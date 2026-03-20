@@ -6,7 +6,7 @@ plugins {
     `maven-publish`
 }
 
-group = "com.cascade"
+group = "com.landofoz"
 version = "0.1.0"
 
 android {
