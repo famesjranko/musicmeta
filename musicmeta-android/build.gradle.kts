@@ -10,7 +10,7 @@ group = "com.landofoz"
 version = "0.1.0"
 
 android {
-    namespace = "com.cascade.enrichment.android"
+    namespace = "com.landofoz.musicmeta.android"
     compileSdk = libs.versions.compileSdk.get().toInt()
 
     defaultConfig {
