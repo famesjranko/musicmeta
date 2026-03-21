@@ -83,6 +83,9 @@ sealed class EnrichmentData {
     @Serializable
     data class ReleaseEditions(val editions: List<ReleaseEdition>) : EnrichmentData()
 
+    @Serializable
+    data class ArtistTimeline(val events: List<TimelineEvent>) : EnrichmentData()
+
 }
 
 @Serializable
@@ -165,5 +168,14 @@ data class ReleaseEdition(
     val label: String? = null,
     val catalogNumber: String? = null,
     val barcode: String? = null,
+    val identifiers: EnrichmentIdentifiers = EnrichmentIdentifiers(),
+)
+
+@Serializable
+data class TimelineEvent(
+    val date: String,
+    val type: String,
+    val description: String,
+    val relatedEntity: String? = null,
     val identifiers: EnrichmentIdentifiers = EnrichmentIdentifiers(),
 )

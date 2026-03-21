@@ -352,6 +352,7 @@ class EnrichmentShowcaseTest {
         is EnrichmentData.Credits ->
             data.credits.take(4).joinToString(", ") { "${it.name}(${it.role})" }
         is EnrichmentData.ReleaseEditions -> "${data.editions.size} editions"
+        is EnrichmentData.ArtistTimeline -> "${data.events.size} timeline events"
     }
 
     companion object {
