@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.5.0
 milestone_name: New Capabilities & Tech Debt Cleanup
 status: unknown
-stopped_at: Completed 06-tech-debt-cleanup/06-03-PLAN.md
-last_updated: "2026-03-21T16:14:15.508Z"
+stopped_at: Completed 06-tech-debt-cleanup/06-02-PLAN.md
+last_updated: "2026-03-21T16:14:35.994Z"
 progress:
   total_phases: 6
   completed_phases: 0
@@ -43,6 +43,7 @@ Plan: 4 of 4
 *Updated after each plan completion*
 | Phase 06-tech-debt-cleanup P01 | 8 | 2 tasks | 16 files |
 | Phase 06-tech-debt-cleanup P03 | 15 | 2 tasks | 12 files |
+| Phase 06-tech-debt-cleanup P02 | 15 | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -57,6 +58,8 @@ Plan: 4 of 4
 - [Phase 06-tech-debt-cleanup]: FakeHttpClient.givenIoException() added to test Provider-level ErrorKind handling; distinct from givenError() which tests null-return path
 - [Phase 06-tech-debt-cleanup]: Api classes keep nullable return types: HttpResult error branches convert to null via when-else pattern, preserving existing Provider interface shape
 - [Phase 06-tech-debt-cleanup]: ListenBrainzApi uses fetchJsonArrayResult/postJsonArrayResult (not fetchJsonResult) because all 4 endpoints return JSONArray responses
+- [Phase 06-tech-debt-cleanup]: CoverArtArchiveApi fetchRedirectUrl calls left unchanged — redirect pattern has no HttpResult equivalent and is semantically distinct from JSON fetches
+- [Phase 06-tech-debt-cleanup]: MusicBrainzApi rateLimiter.execute block uses return@execute null in else branch to preserve nullable return contract while using fetchJsonResult internally
 
 ### Pending Todos
 
@@ -68,6 +71,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T16:14:01.731Z
-Stopped at: Completed 06-tech-debt-cleanup/06-03-PLAN.md
+Last session: 2026-03-21T16:14:35.992Z
+Stopped at: Completed 06-tech-debt-cleanup/06-02-PLAN.md
 Resume file: None
