@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v0.4.0
 milestone_name: Provider Abstraction Overhaul
 status: unknown
-stopped_at: Completed 05-01-PLAN.md
-last_updated: "2026-03-21T09:52:41.168Z"
+stopped_at: Completed 05-02-PLAN.md
+last_updated: "2026-03-21T09:54:06.869Z"
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 15
-  completed_plans: 12
+  completed_plans: 13
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-21)
 ## Current Position
 
 Phase: 05 (Deepening) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 
 ## Performance Metrics
 
@@ -58,6 +58,7 @@ Plan: 2 of 4
 | Phase 04-new-types P02 | 7min | 2 tasks | 7 files |
 | Phase 04-new-types P04 | 8min | 2 tasks | 20 files |
 | Phase 05-deepening P01 | 4min | 2 tasks | 6 files |
+| Phase 05-deepening P02 | 5min | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -86,6 +87,9 @@ Plan: 2 of 4
 - [Phase 04-new-types]: Wikidata multi-property fetch (P18|P569|P570|P495|P106) replaces single-property calls; QID maps for country/occupation
 - [Phase 04-new-types]: Discogs band members uses search-then-fetch pattern: searchArtist for ID, getArtist for member list
 - [Phase 05-deepening]: Back/booklet use findImageByType filtering CAA JSON images array by types field, no release-group fallback
+- [Phase 05-deepening]: Last.fm TRACK_POPULARITY uses track.getInfo for track-level playcount, not artist.getinfo
+- [Phase 05-deepening]: ListenBrainz batch POST endpoints return JSON arrays; postJsonArray added to HttpClient
+- [Phase 05-deepening]: ListenBrainz ARTIST_POPULARITY uses batch-first with top-recordings fallback
 
 ### Pending Todos
 
@@ -97,6 +101,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T09:52:41.166Z
-Stopped at: Completed 05-01-PLAN.md
+Last session: 2026-03-21T09:54:06.866Z
+Stopped at: Completed 05-02-PLAN.md
 Resume file: None
