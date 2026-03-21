@@ -147,6 +147,83 @@ class WikipediaProviderTest {
     }
 
     @Test
+    fun `enrich returns artist photo from page media list`() = runTest {
+        // Given — Wikipedia page summary and media-list return data
+        httpClient.givenJsonResponse("page/summary", SUMMARY_JSON)
+        httpClient.givenJsonResponse("page/media-list", MEDIA_LIST_JSON)
+        val request = EnrichmentRequest.ForArtist(
+            identifiers = EnrichmentIdentifiers(wikipediaTitle = "Radiohead"),
+            name = "Radiohead",
+        )
+
+        // When — enriching for artist photo
+        val result = provider.enrich(request, EnrichmentType.ARTIST_PHOTO)
+
+        // Then — success with Artwork from media list
+        assertTrue(result is EnrichmentResult.Success)
+        val success = result as EnrichmentResult.Success
+        assertEquals("wikipedia", success.provider)
+        assertEquals(0.7f, success.confidence, 0.01f)
+        val artwork = success.data as EnrichmentData.Artwork
+        assertEquals("https://upload.wikimedia.org/wikipedia/commons/radiohead.jpg", artwork.url)
+        assertEquals(800, artwork.width)
+        assertEquals(600, artwork.height)
+    }
+
+    @Test
+    fun `enrich returns NotFound for artist photo when no suitable images`() = runTest {
+        // Given — media list has only SVG images
+        httpClient.givenJsonResponse("page/summary", SUMMARY_JSON)
+        httpClient.givenJsonResponse("page/media-list", MEDIA_LIST_SVG_ONLY_JSON)
+        val request = EnrichmentRequest.ForArtist(
+            identifiers = EnrichmentIdentifiers(wikipediaTitle = "Radiohead"),
+            name = "Radiohead",
+        )
+
+        // When — enriching for artist photo
+        val result = provider.enrich(request, EnrichmentType.ARTIST_PHOTO)
+
+        // Then — NotFound because SVGs are filtered out
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `enrich filters out SVG and icon images from media list`() = runTest {
+        // Given — media list has SVGs, icons, and one valid JPEG
+        httpClient.givenJsonResponse("page/summary", SUMMARY_JSON)
+        httpClient.givenJsonResponse("page/media-list", MEDIA_LIST_MIXED_JSON)
+        val request = EnrichmentRequest.ForArtist(
+            identifiers = EnrichmentIdentifiers(wikipediaTitle = "Radiohead"),
+            name = "Radiohead",
+        )
+
+        // When — enriching for artist photo
+        val result = provider.enrich(request, EnrichmentType.ARTIST_PHOTO)
+
+        // Then — returns the valid JPEG, not SVGs or icons
+        assertTrue(result is EnrichmentResult.Success)
+        val artwork = (result as EnrichmentResult.Success).data as EnrichmentData.Artwork
+        assertEquals("https://upload.wikimedia.org/wikipedia/commons/valid_photo.jpg", artwork.url)
+    }
+
+    @Test
+    fun `enrich returns NotFound for artist photo when media list is empty`() = runTest {
+        // Given — media list has no items
+        httpClient.givenJsonResponse("page/summary", SUMMARY_JSON)
+        httpClient.givenJsonResponse("page/media-list", """{"items":[]}""")
+        val request = EnrichmentRequest.ForArtist(
+            identifiers = EnrichmentIdentifiers(wikipediaTitle = "Radiohead"),
+            name = "Radiohead",
+        )
+
+        // When — enriching for artist photo
+        val result = provider.enrich(request, EnrichmentType.ARTIST_PHOTO)
+
+        // Then — NotFound
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
     fun `enrich returns biography without thumbnail when thumbnail object is missing`() = runTest {
         // Given — Wikipedia returns page summary without a thumbnail object
         httpClient.givenJsonResponse(
@@ -171,5 +248,73 @@ class WikipediaProviderTest {
         val bio = (result as EnrichmentResult.Success).data as EnrichmentData.Biography
         assertEquals("Some Artist is a musician.", bio.text)
         assertEquals(null, bio.thumbnailUrl)
+    }
+
+    private companion object {
+        val SUMMARY_JSON = """{
+            "title": "Radiohead",
+            "extract": "Radiohead are an English rock band.",
+            "description": "English rock band"
+        }""".trimIndent()
+
+        val MEDIA_LIST_JSON = """{
+            "items": [
+                {
+                    "type": "image",
+                    "title": "File:Radiohead_live.jpg",
+                    "original": {
+                        "source": "https://upload.wikimedia.org/wikipedia/commons/radiohead.jpg",
+                        "width": 800,
+                        "height": 600
+                    }
+                }
+            ]
+        }""".trimIndent()
+
+        val MEDIA_LIST_SVG_ONLY_JSON = """{
+            "items": [
+                {
+                    "type": "image",
+                    "title": "File:Flag_of_England.svg",
+                    "original": {
+                        "source": "https://upload.wikimedia.org/wikipedia/commons/flag.svg",
+                        "width": 200,
+                        "height": 100
+                    }
+                }
+            ]
+        }""".trimIndent()
+
+        val MEDIA_LIST_MIXED_JSON = """{
+            "items": [
+                {
+                    "type": "image",
+                    "title": "File:Some_icon.svg",
+                    "original": {
+                        "source": "https://upload.wikimedia.org/wikipedia/commons/icon.svg",
+                        "width": 50,
+                        "height": 50
+                    }
+                },
+                {
+                    "type": "image",
+                    "title": "File:Logo_icon_band.png",
+                    "original": {
+                        "source": "https://upload.wikimedia.org/wikipedia/commons/logo_icon.png",
+                        "width": 200,
+                        "height": 200
+                    }
+                },
+                {
+                    "type": "image",
+                    "title": "File:Valid_photo.jpg",
+                    "original": {
+                        "source": "https://upload.wikimedia.org/wikipedia/commons/valid_photo.jpg",
+                        "width": 640,
+                        "height": 480
+                    }
+                }
+            ]
+        }""".trimIndent()
     }
 }
