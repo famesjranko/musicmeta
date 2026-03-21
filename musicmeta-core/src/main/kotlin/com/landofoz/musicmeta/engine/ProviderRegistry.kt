@@ -5,7 +5,10 @@ import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ProviderInfo
 import com.landofoz.musicmeta.http.CircuitBreaker
 
-class ProviderRegistry(providers: List<EnrichmentProvider>) {
+class ProviderRegistry(
+    providers: List<EnrichmentProvider>,
+    private val priorityOverrides: Map<String, Map<EnrichmentType, Int>> = emptyMap(),
+) {
 
     private val allProviders: List<EnrichmentProvider> = providers.toList()
 
@@ -37,7 +40,9 @@ class ProviderRegistry(providers: List<EnrichmentProvider>) {
         val byType = mutableMapOf<EnrichmentType, MutableList<Pair<EnrichmentProvider, Int>>>()
         for (provider in providers) {
             for (capability in provider.capabilities) {
-                byType.getOrPut(capability.type) { mutableListOf() }.add(provider to capability.priority)
+                val priority = priorityOverrides[provider.id]?.get(capability.type)
+                    ?: capability.priority
+                byType.getOrPut(capability.type) { mutableListOf() }.add(provider to priority)
             }
         }
         return byType.mapValues { (type, providerPriorities) ->

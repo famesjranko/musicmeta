@@ -150,15 +150,22 @@ Providers that require API keys report `isAvailable = false` until configured. T
 
 ```kotlin
 val engine = EnrichmentEngine.Builder()
+    .addProvider(MusicBrainzProvider(httpClient, RateLimiter(1100)))
+    .addProvider(CoverArtArchiveProvider(httpClient, RateLimiter(100),
+        artworkSize = 600, thumbnailSize = 250))     // Custom artwork sizes
+    .addProvider(ITunesProvider(httpClient, RateLimiter(3000),
+        artworkSize = 600))                           // Per-provider artwork size
     .config(EnrichmentConfig(
         minConfidence = 0.6f,           // Stricter matching
-        preferredArtworkSize = 600,     // Smaller artwork
         userAgent = "MyApp/1.0 (contact@example.com)",
         enableIdentityResolution = true,
         enrichTimeoutMs = 15_000,
         confidenceOverrides = mapOf(    // Tune per-provider
             "deezer" to 0.8f,
             "itunes" to 0.6f,
+        ),
+        priorityOverrides = mapOf(      // Reorder provider chains
+            "deezer" to mapOf(EnrichmentType.ALBUM_ART to 90),
         ),
     ))
     .logger(object : EnrichmentLogger {

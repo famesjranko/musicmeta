@@ -2,6 +2,7 @@ package com.landofoz.musicmeta.android.cache
 
 import com.landofoz.musicmeta.EnrichmentCache
 import com.landofoz.musicmeta.EnrichmentData
+import com.landofoz.musicmeta.EnrichmentLogger
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import kotlinx.serialization.json.Json
@@ -13,6 +14,7 @@ import kotlinx.serialization.json.Json
 class RoomEnrichmentCache(
     private val dao: EnrichmentCacheDao,
     private val clock: () -> Long = System::currentTimeMillis,
+    private val logger: EnrichmentLogger = EnrichmentLogger.NoOp,
 ) : EnrichmentCache {
 
     private val json = Json {
@@ -27,7 +29,10 @@ class RoomEnrichmentCache(
         val entity = dao.get(entityKey, type.name, clock()) ?: return null
         val data = try {
             json.decodeFromString<EnrichmentData>(entity.dataJson)
-        } catch (_: Exception) { return null }
+        } catch (e: Exception) {
+            logger.warn(TAG, "Failed to deserialize cache entry $entityKey:$type: ${e.message}", e)
+            return null
+        }
         return EnrichmentResult.Success(type, data, entity.provider, entity.confidence)
     }
 
@@ -68,4 +73,8 @@ class RoomEnrichmentCache(
 
     /** Cleanup expired entries. Call periodically (e.g., from WorkManager). */
     suspend fun deleteExpired() = dao.deleteExpired(clock())
+
+    private companion object {
+        const val TAG = "RoomEnrichmentCache"
+    }
 }

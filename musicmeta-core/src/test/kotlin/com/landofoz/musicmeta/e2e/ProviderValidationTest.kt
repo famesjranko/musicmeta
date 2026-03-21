@@ -22,7 +22,7 @@ import org.junit.Assert.*
 
 /**
  * Tests each provider individually against real APIs.
- * Run manually: ./gradlew :enrichment-core:test -Dinclude.e2e=true
+ * Run manually: ./gradlew :musicmeta-core:test -Dinclude.e2e=true
  *
  * Each test isolates a single provider so failures are easy to diagnose.
  */
@@ -290,6 +290,6 @@ class ProviderValidationTest {
 
     companion object {
         private const val USER_AGENT =
-            "Cascade/1.0-test (Android music player; https://github.com/famesjranko/cascade)"
+            "MusicMetaTest/1.0 (https://github.com/famesjranko/musicmeta)"
     }
 }

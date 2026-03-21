@@ -8,12 +8,23 @@ import java.text.Normalizer
  */
 object ArtistMatcher {
 
+    /** Default minimum fraction of expected tokens that must appear in candidate. */
+    const val DEFAULT_MIN_TOKEN_OVERLAP = 0.5f
+
     /**
      * Returns true if [candidate] is a plausible match for [expected].
      * Handles: case, "The" prefix, punctuation, diacritics, feat. credits,
      * "&" vs "and", and token overlap for partial matches.
+     *
+     * @param minTokenOverlap Minimum fraction (0.0–1.0) of expected tokens that
+     *   must appear in the candidate for a token-overlap match. Lower values
+     *   accept fuzzier matches. Default is 0.5 (50%).
      */
-    fun isMatch(expected: String, candidate: String): Boolean {
+    fun isMatch(
+        expected: String,
+        candidate: String,
+        minTokenOverlap: Float = DEFAULT_MIN_TOKEN_OVERLAP,
+    ): Boolean {
         if (expected.isBlank() || candidate.isBlank()) return false
 
         val normExpected = normalize(expected)
@@ -30,13 +41,13 @@ object ArtistMatcher {
         // One contains the other (handles "feat." suffixes)
         if (normCandidate.contains(normExpected) || normExpected.contains(normCandidate)) return true
 
-        // Token overlap — at least 50% of expected tokens appear in candidate
+        // Token overlap — at least minTokenOverlap of expected tokens appear in candidate
         val expectedTokens = tokenize(normExpected)
         val candidateTokens = tokenize(normCandidate)
         if (expectedTokens.isEmpty()) return false
 
         val overlap = expectedTokens.count { it in candidateTokens }
-        return overlap.toFloat() / expectedTokens.size >= 0.5f
+        return overlap.toFloat() / expectedTokens.size >= minTokenOverlap
     }
 
     /**

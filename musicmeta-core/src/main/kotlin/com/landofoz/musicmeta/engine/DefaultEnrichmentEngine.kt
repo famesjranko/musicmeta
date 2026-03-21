@@ -63,7 +63,12 @@ class DefaultEnrichmentEngine(
         // Identity provider (MusicBrainz) is the primary search source
         val identity = registry.identityProvider()
         val primary = if (identity != null) {
-            try { identity.searchCandidates(request, limit) } catch (_: Exception) { emptyList() }
+            try {
+                identity.searchCandidates(request, limit)
+            } catch (e: Exception) {
+                logger.warn(TAG, "Identity search failed: ${e.message}", e)
+                emptyList()
+            }
         } else emptyList()
 
         if (primary.size >= limit) return primary.take(limit)
@@ -72,7 +77,12 @@ class DefaultEnrichmentEngine(
         val remaining = limit - primary.size
         val supplemental = registry.searchProviders().flatMap { provider ->
             if (!provider.isAvailable) return@flatMap emptyList()
-            try { provider.searchCandidates(request, remaining) } catch (_: Exception) { emptyList() }
+            try {
+                provider.searchCandidates(request, remaining)
+            } catch (e: Exception) {
+                logger.warn(TAG, "Search failed for ${provider.id}: ${e.message}", e)
+                emptyList()
+            }
         }
 
         // Deduplicate by title+artist (supplemental may overlap with primary)
@@ -93,7 +103,12 @@ class DefaultEnrichmentEngine(
         val provider = registry.identityProvider() ?: return request
         val identityType = IDENTITY_TYPES.firstOrNull { it in uncachedTypes } ?: IDENTITY_TYPES.first()
 
-        val result = try { provider.enrich(request, identityType) } catch (_: Exception) { return request }
+        val result = try {
+            provider.enrich(request, identityType)
+        } catch (e: Exception) {
+            logger.warn(TAG, "Identity resolution failed: ${e.message}", e)
+            return request
+        }
         if (result !is EnrichmentResult.Success) {
             logger.debug(TAG, "Identity resolution returned ${result::class.simpleName}")
             return request

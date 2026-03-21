@@ -22,6 +22,7 @@ import com.landofoz.musicmeta.http.RateLimiter
 class ITunesProvider(
     httpClient: HttpClient,
     rateLimiter: RateLimiter = RateLimiter(3000),
+    private val artworkSize: Int = DEFAULT_ARTWORK_SIZE,
 ) : EnrichmentProvider {
 
     private val api = ITunesApi(httpClient, rateLimiter)
@@ -68,7 +69,7 @@ class ITunesProvider(
 
         if (result?.artworkUrl == null) return EnrichmentResult.NotFound(type, id)
 
-        val highResUrl = result.artworkUrl.replace("100x100bb", "1200x1200bb")
+        val highResUrl = result.artworkUrl.replace("100x100bb", "${artworkSize}x${artworkSize}bb")
 
         return EnrichmentResult.Success(
             type = type,
@@ -93,9 +94,10 @@ class ITunesProvider(
         )
     }
 
-    private companion object {
+    companion object {
+        const val DEFAULT_ARTWORK_SIZE = 1200
         /** Fuzzy search by artist+title. Large catalog but less precise matching than Deezer. */
-        const val CONFIDENCE = 0.65f
-        const val SEARCH_SCORE = 70
+        private const val CONFIDENCE = 0.65f
+        private const val SEARCH_SCORE = 70
     }
 }

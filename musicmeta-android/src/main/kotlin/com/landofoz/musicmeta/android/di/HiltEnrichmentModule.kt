@@ -20,6 +20,8 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object HiltEnrichmentModule {
 
+    const val DEFAULT_DATABASE_NAME = "enrichment_cache.db"
+
     @Provides
     @Singleton
     fun provideEnrichmentCacheDatabase(
@@ -27,7 +29,7 @@ object HiltEnrichmentModule {
     ): EnrichmentCacheDatabase = Room.databaseBuilder(
         context,
         EnrichmentCacheDatabase::class.java,
-        "enrichment_cache.db",
+        DEFAULT_DATABASE_NAME,
     ).build()
 
     @Provides

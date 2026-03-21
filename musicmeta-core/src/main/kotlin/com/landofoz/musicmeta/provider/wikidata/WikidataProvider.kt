@@ -16,6 +16,7 @@ import com.landofoz.musicmeta.http.RateLimiter
 class WikidataProvider(
     httpClient: HttpClient,
     rateLimiter: RateLimiter,
+    private val imageSize: Int = DEFAULT_IMAGE_SIZE,
 ) : EnrichmentProvider {
 
     private val api = WikidataApi(httpClient, rateLimiter)
@@ -42,7 +43,7 @@ class WikidataProvider(
             return EnrichmentResult.NotFound(type, id)
         }
 
-        val imageUrl = api.getArtistImageUrl(wikidataId)
+        val imageUrl = api.getArtistImageUrl(wikidataId, imageSize)
             ?: return EnrichmentResult.NotFound(type, id)
 
         return EnrichmentResult.Success(
@@ -53,9 +54,10 @@ class WikidataProvider(
         )
     }
 
-    private companion object {
-        const val PRIORITY = 100
+    companion object {
+        const val DEFAULT_IMAGE_SIZE = 1200
+        private const val PRIORITY = 100
         /** MBID-based Wikidata ID lookup. Authoritative source, but image quality varies. */
-        const val CONFIDENCE = 0.9f
+        private const val CONFIDENCE = 0.9f
     }
 }

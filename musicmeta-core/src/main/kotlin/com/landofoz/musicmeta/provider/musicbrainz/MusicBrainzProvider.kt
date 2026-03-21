@@ -18,6 +18,8 @@ import com.landofoz.musicmeta.http.RateLimiter
 class MusicBrainzProvider(
     httpClient: HttpClient,
     rateLimiter: RateLimiter,
+    private val minMatchScore: Int = DEFAULT_MIN_MATCH_SCORE,
+    private val thumbnailSize: Int = DEFAULT_THUMBNAIL_SIZE,
 ) : EnrichmentProvider {
 
     private val api = MusicBrainzApi(httpClient, rateLimiter)
@@ -59,7 +61,7 @@ class MusicBrainzProvider(
                 releaseType = release.releaseType,
                 score = release.score,
                 thumbnailUrl = if (release.hasFrontCover) {
-                    "https://coverartarchive.org/release/${release.id}/front-250"
+                    "https://coverartarchive.org/release/${release.id}/front-$thumbnailSize"
                 } else null,
                 identifiers = EnrichmentIdentifiers(
                     musicBrainzId = release.id,
@@ -126,7 +128,7 @@ class MusicBrainzProvider(
         val releases = api.searchReleases(request.title, request.artist)
         if (releases.isEmpty()) return EnrichmentResult.RateLimited(type, id)
 
-        val best = releases.firstOrNull { it.score >= MIN_MATCH_SCORE }
+        val best = releases.firstOrNull { it.score >= minMatchScore }
             ?: return EnrichmentResult.NotFound(type, id)
 
         // Search already includes release-group tags, label-info, and cover-art-archive.
@@ -168,7 +170,7 @@ class MusicBrainzProvider(
         if (artists.isEmpty()) return EnrichmentResult.RateLimited(type, id)
 
         val best = pickBestArtist(request.name, artists)
-        if (best.score < MIN_MATCH_SCORE) {
+        if (best.score < minMatchScore) {
             return EnrichmentResult.NotFound(type, id)
         }
 
@@ -198,7 +200,7 @@ class MusicBrainzProvider(
         val recordings = api.searchRecordings(request.title, request.artist)
         if (recordings.isEmpty()) return EnrichmentResult.RateLimited(type, id)
 
-        val best = recordings.firstOrNull { it.score >= MIN_MATCH_SCORE }
+        val best = recordings.firstOrNull { it.score >= minMatchScore }
             ?: return EnrichmentResult.NotFound(type, id)
 
         return EnrichmentResult.Success(
@@ -268,7 +270,8 @@ class MusicBrainzProvider(
     }.first()
 
     companion object {
-        const val MIN_MATCH_SCORE = 80
+        const val DEFAULT_MIN_MATCH_SCORE = 80
+        const val DEFAULT_THUMBNAIL_SIZE = 250
         /** Types that require a full lookup (not just search) to get URL relations. */
         private val RELATION_DEPENDENT_TYPES = setOf(
             EnrichmentType.ARTIST_PHOTO,

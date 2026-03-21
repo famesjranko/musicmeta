@@ -22,7 +22,7 @@ import org.junit.Assert.*
 
 /**
  * End-to-end tests against real APIs.
- * Run manually: ./gradlew :enrichment-core:test -Dinclude.e2e=true
+ * Run manually: ./gradlew :musicmeta-core:test -Dinclude.e2e=true
  *
  * These tests use well-known, stable music data so results are deterministic.
  * Rate limits are respected via per-provider rate limiters.
@@ -420,6 +420,6 @@ class RealApiEndToEndTest {
 
     companion object {
         private const val USER_AGENT =
-            "Cascade/1.0-test (Android music player; https://github.com/famesjranko/cascade)"
+            "MusicMetaTest/1.0 (https://github.com/famesjranko/musicmeta)"
     }
 }

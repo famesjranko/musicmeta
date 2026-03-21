@@ -16,6 +16,8 @@ import com.landofoz.musicmeta.http.RateLimiter
 class CoverArtArchiveProvider(
     httpClient: HttpClient,
     @Suppress("UNUSED_PARAMETER") rateLimiter: RateLimiter,
+    private val artworkSize: Int = DEFAULT_ARTWORK_SIZE,
+    private val thumbnailSize: Int = DEFAULT_THUMBNAIL_SIZE,
 ) : EnrichmentProvider {
 
     private val api = CoverArtArchiveApi(httpClient)
@@ -58,9 +60,9 @@ class CoverArtArchiveProvider(
     ): EnrichmentResult {
         // Try release-specific art first
         if (releaseId != null) {
-            val url = api.getArtworkUrl(releaseId, SIZE_FULL)
+            val url = api.getArtworkUrl(releaseId, artworkSize)
             if (url != null) {
-                val thumbUrl = api.getArtworkUrl(releaseId, SIZE_THUMB)
+                val thumbUrl = api.getArtworkUrl(releaseId, thumbnailSize)
                 return EnrichmentResult.Success(
                     type = type,
                     data = EnrichmentData.Artwork(
@@ -75,9 +77,9 @@ class CoverArtArchiveProvider(
 
         // Fall back to release-group art
         if (groupId != null) {
-            val url = api.getGroupArtworkUrl(groupId, SIZE_FULL)
+            val url = api.getGroupArtworkUrl(groupId, artworkSize)
             if (url != null) {
-                val thumbUrl = api.getGroupArtworkUrl(groupId, SIZE_THUMB)
+                val thumbUrl = api.getGroupArtworkUrl(groupId, thumbnailSize)
                 return EnrichmentResult.Success(
                     type = type,
                     data = EnrichmentData.Artwork(
@@ -94,7 +96,7 @@ class CoverArtArchiveProvider(
     }
 
     companion object {
-        private const val SIZE_FULL = 1200
-        private const val SIZE_THUMB = 250
+        const val DEFAULT_ARTWORK_SIZE = 1200
+        const val DEFAULT_THUMBNAIL_SIZE = 250
     }
 }

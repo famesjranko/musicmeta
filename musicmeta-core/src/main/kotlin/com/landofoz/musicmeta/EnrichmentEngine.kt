@@ -36,7 +36,7 @@ interface EnrichmentEngine {
         fun logger(logger: EnrichmentLogger) = apply { this.logger = logger }
 
         fun build(): EnrichmentEngine {
-            val registry = ProviderRegistry(providers)
+            val registry = ProviderRegistry(providers, config.priorityOverrides)
             return DefaultEnrichmentEngine(
                 registry = registry,
                 cache = cache ?: InMemoryEnrichmentCache(),
