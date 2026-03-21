@@ -11,3 +11,13 @@ data class ITunesAlbumResult(
     val country: String? = null,
     val trackCount: Int? = null,
 )
+
+/** Track result from the iTunes Lookup API (`/lookup?id={collectionId}&entity=song`). */
+data class ITunesTrackResult(
+    val trackId: Long = 0,
+    val trackName: String,
+    val trackNumber: Int,
+    val trackTimeMillis: Long? = null,
+    val artistName: String,
+    val collectionName: String? = null,
+)

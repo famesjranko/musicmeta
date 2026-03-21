@@ -1,10 +1,12 @@
 package com.landofoz.musicmeta.provider.itunes
 
 import com.landofoz.musicmeta.ArtworkSize
+import com.landofoz.musicmeta.DiscographyAlbum
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.GenreTag
 import com.landofoz.musicmeta.SearchCandidate
+import com.landofoz.musicmeta.TrackInfo
 
 /** Maps iTunes DTOs to EnrichmentData subclasses. */
 object ITunesMapper {
@@ -32,6 +34,33 @@ object ITunesMapper {
             },
             country = result.country,
             releaseDate = result.releaseDate,
+        )
+
+    fun toTracklist(tracks: List<ITunesTrackResult>): EnrichmentData.Tracklist =
+        EnrichmentData.Tracklist(
+            tracks = tracks.map { track ->
+                TrackInfo(
+                    title = track.trackName,
+                    position = track.trackNumber,
+                    durationMs = track.trackTimeMillis,
+                )
+            },
+        )
+
+    fun toDiscography(albums: List<ITunesAlbumResult>): EnrichmentData.Discography =
+        EnrichmentData.Discography(
+            albums = albums.map { album ->
+                DiscographyAlbum(
+                    title = album.collectionName,
+                    year = album.releaseDate?.take(4),
+                    thumbnailUrl = album.artworkUrl,
+                    identifiers = if (album.collectionId > 0) {
+                        EnrichmentIdentifiers().withExtra("itunesCollectionId", album.collectionId.toString())
+                    } else {
+                        EnrichmentIdentifiers()
+                    },
+                )
+            },
         )
 
     fun toSearchCandidate(
