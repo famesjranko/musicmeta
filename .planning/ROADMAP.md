@@ -87,7 +87,11 @@ Plans:
   1. User can request EnrichmentType.ARTIST_TIMELINE and receive a list of timeline events in chronological order
   2. Timeline events cover at least three categories: life-span events (born/died/formed/disbanded), discography releases, and band-member changes
   3. The engine resolves ARTIST_DISCOGRAPHY and BAND_MEMBERS sub-types automatically when ARTIST_TIMELINE is requested, without the caller specifying them
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 09-01-PLAN.md — ARTIST_TIMELINE type, data model, TimelineSynthesizer (TDD)
+- [ ] 09-02-PLAN.md — Engine composite type resolution + integration tests
 
 ### Phase 10: Genre Enhancement
 **Goal**: Genre results carry per-tag confidence scores and the provider chain merges tags from all providers rather than short-circuiting on the first success
@@ -126,6 +130,6 @@ Plans:
 | 6. Tech Debt Cleanup | v0.5.0 | 4/4 | Complete   | 2026-03-21 |
 | 7. Credits & Personnel | v0.5.0 | 1/2 | In Progress|  |
 | 8. Release Editions | v0.5.0 | 2/2 | Complete   | 2026-03-21 |
-| 9. Artist Timeline | v0.5.0 | 0/TBD | Not started | - |
+| 9. Artist Timeline | v0.5.0 | 0/2 | Not started | - |
 | 10. Genre Enhancement | v0.5.0 | 0/TBD | Not started | - |
 | 11. Provider Coverage Expansion | v0.5.0 | 0/TBD | Not started | - |
