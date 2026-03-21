@@ -7,3 +7,11 @@ data class WikipediaSummary(
     val description: String?,
     val thumbnailUrl: String?,
 )
+
+/** Image item from the Wikipedia REST API page/media-list endpoint. */
+data class WikipediaMediaItem(
+    val title: String,
+    val url: String,
+    val width: Int?,
+    val height: Int?,
+)

@@ -11,4 +11,11 @@ object WikipediaMapper {
             source = "Wikipedia",
             thumbnailUrl = summary.thumbnailUrl,
         )
+
+    fun toArtwork(media: WikipediaMediaItem): EnrichmentData.Artwork =
+        EnrichmentData.Artwork(
+            url = media.url,
+            width = media.width,
+            height = media.height,
+        )
 }

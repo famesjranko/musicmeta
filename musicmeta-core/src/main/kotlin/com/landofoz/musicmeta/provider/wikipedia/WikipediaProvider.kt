@@ -36,6 +36,11 @@ class WikipediaProvider(
             priority = 100,
             identifierRequirement = IdentifierRequirement.WIKIPEDIA_TITLE,
         ),
+        ProviderCapability(
+            type = EnrichmentType.ARTIST_PHOTO,
+            priority = 30,
+            identifierRequirement = IdentifierRequirement.WIKIPEDIA_TITLE,
+        ),
     )
 
     override suspend fun enrich(
@@ -43,20 +48,38 @@ class WikipediaProvider(
         type: EnrichmentType,
     ): EnrichmentResult {
         logger.debug(TAG, "wpTitle=${request.identifiers.wikipediaTitle}, wikidataId=${request.identifiers.wikidataId}")
-        // Try direct Wikipedia title first, fall back to Wikidata sitelink resolution
         val title = request.identifiers.wikipediaTitle
             ?: resolveFromWikidata(request.identifiers.wikidataId)
         logger.debug(TAG, "Resolved title=$title")
         if (title == null) return EnrichmentResult.NotFound(type, id)
 
+        return when (type) {
+            EnrichmentType.ARTIST_BIO -> enrichBio(title, type)
+            EnrichmentType.ARTIST_PHOTO -> enrichArtistPhoto(title, type)
+            else -> EnrichmentResult.NotFound(type, id)
+        }
+    }
+
+    private suspend fun enrichBio(title: String, type: EnrichmentType): EnrichmentResult {
         val summary = api.getPageSummary(title)
             ?: return EnrichmentResult.NotFound(type, id)
-
         return EnrichmentResult.Success(
             type = type,
             data = WikipediaMapper.toBiography(summary),
             provider = id,
             confidence = CONFIDENCE,
+        )
+    }
+
+    private suspend fun enrichArtistPhoto(title: String, type: EnrichmentType): EnrichmentResult {
+        val mediaItems = api.getPageMediaList(title)
+        val bestImage = mediaItems.firstOrNull()
+            ?: return EnrichmentResult.NotFound(type, id)
+        return EnrichmentResult.Success(
+            type = type,
+            data = WikipediaMapper.toArtwork(bestImage),
+            provider = id,
+            confidence = PHOTO_CONFIDENCE,
         )
     }
 
@@ -81,6 +104,8 @@ class WikipediaProvider(
         const val TAG = "WikipediaProvider"
         /** Authoritative encyclopedia. High quality for notable artists. */
         const val CONFIDENCE = 0.95f
+        /** Lower than Wikidata (0.9) since Wikipedia images are less curated. */
+        const val PHOTO_CONFIDENCE = 0.7f
         const val WIKIDATA_API = "https://www.wikidata.org/w/api.php"
     }
 }
