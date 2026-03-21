@@ -10,3 +10,27 @@ data class DeezerAlbumResult(
     val coverBig: String?,
     val coverXl: String?,
 )
+
+/** Artist search result from Deezer API. */
+data class DeezerArtistSearchResult(
+    val id: Long,
+    val name: String,
+)
+
+/** Album entry from Deezer artist albums endpoint. */
+data class DeezerArtistAlbum(
+    val id: Long,
+    val title: String,
+    val releaseDate: String?,
+    val recordType: String?,
+    val coverSmall: String?,
+    val coverMedium: String?,
+)
+
+/** Track entry from Deezer album tracks endpoint. */
+data class DeezerTrack(
+    val id: Long,
+    val title: String,
+    val trackPosition: Int,
+    val durationSec: Int,
+)

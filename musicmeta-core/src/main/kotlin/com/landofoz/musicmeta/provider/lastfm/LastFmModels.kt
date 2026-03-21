@@ -13,3 +13,10 @@ data class LastFmSimilarArtist(
     val matchScore: Float,
     val mbid: String?,
 )
+
+data class LastFmSimilarTrack(
+    val title: String,
+    val artist: String,
+    val matchScore: Float,
+    val mbid: String?,
+)

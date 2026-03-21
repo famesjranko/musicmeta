@@ -39,6 +39,60 @@ class DeezerApi(
         }
     }
 
+    suspend fun searchArtist(name: String): DeezerArtistSearchResult? {
+        val encoded = URLEncoder.encode(name, "UTF-8")
+        val url = "$BASE_URL/search/artist?q=$encoded&limit=1"
+        val json = rateLimiter.execute {
+            httpClient.fetchJson(url)
+        } ?: return null
+
+        val data = json.optJSONArray("data") ?: return null
+        if (data.length() == 0) return null
+        val artist = data.getJSONObject(0)
+        return DeezerArtistSearchResult(
+            id = artist.optLong("id"),
+            name = artist.optString("name", ""),
+        )
+    }
+
+    suspend fun getArtistAlbums(artistId: Long, limit: Int = 50): List<DeezerArtistAlbum> {
+        val url = "$BASE_URL/artist/$artistId/albums?limit=$limit"
+        val json = rateLimiter.execute {
+            httpClient.fetchJson(url)
+        } ?: return emptyList()
+
+        val data = json.optJSONArray("data") ?: return emptyList()
+        return (0 until data.length()).map { i ->
+            val album = data.getJSONObject(i)
+            DeezerArtistAlbum(
+                id = album.optLong("id"),
+                title = album.optString("title", ""),
+                releaseDate = album.optString("release_date").takeIfNotEmpty(),
+                recordType = album.optString("record_type").takeIfNotEmpty(),
+                coverSmall = album.optString("cover_small").takeIfNotEmpty(),
+                coverMedium = album.optString("cover_medium").takeIfNotEmpty(),
+            )
+        }
+    }
+
+    suspend fun getAlbumTracks(albumId: Long): List<DeezerTrack> {
+        val url = "$BASE_URL/album/$albumId/tracks"
+        val json = rateLimiter.execute {
+            httpClient.fetchJson(url)
+        } ?: return emptyList()
+
+        val data = json.optJSONArray("data") ?: return emptyList()
+        return (0 until data.length()).map { i ->
+            val track = data.getJSONObject(i)
+            DeezerTrack(
+                id = track.optLong("id"),
+                title = track.optString("title", ""),
+                trackPosition = track.optInt("track_position", 0),
+                durationSec = track.optInt("duration", 0),
+            )
+        }
+    }
+
     private fun String.takeIfNotEmpty(): String? = takeIf { it.isNotBlank() }
 
     private companion object {

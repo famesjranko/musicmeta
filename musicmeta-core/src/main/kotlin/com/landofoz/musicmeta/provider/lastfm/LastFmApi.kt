@@ -36,6 +36,18 @@ class LastFmApi(
         return parseTags(json)
     }
 
+    suspend fun getSimilarTracks(trackTitle: String, artistName: String, limit: Int = 20): List<LastFmSimilarTrack> {
+        val url = buildTrackUrl("track.getsimilar", trackTitle, artistName) + "&limit=$limit"
+        val json = rateLimiter.execute { httpClient.fetchJson(url) } ?: return emptyList()
+        return parseSimilarTracks(json)
+    }
+
+    private fun buildTrackUrl(method: String, trackTitle: String, artistName: String): String {
+        val encodedTrack = URLEncoder.encode(trackTitle, "UTF-8")
+        val encodedArtist = URLEncoder.encode(artistName, "UTF-8")
+        return "$BASE_URL?method=$method&track=$encodedTrack&artist=$encodedArtist&api_key=${apiKeyProvider()}&format=json"
+    }
+
     private fun buildUrl(method: String, artistName: String): String {
         val encoded = URLEncoder.encode(artistName, "UTF-8")
         return "$BASE_URL?method=$method&artist=$encoded&api_key=${apiKeyProvider()}&format=json"
@@ -61,6 +73,21 @@ class LastFmApi(
             val obj = array.getJSONObject(i)
             LastFmSimilarArtist(
                 name = obj.optString("name", ""),
+                matchScore = obj.optString("match", "0").toFloatOrNull() ?: 0f,
+                mbid = obj.optString("mbid").takeIf { it.isNotBlank() },
+            )
+        }
+    }
+
+    private fun parseSimilarTracks(json: JSONObject): List<LastFmSimilarTrack> {
+        val container = json.optJSONObject("similartracks") ?: return emptyList()
+        val array = container.optJSONArray("track") ?: return emptyList()
+        return (0 until array.length()).map { i ->
+            val obj = array.getJSONObject(i)
+            val artistObj = obj.optJSONObject("artist")
+            LastFmSimilarTrack(
+                title = obj.optString("name", ""),
+                artist = artistObj?.optString("name", "") ?: "",
                 matchScore = obj.optString("match", "0").toFloatOrNull() ?: 0f,
                 mbid = obj.optString("mbid").takeIf { it.isNotBlank() },
             )
