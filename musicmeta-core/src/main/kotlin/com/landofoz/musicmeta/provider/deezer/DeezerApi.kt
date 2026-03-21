@@ -1,6 +1,7 @@
 package com.landofoz.musicmeta.provider.deezer
 
 import com.landofoz.musicmeta.http.HttpClient
+import com.landofoz.musicmeta.http.HttpResult
 import com.landofoz.musicmeta.http.RateLimiter
 import java.net.URLEncoder
 
@@ -20,7 +21,10 @@ class DeezerApi(
         val encoded = URLEncoder.encode(query, "UTF-8")
         val url = "$BASE_URL/search/album?q=$encoded&limit=$limit"
         val json = rateLimiter.execute {
-            httpClient.fetchJson(url)
+            when (val r = httpClient.fetchJsonResult(url)) {
+                is HttpResult.Ok -> r.body
+                else -> return@execute null
+            }
         } ?: return emptyList()
 
         val data = json.optJSONArray("data") ?: return emptyList()
@@ -46,7 +50,10 @@ class DeezerApi(
         val encoded = URLEncoder.encode(name, "UTF-8")
         val url = "$BASE_URL/search/artist?q=$encoded&limit=1"
         val json = rateLimiter.execute {
-            httpClient.fetchJson(url)
+            when (val r = httpClient.fetchJsonResult(url)) {
+                is HttpResult.Ok -> r.body
+                else -> return@execute null
+            }
         } ?: return null
 
         val data = json.optJSONArray("data") ?: return null
@@ -61,7 +68,10 @@ class DeezerApi(
     suspend fun getArtistAlbums(artistId: Long, limit: Int = 50): List<DeezerArtistAlbum> {
         val url = "$BASE_URL/artist/$artistId/albums?limit=$limit"
         val json = rateLimiter.execute {
-            httpClient.fetchJson(url)
+            when (val r = httpClient.fetchJsonResult(url)) {
+                is HttpResult.Ok -> r.body
+                else -> return@execute null
+            }
         } ?: return emptyList()
 
         val data = json.optJSONArray("data") ?: return emptyList()
@@ -81,7 +91,10 @@ class DeezerApi(
     suspend fun getAlbumTracks(albumId: Long): List<DeezerTrack> {
         val url = "$BASE_URL/album/$albumId/tracks"
         val json = rateLimiter.execute {
-            httpClient.fetchJson(url)
+            when (val r = httpClient.fetchJsonResult(url)) {
+                is HttpResult.Ok -> r.body
+                else -> return@execute null
+            }
         } ?: return emptyList()
 
         val data = json.optJSONArray("data") ?: return emptyList()

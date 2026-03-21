@@ -4,6 +4,7 @@ import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
+import com.landofoz.musicmeta.ErrorKind
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.testutil.FakeHttpClient
 import kotlinx.coroutines.test.runTest
@@ -287,6 +288,21 @@ class LastFmProviderTest {
 
         // Then — NotFound because no similar tracks returned
         assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `enrich returns Error with ErrorKind NETWORK when network fails`() = runTest {
+        // Given — Last.fm API throws an IOException
+        httpClient.givenIoException("audioscrobbler.com")
+        val request = EnrichmentRequest.forArtist(name = "Radiohead")
+
+        // When — enriching for genre
+        val result = provider.enrich(request, EnrichmentType.GENRE)
+
+        // Then — Error with NETWORK kind
+        assertTrue(result is EnrichmentResult.Error)
+        val error = result as EnrichmentResult.Error
+        assertEquals(ErrorKind.NETWORK, error.errorKind)
     }
 
     private companion object {
