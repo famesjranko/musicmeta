@@ -88,15 +88,54 @@ class MusicBrainzProviderTest {
     }
 
     @Test
-    fun `enrich returns RateLimited on null response`() = runTest {
-        // Given — no canned response configured (simulates network/rate-limit failure)
+    fun `enrich returns NotFound on null response`() = runTest {
+        // Given — no canned response configured (API returns null -> emptyList)
         val request = EnrichmentRequest.forAlbum("Test", "Test")
 
         // When — enriching for genre
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then — RateLimited because null response indicates throttling
-        assertTrue(result is EnrichmentResult.RateLimited)
+        // Then — NotFound because empty results mean no match
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `empty album search results return NotFound`() = runTest {
+        // Given — MusicBrainz returns an empty releases array
+        httpClient.givenJsonResponse("release?query", """{"releases":[]}""")
+        val request = EnrichmentRequest.forAlbum("Nothing", "Nobody")
+
+        // When — enriching for genre
+        val result = provider.enrich(request, EnrichmentType.GENRE)
+
+        // Then — NotFound because no releases matched
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `empty artist search results return NotFound`() = runTest {
+        // Given — MusicBrainz returns an empty artists array
+        httpClient.givenJsonResponse("artist?query", """{"artists":[]}""")
+        val request = EnrichmentRequest.forArtist("Nobody")
+
+        // When — enriching for genre
+        val result = provider.enrich(request, EnrichmentType.GENRE)
+
+        // Then — NotFound because no artists matched
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `empty recording search results return NotFound`() = runTest {
+        // Given — MusicBrainz returns an empty recordings array
+        httpClient.givenJsonResponse("recording?query", """{"recordings":[]}""")
+        val request = EnrichmentRequest.forTrack("Nothing", "Nobody")
+
+        // When — enriching for genre
+        val result = provider.enrich(request, EnrichmentType.GENRE)
+
+        // Then — NotFound because no recordings matched
+        assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
