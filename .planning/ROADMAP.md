@@ -60,7 +60,10 @@ Plans:
   3. SimilarArtist and PopularTrack carry identifiers: EnrichmentIdentifiers (not musicBrainzId: String?)
   4. EnrichmentResult.Error includes an errorKind: ErrorKind field; callers can distinguish NETWORK vs AUTH vs PARSE failures without parsing the message string
   5. HttpClient.fetchJsonResult() returns HttpResult<JSONObject> with distinct subtypes for Ok, ClientError (404), ServerError (500), RateLimited (429), and NetworkError
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 03-01-PLAN.md — TTL in EnrichmentType enum, extensible identifiers, SimilarArtist/PopularTrack migration
+- [ ] 03-02-PLAN.md — ErrorKind enum on EnrichmentResult.Error, HttpResult sealed class with fetchJsonResult()
 
 ### Phase 4: New Types
 **Goal**: Consumers can enrich band membership, artist discography, album tracks, similar tracks, artist banners, external links, and artwork at multiple sizes using a single enrich() call
@@ -97,6 +100,6 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Bug Fixes | 2/2 | Complete | 2026-03-21 |
 | 2. Provider Abstraction | 0/3 | Not started | - |
-| 3. Public API Cleanup | 0/TBD | Not started | - |
+| 3. Public API Cleanup | 0/2 | Not started | - |
 | 4. New Types | 0/TBD | Not started | - |
 | 5. Deepening | 0/TBD | Not started | - |
