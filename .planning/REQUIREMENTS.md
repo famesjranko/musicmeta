@@ -45,7 +45,7 @@ Requirements for the Provider Abstraction Overhaul milestone. Each maps to roadm
 
 ### Deepening
 
-- [ ] **DEEP-01**: ALBUM_ART_BACK and ALBUM_BOOKLET types via Cover Art Archive JSON endpoint
+- [x] **DEEP-01**: ALBUM_ART_BACK and ALBUM_BOOKLET types via Cover Art Archive JSON endpoint
 - [ ] **DEEP-02**: Album metadata from Deezer, iTunes, Discogs (currently ignored fields)
 - [ ] **DEEP-03**: Track-level popularity fix via Last.fm track.getInfo and ListenBrainz batch
 - [ ] **DEEP-04**: Wikipedia page media for supplemental ARTIST_PHOTO coverage
@@ -102,7 +102,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TYPE-06 | Phase 4 | Complete |
 | TYPE-07 | Phase 4 | Complete |
 | TYPE-08 | Phase 4 | Complete |
-| DEEP-01 | Phase 5 | Pending |
+| DEEP-01 | Phase 5 | Complete |
 | DEEP-02 | Phase 5 | Pending |
 | DEEP-03 | Phase 5 | Pending |
 | DEEP-04 | Phase 5 | Pending |

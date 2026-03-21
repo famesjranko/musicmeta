@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v0.4.0
 milestone_name: Provider Abstraction Overhaul
 status: unknown
-stopped_at: Completed 04-04-PLAN.md
-last_updated: "2026-03-21T09:34:30.473Z"
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-03-21T09:52:41.168Z"
 progress:
   total_phases: 5
   completed_phases: 4
-  total_plans: 11
-  completed_plans: 11
+  total_plans: 15
+  completed_plans: 12
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-21)
 
 **Core value:** Consumers get comprehensive music metadata from a single enrich() call without knowing provider details.
-**Current focus:** Phase 04 — New Types
+**Current focus:** Phase 05 — Deepening
 
 ## Current Position
 
-Phase: 5
-Plan: Not started
+Phase: 05 (Deepening) — EXECUTING
+Plan: 2 of 4
 
 ## Performance Metrics
 
@@ -57,6 +57,7 @@ Plan: Not started
 | Phase 04-new-types P03 | 3min | 2 tasks | 12 files |
 | Phase 04-new-types P02 | 7min | 2 tasks | 7 files |
 | Phase 04-new-types P04 | 8min | 2 tasks | 20 files |
+| Phase 05-deepening P01 | 4min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -84,6 +85,7 @@ Plan: Not started
 - [Phase 04-new-types]: CAA JSON metadata fetched alongside redirect URL for artwork sizes with graceful degradation
 - [Phase 04-new-types]: Wikidata multi-property fetch (P18|P569|P570|P495|P106) replaces single-property calls; QID maps for country/occupation
 - [Phase 04-new-types]: Discogs band members uses search-then-fetch pattern: searchArtist for ID, getArtist for member list
+- [Phase 05-deepening]: Back/booklet use findImageByType filtering CAA JSON images array by types field, no release-group fallback
 
 ### Pending Todos
 
@@ -95,6 +97,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T09:30:33.247Z
-Stopped at: Completed 04-04-PLAN.md
+Last session: 2026-03-21T09:52:41.166Z
+Stopped at: Completed 05-01-PLAN.md
 Resume file: None
