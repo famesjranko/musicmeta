@@ -63,7 +63,7 @@ Plans:
 **Plans**: 2 plans
 Plans:
 - [x] 03-01-PLAN.md — TTL in EnrichmentType enum, extensible identifiers, SimilarArtist/PopularTrack migration
-- [ ] 03-02-PLAN.md — ErrorKind enum on EnrichmentResult.Error, HttpResult sealed class with fetchJsonResult()
+- [x] 03-02-PLAN.md — ErrorKind enum on EnrichmentResult.Error, HttpResult sealed class with fetchJsonResult()
 
 ### Phase 4: New Types
 **Goal**: Consumers can enrich band membership, artist discography, album tracks, similar tracks, artist banners, external links, and artwork at multiple sizes using a single enrich() call

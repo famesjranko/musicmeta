@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v0.4.0
 milestone_name: Provider Abstraction Overhaul
 status: unknown
-stopped_at: Completed 03-01-PLAN.md
-last_updated: "2026-03-21T08:45:31.443Z"
+stopped_at: Completed 03-02-PLAN.md
+last_updated: "2026-03-21T08:48:24.221Z"
 progress:
   total_phases: 5
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 7
-  completed_plans: 6
+  completed_plans: 7
 ---
 
 # Project State
@@ -52,6 +52,7 @@ Plan: 2 of 2
 | Phase 02-provider-abstraction P02 | 5min | 2 tasks | 10 files |
 | Phase 02-provider-abstraction P03 | 7min | 2 tasks | 24 files |
 | Phase 03-public-api-cleanup P01 | 5min | 2 tasks | 11 files |
+| Phase 03-public-api-cleanup P02 | 7min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -71,6 +72,7 @@ Plan: 2 of 2
 - [Phase 02-provider-abstraction]: ApiKeyConfig with nullable Strings; withDefaultProviders creates 8 keyless providers always, key-requiring providers only with keys
 - [Phase 03-public-api-cleanup]: TTL values carried as defaultTtlMs on EnrichmentType enum entries with config.ttlOverrides for per-type override
 - [Phase 03-public-api-cleanup]: EnrichmentIdentifiers extended with extra map, get(), withExtra() for extensible provider IDs; @Serializable added for data class embedding
+- [Phase 03-public-api-cleanup]: ErrorKind.UNKNOWN default preserves all existing Error construction sites; fetchJsonResult has no retry logic
 
 ### Pending Todos
 
@@ -82,6 +84,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T08:45:31.440Z
-Stopped at: Completed 03-01-PLAN.md
+Last session: 2026-03-21T08:48:24.218Z
+Stopped at: Completed 03-02-PLAN.md
 Resume file: None
