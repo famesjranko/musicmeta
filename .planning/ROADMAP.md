@@ -14,7 +14,7 @@ v0.4.0 moves from a working prototype to a well-abstracted library. Five sequent
 - [ ] **Phase 2: Provider Abstraction** - Typed identifiers, identity provider formalization, mapper pattern, API key config
 - [ ] **Phase 3: Public API Cleanup** - TTL in EnrichmentType, extensible identifiers, error categorization, HttpResult
 - [ ] **Phase 4: New Types** - 6 new enrichment types, artwork sizes, expanded Wikidata properties
-- [ ] **Phase 5: Deepening** - Back cover art, album metadata from more sources, track popularity fix, Wikipedia media, batch endpoints, confidence standardization
+- [x] **Phase 5: Deepening** - Back cover art, album metadata from more sources, track popularity fix, Wikipedia media, batch endpoints, confidence standardization (completed 2026-03-21)
 
 ## Phase Details
 
@@ -100,7 +100,7 @@ Plans:
 - [x] 05-01-PLAN.md — ALBUM_ART_BACK and ALBUM_BOOKLET types via Cover Art Archive JSON endpoint
 - [x] 05-02-PLAN.md — Last.fm track.getInfo for TRACK_POPULARITY, ListenBrainz batch endpoints
 - [x] 05-03-PLAN.md — Album metadata from Deezer/iTunes/Discogs, Wikipedia page media for ARTIST_PHOTO
-- [ ] 05-04-PLAN.md — ConfidenceCalculator utility and provider-wide confidence standardization
+- [x] 05-04-PLAN.md — ConfidenceCalculator utility and provider-wide confidence standardization
 
 ## Progress
 
@@ -112,4 +112,4 @@ Plans:
 | 2. Provider Abstraction | 0/3 | Not started | - |
 | 3. Public API Cleanup | 0/2 | Not started | - |
 | 4. New Types | 2/4 | In Progress|  |
-| 5. Deepening | 2/4 | In Progress|  |
+| 5. Deepening | 4/4 | Complete   | 2026-03-21 |

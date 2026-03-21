@@ -50,7 +50,7 @@ Requirements for the Provider Abstraction Overhaul milestone. Each maps to roadm
 - [x] **DEEP-03**: Track-level popularity fix via Last.fm track.getInfo and ListenBrainz batch
 - [x] **DEEP-04**: Wikipedia page media for supplemental ARTIST_PHOTO coverage
 - [x] **DEEP-05**: ListenBrainz batch endpoints (popularity/artist, top-release-groups, sitewide/artists)
-- [ ] **DEEP-06**: Confidence scoring standardization via ConfidenceCalculator utility
+- [x] **DEEP-06**: Confidence scoring standardization via ConfidenceCalculator utility
 
 ## Future Requirements
 
@@ -107,7 +107,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DEEP-03 | Phase 5 | Complete |
 | DEEP-04 | Phase 5 | Complete |
 | DEEP-05 | Phase 5 | Complete |
-| DEEP-06 | Phase 5 | Pending |
+| DEEP-06 | Phase 5 | Complete |
 
 **Coverage:**
 - v0.4.0 requirements: 30 total (note: REQUIREMENTS.md header previously said 25; actual count is 30)
