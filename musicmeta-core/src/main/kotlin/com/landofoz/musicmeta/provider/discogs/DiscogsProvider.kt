@@ -7,6 +7,7 @@ import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.engine.ArtistMatcher
+import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 
@@ -104,11 +105,6 @@ class DiscogsProvider(
         type = type,
         data = data,
         provider = id,
-        confidence = CONFIDENCE,
+        confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = false),
     )
-
-    private companion object {
-        /** Fuzzy search, physical-release focus. Digital albums may not match well. */
-        const val CONFIDENCE = 0.6f
-    }
 }

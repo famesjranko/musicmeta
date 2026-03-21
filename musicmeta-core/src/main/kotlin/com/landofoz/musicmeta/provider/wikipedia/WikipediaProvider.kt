@@ -7,6 +7,7 @@ import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.IdentifierRequirement
 import com.landofoz.musicmeta.ProviderCapability
+import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 
@@ -67,7 +68,7 @@ class WikipediaProvider(
             type = type,
             data = WikipediaMapper.toBiography(summary),
             provider = id,
-            confidence = CONFIDENCE,
+            confidence = ConfidenceCalculator.authoritative(),
         )
     }
 
@@ -79,7 +80,7 @@ class WikipediaProvider(
             type = type,
             data = WikipediaMapper.toArtwork(bestImage),
             provider = id,
-            confidence = PHOTO_CONFIDENCE,
+            confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = false),
         )
     }
 
@@ -102,10 +103,6 @@ class WikipediaProvider(
 
     private companion object {
         const val TAG = "WikipediaProvider"
-        /** Authoritative encyclopedia. High quality for notable artists. */
-        const val CONFIDENCE = 0.95f
-        /** Lower than Wikidata (0.9) since Wikipedia images are less curated. */
-        const val PHOTO_CONFIDENCE = 0.7f
         const val WIKIDATA_API = "https://www.wikidata.org/w/api.php"
     }
 }

@@ -6,6 +6,7 @@ import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ProviderCapability
+import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 
@@ -135,11 +136,6 @@ class LastFmProvider(
         type = type,
         data = data,
         provider = id,
-        confidence = CONFIDENCE,
+        confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
     )
-
-    private companion object {
-        /** Artist name match. Good data quality from large user base, but user-contributed. */
-        const val CONFIDENCE = 0.85f
-    }
 }

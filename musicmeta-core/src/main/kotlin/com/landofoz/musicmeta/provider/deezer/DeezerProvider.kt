@@ -8,6 +8,7 @@ import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.engine.ArtistMatcher
+import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 
@@ -75,7 +76,7 @@ class DeezerProvider(
             type = EnrichmentType.ARTIST_DISCOGRAPHY,
             data = DeezerMapper.toDiscography(albums),
             provider = id,
-            confidence = CONFIDENCE,
+            confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = false),
             resolvedIdentifiers = EnrichmentIdentifiers().withExtra("deezerId", artist.id.toString()),
         )
     }
@@ -96,7 +97,7 @@ class DeezerProvider(
             type = EnrichmentType.ALBUM_TRACKS,
             data = DeezerMapper.toTracklist(tracks),
             provider = id,
-            confidence = CONFIDENCE,
+            confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = false),
         )
     }
 
@@ -117,7 +118,7 @@ class DeezerProvider(
             type = type,
             data = DeezerMapper.toAlbumMetadata(result),
             provider = id,
-            confidence = CONFIDENCE,
+            confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
         )
     }
 
@@ -143,7 +144,7 @@ class DeezerProvider(
             type = type,
             data = artwork,
             provider = id,
-            confidence = CONFIDENCE,
+            confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
         )
     }
 
@@ -151,7 +152,6 @@ class DeezerProvider(
         DeezerMapper.toSearchCandidate(this, this@DeezerProvider.id, SEARCH_SCORE)
 
     private companion object {
-        const val CONFIDENCE = 0.7f
         const val SEARCH_SCORE = 75
     }
 }

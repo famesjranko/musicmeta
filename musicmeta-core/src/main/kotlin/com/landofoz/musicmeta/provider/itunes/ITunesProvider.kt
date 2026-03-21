@@ -7,6 +7,7 @@ import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.engine.ArtistMatcher
+import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 
@@ -78,7 +79,7 @@ class ITunesProvider(
         type = type,
         data = ITunesMapper.toAlbumMetadata(result),
         provider = id,
-        confidence = CONFIDENCE,
+        confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
     )
 
     private fun enrichAlbumArt(
@@ -92,7 +93,7 @@ class ITunesProvider(
             type = type,
             data = artwork,
             provider = id,
-            confidence = CONFIDENCE,
+            confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
         )
     }
 
@@ -101,8 +102,6 @@ class ITunesProvider(
 
     companion object {
         const val DEFAULT_ARTWORK_SIZE = 1200
-        /** Fuzzy search by artist+title. Large catalog but less precise matching than Deezer. */
-        private const val CONFIDENCE = 0.65f
         private const val SEARCH_SCORE = 70
     }
 }

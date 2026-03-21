@@ -7,6 +7,7 @@ import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.SearchCandidate
+import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 
@@ -107,7 +108,7 @@ class MusicBrainzProvider(
         val mbid = request.identifiers.musicBrainzId
         if (mbid != null) {
             val full = api.lookupRelease(mbid) ?: return EnrichmentResult.NotFound(type, id)
-            return buildAlbumResult(full, type, 1.0f)
+            return buildAlbumResult(full, type, ConfidenceCalculator.idBasedLookup())
         }
         val releases = api.searchReleases(request.title, request.artist)
         if (releases.isEmpty()) return EnrichmentResult.NotFound(type, id)
@@ -115,7 +116,7 @@ class MusicBrainzProvider(
             ?: return EnrichmentResult.NotFound(type, id)
         val needsLookup = type in RELATION_DEPENDENT_TYPES && best.tags.isEmpty() && best.label == null
         val resolved = if (needsLookup) api.lookupRelease(best.id) ?: best else best
-        return buildAlbumResult(resolved, type, best.score / 100f)
+        return buildAlbumResult(resolved, type, ConfidenceCalculator.searchScore(best.score))
     }
 
     private suspend fun enrichAlbumTracks(request: EnrichmentRequest.ForAlbum): EnrichmentResult {
@@ -128,7 +129,7 @@ class MusicBrainzProvider(
         if (release.tracks.isEmpty()) return EnrichmentResult.NotFound(type, id)
         return EnrichmentResult.Success(
             type = type, data = MusicBrainzMapper.toTracklist(release.tracks),
-            provider = id, confidence = 1.0f,
+            provider = id, confidence = ConfidenceCalculator.idBasedLookup(),
             resolvedIdentifiers = MusicBrainzMapper.toAlbumIdentifiers(release),
         )
     }
@@ -147,7 +148,7 @@ class MusicBrainzProvider(
         if (mbid != null) {
             val full = api.lookupArtist(mbid)
                 ?: return EnrichmentResult.NotFound(type, id)
-            return buildArtistResult(full, type, 1.0f)
+            return buildArtistResult(full, type, ConfidenceCalculator.idBasedLookup())
         }
 
         val artists = api.searchArtists(request.name)
@@ -168,7 +169,7 @@ class MusicBrainzProvider(
             best
         }
 
-        return buildArtistResult(resolved, type, best.score / 100f)
+        return buildArtistResult(resolved, type, ConfidenceCalculator.searchScore(best.score))
     }
 
     private suspend fun enrichArtistNewType(
@@ -189,7 +190,7 @@ class MusicBrainzProvider(
                 EnrichmentResult.Success(
                     type = type,
                     data = MusicBrainzMapper.toBandMembers(artist.bandMembers),
-                    provider = id, confidence = 1.0f,
+                    provider = id, confidence = ConfidenceCalculator.idBasedLookup(),
                     resolvedIdentifiers = MusicBrainzMapper.toArtistIdentifiers(artist),
                 )
             }
@@ -199,7 +200,7 @@ class MusicBrainzProvider(
                 EnrichmentResult.Success(
                     type = type,
                     data = MusicBrainzMapper.toDiscography(groups),
-                    provider = id, confidence = 1.0f,
+                    provider = id, confidence = ConfidenceCalculator.idBasedLookup(),
                 )
             }
             EnrichmentType.ARTIST_LINKS -> {
@@ -209,7 +210,7 @@ class MusicBrainzProvider(
                 EnrichmentResult.Success(
                     type = type,
                     data = MusicBrainzMapper.toArtistLinks(artist.urlRelations),
-                    provider = id, confidence = 1.0f,
+                    provider = id, confidence = ConfidenceCalculator.idBasedLookup(),
                     resolvedIdentifiers = MusicBrainzMapper.toArtistIdentifiers(artist),
                 )
             }
@@ -231,7 +232,7 @@ class MusicBrainzProvider(
             type = type,
             data = MusicBrainzMapper.toTrackMetadata(best),
             provider = id,
-            confidence = best.score / 100f,
+            confidence = ConfidenceCalculator.searchScore(best.score),
             resolvedIdentifiers = MusicBrainzMapper.toTrackIdentifiers(best),
         )
     }

@@ -6,6 +6,7 @@ import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.IdentifierRequirement
 import com.landofoz.musicmeta.ProviderCapability
+import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 
@@ -84,14 +85,12 @@ class ListenBrainzProvider(
         type = type,
         data = data,
         provider = id,
-        confidence = CONFIDENCE,
+        confidence = ConfidenceCalculator.authoritative(),
     )
 
     private companion object {
         const val PRIORITY = 100
         /** Fallback priority -- Last.fm is primary for track popularity. */
         const val FALLBACK_PRIORITY = 50
-        /** MBID-based lookup. Reliable but smaller user base than Last.fm. */
-        const val CONFIDENCE = 0.85f
     }
 }

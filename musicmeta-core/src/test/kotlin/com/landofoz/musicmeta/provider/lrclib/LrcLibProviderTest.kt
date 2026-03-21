@@ -96,7 +96,7 @@ class LrcLibProviderTest {
         // Then
         assertTrue(result is EnrichmentResult.Success)
         val success = result as EnrichmentResult.Success
-        assertEquals(0.7f, success.confidence)
+        assertEquals(0.6f, success.confidence)
         val lyrics = success.data as EnrichmentData.Lyrics
         assertEquals("[00:00.00] When you were here before", lyrics.syncedLyrics)
     }

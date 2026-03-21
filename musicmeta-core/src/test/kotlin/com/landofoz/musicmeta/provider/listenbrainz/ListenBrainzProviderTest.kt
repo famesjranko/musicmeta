@@ -58,7 +58,7 @@ class ListenBrainzProviderTest {
         assertTrue(result is EnrichmentResult.Success)
         val success = result as EnrichmentResult.Success
         assertEquals("listenbrainz", success.provider)
-        assertEquals(0.85f, success.confidence, 0.01f)
+        assertEquals(0.95f, success.confidence, 0.01f)
         val popularity = success.data as EnrichmentData.Popularity
         assertEquals(2, popularity.topTracks!!.size)
         assertEquals("Creep", popularity.topTracks!![0].title)

@@ -6,6 +6,7 @@ import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.IdentifierRequirement
 import com.landofoz.musicmeta.ProviderCapability
+import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 
@@ -83,7 +84,7 @@ class CoverArtArchiveProvider(
                     type = type,
                     data = CoverArtArchiveMapper.toArtwork(url, thumbUrl, frontImage),
                     provider = id,
-                    confidence = 1.0f,
+                    confidence = ConfidenceCalculator.idBasedLookup(),
                 )
             }
         }
@@ -97,7 +98,7 @@ class CoverArtArchiveProvider(
                     type = type,
                     data = CoverArtArchiveMapper.toArtwork(url, thumbUrl),
                     provider = id,
-                    confidence = 1.0f,
+                    confidence = ConfidenceCalculator.idBasedLookup(),
                 )
             }
         }
@@ -120,7 +121,7 @@ class CoverArtArchiveProvider(
             type = type,
             data = CoverArtArchiveMapper.toArtwork(image.url, image.thumbnails["small"], image),
             provider = id,
-            confidence = 1.0f,
+            confidence = ConfidenceCalculator.idBasedLookup(),
         )
     }
 

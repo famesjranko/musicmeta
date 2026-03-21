@@ -163,7 +163,7 @@ class WikipediaProviderTest {
         assertTrue(result is EnrichmentResult.Success)
         val success = result as EnrichmentResult.Success
         assertEquals("wikipedia", success.provider)
-        assertEquals(0.7f, success.confidence, 0.01f)
+        assertEquals(0.6f, success.confidence, 0.01f)
         val artwork = success.data as EnrichmentData.Artwork
         assertEquals("https://upload.wikimedia.org/wikipedia/commons/radiohead.jpg", artwork.url)
         assertEquals(800, artwork.width)

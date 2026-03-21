@@ -6,6 +6,7 @@ import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.IdentifierRequirement
 import com.landofoz.musicmeta.ProviderCapability
+import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 
@@ -57,7 +58,7 @@ class WikidataProvider(
             EnrichmentType.ARTIST_PHOTO -> {
                 val imageUrl = props.imageUrl
                     ?: return EnrichmentResult.NotFound(type, id)
-                EnrichmentResult.Success(type, WikidataMapper.toArtwork(imageUrl), id, CONFIDENCE)
+                EnrichmentResult.Success(type, WikidataMapper.toArtwork(imageUrl), id, ConfidenceCalculator.authoritative())
             }
             EnrichmentType.COUNTRY -> {
                 val metadata = WikidataMapper.toMetadata(props)
@@ -66,7 +67,7 @@ class WikidataProvider(
                 ) {
                     return EnrichmentResult.NotFound(type, id)
                 }
-                EnrichmentResult.Success(type, metadata, id, CONFIDENCE)
+                EnrichmentResult.Success(type, metadata, id, ConfidenceCalculator.authoritative())
             }
             else -> EnrichmentResult.NotFound(type, id)
         }
@@ -75,7 +76,5 @@ class WikidataProvider(
     companion object {
         const val DEFAULT_IMAGE_SIZE = 1200
         private const val PRIORITY = 100
-        /** MBID-based Wikidata ID lookup. Authoritative source, but image quality varies. */
-        private const val CONFIDENCE = 0.9f
     }
 }

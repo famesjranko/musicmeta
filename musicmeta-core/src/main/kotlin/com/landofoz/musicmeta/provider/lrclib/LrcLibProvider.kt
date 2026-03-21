@@ -5,6 +5,7 @@ import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ProviderCapability
+import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 
@@ -65,7 +66,7 @@ class LrcLibProvider(
             durationSec = durationSec,
         )
         if (exactResult != null) {
-            return toEnrichmentResult(exactResult, type, EXACT_MATCH_CONFIDENCE)
+            return toEnrichmentResult(exactResult, type, ConfidenceCalculator.authoritative())
         }
 
         // Fall back to search
@@ -73,7 +74,7 @@ class LrcLibProvider(
         val bestMatch = searchResults.firstOrNull()
             ?: return EnrichmentResult.NotFound(type, id)
 
-        return toEnrichmentResult(bestMatch, type, SEARCH_MATCH_CONFIDENCE)
+        return toEnrichmentResult(bestMatch, type, ConfidenceCalculator.fuzzyMatch(hasArtistMatch = false))
     }
 
     private fun toEnrichmentResult(
@@ -95,10 +96,5 @@ class LrcLibProvider(
             provider = id,
             confidence = confidence,
         )
-    }
-
-    companion object {
-        private const val EXACT_MATCH_CONFIDENCE = 0.95f
-        private const val SEARCH_MATCH_CONFIDENCE = 0.7f
     }
 }

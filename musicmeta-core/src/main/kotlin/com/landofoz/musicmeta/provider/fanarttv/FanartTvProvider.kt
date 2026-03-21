@@ -7,6 +7,7 @@ import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.IdentifierRequirement
 import com.landofoz.musicmeta.ProviderCapability
+import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 
@@ -85,11 +86,6 @@ class FanartTvProvider(
         type = type,
         data = data,
         provider = id,
-        confidence = CONFIDENCE,
+        confidence = ConfidenceCalculator.authoritative(),
     )
-
-    private companion object {
-        /** MBID-based lookup. Community-curated images, authoritative when available. */
-        const val CONFIDENCE = 0.9f
-    }
 }

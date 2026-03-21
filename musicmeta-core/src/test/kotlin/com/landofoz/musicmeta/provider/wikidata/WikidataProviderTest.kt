@@ -46,7 +46,7 @@ class WikidataProviderTest {
         assertTrue(result is EnrichmentResult.Success)
         val success = result as EnrichmentResult.Success
         assertEquals("wikidata", success.provider)
-        assertEquals(0.9f, success.confidence, 0.01f)
+        assertEquals(0.95f, success.confidence, 0.01f)
         val artwork = success.data as EnrichmentData.Artwork
         assertTrue(artwork.url.contains("Radiohead"))
         assertTrue(artwork.url.contains("width=1200"))
