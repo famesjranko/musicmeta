@@ -167,6 +167,75 @@ class MusicBrainzParserTest {
     }
 
     @Test
+    fun `parseBandMembers extracts members from artist-rels`() {
+        // Given -- artist lookup response with member-of-band relations
+        val json = JSONObject(ARTIST_WITH_BAND_MEMBERS)
+
+        // When -- parsing band members
+        val members = MusicBrainzParser.parseBandMembers(json)
+
+        // Then -- members extracted with name, role, dates
+        assertEquals(2, members.size)
+        assertEquals("Thom Yorke", members[0].name)
+        assertEquals("lead vocals", members[0].role)
+        assertEquals("1985", members[0].beginDate)
+        assertNull(members[0].endDate)
+        assertEquals(false, members[0].ended)
+        assertEquals("Jonny Greenwood", members[1].name)
+        assertEquals("guitar", members[1].role)
+    }
+
+    @Test
+    fun `parseReleaseGroups extracts albums from browse response`() {
+        // Given -- browse release-groups response
+        val json = JSONObject(RELEASE_GROUPS_BROWSE)
+
+        // When -- parsing release groups
+        val groups = MusicBrainzParser.parseReleaseGroups(json)
+
+        // Then -- release groups extracted with title, type, date
+        assertEquals(2, groups.size)
+        assertEquals("OK Computer", groups[0].title)
+        assertEquals("Album", groups[0].primaryType)
+        assertEquals("1997-06-16", groups[0].firstReleaseDate)
+        assertEquals("The Bends", groups[1].title)
+    }
+
+    @Test
+    fun `parseMedia extracts tracks from release`() {
+        // Given -- release lookup with media array
+        val json = JSONObject(RELEASE_WITH_MEDIA)
+
+        // When -- parsing media tracks
+        val tracks = MusicBrainzParser.parseMedia(json)
+
+        // Then -- tracks extracted with title, position, length, recording id
+        assertEquals(2, tracks.size)
+        assertEquals("Airbag", tracks[0].title)
+        assertEquals(1, tracks[0].position)
+        assertEquals(284000L, tracks[0].lengthMs)
+        assertEquals("rec-1", tracks[0].id)
+        assertEquals("Paranoid Android", tracks[1].title)
+        assertEquals(2, tracks[1].position)
+    }
+
+    @Test
+    fun `parseUrlRelations extracts external links and excludes wikidata and wikipedia`() {
+        // Given -- artist with URL relations including wikidata and wikipedia
+        val json = JSONObject(ARTIST_WITH_URL_RELATIONS)
+
+        // When -- parsing URL relations
+        val relations = MusicBrainzParser.parseUrlRelations(json)
+
+        // Then -- external links extracted, wikidata and wikipedia excluded
+        assertEquals(2, relations.size)
+        assertEquals("official homepage", relations[0].type)
+        assertEquals("https://radiohead.com", relations[0].url)
+        assertEquals("bandcamp", relations[1].type)
+        assertEquals("https://radiohead.bandcamp.com", relations[1].url)
+    }
+
+    @Test
     fun `extractArtistCredit concatenates names with join phrases`() {
         // Given — artist-credit array with two artists and a "feat." join phrase
         val obj = JSONObject(
@@ -280,6 +349,105 @@ class MusicBrainzParserTest {
               "date": "1995-03-13",
               "country": "GB",
               "release-group": {"id": "rg1", "primary-type": "Album"}
+            }
+        """.trimIndent()
+
+        private val ARTIST_WITH_BAND_MEMBERS = """
+            {
+              "id": "art1",
+              "name": "Radiohead",
+              "relations": [
+                {
+                  "type": "member of band",
+                  "artist": {"id": "m1", "name": "Thom Yorke"},
+                  "attributes": ["lead vocals"],
+                  "begin": "1985",
+                  "ended": false
+                },
+                {
+                  "type": "member of band",
+                  "artist": {"id": "m2", "name": "Jonny Greenwood"},
+                  "attributes": ["guitar"],
+                  "begin": "1985",
+                  "ended": false
+                },
+                {
+                  "type": "wikidata",
+                  "target-type": "url",
+                  "url": {"resource": "https://www.wikidata.org/wiki/Q188451"}
+                }
+              ]
+            }
+        """.trimIndent()
+
+        private val RELEASE_GROUPS_BROWSE = """
+            {
+              "release-groups": [
+                {
+                  "id": "rg1",
+                  "title": "OK Computer",
+                  "primary-type": "Album",
+                  "first-release-date": "1997-06-16"
+                },
+                {
+                  "id": "rg2",
+                  "title": "The Bends",
+                  "primary-type": "Album",
+                  "first-release-date": "1995-03-13"
+                }
+              ]
+            }
+        """.trimIndent()
+
+        private val RELEASE_WITH_MEDIA = """
+            {
+              "id": "rel1",
+              "title": "OK Computer",
+              "media": [{
+                "tracks": [
+                  {
+                    "title": "Airbag",
+                    "position": 1,
+                    "length": 284000,
+                    "recording": {"id": "rec-1"}
+                  },
+                  {
+                    "title": "Paranoid Android",
+                    "position": 2,
+                    "length": 383000,
+                    "recording": {"id": "rec-2"}
+                  }
+                ]
+              }]
+            }
+        """.trimIndent()
+
+        private val ARTIST_WITH_URL_RELATIONS = """
+            {
+              "id": "art1",
+              "name": "Radiohead",
+              "relations": [
+                {
+                  "type": "official homepage",
+                  "target-type": "url",
+                  "url": {"resource": "https://radiohead.com"}
+                },
+                {
+                  "type": "bandcamp",
+                  "target-type": "url",
+                  "url": {"resource": "https://radiohead.bandcamp.com"}
+                },
+                {
+                  "type": "wikidata",
+                  "target-type": "url",
+                  "url": {"resource": "https://www.wikidata.org/wiki/Q188451"}
+                },
+                {
+                  "type": "wikipedia",
+                  "target-type": "url",
+                  "url": {"resource": "https://en.wikipedia.org/wiki/Radiohead"}
+                }
+              ]
             }
         """.trimIndent()
 

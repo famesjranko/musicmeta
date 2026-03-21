@@ -1,6 +1,7 @@
 package com.landofoz.musicmeta.provider.musicbrainz
 
 import com.landofoz.musicmeta.EnrichmentData
+import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
@@ -173,6 +174,99 @@ class MusicBrainzProviderTest {
         assertEquals("rec1", success.resolvedIdentifiers?.musicBrainzId)
     }
 
+    @Test
+    fun `enrich returns BandMembers for artist with members`() = runTest {
+        // Given -- artist lookup with artist-rels returns band member relations
+        httpClient.givenJsonResponse("artist/art1?fmt=json&inc=tags+url-rels+artist-rels", ARTIST_LOOKUP_WITH_MEMBERS)
+        val request = EnrichmentRequest.forArtist("Radiohead")
+            .withIdentifiers(EnrichmentIdentifiers(musicBrainzId = "art1"))
+
+        // When -- enriching for BAND_MEMBERS
+        val result = provider.enrich(request, EnrichmentType.BAND_MEMBERS)
+
+        // Then -- Success with BandMembers data containing member names and roles
+        assertTrue(result is EnrichmentResult.Success)
+        val success = result as EnrichmentResult.Success
+        val data = success.data as EnrichmentData.BandMembers
+        assertEquals(2, data.members.size)
+        assertEquals("Thom Yorke", data.members[0].name)
+        assertEquals("lead vocals", data.members[0].role)
+    }
+
+    @Test
+    fun `enrich returns NotFound for BandMembers when no members in relations`() = runTest {
+        // Given -- artist lookup returns no member-of-band relations
+        httpClient.givenJsonResponse("artist/art1?fmt=json&inc=tags+url-rels+artist-rels", ARTIST_LOOKUP_NO_MEMBERS)
+        val request = EnrichmentRequest.forArtist("Radiohead")
+            .withIdentifiers(EnrichmentIdentifiers(musicBrainzId = "art1"))
+
+        // When -- enriching for BAND_MEMBERS
+        val result = provider.enrich(request, EnrichmentType.BAND_MEMBERS)
+
+        // Then -- NotFound because no band members in relations
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `enrich returns Discography for artist`() = runTest {
+        // Given -- artist search followed by release-group browse
+        httpClient.givenJsonResponse("artist?query", ARTIST_SEARCH_WITH_WIKIDATA)
+        httpClient.givenJsonResponse("release-group?artist=art1", RELEASE_GROUP_BROWSE)
+        val request = EnrichmentRequest.forArtist("Radiohead")
+            .withIdentifiers(EnrichmentIdentifiers(musicBrainzId = "art1"))
+
+        // When -- enriching for ARTIST_DISCOGRAPHY
+        val result = provider.enrich(request, EnrichmentType.ARTIST_DISCOGRAPHY)
+
+        // Then -- Success with Discography data
+        assertTrue(result is EnrichmentResult.Success)
+        val success = result as EnrichmentResult.Success
+        val data = success.data as EnrichmentData.Discography
+        assertEquals(2, data.albums.size)
+        assertEquals("OK Computer", data.albums[0].title)
+        assertEquals("1997", data.albums[0].year)
+        assertEquals("Album", data.albums[0].type)
+    }
+
+    @Test
+    fun `enrich returns Tracklist for album`() = runTest {
+        // Given -- release lookup with media array
+        httpClient.givenJsonResponse("release/rel1?fmt=json", RELEASE_LOOKUP_WITH_TRACKS)
+        val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+            .withIdentifiers(EnrichmentIdentifiers(musicBrainzId = "rel1"))
+
+        // When -- enriching for ALBUM_TRACKS
+        val result = provider.enrich(request, EnrichmentType.ALBUM_TRACKS)
+
+        // Then -- Success with Tracklist data
+        assertTrue(result is EnrichmentResult.Success)
+        val success = result as EnrichmentResult.Success
+        val data = success.data as EnrichmentData.Tracklist
+        assertEquals(2, data.tracks.size)
+        assertEquals("Airbag", data.tracks[0].title)
+        assertEquals(1, data.tracks[0].position)
+        assertEquals(284000L, data.tracks[0].durationMs)
+    }
+
+    @Test
+    fun `enrich returns ArtistLinks for artist`() = runTest {
+        // Given -- artist lookup with URL relations
+        httpClient.givenJsonResponse("artist/art1?fmt=json&inc=tags+url-rels", ARTIST_LOOKUP_WITH_LINKS)
+        val request = EnrichmentRequest.forArtist("Radiohead")
+            .withIdentifiers(EnrichmentIdentifiers(musicBrainzId = "art1"))
+
+        // When -- enriching for ARTIST_LINKS
+        val result = provider.enrich(request, EnrichmentType.ARTIST_LINKS)
+
+        // Then -- Success with ArtistLinks data, wikidata/wikipedia excluded
+        assertTrue(result is EnrichmentResult.Success)
+        val success = result as EnrichmentResult.Success
+        val data = success.data as EnrichmentData.ArtistLinks
+        assertEquals(2, data.links.size)
+        assertEquals("official homepage", data.links[0].type)
+        assertEquals("https://radiohead.com", data.links[0].url)
+    }
+
     companion object {
         private val RELEASE_SEARCH_HIGH_SCORE = """
             {
@@ -241,6 +335,122 @@ class MusicBrainzProviderTest {
                   }
                 ]
               }]
+            }
+        """.trimIndent()
+
+        private val ARTIST_LOOKUP_WITH_MEMBERS = """
+            {
+              "id": "art1",
+              "name": "Radiohead",
+              "type": "Group",
+              "tags": [{"name": "rock", "count": 5}],
+              "relations": [
+                {
+                  "type": "member of band",
+                  "artist": {"id": "m1", "name": "Thom Yorke"},
+                  "attributes": ["lead vocals"],
+                  "begin": "1985",
+                  "ended": false
+                },
+                {
+                  "type": "member of band",
+                  "artist": {"id": "m2", "name": "Jonny Greenwood"},
+                  "attributes": ["guitar"],
+                  "begin": "1985",
+                  "ended": false
+                }
+              ]
+            }
+        """.trimIndent()
+
+        private val ARTIST_LOOKUP_NO_MEMBERS = """
+            {
+              "id": "art1",
+              "name": "Radiohead",
+              "type": "Group",
+              "tags": [{"name": "rock", "count": 5}],
+              "relations": [
+                {
+                  "type": "wikidata",
+                  "target-type": "url",
+                  "url": {"resource": "https://www.wikidata.org/wiki/Q188451"}
+                }
+              ]
+            }
+        """.trimIndent()
+
+        private val RELEASE_GROUP_BROWSE = """
+            {
+              "release-groups": [
+                {
+                  "id": "rg1",
+                  "title": "OK Computer",
+                  "primary-type": "Album",
+                  "first-release-date": "1997-06-16"
+                },
+                {
+                  "id": "rg2",
+                  "title": "The Bends",
+                  "primary-type": "Album",
+                  "first-release-date": "1995-03-13"
+                }
+              ]
+            }
+        """.trimIndent()
+
+        private val RELEASE_LOOKUP_WITH_TRACKS = """
+            {
+              "id": "rel1",
+              "title": "OK Computer",
+              "artist-credit": [{"artist": {"name": "Radiohead"}}],
+              "release-group": {"id": "rg1", "primary-type": "Album"},
+              "media": [{
+                "tracks": [
+                  {
+                    "title": "Airbag",
+                    "position": 1,
+                    "length": 284000,
+                    "recording": {"id": "rec-1"}
+                  },
+                  {
+                    "title": "Paranoid Android",
+                    "position": 2,
+                    "length": 383000,
+                    "recording": {"id": "rec-2"}
+                  }
+                ]
+              }]
+            }
+        """.trimIndent()
+
+        private val ARTIST_LOOKUP_WITH_LINKS = """
+            {
+              "id": "art1",
+              "name": "Radiohead",
+              "type": "Group",
+              "tags": [{"name": "rock", "count": 5}],
+              "relations": [
+                {
+                  "type": "official homepage",
+                  "target-type": "url",
+                  "url": {"resource": "https://radiohead.com"}
+                },
+                {
+                  "type": "bandcamp",
+                  "target-type": "url",
+                  "url": {"resource": "https://radiohead.bandcamp.com"}
+                },
+                {
+                  "type": "wikidata",
+                  "target-type": "url",
+                  "url": {"resource": "https://www.wikidata.org/wiki/Q188451"}
+                },
+                {
+                  "type": "wikipedia",
+                  "target-type": "url",
+                  "url": {"resource": "https://en.wikipedia.org/wiki/Radiohead"}
+                }
+              ]
             }
         """.trimIndent()
 
