@@ -22,9 +22,7 @@ class ProviderRegistry(
     fun supportedTypes(): Set<EnrichmentType> = chains.keys
 
     fun identityProvider(): EnrichmentProvider? =
-        allProviders.firstOrNull { provider ->
-            provider.capabilities.any { it.type == EnrichmentType.GENRE || it.type == EnrichmentType.LABEL }
-        }
+        allProviders.firstOrNull { it.isIdentityProvider }
 
     /** Providers that may have search capability, excluding the identity provider. */
     fun searchProviders(): List<EnrichmentProvider> {

@@ -5,6 +5,7 @@ import com.landofoz.musicmeta.EnrichmentProvider
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
+import com.landofoz.musicmeta.IdentifierRequirement
 import com.landofoz.musicmeta.http.CircuitBreaker
 
 class ProviderChain(
@@ -41,12 +42,18 @@ class ProviderChain(
         provider: EnrichmentProvider,
         identifiers: EnrichmentIdentifiers,
     ): Boolean {
-        val capability = provider.capabilities.firstOrNull { it.type == type }
-        if (capability == null || !capability.requiresIdentifier) return true
-        return identifiers.musicBrainzId != null ||
-            identifiers.musicBrainzReleaseGroupId != null ||
-            identifiers.wikidataId != null ||
-            identifiers.wikipediaTitle != null
+        val capability = provider.capabilities.firstOrNull { it.type == type } ?: return true
+        return when (capability.identifierRequirement) {
+            IdentifierRequirement.NONE -> true
+            IdentifierRequirement.MUSICBRAINZ_ID -> identifiers.musicBrainzId != null
+            IdentifierRequirement.MUSICBRAINZ_RELEASE_GROUP_ID -> identifiers.musicBrainzReleaseGroupId != null
+            IdentifierRequirement.WIKIDATA_ID -> identifiers.wikidataId != null
+            IdentifierRequirement.WIKIPEDIA_TITLE -> identifiers.wikipediaTitle != null || identifiers.wikidataId != null
+            IdentifierRequirement.ANY_IDENTIFIER -> identifiers.musicBrainzId != null ||
+                identifiers.musicBrainzReleaseGroupId != null ||
+                identifiers.wikidataId != null ||
+                identifiers.wikipediaTitle != null
+        }
     }
 
     fun providerCount(): Int = providers.size

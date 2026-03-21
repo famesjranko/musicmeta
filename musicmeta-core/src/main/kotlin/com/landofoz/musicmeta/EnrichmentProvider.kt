@@ -25,6 +25,16 @@ interface EnrichmentProvider {
     /** Whether this provider is currently usable (has key if needed, etc.). */
     val isAvailable: Boolean
 
+    /** Whether this provider resolves identifiers (MBIDs, Wikidata IDs, etc.) for downstream providers. */
+    val isIdentityProvider: Boolean get() = false
+
+    /**
+     * Resolve identifiers for the given request. Only meaningful when [isIdentityProvider] is true.
+     * Returns a Success with IdentifierResolution data, or NotFound/Error.
+     */
+    suspend fun resolveIdentity(request: EnrichmentRequest): EnrichmentResult =
+        EnrichmentResult.NotFound(EnrichmentType.GENRE, id)
+
     /**
      * Attempt to enrich a music entity for a specific type.
      *
@@ -52,15 +62,29 @@ interface EnrichmentProvider {
 }
 
 /**
+ * What kind of resolved identifier a provider capability needs to operate.
+ *
+ * NONE — provider can search by title/artist (e.g., MusicBrainz, Deezer).
+ * Typed values — provider requires a specific identifier from identity resolution.
+ */
+enum class IdentifierRequirement {
+    NONE,
+    MUSICBRAINZ_ID,
+    MUSICBRAINZ_RELEASE_GROUP_ID,
+    WIKIDATA_ID,
+    WIKIPEDIA_TITLE,
+    ANY_IDENTIFIER,
+}
+
+/**
  * Declares that a provider can supply a specific enrichment type.
  *
  * @param type The enrichment type this capability covers
  * @param priority Higher = tried first. 100 = primary source, 50 = fallback.
- * @param requiresIdentifier True if this capability needs a resolved ID (MBID, etc.)
- *   rather than just title/artist search
+ * @param identifierRequirement What resolved identifier this capability needs
  */
 data class ProviderCapability(
     val type: EnrichmentType,
     val priority: Int,
-    val requiresIdentifier: Boolean = false,
+    val identifierRequirement: IdentifierRequirement = IdentifierRequirement.NONE,
 )

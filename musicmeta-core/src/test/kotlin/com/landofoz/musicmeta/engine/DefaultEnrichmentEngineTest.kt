@@ -98,9 +98,9 @@ class DefaultEnrichmentEngineTest {
 
     @Test fun `enrich with identity resolution enriches identifiers`() = runTest {
         // Given — identity provider resolves MBID, art provider requires identifier
-        val idProvider = FakeProvider(id = "mb", capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)))
+        val idProvider = FakeProvider(id = "mb", isIdentityProvider = true, capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)))
             .also { it.givenResult(EnrichmentType.GENRE, EnrichmentResult.Success(EnrichmentType.GENRE, EnrichmentData.IdentifierResolution(musicBrainzId = "mbid-123", wikidataId = "Q123"), "mb", 0.95f)) }
-        val artProvider = FakeProvider(id = "caa", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100, requiresIdentifier = true)))
+        val artProvider = FakeProvider(id = "caa", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100, identifierRequirement = IdentifierRequirement.MUSICBRAINZ_ID)))
             .also { it.givenResult(EnrichmentType.ALBUM_ART, art("caa")) }
         val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider, artProvider)), cache, FakeHttpClient(), EnrichmentConfig(enableIdentityResolution = true))
 
@@ -134,6 +134,7 @@ class DefaultEnrichmentEngineTest {
         )
         val p = FakeProviderWithSearch(
             id = "mb",
+            isIdentityProvider = true,
             capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)),
             candidates = listOf(candidate),
         )
@@ -165,7 +166,7 @@ class DefaultEnrichmentEngineTest {
             wikidataId = "Q123",
             metadata = EnrichmentData.Metadata(genres = listOf("rock", "alternative"), label = "Parlophone"),
         )
-        val idProvider = FakeProvider(id = "mb", capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)))
+        val idProvider = FakeProvider(id = "mb", isIdentityProvider = true, capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)))
             .also { it.givenResult(EnrichmentType.GENRE, EnrichmentResult.Success(EnrichmentType.GENRE, resolution, "mb", 0.95f)) }
         val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider)), cache, FakeHttpClient(), EnrichmentConfig(enableIdentityResolution = true))
 
@@ -190,9 +191,9 @@ class DefaultEnrichmentEngineTest {
             musicBrainzId = "mbid-456", wikidataId = "Q456", wikipediaTitle = "Radiohead",
             metadata = EnrichmentData.Metadata(genres = listOf("rock")),
         )
-        val idProvider = FakeProvider(id = "mb", capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)))
+        val idProvider = FakeProvider(id = "mb", isIdentityProvider = true, capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)))
             .also { it.givenResult(EnrichmentType.GENRE, EnrichmentResult.Success(EnrichmentType.GENRE, resolution, "mb", 0.95f)) }
-        val bioProvider = FakeProvider(id = "wp", capabilities = listOf(ProviderCapability(EnrichmentType.ARTIST_BIO, 100, requiresIdentifier = true)))
+        val bioProvider = FakeProvider(id = "wp", capabilities = listOf(ProviderCapability(EnrichmentType.ARTIST_BIO, 100, identifierRequirement = IdentifierRequirement.WIKIPEDIA_TITLE)))
             .also { it.givenResult(EnrichmentType.ARTIST_BIO, EnrichmentResult.Success(EnrichmentType.ARTIST_BIO, EnrichmentData.Biography("bio text", "Wikipedia"), "wp", 0.9f)) }
         val artistReq = EnrichmentRequest.forArtist("Radiohead")
         val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider, bioProvider)), cache, FakeHttpClient(), EnrichmentConfig(enableIdentityResolution = true))
@@ -210,7 +211,7 @@ class DefaultEnrichmentEngineTest {
     @Test fun `identity resolution without metadata still resolves via provider chain`() = runTest {
         // Given — identity provider returns IdentifierResolution with null metadata
         val resolution = EnrichmentData.IdentifierResolution(musicBrainzId = "mbid-789", metadata = null)
-        val idProvider = FakeProvider(id = "mb", capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)))
+        val idProvider = FakeProvider(id = "mb", isIdentityProvider = true, capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)))
             .also { it.givenResult(EnrichmentType.GENRE, EnrichmentResult.Success(EnrichmentType.GENRE, resolution, "mb", 0.95f)) }
         val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider)), cache, FakeHttpClient(), EnrichmentConfig(enableIdentityResolution = true))
 
@@ -246,7 +247,7 @@ class DefaultEnrichmentEngineTest {
         // Given — MB returns 1 candidate, Deezer has a different album
         val mbCandidate = SearchCandidate("OK Computer", "Radiohead", "1997", "GB", "Album", 98, null, EnrichmentIdentifiers(musicBrainzId = "abc"), "mb")
         val deezerCandidate = SearchCandidate("The Bends", "Radiohead", null, null, null, 75, "https://img.deezer.com/123", EnrichmentIdentifiers(), "deezer")
-        val mb = FakeProviderWithSearch(id = "mb", capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)), candidates = listOf(mbCandidate))
+        val mb = FakeProviderWithSearch(id = "mb", isIdentityProvider = true, capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)), candidates = listOf(mbCandidate))
         val deezer = FakeProviderWithSearch(id = "deezer", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 50)), candidates = listOf(deezerCandidate))
 
         // When — searching with limit 10 (primary only has 1)
@@ -263,7 +264,7 @@ class DefaultEnrichmentEngineTest {
         val candidates = (1..5).map { i ->
             SearchCandidate("Album $i", "Artist", null, null, null, 90, null, EnrichmentIdentifiers(), "mb")
         }
-        val mb = FakeProviderWithSearch(id = "mb", capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)), candidates = candidates)
+        val mb = FakeProviderWithSearch(id = "mb", isIdentityProvider = true, capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)), candidates = candidates)
         val deezer = FakeProviderWithSearch(id = "deezer", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 50)), candidates = listOf(
             SearchCandidate("Should Not Appear", "Artist", null, null, null, 75, null, EnrichmentIdentifiers(), "deezer"),
         ))
@@ -310,8 +311,9 @@ class DefaultEnrichmentEngineTest {
 private class FakeProviderWithSearch(
     id: String,
     capabilities: List<ProviderCapability>,
+    isIdentityProvider: Boolean = false,
     private val candidates: List<SearchCandidate> = emptyList(),
-) : FakeProvider(id = id, capabilities = capabilities) {
+) : FakeProvider(id = id, capabilities = capabilities, isIdentityProvider = isIdentityProvider) {
     override suspend fun searchCandidates(
         request: EnrichmentRequest,
         limit: Int,

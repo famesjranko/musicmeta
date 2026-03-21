@@ -12,6 +12,7 @@ open class FakeProvider(
     override val capabilities: List<ProviderCapability> = emptyList(),
     override val requiresApiKey: Boolean = false,
     override val isAvailable: Boolean = true,
+    override val isIdentityProvider: Boolean = false,
 ) : EnrichmentProvider {
     private val results = mutableMapOf<EnrichmentType, EnrichmentResult>()
     val enrichCalls = mutableListOf<Pair<EnrichmentRequest, EnrichmentType>>()
