@@ -1,5 +1,19 @@
 package com.landofoz.musicmeta
 
+/** Categorizes the type of error for programmatic handling. */
+enum class ErrorKind {
+    /** Network connectivity or timeout failure. */
+    NETWORK,
+    /** Authentication or authorization failure (401/403). */
+    AUTH,
+    /** Response parsing failure (malformed JSON, unexpected schema). */
+    PARSE,
+    /** Rate limit exceeded (429). */
+    RATE_LIMIT,
+    /** Uncategorized error. */
+    UNKNOWN,
+}
+
 /**
  * Outcome of an enrichment attempt for a single type.
  *
@@ -53,5 +67,6 @@ sealed class EnrichmentResult {
         val provider: String,
         val message: String,
         val cause: Throwable? = null,
+        val errorKind: ErrorKind = ErrorKind.UNKNOWN,
     ) : EnrichmentResult()
 }
