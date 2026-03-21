@@ -1,6 +1,7 @@
 package com.landofoz.musicmeta.provider.discogs
 
 import com.landofoz.musicmeta.BandMember
+import com.landofoz.musicmeta.Credit
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
 
@@ -32,6 +33,57 @@ object DiscogsMapper {
             genres = (release.genres.orEmpty() + release.styles.orEmpty())
                 .takeIf { it.isNotEmpty() },
         )
+
+    fun toCredits(credits: List<DiscogsCredit>): EnrichmentData.Credits =
+        EnrichmentData.Credits(
+            credits = credits.map { credit ->
+                Credit(
+                    name = credit.name,
+                    role = credit.role,
+                    roleCategory = mapRoleCategory(credit.role),
+                    identifiers = if (credit.id != null) {
+                        EnrichmentIdentifiers().withExtra("discogsArtistId", credit.id.toString())
+                    } else EnrichmentIdentifiers(),
+                )
+            },
+        )
+
+    internal fun mapRoleCategory(role: String): String? {
+        val lower = role.lowercase()
+        return when {
+            // Performance
+            lower.contains("vocal") -> "performance"
+            lower.contains("guitar") -> "performance"
+            lower.contains("bass") -> "performance"
+            lower.contains("drum") -> "performance"
+            lower.contains("keyboard") -> "performance"
+            lower.contains("piano") -> "performance"
+            lower.contains("percussion") -> "performance"
+            lower.contains("instrument") -> "performance"
+            lower.contains("perform") -> "performance"
+            lower.contains("featuring") -> "performance"
+            lower.contains("orchestra") -> "performance"
+            lower.contains("choir") -> "performance"
+            lower.contains("strings") -> "performance"
+            // Production
+            lower.contains("produc") -> "production"
+            lower.contains("engineer") -> "production"
+            lower.contains("mix") -> "production"
+            lower.contains("master") -> "production"
+            lower.contains("record") -> "production"
+            lower.contains("remix") -> "production"
+            lower.contains("program") -> "production"
+            // Songwriting
+            lower.contains("written") -> "songwriting"
+            lower.contains("writer") -> "songwriting"
+            lower.contains("compos") -> "songwriting"
+            lower.contains("lyric") -> "songwriting"
+            lower.contains("arrang") -> "songwriting"
+            lower.contains("music by") -> "songwriting"
+            lower.contains("words by") -> "songwriting"
+            else -> null
+        }
+    }
 
     fun toBandMembers(artist: DiscogsArtist): EnrichmentData.BandMembers =
         EnrichmentData.BandMembers(
