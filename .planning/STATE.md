@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v0.5.0
 milestone_name: New Capabilities & Tech Debt Cleanup
 status: unknown
-stopped_at: Completed 06-tech-debt-cleanup/06-04-PLAN.md
-last_updated: "2026-03-21T16:23:12.697Z"
+stopped_at: Completed 07-credits-personnel/07-01-PLAN.md
+last_updated: "2026-03-21T16:41:57.434Z"
 progress:
   total_phases: 6
   completed_phases: 1
-  total_plans: 4
-  completed_plans: 4
+  total_plans: 6
+  completed_plans: 5
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-22)
 
 **Core value:** Consumers get comprehensive, accurate music metadata from a single enrich() call without knowing which APIs exist, how they authenticate, or how to correlate identifiers across services.
-**Current focus:** Phase 06 — Tech Debt Cleanup
+**Current focus:** Phase 07 — Credits & Personnel
 
 ## Current Position
 
-Phase: 7
-Plan: Not started
+Phase: 07 (Credits & Personnel) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -45,6 +45,7 @@ Plan: Not started
 | Phase 06-tech-debt-cleanup P03 | 15 | 2 tasks | 12 files |
 | Phase 06-tech-debt-cleanup P02 | 15 | 2 tasks | 9 files |
 | Phase 06-tech-debt-cleanup P04 | 15 | 2 tasks | 6 files |
+| Phase 07-credits-personnel P01 | 25 | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -62,6 +63,9 @@ Plan: Not started
 - [Phase 06-tech-debt-cleanup]: CoverArtArchiveApi fetchRedirectUrl calls left unchanged — redirect pattern has no HttpResult equivalent and is semantically distinct from JSON fetches
 - [Phase 06-tech-debt-cleanup]: MusicBrainzApi rateLimiter.execute block uses return@execute null in else branch to preserve nullable return contract while using fetchJsonResult internally
 - [Phase 06-tech-debt-cleanup]: Discogs IDs stored via extra map keys discogsReleaseId/discogsMasterId consistent with withExtra pattern; masterId omitted when master_id=0 as Discogs uses 0 for absent master
+- [Phase 07-credits-personnel]: lookupRecording returns raw JSONObject to avoid bloating MusicBrainzRecording with optional relation fields only present during lookup
+- [Phase 07-credits-personnel]: enrichTrackCredits dispatched via type-check guard at top of enrichTrack, consistent with enrichAlbumTracks pattern
+- [Phase 07-credits-personnel]: Work-rel composer/lyricist/arranger extracted from nested work.relations when top-level rel is performance/work; mapArtistRelType/mapWorkRelType helpers centralize role-to-category mapping
 
 ### Pending Todos
 
@@ -73,6 +77,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T16:19:37.538Z
-Stopped at: Completed 06-tech-debt-cleanup/06-04-PLAN.md
+Last session: 2026-03-21T16:41:57.432Z
+Stopped at: Completed 07-credits-personnel/07-01-PLAN.md
 Resume file: None

@@ -16,10 +16,10 @@ Requirements for v0.5.0 milestone. Each maps to roadmap phases.
 
 ### Credits
 
-- [ ] **CRED-01**: User can enrich track-level credits (performers, producers, composers, engineers) via CREDITS type
-- [ ] **CRED-02**: MusicBrainz provides recording credits from artist-rels and work-rels at priority 100
+- [x] **CRED-01**: User can enrich track-level credits (performers, producers, composers, engineers) via CREDITS type
+- [x] **CRED-02**: MusicBrainz provides recording credits from artist-rels and work-rels at priority 100
 - [ ] **CRED-03**: Discogs provides release credits from extraartists at priority 50
-- [ ] **CRED-04**: Credits include roleCategory grouping (performance, production, songwriting)
+- [x] **CRED-04**: Credits include roleCategory grouping (performance, production, songwriting)
 
 ### Editions
 
@@ -74,10 +74,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DEBT-02 | Phase 6 | Complete |
 | DEBT-03 | Phase 6 | Complete |
 | DEBT-04 | Phase 6 | Complete |
-| CRED-01 | Phase 7 | Pending |
-| CRED-02 | Phase 7 | Pending |
+| CRED-01 | Phase 7 | Complete |
+| CRED-02 | Phase 7 | Complete |
 | CRED-03 | Phase 7 | Pending |
-| CRED-04 | Phase 7 | Pending |
+| CRED-04 | Phase 7 | Complete |
 | EDIT-01 | Phase 8 | Pending |
 | EDIT-02 | Phase 8 | Pending |
 | EDIT-03 | Phase 8 | Pending |
