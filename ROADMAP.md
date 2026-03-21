@@ -18,203 +18,73 @@ An open-source music metadata engine that any app can drop in to get **everythin
 
 ---
 
-## Where We Are (v0.1.0)
+## Where We Are (v0.4.0)
 
-### Strengths
+### What Changed Since v0.1.0
 
-The **architecture is solid** and ready to scale:
+v0.4.0 was a **Provider Abstraction Overhaul** — 5 phases, 15 plans, 31 tasks, shipped 2026-03-21.
 
-- 11 providers wired with priority chains, circuit breakers, rate limiting
-- Identity resolution pipeline (MusicBrainz → MBID/Wikidata/Wikipedia → precise downstream lookups)
-- Fan-out concurrency, confidence filtering, configurable everything
-- Clean provider abstraction — adding capabilities = implementing an interface
-- Pure Kotlin/JVM core, optional Android module
+Key structural improvements:
+- **Typed identifier requirements** — `IdentifierRequirement` enum replaces boolean `requiresIdentifier`; provider chains skip providers precisely when specific identifiers are missing
+- **Formalized identity resolution** — `isIdentityProvider` flag and `resolveIdentity()` method replace fragile GENRE/LABEL heuristic
+- **Mapper pattern** — 11 `*Mapper.kt` files isolate DTO-to-EnrichmentData mapping; public API changes only touch mappers
+- **Centralized API keys** — `ApiKeyConfig` + `Builder.withDefaultProviders()` for one-line engine setup
+- **Standardized confidence** — `ConfidenceCalculator` with semantic scoring methods; zero hardcoded floats across all providers
+- **Clean public API** — TTL in enum, extensible identifiers via `extra` map, `ErrorKind` enum, `HttpResult` sealed class
 
-### Current Coverage (16 enrichment types)
+### Current Coverage (25 enrichment types)
 
 | Category | Type | Providers | Depth |
 |----------|------|-----------|-------|
-| **Artwork** | ALBUM_ART | CAA, Fanart.tv, Deezer, iTunes | Good — 4 providers, but single URL per result |
-| | ARTIST_PHOTO | Wikidata, Fanart.tv | OK |
-| | ARTIST_BACKGROUND | Fanart.tv only | Thin — requires API key + MBID |
-| | ARTIST_LOGO | Fanart.tv only | Thin — requires API key + MBID |
-| | CD_ART | Fanart.tv only | Thin — requires API key + MBID |
+| **Artwork** | ALBUM_ART | CAA, Fanart.tv, Deezer, iTunes | Good — 4 providers, multi-size support |
+| | ALBUM_ART_BACK | CAA | Good — via JSON metadata endpoint |
+| | ALBUM_BOOKLET | CAA | Good — via JSON metadata endpoint |
+| | ARTIST_PHOTO | Wikidata, Fanart.tv, Wikipedia | Good — 3 providers (Wikipedia via page media-list) |
+| | ARTIST_BACKGROUND | Fanart.tv | Thin — requires API key + MBID |
+| | ARTIST_LOGO | Fanart.tv | Thin — requires API key + MBID |
+| | ARTIST_BANNER | Fanart.tv | OK — requires API key + MBID |
+| | CD_ART | Fanart.tv | Thin — requires API key + MBID |
 | **Metadata** | GENRE | MusicBrainz, Last.fm | Good |
 | | LABEL | MusicBrainz, Discogs | Good |
 | | RELEASE_DATE | MusicBrainz | OK |
 | | RELEASE_TYPE | MusicBrainz, Discogs | OK |
-| | COUNTRY | MusicBrainz | OK |
+| | COUNTRY | MusicBrainz, Wikidata | Good — Wikidata adds P495 country of origin |
+| | BAND_MEMBERS | MusicBrainz, Discogs | Good — artist-rels + artist endpoint |
+| | ARTIST_DISCOGRAPHY | MusicBrainz, Deezer | Good — browse release-groups + artist albums |
+| | ALBUM_TRACKS | MusicBrainz, Deezer | Good — media array + album tracks endpoint |
+| | ALBUM_METADATA | Deezer, Discogs, iTunes | Good — trackCount, explicit, catalogNumber, rating |
 | **Text** | ARTIST_BIO | Wikipedia, Last.fm | Good |
 | | LYRICS_SYNCED | LRCLIB | Good |
 | | LYRICS_PLAIN | LRCLIB | Good |
-| **Relationships** | SIMILAR_ARTISTS | Last.fm only | Thin — requires API key |
-| **Statistics** | ARTIST_POPULARITY | Last.fm, ListenBrainz | OK |
-| | TRACK_POPULARITY | Last.fm, ListenBrainz | Fragmented |
+| **Relationships** | SIMILAR_ARTISTS | Last.fm | OK — requires API key |
+| | SIMILAR_TRACKS | Last.fm | OK — via track.getSimilar |
+| | ARTIST_LINKS | MusicBrainz | Good — all URL relation types parsed |
+| **Statistics** | ARTIST_POPULARITY | Last.fm, ListenBrainz | Good — batch endpoints available |
+| | TRACK_POPULARITY | Last.fm, ListenBrainz | Good — track.getInfo + batch recording endpoint |
 
-### What Each Provider Actually Uses vs. What's Available
+### Provider Utilization
 
-This is where the biggest opportunity is — **most of the data we need is already accessible from providers we integrate, we just don't extract it yet**.
-
-| Provider | Endpoints Called | Endpoints Available | Utilization |
-|----------|----------------|-------------------|-------------|
-| **MusicBrainz** | 5 | 12+ | ~40% — ignoring relations (members, credits), release-group browsing (discography), media (tracklists) |
-| **Last.fm** | 2 methods | 10+ | ~20% — only artist.getinfo + artist.getsimilar; missing album/track info, top tracks/albums, track.getSimilar |
-| **Fanart.tv** | 1 | 3 (artist, album, label) | ~33% — good extraction from artist endpoint, missing album-specific and label endpoints, language/likes ranking |
-| **Deezer** | 1 | 8+ | ~12% — album art search only; artist, tracklist, related artists all available |
-| **Discogs** | 1 | 7+ | ~15% — search only; missing artist members, full release lookup, genres/styles |
-| **Cover Art Archive** | 2 (redirects) | 5+ | ~30% — front cover only; back, booklet, tray, full image listing available |
-| **ListenBrainz** | 1 | 12+ | ~8% — top recordings only; batch popularity endpoints, top release groups, sitewide stats, similar artists all available |
-| **iTunes** | 1 | 7+ | ~14% — album search only; ignoring artist/track search, album track lookup, artist discography lookup, AMG IDs, UPC/barcode lookup |
-| **Wikidata** | 1 (P18 only) | 100+ properties | ~5% — only fetching image; birth/death dates, nationality, occupation all available |
-| **Wikipedia** | 1 | 4+ | ~25% — summary only; page media, related articles, full HTML available (mobile-sections endpoint was removed in 2023) |
-| **LRCLIB** | 2 | 2 | ~100% — fully utilized |
-
----
-
-## What Needs to Be Done
-
-### Phase 1: Unlock Existing Provider Data (highest ROI)
-
-These require **no new providers** — just extracting more from APIs we already call or adding endpoints to existing providers.
-
-#### 1A. Band Members & Artist Relationships
-**New type: `BAND_MEMBERS`**
-
-| Source | How | Effort |
-|--------|-----|--------|
-| MusicBrainz | Parse `relations` array in artist lookup (already fetched with `inc=url-rels`, need `inc=artist-rels`) | Medium |
-| Discogs | Parse `members[]` array from `GET /artists/{id}` response (members are inline, not a separate endpoint) | Medium |
-
-Data model needed:
-```
-BandMembers(members: List<BandMember>)
-BandMember(name, role?, activePeriod?, musicBrainzId?)
-```
-
-#### 1B. Artist Discography
-**New type: `ARTIST_DISCOGRAPHY`**
-
-| Source | How | Effort |
-|--------|-----|--------|
-| MusicBrainz | New endpoint: browse `/release-group?artist={mbid}&type=album` | Medium |
-| Deezer | New endpoint: `GET /artist/{id}/albums` | Low |
-
-Data model needed:
-```
-Discography(albums: List<DiscographyAlbum>)
-DiscographyAlbum(title, year?, type?, musicBrainzId?, thumbnailUrl?)
-```
-
-#### 1C. Album Tracklist
-**New type: `ALBUM_TRACKS`**
-
-| Source | How | Effort |
-|--------|-----|--------|
-| MusicBrainz | Parse `media` array in release lookup (data is already returned, just ignored) | Low |
-| Deezer | New endpoint: `GET /album/{id}/tracks` | Low |
-
-Data model needed:
-```
-Tracklist(tracks: List<TrackInfo>)
-TrackInfo(title, position, durationMs?, musicBrainzId?, isrc?)
-```
-
-#### 1D. Similar Tracks
-**New type: `SIMILAR_TRACKS`**
-
-Note: `SIMILAR_ALBUMS` was originally planned here but Last.fm's `album.getSimilar` method does not exist. Album similarity would need a different approach (e.g., Deezer related artists, or inferring from shared tags/genres).
-
-| Source | How | Effort |
-|--------|-----|--------|
-| Last.fm | New method: `track.getSimilar` | Low |
-| Deezer | New endpoint: `GET /artist/{id}/related` (for artist-level, supplements tracks) | Low |
-
-#### 1E. Artist Banner/Hero Images
-**New type: `ARTIST_BANNER`**
-
-| Source | How | Effort |
-|--------|-----|--------|
-| Fanart.tv | Already returned in API response as `musicbanner` — just need to wire it to a new type | Very low — data is already parsed in `extractUrls`, just not mapped to a type |
-
-#### 1F. Multiple Art Sizes per Result
-**Enhancement to `EnrichmentData.Artwork`**
-
-Currently each artwork result returns a single URL. The APIs return multiple sizes:
-
-| Source | Available Sizes |
-|--------|----------------|
-| Cover Art Archive | 250px, 500px, 1200px, full |
-| Deezer | small (56px), medium (250px), big (500px), xl (1000px) |
-| iTunes | Any size via URL template (`{n}x{n}bb`) |
-| Fanart.tv | Full resolution + community variants |
-
-Enhancement:
-```
-Artwork(
-    url: String,                          // best/default
-    sizes: List<ArtworkSize>? = null,     // all available
-    thumbnailUrl: String? = null,
-)
-ArtworkSize(url, width, height, label?)   // label = "small", "medium", "xl", etc.
-```
-
-Effort: Medium — need to update each provider's artwork mapping.
-
-#### 1G. Artist Links (Social, Websites)
-**New type: `ARTIST_LINKS`**
-
-| Source | How | Effort |
-|--------|-----|--------|
-| MusicBrainz | Already fetched with `inc=url-rels` — just need to parse all URL relation types (currently only Wikidata/Wikipedia extracted) | Low |
-
-MusicBrainz URL relations include: official website, bandcamp, soundcloud, youtube, spotify, apple music, instagram, twitter/X, facebook, discogs, allmusic, setlist.fm, etc.
-
-Data model:
-```
-ArtistLinks(links: List<ExternalLink>)
-ExternalLink(type: String, url: String, label?: String)  // type = "official", "spotify", "youtube", etc.
-```
-
-#### 1H. More from Wikidata
-Currently only fetching P18 (image). Low-effort additions:
-
-| Property | Code | Use |
-|----------|------|-----|
-| Birth date | P569 | Artist profile |
-| Death date | P570 | Artist profile |
-| Nationality | P27 | Artist profile |
-| Occupation | P106 | Artist type detail |
-| Commons category | P373 | More images |
-
-These can enrich the existing `Metadata` data class (it already has `beginDate`, `endDate`, `artistType`).
+| Provider | Endpoints Used | Utilization | Notes |
+|----------|---------------|-------------|-------|
+| **MusicBrainz** | 9 | ~70% | artist-rels, release-group browse, media array, all URL relations |
+| **Last.fm** | 4 methods | ~40% | artist.getinfo, artist.getsimilar, track.getSimilar, track.getInfo |
+| **Fanart.tv** | 1 | ~50% | artist endpoint: all image types including banners |
+| **Deezer** | 4 | ~50% | album search, artist search, artist albums, album tracks |
+| **Discogs** | 3 | ~40% | search, artist lookup (members), album metadata |
+| **Cover Art Archive** | 2 | ~60% | front/back/booklet via JSON metadata, multi-size thumbnails |
+| **ListenBrainz** | 4 | ~30% | top recordings, batch recording popularity, batch artist popularity, top release groups |
+| **iTunes** | 1 | ~25% | album search with metadata extraction (trackCount, genre, price) |
+| **Wikidata** | 1 (5 properties) | ~15% | P18 image, P569/P570 dates, P495 country, P106 occupation |
+| **Wikipedia** | 2 | ~50% | summary + page media-list for supplemental photos |
+| **LRCLIB** | 2 | ~100% | fully utilized |
 
 ---
 
-### Phase 2: Deepen Existing Types
+## What's Left
 
-#### 2A. Back Cover & Booklet Art
-**New types: `ALBUM_ART_BACK`, `ALBUM_BOOKLET`** (or flags on ALBUM_ART)
+### Phase 3: New Capabilities (future)
 
-Cover Art Archive's JSON endpoint (`/release/{id}`) returns all image types with thumbnails. Currently we only request `front-{size}`.
-
-#### 2B. Album-Level Metadata from More Sources
-Deezer search results already return `fans`, `nb_tracks`, `record_type`, `release_date`, `explicit_lyrics` — all ignored. The full album endpoint (`GET /album/{id}`) additionally provides `rating`, `genres`, `label`, `duration`, `contributors`, and `UPC`. iTunes returns `trackCount`, `primaryGenreName`. Wiring these in strengthens the metadata for albums.
-
-#### 2C. Track-Level Popularity
-ListenBrainz has batch recording popularity via `POST /1/popularity/recording` (accepts `{"recording_mbids": [...]}`). Last.fm has `track.getInfo` with playcount/listeners. Currently `TRACK_POPULARITY` is fragmented — a dedicated chain with these endpoints would solidify it.
-
-#### 2D. Wikipedia Structured Content
-The `/page/mobile-sections/{title}` endpoint was deprecated and removed in 2023. Alternatives for structured bio content:
-- `/page/html/{title}` — full HTML with infobox data and section headings (requires HTML parsing)
-- Wikidata properties — structured data (genre, members, labels, dates) without parsing HTML
-- Newer Wikimedia API at `api.wikimedia.org` — cleaner design with explicit language routing
-
-#### 2E. Wikipedia Page Media
-`/page/media-list/{title}` returns all images on the article — band photos, album covers, concert shots. Could supplement the thin `ARTIST_PHOTO` coverage.
-
----
-
-### Phase 3: New Capabilities
+These are the remaining items from the original roadmap, not yet implemented.
 
 #### 3A. Credits & Personnel
 **New type: `CREDITS`**
@@ -223,7 +93,7 @@ MusicBrainz recording/release relationships can identify: producer, engineer, mi
 
 ```
 Credits(credits: List<Credit>)
-Credit(name, role, type?, musicBrainzId?)  // type = "producer", "performer:guitar", etc.
+Credit(name, role, type?, identifiers?)  // type = "producer", "performer:guitar", etc.
 ```
 
 #### 3B. Release Editions
@@ -239,35 +109,46 @@ Last.fm tags + MusicBrainz tags often differ. Could merge/deduplicate and add co
 
 ---
 
+### Tech Debt (from v0.4.0)
+
+Minor items deferred during the milestone:
+
+- `ErrorKind` enum exists but no provider categorizes errors yet (all default to UNKNOWN)
+- `HttpResult`/`fetchJsonResult()` exists but no provider uses it yet (all use legacy nullable methods)
+- SIMILAR_TRACKS only implemented by Last.fm (Deezer was descoped)
+- ListenBrainz `getTopReleaseGroupsForArtist` + `toDiscography` mapper plumbing exists but not wired as a capability
+
+---
+
 ## Priority Scorecard
 
-Ranked by **impact to consumers × implementation effort**:
+Ranked by **impact to consumers × implementation effort** (updated for v0.4.0):
 
-| # | Feature | New Types | Impact | Effort | Providers Involved |
-|---|---------|-----------|--------|--------|--------------------|
-| 1 | Multiple art sizes | Enhancement | High | Medium | CAA, Deezer, iTunes, Fanart.tv |
-| 2 | Album tracklist | ALBUM_TRACKS | High | Low | MusicBrainz (data already returned), Deezer |
-| 3 | Artist discography | ARTIST_DISCOGRAPHY | High | Medium | MusicBrainz, Deezer |
-| 4 | Band members | BAND_MEMBERS | High | Medium | MusicBrainz, Discogs |
-| 5 | Artist links | ARTIST_LINKS | Medium | Low | MusicBrainz (data already returned) |
-| 6 | Artist banner | ARTIST_BANNER | Medium | Very low | Fanart.tv (data already parsed) |
-| 7 | Similar tracks | SIMILAR_TRACKS | Medium | Low | Last.fm, Deezer |
-| 8 | Wikidata enrichment | Enhancement | Medium | Low | Wikidata |
-| 9 | Album back/booklet art | Enhancement | Medium | Low | CAA |
-| 10 | Credits & personnel | CREDITS | High | High | MusicBrainz, Discogs |
-| 11 | Wikipedia sections/media | Enhancement | Low | Medium | Wikipedia |
-| 12 | Release editions | RELEASE_EDITIONS | Low | Medium | MusicBrainz |
+| # | Feature | New Types | Impact | Effort | Status |
+|---|---------|-----------|--------|--------|--------|
+| 1 | Multiple art sizes | Enhancement | High | Medium | ✅ Done (v0.4.0) |
+| 2 | Album tracklist | ALBUM_TRACKS | High | Low | ✅ Done (v0.4.0) |
+| 3 | Artist discography | ARTIST_DISCOGRAPHY | High | Medium | ✅ Done (v0.4.0) |
+| 4 | Band members | BAND_MEMBERS | High | Medium | ✅ Done (v0.4.0) |
+| 5 | Artist links | ARTIST_LINKS | Medium | Low | ✅ Done (v0.4.0) |
+| 6 | Artist banner | ARTIST_BANNER | Medium | Very low | ✅ Done (v0.4.0) |
+| 7 | Similar tracks | SIMILAR_TRACKS | Medium | Low | ✅ Done (v0.4.0) — Last.fm only |
+| 8 | Wikidata enrichment | Enhancement | Medium | Low | ✅ Done (v0.4.0) |
+| 9 | Album back/booklet art | Enhancement | Medium | Low | ✅ Done (v0.4.0) |
+| 10 | Credits & personnel | CREDITS | High | High | Planned |
+| 11 | Wikipedia media | Enhancement | Low | Medium | ✅ Done (v0.4.0) |
+| 12 | Release editions | RELEASE_EDITIONS | Low | Medium | Planned |
 
 ---
 
 ## Summary
 
-| Dimension | Now | After Phase 1 | After Phase 2 | After Phase 3 |
-|-----------|-----|---------------|---------------|---------------|
-| Enrichment types | 16 | 22 (+6) | 22 (deepened) | 25 (+3) |
-| Provider utilization | ~30% avg | ~60% avg | ~75% avg | ~85% avg |
-| "App-ready" artist page | Partial (photo, bio, genres, similar) | Full (+ members, discography, links, banner, popularity) | Rich (+ media, credits) | Complete |
-| "App-ready" album page | Partial (front art, genres, label, date) | Full (+ tracklist, back art, all sizes) | Rich (+ credits, editions) | Complete |
-| "App-ready" now-playing | Partial (lyrics, album art) | Better (+ similar tracks, sizes) | Rich (+ credits, track stats) | Complete |
+| Dimension | v0.1.0 | v0.4.0 | After Phase 3 |
+|-----------|--------|--------|---------------|
+| Enrichment types | 16 | 25 (+9) | 28 (+3) |
+| Provider utilization | ~30% avg | ~50% avg | ~70% avg |
+| "App-ready" artist page | Partial (photo, bio, genres, similar) | Full (+ members, discography, links, banner, dates, country) | Complete (+ credits) |
+| "App-ready" album page | Partial (front art, genres, label, date) | Full (+ tracklist, back art, booklet, all sizes, metadata from 3 sources) | Complete (+ credits, editions) |
+| "App-ready" now-playing | Partial (lyrics, album art) | Rich (+ similar tracks, multi-size art, track-level popularity) | Complete (+ credits) |
 
-**The architecture is the hard part and it's done.** Most of what remains is wiring up data that's already available from providers you already integrate. Phase 1 is largely "parse more fields from API responses you already receive."
+**The architecture and abstraction layer are done.** The mapper pattern, typed identifiers, and confidence standardization make adding new capabilities straightforward. Phase 3 items (credits, editions, timeline, genre) are the remaining gap to "complete" coverage.
