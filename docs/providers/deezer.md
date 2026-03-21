@@ -1,0 +1,126 @@
+# Deezer Provider
+
+> Free public API with no auth required. Currently used only for album art search fallback, but has extensive artist, album, and track data available.
+
+## API Overview
+
+| | |
+|---|---|
+| **Base URL** | `https://api.deezer.com` |
+| **Auth** | None for search/public endpoints |
+| **Rate Limit** | 50 requests / 5 seconds (~10/s); we use 100ms |
+| **Format** | JSON |
+| **Reference Docs** | https://developers.deezer.com/api |
+| **Explorer** | https://developers.deezer.com/api/explorer |
+| **API Key Required** | No (public endpoints) |
+
+## Endpoints We Use
+
+### Album Search
+```
+GET /search/album?q={query}&limit={n}
+```
+
+Query format: `"artist name album title"` (free text).
+
+Response:
+```json
+{
+  "data": [
+    {
+      "id": 103248,
+      "title": "OK Computer",
+      "artist": {
+        "id": 399,
+        "name": "Radiohead",
+        "picture_small": "...",
+        "picture_medium": "...",
+        "picture_big": "...",
+        "picture_xl": "..."
+      },
+      "cover_small": "https://api.deezer.com/album/103248/image?size=small",
+      "cover_medium": "...",
+      "cover_big": "...",
+      "cover_xl": "...",
+      "nb_tracks": 12,
+      "release_date": "1997-06-16",
+      "record_type": "album",
+      "explicit_lyrics": false,
+      "fans": 45678
+    }
+  ]
+}
+```
+
+## Cover Image Sizes
+
+| Field | Pixels | URL Pattern |
+|-------|--------|-------------|
+| `cover_small` | 56x56 | `/image?size=small` |
+| `cover_medium` | 250x250 | `/image?size=medium` |
+| `cover_big` | 500x500 | `/image?size=big` |
+| `cover_xl` | 1000x1000 | `/image?size=xl` |
+
+We prefer `cover_xl` → `cover_big` → `cover_medium` → `cover_small`, with `cover_medium` as thumbnail.
+
+## What We Extract
+
+| Field | Source | Notes |
+|-------|--------|-------|
+| Album title | `data[].title` | |
+| Artist name | `data[].artist.name` | Verified via `ArtistMatcher.isMatch()` |
+| Cover URLs | `cover_small` through `cover_xl` | Best available used as main, medium as thumbnail |
+
+## What We DON'T Extract (Available Data)
+
+### From Current Search Response (ignored)
+
+| Field | Where | Useful For |
+|-------|-------|------------|
+| `id` | Album object | Needed for detailed album lookup |
+| `artist.id` | Artist object | Needed for artist endpoints |
+| `artist.picture_*` | Artist object | ARTIST_PHOTO — 4 sizes available! |
+| `nb_tracks` | Album object | Track count validation |
+| `release_date` | Album object | RELEASE_DATE |
+| `record_type` | Album object | RELEASE_TYPE ("album", "single", "ep", "compilation") |
+| `explicit_lyrics` | Album object | Content filtering |
+| `fans` | Album object | Album popularity metric |
+
+### Endpoints Not Yet Called
+
+| Endpoint | Data | Useful For |
+|----------|------|------------|
+| `GET /album/{id}` | Full album details: tracklist URL, genres, label, duration, rating, contributors, UPC | Album metadata |
+| `GET /album/{id}/tracks` | Tracklist with title, duration, preview URL, disk_number, track_position, ISRC | ALBUM_TRACKS |
+| `GET /artist/{id}` | Bio snippet, image, nb_album, nb_fan, radio | Artist profile |
+| `GET /artist/{id}/albums` | Full discography with release dates and types | ARTIST_DISCOGRAPHY |
+| `GET /artist/{id}/related` | Related/similar artists | SIMILAR_ARTISTS |
+| `GET /artist/{id}/top` | Top 5 tracks by popularity | Track rankings |
+| `GET /artist/{id}/radio` | Auto-generated radio tracks | Similar tracks |
+| `GET /search/artist?q={name}` | Artist search | Artist lookup |
+| `GET /search/track?q={query}` | Track search | Track lookup |
+| `GET /genre` | All genres | Genre taxonomy |
+| `GET /genre/{id}/artists` | Top artists per genre | Genre exploration |
+
+## Gotchas & Edge Cases
+
+- **Search is fuzzy**: `q=Radiohead OK Computer` may return unrelated results if the exact album isn't in Deezer. We use `ArtistMatcher.isMatch()` to verify.
+- **No auth but rate limited**: 50 requests per 5 seconds. Exceeding returns 429. Our 100ms limiter is within bounds for sequential use but could be tight under fan-out.
+- **Image URLs are proxied**: Deezer cover URLs go through `api.deezer.com/album/{id}/image?size=...` which redirects to CDN. These are stable for caching.
+- **Artist images in search results**: Every album search result includes `artist.picture_*` at 4 sizes — we throw these away entirely.
+- **`record_type` values**: "album", "single", "ep", "compilation". Useful for filtering.
+- **Regional availability**: Some albums may not be available in all regions. The API returns them regardless.
+- **Preview URLs**: 30-second preview clips are available for most tracks — not currently relevant but interesting for future use.
+- **Deezer IDs are numeric**: Unlike MusicBrainz UUIDs, Deezer uses numeric IDs. No cross-reference unless you search.
+
+## Internal Architecture
+
+```
+DeezerProvider
+├── DeezerApi       — album search + parsing
+└── DeezerModels    — DTO: DeezerAlbumResult (id, title, artistName, cover_small/medium/big/xl)
+```
+
+Constructor params:
+- `httpClient: HttpClient`
+- `rateLimiter: RateLimiter` — 100ms recommended
