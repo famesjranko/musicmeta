@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v0.5.0
 milestone_name: New Capabilities & Tech Debt Cleanup
 status: unknown
-stopped_at: Completed 09-artist-timeline/09-01-PLAN.md
-last_updated: "2026-03-21T17:25:18.446Z"
+stopped_at: Completed 09-artist-timeline/09-02-PLAN.md
+last_updated: "2026-03-21T17:31:43.941Z"
 progress:
   total_phases: 6
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 10
-  completed_plans: 9
+  completed_plans: 10
 ---
 
 # Project State
@@ -50,6 +50,7 @@ Plan: 2 of 2
 | Phase 08-release-editions P01 | 4 | 2 tasks | 10 files |
 | Phase 08-release-editions P02 | 8 | 2 tasks | 6 files |
 | Phase 09-artist-timeline P01 | 2 | 2 tasks | 5 files |
+| Phase 09-artist-timeline P02 | 4 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -82,6 +83,8 @@ Plan: 2 of 2
 - [Phase 09-artist-timeline]: TimelineSynthesizer.synthesize() accepts EnrichmentResult? so callers pass raw results without unwrapping — simplifies Plan 02 integration
 - [Phase 09-artist-timeline]: null artistType in Metadata defaults to Group behavior (formed/disbanded) — most MusicBrainz artists without explicit type are groups
 - [Phase 09-artist-timeline]: TimelineEvent placed as top-level @Serializable class, consistent with BandMember, DiscographyAlbum, etc.
+- [Phase 09-artist-timeline]: resolveIdentity() returns Pair<EnrichmentRequest, EnrichmentResult?> so raw identity result threads to composite synthesizer regardless of which IDENTITY_TYPES the caller requested
+- [Phase 09-artist-timeline]: COMPOSITE_DEPENDENCIES map in companion object maps ARTIST_TIMELINE to sub-types; filterKeys excludes sub-type results from caller-visible return map
 
 ### Pending Todos
 
@@ -93,6 +96,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T17:25:18.443Z
-Stopped at: Completed 09-artist-timeline/09-01-PLAN.md
+Last session: 2026-03-21T17:31:43.938Z
+Stopped at: Completed 09-artist-timeline/09-02-PLAN.md
 Resume file: None

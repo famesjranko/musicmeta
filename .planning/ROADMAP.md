@@ -27,7 +27,7 @@ Full details: `.planning/milestones/v0.4.0-ROADMAP.md`
 - [x] **Phase 6: Tech Debt Cleanup** - Migrate all 11 providers to HttpResult/ErrorKind and wire ListenBrainz + Discogs IDs (completed 2026-03-21)
 - [ ] **Phase 7: Credits & Personnel** - New CREDITS enrichment type from MusicBrainz and Discogs
 - [x] **Phase 8: Release Editions** - New RELEASE_EDITIONS enrichment type from MusicBrainz and Discogs (completed 2026-03-21)
-- [ ] **Phase 9: Artist Timeline** - New ARTIST_TIMELINE composite type synthesizing existing enrichment data
+- [x] **Phase 9: Artist Timeline** - New ARTIST_TIMELINE composite type synthesizing existing enrichment data (completed 2026-03-21)
 - [ ] **Phase 10: Genre Enhancement** - Multi-provider genre merging with per-tag confidence scores
 - [ ] **Phase 11: Provider Coverage Expansion** - Deeper coverage from Last.fm, iTunes, Fanart.tv, ListenBrainz, and Discogs
 
@@ -87,11 +87,11 @@ Plans:
   1. User can request EnrichmentType.ARTIST_TIMELINE and receive a list of timeline events in chronological order
   2. Timeline events cover at least three categories: life-span events (born/died/formed/disbanded), discography releases, and band-member changes
   3. The engine resolves ARTIST_DISCOGRAPHY and BAND_MEMBERS sub-types automatically when ARTIST_TIMELINE is requested, without the caller specifying them
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 09-01-PLAN.md — ARTIST_TIMELINE type, data model, TimelineSynthesizer (TDD)
-- [ ] 09-02-PLAN.md — Engine composite type resolution + integration tests
+- [x] 09-02-PLAN.md — Engine composite type resolution + integration tests
 
 ### Phase 10: Genre Enhancement
 **Goal**: Genre results carry per-tag confidence scores and the provider chain merges tags from all providers rather than short-circuiting on the first success
@@ -130,6 +130,6 @@ Plans:
 | 6. Tech Debt Cleanup | v0.5.0 | 4/4 | Complete   | 2026-03-21 |
 | 7. Credits & Personnel | v0.5.0 | 1/2 | In Progress|  |
 | 8. Release Editions | v0.5.0 | 2/2 | Complete   | 2026-03-21 |
-| 9. Artist Timeline | v0.5.0 | 1/2 | In Progress|  |
+| 9. Artist Timeline | v0.5.0 | 2/2 | Complete   | 2026-03-21 |
 | 10. Genre Enhancement | v0.5.0 | 0/TBD | Not started | - |
 | 11. Provider Coverage Expansion | v0.5.0 | 0/TBD | Not started | - |
