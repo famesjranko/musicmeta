@@ -4,7 +4,7 @@ milestone: v0.5.0
 milestone_name: New Capabilities & Tech Debt Cleanup
 status: unknown
 stopped_at: Completed 07-credits-personnel/07-02-PLAN.md
-last_updated: "2026-03-21T16:47:26.924Z"
+last_updated: "2026-03-21T16:50:59.077Z"
 progress:
   total_phases: 6
   completed_phases: 2
@@ -23,8 +23,8 @@ See: .planning/PROJECT.md (updated 2026-03-22)
 
 ## Current Position
 
-Phase: 07 (Credits & Personnel) — EXECUTING
-Plan: 2 of 2
+Phase: 8
+Plan: Not started
 
 ## Performance Metrics
 
