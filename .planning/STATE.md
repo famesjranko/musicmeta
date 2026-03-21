@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v0.4.0
 milestone_name: Provider Abstraction Overhaul
 status: unknown
-stopped_at: Completed 04-02-PLAN.md
-last_updated: "2026-03-21T09:20:17.582Z"
+stopped_at: Completed 04-04-PLAN.md
+last_updated: "2026-03-21T09:30:33.250Z"
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 11
-  completed_plans: 10
+  completed_plans: 11
 ---
 
 # Project State
@@ -56,6 +56,7 @@ Plan: 4 of 4
 | Phase 04-new-types P01 | 2min | 2 tasks | 4 files |
 | Phase 04-new-types P03 | 3min | 2 tasks | 12 files |
 | Phase 04-new-types P02 | 7min | 2 tasks | 7 files |
+| Phase 04-new-types P04 | 8min | 2 tasks | 20 files |
 
 ## Accumulated Context
 
@@ -80,6 +81,9 @@ Plan: 4 of 4
 - [Phase 04-new-types]: Deezer uses search-then-fetch pattern: searchArtist for ID, then getArtistAlbums/getAlbumTracks by ID; Deezer IDs stored in identifiers.extra
 - [Phase 04-new-types]: Last.fm SIMILAR_TRACKS type check handled before ForArtist cast, allowing ForTrack requests for this type only
 - [Phase 04-new-types]: Separate lookupArtistWithRels method avoids artist-rels overhead on existing lookups; new types routed through enrichArtistNewType for clean dispatch
+- [Phase 04-new-types]: CAA JSON metadata fetched alongside redirect URL for artwork sizes with graceful degradation
+- [Phase 04-new-types]: Wikidata multi-property fetch (P18|P569|P570|P495|P106) replaces single-property calls; QID maps for country/occupation
+- [Phase 04-new-types]: Discogs band members uses search-then-fetch pattern: searchArtist for ID, getArtist for member list
 
 ### Pending Todos
 
@@ -91,6 +95,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T09:20:17.580Z
-Stopped at: Completed 04-02-PLAN.md
+Last session: 2026-03-21T09:30:33.247Z
+Stopped at: Completed 04-04-PLAN.md
 Resume file: None

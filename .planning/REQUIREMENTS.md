@@ -41,7 +41,7 @@ Requirements for the Provider Abstraction Overhaul milestone. Each maps to roadm
 - [x] **TYPE-05**: ARTIST_BANNER type with Fanart.tv provider
 - [x] **TYPE-06**: ARTIST_LINKS type with MusicBrainz provider
 - [x] **TYPE-07**: Artwork sizes enhancement (sizes list on Artwork, all 4 artwork providers updated)
-- [ ] **TYPE-08**: Wikidata expanded properties (P569, P570, P495, P106, P373)
+- [x] **TYPE-08**: Wikidata expanded properties (P569, P570, P495, P106, P373)
 
 ### Deepening
 
@@ -101,7 +101,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TYPE-05 | Phase 4 | Complete |
 | TYPE-06 | Phase 4 | Complete |
 | TYPE-07 | Phase 4 | Complete |
-| TYPE-08 | Phase 4 | Pending |
+| TYPE-08 | Phase 4 | Complete |
 | DEEP-01 | Phase 5 | Pending |
 | DEEP-02 | Phase 5 | Pending |
 | DEEP-03 | Phase 5 | Pending |

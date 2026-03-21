@@ -82,7 +82,7 @@ Plans:
 - [x] 04-01-PLAN.md — New EnrichmentType values, EnrichmentData subclasses, ArtworkSize, serialization tests
 - [x] 04-02-PLAN.md — MusicBrainz: BAND_MEMBERS, ARTIST_DISCOGRAPHY, ALBUM_TRACKS, ARTIST_LINKS capabilities
 - [x] 04-03-PLAN.md — Deezer discography/tracks, Last.fm similar tracks, Fanart.tv artist banner
-- [ ] 04-04-PLAN.md — Artwork sizes for 4 providers, Wikidata expanded properties, Discogs band members
+- [x] 04-04-PLAN.md — Artwork sizes for 4 providers, Wikidata expanded properties, Discogs band members
 
 ### Phase 5: Deepening
 **Goal**: Existing enrichment types are more complete: back cover art is available, album metadata comes from more sources, track popularity works correctly, artist photos have supplemental Wikipedia coverage, ListenBrainz batch endpoints are used, and all providers report confidence scores consistently
