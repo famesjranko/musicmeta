@@ -22,7 +22,7 @@ Consumers get comprehensive, accurate music metadata from a single `enrich()` ca
 
 ## Current State
 
-Phase 9 complete. 28 enrichment types. ARTIST_TIMELINE introduced composite enrichment concept to engine.
+Phase 10 complete. 28 enrichment types with 3 new engine concepts: composite types, mergeable types, GenreMerger.
 
 ## Requirements
 
@@ -49,8 +49,9 @@ Phase 9 complete. 28 enrichment types. ARTIST_TIMELINE introduced composite enri
 
 - v0.5.0-Phase9: ARTIST_TIMELINE composite enrichment type with TimelineSynthesizer and automatic sub-type resolution in DefaultEnrichmentEngine
 
+- v0.5.0-Phase10: Genre enhancement with GenreTag confidence scores, GenreMerger, and ProviderChain.resolveAll() for mergeable types
+
 ### Active
-- [ ] Genre enhancement with multi-provider merging and GenreTag
 - [ ] Provider coverage expansion (Last.fm, iTunes, Fanart.tv, ListenBrainz endpoints)
 
 ### Out of Scope
@@ -104,4 +105,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-22 after Phase 9 completion*
+*Last updated: 2026-03-22 after Phase 10 completion*
