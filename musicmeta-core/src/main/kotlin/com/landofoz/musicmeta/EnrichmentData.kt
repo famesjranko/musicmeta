@@ -58,6 +58,21 @@ sealed class EnrichmentData {
         val topTracks: List<PopularTrack>? = null,
     ) : EnrichmentData()
 
+    @Serializable
+    data class BandMembers(val members: List<BandMember>) : EnrichmentData()
+
+    @Serializable
+    data class Discography(val albums: List<DiscographyAlbum>) : EnrichmentData()
+
+    @Serializable
+    data class Tracklist(val tracks: List<TrackInfo>) : EnrichmentData()
+
+    @Serializable
+    data class SimilarTracks(val tracks: List<SimilarTrack>) : EnrichmentData()
+
+    @Serializable
+    data class ArtistLinks(val links: List<ExternalLink>) : EnrichmentData()
+
 }
 
 @Serializable
@@ -81,4 +96,44 @@ data class PopularTrack(
     val identifiers: EnrichmentIdentifiers = EnrichmentIdentifiers(),
     val listenCount: Long,
     val rank: Int,
+)
+
+@Serializable
+data class BandMember(
+    val name: String,
+    val role: String? = null,
+    val activePeriod: String? = null,
+    val identifiers: EnrichmentIdentifiers = EnrichmentIdentifiers(),
+)
+
+@Serializable
+data class DiscographyAlbum(
+    val title: String,
+    val year: String? = null,
+    val type: String? = null,
+    val thumbnailUrl: String? = null,
+    val identifiers: EnrichmentIdentifiers = EnrichmentIdentifiers(),
+)
+
+@Serializable
+data class TrackInfo(
+    val title: String,
+    val position: Int,
+    val durationMs: Long? = null,
+    val identifiers: EnrichmentIdentifiers = EnrichmentIdentifiers(),
+)
+
+@Serializable
+data class SimilarTrack(
+    val title: String,
+    val artist: String,
+    val matchScore: Float,
+    val identifiers: EnrichmentIdentifiers = EnrichmentIdentifiers(),
+)
+
+@Serializable
+data class ExternalLink(
+    val type: String,
+    val url: String,
+    val label: String? = null,
 )

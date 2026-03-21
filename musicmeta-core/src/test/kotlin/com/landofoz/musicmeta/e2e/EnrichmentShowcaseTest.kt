@@ -332,6 +332,16 @@ class EnrichmentShowcaseTest {
             data.listenCount?.let { append("plays=$it ") }
             data.topTracks?.firstOrNull()?.let { append("top: ${it.title}(${it.listenCount})") }
         }
+        is EnrichmentData.BandMembers ->
+            data.members.take(4).joinToString(", ") { it.name }
+        is EnrichmentData.Discography ->
+            "${data.albums.size} albums"
+        is EnrichmentData.Tracklist ->
+            "${data.tracks.size} tracks"
+        is EnrichmentData.SimilarTracks ->
+            data.tracks.take(4).joinToString(", ") { "${it.title}(%.1f)".format(it.matchScore) }
+        is EnrichmentData.ArtistLinks ->
+            data.links.take(4).joinToString(", ") { "${it.type}=${it.url.take(40)}" }
     }
 
     companion object {
