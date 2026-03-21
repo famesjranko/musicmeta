@@ -4,6 +4,7 @@ import com.landofoz.musicmeta.BandMember
 import com.landofoz.musicmeta.Credit
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
+import com.landofoz.musicmeta.GenreTag
 import com.landofoz.musicmeta.ReleaseEdition
 
 /** Maps Discogs DTOs to EnrichmentData subclasses. */
@@ -24,8 +25,12 @@ object DiscogsMapper {
         return EnrichmentData.Metadata(releaseType = releaseType)
     }
 
-    fun toAlbumMetadata(release: DiscogsRelease): EnrichmentData.Metadata =
-        EnrichmentData.Metadata(
+    fun toAlbumMetadata(release: DiscogsRelease): EnrichmentData.Metadata {
+        val genreTagList = buildList {
+            release.genres?.forEach { add(GenreTag(it, 0.3f, listOf("discogs"))) }
+            release.styles?.forEach { add(GenreTag(it, 0.2f, listOf("discogs"))) }
+        }.takeIf { it.isNotEmpty() }
+        return EnrichmentData.Metadata(
             label = release.label,
             releaseDate = release.year,
             releaseType = release.releaseType,
@@ -33,7 +38,9 @@ object DiscogsMapper {
             catalogNumber = release.catno,
             genres = (release.genres.orEmpty() + release.styles.orEmpty())
                 .takeIf { it.isNotEmpty() },
+            genreTags = genreTagList,
         )
+    }
 
     fun toCredits(credits: List<DiscogsCredit>): EnrichmentData.Credits =
         EnrichmentData.Credits(

@@ -3,6 +3,7 @@ package com.landofoz.musicmeta.provider.itunes
 import com.landofoz.musicmeta.ArtworkSize
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
+import com.landofoz.musicmeta.GenreTag
 import com.landofoz.musicmeta.SearchCandidate
 
 /** Maps iTunes DTOs to EnrichmentData subclasses. */
@@ -26,6 +27,9 @@ object ITunesMapper {
         EnrichmentData.Metadata(
             trackCount = result.trackCount,
             genres = listOfNotNull(result.primaryGenreName),
+            genreTags = result.primaryGenreName?.let {
+                listOf(GenreTag(it, 0.2f, listOf("itunes")))
+            },
             country = result.country,
             releaseDate = result.releaseDate,
         )
