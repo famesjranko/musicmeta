@@ -36,6 +36,7 @@ enum class EnrichmentType(val defaultTtlMs: Long) {
     BAND_MEMBERS(30L * 24 * 60 * 60 * 1000),
     SIMILAR_TRACKS(30L * 24 * 60 * 60 * 1000),
     ARTIST_LINKS(90L * 24 * 60 * 60 * 1000),
+    CREDITS(30L * 24 * 60 * 60 * 1000),
 
     // Additional metadata
     ARTIST_DISCOGRAPHY(30L * 24 * 60 * 60 * 1000),

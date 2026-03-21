@@ -4,6 +4,7 @@ import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.HttpResult
 import com.landofoz.musicmeta.http.RateLimiter
 import java.net.URLEncoder
+import org.json.JSONObject
 
 /**
  * MusicBrainz API client. Handles query building, rate limiting, and parsing.
@@ -90,6 +91,19 @@ class MusicBrainzApi(
             }
         } ?: return null
         return MusicBrainzParser.parseLookupArtist(json)
+    }
+
+    /** Lookup a recording by MBID with artist-rels and work-rels (needed for credits). */
+    suspend fun lookupRecording(mbid: String): JSONObject? {
+        val json = rateLimiter.execute {
+            when (val r = httpClient.fetchJsonResult(
+                "$BASE_URL/recording/$mbid?fmt=json&inc=artist-rels+work-rels",
+            )) {
+                is HttpResult.Ok -> r.body
+                else -> return@execute null
+            }
+        }
+        return json
     }
 
     /** Browse release groups for an artist (for discography). */

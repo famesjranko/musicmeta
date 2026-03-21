@@ -349,6 +349,8 @@ class EnrichmentShowcaseTest {
             data.tracks.take(4).joinToString(", ") { "${it.title}(%.1f)".format(it.matchScore) }
         is EnrichmentData.ArtistLinks ->
             data.links.take(4).joinToString(", ") { "${it.type}=${it.url.take(40)}" }
+        is EnrichmentData.Credits ->
+            data.credits.take(4).joinToString(", ") { "${it.name}(${it.role})" }
     }
 
     companion object {

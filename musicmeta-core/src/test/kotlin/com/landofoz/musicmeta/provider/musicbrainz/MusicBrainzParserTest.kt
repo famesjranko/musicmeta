@@ -1,7 +1,12 @@
 package com.landofoz.musicmeta.provider.musicbrainz
 
+import com.landofoz.musicmeta.EnrichmentData
+import com.landofoz.musicmeta.EnrichmentIdentifiers
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -252,7 +257,198 @@ class MusicBrainzParserTest {
         assertEquals("Massive Attack feat. Tricky", credit)
     }
 
+    @Test
+    fun `parseRecordingCredits extracts vocal relation with lead vocals roleCategory performance`() {
+        // Given -- recording lookup response with a vocal artist-rel
+        val json = JSONObject(RECORDING_WITH_VOCAL_REL)
+
+        // When -- parsing recording credits
+        val credits = MusicBrainzParser.parseRecordingCredits(json)
+
+        // Then -- vocal credit extracted with role "lead vocals" and roleCategory "performance"
+        assertEquals(1, credits.size)
+        assertEquals("Thom Yorke", credits[0].name)
+        assertEquals("lead vocals", credits[0].role)
+        assertEquals("performance", credits[0].roleCategory)
+        assertEquals("ty1", credits[0].id)
+    }
+
+    @Test
+    fun `parseRecordingCredits extracts instrument relation with guitar roleCategory performance`() {
+        // Given -- recording with instrument artist-rel with attribute "guitar"
+        val json = JSONObject(RECORDING_WITH_INSTRUMENT_REL)
+
+        // When -- parsing recording credits
+        val credits = MusicBrainzParser.parseRecordingCredits(json)
+
+        // Then -- instrument credit with role from attribute and roleCategory "performance"
+        assertEquals(1, credits.size)
+        assertEquals("Jonny Greenwood", credits[0].name)
+        assertEquals("guitar", credits[0].role)
+        assertEquals("performance", credits[0].roleCategory)
+    }
+
+    @Test
+    fun `parseRecordingCredits extracts producer relation with roleCategory production`() {
+        // Given -- recording with producer artist-rel
+        val json = JSONObject(RECORDING_WITH_PRODUCER_REL)
+
+        // When -- parsing recording credits
+        val credits = MusicBrainzParser.parseRecordingCredits(json)
+
+        // Then -- producer credit with roleCategory "production"
+        assertEquals(1, credits.size)
+        assertEquals("Nigel Godrich", credits[0].name)
+        assertEquals("producer", credits[0].role)
+        assertEquals("production", credits[0].roleCategory)
+    }
+
+    @Test
+    fun `parseRecordingCredits extracts composer from work-rels with roleCategory songwriting`() {
+        // Given -- recording with a work-rel containing a composer relation
+        val json = JSONObject(RECORDING_WITH_WORK_REL)
+
+        // When -- parsing recording credits
+        val credits = MusicBrainzParser.parseRecordingCredits(json)
+
+        // Then -- composer credit with roleCategory "songwriting"
+        val composer = credits.find { it.role == "composer" }
+        assertNotNull(composer)
+        assertEquals("Thom Yorke", composer!!.name)
+        assertEquals("songwriting", composer.roleCategory)
+    }
+
+    @Test
+    fun `parseRecordingCredits returns empty list when no relations present`() {
+        // Given -- recording with no relations
+        val json = JSONObject("""{"id":"rec1","title":"Song","relations":[]}""")
+
+        // When -- parsing recording credits
+        val credits = MusicBrainzParser.parseRecordingCredits(json)
+
+        // Then -- empty list returned
+        assertTrue(credits.isEmpty())
+    }
+
+    @Test
+    fun `toCredits maps MusicBrainzCredit list to EnrichmentData Credits with correct fields`() {
+        // Given -- a list of MusicBrainzCredit DTOs
+        val dtos = listOf(
+            MusicBrainzCredit(name = "Thom Yorke", id = "ty1", role = "lead vocals", roleCategory = "performance"),
+            MusicBrainzCredit(name = "Nigel Godrich", id = "ng1", role = "producer", roleCategory = "production"),
+        )
+
+        // When -- mapping to EnrichmentData.Credits
+        val result = MusicBrainzMapper.toCredits(dtos)
+
+        // Then -- Credits data class with correct Credit fields
+        assertEquals(2, result.credits.size)
+        assertEquals("Thom Yorke", result.credits[0].name)
+        assertEquals("lead vocals", result.credits[0].role)
+        assertEquals("performance", result.credits[0].roleCategory)
+        assertEquals(EnrichmentIdentifiers(musicBrainzId = "ty1"), result.credits[0].identifiers)
+        assertEquals("Nigel Godrich", result.credits[1].name)
+        assertEquals("producer", result.credits[1].role)
+        assertEquals("production", result.credits[1].roleCategory)
+    }
+
+    @Test
+    fun `Credits round-trip serialization works`() {
+        // Given -- a Credits instance with mixed credits
+        val original = EnrichmentData.Credits(
+            credits = listOf(
+                com.landofoz.musicmeta.Credit(
+                    name = "Thom Yorke",
+                    role = "lead vocals",
+                    roleCategory = "performance",
+                    identifiers = EnrichmentIdentifiers(musicBrainzId = "ty1"),
+                ),
+            ),
+        )
+
+        // When -- serializing and deserializing
+        val json = Json.encodeToString(original)
+        val restored = Json.decodeFromString<EnrichmentData.Credits>(json)
+
+        // Then -- restored instance matches original
+        assertEquals(original, restored)
+        assertEquals("Thom Yorke", restored.credits[0].name)
+        assertEquals("performance", restored.credits[0].roleCategory)
+    }
+
     companion object {
+        private val RECORDING_WITH_VOCAL_REL = """
+            {
+              "id": "rec1",
+              "title": "Paranoid Android",
+              "relations": [
+                {
+                  "type": "vocal",
+                  "target-type": "artist",
+                  "artist": {"id": "ty1", "name": "Thom Yorke"},
+                  "attributes": ["lead vocals"]
+                }
+              ]
+            }
+        """.trimIndent()
+
+        private val RECORDING_WITH_INSTRUMENT_REL = """
+            {
+              "id": "rec1",
+              "title": "Paranoid Android",
+              "relations": [
+                {
+                  "type": "instrument",
+                  "target-type": "artist",
+                  "artist": {"id": "jg1", "name": "Jonny Greenwood"},
+                  "attributes": ["guitar"]
+                }
+              ]
+            }
+        """.trimIndent()
+
+        private val RECORDING_WITH_PRODUCER_REL = """
+            {
+              "id": "rec1",
+              "title": "Paranoid Android",
+              "relations": [
+                {
+                  "type": "producer",
+                  "target-type": "artist",
+                  "artist": {"id": "ng1", "name": "Nigel Godrich"},
+                  "attributes": []
+                }
+              ]
+            }
+        """.trimIndent()
+
+        private val RECORDING_WITH_WORK_REL = """
+            {
+              "id": "rec1",
+              "title": "Paranoid Android",
+              "relations": [
+                {
+                  "type": "performance",
+                  "target-type": "work",
+                  "work": {
+                    "id": "work1",
+                    "title": "Paranoid Android",
+                    "relations": [
+                      {
+                        "type": "composer",
+                        "target-type": "artist",
+                        "artist": {"id": "ty1", "name": "Thom Yorke"},
+                        "attributes": []
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+        """.trimIndent()
+
+    // EXISTING FIXTURES BELOW
+
         private val RELEASE_SEARCH_RESPONSE = """
             {
               "releases": [{

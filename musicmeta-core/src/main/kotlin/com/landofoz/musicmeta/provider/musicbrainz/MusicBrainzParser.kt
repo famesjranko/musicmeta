@@ -146,6 +146,79 @@ object MusicBrainzParser {
         return tracks
     }
 
+    /**
+     * Parse recording credits from a recording lookup response with artist-rels and work-rels.
+     *
+     * Processes top-level artist-rels and work-rels (composer/lyricist/arranger from nested
+     * work relations when the relation type is "performance").
+     */
+    fun parseRecordingCredits(json: JSONObject): List<MusicBrainzCredit> {
+        val relations = json.optJSONArray("relations") ?: return emptyList()
+        val credits = mutableListOf<MusicBrainzCredit>()
+        for (i in 0 until relations.length()) {
+            val rel = relations.getJSONObject(i)
+            val targetType = rel.optString("target-type")
+            when {
+                targetType == "artist" -> {
+                    val artist = rel.optJSONObject("artist") ?: continue
+                    val relType = rel.optString("type")
+                    val attrs = rel.optJSONArray("attributes")
+                    val firstAttr = attrs?.let { if (it.length() > 0) it.getString(0) else null }
+                    val (role, category) = mapArtistRelType(relType, firstAttr)
+                    credits.add(
+                        MusicBrainzCredit(
+                            name = artist.getString("name"),
+                            id = artist.optString("id").takeIf { it.isNotBlank() },
+                            role = role,
+                            roleCategory = category,
+                        ),
+                    )
+                }
+                targetType == "work" && rel.optString("type") == "performance" -> {
+                    val work = rel.optJSONObject("work") ?: continue
+                    val workRels = work.optJSONArray("relations") ?: continue
+                    for (j in 0 until workRels.length()) {
+                        val workRel = workRels.getJSONObject(j)
+                        if (workRel.optString("target-type") != "artist") continue
+                        val artist = workRel.optJSONObject("artist") ?: continue
+                        val workRelType = workRel.optString("type")
+                        val (role, category) = mapWorkRelType(workRelType)
+                        credits.add(
+                            MusicBrainzCredit(
+                                name = artist.getString("name"),
+                                id = artist.optString("id").takeIf { it.isNotBlank() },
+                                role = role,
+                                roleCategory = category,
+                            ),
+                        )
+                    }
+                }
+            }
+        }
+        return credits
+    }
+
+    private fun mapArtistRelType(type: String, firstAttr: String?): Pair<String, String?> =
+        when (type) {
+            "vocal" -> Pair(firstAttr ?: "vocals", "performance")
+            "instrument" -> Pair(firstAttr ?: "instrument", "performance")
+            "performer" -> Pair("performer", "performance")
+            "producer" -> Pair("producer", "production")
+            "engineer" -> Pair("engineer", "production")
+            "mix" -> Pair("mixer", "production")
+            "mastering" -> Pair("mastering", "production")
+            "recording" -> Pair("recording engineer", "production")
+            else -> Pair(type, null)
+        }
+
+    private fun mapWorkRelType(type: String): Pair<String, String?> =
+        when (type) {
+            "composer" -> Pair("composer", "songwriting")
+            "lyricist" -> Pair("lyricist", "songwriting")
+            "arranger" -> Pair("arranger", "songwriting")
+            else -> Pair(type, null)
+        }
+
     /** Parse URL relations from an artist lookup, excluding wikidata and wikipedia. */
     fun parseUrlRelations(json: JSONObject): List<MusicBrainzUrlRelation> {
         val relations = json.optJSONArray("relations") ?: return emptyList()

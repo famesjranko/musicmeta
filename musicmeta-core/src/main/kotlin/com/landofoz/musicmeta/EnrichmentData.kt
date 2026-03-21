@@ -77,6 +77,9 @@ sealed class EnrichmentData {
     @Serializable
     data class ArtistLinks(val links: List<ExternalLink>) : EnrichmentData()
 
+    @Serializable
+    data class Credits(val credits: List<Credit>) : EnrichmentData()
+
 }
 
 @Serializable
@@ -140,4 +143,12 @@ data class ExternalLink(
     val type: String,
     val url: String,
     val label: String? = null,
+)
+
+@Serializable
+data class Credit(
+    val name: String,
+    val role: String,
+    val roleCategory: String? = null,
+    val identifiers: EnrichmentIdentifiers = EnrichmentIdentifiers(),
 )

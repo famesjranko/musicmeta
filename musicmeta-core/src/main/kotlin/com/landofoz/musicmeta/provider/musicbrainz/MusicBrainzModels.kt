@@ -70,3 +70,10 @@ data class MusicBrainzUrlRelation(
     val type: String,
     val url: String,
 )
+
+data class MusicBrainzCredit(
+    val name: String,
+    val id: String?,
+    val role: String,
+    val roleCategory: String?,
+)

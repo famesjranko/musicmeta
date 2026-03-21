@@ -1,6 +1,7 @@
 package com.landofoz.musicmeta.provider.musicbrainz
 
 import com.landofoz.musicmeta.BandMember
+import com.landofoz.musicmeta.Credit
 import com.landofoz.musicmeta.DiscographyAlbum
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
@@ -96,6 +97,18 @@ object MusicBrainzMapper {
         EnrichmentData.ArtistLinks(
             links = relations.map { rel ->
                 ExternalLink(type = rel.type, url = rel.url)
+            },
+        )
+
+    fun toCredits(credits: List<MusicBrainzCredit>): EnrichmentData.Credits =
+        EnrichmentData.Credits(
+            credits = credits.map { credit ->
+                Credit(
+                    name = credit.name,
+                    role = credit.role,
+                    roleCategory = credit.roleCategory,
+                    identifiers = EnrichmentIdentifiers(musicBrainzId = credit.id),
+                )
             },
         )
 
