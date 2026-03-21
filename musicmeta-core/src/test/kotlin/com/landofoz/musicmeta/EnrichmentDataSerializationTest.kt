@@ -155,6 +155,42 @@ class EnrichmentDataSerializationTest {
     }
 
     @Test
+    fun `GenreTag round-trip serialization works`() {
+        // Given
+        val tag = GenreTag(
+            name = "Alternative Rock",
+            confidence = 0.85f,
+            sources = listOf("musicbrainz", "lastfm"),
+        )
+
+        // When
+        val encoded = json.encodeToString(tag)
+        val decoded = json.decodeFromString<GenreTag>(encoded)
+
+        // Then
+        assertEquals(tag, decoded)
+    }
+
+    @Test
+    fun `Metadata with genreTags survives round-trip serialization`() {
+        // Given
+        val original = EnrichmentData.Metadata(
+            genres = listOf("rock", "alternative"),
+            genreTags = listOf(
+                GenreTag(name = "Rock", confidence = 0.9f, sources = listOf("musicbrainz")),
+                GenreTag(name = "Alternative", confidence = 0.7f),
+            ),
+        )
+
+        // When
+        val encoded = json.encodeToString(original)
+        val decoded = json.decodeFromString<EnrichmentData.Metadata>(encoded)
+
+        // Then
+        assertEquals(original, decoded)
+    }
+
+    @Test
     fun `Artwork with sizes survives round-trip serialization`() {
         // Given
         val original = EnrichmentData.Artwork(

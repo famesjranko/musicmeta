@@ -18,6 +18,7 @@ sealed class EnrichmentData {
     @Serializable
     data class Metadata(
         val genres: List<String>? = null,
+        val genreTags: List<GenreTag>? = null,
         val label: String? = null,
         val releaseDate: String? = null,
         val releaseType: String? = null,
@@ -178,4 +179,11 @@ data class TimelineEvent(
     val description: String,
     val relatedEntity: String? = null,
     val identifiers: EnrichmentIdentifiers = EnrichmentIdentifiers(),
+)
+
+@Serializable
+data class GenreTag(
+    val name: String,
+    val confidence: Float,
+    val sources: List<String> = emptyList(),
 )
