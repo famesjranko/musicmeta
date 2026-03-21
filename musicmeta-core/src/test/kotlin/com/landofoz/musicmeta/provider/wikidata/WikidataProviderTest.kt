@@ -113,6 +113,89 @@ class WikidataProviderTest {
     }
 
     @Test
+    fun `preferred rank claim is selected over normal rank`() = runTest {
+        // Given - P18 has two claims: normal rank first, preferred rank second
+        httpClient.givenJsonResponse(
+            "wikidata.org",
+            """{"claims":{"P18":[
+                {"rank":"normal","mainsnak":{"datavalue":{"value":"Old_photo.jpg","type":"string"}}},
+                {"rank":"preferred","mainsnak":{"datavalue":{"value":"New_photo.jpg","type":"string"}}}
+            ]}}""",
+        )
+
+        val request = EnrichmentRequest.ForArtist(
+            identifiers = EnrichmentIdentifiers(wikidataId = "Q44802"),
+            name = "Radiohead",
+        )
+
+        // When
+        val result = provider.enrich(request, EnrichmentType.ARTIST_PHOTO)
+
+        // Then - should use the preferred-rank claim (New_photo.jpg)
+        assertTrue(result is EnrichmentResult.Success)
+        val artwork = (result as EnrichmentResult.Success).data as EnrichmentData.Artwork
+        assertTrue(
+            "URL should contain New_photo.jpg, was: ${artwork.url}",
+            artwork.url.contains("New_photo.jpg"),
+        )
+    }
+
+    @Test
+    fun `normal rank claim is used when no preferred rank exists`() = runTest {
+        // Given - P18 has two claims both with normal rank
+        httpClient.givenJsonResponse(
+            "wikidata.org",
+            """{"claims":{"P18":[
+                {"rank":"normal","mainsnak":{"datavalue":{"value":"First.jpg","type":"string"}}},
+                {"rank":"normal","mainsnak":{"datavalue":{"value":"Second.jpg","type":"string"}}}
+            ]}}""",
+        )
+
+        val request = EnrichmentRequest.ForArtist(
+            identifiers = EnrichmentIdentifiers(wikidataId = "Q44802"),
+            name = "Radiohead",
+        )
+
+        // When
+        val result = provider.enrich(request, EnrichmentType.ARTIST_PHOTO)
+
+        // Then - should use the first claim (First.jpg) when no preferred exists
+        assertTrue(result is EnrichmentResult.Success)
+        val artwork = (result as EnrichmentResult.Success).data as EnrichmentData.Artwork
+        assertTrue(
+            "URL should contain First.jpg, was: ${artwork.url}",
+            artwork.url.contains("First.jpg"),
+        )
+    }
+
+    @Test
+    fun `single claim without rank field still works`() = runTest {
+        // Given - P18 has a single claim with no "rank" key
+        httpClient.givenJsonResponse(
+            "wikidata.org",
+            """{"claims":{"P18":[
+                {"mainsnak":{"datavalue":{"value":"Only_photo.jpg","type":"string"}}}
+            ]}}""",
+        )
+
+        val request = EnrichmentRequest.ForArtist(
+            identifiers = EnrichmentIdentifiers(wikidataId = "Q44802"),
+            name = "Radiohead",
+        )
+
+        // When
+        val result = provider.enrich(request, EnrichmentType.ARTIST_PHOTO)
+
+        // Then - should work (backward-compatible) and use the only claim
+        assertTrue(result is EnrichmentResult.Success)
+        val artwork = (result as EnrichmentResult.Success).data as EnrichmentData.Artwork
+        assertTrue(
+            "URL should contain Only_photo.jpg, was: ${artwork.url}",
+            artwork.url.contains("Only_photo.jpg"),
+        )
+    }
+
+    @Test
     fun `enrich returns NotFound when claims object is missing entirely`() = runTest {
         // Given — Wikidata API returns JSON without a "claims" key
         val wikidataId = "Q99998"
