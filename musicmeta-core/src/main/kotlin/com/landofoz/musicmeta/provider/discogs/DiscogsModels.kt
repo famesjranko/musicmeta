@@ -5,6 +5,10 @@ data class DiscogsReleaseDetail(
     val title: String,
     val extraartists: List<DiscogsCredit>,
     val tracklist: List<DiscogsTrackItem>,
+    val communityRating: Float? = null,
+    val ratingCount: Int? = null,
+    val haveCount: Int? = null,
+    val wantCount: Int? = null,
 )
 
 data class DiscogsCredit(
