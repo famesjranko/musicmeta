@@ -126,10 +126,10 @@ class GenreMergerTest {
         // When
         val result = GenreMerger.merge(tags)
 
-        // Then - tags are returned normalized and sorted
+        // Then - tags are returned sorted by confidence; display name is first-seen casing
         assertEquals(2, result.size)
-        assertEquals("electronic", result[0].name)
-        assertEquals("ambient", result[1].name)
+        assertEquals("Electronic", result[0].name) // first-seen casing preserved
+        assertEquals("Ambient", result[1].name)    // first-seen casing preserved
         assertEquals(0.9f, result[0].confidence, 0.001f)
     }
 }
