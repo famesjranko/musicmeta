@@ -1,5 +1,30 @@
 # Milestones
 
+## v0.5.0 New Capabilities & Tech Debt Cleanup (Shipped: 2026-03-21)
+
+**Phases completed:** 6 phases, 16 plans, 26 tasks
+
+**Key accomplishments:**
+
+- HttpResult-returning method variants added to HttpClient (fetchJsonArrayResult, postJsonResult, postJsonArrayResult) and 4 providers fully migrated from nullable fetchJson to typed fetchJsonResult with ErrorKind error classification
+- CoverArtArchive (1 site), LrcLib (2 sites), and MusicBrainz (7 sites) Api classes migrated from nullable fetchJson/fetchJsonArray to fetchJsonResult/fetchJsonArrayResult; all 3 Providers now map errors to ErrorKind via mapError() helper
+- 4 remaining providers migrated from nullable fetchJson/fetchJsonArray/postJsonArray to typed HttpResult variants with ErrorKind error classification, completing the DEBT-01 and DEBT-02 milestone across all 11 providers
+- ListenBrainz ARTIST_DISCOGRAPHY wired at priority 50 and Discogs release/master IDs stored in resolvedIdentifiers via discogsReleaseId/discogsMasterId extra map keys
+- CREDITS enrichment type with MusicBrainz recording lookup parsing 11 role types (vocal, instrument, performer, producer, engineer, mixer, mastering, recording engineer, composer, lyricist, arranger) into Credits/Credit @Serializable data classes with performance/production/songwriting roleCategory
+- Discogs CREDITS fallback at priority 50 using discogsReleaseId from Phase 6 to fetch release extraartists, with track-level filtering and role-to-category keyword mapping covering performance/production/songwriting
+- One-liner:
+- Discogs master versions endpoint wired as RELEASE_EDITIONS fallback (priority 50) reading discogsMasterId from identifiers.extra, with DiscogsMasterVersion model, getMasterVersions API, and toReleaseEditions mapper
+- ARTIST_TIMELINE EnrichmentType with ArtistTimeline/TimelineEvent data classes and a pure TimelineSynthesizer that produces chronologically sorted, deduplicated timeline events from life-span metadata, discography albums, and band member changes
+- Composite ARTIST_TIMELINE resolution wired into DefaultEnrichmentEngine — requesting ARTIST_TIMELINE transparently auto-resolves ARTIST_DISCOGRAPHY and BAND_MEMBERS sub-types, feeds them plus identity metadata (beginDate/endDate/artistType) to TimelineSynthesizer, and returns the synthesized timeline without exposing sub-types to callers
+- GenreTag @Serializable data class with confidence + sources, Metadata.genreTags field, and GenreMerger.merge() with alias normalization, deduplication, and additive confidence scoring
+- RED:
+- Task 1 — ProviderChain.resolveAll():
+- Last.fm ALBUM_METADATA at priority 40 via album.getinfo with genre tags, and Discogs community rating (average 4.2f, have/want counts) extracted from existing release details call
+- 1. [Rule 3 - Blocking] Parallel agent test compilation blocked build
+- 1. [Rule 1 - Bug] Fixed ITunesProvider.exactMatch() unresolved reference
+
+---
+
 ## v0.4.0 Provider Abstraction Overhaul (Shipped: 2026-03-21)
 
 **Phases completed:** 5 phases, 15 plans, 31 tasks
