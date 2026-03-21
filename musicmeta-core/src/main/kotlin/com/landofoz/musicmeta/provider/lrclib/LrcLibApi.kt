@@ -1,6 +1,7 @@
 package com.landofoz.musicmeta.provider.lrclib
 
 import com.landofoz.musicmeta.http.HttpClient
+import com.landofoz.musicmeta.http.HttpResult
 import com.landofoz.musicmeta.http.RateLimiter
 import org.json.JSONArray
 import org.json.JSONObject
@@ -31,7 +32,10 @@ class LrcLibApi(
             if (album != null) append("&album_name=${encode(album)}")
             if (durationSec != null) append("&duration=$durationSec")
         }
-        val json = httpClient.fetchJson(url) ?: return@execute null
+        val json = when (val result = httpClient.fetchJsonResult(url)) {
+            is HttpResult.Ok -> result.body
+            else -> return@execute null
+        }
         parseResult(json)
     }
 
@@ -44,7 +48,10 @@ class LrcLibApi(
         track: String,
     ): List<LrcLibResult> = rateLimiter.execute {
         val url = "$BASE_URL/api/search?artist_name=${encode(artist)}&track_name=${encode(track)}"
-        val jsonArray = httpClient.fetchJsonArray(url) ?: return@execute emptyList()
+        val jsonArray = when (val result = httpClient.fetchJsonArrayResult(url)) {
+            is HttpResult.Ok -> result.body
+            else -> return@execute emptyList()
+        }
         parseResultArray(jsonArray)
     }
 

@@ -4,6 +4,7 @@ import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
+import com.landofoz.musicmeta.ErrorKind
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.testutil.FakeHttpClient
 import kotlinx.coroutines.test.runTest
@@ -207,6 +208,23 @@ class LrcLibProviderTest {
 
         // Then — NotFound because both lyrics are null and track is not instrumental
         assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `enrich returns Error with NETWORK ErrorKind when API throws IOException`() = runTest {
+        // Given — fetchJsonResult throws IOException simulating a network failure
+        httpClient.givenIoException("/api/get")
+        val request = EnrichmentRequest.forTrack(
+            title = "Creep",
+            artist = "Radiohead",
+        )
+
+        // When — enriching for lyrics
+        val result = provider.enrich(request, EnrichmentType.LYRICS_SYNCED)
+
+        // Then — Error with NETWORK ErrorKind
+        assertTrue("Expected Error but got $result", result is EnrichmentResult.Error)
+        assertEquals(ErrorKind.NETWORK, (result as EnrichmentResult.Error).errorKind)
     }
 
     @Test

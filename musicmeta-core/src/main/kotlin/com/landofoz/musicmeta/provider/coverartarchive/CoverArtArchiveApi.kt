@@ -1,6 +1,7 @@
 package com.landofoz.musicmeta.provider.coverartarchive
 
 import com.landofoz.musicmeta.http.HttpClient
+import com.landofoz.musicmeta.http.HttpResult
 import org.json.JSONObject
 
 /**
@@ -35,7 +36,10 @@ class CoverArtArchiveApi(
      */
     suspend fun getArtworkMetadata(releaseId: String): CoverArtArchiveImageList? {
         val url = "$BASE_URL/release/$releaseId"
-        val json = httpClient.fetchJson(url) ?: return null
+        val json = when (val result = httpClient.fetchJsonResult(url)) {
+            is HttpResult.Ok -> result.body
+            else -> return null
+        }
         return parseImageList(json)
     }
 

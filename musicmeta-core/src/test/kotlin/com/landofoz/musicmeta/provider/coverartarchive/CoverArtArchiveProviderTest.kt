@@ -1,14 +1,15 @@
 package com.landofoz.musicmeta.provider.coverartarchive
 
+import com.landofoz.musicmeta.ArtworkSize
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
+import com.landofoz.musicmeta.ErrorKind
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.testutil.FakeHttpClient
 import kotlinx.coroutines.test.runTest
-import com.landofoz.musicmeta.ArtworkSize
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -415,5 +416,24 @@ class CoverArtArchiveProviderTest {
 
         // Then — NotFound after exhausting both release and release-group paths
         assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `enrich returns Error with NETWORK ErrorKind when metadata endpoint throws IOException`() = runTest {
+        // Given — metadata endpoint throws IOException (network failure)
+        // ALBUM_ART_BACK goes straight to getArtworkMetadata (fetchJsonResult) without a redirect call
+        httpClient.givenIoException("release/err-rel")
+        val request = EnrichmentRequest.ForAlbum(
+            identifiers = EnrichmentIdentifiers(musicBrainzId = "err-rel"),
+            title = "Error Album",
+            artist = "Error Artist",
+        )
+
+        // When — enriching for back cover art (triggers metadata fetch which throws)
+        val result = provider.enrich(request, EnrichmentType.ALBUM_ART_BACK)
+
+        // Then — Error with NETWORK ErrorKind
+        assertTrue("Expected Error but got $result", result is EnrichmentResult.Error)
+        assertEquals(ErrorKind.NETWORK, (result as EnrichmentResult.Error).errorKind)
     }
 }
