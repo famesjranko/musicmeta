@@ -42,6 +42,12 @@ class LastFmApi(
         return parseSimilarTracks(json)
     }
 
+    suspend fun getTrackInfo(trackTitle: String, artistName: String): LastFmTrackInfo? {
+        val url = buildTrackUrl("track.getInfo", trackTitle, artistName)
+        val json = rateLimiter.execute { httpClient.fetchJson(url) } ?: return null
+        return parseTrackInfo(json)
+    }
+
     private fun buildTrackUrl(method: String, trackTitle: String, artistName: String): String {
         val encodedTrack = URLEncoder.encode(trackTitle, "UTF-8")
         val encodedArtist = URLEncoder.encode(artistName, "UTF-8")
@@ -92,6 +98,18 @@ class LastFmApi(
                 mbid = obj.optString("mbid").takeIf { it.isNotBlank() },
             )
         }
+    }
+
+    private fun parseTrackInfo(json: JSONObject): LastFmTrackInfo? {
+        val track = json.optJSONObject("track") ?: return null
+        val artist = track.optJSONObject("artist")
+        return LastFmTrackInfo(
+            title = track.optString("name", ""),
+            artist = artist?.optString("name", "") ?: "",
+            playcount = track.optString("playcount")?.toLongOrNull(),
+            listeners = track.optString("listeners")?.toLongOrNull(),
+            mbid = track.optString("mbid").takeIf { it.isNotBlank() },
+        )
     }
 
     private fun parseTags(json: JSONObject): List<String> {

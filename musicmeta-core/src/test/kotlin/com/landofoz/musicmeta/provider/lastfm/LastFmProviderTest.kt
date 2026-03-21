@@ -202,25 +202,55 @@ class LastFmProviderTest {
     }
 
     @Test
-    fun `capabilities do not include TRACK_POPULARITY`() {
+    fun `capabilities include TRACK_POPULARITY`() {
         // Given — provider instance
 
         // When — checking capabilities
 
-        // Then — no capability has type TRACK_POPULARITY
-        assertTrue(provider.capabilities.none { it.type == EnrichmentType.TRACK_POPULARITY })
+        // Then — TRACK_POPULARITY capability exists with priority 100
+        assertTrue(provider.capabilities.any { it.type == EnrichmentType.TRACK_POPULARITY })
     }
 
     @Test
-    fun `enrich returns NotFound for TRACK_POPULARITY`() = runTest {
-        // Given — valid artist info response configured
-        httpClient.givenJsonResponse("artist.getinfo", ARTIST_INFO_JSON)
-        val request = EnrichmentRequest.forArtist(name = "Radiohead")
+    fun `enrich returns track popularity for ForTrack request`() = runTest {
+        // Given — Last.fm returns track.getInfo JSON with playcount and listeners
+        httpClient.givenJsonResponse("track.getInfo", TRACK_INFO_JSON)
+        val request = EnrichmentRequest.forTrack(title = "Karma Police", artist = "Radiohead")
 
         // When — enriching for TRACK_POPULARITY
         val result = provider.enrich(request, EnrichmentType.TRACK_POPULARITY)
 
-        // Then — NotFound because Last.fm does not support track-level popularity
+        // Then — Success with track-level playcount and listeners
+        assertTrue(result is EnrichmentResult.Success)
+        val data = (result as EnrichmentResult.Success).data
+        assertTrue(data is EnrichmentData.Popularity)
+        val popularity = data as EnrichmentData.Popularity
+        assertEquals(12345L, popularity.listenCount)
+        assertEquals(6789L, popularity.listenerCount)
+    }
+
+    @Test
+    fun `enrich returns NotFound for TRACK_POPULARITY with ForArtist request`() = runTest {
+        // Given — valid artist info response configured
+        httpClient.givenJsonResponse("artist.getinfo", ARTIST_INFO_JSON)
+        val request = EnrichmentRequest.forArtist(name = "Radiohead")
+
+        // When — enriching for TRACK_POPULARITY (requires ForTrack)
+        val result = provider.enrich(request, EnrichmentType.TRACK_POPULARITY)
+
+        // Then — NotFound because TRACK_POPULARITY requires ForTrack
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `enrich returns NotFound for TRACK_POPULARITY when API returns null`() = runTest {
+        // Given — no response configured for track.getInfo
+        val request = EnrichmentRequest.forTrack(title = "Nonexistent", artist = "Nobody")
+
+        // When — enriching for TRACK_POPULARITY
+        val result = provider.enrich(request, EnrichmentType.TRACK_POPULARITY)
+
+        // Then — NotFound because track.getInfo returns null
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
@@ -286,6 +316,18 @@ class LastFmProviderTest {
                   "listeners": "4000000",
                   "playcount": "300000000"
                 }
+              }
+            }
+        """.trimIndent()
+
+        val TRACK_INFO_JSON = """
+            {
+              "track": {
+                "name": "Karma Police",
+                "artist": {"name": "Radiohead"},
+                "playcount": "12345",
+                "listeners": "6789",
+                "mbid": "abc-123"
               }
             }
         """.trimIndent()

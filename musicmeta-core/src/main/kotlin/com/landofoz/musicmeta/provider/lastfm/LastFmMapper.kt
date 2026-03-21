@@ -46,4 +46,10 @@ object LastFmMapper {
             listenerCount = info.listeners,
             listenCount = info.playcount,
         )
+
+    fun toTrackPopularity(info: LastFmTrackInfo): EnrichmentData.Popularity =
+        EnrichmentData.Popularity(
+            listenCount = info.playcount,
+            listenerCount = info.listeners,
+        )
 }

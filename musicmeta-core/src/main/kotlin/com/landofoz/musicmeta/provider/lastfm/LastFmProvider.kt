@@ -36,6 +36,7 @@ class LastFmProvider(
         ProviderCapability(EnrichmentType.ARTIST_BIO, priority = 50),
         ProviderCapability(EnrichmentType.ARTIST_POPULARITY, priority = 100),
         ProviderCapability(EnrichmentType.SIMILAR_TRACKS, priority = 100),
+        ProviderCapability(EnrichmentType.TRACK_POPULARITY, priority = 100),
     )
 
     override suspend fun enrich(
@@ -44,12 +45,16 @@ class LastFmProvider(
     ): EnrichmentResult {
         if (!isAvailable) return EnrichmentResult.NotFound(type, id)
 
-        // SIMILAR_TRACKS requires a ForTrack request; all others require ForArtist
-        if (type == EnrichmentType.SIMILAR_TRACKS) {
+        // SIMILAR_TRACKS and TRACK_POPULARITY require a ForTrack request; all others require ForArtist
+        if (type == EnrichmentType.SIMILAR_TRACKS || type == EnrichmentType.TRACK_POPULARITY) {
             val trackRequest = request as? EnrichmentRequest.ForTrack
                 ?: return EnrichmentResult.NotFound(type, id)
             return try {
-                enrichSimilarTracks(trackRequest, type)
+                when (type) {
+                    EnrichmentType.SIMILAR_TRACKS -> enrichSimilarTracks(trackRequest, type)
+                    EnrichmentType.TRACK_POPULARITY -> enrichTrackPopularity(trackRequest, type)
+                    else -> EnrichmentResult.NotFound(type, id)
+                }
             } catch (e: Exception) {
                 EnrichmentResult.Error(type, id, e.message ?: "Unknown error", e)
             }
@@ -106,6 +111,15 @@ class LastFmProvider(
         val tracks = api.getSimilarTracks(request.title, request.artist)
         if (tracks.isEmpty()) return EnrichmentResult.NotFound(type, id)
         return success(LastFmMapper.toSimilarTracks(tracks), type)
+    }
+
+    private suspend fun enrichTrackPopularity(
+        request: EnrichmentRequest.ForTrack,
+        type: EnrichmentType,
+    ): EnrichmentResult {
+        val info = api.getTrackInfo(request.title, request.artist)
+            ?: return EnrichmentResult.NotFound(type, id)
+        return success(LastFmMapper.toTrackPopularity(info), type)
     }
 
     private suspend fun enrichPopularity(
