@@ -265,15 +265,15 @@ class EnrichmentShowcaseTest {
     }
 
     private fun printResults(results: Map<EnrichmentType, EnrichmentResult>) {
-        val resolution = results.values
+        val identityResult = results.values
             .filterIsInstance<EnrichmentResult.Success>()
-            .firstOrNull { it.data is EnrichmentData.IdentifierResolution }
-            ?.data as? EnrichmentData.IdentifierResolution
-        if (resolution != null) {
-            println("  Identity: mbid=${resolution.musicBrainzId ?: "-"}" +
-                " wikidata=${resolution.wikidataId ?: "-"}" +
-                " wikipedia=${resolution.wikipediaTitle ?: "-"}" +
-                " score=${resolution.score}")
+            .firstOrNull { it.resolvedIdentifiers != null }
+        if (identityResult != null) {
+            val ids = identityResult.resolvedIdentifiers
+            println("  Identity: mbid=${ids?.musicBrainzId ?: "-"}" +
+                " wikidata=${ids?.wikidataId ?: "-"}" +
+                " wikipedia=${ids?.wikipediaTitle ?: "-"}" +
+                " conf=${identityResult.confidence}")
         }
 
         var found = 0; var missing = 0; var errors = 0
@@ -332,8 +332,6 @@ class EnrichmentShowcaseTest {
             data.listenCount?.let { append("plays=$it ") }
             data.topTracks?.firstOrNull()?.let { append("top: ${it.title}(${it.listenCount})") }
         }
-        is EnrichmentData.IdentifierResolution ->
-            "mbid=${data.musicBrainzId}"
     }
 
     companion object {

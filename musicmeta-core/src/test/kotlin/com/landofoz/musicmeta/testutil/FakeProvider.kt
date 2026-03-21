@@ -15,9 +15,17 @@ open class FakeProvider(
     override val isIdentityProvider: Boolean = false,
 ) : EnrichmentProvider {
     private val results = mutableMapOf<EnrichmentType, EnrichmentResult>()
+    private var identityResult: EnrichmentResult? = null
     val enrichCalls = mutableListOf<Pair<EnrichmentRequest, EnrichmentType>>()
 
     fun givenResult(type: EnrichmentType, result: EnrichmentResult) { results[type] = result }
+    fun givenIdentityResult(result: EnrichmentResult) { identityResult = result }
+
+    override suspend fun resolveIdentity(request: EnrichmentRequest): EnrichmentResult {
+        val result = identityResult ?: return super.resolveIdentity(request)
+        enrichCalls.add(request to EnrichmentType.GENRE)
+        return result
+    }
 
     override suspend fun enrich(request: EnrichmentRequest, type: EnrichmentType): EnrichmentResult {
         enrichCalls.add(request to type)

@@ -30,7 +30,7 @@ interface EnrichmentProvider {
 
     /**
      * Resolve identifiers for the given request. Only meaningful when [isIdentityProvider] is true.
-     * Returns a Success with IdentifierResolution data, or NotFound/Error.
+     * Returns a Success with Metadata data and resolvedIdentifiers, or NotFound/Error.
      */
     suspend fun resolveIdentity(request: EnrichmentRequest): EnrichmentResult =
         EnrichmentResult.NotFound(EnrichmentType.GENRE, id)

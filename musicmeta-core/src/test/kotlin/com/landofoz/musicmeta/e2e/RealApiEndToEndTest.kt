@@ -2,6 +2,7 @@ package com.landofoz.musicmeta.e2e
 
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentEngine
+import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
@@ -411,24 +412,28 @@ class RealApiEndToEndTest {
         assertNotNull("Should resolve AC/DC", resolution)
     }
 
-    private fun extractResolution(
-        result: Map<EnrichmentType, EnrichmentResult>,
-    ): EnrichmentData.IdentifierResolution? {
-        // The engine stores Metadata (not IdentifierResolution) in results,
-        // with resolved identifiers attached to the Success wrapper.
+    /** Extracts resolved identifiers and metadata from the first Success with resolvedIdentifiers. */
+    private fun extractResolution(result: Map<EnrichmentType, EnrichmentResult>): ResolvedInfo? {
         val success = result.values
             .filterIsInstance<EnrichmentResult.Success>()
             .firstOrNull { it.resolvedIdentifiers != null } ?: return null
         val ids = success.resolvedIdentifiers ?: return null
         val metadata = success.data as? EnrichmentData.Metadata
-        return EnrichmentData.IdentifierResolution(
-            musicBrainzId = ids.musicBrainzId,
-            musicBrainzReleaseGroupId = ids.musicBrainzReleaseGroupId,
-            wikidataId = ids.wikidataId,
-            wikipediaTitle = ids.wikipediaTitle,
+        return ResolvedInfo(
+            ids = ids,
             score = (success.confidence * 100).toInt(),
             metadata = metadata,
         )
+    }
+
+    private data class ResolvedInfo(
+        val ids: EnrichmentIdentifiers,
+        val score: Int,
+        val metadata: EnrichmentData.Metadata?,
+    ) {
+        val musicBrainzId get() = ids.musicBrainzId
+        val wikidataId get() = ids.wikidataId
+        val wikipediaTitle get() = ids.wikipediaTitle
     }
 
     companion object {

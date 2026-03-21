@@ -50,14 +50,15 @@ class ProviderValidationTest {
         // When — enriching a well-known album
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then — MBID resolved with high score and metadata
+        // Then — MBID resolved with high confidence and metadata
         assertTrue("Should succeed", result is EnrichmentResult.Success)
-        val data = (result as EnrichmentResult.Success).data as EnrichmentData.IdentifierResolution
-        assertNotNull("Should have MBID", data.musicBrainzId)
-        assertTrue("Score >= 80", data.score >= 80)
-        assertNotNull("Should have metadata", data.metadata)
-        println("  Album MBID: ${data.musicBrainzId}, score: ${data.score}")
-        println("  Genres: ${data.metadata?.genres}, Label: ${data.metadata?.label}")
+        val success = result as EnrichmentResult.Success
+        val data = success.data as EnrichmentData.Metadata
+        assertNotNull("Should have MBID", success.resolvedIdentifiers?.musicBrainzId)
+        assertTrue("Confidence >= 0.80", success.confidence >= 0.80f)
+        assertNotNull("Should have genres or label", data.genres ?: data.label)
+        println("  Album MBID: ${success.resolvedIdentifiers?.musicBrainzId}, confidence: ${success.confidence}")
+        println("  Genres: ${data.genres}, Label: ${data.label}")
     }
 
     @Test
@@ -71,10 +72,11 @@ class ProviderValidationTest {
 
         // Then — artist resolved with Wikidata relation
         assertTrue("Should succeed", result is EnrichmentResult.Success)
-        val data = (result as EnrichmentResult.Success).data as EnrichmentData.IdentifierResolution
-        assertNotNull("Should have Wikidata ID", data.wikidataId)
-        println("  Artist MBID: ${data.musicBrainzId}")
-        println("  Wikidata: ${data.wikidataId}, Wikipedia: ${data.wikipediaTitle}")
+        val success = result as EnrichmentResult.Success
+        assertTrue(success.data is EnrichmentData.Metadata)
+        assertNotNull("Should have Wikidata ID", success.resolvedIdentifiers?.wikidataId)
+        println("  Artist MBID: ${success.resolvedIdentifiers?.musicBrainzId}")
+        println("  Wikidata: ${success.resolvedIdentifiers?.wikidataId}, Wikipedia: ${success.resolvedIdentifiers?.wikipediaTitle}")
     }
 
     @Test
@@ -91,11 +93,12 @@ class ProviderValidationTest {
 
         // Then — uses the provided MBID and returns full metadata
         assertTrue("Direct lookup should succeed", result is EnrichmentResult.Success)
-        val data = (result as EnrichmentResult.Success).data as EnrichmentData.IdentifierResolution
-        assertEquals("Should use provided MBID", "a74b1b7f-71a5-4011-9441-d0b5e4122711", data.musicBrainzId)
-        assertNotNull("Lookup should return wikidataId", data.wikidataId)
-        assertNotNull("Lookup should return metadata", data.metadata)
-        println("  Wikidata: ${data.wikidataId}, Genres: ${data.metadata?.genres}")
+        val success = result as EnrichmentResult.Success
+        val data = success.data as EnrichmentData.Metadata
+        assertEquals("Should use provided MBID", "a74b1b7f-71a5-4011-9441-d0b5e4122711", success.resolvedIdentifiers?.musicBrainzId)
+        assertNotNull("Lookup should return wikidataId", success.resolvedIdentifiers?.wikidataId)
+        assertNotNull("Lookup should return genres or metadata", data.genres ?: data.country)
+        println("  Wikidata: ${success.resolvedIdentifiers?.wikidataId}, Genres: ${data.genres}")
     }
 
     @Test
@@ -109,7 +112,7 @@ class ProviderValidationTest {
 
         // Then — resolves despite the slash in the name
         assertTrue("AC/DC should resolve", result is EnrichmentResult.Success)
-        println("  MBID: ${((result as EnrichmentResult.Success).data as EnrichmentData.IdentifierResolution).musicBrainzId}")
+        println("  MBID: ${(result as EnrichmentResult.Success).resolvedIdentifiers?.musicBrainzId}")
     }
 
     // --- Cover Art Archive ---

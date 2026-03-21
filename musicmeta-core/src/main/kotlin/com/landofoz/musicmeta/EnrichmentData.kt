@@ -57,21 +57,6 @@ sealed class EnrichmentData {
         val topTracks: List<PopularTrack>? = null,
     ) : EnrichmentData()
 
-    /**
-     * Resolved identifiers + metadata from an identity lookup (e.g., MusicBrainz).
-     * Used by the engine to enrich the request before fanning out, and also
-     * carries metadata that came as a side effect of the identity search.
-     */
-    @Serializable
-    data class IdentifierResolution(
-        val musicBrainzId: String? = null,
-        val musicBrainzReleaseGroupId: String? = null,
-        val wikidataId: String? = null,
-        val wikipediaTitle: String? = null,
-        val score: Int = 0,
-        val metadata: Metadata? = null,
-        val hasFrontCover: Boolean = false,
-    ) : EnrichmentData()
 }
 
 @Serializable

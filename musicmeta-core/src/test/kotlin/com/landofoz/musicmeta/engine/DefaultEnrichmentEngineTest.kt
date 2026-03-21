@@ -99,7 +99,7 @@ class DefaultEnrichmentEngineTest {
     @Test fun `enrich with identity resolution enriches identifiers`() = runTest {
         // Given — identity provider resolves MBID, art provider requires identifier
         val idProvider = FakeProvider(id = "mb", isIdentityProvider = true, capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)))
-            .also { it.givenResult(EnrichmentType.GENRE, EnrichmentResult.Success(EnrichmentType.GENRE, EnrichmentData.IdentifierResolution(musicBrainzId = "mbid-123", wikidataId = "Q123"), "mb", 0.95f)) }
+            .also { it.givenIdentityResult(EnrichmentResult.Success(EnrichmentType.GENRE, EnrichmentData.Metadata(genres = listOf("rock")), "mb", 0.95f, resolvedIdentifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-123", wikidataId = "Q123"))) }
         val artProvider = FakeProvider(id = "caa", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100, identifierRequirement = IdentifierRequirement.MUSICBRAINZ_ID)))
             .also { it.givenResult(EnrichmentType.ALBUM_ART, art("caa")) }
         val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider, artProvider)), cache, FakeHttpClient(), EnrichmentConfig(enableIdentityResolution = true))
@@ -159,21 +159,17 @@ class DefaultEnrichmentEngineTest {
 
     // --- Identity resolution side-effects ---
 
-    @Test fun `identity resolution extracts Metadata from IdentifierResolution`() = runTest {
-        // Given — identity provider returns IdentifierResolution with nested Metadata
-        val resolution = EnrichmentData.IdentifierResolution(
-            musicBrainzId = "mbid-123",
-            wikidataId = "Q123",
-            metadata = EnrichmentData.Metadata(genres = listOf("rock", "alternative"), label = "Parlophone"),
-        )
+    @Test fun `identity resolution stores Metadata for identity types`() = runTest {
+        // Given — identity provider returns Metadata with resolvedIdentifiers
+        val metadata = EnrichmentData.Metadata(genres = listOf("rock", "alternative"), label = "Parlophone")
         val idProvider = FakeProvider(id = "mb", isIdentityProvider = true, capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)))
-            .also { it.givenResult(EnrichmentType.GENRE, EnrichmentResult.Success(EnrichmentType.GENRE, resolution, "mb", 0.95f)) }
+            .also { it.givenIdentityResult(EnrichmentResult.Success(EnrichmentType.GENRE, metadata, "mb", 0.95f, resolvedIdentifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-123", wikidataId = "Q123"))) }
         val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider)), cache, FakeHttpClient(), EnrichmentConfig(enableIdentityResolution = true))
 
         // When — enriching GENRE and LABEL (both identity types)
         val results = e.enrich(req, setOf(EnrichmentType.GENRE, EnrichmentType.LABEL))
 
-        // Then — GENRE result is Metadata (not IdentifierResolution) with resolved identifiers
+        // Then — GENRE result is Metadata with resolved identifiers
         val genreResult = results[EnrichmentType.GENRE] as EnrichmentResult.Success
         assertTrue("Expected Metadata but got ${genreResult.data::class.simpleName}", genreResult.data is EnrichmentData.Metadata)
         assertEquals(listOf("rock", "alternative"), (genreResult.data as EnrichmentData.Metadata).genres)
@@ -187,12 +183,10 @@ class DefaultEnrichmentEngineTest {
 
     @Test fun `identity resolution updates request identifiers for downstream providers`() = runTest {
         // Given — identity provider resolves wikidataId + wikipediaTitle, bio provider needs them
-        val resolution = EnrichmentData.IdentifierResolution(
-            musicBrainzId = "mbid-456", wikidataId = "Q456", wikipediaTitle = "Radiohead",
-            metadata = EnrichmentData.Metadata(genres = listOf("rock")),
-        )
+        val metadata = EnrichmentData.Metadata(genres = listOf("rock"))
+        val resolvedIds = EnrichmentIdentifiers(musicBrainzId = "mbid-456", wikidataId = "Q456", wikipediaTitle = "Radiohead")
         val idProvider = FakeProvider(id = "mb", isIdentityProvider = true, capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)))
-            .also { it.givenResult(EnrichmentType.GENRE, EnrichmentResult.Success(EnrichmentType.GENRE, resolution, "mb", 0.95f)) }
+            .also { it.givenIdentityResult(EnrichmentResult.Success(EnrichmentType.GENRE, metadata, "mb", 0.95f, resolvedIdentifiers = resolvedIds)) }
         val bioProvider = FakeProvider(id = "wp", capabilities = listOf(ProviderCapability(EnrichmentType.ARTIST_BIO, 100, identifierRequirement = IdentifierRequirement.WIKIPEDIA_TITLE)))
             .also { it.givenResult(EnrichmentType.ARTIST_BIO, EnrichmentResult.Success(EnrichmentType.ARTIST_BIO, EnrichmentData.Biography("bio text", "Wikipedia"), "wp", 0.9f)) }
         val artistReq = EnrichmentRequest.forArtist("Radiohead")
@@ -208,18 +202,21 @@ class DefaultEnrichmentEngineTest {
         assertEquals("Radiohead", enrichedReq.identifiers.wikipediaTitle)
     }
 
-    @Test fun `identity resolution without metadata still resolves via provider chain`() = runTest {
-        // Given — identity provider returns IdentifierResolution with null metadata
-        val resolution = EnrichmentData.IdentifierResolution(musicBrainzId = "mbid-789", metadata = null)
+    @Test fun `identity resolution with resolvedIdentifiers updates request for provider chain`() = runTest {
+        // Given — identity provider returns Metadata with resolvedIdentifiers
+        val metadata = EnrichmentData.Metadata(genres = listOf("rock"))
+        val resolvedIds = EnrichmentIdentifiers(musicBrainzId = "mbid-789")
         val idProvider = FakeProvider(id = "mb", isIdentityProvider = true, capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)))
-            .also { it.givenResult(EnrichmentType.GENRE, EnrichmentResult.Success(EnrichmentType.GENRE, resolution, "mb", 0.95f)) }
+            .also { it.givenIdentityResult(EnrichmentResult.Success(EnrichmentType.GENRE, metadata, "mb", 0.95f, resolvedIdentifiers = resolvedIds)) }
         val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider)), cache, FakeHttpClient(), EnrichmentConfig(enableIdentityResolution = true))
 
         // When — enriching GENRE
         val results = e.enrich(req, setOf(EnrichmentType.GENRE))
 
-        // Then — GENRE still resolves via provider chain (identity provider called again)
+        // Then — GENRE resolves from identity resolution with Metadata
         assertTrue(results[EnrichmentType.GENRE] is EnrichmentResult.Success)
+        val genreResult = results[EnrichmentType.GENRE] as EnrichmentResult.Success
+        assertTrue(genreResult.data is EnrichmentData.Metadata)
     }
 
     // --- Manual selection flag ---
@@ -281,9 +278,10 @@ class DefaultEnrichmentEngineTest {
 
     @Test fun `needsIdentityResolution triggers when provider needs MUSICBRAINZ_ID and request lacks it`() = runTest {
         // Given — identity provider + art provider requiring MUSICBRAINZ_ID, request has no MBID
-        val resolution = EnrichmentData.IdentifierResolution(musicBrainzId = "mbid-resolved")
+        val metadata = EnrichmentData.Metadata(genres = listOf("rock"))
+        val resolvedIds = EnrichmentIdentifiers(musicBrainzId = "mbid-resolved")
         val idProvider = FakeProvider(id = "mb", isIdentityProvider = true, capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)))
-            .also { it.givenResult(EnrichmentType.GENRE, EnrichmentResult.Success(EnrichmentType.GENRE, resolution, "mb", 0.95f)) }
+            .also { it.givenIdentityResult(EnrichmentResult.Success(EnrichmentType.GENRE, metadata, "mb", 0.95f, resolvedIdentifiers = resolvedIds)) }
         val artProvider = FakeProvider(id = "caa", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100, identifierRequirement = IdentifierRequirement.MUSICBRAINZ_ID)))
             .also { it.givenResult(EnrichmentType.ALBUM_ART, art("caa")) }
         val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider, artProvider)), cache, FakeHttpClient(), EnrichmentConfig(enableIdentityResolution = true))

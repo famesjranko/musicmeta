@@ -105,7 +105,7 @@ class DefaultEnrichmentEngine(
         val identityType = IDENTITY_TYPES.firstOrNull { it in uncachedTypes } ?: IDENTITY_TYPES.first()
 
         val result = try {
-            provider.enrich(request, identityType)
+            provider.resolveIdentity(request)
         } catch (e: Exception) {
             logger.warn(TAG, "Identity resolution failed: ${e.message}", e)
             return request
@@ -115,36 +115,44 @@ class DefaultEnrichmentEngine(
             return request
         }
 
-        val data = result.data
-        if (data is EnrichmentData.IdentifierResolution) {
-            logger.debug(TAG, "Identity resolved: wikidataId=${data.wikidataId}, wpTitle=${data.wikipediaTitle}")
-
-            val resolvedIds = EnrichmentIdentifiers(
-                musicBrainzId = data.musicBrainzId ?: request.identifiers.musicBrainzId,
-                musicBrainzReleaseGroupId = data.musicBrainzReleaseGroupId ?: request.identifiers.musicBrainzReleaseGroupId,
-                wikidataId = data.wikidataId ?: request.identifiers.wikidataId,
-                wikipediaTitle = data.wikipediaTitle ?: request.identifiers.wikipediaTitle,
-            )
-
-            // Store Metadata (not IdentifierResolution) for metadata types, with identifiers attached
-            val metadata = data.metadata
-            if (metadata != null) {
-                val metadataResult = EnrichmentResult.Success(
-                    type = identityType,
-                    data = metadata,
-                    provider = result.provider,
-                    confidence = result.confidence,
-                    resolvedIdentifiers = resolvedIds,
-                )
+        // Extract resolved identifiers from the result
+        val resolved = result.resolvedIdentifiers
+        if (resolved == null) {
+            logger.debug(TAG, "Identity resolution returned no resolvedIdentifiers")
+            // Still store the result for identity types if data is Metadata
+            if (result.data is EnrichmentData.Metadata) {
                 for (type in IDENTITY_TYPES) {
-                    if (type in uncachedTypes) { results[type] = metadataResult; uncachedTypes.remove(type) }
+                    if (type in uncachedTypes) { results[type] = result; uncachedTypes.remove(type) }
                 }
             }
-
-            return request.withIdentifiers(resolvedIds)
+            return request
         }
-        if (data is EnrichmentData.Metadata) { results[identityType] = result; uncachedTypes.remove(identityType) }
-        return request
+
+        logger.debug(TAG, "Identity resolved: mbid=${resolved.musicBrainzId}, wikidataId=${resolved.wikidataId}, wpTitle=${resolved.wikipediaTitle}")
+
+        // Merge resolved identifiers with existing ones (resolved takes precedence)
+        val mergedIds = EnrichmentIdentifiers(
+            musicBrainzId = resolved.musicBrainzId ?: request.identifiers.musicBrainzId,
+            musicBrainzReleaseGroupId = resolved.musicBrainzReleaseGroupId ?: request.identifiers.musicBrainzReleaseGroupId,
+            wikidataId = resolved.wikidataId ?: request.identifiers.wikidataId,
+            wikipediaTitle = resolved.wikipediaTitle ?: request.identifiers.wikipediaTitle,
+        )
+
+        // Store Metadata result for all identity types with resolved identifiers attached
+        if (result.data is EnrichmentData.Metadata) {
+            val metadataResult = EnrichmentResult.Success(
+                type = identityType,
+                data = result.data,
+                provider = result.provider,
+                confidence = result.confidence,
+                resolvedIdentifiers = mergedIds,
+            )
+            for (type in IDENTITY_TYPES) {
+                if (type in uncachedTypes) { results[type] = metadataResult; uncachedTypes.remove(type) }
+            }
+        }
+
+        return request.withIdentifiers(mergedIds)
     }
 
     private suspend fun resolveTypes(
