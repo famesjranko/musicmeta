@@ -22,7 +22,7 @@ class LrcLibApi(
         artist: String,
         track: String,
         album: String? = null,
-        durationSec: Int? = null,
+        durationSec: Double? = null,
     ): LrcLibResult? = rateLimiter.execute {
         val url = buildString {
             append("$BASE_URL/api/get?")

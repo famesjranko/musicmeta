@@ -58,7 +58,7 @@ class LrcLibProvider(
         request: EnrichmentRequest.ForTrack,
         type: EnrichmentType,
     ): EnrichmentResult {
-        val durationSec = request.durationMs?.let { (it / 1000).toInt() }
+        val durationSec = request.durationMs?.let { it / 1000.0 }
 
         // Try exact match first (with album + duration when available)
         val exactResult = api.getLyrics(

@@ -143,7 +143,7 @@ class LrcLibProviderTest {
         // Then - verify the URL contains album and duration params
         val url = httpClient.requestedUrls.first()
         assertTrue("URL should contain album_name", url.contains("album_name="))
-        assertTrue("URL should contain duration", url.contains("duration=238"))
+        assertTrue("URL should contain duration", url.contains("duration=238.0"))
     }
 
     @Test
