@@ -339,6 +339,75 @@ class MusicBrainzProviderTest {
     }
 
     @Test
+    fun `provider has RELEASE_EDITIONS capability at priority 100 with MUSICBRAINZ_RELEASE_GROUP_ID requirement`() {
+        // Given -- provider capabilities list
+        val capability = provider.capabilities.find { it.type == EnrichmentType.RELEASE_EDITIONS }
+
+        // Then -- RELEASE_EDITIONS capability exists with correct priority and identifier requirement
+        assertNotNull(capability)
+        assertEquals(100, capability!!.priority)
+        assertEquals(com.landofoz.musicmeta.IdentifierRequirement.MUSICBRAINZ_RELEASE_GROUP_ID, capability.identifierRequirement)
+    }
+
+    @Test
+    fun `enrichAlbumEditions returns Success with ReleaseEditions when release-group has releases`() = runTest {
+        // Given -- release-group lookup returns JSON with releases
+        httpClient.givenJsonResponse("release-group/rg1", RELEASE_GROUP_WITH_RELEASES_JSON)
+        val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+            .withIdentifiers(EnrichmentIdentifiers(musicBrainzReleaseGroupId = "rg1"))
+
+        // When -- enriching for RELEASE_EDITIONS
+        val result = provider.enrich(request, EnrichmentType.RELEASE_EDITIONS)
+
+        // Then -- Success with ReleaseEditions data containing editions
+        assertTrue("Expected Success but got $result", result is EnrichmentResult.Success)
+        val success = result as EnrichmentResult.Success
+        val data = success.data as EnrichmentData.ReleaseEditions
+        assertTrue("Expected non-empty editions, got ${data.editions.size}", data.editions.isNotEmpty())
+        assertEquals(1.0f, success.confidence, 0.001f)
+    }
+
+    @Test
+    fun `enrichAlbumEditions returns NotFound when release-group MBID missing from identifiers`() = runTest {
+        // Given -- ForAlbum request without release-group MBID
+        val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+
+        // When -- enriching for RELEASE_EDITIONS
+        val result = provider.enrich(request, EnrichmentType.RELEASE_EDITIONS)
+
+        // Then -- NotFound because no release-group MBID available
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `enrichAlbumEditions returns NotFound when lookupReleaseGroup returns null`() = runTest {
+        // Given -- no canned response for release-group lookup (returns null)
+        val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+            .withIdentifiers(EnrichmentIdentifiers(musicBrainzReleaseGroupId = "rg1"))
+
+        // When -- enriching for RELEASE_EDITIONS (no HTTP response configured)
+        val result = provider.enrich(request, EnrichmentType.RELEASE_EDITIONS)
+
+        // Then -- NotFound because lookupReleaseGroup returned null
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `enrichAlbumEditions returns Error with NETWORK ErrorKind on IOException`() = runTest {
+        // Given -- release-group lookup throws IOException
+        httpClient.givenIoException("release-group/")
+        val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+            .withIdentifiers(EnrichmentIdentifiers(musicBrainzReleaseGroupId = "rg1"))
+
+        // When -- enriching for RELEASE_EDITIONS
+        val result = provider.enrich(request, EnrichmentType.RELEASE_EDITIONS)
+
+        // Then -- Error with NETWORK ErrorKind
+        assertTrue("Expected Error but got $result", result is EnrichmentResult.Error)
+        assertEquals(ErrorKind.NETWORK, (result as EnrichmentResult.Error).errorKind)
+    }
+
+    @Test
     fun `enrich ForTrack CREDITS returns Error with NETWORK ErrorKind on IOException`() = runTest {
         // Given -- recording lookup throws IOException
         httpClient.givenIoException("recording/")
@@ -549,6 +618,29 @@ class MusicBrainzProviderTest {
                 "isrcs": ["GBAYE9700100"],
                 "tags": [{"name": "alternative rock", "count": 3}]
               }]
+            }
+        """.trimIndent()
+
+        private val RELEASE_GROUP_WITH_RELEASES_JSON = """
+            {
+              "id": "rg1",
+              "title": "OK Computer",
+              "releases": [
+                {
+                  "id": "rel1",
+                  "title": "OK Computer",
+                  "date": "1997-06-16",
+                  "country": "GB",
+                  "barcode": "BARCODE123",
+                  "media": [{"format": "CD", "tracks": []}],
+                  "label-info": [
+                    {
+                      "catalog-number": "PCS 8088",
+                      "label": {"name": "Parlophone"}
+                    }
+                  ]
+                }
+              ]
             }
         """.trimIndent()
 

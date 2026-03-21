@@ -47,6 +47,11 @@ class MusicBrainzProvider(
             priority = 100,
             identifierRequirement = IdentifierRequirement.MUSICBRAINZ_ID,
         ),
+        ProviderCapability(
+            EnrichmentType.RELEASE_EDITIONS,
+            priority = 100,
+            identifierRequirement = IdentifierRequirement.MUSICBRAINZ_RELEASE_GROUP_ID,
+        ),
     )
 
     override suspend fun resolveIdentity(request: EnrichmentRequest): EnrichmentResult =
@@ -112,6 +117,7 @@ class MusicBrainzProvider(
         request: EnrichmentRequest.ForAlbum, type: EnrichmentType,
     ): EnrichmentResult {
         if (type == EnrichmentType.ALBUM_TRACKS) return enrichAlbumTracks(request)
+        if (type == EnrichmentType.RELEASE_EDITIONS) return enrichAlbumEditions(request)
         val mbid = request.identifiers.musicBrainzId
         if (mbid != null) {
             val full = api.lookupRelease(mbid) ?: return EnrichmentResult.NotFound(type, id)
@@ -138,6 +144,22 @@ class MusicBrainzProvider(
             type = type, data = MusicBrainzMapper.toTracklist(release.tracks),
             provider = id, confidence = ConfidenceCalculator.idBasedLookup(),
             resolvedIdentifiers = MusicBrainzMapper.toAlbumIdentifiers(release),
+        )
+    }
+
+    private suspend fun enrichAlbumEditions(request: EnrichmentRequest.ForAlbum): EnrichmentResult {
+        val type = EnrichmentType.RELEASE_EDITIONS
+        val releaseGroupMbid = request.identifiers.musicBrainzReleaseGroupId
+            ?: return EnrichmentResult.NotFound(type, id)
+        val json = api.lookupReleaseGroup(releaseGroupMbid)
+            ?: return EnrichmentResult.NotFound(type, id)
+        val detail = MusicBrainzParser.parseReleaseGroupDetail(json)
+        if (detail.releases.isEmpty()) return EnrichmentResult.NotFound(type, id)
+        return EnrichmentResult.Success(
+            type = type,
+            data = MusicBrainzMapper.toReleaseEditions(detail),
+            provider = id,
+            confidence = ConfidenceCalculator.idBasedLookup(),
         )
     }
 
