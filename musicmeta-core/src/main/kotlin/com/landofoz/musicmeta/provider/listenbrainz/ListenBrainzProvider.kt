@@ -40,6 +40,11 @@ class ListenBrainzProvider(
             priority = FALLBACK_PRIORITY,
             identifierRequirement = IdentifierRequirement.MUSICBRAINZ_ID,
         ),
+        ProviderCapability(
+            type = EnrichmentType.ARTIST_DISCOGRAPHY,
+            priority = FALLBACK_PRIORITY,
+            identifierRequirement = IdentifierRequirement.MUSICBRAINZ_ID,
+        ),
     )
 
     override suspend fun enrich(
@@ -52,6 +57,7 @@ class ListenBrainzProvider(
         return when (type) {
             EnrichmentType.ARTIST_POPULARITY -> enrichArtistPopularity(mbid, type)
             EnrichmentType.TRACK_POPULARITY -> enrichTrackPopularity(mbid, type)
+            EnrichmentType.ARTIST_DISCOGRAPHY -> enrichDiscography(mbid, type)
             else -> EnrichmentResult.NotFound(type, id)
         }
     }
@@ -91,6 +97,19 @@ class ListenBrainzProvider(
             val recordings = api.getRecordingPopularity(listOf(recordingMbid))
             if (recordings.isEmpty()) return EnrichmentResult.NotFound(type, id)
             success(ListenBrainzMapper.toTrackPopularity(recordings), type)
+        } catch (e: Exception) {
+            mapError(type, e)
+        }
+    }
+
+    private suspend fun enrichDiscography(
+        artistMbid: String,
+        type: EnrichmentType,
+    ): EnrichmentResult {
+        return try {
+            val groups = api.getTopReleaseGroupsForArtist(artistMbid)
+            if (groups.isEmpty()) return EnrichmentResult.NotFound(type, id)
+            success(ListenBrainzMapper.toDiscography(groups), type)
         } catch (e: Exception) {
             mapError(type, e)
         }

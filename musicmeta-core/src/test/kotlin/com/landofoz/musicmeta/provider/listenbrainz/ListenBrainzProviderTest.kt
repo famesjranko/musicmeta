@@ -13,6 +13,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.junit.Assert.assertNull
 
 class ListenBrainzProviderTest {
 
@@ -323,5 +324,70 @@ class ListenBrainzProviderTest {
         assertTrue(result is EnrichmentResult.Error)
         val error = result as EnrichmentResult.Error
         assertEquals(ErrorKind.NETWORK, error.errorKind)
+    }
+
+    @Test
+    fun `enrich returns discography from top release groups`() = runTest {
+        // Given
+        httpClient.givenJsonResponse(
+            "top-release-groups-for-artist",
+            """[
+                {"release_group_mbid":"rg-1","release_group_name":"OK Computer","artist_name":"Radiohead","total_listen_count":100000},
+                {"release_group_mbid":"rg-2","release_group_name":"Kid A","artist_name":"Radiohead","total_listen_count":80000}
+            ]""",
+        )
+        val request = EnrichmentRequest.ForArtist(
+            identifiers = EnrichmentIdentifiers(musicBrainzId = "artist-mbid"),
+            name = "Radiohead",
+        )
+
+        // When
+        val result = provider.enrich(request, EnrichmentType.ARTIST_DISCOGRAPHY)
+
+        // Then
+        assertTrue(result is EnrichmentResult.Success)
+        val success = result as EnrichmentResult.Success
+        val discography = success.data as EnrichmentData.Discography
+        assertEquals(2, discography.albums.size)
+        assertEquals("OK Computer", discography.albums[0].title)
+        assertEquals("rg-1", discography.albums[0].identifiers.musicBrainzReleaseGroupId)
+    }
+
+    @Test
+    fun `enrich returns NotFound for ARTIST_DISCOGRAPHY when no release groups`() = runTest {
+        // Given
+        httpClient.givenJsonResponse("top-release-groups-for-artist", "[]")
+        val request = EnrichmentRequest.ForArtist(
+            identifiers = EnrichmentIdentifiers(musicBrainzId = "artist-mbid"),
+            name = "Radiohead",
+        )
+
+        // When
+        val result = provider.enrich(request, EnrichmentType.ARTIST_DISCOGRAPHY)
+
+        // Then
+        assertTrue(result is EnrichmentResult.NotFound)
+        assertEquals("listenbrainz", (result as EnrichmentResult.NotFound).provider)
+    }
+
+    @Test
+    fun `enrich returns NotFound for ARTIST_DISCOGRAPHY without MBID`() = runTest {
+        // Given — no MBID in identifiers
+        val request = EnrichmentRequest.ForArtist(
+            identifiers = EnrichmentIdentifiers(),
+            name = "Radiohead",
+        )
+
+        // When
+        val result = provider.enrich(request, EnrichmentType.ARTIST_DISCOGRAPHY)
+
+        // Then
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `capabilities include ARTIST_DISCOGRAPHY at priority 50`() {
+        // Then
+        assertTrue(provider.capabilities.any { it.type == EnrichmentType.ARTIST_DISCOGRAPHY && it.priority == 50 })
     }
 }
