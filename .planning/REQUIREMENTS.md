@@ -70,35 +70,35 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DEBT-01 | — | Pending |
-| DEBT-02 | — | Pending |
-| DEBT-03 | — | Pending |
-| DEBT-04 | — | Pending |
-| CRED-01 | — | Pending |
-| CRED-02 | — | Pending |
-| CRED-03 | — | Pending |
-| CRED-04 | — | Pending |
-| EDIT-01 | — | Pending |
-| EDIT-02 | — | Pending |
-| EDIT-03 | — | Pending |
-| TIME-01 | — | Pending |
-| TIME-02 | — | Pending |
-| TIME-03 | — | Pending |
-| GENR-01 | — | Pending |
-| GENR-02 | — | Pending |
-| GENR-03 | — | Pending |
-| GENR-04 | — | Pending |
-| PROV-01 | — | Pending |
-| PROV-02 | — | Pending |
-| PROV-03 | — | Pending |
-| PROV-04 | — | Pending |
-| PROV-05 | — | Pending |
+| DEBT-01 | Phase 6 | Pending |
+| DEBT-02 | Phase 6 | Pending |
+| DEBT-03 | Phase 6 | Pending |
+| DEBT-04 | Phase 6 | Pending |
+| CRED-01 | Phase 7 | Pending |
+| CRED-02 | Phase 7 | Pending |
+| CRED-03 | Phase 7 | Pending |
+| CRED-04 | Phase 7 | Pending |
+| EDIT-01 | Phase 8 | Pending |
+| EDIT-02 | Phase 8 | Pending |
+| EDIT-03 | Phase 8 | Pending |
+| TIME-01 | Phase 9 | Pending |
+| TIME-02 | Phase 9 | Pending |
+| TIME-03 | Phase 9 | Pending |
+| GENR-01 | Phase 10 | Pending |
+| GENR-02 | Phase 10 | Pending |
+| GENR-03 | Phase 10 | Pending |
+| GENR-04 | Phase 10 | Pending |
+| PROV-01 | Phase 11 | Pending |
+| PROV-02 | Phase 11 | Pending |
+| PROV-03 | Phase 11 | Pending |
+| PROV-04 | Phase 11 | Pending |
+| PROV-05 | Phase 11 | Pending |
 
 **Coverage:**
 - v0.5.0 requirements: 23 total
-- Mapped to phases: 0
-- Unmapped: 23 ⚠️
+- Mapped to phases: 23
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-22*
-*Last updated: 2026-03-22 after initial definition*
+*Last updated: 2026-03-22 after roadmap creation*
