@@ -147,6 +147,44 @@ class LrcLibProviderTest {
     }
 
     @Test
+    fun `duration is passed as float preserving fractional seconds`() = runTest {
+        // Given - a track with durationMs that has fractional seconds (238.5s)
+        httpClient.givenJsonResponse("/api/get", SYNCED_LYRICS_JSON)
+        val request = EnrichmentRequest.forTrack(
+            title = "Creep",
+            artist = "Radiohead",
+            album = "Pablo Honey",
+            durationMs = 238_500L,
+        )
+
+        // When
+        provider.enrich(request, EnrichmentType.LYRICS_SYNCED)
+
+        // Then - URL should contain duration=238.5 (not duration=238)
+        val url = httpClient.requestedUrls.first()
+        assertTrue("URL should contain duration=238.5, was: $url", url.contains("duration=238.5"))
+    }
+
+    @Test
+    fun `duration with exact milliseconds is passed as float`() = runTest {
+        // Given - a track with durationMs that is exactly 180 seconds
+        httpClient.givenJsonResponse("/api/get", SYNCED_LYRICS_JSON)
+        val request = EnrichmentRequest.forTrack(
+            title = "Creep",
+            artist = "Radiohead",
+            album = "Pablo Honey",
+            durationMs = 180_000L,
+        )
+
+        // When
+        provider.enrich(request, EnrichmentType.LYRICS_SYNCED)
+
+        // Then - URL should contain duration=180.0 (float format)
+        val url = httpClient.requestedUrls.first()
+        assertTrue("URL should contain duration=180.0, was: $url", url.contains("duration=180.0"))
+    }
+
+    @Test
     fun `enrich returns NotFound when both syncedLyrics and plainLyrics are null and not instrumental`() = runTest {
         // Given — LrcLib returns a track with null lyrics and instrumental=false
         httpClient.givenJsonResponse("/api/get", """{
