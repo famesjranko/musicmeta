@@ -5,6 +5,7 @@ import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
+import com.landofoz.musicmeta.ErrorKind
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.testutil.FakeHttpClient
 import kotlinx.coroutines.test.runTest
@@ -265,6 +266,20 @@ class MusicBrainzProviderTest {
         assertEquals(2, data.links.size)
         assertEquals("official homepage", data.links[0].type)
         assertEquals("https://radiohead.com", data.links[0].url)
+    }
+
+    @Test
+    fun `enrich returns Error with NETWORK ErrorKind when API throws IOException`() = runTest {
+        // Given — fetchJsonResult throws IOException simulating a network failure
+        httpClient.givenIoException("musicbrainz.org")
+        val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+
+        // When — enriching for genre (triggers searchReleases which throws)
+        val result = provider.enrich(request, EnrichmentType.GENRE)
+
+        // Then — Error with NETWORK ErrorKind
+        assertTrue("Expected Error but got $result", result is EnrichmentResult.Error)
+        assertEquals(ErrorKind.NETWORK, (result as EnrichmentResult.Error).errorKind)
     }
 
     companion object {

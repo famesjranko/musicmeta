@@ -5,6 +5,7 @@ import com.landofoz.musicmeta.EnrichmentProvider
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
+import com.landofoz.musicmeta.ErrorKind
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
@@ -98,7 +99,7 @@ class MusicBrainzProvider(
                 is EnrichmentRequest.ForTrack -> enrichTrack(request, type)
             }
         } catch (e: Exception) {
-            EnrichmentResult.Error(type, id, e.message ?: "Unknown error", e)
+            mapError(type, e)
         }
 
     private suspend fun enrichAlbum(
@@ -278,6 +279,15 @@ class MusicBrainzProvider(
             else -> 0
         }
     }.first()
+
+    private fun mapError(type: EnrichmentType, e: Exception): EnrichmentResult.Error {
+        val kind = when (e) {
+            is java.io.IOException -> ErrorKind.NETWORK
+            is org.json.JSONException -> ErrorKind.PARSE
+            else -> ErrorKind.UNKNOWN
+        }
+        return EnrichmentResult.Error(type, id, e.message ?: "Unknown error", e, kind)
+    }
 
     companion object {
         const val DEFAULT_MIN_MATCH_SCORE = 80
