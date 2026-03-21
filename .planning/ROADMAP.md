@@ -95,7 +95,12 @@ Plans:
   4. WikipediaProvider can return supplemental ARTIST_PHOTO images from the Wikipedia page media list endpoint for artists with few Wikidata images
   5. ListenBrainz batch endpoints (popularity/recording, popularity/artist, top-release-groups-for-artist) are called with multiple IDs in one request rather than one request per item
   6. All provider Success results use ConfidenceCalculator constants (idBasedLookup, authoritative, searchScore, fuzzyMatch); no provider hardcodes a raw float confidence value
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+- [ ] 05-01-PLAN.md — ALBUM_ART_BACK and ALBUM_BOOKLET types via Cover Art Archive JSON endpoint
+- [ ] 05-02-PLAN.md — Last.fm track.getInfo for TRACK_POPULARITY, ListenBrainz batch endpoints
+- [ ] 05-03-PLAN.md — Album metadata from Deezer/iTunes/Discogs, Wikipedia page media for ARTIST_PHOTO
+- [ ] 05-04-PLAN.md — ConfidenceCalculator utility and provider-wide confidence standardization
 
 ## Progress
 
@@ -107,4 +112,4 @@ Plans:
 | 2. Provider Abstraction | 0/3 | Not started | - |
 | 3. Public API Cleanup | 0/2 | Not started | - |
 | 4. New Types | 2/4 | In Progress|  |
-| 5. Deepening | 0/TBD | Not started | - |
+| 5. Deepening | 0/4 | Not started | - |
