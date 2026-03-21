@@ -63,7 +63,7 @@ class ListenBrainzProviderTest {
         assertEquals(2, popularity.topTracks!!.size)
         assertEquals("Creep", popularity.topTracks!![0].title)
         assertEquals(50000L, popularity.topTracks!![0].listenCount)
-        assertEquals("abc", popularity.topTracks!![0].musicBrainzId)
+        assertEquals("abc", popularity.topTracks!![0].identifiers.musicBrainzId)
         assertEquals(1, popularity.topTracks!![0].rank)
         assertEquals("Karma Police", popularity.topTracks!![1].title)
         assertEquals(45000L, popularity.topTracks!![1].listenCount)
@@ -164,7 +164,7 @@ class ListenBrainzProviderTest {
         val popularity = (result as EnrichmentResult.Success).data as EnrichmentData.Popularity
         assertEquals(1, popularity.topTracks!!.size)
         assertEquals("Valid Track", popularity.topTracks!![0].title)
-        assertEquals("valid-mbid-123", popularity.topTracks!![0].musicBrainzId)
+        assertEquals("valid-mbid-123", popularity.topTracks!![0].identifiers.musicBrainzId)
     }
 
     @Test

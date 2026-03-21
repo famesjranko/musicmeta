@@ -62,14 +62,14 @@ sealed class EnrichmentData {
 @Serializable
 data class SimilarArtist(
     val name: String,
-    val musicBrainzId: String? = null,
+    val identifiers: EnrichmentIdentifiers = EnrichmentIdentifiers(),
     val matchScore: Float,
 )
 
 @Serializable
 data class PopularTrack(
     val title: String,
-    val musicBrainzId: String? = null,
+    val identifiers: EnrichmentIdentifiers = EnrichmentIdentifiers(),
     val listenCount: Long,
     val rank: Int,
 )

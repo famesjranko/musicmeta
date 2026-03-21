@@ -1,5 +1,7 @@
 package com.landofoz.musicmeta
 
+import kotlinx.serialization.Serializable
+
 /**
  * Describes the music entity to enrich and what identifiers are available.
  * Identifiers are progressively filled during enrichment (e.g., MusicBrainz
@@ -59,6 +61,7 @@ sealed class EnrichmentRequest {
  * Known identifiers for a music entity, progressively filled during enrichment.
  * MusicBrainz identity resolution populates most of these.
  */
+@Serializable
 data class EnrichmentIdentifiers(
     val musicBrainzId: String? = null,
     val musicBrainzReleaseGroupId: String? = null,
@@ -66,4 +69,12 @@ data class EnrichmentIdentifiers(
     val isrc: String? = null,
     val barcode: String? = null,
     val wikipediaTitle: String? = null,
-)
+    val extra: Map<String, String> = emptyMap(),
+) {
+    /** Retrieves an extra identifier by key, or null if not present. */
+    fun get(key: String): String? = extra[key]
+
+    /** Returns a copy with the given extra identifier added (immutable). */
+    fun withExtra(key: String, value: String): EnrichmentIdentifiers =
+        copy(extra = extra + (key to value))
+}

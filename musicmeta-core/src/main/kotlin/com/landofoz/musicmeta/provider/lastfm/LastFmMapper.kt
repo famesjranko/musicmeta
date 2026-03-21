@@ -1,6 +1,7 @@
 package com.landofoz.musicmeta.provider.lastfm
 
 import com.landofoz.musicmeta.EnrichmentData
+import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.SimilarArtist
 
 /** Maps Last.fm DTOs to EnrichmentData subclasses. */
@@ -11,7 +12,7 @@ object LastFmMapper {
             artists = artists.map {
                 SimilarArtist(
                     name = it.name,
-                    musicBrainzId = it.mbid,
+                    identifiers = EnrichmentIdentifiers(musicBrainzId = it.mbid),
                     matchScore = it.matchScore,
                 )
             },

@@ -44,7 +44,7 @@ class LastFmProviderTest {
         assertEquals(2, similar.size)
         assertEquals("Thom Yorke", similar[0].name)
         assertEquals(0.8f, similar[0].matchScore)
-        assertEquals("abc123", similar[0].musicBrainzId)
+        assertEquals("abc123", similar[0].identifiers.musicBrainzId)
         assertEquals("Muse", similar[1].name)
     }
 

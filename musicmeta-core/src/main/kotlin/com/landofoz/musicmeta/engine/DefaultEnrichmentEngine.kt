@@ -136,6 +136,7 @@ class DefaultEnrichmentEngine(
             musicBrainzReleaseGroupId = resolved.musicBrainzReleaseGroupId ?: request.identifiers.musicBrainzReleaseGroupId,
             wikidataId = resolved.wikidataId ?: request.identifiers.wikidataId,
             wikipediaTitle = resolved.wikipediaTitle ?: request.identifiers.wikipediaTitle,
+            extra = request.identifiers.extra + resolved.extra,
         )
 
         // Store Metadata result for all identity types with resolved identifiers attached
