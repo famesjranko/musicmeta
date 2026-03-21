@@ -142,4 +142,4 @@ Plans:
 | 8. Release Editions | v0.5.0 | 2/2 | Complete   | 2026-03-21 |
 | 9. Artist Timeline | v0.5.0 | 2/2 | Complete   | 2026-03-21 |
 | 10. Genre Enhancement | v0.5.0 | 3/3 | Complete    | 2026-03-21 |
-| 11. Provider Coverage Expansion | v0.5.0 | 3/3 | Complete   | 2026-03-21 |
+| 11. Provider Coverage Expansion | v0.5.0 | 3/3 | Complete    | 2026-03-21 |
