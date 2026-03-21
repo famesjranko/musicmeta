@@ -77,6 +77,6 @@ class LastFmApi(
     }
 
     private companion object {
-        const val BASE_URL = "http://ws.audioscrobbler.com/2.0/"
+        const val BASE_URL = "https://ws.audioscrobbler.com/2.0/"
     }
 }

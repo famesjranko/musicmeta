@@ -36,7 +36,6 @@ class LastFmProvider(
         ProviderCapability(EnrichmentType.GENRE, priority = 100),
         ProviderCapability(EnrichmentType.ARTIST_BIO, priority = 50),
         ProviderCapability(EnrichmentType.ARTIST_POPULARITY, priority = 100),
-        ProviderCapability(EnrichmentType.TRACK_POPULARITY, priority = 50),
     )
 
     override suspend fun enrich(
@@ -53,7 +52,6 @@ class LastFmProvider(
                 EnrichmentType.GENRE -> enrichGenre(artistRequest, type)
                 EnrichmentType.ARTIST_BIO -> enrichBio(artistRequest, type)
                 EnrichmentType.ARTIST_POPULARITY -> enrichPopularity(artistRequest, type)
-                EnrichmentType.TRACK_POPULARITY -> enrichPopularity(artistRequest, type)
                 else -> EnrichmentResult.NotFound(type, id)
             }
         } catch (e: Exception) {
