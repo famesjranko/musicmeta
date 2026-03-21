@@ -42,12 +42,12 @@ Full details: `.planning/milestones/v0.4.0-ROADMAP.md`
   2. Every provider maps API errors to the appropriate ErrorKind so error diagnostics are consistent across all 11 providers
   3. ListenBrainz appears in a provider chain for ARTIST_DISCOGRAPHY and returns results in E2E tests
   4. Discogs release ID and master ID are stored on EnrichmentIdentifiers after a successful Discogs search so downstream phases can use them without re-searching
-**Plans:** 1/4 plans executed
+**Plans:** 3/4 plans executed
 
 Plans:
 - [x] 06-01-PLAN.md — HttpClient extensions + Wikidata/Wikipedia/FanartTv/iTunes migration
-- [ ] 06-02-PLAN.md — CoverArtArchive/LrcLib/MusicBrainz migration
-- [ ] 06-03-PLAN.md — Deezer/Last.fm/Discogs/ListenBrainz migration
+- [x] 06-02-PLAN.md — CoverArtArchive/LrcLib/MusicBrainz migration
+- [x] 06-03-PLAN.md — Deezer/Last.fm/Discogs/ListenBrainz migration
 - [ ] 06-04-PLAN.md — ListenBrainz ARTIST_DISCOGRAPHY wiring + Discogs ID storage
 
 ### Phase 7: Credits & Personnel
@@ -115,7 +115,7 @@ Plans:
 | 3. Public API Cleanup | v0.4.0 | 2/2 | Complete | 2026-03-21 |
 | 4. New Types | v0.4.0 | 4/4 | Complete | 2026-03-21 |
 | 5. Deepening | v0.4.0 | 4/4 | Complete | 2026-03-21 |
-| 6. Tech Debt Cleanup | v0.5.0 | 1/4 | In Progress|  |
+| 6. Tech Debt Cleanup | v0.5.0 | 3/4 | In Progress|  |
 | 7. Credits & Personnel | v0.5.0 | 0/TBD | Not started | - |
 | 8. Release Editions | v0.5.0 | 0/TBD | Not started | - |
 | 9. Artist Timeline | v0.5.0 | 0/TBD | Not started | - |

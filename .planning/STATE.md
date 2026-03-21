@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v0.5.0
 milestone_name: New Capabilities & Tech Debt Cleanup
 status: unknown
-stopped_at: Completed 06-tech-debt-cleanup/06-01-PLAN.md
-last_updated: "2026-03-21T16:06:41.898Z"
+stopped_at: Completed 06-tech-debt-cleanup/06-03-PLAN.md
+last_updated: "2026-03-21T16:14:15.508Z"
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 4
-  completed_plans: 1
+  completed_plans: 3
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-22)
 ## Current Position
 
 Phase: 06 (Tech Debt Cleanup) — EXECUTING
-Plan: 2 of 4
+Plan: 4 of 4
 
 ## Performance Metrics
 
@@ -42,6 +42,7 @@ Plan: 2 of 4
 
 *Updated after each plan completion*
 | Phase 06-tech-debt-cleanup P01 | 8 | 2 tasks | 16 files |
+| Phase 06-tech-debt-cleanup P03 | 15 | 2 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -54,6 +55,8 @@ Plan: 2 of 4
 - HttpResult and ErrorKind introduced in v0.4.0 but not yet adopted — Phase 6 completes adoption across all 11 providers
 - [Phase 06-tech-debt-cleanup]: Api classes keep nullable return types during HttpResult migration; IOException/JSONException propagate to Provider where mapError() converts them to ErrorKind
 - [Phase 06-tech-debt-cleanup]: FakeHttpClient.givenIoException() added to test Provider-level ErrorKind handling; distinct from givenError() which tests null-return path
+- [Phase 06-tech-debt-cleanup]: Api classes keep nullable return types: HttpResult error branches convert to null via when-else pattern, preserving existing Provider interface shape
+- [Phase 06-tech-debt-cleanup]: ListenBrainzApi uses fetchJsonArrayResult/postJsonArrayResult (not fetchJsonResult) because all 4 endpoints return JSONArray responses
 
 ### Pending Todos
 
@@ -65,6 +68,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T16:06:41.895Z
-Stopped at: Completed 06-tech-debt-cleanup/06-01-PLAN.md
+Last session: 2026-03-21T16:14:01.731Z
+Stopped at: Completed 06-tech-debt-cleanup/06-03-PLAN.md
 Resume file: None
