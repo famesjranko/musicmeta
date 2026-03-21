@@ -40,6 +40,18 @@ class FakeHttpClient : HttpClient {
         return jsonResponses.entries.firstOrNull { url.contains(it.key) }?.value ?: url
     }
 
+    override suspend fun postJson(url: String, body: String): JSONObject? {
+        requestedUrls.add(url)
+        if (errors.any { url.contains(it) }) return null
+        return jsonResponses.entries.firstOrNull { url.contains(it.key) }?.value?.let { JSONObject(it) }
+    }
+
+    override suspend fun postJsonArray(url: String, body: String): JSONArray? {
+        requestedUrls.add(url)
+        if (errors.any { url.contains(it) }) return null
+        return jsonResponses.entries.firstOrNull { url.contains(it.key) }?.value?.let { JSONArray(it) }
+    }
+
     override suspend fun fetchJsonResult(url: String): HttpResult<JSONObject> {
         requestedUrls.add(url)
         val configured = httpResultResponses.entries.firstOrNull { url.contains(it.key) }

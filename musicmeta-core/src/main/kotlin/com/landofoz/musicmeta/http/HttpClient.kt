@@ -28,4 +28,10 @@ interface HttpClient {
      * the specific HTTP status for precise error handling.
      */
     suspend fun fetchJsonResult(url: String): HttpResult<JSONObject>
+
+    /** POST request with JSON body, parse response as JSON object. Returns null on error. */
+    suspend fun postJson(url: String, body: String): JSONObject?
+
+    /** POST request with JSON body, parse response as JSON array. Returns null on error. */
+    suspend fun postJsonArray(url: String, body: String): JSONArray?
 }

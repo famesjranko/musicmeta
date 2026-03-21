@@ -81,6 +81,44 @@ class DefaultHttpClient(
             }
         }
 
+    override suspend fun postJson(url: String, body: String): JSONObject? =
+        withContext(Dispatchers.IO) {
+            try {
+                val conn = openConnection(url).apply {
+                    requestMethod = "POST"
+                    setRequestProperty("Content-Type", "application/json")
+                    doOutput = true
+                }
+                conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+                try {
+                    if (conn.responseCode !in 200..299) return@withContext null
+                    val text = conn.responseStream().bufferedReader().use { it.readText() }
+                    JSONObject(text)
+                } finally {
+                    conn.disconnect()
+                }
+            } catch (_: IOException) { null } catch (_: JSONException) { null }
+        }
+
+    override suspend fun postJsonArray(url: String, body: String): JSONArray? =
+        withContext(Dispatchers.IO) {
+            try {
+                val conn = openConnection(url).apply {
+                    requestMethod = "POST"
+                    setRequestProperty("Content-Type", "application/json")
+                    doOutput = true
+                }
+                conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+                try {
+                    if (conn.responseCode !in 200..299) return@withContext null
+                    val text = conn.responseStream().bufferedReader().use { it.readText() }
+                    JSONArray(text)
+                } finally {
+                    conn.disconnect()
+                }
+            } catch (_: IOException) { null } catch (_: JSONException) { null }
+        }
+
     private fun readErrorBody(conn: HttpURLConnection): String? =
         try { conn.errorStream?.bufferedReader()?.use { it.readText() } } catch (_: IOException) { null }
 
