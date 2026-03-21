@@ -78,13 +78,42 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (populated by roadmapper) | | |
+| BUG-01 | Phase 1 | Pending |
+| BUG-02 | Phase 1 | Pending |
+| BUG-03 | Phase 1 | Pending |
+| BUG-04 | Phase 1 | Pending |
+| BUG-05 | Phase 1 | Pending |
+| ABST-01 | Phase 2 | Pending |
+| ABST-02 | Phase 2 | Pending |
+| ABST-03 | Phase 2 | Pending |
+| ABST-04 | Phase 2 | Pending |
+| ABST-05 | Phase 2 | Pending |
+| ABST-06 | Phase 2 | Pending |
+| API-01 | Phase 3 | Pending |
+| API-02 | Phase 3 | Pending |
+| API-03 | Phase 3 | Pending |
+| API-04 | Phase 3 | Pending |
+| API-05 | Phase 3 | Pending |
+| TYPE-01 | Phase 4 | Pending |
+| TYPE-02 | Phase 4 | Pending |
+| TYPE-03 | Phase 4 | Pending |
+| TYPE-04 | Phase 4 | Pending |
+| TYPE-05 | Phase 4 | Pending |
+| TYPE-06 | Phase 4 | Pending |
+| TYPE-07 | Phase 4 | Pending |
+| TYPE-08 | Phase 4 | Pending |
+| DEEP-01 | Phase 5 | Pending |
+| DEEP-02 | Phase 5 | Pending |
+| DEEP-03 | Phase 5 | Pending |
+| DEEP-04 | Phase 5 | Pending |
+| DEEP-05 | Phase 5 | Pending |
+| DEEP-06 | Phase 5 | Pending |
 
 **Coverage:**
-- v0.4.0 requirements: 25 total
-- Mapped to phases: 0
-- Unmapped: 25
+- v0.4.0 requirements: 30 total (note: REQUIREMENTS.md header previously said 25; actual count is 30)
+- Mapped to phases: 30
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-21*
-*Last updated: 2026-03-21 after initial definition*
+*Last updated: 2026-03-21 after roadmap creation*
