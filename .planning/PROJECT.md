@@ -2,28 +2,15 @@
 
 ## What This Is
 
-A pure Kotlin/JVM music metadata enrichment library that aggregates data from 11 public APIs (MusicBrainz, Last.fm, Wikidata, Wikipedia, Cover Art Archive, Fanart.tv, Deezer, iTunes, Discogs, ListenBrainz, LRCLIB) into a unified pipeline with priority chains, circuit breakers, rate limiting, and identity resolution. 28 enrichment types across 7 categories: artwork (7 types with multi-size support), metadata (9 types), text (3 types), relationships (3 types), statistics (2 types), links (2 types), and composite (2 types). Features composite type resolution, mergeable multi-provider genre merging, and per-tag confidence scoring.
+A pure Kotlin/JVM music metadata enrichment and recommendation library that aggregates data from 11 public APIs (MusicBrainz, Last.fm, Wikidata, Wikipedia, Cover Art Archive, Fanart.tv, Deezer, iTunes, Discogs, ListenBrainz, LRCLIB) into a unified pipeline with priority chains, circuit breakers, rate limiting, and identity resolution. 31 enrichment types across 8 categories: artwork (7 types), metadata (9 types), text (3 types), relationships (3 types), statistics (2 types), links (2 types), composite (2 types), and recommendations (3 types). Features multi-provider merging, composite type synthesis, genre affinity discovery, similar albums via era-proximity scoring, and pluggable catalog-aware filtering.
 
 ## Core Value
 
 Consumers get comprehensive, accurate music metadata from a single `enrich()` call without knowing which APIs exist, how they authenticate, or how to correlate identifiers across services.
 
-## Current Milestone: v0.6.0 Recommendations Engine
-
-**Goal:** Build discovery features on top of the enrichment data — turn musicmeta from a metadata lookup library into a recommendation engine.
-
-**Target features:**
-- Similar Artists — add Deezer `/artist/{id}/related` as third provider
-- Similar Tracks — add Deezer `/artist/{id}/radio` as second provider
-- Similar Albums — synthesized from similar artists + genre + era (new composite type)
-- Radio/Mix — Deezer radio endpoint for seed-based track generation
-- Credit-Based Discovery — "more from this producer/composer" via CREDITS data
-- Genre Discovery — genre affinity neighbors via GenreMerger confidence scores
-- Listening-Based — ListenBrainz collaborative filtering recommendations (user-scoped)
-
 ## Current State
 
-Shipped v0.5.0 with 28 enrichment types across 11 providers. All providers use HttpResult/ErrorKind uniformly. Three new enrichment types (CREDITS, RELEASE_EDITIONS, ARTIST_TIMELINE) plus genre enhancement with multi-provider merging. Provider coverage expanded with new Last.fm, iTunes, Fanart.tv, and ListenBrainz endpoints.
+Shipped v0.6.0 Recommendations Engine with 31 enrichment types across 11 providers. Three new recommendation types (ARTIST_RADIO, SIMILAR_ALBUMS, GENRE_DISCOVERY), SIMILAR_ARTISTS upgraded to multi-provider mergeable type (Last.fm + ListenBrainz + Deezer), engine extensibility via ResultMerger and CompositeSynthesizer interfaces, and CatalogProvider interface for availability-aware filtering.
 
 ## Requirements
 
@@ -46,16 +33,17 @@ Shipped v0.5.0 with 28 enrichment types across 11 providers. All providers use H
 - v0.5.0: ARTIST_TIMELINE composite type with automatic sub-type resolution
 - v0.5.0: GenreTag confidence scores, GenreMerger, ProviderChain.resolveAll() for mergeable types
 - v0.5.0: Provider coverage expansion (Last.fm album info, iTunes lookups, Fanart.tv album art, ListenBrainz similar artists, Discogs community data)
+- v0.6.0: ResultMerger and CompositeSynthesizer interfaces extracted from engine
+- v0.6.0: Deezer SIMILAR_ARTISTS via /artist/{id}/related, SIMILAR_ARTISTS promoted to mergeable with SimilarArtistMerger
+- v0.6.0: ARTIST_RADIO type via Deezer /artist/{id}/radio endpoint
+- v0.6.0: SIMILAR_ALBUMS standalone provider with era-proximity scoring
+- v0.6.0: GENRE_DISCOVERY composite type with static genre affinity taxonomy (~70 relationships)
+- v0.6.0: CatalogProvider interface with UNFILTERED/AVAILABLE_ONLY/AVAILABLE_FIRST modes
+- v0.6.0: SimilarArtist.sources field for merge transparency across 3 providers
 
 ### Active
 
-- [ ] Deezer SIMILAR_ARTISTS via `/artist/{id}/related`
-- [ ] Deezer SIMILAR_TRACKS via `/artist/{id}/radio`
-- [ ] SIMILAR_ALBUMS synthesized from similar artists + genre + era
-- [ ] Radio/Mix seed-based track generation via Deezer radio
-- [ ] Credit-based discovery queries from CREDITS data
-- [ ] Genre affinity matching via GenreMerger confidence scores
-- [ ] ListenBrainz collaborative filtering recommendations
+(None — planning next milestone)
 
 ### Out of Scope
 
@@ -63,15 +51,19 @@ Shipped v0.5.0 with 28 enrichment types across 11 providers. All providers use H
 - Android module changes — core-only focus
 - Wikipedia structured HTML parsing — high complexity, low ROI vs Wikidata
 - ForAlbum credits aggregation — deferred from v0.5.0
-- Generic CompositeType registry — ARTIST_TIMELINE handled specifically for now
-- Genre taxonomy hierarchy — deferred
+- Genre taxonomy hierarchy — flat affinity table covers the use case
+- Credit-based discovery — cross-entity query pattern, deferred to v0.7.0
+- ListenBrainz collaborative filtering — user-scoped, needs user identity concept, deferred to v0.8.0
+- CatalogProvider implementations (LocalLibrary, Spotify, etc.) — interface only in v0.6.0, implementations v0.8.0
 
 ## Context
 
 - Pre-1.0 with no external consumers — clean breaking changes still safe
 - Provider APIs are the biggest long-term maintenance risk — mitigated by mapper pattern
 - v0.5.0 tech debt: itunesArtistId not stored in resolvedIdentifiers (re-searches on every discography call)
-- 28 enrichment types, 3 engine concepts (provider chains, composite types, mergeable types)
+- v0.6.0 tech debt: DefaultEnrichmentEngine.kt is 304 lines (4 over 300-line target)
+- 31 enrichment types, 4 engine concepts (provider chains, composite types, mergeable types, catalog filtering)
+- Engine extensibility: new mergeable types via ResultMerger, new composites via CompositeSynthesizer
 
 ## Constraints
 
@@ -93,6 +85,11 @@ Shipped v0.5.0 with 28 enrichment types across 11 providers. All providers use H
 | Engine-level composite types | ARTIST_TIMELINE synthesizes from sub-types; reuses existing data without duplicate API calls | ✓ Good — clean separation |
 | Engine-level genre merging | Collect all provider results via resolveAll() instead of short-circuit; GenreMerger normalizes + scores | ✓ Good — extensible pattern |
 | Discogs ID propagation via extra map | Store release/master IDs in resolvedIdentifiers.extra for downstream phases | ✓ Good — enables Credits + Editions |
+| ResultMerger/CompositeSynthesizer extraction | Engine delegates merge+composite logic to interfaces; new types don't modify engine | ✓ Good — SimilarArtistMerger + GenreAffinityMatcher added without touching engine |
+| SimilarAlbumsProvider standalone (not composite) | Composites can't trigger new API calls for other entities; standalone provider makes its own Deezer calls | ✓ Good — clean multi-call pattern |
+| CatalogProvider as fun interface | SAM conversion lets consumers pass lambdas; filtering modes as enum | ✓ Good — simple contract |
+| Additive scoring for SimilarArtistMerger | Consistent with GenreMerger pattern; cross-provider agreement boosts ranking | ✓ Good |
+| Deezer artist ID via extra map | Consistent with discogsReleaseId pattern; check cached first, search fallback with ArtistMatcher | ✓ Good — reused across 3 Deezer features |
 
 ## Evolution
 
@@ -112,4 +109,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-22 after v0.6.0 milestone start*
+*Last updated: 2026-03-23 after v0.6.0 milestone*

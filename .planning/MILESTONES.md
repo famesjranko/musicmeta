@@ -1,5 +1,28 @@
 # Milestones
 
+## v0.6.0 Recommendations Engine (Shipped: 2026-03-22)
+
+**Phases completed:** 7 phases, 14 plans, 25 tasks
+
+**Key accomplishments:**
+
+- ResultMerger and CompositeSynthesizer strategy interfaces extracted with GenreMerger and TimelineSynthesizer as the first implementations
+- DefaultEnrichmentEngine refactored to delegate genre merging and composite synthesis to pluggable ResultMerger and CompositeSynthesizer strategies via map lookup, removing 65 lines of inline dispatch logic
+- DeezerModels.kt
+- One-liner:
+- ARTIST_RADIO enrichment type with RadioPlaylist/RadioTrack model and DeezerMapper.toRadioPlaylist() so Plan 02 has stable contracts to implement against
+- Deezer /artist/{id}/radio endpoint wired into DeezerProvider as ARTIST_RADIO capability at priority 100, with 7 unit tests covering success, NotFound, and deezerId caching
+- SIMILAR_ALBUMS type and SimilarAlbumsProvider via Deezer related artists plus per-artist top album sampling with era proximity scoring
+- SimilarAlbumsProvider wired into Builder.withDefaultProviders() and covered by 10 unit tests including era proximity ordering reversal and deezerId skip optimization
+- GENRE_DISCOVERY composite type with GenreAffinityMatcher: 56-key genre taxonomy scoring ~70 relationships across 12 genre families via confidence-weighted affinity
+- GenreAffinityMatcher wired into Builder default synthesizer list; GENRE_DISCOVERY available by default with behavioral registration test in BuilderDefaultProvidersTest
+- Public contract for consumer catalog plug-in: CatalogProvider fun interface, CatalogFilterMode enum, and backward-compatible wiring into EnrichmentConfig and Builder.catalog()
+- Post-resolution catalog filtering via applyCatalogFiltering() wired into DefaultEnrichmentEngine, with AVAILABLE_ONLY, AVAILABLE_FIRST, and UNFILTERED modes and 9 unit tests
+- E2E showcase test updated with `10 - v0_6_0 feature spotlight` covering SIMILAR_ARTISTS merge (sources field), ARTIST_RADIO track listing, SIMILAR_ALBUMS era scoring, and GENRE_DISCOVERY affinity neighbors; coverage matrix banner bumped to v0.6.0
+- v0.6.0 documentation complete: README updated to 31 types with Recommendations section, CHANGELOG gains [0.6.0] and backfilled [0.5.0] entries, STORIES documents five architectural decisions, ROADMAP marks v0.6.0 shipped
+
+---
+
 ## v0.5.0 New Capabilities & Tech Debt Cleanup (Shipped: 2026-03-21)
 
 **Phases completed:** 6 phases, 16 plans, 26 tasks
