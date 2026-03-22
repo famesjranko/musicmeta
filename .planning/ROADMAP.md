@@ -139,7 +139,10 @@ Plans:
   1. EnrichmentShowcaseTest contains at least one demonstration of each new v0.6.0 enrichment type (ARTIST_RADIO, SIMILAR_ALBUMS, GENRE_DISCOVERY) and the updated SIMILAR_ARTISTS behavior
   2. README reflects the new enrichment types and recommendation capabilities
   3. CHANGELOG contains a v0.6.0 entry listing all shipped features
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 18-01-PLAN.md — Update EnrichmentShowcaseTest with v0.6.0 feature spotlight and updated coverage matrix
+- [ ] 18-02-PLAN.md — Update README, CHANGELOG, STORIES, and ROADMAP for v0.6.0
 
 ## Progress
 
@@ -162,4 +165,4 @@ Plans:
 | 15. Similar Albums | v0.6.0 | 2/2 | Complete    | 2026-03-22 |
 | 16. Genre Discovery | v0.6.0 | 2/2 | Complete    | 2026-03-22 |
 | 17. Catalog Filtering Interface | v0.6.0 | 2/2 | Complete    | 2026-03-22 |
-| 18. Integration and Docs | v0.6.0 | 0/TBD | Not started | - |
+| 18. Integration and Docs | v0.6.0 | 0/2 | In Progress | - |
