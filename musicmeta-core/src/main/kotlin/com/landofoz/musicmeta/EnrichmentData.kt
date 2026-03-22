@@ -87,6 +87,9 @@ sealed class EnrichmentData {
     @Serializable
     data class ArtistTimeline(val events: List<TimelineEvent>) : EnrichmentData()
 
+    @Serializable
+    data class RadioPlaylist(val tracks: List<RadioTrack>) : EnrichmentData()
+
 }
 
 @Serializable
@@ -187,4 +190,13 @@ data class GenreTag(
     val name: String,
     val confidence: Float,
     val sources: List<String> = emptyList(),
+)
+
+@Serializable
+data class RadioTrack(
+    val title: String,
+    val artist: String,
+    val album: String? = null,
+    val durationMs: Long? = null,
+    val identifiers: EnrichmentIdentifiers = EnrichmentIdentifiers(),
 )

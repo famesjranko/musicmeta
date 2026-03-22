@@ -221,4 +221,40 @@ class EnrichmentDataSerializationTest {
         // Then
         assertEquals(original, decoded)
     }
+
+    @Test
+    fun `ARTIST_RADIO is a valid EnrichmentType with 7-day TTL`() {
+        // Given -- the ARTIST_RADIO type
+        val type = EnrichmentType.ARTIST_RADIO
+
+        // Then -- it exists and has 7-day TTL
+        assertEquals(7L * 24 * 60 * 60 * 1000, type.defaultTtlMs)
+    }
+
+    @Test
+    fun `RadioPlaylist survives round-trip serialization`() {
+        // Given
+        val original = EnrichmentData.RadioPlaylist(
+            tracks = listOf(
+                RadioTrack(
+                    title = "Creep",
+                    artist = "Radiohead",
+                    album = "Pablo Honey",
+                    durationMs = 238000L,
+                    identifiers = EnrichmentIdentifiers().withExtra("deezerId", "123"),
+                ),
+                RadioTrack(
+                    title = "Karma Police",
+                    artist = "Radiohead",
+                ),
+            ),
+        )
+
+        // When
+        val encoded = json.encodeToString(original)
+        val decoded = json.decodeFromString<EnrichmentData.RadioPlaylist>(encoded)
+
+        // Then
+        assertEquals(original, decoded)
+    }
 }

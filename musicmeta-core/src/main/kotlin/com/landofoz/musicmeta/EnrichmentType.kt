@@ -50,4 +50,7 @@ enum class EnrichmentType(val defaultTtlMs: Long) {
 
     // Composite
     ARTIST_TIMELINE(30L * 24 * 60 * 60 * 1000),
+
+    // Radio / recommendations — 7 days
+    ARTIST_RADIO(7L * 24 * 60 * 60 * 1000),
 }
