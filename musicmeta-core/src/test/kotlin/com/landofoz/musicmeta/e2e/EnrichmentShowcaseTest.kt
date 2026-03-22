@@ -8,7 +8,9 @@ import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.http.DefaultHttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.provider.coverartarchive.CoverArtArchiveProvider
+import com.landofoz.musicmeta.provider.deezer.DeezerApi
 import com.landofoz.musicmeta.provider.deezer.DeezerProvider
+import com.landofoz.musicmeta.provider.deezer.SimilarAlbumsProvider
 import com.landofoz.musicmeta.provider.discogs.DiscogsProvider
 import com.landofoz.musicmeta.provider.fanarttv.FanartTvProvider
 import com.landofoz.musicmeta.provider.itunes.ITunesProvider
@@ -64,6 +66,7 @@ class EnrichmentShowcaseTest {
             .addProvider(WikipediaProvider(http, RateLimiter(100)))
             .addProvider(LrcLibProvider(http, RateLimiter(200)))
             .addProvider(DeezerProvider(http, RateLimiter(100)))
+            .addProvider(SimilarAlbumsProvider(DeezerApi(http, RateLimiter(100))))
             .addProvider(ITunesProvider(http, RateLimiter(3000)))
             .addProvider(ListenBrainzProvider(http, RateLimiter(100)))
             .addProvider(LastFmProvider(prop("lastfm.apikey"), http, RateLimiter(200)))
