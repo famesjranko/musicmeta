@@ -35,9 +35,9 @@ Requirements for the Recommendations Engine milestone. Each maps to roadmap phas
 
 ### Genre Discovery
 
-- [ ] **GEN-01**: User can request GENRE_DISCOVERY enrichment for any entity with genre data
-- [ ] **GEN-02**: Static genre taxonomy covers ~60-80 genre relationships
-- [ ] **GEN-03**: GenreAffinity results include name, affinity score, relationship type, and source genres
+- [x] **GEN-01**: User can request GENRE_DISCOVERY enrichment for any entity with genre data
+- [x] **GEN-02**: Static genre taxonomy covers ~60-80 genre relationships
+- [x] **GEN-03**: GenreAffinity results include name, affinity score, relationship type, and source genres
 
 ### Catalog Filtering
 
@@ -108,9 +108,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ALB-02 | Phase 15 | Complete |
 | ALB-03 | Phase 15 | Complete |
 | ALB-04 | Phase 15 | Complete |
-| GEN-01 | Phase 16 | Pending |
-| GEN-02 | Phase 16 | Pending |
-| GEN-03 | Phase 16 | Pending |
+| GEN-01 | Phase 16 | Complete |
+| GEN-02 | Phase 16 | Complete |
+| GEN-03 | Phase 16 | Complete |
 | CAT-01 | Phase 17 | Pending |
 | CAT-02 | Phase 17 | Pending |
 | CAT-03 | Phase 17 | Pending |

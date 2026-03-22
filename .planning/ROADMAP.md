@@ -114,7 +114,7 @@ Plans:
   3. Each GenreAffinity result includes name, affinity score, relationship type, and the source genre(s) that triggered it
 **Plans**: 2 plans
 Plans:
-- [ ] 16-01-PLAN.md — Add GENRE_DISCOVERY type, GenreDiscovery/GenreAffinity data model, and GenreAffinityMatcher with static taxonomy
+- [x] 16-01-PLAN.md — Add GENRE_DISCOVERY type, GenreDiscovery/GenreAffinity data model, and GenreAffinityMatcher with static taxonomy
 - [ ] 16-02-PLAN.md — Wire GenreAffinityMatcher into Builder default synthesizer list and write GenreAffinityMatcherTest
 
 ### Phase 17: Catalog Filtering Interface
@@ -157,6 +157,6 @@ Plans:
 | 13. Similar Artists + Merger | v0.6.0 | 2/2 | Complete    | 2026-03-22 |
 | 14. Artist Radio | v0.6.0 | 2/2 | Complete    | 2026-03-22 |
 | 15. Similar Albums | v0.6.0 | 2/2 | Complete    | 2026-03-22 |
-| 16. Genre Discovery | v0.6.0 | 0/2 | Not started | - |
+| 16. Genre Discovery | v0.6.0 | 1/2 | In Progress|  |
 | 17. Catalog Filtering Interface | v0.6.0 | 0/TBD | Not started | - |
 | 18. Integration and Docs | v0.6.0 | 0/TBD | Not started | - |

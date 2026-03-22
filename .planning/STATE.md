@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v0.6.0
 milestone_name: Recommendations Engine
 status: unknown
-stopped_at: Completed 15-02-PLAN.md
-last_updated: "2026-03-22T14:46:53.449Z"
+stopped_at: Completed 16-01-PLAN.md
+last_updated: "2026-03-22T15:00:37.405Z"
 progress:
   total_phases: 7
   completed_phases: 4
-  total_plans: 8
-  completed_plans: 8
+  total_plans: 10
+  completed_plans: 9
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-22)
 
 **Core value:** Consumers get comprehensive, accurate music metadata from a single enrich() call without knowing which APIs exist, how they authenticate, or how to correlate identifiers across services.
-**Current focus:** Phase 15 — Similar Albums
+**Current focus:** Phase 16 — Genre Discovery
 
 ## Current Position
 
-Phase: 16
-Plan: Not started
+Phase: 16 (Genre Discovery) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -49,6 +49,7 @@ Plan: Not started
 | Phase 14-artist-radio P02 | 2 | 2 tasks | 3 files |
 | Phase 15 P01 | 5 | 2 tasks | 4 files |
 | Phase 15-similar-albums P02 | 10 | 2 tasks | 5 files |
+| Phase 16-genre-discovery P01 | 6 | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -77,6 +78,8 @@ Plan: Not started
 - [Phase 15-01]: Era multiplier uses discrete tiers: ±5yr = 1.2x, ±10yr = 1.0x, beyond = 0.8x for simple predictable scoring
 - [Phase 15-similar-albums]: SimilarAlbumsProvider uses its own DeezerApi instance with shared HttpClient and defaultRateLimiter — each provider owns its API object
 - [Phase 15-similar-albums]: [Phase 15-02]: Era proximity reversal test uses 5 related artists so index-1 score (0.82) with 1.2x era multiplier outscores index-0 (1.0) with 0.8x: 0.984 > 0.80
+- [Phase 16-genre-discovery]: Taxonomy extracted to GenreTaxonomy.kt to keep GenreAffinityMatcher.kt under 200 lines — pure data constant, no logic
+- [Phase 16-genre-discovery]: deduplicateByName keeps highest affinity; merges sourceGenres only when affinity values are exactly equal
 
 ### Pending Todos
 
@@ -89,6 +92,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-22T14:44:03.933Z
-Stopped at: Completed 15-02-PLAN.md
+Last session: 2026-03-22T15:00:37.403Z
+Stopped at: Completed 16-01-PLAN.md
 Resume file: None
