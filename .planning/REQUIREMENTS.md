@@ -9,8 +9,8 @@ Requirements for the Recommendations Engine milestone. Each maps to roadmap phas
 
 ### Engine Refactoring
 
-- [ ] **ENG-01**: Engine extracts merger dispatch into ResultMerger interface
-- [ ] **ENG-02**: Engine extracts composite dispatch into CompositeSynthesizer interface
+- [x] **ENG-01**: Engine extracts merger dispatch into ResultMerger interface
+- [x] **ENG-02**: Engine extracts composite dispatch into CompositeSynthesizer interface
 - [ ] **ENG-03**: DefaultEnrichmentEngine is under 300 lines after refactoring
 
 ### Similar Artists
@@ -94,8 +94,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ENG-01 | Phase 12 | Pending |
-| ENG-02 | Phase 12 | Pending |
+| ENG-01 | Phase 12 | Complete |
+| ENG-02 | Phase 12 | Complete |
 | ENG-03 | Phase 12 | Pending |
 | SIM-01 | Phase 13 | Pending |
 | SIM-02 | Phase 13 | Pending |

@@ -60,7 +60,7 @@ Full details: `.planning/milestones/v0.5.0-ROADMAP.md`
   4. All existing tests pass without modification after the refactor
 **Plans**: 2 plans
 Plans:
-- [ ] 12-01-PLAN.md — Define ResultMerger and CompositeSynthesizer interfaces; adapt GenreMerger and TimelineSynthesizer as first implementations
+- [x] 12-01-PLAN.md — Define ResultMerger and CompositeSynthesizer interfaces; adapt GenreMerger and TimelineSynthesizer as first implementations
 - [ ] 12-02-PLAN.md — Refactor DefaultEnrichmentEngine to delegate to interface registries; update Builder wiring
 
 ### Phase 13: Similar Artists + Merger
@@ -141,7 +141,7 @@ Plans:
 | 9. Artist Timeline | v0.5.0 | 2/2 | Complete | 2026-03-21 |
 | 10. Genre Enhancement | v0.5.0 | 3/3 | Complete | 2026-03-21 |
 | 11. Provider Coverage | v0.5.0 | 3/3 | Complete | 2026-03-21 |
-| 12. Engine Refactoring | v0.6.0 | 0/2 | Planning complete | - |
+| 12. Engine Refactoring | v0.6.0 | 1/2 | In Progress|  |
 | 13. Similar Artists + Merger | v0.6.0 | 0/TBD | Not started | - |
 | 14. Artist Radio | v0.6.0 | 0/TBD | Not started | - |
 | 15. Similar Albums | v0.6.0 | 0/TBD | Not started | - |
