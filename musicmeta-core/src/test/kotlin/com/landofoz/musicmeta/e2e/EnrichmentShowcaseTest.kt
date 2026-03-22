@@ -221,7 +221,7 @@ class EnrichmentShowcaseTest {
 
     @Test
     fun `08 - coverage matrix`() {
-        banner("COVERAGE MATRIX (v0.5.0)")
+        banner("COVERAGE MATRIX (v0.6.0)")
         val providers = engine.getProviders()
         var multiCount = 0
         EnrichmentType.entries.forEach { type ->
@@ -243,9 +243,14 @@ class EnrichmentShowcaseTest {
         }
         println("\n  M+/M = multi-provider, S = single provider, - = no provider")
         println("  $multiCount/${EnrichmentType.entries.size} types have multi-provider coverage")
-        println("\n  ENGINE FEATURES (v0.5.0):")
+        println("\n  ENGINE FEATURES (v0.6.0):")
         println("    - GENRE uses GenreMerger (multi-provider merge, not short-circuit)")
+        println("    - SIMILAR_ARTISTS uses SimilarArtistMerger (Last.fm + ListenBrainz + Deezer)")
         println("    - ARTIST_TIMELINE is composite (auto-resolves DISCOGRAPHY + BAND_MEMBERS)")
+        println("    - GENRE_DISCOVERY is composite (GenreAffinityMatcher via static taxonomy)")
+        println("    - ARTIST_RADIO backed by Deezer /artist/{id}/radio (7-day TTL)")
+        println("    - SIMILAR_ALBUMS synthesized from similar artists + era scoring (Deezer)")
+        println("    - CatalogProvider interface: plug in your library for AVAILABLE_ONLY/AVAILABLE_FIRST filtering")
         println("    - All 11 providers use HttpResult/ErrorKind uniformly")
     }
 
@@ -323,6 +328,85 @@ class EnrichmentShowcaseTest {
             } ?: println("    genres: ${data.genres}")
             println("    backward-compat genres: ${data.genres?.take(5)}")
         } else printSingleResult(EnrichmentType.GENRE, genre)
+    }
+
+    // --- 10. v0.6.0 feature spotlight ---
+
+    @Test
+    fun `10 - v0_6_0 feature spotlight`() = runBlocking {
+        banner("v0.6.0 FEATURES: RECOMMENDATIONS ENGINE")
+
+        // SIMILAR_ARTISTS merge: Radiohead — should show sources=[lastfm, listenbrainz, deezer]
+        println("  --- SIMILAR_ARTISTS MERGE: Radiohead ---")
+        val similarArtistResults = engine.enrich(
+            EnrichmentRequest.forArtist("Radiohead"),
+            setOf(EnrichmentType.SIMILAR_ARTISTS),
+        )
+        val similarArtists = similarArtistResults[EnrichmentType.SIMILAR_ARTISTS]
+        if (similarArtists is EnrichmentResult.Success) {
+            println("    provider: ${similarArtists.provider}, conf=${similarArtists.confidence}")
+            val data = similarArtists.data as EnrichmentData.SimilarArtists
+            println("    ${data.artists.size} artists (merged)")
+            data.artists.take(6).forEach { a ->
+                println("    %-28s score=%.2f  sources=%s".format(a.name, a.matchScore, a.sources))
+            }
+            val multiSource = data.artists.count { it.sources.size > 1 }
+            println("    $multiSource/${data.artists.size} artists contributed by 2+ providers")
+        } else printSingleResult(EnrichmentType.SIMILAR_ARTISTS, similarArtists)
+
+        // ARTIST_RADIO: Daft Punk — Deezer radio tracks
+        println("\n  --- ARTIST_RADIO: Daft Punk ---")
+        val radioResults = engine.enrich(
+            EnrichmentRequest.forArtist("Daft Punk"),
+            setOf(EnrichmentType.ARTIST_RADIO),
+        )
+        val radio = radioResults[EnrichmentType.ARTIST_RADIO]
+        if (radio is EnrichmentResult.Success) {
+            println("    provider: ${radio.provider}, conf=${radio.confidence}")
+            val data = radio.data as EnrichmentData.RadioPlaylist
+            println("    ${data.tracks.size} tracks")
+            data.tracks.take(5).forEach { t ->
+                val dur = t.durationMs?.let { "${it / 1000}s" } ?: "?"
+                println("    %-30s %-20s %s".format(t.title.take(30), t.artist.take(20), dur))
+            }
+        } else printSingleResult(EnrichmentType.ARTIST_RADIO, radio)
+
+        // SIMILAR_ALBUMS: OK Computer — scored by artist similarity + era
+        println("\n  --- SIMILAR_ALBUMS: OK Computer by Radiohead ---")
+        val albumResults = engine.enrich(
+            EnrichmentRequest.forAlbum("OK Computer", "Radiohead"),
+            setOf(EnrichmentType.SIMILAR_ALBUMS),
+        )
+        val albums = albumResults[EnrichmentType.SIMILAR_ALBUMS]
+        if (albums is EnrichmentResult.Success) {
+            println("    provider: ${albums.provider}, conf=${albums.confidence}")
+            val data = albums.data as EnrichmentData.SimilarAlbums
+            println("    ${data.albums.size} similar albums")
+            data.albums.take(6).forEach { a ->
+                val year = a.year?.toString() ?: "?"
+                println("    %-30s %-20s %s  score=%.2f".format(
+                    a.title.take(30), a.artist.take(20), year, a.artistMatchScore,
+                ))
+            }
+        } else printSingleResult(EnrichmentType.SIMILAR_ALBUMS, albums)
+
+        // GENRE_DISCOVERY: Radiohead — affinity-scored genre neighbors
+        println("\n  --- GENRE_DISCOVERY: Radiohead ---")
+        val genreDiscoveryResults = engine.enrich(
+            EnrichmentRequest.forArtist("Radiohead"),
+            setOf(EnrichmentType.GENRE_DISCOVERY),
+        )
+        val genreDiscovery = genreDiscoveryResults[EnrichmentType.GENRE_DISCOVERY]
+        if (genreDiscovery is EnrichmentResult.Success) {
+            println("    provider: ${genreDiscovery.provider}, conf=${genreDiscovery.confidence}")
+            val data = genreDiscovery.data as EnrichmentData.GenreDiscovery
+            println("    ${data.relatedGenres.size} related genres")
+            data.relatedGenres.take(8).forEach { g ->
+                println("    %-28s affinity=%.2f  rel=%-8s sources=%s".format(
+                    g.name, g.affinity, g.relationship, g.sourceGenres,
+                ))
+            }
+        } else printSingleResult(EnrichmentType.GENRE_DISCOVERY, genreDiscovery)
     }
 
     // --- Helpers ---
