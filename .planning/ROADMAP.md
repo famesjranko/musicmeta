@@ -112,7 +112,10 @@ Plans:
   1. Calling enrich() for GENRE_DISCOVERY on an entity with existing genre data returns a list of GenreAffinity results
   2. The static genre taxonomy covers at least 60 genre relationships spanning parent, child, and sibling relationship types
   3. Each GenreAffinity result includes name, affinity score, relationship type, and the source genre(s) that triggered it
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 16-01-PLAN.md — Add GENRE_DISCOVERY type, GenreDiscovery/GenreAffinity data model, and GenreAffinityMatcher with static taxonomy
+- [ ] 16-02-PLAN.md — Wire GenreAffinityMatcher into Builder default synthesizer list and write GenreAffinityMatcherTest
 
 ### Phase 17: Catalog Filtering Interface
 **Goal**: Library consumers can plug in their own catalog (local library, streaming service, etc.) so recommendation results are pre-filtered or re-ranked by availability before being returned
@@ -154,6 +157,6 @@ Plans:
 | 13. Similar Artists + Merger | v0.6.0 | 2/2 | Complete    | 2026-03-22 |
 | 14. Artist Radio | v0.6.0 | 2/2 | Complete    | 2026-03-22 |
 | 15. Similar Albums | v0.6.0 | 2/2 | Complete    | 2026-03-22 |
-| 16. Genre Discovery | v0.6.0 | 0/TBD | Not started | - |
+| 16. Genre Discovery | v0.6.0 | 0/2 | Not started | - |
 | 17. Catalog Filtering Interface | v0.6.0 | 0/TBD | Not started | - |
 | 18. Integration and Docs | v0.6.0 | 0/TBD | Not started | - |
