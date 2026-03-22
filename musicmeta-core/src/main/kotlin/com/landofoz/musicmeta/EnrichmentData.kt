@@ -90,6 +90,9 @@ sealed class EnrichmentData {
     @Serializable
     data class RadioPlaylist(val tracks: List<RadioTrack>) : EnrichmentData()
 
+    @Serializable
+    data class SimilarAlbums(val albums: List<SimilarAlbum>) : EnrichmentData()
+
 }
 
 @Serializable
@@ -198,5 +201,15 @@ data class RadioTrack(
     val artist: String,
     val album: String? = null,
     val durationMs: Long? = null,
+    val identifiers: EnrichmentIdentifiers = EnrichmentIdentifiers(),
+)
+
+@Serializable
+data class SimilarAlbum(
+    val title: String,
+    val artist: String,
+    val year: Int? = null,
+    val artistMatchScore: Float,
+    val thumbnailUrl: String? = null,
     val identifiers: EnrichmentIdentifiers = EnrichmentIdentifiers(),
 )
