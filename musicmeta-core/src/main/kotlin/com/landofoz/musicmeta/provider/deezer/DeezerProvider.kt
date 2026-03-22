@@ -36,6 +36,7 @@ class DeezerProvider(
         ProviderCapability(EnrichmentType.ALBUM_TRACKS, priority = 50),
         ProviderCapability(EnrichmentType.ALBUM_METADATA, priority = 50),
         ProviderCapability(EnrichmentType.SIMILAR_ARTISTS, priority = 30),
+        ProviderCapability(EnrichmentType.ARTIST_RADIO, priority = 100),
     )
 
     override suspend fun searchCandidates(
@@ -59,6 +60,7 @@ class DeezerProvider(
                 EnrichmentType.ALBUM_TRACKS -> enrichAlbumTracks(request)
                 EnrichmentType.ALBUM_METADATA -> enrichAlbumMetadata(request, type)
                 EnrichmentType.SIMILAR_ARTISTS -> enrichSimilarArtists(request)
+                EnrichmentType.ARTIST_RADIO -> enrichArtistRadio(request)
                 else -> enrichAlbumArt(request, type)
             }
         } catch (e: Exception) {
@@ -118,6 +120,36 @@ class DeezerProvider(
         return EnrichmentResult.Success(
             type = EnrichmentType.SIMILAR_ARTISTS,
             data = DeezerMapper.toSimilarArtists(related),
+            provider = id,
+            confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
+            resolvedIdentifiers = EnrichmentIdentifiers().withExtra("deezerId", artist.id.toString()),
+        )
+    }
+
+    private suspend fun enrichArtistRadio(request: EnrichmentRequest): EnrichmentResult {
+        val artistRequest = request as? EnrichmentRequest.ForArtist
+            ?: return EnrichmentResult.NotFound(EnrichmentType.ARTIST_RADIO, id)
+
+        // Check for cached Deezer artist ID first, fall back to search
+        val deezerId = request.identifiers.extra["deezerId"]?.toLongOrNull()
+        val artist = if (deezerId != null) {
+            DeezerArtistSearchResult(id = deezerId, name = artistRequest.name)
+        } else {
+            val searchResult = api.searchArtist(artistRequest.name)
+                ?: return EnrichmentResult.NotFound(EnrichmentType.ARTIST_RADIO, id)
+            // Verify the search result matches the requested artist
+            if (!ArtistMatcher.isMatch(artistRequest.name, searchResult.name)) {
+                return EnrichmentResult.NotFound(EnrichmentType.ARTIST_RADIO, id)
+            }
+            searchResult
+        }
+
+        val tracks = api.getArtistRadio(artist.id)
+        if (tracks.isEmpty()) return EnrichmentResult.NotFound(EnrichmentType.ARTIST_RADIO, id)
+
+        return EnrichmentResult.Success(
+            type = EnrichmentType.ARTIST_RADIO,
+            data = DeezerMapper.toRadioPlaylist(tracks),
             provider = id,
             confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
             resolvedIdentifiers = EnrichmentIdentifiers().withExtra("deezerId", artist.id.toString()),
