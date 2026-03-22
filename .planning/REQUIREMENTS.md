@@ -41,10 +41,10 @@ Requirements for the Recommendations Engine milestone. Each maps to roadmap phas
 
 ### Catalog Filtering
 
-- [ ] **CAT-01**: CatalogProvider interface allows consumers to check item availability
-- [ ] **CAT-02**: CatalogFilterMode supports unfiltered, available-only, and available-first modes
+- [x] **CAT-01**: CatalogProvider interface allows consumers to check item availability
+- [x] **CAT-02**: CatalogFilterMode supports unfiltered, available-only, and available-first modes
 - [ ] **CAT-03**: Engine applies catalog filtering to recommendation-type results before returning
-- [ ] **CAT-04**: Recommendations work unfiltered by default when no CatalogProvider is configured
+- [x] **CAT-04**: Recommendations work unfiltered by default when no CatalogProvider is configured
 
 ### Integration
 
@@ -111,10 +111,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GEN-01 | Phase 16 | Complete |
 | GEN-02 | Phase 16 | Complete |
 | GEN-03 | Phase 16 | Complete |
-| CAT-01 | Phase 17 | Pending |
-| CAT-02 | Phase 17 | Pending |
+| CAT-01 | Phase 17 | Complete |
+| CAT-02 | Phase 17 | Complete |
 | CAT-03 | Phase 17 | Pending |
-| CAT-04 | Phase 17 | Pending |
+| CAT-04 | Phase 17 | Complete |
 | INT-01 | Phase 18 | Pending |
 | INT-02 | Phase 18 | Pending |
 

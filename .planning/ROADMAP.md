@@ -128,7 +128,7 @@ Plans:
   4. Requesting a recommendation type with no CatalogProvider configured returns all results, identical to previous behavior
 **Plans**: 2 plans
 Plans:
-- [ ] 17-01-PLAN.md — Define CatalogProvider interface, CatalogQuery, CatalogMatch, CatalogFilterMode; wire into EnrichmentConfig and Builder
+- [x] 17-01-PLAN.md — Define CatalogProvider interface, CatalogQuery, CatalogMatch, CatalogFilterMode; wire into EnrichmentConfig and Builder
 - [ ] 17-02-PLAN.md — Implement post-resolution catalog filtering in DefaultEnrichmentEngine; write CatalogFilteringTest
 
 ### Phase 18: Integration and Docs
@@ -161,5 +161,5 @@ Plans:
 | 14. Artist Radio | v0.6.0 | 2/2 | Complete    | 2026-03-22 |
 | 15. Similar Albums | v0.6.0 | 2/2 | Complete    | 2026-03-22 |
 | 16. Genre Discovery | v0.6.0 | 2/2 | Complete    | 2026-03-22 |
-| 17. Catalog Filtering Interface | v0.6.0 | 0/2 | Not started | - |
+| 17. Catalog Filtering Interface | v0.6.0 | 1/2 | In Progress|  |
 | 18. Integration and Docs | v0.6.0 | 0/TBD | Not started | - |

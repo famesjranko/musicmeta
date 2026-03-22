@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v0.6.0
 milestone_name: Recommendations Engine
 status: unknown
-stopped_at: Completed 16-02-PLAN.md
-last_updated: "2026-03-22T15:08:32.236Z"
+stopped_at: Completed 17-01-PLAN.md
+last_updated: "2026-03-22T15:15:48.513Z"
 progress:
   total_phases: 7
   completed_phases: 5
-  total_plans: 10
-  completed_plans: 10
+  total_plans: 12
+  completed_plans: 11
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-22)
 
 **Core value:** Consumers get comprehensive, accurate music metadata from a single enrich() call without knowing which APIs exist, how they authenticate, or how to correlate identifiers across services.
-**Current focus:** Phase 16 — Genre Discovery
+**Current focus:** Phase 17 — Catalog Filtering Interface
 
 ## Current Position
 
-Phase: 17
-Plan: Not started
+Phase: 17 (Catalog Filtering Interface) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -51,6 +51,7 @@ Plan: Not started
 | Phase 15-similar-albums P02 | 10 | 2 tasks | 5 files |
 | Phase 16-genre-discovery P01 | 6 | 2 tasks | 7 files |
 | Phase 16-genre-discovery P02 | 3 | 2 tasks | 2 files |
+| Phase 17-catalog-filtering-interface P01 | 2 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -82,6 +83,9 @@ Plan: Not started
 - [Phase 16-genre-discovery]: Taxonomy extracted to GenreTaxonomy.kt to keep GenreAffinityMatcher.kt under 200 lines — pure data constant, no logic
 - [Phase 16-genre-discovery]: deduplicateByName keeps highest affinity; merges sourceGenres only when affinity values are exactly equal
 - [Phase 16-genre-discovery]: [Phase 16-02]: GenreAffinityMatcher added to Builder default synthesizers at construction time alongside TimelineSynthesizer — stateless object needs no constructor params
+- [Phase 17-01]: CatalogProvider is a fun interface (SAM) so consumers can use lambda syntax for simple implementations
+- [Phase 17-01]: catalogProvider defaults to null and catalogFilterMode defaults to UNFILTERED ensuring zero behavior change for existing consumers
+- [Phase 17-01]: Builder.catalog() uses config.copy() to preserve all other config fields when wiring catalog options
 
 ### Pending Todos
 
@@ -94,6 +98,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-22T15:05:17.595Z
-Stopped at: Completed 16-02-PLAN.md
+Last session: 2026-03-22T15:15:48.511Z
+Stopped at: Completed 17-01-PLAN.md
 Resume file: None
