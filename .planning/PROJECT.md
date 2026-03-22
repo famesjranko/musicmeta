@@ -8,6 +8,19 @@ A pure Kotlin/JVM music metadata enrichment library that aggregates data from 11
 
 Consumers get comprehensive, accurate music metadata from a single `enrich()` call without knowing which APIs exist, how they authenticate, or how to correlate identifiers across services.
 
+## Current Milestone: v0.6.0 Recommendations Engine
+
+**Goal:** Build discovery features on top of the enrichment data — turn musicmeta from a metadata lookup library into a recommendation engine.
+
+**Target features:**
+- Similar Artists — add Deezer `/artist/{id}/related` as third provider
+- Similar Tracks — add Deezer `/artist/{id}/radio` as second provider
+- Similar Albums — synthesized from similar artists + genre + era (new composite type)
+- Radio/Mix — Deezer radio endpoint for seed-based track generation
+- Credit-Based Discovery — "more from this producer/composer" via CREDITS data
+- Genre Discovery — genre affinity neighbors via GenreMerger confidence scores
+- Listening-Based — ListenBrainz collaborative filtering recommendations (user-scoped)
+
 ## Current State
 
 Shipped v0.5.0 with 28 enrichment types across 11 providers. All providers use HttpResult/ErrorKind uniformly. Three new enrichment types (CREDITS, RELEASE_EDITIONS, ARTIST_TIMELINE) plus genre enhancement with multi-provider merging. Provider coverage expanded with new Last.fm, iTunes, Fanart.tv, and ListenBrainz endpoints.
@@ -36,7 +49,13 @@ Shipped v0.5.0 with 28 enrichment types across 11 providers. All providers use H
 
 ### Active
 
-(None — planning next milestone)
+- [ ] Deezer SIMILAR_ARTISTS via `/artist/{id}/related`
+- [ ] Deezer SIMILAR_TRACKS via `/artist/{id}/radio`
+- [ ] SIMILAR_ALBUMS synthesized from similar artists + genre + era
+- [ ] Radio/Mix seed-based track generation via Deezer radio
+- [ ] Credit-based discovery queries from CREDITS data
+- [ ] Genre affinity matching via GenreMerger confidence scores
+- [ ] ListenBrainz collaborative filtering recommendations
 
 ### Out of Scope
 
@@ -93,4 +112,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-22 after v0.5.0 milestone*
+*Last updated: 2026-03-22 after v0.6.0 milestone start*
