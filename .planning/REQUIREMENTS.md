@@ -94,35 +94,35 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ENG-01 | — | Pending |
-| ENG-02 | — | Pending |
-| ENG-03 | — | Pending |
-| SIM-01 | — | Pending |
-| SIM-02 | — | Pending |
-| SIM-03 | — | Pending |
-| SIM-04 | — | Pending |
-| RAD-01 | — | Pending |
-| RAD-02 | — | Pending |
-| RAD-03 | — | Pending |
-| ALB-01 | — | Pending |
-| ALB-02 | — | Pending |
-| ALB-03 | — | Pending |
-| ALB-04 | — | Pending |
-| GEN-01 | — | Pending |
-| GEN-02 | — | Pending |
-| GEN-03 | — | Pending |
-| CAT-01 | — | Pending |
-| CAT-02 | — | Pending |
-| CAT-03 | — | Pending |
-| CAT-04 | — | Pending |
-| INT-01 | — | Pending |
-| INT-02 | — | Pending |
+| ENG-01 | Phase 12 | Pending |
+| ENG-02 | Phase 12 | Pending |
+| ENG-03 | Phase 12 | Pending |
+| SIM-01 | Phase 13 | Pending |
+| SIM-02 | Phase 13 | Pending |
+| SIM-03 | Phase 13 | Pending |
+| SIM-04 | Phase 13 | Pending |
+| RAD-01 | Phase 14 | Pending |
+| RAD-02 | Phase 14 | Pending |
+| RAD-03 | Phase 14 | Pending |
+| ALB-01 | Phase 15 | Pending |
+| ALB-02 | Phase 15 | Pending |
+| ALB-03 | Phase 15 | Pending |
+| ALB-04 | Phase 15 | Pending |
+| GEN-01 | Phase 16 | Pending |
+| GEN-02 | Phase 16 | Pending |
+| GEN-03 | Phase 16 | Pending |
+| CAT-01 | Phase 17 | Pending |
+| CAT-02 | Phase 17 | Pending |
+| CAT-03 | Phase 17 | Pending |
+| CAT-04 | Phase 17 | Pending |
+| INT-01 | Phase 18 | Pending |
+| INT-02 | Phase 18 | Pending |
 
 **Coverage:**
 - v0.6.0 requirements: 23 total
-- Mapped to phases: 0
-- Unmapped: 23 ⚠️
+- Mapped to phases: 23
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-23*
-*Last updated: 2026-03-23 after initial definition*
+*Last updated: 2026-03-23 after roadmap creation*
