@@ -2,7 +2,11 @@ package com.landofoz.musicmeta.engine
 
 import com.landofoz.musicmeta.ApiKeyConfig
 import com.landofoz.musicmeta.EnrichmentEngine
+import com.landofoz.musicmeta.EnrichmentRequest
+import com.landofoz.musicmeta.EnrichmentResult
+import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.testutil.FakeHttpClient
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -95,5 +99,31 @@ class BuilderDefaultProvidersTest {
 
         // Then -- MusicBrainz has capabilities (identity provider)
         assertTrue(mb.capabilities.isNotEmpty())
+    }
+
+    @Test fun `withDefaultProviders registers genre_affinity_matcher synthesizer for GENRE_DISCOVERY`() = runTest {
+        // Given -- default providers; no HTTP stubs so all provider calls return NotFound
+        val engine = EnrichmentEngine.Builder()
+            .httpClient(httpClient)
+            .withDefaultProviders()
+            .build()
+
+        // When -- requesting GENRE_DISCOVERY (a composite type handled by GenreAffinityMatcher)
+        val results = engine.enrich(
+            EnrichmentRequest.forArtist("Test Artist"),
+            setOf(EnrichmentType.GENRE_DISCOVERY),
+        )
+        val result = results[EnrichmentType.GENRE_DISCOVERY]
+
+        // Then -- synthesizer handled the request (provider is "genre_affinity_matcher", not "no_composite_handler")
+        // Result is NotFound because no GENRE data is available, but the synthesizer WAS invoked
+        assertTrue("GENRE_DISCOVERY result must be present", result != null)
+        val notFound = result as? EnrichmentResult.NotFound
+        assertTrue("Expected NotFound (no GENRE data), got ${result?.let { it::class.simpleName }}", notFound != null)
+        assertNotEquals(
+            "genre_affinity_matcher synthesizer must be registered (not falling back to no_composite_handler)",
+            "no_composite_handler",
+            notFound?.provider,
+        )
     }
 }
