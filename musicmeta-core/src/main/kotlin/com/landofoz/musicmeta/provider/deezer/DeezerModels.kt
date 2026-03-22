@@ -37,3 +37,9 @@ data class DeezerTrack(
     val trackPosition: Int,
     val durationSec: Int,
 )
+
+/** Related artist entry from Deezer /artist/{id}/related endpoint. */
+data class DeezerRelatedArtist(
+    val id: Long,
+    val name: String,
+)

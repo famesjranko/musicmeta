@@ -109,6 +109,25 @@ class DeezerApi(
         }
     }
 
+    suspend fun getRelatedArtists(artistId: Long, limit: Int = 20): List<DeezerRelatedArtist> {
+        val url = "$BASE_URL/artist/$artistId/related?limit=$limit"
+        val json = rateLimiter.execute {
+            when (val r = httpClient.fetchJsonResult(url)) {
+                is HttpResult.Ok -> r.body
+                else -> return@execute null
+            }
+        } ?: return emptyList()
+
+        val data = json.optJSONArray("data") ?: return emptyList()
+        return (0 until data.length()).map { i ->
+            val artist = data.getJSONObject(i)
+            DeezerRelatedArtist(
+                id = artist.optLong("id"),
+                name = artist.optString("name", ""),
+            )
+        }
+    }
+
     private fun String.takeIfNotEmpty(): String? = takeIf { it.isNotBlank() }
 
     private companion object {

@@ -232,7 +232,107 @@ class DeezerProviderTest {
         assertEquals(ErrorKind.NETWORK, error.errorKind)
     }
 
+    // SIMILAR_ARTISTS tests
+
+    @Test
+    fun `enrich returns SimilarArtists for artist`() = runTest {
+        // Given — Deezer returns a matching artist and related artists
+        httpClient.givenJsonResponse("search/artist", """{"data":[{"id":399,"name":"Radiohead"}]}""")
+        httpClient.givenJsonResponse("artist/399/related", RELATED_ARTISTS_RESPONSE)
+        val request = EnrichmentRequest.forArtist("Radiohead")
+
+        // When — enriching for similar artists
+        val result = provider.enrich(request, EnrichmentType.SIMILAR_ARTISTS)
+
+        // Then — success with SimilarArtists data
+        assertTrue(result is EnrichmentResult.Success)
+        val data = (result as EnrichmentResult.Success).data as EnrichmentData.SimilarArtists
+        assertEquals(3, data.artists.size)
+        assertEquals("Muse", data.artists[0].name)
+    }
+
+    @Test
+    fun `enrich returns NotFound for SimilarArtists when artist not found`() = runTest {
+        // Given — Deezer returns no artist search results
+        httpClient.givenJsonResponse("search/artist", """{"data":[]}""")
+        val request = EnrichmentRequest.forArtist("Nonexistent Artist")
+
+        // When — enriching for similar artists
+        val result = provider.enrich(request, EnrichmentType.SIMILAR_ARTISTS)
+
+        // Then — NotFound because no artist matched
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `enrich returns NotFound for SimilarArtists when artist name does not match`() = runTest {
+        // Given — Deezer returns a different artist
+        httpClient.givenJsonResponse("search/artist", """{"data":[{"id":999,"name":"Completely Different Band"}]}""")
+        val request = EnrichmentRequest.forArtist("Radiohead")
+
+        // When — enriching for similar artists
+        val result = provider.enrich(request, EnrichmentType.SIMILAR_ARTISTS)
+
+        // Then — NotFound because ArtistMatcher.isMatch() rejects the result
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `enrich returns NotFound for SimilarArtists on album request`() = runTest {
+        // Given — a ForAlbum request (SIMILAR_ARTISTS requires ForArtist)
+        val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+
+        // When — enriching for similar artists
+        val result = provider.enrich(request, EnrichmentType.SIMILAR_ARTISTS)
+
+        // Then — NotFound because SIMILAR_ARTISTS requires ForArtist
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `enrich returns SimilarArtists with deezerId in identifiers`() = runTest {
+        // Given — Deezer returns matching artist and related artists
+        httpClient.givenJsonResponse("search/artist", """{"data":[{"id":399,"name":"Radiohead"}]}""")
+        httpClient.givenJsonResponse("artist/399/related", RELATED_ARTISTS_RESPONSE)
+        val request = EnrichmentRequest.forArtist("Radiohead")
+
+        // When — enriching for similar artists
+        val result = provider.enrich(request, EnrichmentType.SIMILAR_ARTISTS)
+
+        // Then — each SimilarArtist has deezerId in identifiers.extra and sources = ["deezer"]
+        assertTrue(result is EnrichmentResult.Success)
+        val data = (result as EnrichmentResult.Success).data as EnrichmentData.SimilarArtists
+        assertTrue(data.artists.all { it.sources == listOf("deezer") })
+        assertTrue(data.artists.all { it.identifiers.extra["deezerId"] != null })
+        assertEquals("1001", data.artists[0].identifiers.extra["deezerId"])
+    }
+
+    @Test
+    fun `enrich returns SimilarArtists with positional match scores`() = runTest {
+        // Given — Deezer returns artist and 3 related artists
+        httpClient.givenJsonResponse("search/artist", """{"data":[{"id":399,"name":"Radiohead"}]}""")
+        httpClient.givenJsonResponse("artist/399/related", RELATED_ARTISTS_RESPONSE)
+        val request = EnrichmentRequest.forArtist("Radiohead")
+
+        // When — enriching for similar artists
+        val result = provider.enrich(request, EnrichmentType.SIMILAR_ARTISTS)
+
+        // Then — first artist has higher score than last
+        val data = ((result as EnrichmentResult.Success).data as EnrichmentData.SimilarArtists).artists
+        assertTrue(data[0].matchScore > data[2].matchScore)
+        // First should be ~1.0 and last should be ~0.1
+        assertEquals(1.0f, data[0].matchScore, 0.01f)
+    }
+
     companion object {
+        val RELATED_ARTISTS_RESPONSE = """
+            {"data":[
+                {"id":1001,"name":"Muse"},
+                {"id":1002,"name":"Sigur Ros"},
+                {"id":1003,"name":"Portishead"}
+            ]}
+        """.trimIndent()
+
         val DEEZER_METADATA_RESPONSE = """
             {"data":[{
                 "title":"OK Computer",

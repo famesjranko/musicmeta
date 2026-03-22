@@ -5,6 +5,7 @@ import com.landofoz.musicmeta.DiscographyAlbum
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.SearchCandidate
+import com.landofoz.musicmeta.SimilarArtist
 import com.landofoz.musicmeta.TrackInfo
 
 /** Maps Deezer DTOs to EnrichmentData subclasses. */
@@ -58,6 +59,20 @@ object DeezerMapper {
             releaseType = result.recordType,
             explicit = result.explicitLyrics,
         )
+
+    fun toSimilarArtists(artists: List<DeezerRelatedArtist>): EnrichmentData.SimilarArtists {
+        val count = artists.size.coerceAtLeast(1)
+        return EnrichmentData.SimilarArtists(
+            artists = artists.mapIndexed { index, artist ->
+                SimilarArtist(
+                    name = artist.name,
+                    identifiers = EnrichmentIdentifiers().withExtra("deezerId", artist.id.toString()),
+                    matchScore = 1.0f - (index.toFloat() / count) * 0.9f,
+                    sources = listOf("deezer"),
+                )
+            },
+        )
+    }
 
     fun toSearchCandidate(
         result: DeezerAlbumResult,
