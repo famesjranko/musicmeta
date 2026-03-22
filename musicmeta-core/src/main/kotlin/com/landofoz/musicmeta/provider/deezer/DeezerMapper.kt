@@ -4,6 +4,7 @@ import com.landofoz.musicmeta.ArtworkSize
 import com.landofoz.musicmeta.DiscographyAlbum
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
+import com.landofoz.musicmeta.RadioTrack
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.SimilarArtist
 import com.landofoz.musicmeta.TrackInfo
@@ -89,4 +90,17 @@ object DeezerMapper {
         identifiers = EnrichmentIdentifiers(),
         provider = providerId,
     )
+
+    fun toRadioPlaylist(tracks: List<DeezerRadioTrack>): EnrichmentData.RadioPlaylist =
+        EnrichmentData.RadioPlaylist(
+            tracks = tracks.map { track ->
+                RadioTrack(
+                    title = track.title,
+                    artist = track.artistName,
+                    album = track.albumTitle,
+                    durationMs = if (track.durationSec > 0) track.durationSec.toLong() * 1000 else null,
+                    identifiers = EnrichmentIdentifiers().withExtra("deezerId", track.id.toString()),
+                )
+            },
+        )
 }
