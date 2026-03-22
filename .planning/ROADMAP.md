@@ -99,7 +99,10 @@ Plans:
   2. Each SimilarAlbum includes title, artist, year, artistMatchScore, thumbnail, and identifiers
   3. Albums are ordered with higher artistMatchScore results appearing first; era proximity influences scoring when year data is present
   4. The SimilarAlbumsProvider is a standalone provider — no I/O occurs inside the synthesizer function itself
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 15-01-PLAN.md — Add SIMILAR_ALBUMS type, SimilarAlbum/SimilarAlbums data model, DeezerMapper.toSimilarAlbum(), and SimilarAlbumsProvider
+- [ ] 15-02-PLAN.md — Wire SimilarAlbumsProvider into Builder.withDefaultProviders() and write SimilarAlbumsProviderTest
 
 ### Phase 16: Genre Discovery
 **Goal**: Users can discover related genres for any entity that has genre data, receiving affinity-scored neighbors with relationship type context
@@ -150,7 +153,7 @@ Plans:
 | 12. Engine Refactoring | v0.6.0 | 2/2 | Complete    | 2026-03-22 |
 | 13. Similar Artists + Merger | v0.6.0 | 2/2 | Complete    | 2026-03-22 |
 | 14. Artist Radio | v0.6.0 | 2/2 | Complete    | 2026-03-22 |
-| 15. Similar Albums | v0.6.0 | 0/TBD | Not started | - |
+| 15. Similar Albums | v0.6.0 | 0/2 | Not started | - |
 | 16. Genre Discovery | v0.6.0 | 0/TBD | Not started | - |
 | 17. Catalog Filtering Interface | v0.6.0 | 0/TBD | Not started | - |
 | 18. Integration and Docs | v0.6.0 | 0/TBD | Not started | - |
