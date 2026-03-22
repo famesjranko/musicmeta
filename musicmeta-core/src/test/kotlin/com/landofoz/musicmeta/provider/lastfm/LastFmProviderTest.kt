@@ -51,6 +51,20 @@ class LastFmProviderTest {
     }
 
     @Test
+    fun `similar artists have sources set to lastfm`() = runTest {
+        // Given
+        httpClient.givenJsonResponse("artist.getsimilar", SIMILAR_ARTISTS_JSON)
+        val request = EnrichmentRequest.forArtist(name = "Radiohead")
+
+        // When
+        val result = provider.enrich(request, EnrichmentType.SIMILAR_ARTISTS)
+
+        // Then — each SimilarArtist includes "lastfm" in sources
+        val similar = ((result as EnrichmentResult.Success).data as EnrichmentData.SimilarArtists).artists
+        assertTrue(similar.all { it.sources == listOf("lastfm") })
+    }
+
+    @Test
     fun `enrich returns genre tags`() = runTest {
         // Given
         httpClient.givenJsonResponse("artist.getinfo", ARTIST_INFO_JSON)

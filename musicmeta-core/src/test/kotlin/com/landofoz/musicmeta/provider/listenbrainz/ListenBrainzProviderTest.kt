@@ -421,6 +421,27 @@ class ListenBrainzProviderTest {
     }
 
     @Test
+    fun `similar artists have sources set to listenbrainz`() = runTest {
+        // Given
+        val artistMbid = "a74b1b7f-71a5-4011-9441-d0b5e4122711"
+        httpClient.givenJsonResponse(
+            "lb-radio",
+            """{"payload": [{"artist_mbid": "mbid-1", "artist_name": "Thom Yorke", "score": 0.85}]}""",
+        )
+        val request = EnrichmentRequest.ForArtist(
+            identifiers = EnrichmentIdentifiers(musicBrainzId = artistMbid),
+            name = "Radiohead",
+        )
+
+        // When
+        val result = provider.enrich(request, EnrichmentType.SIMILAR_ARTISTS)
+
+        // Then — each SimilarArtist includes "listenbrainz" in sources
+        val data = (result as EnrichmentResult.Success).data as EnrichmentData.SimilarArtists
+        assertTrue(data.artists.all { it.sources == listOf("listenbrainz") })
+    }
+
+    @Test
     fun `enrich returns NotFound for SIMILAR_ARTISTS when API returns empty`() = runTest {
         // Given
         httpClient.givenJsonResponse("lb-radio", """{"payload": []}""")

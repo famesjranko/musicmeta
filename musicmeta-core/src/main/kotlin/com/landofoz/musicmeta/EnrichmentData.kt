@@ -102,6 +102,7 @@ data class SimilarArtist(
     val name: String,
     val identifiers: EnrichmentIdentifiers = EnrichmentIdentifiers(),
     val matchScore: Float,
+    val sources: List<String> = emptyList(),
 )
 
 @Serializable

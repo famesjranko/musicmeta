@@ -48,6 +48,7 @@ object ListenBrainzMapper {
                     name = artist.name,
                     identifiers = EnrichmentIdentifiers(musicBrainzId = artist.artistMbid),
                     matchScore = artist.score,
+                    sources = listOf("listenbrainz"),
                 )
             },
         )
