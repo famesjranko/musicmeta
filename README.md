@@ -11,14 +11,14 @@ Built for music player apps that want Spotify-quality metadata without a commerc
          |
          v
 +-----------------------------+
-|  EnrichmentEngine           |  28 enrichment types
+|  EnrichmentEngine           |  31 enrichment types
 |                             |  11 providers
 |  MusicBrainz ---------------+--> Identity (MBID), genre, label, credits, editions
 |  Cover Art Archive ---------+--> Album art front/back/booklet (multi-size)
 |  Wikidata ------------------+--> Artist photo, country, dates
 |  Wikipedia -----------------+--> Artist biography, supplemental photos
 |  LRCLIB --------------------+--> Synced + plain lyrics
-|  Deezer --------------------+--> Album art, discography, tracklists
+|  Deezer --------------------+--> Album art, discography, tracklists, similar artists, radio, similar albums
 |  iTunes --------------------+--> Album art, tracklists, discography
 |  Last.fm -------------------+--> Genres, similar artists/tracks, album metadata
 |  ListenBrainz --------------+--> Popularity, discography, similar artists
@@ -124,8 +124,8 @@ The `musicmeta-android` module adds Room-backed persistent caching, a Hilt DI mo
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("com.github.famesjranko.musicmeta:musicmeta-core:v0.5.0")
-    implementation("com.github.famesjranko.musicmeta:musicmeta-android:v0.5.0")
+    implementation("com.github.famesjranko.musicmeta:musicmeta-core:v0.6.0")
+    implementation("com.github.famesjranko.musicmeta:musicmeta-android:v0.6.0")
 }
 ```
 
@@ -168,7 +168,7 @@ object MyEnrichmentModule {
 | Wikidata | Artist photo, country, dates, occupation | No | None |
 | Wikipedia | Artist biography, supplemental photos | No | None |
 | LRCLIB | Synced + plain lyrics | No | None |
-| Deezer | Album art, discography, tracklists, album metadata | No | None |
+| Deezer | Album art, discography, tracklists, album metadata, similar artists, artist radio, similar albums | No | None |
 | iTunes | Album art, tracklists, discography, album metadata | No | ~1 req/3sec |
 | ListenBrainz | Popularity, listen counts, discography, similar artists | No | None |
 | Last.fm | Genres, similar artists/tracks, bios, popularity, album metadata | Yes | None |
@@ -182,7 +182,7 @@ object MyEnrichmentModule {
 - Fanart.tv: https://fanart.tv/get-an-api-key/
 - Discogs: https://www.discogs.com/settings/developers → "Generate new token"
 
-## Enrichment types (28)
+## Enrichment types (31)
 
 | Category | Types | Multi-provider |
 |----------|-------|----------------|
@@ -191,11 +191,115 @@ object MyEnrichmentModule {
 | **Credits** | CREDITS | MusicBrainz (recording rels) + Discogs (extraartists) |
 | **Editions** | RELEASE_EDITIONS | MusicBrainz (release-group) + Discogs (master versions) |
 | **Text** | ARTIST_BIO, LYRICS_SYNCED, LYRICS_PLAIN | BIO (2) |
-| **Relationships** | SIMILAR_ARTISTS, SIMILAR_TRACKS, ARTIST_LINKS | SIMILAR_ARTISTS (2) |
+| **Relationships** | SIMILAR_ARTISTS, SIMILAR_TRACKS, ARTIST_LINKS | SIMILAR_ARTISTS merged (3: Last.fm, ListenBrainz, Deezer) |
 | **Statistics** | ARTIST_POPULARITY, TRACK_POPULARITY | Both from 2 providers |
-| **Composite** | ARTIST_TIMELINE | Synthesized from discography + members + life-span |
+| **Composite** | ARTIST_TIMELINE, GENRE_DISCOVERY | ARTIST_TIMELINE: discography + members + life-span; GENRE_DISCOVERY: static affinity taxonomy |
+| **Radio** | ARTIST_RADIO | Deezer /artist/{id}/radio, ordered playlist |
+| **Discovery** | SIMILAR_ALBUMS | Deezer related artists + era scoring |
 
-16 of 28 types have multi-provider coverage with automatic fallback.
+16 of 31 types have multi-provider coverage with automatic fallback.
+
+## Recommendations
+
+v0.6.0 adds discovery and radio features built on top of enrichment data. All recommendation types work with the standard `enrich()` call.
+
+### Similar artists (merged)
+
+```kotlin
+val results = engine.enrich(
+    EnrichmentRequest.forArtist("Radiohead"),
+    setOf(EnrichmentType.SIMILAR_ARTISTS),
+)
+val artists = (results[EnrichmentType.SIMILAR_ARTISTS] as? EnrichmentResult.Success)
+    ?.data as? EnrichmentData.SimilarArtists
+artists?.artists?.forEach { a ->
+    println("${a.name} (score=%.2f, sources=${a.sources})".format(a.matchScore))
+}
+// Thom Yorke (score=0.95, sources=[lastfm, listenbrainz, deezer])
+// Portishead (score=0.88, sources=[lastfm, deezer])
+```
+
+Results from Last.fm, ListenBrainz, and Deezer are deduplicated and merged. Each `SimilarArtist` has a `sources` field listing which providers contributed it.
+
+### Artist radio
+
+```kotlin
+val results = engine.enrich(
+    EnrichmentRequest.forArtist("Daft Punk"),
+    setOf(EnrichmentType.ARTIST_RADIO),
+)
+val playlist = (results[EnrichmentType.ARTIST_RADIO] as? EnrichmentResult.Success)
+    ?.data as? EnrichmentData.RadioPlaylist
+playlist?.tracks?.forEach { t ->
+    println("${t.title} — ${t.artist} (${t.durationMs?.div(1000)}s)")
+}
+```
+
+Backed by Deezer's `/artist/{id}/radio` endpoint. Returns up to 25 tracks. Results cached for 7 days.
+
+### Similar albums
+
+```kotlin
+val results = engine.enrich(
+    EnrichmentRequest.forAlbum("OK Computer", "Radiohead"),
+    setOf(EnrichmentType.SIMILAR_ALBUMS),
+)
+val albums = (results[EnrichmentType.SIMILAR_ALBUMS] as? EnrichmentResult.Success)
+    ?.data as? EnrichmentData.SimilarAlbums
+albums?.albums?.forEach { a ->
+    println("${a.title} by ${a.artist} (${a.year}) — score=%.2f".format(a.artistMatchScore))
+}
+```
+
+Synthesized from Deezer similar artists and their top albums. Scored by artist similarity and era proximity. Albums from the same era as the request get a 1.2x score multiplier.
+
+### Genre discovery
+
+```kotlin
+val results = engine.enrich(
+    EnrichmentRequest.forArtist("Radiohead"),
+    setOf(EnrichmentType.GENRE_DISCOVERY),
+)
+val discovery = (results[EnrichmentType.GENRE_DISCOVERY] as? EnrichmentResult.Success)
+    ?.data as? EnrichmentData.GenreDiscovery
+discovery?.relatedGenres?.forEach { g ->
+    println("${g.name} (affinity=%.2f, rel=${g.relationship}, from=${g.sourceGenres})".format(g.affinity))
+}
+// post-rock (affinity=0.90, rel=sibling, from=[alternative rock])
+// shoegaze (affinity=0.80, rel=sibling, from=[alternative rock])
+// art rock (affinity=0.85, rel=parent, from=[alternative rock])
+```
+
+Uses a static genre affinity taxonomy covering ~70 genre relationships. Requires the entity to have genre data (from a prior GENRE enrichment or included in the same call).
+
+### Catalog filtering
+
+Plug in your music library to filter recommendation results by availability:
+
+```kotlin
+val engine = EnrichmentEngine.Builder()
+    .addProvider(/* ... */)
+    .catalog(
+        catalogProvider = MyCatalogProvider(),    // implement CatalogProvider interface
+        mode = CatalogFilterMode.AVAILABLE_FIRST, // or AVAILABLE_ONLY, UNFILTERED
+    )
+    .build()
+
+// Implement CatalogProvider with a SAM lambda:
+val catalog = CatalogProvider { queries ->
+    queries.map { q ->
+        CatalogMatch(
+            available = myLibrary.contains(q.title, q.artist),
+            source = "local",
+        )
+    }
+}
+```
+
+Modes:
+- `AVAILABLE_ONLY` — removes unavailable items from results
+- `AVAILABLE_FIRST` — available items appear first, unavailable items follow
+- `UNFILTERED` — no filtering (default when no CatalogProvider is configured)
 
 ## How it works
 
@@ -329,8 +433,8 @@ dependencyResolutionManagement {
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("com.github.famesjranko.musicmeta:musicmeta-core:v0.5.0")
-    implementation("com.github.famesjranko.musicmeta:musicmeta-android:v0.5.0") // Android only
+    implementation("com.github.famesjranko.musicmeta:musicmeta-core:v0.6.0")
+    implementation("com.github.famesjranko.musicmeta:musicmeta-android:v0.6.0") // Android only
 }
 ```
 
