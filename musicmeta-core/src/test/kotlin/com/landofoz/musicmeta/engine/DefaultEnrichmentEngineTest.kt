@@ -642,6 +642,73 @@ class DefaultEnrichmentEngineTest {
         )
     }
 
+    // --- SIMILAR_ARTISTS multi-provider merge (SIM-02, SIM-03) ---
+
+    private fun similarArtistsProvider(id: String, artists: List<SimilarArtist>) =
+        FakeProvider(id = id, capabilities = listOf(ProviderCapability(EnrichmentType.SIMILAR_ARTISTS, 100)))
+            .also {
+                it.givenResult(
+                    EnrichmentType.SIMILAR_ARTISTS,
+                    EnrichmentResult.Success(
+                        type = EnrichmentType.SIMILAR_ARTISTS,
+                        data = EnrichmentData.SimilarArtists(artists = artists),
+                        provider = id,
+                        confidence = 0.9f,
+                    )
+                )
+            }
+
+    @Test fun `enrich merges SIMILAR_ARTISTS from multiple providers`() = runTest {
+        // Given — provider A returns Muse + Bjork, provider B returns Muse + Portishead
+        val providerA = similarArtistsProvider(
+            id = "lastfm",
+            artists = listOf(
+                SimilarArtist("Muse", matchScore = 0.9f, sources = listOf("lastfm")),
+                SimilarArtist("Bjork", matchScore = 0.7f, sources = listOf("lastfm")),
+            )
+        )
+        val providerB = similarArtistsProvider(
+            id = "deezer",
+            artists = listOf(
+                SimilarArtist("Muse", matchScore = 0.5f, sources = listOf("deezer")),
+                SimilarArtist("Portishead", matchScore = 0.8f, sources = listOf("deezer")),
+            )
+        )
+        val artistRequest = EnrichmentRequest.forArtist("Radiohead")
+        // Engine built with both GenreMerger and SimilarArtistMerger (mirrors Builder defaults)
+        val e = DefaultEnrichmentEngine(
+            ProviderRegistry(listOf(providerA, providerB)),
+            cache,
+            FakeHttpClient(),
+            config,
+            mergers = listOf(GenreMerger, SimilarArtistMerger),
+        )
+
+        // When — enriching SIMILAR_ARTISTS with both providers
+        val results = e.enrich(artistRequest, setOf(EnrichmentType.SIMILAR_ARTISTS))
+
+        // Then — result is Success from the merger
+        val result = results[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
+        assertEquals("similar_artist_merger", result.provider)
+        val data = result.data as EnrichmentData.SimilarArtists
+
+        // Then — Muse appears once (deduplicated), with both sources, matchScore capped at 1.0
+        val muse = data.artists.first { it.name == "Muse" }
+        assertTrue("lastfm" in muse.sources)
+        assertTrue("deezer" in muse.sources)
+        assertEquals(1.0f, muse.matchScore, 0.001f)
+
+        // Then — Bjork and Portishead each appear once with their original single-provider sources
+        val bjork = data.artists.first { it.name == "Bjork" }
+        assertEquals(listOf("lastfm"), bjork.sources)
+        val portishead = data.artists.first { it.name == "Portishead" }
+        assertEquals(listOf("deezer"), portishead.sources)
+
+        // Then — results sorted by matchScore descending (Muse=1.0, Portishead=0.8, Bjork=0.7)
+        val scores = data.artists.map { it.matchScore }
+        assertEquals(scores, scores.sortedDescending())
+    }
+
     @Test fun `ARTIST_TIMELINE is cached like standard types`() = runTest {
         // Given — identity provider + discography + band members providers
         val idProvider = identityProviderWithMetadata()

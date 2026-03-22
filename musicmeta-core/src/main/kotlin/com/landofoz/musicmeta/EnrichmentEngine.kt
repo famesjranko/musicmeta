@@ -4,6 +4,7 @@ import com.landofoz.musicmeta.cache.InMemoryEnrichmentCache
 import com.landofoz.musicmeta.engine.DefaultEnrichmentEngine
 import com.landofoz.musicmeta.engine.GenreMerger
 import com.landofoz.musicmeta.engine.ProviderRegistry
+import com.landofoz.musicmeta.engine.SimilarArtistMerger
 import com.landofoz.musicmeta.engine.TimelineSynthesizer
 import com.landofoz.musicmeta.http.DefaultHttpClient
 import com.landofoz.musicmeta.http.HttpClient
@@ -43,7 +44,7 @@ interface EnrichmentEngine {
         private var config: EnrichmentConfig = EnrichmentConfig()
         private var logger: EnrichmentLogger = EnrichmentLogger.NoOp
         private var apiKeyConfig: ApiKeyConfig? = null
-        private val mergers = mutableListOf<com.landofoz.musicmeta.engine.ResultMerger>(GenreMerger)
+        private val mergers = mutableListOf<com.landofoz.musicmeta.engine.ResultMerger>(GenreMerger, SimilarArtistMerger)
         private val synthesizers = mutableListOf<com.landofoz.musicmeta.engine.CompositeSynthesizer>(TimelineSynthesizer)
 
         fun addProvider(provider: EnrichmentProvider) = apply { providers.add(provider) }
