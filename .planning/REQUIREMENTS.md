@@ -22,9 +22,9 @@ Requirements for the Recommendations Engine milestone. Each maps to roadmap phas
 
 ### Artist Radio
 
-- [ ] **RAD-01**: User can request ARTIST_RADIO enrichment for any artist
+- [x] **RAD-01**: User can request ARTIST_RADIO enrichment for any artist
 - [ ] **RAD-02**: Deezer provides radio tracks via /artist/{id}/radio endpoint
-- [ ] **RAD-03**: RadioPlaylist returns ordered tracks with title, artist, album, duration, and identifiers
+- [x] **RAD-03**: RadioPlaylist returns ordered tracks with title, artist, album, duration, and identifiers
 
 ### Similar Albums
 
@@ -101,9 +101,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SIM-02 | Phase 13 | Complete |
 | SIM-03 | Phase 13 | Complete |
 | SIM-04 | Phase 13 | Complete |
-| RAD-01 | Phase 14 | Pending |
+| RAD-01 | Phase 14 | Complete |
 | RAD-02 | Phase 14 | Pending |
-| RAD-03 | Phase 14 | Pending |
+| RAD-03 | Phase 14 | Complete |
 | ALB-01 | Phase 15 | Pending |
 | ALB-02 | Phase 15 | Pending |
 | ALB-03 | Phase 15 | Pending |
