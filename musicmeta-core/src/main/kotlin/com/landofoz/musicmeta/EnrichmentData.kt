@@ -93,6 +93,9 @@ sealed class EnrichmentData {
     @Serializable
     data class SimilarAlbums(val albums: List<SimilarAlbum>) : EnrichmentData()
 
+    @Serializable
+    data class GenreDiscovery(val relatedGenres: List<GenreAffinity>) : EnrichmentData()
+
 }
 
 @Serializable
@@ -212,4 +215,12 @@ data class SimilarAlbum(
     val artistMatchScore: Float,
     val thumbnailUrl: String? = null,
     val identifiers: EnrichmentIdentifiers = EnrichmentIdentifiers(),
+)
+
+@Serializable
+data class GenreAffinity(
+    val name: String,
+    val affinity: Float,
+    val relationship: String,
+    val sourceGenres: List<String>,
 )
