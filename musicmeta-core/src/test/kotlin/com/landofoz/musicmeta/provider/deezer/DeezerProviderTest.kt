@@ -1,6 +1,7 @@
 package com.landofoz.musicmeta.provider.deezer
 
 import com.landofoz.musicmeta.EnrichmentData
+import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
@@ -324,7 +325,121 @@ class DeezerProviderTest {
         assertEquals(1.0f, data[0].matchScore, 0.01f)
     }
 
+    // ARTIST_RADIO tests
+
+    @Test
+    fun `enrich returns RadioPlaylist for artist`() = runTest {
+        // Given — Deezer returns a matching artist and radio tracks
+        httpClient.givenJsonResponse("search/artist", """{"data":[{"id":399,"name":"Radiohead"}]}""")
+        httpClient.givenJsonResponse("artist/399/radio", RADIO_RESPONSE)
+        val request = EnrichmentRequest.forArtist("Radiohead")
+
+        // When — enriching for artist radio
+        val result = provider.enrich(request, EnrichmentType.ARTIST_RADIO)
+
+        // Then — success with RadioPlaylist data
+        assertTrue(result is EnrichmentResult.Success)
+        val data = (result as EnrichmentResult.Success).data as EnrichmentData.RadioPlaylist
+        assertEquals(2, data.tracks.size)
+        assertEquals("Creep", data.tracks[0].title)
+        assertEquals("Radiohead", data.tracks[0].artist)
+        assertEquals("Pablo Honey", data.tracks[0].album)
+        assertEquals(238000L, data.tracks[0].durationMs)
+    }
+
+    @Test
+    fun `enrich returns RadioPlaylist track with deezerId identifier`() = runTest {
+        // Given — Deezer returns artist and radio tracks
+        httpClient.givenJsonResponse("search/artist", """{"data":[{"id":399,"name":"Radiohead"}]}""")
+        httpClient.givenJsonResponse("artist/399/radio", RADIO_RESPONSE)
+        val request = EnrichmentRequest.forArtist("Radiohead")
+
+        // When — enriching for artist radio
+        val result = provider.enrich(request, EnrichmentType.ARTIST_RADIO) as EnrichmentResult.Success
+        val data = result.data as EnrichmentData.RadioPlaylist
+
+        // Then — each track has deezerId in identifiers.extra
+        assertTrue(data.tracks.all { it.identifiers.extra["deezerId"] != null })
+        assertEquals("123", data.tracks[0].identifiers.extra["deezerId"])
+    }
+
+    @Test
+    fun `enrich returns NotFound for ARTIST_RADIO on album request`() = runTest {
+        // Given — a ForAlbum request (ARTIST_RADIO requires ForArtist)
+        val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+
+        // When — enriching for artist radio
+        val result = provider.enrich(request, EnrichmentType.ARTIST_RADIO)
+
+        // Then — NotFound because ARTIST_RADIO requires ForArtist
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `enrich returns NotFound for ARTIST_RADIO when artist search returns no results`() = runTest {
+        // Given — Deezer returns no artist search results
+        httpClient.givenJsonResponse("search/artist", """{"data":[]}""")
+        val request = EnrichmentRequest.forArtist("Nonexistent Artist")
+
+        // When — enriching for artist radio
+        val result = provider.enrich(request, EnrichmentType.ARTIST_RADIO)
+
+        // Then — NotFound because no artist matched
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `enrich returns NotFound for ARTIST_RADIO when artist name does not match`() = runTest {
+        // Given — Deezer returns a different artist
+        httpClient.givenJsonResponse("search/artist", """{"data":[{"id":999,"name":"Completely Different Band"}]}""")
+        val request = EnrichmentRequest.forArtist("Radiohead")
+
+        // When — enriching for artist radio
+        val result = provider.enrich(request, EnrichmentType.ARTIST_RADIO)
+
+        // Then — NotFound because ArtistMatcher.isMatch() rejects the result
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `enrich returns NotFound for ARTIST_RADIO when radio endpoint returns empty data`() = runTest {
+        // Given — Deezer returns artist but radio endpoint returns no tracks
+        httpClient.givenJsonResponse("search/artist", """{"data":[{"id":399,"name":"Radiohead"}]}""")
+        httpClient.givenJsonResponse("artist/399/radio", """{"data":[]}""")
+        val request = EnrichmentRequest.forArtist("Radiohead")
+
+        // When — enriching for artist radio
+        val result = provider.enrich(request, EnrichmentType.ARTIST_RADIO)
+
+        // Then — NotFound because no tracks returned
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `enrich skips artist search for ARTIST_RADIO when deezerId is cached`() = runTest {
+        // Given — request already has deezerId cached, only radio endpoint needed
+        httpClient.givenJsonResponse("artist/399/radio", RADIO_RESPONSE)
+        val request = EnrichmentRequest.forArtist("Radiohead").copy(
+            identifiers = EnrichmentIdentifiers().withExtra("deezerId", "399")
+        )
+
+        // When — enriching for artist radio
+        val result = provider.enrich(request, EnrichmentType.ARTIST_RADIO)
+
+        // Then — success without a search/artist call
+        assertTrue(result is EnrichmentResult.Success)
+        val urls = httpClient.requestedUrls
+        assertTrue(urls.none { it.contains("search/artist") })
+    }
+
     companion object {
+        val RADIO_RESPONSE = """
+            {"data":[
+                {"id":123,"title":"Creep","artist":{"name":"Radiohead"},"album":{"title":"Pablo Honey"},"duration":238},
+                {"id":456,"title":"Fake Plastic Trees","artist":{"name":"Radiohead"},"album":{"title":"The Bends"},"duration":273}
+            ]}
+        """.trimIndent()
+
         val RELATED_ARTISTS_RESPONSE = """
             {"data":[
                 {"id":1001,"name":"Muse"},
