@@ -39,7 +39,7 @@ Full details: `.planning/milestones/v0.5.0-ROADMAP.md`
 
 **Milestone Goal:** Turn musicmeta from a metadata lookup library into a recommendation engine by adding discovery features built on top of enrichment data.
 
-- [ ] **Phase 12: Engine Refactoring** — Extract ResultMerger and CompositeSynthesizer interfaces; bring DefaultEnrichmentEngine under 300 lines
+- [x] **Phase 12: Engine Refactoring** — Extract ResultMerger and CompositeSynthesizer interfaces; bring DefaultEnrichmentEngine under 300 lines (completed 2026-03-22)
 - [ ] **Phase 13: Similar Artists + Merger** — Add Deezer as third SIMILAR_ARTISTS provider; promote to mergeable type with SimilarArtistMerger
 - [ ] **Phase 14: Artist Radio** — New ARTIST_RADIO type backed by Deezer /artist/{id}/radio endpoint
 - [ ] **Phase 15: Similar Albums** — New SIMILAR_ALBUMS composite type synthesized from similar artists, genre, and era data
@@ -61,7 +61,7 @@ Full details: `.planning/milestones/v0.5.0-ROADMAP.md`
 **Plans**: 2 plans
 Plans:
 - [x] 12-01-PLAN.md — Define ResultMerger and CompositeSynthesizer interfaces; adapt GenreMerger and TimelineSynthesizer as first implementations
-- [ ] 12-02-PLAN.md — Refactor DefaultEnrichmentEngine to delegate to interface registries; update Builder wiring
+- [x] 12-02-PLAN.md — Refactor DefaultEnrichmentEngine to delegate to interface registries; update Builder wiring
 
 ### Phase 13: Similar Artists + Merger
 **Goal**: Users get richer similar-artist results that combine Last.fm, ListenBrainz, and Deezer data — deduplicated and scored — instead of only the first provider that responds
@@ -141,7 +141,7 @@ Plans:
 | 9. Artist Timeline | v0.5.0 | 2/2 | Complete | 2026-03-21 |
 | 10. Genre Enhancement | v0.5.0 | 3/3 | Complete | 2026-03-21 |
 | 11. Provider Coverage | v0.5.0 | 3/3 | Complete | 2026-03-21 |
-| 12. Engine Refactoring | v0.6.0 | 1/2 | In Progress|  |
+| 12. Engine Refactoring | v0.6.0 | 2/2 | Complete   | 2026-03-22 |
 | 13. Similar Artists + Merger | v0.6.0 | 0/TBD | Not started | - |
 | 14. Artist Radio | v0.6.0 | 0/TBD | Not started | - |
 | 15. Similar Albums | v0.6.0 | 0/TBD | Not started | - |

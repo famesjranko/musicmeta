@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v0.6.0
 milestone_name: Recommendations Engine
 status: unknown
-stopped_at: Completed 12-01-PLAN.md
-last_updated: "2026-03-22T13:36:28.901Z"
+stopped_at: Completed 12-02-PLAN.md
+last_updated: "2026-03-22T13:41:07.459Z"
 progress:
   total_phases: 7
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State
@@ -42,6 +42,7 @@ Plan: 2 of 2
 
 *Updated after each plan completion*
 | Phase 12-engine-refactoring P01 | 2 | 2 tasks | 6 files |
+| Phase 12-engine-refactoring P02 | 5 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -54,6 +55,8 @@ Plan: 2 of 2
 - CatalogProvider interface only — no implementations shipped in v0.6.0; AVAILABLE_ONLY and AVAILABLE_FIRST modes wired at engine level
 - [Phase 12-01]: Interfaces define extension points without modifying DefaultEnrichmentEngine: Phase 13 and Phase 16 plug in by implementing ResultMerger/CompositeSynthesizer respectively
 - [Phase 12-01]: GenreMerger and TimelineSynthesizer remain objects (singletons): stateless strategy pattern preserved; existing methods kept as internal implementation details
+- [Phase 12-02]: Default constructor params use listOf(GenreMerger)/listOf(TimelineSynthesizer) for backward compat with tests constructing DefaultEnrichmentEngine directly
+- [Phase 12-02]: Builder pre-populates merger/synthesizer lists so withDefaultProviders() doesn't need to add them explicitly
 
 ### Pending Todos
 
@@ -66,6 +69,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-22T13:36:28.899Z
-Stopped at: Completed 12-01-PLAN.md
+Last session: 2026-03-22T13:41:07.456Z
+Stopped at: Completed 12-02-PLAN.md
 Resume file: None
