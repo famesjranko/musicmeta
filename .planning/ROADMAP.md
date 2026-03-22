@@ -72,7 +72,10 @@ Plans:
   2. The merged result contains no duplicate artists (matched by name or MBID)
   3. Each SimilarArtist in the result has a sources field listing which providers contributed it
   4. Deezer artist ID is resolved via searchArtist + name match guard, not assumed to be cached
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 13-01-PLAN.md — Add sources field to SimilarArtist, backfill existing mappers, implement Deezer SIMILAR_ARTISTS provider
+- [ ] 13-02-PLAN.md — Create SimilarArtistMerger and wire into Builder for automatic multi-provider merge
 
 ### Phase 14: Artist Radio
 **Goal**: Users can request a radio-style playlist seeded by any artist, returned as an ordered list of tracks with full metadata
@@ -142,7 +145,7 @@ Plans:
 | 10. Genre Enhancement | v0.5.0 | 3/3 | Complete | 2026-03-21 |
 | 11. Provider Coverage | v0.5.0 | 3/3 | Complete | 2026-03-21 |
 | 12. Engine Refactoring | v0.6.0 | 2/2 | Complete    | 2026-03-22 |
-| 13. Similar Artists + Merger | v0.6.0 | 0/TBD | Not started | - |
+| 13. Similar Artists + Merger | v0.6.0 | 0/2 | Not started | - |
 | 14. Artist Radio | v0.6.0 | 0/TBD | Not started | - |
 | 15. Similar Albums | v0.6.0 | 0/TBD | Not started | - |
 | 16. Genre Discovery | v0.6.0 | 0/TBD | Not started | - |
