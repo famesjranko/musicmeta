@@ -422,6 +422,60 @@ class MusicBrainzProviderTest {
         assertEquals(ErrorKind.NETWORK, (result as EnrichmentResult.Error).errorKind)
     }
 
+    // --- ForAlbum guard for artist-only types ---
+
+    @Test
+    fun `enrichAlbum returns NotFound for BAND_MEMBERS`() = runTest {
+        // Given — ForAlbum request
+        val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+            .withIdentifiers(EnrichmentIdentifiers(musicBrainzId = "rel1"))
+
+        // When — enriching for BAND_MEMBERS (artist-only type)
+        val result = provider.enrich(request, EnrichmentType.BAND_MEMBERS)
+
+        // Then — NotFound instead of leaking Metadata
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `enrichAlbum returns NotFound for ARTIST_DISCOGRAPHY`() = runTest {
+        // Given — ForAlbum request
+        val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+            .withIdentifiers(EnrichmentIdentifiers(musicBrainzId = "rel1"))
+
+        // When — enriching for ARTIST_DISCOGRAPHY (artist-only type)
+        val result = provider.enrich(request, EnrichmentType.ARTIST_DISCOGRAPHY)
+
+        // Then — NotFound
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `enrichAlbum returns NotFound for ARTIST_LINKS`() = runTest {
+        // Given — ForAlbum request
+        val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+            .withIdentifiers(EnrichmentIdentifiers(musicBrainzId = "rel1"))
+
+        // When — enriching for ARTIST_LINKS (artist-only type)
+        val result = provider.enrich(request, EnrichmentType.ARTIST_LINKS)
+
+        // Then — NotFound
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `enrichAlbum returns NotFound for CREDITS`() = runTest {
+        // Given — ForAlbum request
+        val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+            .withIdentifiers(EnrichmentIdentifiers(musicBrainzId = "rel1"))
+
+        // When — enriching for CREDITS (track-only type)
+        val result = provider.enrich(request, EnrichmentType.CREDITS)
+
+        // Then — NotFound
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
     companion object {
         private val RELEASE_SEARCH_HIGH_SCORE = """
             {

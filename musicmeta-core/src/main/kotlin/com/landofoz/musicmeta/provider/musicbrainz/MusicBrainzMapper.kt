@@ -134,8 +134,8 @@ object MusicBrainzMapper {
         )
 
     private fun buildActivePeriod(member: MusicBrainzBandMember): String? {
-        val begin = member.beginDate ?: return null
-        val end = if (member.ended) (member.endDate ?: "?") else "present"
+        val begin = member.beginDate?.take(4) ?: return null
+        val end = if (member.ended) (member.endDate?.take(4) ?: "?") else "present"
         return "$begin-$end"
     }
 

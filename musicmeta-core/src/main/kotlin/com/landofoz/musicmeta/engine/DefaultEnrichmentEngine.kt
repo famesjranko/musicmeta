@@ -122,9 +122,12 @@ class DefaultEnrichmentEngine(
         if (resolved == null) {
             logger.debug(TAG, "Identity resolution returned no resolvedIdentifiers")
             // Still store the result for identity types if data is Metadata
+            // Skip mergeable types (e.g. GENRE) — they need multi-provider resolution
             if (result.data is EnrichmentData.Metadata) {
                 for (type in IDENTITY_TYPES) {
-                    if (type in uncachedTypes) { results[type] = result; uncachedTypes.remove(type) }
+                    if (type in uncachedTypes && type !in MERGEABLE_TYPES) {
+                        results[type] = result; uncachedTypes.remove(type)
+                    }
                 }
             }
             return request to result
@@ -142,6 +145,7 @@ class DefaultEnrichmentEngine(
         )
 
         // Store Metadata result for all identity types with resolved identifiers attached
+        // Skip mergeable types (e.g. GENRE) — they need multi-provider resolution
         if (result.data is EnrichmentData.Metadata) {
             val metadataResult = EnrichmentResult.Success(
                 type = identityType,
@@ -151,7 +155,9 @@ class DefaultEnrichmentEngine(
                 resolvedIdentifiers = mergedIds,
             )
             for (type in IDENTITY_TYPES) {
-                if (type in uncachedTypes) { results[type] = metadataResult; uncachedTypes.remove(type) }
+                if (type in uncachedTypes && type !in MERGEABLE_TYPES) {
+                    results[type] = metadataResult; uncachedTypes.remove(type)
+                }
             }
         }
 
@@ -199,7 +205,7 @@ class DefaultEnrichmentEngine(
 
         // Synthesize composite types from resolved sub-types
         for (compositeType in compositeTypes) {
-            resolved[compositeType] = synthesizeComposite(compositeType, resolved, identityResult)
+            resolved[compositeType] = synthesizeComposite(compositeType, resolved, identityResult, request)
         }
 
         // Only return types the caller requested — exclude internal sub-types
@@ -241,9 +247,10 @@ class DefaultEnrichmentEngine(
         type: EnrichmentType,
         resolved: Map<EnrichmentType, EnrichmentResult>,
         identityResult: EnrichmentResult?,
+        request: EnrichmentRequest,
     ): EnrichmentResult {
         return when (type) {
-            EnrichmentType.ARTIST_TIMELINE -> synthesizeTimeline(resolved, identityResult)
+            EnrichmentType.ARTIST_TIMELINE -> synthesizeTimeline(resolved, identityResult, request)
             else -> EnrichmentResult.NotFound(type, "no_composite_handler")
         }
     }
@@ -251,7 +258,11 @@ class DefaultEnrichmentEngine(
     private fun synthesizeTimeline(
         resolved: Map<EnrichmentType, EnrichmentResult>,
         identityResult: EnrichmentResult?,
+        request: EnrichmentRequest,
     ): EnrichmentResult {
+        if (request !is EnrichmentRequest.ForArtist) {
+            return EnrichmentResult.NotFound(EnrichmentType.ARTIST_TIMELINE, "artist_only")
+        }
         val discography = resolved[EnrichmentType.ARTIST_DISCOGRAPHY]
         val bandMembers = resolved[EnrichmentType.BAND_MEMBERS]
 

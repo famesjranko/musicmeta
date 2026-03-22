@@ -116,6 +116,9 @@ class MusicBrainzProvider(
     private suspend fun enrichAlbum(
         request: EnrichmentRequest.ForAlbum, type: EnrichmentType,
     ): EnrichmentResult {
+        if (type in ARTIST_NEW_TYPES || type == EnrichmentType.CREDITS) {
+            return EnrichmentResult.NotFound(type, id)
+        }
         if (type == EnrichmentType.ALBUM_TRACKS) return enrichAlbumTracks(request)
         if (type == EnrichmentType.RELEASE_EDITIONS) return enrichAlbumEditions(request)
         val mbid = request.identifiers.musicBrainzId

@@ -159,26 +159,26 @@ class DefaultEnrichmentEngineTest {
 
     // --- Identity resolution side-effects ---
 
-    @Test fun `identity resolution stores Metadata for identity types`() = runTest {
+    @Test fun `identity resolution stores Metadata for non-mergeable identity types`() = runTest {
         // Given — identity provider returns Metadata with resolvedIdentifiers
         val metadata = EnrichmentData.Metadata(genres = listOf("rock", "alternative"), label = "Parlophone")
         val idProvider = FakeProvider(id = "mb", isIdentityProvider = true, capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)))
-            .also { it.givenIdentityResult(EnrichmentResult.Success(EnrichmentType.GENRE, metadata, "mb", 0.95f, resolvedIdentifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-123", wikidataId = "Q123"))) }
+            .also {
+                it.givenIdentityResult(EnrichmentResult.Success(EnrichmentType.GENRE, metadata, "mb", 0.95f, resolvedIdentifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-123", wikidataId = "Q123")))
+                it.givenResult(EnrichmentType.GENRE, EnrichmentResult.Success(EnrichmentType.GENRE, metadata, "mb", 0.95f))
+            }
         val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider)), cache, FakeHttpClient(), EnrichmentConfig(enableIdentityResolution = true))
 
-        // When — enriching GENRE and LABEL (both identity types)
+        // When — enriching GENRE and LABEL (both identity types, but GENRE is mergeable)
         val results = e.enrich(req, setOf(EnrichmentType.GENRE, EnrichmentType.LABEL))
 
-        // Then — GENRE result is Metadata with resolved identifiers
-        val genreResult = results[EnrichmentType.GENRE] as EnrichmentResult.Success
-        assertTrue("Expected Metadata but got ${genreResult.data::class.simpleName}", genreResult.data is EnrichmentData.Metadata)
-        assertEquals(listOf("rock", "alternative"), (genreResult.data as EnrichmentData.Metadata).genres)
-        assertNotNull(genreResult.resolvedIdentifiers)
-        assertEquals("mbid-123", genreResult.resolvedIdentifiers?.musicBrainzId)
-
-        // Then — LABEL also gets the shared Metadata result
+        // Then — LABEL gets identity result (non-mergeable identity type)
         val labelResult = results[EnrichmentType.LABEL] as EnrichmentResult.Success
         assertEquals("Parlophone", (labelResult.data as EnrichmentData.Metadata).label)
+
+        // Then — GENRE goes through merge path (mergeable type, not consumed by identity)
+        val genreResult = results[EnrichmentType.GENRE] as EnrichmentResult.Success
+        assertTrue("Expected Metadata but got ${genreResult.data::class.simpleName}", genreResult.data is EnrichmentData.Metadata)
     }
 
     @Test fun `identity resolution updates request identifiers for downstream providers`() = runTest {
@@ -202,21 +202,31 @@ class DefaultEnrichmentEngineTest {
         assertEquals("Radiohead", enrichedReq.identifiers.wikipediaTitle)
     }
 
-    @Test fun `identity resolution with resolvedIdentifiers updates request for provider chain`() = runTest {
-        // Given — identity provider returns Metadata with resolvedIdentifiers
-        val metadata = EnrichmentData.Metadata(genres = listOf("rock"))
+    @Test fun `GENRE goes through merge path even with identity resolution enabled`() = runTest {
+        // Given — identity provider + genre provider both contribute genreTags
+        val metadata = EnrichmentData.Metadata(
+            genres = listOf("rock"),
+            genreTags = listOf(GenreTag("rock", 0.4f, listOf("musicbrainz"))),
+        )
         val resolvedIds = EnrichmentIdentifiers(musicBrainzId = "mbid-789")
         val idProvider = FakeProvider(id = "mb", isIdentityProvider = true, capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)))
-            .also { it.givenIdentityResult(EnrichmentResult.Success(EnrichmentType.GENRE, metadata, "mb", 0.95f, resolvedIdentifiers = resolvedIds)) }
-        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider)), cache, FakeHttpClient(), EnrichmentConfig(enableIdentityResolution = true))
+            .also {
+                it.givenIdentityResult(EnrichmentResult.Success(EnrichmentType.GENRE, metadata, "mb", 0.95f, resolvedIdentifiers = resolvedIds))
+                it.givenResult(EnrichmentType.GENRE, EnrichmentResult.Success(EnrichmentType.GENRE, metadata, "mb", 0.95f))
+            }
+        val lastfm = genreProviderWithTags("lastfm", listOf(GenreTag("alternative rock", 0.3f, listOf("lastfm"))))
+        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider, lastfm)), cache, FakeHttpClient(), EnrichmentConfig(enableIdentityResolution = true))
 
-        // When — enriching GENRE
+        // When — enriching GENRE with identity resolution enabled
         val results = e.enrich(req, setOf(EnrichmentType.GENRE))
 
-        // Then — GENRE resolves from identity resolution with Metadata
-        assertTrue(results[EnrichmentType.GENRE] is EnrichmentResult.Success)
+        // Then — GENRE result comes from genre_merger (not identity resolution)
         val genreResult = results[EnrichmentType.GENRE] as EnrichmentResult.Success
-        assertTrue(genreResult.data is EnrichmentData.Metadata)
+        assertEquals("genre_merger", genreResult.provider)
+        val tags = (genreResult.data as EnrichmentData.Metadata).genreTags!!
+        val sources = tags.flatMap { it.sources }.distinct()
+        assertTrue("Should have musicbrainz source", "musicbrainz" in sources)
+        assertTrue("Should have lastfm source", "lastfm" in sources)
     }
 
     // --- Manual selection flag ---
@@ -608,6 +618,28 @@ class DefaultEnrichmentEngineTest {
         val result = results[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success
         assertEquals("p1", result.provider)
         assertEquals(0, p2.enrichCalls.size)
+    }
+
+    @Test fun `ARTIST_TIMELINE returns NotFound for ForAlbum requests`() = runTest {
+        // Given — identity provider + discography + band members providers
+        val idProvider = identityProviderWithMetadata()
+        val discoProvider = discographyProvider()
+        val membersProvider = bandMembersProvider()
+        val e = DefaultEnrichmentEngine(
+            ProviderRegistry(listOf(idProvider, discoProvider, membersProvider)),
+            cache,
+            FakeHttpClient(),
+            EnrichmentConfig(enableIdentityResolution = true),
+        )
+
+        // When — requesting ARTIST_TIMELINE for a ForAlbum request
+        val results = e.enrich(req, setOf(EnrichmentType.ARTIST_TIMELINE))
+
+        // Then — NotFound because timelines are ForArtist-only
+        assertTrue(
+            "Expected NotFound but got ${results[EnrichmentType.ARTIST_TIMELINE]}",
+            results[EnrichmentType.ARTIST_TIMELINE] is EnrichmentResult.NotFound,
+        )
     }
 
     @Test fun `ARTIST_TIMELINE is cached like standard types`() = runTest {

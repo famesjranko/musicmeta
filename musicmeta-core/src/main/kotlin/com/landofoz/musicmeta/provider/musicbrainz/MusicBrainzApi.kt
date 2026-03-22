@@ -93,11 +93,11 @@ class MusicBrainzApi(
         return MusicBrainzParser.parseLookupArtist(json)
     }
 
-    /** Lookup a release-group by MBID with releases, labels, and media (needed for editions). */
+    /** Lookup a release-group by MBID with releases (needed for editions). */
     suspend fun lookupReleaseGroup(releaseGroupMbid: String): JSONObject? {
         val json = rateLimiter.execute {
             when (val r = httpClient.fetchJsonResult(
-                "$BASE_URL/release-group/$releaseGroupMbid?fmt=json&inc=releases+labels+media",
+                "$BASE_URL/release-group/$releaseGroupMbid?fmt=json&inc=releases",
             )) {
                 is HttpResult.Ok -> r.body
                 else -> return@execute null

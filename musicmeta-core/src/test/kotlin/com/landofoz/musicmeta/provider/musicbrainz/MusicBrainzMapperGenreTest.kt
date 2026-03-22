@@ -154,4 +154,69 @@ class MusicBrainzMapperGenreTest {
         // Then
         assertNull(metadata.genreTags)
     }
+
+    // --- Band member date normalization ---
+
+    @Test
+    fun `toBandMembers normalizes full dates to year-only in activePeriod`() {
+        // Given — member with YYYY-MM-DD dates from MusicBrainz
+        val members = listOf(
+            MusicBrainzBandMember(
+                name = "Dave Grohl",
+                id = "member-1",
+                role = "drums",
+                beginDate = "1990-03-15",
+                endDate = "2003-07-10",
+                ended = true,
+            ),
+        )
+
+        // When
+        val result = MusicBrainzMapper.toBandMembers(members)
+
+        // Then — activePeriod uses year-only format
+        assertEquals("1990-2003", result.members[0].activePeriod)
+    }
+
+    @Test
+    fun `toBandMembers normalizes YYYY-MM dates to year-only`() {
+        // Given — member with YYYY-MM dates
+        val members = listOf(
+            MusicBrainzBandMember(
+                name = "Pat Smear",
+                id = "member-2",
+                role = "guitar",
+                beginDate = "1994-10",
+                endDate = null,
+                ended = false,
+            ),
+        )
+
+        // When
+        val result = MusicBrainzMapper.toBandMembers(members)
+
+        // Then
+        assertEquals("1994-present", result.members[0].activePeriod)
+    }
+
+    @Test
+    fun `toBandMembers handles year-only dates without change`() {
+        // Given — member with plain YYYY dates
+        val members = listOf(
+            MusicBrainzBandMember(
+                name = "Nate Mendel",
+                id = "member-3",
+                role = "bass",
+                beginDate = "1995",
+                endDate = "2010",
+                ended = true,
+            ),
+        )
+
+        // When
+        val result = MusicBrainzMapper.toBandMembers(members)
+
+        // Then
+        assertEquals("1995-2010", result.members[0].activePeriod)
+    }
 }
