@@ -10,7 +10,9 @@ import com.landofoz.musicmeta.http.DefaultHttpClient
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.provider.coverartarchive.CoverArtArchiveProvider
+import com.landofoz.musicmeta.provider.deezer.DeezerApi
 import com.landofoz.musicmeta.provider.deezer.DeezerProvider
+import com.landofoz.musicmeta.provider.deezer.SimilarAlbumsProvider
 import com.landofoz.musicmeta.provider.discogs.DiscogsProvider
 import com.landofoz.musicmeta.provider.fanarttv.FanartTvProvider
 import com.landofoz.musicmeta.provider.itunes.ITunesProvider
@@ -67,6 +69,8 @@ interface EnrichmentEngine {
             addProvider(WikidataProvider(client, defaultRateLimiter))
             addProvider(WikipediaProvider(client, defaultRateLimiter))
             addProvider(DeezerProvider(client))
+            val deezerApi = DeezerApi(client, defaultRateLimiter)
+            addProvider(SimilarAlbumsProvider(deezerApi))
             addProvider(ITunesProvider(client))
             addProvider(ListenBrainzProvider(client, defaultRateLimiter))
             addProvider(LrcLibProvider(client, defaultRateLimiter))
