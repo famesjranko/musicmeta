@@ -49,7 +49,7 @@ Requirements for the Recommendations Engine milestone. Each maps to roadmap phas
 ### Integration
 
 - [x] **INT-01**: EnrichmentShowcaseTest updated with v0.6.0 recommendation feature spotlight
-- [ ] **INT-02**: README, ROADMAP, CHANGELOG, and STORIES updated for v0.6.0
+- [x] **INT-02**: README, ROADMAP, CHANGELOG, and STORIES updated for v0.6.0
 
 ## Future Requirements
 
@@ -116,7 +116,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CAT-03 | Phase 17 | Complete |
 | CAT-04 | Phase 17 | Complete |
 | INT-01 | Phase 18 | Complete |
-| INT-02 | Phase 18 | Pending |
+| INT-02 | Phase 18 | Complete |
 
 **Coverage:**
 - v0.6.0 requirements: 23 total

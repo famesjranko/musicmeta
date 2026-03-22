@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
 milestone: v0.6.0
-milestone_name: Recommendations Engine
+milestone_name: Recommendations Engine — SHIPPED 2026-03-23
 status: unknown
-stopped_at: Completed 18-01-PLAN.md
-last_updated: "2026-03-22T15:31:10.487Z"
+stopped_at: Completed 18-02-PLAN.md
+last_updated: "2026-03-22T15:33:06.117Z"
 progress:
   total_phases: 7
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 14
-  completed_plans: 13
+  completed_plans: 14
 ---
 
 # Project State
@@ -54,6 +54,7 @@ Plan: 2 of 2
 | Phase 17-catalog-filtering-interface P01 | 2 | 2 tasks | 3 files |
 | Phase 17-catalog-filtering-interface P02 | 3 | 2 tasks | 3 files |
 | Phase 18-integration-and-docs P01 | 5 | 1 tasks | 1 files |
+| Phase 18-integration-and-docs P02 | 4min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -90,6 +91,7 @@ Plan: 2 of 2
 - [Phase 17-01]: Builder.catalog() uses config.copy() to preserve all other config fields when wiring catalog options
 - [Phase 17-02]: Filtering helpers extracted to CatalogFilter.kt to keep DefaultEnrichmentEngine.kt under 300-line max; AVAILABLE_ONLY with all items filtered returns NotFound to preserve sealed type invariant
 - [Phase 18-01]: Spotlight test uses printSingleResult fallback for non-Success cases — diagnostic test should never fail even when APIs unavailable
+- [Phase 18]: Documentation updates follow newest-first ordering in STORIES.md; CHANGELOG backfills missing [0.5.0] entry to maintain complete release history
 
 ### Pending Todos
 
@@ -102,6 +104,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-22T15:31:10.485Z
-Stopped at: Completed 18-01-PLAN.md
+Last session: 2026-03-22T15:33:06.114Z
+Stopped at: Completed 18-02-PLAN.md
 Resume file: None
