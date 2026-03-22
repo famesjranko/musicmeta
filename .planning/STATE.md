@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v0.6.0
 milestone_name: Recommendations Engine
 status: unknown
-stopped_at: Completed 14-01-PLAN.md
-last_updated: "2026-03-22T14:22:16.343Z"
+stopped_at: Completed 14-02-PLAN.md
+last_updated: "2026-03-22T14:27:05.060Z"
 progress:
   total_phases: 7
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 6
-  completed_plans: 5
+  completed_plans: 6
 ---
 
 # Project State
@@ -46,6 +46,7 @@ Plan: 2 of 2
 | Phase 13-similar-artists-merger P01 | 223 | 2 tasks | 8 files |
 | Phase 13-similar-artists-merger P02 | 5 | 2 tasks | 4 files |
 | Phase 14-artist-radio P01 | 4 | 2 tasks | 7 files |
+| Phase 14-artist-radio P02 | 2 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -67,6 +68,8 @@ Plan: 2 of 2
 - [Phase 14-01]: RadioTrack has no matchScore field — radio playlists are ordered sequences, not similarity rankings
 - [Phase 14-01]: durationMs is null when durationSec is 0 — distinguishes unknown duration from zero-length tracks
 - [Phase 14-01]: DeezerRadioTrack DTOs follow plain data class pattern (no @Serializable), consistent with all other Deezer DTOs
+- [Phase 14-02]: enrichArtistRadio() uses deezerId-first / searchArtist+isMatch fallback pattern matching enrichSimilarArtists() for consistent caching strategy
+- [Phase 14-02]: ARTIST_RADIO declared at priority 100 (primary/only provider) vs SIMILAR_ARTISTS at priority 30 — radio is Deezer-exclusive
 
 ### Pending Todos
 
@@ -79,6 +82,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-22T14:22:16.341Z
-Stopped at: Completed 14-01-PLAN.md
+Last session: 2026-03-22T14:27:05.058Z
+Stopped at: Completed 14-02-PLAN.md
 Resume file: None

@@ -41,7 +41,7 @@ Full details: `.planning/milestones/v0.5.0-ROADMAP.md`
 
 - [x] **Phase 12: Engine Refactoring** — Extract ResultMerger and CompositeSynthesizer interfaces; bring DefaultEnrichmentEngine under 300 lines (completed 2026-03-22)
 - [x] **Phase 13: Similar Artists + Merger** — Add Deezer as third SIMILAR_ARTISTS provider; promote to mergeable type with SimilarArtistMerger (completed 2026-03-22)
-- [ ] **Phase 14: Artist Radio** — New ARTIST_RADIO type backed by Deezer /artist/{id}/radio endpoint
+- [x] **Phase 14: Artist Radio** — New ARTIST_RADIO type backed by Deezer /artist/{id}/radio endpoint (completed 2026-03-22)
 - [ ] **Phase 15: Similar Albums** — New SIMILAR_ALBUMS composite type synthesized from similar artists, genre, and era data
 - [ ] **Phase 16: Genre Discovery** — New GENRE_DISCOVERY composite type using static genre affinity taxonomy
 - [ ] **Phase 17: Catalog Filtering Interface** — CatalogProvider interface and engine-level filtering applied to recommendation results
@@ -88,7 +88,7 @@ Plans:
 **Plans**: 2 plans
 Plans:
 - [x] 14-01-PLAN.md — Add ARTIST_RADIO type, RadioPlaylist/RadioTrack data model, DeezerRadioTrack DTO, and DeezerMapper.toRadioPlaylist()
-- [ ] 14-02-PLAN.md — Implement DeezerApi.getArtistRadio(), wire ARTIST_RADIO into DeezerProvider, add unit tests
+- [x] 14-02-PLAN.md — Implement DeezerApi.getArtistRadio(), wire ARTIST_RADIO into DeezerProvider, add unit tests
 
 ### Phase 15: Similar Albums
 **Goal**: Users can discover albums similar to one they know, ranked by artist similarity and era proximity, without the engine making additional API calls during synthesis
@@ -149,7 +149,7 @@ Plans:
 | 11. Provider Coverage | v0.5.0 | 3/3 | Complete | 2026-03-21 |
 | 12. Engine Refactoring | v0.6.0 | 2/2 | Complete    | 2026-03-22 |
 | 13. Similar Artists + Merger | v0.6.0 | 2/2 | Complete    | 2026-03-22 |
-| 14. Artist Radio | v0.6.0 | 1/2 | In Progress|  |
+| 14. Artist Radio | v0.6.0 | 2/2 | Complete   | 2026-03-22 |
 | 15. Similar Albums | v0.6.0 | 0/TBD | Not started | - |
 | 16. Genre Discovery | v0.6.0 | 0/TBD | Not started | - |
 | 17. Catalog Filtering Interface | v0.6.0 | 0/TBD | Not started | - |
