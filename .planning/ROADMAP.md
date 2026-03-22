@@ -40,7 +40,7 @@ Full details: `.planning/milestones/v0.5.0-ROADMAP.md`
 **Milestone Goal:** Turn musicmeta from a metadata lookup library into a recommendation engine by adding discovery features built on top of enrichment data.
 
 - [x] **Phase 12: Engine Refactoring** — Extract ResultMerger and CompositeSynthesizer interfaces; bring DefaultEnrichmentEngine under 300 lines (completed 2026-03-22)
-- [ ] **Phase 13: Similar Artists + Merger** — Add Deezer as third SIMILAR_ARTISTS provider; promote to mergeable type with SimilarArtistMerger
+- [x] **Phase 13: Similar Artists + Merger** — Add Deezer as third SIMILAR_ARTISTS provider; promote to mergeable type with SimilarArtistMerger (completed 2026-03-22)
 - [ ] **Phase 14: Artist Radio** — New ARTIST_RADIO type backed by Deezer /artist/{id}/radio endpoint
 - [ ] **Phase 15: Similar Albums** — New SIMILAR_ALBUMS composite type synthesized from similar artists, genre, and era data
 - [ ] **Phase 16: Genre Discovery** — New GENRE_DISCOVERY composite type using static genre affinity taxonomy
@@ -75,7 +75,7 @@ Plans:
 **Plans**: 2 plans
 Plans:
 - [x] 13-01-PLAN.md — Add sources field to SimilarArtist, backfill existing mappers, implement Deezer SIMILAR_ARTISTS provider
-- [ ] 13-02-PLAN.md — Create SimilarArtistMerger and wire into Builder for automatic multi-provider merge
+- [x] 13-02-PLAN.md — Create SimilarArtistMerger and wire into Builder for automatic multi-provider merge
 
 ### Phase 14: Artist Radio
 **Goal**: Users can request a radio-style playlist seeded by any artist, returned as an ordered list of tracks with full metadata
@@ -145,7 +145,7 @@ Plans:
 | 10. Genre Enhancement | v0.5.0 | 3/3 | Complete | 2026-03-21 |
 | 11. Provider Coverage | v0.5.0 | 3/3 | Complete | 2026-03-21 |
 | 12. Engine Refactoring | v0.6.0 | 2/2 | Complete    | 2026-03-22 |
-| 13. Similar Artists + Merger | v0.6.0 | 1/2 | In Progress|  |
+| 13. Similar Artists + Merger | v0.6.0 | 2/2 | Complete   | 2026-03-22 |
 | 14. Artist Radio | v0.6.0 | 0/TBD | Not started | - |
 | 15. Similar Albums | v0.6.0 | 0/TBD | Not started | - |
 | 16. Genre Discovery | v0.6.0 | 0/TBD | Not started | - |

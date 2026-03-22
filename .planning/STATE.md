@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v0.6.0
 milestone_name: Recommendations Engine
 status: unknown
-stopped_at: Completed 13-01-PLAN.md
-last_updated: "2026-03-22T14:02:43.601Z"
+stopped_at: Completed 13-02-PLAN.md
+last_updated: "2026-03-22T14:07:56.208Z"
 progress:
   total_phases: 7
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 4
-  completed_plans: 3
+  completed_plans: 4
 ---
 
 # Project State
@@ -44,6 +44,7 @@ Plan: 2 of 2
 | Phase 12-engine-refactoring P01 | 2 | 2 tasks | 6 files |
 | Phase 12-engine-refactoring P02 | 5 | 2 tasks | 2 files |
 | Phase 13-similar-artists-merger P01 | 223 | 2 tasks | 8 files |
+| Phase 13-similar-artists-merger P02 | 5 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -61,6 +62,7 @@ Plan: 2 of 2
 - [Phase 13-01]: SimilarArtist.sources defaults to emptyList() for backward compatibility, matching GenreTag.sources pattern
 - [Phase 13-01]: DeezerProvider.enrichSimilarArtists checks identifiers.extra[deezerId] before searching for caching
 - [Phase 13-01]: Deezer positional match score: 1.0f - (index/count)*0.9f gives 1.0 first, 0.1 last
+- [Phase 13-02]: Builder integration test uses DefaultEnrichmentEngine directly with explicit mergers list rather than Builder, matching existing test patterns
 
 ### Pending Todos
 
@@ -73,6 +75,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-22T14:02:43.598Z
-Stopped at: Completed 13-01-PLAN.md
+Last session: 2026-03-22T14:07:56.205Z
+Stopped at: Completed 13-02-PLAN.md
 Resume file: None
