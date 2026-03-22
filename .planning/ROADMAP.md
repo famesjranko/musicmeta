@@ -141,7 +141,7 @@ Plans:
 | 9. Artist Timeline | v0.5.0 | 2/2 | Complete | 2026-03-21 |
 | 10. Genre Enhancement | v0.5.0 | 3/3 | Complete | 2026-03-21 |
 | 11. Provider Coverage | v0.5.0 | 3/3 | Complete | 2026-03-21 |
-| 12. Engine Refactoring | v0.6.0 | 2/2 | Complete   | 2026-03-22 |
+| 12. Engine Refactoring | v0.6.0 | 2/2 | Complete    | 2026-03-22 |
 | 13. Similar Artists + Merger | v0.6.0 | 0/TBD | Not started | - |
 | 14. Artist Radio | v0.6.0 | 0/TBD | Not started | - |
 | 15. Similar Albums | v0.6.0 | 0/TBD | Not started | - |
