@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.engine
 
+import com.landofoz.musicmeta.CatalogFilterMode
 import com.landofoz.musicmeta.EnrichmentCache
 import com.landofoz.musicmeta.EnrichmentConfig
 import com.landofoz.musicmeta.EnrichmentData
@@ -57,6 +58,7 @@ class DefaultEnrichmentEngine(
                 } else request
 
                 results.putAll(resolveTypes(enrichedRequest, uncachedTypes, identityResult))
+                applyCatalogFiltering(results)
             }
         } catch (_: TimeoutCancellationException) {
             logger.warn(TAG, "Enrich timed out after ${config.enrichTimeoutMs}ms, returning partial results")
@@ -234,6 +236,22 @@ class DefaultEnrichmentEngine(
             return EnrichmentResult.NotFound(result.type, result.provider)
         }
         return if (override != null) result.copy(confidence = override) else result
+    }
+
+    /** Applies catalog availability filtering to recommendation results in-place. No-op when null or UNFILTERED. */
+    private suspend fun applyCatalogFiltering(results: MutableMap<EnrichmentType, EnrichmentResult>) {
+        val provider = config.catalogProvider ?: return
+        val mode = config.catalogFilterMode
+        if (mode == CatalogFilterMode.UNFILTERED) return
+
+        for (type in RECOMMENDATION_TYPES) {
+            val result = results[type] as? EnrichmentResult.Success ?: continue
+            val queries = toQueries(result.data) ?: continue
+            if (queries.isEmpty()) continue
+
+            val matches = provider.checkAvailability(queries)
+            results[type] = applyMode(result, matches, mode)
+        }
     }
 
     private fun needsIdentityResolution(request: EnrichmentRequest, types: Set<EnrichmentType>): Boolean {
