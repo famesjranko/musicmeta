@@ -153,7 +153,7 @@ Plans:
 | 12. Engine Refactoring | v0.6.0 | 2/2 | Complete    | 2026-03-22 |
 | 13. Similar Artists + Merger | v0.6.0 | 2/2 | Complete    | 2026-03-22 |
 | 14. Artist Radio | v0.6.0 | 2/2 | Complete    | 2026-03-22 |
-| 15. Similar Albums | v0.6.0 | 2/2 | Complete   | 2026-03-22 |
+| 15. Similar Albums | v0.6.0 | 2/2 | Complete    | 2026-03-22 |
 | 16. Genre Discovery | v0.6.0 | 0/TBD | Not started | - |
 | 17. Catalog Filtering Interface | v0.6.0 | 0/TBD | Not started | - |
 | 18. Integration and Docs | v0.6.0 | 0/TBD | Not started | - |

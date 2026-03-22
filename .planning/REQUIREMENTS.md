@@ -28,10 +28,10 @@ Requirements for the Recommendations Engine milestone. Each maps to roadmap phas
 
 ### Similar Albums
 
-- [ ] **ALB-01**: User can request SIMILAR_ALBUMS enrichment for any album
-- [ ] **ALB-02**: SimilarAlbumsProvider fetches related artists then their top albums from Deezer
-- [ ] **ALB-03**: Albums are scored by artist similarity and optionally filtered by era proximity
-- [ ] **ALB-04**: SimilarAlbum includes title, artist, year, artistMatchScore, thumbnail, and identifiers
+- [x] **ALB-01**: User can request SIMILAR_ALBUMS enrichment for any album
+- [x] **ALB-02**: SimilarAlbumsProvider fetches related artists then their top albums from Deezer
+- [x] **ALB-03**: Albums are scored by artist similarity and optionally filtered by era proximity
+- [x] **ALB-04**: SimilarAlbum includes title, artist, year, artistMatchScore, thumbnail, and identifiers
 
 ### Genre Discovery
 
@@ -104,10 +104,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RAD-01 | Phase 14 | Complete |
 | RAD-02 | Phase 14 | Complete |
 | RAD-03 | Phase 14 | Complete |
-| ALB-01 | Phase 15 | Pending |
-| ALB-02 | Phase 15 | Pending |
-| ALB-03 | Phase 15 | Pending |
-| ALB-04 | Phase 15 | Pending |
+| ALB-01 | Phase 15 | Complete |
+| ALB-02 | Phase 15 | Complete |
+| ALB-03 | Phase 15 | Complete |
+| ALB-04 | Phase 15 | Complete |
 | GEN-01 | Phase 16 | Pending |
 | GEN-02 | Phase 16 | Pending |
 | GEN-03 | Phase 16 | Pending |
