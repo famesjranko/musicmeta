@@ -6,6 +6,7 @@ import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.RadioTrack
 import com.landofoz.musicmeta.SearchCandidate
+import com.landofoz.musicmeta.SimilarAlbum
 import com.landofoz.musicmeta.SimilarArtist
 import com.landofoz.musicmeta.TrackInfo
 
@@ -103,4 +104,17 @@ object DeezerMapper {
                 )
             },
         )
+
+    fun toSimilarAlbum(
+        album: DeezerArtistAlbum,
+        artistName: String,
+        score: Float,
+    ): SimilarAlbum = SimilarAlbum(
+        title = album.title,
+        artist = artistName,
+        year = album.releaseDate?.take(4)?.toIntOrNull(),
+        artistMatchScore = score,
+        thumbnailUrl = album.coverMedium ?: album.coverSmall,
+        identifiers = EnrichmentIdentifiers().withExtra("deezerId", album.id.toString()),
+    )
 }
