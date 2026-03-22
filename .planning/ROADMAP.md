@@ -4,7 +4,7 @@
 
 - ✅ **v0.4.0 Provider Abstraction Overhaul** — Phases 1-5 (shipped 2026-03-21)
 - ✅ **v0.5.0 New Capabilities & Tech Debt Cleanup** — Phases 6-11 (shipped 2026-03-22)
-- 🚧 **v0.6.0 Recommendations Engine** — Phases 12-18 (in progress)
+- ✅ **v0.6.0 Recommendations Engine** — Phases 12-18 (shipped 2026-03-23)
 
 ## Phases
 
@@ -35,7 +35,7 @@ Full details: `.planning/milestones/v0.5.0-ROADMAP.md`
 
 </details>
 
-### 🚧 v0.6.0 Recommendations Engine (In Progress)
+### ✅ v0.6.0 Recommendations Engine — SHIPPED 2026-03-23
 
 **Milestone Goal:** Turn musicmeta from a metadata lookup library into a recommendation engine by adding discovery features built on top of enrichment data.
 
@@ -45,7 +45,7 @@ Full details: `.planning/milestones/v0.5.0-ROADMAP.md`
 - [x] **Phase 15: Similar Albums** — New SIMILAR_ALBUMS composite type synthesized from similar artists, genre, and era data (completed 2026-03-22)
 - [x] **Phase 16: Genre Discovery** — New GENRE_DISCOVERY composite type using static genre affinity taxonomy (completed 2026-03-22)
 - [x] **Phase 17: Catalog Filtering Interface** — CatalogProvider interface and engine-level filtering applied to recommendation results (completed 2026-03-22)
-- [ ] **Phase 18: Integration and Docs** — EnrichmentShowcaseTest updated; README, ROADMAP, CHANGELOG, STORIES finalized for v0.6.0
+- [x] **Phase 18: Integration and Docs** — EnrichmentShowcaseTest updated; README, ROADMAP, CHANGELOG, STORIES finalized for v0.6.0 (completed 2026-03-23)
 
 ## Phase Details
 
@@ -142,7 +142,7 @@ Plans:
 **Plans**: 2 plans
 Plans:
 - [x] 18-01-PLAN.md — Update EnrichmentShowcaseTest with v0.6.0 feature spotlight and updated coverage matrix
-- [ ] 18-02-PLAN.md — Update README, CHANGELOG, STORIES, and ROADMAP for v0.6.0
+- [x] 18-02-PLAN.md — Update README, CHANGELOG, STORIES, and ROADMAP for v0.6.0
 
 ## Progress
 
@@ -165,4 +165,4 @@ Plans:
 | 15. Similar Albums | v0.6.0 | 2/2 | Complete    | 2026-03-22 |
 | 16. Genre Discovery | v0.6.0 | 2/2 | Complete    | 2026-03-22 |
 | 17. Catalog Filtering Interface | v0.6.0 | 2/2 | Complete    | 2026-03-22 |
-| 18. Integration and Docs | v0.6.0 | 1/2 | In Progress|  |
+| 18. Integration and Docs | v0.6.0 | 2/2 | Complete | 2026-03-23 |

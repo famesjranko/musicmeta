@@ -250,8 +250,8 @@ The engine works well, but the consumer API is a power-user API. Developers buil
 
 ## Planned Milestones
 
-### v0.6.0 — Recommendations Engine
-Build discovery features on top of the enrichment data. Add Deezer radio/related endpoints, ListenBrainz CF recommendations, synthesized similar albums, credit-based discovery, and genre affinity matching. Depends on existing SIMILAR_ARTISTS, SIMILAR_TRACKS, CREDITS, GenreMerger infrastructure.
+### ✅ v0.6.0 — Recommendations Engine — SHIPPED 2026-03-23
+Built discovery features on top of the enrichment data: multi-provider SIMILAR_ARTISTS merge (Last.fm + ListenBrainz + Deezer), ARTIST_RADIO (Deezer radio endpoint), SIMILAR_ALBUMS (synthesized from related artists + era scoring), GENRE_DISCOVERY (static genre affinity taxonomy), and CatalogProvider interface for library-aware filtering. 7 phases, 14 plans, 31 enrichment types.
 
 ### v0.7.0 — Developer Experience
 Add a convenience layer that makes musicmeta feel effortless for the 80% use case. High-level `artistProfile()` / `albumProfile()` / `trackProfile()` methods returning structured objects with all fields pre-extracted. Type-safe request scoping. Cleaner data model. The low-level `enrich()` API stays for power users. This is a thin layer on top of what already works — no engine changes needed.
