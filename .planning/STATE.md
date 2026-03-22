@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v0.6.0
 milestone_name: Recommendations Engine
 status: unknown
-stopped_at: Completed 14-02-PLAN.md
-last_updated: "2026-03-22T14:29:45.970Z"
+stopped_at: Completed 15-01-PLAN.md
+last_updated: "2026-03-22T14:38:25.442Z"
 progress:
   total_phases: 7
   completed_phases: 3
-  total_plans: 6
-  completed_plans: 6
+  total_plans: 8
+  completed_plans: 7
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-22)
 
 **Core value:** Consumers get comprehensive, accurate music metadata from a single enrich() call without knowing which APIs exist, how they authenticate, or how to correlate identifiers across services.
-**Current focus:** Phase 14 — Artist Radio
+**Current focus:** Phase 15 — Similar Albums
 
 ## Current Position
 
-Phase: 15
-Plan: Not started
+Phase: 15 (Similar Albums) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -47,6 +47,7 @@ Plan: Not started
 | Phase 13-similar-artists-merger P02 | 5 | 2 tasks | 4 files |
 | Phase 14-artist-radio P01 | 4 | 2 tasks | 7 files |
 | Phase 14-artist-radio P02 | 2 | 2 tasks | 3 files |
+| Phase 15 P01 | 5 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -70,6 +71,9 @@ Plan: Not started
 - [Phase 14-01]: DeezerRadioTrack DTOs follow plain data class pattern (no @Serializable), consistent with all other Deezer DTOs
 - [Phase 14-02]: enrichArtistRadio() uses deezerId-first / searchArtist+isMatch fallback pattern matching enrichSimilarArtists() for consistent caching strategy
 - [Phase 14-02]: ARTIST_RADIO declared at priority 100 (primary/only provider) vs SIMILAR_ARTISTS at priority 30 — radio is Deezer-exclusive
+- [Phase 15-01]: SimilarAlbum.year is Int? (not String?) matching ReleaseEdition.year pattern already in EnrichmentData.kt
+- [Phase 15-01]: SimilarAlbumsProvider is standalone (NOT composite): all Deezer API calls happen inside the provider, consistent with decision in STATE.md
+- [Phase 15-01]: Era multiplier uses discrete tiers: ±5yr = 1.2x, ±10yr = 1.0x, beyond = 0.8x for simple predictable scoring
 
 ### Pending Todos
 
@@ -82,6 +86,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-22T14:27:05.058Z
-Stopped at: Completed 14-02-PLAN.md
+Last session: 2026-03-22T14:38:25.439Z
+Stopped at: Completed 15-01-PLAN.md
 Resume file: None
