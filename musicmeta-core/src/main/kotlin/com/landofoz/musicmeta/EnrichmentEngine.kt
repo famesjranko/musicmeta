@@ -2,7 +2,9 @@ package com.landofoz.musicmeta
 
 import com.landofoz.musicmeta.cache.InMemoryEnrichmentCache
 import com.landofoz.musicmeta.engine.DefaultEnrichmentEngine
+import com.landofoz.musicmeta.engine.GenreMerger
 import com.landofoz.musicmeta.engine.ProviderRegistry
+import com.landofoz.musicmeta.engine.TimelineSynthesizer
 import com.landofoz.musicmeta.http.DefaultHttpClient
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
@@ -41,6 +43,8 @@ interface EnrichmentEngine {
         private var config: EnrichmentConfig = EnrichmentConfig()
         private var logger: EnrichmentLogger = EnrichmentLogger.NoOp
         private var apiKeyConfig: ApiKeyConfig? = null
+        private val mergers = mutableListOf<com.landofoz.musicmeta.engine.ResultMerger>(GenreMerger)
+        private val synthesizers = mutableListOf<com.landofoz.musicmeta.engine.CompositeSynthesizer>(TimelineSynthesizer)
 
         fun addProvider(provider: EnrichmentProvider) = apply { providers.add(provider) }
         fun cache(cache: EnrichmentCache) = apply { this.cache = cache }
@@ -48,6 +52,8 @@ interface EnrichmentEngine {
         fun config(config: EnrichmentConfig) = apply { this.config = config }
         fun logger(logger: EnrichmentLogger) = apply { this.logger = logger }
         fun apiKeys(config: ApiKeyConfig) = apply { this.apiKeyConfig = config }
+        fun addMerger(merger: com.landofoz.musicmeta.engine.ResultMerger) = apply { mergers.add(merger) }
+        fun addSynthesizer(synthesizer: com.landofoz.musicmeta.engine.CompositeSynthesizer) = apply { synthesizers.add(synthesizer) }
 
         fun withDefaultProviders() = apply {
             val client = httpClient ?: DefaultHttpClient(config.userAgent)
@@ -87,6 +93,8 @@ interface EnrichmentEngine {
                 httpClient = httpClient ?: DefaultHttpClient(config.userAgent),
                 config = config,
                 logger = logger,
+                mergers = mergers.toList(),
+                synthesizers = synthesizers.toList(),
             )
         }
     }
