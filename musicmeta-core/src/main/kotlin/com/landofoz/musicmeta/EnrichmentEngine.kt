@@ -56,6 +56,9 @@ interface EnrichmentEngine {
         fun config(config: EnrichmentConfig) = apply { this.config = config }
         fun logger(logger: EnrichmentLogger) = apply { this.logger = logger }
         fun apiKeys(config: ApiKeyConfig) = apply { this.apiKeyConfig = config }
+        fun catalog(provider: CatalogProvider, mode: CatalogFilterMode = CatalogFilterMode.UNFILTERED) = apply {
+            this.config = this.config.copy(catalogProvider = provider, catalogFilterMode = mode)
+        }
         fun addMerger(merger: com.landofoz.musicmeta.engine.ResultMerger) = apply { mergers.add(merger) }
         fun addSynthesizer(synthesizer: com.landofoz.musicmeta.engine.CompositeSynthesizer) = apply { synthesizers.add(synthesizer) }
 
