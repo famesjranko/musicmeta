@@ -85,7 +85,10 @@ Plans:
   1. Calling enrich() for ARTIST_RADIO on a ForArtist request returns a RadioPlaylist result
   2. Each RadioTrack in the playlist includes title, artist, album, duration, and Deezer identifiers
   3. ARTIST_RADIO results are cached with a 7-day TTL
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 14-01-PLAN.md — Add ARTIST_RADIO type, RadioPlaylist/RadioTrack data model, DeezerRadioTrack DTO, and DeezerMapper.toRadioPlaylist()
+- [ ] 14-02-PLAN.md — Implement DeezerApi.getArtistRadio(), wire ARTIST_RADIO into DeezerProvider, add unit tests
 
 ### Phase 15: Similar Albums
 **Goal**: Users can discover albums similar to one they know, ranked by artist similarity and era proximity, without the engine making additional API calls during synthesis
@@ -146,7 +149,7 @@ Plans:
 | 11. Provider Coverage | v0.5.0 | 3/3 | Complete | 2026-03-21 |
 | 12. Engine Refactoring | v0.6.0 | 2/2 | Complete    | 2026-03-22 |
 | 13. Similar Artists + Merger | v0.6.0 | 2/2 | Complete    | 2026-03-22 |
-| 14. Artist Radio | v0.6.0 | 0/TBD | Not started | - |
+| 14. Artist Radio | v0.6.0 | 0/2 | Not started | - |
 | 15. Similar Albums | v0.6.0 | 0/TBD | Not started | - |
 | 16. Genre Discovery | v0.6.0 | 0/TBD | Not started | - |
 | 17. Catalog Filtering Interface | v0.6.0 | 0/TBD | Not started | - |
