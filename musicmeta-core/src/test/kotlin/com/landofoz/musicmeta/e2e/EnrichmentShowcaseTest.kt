@@ -432,6 +432,8 @@ class EnrichmentShowcaseTest {
             data.events.firstOrNull()?.let { append(" first=${it.date}:${it.type}") }
         }
         is EnrichmentData.RadioPlaylist -> "${data.tracks.size} tracks"
+        is EnrichmentData.SimilarAlbums ->
+            "${data.albums.size} similar albums: ${data.albums.take(3).joinToString(", ") { "${it.title} by ${it.artist}" }}"
     }
 
     private fun printSingleResult(type: EnrichmentType, result: EnrichmentResult?) {

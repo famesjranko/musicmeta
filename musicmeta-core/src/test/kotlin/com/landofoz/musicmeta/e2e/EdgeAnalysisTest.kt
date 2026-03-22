@@ -119,6 +119,7 @@ class EdgeAnalysisTest {
         is EnrichmentData.ReleaseEditions -> "${data.editions.size} editions"
         is EnrichmentData.ArtistTimeline -> "${data.events.size} events"
         is EnrichmentData.RadioPlaylist -> "${data.tracks.size} tracks"
+        is EnrichmentData.SimilarAlbums -> "${data.albums.size} similar albums"
     }
 
     // =================================================================

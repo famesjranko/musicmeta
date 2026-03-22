@@ -10,7 +10,7 @@ class BuilderDefaultProvidersTest {
 
     private val httpClient = FakeHttpClient()
 
-    @Test fun `withDefaultProviders without keys creates 8 providers`() {
+    @Test fun `withDefaultProviders without keys creates 9 providers`() {
         // Given -- no API keys configured
         val engine = EnrichmentEngine.Builder()
             .httpClient(httpClient)
@@ -20,14 +20,15 @@ class BuilderDefaultProvidersTest {
         // When -- listing providers
         val providers = engine.getProviders()
 
-        // Then -- 8 keyless providers registered
-        assertEquals(8, providers.size)
+        // Then -- 9 keyless providers registered (includes SimilarAlbumsProvider)
+        assertEquals(9, providers.size)
         val ids = providers.map { it.id }.toSet()
         assertTrue("musicbrainz" in ids)
         assertTrue("coverartarchive" in ids)
         assertTrue("wikidata" in ids)
         assertTrue("wikipedia" in ids)
         assertTrue("deezer" in ids)
+        assertTrue("deezer-similar-albums" in ids)
         assertTrue("itunes" in ids)
         assertTrue("listenbrainz" in ids)
         assertTrue("lrclib" in ids)
@@ -54,8 +55,8 @@ class BuilderDefaultProvidersTest {
         // When -- listing providers
         val providers = engine.getProviders()
 
-        // Then -- all 11 providers registered
-        assertEquals(11, providers.size)
+        // Then -- all 12 providers registered (9 keyless + 3 key-requiring)
+        assertEquals(12, providers.size)
         val ids = providers.map { it.id }.toSet()
         assertTrue("lastfm" in ids)
         assertTrue("fanarttv" in ids)
@@ -73,8 +74,8 @@ class BuilderDefaultProvidersTest {
         // When -- listing providers
         val providers = engine.getProviders()
 
-        // Then -- 9 providers (8 keyless + Last.fm)
-        assertEquals(9, providers.size)
+        // Then -- 10 providers (9 keyless + Last.fm)
+        assertEquals(10, providers.size)
         val ids = providers.map { it.id }.toSet()
         assertTrue("lastfm" in ids)
         assertFalse("fanarttv" in ids)
