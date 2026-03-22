@@ -434,6 +434,8 @@ class EnrichmentShowcaseTest {
         is EnrichmentData.RadioPlaylist -> "${data.tracks.size} tracks"
         is EnrichmentData.SimilarAlbums ->
             "${data.albums.size} similar albums: ${data.albums.take(3).joinToString(", ") { "${it.title} by ${it.artist}" }}"
+        is EnrichmentData.GenreDiscovery ->
+            "${data.relatedGenres.size} related genres: ${data.relatedGenres.take(3).joinToString(", ") { "${it.name}(%.2f)".format(it.affinity) }}"
     }
 
     private fun printSingleResult(type: EnrichmentType, result: EnrichmentResult?) {

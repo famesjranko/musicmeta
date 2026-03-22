@@ -120,6 +120,7 @@ class EdgeAnalysisTest {
         is EnrichmentData.ArtistTimeline -> "${data.events.size} events"
         is EnrichmentData.RadioPlaylist -> "${data.tracks.size} tracks"
         is EnrichmentData.SimilarAlbums -> "${data.albums.size} similar albums"
+        is EnrichmentData.GenreDiscovery -> "${data.relatedGenres.size} related genres"
     }
 
     // =================================================================
