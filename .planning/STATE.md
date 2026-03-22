@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v0.6.0
 milestone_name: Recommendations Engine
 status: unknown
-stopped_at: Completed 17-01-PLAN.md
-last_updated: "2026-03-22T15:15:48.513Z"
+stopped_at: Completed 17-02-PLAN.md
+last_updated: "2026-03-22T15:20:10.732Z"
 progress:
   total_phases: 7
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 12
-  completed_plans: 11
+  completed_plans: 12
 ---
 
 # Project State
@@ -52,6 +52,7 @@ Plan: 2 of 2
 | Phase 16-genre-discovery P01 | 6 | 2 tasks | 7 files |
 | Phase 16-genre-discovery P02 | 3 | 2 tasks | 2 files |
 | Phase 17-catalog-filtering-interface P01 | 2 | 2 tasks | 3 files |
+| Phase 17-catalog-filtering-interface P02 | 3 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -86,6 +87,7 @@ Plan: 2 of 2
 - [Phase 17-01]: CatalogProvider is a fun interface (SAM) so consumers can use lambda syntax for simple implementations
 - [Phase 17-01]: catalogProvider defaults to null and catalogFilterMode defaults to UNFILTERED ensuring zero behavior change for existing consumers
 - [Phase 17-01]: Builder.catalog() uses config.copy() to preserve all other config fields when wiring catalog options
+- [Phase 17-02]: Filtering helpers extracted to CatalogFilter.kt to keep DefaultEnrichmentEngine.kt under 300-line max; AVAILABLE_ONLY with all items filtered returns NotFound to preserve sealed type invariant
 
 ### Pending Todos
 
@@ -98,6 +100,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-22T15:15:48.511Z
-Stopped at: Completed 17-01-PLAN.md
+Last session: 2026-03-22T15:20:10.730Z
+Stopped at: Completed 17-02-PLAN.md
 Resume file: None

@@ -44,7 +44,7 @@ Full details: `.planning/milestones/v0.5.0-ROADMAP.md`
 - [x] **Phase 14: Artist Radio** — New ARTIST_RADIO type backed by Deezer /artist/{id}/radio endpoint (completed 2026-03-22)
 - [x] **Phase 15: Similar Albums** — New SIMILAR_ALBUMS composite type synthesized from similar artists, genre, and era data (completed 2026-03-22)
 - [x] **Phase 16: Genre Discovery** — New GENRE_DISCOVERY composite type using static genre affinity taxonomy (completed 2026-03-22)
-- [ ] **Phase 17: Catalog Filtering Interface** — CatalogProvider interface and engine-level filtering applied to recommendation results
+- [x] **Phase 17: Catalog Filtering Interface** — CatalogProvider interface and engine-level filtering applied to recommendation results (completed 2026-03-22)
 - [ ] **Phase 18: Integration and Docs** — EnrichmentShowcaseTest updated; README, ROADMAP, CHANGELOG, STORIES finalized for v0.6.0
 
 ## Phase Details
@@ -129,7 +129,7 @@ Plans:
 **Plans**: 2 plans
 Plans:
 - [x] 17-01-PLAN.md — Define CatalogProvider interface, CatalogQuery, CatalogMatch, CatalogFilterMode; wire into EnrichmentConfig and Builder
-- [ ] 17-02-PLAN.md — Implement post-resolution catalog filtering in DefaultEnrichmentEngine; write CatalogFilteringTest
+- [x] 17-02-PLAN.md — Implement post-resolution catalog filtering in DefaultEnrichmentEngine; write CatalogFilteringTest
 
 ### Phase 18: Integration and Docs
 **Goal**: v0.6.0 features are demonstrated end-to-end in the showcase test and all documentation accurately reflects the completed milestone
@@ -161,5 +161,5 @@ Plans:
 | 14. Artist Radio | v0.6.0 | 2/2 | Complete    | 2026-03-22 |
 | 15. Similar Albums | v0.6.0 | 2/2 | Complete    | 2026-03-22 |
 | 16. Genre Discovery | v0.6.0 | 2/2 | Complete    | 2026-03-22 |
-| 17. Catalog Filtering Interface | v0.6.0 | 1/2 | In Progress|  |
+| 17. Catalog Filtering Interface | v0.6.0 | 2/2 | Complete   | 2026-03-22 |
 | 18. Integration and Docs | v0.6.0 | 0/TBD | Not started | - |
