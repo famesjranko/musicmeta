@@ -1,7 +1,9 @@
 package com.landofoz.musicmeta.engine
 
 import com.landofoz.musicmeta.EnrichmentData
+import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
+import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.TimelineEvent
 
 /**
@@ -10,7 +12,37 @@ import com.landofoz.musicmeta.TimelineEvent
  * album release events from discography, and member change events from
  * band members. Sorts chronologically and deduplicates by date+type.
  */
-object TimelineSynthesizer {
+object TimelineSynthesizer : CompositeSynthesizer {
+
+    override val type: EnrichmentType = EnrichmentType.ARTIST_TIMELINE
+
+    override val dependencies: Set<EnrichmentType> = setOf(
+        EnrichmentType.ARTIST_DISCOGRAPHY,
+        EnrichmentType.BAND_MEMBERS,
+    )
+
+    /**
+     * Synthesizes an ARTIST_TIMELINE from resolved sub-type results.
+     * Only valid for ForArtist requests — returns NotFound("artist_only") otherwise.
+     */
+    override fun synthesize(
+        resolved: Map<EnrichmentType, EnrichmentResult>,
+        identityResult: EnrichmentResult?,
+        request: EnrichmentRequest,
+    ): EnrichmentResult {
+        if (request !is EnrichmentRequest.ForArtist) {
+            return EnrichmentResult.NotFound(EnrichmentType.ARTIST_TIMELINE, "artist_only")
+        }
+        val discography = resolved[EnrichmentType.ARTIST_DISCOGRAPHY]
+        val bandMembers = resolved[EnrichmentType.BAND_MEMBERS]
+        val timeline = synthesize(identityResult, discography, bandMembers)
+        return EnrichmentResult.Success(
+            type = type,
+            data = timeline,
+            provider = "timeline_synthesizer",
+            confidence = ConfidenceCalculator.authoritative(),
+        )
+    }
 
     fun synthesize(
         metadata: EnrichmentResult?,

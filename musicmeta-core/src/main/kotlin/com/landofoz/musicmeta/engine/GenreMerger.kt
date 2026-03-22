@@ -1,9 +1,40 @@
 package com.landofoz.musicmeta.engine
 
+import com.landofoz.musicmeta.EnrichmentData
+import com.landofoz.musicmeta.EnrichmentResult
+import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.GenreTag
 
 /** Pure function that normalizes, deduplicates, and merges genre tags from multiple providers. */
-object GenreMerger {
+object GenreMerger : ResultMerger {
+
+    override val type: EnrichmentType = EnrichmentType.GENRE
+
+    /**
+     * Merges multiple successful provider results for GENRE into a single result.
+     * Collects all genreTags from Metadata results, then normalizes and merges them.
+     * Returns NotFound if results is empty; returns the first result as-is if no genreTags present.
+     */
+    override fun merge(results: List<EnrichmentResult.Success>): EnrichmentResult {
+        if (results.isEmpty()) return EnrichmentResult.NotFound(type, "all_providers")
+
+        val allTags = results.flatMap { result ->
+            (result.data as? EnrichmentData.Metadata)?.genreTags.orEmpty()
+        }
+        if (allTags.isEmpty()) return results.first()
+
+        val merged = merge(allTags)
+        return EnrichmentResult.Success(
+            type = type,
+            data = EnrichmentData.Metadata(
+                genres = merged.take(10).map { it.name }.takeIf { it.isNotEmpty() },
+                genreTags = merged.takeIf { it.isNotEmpty() },
+            ),
+            provider = "genre_merger",
+            confidence = results.maxOf { it.confidence },
+            resolvedIdentifiers = results.firstNotNullOfOrNull { it.resolvedIdentifiers },
+        )
+    }
 
     /** Genre alias map for normalization — maps common variants to canonical forms. */
     private val ALIASES = mapOf(
