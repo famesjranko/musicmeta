@@ -15,10 +15,10 @@ Requirements for the Recommendations Engine milestone. Each maps to roadmap phas
 
 ### Similar Artists
 
-- [ ] **SIM-01**: Deezer provides similar artists via /artist/{id}/related endpoint
+- [x] **SIM-01**: Deezer provides similar artists via /artist/{id}/related endpoint
 - [ ] **SIM-02**: SIMILAR_ARTISTS is promoted to mergeable type (like GENRE)
 - [ ] **SIM-03**: SimilarArtistMerger deduplicates by name/MBID and handles score differences across providers
-- [ ] **SIM-04**: SimilarArtist data class includes sources field tracking which providers contributed
+- [x] **SIM-04**: SimilarArtist data class includes sources field tracking which providers contributed
 
 ### Artist Radio
 
@@ -97,10 +97,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ENG-01 | Phase 12 | Complete |
 | ENG-02 | Phase 12 | Complete |
 | ENG-03 | Phase 12 | Complete |
-| SIM-01 | Phase 13 | Pending |
+| SIM-01 | Phase 13 | Complete |
 | SIM-02 | Phase 13 | Pending |
 | SIM-03 | Phase 13 | Pending |
-| SIM-04 | Phase 13 | Pending |
+| SIM-04 | Phase 13 | Complete |
 | RAD-01 | Phase 14 | Pending |
 | RAD-02 | Phase 14 | Pending |
 | RAD-03 | Phase 14 | Pending |

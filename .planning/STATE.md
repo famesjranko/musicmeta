@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v0.6.0
 milestone_name: Recommendations Engine
 status: unknown
-stopped_at: Completed 12-02-PLAN.md
-last_updated: "2026-03-22T13:43:58.508Z"
+stopped_at: Completed 13-01-PLAN.md
+last_updated: "2026-03-22T14:02:43.601Z"
 progress:
   total_phases: 7
   completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  total_plans: 4
+  completed_plans: 3
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-22)
 
 **Core value:** Consumers get comprehensive, accurate music metadata from a single enrich() call without knowing which APIs exist, how they authenticate, or how to correlate identifiers across services.
-**Current focus:** Phase 12 — Engine Refactoring
+**Current focus:** Phase 13 — Similar Artists + Merger
 
 ## Current Position
 
-Phase: 13
-Plan: Not started
+Phase: 13 (Similar Artists + Merger) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -43,6 +43,7 @@ Plan: Not started
 *Updated after each plan completion*
 | Phase 12-engine-refactoring P01 | 2 | 2 tasks | 6 files |
 | Phase 12-engine-refactoring P02 | 5 | 2 tasks | 2 files |
+| Phase 13-similar-artists-merger P01 | 223 | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -57,6 +58,9 @@ Plan: Not started
 - [Phase 12-01]: GenreMerger and TimelineSynthesizer remain objects (singletons): stateless strategy pattern preserved; existing methods kept as internal implementation details
 - [Phase 12-02]: Default constructor params use listOf(GenreMerger)/listOf(TimelineSynthesizer) for backward compat with tests constructing DefaultEnrichmentEngine directly
 - [Phase 12-02]: Builder pre-populates merger/synthesizer lists so withDefaultProviders() doesn't need to add them explicitly
+- [Phase 13-01]: SimilarArtist.sources defaults to emptyList() for backward compatibility, matching GenreTag.sources pattern
+- [Phase 13-01]: DeezerProvider.enrichSimilarArtists checks identifiers.extra[deezerId] before searching for caching
+- [Phase 13-01]: Deezer positional match score: 1.0f - (index/count)*0.9f gives 1.0 first, 0.1 last
 
 ### Pending Todos
 
@@ -69,6 +73,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-22T13:41:07.456Z
-Stopped at: Completed 12-02-PLAN.md
+Last session: 2026-03-22T14:02:43.598Z
+Stopped at: Completed 13-01-PLAN.md
 Resume file: None
