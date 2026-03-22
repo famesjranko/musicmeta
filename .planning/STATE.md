@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v0.6.0
 milestone_name: Recommendations Engine
 status: unknown
-stopped_at: Completed 15-01-PLAN.md
-last_updated: "2026-03-22T14:38:25.442Z"
+stopped_at: Completed 15-02-PLAN.md
+last_updated: "2026-03-22T14:44:03.936Z"
 progress:
   total_phases: 7
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 8
-  completed_plans: 7
+  completed_plans: 8
 ---
 
 # Project State
@@ -48,6 +48,7 @@ Plan: 2 of 2
 | Phase 14-artist-radio P01 | 4 | 2 tasks | 7 files |
 | Phase 14-artist-radio P02 | 2 | 2 tasks | 3 files |
 | Phase 15 P01 | 5 | 2 tasks | 4 files |
+| Phase 15-similar-albums P02 | 10 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -74,6 +75,8 @@ Plan: 2 of 2
 - [Phase 15-01]: SimilarAlbum.year is Int? (not String?) matching ReleaseEdition.year pattern already in EnrichmentData.kt
 - [Phase 15-01]: SimilarAlbumsProvider is standalone (NOT composite): all Deezer API calls happen inside the provider, consistent with decision in STATE.md
 - [Phase 15-01]: Era multiplier uses discrete tiers: ±5yr = 1.2x, ±10yr = 1.0x, beyond = 0.8x for simple predictable scoring
+- [Phase 15-similar-albums]: SimilarAlbumsProvider uses its own DeezerApi instance with shared HttpClient and defaultRateLimiter — each provider owns its API object
+- [Phase 15-similar-albums]: [Phase 15-02]: Era proximity reversal test uses 5 related artists so index-1 score (0.82) with 1.2x era multiplier outscores index-0 (1.0) with 0.8x: 0.984 > 0.80
 
 ### Pending Todos
 
@@ -86,6 +89,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-22T14:38:25.439Z
-Stopped at: Completed 15-01-PLAN.md
+Last session: 2026-03-22T14:44:03.933Z
+Stopped at: Completed 15-02-PLAN.md
 Resume file: None
