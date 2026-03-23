@@ -63,6 +63,17 @@ class LastFmApi(
         return parseSimilarTracks(json)
     }
 
+    suspend fun getArtistTopTracks(artistName: String, limit: Int = 20): List<LastFmTopTrack> {
+        val url = buildUrl("artist.gettoptracks", artistName) + "&limit=$limit"
+        val json = rateLimiter.execute {
+            when (val r = httpClient.fetchJsonResult(url)) {
+                is HttpResult.Ok -> r.body
+                else -> return@execute null
+            }
+        } ?: return emptyList()
+        return parseTopTracks(json)
+    }
+
     suspend fun getAlbumInfo(album: String, artist: String): LastFmAlbumInfo? {
         val url = buildAlbumUrl("album.getinfo", album, artist)
         val json = rateLimiter.execute {
@@ -178,6 +189,23 @@ class LastFmApi(
             wiki = wiki,
             trackCount = trackCount,
         )
+    }
+
+    private fun parseTopTracks(json: JSONObject): List<LastFmTopTrack> {
+        val container = json.optJSONObject("toptracks") ?: return emptyList()
+        val array = container.optJSONArray("track") ?: return emptyList()
+        return (0 until array.length()).mapIndexed { index, i ->
+            val obj = array.getJSONObject(i)
+            val artistObj = obj.optJSONObject("artist")
+            LastFmTopTrack(
+                title = obj.optString("name", ""),
+                artist = artistObj?.optString("name", "") ?: "",
+                playcount = obj.optString("playcount")?.toLongOrNull(),
+                listeners = obj.optString("listeners")?.toLongOrNull(),
+                mbid = obj.optString("mbid").takeIf { it.isNotBlank() },
+                rank = index + 1,
+            )
+        }
     }
 
     private fun parseTags(json: JSONObject): List<String> {

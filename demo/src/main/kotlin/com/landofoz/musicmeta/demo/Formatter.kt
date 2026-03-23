@@ -281,5 +281,11 @@ object Formatter {
         is EnrichmentData.GenreDiscovery ->
             "${data.relatedGenres.size} genres: " +
                 data.relatedGenres.take(3).joinToString(", ") { "${it.name}(%.2f)".format(it.affinity) }
+        is EnrichmentData.TopTracks ->
+            "${data.tracks.size} tracks: " +
+                data.tracks.take(3).joinToString(", ") {
+                    val plays = it.listenCount?.let { c -> " (${c})" } ?: ""
+                    "${it.title}$plays"
+                }
     }
 }

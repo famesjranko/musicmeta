@@ -16,6 +16,7 @@ internal val RECOMMENDATION_TYPES = setOf(
     EnrichmentType.SIMILAR_ALBUMS,
     EnrichmentType.ARTIST_RADIO,
     EnrichmentType.SIMILAR_TRACKS,
+    EnrichmentType.ARTIST_TOP_TRACKS,
 )
 
 /**
@@ -34,6 +35,9 @@ internal fun toQueries(data: EnrichmentData): List<CatalogQuery>? = when (data) 
     }
     is EnrichmentData.SimilarTracks -> data.tracks.map { t ->
         CatalogQuery(title = t.title, artist = t.artist, identifiers = t.identifiers)
+    }
+    is EnrichmentData.TopTracks -> data.tracks.map { t ->
+        CatalogQuery(title = t.title, artist = t.artist, album = t.album, identifiers = t.identifiers)
     }
     else -> null
 }
@@ -80,5 +84,6 @@ internal fun reorderData(data: EnrichmentData, indices: List<Int>): EnrichmentDa
     is EnrichmentData.SimilarAlbums -> data.copy(albums = indices.mapNotNull { data.albums.getOrNull(it) })
     is EnrichmentData.RadioPlaylist -> data.copy(tracks = indices.mapNotNull { data.tracks.getOrNull(it) })
     is EnrichmentData.SimilarTracks -> data.copy(tracks = indices.mapNotNull { data.tracks.getOrNull(it) })
+    is EnrichmentData.TopTracks -> data.copy(tracks = indices.mapNotNull { data.tracks.getOrNull(it) })
     else -> null
 }

@@ -270,7 +270,7 @@ private val ARTIST_TYPES = setOf(
     EnrichmentType.SIMILAR_ARTISTS, EnrichmentType.BAND_MEMBERS,
     EnrichmentType.ARTIST_DISCOGRAPHY, EnrichmentType.ARTIST_LINKS,
     EnrichmentType.ARTIST_TIMELINE, EnrichmentType.ARTIST_RADIO,
-    EnrichmentType.GENRE_DISCOVERY,
+    EnrichmentType.ARTIST_TOP_TRACKS, EnrichmentType.GENRE_DISCOVERY,
 )
 
 private val ALBUM_TYPES = setOf(

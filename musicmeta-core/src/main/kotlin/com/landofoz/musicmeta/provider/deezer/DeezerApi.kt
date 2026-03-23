@@ -181,6 +181,31 @@ class DeezerApi(
         }
     }
 
+    suspend fun getArtistTop(artistId: Long, limit: Int = 10): List<DeezerTopTrack> {
+        val url = "$BASE_URL/artist/$artistId/top?limit=$limit"
+        val json = rateLimiter.execute {
+            when (val r = httpClient.fetchJsonResult(url)) {
+                is HttpResult.Ok -> r.body
+                else -> return@execute null
+            }
+        } ?: return emptyList()
+
+        val data = json.optJSONArray("data") ?: return emptyList()
+        return (0 until data.length()).map { i ->
+            val track = data.getJSONObject(i)
+            val artist = track.optJSONObject("artist")
+            val album = track.optJSONObject("album")
+            DeezerTopTrack(
+                id = track.optLong("id"),
+                title = track.optString("title", ""),
+                artistName = artist?.optString("name", "") ?: "",
+                albumTitle = album?.optString("title")?.takeIf { it.isNotBlank() },
+                durationSec = track.optInt("duration", 0),
+                rank = track.optInt("rank", 0),
+            )
+        }
+    }
+
     suspend fun getArtistRadio(artistId: Long, limit: Int = 25): List<DeezerRadioTrack> {
         val url = "$BASE_URL/artist/$artistId/radio?limit=$limit"
         val json = rateLimiter.execute {

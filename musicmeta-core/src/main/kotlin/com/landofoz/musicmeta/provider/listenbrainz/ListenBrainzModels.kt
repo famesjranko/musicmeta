@@ -6,6 +6,9 @@ data class ListenBrainzPopularTrack(
     val title: String,
     val artistName: String,
     val listenCount: Long,
+    val listenerCount: Long? = null,
+    val durationMs: Long? = null,
+    val albumName: String? = null,
 )
 
 /** Batch recording popularity from POST /1/popularity/recording. */

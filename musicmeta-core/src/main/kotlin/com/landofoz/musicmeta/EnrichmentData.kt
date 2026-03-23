@@ -98,6 +98,9 @@ sealed class EnrichmentData {
     @Serializable
     data class GenreDiscovery(val relatedGenres: List<GenreAffinity>) : EnrichmentData()
 
+    @Serializable
+    data class TopTracks(val tracks: List<TopTrack>) : EnrichmentData()
+
 }
 
 @Serializable
@@ -235,4 +238,17 @@ data class GenreAffinity(
     val affinity: Float,
     val relationship: String,
     val sourceGenres: List<String>,
+)
+
+@Serializable
+data class TopTrack(
+    val title: String,
+    val artist: String,
+    val album: String? = null,
+    val durationMs: Long? = null,
+    val listenCount: Long? = null,
+    val listenerCount: Long? = null,
+    val rank: Int,
+    val sources: List<String> = emptyList(),
+    val identifiers: EnrichmentIdentifiers = EnrichmentIdentifiers(),
 )

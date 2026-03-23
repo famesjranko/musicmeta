@@ -36,6 +36,7 @@ class LastFmProvider(
         ProviderCapability(EnrichmentType.GENRE, priority = 100),
         ProviderCapability(EnrichmentType.ARTIST_BIO, priority = 50),
         ProviderCapability(EnrichmentType.ARTIST_POPULARITY, priority = 100),
+        ProviderCapability(EnrichmentType.ARTIST_TOP_TRACKS, priority = 100),
         ProviderCapability(EnrichmentType.SIMILAR_TRACKS, priority = 100),
         ProviderCapability(EnrichmentType.TRACK_POPULARITY, priority = 100),
         ProviderCapability(EnrichmentType.ALBUM_METADATA, priority = 40),
@@ -82,6 +83,7 @@ class LastFmProvider(
                 EnrichmentType.GENRE -> enrichGenre(artistRequest, type)
                 EnrichmentType.ARTIST_BIO -> enrichBio(artistRequest, type)
                 EnrichmentType.ARTIST_POPULARITY -> enrichPopularity(artistRequest, type)
+                EnrichmentType.ARTIST_TOP_TRACKS -> enrichTopTracks(artistRequest, type)
                 else -> EnrichmentResult.NotFound(type, id)
             }
         } catch (e: Exception) {
@@ -142,6 +144,15 @@ class LastFmProvider(
         val info = api.getArtistInfo(request.name)
             ?: return EnrichmentResult.NotFound(type, id)
         return success(LastFmMapper.toPopularity(info), type)
+    }
+
+    private suspend fun enrichTopTracks(
+        request: EnrichmentRequest.ForArtist,
+        type: EnrichmentType,
+    ): EnrichmentResult {
+        val tracks = api.getArtistTopTracks(request.name)
+        if (tracks.isEmpty()) return EnrichmentResult.NotFound(type, id)
+        return success(LastFmMapper.toTopTracks(tracks), type)
     }
 
     private suspend fun enrichAlbumMetadata(

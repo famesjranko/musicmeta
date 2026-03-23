@@ -525,6 +525,8 @@ class EnrichmentShowcaseTest {
             "${data.albums.size} similar albums: ${data.albums.take(3).joinToString(", ") { "${it.title} by ${it.artist}" }}"
         is EnrichmentData.GenreDiscovery ->
             "${data.relatedGenres.size} related genres: ${data.relatedGenres.take(3).joinToString(", ") { "${it.name}(%.2f)".format(it.affinity) }}"
+        is EnrichmentData.TopTracks ->
+            "${data.tracks.size} top tracks: ${data.tracks.take(3).joinToString(", ") { "${it.title}(${it.listenCount ?: 0})" }}"
     }
 
     private fun printSingleResult(type: EnrichmentType, result: EnrichmentResult?) {

@@ -9,6 +9,7 @@ import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.SimilarAlbum
 import com.landofoz.musicmeta.SimilarArtist
 import com.landofoz.musicmeta.SimilarTrack
+import com.landofoz.musicmeta.TopTrack
 import com.landofoz.musicmeta.TrackInfo
 
 /** Maps Deezer DTOs to EnrichmentData subclasses. */
@@ -124,6 +125,21 @@ object DeezerMapper {
         identifiers = EnrichmentIdentifiers(),
         provider = providerId,
     )
+
+    fun toTopTracks(tracks: List<DeezerTopTrack>): EnrichmentData.TopTracks =
+        EnrichmentData.TopTracks(
+            tracks = tracks.mapIndexed { index, t ->
+                TopTrack(
+                    title = t.title,
+                    artist = t.artistName,
+                    album = t.albumTitle,
+                    durationMs = if (t.durationSec > 0) t.durationSec.toLong() * 1000 else null,
+                    rank = index + 1,
+                    sources = listOf("deezer"),
+                    identifiers = EnrichmentIdentifiers().withExtra("deezerId", t.id.toString()),
+                )
+            },
+        )
 
     fun toRadioPlaylist(tracks: List<DeezerRadioTrack>): EnrichmentData.RadioPlaylist =
         EnrichmentData.RadioPlaylist(

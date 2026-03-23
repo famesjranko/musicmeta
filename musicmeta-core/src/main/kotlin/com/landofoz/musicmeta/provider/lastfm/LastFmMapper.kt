@@ -5,6 +5,7 @@ import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.GenreTag
 import com.landofoz.musicmeta.SimilarArtist
 import com.landofoz.musicmeta.SimilarTrack
+import com.landofoz.musicmeta.TopTrack
 
 /** Maps Last.fm DTOs to EnrichmentData subclasses. */
 object LastFmMapper {
@@ -64,6 +65,22 @@ object LastFmMapper {
         EnrichmentData.Popularity(
             listenerCount = info.listeners,
             listenCount = info.playcount,
+        )
+
+    fun toTopTracks(tracks: List<LastFmTopTrack>): EnrichmentData.TopTracks =
+        EnrichmentData.TopTracks(
+            tracks = tracks.map { t ->
+                TopTrack(
+                    title = t.title,
+                    artist = t.artist,
+                    listenCount = t.playcount,
+                    listenerCount = t.listeners,
+                    rank = t.rank,
+                    sources = listOf("lastfm"),
+                    identifiers = if (t.mbid != null) EnrichmentIdentifiers(musicBrainzId = t.mbid)
+                    else EnrichmentIdentifiers(),
+                )
+            },
         )
 
     fun toTrackPopularity(info: LastFmTrackInfo): EnrichmentData.Popularity =

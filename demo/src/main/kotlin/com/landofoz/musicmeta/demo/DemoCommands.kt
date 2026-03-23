@@ -150,4 +150,6 @@ val TYPE_ALIASES = mapOf(
     "plain-lyrics" to EnrichmentType.LYRICS_PLAIN,
     "credits" to EnrichmentType.CREDITS,
     "discovery" to EnrichmentType.GENRE_DISCOVERY,
+    "top" to EnrichmentType.ARTIST_TOP_TRACKS,
+    "top-tracks" to EnrichmentType.ARTIST_TOP_TRACKS,
 )
