@@ -5,6 +5,7 @@ import com.landofoz.musicmeta.EnrichmentCache
 import com.landofoz.musicmeta.EnrichmentConfig
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentEngine
+import com.landofoz.musicmeta.ErrorKind
 import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentLogger
 import com.landofoz.musicmeta.EnrichmentRequest
@@ -61,7 +62,12 @@ class DefaultEnrichmentEngine(
                 applyCatalogFiltering(results)
             }
         } catch (_: TimeoutCancellationException) {
-            logger.warn(TAG, "Enrich timed out after ${config.enrichTimeoutMs}ms, returning partial results")
+            logger.warn(TAG, "Enrich timed out after ${config.enrichTimeoutMs}ms")
+            for (type in types) {
+                if (type !in results) {
+                    results[type] = EnrichmentResult.Error(type, "engine", "Enrichment timed out", errorKind = ErrorKind.TIMEOUT)
+                }
+            }
         }
 
         for ((type, result) in results) {
@@ -115,8 +121,6 @@ class DefaultEnrichmentEngine(
         uncachedTypes: MutableSet<EnrichmentType>,
     ): Pair<EnrichmentRequest, EnrichmentResult?> {
         val provider = registry.identityProvider() ?: return request to null
-        val identityType = IDENTITY_TYPES.firstOrNull { it in uncachedTypes } ?: IDENTITY_TYPES.first()
-
         val result = try {
             provider.resolveIdentity(request)
         } catch (e: Exception) {
@@ -137,7 +141,7 @@ class DefaultEnrichmentEngine(
             if (result.data is EnrichmentData.Metadata) {
                 for (type in IDENTITY_TYPES) {
                     if (type in uncachedTypes && type !in mergeableTypes) {
-                        results[type] = result; uncachedTypes.remove(type)
+                        results[type] = result.copy(type = type); uncachedTypes.remove(type)
                     }
                 }
             }
@@ -158,16 +162,16 @@ class DefaultEnrichmentEngine(
         // Store Metadata result for all identity types with resolved identifiers attached
         // Skip mergeable types (e.g. GENRE) — they need multi-provider resolution
         if (result.data is EnrichmentData.Metadata) {
-            val metadataResult = EnrichmentResult.Success(
-                type = identityType,
-                data = result.data,
-                provider = result.provider,
-                confidence = result.confidence,
-                resolvedIdentifiers = mergedIds,
-            )
             for (type in IDENTITY_TYPES) {
                 if (type in uncachedTypes && type !in mergeableTypes) {
-                    results[type] = metadataResult; uncachedTypes.remove(type)
+                    results[type] = EnrichmentResult.Success(
+                        type = type,
+                        data = result.data,
+                        provider = result.provider,
+                        confidence = result.confidence,
+                        resolvedIdentifiers = mergedIds,
+                    )
+                    uncachedTypes.remove(type)
                 }
             }
         }
@@ -202,17 +206,16 @@ class DefaultEnrichmentEngine(
             }
         }.awaitAll().toMap().toMutableMap()
 
-        // Resolve mergeable types — collect ALL provider results then merge
-        for (mergeType in mergeableRequested) {
-            val deferred = async {
+        // Resolve mergeable types concurrently — collect ALL provider results then merge
+        val mergeableResults = mergeableRequested.map { mergeType ->
+            async {
                 val chain = registry.chainFor(mergeType)
                 val allResults = chain?.resolveAll(request) ?: emptyList()
-                // Apply confidence filter per-result before merge
                 val filtered = allResults.mapNotNull { filterByConfidence(it) as? EnrichmentResult.Success }
                 mergeType to (mergers[mergeType]?.merge(filtered) ?: EnrichmentResult.NotFound(mergeType, "no_merger"))
             }
-            resolved[mergeType] = deferred.await().second
-        }
+        }.awaitAll()
+        for ((type, result) in mergeableResults) { resolved[type] = result }
 
         // Synthesize composite types from resolved sub-types
         for (compositeType in compositeTypes) {

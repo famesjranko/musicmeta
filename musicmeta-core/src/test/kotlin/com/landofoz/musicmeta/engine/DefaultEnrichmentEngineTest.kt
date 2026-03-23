@@ -4,6 +4,7 @@ import com.landofoz.musicmeta.*
 import com.landofoz.musicmeta.testutil.FakeEnrichmentCache
 import com.landofoz.musicmeta.testutil.FakeHttpClient
 import com.landofoz.musicmeta.testutil.FakeProvider
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
 import org.junit.Before
@@ -827,6 +828,64 @@ class DefaultEnrichmentEngineTest {
         assertEquals(0, providerB.enrichCalls.size)
     }
 
+    @Test fun `timeout backfills missing types with Error TIMEOUT`() = runTest {
+        // Given — a slow provider that exceeds the timeout
+        val slow = SlowProvider(
+            id = "slow",
+            capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100)),
+            delayMs = 5_000,
+        ).also { it.givenResult(EnrichmentType.ALBUM_ART, art("slow")) }
+        val shortTimeout = EnrichmentConfig(enableIdentityResolution = false, enrichTimeoutMs = 100)
+        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(slow)), cache, FakeHttpClient(), shortTimeout)
+
+        // When — enriching with a timeout shorter than the provider's delay
+        val results = e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
+
+        // Then — timed-out type gets Error with TIMEOUT kind
+        val result = results[EnrichmentType.ALBUM_ART]
+        assertTrue("Expected Error but got $result", result is EnrichmentResult.Error)
+        assertEquals(ErrorKind.TIMEOUT, (result as EnrichmentResult.Error).errorKind)
+        assertEquals("engine", result.provider)
+    }
+
+    @Test fun `timeout preserves cached results alongside TIMEOUT errors`() = runTest {
+        // Given — one type is cached, another needs a slow provider
+        cache.put(DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.GENRE), EnrichmentType.GENRE, genre("cached"))
+        val slow = SlowProvider(
+            id = "slow",
+            capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100)),
+            delayMs = 5_000,
+        ).also { it.givenResult(EnrichmentType.ALBUM_ART, art("slow")) }
+        val shortTimeout = EnrichmentConfig(enableIdentityResolution = false, enrichTimeoutMs = 100)
+        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(slow)), cache, FakeHttpClient(), shortTimeout)
+
+        // When — requesting both types
+        val results = e.enrich(req, setOf(EnrichmentType.ALBUM_ART, EnrichmentType.GENRE))
+
+        // Then — cached type returned normally, slow type gets TIMEOUT error
+        assertTrue(results[EnrichmentType.GENRE] is EnrichmentResult.Success)
+        val artResult = results[EnrichmentType.ALBUM_ART]
+        assertTrue("Expected Error but got $artResult", artResult is EnrichmentResult.Error)
+        assertEquals(ErrorKind.TIMEOUT, (artResult as EnrichmentResult.Error).errorKind)
+    }
+
+    @Test fun `timeout does not cache Error TIMEOUT results`() = runTest {
+        // Given — slow provider that will time out
+        val slow = SlowProvider(
+            id = "slow",
+            capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100)),
+            delayMs = 5_000,
+        ).also { it.givenResult(EnrichmentType.ALBUM_ART, art("slow")) }
+        val shortTimeout = EnrichmentConfig(enableIdentityResolution = false, enrichTimeoutMs = 100)
+        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(slow)), cache, FakeHttpClient(), shortTimeout)
+
+        // When — enriching (will time out)
+        e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
+
+        // Then — nothing cached (Error results are never cached)
+        assertTrue(cache.stored.isEmpty())
+    }
+
     @Test fun `ARTIST_TIMELINE is cached like standard types`() = runTest {
         // Given — identity provider + discography + band members providers
         val idProvider = identityProviderWithMetadata()
@@ -849,6 +908,17 @@ class DefaultEnrichmentEngineTest {
         // Then — ARTIST_TIMELINE is returned from cache; discography provider not called again
         assertTrue("ARTIST_TIMELINE should be Success on second call", results[EnrichmentType.ARTIST_TIMELINE] is EnrichmentResult.Success)
         assertEquals("Discography provider should not be called again on cache hit", discoCallsAfterFirst, discoProvider.enrichCalls.size)
+    }
+}
+
+private class SlowProvider(
+    id: String,
+    capabilities: List<ProviderCapability>,
+    private val delayMs: Long,
+) : FakeProvider(id = id, capabilities = capabilities) {
+    override suspend fun enrich(request: EnrichmentRequest, type: EnrichmentType): EnrichmentResult {
+        delay(delayMs)
+        return super.enrich(request, type)
     }
 }
 

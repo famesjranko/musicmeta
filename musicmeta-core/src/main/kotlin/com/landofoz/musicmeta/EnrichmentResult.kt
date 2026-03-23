@@ -10,6 +10,8 @@ enum class ErrorKind {
     PARSE,
     /** Rate limit exceeded (429). */
     RATE_LIMIT,
+    /** Engine-level enrichment timeout — type was not resolved before deadline. */
+    TIMEOUT,
     /** Uncategorized error. */
     UNKNOWN,
 }

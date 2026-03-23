@@ -5,17 +5,18 @@ import org.junit.Test
 
 class EnrichmentResultTest {
 
-    @Test fun `ErrorKind has all five values`() {
+    @Test fun `ErrorKind has all six values`() {
         // Given / When — access all enum values
         val values = ErrorKind.entries
 
-        // Then — exactly 5 values in the expected order
-        assertEquals(5, values.size)
+        // Then — exactly 6 values in the expected order
+        assertEquals(6, values.size)
         assertEquals(ErrorKind.NETWORK, values[0])
         assertEquals(ErrorKind.AUTH, values[1])
         assertEquals(ErrorKind.PARSE, values[2])
         assertEquals(ErrorKind.RATE_LIMIT, values[3])
-        assertEquals(ErrorKind.UNKNOWN, values[4])
+        assertEquals(ErrorKind.TIMEOUT, values[4])
+        assertEquals(ErrorKind.UNKNOWN, values[5])
     }
 
     @Test fun `Error defaults errorKind to UNKNOWN`() {
@@ -67,10 +68,11 @@ class EnrichmentResultTest {
             ErrorKind.AUTH,
             ErrorKind.PARSE,
             ErrorKind.RATE_LIMIT,
+            ErrorKind.TIMEOUT,
             ErrorKind.UNKNOWN,
         )
 
         // Then — all distinct
-        assertEquals(5, kinds.toSet().size)
+        assertEquals(6, kinds.toSet().size)
     }
 }
