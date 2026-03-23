@@ -8,6 +8,9 @@ import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.IdentifierRequirement
 import com.landofoz.musicmeta.http.CircuitBreaker
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 
 class ProviderChain(
     val type: EnrichmentType,
@@ -17,26 +20,38 @@ class ProviderChain(
     private val logger: EnrichmentLogger = EnrichmentLogger.NoOp,
 ) {
     /**
-     * Collects ALL Success results from every provider — does not short-circuit on first success.
-     * Used for mergeable types (e.g. GENRE) where multiple providers contribute data.
-     * Respects the same availability, identifier, and circuit breaker checks as resolve().
+     * Collects ALL Success results from every eligible provider concurrently.
+     * Used for mergeable types (e.g. GENRE, ARTIST_PHOTO) where multiple providers contribute data.
+     * Respects availability, identifier requirements, and circuit breaker checks.
      */
-    suspend fun resolveAll(request: EnrichmentRequest): List<EnrichmentResult.Success> {
-        val successes = mutableListOf<EnrichmentResult.Success>()
-        forEachEligible(request) { provider, breaker, result ->
-            when (result) {
-                is EnrichmentResult.Success -> { breaker?.recordSuccess(); successes.add(result) }
-                is EnrichmentResult.NotFound -> { breaker?.recordSuccess() }
-                is EnrichmentResult.RateLimited -> {
-                    logger.debug(TAG, "${type.name}: ${provider.id} rate limited, skipping")
+    suspend fun resolveAll(request: EnrichmentRequest): List<EnrichmentResult.Success> = coroutineScope {
+        val eligible = providers.filter { provider ->
+            provider.isAvailable &&
+                hasRequiredIdentifiers(provider, request.identifiers) &&
+                (circuitBreakers[provider.id]?.allowRequest() ?: true)
+        }
+
+        eligible.map { provider ->
+            async {
+                val breaker = circuitBreakers[provider.id]
+                val result = try {
+                    provider.enrich(request, type)
+                } catch (e: Exception) {
+                    EnrichmentResult.Error(type, provider.id, e.message ?: "Unknown error", e)
                 }
-                is EnrichmentResult.Error -> {
-                    breaker?.recordFailure()
-                    logger.debug(TAG, "${type.name}: ${provider.id} error: ${result.message}")
+                when (result) {
+                    is EnrichmentResult.Success -> { breaker?.recordSuccess(); result }
+                    is EnrichmentResult.NotFound -> { breaker?.recordSuccess(); null }
+                    is EnrichmentResult.RateLimited -> {
+                        logger.debug(TAG, "${type.name}: ${provider.id} rate limited, skipping"); null
+                    }
+                    is EnrichmentResult.Error -> {
+                        breaker?.recordFailure()
+                        logger.debug(TAG, "${type.name}: ${provider.id} error: ${result.message}"); null
+                    }
                 }
             }
-        }
-        return successes
+        }.awaitAll().filterNotNull()
     }
 
     suspend fun resolve(request: EnrichmentRequest): EnrichmentResult {
