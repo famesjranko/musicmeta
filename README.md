@@ -461,7 +461,7 @@ dependencies {
 ./gradlew publishToMavenLocal
 ```
 
-Then consume as `com.landofoz:musicmeta-core:0.5.0` from `mavenLocal()`.
+Then consume as `com.landofoz:musicmeta-core:0.6.0` from `mavenLocal()`.
 
 ## Running tests
 
@@ -497,13 +497,15 @@ The showcase report includes:
 - Edge cases (AC/DC, Bjork, instrumental tracks, obscure artists)
 - Dynamic coverage matrix (which types have multi-provider support)
 - v0.5.0 feature spotlight (credits with roleCategory, release editions, artist timeline, genre merge with confidence)
+- v0.6.0 feature spotlight (similar artists merge with sources, artist radio, similar albums, genre discovery)
 
 ## Documentation
 
 | Document | Purpose |
 |----------|---------|
 | [docs/how-it-works.md](docs/how-it-works.md) | Complete pipeline trace — from `enrich()` call to results |
-| [docs/v0.5.0-edge-analysis.md](docs/v0.5.0-edge-analysis.md) | Edge testing report — bugs, findings, methodology |
+| [docs/v0.5.0-edge-analysis.md](docs/v0.5.0-edge-analysis.md) | v0.5.0 edge testing report |
+| [docs/v0.6.0-edge-analysis.md](docs/v0.6.0-edge-analysis.md) | v0.6.0 recommendations edge testing — merge behavior, radio, similar albums, genre discovery |
 | [docs/providers/](docs/providers/) | Per-provider API documentation and endpoint inventory |
 | [CHANGELOG.md](CHANGELOG.md) | Release history |
 | [STORIES.md](STORIES.md) | Architectural decisions and rationale |
