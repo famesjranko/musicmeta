@@ -54,7 +54,6 @@ interface EnrichmentEngine {
             GenreMerger, SimilarArtistMerger, SimilarTrackMerger,
             ArtworkMerger(EnrichmentType.ARTIST_PHOTO),
             ArtworkMerger(EnrichmentType.ALBUM_ART),
-            TopTrackMerger,
         )
         private val synthesizers = mutableListOf<com.landofoz.musicmeta.engine.CompositeSynthesizer>(TimelineSynthesizer, GenreAffinityMatcher)
 
@@ -81,20 +80,18 @@ interface EnrichmentEngine {
             addProvider(WikidataProvider(client, defaultRateLimiter))
             addProvider(WikipediaProvider(client, defaultRateLimiter))
             addProvider(DeezerProvider(client, defaultRateLimiter,
-                radioLimit = config.radioLimit, topTracksLimit = config.topTracksLimit))
+                radioLimit = config.radioLimit))
             val deezerApi = DeezerApi(client, defaultRateLimiter)
             addProvider(SimilarAlbumsProvider(deezerApi))
             addProvider(ITunesProvider(client))
-            addProvider(ListenBrainzProvider(client, defaultRateLimiter,
-                topTracksLimit = config.topTracksLimit))
+            addProvider(ListenBrainzProvider(client, defaultRateLimiter))
             addProvider(LrcLibProvider(client, defaultRateLimiter))
 
             // Key-requiring providers (only added if key is provided)
             val keys = apiKeyConfig
             if (keys != null) {
                 keys.lastFmKey?.let {
-                    addProvider(LastFmProvider(it, client, defaultRateLimiter,
-                        topTracksLimit = config.topTracksLimit))
+                    addProvider(LastFmProvider(it, client, defaultRateLimiter))
                 }
                 keys.fanartTvProjectKey?.let {
                     addProvider(FanartTvProvider(it, client, defaultRateLimiter))
@@ -106,6 +103,7 @@ interface EnrichmentEngine {
         }
 
         fun build(): EnrichmentEngine {
+            val allMergers = mergers + TopTrackMerger
             val registry = ProviderRegistry(providers, config.priorityOverrides, logger)
             return DefaultEnrichmentEngine(
                 registry = registry,
@@ -113,7 +111,7 @@ interface EnrichmentEngine {
                 httpClient = httpClient ?: DefaultHttpClient(config.userAgent),
                 config = config,
                 logger = logger,
-                mergers = mergers.toList(),
+                mergers = allMergers,
                 synthesizers = synthesizers.toList(),
             )
         }

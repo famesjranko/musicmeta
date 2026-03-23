@@ -19,11 +19,10 @@ class LastFmProvider(
     private val apiKeyProvider: () -> String,
     httpClient: HttpClient,
     rateLimiter: RateLimiter,
-    private val topTracksLimit: Int = 50,
 ) : EnrichmentProvider {
 
-    constructor(apiKey: String, httpClient: HttpClient, rateLimiter: RateLimiter, topTracksLimit: Int = 50) :
-        this({ apiKey }, httpClient, rateLimiter, topTracksLimit)
+    constructor(apiKey: String, httpClient: HttpClient, rateLimiter: RateLimiter) :
+        this({ apiKey }, httpClient, rateLimiter)
 
     private val api = LastFmApi(apiKeyProvider, httpClient, rateLimiter)
 
@@ -151,7 +150,7 @@ class LastFmProvider(
         request: EnrichmentRequest.ForArtist,
         type: EnrichmentType,
     ): EnrichmentResult {
-        val tracks = api.getArtistTopTracks(request.name, limit = topTracksLimit)
+        val tracks = api.getArtistTopTracks(request.name, limit = 1000)
         if (tracks.isEmpty()) return EnrichmentResult.NotFound(type, id)
         return success(LastFmMapper.toTopTracks(tracks), type)
     }

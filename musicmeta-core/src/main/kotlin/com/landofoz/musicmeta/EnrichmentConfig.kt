@@ -36,15 +36,12 @@ data class EnrichmentConfig(
     val catalogFilterMode: CatalogFilterMode = CatalogFilterMode.UNFILTERED,
     /** Max tracks returned for ARTIST_RADIO. Deezer supports up to 100. */
     val radioLimit: Int = DEFAULT_RADIO_LIMIT,
-    /** Max tracks returned for ARTIST_TOP_TRACKS per provider (before merge). */
-    val topTracksLimit: Int = DEFAULT_TOP_TRACKS_LIMIT,
 ) {
     companion object {
         const val DEFAULT_MIN_CONFIDENCE = 0.5f
         const val DEFAULT_USER_AGENT = "MusicEnrichmentEngine/1.0"
         const val DEFAULT_ENRICH_TIMEOUT_MS = 30_000L
         const val DEFAULT_RADIO_LIMIT = 50
-        const val DEFAULT_TOP_TRACKS_LIMIT = 50
     }
 }
 

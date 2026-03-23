@@ -10,6 +10,11 @@ import com.landofoz.musicmeta.TopTrack
  * Deduplicates by normalized title (+ MBID when available), sums listen counts,
  * merges sources, and ranks by combined popularity.
  */
+/**
+ * Merges top tracks from all providers. Each provider fetches its API max.
+ * Results are deduplicated, listen counts summed, and ranked by combined popularity.
+ * Returns everything — the developer filters to their needs.
+ */
 object TopTrackMerger : ResultMerger {
 
     override val type: EnrichmentType = EnrichmentType.ARTIST_TOP_TRACKS

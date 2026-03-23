@@ -21,7 +21,6 @@ class DeezerProvider(
     httpClient: HttpClient,
     rateLimiter: RateLimiter = RateLimiter(100),
     private val radioLimit: Int = 50,
-    private val topTracksLimit: Int = 50,
 ) : EnrichmentProvider {
 
     private val api = DeezerApi(httpClient, rateLimiter)
@@ -114,7 +113,7 @@ class DeezerProvider(
             searchResult
         }
 
-        val tracks = api.getArtistTop(artist.id, limit = topTracksLimit)
+        val tracks = api.getArtistTop(artist.id, limit = 100)
         if (tracks.isEmpty()) return EnrichmentResult.NotFound(EnrichmentType.ARTIST_TOP_TRACKS, id)
 
         return EnrichmentResult.Success(
