@@ -59,6 +59,24 @@ object Formatter {
         }
 
         term.summary(found, notFound, errors, cached = cacheHits, timedOut = timedOut)
+
+        // Show "Did you mean?" when identity resolution had near-miss candidates
+        val suggestions = rest.map { it.value }
+            .filterIsInstance<EnrichmentResult.NotFound>()
+            .firstOrNull { it.suggestions != null }
+            ?.suggestions
+        if (suggestions != null) {
+            term.println()
+            term.warning("Did you mean?", "Identity match below threshold")
+            suggestions.forEachIndexed { i, c ->
+                val name = term.styled(c.title, term.theme.bold)
+                val artist = c.artist?.let { " by $it" } ?: ""
+                val score = term.styled("${c.score}%", term.theme.warning)
+                val disambig = c.disambiguation?.let { " ${term.styled("($it)", term.theme.muted)}" } ?: ""
+                term.println("    ${i + 1}. $name$artist  $score$disambig")
+            }
+            term.info("Use 'search' to find candidates, then 'pick <number>' to enrich by MBID.")
+        }
     }
 
     fun printSearchResults(candidates: List<SearchCandidate>, term: Terminal) {

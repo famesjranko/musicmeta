@@ -7,17 +7,21 @@
 
 ## Decisions
 
-### 2026-03-24: Identity match score — bridging auto mode and disambiguation
+### 2026-03-24: Disambiguation signals — identity match score and "did you mean?"
 
-**Context**: The engine's auto mode (`enrich()` with just a name) silently picks the best MusicBrainz match. Developers had no way to know if the match was confident ("Radiohead" → score 100) or ambiguous ("Bush" → score 80, could be British or Canadian band). The `search()` → pick → `enrich(mbid=...)` flow existed for manual disambiguation, but there was no signal telling developers *when* to use it.
+**Context**: The engine's auto mode (`enrich()` with just a name) silently picks the best MusicBrainz match. Developers had no way to know if the match was confident ("Radiohead" → score 100) or ambiguous ("Bush" → score 80, could be British or Canadian band). The `search()` → pick → `enrich(mbid=...)` flow existed for manual disambiguation, but there was no signal telling developers *when* to use it. Worse, when no match met the threshold, all candidates were silently discarded — the developer got NotFound with zero context.
 
-**Decision**: Add `identityMatchScore: Int?` to `EnrichmentResult.Success`. The engine stamps every result with the MusicBrainz search score (0-100) after identity resolution.
+**Decision**: Two complementary signals on `EnrichmentResult`:
+1. `Success.identityMatchScore: Int?` — stamps every result with the MusicBrainz search score (0-100) after identity resolution.
+2. `NotFound.suggestions: List<SearchCandidate>?` — carries near-miss candidates when identity resolution finds results below the match threshold.
 
 **Key design decisions**:
-- **Int on 0-100 scale**, matching `SearchCandidate.score`. Distinct from `confidence: Float` (0.0-1.0) which measures data quality, not identity quality. No risk of confusing the two.
-- **`null` means "no fuzzy matching occurred"** — either MBID was pre-provided, or the result was cached. `null` is a positive signal: identity was already certain.
-- **Stamped on all results**, not just the identity type. A developer requesting ALBUM_ART gets the identity score on that result — they don't need to also request GENRE just to check match quality.
-- **Extracted from identity result's confidence field** — `(identityResult.confidence * 100).toInt()`. No new data flow; the score was already computed by MusicBrainz, just not exposed.
+- **`identityMatchScore` uses Int on 0-100 scale**, matching `SearchCandidate.score`. Distinct from `confidence: Float` (0.0-1.0) which measures data quality, not identity quality. `null` means no fuzzy matching occurred (MBID was pre-provided or result was cached).
+- **Score stamped on all results**, not just the identity type. A developer requesting ALBUM_ART gets the identity score without also requesting GENRE.
+- **Suggestions reuse `SearchCandidate`** — the same type returned by `engine.search()`. Contains title, artist, score, disambiguation text, and MBID. Developers can show "did you mean?" and re-enrich with the chosen MBID.
+- **Suggestions propagated to all NotFound results.** The engine attaches identity suggestions to every type that ended up as NotFound, so the developer finds them regardless of which type they check.
+- **Max 3 suggestions** to keep the response lightweight. The developer can call `search()` for more.
+- **No extra API calls.** The candidates were already fetched by MusicBrainz search — they were just being discarded when none met the threshold.
 
 **Status**: Active
 

@@ -61,6 +61,7 @@ class DefaultEnrichmentEngine(
                 results.putAll(resolveTypes(enrichedRequest, uncachedTypes, identityResult))
                 applyCatalogFiltering(results)
                 stampIdentityScore(results, identityResult)
+                propagateIdentitySuggestions(results, identityResult)
             }
         } catch (_: TimeoutCancellationException) {
             logger.warn(TAG, "Enrich timed out after ${config.enrichTimeoutMs}ms")
@@ -130,7 +131,7 @@ class DefaultEnrichmentEngine(
         }
         if (result !is EnrichmentResult.Success) {
             logger.debug(TAG, "Identity resolution returned ${result::class.simpleName}")
-            return request to null
+            return request to result
         }
 
         // Extract resolved identifiers from the result
@@ -252,6 +253,19 @@ class DefaultEnrichmentEngine(
         for ((type, result) in results) {
             if (result is EnrichmentResult.Success && result.identityMatchScore == null) {
                 results[type] = result.copy(identityMatchScore = score)
+            }
+        }
+    }
+
+    /** Propagates identity resolution suggestions to all NotFound results. */
+    private fun propagateIdentitySuggestions(
+        results: MutableMap<EnrichmentType, EnrichmentResult>,
+        identityResult: EnrichmentResult?,
+    ) {
+        val suggestions = (identityResult as? EnrichmentResult.NotFound)?.suggestions ?: return
+        for ((type, result) in results) {
+            if (result is EnrichmentResult.NotFound && result.suggestions == null) {
+                results[type] = result.copy(suggestions = suggestions)
             }
         }
     }

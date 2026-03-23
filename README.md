@@ -79,7 +79,12 @@ when (val art = results[EnrichmentType.ALBUM_ART]) {
         println("Confidence: ${art.confidence}")    // 0.0-1.0
         println("Match: ${art.identityMatchScore}") // 0-100 identity quality, null if MBID was provided
     }
-    is EnrichmentResult.NotFound -> println("No art found")
+    is EnrichmentResult.NotFound -> {
+        if (art.suggestions != null) {
+            println("Did you mean?")
+            art.suggestions!!.forEach { println("  ${it.title} (${it.score}%) ${it.disambiguation ?: ""}") }
+        } else println("No art found")
+    }
     is EnrichmentResult.RateLimited -> println("Try again later")
     is EnrichmentResult.Error -> println("Error: ${art.message}")
 }

@@ -150,7 +150,7 @@ This two-step flow is the right answer for the unopinionated principle: the libr
 | Gap | Problem | Impact | Status |
 |-----|---------|--------|--------|
 | **Match quality indicator on `enrich()`** | Auto mode returns results with no indication of how confident the identity match was | Developer can't detect ambiguous matches to prompt for disambiguation | ✅ Shipped — `identityMatchScore` on `Success` |
-| **No "did you mean?" on NotFound** | When search finds no match above threshold, returns empty — no close matches suggested | Developer can't help users fix typos | Open |
+| **"Did you mean?" on NotFound** | When search finds no match above threshold, returns empty — no close matches suggested | Developer can't help users fix typos | ✅ Shipped — `NotFound.suggestions` |
 | **Provider factual conflicts not surfaced** | If MusicBrainz says country=UK and Wikidata says country=GB, first provider wins silently | Minor — most factual conflicts are equivalent representations, not real disagreements | Open |
 
 **Shipped — `identityMatchScore` on `EnrichmentResult.Success`**: Each `Success` result now carries `identityMatchScore: Int?` (0-100, same scale as `SearchCandidate.score`). `null` when identity was pre-resolved (MBID provided) or result was cached. The engine stamps the MusicBrainz search score onto all results after identity resolution. Developers can use this to decide: high score → show immediately, low score → prompt user with `search()` candidates for disambiguation.

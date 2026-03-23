@@ -62,10 +62,18 @@ sealed class EnrichmentResult {
         val identityMatchScore: Int? = null,
     ) : EnrichmentResult()
 
-    /** Provider searched but found nothing. */
+    /**
+     * Provider searched but found nothing.
+     *
+     * When identity resolution finds candidates below the match threshold,
+     * [suggestions] carries the near-miss candidates. Developers can show
+     * a "did you mean?" prompt and re-enrich with the chosen MBID via
+     * [EnrichmentEngine.search] or by passing [SearchCandidate.identifiers].
+     */
     data class NotFound(
         val type: EnrichmentType,
         val provider: String,
+        val suggestions: List<SearchCandidate>? = null,
     ) : EnrichmentResult()
 
     /** Provider is rate limited — try later. */

@@ -1,8 +1,10 @@
 package com.landofoz.musicmeta.provider.musicbrainz
 
+import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
+import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -51,7 +53,8 @@ internal class MusicBrainzEnricher(
         val releases = api.searchReleases(request.title, request.artist)
         if (releases.isEmpty()) return EnrichmentResult.NotFound(type, providerId)
         val best = releases.firstOrNull { it.score >= minMatchScore }
-            ?: return EnrichmentResult.NotFound(type, providerId)
+            ?: return EnrichmentResult.NotFound(type, providerId,
+                suggestions = releases.take(MAX_SUGGESTIONS).map { it.toCandidate() })
         val needsLookup = type in RELATION_DEPENDENT_TYPES && best.tags.isEmpty() && best.label == null
         val resolved = if (needsLookup) api.lookupRelease(best.id) ?: best else best
         return buildAlbumResult(resolved, type, ConfidenceCalculator.searchScore(best.score))
@@ -115,7 +118,8 @@ internal class MusicBrainzEnricher(
 
         val best = pickBestArtist(request.name, artists)
         if (best.score < minMatchScore) {
-            return EnrichmentResult.NotFound(type, providerId)
+            return EnrichmentResult.NotFound(type, providerId,
+                suggestions = artists.take(MAX_SUGGESTIONS).map { it.toCandidate() })
         }
 
         // Search results have metadata (genres, country) but lack URL relations
@@ -264,7 +268,25 @@ internal class MusicBrainzEnricher(
         }
     }.first()
 
+    private fun MusicBrainzRelease.toCandidate() = SearchCandidate(
+        title = title, artist = artistCredit, year = date,
+        country = country, releaseType = releaseType, score = score,
+        thumbnailUrl = null, provider = providerId,
+        identifiers = EnrichmentIdentifiers(musicBrainzId = id, musicBrainzReleaseGroupId = releaseGroupId),
+        disambiguation = disambiguation,
+    )
+
+    private fun MusicBrainzArtist.toCandidate() = SearchCandidate(
+        title = name, artist = null, year = beginDate,
+        country = country, releaseType = type, score = score,
+        thumbnailUrl = null, provider = providerId,
+        identifiers = EnrichmentIdentifiers(musicBrainzId = id),
+        disambiguation = disambiguation,
+    )
+
     companion object {
+        private const val MAX_SUGGESTIONS = 3
+
         /** Types that require a full lookup (not just search) to get URL relations. */
         private val RELATION_DEPENDENT_TYPES = setOf(
             EnrichmentType.ARTIST_PHOTO,

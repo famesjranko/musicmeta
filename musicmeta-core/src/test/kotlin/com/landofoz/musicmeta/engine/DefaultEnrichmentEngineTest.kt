@@ -262,6 +262,47 @@ class DefaultEnrichmentEngineTest {
         assertNull(artResult.identityMatchScore)
     }
 
+    // --- Identity suggestions ("did you mean?") ---
+
+    @Test fun `enrich propagates identity suggestions to NotFound results`() = runTest {
+        // Given — identity provider returns NotFound with suggestions (score below threshold)
+        val suggestions = listOf(
+            SearchCandidate("Bush", null, "1992", "GB", "Group", 75, null, EnrichmentIdentifiers(musicBrainzId = "mbid-gb"), "mb", disambiguation = "British rock band"),
+            SearchCandidate("Bush", null, "1994", "CA", "Group", 70, null, EnrichmentIdentifiers(musicBrainzId = "mbid-ca"), "mb", disambiguation = "Canadian band"),
+        )
+        val idProvider = FakeProvider(id = "mb", isIdentityProvider = true, capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)))
+            .also { it.givenIdentityResult(EnrichmentResult.NotFound(EnrichmentType.GENRE, "mb", suggestions = suggestions)) }
+        val artProvider = FakeProvider(id = "caa", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100, identifierRequirement = IdentifierRequirement.MUSICBRAINZ_ID)))
+        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider, artProvider)), cache, FakeHttpClient(), EnrichmentConfig(enableIdentityResolution = true))
+
+        // When — enriching with identity resolution that fails with suggestions
+        val results = e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
+
+        // Then — NotFound result carries the identity suggestions
+        val artResult = results[EnrichmentType.ALBUM_ART] as EnrichmentResult.NotFound
+        assertNotNull(artResult.suggestions)
+        assertEquals(2, artResult.suggestions!!.size)
+        assertEquals("British rock band", artResult.suggestions!![0].disambiguation)
+    }
+
+    @Test fun `enrich does not attach suggestions to Success results`() = runTest {
+        // Given — identity fails with suggestions, but downstream provider finds data anyway
+        val suggestions = listOf(
+            SearchCandidate("Bush", null, null, null, null, 75, null, EnrichmentIdentifiers(musicBrainzId = "mbid-1"), "mb"),
+        )
+        val idProvider = FakeProvider(id = "mb", isIdentityProvider = true, capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)))
+            .also { it.givenIdentityResult(EnrichmentResult.NotFound(EnrichmentType.GENRE, "mb", suggestions = suggestions)) }
+        val artProvider = FakeProvider(id = "deezer", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 50)))
+            .also { it.givenResult(EnrichmentType.ALBUM_ART, art("deezer")) }
+        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider, artProvider)), cache, FakeHttpClient(), EnrichmentConfig(enableIdentityResolution = true))
+
+        // When — enriching (identity fails but Deezer finds art via fuzzy search)
+        val results = e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
+
+        // Then — Success result, no suggestions needed
+        assertTrue(results[EnrichmentType.ALBUM_ART] is EnrichmentResult.Success)
+    }
+
     // --- Manual selection flag ---
 
     @Test fun `enrich preserves manually selected cache entries`() = runTest {
