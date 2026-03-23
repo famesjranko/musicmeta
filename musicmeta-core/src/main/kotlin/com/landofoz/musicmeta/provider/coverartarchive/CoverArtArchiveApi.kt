@@ -80,12 +80,3 @@ class CoverArtArchiveApi(
         const val BASE_URL = "https://coverartarchive.org"
     }
 }
-
-data class CoverArtArchiveImageList(val images: List<CoverArtArchiveImage>)
-
-data class CoverArtArchiveImage(
-    val front: Boolean,
-    val url: String,
-    val thumbnails: Map<String, String>,
-    val types: List<String> = emptyList(),
-)
