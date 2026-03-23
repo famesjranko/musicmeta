@@ -95,7 +95,7 @@ interface EnrichmentEngine {
         }
 
         fun build(): EnrichmentEngine {
-            val registry = ProviderRegistry(providers, config.priorityOverrides)
+            val registry = ProviderRegistry(providers, config.priorityOverrides, logger)
             return DefaultEnrichmentEngine(
                 registry = registry,
                 cache = cache ?: InMemoryEnrichmentCache(),

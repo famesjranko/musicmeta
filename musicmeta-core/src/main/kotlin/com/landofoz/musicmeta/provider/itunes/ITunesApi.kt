@@ -1,6 +1,7 @@
 package com.landofoz.musicmeta.provider.itunes
 
 import com.landofoz.musicmeta.http.HttpClient
+import com.landofoz.musicmeta.takeIfNotEmpty
 import com.landofoz.musicmeta.http.HttpResult
 import com.landofoz.musicmeta.http.RateLimiter
 import java.net.URLEncoder
@@ -101,8 +102,6 @@ class ITunesApi(
             country = album.optString("country").takeIfNotEmpty(),
             trackCount = album.optInt("trackCount", 0).takeIf { it > 0 },
         )
-
-    private fun String.takeIfNotEmpty(): String? = takeIf { it.isNotBlank() }
 
     companion object {
         const val BASE_URL = "https://itunes.apple.com"

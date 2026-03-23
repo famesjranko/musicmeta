@@ -59,6 +59,16 @@ interface EnrichmentProvider {
         request: EnrichmentRequest,
         limit: Int = 10,
     ): List<SearchCandidate> = emptyList()
+
+    /** Maps exceptions to typed [EnrichmentResult.Error] with appropriate [ErrorKind]. */
+    fun mapError(type: EnrichmentType, e: Exception): EnrichmentResult.Error {
+        val kind = when (e) {
+            is java.io.IOException -> ErrorKind.NETWORK
+            is org.json.JSONException -> ErrorKind.PARSE
+            else -> ErrorKind.UNKNOWN
+        }
+        return EnrichmentResult.Error(type, id, e.message ?: "Unknown error", e, kind)
+    }
 }
 
 /**

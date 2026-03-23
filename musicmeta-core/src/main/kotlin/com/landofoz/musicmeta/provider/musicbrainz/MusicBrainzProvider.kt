@@ -5,11 +5,9 @@ import com.landofoz.musicmeta.EnrichmentProvider
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
-import com.landofoz.musicmeta.ErrorKind
 import com.landofoz.musicmeta.IdentifierRequirement
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.SearchCandidate
-import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 
@@ -24,9 +22,11 @@ class MusicBrainzProvider(
     private val thumbnailSize: Int = DEFAULT_THUMBNAIL_SIZE,
 ) : EnrichmentProvider {
 
-    private val api = MusicBrainzApi(httpClient, rateLimiter)
-
     override val id: String = "musicbrainz"
+
+    private val api = MusicBrainzApi(httpClient, rateLimiter)
+    private val enricher = MusicBrainzEnricher(api, id, minMatchScore)
+
     override val displayName: String = "MusicBrainz"
     override val requiresApiKey: Boolean = false
     override val isAvailable: Boolean = true
@@ -105,256 +105,16 @@ class MusicBrainzProvider(
     ): EnrichmentResult =
         try {
             when (request) {
-                is EnrichmentRequest.ForAlbum -> enrichAlbum(request, type)
-                is EnrichmentRequest.ForArtist -> enrichArtist(request, type)
-                is EnrichmentRequest.ForTrack -> enrichTrack(request, type)
+                is EnrichmentRequest.ForAlbum -> enricher.enrichAlbum(request, type)
+                is EnrichmentRequest.ForArtist -> enricher.enrichArtist(request, type)
+                is EnrichmentRequest.ForTrack -> enricher.enrichTrack(request, type)
             }
         } catch (e: Exception) {
             mapError(type, e)
         }
 
-    private suspend fun enrichAlbum(
-        request: EnrichmentRequest.ForAlbum, type: EnrichmentType,
-    ): EnrichmentResult {
-        if (type in ARTIST_NEW_TYPES || type == EnrichmentType.CREDITS) {
-            return EnrichmentResult.NotFound(type, id)
-        }
-        if (type == EnrichmentType.ALBUM_TRACKS) return enrichAlbumTracks(request)
-        if (type == EnrichmentType.RELEASE_EDITIONS) return enrichAlbumEditions(request)
-        val mbid = request.identifiers.musicBrainzId
-        if (mbid != null) {
-            val full = api.lookupRelease(mbid) ?: return EnrichmentResult.NotFound(type, id)
-            return buildAlbumResult(full, type, ConfidenceCalculator.idBasedLookup())
-        }
-        val releases = api.searchReleases(request.title, request.artist)
-        if (releases.isEmpty()) return EnrichmentResult.NotFound(type, id)
-        val best = releases.firstOrNull { it.score >= minMatchScore }
-            ?: return EnrichmentResult.NotFound(type, id)
-        val needsLookup = type in RELATION_DEPENDENT_TYPES && best.tags.isEmpty() && best.label == null
-        val resolved = if (needsLookup) api.lookupRelease(best.id) ?: best else best
-        return buildAlbumResult(resolved, type, ConfidenceCalculator.searchScore(best.score))
-    }
-
-    private suspend fun enrichAlbumTracks(request: EnrichmentRequest.ForAlbum): EnrichmentResult {
-        val type = EnrichmentType.ALBUM_TRACKS
-        val mbid = request.identifiers.musicBrainzId ?: run {
-            api.searchReleases(request.title, request.artist)
-                .firstOrNull { it.score >= minMatchScore }?.id
-        } ?: return EnrichmentResult.NotFound(type, id)
-        val release = api.lookupRelease(mbid) ?: return EnrichmentResult.NotFound(type, id)
-        if (release.tracks.isEmpty()) return EnrichmentResult.NotFound(type, id)
-        return EnrichmentResult.Success(
-            type = type, data = MusicBrainzMapper.toTracklist(release.tracks),
-            provider = id, confidence = ConfidenceCalculator.idBasedLookup(),
-            resolvedIdentifiers = MusicBrainzMapper.toAlbumIdentifiers(release),
-        )
-    }
-
-    private suspend fun enrichAlbumEditions(request: EnrichmentRequest.ForAlbum): EnrichmentResult {
-        val type = EnrichmentType.RELEASE_EDITIONS
-        val releaseGroupMbid = request.identifiers.musicBrainzReleaseGroupId
-            ?: return EnrichmentResult.NotFound(type, id)
-        val json = api.lookupReleaseGroup(releaseGroupMbid)
-            ?: return EnrichmentResult.NotFound(type, id)
-        val detail = MusicBrainzParser.parseReleaseGroupDetail(json)
-        if (detail.releases.isEmpty()) return EnrichmentResult.NotFound(type, id)
-        return EnrichmentResult.Success(
-            type = type,
-            data = MusicBrainzMapper.toReleaseEditions(detail),
-            provider = id,
-            confidence = ConfidenceCalculator.idBasedLookup(),
-        )
-    }
-
-    private suspend fun enrichArtist(
-        request: EnrichmentRequest.ForArtist,
-        type: EnrichmentType,
-    ): EnrichmentResult {
-        // New types with specialized API calls
-        if (type in ARTIST_NEW_TYPES) {
-            return enrichArtistNewType(request, type)
-        }
-
-        // If we already have an MBID, skip search and go straight to lookup
-        val mbid = request.identifiers.musicBrainzId
-        if (mbid != null) {
-            val full = api.lookupArtist(mbid)
-                ?: return EnrichmentResult.NotFound(type, id)
-            return buildArtistResult(full, type, ConfidenceCalculator.idBasedLookup())
-        }
-
-        val artists = api.searchArtists(request.name)
-        if (artists.isEmpty()) return EnrichmentResult.NotFound(type, id)
-
-        val best = pickBestArtist(request.name, artists)
-        if (best.score < minMatchScore) {
-            return EnrichmentResult.NotFound(type, id)
-        }
-
-        // Search results have metadata (genres, country) but lack URL relations
-        // (wikidata, wikipedia). Do the full lookup when these are missing so
-        // downstream providers (Wikidata, Wikipedia) can use them.
-        val needsRelations = best.wikidataId == null && best.wikipediaTitle == null
-        val resolved = if (needsRelations) {
-            api.lookupArtist(best.id) ?: best
-        } else {
-            best
-        }
-
-        return buildArtistResult(resolved, type, ConfidenceCalculator.searchScore(best.score))
-    }
-
-    private suspend fun enrichArtistNewType(
-        request: EnrichmentRequest.ForArtist,
-        type: EnrichmentType,
-    ): EnrichmentResult {
-        val mbid = request.identifiers.musicBrainzId ?: run {
-            val artists = api.searchArtists(request.name)
-            val best = pickBestArtist(request.name, artists)
-            if (best.score >= minMatchScore) best.id else null
-        } ?: return EnrichmentResult.NotFound(type, id)
-
-        return when (type) {
-            EnrichmentType.BAND_MEMBERS -> {
-                val artist = api.lookupArtistWithRels(mbid)
-                    ?: return EnrichmentResult.NotFound(type, id)
-                if (artist.bandMembers.isEmpty()) return EnrichmentResult.NotFound(type, id)
-                EnrichmentResult.Success(
-                    type = type,
-                    data = MusicBrainzMapper.toBandMembers(artist.bandMembers),
-                    provider = id, confidence = ConfidenceCalculator.idBasedLookup(),
-                    resolvedIdentifiers = MusicBrainzMapper.toArtistIdentifiers(artist),
-                )
-            }
-            EnrichmentType.ARTIST_DISCOGRAPHY -> {
-                val groups = api.browseReleaseGroups(mbid)
-                if (groups.isEmpty()) return EnrichmentResult.NotFound(type, id)
-                EnrichmentResult.Success(
-                    type = type,
-                    data = MusicBrainzMapper.toDiscography(groups),
-                    provider = id, confidence = ConfidenceCalculator.idBasedLookup(),
-                )
-            }
-            EnrichmentType.ARTIST_LINKS -> {
-                val artist = api.lookupArtist(mbid)
-                    ?: return EnrichmentResult.NotFound(type, id)
-                if (artist.urlRelations.isEmpty()) return EnrichmentResult.NotFound(type, id)
-                EnrichmentResult.Success(
-                    type = type,
-                    data = MusicBrainzMapper.toArtistLinks(artist.urlRelations),
-                    provider = id, confidence = ConfidenceCalculator.idBasedLookup(),
-                    resolvedIdentifiers = MusicBrainzMapper.toArtistIdentifiers(artist),
-                )
-            }
-            else -> EnrichmentResult.NotFound(type, id)
-        }
-    }
-
-    private suspend fun enrichTrack(
-        request: EnrichmentRequest.ForTrack,
-        type: EnrichmentType,
-    ): EnrichmentResult {
-        if (type == EnrichmentType.CREDITS) return enrichTrackCredits(request)
-
-        val recordings = api.searchRecordings(request.title, request.artist)
-        if (recordings.isEmpty()) return EnrichmentResult.NotFound(type, id)
-
-        val best = recordings.firstOrNull { it.score >= minMatchScore }
-            ?: return EnrichmentResult.NotFound(type, id)
-
-        return EnrichmentResult.Success(
-            type = type,
-            data = MusicBrainzMapper.toTrackMetadata(best),
-            provider = id,
-            confidence = ConfidenceCalculator.searchScore(best.score),
-            resolvedIdentifiers = MusicBrainzMapper.toTrackIdentifiers(best),
-        )
-    }
-
-    private suspend fun enrichTrackCredits(
-        request: EnrichmentRequest.ForTrack,
-    ): EnrichmentResult {
-        val type = EnrichmentType.CREDITS
-        val mbid = request.identifiers.musicBrainzId
-            ?: return EnrichmentResult.NotFound(type, id)
-        val json = api.lookupRecording(mbid)
-            ?: return EnrichmentResult.NotFound(type, id)
-        val credits = MusicBrainzParser.parseRecordingCredits(json)
-        if (credits.isEmpty()) return EnrichmentResult.NotFound(type, id)
-        return EnrichmentResult.Success(
-            type = type,
-            data = MusicBrainzMapper.toCredits(credits),
-            provider = id,
-            confidence = ConfidenceCalculator.idBasedLookup(),
-        )
-    }
-
-    private fun buildAlbumResult(
-        release: MusicBrainzRelease,
-        type: EnrichmentType,
-        confidence: Float,
-    ): EnrichmentResult.Success = EnrichmentResult.Success(
-        type = type,
-        data = MusicBrainzMapper.toAlbumMetadata(release),
-        provider = id,
-        confidence = confidence,
-        resolvedIdentifiers = MusicBrainzMapper.toAlbumIdentifiers(release),
-    )
-
-    private fun buildArtistResult(
-        artist: MusicBrainzArtist,
-        type: EnrichmentType,
-        confidence: Float,
-    ): EnrichmentResult.Success = EnrichmentResult.Success(
-        type = type,
-        data = MusicBrainzMapper.toArtistMetadata(artist),
-        provider = id,
-        confidence = confidence,
-        resolvedIdentifiers = MusicBrainzMapper.toArtistIdentifiers(artist),
-    )
-
-    /**
-     * Rank artist candidates: exact name match with tags > exact name match >
-     * has tags with high score > highest score.
-     */
-    private fun pickBestArtist(
-        query: String,
-        candidates: List<MusicBrainzArtist>,
-    ): MusicBrainzArtist = candidates.sortedByDescending { artist ->
-        val exactMatch = artist.name.equals(query, ignoreCase = true)
-        val hasTags = artist.tags.isNotEmpty()
-        when {
-            exactMatch && hasTags -> 3
-            exactMatch -> 2
-            hasTags -> 1
-            else -> 0
-        }
-    }.first()
-
-    private fun mapError(type: EnrichmentType, e: Exception): EnrichmentResult.Error {
-        val kind = when (e) {
-            is java.io.IOException -> ErrorKind.NETWORK
-            is org.json.JSONException -> ErrorKind.PARSE
-            else -> ErrorKind.UNKNOWN
-        }
-        return EnrichmentResult.Error(type, id, e.message ?: "Unknown error", e, kind)
-    }
-
     companion object {
         const val DEFAULT_MIN_MATCH_SCORE = 80
         const val DEFAULT_THUMBNAIL_SIZE = 250
-        /** Types that require a full lookup (not just search) to get URL relations. */
-        private val RELATION_DEPENDENT_TYPES = setOf(
-            EnrichmentType.ARTIST_PHOTO,
-            EnrichmentType.ARTIST_BIO,
-            EnrichmentType.ARTIST_BACKGROUND,
-            EnrichmentType.ARTIST_LOGO,
-        )
-        /** New artist types routed through enrichArtistNewType(). */
-        private val ARTIST_NEW_TYPES = setOf(
-            EnrichmentType.BAND_MEMBERS,
-            EnrichmentType.ARTIST_DISCOGRAPHY,
-            EnrichmentType.ARTIST_LINKS,
-        )
     }
 }

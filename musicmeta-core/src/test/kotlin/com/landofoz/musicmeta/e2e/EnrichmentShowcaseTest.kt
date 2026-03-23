@@ -59,14 +59,16 @@ class EnrichmentShowcaseTest {
         )
 
         val http = DefaultHttpClient(USER_AGENT)
+        val deezerRl = RateLimiter(100)
+        val deezerApi = DeezerApi(http, deezerRl)
         engine = EnrichmentEngine.Builder()
             .addProvider(MusicBrainzProvider(http, RateLimiter(1100)))
             .addProvider(CoverArtArchiveProvider(http, RateLimiter(100)))
             .addProvider(WikidataProvider(http, RateLimiter(100)))
             .addProvider(WikipediaProvider(http, RateLimiter(100)))
             .addProvider(LrcLibProvider(http, RateLimiter(200)))
-            .addProvider(DeezerProvider(http, RateLimiter(100)))
-            .addProvider(SimilarAlbumsProvider(DeezerApi(http, RateLimiter(100))))
+            .addProvider(DeezerProvider(http, deezerRl))
+            .addProvider(SimilarAlbumsProvider(deezerApi))
             .addProvider(ITunesProvider(http, RateLimiter(3000)))
             .addProvider(ListenBrainzProvider(http, RateLimiter(100)))
             .addProvider(LastFmProvider(prop("lastfm.apikey"), http, RateLimiter(200)))
@@ -433,7 +435,8 @@ class EnrichmentShowcaseTest {
         }
 
         var found = 0; var missing = 0; var errors = 0
-        ALL_TYPES.forEach { type ->
+        // Iterate in canonical order but only show types present in results
+        ALL_TYPES.filter { it in results }.forEach { type ->
             val result = results[type]
             val line = when (result) {
                 is EnrichmentResult.Success -> {
@@ -542,6 +545,9 @@ class EnrichmentShowcaseTest {
 
         private val ALL_TYPES = EnrichmentType.entries.toSet()
 
-        private fun prop(key: String) = System.getProperty(key, "")
+        private fun prop(key: String) = System.getProperty(
+            key,
+            System.getenv(key.replace(".", "_").uppercase()) ?: "",
+        )
     }
 }

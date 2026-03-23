@@ -1,6 +1,7 @@
 package com.landofoz.musicmeta.engine
 
 import com.landofoz.musicmeta.EnrichmentIdentifiers
+import com.landofoz.musicmeta.EnrichmentLogger
 import com.landofoz.musicmeta.EnrichmentProvider
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
@@ -13,6 +14,7 @@ class ProviderChain(
     private val providers: List<EnrichmentProvider>,
     private val circuitBreakers: Map<String, CircuitBreaker> =
         providers.associate { it.id to CircuitBreaker() },
+    private val logger: EnrichmentLogger = EnrichmentLogger.NoOp,
 ) {
     /**
      * Collects ALL Success results from every provider — does not short-circuit on first success.
@@ -21,30 +23,42 @@ class ProviderChain(
      */
     suspend fun resolveAll(request: EnrichmentRequest): List<EnrichmentResult.Success> {
         val successes = mutableListOf<EnrichmentResult.Success>()
-        for (provider in providers) {
-            if (!provider.isAvailable) continue
-            if (!hasRequiredIdentifiers(provider, request.identifiers)) continue
-
-            val breaker = circuitBreakers[provider.id]
-            if (breaker != null && !breaker.allowRequest()) continue
-
-            val result = try {
-                provider.enrich(request, type)
-            } catch (e: Exception) {
-                EnrichmentResult.Error(type, provider.id, e.message ?: "Unknown error", e)
-            }
-
+        forEachEligible(request) { provider, breaker, result ->
             when (result) {
                 is EnrichmentResult.Success -> { breaker?.recordSuccess(); successes.add(result) }
-                is EnrichmentResult.NotFound -> { breaker?.recordSuccess(); continue }
-                is EnrichmentResult.RateLimited -> continue
-                is EnrichmentResult.Error -> { breaker?.recordFailure(); continue }
+                is EnrichmentResult.NotFound -> { breaker?.recordSuccess() }
+                is EnrichmentResult.RateLimited -> {
+                    logger.debug(TAG, "${type.name}: ${provider.id} rate limited, skipping")
+                }
+                is EnrichmentResult.Error -> {
+                    breaker?.recordFailure()
+                    logger.debug(TAG, "${type.name}: ${provider.id} error: ${result.message}")
+                }
             }
         }
         return successes
     }
 
     suspend fun resolve(request: EnrichmentRequest): EnrichmentResult {
+        forEachEligible(request) { _, breaker, result ->
+            when (result) {
+                is EnrichmentResult.Success -> { breaker?.recordSuccess(); return result }
+                is EnrichmentResult.NotFound -> { breaker?.recordSuccess() }
+                is EnrichmentResult.RateLimited -> {}
+                is EnrichmentResult.Error -> { breaker?.recordFailure() }
+            }
+        }
+        return EnrichmentResult.NotFound(type, "all_providers")
+    }
+
+    /**
+     * Iterates eligible providers, calling each and passing the result to [onResult].
+     * Handles availability, identifier requirements, and circuit breaker checks.
+     */
+    private suspend inline fun forEachEligible(
+        request: EnrichmentRequest,
+        onResult: (EnrichmentProvider, CircuitBreaker?, EnrichmentResult) -> Unit,
+    ) {
         for (provider in providers) {
             if (!provider.isAvailable) continue
             if (!hasRequiredIdentifiers(provider, request.identifiers)) continue
@@ -58,14 +72,8 @@ class ProviderChain(
                 EnrichmentResult.Error(type, provider.id, e.message ?: "Unknown error", e)
             }
 
-            when (result) {
-                is EnrichmentResult.Success -> { breaker?.recordSuccess(); return result }
-                is EnrichmentResult.NotFound -> { breaker?.recordSuccess(); continue }
-                is EnrichmentResult.RateLimited -> continue
-                is EnrichmentResult.Error -> { breaker?.recordFailure(); continue }
-            }
+            onResult(provider, breaker, result)
         }
-        return EnrichmentResult.NotFound(type, "all_providers")
     }
 
     private fun hasRequiredIdentifiers(
@@ -89,4 +97,8 @@ class ProviderChain(
     fun providers(): List<EnrichmentProvider> = providers
 
     fun providerCount(): Int = providers.size
+
+    private companion object {
+        const val TAG = "ProviderChain"
+    }
 }

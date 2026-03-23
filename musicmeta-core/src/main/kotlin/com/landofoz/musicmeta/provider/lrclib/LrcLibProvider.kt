@@ -4,7 +4,6 @@ import com.landofoz.musicmeta.EnrichmentProvider
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
-import com.landofoz.musicmeta.ErrorKind
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.http.HttpClient
@@ -99,12 +98,4 @@ class LrcLibProvider(
         )
     }
 
-    private fun mapError(type: EnrichmentType, e: Exception): EnrichmentResult.Error {
-        val kind = when (e) {
-            is java.io.IOException -> ErrorKind.NETWORK
-            is org.json.JSONException -> ErrorKind.PARSE
-            else -> ErrorKind.UNKNOWN
-        }
-        return EnrichmentResult.Error(type, id, e.message ?: "Unknown error", e, kind)
-    }
 }

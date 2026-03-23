@@ -263,7 +263,7 @@ class MusicBrainzParserTest {
         val json = JSONObject(RECORDING_WITH_VOCAL_REL)
 
         // When -- parsing recording credits
-        val credits = MusicBrainzParser.parseRecordingCredits(json)
+        val credits = MusicBrainzCreditParser.parseRecordingCredits(json)
 
         // Then -- vocal credit extracted with role "lead vocals" and roleCategory "performance"
         assertEquals(1, credits.size)
@@ -279,7 +279,7 @@ class MusicBrainzParserTest {
         val json = JSONObject(RECORDING_WITH_INSTRUMENT_REL)
 
         // When -- parsing recording credits
-        val credits = MusicBrainzParser.parseRecordingCredits(json)
+        val credits = MusicBrainzCreditParser.parseRecordingCredits(json)
 
         // Then -- instrument credit with role from attribute and roleCategory "performance"
         assertEquals(1, credits.size)
@@ -294,7 +294,7 @@ class MusicBrainzParserTest {
         val json = JSONObject(RECORDING_WITH_PRODUCER_REL)
 
         // When -- parsing recording credits
-        val credits = MusicBrainzParser.parseRecordingCredits(json)
+        val credits = MusicBrainzCreditParser.parseRecordingCredits(json)
 
         // Then -- producer credit with roleCategory "production"
         assertEquals(1, credits.size)
@@ -309,7 +309,7 @@ class MusicBrainzParserTest {
         val json = JSONObject(RECORDING_WITH_WORK_REL)
 
         // When -- parsing recording credits
-        val credits = MusicBrainzParser.parseRecordingCredits(json)
+        val credits = MusicBrainzCreditParser.parseRecordingCredits(json)
 
         // Then -- composer credit with roleCategory "songwriting"
         val composer = credits.find { it.role == "composer" }
@@ -324,7 +324,7 @@ class MusicBrainzParserTest {
         val json = JSONObject("""{"id":"rec1","title":"Song","relations":[]}""")
 
         // When -- parsing recording credits
-        val credits = MusicBrainzParser.parseRecordingCredits(json)
+        val credits = MusicBrainzCreditParser.parseRecordingCredits(json)
 
         // Then -- empty list returned
         assertTrue(credits.isEmpty())
@@ -382,7 +382,7 @@ class MusicBrainzParserTest {
         val json = JSONObject(RELEASE_GROUP_WITH_RELEASES)
 
         // When -- parsing release group detail
-        val detail = MusicBrainzParser.parseReleaseGroupDetail(json)
+        val detail = MusicBrainzCreditParser.parseReleaseGroupDetail(json)
 
         // Then -- detail has correct id, title, and list of releases
         assertEquals("rg1", detail.id)
@@ -396,7 +396,7 @@ class MusicBrainzParserTest {
         val json = JSONObject(RELEASE_GROUP_WITH_RELEASES)
 
         // When -- parsing release group detail
-        val detail = MusicBrainzParser.parseReleaseGroupDetail(json)
+        val detail = MusicBrainzCreditParser.parseReleaseGroupDetail(json)
 
         // Then -- first release has all fields extracted
         val release = detail.releases[0]
@@ -416,7 +416,7 @@ class MusicBrainzParserTest {
         val json = JSONObject("""{"id":"rg1","title":"No Releases"}""")
 
         // When -- parsing release group detail
-        val detail = MusicBrainzParser.parseReleaseGroupDetail(json)
+        val detail = MusicBrainzCreditParser.parseReleaseGroupDetail(json)
 
         // Then -- releases list is empty
         assertEquals("rg1", detail.id)
