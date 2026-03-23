@@ -16,12 +16,13 @@
 2. `NotFound.suggestions: List<SearchCandidate>?` — carries near-miss candidates when identity resolution finds results below the match threshold.
 
 **Key design decisions**:
-- **`identityMatchScore` uses Int on 0-100 scale**, matching `SearchCandidate.score`. Distinct from `confidence: Float` (0.0-1.0) which measures data quality, not identity quality. `null` means no fuzzy matching occurred (MBID was pre-provided or result was cached).
-- **Score stamped on all results**, not just the identity type. A developer requesting ALBUM_ART gets the identity score without also requesting GENRE.
-- **Suggestions reuse `SearchCandidate`** — the same type returned by `engine.search()`. Contains title, artist, score, disambiguation text, and MBID. Developers can show "did you mean?" and re-enrich with the chosen MBID.
-- **Suggestions propagated to all NotFound results.** The engine attaches identity suggestions to every type that ended up as NotFound, so the developer finds them regardless of which type they check.
+- **`IdentityMatch` enum** (`RESOLVED`, `BEST_EFFORT`, `SUGGESTIONS`) on both `Success` and `NotFound`. Single field to route on — no magic numbers, no checking multiple fields. `null` means identity resolution wasn't needed (MBID pre-provided or cached).
+- **Short-circuit on `SUGGESTIONS`**. When identity fails with near-miss candidates, the engine returns `NotFound(SUGGESTIONS)` immediately for all types — no provider fan-out, no wasted API calls. The developer shows "did you mean?", user picks, re-enriches with the correct MBID. Saves ~14s vs the old behavior of querying all providers with a bad name.
+- **`BEST_EFFORT` for unverified results**. When identity fails without candidates (truly nothing found), providers try fuzzy searches. Results are stamped `BEST_EFFORT` so the developer can show a warning.
+- **`identityMatchScore` on 0-100 scale** (only when `RESOLVED`), matching `SearchCandidate.score`. Distinct from `confidence: Float` (0.0-1.0) which measures data quality, not identity quality.
+- **Suggestions reuse `SearchCandidate`** — the same type returned by `engine.search()`. Contains title, artist, score, disambiguation text, and MBID.
+- **Fuzzy fallback search**. MusicBrainz quoted search (`artist:"Radohead"`) returns zero results for typos. When empty, falls back to unquoted Lucene `~` fuzzy search to find near-miss candidates for suggestions. One extra API call, only in the typo case.
 - **Max 3 suggestions** to keep the response lightweight. The developer can call `search()` for more.
-- **No extra API calls.** The candidates were already fetched by MusicBrainz search — they were just being discarded when none met the threshold.
 
 **Status**: Active
 

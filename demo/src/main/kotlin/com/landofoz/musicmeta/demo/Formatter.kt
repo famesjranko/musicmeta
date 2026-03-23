@@ -6,6 +6,7 @@ import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
+import com.landofoz.musicmeta.IdentityMatch
 import com.landofoz.musicmeta.ProviderInfo
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.demo.ui.Terminal
@@ -31,7 +32,11 @@ object Formatter {
             } else {
                 snippet(result.data)
             }
-            term.success(typeName(type), "$detail  $conf")
+            if (result.identityMatch == IdentityMatch.BEST_EFFORT) {
+                term.warning(typeName(type), "$detail  $conf ${term.styled("[unverified]", term.theme.warning)}")
+            } else {
+                term.success(typeName(type), "$detail  $conf")
+            }
         }
 
         if (rest.isNotEmpty() && successes.isNotEmpty()) term.println()
@@ -61,10 +66,10 @@ object Formatter {
         term.summary(found, notFound, errors, cached = cacheHits, timedOut = timedOut)
 
         // Show "Did you mean?" when identity resolution had near-miss candidates
-        val suggestions = rest.map { it.value }
+        val suggestionsResult = rest.map { it.value }
             .filterIsInstance<EnrichmentResult.NotFound>()
-            .firstOrNull { it.suggestions != null }
-            ?.suggestions
+            .firstOrNull { it.identityMatch == IdentityMatch.SUGGESTIONS }
+        val suggestions = suggestionsResult?.suggestions
         if (suggestions != null) {
             term.println()
             term.warning("Did you mean?", "Identity match below threshold")

@@ -6,6 +6,7 @@ import com.landofoz.musicmeta.EnrichmentConfig
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentEngine
 import com.landofoz.musicmeta.ErrorKind
+import com.landofoz.musicmeta.IdentityMatch
 import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentLogger
 import com.landofoz.musicmeta.EnrichmentRequest
@@ -58,10 +59,18 @@ class DefaultEnrichmentEngine(
                     resolveIdentity(request, results, uncachedTypes).also { identityResult = it.second }.first
                 } else request
 
-                results.putAll(resolveTypes(enrichedRequest, uncachedTypes, identityResult))
-                applyCatalogFiltering(results)
-                stampIdentityScore(results, identityResult)
-                propagateIdentitySuggestions(results, identityResult)
+                // Short-circuit: when identity failed with suggestions, skip provider fan-out
+                val identityNotFound = identityResult as? EnrichmentResult.NotFound
+                if (identityNotFound?.suggestions != null) {
+                    for (type in uncachedTypes) {
+                        results[type] = EnrichmentResult.NotFound(type, "engine",
+                            suggestions = identityNotFound.suggestions, identityMatch = IdentityMatch.SUGGESTIONS)
+                    }
+                } else {
+                    results.putAll(resolveTypes(enrichedRequest, uncachedTypes, identityResult))
+                    applyCatalogFiltering(results)
+                    stampIdentityMatch(results, identityResult)
+                }
             }
         } catch (_: TimeoutCancellationException) {
             logger.warn(TAG, "Enrich timed out after ${config.enrichTimeoutMs}ms")
@@ -243,30 +252,29 @@ class DefaultEnrichmentEngine(
         return if (override != null) result.copy(confidence = override) else result
     }
 
-    /** Stamps identity match score on all freshly resolved Success results. */
-    private fun stampIdentityScore(
+    /** Stamps [IdentityMatch] and score on all freshly resolved results. */
+    private fun stampIdentityMatch(
         results: MutableMap<EnrichmentType, EnrichmentResult>,
         identityResult: EnrichmentResult?,
     ) {
-        val score = (identityResult as? EnrichmentResult.Success)
-            ?.let { (it.confidence * 100).toInt() } ?: return
-        for ((type, result) in results) {
-            if (result is EnrichmentResult.Success && result.identityMatchScore == null) {
-                results[type] = result.copy(identityMatchScore = score)
+        when (identityResult) {
+            is EnrichmentResult.Success -> {
+                val score = (identityResult.confidence * 100).toInt()
+                for ((type, result) in results) {
+                    if (result is EnrichmentResult.Success && result.identityMatch == null) {
+                        results[type] = result.copy(identityMatch = IdentityMatch.RESOLVED, identityMatchScore = score)
+                    }
+                }
             }
-        }
-    }
-
-    /** Propagates identity resolution suggestions to all NotFound results. */
-    private fun propagateIdentitySuggestions(
-        results: MutableMap<EnrichmentType, EnrichmentResult>,
-        identityResult: EnrichmentResult?,
-    ) {
-        val suggestions = (identityResult as? EnrichmentResult.NotFound)?.suggestions ?: return
-        for ((type, result) in results) {
-            if (result is EnrichmentResult.NotFound && result.suggestions == null) {
-                results[type] = result.copy(suggestions = suggestions)
+            is EnrichmentResult.NotFound -> {
+                // Identity failed without suggestions — mark Success results as best-effort
+                for ((type, result) in results) {
+                    if (result is EnrichmentResult.Success && result.identityMatch == null) {
+                        results[type] = result.copy(identityMatch = IdentityMatch.BEST_EFFORT)
+                    }
+                }
             }
+            else -> {} // No identity resolution attempted
         }
     }
 

@@ -72,18 +72,17 @@ val results = engine.enrich(
 )
 
 when (val art = results[EnrichmentType.ALBUM_ART]) {
-    is EnrichmentResult.Success -> {
-        val artwork = art.data as EnrichmentData.Artwork
-        println("Cover: ${artwork.url}")           // 1200px artwork URL
-        println("Thumb: ${artwork.thumbnailUrl}")   // 250px thumbnail
-        println("Confidence: ${art.confidence}")    // 0.0-1.0
-        println("Match: ${art.identityMatchScore}") // 0-100 identity quality, null if MBID was provided
+    is EnrichmentResult.Success -> when (art.identityMatch) {
+        IdentityMatch.RESOLVED -> println("Cover: ${(art.data as EnrichmentData.Artwork).url} (match: ${art.identityMatchScore}%)")
+        IdentityMatch.BEST_EFFORT -> println("Cover (unverified): ${(art.data as EnrichmentData.Artwork).url}")
+        null -> println("Cover: ${(art.data as EnrichmentData.Artwork).url}")  // MBID was provided
     }
-    is EnrichmentResult.NotFound -> {
-        if (art.suggestions != null) {
+    is EnrichmentResult.NotFound -> when (art.identityMatch) {
+        IdentityMatch.SUGGESTIONS -> {
             println("Did you mean?")
             art.suggestions!!.forEach { println("  ${it.title} (${it.score}%) ${it.disambiguation ?: ""}") }
-        } else println("No art found")
+        }
+        else -> println("No art found")
     }
     is EnrichmentResult.RateLimited -> println("Try again later")
     is EnrichmentResult.Error -> println("Error: ${art.message}")

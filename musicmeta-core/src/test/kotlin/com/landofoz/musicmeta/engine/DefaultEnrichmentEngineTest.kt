@@ -230,9 +230,9 @@ class DefaultEnrichmentEngineTest {
         assertTrue("Should have lastfm source", "lastfm" in sources)
     }
 
-    // --- Identity match score ---
+    // --- Identity match (RESOLVED / BEST_EFFORT / SUGGESTIONS) ---
 
-    @Test fun `enrich stamps identityMatchScore from identity resolution`() = runTest {
+    @Test fun `enrich stamps RESOLVED with score from identity resolution`() = runTest {
         // Given — identity provider resolves with confidence 0.85 (= score 85)
         val idProvider = FakeProvider(id = "mb", isIdentityProvider = true, capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)))
             .also { it.givenIdentityResult(EnrichmentResult.Success(EnrichmentType.GENRE, EnrichmentData.Metadata(genres = listOf("rock")), "mb", 0.85f, resolvedIdentifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-123"))) }
@@ -243,12 +243,13 @@ class DefaultEnrichmentEngineTest {
         // When — enriching with identity resolution
         val results = e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
 
-        // Then — downstream result carries the identity match score
+        // Then — RESOLVED with score
         val artResult = results[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success
+        assertEquals(IdentityMatch.RESOLVED, artResult.identityMatch)
         assertEquals(85, artResult.identityMatchScore)
     }
 
-    @Test fun `enrich leaves identityMatchScore null when no identity resolution needed`() = runTest {
+    @Test fun `enrich leaves identityMatch null when no identity resolution needed`() = runTest {
         // Given — request already has MBID, no identity resolution needed
         val p = FakeProvider(id = "p", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100)))
             .also { it.givenResult(EnrichmentType.ALBUM_ART, art("p")) }
@@ -257,38 +258,17 @@ class DefaultEnrichmentEngineTest {
         // When — enriching (identity resolution skipped)
         val results = engine(p).enrich(reqWithMbid, setOf(EnrichmentType.ALBUM_ART))
 
-        // Then — no identity match score (identity was pre-resolved)
+        // Then — null identity match (pre-resolved, confident)
         val artResult = results[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success
+        assertNull(artResult.identityMatch)
         assertNull(artResult.identityMatchScore)
     }
 
-    // --- Identity suggestions ("did you mean?") ---
-
-    @Test fun `enrich propagates identity suggestions to NotFound results`() = runTest {
-        // Given — identity provider returns NotFound with suggestions (score below threshold)
+    @Test fun `enrich short-circuits with SUGGESTIONS when identity fails with candidates`() = runTest {
+        // Given — identity provider returns NotFound with suggestions
         val suggestions = listOf(
             SearchCandidate("Bush", null, "1992", "GB", "Group", 75, null, EnrichmentIdentifiers(musicBrainzId = "mbid-gb"), "mb", disambiguation = "British rock band"),
             SearchCandidate("Bush", null, "1994", "CA", "Group", 70, null, EnrichmentIdentifiers(musicBrainzId = "mbid-ca"), "mb", disambiguation = "Canadian band"),
-        )
-        val idProvider = FakeProvider(id = "mb", isIdentityProvider = true, capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)))
-            .also { it.givenIdentityResult(EnrichmentResult.NotFound(EnrichmentType.GENRE, "mb", suggestions = suggestions)) }
-        val artProvider = FakeProvider(id = "caa", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100, identifierRequirement = IdentifierRequirement.MUSICBRAINZ_ID)))
-        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider, artProvider)), cache, FakeHttpClient(), EnrichmentConfig(enableIdentityResolution = true))
-
-        // When — enriching with identity resolution that fails with suggestions
-        val results = e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
-
-        // Then — NotFound result carries the identity suggestions
-        val artResult = results[EnrichmentType.ALBUM_ART] as EnrichmentResult.NotFound
-        assertNotNull(artResult.suggestions)
-        assertEquals(2, artResult.suggestions!!.size)
-        assertEquals("British rock band", artResult.suggestions!![0].disambiguation)
-    }
-
-    @Test fun `enrich does not attach suggestions to Success results`() = runTest {
-        // Given — identity fails with suggestions, but downstream provider finds data anyway
-        val suggestions = listOf(
-            SearchCandidate("Bush", null, null, null, null, 75, null, EnrichmentIdentifiers(musicBrainzId = "mbid-1"), "mb"),
         )
         val idProvider = FakeProvider(id = "mb", isIdentityProvider = true, capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)))
             .also { it.givenIdentityResult(EnrichmentResult.NotFound(EnrichmentType.GENRE, "mb", suggestions = suggestions)) }
@@ -296,11 +276,32 @@ class DefaultEnrichmentEngineTest {
             .also { it.givenResult(EnrichmentType.ALBUM_ART, art("deezer")) }
         val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider, artProvider)), cache, FakeHttpClient(), EnrichmentConfig(enableIdentityResolution = true))
 
-        // When — enriching (identity fails but Deezer finds art via fuzzy search)
+        // When — enriching with identity resolution that fails with suggestions
         val results = e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
 
-        // Then — Success result, no suggestions needed
-        assertTrue(results[EnrichmentType.ALBUM_ART] is EnrichmentResult.Success)
+        // Then — short-circuited: NotFound with SUGGESTIONS, downstream provider NOT called
+        val artResult = results[EnrichmentType.ALBUM_ART] as EnrichmentResult.NotFound
+        assertEquals(IdentityMatch.SUGGESTIONS, artResult.identityMatch)
+        assertEquals(2, artResult.suggestions!!.size)
+        assertEquals("British rock band", artResult.suggestions!![0].disambiguation)
+        assertEquals(0, artProvider.enrichCalls.size) // short-circuited, never called
+    }
+
+    @Test fun `enrich stamps BEST_EFFORT when identity fails without suggestions`() = runTest {
+        // Given — identity provider returns NotFound without suggestions (truly nothing found)
+        val idProvider = FakeProvider(id = "mb", isIdentityProvider = true, capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)))
+            .also { it.givenIdentityResult(EnrichmentResult.NotFound(EnrichmentType.GENRE, "mb")) }
+        val artProvider = FakeProvider(id = "deezer", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 50)))
+            .also { it.givenResult(EnrichmentType.ALBUM_ART, art("deezer")) }
+        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider, artProvider)), cache, FakeHttpClient(), EnrichmentConfig(enableIdentityResolution = true))
+
+        // When — enriching (identity fails, providers try fuzzy search)
+        val results = e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
+
+        // Then — Success but marked as BEST_EFFORT
+        val artResult = results[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success
+        assertEquals(IdentityMatch.BEST_EFFORT, artResult.identityMatch)
+        assertNull(artResult.identityMatchScore)
     }
 
     // --- Manual selection flag ---

@@ -17,6 +17,27 @@ enum class ErrorKind {
 }
 
 /**
+ * Describes how identity resolution (MusicBrainz lookup) went for this result.
+ *
+ * | Value | Meaning | Developer Action |
+ * |-------|---------|-----------------|
+ * | [RESOLVED] | Identity matched confidently | Show results normally |
+ * | [BEST_EFFORT] | Identity failed, results from unverified fuzzy provider searches | Show with caution |
+ * | [SUGGESTIONS] | Identity failed, near-miss candidates available | Show "did you mean?" prompt |
+ *
+ * `null` on [EnrichmentResult.Success.identityMatch] means identity resolution
+ * was not needed (MBID was pre-provided) or the result was cached — treat as confident.
+ */
+enum class IdentityMatch {
+    /** Identity resolution matched an entity. [EnrichmentResult.Success.identityMatchScore] has the score. */
+    RESOLVED,
+    /** Identity resolution failed. Results are from unverified fuzzy provider searches. */
+    BEST_EFFORT,
+    /** Identity resolution failed but found near-miss candidates. Check [EnrichmentResult.NotFound.suggestions]. */
+    SUGGESTIONS,
+}
+
+/**
  * Outcome of an enrichment attempt for a single type.
  *
  * ## Confidence Scoring
@@ -49,31 +70,27 @@ sealed class EnrichmentResult {
         /** Identifiers resolved during enrichment (e.g., MBIDs from identity resolution). */
         val resolvedIdentifiers: EnrichmentIdentifiers? = null,
         /**
-         * Identity resolution match score (0-100), indicating how confident the
-         * entity match was. Same scale as [SearchCandidate.score].
-         * - `null` when identity was pre-resolved (MBID provided) or result was cached
-         * - `100` when looked up by exact ID during identity resolution
-         * - `80-99` for high-confidence fuzzy matches
-         *
-         * Developers can use this to decide whether to show results immediately
-         * (high score) or prompt the user with [EnrichmentEngine.search] candidates
-         * for disambiguation (low score).
+         * Identity resolution match score (0-100), same scale as [SearchCandidate.score].
+         * Only set when [identityMatch] is [IdentityMatch.RESOLVED].
          */
         val identityMatchScore: Int? = null,
+        /** How identity resolution went for this result. `null` when MBID was pre-provided or cached. */
+        val identityMatch: IdentityMatch? = null,
     ) : EnrichmentResult()
 
     /**
      * Provider searched but found nothing.
      *
-     * When identity resolution finds candidates below the match threshold,
-     * [suggestions] carries the near-miss candidates. Developers can show
-     * a "did you mean?" prompt and re-enrich with the chosen MBID via
-     * [EnrichmentEngine.search] or by passing [SearchCandidate.identifiers].
+     * When [identityMatch] is [IdentityMatch.SUGGESTIONS], [suggestions] carries
+     * near-miss candidates. Developers can show a "did you mean?" prompt and
+     * re-enrich with the chosen MBID.
      */
     data class NotFound(
         val type: EnrichmentType,
         val provider: String,
         val suggestions: List<SearchCandidate>? = null,
+        /** How identity resolution went for this result. `null` when not applicable. */
+        val identityMatch: IdentityMatch? = null,
     ) : EnrichmentResult()
 
     /** Provider is rate limited — try later. */
