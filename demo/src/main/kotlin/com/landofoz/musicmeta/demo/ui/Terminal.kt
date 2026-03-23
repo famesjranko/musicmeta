@@ -48,9 +48,11 @@ class Terminal(val theme: Theme) {
     fun keyValue(key: String, value: String) =
         println("  ${styled(key.padEnd(12), theme.accent)}$value")
 
-    fun summary(found: Int, skipped: Int, errors: Int) {
-        val parts = mutableListOf(styled("$found found", theme.success))
-        if (skipped > 0) parts += styled("$skipped skipped", theme.muted)
+    fun summary(found: Int, notFound: Int, errors: Int, cached: Int = 0, timedOut: Int = 0) {
+        val foundLabel = if (cached > 0) "$found found ($cached cached)" else "$found found"
+        val parts = mutableListOf(styled(foundLabel, theme.success))
+        if (notFound > 0) parts += styled("$notFound not found", theme.muted)
+        if (timedOut > 0) parts += styled("$timedOut timed out", theme.warning)
         if (errors > 0) parts += styled("$errors errors", theme.error)
         println("\n  ${parts.joinToString(styled(" ${theme.dot} ", theme.muted))}")
     }
@@ -66,6 +68,11 @@ class Terminal(val theme: Theme) {
         System.out.flush()
         return reader.readLine()
     }
+
+    /** Renders a clickable terminal hyperlink (OSC 8). Falls back to plain label in non-ANSI mode. */
+    fun link(url: String, label: String): String =
+        if (theme.reset.isNotEmpty()) "\u001b]8;;$url\u0007${styled(label, theme.info)}\u001b]8;;\u0007"
+        else label
 
     /** Clear the current line (for spinner cleanup). */
     fun clearLine() = print("\r${" ".repeat(72)}\r")

@@ -1,6 +1,8 @@
 package com.landofoz.musicmeta.demo
 
 import com.landofoz.musicmeta.ApiKeyConfig
+import com.landofoz.musicmeta.CatalogFilterMode
+import com.landofoz.musicmeta.EnrichmentConfig
 import com.landofoz.musicmeta.EnrichmentEngine
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentType
@@ -16,33 +18,52 @@ fun main(args: Array<String>) {
 
     term.banner("musicmeta CLI")
 
-    val engine = buildEngine()
-    Formatter.printProviders(engine.getProviders(), term)
+    val state = DemoState(logger = DemoLogger(term))
+    state.rebuild()
+    Formatter.printProviders(state.engine.getProviders(), term)
     term.println()
 
     if (args.isNotEmpty()) {
-        runSingleCommand(args, engine, term, spinner)
+        runSingleCommand(args, state, term, spinner)
     } else {
         Formatter.printHelp(term)
         term.println()
-        repl(engine, term, spinner)
+        repl(state, term, spinner)
     }
 }
 
-private fun buildEngine(): EnrichmentEngine {
-    val secrets = loadSecrets()
-    val keys = ApiKeyConfig(
-        lastFmKey = secrets["lastfm.apikey"] ?: env("LASTFM_API_KEY"),
-        fanartTvProjectKey = secrets["fanarttv.apikey"] ?: env("FANARTTV_API_KEY"),
-        discogsPersonalToken = secrets["discogs.token"] ?: env("DISCOGS_TOKEN"),
-    )
-    return EnrichmentEngine.Builder()
-        .apiKeys(keys)
-        .withDefaultProviders()
-        .build()
+/** Mutable engine state — rebuilt when config, catalog, or verbose settings change. */
+class DemoState(
+    var config: EnrichmentConfig = EnrichmentConfig(),
+    val cache: TrackingCache = TrackingCache(),
+    val logger: DemoLogger,
+    val catalog: DemoCatalog = DemoCatalog(),
+    var catalogMode: CatalogFilterMode = CatalogFilterMode.UNFILTERED,
+) {
+    lateinit var engine: EnrichmentEngine
+    private val secrets = loadSecrets()
+
+    fun rebuild() {
+        val keys = ApiKeyConfig(
+            lastFmKey = secrets["lastfm.apikey"] ?: env("LASTFM_API_KEY"),
+            fanartTvProjectKey = secrets["fanarttv.apikey"] ?: env("FANARTTV_API_KEY"),
+            discogsPersonalToken = secrets["discogs.token"] ?: env("DISCOGS_TOKEN"),
+        )
+        val effectiveConfig = if (catalogMode != CatalogFilterMode.UNFILTERED) {
+            config.copy(catalogProvider = catalog, catalogFilterMode = catalogMode)
+        } else config
+
+        engine = EnrichmentEngine.Builder()
+            .apiKeys(keys)
+            .config(effectiveConfig)
+            .cache(cache)
+            .logger(logger)
+            .withDefaultProviders()
+            .build()
+    }
 }
 
-private fun repl(engine: EnrichmentEngine, term: Terminal, spinner: Spinner) {
+private fun repl(state: DemoState, term: Terminal, spinner: Spinner) {
     while (true) {
         val line = term.prompt() ?: break
         val trimmed = line.trim()
@@ -52,16 +73,31 @@ private fun repl(engine: EnrichmentEngine, term: Terminal, spinner: Spinner) {
             trimmed.equals("quit", ignoreCase = true) ||
                 trimmed.equals("exit", ignoreCase = true) -> break
             trimmed.equals("help", ignoreCase = true) -> Formatter.printHelp(term)
+            trimmed.equals("providers detail", ignoreCase = true) ->
+                Formatter.printProviderDetail(state.engine.getProviders(), term)
             trimmed.equals("providers", ignoreCase = true) ->
-                Formatter.printProviders(engine.getProviders(), term)
-            else -> executeCommand(trimmed, engine, term, spinner)
+                Formatter.printProviders(state.engine.getProviders(), term)
+            trimmed.equals("config", ignoreCase = true) ->
+                Formatter.printConfig(state.config, state.logger.enabled, state.catalogMode, term)
+            trimmed.startsWith("config ", ignoreCase = true) ->
+                handleConfig(trimmed.substringAfter("config ").trim(), state, term)
+            trimmed.equals("verbose", ignoreCase = true) -> toggleVerbose(state, term)
+            trimmed.equals("cache", ignoreCase = true) -> Formatter.printCacheStats(state.cache, term)
+            trimmed.startsWith("cache ", ignoreCase = true) ->
+                handleCache(trimmed.substringAfter("cache ").trim(), state, term)
+            trimmed.equals("catalog", ignoreCase = true) ->
+                Formatter.printCatalog(state.catalog, state.catalogMode, term)
+            trimmed.startsWith("catalog ", ignoreCase = true) ->
+                handleCatalog(trimmed.substringAfter("catalog ").trim(), state, term)
+            else -> executeCommand(trimmed, state, term, spinner)
         }
         term.println()
     }
 }
 
-private fun executeCommand(input: String, engine: EnrichmentEngine, term: Terminal, spinner: Spinner) {
-    val command = parseCommand(input)
+private fun executeCommand(input: String, state: DemoState, term: Terminal, spinner: Spinner) {
+    val (cleanInput, customTypes) = extractTypes(input)
+    val command = parseCommand(cleanInput)
     if (command == null) {
         term.info("Unknown command. Type 'help' for usage.")
         return
@@ -70,19 +106,28 @@ private fun executeCommand(input: String, engine: EnrichmentEngine, term: Termin
     runBlocking {
         when (command) {
             is Command.Enrich -> {
-                val (label, types) = when (command.request) {
-                    is EnrichmentRequest.ForArtist -> "Enriching artist \"${command.request.name}\"" to ARTIST_TYPES
-                    is EnrichmentRequest.ForAlbum -> "Enriching album \"${command.request.title}\" by \"${command.request.artist}\"" to ALBUM_TYPES
-                    is EnrichmentRequest.ForTrack -> "Enriching track \"${command.request.title}\" by \"${command.request.artist}\"" to TRACK_TYPES
+                val (label, defaultTypes) = when (command.request) {
+                    is EnrichmentRequest.ForArtist ->
+                        "Enriching artist \"${command.request.name}\"" to ARTIST_TYPES
+                    is EnrichmentRequest.ForAlbum ->
+                        "Enriching album \"${command.request.title}\" by \"${command.request.artist}\"" to ALBUM_TYPES
+                    is EnrichmentRequest.ForTrack ->
+                        "Enriching track \"${command.request.title}\" by \"${command.request.artist}\"" to TRACK_TYPES
                 }
-                val results = spinner.spin("$label...") {
-                    engine.enrich(command.request, types)
+                val types = customTypes ?: defaultTypes
+                val hitsBefore = state.cache.hits
+                val results = if (state.logger.enabled) {
+                    term.info(label)
+                    state.engine.enrich(command.request, types)
+                } else {
+                    spinner.spin("$label...") { state.engine.enrich(command.request, types) }
                 }
-                Formatter.printResults(results, term)
+                val cacheHits = state.cache.hits - hitsBefore
+                Formatter.printResults(results, term, cacheHits)
             }
             is Command.Search -> {
                 val results = spinner.spin("Searching...") {
-                    engine.search(command.request, limit = 10)
+                    state.engine.search(command.request, limit = 10)
                 }
                 Formatter.printSearchResults(results, term)
             }
@@ -90,9 +135,8 @@ private fun executeCommand(input: String, engine: EnrichmentEngine, term: Termin
     }
 }
 
-private fun runSingleCommand(args: Array<String>, engine: EnrichmentEngine, term: Terminal, spinner: Spinner) {
-    val input = args.joinToString(" ")
-    executeCommand(input, engine, term, spinner)
+private fun runSingleCommand(args: Array<String>, state: DemoState, term: Terminal, spinner: Spinner) {
+    executeCommand(args.joinToString(" "), state, term, spinner)
 }
 
 private fun parseCommand(input: String): Command? {
@@ -150,11 +194,10 @@ private fun parseSearchCommand(rest: String): Command? {
 
 private fun env(key: String): String? = System.getenv(key)?.takeIf { it.isNotBlank() }
 
-/** Load API keys from secrets.properties (project root), if it exists. */
 private fun loadSecrets(): Map<String, String> {
     val paths = listOf(
-        java.io.File("secrets.properties"),       // running from demo/
-        java.io.File("../secrets.properties"),     // running from project root
+        java.io.File("secrets.properties"),
+        java.io.File("../secrets.properties"),
     )
     val file = paths.firstOrNull { it.exists() } ?: return emptyMap()
     return file.readLines()
@@ -190,6 +233,7 @@ private val TRACK_TYPES = setOf(
     EnrichmentType.TRACK_POPULARITY, EnrichmentType.SIMILAR_TRACKS,
     EnrichmentType.CREDITS, EnrichmentType.GENRE_DISCOVERY,
 )
+
 private val BY_REGEX = Regex("\\s+by\\s+", RegexOption.IGNORE_CASE)
 
 private sealed class Command {

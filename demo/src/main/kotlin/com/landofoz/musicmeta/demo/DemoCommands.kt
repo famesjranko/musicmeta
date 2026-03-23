@@ -1,0 +1,153 @@
+package com.landofoz.musicmeta.demo
+
+import com.landofoz.musicmeta.CatalogFilterMode
+import com.landofoz.musicmeta.EnrichmentType
+import com.landofoz.musicmeta.demo.ui.Terminal
+import kotlinx.coroutines.runBlocking
+
+fun handleConfig(args: String, state: DemoState, term: Terminal) {
+    val parts = args.split(" ", limit = 2)
+    val key = parts[0].lowercase()
+    val value = parts.getOrNull(1)?.trim()
+
+    if (value == null) {
+        term.info("Usage: config <key> <value>")
+        term.info("Keys: timeout <ms>, confidence <0.0-1.0>, identity on|off")
+        return
+    }
+
+    when (key) {
+        "timeout" -> {
+            val ms = value.toLongOrNull()
+            if (ms == null || ms < 0) { term.info("Invalid timeout: $value"); return }
+            state.config = state.config.copy(enrichTimeoutMs = ms)
+            state.rebuild()
+            term.info("Timeout set to ${ms}ms")
+        }
+        "confidence" -> {
+            val c = value.toFloatOrNull()
+            if (c == null || c !in 0f..1f) { term.info("Invalid confidence: $value (use 0.0-1.0)"); return }
+            state.config = state.config.copy(minConfidence = c)
+            state.rebuild()
+            term.info("Min confidence set to ${"%.2f".format(c)}")
+        }
+        "identity" -> {
+            val on = value.equals("on", ignoreCase = true) || value == "true"
+            val off = value.equals("off", ignoreCase = true) || value == "false"
+            if (!on && !off) { term.info("Usage: config identity on|off"); return }
+            state.config = state.config.copy(enableIdentityResolution = on)
+            state.rebuild()
+            term.info("Identity resolution: ${if (on) "on" else "off"}")
+        }
+        else -> term.info("Unknown config key: $key. Try: timeout, confidence, identity")
+    }
+}
+
+fun handleCache(args: String, state: DemoState, term: Terminal) {
+    when (args.lowercase()) {
+        "clear" -> {
+            runBlocking { state.cache.clear() }
+            term.info("Cache cleared.")
+        }
+        else -> term.info("Usage: cache [clear]")
+    }
+}
+
+fun toggleVerbose(state: DemoState, term: Terminal) {
+    state.logger.enabled = !state.logger.enabled
+    term.info("Verbose logging: ${if (state.logger.enabled) "on" else "off"}")
+}
+
+fun handleCatalog(args: String, state: DemoState, term: Terminal) {
+    val parts = args.split(" ", limit = 2)
+    val cmd = parts[0].lowercase()
+    val value = parts.getOrNull(1)?.trim()
+
+    when (cmd) {
+        "add" -> {
+            if (value.isNullOrBlank()) { term.info("Usage: catalog add <artist>"); return }
+            state.catalog.artists.add(value)
+            if (state.catalogMode == CatalogFilterMode.UNFILTERED) {
+                state.catalogMode = CatalogFilterMode.AVAILABLE_FIRST
+                state.rebuild()
+                term.info("Added \"$value\". Catalog mode auto-set to available-first.")
+            } else {
+                term.info("Added \"$value\" to demo catalog.")
+            }
+        }
+        "remove" -> {
+            if (value.isNullOrBlank()) { term.info("Usage: catalog remove <artist>"); return }
+            if (state.catalog.artists.removeIf { it.equals(value, ignoreCase = true) }) {
+                term.info("Removed \"$value\".")
+            } else {
+                term.info("\"$value\" not in catalog.")
+            }
+        }
+        "mode" -> {
+            if (value == null) { term.info("Usage: catalog mode off|only|first"); return }
+            val mode = when (value.lowercase()) {
+                "off", "unfiltered" -> CatalogFilterMode.UNFILTERED
+                "only", "available_only", "available-only" -> CatalogFilterMode.AVAILABLE_ONLY
+                "first", "available_first", "available-first" -> CatalogFilterMode.AVAILABLE_FIRST
+                else -> { term.info("Unknown mode: $value. Try: off, only, first"); return }
+            }
+            state.catalogMode = mode
+            state.rebuild()
+            term.info("Catalog filter mode: ${mode.name.lowercase().replace("_", " ")}")
+        }
+        else -> term.info("Usage: catalog add|remove <artist> | catalog mode off|only|first")
+    }
+}
+
+/** Extracts --types flag from input, returns (clean command, custom types or null). */
+fun extractTypes(input: String): Pair<String, Set<EnrichmentType>?> {
+    val idx = input.indexOf("--types", ignoreCase = true)
+    if (idx < 0) return input to null
+    val command = input.substring(0, idx).trim()
+    val typeStr = input.substring(idx + "--types".length).trim()
+    val types = typeStr.split(",", " ")
+        .filter { it.isNotBlank() }
+        .mapNotNull { resolveType(it.trim()) }
+        .toSet()
+    return command to types.ifEmpty { null }
+}
+
+fun resolveType(name: String): EnrichmentType? {
+    val normalized = name.uppercase().replace("-", "_")
+    return EnrichmentType.entries.firstOrNull { it.name == normalized }
+        ?: TYPE_ALIASES[name.lowercase()]
+}
+
+val TYPE_ALIASES = mapOf(
+    "art" to EnrichmentType.ALBUM_ART,
+    "back" to EnrichmentType.ALBUM_ART_BACK,
+    "booklet" to EnrichmentType.ALBUM_BOOKLET,
+    "cd" to EnrichmentType.CD_ART,
+    "bio" to EnrichmentType.ARTIST_BIO,
+    "photo" to EnrichmentType.ARTIST_PHOTO,
+    "bg" to EnrichmentType.ARTIST_BACKGROUND,
+    "logo" to EnrichmentType.ARTIST_LOGO,
+    "banner" to EnrichmentType.ARTIST_BANNER,
+    "genre" to EnrichmentType.GENRE,
+    "label" to EnrichmentType.LABEL,
+    "date" to EnrichmentType.RELEASE_DATE,
+    "country" to EnrichmentType.COUNTRY,
+    "metadata" to EnrichmentType.ALBUM_METADATA,
+    "meta" to EnrichmentType.ALBUM_METADATA,
+    "tracks" to EnrichmentType.ALBUM_TRACKS,
+    "editions" to EnrichmentType.RELEASE_EDITIONS,
+    "similar" to EnrichmentType.SIMILAR_ARTISTS,
+    "similar-albums" to EnrichmentType.SIMILAR_ALBUMS,
+    "similar-tracks" to EnrichmentType.SIMILAR_TRACKS,
+    "popularity" to EnrichmentType.ARTIST_POPULARITY,
+    "members" to EnrichmentType.BAND_MEMBERS,
+    "disco" to EnrichmentType.ARTIST_DISCOGRAPHY,
+    "discography" to EnrichmentType.ARTIST_DISCOGRAPHY,
+    "links" to EnrichmentType.ARTIST_LINKS,
+    "timeline" to EnrichmentType.ARTIST_TIMELINE,
+    "radio" to EnrichmentType.ARTIST_RADIO,
+    "lyrics" to EnrichmentType.LYRICS_SYNCED,
+    "plain-lyrics" to EnrichmentType.LYRICS_PLAIN,
+    "credits" to EnrichmentType.CREDITS,
+    "discovery" to EnrichmentType.GENRE_DISCOVERY,
+)
