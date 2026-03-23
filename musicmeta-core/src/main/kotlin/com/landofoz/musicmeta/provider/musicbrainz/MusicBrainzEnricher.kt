@@ -51,7 +51,11 @@ internal class MusicBrainzEnricher(
             return buildAlbumResult(full, type, ConfidenceCalculator.idBasedLookup())
         }
         val releases = api.searchReleases(request.title, request.artist)
-        if (releases.isEmpty()) return EnrichmentResult.NotFound(type, providerId)
+        if (releases.isEmpty()) {
+            val fuzzy = api.searchReleasesFuzzy(request.title, request.artist)
+            return EnrichmentResult.NotFound(type, providerId,
+                suggestions = fuzzy.takeIf { it.isNotEmpty() }?.take(MAX_SUGGESTIONS)?.map { it.toCandidate() })
+        }
         val best = releases.firstOrNull { it.score >= minMatchScore }
             ?: return EnrichmentResult.NotFound(type, providerId,
                 suggestions = releases.take(MAX_SUGGESTIONS).map { it.toCandidate() })
@@ -114,7 +118,11 @@ internal class MusicBrainzEnricher(
         }
 
         val artists = api.searchArtists(request.name)
-        if (artists.isEmpty()) return EnrichmentResult.NotFound(type, providerId)
+        if (artists.isEmpty()) {
+            val fuzzy = api.searchArtistsFuzzy(request.name)
+            return EnrichmentResult.NotFound(type, providerId,
+                suggestions = fuzzy.takeIf { it.isNotEmpty() }?.take(MAX_SUGGESTIONS)?.map { it.toCandidate() })
+        }
 
         val best = pickBestArtist(request.name, artists)
         if (best.score < minMatchScore) {

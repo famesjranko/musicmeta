@@ -30,11 +30,42 @@ class MusicBrainzApi(
         return MusicBrainzParser.parseReleases(json)
     }
 
+    /** Broader fuzzy search (unquoted + Lucene ~) for near-miss suggestions. */
+    suspend fun searchReleasesFuzzy(
+        title: String,
+        artist: String,
+        limit: Int = 3,
+    ): List<MusicBrainzRelease> {
+        val query = encode("release:${escapeLucene(title)}~ AND artistname:${escapeLucene(artist)}~")
+        val json = rateLimiter.execute {
+            when (val r = httpClient.fetchJsonResult("$BASE_URL/release?query=$query&fmt=json&limit=$limit")) {
+                is HttpResult.Ok -> r.body
+                else -> return@execute null
+            }
+        } ?: return emptyList()
+        return MusicBrainzParser.parseReleases(json)
+    }
+
     suspend fun searchArtists(
         name: String,
         limit: Int = 5,
     ): List<MusicBrainzArtist> {
         val query = encode("artist:\"${escapeLucene(name)}\"")
+        val json = rateLimiter.execute {
+            when (val r = httpClient.fetchJsonResult("$BASE_URL/artist?query=$query&fmt=json&limit=$limit")) {
+                is HttpResult.Ok -> r.body
+                else -> return@execute null
+            }
+        } ?: return emptyList()
+        return MusicBrainzParser.parseArtists(json)
+    }
+
+    /** Broader fuzzy search (unquoted + Lucene ~) for near-miss suggestions. */
+    suspend fun searchArtistsFuzzy(
+        name: String,
+        limit: Int = 3,
+    ): List<MusicBrainzArtist> {
+        val query = encode("artist:${escapeLucene(name)}~")
         val json = rateLimiter.execute {
             when (val r = httpClient.fetchJsonResult("$BASE_URL/artist?query=$query&fmt=json&limit=$limit")) {
                 is HttpResult.Ok -> r.body
