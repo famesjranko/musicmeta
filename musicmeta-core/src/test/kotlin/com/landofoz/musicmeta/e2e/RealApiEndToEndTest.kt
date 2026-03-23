@@ -40,15 +40,15 @@ class RealApiEndToEndTest {
             System.getProperty("include.e2e") == "true",
         )
 
-        val httpClient = DefaultHttpClient(USER_AGENT)
+        val f = E2ETestFixture
         engine = EnrichmentEngine.Builder()
-            .addProvider(MusicBrainzProvider(httpClient, RateLimiter(1100)))
-            .addProvider(CoverArtArchiveProvider(httpClient, RateLimiter(100)))
-            .addProvider(WikidataProvider(httpClient, RateLimiter(100)))
-            .addProvider(WikipediaProvider(httpClient, RateLimiter(100)))
-            .addProvider(LrcLibProvider(httpClient, RateLimiter(200)))
-            .addProvider(DeezerProvider(httpClient, RateLimiter(100)))
-            .addProvider(ITunesProvider(httpClient, RateLimiter(3000)))
+            .addProvider(MusicBrainzProvider(f.httpClient, f.mbRateLimiter))
+            .addProvider(CoverArtArchiveProvider(f.httpClient, f.defaultRateLimiter))
+            .addProvider(WikidataProvider(f.httpClient, f.defaultRateLimiter))
+            .addProvider(WikipediaProvider(f.httpClient, f.defaultRateLimiter, wikidataRateLimiter = f.defaultRateLimiter))
+            .addProvider(LrcLibProvider(f.httpClient, f.lrcLibRateLimiter))
+            .addProvider(DeezerProvider(f.httpClient, f.defaultRateLimiter))
+            .addProvider(ITunesProvider(f.httpClient, f.itunesRateLimiter))
             .build()
     }
 
@@ -437,7 +437,6 @@ class RealApiEndToEndTest {
     }
 
     companion object {
-        private const val USER_AGENT =
-            "MusicMetaTest/1.0 (https://github.com/famesjranko/musicmeta)"
+        private const val USER_AGENT = E2ETestFixture.USER_AGENT
     }
 }

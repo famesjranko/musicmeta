@@ -1,7 +1,6 @@
 package com.landofoz.musicmeta.engine
 
 import com.landofoz.musicmeta.EnrichmentData
-import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.SimilarArtist
@@ -64,7 +63,7 @@ object SimilarArtistMerger : ResultMerger {
                     .fold(0f) { acc, s -> acc + s }
                     .coerceAtMost(1.0f)
                 val allSources = group.flatMap { it.sources }.distinct()
-                val mergedIdentifiers = mergeIdentifiers(group.map { it.identifiers })
+                val mergedIdentifiers = ResultMerger.mergeIdentifiers(group.map { it.identifiers })
 
                 SimilarArtist(
                     name = first.name,
@@ -74,16 +73,6 @@ object SimilarArtistMerger : ResultMerger {
                 )
             }
             .sortedByDescending { it.matchScore }
-    }
-
-    /** Merges identifiers from multiple providers. Prefers non-null MBID; combines extra maps. */
-    private fun mergeIdentifiers(ids: List<EnrichmentIdentifiers>): EnrichmentIdentifiers {
-        val mbid = ids.firstNotNullOfOrNull { it.musicBrainzId }
-        val combinedExtra = ids.fold(emptyMap<String, String>()) { acc, id -> acc + id.extra }
-        return EnrichmentIdentifiers(
-            musicBrainzId = mbid,
-            extra = combinedExtra,
-        )
     }
 
     private fun normalize(name: String): String = name.trim().lowercase()

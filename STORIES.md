@@ -7,6 +7,23 @@
 
 ## Decisions
 
+### 2026-03-23: SIMILAR_TRACKS multi-provider merge via Deezer track radio
+
+**Context**: SIMILAR_TRACKS only had Last.fm (`track.getSimilar`). The ROADMAP noted "Deezer radio is artist-seeded, different semantics" but that referred to ARTIST_RADIO (`/artist/{id}/radio`). Deezer also has `/track/{id}/radio` — a track-seeded endpoint returning ~25 similar tracks.
+
+**Decision**: Add Deezer as a second SIMILAR_TRACKS provider with a `SimilarTrackMerger`, following the exact pattern established by `SimilarArtistMerger` in v0.6.0. The merger deduplicates by normalized title+artist, uses additive scoring capped at 1.0, and merges sources/identifiers.
+
+**Key details**:
+- `DeezerApi.searchTrack()` finds the Deezer track ID via `/search/track`, guarded by `ArtistMatcher.isMatch()`
+- `DeezerApi.getTrackRadio()` calls `/track/{id}/radio`, reuses `DeezerRadioTrack` model (same response shape as artist radio)
+- Position-based matchScores for Deezer results (same formula as `toSimilarArtists`)
+- `SimilarTrack` gained a `sources: List<String>` field (matching `SimilarArtist` pattern)
+- SIMILAR_TRACKS is now a mergeable type in the engine — all providers queried, results merged
+
+**Status**: Active
+
+---
+
 ### 2026-03-22: v0.6.0 Recommendations Engine — key architectural decisions
 
 **Context**: Built four new recommendation enrichment types on top of the v0.5.0 engine. Several design decisions worth documenting.

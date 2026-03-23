@@ -28,7 +28,7 @@ import org.junit.Assert.*
  */
 class ProviderValidationTest {
 
-    private lateinit var httpClient: DefaultHttpClient
+    private val f = E2ETestFixture
 
     @Before
     fun setup() {
@@ -36,7 +36,6 @@ class ProviderValidationTest {
             "E2E tests disabled. Run with -Dinclude.e2e=true",
             System.getProperty("include.e2e") == "true",
         )
-        httpClient = DefaultHttpClient(USER_AGENT)
     }
 
     // --- MusicBrainz ---
@@ -44,7 +43,7 @@ class ProviderValidationTest {
     @Test
     fun `MusicBrainz - album search returns scored results`() = runTest {
         // Given — MusicBrainz provider with real HTTP client
-        val provider = MusicBrainzProvider(httpClient, RateLimiter(1100))
+        val provider = MusicBrainzProvider(f.httpClient, f.mbRateLimiter)
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
 
         // When — enriching a well-known album
@@ -64,7 +63,7 @@ class ProviderValidationTest {
     @Test
     fun `MusicBrainz - artist lookup returns relations`() = runTest {
         // Given — MusicBrainz provider with real HTTP client
-        val provider = MusicBrainzProvider(httpClient, RateLimiter(1100))
+        val provider = MusicBrainzProvider(f.httpClient, f.mbRateLimiter)
         val request = EnrichmentRequest.forArtist("Radiohead")
 
         // When — enriching a well-known artist
@@ -82,7 +81,7 @@ class ProviderValidationTest {
     @Test
     fun `MusicBrainz - direct MBID lookup works`() = runTest {
         // Given — request with a pre-known MBID (Radiohead's artist ID)
-        val provider = MusicBrainzProvider(httpClient, RateLimiter(1100))
+        val provider = MusicBrainzProvider(f.httpClient, f.mbRateLimiter)
         val request = EnrichmentRequest.ForArtist(
             identifiers = EnrichmentIdentifiers(musicBrainzId = "a74b1b7f-71a5-4011-9441-d0b5e4122711"),
             name = "Radiohead",
@@ -104,7 +103,7 @@ class ProviderValidationTest {
     @Test
     fun `MusicBrainz - handles special chars (AC DC)`() = runTest {
         // Given — "AC/DC" requires Lucene query escaping for the slash
-        val provider = MusicBrainzProvider(httpClient, RateLimiter(1100))
+        val provider = MusicBrainzProvider(f.httpClient, f.mbRateLimiter)
         val request = EnrichmentRequest.forArtist("AC/DC")
 
         // When — enriching an artist with special characters
@@ -120,7 +119,7 @@ class ProviderValidationTest {
     @Test
     fun `CoverArtArchive - returns art for known release group`() = runTest {
         // Given — CAA provider with a known OK Computer release-group MBID
-        val provider = CoverArtArchiveProvider(httpClient, RateLimiter(100))
+        val provider = CoverArtArchiveProvider(f.httpClient, f.defaultRateLimiter)
         val request = EnrichmentRequest.ForAlbum(
             identifiers = EnrichmentIdentifiers(
                 musicBrainzReleaseGroupId = "d1a49970-e498-32dc-ac72-34debff397b4",
@@ -147,7 +146,7 @@ class ProviderValidationTest {
     @Test
     fun `Wikidata - returns artist photo via P18`() = runTest {
         // Given — Wikidata provider with Radiohead's Wikidata ID (Q44190)
-        val provider = WikidataProvider(httpClient, RateLimiter(100))
+        val provider = WikidataProvider(f.httpClient, f.defaultRateLimiter)
         val request = EnrichmentRequest.ForArtist(
             identifiers = EnrichmentIdentifiers(wikidataId = "Q44190"),
             name = "Radiohead",
@@ -171,7 +170,7 @@ class ProviderValidationTest {
     @Test
     fun `Wikipedia - returns bio for direct title`() = runTest {
         // Given — Wikipedia provider with a direct article title
-        val provider = WikipediaProvider(httpClient, RateLimiter(100))
+        val provider = WikipediaProvider(f.httpClient, f.defaultRateLimiter)
         val request = EnrichmentRequest.ForArtist(
             identifiers = EnrichmentIdentifiers(wikipediaTitle = "Radiohead"),
             name = "Radiohead",
@@ -191,7 +190,7 @@ class ProviderValidationTest {
     @Test
     fun `Wikipedia - resolves bio via Wikidata sitelinks`() = runTest {
         // Given — Air (French band) with Wikidata ID but no direct Wikipedia title
-        val provider = WikipediaProvider(httpClient, RateLimiter(100))
+        val provider = WikipediaProvider(f.httpClient, f.defaultRateLimiter)
         val request = EnrichmentRequest.ForArtist(
             identifiers = EnrichmentIdentifiers(wikidataId = "Q318452"),
             name = "Air",
@@ -210,7 +209,7 @@ class ProviderValidationTest {
     @Test
     fun `Wikipedia - handles title with special chars`() = runTest {
         // Given — title with parentheses that need URL encoding
-        val provider = WikipediaProvider(httpClient, RateLimiter(100))
+        val provider = WikipediaProvider(f.httpClient, f.defaultRateLimiter)
         val request = EnrichmentRequest.ForArtist(
             identifiers = EnrichmentIdentifiers(wikipediaTitle = "Air (French band)"),
             name = "Air",
@@ -228,7 +227,7 @@ class ProviderValidationTest {
     @Test
     fun `LRCLIB - returns lyrics for well-known track`() = runTest {
         // Given — LRCLIB provider searching for "Creep" by Radiohead
-        val provider = LrcLibProvider(httpClient, RateLimiter(200))
+        val provider = LrcLibProvider(f.httpClient, f.lrcLibRateLimiter)
         val request = EnrichmentRequest.forTrack("Creep", "Radiohead", album = "Pablo Honey")
 
         // When — enriching for synced lyrics
@@ -245,7 +244,7 @@ class ProviderValidationTest {
     @Test
     fun `LRCLIB - returns NotFound for nonexistent track`() = runTest {
         // Given — LRCLIB provider searching for a gibberish track
-        val provider = LrcLibProvider(httpClient, RateLimiter(200))
+        val provider = LrcLibProvider(f.httpClient, f.lrcLibRateLimiter)
         val request = EnrichmentRequest.forTrack("zxqwvnmkjhgf", "NonexistentArtist12345")
 
         // When — enriching for synced lyrics
@@ -260,7 +259,7 @@ class ProviderValidationTest {
     @Test
     fun `Deezer - returns album art via search`() = runTest {
         // Given — Deezer provider with real HTTP client
-        val provider = DeezerProvider(httpClient, RateLimiter(100))
+        val provider = DeezerProvider(f.httpClient, f.defaultRateLimiter)
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
 
         // When — enriching for album art
@@ -278,7 +277,7 @@ class ProviderValidationTest {
     @Test
     fun `iTunes - returns album art with upscaled URL`() = runTest {
         // Given — iTunes provider with real HTTP client
-        val provider = ITunesProvider(httpClient, RateLimiter(3000))
+        val provider = ITunesProvider(f.httpClient, f.itunesRateLimiter)
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
 
         // When — enriching for album art
@@ -292,7 +291,6 @@ class ProviderValidationTest {
     }
 
     companion object {
-        private const val USER_AGENT =
-            "MusicMetaTest/1.0 (https://github.com/famesjranko/musicmeta)"
+        private const val USER_AGENT = E2ETestFixture.USER_AGENT
     }
 }

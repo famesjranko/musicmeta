@@ -38,24 +38,19 @@ class EdgeAnalysisTest {
         @JvmStatic
         fun setup() {
             Assume.assumeTrue(System.getProperty("include.e2e") == "true")
-            fun prop(name: String): String =
-                System.getProperty(name, "") .ifBlank {
-                    System.getenv(name.uppercase().replace('.', '_')) ?: ""
-                }
-
-            val http = DefaultHttpClient("MusicMetaEdgeTest/1.0 (edge-analysis@test.com)")
+            val f = E2ETestFixture
             engine = EnrichmentEngine.Builder()
-                .addProvider(MusicBrainzProvider(http, RateLimiter(1100)))
-                .addProvider(CoverArtArchiveProvider(http, RateLimiter(100)))
-                .addProvider(WikidataProvider(http, RateLimiter(100)))
-                .addProvider(WikipediaProvider(http, RateLimiter(100)))
-                .addProvider(LrcLibProvider(http, RateLimiter(200)))
-                .addProvider(DeezerProvider(http, RateLimiter(100)))
-                .addProvider(ITunesProvider(http, RateLimiter(3000)))
-                .addProvider(ListenBrainzProvider(http, RateLimiter(100)))
-                .addProvider(LastFmProvider(prop("lastfm.apikey"), http, RateLimiter(200)))
-                .addProvider(FanartTvProvider(prop("fanarttv.apikey"), http, RateLimiter(100)))
-                .addProvider(DiscogsProvider(prop("discogs.token"), http, RateLimiter(100)))
+                .addProvider(MusicBrainzProvider(f.httpClient, f.mbRateLimiter))
+                .addProvider(CoverArtArchiveProvider(f.httpClient, f.defaultRateLimiter))
+                .addProvider(WikidataProvider(f.httpClient, f.defaultRateLimiter))
+                .addProvider(WikipediaProvider(f.httpClient, f.defaultRateLimiter))
+                .addProvider(LrcLibProvider(f.httpClient, f.lrcLibRateLimiter))
+                .addProvider(DeezerProvider(f.httpClient, f.defaultRateLimiter))
+                .addProvider(ITunesProvider(f.httpClient, f.itunesRateLimiter))
+                .addProvider(ListenBrainzProvider(f.httpClient, f.defaultRateLimiter))
+                .addProvider(LastFmProvider(f.prop("lastfm.apikey"), f.httpClient, f.lastFmRateLimiter))
+                .addProvider(FanartTvProvider(f.prop("fanarttv.apikey"), f.httpClient, f.defaultRateLimiter))
+                .addProvider(DiscogsProvider(f.prop("discogs.token"), f.httpClient, f.defaultRateLimiter))
                 .build()
         }
 

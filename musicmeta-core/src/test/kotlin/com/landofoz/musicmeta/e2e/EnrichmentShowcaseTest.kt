@@ -58,22 +58,21 @@ class EnrichmentShowcaseTest {
             System.getProperty("include.e2e") == "true",
         )
 
-        val http = DefaultHttpClient(USER_AGENT)
-        val deezerRl = RateLimiter(100)
-        val deezerApi = DeezerApi(http, deezerRl)
+        val f = E2ETestFixture
+        val deezerApi = DeezerApi(f.httpClient, f.defaultRateLimiter)
         engine = EnrichmentEngine.Builder()
-            .addProvider(MusicBrainzProvider(http, RateLimiter(1100)))
-            .addProvider(CoverArtArchiveProvider(http, RateLimiter(100)))
-            .addProvider(WikidataProvider(http, RateLimiter(100)))
-            .addProvider(WikipediaProvider(http, RateLimiter(100)))
-            .addProvider(LrcLibProvider(http, RateLimiter(200)))
-            .addProvider(DeezerProvider(http, deezerRl))
+            .addProvider(MusicBrainzProvider(f.httpClient, f.mbRateLimiter))
+            .addProvider(CoverArtArchiveProvider(f.httpClient, f.defaultRateLimiter))
+            .addProvider(WikidataProvider(f.httpClient, f.defaultRateLimiter))
+            .addProvider(WikipediaProvider(f.httpClient, f.defaultRateLimiter))
+            .addProvider(LrcLibProvider(f.httpClient, f.lrcLibRateLimiter))
+            .addProvider(DeezerProvider(f.httpClient, f.defaultRateLimiter))
             .addProvider(SimilarAlbumsProvider(deezerApi))
-            .addProvider(ITunesProvider(http, RateLimiter(3000)))
-            .addProvider(ListenBrainzProvider(http, RateLimiter(100)))
-            .addProvider(LastFmProvider(prop("lastfm.apikey"), http, RateLimiter(200)))
-            .addProvider(FanartTvProvider(prop("fanarttv.apikey"), http, RateLimiter(100)))
-            .addProvider(DiscogsProvider(prop("discogs.token"), http, RateLimiter(100)))
+            .addProvider(ITunesProvider(f.httpClient, f.itunesRateLimiter))
+            .addProvider(ListenBrainzProvider(f.httpClient, f.defaultRateLimiter))
+            .addProvider(LastFmProvider(f.prop("lastfm.apikey"), f.httpClient, f.lastFmRateLimiter))
+            .addProvider(FanartTvProvider(f.prop("fanarttv.apikey"), f.httpClient, f.defaultRateLimiter))
+            .addProvider(DiscogsProvider(f.prop("discogs.token"), f.httpClient, f.defaultRateLimiter))
             .build()
     }
 
@@ -540,14 +539,7 @@ class EnrichmentShowcaseTest {
     }
 
     companion object {
-        private const val USER_AGENT =
-            "MusicMetaShowcase/1.0 (https://github.com/famesjranko/musicmeta)"
-
+        private const val USER_AGENT = E2ETestFixture.USER_AGENT
         private val ALL_TYPES = EnrichmentType.entries.toSet()
-
-        private fun prop(key: String) = System.getProperty(
-            key,
-            System.getenv(key.replace(".", "_").uppercase()) ?: "",
-        )
     }
 }

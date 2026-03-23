@@ -252,11 +252,7 @@ class DefaultHttpClient(
                 } finally { conn.disconnect() }
             } catch (_: IOException) { if (attempt == maxRetries - 1) return null; delay(retryDelay(null, attempt)) }
         }
-        return try {
-            val conn = openConnection(url).apply { connect() }
-            try { if (conn.responseCode !in 200..299) null else conn.responseStream().bufferedReader().use { it.readText() } }
-            finally { conn.disconnect() }
-        } catch (_: IOException) { null }
+        return null // All retries exhausted (429/503 on every attempt)
     }
 
     private fun openConnection(url: String): HttpURLConnection {

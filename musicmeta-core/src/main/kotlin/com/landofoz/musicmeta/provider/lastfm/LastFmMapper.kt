@@ -33,6 +33,7 @@ object LastFmMapper {
                     } else {
                         EnrichmentIdentifiers()
                     },
+                    sources = listOf("lastfm"),
                 )
             },
         )

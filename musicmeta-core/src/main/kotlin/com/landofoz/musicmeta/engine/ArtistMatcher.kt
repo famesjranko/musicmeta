@@ -59,19 +59,23 @@ object ArtistMatcher {
      * - Strip punctuation (AC/DC → acdc)
      * - Collapse whitespace
      */
+    private val DIACRITICS_REGEX = Regex("\\p{InCombiningDiacriticalMarks}+")
+    private val NON_ALPHANUMERIC_REGEX = Regex("[^a-z0-9 ]")
+    private val WHITESPACE_REGEX = Regex("\\s+")
+
     private fun normalize(name: String): String {
         var s = name.lowercase().trim()
         // Strip diacritics
         s = Normalizer.normalize(s, Normalizer.Form.NFD)
-            .replace(Regex("\\p{InCombiningDiacriticalMarks}+"), "")
+            .replace(DIACRITICS_REGEX, "")
         // Normalize & → and
         s = s.replace("&", " and ")
         // Replace punctuation with space (so AC/DC → ac dc, not acdc)
-        s = s.replace(Regex("[^a-z0-9 ]"), " ")
+        s = s.replace(NON_ALPHANUMERIC_REGEX, " ")
         // Remove leading "the "
         s = s.removePrefix("the ")
         // Collapse whitespace
-        s = s.replace(Regex("\\s+"), " ").trim()
+        s = s.replace(WHITESPACE_REGEX, " ").trim()
         return s
     }
 

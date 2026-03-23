@@ -56,11 +56,11 @@ class LrcLibApi(
     }
 
     private fun parseResult(json: JSONObject): LrcLibResult = LrcLibResult(
-        id = json.getLong("id"),
-        trackName = json.getString("trackName"),
-        artistName = json.getString("artistName"),
+        id = json.optLong("id", 0L),
+        trackName = json.optString("trackName", ""),
+        artistName = json.optString("artistName", ""),
         albumName = json.optString("albumName", null),
-        duration = if (json.isNull("duration")) null else json.getDouble("duration"),
+        duration = if (json.isNull("duration")) null else json.optDouble("duration", 0.0),
         instrumental = json.optBoolean("instrumental", false),
         syncedLyrics = json.optString("syncedLyrics", null),
         plainLyrics = json.optString("plainLyrics", null),
