@@ -463,6 +463,34 @@ dependencies {
 
 Then consume as `com.landofoz:musicmeta-core:0.6.0` from `mavenLocal()`.
 
+## Interactive demo
+
+The `demo/` module is a standalone CLI that showcases the full engine API surface. It's a composite build that resolves `musicmeta-core` from local source.
+
+```bash
+cd demo && ../gradlew run -q --console=plain
+```
+
+```
+musicmeta› artist radiohead
+musicmeta› album OK Computer by Radiohead
+musicmeta› track Paranoid Android by Radiohead --types lyrics,credits
+musicmeta› search artist pink floyd
+```
+
+Engine commands let you explore configuration, caching, catalog filtering, and provider capabilities interactively:
+
+```
+musicmeta› config                          # view engine configuration
+musicmeta› config timeout 10000            # set enrichment timeout
+musicmeta› config confidence 0.7           # set min confidence threshold
+musicmeta› verbose                         # toggle provider chain logging
+musicmeta› cache                           # view cache hit/miss stats
+musicmeta› providers detail                # show provider capabilities
+musicmeta› catalog add Radiohead           # add artist to demo catalog
+musicmeta› catalog mode only               # filter recommendations by catalog
+```
+
 ## Running tests
 
 ```bash
