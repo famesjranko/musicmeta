@@ -269,7 +269,7 @@ object Formatter {
             data.plainLyrics?.let { append("plain=${it.lines().size} lines") }
         }
         is EnrichmentData.Biography ->
-            "\"${data.text.take(80)}...\""
+            "\"${data.text.replace(Regex("<[^>]*>"), "").trim().take(80)}...\""
         is EnrichmentData.SimilarArtists ->
             "${data.artists.size} artists: " +
                 data.artists.take(3).joinToString(", ") { "${it.name}(%.1f)".format(it.matchScore) }
