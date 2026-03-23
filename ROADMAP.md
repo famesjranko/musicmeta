@@ -206,7 +206,7 @@ Endpoints with diminishing returns (niche, write APIs, deprecated):
 
 ## Priority Scorecard
 
-Ranked by **impact to consumers × implementation effort** (updated for v0.5.0):
+Ranked by **impact to consumers × implementation effort**:
 
 | # | Feature | New Types | Impact | Effort | Status |
 |---|---------|-----------|--------|--------|--------|
@@ -226,6 +226,18 @@ Ranked by **impact to consumers × implementation effort** (updated for v0.5.0):
 | 14 | Genre confidence scores | Enhancement | Medium | Medium | ✅ Done (v0.5.0) — GenreMerger |
 | 15 | Provider coverage expansion | Enhancement | Medium | Low | ✅ Done (v0.5.0) — 5 providers deepened |
 | 16 | HttpResult/ErrorKind adoption | Enhancement | Low | Medium | ✅ Done (v0.5.0) — all 11 providers |
+| 17 | Similar artists merge | SIMILAR_ARTISTS | High | Medium | ✅ Done (v0.6.0) — 3 providers via SimilarArtistMerger |
+| 18 | Artist radio | ARTIST_RADIO | Medium | Low | ✅ Done (v0.6.0) — Deezer radio endpoint |
+| 19 | Similar albums | SIMILAR_ALBUMS | Medium | Medium | ✅ Done (v0.6.0) — era-proximity scoring |
+| 20 | Genre discovery | GENRE_DISCOVERY | Medium | Medium | ✅ Done (v0.6.0) — GenreAffinityMatcher |
+| 21 | Catalog filtering | Enhancement | High | Medium | ✅ Done (v0.6.0) — CatalogProvider interface + 3 modes |
+| 22 | Artwork merging | Enhancement | High | Medium | ✅ Done — ArtworkMerger, ARTIST_PHOTO (5 providers), ALBUM_ART (5 merged) |
+| 23 | Deezer + Discogs artist photos | Enhancement | Medium | Low | ✅ Done — stopped discarding image data from existing API calls |
+| 24 | Artist top tracks | ARTIST_TOP_TRACKS | High | Medium | ✅ Done — 3 providers merged, no artificial cap |
+| 25 | ErrorKind.TIMEOUT | Enhancement | Medium | Low | ✅ Done — timed-out types get explicit errors |
+| 26 | Band member dedup + solo artists | Enhancement | Medium | Low | ✅ Done — MBID dedup, Person-type returns sole member |
+| 27 | Performance (MB caching + parallel resolveAll) | Enhancement | Medium | Medium | ✅ Done — ~6s faster for artist enrichment |
+| 28 | Search disambiguation | Enhancement | Medium | Low | ✅ Done — SearchCandidate.disambiguation + pick-and-enrich flow |
 
 ---
 
