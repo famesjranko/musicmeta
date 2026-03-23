@@ -125,6 +125,8 @@ data class SearchCandidate(
     val thumbnailUrl: String?,
     val identifiers: EnrichmentIdentifiers,
     val provider: String,
+    /** MusicBrainz disambiguation comment (e.g., "British rock band" vs "Canadian band"). */
+    val disambiguation: String? = null,
 )
 
 data class ProviderInfo(

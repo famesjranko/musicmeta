@@ -72,12 +72,15 @@ object Formatter {
             val year = c.year ?: "-"
             val country = c.country ?: "-"
             val type = c.releaseType ?: "-"
+            val disambig = c.disambiguation?.let { term.styled(" ($it)", term.theme.muted) } ?: ""
             val src = term.styled(c.provider, term.theme.muted)
             term.success(
                 "${i + 1}. ${c.title}$artist".take(40),
-                "$country  $type  $year  score=${c.score}  $src",
+                "$country  $type  $year  score=${c.score}$disambig  $src",
             )
         }
+        term.println()
+        term.info("Use 'pick <number>' to enrich a specific result.")
     }
 
     fun printProviders(providers: List<ProviderInfo>, term: Terminal) {
@@ -173,6 +176,7 @@ object Formatter {
         cmd("track", "<title> by <artist>", "Enrich a track")
         term.println("${" ".repeat(4)}${term.styled("Add --types bio,art,... to select specific types", term.theme.muted)}")
         cmd("search", "artist|album|track ...", "Search for candidates")
+        cmd("pick", "<number>", "Enrich a search result by its MBID")
 
         term.heading("Engine")
         cmd("config", "[key value]", "View or set configuration")

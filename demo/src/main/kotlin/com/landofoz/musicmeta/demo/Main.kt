@@ -6,6 +6,7 @@ import com.landofoz.musicmeta.EnrichmentConfig
 import com.landofoz.musicmeta.EnrichmentEngine
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentType
+import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.demo.ui.Spinner
 import com.landofoz.musicmeta.demo.ui.Terminal
 import com.landofoz.musicmeta.demo.ui.Theme
@@ -41,6 +42,9 @@ class DemoState(
     var catalogMode: CatalogFilterMode = CatalogFilterMode.UNFILTERED,
 ) {
     lateinit var engine: EnrichmentEngine
+    /** Last search results — used by 'pick' command for disambiguation flow. */
+    var lastSearchResults: List<SearchCandidate> = emptyList()
+    var lastSearchType: String? = null // "artist", "album", "track"
     private val secrets = loadSecrets()
 
     fun rebuild() {
@@ -89,6 +93,8 @@ private fun repl(state: DemoState, term: Terminal, spinner: Spinner) {
                 Formatter.printCatalog(state.catalog, state.catalogMode, term)
             trimmed.startsWith("catalog ", ignoreCase = true) ->
                 handleCatalog(trimmed.substringAfter("catalog ").trim(), state, term)
+            trimmed.startsWith("pick ", ignoreCase = true) ->
+                pickCandidate(trimmed.substringAfter("pick ").trim(), state, term, spinner)
             else -> executeCommand(trimmed, state, term, spinner)
         }
         term.println()
@@ -129,9 +135,58 @@ private fun executeCommand(input: String, state: DemoState, term: Terminal, spin
                 val results = spinner.spin("Searching...") {
                     state.engine.search(command.request, limit = 10)
                 }
+                state.lastSearchResults = results
+                state.lastSearchType = when (command.request) {
+                    is EnrichmentRequest.ForArtist -> "artist"
+                    is EnrichmentRequest.ForAlbum -> "album"
+                    is EnrichmentRequest.ForTrack -> "track"
+                }
                 Formatter.printSearchResults(results, term)
             }
         }
+    }
+}
+
+private fun pickCandidate(input: String, state: DemoState, term: Terminal, spinner: Spinner) {
+    val (indexStr, customTypes) = extractTypes(input)
+    val index = indexStr.toIntOrNull()
+    if (index == null || index < 1 || index > state.lastSearchResults.size) {
+        if (state.lastSearchResults.isEmpty()) {
+            term.info("No search results. Run 'search artist <name>' first.")
+        } else {
+            term.info("Pick a number between 1 and ${state.lastSearchResults.size}.")
+        }
+        return
+    }
+    val candidate = state.lastSearchResults[index - 1]
+    val mbid = candidate.identifiers.musicBrainzId
+    val request = when (state.lastSearchType) {
+        "artist" -> EnrichmentRequest.forArtist(candidate.title, mbid = mbid)
+        "album" -> EnrichmentRequest.forAlbum(
+            candidate.title, candidate.artist ?: "", mbid = mbid,
+        )
+        else -> {
+            term.info("Pick is only supported for artist and album searches.")
+            return
+        }
+    }
+    val types = customTypes ?: when (state.lastSearchType) {
+        "artist" -> ARTIST_TYPES
+        "album" -> ALBUM_TYPES
+        else -> TRACK_TYPES
+    }
+    val disambig = candidate.disambiguation?.let { " ($it)" } ?: ""
+    val label = "Enriching ${state.lastSearchType} \"${candidate.title}\"$disambig"
+    runBlocking {
+        val hitsBefore = state.cache.hits
+        val results = if (state.logger.enabled) {
+            term.info(label)
+            state.engine.enrich(request, types)
+        } else {
+            spinner.spin("$label...") { state.engine.enrich(request, types) }
+        }
+        val cacheHits = state.cache.hits - hitsBefore
+        Formatter.printResults(results, term, cacheHits)
     }
 }
 

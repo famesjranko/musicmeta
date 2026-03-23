@@ -83,6 +83,7 @@ class MusicBrainzProvider(
                     musicBrainzId = release.id,
                     musicBrainzReleaseGroupId = release.releaseGroupId,
                 ),
+                disambiguation = release.disambiguation,
             )
         }
 
@@ -96,6 +97,7 @@ class MusicBrainzProvider(
                 releaseType = artist.type, score = artist.score,
                 thumbnailUrl = null, provider = id,
                 identifiers = EnrichmentIdentifiers(musicBrainzId = artist.id),
+                disambiguation = artist.disambiguation,
             )
         }
 
