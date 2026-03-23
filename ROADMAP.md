@@ -116,6 +116,41 @@ Key additions:
 
 ## What's Left
 
+### Ambiguity & Conflict Resolution — Open Design Questions
+
+The engine currently auto-picks the "best" match from MusicBrainz and proceeds silently. The developer never knows if the match was ambiguous, marginal, or potentially wrong. This conflicts with the unopinionated principle — **we shouldn't decide for the developer when we're not sure.**
+
+**Real-world scenarios that need handling:**
+
+| Scenario | Example | Current behavior | Problem |
+|----------|---------|-----------------|---------|
+| **Multiple close matches** | "Bush" — British rock band vs Canadian band | Picks highest MusicBrainz score silently | Developer gets the wrong Bush with no indication |
+| **Obscure/niche artist** | "Ochre" — low score, few tags | Proceeds if score >= 60 | May enrich the wrong entity with no warning |
+| **Name collision** | "Nirvana" — 60s psych vs 90s grunge | Picks whichever MusicBrainz ranks higher | Could flip depending on tag counts |
+| **Near miss / misspelling** | "Readiohead" | Falls below minMatchScore, returns NotFound | No suggestion of "did you mean Radiohead?" |
+| **Provider data conflicts** | Last.fm says "electronic", Discogs says "ambient" | Merged silently via GenreMerger | Correct behavior for genres, but what about factual conflicts? (e.g., different country, different formation date) |
+| **Partial match** | "OK Computer" matches "OK Computer OKNOTOK" | Picks the closest, no indication it was fuzzy | Developer doesn't know the match wasn't exact |
+
+**Design decisions needed:**
+
+1. **Should `enrich()` surface ambiguity?** Options:
+   - Return a confidence/match quality indicator alongside results so the developer can decide whether to trust the match or prompt their user
+   - Add an `ambiguous` flag or `matchQuality` field to the result
+   - Return the top N candidates when confidence is below a threshold, letting the developer choose
+
+2. **Should there be a "safe mode" vs "best effort" mode?**
+   - Safe mode: refuse to auto-pick when ambiguous, return candidates instead
+   - Best effort (current): always pick the best match, let confidence filtering handle quality
+   - Developer chooses which mode fits their app
+
+3. **How to handle factual conflicts across providers?** (e.g., different formation dates, different countries)
+   - Currently only genres are merged; other metadata uses short-circuit (first provider wins)
+   - Should conflicting facts be surfaced, or is first-provider-wins acceptable?
+
+4. **The `search()` API already exists for disambiguation** — should `enrich()` integrate with it, or should disambiguation always be a separate developer-initiated step?
+
+**Principle: the library should never silently guess wrong.** When the engine isn't confident, it should tell the developer so they can involve their user. The worst outcome is enriching the wrong artist and showing incorrect data in the UI.
+
 ### Remaining Gaps (no planned milestone)
 
 - **itunesArtistId** not stored in resolvedIdentifiers — re-searches on every discography call (minor perf tech debt from v0.5.0)
