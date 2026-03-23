@@ -80,7 +80,7 @@ object Formatter {
                 val disambig = c.disambiguation?.let { " ${term.styled("($it)", term.theme.muted)}" } ?: ""
                 term.println("    ${i + 1}. $name$artist  $score$disambig")
             }
-            term.info("Use 'search' to find candidates, then 'pick <number>' to enrich by MBID.")
+            term.info("Use 'pick <number>' to enrich by MBID.")
         }
     }
 

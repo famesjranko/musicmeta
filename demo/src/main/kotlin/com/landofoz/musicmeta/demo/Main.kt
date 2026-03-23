@@ -5,6 +5,7 @@ import com.landofoz.musicmeta.CatalogFilterMode
 import com.landofoz.musicmeta.EnrichmentConfig
 import com.landofoz.musicmeta.EnrichmentEngine
 import com.landofoz.musicmeta.EnrichmentRequest
+import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.demo.ui.Spinner
@@ -130,6 +131,19 @@ private fun executeCommand(input: String, state: DemoState, term: Terminal, spin
                 }
                 val cacheHits = state.cache.hits - hitsBefore
                 Formatter.printResults(results, term, cacheHits)
+                // Store suggestions so 'pick' works from "Did you mean?" prompts
+                val suggestions = results.values
+                    .filterIsInstance<EnrichmentResult.NotFound>()
+                    .firstOrNull { it.suggestions != null }
+                    ?.suggestions
+                if (suggestions != null) {
+                    state.lastSearchResults = suggestions
+                    state.lastSearchType = when (command.request) {
+                        is EnrichmentRequest.ForArtist -> "artist"
+                        is EnrichmentRequest.ForAlbum -> "album"
+                        is EnrichmentRequest.ForTrack -> "track"
+                    }
+                }
             }
             is Command.Search -> {
                 val results = spinner.spin("Searching...") {
