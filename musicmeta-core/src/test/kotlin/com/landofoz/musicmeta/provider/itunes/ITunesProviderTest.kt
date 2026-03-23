@@ -273,6 +273,23 @@ class ITunesProviderTest {
     }
 
     @Test
+    fun `enrich stores itunesArtistId in resolvedIdentifiers for discography`() = runTest {
+        // Given — ForArtist without itunesArtistId; search resolves the artist ID
+        httpClient.givenJsonResponse("search", ITUNES_SEARCH_ARTIST_RESPONSE)
+        httpClient.givenJsonResponse("lookup", ITUNES_LOOKUP_ARTIST_ALBUMS_RESPONSE)
+        val request = EnrichmentRequest.forArtist("Radiohead")
+
+        // When — enriching for artist discography
+        val result = provider.enrich(request, EnrichmentType.ARTIST_DISCOGRAPHY)
+
+        // Then — resolvedIdentifiers includes itunesArtistId for future lookups
+        assertTrue(result is EnrichmentResult.Success)
+        val resolved = (result as EnrichmentResult.Success).resolvedIdentifiers
+        assertNotNull(resolved)
+        assertNotNull("itunesArtistId should be stored", resolved?.get("itunesArtistId"))
+    }
+
+    @Test
     fun `enrich returns NotFound for ALBUM_TRACKS when lookup returns empty`() = runTest {
         // Given — lookup returns only the collection wrapper, no tracks
         httpClient.givenJsonResponse("lookup", ITUNES_LOOKUP_EMPTY_TRACKS_RESPONSE)

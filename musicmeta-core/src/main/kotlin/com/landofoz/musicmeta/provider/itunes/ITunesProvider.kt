@@ -132,6 +132,7 @@ class ITunesProvider(
                 data = ITunesMapper.toDiscography(albums),
                 provider = id,
                 confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
+                resolvedIdentifiers = EnrichmentIdentifiers().withExtra("itunesArtistId", artistId.toString()),
             )
         } catch (e: Exception) {
             mapError(type, e)
