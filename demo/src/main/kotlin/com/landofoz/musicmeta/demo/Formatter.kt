@@ -23,26 +23,25 @@ object Formatter {
         for ((type, result) in successes) {
             result as EnrichmentResult.Success
             found++
-            val provider = result.provider.take(17).padEnd(17)
-            val conf = "%.2f".format(result.confidence)
-            term.success(type.name, "$provider $conf  ${snippet(result.data)}")
+            term.success(typeName(type), snippet(result.data))
         }
 
+        if (rest.isNotEmpty() && successes.isNotEmpty()) term.println()
         for ((type, result) in rest) {
             when (result) {
                 is EnrichmentResult.NotFound -> {
                     skipped++
-                    term.missing(type.name, result.provider)
+                    term.missing(typeName(type), "")
                 }
                 is EnrichmentResult.RateLimited -> {
                     errors++
-                    term.warning(type.name, "rate limited (${result.provider})")
+                    term.warning(typeName(type), "rate limited")
                 }
                 is EnrichmentResult.Error -> {
                     errors++
-                    term.error(type.name, "${result.provider}: ${result.message.take(50)}")
+                    term.error(typeName(type), result.message.take(50))
                 }
-                is EnrichmentResult.Success -> {} // already handled
+                is EnrichmentResult.Success -> {}
             }
         }
 
@@ -92,14 +91,20 @@ object Formatter {
 
     fun printHelp(term: Terminal) {
         term.heading("Commands")
-        term.println("  ${term.styled("artist", term.theme.bold)} <name>                Enrich an artist")
-        term.println("  ${term.styled("album", term.theme.bold)} <title> by <artist>    Enrich an album")
-        term.println("  ${term.styled("track", term.theme.bold)} <title> by <artist>    Enrich a track")
-        term.println("  ${term.styled("search", term.theme.bold)} artist <name>         Search artist candidates")
-        term.println("  ${term.styled("search", term.theme.bold)} album <title> <artist> Search album candidates")
-        term.println("  ${term.styled("providers", term.theme.bold)}                      Show provider status")
-        term.println("  ${term.styled("help", term.theme.bold)}                           Show this help")
-        term.println("  ${term.styled("quit", term.theme.bold)}                           Exit")
+        fun cmd(name: String, args: String, desc: String) {
+            val left = "  ${term.styled(name, term.theme.bold)} $args"
+            // ANSI codes don't take visual width, so pad based on raw text length
+            val rawLen = name.length + args.length + 3
+            term.println("$left${" ".repeat(maxOf(32 - rawLen, 2))}${term.styled(desc, term.theme.muted)}")
+        }
+        cmd("artist", "<name>", "Enrich an artist")
+        cmd("album", "<title> by <artist>", "Enrich an album")
+        cmd("track", "<title> by <artist>", "Enrich a track")
+        cmd("search", "artist <name>", "Search artist candidates")
+        cmd("search", "album <title> <artist>", "Search album candidates")
+        cmd("providers", "", "Show provider status")
+        cmd("help", "", "Show this help")
+        cmd("quit", "", "Exit")
     }
 
     private fun printIdentity(results: Map<EnrichmentType, EnrichmentResult>, term: Terminal) {
@@ -118,6 +123,10 @@ object Formatter {
         identity.wikidataId?.let { term.keyValue("Wikidata:", it) }
         identity.wikipediaTitle?.let { term.keyValue("Wikipedia:", it) }
     }
+
+    /** Human-readable type name: ARTIST_BIO → "Artist Bio" */
+    private fun typeName(type: EnrichmentType): String =
+        type.name.lowercase().split("_").joinToString(" ") { it.replaceFirstChar(Char::uppercase) }
 
     /** One-line summary of enrichment data. Exhaustive over all EnrichmentData subtypes. */
     private fun snippet(data: EnrichmentData): String = when (data) {

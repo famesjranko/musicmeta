@@ -24,6 +24,7 @@ data class Theme(
     val boxBL: String, val boxBR: String,
     val boxH: String, val boxV: String,
     val headingBar: String,
+    val thinBar: String,
     val spinnerFrames: List<String>,
 ) {
     companion object {
@@ -43,6 +44,7 @@ data class Theme(
             boxBL = "\u255a", boxBR = "\u255d",
             boxH = "\u2550", boxV = "\u2551",
             headingBar = "\u2550",
+            thinBar = "\u2500",
             spinnerFrames = listOf(
                 "\u280b", "\u2819", "\u2839", "\u2838",
                 "\u283c", "\u2834", "\u2826", "\u2827",
@@ -56,7 +58,7 @@ data class Theme(
             check = "+", cross = "x", dot = ".", warn = "!",
             arrow = ">", bullet = "*",
             boxTL = "+", boxTR = "+", boxBL = "+", boxBR = "+",
-            boxH = "=", boxV = "|", headingBar = "=",
+            boxH = "=", boxV = "|", headingBar = "=", thinBar = "-",
             spinnerFrames = listOf("|", "/", "-", "\\"),
         )
 

@@ -28,8 +28,9 @@ class Terminal(val theme: Theme) {
     }
 
     fun heading(title: String) {
-        val bar = theme.headingBar.repeat(maxOf(58 - title.length, 4))
-        println(styled("${theme.headingBar.repeat(2)} $title $bar", theme.primary, theme.bold))
+        println()
+        println("  ${styled(title, theme.primary, theme.bold)}")
+        println("  ${styled(theme.thinBar.repeat(56), theme.muted)}")
     }
 
     fun success(label: String, detail: String) =
