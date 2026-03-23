@@ -19,6 +19,7 @@ import com.landofoz.musicmeta.http.RateLimiter
 class ListenBrainzProvider(
     httpClient: HttpClient,
     rateLimiter: RateLimiter,
+    private val topTracksLimit: Int = 50,
 ) : EnrichmentProvider {
 
     private val api = ListenBrainzApi(httpClient, rateLimiter)
@@ -135,7 +136,7 @@ class ListenBrainzProvider(
         type: EnrichmentType,
     ): EnrichmentResult {
         return try {
-            val tracks = api.getTopRecordingsForArtist(artistMbid)
+            val tracks = api.getTopRecordingsForArtist(artistMbid).take(topTracksLimit)
             if (tracks.isEmpty()) return EnrichmentResult.NotFound(type, id)
             success(ListenBrainzMapper.toTopTracks(tracks), type)
         } catch (e: Exception) {

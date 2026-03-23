@@ -85,7 +85,8 @@ interface EnrichmentEngine {
             val deezerApi = DeezerApi(client, defaultRateLimiter)
             addProvider(SimilarAlbumsProvider(deezerApi))
             addProvider(ITunesProvider(client))
-            addProvider(ListenBrainzProvider(client, defaultRateLimiter))
+            addProvider(ListenBrainzProvider(client, defaultRateLimiter,
+                topTracksLimit = config.topTracksLimit))
             addProvider(LrcLibProvider(client, defaultRateLimiter))
 
             // Key-requiring providers (only added if key is provided)
