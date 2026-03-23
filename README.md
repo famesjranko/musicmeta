@@ -18,7 +18,7 @@ Built for music player apps that want Spotify-quality metadata without a commerc
 |  Wikidata ------------------+--> Artist photo, country, dates
 |  Wikipedia -----------------+--> Artist biography, supplemental photos
 |  LRCLIB --------------------+--> Synced + plain lyrics
-|  Deezer --------------------+--> Album art, discography, tracklists, similar artists, radio, similar albums
+|  Deezer --------------------+--> Artist photos, album art, discography, tracklists, similar artists, radio, similar albums
 |  iTunes --------------------+--> Album art, tracklists, discography
 |  Last.fm -------------------+--> Genres, similar artists/tracks, album metadata
 |  ListenBrainz --------------+--> Popularity, discography, similar artists
@@ -168,7 +168,7 @@ object MyEnrichmentModule {
 | Wikidata | Artist photo, country, dates, occupation | No | None |
 | Wikipedia | Artist biography, supplemental photos | No | None |
 | LRCLIB | Synced + plain lyrics | No | None |
-| Deezer | Album art, discography, tracklists, album metadata, similar artists, artist radio, similar albums | No | None |
+| Deezer | Artist photos, album art, discography, tracklists, album metadata, similar artists, artist radio, similar albums | No | None |
 | iTunes | Album art, tracklists, discography, album metadata | No | ~1 req/3sec |
 | ListenBrainz | Popularity, listen counts, discography, similar artists | No | None |
 | Last.fm | Genres, similar artists/tracks, bios, popularity, album metadata | Yes | None |
@@ -186,7 +186,7 @@ object MyEnrichmentModule {
 
 | Category | Types | Multi-provider |
 |----------|-------|----------------|
-| **Artwork** | ALBUM_ART, ALBUM_ART_BACK, ALBUM_BOOKLET, ARTIST_PHOTO, ARTIST_BACKGROUND, ARTIST_LOGO, ARTIST_BANNER, CD_ART | ALBUM_ART (5), ARTIST_PHOTO (3) |
+| **Artwork** | ALBUM_ART, ALBUM_ART_BACK, ALBUM_BOOKLET, ARTIST_PHOTO, ARTIST_BACKGROUND, ARTIST_LOGO, ARTIST_BANNER, CD_ART | ALBUM_ART merged (5 providers via ArtworkMerger), ARTIST_PHOTO merged (4: Wikidata, Fanart.tv, Deezer, Wikipedia) |
 | **Metadata** | GENRE, LABEL, RELEASE_DATE, RELEASE_TYPE, COUNTRY, BAND_MEMBERS, ARTIST_DISCOGRAPHY, ALBUM_TRACKS, ALBUM_METADATA | GENRE merged from 2+, DISCOGRAPHY (4), TRACKS (3), METADATA (4) |
 | **Credits** | CREDITS | MusicBrainz (recording rels) + Discogs (extraartists) |
 | **Editions** | RELEASE_EDITIONS | MusicBrainz (release-group) + Discogs (master versions) |
@@ -197,7 +197,7 @@ object MyEnrichmentModule {
 | **Radio** | ARTIST_RADIO | Deezer /artist/{id}/radio, ordered playlist |
 | **Discovery** | SIMILAR_ALBUMS | Deezer related artists + era scoring |
 
-16 of 31 types have multi-provider coverage with automatic fallback.
+17 of 31 types have multi-provider coverage with automatic fallback. Artwork types (ALBUM_ART, ARTIST_PHOTO) are merged from all providers — the best image is primary, alternatives are available via `Artwork.alternatives`.
 
 ## Recommendations
 
