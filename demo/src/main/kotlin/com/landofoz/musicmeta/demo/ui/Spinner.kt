@@ -2,9 +2,9 @@ package com.landofoz.musicmeta.demo.ui
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 /** Animated braille spinner for long-running operations. */
 class Spinner(private val terminal: Terminal) {
@@ -24,8 +24,8 @@ class Spinner(private val terminal: Terminal) {
         }
 
         val startMs = System.currentTimeMillis()
-        val animJob = withContext(Dispatchers.IO) {
-            launch {
+        return coroutineScope {
+            val animJob = launch(Dispatchers.IO) {
                 var i = 0
                 while (true) {
                     val frame = terminal.styled(frames[i % frames.size], color)
@@ -37,13 +37,13 @@ class Spinner(private val terminal: Terminal) {
                     i++
                 }
             }
-        }
 
-        return try {
-            block()
-        } finally {
-            animJob.cancelAndJoin()
-            terminal.clearLine()
+            try {
+                block()
+            } finally {
+                animJob.cancelAndJoin()
+                terminal.clearLine()
+            }
         }
     }
 
