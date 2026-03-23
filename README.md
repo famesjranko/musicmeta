@@ -467,6 +467,18 @@ Then consume as `com.landofoz:musicmeta-core:0.6.0` from `mavenLocal()`.
 
 The `demo/` module is a standalone CLI that showcases the full engine API surface. It's a composite build that resolves `musicmeta-core` from local source.
 
+8 of 11 providers work without API keys. To enable all providers, either create a `secrets.properties` file in the project root:
+
+```properties
+lastfm.apikey=YOUR_KEY
+fanarttv.apikey=YOUR_KEY
+discogs.token=YOUR_TOKEN
+```
+
+Or set environment variables: `LASTFM_API_KEY`, `FANARTTV_API_KEY`, `DISCOGS_TOKEN`.
+
+Then run:
+
 ```bash
 cd demo && ../gradlew run -q --console=plain
 ```
