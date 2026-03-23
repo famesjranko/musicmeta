@@ -68,16 +68,24 @@ object Formatter {
         }
         term.heading("Search Results")
         candidates.forEachIndexed { i, c ->
+            val num = term.styled("${i + 1}.", term.theme.bold)
+            val name = term.styled(c.title, term.theme.bold)
             val artist = c.artist?.let { " by $it" } ?: ""
-            val year = c.year ?: "-"
-            val country = c.country ?: "-"
-            val type = c.releaseType ?: "-"
-            val disambig = c.disambiguation?.let { term.styled(" ($it)", term.theme.muted) } ?: ""
-            val src = term.styled(c.provider, term.theme.muted)
-            term.success(
-                "${i + 1}. ${c.title}$artist".take(40),
-                "$country  $type  $year  score=${c.score}$disambig  $src",
+            val score = term.styled("${c.score}%", if (c.score >= 90) term.theme.success else term.theme.warning)
+
+            // Line 1: number, name, score
+            val tags = listOfNotNull(
+                c.country,
+                c.releaseType,
+                c.year?.take(4),
             )
+            val tagStr = if (tags.isNotEmpty()) term.styled(tags.joinToString(" ${term.theme.dot} "), term.theme.muted) else ""
+            term.println("  $num $name$artist  $score  $tagStr")
+
+            // Line 2: disambiguation (if present)
+            c.disambiguation?.let {
+                term.println("     ${term.styled(it, term.theme.muted)}")
+            }
         }
         term.println()
         term.info("Use 'pick <number>' to enrich a specific result.")
