@@ -44,6 +44,11 @@ class CoverArtArchiveProvider(
             priority = 100,
             identifierRequirement = IdentifierRequirement.MUSICBRAINZ_ID,
         ),
+        ProviderCapability(
+            type = EnrichmentType.CD_ART,
+            priority = 50,
+            identifierRequirement = IdentifierRequirement.MUSICBRAINZ_ID,
+        ),
     )
 
     override suspend fun enrich(
@@ -62,6 +67,7 @@ class CoverArtArchiveProvider(
                 EnrichmentType.ALBUM_ART -> findArtwork(releaseId, groupId, type)
                 EnrichmentType.ALBUM_ART_BACK -> findImageByType(releaseId, type, "Back")
                 EnrichmentType.ALBUM_BOOKLET -> findImageByType(releaseId, type, "Booklet")
+                EnrichmentType.CD_ART -> findImageByType(releaseId, type, "Medium")
                 else -> EnrichmentResult.NotFound(type, id)
             }
         } catch (e: Exception) {
