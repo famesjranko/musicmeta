@@ -8,7 +8,7 @@
 
 Give Android and JVM music app developers a flexible, unopinionated engine for getting rich metadata, artwork, and discovery data from public APIs — so they can build polished UI/UX without becoming experts in MusicBrainz, Wikidata, Deezer, and half a dozen other services.
 
-The library is a tool for developers to wield for their needs, not a framework that dictates how to use it. Request all 31 types at once or just the one you need. Use the merged result or pick from alternatives. Cache everything or nothing. The engine adapts to how you want to work.
+The library is a tool for developers to wield for their needs, not a framework that dictates how to use it. Request all 32 types at once or just the one you need. Use the merged result or pick from alternatives. Cache everything or nothing. The engine adapts to how you want to work.
 
 ### Core principles
 
@@ -52,7 +52,7 @@ v0.6.0 was **Recommendations Engine** — 7 phases, 14 plans, shipped 2026-03-23
 
 Key additions:
 - **SIMILAR_ARTISTS multi-provider merge** — Deezer `/artist/{id}/related` added as third provider. SIMILAR_ARTISTS promoted to mergeable type (like GENRE). `SimilarArtistMerger` deduplicates by name, uses additive scoring capped at 1.0, and tracks contributing sources per artist.
-- **ARTIST_RADIO** — New enrichment type backed by Deezer `/artist/{id}/radio`. Returns ordered `RadioPlaylist` with up to 25 tracks. 7-day TTL.
+- **ARTIST_RADIO** — New enrichment type backed by Deezer `/artist/{id}/radio`. Returns ordered `RadioPlaylist` (default 50 tracks, configurable via `radioLimit`). 7-day TTL.
 - **SIMILAR_ALBUMS** — New enrichment type via standalone `SimilarAlbumsProvider`. Fetches Deezer related artists + their top albums, scored by artist similarity and era proximity (±5yr = 1.2x multiplier). 30-day TTL.
 - **GENRE_DISCOVERY** — New composite type via `GenreAffinityMatcher`. Static genre taxonomy of ~70 relationships across 12 families. Produces affinity-scored genre neighbors with relationship type (parent/child/sibling).
 - **CatalogProvider interface** — Consumers implement `checkAvailability()` to filter recommendation results by availability. Three modes: UNFILTERED (default), AVAILABLE_ONLY, AVAILABLE_FIRST.
@@ -65,11 +65,11 @@ Key additions:
 | **Artwork** | ALBUM_ART | CAA, Fanart.tv, Deezer, iTunes, Wikipedia | **Excellent** — 5 providers merged via ArtworkMerger, alternatives preserved |
 | | ALBUM_ART_BACK | CAA | Good — via JSON metadata endpoint |
 | | ALBUM_BOOKLET | CAA | Good — via JSON metadata endpoint |
-| | ARTIST_PHOTO | Wikidata, Fanart.tv, Deezer, Wikipedia | **Excellent** — 4 providers merged via ArtworkMerger, covers niche artists |
+| | ARTIST_PHOTO | Wikidata, Fanart.tv, Deezer, Discogs, Wikipedia | **Excellent** — 5 providers merged via ArtworkMerger, covers niche artists |
 | | ARTIST_BACKGROUND | Fanart.tv | Thin — requires API key + MBID |
 | | ARTIST_LOGO | Fanart.tv | Thin — requires API key + MBID |
 | | ARTIST_BANNER | Fanart.tv | OK — requires API key + MBID |
-| | CD_ART | Fanart.tv | OK — album-specific endpoint added |
+| | CD_ART | Fanart.tv, CAA | Good — 2 providers |
 | **Metadata** | GENRE | MusicBrainz, Last.fm, Discogs, iTunes | **Excellent** — 4 providers merged via GenreMerger |
 | | LABEL | MusicBrainz, Discogs | Good |
 | | RELEASE_DATE | MusicBrainz | OK |
@@ -91,7 +91,8 @@ Key additions:
 | | TRACK_POPULARITY | Last.fm, ListenBrainz | Good |
 | **Composite** | ARTIST_TIMELINE | TimelineSynthesizer | Good — auto-resolves sub-types, synthesizes chronological events |
 | | GENRE_DISCOVERY | GenreAffinityMatcher | **v0.6.0** — static taxonomy, ~70 genre relationships |
-| **Recommendations** | ARTIST_RADIO | Deezer | **v0.6.0** — ordered playlist of ~25 tracks, 7-day TTL |
+| **Top Tracks** | ARTIST_TOP_TRACKS | Last.fm, ListenBrainz, Deezer | **Excellent** — 3 providers merged via TopTrackMerger, fetches API max, no artificial cap |
+| **Recommendations** | ARTIST_RADIO | Deezer | **v0.6.0** — ordered playlist (default 50 tracks, configurable), 7-day TTL |
 | | SIMILAR_ALBUMS | Deezer (SimilarAlbumsProvider) | **v0.6.0** — era-proximity scored, 30-day TTL |
 
 ### Provider Utilization
@@ -99,11 +100,11 @@ Key additions:
 | Provider | Endpoints Used | Utilization | Change from v0.5.0 |
 |----------|---------------|-------------|---------------------|
 | **MusicBrainz** | 11 | ~85% | — |
-| **Last.fm** | 5 methods | ~50% | — |
+| **Last.fm** | 6 methods | ~55% | +1 (artist.gettoptracks) |
 | **Fanart.tv** | 2 | ~67% | — |
 | **Deezer** | 10 | ~100% | +6 (getRelatedArtists, getArtistRadio, SimilarAlbumsProvider, searchTrack, getTrackRadio, artist photos) |
-| **Discogs** | 5 | ~65% | — |
-| **Cover Art Archive** | 2 | ~60% | — |
+| **Discogs** | 5 | ~70% | +artist images from existing getArtist call |
+| **Cover Art Archive** | 2 | ~70% | +CD_ART from existing metadata endpoint |
 | **ListenBrainz** | 6 | ~43% | — |
 | **iTunes** | 3 | ~43% | — |
 | **Wikidata** | 1 (5 properties) | ~15% | — |
@@ -166,8 +167,6 @@ This two-step flow is the right answer for the unopinionated principle: the libr
 - **ForAlbum credits aggregation** — CREDITS only supports ForTrack; aggregating per-track credits for an album deferred
 - **Credit-Based Discovery** — "more from this producer/composer" via CREDITS data; cross-entity query pattern, deferred to v0.7.0+
 - **ListenBrainz collaborative filtering** — user-scoped recommendations; needs user identity concept in EnrichmentRequest, deferred to v0.8.0+
-- **Last.fm artist.gettoptracks** — could enhance ARTIST_POPULARITY with top track names/scrobble counts
-- **Discogs artist images** — `getArtist()` response includes `images[]` array, already called for BAND_MEMBERS but images are not parsed. Would add another ARTIST_PHOTO source.
 
 ### Catalog Awareness — Interface Shipped, Implementations Remaining
 
@@ -186,13 +185,14 @@ The `CatalogProvider` interface shipped in v0.6.0 with three filtering modes (UN
 **Shipped:**
 - **ArtworkMerger** — ARTIST_PHOTO and ALBUM_ART are now mergeable types. All providers are queried and results merged: highest-confidence image is primary, others are available via `Artwork.alternatives: List<ArtworkSource>`.
 - **Deezer artist photos** — `picture_small/medium/big/xl` (4 sizes up to 1000x1000) now parsed and returned. Gives artist photos for niche artists like Ochre that have no Wikidata/Fanart.tv coverage.
+- **Discogs artist photos** — `images[]` array from existing `getArtist()` response now parsed. ARTIST_PHOTO has 5 providers.
+- **CD_ART from Cover Art Archive** — CAA's "Medium" image type was already in the API response but the capability wasn't registered.
 - **ErrorKind.TIMEOUT** — timed-out types get explicit `Error(TIMEOUT)` instead of being silently missing.
 - **Band member deduplication** — MusicBrainz members deduplicated by ID, roles merged. Solo (Person-type) artists return themselves as the sole member.
 - **Performance** — MusicBrainz lookup caching eliminates redundant API calls (~2s saved). `resolveAll` runs providers concurrently for mergeable types.
 
-**Remaining gap:**
-- **Discogs artist images** — `getArtist()` response includes `images[]` array but not parsed yet. Would add a 5th ARTIST_PHOTO source.
-- **ARTIST_BACKGROUND/LOGO/BANNER** — still single-provider (Fanart.tv only). Could be made mergeable if additional sources are added.
+**Remaining:**
+- **ARTIST_BACKGROUND/LOGO/BANNER** — still single-provider (Fanart.tv only). No other API provides these semantic image types.
 
 ### Provider Coverage Gaps
 
