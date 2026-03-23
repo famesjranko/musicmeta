@@ -23,12 +23,15 @@ class Spinner(private val terminal: Terminal) {
             return block()
         }
 
+        val startMs = System.currentTimeMillis()
         val animJob = withContext(Dispatchers.IO) {
             launch {
                 var i = 0
                 while (true) {
                     val frame = terminal.styled(frames[i % frames.size], color)
-                    terminal.print("\r  $frame $message")
+                    val elapsed = (System.currentTimeMillis() - startMs) / 1000
+                    val timer = terminal.styled("${elapsed}s", terminal.theme.muted)
+                    terminal.print("\r  $frame $message $timer")
                     System.out.flush()
                     delay(FRAME_DELAY_MS)
                     i++
