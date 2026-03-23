@@ -11,7 +11,7 @@ class Spinner(private val terminal: Terminal) {
 
     private val frames = terminal.theme.spinnerFrames
     private val color = terminal.theme.primary
-    private val isInteractive = System.console() != null
+    private val isInteractive = System.getenv("TERM")?.let { it != "dumb" } ?: false
 
     /**
      * Shows an animated spinner while [block] executes.

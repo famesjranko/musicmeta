@@ -60,7 +60,12 @@ data class Theme(
             spinnerFrames = listOf("|", "/", "-", "\\"),
         )
 
-        fun detect(): Theme =
-            if (System.console() != null) Default else Plain
+        fun detect(): Theme {
+            // System.console() is null when launched by Gradle even with a real terminal.
+            // Fall back to checking TERM env var and explicit NO_COLOR convention.
+            if (System.getenv("NO_COLOR") != null) return Plain
+            val term = System.getenv("TERM")
+            return if (term != null && term != "dumb") Default else Plain
+        }
     }
 }
