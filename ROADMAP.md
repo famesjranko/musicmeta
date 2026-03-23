@@ -58,7 +58,7 @@ Key additions:
 - **CatalogProvider interface** — Consumers implement `checkAvailability()` to filter recommendation results by availability. Three modes: UNFILTERED (default), AVAILABLE_ONLY, AVAILABLE_FIRST.
 - **Engine extensibility** — `ResultMerger` and `CompositeSynthesizer` interfaces extracted from engine. New mergeable types and composite types plug in without modifying `DefaultEnrichmentEngine`.
 
-### Current Coverage (31 enrichment types)
+### Current Coverage (32 enrichment types)
 
 | Category | Type | Providers | Depth |
 |----------|------|-----------|-------|
@@ -233,7 +233,7 @@ Ranked by **impact to consumers × implementation effort** (updated for v0.5.0):
 
 | Dimension | v0.1.0 | v0.4.0 | v0.5.0 | v0.6.0 |
 |-----------|--------|--------|--------|--------|
-| Enrichment types | 16 | 25 (+9) | 28 (+3) | 31 (+3) |
+| Enrichment types | 16 | 25 (+9) | 28 (+3) | 32 (+4) |
 | Provider utilization | ~30% avg | ~48% avg | ~57% avg | ~60% avg |
 | Engine concepts | Provider chains | + Typed identifiers, mapper pattern, confidence calculator | + Composite types, mergeable types, GenreMerger | + ResultMerger/CompositeSynthesizer interfaces, CatalogProvider filtering, ArtworkMerger, ErrorKind.TIMEOUT |
 | "App-ready" artist page | Partial | Full | **Complete** | **Complete** + radio, genre discovery, merged similar artists |
@@ -246,14 +246,14 @@ Ranked by **impact to consumers × implementation effort** (updated for v0.5.0):
 
 | Goal Category | Coverage | Assessment |
 |--------------|----------|------------|
-| Artwork | 8 types, ALBUM_ART (5 merged) + ARTIST_PHOTO (4 merged) | ✅ **Complete** — ArtworkMerger collects from all providers with alternatives. Deezer artist photos added for niche artist coverage. |
+| Artwork | 8 types, ALBUM_ART (5 merged) + ARTIST_PHOTO (5 merged) + CD_ART (2) | ✅ **Complete** — ArtworkMerger collects from all providers with alternatives. Deezer + Discogs artist photos added for niche coverage. |
 | Metadata | 9 types including credits + editions | ✅ **Complete** |
 | Text content | Bios + synced/plain lyrics | ✅ **Complete** |
 | Relationships | Similar artists (3 merged), similar tracks, links | ✅ **Complete** |
-| Statistics | Artist + track popularity from 2 sources | ✅ **Complete** |
+| Statistics | Artist + track popularity from 2 sources, top tracks (3 merged) | ✅ **Complete** |
 | Links | All MusicBrainz URL relation types | ✅ **Complete** |
 | Credits | Performers, producers, composers, engineers | ✅ **Complete** |
-| Recommendations | 5 modules shipped; credit discovery + CF deferred | 🟡 **Mostly complete** |
+| Recommendations | 6 modules shipped; credit discovery + CF deferred | 🟡 **Mostly complete** |
 | Developer Experience | Engine works, consumer API is power-user only | ❌ **Not started** |
 | Catalog Awareness | Interface shipped; implementations deferred | 🟡 **Interface only** |
 
@@ -267,6 +267,7 @@ Ranked by **impact to consumers × implementation effort** (updated for v0.5.0):
 | Similar Tracks | ✅ **Shipped** | 2-provider merge (Last.fm + Deezer track radio) via SimilarTrackMerger |
 | Similar Albums | ✅ **Shipped (v0.6.0)** | SimilarAlbumsProvider with era-proximity scoring |
 | Radio/Mix | ✅ **Shipped (v0.6.0)** | ARTIST_RADIO via Deezer `/artist/{id}/radio` |
+| Top Tracks | ✅ **Shipped** | 3-provider merge (Last.fm + ListenBrainz + Deezer) via TopTrackMerger. Fetches API max, no artificial cap. |
 | Credit-Based Discovery | ❌ Deferred (v0.7.0+) | Cross-entity query pattern; CREDITS data exists |
 | Genre Discovery | ✅ **Shipped (v0.6.0)** | GenreAffinityMatcher with ~70-relationship static taxonomy |
 | Listening-Based | ❌ Deferred (v0.8.0+) | User-scoped; needs user identity in EnrichmentRequest |
@@ -288,7 +289,7 @@ The engine works well, but the consumer API is a power-user API. Developers buil
 ## Planned Milestones
 
 ### ✅ v0.6.0 — Recommendations Engine — SHIPPED 2026-03-23
-Built discovery features on top of the enrichment data: multi-provider SIMILAR_ARTISTS merge (Last.fm + ListenBrainz + Deezer), ARTIST_RADIO (Deezer radio endpoint), SIMILAR_ALBUMS (synthesized from related artists + era scoring), GENRE_DISCOVERY (static genre affinity taxonomy), and CatalogProvider interface for library-aware filtering. 7 phases, 14 plans, 31 enrichment types.
+Built discovery features on top of the enrichment data: multi-provider SIMILAR_ARTISTS merge (Last.fm + ListenBrainz + Deezer), ARTIST_RADIO (Deezer radio endpoint), SIMILAR_ALBUMS (synthesized from related artists + era scoring), GENRE_DISCOVERY (static genre affinity taxonomy), and CatalogProvider interface for library-aware filtering. 7 phases, 14 plans, 32 enrichment types.
 
 ### v0.7.0 — Developer Experience
 Add a convenience layer that makes musicmeta feel effortless for the 80% use case. High-level `artistProfile()` / `albumProfile()` / `trackProfile()` methods returning structured objects with all fields pre-extracted. Type-safe request scoping. Cleaner data model. The low-level `enrich()` API stays for power users. This is a thin layer on top of what already works — no engine changes needed.
