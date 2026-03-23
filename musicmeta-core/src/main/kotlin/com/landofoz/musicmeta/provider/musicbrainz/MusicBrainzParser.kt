@@ -92,13 +92,16 @@ object MusicBrainzParser {
         )
     }
 
-    /** Parse band members from artist-rels in an artist lookup response. */
+    /** Parse band members from artist-rels in an artist lookup response.
+     *  Only includes "backward" direction — people who are members OF this entity.
+     *  "forward" direction means this entity is a member of the related artist (e.g. side projects). */
     fun parseBandMembers(json: JSONObject): List<MusicBrainzBandMember> {
         val relations = json.optJSONArray("relations") ?: return emptyList()
         val members = mutableListOf<MusicBrainzBandMember>()
         for (i in 0 until relations.length()) {
             val rel = relations.getJSONObject(i)
             if (rel.optString("type") != "member of band") continue
+            if (rel.optString("direction") != "backward") continue
             val artist = rel.optJSONObject("artist") ?: continue
             val attrs = rel.optJSONArray("attributes")
             val role = attrs?.let { if (it.length() > 0) it.getString(0) else null }

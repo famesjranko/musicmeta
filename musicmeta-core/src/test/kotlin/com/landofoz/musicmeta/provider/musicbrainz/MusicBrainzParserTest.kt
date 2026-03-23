@@ -191,6 +191,42 @@ class MusicBrainzParserTest {
     }
 
     @Test
+    fun `parseBandMembers ignores forward relations for solo artists`() {
+        // Given -- a solo artist (like Moby) whose relations point to bands they belong to
+        val json = JSONObject("""
+            {
+              "id": "solo1",
+              "name": "Moby",
+              "type": "Person",
+              "relations": [
+                {
+                  "type": "member of band",
+                  "direction": "forward",
+                  "artist": {"id": "b1", "name": "Diamondsnake"},
+                  "attributes": [],
+                  "begin": "2004",
+                  "ended": true
+                },
+                {
+                  "type": "member of band",
+                  "direction": "forward",
+                  "artist": {"id": "b2", "name": "The Void Pacific Choir"},
+                  "attributes": [],
+                  "begin": "2016",
+                  "ended": false
+                }
+              ]
+            }
+        """.trimIndent())
+
+        // When -- parsing band members
+        val members = MusicBrainzParser.parseBandMembers(json)
+
+        // Then -- no members returned (these are bands the person belongs to, not members)
+        assertTrue(members.isEmpty())
+    }
+
+    @Test
     fun `parseReleaseGroups extracts albums from browse response`() {
         // Given -- browse release-groups response
         val json = JSONObject(RELEASE_GROUPS_BROWSE)
@@ -659,6 +695,7 @@ class MusicBrainzParserTest {
               "relations": [
                 {
                   "type": "member of band",
+                  "direction": "backward",
                   "artist": {"id": "m1", "name": "Thom Yorke"},
                   "attributes": ["lead vocals"],
                   "begin": "1985",
@@ -666,6 +703,7 @@ class MusicBrainzParserTest {
                 },
                 {
                   "type": "member of band",
+                  "direction": "backward",
                   "artist": {"id": "m2", "name": "Jonny Greenwood"},
                   "attributes": ["guitar"],
                   "begin": "1985",

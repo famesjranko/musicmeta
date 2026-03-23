@@ -556,6 +556,7 @@ class MusicBrainzProviderTest {
               "relations": [
                 {
                   "type": "member of band",
+                  "direction": "backward",
                   "artist": {"id": "m1", "name": "Thom Yorke"},
                   "attributes": ["lead vocals"],
                   "begin": "1985",
@@ -563,6 +564,7 @@ class MusicBrainzProviderTest {
                 },
                 {
                   "type": "member of band",
+                  "direction": "backward",
                   "artist": {"id": "m2", "name": "Jonny Greenwood"},
                   "attributes": ["guitar"],
                   "begin": "1985",
