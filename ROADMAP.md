@@ -6,12 +6,14 @@
 
 ## The Goal
 
-Make it effortless for Android and JVM music app developers to get **everything** they need for rich, polished UI/UX — artwork, metadata, lyrics, recommendations, discovery — from a single library, without wiring up APIs themselves.
+Give Android and JVM music app developers a flexible, unopinionated engine for getting rich metadata, artwork, and discovery data from public APIs — so they can build polished UI/UX without becoming experts in MusicBrainz, Wikidata, Deezer, and half a dozen other services.
+
+The library is a tool for developers to wield for their needs, not a framework that dictates how to use it. Request all 31 types at once or just the one you need. Use the merged result or pick from alternatives. Cache everything or nothing. The engine adapts to how you want to work.
 
 ### Core principles
 
-- **Maximize data, never discard.** If three providers return artist photos, return all three with alternatives. The consumer app decides which to show. Every piece of data an API returns should reach the developer.
-- **One call, everything you need.** A single `enrich()` call fans out to 11 providers concurrently, merges results intelligently, and returns a typed map. No boilerplate, no API orchestration.
+- **Maximize data, never discard.** If three providers return artist photos, return all three with alternatives. Every piece of data an API returns should reach the developer — they decide what to show their users.
+- **Unopinionated and flexible.** No prescribed usage patterns. Developers choose what to request, when to request it, and how to present results. The library provides data and lets the app make decisions.
 - **Resilient by default.** Rate limiting, circuit breaking, timeout handling (with explicit `ErrorKind.TIMEOUT`), and caching are built in. Individual provider failures don't break the request.
 - **Works without API keys.** 8 of 11 providers need no authentication. The library returns useful results out of the box; adding API keys unlocks more coverage, not basic functionality.
 
