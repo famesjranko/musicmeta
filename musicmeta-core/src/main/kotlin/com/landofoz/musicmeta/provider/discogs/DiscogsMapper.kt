@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.provider.discogs
 
+import com.landofoz.musicmeta.ArtworkSize
 import com.landofoz.musicmeta.BandMember
 import com.landofoz.musicmeta.Credit
 import com.landofoz.musicmeta.EnrichmentData
@@ -9,6 +10,26 @@ import com.landofoz.musicmeta.ReleaseEdition
 
 /** Maps Discogs DTOs to EnrichmentData subclasses. */
 object DiscogsMapper {
+
+    fun toArtistPhoto(artist: DiscogsArtist): EnrichmentData.Artwork? {
+        // Prefer "primary" type image, fall back to any image
+        val primary = artist.images.firstOrNull { it.type == "primary" }
+            ?: artist.images.firstOrNull()
+            ?: return null
+        val sizes = artist.images.map { img ->
+            ArtworkSize(
+                url = img.uri,
+                width = img.width,
+                height = img.height,
+                label = img.type,
+            )
+        }
+        return EnrichmentData.Artwork(
+            url = primary.uri,
+            thumbnailUrl = primary.uri150,
+            sizes = sizes.takeIf { it.isNotEmpty() },
+        )
+    }
 
     fun toArtwork(release: DiscogsRelease): EnrichmentData.Artwork? {
         val url = release.coverImage ?: return null

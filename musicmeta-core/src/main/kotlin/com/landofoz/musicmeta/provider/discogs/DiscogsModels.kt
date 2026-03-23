@@ -41,6 +41,15 @@ data class DiscogsArtist(
     val id: Long,
     val name: String,
     val members: List<DiscogsMember>,
+    val images: List<DiscogsImage> = emptyList(),
+)
+
+data class DiscogsImage(
+    val type: String,
+    val uri: String,
+    val uri150: String?,
+    val width: Int?,
+    val height: Int?,
 )
 
 data class DiscogsMember(

@@ -143,10 +143,28 @@ class DiscogsApi(
                 )
             }
         }
+        val images = mutableListOf<DiscogsImage>()
+        val imagesArray = json.optJSONArray("images")
+        if (imagesArray != null) {
+            for (i in 0 until imagesArray.length()) {
+                val img = imagesArray.getJSONObject(i)
+                val uri = img.optString("uri").takeIf { it.isNotBlank() } ?: continue
+                images.add(
+                    DiscogsImage(
+                        type = img.optString("type", "secondary"),
+                        uri = uri,
+                        uri150 = img.optString("uri150").takeIf { it.isNotBlank() },
+                        width = img.optInt("width", 0).takeIf { it > 0 },
+                        height = img.optInt("height", 0).takeIf { it > 0 },
+                    ),
+                )
+            }
+        }
         return DiscogsArtist(
             id = json.optLong("id", 0L),
             name = json.optString("name", ""),
             members = members,
+            images = images,
         )
     }
 

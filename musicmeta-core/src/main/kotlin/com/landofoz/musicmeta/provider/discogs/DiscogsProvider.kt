@@ -34,6 +34,7 @@ class DiscogsProvider(
     override val isAvailable: Boolean get() = tokenProvider().isNotBlank()
 
     override val capabilities = listOf(
+        ProviderCapability(EnrichmentType.ARTIST_PHOTO, priority = 40),
         ProviderCapability(EnrichmentType.ALBUM_ART, priority = 20),
         ProviderCapability(EnrichmentType.LABEL, priority = 50),
         ProviderCapability(EnrichmentType.RELEASE_TYPE, priority = 50),
@@ -49,10 +50,10 @@ class DiscogsProvider(
     ): EnrichmentResult {
         if (!isAvailable) return EnrichmentResult.NotFound(type, id)
 
-        if (type == EnrichmentType.BAND_MEMBERS) {
+        if (type == EnrichmentType.ARTIST_PHOTO || type == EnrichmentType.BAND_MEMBERS) {
             val artistRequest = request as? EnrichmentRequest.ForArtist
                 ?: return EnrichmentResult.NotFound(type, id)
-            return enrichBandMembers(artistRequest, type)
+            return enrichArtistType(artistRequest, type)
         }
 
         if (type == EnrichmentType.CREDITS) {
@@ -160,7 +161,7 @@ class DiscogsProvider(
         return success(metadata, EnrichmentType.ALBUM_METADATA, release)
     }
 
-    private suspend fun enrichBandMembers(
+    private suspend fun enrichArtistType(
         request: EnrichmentRequest.ForArtist,
         type: EnrichmentType,
     ): EnrichmentResult {
@@ -169,10 +170,18 @@ class DiscogsProvider(
                 ?: return EnrichmentResult.NotFound(type, id)
             val artist = api.getArtist(artistId)
                 ?: return EnrichmentResult.NotFound(type, id)
-            if (artist.members.isEmpty()) {
-                return EnrichmentResult.NotFound(type, id)
+            when (type) {
+                EnrichmentType.ARTIST_PHOTO -> {
+                    val artwork = DiscogsMapper.toArtistPhoto(artist)
+                        ?: return EnrichmentResult.NotFound(type, id)
+                    success(artwork, type)
+                }
+                EnrichmentType.BAND_MEMBERS -> {
+                    if (artist.members.isEmpty()) return EnrichmentResult.NotFound(type, id)
+                    success(DiscogsMapper.toBandMembers(artist), type)
+                }
+                else -> EnrichmentResult.NotFound(type, id)
             }
-            success(DiscogsMapper.toBandMembers(artist), type)
         } catch (e: Exception) {
             mapError(type, e)
         }
