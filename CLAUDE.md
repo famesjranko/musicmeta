@@ -99,6 +99,15 @@ Adds Android-specific integrations on top of core:
 - Pure functions when possible
 - Explicit over implicit — no magic
 
+## Modeling Rules
+
+- Enums for fixed sets — never string constants
+- Sealed classes for variants with different data — each variant is a data class
+- Interfaces for contracts and strategies (providers, cache, mergers)
+- Data classes over Pair/Triple/Map for structured fields
+- Collection wrappers only when they carry semantic meaning (sealed class variants) — not for API return types
+- @Serializable only on public API payload types (EnrichmentData subtypes, EnrichmentIdentifiers) — never on provider models or infrastructure
+
 ## Git Rules
 
 - **DO NOT** add Co-Authored-By, "Generated with Claude", or any AI/Anthropic references to commits or PR messages

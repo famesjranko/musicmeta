@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - iTunes provider now stores `itunesArtistId` in `resolvedIdentifiers` after artist search — eliminates redundant search API call on subsequent discography requests
+- `RoomEnrichmentCacheTest` — trailing lambda resolved to wrong parameter after `logger` was added to `RoomEnrichmentCache` constructor; fixed with named `clock` argument
 
 ## [0.6.0] - 2026-03-23
 
