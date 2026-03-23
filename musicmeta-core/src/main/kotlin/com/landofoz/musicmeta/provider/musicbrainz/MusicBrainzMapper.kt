@@ -72,6 +72,34 @@ object MusicBrainzMapper {
             },
         )
 
+    /** For solo (Person-type) artists, return the artist themselves as the sole member. */
+    fun toSoloArtistMember(artist: MusicBrainzArtist): EnrichmentData.BandMembers {
+        // sort-name for Person artists is typically "Last, First" — convert to "First Last"
+        val realName = artist.sortName?.let { sortName ->
+            val parts = sortName.split(",", limit = 2).map { it.trim() }
+            if (parts.size == 2) "${parts[1]} ${parts[0]}" else sortName
+        }
+        val displayName = if (realName != null && !realName.equals(artist.name, ignoreCase = true)) {
+            "$realName (${artist.name})"
+        } else {
+            artist.name
+        }
+        val period = listOfNotNull(
+            artist.beginDate?.take(4),
+            if (artist.endDate != null) artist.endDate.take(4) else "present",
+        ).joinToString("-").takeIf { it.isNotEmpty() }
+        return EnrichmentData.BandMembers(
+            members = listOf(
+                BandMember(
+                    name = displayName,
+                    role = "solo artist",
+                    activePeriod = period,
+                    identifiers = EnrichmentIdentifiers(musicBrainzId = artist.id),
+                ),
+            ),
+        )
+    }
+
     fun toDiscography(groups: List<MusicBrainzReleaseGroup>): EnrichmentData.Discography =
         EnrichmentData.Discography(
             albums = groups.map { group ->

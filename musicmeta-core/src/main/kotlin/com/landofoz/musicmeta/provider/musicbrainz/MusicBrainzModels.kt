@@ -23,6 +23,7 @@ data class MusicBrainzRelease(
 data class MusicBrainzArtist(
     val id: String,
     val name: String,
+    val sortName: String? = null,
     val type: String?,
     val country: String?,
     val beginDate: String?,

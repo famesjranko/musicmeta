@@ -65,6 +65,7 @@ object MusicBrainzParser {
         return MusicBrainzArtist(
             id = obj.getString("id"),
             name = obj.getString("name"),
+            sortName = obj.optString("sort-name").takeIf { it.isNotBlank() },
             type = obj.optString("type").takeIf { it.isNotBlank() },
             country = obj.optString("country").takeIf { it.isNotBlank() },
             beginDate = lifeSpan?.optString("begin")?.takeIf { it.isNotBlank() },
@@ -94,21 +95,22 @@ object MusicBrainzParser {
 
     /** Parse band members from artist-rels in an artist lookup response.
      *  Only includes "backward" direction — people who are members OF this entity.
-     *  "forward" direction means this entity is a member of the related artist (e.g. side projects). */
+     *  "forward" direction means this entity is a member of the related artist (e.g. side projects).
+     *  Deduplicates by member ID — merges roles and picks the widest date range. */
     fun parseBandMembers(json: JSONObject): List<MusicBrainzBandMember> {
         val relations = json.optJSONArray("relations") ?: return emptyList()
-        val members = mutableListOf<MusicBrainzBandMember>()
+        val byId = LinkedHashMap<String, MutableList<RawMemberRel>>()
         for (i in 0 until relations.length()) {
             val rel = relations.getJSONObject(i)
             if (rel.optString("type") != "member of band") continue
             if (rel.optString("direction") != "backward") continue
             val artist = rel.optJSONObject("artist") ?: continue
+            val id = artist.optString("id").takeIf { it.isNotBlank() } ?: continue
             val attrs = rel.optJSONArray("attributes")
             val role = attrs?.let { if (it.length() > 0) it.getString(0) else null }
-            members.add(
-                MusicBrainzBandMember(
+            byId.getOrPut(id) { mutableListOf() }.add(
+                RawMemberRel(
                     name = artist.getString("name"),
-                    id = artist.optString("id").takeIf { it.isNotBlank() },
                     role = role,
                     beginDate = rel.optString("begin").takeIf { it.isNotBlank() },
                     endDate = rel.optString("end").takeIf { it.isNotBlank() },
@@ -116,8 +118,29 @@ object MusicBrainzParser {
                 ),
             )
         }
-        return members
+        return byId.map { (id, rels) ->
+            val roles = rels.mapNotNull { it.role }.distinct()
+            val earliest = rels.mapNotNull { it.beginDate }.minOrNull()
+            val latest = rels.mapNotNull { it.endDate }.maxOrNull()
+            val stillActive = rels.any { !it.ended }
+            MusicBrainzBandMember(
+                name = rels.first().name,
+                id = id,
+                role = roles.joinToString(", ").takeIf { it.isNotEmpty() },
+                beginDate = earliest,
+                endDate = if (stillActive) null else latest,
+                ended = !stillActive,
+            )
+        }
     }
+
+    private data class RawMemberRel(
+        val name: String,
+        val role: String?,
+        val beginDate: String?,
+        val endDate: String?,
+        val ended: Boolean,
+    )
 
     /** Parse release groups from a browse response. */
     fun parseReleaseGroups(json: JSONObject): List<MusicBrainzReleaseGroup> {

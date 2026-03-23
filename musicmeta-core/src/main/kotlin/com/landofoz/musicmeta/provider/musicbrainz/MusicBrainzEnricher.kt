@@ -4,6 +4,9 @@ import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Handles per-entity enrichment logic for MusicBrainz.
@@ -14,6 +17,22 @@ internal class MusicBrainzEnricher(
     private val providerId: String,
     private val minMatchScore: Int,
 ) {
+
+    /** Cache artist lookups by MBID to avoid redundant API calls across types. */
+    private val artistCache = ConcurrentHashMap<String, MusicBrainzArtist>()
+    private val artistLookupMutex = Mutex()
+
+    /** Lookup artist with rels (superset), caching to avoid redundant calls.
+     *  BAND_MEMBERS, ARTIST_LINKS, and GENRE all need artist data for the same MBID. */
+    private suspend fun cachedArtistLookup(mbid: String): MusicBrainzArtist? {
+        artistCache[mbid]?.let { return it }
+        return artistLookupMutex.withLock {
+            artistCache[mbid]?.let { return@withLock it }
+            val result = api.lookupArtistWithRels(mbid)
+            result?.let { artistCache[mbid] = it }
+            result
+        }
+    }
 
     internal suspend fun enrichAlbum(
         request: EnrichmentRequest.ForAlbum, type: EnrichmentType,
@@ -83,10 +102,10 @@ internal class MusicBrainzEnricher(
             return enrichArtistNewType(request, type)
         }
 
-        // If we already have an MBID, skip search and go straight to lookup
+        // If we already have an MBID, skip search and use cached lookup
         val mbid = request.identifiers.musicBrainzId
         if (mbid != null) {
-            val full = api.lookupArtist(mbid)
+            val full = cachedArtistLookup(mbid)
                 ?: return EnrichmentResult.NotFound(type, providerId)
             return buildArtistResult(full, type, ConfidenceCalculator.idBasedLookup())
         }
@@ -104,7 +123,7 @@ internal class MusicBrainzEnricher(
         // downstream providers (Wikidata, Wikipedia) can use them.
         val needsRelations = best.wikidataId == null && best.wikipediaTitle == null
         val resolved = if (needsRelations) {
-            api.lookupArtist(best.id) ?: best
+            cachedArtistLookup(best.id) ?: best
         } else {
             best
         }
@@ -124,12 +143,18 @@ internal class MusicBrainzEnricher(
 
         return when (type) {
             EnrichmentType.BAND_MEMBERS -> {
-                val artist = api.lookupArtistWithRels(mbid)
+                val artist = cachedArtistLookup(mbid)
                     ?: return EnrichmentResult.NotFound(type, providerId)
-                if (artist.bandMembers.isEmpty()) return EnrichmentResult.NotFound(type, providerId)
+                val members = if (artist.bandMembers.isNotEmpty()) {
+                    MusicBrainzMapper.toBandMembers(artist.bandMembers)
+                } else if (artist.type == "Person") {
+                    MusicBrainzMapper.toSoloArtistMember(artist)
+                } else {
+                    return EnrichmentResult.NotFound(type, providerId)
+                }
                 EnrichmentResult.Success(
                     type = type,
-                    data = MusicBrainzMapper.toBandMembers(artist.bandMembers),
+                    data = members,
                     provider = providerId, confidence = ConfidenceCalculator.idBasedLookup(),
                     resolvedIdentifiers = MusicBrainzMapper.toArtistIdentifiers(artist),
                 )
@@ -144,7 +169,7 @@ internal class MusicBrainzEnricher(
                 )
             }
             EnrichmentType.ARTIST_LINKS -> {
-                val artist = api.lookupArtist(mbid)
+                val artist = cachedArtistLookup(mbid)
                     ?: return EnrichmentResult.NotFound(type, providerId)
                 if (artist.urlRelations.isEmpty()) return EnrichmentResult.NotFound(type, providerId)
                 EnrichmentResult.Success(
