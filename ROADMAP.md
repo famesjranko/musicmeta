@@ -139,12 +139,15 @@ val results = engine.enrich(
 
 This two-step flow is the right answer for the unopinionated principle: the library provides candidates, the app decides. When an MBID is provided, the engine skips fuzzy matching entirely and does precise ID-based lookups across all providers.
 
-**What needs improvement:**
+**Shipped:**
+- `SearchCandidate.disambiguation` — MusicBrainz disambiguation text (e.g., "British rock band" vs "Canadian band") included in search results so developers can show users meaningful choices
+- `SearchCandidate.releaseType` already carries artist type ("Group", "Person") and release type for albums
+- `SearchCandidate.identifiers` carries MBIDs for the pick-and-enrich flow
+
+**What still needs improvement:**
 
 | Gap | Problem | Impact |
 |-----|---------|--------|
-| **SearchCandidate lacks disambiguation** | MusicBrainz returns a `disambiguation` field (e.g., "British rock band" vs "Canadian band") but we don't include it | Developer can't show users meaningful choices |
-| **SearchCandidate lacks artist type** | MusicBrainz returns `type` ("Group", "Person", etc.) but we don't include it | Can't distinguish bands from solo acts in search results |
 | **No match quality indicator on `enrich()`** | Auto mode returns results with no indication of how confident the identity match was | Developer can't detect ambiguous matches to prompt for disambiguation |
 | **No "did you mean?" on NotFound** | When search finds no match above threshold, returns empty — no close matches suggested | Developer can't help users fix typos |
 | **Provider factual conflicts not surfaced** | If MusicBrainz says country=UK and Wikidata says country=GB, first provider wins silently | Minor — most factual conflicts are equivalent representations, not real disagreements |
