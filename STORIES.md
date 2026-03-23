@@ -7,6 +7,58 @@
 
 ## Decisions
 
+### 2026-03-24: ARTIST_TOP_TRACKS — fetch everything, let devs filter
+
+**Context**: Apps need an artist's most popular tracks for "Top Tracks" UI widgets. The data existed across three providers (Last.fm scrobble counts, ListenBrainz listen counts + duration + album, Deezer stream ranking) but wasn't surfaced as its own type — it was buried inside `ARTIST_POPULARITY.topTracks` from ListenBrainz only.
+
+**Decision**: New `ARTIST_TOP_TRACKS` enrichment type with `TopTrackMerger`. Three providers merged: Last.fm (`artist.gettoptracks`, up to 1000), Deezer (`/artist/{id}/top`, up to 100), ListenBrainz (`/popularity/top-recordings-for-artist`, unlimited).
+
+**Key design decisions**:
+- **No artificial limit on output.** Early iterations had `topTracksLimit` in config, but this is opinionated — the developer should call `.take(n)` for their UI needs. Each provider fetches its API max; the merger returns everything deduplicated and ranked. Consistent with the "never discard data" principle.
+- **New `TopTrack` data class** rather than reusing `PopularTrack`. `PopularTrack` was too thin (no album, duration, listenerCount, sources). `TopTrack` has everything an app needs for a rich track list.
+- **ListenBrainz was discarding data.** The existing `getTopRecordingsForArtist` parser threw away `total_user_count`, `length`, and `release.name` — three fields the API already returned. Fixed to capture everything.
+- **Merger deduplicates by normalized title + MBID.** MBID-based matching takes priority, so "Karma Police" and "Karma Police (Remastered)" merge when they share an MBID. Listen counts are summed across providers; highest listener count is kept.
+- **Added to `RECOMMENDATION_TYPES`** so CatalogProvider filtering applies automatically. If a developer configures catalog awareness, top tracks are filtered by availability just like radio and similar artists.
+
+**Status**: Active
+
+---
+
+### 2026-03-24: "Never discard data" — ArtworkMerger and multi-provider images
+
+**Context**: Testing with niche artist "Ochre" revealed ARTIST_PHOTO returned NotFound despite Deezer having a profile photo. Investigation found Deezer's `searchArtist()` response includes `picture_small/medium/big/xl` but we discarded them. Same for Discogs — `getArtist()` returns `images[]` but we only parsed `members`. Broader problem: artwork types used short-circuit provider chains (first `Success` wins), so even when multiple providers had different images, only one was returned.
+
+**Decision**: Establish "never discard data" as a core project principle. Make artwork types mergeable. Create `ArtworkMerger` following the `ResultMerger` pattern.
+
+**Key design decisions**:
+- **`ArtworkSource` model and `Artwork.alternatives` field** (backward compatible). The highest-confidence provider's image becomes the primary `url`/`thumbnailUrl`/`sizes`. Other providers' images are available via `alternatives: List<ArtworkSource>`. Consumers who only read `url` see no change; consumers who want all images check `alternatives`.
+- **Not a flat `sizes` list.** Early design considered putting all provider images into one `sizes` list with provider labels. Rejected because `ArtworkSize` represents different resolutions of the *same* image — a Deezer press photo and a Wikidata editorial photo are *different images*, not size variants.
+- **Deezer artist photos added** (priority 60, no API key needed). Covers niche artists that Wikidata/Fanart.tv miss.
+- **Discogs artist photos added** (priority 40, requires token). Zero extra API calls — `getArtist()` was already called for BAND_MEMBERS, images were in the same response.
+- **ARTIST_PHOTO now has 5 providers**: Wikidata (100), Fanart.tv (80), Deezer (60), Discogs (40), Wikipedia.
+- **ALBUM_ART also made mergeable**: 5 providers (CAA, Deezer, iTunes, Fanart.tv, Wikipedia) now contribute with alternatives.
+- **CD_ART added to Cover Art Archive**: The API already returned CD/Medium image types in metadata but the capability wasn't registered.
+
+**Status**: Active
+
+---
+
+### 2026-03-24: Performance + quality fixes
+
+**Context**: Artist enrichment for Radiohead took ~16 seconds. Band members showed "19 members: Colin Greenwood, Colin Greenwood, Colin Greenwood..." (duplicates from multiple MusicBrainz membership periods). Solo artist "Ochre" returned NotFound for band members despite being a known person.
+
+**Fixes**:
+- **MusicBrainz lookup caching** (`cachedArtistLookup` with Mutex). BAND_MEMBERS, ARTIST_LINKS, and GENRE all called `lookupArtist(mbid)` separately — 3 redundant API calls through the 1.1s rate limiter. Now uses `lookupArtistWithRels` (superset) cached by MBID. First call populates cache, subsequent calls return instantly. Saves ~2.2s per artist enrichment.
+- **Concurrent `resolveAll`** in ProviderChain. Mergeable types (GENRE, SIMILAR_ARTISTS, ARTIST_PHOTO) previously queried providers sequentially via `forEachEligible`. Now launches each provider in its own `async` via `coroutineScope`. Combined with MB caching, reduced Radiohead from ~16s to ~10s.
+- **Band member deduplication.** MusicBrainz returns multiple `member-of-band` relationships per person (different roles, time periods). Now deduplicates by member ID — merges roles (e.g., "guitar, keyboards" for Jonny Greenwood) and picks the widest date range.
+- **Solo artist handling.** When MusicBrainz artist type is "Person" and no member relationships exist, returns the artist themselves as the sole member using `sort-name` for real name (e.g., "Christopher Leary (Ochre)").
+- **ErrorKind.TIMEOUT.** When the engine timeout fires, timed-out types now get explicit `EnrichmentResult.Error(errorKind = ErrorKind.TIMEOUT)` instead of being silently missing from the result map.
+- **SearchCandidate.disambiguation.** MusicBrainz returns disambiguation text (e.g., "British rock band" vs "Canadian band") — now included in search results so developers can show users meaningful choices for the pick-and-enrich flow.
+
+**Status**: Active
+
+---
+
 ### 2026-03-23: SIMILAR_TRACKS multi-provider merge via Deezer track radio
 
 **Context**: SIMILAR_TRACKS only had Last.fm (`track.getSimilar`). The ROADMAP noted "Deezer radio is artist-seeded, different semantics" but that referred to ARTIST_RADIO (`/artist/{id}/radio`). Deezer also has `/track/{id}/radio` — a track-seeded endpoint returning ~25 similar tracks.
