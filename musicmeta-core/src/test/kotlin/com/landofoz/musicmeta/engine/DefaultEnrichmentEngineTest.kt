@@ -709,6 +709,124 @@ class DefaultEnrichmentEngineTest {
         assertEquals(scores, scores.sortedDescending())
     }
 
+    @Test fun `SIMILAR_ARTISTS merge still works when one provider errors`() = runTest {
+        // Given — provider A returns artists, provider B throws an exception
+        val providerA = similarArtistsProvider(
+            id = "lastfm",
+            artists = listOf(
+                SimilarArtist("Muse", matchScore = 0.9f, sources = listOf("lastfm")),
+                SimilarArtist("Bjork", matchScore = 0.7f, sources = listOf("lastfm")),
+            )
+        )
+        val providerB = FakeProvider(
+            id = "deezer",
+            capabilities = listOf(ProviderCapability(EnrichmentType.SIMILAR_ARTISTS, 30)),
+        ).also {
+            it.givenResult(
+                EnrichmentType.SIMILAR_ARTISTS,
+                EnrichmentResult.Error(EnrichmentType.SIMILAR_ARTISTS, "deezer", "API timeout"),
+            )
+        }
+        val e = DefaultEnrichmentEngine(
+            ProviderRegistry(listOf(providerA, providerB)),
+            cache,
+            FakeHttpClient(),
+            config,
+            mergers = listOf(GenreMerger, SimilarArtistMerger),
+        )
+
+        // When — enriching with one erroring provider
+        val results = e.enrich(
+            EnrichmentRequest.forArtist("Radiohead"),
+            setOf(EnrichmentType.SIMILAR_ARTISTS),
+        )
+
+        // Then — still returns merged result from the working provider
+        val result = results[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
+        assertEquals("similar_artist_merger", result.provider)
+        val data = result.data as EnrichmentData.SimilarArtists
+        assertEquals(2, data.artists.size)
+        assertTrue(data.artists.all { "lastfm" in it.sources })
+    }
+
+    @Test fun `SIMILAR_ARTISTS returns NotFound when all providers error`() = runTest {
+        // Given — both providers return errors
+        val providerA = FakeProvider(
+            id = "lastfm",
+            capabilities = listOf(ProviderCapability(EnrichmentType.SIMILAR_ARTISTS, 100)),
+        ).also {
+            it.givenResult(
+                EnrichmentType.SIMILAR_ARTISTS,
+                EnrichmentResult.Error(EnrichmentType.SIMILAR_ARTISTS, "lastfm", "Rate limited"),
+            )
+        }
+        val providerB = FakeProvider(
+            id = "deezer",
+            capabilities = listOf(ProviderCapability(EnrichmentType.SIMILAR_ARTISTS, 30)),
+        ).also {
+            it.givenResult(
+                EnrichmentType.SIMILAR_ARTISTS,
+                EnrichmentResult.Error(EnrichmentType.SIMILAR_ARTISTS, "deezer", "API timeout"),
+            )
+        }
+        val e = DefaultEnrichmentEngine(
+            ProviderRegistry(listOf(providerA, providerB)),
+            cache,
+            FakeHttpClient(),
+            config,
+            mergers = listOf(GenreMerger, SimilarArtistMerger),
+        )
+
+        // When
+        val results = e.enrich(
+            EnrichmentRequest.forArtist("Radiohead"),
+            setOf(EnrichmentType.SIMILAR_ARTISTS),
+        )
+
+        // Then — NotFound since no provider succeeded
+        assertTrue(
+            "Expected NotFound but got ${results[EnrichmentType.SIMILAR_ARTISTS]}",
+            results[EnrichmentType.SIMILAR_ARTISTS] is EnrichmentResult.NotFound,
+        )
+    }
+
+    @Test fun `SIMILAR_ARTISTS merge skips unavailable provider`() = runTest {
+        // Given — provider A is available with results, provider B is unavailable
+        val providerA = similarArtistsProvider(
+            id = "deezer",
+            artists = listOf(
+                SimilarArtist("Portishead", matchScore = 0.8f, sources = listOf("deezer")),
+            )
+        )
+        val providerB = FakeProvider(
+            id = "lastfm",
+            capabilities = listOf(ProviderCapability(EnrichmentType.SIMILAR_ARTISTS, 100)),
+            isAvailable = false,
+        )
+        val e = DefaultEnrichmentEngine(
+            ProviderRegistry(listOf(providerA, providerB)),
+            cache,
+            FakeHttpClient(),
+            config,
+            mergers = listOf(GenreMerger, SimilarArtistMerger),
+        )
+
+        // When
+        val results = e.enrich(
+            EnrichmentRequest.forArtist("Radiohead"),
+            setOf(EnrichmentType.SIMILAR_ARTISTS),
+        )
+
+        // Then — only available provider's results returned
+        val result = results[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
+        val data = result.data as EnrichmentData.SimilarArtists
+        assertEquals(1, data.artists.size)
+        assertEquals("Portishead", data.artists[0].name)
+        assertEquals(listOf("deezer"), data.artists[0].sources)
+        // Unavailable provider should not have been called
+        assertEquals(0, providerB.enrichCalls.size)
+    }
+
     @Test fun `ARTIST_TIMELINE is cached like standard types`() = runTest {
         // Given — identity provider + discography + band members providers
         val idProvider = identityProviderWithMetadata()

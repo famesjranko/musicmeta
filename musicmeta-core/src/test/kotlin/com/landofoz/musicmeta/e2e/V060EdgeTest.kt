@@ -5,7 +5,6 @@ import com.landofoz.musicmeta.EnrichmentEngine
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
-import com.landofoz.musicmeta.SimilarArtist
 import com.landofoz.musicmeta.http.DefaultHttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.provider.coverartarchive.CoverArtArchiveProvider
@@ -22,6 +21,8 @@ import com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzProvider
 import com.landofoz.musicmeta.provider.wikidata.WikidataProvider
 import com.landofoz.musicmeta.provider.wikipedia.WikipediaProvider
 import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Assume
 import org.junit.BeforeClass
 import org.junit.FixMethodOrder
@@ -64,55 +65,61 @@ class V060EdgeTest {
     // ═══════════════════════════════════════════════════════
 
     @Test
-    fun `01 - similar artists merge - well-known artist`() = runBlocking {
-        println("\n" + "=".repeat(64))
-        println("  SIMILAR_ARTISTS MERGE EDGES")
-        println("=".repeat(64))
-
-        println("  --- Radiohead (well-known, expect multi-source) ---")
+    fun `01 - similar artists merge - well-known artist returns results with valid scores`() = runBlocking {
+        println("\n  --- Radiohead (well-known, expect multi-source) ---")
         val results = engine.enrich(
             EnrichmentRequest.forArtist("Radiohead"),
             setOf(EnrichmentType.SIMILAR_ARTISTS),
         )
         val sa = results[EnrichmentType.SIMILAR_ARTISTS]
-        if (sa is EnrichmentResult.Success) {
-            val data = sa.data as EnrichmentData.SimilarArtists
-            val artists = data.artists
-            val multiSource = artists.filter { it.sources.size > 1 }
-            println("    provider: ${sa.provider}, conf=${sa.confidence}")
-            println("    total: ${artists.size} artists")
-            println("    multi-source: ${multiSource.size}/${artists.size}")
-            println("    score range: ${artists.minOfOrNull { it.matchScore }}..${artists.maxOfOrNull { it.matchScore }}")
-            println("    capped at 1.0: ${artists.count { it.matchScore >= 1.0f }}")
-            println("    sources distribution:")
-            val bySource = artists.flatMap { it.sources }.groupingBy { it }.eachCount()
-            bySource.forEach { (src, count) -> println("      $src: $count artists") }
-            println("    top 5:")
-            artists.take(5).forEach { println("      ${it.name.padEnd(30)} score=${it.matchScore} sources=${it.sources} mbid=${it.identifiers.musicBrainzId ?: "none"}") }
-            val names = artists.map { it.name.lowercase() }
-            val dupes = names.groupingBy { it }.eachCount().filter { it.value > 1 }
-            if (dupes.isNotEmpty()) println("    BUG: duplicate names: $dupes")
-            else println("    dedup: OK (no duplicates)")
-        } else {
-            println("    RESULT: ${sa?.let { it::class.simpleName }} — ${(sa as? EnrichmentResult.NotFound)?.provider}")
+        assertTrue("Expected Success for Radiohead similar artists", sa is EnrichmentResult.Success)
+        val data = (sa as EnrichmentResult.Success).data as EnrichmentData.SimilarArtists
+        val artists = data.artists
+
+        // Structural invariants
+        assertTrue("Should return at least 1 similar artist", artists.isNotEmpty())
+        assertTrue("Merger should be the provider", sa.provider == "similar_artist_merger")
+        artists.forEach { artist ->
+            assertTrue("Score ${artist.matchScore} should be in [0, 1.0]", artist.matchScore in 0f..1.0f)
+            assertTrue("Artist name should not be blank", artist.name.isNotBlank())
+            assertTrue("Sources should not be empty for ${artist.name}", artist.sources.isNotEmpty())
+        }
+
+        // No duplicates by normalized name
+        val names = artists.map { it.name.lowercase().trim() }
+        val dupes = names.groupingBy { it }.eachCount().filter { it.value > 1 }
+        assertTrue("Duplicate artists found: $dupes", dupes.isEmpty())
+
+        // Diagnostic output (for manual review of multi-source merge activation)
+        val multiSource = artists.filter { it.sources.size > 1 }
+        val bySource = artists.flatMap { it.sources }.groupingBy { it }.eachCount()
+        println("    provider: ${sa.provider}, conf=${sa.confidence}")
+        println("    total: ${artists.size}, multi-source: ${multiSource.size}")
+        println("    sources: $bySource")
+        println("    score range: ${artists.minOf { it.matchScore }}..${artists.maxOf { it.matchScore }}")
+        artists.take(5).forEach { println("      ${it.name.padEnd(30)} score=${it.matchScore} sources=${it.sources}") }
+        if (multiSource.isEmpty()) {
+            println("    WARNING: no multi-source artists — check if Last.fm/ListenBrainz are responding")
         }
     }
 
     @Test
     fun `02 - similar artists merge - obscure artist`() = runBlocking {
-        println("\n  --- Boards of Canada (niche, may be single-source) ---")
+        println("\n  --- Boards of Canada (niche) ---")
         val results = engine.enrich(
             EnrichmentRequest.forArtist("Boards of Canada"),
             setOf(EnrichmentType.SIMILAR_ARTISTS),
         )
         val sa = results[EnrichmentType.SIMILAR_ARTISTS]
+        // Obscure artists may legitimately return NotFound — only assert invariants on Success
         if (sa is EnrichmentResult.Success) {
             val data = sa.data as EnrichmentData.SimilarArtists
-            val artists = data.artists
-            val multiSource = artists.filter { it.sources.size > 1 }
-            println("    total: ${artists.size}, multi-source: ${multiSource.size}")
-            println("    sources: ${artists.flatMap { it.sources }.distinct()}")
-            artists.take(3).forEach { println("      ${it.name.padEnd(30)} score=${it.matchScore} sources=${it.sources}") }
+            data.artists.forEach { artist ->
+                assertTrue("Score out of range for ${artist.name}", artist.matchScore in 0f..1.0f)
+            }
+            val names = data.artists.map { it.name.lowercase().trim() }
+            assertTrue("Duplicates found", names.size == names.toSet().size)
+            println("    total: ${data.artists.size}, sources: ${data.artists.flatMap { it.sources }.distinct()}")
         } else {
             println("    RESULT: ${sa?.let { it::class.simpleName }}")
         }
@@ -126,24 +133,30 @@ class V060EdgeTest {
             setOf(EnrichmentType.SIMILAR_ARTISTS),
         )
         val sa = results[EnrichmentType.SIMILAR_ARTISTS]
+        // Non-latin should not crash — any result type is acceptable
+        assertNotNull("Result should not be null", sa)
         if (sa is EnrichmentResult.Success) {
             val data = sa.data as EnrichmentData.SimilarArtists
+            data.artists.forEach { artist ->
+                assertTrue("Score out of range for ${artist.name}", artist.matchScore in 0f..1.0f)
+            }
             println("    total: ${data.artists.size}, sources: ${data.artists.flatMap { it.sources }.distinct()}")
-            data.artists.take(3).forEach { println("      ${it.name.padEnd(30)} score=${it.matchScore}") }
         } else {
-            println("    RESULT: ${sa?.let { it::class.simpleName }} — ${(sa as? EnrichmentResult.NotFound)?.provider}")
+            println("    RESULT: ${sa?.let { it::class.simpleName }}")
         }
     }
 
     @Test
-    fun `04 - similar artists - wrong request type`() = runBlocking {
-        println("\n  --- ForAlbum: OK Computer (wrong request type for SIMILAR_ARTISTS) ---")
+    fun `04 - similar artists - wrong request type returns NotFound`() = runBlocking {
         val results = engine.enrich(
             EnrichmentRequest.forAlbum("OK Computer", "Radiohead"),
             setOf(EnrichmentType.SIMILAR_ARTISTS),
         )
         val sa = results[EnrichmentType.SIMILAR_ARTISTS]
-        println("    RESULT: ${sa?.let { it::class.simpleName }} — ${(sa as? EnrichmentResult.NotFound)?.provider ?: (sa as? EnrichmentResult.Success)?.provider}")
+        assertTrue(
+            "ForAlbum should return NotFound for SIMILAR_ARTISTS but got ${sa?.let { it::class.simpleName }}",
+            sa is EnrichmentResult.NotFound,
+        )
     }
 
     // ═══════════════════════════════════════════════════════
@@ -151,54 +164,67 @@ class V060EdgeTest {
     // ═══════════════════════════════════════════════════════
 
     @Test
-    fun `05 - artist radio edges`() = runBlocking {
-        println("\n" + "=".repeat(64))
-        println("  ARTIST_RADIO EDGES")
-        println("=".repeat(64))
+    fun `05 - artist radio - well-known artist returns tracks with metadata`() = runBlocking {
+        println("\n  --- Radiohead ARTIST_RADIO ---")
+        val results = engine.enrich(EnrichmentRequest.forArtist("Radiohead"), setOf(EnrichmentType.ARTIST_RADIO))
+        val radio = results[EnrichmentType.ARTIST_RADIO]
+        assertTrue("Expected Success for Radiohead radio", radio is EnrichmentResult.Success)
+        val data = (radio as EnrichmentResult.Success).data as EnrichmentData.RadioPlaylist
 
-        println("  --- Radiohead (well-known) ---")
-        var results = engine.enrich(EnrichmentRequest.forArtist("Radiohead"), setOf(EnrichmentType.ARTIST_RADIO))
-        var radio = results[EnrichmentType.ARTIST_RADIO]
-        if (radio is EnrichmentResult.Success) {
-            val data = radio.data as EnrichmentData.RadioPlaylist
-            println("    tracks: ${data.tracks.size}")
-            println("    has durations: ${data.tracks.count { it.durationMs != null }}/${data.tracks.size}")
-            println("    has albums: ${data.tracks.count { it.album != null }}/${data.tracks.size}")
-            println("    has identifiers: ${data.tracks.count { it.identifiers.extra.containsKey("deezerId") }}/${data.tracks.size}")
-            val uniqueArtists = data.tracks.map { it.artist }.distinct()
-            println("    unique artists: ${uniqueArtists.size}")
-            println("    seed artist tracks: ${data.tracks.count { it.artist.equals("Radiohead", ignoreCase = true) }}")
-            data.tracks.take(5).forEach { println("      ${it.title.take(35).padEnd(35)} ${it.artist.padEnd(20)} ${it.durationMs?.let { d -> "${d/1000}s" } ?: "?"}") }
-            val dupes = data.tracks.groupBy { "${it.title}:${it.artist}".lowercase() }.filter { it.value.size > 1 }
-            if (dupes.isNotEmpty()) println("    BUG: duplicate tracks: ${dupes.keys}")
-            else println("    dedup: OK")
-        } else {
-            println("    RESULT: ${radio?.let { it::class.simpleName }}")
+        // Structural invariants
+        assertTrue("Should return at least 1 track", data.tracks.isNotEmpty())
+        data.tracks.forEach { track ->
+            assertTrue("Track title should not be blank", track.title.isNotBlank())
+            assertTrue("Track artist should not be blank", track.artist.isNotBlank())
         }
 
-        println("\n  --- The Gerogerigegege (very obscure) ---")
-        results = engine.enrich(EnrichmentRequest.forArtist("The Gerogerigegege"), setOf(EnrichmentType.ARTIST_RADIO))
-        radio = results[EnrichmentType.ARTIST_RADIO]
-        println("    RESULT: ${radio?.let { it::class.simpleName }} — ${(radio as? EnrichmentResult.NotFound)?.provider ?: "found ${((radio as? EnrichmentResult.Success)?.data as? EnrichmentData.RadioPlaylist)?.tracks?.size} tracks"}")
+        // No duplicate tracks
+        val trackKeys = data.tracks.map { "${it.title}:${it.artist}".lowercase() }
+        val dupes = trackKeys.groupingBy { it }.eachCount().filter { it.value > 1 }
+        assertTrue("Duplicate tracks: ${dupes.keys}", dupes.isEmpty())
 
-        println("\n  --- ForAlbum: OK Computer (wrong request type) ---")
-        results = engine.enrich(EnrichmentRequest.forAlbum("OK Computer", "Radiohead"), setOf(EnrichmentType.ARTIST_RADIO))
-        radio = results[EnrichmentType.ARTIST_RADIO]
-        println("    RESULT: ${radio?.let { it::class.simpleName }} — ${(radio as? EnrichmentResult.NotFound)?.provider ?: "unexpected success!"}")
+        // Should have variety (not all from the seed artist)
+        val uniqueArtists = data.tracks.map { it.artist }.distinct()
+        assertTrue("Expected multiple artists in radio, got: $uniqueArtists", uniqueArtists.size > 1)
 
-        println("\n  --- ForTrack: Creep (wrong request type) ---")
-        results = engine.enrich(EnrichmentRequest.forTrack("Creep", "Radiohead"), setOf(EnrichmentType.ARTIST_RADIO))
-        radio = results[EnrichmentType.ARTIST_RADIO]
-        println("    RESULT: ${radio?.let { it::class.simpleName }} — ${(radio as? EnrichmentResult.NotFound)?.provider ?: "unexpected success!"}")
+        println("    tracks: ${data.tracks.size}, unique artists: ${uniqueArtists.size}")
+        println("    has durations: ${data.tracks.count { it.durationMs != null }}/${data.tracks.size}")
+    }
 
-        println("\n  --- AC/DC (special characters) ---")
-        results = engine.enrich(EnrichmentRequest.forArtist("AC/DC"), setOf(EnrichmentType.ARTIST_RADIO))
-        radio = results[EnrichmentType.ARTIST_RADIO]
+    @Test
+    fun `05b - artist radio - wrong request types return NotFound`() = runBlocking {
+        // ForAlbum
+        val albumResults = engine.enrich(
+            EnrichmentRequest.forAlbum("OK Computer", "Radiohead"),
+            setOf(EnrichmentType.ARTIST_RADIO),
+        )
+        assertTrue(
+            "ForAlbum should return NotFound for ARTIST_RADIO",
+            albumResults[EnrichmentType.ARTIST_RADIO] is EnrichmentResult.NotFound,
+        )
+
+        // ForTrack
+        val trackResults = engine.enrich(
+            EnrichmentRequest.forTrack("Creep", "Radiohead"),
+            setOf(EnrichmentType.ARTIST_RADIO),
+        )
+        assertTrue(
+            "ForTrack should return NotFound for ARTIST_RADIO",
+            trackResults[EnrichmentType.ARTIST_RADIO] is EnrichmentResult.NotFound,
+        )
+    }
+
+    @Test
+    fun `05c - artist radio - special characters handled`() = runBlocking {
+        val results = engine.enrich(EnrichmentRequest.forArtist("AC/DC"), setOf(EnrichmentType.ARTIST_RADIO))
+        val radio = results[EnrichmentType.ARTIST_RADIO]
+        // AC/DC is well-known enough that it should succeed; slash in name should not crash
         if (radio is EnrichmentResult.Success) {
             val data = radio.data as EnrichmentData.RadioPlaylist
-            println("    tracks: ${data.tracks.size} (special chars handled OK)")
+            assertTrue("AC/DC radio should return tracks", data.tracks.isNotEmpty())
+            println("    AC/DC: ${data.tracks.size} tracks (special chars OK)")
         } else {
-            println("    RESULT: ${radio?.let { it::class.simpleName }} — ${(radio as? EnrichmentResult.NotFound)?.provider}")
+            println("    AC/DC: ${radio?.let { it::class.simpleName }} (may be transient)")
         }
     }
 
@@ -207,79 +233,64 @@ class V060EdgeTest {
     // ═══════════════════════════════════════════════════════
 
     @Test
-    fun `06 - similar albums edges`() = runBlocking {
-        println("\n" + "=".repeat(64))
-        println("  SIMILAR_ALBUMS EDGES")
-        println("=".repeat(64))
-
-        println("  --- OK Computer by Radiohead (well-known, 1997) ---")
-        var results = engine.enrich(
+    fun `06 - similar albums - well-known album has valid scores and no self-reference`() = runBlocking {
+        println("\n  --- OK Computer by Radiohead (SIMILAR_ALBUMS) ---")
+        val results = engine.enrich(
             EnrichmentRequest.forAlbum("OK Computer", "Radiohead"),
             setOf(EnrichmentType.SIMILAR_ALBUMS),
         )
-        var sa = results[EnrichmentType.SIMILAR_ALBUMS]
-        if (sa is EnrichmentResult.Success) {
-            val data = sa.data as EnrichmentData.SimilarAlbums
-            println("    total: ${data.albums.size}")
-            println("    score range: ${data.albums.minOfOrNull { it.artistMatchScore }}..${data.albums.maxOfOrNull { it.artistMatchScore }}")
-            println("    with year: ${data.albums.count { it.year != null }}/${data.albums.size}")
-            println("    with thumbnail: ${data.albums.count { it.thumbnailUrl != null }}/${data.albums.size}")
-            println("    unique artists: ${data.albums.map { it.artist }.distinct().size}")
-            val selfAlbums = data.albums.filter { it.artist.equals("Radiohead", ignoreCase = true) }
-            if (selfAlbums.isNotEmpty()) println("    BUG: contains seed artist's own albums: ${selfAlbums.map { it.title }}")
-            else println("    self-filter: OK (no seed artist albums)")
-            val dupes = data.albums.groupBy { "${it.title}:${it.artist}".lowercase() }.filter { it.value.size > 1 }
-            if (dupes.isNotEmpty()) println("    BUG: duplicate albums: ${dupes.keys}")
-            else println("    dedup: OK")
-            data.albums.take(5).forEach { println("      ${it.title.take(35).padEnd(35)} ${it.artist.padEnd(20)} ${it.year ?: "?"} score=${it.artistMatchScore}") }
-        } else {
-            println("    RESULT: ${sa?.let { it::class.simpleName }}")
+        val sa = results[EnrichmentType.SIMILAR_ALBUMS]
+        assertTrue("Expected Success for OK Computer similar albums", sa is EnrichmentResult.Success)
+        val data = (sa as EnrichmentResult.Success).data as EnrichmentData.SimilarAlbums
+
+        assertTrue("Should return at least 1 similar album", data.albums.isNotEmpty())
+
+        // Score range and no self-referencing
+        data.albums.forEach { album ->
+            assertTrue("Score out of range for ${album.title}: ${album.artistMatchScore}",
+                album.artistMatchScore >= 0f)
+            assertTrue("Album title should not be blank", album.title.isNotBlank())
+            assertTrue("Album artist should not be blank", album.artist.isNotBlank())
         }
 
-        println("\n  --- DAMN. by Kendrick Lamar (hip-hop, 2017) ---")
-        results = engine.enrich(
-            EnrichmentRequest.forAlbum("DAMN.", "Kendrick Lamar"),
-            setOf(EnrichmentType.SIMILAR_ALBUMS),
+        // No seed artist's own albums in results (self-filter)
+        val selfAlbums = data.albums.filter { it.artist.equals("Radiohead", ignoreCase = true) }
+        assertTrue("Seed artist albums should be excluded: ${selfAlbums.map { it.title }}", selfAlbums.isEmpty())
+
+        // No duplicates
+        val dupes = data.albums.groupBy { "${it.title}:${it.artist}".lowercase() }.filter { it.value.size > 1 }
+        assertTrue("Duplicate albums: ${dupes.keys}", dupes.isEmpty())
+
+        println("    total: ${data.albums.size}, unique artists: ${data.albums.map { it.artist }.distinct().size}")
+        println("    score range: ${data.albums.minOf { it.artistMatchScore }}..${data.albums.maxOf { it.artistMatchScore }}")
+        data.albums.take(5).forEach {
+            println("      ${it.title.take(35).padEnd(35)} ${it.artist.padEnd(20)} ${it.year ?: "?"} score=${it.artistMatchScore}")
+        }
+    }
+
+    @Test
+    fun `06b - similar albums - wrong request type returns NotFound`() = runBlocking {
+        val results = engine.enrich(EnrichmentRequest.forArtist("Radiohead"), setOf(EnrichmentType.SIMILAR_ALBUMS))
+        assertTrue(
+            "ForArtist should return NotFound for SIMILAR_ALBUMS",
+            results[EnrichmentType.SIMILAR_ALBUMS] is EnrichmentResult.NotFound,
         )
-        sa = results[EnrichmentType.SIMILAR_ALBUMS]
-        if (sa is EnrichmentResult.Success) {
-            val data = sa.data as EnrichmentData.SimilarAlbums
-            println("    total: ${data.albums.size}, unique artists: ${data.albums.map { it.artist }.distinct().size}")
-            data.albums.take(3).forEach { println("      ${it.title.take(35).padEnd(35)} ${it.artist.padEnd(20)} ${it.year ?: "?"} score=${it.artistMatchScore}") }
-        } else {
-            println("    RESULT: ${sa?.let { it::class.simpleName }} — ${(sa as? EnrichmentResult.NotFound)?.provider}")
-        }
+    }
 
-        println("\n  --- ForArtist: Radiohead (wrong request type) ---")
-        results = engine.enrich(EnrichmentRequest.forArtist("Radiohead"), setOf(EnrichmentType.SIMILAR_ALBUMS))
-        sa = results[EnrichmentType.SIMILAR_ALBUMS]
-        println("    RESULT: ${sa?.let { it::class.simpleName }} — ${(sa as? EnrichmentResult.NotFound)?.provider ?: "unexpected success!"}")
-
-        println("\n  --- Cosmogramma by Flying Lotus (niche) ---")
-        results = engine.enrich(
-            EnrichmentRequest.forAlbum("Cosmogramma", "Flying Lotus"),
-            setOf(EnrichmentType.SIMILAR_ALBUMS),
-        )
-        sa = results[EnrichmentType.SIMILAR_ALBUMS]
-        if (sa is EnrichmentResult.Success) {
-            val data = sa.data as EnrichmentData.SimilarAlbums
-            println("    total: ${data.albums.size}")
-            data.albums.take(3).forEach { println("      ${it.title.take(35).padEnd(35)} ${it.artist.padEnd(20)} score=${it.artistMatchScore}") }
-        } else {
-            println("    RESULT: ${sa?.let { it::class.simpleName }} — ${(sa as? EnrichmentResult.NotFound)?.provider}")
-        }
-
-        println("\n  --- I by Meshuggah (single char album) ---")
-        results = engine.enrich(
+    @Test
+    fun `06c - similar albums - single-char album name does not crash`() = runBlocking {
+        val results = engine.enrich(
             EnrichmentRequest.forAlbum("I", "Meshuggah"),
             setOf(EnrichmentType.SIMILAR_ALBUMS),
         )
-        sa = results[EnrichmentType.SIMILAR_ALBUMS]
+        val sa = results[EnrichmentType.SIMILAR_ALBUMS]
+        // Single-char should not crash — any result type is acceptable
+        assertNotNull("Result should not be null", sa)
         if (sa is EnrichmentResult.Success) {
             val data = sa.data as EnrichmentData.SimilarAlbums
-            println("    total: ${data.albums.size}")
+            println("    I by Meshuggah: ${data.albums.size} similar albums")
         } else {
-            println("    RESULT: ${sa?.let { it::class.simpleName }} — ${(sa as? EnrichmentResult.NotFound)?.provider}")
+            println("    I by Meshuggah: ${sa?.let { it::class.simpleName }}")
         }
     }
 
@@ -288,62 +299,54 @@ class V060EdgeTest {
     // ═══════════════════════════════════════════════════════
 
     @Test
-    fun `07 - genre discovery edges`() = runBlocking {
-        println("\n" + "=".repeat(64))
-        println("  GENRE_DISCOVERY EDGES")
-        println("=".repeat(64))
-
-        println("  --- Radiohead (rock/electronic — expect rich discovery) ---")
-        var results = engine.enrich(
+    fun `07 - genre discovery - well-known artist returns related genres with valid affinities`() = runBlocking {
+        println("\n  --- Radiohead GENRE_DISCOVERY ---")
+        val results = engine.enrich(
             EnrichmentRequest.forArtist("Radiohead"),
             setOf(EnrichmentType.GENRE_DISCOVERY),
         )
-        var gd = results[EnrichmentType.GENRE_DISCOVERY]
-        if (gd is EnrichmentResult.Success) {
-            val data = gd.data as EnrichmentData.GenreDiscovery
-            println("    total: ${data.relatedGenres.size}")
-            val byRel = data.relatedGenres.groupBy { it.relationship }
-            byRel.forEach { (rel, genres) -> println("    $rel: ${genres.size}") }
-            println("    affinity range: ${data.relatedGenres.minOfOrNull { it.affinity }}..${data.relatedGenres.maxOfOrNull { it.affinity }}")
-            data.relatedGenres.take(5).forEach { println("      ${it.name.padEnd(25)} aff=${it.affinity} rel=${it.relationship} from=${it.sourceGenres}") }
-        } else {
-            println("    RESULT: ${gd?.let { it::class.simpleName }}")
+        val gd = results[EnrichmentType.GENRE_DISCOVERY]
+        assertTrue("Expected Success for Radiohead genre discovery", gd is EnrichmentResult.Success)
+        val data = (gd as EnrichmentResult.Success).data as EnrichmentData.GenreDiscovery
+
+        assertTrue("Should return at least 1 related genre", data.relatedGenres.isNotEmpty())
+        data.relatedGenres.forEach { genre ->
+            assertTrue("Affinity out of range for ${genre.name}: ${genre.affinity}",
+                genre.affinity in 0f..1.0f)
+            assertTrue("Genre name should not be blank", genre.name.isNotBlank())
+            assertTrue("Relationship should not be blank for ${genre.name}", genre.relationship.isNotBlank())
+            assertTrue("Source genres should not be empty for ${genre.name}", genre.sourceGenres.isNotEmpty())
         }
 
-        println("\n  --- Amon Amarth (melodic death metal — may not be in taxonomy) ---")
-        results = engine.enrich(
-            EnrichmentRequest.forArtist("Amon Amarth"),
-            setOf(EnrichmentType.GENRE_DISCOVERY),
-        )
-        gd = results[EnrichmentType.GENRE_DISCOVERY]
-        if (gd is EnrichmentResult.Success) {
-            val data = gd.data as EnrichmentData.GenreDiscovery
-            println("    total: ${data.relatedGenres.size}")
-            data.relatedGenres.take(5).forEach { println("      ${it.name.padEnd(25)} aff=${it.affinity} from=${it.sourceGenres}") }
-        } else {
-            println("    RESULT: ${gd?.let { it::class.simpleName }} — ${(gd as? EnrichmentResult.NotFound)?.provider}")
-        }
+        val byRel = data.relatedGenres.groupBy { it.relationship }
+        println("    total: ${data.relatedGenres.size}, relationships: ${byRel.mapValues { it.value.size }}")
+        println("    affinity range: ${data.relatedGenres.minOf { it.affinity }}..${data.relatedGenres.maxOf { it.affinity }}")
+    }
 
-        println("\n  --- ForAlbum: OK Computer (should work — albums have genres) ---")
-        results = engine.enrich(
+    @Test
+    fun `07b - genre discovery - works for ForAlbum and ForTrack`() = runBlocking {
+        // ForAlbum should work (albums have genre data)
+        val albumResults = engine.enrich(
             EnrichmentRequest.forAlbum("OK Computer", "Radiohead"),
             setOf(EnrichmentType.GENRE_DISCOVERY),
         )
-        gd = results[EnrichmentType.GENRE_DISCOVERY]
-        if (gd is EnrichmentResult.Success) {
-            val data = gd.data as EnrichmentData.GenreDiscovery
-            println("    total: ${data.relatedGenres.size} related genres (album genre discovery works)")
+        val albumGd = albumResults[EnrichmentType.GENRE_DISCOVERY]
+        if (albumGd is EnrichmentResult.Success) {
+            val data = albumGd.data as EnrichmentData.GenreDiscovery
+            assertTrue("Album genre discovery should return genres", data.relatedGenres.isNotEmpty())
+            println("    ForAlbum: ${data.relatedGenres.size} related genres")
         } else {
-            println("    RESULT: ${gd?.let { it::class.simpleName }} — ${(gd as? EnrichmentResult.NotFound)?.provider}")
+            println("    ForAlbum: ${albumGd?.let { it::class.simpleName }} (genres may not have resolved)")
         }
 
-        println("\n  --- ForTrack: Creep by Radiohead (track — may lack genreTags) ---")
-        results = engine.enrich(
+        // ForTrack — may or may not work depending on genre tag availability
+        val trackResults = engine.enrich(
             EnrichmentRequest.forTrack("Creep", "Radiohead"),
             setOf(EnrichmentType.GENRE_DISCOVERY),
         )
-        gd = results[EnrichmentType.GENRE_DISCOVERY]
-        println("    RESULT: ${gd?.let { it::class.simpleName }} — ${(gd as? EnrichmentResult.NotFound)?.provider ?: "found ${((gd as? EnrichmentResult.Success)?.data as? EnrichmentData.GenreDiscovery)?.relatedGenres?.size} genres"}")
+        val trackGd = trackResults[EnrichmentType.GENRE_DISCOVERY]
+        assertNotNull("ForTrack result should not be null", trackGd)
+        println("    ForTrack: ${trackGd?.let { it::class.simpleName }}")
     }
 
     // ═══════════════════════════════════════════════════════
@@ -351,12 +354,8 @@ class V060EdgeTest {
     // ═══════════════════════════════════════════════════════
 
     @Test
-    fun `08 - all v060 types concurrent`() = runBlocking {
-        println("\n" + "=".repeat(64))
-        println("  ALL v0.6.0 TYPES CONCURRENT")
-        println("=".repeat(64))
-
-        println("  --- ForArtist: Daft Punk (all rec types at once) ---")
+    fun `08 - all v060 types concurrent - no errors under fan-out`() = runBlocking {
+        println("\n  --- Daft Punk (5 types concurrent) ---")
         val start = System.currentTimeMillis()
         val results = engine.enrich(
             EnrichmentRequest.forArtist("Daft Punk"),
@@ -369,67 +368,48 @@ class V060EdgeTest {
             ),
         )
         val elapsed = System.currentTimeMillis() - start
+
+        // All 5 types should be present in results (even if NotFound)
+        val requestedTypes = setOf(
+            EnrichmentType.SIMILAR_ARTISTS, EnrichmentType.ARTIST_RADIO,
+            EnrichmentType.GENRE_DISCOVERY, EnrichmentType.GENRE, EnrichmentType.ARTIST_BIO,
+        )
+        for (type in requestedTypes) {
+            assertNotNull("Missing result for $type", results[type])
+            assertTrue(
+                "$type should not be Error: ${(results[type] as? EnrichmentResult.Error)?.message}",
+                results[type] !is EnrichmentResult.Error,
+            )
+        }
+
         println("    elapsed: ${elapsed}ms")
         results.forEach { (type, result) ->
             val status = when (result) {
-                is EnrichmentResult.Success -> "OK (${result.provider}, conf=${result.confidence})"
+                is EnrichmentResult.Success -> "OK (${result.provider})"
                 is EnrichmentResult.NotFound -> "NF (${result.provider})"
-                is EnrichmentResult.Error -> "ERR (${result.provider}: ${result.message})"
-                is EnrichmentResult.RateLimited -> "RL (${result.provider})"
-            }
-            val detail = when (result) {
-                is EnrichmentResult.Success -> when (val d = result.data) {
-                    is EnrichmentData.SimilarArtists -> "${d.artists.size} artists"
-                    is EnrichmentData.RadioPlaylist -> "${d.tracks.size} tracks"
-                    is EnrichmentData.GenreDiscovery -> "${d.relatedGenres.size} genres"
-                    is EnrichmentData.Metadata -> d.genreTags?.size?.let { "$it tags" } ?: "metadata"
-                    is EnrichmentData.Biography -> "${d.text.take(50)}..."
-                    else -> d::class.simpleName ?: ""
-                }
-                else -> ""
-            }
-            println("    ${type.name.padEnd(20)} $status $detail")
-        }
-
-        println("\n  --- ForAlbum: Random Access Memories (SIMILAR_ALBUMS + GENRE_DISCOVERY) ---")
-        val start2 = System.currentTimeMillis()
-        val results2 = engine.enrich(
-            EnrichmentRequest.forAlbum("Random Access Memories", "Daft Punk"),
-            setOf(
-                EnrichmentType.SIMILAR_ALBUMS,
-                EnrichmentType.GENRE_DISCOVERY,
-                EnrichmentType.GENRE,
-            ),
-        )
-        val elapsed2 = System.currentTimeMillis() - start2
-        println("    elapsed: ${elapsed2}ms")
-        results2.forEach { (type, result) ->
-            val status = when (result) {
-                is EnrichmentResult.Success -> "OK"
-                is EnrichmentResult.NotFound -> "NF (${result.provider})"
-                else -> result::class.simpleName ?: ""
+                is EnrichmentResult.Error -> "ERR (${result.message})"
+                is EnrichmentResult.RateLimited -> "RL"
             }
             println("    ${type.name.padEnd(20)} $status")
         }
     }
 
-    // ═══════════════════════════════════════════════════════
-    // SUMMARY
-    // ═══════════════════════════════════════════════════════
-
     @Test
-    fun `09 - analysis summary`() {
-        println("\n" + "=".repeat(64))
-        println("  v0.6.0 EDGE ANALYSIS COMPLETE")
-        println("=".repeat(64))
-        println("  Review output above for:")
-        println("    - Multi-source merge activation (lastfm + listenbrainz + deezer)")
-        println("    - Duplicate detection in merged results")
-        println("    - Score capping behavior (should not exceed 1.0)")
-        println("    - Wrong request type handling (ForAlbum for artist-scoped types)")
-        println("    - Special character handling in Deezer searches")
-        println("    - Genre taxonomy coverage for niche genres")
-        println("    - Self-referencing in similar albums (seed artist's own albums)")
-        println("    - Concurrent request performance")
+    fun `08b - concurrent album types - no errors under fan-out`() = runBlocking {
+        println("\n  --- Random Access Memories (3 types concurrent) ---")
+        val results = engine.enrich(
+            EnrichmentRequest.forAlbum("Random Access Memories", "Daft Punk"),
+            setOf(EnrichmentType.SIMILAR_ALBUMS, EnrichmentType.GENRE_DISCOVERY, EnrichmentType.GENRE),
+        )
+
+        for (type in results.keys) {
+            assertTrue(
+                "$type should not be Error: ${(results[type] as? EnrichmentResult.Error)?.message}",
+                results[type] !is EnrichmentResult.Error,
+            )
+        }
+        results.forEach { (type, result) ->
+            println("    ${type.name.padEnd(20)} ${result::class.simpleName}")
+        }
     }
 }
