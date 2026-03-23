@@ -56,10 +56,10 @@ Key additions:
 
 | Category | Type | Providers | Depth |
 |----------|------|-----------|-------|
-| **Artwork** | ALBUM_ART | CAA, Fanart.tv, Deezer, iTunes, Wikipedia | Good — 5 providers, multi-size |
+| **Artwork** | ALBUM_ART | CAA, Fanart.tv, Deezer, iTunes, Wikipedia | **Excellent** — 5 providers merged via ArtworkMerger, alternatives preserved |
 | | ALBUM_ART_BACK | CAA | Good — via JSON metadata endpoint |
 | | ALBUM_BOOKLET | CAA | Good — via JSON metadata endpoint |
-| | ARTIST_PHOTO | Wikidata, Fanart.tv, Wikipedia | Good — 3 providers |
+| | ARTIST_PHOTO | Wikidata, Fanart.tv, Deezer, Wikipedia | **Excellent** — 4 providers merged via ArtworkMerger, covers niche artists |
 | | ARTIST_BACKGROUND | Fanart.tv | Thin — requires API key + MBID |
 | | ARTIST_LOGO | Fanart.tv | Thin — requires API key + MBID |
 | | ARTIST_BANNER | Fanart.tv | OK — requires API key + MBID |
@@ -95,7 +95,7 @@ Key additions:
 | **MusicBrainz** | 11 | ~85% | — |
 | **Last.fm** | 5 methods | ~50% | — |
 | **Fanart.tv** | 2 | ~67% | — |
-| **Deezer** | 9 | ~94% | +5 (getRelatedArtists, getArtistRadio, SimilarAlbumsProvider, searchTrack, getTrackRadio) |
+| **Deezer** | 10 | ~100% | +6 (getRelatedArtists, getArtistRadio, SimilarAlbumsProvider, searchTrack, getTrackRadio, artist photos) |
 | **Discogs** | 5 | ~65% | — |
 | **Cover Art Archive** | 2 | ~60% | — |
 | **ListenBrainz** | 6 | ~43% | — |
@@ -104,7 +104,7 @@ Key additions:
 | **Wikipedia** | 2 | ~50% | — |
 | **LRCLIB** | 2 | ~100% | — |
 
-**Average utilization: ~60%** (up from ~57% in v0.5.0)
+**Average utilization: ~61%** (up from ~57% in v0.5.0, ~60% in v0.6.0)
 
 ---
 
@@ -112,13 +112,12 @@ Key additions:
 
 ### Remaining Gaps (no planned milestone)
 
-- **SIMILAR_TRACKS** now has 2 providers (Last.fm + Deezer track radio) merged via SimilarTrackMerger
 - **itunesArtistId** not stored in resolvedIdentifiers — re-searches on every discography call (minor perf tech debt from v0.5.0)
 - **ForAlbum credits aggregation** — CREDITS only supports ForTrack; aggregating per-track credits for an album deferred
 - **Credit-Based Discovery** — "more from this producer/composer" via CREDITS data; cross-entity query pattern, deferred to v0.7.0+
 - **ListenBrainz collaborative filtering** — user-scoped recommendations; needs user identity concept in EnrichmentRequest, deferred to v0.8.0+
 - **Last.fm artist.gettoptracks** — could enhance ARTIST_POPULARITY with top track names/scrobble counts
-- **DefaultEnrichmentEngine.kt** is 304 lines (4 over 300-line target)
+- **Discogs artist images** — `getArtist()` response includes `images[]` array, already called for BAND_MEMBERS but images are not parsed. Would add another ARTIST_PHOTO source.
 
 ### Catalog Awareness — Interface Shipped, Implementations Remaining
 
@@ -130,19 +129,20 @@ The `CatalogProvider` interface shipped in v0.6.0 with three filtering modes (UN
 - Fingerprint-based matching (AcoustID/Chromaprint) for local library
 - Availability scoring — ranking by how accessible items are
 
-### Artwork Mergeability — Data Being Discarded
-
-**Core problem:** Artwork types use short-circuit provider chains (first `Success` wins). This means if Wikidata returns an artist photo, Deezer and Fanart.tv results are discarded — even though they're *different images* (editorial photo vs label press photo vs fan art). A dev building a music app wants all options.
+### Artwork Mergeability — Mostly Resolved
 
 **Principle: never discard data the API already returns.** If multiple providers have images for an artist, return all of them. The consumer decides which to display.
 
-**Immediate gaps (providers return data we throw away):**
-- **Deezer** — Every artist search result includes `picture_small/medium/big/xl` (4 sizes up to 1000x1000). Currently discarded. Would give artist photos for niche artists like Ochre that have no Wikidata/Fanart.tv coverage.
-- **Discogs** — `getArtist()` response includes `images[]` array. Already called for BAND_MEMBERS but images are not parsed.
+**Shipped:**
+- **ArtworkMerger** — ARTIST_PHOTO and ALBUM_ART are now mergeable types. All providers are queried and results merged: highest-confidence image is primary, others are available via `Artwork.alternatives: List<ArtworkSource>`.
+- **Deezer artist photos** — `picture_small/medium/big/xl` (4 sizes up to 1000x1000) now parsed and returned. Gives artist photos for niche artists like Ochre that have no Wikidata/Fanart.tv coverage.
+- **ErrorKind.TIMEOUT** — timed-out types get explicit `Error(TIMEOUT)` instead of being silently missing.
+- **Band member deduplication** — MusicBrainz members deduplicated by ID, roles merged. Solo (Person-type) artists return themselves as the sole member.
+- **Performance** — MusicBrainz lookup caching eliminates redundant API calls (~2s saved). `resolveAll` runs providers concurrently for mergeable types.
 
-**Architecture fix needed:** Make artwork types mergeable (like GENRE). Create an `ArtworkMerger` that collects from all providers and returns a combined `Artwork` with all images attributed by provider. The `Artwork.sizes: List<ArtworkSize>` field already supports this.
-
-**Affected types:** ARTIST_PHOTO (highest priority — currently misses niche artists), ALBUM_ART (5 providers but only first success used), potentially ARTIST_BACKGROUND/LOGO/BANNER.
+**Remaining gap:**
+- **Discogs artist images** — `getArtist()` response includes `images[]` array but not parsed yet. Would add a 5th ARTIST_PHOTO source.
+- **ARTIST_BACKGROUND/LOGO/BANNER** — still single-provider (Fanart.tv only). Could be made mergeable if additional sources are added.
 
 ### Provider Coverage Gaps
 
@@ -185,7 +185,7 @@ Ranked by **impact to consumers × implementation effort** (updated for v0.5.0):
 |-----------|--------|--------|--------|--------|
 | Enrichment types | 16 | 25 (+9) | 28 (+3) | 31 (+3) |
 | Provider utilization | ~30% avg | ~48% avg | ~57% avg | ~60% avg |
-| Engine concepts | Provider chains | + Typed identifiers, mapper pattern, confidence calculator | + Composite types, mergeable types, GenreMerger | + ResultMerger/CompositeSynthesizer interfaces, CatalogProvider filtering |
+| Engine concepts | Provider chains | + Typed identifiers, mapper pattern, confidence calculator | + Composite types, mergeable types, GenreMerger | + ResultMerger/CompositeSynthesizer interfaces, CatalogProvider filtering, ArtworkMerger, ErrorKind.TIMEOUT |
 | "App-ready" artist page | Partial | Full | **Complete** | **Complete** + radio, genre discovery, merged similar artists |
 | "App-ready" album page | Partial | Full | **Complete** | **Complete** + similar albums with era scoring |
 | "App-ready" now-playing | Partial | Rich | **Complete** | **Complete** + catalog-aware filtering |
@@ -196,7 +196,7 @@ Ranked by **impact to consumers × implementation effort** (updated for v0.5.0):
 
 | Goal Category | Coverage | Assessment |
 |--------------|----------|------------|
-| Artwork | 8 types, 5 providers for album art | 🟡 **Types complete, data being lost** — artwork uses short-circuit chains, discarding images from lower-priority providers. Deezer + Discogs artist images not collected. Needs ArtworkMerger. |
+| Artwork | 8 types, ALBUM_ART (5 merged) + ARTIST_PHOTO (4 merged) | ✅ **Complete** — ArtworkMerger collects from all providers with alternatives. Deezer artist photos added for niche artist coverage. |
 | Metadata | 9 types including credits + editions | ✅ **Complete** |
 | Text content | Bios + synced/plain lyrics | ✅ **Complete** |
 | Relationships | Similar artists (3 merged), similar tracks, links | ✅ **Complete** |
@@ -207,7 +207,7 @@ Ranked by **impact to consumers × implementation effort** (updated for v0.5.0):
 | Developer Experience | Engine works, consumer API is power-user only | ❌ **Not started** |
 | Catalog Awareness | Interface shipped; implementations deferred | 🟡 **Interface only** |
 
-**7/10 goal categories complete or mostly complete.** Two categories remain: Artwork (data loss from short-circuit chains) and Developer Experience.
+**8/10 goal categories complete or mostly complete.** One category remains: Developer Experience.
 
 #### Recommendation Module Status
 
