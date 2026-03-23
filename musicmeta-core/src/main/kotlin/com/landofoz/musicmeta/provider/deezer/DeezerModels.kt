@@ -18,6 +18,10 @@ data class DeezerAlbumResult(
 data class DeezerArtistSearchResult(
     val id: Long,
     val name: String,
+    val pictureSmall: String? = null,
+    val pictureMedium: String? = null,
+    val pictureBig: String? = null,
+    val pictureXl: String? = null,
 )
 
 /** Album entry from Deezer artist albums endpoint. */
@@ -44,7 +48,14 @@ data class DeezerRelatedArtist(
     val name: String,
 )
 
-/** Radio track entry from Deezer /artist/{id}/radio endpoint. */
+/** Track search result from Deezer API. */
+data class DeezerTrackSearchResult(
+    val id: Long,
+    val title: String,
+    val artistName: String,
+)
+
+/** Radio track entry from Deezer /artist/{id}/radio or /track/{id}/radio endpoint. */
 data class DeezerRadioTrack(
     val id: Long,
     val title: String,

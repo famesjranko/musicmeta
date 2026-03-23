@@ -30,11 +30,13 @@ class DeezerProvider(
     override val isAvailable = true
 
     override val capabilities = listOf(
+        ProviderCapability(EnrichmentType.ARTIST_PHOTO, priority = 60),
         ProviderCapability(EnrichmentType.ALBUM_ART, priority = 50),
         ProviderCapability(EnrichmentType.ARTIST_DISCOGRAPHY, priority = 50),
         ProviderCapability(EnrichmentType.ALBUM_TRACKS, priority = 50),
         ProviderCapability(EnrichmentType.ALBUM_METADATA, priority = 50),
         ProviderCapability(EnrichmentType.SIMILAR_ARTISTS, priority = 30),
+        ProviderCapability(EnrichmentType.SIMILAR_TRACKS, priority = 50),
         ProviderCapability(EnrichmentType.ARTIST_RADIO, priority = 100),
     )
 
@@ -55,16 +57,41 @@ class DeezerProvider(
     ): EnrichmentResult {
         return try {
             when (type) {
+                EnrichmentType.ARTIST_PHOTO -> enrichArtistPhoto(request)
                 EnrichmentType.ARTIST_DISCOGRAPHY -> enrichDiscography(request)
                 EnrichmentType.ALBUM_TRACKS -> enrichAlbumTracks(request)
                 EnrichmentType.ALBUM_METADATA -> enrichAlbumMetadata(request, type)
                 EnrichmentType.SIMILAR_ARTISTS -> enrichSimilarArtists(request)
+                EnrichmentType.SIMILAR_TRACKS -> enrichSimilarTracks(request)
                 EnrichmentType.ARTIST_RADIO -> enrichArtistRadio(request)
                 else -> enrichAlbumArt(request, type)
             }
         } catch (e: Exception) {
             mapError(type, e)
         }
+    }
+
+    private suspend fun enrichArtistPhoto(request: EnrichmentRequest): EnrichmentResult {
+        val artistRequest = request as? EnrichmentRequest.ForArtist
+            ?: return EnrichmentResult.NotFound(EnrichmentType.ARTIST_PHOTO, id)
+
+        val artist = api.searchArtist(artistRequest.name)
+            ?: return EnrichmentResult.NotFound(EnrichmentType.ARTIST_PHOTO, id)
+
+        if (!ArtistMatcher.isMatch(artistRequest.name, artist.name)) {
+            return EnrichmentResult.NotFound(EnrichmentType.ARTIST_PHOTO, id)
+        }
+
+        val artwork = DeezerMapper.toArtistPhoto(artist)
+            ?: return EnrichmentResult.NotFound(EnrichmentType.ARTIST_PHOTO, id)
+
+        return EnrichmentResult.Success(
+            type = EnrichmentType.ARTIST_PHOTO,
+            data = artwork,
+            provider = id,
+            confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
+            resolvedIdentifiers = EnrichmentIdentifiers().withExtra("deezerId", artist.id.toString()),
+        )
     }
 
     private suspend fun enrichDiscography(request: EnrichmentRequest): EnrichmentResult {
@@ -113,6 +140,29 @@ class DeezerProvider(
             provider = id,
             confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
             resolvedIdentifiers = EnrichmentIdentifiers().withExtra("deezerId", artist.id.toString()),
+        )
+    }
+
+    private suspend fun enrichSimilarTracks(request: EnrichmentRequest): EnrichmentResult {
+        val trackRequest = request as? EnrichmentRequest.ForTrack
+            ?: return EnrichmentResult.NotFound(EnrichmentType.SIMILAR_TRACKS, id)
+
+        val searchResult = api.searchTrack(trackRequest.title, trackRequest.artist)
+            ?: return EnrichmentResult.NotFound(EnrichmentType.SIMILAR_TRACKS, id)
+
+        if (!ArtistMatcher.isMatch(trackRequest.artist, searchResult.artistName)) {
+            return EnrichmentResult.NotFound(EnrichmentType.SIMILAR_TRACKS, id)
+        }
+
+        val tracks = api.getTrackRadio(searchResult.id)
+        if (tracks.isEmpty()) return EnrichmentResult.NotFound(EnrichmentType.SIMILAR_TRACKS, id)
+
+        return EnrichmentResult.Success(
+            type = EnrichmentType.SIMILAR_TRACKS,
+            data = DeezerMapper.toSimilarTracks(tracks),
+            provider = id,
+            confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
+            resolvedIdentifiers = EnrichmentIdentifiers().withExtra("deezerId", searchResult.id.toString()),
         )
     }
 

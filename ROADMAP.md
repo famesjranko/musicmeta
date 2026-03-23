@@ -8,7 +8,7 @@
 
 An open-source music metadata engine that any app can drop in to get **everything** about an artist, album, or track:
 
-- **Artwork**: all types (album front/back, artist photo, banner, logo, fanart, CD art, booklet) at all sizes (thumb → hero)
+- **Artwork**: all types (album front/back, artist photo, banner, logo, fanart, CD art, booklet) at all sizes (thumb → hero), **from all providers** — never discard data. If three providers return artist photos, return all three. The consumer app decides which to show (let users pick, use context-appropriate images, etc.).
 - **Metadata**: artist → members → discography → albums → tracks, with labels, dates, countries, genres
 - **Text content**: biographies, lyrics (synced + plain)
 - **Relationships**: similar artists, similar tracks
@@ -79,7 +79,7 @@ Key additions:
 | | LYRICS_SYNCED | LRCLIB | Good |
 | | LYRICS_PLAIN | LRCLIB | Good |
 | **Relationships** | SIMILAR_ARTISTS | Last.fm, ListenBrainz, Deezer | **Excellent** — 3 providers merged via SimilarArtistMerger |
-| | SIMILAR_TRACKS | Last.fm | OK — via track.getSimilar |
+| | SIMILAR_TRACKS | Last.fm, Deezer | Good — 2 providers merged via SimilarTrackMerger |
 | | ARTIST_LINKS | MusicBrainz | Good — all URL relation types parsed |
 | **Statistics** | ARTIST_POPULARITY | Last.fm, ListenBrainz | Good — batch endpoints available |
 | | TRACK_POPULARITY | Last.fm, ListenBrainz | Good |
@@ -95,7 +95,7 @@ Key additions:
 | **MusicBrainz** | 11 | ~85% | — |
 | **Last.fm** | 5 methods | ~50% | — |
 | **Fanart.tv** | 2 | ~67% | — |
-| **Deezer** | 7 | ~88% | +3 (getRelatedArtists, getArtistRadio, SimilarAlbumsProvider) |
+| **Deezer** | 9 | ~94% | +5 (getRelatedArtists, getArtistRadio, SimilarAlbumsProvider, searchTrack, getTrackRadio) |
 | **Discogs** | 5 | ~65% | — |
 | **Cover Art Archive** | 2 | ~60% | — |
 | **ListenBrainz** | 6 | ~43% | — |
@@ -112,7 +112,7 @@ Key additions:
 
 ### Remaining Gaps (no planned milestone)
 
-- **SIMILAR_TRACKS** only implemented by Last.fm (Deezer radio is artist-seeded, not track-seeded)
+- **SIMILAR_TRACKS** now has 2 providers (Last.fm + Deezer track radio) merged via SimilarTrackMerger
 - **itunesArtistId** not stored in resolvedIdentifiers — re-searches on every discography call (minor perf tech debt from v0.5.0)
 - **ForAlbum credits aggregation** — CREDITS only supports ForTrack; aggregating per-track credits for an album deferred
 - **Credit-Based Discovery** — "more from this producer/composer" via CREDITS data; cross-entity query pattern, deferred to v0.7.0+
@@ -129,6 +129,20 @@ The `CatalogProvider` interface shipped in v0.6.0 with three filtering modes (UN
 - `SpotifyCatalog` / `YouTubeMusicCatalog` — streaming service availability checks (requires OAuth)
 - Fingerprint-based matching (AcoustID/Chromaprint) for local library
 - Availability scoring — ranking by how accessible items are
+
+### Artwork Mergeability — Data Being Discarded
+
+**Core problem:** Artwork types use short-circuit provider chains (first `Success` wins). This means if Wikidata returns an artist photo, Deezer and Fanart.tv results are discarded — even though they're *different images* (editorial photo vs label press photo vs fan art). A dev building a music app wants all options.
+
+**Principle: never discard data the API already returns.** If multiple providers have images for an artist, return all of them. The consumer decides which to display.
+
+**Immediate gaps (providers return data we throw away):**
+- **Deezer** — Every artist search result includes `picture_small/medium/big/xl` (4 sizes up to 1000x1000). Currently discarded. Would give artist photos for niche artists like Ochre that have no Wikidata/Fanart.tv coverage.
+- **Discogs** — `getArtist()` response includes `images[]` array. Already called for BAND_MEMBERS but images are not parsed.
+
+**Architecture fix needed:** Make artwork types mergeable (like GENRE). Create an `ArtworkMerger` that collects from all providers and returns a combined `Artwork` with all images attributed by provider. The `Artwork.sizes: List<ArtworkSize>` field already supports this.
+
+**Affected types:** ARTIST_PHOTO (highest priority — currently misses niche artists), ALBUM_ART (5 providers but only first success used), potentially ARTIST_BACKGROUND/LOGO/BANNER.
 
 ### Provider Coverage Gaps
 
@@ -182,25 +196,25 @@ Ranked by **impact to consumers × implementation effort** (updated for v0.5.0):
 
 | Goal Category | Coverage | Assessment |
 |--------------|----------|------------|
-| Artwork | 8 types, 5 providers for album art | ✅ **Complete** |
+| Artwork | 8 types, 5 providers for album art | 🟡 **Types complete, data being lost** — artwork uses short-circuit chains, discarding images from lower-priority providers. Deezer + Discogs artist images not collected. Needs ArtworkMerger. |
 | Metadata | 9 types including credits + editions | ✅ **Complete** |
 | Text content | Bios + synced/plain lyrics | ✅ **Complete** |
 | Relationships | Similar artists (3 merged), similar tracks, links | ✅ **Complete** |
 | Statistics | Artist + track popularity from 2 sources | ✅ **Complete** |
 | Links | All MusicBrainz URL relation types | ✅ **Complete** |
 | Credits | Performers, producers, composers, engineers | ✅ **Complete** |
-| Recommendations | 4 modules shipped; credit discovery + CF deferred | 🟡 **Mostly complete** |
+| Recommendations | 5 modules shipped; credit discovery + CF deferred | 🟡 **Mostly complete** |
 | Developer Experience | Engine works, consumer API is power-user only | ❌ **Not started** |
 | Catalog Awareness | Interface shipped; implementations deferred | 🟡 **Interface only** |
 
-**8/10 goal categories complete or mostly complete.** One category remains: Developer Experience.
+**7/10 goal categories complete or mostly complete.** Two categories remain: Artwork (data loss from short-circuit chains) and Developer Experience.
 
 #### Recommendation Module Status
 
 | Module | Status | Details |
 |--------|--------|---------|
 | Similar Artists | ✅ **Shipped (v0.6.0)** | 3-provider merge (Last.fm + ListenBrainz + Deezer) via SimilarArtistMerger |
-| Similar Tracks | 🟡 Partial | Last.fm only — Deezer radio is artist-seeded, different semantics |
+| Similar Tracks | ✅ **Shipped** | 2-provider merge (Last.fm + Deezer track radio) via SimilarTrackMerger |
 | Similar Albums | ✅ **Shipped (v0.6.0)** | SimilarAlbumsProvider with era-proximity scoring |
 | Radio/Mix | ✅ **Shipped (v0.6.0)** | ARTIST_RADIO via Deezer `/artist/{id}/radio` |
 | Credit-Based Discovery | ❌ Deferred (v0.7.0+) | Cross-entity query pattern; CREDITS data exists |

@@ -325,6 +325,81 @@ class DeezerProviderTest {
         assertEquals(1.0f, data[0].matchScore, 0.01f)
     }
 
+    // SIMILAR_TRACKS tests
+
+    @Test
+    fun `enrich returns SimilarTracks for track`() = runTest {
+        // Given — Deezer returns a matching track search result and track radio
+        httpClient.givenJsonResponse("search/track", TRACK_SEARCH_RESPONSE)
+        httpClient.givenJsonResponse("track/789/radio", TRACK_RADIO_RESPONSE)
+        val request = EnrichmentRequest.forTrack("Karma Police", "Radiohead")
+
+        // When — enriching for similar tracks
+        val result = provider.enrich(request, EnrichmentType.SIMILAR_TRACKS)
+
+        // Then — success with SimilarTracks data
+        assertTrue(result is EnrichmentResult.Success)
+        val data = (result as EnrichmentResult.Success).data as EnrichmentData.SimilarTracks
+        assertEquals(2, data.tracks.size)
+        assertEquals("No Surprises", data.tracks[0].title)
+        assertEquals("Radiohead", data.tracks[0].artist)
+        assertEquals(listOf("deezer"), data.tracks[0].sources)
+    }
+
+    @Test
+    fun `enrich returns NotFound for SimilarTracks when no search result`() = runTest {
+        // Given — Deezer returns no track search results
+        httpClient.givenJsonResponse("search/track", """{"data":[]}""")
+        val request = EnrichmentRequest.forTrack("Nonexistent", "Nobody")
+
+        // When — enriching for similar tracks
+        val result = provider.enrich(request, EnrichmentType.SIMILAR_TRACKS)
+
+        // Then — NotFound because no track matched
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `enrich returns NotFound for SimilarTracks when artist mismatch`() = runTest {
+        // Given — Deezer returns a track from a different artist
+        httpClient.givenJsonResponse("search/track", """{"data":[{"id":999,"title":"Karma Police","artist":{"name":"Completely Different Band"}}]}""")
+        val request = EnrichmentRequest.forTrack("Karma Police", "Radiohead")
+
+        // When — enriching for similar tracks
+        val result = provider.enrich(request, EnrichmentType.SIMILAR_TRACKS)
+
+        // Then — NotFound because ArtistMatcher.isMatch() rejects the result
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `enrich returns NotFound for SimilarTracks on artist request`() = runTest {
+        // Given — a ForArtist request (SIMILAR_TRACKS requires ForTrack)
+        val request = EnrichmentRequest.forArtist("Radiohead")
+
+        // When — enriching for similar tracks
+        val result = provider.enrich(request, EnrichmentType.SIMILAR_TRACKS)
+
+        // Then — NotFound because SIMILAR_TRACKS requires ForTrack
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `enrich returns SimilarTracks with positional match scores`() = runTest {
+        // Given — Deezer returns track search and radio results
+        httpClient.givenJsonResponse("search/track", TRACK_SEARCH_RESPONSE)
+        httpClient.givenJsonResponse("track/789/radio", TRACK_RADIO_RESPONSE)
+        val request = EnrichmentRequest.forTrack("Karma Police", "Radiohead")
+
+        // When — enriching for similar tracks
+        val result = provider.enrich(request, EnrichmentType.SIMILAR_TRACKS)
+
+        // Then — first track has higher score than last
+        val data = ((result as EnrichmentResult.Success).data as EnrichmentData.SimilarTracks).tracks
+        assertTrue(data[0].matchScore > data[1].matchScore)
+        assertEquals(1.0f, data[0].matchScore, 0.01f)
+    }
+
     // ARTIST_RADIO tests
 
     @Test
@@ -473,6 +548,19 @@ class DeezerProviderTest {
             {"data":[
                 {"id":1001,"title":"Airbag","track_position":1,"duration":284},
                 {"id":1002,"title":"Paranoid Android","track_position":2,"duration":383}
+            ]}
+        """.trimIndent()
+
+        val TRACK_SEARCH_RESPONSE = """
+            {"data":[
+                {"id":789,"title":"Karma Police","artist":{"name":"Radiohead"}}
+            ]}
+        """.trimIndent()
+
+        val TRACK_RADIO_RESPONSE = """
+            {"data":[
+                {"id":201,"title":"No Surprises","artist":{"name":"Radiohead"},"album":{"title":"OK Computer"},"duration":229},
+                {"id":202,"title":"Exit Music (For a Film)","artist":{"name":"Radiohead"},"album":{"title":"OK Computer"},"duration":277}
             ]}
         """.trimIndent()
 

@@ -63,6 +63,10 @@ class DeezerApi(
         return DeezerArtistSearchResult(
             id = artist.optLong("id"),
             name = artist.optString("name", ""),
+            pictureSmall = artist.optString("picture_small").takeIfNotEmpty(),
+            pictureMedium = artist.optString("picture_medium").takeIfNotEmpty(),
+            pictureBig = artist.optString("picture_big").takeIfNotEmpty(),
+            pictureXl = artist.optString("picture_xl").takeIfNotEmpty(),
         )
     }
 
@@ -125,6 +129,54 @@ class DeezerApi(
             DeezerRelatedArtist(
                 id = artist.optLong("id"),
                 name = artist.optString("name", ""),
+            )
+        }
+    }
+
+    suspend fun searchTrack(title: String, artist: String): DeezerTrackSearchResult? {
+        val query = URLEncoder.encode("$artist $title", "UTF-8")
+        val url = "$BASE_URL/search/track?q=$query&limit=5"
+        val json = rateLimiter.execute {
+            when (val r = httpClient.fetchJsonResult(url)) {
+                is HttpResult.Ok -> r.body
+                else -> return@execute null
+            }
+        } ?: return null
+
+        val data = json.optJSONArray("data") ?: return null
+        for (i in 0 until data.length()) {
+            val track = data.getJSONObject(i)
+            val trackArtist = track.optJSONObject("artist")
+            val artistName = trackArtist?.optString("name", "") ?: ""
+            return DeezerTrackSearchResult(
+                id = track.optLong("id"),
+                title = track.optString("title", ""),
+                artistName = artistName,
+            )
+        }
+        return null
+    }
+
+    suspend fun getTrackRadio(trackId: Long, limit: Int = 25): List<DeezerRadioTrack> {
+        val url = "$BASE_URL/track/$trackId/radio?limit=$limit"
+        val json = rateLimiter.execute {
+            when (val r = httpClient.fetchJsonResult(url)) {
+                is HttpResult.Ok -> r.body
+                else -> return@execute null
+            }
+        } ?: return emptyList()
+
+        val data = json.optJSONArray("data") ?: return emptyList()
+        return (0 until data.length()).map { i ->
+            val track = data.getJSONObject(i)
+            val trackArtist = track.optJSONObject("artist")
+            val album = track.optJSONObject("album")
+            DeezerRadioTrack(
+                id = track.optLong("id"),
+                title = track.optString("title", ""),
+                artistName = trackArtist?.optString("name", "") ?: "",
+                albumTitle = album?.optString("title")?.takeIf { it.isNotBlank() },
+                durationSec = track.optInt("duration", 0),
             )
         }
     }

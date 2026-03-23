@@ -13,6 +13,8 @@ sealed class EnrichmentData {
         val height: Int? = null,
         val thumbnailUrl: String? = null,
         val sizes: List<ArtworkSize>? = null,
+        /** Images from other providers, available when artwork is merged from multiple sources. */
+        val alternatives: List<ArtworkSource>? = null,
     ) : EnrichmentData()
 
     @Serializable
@@ -106,6 +108,15 @@ data class ArtworkSize(
     val label: String? = null,
 )
 
+/** An image from an alternative provider, used when artwork is merged from multiple sources. */
+@Serializable
+data class ArtworkSource(
+    val provider: String,
+    val url: String,
+    val thumbnailUrl: String? = null,
+    val sizes: List<ArtworkSize>? = null,
+)
+
 @Serializable
 data class SimilarArtist(
     val name: String,
@@ -153,6 +164,7 @@ data class SimilarTrack(
     val artist: String,
     val matchScore: Float,
     val identifiers: EnrichmentIdentifiers = EnrichmentIdentifiers(),
+    val sources: List<String> = emptyList(),
 )
 
 @Serializable

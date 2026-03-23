@@ -8,6 +8,7 @@ import com.landofoz.musicmeta.RadioTrack
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.SimilarAlbum
 import com.landofoz.musicmeta.SimilarArtist
+import com.landofoz.musicmeta.SimilarTrack
 import com.landofoz.musicmeta.TrackInfo
 
 /** Maps Deezer DTOs to EnrichmentData subclasses. */
@@ -26,6 +27,23 @@ object DeezerMapper {
         return EnrichmentData.Artwork(
             url = url,
             thumbnailUrl = result.coverMedium,
+            sizes = sizes.takeIf { it.isNotEmpty() },
+        )
+    }
+
+    fun toArtistPhoto(result: DeezerArtistSearchResult): EnrichmentData.Artwork? {
+        val url = result.pictureXl ?: result.pictureBig
+            ?: result.pictureMedium ?: result.pictureSmall
+            ?: return null
+        val sizes = listOfNotNull(
+            result.pictureSmall?.let { ArtworkSize(url = it, width = 56, height = 56, label = "small") },
+            result.pictureMedium?.let { ArtworkSize(url = it, width = 250, height = 250, label = "medium") },
+            result.pictureBig?.let { ArtworkSize(url = it, width = 500, height = 500, label = "big") },
+            result.pictureXl?.let { ArtworkSize(url = it, width = 1000, height = 1000, label = "xl") },
+        )
+        return EnrichmentData.Artwork(
+            url = url,
+            thumbnailUrl = result.pictureMedium,
             sizes = sizes.takeIf { it.isNotEmpty() },
         )
     }
@@ -70,6 +88,21 @@ object DeezerMapper {
                     name = artist.name,
                     identifiers = EnrichmentIdentifiers().withExtra("deezerId", artist.id.toString()),
                     matchScore = 1.0f - (index.toFloat() / count) * 0.9f,
+                    sources = listOf("deezer"),
+                )
+            },
+        )
+    }
+
+    fun toSimilarTracks(tracks: List<DeezerRadioTrack>): EnrichmentData.SimilarTracks {
+        val count = tracks.size.coerceAtLeast(1)
+        return EnrichmentData.SimilarTracks(
+            tracks = tracks.mapIndexed { index, track ->
+                SimilarTrack(
+                    title = track.title,
+                    artist = track.artistName,
+                    matchScore = 1.0f - (index.toFloat() / count) * 0.9f,
+                    identifiers = EnrichmentIdentifiers().withExtra("deezerId", track.id.toString()),
                     sources = listOf("deezer"),
                 )
             },

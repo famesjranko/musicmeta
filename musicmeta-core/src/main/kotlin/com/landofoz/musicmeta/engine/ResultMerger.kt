@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.engine
 
+import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 
@@ -18,4 +19,19 @@ interface ResultMerger {
      * Returns NotFound if the input list is empty.
      */
     fun merge(results: List<EnrichmentResult.Success>): EnrichmentResult
+
+    companion object {
+        /** Merges identifiers from multiple providers, preserving all typed fields. */
+        fun mergeIdentifiers(ids: List<EnrichmentIdentifiers>): EnrichmentIdentifiers {
+            return EnrichmentIdentifiers(
+                musicBrainzId = ids.firstNotNullOfOrNull { it.musicBrainzId },
+                musicBrainzReleaseGroupId = ids.firstNotNullOfOrNull { it.musicBrainzReleaseGroupId },
+                wikidataId = ids.firstNotNullOfOrNull { it.wikidataId },
+                isrc = ids.firstNotNullOfOrNull { it.isrc },
+                barcode = ids.firstNotNullOfOrNull { it.barcode },
+                wikipediaTitle = ids.firstNotNullOfOrNull { it.wikipediaTitle },
+                extra = ids.fold(emptyMap()) { acc, id -> acc + id.extra },
+            )
+        }
+    }
 }
