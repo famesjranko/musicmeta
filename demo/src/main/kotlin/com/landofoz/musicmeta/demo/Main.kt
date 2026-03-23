@@ -30,10 +30,11 @@ fun main(args: Array<String>) {
 }
 
 private fun buildEngine(): EnrichmentEngine {
+    val secrets = loadSecrets()
     val keys = ApiKeyConfig(
-        lastFmKey = env("LASTFM_API_KEY"),
-        fanartTvProjectKey = env("FANARTTV_API_KEY"),
-        discogsPersonalToken = env("DISCOGS_TOKEN"),
+        lastFmKey = secrets["lastfm.apikey"] ?: env("LASTFM_API_KEY"),
+        fanartTvProjectKey = secrets["fanarttv.apikey"] ?: env("FANARTTV_API_KEY"),
+        discogsPersonalToken = secrets["discogs.token"] ?: env("DISCOGS_TOKEN"),
     )
     return EnrichmentEngine.Builder()
         .apiKeys(keys)
@@ -148,6 +149,21 @@ private fun parseSearchCommand(rest: String): Command? {
 }
 
 private fun env(key: String): String? = System.getenv(key)?.takeIf { it.isNotBlank() }
+
+/** Load API keys from secrets.properties (project root), if it exists. */
+private fun loadSecrets(): Map<String, String> {
+    val paths = listOf(
+        java.io.File("secrets.properties"),       // running from demo/
+        java.io.File("../secrets.properties"),     // running from project root
+    )
+    val file = paths.firstOrNull { it.exists() } ?: return emptyMap()
+    return file.readLines()
+        .filter { it.contains('=') && !it.trimStart().startsWith('#') }
+        .associate { line ->
+            val (k, v) = line.split('=', limit = 2)
+            k.trim() to v.trim()
+        }
+}
 
 private val ARTIST_TYPES = setOf(
     EnrichmentType.GENRE, EnrichmentType.ARTIST_BIO, EnrichmentType.ARTIST_PHOTO,
