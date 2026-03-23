@@ -69,13 +69,13 @@ private fun executeCommand(input: String, engine: EnrichmentEngine, term: Termin
     runBlocking {
         when (command) {
             is Command.Enrich -> {
-                val label = when (command.request) {
-                    is EnrichmentRequest.ForArtist -> "Enriching artist \"${command.request.name}\""
-                    is EnrichmentRequest.ForAlbum -> "Enriching album \"${command.request.title}\" by \"${command.request.artist}\""
-                    is EnrichmentRequest.ForTrack -> "Enriching track \"${command.request.title}\" by \"${command.request.artist}\""
+                val (label, types) = when (command.request) {
+                    is EnrichmentRequest.ForArtist -> "Enriching artist \"${command.request.name}\"" to ARTIST_TYPES
+                    is EnrichmentRequest.ForAlbum -> "Enriching album \"${command.request.title}\" by \"${command.request.artist}\"" to ALBUM_TYPES
+                    is EnrichmentRequest.ForTrack -> "Enriching track \"${command.request.title}\" by \"${command.request.artist}\"" to TRACK_TYPES
                 }
                 val results = spinner.spin("$label...") {
-                    engine.enrich(command.request, ALL_TYPES)
+                    engine.enrich(command.request, types)
                 }
                 Formatter.printResults(results, term)
             }
@@ -149,7 +149,27 @@ private fun parseSearchCommand(rest: String): Command? {
 
 private fun env(key: String): String? = System.getenv(key)?.takeIf { it.isNotBlank() }
 
-private val ALL_TYPES = EnrichmentType.entries.toSet()
+private val ARTIST_TYPES = setOf(
+    EnrichmentType.GENRE, EnrichmentType.ARTIST_BIO, EnrichmentType.ARTIST_PHOTO,
+    EnrichmentType.ARTIST_POPULARITY, EnrichmentType.SIMILAR_ARTISTS,
+    EnrichmentType.BAND_MEMBERS, EnrichmentType.ARTIST_DISCOGRAPHY,
+    EnrichmentType.ARTIST_LINKS, EnrichmentType.ARTIST_TIMELINE,
+    EnrichmentType.ARTIST_RADIO, EnrichmentType.GENRE_DISCOVERY,
+)
+
+private val ALBUM_TYPES = setOf(
+    EnrichmentType.ALBUM_ART, EnrichmentType.GENRE, EnrichmentType.LABEL,
+    EnrichmentType.RELEASE_DATE, EnrichmentType.RELEASE_TYPE, EnrichmentType.COUNTRY,
+    EnrichmentType.ALBUM_METADATA, EnrichmentType.ALBUM_TRACKS,
+    EnrichmentType.RELEASE_EDITIONS, EnrichmentType.SIMILAR_ALBUMS,
+    EnrichmentType.GENRE_DISCOVERY,
+)
+
+private val TRACK_TYPES = setOf(
+    EnrichmentType.GENRE, EnrichmentType.LYRICS_SYNCED, EnrichmentType.LYRICS_PLAIN,
+    EnrichmentType.TRACK_POPULARITY, EnrichmentType.SIMILAR_TRACKS,
+    EnrichmentType.CREDITS, EnrichmentType.GENRE_DISCOVERY,
+)
 private val BY_REGEX = Regex("\\s+by\\s+", RegexOption.IGNORE_CASE)
 
 private sealed class Command {
