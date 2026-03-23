@@ -1,6 +1,6 @@
 # musicmeta
 
-A Kotlin library that gives Android and JVM music apps access to rich metadata, artwork, and discovery features — without a commercial API. Ask for as much or as little as you need: all 31 enrichment types at once, a single artist photo, just lyrics, or anything in between.
+A Kotlin library that gives Android and JVM music apps access to rich metadata, artwork, and discovery features — without a commercial API. Ask for as much or as little as you need: all 32 enrichment types at once, a single artist photo, just lyrics, or anything in between.
 
 11 public music APIs behind one engine. You choose what to request, how to use it, and what to show your users. The library handles the plumbing — identity resolution, multi-provider merging, confidence scoring, rate limiting, caching — so you can focus on building your app.
 
@@ -11,7 +11,7 @@ A Kotlin library that gives Android and JVM music apps access to rich metadata, 
          |
          v
 +-----------------------------+
-|  EnrichmentEngine           |  31 enrichment types
+|  EnrichmentEngine           |  32 enrichment types
 |                             |  11 providers
 |  MusicBrainz ---------------+--> Identity (MBID), genre, label, credits, editions
 |  Cover Art Archive ---------+--> Album art front/back/booklet (multi-size)
@@ -193,7 +193,7 @@ object MyEnrichmentModule {
 - Fanart.tv: https://fanart.tv/get-an-api-key/
 - Discogs: https://www.discogs.com/settings/developers → "Generate new token"
 
-## Enrichment types (31)
+## Enrichment types (32)
 
 | Category | Types | Multi-provider |
 |----------|-------|----------------|
@@ -203,12 +203,13 @@ object MyEnrichmentModule {
 | **Editions** | RELEASE_EDITIONS | MusicBrainz (release-group) + Discogs (master versions) |
 | **Text** | ARTIST_BIO, LYRICS_SYNCED, LYRICS_PLAIN | BIO (2) |
 | **Relationships** | SIMILAR_ARTISTS, SIMILAR_TRACKS, ARTIST_LINKS | SIMILAR_ARTISTS merged (3: Last.fm, ListenBrainz, Deezer) |
+| **Top Tracks** | ARTIST_TOP_TRACKS | Merged from 3 providers (Last.fm, ListenBrainz, Deezer) via TopTrackMerger |
 | **Statistics** | ARTIST_POPULARITY, TRACK_POPULARITY | Both from 2 providers |
 | **Composite** | ARTIST_TIMELINE, GENRE_DISCOVERY | ARTIST_TIMELINE: discography + members + life-span; GENRE_DISCOVERY: static affinity taxonomy |
 | **Radio** | ARTIST_RADIO | Deezer /artist/{id}/radio, ordered playlist |
 | **Discovery** | SIMILAR_ALBUMS | Deezer related artists + era scoring |
 
-17 of 31 types have multi-provider coverage with automatic fallback. Artwork types (ALBUM_ART, ARTIST_PHOTO) are merged from all providers — the best image is primary, alternatives are available via `Artwork.alternatives`.
+18 of 32 types have multi-provider coverage with automatic fallback. Artwork types (ALBUM_ART, ARTIST_PHOTO) are merged from all providers — the best image is primary, alternatives are available via `Artwork.alternatives`.
 
 ## Recommendations
 

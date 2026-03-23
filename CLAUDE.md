@@ -10,6 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `CLAUDE.md` | AI coding instructions (this file) |
 | `STORIES.md` | Architectural decisions, progress log, rationale |
 | `CHANGELOG.md` | Release history (user-facing, Keep a Changelog format) |
+| `ROADMAP.md` | Gap analysis, coverage matrix, planned milestones |
 
 **For AI agents**: Check `STORIES.md` for context on *why* decisions were made. Update it when making significant architectural choices or completing milestones. Update `CHANGELOG.md` when adding features or fixing bugs.
 
@@ -66,7 +67,8 @@ Key types:
 Provider internal structure (each under `provider/<name>/`):
 - `*Api.kt` — raw HTTP calls, returns parsed models
 - `*Models.kt` — data classes for API responses
-- `*Provider.kt` — implements `EnrichmentProvider`, maps API responses to `EnrichmentResult`
+- `*Mapper.kt` — transforms API models into `EnrichmentData` types
+- `*Provider.kt` — implements `EnrichmentProvider`, orchestrates Api → Mapper → `EnrichmentResult`
 
 Infrastructure in `http/`:
 - `HttpClient` interface with `DefaultHttpClient` (java.net.HttpURLConnection)
