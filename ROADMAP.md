@@ -147,23 +147,21 @@ This two-step flow is the right answer for the unopinionated principle: the libr
 
 **What still needs improvement:**
 
-| Gap | Problem | Impact |
-|-----|---------|--------|
-| **No match quality indicator on `enrich()`** | Auto mode returns results with no indication of how confident the identity match was | Developer can't detect ambiguous matches to prompt for disambiguation |
-| **No "did you mean?" on NotFound** | When search finds no match above threshold, returns empty — no close matches suggested | Developer can't help users fix typos |
-| **Provider factual conflicts not surfaced** | If MusicBrainz says country=UK and Wikidata says country=GB, first provider wins silently | Minor — most factual conflicts are equivalent representations, not real disagreements |
+| Gap | Problem | Impact | Status |
+|-----|---------|--------|--------|
+| **Match quality indicator on `enrich()`** | Auto mode returns results with no indication of how confident the identity match was | Developer can't detect ambiguous matches to prompt for disambiguation | ✅ Shipped — `identityMatchScore` on `Success` |
+| **No "did you mean?" on NotFound** | When search finds no match above threshold, returns empty — no close matches suggested | Developer can't help users fix typos | Open |
+| **Provider factual conflicts not surfaced** | If MusicBrainz says country=UK and Wikidata says country=GB, first provider wins silently | Minor — most factual conflicts are equivalent representations, not real disagreements | Open |
 
-**Design decisions needed:**
+**Shipped — `identityMatchScore` on `EnrichmentResult.Success`**: Each `Success` result now carries `identityMatchScore: Int?` (0-100, same scale as `SearchCandidate.score`). `null` when identity was pre-resolved (MBID provided) or result was cached. The engine stamps the MusicBrainz search score onto all results after identity resolution. Developers can use this to decide: high score → show immediately, low score → prompt user with `search()` candidates for disambiguation.
 
-1. **Should `enrich()` return match quality?** A `matchConfidence` or `identityScore` field on the result would let developers decide: high score → show immediately, low score → prompt user with `search()` candidates. This keeps auto mode working but gives the developer a signal.
+**Remaining design question — strict mode**: Some apps want to never show wrong data (e.g., a metadata editor). A mode where `enrich()` refuses to auto-pick below a configurable threshold and returns candidates instead would serve this use case without changing the default behavior.
 
-2. **Should there be a strict mode?** Some apps want to never show wrong data (e.g., a metadata editor). A mode where `enrich()` refuses to auto-pick below a configurable threshold and returns candidates instead would serve this use case without changing the default behavior.
-
-**Principle: the library should never silently guess wrong.** When the engine isn't confident, it should give the developer enough information to involve their user. The two-step search→enrich flow is the primary tool for this — it just needs better candidate data and a bridge from auto mode.
+**Principle: the library should never silently guess wrong.** When the engine isn't confident, it should give the developer enough information to involve their user. The two-step search→enrich flow is the primary tool for this.
 
 ### Remaining Gaps (no planned milestone)
 
-- **itunesArtistId** not stored in resolvedIdentifiers — re-searches on every discography call (minor perf tech debt from v0.5.0)
+- ~~**itunesArtistId** not stored in resolvedIdentifiers~~ — ✅ Fixed: iTunes provider now stores `itunesArtistId` after artist search
 - **ForAlbum credits aggregation** — CREDITS only supports ForTrack; aggregating per-track credits for an album deferred
 - **Credit-Based Discovery** — "more from this producer/composer" via CREDITS data; cross-entity query pattern, deferred to v0.7.0+
 - **ListenBrainz collaborative filtering** — user-scoped recommendations; needs user identity concept in EnrichmentRequest, deferred to v0.8.0+

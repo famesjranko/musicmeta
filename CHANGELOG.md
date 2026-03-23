@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - `SIMILAR_TRACKS` multi-provider merge — Deezer `/track/{id}/radio` added as second provider alongside Last.fm `track.getSimilar`; results deduplicated and combined via `SimilarTrackMerger`; each `SimilarTrack` now has a `sources` field listing contributing providers
 - `DeezerApi.searchTrack()` and `DeezerApi.getTrackRadio()` — track search and track-seeded radio endpoints
+- `EnrichmentResult.Success.identityMatchScore` — identity resolution match quality (0-100, same scale as `SearchCandidate.score`); `null` when MBID was pre-provided or result was cached; lets developers detect ambiguous matches and prompt for disambiguation via `search()`
+
+### Fixed
+- iTunes provider now stores `itunesArtistId` in `resolvedIdentifiers` after artist search — eliminates redundant search API call on subsequent discography requests
 
 ## [0.6.0] - 2026-03-23
 

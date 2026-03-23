@@ -230,6 +230,38 @@ class DefaultEnrichmentEngineTest {
         assertTrue("Should have lastfm source", "lastfm" in sources)
     }
 
+    // --- Identity match score ---
+
+    @Test fun `enrich stamps identityMatchScore from identity resolution`() = runTest {
+        // Given — identity provider resolves with confidence 0.85 (= score 85)
+        val idProvider = FakeProvider(id = "mb", isIdentityProvider = true, capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)))
+            .also { it.givenIdentityResult(EnrichmentResult.Success(EnrichmentType.GENRE, EnrichmentData.Metadata(genres = listOf("rock")), "mb", 0.85f, resolvedIdentifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-123"))) }
+        val artProvider = FakeProvider(id = "caa", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100, identifierRequirement = IdentifierRequirement.MUSICBRAINZ_ID)))
+            .also { it.givenResult(EnrichmentType.ALBUM_ART, art("caa")) }
+        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider, artProvider)), cache, FakeHttpClient(), EnrichmentConfig(enableIdentityResolution = true))
+
+        // When — enriching with identity resolution
+        val results = e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
+
+        // Then — downstream result carries the identity match score
+        val artResult = results[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success
+        assertEquals(85, artResult.identityMatchScore)
+    }
+
+    @Test fun `enrich leaves identityMatchScore null when no identity resolution needed`() = runTest {
+        // Given — request already has MBID, no identity resolution needed
+        val p = FakeProvider(id = "p", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100)))
+            .also { it.givenResult(EnrichmentType.ALBUM_ART, art("p")) }
+        val reqWithMbid = EnrichmentRequest.forAlbum("OK Computer", "Radiohead", mbid = "mbid-123")
+
+        // When — enriching (identity resolution skipped)
+        val results = engine(p).enrich(reqWithMbid, setOf(EnrichmentType.ALBUM_ART))
+
+        // Then — no identity match score (identity was pre-resolved)
+        val artResult = results[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success
+        assertNull(artResult.identityMatchScore)
+    }
+
     // --- Manual selection flag ---
 
     @Test fun `enrich preserves manually selected cache entries`() = runTest {

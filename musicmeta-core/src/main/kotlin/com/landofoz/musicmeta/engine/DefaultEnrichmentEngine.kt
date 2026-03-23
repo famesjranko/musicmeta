@@ -60,6 +60,7 @@ class DefaultEnrichmentEngine(
 
                 results.putAll(resolveTypes(enrichedRequest, uncachedTypes, identityResult))
                 applyCatalogFiltering(results)
+                stampIdentityScore(results, identityResult)
             }
         } catch (_: TimeoutCancellationException) {
             logger.warn(TAG, "Enrich timed out after ${config.enrichTimeoutMs}ms")
@@ -239,6 +240,20 @@ class DefaultEnrichmentEngine(
             return EnrichmentResult.NotFound(result.type, result.provider)
         }
         return if (override != null) result.copy(confidence = override) else result
+    }
+
+    /** Stamps identity match score on all freshly resolved Success results. */
+    private fun stampIdentityScore(
+        results: MutableMap<EnrichmentType, EnrichmentResult>,
+        identityResult: EnrichmentResult?,
+    ) {
+        val score = (identityResult as? EnrichmentResult.Success)
+            ?.let { (it.confidence * 100).toInt() } ?: return
+        for ((type, result) in results) {
+            if (result is EnrichmentResult.Success && result.identityMatchScore == null) {
+                results[type] = result.copy(identityMatchScore = score)
+            }
+        }
     }
 
     /** Applies catalog availability filtering to recommendation results in-place. No-op when null or UNFILTERED. */

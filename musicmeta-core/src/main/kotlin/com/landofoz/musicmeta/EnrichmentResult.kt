@@ -48,6 +48,18 @@ sealed class EnrichmentResult {
         val confidence: Float,
         /** Identifiers resolved during enrichment (e.g., MBIDs from identity resolution). */
         val resolvedIdentifiers: EnrichmentIdentifiers? = null,
+        /**
+         * Identity resolution match score (0-100), indicating how confident the
+         * entity match was. Same scale as [SearchCandidate.score].
+         * - `null` when identity was pre-resolved (MBID provided) or result was cached
+         * - `100` when looked up by exact ID during identity resolution
+         * - `80-99` for high-confidence fuzzy matches
+         *
+         * Developers can use this to decide whether to show results immediately
+         * (high score) or prompt the user with [EnrichmentEngine.search] candidates
+         * for disambiguation (low score).
+         */
+        val identityMatchScore: Int? = null,
     ) : EnrichmentResult()
 
     /** Provider searched but found nothing. */

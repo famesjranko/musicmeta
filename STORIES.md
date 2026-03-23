@@ -7,6 +7,22 @@
 
 ## Decisions
 
+### 2026-03-24: Identity match score — bridging auto mode and disambiguation
+
+**Context**: The engine's auto mode (`enrich()` with just a name) silently picks the best MusicBrainz match. Developers had no way to know if the match was confident ("Radiohead" → score 100) or ambiguous ("Bush" → score 80, could be British or Canadian band). The `search()` → pick → `enrich(mbid=...)` flow existed for manual disambiguation, but there was no signal telling developers *when* to use it.
+
+**Decision**: Add `identityMatchScore: Int?` to `EnrichmentResult.Success`. The engine stamps every result with the MusicBrainz search score (0-100) after identity resolution.
+
+**Key design decisions**:
+- **Int on 0-100 scale**, matching `SearchCandidate.score`. Distinct from `confidence: Float` (0.0-1.0) which measures data quality, not identity quality. No risk of confusing the two.
+- **`null` means "no fuzzy matching occurred"** — either MBID was pre-provided, or the result was cached. `null` is a positive signal: identity was already certain.
+- **Stamped on all results**, not just the identity type. A developer requesting ALBUM_ART gets the identity score on that result — they don't need to also request GENRE just to check match quality.
+- **Extracted from identity result's confidence field** — `(identityResult.confidence * 100).toInt()`. No new data flow; the score was already computed by MusicBrainz, just not exposed.
+
+**Status**: Active
+
+---
+
 ### 2026-03-24: ARTIST_TOP_TRACKS — fetch everything, let devs filter
 
 **Context**: Apps need an artist's most popular tracks for "Top Tracks" UI widgets. The data existed across three providers (Last.fm scrobble counts, ListenBrainz listen counts + duration + album, Deezer stream ranking) but wasn't surfaced as its own type — it was buried inside `ARTIST_POPULARITY.topTracks` from ListenBrainz only.

@@ -77,6 +77,7 @@ when (val art = results[EnrichmentType.ALBUM_ART]) {
         println("Cover: ${artwork.url}")           // 1200px artwork URL
         println("Thumb: ${artwork.thumbnailUrl}")   // 250px thumbnail
         println("Confidence: ${art.confidence}")    // 0.0-1.0
+        println("Match: ${art.identityMatchScore}") // 0-100 identity quality, null if MBID was provided
     }
     is EnrichmentResult.NotFound -> println("No art found")
     is EnrichmentResult.RateLimited -> println("Try again later")
@@ -315,7 +316,7 @@ Modes:
 
 ## How it works
 
-1. **Identity resolution** — MusicBrainz searches by title/artist, returns a MusicBrainz ID (MBID) plus Wikidata/Wikipedia links. Downstream providers use these IDs for precise lookups instead of fuzzy search.
+1. **Identity resolution** — MusicBrainz searches by title/artist, returns a MusicBrainz ID (MBID) plus Wikidata/Wikipedia links. Downstream providers use these IDs for precise lookups instead of fuzzy search. Every result carries `identityMatchScore` (0-100) so you can detect ambiguous matches and prompt for disambiguation via `search()`.
 
 2. **Fan-out** — The engine sends the enriched request to provider chains for each type, concurrently. Three resolution modes:
    - **Standard** — providers tried in priority order, first `Success` wins

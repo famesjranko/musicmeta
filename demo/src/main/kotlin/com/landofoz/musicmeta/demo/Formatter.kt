@@ -197,10 +197,11 @@ object Formatter {
     }
 
     private fun printIdentity(results: Map<EnrichmentType, EnrichmentResult>, term: Terminal) {
-        val identity = results.values
+        val firstSuccess = results.values
             .filterIsInstance<EnrichmentResult.Success>()
             .firstOrNull { it.resolvedIdentifiers != null }
-            ?.resolvedIdentifiers ?: return
+            ?: return
+        val identity = firstSuccess.resolvedIdentifiers ?: return
 
         val hasAny = identity.musicBrainzId != null ||
             identity.wikidataId != null ||
@@ -211,6 +212,10 @@ object Formatter {
         identity.musicBrainzId?.let { term.keyValue("MBID:", it) }
         identity.wikidataId?.let { term.keyValue("Wikidata:", it) }
         identity.wikipediaTitle?.let { term.keyValue("Wikipedia:", it) }
+        firstSuccess.identityMatchScore?.let { score ->
+            val color = if (score >= 90) term.theme.success else term.theme.warning
+            term.keyValue("Match:", term.styled("$score%", color))
+        }
     }
 
     /** Human-readable type name: ARTIST_BIO -> "Artist Bio" */
