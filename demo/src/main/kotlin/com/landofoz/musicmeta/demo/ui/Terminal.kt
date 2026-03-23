@@ -16,9 +16,13 @@ class Terminal(val theme: Theme) {
     fun println(text: String = "") = kotlin.io.println(text)
 
     fun banner(title: String) {
+        val width = 62
+        val pad = width - title.length - 2
+        val border = theme.boxH.repeat(width)
         println()
-        println("  ${styled(title, theme.primary, theme.bold)}")
-        println("  ${styled(theme.thinBar.repeat(title.length + 4), theme.muted)}")
+        println(styled("${theme.boxTL}$border${theme.boxTR}", theme.primary))
+        println("${styled(theme.boxV, theme.primary)}  ${styled(title, theme.bold)}${" ".repeat(maxOf(pad, 0))}${styled(theme.boxV, theme.primary)}")
+        println(styled("${theme.boxBL}$border${theme.boxBR}", theme.primary))
     }
 
     fun heading(title: String) {

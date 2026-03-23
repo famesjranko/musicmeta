@@ -23,6 +23,7 @@ data class Theme(
     val boxTL: String, val boxTR: String,
     val boxBL: String, val boxBR: String,
     val boxH: String, val boxV: String,
+    val boxDiv: String,
     val headingBar: String,
     val thinBar: String,
     val spinnerFrames: List<String>,
@@ -40,9 +41,10 @@ data class Theme(
             reset = "\u001b[0m",       // reset
             check = "\u2713", cross = "\u2717", dot = "\u00b7",
             warn = "\u25b2", arrow = "\u203a", bullet = "\u2022",
-            boxTL = "\u2554", boxTR = "\u2557",
-            boxBL = "\u255a", boxBR = "\u255d",
-            boxH = "\u2550", boxV = "\u2551",
+            boxTL = "\u256d", boxTR = "\u256e",
+            boxBL = "\u2570", boxBR = "\u256f",
+            boxH = "\u2500", boxV = "\u2502",
+            boxDiv = "\u251c",
             headingBar = "\u2550",
             thinBar = "\u2500",
             spinnerFrames = listOf(
@@ -58,7 +60,8 @@ data class Theme(
             check = "+", cross = "x", dot = ".", warn = "!",
             arrow = ">", bullet = "*",
             boxTL = "+", boxTR = "+", boxBL = "+", boxBR = "+",
-            boxH = "=", boxV = "|", headingBar = "=", thinBar = "-",
+            boxH = "-", boxV = "|", boxDiv = "+",
+            headingBar = "=", thinBar = "-",
             spinnerFrames = listOf("|", "/", "-", "\\"),
         )
 
