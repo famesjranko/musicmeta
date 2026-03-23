@@ -167,7 +167,7 @@ class RoomEnrichmentCacheTest {
     fun `returns null for expired entry`() = runTest {
         // Given — cache with a controllable clock
         var now = 1_000_000L
-        val clockCache = RoomEnrichmentCache(database.enrichmentCacheDao()) { now }
+        val clockCache = RoomEnrichmentCache(database.enrichmentCacheDao(), clock = { now })
 
         val result = EnrichmentResult.Success(
             type = EnrichmentType.ALBUM_ART,

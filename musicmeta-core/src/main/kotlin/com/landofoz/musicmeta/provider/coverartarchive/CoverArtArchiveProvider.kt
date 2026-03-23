@@ -119,9 +119,9 @@ class CoverArtArchiveProvider(
         imageType: String,
     ): EnrichmentResult {
         if (releaseId == null) return EnrichmentResult.NotFound(type, id)
-        val metadata = api.getArtworkMetadata(releaseId)
+        val images = api.getArtworkMetadata(releaseId)
             ?: return EnrichmentResult.NotFound(type, id)
-        val image = metadata.images.firstOrNull { imageType in it.types }
+        val image = images.firstOrNull { imageType in it.types }
             ?: return EnrichmentResult.NotFound(type, id)
         return EnrichmentResult.Success(
             type = type,
@@ -133,8 +133,8 @@ class CoverArtArchiveProvider(
 
     /** Fetch image metadata for sizes. Returns the first front image, or null. */
     private suspend fun fetchFrontImage(releaseId: String): CoverArtArchiveImage? {
-        val metadata = api.getArtworkMetadata(releaseId) ?: return null
-        return metadata.images.firstOrNull { it.front }
+        val images = api.getArtworkMetadata(releaseId) ?: return null
+        return images.firstOrNull { it.front }
     }
 
     companion object {

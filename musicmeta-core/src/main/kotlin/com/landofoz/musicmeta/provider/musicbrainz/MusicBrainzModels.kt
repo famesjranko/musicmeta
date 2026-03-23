@@ -10,7 +10,7 @@ data class MusicBrainzRelease(
     val country: String?,
     val barcode: String?,
     val tags: List<String>,
-    val tagCounts: List<Pair<String, Int>> = emptyList(),
+    val tagCounts: List<TagCount> = emptyList(),
     val label: String?,
     val releaseType: String?,
     val releaseGroupId: String?,
@@ -29,7 +29,7 @@ data class MusicBrainzArtist(
     val beginDate: String?,
     val endDate: String?,
     val tags: List<String>,
-    val tagCounts: List<Pair<String, Int>> = emptyList(),
+    val tagCounts: List<TagCount> = emptyList(),
     val disambiguation: String?,
     val wikidataId: String?,
     val wikipediaTitle: String?,
@@ -43,7 +43,7 @@ data class MusicBrainzRecording(
     val title: String,
     val isrcs: List<String>,
     val tags: List<String>,
-    val tagCounts: List<Pair<String, Int>> = emptyList(),
+    val tagCounts: List<TagCount> = emptyList(),
     val score: Int,
 )
 
@@ -66,7 +66,7 @@ data class MusicBrainzReleaseGroup(
 data class MusicBrainzTrack(
     val title: String,
     val position: Int,
-    val lengthMs: Long?,
+    val durationMs: Long?,
     val id: String?,
 )
 
@@ -97,4 +97,9 @@ data class MusicBrainzEdition(
     val format: String?,
     val label: String?,
     val catalogNumber: String?,
+)
+
+data class TagCount(
+    val name: String,
+    val count: Int,
 )

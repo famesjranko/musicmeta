@@ -51,10 +51,10 @@ class CoverArtArchiveApiTest {
         val metadata = api.getArtworkMetadata("test-types")
 
         // Then -- each image has its types parsed
-        assertEquals(3, metadata!!.images.size)
-        assertEquals(listOf("Front"), metadata.images[0].types)
-        assertEquals(listOf("Back"), metadata.images[1].types)
-        assertEquals(listOf("Booklet"), metadata.images[2].types)
+        assertEquals(3, metadata!!.size)
+        assertEquals(listOf("Front"), metadata[0].types)
+        assertEquals(listOf("Back"), metadata[1].types)
+        assertEquals(listOf("Booklet"), metadata[2].types)
     }
 
     @Test
@@ -77,8 +77,8 @@ class CoverArtArchiveApiTest {
         val metadata = api.getArtworkMetadata("no-types")
 
         // Then -- types defaults to empty list
-        assertEquals(1, metadata!!.images.size)
-        assertTrue(metadata.images[0].types.isEmpty())
+        assertEquals(1, metadata!!.size)
+        assertTrue(metadata[0].types.isEmpty())
     }
 
     @Test

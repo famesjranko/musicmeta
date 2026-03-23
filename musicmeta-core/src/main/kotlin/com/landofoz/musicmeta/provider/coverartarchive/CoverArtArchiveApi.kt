@@ -34,7 +34,7 @@ class CoverArtArchiveApi(
      * Fetch full image metadata for a release, including thumbnail sizes.
      * Returns the list of images with their thumbnails, or null on error.
      */
-    suspend fun getArtworkMetadata(releaseId: String): CoverArtArchiveImageList? {
+    suspend fun getArtworkMetadata(releaseId: String): List<CoverArtArchiveImage>? {
         val url = "$BASE_URL/release/$releaseId"
         val json = when (val result = httpClient.fetchJsonResult(url)) {
             is HttpResult.Ok -> result.body
@@ -43,9 +43,9 @@ class CoverArtArchiveApi(
         return parseImageList(json)
     }
 
-    private fun parseImageList(json: JSONObject): CoverArtArchiveImageList {
-        val imagesArray = json.optJSONArray("images") ?: return CoverArtArchiveImageList(emptyList())
-        val images = (0 until imagesArray.length()).mapNotNull { i ->
+    private fun parseImageList(json: JSONObject): List<CoverArtArchiveImage> {
+        val imagesArray = json.optJSONArray("images") ?: return emptyList()
+        return (0 until imagesArray.length()).mapNotNull { i ->
             val obj = imagesArray.optJSONObject(i) ?: return@mapNotNull null
             val front = obj.optBoolean("front", false)
             val imageUrl = obj.optString("image", "").takeIf { it.isNotBlank() } ?: return@mapNotNull null
@@ -65,7 +65,6 @@ class CoverArtArchiveApi(
             }
             CoverArtArchiveImage(front = front, url = imageUrl, thumbnails = thumbnails, types = types)
         }
-        return CoverArtArchiveImageList(images)
     }
 
     /** Build a canonical CAA URL without checking availability. */

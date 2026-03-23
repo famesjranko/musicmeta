@@ -254,7 +254,7 @@ class MusicBrainzParserTest {
         assertEquals(2, tracks.size)
         assertEquals("Airbag", tracks[0].title)
         assertEquals(1, tracks[0].position)
-        assertEquals(284000L, tracks[0].lengthMs)
+        assertEquals(284000L, tracks[0].durationMs)
         assertEquals("rec-1", tracks[0].id)
         assertEquals("Paranoid Android", tracks[1].title)
         assertEquals(2, tracks[1].position)

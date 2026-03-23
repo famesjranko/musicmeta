@@ -7,7 +7,7 @@ import org.junit.Test
 
 class MusicBrainzMapperGenreTest {
 
-    private fun makeRelease(tagCounts: List<Pair<String, Int>> = emptyList()): MusicBrainzRelease =
+    private fun makeRelease(tagCounts: List<TagCount> = emptyList()): MusicBrainzRelease =
         MusicBrainzRelease(
             id = "test-id",
             title = "Test Album",
@@ -15,7 +15,7 @@ class MusicBrainzMapperGenreTest {
             date = "2020-01-01",
             country = "US",
             barcode = null,
-            tags = tagCounts.map { it.first },
+            tags = tagCounts.map { it.name },
             tagCounts = tagCounts,
             label = null,
             releaseType = "Album",
@@ -24,7 +24,7 @@ class MusicBrainzMapperGenreTest {
             score = 100,
         )
 
-    private fun makeArtist(tagCounts: List<Pair<String, Int>> = emptyList()): MusicBrainzArtist =
+    private fun makeArtist(tagCounts: List<TagCount> = emptyList()): MusicBrainzArtist =
         MusicBrainzArtist(
             id = "artist-id",
             name = "Test Artist",
@@ -32,7 +32,7 @@ class MusicBrainzMapperGenreTest {
             country = "US",
             beginDate = null,
             endDate = null,
-            tags = tagCounts.map { it.first },
+            tags = tagCounts.map { it.name },
             tagCounts = tagCounts,
             disambiguation = null,
             wikidataId = null,
@@ -40,12 +40,12 @@ class MusicBrainzMapperGenreTest {
             score = 100,
         )
 
-    private fun makeRecording(tagCounts: List<Pair<String, Int>> = emptyList()): MusicBrainzRecording =
+    private fun makeRecording(tagCounts: List<TagCount> = emptyList()): MusicBrainzRecording =
         MusicBrainzRecording(
             id = "recording-id",
             title = "Test Track",
             isrcs = emptyList(),
-            tags = tagCounts.map { it.first },
+            tags = tagCounts.map { it.name },
             tagCounts = tagCounts,
             score = 100,
         )
@@ -53,7 +53,7 @@ class MusicBrainzMapperGenreTest {
     @Test
     fun `toAlbumMetadata populates genreTags with 0_4f confidence and musicbrainz source`() {
         // Given
-        val tagCounts = listOf("rock" to 10, "pop" to 5)
+        val tagCounts = listOf(TagCount("rock", 10), TagCount("pop", 5))
         val release = makeRelease(tagCounts)
 
         // When
@@ -73,7 +73,7 @@ class MusicBrainzMapperGenreTest {
     @Test
     fun `toAlbumMetadata still populates genres for backward compatibility`() {
         // Given
-        val tagCounts = listOf("jazz" to 8, "blues" to 3)
+        val tagCounts = listOf(TagCount("jazz", 8), TagCount("blues", 3))
         val release = makeRelease(tagCounts)
 
         // When
@@ -98,7 +98,7 @@ class MusicBrainzMapperGenreTest {
     @Test
     fun `toArtistMetadata populates genreTags with 0_4f confidence and musicbrainz source`() {
         // Given
-        val tagCounts = listOf("metal" to 15)
+        val tagCounts = listOf(TagCount("metal", 15))
         val artist = makeArtist(tagCounts)
 
         // When
@@ -128,7 +128,7 @@ class MusicBrainzMapperGenreTest {
     @Test
     fun `toTrackMetadata populates genreTags with 0_4f confidence and musicbrainz source`() {
         // Given
-        val tagCounts = listOf("electronic" to 7)
+        val tagCounts = listOf(TagCount("electronic", 7))
         val recording = makeRecording(tagCounts)
 
         // When

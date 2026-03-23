@@ -47,7 +47,7 @@ object MusicBrainzParser {
             date = obj.optString("date").takeIf { it.isNotBlank() },
             country = obj.optString("country").takeIf { it.isNotBlank() },
             barcode = obj.optString("barcode").takeIf { it.isNotBlank() },
-            tags = tagCounts.map { it.first },
+            tags = tagCounts.map { it.name },
             tagCounts = tagCounts,
             label = extractLabel(obj),
             releaseType = extractReleaseType(obj),
@@ -70,7 +70,7 @@ object MusicBrainzParser {
             country = obj.optString("country").takeIf { it.isNotBlank() },
             beginDate = lifeSpan?.optString("begin")?.takeIf { it.isNotBlank() },
             endDate = lifeSpan?.optString("end")?.takeIf { it.isNotBlank() },
-            tags = tagCounts.map { it.first },
+            tags = tagCounts.map { it.name },
             tagCounts = tagCounts,
             disambiguation = obj.optString("disambiguation").takeIf { it.isNotBlank() },
             wikidataId = extractWikidataId(obj),
@@ -87,7 +87,7 @@ object MusicBrainzParser {
             id = obj.getString("id"),
             title = obj.getString("title"),
             isrcs = extractIsrcs(obj),
-            tags = tagCounts.map { it.first },
+            tags = tagCounts.map { it.name },
             tagCounts = tagCounts,
             score = obj.optInt("score", 0),
         )
@@ -171,7 +171,7 @@ object MusicBrainzParser {
                     MusicBrainzTrack(
                         title = track.getString("title"),
                         position = track.getInt("position"),
-                        lengthMs = track.optLong("length", 0L).takeIf { it > 0 },
+                        durationMs = track.optLong("length", 0L).takeIf { it > 0 },
                         id = recordingId ?: track.optString("id").takeIf { it.isNotBlank() },
                     ),
                 )
@@ -211,7 +211,7 @@ object MusicBrainzParser {
      * Extract tags with counts, falling back to release-group tags.
      * Tags are primarily on release-groups in MusicBrainz.
      */
-    internal fun extractReleaseTagCounts(release: JSONObject): List<Pair<String, Int>> {
+    internal fun extractReleaseTagCounts(release: JSONObject): List<TagCount> {
         val releaseTags = extractTagsWithCounts(release)
         if (releaseTags.isNotEmpty()) return releaseTags
         val releaseGroup = release.optJSONObject("release-group") ?: return emptyList()
@@ -223,18 +223,18 @@ object MusicBrainzParser {
      * Tags are primarily on release-groups in MusicBrainz.
      */
     internal fun extractReleaseTags(release: JSONObject): List<String> =
-        extractReleaseTagCounts(release).map { it.first }
+        extractReleaseTagCounts(release).map { it.name }
 
-    internal fun extractTagsWithCounts(obj: JSONObject): List<Pair<String, Int>> {
+    internal fun extractTagsWithCounts(obj: JSONObject): List<TagCount> {
         val tags = obj.optJSONArray("tags") ?: return emptyList()
         return (0 until tags.length())
             .map { i -> tags.getJSONObject(i) }
             .sortedByDescending { it.optInt("count", 0) }
-            .map { it.getString("name") to it.optInt("count", 0) }
+            .map { TagCount(it.getString("name"), it.optInt("count", 0)) }
     }
 
     internal fun extractTags(obj: JSONObject): List<String> =
-        extractTagsWithCounts(obj).map { it.first }
+        extractTagsWithCounts(obj).map { it.name }
 
     private fun extractLabel(release: JSONObject): String? {
         val labelInfo = release.optJSONArray("label-info") ?: return null

@@ -120,7 +120,7 @@ object MusicBrainzMapper {
                 TrackInfo(
                     title = track.title,
                     position = track.position,
-                    durationMs = track.lengthMs,
+                    durationMs = track.durationMs,
                     identifiers = EnrichmentIdentifiers(musicBrainzId = track.id),
                 )
             },
@@ -167,8 +167,8 @@ object MusicBrainzMapper {
         return "$begin-$end"
     }
 
-    private fun buildGenreTags(tagCounts: List<Pair<String, Int>>): List<GenreTag>? =
-        tagCounts.map { (name, _) ->
-            GenreTag(name = name, confidence = 0.4f, sources = listOf("musicbrainz"))
+    private fun buildGenreTags(tagCounts: List<TagCount>): List<GenreTag>? =
+        tagCounts.map { tag ->
+            GenreTag(name = tag.name, confidence = 0.4f, sources = listOf("musicbrainz"))
         }.takeIf { it.isNotEmpty() }
 }
