@@ -80,7 +80,8 @@ interface EnrichmentEngine {
             addProvider(CoverArtArchiveProvider(client, defaultRateLimiter))
             addProvider(WikidataProvider(client, defaultRateLimiter))
             addProvider(WikipediaProvider(client, defaultRateLimiter))
-            addProvider(DeezerProvider(client))
+            addProvider(DeezerProvider(client, defaultRateLimiter,
+                radioLimit = config.radioLimit, topTracksLimit = config.topTracksLimit))
             val deezerApi = DeezerApi(client, defaultRateLimiter)
             addProvider(SimilarAlbumsProvider(deezerApi))
             addProvider(ITunesProvider(client))
@@ -91,7 +92,8 @@ interface EnrichmentEngine {
             val keys = apiKeyConfig
             if (keys != null) {
                 keys.lastFmKey?.let {
-                    addProvider(LastFmProvider(it, client, defaultRateLimiter))
+                    addProvider(LastFmProvider(it, client, defaultRateLimiter,
+                        topTracksLimit = config.topTracksLimit))
                 }
                 keys.fanartTvProjectKey?.let {
                     addProvider(FanartTvProvider(it, client, defaultRateLimiter))

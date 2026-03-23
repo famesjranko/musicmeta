@@ -20,6 +20,8 @@ import com.landofoz.musicmeta.http.RateLimiter
 class DeezerProvider(
     httpClient: HttpClient,
     rateLimiter: RateLimiter = RateLimiter(100),
+    private val radioLimit: Int = 50,
+    private val topTracksLimit: Int = 50,
 ) : EnrichmentProvider {
 
     private val api = DeezerApi(httpClient, rateLimiter)
@@ -112,7 +114,7 @@ class DeezerProvider(
             searchResult
         }
 
-        val tracks = api.getArtistTop(artist.id)
+        val tracks = api.getArtistTop(artist.id, limit = topTracksLimit)
         if (tracks.isEmpty()) return EnrichmentResult.NotFound(EnrichmentType.ARTIST_TOP_TRACKS, id)
 
         return EnrichmentResult.Success(
@@ -214,7 +216,7 @@ class DeezerProvider(
             searchResult
         }
 
-        val tracks = api.getArtistRadio(artist.id)
+        val tracks = api.getArtistRadio(artist.id, limit = radioLimit)
         if (tracks.isEmpty()) return EnrichmentResult.NotFound(EnrichmentType.ARTIST_RADIO, id)
 
         return EnrichmentResult.Success(
