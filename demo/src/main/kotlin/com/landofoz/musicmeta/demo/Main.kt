@@ -167,14 +167,18 @@ private fun loadSecrets(): Map<String, String> {
 
 private val ARTIST_TYPES = setOf(
     EnrichmentType.GENRE, EnrichmentType.ARTIST_BIO, EnrichmentType.ARTIST_PHOTO,
-    EnrichmentType.ARTIST_POPULARITY, EnrichmentType.SIMILAR_ARTISTS,
-    EnrichmentType.BAND_MEMBERS, EnrichmentType.ARTIST_DISCOGRAPHY,
-    EnrichmentType.ARTIST_LINKS, EnrichmentType.ARTIST_TIMELINE,
-    EnrichmentType.ARTIST_RADIO, EnrichmentType.GENRE_DISCOVERY,
+    EnrichmentType.ARTIST_BACKGROUND, EnrichmentType.ARTIST_LOGO,
+    EnrichmentType.ARTIST_BANNER, EnrichmentType.ARTIST_POPULARITY,
+    EnrichmentType.SIMILAR_ARTISTS, EnrichmentType.BAND_MEMBERS,
+    EnrichmentType.ARTIST_DISCOGRAPHY, EnrichmentType.ARTIST_LINKS,
+    EnrichmentType.ARTIST_TIMELINE, EnrichmentType.ARTIST_RADIO,
+    EnrichmentType.GENRE_DISCOVERY,
 )
 
 private val ALBUM_TYPES = setOf(
-    EnrichmentType.ALBUM_ART, EnrichmentType.GENRE, EnrichmentType.LABEL,
+    EnrichmentType.ALBUM_ART, EnrichmentType.ALBUM_ART_BACK,
+    EnrichmentType.ALBUM_BOOKLET, EnrichmentType.CD_ART,
+    EnrichmentType.GENRE, EnrichmentType.LABEL,
     EnrichmentType.RELEASE_DATE, EnrichmentType.RELEASE_TYPE, EnrichmentType.COUNTRY,
     EnrichmentType.ALBUM_METADATA, EnrichmentType.ALBUM_TRACKS,
     EnrichmentType.RELEASE_EDITIONS, EnrichmentType.SIMILAR_ALBUMS,
