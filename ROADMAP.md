@@ -6,9 +6,18 @@
 
 ## The Goal
 
-An open-source music metadata engine that any app can drop in to get **everything** about an artist, album, or track:
+Make it effortless for Android and JVM music app developers to get **everything** they need for rich, polished UI/UX — artwork, metadata, lyrics, recommendations, discovery — from a single library, without wiring up APIs themselves.
 
-- **Artwork**: all types (album front/back, artist photo, banner, logo, fanart, CD art, booklet) at all sizes (thumb → hero), **from all providers** — never discard data. If three providers return artist photos, return all three. The consumer app decides which to show (let users pick, use context-appropriate images, etc.).
+### Core principles
+
+- **Maximize data, never discard.** If three providers return artist photos, return all three with alternatives. The consumer app decides which to show. Every piece of data an API returns should reach the developer.
+- **One call, everything you need.** A single `enrich()` call fans out to 11 providers concurrently, merges results intelligently, and returns a typed map. No boilerplate, no API orchestration.
+- **Resilient by default.** Rate limiting, circuit breaking, timeout handling (with explicit `ErrorKind.TIMEOUT`), and caching are built in. Individual provider failures don't break the request.
+- **Works without API keys.** 8 of 11 providers need no authentication. The library returns useful results out of the box; adding API keys unlocks more coverage, not basic functionality.
+
+### What the library provides
+
+- **Artwork**: all types (album front/back, artist photo, banner, logo, fanart, CD art, booklet) at all sizes (thumb → hero), merged from all providers via ArtworkMerger with alternatives
 - **Metadata**: artist → members → discography → albums → tracks, with labels, dates, countries, genres
 - **Text content**: biographies, lyrics (synced + plain)
 - **Relationships**: similar artists, similar tracks
@@ -16,25 +25,20 @@ An open-source music metadata engine that any app can drop in to get **everythin
 - **Links**: social media, websites, streaming profiles
 - **Credits**: producers, performers, composers, engineers
 - **Recommendations**: discovery and radio features built on enrichment data
-  - *Similar Artists* — multi-provider similarity (Last.fm, ListenBrainz, Deezer)
+  - *Similar Artists* — multi-provider merge (Last.fm, ListenBrainz, Deezer) with source attribution
   - *Similar Tracks* — track-level "you might also like"
-  - *Similar Albums* — synthesized from similar artists + genre + era
-  - *Radio/Mix* — seed-based playlist generation (Deezer radio, ListenBrainz)
-  - *Credit-Based Discovery* — "more from this producer/composer" via credits data
-  - *Genre Discovery* — genre affinity neighbors via confidence scores
-  - *Listening-Based* — collaborative filtering recommendations (user-scoped)
-- **Developer Experience**: convenience API that makes integration effortless
-  - *Profile methods* — `engine.artistProfile("Radiohead")` returns a structured object with all fields pre-extracted
-  - *AlbumProfile / TrackProfile* — same pattern for albums and tracks
-  - *Type-safe requests* — only valid types for each entity kind, no wasted calls
-  - *Cleaner data model* — split overloaded Metadata into focused types
-  - *Smart defaults* — request the right types automatically based on entity kind
-- **Catalog Awareness**: recommendations filtered by what the user can actually play
-  - *Catalog Provider* — pluggable interface answering "does the user have access to X?"
-  - *Local Library* — scan local files, match by title/artist/fingerprint
-  - *Streaming Services* — Spotify, YouTube Music, Apple Music, Tidal catalog checks
+  - *Similar Albums* — synthesized from similar artists + genre + era proximity
+  - *Radio/Mix* — seed-based playlist generation (Deezer radio)
+  - *Genre Discovery* — genre affinity neighbors via confidence-scored taxonomy
+  - *Credit-Based Discovery* — "more from this producer/composer" via credits data (planned)
+  - *Listening-Based* — collaborative filtering recommendations (planned, user-scoped)
+- **Catalog Awareness**: filter recommendations by what the user can actually play
+  - *CatalogProvider interface* — consumers implement to answer "does the user have access to X?"
   - *Filtering Modes* — unfiltered (pure discovery), available-only, available-first (ranked)
-  - *Availability Scoring* — recommendations ranked by how accessible they are to this user
+- **Developer Experience**: make integration as simple as possible
+  - *Profile methods* — `engine.artistProfile("Radiohead")` returning a structured object (planned)
+  - *Type-safe requests* — only valid types for each entity kind, no wasted calls (planned)
+  - *Smart defaults* — request the right types automatically based on entity kind (planned)
 
 ---
 

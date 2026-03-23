@@ -1,8 +1,8 @@
 # musicmeta
 
-A Kotlin library that looks up music metadata from multiple public APIs. Give it an album, artist, or track name and get back artwork, genres, lyrics, biographies, credits, timelines, and more.
+A drop-in Kotlin library that gives Android and JVM music apps rich metadata, artwork, and discovery — without a commercial API. One `enrich()` call returns everything a music player needs for polished UI/UX: artist photos from multiple sources, album art at every size, synced lyrics, bios, credits, similar artists, radio playlists, genre discovery, and more.
 
-Built for music player apps that want Spotify-quality metadata without a commercial API. Works on JVM and Android.
+Built so developers don't have to wire up MusicBrainz, Wikidata, Deezer, Last.fm, and half a dozen other APIs themselves. The engine handles identity resolution, multi-provider merging, confidence scoring, rate limiting, and caching — you just ask for what you need.
 
 ## What it does
 
