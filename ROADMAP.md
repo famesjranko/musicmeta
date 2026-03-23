@@ -116,40 +116,46 @@ Key additions:
 
 ## What's Left
 
-### Ambiguity & Conflict Resolution — Open Design Questions
+### Ambiguity & Disambiguation
 
-The engine currently auto-picks the "best" match from MusicBrainz and proceeds silently. The developer never knows if the match was ambiguous, marginal, or potentially wrong. This conflicts with the unopinionated principle — **we shouldn't decide for the developer when we're not sure.**
+The engine supports two usage patterns for identity resolution:
 
-**Real-world scenarios that need handling:**
+**Auto mode** (current default) — pass a name, engine picks the best MusicBrainz match and enriches it. Simple but opaque — the developer doesn't know if the match was confident or a coin flip between two similar artists.
 
-| Scenario | Example | Current behavior | Problem |
-|----------|---------|-----------------|---------|
-| **Multiple close matches** | "Bush" — British rock band vs Canadian band | Picks highest MusicBrainz score silently | Developer gets the wrong Bush with no indication |
-| **Obscure/niche artist** | "Ochre" — low score, few tags | Proceeds if score >= 60 | May enrich the wrong entity with no warning |
-| **Name collision** | "Nirvana" — 60s psych vs 90s grunge | Picks whichever MusicBrainz ranks higher | Could flip depending on tag counts |
-| **Near miss / misspelling** | "Readiohead" | Falls below minMatchScore, returns NotFound | No suggestion of "did you mean Radiohead?" |
-| **Provider data conflicts** | Last.fm says "electronic", Discogs says "ambient" | Merged silently via GenreMerger | Correct behavior for genres, but what about factual conflicts? (e.g., different country, different formation date) |
-| **Partial match** | "OK Computer" matches "OK Computer OKNOTOK" | Picks the closest, no indication it was fuzzy | Developer doesn't know the match wasn't exact |
+**Manual disambiguation** (already supported) — the developer controls the flow:
+```kotlin
+// 1. Search — returns candidates with MBIDs, scores, and metadata
+val candidates = engine.search(EnrichmentRequest.forArtist("Bush"), limit = 5)
+// → "Bush" (British rock, score=100, mbid=abc), "Bush" (Canadian, score=95, mbid=def)
+
+// 2. Developer/user picks the right one
+
+// 3. Enrich with the chosen MBID — skips search, goes straight to ID-based lookup
+val results = engine.enrich(
+    EnrichmentRequest.forArtist("Bush", mbid = chosen.identifiers.musicBrainzId),
+    types,
+)
+```
+
+This two-step flow is the right answer for the unopinionated principle: the library provides candidates, the app decides. When an MBID is provided, the engine skips fuzzy matching entirely and does precise ID-based lookups across all providers.
+
+**What needs improvement:**
+
+| Gap | Problem | Impact |
+|-----|---------|--------|
+| **SearchCandidate lacks disambiguation** | MusicBrainz returns a `disambiguation` field (e.g., "British rock band" vs "Canadian band") but we don't include it | Developer can't show users meaningful choices |
+| **SearchCandidate lacks artist type** | MusicBrainz returns `type` ("Group", "Person", etc.) but we don't include it | Can't distinguish bands from solo acts in search results |
+| **No match quality indicator on `enrich()`** | Auto mode returns results with no indication of how confident the identity match was | Developer can't detect ambiguous matches to prompt for disambiguation |
+| **No "did you mean?" on NotFound** | When search finds no match above threshold, returns empty — no close matches suggested | Developer can't help users fix typos |
+| **Provider factual conflicts not surfaced** | If MusicBrainz says country=UK and Wikidata says country=GB, first provider wins silently | Minor — most factual conflicts are equivalent representations, not real disagreements |
 
 **Design decisions needed:**
 
-1. **Should `enrich()` surface ambiguity?** Options:
-   - Return a confidence/match quality indicator alongside results so the developer can decide whether to trust the match or prompt their user
-   - Add an `ambiguous` flag or `matchQuality` field to the result
-   - Return the top N candidates when confidence is below a threshold, letting the developer choose
+1. **Should `enrich()` return match quality?** A `matchConfidence` or `identityScore` field on the result would let developers decide: high score → show immediately, low score → prompt user with `search()` candidates. This keeps auto mode working but gives the developer a signal.
 
-2. **Should there be a "safe mode" vs "best effort" mode?**
-   - Safe mode: refuse to auto-pick when ambiguous, return candidates instead
-   - Best effort (current): always pick the best match, let confidence filtering handle quality
-   - Developer chooses which mode fits their app
+2. **Should there be a strict mode?** Some apps want to never show wrong data (e.g., a metadata editor). A mode where `enrich()` refuses to auto-pick below a configurable threshold and returns candidates instead would serve this use case without changing the default behavior.
 
-3. **How to handle factual conflicts across providers?** (e.g., different formation dates, different countries)
-   - Currently only genres are merged; other metadata uses short-circuit (first provider wins)
-   - Should conflicting facts be surfaced, or is first-provider-wins acceptable?
-
-4. **The `search()` API already exists for disambiguation** — should `enrich()` integrate with it, or should disambiguation always be a separate developer-initiated step?
-
-**Principle: the library should never silently guess wrong.** When the engine isn't confident, it should tell the developer so they can involve their user. The worst outcome is enriching the wrong artist and showing incorrect data in the UI.
+**Principle: the library should never silently guess wrong.** When the engine isn't confident, it should give the developer enough information to involve their user. The two-step search→enrich flow is the primary tool for this — it just needs better candidate data and a bridge from auto mode.
 
 ### Remaining Gaps (no planned milestone)
 

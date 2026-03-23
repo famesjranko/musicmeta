@@ -115,6 +115,17 @@ val candidates = engine.search(
     limit = 5,
 )
 candidates.forEach { println("${it.title} (${it.year}) -- score ${it.score}") }
+
+// Two-step disambiguation: search first, then enrich with the chosen MBID.
+// Useful when the name is ambiguous (e.g., "Bush", "Nirvana") — let the user pick.
+val artistCandidates = engine.search(EnrichmentRequest.forArtist("Bush"), limit = 5)
+// → Show candidates to user, they pick one...
+val chosen = artistCandidates.first() // user's choice
+val enriched = engine.enrich(
+    EnrichmentRequest.forArtist(chosen.title, mbid = chosen.identifiers.musicBrainzId),
+    setOf(EnrichmentType.GENRE, EnrichmentType.ARTIST_BIO),
+)
+// When an MBID is provided, the engine skips fuzzy search and does precise lookups.
 ```
 
 ### Android (musicmeta-android)
