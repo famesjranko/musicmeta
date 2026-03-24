@@ -1,5 +1,21 @@
 # Milestones
 
+## v0.8.0 Production Readiness (Shipped: 2026-03-24)
+
+**Phases completed:** 4 phases, 7 plans, 14 tasks
+
+**Key accomplishments:**
+
+- musicmeta-okhttp module with OkHttpEnrichmentClient implementing all 10 HttpClient methods via OkHttp 4.12.0 Call API, transparent gzip, and correct 429/4xx/5xx status mapping
+- 28 MockWebServer integration tests proving OkHttpEnrichmentClient matches HttpClient contract across all 10 methods, status-code mapping (429/4xx/5xx/2xx), gzip decompression, Retry-After parsing, and POST body transmission
+- CacheMode enum, isStale flag on Success, getIncludingExpired interface method, and InMemoryEnrichmentCache retained-expiry implementation with 3 new TDD-driven tests
+- STALE_IF_ERROR fallback wired into DefaultEnrichmentEngine: expired cache served on Error/RateLimited with isStale=true, stale results excluded from re-caching, RoomEnrichmentCache and FakeEnrichmentCache updated with getIncludingExpired support
+- enrichBatch() added to EnrichmentEngine interface as a default Flow-returning method, with explicit override in DefaultEnrichmentEngine and 5 Turbine tests covering order, empty list, cancellation, forceRefresh propagation, and cache-hit bypass
+- vanniktech gradle-maven-publish-plugin 0.30.0 applied to all 3 modules (core, okhttp, android) targeting SonatypeHost.CENTRAL_PORTAL with GPG signing, full POM metadata, and version 0.8.0
+- publishToMavenLocal verified for all 3 modules with correct POM metadata; README restructured with Maven Central as primary installation method including musicmeta-okhttp coordinates for the first time
+
+---
+
 ## v0.6.0 Recommendations Engine (Shipped: 2026-03-22)
 
 **Phases completed:** 7 phases, 14 plans, 25 tasks

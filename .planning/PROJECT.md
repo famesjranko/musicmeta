@@ -2,25 +2,15 @@
 
 ## What This Is
 
-A pure Kotlin/JVM music metadata enrichment and recommendation library that aggregates data from 11 public APIs (MusicBrainz, Last.fm, Wikidata, Wikipedia, Cover Art Archive, Fanart.tv, Deezer, iTunes, Discogs, ListenBrainz, LRCLIB) into a unified pipeline with priority chains, circuit breakers, rate limiting, and identity resolution. 31 enrichment types across 8 categories: artwork (7 types), metadata (9 types), text (3 types), relationships (3 types), statistics (2 types), links (2 types), composite (2 types), and recommendations (3 types). Features multi-provider merging, composite type synthesis, genre affinity discovery, similar albums via era-proximity scoring, and pluggable catalog-aware filtering.
+A pure Kotlin/JVM music metadata enrichment and recommendation library that aggregates data from 11 public APIs (MusicBrainz, Last.fm, Wikidata, Wikipedia, Cover Art Archive, Fanart.tv, Deezer, iTunes, Discogs, ListenBrainz, LRCLIB) into a unified pipeline with priority chains, circuit breakers, rate limiting, and identity resolution. 32 enrichment types across 8 categories. Three-module architecture: `musicmeta-core` (pure JVM), `musicmeta-okhttp` (OkHttp adapter), `musicmeta-android` (Room, Hilt, WorkManager). Features multi-provider merging, composite type synthesis, stale-while-revalidate caching, bulk enrichment via Flow, profile methods, and Maven Central distribution.
 
 ## Core Value
 
 Consumers get comprehensive, accurate music metadata from a single `enrich()` call without knowing which APIs exist, how they authenticate, or how to correlate identifiers across services.
 
-## Current Milestone: v0.8.0 Production Readiness
-
-**Goal:** Address production readiness gaps identified by external review — OkHttp adapter, offline cache fallback, bulk enrichment API, Maven Central distribution.
-
-**Target features:**
-- OkHttp HttpClient adapter (`musicmeta-okhttp` module)
-- Stale-while-revalidate cache mode (`STALE_IF_ERROR`)
-- Bulk enrichment API (`enrichBatch()` with Flow emission)
-- Maven Central publishing (all 3 modules)
-
 ## Current State
 
-Shipped v0.7.0 Developer Experience with EnrichmentResults wrapper (19 named accessors), profile extension functions (artistProfile/albumProfile/trackProfile), default type sets per entity kind, cache management API (invalidate/forceRefresh/manualSelection), and ProviderChain failure preservation fix. 32 enrichment types across 11 providers.
+Shipped v0.8.0 Production Readiness. Three-module architecture: `musicmeta-core`, `musicmeta-okhttp` (OkHttp 4.12.0 adapter), `musicmeta-android`. Stale-while-revalidate cache via `CacheMode.STALE_IF_ERROR`. Bulk enrichment via `enrichBatch()` Flow API. Maven Central publishing via vanniktech plugin targeting Central Portal. 32 enrichment types across 11 providers, version 0.8.0.
 
 ## Requirements
 
@@ -56,13 +46,14 @@ Shipped v0.7.0 Developer Experience with EnrichmentResults wrapper (19 named acc
 - v0.7.0: Cache management API — invalidate(), forceRefresh, isManuallySelected()/markManuallySelected()
 - v0.7.0: ProviderChain failure preservation, Room cache identity round-tripping, cache key convergence
 - v0.7.0: SIMILAR_TRACKS multi-provider merge (Last.fm + Deezer) via SimilarTrackMerger
+- v0.8.0: OkHttpEnrichmentClient — all 10 HttpClient methods via OkHttp 4.12.0 in musicmeta-okhttp module
+- v0.8.0: CacheMode.STALE_IF_ERROR — expired cache served on Error/RateLimited with isStale flag, not for NotFound
+- v0.8.0: enrichBatch() Flow API — sequential bulk enrichment with cooperative cancellation
+- v0.8.0: Maven Central publishing via vanniktech plugin + Central Portal for all 3 modules
 
 ### Active
 
-- [ ] OkHttp HttpClient adapter — `musicmeta-okhttp` module implementing all 12 HttpClient methods via OkHttp Call API
-- [ ] Stale-while-revalidate cache — `CacheMode.STALE_IF_ERROR` serving expired cache on Error/RateLimited with `isStale` flag
-- [ ] Bulk enrichment — `enrichBatch()` returning `Flow<Pair<EnrichmentRequest, EnrichmentResults>>` with sequential iteration
-- [ ] Maven Central publishing — Sonatype/OSSRH config, POM metadata, signing, sources/javadoc jars for all modules
+(None — planning next milestone)
 
 ### Out of Scope
 
@@ -80,11 +71,13 @@ Shipped v0.7.0 Developer Experience with EnrichmentResults wrapper (19 named acc
 
 - Pre-1.0 with no external consumers — clean breaking changes still safe
 - Provider APIs are the biggest long-term maintenance risk — mitigated by mapper pattern
-- v0.6.0 tech debt: DefaultEnrichmentEngine.kt is 304 lines (4 over 300-line target)
 - 32 enrichment types, 4 engine concepts (provider chains, composite types, mergeable types, catalog filtering)
 - Engine extensibility: new mergeable types via ResultMerger, new composites via CompositeSynthesizer
-- v0.7.0 shipped EnrichmentResults wrapper + profile methods + cache management API
-- HttpClient has 12 methods (6 nullable, 4 HttpResult, fetchBody, fetchRedirectUrl) — OkHttp adapter must implement all
+- Three-module architecture: musicmeta-core, musicmeta-okhttp, musicmeta-android — all at version 0.8.0
+- HttpClient has 10 methods — OkHttp adapter (musicmeta-okhttp) and DefaultHttpClient (musicmeta-core) both implement all 10
+- vanniktech plugin v0.30.0 (not 0.36.0 — AGP 8.7.3 incompatibility). Upgrade with AGP bump.
+- Android javadoc jar disabled (AGP 8.7.3/Dokka 1.x/Kotlin 2.1.0 conflict). Re-enable with AGP upgrade.
+- Central Portal namespace verification and GPG key setup required before first live Maven Central publish
 
 ## Constraints
 
@@ -111,6 +104,13 @@ Shipped v0.7.0 Developer Experience with EnrichmentResults wrapper (19 named acc
 | CatalogProvider as fun interface | SAM conversion lets consumers pass lambdas; filtering modes as enum | ✓ Good — simple contract |
 | Additive scoring for SimilarArtistMerger | Consistent with GenreMerger pattern; cross-provider agreement boosts ranking | ✓ Good |
 | Deezer artist ID via extra map | Consistent with discogsReleaseId pattern; check cached first, search fallback with ArtistMatcher | ✓ Good — reused across 3 Deezer features |
+| OkHttp 4.12.0 (not 5.x) | 5.x forces Kotlin 2.2.x stdlib onto consumers; 4.x avoids conflict | ✓ Good — all tests pass |
+| No manual Accept-Encoding in OkHttp | OkHttp handles transparent gzip; manual header disables decompression | ✓ Good — gzip test passes |
+| STALE_IF_ERROR only (no CACHE_FIRST) | CACHE_FIRST needs background refresh architecture; STALE_IF_ERROR covers offline case | ✓ Good — minimal complexity |
+| Stale only for Error/RateLimited, not NotFound | NotFound means "searched and found nothing"; stale would be misleading | ✓ Good — clear semantics |
+| enrichBatch sequential (not pipelined) | Rate limiter naturally throttles; cache hits return fast; 90% of value | ✓ Good — simple, correct |
+| vanniktech plugin per-module (not subprojects) | Avoids Android signing timing issues; matches plugin docs | ✓ Good — all 3 modules publish |
+| OSSRH dead → Central Portal | OSSRH shut down June 2025; vanniktech + CENTRAL_PORTAL is the replacement | ✓ Good — dry-run verified |
 
 ## Evolution
 
@@ -130,4 +130,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-24 after v0.8.0 milestone start*
+*Last updated: 2026-03-24 after v0.8.0 milestone*
