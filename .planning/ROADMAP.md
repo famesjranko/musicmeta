@@ -117,11 +117,11 @@ Plans:
   3. Published POMs include license (Apache 2.0), developer name/email, and SCM URL pointing to the repository
   4. Artifacts are GPG-signed when a key is configured (signing skipped gracefully when key is absent)
   5. JitPack coordinates remain unchanged — existing consumers do not need to update their build files
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 22-01: Apply vanniktech plugin per-module with `CENTRAL_PORTAL` host, `AndroidSingleVariantLibrary` for android module, POM metadata, GPG signing; add credential placeholders to `gradle.properties`
-- [ ] 22-02: Verify publishing dry-run for all three modules; update README with Maven Central coordinates and badge
+- [ ] 22-01-PLAN.md — Apply vanniktech plugin per-module with `CENTRAL_PORTAL` host, `AndroidSingleVariantLibrary` for android module, POM metadata, GPG signing; add credential placeholders to `gradle.properties`
+- [ ] 22-02-PLAN.md — Verify publishing dry-run for all three modules; update README with Maven Central coordinates and badge
 
 ## Progress
 
