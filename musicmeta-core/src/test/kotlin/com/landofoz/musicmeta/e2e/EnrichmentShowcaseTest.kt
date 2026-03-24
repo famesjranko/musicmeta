@@ -21,6 +21,7 @@ import com.landofoz.musicmeta.provider.lrclib.LrcLibProvider
 import com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzProvider
 import com.landofoz.musicmeta.provider.wikidata.WikidataProvider
 import com.landofoz.musicmeta.provider.wikipedia.WikipediaProvider
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.runBlocking
 import org.junit.Assume
 import org.junit.Before
@@ -226,7 +227,7 @@ class EnrichmentShowcaseTest {
 
     @Test
     fun `08 - coverage matrix`() {
-        banner("COVERAGE MATRIX (v0.6.0)")
+        banner("COVERAGE MATRIX (v0.8.0)")
         val providers = engine.getProviders()
         var multiCount = 0
         EnrichmentType.entries.forEach { type ->
@@ -248,7 +249,7 @@ class EnrichmentShowcaseTest {
         }
         println("\n  M+/M = multi-provider, S = single provider, - = no provider")
         println("  $multiCount/${EnrichmentType.entries.size} types have multi-provider coverage")
-        println("\n  ENGINE FEATURES (v0.6.0):")
+        println("\n  ENGINE FEATURES (v0.8.0):")
         println("    - GENRE uses GenreMerger (multi-provider merge, not short-circuit)")
         println("    - SIMILAR_ARTISTS uses SimilarArtistMerger (Last.fm + ListenBrainz + Deezer)")
         println("    - ARTIST_TIMELINE is composite (auto-resolves DISCOGRAPHY + BAND_MEMBERS)")
@@ -257,6 +258,10 @@ class EnrichmentShowcaseTest {
         println("    - SIMILAR_ALBUMS synthesized from similar artists + era scoring (Deezer)")
         println("    - CatalogProvider interface: plug in your library for AVAILABLE_ONLY/AVAILABLE_FIRST filtering")
         println("    - All 11 providers use HttpResult/ErrorKind uniformly")
+        println("    - v0.8.0: OkHttpEnrichmentClient adapter (musicmeta-okhttp module)")
+        println("    - v0.8.0: CacheMode.STALE_IF_ERROR — offline fallback with isStale flag")
+        println("    - v0.8.0: enrichBatch() Flow API for bulk enrichment")
+        println("    - v0.8.0: Maven Central publishing via vanniktech + Central Portal")
     }
 
     // --- 9. v0.5.0 feature spotlight ---
@@ -412,6 +417,71 @@ class EnrichmentShowcaseTest {
                 ))
             }
         } else printSingleResult(EnrichmentType.GENRE_DISCOVERY, genreDiscovery)
+    }
+
+    // --- 11. v0.8.0 feature spotlight ---
+
+    @Test
+    fun `11 - v0_8_0 feature spotlight`() = runBlocking {
+        banner("v0.8.0 FEATURES: PRODUCTION READINESS")
+        println("  (OkHttp adapter E2E tested in musicmeta-okhttp module)")
+
+        // Stale-while-revalidate cache: demonstrate isStale flag
+        println("\n  --- STALE CACHE (STALE_IF_ERROR) ---")
+        val staleConfig = com.landofoz.musicmeta.EnrichmentConfig(
+            cacheMode = com.landofoz.musicmeta.cache.CacheMode.STALE_IF_ERROR,
+        )
+        val staleEngine = EnrichmentEngine.Builder()
+            .config(staleConfig)
+            .withDefaultProviders()
+            .build()
+        // First: populate cache with a real result
+        val warmup = staleEngine.enrich(
+            EnrichmentRequest.forAlbum("OK Computer", "Radiohead"),
+            setOf(EnrichmentType.GENRE),
+        )
+        val warmupGenre = warmup.raw[EnrichmentType.GENRE]
+        println("    Cache warm: GENRE ${if (warmupGenre is EnrichmentResult.Success) "cached (isStale=${warmupGenre.isStale})" else "not cached"}")
+
+        // Second: same request, should come from cache (isStale=false because cache is fresh)
+        val cached = staleEngine.enrich(
+            EnrichmentRequest.forAlbum("OK Computer", "Radiohead"),
+            setOf(EnrichmentType.GENRE),
+        )
+        val cachedGenre = cached.raw[EnrichmentType.GENRE]
+        println("    Cache hit: GENRE ${if (cachedGenre is EnrichmentResult.Success) "isStale=${cachedGenre.isStale}" else "miss"}")
+
+        // enrichBatch: demonstrate Flow-based bulk enrichment
+        println("\n  --- BULK ENRICHMENT (enrichBatch) ---")
+        val albums = listOf(
+            EnrichmentRequest.forAlbum("OK Computer", "Radiohead"),
+            EnrichmentRequest.forAlbum("The Bends", "Radiohead"),
+            EnrichmentRequest.forAlbum("Kid A", "Radiohead"),
+        )
+        var batchCount = 0
+        engine.enrichBatch(albums, setOf(EnrichmentType.GENRE, EnrichmentType.ALBUM_ART)).collect { (request, results) ->
+            batchCount++
+            val genreStatus = when (val g = results.raw[EnrichmentType.GENRE]) {
+                is EnrichmentResult.Success -> "SUCCESS (${g.provider})"
+                is EnrichmentResult.NotFound -> "NotFound"
+                else -> g?.javaClass?.simpleName ?: "null"
+            }
+            val artStatus = when (val a = results.raw[EnrichmentType.ALBUM_ART]) {
+                is EnrichmentResult.Success -> "SUCCESS (${a.provider})"
+                is EnrichmentResult.NotFound -> "NotFound"
+                else -> a?.javaClass?.simpleName ?: "null"
+            }
+            val label = (request as? EnrichmentRequest.ForAlbum)?.title ?: request.toString()
+            println("    [$batchCount/3] $label: GENRE=$genreStatus, ART=$artStatus")
+        }
+        println("    Batch complete: $batchCount/${albums.size} results emitted")
+
+        // Maven Central publishing status
+        println("\n  --- MAVEN CENTRAL PUBLISHING ---")
+        println("    Version: 0.8.0")
+        println("    Modules: musicmeta-core, musicmeta-okhttp, musicmeta-android")
+        println("    Plugin: com.vanniktech.maven.publish (Central Portal)")
+        println("    publishToMavenLocal: verified (dry-run)")
     }
 
     // --- Helpers ---

@@ -13,6 +13,10 @@ java {
     targetCompatibility = JavaVersion.VERSION_17
 }
 
+tasks.withType<Test> {
+    systemProperty("include.e2e", System.getProperty("include.e2e") ?: "false")
+}
+
 dependencies {
     // Core module (exposes HttpClient, HttpResult types to consumers)
     api(project(":musicmeta-core"))
