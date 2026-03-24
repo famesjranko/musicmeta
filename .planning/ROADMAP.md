@@ -57,7 +57,7 @@ Full details: `.planning/milestones/v0.6.0-ROADMAP.md`
 
 - [x] **Phase 19: OkHttp Adapter** - New `musicmeta-okhttp` module; `OkHttpEnrichmentClient` implementing all 10 `HttpClient` methods (completed 2026-03-24)
 - [x] **Phase 20: Stale Cache** - `CacheMode.STALE_IF_ERROR` serving expired cache entries on Error/RateLimited with `isStale` flag (completed 2026-03-24)
-- [ ] **Phase 21: Bulk Enrichment** - `enrichBatch()` returning `Flow<Pair<EnrichmentRequest, EnrichmentResults>>` with sequential iteration and cooperative cancellation
+- [x] **Phase 21: Bulk Enrichment** - `enrichBatch()` returning `Flow<Pair<EnrichmentRequest, EnrichmentResults>>` with sequential iteration and cooperative cancellation (completed 2026-03-24)
 - [ ] **Phase 22: Maven Central Publishing** - All 3 modules published to Maven Central via Central Portal using vanniktech plugin
 
 ## Phase Details
@@ -105,7 +105,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 21-01-PLAN.md — Add enrichBatch() default method to EnrichmentEngine interface; explicit override in DefaultEnrichmentEngine; 5 Turbine tests covering batch emission, cancellation, empty list, forceRefresh, and cache-hit bypass
+- [x] 21-01-PLAN.md — Add enrichBatch() default method to EnrichmentEngine interface; explicit override in DefaultEnrichmentEngine; 5 Turbine tests covering batch emission, cancellation, empty list, forceRefresh, and cache-hit bypass
 
 ### Phase 22: Maven Central Publishing
 **Goal**: Library consumers can declare `musicmeta-core`, `musicmeta-okhttp`, and `musicmeta-android` as Maven Central dependencies — unlocking Dependabot, Renovate, and corporate artifact proxies that block JitPack
@@ -147,5 +147,5 @@ Plans:
 | 18. Integration and Docs | v0.6.0 | 2/2 | Complete | 2026-03-23 |
 | 19. OkHttp Adapter | v0.8.0 | 2/2 | Complete    | 2026-03-24 |
 | 20. Stale Cache | v0.8.0 | 2/2 | Complete    | 2026-03-24 |
-| 21. Bulk Enrichment | v0.8.0 | 0/1 | Not started | - |
+| 21. Bulk Enrichment | v0.8.0 | 1/1 | Complete   | 2026-03-24 |
 | 22. Maven Central Publishing | v0.8.0 | 0/2 | Not started | - |
