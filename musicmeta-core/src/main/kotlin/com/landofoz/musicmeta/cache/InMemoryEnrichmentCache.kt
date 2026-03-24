@@ -18,8 +18,15 @@ class InMemoryEnrichmentCache(
     override suspend fun get(entityKey: String, type: EnrichmentType): EnrichmentResult.Success? = mutex.withLock {
         val key = cacheKey(entityKey, type)
         val entry = entries[key] ?: return null
-        if (clock() > entry.expiresAt) { entries.remove(key); return null }
+        if (clock() > entry.expiresAt) { return null }
         entry.result
+    }
+
+    override suspend fun getIncludingExpired(
+        entityKey: String,
+        type: EnrichmentType,
+    ): EnrichmentResult.Success? = mutex.withLock {
+        entries[cacheKey(entityKey, type)]?.result
     }
 
     override suspend fun put(entityKey: String, type: EnrichmentType, result: EnrichmentResult.Success, ttlMs: Long) {

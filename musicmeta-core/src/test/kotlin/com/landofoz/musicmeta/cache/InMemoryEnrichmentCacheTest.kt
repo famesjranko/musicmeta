@@ -107,4 +107,41 @@ class InMemoryEnrichmentCacheTest {
         assertNull(cache.get("a:1", EnrichmentType.ALBUM_ART))
         assertFalse(cache.isManuallySelected("a:1", EnrichmentType.ALBUM_ART))
     }
+
+    @Test fun `get returns null for expired entry but does not remove it`() = runTest {
+        // Given — entry with 5s TTL, clock advanced past expiry
+        cache.put("a:1", EnrichmentType.ALBUM_ART, art(), 5000)
+        time += 6000
+
+        // When — get() returns null for the expired entry
+        val getResult = cache.get("a:1", EnrichmentType.ALBUM_ART)
+
+        // Then — get() returns null, but the entry is retained so getIncludingExpired can still find it
+        assertNull(getResult)
+        assertNotNull(cache.getIncludingExpired("a:1", EnrichmentType.ALBUM_ART))
+    }
+
+    @Test fun `getIncludingExpired returns expired entry`() = runTest {
+        // Given — entry stored with 5s TTL, clock advanced past expiry
+        val stored = art("expired-url")
+        cache.put("a:1", EnrichmentType.ALBUM_ART, stored, 5000)
+        time += 6000
+
+        // When — retrieving via getIncludingExpired
+        val result = cache.getIncludingExpired("a:1", EnrichmentType.ALBUM_ART)
+
+        // Then — the stale entry is returned with correct data
+        assertNotNull(result)
+        assertEquals(stored.data, result!!.data)
+    }
+
+    @Test fun `getIncludingExpired returns null for never-cached key`() = runTest {
+        // Given — empty cache, no entry ever stored for this key
+
+        // When — calling getIncludingExpired on an unknown key
+        val result = cache.getIncludingExpired("missing:1", EnrichmentType.ALBUM_ART)
+
+        // Then — returns null because no entry exists at all
+        assertNull(result)
+    }
 }
