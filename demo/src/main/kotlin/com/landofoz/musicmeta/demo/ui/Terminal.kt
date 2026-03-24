@@ -57,10 +57,11 @@ class Terminal(val theme: Theme) {
         println("\n  ${parts.joinToString(styled(" ${theme.dot} ", theme.muted))}")
     }
 
-    fun providerRow(name: String, active: Boolean) {
+    fun providerRow(name: String, active: Boolean, colWidth: Int = 26) {
         val symbol = if (active) styled(theme.bullet, theme.success) else styled(theme.warn, theme.warning)
         val status = if (active) styled("ACTIVE", theme.success) else styled("NO KEY", theme.warning)
-        print("  $symbol ${name.padEnd(16)} ${status.padEnd(20)}")
+        val cell = "$symbol ${name.padEnd(colWidth - 8)} $status"
+        print("  $cell")
     }
 
     fun prompt(): String? {

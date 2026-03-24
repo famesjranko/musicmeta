@@ -1,7 +1,12 @@
 package com.landofoz.musicmeta.demo
 
 import com.landofoz.musicmeta.CatalogFilterMode
+import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentType
+import com.landofoz.musicmeta.albumProfile
+import com.landofoz.musicmeta.artistProfile
+import com.landofoz.musicmeta.trackProfile
+import com.landofoz.musicmeta.demo.ui.Spinner
 import com.landofoz.musicmeta.demo.ui.Terminal
 import kotlinx.coroutines.runBlocking
 
@@ -49,7 +54,89 @@ fun handleCache(args: String, state: DemoState, term: Terminal) {
             runBlocking { state.cache.clear() }
             term.info("Cache cleared.")
         }
-        else -> term.info("Usage: cache [clear]")
+        else -> {
+            term.info("Usage: cache [clear]")
+            term.info("Related: refresh <entity>, invalidate <entity>")
+        }
+    }
+}
+
+fun executeRefresh(input: String, state: DemoState, term: Terminal, spinner: Spinner) {
+    val (cleanInput, customTypes) = extractTypes(input)
+    val request = parseEntityRequest(cleanInput)
+    if (request == null) {
+        term.info("Usage: refresh artist|album|track <name> [by <artist>]")
+        return
+    }
+    val types = customTypes ?: defaultTypesFor(request)
+    val label = "Refreshing ${entityKind(request)}..."
+    runBlocking {
+        val profile = if (state.logger.enabled) {
+            term.info(label)
+            enrichProfile(state, request, types, forceRefresh = true)
+        } else {
+            spinner.spin(label) { enrichProfile(state, request, types, forceRefresh = true) }
+        }
+        printEnrichedProfile(profile, request, term, cacheHits = 0)
+    }
+}
+
+fun handleInvalidate(input: String, state: DemoState, term: Terminal) {
+    val request = parseEntityRequest(input)
+    if (request == null) {
+        term.info("Usage: invalidate artist|album|track <name> [by <artist>]")
+        return
+    }
+    runBlocking { state.engine.invalidate(request) }
+    term.info("Cache invalidated for ${entityKind(request)}.")
+}
+
+/** Calls the appropriate profile extension with forceRefresh support. Returns (results, suggestions). */
+internal suspend fun enrichProfile(
+    state: DemoState,
+    request: EnrichmentRequest,
+    types: Set<EnrichmentType>,
+    forceRefresh: Boolean = false,
+): EnrichedProfile = when (request) {
+    is EnrichmentRequest.ForArtist -> {
+        val p = state.engine.artistProfile(request.name, request.identifiers.musicBrainzId, types, forceRefresh)
+        EnrichedProfile.Artist(p)
+    }
+    is EnrichmentRequest.ForAlbum -> {
+        val p = state.engine.albumProfile(request.title, request.artist, request.identifiers.musicBrainzId, types, forceRefresh)
+        EnrichedProfile.Album(p)
+    }
+    is EnrichmentRequest.ForTrack -> {
+        val p = state.engine.trackProfile(request.title, request.artist, mbid = request.identifiers.musicBrainzId, types = types, forceRefresh = forceRefresh)
+        EnrichedProfile.Track(p)
+    }
+}
+
+internal fun printEnrichedProfile(profile: EnrichedProfile, request: EnrichmentRequest, term: Terminal, cacheHits: Int) {
+    when (profile) {
+        is EnrichedProfile.Artist -> Formatter.printProfile(profile.value, term, cacheHits)
+        is EnrichedProfile.Album -> Formatter.printProfile(profile.value, term, cacheHits)
+        is EnrichedProfile.Track -> Formatter.printProfile(profile.value, term, cacheHits)
+    }
+}
+
+internal fun defaultTypesFor(request: EnrichmentRequest): Set<EnrichmentType> = when (request) {
+    is EnrichmentRequest.ForArtist -> ARTIST_TYPES
+    is EnrichmentRequest.ForAlbum -> ALBUM_TYPES
+    is EnrichmentRequest.ForTrack -> TRACK_TYPES
+}
+
+/** Wrapper so the caller can handle all three profile types uniformly. */
+internal sealed class EnrichedProfile {
+    abstract val suggestions: List<com.landofoz.musicmeta.SearchCandidate>
+    data class Artist(val value: com.landofoz.musicmeta.ArtistProfile) : EnrichedProfile() {
+        override val suggestions get() = value.suggestions
+    }
+    data class Album(val value: com.landofoz.musicmeta.AlbumProfile) : EnrichedProfile() {
+        override val suggestions get() = value.suggestions
+    }
+    data class Track(val value: com.landofoz.musicmeta.TrackProfile) : EnrichedProfile() {
+        override val suggestions get() = value.suggestions
     }
 }
 

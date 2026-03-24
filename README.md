@@ -261,7 +261,7 @@ Then consume as `com.landofoz:musicmeta-core:0.7.0` from `mavenLocal()`.
 
 ## Interactive demo
 
-The `demo/` module is a standalone CLI that showcases the full engine API. 8 of 11 providers work without API keys. To enable all providers, create a `secrets.properties` file or set environment variables (`LASTFM_API_KEY`, `FANARTTV_API_KEY`, `DISCOGS_TOKEN`).
+The `demo/` module is a standalone CLI that showcases all three API tiers (profiles, named accessors, raw results), cache management, and the disambiguation flow. 8 of 11 providers work without API keys. To enable all providers, create a `secrets.properties` file or set environment variables (`LASTFM_API_KEY`, `FANARTTV_API_KEY`, `DISCOGS_TOKEN`).
 
 ```bash
 cd demo && ../gradlew run -q --console=plain
@@ -272,6 +272,9 @@ musicmeta> artist radiohead
 musicmeta> album OK Computer by Radiohead
 musicmeta> track Paranoid Android by Radiohead --types lyrics,credits
 musicmeta> search artist pink floyd
+musicmeta> pick 1
+musicmeta> refresh artist radiohead
+musicmeta> invalidate artist radiohead
 ```
 
 ## Running tests

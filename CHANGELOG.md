@@ -27,6 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`engine.isManuallySelected(request, type)` / `engine.markManuallySelected(request, type)`** — manual selection support (e.g., user picks artwork) without cache key knowledge
 - `SIMILAR_TRACKS` multi-provider merge — Deezer `/track/{id}/radio` added as second provider alongside Last.fm `track.getSimilar`
 - `IdentityMatch` enum, `identityMatchScore`, `NotFound.suggestions`, short-circuit on suggestions, fuzzy fallback search
+- **Demo CLI refactored** to showcase all three API tiers — enrichment commands use profile methods (Tier 1), profile summary card shows named accessors (Tier 2), per-type diagnostic output uses raw map (Tier 3). New `refresh` and `invalidate` commands demonstrate cache management. `pick` uses `SearchCandidate` overloads.
+- **Developer guide split** into 7 focused pages under `docs/guides/` — quick-start, identity resolution, results & errors, cache management, configuration, extension points, Android integration
 
 ### Fixed
 - **`ProviderChain` preserves failure reasons** — when all providers fail with `RateLimited` or `Error`, the chain now returns the actual failure instead of collapsing to `NotFound`. Consumers can distinguish "data doesn't exist" from "all providers failed" for retry logic

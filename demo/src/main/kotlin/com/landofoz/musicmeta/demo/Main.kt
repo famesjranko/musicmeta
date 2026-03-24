@@ -5,9 +5,11 @@ import com.landofoz.musicmeta.CatalogFilterMode
 import com.landofoz.musicmeta.EnrichmentConfig
 import com.landofoz.musicmeta.EnrichmentEngine
 import com.landofoz.musicmeta.EnrichmentRequest
-import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.SearchCandidate
+import com.landofoz.musicmeta.albumProfile
+import com.landofoz.musicmeta.artistProfile
+import com.landofoz.musicmeta.trackProfile
 import com.landofoz.musicmeta.demo.ui.Spinner
 import com.landofoz.musicmeta.demo.ui.Terminal
 import com.landofoz.musicmeta.demo.ui.Theme
@@ -18,17 +20,17 @@ fun main(args: Array<String>) {
     val term = Terminal(theme)
     val spinner = Spinner(term)
 
-    term.banner("musicmeta CLI")
+    term.banner("musicmeta demo CLI")
 
     val state = DemoState(logger = DemoLogger(term))
     state.rebuild()
-    Formatter.printProviders(state.engine.getProviders(), term)
+    InfoFormatter.printProviders(state.engine.getProviders(), term)
     term.println()
 
     if (args.isNotEmpty()) {
         runSingleCommand(args, state, term, spinner)
     } else {
-        Formatter.printHelp(term)
+        InfoFormatter.printHelp(term)
         term.println()
         repl(state, term, spinner)
     }
@@ -77,23 +79,27 @@ private fun repl(state: DemoState, term: Terminal, spinner: Spinner) {
         when {
             trimmed.equals("quit", ignoreCase = true) ||
                 trimmed.equals("exit", ignoreCase = true) -> break
-            trimmed.equals("help", ignoreCase = true) -> Formatter.printHelp(term)
+            trimmed.equals("help", ignoreCase = true) -> InfoFormatter.printHelp(term)
             trimmed.equals("providers detail", ignoreCase = true) ->
-                Formatter.printProviderDetail(state.engine.getProviders(), term)
+                InfoFormatter.printProviderDetail(state.engine.getProviders(), term)
             trimmed.equals("providers", ignoreCase = true) ->
-                Formatter.printProviders(state.engine.getProviders(), term)
+                InfoFormatter.printProviders(state.engine.getProviders(), term)
             trimmed.equals("config", ignoreCase = true) ->
-                Formatter.printConfig(state.config, state.logger.enabled, state.catalogMode, term)
+                InfoFormatter.printConfig(state.config, state.logger.enabled, state.catalogMode, term)
             trimmed.startsWith("config ", ignoreCase = true) ->
                 handleConfig(trimmed.substringAfter("config ").trim(), state, term)
             trimmed.equals("verbose", ignoreCase = true) -> toggleVerbose(state, term)
-            trimmed.equals("cache", ignoreCase = true) -> Formatter.printCacheStats(state.cache, term)
+            trimmed.equals("cache", ignoreCase = true) -> InfoFormatter.printCacheStats(state.cache, term)
             trimmed.startsWith("cache ", ignoreCase = true) ->
                 handleCache(trimmed.substringAfter("cache ").trim(), state, term)
             trimmed.equals("catalog", ignoreCase = true) ->
-                Formatter.printCatalog(state.catalog, state.catalogMode, term)
+                InfoFormatter.printCatalog(state.catalog, state.catalogMode, term)
             trimmed.startsWith("catalog ", ignoreCase = true) ->
                 handleCatalog(trimmed.substringAfter("catalog ").trim(), state, term)
+            trimmed.startsWith("refresh ", ignoreCase = true) ->
+                executeRefresh(trimmed.substringAfter("refresh ").trim(), state, term, spinner)
+            trimmed.startsWith("invalidate ", ignoreCase = true) ->
+                handleInvalidate(trimmed.substringAfter("invalidate ").trim(), state, term)
             trimmed.startsWith("pick ", ignoreCase = true) ->
                 pickCandidate(trimmed.substringAfter("pick ").trim(), state, term, spinner)
             else -> executeCommand(trimmed, state, term, spinner)
@@ -113,36 +119,21 @@ private fun executeCommand(input: String, state: DemoState, term: Terminal, spin
     runBlocking {
         when (command) {
             is Command.Enrich -> {
-                val (label, defaultTypes) = when (command.request) {
-                    is EnrichmentRequest.ForArtist ->
-                        "Enriching artist \"${command.request.name}\"" to ARTIST_TYPES
-                    is EnrichmentRequest.ForAlbum ->
-                        "Enriching album \"${command.request.title}\" by \"${command.request.artist}\"" to ALBUM_TYPES
-                    is EnrichmentRequest.ForTrack ->
-                        "Enriching track \"${command.request.title}\" by \"${command.request.artist}\"" to TRACK_TYPES
-                }
-                val types = customTypes ?: defaultTypes
+                val types = customTypes ?: defaultTypesFor(command.request)
+                val label = enrichLabel(command.request)
                 val hitsBefore = state.cache.hits
-                val results = if (state.logger.enabled) {
+                val profile = if (state.logger.enabled) {
                     term.info(label)
-                    state.engine.enrich(command.request, types)
+                    enrichProfile(state, command.request, types)
                 } else {
-                    spinner.spin("$label...") { state.engine.enrich(command.request, types) }
+                    spinner.spin("$label...") { enrichProfile(state, command.request, types) }
                 }
                 val cacheHits = state.cache.hits - hitsBefore
-                Formatter.printResults(results, term, cacheHits)
-                // Store suggestions so 'pick' works from "Did you mean?" prompts
-                val suggestions = results.raw.values
-                    .filterIsInstance<EnrichmentResult.NotFound>()
-                    .firstOrNull { it.suggestions != null }
-                    ?.suggestions
-                if (suggestions != null) {
-                    state.lastSearchResults = suggestions
-                    state.lastSearchType = when (command.request) {
-                        is EnrichmentRequest.ForArtist -> "artist"
-                        is EnrichmentRequest.ForAlbum -> "album"
-                        is EnrichmentRequest.ForTrack -> "track"
-                    }
+                printEnrichedProfile(profile, command.request, term, cacheHits)
+
+                if (profile.suggestions.isNotEmpty()) {
+                    state.lastSearchResults = profile.suggestions
+                    state.lastSearchType = entityKind(command.request)
                 }
             }
             is Command.Search -> {
@@ -150,11 +141,7 @@ private fun executeCommand(input: String, state: DemoState, term: Terminal, spin
                     state.engine.search(command.request, limit = 10)
                 }
                 state.lastSearchResults = results
-                state.lastSearchType = when (command.request) {
-                    is EnrichmentRequest.ForArtist -> "artist"
-                    is EnrichmentRequest.ForAlbum -> "album"
-                    is EnrichmentRequest.ForTrack -> "track"
-                }
+                state.lastSearchType = entityKind(command.request)
                 Formatter.printSearchResults(results, term)
             }
         }
@@ -173,17 +160,6 @@ private fun pickCandidate(input: String, state: DemoState, term: Terminal, spinn
         return
     }
     val candidate = state.lastSearchResults[index - 1]
-    val mbid = candidate.identifiers.musicBrainzId
-    val request = when (state.lastSearchType) {
-        "artist" -> EnrichmentRequest.forArtist(candidate.title, mbid = mbid)
-        "album" -> EnrichmentRequest.forAlbum(
-            candidate.title, candidate.artist ?: "", mbid = mbid,
-        )
-        else -> {
-            term.info("Pick is only supported for artist and album searches.")
-            return
-        }
-    }
     val types = customTypes ?: when (state.lastSearchType) {
         "artist" -> ARTIST_TYPES
         "album" -> ALBUM_TYPES
@@ -193,15 +169,32 @@ private fun pickCandidate(input: String, state: DemoState, term: Terminal, spinn
     val label = "Enriching ${state.lastSearchType} \"${candidate.title}\"$disambig"
     runBlocking {
         val hitsBefore = state.cache.hits
-        val results = if (state.logger.enabled) {
+        val profile = if (state.logger.enabled) {
             term.info(label)
-            state.engine.enrich(request, types)
+            enrichFromCandidate(state, candidate, state.lastSearchType, types)
         } else {
-            spinner.spin("$label...") { state.engine.enrich(request, types) }
+            spinner.spin("$label...") { enrichFromCandidate(state, candidate, state.lastSearchType, types) }
         }
         val cacheHits = state.cache.hits - hitsBefore
-        Formatter.printResults(results, term, cacheHits)
+        when (profile) {
+            is EnrichedProfile.Artist -> Formatter.printProfile(profile.value, term, cacheHits)
+            is EnrichedProfile.Album -> Formatter.printProfile(profile.value, term, cacheHits)
+            is EnrichedProfile.Track -> Formatter.printProfile(profile.value, term, cacheHits)
+        }
     }
+}
+
+/** Uses SearchCandidate overloads — the Tier 1 "did you mean?" → re-enrich flow. */
+private suspend fun enrichFromCandidate(
+    state: DemoState,
+    candidate: SearchCandidate,
+    searchType: String?,
+    types: Set<EnrichmentType>,
+): EnrichedProfile = when (searchType) {
+    "artist" -> EnrichedProfile.Artist(state.engine.artistProfile(candidate, types))
+    "album" -> EnrichedProfile.Album(state.engine.albumProfile(candidate, types))
+    "track" -> EnrichedProfile.Track(state.engine.trackProfile(candidate, types = types))
+    else -> EnrichedProfile.Artist(state.engine.artistProfile(candidate, types))
 }
 
 private fun runSingleCommand(args: Array<String>, state: DemoState, term: Terminal, spinner: Spinner) {
@@ -238,50 +231,37 @@ private fun parseSearchCommand(rest: String): Command? {
     return when {
         lower.startsWith("artist ") -> {
             val name = rest.substringAfter("artist ").trim()
-            if (name.isBlank()) null
-            else Command.Search(EnrichmentRequest.forArtist(name))
+            if (name.isBlank()) null else Command.Search(EnrichmentRequest.forArtist(name))
         }
         lower.startsWith("album ") -> {
             val parts = rest.substringAfter("album ").trim().split(BY_REGEX, limit = 2)
             if (parts.isEmpty() || parts[0].isBlank()) null
-            else Command.Search(EnrichmentRequest.forAlbum(
-                parts[0].trim(),
-                parts.getOrNull(1)?.trim() ?: "",
-            ))
+            else Command.Search(EnrichmentRequest.forAlbum(parts[0].trim(), parts.getOrNull(1)?.trim() ?: ""))
         }
         lower.startsWith("track ") -> {
             val parts = rest.substringAfter("track ").trim().split(BY_REGEX, limit = 2)
             if (parts.isEmpty() || parts[0].isBlank()) null
-            else Command.Search(EnrichmentRequest.forTrack(
-                parts[0].trim(),
-                parts.getOrNull(1)?.trim() ?: "",
-            ))
+            else Command.Search(EnrichmentRequest.forTrack(parts[0].trim(), parts.getOrNull(1)?.trim() ?: ""))
         }
         else -> null
     }
 }
 
+private fun enrichLabel(request: EnrichmentRequest): String = when (request) {
+    is EnrichmentRequest.ForArtist -> "Enriching artist \"${request.name}\""
+    is EnrichmentRequest.ForAlbum -> "Enriching album \"${request.title}\" by \"${request.artist}\""
+    is EnrichmentRequest.ForTrack -> "Enriching track \"${request.title}\" by \"${request.artist}\""
+}
+
 private fun env(key: String): String? = System.getenv(key)?.takeIf { it.isNotBlank() }
 
 private fun loadSecrets(): Map<String, String> {
-    val paths = listOf(
-        java.io.File("secrets.properties"),
-        java.io.File("../secrets.properties"),
-    )
+    val paths = listOf(java.io.File("secrets.properties"), java.io.File("../secrets.properties"))
     val file = paths.firstOrNull { it.exists() } ?: return emptyMap()
     return file.readLines()
         .filter { it.contains('=') && !it.trimStart().startsWith('#') }
-        .associate { line ->
-            val (k, v) = line.split('=', limit = 2)
-            k.trim() to v.trim()
-        }
+        .associate { line -> val (k, v) = line.split('=', limit = 2); k.trim() to v.trim() }
 }
-
-private val ARTIST_TYPES = EnrichmentRequest.DEFAULT_ARTIST_TYPES
-private val ALBUM_TYPES = EnrichmentRequest.DEFAULT_ALBUM_TYPES
-private val TRACK_TYPES = EnrichmentRequest.DEFAULT_TRACK_TYPES
-
-private val BY_REGEX = Regex("\\s+by\\s+", RegexOption.IGNORE_CASE)
 
 private sealed class Command {
     data class Enrich(val request: EnrichmentRequest) : Command()
