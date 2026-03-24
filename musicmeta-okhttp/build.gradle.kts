@@ -1,23 +1,16 @@
+import com.vanniktech.maven.publish.SonatypeHost
+
 plugins {
     alias(libs.plugins.kotlin.jvm)
-    `maven-publish`
+    alias(libs.plugins.vanniktech.publish)
 }
 
 group = "com.landofoz"
-version = "0.1.0"
+version = "0.8.0"
 
 java {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
-}
-
-publishing {
-    publications {
-        create<MavenPublication>("maven") {
-            from(components["java"])
-            artifactId = "musicmeta-okhttp"
-        }
-    }
 }
 
 dependencies {
@@ -36,4 +29,33 @@ dependencies {
     // Testing
     testImplementation(libs.bundles.testing)
     testImplementation(libs.okhttp.mockwebserver)
+}
+
+mavenPublishing {
+    publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
+    signAllPublications()
+    coordinates("com.landofoz", "musicmeta-okhttp", version.toString())
+    pom {
+        name.set("musicmeta-okhttp")
+        description.set("OkHttp adapter for musicmeta-core — plug in your OkHttpClient instance")
+        url.set("https://github.com/famesjranko/musicmeta")
+        licenses {
+            license {
+                name.set("Apache-2.0")
+                url.set("https://www.apache.org/licenses/LICENSE-2.0")
+            }
+        }
+        developers {
+            developer {
+                id.set("famesjranko")
+                name.set("Andy")
+                url.set("https://github.com/famesjranko")
+            }
+        }
+        scm {
+            connection.set("scm:git:git://github.com/famesjranko/musicmeta.git")
+            developerConnection.set("scm:git:ssh://github.com/famesjranko/musicmeta.git")
+            url.set("https://github.com/famesjranko/musicmeta")
+        }
+    }
 }

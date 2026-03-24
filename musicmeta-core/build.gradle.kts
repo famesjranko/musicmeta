@@ -1,11 +1,13 @@
+import com.vanniktech.maven.publish.SonatypeHost
+
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.serialization)
-    `maven-publish`
+    alias(libs.plugins.vanniktech.publish)
 }
 
 group = "com.landofoz"
-version = "0.1.0"
+version = "0.8.0"
 
 java {
     sourceCompatibility = JavaVersion.VERSION_17
@@ -27,15 +29,6 @@ tasks.withType<Test> {
     }
 }
 
-publishing {
-    publications {
-        create<MavenPublication>("maven") {
-            from(components["java"])
-            artifactId = "musicmeta-core"
-        }
-    }
-}
-
 dependencies {
     // Coroutines
     implementation(libs.kotlinx.coroutines.core)
@@ -48,4 +41,33 @@ dependencies {
 
     // Testing
     testImplementation(libs.bundles.testing)
+}
+
+mavenPublishing {
+    publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
+    signAllPublications()
+    coordinates("com.landofoz", "musicmeta-core", version.toString())
+    pom {
+        name.set("musicmeta-core")
+        description.set("Music metadata enrichment engine — provider chains, identity resolution, caching")
+        url.set("https://github.com/famesjranko/musicmeta")
+        licenses {
+            license {
+                name.set("Apache-2.0")
+                url.set("https://www.apache.org/licenses/LICENSE-2.0")
+            }
+        }
+        developers {
+            developer {
+                id.set("famesjranko")
+                name.set("Andy")
+                url.set("https://github.com/famesjranko")
+            }
+        }
+        scm {
+            connection.set("scm:git:git://github.com/famesjranko/musicmeta.git")
+            developerConnection.set("scm:git:ssh://github.com/famesjranko/musicmeta.git")
+            url.set("https://github.com/famesjranko/musicmeta")
+        }
+    }
 }

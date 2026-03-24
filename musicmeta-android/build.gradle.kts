@@ -1,13 +1,16 @@
+import com.vanniktech.maven.publish.AndroidSingleVariantLibrary
+import com.vanniktech.maven.publish.SonatypeHost
+
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
-    `maven-publish`
+    alias(libs.plugins.vanniktech.publish)
 }
 
 group = "com.landofoz"
-version = "0.1.0"
+version = "0.8.0"
 
 android {
     namespace = "com.landofoz.musicmeta.android"
@@ -40,17 +43,6 @@ android {
     }
 }
 
-afterEvaluate {
-    publishing {
-        publications {
-            create<MavenPublication>("release") {
-                from(components["release"])
-                artifactId = "musicmeta-android"
-            }
-        }
-    }
-}
-
 dependencies {
     // Enrichment core
     implementation(project(":musicmeta-core"))
@@ -76,4 +68,38 @@ dependencies {
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.room.testing)
+}
+
+mavenPublishing {
+    publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
+    signAllPublications()
+    configure(AndroidSingleVariantLibrary(
+        variant = "release",
+        sourcesJar = true,
+        publishJavadocJar = true,
+    ))
+    coordinates("com.landofoz", "musicmeta-android", version.toString())
+    pom {
+        name.set("musicmeta-android")
+        description.set("Android extensions for musicmeta-core — Room cache, Hilt DI, WorkManager background enrichment")
+        url.set("https://github.com/famesjranko/musicmeta")
+        licenses {
+            license {
+                name.set("Apache-2.0")
+                url.set("https://www.apache.org/licenses/LICENSE-2.0")
+            }
+        }
+        developers {
+            developer {
+                id.set("famesjranko")
+                name.set("Andy")
+                url.set("https://github.com/famesjranko")
+            }
+        }
+        scm {
+            connection.set("scm:git:git://github.com/famesjranko/musicmeta.git")
+            developerConnection.set("scm:git:ssh://github.com/famesjranko/musicmeta.git")
+            url.set("https://github.com/famesjranko/musicmeta")
+        }
+    }
 }

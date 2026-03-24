@@ -28,7 +28,7 @@ coroutines = "1.9.0"
 okhttp = "4.12.0"
 
 # Maven Central Publishing
-vanniktech-publish = "0.36.0"
+vanniktech-publish = "0.30.0"
 
 # Testing
 junit = "4.13.2"
