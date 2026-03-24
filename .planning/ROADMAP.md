@@ -120,7 +120,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 22-01-PLAN.md — Apply vanniktech plugin per-module with `CENTRAL_PORTAL` host, `AndroidSingleVariantLibrary` for android module, POM metadata, GPG signing; add credential placeholders to `gradle.properties`
+- [x] 22-01-PLAN.md — Apply vanniktech plugin per-module with `CENTRAL_PORTAL` host, `AndroidSingleVariantLibrary` for android module, POM metadata, GPG signing; add credential placeholders to `gradle.properties`
 - [ ] 22-02-PLAN.md — Verify publishing dry-run for all three modules; update README with Maven Central coordinates and badge
 
 ## Progress
@@ -148,4 +148,4 @@ Plans:
 | 19. OkHttp Adapter | v0.8.0 | 2/2 | Complete    | 2026-03-24 |
 | 20. Stale Cache | v0.8.0 | 2/2 | Complete    | 2026-03-24 |
 | 21. Bulk Enrichment | v0.8.0 | 1/1 | Complete    | 2026-03-24 |
-| 22. Maven Central Publishing | v0.8.0 | 0/2 | Not started | - |
+| 22. Maven Central Publishing | v0.8.0 | 1/2 | In Progress|  |

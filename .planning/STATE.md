@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v0.8.0
 milestone_name: Production Readiness
 status: unknown
-stopped_at: Completed 21-01-PLAN.md (enrichBatch bulk enrichment API)
-last_updated: "2026-03-24T11:28:48.644Z"
+stopped_at: Completed 22-01-PLAN.md (Maven Central publishing config)
+last_updated: "2026-03-24T11:42:49.978Z"
 progress:
   total_phases: 4
   completed_phases: 3
-  total_plans: 5
-  completed_plans: 5
+  total_plans: 7
+  completed_plans: 6
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-24)
 
 **Core value:** Consumers get comprehensive, accurate music metadata from a single enrich() call without knowing which APIs exist, how they authenticate, or how to correlate identifiers across services.
-**Current focus:** Phase 21 — Bulk Enrichment
+**Current focus:** Phase 22 — Maven Central Publishing
 
 ## Current Position
 
-Phase: 22
-Plan: Not started
+Phase: 22 (Maven Central Publishing) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -46,6 +46,7 @@ Plan: Not started
 | Phase 20-stale-cache P01 | 2min | 2 tasks | 6 files |
 | Phase 20-stale-cache P02 | 15min | 2 tasks | 5 files |
 | Phase 21-bulk-enrichment P01 | 2min | 2 tasks | 3 files |
+| Phase 22-maven-central-publishing P01 | 7min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -68,6 +69,7 @@ Plan: Not started
 - [Phase 21-bulk-enrichment]: enrichBatch() as interface default method: custom EnrichmentEngine implementations get batch support automatically without override
 - [Phase 21-bulk-enrichment]: Explicit override in DefaultEnrichmentEngine: enables future optimization (concurrency, backpressure) without breaking the interface contract
 - [Phase 21-bulk-enrichment]: flow{} + for loop: cooperative cancellation via take(N) works because emit() is a suspension point
+- [Phase 22-maven-central-publishing]: vanniktech 0.30.0 instead of 0.36.0: 0.36.0 hardcodes AGP 8.13.0 minimum (project uses AGP 8.7.3); 0.35.0 also rejected (removed SonatypeHost API); 0.30.0 has same DSL, supports AGP 8.0.0+
 
 ### Pending Todos
 
@@ -80,6 +82,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-24T11:26:28.561Z
-Stopped at: Completed 21-01-PLAN.md (enrichBatch bulk enrichment API)
+Last session: 2026-03-24T11:42:49.975Z
+Stopped at: Completed 22-01-PLAN.md (Maven Central publishing config)
 Resume file: None

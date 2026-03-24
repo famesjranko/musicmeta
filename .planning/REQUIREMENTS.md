@@ -26,17 +26,17 @@ Requirements for Production Readiness milestone. Each maps to roadmap phases.
 
 ### BATCH (Bulk Enrichment)
 
-- [ ] **BATCH-01**: Developer can call enrichBatch() to enrich multiple requests in sequence
-- [ ] **BATCH-02**: enrichBatch() returns Flow emitting results per request as they complete
-- [ ] **BATCH-03**: Flow cancellation stops processing remaining requests
-- [ ] **BATCH-04**: Cache hits in batch return immediately without rate limiter delay
+- [x] **BATCH-01**: Developer can call enrichBatch() to enrich multiple requests in sequence
+- [x] **BATCH-02**: enrichBatch() returns Flow emitting results per request as they complete
+- [x] **BATCH-03**: Flow cancellation stops processing remaining requests
+- [x] **BATCH-04**: Cache hits in batch return immediately without rate limiter delay
 
 ### PUB (Maven Central Publishing)
 
-- [ ] **PUB-01**: All 3 modules (core, okhttp, android) publish to Maven Central via Central Portal
-- [ ] **PUB-02**: Published artifacts include sources and javadoc jars
-- [ ] **PUB-03**: Published POMs include correct metadata (license, developer, SCM)
-- [ ] **PUB-04**: Artifacts are signed with GPG when key is available
+- [x] **PUB-01**: All 3 modules (core, okhttp, android) publish to Maven Central via Central Portal
+- [x] **PUB-02**: Published artifacts include sources and javadoc jars
+- [x] **PUB-03**: Published POMs include correct metadata (license, developer, SCM)
+- [x] **PUB-04**: Artifacts are signed with GPG when key is available
 - [ ] **PUB-05**: JitPack remains supported as alternative distribution
 
 ## Future Requirements
@@ -88,14 +88,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CACHE-04 | Phase 20 | Complete |
 | CACHE-05 | Phase 20 | Complete |
 | CACHE-06 | Phase 20 | Complete |
-| BATCH-01 | Phase 21 | Pending |
-| BATCH-02 | Phase 21 | Pending |
-| BATCH-03 | Phase 21 | Pending |
-| BATCH-04 | Phase 21 | Pending |
-| PUB-01 | Phase 22 | Pending |
-| PUB-02 | Phase 22 | Pending |
-| PUB-03 | Phase 22 | Pending |
-| PUB-04 | Phase 22 | Pending |
+| BATCH-01 | Phase 21 | Complete |
+| BATCH-02 | Phase 21 | Complete |
+| BATCH-03 | Phase 21 | Complete |
+| BATCH-04 | Phase 21 | Complete |
+| PUB-01 | Phase 22 | Complete |
+| PUB-02 | Phase 22 | Complete |
+| PUB-03 | Phase 22 | Complete |
+| PUB-04 | Phase 22 | Complete |
 | PUB-05 | Phase 22 | Pending |
 
 **Coverage:**
