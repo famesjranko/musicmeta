@@ -8,17 +8,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- `SIMILAR_TRACKS` multi-provider merge — Deezer `/track/{id}/radio` added as second provider alongside Last.fm `track.getSimilar`; results deduplicated and combined via `SimilarTrackMerger`; each `SimilarTrack` now has a `sources` field listing contributing providers
-- `DeezerApi.searchTrack()` and `DeezerApi.getTrackRadio()` — track search and track-seeded radio endpoints
-- `IdentityMatch` enum — `RESOLVED`, `BEST_EFFORT`, `SUGGESTIONS` — single field on `Success` and `NotFound` telling developers how identity resolution went; `null` when MBID was pre-provided or cached
-- `EnrichmentResult.Success.identityMatchScore` — identity resolution match quality (0-100, same scale as `SearchCandidate.score`); set when `identityMatch` is `RESOLVED`
-- `EnrichmentResult.NotFound.suggestions` — near-miss `SearchCandidate` list when `identityMatch` is `SUGGESTIONS`; enables "did you mean?" UI prompts for ambiguous or mistyped queries
-- Short-circuit on suggestions — when identity resolution fails with near-miss candidates, the engine skips the provider fan-out and returns `NotFound(SUGGESTIONS)` immediately instead of wasting ~14s on unverified fuzzy searches
-- Fuzzy fallback search — when MusicBrainz quoted search returns zero results, an unquoted Lucene `~` fuzzy search finds near-miss candidates for suggestions
+- **`EnrichmentResults` wrapper** — `enrich()` now returns `EnrichmentResults` (data class) instead of raw `Map`. Includes `raw` map access, `requestedTypes` set, and top-level `IdentityResolution`
+- **`IdentityResolution` data class** — engine-level identity outcome (identifiers, match status, score, suggestions) accessible without scanning individual results
+- **19 named accessors** on `EnrichmentResults` — `albumArt()`, `artistPhoto()`, `biography()`, `lyrics()`, `credits()`, `genres()`, `genreTags()`, `label()`, `releaseDate()`, `releaseType()`, `country()`, `similarArtists()`, `similarTracks()`, `topTracks()`, `radio()`, `discography()`, `similarAlbums()`, plus `artistPopularity()` and `trackPopularity()`
+- **Generic typed accessor** `EnrichmentResults.get<T>(type)` — type-safe data extraction for any `EnrichmentData` subclass
+- **`wasRequested(type)` and `result(type)`** on `EnrichmentResults` — distinguish "not requested" from "not found"; access raw result for error diagnostics
+- **Metadata field fallback** — `genres()`, `label()`, `releaseDate()`, etc. try the dedicated type first, then fall back to `ALBUM_METADATA`
+- **Default type sets** — `EnrichmentRequest.DEFAULT_ARTIST_TYPES`, `DEFAULT_ALBUM_TYPES`, `DEFAULT_TRACK_TYPES`; composable via set algebra
+- **`defaultTypesFor(request)`** — returns the appropriate default set for any request kind
+- **Profile extension functions** — `engine.artistProfile("Radiohead")`, `engine.albumProfile("OK Computer", "Radiohead")`, `engine.trackProfile("Creep", "Radiohead")` returning structured data classes with computed properties
+- **`ArtistProfile`** — photo, bio, genres, members, discography, links, popularity, topTracks, similarArtists, radio, similarAlbums, timeline, genreDiscovery, identity, suggestions
+- **`AlbumProfile`** — artwork (front/back/booklet/CD), genres, label, releaseDate, releaseType, country, tracks, editions, similarAlbums, genreDiscovery, identity
+- **`TrackProfile`** — genres, lyrics, credits, artwork, popularity, similarTracks, genreDiscovery, identity
+- **`SearchCandidate` profile overloads** — `engine.artistProfile(candidate)` for smooth "did you mean?" → re-enrich flow
+- **Custom type sets on profiles** — `engine.artistProfile("Radiohead", types = setOf(GENRE, ARTIST_PHOTO))` to skip unnecessary API calls
+- **`forceRefresh` parameter** on `enrich()` and all profile extensions — bypasses cache for the requested types, clears existing entries (including manual selections) before fetching
+- **`engine.invalidate(request, type?)`** — invalidate cached data by request without knowing internal cache keys. Clears both MBID and name-alias keys. Pass `null` type to clear all types.
+- **`engine.isManuallySelected(request, type)` / `engine.markManuallySelected(request, type)`** — manual selection support (e.g., user picks artwork) without cache key knowledge
+- `SIMILAR_TRACKS` multi-provider merge — Deezer `/track/{id}/radio` added as second provider alongside Last.fm `track.getSimilar`
+- `IdentityMatch` enum, `identityMatchScore`, `NotFound.suggestions`, short-circuit on suggestions, fuzzy fallback search
 
 ### Fixed
-- iTunes provider now stores `itunesArtistId` in `resolvedIdentifiers` after artist search — eliminates redundant search API call on subsequent discography requests
-- `RoomEnrichmentCacheTest` — trailing lambda resolved to wrong parameter after `logger` was added to `RoomEnrichmentCache` constructor; fixed with named `clock` argument
+- **`ProviderChain` preserves failure reasons** — when all providers fail with `RateLimited` or `Error`, the chain now returns the actual failure instead of collapsing to `NotFound`. Consumers can distinguish "data doesn't exist" from "all providers failed" for retry logic
+- **Room cache persists identity fields** — `identityMatch`, `identityMatchScore`, and `resolvedIdentifiers` now round-trip through `RoomEnrichmentCache` (previously silently dropped on cache read). DB migration v1→v2
+- **Cache key convergence after disambiguation** — when identity resolution resolves an MBID, results are also cached under the name-based key, so future name-only lookups find the MBID-resolved data
+- iTunes `itunesArtistId` stored in `resolvedIdentifiers` after artist search
+
+### Changed
+- **Breaking:** `EnrichmentEngine.enrich()` returns `EnrichmentResults` instead of `Map<EnrichmentType, EnrichmentResult>`. Access the raw map via `.raw`. Signature also gains `forceRefresh: Boolean = false` (source compatible)
+- **Breaking:** `EnrichmentEngine` interface gains `invalidate()`, `isManuallySelected()`, `markManuallySelected()` — custom implementations must add these methods
+- **Breaking:** `EnrichmentWorker.onItemEnriched()` parameter changed from `Map` to `EnrichmentResults`
+- Room database version 1 → 2 (automatic migration included via `MIGRATION_1_2`)
 
 ## [0.6.0] - 2026-03-23
 

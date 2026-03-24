@@ -7,7 +7,7 @@ import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.landofoz.musicmeta.EnrichmentEngine
 import com.landofoz.musicmeta.EnrichmentRequest
-import com.landofoz.musicmeta.EnrichmentResult
+import com.landofoz.musicmeta.EnrichmentResults
 import com.landofoz.musicmeta.EnrichmentType
 
 /**
@@ -39,7 +39,7 @@ abstract class EnrichmentWorker(
     /** Called after each item is enriched. Subclass persists results to its domain. */
     abstract suspend fun onItemEnriched(
         request: EnrichmentRequest,
-        results: Map<EnrichmentType, EnrichmentResult>,
+        results: EnrichmentResults,
     )
 
     override suspend fun doWork(): Result {

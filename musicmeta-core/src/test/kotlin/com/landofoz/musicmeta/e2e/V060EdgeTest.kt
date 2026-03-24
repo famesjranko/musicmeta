@@ -68,7 +68,7 @@ class V060EdgeTest {
             EnrichmentRequest.forArtist("Radiohead"),
             setOf(EnrichmentType.SIMILAR_ARTISTS),
         )
-        val sa = results[EnrichmentType.SIMILAR_ARTISTS]
+        val sa = results.raw[EnrichmentType.SIMILAR_ARTISTS]
         assertTrue("Expected Success for Radiohead similar artists", sa is EnrichmentResult.Success)
         val data = (sa as EnrichmentResult.Success).data as EnrichmentData.SimilarArtists
         val artists = data.artists
@@ -107,7 +107,7 @@ class V060EdgeTest {
             EnrichmentRequest.forArtist("Boards of Canada"),
             setOf(EnrichmentType.SIMILAR_ARTISTS),
         )
-        val sa = results[EnrichmentType.SIMILAR_ARTISTS]
+        val sa = results.raw[EnrichmentType.SIMILAR_ARTISTS]
         // Obscure artists may legitimately return NotFound — only assert invariants on Success
         if (sa is EnrichmentResult.Success) {
             val data = sa.data as EnrichmentData.SimilarArtists
@@ -129,7 +129,7 @@ class V060EdgeTest {
             EnrichmentRequest.forArtist("坂本龍一"),
             setOf(EnrichmentType.SIMILAR_ARTISTS),
         )
-        val sa = results[EnrichmentType.SIMILAR_ARTISTS]
+        val sa = results.raw[EnrichmentType.SIMILAR_ARTISTS]
         // Non-latin should not crash — any result type is acceptable
         assertNotNull("Result should not be null", sa)
         if (sa is EnrichmentResult.Success) {
@@ -149,7 +149,7 @@ class V060EdgeTest {
             EnrichmentRequest.forAlbum("OK Computer", "Radiohead"),
             setOf(EnrichmentType.SIMILAR_ARTISTS),
         )
-        val sa = results[EnrichmentType.SIMILAR_ARTISTS]
+        val sa = results.raw[EnrichmentType.SIMILAR_ARTISTS]
         assertTrue(
             "ForAlbum should return NotFound for SIMILAR_ARTISTS but got ${sa?.let { it::class.simpleName }}",
             sa is EnrichmentResult.NotFound,
@@ -164,7 +164,7 @@ class V060EdgeTest {
     fun `05 - artist radio - well-known artist returns tracks with metadata`() = runBlocking {
         println("\n  --- Radiohead ARTIST_RADIO ---")
         val results = engine.enrich(EnrichmentRequest.forArtist("Radiohead"), setOf(EnrichmentType.ARTIST_RADIO))
-        val radio = results[EnrichmentType.ARTIST_RADIO]
+        val radio = results.raw[EnrichmentType.ARTIST_RADIO]
         assertTrue("Expected Success for Radiohead radio", radio is EnrichmentResult.Success)
         val data = (radio as EnrichmentResult.Success).data as EnrichmentData.RadioPlaylist
 
@@ -197,7 +197,7 @@ class V060EdgeTest {
         )
         assertTrue(
             "ForAlbum should return NotFound for ARTIST_RADIO",
-            albumResults[EnrichmentType.ARTIST_RADIO] is EnrichmentResult.NotFound,
+            albumResults.raw[EnrichmentType.ARTIST_RADIO] is EnrichmentResult.NotFound,
         )
 
         // ForTrack
@@ -207,14 +207,14 @@ class V060EdgeTest {
         )
         assertTrue(
             "ForTrack should return NotFound for ARTIST_RADIO",
-            trackResults[EnrichmentType.ARTIST_RADIO] is EnrichmentResult.NotFound,
+            trackResults.raw[EnrichmentType.ARTIST_RADIO] is EnrichmentResult.NotFound,
         )
     }
 
     @Test
     fun `05c - artist radio - special characters handled`() = runBlocking {
         val results = engine.enrich(EnrichmentRequest.forArtist("AC/DC"), setOf(EnrichmentType.ARTIST_RADIO))
-        val radio = results[EnrichmentType.ARTIST_RADIO]
+        val radio = results.raw[EnrichmentType.ARTIST_RADIO]
         // AC/DC is well-known enough that it should succeed; slash in name should not crash
         if (radio is EnrichmentResult.Success) {
             val data = radio.data as EnrichmentData.RadioPlaylist
@@ -236,7 +236,7 @@ class V060EdgeTest {
             EnrichmentRequest.forAlbum("OK Computer", "Radiohead"),
             setOf(EnrichmentType.SIMILAR_ALBUMS),
         )
-        val sa = results[EnrichmentType.SIMILAR_ALBUMS]
+        val sa = results.raw[EnrichmentType.SIMILAR_ALBUMS]
         assertTrue("Expected Success for OK Computer similar albums", sa is EnrichmentResult.Success)
         val data = (sa as EnrichmentResult.Success).data as EnrichmentData.SimilarAlbums
 
@@ -270,7 +270,7 @@ class V060EdgeTest {
         val results = engine.enrich(EnrichmentRequest.forArtist("Radiohead"), setOf(EnrichmentType.SIMILAR_ALBUMS))
         assertTrue(
             "ForArtist should return NotFound for SIMILAR_ALBUMS",
-            results[EnrichmentType.SIMILAR_ALBUMS] is EnrichmentResult.NotFound,
+            results.raw[EnrichmentType.SIMILAR_ALBUMS] is EnrichmentResult.NotFound,
         )
     }
 
@@ -280,7 +280,7 @@ class V060EdgeTest {
             EnrichmentRequest.forAlbum("I", "Meshuggah"),
             setOf(EnrichmentType.SIMILAR_ALBUMS),
         )
-        val sa = results[EnrichmentType.SIMILAR_ALBUMS]
+        val sa = results.raw[EnrichmentType.SIMILAR_ALBUMS]
         // Single-char should not crash — any result type is acceptable
         assertNotNull("Result should not be null", sa)
         if (sa is EnrichmentResult.Success) {
@@ -302,7 +302,7 @@ class V060EdgeTest {
             EnrichmentRequest.forArtist("Radiohead"),
             setOf(EnrichmentType.GENRE_DISCOVERY),
         )
-        val gd = results[EnrichmentType.GENRE_DISCOVERY]
+        val gd = results.raw[EnrichmentType.GENRE_DISCOVERY]
         assertTrue("Expected Success for Radiohead genre discovery", gd is EnrichmentResult.Success)
         val data = (gd as EnrichmentResult.Success).data as EnrichmentData.GenreDiscovery
 
@@ -327,7 +327,7 @@ class V060EdgeTest {
             EnrichmentRequest.forAlbum("OK Computer", "Radiohead"),
             setOf(EnrichmentType.GENRE_DISCOVERY),
         )
-        val albumGd = albumResults[EnrichmentType.GENRE_DISCOVERY]
+        val albumGd = albumResults.raw[EnrichmentType.GENRE_DISCOVERY]
         if (albumGd is EnrichmentResult.Success) {
             val data = albumGd.data as EnrichmentData.GenreDiscovery
             assertTrue("Album genre discovery should return genres", data.relatedGenres.isNotEmpty())
@@ -341,7 +341,7 @@ class V060EdgeTest {
             EnrichmentRequest.forTrack("Creep", "Radiohead"),
             setOf(EnrichmentType.GENRE_DISCOVERY),
         )
-        val trackGd = trackResults[EnrichmentType.GENRE_DISCOVERY]
+        val trackGd = trackResults.raw[EnrichmentType.GENRE_DISCOVERY]
         assertNotNull("ForTrack result should not be null", trackGd)
         println("    ForTrack: ${trackGd?.let { it::class.simpleName }}")
     }
@@ -372,15 +372,15 @@ class V060EdgeTest {
             EnrichmentType.GENRE_DISCOVERY, EnrichmentType.GENRE, EnrichmentType.ARTIST_BIO,
         )
         for (type in requestedTypes) {
-            assertNotNull("Missing result for $type", results[type])
+            assertNotNull("Missing result for $type", results.raw[type])
             assertTrue(
-                "$type should not be Error: ${(results[type] as? EnrichmentResult.Error)?.message}",
-                results[type] !is EnrichmentResult.Error,
+                "$type should not be Error: ${(results.raw[type] as? EnrichmentResult.Error)?.message}",
+                results.raw[type] !is EnrichmentResult.Error,
             )
         }
 
         println("    elapsed: ${elapsed}ms")
-        results.forEach { (type, result) ->
+        results.raw.forEach { (type, result) ->
             val status = when (result) {
                 is EnrichmentResult.Success -> "OK (${result.provider})"
                 is EnrichmentResult.NotFound -> "NF (${result.provider})"
@@ -399,13 +399,13 @@ class V060EdgeTest {
             setOf(EnrichmentType.SIMILAR_ALBUMS, EnrichmentType.GENRE_DISCOVERY, EnrichmentType.GENRE),
         )
 
-        for (type in results.keys) {
+        for (type in results.raw.keys) {
             assertTrue(
-                "$type should not be Error: ${(results[type] as? EnrichmentResult.Error)?.message}",
-                results[type] !is EnrichmentResult.Error,
+                "$type should not be Error: ${(results.raw[type] as? EnrichmentResult.Error)?.message}",
+                results.raw[type] !is EnrichmentResult.Error,
             )
         }
-        results.forEach { (type, result) ->
+        results.raw.forEach { (type, result) ->
             println("    ${type.name.padEnd(20)} ${result::class.simpleName}")
         }
     }

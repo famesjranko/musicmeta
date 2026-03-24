@@ -101,7 +101,7 @@ class CatalogFilteringTest {
         val results = engine(provider, fakeCatalog).enrich(req, setOf(EnrichmentType.SIMILAR_ARTISTS))
 
         // Then — middle item removed, first and third remain
-        val success = results[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
+        val success = results.raw[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
         val artists = (success.data as EnrichmentData.SimilarArtists).artists
         assertEquals(2, artists.size)
         assertEquals("Artist A", artists[0].name)
@@ -126,7 +126,7 @@ class CatalogFilteringTest {
         val results = engine(provider, fakeCatalog).enrich(req, setOf(EnrichmentType.ARTIST_RADIO))
 
         // Then — first track removed, second remains
-        val success = results[EnrichmentType.ARTIST_RADIO] as EnrichmentResult.Success
+        val success = results.raw[EnrichmentType.ARTIST_RADIO] as EnrichmentResult.Success
         val tracks = (success.data as EnrichmentData.RadioPlaylist).tracks
         assertEquals(1, tracks.size)
         assertEquals("Track 2", tracks[0].title)
@@ -150,7 +150,7 @@ class CatalogFilteringTest {
         val results = engine(provider, fakeCatalog).enrich(req, setOf(EnrichmentType.SIMILAR_ALBUMS))
 
         // Then — second album removed, first remains
-        val success = results[EnrichmentType.SIMILAR_ALBUMS] as EnrichmentResult.Success
+        val success = results.raw[EnrichmentType.SIMILAR_ALBUMS] as EnrichmentResult.Success
         val albums = (success.data as EnrichmentData.SimilarAlbums).albums
         assertEquals(1, albums.size)
         assertEquals("Album X", albums[0].title)
@@ -175,7 +175,7 @@ class CatalogFilteringTest {
             .enrich(req, setOf(EnrichmentType.SIMILAR_ARTISTS))
 
         // Then — available items come first [A1-avail, A3-avail, A0-unavail, A2-unavail]
-        val success = results[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
+        val success = results.raw[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
         val artists = (success.data as EnrichmentData.SimilarArtists).artists
         assertEquals(4, artists.size)
         assertEquals("A1-avail", artists[0].name)
@@ -201,7 +201,7 @@ class CatalogFilteringTest {
             .enrich(req, setOf(EnrichmentType.SIMILAR_ARTISTS))
 
         // Then — all items returned unchanged
-        val success = results[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
+        val success = results.raw[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
         val artists = (success.data as EnrichmentData.SimilarArtists).artists
         assertEquals(2, artists.size)
     }
@@ -220,7 +220,7 @@ class CatalogFilteringTest {
             .enrich(req, setOf(EnrichmentType.SIMILAR_ARTISTS))
 
         // Then — items returned unchanged
-        val success = results[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
+        val success = results.raw[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
         val artists = (success.data as EnrichmentData.SimilarArtists).artists
         assertEquals(2, artists.size)
     }
@@ -244,7 +244,7 @@ class CatalogFilteringTest {
 
         // Then — ALBUM_ART result unchanged, checkAvailability never called
         assertFalse(checkAvailabilityCalled)
-        val success = results[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success
+        val success = results.raw[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success
         assertNotNull(success.data)
     }
 
@@ -264,7 +264,7 @@ class CatalogFilteringTest {
         val results = engine(provider, fakeCatalog).enrich(req, setOf(EnrichmentType.SIMILAR_ARTISTS))
 
         // Then — all 3 items returned
-        val success = results[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
+        val success = results.raw[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
         val artists = (success.data as EnrichmentData.SimilarArtists).artists
         assertEquals(3, artists.size)
     }
@@ -285,6 +285,6 @@ class CatalogFilteringTest {
         val results = engine(provider, fakeCatalog).enrich(req, setOf(EnrichmentType.SIMILAR_ARTISTS))
 
         // Then — NotFound returned because all items filtered out
-        assertTrue(results[EnrichmentType.SIMILAR_ARTISTS] is EnrichmentResult.NotFound)
+        assertTrue(results.raw[EnrichmentType.SIMILAR_ARTISTS] is EnrichmentResult.NotFound)
     }
 }

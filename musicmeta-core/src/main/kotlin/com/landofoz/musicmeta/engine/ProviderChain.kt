@@ -55,15 +55,16 @@ class ProviderChain(
     }
 
     suspend fun resolve(request: EnrichmentRequest): EnrichmentResult {
+        var lastFailure: EnrichmentResult? = null
         forEachEligible(request) { _, breaker, result ->
             when (result) {
                 is EnrichmentResult.Success -> { breaker?.recordSuccess(); return result }
                 is EnrichmentResult.NotFound -> { breaker?.recordSuccess() }
-                is EnrichmentResult.RateLimited -> {}
-                is EnrichmentResult.Error -> { breaker?.recordFailure() }
+                is EnrichmentResult.RateLimited -> { lastFailure = result }
+                is EnrichmentResult.Error -> { breaker?.recordFailure(); lastFailure = result }
             }
         }
-        return EnrichmentResult.NotFound(type, "all_providers")
+        return lastFailure ?: EnrichmentResult.NotFound(type, "all_providers")
     }
 
     /**

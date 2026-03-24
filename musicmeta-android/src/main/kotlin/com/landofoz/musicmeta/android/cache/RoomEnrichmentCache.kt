@@ -2,9 +2,11 @@ package com.landofoz.musicmeta.android.cache
 
 import com.landofoz.musicmeta.EnrichmentCache
 import com.landofoz.musicmeta.EnrichmentData
+import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentLogger
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
+import com.landofoz.musicmeta.IdentityMatch
 import kotlinx.serialization.json.Json
 
 /**
@@ -33,7 +35,18 @@ class RoomEnrichmentCache(
             logger.warn(TAG, "Failed to deserialize cache entry $entityKey:$type: ${e.message}", e)
             return null
         }
-        return EnrichmentResult.Success(type, data, entity.provider, entity.confidence)
+        val resolvedIds = entity.resolvedIdsJson?.let {
+            try { json.decodeFromString<EnrichmentIdentifiers>(it) } catch (_: Exception) { null }
+        }
+        val identityMatch = entity.identityMatch?.let {
+            try { IdentityMatch.valueOf(it) } catch (_: Exception) { null }
+        }
+        return EnrichmentResult.Success(
+            type, data, entity.provider, entity.confidence,
+            resolvedIdentifiers = resolvedIds,
+            identityMatchScore = entity.identityMatchScore,
+            identityMatch = identityMatch,
+        )
     }
 
     override suspend fun put(
@@ -43,6 +56,9 @@ class RoomEnrichmentCache(
         ttlMs: Long,
     ) {
         val now = clock()
+        val resolvedIdsJson = result.resolvedIdentifiers?.let {
+            json.encodeToString(EnrichmentIdentifiers.serializer(), it)
+        }
         dao.insert(
             EnrichmentCacheEntity(
                 entityKey = entityKey,
@@ -50,6 +66,9 @@ class RoomEnrichmentCache(
                 provider = result.provider,
                 dataJson = json.encodeToString(EnrichmentData.serializer(), result.data),
                 confidence = result.confidence,
+                identityMatch = result.identityMatch?.name,
+                identityMatchScore = result.identityMatchScore,
+                resolvedIdsJson = resolvedIdsJson,
                 cachedAt = now,
                 expiresAt = now + ttlMs,
             ),

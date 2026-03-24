@@ -113,7 +113,7 @@ class BuilderDefaultProvidersTest {
             EnrichmentRequest.forArtist("Test Artist"),
             setOf(EnrichmentType.GENRE_DISCOVERY),
         )
-        val result = results[EnrichmentType.GENRE_DISCOVERY]
+        val result = results.raw[EnrichmentType.GENRE_DISCOVERY]
 
         // Then -- synthesizer handled the request (provider is "genre_affinity_matcher", not "no_composite_handler")
         // Result is NotFound because no GENRE data is available, but the synthesizer WAS invoked

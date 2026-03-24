@@ -29,10 +29,17 @@ import com.landofoz.musicmeta.provider.wikipedia.WikipediaProvider
 
 interface EnrichmentEngine {
 
+    /**
+     * Enriches a music entity with the requested data types.
+     *
+     * @param forceRefresh When true, bypasses the cache for the requested types and fetches fresh
+     *   data from providers. Existing cache entries (including manual selections) are cleared first.
+     */
     suspend fun enrich(
         request: EnrichmentRequest,
         types: Set<EnrichmentType>,
-    ): Map<EnrichmentType, EnrichmentResult>
+        forceRefresh: Boolean = false,
+    ): EnrichmentResults
 
     suspend fun search(
         request: EnrichmentRequest,
@@ -42,6 +49,15 @@ interface EnrichmentEngine {
     fun getProviders(): List<ProviderInfo>
 
     val cache: EnrichmentCache
+
+    /** Invalidates cached data for a request. Pass a specific [type] or null to clear all types. */
+    suspend fun invalidate(request: EnrichmentRequest, type: EnrichmentType? = null)
+
+    /** Whether the user has manually selected data for this request/type (e.g., picked artwork). */
+    suspend fun isManuallySelected(request: EnrichmentRequest, type: EnrichmentType): Boolean
+
+    /** Marks data as manually selected by the user, protecting it from automatic overwrites. */
+    suspend fun markManuallySelected(request: EnrichmentRequest, type: EnrichmentType)
 
     class Builder {
         private val providers = mutableListOf<EnrichmentProvider>()

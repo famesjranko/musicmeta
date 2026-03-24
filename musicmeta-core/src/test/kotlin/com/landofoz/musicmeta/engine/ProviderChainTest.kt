@@ -128,7 +128,7 @@ class ProviderChainTest {
         assertEquals("caa", (result as EnrichmentResult.Success).provider)
     }
 
-    @Test fun `resolve returns NotFound when all providers exhausted`() = runTest {
+    @Test fun `resolve returns NotFound when all providers return NotFound`() = runTest {
         // Given — only provider returns NotFound
         val p = FakeProvider(id = "p").also { it.givenResult(EnrichmentType.ALBUM_ART, EnrichmentResult.NotFound(EnrichmentType.ALBUM_ART, "p")) }
 
@@ -137,6 +137,43 @@ class ProviderChainTest {
 
         // Then — NotFound with "all_providers"
         assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test fun `resolve preserves RateLimited when all providers rate limited`() = runTest {
+        // Given — both providers return RateLimited
+        val p1 = FakeProvider(id = "p1").also { it.givenResult(EnrichmentType.ALBUM_ART, EnrichmentResult.RateLimited(EnrichmentType.ALBUM_ART, "p1")) }
+        val p2 = FakeProvider(id = "p2").also { it.givenResult(EnrichmentType.ALBUM_ART, EnrichmentResult.RateLimited(EnrichmentType.ALBUM_ART, "p2")) }
+
+        // When — resolving
+        val result = ProviderChain(EnrichmentType.ALBUM_ART, listOf(p1, p2)).resolve(req)
+
+        // Then — RateLimited preserved (not collapsed to NotFound)
+        assertTrue("Expected RateLimited but got ${result::class.simpleName}", result is EnrichmentResult.RateLimited)
+    }
+
+    @Test fun `resolve preserves Error when all providers error`() = runTest {
+        // Given — both providers return Error
+        val p1 = FakeProvider(id = "p1").also { it.givenResult(EnrichmentType.ALBUM_ART, EnrichmentResult.Error(EnrichmentType.ALBUM_ART, "p1", "timeout")) }
+        val p2 = FakeProvider(id = "p2").also { it.givenResult(EnrichmentType.ALBUM_ART, EnrichmentResult.Error(EnrichmentType.ALBUM_ART, "p2", "network")) }
+
+        // When — resolving
+        val result = ProviderChain(EnrichmentType.ALBUM_ART, listOf(p1, p2)).resolve(req)
+
+        // Then — last Error preserved (not collapsed to NotFound)
+        assertTrue("Expected Error but got ${result::class.simpleName}", result is EnrichmentResult.Error)
+        assertEquals("p2", (result as EnrichmentResult.Error).provider)
+    }
+
+    @Test fun `resolve returns NotFound over RateLimited when NotFound is last`() = runTest {
+        // Given — p1 rate limited, p2 returns NotFound
+        val p1 = FakeProvider(id = "p1").also { it.givenResult(EnrichmentType.ALBUM_ART, EnrichmentResult.RateLimited(EnrichmentType.ALBUM_ART, "p1")) }
+        val p2 = FakeProvider(id = "p2").also { it.givenResult(EnrichmentType.ALBUM_ART, EnrichmentResult.NotFound(EnrichmentType.ALBUM_ART, "p2")) }
+
+        // When — resolving (p1 rate limited tracked, p2 NotFound does not overwrite)
+        val result = ProviderChain(EnrichmentType.ALBUM_ART, listOf(p1, p2)).resolve(req)
+
+        // Then — RateLimited preserved because at least one provider had a real failure
+        assertTrue("Expected RateLimited but got ${result::class.simpleName}", result is EnrichmentResult.RateLimited)
     }
 
     @Test fun `resolve catches exceptions and falls through`() = runTest {

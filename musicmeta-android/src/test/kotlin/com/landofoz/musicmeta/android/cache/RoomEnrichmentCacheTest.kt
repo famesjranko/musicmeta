@@ -4,8 +4,10 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.landofoz.musicmeta.EnrichmentData
+import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
+import com.landofoz.musicmeta.IdentityMatch
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.test.runTest
@@ -300,6 +302,59 @@ class RoomEnrichmentCacheTest {
         // Then
         assertNull(cache.get("album:1", EnrichmentType.ALBUM_ART))
         assertNull(cache.get("artist:1", EnrichmentType.ARTIST_BIO))
+    }
+
+    @Test
+    fun `stores and retrieves identity fields`() = runTest {
+        // Given — result with identity resolution data
+        val ids = EnrichmentIdentifiers(
+            musicBrainzId = "a74b1b7f-71a5-4011-9441-d0b5e4122711",
+            wikidataId = "Q188451",
+            wikipediaTitle = "Radiohead",
+        )
+        val result = EnrichmentResult.Success(
+            type = EnrichmentType.GENRE,
+            data = EnrichmentData.Metadata(genres = listOf("Rock")),
+            provider = "musicbrainz",
+            confidence = 0.9f,
+            resolvedIdentifiers = ids,
+            identityMatchScore = 95,
+            identityMatch = IdentityMatch.RESOLVED,
+        )
+
+        // When
+        cache.put("artist:radiohead", EnrichmentType.GENRE, result)
+        val retrieved = cache.get("artist:radiohead", EnrichmentType.GENRE)
+
+        // Then — identity fields round-tripped
+        assertNotNull(retrieved)
+        assertEquals(IdentityMatch.RESOLVED, retrieved!!.identityMatch)
+        assertEquals(95, retrieved.identityMatchScore)
+        assertNotNull(retrieved.resolvedIdentifiers)
+        assertEquals("a74b1b7f-71a5-4011-9441-d0b5e4122711", retrieved.resolvedIdentifiers!!.musicBrainzId)
+        assertEquals("Q188451", retrieved.resolvedIdentifiers!!.wikidataId)
+        assertEquals("Radiohead", retrieved.resolvedIdentifiers!!.wikipediaTitle)
+    }
+
+    @Test
+    fun `stores and retrieves result without identity fields`() = runTest {
+        // Given — result with no identity data (e.g., MBID pre-provided)
+        val result = EnrichmentResult.Success(
+            type = EnrichmentType.ALBUM_ART,
+            data = EnrichmentData.Artwork(url = "https://example.com/art.jpg"),
+            provider = "coverartarchive",
+            confidence = 0.95f,
+        )
+
+        // When
+        cache.put("album:no-id", EnrichmentType.ALBUM_ART, result)
+        val retrieved = cache.get("album:no-id", EnrichmentType.ALBUM_ART)
+
+        // Then — nulls preserved
+        assertNotNull(retrieved)
+        assertNull(retrieved!!.identityMatch)
+        assertNull(retrieved.identityMatchScore)
+        assertNull(retrieved.resolvedIdentifiers)
     }
 
     @Test

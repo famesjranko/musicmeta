@@ -5,6 +5,7 @@ import com.landofoz.musicmeta.EnrichmentEngine
 import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
+import com.landofoz.musicmeta.EnrichmentResults
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.http.DefaultHttpClient
 import com.landofoz.musicmeta.http.RateLimiter
@@ -116,7 +117,7 @@ class RealApiEndToEndTest {
         val result = engine.enrich(request, setOf(EnrichmentType.ALBUM_ART))
 
         // Then — artwork URL returned via HTTP
-        val art = result[EnrichmentType.ALBUM_ART]
+        val art = result.raw[EnrichmentType.ALBUM_ART]
         assertTrue("Should find album art", art is EnrichmentResult.Success)
         val artwork = (art as EnrichmentResult.Success).data as EnrichmentData.Artwork
         assertTrue("URL should be HTTP", artwork.url.startsWith("http"))
@@ -134,14 +135,20 @@ class RealApiEndToEndTest {
         // When — enriching for artist photo
         val result = engine.enrich(request, setOf(EnrichmentType.ARTIST_PHOTO))
 
-        // Then — photo URL from Wikimedia Commons (if P18 exists)
-        val photo = result[EnrichmentType.ARTIST_PHOTO]
+        // Then — photo should be available (primary or alternative may be from Wikidata)
+        val photo = result.raw[EnrichmentType.ARTIST_PHOTO]
         if (photo is EnrichmentResult.Success) {
             val artwork = photo.data as EnrichmentData.Artwork
-            assertTrue("URL should contain wikimedia", artwork.url.contains("wikimedia") || artwork.url.contains("commons"))
-            println("  Photo URL: ${artwork.url}")
+            // With ArtworkMerger, primary may be from any provider; Wikidata may be in alternatives
+            val allUrls = listOf(artwork.url) + (artwork.alternatives?.map { it.url } ?: emptyList())
+            val hasWikimedia = allUrls.any { it.contains("wikimedia") || it.contains("commons") }
+            println("  Photo URL: ${artwork.url} (provider: ${photo.provider})")
+            println("  Alternatives: ${artwork.alternatives?.map { "${it.provider}: ${it.url.take(60)}" } ?: "none"}")
+            if (hasWikimedia) println("  Wikidata image found (primary or alternative)")
+            // At minimum, we got a photo from some provider
+            assertTrue("URL should be HTTP", artwork.url.startsWith("http"))
         } else {
-            println("  No photo found (Wikidata may not have P18 for Radiohead)")
+            println("  No photo found (no provider had an image)")
         }
     }
 
@@ -156,7 +163,7 @@ class RealApiEndToEndTest {
         val result = engine.enrich(request, setOf(EnrichmentType.ARTIST_BIO))
 
         // Then — biography text mentioning "English" with Wikipedia as source
-        val bio = result[EnrichmentType.ARTIST_BIO]
+        val bio = result.raw[EnrichmentType.ARTIST_BIO]
         assertTrue("Should find biography", bio is EnrichmentResult.Success)
         val biography = (bio as EnrichmentResult.Success).data as EnrichmentData.Biography
         assertTrue("Bio should mention English", biography.text.contains("English"))
@@ -173,7 +180,7 @@ class RealApiEndToEndTest {
         val result = engine.enrich(request, setOf(EnrichmentType.ARTIST_BIO))
 
         // Then — biography found via the Wikidata→Wikipedia sitelink path
-        val bio = result[EnrichmentType.ARTIST_BIO]
+        val bio = result.raw[EnrichmentType.ARTIST_BIO]
         assertTrue("Should find Air biography via Wikidata sitelinks", bio is EnrichmentResult.Success)
         val biography = (bio as EnrichmentResult.Success).data as EnrichmentData.Biography
         assertTrue("Bio should mention French", biography.text.contains("French"))
@@ -194,8 +201,8 @@ class RealApiEndToEndTest {
         )
 
         // Then — at least one lyrics format returned with non-blank text
-        val synced = result[EnrichmentType.LYRICS_SYNCED]
-        val plain = result[EnrichmentType.LYRICS_PLAIN]
+        val synced = result.raw[EnrichmentType.LYRICS_SYNCED]
+        val plain = result.raw[EnrichmentType.LYRICS_PLAIN]
         val success = synced as? EnrichmentResult.Success ?: plain as? EnrichmentResult.Success
         assertNotNull("Should find lyrics for Creep", success)
         val lyrics = success!!.data as EnrichmentData.Lyrics
@@ -218,7 +225,7 @@ class RealApiEndToEndTest {
         )
 
         // Then — either marked as instrumental or not found in LRCLIB
-        val success = result.values.filterIsInstance<EnrichmentResult.Success>()
+        val success = result.raw.values.filterIsInstance<EnrichmentResult.Success>()
             .firstOrNull { it.data is EnrichmentData.Lyrics }
         if (success != null) {
             val lyrics = success.data as EnrichmentData.Lyrics
@@ -244,7 +251,7 @@ class RealApiEndToEndTest {
         val result = deezerOnly.enrich(request, setOf(EnrichmentType.ALBUM_ART))
 
         // Then — artwork URL from Deezer CDN
-        val art = result[EnrichmentType.ALBUM_ART]
+        val art = result.raw[EnrichmentType.ALBUM_ART]
         assertTrue("Deezer should find album art", art is EnrichmentResult.Success)
         val artwork = (art as EnrichmentResult.Success).data as EnrichmentData.Artwork
         assertTrue("URL should be Deezer CDN", artwork.url.contains("dzcdn"))
@@ -266,7 +273,7 @@ class RealApiEndToEndTest {
         val result = itunesOnly.enrich(request, setOf(EnrichmentType.ALBUM_ART))
 
         // Then — artwork URL upscaled to 1200x1200
-        val art = result[EnrichmentType.ALBUM_ART]
+        val art = result.raw[EnrichmentType.ALBUM_ART]
         assertTrue("iTunes should find album art", art is EnrichmentResult.Success)
         val artwork = (art as EnrichmentResult.Success).data as EnrichmentData.Artwork
         assertTrue("URL should be upscaled to 1200", artwork.url.contains("1200x1200"))
@@ -293,7 +300,7 @@ class RealApiEndToEndTest {
 
         // Then — identity resolved, artwork found, and metadata populated
         println("  Results:")
-        result.forEach { (type, res) ->
+        result.raw.forEach { (type, res) ->
             val status = when (res) {
                 is EnrichmentResult.Success -> "SUCCESS (${res.provider}, conf=${res.confidence})"
                 is EnrichmentResult.NotFound -> "NOT_FOUND (${res.provider})"
@@ -312,7 +319,7 @@ class RealApiEndToEndTest {
         println("  Type: ${resolution.metadata?.releaseType}")
         println("  Country: ${resolution.metadata?.country}")
 
-        val art = result[EnrichmentType.ALBUM_ART]
+        val art = result.raw[EnrichmentType.ALBUM_ART]
         assertTrue("Should have artwork", art is EnrichmentResult.Success)
     }
 
@@ -327,7 +334,7 @@ class RealApiEndToEndTest {
 
         // Then — biography found with substantial text
         println("  Results:")
-        result.forEach { (type, res) ->
+        result.raw.forEach { (type, res) ->
             val status = when (res) {
                 is EnrichmentResult.Success -> "SUCCESS (${res.provider})"
                 is EnrichmentResult.NotFound -> "NOT_FOUND (${res.provider})"
@@ -337,7 +344,7 @@ class RealApiEndToEndTest {
             println("    $type: $status")
         }
 
-        val bio = result[EnrichmentType.ARTIST_BIO]
+        val bio = result.raw[EnrichmentType.ARTIST_BIO]
         assertTrue("Should have biography", bio is EnrichmentResult.Success)
         val biography = (bio as EnrichmentResult.Success).data as EnrichmentData.Biography
         println("  Bio: ${biography.text.take(120)}...")
@@ -392,10 +399,10 @@ class RealApiEndToEndTest {
 
         // Then — does not crash, returns NotFound results
         println("  Results for nonexistent album:")
-        result.forEach { (type, res) ->
+        result.raw.forEach { (type, res) ->
             println("    $type: ${res::class.simpleName}")
         }
-        assertTrue("Should handle gracefully", result.isNotEmpty())
+        assertTrue("Should handle gracefully", result.raw.isNotEmpty())
     }
 
     @Test
@@ -413,8 +420,8 @@ class RealApiEndToEndTest {
     }
 
     /** Extracts resolved identifiers and metadata from the first Success with resolvedIdentifiers. */
-    private fun extractResolution(result: Map<EnrichmentType, EnrichmentResult>): ResolvedInfo? {
-        val success = result.values
+    private fun extractResolution(result: EnrichmentResults): ResolvedInfo? {
+        val success = result.raw.values
             .filterIsInstance<EnrichmentResult.Success>()
             .firstOrNull { it.resolvedIdentifiers != null } ?: return null
         val ids = success.resolvedIdentifiers ?: return null

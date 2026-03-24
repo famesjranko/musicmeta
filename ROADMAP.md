@@ -38,15 +38,27 @@ The library is a tool for developers to wield for their needs, not a framework t
   - *CatalogProvider interface* — consumers implement to answer "does the user have access to X?"
   - *Filtering Modes* — unfiltered (pure discovery), available-only, available-first (ranked)
 - **Developer Experience**: make integration as simple as possible
-  - *Profile methods* — `engine.artistProfile("Radiohead")` returning a structured object (planned)
-  - *Type-safe requests* — only valid types for each entity kind, no wasted calls (planned)
-  - *Smart defaults* — request the right types automatically based on entity kind (planned)
+  - *Profile methods* — `engine.artistProfile("Radiohead")` returning a structured object
+  - *Type-safe requests* — only valid types for each entity kind, no wasted calls
+  - *Smart defaults* — request the right types automatically based on entity kind
+  - *Cache management* — `engine.invalidate(request)`, `forceRefresh`, manual selection without cache key knowledge
 
 ---
 
-## Where We Are (v0.6.0)
+## Where We Are (v0.7.0)
 
-### What Changed Since v0.5.0
+### What Changed Since v0.6.0
+
+v0.7.0 was **Developer Experience** — shipped 2026-03-24.
+
+Key additions:
+- **Profile methods** — `engine.artistProfile("Radiohead")`, `engine.albumProfile(...)`, `engine.trackProfile(...)` returning structured data classes with computed properties
+- **`EnrichmentResults` wrapper** — 19 named accessors, top-level `IdentityResolution`, `wasRequested()`/`result()` diagnostics, generic `get<T>()`
+- **Default type sets** — `DEFAULT_ARTIST_TYPES` (15), `DEFAULT_ALBUM_TYPES` (14), `DEFAULT_TRACK_TYPES` (8), composable via set algebra
+- **Cache management API** — `engine.invalidate(request, type?)`, `forceRefresh` parameter on `enrich()` and all profile extensions, `engine.isManuallySelected()`/`markManuallySelected()` without cache key knowledge
+- **Bug fixes** — ProviderChain failure preservation, Room cache identity round-tripping, cache key convergence after disambiguation
+
+### What Changed in v0.6.0
 
 v0.6.0 was **Recommendations Engine** — 7 phases, 14 plans, shipped 2026-03-23.
 
@@ -241,14 +253,14 @@ Ranked by **impact to consumers × implementation effort**:
 
 ## Summary
 
-| Dimension | v0.1.0 | v0.4.0 | v0.5.0 | v0.6.0 |
-|-----------|--------|--------|--------|--------|
-| Enrichment types | 16 | 25 (+9) | 28 (+3) | 32 (+4) |
-| Provider utilization | ~30% avg | ~48% avg | ~57% avg | ~60% avg |
-| Engine concepts | Provider chains | + Typed identifiers, mapper pattern, confidence calculator | + Composite types, mergeable types, GenreMerger | + ResultMerger/CompositeSynthesizer interfaces, CatalogProvider filtering, ArtworkMerger, ErrorKind.TIMEOUT |
-| "App-ready" artist page | Partial | Full | **Complete** | **Complete** + radio, genre discovery, merged similar artists |
-| "App-ready" album page | Partial | Full | **Complete** | **Complete** + similar albums with era scoring |
-| "App-ready" now-playing | Partial | Rich | **Complete** | **Complete** + catalog-aware filtering |
+| Dimension | v0.1.0 | v0.4.0 | v0.5.0 | v0.6.0 | v0.7.0 |
+|-----------|--------|--------|--------|--------|--------|
+| Enrichment types | 16 | 25 (+9) | 28 (+3) | 32 (+4) | 32 |
+| Provider utilization | ~30% avg | ~48% avg | ~57% avg | ~60% avg | ~60% avg |
+| Engine concepts | Provider chains | + Typed identifiers, mapper pattern, confidence calculator | + Composite types, mergeable types, GenreMerger | + ResultMerger/CompositeSynthesizer interfaces, CatalogProvider filtering, ArtworkMerger | + EnrichmentResults wrapper, IdentityResolution, profiles, default type sets |
+| "App-ready" artist page | Partial | Full | **Complete** | **Complete** + radio, genre discovery | `engine.artistProfile("Radiohead")` — one call, structured result |
+| "App-ready" album page | Partial | Full | **Complete** | **Complete** + similar albums | `engine.albumProfile("OK Computer", "Radiohead")` |
+| "App-ready" now-playing | Partial | Rich | **Complete** | **Complete** + catalog-aware | `engine.trackProfile("Creep", "Radiohead")` |
 
 **The metadata + recommendations story is nearly complete.** A music app using musicmeta now gets metadata, discovery, and radio features from a single `enrich()` call. The architecture supports four enrichment patterns: standard provider chains, composite synthesis, multi-provider merging, and catalog-aware filtering.
 
@@ -264,10 +276,10 @@ Ranked by **impact to consumers × implementation effort**:
 | Links | All MusicBrainz URL relation types | ✅ **Complete** |
 | Credits | Performers, producers, composers, engineers | ✅ **Complete** |
 | Recommendations | 6 modules shipped; credit discovery + CF deferred | 🟡 **Mostly complete** |
-| Developer Experience | Engine works, consumer API is power-user only | ❌ **Not started** |
+| Developer Experience | EnrichmentResults wrapper, profiles, default type sets, identity resolution, cache management | ✅ **Complete** — `artistProfile()`, `albumProfile()`, `trackProfile()` with computed properties, 19 named accessors, `wasRequested()`/`result()` diagnostics, `invalidate()`, `forceRefresh`, manual selection |
 | Catalog Awareness | Interface shipped; implementations deferred | 🟡 **Interface only** |
 
-**8/10 goal categories complete or mostly complete.** One category remains: Developer Experience.
+**9/10 goal categories complete or mostly complete.** Remaining: Catalog Awareness implementations (interface shipped, concrete implementations deferred).
 
 #### Recommendation Module Status
 
@@ -278,21 +290,22 @@ Ranked by **impact to consumers × implementation effort**:
 | Similar Albums | ✅ **Shipped (v0.6.0)** | SimilarAlbumsProvider with era-proximity scoring |
 | Radio/Mix | ✅ **Shipped (v0.6.0)** | ARTIST_RADIO via Deezer `/artist/{id}/radio` |
 | Top Tracks | ✅ **Shipped** | 3-provider merge (Last.fm + ListenBrainz + Deezer) via TopTrackMerger. Fetches API max, no artificial cap. |
-| Credit-Based Discovery | ❌ Deferred (v0.7.0+) | Cross-entity query pattern; CREDITS data exists |
+| Credit-Based Discovery | ❌ Deferred (v0.8.0+) | Cross-entity query pattern; CREDITS data exists |
 | Genre Discovery | ✅ **Shipped (v0.6.0)** | GenreAffinityMatcher with ~70-relationship static taxonomy |
 | Listening-Based | ❌ Deferred (v0.8.0+) | User-scoped; needs user identity in EnrichmentRequest |
 
 #### Developer Experience Status
 
-The engine works well, but the consumer API is a power-user API. Developers building music apps have to manually request types, cast results, and handle the Map pattern. A convenience layer would make the library feel effortless for the 80% use case.
+The consumer API now covers the full developer journey: build → get → update → refresh. Profile methods handle the 80% case; `EnrichmentResults` accessors handle the rest.
 
 | Issue | Impact | Status |
 |-------|--------|--------|
-| Verbose result handling (Map + casting) | High — every consumer writes boilerplate | ❌ Not started |
-| No high-level profile methods | High — "give me an artist page" is the #1 use case | ❌ Not started |
-| No type safety per request kind | Medium — ForArtist + LYRICS_SYNCED = wasted call | ❌ Not started |
-| Metadata class overloaded | Medium — 15 nullable fields, unclear which are populated | ❌ Not started |
-| "All types" returns noisy NotFounds | Low — 11 NotFounds for ForAlbum is confusing | ❌ Not started |
+| Verbose result handling (Map + casting) | High — every consumer writes boilerplate | ✅ Done — `EnrichmentResults` wrapper with 19 named accessors + generic `get<T>()` |
+| No high-level profile methods | High — "give me an artist page" is the #1 use case | ✅ Done — `artistProfile()`, `albumProfile()`, `trackProfile()` extension functions |
+| No type safety per request kind | Medium — ForArtist + LYRICS_SYNCED = wasted call | ✅ Done — `DEFAULT_ARTIST_TYPES`, `DEFAULT_ALBUM_TYPES`, `DEFAULT_TRACK_TYPES` with `defaultTypesFor()` |
+| Cache management requires internal keys | High — consumers can't invalidate or refresh cleanly | ✅ Done — `engine.invalidate(request)`, `forceRefresh` param, `markManuallySelected()`/`isManuallySelected()` |
+| Metadata class overloaded | Medium — 16 nullable fields, unclear which are populated | ✅ Resolved — profile properties and named accessors unwrap individual fields; Tier 3 power users can still access raw `Metadata` but rarely need to |
+| "All types" returns noisy NotFounds | Low — 11 NotFounds for ForAlbum is confusing | ✅ Done — default type sets + `wasRequested()` distinguish requested vs unrequested |
 
 ---
 
@@ -301,8 +314,8 @@ The engine works well, but the consumer API is a power-user API. Developers buil
 ### ✅ v0.6.0 — Recommendations Engine — SHIPPED 2026-03-23
 Built discovery features on top of the enrichment data: multi-provider SIMILAR_ARTISTS merge (Last.fm + ListenBrainz + Deezer), ARTIST_RADIO (Deezer radio endpoint), SIMILAR_ALBUMS (synthesized from related artists + era scoring), GENRE_DISCOVERY (static genre affinity taxonomy), and CatalogProvider interface for library-aware filtering. 7 phases, 14 plans, 32 enrichment types.
 
-### v0.7.0 — Developer Experience
-Add a convenience layer that makes musicmeta feel effortless for the 80% use case. High-level `artistProfile()` / `albumProfile()` / `trackProfile()` methods returning structured objects with all fields pre-extracted. Type-safe request scoping. Cleaner data model. The low-level `enrich()` API stays for power users. This is a thin layer on top of what already works — no engine changes needed.
+### ✅ v0.7.0 — Developer Experience — SHIPPED 2026-03-24
+Added a convenience layer: `EnrichmentResults` wrapper with 19 named accessors, top-level `IdentityResolution`, `wasRequested()`/`result()` for diagnostics, default type sets per entity kind, and profile extension functions (`artistProfile()`, `albumProfile()`, `trackProfile()`) with `SearchCandidate` overloads and `forceRefresh` support. Cache management API: `engine.invalidate(request)`, `engine.isManuallySelected()`/`markManuallySelected()`. Also fixed ProviderChain failure preservation, Room cache identity round-tripping, and cache key convergence after disambiguation. Developer guide split into 7 focused pages under `docs/guides/`.
 
 ### v0.8.0+ — Catalog Implementations & User-Scoped Features
 `CatalogProvider` interface and filtering modes shipped in v0.6.0. This milestone adds concrete implementations: `LocalLibraryCatalog` (file scanning + fingerprint matching), `SpotifyCatalog` (OAuth + catalog check), `YouTubeMusicCatalog`. Also adds ListenBrainz collaborative filtering (user-scoped recommendations requiring username in request). May introduce `ForUser` request variant or dedicated engine method.

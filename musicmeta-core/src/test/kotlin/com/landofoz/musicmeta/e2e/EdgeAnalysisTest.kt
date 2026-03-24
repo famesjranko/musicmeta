@@ -1,6 +1,11 @@
 package com.landofoz.musicmeta.e2e
 
-import com.landofoz.musicmeta.*
+import com.landofoz.musicmeta.EnrichmentData
+import com.landofoz.musicmeta.EnrichmentEngine
+import com.landofoz.musicmeta.EnrichmentRequest
+import com.landofoz.musicmeta.EnrichmentResult
+import com.landofoz.musicmeta.EnrichmentResults
+import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.http.DefaultHttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.provider.coverartarchive.CoverArtArchiveProvider
@@ -68,15 +73,15 @@ class EdgeAnalysisTest {
 
     private fun resultSummary(
         label: String,
-        results: Map<EnrichmentType, EnrichmentResult>,
+        results: EnrichmentResults,
         types: Set<EnrichmentType>,
     ) {
-        val success = results.count { it.value is EnrichmentResult.Success }
-        val notFound = results.count { it.value is EnrichmentResult.NotFound }
-        val errors = results.count { it.value is EnrichmentResult.Error }
-        val rateLimited = results.count { it.value is EnrichmentResult.RateLimited }
+        val success = results.raw.count { it.value is EnrichmentResult.Success }
+        val notFound = results.raw.count { it.value is EnrichmentResult.NotFound }
+        val errors = results.raw.count { it.value is EnrichmentResult.Error }
+        val rateLimited = results.raw.count { it.value is EnrichmentResult.RateLimited }
         log("    $label: $success success, $notFound notfound, $errors errors, $rateLimited ratelimited (of ${types.size} requested)")
-        results.forEach { (type, result) ->
+        results.raw.forEach { (type, result) ->
             val status = when (result) {
                 is EnrichmentResult.Success -> "OK  conf=%.2f provider=%-18s %s".format(
                     result.confidence, result.provider, snippet(result.data),
@@ -142,8 +147,8 @@ class EdgeAnalysisTest {
                 EnrichmentRequest.forAlbum(album, artist),
                 setOf(EnrichmentType.GENRE, EnrichmentType.ALBUM_ART, EnrichmentType.ALBUM_METADATA),
             )
-            val found = results.count { it.value is EnrichmentResult.Success }
-            val types = results.entries.joinToString(", ") { (t, r) ->
+            val found = results.raw.count { it.value is EnrichmentResult.Success }
+            val types = results.raw.entries.joinToString(", ") { (t, r) ->
                 val s = if (r is EnrichmentResult.Success) "OK" else "NF"
                 "${t.name}=$s"
             }
@@ -171,8 +176,8 @@ class EdgeAnalysisTest {
                 EnrichmentRequest.forAlbum(album, artist),
                 setOf(EnrichmentType.GENRE, EnrichmentType.ALBUM_ART),
             )
-            val found = results.count { it.value is EnrichmentResult.Success }
-            log("      $found/2 found: ${results.entries.joinToString { "${it.key.name}=${if (it.value is EnrichmentResult.Success) "OK" else "NF"}" }}")
+            val found = results.raw.count { it.value is EnrichmentResult.Success }
+            log("      $found/2 found: ${results.raw.entries.joinToString { "${it.key.name}=${if (it.value is EnrichmentResult.Success) "OK" else "NF"}" }}")
         }
     }
 
@@ -199,7 +204,7 @@ class EdgeAnalysisTest {
                     EnrichmentRequest.forAlbum(album.take(200), artist.take(200)),
                     setOf(EnrichmentType.GENRE),
                 )
-                val result = results[EnrichmentType.GENRE]
+                val result = results.raw[EnrichmentType.GENRE]
                 val status = when (result) {
                     is EnrichmentResult.Success -> "SUCCESS (unexpected!)"
                     is EnrichmentResult.NotFound -> "NotFound (expected)"
@@ -264,16 +269,16 @@ class EdgeAnalysisTest {
                 EnrichmentType.BAND_MEMBERS,
             ),
         )
-        val timeline = results[EnrichmentType.ARTIST_TIMELINE]
-        val disco = results[EnrichmentType.ARTIST_DISCOGRAPHY]
-        val members = results[EnrichmentType.BAND_MEMBERS]
+        val timeline = results.raw[EnrichmentType.ARTIST_TIMELINE]
+        val disco = results.raw[EnrichmentType.ARTIST_DISCOGRAPHY]
+        val members = results.raw[EnrichmentType.BAND_MEMBERS]
         log("      TIMELINE: ${if (timeline is EnrichmentResult.Success) "${(timeline.data as EnrichmentData.ArtistTimeline).events.size} events" else timeline?.let { it::class.simpleName } ?: "null"}")
         log("      DISCOGRAPHY: ${if (disco is EnrichmentResult.Success) "${(disco.data as EnrichmentData.Discography).albums.size} albums" else disco?.let { it::class.simpleName } ?: "null"}")
         log("      BAND_MEMBERS: ${if (members is EnrichmentResult.Success) "${(members.data as EnrichmentData.BandMembers).members.size} members" else members?.let { it::class.simpleName } ?: "null"}")
     }
 
-    private fun logTimelineResult(results: Map<EnrichmentType, EnrichmentResult>) {
-        val tl = results[EnrichmentType.ARTIST_TIMELINE]
+    private fun logTimelineResult(results: EnrichmentResults) {
+        val tl = results.raw[EnrichmentType.ARTIST_TIMELINE]
         if (tl is EnrichmentResult.Success) {
             val data = tl.data as EnrichmentData.ArtistTimeline
             val byType = data.events.groupBy { it.type }
@@ -326,8 +331,8 @@ class EdgeAnalysisTest {
         logCreditsResult(results)
     }
 
-    private fun logCreditsResult(results: Map<EnrichmentType, EnrichmentResult>) {
-        val cr = results[EnrichmentType.CREDITS]
+    private fun logCreditsResult(results: EnrichmentResults) {
+        val cr = results.raw[EnrichmentType.CREDITS]
         if (cr is EnrichmentResult.Success) {
             val data = cr.data as EnrichmentData.Credits
             val cats = data.credits.groupBy { it.roleCategory ?: "other" }
@@ -367,7 +372,7 @@ class EdgeAnalysisTest {
                 EnrichmentRequest.forArtist(artist),
                 setOf(EnrichmentType.GENRE),
             )
-            val genre = results[EnrichmentType.GENRE]
+            val genre = results.raw[EnrichmentType.GENRE]
             if (genre is EnrichmentResult.Success) {
                 val data = genre.data as EnrichmentData.Metadata
                 log("      provider=${genre.provider} merged=${genre.provider == "genre_merger"}")
@@ -401,7 +406,7 @@ class EdgeAnalysisTest {
                 EnrichmentRequest.forAlbum(album, artist),
                 setOf(EnrichmentType.RELEASE_EDITIONS),
             )
-            val ed = results[EnrichmentType.RELEASE_EDITIONS]
+            val ed = results.raw[EnrichmentType.RELEASE_EDITIONS]
             if (ed is EnrichmentResult.Success) {
                 val data = ed.data as EnrichmentData.ReleaseEditions
                 val countries = data.editions.mapNotNull { it.country }.distinct()
@@ -447,7 +452,7 @@ class EdgeAnalysisTest {
                 EnrichmentType.CREDITS, EnrichmentType.RELEASE_EDITIONS,
             ),
         )
-        resultSummary("Cosmogramma", results2, results2.keys)
+        resultSummary("Cosmogramma", results2, results2.raw.keys)
     }
 
     // =================================================================
@@ -469,10 +474,10 @@ class EdgeAnalysisTest {
         val results2 = engine.enrich(request, types)
         val time2 = System.currentTimeMillis() - start2
 
-        log("    First call:  ${time1}ms (${results1.count { it.value is EnrichmentResult.Success }} success)")
-        log("    Second call: ${time2}ms (${results2.count { it.value is EnrichmentResult.Success }} success)")
+        log("    First call:  ${time1}ms (${results1.raw.count { it.value is EnrichmentResult.Success }} success)")
+        log("    Second call: ${time2}ms (${results2.raw.count { it.value is EnrichmentResult.Success }} success)")
         log("    Speedup: ${if (time2 > 0) "${time1 / time2}x" else "instant"}")
-        log("    Same results: ${results1.keys == results2.keys}")
+        log("    Same results: ${results1.raw.keys == results2.raw.keys}")
     }
 
     // =================================================================
@@ -486,24 +491,24 @@ class EdgeAnalysisTest {
 
         log("    --- ForArtist: Radiohead ---")
         val artistR = engine.enrich(EnrichmentRequest.forArtist("Radiohead"), allTypes)
-        val artistSuccess = artistR.count { it.value is EnrichmentResult.Success }
+        val artistSuccess = artistR.raw.count { it.value is EnrichmentResult.Success }
         log("      $artistSuccess/${allTypes.size} types returned data")
-        log("      Successful: ${artistR.filter { it.value is EnrichmentResult.Success }.keys.joinToString { it.name }}")
+        log("      Successful: ${artistR.raw.filter { it.value is EnrichmentResult.Success }.keys.joinToString { it.name }}")
 
         log("    --- ForAlbum: OK Computer by Radiohead ---")
         val albumR = engine.enrich(EnrichmentRequest.forAlbum("OK Computer", "Radiohead"), allTypes)
-        val albumSuccess = albumR.count { it.value is EnrichmentResult.Success }
+        val albumSuccess = albumR.raw.count { it.value is EnrichmentResult.Success }
         log("      $albumSuccess/${allTypes.size} types returned data")
-        log("      Successful: ${albumR.filter { it.value is EnrichmentResult.Success }.keys.joinToString { it.name }}")
+        log("      Successful: ${albumR.raw.filter { it.value is EnrichmentResult.Success }.keys.joinToString { it.name }}")
 
         log("    --- ForTrack: Paranoid Android by Radiohead ---")
         val trackR = engine.enrich(
             EnrichmentRequest.forTrack("Paranoid Android", "Radiohead", album = "OK Computer"),
             allTypes,
         )
-        val trackSuccess = trackR.count { it.value is EnrichmentResult.Success }
+        val trackSuccess = trackR.raw.count { it.value is EnrichmentResult.Success }
         log("      $trackSuccess/${allTypes.size} types returned data")
-        log("      Successful: ${trackR.filter { it.value is EnrichmentResult.Success }.keys.joinToString { it.name }}")
+        log("      Successful: ${trackR.raw.filter { it.value is EnrichmentResult.Success }.keys.joinToString { it.name }}")
     }
 
     // =================================================================

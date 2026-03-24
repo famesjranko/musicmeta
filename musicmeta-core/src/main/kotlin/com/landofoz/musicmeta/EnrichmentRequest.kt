@@ -54,6 +54,44 @@ sealed class EnrichmentRequest {
             durationMs: Long? = null,
             mbid: String? = null,
         ) = ForTrack(EnrichmentIdentifiers(musicBrainzId = mbid), title, artist, album, durationMs)
+
+        /** Types meaningful for [ForArtist] requests. */
+        val DEFAULT_ARTIST_TYPES: Set<EnrichmentType> = setOf(
+            EnrichmentType.GENRE, EnrichmentType.ARTIST_BIO,
+            EnrichmentType.ARTIST_PHOTO, EnrichmentType.ARTIST_BACKGROUND,
+            EnrichmentType.ARTIST_LOGO, EnrichmentType.ARTIST_BANNER,
+            EnrichmentType.ARTIST_POPULARITY, EnrichmentType.SIMILAR_ARTISTS,
+            EnrichmentType.BAND_MEMBERS, EnrichmentType.ARTIST_DISCOGRAPHY,
+            EnrichmentType.ARTIST_LINKS, EnrichmentType.ARTIST_TIMELINE,
+            EnrichmentType.ARTIST_RADIO, EnrichmentType.ARTIST_TOP_TRACKS,
+            EnrichmentType.GENRE_DISCOVERY,
+        )
+
+        /** Types meaningful for [ForAlbum] requests. */
+        val DEFAULT_ALBUM_TYPES: Set<EnrichmentType> = setOf(
+            EnrichmentType.ALBUM_ART, EnrichmentType.ALBUM_ART_BACK,
+            EnrichmentType.ALBUM_BOOKLET, EnrichmentType.CD_ART,
+            EnrichmentType.GENRE, EnrichmentType.LABEL,
+            EnrichmentType.RELEASE_DATE, EnrichmentType.RELEASE_TYPE,
+            EnrichmentType.COUNTRY, EnrichmentType.ALBUM_METADATA,
+            EnrichmentType.ALBUM_TRACKS, EnrichmentType.RELEASE_EDITIONS,
+            EnrichmentType.SIMILAR_ALBUMS, EnrichmentType.GENRE_DISCOVERY,
+        )
+
+        /** Types meaningful for [ForTrack] requests. */
+        val DEFAULT_TRACK_TYPES: Set<EnrichmentType> = setOf(
+            EnrichmentType.GENRE, EnrichmentType.LYRICS_SYNCED,
+            EnrichmentType.LYRICS_PLAIN, EnrichmentType.TRACK_POPULARITY,
+            EnrichmentType.SIMILAR_TRACKS, EnrichmentType.CREDITS,
+            EnrichmentType.ALBUM_ART, EnrichmentType.GENRE_DISCOVERY,
+        )
+
+        /** Returns the default type set for a given request kind. */
+        fun defaultTypesFor(request: EnrichmentRequest): Set<EnrichmentType> = when (request) {
+            is ForArtist -> DEFAULT_ARTIST_TYPES
+            is ForAlbum -> DEFAULT_ALBUM_TYPES
+            is ForTrack -> DEFAULT_TRACK_TYPES
+        }
     }
 }
 

@@ -4,6 +4,7 @@ import com.landofoz.musicmeta.CatalogFilterMode
 import com.landofoz.musicmeta.EnrichmentConfig
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentResult
+import com.landofoz.musicmeta.EnrichmentResults
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
 import com.landofoz.musicmeta.IdentityMatch
@@ -14,13 +15,13 @@ import com.landofoz.musicmeta.demo.ui.Terminal
 /** Formats enrichment results, search results, and provider info for terminal display. */
 object Formatter {
 
-    fun printResults(results: Map<EnrichmentType, EnrichmentResult>, term: Terminal, cacheHits: Int = 0) {
+    fun printResults(results: EnrichmentResults, term: Terminal, cacheHits: Int = 0) {
         printIdentity(results, term)
         term.println()
 
         var found = 0; var notFound = 0; var errors = 0; var timedOut = 0
 
-        val (successes, rest) = results.entries.partition { it.value is EnrichmentResult.Success }
+        val (successes, rest) = results.raw.entries.partition { it.value is EnrichmentResult.Success }
 
         term.heading("Results")
         for ((type, result) in successes) {
@@ -219,23 +220,20 @@ object Formatter {
         cmd("quit", "", "Exit")
     }
 
-    private fun printIdentity(results: Map<EnrichmentType, EnrichmentResult>, term: Terminal) {
-        val firstSuccess = results.values
-            .filterIsInstance<EnrichmentResult.Success>()
-            .firstOrNull { it.resolvedIdentifiers != null }
-            ?: return
-        val identity = firstSuccess.resolvedIdentifiers ?: return
+    private fun printIdentity(results: EnrichmentResults, term: Terminal) {
+        val resolution = results.identity ?: return
+        val ids = resolution.identifiers
 
-        val hasAny = identity.musicBrainzId != null ||
-            identity.wikidataId != null ||
-            identity.wikipediaTitle != null
+        val hasAny = ids.musicBrainzId != null ||
+            ids.wikidataId != null ||
+            ids.wikipediaTitle != null
         if (!hasAny) return
 
         term.heading("Identity")
-        identity.musicBrainzId?.let { term.keyValue("MBID:", it) }
-        identity.wikidataId?.let { term.keyValue("Wikidata:", it) }
-        identity.wikipediaTitle?.let { term.keyValue("Wikipedia:", it) }
-        firstSuccess.identityMatchScore?.let { score ->
+        ids.musicBrainzId?.let { term.keyValue("MBID:", it) }
+        ids.wikidataId?.let { term.keyValue("Wikidata:", it) }
+        ids.wikipediaTitle?.let { term.keyValue("Wikipedia:", it) }
+        resolution.matchScore?.let { score ->
             val color = if (score >= 90) term.theme.success else term.theme.warning
             term.keyValue("Match:", term.styled("$score%", color))
         }

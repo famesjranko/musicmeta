@@ -7,6 +7,23 @@
 
 ## Decisions
 
+### 2026-03-24: Cache management API — closing the consumer dev map
+
+**Context**: Audit of the v0.7.0 developer experience revealed that while build→get→search flows were clean, update/refresh operations required consumers to import `DefaultEnrichmentEngine` and hand-compute internal cache keys. This leaked an implementation detail: the entity key format (`"artist:Radiohead:GENRE"`) includes the type and uses MBID when available, with name-alias keys for cache convergence after disambiguation. No external consumer should need to know this.
+
+**Decision**: Four new methods on `EnrichmentEngine` interface, plus `forceRefresh` on `enrich()`.
+
+**Key design decisions**:
+- **`invalidate(request, type?)` iterates all `EnrichmentType.entries` when type is null.** The cache interface's `invalidate(entityKey, null)` was designed for a different key format — entity keys embed the type, so "delete all for this entity" requires computing a key per type. 32 iterations is trivial cost for a cache operation.
+- **`invalidateKeys()` private helper shared by `invalidate()` and `forceRefresh`.** Both need to clear the primary key AND the name-alias key (when MBID is present). Extracted to avoid duplication.
+- **`forceRefresh` as a parameter on `enrich()`, not a separate method.** Keeps the full pipeline intact (identity resolution, provider fan-out, caching, catalog filtering). Implementation: invalidate requested types before the normal flow. Profile extensions inherit it for free via delegation.
+- **Entity key functions extracted to `EntityKey.kt`.** `entityKeyFor()` and `entityKeyForName()` were `DefaultEnrichmentEngine` companion methods — internal details that tests referenced. Moved to package-internal top-level functions. Companion keeps thin delegation wrappers to avoid breaking existing test references.
+- **`markManuallySelected`/`isManuallySelected` delegate directly.** These are simple key-computation wrappers — no aliasing complexity since manual selection is always on the primary key.
+
+**Status**: Active
+
+---
+
 ### 2026-03-24: Disambiguation signals — identity match score and "did you mean?"
 
 **Context**: The engine's auto mode (`enrich()` with just a name) silently picks the best MusicBrainz match. Developers had no way to know if the match was confident ("Radiohead" → score 100) or ambiguous ("Bush" → score 80, could be British or Canadian band). The `search()` → pick → `enrich(mbid=...)` flow existed for manual disambiguation, but there was no signal telling developers *when* to use it. Worse, when no match met the threshold, all candidates were silently discarded — the developer got NotFound with zero context.

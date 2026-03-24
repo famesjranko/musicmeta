@@ -4,6 +4,7 @@ import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentEngine
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
+import com.landofoz.musicmeta.EnrichmentResults
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.http.DefaultHttpClient
 import com.landofoz.musicmeta.http.RateLimiter
@@ -270,7 +271,7 @@ class EnrichmentShowcaseTest {
             EnrichmentRequest.forTrack("Bohemian Rhapsody", "Queen", album = "A Night at the Opera"),
             setOf(EnrichmentType.CREDITS),
         )
-        val credits = creditResults[EnrichmentType.CREDITS]
+        val credits = creditResults.raw[EnrichmentType.CREDITS]
         if (credits is EnrichmentResult.Success) {
             println("    provider: ${credits.provider}, conf=${credits.confidence}")
             val data = credits.data as EnrichmentData.Credits
@@ -287,7 +288,7 @@ class EnrichmentShowcaseTest {
             EnrichmentRequest.forAlbum("OK Computer", "Radiohead"),
             setOf(EnrichmentType.RELEASE_EDITIONS),
         )
-        val editions = editionResults[EnrichmentType.RELEASE_EDITIONS]
+        val editions = editionResults.raw[EnrichmentType.RELEASE_EDITIONS]
         if (editions is EnrichmentResult.Success) {
             println("    provider: ${editions.provider}, conf=${editions.confidence}")
             val data = editions.data as EnrichmentData.ReleaseEditions
@@ -306,7 +307,7 @@ class EnrichmentShowcaseTest {
             EnrichmentRequest.forArtist("Radiohead"),
             setOf(EnrichmentType.ARTIST_TIMELINE),
         )
-        val timeline = timelineResults[EnrichmentType.ARTIST_TIMELINE]
+        val timeline = timelineResults.raw[EnrichmentType.ARTIST_TIMELINE]
         if (timeline is EnrichmentResult.Success) {
             println("    provider: ${timeline.provider}, conf=${timeline.confidence}")
             val data = timeline.data as EnrichmentData.ArtistTimeline
@@ -323,7 +324,7 @@ class EnrichmentShowcaseTest {
             EnrichmentRequest.forArtist("Radiohead"),
             setOf(EnrichmentType.GENRE),
         )
-        val genre = genreResults[EnrichmentType.GENRE]
+        val genre = genreResults.raw[EnrichmentType.GENRE]
         if (genre is EnrichmentResult.Success) {
             println("    provider: ${genre.provider}, conf=${genre.confidence}")
             val data = genre.data as EnrichmentData.Metadata
@@ -346,7 +347,7 @@ class EnrichmentShowcaseTest {
             EnrichmentRequest.forArtist("Radiohead"),
             setOf(EnrichmentType.SIMILAR_ARTISTS),
         )
-        val similarArtists = similarArtistResults[EnrichmentType.SIMILAR_ARTISTS]
+        val similarArtists = similarArtistResults.raw[EnrichmentType.SIMILAR_ARTISTS]
         if (similarArtists is EnrichmentResult.Success) {
             println("    provider: ${similarArtists.provider}, conf=${similarArtists.confidence}")
             val data = similarArtists.data as EnrichmentData.SimilarArtists
@@ -364,7 +365,7 @@ class EnrichmentShowcaseTest {
             EnrichmentRequest.forArtist("Daft Punk"),
             setOf(EnrichmentType.ARTIST_RADIO),
         )
-        val radio = radioResults[EnrichmentType.ARTIST_RADIO]
+        val radio = radioResults.raw[EnrichmentType.ARTIST_RADIO]
         if (radio is EnrichmentResult.Success) {
             println("    provider: ${radio.provider}, conf=${radio.confidence}")
             val data = radio.data as EnrichmentData.RadioPlaylist
@@ -381,7 +382,7 @@ class EnrichmentShowcaseTest {
             EnrichmentRequest.forAlbum("OK Computer", "Radiohead"),
             setOf(EnrichmentType.SIMILAR_ALBUMS),
         )
-        val albums = albumResults[EnrichmentType.SIMILAR_ALBUMS]
+        val albums = albumResults.raw[EnrichmentType.SIMILAR_ALBUMS]
         if (albums is EnrichmentResult.Success) {
             println("    provider: ${albums.provider}, conf=${albums.confidence}")
             val data = albums.data as EnrichmentData.SimilarAlbums
@@ -400,7 +401,7 @@ class EnrichmentShowcaseTest {
             EnrichmentRequest.forArtist("Radiohead"),
             setOf(EnrichmentType.GENRE_DISCOVERY),
         )
-        val genreDiscovery = genreDiscoveryResults[EnrichmentType.GENRE_DISCOVERY]
+        val genreDiscovery = genreDiscoveryResults.raw[EnrichmentType.GENRE_DISCOVERY]
         if (genreDiscovery is EnrichmentResult.Success) {
             println("    provider: ${genreDiscovery.provider}, conf=${genreDiscovery.confidence}")
             val data = genreDiscovery.data as EnrichmentData.GenreDiscovery
@@ -421,8 +422,8 @@ class EnrichmentShowcaseTest {
         println("=".repeat(64))
     }
 
-    private fun printResults(results: Map<EnrichmentType, EnrichmentResult>) {
-        val identityResult = results.values
+    private fun printResults(results: EnrichmentResults) {
+        val identityResult = results.raw.values
             .filterIsInstance<EnrichmentResult.Success>()
             .firstOrNull { it.resolvedIdentifiers != null }
         if (identityResult != null) {
@@ -435,8 +436,8 @@ class EnrichmentShowcaseTest {
 
         var found = 0; var missing = 0; var errors = 0
         // Iterate in canonical order but only show types present in results
-        ALL_TYPES.filter { it in results }.forEach { type ->
-            val result = results[type]
+        ALL_TYPES.filter { it in results.raw }.forEach { type ->
+            val result = results.raw[type]
             val line = when (result) {
                 is EnrichmentResult.Success -> {
                     found++

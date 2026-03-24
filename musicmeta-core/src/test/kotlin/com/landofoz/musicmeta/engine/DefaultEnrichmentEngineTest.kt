@@ -32,8 +32,105 @@ class DefaultEnrichmentEngineTest {
         val results = engine(p).enrich(req, setOf(EnrichmentType.ALBUM_ART))
 
         // Then — cached result returned, provider never called
-        assertEquals("cached", (results[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success).provider)
+        assertEquals("cached", (results.raw[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success).provider)
         assertEquals(0, p.enrichCalls.size)
+    }
+
+    @Test fun `enrich skips identity resolution when all types cached`() = runTest {
+        // Given — identity provider that would resolve, and both types already cached
+        val idProvider = FakeProvider(id = "mb", isIdentityProvider = true, capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)))
+            .also { it.givenIdentityResult(EnrichmentResult.Success(EnrichmentType.GENRE, EnrichmentData.Metadata(genres = listOf("rock")), "mb", 0.95f, resolvedIdentifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-123"))) }
+        val types = setOf(EnrichmentType.ALBUM_ART, EnrichmentType.GENRE)
+        for (type in types) {
+            cache.put(DefaultEnrichmentEngine.entityKeyFor(req, type), type, art("cached"))
+        }
+        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider)), cache, FakeHttpClient(), EnrichmentConfig(enableIdentityResolution = true))
+
+        // When — enriching with everything already cached
+        val results = e.enrich(req, types)
+
+        // Then — identity resolution skipped (no providers called), identity is null
+        assertNull("identity should be null when all types served from cache", results.identity)
+        assertEquals(0, idProvider.enrichCalls.size)
+    }
+
+    // --- forceRefresh ---
+
+    @Test fun `enrich with forceRefresh bypasses cache and fetches fresh data`() = runTest {
+        // Given — cache has stale data, provider has fresh data
+        val p = FakeProvider(id = "p", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100)))
+            .also { it.givenResult(EnrichmentType.ALBUM_ART, art("fresh")) }
+        cache.put(DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.ALBUM_ART), EnrichmentType.ALBUM_ART, art("stale"))
+
+        // When — enriching with forceRefresh
+        val results = engine(p).enrich(req, setOf(EnrichmentType.ALBUM_ART), forceRefresh = true)
+
+        // Then — fresh data returned, not stale cache
+        assertEquals("fresh", (results.raw[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success).provider)
+    }
+
+    // --- invalidate ---
+
+    @Test fun `invalidate removes cached result for specific type`() = runTest {
+        // Given — cache has art and genre results
+        val p = FakeProvider(id = "p")
+        val e = engine(p)
+        cache.put(DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.ALBUM_ART), EnrichmentType.ALBUM_ART, art("p"))
+        cache.put(DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.GENRE), EnrichmentType.GENRE, genre("p"))
+
+        // When — invalidating only art
+        e.invalidate(req, EnrichmentType.ALBUM_ART)
+
+        // Then — art gone, genre still cached
+        assertNull(cache.get(DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.ALBUM_ART), EnrichmentType.ALBUM_ART))
+        assertNotNull(cache.get(DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.GENRE), EnrichmentType.GENRE))
+    }
+
+    @Test fun `invalidate with null type removes all cached types`() = runTest {
+        // Given — cache has art and genre results
+        val p = FakeProvider(id = "p")
+        val e = engine(p)
+        cache.put(DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.ALBUM_ART), EnrichmentType.ALBUM_ART, art("p"))
+        cache.put(DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.GENRE), EnrichmentType.GENRE, genre("p"))
+
+        // When — invalidating all types for the request
+        e.invalidate(req)
+
+        // Then — both gone
+        assertNull(cache.get(DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.ALBUM_ART), EnrichmentType.ALBUM_ART))
+        assertNull(cache.get(DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.GENRE), EnrichmentType.GENRE))
+    }
+
+    @Test fun `invalidate clears name-alias key when request has MBID`() = runTest {
+        // Given — result cached under both MBID key and name-alias key
+        val mbidReq = EnrichmentRequest.ForAlbum(EnrichmentIdentifiers(musicBrainzId = "mbid-123"), "OK Computer", "Radiohead")
+        val p = FakeProvider(id = "p")
+        val e = engine(p)
+        cache.put(DefaultEnrichmentEngine.entityKeyFor(mbidReq, EnrichmentType.ALBUM_ART), EnrichmentType.ALBUM_ART, art("p"))
+        cache.put(DefaultEnrichmentEngine.entityKeyForName(mbidReq, EnrichmentType.ALBUM_ART), EnrichmentType.ALBUM_ART, art("p"))
+
+        // When — invalidating the MBID request
+        e.invalidate(mbidReq, EnrichmentType.ALBUM_ART)
+
+        // Then — both keys cleared
+        assertNull(cache.get(DefaultEnrichmentEngine.entityKeyFor(mbidReq, EnrichmentType.ALBUM_ART), EnrichmentType.ALBUM_ART))
+        assertNull(cache.get(DefaultEnrichmentEngine.entityKeyForName(mbidReq, EnrichmentType.ALBUM_ART), EnrichmentType.ALBUM_ART))
+    }
+
+    // --- manual selection ---
+
+    @Test fun `markManuallySelected and isManuallySelected round-trip through cache`() = runTest {
+        // Given — a result cached for the request
+        val p = FakeProvider(id = "p")
+        val e = engine(p)
+        cache.put(DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.ALBUM_ART), EnrichmentType.ALBUM_ART, art("p"))
+
+        // When — marking as manually selected via the engine
+        assertFalse(e.isManuallySelected(req, EnrichmentType.ALBUM_ART))
+        e.markManuallySelected(req, EnrichmentType.ALBUM_ART)
+
+        // Then — manual selection flag persisted
+        assertTrue(e.isManuallySelected(req, EnrichmentType.ALBUM_ART))
     }
 
     @Test fun `enrich fans out to provider chains`() = runTest {
@@ -45,9 +142,9 @@ class DefaultEnrichmentEngineTest {
         val results = engine(p1, p2).enrich(req, setOf(EnrichmentType.ALBUM_ART, EnrichmentType.GENRE))
 
         // Then — both resolved in parallel
-        assertEquals(2, results.size)
-        assertTrue(results[EnrichmentType.ALBUM_ART] is EnrichmentResult.Success)
-        assertTrue(results[EnrichmentType.GENRE] is EnrichmentResult.Success)
+        assertEquals(2, results.raw.size)
+        assertTrue(results.raw[EnrichmentType.ALBUM_ART] is EnrichmentResult.Success)
+        assertTrue(results.raw[EnrichmentType.GENRE] is EnrichmentResult.Success)
     }
 
     @Test fun `enrich caches successful results`() = runTest {
@@ -81,8 +178,8 @@ class DefaultEnrichmentEngineTest {
         val results = engine(p).enrich(req, setOf(EnrichmentType.ALBUM_ART, EnrichmentType.LYRICS_SYNCED))
 
         // Then — art succeeds, lyrics returns NotFound
-        assertTrue(results[EnrichmentType.ALBUM_ART] is EnrichmentResult.Success)
-        assertTrue(results[EnrichmentType.LYRICS_SYNCED] is EnrichmentResult.NotFound)
+        assertTrue(results.raw[EnrichmentType.ALBUM_ART] is EnrichmentResult.Success)
+        assertTrue(results.raw[EnrichmentType.LYRICS_SYNCED] is EnrichmentResult.NotFound)
     }
 
     @Test fun `enrich filters below min confidence`() = runTest {
@@ -94,7 +191,7 @@ class DefaultEnrichmentEngineTest {
         val results = engine(p).enrich(req, setOf(EnrichmentType.ALBUM_ART))
 
         // Then — treated as NotFound
-        assertTrue(results[EnrichmentType.ALBUM_ART] is EnrichmentResult.NotFound)
+        assertTrue(results.raw[EnrichmentType.ALBUM_ART] is EnrichmentResult.NotFound)
     }
 
     @Test fun `enrich with identity resolution enriches identifiers`() = runTest {
@@ -122,7 +219,7 @@ class DefaultEnrichmentEngineTest {
 
     @Test fun `enrich with empty types returns empty map`() = runTest {
         // When / Then
-        assertTrue(engine().enrich(req, emptySet()).isEmpty())
+        assertTrue(engine().enrich(req, emptySet()).raw.isEmpty())
     }
 
     @Test fun `search returns candidates from identity provider`() = runTest {
@@ -174,11 +271,11 @@ class DefaultEnrichmentEngineTest {
         val results = e.enrich(req, setOf(EnrichmentType.GENRE, EnrichmentType.LABEL))
 
         // Then — LABEL gets identity result (non-mergeable identity type)
-        val labelResult = results[EnrichmentType.LABEL] as EnrichmentResult.Success
+        val labelResult = results.raw[EnrichmentType.LABEL] as EnrichmentResult.Success
         assertEquals("Parlophone", (labelResult.data as EnrichmentData.Metadata).label)
 
         // Then — GENRE goes through merge path (mergeable type, not consumed by identity)
-        val genreResult = results[EnrichmentType.GENRE] as EnrichmentResult.Success
+        val genreResult = results.raw[EnrichmentType.GENRE] as EnrichmentResult.Success
         assertTrue("Expected Metadata but got ${genreResult.data::class.simpleName}", genreResult.data is EnrichmentData.Metadata)
     }
 
@@ -222,7 +319,7 @@ class DefaultEnrichmentEngineTest {
         val results = e.enrich(req, setOf(EnrichmentType.GENRE))
 
         // Then — GENRE result comes from genre_merger (not identity resolution)
-        val genreResult = results[EnrichmentType.GENRE] as EnrichmentResult.Success
+        val genreResult = results.raw[EnrichmentType.GENRE] as EnrichmentResult.Success
         assertEquals("genre_merger", genreResult.provider)
         val tags = (genreResult.data as EnrichmentData.Metadata).genreTags!!
         val sources = tags.flatMap { it.sources }.distinct()
@@ -244,7 +341,7 @@ class DefaultEnrichmentEngineTest {
         val results = e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
 
         // Then — RESOLVED with score
-        val artResult = results[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success
+        val artResult = results.raw[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success
         assertEquals(IdentityMatch.RESOLVED, artResult.identityMatch)
         assertEquals(85, artResult.identityMatchScore)
     }
@@ -259,7 +356,7 @@ class DefaultEnrichmentEngineTest {
         val results = engine(p).enrich(reqWithMbid, setOf(EnrichmentType.ALBUM_ART))
 
         // Then — null identity match (pre-resolved, confident)
-        val artResult = results[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success
+        val artResult = results.raw[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success
         assertNull(artResult.identityMatch)
         assertNull(artResult.identityMatchScore)
     }
@@ -280,7 +377,7 @@ class DefaultEnrichmentEngineTest {
         val results = e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
 
         // Then — short-circuited: NotFound with SUGGESTIONS, downstream provider NOT called
-        val artResult = results[EnrichmentType.ALBUM_ART] as EnrichmentResult.NotFound
+        val artResult = results.raw[EnrichmentType.ALBUM_ART] as EnrichmentResult.NotFound
         assertEquals(IdentityMatch.SUGGESTIONS, artResult.identityMatch)
         assertEquals(2, artResult.suggestions!!.size)
         assertEquals("British rock band", artResult.suggestions!![0].disambiguation)
@@ -299,7 +396,7 @@ class DefaultEnrichmentEngineTest {
         val results = e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
 
         // Then — Success but marked as BEST_EFFORT
-        val artResult = results[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success
+        val artResult = results.raw[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success
         assertEquals(IdentityMatch.BEST_EFFORT, artResult.identityMatch)
         assertNull(artResult.identityMatchScore)
     }
@@ -318,7 +415,7 @@ class DefaultEnrichmentEngineTest {
         val results = engine(p).enrich(req, setOf(EnrichmentType.ALBUM_ART))
 
         // Then — manual selection preserved, provider not called
-        val result = results[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success
+        val result = results.raw[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success
         assertEquals("user-selected", result.provider)
         assertEquals(0, p.enrichCalls.size)
     }
@@ -408,6 +505,28 @@ class DefaultEnrichmentEngineTest {
         assertEquals("Identity provider should not have been called", 0, idProvider.enrichCalls.size)
     }
 
+    // --- Cache key convergence after disambiguation ---
+
+    @Test fun `name-only request caches under name key after identity resolution`() = runTest {
+        // Given — identity provider resolves MBID for a name-only request
+        val metadata = EnrichmentData.Metadata(genres = listOf("rock"), label = "Parlophone")
+        val resolvedIds = EnrichmentIdentifiers(musicBrainzId = "mbid-resolved")
+        val idProvider = FakeProvider(id = "mb", isIdentityProvider = true, capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)))
+            .also {
+                it.givenIdentityResult(EnrichmentResult.Success(EnrichmentType.GENRE, metadata, "mb", 0.95f, resolvedIdentifiers = resolvedIds))
+                it.givenResult(EnrichmentType.GENRE, EnrichmentResult.Success(EnrichmentType.GENRE, metadata, "mb", 0.95f))
+            }
+        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider)), cache, FakeHttpClient(), EnrichmentConfig(enableIdentityResolution = true))
+
+        // When — enriching with name-only request (no MBID)
+        val nameReq = EnrichmentRequest.forArtist("Radiohead")
+        e.enrich(nameReq, setOf(EnrichmentType.LABEL))
+
+        // Then — result cached under the name-based key (for future name-only lookups)
+        val nameKey = DefaultEnrichmentEngine.entityKeyForName(nameReq, EnrichmentType.LABEL)
+        assertNotNull("Should be cached under name key", cache.get(nameKey, EnrichmentType.LABEL))
+    }
+
     // --- TTL on EnrichmentType ---
 
     @Test fun `EnrichmentType ALBUM_ART has 90-day default TTL`() {
@@ -470,7 +589,7 @@ class DefaultEnrichmentEngineTest {
         val results = e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
 
         // Then — confidence is the overridden value
-        assertEquals(0.9f, (results[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success).confidence)
+        assertEquals(0.9f, (results.raw[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success).confidence)
     }
 
     @Test fun `confidence override below minConfidence filters result`() = runTest {
@@ -484,7 +603,7 @@ class DefaultEnrichmentEngineTest {
         val results = e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
 
         // Then — filtered out as NotFound
-        assertTrue(results[EnrichmentType.ALBUM_ART] is EnrichmentResult.NotFound)
+        assertTrue(results.raw[EnrichmentType.ALBUM_ART] is EnrichmentResult.NotFound)
     }
 
     // --- Composite timeline ---
@@ -552,7 +671,7 @@ class DefaultEnrichmentEngineTest {
         val results = e.enrich(artistReq, setOf(EnrichmentType.ARTIST_TIMELINE))
 
         // Then — result is Success with ArtistTimeline containing events
-        val timeline = results[EnrichmentType.ARTIST_TIMELINE]
+        val timeline = results.raw[EnrichmentType.ARTIST_TIMELINE]
         assertTrue("Expected Success but got $timeline", timeline is EnrichmentResult.Success)
         val data = (timeline as EnrichmentResult.Success).data as EnrichmentData.ArtistTimeline
         val eventTypes = data.events.map { it.type }
@@ -577,9 +696,9 @@ class DefaultEnrichmentEngineTest {
         val results = e.enrich(artistReq, setOf(EnrichmentType.ARTIST_TIMELINE))
 
         // Then — only ARTIST_TIMELINE is in the result map; sub-types are not exposed
-        assertTrue("ARTIST_TIMELINE should be in results", EnrichmentType.ARTIST_TIMELINE in results)
-        assertFalse("ARTIST_DISCOGRAPHY should NOT be in results", EnrichmentType.ARTIST_DISCOGRAPHY in results)
-        assertFalse("BAND_MEMBERS should NOT be in results", EnrichmentType.BAND_MEMBERS in results)
+        assertTrue("ARTIST_TIMELINE should be in results", EnrichmentType.ARTIST_TIMELINE in results.raw)
+        assertFalse("ARTIST_DISCOGRAPHY should NOT be in results", EnrichmentType.ARTIST_DISCOGRAPHY in results.raw)
+        assertFalse("BAND_MEMBERS should NOT be in results", EnrichmentType.BAND_MEMBERS in results.raw)
     }
 
     @Test fun `ARTIST_TIMELINE gracefully degrades when sub-types return NotFound`() = runTest {
@@ -596,7 +715,7 @@ class DefaultEnrichmentEngineTest {
         val results = e.enrich(artistReq, setOf(EnrichmentType.ARTIST_TIMELINE))
 
         // Then — still a Success with a partial timeline containing just the life-span event
-        val timeline = results[EnrichmentType.ARTIST_TIMELINE]
+        val timeline = results.raw[EnrichmentType.ARTIST_TIMELINE]
         assertTrue("Expected Success but got $timeline", timeline is EnrichmentResult.Success)
         val data = (timeline as EnrichmentResult.Success).data as EnrichmentData.ArtistTimeline
         assertEquals(1, data.events.size)
@@ -620,8 +739,8 @@ class DefaultEnrichmentEngineTest {
         val results = e.enrich(artistReq, setOf(EnrichmentType.ARTIST_TIMELINE, EnrichmentType.ARTIST_DISCOGRAPHY))
 
         // Then — both are in the result map
-        assertTrue("ARTIST_TIMELINE should be in results", results[EnrichmentType.ARTIST_TIMELINE] is EnrichmentResult.Success)
-        assertTrue("ARTIST_DISCOGRAPHY should be in results", results[EnrichmentType.ARTIST_DISCOGRAPHY] is EnrichmentResult.Success)
+        assertTrue("ARTIST_TIMELINE should be in results", results.raw[EnrichmentType.ARTIST_TIMELINE] is EnrichmentResult.Success)
+        assertTrue("ARTIST_DISCOGRAPHY should be in results", results.raw[EnrichmentType.ARTIST_DISCOGRAPHY] is EnrichmentResult.Success)
     }
 
     // --- Genre merging via mergeable type path (GENR-02, GENR-03, GENR-04) ---
@@ -639,7 +758,7 @@ class DefaultEnrichmentEngineTest {
         val results = engine(p1, p2).enrich(req, setOf(EnrichmentType.GENRE))
 
         // Then — result is Success with merged genreTags (rock combined from both providers)
-        val result = results[EnrichmentType.GENRE] as EnrichmentResult.Success
+        val result = results.raw[EnrichmentType.GENRE] as EnrichmentResult.Success
         val metadata = result.data as EnrichmentData.Metadata
         assertNotNull("genreTags should not be null", metadata.genreTags)
         val tagNames = metadata.genreTags!!.map { it.name }
@@ -659,7 +778,7 @@ class DefaultEnrichmentEngineTest {
         val results = engine(p1, p2).enrich(req, setOf(EnrichmentType.GENRE))
 
         // Then — genres list is populated from top merged tag names
-        val result = results[EnrichmentType.GENRE] as EnrichmentResult.Success
+        val result = results.raw[EnrichmentType.GENRE] as EnrichmentResult.Success
         val metadata = result.data as EnrichmentData.Metadata
         assertNotNull("genres list should be populated for backward compatibility", metadata.genres)
         assertTrue("genres should contain rock", "rock" in metadata.genres!!)
@@ -674,7 +793,7 @@ class DefaultEnrichmentEngineTest {
         val results = engine(p1).enrich(req, setOf(EnrichmentType.GENRE))
 
         // Then — provider field is genre_merger
-        val result = results[EnrichmentType.GENRE] as EnrichmentResult.Success
+        val result = results.raw[EnrichmentType.GENRE] as EnrichmentResult.Success
         assertEquals("genre_merger", result.provider)
     }
 
@@ -690,7 +809,7 @@ class DefaultEnrichmentEngineTest {
         val results = engine(p1, p2).enrich(req, setOf(EnrichmentType.ALBUM_ART))
 
         // Then — p1 wins, p2 never called (short-circuit preserved)
-        val result = results[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success
+        val result = results.raw[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success
         assertEquals("p1", result.provider)
         assertEquals(0, p2.enrichCalls.size)
     }
@@ -712,8 +831,8 @@ class DefaultEnrichmentEngineTest {
 
         // Then — NotFound because timelines are ForArtist-only
         assertTrue(
-            "Expected NotFound but got ${results[EnrichmentType.ARTIST_TIMELINE]}",
-            results[EnrichmentType.ARTIST_TIMELINE] is EnrichmentResult.NotFound,
+            "Expected NotFound but got ${results.raw[EnrichmentType.ARTIST_TIMELINE]}",
+            results.raw[EnrichmentType.ARTIST_TIMELINE] is EnrichmentResult.NotFound,
         )
     }
 
@@ -763,7 +882,7 @@ class DefaultEnrichmentEngineTest {
         val results = e.enrich(artistRequest, setOf(EnrichmentType.SIMILAR_ARTISTS))
 
         // Then — result is Success from the merger
-        val result = results[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
+        val result = results.raw[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
         assertEquals("similar_artist_merger", result.provider)
         val data = result.data as EnrichmentData.SimilarArtists
 
@@ -817,7 +936,7 @@ class DefaultEnrichmentEngineTest {
         )
 
         // Then — still returns merged result from the working provider
-        val result = results[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
+        val result = results.raw[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
         assertEquals("similar_artist_merger", result.provider)
         val data = result.data as EnrichmentData.SimilarArtists
         assertEquals(2, data.artists.size)
@@ -860,8 +979,8 @@ class DefaultEnrichmentEngineTest {
 
         // Then — NotFound since no provider succeeded
         assertTrue(
-            "Expected NotFound but got ${results[EnrichmentType.SIMILAR_ARTISTS]}",
-            results[EnrichmentType.SIMILAR_ARTISTS] is EnrichmentResult.NotFound,
+            "Expected NotFound but got ${results.raw[EnrichmentType.SIMILAR_ARTISTS]}",
+            results.raw[EnrichmentType.SIMILAR_ARTISTS] is EnrichmentResult.NotFound,
         )
     }
 
@@ -893,7 +1012,7 @@ class DefaultEnrichmentEngineTest {
         )
 
         // Then — only available provider's results returned
-        val result = results[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
+        val result = results.raw[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
         val data = result.data as EnrichmentData.SimilarArtists
         assertEquals(1, data.artists.size)
         assertEquals("Portishead", data.artists[0].name)
@@ -916,7 +1035,7 @@ class DefaultEnrichmentEngineTest {
         val results = e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
 
         // Then — timed-out type gets Error with TIMEOUT kind
-        val result = results[EnrichmentType.ALBUM_ART]
+        val result = results.raw[EnrichmentType.ALBUM_ART]
         assertTrue("Expected Error but got $result", result is EnrichmentResult.Error)
         assertEquals(ErrorKind.TIMEOUT, (result as EnrichmentResult.Error).errorKind)
         assertEquals("engine", result.provider)
@@ -937,8 +1056,8 @@ class DefaultEnrichmentEngineTest {
         val results = e.enrich(req, setOf(EnrichmentType.ALBUM_ART, EnrichmentType.GENRE))
 
         // Then — cached type returned normally, slow type gets TIMEOUT error
-        assertTrue(results[EnrichmentType.GENRE] is EnrichmentResult.Success)
-        val artResult = results[EnrichmentType.ALBUM_ART]
+        assertTrue(results.raw[EnrichmentType.GENRE] is EnrichmentResult.Success)
+        val artResult = results.raw[EnrichmentType.ALBUM_ART]
         assertTrue("Expected Error but got $artResult", artResult is EnrichmentResult.Error)
         assertEquals(ErrorKind.TIMEOUT, (artResult as EnrichmentResult.Error).errorKind)
     }
@@ -980,7 +1099,7 @@ class DefaultEnrichmentEngineTest {
         val results = e.enrich(artistReq, setOf(EnrichmentType.ARTIST_TIMELINE))
 
         // Then — ARTIST_TIMELINE is returned from cache; discography provider not called again
-        assertTrue("ARTIST_TIMELINE should be Success on second call", results[EnrichmentType.ARTIST_TIMELINE] is EnrichmentResult.Success)
+        assertTrue("ARTIST_TIMELINE should be Success on second call", results.raw[EnrichmentType.ARTIST_TIMELINE] is EnrichmentResult.Success)
         assertEquals("Discography provider should not be called again on cache hit", discoCallsAfterFirst, discoProvider.enrichCalls.size)
     }
 }

@@ -132,7 +132,7 @@ private fun executeCommand(input: String, state: DemoState, term: Terminal, spin
                 val cacheHits = state.cache.hits - hitsBefore
                 Formatter.printResults(results, term, cacheHits)
                 // Store suggestions so 'pick' works from "Did you mean?" prompts
-                val suggestions = results.values
+                val suggestions = results.raw.values
                     .filterIsInstance<EnrichmentResult.NotFound>()
                     .firstOrNull { it.suggestions != null }
                     ?.suggestions
@@ -277,31 +277,9 @@ private fun loadSecrets(): Map<String, String> {
         }
 }
 
-private val ARTIST_TYPES = setOf(
-    EnrichmentType.GENRE, EnrichmentType.ARTIST_BIO, EnrichmentType.ARTIST_PHOTO,
-    EnrichmentType.ARTIST_BACKGROUND, EnrichmentType.ARTIST_LOGO,
-    EnrichmentType.ARTIST_BANNER, EnrichmentType.ARTIST_POPULARITY,
-    EnrichmentType.SIMILAR_ARTISTS, EnrichmentType.BAND_MEMBERS,
-    EnrichmentType.ARTIST_DISCOGRAPHY, EnrichmentType.ARTIST_LINKS,
-    EnrichmentType.ARTIST_TIMELINE, EnrichmentType.ARTIST_RADIO,
-    EnrichmentType.ARTIST_TOP_TRACKS, EnrichmentType.GENRE_DISCOVERY,
-)
-
-private val ALBUM_TYPES = setOf(
-    EnrichmentType.ALBUM_ART, EnrichmentType.ALBUM_ART_BACK,
-    EnrichmentType.ALBUM_BOOKLET, EnrichmentType.CD_ART,
-    EnrichmentType.GENRE, EnrichmentType.LABEL,
-    EnrichmentType.RELEASE_DATE, EnrichmentType.RELEASE_TYPE, EnrichmentType.COUNTRY,
-    EnrichmentType.ALBUM_METADATA, EnrichmentType.ALBUM_TRACKS,
-    EnrichmentType.RELEASE_EDITIONS, EnrichmentType.SIMILAR_ALBUMS,
-    EnrichmentType.GENRE_DISCOVERY,
-)
-
-private val TRACK_TYPES = setOf(
-    EnrichmentType.GENRE, EnrichmentType.LYRICS_SYNCED, EnrichmentType.LYRICS_PLAIN,
-    EnrichmentType.TRACK_POPULARITY, EnrichmentType.SIMILAR_TRACKS,
-    EnrichmentType.CREDITS, EnrichmentType.GENRE_DISCOVERY,
-)
+private val ARTIST_TYPES = EnrichmentRequest.DEFAULT_ARTIST_TYPES
+private val ALBUM_TYPES = EnrichmentRequest.DEFAULT_ALBUM_TYPES
+private val TRACK_TYPES = EnrichmentRequest.DEFAULT_TRACK_TYPES
 
 private val BY_REGEX = Regex("\\s+by\\s+", RegexOption.IGNORE_CASE)
 

@@ -1,6 +1,5 @@
 package com.landofoz.musicmeta.engine
 
-import com.landofoz.musicmeta.CatalogFilterMode
 import com.landofoz.musicmeta.EnrichmentCache
 import com.landofoz.musicmeta.EnrichmentConfig
 import com.landofoz.musicmeta.EnrichmentData
@@ -11,8 +10,9 @@ import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentLogger
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
+import com.landofoz.musicmeta.EnrichmentResults
 import com.landofoz.musicmeta.EnrichmentType
-import com.landofoz.musicmeta.IdentifierRequirement
+import com.landofoz.musicmeta.IdentityResolution
 import com.landofoz.musicmeta.ProviderInfo
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.http.HttpClient
@@ -42,7 +42,12 @@ class DefaultEnrichmentEngine(
     override suspend fun enrich(
         request: EnrichmentRequest,
         types: Set<EnrichmentType>,
-    ): Map<EnrichmentType, EnrichmentResult> {
+        forceRefresh: Boolean,
+    ): EnrichmentResults {
+        if (forceRefresh) {
+            for (type in types) invalidateKeys(request, type)
+        }
+
         val results = mutableMapOf<EnrichmentType, EnrichmentResult>()
         val uncachedTypes = mutableSetOf<EnrichmentType>()
 
@@ -50,14 +55,20 @@ class DefaultEnrichmentEngine(
             val cached = cache.get(entityKeyFor(request, type), type)
             if (cached != null) results[type] = cached else uncachedTypes.add(type)
         }
-        if (uncachedTypes.isEmpty()) return results
+        if (uncachedTypes.isEmpty()) {
+            return EnrichmentResults(results, types, identity = null)
+        }
+
+        var identityResolution: IdentityResolution? = null
 
         try {
             withTimeout(config.enrichTimeoutMs) {
                 var identityResult: EnrichmentResult? = null
-                val enrichedRequest = if (config.enableIdentityResolution && needsIdentityResolution(request, uncachedTypes)) {
+                val enrichedRequest = if (config.enableIdentityResolution && needsIdentityResolution(request, uncachedTypes, registry)) {
                     resolveIdentity(request, results, uncachedTypes).also { identityResult = it.second }.first
                 } else request
+
+                identityResolution = buildIdentityResolution(identityResult, enrichedRequest)
 
                 // Short-circuit: when identity failed with suggestions, skip provider fan-out
                 val identityNotFound = identityResult as? EnrichmentResult.NotFound
@@ -68,7 +79,7 @@ class DefaultEnrichmentEngine(
                     }
                 } else {
                     results.putAll(resolveTypes(enrichedRequest, uncachedTypes, identityResult))
-                    applyCatalogFiltering(results)
+                    applyCatalogFiltering(results, config.catalogProvider, config.catalogFilterMode)
                     stampIdentityMatch(results, identityResult)
                 }
             }
@@ -81,16 +92,37 @@ class DefaultEnrichmentEngine(
             }
         }
 
+        val resolvedMbid = identityResolution?.identifiers?.musicBrainzId
         for ((type, result) in results) {
             if (result is EnrichmentResult.Success) {
-                cache.put(entityKeyFor(request, type), type, result, config.ttlOverrides[type] ?: type.defaultTtlMs)
+                val ttl = config.ttlOverrides[type] ?: type.defaultTtlMs
+                val primaryKey = entityKeyFor(request, type)
+                cache.put(primaryKey, type, result, ttl)
+
+                // Alias: when identity resolution added an MBID, also cache under the
+                // name-based key so future name-only lookups find MBID-resolved data.
+                if (resolvedMbid != null && request.identifiers.musicBrainzId == null) {
+                    val nameKey = entityKeyForName(request, type)
+                    cache.put(nameKey, type, result, ttl)
+                }
             }
         }
-        return results
+        return EnrichmentResults(results, types, identityResolution)
+    }
+
+    override suspend fun invalidate(request: EnrichmentRequest, type: EnrichmentType?) {
+        val types = if (type != null) listOf(type) else EnrichmentType.entries
+        for (t in types) invalidateKeys(request, t)
+    }
+
+    override suspend fun isManuallySelected(request: EnrichmentRequest, type: EnrichmentType): Boolean =
+        cache.isManuallySelected(entityKeyFor(request, type), type)
+
+    override suspend fun markManuallySelected(request: EnrichmentRequest, type: EnrichmentType) {
+        cache.markManuallySelected(entityKeyFor(request, type), type)
     }
 
     override suspend fun search(request: EnrichmentRequest, limit: Int): List<SearchCandidate> {
-        // Identity provider (MusicBrainz) is the primary search source
         val identity = registry.identityProvider()
         val primary = if (identity != null) {
             try {
@@ -103,7 +135,6 @@ class DefaultEnrichmentEngine(
 
         if (primary.size >= limit) return primary.take(limit)
 
-        // Supplement with other providers if primary didn't fill the limit
         val remaining = limit - primary.size
         val supplemental = registry.searchProviders().flatMap { provider ->
             if (!provider.isAvailable) return@flatMap emptyList()
@@ -115,7 +146,6 @@ class DefaultEnrichmentEngine(
             }
         }
 
-        // Deduplicate by title+artist (supplemental may overlap with primary)
         val primaryTitles = primary.map { "${it.title}:${it.artist}".lowercase() }.toSet()
         val unique = supplemental.filter {
             "${it.title}:${it.artist}".lowercase() !in primaryTitles
@@ -124,6 +154,14 @@ class DefaultEnrichmentEngine(
     }
 
     override fun getProviders(): List<ProviderInfo> = registry.providerInfos()
+
+    /** Invalidates both the primary key and the name-alias key for a request/type. */
+    private suspend fun invalidateKeys(request: EnrichmentRequest, type: EnrichmentType) {
+        cache.invalidate(entityKeyFor(request, type), type)
+        if (request.identifiers.musicBrainzId != null) {
+            cache.invalidate(entityKeyForName(request, type), type)
+        }
+    }
 
     /** Returns the enriched request and the raw identity result (for composite type synthesis). */
     private suspend fun resolveIdentity(
@@ -143,12 +181,9 @@ class DefaultEnrichmentEngine(
             return request to result
         }
 
-        // Extract resolved identifiers from the result
         val resolved = result.resolvedIdentifiers
         if (resolved == null) {
             logger.debug(TAG, "Identity resolution returned no resolvedIdentifiers")
-            // Still store the result for identity types if data is Metadata
-            // Skip mergeable types (e.g. GENRE) — they need multi-provider resolution
             if (result.data is EnrichmentData.Metadata) {
                 for (type in IDENTITY_TYPES) {
                     if (type in uncachedTypes && type !in mergeableTypes) {
@@ -161,17 +196,16 @@ class DefaultEnrichmentEngine(
 
         logger.debug(TAG, "Identity resolved: mbid=${resolved.musicBrainzId}, wikidataId=${resolved.wikidataId}, wpTitle=${resolved.wikipediaTitle}")
 
-        // Merge resolved identifiers with existing ones (resolved takes precedence)
         val mergedIds = EnrichmentIdentifiers(
             musicBrainzId = resolved.musicBrainzId ?: request.identifiers.musicBrainzId,
             musicBrainzReleaseGroupId = resolved.musicBrainzReleaseGroupId ?: request.identifiers.musicBrainzReleaseGroupId,
             wikidataId = resolved.wikidataId ?: request.identifiers.wikidataId,
+            isrc = resolved.isrc ?: request.identifiers.isrc,
+            barcode = resolved.barcode ?: request.identifiers.barcode,
             wikipediaTitle = resolved.wikipediaTitle ?: request.identifiers.wikipediaTitle,
             extra = request.identifiers.extra + resolved.extra,
         )
 
-        // Store Metadata result for all identity types with resolved identifiers attached
-        // Skip mergeable types (e.g. GENRE) — they need multi-provider resolution
         if (result.data is EnrichmentData.Metadata) {
             for (type in IDENTITY_TYPES) {
                 if (type in uncachedTypes && type !in mergeableTypes) {
@@ -198,16 +232,13 @@ class DefaultEnrichmentEngine(
         val compositeTypes = types.filter { it in compositeDependencies }
         val standardTypes = types - compositeTypes.toSet()
 
-        // Split standard types into mergeable (e.g. GENRE) vs regular (short-circuit)
         val mergeableRequested = standardTypes.filter { it in mergeableTypes }.toSet()
         val regularTypes = standardTypes - mergeableRequested
 
-        // Composite types need sub-type resolution first
         val compositeSubTypes = compositeTypes
             .flatMap { compositeDependencies[it] ?: emptySet() }
             .toSet() - regularTypes - mergeableRequested
 
-        // Resolve regular types + composite sub-types concurrently (short-circuit behavior)
         val allRegularToResolve = regularTypes + compositeSubTypes
         val resolved = allRegularToResolve.map { type ->
             async {
@@ -217,7 +248,6 @@ class DefaultEnrichmentEngine(
             }
         }.awaitAll().toMap().toMutableMap()
 
-        // Resolve mergeable types concurrently — collect ALL provider results then merge
         val mergeableResults = mergeableRequested.map { mergeType ->
             async {
                 val chain = registry.chainFor(mergeType)
@@ -228,20 +258,14 @@ class DefaultEnrichmentEngine(
         }.awaitAll()
         for ((type, result) in mergeableResults) { resolved[type] = result }
 
-        // Synthesize composite types from resolved sub-types
         for (compositeType in compositeTypes) {
             resolved[compositeType] = synthesizers[compositeType]?.synthesize(resolved, identityResult, request)
                 ?: EnrichmentResult.NotFound(compositeType, "no_composite_handler")
         }
 
-        // Only return types the caller requested — exclude internal sub-types
         resolved.filterKeys { it in types }
     }
 
-    /**
-     * Apply confidence overrides from config, then filter below minConfidence.
-     * If a provider has a confidence override in config, replace the hardcoded value.
-     */
     private fun filterByConfidence(result: EnrichmentResult): EnrichmentResult {
         if (result !is EnrichmentResult.Success) return result
         val override = config.confidenceOverrides[result.provider]
@@ -252,73 +276,6 @@ class DefaultEnrichmentEngine(
         return if (override != null) result.copy(confidence = override) else result
     }
 
-    /** Stamps [IdentityMatch] and score on all freshly resolved results. */
-    private fun stampIdentityMatch(
-        results: MutableMap<EnrichmentType, EnrichmentResult>,
-        identityResult: EnrichmentResult?,
-    ) {
-        when (identityResult) {
-            is EnrichmentResult.Success -> {
-                val score = (identityResult.confidence * 100).toInt()
-                for ((type, result) in results) {
-                    if (result is EnrichmentResult.Success && result.identityMatch == null) {
-                        results[type] = result.copy(identityMatch = IdentityMatch.RESOLVED, identityMatchScore = score)
-                    }
-                }
-            }
-            is EnrichmentResult.NotFound -> {
-                // Identity failed without suggestions — mark Success results as best-effort
-                for ((type, result) in results) {
-                    if (result is EnrichmentResult.Success && result.identityMatch == null) {
-                        results[type] = result.copy(identityMatch = IdentityMatch.BEST_EFFORT)
-                    }
-                }
-            }
-            else -> {} // No identity resolution attempted
-        }
-    }
-
-    /** Applies catalog availability filtering to recommendation results in-place. No-op when null or UNFILTERED. */
-    private suspend fun applyCatalogFiltering(results: MutableMap<EnrichmentType, EnrichmentResult>) {
-        val provider = config.catalogProvider ?: return
-        val mode = config.catalogFilterMode
-        if (mode == CatalogFilterMode.UNFILTERED) return
-
-        for (type in RECOMMENDATION_TYPES) {
-            val result = results[type] as? EnrichmentResult.Success ?: continue
-            val queries = toQueries(result.data) ?: continue
-            if (queries.isEmpty()) continue
-
-            val matches = provider.checkAvailability(queries)
-            results[type] = applyMode(result, matches, mode)
-        }
-    }
-
-    private fun needsIdentityResolution(request: EnrichmentRequest, types: Set<EnrichmentType>): Boolean {
-        val ids = request.identifiers
-        // Always need identity if we have no MBID at all (identity provider resolves it)
-        if (ids.musicBrainzId == null && ids.musicBrainzReleaseGroupId == null) return true
-        // Check if any requested type has providers that need identifiers we're missing
-        for (type in types) {
-            val chain = registry.chainFor(type) ?: continue
-            for (provider in chain.providers()) {
-                val cap = provider.capabilities.firstOrNull { it.type == type } ?: continue
-                val missing = when (cap.identifierRequirement) {
-                    IdentifierRequirement.NONE -> false
-                    IdentifierRequirement.MUSICBRAINZ_ID -> ids.musicBrainzId == null
-                    IdentifierRequirement.MUSICBRAINZ_RELEASE_GROUP_ID -> ids.musicBrainzReleaseGroupId == null
-                    IdentifierRequirement.WIKIDATA_ID -> ids.wikidataId == null
-                    IdentifierRequirement.WIKIPEDIA_TITLE -> ids.wikipediaTitle == null && ids.wikidataId == null
-                    IdentifierRequirement.ANY_IDENTIFIER -> ids.musicBrainzId == null &&
-                        ids.musicBrainzReleaseGroupId == null &&
-                        ids.wikidataId == null && ids.wikipediaTitle == null
-                }
-                if (missing) return true
-            }
-        }
-        return false
-    }
-
     companion object {
         private const val TAG = "EnrichmentEngine"
 
@@ -327,18 +284,12 @@ class DefaultEnrichmentEngine(
             EnrichmentType.RELEASE_TYPE, EnrichmentType.COUNTRY,
         )
 
-        fun entityKeyFor(request: EnrichmentRequest, type: EnrichmentType): String {
-            val prefix = when (request) {
-                is EnrichmentRequest.ForAlbum -> "album"
-                is EnrichmentRequest.ForArtist -> "artist"
-                is EnrichmentRequest.ForTrack -> "track"
-            }
-            val id = request.identifiers.musicBrainzId ?: when (request) {
-                is EnrichmentRequest.ForAlbum -> "${request.artist}:${request.title}"
-                is EnrichmentRequest.ForArtist -> request.name
-                is EnrichmentRequest.ForTrack -> "${request.artist}:${request.title}"
-            }
-            return "$prefix:$id:$type"
-        }
+        /** @see entityKeyFor */
+        fun entityKeyFor(request: EnrichmentRequest, type: EnrichmentType): String =
+            com.landofoz.musicmeta.engine.entityKeyFor(request, type)
+
+        /** @see entityKeyForName */
+        fun entityKeyForName(request: EnrichmentRequest, type: EnrichmentType): String =
+            com.landofoz.musicmeta.engine.entityKeyForName(request, type)
     }
 }
