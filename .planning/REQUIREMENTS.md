@@ -77,32 +77,32 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| HTTP-01 | Pending | Pending |
-| HTTP-02 | Pending | Pending |
-| HTTP-03 | Pending | Pending |
-| HTTP-04 | Pending | Pending |
-| HTTP-05 | Pending | Pending |
-| CACHE-01 | Pending | Pending |
-| CACHE-02 | Pending | Pending |
-| CACHE-03 | Pending | Pending |
-| CACHE-04 | Pending | Pending |
-| CACHE-05 | Pending | Pending |
-| CACHE-06 | Pending | Pending |
-| BATCH-01 | Pending | Pending |
-| BATCH-02 | Pending | Pending |
-| BATCH-03 | Pending | Pending |
-| BATCH-04 | Pending | Pending |
-| PUB-01 | Pending | Pending |
-| PUB-02 | Pending | Pending |
-| PUB-03 | Pending | Pending |
-| PUB-04 | Pending | Pending |
-| PUB-05 | Pending | Pending |
+| HTTP-01 | Phase 19 | Pending |
+| HTTP-02 | Phase 19 | Pending |
+| HTTP-03 | Phase 19 | Pending |
+| HTTP-04 | Phase 19 | Pending |
+| HTTP-05 | Phase 19 | Pending |
+| CACHE-01 | Phase 20 | Pending |
+| CACHE-02 | Phase 20 | Pending |
+| CACHE-03 | Phase 20 | Pending |
+| CACHE-04 | Phase 20 | Pending |
+| CACHE-05 | Phase 20 | Pending |
+| CACHE-06 | Phase 20 | Pending |
+| BATCH-01 | Phase 21 | Pending |
+| BATCH-02 | Phase 21 | Pending |
+| BATCH-03 | Phase 21 | Pending |
+| BATCH-04 | Phase 21 | Pending |
+| PUB-01 | Phase 22 | Pending |
+| PUB-02 | Phase 22 | Pending |
+| PUB-03 | Phase 22 | Pending |
+| PUB-04 | Phase 22 | Pending |
+| PUB-05 | Phase 22 | Pending |
 
 **Coverage:**
 - v0.8.0 requirements: 19 total
-- Mapped to phases: 0
-- Unmapped: 19
+- Mapped to phases: 19
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-24*
-*Last updated: 2026-03-24 after initial definition*
+*Last updated: 2026-03-24 after roadmap creation*

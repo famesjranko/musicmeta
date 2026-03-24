@@ -5,6 +5,7 @@
 - ✅ **v0.4.0 Provider Abstraction Overhaul** — Phases 1-5 (shipped 2026-03-21)
 - ✅ **v0.5.0 New Capabilities & Tech Debt Cleanup** — Phases 6-11 (shipped 2026-03-22)
 - ✅ **v0.6.0 Recommendations Engine** — Phases 12-18 (shipped 2026-03-23)
+- 🚧 **v0.8.0 Production Readiness** — Phases 19-22 (in progress)
 
 ## Phases
 
@@ -50,6 +51,78 @@ Full details: `.planning/milestones/v0.6.0-ROADMAP.md`
 
 </details>
 
+### 🚧 v0.8.0 Production Readiness (In Progress)
+
+**Milestone Goal:** Address the four production readiness gaps identified by external review — OkHttp adapter for Android teams, offline stale cache fallback, bulk enrichment Flow API, and Maven Central distribution.
+
+- [ ] **Phase 19: OkHttp Adapter** - New `musicmeta-okhttp` module; `OkHttpEnrichmentClient` implementing all 10 `HttpClient` methods
+- [ ] **Phase 20: Stale Cache** - `CacheMode.STALE_IF_ERROR` serving expired cache entries on Error/RateLimited with `isStale` flag
+- [ ] **Phase 21: Bulk Enrichment** - `enrichBatch()` returning `Flow<Pair<EnrichmentRequest, EnrichmentResults>>` with sequential iteration and cooperative cancellation
+- [ ] **Phase 22: Maven Central Publishing** - All 3 modules published to Maven Central via Central Portal using vanniktech plugin
+
+## Phase Details
+
+### Phase 19: OkHttp Adapter
+**Goal**: Android developers can pass their existing `OkHttpClient` instance to `EnrichmentEngine.Builder` and use all engine features without running two HTTP stacks in their app
+**Depends on**: Phase 18 (v0.6.0 complete)
+**Requirements**: HTTP-01, HTTP-02, HTTP-03, HTTP-04, HTTP-05
+**Success Criteria** (what must be TRUE):
+  1. Developer can create `OkHttpEnrichmentClient(okHttpClient)` and pass it to `EnrichmentEngine.Builder.httpClient()` — the engine uses it for all HTTP calls
+  2. All 10 `HttpClient` methods work correctly: JSON object, JSON array, body, redirect URL, POST variants, and all four `HttpResult`-returning variants
+  3. HTTP 429 responses map to `RateLimited`, 4xx responses map to `ClientError`, 5xx responses map to `ServerError` — the same semantics as `DefaultHttpClient`
+  4. Gzip decompression works transparently — OkHttp handles it automatically without a manually set `Accept-Encoding` header
+  5. Adding `musicmeta-okhttp` to a project that doesn't declare it adds no transitive OkHttp dependency to `musicmeta-core`
+**Plans**: TBD
+
+Plans:
+- [ ] 19-01: Create `musicmeta-okhttp` Gradle module; add OkHttp 4.12.0 + MockWebServer to version catalog; implement `OkHttpEnrichmentClient` with all 10 methods
+- [ ] 19-02: Write MockWebServer integration tests covering all 10 methods, status code mapping, gzip decompression, and response body lifecycle
+
+### Phase 20: Stale Cache
+**Goal**: Consumers running under degraded network conditions (Error or RateLimited responses) get the last known data with an `isStale` flag instead of empty results
+**Depends on**: Phase 19
+**Requirements**: CACHE-01, CACHE-02, CACHE-03, CACHE-04, CACHE-05, CACHE-06
+**Success Criteria** (what must be TRUE):
+  1. Developer can set `CacheMode.STALE_IF_ERROR` in `EnrichmentConfig` — existing callers with no `cacheMode` set see no behavior change
+  2. When the provider returns `Error` or `RateLimited` and an expired cache entry exists, the engine returns that entry as `EnrichmentResult.Success` with `isStale = true`
+  3. When the provider returns `NotFound` and an expired cache entry exists, the engine returns `NotFound` — stale data is not served for genuine not-found responses
+  4. A stale result served from cache is not re-written to cache; the expired entry's TTL is not renewed
+  5. `InMemoryEnrichmentCache.getIncludingExpired()` returns the expired entry directly without calling `get()` internally
+**Plans**: TBD
+
+Plans:
+- [ ] 20-01: Add `CacheMode` enum; add `isStale: Boolean = false` to `EnrichmentResult.Success`; add `getIncludingExpired()` default method to `EnrichmentCache`; update `InMemoryEnrichmentCache`
+- [ ] 20-02: Wire `STALE_IF_ERROR` logic into `DefaultEnrichmentEngine` (post-error stale lookup + `!result.isStale` cache-write guard); update `RoomEnrichmentCache` with new DAO query; update `FakeEnrichmentCache`; write 8 unit tests
+
+### Phase 21: Bulk Enrichment
+**Goal**: Developers can enrich a list of requests with a single call, receiving results as a Flow so they can show progress or stop early — without writing for-loop boilerplate
+**Depends on**: Phase 20
+**Requirements**: BATCH-01, BATCH-02, BATCH-03, BATCH-04
+**Success Criteria** (what must be TRUE):
+  1. Developer can call `engine.enrichBatch(requests, types)` and collect a `Flow<Pair<EnrichmentRequest, EnrichmentResults>>` that emits one pair per request as each completes
+  2. Cancelling the Flow (e.g., via `take(N)` or scope cancellation) stops processing the remaining requests without error
+  3. Cache hits in the batch return immediately — the rate limiter delay is not applied to requests that are served entirely from cache
+**Plans**: TBD
+
+Plans:
+- [ ] 21-01: Add `enrichBatch()` default method to `EnrichmentEngine` interface; add explicit override in `DefaultEnrichmentEngine`; write `EnrichmentBatchTest` with Turbine covering normal batch, cancellation, empty list, exception safety, and force-refresh propagation
+
+### Phase 22: Maven Central Publishing
+**Goal**: Library consumers can declare `musicmeta-core`, `musicmeta-okhttp`, and `musicmeta-android` as Maven Central dependencies — unlocking Dependabot, Renovate, and corporate artifact proxies that block JitPack
+**Depends on**: Phase 19, Phase 20, Phase 21
+**Requirements**: PUB-01, PUB-02, PUB-03, PUB-04, PUB-05
+**Success Criteria** (what must be TRUE):
+  1. All three modules publish to Maven Central via Sonatype Central Portal using the vanniktech `gradle-maven-publish-plugin` (v0.36.0) — not OSSRH, which was shut down June 2025
+  2. Published artifacts include sources and javadoc jars alongside the main jar
+  3. Published POMs include license (Apache 2.0), developer name/email, and SCM URL pointing to the repository
+  4. Artifacts are GPG-signed when a key is configured (signing skipped gracefully when key is absent)
+  5. JitPack coordinates remain unchanged — existing consumers do not need to update their build files
+**Plans**: TBD
+
+Plans:
+- [ ] 22-01: Apply vanniktech plugin per-module with `CENTRAL_PORTAL` host, `AndroidSingleVariantLibrary` for android module, POM metadata, GPG signing; add credential placeholders to `gradle.properties`
+- [ ] 22-02: Verify publishing dry-run for all three modules; update README with Maven Central coordinates and badge
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -65,10 +138,14 @@ Full details: `.planning/milestones/v0.6.0-ROADMAP.md`
 | 9. Artist Timeline | v0.5.0 | 2/2 | Complete | 2026-03-21 |
 | 10. Genre Enhancement | v0.5.0 | 3/3 | Complete | 2026-03-21 |
 | 11. Provider Coverage | v0.5.0 | 3/3 | Complete | 2026-03-21 |
-| 12. Engine Refactoring | v0.6.0 | 2/2 | Complete    | 2026-03-22 |
-| 13. Similar Artists + Merger | v0.6.0 | 2/2 | Complete    | 2026-03-22 |
-| 14. Artist Radio | v0.6.0 | 2/2 | Complete    | 2026-03-22 |
-| 15. Similar Albums | v0.6.0 | 2/2 | Complete    | 2026-03-22 |
-| 16. Genre Discovery | v0.6.0 | 2/2 | Complete    | 2026-03-22 |
-| 17. Catalog Filtering Interface | v0.6.0 | 2/2 | Complete    | 2026-03-22 |
-| 18. Integration and Docs | v0.6.0 | 2/2 | Complete    | 2026-03-22 |
+| 12. Engine Refactoring | v0.6.0 | 2/2 | Complete | 2026-03-22 |
+| 13. Similar Artists + Merger | v0.6.0 | 2/2 | Complete | 2026-03-22 |
+| 14. Artist Radio | v0.6.0 | 2/2 | Complete | 2026-03-22 |
+| 15. Similar Albums | v0.6.0 | 2/2 | Complete | 2026-03-22 |
+| 16. Genre Discovery | v0.6.0 | 2/2 | Complete | 2026-03-22 |
+| 17. Catalog Filtering Interface | v0.6.0 | 2/2 | Complete | 2026-03-22 |
+| 18. Integration and Docs | v0.6.0 | 2/2 | Complete | 2026-03-23 |
+| 19. OkHttp Adapter | v0.8.0 | 0/2 | Not started | - |
+| 20. Stale Cache | v0.8.0 | 0/2 | Not started | - |
+| 21. Bulk Enrichment | v0.8.0 | 0/1 | Not started | - |
+| 22. Maven Central Publishing | v0.8.0 | 0/2 | Not started | - |

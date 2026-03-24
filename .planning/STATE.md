@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v0.8.0
 milestone_name: Production Readiness
-status: not_started
+status: ready_to_plan
 stopped_at: null
 last_updated: "2026-03-24"
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
-  total_plans: 0
+  total_plans: 7
   completed_plans: 0
 ---
 
@@ -19,19 +19,20 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-24)
 
 **Core value:** Consumers get comprehensive, accurate music metadata from a single enrich() call without knowing which APIs exist, how they authenticate, or how to correlate identifiers across services.
-**Current focus:** Defining requirements for v0.8.0
+**Current focus:** Phase 19 — OkHttp Adapter
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-03-24 — Milestone v0.8.0 started
+Phase: 19 of 22 (OkHttp Adapter)
+Plan: 0 of 2 in current phase
+Status: Ready to plan
+Last activity: 2026-03-24 — Roadmap created for v0.8.0
+
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
 **Velocity:**
-
 - Total plans completed: 0 (v0.8.0)
 - Average duration: --
 - Total execution time: 0 hours
@@ -48,11 +49,12 @@ Last activity: 2026-03-24 — Milestone v0.8.0 started
 
 ### Decisions
 
-- Engine refactoring must precede all feature phases: ResultMerger and CompositeSynthesizer interfaces are prerequisites for Phase 13 (SimilarArtistMerger) and Phase 16 (GENRE_DISCOVERY synthesizer)
-- SIMILAR_ARTISTS promoted to MERGEABLE_TYPES: adding Deezer at priority 50 to a short-circuit chain silently discards Deezer data; merger must come first
-- Deezer artist ID resolution via searchArtist + ArtistMatcher.isMatch() guard: check identifiers.extra["deezerId"] first, fall back to search, return NotFound rather than guessing
-- SimilarAlbumsProvider is standalone (NOT composite): synthesizer must be pure with no I/O; Deezer related artists + top albums fetched inside the provider, not the synthesizer
-- CatalogProvider interface only — no implementations shipped in v0.6.0; AVAILABLE_ONLY and AVAILABLE_FIRST modes wired at engine level
+- OkHttp 4.12.0 (not 5.x): OkHttp 5.x forces Kotlin 2.2.x stdlib onto library consumers; 4.x avoids the conflict
+- OSSRH is dead (shut down June 30, 2025): Phase 22 must use vanniktech gradle-maven-publish-plugin v0.36.0 targeting SonatypeHost.CENTRAL_PORTAL — not OSSRH URLs
+- HttpClient has 10 methods (not 12): PROJECT.md had an incorrect count; implement all 10 methods in OkHttpEnrichmentClient
+- No manual Accept-Encoding in OkHttp adapter: OkHttp adds the header automatically; setting it manually disables transparent decompression and delivers raw gzip bytes to the JSON parser
+- Mutex non-reentrant in InMemoryEnrichmentCache: getIncludingExpired() must access the entries map directly under its own lock, never by delegating to get()
+- Stale results must not be re-cached: add !result.isStale guard to engine cache-write loop to prevent expired data from receiving a fresh TTL
 
 ### Pending Todos
 
@@ -60,10 +62,11 @@ None yet.
 
 ### Blockers/Concerns
 
-None yet.
+- [Phase 22] Central Portal namespace verification: whether com.landofoz is registered in Sonatype Central Portal is unknown; first publish may require manual approval (1-2 business days)
+- [Phase 22] GPG key existence: key generation, config, and keyserver upload add pre-Phase-22 setup time if no key exists
 
 ## Session Continuity
 
 Last session: 2026-03-24
-Stopped at: Milestone v0.8.0 initialized
+Stopped at: Roadmap created — ready to plan Phase 19
 Resume file: None
