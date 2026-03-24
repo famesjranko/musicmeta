@@ -45,7 +45,7 @@ The library is a tool for developers to wield for their needs, not a framework t
 
 ---
 
-## Where We Are (v0.7.0)
+## Where We Are (v0.8.1)
 
 ### What Changed Since v0.6.0
 
@@ -60,7 +60,7 @@ Key additions:
 
 ### What Changed in v0.6.0
 
-v0.6.0 was **Recommendations Engine** — 7 phases, 14 plans, shipped 2026-03-23.
+v0.6.0 was **Recommendations Engine** — shipped 2026-03-23.
 
 Key additions:
 - **SIMILAR_ARTISTS multi-provider merge** — Deezer `/artist/{id}/related` added as third provider. SIMILAR_ARTISTS promoted to mergeable type (like GENRE). `SimilarArtistMerger` deduplicates by name, uses additive scoring capped at 1.0, and tracks contributing sources per artist.
@@ -248,19 +248,19 @@ Ranked by **impact to consumers × implementation effort**:
 | 26 | Band member dedup + solo artists | Enhancement | Medium | Low | ✅ Done — MBID dedup, Person-type returns sole member |
 | 27 | Performance (MB caching + parallel resolveAll) | Enhancement | Medium | Medium | ✅ Done — ~6s faster for artist enrichment |
 | 28 | Search disambiguation | Enhancement | Medium | Low | ✅ Done — SearchCandidate.disambiguation + pick-and-enrich flow |
-| 29 | OkHttp adapter | Enhancement | High | Low | Planned (v0.8.0) — `musicmeta-okhttp` module, ~1 day |
-| 30 | Stale-while-revalidate cache | Enhancement | High | Medium | Planned (v0.8.0) — `CacheMode` enum, offline fallback, ~2-3 days |
-| 31 | Bulk enrichment (simple) | Enhancement | High | Low | Planned (v0.8.0) — sequential `enrichBatch()` with Flow emission, ~1 day |
-| 32 | Maven Central publishing | Enhancement | High | Medium | Planned (v0.8.0) — Sonatype config + BOM, ~1 day code + ops |
-| 33 | API stability (v1.0.0) | Milestone | High | Low | Planned (v1.0.0) — semver guarantees, freeze public API |
+| 29 | OkHttp adapter | Enhancement | High | Low | ✅ Done (v0.8.0) — `musicmeta-okhttp` module |
+| 30 | Stale-while-revalidate cache | Enhancement | High | Medium | ✅ Done (v0.8.0) — `CacheMode.STALE_IF_ERROR`, offline fallback |
+| 31 | Bulk enrichment (simple) | Enhancement | High | Low | ✅ Done (v0.8.0) — sequential `enrichBatch()` with Flow emission |
+| 32 | Maven Central publishing | Enhancement | High | Medium | ✅ Done (v0.8.0) — `io.github.famesjranko` on Maven Central |
+| 33 | API stability (v1.0.0) | Milestone | High | Low | Planned — semver guarantees, freeze public API |
 | — | ~~Flow-based progressive API~~ | Enhancement | Medium | High | Deferred — marginal benefit vs complexity; callers can split enrich() calls |
 
 ---
 
 ## Summary
 
-| Dimension | v0.1.0 | v0.4.0 | v0.5.0 | v0.6.0 | v0.7.0 | v0.8.0 (planned) | v1.0.0 (planned) |
-|-----------|--------|--------|--------|--------|--------|------------------|------------------|
+| Dimension | v0.1.0 | v0.4.0 | v0.5.0 | v0.6.0 | v0.7.0 | v0.8.x | v1.0.0 (planned) |
+|-----------|--------|--------|--------|--------|--------|--------|------------------|
 | Enrichment types | 16 | 25 (+9) | 28 (+3) | 32 (+4) | 32 | 32 | 32 |
 | Provider utilization | ~30% avg | ~48% avg | ~57% avg | ~60% avg | ~60% avg | ~60% avg | ~60% avg |
 | Engine concepts | Provider chains | + Typed identifiers, mapper pattern, confidence calculator | + Composite types, mergeable types, GenreMerger | + ResultMerger/CompositeSynthesizer interfaces, CatalogProvider filtering, ArtworkMerger | + EnrichmentResults wrapper, IdentityResolution, profiles, default type sets | + OkHttp adapter, stale cache, bulk enrichment | API freeze, semver |
@@ -268,7 +268,7 @@ Ranked by **impact to consumers × implementation effort**:
 | "App-ready" album page | Partial | Full | **Complete** | **Complete** + similar albums | `engine.albumProfile("OK Computer", "Radiohead")` | + offline support, bulk loading | Stable |
 | "App-ready" now-playing | Partial | Rich | **Complete** | **Complete** + catalog-aware | `engine.trackProfile("Creep", "Radiohead")` | + offline support | Stable |
 | Android integration | Room cache | + Hilt module | + WorkManager | + WorkManager | + WorkManager | + OkHttp adapter | Stable |
-| Distribution | JitPack | JitPack | JitPack | JitPack | JitPack | + Maven Central | Maven Central |
+| Distribution | JitPack | JitPack | JitPack | JitPack | JitPack | JitPack + Maven Central | Maven Central |
 
 **The metadata + recommendations story is nearly complete.** A music app using musicmeta now gets metadata, discovery, and radio features from a single `enrich()` call. The architecture supports four enrichment patterns: standard provider chains, composite synthesis, multi-provider merging, and catalog-aware filtering.
 
@@ -289,7 +289,7 @@ Ranked by **impact to consumers × implementation effort**:
 
 **9/10 goal categories complete or mostly complete.** Remaining: Catalog Awareness implementations (interface shipped, concrete implementations deferred).
 
-**Production readiness gaps identified by external review:** HttpURLConnection-only HTTP stack (no OkHttp adapter), JitPack-only distribution, no offline/stale cache mode, no bulk enrichment API. Addressed in v0.8.0 milestone (~5-6 days estimated). Flow-based progressive API assessed and deferred — marginal benefit vs complexity.
+**Production readiness gaps identified by external review:** HttpURLConnection-only HTTP stack (no OkHttp adapter), JitPack-only distribution, no offline/stale cache mode, no bulk enrichment API. All addressed in v0.8.0. Flow-based progressive API assessed and deferred — marginal benefit vs complexity.
 
 #### Recommendation Module Status
 
@@ -322,44 +322,16 @@ The consumer API now covers the full developer journey: build → get → update
 ## Planned Milestones
 
 ### ✅ v0.6.0 — Recommendations Engine — SHIPPED 2026-03-23
-Built discovery features on top of the enrichment data: multi-provider SIMILAR_ARTISTS merge (Last.fm + ListenBrainz + Deezer), ARTIST_RADIO (Deezer radio endpoint), SIMILAR_ALBUMS (synthesized from related artists + era scoring), GENRE_DISCOVERY (static genre affinity taxonomy), and CatalogProvider interface for library-aware filtering. 7 phases, 14 plans, 32 enrichment types.
+Built discovery features: multi-provider SIMILAR_ARTISTS merge (Last.fm + ListenBrainz + Deezer), ARTIST_RADIO (Deezer radio endpoint), SIMILAR_ALBUMS (synthesized from related artists + era scoring), GENRE_DISCOVERY (static genre affinity taxonomy), and CatalogProvider interface for library-aware filtering.
 
 ### ✅ v0.7.0 — Developer Experience — SHIPPED 2026-03-24
-Added a convenience layer: `EnrichmentResults` wrapper with 19 named accessors, top-level `IdentityResolution`, `wasRequested()`/`result()` for diagnostics, default type sets per entity kind, and profile extension functions (`artistProfile()`, `albumProfile()`, `trackProfile()`) with `SearchCandidate` overloads and `forceRefresh` support. Cache management API: `engine.invalidate(request)`, `engine.isManuallySelected()`/`markManuallySelected()`. Also fixed ProviderChain failure preservation, Room cache identity round-tripping, and cache key convergence after disambiguation. Developer guide split into 7 focused pages under `docs/guides/`.
+Added a convenience layer: `EnrichmentResults` wrapper with 19 named accessors, profile extension functions (`artistProfile()`, `albumProfile()`, `trackProfile()`), default type sets, cache management API (`invalidate()`, `forceRefresh`, `markManuallySelected()`). Fixed ProviderChain failure preservation, Room cache identity round-tripping, and cache key convergence. Developer guide split into 7 focused pages under `docs/guides/`.
 
-### v0.8.0 — Production Readiness
+### ✅ v0.8.0 — Production Readiness — SHIPPED 2026-03-24
+Addressed four adoption blockers: `musicmeta-okhttp` module (OkHttp adapter), `CacheMode.STALE_IF_ERROR` (offline fallback), `enrichBatch()` (bulk enrichment via Flow), Maven Central publishing via vanniktech plugin.
 
-External review identified real gaps in Android integration and production readiness. This milestone addresses the four highest-impact items — chosen by value-to-effort ratio, no architectural rewrites.
-
-**Deliberately deferred:** Flow-based progressive API (`enrichFlow()` emitting partial results). Assessed and rejected for v0.8.0 — identity resolution blocks all emission, mergeable types (artwork, genres, similar artists) can't emit until all providers finish, so the actual progressive benefit is marginal. Callers who need progressive loading can make separate `enrich()` calls with different type sets today. Revisit if real demand emerges.
-
-#### OkHttp HttpClient adapter
-**Problem**: `DefaultHttpClient` uses `java.net.HttpURLConnection`. Every Android project already has OkHttp — developers can't leverage existing interceptors, certificate pinning, proxy config, or connection pooling.
-
-**Solution**: Ship `OkHttpEnrichmentClient` implementing `HttpClient` in a new `musicmeta-okhttp` module (optional dependency). Developers pass their existing `OkHttpClient` instance. The `HttpClient` interface already exists with 12 methods — this is a transport swap, not an architecture change. ~200 lines.
-
-**Effort**: ~1 day.
-
-#### Stale-while-revalidate cache mode
-**Problem**: Cache returns `null` on TTL expiry. No offline fallback, no stale serving with freshness indicator. Mobile apps with intermittent connectivity get nothing when the network is down and cache is expired.
-
-**Solution**: Add `CacheMode` enum to `EnrichmentConfig`: `NETWORK_FIRST` (current behavior), `STALE_IF_ERROR` (serve expired data when network fails, flagged with `isStale: Boolean` on results), `CACHE_FIRST` (always serve cache, refresh in background). Add `getIncludingExpired()` to `EnrichmentCache` with default implementation returning `null` (backward-compatible). Cache implementations stop deleting expired entries on read — cleanup stays explicit via `deleteExpired()`. Room migration required for `RoomEnrichmentCache`.
-
-**Effort**: ~2-3 days.
-
-#### Bulk enrichment (simple)
-**Problem**: Enriching a library screen (20 albums) means 20 serial MusicBrainz lookups at 1 req/sec = 20+ seconds. No progress feedback.
-
-**Solution**: Add `engine.enrichBatch(requests, types): Flow<Pair<EnrichmentRequest, EnrichmentResults>>`. Simple implementation: iterates requests sequentially, emits each result as it completes. MusicBrainz rate limiter naturally throttles. Cache hits return instantly (no queue wait). Progress is implicit in the flow (count emissions vs total). This gives 90% of the value — per-entity callbacks, cache optimization, natural backpressure — without building a pipelining scheduler. Real pipelining (concurrent identity resolution + downstream fan-out overlap) deferred until someone proves the simple version is the bottleneck.
-
-**Effort**: ~1 day.
-
-#### Maven Central publishing
-**Problem**: JitPack-only distribution. Corporate environments often block JitPack for supply chain security reasons.
-
-**Solution**: Add Sonatype/Maven Central publishing config (`signing`, `maven-publish` with repository URLs, POM metadata). Publish `musicmeta-core`, `musicmeta-android`, and `musicmeta-okhttp` as a BOM. JitPack remains supported as an alternative. Code changes are small (~1 day); operational setup (Sonatype account, GPG key, CI secrets) is the real work.
-
-**Effort**: ~1 day code + ~1-2 days ops.
+### ✅ v0.8.1 — Patch — SHIPPED 2026-03-25
+Search fuzzy fallback fix, demo v0.8.0 features (OkHttp toggle, batch, stale cache), Maven group ID changed to `io.github.famesjranko`, CI workflow for automated publishing.
 
 ### v0.9.0 — Catalog Implementations & User-Scoped Features
 `CatalogProvider` interface and filtering modes shipped in v0.6.0. This milestone adds concrete implementations: `LocalLibraryCatalog` (file scanning + fingerprint matching), `SpotifyCatalog` (OAuth + catalog check), `YouTubeMusicCatalog`. Also adds ListenBrainz collaborative filtering (user-scoped recommendations requiring username in request). May introduce `ForUser` request variant or dedicated engine method.

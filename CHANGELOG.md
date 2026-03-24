@@ -25,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.8.0] - 2026-03-24
 
-Production Readiness — 4 phases, 7 plans, 32 enrichment types.
+Production Readiness — 32 enrichment types.
 
 ### Added
 - **`musicmeta-okhttp` module** — `OkHttpEnrichmentClient` implementing all 10 `HttpClient` methods via OkHttp 4.12.0 `Call` API. Transparent gzip decompression (no manual `Accept-Encoding` header). No built-in retry — delegates to OkHttp interceptors. Timeouts inherited from caller's `OkHttpClient` instance.
@@ -83,7 +83,7 @@ Developer Experience — profiles, named accessors, cache management, identity s
 
 ## [0.6.0] - 2026-03-23
 
-Recommendations Engine — 7 phases, 14 plans, 31 enrichment types.
+Recommendations Engine — 31 enrichment types.
 
 ### Added
 - `SIMILAR_ARTISTS` multi-provider merge — Last.fm, ListenBrainz, and Deezer results deduplicated and combined via `SimilarArtistMerger`; each `SimilarArtist` has a `sources` field listing contributing providers
@@ -100,18 +100,18 @@ Recommendations Engine — 7 phases, 14 plans, 31 enrichment types.
 - `RadioPlaylist` and `RadioTrack` data classes — playlist container and track with `durationMs: Long?`
 - `CatalogQuery` and `CatalogMatch` data classes — input/output types for `CatalogProvider.checkAvailability()`
 - `GenreTaxonomy.kt` — static genre affinity data extracted to its own file (pure constant, no logic)
-- `CatalogFilter.kt` — catalog filtering helpers extracted from `DefaultEnrichmentEngine` to keep engine under 300 lines
+- `CatalogFilter.kt` — catalog filtering helpers extracted from `DefaultEnrichmentEngine`
 - Enrichment showcase test updated with v0.6.0 feature spotlight (SIMILAR_ARTISTS merge, ARTIST_RADIO, SIMILAR_ALBUMS, GENRE_DISCOVERY)
 
 ### Changed
-- `DefaultEnrichmentEngine` delegates mergeable-type dispatch to `ProviderRegistry.mergers` (was inline); delegates composite-type dispatch to `ProviderRegistry.synthesizers` (was inline); now under 300 lines
+- `DefaultEnrichmentEngine` delegates mergeable-type dispatch to `ProviderRegistry.mergers` (was inline); delegates composite-type dispatch to `ProviderRegistry.synthesizers` (was inline)
 - `EnrichmentConfig` gains optional `catalogProvider: CatalogProvider?` and `catalogFilterMode: CatalogFilterMode` (default `UNFILTERED` — no behavior change for existing consumers)
 - `EnrichmentEngine.Builder` gains `.catalog(provider, mode)` convenience method
 - `SIMILAR_ARTISTS` promoted to mergeable type — all configured providers contribute rather than first-success short-circuit
 
 ## [0.5.0] - 2026-03-22
 
-New Capabilities & Tech Debt Cleanup — 6 phases, 14 plans.
+New Capabilities & Tech Debt Cleanup.
 
 ### Added
 - `CREDITS` enrichment type — `EnrichmentData.Credits` with `CreditEntry` (name, role, roleCategory, instruments); MusicBrainz provides via recording artist-rels, Discogs via extraartists
@@ -137,7 +137,7 @@ New Capabilities & Tech Debt Cleanup — 6 phases, 14 plans.
 
 ## [0.4.0] - 2026-03-21
 
-Provider Abstraction Overhaul — 5 phases, 15 plans, 25 enrichment types, 328 tests.
+Provider Abstraction Overhaul — 25 enrichment types.
 
 ### Added
 - 9 new enrichment types: `BAND_MEMBERS`, `ARTIST_DISCOGRAPHY`, `ALBUM_TRACKS`, `SIMILAR_TRACKS`, `ARTIST_BANNER`, `ARTIST_LINKS`, `ALBUM_ART_BACK`, `ALBUM_BOOKLET`, `ALBUM_METADATA`
