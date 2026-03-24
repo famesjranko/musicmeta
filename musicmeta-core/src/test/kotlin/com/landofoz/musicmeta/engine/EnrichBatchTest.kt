@@ -124,6 +124,43 @@ class EnrichBatchTest {
         assertEquals("provider should have been called due to forceRefresh", 1, provider.enrichCalls.size)
     }
 
+    @Test fun `enrichBatch with STALE_IF_ERROR serves stale on provider failure`() = runTest {
+        // Given — provider returns Error for all requests, but expired cache has stale data for req1
+        val req1 = EnrichmentRequest.forAlbum("Amnesiac", "Radiohead")
+        val req2 = EnrichmentRequest.forAlbum("Hail to the Thief", "Radiohead")
+        val provider = FakeProvider(
+            id = "failing",
+            capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100)),
+        ).also {
+            it.givenResult(EnrichmentType.ALBUM_ART, EnrichmentResult.Error(EnrichmentType.ALBUM_ART, "failing", "API down"))
+        }
+        val staleConfig = EnrichmentConfig(
+            enableIdentityResolution = false,
+            cacheMode = com.landofoz.musicmeta.cache.CacheMode.STALE_IF_ERROR,
+        )
+        val staleCache = FakeEnrichmentCache()
+        val key1 = DefaultEnrichmentEngine.entityKeyFor(req1, EnrichmentType.ALBUM_ART)
+        staleCache.expiredStore["$key1:${EnrichmentType.ALBUM_ART}"] = artSuccess("stale-art")
+        val staleEngine = DefaultEnrichmentEngine(
+            ProviderRegistry(listOf(provider)), staleCache, FakeHttpClient(), staleConfig,
+        )
+
+        // When — batch enriching both requests
+        staleEngine.enrichBatch(listOf(req1, req2), types).test {
+            val item1 = awaitItem()
+            val item2 = awaitItem()
+            awaitComplete()
+
+            // Then — req1 gets stale fallback (isStale=true), req2 gets Error (no stale available)
+            val result1 = item1.second.raw[EnrichmentType.ALBUM_ART]
+            assert(result1 is EnrichmentResult.Success) { "req1 should get stale Success, got $result1" }
+            assert((result1 as EnrichmentResult.Success).isStale) { "req1 should be marked stale" }
+
+            val result2 = item2.second.raw[EnrichmentType.ALBUM_ART]
+            assert(result2 is EnrichmentResult.Error) { "req2 should get Error (no stale), got $result2" }
+        }
+    }
+
     @Test fun `enrichBatch returns cached results without calling provider`() = runTest {
         // Given — req1 is cached, req2 is not; provider handles req2
         val req1 = EnrichmentRequest.forAlbum("Amnesiac", "Radiohead")

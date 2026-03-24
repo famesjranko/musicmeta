@@ -1168,6 +1168,68 @@ class DefaultEnrichmentEngineTest {
         assertTrue("Stale result should not be written to fresh cache", cache.stored.isEmpty())
     }
 
+    // --- v0.8.0 edge cases ---
+
+    @Test fun `STALE_IF_ERROR serves stale on timeout Error`() = runTest {
+        // Given — timeout produces Error(TIMEOUT), expiredStore has stale data
+        val p = FakeProvider(id = "p", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100)))
+            .also { it.givenResult(EnrichmentType.ALBUM_ART, EnrichmentResult.Error(EnrichmentType.ALBUM_ART, "p", "timed out", errorKind = ErrorKind.TIMEOUT)) }
+        val key = DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.ALBUM_ART)
+        cache.expiredStore["$key:${EnrichmentType.ALBUM_ART}"] = art("stale-provider")
+
+        // When — enriching with STALE_IF_ERROR
+        val results = staleEngine(p).enrich(req, setOf(EnrichmentType.ALBUM_ART))
+
+        // Then — stale served even for TIMEOUT errors (TIMEOUT is ErrorKind on Error)
+        val result = results.raw[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success
+        assertEquals("stale-provider", result.provider)
+        assertTrue("Result should be marked stale", result.isStale)
+    }
+
+    @Test fun `STALE_IF_ERROR preserves Error when no expired entry exists`() = runTest {
+        // Given — provider returns Error, but NO expired entry in cache
+        val p = FakeProvider(id = "p", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100)))
+            .also { it.givenResult(EnrichmentType.ALBUM_ART, EnrichmentResult.Error(EnrichmentType.ALBUM_ART, "p", "API down")) }
+        // expiredStore is empty — no stale data available
+
+        // When — enriching with STALE_IF_ERROR
+        val results = staleEngine(p).enrich(req, setOf(EnrichmentType.ALBUM_ART))
+
+        // Then — Error is preserved because there's nothing stale to serve
+        assertTrue(
+            "Expected Error when no expired entry exists, got ${results.raw[EnrichmentType.ALBUM_ART]}",
+            results.raw[EnrichmentType.ALBUM_ART] is EnrichmentResult.Error,
+        )
+    }
+
+    @Test fun `STALE_IF_ERROR mixed types - Error gets stale, Success stays fresh`() = runTest {
+        // Given — two types: art=Error (has stale), genre=Success (fresh from provider)
+        val p = FakeProvider(
+            id = "p",
+            capabilities = listOf(
+                ProviderCapability(EnrichmentType.ALBUM_ART, 100),
+                ProviderCapability(EnrichmentType.GENRE, 100),
+            ),
+        ).also {
+            it.givenResult(EnrichmentType.ALBUM_ART, EnrichmentResult.Error(EnrichmentType.ALBUM_ART, "p", "API down"))
+            it.givenResult(EnrichmentType.GENRE, genre("fresh-genre"))
+        }
+        val key = DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.ALBUM_ART)
+        cache.expiredStore["$key:${EnrichmentType.ALBUM_ART}"] = art("stale-art")
+
+        // When — enriching both types with STALE_IF_ERROR
+        val results = staleEngine(p).enrich(req, setOf(EnrichmentType.ALBUM_ART, EnrichmentType.GENRE))
+
+        // Then — art gets stale fallback, genre stays fresh
+        val artResult = results.raw[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success
+        assertTrue("Art should be stale", artResult.isStale)
+        assertEquals("stale-art", artResult.provider)
+
+        val genreResult = results.raw[EnrichmentType.GENRE] as EnrichmentResult.Success
+        assertFalse("Genre should NOT be stale", genreResult.isStale)
+        assertEquals("fresh-genre", genreResult.provider)
+    }
+
     @Test fun `ARTIST_TIMELINE is cached like standard types`() = runTest {
         // Given — identity provider + discography + band members providers
         val idProvider = identityProviderWithMetadata()

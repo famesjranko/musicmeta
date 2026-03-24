@@ -406,6 +406,66 @@ class OkHttpEnrichmentClientTest {
         assertEquals("Come Together", ok.body.getJSONObject(0).getString("track"))
     }
 
+    // ---- Edge case: empty body on 200 ----
+
+    @Test fun `fetchJsonResult returns NetworkError when 200 body is empty string`() = runTest {
+        // Given — server returns 200 with empty body
+        server.enqueue(MockResponse().setResponseCode(200).setBody(""))
+
+        // When
+        val result = client.fetchJsonResult(url())
+
+        // Then — empty string is not valid JSON, should be NetworkError
+        assertTrue("Expected NetworkError for empty body, got $result", result is HttpResult.NetworkError)
+    }
+
+    @Test fun `fetchJson returns null when 200 body is empty string`() = runTest {
+        // Given — server returns 200 with empty body
+        server.enqueue(MockResponse().setResponseCode(200).setBody(""))
+
+        // When
+        val result = client.fetchJson(url())
+
+        // Then — empty string is not valid JSON object
+        assertNull(result)
+    }
+
+    // ---- Edge case: 301 redirect ----
+
+    @Test fun `fetchRedirectUrl returns Location header for 301 redirect`() = runTest {
+        // Given — server returns 301 (permanent redirect)
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(301)
+                .setHeader("Location", "https://cdn.example.com/image.jpg")
+        )
+
+        // When
+        val result = client.fetchRedirectUrl(url())
+
+        // Then — Location header extracted, same as 307
+        assertEquals("https://cdn.example.com/image.jpg", result)
+    }
+
+    // ---- Edge case: 429 on POST methods (Retry-After parsing) ----
+
+    @Test fun `postJsonResult returns RateLimited with Retry-After for 429`() = runTest {
+        // Given — POST returns 429 with Retry-After
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(429)
+                .setHeader("Retry-After", "10")
+                .setBody("Too Many Requests")
+        )
+
+        // When
+        val result = client.postJsonResult(url(), """{"test":true}""")
+
+        // Then — retryAfterMs = 10 * 1000 = 10000
+        assertTrue(result is HttpResult.RateLimited)
+        assertEquals(10000L, (result as HttpResult.RateLimited).retryAfterMs)
+    }
+
     @Test fun `postJsonArrayResult returns HttpResult RateLimited for 429 response`() = runTest {
         // Given
         server.enqueue(MockResponse().setResponseCode(429).setBody("Too Many Requests"))
