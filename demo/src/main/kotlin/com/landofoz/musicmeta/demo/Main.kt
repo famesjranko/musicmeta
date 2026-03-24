@@ -9,11 +9,13 @@ import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.albumProfile
 import com.landofoz.musicmeta.artistProfile
+import com.landofoz.musicmeta.okhttp.OkHttpEnrichmentClient
 import com.landofoz.musicmeta.trackProfile
 import com.landofoz.musicmeta.demo.ui.Spinner
 import com.landofoz.musicmeta.demo.ui.Terminal
 import com.landofoz.musicmeta.demo.ui.Theme
 import kotlinx.coroutines.runBlocking
+import okhttp3.OkHttpClient
 
 fun main(args: Array<String>) {
     val theme = Theme.detect()
@@ -43,6 +45,7 @@ class DemoState(
     val logger: DemoLogger,
     val catalog: DemoCatalog = DemoCatalog(),
     var catalogMode: CatalogFilterMode = CatalogFilterMode.UNFILTERED,
+    var httpBackend: HttpBackend = HttpBackend.DEFAULT,
 ) {
     lateinit var engine: EnrichmentEngine
     /** Last search results — used by 'pick' command for disambiguation flow. */
@@ -60,13 +63,17 @@ class DemoState(
             config.copy(catalogProvider = catalog, catalogFilterMode = catalogMode)
         } else config
 
-        engine = EnrichmentEngine.Builder()
+        val builder = EnrichmentEngine.Builder()
             .apiKeys(keys)
             .config(effectiveConfig)
             .cache(cache)
             .logger(logger)
-            .withDefaultProviders()
-            .build()
+
+        if (httpBackend == HttpBackend.OKHTTP) {
+            builder.httpClient(OkHttpEnrichmentClient(OkHttpClient(), effectiveConfig.userAgent))
+        }
+
+        engine = builder.withDefaultProviders().build()
     }
 }
 
@@ -85,7 +92,7 @@ private fun repl(state: DemoState, term: Terminal, spinner: Spinner) {
             trimmed.equals("providers", ignoreCase = true) ->
                 InfoFormatter.printProviders(state.engine.getProviders(), term)
             trimmed.equals("config", ignoreCase = true) ->
-                InfoFormatter.printConfig(state.config, state.logger.enabled, state.catalogMode, term)
+                InfoFormatter.printConfig(state.config, state.logger.enabled, state.catalogMode, state.httpBackend, term)
             trimmed.startsWith("config ", ignoreCase = true) ->
                 handleConfig(trimmed.substringAfter("config ").trim(), state, term)
             trimmed.equals("verbose", ignoreCase = true) -> toggleVerbose(state, term)
@@ -102,6 +109,8 @@ private fun repl(state: DemoState, term: Terminal, spinner: Spinner) {
                 handleInvalidate(trimmed.substringAfter("invalidate ").trim(), state, term)
             trimmed.startsWith("pick ", ignoreCase = true) ->
                 pickCandidate(trimmed.substringAfter("pick ").trim(), state, term, spinner)
+            trimmed.startsWith("batch ", ignoreCase = true) ->
+                executeBatch(trimmed.substringAfter("batch ").trim(), state, term)
             else -> executeCommand(trimmed, state, term, spinner)
         }
         term.println()

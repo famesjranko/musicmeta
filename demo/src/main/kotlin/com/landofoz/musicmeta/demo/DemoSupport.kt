@@ -11,6 +11,9 @@ import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.cache.InMemoryEnrichmentCache
 import com.landofoz.musicmeta.demo.ui.Terminal
 
+/** Which HTTP transport the demo engine uses. */
+enum class HttpBackend { DEFAULT, OKHTTP }
+
 // --- Shared constants and parsing ---
 
 internal val BY_REGEX = Regex("\\s+by\\s+", RegexOption.IGNORE_CASE)
@@ -58,6 +61,9 @@ class TrackingCache(
 
     override suspend fun put(entityKey: String, type: EnrichmentType, result: EnrichmentResult.Success, ttlMs: Long) =
         delegate.put(entityKey, type, result, ttlMs)
+
+    override suspend fun getIncludingExpired(entityKey: String, type: EnrichmentType): EnrichmentResult.Success? =
+        delegate.getIncludingExpired(entityKey, type)
 
     override suspend fun invalidate(entityKey: String, type: EnrichmentType?) = delegate.invalidate(entityKey, type)
     override suspend fun isManuallySelected(entityKey: String, type: EnrichmentType) = delegate.isManuallySelected(entityKey, type)

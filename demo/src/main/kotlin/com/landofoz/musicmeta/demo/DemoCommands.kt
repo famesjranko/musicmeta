@@ -2,12 +2,16 @@ package com.landofoz.musicmeta.demo
 
 import com.landofoz.musicmeta.CatalogFilterMode
 import com.landofoz.musicmeta.EnrichmentRequest
+import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
+import com.landofoz.musicmeta.ErrorKind
 import com.landofoz.musicmeta.albumProfile
 import com.landofoz.musicmeta.artistProfile
+import com.landofoz.musicmeta.cache.CacheMode
 import com.landofoz.musicmeta.trackProfile
 import com.landofoz.musicmeta.demo.ui.Spinner
 import com.landofoz.musicmeta.demo.ui.Terminal
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.runBlocking
 
 fun handleConfig(args: String, state: DemoState, term: Terminal) {
@@ -17,7 +21,7 @@ fun handleConfig(args: String, state: DemoState, term: Terminal) {
 
     if (value == null) {
         term.info("Usage: config <key> <value>")
-        term.info("Keys: timeout <ms>, confidence <0.0-1.0>, identity on|off")
+        term.info("Keys: timeout <ms>, confidence <0.0-1.0>, identity on|off, http default|okhttp, stale on|off")
         return
     }
 
@@ -44,7 +48,26 @@ fun handleConfig(args: String, state: DemoState, term: Terminal) {
             state.rebuild()
             term.info("Identity resolution: ${if (on) "on" else "off"}")
         }
-        else -> term.info("Unknown config key: $key. Try: timeout, confidence, identity")
+        "http" -> {
+            val backend = when (value.lowercase()) {
+                "default" -> HttpBackend.DEFAULT
+                "okhttp" -> HttpBackend.OKHTTP
+                else -> { term.info("Usage: config http default|okhttp"); return }
+            }
+            state.httpBackend = backend
+            state.rebuild()
+            term.info("HTTP backend: ${backend.name.lowercase()}")
+        }
+        "stale" -> {
+            val on = value.equals("on", ignoreCase = true) || value == "true"
+            val off = value.equals("off", ignoreCase = true) || value == "false"
+            if (!on && !off) { term.info("Usage: config stale on|off"); return }
+            val mode = if (on) CacheMode.STALE_IF_ERROR else CacheMode.NETWORK_FIRST
+            state.config = state.config.copy(cacheMode = mode)
+            state.rebuild()
+            term.info("Cache mode: ${mode.name.lowercase().replace("_", " ")}")
+        }
+        else -> term.info("Unknown config key: $key. Try: timeout, confidence, identity, http, stale")
     }
 }
 
@@ -240,3 +263,92 @@ val TYPE_ALIASES = mapOf(
     "top" to EnrichmentType.ARTIST_TOP_TRACKS,
     "top-tracks" to EnrichmentType.ARTIST_TOP_TRACKS,
 )
+
+/**
+ * Batch enrichment — parses semicolon-separated entities and streams results via enrichBatch().
+ * Usage: batch artist Radiohead; Pink Floyd; Nirvana
+ *        batch album OK Computer by Radiohead; Nevermind by Nirvana
+ */
+fun executeBatch(input: String, state: DemoState, term: Terminal) {
+    val (cleanInput, customTypes) = extractTypes(input)
+    val lower = cleanInput.lowercase()
+
+    val kind = when {
+        lower.startsWith("artist ") -> "artist"
+        lower.startsWith("album ") -> "album"
+        lower.startsWith("track ") -> "track"
+        else -> {
+            term.info("Usage: batch artist|album|track <name1>; <name2>; ...")
+            return
+        }
+    }
+
+    val rest = cleanInput.substring(kind.length + 1).trim()
+    val items = rest.split(";").map { it.trim() }.filter { it.isNotBlank() }
+    if (items.isEmpty()) {
+        term.info("No items to enrich. Separate with semicolons: batch artist A; B; C")
+        return
+    }
+
+    val requests = items.mapNotNull { item ->
+        when (kind) {
+            "artist" -> EnrichmentRequest.forArtist(item)
+            "album" -> {
+                val parts = item.split(BY_REGEX, limit = 2)
+                if (parts.size < 2) { term.info("Skipping \"$item\" — use: title by artist"); null }
+                else EnrichmentRequest.forAlbum(parts[0].trim(), parts[1].trim())
+            }
+            "track" -> {
+                val parts = item.split(BY_REGEX, limit = 2)
+                if (parts.size < 2) { term.info("Skipping \"$item\" — use: title by artist"); null }
+                else EnrichmentRequest.forTrack(parts[0].trim(), parts[1].trim())
+            }
+            else -> null
+        }
+    }
+    if (requests.isEmpty()) return
+
+    val types = customTypes ?: when (kind) {
+        "artist" -> ARTIST_TYPES
+        "album" -> ALBUM_TYPES
+        else -> TRACK_TYPES
+    }
+
+    term.heading("Batch ($kind, ${requests.size} items)")
+    val startMs = System.currentTimeMillis()
+    var totalFound = 0; var totalErrors = 0
+
+    runBlocking {
+        state.engine.enrichBatch(requests, types).collect { (request, results) ->
+            var found = 0; var notFound = 0; var errors = 0; var stale = 0
+            for ((_, result) in results.raw) {
+                when (result) {
+                    is EnrichmentResult.Success -> { found++; if (result.isStale) stale++ }
+                    is EnrichmentResult.NotFound -> notFound++
+                    is EnrichmentResult.RateLimited -> errors++
+                    is EnrichmentResult.Error -> errors++
+                }
+            }
+            totalFound += found; totalErrors += errors
+
+            val label = when (request) {
+                is EnrichmentRequest.ForArtist -> request.name
+                is EnrichmentRequest.ForAlbum -> "${request.title} by ${request.artist}"
+                is EnrichmentRequest.ForTrack -> "${request.title} by ${request.artist}"
+            }
+
+            val parts = mutableListOf("$found found")
+            if (notFound > 0) parts += "$notFound not found"
+            if (errors > 0) parts += "$errors errors"
+            if (stale > 0) parts += "$stale stale"
+            val detail = parts.joinToString(", ")
+
+            if (errors > 0) term.warning(label, detail)
+            else term.success(label, detail)
+        }
+    }
+
+    val elapsed = (System.currentTimeMillis() - startMs) / 1000.0
+    term.println()
+    term.info("${requests.size} items, $totalFound found, $totalErrors errors  [${"%.1f".format(elapsed)}s]")
+}

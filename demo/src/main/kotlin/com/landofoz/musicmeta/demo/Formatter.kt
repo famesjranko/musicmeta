@@ -114,10 +114,11 @@ object Formatter {
             } else {
                 snippet(result.data)
             }
+            val staleTag = if (result.isStale) " ${term.styled("[stale]", term.theme.warning)}" else ""
             if (result.identityMatch == IdentityMatch.BEST_EFFORT) {
-                term.warning(typeName(type), "$detail  $conf ${term.styled("[unverified]", term.theme.warning)}")
+                term.warning(typeName(type), "$detail  $conf ${term.styled("[unverified]", term.theme.warning)}$staleTag")
             } else {
-                term.success(typeName(type), "$detail  $conf")
+                term.success(typeName(type), "$detail  $conf$staleTag")
             }
         }
 

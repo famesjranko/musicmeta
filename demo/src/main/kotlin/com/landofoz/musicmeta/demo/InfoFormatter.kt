@@ -3,6 +3,7 @@ package com.landofoz.musicmeta.demo
 import com.landofoz.musicmeta.CatalogFilterMode
 import com.landofoz.musicmeta.EnrichmentConfig
 import com.landofoz.musicmeta.ProviderInfo
+import com.landofoz.musicmeta.cache.CacheMode
 import com.landofoz.musicmeta.demo.ui.Terminal
 
 /** Formats help text, config, providers, cache stats, and catalog — the static info commands. */
@@ -23,6 +24,7 @@ object InfoFormatter {
         term.println("${" ".repeat(4)}${term.styled("Add --types bio,art,... to select specific types", term.theme.muted)}")
         cmd("search", "artist|album|track ...", "Search for candidates")
         cmd("pick", "<number>", "Enrich a search result by MBID")
+        cmd("batch", "artist|album|track a; b; c", "Batch enrich (semicolon-separated)")
 
         term.heading("Cache Management")
         cmd("refresh", "artist|album|track ...", "Re-enrich bypassing cache")
@@ -38,11 +40,23 @@ object InfoFormatter {
         cmd("quit", "", "Exit")
     }
 
-    fun printConfig(config: EnrichmentConfig, verbose: Boolean, catalogMode: CatalogFilterMode, term: Terminal) {
+    fun printConfig(
+        config: EnrichmentConfig,
+        verbose: Boolean,
+        catalogMode: CatalogFilterMode,
+        httpBackend: HttpBackend,
+        term: Terminal,
+    ) {
         term.heading("Configuration")
         term.keyValue("Timeout:", "${config.enrichTimeoutMs}ms")
         term.keyValue("Confidence:", "%.2f".format(config.minConfidence))
         term.keyValue("Identity:", if (config.enableIdentityResolution) "on" else "off")
+        term.keyValue("HTTP:", httpBackend.name.lowercase())
+        val cacheLabel = when (config.cacheMode) {
+            CacheMode.NETWORK_FIRST -> "network first"
+            CacheMode.STALE_IF_ERROR -> "stale if error"
+        }
+        term.keyValue("Stale:", cacheLabel)
         term.keyValue("Verbose:", if (verbose) "on" else "off")
         val modeName = when (catalogMode) {
             CatalogFilterMode.UNFILTERED -> "off"

@@ -22,5 +22,6 @@ tasks.named<JavaExec>("run") {
 
 dependencies {
     implementation("com.landofoz:musicmeta-core")
+    implementation("com.landofoz:musicmeta-okhttp")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
 }
