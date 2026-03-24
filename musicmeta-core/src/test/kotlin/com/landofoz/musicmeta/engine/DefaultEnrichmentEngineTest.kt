@@ -1079,6 +1079,95 @@ class DefaultEnrichmentEngineTest {
         assertTrue(cache.stored.isEmpty())
     }
 
+    // --- stale cache ---
+
+    private val staleConfig = EnrichmentConfig(
+        enableIdentityResolution = false,
+        cacheMode = com.landofoz.musicmeta.cache.CacheMode.STALE_IF_ERROR,
+    )
+    private fun staleEngine(vararg providers: FakeProvider) =
+        DefaultEnrichmentEngine(ProviderRegistry(providers.toList()), cache, FakeHttpClient(), staleConfig)
+
+    @Test fun `STALE_IF_ERROR serves expired cache when provider returns Error`() = runTest {
+        // Given — provider returns Error, expiredStore has stale art data
+        val p = FakeProvider(id = "p", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100)))
+            .also { it.givenResult(EnrichmentType.ALBUM_ART, EnrichmentResult.Error(EnrichmentType.ALBUM_ART, "p", "API down")) }
+        val key = DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.ALBUM_ART)
+        cache.expiredStore["$key:${EnrichmentType.ALBUM_ART}"] = art("stale-provider")
+
+        // When — enriching with STALE_IF_ERROR config
+        val results = staleEngine(p).enrich(req, setOf(EnrichmentType.ALBUM_ART))
+
+        // Then — returns expired cache entry with isStale=true
+        val result = results.raw[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success
+        assertEquals("stale-provider", result.provider)
+        assertTrue("Result should be marked stale", result.isStale)
+    }
+
+    @Test fun `STALE_IF_ERROR serves expired cache when provider returns RateLimited`() = runTest {
+        // Given — provider returns RateLimited, expiredStore has stale art data
+        val p = FakeProvider(id = "p", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100)))
+            .also { it.givenResult(EnrichmentType.ALBUM_ART, EnrichmentResult.RateLimited(EnrichmentType.ALBUM_ART, "p")) }
+        val key = DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.ALBUM_ART)
+        cache.expiredStore["$key:${EnrichmentType.ALBUM_ART}"] = art("stale-provider")
+
+        // When — enriching with STALE_IF_ERROR config
+        val results = staleEngine(p).enrich(req, setOf(EnrichmentType.ALBUM_ART))
+
+        // Then — returns expired cache entry with isStale=true
+        val result = results.raw[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success
+        assertEquals("stale-provider", result.provider)
+        assertTrue("Result should be marked stale", result.isStale)
+    }
+
+    @Test fun `STALE_IF_ERROR does not serve stale for genuine NotFound`() = runTest {
+        // Given — provider returns NotFound, expiredStore has stale art data
+        val p = FakeProvider(id = "p", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100)))
+        // FakeProvider returns NotFound by default when no result is configured
+        val key = DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.ALBUM_ART)
+        cache.expiredStore["$key:${EnrichmentType.ALBUM_ART}"] = art("stale-provider")
+
+        // When — enriching with STALE_IF_ERROR config
+        val results = staleEngine(p).enrich(req, setOf(EnrichmentType.ALBUM_ART))
+
+        // Then — NotFound is preserved, stale cache NOT served (provider searched and found nothing)
+        assertTrue(
+            "Expected NotFound but got ${results.raw[EnrichmentType.ALBUM_ART]}",
+            results.raw[EnrichmentType.ALBUM_ART] is EnrichmentResult.NotFound,
+        )
+    }
+
+    @Test fun `NETWORK_FIRST does not serve stale when provider fails`() = runTest {
+        // Given — default NETWORK_FIRST config, provider returns Error, expiredStore has stale data
+        val p = FakeProvider(id = "p", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100)))
+            .also { it.givenResult(EnrichmentType.ALBUM_ART, EnrichmentResult.Error(EnrichmentType.ALBUM_ART, "p", "API down")) }
+        val key = DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.ALBUM_ART)
+        cache.expiredStore["$key:${EnrichmentType.ALBUM_ART}"] = art("stale-provider")
+
+        // When — enriching with default NETWORK_FIRST config (uses engine(), not staleEngine())
+        val results = engine(p).enrich(req, setOf(EnrichmentType.ALBUM_ART))
+
+        // Then — Error returned, stale fallback NOT applied
+        assertTrue(
+            "Expected Error but got ${results.raw[EnrichmentType.ALBUM_ART]}",
+            results.raw[EnrichmentType.ALBUM_ART] is EnrichmentResult.Error,
+        )
+    }
+
+    @Test fun `stale result is not re-written to cache`() = runTest {
+        // Given — provider returns Error, expiredStore has stale art data, stored is empty
+        val p = FakeProvider(id = "p", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100)))
+            .also { it.givenResult(EnrichmentType.ALBUM_ART, EnrichmentResult.Error(EnrichmentType.ALBUM_ART, "p", "API down")) }
+        val key = DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.ALBUM_ART)
+        cache.expiredStore["$key:${EnrichmentType.ALBUM_ART}"] = art("stale-provider")
+
+        // When — enriching with STALE_IF_ERROR (stale is served)
+        staleEngine(p).enrich(req, setOf(EnrichmentType.ALBUM_ART))
+
+        // Then — stale result was NOT re-cached with a fresh TTL (stored remains empty)
+        assertTrue("Stale result should not be written to fresh cache", cache.stored.isEmpty())
+    }
+
     @Test fun `ARTIST_TIMELINE is cached like standard types`() = runTest {
         // Given — identity provider + discography + band members providers
         val idProvider = identityProviderWithMetadata()
