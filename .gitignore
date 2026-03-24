@@ -10,4 +10,6 @@
 .cxx
 local.properties
 .claude
+.planning
+CLAUDE.md
 secrets.properties
