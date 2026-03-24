@@ -89,7 +89,7 @@ Adds Android-specific integrations on top of core:
 - E2E tests in `e2e/` are gated by `-Dinclude.e2e=true` system property (forwarded in build.gradle.kts)
 - Android tests use Robolectric
 - Test names use backtick style: `` `provider returns NotFound when album has no art` ``
-- Tests follow Given-When-Then structure with comments
+- Tests follow Given-When-Then structure with comments - using proper: what is given, what action is taken, and what outcome is expected — not just bare section markers.
 
 ## Code Style
 
