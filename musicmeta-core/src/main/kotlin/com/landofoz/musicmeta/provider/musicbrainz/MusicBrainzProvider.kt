@@ -69,8 +69,10 @@ class MusicBrainzProvider(
 
     private suspend fun searchAlbumCandidates(
         request: EnrichmentRequest.ForAlbum, limit: Int,
-    ): List<SearchCandidate> =
-        api.searchReleases(request.title, request.artist, limit).map { release ->
+    ): List<SearchCandidate> {
+        val releases = api.searchReleases(request.title, request.artist, limit)
+            .ifEmpty { api.searchReleasesFuzzy(request.title, request.artist, limit) }
+        return releases.map { release ->
             val thumb = if (release.hasFrontCover) {
                 "https://coverartarchive.org/release/${release.id}/front-$thumbnailSize"
             } else null
@@ -86,11 +88,14 @@ class MusicBrainzProvider(
                 disambiguation = release.disambiguation,
             )
         }
+    }
 
     private suspend fun searchArtistCandidates(
         request: EnrichmentRequest.ForArtist, limit: Int,
-    ): List<SearchCandidate> =
-        api.searchArtists(request.name, limit).map { artist ->
+    ): List<SearchCandidate> {
+        val artists = api.searchArtists(request.name, limit)
+            .ifEmpty { api.searchArtistsFuzzy(request.name, limit) }
+        return artists.map { artist ->
             SearchCandidate(
                 title = artist.name, artist = null,
                 year = artist.beginDate, country = artist.country,
@@ -100,6 +105,7 @@ class MusicBrainzProvider(
                 disambiguation = artist.disambiguation,
             )
         }
+    }
 
     override suspend fun enrich(
         request: EnrichmentRequest,
