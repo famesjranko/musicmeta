@@ -1,254 +1,268 @@
 # Pitfalls Research
 
-**Domain:** Adding recommendation modules to existing music metadata enrichment library
-**Researched:** 2026-03-23
-**Confidence:** HIGH (codebase analysis) / MEDIUM (API behavior) / LOW (external docs only)
+**Domain:** Adding OkHttp adapter, stale-while-revalidate cache, bulk enrichment API, and Maven Central publishing to an existing Kotlin/JVM music metadata library
+**Researched:** 2026-03-24
+**Confidence:** HIGH (codebase analysis, official docs) / MEDIUM (community-verified patterns)
 
 ---
 
 ## Critical Pitfalls
 
-### Pitfall 1: Multi-Provider Similarity Score Incompatibility
+### Pitfall 1: Manually Setting Accept-Encoding Disables OkHttp Transparent Decompression
 
 **What goes wrong:**
-Last.fm `match` is a float 0.0–1.0 derived from collaborative filtering plus tag overlap. Deezer
-`/artist/{id}/related` returns ranked artists with no numeric score at all — just an ordered list.
-ListenBrainz `/1/explore/similar-artists/{mbid}` returns artists sorted by a listen-pattern
-similarity that is not normalized to the same scale. If you feed all three into the same merge
-logic and average or sum scores, you corrupt the output: artists that appear in Deezer's
-ranked list get assigned score 0.0 (missing), which drags them below the confidence threshold
-and drops them. Artists with a Last.fm score of 0.4 (moderate similarity) may rank above a Deezer
-top-1 match that you assigned an arbitrary positional score.
+OkHttp automatically adds `Accept-Encoding: gzip`, negotiates compression, and transparently decompresses the response body before returning it to the caller. If you manually add `Accept-Encoding: gzip` to the request headers (to match `DefaultHttpClient.openConnection()` which explicitly sets it), OkHttp detects the manual override, disables transparent decompression, and hands you a compressed byte stream. The `org.json.JSONObject` parser then throws a `JSONException` because it receives binary gzip data instead of UTF-8 JSON.
+
+`DefaultHttpClient` sets `Accept-Encoding: gzip` explicitly and then manually unwraps via `GZIPInputStream` in `responseStream()`. The OkHttp adapter must not replicate this pattern — the two mechanisms conflict.
 
 **Why it happens:**
-The existing `SimilarArtist` data class has `matchScore: Float` as a required field. Providers
-that don't return a score must invent one. The temptation is to assign `0.5f` as a default, which
-mixes semantic meaning (Last.fm: "half similar") with structural meaning (Deezer: "present in
-results"), breaking any downstream ranking.
+The implementation plan correctly documents this distinction, but the instinct when porting `DefaultHttpClient` behavior is to mirror every request header. The `openConnection()` helper sets four headers: `User-Agent`, `Accept`, `Accept-Encoding: gzip`, and timeouts. Three of them are correct to port; `Accept-Encoding` is the trap.
 
 **How to avoid:**
-Before implementing the merge, define what `matchScore` means for each source:
-- Last.fm: pass through directly (0.0–1.0, collaborative + tag)
-- ListenBrainz similar-artists: assign by rank position using `(1.0 - index/count)`
-- Deezer related: assign by rank position using `(1.0 - index/count)`
+Do NOT set `Accept-Encoding` on OkHttp requests. Let OkHttp handle it. Set only `User-Agent` and `Accept: application/json` on every request. The `docs/v0.8.0.md` plan already states this correctly ("GZIP: handled automatically by OkHttp — no manual GZIPInputStream"). Do not deviate from this.
 
-Document the derivation in the mapper. Do not mix computed positional scores with semantic
-Last.fm scores in a straight average; instead treat Last.fm score as primary confidence and
-position-derived scores as tie-breakers. The merge de-duplicates by artist name/MBID and keeps
-the highest score; it does NOT average.
+Test with an endpoint that actually returns gzip-compressed responses (e.g., MusicBrainz — it gzip-compresses by default). The integration test using `MockWebServer` with a gzip-encoded body will catch this if written.
 
 **Warning signs:**
-- A well-known artist's close collaborator appears near the bottom of merged results
-- Last.fm-only results consistently outrank Deezer results regardless of Deezer rank
-- Tests show different orderings on each run (indicates unstable sort on equal scores)
+- `JSONException: Value ??? of type org.json.JSONObject$1 cannot be converted to JSONObject` on what should be a valid JSON endpoint
+- `response.body?.string()` contains binary garbage starting with `\u001f\u008b` (gzip magic bytes)
+- `Content-Encoding: gzip` header visible in `MockWebServer` recorded request
 
-**Phase to address:** Phase 1 (Deezer SIMILAR_ARTISTS + SIMILAR_TRACKS) — establish score
-derivation rules before any merge code is written.
+**Phase to address:** Phase 1 (OkHttp adapter) — write a `MockWebServer` test that serves a gzip-compressed JSON response and assert the parsed `JSONObject` is correct.
 
 ---
 
-### Pitfall 2: SIMILAR_ARTISTS Is Currently a Short-Circuit Chain, Not a Merge
+### Pitfall 2: OkHttp fetchRedirectUrl Does Not Use followRedirects(false) Per-Call Without a New Client
 
 **What goes wrong:**
-`GENRE` is the only `MERGEABLE_TYPE` in `DefaultEnrichmentEngine.MERGEABLE_TYPES`. `SIMILAR_ARTISTS`
-uses `ProviderChain.resolve()` (short-circuit), meaning only the highest-priority provider runs.
-Adding Deezer as a third provider at priority 50 (or any priority below 100) means it never runs
-when Last.fm succeeds — which is almost always when an API key is present. You get exactly the
-same SIMILAR_ARTISTS result as before, with no benefit from the Deezer data.
+`DefaultHttpClient.fetchRedirectUrl()` sets `instanceFollowRedirects = false` on a single `HttpURLConnection` before connecting. OkHttp has no equivalent per-call flag — `followRedirects` is a property of the `OkHttpClient` instance. To disable redirect following for only `fetchRedirectUrl()`, you must call `client.newBuilder().followRedirects(false).build()` to get a modified client for that one call.
+
+The `docs/v0.8.0.md` plan correctly specifies this approach. The pitfall is implementing it wrong — creating a new client inside `buildGetRequest()` rather than creating it lazily once at construction time and storing it, or forgetting that `followSslRedirects` is a separate property that also needs to be set to `false` for HTTPS-to-HTTPS redirects (Cover Art Archive uses HTTPS).
 
 **Why it happens:**
-The engine's merge/short-circuit decision is made by the set `MERGEABLE_TYPES`. It is easy to add
-a new provider capability without promoting the type to mergeable, because the existing tests pass
-(Last.fm still returns data). The Deezer contribution is silently discarded.
+`OkHttpClient.newBuilder()` creates a shallow clone of the client, reusing its connection pool and dispatcher. It is cheap to call but the result should not be thrown away — if you create a new "no-redirect" client per-call, the connection pool won't be shared and you defeat the purpose of using OkHttp.
 
 **How to avoid:**
-Add `SIMILAR_ARTISTS` to `MERGEABLE_TYPES` and implement a `SimilarArtistsMerger` analogous to
-`GenreMerger`. The merger de-duplicates by MBID (prefer) or normalized artist name, keeps the
-highest score per artist, and merges the source list. Set a result cap (20 artists) to avoid
-bloat. The `Success` result provider field should be `"similar_artists_merger"`.
+Create `private val noRedirectClient = client.newBuilder().followRedirects(false).followSslRedirects(false).build()` once in the `OkHttpEnrichmentClient` constructor. Use it only inside `fetchRedirectUrl()`. All other methods use the original `client`. This reuses the same connection pool and dispatcher.
+
+Test with a `MockWebServer` test that returns a 307 redirect and assert `fetchRedirectUrl()` returns the `Location` header value, not the final resolved URL. The Cover Art Archive use case requires the raw redirect URL, not the destination.
 
 **Warning signs:**
-- Unit test shows Deezer provider returns data but the engine result contains only Last.fm artists
-- Adding `DeezerProvider` to the test builder does not change `SIMILAR_ARTISTS` output
-- The Deezer provider's `enrich()` is never called in integration tests
+- `fetchRedirectUrl()` follows the redirect and returns the final image URL instead of the CDN redirect URL
+- Cover Art Archive images appear as 404 in consumers that expect a redirect URL to follow themselves
+- Memory growth during high-volume requests (new client per call without shared connection pool)
 
-**Phase to address:** Phase 1 — must be addressed before any Deezer provider code is considered
-done.
+**Phase to address:** Phase 1 (OkHttp adapter) — include a `MockWebServer` test for `fetchRedirectUrl()` that asserts the returned URL equals the `Location` header, not the destination.
 
 ---
 
-### Pitfall 3: Deezer Requires an Artist Numeric ID, Which the Engine Never Stores
+### Pitfall 3: Stale Cache Re-Writes Expired Entries With a Fresh TTL
 
 **What goes wrong:**
-`GET /artist/{id}/related` and `GET /artist/{id}/radio` require a Deezer numeric artist ID. The
-current `DeezerProvider` obtains this ID during `enrichDiscography()` and stores it in
-`resolvedIdentifiers.extra["deezerId"]`. However, `EnrichmentRequest.ForArtist` starts with no
-Deezer ID. For SIMILAR_ARTISTS and SIMILAR_TRACKS, a new `enrichSimilarArtists()` or
-`enrichSimilarTracks()` method must first call `GET /search/artist?q={name}` to get the ID before
-calling the related/radio endpoints. This is two HTTP calls per request instead of one, and the
-intermediate artist search is fuzzy — the first result may not be the correct artist.
+The engine's cache write loop at line 97 of `DefaultEnrichmentEngine.kt` writes all `Success` results to cache:
 
-The common mistake is to call `api.searchArtist(name)` and use `result.first()` without
-verification. For artists with generic names ("The National", "Phoenix", "America"), the first
-search result is often wrong.
+```kotlin
+if (result is EnrichmentResult.Success) {
+    val ttl = config.ttlOverrides[type] ?: type.defaultTtlMs
+    cache.put(primaryKey, type, result, ttl)
+}
+```
+
+After the stale fallback runs, stale results are `EnrichmentResult.Success` instances with `isStale = true`. Without an explicit guard, the write loop will re-cache them with a fresh TTL. An album cover image cached 30 days ago, served stale because the provider is down, would then be locked in cache for another 30 days — even after the provider recovers. The entry is refreshed indefinitely as long as the provider fails on each call.
+
+The `docs/v0.8.0.md` plan correctly identifies this and specifies adding `&& !result.isStale` to the guard. The risk is forgetting it during implementation.
 
 **Why it happens:**
-Deezer IDs are opaque numeric values with no cross-reference in the existing identifier system.
-Unlike MusicBrainz IDs, they cannot be resolved from a known MBID. The `extra` map in
-`EnrichmentIdentifiers` can store them, but only after a prior Deezer call (e.g., discography)
-has run and propagated the ID.
+The `isStale` field is added to `EnrichmentResult.Success` with a default of `false`. Existing code that checks `is EnrichmentResult.Success` handles stale results identically to fresh results. The write loop has no reason to look at `isStale` without deliberate attention.
 
 **How to avoid:**
-In the new Deezer methods for SIMILAR_ARTISTS and SIMILAR_TRACKS:
-1. Check `request.identifiers.extra["deezerId"]` first — use it directly if present
-2. If absent, call `searchArtist(name)` and verify the result against `ArtistMatcher.isMatch()`
-3. Store the resolved ID in `resolvedIdentifiers.extra["deezerId"]` so downstream calls reuse it
-4. Return `NotFound` if no verified match exists — do not guess
+Change the cache write guard to:
+```kotlin
+if (result is EnrichmentResult.Success && !result.isStale) {
+```
+
+Write a test: `stale result is not re-written to cache` — the `docs/v0.8.0.md` plan lists this as a required test. Verify with `FakeEnrichmentCache.storedTtls` that no entry was written for a type that returned a stale result.
 
 **Warning signs:**
-- Wrong artist's "radio" tracks appearing for obscure artists with common names
-- Two Deezer HTTP calls visible in logs for every SIMILAR_ARTISTS request when discography was
-  not pre-fetched
-- `ArtistMatcher.isMatch()` not called before using search result
+- Stale result TTL in `FakeEnrichmentCache.storedTtls` matches the type's `defaultTtlMs` rather than being absent
+- Provider recovers but consumers keep getting `isStale = true` results
+- `FakeEnrichmentCache.stored` contains entries with `isStale = true` after an `enrich()` call with `STALE_IF_ERROR`
 
-**Phase to address:** Phase 1 — the ID lookup and verification pattern must be in the Deezer API
-layer before any endpoint using artist IDs is wired up.
+**Phase to address:** Phase 2 (stale cache) — the `stale result is not re-written to cache` test must be one of the first tests written for the engine changes.
 
 ---
 
-### Pitfall 4: ListenBrainz CF Endpoint Is User-Scoped with No Username in EnrichmentRequest
+### Pitfall 4: InMemoryEnrichmentCache Mutex Deadlock in getIncludingExpired
 
 **What goes wrong:**
-`GET /1/cf/recommendation/user/{username}/recording` requires a ListenBrainz username, not a
-MusicBrainz ID. The `EnrichmentRequest` hierarchy (`ForArtist`, `ForAlbum`, `ForTrack`) has no
-concept of a logged-in user. The endpoint returns personalized recommendations for that user's
-listening history — not recommendations for an artist or track. The data model is fundamentally
-different from every other enrichment type in this library.
-
-Additionally, the endpoint returns 204 No Content when recommendations have not yet been
-generated for the user (this is distinct from 404 and requires separate handling). The
-`HttpClient` must handle 204 as an empty response, not an error.
+`InMemoryEnrichmentCache.get()` acquires `mutex.withLock { ... }`. When `getIncludingExpired()` is added, it must also acquire the same mutex. If either method calls the other (e.g., `getIncludingExpired` calling `get()` internally to reduce code duplication), the `Mutex` in `kotlinx.coroutines.sync` is **not reentrant** — the second `withLock` call on the same coroutine will deadlock.
 
 **Why it happens:**
-The CF endpoint appears in the ListenBrainz docs alongside other endpoints that work with MBIDs.
-It's natural to assume it follows the same pattern. The distinction — user-scoped vs.
-content-scoped — is only clear when you read the endpoint path: `/user/{username}` vs.
-`/artist/{mbid}`.
+`java.util.concurrent.locks.ReentrantLock` is reentrant. Kotlin's `Mutex` is not. Developers familiar with Java locking expect lock re-entry to work.
 
 **How to avoid:**
-Do not model ListenBrainz CF as a standard `EnrichmentProvider`. It is a user-preference service,
-not a content enrichment service. The correct approach is one of:
+Both `get()` and `getIncludingExpired()` must each directly access `entries` map without calling each other. Extract the shared read logic into a `private fun readEntry(key: String): EnrichmentResult.Success?` that is called from within an already-held lock (not itself using `mutex.withLock`). The current `get()` method is short enough (4 lines of logic) that duplication is acceptable.
 
-Option A (recommended for v0.6.0): Treat it as a factory or out-of-band feature. Add a
-`ListenBrainzRecommendationService` separate from the provider chain, accepting a username
-parameter. This is not an `EnrichmentType` — it's a separate public API on the engine.
-
-Option B: Extend `EnrichmentRequest` with an optional `userContext` field containing a
-ListenBrainz username, and add CF as a specialized `EnrichmentType.LISTENING_BASED`. This
-works but bloats `EnrichmentRequest` with a concern that applies to only one of 11 providers.
-
-Option A is cleaner and avoids poisoning the request model. The feature is explicitly
-out-of-band, which is honest about what it is.
+The mutex must be acquired in both public methods:
+```kotlin
+override suspend fun getIncludingExpired(entityKey: String, type: EnrichmentType): EnrichmentResult.Success? = mutex.withLock {
+    entries[cacheKey(entityKey, type)]?.result  // no expiry check
+}
+```
 
 **Warning signs:**
-- Trying to declare `IdentifierRequirement` for a ListenBrainz username (no enum value exists)
-- Writing a provider that returns `NotFound` when `request.identifiers.musicBrainzId` is null,
-  but the real missing piece is a username
-- 204 responses parsed as JSON throwing an exception
+- Test hangs indefinitely when exercising stale cache path
+- Coroutine test times out in `InMemoryEnrichmentCacheTest`
+- Deadlock only reproducible when running the full test suite (Dispatchers.IO context)
 
-**Phase to address:** Phase 4 (Listening-Based recommendations) — design the user-context API
-shape before writing any code.
+**Phase to address:** Phase 2 (stale cache) — write `getIncludingExpired()` in `InMemoryEnrichmentCache` with mutex correctness as the primary concern.
 
 ---
 
-### Pitfall 5: SIMILAR_ALBUMS Composite Creates a Two-Level Dependency Chain
+### Pitfall 5: OSSRH (oss.sonatype.org) Is EOL — The docs/v0.8.0.md Plan Points at a Dead System
 
 **What goes wrong:**
-SIMILAR_ALBUMS is described as "synthesized from similar artists + genre + era." This means its
-`COMPOSITE_DEPENDENCIES` would include `SIMILAR_ARTISTS`, `GENRE`, and optionally `RELEASE_DATE`
-or `RELEASE_TYPE`. The existing composite resolution in `DefaultEnrichmentEngine.resolveTypes()`
-resolves sub-types and then synthesizes the composite. This works for `ARTIST_TIMELINE` because
-its sub-types (`ARTIST_DISCOGRAPHY`, `BAND_MEMBERS`) are leaf providers.
+The `docs/v0.8.0.md` plan says to add "OSSRH repository URLs (snapshots + releases)" and credentials from `gradle.properties`. Sonatype OSSRH (`oss.sonatype.org` and `s01.oss.sonatype.org`) **reached end-of-life on June 30, 2025** and is shut down. Publishing to those endpoints will fail with connection errors or 403s. The plan's publishing approach targets a dead system.
 
-The problem: if `SIMILAR_ARTISTS` is itself a merged type (after Pitfall 2 fix), the composite
-resolution must wait for the full merge to complete before synthesizing. The engine does handle
-this (mergeables run before composites), but `SIMILAR_ALBUMS` requires `SIMILAR_ARTISTS` for an
-*album* request — and the current `SIMILAR_ARTISTS` only works for `ForArtist`. Calling
-SIMILAR_ARTISTS from a `ForAlbum` request propagates `NotFound`, so the composite gets nothing.
-
-Further: the synthesizer needs to do something useful with similar artists + genre + era to produce
-album recommendations. "Artists similar to this artist who released albums in a similar genre/era"
-requires looking up those artists' discographies — that's potentially N additional provider calls,
-not a pure synthesis.
+The replacement is **Sonatype Central Portal** (`central.sonatype.com`), which uses a completely different API and authentication model.
 
 **Why it happens:**
-Composite types look simple on paper ("combine X + Y") but the synthesis step requires data
-across request scopes. `SIMILAR_ALBUMS` for a `ForAlbum` request needs artist-level data from the
-album's artist — a scope hop the current engine does not support. The `ARTIST_TIMELINE` composite
-works because all its inputs are also artist-scoped.
+The OSSRH/`maven-publish` + `signing` Gradle pattern was the standard for years. Most blog posts, StackOverflow answers, and tutorials still describe the OSSRH flow. The `docs/v0.8.0.md` plan was written from that established pattern without checking current state.
 
 **How to avoid:**
-For SIMILAR_ALBUMS, the synthesis strategy must be defined precisely before implementation:
-- Option A: Limit to genre + era matching against the known discography of similar artists
-  (no extra API calls, but shallow results). This is the v0.6.0 scope.
-- Option B: Accept that SIMILAR_ALBUMS will need a sub-request for each similar artist's
-  discography — add a batch resolution path to the engine.
+Use `com.vanniktech.maven.publish` plugin (current version 0.36.0+) instead of raw `maven-publish` + `signing` in a `subprojects` block. It supports Central Portal natively:
 
-Option A is correct for v0.6.0 and should be documented as a known limitation. The synthesizer
-takes the genre tags and release year from the source album, then filters/scores entries in
-the similar artists' discographies by genre overlap and year proximity. No extra API calls.
-Result quality will be moderate for obscure albums where genre/era data is sparse.
+```kotlin
+// In each module's build.gradle.kts
+plugins {
+    id("com.vanniktech.maven.publish") version "0.36.0"
+}
+
+mavenPublishing {
+    publishToMavenCentral()  // targets Central Portal, not OSSRH
+    signAllPublications()
+}
+```
+
+Credentials for Central Portal are **user tokens** generated at `central.sonatype.com/account`, not your login password. Set `mavenCentralUsername` and `mavenCentralPassword` in `~/.gradle/gradle.properties` or as `ORG_GRADLE_PROJECT_mavenCentralUsername` environment variables.
+
+The `docs/v0.8.0.md` plan's "subprojects block with POM metadata + OSSRH URLs" approach requires rewriting to use the vanniktech plugin per-module. The signing configuration is the same (GPG key), but the repository configuration is different.
 
 **Warning signs:**
-- Synthesizer function has more than 40 lines
-- Synthesizer makes HTTP calls (it should be pure, using only already-resolved data)
-- The composite has `COMPOSITE_DEPENDENCIES` pointing to another composite type
+- `401 Unauthorized` or `Connection refused` when publishing to `oss.sonatype.org`
+- `publishMavenPublicationToSonatypeRepository` task fails immediately
+- Gradle docs or community posts referencing `https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/`
 
-**Phase to address:** Phase 2 (SIMILAR_ALBUMS) — design the synthesizer contract (pure function,
-no I/O) before any implementation.
+**Phase to address:** Phase 4 (Maven Central publishing) — replace the entire OSSRH approach with the vanniktech plugin targeting Central Portal before writing any publishing config.
 
 ---
 
-### Pitfall 6: Credit-Based Discovery Has No Reverse Lookup
+### Pitfall 6: Signing Plugin subprojects Block Configuration Timing Errors
 
 **What goes wrong:**
-CREDITS data contains: `{ name: "Rick Rubin", role: "producer", roleCategory: "production" }`.
-Credit-based discovery means "find other tracks produced by Rick Rubin." This requires a reverse
-index: given a credit name, find all recordings they contributed to. Neither MusicBrainz nor
-Discogs in the current implementation provides this — the existing CREDITS provider looks up
-credits for a given recording, not all recordings for a given person.
+The `docs/v0.8.0.md` plan places signing configuration in a root `subprojects {}` block. Configuring the `signing` plugin and referencing `publications` inside `subprojects {}` triggers configuration-time resolution of tasks that don't exist yet. For the `musicmeta-android` module, the `release` publication component is created inside `afterEvaluate {}` (because Android library variants are not available at configuration time). The signing plugin trying to sign a publication that doesn't exist yet causes:
 
-The MusicBrainz API has this: `GET /ws/2/recording?artist={person-mbid}` with the artist's
-production role included in the `inc` parameter. But the Credit data model stores credit names,
-not the credited person's MBID. If you search by name, you get name collisions ("John Smith")
-and no guarantee the result is the same person.
+```
+Could not get unknown property 'release' for PublicationContainer
+```
+
+or silently produces unsigned artifacts (signing task created but not wired to the publication).
 
 **Why it happens:**
-Credits were implemented as a lookup (recording → credits), and the reverse direction (person →
-recordings) was not in scope for v0.5.0. It is easy to assume that because you have the data,
-discovery follows trivially. It does not.
+`musicmeta-core` and `musicmeta-okhttp` are pure JVM modules — their publications are available at configuration time. `musicmeta-android` requires `afterEvaluate`. A root `subprojects` block that applies uniformly to all three modules hits the Android timing issue.
 
 **How to avoid:**
-Before implementing credit-based discovery, decide the lookup key:
-- MusicBrainz credits should store the credited artist's MBID in `Credit.identifiers.musicBrainzId`
-  (check if `MusicBrainzParser.parseRecordingCredits()` already returns this)
-- Discogs credits store credited artist IDs in `extraartists[].id` — these should be stored in
-  `Credit.identifiers.extra["discogsArtistId"]`
+Per-module configuration is safer than a root `subprojects` block for signing. Apply the vanniktech plugin per-module (see Pitfall 5) — it handles the `afterEvaluate` timing for Android automatically.
 
-With person MBIDs stored, discovery is: resolve person MBID from credit → call
-`GET /ws/2/recording?artist={person-mbid}&inc=artist-credits` → return results as similar tracks.
-Without MBIDs, discovery degrades to a name-based search that is unreliable.
+If using raw `maven-publish` + `signing`, the Android module needs:
+```kotlin
+afterEvaluate {
+    signing {
+        sign(publishing.publications["release"])
+    }
+}
+```
 
-Verify the current `MusicBrainzParser.parseRecordingCredits()` output before designing the feature.
+The JVM modules can configure signing at normal evaluation time. Do not use a single root `subprojects` block for signing.
 
 **Warning signs:**
-- Credit-based discovery test uses a credit with a common name ("John Smith") and expects specific
-  results — this will be flaky
-- Discovery feature builds a fuzzy artist name search rather than an MBID lookup
-- `Credit.identifiers` is always `EnrichmentIdentifiers()` (empty) in test data
+- `./gradlew :musicmeta-android:signReleasePublication` succeeds but produces no `.asc` files
+- `./gradlew :musicmeta-android:publishToMavenLocal` completes without signing artifacts
+- `Could not resolve com.landofoz:musicmeta-android:0.8.0` — missing `.asc` in local Maven repo
 
-**Phase to address:** Phase 3 (Credit-Based Discovery) — audit Credit model for MBID storage
-before writing any discovery logic.
+**Phase to address:** Phase 4 (Maven Central publishing) — verify `~/.m2/repository/com/landofoz/musicmeta-android/0.8.0/` contains `.asc` files after `publishToMavenLocal`.
+
+---
+
+### Pitfall 7: OkHttp Response Body Must Be Closed Explicitly to Avoid Connection Leaks
+
+**What goes wrong:**
+OkHttp's `Response.body` is a one-read stream that must be closed after use. If the response body is read via `body?.string()` inside a `try` block but an exception occurs between creating the response and reading the body (or the body is never read for error responses), the underlying TCP connection is leaked. Over time, the connection pool fills with leaked connections and new requests hang or fail.
+
+`DefaultHttpClient` uses `conn.disconnect()` in a `finally` block which always releases resources. There is no equivalent automatic cleanup in OkHttp — the response body is your responsibility.
+
+**Why it happens:**
+`body?.string()` looks safe (the `?.` handles null) but it does not close the response body on the happy path — `string()` reads and closes, but only if called. For 4xx and 5xx responses where you want the error body (`response.body?.string()` for `ClientError`/`ServerError`), calling `string()` both reads and closes. The trap is success responses where you build an `HttpResult.Ok` and forget to ensure the body is always closed even if `JSONObject` parsing throws.
+
+**How to avoid:**
+Use `response.use { r -> r.body?.string() }` or `response.body?.use { it.string() }` patterns. In the `OkHttpEnrichmentClient`, the response must always be closed in a `finally` or via `use`:
+
+```kotlin
+client.newCall(request).execute().use { response ->
+    val code = response.code
+    when {
+        code == 429 -> { /* ... */ }
+        code in 400..499 -> HttpResult.ClientError(code, response.body?.string())
+        code in 200..299 -> {
+            val text = response.body?.string() ?: return@use HttpResult.NetworkError("empty body")
+            // parse JSON...
+        }
+        // ...
+    }
+}
+```
+
+The `use` block on `Response` calls `close()` after the lambda completes regardless of exceptions.
+
+**Warning signs:**
+- `WARNING: A connection to [url] was leaked. Did you forget to close a response body?` in OkHttp logs
+- `MockWebServer` test intermittently fails with "server failed to receive request" after many test iterations
+- Connection pool exhaustion after running `enrichBatch()` with a large list
+
+**Phase to address:** Phase 1 (OkHttp adapter) — every method in `OkHttpEnrichmentClient` must use `response.use { }` or `response.body?.use { }`.
+
+---
+
+### Pitfall 8: enrichBatch Flow Cancellation Requires Cooperative Suspension in the Loop
+
+**What goes wrong:**
+The `enrichBatch` default implementation in `EnrichmentEngine.kt` is:
+```kotlin
+flow {
+    for (request in requests) {
+        emit(request to enrich(request, types, forceRefresh))
+    }
+}
+```
+
+`enrich()` is a suspend function, so each iteration is a suspension point. Cancellation is cooperative — the flow will stop after the current `enrich()` call completes but before the next `emit()`. This is correct behavior for most cases. The pitfall is in the test: `enrichBatch cancellation stops processing (take(1))` must verify that not all requests were processed, but the test must account for the fact that the in-flight `enrich()` for item 1 will complete before cancellation propagates, and at minimum 1 result will always be emitted.
+
+A separate pitfall: if `enrich()` throws an uncaught exception (not wraps it in `EnrichmentResult.Error`), the flow terminates and remaining requests are never processed. The default implementation has no exception handling around the `enrich()` call.
+
+**Why it happens:**
+The `enrich()` interface contract guarantees it returns `EnrichmentResults` and never throws (exceptions are wrapped in `EnrichmentResult.Error`). But the default `enrichBatch` in the interface calls `enrich()` without a `try/catch`. If a future `enrich()` implementation breaks this contract, or if `DefaultEnrichmentEngine` has a bug in the `STALE_IF_ERROR` path that escapes the catch block, the entire batch fails.
+
+**How to avoid:**
+Add a `try/catch` in the `DefaultEnrichmentEngine.enrichBatch()` override around the `enrich()` call that converts any escaped exception to an `EnrichmentResults` with all types as `EnrichmentResult.Error`. This makes `enrichBatch` resilient even if `enrich()` has a latent uncaught exception path.
+
+For the cancellation test: use Turbine's `cancel()` after `take(1)` and assert that `FakeProvider.callCount` is at most 2 (one for the completed request, potentially one in-flight) and less than `requests.size`.
+
+**Warning signs:**
+- `enrichBatch` test with `take(1).collect {}` hangs if `enrich()` throws instead of wrapping errors
+- Cancellation test passes when it should fail (the loop is not checking for cancellation)
+- Empty request list test emits a spurious element
+
+**Phase to address:** Phase 3 (bulk enrichment) — the cancellation test and exception-safety of the loop must both be verified.
 
 ---
 
@@ -256,12 +270,13 @@ before writing any discovery logic.
 
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| Assign `0.5f` as default matchScore for Deezer ranked results | No new data class fields | Corrupts ranking when mixed with Last.fm semantic scores | Never |
-| Skip SimilarArtistsMerger, run SIMILAR_ARTISTS as short-circuit | Deezer provider wired quickly | Deezer data silently never used; test coverage misleads | Never |
-| Store deezerId only in `resolvedIdentifiers` Success result, not propagated back to request | Simpler code | Every SIMILAR_ARTISTS call always does two Deezer requests | Only if discography always runs first in same enrich() call |
-| Implement CF as a standard EnrichmentProvider with a hardcoded test username | Feature appears to work in tests | Test fixture contamination; username leaks into public API shape | Never |
-| Make SIMILAR_ALBUMS do N sub-requests in the synthesizer | More album candidates | Synthesizer is no longer a pure function; timeout risk scales with N | Never in synthesizer — move to engine layer if needed |
-| Normalize all similarity scores to 0–1 by dividing by max | Simple code | Loses meaning when max varies by provider run (empty results) | Low-stakes exploratory features only |
+| Put signing config in root `subprojects {}` for all modules | Single place to configure | Android timing errors, unsigned artifacts silently; hard to debug | Never — per-module config is required |
+| Use OSSRH URLs from old tutorials | Familiar setup | Fails immediately — OSSRH is EOL as of June 2025 | Never |
+| Skip `response.use {}` and call `body?.string()` directly | Less boilerplate | Connection pool leaks in production under load | Never |
+| Manually set `Accept-Encoding: gzip` in OkHttp request | Mirrors DefaultHttpClient behavior | OkHttp disables transparent decompression; binary garbage returned | Never |
+| Add `isStale` guard to cache write loop as a TODO comment | Feature appears to work | Stale data locked in cache indefinitely once provider recovers | Never |
+| One `OkHttpClient` instance per `OkHttpEnrichmentClient` method | Simpler code | Each call creates a new connection pool; no connection reuse | Never |
+| Serve stale for `NotFound` results in STALE_IF_ERROR mode | More permissive fallback | Returns cached "no results" even if the data might exist now; misleads callers | Never |
 
 ---
 
@@ -269,14 +284,16 @@ before writing any discovery logic.
 
 | Integration | Common Mistake | Correct Approach |
 |-------------|----------------|------------------|
-| Deezer `/artist/{id}/related` | Calling without verifying the artist ID came from the correct artist | Always verify via `ArtistMatcher.isMatch()` before accepting a searched artist ID |
-| Deezer `/artist/{id}/radio` | Treating empty `data` array as a parse error | Empty array = artist not found in Deezer or Deezer has no radio for them; return `NotFound` |
-| Deezer fan-out concurrency | 100ms `RateLimiter` is per-provider but `resolveTypes()` calls providers concurrently | Deezer has 3 new capabilities; concurrent fan-out could issue 3 Deezer requests simultaneously, breaching the ~50/5s limit. The `RateLimiter` must be shared across all Deezer methods via the same `DeezerApi` instance |
-| Last.fm `getsimilar` match score | Score is 0–1 but values above 0.8 are extremely rare (most are 0.1–0.4) | Do not apply `minConfidence` filter to individual similar-artist match scores — these are relative similarity signals, not provider quality scores |
-| ListenBrainz CF 204 | `fetchJson()` throws on empty body | Check HTTP status before parsing; 204 should return `NotFound`, not `Error` |
-| ListenBrainz CF `last_updated` | Ignoring stale recommendations | Cache TTL for CF results should be short (1–7 days); stale recommendations with old `last_updated` should be flagged or re-fetched |
-| Genre discovery from GenreMerger | Using raw `genreTags` from a single provider | Must use merged tags from `resolveAll()` output to get multi-provider confidence; single-provider tags have inflated variance |
-| MusicBrainz Credits MBID | `Credit.identifiers` assumed empty by existing code | Verify actual parser output before assuming credits have no MBIDs; if absent, plan to add MBID extraction before building reverse lookup |
+| OkHttp + gzip | Setting `Accept-Encoding: gzip` manually | Omit the header; OkHttp adds it and decompresses transparently |
+| OkHttp redirect | Using the same `OkHttpClient` for `fetchRedirectUrl` | Create `noRedirectClient` at construction time via `newBuilder().followRedirects(false).followSslRedirects(false).build()` |
+| OkHttp response body | Reading `body?.string()` without closing | Wrap with `response.use { }` or `body.use { it.string() }` on every path |
+| MockWebServer | Asserting `body?.string()` in test without closing response | Use `response.use { }` in test code too — leaks cause test suite flakiness |
+| Sonatype Central Portal | Using OSSRH credentials (username/password) | Generate user tokens from `central.sonatype.com/account` — login credentials rejected |
+| Sonatype Central Portal | Publishing with `maven-publish` directly | Use `com.vanniktech.maven.publish` plugin — it handles Central Portal API, checksums, and upload format |
+| Gradle signing | Using `signing.keyId` file-based approach in CI | Prefer `ORG_GRADLE_PROJECT_signingInMemoryKey` env var for CI — no keyring file to manage |
+| Maven Central | Publishing `pom` packaging without sources/javadoc jars | Maven Central requires sources.jar and javadoc.jar for every non-pom artifact; build fails validation |
+| Room cache getIncludingExpired | Adding new DAO method as `@Transaction` | Not needed — it's a read-only SELECT; `@Transaction` adds unnecessary overhead |
+| EnrichmentResult.Success isStale | Using `.copy()` with all fields | `result.copy(isStale = true)` is correct; only the isStale field changes |
 
 ---
 
@@ -284,24 +301,38 @@ before writing any discovery logic.
 
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| Uncached SIMILAR_ALBUMS triggering 4+ provider calls per request | Response time spikes; MusicBrainz rate limiter backpressure | Cache SIMILAR_ALBUMS aggressively (30-day TTL); it has no real-time data | Any caller requesting SIMILAR_ALBUMS without prior cache warm-up |
-| Credit-based discovery making per-credit reverse lookups | O(N credits) API calls for a track with many collaborators | Batch or limit: resolve top-1 or top-2 credits by roleCategory ("producer", "composer") | Tracks with 10+ distinct credits (common for hip-hop productions) |
-| SIMILAR_ARTISTS merge collecting all providers including slow ones | P95 latency dominates | Circuit breakers handle provider failures, but slow providers block the merge; add per-provider timeout | Any request where one provider takes >2s (Deezer geographic restrictions) |
-| Deezer concurrent fan-out breaching rate limit | Intermittent 429s, circuit breaker opens, all Deezer results lost | Ensure `DeezerApi` instance is shared across all provider capabilities so the `RateLimiter` serializes calls | When 3+ Deezer-backed types are requested in the same `enrich()` call |
-| SIMILAR_ALBUMS composite triggering sub-types that trigger further composites | Stack overflow or unbounded resolution | Never put a composite type in `COMPOSITE_DEPENDENCIES` of another composite | Immediately on first request if SIMILAR_ALBUMS depends on ARTIST_TIMELINE |
+| `enrichBatch` with large list, all cache misses | Wallclock time = sum of all `enrich()` calls × providers | Batch is sequential by design; warn callers that cache warm-up matters | Lists larger than ~50 requests with cold cache |
+| New `OkHttpClient` per request (not using shared client) | Connection pool exhausted; slow TLS handshakes for every request | Pass a shared `OkHttpClient` into `OkHttpEnrichmentClient` constructor | Any sustained usage — even 10 requests/min |
+| `getIncludingExpired` on Room with no index on `expires_at` | Slow query on large cache tables | The query uses `entity_key + enrichment_type` which is the existing composite key; no performance regression | Large Room databases (10k+ entries) |
+| `STALE_IF_ERROR` calling `getIncludingExpired` for every type in results | N extra DB calls per `enrich()` when provider fails | Only call `getIncludingExpired` when `cacheMode == STALE_IF_ERROR` AND result is `Error`/`RateLimited` | Always present if STALE_IF_ERROR is enabled and providers are degraded |
+| OkHttp connection pool with too-short idle timeout | Connections recycled before reuse; performance regression vs DefaultHttpClient | Use default `OkHttpClient()` — it has sensible defaults (5 connections, 5min idle) | Custom `OkHttpClient` built with `connectionPool(ConnectionPool(0, ...))` |
+
+---
+
+## Security Mistakes
+
+| Mistake | Risk | Prevention |
+|---------|------|------------|
+| Committing GPG private key to `gradle.properties` | Signing key compromise; stolen identity | Store in `~/.gradle/gradle.properties` (outside repo) or CI environment variables only |
+| Hardcoding Sonatype user token in `build.gradle.kts` | Token exposure in repo history | Use `findProperty("mavenCentralUsername")` with fallback from env var |
+| Publishing SNAPSHOT versions to Maven Central | SNAPSHOT artifacts blocked by Central Portal validation | Use `-SNAPSHOT` suffix only for local testing; Central Portal requires release versions |
+| Logging `EnrichmentConfig` including API keys in enrichBatch | API key exposure in application logs | Do not add config logging to the batch path; keys are in `ApiKeyConfig`, not `EnrichmentConfig`, but verify |
 
 ---
 
 ## "Looks Done But Isn't" Checklist
 
-- [ ] **Deezer SIMILAR_ARTISTS:** Provider returns data in isolation — verify it actually runs in the engine (SIMILAR_ARTISTS added to MERGEABLE_TYPES, SimilarArtistsMerger wired)
-- [ ] **Deezer SIMILAR_TRACKS:** Provider returns data for a known artist — verify behavior for obscure artists not in Deezer's catalog (empty `data[]` handled as `NotFound`)
-- [ ] **SIMILAR_ALBUMS synthesizer:** Returns results for mainstream artists — verify behavior when genre data is missing (zero genreTags) or similar artists returned empty
-- [ ] **ListenBrainz CF:** Test with a username that has recommendations — verify 204 handled correctly for users with no generated recommendations
-- [ ] **Credit-based discovery:** Works for a well-documented recording — verify behavior for recordings with zero MBID-linked credits (Discogs-only or anonymous credits)
-- [ ] **Genre discovery:** Returns neighbors — verify that the normalized genre key is used for comparison, not the raw display name (prevents "Alt Rock" vs "alt rock" mismatches)
-- [ ] **Rate limiting under fan-out:** Each feature works in isolation — verify that requesting SIMILAR_ARTISTS + SIMILAR_TRACKS + SIMILAR_ALBUMS in one call does not cause Deezer 429s
-- [ ] **Score normalization:** Merged results look reasonable — verify the merge produces a stable sort (same input always produces same output order)
+- [ ] **OkHttp gzip:** `OkHttpEnrichmentClient` returns correct JSON for a gzip-compressed response — verify with a `MockWebServer` test serving a gzip body
+- [ ] **OkHttp redirect:** `fetchRedirectUrl()` returns the `Location` header value, not the final resolved URL — verify with a `MockWebServer` 307 response
+- [ ] **OkHttp body leak:** All 12 methods close the response body — verify by running `OkHttpEnrichmentClientTest` and checking OkHttp logs for "connection leaked" warnings
+- [ ] **Stale guard:** Stale results are not re-written to cache — verify `FakeEnrichmentCache.stored` does not contain `isStale = true` entries after `enrich()` with `STALE_IF_ERROR`
+- [ ] **Stale not-for-NotFound:** `STALE_IF_ERROR` does not serve stale for `NotFound` results — verify test `STALE_IF_ERROR does not serve stale for genuine NotFound`
+- [ ] **Maven Central publishing:** All 3 modules publish with sources jar, javadoc jar, and `.asc` signatures — verify `ls ~/.m2/repository/com/landofoz/musicmeta-core/0.8.0/` shows all 6 file types (.jar, -sources.jar, -javadoc.jar, .pom, .module, and corresponding .asc)
+- [ ] **Maven Central POM:** Published POM contains `<name>`, `<description>`, `<url>`, `<licenses>`, `<developers>`, `<scm>` — verify with `cat ~/.m2/repository/com/landofoz/musicmeta-core/0.8.0/musicmeta-core-0.8.0.pom`
+- [ ] **enrichBatch cancellation:** Cancelling after `take(1)` stops the loop — verify `FakeProvider.callCount` is less than `requests.size`
+- [ ] **enrichBatch empty list:** Empty list emits nothing and completes normally — Turbine `awaitComplete()` without `awaitItem()`
+- [ ] **Version bump:** All 3 modules publish as `0.8.0`, not `0.1.0` — verify POM `<version>` field
+- [ ] **Mutex in getIncludingExpired:** `InMemoryEnrichmentCache.getIncludingExpired()` acquires the mutex — verify concurrent test does not return inconsistent results
 
 ---
 
@@ -309,12 +340,14 @@ before writing any discovery logic.
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| SIMILAR_ARTISTS implemented as short-circuit (Pitfall 2) | LOW | Add `SIMILAR_ARTISTS` to `MERGEABLE_TYPES`; implement `SimilarArtistsMerger`; existing provider tests still pass |
-| Wrong Deezer artist ID used (Pitfall 3) | LOW | Add `ArtistMatcher.isMatch()` guard in `searchArtist()` helper; add test for common-name artist |
-| ListenBrainz CF modeled as EnrichmentProvider (Pitfall 4) | HIGH | Requires removing from `ProviderRegistry`, adding new public API method, updating any callers |
-| SIMILAR_ALBUMS synthesizer makes I/O calls (Pitfall 5) | MEDIUM | Extract I/O to engine layer, keep synthesizer pure; requires new engine method for batch sub-requests |
-| Credit discovery built without MBIDs (Pitfall 6) | MEDIUM | Audit `MusicBrainzParser.parseRecordingCredits()` output; add MBID extraction to parser; may require changing `Credit` data class shape |
-| Score mixing corruption (Pitfall 1) | LOW | Define score derivation rules in mapper constants; rewrite merge to use max-score-wins instead of average |
+| Accept-Encoding set on OkHttp (Pitfall 1) | LOW | Remove the header from `buildGetRequest()`; existing `MockWebServer` tests will catch it |
+| fetchRedirectUrl follows redirects (Pitfall 2) | LOW | Create `noRedirectClient` in constructor; update `fetchRedirectUrl()` to use it |
+| Stale results cached with fresh TTL (Pitfall 3) | LOW | Add `&& !result.isStale` to cache write guard at engine line 97 |
+| Mutex deadlock in getIncludingExpired (Pitfall 4) | LOW | Rewrite to use direct `entries[]` access under existing lock, not calling `get()` |
+| OSSRH EOL, publishing fails (Pitfall 5) | MEDIUM | Replace raw `maven-publish` config with vanniktech plugin; reconfigure credentials for Central Portal |
+| Unsigned Android artifacts (Pitfall 6) | LOW | Move signing config into `afterEvaluate {}` per-module; verify `.asc` files in local Maven repo |
+| Response body leak (Pitfall 7) | LOW | Wrap all `execute()` calls with `response.use { }` |
+| enrichBatch exception propagation (Pitfall 8) | LOW | Add `try/catch` around `enrich()` in `DefaultEnrichmentEngine.enrichBatch()` override |
 
 ---
 
@@ -322,27 +355,46 @@ before writing any discovery logic.
 
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| Multi-provider score incompatibility (Pitfall 1) | Phase 1 — Deezer SIMILAR_ARTISTS | FakeProvider test: Last.fm + Deezer both return artists; merged result has stable ordering with correct top artist |
-| SIMILAR_ARTISTS not in MERGEABLE_TYPES (Pitfall 2) | Phase 1 — before DeezerProvider wiring | Test: DeezerProvider in registry returns artists; engine result contains artists from both providers |
-| Deezer artist ID not verified (Pitfall 3) | Phase 1 — DeezerApi.searchArtist() | Test: artist with common name returns `NotFound` when match fails `ArtistMatcher.isMatch()` |
-| ListenBrainz CF user-scope mismatch (Pitfall 4) | Phase 4 — design phase | No `EnrichmentProvider` subclass for CF; a separate service/function is the only implementation path |
-| SIMILAR_ALBUMS composite scope hop (Pitfall 5) | Phase 2 — synthesizer design | Synthesizer is a pure function with no I/O; unit test runs without any HTTP calls |
-| Credit discovery reverse lookup gap (Pitfall 6) | Phase 3 — audit before coding | `MusicBrainzParser.parseRecordingCredits()` test asserts MBID is present in Credit.identifiers for known recording |
-| Genre merge used incorrectly (Pitfall 7) | Phase 5 — Genre Discovery | Genre discovery test uses `resolveAll()` output, not a single provider's raw tags |
-| Deezer concurrent rate limit (Pitfall 8) | Phase 1 | Integration test: 3 Deezer-backed types in one call; verify single `DeezerApi` instance shared across capabilities |
+| OkHttp gzip decompression (Pitfall 1) | Phase 1 | MockWebServer test: gzip-encoded JSON body returns correct `JSONObject` |
+| fetchRedirectUrl follows redirects (Pitfall 2) | Phase 1 | MockWebServer test: 307 response returns `Location` header value, not resolved URL |
+| Stale results re-cached (Pitfall 3) | Phase 2 | Unit test: `stale result is not re-written to cache` — FakeEnrichmentCache has no stale entries |
+| Mutex deadlock (Pitfall 4) | Phase 2 | Unit test: concurrent `get()` + `getIncludingExpired()` calls complete without hanging |
+| OSSRH EOL (Pitfall 5) | Phase 4 | `./gradlew publishToMavenLocal` succeeds; artifacts visible in `~/.m2/repository/com/landofoz/` |
+| Android signing timing (Pitfall 6) | Phase 4 | `ls ~/.m2/.../musicmeta-android/0.8.0/` includes `.asc` files |
+| Response body leak (Pitfall 7) | Phase 1 | OkHttp logs show no "connection leaked" warnings after full test suite |
+| enrichBatch exception path (Pitfall 8) | Phase 3 | Test: `enrich()` throwing exception does not terminate the batch flow |
+
+---
+
+## docs/v0.8.0.md Plan Flags
+
+Specific issues in the current implementation plan that need correction:
+
+| Location in Plan | Issue | Correction |
+|------------------|-------|------------|
+| Phase 4, "OSSRH repository URLs (snapshots + releases)" | OSSRH is EOL as of June 30, 2025 | Replace with Central Portal via vanniktech plugin |
+| Phase 4, "subprojects block with signing plugin" | Causes Android `afterEvaluate` timing errors | Use per-module vanniktech plugin config |
+| Phase 4, "Credentials from gradle.properties" | Central Portal uses user tokens, not login credentials | Token generation from central.sonatype.com, not oss.sonatype.org |
+| Phase 1, "Constructor: (client: OkHttpClient, userAgent: String)" | Correct. Do not add Accept-Encoding header. | No change needed, but explicitly confirmed |
+| Phase 2, "Cache write loop line 97: ADD: && !result.isStale" | Correct identification, needs explicit implementation | Verify this guard is in the implementation checklist |
+| Phase 2, "getIncludingExpired must also use mutex.withLock" | Correct. Do not call get() from getIncludingExpired(). | Implement as direct map access under lock |
 
 ---
 
 ## Sources
 
-- Codebase analysis: `DefaultEnrichmentEngine.kt`, `ProviderChain.kt`, `ProviderRegistry.kt`, `GenreMerger.kt`, `ConfidenceCalculator.kt`, `DeezerProvider.kt`, `ListenBrainzProvider.kt`, `LastFmProvider.kt`, `MusicBrainzProvider.kt`, `TimelineSynthesizer.kt`, `EnrichmentData.kt`, `EnrichmentType.kt`
-- Provider documentation: `docs/providers/deezer.md`, `docs/providers/listenbrainz.md`, `docs/providers/lastfm.md`
-- Project context: `.planning/PROJECT.md`
-- ListenBrainz CF endpoint: https://listenbrainz.readthedocs.io/en/latest/users/api/recommendation.html (204 = no recommendations generated; endpoint is experimental and subject to change)
-- Music credit completeness: https://soundcharts.com/en/blog/music-metadata (50M+ songs missing producer/songwriter credits; cross-database inconsistency is systemic)
-- Last.fm similarity algorithm: https://www.quora.com/How-does-Last-fm-compute-lists-of-similar-artists (collaborative filtering + tag-based; not a pure content signal)
-- Deezer rate limit: https://github.com/BackInBash/DeezerSync/issues/6 (community-observed ~50 req/5s; no official documentation)
+- Codebase analysis: `DefaultHttpClient.kt` (289 lines), `InMemoryEnrichmentCache.kt`, `DefaultEnrichmentEngine.kt`, `RoomEnrichmentCache.kt`, `EnrichmentResult.kt`, `EnrichmentCache.kt`, `HttpClient.kt`, `EnrichmentEngine.kt`, `build.gradle.kts` (all modules), `gradle/libs.versions.toml`
+- Implementation plan reviewed: `docs/v0.8.0.md`
+- OkHttp transparent gzip: [OkHttp issue #1579](https://github.com/square/okhttp/issues/1579) — confirms manual `Accept-Encoding` disables transparent decompression
+- OkHttp response body close: [okhttp-coroutines README](https://github.com/square/okhttp/blob/master/okhttp-coroutines/README.md) — `response.use {}` pattern
+- OSSRH EOL: [Gradle Forums thread](https://discuss.gradle.org/t/publishing-to-maven-central-in-2025-ossrh-eol/50983) — confirmed shutdown June 30, 2025
+- OSSRH shutdown tracking: [GitHub issue #11512 IQSS/dataverse](https://github.com/IQSS/dataverse/issues/11512)
+- vanniktech plugin Central Portal: [vanniktech.github.io](https://vanniktech.github.io/gradle-maven-publish-plugin/central/) — current setup for Central Portal
+- Maven Central requirements: [central.sonatype.org/publish/requirements](https://central.sonatype.org/publish/requirements/) — required POM fields, sources/javadoc jars, GPG signing
+- Gradle signing with subprojects: [gradle/gradle issue #13419](https://github.com/gradle/gradle/issues/13419) — afterEvaluate timing requirement for Android
+- Kotlin coroutines Flow cancellation: [Kotlin docs](https://kotlinlang.org/docs/flow.html) — cooperative cancellation at suspension points
+- Kotlin data class default parameter binary compat: [Kotlin binary-compatibility-validator](https://github.com/Kotlin/binary-compatibility-validator) — `isStale: Boolean = false` is source-compatible but not binary-compatible (acceptable pre-1.0)
 
 ---
-*Pitfalls research for: v0.6.0 Recommendations Engine — adding 7 recommendation modules to existing music metadata enrichment library*
-*Researched: 2026-03-23*
+*Pitfalls research for: v0.8.0 Production Readiness — OkHttp adapter, stale cache, bulk enrichment, Maven Central publishing*
+*Researched: 2026-03-24*

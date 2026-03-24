@@ -1,164 +1,177 @@
 # Project Research Summary
 
-**Project:** musicmeta v0.6.0 — Recommendations Engine
-**Domain:** Music metadata enrichment library (Kotlin/JVM), adding 7 recommendation modules to an existing provider-chain engine
-**Researched:** 2026-03-23
+**Project:** musicmeta v0.8.0 Production Readiness
+**Domain:** Kotlin/JVM music metadata enrichment library — OkHttp adapter, stale cache, bulk enrichment, Maven Central
+**Researched:** 2026-03-24
 **Confidence:** HIGH
 
 ## Executive Summary
 
-The v0.6.0 Recommendations Engine extends an already-working enrichment library rather than building from scratch. All 7 recommendation modules can be implemented using the existing stack — no new dependencies are needed. The work divides cleanly into three categories: (a) adding new capabilities to existing Deezer and ListenBrainz providers (SIMILAR_ARTISTS, SIMILAR_TRACKS), (b) adding one new composite type synthesized from existing data (SIMILAR_ALBUMS), and (c) adding two new out-of-band engine methods that bypass the provider chain entirely (credit-based discovery, listening recommendations). A sixth module, genre affinity, is a pure utility function requiring no API calls or new types.
+v0.8.0 is a production readiness milestone, not a feature expansion. The four features — OkHttp adapter module, stale-while-revalidate cache, bulk enrichment Flow API, and Maven Central publishing — each remove a specific adoption blocker for production Android teams. The existing architecture accommodates all four additions cleanly: the `HttpClient` interface has an integration point at `EnrichmentEngine.Builder.httpClient()` (line 78) that accepts any implementation; `EnrichmentResult.Success` can absorb the `isStale` flag with a default that preserves source compatibility; `Flow` is already a transitive dependency so `enrichBatch()` needs no new dep; and the Gradle build structure accepts per-module publishing config without restructuring.
 
-The recommended approach treats each module as fitting one of four established patterns from the codebase: standard provider addition, composite type synthesis, engine-level utility, and new engine method. The critical insight from architecture research is that ListenBrainz collaborative filtering and credit-based discovery are fundamentally user-scoped or person-scoped queries — not entity-enrichment calls — and must not be forced into the `EnrichmentRequest`/`EnrichmentProvider` model. Both should be added as dedicated methods on `EnrichmentEngine` (`discoverByCredit()`, `listeningRecommendations()`), bypassing the provider chain.
+The recommended implementation order is OkHttp adapter first (creates the third module required for Maven Central config), stale cache second (so bulk enrichment inherits offline support for free), batch API third (minimal implementation, relies on stale cache), and Maven Central last (requires all three modules to exist). This ordering is already in `docs/v0.8.0.md` and is confirmed correct by dependency analysis. Phases 1 and 2 are independent of each other and could proceed concurrently if needed.
 
-The highest-risk pitfalls involve multi-provider similarity score incompatibility (Deezer returns ranked lists with no numeric scores, which corrupt Last.fm semantic scores if naively merged) and the Deezer artist ID resolution gap (three Deezer features require a numeric Deezer artist ID not currently stored in `EnrichmentIdentifiers`). Both pitfalls must be addressed in Phase 1 before any later module builds on Deezer data. SIMILAR_ALBUMS is the highest-value new feature and the highest-complexity implementation, requiring a pure synthesizer that operates on already-resolved sub-types with no I/O calls inside the synthesis step.
+The single highest-risk item is Phase 4: the `docs/v0.8.0.md` plan targets the defunct OSSRH publishing infrastructure, which was shut down on June 30, 2025. The entire publishing mechanism must be replaced with the `vanniktech/gradle-maven-publish-plugin` (v0.36.0) targeting Sonatype Central Portal. Every other design decision in the plan has been verified correct against actual source files and official documentation. Implementation risk is LOW for Phases 1-3 (clear patterns, existing codebase structure accommodates all changes without restructuring) and MEDIUM-HIGH for Phase 4 (process complexity: Central Portal account, namespace verification, GPG key setup, first-publish manual approval).
 
 ## Key Findings
 
 ### Recommended Stack
 
-No new library dependencies are required for any of the 7 modules. The existing stack — Kotlin 2.1.0, kotlinx.coroutines 1.9.0, org.json for HTTP parsing, kotlinx.serialization-json for `EnrichmentData` — is sufficient. Pure-Kotlin cosine similarity replaces Apache Commons Math for genre affinity (10 lines, no external JAR). No new entries in `gradle/libs.versions.toml`.
+The existing validated stack (Kotlin 2.1.0, coroutines 1.9.0, kotlinx.serialization 1.7.3, org.json, JUnit 4.13.2, Turbine 1.2.0) requires no changes for Phases 1-3. Only two new library entries and one new plugin enter the build for v0.8.0.
 
-**Core technologies:**
-- Kotlin/JVM 2.1.0 — language; no upgrade needed
-- kotlinx.coroutines 1.9.0 — existing fan-out pattern (`coroutineScope { async {} }`) handles all concurrent resolution; no new concurrency primitives needed
-- org.json — all new API response parsing (Deezer, ListenBrainz CF) follows the same pattern as existing providers
-- kotlinx.serialization-json — new `EnrichmentData` subtypes (`SimilarAlbums`, `SimilarAlbum`) auto-serialize via the existing sealed class hierarchy
+**Core technologies — new additions only:**
+- `com.squareup.okhttp3:okhttp:4.12.0`: HTTP client implementation for the adapter module — 4.12.0 is the final stable 4.x release; OkHttp 5.x is rejected because it forces Kotlin 2.2.x stdlib onto library consumers and renames MockWebServer coordinates with no compensating benefit at this milestone
+- `com.squareup.okhttp3:mockwebserver:4.12.0`: Integration test server for adapter — standard tool; the 4.x coordinate is unchanged (the 5.x rename to `mockwebserver3-junit4` does not apply here)
+- `com.vanniktech.maven.publish:0.36.0` (Gradle plugin): Maven Central publishing via Central Portal — the only working publishing path since OSSRH shutdown; handles sources/javadoc jars, GPG signing, and Android variant timing automatically per module
 
-The only schema additions needed are new `EnrichmentType` enum entries: `SIMILAR_ALBUMS` (30-day TTL, composite) and `LISTENING_RECS` (1-day TTL, non-composite). `SIMILAR_TRACKS` and `SIMILAR_ARTISTS` already exist and receive new providers; `RADIO_MIX` maps directly to `SIMILAR_TRACKS` (no new type warranted per architecture research).
+See `.planning/research/STACK.md` for the exact version catalog additions and per-module `build.gradle.kts` templates (including the `musicmeta-okhttp` build file).
 
 ### Expected Features
 
-**Must have (table stakes) for v0.6.0:**
-- Deezer SIMILAR_ARTISTS — third provider in existing short-circuit chain, foundational for SIMILAR_ALBUMS
-- Deezer SIMILAR_TRACKS — second provider in existing chain; position-based synthetic match score (position 1 = 1.0, linear decay to 0.1 at position 25)
-- SIMILAR_ALBUMS — new composite `EnrichmentType` synthesized from SIMILAR_ARTISTS + GENRE + ARTIST_DISCOGRAPHY; highest-value new discovery surface
-- ListenBrainz CF (LISTENING_RECS) — new out-of-band engine method returning recording MBIDs with CF scores for a named LB user
+All four v0.8.0 features are P1. No feature is optional; each removes a concrete adoption blocker.
 
-**Should have (competitive differentiators):**
-- SIMILAR_ARTISTS promoted to mergeable type — upgrades from short-circuit to all-provider union with `SimilarArtistsMerger`; improves SIMILAR_ALBUMS input quality
-- Genre affinity (`GenreGraph` utility) — cosine similarity on `List<GenreTag>`, exposed as a pure utility object analogous to `GenreMerger`; no new `EnrichmentType` needed
-- Credit-based discovery — new `discoverByCredit(personMbid, role, limit)` engine method; scoped to production/songwriting roles where MBID data is dense
+**Must have (table stakes):**
+- OkHttp adapter implementing all 10 `HttpClient` methods — Android teams managing an `OkHttpClient` singleton cannot use the library without it; running two HTTP stacks in one app is not viable
+- Stale serving for `Error` and `RateLimited` only (not `NotFound`) — mobile offline support is expected in any enrichment library targeting Android; returning empty results on network blip is a reliability failure
+- `CacheMode` enum with `NETWORK_FIRST` default — existing callers must see no behavior change; `STALE_IF_ERROR` is explicit opt-in
+- `isStale: Boolean = false` on `EnrichmentResult.Success` — consumers need to distinguish fallback data from fresh results to show staleness indicators or decide to retry
+- `enrichBatch()` returning `Flow<Pair<EnrichmentRequest, EnrichmentResults>>` — the most common real-world use case (enrich a full music library) has no ergonomic API today; callers write boilerplate for loops
+- Maven Central distribution with sources jar, javadoc jar, and GPG-signed artifacts — JitPack blocks corporate adoption; Maven Central is required for Dependabot, Renovate, and security scanning
 
-**Defer (v0.6.x / v0.7+):**
-- Genre taxonomy hierarchy — deferred per PROJECT.md; flat affinity table covers the use case
-- `ForUser` request variant — clean model for ListenBrainz CF but a breaking change; defer until CF sees real usage
-- Full SIMILAR_ARTISTS merger with score averaging — build once all three providers are live and coverage can be measured
-- MusicBrainz `getRecordingsByContributor` cross-entity query — high complexity; Approach A (synthesis from existing CREDITS) is v0.6.0 scope
+**Should have (differentiators):**
+- `musicmeta-okhttp` as a separate module — core stays dependency-light (org.json + coroutines only); consumers who don't want OkHttp never pull it in; this is the Ktor client engine module pattern
+- `enrichBatch()` cooperative cancellation — `take(N)` from the cold Flow stops processing with no wasted API calls; this is worth documenting explicitly as a feature
+- `getIncludingExpired()` with default null on `EnrichmentCache` interface — custom implementations auto-safe without breaking; only `InMemoryEnrichmentCache` and `RoomEnrichmentCache` actively provide stale data
+
+**Defer (v0.8.x or v0.9+):**
+- `CACHE_FIRST` mode (serve stale always, background refresh) — requires background coroutine scope management and a consumer notification mechanism; different architecture; explicitly out of v0.8.0 scope
+- `STALE_WHILE_REVALIDATE` proactive mode — only if `STALE_IF_ERROR` proves insufficient in practice
+- Parallel `enrichBatch` — MusicBrainz rate limiter (1 req/sec) makes parallelism counterproductive; sequential is 90% of the value; concurrency is a future optimization
+- OkHttp 5.x variant of the adapter — only if consumer demand emerges; this upgrade belongs alongside a Kotlin 2.2.x bump
+
+See `.planning/research/FEATURES.md` for full anti-feature analysis and feature dependency graph.
 
 ### Architecture Approach
 
-Four distinct patterns from the codebase handle all 7 modules without inventing new abstractions. Standard provider addition (Pitfall-aware: SIMILAR_ARTISTS must be promoted to `MERGEABLE_TYPES` or Deezer data is silently discarded) handles Deezer SIMILAR_ARTISTS and SIMILAR_TRACKS. Composite type synthesis — the `ARTIST_TIMELINE` pattern — handles SIMILAR_ALBUMS via a new pure `SimilarAlbumsSynthesizer` object. Engine-level utility (the `GenreMerger` pattern) handles genre affinity as a `GenreGraph` object. New engine methods on the `EnrichmentEngine` interface handle the two out-of-band features whose query shape does not fit `EnrichmentRequest`.
+The architecture is purely additive for Phases 1 and 3; Phase 2 modifies 6 core files and 2 Android files; Phase 4 touches only build files. No existing interfaces are broken — every change either extends an interface with a backward-compatible default implementation or adds a field with a default value. The `HttpClient` interface integration point accepts any implementation, so `OkHttpEnrichmentClient` plugs in with no engine changes required.
 
-**Major components introduced in v0.6.0:**
-1. `DeezerApi` (extended) — adds `getRelatedArtists(artistId, limit)` and `getArtistRadio(artistId, limit)`; shared `RateLimiter` instance must cover all three Deezer capabilities to prevent concurrent fan-out exceeding ~50 req/5s
-2. `SimilarAlbumsSynthesizer` — new pure stateless object; mirrors `TimelineSynthesizer`; accepts already-resolved `SimilarArtists`, `Genre`, and `ArtistDiscography` results; no I/O
-3. `GenreGraph` — new public utility object; `neighbors(tags, limit)` using cosine similarity; no provider registration
-4. `DefaultEnrichmentEngine` (extended) — adds `discoverByCredit()` and `listeningRecommendations()` methods; both bypass provider chain and call `MusicBrainzApi`/`ListenBrainzApi` directly via Builder-injected instances
+**Major components and changes:**
+1. `OkHttpEnrichmentClient` (new file, new module) — implements all 10 `HttpClient` methods via `OkHttp Call.execute()` wrapped in `withContext(Dispatchers.IO)`; three private helpers (`buildGetRequest`, `buildPostRequest`, `toHttpResult`) keep each public method under 40 lines
+2. `EnrichmentCache` interface — gains `getIncludingExpired()` with default `null`; `InMemoryEnrichmentCache` changes eager-delete at line 21 to return-null-only; `RoomEnrichmentCache` adds a new DAO query (no schema migration needed)
+3. `DefaultEnrichmentEngine` — inserts `applyStaleCache()` after the timeout catch block (line 93); adds `!result.isStale` guard to the cache write loop at line 97; adds explicit `enrichBatch()` override
+4. `EnrichmentEngine` interface — gains `enrichBatch()` default implementation (6 lines); `CacheMode` enum added to cache package
+5. Build system — vanniktech plugin applied per module; all three modules publish version `0.8.0` to Central Portal
+
+**Critical correction to `docs/v0.8.0.md` Phase 4:** The plan's "subprojects block with OSSRH URLs" approach is entirely wrong and must not be implemented. Replace with per-module vanniktech DSL. The `AndroidSingleVariantLibrary` configure block replaces both `android { publishing { singleVariant() } }` and `afterEvaluate { publishing { } }`. The `java { withSourcesJar(); withJavadocJar() }` blocks are also unnecessary — the vanniktech plugin adds them automatically.
+
+**Minor correction:** `docs/v0.8.0.md` and `PROJECT.md` refer to "12 HttpClient methods" — actual count verified from source is 10 (6 nullable + 4 HttpResult). No impact on implementation scope; implement all 10 methods.
+
+See `.planning/research/ARCHITECTURE.md` for a file-by-file change map with exact line references confirmed against source, and a complete before/after validation table for all claims in `docs/v0.8.0.md`.
 
 ### Critical Pitfalls
 
-1. **Multi-provider score incompatibility** — Deezer returns ranked lists with no numeric scores; Last.fm returns semantic floats 0–1. Mixing them in a naive average corrupts ranking. Prevention: derive Deezer scores from position (`1.0 - index/count`), treat Last.fm as primary confidence, use max-score-wins (not averaging) in the merger. Must be defined before any merge code is written (Phase 1).
+1. **OkHttp transparent GZIP disabled by manual `Accept-Encoding` header** — Do NOT set `Accept-Encoding: gzip` in `buildGetRequest()`. OkHttp adds this header automatically and decompresses transparently; manually setting it signals "caller will decompress" and causes binary gzip bytes to reach the JSON parser. Test with a MockWebServer endpoint serving a gzip-compressed JSON response body.
 
-2. **SIMILAR_ARTISTS not in MERGEABLE_TYPES** — Adding Deezer at priority 50 to a short-circuit chain means its data is silently discarded whenever Last.fm succeeds. Prevention: add `SIMILAR_ARTISTS` to `MERGEABLE_TYPES` and implement `SimilarArtistsMerger` before wiring the Deezer provider. Verify with a test that asserts both providers' artists appear in the engine result.
+2. **OSSRH is shut down — `docs/v0.8.0.md` Phase 4 targets a dead system** — All OSSRH endpoints (`s01.oss.sonatype.org`, `oss.sonatype.org`) have rejected uploads since June 30, 2025. Replace the entire Phase 4 publishing approach with the vanniktech plugin targeting `SonatypeHost.CENTRAL_PORTAL`. Use Central Portal user tokens (generated at `central.sonatype.com/account`) — not OSSRH login credentials — stored in `~/.gradle/gradle.properties`.
 
-3. **Deezer artist ID resolution gap** — Three Deezer features require a numeric Deezer artist ID not stored in `EnrichmentIdentifiers` unless a prior discography call ran. Prevention: check `identifiers.extra["deezerId"]` first; fall back to `searchArtist(name)` with `ArtistMatcher.isMatch()` verification; return `NotFound` rather than guessing. The shared `DeezerApi` instance must be used across all capabilities to ensure the `RateLimiter` serializes all concurrent Deezer calls.
+3. **Stale results re-cached with fresh TTL** — The engine cache write loop at line 97 writes all `Success` results. After stale serving, stale results are `EnrichmentResult.Success` instances with `isStale = true`. Without the `&& !result.isStale` guard, expired data gets a new TTL and remains stale indefinitely even after the provider recovers.
 
-4. **ListenBrainz CF user-scope mismatch** — The CF endpoint is user-scoped, not entity-scoped; modeling it as an `EnrichmentProvider` requires username in `EnrichmentRequest` which poisons the request model. Prevention: implement as a dedicated `listeningRecommendations(username, limit)` method on `EnrichmentEngine`; handle 204 No Content as `NotFound` (not an error) in `ListenBrainzApi`.
+4. **`InMemoryEnrichmentCache` mutex deadlock in `getIncludingExpired`** — Kotlin's `Mutex` is not reentrant. If `getIncludingExpired()` calls `get()` internally to reduce duplication, the second `mutex.withLock` on the same coroutine deadlocks. Both methods must access the `entries` map directly under their own lock without delegating to each other.
 
-5. **SIMILAR_ALBUMS synthesizer with I/O** — The temptation is to fetch each similar artist's discography inside the synthesizer. This breaks the pure-function synthesis model, introduces uncounted HTTP calls, and creates timeout risk. Prevention: scope v0.6.0 SIMILAR_ALBUMS to artist-level signals from already-resolved sub-types only; if per-similar-artist discography is needed, declare it as a sub-type dependency at the engine level, not inside the synthesizer.
+5. **OkHttp response body must be closed explicitly** — `response.body?.string()` reads the body but does not guarantee closure if an exception is thrown before the read. Wrap every `execute()` call with `response.use { }` to guarantee connection pool release on all paths.
 
-6. **Credit discovery without MBIDs** — Credit-based discovery requires a reverse lookup (person → recordings), which requires the credited person's MBID. Prevention: audit `MusicBrainzParser.parseRecordingCredits()` before writing any discovery logic; verify that `Credit.identifiers.musicBrainzId` is populated for production credits. If absent, add MBID extraction to the parser first.
+See `.planning/research/PITFALLS.md` for 8 critical pitfalls with warning signs, recovery steps, and an 11-item "looks done but isn't" verification checklist.
 
 ## Implications for Roadmap
 
-Based on research, the build order is driven by two constraints: (a) Deezer provider extensions must be stable before SIMILAR_ALBUMS can be tested with real data, and (b) ListenBrainz CF and credit discovery are independent of all other modules. Genre affinity is a utility that can be delivered at any point.
+The `docs/v0.8.0.md` phase ordering is confirmed correct by dependency analysis. The rationale is dependency-driven, not arbitrary.
 
-### Phase 1: Deezer Provider Extensions
-**Rationale:** Foundational for SIMILAR_ALBUMS (Phase 2) and validates the "add to existing provider" pattern before more complex work begins. Must address the three Deezer pitfalls (score incompatibility, MERGEABLE_TYPES promotion, ID resolution gap) before any code ships.
-**Delivers:** Deezer as third SIMILAR_ARTISTS provider and second SIMILAR_TRACKS provider; `SimilarArtistsMerger` promoting SIMILAR_ARTISTS to a mergeable type; verified artist ID resolution with `ArtistMatcher.isMatch()` guard.
-**Addresses:** Deezer SIMILAR_ARTISTS (table stakes), Deezer SIMILAR_TRACKS (table stakes)
-**Avoids:** Pitfall 1 (score incompatibility), Pitfall 2 (short-circuit silently discards Deezer), Pitfall 3 (unverified artist ID), Pitfall 8 (concurrent Deezer fan-out via shared `RateLimiter`)
-**Research flag:** Standard patterns; skip research-phase.
+### Phase 1: OkHttp Adapter Module (`musicmeta-okhttp`)
 
-### Phase 2: SIMILAR_ALBUMS Composite
-**Rationale:** Highest-value new discovery surface; depends on Phase 1 providing real SIMILAR_ARTISTS data to validate the synthesizer. Must define the synthesizer contract as a pure function with no I/O before implementation begins.
-**Delivers:** New `EnrichmentType.SIMILAR_ALBUMS`; `SimilarAlbumsSynthesizer` pure object; new `EnrichmentData.SimilarAlbums` and `SimilarAlbum` data classes; 30-day TTL caching.
-**Implements:** Composite type synthesis pattern (mirrors `ARTIST_TIMELINE` / `TimelineSynthesizer`)
-**Avoids:** Pitfall 5 (synthesizer with I/O — verify synthesizer is pure before merging)
-**Research flag:** Well-documented pattern (ARTIST_TIMELINE precedent); skip research-phase.
+**Rationale:** Creates the third Gradle module that Phase 4 (Maven Central) must configure. Also the single largest implementation task (10 methods) and validates that the `HttpClient` interface is fully implementable without changes to the engine. Phases 2 and 3 are independent of Phase 1 but Phase 4 depends on it.
+**Delivers:** New `musicmeta-okhttp` Gradle module; `OkHttpEnrichmentClient` implementing all 10 `HttpClient` methods; MockWebServer integration tests; version catalog additions for okhttp and mockwebserver.
+**Addresses:** Android adoption blocker (dual HTTP stack problem); OkHttp ecosystem compatibility.
+**Avoids:** GZIP decompression footgun (do not set `Accept-Encoding`), redirect-following misconfiguration (create `noRedirectClient` at construction time), response body connection leaks (wrap with `response.use { }`).
+**Research flag:** No additional research needed — OkHttp patterns are well-documented; all 10 method behaviors verified against `DefaultHttpClient.kt`; implementation plan confirmed against source.
 
-### Phase 3: Genre Affinity Utility
-**Rationale:** Independent of all other modules; pure computation on existing GENRE data; lowest implementation risk; can be delivered in parallel with or after Phase 2.
-**Delivers:** `GenreGraph` public utility object with `neighbors(tags, limit)` using cosine similarity; usable by consumers after any `GENRE` enrichment; also used by `SimilarAlbumsSynthesizer` for genre overlap scoring.
-**Implements:** Engine-level utility pattern (mirrors `GenreMerger`)
-**Research flag:** Standard patterns; skip research-phase.
+### Phase 2: Stale-While-Revalidate Cache
 
-### Phase 4: Credit-Based Discovery
-**Rationale:** Independent of Deezer phases; depends on CREDITS type (shipped in v0.5.0); must audit `MusicBrainzParser.parseRecordingCredits()` for MBID presence before writing any discovery logic.
-**Delivers:** New `discoverByCredit(personMbid, role, limit)` method on `EnrichmentEngine`; MusicBrainz person-relationship query for production/songwriting roles; `CreditDiscoveryResult` data class; result cap (3 persons, 10 recordings each) to prevent fan-out.
-**Avoids:** Pitfall 6 (credit discovery without MBIDs — audit parser first); anti-pattern of `ForPerson` request type
-**Research flag:** Needs pre-implementation audit: verify `MusicBrainzParser.parseRecordingCredits()` outputs populated `Credit.identifiers.musicBrainzId`. If absent, parser changes are required before Phase 4 proper begins.
+**Rationale:** Must precede Phase 3 so `enrichBatch()` inherits offline support automatically. The stale cache infrastructure (`CacheMode`, `isStale`, `getIncludingExpired`) is a prerequisite for the batch API to behave correctly under degraded network conditions. Technically independent of Phase 1 — touches non-overlapping files.
+**Delivers:** `CacheMode` enum; `isStale: Boolean = false` on `EnrichmentResult.Success`; `getIncludingExpired()` on `EnrichmentCache` interface; `STALE_IF_ERROR` logic in `DefaultEnrichmentEngine`; new DAO query in `EnrichmentCacheDao`; updated `RoomEnrichmentCache`; updated `FakeEnrichmentCache`; 8 new test cases.
+**Addresses:** Mobile offline scenario; staleness transparency for UI consumers.
+**Avoids:** Stale re-caching (add `!result.isStale` guard), mutex deadlock (direct map access under lock, never call `get()` from `getIncludingExpired()`), stale-for-`NotFound` correctness error.
+**Research flag:** No additional research needed — all file locations, line numbers, and change boundaries verified against actual source. No schema migration required.
 
-### Phase 5: ListenBrainz Collaborative Filtering
-**Rationale:** Independent of all other modules; must be modeled as an out-of-band engine method from the start (not an `EnrichmentProvider`) to avoid poisoning the request model.
-**Delivers:** New `listeningRecommendations(username, limit)` method on `EnrichmentEngine`; new `ListenBrainzApi.getCFRecommendations()` method; `ListeningRecommendation` data class; 204 No Content handled as `NotFound`; 1-day cache TTL.
-**Avoids:** Pitfall 4 (CF user-scope mismatch — no `ForUser` request type, no `EnrichmentProvider` subclass)
-**Research flag:** Standard patterns; skip research-phase. API endpoint is marked experimental in ListenBrainz docs — monitor for breaking changes.
+### Phase 3: Bulk Enrichment Flow API
+
+**Rationale:** Minimal implementation (~20 lines across two files). Depends on Phase 2 so each `enrich()` call inside the batch automatically uses `cacheMode` and the stale fallback path. Implementation effort is in test coverage, not code.
+**Delivers:** `enrichBatch()` default method on `EnrichmentEngine` interface; explicit override in `DefaultEnrichmentEngine`; `EnrichmentBatchTest.kt` with 5 Turbine test cases (normal batch, cancellation, empty list, exception safety, force-refresh propagation).
+**Addresses:** Most common real-world use case (process a full music library); cooperative cancellation via cold Flow.
+**Avoids:** Concurrent enrichBatch anti-pattern (MusicBrainz rate limiter makes parallelism counterproductive); exception propagation terminating the entire batch (add `try/catch` around `enrich()` in `DefaultEnrichmentEngine.enrichBatch()` override).
+**Research flag:** No additional research needed — sequential cold Flow is the simplest correct implementation; Turbine is already in the test bundle.
+
+### Phase 4: Maven Central Publishing
+
+**Rationale:** Requires all three modules to exist (Phase 1 creates `musicmeta-okhttp`). Cannot configure publishing for a module that doesn't exist. Process complexity is high but Kotlin/build file changes are small.
+**Delivers:** All three modules published as `0.8.0` to Maven Central via Central Portal; sources jars, javadoc jars, GPG-signed artifacts; complete POM metadata; credential placeholder comments in `gradle.properties`; updated README with Maven Central coordinates.
+**Addresses:** Corporate adoption blocker (JitPack-only distribution); Dependabot/Renovate/security scanner compatibility.
+**Avoids:** OSSRH-targeting failure (use vanniktech plugin + `CENTRAL_PORTAL` host), Android signing timing errors from root `subprojects` block (use per-module vanniktech DSL instead).
+**Research flag:** PLAN CORRECTION REQUIRED before implementation — the `docs/v0.8.0.md` Phase 4 section must be rewritten entirely to use the vanniktech plugin. The OSSRH approach in the plan will fail immediately on the first publishing attempt. See `.planning/research/STACK.md` for the exact replacement configuration and `.planning/research/PITFALLS.md` Pitfalls 5 and 6 for the detailed correction.
 
 ### Phase Ordering Rationale
 
-- Phase 1 must precede Phase 2 because the SIMILAR_ALBUMS synthesizer needs real SIMILAR_ARTISTS data from multiple providers to be meaningfully testable; unit testing with fakes alone is insufficient to validate the scoring algorithm.
-- Phases 3, 4, and 5 are independent of each other and of Phase 2; they can be sequenced in any order or run in parallel based on team capacity.
-- Phase 4 has a pre-work gate (parser audit) that should be done at the start of Phase 4 planning, not deferred to implementation.
-- The `SimilarArtistsMerger` in Phase 1 is a prerequisite for full SIMILAR_ALBUMS quality (Phase 2), reinforcing the Phase 1 → Phase 2 dependency.
+- **Phase 1 before Phase 4:** Maven Central config must cover all three modules; `musicmeta-okhttp` must exist before Phase 4 can be written.
+- **Phase 2 before Phase 3:** `enrichBatch()` calls `enrich()` which uses `config.cacheMode`; without stale cache in place, batch silently propagates `RateLimited` errors for every rate-limited item in large libraries.
+- **Phase 1 and Phase 2 are independent:** They touch non-overlapping files; they can proceed concurrently if needed.
+- **Phase 4 last:** All module artifacts must exist; Central Portal account, namespace verification, and GPG setup are external blocking prerequisites.
 
 ### Research Flags
 
-Phases likely needing pre-implementation audit or research:
-- **Phase 4 (Credit-Based Discovery):** Audit `MusicBrainzParser.parseRecordingCredits()` output before writing any discovery logic. If `Credit.identifiers.musicBrainzId` is absent for production credits, parser changes become a dependency that may scope-expand this phase.
+Phases with well-documented patterns (no additional research needed):
+- **Phase 1:** OkHttp adapter is a standard Kotlin/JVM pattern; all method behaviors verified against `DefaultHttpClient.kt`; MockWebServer integration patterns are established.
+- **Phase 2:** All file locations, line numbers, and change boundaries verified against actual source. No ambiguity.
+- **Phase 3:** Trivially simple implementation; Turbine testing patterns already established in the test suite.
 
-Phases with standard patterns (skip research-phase):
-- **Phase 1:** Deezer provider extension follows exact same pattern as existing `enrichDiscography()`; pitfalls are identified and prevention is clear.
-- **Phase 2:** SIMILAR_ALBUMS composite follows exact same pattern as `ARTIST_TIMELINE`; synthesizer contract and dependency declaration are fully specified.
-- **Phase 3:** `GenreGraph` is a pure utility; cosine similarity implementation is 10 lines verified against the existing `GenreMerger` pattern.
-- **Phase 5:** ListenBrainz CF API is documented (official readthedocs); no auth required; 204 edge case is called out explicitly.
+Phase requiring plan correction before implementation:
+- **Phase 4:** The research is complete; no `/gsd:research-phase` needed. However, the `docs/v0.8.0.md` Phase 4 section must be rewritten before any build file changes are made. The vanniktech plugin configuration documented in `STACK.md` and `PITFALLS.md` is the authoritative replacement.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | No new dependencies; all existing library versions verified; integration patterns confirmed against codebase source |
-| Features | HIGH | API endpoints verified against official ListenBrainz docs and project-maintained Deezer docs; scoring conventions derived from established industry patterns (beaTunes, Last.fm) |
-| Architecture | HIGH | Direct codebase analysis of `DefaultEnrichmentEngine`, `TimelineSynthesizer`, `GenreMerger`, `DeezerProvider`; four patterns are proven and in production |
-| Pitfalls | HIGH (codebase) / MEDIUM (API behavior) | Pitfalls 1–3, 5 derived from direct code analysis; Pitfalls 4, 6 from API docs + code; Deezer rate limit from community observation only (no official docs) |
+| Stack | HIGH | All versions verified on Maven Central; OkHttp 4.12.0 rationale confirmed against 4.x and 5.x changelogs; vanniktech 0.36.0 confirmed as latest stable; OSSRH shutdown confirmed via official Sonatype announcement |
+| Features | HIGH | OkHttp and Maven Central findings from official docs and changelogs; stale cache and bulk API findings from direct codebase analysis; all 10 `HttpClient` methods confirmed in source; anti-feature rationale verified against codebase constraints |
+| Architecture | HIGH | All line numbers, file paths, and class structures verified against actual source files; no speculative claims; every assertion in `docs/v0.8.0.md` validated claim-by-claim with source citations |
+| Pitfalls | HIGH | OkHttp gzip pitfall verified from official OkHttp issue #1579; OSSRH EOL from official Sonatype announcement; mutex non-reentrancy from Kotlin coroutines docs; Gradle signing timing from Gradle issue tracker; Flow cancellation from official Kotlin docs |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **Deezer rate limit (50 req/5s):** Observed from community sources only, not official Deezer developer documentation. The shared `RateLimiter` at 100ms delay should stay conservative; treat 429 responses as rate-limit signals and back off. Validate in Phase 1 integration testing.
-- **ListenBrainz CF endpoint stability:** The endpoint is marked experimental in official docs. Implement with a defensive wrapper and surface `last_updated` to consumers so they can detect stale recommendations. Monitor for breaking changes post-v0.6.0 ship.
-- **`Credit.identifiers.musicBrainzId` population:** Not confirmed from code analysis (would require reading `MusicBrainzParser.parseRecordingCredits()` output). This is the Phase 4 gate: if MBIDs are absent, credit discovery requires a parser change before any discovery logic can be written.
-- **SIMILAR_ALBUMS quality with sparse data:** The synthesizer produces moderate results when GENRE data is missing (zero `GenreTag` entries). The genre overlap defaults to 1.0 (no penalty) in this case, which may inflate scores for artists who share no verified genre overlap. Document as a known limitation; monitor consumer feedback after v0.6.0 ships.
+- **HttpClient method count discrepancy:** `PROJECT.md` says "12 methods" but `HttpClient.kt` has 10. No impact on implementation — implement all 10. Update the count in `PROJECT.md` when the milestone is complete.
+- **Central Portal namespace verification:** Whether `com.landofoz` is already registered in Sonatype Central Portal is unknown. If unverified, the first publish requires a manual approval step from Sonatype (typically 1-2 business days). Factor this into delivery timeline for Phase 4.
+- **GPG key existence:** Research cannot determine if an existing GPG key suitable for Maven Central signing is available. If not, key generation, configuration, and upload to a public keyserver add pre-Phase-4 setup time.
+- **`Accept-Encoding` in `buildGetRequest` — most likely implementation mistake:** Ensure the Phase 1 implementation review explicitly checks that `buildGetRequest()` does not include an `Accept-Encoding: gzip` header. This is the highest-probability mistake when porting logic from `DefaultHttpClient`.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- Project codebase: `DefaultEnrichmentEngine.kt`, `DeezerProvider.kt`, `DeezerApi.kt`, `ListenBrainzProvider.kt`, `ListenBrainzApi.kt`, `ProviderChain.kt`, `TimelineSynthesizer.kt`, `GenreMerger.kt`, `EnrichmentData.kt`, `EnrichmentType.kt` — direct analysis
-- Project provider docs: `docs/providers/deezer.md`, `docs/providers/listenbrainz.md`, `docs/providers/lastfm.md` — project-maintained API reference
-- ListenBrainz CF recommendation endpoint: https://listenbrainz.readthedocs.io/en/latest/users/api/recommendation.html — official docs; 204 behavior and public-read confirmed
+- Direct codebase analysis — `HttpClient.kt`, `DefaultHttpClient.kt`, `DefaultEnrichmentEngine.kt`, `InMemoryEnrichmentCache.kt`, `RoomEnrichmentCache.kt`, `EnrichmentResult.kt`, `EnrichmentCache.kt`, `EnrichmentConfig.kt`, `EnrichmentEngine.kt`, `EnrichmentCacheDao.kt`, `FakeEnrichmentCache.kt`, all `build.gradle.kts` files, `gradle/libs.versions.toml`, `settings.gradle.kts`
+- [Maven Central: com.squareup.okhttp3:okhttp](https://central.sonatype.com/artifact/com.squareup.okhttp3/okhttp) — version history confirmed; 4.12.0 final 4.x release confirmed
+- [OkHttp 4.x changelog](https://square.github.io/okhttp/changelogs/changelog_4x/) — 4.12.0 final 4.x release (Oct 2023) confirmed
+- [OkHttp 5.x changelog](https://square.github.io/okhttp/changelogs/changelog/) — Kotlin 2.2.x requirement and `mockwebserver3` rename confirmed
+- [Sonatype OSSRH sunset announcement](https://central.sonatype.org/news/20250326_ossrh_sunset/) — EOL June 30, 2025 confirmed
+- [Sonatype OSSRH EOL page](https://central.sonatype.org/pages/ossrh-eol/) — shutdown and compatibility shim confirmed
+- [vanniktech plugin GitHub releases](https://github.com/vanniktech/gradle-maven-publish-plugin/releases) — 0.36.0 latest stable (Jan 18, 2025) confirmed
+- [vanniktech plugin Central Portal docs](https://vanniktech.github.io/gradle-maven-publish-plugin/central/) — `CENTRAL_PORTAL` host, `AndroidSingleVariantLibrary`, `signAllPublications()` DSL confirmed
+- [OkHttp gzip issue #1579](https://github.com/square/okhttp/issues/1579) — manual `Accept-Encoding` disables transparent decompression confirmed
+- [Kotlin Flow docs](https://kotlinlang.org/docs/flow.html) — cooperative cancellation at suspension points confirmed
 
 ### Secondary (MEDIUM confidence)
-- Deezer artist API (community wiki): https://github.com/antoineraulin/deezer-api/wiki/artist — `/related` and `/radio` endpoint shapes confirmed; not official Deezer developer portal (requires login)
-- deezer-python library docs: https://deezer-python.readthedocs.io/en/stable/api_reference/resources/artist.html — third-party wrapper; consistent with community wiki
-- Spotify recommendation architecture: https://www.music-tomorrow.com/blog/how-spotify-recommendation-system-works-complete-guide — industry patterns for score normalization and multi-provider merge
-- beaTunes matchlist (position-score normalization): https://www.beatunes.com/en/beatunes-matchlist.html — industry precedent for rank-to-score derivation
-
-### Tertiary (LOW confidence)
-- Deezer rate limit (50 req/5s): https://github.com/BackInBash/DeezerSync/issues/6 — community-observed only; no official documentation; use conservatively
-- Music credit completeness: https://soundcharts.com/en/blog/music-metadata — contextual only; confirms sparse MBID coverage for production credits in less-documented catalogs
+- [Gradle signing issue #13419](https://github.com/gradle/gradle/issues/13419) — `afterEvaluate` timing requirement for Android module signing
+- [Gradle Maven publishing docs](https://docs.gradle.org/current/userguide/publishing_maven.html) — `subprojects` anti-pattern for publishing config
+- [OkHttp MockWebServer 5.x coordinate change issue #7339](https://github.com/square/okhttp/issues/7339) — `mockwebserver3-junit4` rename in 5.x confirmed
 
 ---
-*Research completed: 2026-03-23*
+*Research completed: 2026-03-24*
 *Ready for roadmap: yes*

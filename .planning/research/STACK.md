@@ -1,321 +1,254 @@
 # Stack Research
 
-**Domain:** Music recommendation engine (Kotlin/JVM library, v0.6.0 additions)
-**Researched:** 2026-03-23
-**Confidence:** HIGH
+**Domain:** Kotlin/JVM music metadata enrichment library — v0.8.0 Production Readiness additions
+**Researched:** 2026-03-24
+**Confidence:** HIGH (all critical claims verified against Maven Central and official documentation)
 
 ---
 
-## Summary
+## Context
 
-No new library dependencies are needed for v0.6.0. All 7 recommendation modules can be built
-using the existing stack. The work is API integration, synthesis logic, and engine wiring —
-not new infrastructure.
+This is a SUBSEQUENT MILESTONE research document. Do not re-research the existing validated stack
+(Kotlin 2.1.0, coroutines 1.9.0, kotlinx.serialization 1.7.3, org.json, JUnit 4.13.2, Turbine 1.2.0).
 
----
-
-## Existing Stack (No Changes Required)
-
-The following are already present and sufficient for all v0.6.0 work:
-
-| Technology | Version | Role |
-|------------|---------|------|
-| Kotlin/JVM | 2.1.0 | Language |
-| kotlinx.coroutines | 1.9.0 | Concurrency (`async`, `coroutineScope`) for fan-out |
-| org.json | 20231013 | JSON parsing in all provider `*Api.kt` files |
-| kotlinx.serialization-json | 1.7.3 | `EnrichmentData` serialization |
-| Java 17 | — | Runtime target |
-
-No additions to `gradle/libs.versions.toml` are required.
+This document covers only what is NEW for v0.8.0:
+1. OkHttp adapter module (`musicmeta-okhttp`)
+2. Stale-while-revalidate cache (no new deps — pure library changes)
+3. Bulk enrichment with Flow (no new deps — Flow is in existing coroutines-core)
+4. Maven Central publishing (new tooling required — OSSRH is gone)
 
 ---
 
-## Module 1: Deezer SIMILAR_ARTISTS
+## Recommended Stack — New Additions Only
 
-**Endpoint:** `GET https://api.deezer.com/artist/{id}/related`
+### OkHttp Adapter Module
 
-**Response shape:**
-```json
-{
-  "data": [
-    {
-      "id": 1234,
-      "name": "Thom Yorke",
-      "picture_small": "...",
-      "picture_medium": "...",
-      "picture_big": "...",
-      "picture_xl": "...",
-      "nb_album": 5,
-      "nb_fan": 123456,
-      "radio": true
+| Technology | Version | Purpose | Why Recommended |
+|------------|---------|---------|-----------------|
+| `com.squareup.okhttp3:okhttp` | **4.12.0** | HTTP client implementation for adapter module | See version decision below |
+| `com.squareup.okhttp3:mockwebserver` | **4.12.0** | Integration testing mock server | Matches OkHttp 4.x coordinate; no JUnit-specific suffix needed in 4.x |
+
+**Version decision — 4.12.0 vs 5.x:**
+
+`docs/v0.8.0.md` specifies `okhttp = "4.12.0"`. This is correct. Do not upgrade to 5.x for this milestone.
+
+OkHttp 5.x is the current stable series (5.3.2 as of Nov 2025), but it is the wrong choice here:
+
+- OkHttp 5.x was compiled with Kotlin 2.2.x and brings `kotlin-stdlib:2.2.21` as a transitive
+  dependency. `musicmeta-okhttp` compiles with Kotlin 2.1.0. Gradle resolves the higher transitive
+  version silently for direct consumers, but a library that forces `stdlib 2.2.x` onto users of
+  `musicmeta-okhttp` who may be on Kotlin 2.0.x is bad library hygiene. The Kotlin stdlib is a
+  runtime dependency for the adapter's consumers, not just the adapter itself.
+- OkHttp 5.x changes the MockWebServer artifact coordinate to `mockwebserver3-junit4` (new
+  `mockwebserver3` package name). This migration delivers zero value for a thin adapter module.
+- OkHttp 5.x drops Kotlin Multiplatform support. Not a concern here, but signals a more opinionated
+  release with higher transitive impact.
+- OkHttp 4.12.0 is the final 4.x release (Oct 2023). Its API is stable and feature-complete for
+  all 12 `HttpClient` methods the adapter needs to implement.
+- When the project bumps to Kotlin 2.2.x in a future milestone, upgrade the adapter to OkHttp 5.x
+  at the same time. The two upgrades belong together.
+
+**Confidence:** HIGH — verified via Maven Central version listing, OkHttp 4.x changelog (4.12.0 is
+final 4.x release), OkHttp 5.x changelog (Kotlin 2.2.x requirement), and OkHttp GitHub README.
+
+---
+
+### Maven Central Publishing
+
+| Technology | Version | Purpose | Why Recommended |
+|------------|---------|---------|-----------------|
+| `com.vanniktech.maven.publish` Gradle plugin | **0.36.0** | Publishes all 3 modules to Maven Central via Central Portal | OSSRH is shut down; this plugin directly supports the new Central Portal API |
+
+**Critical: The approach in `docs/v0.8.0.md` Phase 4 no longer works.**
+
+The plan describes configuring the built-in `maven-publish` plugin with OSSRH repository URLs
+(`s01.oss.sonatype.org`, `oss.sonatype.org`). OSSRH was shut down on **June 30, 2025**. Those URLs
+do not accept uploads. A compatibility shim exists but requires a Portal token anyway — there is
+no reason to use it when the vanniktech plugin provides a cleaner path.
+
+The `vanniktech/gradle-maven-publish-plugin` version 0.36.0:
+- Supports `SonatypeHost.CENTRAL_PORTAL` — the new post-OSSRH publishing target
+- Auto-configures sources jar and javadoc jar for Kotlin JVM targets (replaces the
+  `java { withSourcesJar(); withJavadocJar() }` the plan mentions)
+- Handles Android library variant publishing via `AndroidSingleVariantLibrary`
+- Manages GPG signing via `signAllPublications()`
+- Adds `publishToMavenCentral` and `publishAndReleaseToMavenCentral` tasks
+- Latest stable: 0.36.0 (January 18, 2025); no newer stable version exists as of March 2026
+
+**Confidence:** HIGH — verified via vanniktech plugin GitHub releases, Sonatype OSSRH sunset
+announcement, and Sonatype OSSRH EOL page.
+
+---
+
+## No New Dependencies for Cache or Bulk Enrichment
+
+**Stale-while-revalidate cache:** Pure library changes. New `CacheMode` enum, new method on
+`EnrichmentCache` interface, modified `InMemoryEnrichmentCache`, `RoomEnrichmentCache`, and
+`DefaultEnrichmentEngine`. No new Gradle dependencies.
+
+**Bulk enrichment API:** `Flow<T>` and the `flow {}` builder are already in
+`kotlinx-coroutines-core:1.9.0`, which is declared in `musicmeta-core/build.gradle.kts`. No new
+Gradle dependencies.
+
+---
+
+## Version Catalog Changes (`gradle/libs.versions.toml`)
+
+Add these entries only:
+
+```toml
+[versions]
+okhttp = "4.12.0"
+# vanniktech does not need a version entry — hardcode in plugin block, or add:
+vanniktech-publish = "0.36.0"
+
+[libraries]
+okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
+okhttp-mockwebserver = { module = "com.squareup.okhttp3:mockwebserver", version.ref = "okhttp" }
+
+[plugins]
+# Add alongside existing plugin entries:
+vanniktech-publish = { id = "com.vanniktech.maven.publish", version.ref = "vanniktech-publish" }
+```
+
+Note: The version catalog version entry for `vanniktech-publish` is optional but consistent with
+the project's pattern of cataloguing all dependency versions centrally.
+
+---
+
+## New Module: `musicmeta-okhttp/build.gradle.kts`
+
+Follow `musicmeta-core` pattern exactly — pure Kotlin JVM, no `afterEvaluate`, no Android.
+
+```kotlin
+plugins {
+    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.vanniktech.publish)
+}
+
+group = "com.landofoz"
+version = "0.8.0"
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+dependencies {
+    api(project(":musicmeta-core"))
+    api(libs.okhttp)
+    implementation(libs.json)               // for org.json.JSONObject / JSONArray parsing
+
+    testImplementation(libs.bundles.testing)
+    testImplementation(libs.okhttp.mockwebserver)
+}
+
+mavenPublishing {
+    publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
+    signAllPublications()
+    coordinates("com.landofoz", "musicmeta-okhttp", "0.8.0")
+    pom {
+        name = "musicmeta-okhttp"
+        description = "OkHttp HttpClient adapter for musicmeta-core"
+        url = "https://github.com/<owner>/music-enrichment"
+        licenses {
+            license {
+                name = "Apache-2.0"
+                url = "https://www.apache.org/licenses/LICENSE-2.0"
+            }
+        }
+        developers { developer { name = "<developer name>" } }
+        scm {
+            connection = "scm:git:git://github.com/<owner>/music-enrichment.git"
+            url = "https://github.com/<owner>/music-enrichment"
+        }
     }
-  ]
 }
 ```
 
-**Rate limit:** Same ~50 req/5s budget as existing Deezer calls. Use the existing 100ms
-`RateLimiter`. No separate limiter needed — the shared `rateLimiter` instance passed into
-`DeezerApi` already serialises all Deezer calls.
-
-**Auth:** None. Public endpoint, same as all current Deezer usage.
-
-**ID source:** The Deezer artist ID is already stored in `resolvedIdentifiers.extra["deezerId"]`
-whenever `enrichDiscography()` resolves an artist (see `DeezerProvider.enrichDiscography()`).
-For SIMILAR_ARTISTS requests where ARTIST_DISCOGRAPHY was not previously called, a name-based
-`searchArtist()` lookup is required first — same pattern already used for discography.
-
-**Integration pattern:** Add `getRelatedArtists(artistId: Long)` to `DeezerApi`. Add
-`SIMILAR_ARTISTS` capability (priority 50 — fallback to Last.fm primary) to `DeezerProvider`.
-Map `id`/`name`/`picture_medium` to `SimilarArtist(name, matchScore=0.8f, identifiers)` with
-the Deezer ID stored in `identifiers.extra["deezerId"]`. The fixed matchScore of 0.8 is
-appropriate — Deezer's related endpoint does not return a similarity score.
-
-**Confidence:** HIGH — verified against official Deezer API wiki and deezer-python library docs.
+Note: `api(libs.okhttp)` uses `api` scope (not `implementation`) so that consumers of
+`musicmeta-okhttp` get OkHttp on their compile classpath — they need it to construct an
+`OkHttpClient` to pass to `OkHttpEnrichmentClient`.
 
 ---
 
-## Module 2: Deezer SIMILAR_TRACKS (Radio endpoint)
+## Maven Central Publishing — Per-Module Config
 
-**Endpoint:** `GET https://api.deezer.com/artist/{id}/radio`
+### Root `build.gradle.kts`
 
-**Response shape:**
-```json
-{
-  "data": [
-    {
-      "id": 5678,
-      "title": "Everything in Its Right Place",
-      "readable": true,
-      "duration": 265,
-      "rank": 890000,
-      "explicit_lyrics": false,
-      "preview": "https://cdns-preview-x.dzcdn.net/...",
-      "artist": {
-        "id": 399,
-        "name": "Radiohead"
-      },
-      "album": {
-        "id": 103248,
-        "title": "Kid A",
-        "cover_medium": "..."
-      }
-    }
-  ]
-}
-```
-
-**Rate limit:** Same 100ms limiter. Radio returns up to 25 tracks per call. No pagination.
-
-**Auth:** None.
-
-**ID source:** Same artist ID lookup pattern as SIMILAR_ARTISTS above. Check
-`identifiers.extra["deezerId"]` first; fall back to `searchArtist(name)` if missing.
-
-**Integration pattern:** Add `getArtistRadio(artistId: Long)` to `DeezerApi`. Map each track
-to `SimilarTrack(title, artist=artist.name, matchScore=0.7f, identifiers)`. The fixed 0.7
-matchScore reflects that this is a genre-compatible seeded track list, not a direct similarity
-score. Add `SIMILAR_TRACKS` capability (priority 50 — fallback to Last.fm primary) to
-`DeezerProvider`.
-
-**Confidence:** HIGH — response shape verified against Deezer API wiki and deezer-python docs.
-
----
-
-## Module 3: ListenBrainz CF Recommendations
-
-**Endpoint:** `GET https://api.listenbrainz.org/1/cf/recommendation/user/{user_name}/recording`
-
-**Authentication:** PUBLIC — no user token required to read CF recommendations for a given
-username. (Write/feedback endpoints require tokens; read does not.)
-
-**Response shape:**
-```json
-{
-  "payload": {
-    "last_updated": 1685000000,
-    "mbids": [
-      { "recording_mbid": "526bd613-fddd-4bd6-9137-ab709ac74cab", "score": 9.345 },
-      { "recording_mbid": "...", "score": 6.998 }
-    ],
-    "user_name": "exampleuser",
-    "count": 25,
-    "total_mbid_count": 1000,
-    "offset": 0
-  }
-}
-```
-
-**Query parameters:** `count` (default 25), `offset` (default 0) for pagination.
-
-**Score:** Raw CF score (unbounded float, higher = more recommended). Normalise to 0–1 by
-dividing by the maximum score in the result set, or use linear scaling against a known
-practical maximum (~15 observed). Use `ConfidenceCalculator.fuzzyMatch()` as the provider
-confidence since CF quality depends on how much listening history the user has.
-
-**User-scoped nature:** This endpoint requires a ListenBrainz `user_name` — it returns
-recommendations for a specific user, not for an anonymous artist query. This is fundamentally
-different from all other enrichment types, which are entity-centric (artist/album/track).
-
-**Integration design:** Pass the user name as an `EnrichmentConfig` property (e.g.,
-`listenBrainzUserName: String?`) rather than via `EnrichmentRequest`. The provider checks
-`isAvailable` based on whether the username is configured. `ForArtist` requests can match the
-artist MBID against returned recording MBIDs via a MusicBrainz lookup — but that adds a second
-API call. Simpler: return the raw recording list as `SimilarTracks` (recording_mbid in
-identifiers) and let the consumer resolve details. Pagination via `offset`/`count` should be
-supported in the `ListenBrainzApi` method but not exposed in the provider (fetch first page
-only by default, configurable via constructor param).
-
-**Confidence:** HIGH — verified against official ListenBrainz readthedocs.
-
----
-
-## Module 4: SIMILAR_ALBUMS (Synthesis)
-
-**No new API calls needed.** SIMILAR_ALBUMS is a composite type synthesized from existing
-data already in the enrichment pipeline.
-
-**Algorithm:** Resolve SIMILAR_ARTISTS, GENRE, and ARTIST_DISCOGRAPHY, then cross-reference:
-
-1. Take top N similar artists (from Last.fm/ListenBrainz/Deezer providers)
-2. For each similar artist, find albums in their discography with release year within
-   ±5 years of the seed album (era matching)
-3. Filter by genre overlap: compute intersection of GenreTag names between seed and candidate
-   (using the normalised names from `GenreMerger.normalize()` — already public on the object)
-4. Score each candidate album: `matchScore = artistMatch * eraScore * genreOverlap`
-5. Sort by score, deduplicate by artist+album title normalised, take top 20
-
-**Scoring specifics:**
-- `artistMatch` = the `SimilarArtist.matchScore` from the provider (0–1)
-- `eraScore` = `1.0 - (|yearDiff| / 5).coerceIn(0f, 1f)` (0 if >5 years apart, 1.0 if same year)
-- `genreOverlap` = `sharedTags / maxTags` where shared = count of normalised tag names in
-  both sets; if GENRE data is unavailable, default to 1.0 (no penalty)
-
-**Output type:** New `EnrichmentData.SimilarAlbums` with `albums: List<SimilarAlbum>` where
-`SimilarAlbum` carries `title`, `artist`, `year`, `score: Float`, and `identifiers`.
-
-**Synthesizer:** Implement as `SimilarAlbumSynthesizer` following the `TimelineSynthesizer`
-pattern — a stateless `object` with a pure `synthesize(similarArtists, discographies, genre)`
-function. Wire it into `DefaultEnrichmentEngine.synthesizeComposite()`.
-
-**COMPOSITE_DEPENDENCIES entry:**
+Add the vanniktech plugin to the root with `apply false`:
 ```kotlin
-EnrichmentType.SIMILAR_ALBUMS to setOf(
-    EnrichmentType.SIMILAR_ARTISTS,
-    EnrichmentType.ARTIST_DISCOGRAPHY,
-    EnrichmentType.GENRE,
-)
+alias(libs.plugins.vanniktech.publish) apply false
 ```
 
-**No external library needed** — the scoring algorithm is simple arithmetic. Cosine similarity
-or more complex ML-based approaches are out of scope; the confidence of the result is bounded
-by the confidence of the upstream similar-artists provider anyway.
+Remove the manual `subprojects` block described in `docs/v0.8.0.md` — the vanniktech plugin
+handles POM metadata, signing, and sources/javadoc jars per-module via its DSL.
 
-**Confidence:** HIGH — algorithm derived from existing GenreMerger and TimelineSynthesizer
-patterns already proven in the codebase.
+### `musicmeta-core/build.gradle.kts`
 
----
-
-## Module 5: Credit-Based Discovery
-
-**No new API calls needed.** This synthesizes from existing CREDITS data.
-
-**Query pattern:** Consumer calls `enrich(ForArtist(name="Brian Eno"), setOf(CREDITS))` and
-gets back a `Credits` list. Credit-based discovery inverts this: given a seed track/album with
-CREDITS already resolved, find other releases featuring the same producer/composer.
-
-**Implementation:**
-
-There are two valid approaches. Approach A is simpler and fits the existing engine model:
-
-**Approach A (recommended): Engine-level synthesis**
-- New composite type `CREDIT_DISCOVERY` depends on `CREDITS`
-- Engine calls `synthesizeComposite()` with the credits result
-- `CreditDiscoverySynthesizer` filters credits by `roleCategory == "production"` (or
-  `roleCategory == "composition"`) and returns those credits as `SimilarArtists` with
-  the credit person's name and MBID (from `Credit.identifiers.musicBrainzId`)
-- Consumer can then call `enrich(ForArtist(name=creditPerson.name, mbid=creditMbid),
-  setOf(ARTIST_DISCOGRAPHY))` to browse their other work
-
-**Approach B (deferred): Cross-entity query**
-- "Find all albums by producer X" requires querying MusicBrainz recording relationships
-  by person MBID — a new `MusicBrainzApi.getRecordingsByContributor(personMbid)` call
-- HIGH complexity, out of scope for v0.6.0
-
-**Data model addition:** No new `EnrichmentData` subclass strictly required for Approach A —
-the result is a filtered view of existing `SimilarArtists` data. However, a dedicated
-`CreditedPerson` data class makes intent clearer:
+Replace the current `maven-publish` block and add the vanniktech plugin:
 ```kotlin
-data class CreditedPerson(
-    val name: String,
-    val role: String,
-    val roleCategory: String?,
-    val identifiers: EnrichmentIdentifiers,
-)
-```
+plugins {
+    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.vanniktech.publish)    // replaces `maven-publish`
+}
 
-**Confidence:** HIGH for Approach A. The existing CREDITS data already carries MBIDs and
-roleCategory from MusicBrainzProvider and DiscogsProvider.
-
----
-
-## Module 6: Genre Affinity Matching
-
-**No new API calls needed.** Uses existing `GenreTag` data with confidence scores from
-`GenreMerger`.
-
-**Algorithm:** Given a seed artist with resolved GENRE data (a `List<GenreTag>` with
-confidence scores), find genre neighbours via cosine similarity of tag-confidence vectors.
-
-**Implementation in this library:** The library doesn't maintain a corpus of all artists'
-genre vectors (that would require a database). The practical implementation is:
-
-1. New composite type `GENRE_AFFINITY` (or named `GENRE_NEIGHBORS`)
-2. Depends on `SIMILAR_ARTISTS` and `GENRE`
-3. For each similar artist (already resolved), the consumer can enrich them for GENRE
-   separately — but that is N additional API calls
-4. **Practical v0.6.0 scope:** Implement genre affinity as a utility function
-   `GenreAffinityCalculator.similarity(tags1: List<GenreTag>, tags2: List<GenreTag>): Float`
-   that returns cosine similarity of the two tag-confidence vectors. This function is usable
-   by a consumer who has both genre results and similar-artist genre results, and by
-   `SimilarAlbumSynthesizer` for the genre overlap scoring.
-
-**Cosine similarity (pure Kotlin, no library):**
-```kotlin
-fun similarity(a: List<GenreTag>, b: List<GenreTag>): Float {
-    val aMap = a.associate { GenreMerger.normalize(it.name) to it.confidence }
-    val bMap = b.associate { GenreMerger.normalize(it.name) to it.confidence }
-    val shared = aMap.keys.intersect(bMap.keys)
-    val dot = shared.sumOf { (aMap[it]!! * bMap[it]!!).toDouble() }.toFloat()
-    val magA = sqrt(aMap.values.sumOf { (it * it).toDouble() }).toFloat()
-    val magB = sqrt(bMap.values.sumOf { (it * it).toDouble() }).toFloat()
-    if (magA == 0f || magB == 0f) return 0f
-    return dot / (magA * magB)
+mavenPublishing {
+    publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
+    signAllPublications()
+    coordinates("com.landofoz", "musicmeta-core", "0.8.0")
+    pom { /* same structure as musicmeta-okhttp above */ }
 }
 ```
 
-Uses only `kotlin.math.sqrt` — no dependency. This is a ~10 line pure function.
+The `java { withSourcesJar(); withJavadocJar() }` block mentioned in `docs/v0.8.0.md` is NOT
+needed — the vanniktech plugin adds these automatically for Kotlin JVM targets.
 
-**Confidence:** HIGH. Cosine similarity on weighted tag vectors is the standard approach for
-content-based genre recommendation. No external ML library needed at this scale.
+### `musicmeta-android/build.gradle.kts`
+
+The Android module requires the `AndroidSingleVariantLibrary` configure block:
+```kotlin
+plugins {
+    // existing plugins ...
+    alias(libs.plugins.vanniktech.publish)    // replaces `maven-publish`
+}
+
+mavenPublishing {
+    publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
+    signAllPublications()
+    configure(
+        AndroidSingleVariantLibrary(
+            variant = "release",
+            sourcesJar = true,
+            publishJavadocJar = true,
+        )
+    )
+    coordinates("com.landofoz", "musicmeta-android", "0.8.0")
+    pom { /* same structure */ }
+}
+```
+
+The existing `afterEvaluate { publishing { ... } }` block is removed — the vanniktech plugin
+handles variant timing internally.
+
+The `android { publishing { singleVariant("release") { ... } } }` block described in
+`docs/v0.8.0.md` is NOT needed — `AndroidSingleVariantLibrary` in the vanniktech DSL replaces it.
 
 ---
 
-## Module 7: Deezer ID Propagation for Related/Radio Endpoints
+## Credentials Setup
 
-**Critical constraint for Modules 1 and 2:** Both `GET /artist/{id}/related` and
-`GET /artist/{id}/radio` require a numeric Deezer artist ID. The existing code already stores
-this in `resolvedIdentifiers.extra["deezerId"]` when `enrichDiscography()` resolves an artist
-successfully. However, this identifier is not guaranteed to be present when SIMILAR_ARTISTS
-or SIMILAR_TRACKS are requested independently (without prior ARTIST_DISCOGRAPHY resolution).
+Goes in `~/.gradle/gradle.properties` (never committed):
+```properties
+mavenCentralUsername=<Central Portal user token username>
+mavenCentralPassword=<Central Portal user token password>
+signing.keyId=<last 8 chars of GPG key ID>
+signing.password=<GPG passphrase>
+signing.secretKeyRingFile=</path/to/secring.gpg>
+```
 
-**Resolution:** The `DeezerProvider.enrichSimilarArtists()` and `enrichSimilarTracks()`
-methods must follow this pattern:
-1. Check `request.identifiers.extra["deezerId"]` — use directly if present
-2. If absent, call `api.searchArtist(name)` to resolve — same pattern as `enrichDiscography()`
-3. Store the resolved Deezer ID in `resolvedIdentifiers` of the Success result
-
-This is the same two-step pattern already used by `enrichDiscography()`. No architectural
-change required.
+Add comment-only placeholders to the project's `gradle.properties` so the setup is discoverable.
 
 ---
 
@@ -323,79 +256,84 @@ change required.
 
 | Recommended | Alternative | Why Not |
 |-------------|-------------|---------|
-| Pure Kotlin cosine similarity | Apache Commons Math `CosineSimilarity` | Adds a JVM dependency for 10 lines of math. No benefit at this scale. |
-| Synthesis-based SIMILAR_ALBUMS | Last.fm `album.getsimilar` | Last.fm has no `album.getsimilar` endpoint. No direct album similarity API exists in the existing provider set. |
-| `GenreAffinityCalculator` utility | ML embedding service (e.g., word2vec on genre names) | Overkill for a library; requires network call or model loading. |
-| User-scoped CF config param | New `ForUser` request type | A `ForUser` request type changes the engine contract for all 6 other recommendation modules. Config param isolates the user-scoping cleanly. |
-| Approach A credit discovery | MusicBrainz `getRecordingsByContributor` | Cross-entity query requires new MusicBrainz endpoint, high complexity, deferred to post-v0.6.0. |
+| OkHttp 4.12.0 | OkHttp 5.3.2 | Forces Kotlin 2.2.x stdlib onto consumers; MockWebServer coordinate change adds churn; upgrade belongs with a future Kotlin 2.2 bump |
+| vanniktech maven-publish 0.36.0 | Raw `maven-publish` + OSSRH URLs | OSSRH shutdown June 2025; raw plugin has no Central Portal support; requires manual POM, signing, and sources jar config |
+| vanniktech maven-publish 0.36.0 | JReleaser | JReleaser is a full CI/CD release pipeline tool; heavier than needed for a Gradle library publishing setup |
+| vanniktech maven-publish 0.36.0 | OSSRH Staging API compatibility shim | Works but requires Portal token anyway; adds an indirection layer with no upside; the shim is a migration bridge, not a long-term solution |
 
 ---
 
-## What NOT to Add
+## What NOT to Use
 
 | Avoid | Why | Use Instead |
 |-------|-----|-------------|
-| New HTTP client library (OkHttp, Ktor) | Zero benefit — `DefaultHttpClient` handles all 11 providers already | Existing `DefaultHttpClient` |
-| Apache Commons Math | 1.6MB jar for cosine similarity | Pure Kotlin 10-line implementation |
-| Spotify or Apple Music providers | Out of scope per PROJECT.md — focus on existing 11 | None; existing providers cover all 7 modules |
-| `kotlinx.coroutines` version bump | 1.9.0 is current; no new coroutine features needed | Stay at 1.9.0 |
-| Room schema changes | Android module out of scope for v0.6.0 | New `EnrichmentType` entries auto-serialise via existing cache |
-| ListenBrainz user token storage | CF recommendations are read-only / public | Pass username as plain string config param |
+| OSSRH URLs (`s01.oss.sonatype.org`, `oss.sonatype.org`) | Shutdown June 30, 2025; uploads rejected | `SonatypeHost.CENTRAL_PORTAL` via vanniktech plugin |
+| OkHttp 5.x for this milestone | Forces Kotlin 2.2.x stdlib onto library consumers; MockWebServer artifact rename | OkHttp 4.12.0 |
+| `mockwebserver3-junit4` artifact | That is the OkHttp 5.x artifact; incompatible with OkHttp 4.12 | `com.squareup.okhttp3:mockwebserver:4.12.0` |
+| `java { withSourcesJar(); withJavadocJar() }` | Duplicates what vanniktech plugin does automatically | Remove when applying vanniktech plugin |
+| `android { publishing { singleVariant() } }` | Replaced by `AndroidSingleVariantLibrary` in vanniktech DSL | `configure(AndroidSingleVariantLibrary(...))` |
+| `afterEvaluate { publishing { ... } }` in android module | Vanniktech plugin handles variant timing internally | Remove block; use plugin DSL |
 
 ---
 
-## New EnrichmentTypes Required
+## Version Compatibility Matrix
 
-These additions to the `EnrichmentType` enum are the only schema changes needed:
-
-| Type | Category | TTL | Provider(s) | Composite? |
-|------|----------|-----|-------------|------------|
-| `SIMILAR_ALBUMS` | Composite | 30 days | synthesizer | Yes |
-| `RADIO_MIX` | Relationships | 7 days | Deezer (`/radio`) | No |
-| `CREDIT_DISCOVERY` | Composite | 30 days | synthesizer | Yes |
-| `GENRE_AFFINITY` | Relationships | 30 days | synthesizer | Yes (optional) |
-| `LISTENING_RECS` | Relationships | 1 day | ListenBrainz CF | No |
-
-`RADIO_MIX` and `LISTENING_RECS` use short TTLs because the underlying data changes
-frequently (radio is random; CF recommendations refresh periodically).
+| Dependency | Version | Compatible With | Notes |
+|------------|---------|-----------------|-------|
+| `okhttp` | 4.12.0 | Kotlin 2.1.0, Java 17 | Compiled with Kotlin 1.9; fully binary-compatible with Kotlin 2.1 consumers |
+| `mockwebserver` | 4.12.0 | JUnit 4.13.2 | Same group/artifact as OkHttp 4.x; no separate `-junit4` artifact needed in 4.x |
+| `vanniktech.maven.publish` | 0.36.0 | Gradle 8.x, AGP 8.7.x, Kotlin 2.1.x | 0.36.0 requires min JDK upgrade; dropped Dokka v1 support (not used here) |
+| `kotlinx-coroutines-core` | 1.9.0 (existing) | Kotlin 2.1.0 | `Flow` and `flow {}` builder included; no new dep needed for bulk enrichment |
 
 ---
 
-## Integration Points Summary
+## Corrections to `docs/v0.8.0.md`
 
-| Module | Touches | New Files |
-|--------|---------|-----------|
-| Deezer SIMILAR_ARTISTS | `DeezerApi`, `DeezerModels`, `DeezerProvider` | None — extends existing files |
-| Deezer SIMILAR_TRACKS / Radio | `DeezerApi`, `DeezerModels`, `DeezerProvider` | None — extends existing files |
-| ListenBrainz CF | `ListenBrainzApi`, `ListenBrainzModels`, `ListenBrainzProvider`, `EnrichmentConfig` | None |
-| SIMILAR_ALBUMS | `DefaultEnrichmentEngine`, `EnrichmentData`, `EnrichmentType` | `SimilarAlbumSynthesizer.kt` |
-| Credit Discovery | `DefaultEnrichmentEngine`, `EnrichmentData`, `EnrichmentType` | `CreditDiscoverySynthesizer.kt` |
-| Genre Affinity | `GenreMerger` (expose `normalize`) | `GenreAffinityCalculator.kt` |
-| RADIO_MIX | `DeezerApi`, `DeezerProvider` | None — uses same radio endpoint as SIMILAR_TRACKS |
+Two issues in the implementation plan require changes:
 
----
+### Issue 1: OkHttp version — version is correct, no change needed
 
-## Version Compatibility
+`docs/v0.8.0.md` line 19 specifies `okhttp = "4.12.0"`. **This is correct.** Research confirms
+4.12.0 is the right choice for this milestone. No change to the plan.
 
-All existing versions remain compatible. No transitive dependency conflicts introduced.
+### Issue 2: Maven Central publishing approach — HIGH priority, plan must change
 
-| Existing Dependency | Version | Status |
-|---------------------|---------|--------|
-| kotlinx.coroutines-core | 1.9.0 | No change needed |
-| kotlinx.serialization-json | 1.7.3 | New `EnrichmentData` subclasses work automatically |
-| org.json | 20231013 | Sufficient for all new API parsing |
-| Kotlin | 2.1.0 | No change needed |
+`docs/v0.8.0.md` Phase 4 describes:
+- A `subprojects` block in root `build.gradle.kts` with OSSRH repository URLs
+- `java { withSourcesJar(); withJavadocJar() }` per JVM module
+- `android { publishing { singleVariant("release") { ... } } }` for the Android module
+- Inline signing plugin configuration
+
+**All of this is the OSSRH approach, which is shutdown.** The entire Phase 4 implementation must
+be replaced with the vanniktech plugin approach documented in this file.
+
+Specific line-level changes to the plan:
+- Phase 4 "Shared publishing config" block → replace with vanniktech plugin applied per-module
+- Phase 4 "Per-module changes" → replace `java { withSourcesJar()... }` with vanniktech DSL
+- Phase 4 android module line → replace `android { publishing { singleVariant() } }` with
+  `configure(AndroidSingleVariantLibrary(...))`
+- Add `alias(libs.plugins.vanniktech.publish)` to version catalog and all three module build files
+
+### Issue 3: MockWebServer artifact name — no change needed
+
+`docs/v0.8.0.md` references `libs.okhttp.mockwebserver` which maps to
+`com.squareup.okhttp3:mockwebserver:4.12.0`. This is the correct 4.x artifact name.
+The `mockwebserver3-junit4` artifact only applies to OkHttp 5.x and should not be used.
 
 ---
 
 ## Sources
 
-- ListenBrainz CF recommendation docs — `https://listenbrainz.readthedocs.io/en/latest/users/api/recommendation.html` — HIGH confidence (official docs, fetched 2026-03-23)
-- Deezer artist related/radio response fields — `https://github.com/antoineraulin/deezer-api/wiki/artist` — MEDIUM confidence (community wiki, consistent with deezer-python library docs)
-- Deezer Python library artist resource — `https://deezer-python.readthedocs.io/en/stable/api_reference/resources/artist.html` — MEDIUM confidence (third-party wrapper, reflects current API shape)
-- Existing codebase: `DeezerApi.kt`, `DeezerProvider.kt`, `ListenBrainzApi.kt`, `DefaultEnrichmentEngine.kt` — HIGH confidence (source of truth for integration patterns)
-- `docs/providers/deezer.md`, `docs/providers/listenbrainz.md`, `docs/providers/lastfm.md` — HIGH confidence (project-maintained API reference)
+- [Maven Central: com.squareup.okhttp3:okhttp](https://central.sonatype.com/artifact/com.squareup.okhttp3/okhttp) — version 5.3.2 confirmed latest stable; HIGH confidence
+- [OkHttp 5.x Changelog](https://square.github.io/okhttp/changelogs/changelog/) — 5.0.0 stable July 2025, Kotlin 2.2.x requirement confirmed; HIGH confidence
+- [OkHttp 4.x Changelog](https://square.github.io/okhttp/changelogs/changelog_4x/) — 4.12.0 confirmed final 4.x release (Oct 2023); HIGH confidence
+- [OkHttp GitHub README](https://github.com/square/okhttp) — recommends 5.3.0 for new projects; HIGH confidence
+- [Sonatype OSSRH Sunset Announcement](https://central.sonatype.org/news/20250326_ossrh_sunset/) — OSSRH EOL June 30, 2025; HIGH confidence
+- [Sonatype OSSRH EOL Page](https://central.sonatype.org/pages/ossrh-eol/) — shutdown confirmed, compatibility shim exists; HIGH confidence
+- [vanniktech plugin GitHub Releases](https://github.com/vanniktech/gradle-maven-publish-plugin/releases) — 0.36.0 latest stable (Jan 18, 2025); HIGH confidence
+- [vanniktech plugin Central Portal docs](https://vanniktech.github.io/gradle-maven-publish-plugin/central/) — `CENTRAL_PORTAL` host config confirmed; HIGH confidence
+- [vanniktech plugin "What to publish" docs](https://vanniktech.github.io/gradle-maven-publish-plugin/what/) — `AndroidSingleVariantLibrary`, `KotlinJvm` DSL config confirmed; HIGH confidence
 
 ---
-*Stack research for: music recommendation engine (v0.6.0)*
-*Researched: 2026-03-23*
+*Stack research for: musicmeta v0.8.0 production readiness — OkHttp adapter, stale cache, bulk enrichment, Maven Central publishing*
+*Researched: 2026-03-24*
