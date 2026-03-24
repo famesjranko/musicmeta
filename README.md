@@ -128,8 +128,8 @@ The `musicmeta-android` module adds Room-backed persistent caching, a Hilt DI mo
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("com.github.famesjranko.musicmeta:musicmeta-core:v0.7.0")
-    implementation("com.github.famesjranko.musicmeta:musicmeta-android:v0.7.0")
+    implementation("com.landofoz:musicmeta-core:0.8.0")
+    implementation("com.landofoz:musicmeta-android:0.8.0") // Android only
 }
 ```
 
@@ -203,7 +203,20 @@ val engine = EnrichmentEngine.Builder()
 
 ## Installation
 
-### JitPack (recommended)
+### Maven Central (recommended)
+
+```kotlin
+// build.gradle.kts
+dependencies {
+    implementation("com.landofoz:musicmeta-core:0.8.0")
+    implementation("com.landofoz:musicmeta-okhttp:0.8.0")   // Optional: OkHttp adapter
+    implementation("com.landofoz:musicmeta-android:0.8.0")  // Optional: Android (Room cache, Hilt, WorkManager)
+}
+```
+
+### JitPack
+
+For projects already using JitPack — existing coordinates remain unchanged.
 
 ```kotlin
 // settings.gradle.kts
@@ -247,7 +260,7 @@ dependencies {
 ./gradlew publishToMavenLocal
 ```
 
-Then consume as `com.landofoz:musicmeta-core:0.7.0` from `mavenLocal()`.
+Then consume as `com.landofoz:musicmeta-core:0.8.0` from `mavenLocal()`.
 
 ## Documentation
 
