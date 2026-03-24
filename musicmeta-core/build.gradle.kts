@@ -6,7 +6,7 @@ plugins {
     alias(libs.plugins.vanniktech.publish)
 }
 
-group = "com.landofoz"
+group = "io.github.famesjranko"
 version = "0.8.0"
 
 java {
@@ -48,7 +48,7 @@ mavenPublishing {
     if (project.hasProperty("signing.keyId")) {
         signAllPublications()
     }
-    coordinates("com.landofoz", "musicmeta-core", version.toString())
+    coordinates("io.github.famesjranko", "musicmeta-core", version.toString())
     pom {
         name.set("musicmeta-core")
         description.set("Music metadata enrichment engine — provider chains, identity resolution, caching")

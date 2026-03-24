@@ -9,7 +9,7 @@ plugins {
     alias(libs.plugins.vanniktech.publish)
 }
 
-group = "com.landofoz"
+group = "io.github.famesjranko"
 version = "0.8.0"
 
 android {
@@ -83,7 +83,7 @@ mavenPublishing {
         // musicmeta-core. Disabled until AGP is upgraded to a version bundling Dokka 2.x.
         publishJavadocJar = false,
     ))
-    coordinates("com.landofoz", "musicmeta-android", version.toString())
+    coordinates("io.github.famesjranko", "musicmeta-android", version.toString())
     pom {
         name.set("musicmeta-android")
         description.set("Android extensions for musicmeta-core — Room cache, Hilt DI, WorkManager background enrichment")

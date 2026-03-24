@@ -5,7 +5,7 @@ plugins {
     alias(libs.plugins.vanniktech.publish)
 }
 
-group = "com.landofoz"
+group = "io.github.famesjranko"
 version = "0.8.0"
 
 java {
@@ -40,7 +40,7 @@ mavenPublishing {
     if (project.hasProperty("signing.keyId")) {
         signAllPublications()
     }
-    coordinates("com.landofoz", "musicmeta-okhttp", version.toString())
+    coordinates("io.github.famesjranko", "musicmeta-okhttp", version.toString())
     pom {
         name.set("musicmeta-okhttp")
         description.set("OkHttp adapter for musicmeta-core — plug in your OkHttpClient instance")

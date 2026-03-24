@@ -44,7 +44,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture
 
-**Two-module Gradle project** published as `com.landofoz:musicmeta-core` and `com.landofoz:musicmeta-android` via JitPack.
+**Three-module Gradle project** published as `io.github.famesjranko:musicmeta-core`, `io.github.famesjranko:musicmeta-android`, and `io.github.famesjranko:musicmeta-okhttp` via Maven Central.
 
 ### musicmeta-core (pure Kotlin/JVM)
 
@@ -117,7 +117,7 @@ Adds Android-specific integrations on top of core:
 ## Key Conventions
 
 - Package: `com.landofoz.musicmeta` (core), `com.landofoz.musicmeta.android` (android module)
-- Group ID: `com.landofoz`
+- Group ID: `io.github.famesjranko`
 - Java 17 target
 - Dependencies managed via `gradle/libs.versions.toml` version catalog
 - JSON parsing uses `org.json` (not Gson/Moshi); serialization uses `kotlinx.serialization`

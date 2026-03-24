@@ -128,8 +128,8 @@ The `musicmeta-android` module adds Room-backed persistent caching, a Hilt DI mo
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("com.landofoz:musicmeta-core:0.8.0")
-    implementation("com.landofoz:musicmeta-android:0.8.0") // Android only
+    implementation("io.github.famesjranko:musicmeta-core:0.8.0")
+    implementation("io.github.famesjranko:musicmeta-android:0.8.0") // Android only
 }
 ```
 
@@ -208,9 +208,9 @@ val engine = EnrichmentEngine.Builder()
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("com.landofoz:musicmeta-core:0.8.0")
-    implementation("com.landofoz:musicmeta-okhttp:0.8.0")   // Optional: OkHttp adapter
-    implementation("com.landofoz:musicmeta-android:0.8.0")  // Optional: Android (Room cache, Hilt, WorkManager)
+    implementation("io.github.famesjranko:musicmeta-core:0.8.0")
+    implementation("io.github.famesjranko:musicmeta-okhttp:0.8.0")   // Optional: OkHttp adapter
+    implementation("io.github.famesjranko:musicmeta-android:0.8.0")  // Optional: Android (Room cache, Hilt, WorkManager)
 }
 ```
 
@@ -249,8 +249,8 @@ includeBuild("../musicmeta")
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("com.landofoz:musicmeta-core")
-    implementation("com.landofoz:musicmeta-android")
+    implementation("io.github.famesjranko:musicmeta-core")
+    implementation("io.github.famesjranko:musicmeta-android")
 }
 ```
 
@@ -260,7 +260,7 @@ dependencies {
 ./gradlew publishToMavenLocal
 ```
 
-Then consume as `com.landofoz:musicmeta-core:0.8.0` from `mavenLocal()`.
+Then consume as `io.github.famesjranko:musicmeta-core:0.8.0` from `mavenLocal()`.
 
 ## Documentation
 
