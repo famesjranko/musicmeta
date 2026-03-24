@@ -91,7 +91,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 20-01-PLAN.md — Define stale cache contracts: CacheMode enum, isStale on Success, getIncludingExpired on EnrichmentCache, InMemoryEnrichmentCache implementation
+- [x] 20-01-PLAN.md — Define stale cache contracts: CacheMode enum, isStale on Success, getIncludingExpired on EnrichmentCache, InMemoryEnrichmentCache implementation
 - [ ] 20-02-PLAN.md — Wire STALE_IF_ERROR into DefaultEnrichmentEngine, update RoomEnrichmentCache and FakeEnrichmentCache, write 8 unit tests
 
 ### Phase 21: Bulk Enrichment
@@ -146,6 +146,6 @@ Plans:
 | 17. Catalog Filtering Interface | v0.6.0 | 2/2 | Complete | 2026-03-22 |
 | 18. Integration and Docs | v0.6.0 | 2/2 | Complete | 2026-03-23 |
 | 19. OkHttp Adapter | v0.8.0 | 2/2 | Complete    | 2026-03-24 |
-| 20. Stale Cache | v0.8.0 | 0/2 | Not started | - |
+| 20. Stale Cache | v0.8.0 | 1/2 | In Progress|  |
 | 21. Bulk Enrichment | v0.8.0 | 0/1 | Not started | - |
 | 22. Maven Central Publishing | v0.8.0 | 0/2 | Not started | - |

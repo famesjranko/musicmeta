@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v0.8.0
 milestone_name: Production Readiness
 status: unknown
-stopped_at: Completed 19-02-PLAN.md (OkHttp adapter MockWebServer integration tests)
-last_updated: "2026-03-24T10:58:33.258Z"
+stopped_at: Completed 20-01-PLAN.md (Stale cache contracts and InMemoryEnrichmentCache implementation)
+last_updated: "2026-03-24T11:09:18.090Z"
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  total_plans: 4
+  completed_plans: 3
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-24)
 
 **Core value:** Consumers get comprehensive, accurate music metadata from a single enrich() call without knowing which APIs exist, how they authenticate, or how to correlate identifiers across services.
-**Current focus:** Phase 19 — OkHttp Adapter
+**Current focus:** Phase 20 — Stale Cache
 
 ## Current Position
 
-Phase: 20
-Plan: Not started
+Phase: 20 (Stale Cache) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -43,6 +43,7 @@ Plan: Not started
 *Updated after each plan completion*
 | Phase 19-okhttp-adapter P01 | 3 | 2 tasks | 4 files |
 | Phase 19-okhttp-adapter P02 | 1 | 2 tasks | 1 files |
+| Phase 20-stale-cache P01 | 2min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -57,6 +58,8 @@ Plan: Not started
 - [Phase 19-okhttp-adapter]: parseJsonResult<T> generic helper: factors out status-code branching across all 4 HttpResult methods
 - [Phase 19-okhttp-adapter]: No Accept-Encoding header in OkHttp adapter: setting it manually disables transparent gzip decompression
 - [Phase 19-okhttp-adapter]: Content-Type assertion uses contains() not assertEquals(): OkHttp appends charset suffix (application/json; charset=utf-8)
+- [Phase 20-stale-cache]: Mutex non-reentrant in InMemoryEnrichmentCache: getIncludingExpired() must access entries map directly under its own lock, never by delegating to get()
+- [Phase 20-stale-cache]: Expired entries retained (not deleted) in get(): LRU eviction handles memory, enabling stale serving without separate storage
 
 ### Pending Todos
 
@@ -69,6 +72,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-24T10:55:28.818Z
-Stopped at: Completed 19-02-PLAN.md (OkHttp adapter MockWebServer integration tests)
+Last session: 2026-03-24T11:09:18.088Z
+Stopped at: Completed 20-01-PLAN.md (Stale cache contracts and InMemoryEnrichmentCache implementation)
 Resume file: None
