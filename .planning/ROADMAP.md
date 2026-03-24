@@ -102,10 +102,10 @@ Plans:
   1. Developer can call `engine.enrichBatch(requests, types)` and collect a `Flow<Pair<EnrichmentRequest, EnrichmentResults>>` that emits one pair per request as each completes
   2. Cancelling the Flow (e.g., via `take(N)` or scope cancellation) stops processing the remaining requests without error
   3. Cache hits in the batch return immediately — the rate limiter delay is not applied to requests that are served entirely from cache
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 21-01: Add `enrichBatch()` default method to `EnrichmentEngine` interface; add explicit override in `DefaultEnrichmentEngine`; write `EnrichmentBatchTest` with Turbine covering normal batch, cancellation, empty list, exception safety, and force-refresh propagation
+- [ ] 21-01-PLAN.md — Add enrichBatch() default method to EnrichmentEngine interface; explicit override in DefaultEnrichmentEngine; 5 Turbine tests covering batch emission, cancellation, empty list, forceRefresh, and cache-hit bypass
 
 ### Phase 22: Maven Central Publishing
 **Goal**: Library consumers can declare `musicmeta-core`, `musicmeta-okhttp`, and `musicmeta-android` as Maven Central dependencies — unlocking Dependabot, Renovate, and corporate artifact proxies that block JitPack
