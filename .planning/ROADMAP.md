@@ -72,11 +72,11 @@ Full details: `.planning/milestones/v0.6.0-ROADMAP.md`
   3. HTTP 429 responses map to `RateLimited`, 4xx responses map to `ClientError`, 5xx responses map to `ServerError` — the same semantics as `DefaultHttpClient`
   4. Gzip decompression works transparently — OkHttp handles it automatically without a manually set `Accept-Encoding` header
   5. Adding `musicmeta-okhttp` to a project that doesn't declare it adds no transitive OkHttp dependency to `musicmeta-core`
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 19-01: Create `musicmeta-okhttp` Gradle module; add OkHttp 4.12.0 + MockWebServer to version catalog; implement `OkHttpEnrichmentClient` with all 10 methods
-- [ ] 19-02: Write MockWebServer integration tests covering all 10 methods, status code mapping, gzip decompression, and response body lifecycle
+- [ ] 19-01-PLAN.md — Create musicmeta-okhttp Gradle module and implement OkHttpEnrichmentClient with all 10 methods
+- [ ] 19-02-PLAN.md — Write MockWebServer integration tests covering all 10 methods, status code mapping, gzip decompression, and response body lifecycle
 
 ### Phase 20: Stale Cache
 **Goal**: Consumers running under degraded network conditions (Error or RateLimited responses) get the last known data with an `isStale` flag instead of empty results
