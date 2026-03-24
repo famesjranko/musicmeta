@@ -29,10 +29,22 @@ class RoomEnrichmentCache(
         type: EnrichmentType,
     ): EnrichmentResult.Success? {
         val entity = dao.get(entityKey, type.name, clock()) ?: return null
+        return deserializeEntity(entity, type)
+    }
+
+    override suspend fun getIncludingExpired(
+        entityKey: String,
+        type: EnrichmentType,
+    ): EnrichmentResult.Success? {
+        val entity = dao.getIncludingExpired(entityKey, type.name) ?: return null
+        return deserializeEntity(entity, type)
+    }
+
+    private fun deserializeEntity(entity: EnrichmentCacheEntity, type: EnrichmentType): EnrichmentResult.Success? {
         val data = try {
             json.decodeFromString<EnrichmentData>(entity.dataJson)
         } catch (e: Exception) {
-            logger.warn(TAG, "Failed to deserialize cache entry $entityKey:$type: ${e.message}", e)
+            logger.warn(TAG, "Failed to deserialize cache entry ${entity.entityKey}:$type: ${e.message}", e)
             return null
         }
         val resolvedIds = entity.resolvedIdsJson?.let {

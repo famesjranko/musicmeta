@@ -13,6 +13,11 @@ interface EnrichmentCacheDao {
     )
     suspend fun get(entityKey: String, type: String, now: Long): EnrichmentCacheEntity?
 
+    @Query(
+        "SELECT * FROM enrichment_cache WHERE entity_key = :entityKey AND enrichment_type = :type LIMIT 1",
+    )
+    suspend fun getIncludingExpired(entityKey: String, type: String): EnrichmentCacheEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(entity: EnrichmentCacheEntity)
 
