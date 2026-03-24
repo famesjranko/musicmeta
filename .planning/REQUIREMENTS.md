@@ -9,11 +9,11 @@ Requirements for Production Readiness milestone. Each maps to roadmap phases.
 
 ### HTTP (OkHttp Adapter)
 
-- [ ] **HTTP-01**: Developer can create OkHttpEnrichmentClient with their existing OkHttpClient instance and pass it to EnrichmentEngine.Builder
-- [ ] **HTTP-02**: OkHttp adapter implements all 10 HttpClient methods (JSON, array, body, redirect, POST, HttpResult variants)
-- [ ] **HTTP-03**: OkHttp adapter correctly maps HTTP status codes to HttpResult sealed variants (429 to RateLimited, 4xx to ClientError, 5xx to ServerError)
-- [ ] **HTTP-04**: OkHttp adapter delegates gzip decompression and retry to OkHttp (no manual Accept-Encoding header, no built-in retry loop)
-- [ ] **HTTP-05**: musicmeta-okhttp is an optional module — core does not depend on it
+- [x] **HTTP-01**: Developer can create OkHttpEnrichmentClient with their existing OkHttpClient instance and pass it to EnrichmentEngine.Builder
+- [x] **HTTP-02**: OkHttp adapter implements all 10 HttpClient methods (JSON, array, body, redirect, POST, HttpResult variants)
+- [x] **HTTP-03**: OkHttp adapter correctly maps HTTP status codes to HttpResult sealed variants (429 to RateLimited, 4xx to ClientError, 5xx to ServerError)
+- [x] **HTTP-04**: OkHttp adapter delegates gzip decompression and retry to OkHttp (no manual Accept-Encoding header, no built-in retry loop)
+- [x] **HTTP-05**: musicmeta-okhttp is an optional module — core does not depend on it
 
 ### CACHE (Stale Cache)
 
@@ -77,11 +77,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| HTTP-01 | Phase 19 | Pending |
-| HTTP-02 | Phase 19 | Pending |
-| HTTP-03 | Phase 19 | Pending |
-| HTTP-04 | Phase 19 | Pending |
-| HTTP-05 | Phase 19 | Pending |
+| HTTP-01 | Phase 19 | Complete |
+| HTTP-02 | Phase 19 | Complete |
+| HTTP-03 | Phase 19 | Complete |
+| HTTP-04 | Phase 19 | Complete |
+| HTTP-05 | Phase 19 | Complete |
 | CACHE-01 | Phase 20 | Pending |
 | CACHE-02 | Phase 20 | Pending |
 | CACHE-03 | Phase 20 | Pending |
