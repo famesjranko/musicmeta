@@ -45,7 +45,9 @@ dependencies {
 
 mavenPublishing {
     publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
-    signAllPublications()
+    if (project.hasProperty("signing.keyId")) {
+        signAllPublications()
+    }
     coordinates("com.landofoz", "musicmeta-core", version.toString())
     pom {
         name.set("musicmeta-core")

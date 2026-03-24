@@ -72,11 +72,16 @@ dependencies {
 
 mavenPublishing {
     publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
-    signAllPublications()
+    if (project.hasProperty("signing.keyId")) {
+        signAllPublications()
+    }
     configure(AndroidSingleVariantLibrary(
         variant = "release",
         sourcesJar = true,
-        publishJavadocJar = true,
+        // AGP 8.7.3 bundles Dokka 1.x which cannot parse Kotlin 2.1 metadata (binary version 2.1.0,
+        // expected 1.4.2). Javadoc generation fails at compile time for all sealed classes from
+        // musicmeta-core. Disabled until AGP is upgraded to a version bundling Dokka 2.x.
+        publishJavadocJar = false,
     ))
     coordinates("com.landofoz", "musicmeta-android", version.toString())
     pom {
