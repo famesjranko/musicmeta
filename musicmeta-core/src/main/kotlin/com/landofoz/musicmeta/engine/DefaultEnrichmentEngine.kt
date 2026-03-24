@@ -15,6 +15,7 @@ import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.IdentityResolution
 import com.landofoz.musicmeta.ProviderInfo
 import com.landofoz.musicmeta.SearchCandidate
+import com.landofoz.musicmeta.cache.CacheMode
 import com.landofoz.musicmeta.http.HttpClient
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.async
@@ -92,9 +93,13 @@ class DefaultEnrichmentEngine(
             }
         }
 
+        if (config.cacheMode == CacheMode.STALE_IF_ERROR) {
+            applyStaleCache(request, results, uncachedTypes)
+        }
+
         val resolvedMbid = identityResolution?.identifiers?.musicBrainzId
         for ((type, result) in results) {
-            if (result is EnrichmentResult.Success) {
+            if (result is EnrichmentResult.Success && !result.isStale) {
                 val ttl = config.ttlOverrides[type] ?: type.defaultTtlMs
                 val primaryKey = entityKeyFor(request, type)
                 cache.put(primaryKey, type, result, ttl)
@@ -274,6 +279,22 @@ class DefaultEnrichmentEngine(
             return EnrichmentResult.NotFound(result.type, result.provider)
         }
         return if (override != null) result.copy(confidence = override) else result
+    }
+
+    private suspend fun applyStaleCache(
+        request: EnrichmentRequest,
+        results: MutableMap<EnrichmentType, EnrichmentResult>,
+        types: Set<EnrichmentType>,
+    ) {
+        for (type in types) {
+            val result = results[type] ?: continue
+            if (result is EnrichmentResult.Error || result is EnrichmentResult.RateLimited) {
+                val stale = cache.getIncludingExpired(entityKeyFor(request, type), type)
+                if (stale != null) {
+                    results[type] = stale.copy(isStale = true)
+                }
+            }
+        }
     }
 
     companion object {
