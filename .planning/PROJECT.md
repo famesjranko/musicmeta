@@ -8,9 +8,19 @@ A pure Kotlin/JVM music metadata enrichment and recommendation library that aggr
 
 Consumers get comprehensive, accurate music metadata from a single `enrich()` call without knowing which APIs exist, how they authenticate, or how to correlate identifiers across services.
 
+## Current Milestone: v0.8.0 Production Readiness
+
+**Goal:** Address production readiness gaps identified by external review — OkHttp adapter, offline cache fallback, bulk enrichment API, Maven Central distribution.
+
+**Target features:**
+- OkHttp HttpClient adapter (`musicmeta-okhttp` module)
+- Stale-while-revalidate cache mode (`STALE_IF_ERROR`)
+- Bulk enrichment API (`enrichBatch()` with Flow emission)
+- Maven Central publishing (all 3 modules)
+
 ## Current State
 
-Shipped v0.6.0 Recommendations Engine with 31 enrichment types across 11 providers. Three new recommendation types (ARTIST_RADIO, SIMILAR_ALBUMS, GENRE_DISCOVERY), SIMILAR_ARTISTS upgraded to multi-provider mergeable type (Last.fm + ListenBrainz + Deezer), engine extensibility via ResultMerger and CompositeSynthesizer interfaces, and CatalogProvider interface for availability-aware filtering.
+Shipped v0.7.0 Developer Experience with EnrichmentResults wrapper (19 named accessors), profile extension functions (artistProfile/albumProfile/trackProfile), default type sets per entity kind, cache management API (invalidate/forceRefresh/manualSelection), and ProviderChain failure preservation fix. 32 enrichment types across 11 providers.
 
 ## Requirements
 
@@ -40,10 +50,19 @@ Shipped v0.6.0 Recommendations Engine with 31 enrichment types across 11 provide
 - v0.6.0: GENRE_DISCOVERY composite type with static genre affinity taxonomy (~70 relationships)
 - v0.6.0: CatalogProvider interface with UNFILTERED/AVAILABLE_ONLY/AVAILABLE_FIRST modes
 - v0.6.0: SimilarArtist.sources field for merge transparency across 3 providers
+- v0.7.0: EnrichmentResults wrapper with 19 named accessors, top-level IdentityResolution, wasRequested()/result() diagnostics
+- v0.7.0: Profile extension functions (artistProfile, albumProfile, trackProfile) with SearchCandidate overloads
+- v0.7.0: Default type sets (DEFAULT_ARTIST_TYPES, DEFAULT_ALBUM_TYPES, DEFAULT_TRACK_TYPES) with defaultTypesFor()
+- v0.7.0: Cache management API — invalidate(), forceRefresh, isManuallySelected()/markManuallySelected()
+- v0.7.0: ProviderChain failure preservation, Room cache identity round-tripping, cache key convergence
+- v0.7.0: SIMILAR_TRACKS multi-provider merge (Last.fm + Deezer) via SimilarTrackMerger
 
 ### Active
 
-(None — planning next milestone)
+- [ ] OkHttp HttpClient adapter — `musicmeta-okhttp` module implementing all 12 HttpClient methods via OkHttp Call API
+- [ ] Stale-while-revalidate cache — `CacheMode.STALE_IF_ERROR` serving expired cache on Error/RateLimited with `isStale` flag
+- [ ] Bulk enrichment — `enrichBatch()` returning `Flow<Pair<EnrichmentRequest, EnrichmentResults>>` with sequential iteration
+- [ ] Maven Central publishing — Sonatype/OSSRH config, POM metadata, signing, sources/javadoc jars for all modules
 
 ### Out of Scope
 
@@ -52,18 +71,20 @@ Shipped v0.6.0 Recommendations Engine with 31 enrichment types across 11 provide
 - Wikipedia structured HTML parsing — high complexity, low ROI vs Wikidata
 - ForAlbum credits aggregation — deferred from v0.5.0
 - Genre taxonomy hierarchy — flat affinity table covers the use case
-- Credit-based discovery — cross-entity query pattern, deferred to v0.7.0
-- ListenBrainz collaborative filtering — user-scoped, needs user identity concept, deferred to v0.8.0
-- CatalogProvider implementations (LocalLibrary, Spotify, etc.) — interface only in v0.6.0, implementations v0.8.0
+- Credit-based discovery — cross-entity query pattern, deferred to v0.9.0+
+- ListenBrainz collaborative filtering — user-scoped, needs user identity concept, deferred to v0.9.0
+- CatalogProvider implementations (LocalLibrary, Spotify, etc.) — interface only in v0.6.0, deferred to v0.9.0
+- Flow-based progressive API — marginal benefit vs complexity; callers split enrich() calls today
 
 ## Context
 
 - Pre-1.0 with no external consumers — clean breaking changes still safe
 - Provider APIs are the biggest long-term maintenance risk — mitigated by mapper pattern
-- v0.5.0 tech debt: itunesArtistId not stored in resolvedIdentifiers (re-searches on every discography call)
 - v0.6.0 tech debt: DefaultEnrichmentEngine.kt is 304 lines (4 over 300-line target)
-- 31 enrichment types, 4 engine concepts (provider chains, composite types, mergeable types, catalog filtering)
+- 32 enrichment types, 4 engine concepts (provider chains, composite types, mergeable types, catalog filtering)
 - Engine extensibility: new mergeable types via ResultMerger, new composites via CompositeSynthesizer
+- v0.7.0 shipped EnrichmentResults wrapper + profile methods + cache management API
+- HttpClient has 12 methods (6 nullable, 4 HttpResult, fetchBody, fetchRedirectUrl) — OkHttp adapter must implement all
 
 ## Constraints
 
@@ -109,4 +130,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-23 after v0.6.0 milestone*
+*Last updated: 2026-03-24 after v0.8.0 milestone start*
