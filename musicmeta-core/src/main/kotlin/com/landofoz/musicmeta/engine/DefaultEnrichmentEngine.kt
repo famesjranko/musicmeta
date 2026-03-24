@@ -21,6 +21,8 @@ import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withTimeout
 
 class DefaultEnrichmentEngine(
@@ -113,6 +115,16 @@ class DefaultEnrichmentEngine(
             }
         }
         return EnrichmentResults(results, types, identityResolution)
+    }
+
+    override fun enrichBatch(
+        requests: List<EnrichmentRequest>,
+        types: Set<EnrichmentType>,
+        forceRefresh: Boolean,
+    ): Flow<Pair<EnrichmentRequest, EnrichmentResults>> = flow {
+        for (request in requests) {
+            emit(request to enrich(request, types, forceRefresh))
+        }
     }
 
     override suspend fun invalidate(request: EnrichmentRequest, type: EnrichmentType?) {

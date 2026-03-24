@@ -26,6 +26,8 @@ import com.landofoz.musicmeta.provider.lrclib.LrcLibProvider
 import com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzProvider
 import com.landofoz.musicmeta.provider.wikidata.WikidataProvider
 import com.landofoz.musicmeta.provider.wikipedia.WikipediaProvider
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 
 interface EnrichmentEngine {
 
@@ -40,6 +42,25 @@ interface EnrichmentEngine {
         types: Set<EnrichmentType>,
         forceRefresh: Boolean = false,
     ): EnrichmentResults
+
+    /**
+     * Enriches multiple requests sequentially, emitting each result as it completes.
+     *
+     * Results are emitted as a cold [Flow]. Cancelling collection (e.g., via [take])
+     * stops processing remaining requests cooperatively.
+     *
+     * Cache hits return immediately without rate-limiter delay because the
+     * underlying [enrich] call short-circuits on cached data.
+     */
+    fun enrichBatch(
+        requests: List<EnrichmentRequest>,
+        types: Set<EnrichmentType>,
+        forceRefresh: Boolean = false,
+    ): Flow<Pair<EnrichmentRequest, EnrichmentResults>> = flow {
+        for (request in requests) {
+            emit(request to enrich(request, types, forceRefresh))
+        }
+    }
 
     suspend fun search(
         request: EnrichmentRequest,
