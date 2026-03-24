@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-03-24
+
+Production Readiness — 4 phases, 7 plans, 32 enrichment types.
+
+### Added
+- **`musicmeta-okhttp` module** — `OkHttpEnrichmentClient` implementing all 10 `HttpClient` methods via OkHttp 4.12.0 `Call` API. Transparent gzip decompression (no manual `Accept-Encoding` header). No built-in retry — delegates to OkHttp interceptors. Timeouts inherited from caller's `OkHttpClient` instance.
+- **`CacheMode.STALE_IF_ERROR`** — when provider returns `Error` or `RateLimited` and an expired cache entry exists, serves the expired entry as `Success` with `isStale = true`. Does not serve stale for `NotFound` (provider found nothing). Stale results are not re-cached with fresh TTL.
+- **`CacheMode` enum** on `EnrichmentConfig` — `NETWORK_FIRST` (default, existing behavior) and `STALE_IF_ERROR`
+- **`isStale: Boolean`** on `EnrichmentResult.Success` — `false` by default, `true` when result is from expired cache via stale fallback
+- **`getIncludingExpired()`** on `EnrichmentCache` — returns cached entry regardless of expiry. Default implementation returns `null` (backward compatible for custom caches). Implemented by `InMemoryEnrichmentCache` and `RoomEnrichmentCache`.
+- **`enrichBatch()`** on `EnrichmentEngine` — returns `Flow<Pair<EnrichmentRequest, EnrichmentResults>>` for bulk enrichment. Sequential iteration with cooperative cancellation. Cache hits return immediately. Default method on interface with explicit override in `DefaultEnrichmentEngine`.
+- **Maven Central publishing** via vanniktech `gradle-maven-publish-plugin` targeting `SonatypeHost.CENTRAL_PORTAL` — all 3 modules (`musicmeta-core`, `musicmeta-okhttp`, `musicmeta-android`) with POM metadata (Apache 2.0, developer, SCM), conditional GPG signing, sources + javadoc jars
+
+### Changed
+- **`InMemoryEnrichmentCache`** no longer eagerly deletes expired entries on `get()` — expired entries remain in the LRU map for stale serving via `getIncludingExpired()`
+- **`EnrichmentEngine` interface** gains `enrichBatch()` default method — custom implementations inherit it automatically
+- **Version bumped** from 0.1.0 to 0.8.0 across all modules
+- **README** updated with Maven Central as primary installation method; JitPack preserved for existing consumers
+
+## [0.7.0] - 2026-03-24
+
+Developer Experience — profiles, named accessors, cache management, identity signals.
+
 ### Added
 - **`EnrichmentResults` wrapper** — `enrich()` now returns `EnrichmentResults` (data class) instead of raw `Map`. Includes `raw` map access, `requestedTypes` set, and top-level `IdentityResolution`
 - **`IdentityResolution` data class** — engine-level identity outcome (identifiers, match status, score, suggestions) accessible without scanning individual results

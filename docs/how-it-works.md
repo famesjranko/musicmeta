@@ -76,12 +76,17 @@ enrich(request, types, forceRefresh)
               │
               ▼
 ┌────────────────────────────┐
-│ 7. Identity Stamp          │── mark RESOLVED/BEST_EFFORT + score
+│ 7. Stale Fallback          │── STALE_IF_ERROR: serve expired cache on Error/RateLimited
 └─────────────┬──────────────┘
               │
               ▼
 ┌────────────────────────────┐
-│ 8. Cache Store + Alias     │── save with TTL + name alias
+│ 8. Identity Stamp          │── mark RESOLVED/BEST_EFFORT + score
+└─────────────┬──────────────┘
+              │
+              ▼
+┌────────────────────────────┐
+│ 9. Cache Store + Alias     │── save with TTL + name alias (skip stale results)
 └─────────────┬──────────────┘
               │
               ▼
@@ -413,6 +418,76 @@ engine.invalidate(EnrichmentRequest.forArtist("Radiohead"))
 
 ---
 
+## Stale Cache (Offline Fallback)
+
+When a provider fails with `Error` or `RateLimited` and an expired cache entry exists, the engine can serve the stale data instead of returning the error. Enable via `CacheMode.STALE_IF_ERROR`:
+
+```kotlin
+val engine = EnrichmentEngine.Builder()
+    .withDefaultProviders()
+    .config(EnrichmentConfig(cacheMode = CacheMode.STALE_IF_ERROR))
+    .build()
+```
+
+Stale results have `isStale = true` on `EnrichmentResult.Success`, so consumers can show a staleness indicator:
+
+```kotlin
+val result = results.result(EnrichmentType.GENRE) as? EnrichmentResult.Success
+if (result?.isStale == true) {
+    println("Showing cached data — refresh when online")
+}
+```
+
+**Key rules:**
+- Stale is only served for `Error` and `RateLimited` — never for `NotFound` (which means the provider searched and found nothing)
+- Stale results are not re-written to cache (the expired entry's TTL is not renewed)
+- `NETWORK_FIRST` (default) never serves stale — errors are returned as-is
+
+---
+
+## Bulk Enrichment
+
+Enrich multiple requests with a single call using `enrichBatch()`. Results emit as a `Flow` — each request's results are emitted as they complete:
+
+```kotlin
+engine.enrichBatch(
+    requests = listOf(
+        EnrichmentRequest.forAlbum("OK Computer", "Radiohead"),
+        EnrichmentRequest.forAlbum("Kid A", "Radiohead"),
+        EnrichmentRequest.forAlbum("The Bends", "Radiohead"),
+    ),
+    types = setOf(EnrichmentType.ALBUM_ART, EnrichmentType.GENRE),
+).collect { (request, results) ->
+    val title = (request as EnrichmentRequest.ForAlbum).title
+    println("$title: ${results.genres()}")
+}
+```
+
+- Sequential iteration — MusicBrainz rate limiter naturally throttles at 1 req/sec
+- Cache hits return immediately without rate limiter delay
+- Cancellation via `take(N)` or scope cancellation stops processing remaining requests
+- `forceRefresh` parameter propagates to each underlying `enrich()` call
+
+---
+
+## OkHttp Adapter
+
+The optional `musicmeta-okhttp` module provides `OkHttpEnrichmentClient` — an `HttpClient` implementation backed by OkHttp 4.12.0. Pass your existing `OkHttpClient` instance to leverage interceptors, certificate pinning, connection pooling, and proxy configuration:
+
+```kotlin
+val engine = EnrichmentEngine.Builder()
+    .httpClient(OkHttpEnrichmentClient(myOkHttpClient, "MyApp/1.0"))
+    .withDefaultProviders()
+    .build()
+```
+
+**Differences from `DefaultHttpClient`:**
+- No built-in retry logic — add retries via OkHttp interceptors
+- Gzip decompression handled transparently by OkHttp (no manual `Accept-Encoding` header)
+- Timeouts inherited from the `OkHttpClient` instance
+
+---
+
 ## Architecture
 
 ```
@@ -481,6 +556,20 @@ musicmeta-core/src/main/kotlin/com/landofoz/musicmeta/
     ├── lastfm/
     ├── fanarttv/
     └── discogs/
+```
+
+musicmeta-okhttp/src/main/kotlin/com/landofoz/musicmeta/okhttp/
+└── OkHttpEnrichmentClient.kt      # OkHttp 4.12.0 adapter for HttpClient
+```
+
+```
+musicmeta-android/src/main/kotlin/com/landofoz/musicmeta/android/
+├── cache/
+│   ├── EnrichmentCacheDao.kt      # Room DAO
+│   ├── RoomEnrichmentCache.kt     # Room-backed persistent cache
+│   └── EnrichmentCacheEntity.kt   # Room entity
+├── HiltEnrichmentModule.kt        # Hilt DI wiring
+└── EnrichmentWorker.kt            # WorkManager base worker
 ```
 
 Each provider follows the same pattern:

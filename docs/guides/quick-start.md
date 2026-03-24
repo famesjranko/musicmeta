@@ -20,6 +20,18 @@ val engine = EnrichmentEngine.Builder()
 
 8 of 11 providers work without API keys. `withDefaultProviders()` registers all of them and conditionally adds key-requiring providers only when their key is present.
 
+### With OkHttp (recommended for Android)
+
+```kotlin
+// Add: implementation("com.landofoz:musicmeta-okhttp:0.8.0")
+val engine = EnrichmentEngine.Builder()
+    .httpClient(OkHttpEnrichmentClient(myOkHttpClient, "MyApp/1.0"))
+    .withDefaultProviders()
+    .build()
+```
+
+This replaces the default `HttpURLConnection` transport with your existing `OkHttpClient` — interceptors, certificate pinning, and connection pooling all apply.
+
 ---
 
 ## Tier 1: Profile methods
@@ -203,6 +215,28 @@ val profile = engine.artistProfile(
 )
 // profile.identityMatch will be null (resolution not attempted)
 ```
+
+---
+
+## Bulk enrichment
+
+Enrich a list of requests as a `Flow` — results emit one at a time as each completes:
+
+```kotlin
+engine.enrichBatch(
+    listOf(
+        EnrichmentRequest.forAlbum("OK Computer", "Radiohead"),
+        EnrichmentRequest.forAlbum("Kid A", "Radiohead"),
+        EnrichmentRequest.forAlbum("The Bends", "Radiohead"),
+    ),
+    setOf(EnrichmentType.ALBUM_ART, EnrichmentType.GENRE),
+).collect { (request, results) ->
+    val title = (request as EnrichmentRequest.ForAlbum).title
+    updateUI(title, results.albumArt(), results.genres())
+}
+```
+
+Cache hits return immediately. Cancel the Flow via `take(N)` to stop early. See [cache-management.md](cache-management.md) for offline fallback with `CacheMode.STALE_IF_ERROR`.
 
 ---
 

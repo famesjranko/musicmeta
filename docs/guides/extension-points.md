@@ -105,24 +105,38 @@ Providers with unsatisfied requirements are automatically skipped.
 
 ---
 
-## Custom HTTP clients
+## HTTP clients
 
-Replace `DefaultHttpClient` (which uses `java.net.HttpURLConnection`) with your preferred HTTP library. Call `.httpClient()` before `.withDefaultProviders()` so the default providers use your client.
+### OkHttp adapter (recommended for Android)
+
+The `musicmeta-okhttp` module ships a ready-to-use `OkHttpEnrichmentClient`. Add the dependency and pass your existing `OkHttpClient`:
 
 ```kotlin
-class OkHttpMusicMetaClient(
-    private val client: OkHttpClient,
-) : HttpClient {
+// build.gradle.kts
+implementation("com.landofoz:musicmeta-okhttp:0.8.0")
+```
 
-    override suspend fun fetchJson(url: String): JSONObject? {
-        val request = Request.Builder().url(url).build()
-        return client.newCall(request).execute().use { response ->
-            if (response.isSuccessful) {
-                response.body?.string()?.let { JSONObject(it) }
-            } else null
-        }
-    }
+```kotlin
+val engine = EnrichmentEngine.Builder()
+    .httpClient(OkHttpEnrichmentClient(myOkHttpClient, "MyApp/1.0"))
+    .withDefaultProviders()
+    .build()
+```
 
+Call `.httpClient()` **before** `.withDefaultProviders()` so all default providers use OkHttp.
+
+**Differences from `DefaultHttpClient`:**
+- No built-in retry — add retries via OkHttp interceptors
+- Gzip decompression handled transparently (do not set `Accept-Encoding` manually)
+- Timeouts inherited from the `OkHttpClient` instance
+
+### Custom HTTP clients
+
+For other HTTP libraries (Ktor, Fuel, etc.), implement the `HttpClient` interface (10 methods):
+
+```kotlin
+class MyHttpClient : HttpClient {
+    override suspend fun fetchJson(url: String): JSONObject? { /* ... */ }
     override suspend fun fetchJsonResult(url: String): HttpResult<JSONObject> { /* ... */ }
     override suspend fun fetchJsonArray(url: String): JSONArray? { /* ... */ }
     override suspend fun fetchJsonArrayResult(url: String): HttpResult<JSONArray> { /* ... */ }
@@ -135,7 +149,7 @@ class OkHttpMusicMetaClient(
 }
 
 val engine = EnrichmentEngine.Builder()
-    .httpClient(OkHttpMusicMetaClient(myOkHttpClient))  // before withDefaultProviders()
+    .httpClient(MyHttpClient())  // before withDefaultProviders()
     .withDefaultProviders()
     .build()
 ```

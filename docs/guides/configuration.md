@@ -39,6 +39,10 @@ val config = EnrichmentConfig(
 
     // Max tracks for ARTIST_RADIO (Deezer supports up to 100). Default: 50.
     radioLimit = 25,
+
+    // Cache fallback mode. NETWORK_FIRST (default) returns errors as-is.
+    // STALE_IF_ERROR serves expired cache entries when providers return Error or RateLimited.
+    cacheMode = CacheMode.STALE_IF_ERROR,
 )
 ```
 

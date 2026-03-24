@@ -151,6 +151,67 @@ engine.cache.clear()                                    // wipes the entire cach
 
 ---
 
+## Stale-while-revalidate (offline fallback)
+
+By default, expired cache entries are not served — the engine returns provider errors as-is. Enable `STALE_IF_ERROR` to serve expired data when the network fails:
+
+```kotlin
+val engine = EnrichmentEngine.Builder()
+    .withDefaultProviders()
+    .config(EnrichmentConfig(cacheMode = CacheMode.STALE_IF_ERROR))
+    .build()
+```
+
+### How it works
+
+When a provider returns `Error` or `RateLimited` and an expired cache entry exists for that type, the engine serves the expired entry as `Success` with `isStale = true`. The consumer can show a staleness indicator:
+
+```kotlin
+val result = results.result(EnrichmentType.GENRE) as? EnrichmentResult.Success
+if (result?.isStale == true) {
+    showBanner("Showing cached data — check your connection")
+}
+```
+
+### Rules
+
+| Provider result | Expired entry exists? | Behavior |
+|-----------------|----------------------|----------|
+| `Error` | Yes | Serve stale (`isStale = true`) |
+| `RateLimited` | Yes | Serve stale (`isStale = true`) |
+| `Error` | No | Return `Error` as-is |
+| `NotFound` | Yes | Return `NotFound` — provider found nothing, stale would be misleading |
+| `Success` | — | Return fresh `Success` normally |
+
+### Cache write guard
+
+Stale results are **not** re-written to cache. The `!isStale` guard prevents expired data from receiving a fresh TTL. The original expired entry remains in the cache for future stale serving until LRU eviction removes it.
+
+### CacheMode values
+
+| Mode | Behavior |
+|------|----------|
+| `NETWORK_FIRST` | Default. Expired entries are never served. Errors returned as-is. |
+| `STALE_IF_ERROR` | Serve expired entries on `Error`/`RateLimited`. Fresh results cached normally. |
+
+### Custom cache implementations
+
+If you implement `EnrichmentCache`, add `getIncludingExpired()` to support stale serving:
+
+```kotlin
+override suspend fun getIncludingExpired(
+    entityKey: String,
+    type: EnrichmentType,
+): EnrichmentResult.Success? {
+    // Return the entry regardless of expiry
+    // Default implementation returns null (stale serving disabled)
+}
+```
+
+`InMemoryEnrichmentCache` and `RoomEnrichmentCache` both implement this method.
+
+---
+
 ## Clearing expired entries (Android)
 
 `RoomEnrichmentCache` provides a `deleteExpired()` method for housekeeping. Call it periodically — a good pattern is a periodic WorkManager task:

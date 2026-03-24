@@ -7,6 +7,26 @@
 
 ## Decisions
 
+### 2026-03-24: v0.8.0 Production Readiness — four adoption blockers addressed
+
+**Context**: External review identified four gaps blocking production adoption: no OkHttp adapter (every Android project has OkHttp already), no offline cache fallback, no bulk enrichment API, JitPack-only distribution. Flow-based progressive API was assessed and deliberately cut — identity resolution blocks all emission, so marginal benefit vs complexity.
+
+**Decision**: Ship four targeted features as v0.8.0 without architectural rewrites.
+
+**Key decisions**:
+- **OkHttp 4.12.0, not 5.x**. OkHttp 5.x requires Kotlin 2.2.x stdlib as a transitive dependency, which would force consumers onto Kotlin 2.2.x even though musicmeta compiles with Kotlin 2.1.0. The upgrade belongs together with a future Kotlin 2.2 bump.
+- **No `Accept-Encoding: gzip` in OkHttp adapter.** OkHttp adds this header automatically and handles transparent decompression. Setting it manually disables OkHttp's decompression and delivers raw gzip bytes to the JSON parser — a documented footgun in OkHttp's issue tracker.
+- **`STALE_IF_ERROR` only, no `CACHE_FIRST`.** `CACHE_FIRST` (always serve cache, refresh in background) needs a background refresh coroutine scope, which is a different architecture. `STALE_IF_ERROR` covers the critical offline case with minimal complexity.
+- **Stale only for `Error`/`RateLimited`, never `NotFound`.** `NotFound` means "the provider searched and found nothing" — serving stale data would be misleading. `Error` and `RateLimited` mean "the network failed" — stale is a reasonable fallback.
+- **`enrichBatch()` is sequential, not pipelined.** Rate limiter naturally throttles at 1 req/sec for MusicBrainz. Cache hits return instantly. Real pipelining (concurrent identity resolution overlap) deferred until someone proves the simple version is a bottleneck.
+- **OSSRH is dead (shut down June 2025).** The original plan targeted OSSRH URLs — research caught this before implementation. Switched to vanniktech `gradle-maven-publish-plugin` targeting `SonatypeHost.CENTRAL_PORTAL`.
+- **vanniktech plugin 0.30.0, not 0.36.0.** v0.36.0 hardcodes `ANDROID_GRADLE_MIN = "8.13.0"` but the project uses AGP 8.7.3. v0.30.0 has the same `CENTRAL_PORTAL` DSL and works with AGP 8.0.0+.
+- **Android javadoc jar disabled.** AGP 8.7.3 bundles Dokka 1.x (ASM8) which cannot parse Kotlin 2.1.0 sealed class metadata. Core and okhttp produce full javadoc jars. Android publishes `.aar` + `-sources.jar` + `.pom`. Re-enable with AGP 8.13.0+.
+
+**Status**: Shipped
+
+---
+
 ### 2026-03-24: Cache management API — closing the consumer dev map
 
 **Context**: Audit of the v0.7.0 developer experience revealed that while build→get→search flows were clean, update/refresh operations required consumers to import `DefaultEnrichmentEngine` and hand-compute internal cache keys. This leaked an implementation detail: the entity key format (`"artist:Radiohead:GENRE"`) includes the type and uses MBID when available, with name-alias keys for cache convergence after disambiguation. No external consumer should need to know this.
