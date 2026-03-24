@@ -232,8 +232,9 @@ dependencyResolutionManagement {
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("com.github.famesjranko.musicmeta:musicmeta-core:v0.7.0")
-    implementation("com.github.famesjranko.musicmeta:musicmeta-android:v0.7.0") // Android only
+    implementation("com.github.famesjranko.musicmeta:musicmeta-core:v0.8.1")
+    implementation("com.github.famesjranko.musicmeta:musicmeta-okhttp:v0.8.1")   // Optional: OkHttp adapter
+    implementation("com.github.famesjranko.musicmeta:musicmeta-android:v0.8.1")  // Optional: Android
 }
 ```
 
