@@ -23,7 +23,7 @@ val engine = EnrichmentEngine.Builder()
 ### With OkHttp (recommended for Android)
 
 ```kotlin
-// Add: implementation("io.github.famesjranko:musicmeta-okhttp:0.8.0")
+// Add: implementation("io.github.famesjranko:musicmeta-okhttp:0.8.1")
 val engine = EnrichmentEngine.Builder()
     .httpClient(OkHttpEnrichmentClient(myOkHttpClient, "MyApp/1.0"))
     .withDefaultProviders()

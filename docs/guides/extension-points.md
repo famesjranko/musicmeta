@@ -113,7 +113,7 @@ The `musicmeta-okhttp` module ships a ready-to-use `OkHttpEnrichmentClient`. Add
 
 ```kotlin
 // build.gradle.kts
-implementation("io.github.famesjranko:musicmeta-okhttp:0.8.0")
+implementation("io.github.famesjranko:musicmeta-okhttp:0.8.1")
 ```
 
 ```kotlin

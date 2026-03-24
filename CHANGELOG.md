@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-03-25
+
+### Fixed
+- **Search command** falls back to fuzzy matching when exact search returns empty — typos like "radohead" now find "Radiohead"
+- **`TrackingCache`** delegates `getIncludingExpired()` — stale cache mode now works in demo
+
+### Added
+- **Demo**: `config http default|okhttp` — switch HTTP backend for live testing
+- **Demo**: `config stale on|off` — toggle `STALE_IF_ERROR` cache mode
+- **Demo**: `batch artist|album|track a; b; c` — bulk enrichment with streaming output
+- **Demo**: `[stale]` indicator on results served from expired cache
+
+### Changed
+- **Maven group ID** changed from `com.landofoz` to `io.github.famesjranko` for Central Portal publishing
+- **README** license set to Apache-2.0
+
 ## [0.8.0] - 2026-03-24
 
 Production Readiness — 4 phases, 7 plans, 32 enrichment types.

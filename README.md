@@ -128,8 +128,8 @@ The `musicmeta-android` module adds Room-backed persistent caching, a Hilt DI mo
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("io.github.famesjranko:musicmeta-core:0.8.0")
-    implementation("io.github.famesjranko:musicmeta-android:0.8.0") // Android only
+    implementation("io.github.famesjranko:musicmeta-core:0.8.1")
+    implementation("io.github.famesjranko:musicmeta-android:0.8.1") // Android only
 }
 ```
 
@@ -208,9 +208,9 @@ val engine = EnrichmentEngine.Builder()
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("io.github.famesjranko:musicmeta-core:0.8.0")
-    implementation("io.github.famesjranko:musicmeta-okhttp:0.8.0")   // Optional: OkHttp adapter
-    implementation("io.github.famesjranko:musicmeta-android:0.8.0")  // Optional: Android (Room cache, Hilt, WorkManager)
+    implementation("io.github.famesjranko:musicmeta-core:0.8.1")
+    implementation("io.github.famesjranko:musicmeta-okhttp:0.8.1")   // Optional: OkHttp adapter
+    implementation("io.github.famesjranko:musicmeta-android:0.8.1")  // Optional: Android (Room cache, Hilt, WorkManager)
 }
 ```
 
@@ -260,7 +260,7 @@ dependencies {
 ./gradlew publishToMavenLocal
 ```
 
-Then consume as `io.github.famesjranko:musicmeta-core:0.8.0` from `mavenLocal()`.
+Then consume as `io.github.famesjranko:musicmeta-core:0.8.1` from `mavenLocal()`.
 
 ## Documentation
 
