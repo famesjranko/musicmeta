@@ -1,11 +1,6 @@
 package com.landofoz.musicmeta.e2e
 
-import com.landofoz.musicmeta.EnrichmentData
-import com.landofoz.musicmeta.EnrichmentEngine
-import com.landofoz.musicmeta.EnrichmentRequest
-import com.landofoz.musicmeta.EnrichmentResult
-import com.landofoz.musicmeta.EnrichmentResults
-import com.landofoz.musicmeta.EnrichmentType
+import com.landofoz.musicmeta.*
 import com.landofoz.musicmeta.http.DefaultHttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.provider.coverartarchive.CoverArtArchiveProvider
@@ -419,10 +414,115 @@ class EnrichmentShowcaseTest {
         } else printSingleResult(EnrichmentType.GENRE_DISCOVERY, genreDiscovery)
     }
 
-    // --- 11. v0.8.0 feature spotlight ---
+    // --- 11. v0.7.0 feature spotlight ---
 
     @Test
-    fun `11 - v0_8_0 feature spotlight`() = runBlocking {
+    fun `11 - v0_7_0 feature spotlight`() = runBlocking {
+        banner("v0.7.0 FEATURES: DEVELOPER EXPERIENCE")
+
+        // Tier 1: Profile methods — one call, structured result
+        println("  --- TIER 1: artistProfile() ---")
+        val profile = engine.artistProfile("Radiohead")
+        println("    Name: ${profile.name}")
+        println("    Identity: ${profile.identityMatch} (score=${profile.identityMatchScore})")
+        println("    MBID: ${profile.identifiers.musicBrainzId}")
+        println("    Photo: ${profile.photo?.url?.take(60) ?: "none"}${if ((profile.photo?.url?.length ?: 0) > 60) "..." else ""}")
+        println("    Bio: ${profile.bio?.text?.take(80) ?: "none"}...")
+        println("    Genres: ${profile.genres.take(3).joinToString(", ") { "${it.name}(%.2f)".format(it.confidence) }}")
+        println("    Country: ${profile.country}")
+        println("    Members: ${profile.members.take(3).joinToString(", ") { it.name }}")
+        println("    Discography: ${profile.discography.size} albums")
+        println("    Similar: ${profile.similarArtists?.artists?.take(3)?.joinToString(", ") { it.name } ?: "none"}")
+        println("    Top tracks: ${profile.topTracks?.tracks?.take(3)?.joinToString(", ") { it.title } ?: "none"}")
+
+        println("\n  --- TIER 1: albumProfile() ---")
+        val albumProf = engine.albumProfile("OK Computer", "Radiohead")
+        println("    Title: ${albumProf.title} by ${albumProf.artist}")
+        println("    Artwork: ${albumProf.artwork?.url?.take(60) ?: "none"}")
+        println("    Genres: ${albumProf.genres.take(3).joinToString(", ") { it.name }}")
+        println("    Label: ${albumProf.label}")
+        println("    Release date: ${albumProf.releaseDate}")
+        println("    Tracks: ${albumProf.tracks.size}")
+
+        println("\n  --- TIER 1: trackProfile() ---")
+        val trackProf = engine.trackProfile("Creep", "Radiohead")
+        println("    Title: ${trackProf.title} by ${trackProf.artist}")
+        println("    Genres: ${trackProf.genres.take(3).joinToString(", ") { it.name }}")
+        val lyricsData = trackProf.lyrics
+        println("    Lyrics: ${if (lyricsData != null) "${lyricsData.plainLyrics?.lines()?.size ?: 0} lines" else "none"}")
+
+        // Tier 2: EnrichmentResults named accessors
+        println("\n  --- TIER 2: Named accessors on EnrichmentResults ---")
+        val results = engine.enrich(
+            EnrichmentRequest.forAlbum("OK Computer", "Radiohead"),
+            setOf(
+                EnrichmentType.ALBUM_ART, EnrichmentType.GENRE,
+                EnrichmentType.LABEL, EnrichmentType.RELEASE_DATE,
+                EnrichmentType.COUNTRY, EnrichmentType.ALBUM_METADATA,
+            ),
+        )
+        println("    albumArt(): ${results.albumArt()?.url?.take(50) ?: "null"}")
+        println("    genres(): ${results.genres().take(4)}")
+        println("    genreTags(): ${results.genreTags().take(3).joinToString(", ") { "${it.name}(${it.confidence})" }}")
+        println("    label(): ${results.label()}")
+        println("    releaseDate(): ${results.releaseDate()}")
+        println("    country(): ${results.country()}")
+        println("    releaseType(): ${results.releaseType()}")
+
+        // wasRequested() / result() diagnostics
+        println("\n  --- DIAGNOSTICS: wasRequested() + result() ---")
+        println("    wasRequested(ALBUM_ART): ${results.wasRequested(EnrichmentType.ALBUM_ART)}")
+        println("    wasRequested(LYRICS_SYNCED): ${results.wasRequested(EnrichmentType.LYRICS_SYNCED)}")
+        val artResult = results.result(EnrichmentType.ALBUM_ART)
+        println("    result(ALBUM_ART): ${artResult?.javaClass?.simpleName} provider=${(artResult as? EnrichmentResult.Success)?.provider}")
+
+        // Identity resolution on results
+        println("\n  --- IDENTITY RESOLUTION ---")
+        val identity = results.identity
+        println("    match: ${identity?.match}")
+        println("    matchScore: ${identity?.matchScore}")
+        println("    MBID: ${identity?.identifiers?.musicBrainzId}")
+        println("    suggestions: ${identity?.suggestions?.size ?: 0}")
+
+        // Default type sets
+        println("\n  --- DEFAULT TYPE SETS ---")
+        println("    DEFAULT_ARTIST_TYPES: ${EnrichmentRequest.DEFAULT_ARTIST_TYPES.size} types")
+        println("      ${EnrichmentRequest.DEFAULT_ARTIST_TYPES.joinToString(", ") { it.name }}")
+        println("    DEFAULT_ALBUM_TYPES: ${EnrichmentRequest.DEFAULT_ALBUM_TYPES.size} types")
+        println("      ${EnrichmentRequest.DEFAULT_ALBUM_TYPES.joinToString(", ") { it.name }}")
+        println("    DEFAULT_TRACK_TYPES: ${EnrichmentRequest.DEFAULT_TRACK_TYPES.size} types")
+        println("      ${EnrichmentRequest.DEFAULT_TRACK_TYPES.joinToString(", ") { it.name }}")
+        println("    defaultTypesFor(ForArtist) == DEFAULT_ARTIST_TYPES: ${EnrichmentRequest.defaultTypesFor(EnrichmentRequest.forArtist("test")) == EnrichmentRequest.DEFAULT_ARTIST_TYPES}")
+
+        // forceRefresh
+        println("\n  --- FORCE REFRESH ---")
+        val freshProfile = engine.artistProfile("Radiohead",
+            types = setOf(EnrichmentType.GENRE),
+            forceRefresh = true,
+        )
+        println("    forceRefresh=true: genres=${freshProfile.genres.take(2).joinToString(", ") { it.name }}")
+
+        // invalidate
+        println("\n  --- INVALIDATE ---")
+        val req = EnrichmentRequest.forArtist("Radiohead")
+        engine.invalidate(req, EnrichmentType.GENRE)
+        println("    invalidate(Radiohead, GENRE): done")
+        engine.invalidate(req)
+        println("    invalidate(Radiohead, all types): done")
+
+        // Manual selection
+        println("\n  --- MANUAL SELECTION ---")
+        val photoReq = EnrichmentRequest.forArtist("Radiohead")
+        val wasBefore = engine.isManuallySelected(photoReq, EnrichmentType.ARTIST_PHOTO)
+        engine.markManuallySelected(photoReq, EnrichmentType.ARTIST_PHOTO)
+        val wasAfter = engine.isManuallySelected(photoReq, EnrichmentType.ARTIST_PHOTO)
+        println("    isManuallySelected before: $wasBefore, after markManuallySelected: $wasAfter")
+    }
+
+    // --- 12. v0.8.0 feature spotlight ---
+
+    @Test
+    fun `12 - v0_8_0 feature spotlight`() = runBlocking {
         banner("v0.8.0 FEATURES: PRODUCTION READINESS")
         println("  (OkHttp adapter E2E tested in musicmeta-okhttp module)")
 
