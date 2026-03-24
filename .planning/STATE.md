@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v0.8.0
 milestone_name: Production Readiness
 status: unknown
-stopped_at: Completed 20-01-PLAN.md (Stale cache contracts and InMemoryEnrichmentCache implementation)
-last_updated: "2026-03-24T11:09:18.090Z"
+stopped_at: Completed 20-02-PLAN.md (STALE_IF_ERROR engine wiring and Android cache support)
+last_updated: "2026-03-24T11:15:18.510Z"
 progress:
   total_phases: 4
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 4
-  completed_plans: 3
+  completed_plans: 4
 ---
 
 # Project State
@@ -44,6 +44,7 @@ Plan: 2 of 2
 | Phase 19-okhttp-adapter P01 | 3 | 2 tasks | 4 files |
 | Phase 19-okhttp-adapter P02 | 1 | 2 tasks | 1 files |
 | Phase 20-stale-cache P01 | 2min | 2 tasks | 6 files |
+| Phase 20-stale-cache P02 | 15min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -60,6 +61,9 @@ Plan: 2 of 2
 - [Phase 19-okhttp-adapter]: Content-Type assertion uses contains() not assertEquals(): OkHttp appends charset suffix (application/json; charset=utf-8)
 - [Phase 20-stale-cache]: Mutex non-reentrant in InMemoryEnrichmentCache: getIncludingExpired() must access entries map directly under its own lock, never by delegating to get()
 - [Phase 20-stale-cache]: Expired entries retained (not deleted) in get(): LRU eviction handles memory, enabling stale serving without separate storage
+- [Phase 20-stale-cache]: applyStaleCache operates on uncachedTypes: types served from fresh cache never need stale fallback
+- [Phase 20-stale-cache]: NotFound excluded from stale fallback: provider confirmed absence, serving stale data would mislead consumers
+- [Phase 20-stale-cache]: !isStale guard in cache write loop: stale results are served to caller but never re-persisted with a fresh TTL
 
 ### Pending Todos
 
@@ -72,6 +76,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-24T11:09:18.088Z
-Stopped at: Completed 20-01-PLAN.md (Stale cache contracts and InMemoryEnrichmentCache implementation)
+Last session: 2026-03-24T11:15:18.508Z
+Stopped at: Completed 20-02-PLAN.md (STALE_IF_ERROR engine wiring and Android cache support)
 Resume file: None

@@ -17,12 +17,12 @@ Requirements for Production Readiness milestone. Each maps to roadmap phases.
 
 ### CACHE (Stale Cache)
 
-- [ ] **CACHE-01**: Developer can configure STALE_IF_ERROR cache mode via EnrichmentConfig
-- [ ] **CACHE-02**: Expired cache entries are served with isStale=true when provider returns Error or RateLimited
-- [ ] **CACHE-03**: Expired cache entries are NOT served for genuine NotFound results
-- [ ] **CACHE-04**: Stale results are not re-written to cache with fresh TTL
-- [ ] **CACHE-05**: InMemoryEnrichmentCache supports getIncludingExpired() for stale serving
-- [ ] **CACHE-06**: RoomEnrichmentCache supports getIncludingExpired() via new DAO query (no schema migration)
+- [x] **CACHE-01**: Developer can configure STALE_IF_ERROR cache mode via EnrichmentConfig
+- [x] **CACHE-02**: Expired cache entries are served with isStale=true when provider returns Error or RateLimited
+- [x] **CACHE-03**: Expired cache entries are NOT served for genuine NotFound results
+- [x] **CACHE-04**: Stale results are not re-written to cache with fresh TTL
+- [x] **CACHE-05**: InMemoryEnrichmentCache supports getIncludingExpired() for stale serving
+- [x] **CACHE-06**: RoomEnrichmentCache supports getIncludingExpired() via new DAO query (no schema migration)
 
 ### BATCH (Bulk Enrichment)
 
@@ -82,12 +82,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | HTTP-03 | Phase 19 | Complete |
 | HTTP-04 | Phase 19 | Complete |
 | HTTP-05 | Phase 19 | Complete |
-| CACHE-01 | Phase 20 | Pending |
-| CACHE-02 | Phase 20 | Pending |
-| CACHE-03 | Phase 20 | Pending |
-| CACHE-04 | Phase 20 | Pending |
-| CACHE-05 | Phase 20 | Pending |
-| CACHE-06 | Phase 20 | Pending |
+| CACHE-01 | Phase 20 | Complete |
+| CACHE-02 | Phase 20 | Complete |
+| CACHE-03 | Phase 20 | Complete |
+| CACHE-04 | Phase 20 | Complete |
+| CACHE-05 | Phase 20 | Complete |
+| CACHE-06 | Phase 20 | Complete |
 | BATCH-01 | Phase 21 | Pending |
 | BATCH-02 | Phase 21 | Pending |
 | BATCH-03 | Phase 21 | Pending |

@@ -56,7 +56,7 @@ Full details: `.planning/milestones/v0.6.0-ROADMAP.md`
 **Milestone Goal:** Address the four production readiness gaps identified by external review — OkHttp adapter for Android teams, offline stale cache fallback, bulk enrichment Flow API, and Maven Central distribution.
 
 - [x] **Phase 19: OkHttp Adapter** - New `musicmeta-okhttp` module; `OkHttpEnrichmentClient` implementing all 10 `HttpClient` methods (completed 2026-03-24)
-- [ ] **Phase 20: Stale Cache** - `CacheMode.STALE_IF_ERROR` serving expired cache entries on Error/RateLimited with `isStale` flag
+- [x] **Phase 20: Stale Cache** - `CacheMode.STALE_IF_ERROR` serving expired cache entries on Error/RateLimited with `isStale` flag (completed 2026-03-24)
 - [ ] **Phase 21: Bulk Enrichment** - `enrichBatch()` returning `Flow<Pair<EnrichmentRequest, EnrichmentResults>>` with sequential iteration and cooperative cancellation
 - [ ] **Phase 22: Maven Central Publishing** - All 3 modules published to Maven Central via Central Portal using vanniktech plugin
 
@@ -92,7 +92,7 @@ Plans:
 
 Plans:
 - [x] 20-01-PLAN.md — Define stale cache contracts: CacheMode enum, isStale on Success, getIncludingExpired on EnrichmentCache, InMemoryEnrichmentCache implementation
-- [ ] 20-02-PLAN.md — Wire STALE_IF_ERROR into DefaultEnrichmentEngine, update RoomEnrichmentCache and FakeEnrichmentCache, write 8 unit tests
+- [x] 20-02-PLAN.md — Wire STALE_IF_ERROR into DefaultEnrichmentEngine, update RoomEnrichmentCache and FakeEnrichmentCache, write 8 unit tests
 
 ### Phase 21: Bulk Enrichment
 **Goal**: Developers can enrich a list of requests with a single call, receiving results as a Flow so they can show progress or stop early — without writing for-loop boilerplate
@@ -146,6 +146,6 @@ Plans:
 | 17. Catalog Filtering Interface | v0.6.0 | 2/2 | Complete | 2026-03-22 |
 | 18. Integration and Docs | v0.6.0 | 2/2 | Complete | 2026-03-23 |
 | 19. OkHttp Adapter | v0.8.0 | 2/2 | Complete    | 2026-03-24 |
-| 20. Stale Cache | v0.8.0 | 1/2 | In Progress|  |
+| 20. Stale Cache | v0.8.0 | 2/2 | Complete   | 2026-03-24 |
 | 21. Bulk Enrichment | v0.8.0 | 0/1 | Not started | - |
 | 22. Maven Central Publishing | v0.8.0 | 0/2 | Not started | - |
