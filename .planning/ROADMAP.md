@@ -145,7 +145,7 @@ Plans:
 | 16. Genre Discovery | v0.6.0 | 2/2 | Complete | 2026-03-22 |
 | 17. Catalog Filtering Interface | v0.6.0 | 2/2 | Complete | 2026-03-22 |
 | 18. Integration and Docs | v0.6.0 | 2/2 | Complete | 2026-03-23 |
-| 19. OkHttp Adapter | v0.8.0 | 2/2 | Complete   | 2026-03-24 |
+| 19. OkHttp Adapter | v0.8.0 | 2/2 | Complete    | 2026-03-24 |
 | 20. Stale Cache | v0.8.0 | 0/2 | Not started | - |
 | 21. Bulk Enrichment | v0.8.0 | 0/1 | Not started | - |
 | 22. Maven Central Publishing | v0.8.0 | 0/2 | Not started | - |
