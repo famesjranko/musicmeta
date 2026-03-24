@@ -1,5 +1,9 @@
 # musicmeta
 
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.famesjranko/musicmeta-core)](https://central.sonatype.com/artifact/io.github.famesjranko/musicmeta-core)
+[![JitPack](https://jitpack.io/v/famesjranko/musicmeta.svg)](https://jitpack.io/#famesjranko/musicmeta)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
+
 A Kotlin library that gives Android and JVM music apps access to rich metadata, artwork, and discovery features -- without a commercial API. Ask for as much or as little as you need: all 32 enrichment types at once, a single artist photo, just lyrics, or anything in between.
 
 11 public music APIs behind one engine. You choose what to request, how to use it, and what to show your users. The library handles the plumbing -- identity resolution, multi-provider merging, confidence scoring, rate limiting, caching -- so you can focus on building your app.
