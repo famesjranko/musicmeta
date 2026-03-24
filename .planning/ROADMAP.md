@@ -55,7 +55,7 @@ Full details: `.planning/milestones/v0.6.0-ROADMAP.md`
 
 **Milestone Goal:** Address the four production readiness gaps identified by external review — OkHttp adapter for Android teams, offline stale cache fallback, bulk enrichment Flow API, and Maven Central distribution.
 
-- [ ] **Phase 19: OkHttp Adapter** - New `musicmeta-okhttp` module; `OkHttpEnrichmentClient` implementing all 10 `HttpClient` methods
+- [x] **Phase 19: OkHttp Adapter** - New `musicmeta-okhttp` module; `OkHttpEnrichmentClient` implementing all 10 `HttpClient` methods (completed 2026-03-24)
 - [ ] **Phase 20: Stale Cache** - `CacheMode.STALE_IF_ERROR` serving expired cache entries on Error/RateLimited with `isStale` flag
 - [ ] **Phase 21: Bulk Enrichment** - `enrichBatch()` returning `Flow<Pair<EnrichmentRequest, EnrichmentResults>>` with sequential iteration and cooperative cancellation
 - [ ] **Phase 22: Maven Central Publishing** - All 3 modules published to Maven Central via Central Portal using vanniktech plugin
@@ -75,8 +75,8 @@ Full details: `.planning/milestones/v0.6.0-ROADMAP.md`
 **Plans**: 2 plans
 
 Plans:
-- [ ] 19-01-PLAN.md — Create musicmeta-okhttp Gradle module and implement OkHttpEnrichmentClient with all 10 methods
-- [ ] 19-02-PLAN.md — Write MockWebServer integration tests covering all 10 methods, status code mapping, gzip decompression, and response body lifecycle
+- [x] 19-01-PLAN.md — Create musicmeta-okhttp Gradle module and implement OkHttpEnrichmentClient with all 10 methods
+- [x] 19-02-PLAN.md — Write MockWebServer integration tests covering all 10 methods, status code mapping, gzip decompression, and response body lifecycle
 
 ### Phase 20: Stale Cache
 **Goal**: Consumers running under degraded network conditions (Error or RateLimited responses) get the last known data with an `isStale` flag instead of empty results
@@ -145,7 +145,7 @@ Plans:
 | 16. Genre Discovery | v0.6.0 | 2/2 | Complete | 2026-03-22 |
 | 17. Catalog Filtering Interface | v0.6.0 | 2/2 | Complete | 2026-03-22 |
 | 18. Integration and Docs | v0.6.0 | 2/2 | Complete | 2026-03-23 |
-| 19. OkHttp Adapter | v0.8.0 | 0/2 | Not started | - |
+| 19. OkHttp Adapter | v0.8.0 | 2/2 | Complete   | 2026-03-24 |
 | 20. Stale Cache | v0.8.0 | 0/2 | Not started | - |
 | 21. Bulk Enrichment | v0.8.0 | 0/1 | Not started | - |
 | 22. Maven Central Publishing | v0.8.0 | 0/2 | Not started | - |
