@@ -88,11 +88,11 @@ Plans:
   3. When the provider returns `NotFound` and an expired cache entry exists, the engine returns `NotFound` — stale data is not served for genuine not-found responses
   4. A stale result served from cache is not re-written to cache; the expired entry's TTL is not renewed
   5. `InMemoryEnrichmentCache.getIncludingExpired()` returns the expired entry directly without calling `get()` internally
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 20-01: Add `CacheMode` enum; add `isStale: Boolean = false` to `EnrichmentResult.Success`; add `getIncludingExpired()` default method to `EnrichmentCache`; update `InMemoryEnrichmentCache`
-- [ ] 20-02: Wire `STALE_IF_ERROR` logic into `DefaultEnrichmentEngine` (post-error stale lookup + `!result.isStale` cache-write guard); update `RoomEnrichmentCache` with new DAO query; update `FakeEnrichmentCache`; write 8 unit tests
+- [ ] 20-01-PLAN.md — Define stale cache contracts: CacheMode enum, isStale on Success, getIncludingExpired on EnrichmentCache, InMemoryEnrichmentCache implementation
+- [ ] 20-02-PLAN.md — Wire STALE_IF_ERROR into DefaultEnrichmentEngine, update RoomEnrichmentCache and FakeEnrichmentCache, write 8 unit tests
 
 ### Phase 21: Bulk Enrichment
 **Goal**: Developers can enrich a list of requests with a single call, receiving results as a Flow so they can show progress or stop early — without writing for-loop boilerplate
