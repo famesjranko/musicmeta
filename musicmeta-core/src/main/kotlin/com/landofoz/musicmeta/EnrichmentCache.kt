@@ -8,6 +8,15 @@ interface EnrichmentCache {
 
     suspend fun get(entityKey: String, type: EnrichmentType): EnrichmentResult.Success?
 
+    /**
+     * Returns a cached result even if expired. Used by STALE_IF_ERROR mode
+     * to serve stale data when providers fail.
+     *
+     * Default returns null — custom implementations that don't support
+     * stale serving remain backward compatible.
+     */
+    suspend fun getIncludingExpired(entityKey: String, type: EnrichmentType): EnrichmentResult.Success? = null
+
     suspend fun put(
         entityKey: String,
         type: EnrichmentType,

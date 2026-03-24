@@ -1,5 +1,7 @@
 package com.landofoz.musicmeta
 
+import com.landofoz.musicmeta.cache.CacheMode
+
 /**
  * Configuration for the enrichment engine.
  *
@@ -23,6 +25,8 @@ package com.landofoz.musicmeta
  *   recommendation results. When null, filtering is skipped (UNFILTERED behavior).
  * @param catalogFilterMode How to apply catalog filtering when a catalogProvider is present.
  *   Defaults to UNFILTERED (no filtering).
+ * @param cacheMode Controls fallback behavior when providers fail. NETWORK_FIRST (default)
+ *   returns errors as-is. STALE_IF_ERROR serves expired cache entries on Error/RateLimited.
  */
 data class EnrichmentConfig(
     val minConfidence: Float = DEFAULT_MIN_CONFIDENCE,
@@ -36,6 +40,7 @@ data class EnrichmentConfig(
     val catalogFilterMode: CatalogFilterMode = CatalogFilterMode.UNFILTERED,
     /** Max tracks returned for ARTIST_RADIO. Deezer supports up to 100. */
     val radioLimit: Int = DEFAULT_RADIO_LIMIT,
+    val cacheMode: CacheMode = CacheMode.NETWORK_FIRST,
 ) {
     companion object {
         const val DEFAULT_MIN_CONFIDENCE = 0.5f

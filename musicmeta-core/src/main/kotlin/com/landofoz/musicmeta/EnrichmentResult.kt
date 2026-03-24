@@ -76,6 +76,11 @@ sealed class EnrichmentResult {
         val identityMatchScore: Int? = null,
         /** How identity resolution went for this result. `null` when MBID was pre-provided or cached. */
         val identityMatch: IdentityMatch? = null,
+        /**
+         * True when this result was served from an expired cache entry because the provider
+         * returned an error. Consumers can show a staleness indicator or schedule a retry.
+         */
+        val isStale: Boolean = false,
     ) : EnrichmentResult()
 
     /**
