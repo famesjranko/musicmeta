@@ -24,3 +24,4 @@ rootProject.name = "musicmeta"
 
 include(":musicmeta-core")
 include(":musicmeta-android")
+include(":musicmeta-okhttp")
