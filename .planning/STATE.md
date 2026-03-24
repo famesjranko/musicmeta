@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v0.8.0
 milestone_name: Production Readiness
 status: unknown
-stopped_at: Completed 22-01-PLAN.md (Maven Central publishing config)
-last_updated: "2026-03-24T11:42:49.978Z"
+stopped_at: Completed 22-02-PLAN.md (dry-run verification + README Maven Central)
+last_updated: "2026-03-24T11:50:27.056Z"
 progress:
   total_phases: 4
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 7
-  completed_plans: 6
+  completed_plans: 7
 ---
 
 # Project State
@@ -47,6 +47,7 @@ Plan: 2 of 2
 | Phase 20-stale-cache P02 | 15min | 2 tasks | 5 files |
 | Phase 21-bulk-enrichment P01 | 2min | 2 tasks | 3 files |
 | Phase 22-maven-central-publishing P01 | 7min | 2 tasks | 6 files |
+| Phase 22-maven-central-publishing P02 | 5min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -70,6 +71,8 @@ Plan: 2 of 2
 - [Phase 21-bulk-enrichment]: Explicit override in DefaultEnrichmentEngine: enables future optimization (concurrency, backpressure) without breaking the interface contract
 - [Phase 21-bulk-enrichment]: flow{} + for loop: cooperative cancellation via take(N) works because emit() is a suspension point
 - [Phase 22-maven-central-publishing]: vanniktech 0.30.0 instead of 0.36.0: 0.36.0 hardcodes AGP 8.13.0 minimum (project uses AGP 8.7.3); 0.35.0 also rejected (removed SonatypeHost API); 0.30.0 has same DSL, supports AGP 8.0.0+
+- [Phase 22-maven-central-publishing]: Conditional signing: signAllPublications() requires GPG keys at config time; wrap in hasProperty('signing.keyId') for local publish compatibility
+- [Phase 22-maven-central-publishing]: Android javadoc jar disabled: AGP 8.7.3 bundles Dokka 1.x (ASM8) incompatible with Kotlin 2.1 metadata (2.1.0 vs expected 1.4.2); re-enable after AGP upgrade
 
 ### Pending Todos
 
@@ -82,6 +85,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-24T11:42:49.975Z
-Stopped at: Completed 22-01-PLAN.md (Maven Central publishing config)
+Last session: 2026-03-24T11:50:27.054Z
+Stopped at: Completed 22-02-PLAN.md (dry-run verification + README Maven Central)
 Resume file: None

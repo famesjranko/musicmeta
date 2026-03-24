@@ -37,7 +37,7 @@ Requirements for Production Readiness milestone. Each maps to roadmap phases.
 - [x] **PUB-02**: Published artifacts include sources and javadoc jars
 - [x] **PUB-03**: Published POMs include correct metadata (license, developer, SCM)
 - [x] **PUB-04**: Artifacts are signed with GPG when key is available
-- [ ] **PUB-05**: JitPack remains supported as alternative distribution
+- [x] **PUB-05**: JitPack remains supported as alternative distribution
 
 ## Future Requirements
 
@@ -96,7 +96,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PUB-02 | Phase 22 | Complete |
 | PUB-03 | Phase 22 | Complete |
 | PUB-04 | Phase 22 | Complete |
-| PUB-05 | Phase 22 | Pending |
+| PUB-05 | Phase 22 | Complete |
 
 **Coverage:**
 - v0.8.0 requirements: 19 total

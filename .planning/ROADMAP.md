@@ -58,7 +58,7 @@ Full details: `.planning/milestones/v0.6.0-ROADMAP.md`
 - [x] **Phase 19: OkHttp Adapter** - New `musicmeta-okhttp` module; `OkHttpEnrichmentClient` implementing all 10 `HttpClient` methods (completed 2026-03-24)
 - [x] **Phase 20: Stale Cache** - `CacheMode.STALE_IF_ERROR` serving expired cache entries on Error/RateLimited with `isStale` flag (completed 2026-03-24)
 - [x] **Phase 21: Bulk Enrichment** - `enrichBatch()` returning `Flow<Pair<EnrichmentRequest, EnrichmentResults>>` with sequential iteration and cooperative cancellation (completed 2026-03-24)
-- [ ] **Phase 22: Maven Central Publishing** - All 3 modules published to Maven Central via Central Portal using vanniktech plugin
+- [x] **Phase 22: Maven Central Publishing** - All 3 modules published to Maven Central via Central Portal using vanniktech plugin (completed 2026-03-24)
 
 ## Phase Details
 
@@ -121,7 +121,7 @@ Plans:
 
 Plans:
 - [x] 22-01-PLAN.md — Apply vanniktech plugin per-module with `CENTRAL_PORTAL` host, `AndroidSingleVariantLibrary` for android module, POM metadata, GPG signing; add credential placeholders to `gradle.properties`
-- [ ] 22-02-PLAN.md — Verify publishing dry-run for all three modules; update README with Maven Central coordinates and badge
+- [x] 22-02-PLAN.md — Verify publishing dry-run for all three modules; update README with Maven Central coordinates and badge
 
 ## Progress
 
@@ -148,4 +148,4 @@ Plans:
 | 19. OkHttp Adapter | v0.8.0 | 2/2 | Complete    | 2026-03-24 |
 | 20. Stale Cache | v0.8.0 | 2/2 | Complete    | 2026-03-24 |
 | 21. Bulk Enrichment | v0.8.0 | 1/1 | Complete    | 2026-03-24 |
-| 22. Maven Central Publishing | v0.8.0 | 1/2 | In Progress|  |
+| 22. Maven Central Publishing | v0.8.0 | 2/2 | Complete   | 2026-03-24 |
