@@ -148,4 +148,4 @@ Plans:
 | 19. OkHttp Adapter | v0.8.0 | 2/2 | Complete    | 2026-03-24 |
 | 20. Stale Cache | v0.8.0 | 2/2 | Complete    | 2026-03-24 |
 | 21. Bulk Enrichment | v0.8.0 | 1/1 | Complete    | 2026-03-24 |
-| 22. Maven Central Publishing | v0.8.0 | 2/2 | Complete   | 2026-03-24 |
+| 22. Maven Central Publishing | v0.8.0 | 2/2 | Complete    | 2026-03-24 |
