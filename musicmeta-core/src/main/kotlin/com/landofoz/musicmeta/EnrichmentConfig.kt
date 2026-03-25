@@ -3,6 +3,16 @@ package com.landofoz.musicmeta
 import com.landofoz.musicmeta.cache.CacheMode
 
 /**
+ * Discovery depth for LB Radio requests.
+ * Controls how adventurous/experimental the generated playlist is.
+ */
+enum class RadioDiscoveryMode(val apiValue: String) {
+    EASY("easy"),
+    MEDIUM("medium"),
+    HARD("hard"),
+}
+
+/**
  * Configuration for the enrichment engine.
  *
  * @param minConfidence Minimum confidence score (0.0–1.0) to accept a result.
@@ -40,6 +50,8 @@ data class EnrichmentConfig(
     val catalogFilterMode: CatalogFilterMode = CatalogFilterMode.UNFILTERED,
     /** Max tracks returned for ARTIST_RADIO. Deezer supports up to 100. */
     val radioLimit: Int = DEFAULT_RADIO_LIMIT,
+    /** Discovery depth for LB Radio (ARTIST_RADIO_DISCOVERY). */
+    val radioDiscoveryMode: RadioDiscoveryMode = RadioDiscoveryMode.EASY,
     val cacheMode: CacheMode = CacheMode.NETWORK_FIRST,
 ) {
     companion object {
@@ -59,4 +71,6 @@ data class ApiKeyConfig(
     val lastFmKey: String? = null,
     val fanartTvProjectKey: String? = null,
     val discogsPersonalToken: String? = null,
+    /** ListenBrainz user token for LB Radio (ARTIST_RADIO_DISCOVERY). Keyless endpoints still work without this. */
+    val listenBrainzToken: String? = null,
 )

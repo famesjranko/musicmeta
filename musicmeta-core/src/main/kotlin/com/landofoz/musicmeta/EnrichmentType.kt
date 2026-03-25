@@ -53,6 +53,8 @@ enum class EnrichmentType(val defaultTtlMs: Long) {
 
     // Radio / recommendations — 7 days
     ARTIST_RADIO(7L * 24 * 60 * 60 * 1000),
+    // Radio discovery (LB Radio) — 7 days
+    ARTIST_RADIO_DISCOVERY(7L * 24 * 60 * 60 * 1000),
 
     // Top tracks — 7 days
     ARTIST_TOP_TRACKS(7L * 24 * 60 * 60 * 1000),
