@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.2] - 2026-03-25
+
+### Changed
+- **Android `minSdk` lowered from 26 to 21** — no API-level-specific code exists in the android module; 21 (Android 5.0) is the practical floor
+- **README** added Kotlin badge
+
 ## [0.8.1] - 2026-03-25
 
 ### Fixed

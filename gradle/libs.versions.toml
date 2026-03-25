@@ -1,7 +1,8 @@
 [versions]
 # SDK
 compileSdk = "35"
-minSdk = "26"
+# No API-level-specific code — 21 is the practical floor (Google Play Services minimum)
+minSdk = "21"
 
 # Core
 agp = "8.7.3"

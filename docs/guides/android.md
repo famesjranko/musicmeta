@@ -1,6 +1,6 @@
 # Android Integration
 
-The `musicmeta-android` module adds Android-specific integrations on top of `musicmeta-core`.
+The `musicmeta-android` module adds Android-specific integrations on top of `musicmeta-core`. It supports **API 21+** (Android 5.0 Lollipop) — the module uses Room, WorkManager, and Hilt, none of which require a higher API level.
 
 ## Dependencies
 

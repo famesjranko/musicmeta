@@ -45,7 +45,7 @@ The library is a tool for developers to wield for their needs, not a framework t
 
 ---
 
-## Where We Are (v0.8.1)
+## Where We Are (v0.8.2)
 
 ### What Changed Since v0.6.0
 
@@ -330,7 +330,7 @@ Added a convenience layer: `EnrichmentResults` wrapper with 19 named accessors, 
 ### ✅ v0.8.0 — Production Readiness — SHIPPED 2026-03-24
 Addressed four adoption blockers: `musicmeta-okhttp` module (OkHttp adapter), `CacheMode.STALE_IF_ERROR` (offline fallback), `enrichBatch()` (bulk enrichment via Flow), Maven Central publishing via vanniktech plugin.
 
-### ✅ v0.8.1 — Patch — SHIPPED 2026-03-25
+### ✅ v0.8.2 — Patch — SHIPPED 2026-03-25
 Search fuzzy fallback fix, demo v0.8.0 features (OkHttp toggle, batch, stale cache), Maven group ID changed to `io.github.famesjranko`, CI workflow for automated publishing.
 
 ### v0.9.0 — Catalog Implementations & User-Scoped Features
