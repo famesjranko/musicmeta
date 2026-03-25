@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.provider.listenbrainz
 
+import com.landofoz.musicmeta.EnrichmentConfig
 import com.landofoz.musicmeta.EnrichmentProvider
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
@@ -14,52 +15,68 @@ import com.landofoz.musicmeta.http.RateLimiter
  * Provides popularity and discography data from ListenBrainz.
  * Uses batch POST endpoints for recording and artist popularity,
  * with fallback to top-recordings for artist popularity.
- * Requires a musicBrainzId in request identifiers.
+ * Requires a musicBrainzId in request identifiers for most capabilities.
+ * When [authToken] is provided, also registers ARTIST_RADIO_DISCOVERY capability.
  */
 class ListenBrainzProvider(
     httpClient: HttpClient,
     rateLimiter: RateLimiter,
+    private val authToken: String? = null,
+    private val config: EnrichmentConfig = EnrichmentConfig(),
 ) : EnrichmentProvider {
 
-    private val api = ListenBrainzApi(httpClient, rateLimiter)
+    private val api = ListenBrainzApi(httpClient, rateLimiter, authToken)
 
     override val id: String = "listenbrainz"
     override val displayName: String = "ListenBrainz"
     override val requiresApiKey: Boolean = false
     override val isAvailable: Boolean = true
 
-    override val capabilities: List<ProviderCapability> = listOf(
-        ProviderCapability(
+    override val capabilities: List<ProviderCapability> = buildList {
+        add(ProviderCapability(
             type = EnrichmentType.ARTIST_POPULARITY,
             priority = PRIORITY,
             identifierRequirement = IdentifierRequirement.MUSICBRAINZ_ID,
-        ),
-        ProviderCapability(
+        ))
+        add(ProviderCapability(
             type = EnrichmentType.TRACK_POPULARITY,
             priority = FALLBACK_PRIORITY,
             identifierRequirement = IdentifierRequirement.MUSICBRAINZ_ID,
-        ),
-        ProviderCapability(
+        ))
+        add(ProviderCapability(
             type = EnrichmentType.ARTIST_DISCOGRAPHY,
             priority = FALLBACK_PRIORITY,
             identifierRequirement = IdentifierRequirement.MUSICBRAINZ_ID,
-        ),
-        ProviderCapability(
+        ))
+        add(ProviderCapability(
             type = EnrichmentType.SIMILAR_ARTISTS,
             priority = FALLBACK_PRIORITY,
             identifierRequirement = IdentifierRequirement.MUSICBRAINZ_ID,
-        ),
-        ProviderCapability(
+        ))
+        add(ProviderCapability(
             type = EnrichmentType.ARTIST_TOP_TRACKS,
             priority = PRIORITY,
             identifierRequirement = IdentifierRequirement.MUSICBRAINZ_ID,
-        ),
-    )
+        ))
+        // ARTIST_RADIO_DISCOVERY only available when authToken is provided (auth gating per-capability)
+        if (authToken != null) {
+            add(ProviderCapability(
+                type = EnrichmentType.ARTIST_RADIO_DISCOVERY,
+                priority = PRIORITY,
+                identifierRequirement = IdentifierRequirement.NONE,
+            ))
+        }
+    }
 
     override suspend fun enrich(
         request: EnrichmentRequest,
         type: EnrichmentType,
     ): EnrichmentResult {
+        // ARTIST_RADIO_DISCOVERY works with or without MBID
+        if (type == EnrichmentType.ARTIST_RADIO_DISCOVERY) {
+            return enrichRadioDiscovery(request, type)
+        }
+
         val mbid = request.identifiers.musicBrainzId
         if (mbid.isNullOrBlank()) return EnrichmentResult.NotFound(type, id)
 
@@ -138,6 +155,22 @@ class ListenBrainzProvider(
             val tracks = api.getTopRecordingsForArtist(artistMbid)
             if (tracks.isEmpty()) return EnrichmentResult.NotFound(type, id)
             success(ListenBrainzMapper.toTopTracks(tracks), type)
+        } catch (e: Exception) {
+            mapError(type, e)
+        }
+    }
+
+    private suspend fun enrichRadioDiscovery(
+        request: EnrichmentRequest,
+        type: EnrichmentType,
+    ): EnrichmentResult {
+        val artistRequest = request as? EnrichmentRequest.ForArtist
+            ?: return EnrichmentResult.NotFound(type, id)
+        return try {
+            val prompt = request.identifiers.musicBrainzId ?: artistRequest.name
+            val tracks = api.getRadio(prompt, config.radioDiscoveryMode.apiValue)
+            if (tracks.isEmpty()) return EnrichmentResult.NotFound(type, id)
+            success(ListenBrainzMapper.toRadioPlaylist(tracks), type)
         } catch (e: Exception) {
             mapError(type, e)
         }
