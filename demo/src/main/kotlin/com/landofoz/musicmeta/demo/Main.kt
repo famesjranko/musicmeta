@@ -6,6 +6,7 @@ import com.landofoz.musicmeta.EnrichmentConfig
 import com.landofoz.musicmeta.EnrichmentEngine
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentType
+import com.landofoz.musicmeta.RadioDiscoveryMode
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.albumProfile
 import com.landofoz.musicmeta.artistProfile
@@ -46,6 +47,7 @@ class DemoState(
     val catalog: DemoCatalog = DemoCatalog(),
     var catalogMode: CatalogFilterMode = CatalogFilterMode.UNFILTERED,
     var httpBackend: HttpBackend = HttpBackend.DEFAULT,
+    var radioMode: RadioDiscoveryMode = RadioDiscoveryMode.EASY,
 ) {
     lateinit var engine: EnrichmentEngine
     /** Last search results — used by 'pick' command for disambiguation flow. */
@@ -58,10 +60,12 @@ class DemoState(
             lastFmKey = secrets["lastfm.apikey"] ?: env("LASTFM_API_KEY"),
             fanartTvProjectKey = secrets["fanarttv.apikey"] ?: env("FANARTTV_API_KEY"),
             discogsPersonalToken = secrets["discogs.token"] ?: env("DISCOGS_TOKEN"),
+            listenBrainzToken = secrets["listenbrainz.token"] ?: env("LISTENBRAINZ_TOKEN"),
         )
+        val baseConfig = config.copy(radioDiscoveryMode = radioMode)
         val effectiveConfig = if (catalogMode != CatalogFilterMode.UNFILTERED) {
-            config.copy(catalogProvider = catalog, catalogFilterMode = catalogMode)
-        } else config
+            baseConfig.copy(catalogProvider = catalog, catalogFilterMode = catalogMode)
+        } else baseConfig
 
         val builder = EnrichmentEngine.Builder()
             .apiKeys(keys)
@@ -92,7 +96,7 @@ private fun repl(state: DemoState, term: Terminal, spinner: Spinner) {
             trimmed.equals("providers", ignoreCase = true) ->
                 InfoFormatter.printProviders(state.engine.getProviders(), term)
             trimmed.equals("config", ignoreCase = true) ->
-                InfoFormatter.printConfig(state.config, state.logger.enabled, state.catalogMode, state.httpBackend, term)
+                InfoFormatter.printConfig(state.config, state.logger.enabled, state.catalogMode, state.httpBackend, state.radioMode, term)
             trimmed.startsWith("config ", ignoreCase = true) ->
                 handleConfig(trimmed.substringAfter("config ").trim(), state, term)
             trimmed.equals("verbose", ignoreCase = true) -> toggleVerbose(state, term)

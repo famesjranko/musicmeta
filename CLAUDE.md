@@ -108,6 +108,17 @@ Adds Android-specific integrations on top of core:
 - Collection wrappers only when they carry semantic meaning (sealed class variants) — not for API return types
 - @Serializable only on public API payload types (EnrichmentData subtypes, EnrichmentIdentifiers) — never on provider models or infrastructure
 
+## Backwards Compatibility
+
+This library is published on Maven Central and JitPack — assume external consumers exist.
+
+- **No breaking changes** to public API without a major version bump (semver)
+- Breaking = removing/renaming public classes, functions, or parameters; changing return types; reordering non-named parameters; changing enum/sealed-class variants consumers may match on
+- When evolving public API: prefer adding new overloads or default parameters over modifying existing signatures
+- Deprecate before removing — add `@Deprecated` with `ReplaceWith` and keep for at least one minor release before removal
+- Internal code (`internal` visibility, `provider/*/` internals, `http/` infrastructure) can change freely
+- If a breaking change is truly necessary, document it in `CHANGELOG.md` under a `### Breaking Changes` heading and flag it to the user before proceeding
+
 ## Git Rules
 
 - **DO NOT** add Co-Authored-By, "Generated with Claude", or any AI/Anthropic references to commits or PR messages

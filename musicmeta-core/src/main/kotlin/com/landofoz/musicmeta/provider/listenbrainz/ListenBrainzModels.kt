@@ -39,3 +39,14 @@ data class ListenBrainzSimilarArtist(
     val name: String,
     val score: Float,
 )
+
+/** A track from the LB Radio JSPF playlist response. */
+data class ListenBrainzRadioTrack(
+    val title: String,
+    val artist: String,
+    val album: String? = null,
+    val durationMs: Long? = null,
+    val recordingMbid: String? = null,
+    val artistMbid: String? = null,
+    val releaseMbid: String? = null,
+)

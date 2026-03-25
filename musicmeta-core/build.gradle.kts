@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "io.github.famesjranko"
-version = "0.8.2"
+version = "0.9.0"
 
 java {
     sourceCompatibility = JavaVersion.VERSION_17
@@ -23,6 +23,7 @@ tasks.withType<Test> {
         "lastfm.apikey" to "LASTFM_API_KEY",
         "fanarttv.apikey" to "FANARTTV_API_KEY",
         "discogs.token" to "DISCOGS_TOKEN",
+        "listenbrainz.token" to "LISTENBRAINZ_TOKEN",
     )
     apiKeys.forEach { (prop, env) ->
         systemProperty(prop, System.getProperty(prop) ?: System.getenv(env) ?: "")

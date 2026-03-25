@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-03-26
+
+LB Radio & Track Preview — 34 enrichment types.
+
+### Added
+- **`TRACK_PREVIEW` enrichment type** — 30-second MP3 preview URL via Deezer track search. On-demand type (not in `DEFAULT_TRACK_TYPES`). Access via `EnrichmentResults.trackPreview()` or `TrackProfile.preview`. 24-hour TTL (CDN URLs may rotate). No API key required.
+- **`ARTIST_RADIO_DISCOVERY` enrichment type** — community-driven radio playlist via ListenBrainz LB Radio. Returns `RadioPlaylist` with recording, artist, and release MBIDs. Access via `EnrichmentResults.radioDiscovery()` or `ArtistProfile.radioDiscovery`. 7-day TTL. Included in `DEFAULT_ARTIST_TYPES`. Requires `ApiKeyConfig.listenBrainzToken` (free ListenBrainz account).
+- **`RadioDiscoveryMode` enum** on `EnrichmentConfig` — controls LB Radio discovery depth: `EASY` (familiar-adjacent, default), `MEDIUM`, `HARD` (adventurous, deeper cuts).
+- **`ApiKeyConfig.listenBrainzToken`** — optional user token for LB Radio. When absent, `ARTIST_RADIO_DISCOVERY` is silently unavailable; all other ListenBrainz endpoints continue working without any token.
+- **`DeezerTrackSearchResult`** now carries `previewUrl: String?`, `durationSec: Int?`, and `albumTitle: String?` — extracted from the already-available Deezer track search response, no extra API calls.
+- **HttpClient header support** — `fetchJsonResult(url, headers)` overload added to `HttpClient` interface (default no-op impl for backward compatibility); used by LB Radio to send `Authorization: Token` headers.
+
 ## [0.8.2] - 2026-03-25
 
 ### Changed

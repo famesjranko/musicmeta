@@ -40,6 +40,7 @@ class DeezerProvider(
         ProviderCapability(EnrichmentType.SIMILAR_TRACKS, priority = 50),
         ProviderCapability(EnrichmentType.ARTIST_RADIO, priority = 100),
         ProviderCapability(EnrichmentType.ARTIST_TOP_TRACKS, priority = 50),
+        ProviderCapability(EnrichmentType.TRACK_PREVIEW, priority = 100),
     )
 
     override suspend fun searchCandidates(
@@ -67,6 +68,7 @@ class DeezerProvider(
                 EnrichmentType.SIMILAR_ARTISTS -> enrichSimilarArtists(request)
                 EnrichmentType.SIMILAR_TRACKS -> enrichSimilarTracks(request)
                 EnrichmentType.ARTIST_RADIO -> enrichArtistRadio(request)
+                EnrichmentType.TRACK_PREVIEW -> enrichTrackPreview(request)
                 else -> enrichAlbumArt(request, type)
             }
         } catch (e: Exception) {
@@ -224,6 +226,29 @@ class DeezerProvider(
             provider = id,
             confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
             resolvedIdentifiers = EnrichmentIdentifiers().withExtra("deezerId", artist.id.toString()),
+        )
+    }
+
+    private suspend fun enrichTrackPreview(request: EnrichmentRequest): EnrichmentResult {
+        val trackRequest = request as? EnrichmentRequest.ForTrack
+            ?: return EnrichmentResult.NotFound(EnrichmentType.TRACK_PREVIEW, id)
+
+        val searchResult = api.searchTrack(trackRequest.title, trackRequest.artist)
+            ?: return EnrichmentResult.NotFound(EnrichmentType.TRACK_PREVIEW, id)
+
+        if (!ArtistMatcher.isMatch(trackRequest.artist, searchResult.artistName)) {
+            return EnrichmentResult.NotFound(EnrichmentType.TRACK_PREVIEW, id)
+        }
+
+        val preview = DeezerMapper.toTrackPreview(searchResult)
+            ?: return EnrichmentResult.NotFound(EnrichmentType.TRACK_PREVIEW, id)
+
+        return EnrichmentResult.Success(
+            type = EnrichmentType.TRACK_PREVIEW,
+            data = preview,
+            provider = id,
+            confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
+            resolvedIdentifiers = EnrichmentIdentifiers().withExtra("deezerId", searchResult.id.toString()),
         )
     }
 

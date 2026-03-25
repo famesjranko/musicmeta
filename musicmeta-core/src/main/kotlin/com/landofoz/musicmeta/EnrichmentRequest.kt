@@ -63,8 +63,8 @@ sealed class EnrichmentRequest {
             EnrichmentType.ARTIST_POPULARITY, EnrichmentType.SIMILAR_ARTISTS,
             EnrichmentType.BAND_MEMBERS, EnrichmentType.ARTIST_DISCOGRAPHY,
             EnrichmentType.ARTIST_LINKS, EnrichmentType.ARTIST_TIMELINE,
-            EnrichmentType.ARTIST_RADIO, EnrichmentType.ARTIST_TOP_TRACKS,
-            EnrichmentType.GENRE_DISCOVERY,
+            EnrichmentType.ARTIST_RADIO, EnrichmentType.ARTIST_RADIO_DISCOVERY,
+            EnrichmentType.ARTIST_TOP_TRACKS, EnrichmentType.GENRE_DISCOVERY,
         )
 
         /** Types meaningful for [ForAlbum] requests. */

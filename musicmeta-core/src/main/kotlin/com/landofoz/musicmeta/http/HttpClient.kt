@@ -30,6 +30,14 @@ interface HttpClient {
     suspend fun fetchJsonResult(url: String): HttpResult<JSONObject>
 
     /**
+     * GET request returning typed [HttpResult] with custom headers.
+     * Default implementation ignores headers — override in implementations
+     * that need to pass Authorization or other per-request headers.
+     */
+    suspend fun fetchJsonResult(url: String, headers: Map<String, String>): HttpResult<JSONObject> =
+        fetchJsonResult(url)
+
+    /**
      * GET request returning typed [HttpResult] with parsed JSON array body.
      * Unlike [fetchJsonArray] which returns null on any failure, this preserves
      * the specific HTTP status for precise error handling.

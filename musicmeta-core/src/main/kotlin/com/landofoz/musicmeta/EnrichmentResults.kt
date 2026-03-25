@@ -57,6 +57,8 @@ data class EnrichmentResults(
 
     fun topTracks(): EnrichmentData.TopTracks? = get(EnrichmentType.ARTIST_TOP_TRACKS)
     fun radio(): EnrichmentData.RadioPlaylist? = get(EnrichmentType.ARTIST_RADIO)
+    fun radioDiscovery(): EnrichmentData.RadioPlaylist? = get(EnrichmentType.ARTIST_RADIO_DISCOVERY)
+    fun trackPreview(): EnrichmentData.TrackPreview? = get(EnrichmentType.TRACK_PREVIEW)
 
     // --- Statistics ---
 

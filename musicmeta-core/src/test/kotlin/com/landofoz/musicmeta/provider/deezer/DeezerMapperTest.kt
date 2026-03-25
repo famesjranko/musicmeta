@@ -3,6 +3,7 @@ package com.landofoz.musicmeta.provider.deezer
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.RadioTrack
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 
@@ -100,5 +101,56 @@ class DeezerMapperTest {
 
         // Then — deezerId is stored as string
         assertEquals("999", result.tracks.first().identifiers.extra["deezerId"])
+    }
+
+    // TRACK_PREVIEW mapper tests
+
+    @Test
+    fun `toTrackPreview returns TrackPreview with url and durationMs`() {
+        // Given — a track search result with preview URL and duration
+        val result = DeezerTrackSearchResult(
+            id = 789L,
+            title = "Karma Police",
+            artistName = "Radiohead",
+            previewUrl = "https://cdns-preview.dzcdn.net/stream/abc123.mp3",
+            durationSec = 30,
+            albumTitle = "OK Computer",
+        )
+
+        // When
+        val preview = DeezerMapper.toTrackPreview(result)
+
+        // Then — TrackPreview has correct fields
+        assertNotNull(preview)
+        assertEquals("https://cdns-preview.dzcdn.net/stream/abc123.mp3", preview!!.url)
+        assertEquals(30000L, preview.durationMs)
+        assertEquals("deezer", preview.source)
+    }
+
+    @Test
+    fun `toTrackPreview returns null when previewUrl is null`() {
+        // Given — a track search result without preview URL
+        val result = DeezerTrackSearchResult(id = 1L, title = "T", artistName = "A", previewUrl = null)
+
+        // When
+        val preview = DeezerMapper.toTrackPreview(result)
+
+        // Then — null because no preview available
+        assertNull(preview)
+    }
+
+    @Test
+    fun `toTrackPreview always returns 30000ms regardless of track duration`() {
+        // Given — a track with a 45-second full duration (preview is always 30s)
+        val result = DeezerTrackSearchResult(
+            id = 3L, title = "T", artistName = "A",
+            previewUrl = "https://example.com/preview.mp3", durationSec = 45,
+        )
+
+        // When
+        val preview = DeezerMapper.toTrackPreview(result)
+
+        // Then — preview duration is always 30000ms (Deezer previews are 30 seconds)
+        assertEquals(30000L, preview!!.durationMs)
     }
 }

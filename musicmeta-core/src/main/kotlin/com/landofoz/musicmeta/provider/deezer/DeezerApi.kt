@@ -152,6 +152,9 @@ class DeezerApi(
                 id = track.optLong("id"),
                 title = track.optString("title", ""),
                 artistName = artistName,
+                previewUrl = track.optString("preview").takeIf { it.isNotBlank() },
+                durationSec = track.optInt("duration").takeIf { it > 0 },
+                albumTitle = track.optJSONObject("album")?.optString("title")?.takeIf { it.isNotBlank() },
             )
         }
         return null

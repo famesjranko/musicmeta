@@ -53,6 +53,9 @@ data class DeezerTrackSearchResult(
     val id: Long,
     val title: String,
     val artistName: String,
+    val previewUrl: String? = null,
+    val durationSec: Int? = null,
+    val albumTitle: String? = null,
 )
 
 /** Top track entry from Deezer /artist/{id}/top endpoint. */

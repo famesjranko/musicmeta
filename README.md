@@ -5,7 +5,7 @@
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.0.21-%237F52FF?logo=kotlin)](https://kotlinlang.org)
 
-A Kotlin library that gives Android and JVM music apps access to rich metadata, artwork, and discovery features -- without a commercial API. Ask for as much or as little as you need: all 32 enrichment types at once, a single artist photo, just lyrics, or anything in between.
+A Kotlin library that gives Android and JVM music apps access to rich metadata, artwork, and discovery features -- without a commercial API. Ask for as much or as little as you need: all 34 enrichment types at once, a single artist photo, just lyrics, or anything in between.
 
 11 public music APIs behind one engine. You choose what to request, how to use it, and what to show your users. The library handles the plumbing -- identity resolution, multi-provider merging, confidence scoring, rate limiting, caching -- so you can focus on building your app.
 
@@ -16,7 +16,7 @@ A Kotlin library that gives Android and JVM music apps access to rich metadata, 
          |
          v
 +-----------------------------+
-|  EnrichmentEngine           |  32 enrichment types
+|  EnrichmentEngine           |  34 enrichment types
 |                             |  11 providers
 |  MusicBrainz ---------------+--> Identity (MBID), genre, label, credits, editions
 |  Cover Art Archive ---------+--> Album art front/back/booklet (multi-size)
@@ -26,7 +26,7 @@ A Kotlin library that gives Android and JVM music apps access to rich metadata, 
 |  Deezer --------------------+--> Artist photos, album art, discography, tracklists, similar artists, radio, similar albums
 |  iTunes --------------------+--> Album art, tracklists, discography
 |  Last.fm -------------------+--> Genres, similar artists/tracks, album metadata
-|  ListenBrainz --------------+--> Popularity, discography, similar artists
+|  ListenBrainz --------------+--> Popularity, discography, similar artists, radio discovery (with token)
 |  Fanart.tv -----------------+--> Backgrounds, logos, banners, CD art
 |  Discogs -------------------+--> Credits, editions, labels, community data
 +-----------------------------+

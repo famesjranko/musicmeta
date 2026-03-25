@@ -7,6 +7,26 @@
 
 ## Decisions
 
+### 2026-03-26: v0.9.0 — Two new enrichment types: TRACK_PREVIEW and ARTIST_RADIO_DISCOVERY
+
+**Context**: musicmeta's `ARTIST_RADIO` type was single-source (Deezer). Deezer's catalog skews mainstream, leaving niche and indie artists with thin or empty results. Separately, when radio or discovery results include tracks the user doesn't own, consumers had no way to let users audition them. Both gaps were addressable with existing Deezer and ListenBrainz infrastructure.
+
+**Decisions**:
+
+- **Separate types, not merged**: `ARTIST_RADIO` stays Deezer (curated, proprietary algorithm, familiar-adjacent). `ARTIST_RADIO_DISCOVERY` is new (ListenBrainz, community listening data, configurable depth). Radio playlists are ordered sequences, not unordered sets — merging destroys curation intent from both sources. Consumers choose which flavor to request, or both.
+
+- **`TRACK_PREVIEW` as standalone type, not embedded in radio responses**: Preview resolution is context-agnostic — the same `enrich(forTrack(...), TRACK_PREVIEW)` call works for a radio result, a similar artist's top track, a similar album's track, or any other discovery surface. Embedding preview URLs inside radio responses would tie previews to one context and duplicate resolution logic. Standalone type, one feature serves every surface.
+
+- **Auth gating per-capability, not per-provider**: ListenBrainz needs no key for existing endpoints (popularity, similar artists, discography). LB Radio requires a free user token. Only the radio capability is gated — same pattern as Last.fm/Fanart.tv/Discogs (key present → extra capabilities). No token → `ARTIST_RADIO_DISCOVERY` is silently absent, not an error.
+
+- **`TRACK_PREVIEW` excluded from `DEFAULT_TRACK_TYPES`**: On-demand type only. Not every track lookup needs a preview; consumers request it explicitly when building discovery UIs.
+
+- **`TRACK_PREVIEW` excluded from `RECOMMENDATION_TYPES`**: Previews are specifically for tracks the user doesn't have — catalog filtering (available-first/available-only) doesn't apply.
+
+**Status**: Shipped
+
+---
+
 ### 2026-03-24: v0.8.0 Production Readiness — four adoption blockers addressed
 
 **Context**: External review identified four gaps blocking production adoption: no OkHttp adapter (every Android project has OkHttp already), no offline cache fallback, no bulk enrichment API, JitPack-only distribution. Flow-based progressive API was assessed and deliberately cut — identity resolution blocks all emission, so marginal benefit vs complexity.

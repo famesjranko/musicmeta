@@ -4,6 +4,7 @@ import com.landofoz.musicmeta.DiscographyAlbum
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.PopularTrack
+import com.landofoz.musicmeta.RadioTrack
 import com.landofoz.musicmeta.SimilarArtist
 import com.landofoz.musicmeta.TopTrack
 
@@ -81,6 +82,21 @@ object ListenBrainzMapper {
                     identifiers = EnrichmentIdentifiers(
                         musicBrainzReleaseGroupId = group.releaseGroupMbid,
                     ),
+                )
+            },
+        )
+
+    fun toRadioPlaylist(tracks: List<ListenBrainzRadioTrack>): EnrichmentData.RadioPlaylist =
+        EnrichmentData.RadioPlaylist(
+            tracks = tracks.map { track ->
+                RadioTrack(
+                    title = track.title,
+                    artist = track.artist,
+                    album = track.album,
+                    durationMs = track.durationMs,
+                    identifiers = EnrichmentIdentifiers(musicBrainzId = track.recordingMbid)
+                        .let { ids -> track.artistMbid?.let { ids.withExtra("artistMbid", it) } ?: ids }
+                        .let { ids -> track.releaseMbid?.let { ids.withExtra("releaseMbid", it) } ?: ids },
                 )
             },
         )

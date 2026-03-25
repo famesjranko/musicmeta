@@ -37,6 +37,8 @@ results.similarTracks()     // EnrichmentData.SimilarTracks?
 results.discography()       // EnrichmentData.Discography?
 results.topTracks()         // EnrichmentData.TopTracks?
 results.radio()             // EnrichmentData.RadioPlaylist?
+results.radioDiscovery()    // EnrichmentData.RadioPlaylist? (LB Radio)
+results.trackPreview()      // EnrichmentData.TrackPreview?
 results.artistPopularity()  // EnrichmentData.Popularity?
 results.trackPopularity()   // EnrichmentData.Popularity?
 ```

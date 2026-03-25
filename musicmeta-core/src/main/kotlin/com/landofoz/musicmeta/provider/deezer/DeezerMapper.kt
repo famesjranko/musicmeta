@@ -154,6 +154,15 @@ object DeezerMapper {
             },
         )
 
+    fun toTrackPreview(result: DeezerTrackSearchResult): EnrichmentData.TrackPreview? {
+        val url = result.previewUrl ?: return null
+        return EnrichmentData.TrackPreview(
+            url = url,
+            durationMs = 30000L, // Deezer previews are always 30 seconds
+            source = "deezer",
+        )
+    }
+
     fun toSimilarAlbum(
         album: DeezerArtistAlbum,
         artistName: String,

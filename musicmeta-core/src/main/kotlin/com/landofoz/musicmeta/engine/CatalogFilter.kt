@@ -16,6 +16,7 @@ internal val RECOMMENDATION_TYPES = setOf(
     EnrichmentType.SIMILAR_ARTISTS,
     EnrichmentType.SIMILAR_ALBUMS,
     EnrichmentType.ARTIST_RADIO,
+    EnrichmentType.ARTIST_RADIO_DISCOVERY,
     EnrichmentType.SIMILAR_TRACKS,
     EnrichmentType.ARTIST_TOP_TRACKS,
 )

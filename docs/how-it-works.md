@@ -169,7 +169,7 @@ Results below `config.minConfidence` (default 0.5) are converted to NotFound. Pe
 
 ### Step 6: Catalog Filtering
 
-For recommendation types only (SIMILAR_ARTISTS, SIMILAR_ALBUMS, ARTIST_RADIO, SIMILAR_TRACKS, ARTIST_TOP_TRACKS). When a `CatalogProvider` is configured, the engine checks which recommended items are available in the consumer's music catalog:
+For recommendation types only (SIMILAR_ARTISTS, SIMILAR_ALBUMS, ARTIST_RADIO, ARTIST_RADIO_DISCOVERY, SIMILAR_TRACKS, ARTIST_TOP_TRACKS). When a `CatalogProvider` is configured, the engine checks which recommended items are available in the consumer's music catalog:
 
 - **AVAILABLE_ONLY** — remove unavailable items; NotFound if none remain
 - **AVAILABLE_FIRST** — reorder: available items first, then unavailable
@@ -212,9 +212,9 @@ Successful results are cached with per-type TTLs:
 | **Wikidata** | None | Artist photo, country | Structured data supplement |
 | **Wikipedia** | None | Artist bio, supplemental photos | Text content |
 | **LRCLIB** | None | Synced + plain lyrics | Only lyrics source |
-| **Deezer** | None | Album art, artist photos, discography, tracklists, album metadata, similar artists/tracks, artist radio, top tracks, similar albums | Fallback metadata + primary radio/similar albums |
+| **Deezer** | None | Album art, artist photos, discography, tracklists, album metadata, similar artists/tracks, artist radio, top tracks, similar albums, track previews | Fallback metadata + primary radio/similar albums |
 | **iTunes** | None (rate sensitive) | Album art, album metadata, tracklists, discography | Tertiary fallback |
-| **ListenBrainz** | None | Artist/track popularity, discography, similar artists, top tracks | Listening-based stats |
+| **ListenBrainz** | None | Artist/track popularity, discography, similar artists, top tracks, radio discovery | Listening-based stats + community radio (token for radio) |
 | **Last.fm** | API key | Similar artists/tracks, genres, bios, popularity, album metadata, top tracks | Social/scrobble data |
 | **Fanart.tv** | API key | Artist photos/backgrounds/logos/banners, CD art, album art | High-quality fan artwork |
 | **Discogs** | Token | Artist photos, album art, labels, release types, band members, album metadata, credits, editions | Physical release metadata |
@@ -223,7 +223,7 @@ Successful results are cached with per-type TTLs:
 
 ---
 
-## The 32 Enrichment Types
+## The 34 Enrichment Types
 
 ### Artwork (8 types — all mergeable)
 | Type | Providers (by priority) | Notes |
@@ -278,13 +278,19 @@ All artwork types use `ArtworkMerger`: highest-confidence image becomes primary,
 | ARTIST_POPULARITY | Last.fm(100), ListenBrainz(100) | Listeners + play counts |
 | TRACK_POPULARITY | Last.fm(100), ListenBrainz(50) | Per-track stats |
 
-### Recommendations (4 types)
+### Recommendations (5 types)
 | Type | Providers (by priority) | Notes |
 |------|------------------------|-------|
 | ARTIST_RADIO | Deezer(100) | Tracks for a "radio station" seeded by artist |
+| ARTIST_RADIO_DISCOVERY | ListenBrainz(100) | Community-driven radio via LB Radio; requires `listenBrainzToken` |
 | ARTIST_TOP_TRACKS | Last.fm(100), ListenBrainz(100), Deezer(50) | **Mergeable** — deduplicates, sums listen counts |
 | SIMILAR_ALBUMS | Deezer(100) | Albums similar to the queried album |
 | GENRE_DISCOVERY | GenreAffinityMatcher | **Composite** — taxonomy lookup from resolved GENRE tags |
+
+### Preview (1 type)
+| Type | Providers (by priority) | Notes |
+|------|------------------------|-------|
+| TRACK_PREVIEW | Deezer(100) | 30-second MP3 preview URL; on-demand (not in default types) |
 
 ### Composite (1 type)
 | Type | Dependencies | Notes |
@@ -495,9 +501,9 @@ musicmeta-core/src/main/kotlin/com/landofoz/musicmeta/
 ├── EnrichmentEngine.kt              # Public interface + Builder
 ├── EnrichmentRequest.kt             # ForAlbum / ForArtist / ForTrack + default type sets
 ├── EnrichmentResult.kt              # Success / NotFound / Error / RateLimited
-├── EnrichmentResults.kt             # Batch wrapper + 19 named accessors
-├── EnrichmentData.kt                # 18 sealed subtypes (Artwork, Credits, TopTracks, etc.)
-├── EnrichmentType.kt                # 32 enum values with TTLs
+├── EnrichmentResults.kt             # Batch wrapper + 21 named accessors
+├── EnrichmentData.kt                # 19 sealed subtypes (Artwork, Credits, TopTracks, TrackPreview, etc.)
+├── EnrichmentType.kt                # 34 enum values with TTLs
 ├── EnrichmentConfig.kt              # Configuration (confidence, timeouts, overrides)
 ├── EnrichmentProvider.kt            # Provider interface + ProviderCapability
 ├── EnrichmentCache.kt               # Cache interface
