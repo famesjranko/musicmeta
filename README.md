@@ -3,7 +3,7 @@
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.famesjranko/musicmeta-core)](https://central.sonatype.com/artifact/io.github.famesjranko/musicmeta-core)
 [![JitPack](https://jitpack.io/v/famesjranko/musicmeta.svg)](https://jitpack.io/#famesjranko/musicmeta)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
-[![Kotlin](https://img.shields.io/badge/Kotlin-2.0.21-%237F52FF?logo=kotlin)](https://kotlinlang.org)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.1.0-%237F52FF?logo=kotlin)](https://kotlinlang.org)
 
 A Kotlin library that gives Android and JVM music apps access to rich metadata, artwork, and discovery features -- without a commercial API. Ask for as much or as little as you need: all 34 enrichment types at once, a single artist photo, just lyrics, or anything in between.
 
@@ -133,8 +133,8 @@ The `musicmeta-android` module adds Room-backed persistent caching, a Hilt DI mo
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("io.github.famesjranko:musicmeta-core:0.8.2")
-    implementation("io.github.famesjranko:musicmeta-android:0.8.2") // Android only
+    implementation("io.github.famesjranko:musicmeta-core:0.9.0")
+    implementation("io.github.famesjranko:musicmeta-android:0.9.0") // Android only
 }
 ```
 
@@ -165,9 +165,9 @@ object MyEnrichmentModule {
 | Wikidata | Artist photo, country, dates, occupation | No | None |
 | Wikipedia | Artist biography, supplemental photos | No | None |
 | LRCLIB | Synced + plain lyrics | No | None |
-| Deezer | Artist photos, album art, discography, tracklists, album metadata, similar artists, artist radio, similar albums | No | None |
+| Deezer | Artist photos, album art, discography, tracklists, album metadata, similar artists/tracks, artist radio, top tracks, similar albums, track previews | No | None |
 | iTunes | Album art, tracklists, discography, album metadata | No | ~1 req/3sec |
-| ListenBrainz | Popularity, listen counts, discography, similar artists | No | None |
+| ListenBrainz | Popularity, listen counts, discography, similar artists, top tracks, radio discovery (optional token) | Optional | None |
 | Last.fm | Genres, similar artists/tracks, bios, popularity, album metadata | Yes | None |
 | Fanart.tv | Artist photos/backgrounds/logos/banners, CD art, album art | Yes | None |
 | Discogs | Labels, members, credits, editions, community ratings | Yes | None |
@@ -183,16 +183,19 @@ Pass keys via `ApiKeyConfig`:
 
 ```kotlin
 val engine = EnrichmentEngine.Builder()
-    .apiKeys(ApiKeyConfig(lastFmKey = "...", fanartTvProjectKey = "...", discogsPersonalToken = "..."))
+    .apiKeys(ApiKeyConfig(
+        lastFmKey = "...", fanartTvProjectKey = "...", discogsPersonalToken = "...",
+        listenBrainzToken = "...",  // Optional — unlocks ARTIST_RADIO_DISCOVERY
+    ))
     .withDefaultProviders()
     .build()
 ```
 
-## Enrichment types (32)
+## Enrichment types (34)
 
 | Category | Types | Multi-provider |
 |----------|-------|----------------|
-| **Artwork** | ALBUM_ART, ALBUM_ART_BACK, ALBUM_BOOKLET, ARTIST_PHOTO, ARTIST_BACKGROUND, ARTIST_LOGO, ARTIST_BANNER, CD_ART | ALBUM_ART merged (5 providers via ArtworkMerger), ARTIST_PHOTO merged (4: Wikidata, Fanart.tv, Deezer, Wikipedia) |
+| **Artwork** | ALBUM_ART, ALBUM_ART_BACK, ALBUM_BOOKLET, ARTIST_PHOTO, ARTIST_BACKGROUND, ARTIST_LOGO, ARTIST_BANNER, CD_ART | ALBUM_ART merged (5 providers via ArtworkMerger), ARTIST_PHOTO merged (5: Wikidata, Fanart.tv, Deezer, Discogs, Wikipedia) |
 | **Metadata** | GENRE, LABEL, RELEASE_DATE, RELEASE_TYPE, COUNTRY, BAND_MEMBERS, ARTIST_DISCOGRAPHY, ALBUM_TRACKS, ALBUM_METADATA | GENRE merged from 2+, DISCOGRAPHY (4), TRACKS (3), METADATA (4) |
 | **Credits** | CREDITS | MusicBrainz (recording rels) + Discogs (extraartists) |
 | **Editions** | RELEASE_EDITIONS | MusicBrainz (release-group) + Discogs (master versions) |
@@ -201,10 +204,11 @@ val engine = EnrichmentEngine.Builder()
 | **Top Tracks** | ARTIST_TOP_TRACKS | Merged from 3 providers (Last.fm, ListenBrainz, Deezer) via TopTrackMerger |
 | **Statistics** | ARTIST_POPULARITY, TRACK_POPULARITY | Both from 2 providers |
 | **Composite** | ARTIST_TIMELINE, GENRE_DISCOVERY | ARTIST_TIMELINE: discography + members + life-span; GENRE_DISCOVERY: static affinity taxonomy |
-| **Radio** | ARTIST_RADIO | Deezer /artist/{id}/radio, ordered playlist |
+| **Radio** | ARTIST_RADIO, ARTIST_RADIO_DISCOVERY | ARTIST_RADIO: Deezer curated playlist; ARTIST_RADIO_DISCOVERY: ListenBrainz LB Radio (easy/medium/hard modes, optional token) |
+| **Preview** | TRACK_PREVIEW | Deezer 30-second MP3 preview URL (on-demand, not in default types) |
 | **Discovery** | SIMILAR_ALBUMS | Deezer related artists + era scoring |
 
-18 of 32 types have multi-provider coverage with automatic fallback. Artwork types (ALBUM_ART, ARTIST_PHOTO) are merged from all providers -- the best image is primary, alternatives are available via `Artwork.alternatives`.
+19 of 34 types have multi-provider coverage with automatic fallback. Artwork types (ALBUM_ART, ARTIST_PHOTO) are merged from all providers -- the best image is primary, alternatives are available via `Artwork.alternatives`.
 
 ## Installation
 
@@ -213,9 +217,9 @@ val engine = EnrichmentEngine.Builder()
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("io.github.famesjranko:musicmeta-core:0.8.2")
-    implementation("io.github.famesjranko:musicmeta-okhttp:0.8.2")   // Optional: OkHttp adapter
-    implementation("io.github.famesjranko:musicmeta-android:0.8.2")  // Optional: Android (Room cache, Hilt, WorkManager)
+    implementation("io.github.famesjranko:musicmeta-core:0.9.0")
+    implementation("io.github.famesjranko:musicmeta-okhttp:0.9.0")   // Optional: OkHttp adapter
+    implementation("io.github.famesjranko:musicmeta-android:0.9.0")  // Optional: Android (Room cache, Hilt, WorkManager)
 }
 ```
 
@@ -237,9 +241,9 @@ dependencyResolutionManagement {
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("com.github.famesjranko.musicmeta:musicmeta-core:v0.8.2")
-    implementation("com.github.famesjranko.musicmeta:musicmeta-okhttp:v0.8.2")   // Optional: OkHttp adapter
-    implementation("com.github.famesjranko.musicmeta:musicmeta-android:v0.8.2")  // Optional: Android
+    implementation("com.github.famesjranko.musicmeta:musicmeta-core:v0.9.0")
+    implementation("com.github.famesjranko.musicmeta:musicmeta-okhttp:v0.9.0")   // Optional: OkHttp adapter
+    implementation("com.github.famesjranko.musicmeta:musicmeta-android:v0.9.0")  // Optional: Android
 }
 ```
 
@@ -266,7 +270,7 @@ dependencies {
 ./gradlew publishToMavenLocal
 ```
 
-Then consume as `io.github.famesjranko:musicmeta-core:0.8.2` from `mavenLocal()`.
+Then consume as `io.github.famesjranko:musicmeta-core:0.9.0` from `mavenLocal()`.
 
 ## Documentation
 
@@ -280,7 +284,7 @@ Then consume as `io.github.famesjranko:musicmeta-core:0.8.2` from `mavenLocal()`
 
 ## Interactive demo
 
-The `demo/` module is a standalone CLI that showcases all three API tiers (profiles, named accessors, raw results), cache management, and the disambiguation flow. 8 of 11 providers work without API keys. To enable all providers, create a `secrets.properties` file or set environment variables (`LASTFM_API_KEY`, `FANARTTV_API_KEY`, `DISCOGS_TOKEN`).
+The `demo/` module is a standalone CLI that showcases all three API tiers (profiles, named accessors, raw results), cache management, and the disambiguation flow. 8 of 11 providers work without API keys. To enable all providers, create a `secrets.properties` file or set environment variables (`LASTFM_API_KEY`, `FANARTTV_API_KEY`, `DISCOGS_TOKEN`, `LISTENBRAINZ_TOKEN`).
 
 ```bash
 cd demo && ../gradlew run -q --console=plain
@@ -317,7 +321,7 @@ musicmeta> invalidate artist radiohead
 ## Requirements
 
 - **JVM**: Java 17+, Kotlin 2.1+
-- **Android**: Min SDK 26 (Android 8.0) for `musicmeta-android`
+- **Android**: Min SDK 21 (Android 5.0) for `musicmeta-android`
 - **User-Agent**: MusicBrainz and Wikimedia APIs require a descriptive User-Agent string. Set it via `EnrichmentConfig.userAgent` or the `DefaultHttpClient` constructor.
 
 ## License
