@@ -24,6 +24,8 @@ data class TrackProfile(val title: String, val artist: String, val results: Enri
     // --- Stats & Recommendations ---
     val popularity: EnrichmentData.Popularity? get() = results.trackPopularity()
     val similarTracks: EnrichmentData.SimilarTracks? get() = results.similarTracks()
+    val preview: EnrichmentData.TrackPreview? get() =
+        results.get<EnrichmentData.TrackPreview>(EnrichmentType.TRACK_PREVIEW)
     val genreDiscovery: List<GenreAffinity> get() =
         results.get<EnrichmentData.GenreDiscovery>(EnrichmentType.GENRE_DISCOVERY)?.relatedGenres ?: emptyList()
 }
