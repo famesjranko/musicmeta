@@ -101,6 +101,13 @@ sealed class EnrichmentData {
     @Serializable
     data class TopTracks(val tracks: List<TopTrack>) : EnrichmentData()
 
+    @Serializable
+    data class TrackPreview(
+        val url: String,
+        val durationMs: Long = 30000,
+        val source: String,
+    ) : EnrichmentData()
+
 }
 
 @Serializable

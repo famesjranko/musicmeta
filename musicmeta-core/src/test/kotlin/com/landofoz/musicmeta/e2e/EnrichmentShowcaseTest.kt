@@ -698,6 +698,8 @@ class EnrichmentShowcaseTest {
             "${data.relatedGenres.size} related genres: ${data.relatedGenres.take(3).joinToString(", ") { "${it.name}(%.2f)".format(it.affinity) }}"
         is EnrichmentData.TopTracks ->
             "${data.tracks.size} top tracks: ${data.tracks.take(3).joinToString(", ") { "${it.title}(${it.listenCount ?: 0})" }}"
+        is EnrichmentData.TrackPreview ->
+            "url=${data.url.take(70)} duration=${data.durationMs}ms source=${data.source}"
     }
 
     private fun printSingleResult(type: EnrichmentType, result: EnrichmentResult?) {

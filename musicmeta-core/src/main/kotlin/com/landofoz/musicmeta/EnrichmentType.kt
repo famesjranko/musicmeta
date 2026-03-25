@@ -57,6 +57,9 @@ enum class EnrichmentType(val defaultTtlMs: Long) {
     // Top tracks — 7 days
     ARTIST_TOP_TRACKS(7L * 24 * 60 * 60 * 1000),
 
+    // Preview -- 24 hours (URLs may rotate)
+    TRACK_PREVIEW(1L * 24 * 60 * 60 * 1000),
+
     // Discovery / recommendations — 30 days
     SIMILAR_ALBUMS(30L * 24 * 60 * 60 * 1000),
     GENRE_DISCOVERY(30L * 24 * 60 * 60 * 1000),
