@@ -104,7 +104,7 @@ Key additions:
 | **Composite** | ARTIST_TIMELINE | TimelineSynthesizer | Good — auto-resolves sub-types, synthesizes chronological events |
 | | GENRE_DISCOVERY | GenreAffinityMatcher | **v0.6.0** — static taxonomy, ~70 genre relationships |
 | **Top Tracks** | ARTIST_TOP_TRACKS | Last.fm, ListenBrainz, Deezer | **Excellent** — 3 providers merged via TopTrackMerger, fetches API max, no artificial cap |
-| **Recommendations** | ARTIST_RADIO | Deezer | **v0.6.0** — ordered playlist (default 50 tracks, configurable), 7-day TTL |
+| **Recommendations** | ARTIST_RADIO | Deezer (ListenBrainz planned) | **v0.6.0** — ordered playlist (default 50 tracks, configurable), 7-day TTL. LB Radio as second source planned (requires auth token) |
 | | SIMILAR_ALBUMS | Deezer (SimilarAlbumsProvider) | **v0.6.0** — era-proximity scored, 30-day TTL |
 
 ### Provider Utilization
@@ -176,6 +176,7 @@ This two-step flow is the right answer for the unopinionated principle: the libr
 - ~~**itunesArtistId** not stored in resolvedIdentifiers~~ — ✅ Fixed: iTunes provider now stores `itunesArtistId` after artist search
 - **ForAlbum credits aggregation** — CREDITS only supports ForTrack; aggregating per-track credits for an album deferred
 - **Credit-Based Discovery** — "more from this producer/composer" via CREDITS data; cross-entity query pattern, deferred to v0.7.0+
+- **ListenBrainz LB Radio** — second source for ARTIST_RADIO via `GET /1/explore/lb-radio`. Accepts `artist:(Name)` or `artist:(MBID)` prompts with easy/medium/hard modes. Returns JSPF playlist with track titles, artist names, MBIDs, and durations. Requires auth token (free ListenBrainz account). Community-data-driven vs Deezer's algorithmic approach — likely better niche artist coverage. Would need RadioMerger and a decision on gating: ListenBrainz currently needs no API key for existing endpoints (popularity, similar artists), but LB Radio requires one. Gate just the radio capability, not the whole provider.
 - **ListenBrainz collaborative filtering** — user-scoped recommendations; needs user identity concept in EnrichmentRequest, deferred to v0.8.0+
 
 ### Catalog Awareness — Interface Shipped, Implementations Remaining
@@ -208,7 +209,7 @@ The `CatalogProvider` interface shipped in v0.6.0 with three filtering modes (UN
 
 Endpoints with diminishing returns (niche, write APIs, deprecated):
 - Wikidata: ~85% unused but remaining properties are niche (occupation subtypes, genre claims)
-- ListenBrainz: ~57% unused but remaining are CF recommendations, charts, sitewide stats
+- ListenBrainz: ~57% unused but remaining are LB Radio (planned for ARTIST_RADIO merge), CF recommendations (user-scoped, deferred), charts, sitewide stats
 - LRCLIB: publish endpoint (write API, not relevant)
 - Wikipedia: deprecated mobile-sections endpoint
 
@@ -252,7 +253,8 @@ Ranked by **impact to consumers × implementation effort**:
 | 30 | Stale-while-revalidate cache | Enhancement | High | Medium | ✅ Done (v0.8.0) — `CacheMode.STALE_IF_ERROR`, offline fallback |
 | 31 | Bulk enrichment (simple) | Enhancement | High | Low | ✅ Done (v0.8.0) — sequential `enrichBatch()` with Flow emission |
 | 32 | Maven Central publishing | Enhancement | High | Medium | ✅ Done (v0.8.0) — `io.github.famesjranko` on Maven Central |
-| 33 | API stability (v1.0.0) | Milestone | High | Low | Planned — semver guarantees, freeze public API |
+| 33 | ListenBrainz LB Radio (ARTIST_RADIO merge) | Enhancement | Medium | Medium | Planned — second radio source via `/1/explore/lb-radio`, requires auth token, RadioMerger |
+| 34 | API stability (v1.0.0) | Milestone | High | Low | Planned — semver guarantees, freeze public API |
 | — | ~~Flow-based progressive API~~ | Enhancement | Medium | High | Deferred — marginal benefit vs complexity; callers can split enrich() calls |
 
 ---
@@ -298,7 +300,7 @@ Ranked by **impact to consumers × implementation effort**:
 | Similar Artists | ✅ **Shipped (v0.6.0)** | 3-provider merge (Last.fm + ListenBrainz + Deezer) via SimilarArtistMerger |
 | Similar Tracks | ✅ **Shipped** | 2-provider merge (Last.fm + Deezer track radio) via SimilarTrackMerger |
 | Similar Albums | ✅ **Shipped (v0.6.0)** | SimilarAlbumsProvider with era-proximity scoring |
-| Radio/Mix | ✅ **Shipped (v0.6.0)** | ARTIST_RADIO via Deezer `/artist/{id}/radio` |
+| Radio/Mix | ✅ **Shipped (v0.6.0)** | ARTIST_RADIO via Deezer `/artist/{id}/radio`. ListenBrainz LB Radio (`/1/explore/lb-radio`) planned as second source — artist-seeded prompt syntax, three modes (easy/medium/hard), returns JSPF playlist with MBIDs. Requires auth token (free account). Would enable RadioMerger similar to SimilarArtistMerger. |
 | Top Tracks | ✅ **Shipped** | 3-provider merge (Last.fm + ListenBrainz + Deezer) via TopTrackMerger. Fetches API max, no artificial cap. |
 | Credit-Based Discovery | ❌ Deferred (v0.8.0+) | Cross-entity query pattern; CREDITS data exists |
 | Genre Discovery | ✅ **Shipped (v0.6.0)** | GenreAffinityMatcher with ~70-relationship static taxonomy |
