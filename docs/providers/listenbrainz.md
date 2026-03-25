@@ -1,17 +1,17 @@
 # ListenBrainz Provider
 
-> Open-source listen tracking platform (MetaBrainz project). Provides popularity data based on real user listening habits. No API key required.
+> Open-source listen tracking platform (MetaBrainz project). Provides popularity, top tracks, discography, similar artists, and radio discovery based on real user listening habits. Most endpoints require no API key; LB Radio requires a free user token.
 
 ## API Overview
 
 | | |
 |---|---|
 | **Base URL** | `https://api.listenbrainz.org/1` |
-| **Auth** | None for read endpoints |
+| **Auth** | None for read endpoints; `Authorization: Token {token}` for LB Radio |
 | **Rate Limit** | Not strictly documented; we use 100ms |
 | **Format** | JSON (top-level array for popularity endpoints) |
 | **Reference Docs** | https://listenbrainz.readthedocs.io/en/latest/users/api/index.html |
-| **API Key Required** | No |
+| **API Key Required** | No for most endpoints; yes for `ARTIST_RADIO_DISCOVERY` (free ListenBrainz account) |
 
 ## Endpoints We Use
 
@@ -44,7 +44,46 @@ Returns a **JSON array** (not object — note: `fetchJsonArray()` not `fetchJson
 ]
 ```
 
+### LB Radio
+```
+GET /1/explore/lb-radio?prompt=artist:({mbid_or_name})&mode={easy|medium|hard}
+Authorization: Token {listenBrainzToken}
+```
+
+`prompt` accepts either an artist MBID (`artist:(a74b1b7f-71a5-4011-9441-d0b5e4122711)`) or an artist name (`artist:(Radiohead)`) when no MBID is available. The `mode` parameter controls discovery depth: `easy` stays close to the seed artist, `hard` ventures further.
+
+Response (JSPF playlist format):
+```json
+{
+  "payload": {
+    "jspf": {
+      "playlist": {
+        "track": [
+          {
+            "title": "Everything In Its Right Place",
+            "creator": "Radiohead",
+            "album": "Kid A",
+            "duration": 248000,
+            "identifier": ["https://musicbrainz.org/recording/{recording_mbid}"],
+            "extension": {
+              "https://musicbrainz.org/doc/jspf#playlist": {
+                "artist_identifiers": ["https://musicbrainz.org/artist/{artist_mbid}"],
+                "release_identifier": "https://musicbrainz.org/release/{release_mbid}"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}
+```
+
+JSPF `duration` is already in milliseconds. MBIDs are embedded in full MusicBrainz URLs — extracted via `substringAfterLast("/")`.
+
 ## What We Extract
+
+**From top recordings (`/1/popularity/top-recordings-for-artist`):**
 
 | Field | Source | Notes |
 |-------|--------|-------|
@@ -52,6 +91,18 @@ Returns a **JSON array** (not object — note: `fetchJsonArray()` not `fetchJson
 | Recording MBID | `recording_mbid` | Cross-reference with MusicBrainz |
 | Listen count | `total_listen_count` | Cumulative across all users |
 | Rank | Array index + 1 | Implicit ordering by listen count |
+
+**From LB Radio (`/1/explore/lb-radio`):**
+
+| Field | Source | Notes |
+|-------|--------|-------|
+| Track title | `track.title` | |
+| Artist name | `track.creator` | |
+| Album title | `track.album` | Nullable |
+| Duration | `track.duration` | Already in milliseconds |
+| Recording MBID | `track.identifier[0]` | Extracted from MusicBrainz URL |
+| Artist MBID | `extension…artist_identifiers[0]` | Extracted from MusicBrainz URL |
+| Release MBID | `extension…release_identifier` | Extracted from MusicBrainz URL |
 
 ## What We DON'T Extract (Available Data)
 
@@ -102,7 +153,8 @@ Range parameter values: `this_week`, `this_month`, `this_year`, `week`, `month`,
 
 ## Gotchas & Edge Cases
 
-- **Requires artist MBID**: No text search. Depends entirely on MusicBrainz identity resolution.
+- **Requires artist MBID**: Top recordings endpoint requires MBID — no text search. Depends entirely on MusicBrainz identity resolution.
+- **LB Radio requires auth**: `ARTIST_RADIO_DISCOVERY` is silently absent when `ApiKeyConfig.listenBrainzToken` is not set. Other ListenBrainz endpoints (top recordings, similar artists, discography) continue working without any token. The token is free — create a ListenBrainz account at https://listenbrainz.org.
 - **JSON array response**: Unlike most APIs, the popularity endpoint returns a bare JSON array, not `{ "data": [...] }`. Our code uses `httpClient.fetchJsonArray()` for this.
 - **Smaller user base than Last.fm**: ListenBrainz has fewer users, so listen counts are lower. But it's growing and is fully open-source.
 - **Data freshness**: Stats are updated periodically, not real-time. May not reflect very recent releases.
@@ -116,10 +168,11 @@ Range parameter values: `this_week`, `this_month`, `this_year`, `week`, `month`,
 
 ```
 ListenBrainzProvider
-├── ListenBrainzApi       — top recordings endpoint + parsing
-└── ListenBrainzModels    — DTO: ListenBrainzPopularTrack (recordingMbid, title, artistName, listenCount)
+├── ListenBrainzApi       — top recordings + LB Radio (auth-gated) + parsing
+└── ListenBrainzModels    — DTOs: ListenBrainzPopularTrack, ListenBrainzRadioTrack
 ```
 
 Constructor params:
 - `httpClient: HttpClient`
 - `rateLimiter: RateLimiter` — 100ms is fine
+- `authToken: String?` — optional; enables `ARTIST_RADIO_DISCOVERY` when present
