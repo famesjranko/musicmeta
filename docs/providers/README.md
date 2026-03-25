@@ -10,9 +10,9 @@ Per-provider documentation for all external APIs used by musicmeta. Each doc cov
 | [Cover Art Archive](coverartarchive.md) | None | Gentle | Album art via MBID redirect to archive.org |
 | [Last.fm](lastfm.md) | API key | 5 req/sec | Similar artists, genres, bios, popularity |
 | [Fanart.tv](fanarttv.md) | Project key | Gentle | Artist photos, backgrounds, logos, banners, CD art |
-| [Deezer](deezer.md) | None | 10 req/sec | Album art search (+ untapped: discography, related artists) |
+| [Deezer](deezer.md) | None | 10 req/sec | Album art, artist photos, discography, tracklists, radio, top tracks, similar artists/tracks, similar albums, track previews |
 | [Discogs](discogs.md) | Token | 60 req/min | Labels, pressings (+ untapped: band members, credits) |
-| [ListenBrainz](listenbrainz.md) | None | Gentle | Track popularity via listen counts |
+| [ListenBrainz](listenbrainz.md) | Optional token | Gentle | Popularity, similar artists, discography, top tracks, radio discovery (token required for LB Radio) |
 | [LRCLIB](lrclib.md) | None | Gentle | Synced + plain lyrics |
 | [Wikidata](wikidata.md) | None | Gentle | Artist photos (+ untapped: dates, genres, members, links) |
 | [Wikipedia](wikipedia.md) | None | Gentle | Artist biographies |
@@ -21,6 +21,9 @@ Per-provider documentation for all external APIs used by musicmeta. Each doc cov
 ## Auth Summary
 
 **No key needed (8 providers):** MusicBrainz, Cover Art Archive, Deezer, ListenBrainz, LRCLIB, Wikidata, Wikipedia, iTunes
+
+**Optional key (1 provider):**
+- **ListenBrainz** — free user token from https://listenbrainz.org/settings/ (unlocks LB Radio / `ARTIST_RADIO_DISCOVERY`; all other capabilities work without auth)
 
 **Key required (3 providers):**
 - **Last.fm** — free API key from https://www.last.fm/api/account/create

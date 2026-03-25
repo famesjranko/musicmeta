@@ -91,7 +91,7 @@ class DeezerProviderTest {
     }
 
     @Test
-    fun `enrich returns NotFound when data object has no title field`() = runTest {
+    fun `enrich succeeds for album art even when album title is missing`() = runTest {
         // Given — Deezer API returns album objects missing the title field
         httpClient.givenJsonResponse("api.deezer.com", """{"data":[{"artist":{"name":"Radiohead"},"cover_xl":"https://example.com/cover.jpg"}]}""")
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")

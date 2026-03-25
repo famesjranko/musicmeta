@@ -332,6 +332,27 @@ class ListenBrainzRadioDiscoveryTest {
     }
 
     @Test
+    fun `provider sends Authorization header with token`() = runTest {
+        // Given: provider with auth token and valid JSPF response
+        val provider = ListenBrainzProvider(httpClient, RateLimiter(0L), authToken = "my-secret-token")
+        httpClient.givenJsonResponse("lb-radio", JSPF_RESPONSE)
+        val request = EnrichmentRequest.ForArtist(
+            identifiers = EnrichmentIdentifiers(musicBrainzId = "some-mbid"),
+            name = "Radiohead",
+        )
+
+        // When: enriching for ARTIST_RADIO_DISCOVERY
+        provider.enrich(request, EnrichmentType.ARTIST_RADIO_DISCOVERY)
+
+        // Then: the HTTP request included the Authorization header with the token
+        val radioHeaders = httpClient.requestedHeaders.lastOrNull { headers ->
+            headers.containsKey("Authorization")
+        }
+        assertNotNull("Expected Authorization header to be sent", radioHeaders)
+        assertEquals("Token my-secret-token", radioHeaders!!["Authorization"])
+    }
+
+    @Test
     fun `mapper correctly maps all MBID fields including extra identifiers`() {
         // Given: a track with all MBID fields populated
         val track = ListenBrainzRadioTrack(

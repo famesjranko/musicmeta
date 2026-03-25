@@ -25,7 +25,7 @@
 | `ALBUM_METADATA` | Via album search |
 | `ARTIST_RADIO` | Via `/artist/{id}/radio` |
 | `SIMILAR_ARTISTS` | Via `/artist/{id}/related` |
-| `SIMILAR_ALBUMS` | Via `SimilarAlbumsProvider` (synthesized) |
+| `SIMILAR_ALBUMS` | Via `SimilarAlbumsProvider` (separate provider, direct API calls) |
 | `SIMILAR_TRACKS` | Via `/track/{id}/radio` |
 | `ARTIST_TOP_TRACKS` | Via `/artist/{id}/top` |
 | `TRACK_PREVIEW` | Via `/search/track` — 30-second MP3 CDN URL |

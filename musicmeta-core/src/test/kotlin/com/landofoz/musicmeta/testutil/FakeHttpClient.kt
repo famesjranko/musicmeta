@@ -13,6 +13,7 @@ class FakeHttpClient : HttpClient {
     private val httpResultResponses = mutableMapOf<String, HttpResult<JSONObject>>()
     private val httpResultArrayResponses = mutableMapOf<String, HttpResult<JSONArray>>()
     val requestedUrls = mutableListOf<String>()
+    val requestedHeaders = mutableListOf<Map<String, String>>()
 
     fun givenJsonResponse(urlContains: String, json: String) { jsonResponses[urlContains] = json }
     fun givenJsonArrayResponse(urlContains: String, json: String) { jsonResponses[urlContains] = json }
@@ -62,15 +63,22 @@ class FakeHttpClient : HttpClient {
         return jsonResponses.entries.firstOrNull { url.contains(it.key) }?.value?.let { JSONArray(it) }
     }
 
-    override suspend fun fetchJsonResult(url: String): HttpResult<JSONObject> {
+    override suspend fun fetchJsonResult(url: String): HttpResult<JSONObject> =
+        fetchJsonResult(url, emptyMap())
+
+    override suspend fun fetchJsonResult(
+        url: String,
+        headers: Map<String, String>,
+    ): HttpResult<JSONObject> {
         requestedUrls.add(url)
+        requestedHeaders.add(headers)
         if (ioExceptions.any { url.contains(it) }) throw IOException("Simulated network error: $url")
         if (errors.any { url.contains(it) }) return HttpResult.NetworkError("Simulated network error")
         val configured = httpResultResponses.entries.firstOrNull { url.contains(it.key) }
         if (configured != null) return configured.value
         // Fall back to existing fetchJson behavior for backward compatibility
-        val json = fetchJson(url)
-        return if (json != null) HttpResult.Ok(json) else HttpResult.NetworkError("No response configured")
+        val json = jsonResponses.entries.firstOrNull { url.contains(it.key) }?.value
+        return if (json != null) HttpResult.Ok(JSONObject(json)) else HttpResult.NetworkError("No response configured")
     }
 
     override suspend fun fetchJsonArrayResult(url: String): HttpResult<JSONArray> {

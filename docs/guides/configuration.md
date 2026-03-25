@@ -41,7 +41,9 @@ val config = EnrichmentConfig(
     radioLimit = 25,
 
     // Discovery mode for ARTIST_RADIO_DISCOVERY (ListenBrainz LB Radio).
-    // EASY stays close to the seed artist; HARD ventures into less-related territory.
+    // EASY: stays close to the seed artist
+    // MEDIUM: moderate discovery, balances familiarity and exploration
+    // HARD: ventures into less-related territory
     // Default: RadioDiscoveryMode.EASY
     radioDiscoveryMode = RadioDiscoveryMode.EASY,
 
