@@ -40,6 +40,11 @@ val config = EnrichmentConfig(
     // Max tracks for ARTIST_RADIO (Deezer supports up to 100). Default: 50.
     radioLimit = 25,
 
+    // Discovery mode for ARTIST_RADIO_DISCOVERY (ListenBrainz LB Radio).
+    // EASY stays close to the seed artist; HARD ventures into less-related territory.
+    // Default: RadioDiscoveryMode.EASY
+    radioDiscoveryMode = RadioDiscoveryMode.EASY,
+
     // Cache fallback mode. NETWORK_FIRST (default) returns errors as-is.
     // STALE_IF_ERROR serves expired cache entries when providers return Error or RateLimited.
     cacheMode = CacheMode.STALE_IF_ERROR,
@@ -50,15 +55,18 @@ val config = EnrichmentConfig(
 
 ## ApiKeyConfig
 
-Three providers require API keys. All are free to obtain:
+Four providers require API keys. All are free to obtain:
 
 ```kotlin
 val keys = ApiKeyConfig(
     lastFmKey = "...",             // https://www.last.fm/api/account/create
     fanartTvProjectKey = "...",    // https://fanart.tv/get-an-api-key/
     discogsPersonalToken = "...",  // https://www.discogs.com/settings/developers
+    listenBrainzToken = "...",     // https://listenbrainz.org/profile/  (free account)
 )
 ```
+
+`listenBrainzToken` unlocks `ARTIST_RADIO_DISCOVERY` (LB Radio). All other ListenBrainz endpoints — popularity, similar artists, discography — remain keyless and continue working without a token.
 
 Pass keys to the builder. `withDefaultProviders()` conditionally registers key-requiring providers only when their key is present:
 
@@ -173,7 +181,7 @@ engine.getProviders().forEach { info ->
 
 Each request kind has a default set of types that covers the most common use cases.
 
-### DEFAULT_ARTIST_TYPES (15 types)
+### DEFAULT_ARTIST_TYPES (16 types)
 
 ```kotlin
 EnrichmentRequest.DEFAULT_ARTIST_TYPES
@@ -181,7 +189,7 @@ EnrichmentRequest.DEFAULT_ARTIST_TYPES
 // ARTIST_PHOTO, ARTIST_BACKGROUND, ARTIST_LOGO, ARTIST_BANNER,
 // ARTIST_POPULARITY, SIMILAR_ARTISTS,
 // BAND_MEMBERS, ARTIST_DISCOGRAPHY, ARTIST_LINKS, ARTIST_TIMELINE,
-// ARTIST_RADIO, ARTIST_TOP_TRACKS,
+// ARTIST_RADIO, ARTIST_RADIO_DISCOVERY, ARTIST_TOP_TRACKS,
 // GENRE_DISCOVERY
 ```
 
@@ -286,6 +294,59 @@ results.similarAlbums()?.albums?.forEach { album ->
 }
 ```
 
+### Artist radio discovery (ListenBrainz LB Radio)
+
+Community-driven discovery radio via ListenBrainz. Requires `listenBrainzToken` in `ApiKeyConfig`.
+
+```kotlin
+val keys = ApiKeyConfig(listenBrainzToken = "your-token")
+
+val engine = EnrichmentEngine.Builder()
+    .withDefaultProviders()
+    .apiKeys(keys)
+    .build()
+
+val results = engine.enrich(
+    EnrichmentRequest.forArtist("Radiohead"),
+    setOf(EnrichmentType.ARTIST_RADIO_DISCOVERY),
+)
+
+results.radioDiscovery()?.tracks?.forEach { track ->
+    println("${track.title} — ${track.artist} (${track.durationMs?.div(1000)}s)")
+    println("  recording MBID: ${track.identifiers.musicBrainzId}")
+}
+```
+
+Configure discovery depth via `radioDiscoveryMode`:
+
+```kotlin
+// Easy: familiar-adjacent (default)
+val config = EnrichmentConfig(radioDiscoveryMode = RadioDiscoveryMode.EASY)
+
+// Hard: adventurous — deeper into less-related territory
+val config = EnrichmentConfig(radioDiscoveryMode = RadioDiscoveryMode.HARD)
+```
+
+Without `listenBrainzToken`, `ARTIST_RADIO_DISCOVERY` is silently absent — `NotFound` is returned and all other ListenBrainz capabilities continue working.
+
+### Track preview
+
+A 30-second MP3 preview URL from Deezer. On-demand type — not in `DEFAULT_TRACK_TYPES`. Request explicitly when you need it:
+
+```kotlin
+val results = engine.enrich(
+    EnrichmentRequest.forTrack("Creep", "Radiohead"),
+    types = setOf(EnrichmentType.TRACK_PREVIEW),
+)
+
+val preview = results.trackPreview()
+println(preview?.url)        // https://cdns-preview-d.dzcdn.net/stream/...
+println(preview?.durationMs) // 30000
+println(preview?.source)     // "deezer"
+```
+
+Typical use: resolve a preview URL for a track the user discovered via radio or similar artists, so they can audition it before adding it to their library. See `docs/v0.9.0-lb-radio-feature-plan.md` Consumer Usage Patterns for a full discovery-with-preview example.
+
 ### Artist radio
 
 An ordered playlist from Deezer's `/artist/{id}/radio` endpoint. Good for "radio station" features:
@@ -372,4 +433,6 @@ val engine = EnrichmentEngine.Builder()
 | `AVAILABLE_ONLY` | Removes items where `CatalogMatch.available == false`. |
 | `AVAILABLE_FIRST` | Sorts available items before unavailable; preserves relative order within each group. |
 
-Catalog filtering applies to: `SIMILAR_ARTISTS`, `SIMILAR_TRACKS`, `SIMILAR_ALBUMS`, `ARTIST_RADIO`, `ARTIST_TOP_TRACKS`.
+Catalog filtering applies to: `SIMILAR_ARTISTS`, `SIMILAR_TRACKS`, `SIMILAR_ALBUMS`, `ARTIST_RADIO`, `ARTIST_RADIO_DISCOVERY`, `ARTIST_TOP_TRACKS`.
+
+Note: `TRACK_PREVIEW` is intentionally excluded — previews are for tracks the user does not have.

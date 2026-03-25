@@ -8,7 +8,7 @@
 
 Give Android and JVM music app developers a flexible, unopinionated engine for getting rich metadata, artwork, and discovery data from public APIs — so they can build polished UI/UX without becoming experts in MusicBrainz, Wikidata, Deezer, and half a dozen other services.
 
-The library is a tool for developers to wield for their needs, not a framework that dictates how to use it. Request all 32 types at once or just the one you need. Use the merged result or pick from alternatives. Cache everything or nothing. The engine adapts to how you want to work.
+The library is a tool for developers to wield for their needs, not a framework that dictates how to use it. Request all 34 types at once or just the one you need. Use the merged result or pick from alternatives. Cache everything or nothing. The engine adapts to how you want to work.
 
 ### Core principles
 
@@ -45,7 +45,16 @@ The library is a tool for developers to wield for their needs, not a framework t
 
 ---
 
-## Where We Are (v0.8.2)
+## Where We Are (v0.9.0)
+
+### What Changed in v0.9.0
+
+v0.9.0 was **LB Radio & Track Preview** — shipped 2026-03-26.
+
+Key additions:
+- **TRACK_PREVIEW** — 30-second MP3 preview URL via Deezer. On-demand, no API key. `TrackProfile.preview`, `EnrichmentResults.trackPreview()`.
+- **ARTIST_RADIO_DISCOVERY** — community-driven radio via ListenBrainz LB Radio. Requires free user token (`ApiKeyConfig.listenBrainzToken`). `RadioDiscoveryMode` enum for discovery depth. `ArtistProfile.radioDiscovery`, `EnrichmentResults.radioDiscovery()`. Included in `DEFAULT_ARTIST_TYPES`.
+- **HttpClient header support** — `fetchJsonResult(url, headers)` overload for authenticated requests.
 
 ### What Changed Since v0.6.0
 
@@ -70,7 +79,7 @@ Key additions:
 - **CatalogProvider interface** — Consumers implement `checkAvailability()` to filter recommendation results by availability. Three modes: UNFILTERED (default), AVAILABLE_ONLY, AVAILABLE_FIRST.
 - **Engine extensibility** — `ResultMerger` and `CompositeSynthesizer` interfaces extracted from engine. New mergeable types and composite types plug in without modifying `DefaultEnrichmentEngine`.
 
-### Current Coverage (32 enrichment types)
+### Current Coverage (34 enrichment types)
 
 | Category | Type | Providers | Depth |
 |----------|------|-----------|-------|
@@ -104,8 +113,10 @@ Key additions:
 | **Composite** | ARTIST_TIMELINE | TimelineSynthesizer | Good — auto-resolves sub-types, synthesizes chronological events |
 | | GENRE_DISCOVERY | GenreAffinityMatcher | **v0.6.0** — static taxonomy, ~70 genre relationships |
 | **Top Tracks** | ARTIST_TOP_TRACKS | Last.fm, ListenBrainz, Deezer | **Excellent** — 3 providers merged via TopTrackMerger, fetches API max, no artificial cap |
-| **Recommendations** | ARTIST_RADIO | Deezer (ListenBrainz planned) | **v0.6.0** — ordered playlist (default 50 tracks, configurable), 7-day TTL. LB Radio as second source planned (requires auth token) |
+| **Recommendations** | ARTIST_RADIO | Deezer | **v0.6.0** — ordered playlist (default 50 tracks, configurable), 7-day TTL. For community-driven discovery, see ARTIST_RADIO_DISCOVERY |
+| | ARTIST_RADIO_DISCOVERY | ListenBrainz (LB Radio) | **v0.9.0** — community-driven discovery radio, configurable depth (EASY/MEDIUM/HARD), requires free user token, catalog-filtered |
 | | SIMILAR_ALBUMS | Deezer (SimilarAlbumsProvider) | **v0.6.0** — era-proximity scored, 30-day TTL |
+| **Preview** | TRACK_PREVIEW | Deezer | **v0.9.0** — 30-second MP3 preview URL, on-demand (not in DEFAULT_TRACK_TYPES), 24-hour TTL |
 
 ### Provider Utilization
 
@@ -117,13 +128,13 @@ Key additions:
 | **Deezer** | 10 | ~100% | +6 (getRelatedArtists, getArtistRadio, SimilarAlbumsProvider, searchTrack, getTrackRadio, artist photos) |
 | **Discogs** | 5 | ~70% | +artist images from existing getArtist call |
 | **Cover Art Archive** | 2 | ~70% | +CD_ART from existing metadata endpoint |
-| **ListenBrainz** | 6 | ~43% | — |
+| **ListenBrainz** | 7 | ~50% | +1 (getRadio — LB Radio endpoint, auth-gated) |
 | **iTunes** | 3 | ~43% | — |
 | **Wikidata** | 1 (5 properties) | ~15% | — |
 | **Wikipedia** | 2 | ~50% | — |
 | **LRCLIB** | 2 | ~100% | — |
 
-**Average utilization: ~61%** (up from ~57% in v0.5.0, ~60% in v0.6.0)
+**Average utilization: ~62%** (up from ~57% in v0.5.0, ~60% in v0.6.0, ~61% in v0.8.x)
 
 ---
 
@@ -176,7 +187,7 @@ This two-step flow is the right answer for the unopinionated principle: the libr
 - ~~**itunesArtistId** not stored in resolvedIdentifiers~~ — ✅ Fixed: iTunes provider now stores `itunesArtistId` after artist search
 - **ForAlbum credits aggregation** — CREDITS only supports ForTrack; aggregating per-track credits for an album deferred
 - **Credit-Based Discovery** — "more from this producer/composer" via CREDITS data; cross-entity query pattern, deferred to v0.7.0+
-- **ListenBrainz LB Radio** — second source for ARTIST_RADIO via `GET /1/explore/lb-radio`. Accepts `artist:(Name)` or `artist:(MBID)` prompts with easy/medium/hard modes. Returns JSPF playlist with track titles, artist names, MBIDs, and durations. Requires auth token (free ListenBrainz account). Community-data-driven vs Deezer's algorithmic approach — likely better niche artist coverage. Would need RadioMerger and a decision on gating: ListenBrainz currently needs no API key for existing endpoints (popularity, similar artists), but LB Radio requires one. Gate just the radio capability, not the whole provider.
+- ~~**ListenBrainz LB Radio**~~ — ✅ Shipped (v0.9.0): `ARTIST_RADIO_DISCOVERY` via `/1/explore/lb-radio`. Separate type (not merged with ARTIST_RADIO). Auth-gated per-capability: `listenBrainzToken` unlocks radio while existing endpoints remain keyless.
 - **ListenBrainz collaborative filtering** — user-scoped recommendations; needs user identity concept in EnrichmentRequest, deferred to v0.8.0+
 
 ### Catalog Awareness — Interface Shipped, Implementations Remaining
@@ -209,7 +220,7 @@ The `CatalogProvider` interface shipped in v0.6.0 with three filtering modes (UN
 
 Endpoints with diminishing returns (niche, write APIs, deprecated):
 - Wikidata: ~85% unused but remaining properties are niche (occupation subtypes, genre claims)
-- ListenBrainz: ~57% unused but remaining are LB Radio (planned for ARTIST_RADIO merge), CF recommendations (user-scoped, deferred), charts, sitewide stats
+- ListenBrainz: ~50% unused but remaining are CF recommendations (user-scoped, deferred), charts, sitewide stats
 - LRCLIB: publish endpoint (write API, not relevant)
 - Wikipedia: deprecated mobile-sections endpoint
 
@@ -253,7 +264,7 @@ Ranked by **impact to consumers × implementation effort**:
 | 30 | Stale-while-revalidate cache | Enhancement | High | Medium | ✅ Done (v0.8.0) — `CacheMode.STALE_IF_ERROR`, offline fallback |
 | 31 | Bulk enrichment (simple) | Enhancement | High | Low | ✅ Done (v0.8.0) — sequential `enrichBatch()` with Flow emission |
 | 32 | Maven Central publishing | Enhancement | High | Medium | ✅ Done (v0.8.0) — `io.github.famesjranko` on Maven Central |
-| 33 | ListenBrainz LB Radio (ARTIST_RADIO merge) | Enhancement | Medium | Medium | Planned — second radio source via `/1/explore/lb-radio`, requires auth token, RadioMerger |
+| 33 | ARTIST_RADIO_DISCOVERY + TRACK_PREVIEW | 2 new types | Medium | Medium | ✅ Done (v0.9.0) — LB Radio as separate type, Deezer 30s previews |
 | 34 | API stability (v1.0.0) | Milestone | High | Low | Planned — semver guarantees, freeze public API |
 | — | ~~Flow-based progressive API~~ | Enhancement | Medium | High | Deferred — marginal benefit vs complexity; callers can split enrich() calls |
 
@@ -261,11 +272,11 @@ Ranked by **impact to consumers × implementation effort**:
 
 ## Summary
 
-| Dimension | v0.1.0 | v0.4.0 | v0.5.0 | v0.6.0 | v0.7.0 | v0.8.x | v1.0.0 (planned) |
-|-----------|--------|--------|--------|--------|--------|--------|------------------|
-| Enrichment types | 16 | 25 (+9) | 28 (+3) | 32 (+4) | 32 | 32 | 32 |
-| Provider utilization | ~30% avg | ~48% avg | ~57% avg | ~60% avg | ~60% avg | ~60% avg | ~60% avg |
-| Engine concepts | Provider chains | + Typed identifiers, mapper pattern, confidence calculator | + Composite types, mergeable types, GenreMerger | + ResultMerger/CompositeSynthesizer interfaces, CatalogProvider filtering, ArtworkMerger | + EnrichmentResults wrapper, IdentityResolution, profiles, default type sets | + OkHttp adapter, stale cache, bulk enrichment | API freeze, semver |
+| Dimension | v0.1.0 | v0.4.0 | v0.5.0 | v0.6.0 | v0.7.0 | v0.8.x | v0.9.0 | v1.0.0 (planned) |
+|-----------|--------|--------|--------|--------|--------|--------|--------|------------------|
+| Enrichment types | 16 | 25 (+9) | 28 (+3) | 32 (+4) | 32 | 32 | 34 (+2) | 34 |
+| Provider utilization | ~30% avg | ~48% avg | ~57% avg | ~60% avg | ~60% avg | ~60% avg | ~62% avg | ~62% avg |
+| Engine concepts | Provider chains | + Typed identifiers, mapper pattern, confidence calculator | + Composite types, mergeable types, GenreMerger | + ResultMerger/CompositeSynthesizer interfaces, CatalogProvider filtering, ArtworkMerger | + EnrichmentResults wrapper, IdentityResolution, profiles, default type sets | + OkHttp adapter, stale cache, bulk enrichment | + TRACK_PREVIEW, ARTIST_RADIO_DISCOVERY, RadioDiscoveryMode, per-capability auth | API freeze, semver |
 | "App-ready" artist page | Partial | Full | **Complete** | **Complete** + radio, genre discovery | `engine.artistProfile("Radiohead")` — one call, structured result | + offline support, bulk loading | Stable |
 | "App-ready" album page | Partial | Full | **Complete** | **Complete** + similar albums | `engine.albumProfile("OK Computer", "Radiohead")` | + offline support, bulk loading | Stable |
 | "App-ready" now-playing | Partial | Rich | **Complete** | **Complete** + catalog-aware | `engine.trackProfile("Creep", "Radiohead")` | + offline support | Stable |
@@ -300,7 +311,7 @@ Ranked by **impact to consumers × implementation effort**:
 | Similar Artists | ✅ **Shipped (v0.6.0)** | 3-provider merge (Last.fm + ListenBrainz + Deezer) via SimilarArtistMerger |
 | Similar Tracks | ✅ **Shipped** | 2-provider merge (Last.fm + Deezer track radio) via SimilarTrackMerger |
 | Similar Albums | ✅ **Shipped (v0.6.0)** | SimilarAlbumsProvider with era-proximity scoring |
-| Radio/Mix | ✅ **Shipped (v0.6.0)** | ARTIST_RADIO via Deezer `/artist/{id}/radio`. ListenBrainz LB Radio (`/1/explore/lb-radio`) planned as second source — artist-seeded prompt syntax, three modes (easy/medium/hard), returns JSPF playlist with MBIDs. Requires auth token (free account). Would enable RadioMerger similar to SimilarArtistMerger. |
+| Radio/Mix | ✅ **Shipped** | ARTIST_RADIO (v0.6.0) via Deezer `/artist/{id}/radio`. ARTIST_RADIO_DISCOVERY (v0.9.0) via ListenBrainz LB Radio — JSPF playlist with MBIDs, three modes (easy/medium/hard), requires free user token. Separate types, not merged. |
 | Top Tracks | ✅ **Shipped** | 3-provider merge (Last.fm + ListenBrainz + Deezer) via TopTrackMerger. Fetches API max, no artificial cap. |
 | Credit-Based Discovery | ❌ Deferred (v0.8.0+) | Cross-entity query pattern; CREDITS data exists |
 | Genre Discovery | ✅ **Shipped (v0.6.0)** | GenreAffinityMatcher with ~70-relationship static taxonomy |
@@ -335,8 +346,8 @@ Addressed four adoption blockers: `musicmeta-okhttp` module (OkHttp adapter), `C
 ### ✅ v0.8.2 — Patch — SHIPPED 2026-03-25
 Search fuzzy fallback fix, demo v0.8.0 features (OkHttp toggle, batch, stale cache), Maven group ID changed to `io.github.famesjranko`, CI workflow for automated publishing.
 
-### v0.9.0 — Catalog Implementations & User-Scoped Features
-`CatalogProvider` interface and filtering modes shipped in v0.6.0. This milestone adds concrete implementations: `LocalLibraryCatalog` (file scanning + fingerprint matching), `SpotifyCatalog` (OAuth + catalog check), `YouTubeMusicCatalog`. Also adds ListenBrainz collaborative filtering (user-scoped recommendations requiring username in request). May introduce `ForUser` request variant or dedicated engine method.
+### ✅ v0.9.0 — LB Radio & Track Preview — SHIPPED 2026-03-26
+Added two new enrichment types: `TRACK_PREVIEW` (30-second MP3 preview URL via Deezer track search, on-demand, no API key) and `ARTIST_RADIO_DISCOVERY` (community-driven radio via ListenBrainz LB Radio, requires free user token, configurable depth via `RadioDiscoveryMode`). HttpClient header support for authenticated requests. 34 enrichment types total.
 
 ### v1.0.0 — API Stability
 Freeze the public API surface. Semantic versioning guarantees from this point forward. Migration guide from pre-1.0. All deprecated APIs removed. Published to Maven Central with stable coordinates.
