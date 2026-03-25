@@ -104,15 +104,25 @@ class OkHttpEnrichmentClient(
     // region HttpResult GET methods
 
     override suspend fun fetchJsonResult(url: String): HttpResult<JSONObject> =
-        withContext(Dispatchers.IO) {
-            try {
-                client.newCall(buildGetRequest(url)).execute().use { response ->
-                    parseJsonResult(response) { JSONObject(it) }
-                }
-            } catch (e: IOException) {
-                HttpResult.NetworkError(e.message ?: "Network error", e)
+        fetchJsonResult(url, emptyMap())
+
+    override suspend fun fetchJsonResult(
+        url: String,
+        headers: Map<String, String>,
+    ): HttpResult<JSONObject> = withContext(Dispatchers.IO) {
+        try {
+            val requestBuilder = Request.Builder()
+                .url(url)
+                .header("User-Agent", userAgent)
+                .header("Accept", "application/json")
+            headers.forEach { (k, v) -> requestBuilder.header(k, v) }
+            client.newCall(requestBuilder.build()).execute().use { response ->
+                parseJsonResult(response) { JSONObject(it) }
             }
+        } catch (e: IOException) {
+            HttpResult.NetworkError(e.message ?: "Network error", e)
         }
+    }
 
     override suspend fun fetchJsonArrayResult(url: String): HttpResult<JSONArray> =
         withContext(Dispatchers.IO) {
