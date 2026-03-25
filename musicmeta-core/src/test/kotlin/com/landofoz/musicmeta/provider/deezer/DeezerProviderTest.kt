@@ -10,6 +10,7 @@ import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.testutil.FakeHttpClient
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -507,6 +508,88 @@ class DeezerProviderTest {
         assertTrue(urls.none { it.contains("search/artist") })
     }
 
+    // TRACK_PREVIEW tests
+
+    @Test
+    fun `enrich returns TrackPreview for known track with preview URL`() = runTest {
+        // Given — Deezer returns a track with a preview URL
+        httpClient.givenJsonResponse("search/track", TRACK_SEARCH_WITH_PREVIEW_RESPONSE)
+        val request = EnrichmentRequest.forTrack("Karma Police", "Radiohead")
+
+        // When — enriching for track preview
+        val result = provider.enrich(request, EnrichmentType.TRACK_PREVIEW)
+
+        // Then — Success with TrackPreview data
+        assertTrue(result is EnrichmentResult.Success)
+        val data = (result as EnrichmentResult.Success).data as EnrichmentData.TrackPreview
+        assertEquals("https://cdns-preview.dzcdn.net/stream/abc123.mp3", data.url)
+        assertEquals(253000L, data.durationMs)
+        assertEquals("deezer", data.source)
+    }
+
+    @Test
+    fun `enrich returns NotFound for TRACK_PREVIEW when no search result`() = runTest {
+        // Given — Deezer returns no track search results
+        httpClient.givenJsonResponse("search/track", """{"data":[]}""")
+        val request = EnrichmentRequest.forTrack("Nonexistent", "Nobody")
+
+        // When — enriching for track preview
+        val result = provider.enrich(request, EnrichmentType.TRACK_PREVIEW)
+
+        // Then — NotFound because no track matched
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `enrich returns NotFound for TRACK_PREVIEW when artist name does not match`() = runTest {
+        // Given — Deezer returns a track from a different artist
+        httpClient.givenJsonResponse("search/track", """{"data":[{"id":999,"title":"Karma Police","artist":{"name":"Completely Different Band"},"preview":"https://example.com/p.mp3","duration":200}]}""")
+        val request = EnrichmentRequest.forTrack("Karma Police", "Radiohead")
+
+        // When — enriching for track preview
+        val result = provider.enrich(request, EnrichmentType.TRACK_PREVIEW)
+
+        // Then — NotFound because ArtistMatcher.isMatch() rejects the result
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `enrich returns NotFound for TRACK_PREVIEW when preview URL is blank`() = runTest {
+        // Given — Deezer returns a matching track but preview URL is empty
+        httpClient.givenJsonResponse("search/track", TRACK_SEARCH_NO_PREVIEW_RESPONSE)
+        val request = EnrichmentRequest.forTrack("Karma Police", "Radiohead")
+
+        // When — enriching for track preview
+        val result = provider.enrich(request, EnrichmentType.TRACK_PREVIEW)
+
+        // Then — NotFound because preview URL is blank
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `enrich returns NotFound for TRACK_PREVIEW on artist request`() = runTest {
+        // Given — a ForArtist request (TRACK_PREVIEW requires ForTrack)
+        val request = EnrichmentRequest.forArtist("Radiohead")
+
+        // When — enriching for track preview
+        val result = provider.enrich(request, EnrichmentType.TRACK_PREVIEW)
+
+        // Then — NotFound because TRACK_PREVIEW requires ForTrack
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `capabilities include TRACK_PREVIEW with priority 100`() {
+        // Given — the provider's declared capabilities
+
+        // When — checking for TRACK_PREVIEW capability
+        val trackPreviewCap = provider.capabilities.find { it.type == EnrichmentType.TRACK_PREVIEW }
+
+        // Then — exists with priority 100
+        assertNotNull(trackPreviewCap)
+        assertEquals(100, trackPreviewCap!!.priority)
+    }
+
     companion object {
         val RADIO_RESPONSE = """
             {"data":[
@@ -554,6 +637,18 @@ class DeezerProviderTest {
         val TRACK_SEARCH_RESPONSE = """
             {"data":[
                 {"id":789,"title":"Karma Police","artist":{"name":"Radiohead"}}
+            ]}
+        """.trimIndent()
+
+        val TRACK_SEARCH_WITH_PREVIEW_RESPONSE = """
+            {"data":[
+                {"id":789,"title":"Karma Police","artist":{"name":"Radiohead"},"preview":"https://cdns-preview.dzcdn.net/stream/abc123.mp3","duration":253,"album":{"title":"OK Computer"}}
+            ]}
+        """.trimIndent()
+
+        val TRACK_SEARCH_NO_PREVIEW_RESPONSE = """
+            {"data":[
+                {"id":789,"title":"Karma Police","artist":{"name":"Radiohead"},"preview":"","duration":253,"album":{"title":"OK Computer"}}
             ]}
         """.trimIndent()
 
