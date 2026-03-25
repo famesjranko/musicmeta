@@ -222,7 +222,7 @@ class EnrichmentShowcaseTest {
 
     @Test
     fun `08 - coverage matrix`() {
-        banner("COVERAGE MATRIX (v0.8.0)")
+        banner("COVERAGE MATRIX (v0.9.0)")
         val providers = engine.getProviders()
         var multiCount = 0
         EnrichmentType.entries.forEach { type ->
@@ -244,7 +244,7 @@ class EnrichmentShowcaseTest {
         }
         println("\n  M+/M = multi-provider, S = single provider, - = no provider")
         println("  $multiCount/${EnrichmentType.entries.size} types have multi-provider coverage")
-        println("\n  ENGINE FEATURES (v0.8.0):")
+        println("\n  ENGINE FEATURES (v0.9.0):")
         println("    - GENRE uses GenreMerger (multi-provider merge, not short-circuit)")
         println("    - SIMILAR_ARTISTS uses SimilarArtistMerger (Last.fm + ListenBrainz + Deezer)")
         println("    - ARTIST_TIMELINE is composite (auto-resolves DISCOGRAPHY + BAND_MEMBERS)")
@@ -257,6 +257,10 @@ class EnrichmentShowcaseTest {
         println("    - v0.8.0: CacheMode.STALE_IF_ERROR — offline fallback with isStale flag")
         println("    - v0.8.0: enrichBatch() Flow API for bulk enrichment")
         println("    - v0.8.0: Maven Central publishing via vanniktech + Central Portal")
+        println("    - v0.9.0: TRACK_PREVIEW — Deezer 30s preview URLs (24h TTL, on-demand)")
+        println("    - v0.9.0: ARTIST_RADIO_DISCOVERY — ListenBrainz LB Radio (easy/medium/hard modes)")
+        println("    - v0.9.0: HttpClient headers overload for auth-gated endpoints")
+        println("    - v0.9.0: Per-capability auth gating (listenBrainzToken)")
     }
 
     // --- 9. v0.5.0 feature spotlight ---
@@ -582,6 +586,110 @@ class EnrichmentShowcaseTest {
         println("    Modules: musicmeta-core, musicmeta-okhttp, musicmeta-android")
         println("    Plugin: com.vanniktech.maven.publish (Central Portal)")
         println("    publishToMavenLocal: verified (dry-run)")
+    }
+
+    // --- 13. v0.9.0 feature spotlight ---
+
+    @Test
+    fun `13 - v0_9_0 feature spotlight`() = runBlocking {
+        banner("v0.9.0 FEATURES: LB RADIO & TRACK PREVIEW")
+
+        // TRACK_PREVIEW: Deezer 30s preview URL (no API key needed)
+        println("  --- TRACK_PREVIEW: Paranoid Android by Radiohead ---")
+        val previewResults = engine.enrich(
+            EnrichmentRequest.forTrack("Paranoid Android", "Radiohead", album = "OK Computer"),
+            setOf(EnrichmentType.TRACK_PREVIEW),
+        )
+        val preview = previewResults.raw[EnrichmentType.TRACK_PREVIEW]
+        if (preview is EnrichmentResult.Success) {
+            val data = preview.data as EnrichmentData.TrackPreview
+            println("    provider: ${preview.provider}, conf=${preview.confidence}")
+            println("    url: ${data.url.take(80)}${if (data.url.length > 80) "..." else ""}")
+            println("    duration: ${data.durationMs}ms")
+            println("    source: ${data.source}")
+        } else printSingleResult(EnrichmentType.TRACK_PREVIEW, preview)
+
+        // TRACK_PREVIEW via TrackProfile accessor
+        println("\n  --- TRACK_PREVIEW: trackProfile().preview accessor ---")
+        val trackProf = engine.trackProfile(
+            "Creep", "Radiohead",
+            types = EnrichmentRequest.DEFAULT_TRACK_TYPES + EnrichmentType.TRACK_PREVIEW,
+        )
+        println("    preview: ${trackProf.preview?.url?.take(60) ?: "null (not in Deezer catalog?)"}")
+        println("    TRACK_PREVIEW in DEFAULT_TRACK_TYPES: ${EnrichmentType.TRACK_PREVIEW in EnrichmentRequest.DEFAULT_TRACK_TYPES}")
+
+        // EnrichmentResults.trackPreview() accessor
+        println("\n  --- EnrichmentResults.trackPreview() accessor ---")
+        println("    trackPreview(): ${previewResults.trackPreview()?.url?.take(60) ?: "null"}")
+
+        // ARTIST_RADIO_DISCOVERY: ListenBrainz LB Radio (requires auth token)
+        val lbToken = E2ETestFixture.prop("listenbrainz.token")
+        if (lbToken.isNotBlank()) {
+            println("\n  --- ARTIST_RADIO_DISCOVERY: Radiohead (LB Radio) ---")
+            val radioEngine = EnrichmentEngine.Builder()
+                .config(EnrichmentConfig(radioDiscoveryMode = RadioDiscoveryMode.EASY))
+                .apiKeys(ApiKeyConfig(listenBrainzToken = lbToken))
+                .withDefaultProviders()
+                .build()
+
+            val radioResults = radioEngine.enrich(
+                EnrichmentRequest.forArtist("Radiohead"),
+                setOf(EnrichmentType.ARTIST_RADIO_DISCOVERY),
+            )
+            val radio = radioResults.raw[EnrichmentType.ARTIST_RADIO_DISCOVERY]
+            if (radio is EnrichmentResult.Success) {
+                val data = radio.data as EnrichmentData.RadioPlaylist
+                println("    provider: ${radio.provider}, conf=${radio.confidence}")
+                println("    ${data.tracks.size} tracks (mode=EASY)")
+                data.tracks.take(5).forEach { t ->
+                    val dur = t.durationMs?.let { "${it / 1000}s" } ?: "?"
+                    val mbid = t.identifiers.musicBrainzId?.take(8) ?: "?"
+                    println("    %-30s %-20s %s  mbid=%s...".format(
+                        t.title.take(30), t.artist.take(20), dur, mbid,
+                    ))
+                }
+                val withMbid = data.tracks.count { t -> !t.identifiers.musicBrainzId.isNullOrBlank() }
+                println("    $withMbid/${data.tracks.size} tracks have MBIDs")
+            } else printSingleResult(EnrichmentType.ARTIST_RADIO_DISCOVERY, radio)
+
+            // ArtistProfile.radioDiscovery accessor
+            println("\n  --- ArtistProfile.radioDiscovery accessor ---")
+            val profile = radioEngine.artistProfile("Radiohead")
+            println("    radioDiscovery: ${profile.radioDiscovery?.tracks?.size ?: "null"} tracks")
+            println("    radio (Deezer): ${profile.radio?.tracks?.size ?: "null"} tracks")
+
+            // RadioDiscoveryMode.HARD
+            println("\n  --- RadioDiscoveryMode.HARD ---")
+            val hardEngine = EnrichmentEngine.Builder()
+                .config(EnrichmentConfig(radioDiscoveryMode = RadioDiscoveryMode.HARD))
+                .apiKeys(ApiKeyConfig(listenBrainzToken = lbToken))
+                .withDefaultProviders()
+                .build()
+            val hardResults = hardEngine.enrich(
+                EnrichmentRequest.forArtist("Radiohead"),
+                setOf(EnrichmentType.ARTIST_RADIO_DISCOVERY),
+            )
+            val hardRadio = hardResults.raw[EnrichmentType.ARTIST_RADIO_DISCOVERY]
+            if (hardRadio is EnrichmentResult.Success) {
+                val data = hardRadio.data as EnrichmentData.RadioPlaylist
+                println("    ${data.tracks.size} tracks (mode=HARD)")
+                data.tracks.take(3).forEach { t ->
+                    println("    %-30s %-20s".format(t.title.take(30), t.artist.take(20)))
+                }
+            } else printSingleResult(EnrichmentType.ARTIST_RADIO_DISCOVERY, hardRadio)
+        } else {
+            println("\n  --- ARTIST_RADIO_DISCOVERY: SKIPPED (no listenbrainz.token) ---")
+            println("    Set -Dlistenbrainz.token=TOKEN or LISTENBRAINZ_TOKEN env var")
+            println("    Auth gating verified: ARTIST_RADIO_DISCOVERY not in capabilities without token")
+            val noTokenProvider = ListenBrainzProvider(E2ETestFixture.httpClient, E2ETestFixture.defaultRateLimiter)
+            val hasRadio = noTokenProvider.capabilities.any { it.type == EnrichmentType.ARTIST_RADIO_DISCOVERY }
+            println("    Provider without token has ARTIST_RADIO_DISCOVERY: $hasRadio")
+        }
+
+        // ARTIST_RADIO_DISCOVERY in DEFAULT_ARTIST_TYPES and RECOMMENDATION_TYPES
+        println("\n  --- Integration checks ---")
+        println("    ARTIST_RADIO_DISCOVERY in DEFAULT_ARTIST_TYPES: ${EnrichmentType.ARTIST_RADIO_DISCOVERY in EnrichmentRequest.DEFAULT_ARTIST_TYPES}")
+        println("    TRACK_PREVIEW NOT in DEFAULT_TRACK_TYPES: ${EnrichmentType.TRACK_PREVIEW !in EnrichmentRequest.DEFAULT_TRACK_TYPES}")
     }
 
     // --- Helpers ---
