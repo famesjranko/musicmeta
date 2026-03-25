@@ -13,6 +13,7 @@ import org.json.JSONObject
 class ListenBrainzApi(
     private val httpClient: HttpClient,
     private val rateLimiter: RateLimiter,
+    private val authToken: String? = null,
 ) {
 
     suspend fun getTopRecordingsForArtist(
@@ -139,6 +140,62 @@ class ListenBrainzApi(
         }
         results
     }
+
+    /** GET /1/explore/lb-radio?prompt=artist:({prompt})&mode={mode}. Requires authToken. */
+    suspend fun getRadio(
+        artistPrompt: String,
+        mode: String,
+    ): List<ListenBrainzRadioTrack> {
+        val token = authToken ?: return emptyList()
+        return rateLimiter.execute {
+            val encoded = java.net.URLEncoder.encode("artist:($artistPrompt)", "UTF-8")
+            val url = "$BASE_URL/explore/lb-radio?prompt=$encoded&mode=$mode"
+            val headers = mapOf("Authorization" to "Token $token")
+            val json = when (val r = httpClient.fetchJsonResult(url, headers)) {
+                is HttpResult.Ok -> r.body
+                else -> return@execute emptyList()
+            }
+            parseJspfPlaylist(json)
+        }
+    }
+
+    private fun parseJspfPlaylist(json: JSONObject): List<ListenBrainzRadioTrack> {
+        val tracks = json
+            .optJSONObject("payload")
+            ?.optJSONObject("jspf")
+            ?.optJSONObject("playlist")
+            ?.optJSONArray("track")
+            ?: return emptyList()
+        val results = mutableListOf<ListenBrainzRadioTrack>()
+        for (i in 0 until tracks.length()) {
+            parseJspfTrack(tracks.getJSONObject(i))?.let { results += it }
+        }
+        return results
+    }
+
+    private fun parseJspfTrack(track: JSONObject): ListenBrainzRadioTrack? {
+        val title = track.optString("title").takeIf { it.isNotBlank() } ?: return null
+        val creator = track.optString("creator").takeIf { it.isNotBlank() } ?: return null
+        val extension = track.optJSONObject("extension")
+            ?.optJSONObject("https://musicbrainz.org/doc/jspf#playlist")
+        return ListenBrainzRadioTrack(
+            title = title,
+            artist = creator,
+            album = track.optString("album").takeIf { it.isNotBlank() },
+            durationMs = track.optLong("duration", 0L).takeIf { it > 0 },
+            recordingMbid = extractMbid(track.optJSONArray("identifier")?.optString(0)),
+            artistMbid = extractMbid(
+                extension?.optJSONArray("artist_identifiers")?.optString(0)
+            ),
+            releaseMbid = extractMbid(extension?.optString("release_identifier")),
+        )
+    }
+
+    /** Extracts UUID from MusicBrainz URL: https://musicbrainz.org/{type}/{uuid} -> uuid */
+    private fun extractMbid(url: String?): String? =
+        url?.takeIf { it.contains("musicbrainz.org/") }
+            ?.substringAfterLast("/")
+            ?.takeIf { it.isNotBlank() }
 
     private fun parseTopReleaseGroups(
         jsonArray: JSONArray,

@@ -41,45 +41,53 @@ class DefaultHttpClient(
     }
 
     override suspend fun fetchJsonResult(url: String): HttpResult<JSONObject> =
-        withContext(Dispatchers.IO) {
-            try {
-                val conn = openConnection(url).apply { connect() }
-                try {
-                    val code = conn.responseCode
-                    when {
-                        code == 429 -> {
-                            val retryMs = conn.getHeaderField("Retry-After")
-                                ?.toLongOrNull()?.let { it * 1000 }
-                            HttpResult.RateLimited(retryMs)
-                        }
-                        code in 400..499 -> {
-                            val body = readErrorBody(conn)
-                            HttpResult.ClientError(code, body)
-                        }
-                        code in 500..599 -> {
-                            val body = readErrorBody(conn)
-                            HttpResult.ServerError(code, body)
-                        }
-                        code in 200..299 -> {
-                            val text = conn.responseStream().bufferedReader()
-                                .use { it.readText() }
-                            try {
-                                HttpResult.Ok(JSONObject(text), code)
-                            } catch (e: JSONException) {
-                                HttpResult.NetworkError(
-                                    "JSON parse error: ${e.message}", e,
-                                )
-                            }
-                        }
-                        else -> HttpResult.ClientError(code)
-                    }
-                } finally {
-                    conn.disconnect()
-                }
-            } catch (e: IOException) {
-                HttpResult.NetworkError(e.message ?: "Network error", e)
+        fetchJsonResult(url, emptyMap())
+
+    override suspend fun fetchJsonResult(
+        url: String,
+        headers: Map<String, String>,
+    ): HttpResult<JSONObject> = withContext(Dispatchers.IO) {
+        try {
+            val conn = openConnection(url).apply {
+                headers.forEach { (k, v) -> setRequestProperty(k, v) }
+                connect()
             }
+            try {
+                val code = conn.responseCode
+                when {
+                    code == 429 -> {
+                        val retryMs = conn.getHeaderField("Retry-After")
+                            ?.toLongOrNull()?.let { it * 1000 }
+                        HttpResult.RateLimited(retryMs)
+                    }
+                    code in 400..499 -> {
+                        val body = readErrorBody(conn)
+                        HttpResult.ClientError(code, body)
+                    }
+                    code in 500..599 -> {
+                        val body = readErrorBody(conn)
+                        HttpResult.ServerError(code, body)
+                    }
+                    code in 200..299 -> {
+                        val text = conn.responseStream().bufferedReader()
+                            .use { it.readText() }
+                        try {
+                            HttpResult.Ok(JSONObject(text), code)
+                        } catch (e: JSONException) {
+                            HttpResult.NetworkError(
+                                "JSON parse error: ${e.message}", e,
+                            )
+                        }
+                    }
+                    else -> HttpResult.ClientError(code)
+                }
+            } finally {
+                conn.disconnect()
+            }
+        } catch (e: IOException) {
+            HttpResult.NetworkError(e.message ?: "Network error", e)
         }
+    }
 
     override suspend fun fetchJsonArrayResult(url: String): HttpResult<JSONArray> =
         withContext(Dispatchers.IO) {
