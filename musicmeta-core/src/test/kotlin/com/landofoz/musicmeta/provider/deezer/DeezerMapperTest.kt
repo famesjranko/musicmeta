@@ -140,23 +140,8 @@ class DeezerMapperTest {
     }
 
     @Test
-    fun `toTrackPreview defaults durationMs to 30000 when durationSec is null`() {
-        // Given — a track with preview but unknown duration
-        val result = DeezerTrackSearchResult(
-            id = 2L, title = "T", artistName = "A",
-            previewUrl = "https://example.com/preview.mp3", durationSec = null,
-        )
-
-        // When
-        val preview = DeezerMapper.toTrackPreview(result)
-
-        // Then — durationMs defaults to 30000 (30 seconds)
-        assertEquals(30000L, preview!!.durationMs)
-    }
-
-    @Test
-    fun `toTrackPreview converts durationSec to milliseconds`() {
-        // Given — a track with 45-second duration
+    fun `toTrackPreview always returns 30000ms regardless of track duration`() {
+        // Given — a track with a 45-second full duration (preview is always 30s)
         val result = DeezerTrackSearchResult(
             id = 3L, title = "T", artistName = "A",
             previewUrl = "https://example.com/preview.mp3", durationSec = 45,
@@ -165,7 +150,7 @@ class DeezerMapperTest {
         // When
         val preview = DeezerMapper.toTrackPreview(result)
 
-        // Then — 45 * 1000 = 45000
-        assertEquals(45000L, preview!!.durationMs)
+        // Then — preview duration is always 30000ms (Deezer previews are 30 seconds)
+        assertEquals(30000L, preview!!.durationMs)
     }
 }

@@ -523,7 +523,7 @@ class DeezerProviderTest {
         assertTrue(result is EnrichmentResult.Success)
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.TrackPreview
         assertEquals("https://cdns-preview.dzcdn.net/stream/abc123.mp3", data.url)
-        assertEquals(253000L, data.durationMs)
+        assertEquals(30000L, data.durationMs)
         assertEquals("deezer", data.source)
     }
 
