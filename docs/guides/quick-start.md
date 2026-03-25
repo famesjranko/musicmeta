@@ -14,6 +14,7 @@ val engine = EnrichmentEngine.Builder()
         lastFmKey = "...",              // optional — enables Last.fm
         fanartTvProjectKey = "...",     // optional — enables Fanart.tv
         discogsPersonalToken = "...",   // optional — enables Discogs
+        listenBrainzToken = "...",      // optional — enables LB Radio discovery
     ))
     .build()
 ```
@@ -75,6 +76,7 @@ profile.topTracks?.tracks            // List<TopTrack> merged from up to 3 provi
 profile.similarArtists?.artists      // List<SimilarArtist> with matchScore and sources
 profile.similarAlbums?.albums        // List<SimilarAlbum>
 profile.radio?.tracks                // List<RadioTrack> — Deezer artist radio playlist
+profile.radioDiscovery?.tracks       // List<RadioTrack> — ListenBrainz community radio
 profile.timeline                     // List<TimelineEvent> — formed, albums, milestones
 profile.genreDiscovery               // List<GenreAffinity> — related genres to explore
 ```
@@ -138,6 +140,7 @@ profile.genres                       // List<GenreTag>
 // Stats & recommendations
 profile.popularity?.listenCount
 profile.similarTracks?.tracks        // List<SimilarTrack> with matchScore and sources
+profile.preview?.url                 // 30-second MP3 preview URL (Deezer)
 profile.genreDiscovery               // List<GenreAffinity>
 ```
 
@@ -145,7 +148,7 @@ profile.genreDiscovery               // List<GenreAffinity>
 
 ## Custom type sets
 
-By default, profile methods request all types relevant to the entity (15 for artists, 14 for albums, 8 for tracks). Override to request fewer types for faster responses:
+By default, profile methods request all types relevant to the entity (16 for artists, 14 for albums, 8 for tracks). Override to request fewer types for faster responses:
 
 ```kotlin
 // Only fetch photo and genres — skips bio, discography, timeline, etc.
