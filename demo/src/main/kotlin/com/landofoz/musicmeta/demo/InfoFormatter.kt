@@ -3,6 +3,7 @@ package com.landofoz.musicmeta.demo
 import com.landofoz.musicmeta.CatalogFilterMode
 import com.landofoz.musicmeta.EnrichmentConfig
 import com.landofoz.musicmeta.ProviderInfo
+import com.landofoz.musicmeta.RadioDiscoveryMode
 import com.landofoz.musicmeta.cache.CacheMode
 import com.landofoz.musicmeta.demo.ui.Terminal
 
@@ -45,6 +46,7 @@ object InfoFormatter {
         verbose: Boolean,
         catalogMode: CatalogFilterMode,
         httpBackend: HttpBackend,
+        radioMode: RadioDiscoveryMode,
         term: Terminal,
     ) {
         term.heading("Configuration")
@@ -57,6 +59,7 @@ object InfoFormatter {
             CacheMode.STALE_IF_ERROR -> "stale if error"
         }
         term.keyValue("Stale:", cacheLabel)
+        term.keyValue("Radio Mode:", radioMode.name.lowercase())
         term.keyValue("Verbose:", if (verbose) "on" else "off")
         val modeName = when (catalogMode) {
             CatalogFilterMode.UNFILTERED -> "off"
@@ -89,7 +92,7 @@ object InfoFormatter {
         val missing = providers.filter { !it.isAvailable }
         if (missing.isNotEmpty()) {
             term.println()
-            term.info("Set LASTFM_API_KEY, FANARTTV_API_KEY, DISCOGS_TOKEN for full coverage.")
+            term.info("Set LASTFM_API_KEY, FANARTTV_API_KEY, DISCOGS_TOKEN, LISTENBRAINZ_TOKEN for full coverage.")
         }
     }
 

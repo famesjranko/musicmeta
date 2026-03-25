@@ -5,6 +5,7 @@ import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
+import com.landofoz.musicmeta.RadioDiscoveryMode
 import com.landofoz.musicmeta.albumProfile
 import com.landofoz.musicmeta.artistProfile
 import com.landofoz.musicmeta.cache.CacheMode
@@ -21,7 +22,7 @@ fun handleConfig(args: String, state: DemoState, term: Terminal) {
 
     if (value == null) {
         term.info("Usage: config <key> <value>")
-        term.info("Keys: timeout <ms>, confidence <0.0-1.0>, identity on|off, http default|okhttp, stale on|off")
+        term.info("Keys: timeout <ms>, confidence <0.0-1.0>, identity on|off, http default|okhttp, stale on|off, radiomode easy|medium|hard")
         return
     }
 
@@ -67,7 +68,18 @@ fun handleConfig(args: String, state: DemoState, term: Terminal) {
             state.rebuild()
             term.info("Cache mode: ${mode.name.lowercase().replace("_", " ")}")
         }
-        else -> term.info("Unknown config key: $key. Try: timeout, confidence, identity, http, stale")
+        "radiomode" -> {
+            val mode = when (value.lowercase()) {
+                "easy" -> RadioDiscoveryMode.EASY
+                "medium" -> RadioDiscoveryMode.MEDIUM
+                "hard" -> RadioDiscoveryMode.HARD
+                else -> { term.info("Usage: config radiomode easy|medium|hard"); return }
+            }
+            state.radioMode = mode
+            state.rebuild()
+            term.info("Radio discovery mode: ${mode.name.lowercase()}")
+        }
+        else -> term.info("Unknown config key: $key. Try: timeout, confidence, identity, http, stale, radiomode")
     }
 }
 
@@ -262,6 +274,10 @@ val TYPE_ALIASES = mapOf(
     "discovery" to EnrichmentType.GENRE_DISCOVERY,
     "top" to EnrichmentType.ARTIST_TOP_TRACKS,
     "top-tracks" to EnrichmentType.ARTIST_TOP_TRACKS,
+    "preview" to EnrichmentType.TRACK_PREVIEW,
+    "radio-discovery" to EnrichmentType.ARTIST_RADIO_DISCOVERY,
+    "discover" to EnrichmentType.ARTIST_RADIO_DISCOVERY,
+    "lb-radio" to EnrichmentType.ARTIST_RADIO_DISCOVERY,
 )
 
 /**
