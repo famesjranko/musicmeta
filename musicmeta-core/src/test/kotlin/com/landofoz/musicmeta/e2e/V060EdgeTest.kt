@@ -21,6 +21,7 @@ import com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzProvider
 import com.landofoz.musicmeta.provider.wikidata.WikidataProvider
 import com.landofoz.musicmeta.provider.wikipedia.WikipediaProvider
 import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Assume
@@ -344,6 +345,71 @@ class V060EdgeTest {
         val trackGd = trackResults.raw[EnrichmentType.GENRE_DISCOVERY]
         assertNotNull("ForTrack result should not be null", trackGd)
         println("    ForTrack: ${trackGd?.let { it::class.simpleName }}")
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // ARTIST_TOP_TRACKS & ARTIST_POPULARITY EDGE CASES
+    // ═══════════════════════════════════════════════════════
+
+    @Test
+    fun `07c - top tracks - well-known artist returns tracks with non-blank titles`() = runBlocking {
+        // Given — a well-known artist with expected ListenBrainz data
+        println("\n  --- Radiohead ARTIST_TOP_TRACKS ---")
+        val results = engine.enrich(
+            EnrichmentRequest.forArtist("Radiohead"),
+            setOf(EnrichmentType.ARTIST_TOP_TRACKS),
+        )
+        val tt = results.raw[EnrichmentType.ARTIST_TOP_TRACKS]
+
+        // Then — Success with non-blank titles, artists, and valid ranks
+        assertTrue("Expected Success for Radiohead top tracks", tt is EnrichmentResult.Success)
+        val data = (tt as EnrichmentResult.Success).data as EnrichmentData.TopTracks
+        assertTrue("Should return at least 1 top track", data.tracks.isNotEmpty())
+        data.tracks.forEach { track ->
+            assertTrue("Track title should not be blank (rank=${track.rank})", track.title.isNotBlank())
+            assertTrue("Track artist should not be blank", track.artist.isNotBlank())
+            assertTrue("Rank should be positive: ${track.rank}", track.rank > 0)
+        }
+
+        // Ranks should be sequential starting from 1
+        val ranks = data.tracks.map { it.rank }
+        assertEquals("Ranks should start at 1", 1, ranks.first())
+        assertTrue("Ranks should be ascending", ranks == ranks.sorted())
+
+        println("    tracks: ${data.tracks.size}")
+        data.tracks.take(5).forEach {
+            println("      #${it.rank} ${it.title.take(35).padEnd(35)} ${it.artist.padEnd(20)} listens=${it.listenCount ?: "?"}")
+        }
+    }
+
+    @Test
+    fun `07d - artist popularity - well-known artist has listen counts`() = runBlocking {
+        // Given — a well-known artist
+        println("\n  --- Radiohead ARTIST_POPULARITY ---")
+        val results = engine.enrich(
+            EnrichmentRequest.forArtist("Radiohead"),
+            setOf(EnrichmentType.ARTIST_POPULARITY),
+        )
+        val pop = results.raw[EnrichmentType.ARTIST_POPULARITY]
+
+        // Then — Success with non-null popularity data
+        assertTrue("Expected Success for Radiohead popularity", pop is EnrichmentResult.Success)
+        val data = (pop as EnrichmentResult.Success).data as EnrichmentData.Popularity
+
+        // Top tracks within popularity should also have non-blank titles
+        data.topTracks?.forEach { track ->
+            assertTrue(
+                "Popularity topTrack title should not be blank (rank=${track.rank})",
+                track.title.isNotBlank(),
+            )
+        }
+
+        println("    listens=${data.listenCount}, listeners=${data.listenerCount}")
+        println("    topTracks: ${data.topTracks?.size ?: 0}")
+        data.topTracks?.take(3)?.forEach {
+            println("      #${it.rank} ${it.title.take(35).padEnd(35)} listens=${it.listenCount ?: "?"}")
+        }
+        Unit
     }
 
     // ═══════════════════════════════════════════════════════
