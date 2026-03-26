@@ -36,13 +36,13 @@ class ListenBrainzProviderTest {
             """[
                 {
                     "recording_mbid": "abc",
-                    "track_name": "Creep",
+                    "recording_name": "Creep",
                     "artist_name": "Radiohead",
                     "total_listen_count": 50000
                 },
                 {
                     "recording_mbid": "def",
-                    "track_name": "Karma Police",
+                    "recording_name": "Karma Police",
                     "artist_name": "Radiohead",
                     "total_listen_count": 45000
                 }
@@ -135,19 +135,19 @@ class ListenBrainzProviderTest {
             "listenbrainz.org",
             """[
                 {
-                    "track_name": "No MBID Track",
+                    "recording_name": "No MBID Track",
                     "artist_name": "Radiohead",
                     "total_listen_count": 10000
                 },
                 {
                     "recording_mbid": "",
-                    "track_name": "Blank MBID Track",
+                    "recording_name": "Blank MBID Track",
                     "artist_name": "Radiohead",
                     "total_listen_count": 8000
                 },
                 {
                     "recording_mbid": "valid-mbid-123",
-                    "track_name": "Valid Track",
+                    "recording_name": "Valid Track",
                     "artist_name": "Radiohead",
                     "total_listen_count": 5000
                 }
@@ -256,7 +256,7 @@ class ListenBrainzProviderTest {
             """[
                 {
                     "recording_mbid": "abc",
-                    "track_name": "Creep",
+                    "recording_name": "Creep",
                     "artist_name": "Radiohead",
                     "total_listen_count": 50000
                 }
@@ -286,7 +286,7 @@ class ListenBrainzProviderTest {
             """[
                 {
                     "recording_mbid": "zero-plays",
-                    "track_name": "Unpopular Track",
+                    "recording_name": "Unpopular Track",
                     "artist_name": "Radiohead",
                     "total_listen_count": 0
                 }

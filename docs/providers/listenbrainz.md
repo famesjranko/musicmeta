@@ -29,14 +29,11 @@ Returns a **JSON array** (not object — note: `fetchJsonArray()` not `fetchJson
     "artist_name": "Radiohead",
     "recording_mbid": "b3015bab-...",
     "recording_name": "Creep",
-    "track_name": "Creep",
     "total_listen_count": 234567,
     "total_user_count": 45678,
-    "release": {
-      "mbid": "abc123-...",
-      "name": "Pablo Honey",
-      "color": [120, 80, 60]
-    },
+    "release_name": "Pablo Honey",
+    "release_mbid": "abc123-...",
+    "release_color": {"red": 120, "green": 80, "blue": 60},
     "caa_id": 12345678,
     "caa_release_mbid": "abc123-...",
     "length": 238000
@@ -87,7 +84,7 @@ JSPF `duration` is already in milliseconds. MBIDs are embedded in full MusicBrai
 
 | Field | Source | Notes |
 |-------|--------|-------|
-| Track title | `track_name` | |
+| Track title | `recording_name` | |
 | Recording MBID | `recording_mbid` | Cross-reference with MusicBrainz |
 | Listen count | `total_listen_count` | Cumulative across all users |
 | Rank | Array index + 1 | Implicit ordering by listen count |
@@ -111,7 +108,7 @@ JSPF `duration` is already in milliseconds. MBIDs are embedded in full MusicBrai
 | Field | Where | Useful For |
 |-------|-------|------------|
 | `total_user_count` | Each recording | Listener count (distinct users vs total plays) |
-| `recording_name` | Each recording | Duplicate of `track_name` |
+| `release_name` | Each recording | Album/release name (top-level string, not nested) |
 | `release` | Each recording | Object with `mbid`, `name`, `color` — links to release |
 | `caa_id` | Each recording | Cover Art Archive image ID |
 | `caa_release_mbid` | Each recording | Release MBID for Cover Art Archive lookup |

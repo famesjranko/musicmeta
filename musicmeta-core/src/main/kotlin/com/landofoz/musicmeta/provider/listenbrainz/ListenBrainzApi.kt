@@ -69,15 +69,14 @@ class ListenBrainzApi(
             val item = jsonArray.getJSONObject(i)
             val mbid = item.optString("recording_mbid").takeIf { it.isNotBlank() }
                 ?: continue
-            val release = item.optJSONObject("release")
             results += ListenBrainzPopularTrack(
                 recordingMbid = mbid,
-                title = item.optString("track_name", ""),
+                title = item.optString("recording_name", ""),
                 artistName = item.optString("artist_name", ""),
                 listenCount = item.optLong("total_listen_count", 0L),
                 listenerCount = item.optLong("total_user_count", 0L).takeIf { it > 0 },
                 durationMs = item.optLong("length", 0L).takeIf { it > 0 },
-                albumName = release?.optString("name")?.takeIf { it.isNotBlank() },
+                albumName = item.optString("release_name")?.takeIf { it.isNotBlank() },
             )
         }
         return results
