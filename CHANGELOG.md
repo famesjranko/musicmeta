@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-03-26
+
+### Fixed
+- **Empty top track titles from ListenBrainz** — API parser read `track_name` but the API returns `recording_name`, causing all TopTrack titles to be empty strings
+- **Missing album names from ListenBrainz top tracks** — parser looked for a nested `release` object but the API returns `release_name` as a top-level field
+
 ## [0.9.0] - 2026-03-26
 
 LB Radio & Track Preview — 34 enrichment types.
