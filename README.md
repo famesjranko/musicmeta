@@ -137,6 +137,25 @@ println("Match: ${identity?.match}, score: ${identity?.matchScore}%")
 
 Power users can access the raw result map via `results.raw[EnrichmentType.GENRE]`.
 
+### Partial failure resilience
+
+The engine resolves each enrichment type independently. If one provider fails (network error, rate limit, timeout), other types still return successfully. The engine never throws from `enrich()` -- all failures are represented as typed results:
+
+```kotlin
+val profile = engine.artistProfile("Radiohead")
+
+// Genre failed (rate limited), but bio and photo succeeded
+profile.results.result(EnrichmentType.GENRE)       // -> RateLimited
+profile.results.result(EnrichmentType.ARTIST_BIO)   // -> Success
+profile.results.result(EnrichmentType.ARTIST_PHOTO)  // -> Success
+
+// Profile accessors return null for failed types, populated for successful ones
+profile.bio?.text    // -> "Radiohead are an English rock band..."
+profile.genres       // -> emptyList() (failed gracefully)
+```
+
+This means callers can safely use a single `artistProfile()` call without worrying about all-or-nothing failures. Each field on the profile is independently nullable based on whether its enrichment type succeeded.
+
 ### Disambiguation
 
 ```kotlin
@@ -153,8 +172,8 @@ The `musicmeta-android` module adds Room-backed persistent caching, a Hilt DI mo
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("io.github.famesjranko:musicmeta-core:0.9.0")
-    implementation("io.github.famesjranko:musicmeta-android:0.9.0") // Android only
+    implementation("io.github.famesjranko:musicmeta-core:0.9.2")
+    implementation("io.github.famesjranko:musicmeta-android:0.9.2") // Android only
 }
 ```
 
@@ -237,9 +256,9 @@ val engine = EnrichmentEngine.Builder()
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("io.github.famesjranko:musicmeta-core:0.9.0")
-    implementation("io.github.famesjranko:musicmeta-okhttp:0.9.0")   // Optional: OkHttp adapter
-    implementation("io.github.famesjranko:musicmeta-android:0.9.0")  // Optional: Android (Room cache, Hilt, WorkManager)
+    implementation("io.github.famesjranko:musicmeta-core:0.9.2")
+    implementation("io.github.famesjranko:musicmeta-okhttp:0.9.2")   // Optional: OkHttp adapter
+    implementation("io.github.famesjranko:musicmeta-android:0.9.2")  // Optional: Android (Room cache, Hilt, WorkManager)
 }
 ```
 
@@ -261,9 +280,9 @@ dependencyResolutionManagement {
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("com.github.famesjranko.musicmeta:musicmeta-core:v0.9.0")
-    implementation("com.github.famesjranko.musicmeta:musicmeta-okhttp:v0.9.0")   // Optional: OkHttp adapter
-    implementation("com.github.famesjranko.musicmeta:musicmeta-android:v0.9.0")  // Optional: Android
+    implementation("com.github.famesjranko.musicmeta:musicmeta-core:v0.9.2")
+    implementation("com.github.famesjranko.musicmeta:musicmeta-okhttp:v0.9.2")   // Optional: OkHttp adapter
+    implementation("com.github.famesjranko.musicmeta:musicmeta-android:v0.9.2")  // Optional: Android
 }
 ```
 
@@ -290,7 +309,7 @@ dependencies {
 ./gradlew publishToMavenLocal
 ```
 
-Then consume as `io.github.famesjranko:musicmeta-core:0.9.0` from `mavenLocal()`.
+Then consume as `io.github.famesjranko:musicmeta-core:0.9.2` from `mavenLocal()`.
 
 ## Documentation
 
