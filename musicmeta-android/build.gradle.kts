@@ -10,7 +10,7 @@ plugins {
 }
 
 group = "io.github.famesjranko"
-version = "0.9.1"
+version = "0.9.2"
 
 android {
     namespace = "com.landofoz.musicmeta.android"
