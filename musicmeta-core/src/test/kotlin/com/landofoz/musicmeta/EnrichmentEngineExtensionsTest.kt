@@ -255,6 +255,68 @@ class EnrichmentEngineExtensionsTest {
         assertTrue(engine.lastForceRefresh)
     }
 
+    // --- identifiers passthrough ---
+
+    @Test fun `trackProfile passes identifiers with deezerId to request`() = runTest {
+        // Given — identifiers with a deezerId from a previous top tracks enrichment
+        val engine = FakeEngine()
+        val ids = EnrichmentIdentifiers(musicBrainzId = "rec-mbid").withExtra("deezerId", "789")
+
+        // When — calling trackProfile with pre-resolved identifiers
+        engine.trackProfile("Karma Police", "Radiohead", identifiers = ids)
+
+        // Then — the request carries both musicBrainzId and deezerId
+        val req = engine.lastRequest as EnrichmentRequest.ForTrack
+        assertEquals("rec-mbid", req.identifiers.musicBrainzId)
+        assertEquals("789", req.identifiers.extra["deezerId"])
+    }
+
+    @Test fun `forTrack merges mbid into provided identifiers`() {
+        // Given — identifiers with deezerId, plus a separate mbid
+        val ids = EnrichmentIdentifiers().withExtra("deezerId", "789")
+
+        // When — creating a request with both mbid and identifiers
+        val request = EnrichmentRequest.forTrack("Karma Police", "Radiohead", mbid = "override-mbid", identifiers = ids)
+
+        // Then — mbid is merged into identifiers, deezerId is preserved
+        assertEquals("override-mbid", request.identifiers.musicBrainzId)
+        assertEquals("789", request.identifiers.extra["deezerId"])
+    }
+
+    @Test fun `artistProfile passes identifiers to request`() = runTest {
+        val engine = FakeEngine()
+        val ids = EnrichmentIdentifiers().withExtra("deezerId", "399")
+
+        engine.artistProfile("Radiohead", identifiers = ids)
+
+        val req = engine.lastRequest as EnrichmentRequest.ForArtist
+        assertEquals("399", req.identifiers.extra["deezerId"])
+    }
+
+    @Test fun `resolveTrackPreviews returns previews for tracks with deezerId`() = runTest {
+        // Given — engine returns preview for requested track
+        val engine = FakeEngine()
+        engine.resultsToReturn = mapOf(
+            EnrichmentType.TRACK_PREVIEW to EnrichmentResult.Success(
+                EnrichmentType.TRACK_PREVIEW,
+                EnrichmentData.TrackPreview("https://preview.mp3", 30000L, "deezer"),
+                "deezer", 0.9f,
+            ),
+        )
+
+        // When — resolving preview for a track with deezerId
+        val results = engine.resolveTrackPreviews(
+            listOf(TrackPreviewRequest("Karma Police", "Radiohead",
+                identifiers = EnrichmentIdentifiers().withExtra("deezerId", "789"))),
+        )
+
+        // Then — preview is returned
+        assertEquals(1, results.size)
+        assertEquals("Karma Police", results[0].title)
+        assertNotNull(results[0].preview)
+        assertEquals("https://preview.mp3", results[0].preview!!.url)
+    }
+
     // --- defaultTypesFor ---
 
     @Test fun `default type sets are composable via set algebra`() {

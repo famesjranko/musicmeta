@@ -590,6 +590,40 @@ class DeezerProviderTest {
         assertEquals(100, trackPreviewCap!!.priority)
     }
 
+    @Test
+    fun `enrich skips track search for TRACK_PREVIEW when deezerId is in identifiers`() = runTest {
+        // Given — request has deezerId cached, only direct track endpoint needed
+        httpClient.givenJsonResponse("track/789", TRACK_BY_ID_RESPONSE)
+        val request = EnrichmentRequest.forTrack("Karma Police", "Radiohead",
+            identifiers = EnrichmentIdentifiers().withExtra("deezerId", "789"),
+        )
+
+        // When — enriching for track preview
+        val result = provider.enrich(request, EnrichmentType.TRACK_PREVIEW)
+
+        // Then — success without a search/track call
+        assertTrue(result is EnrichmentResult.Success)
+        val preview = (result as EnrichmentResult.Success).data as EnrichmentData.TrackPreview
+        assertEquals("https://cdns-preview.dzcdn.net/stream/abc123.mp3", preview.url)
+        val urls = httpClient.requestedUrls
+        assertTrue("Should not call search endpoint", urls.none { it.contains("search/track") })
+    }
+
+    @Test
+    fun `enrich returns NotFound for TRACK_PREVIEW fast path when track has no preview`() = runTest {
+        // Given — track exists but has no preview URL
+        httpClient.givenJsonResponse("track/789", TRACK_BY_ID_NO_PREVIEW_RESPONSE)
+        val request = EnrichmentRequest.forTrack("Karma Police", "Radiohead",
+            identifiers = EnrichmentIdentifiers().withExtra("deezerId", "789"),
+        )
+
+        // When — enriching for track preview
+        val result = provider.enrich(request, EnrichmentType.TRACK_PREVIEW)
+
+        // Then — NotFound because no preview URL
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
     companion object {
         val RADIO_RESPONSE = """
             {"data":[
@@ -657,6 +691,14 @@ class DeezerProviderTest {
                 {"id":201,"title":"No Surprises","artist":{"name":"Radiohead"},"album":{"title":"OK Computer"},"duration":229},
                 {"id":202,"title":"Exit Music (For a Film)","artist":{"name":"Radiohead"},"album":{"title":"OK Computer"},"duration":277}
             ]}
+        """.trimIndent()
+
+        val TRACK_BY_ID_RESPONSE = """
+            {"id":789,"title":"Karma Police","artist":{"name":"Radiohead"},"preview":"https://cdns-preview.dzcdn.net/stream/abc123.mp3","duration":253,"album":{"title":"OK Computer"}}
+        """.trimIndent()
+
+        val TRACK_BY_ID_NO_PREVIEW_RESPONSE = """
+            {"id":789,"title":"Karma Police","artist":{"name":"Radiohead"},"preview":"","duration":253,"album":{"title":"OK Computer"}}
         """.trimIndent()
 
         val DEEZER_RESPONSE = """

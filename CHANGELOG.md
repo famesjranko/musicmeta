@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.2] - 2026-03-27
+
+Track preview fast path — 4-5x faster preview resolution when deezerId is known.
+
+### Added
+- **`identifiers` parameter on `forTrack()`, `forArtist()`, `forAlbum()`** — pass pre-resolved identifiers (e.g., from top tracks) so providers can skip search/identity resolution. Backwards compatible: new parameter has a default value of `null`.
+- **`identifiers` parameter on `trackProfile()`, `artistProfile()`, `albumProfile()`** — same as above, flows through to the request factory.
+- **`resolveTrackPreviews()` batch extension** — resolves preview URLs for multiple tracks concurrently. Accepts `List<TrackPreviewRequest>`, returns `List<TrackPreviewResult>`. Fans out via coroutines internally.
+- **`DeezerApi.getTrack(trackId)`** — fetches a single track by Deezer ID, including preview URL. Used by the fast path.
+
+### Changed
+- **Deezer `TRACK_PREVIEW` fast path** — when `deezerId` is present in request identifiers, the provider calls `getTrack(id)` directly instead of searching by title/artist. Skips MusicBrainz identity resolution entirely. Cold lookup drops from ~2-3s to ~540ms per track; batch of 10 tracks drops from ~20-30s to ~5.5s.
+
 ## [0.9.1] - 2026-03-26
 
 ### Fixed

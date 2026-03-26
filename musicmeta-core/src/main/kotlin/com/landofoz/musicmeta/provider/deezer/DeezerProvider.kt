@@ -233,14 +233,19 @@ class DeezerProvider(
         val trackRequest = request as? EnrichmentRequest.ForTrack
             ?: return EnrichmentResult.NotFound(EnrichmentType.TRACK_PREVIEW, id)
 
-        val searchResult = api.searchTrack(trackRequest.title, trackRequest.artist)
-            ?: return EnrichmentResult.NotFound(EnrichmentType.TRACK_PREVIEW, id)
+        val deezerId = request.identifiers.extra["deezerId"]?.toLongOrNull()
+        val trackResult = if (deezerId != null) {
+            api.getTrack(deezerId)
+        } else {
+            val result = api.searchTrack(trackRequest.title, trackRequest.artist)
+                ?: return EnrichmentResult.NotFound(EnrichmentType.TRACK_PREVIEW, id)
+            if (!ArtistMatcher.isMatch(trackRequest.artist, result.artistName)) {
+                return EnrichmentResult.NotFound(EnrichmentType.TRACK_PREVIEW, id)
+            }
+            result
+        } ?: return EnrichmentResult.NotFound(EnrichmentType.TRACK_PREVIEW, id)
 
-        if (!ArtistMatcher.isMatch(trackRequest.artist, searchResult.artistName)) {
-            return EnrichmentResult.NotFound(EnrichmentType.TRACK_PREVIEW, id)
-        }
-
-        val preview = DeezerMapper.toTrackPreview(searchResult)
+        val preview = DeezerMapper.toTrackPreview(trackResult)
             ?: return EnrichmentResult.NotFound(EnrichmentType.TRACK_PREVIEW, id)
 
         return EnrichmentResult.Success(
@@ -248,7 +253,7 @@ class DeezerProvider(
             data = preview,
             provider = id,
             confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
-            resolvedIdentifiers = EnrichmentIdentifiers().withExtra("deezerId", searchResult.id.toString()),
+            resolvedIdentifiers = EnrichmentIdentifiers().withExtra("deezerId", trackResult.id.toString()),
         )
     }
 

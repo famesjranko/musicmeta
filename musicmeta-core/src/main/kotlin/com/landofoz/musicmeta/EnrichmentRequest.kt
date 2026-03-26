@@ -41,11 +41,29 @@ sealed class EnrichmentRequest {
     }
 
     companion object {
-        fun forAlbum(title: String, artist: String, mbid: String? = null) =
-            ForAlbum(EnrichmentIdentifiers(musicBrainzId = mbid), title, artist)
+        fun forAlbum(
+            title: String,
+            artist: String,
+            mbid: String? = null,
+            identifiers: EnrichmentIdentifiers? = null,
+        ) = ForAlbum(
+            identifiers = (identifiers ?: EnrichmentIdentifiers()).let {
+                if (mbid != null) it.copy(musicBrainzId = mbid) else it
+            },
+            title = title,
+            artist = artist,
+        )
 
-        fun forArtist(name: String, mbid: String? = null) =
-            ForArtist(EnrichmentIdentifiers(musicBrainzId = mbid), name)
+        fun forArtist(
+            name: String,
+            mbid: String? = null,
+            identifiers: EnrichmentIdentifiers? = null,
+        ) = ForArtist(
+            identifiers = (identifiers ?: EnrichmentIdentifiers()).let {
+                if (mbid != null) it.copy(musicBrainzId = mbid) else it
+            },
+            name = name,
+        )
 
         fun forTrack(
             title: String,
@@ -53,7 +71,16 @@ sealed class EnrichmentRequest {
             album: String? = null,
             durationMs: Long? = null,
             mbid: String? = null,
-        ) = ForTrack(EnrichmentIdentifiers(musicBrainzId = mbid), title, artist, album, durationMs)
+            identifiers: EnrichmentIdentifiers? = null,
+        ) = ForTrack(
+            identifiers = (identifiers ?: EnrichmentIdentifiers()).let {
+                if (mbid != null) it.copy(musicBrainzId = mbid) else it
+            },
+            title = title,
+            artist = artist,
+            album = album,
+            durationMs = durationMs,
+        )
 
         /** Types meaningful for [ForArtist] requests. */
         val DEFAULT_ARTIST_TYPES: Set<EnrichmentType> = setOf(

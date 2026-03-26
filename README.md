@@ -84,6 +84,26 @@ val minimal = engine.artistProfile("Radiohead", types = setOf(
 ))
 ```
 
+### Fast path: pre-resolved identifiers
+
+When you already have identifiers from a previous enrichment (e.g., top tracks carry `deezerId`), pass them through to skip identity resolution:
+
+```kotlin
+// Single track -- skips MusicBrainz, goes straight to Deezer (~540ms vs ~3s)
+val preview = engine.trackProfile(
+    title = topTrack.title,
+    artist = topTrack.artist,
+    identifiers = topTrack.identifiers,  // has deezerId
+    types = setOf(EnrichmentType.TRACK_PREVIEW),
+)
+
+// Batch -- resolves 10 preview URLs concurrently (~5s vs ~30s)
+val previews = engine.resolveTrackPreviews(
+    topTracks.map { TrackPreviewRequest(it.title, it.artist, identifiers = it.identifiers) }
+)
+previews.forEach { println("${it.title}: ${it.preview?.url}") }
+```
+
 ### Flexible: enrich + named accessors
 
 For full control over the request and per-type diagnostics:

@@ -233,6 +233,24 @@ class DeezerApi(
         }
     }
 
+    /** Fetches a single track by Deezer ID. Returns preview URL and metadata. */
+    suspend fun getTrack(trackId: Long): DeezerTrackSearchResult? = rateLimiter.execute {
+        val url = "$BASE_URL/track/$trackId"
+        val json = when (val r = httpClient.fetchJsonResult(url)) {
+            is HttpResult.Ok -> r.body
+            else -> return@execute null
+        }
+        val artist = json.optJSONObject("artist")
+        DeezerTrackSearchResult(
+            id = json.optLong("id"),
+            title = json.optString("title", ""),
+            artistName = artist?.optString("name", "") ?: "",
+            previewUrl = json.optString("preview").takeIf { it.isNotBlank() },
+            durationSec = json.optInt("duration").takeIf { it > 0 },
+            albumTitle = json.optJSONObject("album")?.optString("title")?.takeIf { it.isNotBlank() },
+        )
+    }
+
     private companion object {
         const val BASE_URL = "https://api.deezer.com"
     }

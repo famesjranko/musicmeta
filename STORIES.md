@@ -7,6 +7,24 @@
 
 ## Decisions
 
+### 2026-03-27: v0.9.2 — Track preview fast path and identifiers passthrough
+
+**Context**: Cascade's discovery page loaded in ~20-30 seconds because resolving preview URLs for top tracks required MusicBrainz identity resolution (1 req/sec rate-limited) before each Deezer lookup. But the top tracks already carried `deezerId` in their `identifiers.extra` from the initial fetch — the round-trip through MusicBrainz was unnecessary.
+
+**Decisions**:
+
+- **`identifiers` parameter on factory methods, not a separate API**: Added `identifiers: EnrichmentIdentifiers? = null` to `forTrack()`, `forArtist()`, `forAlbum()` and their profile extension counterparts. This is general-purpose — any provider can check for pre-resolved identifiers, not just Deezer. Backwards compatible via default parameter.
+
+- **Fast path in DeezerProvider, not engine-level bypass**: The deezerId check lives in `enrichTrackPreview()` (same pattern already used by `enrichTopTracks`, `enrichArtistRadio`, `enrichSimilarArtists`). This keeps identity resolution as the engine's concern and provider-specific optimizations in providers.
+
+- **`resolveTrackPreviews()` batch method**: A convenience extension that fans out via `coroutineScope { async {} }`, requesting only `TRACK_PREVIEW` per track. Deezer's 100ms rate limiter serializes the API calls naturally. 10 tracks ≈ 1s + overhead vs 20-30s before.
+
+**Result**: Cold preview resolution dropped from ~2-3s to ~540ms per track. Batch of 10 tracks: ~5.5s. Batch of 20: ~10.8s (previously would timeout).
+
+**Status**: Shipped
+
+---
+
 ### 2026-03-26: v0.9.0 — Two new enrichment types: TRACK_PREVIEW and ARTIST_RADIO_DISCOVERY
 
 **Context**: musicmeta's `ARTIST_RADIO` type was single-source (Deezer). Deezer's catalog skews mainstream, leaving niche and indie artists with thin or empty results. Separately, when radio or discovery results include tracks the user doesn't own, consumers had no way to let users audition them. Both gaps were addressable with existing Deezer and ListenBrainz infrastructure.
