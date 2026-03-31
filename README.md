@@ -1,4 +1,4 @@
-![Musicmeta banner](docs/musicmeta-banner.png)
+![Musicmeta banner](docs/musicmeta-banner.svg)
 
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.famesjranko/musicmeta-core)](https://central.sonatype.com/artifact/io.github.famesjranko/musicmeta-core)
 [![JitPack](https://jitpack.io/v/famesjranko/musicmeta.svg)](https://jitpack.io/#famesjranko/musicmeta)
