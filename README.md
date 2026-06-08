@@ -1,9 +1,13 @@
 ![Musicmeta banner](docs/musicmeta-banner.png)
 
+<div align="center">
+         
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.famesjranko/musicmeta-core)](https://central.sonatype.com/artifact/io.github.famesjranko/musicmeta-core)
 [![JitPack](https://jitpack.io/v/famesjranko/musicmeta.svg)](https://jitpack.io/#famesjranko/musicmeta)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.1.0-%237F52FF?logo=kotlin)](https://kotlinlang.org)
+
+</div>
 
 A Kotlin library that gives Android and JVM music apps access to rich metadata, artwork, and discovery features -- without a commercial API. Ask for as much or as little as you need: all 34 enrichment types at once, a single artist photo, just lyrics, or anything in between.
 
