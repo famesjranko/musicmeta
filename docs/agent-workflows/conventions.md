@@ -241,3 +241,43 @@ is given, what action is taken, and what outcome is expected — not bare sectio
 **Git.** No `Co-Authored-By`, no "Generated with Claude", no AI or tool attribution in any commit, PR,
 issue comment, or anything else that leaves this machine. Never use `git revert` — use `git reset` or
 manual edits. Always ask permission before destructive git commands.
+
+**Claims about behaviour must be executed, not asserted.** If a comment, doc, `CHANGELOG` entry, PR
+body or commit message states what the code does, either run it or mark the claim unverified. The
+reviewer subagent should treat an unexecuted behavioural claim as a finding in its own right — it is
+the defect class this repo has produced most often and the one review is worst at catching, because
+a reviewer only checks a doc against the code if it thinks to.
+
+Worked example, kept because it recurred three times: the `demo/` canary was described in four files
+as the guard against a mid-list parameter insertion. It is not. Kotlin rebinds positional arguments
+silently, so an insertion carrying a default only fails to compile when the rebinding *also* produces
+a type error — v0.9.2 was caught by luck of typing. Two successive corrections to that claim were
+themselves wrong, in opposite directions, because each was reasoned about rather than compiled.
+
+## 10. The fix loop
+
+Applies when a review finding sends work back to the code — the highest-risk moment in either skill,
+because a fix is unreviewed code written once the hard thinking feels done. Assume every fix
+introduces its own defect until shown otherwise. Both the `ship-issue` and `ship-pr` skills encode
+this; it is restated here because the reviewer subagent checks against *this* file.
+
+Per validated finding:
+
+1. **Reproduce before fixing.** Build the failing case first; the fix is not done until it passes. A
+   finding that cannot be reproduced is not validated — say so rather than fixing speculatively.
+2. **Derive the fix from the code.** Where a finding says "X is not handled", read what actually
+   transforms X and enumerate cases from that, not from imagination.
+3. **Trace the fix's own failure modes** before committing — especially anything added under
+   `set -e`/`pipefail`, inside a redirect block, or in a step whose failure is another step's control
+   flow. Ask what happens when the thing you added *fails*, not only when it works.
+4. **Re-run the reviewer's exact scenario**, not a convenient approximation.
+
+Then: **declare your own suspicions** in the re-review prompt; **resume the same reviewer** across
+rounds rather than spawning a fresh one, since it catches regressions largely by remembering the
+prior version; and **plan the batch first** when a round returns roughly five or more findings or any
+finding lands in a §7 danger zone.
+
+**Stopping rule.** Iterate until a round is clean at blocker and major severity. Minors and nits do
+not justify another round — fix them and move on. If three consecutive rounds each find a new defect
+introduced by the previous fix, stop and report rather than continuing: that pattern means the change
+is not well understood, and further rounds will not fix that.
