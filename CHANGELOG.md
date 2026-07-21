@@ -7,7 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-_Nothing yet._
+### Changed
+- **CI: the API-drift watch finds its tracking issue by label, not by title text** — `api-drift.yml` now looks its single `[api-drift-bot]` tracker up via a dedicated `api-drift` label, falling back to the old title search only when the label lookup comes back empty (and re-applying the label with a `::warning::` when it does). GitHub's issue-search tokenizer strips bracket punctuation, so `[api-drift-bot] in:title` was really searching for the words "api drift bot" ranked by relevance — the `startswith` filter kept it correct, but the real tracker still competed with unrelated matches for the 100 result slots and could page out silently, at which point the watch files a *duplicate* tracker every week and keeps doing so. This is the lookup `provider-drift.yml` already shipped with; it is now the same on both watches. (#14)
 
 ## [0.10.0] - 2026-07-22
 

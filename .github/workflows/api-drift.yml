@@ -133,10 +133,11 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Stable, collision-proof marker. Search is scoped to this exact title prefix so we never
-          # match a human-filed issue and never file a duplicate.
+          # TRACKER_LABEL is the tracker's identity, not a category: this job retitles, rewrites and
+          # auto-closes whatever open issue carries it. Never apply it to a hand-filed issue.
           TITLE_MARKER='[api-drift-bot]'
           TITLE="${TITLE_MARKER} API drift / demo-canary breakage on dev"
+          TRACKER_LABEL='api-drift'
 
           demo_broken=false
           if [ "${DEMO_RESULT}" != "success" ]; then
@@ -157,18 +158,25 @@ jobs:
             detect_failed=true
           fi
 
-          # Find the single existing open tracker, if any. `--limit 100` because the default of 30
-          # would let the real tracker paginate out of the result set once the repo carries enough
-          # open issues matching the search — and a tracker that pages out is a tracker this job
-          # files a duplicate of, every week.
-          # `|| true` because this was the last unguarded external call in the step: under
-          # `set -euo pipefail` a 502 or a secondary rate limit here aborts before any of the
-          # file guards below are reached, filing nothing — the same silent failure the guards
-          # and the step condition exist to remove. An empty result is already handled: it
-          # routes to `gh issue create`, so the worst case degrades to a duplicate tracker
-          # rather than silence.
-          existing="$(gh issue list --state open --limit 100 --search "${TITLE_MARKER} in:title" \
-            --json number,title --jq '[.[] | select(.title | startswith("'"${TITLE_MARKER}"'"))][0].number // empty' || true)"
+          # By label, not title text: GitHub's search tokenizer strips brackets, so
+          # `[api-drift-bot] in:title` degrades to relevance-ranked words and the real tracker can
+          # page out of 100 results — after which this job files a duplicate every week.
+          # `|| true` so a 502 here cannot abort the step before anything is filed; an empty result
+          # already routes to `gh issue create`.
+          existing="$(gh issue list --state open --label "${TRACKER_LABEL}" --limit 100 \
+            --json number --jq '.[0].number // empty' || true)"
+
+          # `gh issue list --label` on a DELETED label exits 0 with empty output, so without this
+          # fallback a maintainer removing the label during triage routes every run to `create`.
+          if [ -z "${existing}" ]; then
+            existing="$(gh issue list --state open --limit 100 --search "${TITLE_MARKER} in:title" \
+              --json number,title \
+              --jq '[.[] | select(.title | startswith("'"${TITLE_MARKER}"'"))][0].number // empty' || true)"
+            if [ -n "${existing}" ]; then
+              echo "::warning::Found tracker #${existing} by title, not by label — the '${TRACKER_LABEL}' label may have been removed. Re-applying."
+              gh issue edit "${existing}" --add-label "${TRACKER_LABEL}" || true
+            fi
+          fi
 
           if [ "${API_DRIFT}" = "false" ] && [ "${demo_broken}" = "false" ] \
              && [ "${apidump_failed}" = "false" ] && [ "${detect_failed}" = "false" ]; then
@@ -266,8 +274,11 @@ jobs:
               --body "Drift still present as of ${RUN_URL}. Issue body updated with the latest diff."
             echo "Updated existing tracking issue #${existing}."
           else
+            # TRACKER_LABEL is what the lookup keys on, so a tracker filed without it is invisible
+            # next run. The label-less fallback stays regardless: `--label` fails outright on a
+            # missing label, and filing something the title fallback can find beats filing nothing.
             gh issue create --title "${TITLE}" --body-file issue-body.md \
-              --label area/ci --label enhancement || \
+              --label "${TRACKER_LABEL}" --label area/ci --label enhancement || \
             gh issue create --title "${TITLE}" --body-file issue-body.md
             echo "Filed new tracking issue."
           fi
