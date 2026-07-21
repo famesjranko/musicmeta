@@ -262,21 +262,31 @@ jobs:
           import os, pathlib
 
           limit = int(os.environ.get("SUMMARY_BODY_LIMIT", "40000"))
+          byte_limit = int(os.environ.get("SUMMARY_BYTE_LIMIT", "50000"))
           src = pathlib.Path(os.environ["RAW"]).read_text(encoding="utf-8")
 
           lines = []
           for line in src.splitlines():
               lines.append(line if len(line) <= 400 else line[:400] + " …[line truncated]")
 
-          out, used, dropped = [], 0, 0
-          for line in lines:
-              # +1 for the newline. Measured in characters; UTF-8 bytes >= characters, and the
-              # consumer limit is characters, so this is the correct unit and errs safe.
-              if used + len(line) + 1 > limit:
-                  dropped += 1
-                  continue
+          # Bound BOTH characters and bytes. GitHub's limit is documented in characters, but a
+          # predominantly non-ASCII body can be well under 65536 characters and far over 65536
+          # bytes (a measured worst case: 40958 characters, 71097 bytes). Capping characters alone
+          # would remove a bound that was previously safe by construction, and the failure mode is
+          # a 422 that files nothing — the outcome this workflow exists to prevent. Bytes cost
+          # nothing to track, so track them.
+          out, used, used_bytes, dropped = [], 0, 0, 0
+          for i, line in enumerate(lines):
+              cost = len(line) + 1                       # +1 for the newline
+              cost_bytes = len(line.encode("utf-8")) + 1
+              if used + cost > limit or used_bytes + cost_bytes > byte_limit:
+                  # `break`, not `continue`: keeping a later short line after dropping earlier long
+                  # ones would scatter the omissions while the note below claims a truncated tail.
+                  dropped = len(lines) - i
+                  break
               out.append(line)
-              used += len(line) + 1
+              used += cost
+              used_bytes += cost_bytes
           if dropped:
               out.append(f"… {dropped} further line(s) omitted to stay within the issue-body limit.")
 
@@ -288,7 +298,10 @@ jobs:
           echo "Summary assembled and redacted ($(wc -c < e2e-summary.txt) bytes)."
         env:
           # Applied here rather than in the report step so the cut lands on a character boundary.
+          # Two bounds because a non-ASCII body can be under the character limit and over the byte
+          # one; the summary must satisfy both.
           SUMMARY_BODY_LIMIT: '40000'
+          SUMMARY_BYTE_LIMIT: '50000'
           LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
           FANARTTV_API_KEY: ${{ secrets.FANARTTV_API_KEY }}
           DISCOGS_TOKEN: ${{ secrets.DISCOGS_TOKEN }}
@@ -311,9 +324,9 @@ jobs:
           E2E_RAN: ${{ steps.summary.outputs.E2E_RAN }}
           MISSING_KEYS: ${{ steps.preflight.outputs.missing }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          # Byte budget for the failure summary. GitHub caps an issue body at 65536 characters,
-          # and UTF-8 bytes >= characters, so bounding bytes bounds characters.
-          SUMMARY_BODY_LIMIT: '40000'
+          # No size limit here: the summariser owns both the character and byte budgets, because it
+          # is the only place that can cut on a character boundary. A second copy of the number in
+          # this step would be a stale source of truth for a value nothing here reads.
         run: |
           set -euo pipefail
 
@@ -349,9 +362,9 @@ jobs:
           zero_e2e=false
           if [ "${SUMMARY_RESULT}" = "success" ]; then
             case "${E2E_RAN}" in
-              *[!0-9]*|'') zero_e2e=true ;;
-              0)           zero_e2e=true ;;
-              *)           zero_e2e=false ;;
+              *[!0-9]*|'') zero_e2e=true ;;   # non-numeric or empty — treat as a fault
+              *[!0]*)      zero_e2e=false ;;  # contains a non-zero digit — genuinely ran
+              *)           zero_e2e=true ;;   # all zeros, including "0" and "00"
             esac
           fi
 
