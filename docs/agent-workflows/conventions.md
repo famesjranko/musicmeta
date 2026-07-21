@@ -121,7 +121,7 @@ do not add new ones.
 | `musicmeta-android/**` | `./gradlew :musicmeta-android:test` (needs `ANDROID_HOME`; set to `~/android-sdk`) **plus** `apiCheck` — this module is published too, and its baseline is `musicmeta-android/api/` |
 | `musicmeta-android/**/cache/**` (Room) | Android tests **plus** an explicit schema/migration review — persisted user data |
 | `musicmeta-okhttp/**` | `./gradlew :musicmeta-okhttp:test` **plus** `apiCheck` — published module, baseline in `musicmeta-okhttp/api/` |
-| Any public API change | `cd demo && ../gradlew compileKotlin` — the **positional-caller canary**; `demo/` is a separate composite build (`includeBuild("..")`) that `./gradlew build` never compiles |
+| Any public API change | **`./gradlew apiCheck` and read the `.api` diff — this is the guard for parameter position.** Then `cd demo && ../gradlew compileKotlin`: `demo/` is a separate composite build (`includeBuild("..")`) that `./gradlew build` never compiles, so it is the only in-tree consumer compiling against the published surface. Its argument-order coverage is **partial** — the demo passes `types`/`forceRefresh` by name, so an insertion *after* the last positional argument compiles clean. A green canary is not positional safety (see `CLAUDE.md`) |
 | `gradle/libs.versions.toml`, any `build.gradle.kts` | full `./gradlew build`, and confirm the version catalog is the only place versions changed |
 | `.github/workflows/**` | Review against §7 — release machinery. Never merge on assumption; state what was and was not exercised |
 | Docs only | always-checks only |
@@ -164,6 +164,23 @@ Doc-update triggers:
 | Coverage / gap / milestone shift | `ROADMAP.md` |
 | New provider | `docs/providers/<name>.md` + the provider README table |
 | New public capability | the relevant `docs/guides/*.md` |
+| **Cutting a release** (see the checklist below) | `version` in all three `build.gradle.kts`, the `CHANGELOG.md` heading, `ROADMAP.md` "Where We Are" |
+| **Pushing a `v*` tag** | `README.md` install snippets — Maven Central *and* JitPack coordinates |
+
+**Release checklist.** Nothing in CI enforces version consistency — `publish.yml` derives no version
+from the tag, it publishes whatever the build files declare. A `v0.10.0` tag against `version = "0.9.2"`
+uploads GAV `0.9.2`, which Central rejects as a duplicate, leaving an immutable tag for a version that
+was never published. So:
+
+1. **Before merging the release PR** — bump `version` in `musicmeta-core`, `musicmeta-android` and
+   `musicmeta-okhttp` `build.gradle.kts`; pin the `CHANGELOG.md` `[Unreleased]` heading to the version
+   and date, and open a fresh empty `[Unreleased]` above it; update `ROADMAP.md` "Where We Are".
+   Choose the number against the 0.x carve-out in `CLAUDE.md` — a patch may **not** carry an API break.
+2. **Before pushing the tag** — update the `README.md` install snippets to the new version. They are
+   deliberately left at the previous version until this point, because until the tag fires they would
+   document an artifact that is not on Maven Central. This step is easy to forget and nothing checks
+   it: a stale README tells every new consumer to depend on the release *before* the one just cut.
+3. **After the tag** — confirm `publish.yml` went green and the artifacts resolve from Central.
 
 ## 9. Invariants
 

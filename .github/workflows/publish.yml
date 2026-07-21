@@ -42,5 +42,14 @@ jobs:
           ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.GPG_KEY_PASSWORD }}
           GPG_KEY_BASE64: ${{ secrets.GPG_KEY_BASE64 }}
         run: |
-          export ORG_GRADLE_PROJECT_signingInMemoryKey=$(echo "$GPG_KEY_BASE64" | base64 -d)
+          set -eo pipefail
+          # Assign first, export second. `export VAR=$(cmd)` reports export's own exit status, not
+          # the command substitution's, so a failed or empty base64 decode would sail through and
+          # surface later as an opaque signing error mid-publish. Split, the failure is caught here.
+          ORG_GRADLE_PROJECT_signingInMemoryKey="$(echo "$GPG_KEY_BASE64" | base64 -d)"
+          if [ -z "$ORG_GRADLE_PROJECT_signingInMemoryKey" ]; then
+            echo "::error::GPG_KEY_BASE64 decoded to an empty signing key — refusing to publish unsigned."
+            exit 1
+          fi
+          export ORG_GRADLE_PROJECT_signingInMemoryKey
           ./gradlew publishAllPublicationsToMavenCentralRepository

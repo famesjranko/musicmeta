@@ -99,15 +99,25 @@ jobs:
         run: ../gradlew compileKotlin 2>&1 | tee ../demo-compile.log
 
       - name: File, update, or close the tracking issue
+        # The detect step above runs git commands that could fail (a corrupt index, a pathspec that
+        # matches nothing after an upstream change). Without `always()` such a failure would skip
+        # reporting entirely and the watch would file nothing — silently, which is the failure mode
+        # this whole workflow exists to prevent.
+        if: always()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           API_DRIFT: ${{ steps.api.outputs.drift }}
           APIDUMP_FAILED: ${{ steps.api.outputs.apidump_failed }}
           DEMO_RESULT: ${{ steps.demo.outcome }}
+          DETECT_RESULT: ${{ steps.api.outcome }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          # Byte budget for the diff section. Well under GitHub's 65536-character issue-body cap,
-          # leaving room for the log tails and boilerplate that share the body.
+          # Byte budgets for the two variable-length sections. GitHub caps an issue body at 65536
+          # characters, and UTF-8 bytes >= characters, so bounding bytes bounds characters. Worst
+          # case is the diff plus the demo log (the apiDump-failure section is mutually exclusive
+          # with the diff — a failed apiDump forces drift=false), leaving ~9KB of headroom for
+          # boilerplate: 40000 + 16000 = 56000 of 65536.
           DIFF_BODY_LIMIT: '40000'
+          LOG_BODY_LIMIT: '16000'
         run: |
           set -euo pipefail
 
@@ -126,6 +136,15 @@ jobs:
             apidump_failed=true
           fi
 
+          # This step runs under `if: always()`, so it can be reached with the detect step having
+          # failed outright — in which case its outputs are empty strings rather than true/false.
+          # Treat that as a reportable fault in its own right: an empty API_DRIFT must never fall
+          # through to the healthy branch and auto-close the tracker.
+          detect_failed=false
+          if [ "${DETECT_RESULT}" != "success" ] || [ -z "${API_DRIFT}" ]; then
+            detect_failed=true
+          fi
+
           # Find the single existing open tracker, if any. `--limit 100` because the default of 30
           # would let the real tracker paginate out of the result set once the repo carries enough
           # open issues matching the search — and a tracker that pages out is a tracker this job
@@ -133,7 +152,8 @@ jobs:
           existing="$(gh issue list --state open --limit 100 --search "${TITLE_MARKER} in:title" \
             --json number,title --jq '[.[] | select(.title | startswith("'"${TITLE_MARKER}"'"))][0].number // empty')"
 
-          if [ "${API_DRIFT}" = "false" ] && [ "${demo_broken}" = "false" ] && [ "${apidump_failed}" = "false" ]; then
+          if [ "${API_DRIFT}" = "false" ] && [ "${demo_broken}" = "false" ] \
+             && [ "${apidump_failed}" = "false" ] && [ "${detect_failed}" = "false" ]; then
             # Healthy. Close the tracker if one is open; otherwise do nothing.
             if [ -n "${existing}" ]; then
               gh issue close "${existing}" \
@@ -150,9 +170,10 @@ jobs:
           {
             echo "Automated watch on \`dev\` detected a divergence that the PR gate does not catch."
             echo
-            echo "- **API baseline drift:** ${API_DRIFT}"
+            echo "- **API baseline drift:** ${API_DRIFT:-unknown}"
             echo "- **\`apiDump\` failed (dev may not compile):** ${apidump_failed}"
             echo "- **demo composite build broken:** ${demo_broken}"
+            echo "- **drift-detection step itself failed:** ${detect_failed}"
             echo
             echo "Run: ${RUN_URL}"
             echo
@@ -160,7 +181,7 @@ jobs:
               echo "### \`./gradlew apiDump\` failure output"
               echo
               echo '```'
-              tail -n 60 apidump.log
+              tail -n 60 apidump.log | tail -c "${LOG_BODY_LIMIT}"
               echo '```'
               echo
             fi
@@ -175,20 +196,27 @@ jobs:
               # step. Unbounded means the largest drift events are the ones that file nothing.
               diff_bytes="$(wc -c < api-drift.diff)"
               head -c "${DIFF_BODY_LIMIT}" api-drift.diff
-              if [ "${diff_bytes}" -gt "${DIFF_BODY_LIMIT}" ]; then
-                echo
-                echo "... truncated at ${DIFF_BODY_LIMIT} of ${diff_bytes} bytes."
-                echo "Full diff: run \`./gradlew apiDump && git diff -- '*/api/*.api'\` on \`dev\`, or see ${RUN_URL}."
-              fi
+              echo
               echo '```'
+              if [ "${diff_bytes}" -gt "${DIFF_BODY_LIMIT}" ]; then
+                # Outside the fence, so the backticks below render as code rather than literally.
+                echo
+                echo "_Diff truncated at ${DIFF_BODY_LIMIT} of ${diff_bytes} bytes._ Reproduce in full with"
+                echo "\`./gradlew apiDump && git diff -- '*/api/*.api'\` on \`dev\`, or see ${RUN_URL}."
+              fi
               echo
             fi
             if [ "${demo_broken}" = "true" ]; then
               echo "### demo \`../gradlew compileKotlin\` output"
               echo
               echo '```'
-              # Last 60 lines is enough to show the compile error without dumping the whole log.
-              tail -n 60 demo-compile.log
+              # Last 60 lines is enough to show the compile error without dumping the whole log —
+              # but `tail -n` caps *lines*, not bytes, and Gradle prints single lines that run to
+              # thousands of characters (dependency-resolution failures enumerate every repository
+              # URL; Kotlin daemon errors print full classpaths). Since this section can share the
+              # body with the diff above, cap its bytes too or the two together can still exceed
+              # GitHub's 65536-character limit and fail the `gh` call.
+              tail -n 60 demo-compile.log | tail -c "${LOG_BODY_LIMIT}"
               echo '```'
               echo
             fi

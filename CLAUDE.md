@@ -53,12 +53,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 only in-tree consumer that compiles against the published surface the way an external consumer does:
 
 > **What the canary does and does not catch.** It catches removals, renames and return-type changes —
-> anything that stops a real consumer compiling. It no longer catches the v0.9.2 failure mode
-> (a parameter inserted mid-list on `artistProfile`/`albumProfile`/`trackProfile`): those call sites
-> now pass `types`/`forceRefresh` **by name**, which is what made `demo/` compile again, so an
-> insertion between `mbid` and `types` sails through. Only the positional `SearchCandidate` overload
-> calls in `demo/Main.kt` still exercise argument order. `apiCheck` against the committed `.api`
-> baseline is the real guard for parameter position; the canary is a compile-level backstop.
+> anything that stops a real consumer compiling. On *argument order* its coverage is partial, and the
+> boundary is the last positional argument at each call site: everything from `types` onward is now
+> passed **by name** (that is what made `demo/` compile again after v0.9.2), so an insertion *after*
+> the last positional argument sails through, while one at or before it still breaks the build.
+>
+> Concretely, in `demo/DemoCommands.kt`: `albumProfile(title, artist, mbid, …)` passes three
+> positional arguments, so an insertion between `title`, `artist` or `mbid` is still caught;
+> `artistProfile(name, mbid, …)` and `trackProfile(title, artist, …)` pass two. What is *not* caught
+> is the exact v0.9.2 shape — a parameter inserted between `mbid` and `types`.
+>
+> Treat `apiCheck` against the committed `.api` baseline as the guard for parameter position. The
+> canary is a compile-level backstop with a known gap, not the positional guarantee.
 
 ```bash
 cd demo && ../gradlew compileKotlin

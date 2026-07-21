@@ -39,10 +39,19 @@ jobs:
           retention-days: 7
 
   # `demo/` is a separate composite build (`includeBuild("..")`) that is NOT part of
-  # `settings.gradle.kts`, so `./gradlew build` above never compiles it. It is also the only
-  # positional consumer of the public API in the tree, which makes it an accidental but genuine
-  # API-compatibility canary — it has broken silently before (v0.9.2). This job is that canary.
-  # It runs on draft PRs too, so the required-check contract on main/dev keeps reporting.
+  # `settings.gradle.kts`, so `./gradlew build` above never compiles it. That makes it the only
+  # in-tree consumer compiling against the published surface the way an external consumer does —
+  # it broke silently in v0.9.2 for exactly that reason. This job is that canary.
+  #
+  # Its coverage of argument *order* is partial, and that limit matters: everything from `types`
+  # onward is now passed by name at the demo call sites, so an insertion after the last positional
+  # argument compiles clean here. `apiCheck` against the committed .api baseline is the guard for
+  # parameter position — see CLAUDE.md. Do not treat a green canary as positional safety.
+  #
+  # It runs on draft PRs too. Drafts cannot merge anyway, so this costs little and means a draft
+  # marked ready has already reported. Note this is NOT propping up a required-check contract:
+  # per the live rulesets, `main` requires only the `build` context and `dev` requires none, so
+  # `demo-canary` is a required check on neither branch.
   demo-canary:
     runs-on: ubuntu-latest
     steps:
