@@ -48,14 +48,23 @@ class DefaultEnrichmentEngine(
         forceRefresh: Boolean,
     ): EnrichmentResults {
         if (forceRefresh) {
-            for (type in types) invalidateKeys(request, type)
+            // Guarded per key, not per type: a failure on the primary key must not skip the alias.
+            for (type in types) {
+                for (key in cacheKeysFor(request, type)) {
+                    guardedCacheWrite(logger, "invalidate") { cache.invalidate(key, type) }
+                }
+            }
         }
 
         val results = mutableMapOf<EnrichmentType, EnrichmentResult>()
         val uncachedTypes = mutableSetOf<EnrichmentType>()
 
         for (type in types) {
-            val cached = cache.get(entityKeyFor(request, type), type)
+            // forceRefresh already invalidated these keys; skipping the read keeps a *failed*
+            // invalidation from resurrecting the stale entry it was meant to drop.
+            val cached = if (forceRefresh) null else {
+                guardedCacheRead(logger, "get") { cache.get(entityKeyFor(request, type), type) }
+            }
             if (cached != null) results[type] = cached else uncachedTypes.add(type)
         }
         if (uncachedTypes.isEmpty()) {
@@ -104,13 +113,13 @@ class DefaultEnrichmentEngine(
             if (result is EnrichmentResult.Success && !result.isStale) {
                 val ttl = config.ttlOverrides[type] ?: type.defaultTtlMs
                 val primaryKey = entityKeyFor(request, type)
-                cache.put(primaryKey, type, result, ttl)
+                guardedCacheWrite(logger, "put") { cache.put(primaryKey, type, result, ttl) }
 
                 // Alias: when identity resolution added an MBID, also cache under the
                 // name-based key so future name-only lookups find MBID-resolved data.
                 if (resolvedMbid != null && request.identifiers.musicBrainzId == null) {
                     val nameKey = entityKeyForName(request, type)
-                    cache.put(nameKey, type, result, ttl)
+                    guardedCacheWrite(logger, "put") { cache.put(nameKey, type, result, ttl) }
                 }
             }
         }
@@ -172,12 +181,17 @@ class DefaultEnrichmentEngine(
 
     override fun getProviders(): List<ProviderInfo> = registry.providerInfos()
 
+    /** The primary key, plus the name-alias key when the request carries an MBID. */
+    private fun cacheKeysFor(request: EnrichmentRequest, type: EnrichmentType): List<String> =
+        if (request.identifiers.musicBrainzId != null) {
+            listOf(entityKeyFor(request, type), entityKeyForName(request, type))
+        } else {
+            listOf(entityKeyFor(request, type))
+        }
+
     /** Invalidates both the primary key and the name-alias key for a request/type. */
     private suspend fun invalidateKeys(request: EnrichmentRequest, type: EnrichmentType) {
-        cache.invalidate(entityKeyFor(request, type), type)
-        if (request.identifiers.musicBrainzId != null) {
-            cache.invalidate(entityKeyForName(request, type), type)
-        }
+        for (key in cacheKeysFor(request, type)) cache.invalidate(key, type)
     }
 
     /** Returns the enriched request and the raw identity result (for composite type synthesis). */
@@ -301,7 +315,9 @@ class DefaultEnrichmentEngine(
         for (type in types) {
             val result = results[type] ?: continue
             if (result is EnrichmentResult.Error || result is EnrichmentResult.RateLimited) {
-                val stale = cache.getIncludingExpired(entityKeyFor(request, type), type)
+                val stale = guardedCacheRead(logger, "getIncludingExpired") {
+                    cache.getIncludingExpired(entityKeyFor(request, type), type)
+                }
                 if (stale != null) {
                     results[type] = stale.copy(isStale = true)
                 }

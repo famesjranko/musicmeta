@@ -11,7 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `STORIES.md` | Architectural decisions, progress log, rationale |
 | `CHANGELOG.md` | Release history (user-facing, Keep a Changelog format) |
 | `ROADMAP.md` | Gap analysis, coverage matrix, planned milestones |
-| `docs/agent-workflows/conventions.md` | Issue → PR → dev → main workflow contract (branch model, verification surface, invariants) |
+| `docs/agent-workflows/conventions.md` | Issue → PR → dev → main shipping conventions (branch model, verification surface, danger zones) |
 
 **For AI agents**: Check `STORIES.md` for context on *why* decisions were made. Update it when making significant architectural choices or completing milestones. Update `CHANGELOG.md` when adding features or fixing bugs.
 
@@ -126,6 +126,7 @@ Adds Android-specific integrations on top of core:
 - No `!!` — handle nullability properly
 - Pure functions when possible
 - Explicit over implicit — no magic
+- **Comments:** Explain only non-obvious constraints, traps, guards, or safety rationale — plus the Given-When-Then narration tests require (see Testing Patterns). Do not restate code or preserve history; put that in issues, PRs, or docs. Remove comments when the related code is removed.
 
 ## Modeling Rules
 
@@ -175,7 +176,7 @@ record of what consumers see.
 
 ## Git Rules
 
-- **DO NOT** add Co-Authored-By, "Generated with Claude", or any AI/Anthropic references to commits or PR messages
+- **DO NOT** add Co-Authored-By, "Generated with Claude", or any AI/Anthropic/tool attribution in commits, PR titles and bodies, issue comments, or any other text that leaves this machine
 - **DO NOT** use `git revert` to undo changes — use `git reset` or manual edits instead
 - Always ask permission before running destructive git commands
 
