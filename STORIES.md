@@ -7,6 +7,18 @@
 
 ## Decisions
 
+### 2026-07-21: CI canary + scheduled API-drift watch (issues #3, #6)
+
+**Context**: PR #9 landed `build.yml` running `./gradlew build` (build + test + `apiCheck`) on PRs/pushes to `main`/`dev`. Two silent-rot gaps remained. First, `demo/` is a composite build (`includeBuild("..")`) outside `settings.gradle.kts`, so `./gradlew build` never compiles it — yet it is the tree's only positional consumer of the public API and broke unnoticed in v0.9.2. Second, `apiCheck` on a PR catches an API *change* on the PR that caused it, but not *drift* — a committed `.api` baseline that stops matching reality between releases (a dependency/Kotlin bump moving the emitted ABI, a stale `.api` merge). A red PR run also has no memory.
+
+**Decision — a demo-canary job in `build.yml` and a separate scheduled `api-drift.yml`.** The canary job (`cd demo && ../gradlew compileKotlin`; demo has no wrapper of its own, it borrows the root one) runs under the same triggers as `build`, **including drafts**: `build.yml` is a required check on `main`/`dev`, and skipping on drafts would drop the check context. Drafts cannot merge anyway, so running on them is the cheapest way to keep the required-check contract honest — chosen over a `draft == false` filter for exactly that reason. E2E stays opt-in (`-Dinclude.e2e=true`), never in CI.
+
+The drift watch (weekly + `workflow_dispatch`) checks out `dev`, runs `apiDump`, and `git diff`s the `api/*.api` files. It folds in the demo compile canary too (the issue's note — the other silent-rot check). On drift or demo breakage it files, or updates in place, a **single** `[api-drift-bot]`-prefixed tracking issue (searched by that collision-proof title marker via `gh issue list --search … in:title` + a `startswith` jq filter, so it never matches a human issue and never duplicates), with the diff in the body; when `dev` is clean it auto-closes that issue with a comment. Minimal permissions (`contents: read`, `issues: write`), `GITHUB_TOKEN` only, no new secrets — modelled on MediaStack's `image-drift.yml` drift-warn half.
+
+**Verification**: both YAMLs `yaml.safe_load`-parsed (no actionlint available). Locally exercised the exact commands the workflows run: `cd demo && ../gradlew compileKotlin` green; `./gradlew apiDump` + `git diff --quiet -- '*/api/*.api'` reports no drift (baselines match `dev`); the `gh issue list … in:title` search + jq `startswith` filter confirmed collision-free against existing issue #6; the drift body-assembly bash dry-run under `set -euo pipefail` produces well-formed Markdown. Not exercisable locally: the scheduled trigger, GitHub-hosted `gh issue create`/`edit`/`close` calls, and the runner's Android SDK provisioning — syntax-checked only. `git diff --check` clean.
+
+**Status**: Landed on `epic/api-compat`.
+
 ### 2026-07-21: Narrowing the public API surface — provider/http/engine internals made `internal` (issue #5)
 
 **Context**: The ABI baselines from issue #2 recorded reality, and reality was that ~84 declarations under `provider/` and the `http/`/`engine/` infrastructure were public *by omission* — `class DeezerApi`, `data class DiscogsRelease`, `object GenreMerger` with no visibility modifier default to `public`, so they shipped on Maven Central and JitPack. Nobody intended them as API; each exists to serve the `*Provider` in its own package. The cost was noise: a provider-internal rename turned `apiCheck` red and demanded an `apiDump` commit, burying the one signal that matters (a real `EnrichmentEngine`/`EnrichmentData` change). The 0.x carve-out settled in the entry below licenses the documented removal.
