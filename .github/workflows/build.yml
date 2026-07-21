@@ -1,0 +1,73 @@
+name: Build
+
+on:
+  pull_request:
+    branches:
+      - main
+      - dev
+  push:
+    branches:
+      - main
+      - dev
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build and test
+        run: ./gradlew build
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: '**/build/reports/tests/'
+          retention-days: 7
+
+  # `demo/` is a separate composite build (`includeBuild("..")`) that is NOT part of
+  # `settings.gradle.kts`, so `./gradlew build` above never compiles it. That makes it the only
+  # in-tree consumer compiling against the published surface the way an external consumer does —
+  # it broke silently in v0.9.2 for exactly that reason. This job is that canary.
+  #
+  # It is NOT a parameter-position guard, and that limit matters. Kotlin rebinds positional
+  # arguments silently, so a mid-list insertion carrying a default breaks compilation only when the
+  # rebinding also produces a type error — v0.9.2 was caught by luck of typing, not by position.
+  # (An inserted parameter with no default does fail outright, but that form is banned anyway.) `apiCheck`
+  # against the committed .api baseline is the guard for parameter position; see CLAUDE.md.
+  # A green canary means consumers still compile, not that argument order is unchanged.
+  #
+  # It runs on draft PRs too. Drafts cannot merge anyway, so this costs little and means a draft
+  # marked ready has already reported. Note this is NOT propping up a required-check contract:
+  # per the live rulesets, `main` requires only the `build` context and `dev` requires none, so
+  # `demo-canary` is a required check on neither branch.
+  demo-canary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Compile demo composite build
+        # demo/ has no wrapper of its own; it borrows the root wrapper via ../gradlew, and
+        # compileKotlin resolves musicmeta-core from local source through includeBuild("..").
+        working-directory: demo
+        run: ../gradlew compileKotlin

@@ -12,7 +12,7 @@ import com.landofoz.musicmeta.TimelineEvent
  * album release events from discography, and member change events from
  * band members. Sorts chronologically and deduplicates by date+type.
  */
-object TimelineSynthesizer : CompositeSynthesizer {
+internal object TimelineSynthesizer : CompositeSynthesizer {
 
     override val type: EnrichmentType = EnrichmentType.ARTIST_TIMELINE
 

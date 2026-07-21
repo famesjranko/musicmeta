@@ -31,6 +31,9 @@ okhttp = "4.12.0"
 # Maven Central Publishing
 vanniktech-publish = "0.30.0"
 
+# Public API compatibility (ABI baselines under each module's api/ directory)
+binary-compatibility-validator = "0.18.1"
+
 # Testing
 junit = "4.13.2"
 turbine = "1.2.0"
@@ -94,3 +97,4 @@ ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 vanniktech-publish = { id = "com.vanniktech.maven.publish", version.ref = "vanniktech-publish" }
+binary-compatibility-validator = { id = "org.jetbrains.kotlinx.binary-compatibility-validator", version.ref = "binary-compatibility-validator" }

@@ -2,7 +2,7 @@ package com.landofoz.musicmeta.provider.musicbrainz
 
 /** Internal DTOs for MusicBrainz API responses. */
 
-data class MusicBrainzRelease(
+internal data class MusicBrainzRelease(
     val id: String,
     val title: String,
     val artistCredit: String?,
@@ -20,7 +20,7 @@ data class MusicBrainzRelease(
     val tracks: List<MusicBrainzTrack> = emptyList(),
 )
 
-data class MusicBrainzArtist(
+internal data class MusicBrainzArtist(
     val id: String,
     val name: String,
     val sortName: String? = null,
@@ -38,7 +38,7 @@ data class MusicBrainzArtist(
     val bandMembers: List<MusicBrainzBandMember> = emptyList(),
 )
 
-data class MusicBrainzRecording(
+internal data class MusicBrainzRecording(
     val id: String,
     val title: String,
     val isrcs: List<String>,
@@ -47,7 +47,7 @@ data class MusicBrainzRecording(
     val score: Int,
 )
 
-data class MusicBrainzBandMember(
+internal data class MusicBrainzBandMember(
     val name: String,
     val id: String?,
     val role: String?,
@@ -56,39 +56,39 @@ data class MusicBrainzBandMember(
     val ended: Boolean,
 )
 
-data class MusicBrainzReleaseGroup(
+internal data class MusicBrainzReleaseGroup(
     val id: String,
     val title: String,
     val primaryType: String?,
     val firstReleaseDate: String?,
 )
 
-data class MusicBrainzTrack(
+internal data class MusicBrainzTrack(
     val title: String,
     val position: Int,
     val durationMs: Long?,
     val id: String?,
 )
 
-data class MusicBrainzUrlRelation(
+internal data class MusicBrainzUrlRelation(
     val type: String,
     val url: String,
 )
 
-data class MusicBrainzCredit(
+internal data class MusicBrainzCredit(
     val name: String,
     val id: String?,
     val role: String,
     val roleCategory: String?,
 )
 
-data class MusicBrainzReleaseGroupDetail(
+internal data class MusicBrainzReleaseGroupDetail(
     val id: String,
     val title: String,
     val releases: List<MusicBrainzEdition>,
 )
 
-data class MusicBrainzEdition(
+internal data class MusicBrainzEdition(
     val id: String,
     val title: String,
     val date: String?,
@@ -99,7 +99,7 @@ data class MusicBrainzEdition(
     val catalogNumber: String?,
 )
 
-data class TagCount(
+internal data class TagCount(
     val name: String,
     val count: Int,
 )

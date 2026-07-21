@@ -3,7 +3,7 @@ package com.landofoz.musicmeta.provider.lrclib
 import com.landofoz.musicmeta.EnrichmentData
 
 /** Maps LRCLIB responses to EnrichmentData subclasses. */
-object LrcLibMapper {
+internal object LrcLibMapper {
 
     fun toLyrics(result: LrcLibResult): EnrichmentData.Lyrics =
         EnrichmentData.Lyrics(

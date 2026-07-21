@@ -4,7 +4,7 @@ import com.landofoz.musicmeta.ArtworkSize
 import com.landofoz.musicmeta.EnrichmentData
 
 /** Maps Fanart.tv responses to EnrichmentData subclasses. */
-object FanartTvMapper {
+internal object FanartTvMapper {
 
     fun toArtwork(
         image: FanartTvImage,

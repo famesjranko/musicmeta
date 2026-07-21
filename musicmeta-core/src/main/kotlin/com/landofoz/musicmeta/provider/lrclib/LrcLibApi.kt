@@ -11,7 +11,7 @@ import java.net.URLEncoder
  * Client for the LRCLIB lyrics API (https://lrclib.net).
  * Provides exact match and search endpoints for synced/plain lyrics.
  */
-class LrcLibApi(
+internal class LrcLibApi(
     private val httpClient: HttpClient,
     private val rateLimiter: RateLimiter,
 ) {

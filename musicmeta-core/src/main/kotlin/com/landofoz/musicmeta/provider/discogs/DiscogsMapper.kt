@@ -9,7 +9,7 @@ import com.landofoz.musicmeta.GenreTag
 import com.landofoz.musicmeta.ReleaseEdition
 
 /** Maps Discogs DTOs to EnrichmentData subclasses. */
-object DiscogsMapper {
+internal object DiscogsMapper {
 
     fun toArtistPhoto(artist: DiscogsArtist): EnrichmentData.Artwork? {
         // Prefer "primary" type image, fall back to any image

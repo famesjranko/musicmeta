@@ -9,7 +9,7 @@ import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.TrackInfo
 
 /** Maps iTunes DTOs to EnrichmentData subclasses. */
-object ITunesMapper {
+internal object ITunesMapper {
 
     fun toArtwork(result: ITunesAlbumResult, artworkSize: Int): EnrichmentData.Artwork? {
         val artworkUrl = result.artworkUrl ?: return null

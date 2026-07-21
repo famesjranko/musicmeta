@@ -10,7 +10,7 @@ import java.net.URLEncoder
  * iTunes Search API. Free, no authentication required.
  * Rate limit: ~20 requests/minute.
  */
-class ITunesApi(
+internal class ITunesApi(
     private val httpClient: HttpClient,
     private val rateLimiter: RateLimiter,
 ) {

@@ -11,6 +11,8 @@ import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.SimilarAlbum
 import com.landofoz.musicmeta.engine.ArtistMatcher
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
+import com.landofoz.musicmeta.http.HttpClient
+import com.landofoz.musicmeta.http.RateLimiter
 
 /**
  * Discovers albums similar to a seed album by fetching Deezer related artists
@@ -20,9 +22,19 @@ import com.landofoz.musicmeta.engine.ConfidenceCalculator
  * Standalone provider (not composite): all Deezer API calls happen here,
  * not inside a synthesizer.
  */
-class SimilarAlbumsProvider(
+class SimilarAlbumsProvider internal constructor(
     private val api: DeezerApi,
 ) : EnrichmentProvider {
+
+    /**
+     * Constructs the provider from HTTP infrastructure. [DeezerApi] is an internal
+     * implementation detail, so this is the public entry point consumers use to
+     * register the provider with the engine.
+     */
+    constructor(
+        httpClient: HttpClient,
+        rateLimiter: RateLimiter = RateLimiter(100),
+    ) : this(DeezerApi(httpClient, rateLimiter))
 
     override val id = "deezer-similar-albums"
     override val displayName = "Deezer Similar Albums"

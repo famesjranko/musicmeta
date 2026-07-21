@@ -9,7 +9,7 @@ import com.landofoz.musicmeta.SimilarArtist
 import com.landofoz.musicmeta.TopTrack
 
 /** Maps ListenBrainz responses to EnrichmentData subclasses. */
-object ListenBrainzMapper {
+internal object ListenBrainzMapper {
 
     fun toPopularity(tracks: List<ListenBrainzPopularTrack>): EnrichmentData.Popularity =
         EnrichmentData.Popularity(

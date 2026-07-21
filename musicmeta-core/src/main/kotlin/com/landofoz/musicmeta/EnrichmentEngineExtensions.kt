@@ -36,8 +36,8 @@ suspend fun EnrichmentEngine.artistProfile(
     candidate.title,
     candidate.identifiers.musicBrainzId,
     identifiers = candidate.identifiers,
-    types,
-    forceRefresh,
+    types = types,
+    forceRefresh = forceRefresh,
 )
 
 /**
@@ -69,8 +69,8 @@ suspend fun EnrichmentEngine.albumProfile(
     candidate.artist ?: "",
     candidate.identifiers.musicBrainzId,
     identifiers = candidate.identifiers,
-    types,
-    forceRefresh,
+    types = types,
+    forceRefresh = forceRefresh,
 )
 
 /**
@@ -108,8 +108,8 @@ suspend fun EnrichmentEngine.trackProfile(
     album,
     candidate.identifiers.musicBrainzId,
     identifiers = candidate.identifiers,
-    types,
-    forceRefresh,
+    types = types,
+    forceRefresh = forceRefresh,
 )
 
 /** Input for [resolveTrackPreviews]. */

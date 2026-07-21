@@ -10,7 +10,7 @@ import org.json.JSONObject
  * Fetches track popularity data from the ListenBrainz API.
  * Uses top-recordings, batch recording/artist popularity, and top release groups endpoints.
  */
-class ListenBrainzApi(
+internal class ListenBrainzApi(
     private val httpClient: HttpClient,
     private val rateLimiter: RateLimiter,
     private val authToken: String? = null,

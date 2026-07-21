@@ -134,11 +134,11 @@ internal suspend fun enrichProfile(
     forceRefresh: Boolean = false,
 ): EnrichedProfile = when (request) {
     is EnrichmentRequest.ForArtist -> {
-        val p = state.engine.artistProfile(request.name, request.identifiers.musicBrainzId, types, forceRefresh)
+        val p = state.engine.artistProfile(request.name, request.identifiers.musicBrainzId, types = types, forceRefresh = forceRefresh)
         EnrichedProfile.Artist(p)
     }
     is EnrichmentRequest.ForAlbum -> {
-        val p = state.engine.albumProfile(request.title, request.artist, request.identifiers.musicBrainzId, types, forceRefresh)
+        val p = state.engine.albumProfile(request.title, request.artist, request.identifiers.musicBrainzId, types = types, forceRefresh = forceRefresh)
         EnrichedProfile.Album(p)
     }
     is EnrichmentRequest.ForTrack -> {

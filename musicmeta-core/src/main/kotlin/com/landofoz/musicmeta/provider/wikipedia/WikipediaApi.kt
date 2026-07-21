@@ -9,7 +9,7 @@ import java.net.URLEncoder
  * Fetches artist biographies from the Wikipedia REST API.
  * Uses the page/summary endpoint for plain text extracts.
  */
-class WikipediaApi(
+internal class WikipediaApi(
     private val httpClient: HttpClient,
     private val rateLimiter: RateLimiter,
 ) {

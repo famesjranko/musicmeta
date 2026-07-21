@@ -45,7 +45,28 @@ The library is a tool for developers to wield for their needs, not a framework t
 
 ---
 
-## Where We Are (v0.9.0)
+## Where We Are (v0.10.0)
+
+### What Changed in v0.10.0
+
+v0.10.0 is **Public API compatibility enforcement** — epic #7, 2026-07-21.
+
+The backwards-compatibility contract in `CLAUDE.md` was asserted but unenforced, and an audit of the
+tag history found it had been missed repeatedly: four mid-list parameter insertions (v0.5.0, v0.7.0,
+v0.9.0, v0.9.2), four undeprecated removals or renames (v0.4.0), and `@Deprecated` never once used.
+
+- **Committed ABI baselines** — `binary-compatibility-validator` dumps each module's public API to
+  `api/*.api`. `apiCheck` runs via `build` and on the publish path, so a diverging signature fails
+  the build instead of reaching Maven Central. The `.api` diff is now the review artifact.
+- **CI gates** — `build.yml` runs build + tests + `apiCheck` on PRs and pushes, plus the `demo/`
+  composite-build canary that `./gradlew build` never compiles.
+- **Scheduled drift watch** — `api-drift.yml` files, updates, and auto-closes a single tracking issue
+  when `dev` drifts from its baselines.
+- **Narrowed public surface** — 80 top-level types that were public only by omission (provider
+  `*Api`/`*Mapper`/`*Models`, `MusicBrainzParser`, `http/CircuitBreaker`, the `engine/` mergers and
+  synthesizers) are now `internal`. See `CHANGELOG.md` → Breaking Changes.
+- **0.x semver carve-out** — minor `0.x.0` releases may break if documented and visible in the `.api`
+  diff; patch `0.x.y` releases may not. Full semver from `1.0.0`.
 
 ### What Changed in v0.9.0
 
@@ -265,7 +286,7 @@ Ranked by **impact to consumers × implementation effort**:
 | 31 | Bulk enrichment (simple) | Enhancement | High | Low | ✅ Done (v0.8.0) — sequential `enrichBatch()` with Flow emission |
 | 32 | Maven Central publishing | Enhancement | High | Medium | ✅ Done (v0.8.0) — `io.github.famesjranko` on Maven Central |
 | 33 | ARTIST_RADIO_DISCOVERY + TRACK_PREVIEW | 2 new types | Medium | Medium | ✅ Done (v0.9.0) — LB Radio as separate type, Deezer 30s previews |
-| 34 | API stability (v1.0.0) | Milestone | High | Low | Planned — semver guarantees, freeze public API |
+| 34 | API stability (v1.0.0) | Milestone | High | Low | In progress — enforcement landed (`binary-compatibility-validator`, committed `api/*.api` baselines, `apiCheck` in `build` and publish); accidentally-public `provider/`/`http/`/`engine/` surface narrowed (issue #5 — 80 types now `internal`, ~1350-line `.api` shrink). Remaining: settle the 0.x semver stance, optional pass on remaining `engine/` wiring, then freeze |
 | — | ~~Flow-based progressive API~~ | Enhancement | Medium | High | Deferred — marginal benefit vs complexity; callers can split enrich() calls |
 
 ---
@@ -282,6 +303,10 @@ Ranked by **impact to consumers × implementation effort**:
 | "App-ready" now-playing | Partial | Rich | **Complete** | **Complete** + catalog-aware | `engine.trackProfile("Creep", "Radiohead")` | + offline support | Stable |
 | Android integration | Room cache | + Hilt module | + WorkManager | + WorkManager | + WorkManager | + OkHttp adapter | Stable |
 | Distribution | JitPack | JitPack | JitPack | JitPack | JitPack | JitPack + Maven Central | Maven Central |
+
+> **v0.10.0** is not a column above because it moved none of these dimensions: it added no enrichment
+> types (still 34) and no provider coverage. It was an API-hygiene release — committed ABI baselines,
+> CI gates, a narrowed public surface, and the 0.x semver carve-out. See "Where We Are" above.
 
 **The metadata + recommendations story is nearly complete.** A music app using musicmeta now gets metadata, discovery, and radio features from a single `enrich()` call. The architecture supports four enrichment patterns: standard provider chains, composite synthesis, multi-provider merging, and catalog-aware filtering.
 

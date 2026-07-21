@@ -1,0 +1,273 @@
+name: API drift watch
+
+# Scheduled drift watch for the `dev` integration branch.
+#
+# The PR gate (build.yml -> apiCheck via `build`) catches an API *change* on the PR that causes it —
+# the right place for a change. This job catches *drift*: a committed api/*.api baseline that has
+# quietly stopped matching reality for reasons other than the PR at hand (a dependency bump changing
+# an inherited signature, a Kotlin upgrade altering the emitted ABI, a stale .api file merged in). A
+# red PR run has no memory and scrolls away; this job gives drift an owner and a written record by
+# filing — and later auto-closing — a single tracking issue.
+#
+# It also folds in the demo/ composite-build canary, the other check that can rot silently between
+# releases: demo/ is not in settings.gradle.kts, so ./gradlew build never compiles it.
+
+on:
+  schedule:
+    # Weekly, Mondays 06:00 UTC.
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+# Minimal surface: read the code, write the tracking issue. No new secrets — GITHUB_TOKEN only.
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: api-drift-watch
+  # This job performs external writes (create/edit/close the tracking issue). Do not cancel a run
+  # mid-write — let an in-flight run finish rather than leave a half-updated issue.
+  cancel-in-progress: false
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Regenerate API baselines
+        id: apidump
+        # Non-fatal: if `dev` fails to compile or apiDump errors, that is itself a rot signal the
+        # watcher must report — not a red run that aborts before the issue is filed. Its outcome is
+        # folded into the tracking issue by the reporting step below.
+        continue-on-error: true
+        # `shell: bash` is load-bearing, not decoration. The Actions default for `run:` is
+        # `bash -e {0}` — no `pipefail` — so in `gradlew ... | tee`, the pipeline's status is
+        # `tee`'s, which is always 0. Without this the step's outcome would be permanently
+        # `success`, the failure branch below would be dead code, and a `dev` that no longer
+        # compiles would be reported as healthy. `shell: bash` selects `bash -eo pipefail {0}`.
+        shell: bash
+        run: ./gradlew apiDump 2>&1 | tee apidump.log
+
+      - name: Detect API drift
+        id: api
+        run: |
+          set -euo pipefail
+          if [ "${{ steps.apidump.outcome }}" != "success" ]; then
+            # apiDump could not produce baselines to compare — record the failure, skip the diff.
+            echo "drift=false" >> "$GITHUB_OUTPUT"
+            echo "apidump_failed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "apidump_failed=false" >> "$GITHUB_OUTPUT"
+          # Compare the freshly dumped baselines against what is committed on dev. Stage them
+          # first: a plain `git diff` only sees tracked files, so a brand-new module's baseline
+          # (added, or renamed, since the last commit) would be untracked and therefore invisible —
+          # drift that reports clean. Staging makes both modified and new baselines register.
+          git add -A -- '*/api/*.api'
+          if git diff --cached --quiet -- '*/api/*.api'; then
+            echo "drift=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "drift=true" >> "$GITHUB_OUTPUT"
+            git diff --cached -- '*/api/*.api' > api-drift.diff
+          fi
+          # Reset the tree so the diff never leaks into any later step: unstage, restore the
+          # tracked baselines, then drop any newly generated untracked ones.
+          git reset -q -- '*/api/*.api'
+          git checkout -- '*/api/*.api'
+          git clean -fq -- '*/api/*.api'
+
+      - name: Compile demo composite build
+        id: demo
+        continue-on-error: true
+        working-directory: demo
+        # demo/ borrows the root wrapper via ../gradlew; compileKotlin resolves musicmeta-core from
+        # local source through includeBuild(".."). A failure here is a silent-rot signal, not a hard
+        # job failure — we fold it into the tracking issue instead of just going red.
+        # `shell: bash` for `pipefail` — see the apiDump step above; without it a broken demo build
+        # is masked by `tee` and the demo-canary arm of this workflow can never fire.
+        shell: bash
+        run: ../gradlew compileKotlin 2>&1 | tee ../demo-compile.log
+
+      - name: File, update, or close the tracking issue
+        # The detect step above runs git commands that could fail (a corrupt index, a pathspec that
+        # matches nothing after an upstream change). Without this condition such a failure would
+        # skip reporting entirely and the watch would file nothing — silently, which is the failure
+        # mode this whole workflow exists to prevent.
+        #
+        # `!cancelled()` rather than `always()`: `always()` is the one conditional that also runs
+        # during cancellation, and this step performs external writes. Filing or closing the tracker
+        # while the job is being torn down is exactly the half-write the `concurrency` block above
+        # refuses to allow.
+        #
+        # Reaching this step after an earlier failure means earlier steps may have been SKIPPED, so
+        # the log files they produce may not exist — the body assembly below must not assume they do.
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Explicit, so `gh` never has to infer the repo from a git remote. This step now runs
+          # after an earlier failure (see the condition below), and one thing that can fail is
+          # `actions/checkout` — leaving no repository for `gh` to infer from.
+          GH_REPO: ${{ github.repository }}
+          API_DRIFT: ${{ steps.api.outputs.drift }}
+          APIDUMP_FAILED: ${{ steps.api.outputs.apidump_failed }}
+          DEMO_RESULT: ${{ steps.demo.outcome }}
+          DETECT_RESULT: ${{ steps.api.outcome }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          # Byte budgets for the two variable-length sections. GitHub caps an issue body at 65536
+          # characters, and UTF-8 bytes >= characters, so bounding bytes bounds characters. Worst
+          # case is the diff plus the demo log (the apiDump-failure section is mutually exclusive
+          # with the diff — a failed apiDump forces drift=false), leaving ~9KB of headroom for
+          # boilerplate: 40000 + 16000 = 56000 of 65536.
+          DIFF_BODY_LIMIT: '40000'
+          LOG_BODY_LIMIT: '16000'
+        run: |
+          set -euo pipefail
+
+          # Stable, collision-proof marker. Search is scoped to this exact title prefix so we never
+          # match a human-filed issue and never file a duplicate.
+          TITLE_MARKER='[api-drift-bot]'
+          TITLE="${TITLE_MARKER} API drift / demo-canary breakage on dev"
+
+          demo_broken=false
+          if [ "${DEMO_RESULT}" != "success" ]; then
+            demo_broken=true
+          fi
+
+          apidump_failed=false
+          if [ "${APIDUMP_FAILED}" = "true" ]; then
+            apidump_failed=true
+          fi
+
+          # This step runs under `if: always()`, so it can be reached with the detect step having
+          # failed outright — in which case its outputs are empty strings rather than true/false.
+          # Treat that as a reportable fault in its own right: an empty API_DRIFT must never fall
+          # through to the healthy branch and auto-close the tracker.
+          detect_failed=false
+          if [ "${DETECT_RESULT}" != "success" ] || [ -z "${API_DRIFT}" ]; then
+            detect_failed=true
+          fi
+
+          # Find the single existing open tracker, if any. `--limit 100` because the default of 30
+          # would let the real tracker paginate out of the result set once the repo carries enough
+          # open issues matching the search — and a tracker that pages out is a tracker this job
+          # files a duplicate of, every week.
+          # `|| true` because this was the last unguarded external call in the step: under
+          # `set -euo pipefail` a 502 or a secondary rate limit here aborts before any of the
+          # file guards below are reached, filing nothing — the same silent failure the guards
+          # and the step condition exist to remove. An empty result is already handled: it
+          # routes to `gh issue create`, so the worst case degrades to a duplicate tracker
+          # rather than silence.
+          existing="$(gh issue list --state open --limit 100 --search "${TITLE_MARKER} in:title" \
+            --json number,title --jq '[.[] | select(.title | startswith("'"${TITLE_MARKER}"'"))][0].number // empty' || true)"
+
+          if [ "${API_DRIFT}" = "false" ] && [ "${demo_broken}" = "false" ] \
+             && [ "${apidump_failed}" = "false" ] && [ "${detect_failed}" = "false" ]; then
+            # Healthy. Close the tracker if one is open; otherwise do nothing.
+            if [ -n "${existing}" ]; then
+              gh issue close "${existing}" \
+                --comment "Resolved: \`apiDump\` matches the committed baselines and the demo composite build compiles as of ${RUN_URL}. Closing automatically." \
+                --reason completed
+              echo "Closed tracking issue #${existing} — drift resolved."
+            else
+              echo "No drift, no open tracker. Nothing to do."
+            fi
+            exit 0
+          fi
+
+          # Drift and/or demo breakage present — assemble one body.
+          {
+            echo "Automated watch on \`dev\` detected a divergence that the PR gate does not catch."
+            echo
+            echo "- **API baseline drift:** ${API_DRIFT:-unknown}"
+            echo "- **\`apiDump\` failed (dev may not compile):** ${apidump_failed}"
+            echo "- **demo composite build broken:** ${demo_broken}"
+            echo "- **drift-detection step itself failed:** ${detect_failed}"
+            echo
+            echo "Run: ${RUN_URL}"
+            echo
+            if [ "${apidump_failed}" = "true" ]; then
+              echo "### \`./gradlew apiDump\` failure output"
+              echo
+              if [ -f apidump.log ]; then
+                echo '```'
+                tail -n 60 apidump.log | tail -c "${LOG_BODY_LIMIT}"
+                echo '```'
+              else
+                echo "_No \`apidump.log\` — the step did not run. See ${RUN_URL}._"
+              fi
+              echo
+            fi
+            if [ "${API_DRIFT}" = "true" ] && [ -f api-drift.diff ]; then
+              echo "### \`apiDump\` diff against committed baselines"
+              echo
+              echo '```diff'
+              # Bounded, like every other section here. GitHub caps an issue body at 65536
+              # characters; musicmeta-core.api alone is ~2400 lines, so a Kotlin or AGP bump that
+              # reformats the emitted ABI — exactly the drift class this job exists to catch —
+              # would blow the cap, `gh` would return 422, and `set -euo pipefail` would abort the
+              # step. Unbounded means the largest drift events are the ones that file nothing.
+              diff_bytes="$(wc -c < api-drift.diff)"
+              head -c "${DIFF_BODY_LIMIT}" api-drift.diff
+              # Close the fence on its own line. `head -c` can stop mid-line, so emit a newline
+              # first only when the truncation actually cut one — otherwise the fence would be
+              # preceded by a stray blank line on every untruncated diff.
+              if [ "${diff_bytes}" -gt "${DIFF_BODY_LIMIT}" ]; then echo; fi
+              echo '```'
+              if [ "${diff_bytes}" -gt "${DIFF_BODY_LIMIT}" ]; then
+                # Outside the fence, so the backticks below render as code rather than literally.
+                echo
+                echo "_Diff truncated at ${DIFF_BODY_LIMIT} of ${diff_bytes} bytes._ Reproduce in full with"
+                echo "\`./gradlew apiDump && git diff -- '*/api/*.api'\` on \`dev\`, or see ${RUN_URL}."
+              fi
+              echo
+            fi
+            if [ "${demo_broken}" = "true" ]; then
+              echo "### demo \`../gradlew compileKotlin\` output"
+              echo
+              if [ ! -f demo-compile.log ]; then
+                # The demo step has no `if:`, so it is implicitly `if: success()` and is SKIPPED
+                # whenever an earlier step failed. `steps.demo.outcome` then reads `skipped`, which
+                # sets demo_broken=true above — but the log was never written. Without this guard
+                # the `tail` below aborts the step under `set -euo pipefail` and nothing is filed,
+                # which is the exact silent-failure this step's condition exists to prevent.
+                echo "_The demo compile step reported \`${DEMO_RESULT}\` and wrote no log — it was"
+                echo "most likely skipped because an earlier step failed. See ${RUN_URL}._"
+              else
+                echo '```'
+                # Last 60 lines is enough to show the compile error without dumping the whole log —
+                # but `tail -n` caps *lines*, not bytes, and Gradle prints single lines that run to
+                # thousands of characters (dependency-resolution failures enumerate every repository
+                # URL; Kotlin daemon errors print full classpaths). Since this section can share the
+                # body with the diff above, cap its bytes too or the two together can still exceed
+                # GitHub's 65536-character limit and fail the `gh` call.
+                tail -n 60 demo-compile.log | tail -c "${LOG_BODY_LIMIT}"
+                echo '```'
+              fi
+              echo
+            fi
+            echo "---"
+            echo "_Filed and maintained automatically by the API drift watch. This issue is updated"
+            echo "in place on each run and closed automatically once \`dev\` is clean again._"
+          } > issue-body.md
+
+          if [ -n "${existing}" ]; then
+            gh issue edit "${existing}" --title "${TITLE}" --body-file issue-body.md
+            gh issue comment "${existing}" \
+              --body "Drift still present as of ${RUN_URL}. Issue body updated with the latest diff."
+            echo "Updated existing tracking issue #${existing}."
+          else
+            gh issue create --title "${TITLE}" --body-file issue-body.md \
+              --label area/ci --label enhancement || \
+            gh issue create --title "${TITLE}" --body-file issue-body.md
+            echo "Filed new tracking issue."
+          fi
