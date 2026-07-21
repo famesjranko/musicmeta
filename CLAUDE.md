@@ -49,8 +49,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ./gradlew apiDump
 ```
 
-`demo/` is a **separate composite build** and is never compiled by `./gradlew build`. It is the only
-positional caller of the profile extensions, which makes it an API-compatibility canary:
+`demo/` is a **separate composite build** and is never compiled by `./gradlew build`, so it is the
+only in-tree consumer that compiles against the published surface the way an external consumer does:
+
+> **What the canary does and does not catch.** It catches removals, renames and return-type changes —
+> anything that stops a real consumer compiling. It no longer catches the v0.9.2 failure mode
+> (a parameter inserted mid-list on `artistProfile`/`albumProfile`/`trackProfile`): those call sites
+> now pass `types`/`forceRefresh` **by name**, which is what made `demo/` compile again, so an
+> insertion between `mbid` and `types` sails through. Only the positional `SearchCandidate` overload
+> calls in `demo/Main.kt` still exercise argument order. `apiCheck` against the committed `.api`
+> baseline is the real guard for parameter position; the canary is a compile-level backstop.
 
 ```bash
 cd demo && ../gradlew compileKotlin

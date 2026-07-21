@@ -50,6 +50,12 @@ jobs:
         # watcher must report — not a red run that aborts before the issue is filed. Its outcome is
         # folded into the tracking issue by the reporting step below.
         continue-on-error: true
+        # `shell: bash` is load-bearing, not decoration. The Actions default for `run:` is
+        # `bash -e {0}` — no `pipefail` — so in `gradlew ... | tee`, the pipeline's status is
+        # `tee`'s, which is always 0. Without this the step's outcome would be permanently
+        # `success`, the failure branch below would be dead code, and a `dev` that no longer
+        # compiles would be reported as healthy. `shell: bash` selects `bash -eo pipefail {0}`.
+        shell: bash
         run: ./gradlew apiDump 2>&1 | tee apidump.log
 
       - name: Detect API drift
@@ -63,15 +69,22 @@ jobs:
             exit 0
           fi
           echo "apidump_failed=false" >> "$GITHUB_OUTPUT"
-          # Compare the freshly dumped baselines against what is committed on dev.
-          if git diff --quiet -- '*/api/*.api'; then
+          # Compare the freshly dumped baselines against what is committed on dev. Stage them
+          # first: a plain `git diff` only sees tracked files, so a brand-new module's baseline
+          # (added, or renamed, since the last commit) would be untracked and therefore invisible —
+          # drift that reports clean. Staging makes both modified and new baselines register.
+          git add -A -- '*/api/*.api'
+          if git diff --cached --quiet -- '*/api/*.api'; then
             echo "drift=false" >> "$GITHUB_OUTPUT"
           else
             echo "drift=true" >> "$GITHUB_OUTPUT"
-            git diff -- '*/api/*.api' > api-drift.diff
+            git diff --cached -- '*/api/*.api' > api-drift.diff
           fi
-          # Reset the tree so the diff never leaks into any later step.
+          # Reset the tree so the diff never leaks into any later step: unstage, restore the
+          # tracked baselines, then drop any newly generated untracked ones.
+          git reset -q -- '*/api/*.api'
           git checkout -- '*/api/*.api'
+          git clean -fq -- '*/api/*.api'
 
       - name: Compile demo composite build
         id: demo
@@ -80,6 +93,9 @@ jobs:
         # demo/ borrows the root wrapper via ../gradlew; compileKotlin resolves musicmeta-core from
         # local source through includeBuild(".."). A failure here is a silent-rot signal, not a hard
         # job failure — we fold it into the tracking issue instead of just going red.
+        # `shell: bash` for `pipefail` — see the apiDump step above; without it a broken demo build
+        # is masked by `tee` and the demo-canary arm of this workflow can never fire.
+        shell: bash
         run: ../gradlew compileKotlin 2>&1 | tee ../demo-compile.log
 
       - name: File, update, or close the tracking issue
@@ -89,6 +105,9 @@ jobs:
           APIDUMP_FAILED: ${{ steps.api.outputs.apidump_failed }}
           DEMO_RESULT: ${{ steps.demo.outcome }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          # Byte budget for the diff section. Well under GitHub's 65536-character issue-body cap,
+          # leaving room for the log tails and boilerplate that share the body.
+          DIFF_BODY_LIMIT: '40000'
         run: |
           set -euo pipefail
 
@@ -107,8 +126,11 @@ jobs:
             apidump_failed=true
           fi
 
-          # Find the single existing open tracker, if any.
-          existing="$(gh issue list --state open --search "${TITLE_MARKER} in:title" \
+          # Find the single existing open tracker, if any. `--limit 100` because the default of 30
+          # would let the real tracker paginate out of the result set once the repo carries enough
+          # open issues matching the search — and a tracker that pages out is a tracker this job
+          # files a duplicate of, every week.
+          existing="$(gh issue list --state open --limit 100 --search "${TITLE_MARKER} in:title" \
             --json number,title --jq '[.[] | select(.title | startswith("'"${TITLE_MARKER}"'"))][0].number // empty')"
 
           if [ "${API_DRIFT}" = "false" ] && [ "${demo_broken}" = "false" ] && [ "${apidump_failed}" = "false" ]; then
@@ -146,7 +168,18 @@ jobs:
               echo "### \`apiDump\` diff against committed baselines"
               echo
               echo '```diff'
-              cat api-drift.diff
+              # Bounded, like every other section here. GitHub caps an issue body at 65536
+              # characters; musicmeta-core.api alone is ~2400 lines, so a Kotlin or AGP bump that
+              # reformats the emitted ABI — exactly the drift class this job exists to catch —
+              # would blow the cap, `gh` would return 422, and `set -euo pipefail` would abort the
+              # step. Unbounded means the largest drift events are the ones that file nothing.
+              diff_bytes="$(wc -c < api-drift.diff)"
+              head -c "${DIFF_BODY_LIMIT}" api-drift.diff
+              if [ "${diff_bytes}" -gt "${DIFF_BODY_LIMIT}" ]; then
+                echo
+                echo "... truncated at ${DIFF_BODY_LIMIT} of ${diff_bytes} bytes."
+                echo "Full diff: run \`./gradlew apiDump && git diff -- '*/api/*.api'\` on \`dev\`, or see ${RUN_URL}."
+              fi
               echo '```'
               echo
             fi

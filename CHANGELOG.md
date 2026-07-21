@@ -5,10 +5,14 @@ All notable changes to musicmeta will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.10.0] - 2026-07-21
+
+Public API compatibility enforcement — the public surface is now baselined, gated in CI, and narrowed to what was always meant to be public.
+
+> **Minor, not patch, by rule.** This release removes ~80 types from the published ABI. Under the 0.x carve-out (see `CLAUDE.md`), a `0.x.0` minor may break as long as the break is documented here and visible in the reviewed `api/*.api` diff; a `0.x.y` patch may not. That is why this is 0.10.0.
 
 ### Added
-- **CI: `demo/` composite-build canary** — the PR/push workflow (`build.yml`) now runs a `demo-canary` job (`cd demo && ../gradlew compileKotlin`) alongside `./gradlew build`. `demo/` is a separate composite build (`includeBuild("..")`) that `./gradlew build` never compiles, yet it is the only positional consumer of the public API in the tree — the accidental API-compat canary that broke silently in v0.9.2. It runs on draft PRs too, so the required-check contract on `main`/`dev` keeps reporting.
+- **CI: `demo/` composite-build canary** — the PR/push workflow (`build.yml`) now runs a `demo-canary` job (`cd demo && ../gradlew compileKotlin`) alongside `./gradlew build`. `demo/` is a separate composite build (`includeBuild("..")`) that `./gradlew build` never compiles, yet it is the only in-tree consumer that compiles against the published surface the way an external consumer does — and it broke silently in v0.9.2 for exactly that reason. It runs on draft PRs too. Note that fixing those v0.9.2 call sites to use named arguments (below) means the canary no longer detects a mid-list parameter insertion; `apiCheck` against the committed baseline is the guard for parameter position. See `CLAUDE.md`.
 - **CI: scheduled API-drift watch** — a weekly (`workflow_dispatch`-able) workflow (`api-drift.yml`) checks out `dev`, runs `./gradlew apiDump`, and diffs against the committed `api/*.api` baselines. On drift (or a demo-canary compile break) it files — or updates in place — a single `[api-drift-bot]` tracking issue with the diff in the body, and auto-closes it once `dev` is clean again. Catches *drift* (a dependency/Kotlin bump moving the ABI, a stale `.api` merge) that the PR gate cannot, and gives it a persistent owner instead of a red run that scrolls away. `GITHUB_TOKEN` only, minimal `contents: read` / `issues: write` permissions.
 - **Public ABI baselines** — [`binary-compatibility-validator`](https://github.com/Kotlin/binary-compatibility-validator) dumps each module's public API to `api/*.api`. `apiCheck` runs as part of `./gradlew build` and in the publish workflow, so a signature that diverges from the committed baseline fails the build instead of reaching Maven Central unnoticed. Regenerate with `./gradlew apiDump`; the `.api` diff is the review artifact for an intentional API change. The baselines record the API **as it currently stands**, including the 0.9.2 parameter positions — they stop new drift, they do not retroactively fix breaks that have already shipped.
 
