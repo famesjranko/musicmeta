@@ -43,12 +43,9 @@ jobs:
   # in-tree consumer compiling against the published surface the way an external consumer does —
   # it broke silently in v0.9.2 for exactly that reason. This job is that canary.
   #
-  # It is NOT a parameter-position guard, and that limit matters. Kotlin rebinds positional
-  # arguments silently, so a mid-list insertion carrying a default breaks compilation only when the
-  # rebinding also produces a type error — v0.9.2 was caught by luck of typing, not by position.
-  # (An inserted parameter with no default does fail outright, but that form is banned anyway.) `apiCheck`
-  # against the committed .api baseline is the guard for parameter position; see CLAUDE.md.
-  # A green canary means consumers still compile, not that argument order is unchanged.
+  # It is NOT a parameter-position guard — `apiCheck` against the committed .api baseline is. A
+  # green canary means consumers still compile, not that argument order is unchanged. For why a
+  # mid-list insertion can pass this job, see CLAUDE.md, which owns that rule.
   #
   # It runs on draft PRs too. Drafts cannot merge anyway, so this costs little and means a draft
   # marked ready has already reported. Note this is NOT propping up a required-check contract:
