@@ -1292,6 +1292,7 @@ public final class com/landofoz/musicmeta/EnrichmentResults {
 }
 
 public final class com/landofoz/musicmeta/EnrichmentType : java/lang/Enum {
+	public final fun driftProbeDoNotShip ()V;
 	public static final field ALBUM_ART Lcom/landofoz/musicmeta/EnrichmentType;
 	public static final field ALBUM_ART_BACK Lcom/landofoz/musicmeta/EnrichmentType;
 	public static final field ALBUM_BOOKLET Lcom/landofoz/musicmeta/EnrichmentType;
