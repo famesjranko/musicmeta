@@ -26,7 +26,13 @@ jobs:
         # This is the LAST line of defence, not the first: it fires after a tag exists, so a failure
         # here means deleting and re-pushing the tag. The first line of defence is a PR-time check
         # running `./gradlew build` (which carries apiCheck via `check`) — see the test-CI issue.
-        run: ./gradlew :musicmeta-core:test :musicmeta-okhttp:test apiCheck
+        #
+        # All three published modules are tested here. musicmeta-android was previously omitted,
+        # which left the Room cache — persisted user data on device — untested on the only automated
+        # path to Maven Central. The job already provisions the Android SDK, because the publish step
+        # below builds the AAR; naming the test task adds coverage, not a new toolchain requirement.
+        # `apiCheck` is unqualified and so covers all three modules already.
+        run: ./gradlew :musicmeta-core:test :musicmeta-okhttp:test :musicmeta-android:test apiCheck
 
       - name: Publish to Maven Central
         env:
