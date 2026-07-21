@@ -1,7 +1,7 @@
 package com.landofoz.musicmeta.provider.itunes
 
 /** Album search result from the iTunes Search API. */
-data class ITunesAlbumResult(
+internal data class ITunesAlbumResult(
     val collectionId: Long = 0,
     val collectionName: String,
     val artistName: String,
@@ -13,7 +13,7 @@ data class ITunesAlbumResult(
 )
 
 /** Track result from the iTunes Lookup API (`/lookup?id={collectionId}&entity=song`). */
-data class ITunesTrackResult(
+internal data class ITunesTrackResult(
     val trackId: Long = 0,
     val trackName: String,
     val trackNumber: Int,

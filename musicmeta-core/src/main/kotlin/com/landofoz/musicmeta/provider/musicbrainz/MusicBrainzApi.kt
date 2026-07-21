@@ -10,7 +10,7 @@ import org.json.JSONObject
  * MusicBrainz API client. Handles query building, rate limiting, and parsing.
  * All requests use Lucene query syntax with JSON responses.
  */
-class MusicBrainzApi(
+internal class MusicBrainzApi(
     private val httpClient: HttpClient,
     private val rateLimiter: RateLimiter,
 ) {

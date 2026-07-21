@@ -10,7 +10,7 @@ import java.net.URLEncoder
  * Discogs API client. Requires a personal access token.
  * Rate limited to 60 requests/minute (1000ms interval).
  */
-class DiscogsApi(
+internal class DiscogsApi(
     private val tokenProvider: () -> String,
     private val httpClient: HttpClient,
     private val rateLimiter: RateLimiter,

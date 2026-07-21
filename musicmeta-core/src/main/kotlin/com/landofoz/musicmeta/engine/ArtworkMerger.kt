@@ -12,7 +12,7 @@ import com.landofoz.musicmeta.EnrichmentType
  *
  * Parameterized by type so one class handles ARTIST_PHOTO, ALBUM_ART, etc.
  */
-class ArtworkMerger(override val type: EnrichmentType) : ResultMerger {
+internal class ArtworkMerger(override val type: EnrichmentType) : ResultMerger {
 
     override fun merge(results: List<EnrichmentResult.Success>): EnrichmentResult {
         if (results.isEmpty()) return EnrichmentResult.NotFound(type, "all_providers")

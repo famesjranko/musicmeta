@@ -7,6 +7,23 @@
 
 ## Decisions
 
+### 2026-07-21: Narrowing the public API surface — provider/http/engine internals made `internal` (issue #5)
+
+**Context**: The ABI baselines from issue #2 recorded reality, and reality was that ~84 declarations under `provider/` and the `http/`/`engine/` infrastructure were public *by omission* — `class DeezerApi`, `data class DiscogsRelease`, `object GenreMerger` with no visibility modifier default to `public`, so they shipped on Maven Central and JitPack. Nobody intended them as API; each exists to serve the `*Provider` in its own package. The cost was noise: a provider-internal rename turned `apiCheck` red and demanded an `apiDump` commit, burying the one signal that matters (a real `EnrichmentEngine`/`EnrichmentData` change). The 0.x carve-out settled in the entry below licenses the documented removal.
+
+**Decision — mark the incidentally-public declarations `internal`; keep the intended surface public.** 80 top-level types moved to `internal`: the 11 `*Api`, 11 `*Mapper` and 49 `*Models` response classes behind the providers, `MusicBrainzParser`, `http/CircuitBreaker`, and the 7 `engine/` mergers/synthesizers. The `.api` baseline shrank ~1350 lines. Kept public: the `*Provider` classes (the registration surface), `HttpClient`/`HttpResult`/`HttpResponse`/`DefaultHttpClient`, and the `ResultMerger`/`CompositeSynthesizer` interfaces.
+
+**Two decisions where an internal type leaked into a public signature** (the compiler's "public exposes internal" is the arbiter here):
+
+- **`RateLimiter` stays public, not internal.** The issue listed it as accidental infrastructure, but it is a parameter of nearly every public `*Provider` constructor (`DeezerProvider(HttpClient, RateLimiter, …)`). Hiding it would force removing or reshaping ~12 provider constructors — a far larger break than it removes. The least-break resolution is to keep it public; it is genuinely part of how a consumer tunes a provider. `CircuitBreaker`, which leaks nowhere a consumer supplies it, went internal as planned.
+- **`SimilarAlbumsProvider` and `ProviderChain` constructors changed rather than keeping their Api/CircuitBreaker params public.** `SimilarAlbumsProvider`'s only constructor took `DeezerApi`; keeping `DeezerApi` public just to preserve it would have dragged all of Deezer's models back into the ABI. Instead its `DeezerApi` constructor became `internal` and a public `(HttpClient, RateLimiter)` constructor was added, matching every sibling provider and building the `DeezerApi` internally. `ProviderChain`'s default `circuitBreakers` parameter exposed `CircuitBreaker`; its constructor became `internal` (nothing outside `ProviderRegistry` constructed it; consumers reach a chain via `chainFor()`).
+
+**Deliberately not done**: the remaining public `engine/` wiring — `ProviderRegistry`, `ProviderChain` (class), `DefaultEnrichmentEngine`, and the `ArtistMatcher`/`ConfidenceCalculator` helper objects — is also incidental but out of the issue's "mergers" scope, and `DefaultEnrichmentEngine`/`ProviderRegistry` are constructed inside `EnrichmentEngine.Builder`, so narrowing them needs its own pass. `musicmeta-okhttp` is clean by design (only `OkHttpEnrichmentClient : HttpClient`); `musicmeta-android`'s Room DAO/Database/Entity are Room-required and a persisted-data danger zone, so both modules were left untouched.
+
+**Verification**: `./gradlew build --rerun-tasks` green; test counts read from XML — core 718 (43 e2e skipped), okhttp 35, android 26, 0 failures. `./gradlew apiDump` regenerated the core baseline (okhttp/android unchanged). Demo canary `cd demo && ../gradlew compileKotlin` green — a real composite-build consumer that references none of the removed types. `git diff --check` clean.
+
+**Status**: Landed on `epic/api-compat` for the epic PR.
+
 ### 2026-07-21: Reconciling the already-shipped API breaks — 0.x semver stance, CHANGELOG backfill, v0.9.2 position
 
 **Context**: The ABI-baseline work (below) stopped *new* drift but left three questions about the breaks already on Maven Central and JitPack. All nine claimed breaks were re-verified against the tag history (`git diff v0.X.0..v0.Y.0`) before any of this was written down; every one is real.

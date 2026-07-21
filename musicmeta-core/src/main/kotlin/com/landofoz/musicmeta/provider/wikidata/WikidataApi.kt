@@ -11,7 +11,7 @@ import java.net.URLEncoder
  * P570 (death date), P495 (country of origin), P106 (occupation).
  * Constructs Wikimedia Commons thumbnail URLs from image filenames.
  */
-class WikidataApi(
+internal class WikidataApi(
     private val httpClient: HttpClient,
     private val rateLimiter: RateLimiter,
 ) {

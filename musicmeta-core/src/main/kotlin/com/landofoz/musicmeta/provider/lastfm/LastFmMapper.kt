@@ -8,7 +8,7 @@ import com.landofoz.musicmeta.SimilarTrack
 import com.landofoz.musicmeta.TopTrack
 
 /** Maps Last.fm DTOs to EnrichmentData subclasses. */
-object LastFmMapper {
+internal object LastFmMapper {
 
     fun toSimilarArtists(artists: List<LastFmSimilarArtist>): EnrichmentData.SimilarArtists =
         EnrichmentData.SimilarArtists(

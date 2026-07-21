@@ -15,7 +15,7 @@ import com.landofoz.musicmeta.TopTrack
  * Results are deduplicated, listen counts summed, and ranked by combined popularity.
  * Returns everything — the developer filters to their needs.
  */
-object TopTrackMerger : ResultMerger {
+internal object TopTrackMerger : ResultMerger {
 
     override val type: EnrichmentType = EnrichmentType.ARTIST_TOP_TRACKS
 

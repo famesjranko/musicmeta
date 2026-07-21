@@ -1,7 +1,7 @@
 package com.landofoz.musicmeta.provider.wikipedia
 
 /** Summary data from the Wikipedia REST API page/summary endpoint. */
-data class WikipediaSummary(
+internal data class WikipediaSummary(
     val title: String,
     val extract: String,
     val description: String?,
@@ -9,7 +9,7 @@ data class WikipediaSummary(
 )
 
 /** Image item from the Wikipedia REST API page/media-list endpoint. */
-data class WikipediaMediaItem(
+internal data class WikipediaMediaItem(
     val title: String,
     val url: String,
     val width: Int?,

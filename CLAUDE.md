@@ -138,7 +138,7 @@ Whatever the release channel, evolve the API additively wherever possible:
 - Prefer adding new overloads or default parameters over modifying existing signatures.
 - Deprecate before removing — add `@Deprecated` with `ReplaceWith` and keep for at least one minor release before removal.
 - **Append new parameters at the end with a default — never insert mid-list.** A mid-list insertion silently re-binds every positional argument after it. (Note: on the JVM, adding a parameter *anywhere* to a function with default parameters changes the generated method descriptor, so it is a binary break for pre-compiled callers regardless of position — appending is the source-compatible floor, not a full ABI guarantee. A 0.x minor is the place for either.)
-- Internal code (`internal` visibility, `provider/*/` internals, `http/` infrastructure) can change freely — but see the caveat below: much of `provider/` is public by omission today.
+- Internal code (`internal` visibility, `provider/*/` internals, `http/` infrastructure) can change freely — and this is now enforced by visibility, not just aspiration: the `*Api`/`*Mapper`/`*Models` behind each provider, `MusicBrainzParser`, `CircuitBreaker`, and the `engine/` mergers/synthesizers are all `internal` and absent from the `.api` baselines. The public surface is the `*Provider` classes, `HttpClient`/`HttpResult`/`HttpResponse`/`DefaultHttpClient`/`RateLimiter`, and the `ResultMerger`/`CompositeSynthesizer` extension-point interfaces.
 - When you make a breaking change, document it in `CHANGELOG.md` under a `### Breaking Changes` heading and flag it to the user before proceeding.
 
 **Enforcement.** `binary-compatibility-validator` dumps the public ABI to `api/*.api` in each module.
@@ -147,12 +147,17 @@ fails the build rather than being caught by review alone. An intentional API cha
 `./gradlew apiDump` and reviewing the committed `.api` diff — that diff, not the source diff, is the
 record of what consumers see.
 
-> **Caveat — "internal code can change freely" is not true yet.** The baselines record 93 public
-> classes under `provider/`; almost none are marked `internal`, so they are part of the published ABI
-> and `apiCheck` will flag changes to them. (Under `http/`, only `CircuitBreaker` and `RateLimiter`
-> are accidental — `HttpClient`, `HttpResult` and `HttpResponse` are the contract `musicmeta-okhttp`
-> implements and must stay public.) Narrowing the provider surface is tracked separately; until it
-> lands, a provider-internal refactor legitimately requires an `apiDump` commit.
+> **The provider/http/engine surface was narrowed (2026-07-21, issue #5).** 80 top-level types that
+> were public only by omission — the `*Api`/`*Mapper`/`*Models` behind each provider, `MusicBrainzParser`,
+> `http/CircuitBreaker`, and the `engine/` mergers/synthesizers — are now `internal` and no longer in the
+> `.api` baselines. A refactor confined to those internals no longer touches the public ABI, so `apiCheck`
+> stays green and no `apiDump` commit is needed. `RateLimiter` stays public deliberately: it is a
+> parameter of nearly every public `*Provider` constructor, so hiding it would break the provider
+> constructor surface far more than it narrows anything. What remains public under `engine/`
+> (`ProviderRegistry`, `ProviderChain`, `DefaultEnrichmentEngine`, `ArtistMatcher`, `ConfidenceCalculator`)
+> is engine wiring/helpers left for a future pass. One exception was forced here: `ProviderChain`'s
+> constructor became `internal` (its default `circuitBreakers` parameter referenced the now-internal
+> `CircuitBreaker`); the class itself stays public and is reachable via `ProviderRegistry.chainFor()`.
 
 ## Git Rules
 

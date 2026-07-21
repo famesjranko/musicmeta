@@ -8,7 +8,7 @@ import org.json.JSONObject
  * Cover Art Archive API client. Checks artwork availability via redirect URLs
  * and fetches image metadata (thumbnails/sizes) from the JSON endpoint.
  */
-class CoverArtArchiveApi(
+internal class CoverArtArchiveApi(
     private val httpClient: HttpClient,
 ) {
 

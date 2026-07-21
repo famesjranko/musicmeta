@@ -14,7 +14,7 @@ import com.landofoz.musicmeta.GenreAffinity
  *
  * Relationship weights: sibling=0.9, child=0.8, parent=0.7
  */
-object GenreAffinityMatcher : CompositeSynthesizer {
+internal object GenreAffinityMatcher : CompositeSynthesizer {
 
     override val type: EnrichmentType = EnrichmentType.GENRE_DISCOVERY
 

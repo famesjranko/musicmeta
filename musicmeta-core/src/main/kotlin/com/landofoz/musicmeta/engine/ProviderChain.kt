@@ -12,7 +12,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 
-class ProviderChain(
+class ProviderChain internal constructor(
     val type: EnrichmentType,
     private val providers: List<EnrichmentProvider>,
     private val circuitBreakers: Map<String, CircuitBreaker> =

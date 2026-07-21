@@ -9,7 +9,7 @@ import org.json.JSONObject
  * Fanart.tv API client. Requires a project API key.
  * Provides high-quality artist images: thumbnails, backgrounds, logos, banners.
  */
-class FanartTvApi(
+internal class FanartTvApi(
     private val projectKeyProvider: () -> String,
     private val httpClient: HttpClient,
     private val rateLimiter: RateLimiter,

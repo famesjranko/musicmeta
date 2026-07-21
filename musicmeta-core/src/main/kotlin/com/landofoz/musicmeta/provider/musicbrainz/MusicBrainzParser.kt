@@ -3,7 +3,7 @@ package com.landofoz.musicmeta.provider.musicbrainz
 import org.json.JSONObject
 
 /** Parses MusicBrainz JSON API responses into internal DTOs. */
-object MusicBrainzParser {
+internal object MusicBrainzParser {
 
     fun parseReleases(json: JSONObject): List<MusicBrainzRelease> {
         val releases = json.optJSONArray("releases") ?: return emptyList()
