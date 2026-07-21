@@ -1,0 +1,291 @@
+name: Provider API drift watch
+
+# Scheduled watch for THIRD-PARTY provider drift — the inverse of api-drift.yml.
+#
+# api-drift.yml watches musicmeta's own published ABI: it protects our consumers from us.
+# This job watches the other direction: a provider (MusicBrainz, Deezer, Last.fm, Discogs, …)
+# changing their JSON or endpoints underneath us, which breaks musicmeta's ability to enrich.
+#
+# That failure is silent by construction. Every parser uses org.json's opt* family, which returns
+# a default on a missing key rather than throwing — so a renamed field yields "" and flows through
+# as a *successful* enrichment containing nothing. It has shipped before: v0.9.1 fixed ListenBrainz
+# `track_name` -> `recording_name` and a nested `release` -> top-level `release_name`, both of which
+# reached users as empty values, and both of which then sat in consumers' caches for up to the TTL.
+#
+# Critically, this failure arrives with ZERO commits to this repo. Every other gate here is
+# change-triggered — a PR, a push, a tag. A provider deploys on their schedule while our tree is
+# untouched and every check is green. That is why the detector has to be scheduled: the trigger is
+# external, so the watcher must be too.
+#
+# Never gating. conventions.md §6 is right that third-party rate limits and outages must not be able
+# to block a merge. This does not change that — it gives the signal an owner instead of no home.
+
+on:
+  schedule:
+    # Daily, 05:00 UTC. Daily rather than weekly because bad values are cached with TTLs up to
+    # 7 days, so a weekly cadence could leave consumers holding empty data for a fortnight.
+    - cron: '0 5 * * *'
+  workflow_dispatch:
+
+# Deliberately NOT triggered by pull_request, and never by pull_request_target. This job holds
+# provider API keys; pull_request_target would expose them to fork-authored code. With only
+# schedule and workflow_dispatch, the sole ways to run it are the schedule (which runs as the repo)
+# and a manual dispatch (which requires write access).
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: provider-drift-watch
+  # External writes (create/edit/close the tracking issue). Do not cancel mid-write.
+  cancel-in-progress: false
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    steps:
+      # Actions are SHA-pinned, not tag-pinned, because this job has provider secrets in scope.
+      # A tag is mutable: if `actions/checkout@v4` were ever repointed, it would run with those
+      # secrets available. See #10, which tracks the runtime bump for the other workflows — it
+      # must update these digests too, not just the tags.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: dev
+
+      - uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@48b5f213c81028ace310571dc5ec0fbbca0b2947 # v4
+
+      - name: Check provider credentials are configured
+        id: preflight
+        shell: bash
+        env:
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+          FANARTTV_API_KEY: ${{ secrets.FANARTTV_API_KEY }}
+          DISCOGS_TOKEN: ${{ secrets.DISCOGS_TOKEN }}
+          LISTENBRAINZ_TOKEN: ${{ secrets.LISTENBRAINZ_TOKEN }}
+        run: |
+          set -eo pipefail
+          # A missing key is a MISCONFIGURATION, not provider drift, and the two must not be
+          # reported the same way. E2ETestFixture.prop() returns "" for an absent key with no
+          # skip, so the keyed tests would simply fail — and without this check the watch would
+          # file a "provider drifted" issue every single day about our own missing secrets.
+          # Only the names are ever printed. Never the values.
+          missing=""
+          for name in LASTFM_API_KEY FANARTTV_API_KEY DISCOGS_TOKEN LISTENBRAINZ_TOKEN; do
+            if [ -z "${!name:-}" ]; then
+              missing="${missing}${name} "
+            fi
+          done
+          if [ -n "${missing}" ]; then
+            echo "missing=${missing}" >> "$GITHUB_OUTPUT"
+            echo "::warning::Provider credentials not configured: ${missing}— keyed providers will be reported as misconfigured, not as drift."
+          else
+            echo "missing=" >> "$GITHUB_OUTPUT"
+            echo "All four provider credentials are present."
+          fi
+
+      - name: Run E2E suite against live provider APIs
+        id: e2e
+        # Non-fatal: a red suite is the signal this job exists to report, not a reason to abort
+        # before the issue is filed. Its outcome is folded into the tracking issue below.
+        continue-on-error: true
+        # `shell: bash` is load-bearing. The Actions default for `run:` is `bash -e {0}` with no
+        # pipefail, so in `gradlew ... | tee` the pipeline's status is tee's — always 0 — and this
+        # step's outcome would be permanently `success`. That exact bug shipped in api-drift.yml
+        # and was caught in review; do not re-introduce it here.
+        shell: bash
+        env:
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+          FANARTTV_API_KEY: ${{ secrets.FANARTTV_API_KEY }}
+          DISCOGS_TOKEN: ${{ secrets.DISCOGS_TOKEN }}
+          LISTENBRAINZ_TOKEN: ${{ secrets.LISTENBRAINZ_TOKEN }}
+        # musicmeta-core/build.gradle.kts already forwards these four env vars to the test JVM,
+        # so no build change is needed. The suite is 70 tests across 5 classes, all gated behind
+        # -Dinclude.e2e=true.
+        run: ./gradlew :musicmeta-core:test -Dinclude.e2e=true 2>&1 | tee e2e.log
+
+      - name: Summarise failures
+        id: summary
+        # Runs even when the suite failed — that is the case we most need summarised.
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: |
+          set -eo pipefail
+          python3 - <<'PY' > e2e-summary.txt
+          import glob, xml.etree.ElementTree as ET
+
+          total = failed = errored = skipped = 0
+          rows = []
+          for path in glob.glob("musicmeta-core/build/test-results/**/*.xml", recursive=True):
+              try:
+                  root = ET.parse(path).getroot()
+              except Exception:
+                  continue
+              if root.tag != "testsuite":
+                  continue
+              total += int(root.get("tests", 0))
+              failed += int(root.get("failures", 0))
+              errored += int(root.get("errors", 0))
+              skipped += int(root.get("skipped", 0))
+              for case in root.iter("testcase"):
+                  for bad in list(case.findall("failure")) + list(case.findall("error")):
+                      cls = (case.get("classname") or "").rsplit(".", 1)[-1]
+                      msg = " ".join((bad.get("message") or "").split())
+                      rows.append(f"- **{cls}.{case.get('name')}** — {msg[:400]}")
+
+          print(f"TOTAL={total} FAILED={failed} ERRORED={errored} SKIPPED={skipped}")
+          print("---")
+          for r in rows:
+              print(r)
+          PY
+
+          # REDACTION. This output goes into a PUBLIC issue body, and provider request URLs embed
+          # credentials — Last.fm calls carry `api_key=`, Discogs carries `token=`. An assertion
+          # message or stack trace quoting a URL would publish the key. Two passes:
+          #   1. pattern-redact any credential-shaped query parameter;
+          #   2. redact the literal secret values, in case one reaches the text another way.
+          # GitHub masks known secrets in logs, but masking does not cover what we write to a file
+          # and then POST to the issues API.
+          sed -i -E 's/([?&](api_key|apikey|api-key|token|key|auth)=)[^&[:space:]"'"'"']*/\1REDACTED/gI' e2e-summary.txt
+          for name in LASTFM_API_KEY FANARTTV_API_KEY DISCOGS_TOKEN LISTENBRAINZ_TOKEN; do
+            value="${!name:-}"
+            # Guard on length: an empty or very short value would match everywhere and redact the
+            # whole file to noise. Passed through the environment rather than argv, so the value
+            # never appears in the process table.
+            if [ -n "${value}" ] && [ "${#value}" -ge 8 ]; then
+              SECRET_VALUE="${value}" python3 <<'PY'
+          import os, pathlib
+          secret = os.environ["SECRET_VALUE"]
+          p = pathlib.Path("e2e-summary.txt")
+          p.write_text(p.read_text().replace(secret, "REDACTED"))
+          PY
+            fi
+          done
+
+          echo "Summary assembled and redacted ($(wc -c < e2e-summary.txt) bytes)."
+        env:
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+          FANARTTV_API_KEY: ${{ secrets.FANARTTV_API_KEY }}
+          DISCOGS_TOKEN: ${{ secrets.DISCOGS_TOKEN }}
+          LISTENBRAINZ_TOKEN: ${{ secrets.LISTENBRAINZ_TOKEN }}
+
+      - name: File, update, or close the tracking issue
+        # `!cancelled()` rather than `always()`: always() also fires during cancellation, and this
+        # step performs external writes. Reaching it after an earlier failure means earlier steps
+        # may have been SKIPPED, so every file read below is guarded.
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Explicit, so gh never has to infer the repo from a git remote — checkout itself can fail.
+          GH_REPO: ${{ github.repository }}
+          E2E_RESULT: ${{ steps.e2e.outcome }}
+          MISSING_KEYS: ${{ steps.preflight.outputs.missing }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          # Byte budget for the failure summary. GitHub caps an issue body at 65536 characters,
+          # and UTF-8 bytes >= characters, so bounding bytes bounds characters.
+          SUMMARY_BODY_LIMIT: '40000'
+        run: |
+          set -euo pipefail
+
+          TITLE_MARKER='[provider-drift-bot]'
+          TITLE="${TITLE_MARKER} Provider API drift detected against live endpoints"
+          TRACKER_LABEL='provider-drift'
+
+          suite_failed=false
+          if [ "${E2E_RESULT}" != "success" ]; then
+            suite_failed=true
+          fi
+
+          misconfigured=false
+          if [ -n "${MISSING_KEYS}" ]; then
+            misconfigured=true
+          fi
+
+          # Look the tracker up by LABEL, not by title text. GitHub's issue-search tokenizer strips
+          # bracket punctuation, so a `[provider-drift-bot] in:title` search degrades to the words
+          # "provider drift bot" ranked by relevance — which can page the real tracker out. See #14,
+          # which tracks retrofitting this same fix onto api-drift.yml. `|| true` because an
+          # unguarded gh call under `set -e` would abort before anything is filed; an empty result
+          # correctly routes to `gh issue create`.
+          existing="$(gh issue list --state open --label "${TRACKER_LABEL}" --limit 100 \
+            --json number --jq '.[0].number // empty' || true)"
+
+          if [ "${suite_failed}" = "false" ] && [ "${misconfigured}" = "false" ]; then
+            if [ -n "${existing}" ]; then
+              gh issue close "${existing}" \
+                --comment "Resolved: the full E2E suite passes against live provider APIs as of ${RUN_URL}. Closing automatically." \
+                --reason completed
+              echo "Closed tracking issue #${existing} — providers healthy."
+            else
+              echo "Providers healthy, no open tracker. Nothing to do."
+            fi
+            exit 0
+          fi
+
+          {
+            echo "The scheduled watch found a divergence between musicmeta and live provider APIs."
+            echo
+            echo "- **E2E suite result:** ${E2E_RESULT}"
+            echo "- **Credentials missing (misconfiguration, not drift):** ${MISSING_KEYS:-none}"
+            echo
+            echo "Run: ${RUN_URL}"
+            echo
+            if [ "${misconfigured}" = "true" ]; then
+              echo "> **Configure these repository secrets before trusting this result:**"
+              echo "> \`${MISSING_KEYS}\`"
+              echo ">"
+              echo "> Tests for those providers fail rather than skip when a key is absent"
+              echo "> (\`E2ETestFixture.prop()\` returns an empty string), so failures below may be"
+              echo "> misconfiguration rather than a provider change."
+              echo
+            fi
+            if [ -f e2e-summary.txt ]; then
+              echo "### Failing tests"
+              echo
+              echo '```'
+              summary_bytes="$(wc -c < e2e-summary.txt)"
+              head -c "${SUMMARY_BODY_LIMIT}" e2e-summary.txt
+              if [ "${summary_bytes}" -gt "${SUMMARY_BODY_LIMIT}" ]; then echo; fi
+              echo '```'
+              if [ "${summary_bytes}" -gt "${SUMMARY_BODY_LIMIT}" ]; then
+                echo
+                echo "_Summary truncated at ${SUMMARY_BODY_LIMIT} of ${summary_bytes} bytes. Full output: ${RUN_URL}._"
+              fi
+              echo
+            else
+              echo "_No test summary was produced — the suite step did not reach the summariser._"
+              echo "_See ${RUN_URL}._"
+              echo
+            fi
+            echo "### What to check"
+            echo
+            echo "A provider renaming or moving a field does **not** raise an error here — the"
+            echo "parsers use \`org.json\`'s \`opt*\` accessors, which return a default on a missing"
+            echo "key. Symptoms are empty strings and absent values, not exceptions. Compare the"
+            echo "failing assertion against the provider's current response shape before assuming"
+            echo "the test is wrong."
+            echo
+            echo "A confirmed provider break is a **patch** release: fix the parser, pin the new"
+            echo "shape as a unit-test fixture, ship \`0.x.y\`. The signature and ABI are unchanged,"
+            echo "so the 0.x carve-out permits a patch (see \`CLAUDE.md\`)."
+            echo
+            echo "---"
+            echo "_Filed and maintained automatically by the provider drift watch. Updated in place"
+            echo "on each run and closed automatically once the suite passes again._"
+          } > issue-body.md
+
+          if [ -n "${existing}" ]; then
+            gh issue edit "${existing}" --body-file issue-body.md
+            gh issue comment "${existing}" \
+              --body "Still failing as of ${RUN_URL}. Issue body updated with the latest run."
+            echo "Updated existing tracking issue #${existing}."
+          else
+            gh issue create --title "${TITLE}" --body-file issue-body.md \
+              --label "${TRACKER_LABEL}" --label area/provider
+            echo "Filed new tracking issue."
+          fi
