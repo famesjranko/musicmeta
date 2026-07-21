@@ -29,9 +29,15 @@ jobs:
         #
         # All three published modules are tested here. musicmeta-android was previously omitted,
         # which left the Room cache — persisted user data on device — untested on the only automated
-        # path to Maven Central. The job already provisions the Android SDK, because the publish step
-        # below builds the AAR; naming the test task adds coverage, not a new toolchain requirement.
-        # `apiCheck` is unqualified and so covers all three modules already.
+        # path to Maven Central. This adds no toolchain requirement: :musicmeta-android is in
+        # settings.gradle.kts so AGP configures on every invocation, and the unqualified apiCheck
+        # already required the assembled variant.
+        #
+        # It does add a failure surface. Robolectric fetches its android-all jars from Maven at test
+        # execution time, and AGP's unqualified `test` aggregates debug + release variants, so the
+        # suite runs twice. A Maven or Robolectric CDN hiccup therefore fails this gate *after* the
+        # tag exists — which per the note above means deleting and re-pushing the tag. Judged worth
+        # it: publishing an untested Room migration is the worse outcome.
         run: ./gradlew :musicmeta-core:test :musicmeta-okhttp:test :musicmeta-android:test apiCheck
 
       - name: Publish to Maven Central

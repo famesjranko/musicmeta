@@ -100,10 +100,18 @@ jobs:
 
       - name: File, update, or close the tracking issue
         # The detect step above runs git commands that could fail (a corrupt index, a pathspec that
-        # matches nothing after an upstream change). Without `always()` such a failure would skip
-        # reporting entirely and the watch would file nothing — silently, which is the failure mode
-        # this whole workflow exists to prevent.
-        if: always()
+        # matches nothing after an upstream change). Without this condition such a failure would
+        # skip reporting entirely and the watch would file nothing — silently, which is the failure
+        # mode this whole workflow exists to prevent.
+        #
+        # `!cancelled()` rather than `always()`: `always()` is the one conditional that also runs
+        # during cancellation, and this step performs external writes. Filing or closing the tracker
+        # while the job is being torn down is exactly the half-write the `concurrency` block above
+        # refuses to allow.
+        #
+        # Reaching this step after an earlier failure means earlier steps may have been SKIPPED, so
+        # the log files they produce may not exist — the body assembly below must not assume they do.
+        if: ${{ !cancelled() }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           API_DRIFT: ${{ steps.api.outputs.drift }}
@@ -180,12 +188,16 @@ jobs:
             if [ "${apidump_failed}" = "true" ]; then
               echo "### \`./gradlew apiDump\` failure output"
               echo
-              echo '```'
-              tail -n 60 apidump.log | tail -c "${LOG_BODY_LIMIT}"
-              echo '```'
+              if [ -f apidump.log ]; then
+                echo '```'
+                tail -n 60 apidump.log | tail -c "${LOG_BODY_LIMIT}"
+                echo '```'
+              else
+                echo "_No \`apidump.log\` — the step did not run. See ${RUN_URL}._"
+              fi
               echo
             fi
-            if [ "${API_DRIFT}" = "true" ]; then
+            if [ "${API_DRIFT}" = "true" ] && [ -f api-drift.diff ]; then
               echo "### \`apiDump\` diff against committed baselines"
               echo
               echo '```diff'
@@ -196,7 +208,10 @@ jobs:
               # step. Unbounded means the largest drift events are the ones that file nothing.
               diff_bytes="$(wc -c < api-drift.diff)"
               head -c "${DIFF_BODY_LIMIT}" api-drift.diff
-              echo
+              # Close the fence on its own line. `head -c` can stop mid-line, so emit a newline
+              # first only when the truncation actually cut one — otherwise the fence would be
+              # preceded by a stray blank line on every untruncated diff.
+              if [ "${diff_bytes}" -gt "${DIFF_BODY_LIMIT}" ]; then echo; fi
               echo '```'
               if [ "${diff_bytes}" -gt "${DIFF_BODY_LIMIT}" ]; then
                 # Outside the fence, so the backticks below render as code rather than literally.
@@ -209,6 +224,15 @@ jobs:
             if [ "${demo_broken}" = "true" ]; then
               echo "### demo \`../gradlew compileKotlin\` output"
               echo
+              if [ ! -f demo-compile.log ]; then
+                # The demo step has no `if:`, so it is implicitly `if: success()` and is SKIPPED
+                # whenever an earlier step failed. `steps.demo.outcome` then reads `skipped`, which
+                # sets demo_broken=true above — but the log was never written. Without this guard
+                # the `tail` below aborts the step under `set -euo pipefail` and nothing is filed,
+                # which is the exact silent-failure this step's condition exists to prevent.
+                echo "_The demo compile step reported \`${DEMO_RESULT}\` and wrote no log — it was"
+                echo "most likely skipped because an earlier step failed. See ${RUN_URL}._"
+              else
               echo '```'
               # Last 60 lines is enough to show the compile error without dumping the whole log —
               # but `tail -n` caps *lines*, not bytes, and Gradle prints single lines that run to
@@ -218,6 +242,7 @@ jobs:
               # GitHub's 65536-character limit and fail the `gh` call.
               tail -n 60 demo-compile.log | tail -c "${LOG_BODY_LIMIT}"
               echo '```'
+              fi
               echo
             fi
             echo "---"

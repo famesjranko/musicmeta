@@ -121,7 +121,7 @@ do not add new ones.
 | `musicmeta-android/**` | `./gradlew :musicmeta-android:test` (needs `ANDROID_HOME`; set to `~/android-sdk`) **plus** `apiCheck` — this module is published too, and its baseline is `musicmeta-android/api/` |
 | `musicmeta-android/**/cache/**` (Room) | Android tests **plus** an explicit schema/migration review — persisted user data |
 | `musicmeta-okhttp/**` | `./gradlew :musicmeta-okhttp:test` **plus** `apiCheck` — published module, baseline in `musicmeta-okhttp/api/` |
-| Any public API change | **`./gradlew apiCheck` and read the `.api` diff — this is the guard for parameter position.** Then `cd demo && ../gradlew compileKotlin`: `demo/` is a separate composite build (`includeBuild("..")`) that `./gradlew build` never compiles, so it is the only in-tree consumer compiling against the published surface. Its argument-order coverage is **partial** — the demo passes `types`/`forceRefresh` by name, so an insertion *after* the last positional argument compiles clean. A green canary is not positional safety (see `CLAUDE.md`) |
+| Any public API change | **`./gradlew apiCheck` and read the `.api` diff — this is the guard for parameter position.** Then `cd demo && ../gradlew compileKotlin`: `demo/` is a separate composite build (`includeBuild("..")`) that `./gradlew build` never compiles, so it is the only in-tree consumer compiling against the published surface. It is **not** a position guard — Kotlin rebinds positional arguments silently, so a mid-list insertion only fails to compile if it also produces a type error. A green canary means consumers compile, not that order is unchanged (see `CLAUDE.md`) |
 | `gradle/libs.versions.toml`, any `build.gradle.kts` | full `./gradlew build`, and confirm the version catalog is the only place versions changed |
 | `.github/workflows/**` | Review against §7 — release machinery. Never merge on assumption; state what was and was not exercised |
 | Docs only | always-checks only |
@@ -176,10 +176,17 @@ was never published. So:
    `musicmeta-okhttp` `build.gradle.kts`; pin the `CHANGELOG.md` `[Unreleased]` heading to the version
    and date, and open a fresh empty `[Unreleased]` above it; update `ROADMAP.md` "Where We Are".
    Choose the number against the 0.x carve-out in `CLAUDE.md` — a patch may **not** carry an API break.
-2. **Before pushing the tag** — update the `README.md` install snippets to the new version. They are
-   deliberately left at the previous version until this point, because until the tag fires they would
-   document an artifact that is not on Maven Central. This step is easy to forget and nothing checks
-   it: a stale README tells every new consumer to depend on the release *before* the one just cut.
+2. **At tag time** — update the `README.md` install snippets (Maven Central *and* JitPack
+   coordinates) to the new version. They are deliberately left at the previous version until this
+   point, because until the tag fires they would document an artifact that is not on Maven Central.
+
+   `main` takes no direct pushes, so this is a **docs-only PR into `main`** — the one sanctioned
+   exception to "child PRs target `dev`" in §2, because its whole purpose is to be true only once
+   `main` is the released state. Docs-only, so always-checks only. Merge it, push the tag, then
+   re-run the §2 sync (`git merge --ff-only origin/main`) so `dev` picks the README commit up.
+
+   This step is easy to forget and nothing checks it: a stale README tells every new consumer to
+   depend on the release *before* the one just cut. See #13 for automating the version half of this.
 3. **After the tag** — confirm `publish.yml` went green and the artifacts resolve from Central.
 
 ## 9. Invariants

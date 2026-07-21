@@ -52,19 +52,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 `demo/` is a **separate composite build** and is never compiled by `./gradlew build`, so it is the
 only in-tree consumer that compiles against the published surface the way an external consumer does:
 
-> **What the canary does and does not catch.** It catches removals, renames and return-type changes —
-> anything that stops a real consumer compiling. On *argument order* its coverage is partial, and the
-> boundary is the last positional argument at each call site: everything from `types` onward is now
-> passed **by name** (that is what made `demo/` compile again after v0.9.2), so an insertion *after*
-> the last positional argument sails through, while one at or before it still breaks the build.
+> **The canary is not a parameter-position guard. `apiCheck` is.**
 >
-> Concretely, in `demo/DemoCommands.kt`: `albumProfile(title, artist, mbid, …)` passes three
-> positional arguments, so an insertion between `title`, `artist` or `mbid` is still caught;
-> `artistProfile(name, mbid, …)` and `trackProfile(title, artist, …)` pass two. What is *not* caught
-> is the exact v0.9.2 shape — a parameter inserted between `mbid` and `types`.
+> It catches removals, renames and return-type changes — anything that stops a real consumer
+> compiling. What it cannot reliably catch is a parameter *inserted mid-list*, because Kotlin rebinds
+> positional arguments silently: the break only surfaces if the rebinding also produces a **type**
+> error. v0.9.2 was caught by luck of typing — `Set<EnrichmentType>` could not bind to
+> `EnrichmentIdentifiers?`. Insert a `String?` between `artist` and `mbid` on `albumProfile` and the
+> demo's third positional argument binds to the new parameter, `mbid` quietly takes its default, and
+> everything compiles — wrong, and green.
 >
-> Treat `apiCheck` against the committed `.api` baseline as the guard for parameter position. The
-> canary is a compile-level backstop with a known gap, not the positional guarantee.
+> So: run `apiCheck` and read the `.api` diff for anything touching a signature. Treat a green canary
+> as evidence that consumers still *compile*, never as evidence that argument order is unchanged.
 
 ```bash
 cd demo && ../gradlew compileKotlin

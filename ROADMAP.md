@@ -304,6 +304,10 @@ Ranked by **impact to consumers × implementation effort**:
 | Android integration | Room cache | + Hilt module | + WorkManager | + WorkManager | + WorkManager | + OkHttp adapter | Stable |
 | Distribution | JitPack | JitPack | JitPack | JitPack | JitPack | JitPack + Maven Central | Maven Central |
 
+> **v0.10.0** is not a column above because it moved none of these dimensions: it added no enrichment
+> types (still 34) and no provider coverage. It was an API-hygiene release — committed ABI baselines,
+> CI gates, a narrowed public surface, and the 0.x semver carve-out. See "Where We Are" above.
+
 **The metadata + recommendations story is nearly complete.** A music app using musicmeta now gets metadata, discovery, and radio features from a single `enrich()` call. The architecture supports four enrichment patterns: standard provider chains, composite synthesis, multi-provider merging, and catalog-aware filtering.
 
 ### How close to the goal?
