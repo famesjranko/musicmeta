@@ -22,8 +22,11 @@ Those skills supply the procedure; this file supplies the project.
 - **Location:** `../musicmeta-worktrees/<branch-slug>` — a sibling of the repo. It must stay outside the
   repo tree: Gradle scans the project directory, and a worktree placed inside becomes a second copy of
   every module.
-- **What a fresh worktree is missing: nothing the build needs.** Verified — no `local.properties` and
-  no `secrets.properties` exist in this repo; the Android SDK is located through the `ANDROID_HOME`
+- **What a fresh worktree is missing: nothing the build needs.** Verified — no `local.properties`
+  exists, and the gitignored `secrets.properties` in the primary checkout is read only at *runtime*
+  by the demo CLI (`demo/src/.../Main.kt`), never by a build script, so a worktree builds and
+  compiles without it (`./gradlew run` in a worktree falls back to environment variables for API
+  keys). The Android SDK is located through the `ANDROID_HOME`
   environment variable (`~/android-sdk`), which a worktree inherits from the shell. Gradle re-resolves
   dependencies into the shared user cache. So `./gradlew build` works in a fresh worktree unchanged.
 - **One caveat:** `.claude/` is gitignored, so a worktree does not inherit local Claude Code permission
@@ -83,9 +86,19 @@ even when it does not fire.
 Run on every change, whatever was touched:
 
 ```bash
-./gradlew build          # assembles + tests all three modules
-git diff --check         # trailing whitespace / conflict markers
+./gradlew build          # assembles + tests all three modules; also runs apiCheck via `check`
+git diff --check -- ':!*/api/*.api'   # trailing whitespace / conflict markers
 ```
+
+> **Why the `api/*.api` exclusion.** `binary-compatibility-validator` writes its dumps ending in a
+> blank line, and `apiCheck` compares byte-for-byte — stripping it to satisfy `git diff --check`
+> makes the check fail instead. Without the exclusion the always-check is red on every `apiDump`
+> commit, which trains reviewers to ignore it. The generated file is not hand-edited, so nothing is
+> lost by excluding it.
+
+`apiCheck` compares the public ABI against the committed `api/*.api` baselines. A failure there is
+not a flaky check — it means the public API changed. Either the change was unintended and should be
+reverted, or it was intended and needs `./gradlew apiDump` plus a reviewed `.api` diff in the PR.
 
 There is **no linter configured** in this repo (no ktlint, detekt, or spotless) — do not invent one or
 invoke a raw linter that the build does not pin. Kotlin compiler warnings are the only static signal;
@@ -103,10 +116,11 @@ do not add new ones.
 |---|---|
 | `musicmeta-core/src/main/kotlin/com/landofoz/musicmeta/*.kt` (**public API**) | `./gradlew apiCheck` + read the `.api` diff against §9 backwards-compat rules; **plus** the demo canary below |
 | `musicmeta-core/**` (anything) | `./gradlew :musicmeta-core:test` |
+| Any `api/*.api` baseline | The `.api` diff **is** the review. A change here means the public ABI changed — confirm it was intended, and that §9's append-at-the-end rule was followed |
 | `musicmeta-core/**/provider/<name>/**` | `:musicmeta-core:test --tests "*<Name>*"`, then the full core suite. E2E is a deferred manual proof surface — see below |
-| `musicmeta-android/**` | `./gradlew :musicmeta-android:test` (needs `ANDROID_HOME`; set to `~/android-sdk`) |
+| `musicmeta-android/**` | `./gradlew :musicmeta-android:test` (needs `ANDROID_HOME`; set to `~/android-sdk`) **plus** `apiCheck` — this module is published too, and its baseline is `musicmeta-android/api/` |
 | `musicmeta-android/**/cache/**` (Room) | Android tests **plus** an explicit schema/migration review — persisted user data |
-| `musicmeta-okhttp/**` | `./gradlew :musicmeta-okhttp:test` |
+| `musicmeta-okhttp/**` | `./gradlew :musicmeta-okhttp:test` **plus** `apiCheck` — published module, baseline in `musicmeta-okhttp/api/` |
 | Any public API change | `cd demo && ../gradlew compileKotlin` — the **positional-caller canary**; `demo/` is a separate composite build (`includeBuild("..")`) that `./gradlew build` never compiles |
 | `gradle/libs.versions.toml`, any `build.gradle.kts` | full `./gradlew build`, and confirm the version catalog is the only place versions changed |
 | `.github/workflows/**` | Review against §7 — release machinery. Never merge on assumption; state what was and was not exercised |
@@ -168,7 +182,12 @@ JitPack; assume external consumers exist.
 - Prefer new overloads or default parameters over modifying existing signatures.
 - Deprecate before removing — `@Deprecated` with `ReplaceWith`, kept for at least one minor release.
 - Internal code (`internal` visibility, `provider/*/` internals, `http/` infrastructure) may change
-  freely.
+  freely — **aspirationally.** The baselines record 93 public classes under `provider/`, almost none
+  marked `internal`, so in ABI terms they are published API today and `apiCheck` will flag them.
+  Under `http/` only `CircuitBreaker` and `RateLimiter` are accidental; `HttpClient`, `HttpResult`
+  and `HttpResponse` are the contract `musicmeta-okhttp` implements and must stay public. Until the
+  provider surface is narrowed, a provider-internal refactor legitimately requires an `apiDump`
+  commit; do not suppress it to make the check green.
 
 **Code style.** No `!!` — handle nullability properly. Files 200 lines target / 300 max; functions 20
 lines target / 40 max. Pure functions where possible. Explicit over implicit.

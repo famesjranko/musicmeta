@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Public ABI baselines** — [`binary-compatibility-validator`](https://github.com/Kotlin/binary-compatibility-validator) dumps each module's public API to `api/*.api`. `apiCheck` runs as part of `./gradlew build` and in the publish workflow, so a signature that diverges from the committed baseline fails the build instead of reaching Maven Central unnoticed. Regenerate with `./gradlew apiDump`; the `.api` diff is the review artifact for an intentional API change. The baselines record the API **as it currently stands**, including the 0.9.2 parameter positions — they stop new drift, they do not retroactively fix breaks that have already shipped.
+
+### Fixed
+- **`demo/` compiles again** — the `identifiers` parameter added to `artistProfile()` / `albumProfile()` in 0.9.2 was inserted mid-list, which shifted every positional argument after `mbid`. The demo's call sites now pass `types` and `forceRefresh` by name. The same positional pattern in the `SearchCandidate` overloads of `artistProfile()` / `albumProfile()` / `trackProfile()` was fixed alongside it. No public signature changed.
+
 ## [0.9.2] - 2026-03-27
 
 Track preview fast path — 4-5x faster preview resolution when deezerId is known.

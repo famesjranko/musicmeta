@@ -41,6 +41,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 # Publish to local Maven repo
 ./gradlew publishToMavenLocal
+
+# Check the public ABI against the committed api/*.api baselines (also runs as part of `build`)
+./gradlew apiCheck
+
+# Regenerate the baselines after an intentional API change — commit the resulting .api diff
+./gradlew apiDump
+```
+
+`demo/` is a **separate composite build** and is never compiled by `./gradlew build`. It is the only
+positional caller of the profile extensions, which makes it an API-compatibility canary:
+
+```bash
+cd demo && ../gradlew compileKotlin
 ```
 
 ## Architecture
@@ -117,8 +130,22 @@ This library is published on Maven Central and JitPack — assume external consu
 - Breaking = removing/renaming public classes, functions, or parameters; changing return types; reordering non-named parameters; changing enum/sealed-class variants consumers may match on
 - When evolving public API: prefer adding new overloads or default parameters over modifying existing signatures
 - Deprecate before removing — add `@Deprecated` with `ReplaceWith` and keep for at least one minor release before removal
+- **Append new parameters at the end with a default — never insert mid-list.** A mid-list insertion silently re-binds every positional argument after it
 - Internal code (`internal` visibility, `provider/*/` internals, `http/` infrastructure) can change freely
 - If a breaking change is truly necessary, document it in `CHANGELOG.md` under a `### Breaking Changes` heading and flag it to the user before proceeding
+
+**Enforcement.** `binary-compatibility-validator` dumps the public ABI to `api/*.api` in each module.
+`apiCheck` runs as part of `./gradlew build` and in the publish workflow, so a diverging signature
+fails the build rather than being caught by review alone. An intentional API change means running
+`./gradlew apiDump` and reviewing the committed `.api` diff — that diff, not the source diff, is the
+record of what consumers see.
+
+> **Caveat — "internal code can change freely" is not true yet.** The baselines record 93 public
+> classes under `provider/`; almost none are marked `internal`, so they are part of the published ABI
+> and `apiCheck` will flag changes to them. (Under `http/`, only `CircuitBreaker` and `RateLimiter`
+> are accidental — `HttpClient`, `HttpResult` and `HttpResponse` are the contract `musicmeta-okhttp`
+> implements and must stay public.) Narrowing the provider surface is tracked separately; until it
+> lands, a provider-internal refactor legitimately requires an `apiDump` commit.
 
 ## Git Rules
 

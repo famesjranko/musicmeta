@@ -7,6 +7,28 @@
 
 ## Decisions
 
+### 2026-07-21: Public API compatibility enforced by a committed ABI baseline
+
+**Context**: `CLAUDE.md` has always stated a no-breaking-changes-without-a-major-bump contract, enforced by review alone. An audit of the tag history found review had missed it repeatedly: four mid-list parameter insertions (v0.5.0 `Metadata.genreTags`, v0.7.0 `EnrichmentCacheEntity`, v0.9.0 `EnrichmentConfig.radioDiscoveryMode`, v0.9.2 `identifiers`), four removals or renames with no deprecation cycle in v0.4.0, and `@Deprecated` never once appearing in `musicmeta-core/src/main/`. It surfaced when `demo/` stopped compiling — the v0.9.2 insertion shifted every positional argument after `mbid`, and it shipped in a *patch* release.
+
+**Decision**: Adopt `binary-compatibility-validator`. Each module's public ABI is dumped to `api/*.api` and committed; `apiCheck` compares against it and is wired into `check`, so `./gradlew build` fails on divergence. Reviewing an intentional break becomes reviewing the `.api` diff rather than inferring it from the source diff.
+
+**`apiCheck` added to `publish.yml` as well**: that job runs `:musicmeta-core:test :musicmeta-okhttp:test` — not `build`, not `check` — so without naming the task explicitly the only automated path to Maven Central would have gained no gate at all. The PR-time gate is a separate concern, tracked with the rest of the CI work.
+
+**Key finding — the public surface is far wider than this document claimed.** The first dump recorded **282 public classes in `musicmeta-core`**: 157 in the root package (the intended API) and 2 under `cache/`, but also **93 under `provider/`**, 16 under `engine/`, and 14 under `http/`. `CLAUDE.md` says internal code — "`provider/*/` internals, `http/` infrastructure" — can change freely. For `provider/` that was simply false: those classes are published on Maven Central, and nothing marks them `internal` (84 public top-level declarations vs 2 `internal`). They are public by omission. `DiscogsMapper` and `DiscogsRelease`, for instance, have zero references outside their own package.
+
+The `http/` count is a different story and worth stating precisely, because acting on it carelessly would break a published module: of those 14, only `CircuitBreaker` (with its nested `Companion` and `State`) and `RateLimiter` are accidental. `HttpClient`, `HttpResponse` and `HttpResult` with its five sealed variants are the contract `musicmeta-okhttp` implements — `OkHttpEnrichmentClient` implements `HttpClient` and returns `HttpResult` — so they must stay public.
+
+**Decision — record reality rather than suppress it.** The baselines include those declarations. Hiding them behind `ignoredPackages` would have made the baseline describe an API that does not exist, and would have quietly kept the docs wrong. The cost is accepted and known: until the surface is narrowed, a provider-internal refactor turns `apiCheck` red and requires an `apiDump` commit. Narrowing it is an ABI removal in its own right and needs the 0.x semver stance settled first, so it is tracked as separate work.
+
+**The one thing suppressed**: KSP output lands in the same classes directory BCV reads, so Room's `_Impl` classes and Hilt's generated factories appeared in the android baseline. Those are generated, not authored, and would churn on every Room or Hilt version bump. They are listed in `ignoredClasses` — an exact-match set with no wildcard support, so each new `@Dao` interface, `@Database`, or Hilt `@Provides` method adds an entry by hand. (A new *method* on the existing DAO does not: it lands on the already-ignored `_Impl` class.) The authored types they stand in for are still tracked.
+
+**Note on the tool**: `binary-compatibility-validator` is in maintenance mode; JetBrains points new projects at the ABI validation built into the Kotlin Gradle plugin. That successor needs a newer Kotlin than this project's 2.1.0, so it is a future migration, not a current option.
+
+**Status**: Active
+
+---
+
 ### 2026-03-27: v0.9.2 — Track preview fast path and identifiers passthrough
 
 **Context**: Cascade's discovery page loaded in ~20-30 seconds because resolving preview URLs for top tracks required MusicBrainz identity resolution (1 req/sec rate-limited) before each Deezer lookup. But the top tracks already carried `deezerId` in their `identifiers.extra` from the initial fetch — the round-trip through MusicBrainz was unnecessary.

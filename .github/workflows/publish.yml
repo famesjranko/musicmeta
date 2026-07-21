@@ -18,8 +18,15 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Run tests
-        run: ./gradlew :musicmeta-core:test :musicmeta-okhttp:test
+      - name: Run tests and check public API
+        # apiCheck compares the public ABI against the committed api/*.api baselines. This job does
+        # not run `build`, so without naming apiCheck explicitly the tag path would publish an
+        # unchecked API surface.
+        #
+        # This is the LAST line of defence, not the first: it fires after a tag exists, so a failure
+        # here means deleting and re-pushing the tag. The first line of defence is a PR-time check
+        # running `./gradlew build` (which carries apiCheck via `check`) — see the test-CI issue.
+        run: ./gradlew :musicmeta-core:test :musicmeta-okhttp:test apiCheck
 
       - name: Publish to Maven Central
         env:
