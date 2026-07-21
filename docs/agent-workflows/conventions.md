@@ -1,11 +1,18 @@
-# Workflow Contract — musicmeta
+# Shipping Conventions — musicmeta
 
-The project-specific half of the `ship-issue` and `ship-pr` procedures: branch model, issue closure,
-priority ordering, which checks map to which changed files, and which areas are never automatable.
-Those skills supply the procedure; this file supplies the project.
+How this repository ships work: branch model, issue closure, priority ordering, which checks map to
+which changed files, and which areas are never automatable. `CLAUDE.md` says what project
+documentation applies and what the code-level rules are; this file says how work gets from an issue
+to a published release. It holds only facts about *this* project that cannot be inferred from the
+repository.
 
-> When this contract conflicts with the project's canonical docs (`CLAUDE.md` / `AGENTS.md` or a doc
-> they route to), **the canonical doc wins.** Update this file rather than working around it.
+> **Code-level rules are not restated here.** Review every diff against `CLAUDE.md` directly —
+> **Code Style**, **Modeling Rules**, **Testing Patterns**, **Backwards Compatibility**, **Git
+> Rules**, **Key Conventions**. A copy in this file would have no re-sync trigger: the previous one
+> silently went stale on the load-bearing versioning rule within hours of being written.
+>
+> Where this file conflicts with `CLAUDE.md` or a doc it routes to, **the canonical doc wins.**
+> Update this file rather than working around it.
 
 ---
 
@@ -53,8 +60,8 @@ Those skills supply the procedure; this file supplies the project.
   ```
 
 - The release PR is the designated review point for the accumulated **public API diff**. Read the
-  `.api` dump diff there before tagging (see §9) — this is the gate that would have caught the v0.9.2
-  break.
+  `.api` dump diff there before tagging, against `CLAUDE.md` → **Backwards Compatibility** — this is
+  the gate that would have caught the v0.9.2 break.
 
 ## 3. Priority & selection
 
@@ -63,10 +70,11 @@ Labels: `priority/p0` … `priority/p3`, plus `area/core`, `area/android`, `area
 
 - `next` picks: P0 first, then P1 by issue number, then P2/P3 from the epic checklist in rank order.
   Respect `Depends on #X` — never start an issue before its dependency lands.
-- **Explicit approval required before editing** for P0/P1 and any feature-scope work.
-- `--grind` (autonomous) — cheap, independent **P3** nits only.
-- `--no-review` (skip adversarial review) — trivial **P3** form/documentation work only.
-- Both flags are rejected outright in the danger zones of §7, regardless of priority.
+- **Explicit approval required before editing** for P0/P1, any feature-scope work, and anything in
+  §7's danger zones regardless of priority.
+- Unattended handling is for cheap, independent **P3** work only; skipping an independent review is
+  for trivial **P3** form and documentation changes only. Neither ever applies to §7. These bind
+  behaviour, not a flag: P2 and above get a human in the loop even when the intent looks obvious.
 
 ## 4. Issue closure
 
@@ -114,9 +122,9 @@ do not add new ones.
 
 | Changed files | Verification |
 |---|---|
-| `musicmeta-core/src/main/kotlin/com/landofoz/musicmeta/*.kt` (**public API**) | `./gradlew apiCheck` + read the `.api` diff against §9 backwards-compat rules; **plus** the demo canary below |
+| `musicmeta-core/src/main/kotlin/com/landofoz/musicmeta/*.kt` (**public API**) | `./gradlew apiCheck` + read the `.api` diff against `CLAUDE.md` → **Backwards Compatibility**; **plus** the demo canary below |
 | `musicmeta-core/**` (anything) | `./gradlew :musicmeta-core:test` |
-| Any `api/*.api` baseline | The `.api` diff **is** the review. A change here means the public ABI changed — confirm it was intended, and that §9's append-at-the-end rule was followed |
+| Any `api/*.api` baseline | The `.api` diff **is** the review. A change here means the public ABI changed — confirm it was intended, and that `CLAUDE.md`'s append-at-the-end rule was followed — including its caveat that appending is the source-compatible floor, not an ABI guarantee |
 | `musicmeta-core/**/provider/<name>/**` | `:musicmeta-core:test --tests "*<Name>*"`, then the full core suite. E2E is a deferred manual proof surface — see below |
 | `musicmeta-android/**` | `./gradlew :musicmeta-android:test` (needs `ANDROID_HOME`; set to `~/android-sdk`) **plus** `apiCheck` — this module is published too, and its baseline is `musicmeta-android/api/` |
 | `musicmeta-android/**/cache/**` (Room) | Android tests **plus** an explicit schema/migration review — persisted user data |
@@ -134,7 +142,8 @@ deferred proof surface rather than running it as a gate.
 
 ## 7. Danger zones
 
-`--grind` and `--no-review` are **always rejected** here, at any priority:
+These areas always need explicit approval and a full independent review, at any priority. Never
+handle them unattended, and never abbreviate the review:
 
 - **Public API surface** — `musicmeta-core/src/main/kotlin/com/landofoz/musicmeta/*.kt`. The
   backwards-compat boundary; consumers exist on Maven Central and JitPack.
@@ -193,51 +202,3 @@ was never published. So:
 > `git merge --ff-only origin/main` so `dev` picks the commit up. Note `main` accepts **merge commits
 > only** — its ruleset forbids squash, so §2's squash rule for child PRs does not apply to it — and
 > `build` is a required context there, so even a docs-only PR must go green on a full `./gradlew build`.
-
-## 9. Invariants
-
-Checked by the adversarial reviewer subagent against every diff. Sourced from `CLAUDE.md` — that file
-remains authoritative.
-
-**Backwards compatibility (the load-bearing one).** The library is published to Maven Central and
-JitPack; assume external consumers exist.
-
-- No breaking changes to public API without a major version bump. Breaking = removing/renaming public
-  classes, functions, or parameters; changing return types; reordering non-named parameters; changing
-  enum or sealed-class variants consumers may match on.
-- **Append new parameters at the end with a default — never insert mid-list.** A mid-list insertion
-  silently re-binds every positional argument after it. This is not hypothetical: it shipped in v0.9.2
-  (a patch release) and broke `demo/`, and the same mistake is present in v0.5.0, v0.7.0 and v0.9.0.
-- Prefer new overloads or default parameters over modifying existing signatures.
-- Deprecate before removing — `@Deprecated` with `ReplaceWith`, kept for at least one minor release.
-- Internal code (`internal` visibility, `provider/*/` internals, `http/` infrastructure) may change
-  freely — and as of 2026-07-21 (issue #5) this is enforced by visibility, not just aspiration. The
-  `*Api`/`*Mapper`/`*Models` behind each provider, `MusicBrainzParser`, `http/CircuitBreaker`, and the
-  `engine/` mergers/synthesizers are `internal` and absent from the `.api` baselines, so a refactor
-  confined to them no longer trips `apiCheck` or needs an `apiDump` commit. The public surface is the
-  `*Provider` classes, `HttpClient`/`HttpResult`/`HttpResponse`/`DefaultHttpClient`/`RateLimiter`, and
-  the `ResultMerger`/`CompositeSynthesizer` extension-point interfaces. `RateLimiter` stays public
-  deliberately — it is a parameter of nearly every public `*Provider` constructor. Engine wiring left
-  public (`ProviderRegistry`, `ProviderChain`, `DefaultEnrichmentEngine`, `ArtistMatcher`,
-  `ConfidenceCalculator`) is a candidate for a later pass. The one exception forced here:
-  `ProviderChain`'s constructor became `internal` because its default `circuitBreakers` parameter
-  referenced the now-internal `CircuitBreaker`; the class stays public (reachable via `chainFor()`).
-
-**Code style.** No `!!` — handle nullability properly. Files 200 lines target / 300 max; functions 20
-lines target / 40 max. Pure functions where possible. Explicit over implicit.
-
-**Modeling.** Enums for fixed sets, never string constants. Sealed classes for variants with different
-data, each variant a data class. Interfaces for contracts and strategies. Data classes over
-Pair/Triple/Map for structured fields. `@Serializable` only on public API payload types — never on
-provider models or infrastructure.
-
-**Testing.** Fakes over mocks (`testutil/`: `FakeProvider`, `FakeHttpClient`, `FakeEnrichmentCache`).
-`runTest` for coroutines. Backtick test names. Given-When-Then structure with comments that state what
-is given, what action is taken, and what outcome is expected — not bare section markers.
-
-**Conventions.** Java 17. Dependencies via `gradle/libs.versions.toml` only. `org.json` for parsing,
-`kotlinx.serialization` for serialization. MusicBrainz requires a descriptive User-Agent.
-
-**Git.** No `Co-Authored-By`, no "Generated with Claude", no AI or tool attribution in any commit, PR,
-issue comment, or anything else that leaves this machine. Never use `git revert` — use `git reset` or
-manual edits. Always ask permission before destructive git commands.
