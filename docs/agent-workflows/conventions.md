@@ -17,6 +17,21 @@ Those skills supply the procedure; this file supplies the project.
 - Never stage unrelated user changes, never stash silently, never force-push without
   `--force-with-lease`, never use `--admin` to bypass a failing required check.
 
+**Worktrees.** Every branch gets its own git worktree, so a run never takes over the shared checkout.
+
+- **Location:** `../musicmeta-worktrees/<branch-slug>` — a sibling of the repo. It must stay outside the
+  repo tree: Gradle scans the project directory, and a worktree placed inside becomes a second copy of
+  every module.
+- **What a fresh worktree is missing: nothing the build needs.** Verified — no `local.properties` and
+  no `secrets.properties` exist in this repo; the Android SDK is located through the `ANDROID_HOME`
+  environment variable (`~/android-sdk`), which a worktree inherits from the shell. Gradle re-resolves
+  dependencies into the shared user cache. So `./gradlew build` works in a fresh worktree unchanged.
+- **One caveat:** `.claude/` is gitignored, so a worktree does not inherit local Claude Code permission
+  settings. That affects tool prompts, not build correctness.
+- The `demo/` composite build resolves core via `includeBuild("..")`, a *relative* path — it therefore
+  resolves to the worktree's own copy of the library, which is what you want. Do not "fix" it to an
+  absolute path.
+
 ## 2. Branch model — `two-stage`
 
 | Stage | From → to | Merge method | Branch after |
