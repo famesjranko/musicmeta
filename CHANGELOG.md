@@ -7,7 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-_Nothing yet._
+### Fixed
+- **A throwing `EnrichmentCache` no longer escapes `enrich()`** — `README.md` promised that `enrich()` never throws and that all failures arrive as typed results, but every cache interaction in `enrich()` sat outside the one `try`, whose sole handler was `TimeoutCancellationException`. A cache that threw propagated straight to the caller, so consumers following the README were missing a handler they were told they did not need. This affected every cache operation on the `enrich()` path, not just the read named in the issue: the `forceRefresh` invalidation, the cache read, the `STALE_IF_ERROR` stale read, and both `put` calls. All are now guarded — a failed read degrades to a cache miss and the providers are queried, a failed write degrades to the result not being cached, and the failure is logged via `EnrichmentLogger.warn`. `CancellationException` is deliberately still propagated, so a cancelled caller stops the enrichment instead of being ignored. Two consequences of making invalidation non-fatal are worth knowing: `forceRefresh` now skips the *primary* cache read, so a failed invalidation cannot resurrect the entry it was meant to drop through that path; and `forceRefresh` invalidation is now best-effort, so under `CacheMode.STALE_IF_ERROR` a stale entry left behind by a failed invalidation can still be served if the provider then errors — which is what that mode opts into. Public API is unchanged (`apiCheck` green). (#22)
 
 ## [0.10.0] - 2026-07-21
 

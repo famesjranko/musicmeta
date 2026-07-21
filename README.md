@@ -143,7 +143,7 @@ Power users can access the raw result map via `results.raw[EnrichmentType.GENRE]
 
 ### Partial failure resilience
 
-The engine resolves each enrichment type independently. If one provider fails (network error, rate limit, timeout), other types still return successfully. The engine never throws from `enrich()` -- all failures are represented as typed results:
+The engine resolves each enrichment type independently. If one provider fails (network error, rate limit, timeout), other types still return successfully. The engine never throws from `enrich()` -- provider failures are represented as typed results:
 
 ```kotlin
 val profile = engine.artistProfile("Radiohead")
@@ -159,6 +159,21 @@ profile.genres       // -> emptyList() (failed gracefully)
 ```
 
 This means callers can safely use a single `artistProfile()` call without worrying about all-or-nothing failures. Each field on the profile is independently nullable based on whether its enrichment type succeeded.
+
+A failing `EnrichmentCache` is covered by the same guarantee. The cache is an optimisation, so if your
+implementation throws -- a Room disk error, say -- `enrich()` logs it and carries on: a failed read
+degrades to a cache miss and the providers are queried, and a failed write degrades to the result
+simply not being cached. It is never surfaced to the caller as an exception.
+
+**Cancellation still propagates.** If the calling coroutine is cancelled, `CancellationException` is
+rethrown as structured concurrency requires -- swallowing it would make `enrich()` uncancellable.
+That is not a failure result to handle; it means the caller went away. (The `enrichTimeoutMs`
+deadline is *not* this case: expiry is caught internally and returned as `Error` results with
+`ErrorKind.TIMEOUT`.)
+
+The guarantee covers provider and cache failures. It does not extend to code *you* supply through
+other extension points: a `ResultMerger` or `CompositeSynthesizer` registered via `addMerger` /
+`addSynthesizer` runs unguarded, so an exception thrown there will escape `enrich()`.
 
 ### Disambiguation
 
