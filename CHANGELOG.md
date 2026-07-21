@@ -18,10 +18,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Track preview fast path — 4-5x faster preview resolution when deezerId is known.
 
 ### Added
-- **`identifiers` parameter on `forTrack()`, `forArtist()`, `forAlbum()`** — pass pre-resolved identifiers (e.g., from top tracks) so providers can skip search/identity resolution. Backwards compatible: new parameter has a default value of `null`.
-- **`identifiers` parameter on `trackProfile()`, `artistProfile()`, `albumProfile()`** — same as above, flows through to the request factory.
+- **`identifiers` parameter on `forTrack()`, `forArtist()`, `forAlbum()`** — pass pre-resolved identifiers (e.g., from top tracks) so providers can skip search/identity resolution. Appended at the end of each factory's parameter list with a default of `null`; source-compatible for existing callers.
+- **`identifiers` parameter on `trackProfile()`, `artistProfile()`, `albumProfile()`** — same intent, flows through to the request factory. See Breaking Changes: on the profile extensions this parameter was inserted mid-list, not appended.
 - **`resolveTrackPreviews()` batch extension** — resolves preview URLs for multiple tracks concurrently. Accepts `List<TrackPreviewRequest>`, returns `List<TrackPreviewResult>`. Fans out via coroutines internally.
 - **`DeezerApi.getTrack(trackId)`** — fetches a single track by Deezer ID, including preview URL. Used by the fast path.
+
+### Breaking Changes
+> Documented after the fact (backfilled 2026-07-21). This shipped in a **patch** release, which the current versioning stance (see `CLAUDE.md`) says should never break the API — recorded here rather than corrected, because the committed `api/*.api` baseline already encodes this shape as the source of truth, and moving the parameter again would break the callers who have since adopted v0.9.2 positionally. See `STORIES.md` (2026-07-21).
+- **`identifiers` inserted mid-list on the profile extensions `artistProfile(name, mbid, …)`, `albumProfile(title, artist, mbid, …)`, `trackProfile(title, artist, album, mbid, …)`** — `identifiers: EnrichmentIdentifiers? = null` was placed between `mbid` and `types` rather than appended at the end. Every positional argument after `mbid` shifted one slot. Named callers (e.g. `artistProfile("Radiohead", types = …)`) are unaffected; positional callers written against v0.9.1 (e.g. `artistProfile("Radiohead", null, myTypes)`) now bind their `Set` argument to the `EnrichmentIdentifiers?` slot and fail to compile. The in-repo `demo/` broke this way and was fixed by switching to named arguments. The `forTrack()`/`forArtist()`/`forAlbum()` factories in the same release appended `identifiers` correctly and are not affected.
 
 ### Changed
 - **Deezer `TRACK_PREVIEW` fast path** — when `deezerId` is present in request identifiers, the provider calls `getTrack(id)` directly instead of searching by title/artist. Skips MusicBrainz identity resolution entirely. Cold lookup drops from ~2-3s to ~540ms per track; batch of 10 tracks drops from ~20-30s to ~5.5s.
@@ -46,6 +50,10 @@ LB Radio & Track Preview — 34 enrichment types.
 - **`ApiKeyConfig.listenBrainzToken`** — optional user token for LB Radio. When absent, `ARTIST_RADIO_DISCOVERY` is silently unavailable; all other ListenBrainz endpoints continue working without any token.
 - **`DeezerTrackSearchResult`** now carries `previewUrl: String?`, `durationSec: Int?`, and `albumTitle: String?` — extracted from the already-available Deezer track search response, no extra API calls.
 - **HttpClient header support** — `fetchJsonResult(url, headers)` overload added to `HttpClient` interface (default no-op impl for backward compatibility); used by LB Radio to send `Authorization: Token` headers.
+
+### Breaking Changes
+> Documented after the fact (backfilled 2026-07-21).
+- **`EnrichmentConfig.radioDiscoveryMode` inserted mid-list** — `radioDiscoveryMode: RadioDiscoveryMode = RadioDiscoveryMode.EASY` was placed between `radioLimit` and the previously-last `cacheMode` parameter rather than appended. Positional callers constructing `EnrichmentConfig(...)` with `cacheMode` in the final position rebind that argument to `radioDiscoveryMode` (a type mismatch → compile error). Named-argument callers are unaffected. This is a minor release, so a documented break is within the versioning stance (see `CLAUDE.md`); it is recorded here only because the `### Breaking Changes` heading was never used at the time.
 
 ## [0.8.2] - 2026-03-25
 
@@ -115,6 +123,13 @@ Developer Experience — profiles, named accessors, cache management, identity s
 - **Demo CLI refactored** to showcase all three API tiers — enrichment commands use profile methods (Tier 1), profile summary card shows named accessors (Tier 2), per-type diagnostic output uses raw map (Tier 3). New `refresh` and `invalidate` commands demonstrate cache management. `pick` uses `SearchCandidate` overloads.
 - **Developer guide split** into 7 focused pages under `docs/guides/` — quick-start, identity resolution, results & errors, cache management, configuration, extension points, Android integration
 
+### Breaking Changes
+> Documented after the fact (backfilled 2026-07-21). The return-type and interface-method breaks below were already flagged inline under **Changed** at release time; they are restated here so the `### Breaking Changes` heading `CLAUDE.md` requires is present. This is a minor release, so documented breaks are within the versioning stance.
+- **`EnrichmentCacheEntity` gained three parameters mid-list** (`musicmeta-android`) — `identityMatch`, `identityMatchScore`, and `resolvedIdsJson` were inserted between `confidence` and the previously-following `isManual`/`cachedAt`/`expiresAt` parameters rather than appended. Positional constructors of this published data class rebind their trailing arguments. All three have defaults, so named-argument construction is unaffected. The Room schema change itself is handled by the `MIGRATION_1_2` migration (v1→v2); this note concerns the Kotlin constructor signature, not on-device data.
+- **`EnrichmentEngine.enrich()` return type changed** from `Map<EnrichmentType, EnrichmentResult>` to `EnrichmentResults` — a hard break for any caller of the return value; access the raw map via `.raw` (also noted under Changed).
+- **`EnrichmentEngine` interface gained `invalidate()`, `isManuallySelected()`, `markManuallySelected()` without default bodies** — every third-party implementation of the interface must add these methods (also noted under Changed).
+- **`EnrichmentWorker.onItemEnriched()` parameter type changed** from `Map` to `EnrichmentResults` — overriding subclasses break (also noted under Changed).
+
 ### Fixed
 - **`ProviderChain` preserves failure reasons** — when all providers fail with `RateLimited` or `Error`, the chain now returns the actual failure instead of collapsing to `NotFound`. Consumers can distinguish "data doesn't exist" from "all providers failed" for retry logic
 - **Room cache persists identity fields** — `identityMatch`, `identityMatchScore`, and `resolvedIdentifiers` now round-trip through `RoomEnrichmentCache` (previously silently dropped on cache read). DB migration v1→v2
@@ -163,7 +178,7 @@ New Capabilities & Tech Debt Cleanup.
 - `CREDITS` enrichment type — `EnrichmentData.Credits` with `CreditEntry` (name, role, roleCategory, instruments); MusicBrainz provides via recording artist-rels, Discogs via extraartists
 - `RELEASE_EDITIONS` enrichment type — `EnrichmentData.ReleaseEditions` with `ReleaseEdition` (title, format, country, year, catalogNumber, barcode, label); MusicBrainz provides via release-group releases, Discogs via master versions
 - `ARTIST_TIMELINE` composite enrichment type — `EnrichmentData.ArtistTimeline` with `TimelineEvent` (date, type, description, relatedEntity); synthesized from `ARTIST_DISCOGRAPHY` + `BAND_MEMBERS` + artist life-span data
-- `GENRE` genre tags — `EnrichmentData.Metadata.genreTags: List<GenreTag>?` with per-tag confidence and sources; backward-compatible alongside existing `genres` field
+- `GENRE` genre tags — `EnrichmentData.Metadata.genreTags: List<GenreTag>?` with per-tag confidence and sources, alongside the existing `genres` field (behaviourally additive; see Breaking Changes for the constructor-signature caveat)
 - `GenreTag` data class — `name`, `confidence: Float`, `sources: List<String>`
 - `GenreMerger` — additive confidence scoring across MusicBrainz and Last.fm genre data; deduplicates by name
 - `TimelineSynthesizer` — composite synthesizer combining discography, members, and life-span into ordered timeline events
@@ -176,6 +191,10 @@ New Capabilities & Tech Debt Cleanup.
 - `HttpResult` sealed class — typed HTTP responses replacing nullable returns in all 11 providers
 - `InMemoryEnrichmentCache` added as default in-process LRU cache
 - Enrichment showcase test with v0.5.0 feature spotlight section
+
+### Breaking Changes
+> Documented after the fact (backfilled 2026-07-21).
+- **`EnrichmentData.Metadata.genreTags` inserted mid-list** — the new `genreTags: List<GenreTag>? = null` parameter was placed between `genres` and `label` rather than appended. `Metadata` is a `@Serializable` public payload type. For positional construction and `copy()` this shifts every trailing argument; for kotlinx.serialization the element indices of `label`, `releaseDate`, and the rest shift by one (name-based JSON is unaffected, but index-based/binary formats and any hand-written `KSerializer` are). The field has a default, so named-argument construction and default JSON round-tripping keep working. Minor release, so a documented break is within the versioning stance.
 
 ### Changed
 - All 11 providers migrated to `HttpResult`/`ErrorKind` uniform error handling
@@ -208,6 +227,13 @@ Provider Abstraction Overhaul — 25 enrichment types.
 - Wikidata: expanded properties — P569 (birth date), P570 (death date), P495 (country of origin), P106 (occupation) in a single API call
 - Wikipedia: ARTIST_PHOTO via page media-list endpoint as supplemental source
 - Enrichment showcase test updated to reflect v0.4.0 coverage (25 types)
+
+### Breaking Changes
+> Documented after the fact (backfilled 2026-07-21). These were shipped as clean removals/renames with no deprecation cycle — verified against `git diff v0.1.0..v0.4.0`. Most were noted under **Changed** at the time; they are consolidated here under the `### Breaking Changes` heading `CLAUDE.md` requires, and the `preferredArtworkSize` deletion (previously undocumented) is added. This is a minor release, so documented breaks are within the versioning stance.
+- **`EnrichmentConfig.preferredArtworkSize: Int` and its `EnrichmentConfig.DEFAULT_ARTWORK_SIZE` default constant removed** — previously undocumented anywhere in this changelog. Consumers reading or setting `preferredArtworkSize` no longer compile; multi-size artwork is now expressed through `Artwork.sizes`. (A same-named `DEFAULT_ARTWORK_SIZE` still exists on individual provider companions — only the `EnrichmentConfig` binding was removed.)
+- **`ProviderCapability.requiresIdentifier: Boolean` renamed and retyped to `identifierRequirement: IdentifierRequirement`** — breaks every third-party `EnrichmentProvider`/capability declaration, both the property name and its type.
+- **`EnrichmentData.IdentifierResolution` sealed subclass removed** — consumers matching on it in a `when` over `EnrichmentData` no longer compile. Identity resolution now surfaces via `resolvedIdentifiers` on `EnrichmentResult.Success`.
+- **`SimilarArtist.musicBrainzId: String?` and `PopularTrack.musicBrainzId: String?` replaced by `identifiers: EnrichmentIdentifiers`** — both types are `@Serializable`, so this breaks source (property access) *and* any persisted JSON: entries serialized by any pre-0.4.0 version carrying `musicBrainzId` no longer round-trip into the new `identifiers` shape.
 
 ### Changed
 - `ProviderCapability.requiresIdentifier: Boolean` replaced by `identifierRequirement: IdentifierRequirement` enum

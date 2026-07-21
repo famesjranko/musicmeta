@@ -7,6 +7,29 @@
 
 ## Decisions
 
+### 2026-07-21: Reconciling the already-shipped API breaks — 0.x semver stance, CHANGELOG backfill, v0.9.2 position
+
+**Context**: The ABI-baseline work (below) stopped *new* drift but left three questions about the breaks already on Maven Central and JitPack. All nine claimed breaks were re-verified against the tag history (`git diff v0.X.0..v0.Y.0`) before any of this was written down; every one is real.
+
+**Decision 1 — the v0.9.2 `identifiers` position: leave it and document, do not correct.** In v0.9.2 (a *patch*), `identifiers: EnrichmentIdentifiers? = null` was inserted between `mbid` and `types` on the `artistProfile`/`albumProfile`/`trackProfile` extensions, shifting every positional argument after `mbid`. The committed `api/*.api` baseline already records this shape as the source of truth. The reasoning for leaving it:
+
+- **Named callers are unaffected in every scenario** — and named arguments are the idiomatic Kotlin form. The in-repo `demo/` and the whole extensions test suite call these functions with named `types =`/`identifiers =`/`forceRefresh =`, so no in-repo caller is exposed. The only callers who could break are positional ones.
+- **On the JVM, appending would not have saved binary consumers anyway.** Adding a parameter to a function with default parameters changes the generated method descriptor (and the `$default` synthetic), so a pre-compiled positional caller gets a `NoSuchMethodError` regardless of *where* the parameter goes. Appending only preserves *source* compatibility; it is not a full ABI guarantee. So the practical upside of "correct it" is narrow: restore *source* compat for one cohort.
+- **Correcting cannot restore both cohorts — it only moves the break.** There are now two positional shapes in the wild: the v0.9.1 shape and the v0.9.2 shape. A v0.9.3 that moved `identifiers` to the end would recompile pre-0.9.2 positional callers who skipped 0.9.2, but would break anyone who *adopted* v0.9.2 positionally (their third positional `identifiers` argument would rebind to `types: Set`). It also adds a *third* signature shape to the historical record and spends a release + another reviewed `.api` diff to do it.
+- **The 0.x carve-out (Decision 3) licenses the documented break**, and `apiCheck` + the append-at-the-end rule now prevent recurrence. Chasing source-compat for a hypothetical external positional adopter of a four-month-old patch parameter is not worth a corrective release that itself re-shuffles the signature.
+
+Condition under which to revisit: concrete evidence of external consumers pinned to the v0.9.1 positional shape (an issue report, telemetry). None exists today — the only observed callers are in-repo and all named.
+
+**Decision 2 — backfill `### Breaking Changes` in `CHANGELOG.md`: yes.** `CLAUDE.md` has always required breaking changes under a `### Breaking Changes` heading; that heading had never appeared. Backfilled sections were added to the historical entries for every verified break: **v0.4.0** (four removals/renames with no deprecation cycle — `EnrichmentConfig.preferredArtworkSize` + `DEFAULT_ARTWORK_SIZE` deletion, which had been undocumented entirely; the `ProviderCapability.requiresIdentifier` → `identifierRequirement` rename; the `EnrichmentData.IdentifierResolution` removal; and `SimilarArtist`/`PopularTrack.musicBrainzId` → `identifiers`, both `@Serializable` so persisted JSON breaks too); **v0.5.0** (`Metadata.genreTags` mid-list, `@Serializable`); **v0.7.0** (`EnrichmentCacheEntity` three-parameter mid-list, plus the already-flagged `enrich()` return-type and interface-method breaks restated under the heading); **v0.9.0** (`EnrichmentConfig.radioDiscoveryMode` mid-list); **v0.9.2** (the `identifiers` mid-list above, and the corrected "backwards compatible" wording). The v0.7.0 `enrich()` breaks were the only ones already labelled "Breaking" at the time, under `### Changed`.
+
+**Decision 3 — the semver stance: adopt the 0.x carve-out.** `CLAUDE.md`'s backwards-compatibility section stated a flat "no breaks without a major bump" with no 0.x exception — a rule that was never true of practice, and the gap between the stated rule and reality is what let the audit findings accumulate. The section now says: during `0.x`, **minor** releases MAY break (always documented under `### Breaking Changes` and visible in the reviewed `.api` diff); **patch** releases may NOT break; the full semver rule takes effect at `1.0.0`. The additive-evolution guidance (prefer overloads/defaults, deprecate before removing, append-at-the-end) is retained, with the JVM binary-break nuance added to the append rule.
+
+**Verification**: docs-only change; `./gradlew build` green (including `apiCheck` — no `.api` baseline touched), `git diff --check` clean.
+
+**Status**: Active. Decision 1 is a recommendation carried into the epic PR for the team lead; Decisions 2 and 3 are landed in `CHANGELOG.md` and `CLAUDE.md`.
+
+---
+
 ### 2026-07-21: Public API compatibility enforced by a committed ABI baseline
 
 **Context**: `CLAUDE.md` has always stated a no-breaking-changes-without-a-major-bump contract, enforced by review alone. An audit of the tag history found review had missed it repeatedly: four mid-list parameter insertions (v0.5.0 `Metadata.genreTags`, v0.7.0 `EnrichmentCacheEntity`, v0.9.0 `EnrichmentConfig.radioDiscoveryMode`, v0.9.2 `identifiers`), four removals or renames with no deprecation cycle in v0.4.0, and `@Deprecated` never once appearing in `musicmeta-core/src/main/`. It surfaced when `demo/` stopped compiling — the v0.9.2 insertion shifted every positional argument after `mbid`, and it shipped in a *patch* release.

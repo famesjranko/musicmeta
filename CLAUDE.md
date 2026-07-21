@@ -126,13 +126,20 @@ Adds Android-specific integrations on top of core:
 
 This library is published on Maven Central and JitPack — assume external consumers exist.
 
-- **No breaking changes** to public API without a major version bump (semver)
-- Breaking = removing/renaming public classes, functions, or parameters; changing return types; reordering non-named parameters; changing enum/sealed-class variants consumers may match on
-- When evolving public API: prefer adding new overloads or default parameters over modifying existing signatures
-- Deprecate before removing — add `@Deprecated` with `ReplaceWith` and keep for at least one minor release before removal
-- **Append new parameters at the end with a default — never insert mid-list.** A mid-list insertion silently re-binds every positional argument after it
-- Internal code (`internal` visibility, `provider/*/` internals, `http/` infrastructure) can change freely
-- If a breaking change is truly necessary, document it in `CHANGELOG.md` under a `### Breaking Changes` heading and flag it to the user before proceeding
+**Versioning stance — the 0.x carve-out.** This project is pre-1.0, and during the `0.x` series semver permits breaking changes on minor releases. This repo adopts that carve-out explicitly, because the earlier "no breaks without a major bump" rule was never actually true of practice and that gap is what let the audit findings accumulate (see `STORIES.md`, 2026-07-21):
+
+- **Minor releases (`0.x.0`) MAY contain breaking public-API changes** — but every break MUST be documented under a `### Breaking Changes` heading in `CHANGELOG.md` and be visible in the reviewed `api/*.api` diff. A break that is neither documented nor visible in the `.api` diff is a defect, not a release.
+- **Patch releases (`0.x.y`, `y > 0`) may NOT break the public API.** Patches are for fixes that keep the signature and ABI stable. (v0.9.2 broke this by inserting a parameter mid-list in a patch — the specific mistake this rule exists to stop recurring.)
+- **At `1.0.0` the full semver rule takes effect:** no breaking change to the public API without a major version bump, from then on.
+
+Whatever the release channel, evolve the API additively wherever possible:
+
+- Breaking = removing/renaming public classes, functions, or parameters; changing return types; reordering non-named parameters; changing enum/sealed-class variants consumers may match on.
+- Prefer adding new overloads or default parameters over modifying existing signatures.
+- Deprecate before removing — add `@Deprecated` with `ReplaceWith` and keep for at least one minor release before removal.
+- **Append new parameters at the end with a default — never insert mid-list.** A mid-list insertion silently re-binds every positional argument after it. (Note: on the JVM, adding a parameter *anywhere* to a function with default parameters changes the generated method descriptor, so it is a binary break for pre-compiled callers regardless of position — appending is the source-compatible floor, not a full ABI guarantee. A 0.x minor is the place for either.)
+- Internal code (`internal` visibility, `provider/*/` internals, `http/` infrastructure) can change freely — but see the caveat below: much of `provider/` is public by omission today.
+- When you make a breaking change, document it in `CHANGELOG.md` under a `### Breaking Changes` heading and flag it to the user before proceeding.
 
 **Enforcement.** `binary-compatibility-validator` dumps the public ABI to `api/*.api` in each module.
 `apiCheck` runs as part of `./gradlew build` and in the publish workflow, so a diverging signature
