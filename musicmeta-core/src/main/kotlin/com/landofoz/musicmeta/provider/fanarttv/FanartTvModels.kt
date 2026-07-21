@@ -1,12 +1,12 @@
 package com.landofoz.musicmeta.provider.fanarttv
 
-data class FanartTvImage(
+internal data class FanartTvImage(
     val url: String,
     val id: String? = null,
     val likes: Int = 0,
 )
 
-data class FanartTvArtistImages(
+internal data class FanartTvArtistImages(
     val thumbnails: List<FanartTvImage>,
     val backgrounds: List<FanartTvImage>,
     val logos: List<FanartTvImage>,
@@ -16,7 +16,7 @@ data class FanartTvArtistImages(
 )
 
 /** Album-specific images from the Fanart.tv album endpoint (/v3/music/albums/{releaseGroupMbid}). */
-data class FanartTvAlbumImages(
+internal data class FanartTvAlbumImages(
     val albumCovers: List<FanartTvImage>,
     val cdArt: List<FanartTvImage>,
 )

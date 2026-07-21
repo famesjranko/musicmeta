@@ -9,7 +9,7 @@ import com.landofoz.musicmeta.SimilarTrack
  * Deduplicates and merges similar track results from multiple providers.
  * Additive scoring: tracks recommended by multiple providers rank higher.
  */
-object SimilarTrackMerger : ResultMerger {
+internal object SimilarTrackMerger : ResultMerger {
 
     override val type: EnrichmentType = EnrichmentType.SIMILAR_TRACKS
 

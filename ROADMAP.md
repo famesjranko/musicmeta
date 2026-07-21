@@ -265,7 +265,7 @@ Ranked by **impact to consumers × implementation effort**:
 | 31 | Bulk enrichment (simple) | Enhancement | High | Low | ✅ Done (v0.8.0) — sequential `enrichBatch()` with Flow emission |
 | 32 | Maven Central publishing | Enhancement | High | Medium | ✅ Done (v0.8.0) — `io.github.famesjranko` on Maven Central |
 | 33 | ARTIST_RADIO_DISCOVERY + TRACK_PREVIEW | 2 new types | Medium | Medium | ✅ Done (v0.9.0) — LB Radio as separate type, Deezer 30s previews |
-| 34 | API stability (v1.0.0) | Milestone | High | Low | In progress — enforcement landed (`binary-compatibility-validator`, committed `api/*.api` baselines, `apiCheck` in `build` and publish). Remaining: narrow the accidentally-public `provider/` surface, settle the 0.x semver stance, then freeze |
+| 34 | API stability (v1.0.0) | Milestone | High | Low | In progress — enforcement landed (`binary-compatibility-validator`, committed `api/*.api` baselines, `apiCheck` in `build` and publish); accidentally-public `provider/`/`http/`/`engine/` surface narrowed (issue #5 — 80 types now `internal`, ~1350-line `.api` shrink). Remaining: settle the 0.x semver stance, optional pass on remaining `engine/` wiring, then freeze |
 | — | ~~Flow-based progressive API~~ | Enhancement | Medium | High | Deferred — marginal benefit vs complexity; callers can split enrich() calls |
 
 ---

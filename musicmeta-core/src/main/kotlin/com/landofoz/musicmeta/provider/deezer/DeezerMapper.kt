@@ -13,7 +13,7 @@ import com.landofoz.musicmeta.TopTrack
 import com.landofoz.musicmeta.TrackInfo
 
 /** Maps Deezer DTOs to EnrichmentData subclasses. */
-object DeezerMapper {
+internal object DeezerMapper {
 
     fun toArtwork(result: DeezerAlbumResult): EnrichmentData.Artwork? {
         val url = result.coverXl ?: result.coverBig

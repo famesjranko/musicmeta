@@ -1,6 +1,6 @@
 package com.landofoz.musicmeta.provider.discogs
 
-data class DiscogsReleaseDetail(
+internal data class DiscogsReleaseDetail(
     val id: Long,
     val title: String,
     val extraartists: List<DiscogsCredit>,
@@ -11,19 +11,19 @@ data class DiscogsReleaseDetail(
     val wantCount: Int? = null,
 )
 
-data class DiscogsCredit(
+internal data class DiscogsCredit(
     val name: String,
     val role: String,
     val id: Long?,
 )
 
-data class DiscogsTrackItem(
+internal data class DiscogsTrackItem(
     val title: String,
     val position: String,
     val extraartists: List<DiscogsCredit>,
 )
 
-data class DiscogsRelease(
+internal data class DiscogsRelease(
     val title: String,
     val label: String?,
     val year: String?,
@@ -37,14 +37,14 @@ data class DiscogsRelease(
     val masterId: Long? = null,
 )
 
-data class DiscogsArtist(
+internal data class DiscogsArtist(
     val id: Long,
     val name: String,
     val members: List<DiscogsMember>,
     val images: List<DiscogsImage> = emptyList(),
 )
 
-data class DiscogsImage(
+internal data class DiscogsImage(
     val type: String,
     val uri: String,
     val uri150: String?,
@@ -52,13 +52,13 @@ data class DiscogsImage(
     val height: Int?,
 )
 
-data class DiscogsMember(
+internal data class DiscogsMember(
     val id: Long,
     val name: String,
     val active: Boolean?,
 )
 
-data class DiscogsMasterVersion(
+internal data class DiscogsMasterVersion(
     val id: Long,
     val title: String,
     val format: String?,

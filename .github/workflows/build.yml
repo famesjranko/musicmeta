@@ -37,3 +37,26 @@ jobs:
           name: test-reports
           path: '**/build/reports/tests/'
           retention-days: 7
+
+  # `demo/` is a separate composite build (`includeBuild("..")`) that is NOT part of
+  # `settings.gradle.kts`, so `./gradlew build` above never compiles it. It is also the only
+  # positional consumer of the public API in the tree, which makes it an accidental but genuine
+  # API-compatibility canary — it has broken silently before (v0.9.2). This job is that canary.
+  # It runs on draft PRs too, so the required-check contract on main/dev keeps reporting.
+  demo-canary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Compile demo composite build
+        # demo/ has no wrapper of its own; it borrows the root wrapper via ../gradlew, and
+        # compileKotlin resolves musicmeta-core from local source through includeBuild("..").
+        working-directory: demo
+        run: ../gradlew compileKotlin

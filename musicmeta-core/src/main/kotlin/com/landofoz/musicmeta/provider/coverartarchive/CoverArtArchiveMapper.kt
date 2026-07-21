@@ -4,7 +4,7 @@ import com.landofoz.musicmeta.ArtworkSize
 import com.landofoz.musicmeta.EnrichmentData
 
 /** Maps Cover Art Archive responses to EnrichmentData subclasses. */
-object CoverArtArchiveMapper {
+internal object CoverArtArchiveMapper {
 
     fun toArtwork(
         url: String,

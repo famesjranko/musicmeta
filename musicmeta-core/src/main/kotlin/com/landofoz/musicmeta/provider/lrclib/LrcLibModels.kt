@@ -4,7 +4,7 @@ package com.landofoz.musicmeta.provider.lrclib
  * Response model from the LRCLIB API.
  * Represents a single lyrics result for a track.
  */
-data class LrcLibResult(
+internal data class LrcLibResult(
     val id: Long,
     val trackName: String,
     val artistName: String,

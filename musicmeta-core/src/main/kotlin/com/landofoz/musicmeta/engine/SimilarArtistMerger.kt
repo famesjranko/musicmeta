@@ -9,7 +9,7 @@ import com.landofoz.musicmeta.SimilarArtist
  * Deduplicates and merges similar artist results from multiple providers.
  * Additive scoring: artists recommended by multiple providers rank higher.
  */
-object SimilarArtistMerger : ResultMerger {
+internal object SimilarArtistMerger : ResultMerger {
 
     override val type: EnrichmentType = EnrichmentType.SIMILAR_ARTISTS
 

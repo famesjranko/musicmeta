@@ -182,12 +182,17 @@ JitPack; assume external consumers exist.
 - Prefer new overloads or default parameters over modifying existing signatures.
 - Deprecate before removing — `@Deprecated` with `ReplaceWith`, kept for at least one minor release.
 - Internal code (`internal` visibility, `provider/*/` internals, `http/` infrastructure) may change
-  freely — **aspirationally.** The baselines record 93 public classes under `provider/`, almost none
-  marked `internal`, so in ABI terms they are published API today and `apiCheck` will flag them.
-  Under `http/` only `CircuitBreaker` and `RateLimiter` are accidental; `HttpClient`, `HttpResult`
-  and `HttpResponse` are the contract `musicmeta-okhttp` implements and must stay public. Until the
-  provider surface is narrowed, a provider-internal refactor legitimately requires an `apiDump`
-  commit; do not suppress it to make the check green.
+  freely — and as of 2026-07-21 (issue #5) this is enforced by visibility, not just aspiration. The
+  `*Api`/`*Mapper`/`*Models` behind each provider, `MusicBrainzParser`, `http/CircuitBreaker`, and the
+  `engine/` mergers/synthesizers are `internal` and absent from the `.api` baselines, so a refactor
+  confined to them no longer trips `apiCheck` or needs an `apiDump` commit. The public surface is the
+  `*Provider` classes, `HttpClient`/`HttpResult`/`HttpResponse`/`DefaultHttpClient`/`RateLimiter`, and
+  the `ResultMerger`/`CompositeSynthesizer` extension-point interfaces. `RateLimiter` stays public
+  deliberately — it is a parameter of nearly every public `*Provider` constructor. Engine wiring left
+  public (`ProviderRegistry`, `ProviderChain`, `DefaultEnrichmentEngine`, `ArtistMatcher`,
+  `ConfidenceCalculator`) is a candidate for a later pass. The one exception forced here:
+  `ProviderChain`'s constructor became `internal` because its default `circuitBreakers` parameter
+  referenced the now-internal `CircuitBreaker`; the class stays public (reachable via `chainFor()`).
 
 **Code style.** No `!!` — handle nullability properly. Files 200 lines target / 300 max; functions 20
 lines target / 40 max. Pure functions where possible. Explicit over implicit.

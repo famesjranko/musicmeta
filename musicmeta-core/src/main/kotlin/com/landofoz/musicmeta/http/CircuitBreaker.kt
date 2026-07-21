@@ -16,7 +16,7 @@ package com.landofoz.musicmeta.http
  * @param cooldownMs How long the circuit stays open before allowing a test request
  * @param clock Time source (injectable for testing)
  */
-class CircuitBreaker(
+internal class CircuitBreaker(
     private val failureThreshold: Int = DEFAULT_FAILURE_THRESHOLD,
     private val cooldownMs: Long = DEFAULT_COOLDOWN_MS,
     private val clock: () -> Long = System::currentTimeMillis,

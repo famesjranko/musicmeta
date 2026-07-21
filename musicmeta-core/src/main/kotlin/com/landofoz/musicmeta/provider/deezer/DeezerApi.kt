@@ -10,7 +10,7 @@ import java.net.URLEncoder
  * Deezer public search API. No authentication required.
  * Rate limit: ~10 requests/second.
  */
-class DeezerApi(
+internal class DeezerApi(
     private val httpClient: HttpClient,
     private val rateLimiter: RateLimiter,
 ) {

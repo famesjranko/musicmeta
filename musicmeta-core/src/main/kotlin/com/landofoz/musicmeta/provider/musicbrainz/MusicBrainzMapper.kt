@@ -11,7 +11,7 @@ import com.landofoz.musicmeta.ReleaseEdition
 import com.landofoz.musicmeta.TrackInfo
 
 /** Maps MusicBrainz DTOs to EnrichmentData subclasses. */
-object MusicBrainzMapper {
+internal object MusicBrainzMapper {
 
     fun toAlbumMetadata(release: MusicBrainzRelease): EnrichmentData.Metadata =
         EnrichmentData.Metadata(

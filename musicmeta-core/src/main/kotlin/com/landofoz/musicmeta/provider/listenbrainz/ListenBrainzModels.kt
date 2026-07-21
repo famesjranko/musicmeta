@@ -1,7 +1,7 @@
 package com.landofoz.musicmeta.provider.listenbrainz
 
 /** A popular track recording from the ListenBrainz API. */
-data class ListenBrainzPopularTrack(
+internal data class ListenBrainzPopularTrack(
     val recordingMbid: String,
     val title: String,
     val artistName: String,
@@ -12,21 +12,21 @@ data class ListenBrainzPopularTrack(
 )
 
 /** Batch recording popularity from POST /1/popularity/recording. */
-data class ListenBrainzRecordingPopularity(
+internal data class ListenBrainzRecordingPopularity(
     val recordingMbid: String,
     val totalListenCount: Long,
     val totalUserCount: Long,
 )
 
 /** Batch artist popularity from POST /1/popularity/artist. */
-data class ListenBrainzArtistPopularity(
+internal data class ListenBrainzArtistPopularity(
     val artistMbid: String,
     val totalListenCount: Long,
     val totalUserCount: Long,
 )
 
 /** Top release group from GET /1/popularity/top-release-groups-for-artist/{mbid}. */
-data class ListenBrainzTopReleaseGroup(
+internal data class ListenBrainzTopReleaseGroup(
     val releaseGroupMbid: String,
     val releaseGroupName: String,
     val artistName: String,
@@ -34,14 +34,14 @@ data class ListenBrainzTopReleaseGroup(
 )
 
 /** A similar artist from GET /1/explore/lb-radio/artist/{mbid}/similar. */
-data class ListenBrainzSimilarArtist(
+internal data class ListenBrainzSimilarArtist(
     val artistMbid: String,
     val name: String,
     val score: Float,
 )
 
 /** A track from the LB Radio JSPF playlist response. */
-data class ListenBrainzRadioTrack(
+internal data class ListenBrainzRadioTrack(
     val title: String,
     val artist: String,
     val album: String? = null,

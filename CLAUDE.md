@@ -126,13 +126,20 @@ Adds Android-specific integrations on top of core:
 
 This library is published on Maven Central and JitPack — assume external consumers exist.
 
-- **No breaking changes** to public API without a major version bump (semver)
-- Breaking = removing/renaming public classes, functions, or parameters; changing return types; reordering non-named parameters; changing enum/sealed-class variants consumers may match on
-- When evolving public API: prefer adding new overloads or default parameters over modifying existing signatures
-- Deprecate before removing — add `@Deprecated` with `ReplaceWith` and keep for at least one minor release before removal
-- **Append new parameters at the end with a default — never insert mid-list.** A mid-list insertion silently re-binds every positional argument after it
-- Internal code (`internal` visibility, `provider/*/` internals, `http/` infrastructure) can change freely
-- If a breaking change is truly necessary, document it in `CHANGELOG.md` under a `### Breaking Changes` heading and flag it to the user before proceeding
+**Versioning stance — the 0.x carve-out.** This project is pre-1.0, and during the `0.x` series semver permits breaking changes on minor releases. This repo adopts that carve-out explicitly, because the earlier "no breaks without a major bump" rule was never actually true of practice and that gap is what let the audit findings accumulate (see `STORIES.md`, 2026-07-21):
+
+- **Minor releases (`0.x.0`) MAY contain breaking public-API changes** — but every break MUST be documented under a `### Breaking Changes` heading in `CHANGELOG.md` and be visible in the reviewed `api/*.api` diff. A break that is neither documented nor visible in the `.api` diff is a defect, not a release.
+- **Patch releases (`0.x.y`, `y > 0`) may NOT break the public API.** Patches are for fixes that keep the signature and ABI stable. (v0.9.2 broke this by inserting a parameter mid-list in a patch — the specific mistake this rule exists to stop recurring.)
+- **At `1.0.0` the full semver rule takes effect:** no breaking change to the public API without a major version bump, from then on.
+
+Whatever the release channel, evolve the API additively wherever possible:
+
+- Breaking = removing/renaming public classes, functions, or parameters; changing return types; reordering non-named parameters; changing enum/sealed-class variants consumers may match on.
+- Prefer adding new overloads or default parameters over modifying existing signatures.
+- Deprecate before removing — add `@Deprecated` with `ReplaceWith` and keep for at least one minor release before removal.
+- **Append new parameters at the end with a default — never insert mid-list.** A mid-list insertion silently re-binds every positional argument after it. (Note: on the JVM, adding a parameter *anywhere* to a function with default parameters changes the generated method descriptor, so it is a binary break for pre-compiled callers regardless of position — appending is the source-compatible floor, not a full ABI guarantee. A 0.x minor is the place for either.)
+- Internal code (`internal` visibility, `provider/*/` internals, `http/` infrastructure) can change freely — and this is now enforced by visibility, not just aspiration: the `*Api`/`*Mapper`/`*Models` behind each provider, `MusicBrainzParser`, `CircuitBreaker`, and the `engine/` mergers/synthesizers are all `internal` and absent from the `.api` baselines. The public surface is the `*Provider` classes, `HttpClient`/`HttpResult`/`HttpResponse`/`DefaultHttpClient`/`RateLimiter`, and the `ResultMerger`/`CompositeSynthesizer` extension-point interfaces.
+- When you make a breaking change, document it in `CHANGELOG.md` under a `### Breaking Changes` heading and flag it to the user before proceeding.
 
 **Enforcement.** `binary-compatibility-validator` dumps the public ABI to `api/*.api` in each module.
 `apiCheck` runs as part of `./gradlew build` and in the publish workflow, so a diverging signature
@@ -140,12 +147,17 @@ fails the build rather than being caught by review alone. An intentional API cha
 `./gradlew apiDump` and reviewing the committed `.api` diff — that diff, not the source diff, is the
 record of what consumers see.
 
-> **Caveat — "internal code can change freely" is not true yet.** The baselines record 93 public
-> classes under `provider/`; almost none are marked `internal`, so they are part of the published ABI
-> and `apiCheck` will flag changes to them. (Under `http/`, only `CircuitBreaker` and `RateLimiter`
-> are accidental — `HttpClient`, `HttpResult` and `HttpResponse` are the contract `musicmeta-okhttp`
-> implements and must stay public.) Narrowing the provider surface is tracked separately; until it
-> lands, a provider-internal refactor legitimately requires an `apiDump` commit.
+> **The provider/http/engine surface was narrowed (2026-07-21, issue #5).** 80 top-level types that
+> were public only by omission — the `*Api`/`*Mapper`/`*Models` behind each provider, `MusicBrainzParser`,
+> `http/CircuitBreaker`, and the `engine/` mergers/synthesizers — are now `internal` and no longer in the
+> `.api` baselines. A refactor confined to those internals no longer touches the public ABI, so `apiCheck`
+> stays green and no `apiDump` commit is needed. `RateLimiter` stays public deliberately: it is a
+> parameter of nearly every public `*Provider` constructor, so hiding it would break the provider
+> constructor surface far more than it narrows anything. What remains public under `engine/`
+> (`ProviderRegistry`, `ProviderChain`, `DefaultEnrichmentEngine`, `ArtistMatcher`, `ConfidenceCalculator`)
+> is engine wiring/helpers left for a future pass. One exception was forced here: `ProviderChain`'s
+> constructor became `internal` (its default `circuitBreakers` parameter referenced the now-internal
+> `CircuitBreaker`); the class itself stays public and is reachable via `ProviderRegistry.chainFor()`.
 
 ## Git Rules
 

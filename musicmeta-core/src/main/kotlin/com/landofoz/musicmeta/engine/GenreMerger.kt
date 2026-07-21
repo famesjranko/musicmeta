@@ -6,7 +6,7 @@ import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.GenreTag
 
 /** Pure function that normalizes, deduplicates, and merges genre tags from multiple providers. */
-object GenreMerger : ResultMerger {
+internal object GenreMerger : ResultMerger {
 
     override val type: EnrichmentType = EnrichmentType.GENRE
 
