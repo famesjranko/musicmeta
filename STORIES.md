@@ -22,8 +22,10 @@ not a "never throws" promise on its own.
 **Decision — report a typed `Error`, do not degrade silently.** The cache's degrade-to-miss does not
 transfer: a merger *produces* the type's result, so swallowing would be indistinguishable from a
 genuine `NotFound`. `guardedStrategy` mirrors `CacheGuard`, including rethrowing
-`CancellationException` — load-bearing here in a way it was not for the cache, since both call sites
-sit inside `enrich()`'s `withTimeout` and absorbing it would defeat the deadline.
+`CancellationException` — but for the same reason the cache gives, not a stronger one. Both call
+sites do sit inside `enrich()`'s `withTimeout`, yet neither `merge` nor `synthesize` is a suspending
+function, so the deadline can never be delivered into the guarded block. The rethrow is hygiene
+against one of those interfaces becoming `suspend` later; it is not what enforces the deadline.
 
 **Found while testing**: the pre-existing `?: NotFound(type, "no_merger")` and
 `"no_composite_handler"` fallbacks are unreachable. `mergeableTypes` and `compositeDependencies` are

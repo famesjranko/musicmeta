@@ -17,8 +17,10 @@ private const val TAG = "EnrichmentStrategy"
  * Reported rather than degraded, unlike the cache: a strategy *produces* the type's result, so
  * swallowing the failure would be indistinguishable from a genuine `NotFound`.
  *
- * [CancellationException] is rethrown. Both call sites sit inside `enrich()`'s `withTimeout`, so
- * absorbing it would defeat the enrichment deadline.
+ * [CancellationException] is rethrown, mirroring `CacheGuard`. Note both call sites sit inside
+ * `enrich()`'s `withTimeout` but neither [ResultMerger.merge] nor [CompositeSynthesizer.synthesize]
+ * suspends, so the deadline can never be delivered into [block]: the rethrow is hygiene for the day
+ * one of them becomes `suspend`, not what enforces the deadline today.
  */
 internal fun guardedStrategy(
     logger: EnrichmentLogger,

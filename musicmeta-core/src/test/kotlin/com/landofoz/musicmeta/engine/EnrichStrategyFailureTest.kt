@@ -141,7 +141,7 @@ class EnrichStrategyFailureTest {
     }
 
     @Test fun `guarded strategy rethrows CancellationException`() {
-        // Given — a strategy that throws CancellationException, as the enrich deadline causes
+        // Given — a strategy that throws CancellationException, as a consumer's own cancelled work can
         var propagated = false
 
         // When — run through the guard
@@ -153,7 +153,7 @@ class EnrichStrategyFailureTest {
             propagated = true
         }
 
-        // Then — it is rethrown, so the withTimeout deadline around both call sites still fires
+        // Then — it is rethrown rather than converted to an Error, as structured concurrency requires
         assertTrue("cancellation must not be swallowed by the strategy guard", propagated)
     }
 }
