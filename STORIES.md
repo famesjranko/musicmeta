@@ -7,6 +7,34 @@
 
 ## Decisions
 
+### 2026-07-22: Detect the tag/version mismatch, don't make it unrepresentable (issue #13)
+
+**Context**: `publish.yml` derived nothing from the pushed tag — it published whatever the three
+`build.gradle.kts` files declared. A tag ahead of the build files uploads the old GAV, Central
+rejects the duplicate, and an immutable tag survives for a version that never shipped. Not
+hypothetical: it was live on `dev` during the 0.10.0 release and was fixed by hand-editing three
+files before merge. The release checklist in `docs/project/release.md` documented the discipline;
+nothing enforced it.
+
+**Decision — assert the match, keep three declarations.** The guard checks all three modules (they
+declare `version` independently and can drift from each other, not just from the tag), reads the
+value from Gradle rather than grepping the build file (so it sees what would actually be published),
+treats an unreadable version as a failure, and runs before the test step so it fails at the cheapest
+possible point while the tag is still the only artifact.
+
+**Deferred: collapsing `version` to a single source.** A shared `gradle.properties` value would make
+cross-module drift *unrepresentable* rather than merely detected, which is the stronger fix. It also
+edits publishing configuration in all three modules — a high-risk surface — for a failure mode this
+guard already catches before it can reach Central. Wants its own issue and its own review.
+
+**Also deliberately out of scope**: auto-creating GitHub Releases (rejected — hand-written notes beat
+a generated template) and `automaticRelease` (a deliberate human gate; it wants documenting, not
+automating).
+
+**Verification**: guard body extracted from the parsed YAML and exercised both ways against the real
+build — `v0.10.0` exits 0 with all three modules matching, `v9.9.9` exits 1 with one `::error::` per
+module. The workflow itself only fires on a `v*` tag and was reviewed by inspection.
+
 ### 2026-07-22: Project workflow docs own facts, not agent procedures
 
 **Context**: `docs/agent-workflows/conventions.md` was generated as the “project-specific half” of

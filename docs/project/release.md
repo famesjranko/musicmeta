@@ -22,8 +22,10 @@ rules live in `CLAUDE.md` → **Backwards Compatibility**.
 5. Run the workflow verification surface, review the committed `api/*.api` diff, and confirm the demo
    composite build still compiles.
 
-Nothing in CI derives or reconciles module versions from the tag. A mismatched tag attempts to
-publish the build-file version and can leave an immutable tag for an artifact that never shipped.
+CI still derives no version from the tag — it publishes what the build files declare — but
+`publish.yml` now asserts the tag matches all three modules before running anything else, so a
+mismatch fails the run instead of leaving an immutable tag for an artifact that never shipped.
+Getting step 2 wrong is now a red publish, not a tag you have to delete and re-push.
 
 ## Land and publish
 
