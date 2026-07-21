@@ -126,6 +126,7 @@ Adds Android-specific integrations on top of core:
 - No `!!` — handle nullability properly
 - Pure functions when possible
 - Explicit over implicit — no magic
+- **Comments:** Explain only non-obvious constraints, traps, guards, or safety rationale — plus the Given-When-Then narration tests require (see Testing Patterns). Do not restate code or preserve history; put that in issues, PRs, or docs. Remove comments when the related code is removed.
 
 ## Modeling Rules
 
