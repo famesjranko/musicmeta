@@ -7,6 +7,26 @@
 
 ## Decisions
 
+### 2026-07-22: Project workflow docs own facts, not agent procedures
+
+**Context**: `docs/agent-workflows/conventions.md` was generated as the “project-specific half” of
+the old `ship-init`/`ship-issue`/`ship-pr` design. It mixed durable repository decisions with generic
+tool instructions, autonomy flags, duplicated code rules, and a release checklist. Its copied
+backwards-compatibility rule drifted from `CLAUDE.md` within hours, and the later removal of that copy
+still left a subordinate “canonical docs win” hierarchy rather than clear ownership. It also named an
+epic PR class without defining how children land on the shared branch.
+
+**Decision**: Replace the generated contract with canonical project documents. `docs/project/workflow.md`
+owns branch topology, work isolation, issue lifecycle, selection, and verification; it now defines
+both independent-child and shared-epic landing models. `docs/project/release.md` owns release
+preparation, tagging, and publication. `CLAUDE.md` continues to own code and API constraints and
+routes to both documents. No document is a fallback copy of another.
+
+**Consequences**: Agents and humans read the same project-owned workflow without depending on the
+implementation details of a particular shipping skill. Shared-branch epic children now have an
+explicit push-time closure and abandonment-recovery rule. Future workflow changes update one owner
+instead of re-synchronizing a generated contract.
+
 ### 2026-07-21: CI canary + scheduled API-drift watch (issues #3, #6)
 
 **Context**: PR #9 landed `build.yml` running `./gradlew build` (build + test + `apiCheck`) on PRs/pushes to `main`/`dev`. Two silent-rot gaps remained. First, `demo/` is a composite build (`includeBuild("..")`) outside `settings.gradle.kts`, so `./gradlew build` never compiles it — yet it is the tree's only consumer compiling against the published surface as an external consumer would, and it broke unnoticed in v0.9.2. (It was a fully positional consumer at the time. Note it was never a reliable *position* guard even then: Kotlin rebinds positional arguments silently, so a mid-list insertion carrying a default breaks compilation only when the rebinding also produces a type error — v0.9.2 was caught because `Set<EnrichmentType>` could not bind to `EnrichmentIdentifiers?`. See `CLAUDE.md`.) Second, `apiCheck` on a PR catches an API *change* on the PR that caused it, but not *drift* — a committed `.api` baseline that stops matching reality between releases (a dependency/Kotlin bump moving the emitted ABI, a stale `.api` merge). A red PR run also has no memory.

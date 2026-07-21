@@ -322,6 +322,8 @@ Then consume as `io.github.famesjranko:musicmeta-core:0.9.2` from `mavenLocal()`
 | [docs/guides/](docs/guides/README.md) | Developer guides — quick start, identity resolution, results & errors, cache management, configuration, extension points, Android |
 | [docs/how-it-works.md](docs/how-it-works.md) | Complete pipeline trace -- from `enrich()` call to results |
 | [docs/providers/](docs/providers/) | Per-provider API documentation and endpoint inventory |
+| [docs/project/workflow.md](docs/project/workflow.md) | Branch topology, issue lifecycle, worktrees, and verification selection |
+| [docs/project/release.md](docs/project/release.md) | Release preparation, tagging, and publication |
 | [CHANGELOG.md](CHANGELOG.md) | Release history |
 | [STORIES.md](STORIES.md) | Architectural decisions and rationale |
 
