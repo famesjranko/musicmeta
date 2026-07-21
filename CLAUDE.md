@@ -11,7 +11,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `STORIES.md` | Architectural decisions, progress log, rationale |
 | `CHANGELOG.md` | Release history (user-facing, Keep a Changelog format) |
 | `ROADMAP.md` | Gap analysis, coverage matrix, planned milestones |
-| `docs/agent-workflows/conventions.md` | Issue → PR → dev → main shipping conventions (branch model, verification surface, danger zones) |
+| `docs/project/workflow.md` | Branch topology, worktrees, issue lifecycle, work selection, verification surface |
+| `docs/project/release.md` | Release preparation, dev → main landing, tagging, and publication |
 
 **For AI agents**: Check `STORIES.md` for context on *why* decisions were made. Update it when making significant architectural choices or completing milestones. Update `CHANGELOG.md` when adding features or fixing bugs.
 
