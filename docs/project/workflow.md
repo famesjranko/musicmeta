@@ -51,6 +51,14 @@ Labels are `priority/p0` through `priority/p3`, plus `area/core`, `area/android`
 For `next`, take P0 first, then P1 by issue number, then P2/P3 in epic rank order. Always respect
 `Depends on #N`; a blocked issue is not next regardless of priority.
 
+**Explicit approval is required before editing** for P0/P1, any feature-scope work, and anything
+under [High-risk surfaces](#high-risk-surfaces) regardless of priority.
+
+Unattended handling is for cheap, independent **P3** work only. Skipping an independent review is
+for trivial **P3** form and documentation changes only. Neither ever applies to a high-risk surface.
+These bind behaviour, not a flag: **P2 and above get a human in the loop even when the intent looks
+obvious.**
+
 ## Issue lifecycle
 
 Because `dev` is not the default branch, closing keywords do not close issues when work reaches
@@ -103,13 +111,18 @@ deferred maintainer-run proof surface rather than allowing rate limits or outage
 
 ## High-risk surfaces
 
-These always require explicit review and complete mapped verification:
+These always need **explicit approval before editing** and a **full independent** review, at any
+priority. Never handle them unattended, never abbreviate the review, and always run the complete
+mapped verification:
 
-- Public API and committed API baselines
-- `@Serializable` payloads
-- Android Room entities and migrations
-- Release workflows, publishing configuration, and versions
-- Provider credentials, authentication headers, and User-Agent construction
+- Public API and committed API baselines — `musicmeta-core/src/main/kotlin/com/landofoz/musicmeta/*.kt`
+  and every `api/*.api`. The backwards-compatibility boundary; consumers exist on Maven Central and JitPack.
+- `@Serializable` payloads — `EnrichmentData` subtypes, `EnrichmentIdentifiers`. Changing field order
+  or names breaks persisted JSON in consumers' caches, not just compilation.
+- Android Room entities and migrations — `musicmeta-android/**/cache/**`. User data on device.
+- Release workflows, publishing configuration, and versions — `.github/workflows/**`, publishing
+  blocks in `build.gradle.kts`, anything that changes what reaches Maven Central.
+- Provider credentials, authentication headers, and User-Agent construction.
 
 ## Commit and documentation routing
 

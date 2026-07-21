@@ -17,8 +17,9 @@ name: Provider API drift watch
 # untouched and every check is green. That is why the detector has to be scheduled: the trigger is
 # external, so the watcher must be too.
 #
-# Never gating. conventions.md §6 is right that third-party rate limits and outages must not be able
-# to block a merge. This does not change that — it gives the signal an owner instead of no home.
+# Never gating. docs/project/workflow.md "Verification" is right that third-party rate limits and
+# outages must not be able to block a merge. This does not change that — it gives the signal an
+# owner instead of no home.
 
 on:
   schedule:
