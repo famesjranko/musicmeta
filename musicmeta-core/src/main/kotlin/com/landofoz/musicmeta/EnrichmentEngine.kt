@@ -35,7 +35,9 @@ interface EnrichmentEngine {
      * Enriches a music entity with the requested data types.
      *
      * @param forceRefresh When true, bypasses the cache for the requested types and fetches fresh
-     *   data from providers. Existing cache entries (including manual selections) are cleared first.
+     *   data from providers. Existing cache entries (including manual selections) are cleared first
+     *   on a best-effort basis: if the cache throws while clearing, the failure is logged and fresh
+     *   data is still fetched, rather than being surfaced to the caller.
      */
     suspend fun enrich(
         request: EnrichmentRequest,

@@ -49,7 +49,7 @@ The library is a tool for developers to wield for their needs, not a framework t
 
 ### What Changed in v0.10.0
 
-v0.10.0 is **Public API compatibility enforcement** — epic #7, 2026-07-21.
+v0.10.0 is **Public API compatibility enforcement** — epic #7, 2026-07-22.
 
 The backwards-compatibility contract in `CLAUDE.md` was asserted but unenforced, and an audit of the
 tag history found it had been missed repeatedly: four mid-list parameter insertions (v0.5.0, v0.7.0,
@@ -60,8 +60,14 @@ v0.9.0, v0.9.2), four undeprecated removals or renames (v0.4.0), and `@Deprecate
   the build instead of reaching Maven Central. The `.api` diff is now the review artifact.
 - **CI gates** — `build.yml` runs build + tests + `apiCheck` on PRs and pushes, plus the `demo/`
   composite-build canary that `./gradlew build` never compiles.
-- **Scheduled drift watch** — `api-drift.yml` files, updates, and auto-closes a single tracking issue
-  when `dev` drifts from its baselines.
+- **Scheduled drift watch, both directions** — `api-drift.yml` files, updates, and auto-closes a
+  single tracking issue when `dev` drifts from its baselines. `provider-drift.yml` does the inverse:
+  it runs the gated E2E suite daily against the live third-party APIs and files a tracking issue when
+  a provider changes its JSON or endpoints underneath us — a failure that is otherwise silent,
+  because `org.json`'s `opt*` family turns a renamed field into an empty value inside a *successful*
+  enrichment, and arrives with zero commits to this repo.
+- **Cache failures no longer escape `enrich()`** — a throwing `EnrichmentCache` degrades to a miss
+  and is logged, matching what `README.md` already promised consumers.
 - **Narrowed public surface** — 80 top-level types that were public only by omission (provider
   `*Api`/`*Mapper`/`*Models`, `MusicBrainzParser`, `http/CircuitBreaker`, the `engine/` mergers and
   synthesizers) are now `internal`. See `CHANGELOG.md` → Breaking Changes.
