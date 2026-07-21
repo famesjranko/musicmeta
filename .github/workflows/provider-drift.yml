@@ -58,7 +58,9 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - uses: gradle/actions/setup-gradle@48b5f213c81028ace310571dc5ec0fbbca0b2947 # v4
+      # Commit SHA, not the v4.4.3 tag-object SHA that `refs/tags/v4` dereferences to in one hop.
+      # Both are immutable, but only this form is what pinning tooling emits and verifies.
+      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3
 
       - name: Check provider credentials are configured
         id: preflight
@@ -107,7 +109,24 @@ jobs:
         # musicmeta-core/build.gradle.kts already forwards these four env vars to the test JVM,
         # so no build change is needed. The suite is 70 tests across 5 classes, all gated behind
         # -Dinclude.e2e=true.
-        run: ./gradlew :musicmeta-core:test -Dinclude.e2e=true 2>&1 | tee e2e.log
+        #
+        # `--tests` scopes this to the e2e package. Without it the task runs all 745 core tests, and
+        # any ordinary unit-test regression on `dev` would file an issue claiming a third-party
+        # provider changed its API — daily, until someone fixed it.
+        #
+        # Retried once on failure. This job talks to 11 live third-party APIs from a shared runner
+        # egress IP; a single 429 or 503 is noise, not drift. Two failures in a row is weak evidence
+        # but far better than one, and it costs one extra run only when something is already wrong.
+        run: |
+          set -eo pipefail
+          if ./gradlew :musicmeta-core:test -Dinclude.e2e=true \
+               --tests "com.landofoz.musicmeta.e2e.*" 2>&1 | tee e2e.log; then
+            exit 0
+          fi
+          echo "::notice::E2E suite failed on the first attempt — retrying once to rule out a transient provider error."
+          sleep 60
+          ./gradlew :musicmeta-core:test -Dinclude.e2e=true --rerun-tasks \
+            --tests "com.landofoz.musicmeta.e2e.*" 2>&1 | tee e2e.log
 
       - name: Summarise failures
         id: summary
@@ -116,57 +135,120 @@ jobs:
         shell: bash
         run: |
           set -eo pipefail
-          python3 - <<'PY' > e2e-summary.txt
+          # UTF-8 explicitly: under a non-UTF-8 locale the parser below dies printing a non-ASCII
+          # assertion message (music metadata is full of them — Motörhead, Sigur Rós, Björk), which
+          # would abort this step part-way through redaction.
+          export PYTHONIOENCODING=utf-8
+          export LC_ALL=C.UTF-8
+
+          # FAIL CLOSED. Everything is built in a scratch file and only promoted to the name the
+          # report step reads (`e2e-summary.txt`) once parsing AND both redaction passes have
+          # completed. `set -e` aborts this step on any failure in between, and the trap removes the
+          # scratch file, so a partially-redacted summary can never survive to be published. The
+          # earlier version wrote e2e-summary.txt up front via shell redirection, which meant an
+          # abort mid-redaction left a half-redacted file on disk that the report step happily
+          # posted to a public issue.
+          export RAW=summary.raw
+          trap 'rm -f "$RAW" e2e-summary.part' EXIT
+
+          rm -f e2e-summary.txt
+
+          python3 - > "$RAW" <<'PY'
           import glob, xml.etree.ElementTree as ET
 
           total = failed = errored = skipped = 0
+          e2e_ran = 0
           rows = []
           for path in glob.glob("musicmeta-core/build/test-results/**/*.xml", recursive=True):
               try:
                   root = ET.parse(path).getroot()
               except Exception:
+                  # Unparseable results file — report it rather than dropping the class silently.
+                  rows.append(f"- **[unparseable results file]** {path}")
                   continue
               if root.tag != "testsuite":
                   continue
-              total += int(root.get("tests", 0))
+              tests = int(root.get("tests", 0))
+              skips = int(root.get("skipped", 0))
+              total += tests
               failed += int(root.get("failures", 0))
               errored += int(root.get("errors", 0))
-              skipped += int(root.get("skipped", 0))
+              skipped += skips
+              if ".e2e." in (root.get("name") or ""):
+                  e2e_ran += tests - skips
               for case in root.iter("testcase"):
                   for bad in list(case.findall("failure")) + list(case.findall("error")):
                       cls = (case.get("classname") or "").rsplit(".", 1)[-1]
+                      # NOT truncated here. Truncation happens after redaction — cutting first can
+                      # bisect a credential into a fragment the literal-value pass no longer matches.
                       msg = " ".join((bad.get("message") or "").split())
-                      rows.append(f"- **{cls}.{case.get('name')}** — {msg[:400]}")
+                      rows.append(f"- **{cls}.{case.get('name')}** — {msg}")
 
-          print(f"TOTAL={total} FAILED={failed} ERRORED={errored} SKIPPED={skipped}")
+          print(f"TOTAL={total} FAILED={failed} ERRORED={errored} SKIPPED={skipped} E2E_RAN={e2e_ran}")
           print("---")
           for r in rows:
               print(r)
           PY
 
-          # REDACTION. This output goes into a PUBLIC issue body, and provider request URLs embed
-          # credentials — Last.fm calls carry `api_key=`, Discogs carries `token=`. An assertion
-          # message or stack trace quoting a URL would publish the key. Two passes:
-          #   1. pattern-redact any credential-shaped query parameter;
-          #   2. redact the literal secret values, in case one reaches the text another way.
-          # GitHub masks known secrets in logs, but masking does not cover what we write to a file
-          # and then POST to the issues API.
-          sed -i -E 's/([?&](api_key|apikey|api-key|token|key|auth)=)[^&[:space:]"'"'"']*/\1REDACTED/gI' e2e-summary.txt
+          # Surface how many e2e tests actually executed. If the -Dinclude.e2e gating ever breaks,
+          # all 70 skip, the task exits 0, and without this the watch would report "healthy" and
+          # close a real tracker on its way out.
+          grep -o 'E2E_RAN=[0-9]*' "$RAW" | head -1 >> "$GITHUB_OUTPUT"
+
+          # REDACTION — this output goes into a PUBLIC issue body, and provider request URLs embed
+          # credentials (Last.fm carries api_key=, Discogs carries token=).
+          #
+          # Pass 1: credential-shaped query parameters.
+          sed -i -E 's/([?&](api_key|apikey|api-key|token|key|auth)=)[^&[:space:]"'"'"']*/\1REDACTED/gI' "$RAW"
+
+          # Pass 2: the literal secret values, for forms pass 1 cannot reach — a header dump, a
+          # toString() of a params map, a bare key in free text.
+          #
+          # Matching the raw env value is not enough. A secret pasted into GitHub with a trailing
+          # newline or flanking spaces is stored with them, so the literal never matches the key as
+          # it appears in output, and the credential is published. That is the single most common
+          # way secrets are stored. Redact the stripped value and every non-empty line of it.
           for name in LASTFM_API_KEY FANARTTV_API_KEY DISCOGS_TOKEN LISTENBRAINZ_TOKEN; do
             value="${!name:-}"
-            # Guard on length: an empty or very short value would match everywhere and redact the
-            # whole file to noise. Passed through the environment rather than argv, so the value
-            # never appears in the process table.
-            if [ -n "${value}" ] && [ "${#value}" -ge 8 ]; then
-              SECRET_VALUE="${value}" python3 <<'PY'
-          import os, pathlib
-          secret = os.environ["SECRET_VALUE"]
-          p = pathlib.Path("e2e-summary.txt")
-          p.write_text(p.read_text().replace(secret, "REDACTED"))
+            [ -n "${value}" ] || continue
+            SECRET_NAME="${name}" SECRET_VALUE="${value}" python3 <<'PY'
+          import os, pathlib, sys
+
+          name = os.environ["SECRET_NAME"]
+          raw = os.environ["SECRET_VALUE"]
+
+          # Every variant worth redacting: the whole value stripped, plus each line of a multi-line
+          # secret. Anything shorter than 8 characters is not safely redactable — it would match
+          # ordinary words and turn the body to noise — so fail the step rather than publish it.
+          variants = {raw.strip()} | {ln.strip() for ln in raw.splitlines()}
+          variants = {v for v in variants if v}
+          too_short = sorted(v for v in variants if len(v) < 8)
+          if too_short:
+              print(f"::error::{name} contains a value shorter than 8 characters, which cannot be "
+                    f"safely redacted from a public issue body. Refusing to continue.", file=sys.stderr)
+              sys.exit(1)
+
+          p = pathlib.Path(os.environ["RAW"])
+          text = p.read_text(encoding="utf-8")
+          for v in sorted(variants, key=len, reverse=True):
+              text = text.replace(v, "REDACTED")
+          p.write_text(text, encoding="utf-8")
           PY
-            fi
           done
 
+          # Truncate only now that the text is redacted, and repair any multibyte character the
+          # cut may have split.
+          python3 - <<'PY'
+          import os, pathlib
+          p = pathlib.Path(os.environ["RAW"])
+          out = []
+          for line in p.read_text(encoding="utf-8").splitlines():
+              out.append(line if len(line) <= 400 else line[:400] + " …[truncated]")
+          pathlib.Path("e2e-summary.part").write_text("\n".join(out) + "\n", encoding="utf-8")
+          PY
+
+          # Promote only after every pass succeeded.
+          mv e2e-summary.part e2e-summary.txt
           echo "Summary assembled and redacted ($(wc -c < e2e-summary.txt) bytes)."
         env:
           LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
@@ -179,11 +261,16 @@ jobs:
         # step performs external writes. Reaching it after an earlier failure means earlier steps
         # may have been SKIPPED, so every file read below is guarded.
         if: ${{ !cancelled() }}
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Explicit, so gh never has to infer the repo from a git remote — checkout itself can fail.
           GH_REPO: ${{ github.repository }}
           E2E_RESULT: ${{ steps.e2e.outcome }}
+          # The summariser's outcome gates whether its output may be published at all. It writes
+          # the redacted summary; if it did not finish, its output is not trustworthy.
+          SUMMARY_RESULT: ${{ steps.summary.outcome }}
+          E2E_RAN: ${{ steps.summary.outputs.E2E_RAN }}
           MISSING_KEYS: ${{ steps.preflight.outputs.missing }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           # Byte budget for the failure summary. GitHub caps an issue body at 65536 characters,
@@ -206,6 +293,22 @@ jobs:
             misconfigured=true
           fi
 
+          # The summariser is what redacts credentials. If it did not complete, its output must be
+          # treated as unpublishable regardless of whether a file happens to exist on disk.
+          summary_usable=true
+          if [ "${SUMMARY_RESULT}" != "success" ]; then
+            summary_usable=false
+          fi
+
+          # Zero e2e tests executed is a fault, not health. Every e2e class gates on
+          # Assume.assumeTrue(include.e2e), which marks tests SKIPPED rather than failed — so if the
+          # gating ever breaks, all 70 skip, Gradle exits 0, and a naive reading would call that
+          # "providers healthy" and close a real tracker.
+          zero_e2e=false
+          if [ "${SUMMARY_RESULT}" = "success" ] && [ "${E2E_RAN:-0}" -eq 0 ] 2>/dev/null; then
+            zero_e2e=true
+          fi
+
           # Look the tracker up by LABEL, not by title text. GitHub's issue-search tokenizer strips
           # bracket punctuation, so a `[provider-drift-bot] in:title` search degrades to the words
           # "provider drift bot" ranked by relevance — which can page the real tracker out. See #14,
@@ -215,7 +318,24 @@ jobs:
           existing="$(gh issue list --state open --label "${TRACKER_LABEL}" --limit 100 \
             --json number --jq '.[0].number // empty' || true)"
 
-          if [ "${suite_failed}" = "false" ] && [ "${misconfigured}" = "false" ]; then
+          # Fall back to a title search if the label lookup found nothing. `gh issue list --label`
+          # on a DELETED label exits 0 with empty output, so without this a maintainer removing the
+          # label during triage would silently route every run to `create` — filing a fresh
+          # duplicate tracker every single day. The title search is weaker (GitHub's tokenizer
+          # strips the bracket punctuation, so it degrades to relevance-ranked words), which is why
+          # it is the fallback rather than the primary, but it is enough to find our own issue.
+          if [ -z "${existing}" ]; then
+            existing="$(gh issue list --state open --limit 100 --search "${TITLE_MARKER} in:title" \
+              --json number,title \
+              --jq '[.[] | select(.title | startswith("'"${TITLE_MARKER}"'"))][0].number // empty' || true)"
+            if [ -n "${existing}" ]; then
+              echo "::warning::Found tracker #${existing} by title, not by label — the '${TRACKER_LABEL}' label may have been removed. Re-applying."
+              gh issue edit "${existing}" --add-label "${TRACKER_LABEL}" || true
+            fi
+          fi
+
+          if [ "${suite_failed}" = "false" ] && [ "${misconfigured}" = "false" ] \
+             && [ "${summary_usable}" = "true" ] && [ "${zero_e2e}" = "false" ]; then
             if [ -n "${existing}" ]; then
               gh issue close "${existing}" \
                 --comment "Resolved: the full E2E suite passes against live provider APIs as of ${RUN_URL}. Closing automatically." \
@@ -231,8 +351,23 @@ jobs:
             echo "The scheduled watch found a divergence between musicmeta and live provider APIs."
             echo
             echo "- **E2E suite result:** ${E2E_RESULT}"
+            echo "- **E2E tests actually executed:** ${E2E_RAN:-unknown}"
             echo "- **Credentials missing (misconfiguration, not drift):** ${MISSING_KEYS:-none}"
+            echo "- **Summariser step:** ${SUMMARY_RESULT}"
             echo
+            if [ "${zero_e2e}" = "true" ]; then
+              echo "> **No E2E tests executed.** The suite reported success but ran zero e2e tests,"
+              echo "> which means the \`-Dinclude.e2e=true\` gating is no longer taking effect —"
+              echo "> the watch is silently inert. This is a fault in the watch, not provider drift."
+              echo
+            fi
+            if [ "${summary_usable}" = "false" ]; then
+              echo "> **Test summary withheld.** The summariser step reported"
+              echo "> \`${SUMMARY_RESULT}\`, and it is the step that strips credentials from test"
+              echo "> output. Its output is therefore not safe to publish and has been omitted."
+              echo "> See the run log — which is not public — for the failure detail."
+              echo
+            fi
             echo "Run: ${RUN_URL}"
             echo
             if [ "${misconfigured}" = "true" ]; then
@@ -244,12 +379,15 @@ jobs:
               echo "> misconfiguration rather than a provider change."
               echo
             fi
-            if [ -f e2e-summary.txt ]; then
+            if [ "${summary_usable}" = "true" ] && [ -f e2e-summary.txt ]; then
               echo "### Failing tests"
               echo
               echo '```'
               summary_bytes="$(wc -c < e2e-summary.txt)"
-              head -c "${SUMMARY_BODY_LIMIT}" e2e-summary.txt
+              # `iconv -c` drops any multibyte character the byte-cut split. Music metadata carries
+              # non-ASCII constantly (Motörhead, Sigur Rós, Björk), and invalid UTF-8 in the body
+              # makes the gh API call fail.
+              head -c "${SUMMARY_BODY_LIMIT}" e2e-summary.txt | iconv -f utf-8 -t utf-8 -c
               if [ "${summary_bytes}" -gt "${SUMMARY_BODY_LIMIT}" ]; then echo; fi
               echo '```'
               if [ "${summary_bytes}" -gt "${SUMMARY_BODY_LIMIT}" ]; then
@@ -280,12 +418,24 @@ jobs:
           } > issue-body.md
 
           if [ -n "${existing}" ]; then
-            gh issue edit "${existing}" --body-file issue-body.md
-            gh issue comment "${existing}" \
-              --body "Still failing as of ${RUN_URL}. Issue body updated with the latest run."
+            # Capture the body BEFORE overwriting it, so the comparison below is against the
+            # previous run rather than against what we just wrote.
+            gh issue view "${existing}" --json body --jq .body > previous-body.md 2>/dev/null || true
+            gh issue edit "${existing}" --title "${TITLE}" --body-file issue-body.md
+            # Only comment when the detail actually changed. This runs daily; without the check,
+            # every day of an ongoing provider outage adds a "still failing" comment saying nothing
+            # new, and the issue becomes unreadable within a week.
+            if ! diff -q previous-body.md issue-body.md >/dev/null 2>&1; then
+              gh issue comment "${existing}" \
+                --body "Still failing as of ${RUN_URL}, and the detail changed since the last run. Body updated."
+            fi
             echo "Updated existing tracking issue #${existing}."
           else
+            # Label-less fallback: `gh issue create --label` fails outright if a label is missing,
+            # and without this the watch would file nothing at all — every day — because one label
+            # got deleted. The title-based lookup above is what keeps a label-less issue findable.
             gh issue create --title "${TITLE}" --body-file issue-body.md \
-              --label "${TRACKER_LABEL}" --label area/provider
+              --label "${TRACKER_LABEL}" --label area/provider \
+            || gh issue create --title "${TITLE}" --body-file issue-body.md
             echo "Filed new tracking issue."
           fi
