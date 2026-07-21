@@ -193,7 +193,10 @@ jobs:
           # Surface how many e2e tests actually executed. If the -Dinclude.e2e gating ever breaks,
           # all 70 skip, the task exits 0, and without this the watch would report "healthy" and
           # close a real tracker on its way out.
-          grep -o 'E2E_RAN=[0-9]*' "$RAW" | head -1 >> "$GITHUB_OUTPUT"
+          # `|| true` with an explicit default: unguarded under `set -eo pipefail`, a no-match here
+          # would abort the step with no diagnosis, reading as an unexplained summariser failure.
+          e2e_ran="$(grep -o 'E2E_RAN=[0-9]*' "$RAW" | head -1 | cut -d= -f2 || true)"
+          echo "E2E_RAN=${e2e_ran:-unknown}" >> "$GITHUB_OUTPUT"
 
           # REDACTION — this output goes into a PUBLIC issue body, and provider request URLs embed
           # credentials (Last.fm carries api_key=, Discogs carries token=).
@@ -217,10 +220,19 @@ jobs:
           name = os.environ["SECRET_NAME"]
           raw = os.environ["SECRET_VALUE"]
 
-          # Every variant worth redacting: the whole value stripped, plus each line of a multi-line
-          # secret. Anything shorter than 8 characters is not safely redactable — it would match
-          # ordinary words and turn the body to noise — so fail the step rather than publish it.
-          variants = {raw.strip()} | {ln.strip() for ln in raw.splitlines()}
+          # Every variant worth redacting. The whitespace-normalised forms are load-bearing: the
+          # parser above collapses all runs of whitespace inside each message (" ".join(msg.split())),
+          # so a secret containing a tab or two consecutive spaces appears in the text in a form the
+          # raw value never matches, and would be published verbatim. splitlines() alone does not
+          # cover it — it splits on newlines, not tabs.
+          #
+          # Anything shorter than 8 characters is not safely redactable — it would match ordinary
+          # words and turn the body to noise — so fail the step rather than publish it.
+          variants = (
+              {raw.strip(), " ".join(raw.split())}
+              | {ln.strip() for ln in raw.splitlines()}
+              | {" ".join(ln.split()) for ln in raw.splitlines()}
+          )
           variants = {v for v in variants if v}
           too_short = sorted(v for v in variants if len(v) < 8)
           if too_short:
@@ -236,14 +248,38 @@ jobs:
           PY
           done
 
-          # Truncate only now that the text is redacted, and repair any multibyte character the
-          # cut may have split.
+          # Truncate only now that the text is redacted — cutting first can bisect a credential into
+          # a fragment the literal-value pass no longer matches.
+          #
+          # Both the per-line cap and the whole-file cap are applied HERE, in Python, on character
+          # and line boundaries. The report step therefore just cats this file. Doing the file-level
+          # cap there with `head -c` meant cutting mid-character, and the `iconv -c` guard added to
+          # repair that exits 1 on an incomplete sequence at end of input — which, inside the
+          # `{ … } > issue-body.md` block under `set -euo pipefail`, aborted the whole report step
+          # and filed nothing. That turned the largest drift events into silent no-files: exactly
+          # the failure this workflow exists to remove.
           python3 - <<'PY'
           import os, pathlib
-          p = pathlib.Path(os.environ["RAW"])
-          out = []
-          for line in p.read_text(encoding="utf-8").splitlines():
-              out.append(line if len(line) <= 400 else line[:400] + " …[truncated]")
+
+          limit = int(os.environ.get("SUMMARY_BODY_LIMIT", "40000"))
+          src = pathlib.Path(os.environ["RAW"]).read_text(encoding="utf-8")
+
+          lines = []
+          for line in src.splitlines():
+              lines.append(line if len(line) <= 400 else line[:400] + " …[line truncated]")
+
+          out, used, dropped = [], 0, 0
+          for line in lines:
+              # +1 for the newline. Measured in characters; UTF-8 bytes >= characters, and the
+              # consumer limit is characters, so this is the correct unit and errs safe.
+              if used + len(line) + 1 > limit:
+                  dropped += 1
+                  continue
+              out.append(line)
+              used += len(line) + 1
+          if dropped:
+              out.append(f"… {dropped} further line(s) omitted to stay within the issue-body limit.")
+
           pathlib.Path("e2e-summary.part").write_text("\n".join(out) + "\n", encoding="utf-8")
           PY
 
@@ -251,6 +287,8 @@ jobs:
           mv e2e-summary.part e2e-summary.txt
           echo "Summary assembled and redacted ($(wc -c < e2e-summary.txt) bytes)."
         env:
+          # Applied here rather than in the report step so the cut lands on a character boundary.
+          SUMMARY_BODY_LIMIT: '40000'
           LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
           FANARTTV_API_KEY: ${{ secrets.FANARTTV_API_KEY }}
           DISCOGS_TOKEN: ${{ secrets.DISCOGS_TOKEN }}
@@ -304,9 +342,17 @@ jobs:
           # Assume.assumeTrue(include.e2e), which marks tests SKIPPED rather than failed — so if the
           # gating ever breaks, all 70 skip, Gradle exits 0, and a naive reading would call that
           # "providers healthy" and close a real tracker.
+          # `case` rather than `[ -eq ]`: a non-numeric value makes `-eq` exit 2, which under the
+          # `&&` chain silently yields zero_e2e=false — i.e. an unexpected value would fail OPEN and
+          # let the healthy branch close a real tracker. Anything not a plain integer is treated as
+          # a fault.
           zero_e2e=false
-          if [ "${SUMMARY_RESULT}" = "success" ] && [ "${E2E_RAN:-0}" -eq 0 ] 2>/dev/null; then
-            zero_e2e=true
+          if [ "${SUMMARY_RESULT}" = "success" ]; then
+            case "${E2E_RAN}" in
+              *[!0-9]*|'') zero_e2e=true ;;
+              0)           zero_e2e=true ;;
+              *)           zero_e2e=false ;;
+            esac
           fi
 
           # Look the tracker up by LABEL, not by title text. GitHub's issue-search tokenizer strips
@@ -383,17 +429,13 @@ jobs:
               echo "### Failing tests"
               echo
               echo '```'
-              summary_bytes="$(wc -c < e2e-summary.txt)"
-              # `iconv -c` drops any multibyte character the byte-cut split. Music metadata carries
-              # non-ASCII constantly (Motörhead, Sigur Rós, Björk), and invalid UTF-8 in the body
-              # makes the gh API call fail.
-              head -c "${SUMMARY_BODY_LIMIT}" e2e-summary.txt | iconv -f utf-8 -t utf-8 -c
-              if [ "${summary_bytes}" -gt "${SUMMARY_BODY_LIMIT}" ]; then echo; fi
+              # Plain `cat`: the summariser already capped this file on character and line
+              # boundaries, and says so inline when it dropped anything. Capping here instead meant
+              # `head -c` cutting mid-character, and the `iconv` guard for that exits 1 on an
+              # incomplete sequence at end of input — which inside this `{ … }` block under
+              # `set -euo pipefail` killed the step and filed nothing at all.
+              cat e2e-summary.txt
               echo '```'
-              if [ "${summary_bytes}" -gt "${SUMMARY_BODY_LIMIT}" ]; then
-                echo
-                echo "_Summary truncated at ${SUMMARY_BODY_LIMIT} of ${summary_bytes} bytes. Full output: ${RUN_URL}._"
-              fi
               echo
             else
               echo "_No test summary was produced — the suite step did not reach the summariser._"
@@ -425,7 +467,15 @@ jobs:
             # Only comment when the detail actually changed. This runs daily; without the check,
             # every day of an ongoing provider outage adds a "still failing" comment saying nothing
             # new, and the issue becomes unreadable within a week.
-            if ! diff -q previous-body.md issue-body.md >/dev/null 2>&1; then
+            #
+            # Compare NORMALISED bodies. The body embeds RUN_URL, which carries a per-run id, so a
+            # raw diff always reports a change and the gate is a no-op — worse, the comment then
+            # asserts "the detail changed" when only the run id did. Strip the run id, and strip CR
+            # because GitHub may hand the body back with different line endings than we uploaded.
+            norm() { sed -E 's#/actions/runs/[0-9]+#/actions/runs/RUN#g' "$1" | tr -d '\r'; }
+            norm previous-body.md > prev.norm
+            norm issue-body.md > curr.norm
+            if ! diff -q prev.norm curr.norm >/dev/null 2>&1; then
               gh issue comment "${existing}" \
                 --body "Still failing as of ${RUN_URL}, and the detail changed since the last run. Body updated."
             fi
