@@ -114,6 +114,10 @@ jobs:
         if: ${{ !cancelled() }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Explicit, so `gh` never has to infer the repo from a git remote. This step now runs
+          # after an earlier failure (see the condition below), and one thing that can fail is
+          # `actions/checkout` — leaving no repository for `gh` to infer from.
+          GH_REPO: ${{ github.repository }}
           API_DRIFT: ${{ steps.api.outputs.drift }}
           APIDUMP_FAILED: ${{ steps.api.outputs.apidump_failed }}
           DEMO_RESULT: ${{ steps.demo.outcome }}
@@ -157,8 +161,14 @@ jobs:
           # would let the real tracker paginate out of the result set once the repo carries enough
           # open issues matching the search — and a tracker that pages out is a tracker this job
           # files a duplicate of, every week.
+          # `|| true` because this was the last unguarded external call in the step: under
+          # `set -euo pipefail` a 502 or a secondary rate limit here aborts before any of the
+          # file guards below are reached, filing nothing — the same silent failure the guards
+          # and the step condition exist to remove. An empty result is already handled: it
+          # routes to `gh issue create`, so the worst case degrades to a duplicate tracker
+          # rather than silence.
           existing="$(gh issue list --state open --limit 100 --search "${TITLE_MARKER} in:title" \
-            --json number,title --jq '[.[] | select(.title | startswith("'"${TITLE_MARKER}"'"))][0].number // empty')"
+            --json number,title --jq '[.[] | select(.title | startswith("'"${TITLE_MARKER}"'"))][0].number // empty' || true)"
 
           if [ "${API_DRIFT}" = "false" ] && [ "${demo_broken}" = "false" ] \
              && [ "${apidump_failed}" = "false" ] && [ "${detect_failed}" = "false" ]; then
@@ -233,15 +243,15 @@ jobs:
                 echo "_The demo compile step reported \`${DEMO_RESULT}\` and wrote no log — it was"
                 echo "most likely skipped because an earlier step failed. See ${RUN_URL}._"
               else
-              echo '```'
-              # Last 60 lines is enough to show the compile error without dumping the whole log —
-              # but `tail -n` caps *lines*, not bytes, and Gradle prints single lines that run to
-              # thousands of characters (dependency-resolution failures enumerate every repository
-              # URL; Kotlin daemon errors print full classpaths). Since this section can share the
-              # body with the diff above, cap its bytes too or the two together can still exceed
-              # GitHub's 65536-character limit and fail the `gh` call.
-              tail -n 60 demo-compile.log | tail -c "${LOG_BODY_LIMIT}"
-              echo '```'
+                echo '```'
+                # Last 60 lines is enough to show the compile error without dumping the whole log —
+                # but `tail -n` caps *lines*, not bytes, and Gradle prints single lines that run to
+                # thousands of characters (dependency-resolution failures enumerate every repository
+                # URL; Kotlin daemon errors print full classpaths). Since this section can share the
+                # body with the diff above, cap its bytes too or the two together can still exceed
+                # GitHub's 65536-character limit and fail the `gh` call.
+                tail -n 60 demo-compile.log | tail -c "${LOG_BODY_LIMIT}"
+                echo '```'
               fi
               echo
             fi

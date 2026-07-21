@@ -121,7 +121,7 @@ do not add new ones.
 | `musicmeta-android/**` | `./gradlew :musicmeta-android:test` (needs `ANDROID_HOME`; set to `~/android-sdk`) **plus** `apiCheck` — this module is published too, and its baseline is `musicmeta-android/api/` |
 | `musicmeta-android/**/cache/**` (Room) | Android tests **plus** an explicit schema/migration review — persisted user data |
 | `musicmeta-okhttp/**` | `./gradlew :musicmeta-okhttp:test` **plus** `apiCheck` — published module, baseline in `musicmeta-okhttp/api/` |
-| Any public API change | **`./gradlew apiCheck` and read the `.api` diff — this is the guard for parameter position.** Then `cd demo && ../gradlew compileKotlin`: `demo/` is a separate composite build (`includeBuild("..")`) that `./gradlew build` never compiles, so it is the only in-tree consumer compiling against the published surface. It is **not** a position guard — Kotlin rebinds positional arguments silently, so a mid-list insertion only fails to compile if it also produces a type error. A green canary means consumers compile, not that order is unchanged (see `CLAUDE.md`) |
+| Any public API change | **`./gradlew apiCheck` and read the `.api` diff — this is the guard for parameter position.** Then `cd demo && ../gradlew compileKotlin`: `demo/` is a separate composite build (`includeBuild("..")`) that `./gradlew build` never compiles, so it is the only in-tree consumer compiling against the published surface. It is **not** a position guard — Kotlin rebinds positional arguments silently, so a mid-list insertion carrying a default fails to compile only if it also produces a type error. A green canary means consumers compile, not that order is unchanged (see `CLAUDE.md`) |
 | `gradle/libs.versions.toml`, any `build.gradle.kts` | full `./gradlew build`, and confirm the version catalog is the only place versions changed |
 | `.github/workflows/**` | Review against §7 — release machinery. Never merge on assumption; state what was and was not exercised |
 | Docs only | always-checks only |
@@ -164,30 +164,35 @@ Doc-update triggers:
 | Coverage / gap / milestone shift | `ROADMAP.md` |
 | New provider | `docs/providers/<name>.md` + the provider README table |
 | New public capability | the relevant `docs/guides/*.md` |
-| **Cutting a release** (see the checklist below) | `version` in all three `build.gradle.kts`, the `CHANGELOG.md` heading, `ROADMAP.md` "Where We Are" |
-| **Pushing a `v*` tag** | `README.md` install snippets — Maven Central *and* JitPack coordinates |
+| **Cutting a release** (see the checklist below) | `version` in all three `build.gradle.kts`, the `CHANGELOG.md` heading, `ROADMAP.md` "Where We Are", the `README.md` install snippets |
 
 **Release checklist.** Nothing in CI enforces version consistency — `publish.yml` derives no version
 from the tag, it publishes whatever the build files declare. A `v0.10.0` tag against `version = "0.9.2"`
 uploads GAV `0.9.2`, which Central rejects as a duplicate, leaving an immutable tag for a version that
 was never published. So:
 
-1. **Before merging the release PR** — bump `version` in `musicmeta-core`, `musicmeta-android` and
-   `musicmeta-okhttp` `build.gradle.kts`; pin the `CHANGELOG.md` `[Unreleased]` heading to the version
-   and date, and open a fresh empty `[Unreleased]` above it; update `ROADMAP.md` "Where We Are".
-   Choose the number against the 0.x carve-out in `CLAUDE.md` — a patch may **not** carry an API break.
-2. **At tag time** — update the `README.md` install snippets (Maven Central *and* JitPack
-   coordinates) to the new version. They are deliberately left at the previous version until this
-   point, because until the tag fires they would document an artifact that is not on Maven Central.
+1. **On `dev`, before merging the release PR** — bump `version` in `musicmeta-core`,
+   `musicmeta-android` and `musicmeta-okhttp` `build.gradle.kts`; pin the `CHANGELOG.md`
+   `[Unreleased]` heading to the version and date, and open a fresh empty `[Unreleased]` above it;
+   update `ROADMAP.md` "Where We Are"; update the `README.md` install snippets — **both** the Maven
+   Central and the JitPack coordinates. Choose the number against the 0.x carve-out in `CLAUDE.md`:
+   a patch may **not** carry an API break.
 
-   `main` takes no direct pushes, so this is a **docs-only PR into `main`** — the one sanctioned
-   exception to "child PRs target `dev`" in §2, because its whole purpose is to be true only once
-   `main` is the released state. Docs-only, so always-checks only. Merge it, push the tag, then
-   re-run the §2 sync (`git merge --ff-only origin/main`) so `dev` picks the README commit up.
-
-   This step is easy to forget and nothing checks it: a stale README tells every new consumer to
-   depend on the release *before* the one just cut. See #13 for automating the version half of this.
+   The README bump belongs here, in one commit with the rest, because that is what the repo has
+   always done and because splitting it costs an extra PR and an extra sync to guard against a
+   documentation inconsistency lasting only until step 2. See #13 for automating the version half.
+2. **Merge, then tag promptly.** Merging does not publish; the `v*` tag does. Between the two, the
+   README on `main` names a version that is not yet on Central — which is the reason step 3 says
+   *promptly*, and the reason to avoid merging a release you are not ready to tag.
 3. **After the tag** — confirm `publish.yml` went green and the artifacts resolve from Central.
+
+> **If tagging is deliberately deferred** — the release merges but is not published yet — leave the
+> `README.md` snippets at the previous version instead, since they would otherwise document an
+> artifact nobody can resolve. Bump them when you tag, as a docs-only PR into `main` (the one
+> sanctioned exception to §2's "child work never targets `main`"), then re-run §2's
+> `git merge --ff-only origin/main` so `dev` picks the commit up. Note `main` accepts **merge commits
+> only** — its ruleset forbids squash, so §2's squash rule for child PRs does not apply to it — and
+> `build` is a required context there, so even a docs-only PR must go green on a full `./gradlew build`.
 
 ## 9. Invariants
 

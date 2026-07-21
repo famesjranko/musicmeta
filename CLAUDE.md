@@ -55,9 +55,10 @@ only in-tree consumer that compiles against the published surface the way an ext
 > **The canary is not a parameter-position guard. `apiCheck` is.**
 >
 > It catches removals, renames and return-type changes — anything that stops a real consumer
-> compiling. What it cannot reliably catch is a parameter *inserted mid-list*, because Kotlin rebinds
-> positional arguments silently: the break only surfaces if the rebinding also produces a **type**
-> error. v0.9.2 was caught by luck of typing — `Set<EnrichmentType>` could not bind to
+> compiling. What it cannot reliably catch is a parameter *inserted mid-list* **with a default**,
+> because Kotlin rebinds positional arguments silently: the break then surfaces only if the
+> rebinding also produces a **type** error. (An inserted parameter with *no* default fails outright
+> with "no value passed for parameter" — but that form is already forbidden outright below.) v0.9.2 was caught by luck of typing — `Set<EnrichmentType>` could not bind to
 > `EnrichmentIdentifiers?`. Insert a `String?` between `artist` and `mbid` on `albumProfile` and the
 > demo's third positional argument binds to the new parameter, `mbid` quietly takes its default, and
 > everything compiles — wrong, and green.
