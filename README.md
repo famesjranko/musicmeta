@@ -171,9 +171,12 @@ That is not a failure result to handle; it means the caller went away. (The `enr
 deadline is *not* this case: expiry is caught internally and returned as `Error` results with
 `ErrorKind.TIMEOUT`.)
 
-The guarantee covers provider and cache failures. It does not extend to code *you* supply through
-other extension points: a `ResultMerger` or `CompositeSynthesizer` registered via `addMerger` /
-`addSynthesizer` runs unguarded, so an exception thrown there will escape `enrich()`.
+The same holds for the other extension points you can supply. A `ResultMerger` or
+`CompositeSynthesizer` registered via `addMerger` / `addSynthesizer` runs guarded: if yours throws,
+that type comes back as `Error` and every other type in the call — including results already
+resolved and cache hits already collected — is returned as normal. It is reported rather than
+degraded to a miss, because a merger *produces* the type's result, so swallowing the failure would
+be indistinguishable from a genuine `NotFound`.
 
 ### Disambiguation
 
