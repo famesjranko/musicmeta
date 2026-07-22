@@ -7,6 +7,35 @@
 
 ## Decisions
 
+### 2026-07-22: Catch version drift before the tag, not after (issue #35)
+
+**Context**: `publish.yml`'s tag-vs-version guard (#13) is inherent to the tag-as-trigger model — it
+can only run once the immutable tag exists, so a mismatch it catches still costs a delete-and-re-push.
+But the three modules declare `version` independently and can drift from each other or from the pinned
+`CHANGELOG` heading, and that drift is fully knowable *before* any tag.
+
+**Decision — a `release-readiness` job in `build.yml`, gated to the release PR.** Runs only on
+`pull_request` with `base_ref == main` (the `dev` → `main` release PR, which `release.md` names as the
+review point). Reads all three versions from Gradle — as #31's guard does, so it sees what would
+actually publish — and asserts each equals the top `## [x.y.z]` CHANGELOG heading. Matching all three
+to that one value also proves they match each other, so a single comparison covers both facts the
+issue asks for. By tag time `publish.yml`'s guard is already known-green for version mismatch; it
+stays as the backstop.
+
+**Why a job in `build.yml`, not a new workflow or a dispatchable check**: the issue offered both; the
+job reuses the existing PR trigger and adds no new file. It is deliberately *not* a required check —
+the live `main` ruleset requires only `build` — so its value is the red X a human sees on the release
+PR, not enforcement. Promoting it to a required context is a ruleset change, a follow-up. A docs-only
+PR into `main` (the deferred-tagging exception) leaves versions and heading untouched, so it passes.
+
+**Deferred (issue's non-goals)**: collapsing the three `version` declarations to one source (still
+tracked per #13), and inverting the trigger to `workflow_dispatch` → verify → publish → tag-last,
+which makes the bad state unrepresentable but rewrites the release trigger.
+
+**Verification**: check body extracted and exercised against injected versions — all-agree exits 0; a
+single module drift, a CHANGELOG drift, and an empty version each exit 1 with an `::error::`. The
+`sed` heading parse and the Gradle version read were run against the real tree (both yield 0.10.1).
+
 ### 2026-07-22: Detect the tag/version mismatch, don't make it unrepresentable (issue #13)
 
 **Context**: `publish.yml` derived nothing from the pushed tag — it published whatever the three

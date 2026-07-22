@@ -10,6 +10,9 @@ rules live in `CLAUDE.md` → **Backwards Compatibility**.
 - A `v*` tag on `main` triggers `.github/workflows/publish.yml` and publishes the versions declared
   by the three modules. Merging without tagging does not publish.
 - The release PR is the review point for the accumulated public API diff.
+- On the release PR, `build.yml`'s `release-readiness` check asserts the three module versions match
+  each other and the pinned `CHANGELOG` heading before any tag exists. A red run means step 2 or 3
+  of *Prepare on `dev`* is wrong; fix it before tagging (issue #35).
 
 ## Prepare on `dev`
 
