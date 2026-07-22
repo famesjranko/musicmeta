@@ -4,104 +4,92 @@ This document is authoritative for preparing, merging, tagging, and verifying a 
 Branch topology and ordinary issue handling live in [workflow.md](workflow.md); version compatibility
 rules live in `CLAUDE.md` → **Backwards Compatibility**.
 
-## Release boundary
+A release is three human actions. Everything between them is CI.
 
-- Release PR: `dev` → `main`, merge commit only; keep `dev`.
-- A `v*` tag on `main` triggers `.github/workflows/publish.yml` and publishes the version declared in
-  root `gradle.properties` and inherited by the three modules. Merging without tagging does not publish.
-- The release PR is the review point for the accumulated public API diff.
-- On the release PR, `build.yml`'s `release-readiness` check asserts the three module versions match
-  each other and the pinned `CHANGELOG` heading before any tag exists. A red run means step 2 or 3
-  of *Prepare on `dev`* is wrong; fix it before tagging (issue #35).
+| | You do | CI does |
+|---|---|---|
+| Gate 1 | Run **Prepare release** | writes the version into `gradle.properties` and all 9 README coordinates, proves the notes assemble, pushes to `dev` |
+| Gate 2 | Open the `dev` → `main` PR and merge it | `build`, `demo-canary`, `release-readiness` |
+| Gate 3 | Run **Release** from `main` | verifies, fast-forwards `dev`, tests, publishes to Central, waits for it to resolve, tags, creates the GitHub Release |
 
-## Prepare on `dev`
+## Before gate 1
 
-1. Choose the version under the `0.x` compatibility policy in `CLAUDE.md`. A patch release cannot
-   contain a breaking public API change.
-2. Set the release version in one place — `version` in the root `gradle.properties`; all three modules inherit it.
-3. Pin the current `CHANGELOG.md` `[Unreleased]` section to that version and date, then add a new empty
-   `[Unreleased]` section above it. Put every intentional API break under `### Breaking Changes`.
-4. Update `ROADMAP.md` “Where We Are” and both Maven Central and JitPack coordinates in `README.md`.
-5. Run the workflow verification surface, review the committed `api/*.api` diff, and confirm the demo
-   composite build still compiles.
+Three things the flow reads but does not write:
 
-CI still derives no version from the tag — it publishes what the build declares (now a single
-`gradle.properties` value) — but `publish.yml` asserts the tag matches all three modules before running anything else, so a
-mismatch fails the run instead of leaving an immutable tag for an artifact that never shipped.
-Getting step 2 wrong is now a red publish, not a tag you have to delete and re-push.
+1. Pin the `CHANGELOG.md` `[Unreleased]` heading to the version and date, and open a new empty
+   `[Unreleased]` above it. Choose the version under the `0.x` compatibility policy in `CLAUDE.md` —
+   a patch release cannot contain a breaking public API change.
+2. Make sure that section is release-note shaped, because **it is the release note**: one line per
+   change, headline plus `(#issue)`, reasoning left in the issue or PR. Capped at 3000 characters and
+   400 per line. Check it locally with
+   `python3 scripts/github-workflows/build_release_notes.py <version>`.
+3. Update `ROADMAP.md`'s “Where We Are” heading.
 
-## Land and publish
+## Gate 1 — Prepare release
 
-1. Open `dev` → `main` with `Closes #<epic>` and the release evidence.
-2. Require the current-head checks and merge with a merge commit, never squash.
-3. Fast-forward `dev` to the resulting `main` head and push it:
+Actions → **Prepare release** → Run workflow, from `dev`. Leave `target_version` blank to take the
+top pinned `CHANGELOG` heading. Leave `dry_run` ticked the first time: it prints the diff and the
+assembled notes without pushing.
 
-   ```bash
-   git fetch origin
-   git checkout dev
-   git merge --ff-only origin/main
-   git push origin dev
-   ```
+Re-run with `dry_run` unticked to commit `release: prepare v<version>` to `dev`.
 
-4. Tag the merged `main` commit promptly with `v<version>` and push the tag.
-5. Confirm `publish.yml` succeeds — it uploads, signs and validates the deployment.
-6. Release the deployment in the Central Portal. The build sets no `automaticRelease`, so publish
-   leaves it validated-but-unpublished by design (a human gate). Release it at central.sonatype.com →
-   Deployments; the artifacts resolve from Maven Central ~15–30 min later.
-7. Create the GitHub Release for `v<version>` — see **Release notes** below.
+## Gate 2 — the release PR
+
+Open `dev` → `main` yourself with `Closes #<epic>` and the release evidence, and merge it with a
+**merge commit, never squash**. `main` requires `build`, `demo-canary` and `release-readiness`.
+
+The PR must be opened by a person. A PR opened by CI receives no check runs at all — GitHub does not
+trigger workflows from `GITHUB_TOKEN` events — so it could never satisfy those required checks.
+
+This PR is the review point for the accumulated public API diff.
+
+## Gate 3 — Release
+
+Actions → **Release** → Run workflow, from `main`. `dry_run` ticked runs every verification and
+publishes nothing; untick it to release.
+
+Three jobs run in order, recoverable before irreversible:
+
+1. **verify** — refuses a non-`main` ref; asserts the tag is free, that all three modules and the
+   `CHANGELOG` heading agree, that README pins the version, and that the notes assemble. Then
+   fast-forwards `dev` to `main`, which fails harmlessly if someone has landed on `dev` since the
+   merge.
+2. **publish** — tests plus `apiCheck`, then uploads to Central and waits up to 30 minutes for all
+   three modules to resolve. `automaticRelease` is on, so there is no portal click; the poll is what
+   proves the deployment passed Central's asynchronous validation. **A Maven Central release is
+   immutable.**
+3. **release** — pushes the annotated `v<version>` tag, then creates the GitHub Release from the
+   `CHANGELOG` section plus a generated install block and compare link.
+
+**If a job fails, use "Re-run failed jobs", not a fresh run.** Publishing is not idempotent — Central
+rejects a duplicate version — so a re-run must not repeat a successful upload. Job boundaries make
+that safe, and the publish job additionally skips its own upload when all three modules already
+resolve.
+
+Nothing derives a version from a tag, because the tag is created last from a version already
+verified. A tag that disagrees with what was published is no longer possible to create.
 
 ## Release notes
 
-Keep the GitHub Release **concise and skimmable**. **Do not paste the `CHANGELOG.md` section
-verbatim** — the changelog's per-entry rationale belongs in the changelog and `STORIES.md`, and a
-verbatim dump produces the 6–9k-char walls v0.10.0 and v0.10.1 first shipped with (both since
-rewritten). The release note is the summary; the changelog is one click away for the depth.
+The `## [x.y.z]` section of `CHANGELOG.md` **is** the note. Only the `## Installation` block and the
+`**Full Changelog**` link are generated, which is what stops them going stale: every release from
+v0.8.1 to v0.10.1 carried a versionless badge that rendered the live-latest version on every page.
 
-Structure (matches v0.8–v0.9):
-
-- A one-line summary of the release.
-- One-line bullets under `### Added` / `### Changed` / `### Fixed`, each with its `#issue` ref.
-- `### Breaking Changes` only when the ABI changed — the one section that stays detailed, since a
-  consumer must read it before upgrading.
-- An `## Installation` block whose coordinates **pin this release's version** — a link to
-  `.../musicmeta-core/<version>` and `implementation("…:<version>")`. **Never the versionless
-  `img.shields.io/maven-central/v/…` or `jitpack.io/v/…svg` badges** — those render the live-latest
-  version on every page, which is how v0.8–v0.10 all showed the same number. Badges belong in the
-  README, where "latest" is correct; a release note is pinned.
-- A `**Full Changelog**` compare link: `.../compare/v<prev>...v<new>`.
-
-Create it from a notes file (not a heredoc of the changelog):
+Check any release's notes at any time:
 
 ```bash
-gh release create v<version> --title "v<version>" --notes-file notes.md --latest --verify-tag
+python3 scripts/github-workflows/build_release_notes.py <version>          # what would be published
+gh workflow run release-notes-check.yml -f tag=v<version>                  # re-check a published one
 ```
 
-**Enforced, but only after the fact.** `release-notes-check.yml` runs
-`scripts/github-workflows/validate_release_notes.py` on release publish/edit and fails if the notes
-carry a floating badge or a coordinate that does not pin the tag. It **flags, it cannot block** — the
-notes do not exist until the release is already published, so treat a red run as "go fix the notes",
-not as a gate.
-
-> **Do not rely on the `edited` trigger.** Publishing a release fires the check, but editing one
-> through `gh release edit` was measured *not* to create a run (the release's `updated_at` advanced
-> and no workflow ran). After editing notes, re-check them yourself with the `workflow_dispatch`
-> below, or locally.
-
-The check below is the only pre-publish gate, so run it before you publish:
-
-```bash
-python3 scripts/github-workflows/validate_release_notes.py <version> --notes-file notes.md
-```
-
-Re-check an existing release at any time (also the only way to exercise the workflow, since a
-`release` event cannot be replayed):
-
-```bash
-gh workflow run release-notes-check.yml -f tag=v<version>
-```
+`release-notes-check.yml` is a manual tool now, not a guard: its `release` trigger does not fire for
+a CI-created release, and `release.md` already measured that `gh release edit` does not fire it
+either.
 
 ## Deliberately deferred tagging
 
-If publication is intentionally deferred, leave README installation snippets at the previous
-resolvable version. Update them through a docs-only PR into `main` when tagging, then fast-forward
-`dev` again. `main` still requires a merge commit and its required build check even for that exception.
+If publication is intentionally deferred, leave the README installation snippets at the previous
+resolvable version and do not run gate 1. Land docs-only changes through a PR into `main`, then
+fast-forward `dev` again. `main` still requires a merge commit and its required checks even for that
+exception — and `release-readiness` deliberately does not check README coordinates, so such a PR
+passes with README still on the older version.

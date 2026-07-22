@@ -10,6 +10,9 @@ on:
       - main
       - dev
 
+permissions:
+  contents: read
+
 concurrency:
   group: build-${{ github.ref }}
   cancel-in-progress: true
@@ -17,13 +20,19 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
 
-      - name: Self-check the release-notes validator
+      - name: Self-check the release-notes scripts
         # Unguarded, a regression here would surface only as a release check that silently passes.
         working-directory: scripts/github-workflows
-        run: python3 test_validate_release_notes.py
+        run: for t in test_*.py; do python3 "$t"; done
+
+      - name: Enforce the STORIES entry cap
+        # STORIES has no consumer to fail, so without this the cap is an unenforced ask — which is
+        # what produced the release-note walls in the first place.
+        run: python3 scripts/github-workflows/check_doc_caps.py
 
       - uses: actions/setup-java@v5
         with:
@@ -47,6 +56,7 @@ jobs:
   # in-tree consumer compiling like an external one. Not a parameter-position guard; see CLAUDE.md.
   demo-canary:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
 
@@ -66,6 +76,7 @@ jobs:
   release-readiness:
     if: github.event_name == 'pull_request' && github.base_ref == 'main'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
 
@@ -77,31 +88,5 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
 
       - name: Assert module versions agree with each other and CHANGELOG
-        # Read from Gradle, not grep, so this sees what would publish. An empty parse must fail —
-        # "" would stay green forever. shell: bash for pipefail over awk.
-        shell: bash
-        run: |
-          set -eo pipefail
-          # First `## [x.y.z]` heading, then quit; the digit pattern skips `## [Unreleased]`.
-          changelog_version="$(sed -nE '/^## \[[0-9]/ { s/^## \[([0-9]+\.[0-9]+\.[0-9]+)\].*/\1/p; q; }' CHANGELOG.md)"
-          if [ -z "${changelog_version}" ]; then
-            echo "::error::could not read a pinned '## [x.y.z]' version heading from CHANGELOG.md"
-            exit 1
-          fi
-          failed=0
-          for module in musicmeta-core musicmeta-android musicmeta-okhttp; do
-            declared="$(./gradlew -q --console=plain ":${module}:properties" \
-              | awk -F': ' '/^version: / {print $2; exit}')"
-            if [ -z "${declared}" ]; then
-              echo "::error::could not read a declared version from :${module}"
-              failed=1
-              continue
-            fi
-            if [ "${declared}" != "${changelog_version}" ]; then
-              echo "::error::module :${module} declares ${declared} but CHANGELOG pins ${changelog_version}"
-              failed=1
-            else
-              echo ":${module} declares ${declared} — matches CHANGELOG ${changelog_version}."
-            fi
-          done
-          [ "${failed}" -eq 0 ]
+        # Shared with release.yml's pre-publish check, so both read the same value the same way.
+        run: ./scripts/github-workflows/check_versions.sh

@@ -5,15 +5,31 @@ All notable changes to musicmeta will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+> **Each `## [x.y.z]` section below is the GitHub Release note, used verbatim.** One line per change
+> — headline plus its `(#issue)` where one exists — with the reasoning left in the issue or PR.
+> `scripts/github-workflows/build_release_notes.py` caps a section at 3000 characters and any single
+> line at 400, and the release fails if it does not fit. Sections before 0.11.0 predate this and run
+> considerably longer.
+
 ## [Unreleased]
 
-Docs and CI only so far — no library code, so consumers see nothing new beyond 0.10.1.
+Docs and CI only — no library code, so consumers see nothing new beyond 0.10.1.
 
 ### Added
-- **CI: release notes are checked against the tag they document** — `release-notes-check.yml` runs `scripts/github-workflows/validate_release_notes.py` on release publish, and on demand for any tag via `workflow_dispatch`. It fails notes carrying a versionless `img.shields.io/maven-central/v/…` or `jitpack.io/v/…svg` badge, or any `musicmeta-*` coordinate not pinned to the tag. Those badges render the *live-latest* version on every release page, so every release from v0.8.1 to v0.10.1 advertised the same version no matter which one you opened — all seven have been rewritten to version-pinned links. Two limits are deliberate and documented rather than papered over: the check **flags but cannot block**, because release notes do not exist until after the release is published; and it does **not** fire on `gh release edit` (measured — the release's `updated_at` advanced with no workflow run), so an edited release must be re-checked via `workflow_dispatch` or locally. `build.yml` now runs the validator's own self-test, so a regression in it cannot surface as a check that silently passes.
+- Releases run from two dispatched workflows: `prepare-release.yml` writes the version everywhere it is consumed, `release.yml` verifies, publishes, then tags
+- GitHub Release notes are assembled from this file, with the install block and compare link generated so they cannot go stale
+- `automaticRelease` publishes to Maven Central without the portal click, gated on all three modules resolving before the release is announced
+- Weekly Dependabot updates for GitHub Actions, targeting `dev`
+- Release notes are checked against the tag they document, and the check carries its own self-test
 
 ### Changed
-- **Docs: release notes must be concise and version-pinned, not a verbatim `CHANGELOG` dump** — `docs/project/release.md` gains a release-notes template (summary, one-line bullets with issue refs, `Breaking Changes` only when the ABI moved, a pinned `Installation` block, a compare link). v0.10.0 and v0.10.1 first shipped 8.6k- and 6.6k-char walls of text copied straight from this file; both were rewritten, along with the install block of every earlier release. Badges stay in `README.md`, where "latest" is the correct behaviour; a release note pins its own version.
+- A `## [x.y.z]` section is now the release note itself, capped at 3000 characters and 400 per line — replacing the ask for concise notes that produced 8.6k- and 6.6k-char walls in v0.10.0 and v0.10.1
+- `STORIES.md` entries are capped at 1500 characters, enforced by `build.yml`, so the rationale for a change lives in its PR rather than being rewritten across three documents
+- Release notes must be version-pinned, not a verbatim dump of this file; all seven existing releases were rewritten
+- `build.yml` gains a permissions block, job timeouts, and a shared version check it now uses with `release.yml`
+
+### Removed
+- `publish.yml` — superseded by `release.yml`, which cannot be started by a bot-pushed tag
 
 ## [0.10.1] - 2026-07-22
 

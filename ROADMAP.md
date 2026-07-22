@@ -53,15 +53,8 @@ shipped; the version is declared once, in root `gradle.properties`.
 ### Unreleased — lands in the next release
 
 Docs and CI only. No library code, so the published 0.10.1 artifact is unaffected and consumers see
-nothing new yet.
-
-- **Release-notes guard** — `release-notes-check.yml` fails release notes that carry a versionless
-  "latest" badge or a coordinate that does not pin the tag, closing the drift that made every release
-  page from v0.8.1 onward advertise the same version. It flags rather than blocks (notes do not exist
-  until after publish) and does not fire on `gh release edit`, so an edited release is re-checked via
-  `workflow_dispatch`. The validator carries a self-test, run by `build.yml`.
-- **Release-notes discipline** — `release.md` now requires concise, version-pinned notes instead of a
-  verbatim `CHANGELOG` dump; all seven existing releases were rewritten to match.
+nothing new yet. Releasing is now three dispatched actions instead of a seven-step manual checklist,
+and the `CHANGELOG` section is the release note. See the `[Unreleased]` block in `CHANGELOG.md`.
 
 ### What Changed in v0.10.1
 
