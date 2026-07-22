@@ -48,6 +48,18 @@ def main() -> None:
     # 0.10.10 must not satisfy a 0.10.1 pin.
     assert any("not pinned" in e for e in validate(GOOD.replace(":0.10.1", ":0.10.10"), "0.10.1"))
 
+    # The JitPack floating badge is the other alternation branch — it must be caught too.
+    jit_float = GOOD + "\n[![JitPack](https://jitpack.io/v/famesjranko/musicmeta.svg)](https://jitpack.io/#famesjranko/musicmeta)\n"
+    assert any("floating" in e for e in validate(jit_float, "0.10.1")), validate(jit_float, "0.10.1")
+
+    # A version-PINNED static badge is legitimate and must NOT be flagged.
+    static_badge = GOOD + "\n[![Maven Central](https://img.shields.io/badge/Maven_Central-0.10.1-blue)](https://central.sonatype.com/artifact/io.github.famesjranko/musicmeta-core/0.10.1)\n"
+    assert validate(static_badge, "0.10.1") == [], validate(static_badge, "0.10.1")
+
+    # A -SNAPSHOT suffix must not pass as a pinned release.
+    snap = GOOD.replace("musicmeta-okhttp:0.10.1", "musicmeta-okhttp:0.10.1-SNAPSHOT")
+    assert any("not pinned" in e for e in validate(snap, "0.10.1")), validate(snap, "0.10.1")
+
     print("all assertions passed")
 
 

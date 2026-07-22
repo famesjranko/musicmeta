@@ -3,10 +3,19 @@ name: Release notes check
 # Release notes are hand-assembled after the tag, so no PR gate sees them. On publish and on every
 # edit, assert the install coordinates pin the tag's version and carry no versionless "latest" badge
 # (the drift that made every release page show the same version). See docs/project/release.md.
+#
+# This can only flag, never block: the notes do not exist until after the release is published. The
+# `workflow_dispatch` input re-checks any tag on demand — and is the only way to exercise this
+# workflow, since a `release` event cannot be replayed.
 
 on:
   release:
     types: [published, edited, released]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to check (e.g. v0.10.1)'
+        required: true
 
 permissions:
   contents: read
@@ -20,8 +29,19 @@ jobs:
       - name: Validate release notes pin the tag version
         # Body via env, never inlined into run: — a release body is untrusted, editable text.
         env:
-          TAG: ${{ github.event.release.tag_name }}
-          BODY: ${{ github.event.release.body }}
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_BODY: ${{ github.event.release.body }}
+          INPUT_TAG: ${{ inputs.tag }}
         shell: bash
         run: |
-          printf '%s' "$BODY" | python3 scripts/github-workflows/validate_release_notes.py "${TAG#v}"
+          set -eo pipefail
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            tag="$INPUT_TAG"
+            body="$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json body --jq .body)"
+          else
+            tag="$RELEASE_TAG"
+            body="$RELEASE_BODY"
+          fi
+          printf '%s' "$body" | python3 scripts/github-workflows/validate_release_notes.py "${tag#v}"

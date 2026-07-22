@@ -20,6 +20,12 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Self-check the release-notes validator
+        # Pure stdlib, seconds to run. Without this the validator's own logic is unguarded — a
+        # regression in it would only surface as a release-notes check that silently passes.
+        working-directory: scripts/github-workflows
+        run: python3 test_validate_release_notes.py
+
       - uses: actions/setup-java@v5
         with:
           distribution: temurin

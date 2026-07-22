@@ -12,3 +12,7 @@ local.properties
 .claude
 .planning
 secrets.properties
+
+# Python bytecode (scripts/)
+__pycache__/
+*.pyc

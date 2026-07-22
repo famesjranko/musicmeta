@@ -76,12 +76,21 @@ Create it from a notes file (not a heredoc of the changelog):
 gh release create v<version> --title "v<version>" --notes-file notes.md --latest --verify-tag
 ```
 
-**Enforced.** `release-notes-check.yml` runs `scripts/github-workflows/validate_release_notes.py` on
-every release publish/edit and fails if the notes carry a floating badge or a coordinate that does not
-pin the tag. Check locally before publishing:
+**Enforced, but only after the fact.** `release-notes-check.yml` runs
+`scripts/github-workflows/validate_release_notes.py` on release publish/edit and fails if the notes
+carry a floating badge or a coordinate that does not pin the tag. It **flags, it cannot block** — the
+notes do not exist until the release is already published, so treat a red run as "go fix the notes",
+not as a gate. The check below is the only pre-publish gate, so run it before you publish:
 
 ```bash
-gh release view v<version> --json body --jq .body | python3 scripts/github-workflows/validate_release_notes.py <version>
+python3 scripts/github-workflows/validate_release_notes.py <version> --notes-file notes.md
+```
+
+Re-check an existing release at any time (also the only way to exercise the workflow, since a
+`release` event cannot be replayed):
+
+```bash
+gh workflow run release-notes-check.yml -f tag=v<version>
 ```
 
 ## Deliberately deferred tagging

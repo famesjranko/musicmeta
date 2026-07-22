@@ -27,14 +27,16 @@ FLOATING_BADGE = re.compile(
     r"img\.shields\.io/maven-central/v/io\.github\.famesjranko"
     r"|jitpack\.io/v/famesjranko/musicmeta\.svg"
 )
-# Coordinate forms as they appear in an install block (colon-separated, version-pinned).
-MAVEN_COORD = re.compile(r"io\.github\.famesjranko:(musicmeta-[a-z]+):([0-9]+\.[0-9]+\.[0-9]+)")
-JITPACK_COORD = re.compile(r"com\.github\.famesjranko\.musicmeta:(musicmeta-[a-z]+):v([0-9]+\.[0-9]+\.[0-9]+)")
+# Coordinate forms as they appear in an install block (colon-separated, version-pinned). The optional
+# suffix group is captured so `0.10.1-SNAPSHOT` compares unequal to `0.10.1` rather than passing.
+_VER = r"[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?"
+MAVEN_COORD = re.compile(rf"io\.github\.famesjranko:(musicmeta-[a-z]+):({_VER})")
+JITPACK_COORD = re.compile(rf"com\.github\.famesjranko\.musicmeta:(musicmeta-[a-z]+):v({_VER})")
 
 
 def validate(notes: str, version: str) -> list[str]:
     """Return a list of rule violations (empty means the notes are valid for `version`)."""
-    ver = version.lstrip("v")
+    ver = version.removeprefix("v")
     errors: list[str] = []
 
     if FLOATING_BADGE.search(notes):
@@ -51,8 +53,9 @@ def validate(notes: str, version: str) -> list[str]:
     if bad_jit:
         errors.append(f"JitPack coordinate(s) not pinned to v{ver}: {', '.join(bad_jit)}")
 
-    # A correct core coordinate must actually be present — catches a missing/empty install block.
-    if not re.search(rf"io\.github\.famesjranko:musicmeta-core:{re.escape(ver)}\b", notes):
+    # A correct core coordinate must actually be present — catches a missing/empty install block. The
+    # lookahead (not \b) also rejects `0.10.10` and `0.10.1-SNAPSHOT` as satisfying a `0.10.1` pin.
+    if not re.search(rf"io\.github\.famesjranko:musicmeta-core:{re.escape(ver)}(?![0-9A-Za-z.\-])", notes):
         errors.append(f"Missing the pinned coordinate io.github.famesjranko:musicmeta-core:{ver}")
 
     return errors
