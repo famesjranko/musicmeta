@@ -28,6 +28,9 @@ Docs and CI only — no library code, so consumers see nothing new beyond 0.10.1
 - Release notes must be version-pinned, not a verbatim dump of this file; all seven existing releases were rewritten
 - `build.yml` gains a permissions block, job timeouts, and a shared version check it now uses with `release.yml`
 
+### Fixed
+- The build works when the default JDK is not 17 — `musicmeta-core`, `musicmeta-okhttp` and `demo/` now declare Kotlin's `jvmTarget`, which only `musicmeta-android` did. Kotlin otherwise targeted whatever JDK ran Gradle, failing `./gradlew build` and the demo canary on JDK 21. Published bytecode and the `api/*.api` baselines are unchanged
+
 ### Removed
 - `publish.yml` — superseded by `release.yml`, which cannot be started by a bot-pushed tag
 

@@ -16,6 +16,11 @@ java {
     targetCompatibility = JavaVersion.VERSION_17
 }
 
+// See musicmeta-core: without this the canary cannot be run on a machine whose default JDK is not 17.
+kotlin {
+    compilerOptions { jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17 }
+}
+
 tasks.named<JavaExec>("run") {
     standardInput = System.`in`
 }
