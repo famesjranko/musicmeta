@@ -97,8 +97,15 @@ Three jobs run in order, recoverable before irreversible:
    three modules to resolve. `automaticRelease` is on, so there is no portal click; the poll is what
    proves the deployment passed Central's asynchronous validation. **A Maven Central release is
    immutable.**
-3. **release** — pushes the annotated `v<version>` tag, then creates the GitHub Release from the
-   `CHANGELOG` section plus a generated install block and compare link.
+3. **release** — pushes the annotated `v<version>` tag, creates the GitHub Release from the
+   `CHANGELOG` section plus a generated install block and compare link, then warms JitPack.
+
+**JitPack is a pull, not a push.** Nothing publishes to it: it clones and builds on the first
+artifact request, from the **git tag** alone — not from the GitHub Release, and not from anything
+this workflow uploads. So pushing the tag *is* the entire JitPack integration. The warm-up step
+requests each module's POM so the build happens during the release rather than under the first
+consumer who follows the JitPack link in the notes. It is `continue-on-error` on purpose: JitPack is
+a secondary channel, and its build is not something to fix mid-release.
 
 **If a job fails, use "Re-run failed jobs", not a fresh run.** Publishing is not idempotent — Central
 rejects a duplicate version — so a re-run must not repeat a successful upload. Job boundaries make

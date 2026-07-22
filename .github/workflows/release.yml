@@ -243,3 +243,23 @@ jobs:
           else
             gh release create "v${VERSION}" --title "v${VERSION}" --notes-file notes.md --latest --verify-tag
           fi
+
+      - name: Warm the JitPack build for this tag
+        # JitPack is a pull, not a push: it clones and builds on first artifact request, from the
+        # git tag alone. Nothing here publishes to it. Unwarmed, the first consumer to follow the
+        # release note's JitPack link triggers a cold build and finds any failure for us.
+        # Requesting the POM is what starts the build; the /api/builds endpoint only reports.
+        continue-on-error: true
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          set -o pipefail
+          base="https://jitpack.io/com/github/famesjranko/musicmeta"
+          for module in musicmeta-core musicmeta-okhttp musicmeta-android; do
+            code="$(curl -sS --max-time 600 -o /dev/null -w '%{http_code}' \
+              "${base}/${module}/v${VERSION}/${module}-v${VERSION}.pom" || echo 000)"
+            echo "${module}: HTTP ${code}"
+          done
+          # Non-gating by design — JitPack is a secondary channel and its build is not ours to fix
+          # in the middle of a release. The status is here so a failure is visible in this run.
+          curl -sS --max-time 60 "https://jitpack.io/api/builds/com.github.famesjranko/musicmeta/v${VERSION}" || true

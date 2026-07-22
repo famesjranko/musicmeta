@@ -20,6 +20,7 @@ Docs and CI only — no library code, so consumers see nothing new beyond 0.10.1
 - GitHub Release notes are assembled from this file, with the install block and compare link generated so they cannot go stale
 - `automaticRelease` publishes to Maven Central without the portal click, gated on all three modules resolving before the release is announced
 - Weekly Dependabot updates for GitHub Actions, targeting `dev`
+- The release warms the JitPack build for the new tag, so a broken JitPack build shows up in the release run rather than under the first consumer who follows the link
 - A `stage` release mode that uploads a droppable `-rc.N` rehearsal to the Central Portal, so the credentials, signing and upload path can be exercised without publishing or consuming a version
 - Release notes are checked against the tag they document, and the check carries its own self-test
 
