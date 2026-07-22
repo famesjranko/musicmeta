@@ -1,17 +1,10 @@
 #!/usr/bin/env python3
 """Validate a GitHub Release body pins its own version and carries no floating badge.
 
-Release notes are hand-assembled after the tag, so no PR gate sees them. Versionless "latest" badges
-(`img.shields.io/maven-central/v/…`, `jitpack.io/v/…svg`) render whatever is newest on *every*
-release page, so an old release shows a newer version — the drift this catches. Install coordinates
-must instead pin the release's own version.
+Versionless badges render the live-latest version on every release page, so an old release shows a
+newer one. Install coordinates must pin the release's own version instead.
 
-Note the rules are the inverse of a Play Store validator: here markdown and links are wanted, and a
-*pinned* link is the fix — the check forbids the versionless badge and any mismatched coordinate.
-
-Usage:
     python3 validate_release_notes.py <version> [--notes-file PATH]      # notes default to stdin
-    gh release view v0.10.1 --json body --jq .body | python3 validate_release_notes.py 0.10.1
 
 Exit codes: 0 = valid, 1 = usage/empty notes, 2 = validation failure.
 Importable: validate(notes, version) -> list[str] of error messages (empty = valid).

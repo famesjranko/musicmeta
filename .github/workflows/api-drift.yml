@@ -1,16 +1,9 @@
 name: API drift watch
 
-# Scheduled drift watch for the `dev` integration branch.
-#
-# The PR gate (build.yml -> apiCheck via `build`) catches an API *change* on the PR that causes it —
-# the right place for a change. This job catches *drift*: a committed api/*.api baseline that has
-# quietly stopped matching reality for reasons other than the PR at hand (a dependency bump changing
-# an inherited signature, a Kotlin upgrade altering the emitted ABI, a stale .api file merged in). A
-# red PR run has no memory and scrolls away; this job gives drift an owner and a written record by
-# filing — and later auto-closing — a single tracking issue.
-#
-# It also folds in the demo/ composite-build canary, the other check that can rot silently between
-# releases: demo/ is not in settings.gradle.kts, so ./gradlew build never compiles it.
+# Scheduled drift watch for `dev`. The PR gate catches an API *change*; this catches *drift* — a
+# baseline that stopped matching reality for reasons other than the PR at hand (dependency bump,
+# Kotlin upgrade, stale .api merged in) — and gives it an owner via a single tracking issue.
+# Also folds in the demo/ canary, which `./gradlew build` never compiles.
 
 on:
   schedule:
@@ -50,11 +43,8 @@ jobs:
         # watcher must report — not a red run that aborts before the issue is filed. Its outcome is
         # folded into the tracking issue by the reporting step below.
         continue-on-error: true
-        # `shell: bash` is load-bearing, not decoration. The Actions default for `run:` is
-        # `bash -e {0}` — no `pipefail` — so in `gradlew ... | tee`, the pipeline's status is
-        # `tee`'s, which is always 0. Without this the step's outcome would be permanently
-        # `success`, the failure branch below would be dead code, and a `dev` that no longer
-        # compiles would be reported as healthy. `shell: bash` selects `bash -eo pipefail {0}`.
+        # `shell: bash` is load-bearing: the default `bash -e {0}` has no pipefail, so in
+        # `gradlew | tee` the status is tee's (always 0) and a broken dev would report healthy.
         shell: bash
         run: ./gradlew apiDump 2>&1 | tee apidump.log
 
@@ -69,10 +59,8 @@ jobs:
             exit 0
           fi
           echo "apidump_failed=false" >> "$GITHUB_OUTPUT"
-          # Compare the freshly dumped baselines against what is committed on dev. Stage them
-          # first: a plain `git diff` only sees tracked files, so a brand-new module's baseline
-          # (added, or renamed, since the last commit) would be untracked and therefore invisible —
-          # drift that reports clean. Staging makes both modified and new baselines register.
+          # Stage first: plain `git diff` only sees tracked files, so a brand-new module's baseline
+          # would be invisible — drift that reports clean.
           git add -A -- '*/api/*.api'
           if git diff --cached --quiet -- '*/api/*.api'; then
             echo "drift=false" >> "$GITHUB_OUTPUT"
@@ -90,27 +78,16 @@ jobs:
         id: demo
         continue-on-error: true
         working-directory: demo
-        # demo/ borrows the root wrapper via ../gradlew; compileKotlin resolves musicmeta-core from
-        # local source through includeBuild(".."). A failure here is a silent-rot signal, not a hard
-        # job failure — we fold it into the tracking issue instead of just going red.
-        # `shell: bash` for `pipefail` — see the apiDump step above; without it a broken demo build
-        # is masked by `tee` and the demo-canary arm of this workflow can never fire.
+        # A failure here is a silent-rot signal, not a hard job failure — folded into the
+        # tracking issue rather than going red. `shell: bash` for pipefail; see apiDump above.
         shell: bash
         run: ../gradlew compileKotlin 2>&1 | tee ../demo-compile.log
 
       - name: File, update, or close the tracking issue
-        # The detect step above runs git commands that could fail (a corrupt index, a pathspec that
-        # matches nothing after an upstream change). Without this condition such a failure would
-        # skip reporting entirely and the watch would file nothing — silently, which is the failure
-        # mode this whole workflow exists to prevent.
-        #
-        # `!cancelled()` rather than `always()`: `always()` is the one conditional that also runs
-        # during cancellation, and this step performs external writes. Filing or closing the tracker
-        # while the job is being torn down is exactly the half-write the `concurrency` block above
-        # refuses to allow.
-        #
-        # Reaching this step after an earlier failure means earlier steps may have been SKIPPED, so
-        # the log files they produce may not exist — the body assembly below must not assume they do.
+        # Runs even if detect failed — otherwise the watch files nothing, silently, which is the
+        # failure this workflow exists to prevent. `!cancelled()` not `always()`: this step writes
+        # externally, and a half-write during teardown is what `concurrency` above refuses.
+        # Earlier steps may have been SKIPPED, so their log files may not exist below.
         if: ${{ !cancelled() }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -123,11 +100,8 @@ jobs:
           DEMO_RESULT: ${{ steps.demo.outcome }}
           DETECT_RESULT: ${{ steps.api.outcome }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          # Byte budgets for the two variable-length sections. GitHub caps an issue body at 65536
-          # characters, and UTF-8 bytes >= characters, so bounding bytes bounds characters. Worst
-          # case is the diff plus the demo log (the apiDump-failure section is mutually exclusive
-          # with the diff — a failed apiDump forces drift=false), leaving ~9KB of headroom for
-          # boilerplate: 40000 + 16000 = 56000 of 65536.
+          # Byte budgets: GitHub caps an issue body at 65536 chars and bytes >= chars, so bounding
+          # bytes bounds chars. 40000 + 16000 = 56000, leaving ~9KB for boilerplate.
           DIFF_BODY_LIMIT: '40000'
           LOG_BODY_LIMIT: '16000'
         run: |
@@ -149,20 +123,16 @@ jobs:
             apidump_failed=true
           fi
 
-          # This step runs under `if: always()`, so it can be reached with the detect step having
-          # failed outright — in which case its outputs are empty strings rather than true/false.
-          # Treat that as a reportable fault in its own right: an empty API_DRIFT must never fall
-          # through to the healthy branch and auto-close the tracker.
+          # Detect may have failed outright, leaving outputs empty rather than true/false. An
+          # empty API_DRIFT must never fall through to the healthy branch and close the tracker.
           detect_failed=false
           if [ "${DETECT_RESULT}" != "success" ] || [ -z "${API_DRIFT}" ]; then
             detect_failed=true
           fi
 
-          # By label, not title text: GitHub's search tokenizer strips brackets, so
-          # `[api-drift-bot] in:title` degrades to relevance-ranked words and the real tracker can
-          # page out of 100 results — after which this job files a duplicate every week.
-          # `|| true` so a 502 here cannot abort the step before anything is filed; an empty result
-          # already routes to `gh issue create`.
+          # By label, not title: the search tokenizer strips brackets, so a title match degrades
+          # to ranked words and can page out of 100 results, filing a duplicate weekly (#14).
+          # `|| true` so a 502 cannot abort before anything is filed.
           existing="$(gh issue list --state open --label "${TRACKER_LABEL}" --limit 100 \
             --json number --jq '.[0].number // empty' || true)"
 
@@ -219,11 +189,8 @@ jobs:
               echo "### \`apiDump\` diff against committed baselines"
               echo
               echo '```diff'
-              # Bounded, like every other section here. GitHub caps an issue body at 65536
-              # characters; musicmeta-core.api alone is ~2400 lines, so a Kotlin or AGP bump that
-              # reformats the emitted ABI — exactly the drift class this job exists to catch —
-              # would blow the cap, `gh` would return 422, and `set -euo pipefail` would abort the
-              # step. Unbounded means the largest drift events are the ones that file nothing.
+              # Bounded: core.api alone is ~2400 lines, so a reformatting ABI bump would blow
+              # the 65536 cap, `gh` returns 422, and the biggest drift events would file nothing.
               diff_bytes="$(wc -c < api-drift.diff)"
               head -c "${DIFF_BODY_LIMIT}" api-drift.diff
               # Close the fence on its own line. `head -c` can stop mid-line, so emit a newline
@@ -243,21 +210,15 @@ jobs:
               echo "### demo \`../gradlew compileKotlin\` output"
               echo
               if [ ! -f demo-compile.log ]; then
-                # The demo step has no `if:`, so it is implicitly `if: success()` and is SKIPPED
-                # whenever an earlier step failed. `steps.demo.outcome` then reads `skipped`, which
-                # sets demo_broken=true above — but the log was never written. Without this guard
-                # the `tail` below aborts the step under `set -euo pipefail` and nothing is filed,
-                # which is the exact silent-failure this step's condition exists to prevent.
+                # demo is implicitly `if: success()`, so it SKIPS after an earlier failure —
+                # outcome reads `skipped` (demo_broken=true) but no log exists, and an unguarded
+                # `tail` would abort the step under `set -euo pipefail` and file nothing.
                 echo "_The demo compile step reported \`${DEMO_RESULT}\` and wrote no log — it was"
                 echo "most likely skipped because an earlier step failed. See ${RUN_URL}._"
               else
                 echo '```'
-                # Last 60 lines is enough to show the compile error without dumping the whole log —
-                # but `tail -n` caps *lines*, not bytes, and Gradle prints single lines that run to
-                # thousands of characters (dependency-resolution failures enumerate every repository
-                # URL; Kotlin daemon errors print full classpaths). Since this section can share the
-                # body with the diff above, cap its bytes too or the two together can still exceed
-                # GitHub's 65536-character limit and fail the `gh` call.
+                # `tail -n` caps lines, not bytes, and Gradle emits single lines thousands of
+                # chars long — so cap bytes too, or this plus the diff can exceed the 65536 limit.
                 tail -n 60 demo-compile.log | tail -c "${LOG_BODY_LIMIT}"
                 echo '```'
               fi

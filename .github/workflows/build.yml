@@ -21,8 +21,7 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Self-check the release-notes validator
-        # Pure stdlib, seconds to run. Without this the validator's own logic is unguarded — a
-        # regression in it would only surface as a release-notes check that silently passes.
+        # Unguarded, a regression here would surface only as a release check that silently passes.
         working-directory: scripts/github-workflows
         run: python3 test_validate_release_notes.py
 
@@ -44,19 +43,8 @@ jobs:
           path: '**/build/reports/tests/'
           retention-days: 7
 
-  # `demo/` is a separate composite build (`includeBuild("..")`) that is NOT part of
-  # `settings.gradle.kts`, so `./gradlew build` above never compiles it. That makes it the only
-  # in-tree consumer compiling against the published surface the way an external consumer does —
-  # it broke silently in v0.9.2 for exactly that reason. This job is that canary.
-  #
-  # It is NOT a parameter-position guard — `apiCheck` against the committed .api baseline is. A
-  # green canary means consumers still compile, not that argument order is unchanged. For why a
-  # mid-list insertion can pass this job, see CLAUDE.md, which owns that rule.
-  #
-  # It runs on draft PRs too. Drafts cannot merge anyway, so this costs little and means a draft
-  # marked ready has already reported. Note this is NOT propping up a required-check contract:
-  # per the live rulesets, `main` requires only the `build` context and `dev` requires none, so
-  # `demo-canary` is a required check on neither branch.
+  # `demo/` is a separate composite build, so `./gradlew build` never compiles it — this is the only
+  # in-tree consumer compiling like an external one. Not a parameter-position guard; see CLAUDE.md.
   demo-canary:
     runs-on: ubuntu-latest
     steps:
@@ -70,14 +58,11 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
 
       - name: Compile demo composite build
-        # demo/ has no wrapper of its own; it borrows the root wrapper via ../gradlew, and
-        # compileKotlin resolves musicmeta-core from local source through includeBuild("..").
+        # demo/ has no wrapper of its own — it borrows the root one via ../gradlew.
         working-directory: demo
         run: ../gradlew compileKotlin
 
-  # Version-agreement gate on the release PR (dev → main): the three module versions and the pinned
-  # CHANGELOG heading must all match before any tag exists, so publish.yml's post-tag guard is
-  # already known-green by tag time (issue #35). Not a required check — it just surfaces on the PR.
+  # Version agreement on the release PR, before any tag exists (#35).
   release-readiness:
     if: github.event_name == 'pull_request' && github.base_ref == 'main'
     runs-on: ubuntu-latest
@@ -92,9 +77,8 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
 
       - name: Assert module versions agree with each other and CHANGELOG
-        # Read versions from Gradle, not grep, so we see what publish.yml would upload. Matching all
-        # three to the one CHANGELOG version also proves they match each other. Empty parse fails (a
-        # "" would stay green forever). shell: bash for pipefail over awk.
+        # Read from Gradle, not grep, so this sees what would publish. An empty parse must fail —
+        # "" would stay green forever. shell: bash for pipefail over awk.
         shell: bash
         run: |
           set -eo pipefail

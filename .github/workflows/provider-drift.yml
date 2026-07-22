@@ -1,25 +1,9 @@
 name: Provider API drift watch
 
-# Scheduled watch for THIRD-PARTY provider drift — the inverse of api-drift.yml.
-#
-# api-drift.yml watches musicmeta's own published ABI: it protects our consumers from us.
-# This job watches the other direction: a provider (MusicBrainz, Deezer, Last.fm, Discogs, …)
-# changing their JSON or endpoints underneath us, which breaks musicmeta's ability to enrich.
-#
-# That failure is silent by construction. Every parser uses org.json's opt* family, which returns
-# a default on a missing key rather than throwing — so a renamed field yields "" and flows through
-# as a *successful* enrichment containing nothing. It has shipped before: v0.9.1 fixed ListenBrainz
-# `track_name` -> `recording_name` and a nested `release` -> top-level `release_name`, both of which
-# reached users as empty values, and both of which then sat in consumers' caches for up to the TTL.
-#
-# Critically, this failure arrives with ZERO commits to this repo. Every other gate here is
-# change-triggered — a PR, a push, a tag. A provider deploys on their schedule while our tree is
-# untouched and every check is green. That is why the detector has to be scheduled: the trigger is
-# external, so the watcher must be too.
-#
-# Never gating. docs/project/workflow.md "Verification" is right that third-party rate limits and
-# outages must not be able to block a merge. This does not change that — it gives the signal an
-# owner instead of no home.
+# Scheduled watch for third-party provider drift — the inverse of api-drift.yml. Scheduled, not
+# change-triggered, because the trigger is external: a provider changes its JSON with zero commits
+# here, and org.json's opt* family turns that into a *successful* enrichment containing nothing.
+# Never gating — see CHANGELOG 0.10.0 (#16) for the full rationale.
 
 on:
   schedule:
@@ -28,10 +12,8 @@ on:
     - cron: '0 5 * * *'
   workflow_dispatch:
 
-# Deliberately NOT triggered by pull_request, and never by pull_request_target. This job holds
-# provider API keys; pull_request_target would expose them to fork-authored code. With only
-# schedule and workflow_dispatch, the sole ways to run it are the schedule (which runs as the repo)
-# and a manual dispatch (which requires write access).
+# Never pull_request_target: this job holds provider API keys, which that trigger would expose to
+# fork-authored code. schedule + workflow_dispatch only, both of which require write access.
 
 permissions:
   contents: read
@@ -46,10 +28,8 @@ jobs:
   drift:
     runs-on: ubuntu-latest
     steps:
-      # Actions are SHA-pinned, not tag-pinned, because this job has provider secrets in scope.
-      # A tag is mutable: if `actions/checkout@v7` were ever repointed, it would run with those
-      # secrets available. Bumping these actions means updating the digests below, not just a tag —
-      # each digest must be the action's commit SHA, not the tag-object SHA a `vN` tag dereferences to.
+      # SHA-pinned, not tag-pinned: this job has provider secrets in scope and a tag is mutable.
+      # Bumping means updating the digest — the action's commit SHA, not the tag-object SHA.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: dev
@@ -73,11 +53,8 @@ jobs:
           LISTENBRAINZ_TOKEN: ${{ secrets.LISTENBRAINZ_TOKEN }}
         run: |
           set -eo pipefail
-          # A missing key is a MISCONFIGURATION, not provider drift, and the two must not be
-          # reported the same way. E2ETestFixture.prop() returns "" for an absent key with no
-          # skip, so the keyed tests would simply fail — and without this check the watch would
-          # file a "provider drifted" issue every single day about our own missing secrets.
-          # Only the names are ever printed. Never the values.
+          # A missing key is misconfiguration, not drift: prop() returns "" with no skip, so the
+          # watch would file a "provider drifted" issue daily about our own secrets. Names only.
           missing=""
           for name in LASTFM_API_KEY FANARTTV_API_KEY DISCOGS_TOKEN LISTENBRAINZ_TOKEN; do
             if [ -z "${!name:-}" ]; then
@@ -97,27 +74,17 @@ jobs:
         # Non-fatal: a red suite is the signal this job exists to report, not a reason to abort
         # before the issue is filed. Its outcome is folded into the tracking issue below.
         continue-on-error: true
-        # `shell: bash` is load-bearing. The Actions default for `run:` is `bash -e {0}` with no
-        # pipefail, so in `gradlew ... | tee` the pipeline's status is tee's — always 0 — and this
-        # step's outcome would be permanently `success`. That exact bug shipped in api-drift.yml
-        # and was caught in review; do not re-introduce it here.
+        # `shell: bash` is load-bearing: without pipefail, `gradlew | tee` reports tee's status
+        # (always 0) and this step is permanently `success`. That bug shipped once already.
         shell: bash
         env:
           LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
           FANARTTV_API_KEY: ${{ secrets.FANARTTV_API_KEY }}
           DISCOGS_TOKEN: ${{ secrets.DISCOGS_TOKEN }}
           LISTENBRAINZ_TOKEN: ${{ secrets.LISTENBRAINZ_TOKEN }}
-        # musicmeta-core/build.gradle.kts already forwards these four env vars to the test JVM,
-        # so no build change is needed. The suite is 70 tests across 5 classes, all gated behind
-        # -Dinclude.e2e=true.
-        #
-        # `--tests` scopes this to the e2e package. Without it the task runs all 745 core tests, and
-        # any ordinary unit-test regression on `dev` would file an issue claiming a third-party
-        # provider changed its API — daily, until someone fixed it.
-        #
-        # Retried once on failure. This job talks to 11 live third-party APIs from a shared runner
-        # egress IP; a single 429 or 503 is noise, not drift. Two failures in a row is weak evidence
-        # but far better than one, and it costs one extra run only when something is already wrong.
+        # `--tests` scopes this to the e2e package: unscoped, any ordinary unit-test regression on
+        # dev would file a daily "provider drifted" issue. Retried once — 11 live APIs from a shared
+        # runner IP, so a lone 429/503 is noise, not drift.
         run: |
           set -eo pipefail
           if ./gradlew :musicmeta-core:test -Dinclude.e2e=true \
@@ -142,13 +109,9 @@ jobs:
           export PYTHONIOENCODING=utf-8
           export LC_ALL=C.UTF-8
 
-          # FAIL CLOSED. Everything is built in a scratch file and only promoted to the name the
-          # report step reads (`e2e-summary.txt`) once parsing AND both redaction passes have
-          # completed. `set -e` aborts this step on any failure in between, and the trap removes the
-          # scratch file, so a partially-redacted summary can never survive to be published. The
-          # earlier version wrote e2e-summary.txt up front via shell redirection, which meant an
-          # abort mid-redaction left a half-redacted file on disk that the report step happily
-          # posted to a public issue.
+          # FAIL CLOSED: built in a scratch file, promoted to e2e-summary.txt only after parsing
+          # AND both redaction passes complete. `set -e` plus the trap mean a partially-redacted
+          # summary can never survive to be published to a public issue.
           export RAW=summary.raw
           trap 'rm -f "$RAW" e2e-summary.part' EXIT
 
@@ -191,11 +154,8 @@ jobs:
               print(r)
           PY
 
-          # Surface how many e2e tests actually executed. If the -Dinclude.e2e gating ever breaks,
-          # all 70 skip, the task exits 0, and without this the watch would report "healthy" and
-          # close a real tracker on its way out.
-          # `|| true` with an explicit default: unguarded under `set -eo pipefail`, a no-match here
-          # would abort the step with no diagnosis, reading as an unexplained summariser failure.
+          # If -Dinclude.e2e gating breaks, all tests skip and the task exits 0 — without this the
+          # watch reports "healthy" and closes a real tracker. `|| true` so a no-match cannot abort.
           e2e_ran="$(grep -o 'E2E_RAN=[0-9]*' "$RAW" | head -1 | cut -d= -f2 || true)"
           echo "E2E_RAN=${e2e_ran:-unknown}" >> "$GITHUB_OUTPUT"
 
@@ -249,16 +209,9 @@ jobs:
           PY
           done
 
-          # Truncate only now that the text is redacted — cutting first can bisect a credential into
-          # a fragment the literal-value pass no longer matches.
-          #
-          # Both the per-line cap and the whole-file cap are applied HERE, in Python, on character
-          # and line boundaries. The report step therefore just cats this file. Doing the file-level
-          # cap there with `head -c` meant cutting mid-character, and the `iconv -c` guard added to
-          # repair that exits 1 on an incomplete sequence at end of input — which, inside the
-          # `{ … } > issue-body.md` block under `set -euo pipefail`, aborted the whole report step
-          # and filed nothing. That turned the largest drift events into silent no-files: exactly
-          # the failure this workflow exists to remove.
+          # Truncate only now that the text is redacted — cutting first can bisect a credential
+          # into a fragment the literal-value pass no longer matches. Both caps are applied here,
+          # in Python, on character and line boundaries, so the report step can just cat the file.
           python3 - <<'PY'
           import os, pathlib
 
@@ -378,12 +331,8 @@ jobs:
           existing="$(gh issue list --state open --label "${TRACKER_LABEL}" --limit 100 \
             --json number --jq '.[0].number // empty' || true)"
 
-          # Fall back to a title search if the label lookup found nothing. `gh issue list --label`
-          # on a DELETED label exits 0 with empty output, so without this a maintainer removing the
-          # label during triage would silently route every run to `create` — filing a fresh
-          # duplicate tracker every single day. The title search is weaker (GitHub's tokenizer
-          # strips the bracket punctuation, so it degrades to relevance-ranked words), which is why
-          # it is the fallback rather than the primary, but it is enough to find our own issue.
+          # Fallback: `--label` on a DELETED label exits 0 with empty output, so a maintainer
+          # removing it during triage would route every run to `create`, filing a daily duplicate.
           if [ -z "${existing}" ]; then
             existing="$(gh issue list --state open --limit 100 --search "${TITLE_MARKER} in:title" \
               --json number,title \
@@ -457,11 +406,8 @@ jobs:
                 echo "### Failing tests"
                 echo
                 echo '```'
-                # Plain `cat`: the summariser already capped this file on character and line
-                # boundaries, and says so inline when it dropped anything. Capping here instead meant
-                # `head -c` cutting mid-character, and the `iconv` guard for that exits 1 on an
-                # incomplete sequence at end of input — which inside this `{ … }` block under
-                # `set -euo pipefail` killed the step and filed nothing at all.
+                # Plain `cat`: the summariser already capped this on character/line boundaries.
+                # Capping here would cut mid-character, aborting the step and filing nothing.
                 cat e2e-summary.txt
                 echo '```'
                 echo
@@ -502,12 +448,9 @@ jobs:
             # previous run rather than against what we just wrote.
             gh issue view "${existing}" --json body --jq .body > previous-body.md 2>/dev/null || true
             gh issue edit "${existing}" --title "${TITLE}" --body-file issue-body.md
-            # Comment only when the detail changed, or a multi-day outage accretes a daily
-            # "still failing" comment saying nothing new. Three differences are not real changes and
-            # must be normalised away on both sides, or the gate suppresses nothing: the per-run id
-            # the body embeds via RUN_URL; CR, in case GitHub returns line endings we did not upload;
-            # and trailing newlines, because `gh issue view --jq` appends one that GitHub never
-            # stored. `$( )` strips every trailing newline, printf restores exactly one.
+            # Comment only when the detail changed, or a multi-day outage accretes a daily "still
+            # failing" comment. Normalise the three non-changes first — the RUN_URL run id, CR, and
+            # trailing newlines `gh issue view --jq` appends — or the gate suppresses nothing.
             norm() { printf '%s\n' "$(sed -E 's#/actions/runs/[0-9]+#/actions/runs/RUN#g' "$1" | tr -d '\r')"; }
             # A failed `gh issue view` still creates the file, empty. Comparing against it would
             # assert "the detail changed" having compared nothing, so make no claim instead.

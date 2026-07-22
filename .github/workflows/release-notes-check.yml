@@ -1,12 +1,7 @@
 name: Release notes check
 
-# Release notes are hand-assembled after the tag, so no PR gate sees them. On publish and on every
-# edit, assert the install coordinates pin the tag's version and carry no versionless "latest" badge
-# (the drift that made every release page show the same version). See docs/project/release.md.
-#
-# This can only flag, never block: the notes do not exist until after the release is published. The
-# `workflow_dispatch` input re-checks any tag on demand — and is the only way to exercise this
-# workflow, since a `release` event cannot be replayed.
+# Notes are written after the tag, so no PR gate sees them. Flags only — it cannot block, and does
+# not fire on `gh release edit`; use workflow_dispatch to re-check. See docs/project/release.md.
 
 on:
   release:

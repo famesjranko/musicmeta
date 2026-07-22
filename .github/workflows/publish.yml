@@ -19,16 +19,9 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
 
       - name: Verify tag matches declared versions
-        # Must stay ahead of the publish step: this job derives no version from the tag, so a
-        # mismatch uploads the declared GAV and leaves an immutable tag for an unpublished version.
-        #
-        # All three modules — they inherit one `version` from root `gradle.properties` (#37), so they
-        # cannot drift from each other; the loop still checks each module's effective value as a backstop.
-        # Read from Gradle rather than grepped, so the check sees the value that would be published.
-        # An unreadable version fails: a parse yielding "" would make this guard permanently green.
-        #
-        # `shell: bash` for `pipefail` — the default `bash -e {0}` would report awk's status, so a
-        # failing gradlew would pass.
+        # Must stay ahead of the publish step: nothing here derives a version from the tag, so a
+        # mismatch uploads the declared GAV and strands an immutable tag. Read from Gradle, not
+        # grepped; an empty parse must fail or the guard is permanently green. bash for pipefail.
         shell: bash
         run: |
           set -eo pipefail
@@ -52,25 +45,9 @@ jobs:
           [ "${failed}" -eq 0 ]
 
       - name: Run tests and check public API
-        # apiCheck compares the public ABI against the committed api/*.api baselines. This job does
-        # not run `build`, so without naming apiCheck explicitly the tag path would publish an
-        # unchecked API surface.
-        #
-        # This is the LAST line of defence, not the first: it fires after a tag exists, so a failure
-        # here means deleting and re-pushing the tag. The first line of defence is a PR-time check
-        # running `./gradlew build` (which carries apiCheck via `check`) — see the test-CI issue.
-        #
-        # All three published modules are tested here. musicmeta-android was previously omitted,
-        # which left the Room cache — persisted user data on device — untested on the only automated
-        # path to Maven Central. This adds no toolchain requirement: :musicmeta-android is in
-        # settings.gradle.kts so AGP configures on every invocation, and the unqualified apiCheck
-        # already required the assembled variant.
-        #
-        # It does add a failure surface. Robolectric fetches its android-all jars from Maven at test
-        # execution time, and AGP's unqualified `test` aggregates debug + release variants, so the
-        # suite runs twice. A Maven or Robolectric CDN hiccup therefore fails this gate *after* the
-        # tag exists — which per the note above means deleting and re-pushing the tag. Judged worth
-        # it: publishing an untested Room migration is the worse outcome.
+        # apiCheck is named explicitly: this job never runs `build`, so the tag path would otherwise
+        # publish an unchecked ABI. Last line of defence — a failure here costs a tag re-push, and
+        # android's Robolectric tests fetch from Maven, so a CDN hiccup can trip it.
         run: ./gradlew :musicmeta-core:test :musicmeta-okhttp:test :musicmeta-android:test apiCheck
 
       - name: Publish to Maven Central
@@ -82,9 +59,8 @@ jobs:
           GPG_KEY_BASE64: ${{ secrets.GPG_KEY_BASE64 }}
         run: |
           set -eo pipefail
-          # Assign first, export second. `export VAR=$(cmd)` reports export's own exit status, not
-          # the command substitution's, so a failed or empty base64 decode would sail through and
-          # surface later as an opaque signing error mid-publish. Split, the failure is caught here.
+          # Assign first, export second: `export VAR=$(cmd)` reports export's status, not the
+          # command's, so a failed base64 decode would surface later as an opaque signing error.
           ORG_GRADLE_PROJECT_signingInMemoryKey="$(echo "$GPG_KEY_BASE64" | base64 -d)"
           if [ -z "$ORG_GRADLE_PROJECT_signingInMemoryKey" ]; then
             echo "::error::GPG_KEY_BASE64 decoded to an empty signing key — refusing to publish unsigned."
