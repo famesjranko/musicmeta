@@ -63,13 +63,25 @@ Structure (matches v0.8–v0.9):
 - One-line bullets under `### Added` / `### Changed` / `### Fixed`, each with its `#issue` ref.
 - `### Breaking Changes` only when the ABI changed — the one section that stays detailed, since a
   consumer must read it before upgrading.
-- An `## Installation` block: Maven Central and JitPack coordinates at the new version.
+- An `## Installation` block whose coordinates **pin this release's version** — a link to
+  `.../musicmeta-core/<version>` and `implementation("…:<version>")`. **Never the versionless
+  `img.shields.io/maven-central/v/…` or `jitpack.io/v/…svg` badges** — those render the live-latest
+  version on every page, which is how v0.8–v0.10 all showed the same number. Badges belong in the
+  README, where "latest" is correct; a release note is pinned.
 - A `**Full Changelog**` compare link: `.../compare/v<prev>...v<new>`.
 
 Create it from a notes file (not a heredoc of the changelog):
 
 ```bash
 gh release create v<version> --title "v<version>" --notes-file notes.md --latest --verify-tag
+```
+
+**Enforced.** `release-notes-check.yml` runs `scripts/github-workflows/validate_release_notes.py` on
+every release publish/edit and fails if the notes carry a floating badge or a coordinate that does not
+pin the tag. Check locally before publishing:
+
+```bash
+gh release view v<version> --json body --jq .body | python3 scripts/github-workflows/validate_release_notes.py <version>
 ```
 
 ## Deliberately deferred tagging

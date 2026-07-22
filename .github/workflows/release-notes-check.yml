@@ -1,0 +1,27 @@
+name: Release notes check
+
+# Release notes are hand-assembled after the tag, so no PR gate sees them. On publish and on every
+# edit, assert the install coordinates pin the tag's version and carry no versionless "latest" badge
+# (the drift that made every release page show the same version). See docs/project/release.md.
+
+on:
+  release:
+    types: [published, edited, released]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Validate release notes pin the tag version
+        # Body via env, never inlined into run: — a release body is untrusted, editable text.
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+          BODY: ${{ github.event.release.body }}
+        shell: bash
+        run: |
+          printf '%s' "$BODY" | python3 scripts/github-workflows/validate_release_notes.py "${TAG#v}"
