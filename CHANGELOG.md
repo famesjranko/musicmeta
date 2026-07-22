@@ -24,6 +24,8 @@ Docs and CI only — no library code, so consumers see nothing new beyond 0.10.1
 - Release notes are checked against the tag they document, and the check carries its own self-test
 
 ### Changed
+- Preparing a release needs no hand edits: CI pins the `CHANGELOG` heading to the version and date, opens a fresh empty `[Unreleased]`, and moves the `ROADMAP` heading. Write `[Unreleased]` as you go and that is the whole preparation
+- **Prepare release** takes the version as a required input and refuses one that is already tagged, instead of deriving it from the top pinned heading — which read the *previous* release until `[Unreleased]` was pinned
 - A `## [x.y.z]` section is now the release note itself, capped at 3000 characters and 400 per line — replacing the ask for concise notes that produced 8.6k- and 6.6k-char walls in v0.10.0 and v0.10.1
 - `STORIES.md` entries are capped at 1500 characters, enforced by `build.yml`, so the rationale for a change lives in its PR rather than being rewritten across three documents
 - Release notes must be version-pinned, not a verbatim dump of this file; all seven existing releases were rewritten
