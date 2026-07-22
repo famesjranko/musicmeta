@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Docs and CI only so far — no library code, so consumers see nothing new beyond 0.10.1.
+
+### Added
+- **CI: release notes are checked against the tag they document** — `release-notes-check.yml` runs `scripts/github-workflows/validate_release_notes.py` on release publish, and on demand for any tag via `workflow_dispatch`. It fails notes carrying a versionless `img.shields.io/maven-central/v/…` or `jitpack.io/v/…svg` badge, or any `musicmeta-*` coordinate not pinned to the tag. Those badges render the *live-latest* version on every release page, so every release from v0.8.1 to v0.10.1 advertised the same version no matter which one you opened — all seven have been rewritten to version-pinned links. Two limits are deliberate and documented rather than papered over: the check **flags but cannot block**, because release notes do not exist until after the release is published; and it does **not** fire on `gh release edit` (measured — the release's `updated_at` advanced with no workflow run), so an edited release must be re-checked via `workflow_dispatch` or locally. `build.yml` now runs the validator's own self-test, so a regression in it cannot surface as a check that silently passes.
+
+### Changed
+- **Docs: release notes must be concise and version-pinned, not a verbatim `CHANGELOG` dump** — `docs/project/release.md` gains a release-notes template (summary, one-line bullets with issue refs, `Breaking Changes` only when the ABI moved, a pinned `Installation` block, a compare link). v0.10.0 and v0.10.1 first shipped 8.6k- and 6.6k-char walls of text copied straight from this file; both were rewritten, along with the install block of every earlier release. Badges stay in `README.md`, where "latest" is the correct behaviour; a release note pins its own version.
+
 ## [0.10.1] - 2026-07-22
 
 A throwing consumer-supplied merge strategy no longer escapes `enrich()`, closing the last of the three consumer extension points; plus release-safety work — the release version is declared once in `gradle.properties`, and a `release-readiness` gate (required on `main`) asserts version/CHANGELOG agreement before any tag — alongside CI hardening (publish-tag guard, drift-watch label lookup, Node 20 runtime bump) and doc consolidation. No public-API change — the `api/*.api` baselines are unchanged.
