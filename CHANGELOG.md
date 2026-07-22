@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Build: the release version is declared once, in root `gradle.properties`** — the three modules (`musicmeta-core`, `musicmeta-android`, `musicmeta-okhttp`) previously each declared `version` in their own `build.gradle.kts`, so a release edited the same string in three places and nothing structurally stopped them drifting (the footgun behind the 0.10.0 mismatch on `dev`). A single `version` in the root `gradle.properties` is now inherited by every module, making cross-module drift unrepresentable rather than merely detected. `group` stays per-module — it has never drifted and the `coordinates(…)` calls carry it as a separate literal. The published Maven coordinates are unchanged: the generated POMs are byte-for-byte identical before and after, and the existing version guards (#13 in `publish.yml`, `release-readiness` in `build.yml`) read the effective Gradle version and stay green as backstops. No public-API or consumer-visible change. (#37)
+
+### Added
+- **CI: the release PR now asserts version agreement before any tag exists** — `build.yml` gains a `release-readiness` job that runs only on the `dev` → `main` release PR and fails if the three module versions (`musicmeta-core`, `musicmeta-android`, `musicmeta-okhttp`) disagree with each other or with the pinned `## [x.y.z]` heading in `CHANGELOG.md`. Publication is tag-triggered, so `publish.yml`'s existing tag-vs-version guard (#31) can only run *after* an immutable tag exists — a mismatch there costs a delete-and-re-push. This moves the same version check to the PR, where the drift is knowable before any tag, so by tag time the publish guard is already known-green for version mismatch. Versions are read from Gradle (what would actually publish), not grepped. It is not wired into any branch ruleset as a required check — it surfaces a red run on the release PR, which `release.md` already names as the review point. The `publish.yml` guard stays as the last line of defence. (#35)
+
 ## [0.10.1] - 2026-07-22
 
 A throwing consumer-supplied merge strategy no longer escapes `enrich()`, closing the last of the three consumer extension points; plus CI hardening (publish-tag guard, drift-watch label lookup, Node 20 runtime bump) and doc consolidation. No public-API change — the `api/*.api` baselines are unchanged.

@@ -7,6 +7,62 @@
 
 ## Decisions
 
+### 2026-07-22: Collapse the three version declarations to one source (issue #37)
+
+**Context**: the two version guards (#13 in `publish.yml`, `release-readiness` in `build.yml`, #35)
+both *detect* cross-module drift; neither makes it impossible. Each module declared `version`
+independently, so a release meant editing the same string in three files and keeping them in sync by
+hand — the footgun that produced the 0.10.0 mismatch on `dev`.
+
+**Decision — a single `version` in root `gradle.properties`.** Gradle applies a `version` property
+from the root `gradle.properties` to every project, so all three modules inherit one value and
+cross-module drift becomes *unrepresentable* rather than merely detected — the stronger fix deferred
+under #13. The per-module `version = "0.10.1"` lines are removed; the bump happens in one place.
+
+**Why `version` only, not `group`.** `group` is identical across the three too, but it has never
+drifted, and collapsing it is messier: each `coordinates("io.github.famesjranko", …)` call passes the
+group as a *string literal* separate from the `group` property, so "one source" would mean touching
+two sites per module on the same high-risk surface for no demonstrated benefit. Left per-module.
+
+**Why the guards survive unchanged.** Both read the *effective* Gradle version
+(`./gradlew :module:properties | awk '/^version: /'`), not build-file source text, and
+`coordinates(…, version.toString())` still reads `project.version`. So the guards keep reporting
+0.10.1 for all three and stay as backstops; the published GAV is unchanged.
+
+**Verification**: POMs generated for all three modules before and after the change diff byte-for-byte
+identical (the `api/*.api` baselines can't catch a coordinate regression, so the POM is the check).
+The CI guard's exact `awk` parse still yields 0.10.1 for all three, matching the CHANGELOG heading.
+Full `./gradlew build` (all modules, tests, `apiCheck`) and the `demo/` composite build both pass.
+
+### 2026-07-22: Catch version drift before the tag, not after (issue #35)
+
+**Context**: `publish.yml`'s tag-vs-version guard (#13) is inherent to the tag-as-trigger model — it
+can only run once the immutable tag exists, so a mismatch it catches still costs a delete-and-re-push.
+But the three modules declare `version` independently and can drift from each other or from the pinned
+`CHANGELOG` heading, and that drift is fully knowable *before* any tag.
+
+**Decision — a `release-readiness` job in `build.yml`, gated to the release PR.** Runs only on
+`pull_request` with `base_ref == main` (the `dev` → `main` release PR, which `release.md` names as the
+review point). Reads all three versions from Gradle — as #31's guard does, so it sees what would
+actually publish — and asserts each equals the top `## [x.y.z]` CHANGELOG heading. Matching all three
+to that one value also proves they match each other, so a single comparison covers both facts the
+issue asks for. By tag time `publish.yml`'s guard is already known-green for version mismatch; it
+stays as the backstop.
+
+**Why a job in `build.yml`, not a new workflow or a dispatchable check**: the issue offered both; the
+job reuses the existing PR trigger and adds no new file. It is deliberately *not* a required check —
+the live `main` ruleset requires only `build` — so its value is the red X a human sees on the release
+PR, not enforcement. Promoting it to a required context is a ruleset change, a follow-up. A docs-only
+PR into `main` (the deferred-tagging exception) leaves versions and heading untouched, so it passes.
+
+**Deferred (issue's non-goals)**: collapsing the three `version` declarations to one source (resolved
+2026-07-22, #37), and inverting the trigger to `workflow_dispatch` → verify → publish → tag-last,
+which makes the bad state unrepresentable but rewrites the release trigger.
+
+**Verification**: check body extracted and exercised against injected versions — all-agree exits 0; a
+single module drift, a CHANGELOG drift, and an empty version each exit 1 with an `::error::`. The
+`sed` heading parse and the Gradle version read were run against the real tree (both yield 0.10.1).
+
 ### 2026-07-22: Detect the tag/version mismatch, don't make it unrepresentable (issue #13)
 
 **Context**: `publish.yml` derived nothing from the pushed tag — it published whatever the three
@@ -25,7 +81,8 @@ possible point while the tag is still the only artifact.
 **Deferred: collapsing `version` to a single source.** A shared `gradle.properties` value would make
 cross-module drift *unrepresentable* rather than merely detected, which is the stronger fix. It also
 edits publishing configuration in all three modules — a high-risk surface — for a failure mode this
-guard already catches before it can reach Central. Wants its own issue and its own review.
+guard already catches before it can reach Central. Wants its own issue and its own review. *(Resolved
+2026-07-22, #37 — see the entry at the top of this section.)*
 
 **Also deliberately out of scope**: auto-creating GitHub Releases (rejected — hand-written notes beat
 a generated template) and `automaticRelease` (a deliberate human gate; it wants documenting, not

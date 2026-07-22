@@ -7,23 +7,26 @@ rules live in `CLAUDE.md` → **Backwards Compatibility**.
 ## Release boundary
 
 - Release PR: `dev` → `main`, merge commit only; keep `dev`.
-- A `v*` tag on `main` triggers `.github/workflows/publish.yml` and publishes the versions declared
-  by the three modules. Merging without tagging does not publish.
+- A `v*` tag on `main` triggers `.github/workflows/publish.yml` and publishes the version declared in
+  root `gradle.properties` and inherited by the three modules. Merging without tagging does not publish.
 - The release PR is the review point for the accumulated public API diff.
+- On the release PR, `build.yml`'s `release-readiness` check asserts the three module versions match
+  each other and the pinned `CHANGELOG` heading before any tag exists. A red run means step 2 or 3
+  of *Prepare on `dev`* is wrong; fix it before tagging (issue #35).
 
 ## Prepare on `dev`
 
 1. Choose the version under the `0.x` compatibility policy in `CLAUDE.md`. A patch release cannot
    contain a breaking public API change.
-2. Set the same version in the core, Android, and OkHttp `build.gradle.kts` files.
+2. Set the release version in one place — `version` in the root `gradle.properties`; all three modules inherit it.
 3. Pin the current `CHANGELOG.md` `[Unreleased]` section to that version and date, then add a new empty
    `[Unreleased]` section above it. Put every intentional API break under `### Breaking Changes`.
 4. Update `ROADMAP.md` “Where We Are” and both Maven Central and JitPack coordinates in `README.md`.
 5. Run the workflow verification surface, review the committed `api/*.api` diff, and confirm the demo
    composite build still compiles.
 
-CI still derives no version from the tag — it publishes what the build files declare — but
-`publish.yml` now asserts the tag matches all three modules before running anything else, so a
+CI still derives no version from the tag — it publishes what the build declares (now a single
+`gradle.properties` value) — but `publish.yml` asserts the tag matches all three modules before running anything else, so a
 mismatch fails the run instead of leaving an immutable tag for an artifact that never shipped.
 Getting step 2 wrong is now a red publish, not a tag you have to delete and re-push.
 
