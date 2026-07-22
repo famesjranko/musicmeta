@@ -56,8 +56,36 @@ This PR is the review point for the accumulated public API diff.
 
 ## Gate 3 — Release
 
-Actions → **Release** → Run workflow, from `main`. `dry_run` ticked runs every verification and
-publishes nothing; untick it to release.
+Actions → **Release** → Run workflow, from `main`. Pick a `mode`:
+
+| mode | does | leaves behind |
+|---|---|---|
+| `verify` | every check; publishes nothing, tags nothing | nothing |
+| `stage` | tests, then uploads a **droppable rehearsal** to the portal | one deployment for you to drop |
+| `release` | the full path | a published release |
+
+### Rehearsing with `stage`
+
+`stage` uploads under `<version>-rc.<run number>` with `automaticRelease` off, so the deployment
+lands in the Central Portal as *validated but unpublished*. It exercises the credentials, the GPG
+signing, the upload and Central's own validation — every mechanism the real path depends on — and
+then you drop it at
+[central.sonatype.com/publishing/deployments](https://central.sonatype.com/publishing/deployments).
+
+Leave `version` blank and it stages the currently declared version, e.g. `0.10.1-rc.7`. **No version
+is consumed and nothing in the repo changes.** The `-rc.N` qualifier sorts *below* the plain version
+in Maven's ordering, so a staged artifact could never outrank a real release even if it were
+published by mistake — which is why a four-segment scheme like `0.10.1.1` is wrong here: that sorts
+*above* `0.10.1`.
+
+`stage` skips the release-correctness checks (tag, version agreement, README, notes) because those
+guard a real release and `verify` already covers them. It only needs to be on `main` and pass tests.
+
+**Drop the deployment when you are done.** Sonatype documents dropping a `VALIDATED` deployment, but
+does not document whether the exact version can then be re-uploaded — which is precisely why the
+rehearsal uses a throwaway `-rc.N` coordinate you would never ship.
+
+### `release` — the full path
 
 Three jobs run in order, recoverable before irreversible:
 
