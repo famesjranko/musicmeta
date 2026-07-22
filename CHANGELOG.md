@@ -7,7 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-_Nothing yet._
+### Fixed
+- **A throwing `ResultMerger` or `CompositeSynthesizer` no longer escapes `enrich()`** — both are public, consumer-implementable extension points registered via `addMerger` / `addSynthesizer`, and both were called with no `try`/`catch`, so an exception from your implementation propagated out of `enrich()` past its only handler. The loss was wider than the failing type: regular types were resolved and then discarded as the exception unwound, sibling merge coroutines were cancelled, and cache hits collected before the fan-out went with them. A throwing strategy now yields `EnrichmentResult.Error` for its own type and nothing else in the call is affected. Reported rather than degraded to a miss, because a merger *produces* the type's result and swallowing would be indistinguishable from a genuine `NotFound`. This brings the third and last consumer-supplied extension point in line with `EnrichmentProvider` (guarded in `ProviderChain`) and `EnrichmentCache` (guarded in 0.10.0). No shipped strategy was affected — all eight built-ins guard their own inputs. `internal`-only; no public signature changed. (#28)
 
 ## [0.10.0] - 2026-07-22
 

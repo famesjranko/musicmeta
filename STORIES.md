@@ -7,6 +7,40 @@
 
 ## Decisions
 
+### 2026-07-22: The third extension point gets a guard (issue #28)
+
+**Context**: `ResultMerger` and `CompositeSynthesizer` are public and consumer-implementable, and
+`resolveTypes` called both with no `try`/`catch`. `enrich()`'s only handler is for
+`TimeoutCancellationException`, so a consumer's exception propagated straight out.
+
+The obvious counter-argument — a consumer's own callback should fail loudly — does not survive the
+precedent. `EnrichmentProvider` is equally consumer-registrable and *is* caught, at both
+`ProviderChain` call sites; `EnrichmentCache` got the same treatment in #22. That left mergers and
+synthesizers as the one unguarded extension point out of three. **The inconsistency is the argument**,
+not a "never throws" promise on its own.
+
+**Decision — report a typed `Error`, do not degrade silently.** The cache's degrade-to-miss does not
+transfer: a merger *produces* the type's result, so swallowing would be indistinguishable from a
+genuine `NotFound`. `guardedStrategy` mirrors `CacheGuard`, including rethrowing
+`CancellationException` — but for the same reason the cache gives, not a stronger one. Both call
+sites do sit inside `enrich()`'s `withTimeout`, yet neither `merge` nor `synthesize` is a suspending
+function, so the deadline can never be delivered into the guarded block. The rethrow is hygiene
+against one of those interfaces becoming `suspend` later; it is not what enforces the deadline.
+
+**Found while testing**: the pre-existing `?: NotFound(type, "no_merger")` and
+`"no_composite_handler"` fallbacks are unreachable. `mergeableTypes` and `compositeDependencies` are
+derived from the registered maps, so a type only reaches those call sites when its strategy exists.
+Left in place — removing dead branches is not this fix's job — but no test can assert them, and the
+test that tried now documents the real behaviour instead.
+
+**Also settled**: `README.md`'s known-limitation paragraph, added under #22's scope discipline,
+recorded a deferral rather than a rejection. It is now false and was deleted.
+
+**Not a defect**: `resolveIdentity`'s bare `catch (e: Exception)` sits inside the `withTimeout` block
+and was suspected of masking the deadline. Probed at 100ms against a 5s identity provider — returns
+`Error kind=TIMEOUT`, because cancellation re-asserts at the next suspension point. Recorded so the
+same false suspicion is not re-derived.
+
 ### 2026-07-22: Project workflow docs own facts, not agent procedures
 
 **Context**: `docs/agent-workflows/conventions.md` was generated as the “project-specific half” of

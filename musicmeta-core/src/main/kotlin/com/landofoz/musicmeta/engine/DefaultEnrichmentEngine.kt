@@ -284,14 +284,25 @@ class DefaultEnrichmentEngine(
                 val chain = registry.chainFor(mergeType)
                 val allResults = chain?.resolveAll(request) ?: emptyList()
                 val filtered = allResults.mapNotNull { filterByConfidence(it) as? EnrichmentResult.Success }
-                mergeType to (mergers[mergeType]?.merge(filtered) ?: EnrichmentResult.NotFound(mergeType, "no_merger"))
+                val merger = mergers[mergeType]
+                mergeType to if (merger == null) {
+                    EnrichmentResult.NotFound(mergeType, "no_merger")
+                } else {
+                    guardedStrategy(logger, mergeType, "merger") { merger.merge(filtered) }
+                }
             }
         }.awaitAll()
         for ((type, result) in mergeableResults) { resolved[type] = result }
 
         for (compositeType in compositeTypes) {
-            resolved[compositeType] = synthesizers[compositeType]?.synthesize(resolved, identityResult, request)
-                ?: EnrichmentResult.NotFound(compositeType, "no_composite_handler")
+            val synthesizer = synthesizers[compositeType]
+            resolved[compositeType] = if (synthesizer == null) {
+                EnrichmentResult.NotFound(compositeType, "no_composite_handler")
+            } else {
+                guardedStrategy(logger, compositeType, "synthesizer") {
+                    synthesizer.synthesize(resolved, identityResult, request)
+                }
+            }
         }
 
         resolved.filterKeys { it in types }
