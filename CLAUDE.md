@@ -14,7 +14,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `docs/project/workflow.md` | Branch topology, worktrees, issue lifecycle, work selection, verification surface |
 | `docs/project/release.md` | Release preparation, dev → main landing, tagging, and publication |
 
-**For AI agents**: Check `STORIES.md` for context on *why* decisions were made. Update it when making significant architectural choices or completing milestones. Update `CHANGELOG.md` when adding features or fixing bugs.
+**Write each change down once.** The docs reached 180KB against 408KB of Kotlin because the same
+change was written three or four times in different voices — v0.10.1 alone cost 6.6KB of `CHANGELOG`
+and 10KB of `STORIES` for a one-`try`/`catch` release, and issue #37 has four `STORIES` passages plus
+a `CHANGELOG` bullet. This is the comment rule below, applied to the documents themselves:
+
+- `CHANGELOG.md` — *what* changed. **One line per change**, headline plus `(#issue)`. It is the
+  release note verbatim and is capped at 3000 chars per section, 400 per line; the release fails if
+  it does not fit.
+- `STORIES.md` — *why*, and only for decisions that constrain what can be built next. Not one entry
+  per issue: a CI tweak that closes an issue is a `CHANGELOG` line. The entries that earn their keep
+  are the ones recording **reversals and rejected options** — what was tried, what was declined, and
+  why — because those are what stop a future reader repeating the work. **Capped at 1500 chars per
+  entry**, enforced by `check_doc_caps.py` in `build.yml`. The cap is anchored on the slim end of the
+  file (the tight, useful entries run 1210–1566), not its 2086 median — a median just ratifies the
+  drift. Needing more means the detail belongs in the PR, or it is really two decisions.
+- `ROADMAP.md` — where the project is going. Link to the `CHANGELOG`, do not re-summarise it.
+- The issue or PR — everything else. It is already written there; that is the point.
+
+This applies to new entries. Existing history stays as written.
 
 ## Build & Test Commands
 
@@ -48,6 +66,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 # Regenerate the baselines after an intentional API change — commit the resulting .api diff
 ./gradlew apiDump
+
+# Release checks, the same ones CI runs (see docs/project/release.md)
+./scripts/github-workflows/check_versions.sh                          # modules agree with CHANGELOG
+python3 scripts/github-workflows/build_release_notes.py <version>     # what the release note will be
+python3 scripts/github-workflows/check_doc_caps.py                    # STORIES entry length cap
+(cd scripts/github-workflows && for t in test_*.py; do python3 "$t"; done)
 ```
 
 `demo/` is a **separate composite build** and is never compiled by `./gradlew build`, so it is the
@@ -165,7 +189,7 @@ Whatever the release channel, evolve the API additively wherever possible:
 - When you make a breaking change, document it in `CHANGELOG.md` under a `### Breaking Changes` heading and flag it to the user before proceeding.
 
 **Enforcement.** `binary-compatibility-validator` dumps the public ABI to `api/*.api` in each module.
-`apiCheck` runs as part of `./gradlew build` and in the publish workflow, so a diverging signature
+`apiCheck` runs as part of `./gradlew build` and in `release.yml`, so a diverging signature
 fails the build rather than being caught by review alone. An intentional API change means running
 `./gradlew apiDump` and reviewing the committed `.api` diff — that diff, not the source diff, is the
 record of what consumers see.
