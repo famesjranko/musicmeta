@@ -80,7 +80,14 @@ gh release create v<version> --title "v<version>" --notes-file notes.md --latest
 `scripts/github-workflows/validate_release_notes.py` on release publish/edit and fails if the notes
 carry a floating badge or a coordinate that does not pin the tag. It **flags, it cannot block** — the
 notes do not exist until the release is already published, so treat a red run as "go fix the notes",
-not as a gate. The check below is the only pre-publish gate, so run it before you publish:
+not as a gate.
+
+> **Do not rely on the `edited` trigger.** Publishing a release fires the check, but editing one
+> through `gh release edit` was measured *not* to create a run (the release's `updated_at` advanced
+> and no workflow ran). After editing notes, re-check them yourself with the `workflow_dispatch`
+> below, or locally.
+
+The check below is the only pre-publish gate, so run it before you publish:
 
 ```bash
 python3 scripts/github-workflows/validate_release_notes.py <version> --notes-file notes.md
