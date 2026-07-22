@@ -44,7 +44,33 @@ Getting step 2 wrong is now a red publish, not a tag you have to delete and re-p
    ```
 
 4. Tag the merged `main` commit promptly with `v<version>` and push the tag.
-5. Confirm `publish.yml` succeeds and the artifacts resolve from Maven Central.
+5. Confirm `publish.yml` succeeds — it uploads, signs and validates the deployment.
+6. Release the deployment in the Central Portal. The build sets no `automaticRelease`, so publish
+   leaves it validated-but-unpublished by design (a human gate). Release it at central.sonatype.com →
+   Deployments; the artifacts resolve from Maven Central ~15–30 min later.
+7. Create the GitHub Release for `v<version>` — see **Release notes** below.
+
+## Release notes
+
+Keep the GitHub Release **concise and skimmable**. **Do not paste the `CHANGELOG.md` section
+verbatim** — the changelog's per-entry rationale belongs in the changelog and `STORIES.md`, and a
+verbatim dump produces the 6–9k-char walls v0.10.0 and v0.10.1 first shipped with (both since
+rewritten). The release note is the summary; the changelog is one click away for the depth.
+
+Structure (matches v0.8–v0.9):
+
+- A one-line summary of the release.
+- One-line bullets under `### Added` / `### Changed` / `### Fixed`, each with its `#issue` ref.
+- `### Breaking Changes` only when the ABI changed — the one section that stays detailed, since a
+  consumer must read it before upgrading.
+- An `## Installation` block: Maven Central and JitPack coordinates at the new version.
+- A `**Full Changelog**` compare link: `.../compare/v<prev>...v<new>`.
+
+Create it from a notes file (not a heredoc of the changelog):
+
+```bash
+gh release create v<version> --title "v<version>" --notes-file notes.md --latest --verify-tag
+```
 
 ## Deliberately deferred tagging
 
