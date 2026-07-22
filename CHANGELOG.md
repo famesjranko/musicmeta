@@ -7,8 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **CI: the publish workflow refuses a tag that does not match the declared versions** — `publish.yml` now asserts, before it runs tests or publishes anything, that `${GITHUB_REF_NAME#v}` equals the `version` declared by all three modules. It previously derived nothing at all from the tag: a `v0.10.0` tag pushed against build files still saying `0.9.2` would upload GAV `0.9.2`, Maven Central would reject it as a duplicate, and what survived was an immutable tag and GitHub release for a version that was never published — recoverable only by deleting and re-pushing the tag. That state was live on `dev` during the 0.10.0 release and was fixed by hand. All three modules are checked because each declares `version` independently, and every mismatch is reported in one run. (#13)
+
 ### Changed
 - **CI: the API-drift watch finds its tracking issue by label, not by title text** — `api-drift.yml` now looks its single `[api-drift-bot]` tracker up via a dedicated `api-drift` label, falling back to the old title search only when the label lookup comes back empty (and re-applying the label with a `::warning::` when it does). GitHub's issue-search tokenizer strips bracket punctuation, so `[api-drift-bot] in:title` was really searching for the words "api drift bot" ranked by relevance — the `startswith` filter kept it correct, but the real tracker still competed with unrelated matches for the 100 result slots and could page out silently, at which point the watch files a *duplicate* tracker every week and keeps doing so. This is the lookup `provider-drift.yml` already shipped with; it is now the same on both watches. (#14)
+
+### Fixed
+- **A throwing `ResultMerger` or `CompositeSynthesizer` no longer escapes `enrich()`** — both are public, consumer-implementable extension points registered via `addMerger` / `addSynthesizer`, and both were called with no `try`/`catch`, so an exception from your implementation propagated out of `enrich()` past its only handler. The loss was wider than the failing type: regular types were resolved and then discarded as the exception unwound, sibling merge coroutines were cancelled, and cache hits collected before the fan-out went with them. A throwing strategy now yields `EnrichmentResult.Error` for its own type and nothing else in the call is affected. Reported rather than degraded to a miss, because a merger *produces* the type's result and swallowing would be indistinguishable from a genuine `NotFound`. This brings the third and last consumer-supplied extension point in line with `EnrichmentProvider` (guarded in `ProviderChain`) and `EnrichmentCache` (guarded in 0.10.0). No shipped strategy was affected — all eight built-ins guard their own inputs. `internal`-only; no public signature changed. (#28)
 
 ## [0.10.0] - 2026-07-22
 
