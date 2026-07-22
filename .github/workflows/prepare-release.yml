@@ -57,6 +57,13 @@ jobs:
               exit 1
             fi
           fi
+          # Blank target_version takes the top *pinned* heading, which is the previous release until
+          # [Unreleased] is pinned. Without this the run fails later, on that old section's length,
+          # which names the wrong problem.
+          if git ls-remote --exit-code --tags origin "refs/tags/v${new}" >/dev/null 2>&1; then
+            echo "::error::v${new} is already released — pin the [Unreleased] CHANGELOG section to the new version first"
+            exit 1
+          fi
           old="$(sed -nE 's/^version=(.*)$/\1/p' gradle.properties)"
           if [ -z "${old}" ]; then
             echo "::error::could not read version= from gradle.properties"
