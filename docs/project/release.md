@@ -8,30 +8,41 @@ A release is three human actions. Everything between them is CI.
 
 | | You do | CI does |
 |---|---|---|
-| Gate 1 | Run **Prepare release** | writes the version into `gradle.properties` and all 9 README coordinates, proves the notes assemble, pushes to `dev` |
+| Gate 1 | Run **Prepare release** | pins the `CHANGELOG` and `ROADMAP` headings, writes the version into `gradle.properties` and all 9 README coordinates, proves the notes assemble, pushes to `dev` |
 | Gate 2 | Open the `dev` → `main` PR and merge it | `build`, `demo-canary`, `release-readiness` |
 | Gate 3 | Run **Release** from `main` | verifies, fast-forwards `dev`, tests, publishes to Central, waits for it to resolve, tags, creates the GitHub Release |
 
 ## Before gate 1
 
-Three things the flow reads but does not write:
+**Write the `[Unreleased]` section of `CHANGELOG.md` as you go.** That is the whole preparation, and
+it is the ordinary habit of keeping a changelog — nothing release-specific.
 
-1. Pin the `CHANGELOG.md` `[Unreleased]` heading to the version and date, and open a new empty
-   `[Unreleased]` above it. Choose the version under the `0.x` compatibility policy in `CLAUDE.md` —
-   a patch release cannot contain a breaking public API change.
-2. Make sure that section is release-note shaped, because **it is the release note**: one line per
-   change, headline plus `(#issue)`, reasoning left in the issue or PR. Capped at 3000 characters and
-   400 per line. Check it locally with
-   `python3 scripts/github-workflows/build_release_notes.py <version>`.
-3. Update `ROADMAP.md`'s “Where We Are” heading.
+It matters because **that section becomes the release note verbatim**: one line per change, headline
+plus `(#issue)`, reasoning left in the issue or PR. Capped at 3000 characters and 400 per line. Check
+it any time with `python3 scripts/github-workflows/build_release_notes.py <next-version>` after
+pinning locally, or just run gate 1 as a dry run and read what it prints.
+
+Choose the version under the `0.x` compatibility policy in `CLAUDE.md` — a patch release cannot
+contain a breaking public API change. That choice is the one judgement call in the release.
 
 ## Gate 1 — Prepare release
 
-Actions → **Prepare release** → Run workflow, from `dev`. Leave `target_version` blank to take the
-top pinned `CHANGELOG` heading. Leave `dry_run` ticked the first time: it prints the diff and the
-assembled notes without pushing.
+Actions → **Prepare release** → Run workflow, from `dev`. Enter the version. Leave `dry_run` ticked
+the first time: it prints the full diff and the assembled notes without pushing anything.
+
+It then does every mechanical edit, so none of them is a chance to typo the value every later check
+reads:
+
+- pins `## [Unreleased]` to `## [<version>] - <date>` and opens a fresh empty `[Unreleased]` above it
+- moves `ROADMAP.md`'s “Where We Are” heading to the new version
+- sets `version` in `gradle.properties`
+- rewrites all nine README coordinate lines, then greps to prove the old version is gone
+- assembles the release notes and fails if they do not fit the caps
 
 Re-run with `dry_run` unticked to commit `release: prepare v<version>` to `dev`.
+
+It refuses to prepare a version that is already tagged, and `pin_release.py` refuses to pin twice or
+to pin an empty `[Unreleased]` — so a mistaken re-run stops rather than double-pinning.
 
 ## Gate 2 — the release PR
 
