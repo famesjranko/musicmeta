@@ -22,7 +22,8 @@ jobs:
         # Must stay ahead of the publish step: this job derives no version from the tag, so a
         # mismatch uploads the declared GAV and leaves an immutable tag for an unpublished version.
         #
-        # All three modules — each declares `version` independently and can drift from the others.
+        # All three modules — they inherit one `version` from root `gradle.properties` (#37), so they
+        # cannot drift from each other; the loop still checks each module's effective value as a backstop.
         # Read from Gradle rather than grepped, so the check sees the value that would be published.
         # An unreadable version fails: a parse yielding "" would make this guard permanently green.
         #
