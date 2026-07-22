@@ -134,6 +134,7 @@ Adds Android-specific integrations on top of core:
 - Pure functions when possible
 - Explicit over implicit — no magic
 - **Comments:** Explain only non-obvious constraints, traps, guards, or safety rationale — plus the Given-When-Then narration tests require (see Testing Patterns). Do not restate code or preserve history; put that in issues, PRs, or docs. Remove comments when the related code is removed.
+- **Comment brevity:** Keep comments short — a line or two. If the rationale needs a paragraph, it belongs in `STORIES.md` or the PR, not inline. This applies to CI/YAML too; the sprawling comment blocks in the older workflows are legacy, not the standard to copy.
 
 ## Modeling Rules
 
