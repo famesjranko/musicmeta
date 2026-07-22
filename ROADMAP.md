@@ -58,6 +58,9 @@ v0.10.1 is a patch — no public-API change (`api/*.api` unchanged), so it carri
 - **CI hardening** — the publish workflow refuses a tag that disagrees with the declared module
   versions; the API-drift watch keys on a label instead of brittle title text; all workflows are off
   the deprecated Node 20 runtime.
+- **Release safety** — the release version is declared once in root `gradle.properties`, so
+  cross-module drift is now unrepresentable; a `release-readiness` gate — required on `main`'s ruleset
+  — asserts the three module versions and the pinned `CHANGELOG` heading agree before any tag exists.
 
 ### What Changed in v0.10.0
 
