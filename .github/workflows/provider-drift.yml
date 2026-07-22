@@ -17,8 +17,9 @@ name: Provider API drift watch
 # untouched and every check is green. That is why the detector has to be scheduled: the trigger is
 # external, so the watcher must be too.
 #
-# Never gating. conventions.md §6 is right that third-party rate limits and outages must not be able
-# to block a merge. This does not change that — it gives the signal an owner instead of no home.
+# Never gating. docs/project/workflow.md "Verification" is right that third-party rate limits and
+# outages must not be able to block a merge. This does not change that — it gives the signal an
+# owner instead of no home.
 
 on:
   schedule:
@@ -46,21 +47,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # Actions are SHA-pinned, not tag-pinned, because this job has provider secrets in scope.
-      # A tag is mutable: if `actions/checkout@v4` were ever repointed, it would run with those
-      # secrets available. See #10, which tracks the runtime bump for the other workflows — it
-      # must update these digests too, not just the tags.
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      # A tag is mutable: if `actions/checkout@v7` were ever repointed, it would run with those
+      # secrets available. Bumping these actions means updating the digests below, not just a tag —
+      # each digest must be the action's commit SHA, not the tag-object SHA a `vN` tag dereferences to.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: dev
 
-      - uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
         with:
           distribution: temurin
           java-version: 17
 
-      # Commit SHA, not the v4.4.3 tag-object SHA that `refs/tags/v4` dereferences to in one hop.
+      # Commit SHA, not the v6.2.0 tag-object SHA that `refs/tags/v6` dereferences to in one hop.
       # Both are immutable, but only this form is what pinning tooling emits and verifies.
-      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3
+      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
 
       - name: Check provider credentials are configured
         id: preflight

@@ -171,9 +171,12 @@ That is not a failure result to handle; it means the caller went away. (The `enr
 deadline is *not* this case: expiry is caught internally and returned as `Error` results with
 `ErrorKind.TIMEOUT`.)
 
-The guarantee covers provider and cache failures. It does not extend to code *you* supply through
-other extension points: a `ResultMerger` or `CompositeSynthesizer` registered via `addMerger` /
-`addSynthesizer` runs unguarded, so an exception thrown there will escape `enrich()`.
+The same holds for the other extension points you can supply. A `ResultMerger` or
+`CompositeSynthesizer` registered via `addMerger` / `addSynthesizer` runs guarded: if yours throws,
+that type comes back as `Error` and every other type in the call — including results already
+resolved and cache hits already collected — is returned as normal. It is reported rather than
+degraded to a miss, because a merger *produces* the type's result, so swallowing the failure would
+be indistinguishable from a genuine `NotFound`.
 
 ### Disambiguation
 
@@ -191,8 +194,8 @@ The `musicmeta-android` module adds Room-backed persistent caching, a Hilt DI mo
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("io.github.famesjranko:musicmeta-core:0.10.0")
-    implementation("io.github.famesjranko:musicmeta-android:0.10.0") // Android only
+    implementation("io.github.famesjranko:musicmeta-core:0.10.1")
+    implementation("io.github.famesjranko:musicmeta-android:0.10.1") // Android only
 }
 ```
 
@@ -275,9 +278,9 @@ val engine = EnrichmentEngine.Builder()
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("io.github.famesjranko:musicmeta-core:0.10.0")
-    implementation("io.github.famesjranko:musicmeta-okhttp:0.10.0")   // Optional: OkHttp adapter
-    implementation("io.github.famesjranko:musicmeta-android:0.10.0")  // Optional: Android (Room cache, Hilt, WorkManager)
+    implementation("io.github.famesjranko:musicmeta-core:0.10.1")
+    implementation("io.github.famesjranko:musicmeta-okhttp:0.10.1")   // Optional: OkHttp adapter
+    implementation("io.github.famesjranko:musicmeta-android:0.10.1")  // Optional: Android (Room cache, Hilt, WorkManager)
 }
 ```
 
@@ -299,9 +302,9 @@ dependencyResolutionManagement {
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("com.github.famesjranko.musicmeta:musicmeta-core:v0.10.0")
-    implementation("com.github.famesjranko.musicmeta:musicmeta-okhttp:v0.10.0")   // Optional: OkHttp adapter
-    implementation("com.github.famesjranko.musicmeta:musicmeta-android:v0.10.0")  // Optional: Android
+    implementation("com.github.famesjranko.musicmeta:musicmeta-core:v0.10.1")
+    implementation("com.github.famesjranko.musicmeta:musicmeta-okhttp:v0.10.1")   // Optional: OkHttp adapter
+    implementation("com.github.famesjranko.musicmeta:musicmeta-android:v0.10.1")  // Optional: Android
 }
 ```
 
@@ -328,7 +331,7 @@ dependencies {
 ./gradlew publishToMavenLocal
 ```
 
-Then consume as `io.github.famesjranko:musicmeta-core:0.10.0` from `mavenLocal()`.
+Then consume as `io.github.famesjranko:musicmeta-core:0.10.1` from `mavenLocal()`.
 
 ## Documentation
 
@@ -337,6 +340,8 @@ Then consume as `io.github.famesjranko:musicmeta-core:0.10.0` from `mavenLocal()
 | [docs/guides/](docs/guides/README.md) | Developer guides — quick start, identity resolution, results & errors, cache management, configuration, extension points, Android |
 | [docs/how-it-works.md](docs/how-it-works.md) | Complete pipeline trace -- from `enrich()` call to results |
 | [docs/providers/](docs/providers/) | Per-provider API documentation and endpoint inventory |
+| [docs/project/workflow.md](docs/project/workflow.md) | Branch topology, issue lifecycle, worktrees, and verification selection |
+| [docs/project/release.md](docs/project/release.md) | Release preparation, tagging, and publication |
 | [CHANGELOG.md](CHANGELOG.md) | Release history |
 | [STORIES.md](STORIES.md) | Architectural decisions and rationale |
 

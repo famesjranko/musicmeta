@@ -9,14 +9,46 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 17
 
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Verify tag matches declared versions
+        # Must stay ahead of the publish step: this job derives no version from the tag, so a
+        # mismatch uploads the declared GAV and leaves an immutable tag for an unpublished version.
+        #
+        # All three modules — each declares `version` independently and can drift from the others.
+        # Read from Gradle rather than grepped, so the check sees the value that would be published.
+        # An unreadable version fails: a parse yielding "" would make this guard permanently green.
+        #
+        # `shell: bash` for `pipefail` — the default `bash -e {0}` would report awk's status, so a
+        # failing gradlew would pass.
+        shell: bash
+        run: |
+          set -eo pipefail
+          tag_version="${GITHUB_REF_NAME#v}"
+          failed=0
+          for module in musicmeta-core musicmeta-android musicmeta-okhttp; do
+            declared="$(./gradlew -q --console=plain ":${module}:properties" \
+              | awk -F': ' '/^version: / {print $2; exit}')"
+            if [ -z "${declared}" ]; then
+              echo "::error::could not read a declared version from :${module}"
+              failed=1
+              continue
+            fi
+            if [ "${tag_version}" != "${declared}" ]; then
+              echo "::error::tag ${GITHUB_REF_NAME} does not match :${module} version ${declared}"
+              failed=1
+            else
+              echo ":${module} declares ${declared} — matches ${GITHUB_REF_NAME}."
+            fi
+          done
+          [ "${failed}" -eq 0 ]
 
       - name: Run tests and check public API
         # apiCheck compares the public ABI against the committed api/*.api baselines. This job does

@@ -11,7 +11,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `STORIES.md` | Architectural decisions, progress log, rationale |
 | `CHANGELOG.md` | Release history (user-facing, Keep a Changelog format) |
 | `ROADMAP.md` | Gap analysis, coverage matrix, planned milestones |
-| `docs/agent-workflows/conventions.md` | Issue → PR → dev → main shipping conventions (branch model, verification surface, danger zones) |
+| `docs/project/workflow.md` | Branch topology, worktrees, issue lifecycle, work selection, verification surface |
+| `docs/project/release.md` | Release preparation, dev → main landing, tagging, and publication |
 
 **For AI agents**: Check `STORIES.md` for context on *why* decisions were made. Update it when making significant architectural choices or completing milestones. Update `CHANGELOG.md` when adding features or fixing bugs.
 
@@ -56,12 +57,18 @@ only in-tree consumer that compiles against the published surface the way an ext
 >
 > It catches removals, renames and return-type changes — anything that stops a real consumer
 > compiling. What it cannot reliably catch is a parameter *inserted mid-list* **with a default**,
-> because Kotlin rebinds positional arguments silently: the break then surfaces only if the
-> rebinding also produces a **type** error. (An inserted parameter with *no* default fails outright
-> with "no value passed for parameter" — but that form is already forbidden outright below.) v0.9.2 was caught by luck of typing — `Set<EnrichmentType>` could not bind to
-> `EnrichmentIdentifiers?`. Insert a `String?` between `artist` and `mbid` on `albumProfile` and the
-> demo's third positional argument binds to the new parameter, `mbid` quietly takes its default, and
-> everything compiles — wrong, and green.
+> because Kotlin rebinds positional arguments silently. Such an insertion stays invisible to the
+> compiler **only** when both conditions hold: the shifted arguments still type-check, **and** every
+> parameter the shift leaves *unbound* already carries a default. Either one failing breaks the
+> build — a type error, or `no value passed for parameter` once the shift pushes a required parameter
+> past the caller's last argument. A required parameter merely sitting *after* the insertion point is
+> not enough: if the caller still supplies an argument for it, it binds and the build stays green.
+>
+> On `albumProfile` the shift left only defaulted parameters unbound, so the second condition held
+> and only the type check could catch v0.9.2 — and by luck it did:
+> `Set<EnrichmentType>` could not bind to `EnrichmentIdentifiers?`. Insert a `String?` between
+> `artist` and `mbid` instead and both conditions hold: the demo's third positional argument binds to
+> the new parameter, `mbid` quietly takes its default, and everything compiles — wrong, and green.
 >
 > So: run `apiCheck` and read the `.api` diff for anything touching a signature. Treat a green canary
 > as evidence that consumers still *compile*, never as evidence that argument order is unchanged.
