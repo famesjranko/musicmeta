@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.1] - 2026-07-22
+
+A throwing consumer-supplied merge strategy no longer escapes `enrich()`, closing the last of the three consumer extension points; plus CI hardening (publish-tag guard, drift-watch label lookup, Node 20 runtime bump) and doc consolidation. No public-API change — the `api/*.api` baselines are unchanged.
+
 ### Added
 - **CI: the publish workflow refuses a tag that does not match the declared versions** — `publish.yml` now asserts, before it runs tests or publishes anything, that `${GITHUB_REF_NAME#v}` equals the `version` declared by all three modules. It previously derived nothing at all from the tag: a `v0.10.0` tag pushed against build files still saying `0.9.2` would upload GAV `0.9.2`, Maven Central would reject it as a duplicate, and what survived was an immutable tag and GitHub release for a version that was never published — recoverable only by deleting and re-pushing the tag. That state was live on `dev` during the 0.10.0 release and was fixed by hand. All three modules are checked because each declares `version` independently, and every mismatch is reported in one run. (#13)
 

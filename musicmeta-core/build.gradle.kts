@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "io.github.famesjranko"
-version = "0.10.0"
+version = "0.10.1"
 
 java {
     sourceCompatibility = JavaVersion.VERSION_17

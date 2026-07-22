@@ -45,7 +45,19 @@ The library is a tool for developers to wield for their needs, not a framework t
 
 ---
 
-## Where We Are (v0.10.0)
+## Where We Are (v0.10.1)
+
+### What Changed in v0.10.1
+
+v0.10.1 is a patch — no public-API change (`api/*.api` unchanged), so it carries no break under the
+0.x carve-out.
+
+- **A throwing `ResultMerger`/`CompositeSynthesizer` no longer escapes `enrich()`** — the last of the
+  three consumer-supplied extension points is now guarded, matching `EnrichmentProvider` and
+  `EnrichmentCache`. `internal`-only.
+- **CI hardening** — the publish workflow refuses a tag that disagrees with the declared module
+  versions; the API-drift watch keys on a label instead of brittle title text; all workflows are off
+  the deprecated Node 20 runtime.
 
 ### What Changed in v0.10.0
 

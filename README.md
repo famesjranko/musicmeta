@@ -194,8 +194,8 @@ The `musicmeta-android` module adds Room-backed persistent caching, a Hilt DI mo
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("io.github.famesjranko:musicmeta-core:0.10.0")
-    implementation("io.github.famesjranko:musicmeta-android:0.10.0") // Android only
+    implementation("io.github.famesjranko:musicmeta-core:0.10.1")
+    implementation("io.github.famesjranko:musicmeta-android:0.10.1") // Android only
 }
 ```
 
@@ -278,9 +278,9 @@ val engine = EnrichmentEngine.Builder()
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("io.github.famesjranko:musicmeta-core:0.10.0")
-    implementation("io.github.famesjranko:musicmeta-okhttp:0.10.0")   // Optional: OkHttp adapter
-    implementation("io.github.famesjranko:musicmeta-android:0.10.0")  // Optional: Android (Room cache, Hilt, WorkManager)
+    implementation("io.github.famesjranko:musicmeta-core:0.10.1")
+    implementation("io.github.famesjranko:musicmeta-okhttp:0.10.1")   // Optional: OkHttp adapter
+    implementation("io.github.famesjranko:musicmeta-android:0.10.1")  // Optional: Android (Room cache, Hilt, WorkManager)
 }
 ```
 
@@ -302,9 +302,9 @@ dependencyResolutionManagement {
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("com.github.famesjranko.musicmeta:musicmeta-core:v0.10.0")
-    implementation("com.github.famesjranko.musicmeta:musicmeta-okhttp:v0.10.0")   // Optional: OkHttp adapter
-    implementation("com.github.famesjranko.musicmeta:musicmeta-android:v0.10.0")  // Optional: Android
+    implementation("com.github.famesjranko.musicmeta:musicmeta-core:v0.10.1")
+    implementation("com.github.famesjranko.musicmeta:musicmeta-okhttp:v0.10.1")   // Optional: OkHttp adapter
+    implementation("com.github.famesjranko.musicmeta:musicmeta-android:v0.10.1")  // Optional: Android
 }
 ```
 
@@ -331,7 +331,7 @@ dependencies {
 ./gradlew publishToMavenLocal
 ```
 
-Then consume as `io.github.famesjranko:musicmeta-core:0.10.0` from `mavenLocal()`.
+Then consume as `io.github.famesjranko:musicmeta-core:0.10.1` from `mavenLocal()`.
 
 ## Documentation
 
