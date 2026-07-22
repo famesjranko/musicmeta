@@ -8,9 +8,8 @@ on:
   workflow_dispatch:
     inputs:
       target_version:
-        description: '(optional) Force a version, e.g. 0.11.0. Blank = top CHANGELOG heading.'
-        required: false
-        default: ''
+        description: 'Version to release, e.g. 0.11.0. Choose it under the 0.x policy in CLAUDE.md.'
+        required: true
       dry_run:
         description: 'Preview only — print the diff and the notes, push nothing.'
         type: boolean
@@ -40,22 +39,14 @@ jobs:
           OVERRIDE: ${{ inputs.target_version }}
         run: |
           set -eo pipefail
-          if [ -n "${OVERRIDE}" ]; then
-            new="${OVERRIDE#v}"
-            if ! [[ "${new}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-              echo "::error::target_version '${OVERRIDE}' is not x.y.z"
-              exit 1
-            fi
-            if ! grep -q "^## \[${new}\]" CHANGELOG.md; then
-              echo "::error::CHANGELOG has no '## [${new}]' heading — pin [Unreleased] to it first"
-              exit 1
-            fi
-          else
-            new="$(sed -nE '/^## \[[0-9]/ { s/^## \[([0-9]+\.[0-9]+\.[0-9]+)\].*/\1/p; q; }' CHANGELOG.md)"
-            if [ -z "${new}" ]; then
-              echo "::error::could not read a pinned '## [x.y.z]' heading from CHANGELOG.md"
-              exit 1
-            fi
+          new="${OVERRIDE#v}"
+          if ! [[ "${new}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::target_version '${OVERRIDE}' is not x.y.z"
+            exit 1
+          fi
+          if git ls-remote --exit-code --tags origin "refs/tags/v${new}" >/dev/null 2>&1; then
+            echo "::error::v${new} is already released"
+            exit 1
           fi
           old="$(sed -nE 's/^version=(.*)$/\1/p' gradle.properties)"
           if [ -z "${old}" ]; then
@@ -65,6 +56,12 @@ jobs:
           echo "old=${old}" >> "$GITHUB_OUTPUT"
           echo "new=${new}" >> "$GITHUB_OUTPUT"
           echo "Preparing ${old} -> ${new}"
+
+      - name: Pin the CHANGELOG section and the ROADMAP heading
+        # One deterministic line each. Done by hand they are three chances to typo the value every
+        # later check reads, and forgetting the fresh [Unreleased] silently appends the next
+        # release's notes to this one.
+        run: python3 scripts/github-workflows/pin_release.py "${{ steps.versions.outputs.new }}"
 
       - name: Write the version into gradle.properties and README
         shell: bash
@@ -100,7 +97,7 @@ jobs:
           set -eo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add gradle.properties README.md
+          git add gradle.properties README.md CHANGELOG.md ROADMAP.md
           git commit -m "release: prepare v${NEW}"
           git push origin dev
 

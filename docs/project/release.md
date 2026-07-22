@@ -8,30 +8,41 @@ A release is three human actions. Everything between them is CI.
 
 | | You do | CI does |
 |---|---|---|
-| Gate 1 | Run **Prepare release** | writes the version into `gradle.properties` and all 9 README coordinates, proves the notes assemble, pushes to `dev` |
+| Gate 1 | Run **Prepare release** | pins the `CHANGELOG` and `ROADMAP` headings, writes the version into `gradle.properties` and all 9 README coordinates, proves the notes assemble, pushes to `dev` |
 | Gate 2 | Open the `dev` → `main` PR and merge it | `build`, `demo-canary`, `release-readiness` |
 | Gate 3 | Run **Release** from `main` | verifies, fast-forwards `dev`, tests, publishes to Central, waits for it to resolve, tags, creates the GitHub Release |
 
 ## Before gate 1
 
-Three things the flow reads but does not write:
+**Write the `[Unreleased]` section of `CHANGELOG.md` as you go.** That is the whole preparation, and
+it is the ordinary habit of keeping a changelog — nothing release-specific.
 
-1. Pin the `CHANGELOG.md` `[Unreleased]` heading to the version and date, and open a new empty
-   `[Unreleased]` above it. Choose the version under the `0.x` compatibility policy in `CLAUDE.md` —
-   a patch release cannot contain a breaking public API change.
-2. Make sure that section is release-note shaped, because **it is the release note**: one line per
-   change, headline plus `(#issue)`, reasoning left in the issue or PR. Capped at 3000 characters and
-   400 per line. Check it locally with
-   `python3 scripts/github-workflows/build_release_notes.py <version>`.
-3. Update `ROADMAP.md`'s “Where We Are” heading.
+It matters because **that section becomes the release note verbatim**: one line per change, headline
+plus `(#issue)`, reasoning left in the issue or PR. Capped at 3000 characters and 400 per line. Check
+it any time with `python3 scripts/github-workflows/build_release_notes.py <next-version>` after
+pinning locally, or just run gate 1 as a dry run and read what it prints.
+
+Choose the version under the `0.x` compatibility policy in `CLAUDE.md` — a patch release cannot
+contain a breaking public API change. That choice is the one judgement call in the release.
 
 ## Gate 1 — Prepare release
 
-Actions → **Prepare release** → Run workflow, from `dev`. Leave `target_version` blank to take the
-top pinned `CHANGELOG` heading. Leave `dry_run` ticked the first time: it prints the diff and the
-assembled notes without pushing.
+Actions → **Prepare release** → Run workflow, from `dev`. Enter the version. Leave `dry_run` ticked
+the first time: it prints the full diff and the assembled notes without pushing anything.
+
+It then does every mechanical edit, so none of them is a chance to typo the value every later check
+reads:
+
+- pins `## [Unreleased]` to `## [<version>] - <date>` and opens a fresh empty `[Unreleased]` above it
+- moves `ROADMAP.md`'s “Where We Are” heading to the new version
+- sets `version` in `gradle.properties`
+- rewrites all nine README coordinate lines, then greps to prove the old version is gone
+- assembles the release notes and fails if they do not fit the caps
 
 Re-run with `dry_run` unticked to commit `release: prepare v<version>` to `dev`.
+
+It refuses to prepare a version that is already tagged, and `pin_release.py` refuses to pin twice or
+to pin an empty `[Unreleased]` — so a mistaken re-run stops rather than double-pinning.
 
 ## Gate 2 — the release PR
 
@@ -45,8 +56,36 @@ This PR is the review point for the accumulated public API diff.
 
 ## Gate 3 — Release
 
-Actions → **Release** → Run workflow, from `main`. `dry_run` ticked runs every verification and
-publishes nothing; untick it to release.
+Actions → **Release** → Run workflow, from `main`. Pick a `mode`:
+
+| mode | does | leaves behind |
+|---|---|---|
+| `verify` | every check; publishes nothing, tags nothing | nothing |
+| `stage` | tests, then uploads a **droppable rehearsal** to the portal | one deployment for you to drop |
+| `release` | the full path | a published release |
+
+### Rehearsing with `stage`
+
+`stage` uploads under `<version>-rc.<run number>` with `automaticRelease` off, so the deployment
+lands in the Central Portal as *validated but unpublished*. It exercises the credentials, the GPG
+signing, the upload and Central's own validation — every mechanism the real path depends on — and
+then you drop it at
+[central.sonatype.com/publishing/deployments](https://central.sonatype.com/publishing/deployments).
+
+Leave `version` blank and it stages the currently declared version, e.g. `0.10.1-rc.7`. **No version
+is consumed and nothing in the repo changes.** The `-rc.N` qualifier sorts *below* the plain version
+in Maven's ordering, so a staged artifact could never outrank a real release even if it were
+published by mistake — which is why a four-segment scheme like `0.10.1.1` is wrong here: that sorts
+*above* `0.10.1`.
+
+`stage` skips the release-correctness checks (tag, version agreement, README, notes) because those
+guard a real release and `verify` already covers them. It only needs to be on `main` and pass tests.
+
+**Drop the deployment when you are done.** Sonatype documents dropping a `VALIDATED` deployment, but
+does not document whether the exact version can then be re-uploaded — which is precisely why the
+rehearsal uses a throwaway `-rc.N` coordinate you would never ship.
+
+### `release` — the full path
 
 Three jobs run in order, recoverable before irreversible:
 
