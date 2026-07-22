@@ -7,6 +7,47 @@
 
 ## Decisions
 
+### 2026-07-22: Pin Kotlin's jvmTarget, don't adopt a toolchain
+
+**Context**: only `musicmeta-android` declared `jvmTarget`. The two JVM modules set
+`sourceCompatibility`/`targetCompatibility` alone, which govern `compileJava` — and the repo has no
+`.java` files, so that task is NO-SOURCE. Kotlin fell back to the JDK running Gradle, so `./gradlew
+build` and the demo canary both failed on any machine defaulting to JDK 21, which current Debian and
+Ubuntu do. On a JDK 17 box the two values coincided by accident; nothing in the repo made that
+happen. Unnoticed since the first commit because every workflow and `jitpack.yml` pin 17.
+
+**Rejected — `jvmToolchain(17)`**, the more correct fix. On a JDK-21-only machine it swaps one error
+for "no matching toolchains" unless the foojay resolver is also added, which downloads a JDK from a
+third-party service at build time — a supply-chain surface this repo does not otherwise have. The
+residual gap is accepted: Kotlin resolves JDK classes from the running JDK, so a JDK-18+ API could
+compile locally and fail at runtime on 17. CI on 17 catches that.
+
+**Not an ABI change**: signatures for all 537 core classes are byte-identical either way; only the
+class-file version moves, which BCV does not record. `apiCheck` green, baselines untouched.
+
+### 2026-07-22: Release from one dispatched workflow, tag last
+
+**The design that does not work.** Dispatch → bot-opened PR → merge → bot-pushed tag → `publish.yml`
+is inert: GitHub creates no workflow runs for `GITHUB_TOKEN` events, so the PR gets zero checks and
+can never meet `main`'s required contexts, and the tag never starts `publish.yml`. `android-ip-camera`
+works only because a human creates the release in the UI.
+
+**Decision — dispatch → verify → publish → tag-last, one workflow.** The inversion #35 deferred; the
+trigger rule makes it the cheap option. No cross-workflow triggers, `publish.yml` deleted, no new
+secrets, and the tag derived from a verified version, making #13's failure mode impossible rather
+than caught. Jobs, not steps: **publishing is not idempotent**, so a re-run must not repeat an
+upload.
+
+**Reverses #13 on `automaticRelease`**, kept there as a human gate. The compensating control is a
+three-POM poll — Central validates asynchronously and Gradle goes green on upload. **A published
+version is immutable.**
+
+**Rejected**: a PAT for bot-triggered workflows (rotating credential, keeps
+the broken chain); required checks on `dev` (`github-actions[bot]` lacks the `RepositoryRole 5`
+bypass, so it would reject the bump push it protects); CI commit signing (no `required_signatures`);
+a README check in `release-readiness` (required on `main`, breaks deferred tagging); a `setup-jvm`
+action (Dependabot covers bumps). Verification evidence is in the PR.
+
 ### 2026-07-22: Collapse the three version declarations to one source (issue #37)
 
 **Context**: the two version guards (#13 in `publish.yml`, `release-readiness` in `build.yml`, #35)

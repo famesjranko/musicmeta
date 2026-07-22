@@ -1,4 +1,5 @@
 import com.vanniktech.maven.publish.SonatypeHost
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.kotlin.jvm)
@@ -11,6 +12,12 @@ group = "io.github.famesjranko"
 java {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
+}
+
+// Without this, Kotlin targets whatever JDK runs Gradle while Java targets 17, and the build fails
+// on any machine whose default is not 17. The values coincide only by accident on a JDK 17 box.
+kotlin {
+    compilerOptions { jvmTarget = JvmTarget.JVM_17 }
 }
 
 tasks.withType<Test> {
@@ -44,7 +51,7 @@ dependencies {
 }
 
 mavenPublishing {
-    publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
+    publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL, automaticRelease = true)
     if (project.hasProperty("signing.keyId") || project.hasProperty("signingInMemoryKey")) {
         signAllPublications()
     }

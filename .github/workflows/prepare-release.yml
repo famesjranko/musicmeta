@@ -1,0 +1,118 @@
+name: Prepare release
+
+# Gate 1 of the release flow — see docs/project/release.md. Writes the version everywhere it is
+# consumed, then proves the notes assemble before committing. You open the dev -> main PR yourself:
+# a PR opened by GITHUB_TOKEN gets no check runs, and main requires them.
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_version:
+        description: '(optional) Force a version, e.g. 0.11.0. Blank = top CHANGELOG heading.'
+        required: false
+        default: ''
+      dry_run:
+        description: 'Preview only — print the diff and the notes, push nothing.'
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: prepare-release
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      # SHA-pinned: this job pushes to dev. A tag is mutable.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: dev
+
+      - name: Resolve versions
+        id: versions
+        shell: bash
+        env:
+          OVERRIDE: ${{ inputs.target_version }}
+        run: |
+          set -eo pipefail
+          if [ -n "${OVERRIDE}" ]; then
+            new="${OVERRIDE#v}"
+            if ! [[ "${new}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "::error::target_version '${OVERRIDE}' is not x.y.z"
+              exit 1
+            fi
+            if ! grep -q "^## \[${new}\]" CHANGELOG.md; then
+              echo "::error::CHANGELOG has no '## [${new}]' heading — pin [Unreleased] to it first"
+              exit 1
+            fi
+          else
+            new="$(sed -nE '/^## \[[0-9]/ { s/^## \[([0-9]+\.[0-9]+\.[0-9]+)\].*/\1/p; q; }' CHANGELOG.md)"
+            if [ -z "${new}" ]; then
+              echo "::error::could not read a pinned '## [x.y.z]' heading from CHANGELOG.md"
+              exit 1
+            fi
+          fi
+          old="$(sed -nE 's/^version=(.*)$/\1/p' gradle.properties)"
+          if [ -z "${old}" ]; then
+            echo "::error::could not read version= from gradle.properties"
+            exit 1
+          fi
+          echo "old=${old}" >> "$GITHUB_OUTPUT"
+          echo "new=${new}" >> "$GITHUB_OUTPUT"
+          echo "Preparing ${old} -> ${new}"
+
+      - name: Write the version into gradle.properties and README
+        shell: bash
+        env:
+          OLD: ${{ steps.versions.outputs.old }}
+          NEW: ${{ steps.versions.outputs.new }}
+        run: |
+          set -eo pipefail
+          sed -i -E "s/^version=.*/version=${NEW}/" gradle.properties
+          # Both coordinate forms, unscoped: the 9 version-bearing lines sit in four places,
+          # including one in prose outside any code block.
+          sed -i -E "s/(io\.github\.famesjranko:musicmeta-[a-z]+):[0-9]+\.[0-9]+\.[0-9]+/\1:${NEW}/g" README.md
+          sed -i -E "s/(com\.github\.famesjranko\.musicmeta:musicmeta-[a-z]+):v[0-9]+\.[0-9]+\.[0-9]+/\1:v${NEW}/g" README.md
+
+          if [ "${OLD}" != "${NEW}" ] && grep -nE ":v?${OLD}([^0-9]|$)" README.md gradle.properties; then
+            echo "::error::${OLD} still present above — a coordinate form was missed"
+            exit 1
+          fi
+          grep -c "${NEW}" README.md
+
+      - name: Assemble and check the release notes
+        run: python3 scripts/github-workflows/build_release_notes.py "${{ steps.versions.outputs.new }}"
+
+      - name: Show the diff
+        run: git --no-pager diff
+
+      - name: Commit and push
+        if: ${{ !inputs.dry_run }}
+        shell: bash
+        env:
+          NEW: ${{ steps.versions.outputs.new }}
+        run: |
+          set -eo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add gradle.properties README.md
+          git commit -m "release: prepare v${NEW}"
+          git push origin dev
+
+      - name: Next step
+        shell: bash
+        env:
+          NEW: ${{ steps.versions.outputs.new }}
+          DRY: ${{ inputs.dry_run }}
+        run: |
+          if [ "${DRY}" = "true" ]; then
+            echo "Dry run — nothing pushed. Re-run with dry_run unticked to commit v${NEW}."
+          else
+            echo "Pushed to dev. Now open the dev -> main release PR yourself and merge it,"
+            echo "then run the 'Release' workflow from main."
+          fi
