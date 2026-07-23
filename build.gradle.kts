@@ -45,7 +45,22 @@ subprojects {
     //
     // `matching {}.configureEach` rather than `named()`: the Android plugin registers `check` after
     // this block runs, so `named("check")` fails configuration on musicmeta-android.
-    tasks.matching { it.name == "detekt" }.configureEach { enabled = false }
+    // Both untyped tasks become aliases for their typed pair rather than being switched off. A
+    // disabled task still runs its dependencies and still reports success, so `./gradlew detekt` —
+    // the conventional command, and what an IDE or a stray script will reach for — keeps meaning
+    // "analyse this project" instead of quietly meaning "do nothing, successfully". The same
+    // applies to `detektBaseline`, which writes the *whole* baseline from an untyped run and would
+    // otherwise drop every type-resolved entry the moment someone regenerated it.
+    tasks.matching { it.name == "detekt" }.configureEach {
+        enabled = false
+        dependsOn("detektMain", "detektTest")
+    }
+    tasks.matching { it.name == "detektBaseline" }.configureEach {
+        enabled = false
+        dependsOn("detektBaselineMain", "detektBaselineTest")
+    }
+    // `check` already reaches the typed tasks through the alias above; naming them is belt and
+    // braces against the alias being unpicked without the dependency being noticed.
     tasks.matching { it.name == "check" }.configureEach { dependsOn("detektMain", "detektTest") }
 }
 
