@@ -9,19 +9,38 @@ The check command is the authority. Where a document and a config disagree, the 
 because the config is the thing that fails.
 
 ```bash
-./check          # everything: ktlint, conventions, doc caps, script tests, build, demo canary
-./check --fast   # skips build and demo canary — for the edit loop, not for a push
+./scripts/bootstrap.sh   # once: installs the pinned tools ./check requires
+./check                  # everything
+./check --fast           # skips build and demo canary — for the edit loop, not for a push
 ```
+
+`./check` runs four layers — a formatter, a linter, a type checker, and a custom linter for rules
+no off-the-shelf tool checks — across both languages in the repo:
+
+| Layer | Kotlin | Python | Shell |
+|---|---|---|---|
+| Formatter | ktlint | `ruff format` | — |
+| Linter | detekt | `ruff check` | shellcheck |
+| Type checker | kotlinc (in `build`) | mypy | — |
+| Custom | `check_conventions.py` | — | — |
+
+**A missing tool fails the run — it never skips.** A gate that silently skips when its tool is
+absent reports green while checking nothing, which is worse than no gate, because this file would
+then assert something false.
 
 ## Enforced by
 
 | Invariant | Mechanism | Fails via |
 |---|---|---|
 | Public ABI matches the committed baseline | `api/*.api` + binary-compatibility-validator | `./gradlew apiCheck` (inside `build`) |
-| Formatting and import hygiene | `.editorconfig` + ktlint | `./gradlew ktlintCheck` |
+| Kotlin formatting and import hygiene | `.editorconfig` + ktlint | `./gradlew ktlintCheck` |
+| Kotlin complexity, dead code, bug patterns | `config/detekt.yml` + baselines | `./gradlew detekt` |
 | No `!!` in main sources | `scripts/checks/check_conventions.py` | `./check` |
 | `@Serializable` stays off `provider/` and `http/` types | `scripts/checks/check_conventions.py` | `./check` |
 | Main-source files ≤ 300 lines | `scripts/checks/check_conventions.py` | `./check` |
+| Python formatting and lint | `pyproject.toml` + ruff | `./check` |
+| Python types | `pyproject.toml` + mypy | `./check` |
+| Shell correctness | shellcheck | `./check` |
 | STORIES entries ≤ 1500 chars | `scripts/github-workflows/check_doc_caps.py` | `./check` |
 | Release-note scripts still behave | `scripts/*/test_*.py` | `./check` |
 | Module versions agree with CHANGELOG | `scripts/github-workflows/check_versions.sh` | `release-readiness` job |
@@ -31,16 +50,20 @@ because the config is the thing that fails.
 | Release publishes only from `main` | `release.yml` ref guard | the workflow refusing to run |
 
 Format-on-write (`scripts/format-kotlin.sh`, wired in `.claude/settings.json`) is a convenience,
-not a gate. It no-ops unless the ktlint CLI is installed; `ktlintCheck` is what actually fails.
+not a gate. It no-ops when the ktlint CLI is absent; `ktlintCheck` is what actually fails.
 
 ## Not enforced
 
 Each line is an invariant nothing checks. This list is the honest cost of the enforced list above,
 and it is where drift accumulates silently — so it gets read, not skimmed.
 
-- **Function length (20 target / 40 max).** Unmeasured across the codebase and likely to fail
-  widely. A gate that fails on day one does not ship, so this needs measuring and a grandfather
-  list before it can move up.
+- **Function length (20 target / 40 max).** detekt's `LongMethod` covers the 60-line end of this
+  with a baseline, but the 20/40 numbers in `CLAUDE.md` are stricter than anything enforced. Either
+  the doc or the threshold should move; nothing currently holds the gap.
+- **46 pre-existing detekt findings** sit in `config/detekt-baseline-*.xml` so new code must be
+  clean while existing debt stays visible. One deserves a decision rather than a baseline:
+  `DefaultEnrichmentEngine` takes an unused `private val httpClient` constructor property. Removing
+  it changes a public constructor signature, so it is a documented breaking change, not a cleanup.
 - **Test-file length.** Excluded from the 300-line cap on purpose: given-when-then narratives are
   legitimately long, and a cap here would push people to split coherent suites for the wrong reason.
 - **Test-source style.** Wildcard imports and SCREAMING_CASE fixture names are allowed in tests
@@ -77,3 +100,26 @@ took the codebase from 6022 violations to 47, and 19 unused imports fell out as 
 
 Rejected: adopting `ktlint_official` and reformatting wholesale. It would have made every
 subsequent `git blame` cross a formatting commit for no correctness gain.
+
+### 2026-07-23: detekt tuned to 46 findings rather than baselined at 898
+
+detekt's defaults report 898 findings here, which is not a signal — it is a reason to stop reading
+the report. 477 were `MagicNumber` flagging provider priorities and confidence thresholds, which
+are the domain; 198 were `MaxLineLength` and 23 `WildcardImport`, both already owned by ktlint.
+Two tools disagreeing about line length means whichever runs first owns it and the other is noise.
+Disabling those plus the guard-clause rules (`ReturnCount`, `TooGenericExceptionCaught`, which
+argue against how providers deliberately degrade) left 46, which is small enough to act on.
+
+Rejected: baselining all 898. A baseline that large is indistinguishable from not running the tool,
+and it would have hidden the one finding worth having — an unused constructor property on a public
+class.
+
+### 2026-07-23: Python tooling via uv, because there is no system pip
+
+The machine has Python 3.13 with no `pip`, `pipx`, or `uv`, so mypy was initially written off as
+unavailable. It is not: `uv` is a single static binary that installs both ruff and mypy without a
+system Python package manager. `scripts/bootstrap.sh` pins all four tool versions so a toolchain
+change is a reviewed commit rather than a CI failure nobody caused.
+
+Rejected: black + flake8 + isort. ruff is one binary covering all three, and this repo needed a
+formatter and a linter for 940 lines of script, not three dependencies.

@@ -5,6 +5,7 @@ A gate nobody has watched fail is not a gate, so every rule here is proved to fi
 violation it exists to catch, and proved not to fire on the thing most likely to be mistaken for
 one. Run with: python3 test_check_conventions.py
 """
+
 from __future__ import annotations
 
 import sys
@@ -86,9 +87,7 @@ class ConventionsTest(unittest.TestCase):
         # Given @Serializable applied to a provider's internal model
         body = "package a\n\n@Serializable\ndata class DeezerAlbum(val id: Long)\n"
         # When the check runs
-        findings = self.findings_for(
-            "musicmeta-core/src/main/kotlin/com/landofoz/musicmeta/provider/deezer/M.kt", body
-        )
+        findings = self.findings_for("musicmeta-core/src/main/kotlin/com/landofoz/musicmeta/provider/deezer/M.kt", body)
         # Then it fails and points at the payload types that should carry it instead
         self.assertEqual(len(findings), 1)
         self.assertIn("@Serializable does not belong", findings[0])
@@ -98,9 +97,7 @@ class ConventionsTest(unittest.TestCase):
         # Given @Serializable on an http/ infrastructure type
         body = "package a\n\n@Serializable\nclass HttpThing\n"
         # When the check runs
-        findings = self.findings_for(
-            "musicmeta-core/src/main/kotlin/com/landofoz/musicmeta/http/T.kt", body
-        )
+        findings = self.findings_for("musicmeta-core/src/main/kotlin/com/landofoz/musicmeta/http/T.kt", body)
         # Then it is reported for the same reason
         self.assertEqual(len(findings), 1)
 

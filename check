@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # The single verification command. CI runs exactly this, so a green local run means a green build
-# rather than a guess about one. Ordered cheapest-first: a style slip should fail in seconds, not
-# after a full Gradle build.
+# rather than a guess about one.
+#
+# Four layers, in the order they get cheaper to fix: a formatter, a linter, a type checker, and a
+# custom linter for the rules no off-the-shelf tool checks. Ordered fastest-first so a style slip
+# fails in a second rather than after a full Gradle build.
 #
 #   ./check          everything
 #   ./check --fast   skip the build and the demo canary — for the edit loop, not for a push
@@ -16,6 +19,18 @@ elif [ -n "${1:-}" ]; then
     exit 64
 fi
 
+# A gate whose tool is missing must fail, not skip. Skipping reports green while checking nothing,
+# which is worse than having no gate at all — ARCHITECTURE.md would then assert something false.
+missing=()
+for tool in ruff mypy shellcheck; do
+    command -v "$tool" >/dev/null 2>&1 || missing+=("$tool")
+done
+if [ ${#missing[@]} -gt 0 ]; then
+    echo "missing required tools: ${missing[*]}" >&2
+    echo "run ./scripts/bootstrap.sh to install the pinned versions" >&2
+    exit 127
+fi
+
 # The android module needs an SDK. Falling back to the conventional location turns a cryptic
 # Gradle failure into a working run on a normally-configured machine.
 if [ -z "${ANDROID_HOME:-}" ] && [ -d "$HOME/Android/Sdk" ]; then
@@ -24,8 +39,16 @@ fi
 
 step() { printf '\n\033[1m==> %s\033[0m\n' "$1"; }
 
-step "ktlint"
-./gradlew ktlintCheck --quiet
+step "python format + lint (ruff)"
+ruff format --check .
+ruff check .
+
+step "shell lint (shellcheck)"
+# ./check is itself a gate, so it is the last thing that should go unchecked.
+shellcheck check scripts/*.sh scripts/github-workflows/*.sh
+
+step "python types (mypy)"
+mypy
 
 step "conventions"
 python3 scripts/checks/check_conventions.py
@@ -35,12 +58,14 @@ python3 scripts/github-workflows/check_doc_caps.py
 
 step "script self-tests"
 # Unguarded, a regression in a release script surfaces only as a release check that silently passes.
-for dir in scripts/checks scripts/github-workflows; do
-    for t in "$dir"/test_*.py; do
-        python3 "$t" >/dev/null 2>&1 || { python3 "$t"; exit 1; }
-    done
+for t in scripts/checks/test_*.py scripts/github-workflows/test_*.py; do
+    python3 "$t" >/dev/null 2>&1 || { python3 "$t"; exit 1; }
 done
 echo "all script self-tests pass"
+
+step "kotlin format + static analysis (ktlint, detekt)"
+# One Gradle invocation rather than two — the daemon start dominates either way.
+./gradlew ktlintCheck detekt --quiet
 
 if [ "$FAST" = 1 ]; then
     printf '\n\033[1m--fast: skipped build and demo canary\033[0m\n'

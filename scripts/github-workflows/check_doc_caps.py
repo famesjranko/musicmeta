@@ -8,6 +8,7 @@ going forward, and rewriting history costs more than it returns.
 
     python3 check_doc_caps.py [--stories PATH]
 """
+
 from __future__ import annotations
 
 import argparse

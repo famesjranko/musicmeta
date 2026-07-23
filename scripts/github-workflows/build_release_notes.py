@@ -11,6 +11,7 @@ v0.10.0 and v0.10.1 first shipped 8.6k- and 6.6k-char walls copied from an uncap
 Exit codes: 0 = valid, 1 = file/version not found, 2 = the section violates a cap.
 Importable: extract_section(text, version) -> str, build(text, version) -> str.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -96,8 +97,7 @@ def check_caps(section: str, version: str) -> None:
 
     if errors:
         raise BuildError(
-            f"The '## [{version}]' section is not release-note shaped:\n"
-            + "\n".join(f"  - {e}" for e in errors)
+            f"The '## [{version}]' section is not release-note shaped:\n" + "\n".join(f"  - {e}" for e in errors)
         )
 
 

@@ -8,6 +8,7 @@ plugins {
     alias(libs.plugins.vanniktech.publish) apply false
     alias(libs.plugins.binary.compatibility.validator)
     alias(libs.plugins.ktlint) apply false
+    alias(libs.plugins.detekt) apply false
 }
 
 // Applied to every module rather than per-module, so a new module is formatted by default instead
@@ -15,6 +16,15 @@ plugins {
 // canary, and its job is to compile against the published surface, not to match house style.
 subprojects {
     apply(plugin = "org.jlleitschuh.gradle.ktlint")
+    apply(plugin = "io.gitlab.arturbosch.detekt")
+
+    extensions.configure<io.gitlab.arturbosch.detekt.extensions.DetektExtension> {
+        config.setFrom(rootProject.file("config/detekt.yml"))
+        buildUponDefaultConfig = true
+        // Per module, not one shared file: `detektBaseline` writes the whole baseline for the
+        // module it runs in, so three modules pointed at one path would each overwrite the others.
+        baseline = rootProject.file("config/detekt-baseline-${project.name}.xml")
+    }
 }
 
 // Public ABI baselines live in each module's api/ directory. apiCheck is wired into `check`, so

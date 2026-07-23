@@ -11,6 +11,7 @@ ARCHITECTURE.md under "Not enforced" rather than left implicit here.
 
     python3 check_conventions.py [--root PATH]
 """
+
 from __future__ import annotations
 
 import argparse
@@ -75,12 +76,12 @@ def check_no_double_bang(path: Path, rel: str, source: str) -> list[str]:
     for lineno, line in enumerate(strip_noise(source).splitlines(), start=1):
         # `!!=` is not the not-null assertion; neither is the `!==` identity operator.
         for match in re.finditer(r"!!", line):
-            tail = line[match.end():match.end() + 1]
+            tail = line[match.end() : match.end() + 1]
             if tail not in ("=",):
                 findings.append(
                     f"::error file={rel},line={lineno}::`!!` is banned in main sources. "
                     f"Handle the null: use `?:` with a real fallback, an early return, or "
-                    f"`requireNotNull(x) {{ \"why this cannot be null\" }}` if it truly cannot be."
+                    f'`requireNotNull(x) {{ "why this cannot be null" }}` if it truly cannot be.'
                 )
                 break
     return findings

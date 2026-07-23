@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Runnable self-check: `python3 test_pin_release.py` (no framework needed)."""
+
 from pathlib import Path
 
 from build_release_notes import extract_section
@@ -39,7 +40,7 @@ assert after.index("## [Unreleased]") < after.index("## [0.11.0]")
 # The content moves under the new version, and the new [Unreleased] is genuinely empty.
 assert extract_section(after, "0.11.0").startswith("Docs and CI only.")
 assert "A thing (#42)" in extract_section(after, "0.11.0")
-unreleased = after[after.index("## [Unreleased]") + len("## [Unreleased]"):after.index("## [0.11.0]")]
+unreleased = after[after.index("## [Unreleased]") + len("## [Unreleased]") : after.index("## [0.11.0]")]
 assert not unreleased.strip(), f"new [Unreleased] should be empty, got {unreleased!r}"
 # Older sections are untouched.
 assert "## [0.10.1] - 2026-07-22" in after and "An older thing (#28)" in after
@@ -48,13 +49,14 @@ assert "## [0.10.1] - 2026-07-22" in after and "An older thing (#28)" in after
 expect_error(lambda: pin_changelog(after, "0.11.0", "2026-07-24"), "already has a '## [0.11.0]'")
 
 # --- refusals -----------------------------------------------------------------------------------
-expect_error(lambda: pin_changelog("# Changelog\n\n## [0.10.1] - 2026\n", "0.11.0"[:], "2026-07-23"),
-             "no '## [Unreleased]'")
-expect_error(lambda: pin_changelog("# Changelog\n\n## [Unreleased]\n\n## [0.10.1] - 2026\n", "0.11.0", "2026-07-23"),
-             "empty")
+expect_error(
+    lambda: pin_changelog("# Changelog\n\n## [0.10.1] - 2026\n", "0.11.0"[:], "2026-07-23"), "no '## [Unreleased]'"
+)
+expect_error(
+    lambda: pin_changelog("# Changelog\n\n## [Unreleased]\n\n## [0.10.1] - 2026\n", "0.11.0", "2026-07-23"), "empty"
+)
 # Whitespace-only is still empty.
-expect_error(lambda: pin_changelog("## [Unreleased]\n\n   \n\n## [0.10.1] - 2026\n", "0.11.0", "2026-07-23"),
-             "empty")
+expect_error(lambda: pin_changelog("## [Unreleased]\n\n   \n\n## [0.10.1] - 2026\n", "0.11.0", "2026-07-23"), "empty")
 # An [Unreleased] with no following version heading (first ever release) still pins.
 assert "## [1.0.0] - 2026-07-23" in pin_changelog("# C\n\n## [Unreleased]\n\n- first (#1)\n", "1.0.0", "2026-07-23")
 

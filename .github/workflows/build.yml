@@ -31,6 +31,13 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v6
 
+      - name: Install pinned tooling
+        # Same pinned versions developers get, so CI and local cannot disagree about what a rule
+        # means. ./check refuses to run rather than silently skipping a layer whose tool is absent.
+        run: |
+          ./scripts/bootstrap.sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
       - name: Run the check command
         # The same command developers and agents run locally. CI having its own step list is what
         # makes a CI failure a guessing game, so there is deliberately only one thing to run here.
