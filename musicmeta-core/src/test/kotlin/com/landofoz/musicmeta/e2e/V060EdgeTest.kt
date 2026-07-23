@@ -405,7 +405,8 @@ class V060EdgeTest {
         println("    listens=${data.listenCount}, listeners=${data.listenerCount}")
         println("    topTracks: ${data.topTracks?.size ?: 0}")
         data.topTracks?.take(3)?.forEach {
-            println("      #${it.rank} ${it.title.take(35).padEnd(35)} listens=${it.listenCount ?: "?"}")
+            // PopularTrack.listenCount is non-null, unlike TopTrack.listenCount — no elvis needed.
+            println("      #${it.rank} ${it.title.take(35).padEnd(35)} listens=${it.listenCount}")
         }
         Unit
     }
