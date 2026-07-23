@@ -6,10 +6,10 @@ import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
+import org.junit.Assert.*
 import org.junit.Assume
 import org.junit.Before
 import org.junit.Test
-import org.junit.Assert.*
 
 /**
  * E2E test verifying OkHttpEnrichmentClient works with the real engine

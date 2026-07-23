@@ -18,6 +18,7 @@ class FakeHttpClient : HttpClient {
     fun givenJsonResponse(urlContains: String, json: String) { jsonResponses[urlContains] = json }
     fun givenJsonArrayResponse(urlContains: String, json: String) { jsonResponses[urlContains] = json }
     fun givenError(urlContains: String) { errors.add(urlContains) }
+
     /**
      * Causes fetchJsonResult (and related Result-returning methods) to throw an IOException
      * for URLs containing [urlContains]. Use this to test Provider-level error handling when

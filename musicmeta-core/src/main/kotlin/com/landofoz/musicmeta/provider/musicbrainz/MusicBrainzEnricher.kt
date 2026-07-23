@@ -302,6 +302,7 @@ internal class MusicBrainzEnricher(
             EnrichmentType.ARTIST_BACKGROUND,
             EnrichmentType.ARTIST_LOGO,
         )
+
         /** New artist types routed through enrichArtistNewType(). */
         private val ARTIST_NEW_TYPES = setOf(
             EnrichmentType.BAND_MEMBERS,

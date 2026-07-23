@@ -188,6 +188,7 @@ class ListenBrainzProvider(
 
     private companion object {
         const val PRIORITY = 100
+
         /** Fallback priority -- Last.fm is primary for track popularity. */
         const val FALLBACK_PRIORITY = 50
     }

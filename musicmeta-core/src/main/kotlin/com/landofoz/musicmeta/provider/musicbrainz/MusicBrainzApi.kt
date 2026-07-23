@@ -3,8 +3,8 @@ package com.landofoz.musicmeta.provider.musicbrainz
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.HttpResult
 import com.landofoz.musicmeta.http.RateLimiter
-import java.net.URLEncoder
 import org.json.JSONObject
+import java.net.URLEncoder
 
 /**
  * MusicBrainz API client. Handles query building, rate limiting, and parsing.

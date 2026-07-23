@@ -32,8 +32,7 @@ class RateLimiterTest {
         val limiter = RateLimiter(100)
 
         // When / Then — exception propagates to caller
-        try { limiter.execute { throw IllegalStateException("err") }; fail() }
-        catch (e: IllegalStateException) { assertEquals("err", e.message) }
+        try { limiter.execute { throw IllegalStateException("err") }; fail() } catch (e: IllegalStateException) { assertEquals("err", e.message) }
     }
 
     @Test fun `execute delays when called faster than interval`() = runTest {

@@ -33,7 +33,13 @@ class ProviderRegistry(
     }
 
     fun providerInfos(): List<ProviderInfo> = allProviders.map { provider ->
-        ProviderInfo(provider.id, provider.displayName, provider.capabilities, provider.requiresApiKey, provider.isAvailable)
+        ProviderInfo(
+            provider.id,
+            provider.displayName,
+            provider.capabilities,
+            provider.requiresApiKey,
+            provider.isAvailable,
+        )
     }
 
     private fun buildChains(providers: List<EnrichmentProvider>): Map<EnrichmentType, ProviderChain> {

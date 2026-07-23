@@ -2,6 +2,7 @@ package com.landofoz.musicmeta
 
 import com.landofoz.musicmeta.cache.InMemoryEnrichmentCache
 import com.landofoz.musicmeta.engine.ArtworkMerger
+import com.landofoz.musicmeta.engine.CompositeSynthesizer
 import com.landofoz.musicmeta.engine.DefaultEnrichmentEngine
 import com.landofoz.musicmeta.engine.GenreAffinityMatcher
 import com.landofoz.musicmeta.engine.GenreMerger
@@ -94,7 +95,7 @@ interface EnrichmentEngine {
             ArtworkMerger(EnrichmentType.ARTIST_PHOTO),
             ArtworkMerger(EnrichmentType.ALBUM_ART),
         )
-        private val synthesizers = mutableListOf<com.landofoz.musicmeta.engine.CompositeSynthesizer>(TimelineSynthesizer, GenreAffinityMatcher)
+        private val synthesizers = mutableListOf<CompositeSynthesizer>(TimelineSynthesizer, GenreAffinityMatcher)
 
         fun addProvider(provider: EnrichmentProvider) = apply { providers.add(provider) }
         fun cache(cache: EnrichmentCache) = apply { this.cache = cache }
@@ -106,7 +107,7 @@ interface EnrichmentEngine {
             this.config = this.config.copy(catalogProvider = provider, catalogFilterMode = mode)
         }
         fun addMerger(merger: com.landofoz.musicmeta.engine.ResultMerger) = apply { mergers.add(merger) }
-        fun addSynthesizer(synthesizer: com.landofoz.musicmeta.engine.CompositeSynthesizer) = apply { synthesizers.add(synthesizer) }
+        fun addSynthesizer(synthesizer: CompositeSynthesizer) = apply { synthesizers.add(synthesizer) }
 
         fun withDefaultProviders() = apply {
             val client = httpClient ?: DefaultHttpClient(config.userAgent)

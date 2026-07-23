@@ -6,8 +6,10 @@ package com.landofoz.musicmeta
 enum class CatalogFilterMode {
     /** Return all recommendation items unchanged. Default behavior. */
     UNFILTERED,
+
     /** Remove items where CatalogMatch.available == false. */
     AVAILABLE_ONLY,
+
     /** Sort available items before unavailable; preserve relative order within each group. */
     AVAILABLE_FIRST,
 }

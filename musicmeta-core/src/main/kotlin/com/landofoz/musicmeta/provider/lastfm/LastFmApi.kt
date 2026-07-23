@@ -99,13 +99,15 @@ internal class LastFmApi(
     private fun buildAlbumUrl(method: String, album: String, artist: String): String {
         val encodedAlbum = URLEncoder.encode(album, "UTF-8")
         val encodedArtist = URLEncoder.encode(artist, "UTF-8")
-        return "$BASE_URL?method=$method&album=$encodedAlbum&artist=$encodedArtist&api_key=${apiKeyProvider()}&format=json"
+        return "$BASE_URL?method=$method&album=$encodedAlbum&artist=$encodedArtist" +
+            "&api_key=${apiKeyProvider()}&format=json"
     }
 
     private fun buildTrackUrl(method: String, trackTitle: String, artistName: String): String {
         val encodedTrack = URLEncoder.encode(trackTitle, "UTF-8")
         val encodedArtist = URLEncoder.encode(artistName, "UTF-8")
-        return "$BASE_URL?method=$method&track=$encodedTrack&artist=$encodedArtist&api_key=${apiKeyProvider()}&format=json"
+        return "$BASE_URL?method=$method&track=$encodedTrack&artist=$encodedArtist" +
+            "&api_key=${apiKeyProvider()}&format=json"
     }
 
     private fun buildUrl(method: String, artistName: String): String {

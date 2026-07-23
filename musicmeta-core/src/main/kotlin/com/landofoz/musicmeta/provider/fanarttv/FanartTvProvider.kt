@@ -5,7 +5,7 @@ import com.landofoz.musicmeta.EnrichmentProvider
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
-import com.landofoz.musicmeta.IdentifierRequirement
+import com.landofoz.musicmeta.IdentifierRequirement.MUSICBRAINZ_ID
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.http.HttpClient
@@ -33,12 +33,12 @@ class FanartTvProvider(
     override val isAvailable: Boolean get() = projectKeyProvider().isNotBlank()
 
     override val capabilities = listOf(
-        ProviderCapability(EnrichmentType.ARTIST_PHOTO, priority = 80, identifierRequirement = IdentifierRequirement.MUSICBRAINZ_ID),
-        ProviderCapability(EnrichmentType.ARTIST_BACKGROUND, priority = 100, identifierRequirement = IdentifierRequirement.MUSICBRAINZ_ID),
-        ProviderCapability(EnrichmentType.ARTIST_LOGO, priority = 100, identifierRequirement = IdentifierRequirement.MUSICBRAINZ_ID),
-        ProviderCapability(EnrichmentType.ALBUM_ART, priority = 30, identifierRequirement = IdentifierRequirement.MUSICBRAINZ_ID),
-        ProviderCapability(EnrichmentType.CD_ART, priority = 100, identifierRequirement = IdentifierRequirement.MUSICBRAINZ_ID),
-        ProviderCapability(EnrichmentType.ARTIST_BANNER, priority = 100, identifierRequirement = IdentifierRequirement.MUSICBRAINZ_ID),
+        ProviderCapability(EnrichmentType.ARTIST_PHOTO, priority = 80, identifierRequirement = MUSICBRAINZ_ID),
+        ProviderCapability(EnrichmentType.ARTIST_BACKGROUND, priority = 100, identifierRequirement = MUSICBRAINZ_ID),
+        ProviderCapability(EnrichmentType.ARTIST_LOGO, priority = 100, identifierRequirement = MUSICBRAINZ_ID),
+        ProviderCapability(EnrichmentType.ALBUM_ART, priority = 30, identifierRequirement = MUSICBRAINZ_ID),
+        ProviderCapability(EnrichmentType.CD_ART, priority = 100, identifierRequirement = MUSICBRAINZ_ID),
+        ProviderCapability(EnrichmentType.ARTIST_BANNER, priority = 100, identifierRequirement = MUSICBRAINZ_ID),
     )
 
     override suspend fun enrich(
@@ -50,7 +50,8 @@ class FanartTvProvider(
             ?: return EnrichmentResult.NotFound(type, id)
 
         // Album art and CD art need artist context, artist types need ForArtist
-        if (type != EnrichmentType.ALBUM_ART && type != EnrichmentType.CD_ART &&
+        if (type != EnrichmentType.ALBUM_ART &&
+            type != EnrichmentType.CD_ART &&
             request !is EnrichmentRequest.ForArtist
         ) {
             return EnrichmentResult.NotFound(type, id)
@@ -115,5 +116,4 @@ class FanartTvProvider(
         provider = id,
         confidence = ConfidenceCalculator.authoritative(),
     )
-
 }

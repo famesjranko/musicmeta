@@ -1,6 +1,5 @@
 package com.landofoz.musicmeta.provider.coverartarchive
 
-import com.landofoz.musicmeta.ArtworkSize
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentRequest

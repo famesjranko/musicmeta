@@ -7,6 +7,7 @@ package com.landofoz.musicmeta.cache
 enum class CacheMode {
     /** Always fetch from network; cache is only used when fresh. */
     NETWORK_FIRST,
+
     /** Serve expired cache entries when provider returns Error or RateLimited. */
     STALE_IF_ERROR,
 }
