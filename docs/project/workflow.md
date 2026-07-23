@@ -25,17 +25,27 @@ shared checkout.
 
 ## Branch topology
 
-`dev` is the integration branch. `main` is the release branch.
+**`main` is the only permanent branch.** It is the default branch, the integration branch and the
+release branch. Everything else is temporary and deleted on merge.
 
 | Stage | From → to | Landing | Branch after |
 |---|---|---|---|
-| Independent child | `<area>/<issue#>` → `dev` | Squash PR | Delete |
-| Epic child | Directly on `epic/<slug>` | Verified commit + push; no child PR | Keep |
-| Epic consolidation | `epic/<slug>` → `dev` | Merge-commit PR; never squash | Delete |
-| Release | `dev` → `main` | Merge-commit PR; never squash | Keep `dev` |
+| Independent child | `<area>/<issue#>` → `main` | Squash PR | Deleted automatically |
+| Epic child | Directly on `epic/<slug>` | Verified commit + push; no child PR | Keep until consolidation |
+| Epic consolidation | `epic/<slug>` → `main` | Squash PR | Deleted automatically |
+| Release preparation | `release/<x.y.z>` → `main` | Squash PR | Deleted automatically |
 
-Independent children use their own PRs. Use the epic model only when children form one coherent
-feature that should be reviewed together.
+`main` is protected: a pull request is required, `build` and `demo-canary` must pass, history is
+linear, and **there are no bypass actors** — nothing writes to it directly, including the release
+workflow.
+
+**Squash is the only merge method**, epics included. There used to be a `dev` integration branch
+and merge-commit consolidations; both existed to join two permanent histories, and there is only
+one now. An epic's per-child history lives in its PR, which is where it is actually read.
+
+The previous topology put the required checks on `main`, which received release merges only, while
+`dev` — the default branch, taking every change — had none. Five PRs merged in one day went in
+ungated before that was noticed.
 
 ### Shared-branch epics
 
@@ -44,8 +54,8 @@ feature that should be reviewed together.
   verification evidence, deferrals, and next child before committing.
 - Local verification is the child landing gate because there is no child PR or child CI run.
 - Push the implementation and worklog together, then confirm the remote SHA before bookkeeping.
-- Finalize through one clearly identified epic PR into `dev`. That PR belongs to the epic workflow,
-  not ordinary PR processing, and must land with a merge commit.
+- Finalize through one clearly identified epic PR into `main`. That PR belongs to the epic
+  workflow, not ordinary PR processing, and squash-merges like everything else.
 
 ## Selection
 
@@ -65,16 +75,15 @@ obvious.**
 
 ## Issue lifecycle
 
-`dev` is the default branch, so a closing keyword on a PR merged into `dev` closes its issue
-automatically. `main` is not the default branch: a keyword on the `dev` → `main` release PR closes
-nothing, so nothing may depend on one.
+`main` is the default branch, so a closing keyword on any merged PR closes its issue
+automatically.
 
 Work that never opens a PR still needs closing by hand — that is the epic-child case below, not an
 oversight.
 
 ### Independent children
 
-1. Merge the child PR into `dev` with `Closes #<issue>` in its body.
+1. Merge the child PR into `main` with `Closes #<issue>` in its body.
 2. Confirm the issue actually closed. The keyword fires on merge, but a typo or a retarget is
    silent, and an issue left open is easier to miss than one closed twice.
 3. Tick its epic checklist item while keeping the epic open.
@@ -91,7 +100,7 @@ the transition is manual.
 
 ### The epic itself
 
-The epic closes through `Closes #<epic>` on the **epic consolidation PR into `dev`**, because that
+The epic closes through `Closes #<epic>` on the **epic consolidation PR into `main`**, because that
 is the PR that reaches the default branch. Do not put it on the release PR into `main` — see
 [release.md](release.md).
 

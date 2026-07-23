@@ -30,9 +30,10 @@ because the config is the thing that fails.
 | Build | `./gradlew build` | compile, all unit tests, `apiCheck` against `api/*.api` |
 | Consumer canary | `demo/` composite build | an external consumer still compiles |
 
-Beyond `./check`: `release-readiness` asserts the three module versions agree with `CHANGELOG.md`
-before a release PR merges, `main`'s ruleset requires build + canary + readiness and forbids
-squashes, and `release.yml` refuses to publish from any ref but `main`.
+Beyond `./check`: `main`'s ruleset requires a pull request with `build` and `demo-canary` green,
+linear history, squash-only merges and **no bypass actors** — nothing writes to it directly,
+including the release workflow. `release.yml` refuses to publish from any ref but `main`, and
+asserts version/README/notes agreement before anything irreversible; the tag is pushed last.
 
 **A missing *or mismatched* tool fails the run — it never skips.** A gate that silently skips when
 its tool is absent reports green while checking nothing, which is worse than no gate. `./check`
@@ -77,11 +78,7 @@ than it looks like, each learned the hard way.
 - **Bash-written Kotlin is not formatted on write.** The hook only sees files an `Edit`/`Write`
   payload names. Sweeping everything dirty at end of turn was built and deleted: it reformats
   uncommitted work the agent never touched. `ktlintCheck` catches it, one `./check` later.
-- **`dev` has no required status checks.** Its ruleset carries only `deletion` and
-  `non_fast_forward`. `build` and `demo-canary` run on every push but do not block, because
-  `release.yml` fast-forwards with `git push origin main:dev`, which a `pull_request` rule rejects,
-  and `github-actions[bot]` lacks the bypass a required check would need. The real fix is one
-  protected branch rather than two.
+
 - **`demo/` is exempt from house style.** Neither ktlint nor the convention rules cover it: its job
   is to compile against the published surface like an external consumer, not to match our style.
   `demo/run.sh` *is* shellchecked — that exemption is about Kotlin style, not correctness.

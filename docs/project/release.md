@@ -8,9 +8,13 @@ A release is three human actions. Everything between them is CI.
 
 | | You do | CI does |
 |---|---|---|
-| Gate 1 | Run **Prepare release** | pins the `CHANGELOG` and `ROADMAP` headings, writes the version into `gradle.properties` and all 9 README coordinates, proves the notes assemble, pushes to `dev` |
-| Gate 2 | Open the `dev` → `main` PR and merge it | `build`, `demo-canary`, `release-readiness` |
-| Gate 3 | Run **Release** from `main` | verifies, fast-forwards `dev`, tests, publishes to Central, waits for it to resolve, tags, creates the GitHub Release |
+| Gate 1 | Run **Prepare release** | pins the `CHANGELOG` and `ROADMAP` headings, writes the version into `gradle.properties` and all 9 README coordinates, proves the notes assemble, pushes a `release/<version>` branch |
+| Gate 2 | Open the `release/<version>` → `main` PR and **squash**-merge it | `build`, `demo-canary` |
+| Gate 3 | Run **Release** from `main` | verifies, tests, publishes to Central, waits for it to resolve, tags, creates the GitHub Release |
+
+**Between gate 2 and gate 3, merge nothing else.** `workflow_dispatch` pins the run to the branch
+tip at dispatch time, so a PR landing in that window would release the wrong tree. Note the squash
+SHA at gate 2 and confirm the Release run is on it.
 
 ## Before gate 1
 
@@ -27,7 +31,7 @@ contain a breaking public API change. That choice is the one judgement call in t
 
 ## Gate 1 — Prepare release
 
-Actions → **Prepare release** → Run workflow, from `dev`. Enter the version. Leave `dry_run` ticked
+Actions → **Prepare release** → Run workflow, from `main`. Enter the version. Leave `dry_run` ticked
 the first time: it prints the full diff and the assembled notes without pushing anything.
 
 It then does every mechanical edit, so none of them is a chance to typo the value every later check
@@ -39,22 +43,24 @@ reads:
 - rewrites all nine README coordinate lines, then greps to prove the old version is gone
 - assembles the release notes and fails if they do not fit the caps
 
-Re-run with `dry_run` unticked to commit `release: prepare v<version>` to `dev`.
+Re-run with `dry_run` unticked to commit `release: prepare v<version>` and push it as
+`release/<version>`. It refuses to run if that branch already exists, rather than force-pushing
+over a previous attempt.
 
 It refuses to prepare a version that is already tagged, and `pin_release.py` refuses to pin twice or
 to pin an empty `[Unreleased]` — so a mistaken re-run stops rather than double-pinning.
 
 ## Gate 2 — the release PR
 
-Open `dev` → `main` yourself with the release evidence, and merge it with a **merge commit, never
-squash**. `main` requires `build`, `demo-canary` and `release-readiness`.
+Open `release/<version>` → `main` yourself with the release evidence, and **squash**-merge it.
+`main` requires `build` and `demo-canary`.
 
-Do not put `Closes #<epic>` here. `main` is not the default branch, so a closing keyword on this PR
-closes nothing; the epic closes at its consolidation PR into `dev` instead. See
-[workflow.md](workflow.md) → Issue lifecycle.
+`main` is the default branch, so a closing keyword here *does* close its issue — which is fine, but
+keep release PRs free of them anyway: the release is not what resolved the work.
 
-The PR must be opened by a person. A PR opened by CI receives no check runs at all — GitHub does not
-trigger workflows from `GITHUB_TOKEN` events — so it could never satisfy those required checks.
+The PR is opened by a person because `main` has no bypass actor and this workflow deliberately has
+no `pull-requests: write`. A PR opened with `GITHUB_TOKEN` also creates approval-required workflow
+runs, so bot-opening it would save one click and cost an approval.
 
 This PR is the review point for the accumulated public API diff.
 
@@ -94,9 +100,8 @@ rehearsal uses a throwaway `-rc.N` coordinate you would never ship.
 Three jobs run in order, recoverable before irreversible:
 
 1. **verify** — refuses a non-`main` ref; asserts the tag is free, that all three modules and the
-   `CHANGELOG` heading agree, that README pins the version, and that the notes assemble. Then
-   fast-forwards `dev` to `main`, which fails harmlessly if someone has landed on `dev` since the
-   merge.
+   `CHANGELOG` heading agree, that README pins the version, and that the notes assemble. Nothing
+   here writes; every check is recoverable because the tag comes last.
 2. **publish** — tests plus `apiCheck`, then uploads to Central and waits up to 30 minutes for all
    three modules to resolve. `automaticRelease` is on, so there is no portal click; the poll is what
    proves the deployment passed Central's asynchronous validation. **A Maven Central release is
@@ -139,7 +144,6 @@ either.
 ## Deliberately deferred tagging
 
 If publication is intentionally deferred, leave the README installation snippets at the previous
-resolvable version and do not run gate 1. Land docs-only changes through a PR into `main`, then
-fast-forward `dev` again. `main` still requires a merge commit and its required checks even for that
-exception — and `release-readiness` deliberately does not check README coordinates, so such a PR
-passes with README still on the older version.
+resolvable version and do not run gate 1. Land docs-only changes through an ordinary squash PR into
+`main` like anything else — there is no exception to describe any more, which is one of the things
+collapsing to a single branch bought.

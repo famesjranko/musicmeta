@@ -25,6 +25,8 @@ Mostly docs and CI, plus one engine fix consumers should know about (#53).
 - Release notes are checked against the tag they document, and the check carries its own self-test
 
 ### Changed
+- **One permanent branch.** `main` is the default, integration and release branch; `dev` is gone. Protection had sat on `main`, which took release merges only, while `dev` took every change and required nothing. `main` now needs a PR with `build` and `demo-canary` green, linear history, squash-only merges and **no bypass actors** (#68)
+- Preparing a release pushes a `release/<version>` branch instead of committing straight to the integration branch, and refuses to run if that branch already exists. You open and squash-merge the PR — nothing writes to the protected branch directly, including CI
 - Preparing a release needs no hand edits: CI pins the `CHANGELOG` heading to the version and date, opens a fresh empty `[Unreleased]`, and moves the `ROADMAP` heading. Write `[Unreleased]` as you go and that is the whole preparation
 - **Prepare release** takes the version as a required input and refuses one that is already tagged, instead of deriving it from the top pinned heading — which read the *previous* release until `[Unreleased]` was pinned
 - A `## [x.y.z]` section is now the release note itself, capped at 3000 characters and 400 per line — replacing the ask for concise notes that produced 8.6k- and 6.6k-char walls in v0.10.0 and v0.10.1
@@ -40,6 +42,7 @@ Mostly docs and CI, plus one engine fix consumers should know about (#53).
 - Onboarding no longer teaches the bug it warns about: `CLAUDE.md` pitfall 2 showed `catch (CancellationException) { throw e }` as the correct form, then explained twenty lines later that it is wrong. `ARCHITECTURE.md` claimed 46 baseline detekt findings against an actual 43, and credited the untyped `detekt` task with rules that only run under type resolution (#57)
 
 ### Removed
+- The `release-readiness` CI job and its required-check entry. It was added (#35) when publication was tag-triggered and a version mismatch could only surface after an immutable tag existed. `release.yml` now asserts the same agreement before publishing and tags last, so that mismatch already fails cheaply (#68)
 - The 300-line main-source file cap, and the grandfather list of four files already over it. It was a preference with a mechanism, not a defect the mechanism prevented; detekt's complexity rules cover the case that actually matters (#60)
 - The convention gate's hand-written Kotlin scanner, its `KotlinLexer` oracle and the differential test that kept it honest — 900 lines and a `kotlin-compiler-embeddable` dependency, all of it there so a `!!` inside a comment would not be reported. The bans are absolute instead, which is simpler and stricter (#60)
 - `api-drift.yml` — a weekly scheduled job that regenerated the API baselines and filed a tracking issue. `apiCheck` runs inside `./check` on every push and PR, and an ABI baseline cannot drift without a commit, so 245 lines were watching for something the gate had already caught

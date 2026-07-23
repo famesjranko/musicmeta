@@ -1,8 +1,15 @@
 name: Prepare release
 
 # Gate 1 of the release flow — see docs/project/release.md. Writes the version everywhere it is
-# consumed, then proves the notes assemble before committing. You open the dev -> main PR yourself:
-# a PR opened by GITHUB_TOKEN gets no check runs, and main requires them.
+# consumed, then proves the notes assemble before committing.
+#
+# It pushes a `release/x.y.z` branch and stops. You open and squash-merge the PR yourself, because
+# `main` is protected with no bypass actor and this workflow deliberately has none: the point of a
+# single protected branch is that nothing writes to it directly, and carving out an exception for
+# the release would reopen exactly the hole it closes.
+#
+# A PR opened by GITHUB_TOKEN would also create approval-required workflow runs, so bot-opening it
+# saves a click and costs an approval — no gain.
 
 on:
   workflow_dispatch:
@@ -27,10 +34,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      # SHA-pinned: this job pushes to dev. A tag is mutable.
+      # SHA-pinned: this job pushes a branch. A tag is mutable.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: dev
+          ref: main
 
       - name: Resolve versions
         id: versions
@@ -88,28 +95,45 @@ jobs:
       - name: Show the diff
         run: git --no-pager diff
 
-      - name: Commit and push
+      - name: Commit and push the release branch
         if: ${{ !inputs.dry_run }}
         shell: bash
         env:
           NEW: ${{ steps.versions.outputs.new }}
         run: |
           set -eo pipefail
+          branch="release/${NEW}"
+          # Refuse an existing branch rather than force-pushing over it: a stale release branch
+          # usually means a previous attempt is still open, and clobbering it would discard the
+          # only copy of whatever went wrong.
+          if git ls-remote --exit-code --heads origin "${branch}" >/dev/null 2>&1; then
+            echo "::error::${branch} already exists on origin. Delete or finish it first."
+            exit 1
+          fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add gradle.properties README.md CHANGELOG.md ROADMAP.md
           git commit -m "release: prepare v${NEW}"
-          git push origin dev
+          # Non-force, explicit refspec — this creates the branch and can never move main.
+          git push origin "HEAD:refs/heads/${branch}"
 
       - name: Next step
         shell: bash
         env:
           NEW: ${{ steps.versions.outputs.new }}
           DRY: ${{ inputs.dry_run }}
+          SERVER: ${{ github.server_url }}
+          REPO: ${{ github.repository }}
         run: |
           if [ "${DRY}" = "true" ]; then
             echo "Dry run — nothing pushed. Re-run with dry_run unticked to commit v${NEW}."
           else
-            echo "Pushed to dev. Now open the dev -> main release PR yourself and merge it,"
-            echo "then run the 'Release' workflow from main."
+            echo "Pushed release/${NEW}. Next:"
+            echo "  1. Open the PR:  ${SERVER}/${REPO}/compare/main...release/${NEW}?expand=1"
+            echo "  2. Wait for build + demo-canary, then SQUASH-merge it."
+            echo "  3. Note the squash commit SHA and stop merging anything else."
+            echo "  4. Dispatch 'Release' from main, and confirm the run's commit is that SHA."
+            echo "     workflow_dispatch pins to the branch tip at dispatch time, so a merge"
+            echo "     landing in between would release the wrong tree."
+            echo "  5. Once the run has started, merges can resume."
           fi
