@@ -10,6 +10,7 @@ set -euo pipefail
 
 UV_VERSION="0.11.31"
 RUFF_VERSION="0.15.22"
+MYPY_VERSION="2.3.0"
 SHELLCHECK_VERSION="0.11.0"
 KTLINT_VERSION="1.8.0"
 
@@ -30,54 +31,63 @@ fi
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 
-have() { command -v "$1" >/dev/null 2>&1; }
+# Exact version token, not a substring: a plain `grep 0.11.3` is satisfied by 0.11.31, so a pin
+# could silently accept the wrong build.
+version_is() { # version_is <command> <expected-version>
+    command -v "$1" >/dev/null 2>&1 || return 1
+    "$1" --version 2>/dev/null | grep -qE "(^|[^0-9.])${2//./\\.}([^0-9.]|\$)"
+}
 
 # --- uv: installs the Python tools without needing a system pip (there is not one here) ---
-if ! have uv || ! uv --version 2>/dev/null | grep -q "$UV_VERSION"; then
+if version_is uv "$UV_VERSION"; then
+    echo "uv $UV_VERSION already installed"
+else
     echo "installing uv $UV_VERSION"
     curl -fsSL -o "$tmp/uv.tar.gz" \
         "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-x86_64-unknown-linux-gnu.tar.gz"
     tar xzf "$tmp/uv.tar.gz" -C "$tmp"
     install -m 755 "$tmp/uv-x86_64-unknown-linux-gnu/uv" "$BIN_DIR/uv"
-else
-    echo "uv $UV_VERSION already installed"
 fi
+# Resolve after the branch. An already-satisfied uv may live anywhere on PATH — the official
+# installer puts it in ~/.cargo/bin — so assuming "$BIN_DIR/uv" aborts the run for anyone who
+# already had it.
+UV="$(command -v uv || echo "$BIN_DIR/uv")"
 
 # --- ruff: formatter and linter for the Python under scripts/ ---
-if ! have ruff || ! ruff --version 2>/dev/null | grep -q "$RUFF_VERSION"; then
-    echo "installing ruff $RUFF_VERSION"
-    "$BIN_DIR/uv" tool install --force "ruff@${RUFF_VERSION}" >/dev/null
-else
+if version_is ruff "$RUFF_VERSION"; then
     echo "ruff $RUFF_VERSION already installed"
+else
+    echo "installing ruff $RUFF_VERSION"
+    "$UV" tool install --force "ruff@${RUFF_VERSION}" >/dev/null
 fi
 
 # --- mypy: the type-checker layer for those same scripts ---
-if ! have mypy; then
-    echo "installing mypy"
-    "$BIN_DIR/uv" tool install --force mypy >/dev/null
+if version_is mypy "$MYPY_VERSION"; then
+    echo "mypy $MYPY_VERSION already installed"
 else
-    echo "mypy already installed ($(mypy --version))"
+    echo "installing mypy $MYPY_VERSION"
+    "$UV" tool install --force "mypy==${MYPY_VERSION}" >/dev/null
 fi
 
 # --- shellcheck: ./check and the release scripts are shell, and were the last unchecked code ---
-if ! have shellcheck || ! shellcheck --version 2>/dev/null | grep -q "$SHELLCHECK_VERSION"; then
+if version_is shellcheck "$SHELLCHECK_VERSION"; then
+    echo "shellcheck $SHELLCHECK_VERSION already installed"
+else
     echo "installing shellcheck $SHELLCHECK_VERSION"
     curl -fsSL -o "$tmp/sc.tar.xz" \
         "https://github.com/koalaman/shellcheck/releases/download/v${SHELLCHECK_VERSION}/shellcheck-v${SHELLCHECK_VERSION}.linux.x86_64.tar.xz"
     tar xJf "$tmp/sc.tar.xz" -C "$tmp"
     install -m 755 "$tmp/shellcheck-v${SHELLCHECK_VERSION}/shellcheck" "$BIN_DIR/shellcheck"
-else
-    echo "shellcheck $SHELLCHECK_VERSION already installed"
 fi
 
 # --- ktlint CLI: optional. Only the format-on-write hook uses it; ktlintCheck is the real gate. ---
-if ! have ktlint || ! ktlint --version 2>/dev/null | grep -q "$KTLINT_VERSION"; then
+if version_is ktlint "$KTLINT_VERSION"; then
+    echo "ktlint $KTLINT_VERSION already installed"
+else
     echo "installing ktlint $KTLINT_VERSION (optional — powers format-on-write)"
     curl -fsSL -o "$tmp/ktlint" \
         "https://github.com/pinterest/ktlint/releases/download/${KTLINT_VERSION}/ktlint"
     install -m 755 "$tmp/ktlint" "$BIN_DIR/ktlint"
-else
-    echo "ktlint $KTLINT_VERSION already installed"
 fi
 
 echo

@@ -35,26 +35,81 @@ GRANDFATHERED_LONG_FILES = {
 # JSON rather than their compile.
 SERIALIZABLE_BANNED_DIRS = ("/provider/", "/http/")
 
-BLOCK_COMMENT = re.compile(r"/\*.*?\*/", re.DOTALL)
-LINE_COMMENT = re.compile(r"//[^\n]*")
-TRIPLE_STRING = re.compile(r'""".*?"""', re.DOTALL)
-CHAR_LITERAL = re.compile(r"'(?:\\.|[^'\\])'")
-STRING_LITERAL = re.compile(r'"(?:\\.|[^"\\\n])*"')
+# ONE alternation matched in a single left-to-right pass. Running these as five sequential
+# re.sub passes is wrong and silently disables the gate: `LINE_COMMENT` applied before
+# `STRING_LITERAL` treats the `//` in "https://host/" as a comment and blanks the rest of the
+# line, so `"https://host/" + u!!.trim()` reported clean. A single pass cannot do that, because
+# whichever construct opens first consumes the ones nested inside it.
+#
+# Order within the alternation is the tie-break at a given position: `"""` must be tried before
+# `"`, and both before the `//` that may sit inside them.
+NOISE = re.compile(
+    r"(?P<block>/\*.*?\*/)"
+    r'|(?P<triple>""".*?""")'
+    r"|(?P<line>//[^\n]*)"
+    r"|(?P<char>'(?:\\.|[^'\\])*')"
+    r'|(?P<string>"(?:\\.|[^"\\\n])*")',
+    re.DOTALL,
+)
+
+
+def _blank_run(text: str) -> str:
+    """Whitespace of the same length, keeping newlines so line numbers survive."""
+    return re.sub(r"[^\n]", " ", text)
+
+
+def _blank_literal(text: str) -> str:
+    """Blank a string literal but keep `${...}` template expressions, which are code.
+
+    `"name is ${u!!.trim()}"` contains a real not-null assertion. Blanking the whole literal
+    hides it, and interpolation is where `!!` most often hides in Kotlin.
+    """
+    out: list[str] = []
+    i = 0
+    while i < len(text):
+        start = text.find("${", i)
+        if start < 0:
+            out.append(_blank_run(text[i:]))
+            break
+        out.append(_blank_run(text[i:start]))
+
+        # Walk to the brace that closes this one, so `${list.map { it }}` survives intact.
+        depth = 0
+        end = start + 1
+        while end < len(text):
+            if text[end] == "{":
+                depth += 1
+            elif text[end] == "}":
+                depth -= 1
+                if depth == 0:
+                    end += 1
+                    break
+            end += 1
+        else:
+            # Unterminated — treat the remainder as literal rather than guessing.
+            out.append(_blank_run(text[start:]))
+            break
+
+        # Blank the `${` and `}` delimiters, keep the expression. Lengths are preserved so the
+        # reported column and every later line number still match the original file.
+        out.append("  " + text[start + 2 : end - 1] + " ")
+        i = end
+    return "".join(out)
 
 
 def strip_noise(source: str) -> str:
-    """Blank out comments and string literals so a `!!` inside one is not a violation.
+    """Blank comments and string literals so a `!!` inside one is not a violation.
 
-    Replaces with same-length whitespace runs rather than deleting, so reported line numbers
-    still match the original file.
+    Replaces with same-length whitespace rather than deleting, so reported line numbers still
+    match the original file.
     """
 
     def blank(match: re.Match[str]) -> str:
-        return re.sub(r"[^\n]", " ", match.group(0))
+        if match.lastgroup in ("string", "triple"):
+            return _blank_literal(match.group(0))
+        return _blank_run(match.group(0))
 
-    for pattern in (BLOCK_COMMENT, TRIPLE_STRING, LINE_COMMENT, CHAR_LITERAL, STRING_LITERAL):
-        source = pattern.sub(blank, source)
-    return source
+    return NOISE.sub(blank, source)
 
 
 def main_sources(root: Path) -> list[Path]:
@@ -72,18 +127,22 @@ def main_sources(root: Path) -> list[Path]:
 
 
 def check_no_double_bang(path: Path, rel: str, source: str) -> list[str]:
+    """Report every line whose code contains `!!`.
+
+    Any `!!` counts. An earlier version skipped `!!=` to avoid the `!==` operator, but `!==`
+    contains no `!!` at all, so that guard caught nothing it meant to and did skip `u!!==v`,
+    which is a real violation. The remaining false positive is repeated negation (`!!flag`),
+    which is rare and loud; a false negative here is silent, and silent is the worse failure
+    for a gate.
+    """
     findings = []
     for lineno, line in enumerate(strip_noise(source).splitlines(), start=1):
-        # `!!=` is not the not-null assertion; neither is the `!==` identity operator.
-        for match in re.finditer(r"!!", line):
-            tail = line[match.end() : match.end() + 1]
-            if tail not in ("=",):
-                findings.append(
-                    f"::error file={rel},line={lineno}::`!!` is banned in main sources. "
-                    f"Handle the null: use `?:` with a real fallback, an early return, or "
-                    f'`requireNotNull(x) {{ "why this cannot be null" }}` if it truly cannot be.'
-                )
-                break
+        if "!!" in line:
+            findings.append(
+                f"::error file={rel},line={lineno}::`!!` is banned in main sources. "
+                f"Handle the null: use `?:` with a real fallback, an early return, or "
+                f'`requireNotNull(x) {{ "why this cannot be null" }}` if it truly cannot be.'
+            )
     return findings
 
 
@@ -131,7 +190,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--root", help="repository root (default: inferred from this file)")
     args = parser.parse_args(argv)
 
-    root = Path(args.root) if args.root else Path(__file__).resolve().parent.parent.parent
+    # Resolved, because the demo/ exclusion compares absolute path prefixes — with `--root .`
+    # an unresolved root makes that comparison fail and silently starts scanning demo/.
+    root = Path(args.root).resolve() if args.root else Path(__file__).resolve().parent.parent.parent
     findings = run(root)
 
     for finding in findings:

@@ -24,9 +24,11 @@ no off-the-shelf tool checks — across both languages in the repo:
 | Type checker | kotlinc (in `build`) | mypy | — |
 | Custom | `check_conventions.py` | — | — |
 
-**A missing tool fails the run — it never skips.** A gate that silently skips when its tool is
-absent reports green while checking nothing, which is worse than no gate, because this file would
-then assert something false.
+**A missing *or mismatched* tool fails the run — it never skips.** A gate that silently skips when
+its tool is absent reports green while checking nothing, which is worse than no gate, because this
+file would then assert something false. `./check` verifies the pinned version too, not just
+presence: formatter output differs between releases, so an unpinned tool reintroduces exactly the
+local/CI disagreement one command is supposed to remove.
 
 ## Enforced by
 
@@ -84,7 +86,14 @@ and it is where drift accumulates silently — so it gets read, not skimmed.
   `pull_request` rule would break `release.yml`'s `git push origin main:dev` fast-forward unless
   the Actions app is given a bypass.
 - **`demo/` is exempt from house style.** Neither ktlint nor the convention rules cover it, because
-  its job is to compile against the published surface like an external consumer would.
+  its job is to compile against the published surface like an external consumer would. Its shell
+  (`demo/run.sh`) *is* shellchecked — that exemption is about Kotlin style, not correctness.
+- **`check_conventions.py` approximates the Kotlin lexer.** `strip_noise()` handles comments,
+  string literals, raw strings, char literals and `${...}` interpolation, which covers the shapes
+  that occur here, but it is regex-based and a sufficiently strange construct could still fool it.
+  Every hole found so far has a regression test. The known false positive is repeated negation
+  (`!!!flag`), reported as a violation; that trade is deliberate, because a false positive is loud
+  and a false negative is silent.
 
 ## Decisions
 
@@ -125,3 +134,21 @@ change is a reviewed commit rather than a CI failure nobody caused.
 
 Rejected: black + flake8 + isort. ruff is one binary covering all three, and this repo needed a
 formatter and a linter for 940 lines of script, not three dependencies.
+
+### 2026-07-23: the convention gate lexes in one pass, not five
+
+`strip_noise()` originally applied five regexes in sequence — block comment, raw string, line
+comment, char, string. That is wrong in a way that fails silently: the line-comment pass runs over
+text the string pass has not consumed yet, so the `//` in `"https://host/"` was treated as a
+comment and blanked the rest of the line. `"https://host/" + u!!.trim()` reported clean, and this
+repo builds URLs on nearly every provider line. Three more holes had the same shape (`/*` inside a
+string, `"""` inside a comment), plus `!!` inside `${...}` interpolation, which is where it most
+often hides in Kotlin.
+
+The fix is one alternation matched left-to-right in a single pass, so whichever construct opens
+first consumes whatever is nested inside it, plus brace-balanced preservation of template
+expressions. Each hole has a regression test.
+
+Rejected: a real Kotlin lexer. Correct, and far more than a three-rule gate needs. Rejected too:
+keeping the `!!=` guard, which was written to protect the `!==` operator that contains no `!!` —
+it excluded nothing it intended and did skip the genuine `u!!==v`.

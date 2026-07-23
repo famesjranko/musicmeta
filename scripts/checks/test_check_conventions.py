@@ -57,13 +57,98 @@ class ConventionsTest(unittest.TestCase):
         # Then nothing is reported, because neither is a not-null assertion
         self.assertEqual(findings, [])
 
-    def test_not_equals_is_not_a_double_bang(self):
-        # Given the `!==` identity operator and a negated comparison
-        body = "package a\n\nval b = x !== y\nval c = !!!flag\n"
+    def test_identity_operator_is_not_a_double_bang(self):
+        # Given the `!==` identity operator, which contains no `!!` at all
+        body = "package a\n\nval b = x !== y\n"
         # When the check runs
         findings = self.findings_for("musicmeta-core/src/main/kotlin/A.kt", body)
-        # Then only the genuine double-negation-adjacent `!!` is caught, not `!==`
-        self.assertTrue(all("line=3" not in f for f in findings))
+        # Then nothing is reported
+        self.assertEqual(findings, [])
+
+    def test_double_bang_glued_to_an_equality_operator_is_reported(self):
+        # Given `u!!==v`, valid Kotlin that the old `!!=` guard skipped
+        body = "package a\n\nval b = u!!==v\n"
+        # When the check runs
+        findings = self.findings_for("musicmeta-core/src/main/kotlin/A.kt", body)
+        # Then it is reported — it is a genuine not-null assertion
+        self.assertEqual(len(findings), 1)
+
+    def test_repeated_negation_is_a_known_false_positive(self):
+        # Given repeated negation, which is not a not-null assertion
+        body = "package a\n\nval c = !!!flag\n"
+        # When the check runs
+        findings = self.findings_for("musicmeta-core/src/main/kotlin/A.kt", body)
+        # Then it IS reported. Accepted deliberately: distinguishing it needs a real lexer, it is
+        # rare in Kotlin, and a loud false positive beats the silent false negative that avoiding
+        # it would reintroduce.
+        self.assertEqual(len(findings), 1)
+
+    # --- strip_noise holes found in review of #47. Every one was a silent false negative. ---
+
+    def test_double_bang_after_a_url_string_is_reported(self):
+        # Given a `!!` on the same line as a URL, whose "//" previously looked like a comment
+        body = 'package a\n\nfun f(u: String?) = "https://example.com/" + u!!.trim()\n'
+        # When the check runs
+        findings = self.findings_for("musicmeta-core/src/main/kotlin/A.kt", body)
+        # Then it is reported — this is the shape almost every provider line in this repo takes
+        self.assertEqual(len(findings), 1, "a '//' inside a string must not blank the rest of the line")
+
+    def test_double_bang_after_a_string_containing_block_comment_open_is_reported(self):
+        # Given a string holding "/*", which previously blanked everything to the next "*/"
+        body = 'package a\n\nval glob = "src/*"\nfun g(u: String?) = u!!.trim()\nval o = "*/main"\n'
+        # When the check runs
+        findings = self.findings_for("musicmeta-core/src/main/kotlin/A.kt", body)
+        # Then the `!!` between them is still seen
+        self.assertEqual(len(findings), 1)
+
+    def test_double_bang_after_a_comment_containing_triple_quote_is_reported(self):
+        # Given a line comment mentioning triple quotes, which previously opened a fake raw string
+        body = 'package a\n\n// prose about """ quoting\nfun g(u: String?) = u!!.trim()\n// close """\n'
+        # When the check runs
+        findings = self.findings_for("musicmeta-core/src/main/kotlin/A.kt", body)
+        # Then the code between the two comments is still scanned
+        self.assertEqual(len(findings), 1)
+
+    def test_double_bang_inside_a_string_template_is_reported(self):
+        # Given `!!` inside `${...}`, which is code even though it sits within a string literal
+        body = 'package a\n\nfun g(u: String?) = "name is ${u!!.trim()}"\n'
+        # When the check runs
+        findings = self.findings_for("musicmeta-core/src/main/kotlin/A.kt", body)
+        # Then it is reported — interpolation is where `!!` most often hides
+        self.assertEqual(len(findings), 1)
+
+    def test_nested_braces_in_a_template_do_not_swallow_the_closing_brace(self):
+        # Given a template whose expression contains its own braces
+        body = 'package a\n\nfun g(u: List<String>?) = "x ${u!!.map { it }} y!!z"\n'
+        # When the check runs
+        findings = self.findings_for("musicmeta-core/src/main/kotlin/A.kt", body)
+        # Then the `!!` in the expression is caught and the trailing literal "y!!z" is not
+        self.assertEqual(len(findings), 1)
+
+    def test_literal_text_around_a_template_is_still_blanked(self):
+        # Given `!!` in the literal part of an interpolated string, which is not code
+        body = 'package a\n\nval s = "loud!! ${name} still loud!!"\n'
+        # When the check runs
+        findings = self.findings_for("musicmeta-core/src/main/kotlin/A.kt", body)
+        # Then nothing is reported — only the ${...} span counts as code
+        self.assertEqual(findings, [])
+
+    def test_root_given_as_dot_still_excludes_demo(self):
+        # Given --root passed as a relative path, where prefix matching previously failed
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.write(root, "demo/src/main/kotlin/F.kt", "package a\n\nfun f(x: String?) = x!!\n")
+            cwd = Path.cwd()
+            try:
+                import os
+
+                os.chdir(root)
+                # When the check runs with a relative root
+                findings = run(Path(".").resolve())
+            finally:
+                os.chdir(cwd)
+        # Then demo/ is still excluded
+        self.assertEqual(findings, [])
 
     def test_test_sources_are_not_scanned(self):
         # Given a test source using `!!`, which is allowed there

@@ -61,6 +61,9 @@ ktlint_standard_no-wildcard-imports = disabled
 ktlint_standard_property-naming = disabled
 
 # Generated ABI dumps: apiCheck compares them byte-for-byte, including a trailing blank line.
-[api/*.api]
+# `**/` is required — an EditorConfig pattern containing a `/` anchors at this file's directory,
+# so a bare `[api/*.api]` matches only ./api/ and never musicmeta-*/api/, silently leaving these
+# two settings on for exactly the files they exist to protect.
+[**/api/*.api]
 insert_final_newline = false
 trim_trailing_whitespace = false
