@@ -60,6 +60,31 @@ naming:
   VariableNaming:
     excludes: ['**/test/**']
 
+coroutines:
+  # 20 of the 57 findings the typed tasks add, and all 20 sit in the two HttpClient implementations.
+  # The rule exists so a dispatcher can be swapped for a test one, but HttpClient *is* the seam
+  # here: it is a public interface and tests inject a FakeHttpClient rather than a dispatcher.
+  # Making the dispatcher a constructor parameter would add a public parameter to both classes to
+  # satisfy a rule whose goal the design already meets.
+  #
+  # Scoped to those two files rather than turned off. Evidence about two classes is not evidence
+  # about the repository: a hard-coded Dispatchers.IO in an engine, worker, cache or provider has
+  # none of the reasoning above behind it, and must still fail.
+  InjectDispatcher:
+    excludes:
+      - '**/http/DefaultHttpClient.kt'
+      - '**/okhttp/OkHttpEnrichmentClient.kt'
+
+potential-bugs:
+  # `!!` in test sources stays allowed, and this makes that a decision rather than an inherited
+  # default. detekt ships UnsafeCallOnNullableType already excluding **/test/**; the sibling rule
+  # does not, so it is listed here too. 100 `!!` live in tests, asserting a fixture is present —
+  # a failed assertion there is a test failure with a stack trace, not a consumer's crash.
+  # Main sources are covered by check_conventions.py, which bans every `!!` including on platform
+  # types that neither detekt rule sees (#60).
+  UnnecessaryNotNullOperator:
+    excludes: ['**/test/**', '**/androidTest/**']
+
 exceptions:
   # Providers deliberately catch broadly and map anything to EnrichmentResult.Error, because a
   # provider failure must degrade the chain rather than propagate. Narrowing these would change

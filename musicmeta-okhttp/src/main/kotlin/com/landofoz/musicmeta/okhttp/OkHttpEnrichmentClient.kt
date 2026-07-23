@@ -192,7 +192,7 @@ class OkHttpEnrichmentClient(
             code in 400..499 -> HttpResult.ClientError(code, response.body?.string())
             code in 500..599 -> HttpResult.ServerError(code, response.body?.string())
             code in 200..299 -> {
-                val text = response.body?.string() ?: ""
+                val text = response.body?.string().orEmpty()
                 try {
                     HttpResult.Ok(parse(text), code)
                 } catch (e: JSONException) {

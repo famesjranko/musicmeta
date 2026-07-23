@@ -11,7 +11,7 @@ data class AlbumProfile(val title: String, val artist: String, val results: Enri
     val identifiers: EnrichmentIdentifiers get() = results.identity?.identifiers ?: EnrichmentIdentifiers()
     val identityMatch: IdentityMatch? get() = results.identity?.match
     val identityMatchScore: Int? get() = results.identity?.matchScore
-    val suggestions: List<SearchCandidate> get() = results.identity?.suggestions ?: emptyList()
+    val suggestions: List<SearchCandidate> get() = results.identity?.suggestions.orEmpty()
 
     // --- Artwork ---
     val artwork: EnrichmentData.Artwork? get() = results.albumArt()
@@ -28,12 +28,12 @@ data class AlbumProfile(val title: String, val artist: String, val results: Enri
 
     // --- Tracklist & Editions ---
     val tracks: List<TrackInfo> get() =
-        results.get<EnrichmentData.Tracklist>(EnrichmentType.ALBUM_TRACKS)?.tracks ?: emptyList()
+        results.get<EnrichmentData.Tracklist>(EnrichmentType.ALBUM_TRACKS)?.tracks.orEmpty()
     val editions: List<ReleaseEdition> get() =
-        results.get<EnrichmentData.ReleaseEditions>(EnrichmentType.RELEASE_EDITIONS)?.editions ?: emptyList()
+        results.get<EnrichmentData.ReleaseEditions>(EnrichmentType.RELEASE_EDITIONS)?.editions.orEmpty()
 
     // --- Recommendations ---
     val similarAlbums: EnrichmentData.SimilarAlbums? get() = results.similarAlbums()
     val genreDiscovery: List<GenreAffinity> get() =
-        results.get<EnrichmentData.GenreDiscovery>(EnrichmentType.GENRE_DISCOVERY)?.relatedGenres ?: emptyList()
+        results.get<EnrichmentData.GenreDiscovery>(EnrichmentType.GENRE_DISCOVERY)?.relatedGenres.orEmpty()
 }

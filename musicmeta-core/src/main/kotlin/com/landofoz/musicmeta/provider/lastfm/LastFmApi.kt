@@ -149,7 +149,7 @@ internal class LastFmApi(
             val artistObj = obj.optJSONObject("artist")
             LastFmSimilarTrack(
                 title = obj.optString("name", ""),
-                artist = artistObj?.optString("name", "") ?: "",
+                artist = artistObj?.optString("name", "").orEmpty(),
                 matchScore = obj.optString("match", "0").toFloatOrNull() ?: 0f,
                 mbid = obj.optString("mbid").takeIf { it.isNotBlank() },
             )
@@ -161,7 +161,7 @@ internal class LastFmApi(
         val artist = track.optJSONObject("artist")
         return LastFmTrackInfo(
             title = track.optString("name", ""),
-            artist = artist?.optString("name", "") ?: "",
+            artist = artist?.optString("name", "").orEmpty(),
             playcount = track.optString("playcount")?.toLongOrNull(),
             listeners = track.optString("listeners")?.toLongOrNull(),
             mbid = track.optString("mbid").takeIf { it.isNotBlank() },
@@ -201,7 +201,7 @@ internal class LastFmApi(
             val artistObj = obj.optJSONObject("artist")
             LastFmTopTrack(
                 title = obj.optString("name", ""),
-                artist = artistObj?.optString("name", "") ?: "",
+                artist = artistObj?.optString("name", "").orEmpty(),
                 playcount = obj.optString("playcount")?.toLongOrNull(),
                 listeners = obj.optString("listeners")?.toLongOrNull(),
                 mbid = obj.optString("mbid").takeIf { it.isNotBlank() },

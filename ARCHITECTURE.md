@@ -11,7 +11,7 @@ because the config is the thing that fails.
 ```bash
 ./scripts/bootstrap.sh   # once: installs the pinned tools ./check requires
 ./check                  # everything
-./check --fast           # skips the lexer differential, build and demo canary — edit loop only
+./check --fast           # skips detekt, the lexer differential, build and demo — edit loop only
 ```
 
 `./check` runs four layers — a formatter, a linter, a type checker, and a custom linter for rules
@@ -36,8 +36,8 @@ local/CI disagreement one command is supposed to remove.
 |---|---|---|
 | Public ABI matches the committed baseline | `api/*.api` + binary-compatibility-validator | `./gradlew apiCheck` (inside `build`) |
 | Kotlin formatting and import hygiene | `.editorconfig` + ktlint | `./gradlew ktlintCheck` |
-| Kotlin complexity and structure — *syntactic rules only* | `config/detekt.yml` + baselines | `./gradlew detekt` |
-| No `!!` in main sources | `scripts/checks/check_conventions.py` | `./check` |
+| Kotlin complexity, dead code, bug patterns | `config/detekt.yml` + baselines | `./gradlew detektMain detektTest` |
+| No `!!` in main sources — *including on platform types* | `scripts/checks/check_conventions.py` | `./check` |
 | `@Serializable` stays off `provider/` and `http/` types | `scripts/checks/check_conventions.py` | `./check` |
 | Main-source files ≤ 300 lines | `scripts/checks/check_conventions.py` | `./check` |
 | The conventions scanner classifies Kotlin the way Kotlin does | `scripts/checks/test_code_mask.py` vs `KotlinLexer` | `./check` |
@@ -68,13 +68,22 @@ and it is where drift accumulates silently — so it gets read, not skimmed.
   `Builder.build()` allocates a second `DefaultHttpClient` to fill it. Removing the parameter
   changes a public constructor signature, so it is a documented breaking change, not a cleanup —
   tracked in #48.
-- **Every detekt rule that needs type resolution.** The `detekt` task analyses syntax only, so rules
-  that must resolve a type never run and never say so: `UnsafeCallOnNullableType`,
-  `UnnecessaryNotNullOperator`, `UnreachableCode` and the rest of that class. The typed tasks
-  (`detektMain`/`detektTest`) find 57 issues the gate currently reports nothing about. They are
-  marked EXPERIMENTAL by the plugin and pull an `ANDROID_HOME` requirement into `--fast`, so the
-  switch is its own decision — tracked in #58. Until then this row is why the `!!` ban is a
-  `check_conventions.py` rule and not a detekt one.
+- **detekt in `--fast`.** The typed tasks compile before they analyse and the Android variants need
+  `ANDROID_HOME`, so they sit below the `--fast` exit. The edit loop is ktlint plus
+  `check_conventions.py`; detekt runs on every push and in CI. `--fast` was never evidence for a
+  push, and this widens the gap it already had.
+- **`!!` on a platform type, in detekt.** Measured with a three-cell probe: detekt catches a `!!` on
+  a nullable receiver (`UnsafeCallOnNullableType`) and on a definitely-non-null one
+  (`UnnecessaryNotNullOperator`), and catches **neither** on a Java platform type —
+  `System.getProperty("x")!!` passes both, because the check tests for `TypeNullability.NULLABLE`
+  and a flexible type is not that. `check_conventions.py` catches all three, which is why that rule
+  stays after the switch to typed detekt rather than being deleted as redundant (#60).
+- **Type resolution in detekt is EXPERIMENTAL.** `detektMain`/`detektTest` carry the plugin's
+  experimental marking, and so does every alternative in 1.23.x — hand-wiring `classpath`, the CLI
+  flags, the compiler plugin. Accepted deliberately: the stable task does not check the rules this
+  row exists for. detekt 1.23.8 is also built against Kotlin 2.0.21 / AGP 8.8.1 while this repo runs
+  Kotlin 2.1.0 / AGP 8.7.3, so a detekt or AGP bump needs all three modules' tasks re-run, not just
+  core's.
 - **Test-file length.** Excluded from the 300-line cap on purpose: given-when-then narratives are
   legitimately long, and a cap here would push people to split coherent suites for the wrong reason.
 - **Test-source style.** Wildcard imports and SCREAMING_CASE fixture names are allowed in tests

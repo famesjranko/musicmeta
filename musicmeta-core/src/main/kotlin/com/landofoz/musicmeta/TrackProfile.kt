@@ -11,7 +11,7 @@ data class TrackProfile(val title: String, val artist: String, val results: Enri
     val identifiers: EnrichmentIdentifiers get() = results.identity?.identifiers ?: EnrichmentIdentifiers()
     val identityMatch: IdentityMatch? get() = results.identity?.match
     val identityMatchScore: Int? get() = results.identity?.matchScore
-    val suggestions: List<SearchCandidate> get() = results.identity?.suggestions ?: emptyList()
+    val suggestions: List<SearchCandidate> get() = results.identity?.suggestions.orEmpty()
 
     // --- Metadata ---
     val genres: List<GenreTag> get() = results.genreTags()
@@ -27,5 +27,5 @@ data class TrackProfile(val title: String, val artist: String, val results: Enri
     val preview: EnrichmentData.TrackPreview? get() =
         results.get<EnrichmentData.TrackPreview>(EnrichmentType.TRACK_PREVIEW)
     val genreDiscovery: List<GenreAffinity> get() =
-        results.get<EnrichmentData.GenreDiscovery>(EnrichmentType.GENRE_DISCOVERY)?.relatedGenres ?: emptyList()
+        results.get<EnrichmentData.GenreDiscovery>(EnrichmentType.GENRE_DISCOVERY)?.relatedGenres.orEmpty()
 }

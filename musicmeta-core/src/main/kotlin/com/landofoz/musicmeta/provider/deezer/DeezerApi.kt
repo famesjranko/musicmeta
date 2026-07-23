@@ -35,7 +35,7 @@ internal class DeezerApi(
             DeezerAlbumResult(
                 id = album.optLong("id"),
                 title = album.optString("title", ""),
-                artistName = artist?.optString("name", "") ?: "",
+                artistName = artist?.optString("name", "").orEmpty(),
                 coverSmall = album.optString("cover_small").takeIfNotEmpty(),
                 coverMedium = album.optString("cover_medium").takeIfNotEmpty(),
                 coverBig = album.optString("cover_big").takeIfNotEmpty(),
@@ -147,7 +147,7 @@ internal class DeezerApi(
         for (i in 0 until data.length()) {
             val track = data.getJSONObject(i)
             val trackArtist = track.optJSONObject("artist")
-            val artistName = trackArtist?.optString("name", "") ?: ""
+            val artistName = trackArtist?.optString("name", "").orEmpty()
             return DeezerTrackSearchResult(
                 id = track.optLong("id"),
                 title = track.optString("title", ""),
@@ -177,7 +177,7 @@ internal class DeezerApi(
             DeezerRadioTrack(
                 id = track.optLong("id"),
                 title = track.optString("title", ""),
-                artistName = trackArtist?.optString("name", "") ?: "",
+                artistName = trackArtist?.optString("name", "").orEmpty(),
                 albumTitle = album?.optString("title")?.takeIf { it.isNotBlank() },
                 durationSec = track.optInt("duration", 0),
             )
@@ -201,7 +201,7 @@ internal class DeezerApi(
             DeezerTopTrack(
                 id = track.optLong("id"),
                 title = track.optString("title", ""),
-                artistName = artist?.optString("name", "") ?: "",
+                artistName = artist?.optString("name", "").orEmpty(),
                 albumTitle = album?.optString("title")?.takeIf { it.isNotBlank() },
                 durationSec = track.optInt("duration", 0),
                 rank = track.optInt("rank", 0),
@@ -226,7 +226,7 @@ internal class DeezerApi(
             DeezerRadioTrack(
                 id = track.optLong("id"),
                 title = track.optString("title", ""),
-                artistName = artist?.optString("name", "") ?: "",
+                artistName = artist?.optString("name", "").orEmpty(),
                 albumTitle = album?.optString("title")?.takeIf { it.isNotBlank() },
                 durationSec = track.optInt("duration", 0),
             )
@@ -244,7 +244,7 @@ internal class DeezerApi(
         DeezerTrackSearchResult(
             id = json.optLong("id"),
             title = json.optString("title", ""),
-            artistName = artist?.optString("name", "") ?: "",
+            artistName = artist?.optString("name", "").orEmpty(),
             previewUrl = json.optString("preview").takeIf { it.isNotBlank() },
             durationSec = json.optInt("duration").takeIf { it > 0 },
             albumTitle = json.optJSONObject("album")?.optString("title")?.takeIf { it.isNotBlank() },
