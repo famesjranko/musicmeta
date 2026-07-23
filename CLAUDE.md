@@ -76,9 +76,9 @@ Root-package types: `EnrichmentEngine.kt` (interface + the `Builder` wiring prov
   in-tree consumer that compiles against the published surface the way an external one does. Exempt
   from house Kotlin style on purpose (`ARCHITECTURE.md`); `demo/run.sh` is still shellchecked.
 
-Each provider lives in `provider/<name>/` and splits along these four roles — `musicbrainz/` and
-`deezer/` carry extra `internal` files beyond them. The split is load-bearing: the first three roles
-are `internal`, so they can be renamed freely without an `apiDump`:
+Each provider lives in `provider/<name>/` and splits along these four roles — `musicbrainz/` adds
+three `internal` files, `deezer/` a second public provider. The split is load-bearing: the first
+three roles are `internal`, so they can be renamed freely without an `apiDump`:
 
 | File | Holds | Visibility |
 |---|---|---|
