@@ -70,9 +70,6 @@ mypy
 step "conventions"
 python3 scripts/checks/check_conventions.py
 
-step "doc caps"
-python3 scripts/github-workflows/check_doc_caps.py
-
 step "script self-tests"
 # Unguarded, a regression in a release script surfaces only as a release check that silently passes.
 for t in scripts/checks/test_*.py scripts/github-workflows/test_*.py; do

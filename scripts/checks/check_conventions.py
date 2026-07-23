@@ -36,10 +36,13 @@ SERIALIZABLE_BANNED_DIRS = ("/provider/", "/http/")
 
 # A hand-written scanner, not a regex. Kotlin nests: a string can hold a `${...}` template, that
 # template holds code, and that code can hold another string. Regex cannot express that, and two
-# review rounds each found a hole proving it — first five sequential passes letting the `//` in
-# "https://host/" blank real code, then a single alternation whose string branch could not span
-# the nested quote in `"${enc(id!!, "UTF-8")}"` and silently dropped the `!!`. A ~60-line state
-# machine is both correct here and easier to reason about than the alternation it replaces.
+# attempts proved it — five sequential passes let the `//` in "https://host/" blank real code, then
+# a single alternation could not span the nested quote in `"${enc(id!!, "UTF-8")}"`.
+#
+# Every branch below exists because a review found a case that silently hid a real `!!`. The two
+# least obvious are Kotlin lexical rules rather than nesting: a raw string closes on the LAST `"""`
+# of a quote run, and a backtick-escaped identifier may contain `'` or `"`. Both let a stray
+# delimiter reach code position, where it opened a context that ran to end of file.
 #
 # Returns a same-length mask so reported line numbers always match the source.
 
@@ -73,10 +76,18 @@ def _code_mask(source: str) -> list[bool]:
                 blank(i, i + 2)
                 i += 2
                 continue
-            if ctx == "raw" and source.startswith('"""', i):
-                stack.pop()
-                blank(i, i + 3)
-                i += 3
+            if ctx == "raw" and source[i] == '"':
+                # Maximal munch: Kotlin closes a raw string on the LAST `"""` of a quote run, so
+                # `"""he said "hi""""` ends at the 4th quote with `"` as content. Popping on the
+                # first three left a stray quote in code position, which opened a normal string
+                # that swallowed the rest of the file.
+                run = 0
+                while i + run < n and source[i + run] == '"':
+                    run += 1
+                if run >= 3:
+                    stack.pop()
+                blank(i, i + run)
+                i += run
                 continue
             if ctx == "string" and source[i] == '"':
                 stack.pop()
@@ -113,6 +124,21 @@ def _code_mask(source: str) -> list[bool]:
                 else:
                     blank(i, i + 1)
                     i += 1
+            continue
+
+        if source[i] == "`":
+            # A backtick-escaped identifier is a name, not code to scan. kotlinc rejects `/` in
+            # one, so it cannot hide a comment — but `'`, `"`, `$` and braces are all legal and
+            # would otherwise open a context that runs to EOF. Blanked, so `` fun `not!!really` ``
+            # is also not reported as a violation.
+            blank(i, i + 1)
+            i += 1
+            while i < n and source[i] != "`":
+                blank(i, i + 1)
+                i += 1
+            if i < n:
+                blank(i, i + 1)
+                i += 1
             continue
 
         if source.startswith('"""', i):
@@ -189,7 +215,7 @@ def check_no_double_bang(path: Path, rel: str, source: str) -> list[str]:
     for a gate.
     """
     findings = []
-    for lineno, line in enumerate(strip_noise(source).splitlines(), start=1):
+    for lineno, line in enumerate(strip_noise(source).split("\n"), start=1):
         if "!!" in line:
             findings.append(
                 f"::error file={rel},line={lineno}::`!!` is banned in main sources. "
@@ -204,7 +230,7 @@ def check_serializable_placement(path: Path, rel: str, source: str) -> list[str]
     if not any(marker in posix for marker in SERIALIZABLE_BANNED_DIRS):
         return []
     findings = []
-    for lineno, line in enumerate(strip_noise(source).splitlines(), start=1):
+    for lineno, line in enumerate(strip_noise(source).split("\n"), start=1):
         if "@Serializable" in line:
             findings.append(
                 f"::error file={rel},line={lineno}::@Serializable does not belong on a provider "
@@ -215,7 +241,10 @@ def check_serializable_placement(path: Path, rel: str, source: str) -> list[str]
 
 
 def check_file_length(path: Path, rel: str, source: str) -> list[str]:
-    lines = len(source.splitlines())
+    # split("\n"), not splitlines(): the latter also breaks on \f, \x85 and \u2028, so a form
+    # feed — valid Kotlin whitespace — would count as a line here but not in GitHub's annotations.
+    parts = source.split("\n")
+    lines = len(parts) - 1 if parts and parts[-1] == "" else len(parts)
     if lines <= MAX_FILE_LINES or rel in GRANDFATHERED_LONG_FILES:
         return []
     return [

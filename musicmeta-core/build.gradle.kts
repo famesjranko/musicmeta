@@ -16,6 +16,12 @@ java {
 
 // Without this, Kotlin targets whatever JDK runs Gradle while Java targets 17, and the build fails
 // on any machine whose default is not 17. The values coincide only by accident on a JDK 17 box.
+//
+// `jvmToolchain(17)` is the more correct fix and was rejected: on a JDK-21-only machine it needs
+// the foojay resolver, which downloads a JDK from a third-party service at build time — a
+// supply-chain surface this repo does not otherwise have. Accepted gap: Kotlin resolves JDK classes
+// from the running JDK, so a JDK-18+ API can compile locally and fail at runtime on 17. CI on 17
+// catches it.
 kotlin {
     compilerOptions { jvmTarget = JvmTarget.JVM_17 }
 }

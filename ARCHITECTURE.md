@@ -43,7 +43,6 @@ local/CI disagreement one command is supposed to remove.
 | Python formatting and lint | `pyproject.toml` + ruff | `./check` |
 | Python types | `pyproject.toml` + mypy | `./check` |
 | Shell correctness | shellcheck | `./check` |
-| STORIES entries ≤ 1500 chars | `scripts/github-workflows/check_doc_caps.py` | `./check` |
 | Release-note scripts still behave | `scripts/*/test_*.py` | `./check` |
 | Module versions agree with CHANGELOG | `scripts/github-workflows/check_versions.sh` | `release-readiness` job |
 | An external consumer still compiles | `demo/` composite build | `./check`, `demo-canary` job |
@@ -76,15 +75,17 @@ and it is where drift accumulates silently — so it gets read, not skimmed.
   a judgement call no linter makes well.
 - **Conventional commit format.** Nothing validates commit messages. A `commit-msg` hook or a PR
   title check would close this.
-- **"Write each change down once."** The doc-ownership split between CHANGELOG, STORIES, ROADMAP
-  and the issue is prose. Only the STORIES length cap is mechanised.
+- **"Write each change down once."** The doc-ownership split between CHANGELOG, ROADMAP and the
+  issue is prose, and nothing checks it.
 - **Four files over the 300-line cap.** `DefaultEnrichmentEngine`, `DeezerProvider`,
   `GenreTaxonomy`, `MusicBrainzEnricher` predate the rule and are grandfathered in
   `check_conventions.py`, which prints them on every run so they stay visible.
 - **`dev` has no required status checks.** Its ruleset carries only `deletion` and
-  `non_fast_forward`. `build` and `demo-canary` run on every push but do not block. Adding a
-  `pull_request` rule would break `release.yml`'s `git push origin main:dev` fast-forward unless
-  the Actions app is given a bypass.
+  `non_fast_forward`. `build` and `demo-canary` run on every push but do not block. Two things
+  block closing this: `release.yml` fast-forwards with `git push origin main:dev`, which a
+  `pull_request` rule rejects, and `github-actions[bot]` lacks the `RepositoryRole 5` bypass, so a
+  required check would reject the very version-bump push it exists to protect. A PAT would work and
+  was rejected — a rotating credential to paper over a broken chain.
 - **`demo/` is exempt from house style.** Neither ktlint nor the convention rules cover it, because
   its job is to compile against the published surface like an external consumer would. Its shell
   (`demo/run.sh`) *is* shellchecked — that exemption is about Kotlin style, not correctness.

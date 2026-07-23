@@ -12,34 +12,34 @@ only intended; where it and this file disagree, the mechanism wins.
 
 | File | Purpose |
 |------|---------|
-| `ARCHITECTURE.md` | What is enforced, what is admitted as unenforced, and the decisions behind both |
+| `ARCHITECTURE.md` | What is enforced by a mechanism, and what is admitted as unenforced |
 | `README.md` | Project overview, setup instructions, API examples |
 | `CLAUDE.md` | AI coding instructions (this file) |
-| `STORIES.md` | Architectural decisions, progress log, rationale |
 | `CHANGELOG.md` | Release history (user-facing, Keep a Changelog format) |
 | `ROADMAP.md` | Gap analysis, coverage matrix, planned milestones |
 | `docs/project/workflow.md` | Branch topology, worktrees, issue lifecycle, work selection, verification surface |
 | `docs/project/release.md` | Release preparation, dev → main landing, tagging, and publication |
 
 **Write each change down once.** The docs reached 180KB against 408KB of Kotlin because the same
-change was written three or four times in different voices — v0.10.1 alone cost 6.6KB of `CHANGELOG`
-and 10KB of `STORIES` for a one-`try`/`catch` release, and issue #37 has four `STORIES` passages plus
-a `CHANGELOG` bullet. This is the comment rule below, applied to the documents themselves:
+change was written three or four times in different voices. There is no history document: git and
+the PR hold what happened, and a file that restates them drifts from both.
 
 - `CHANGELOG.md` — *what* changed. **One line per change**, headline plus `(#issue)`. It is the
   release note verbatim and is capped at 3000 chars per section, 400 per line; the release fails if
   it does not fit.
-- `STORIES.md` — *why*, and only for decisions that constrain what can be built next. Not one entry
-  per issue: a CI tweak that closes an issue is a `CHANGELOG` line. The entries that earn their keep
-  are the ones recording **reversals and rejected options** — what was tried, what was declined, and
-  why — because those are what stop a future reader repeating the work. **Capped at 1500 chars per
-  entry**, enforced by `check_doc_caps.py` in `build.yml`. The cap is anchored on the slim end of the
-  file (the tight, useful entries run 1210–1566), not its 2086 median — a median just ratifies the
-  drift. Needing more means the detail belongs in the PR, or it is really two decisions.
+- **Why a thing is the way it is — inline, next to the mechanism.** The comment beside the config
+  or the code is read at the moment it matters, by whoever is about to change it. A separate
+  rationale file is read either never or wholesale, and the second is how it becomes doctrine.
+- **A rejected option worth recording is a comment at the thing that would otherwise be "improved".**
+  Say what was declined and why, so the next reader does not re-derive it.
 - `ROADMAP.md` — where the project is going. Link to the `CHANGELOG`, do not re-summarise it.
+- `ARCHITECTURE.md` — only the two registers. It gets a row when a gate changes, not a narrative.
 - The issue or PR — everything else. It is already written there; that is the point.
 
-This applies to new entries. Existing history stays as written.
+`STORIES.md` was deleted (2026-07-23). It claimed to be immutable decision history but kept
+describing present behaviour, so entries needed correcting — one claim about the demo canary was
+patched across four commits before landing in this file as a pitfall. **If an entry can become
+wrong, it was never history.** That is the test to apply before writing any of the above.
 
 ## Build & Test Commands
 
@@ -77,7 +77,6 @@ This applies to new entries. Existing history stays as written.
 # Release checks, the same ones CI runs (see docs/project/release.md)
 ./scripts/github-workflows/check_versions.sh                          # modules agree with CHANGELOG
 python3 scripts/github-workflows/build_release_notes.py <version>     # what the release note will be
-python3 scripts/github-workflows/check_doc_caps.py                    # STORIES entry length cap
 (cd scripts/github-workflows && for t in test_*.py; do python3 "$t"; done)
 ```
 

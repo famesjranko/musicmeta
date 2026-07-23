@@ -214,6 +214,71 @@ class ConventionsTest(unittest.TestCase):
                 repr(source),
             )
 
+    # --- lexical rules found missing in the third review, each confirmed against kotlinc ---
+
+    def test_raw_string_ending_in_a_quote_does_not_leak(self):
+        # Given a raw string whose content ends with a quote, so it closes on a run of four.
+        # Kotlin closes on the LAST three; closing on the first left a stray quote in code
+        # position that opened a normal string and swallowed the rest of the file.
+        body = 'package a\n\nval banner = """he said "hi""""\nfun boom(u: String?) = u!!.trim()\n'
+        # When the check runs
+        findings = self.findings_for("musicmeta-core/src/main/kotlin/A.kt", body)
+        # Then the `!!` after it is still reported
+        self.assertEqual(len(findings), 1)
+        self.assertIn("line=4", findings[0])
+
+    def test_raw_string_with_a_long_quote_run_does_not_leak(self):
+        # Given a seven-quote run, which also terminates on its last three
+        body = 'package a\n\nval s = """x""""""\nfun boom(u: String?) = u!!.trim()\n'
+        # When the check runs
+        findings = self.findings_for("musicmeta-core/src/main/kotlin/A.kt", body)
+        # Then the `!!` is reported
+        self.assertEqual(len(findings), 1)
+
+    def test_empty_raw_string_still_closes(self):
+        # Given an empty raw string — six quotes, which must not be read as one open plus content
+        body = 'package a\n\nval s = """"""\nfun boom(u: String?) = u!!.trim()\n'
+        # When the check runs
+        findings = self.findings_for("musicmeta-core/src/main/kotlin/A.kt", body)
+        # Then the `!!` after it is reported
+        self.assertEqual(len(findings), 1)
+
+    def test_backtick_identifier_with_an_apostrophe_does_not_leak(self):
+        # Given a backtick-escaped name containing `'`, which previously opened a char literal
+        # that ran to EOF
+        body = "package a\n\nfun `client's id`() = 1\nfun boom(u: String?) = u!!.trim()\n"
+        # When the check runs
+        findings = self.findings_for("musicmeta-core/src/main/kotlin/A.kt", body)
+        # Then the `!!` after it is still reported
+        self.assertEqual(len(findings), 1)
+        self.assertIn("line=4", findings[0])
+
+    def test_backtick_identifier_with_a_quote_does_not_leak(self):
+        # Given a backtick-escaped name containing an odd `"` — legal Kotlin, verified with kotlinc
+        body = 'package a\n\nfun `26" wide`() = 1\nfun boom(u: String?) = u!!.trim()\n'
+        # When the check runs
+        findings = self.findings_for("musicmeta-core/src/main/kotlin/A.kt", body)
+        # Then the `!!` is reported
+        self.assertEqual(len(findings), 1)
+
+    def test_double_bang_inside_a_backtick_identifier_is_not_reported(self):
+        # Given `!!` inside an escaped name, which is part of the name and not an assertion
+        body = "package a\n\nfun `not!!really`() = 1\n"
+        # When the check runs
+        findings = self.findings_for("musicmeta-core/src/main/kotlin/A.kt", body)
+        # Then nothing is reported
+        self.assertEqual(findings, [])
+
+    def test_form_feed_does_not_shift_reported_line_numbers(self):
+        # Given a form feed, which is valid Kotlin whitespace but which splitlines() counts as a
+        # line break while GitHub's annotations count only \n
+        body = "package a\n\nval x = 1\x0c\nfun g(u: String?) = u!!.trim()\n"
+        # When the check runs
+        findings = self.findings_for("musicmeta-core/src/main/kotlin/A.kt", body)
+        # Then the reported line matches \n-counting, which is what the annotation resolves against
+        self.assertEqual(len(findings), 1)
+        self.assertIn("line=4", findings[0])
+
     def test_root_given_as_dot_still_excludes_demo(self):
         # Given --root passed as a relative path, where prefix matching previously failed
         with tempfile.TemporaryDirectory() as tmp:

@@ -203,6 +203,10 @@ class DefaultEnrichmentEngine(
         uncachedTypes: MutableSet<EnrichmentType>,
     ): Pair<EnrichmentRequest, EnrichmentResult?> {
         val provider = registry.identityProvider() ?: return request to null
+        // This bare catch sits inside the caller's `withTimeout` and looks like it swallows the
+        // deadline. It does not: probed at 100ms against a 5s provider it still returns
+        // kind=TIMEOUT, because cancellation re-asserts at the next suspension point. Noted so the
+        // same false suspicion is not re-derived.
         val result = try {
             provider.resolveIdentity(request)
         } catch (e: Exception) {
