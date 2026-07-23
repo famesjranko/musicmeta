@@ -6,18 +6,21 @@
 # custom linter for the rules no off-the-shelf tool checks. Ordered fastest-first so a style slip
 # fails in a second rather than after a full Gradle build.
 #
-#   ./check          everything
-#   ./check --fast   skip the build and the demo canary — for the edit loop, not for a push
+#   ./check              everything
+#   ./check --fast       skip the build and the demo canary — for the edit loop, not a push
+#   ./check --skip-demo  CI only: the demo canary is a separate required check there
 set -euo pipefail
 cd "$(dirname "$0")"
 
 FAST=0
-if [ "${1:-}" = "--fast" ]; then
-    FAST=1
-elif [ -n "${1:-}" ]; then
-    echo "usage: ./check [--fast]" >&2
-    exit 64
-fi
+SKIP_DEMO=0
+for arg in "$@"; do
+    case "$arg" in
+        --fast) FAST=1 ;;
+        --skip-demo) SKIP_DEMO=1 ;;
+        *) echo "usage: ./check [--fast] [--skip-demo]" >&2; exit 64 ;;
+    esac
+done
 
 # A gate whose tool is missing must fail, not skip. Skipping reports green while checking nothing,
 # which is worse than having no gate at all — ARCHITECTURE.md would then assert something false.
@@ -85,9 +88,17 @@ fi
 step "build (compile, test, apiCheck)"
 ./gradlew build
 
-step "demo canary"
 # demo/ is a separate composite build that `./gradlew build` never compiles, so this is the only
 # in-tree consumer compiling the way an external one does. It has no wrapper — it borrows the root.
-(cd demo && ../gradlew compileKotlin --quiet)
+#
+# --skip-demo exists for CI only, where `demo-canary` is a separate required status check and
+# would otherwise compile this twice. Locally the default runs it, so one command still covers
+# everything and a green local run stays a superset of what CI verifies.
+if [ "$SKIP_DEMO" = 1 ]; then
+    printf '\n\033[1m--skip-demo: demo canary left to its own CI job\033[0m\n'
+else
+    step "demo canary"
+    (cd demo && ../gradlew compileKotlin --quiet)
+fi
 
 printf '\n\033[1;32mAll checks passed.\033[0m\n'

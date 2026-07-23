@@ -41,7 +41,9 @@ jobs:
       - name: Run the check command
         # The same command developers and agents run locally. CI having its own step list is what
         # makes a CI failure a guessing game, so there is deliberately only one thing to run here.
-        run: ./check
+        # --skip-demo only because demo-canary below is a separate required check; running it here
+        # too would compile demo/ twice. Local `./check` still covers everything.
+        run: ./check --skip-demo
 
       - name: Upload test reports
         if: failure()
@@ -54,10 +56,10 @@ jobs:
   # `demo/` is a separate composite build, so `./gradlew build` never compiles it — this is the only
   # in-tree consumer compiling like an external one. Not a parameter-position guard; see CLAUDE.md.
   #
-  # `./check` already runs this, so the compile happens twice per CI run. The job stays because
-  # `demo-canary` is a required status check in the `main` protection ruleset and reports the
-  # failure under its own name; deleting it means editing that ruleset first, or merges to `main`
-  # block forever waiting for a check that no longer runs.
+  # This is the only place CI compiles demo/ — the build job passes --skip-demo so it is not done
+  # twice. The job stays separate rather than folding into `build` because `demo-canary` is a
+  # required status check in the `main` protection ruleset and reports under its own name; deleting
+  # it would block merges to `main` waiting for a check that no longer runs.
   demo-canary:
     runs-on: ubuntu-latest
     timeout-minutes: 30
