@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Docs and CI only — no library code, so consumers see nothing new beyond 0.10.1.
+Mostly docs and CI, plus one engine fix consumers should know about (#53).
 
 ### Added
 - Releases run from two dispatched workflows: `prepare-release.yml` writes the version everywhere it is consumed, `release.yml` verifies, publishes, then tags
@@ -33,6 +33,7 @@ Docs and CI only — no library code, so consumers see nothing new beyond 0.10.1
 - `build.yml` gains a permissions block, job timeouts, and a shared version check it now uses with `release.yml`
 
 ### Fixed
+- **A cancelled or timed-out `enrich()` no longer opens circuit breakers against healthy providers** — `CancellationException` is an `Exception`, so the broad `catch` on the provider path converted it into `EnrichmentResult.Error`, and `ProviderChain` records an `Error` as a circuit-breaker *failure*. Every `enrichTimeoutMs` expiry therefore counted against providers that never failed, and repeated timeouts opened the circuit against a healthy one, which then got skipped entirely by the eligibility check. `mapError()` now rethrows `CancellationException` instead of classifying it as `ErrorKind.UNKNOWN`, and `ProviderChain` rethrows around both `provider.enrich(...)` call sites; `SimilarAlbumsProvider` now calls `mapError()` rather than hand-rolling its body. `ProviderChain` additionally calls `ensureActive()` before touching the breaker, so a custom provider that swallows the cancellation itself and returns an `Error` cannot record a failure either. Six further sites that swallowed cancellation are fixed: both `search()` paths and identity resolution in `DefaultEnrichmentEngine`, `searchCandidates` in `DeezerProvider` and `ITunesProvider`, and the batch loop in `EnrichmentWorker` (which previously walked the rest of the batch after a stop). Behaviour change for anyone calling `mapError()` from a custom `EnrichmentProvider`: it throws on cancellation instead of returning an `Error`. Public API is unchanged (`apiCheck` green). The guard is `ensureActive()` rather than a blanket `catch (CancellationException) { throw e }`, deliberately: a `CancellationException` raised *inside* a provider — its own `withTimeout` expiring — must stay that provider's error rather than escaping to be reported as the engine's deadline, and a blanket rethrow got that backwards. (#53)
 - The build works when the default JDK is not 17 — `musicmeta-core`, `musicmeta-okhttp` and `demo/` now declare Kotlin's `jvmTarget`, which only `musicmeta-android` did. Kotlin otherwise targeted whatever JDK ran Gradle, failing `./gradlew build` and the demo canary on JDK 21. Published bytecode and the `api/*.api` baselines are unchanged
 
 ### Removed

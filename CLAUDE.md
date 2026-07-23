@@ -164,7 +164,27 @@ catch (e: Exception) { logger.warn(TAG, "…"); fallback }
 Consequence: `CancellationException` is an `Exception`, so swallowing it defeats
 `withTimeout(config.enrichTimeoutMs)` and leaves `enrich()` working for a caller that has gone away.
 Both guards exist because a throwing cache (#22) and a throwing merger (#28) escaped `enrich()`;
-every consumer-implementable interface needs one (`EnrichmentProvider`'s lives in `ProviderChain`).
+every consumer-implementable interface needs one. `EnrichmentProvider`'s lives in two places:
+`ProviderChain` rethrows around `provider.enrich(...)`, and `mapError()` rethrows rather than
+classifying — which is why a provider's `catch (e: Exception)` should call `mapError(type, e)`
+instead of building an `EnrichmentResult.Error` by hand.
+
+The worst version is not the swallowed cancellation but what the result does next: an `Error`
+makes `ProviderChain` record a circuit-breaker **failure**, so before #53 every `enrichTimeoutMs`
+expiry counted against providers that never failed.
+
+**Use `ensureActive()`, not `catch (CancellationException) { throw e }`.** The blanket rethrow is
+wrong in the other direction: a `CancellationException` can also come from *inside* a provider —
+its own `withTimeout` expiring — while our job is perfectly healthy. Rethrowing that escapes the
+chain, cancels sibling providers, and is reported to the caller as the engine's deadline.
+`ensureActive()` throws only when *this* job is cancelled, so the foreign case stays contained as
+one provider's error. Both directions were shipped and caught during #53; the behaviour is pinned
+by `ProviderChainCancellationTest`, not by a lint rule.
+
+**Do not reason that a swallowed cancellation is harmless because "it re-asserts at the next
+suspension point".** It is not a guarantee — cancellation is cooperative, and a suspend function
+may return without ever suspending again. That claim was written here during #53 and used to wave
+through five real bugs. See [Kotlin's cancellation docs](https://kotlinlang.org/docs/cancellation-and-timeouts.html).
 
 ### 3. `org.json` returns a default for a missing key — it does not fail
 

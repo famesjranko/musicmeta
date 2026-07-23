@@ -21,6 +21,8 @@ import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withTimeout
@@ -156,6 +158,11 @@ class DefaultEnrichmentEngine(
             try {
                 identity.searchCandidates(request, limit)
             } catch (e: Exception) {
+                // ensureActive() throws only when *this* job is cancelled. A CancellationException
+                // from elsewhere — a provider's own withTimeout — falls through and is handled as
+                // the failure it is, rather than escaping to be reported as our deadline. Plain
+                // `catch (CancellationException) { throw e }` gets that second case wrong. (#53)
+                currentCoroutineContext().ensureActive()
                 logger.warn(TAG, "Identity search failed: ${e.message}", e)
                 emptyList()
             }
@@ -169,6 +176,7 @@ class DefaultEnrichmentEngine(
             try {
                 provider.searchCandidates(request, remaining)
             } catch (e: Exception) {
+                currentCoroutineContext().ensureActive() // as above
                 logger.warn(TAG, "Search failed for ${provider.id}: ${e.message}", e)
                 emptyList()
             }
@@ -203,13 +211,15 @@ class DefaultEnrichmentEngine(
         uncachedTypes: MutableSet<EnrichmentType>,
     ): Pair<EnrichmentRequest, EnrichmentResult?> {
         val provider = registry.identityProvider() ?: return request to null
-        // This bare catch sits inside the caller's `withTimeout` and looks like it swallows the
-        // deadline. It does not: probed at 100ms against a 5s provider it still returns
-        // kind=TIMEOUT, because cancellation re-asserts at the next suspension point. Noted so the
-        // same false suspicion is not re-derived.
+        // The rethrow is not optional. An earlier note here claimed the bare catch was safe because
+        // "cancellation re-asserts at the next suspension point" — that is not a guarantee. Kotlin
+        // cancellation is cooperative: a suspend function may return without ever suspending again,
+        // and this one only happened to be caught downstream by resolveTypes()'s coroutineScope.
+        // It also logged a cancelled call as a provider failure. (#53)
         val result = try {
             provider.resolveIdentity(request)
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             logger.warn(TAG, "Identity resolution failed: ${e.message}", e)
             return request to null
         }

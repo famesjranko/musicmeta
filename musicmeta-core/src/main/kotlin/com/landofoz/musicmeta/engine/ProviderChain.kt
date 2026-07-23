@@ -11,6 +11,8 @@ import com.landofoz.musicmeta.http.CircuitBreaker
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 
 class ProviderChain internal constructor(
     val type: EnrichmentType,
@@ -39,6 +41,14 @@ class ProviderChain internal constructor(
                 } catch (e: Exception) {
                     EnrichmentResult.Error(type, provider.id, e.message ?: "Unknown error", e)
                 }
+                // The one guard, and it is deliberately not a `catch (CancellationException)`.
+                // ensureActive() throws only when *this* job is cancelled, so a cancelled caller
+                // never records a breaker failure — while a CancellationException raised elsewhere
+                // (a provider's own withTimeout expiring) stays a failure of that provider instead
+                // of escaping to be misreported as the engine's deadline. It also covers a
+                // consumer's provider that swallows the cancellation and returns an Error, which
+                // no rethrow of ours could intercept. (#53)
+                currentCoroutineContext().ensureActive()
                 when (result) {
                     is EnrichmentResult.Success -> { breaker?.recordSuccess(); result }
                     is EnrichmentResult.NotFound -> { breaker?.recordSuccess(); null }
@@ -87,6 +97,7 @@ class ProviderChain internal constructor(
             } catch (e: Exception) {
                 EnrichmentResult.Error(type, provider.id, e.message ?: "Unknown error", e)
             }
+            currentCoroutineContext().ensureActive() // see resolveAll — the same single guard
 
             onResult(provider, breaker, result)
         }

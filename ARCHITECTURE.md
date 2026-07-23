@@ -74,6 +74,15 @@ and it is where drift accumulates silently — so it gets read, not skimmed.
   (`.editorconfig`). Both stay enforced in main sources, where they currently pass clean.
 - **Comment density and placement.** "Explain non-obvious constraints, not what the code says" is
   a judgement call no linter makes well.
+- **Cancellation handling.** Enforced by behaviour, not by a rule:
+  `ProviderChainCancellationTest` pins that a cancelled call records no circuit-breaker failure and
+  that a *foreign* `CancellationException` stays contained as one provider's error. A textual rule
+  was written for this during #53 and then deleted — it could not see the fallback-returning
+  catches that were the actual bugs, and the remediation it printed
+  (`catch (CancellationException) { throw e }`) was itself the defect, because it cannot tell our
+  cancellation from a provider's own `withTimeout`. `ensureActive()` makes that distinction and a
+  regex cannot. The judgement is review's, backed by those tests.
+
 - **Conventional commit format.** Nothing validates commit messages. A `commit-msg` hook or a PR
   title check would close this.
 - **"Write each change down once."** The doc-ownership split between CHANGELOG, ROADMAP and the
