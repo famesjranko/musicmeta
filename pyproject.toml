@@ -1,0 +1,35 @@
+# Config for the Python under scripts/. There is no Python package here — this file exists so ruff
+# and mypy have one home instead of two dotfiles.
+#
+# These scripts are the gates. check_conventions.py decides whether every Kotlin convention holds
+# and build_release_notes.py decides what ships in a release note, so leaving them as the least
+# checked code in the repo was the gap this closes.
+
+[tool.ruff]
+# 120 to match .editorconfig's Kotlin setting — one line width for the repo. black's 88 default
+# would rewrap code whose p99 is already 114.
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+# Defaults (E4/E7/E9, F) plus the rules that catch real defects rather than taste: bugbear for
+# mutable-default and loop-variable-capture traps, isort for import order, pyupgrade for syntax
+# the target version makes obsolete, and the pytest-style and comprehension sets.
+select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM", "RET"]
+
+[tool.ruff.lint.per-file-ignores]
+# Test modules import the module under test after a sys.path insert, which is not a top-of-file
+# import and cannot be.
+"**/test_*.py" = ["E402"]
+
+[tool.mypy]
+python_version = "3.10"
+files = ["scripts"]
+# Not strict mode: these are scripts, and the self-tests carry more weight than exhaustive
+# annotation would. What is on catches the mistakes that actually happen — a function that forgets
+# to return, an Optional used without a guard.
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_no_return = true
+no_implicit_optional = true
+check_untyped_defs = true

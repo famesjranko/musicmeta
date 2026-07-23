@@ -107,7 +107,6 @@ sealed class EnrichmentData {
         val durationMs: Long = 30000,
         val source: String,
     ) : EnrichmentData()
-
 }
 
 @Serializable

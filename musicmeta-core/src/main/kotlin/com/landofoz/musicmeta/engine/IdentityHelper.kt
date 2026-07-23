@@ -71,7 +71,8 @@ internal fun needsIdentityResolution(
                 IdentifierRequirement.WIKIPEDIA_TITLE -> ids.wikipediaTitle == null && ids.wikidataId == null
                 IdentifierRequirement.ANY_IDENTIFIER -> ids.musicBrainzId == null &&
                     ids.musicBrainzReleaseGroupId == null &&
-                    ids.wikidataId == null && ids.wikipediaTitle == null
+                    ids.wikidataId == null &&
+                    ids.wikipediaTitle == null
             }
             if (missing) return true
         }

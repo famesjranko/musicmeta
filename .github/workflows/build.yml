@@ -24,16 +24,6 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Self-check the release-notes scripts
-        # Unguarded, a regression here would surface only as a release check that silently passes.
-        working-directory: scripts/github-workflows
-        run: for t in test_*.py; do python3 "$t"; done
-
-      - name: Enforce the STORIES entry cap
-        # STORIES has no consumer to fail, so without this the cap is an unenforced ask — which is
-        # what produced the release-note walls in the first place.
-        run: python3 scripts/github-workflows/check_doc_caps.py
-
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -41,8 +31,19 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v6
 
-      - name: Build and test
-        run: ./gradlew build
+      - name: Install pinned tooling
+        # Same pinned versions developers get, so CI and local cannot disagree about what a rule
+        # means. ./check refuses to run rather than silently skipping a layer whose tool is absent.
+        run: |
+          ./scripts/bootstrap.sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Run the check command
+        # The same command developers and agents run locally. CI having its own step list is what
+        # makes a CI failure a guessing game, so there is deliberately only one thing to run here.
+        # --skip-demo only because demo-canary below is a separate required check; running it here
+        # too would compile demo/ twice. Local `./check` still covers everything.
+        run: ./check --skip-demo
 
       - name: Upload test reports
         if: failure()
@@ -54,6 +55,11 @@ jobs:
 
   # `demo/` is a separate composite build, so `./gradlew build` never compiles it — this is the only
   # in-tree consumer compiling like an external one. Not a parameter-position guard; see CLAUDE.md.
+  #
+  # This is the only place CI compiles demo/ — the build job passes --skip-demo so it is not done
+  # twice. The job stays separate rather than folding into `build` because `demo-canary` is a
+  # required status check in the `main` protection ruleset and reports under its own name; deleting
+  # it would block merges to `main` waiting for a check that no longer runs.
   demo-canary:
     runs-on: ubuntu-latest
     timeout-minutes: 30

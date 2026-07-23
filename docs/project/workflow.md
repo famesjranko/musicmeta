@@ -16,8 +16,12 @@ shared checkout.
   `ANDROID_HOME`, and Gradle dependencies resolve through the shared user cache.
 - The `demo/` composite build uses `includeBuild("..")`; inside a worktree it correctly resolves that
   worktree's library. Do not replace the relative path with an absolute one.
-- `.claude/` is gitignored and therefore absent from worktrees. That affects local tool permissions,
-  not build correctness.
+- `.claude/` is ignored except for `.claude/settings.json`, which is tracked so the format-on-write
+  hook reaches every worktree. `.claude/rules/` is un-ignored too but does not exist yet. Everything
+  else there — `settings.local.json`, agent worktrees, local tooling — stays untracked and affects
+  prompting, not build correctness.
+- A fresh worktree needs the pinned tools on `PATH`. They install to `~/.local/bin`, which is shared
+  across worktrees, so `./scripts/bootstrap.sh` is a once-per-machine step, not once per worktree.
 
 ## Branch topology
 
@@ -61,32 +65,50 @@ obvious.**
 
 ## Issue lifecycle
 
-Because `dev` is not the default branch, closing keywords do not close issues when work reaches
-`dev`. Keep them for traceability, but perform the required state transition explicitly.
+`dev` is the default branch, so a closing keyword on a PR merged into `dev` closes its issue
+automatically. `main` is not the default branch: a keyword on the `dev` → `main` release PR closes
+nothing, so nothing may depend on one.
+
+Work that never opens a PR still needs closing by hand — that is the epic-child case below, not an
+oversight.
 
 ### Independent children
 
-1. Merge the child PR into `dev`.
-2. Close each linked child as `completed`.
+1. Merge the child PR into `dev` with `Closes #<issue>` in its body.
+2. Confirm the issue actually closed. The keyword fires on merge, but a typo or a retarget is
+   silent, and an issue left open is easier to miss than one closed twice.
 3. Tick its epic checklist item while keeping the epic open.
 
 ### Shared-branch epic children
+
+These land as a direct push to `epic/<slug>` with no PR of their own, so no keyword can fire and
+the transition is manual.
 
 1. Push the verified child commit and its worklog entry to `epic/<slug>`.
 2. Confirm the remote SHA, then close the child as `completed` and tick its checklist item.
 3. Keep the epic open. If the unintegrated epic is explicitly abandoned, reopen every child closed
    at this push-time boundary and repair the checklist.
 
-The epic itself closes through `Closes #<epic>` on the release PR into default branch `main`.
+### The epic itself
+
+The epic closes through `Closes #<epic>` on the **epic consolidation PR into `dev`**, because that
+is the PR that reaches the default branch. Do not put it on the release PR into `main` — see
+[release.md](release.md).
 
 ## Verification
 
 Run these for every change:
 
 ```bash
-./gradlew build
+./check
 git diff --check -- ':!*/api/*.api'
 ```
+
+`./check` is the whole verification surface and is exactly what CI runs — formatter, linter, type
+checker and custom linter across Kotlin, Python and shell, then the build and the demo canary. Use
+`./check --fast` during the edit loop, never as the evidence for a push.
+[ARCHITECTURE.md](../../ARCHITECTURE.md) records which rules it enforces and which are only
+intended.
 
 The API dump exclusion is intentional: its generator writes a trailing blank line that `apiCheck`
 compares byte-for-byte. Do not hand-edit generated dumps to satisfy whitespace checking.
@@ -131,9 +153,10 @@ Follow the no-attribution and destructive-Git rules in `CLAUDE.md`.
 
 | Change | Update |
 |---|---|
-| Architectural decision or completed milestone | `STORIES.md` |
+| New or changed gate, or a rule that gains/loses a mechanism | `ARCHITECTURE.md` — the *Enforced by* table or the *Not enforced* list |
 | Feature or bug fix | `CHANGELOG.md` |
 | Breaking public API change | `CHANGELOG.md` under `### Breaking Changes` |
+| Why a decision was made, or an approach rejected | Inline at the mechanism; the PR for the rest |
 | Coverage, gap, or milestone shift | `ROADMAP.md` |
 | New provider | `docs/providers/<name>.md` and provider index |
 | New public capability | Relevant `docs/guides/*.md` |

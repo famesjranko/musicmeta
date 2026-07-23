@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Runnable self-check: `python3 test_build_release_notes.py` (no framework needed)."""
+
 from pathlib import Path
 
 from build_release_notes import MAX_LINE_CHARS, MAX_SECTION_CHARS, BuildError, build, extract_section
@@ -67,13 +68,17 @@ assert "**Full Changelog**" not in build(GOOD, "0.10.1")
 too_long = GOOD.replace("### Added", "### Added\n" + "- padding line with some words in it (#1)\n" * 90)
 expect_error(lambda: build(too_long, "0.11.0"), f"limit {MAX_SECTION_CHARS}")
 
-one_fat_line = GOOD.replace("- Dispatch-driven release pipeline, tag created last from the verified version (#42)",
-                            "- " + "x" * (MAX_LINE_CHARS + 1) + " (#42)")
+one_fat_line = GOOD.replace(
+    "- Dispatch-driven release pipeline, tag created last from the verified version (#42)",
+    "- " + "x" * (MAX_LINE_CHARS + 1) + " (#42)",
+)
 expect_error(lambda: build(one_fat_line, "0.11.0"), f"limit {MAX_LINE_CHARS}")
 
 # Exactly at the line cap is allowed; one over is not.
-at_cap = GOOD.replace("- Dispatch-driven release pipeline, tag created last from the verified version (#42)",
-                      "-" + "x" * (MAX_LINE_CHARS - 1))
+at_cap = GOOD.replace(
+    "- Dispatch-driven release pipeline, tag created last from the verified version (#42)",
+    "-" + "x" * (MAX_LINE_CHARS - 1),
+)
 build(at_cap, "0.11.0")
 
 # --- the real CHANGELOG ---------------------------------------------------------------------

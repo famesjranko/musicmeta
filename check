@@ -1,0 +1,105 @@
+#!/usr/bin/env bash
+# The single verification command. CI runs exactly this, so a green local run means a green build
+# rather than a guess about one.
+#
+# Four layers, in the order they get cheaper to fix: a formatter, a linter, a type checker, and a
+# custom linter for the rules no off-the-shelf tool checks. Ordered fastest-first so a style slip
+# fails in a second rather than after a full Gradle build.
+#
+#   ./check              everything
+#   ./check --fast       skip the build and the demo canary — for the edit loop, not a push
+#   ./check --skip-demo  CI only: the demo canary is a separate required check there
+set -euo pipefail
+cd "$(dirname "$0")"
+
+FAST=0
+SKIP_DEMO=0
+for arg in "$@"; do
+    case "$arg" in
+        --fast) FAST=1 ;;
+        --skip-demo) SKIP_DEMO=1 ;;
+        *) echo "usage: ./check [--fast] [--skip-demo]" >&2; exit 64 ;;
+    esac
+done
+
+# A gate whose tool is missing must fail, not skip. Skipping reports green while checking nothing,
+# which is worse than having no gate at all — ARCHITECTURE.md would then assert something false.
+# Version, not just presence. bootstrap.sh pins these precisely because formatter output and
+# lint rules differ between releases, so accepting any version on PATH reintroduces the local/CI
+# disagreement the single command exists to remove.
+bad=""
+require() { # require <command> <pinned-version>
+    if ! command -v "$1" >/dev/null 2>&1; then
+        bad="$bad $1(absent)"
+    elif ! "$1" --version 2>/dev/null | grep -qE "(^|[^0-9.])${2//./\\.}([^0-9.]|$)"; then
+        bad="$bad $1(want $2)"
+    fi
+}
+require ruff 0.15.22
+require mypy 2.3.0
+require shellcheck 0.11.0
+if [ -n "$bad" ]; then
+    echo "tooling mismatch:$bad" >&2
+    echo "run ./scripts/bootstrap.sh to install the pinned versions" >&2
+    exit 127
+fi
+
+# The android module needs an SDK. Falling back to the conventional location turns a cryptic
+# Gradle failure into a working run on a normally-configured machine.
+if [ -z "${ANDROID_HOME:-}" ] && [ -d "$HOME/Android/Sdk" ]; then
+    export ANDROID_HOME="$HOME/Android/Sdk"
+fi
+
+step() { printf '\n\033[1m==> %s\033[0m\n' "$1"; }
+
+step "python format + lint (ruff)"
+ruff format --check .
+ruff check .
+
+step "shell lint (shellcheck)"
+# Discovered, not a fixed glob: a hand-listed set silently stops covering the next script someone
+# adds, which is the same silent-skip failure this gate exists to prevent. `check` has no
+# extension so it is named explicitly. `.claude/` is excluded because agent worktrees under it are
+# whole copies of this repo — without that, every script gets linted once per live worktree.
+find . -name '*.sh' -not -path './.git/*' -not -path './.claude/*' -not -path '*/build/*' \
+    -print0 | sort -z | xargs -0 shellcheck check
+
+step "python types (mypy)"
+mypy
+
+step "conventions"
+python3 scripts/checks/check_conventions.py
+
+step "script self-tests"
+# Unguarded, a regression in a release script surfaces only as a release check that silently passes.
+for t in scripts/checks/test_*.py scripts/github-workflows/test_*.py; do
+    python3 "$t" >/dev/null 2>&1 || { python3 "$t"; exit 1; }
+done
+echo "all script self-tests pass"
+
+step "kotlin format + static analysis (ktlint, detekt)"
+# One Gradle invocation rather than two — the daemon start dominates either way.
+./gradlew ktlintCheck detekt --quiet
+
+if [ "$FAST" = 1 ]; then
+    printf '\n\033[1m--fast: skipped build and demo canary\033[0m\n'
+    exit 0
+fi
+
+step "build (compile, test, apiCheck)"
+./gradlew build
+
+# demo/ is a separate composite build that `./gradlew build` never compiles, so this is the only
+# in-tree consumer compiling the way an external one does. It has no wrapper — it borrows the root.
+#
+# --skip-demo exists for CI only, where `demo-canary` is a separate required status check and
+# would otherwise compile this twice. Locally the default runs it, so one command still covers
+# everything and a green local run stays a superset of what CI verifies.
+if [ "$SKIP_DEMO" = 1 ]; then
+    printf '\n\033[1m--skip-demo: demo canary left to its own CI job\033[0m\n'
+else
+    step "demo canary"
+    (cd demo && ../gradlew compileKotlin --quiet)
+fi
+
+printf '\n\033[1;32mAll checks passed.\033[0m\n'

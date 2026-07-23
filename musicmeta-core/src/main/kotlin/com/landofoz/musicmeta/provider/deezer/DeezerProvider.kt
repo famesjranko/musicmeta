@@ -1,6 +1,5 @@
 package com.landofoz.musicmeta.provider.deezer
 
-import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentProvider
 import com.landofoz.musicmeta.EnrichmentRequest
@@ -57,23 +56,21 @@ class DeezerProvider(
     override suspend fun enrich(
         request: EnrichmentRequest,
         type: EnrichmentType,
-    ): EnrichmentResult {
-        return try {
-            when (type) {
-                EnrichmentType.ARTIST_PHOTO -> enrichArtistPhoto(request)
-                EnrichmentType.ARTIST_TOP_TRACKS -> enrichTopTracks(request)
-                EnrichmentType.ARTIST_DISCOGRAPHY -> enrichDiscography(request)
-                EnrichmentType.ALBUM_TRACKS -> enrichAlbumTracks(request)
-                EnrichmentType.ALBUM_METADATA -> enrichAlbumMetadata(request, type)
-                EnrichmentType.SIMILAR_ARTISTS -> enrichSimilarArtists(request)
-                EnrichmentType.SIMILAR_TRACKS -> enrichSimilarTracks(request)
-                EnrichmentType.ARTIST_RADIO -> enrichArtistRadio(request)
-                EnrichmentType.TRACK_PREVIEW -> enrichTrackPreview(request)
-                else -> enrichAlbumArt(request, type)
-            }
-        } catch (e: Exception) {
-            mapError(type, e)
+    ): EnrichmentResult = try {
+        when (type) {
+            EnrichmentType.ARTIST_PHOTO -> enrichArtistPhoto(request)
+            EnrichmentType.ARTIST_TOP_TRACKS -> enrichTopTracks(request)
+            EnrichmentType.ARTIST_DISCOGRAPHY -> enrichDiscography(request)
+            EnrichmentType.ALBUM_TRACKS -> enrichAlbumTracks(request)
+            EnrichmentType.ALBUM_METADATA -> enrichAlbumMetadata(request, type)
+            EnrichmentType.SIMILAR_ARTISTS -> enrichSimilarArtists(request)
+            EnrichmentType.SIMILAR_TRACKS -> enrichSimilarTracks(request)
+            EnrichmentType.ARTIST_RADIO -> enrichArtistRadio(request)
+            EnrichmentType.TRACK_PREVIEW -> enrichTrackPreview(request)
+            else -> enrichAlbumArt(request, type)
         }
+    } catch (e: Exception) {
+        mapError(type, e)
     }
 
     private suspend fun enrichArtistPhoto(request: EnrichmentRequest): EnrichmentResult {

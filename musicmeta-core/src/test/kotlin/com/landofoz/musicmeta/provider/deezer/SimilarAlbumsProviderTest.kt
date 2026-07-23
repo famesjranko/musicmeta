@@ -172,7 +172,7 @@ class SimilarAlbumsProviderTest {
         // So Portishead album should rank above Muse album despite lower base artist score
         httpClient.givenJsonResponse("search/artist", ARTIST_SEARCH)
         httpClient.givenJsonResponse("artist/399/related", RELATED_ARTISTS_5)
-        httpClient.givenJsonResponse("artist/1001/albums", ERA_MUSE_OLD_ALBUM)   // 1975 album
+        httpClient.givenJsonResponse("artist/1001/albums", ERA_MUSE_OLD_ALBUM) // 1975 album
         httpClient.givenJsonResponse("artist/1002/albums", ERA_PORTISHEAD_CLOSE_ALBUM) // 1993 album
         httpClient.givenJsonResponse("artist/1003/albums", """{"data":[]}""")
         httpClient.givenJsonResponse("artist/1004/albums", """{"data":[]}""")

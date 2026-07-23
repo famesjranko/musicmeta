@@ -343,7 +343,7 @@ Then consume as `io.github.famesjranko:musicmeta-core:0.10.1` from `mavenLocal()
 | [docs/project/workflow.md](docs/project/workflow.md) | Branch topology, issue lifecycle, worktrees, and verification selection |
 | [docs/project/release.md](docs/project/release.md) | Release preparation, tagging, and publication |
 | [CHANGELOG.md](CHANGELOG.md) | Release history |
-| [STORIES.md](STORIES.md) | Architectural decisions and rationale |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | What is enforced, and what is admitted as unenforced |
 
 ## Interactive demo
 

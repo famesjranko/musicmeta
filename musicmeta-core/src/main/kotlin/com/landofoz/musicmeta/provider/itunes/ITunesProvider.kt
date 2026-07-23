@@ -54,12 +54,10 @@ class ITunesProvider(
     override suspend fun enrich(
         request: EnrichmentRequest,
         type: EnrichmentType,
-    ): EnrichmentResult {
-        return when (type) {
-            EnrichmentType.ALBUM_TRACKS -> enrichAlbumTracks(request, type)
-            EnrichmentType.ARTIST_DISCOGRAPHY -> enrichArtistDiscography(request, type)
-            else -> enrichAlbumType(request, type)
-        }
+    ): EnrichmentResult = when (type) {
+        EnrichmentType.ALBUM_TRACKS -> enrichAlbumTracks(request, type)
+        EnrichmentType.ARTIST_DISCOGRAPHY -> enrichArtistDiscography(request, type)
+        else -> enrichAlbumType(request, type)
     }
 
     private suspend fun enrichAlbumTracks(

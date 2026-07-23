@@ -9,11 +9,13 @@ newer one. Install coordinates must pin the release's own version instead.
 Exit codes: 0 = valid, 1 = usage/empty notes, 2 = validation failure.
 Importable: validate(notes, version) -> list[str] of error messages (empty = valid).
 """
+
 from __future__ import annotations
 
 import argparse
 import re
 import sys
+from pathlib import Path
 
 # Versionless badges — the exact two the README carries, correct there, wrong pinned to a release.
 FLOATING_BADGE = re.compile(
@@ -60,7 +62,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--notes-file", help="read notes from this file instead of stdin")
     args = parser.parse_args(argv)
 
-    notes = open(args.notes_file, encoding="utf-8").read() if args.notes_file else sys.stdin.read()
+    notes = Path(args.notes_file).read_text(encoding="utf-8") if args.notes_file else sys.stdin.read()
     if not notes.strip():
         print("::error::release notes are empty", file=sys.stderr)
         return 1

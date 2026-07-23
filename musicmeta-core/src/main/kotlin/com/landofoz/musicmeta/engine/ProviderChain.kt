@@ -102,7 +102,8 @@ class ProviderChain internal constructor(
             IdentifierRequirement.MUSICBRAINZ_ID -> identifiers.musicBrainzId != null
             IdentifierRequirement.MUSICBRAINZ_RELEASE_GROUP_ID -> identifiers.musicBrainzReleaseGroupId != null
             IdentifierRequirement.WIKIDATA_ID -> identifiers.wikidataId != null
-            IdentifierRequirement.WIKIPEDIA_TITLE -> identifiers.wikipediaTitle != null || identifiers.wikidataId != null
+            IdentifierRequirement.WIKIPEDIA_TITLE -> identifiers.wikipediaTitle != null ||
+                identifiers.wikidataId != null
             IdentifierRequirement.ANY_IDENTIFIER -> identifiers.musicBrainzId != null ||
                 identifiers.musicBrainzReleaseGroupId != null ||
                 identifiers.wikidataId != null ||

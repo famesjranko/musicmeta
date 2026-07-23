@@ -62,12 +62,19 @@ class WikidataProvider(
             EnrichmentType.ARTIST_PHOTO -> {
                 val imageUrl = props.imageUrl
                     ?: return EnrichmentResult.NotFound(type, id)
-                EnrichmentResult.Success(type, WikidataMapper.toArtwork(imageUrl), id, ConfidenceCalculator.authoritative())
+                EnrichmentResult.Success(
+                    type,
+                    WikidataMapper.toArtwork(imageUrl),
+                    id,
+                    ConfidenceCalculator.authoritative(),
+                )
             }
             EnrichmentType.COUNTRY -> {
                 val metadata = WikidataMapper.toMetadata(props)
-                if (metadata.country == null && metadata.beginDate == null &&
-                    metadata.endDate == null && metadata.artistType == null
+                if (metadata.country == null &&
+                    metadata.beginDate == null &&
+                    metadata.endDate == null &&
+                    metadata.artistType == null
                 ) {
                     return EnrichmentResult.NotFound(type, id)
                 }

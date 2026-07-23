@@ -46,8 +46,12 @@ to pin an empty `[Unreleased]` — so a mistaken re-run stops rather than double
 
 ## Gate 2 — the release PR
 
-Open `dev` → `main` yourself with `Closes #<epic>` and the release evidence, and merge it with a
-**merge commit, never squash**. `main` requires `build`, `demo-canary` and `release-readiness`.
+Open `dev` → `main` yourself with the release evidence, and merge it with a **merge commit, never
+squash**. `main` requires `build`, `demo-canary` and `release-readiness`.
+
+Do not put `Closes #<epic>` here. `main` is not the default branch, so a closing keyword on this PR
+closes nothing; the epic closes at its consolidation PR into `dev` instead. See
+[workflow.md](workflow.md) → Issue lifecycle.
 
 The PR must be opened by a person. A PR opened by CI receives no check runs at all — GitHub does not
 trigger workflows from `GITHUB_TOKEN` events — so it could never satisfy those required checks.

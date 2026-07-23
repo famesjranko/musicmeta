@@ -48,15 +48,17 @@ internal object TopTrackMerger : ResultMerger {
             // Check if this MBID matches an existing name-based group (or vice versa)
             val existingKey = if (mbid != null) {
                 grouped.keys.firstOrNull { k ->
-                    !k.startsWith("mbid:") && grouped[k]?.any {
-                        it.identifiers.musicBrainzId == mbid
-                    } == true
+                    !k.startsWith("mbid:") &&
+                        grouped[k]?.any {
+                            it.identifiers.musicBrainzId == mbid
+                        } == true
                 }
             } else {
                 grouped.keys.firstOrNull { k ->
-                    k.startsWith("mbid:") && grouped[k]?.any {
-                        normalize(it.title) == normalize(track.title)
-                    } == true
+                    k.startsWith("mbid:") &&
+                        grouped[k]?.any {
+                            normalize(it.title) == normalize(track.title)
+                        } == true
                 }
             }
             grouped.getOrPut(existingKey ?: key) { mutableListOf() }.add(track)

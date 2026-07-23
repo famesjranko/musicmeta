@@ -1,8 +1,6 @@
 package com.landofoz.musicmeta.e2e
 
 import com.landofoz.musicmeta.*
-import com.landofoz.musicmeta.http.DefaultHttpClient
-import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.provider.coverartarchive.CoverArtArchiveProvider
 import com.landofoz.musicmeta.provider.deezer.DeezerApi
 import com.landofoz.musicmeta.provider.deezer.DeezerProvider

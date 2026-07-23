@@ -4,14 +4,14 @@ import com.landofoz.musicmeta.EnrichmentCache
 import com.landofoz.musicmeta.EnrichmentConfig
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentEngine
-import com.landofoz.musicmeta.ErrorKind
-import com.landofoz.musicmeta.IdentityMatch
 import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentLogger
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentResults
 import com.landofoz.musicmeta.EnrichmentType
+import com.landofoz.musicmeta.ErrorKind
+import com.landofoz.musicmeta.IdentityMatch
 import com.landofoz.musicmeta.IdentityResolution
 import com.landofoz.musicmeta.ProviderInfo
 import com.landofoz.musicmeta.SearchCandidate
@@ -76,7 +76,8 @@ class DefaultEnrichmentEngine(
         try {
             withTimeout(config.enrichTimeoutMs) {
                 var identityResult: EnrichmentResult? = null
-                val enrichedRequest = if (config.enableIdentityResolution && needsIdentityResolution(request, uncachedTypes, registry)) {
+                val enrichedRequest = if (config.enableIdentityResolution &&
+                    needsIdentityResolution(request, uncachedTypes, registry)) {
                     resolveIdentity(request, results, uncachedTypes).also { identityResult = it.second }.first
                 } else request
 
@@ -99,7 +100,8 @@ class DefaultEnrichmentEngine(
             logger.warn(TAG, "Enrich timed out after ${config.enrichTimeoutMs}ms")
             for (type in types) {
                 if (type !in results) {
-                    results[type] = EnrichmentResult.Error(type, "engine", "Enrichment timed out", errorKind = ErrorKind.TIMEOUT)
+                    results[type] =
+                        EnrichmentResult.Error(type, "engine", "Enrichment timed out", errorKind = ErrorKind.TIMEOUT)
                 }
             }
         }
@@ -201,6 +203,10 @@ class DefaultEnrichmentEngine(
         uncachedTypes: MutableSet<EnrichmentType>,
     ): Pair<EnrichmentRequest, EnrichmentResult?> {
         val provider = registry.identityProvider() ?: return request to null
+        // This bare catch sits inside the caller's `withTimeout` and looks like it swallows the
+        // deadline. It does not: probed at 100ms against a 5s provider it still returns
+        // kind=TIMEOUT, because cancellation re-asserts at the next suspension point. Noted so the
+        // same false suspicion is not re-derived.
         val result = try {
             provider.resolveIdentity(request)
         } catch (e: Exception) {
@@ -225,11 +231,16 @@ class DefaultEnrichmentEngine(
             return request to result
         }
 
-        logger.debug(TAG, "Identity resolved: mbid=${resolved.musicBrainzId}, wikidataId=${resolved.wikidataId}, wpTitle=${resolved.wikipediaTitle}")
+        logger.debug(
+            TAG,
+            "Identity resolved: mbid=${resolved.musicBrainzId}, " +
+                "wikidataId=${resolved.wikidataId}, wpTitle=${resolved.wikipediaTitle}",
+        )
 
         val mergedIds = EnrichmentIdentifiers(
             musicBrainzId = resolved.musicBrainzId ?: request.identifiers.musicBrainzId,
-            musicBrainzReleaseGroupId = resolved.musicBrainzReleaseGroupId ?: request.identifiers.musicBrainzReleaseGroupId,
+            musicBrainzReleaseGroupId =
+            resolved.musicBrainzReleaseGroupId ?: request.identifiers.musicBrainzReleaseGroupId,
             wikidataId = resolved.wikidataId ?: request.identifiers.wikidataId,
             isrc = resolved.isrc ?: request.identifiers.isrc,
             barcode = resolved.barcode ?: request.identifiers.barcode,

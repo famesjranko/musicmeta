@@ -17,10 +17,10 @@ import com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzProvider
 import com.landofoz.musicmeta.provider.wikidata.WikidataProvider
 import com.landofoz.musicmeta.provider.wikipedia.WikipediaProvider
 import kotlinx.coroutines.runBlocking
+import org.junit.Assert.*
 import org.junit.Assume
 import org.junit.Before
 import org.junit.Test
-import org.junit.Assert.*
 
 /**
  * End-to-end tests against real APIs.

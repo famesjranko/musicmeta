@@ -1,9 +1,9 @@
 package com.landofoz.musicmeta.provider.deezer
 
 import com.landofoz.musicmeta.http.HttpClient
-import com.landofoz.musicmeta.takeIfNotEmpty
 import com.landofoz.musicmeta.http.HttpResult
 import com.landofoz.musicmeta.http.RateLimiter
+import com.landofoz.musicmeta.takeIfNotEmpty
 import java.net.URLEncoder
 
 /**

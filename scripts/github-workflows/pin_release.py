@@ -9,6 +9,7 @@ hand is three chances to typo the thing every later check reads. `prepare-releas
 Exit codes: 0 = pinned, 1 = refused (the message says why).
 Importable: pin_changelog(text, version, date) -> str, pin_roadmap(text, version) -> str.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -38,13 +39,13 @@ def pin_changelog(text: str, version: str, date: str) -> str:
         raise PinError(f"CHANGELOG already has a '## [{version}]' section")
 
     # Everything between [Unreleased] and the next `## ` heading is what would ship.
-    rest = text[match.end():]
+    rest = text[match.end() :]
     next_heading = rest.find("\n## ")
     body = rest if next_heading == -1 else rest[:next_heading]
     if not body.strip():
         raise PinError("the [Unreleased] section is empty — there is nothing to release")
 
-    return text[:match.start()] + f"## [Unreleased]\n\n## [{version}] - {date}" + text[match.end():]
+    return text[: match.start()] + f"## [Unreleased]\n\n## [{version}] - {date}" + text[match.end() :]
 
 
 def pin_roadmap(text: str, version: str) -> str:
