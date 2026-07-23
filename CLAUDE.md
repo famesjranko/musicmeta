@@ -1,228 +1,287 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Onboarding for anyone — human or agent — changing this repo. `make check` is the gate: run it before
+you push, CI runs the same script. [`ARCHITECTURE.md`](ARCHITECTURE.md) is the register of which
+rules a mechanism enforces and which are merely intended; **rules with a mechanism are not repeated
+here**, and where a document and a config disagree the config wins, because the config is the thing
+that fails. Elsewhere: `README.md` (consumer-facing), `CHANGELOG.md` (one line per change, headline
+plus `(#issue)`), `ROADMAP.md`, `docs/project/workflow.md`, `docs/project/release.md`.
 
-**Run `./check` before you push.** It is the whole verification surface — ktlint, the house
-convention rules, doc caps, script self-tests, the build, and the demo canary — and CI runs
-exactly it. `./check --fast` skips the build and canary for the edit loop.
-[`ARCHITECTURE.md`](ARCHITECTURE.md) records which rules are enforced by a mechanism and which are
-only intended; where it and this file disagree, the mechanism wins.
+There is no history document. `STORIES.md` was deleted (2026-07-23): git and the PR hold what
+happened, and *why* a thing is the way it is belongs in a comment next to the mechanism. If an entry
+can become wrong, it was never history.
 
-## Documentation
+## Architecture map
 
-| File | Purpose |
-|------|---------|
-| `ARCHITECTURE.md` | What is enforced by a mechanism, and what is admitted as unenforced |
-| `README.md` | Project overview, setup instructions, API examples |
-| `CLAUDE.md` | AI coding instructions (this file) |
-| `CHANGELOG.md` | Release history (user-facing, Keep a Changelog format) |
-| `ROADMAP.md` | Gap analysis, coverage matrix, planned milestones |
-| `docs/project/workflow.md` | Branch topology, worktrees, issue lifecycle, work selection, verification surface |
-| `docs/project/release.md` | Release preparation, dev → main landing, tagging, and publication |
+Paths below are relative to `musicmeta-core/src/main/kotlin/com/landofoz/musicmeta/` (package
+`com.landofoz.musicmeta`). A call to `enrich(request, types, forceRefresh)` walks
+`engine/DefaultEnrichmentEngine.kt` top to bottom; that one function is the map:
 
-**Write each change down once.** The docs reached 180KB against 408KB of Kotlin because the same
-change was written three or four times in different voices. There is no history document: git and
-the PR hold what happened, and a file that restates them drifts from both.
+1. **Cache** — `forceRefresh` invalidates first, then each type is read via `guardedCacheRead`. Hits
+   return without touching a provider; the rest become `uncachedTypes`. Keys come from
+   `engine/EntityKey.kt` (`entityKeyFor`, plus the name-alias `entityKeyForName`). Every cache read
+   and write inside `enrich()` goes through `engine/CacheGuard.kt` — a throwing cache degrades to a
+   miss, never a failed `enrich()`.
 
-- `CHANGELOG.md` — *what* changed. **One line per change**, headline plus `(#issue)`. It is the
-  release note verbatim and is capped at 3000 chars per section, 400 per line; the release fails if
-  it does not fit.
-- **Why a thing is the way it is — inline, next to the mechanism.** The comment beside the config
-  or the code is read at the moment it matters, by whoever is about to change it. A separate
-  rationale file is read either never or wholesale, and the second is how it becomes doctrine.
-- **A rejected option worth recording is a comment at the thing that would otherwise be "improved".**
-  Say what was declined and why, so the next reader does not re-derive it.
-- `ROADMAP.md` — where the project is going. Link to the `CHANGELOG`, do not re-summarise it.
-- `ARCHITECTURE.md` — only the two registers. It gets a row when a gate changes, not a narrative.
-- The issue or PR — everything else. It is already written there; that is the point.
+2. **Identity resolution** — gated on `EnrichmentConfig.enableIdentityResolution` and
+   `needsIdentityResolution()` (`engine/IdentityHelper.kt`, data-driven from capabilities).
+   `ProviderRegistry.identityProvider()` returns the one provider with `isIdentityProvider = true` —
+   today `MusicBrainzProvider`. Its `resolvedIdentifiers` merge into the request's
+   `EnrichmentIdentifiers` (`request.withIdentifiers(...)`), so downstream providers do MBID lookups
+   instead of fuzzy search. A `NotFound` carrying `suggestions` short-circuits the fan-out entirely.
 
-`STORIES.md` was deleted (2026-07-23). It claimed to be immutable decision history but kept
-describing present behaviour, so entries needed correcting — one claim about the demo canary was
-patched across four commits before landing in this file as a pitfall. **If an entry can become
-wrong, it was never history.** That is the test to apply before writing any of the above.
+3. **Chains** — `engine/ProviderRegistry.kt` builds one `ProviderChain` per `EnrichmentType` up
+   front, sorted by `ProviderCapability.priority` (100 = primary, 50 = fallback) and
+   `EnrichmentConfig.priorityOverrides`; one `http/CircuitBreaker.kt` per provider id, shared across
+   every chain.
 
-## Build & Test Commands
+4. **Fan-out** — `resolveTypes()` splits the types three ways inside `coroutineScope { async { } }`:
+   regular → `ProviderChain.resolve()` (first `Success` wins, `NotFound` falls through); mergeable
+   (a `ResultMerger` is registered) → `ProviderChain.resolveAll()` collects every `Success`
+   concurrently and the merger folds them (`engine/GenreMerger.kt`, `ArtworkMerger.kt`,
+   `SimilarArtistMerger.kt`, `SimilarTrackMerger.kt`, `TopTrackMerger.kt`); composite → a
+   `CompositeSynthesizer` (`engine/TimelineSynthesizer.kt`, `GenreAffinityMatcher.kt`) runs after its
+   `dependencies`, which are resolved even when the caller did not ask for them. Both strategy kinds
+   run inside `engine/StrategyGuard.kt`, which turns a throw into `Error` for that type.
 
-```bash
-# Build everything (core + android)
-./gradlew build
+5. **Eligibility and confidence** — `ProviderChain` skips providers that are unavailable, lack the
+   capability's `IdentifierRequirement`, or have an open breaker. `filterByConfidence()` demotes any
+   `Success` below `EnrichmentConfig.minConfidence` (default 0.5) to `NotFound`;
+   `confidenceOverrides` is keyed by provider id and replaces the score outright.
 
-# Build core module only (pure JVM, no Android SDK needed)
-./gradlew :musicmeta-core:build
+6. **Post-processing and write-back** — `engine/CatalogFilter.kt`, identity-match stamping,
+   `CacheMode.STALE_IF_ERROR` fallback to expired entries, then non-stale successes are cached under
+   the primary key and, when identity added an MBID, the name-alias key too. Steps 2–6 sit inside
+   `withTimeout(config.enrichTimeoutMs)`; on expiry unfinished types become
+   `Error(..., ErrorKind.TIMEOUT)`.
 
-# Run core unit tests
-./gradlew :musicmeta-core:test
+Root-package types: `EnrichmentEngine.kt` (interface + the `Builder` wiring providers →
+`ProviderRegistry` → `DefaultEnrichmentEngine`), `EnrichmentRequest.kt` (sealed:
+`ForAlbum`/`ForArtist`/`ForTrack`), `EnrichmentResult.kt` (sealed:
+`Success`/`NotFound`/`RateLimited`/`Error`), `EnrichmentResults.kt` (return value, raw map via
+`.raw`), `EnrichmentData.kt` (`@Serializable` payloads), `EnrichmentProvider.kt` (interface,
+`ProviderCapability`, `IdentifierRequirement`, `mapError`), `EnrichmentType.kt`,
+`EnrichmentConfig.kt`, `EnrichmentCache.kt`.
 
-# Run a single test class
-./gradlew :musicmeta-core:test --tests "com.landofoz.musicmeta.engine.ProviderChainTest"
+## Module conventions
 
-# Run a single test method
-./gradlew :musicmeta-core:test --tests "com.landofoz.musicmeta.engine.ProviderChainTest.skips unavailable providers"
+- **`musicmeta-core`** — pure Kotlin/JVM, no Android SDK. The engine, providers, `http/`.
+- **`musicmeta-android`** — `RoomEnrichmentCache` (+ DAO/entity/database under `android/cache/`),
+  `HiltEnrichmentModule`, `EnrichmentWorker`. Tests run under Robolectric.
+- **`musicmeta-okhttp`** — one class, `OkHttpEnrichmentClient`, an `HttpClient` implementation.
+- **`demo/`** — a *separate composite build*, never compiled by `./gradlew build`. It is the only
+  in-tree consumer that compiles against the published surface the way an external one does. Exempt
+  from house Kotlin style on purpose (`ARCHITECTURE.md`); `demo/run.sh` is still shellchecked.
 
-# Run E2E tests (hit real APIs, skipped by default)
-./gradlew :musicmeta-core:test -Dinclude.e2e=true
+Each provider lives in `provider/<name>/` as four files, and the split is load-bearing — the first
+three are `internal`, so they can be renamed freely without an `apiDump`:
 
-# Run android module tests (requires Android SDK)
-./gradlew :musicmeta-android:test
+| File | Holds | Visibility |
+|---|---|---|
+| `*Api.kt` | HTTP calls, URL building, `org.json` parsing into models | `internal` |
+| `*Models.kt` | plain data classes mirroring the API response, nothing else | `internal` |
+| `*Mapper.kt` | model → `EnrichmentData` translation, pure functions | `internal` |
+| `*Provider.kt` | implements `EnrichmentProvider`: capabilities, Api → Mapper → `EnrichmentResult` | **public** |
 
-# Publish to local Maven repo
-./gradlew publishToMavenLocal
+The public surface was narrowed to that boundary in v0.10.0 (#5): the `*Provider` classes,
+`HttpClient`/`HttpResult`/`HttpResponse`/`DefaultHttpClient`/`RateLimiter`, the
+`ResultMerger`/`CompositeSynthesizer` extension points, and the root-package types above.
+`CircuitBreaker`, `MusicBrainzParser` and the built-in mergers/synthesizers are `internal` too, so a
+refactor confined to them leaves `apiCheck` green. `RateLimiter` stays public only because it is a
+parameter of nearly every provider constructor.
 
-# Check the public ABI against the committed api/*.api baselines (also runs as part of `build`)
-./gradlew apiCheck
+Tests mirror the main tree under `src/test/kotlin/...` (`engine/`, `http/`, `provider/<name>/`,
+`cache/`, plus `e2e/` — live APIs, gated by `-Dinclude.e2e=true`, never merge-gating). Fakes over
+mocks: `testutil/FakeProvider`, `FakeHttpClient`, `FakeEnrichmentCache`. Coroutine tests use
+`kotlinx.coroutines.test.runTest`. Names are backticked sentences —
+`` `provider returns NotFound when album has no art` `` — with Given-When-Then comments saying what
+is given, what is done, and what is expected, not bare section markers.
 
-# Regenerate the baselines after an intentional API change — commit the resulting .api diff
-./gradlew apiDump
+## Commands
 
-# Release checks, the same ones CI runs (see docs/project/release.md)
-./scripts/github-workflows/check_versions.sh                          # modules agree with CHANGELOG
-python3 scripts/github-workflows/build_release_notes.py <version>     # what the release note will be
-(cd scripts/github-workflows && for t in test_*.py; do python3 "$t"; done)
-```
-
-`demo/` is a **separate composite build** and is never compiled by `./gradlew build`, so it is the
-only in-tree consumer that compiles against the published surface the way an external consumer does:
-
-> **The canary is not a parameter-position guard. `apiCheck` is.**
->
-> It catches removals, renames and return-type changes — anything that stops a real consumer
-> compiling. What it cannot reliably catch is a parameter *inserted mid-list* **with a default**,
-> because Kotlin rebinds positional arguments silently. Such an insertion stays invisible to the
-> compiler **only** when both conditions hold: the shifted arguments still type-check, **and** every
-> parameter the shift leaves *unbound* already carries a default. Either one failing breaks the
-> build — a type error, or `no value passed for parameter` once the shift pushes a required parameter
-> past the caller's last argument. A required parameter merely sitting *after* the insertion point is
-> not enough: if the caller still supplies an argument for it, it binds and the build stays green.
->
-> On `albumProfile` the shift left only defaulted parameters unbound, so the second condition held
-> and only the type check could catch v0.9.2 — and by luck it did:
-> `Set<EnrichmentType>` could not bind to `EnrichmentIdentifiers?`. Insert a `String?` between
-> `artist` and `mbid` instead and both conditions hold: the demo's third positional argument binds to
-> the new parameter, `mbid` quietly takes its default, and everything compiles — wrong, and green.
->
-> So: run `apiCheck` and read the `.api` diff for anything touching a signature. Treat a green canary
-> as evidence that consumers still *compile*, never as evidence that argument order is unchanged.
+`make help` lists everything. The ones that matter:
 
 ```bash
-cd demo && ../gradlew compileKotlin
+make bootstrap      # once per machine: installs the pinned ruff/mypy/shellcheck ./check requires
+make check          # the gate — exactly what CI runs
+make check-fast     # lint + types only, for the edit loop; never evidence for a push
+make test           # core unit tests
+make test-all       # every module
+make test-e2e       # live third-party APIs, needs keys
+make format         # rewrite Kotlin and Python to house style
+make lint           # all four lint layers without building
+make api-check      # public ABI vs the committed api/*.api baselines
+make api-dump       # regenerate them after an intentional change — the .api diff is the record
+make demo           # compile demo/, the external-consumer canary
+make versions       # module versions agree with each other and the CHANGELOG
 ```
 
-## Architecture
+A single class or method still needs Gradle directly:
+`./gradlew :musicmeta-core:test --tests "…engine.ProviderChainTest"`.
 
-**Three-module Gradle project** published as `io.github.famesjranko:musicmeta-core`, `io.github.famesjranko:musicmeta-android`, and `io.github.famesjranko:musicmeta-okhttp` via Maven Central.
+## Pitfalls
 
-### musicmeta-core (pure Kotlin/JVM)
+Each of these cost this project a release, an issue, or a backfilled `### Breaking Changes` entry.
 
-The engine resolves music metadata through a pipeline:
+### 1. Inserting a parameter mid-list silently rebinds every argument after it
 
-1. **Identity resolution** — `MusicBrainzProvider` searches by title/artist, returns an MBID plus Wikidata/Wikipedia links. This enriches the `EnrichmentRequest` with `EnrichmentIdentifiers` so downstream providers can do precise lookups instead of fuzzy search.
+```kotlin
+// WRONG — v0.9.2 did this to albumProfile/artistProfile/trackProfile, in a *patch* release
+suspend fun EnrichmentEngine.albumProfile(
+    title: String, artist: String, mbid: String? = null,
+    identifiers: EnrichmentIdentifiers? = null,       // inserted here
+    types: Set<EnrichmentType> = DEFAULT_ALBUM_TYPES,
+)
+// caller from v0.9.1: albumProfile("OK Computer", "Radiohead", null, myTypes)
+//   → myTypes now binds to `identifiers`
 
-2. **Provider chains** — `ProviderRegistry` builds a `ProviderChain` per `EnrichmentType`, ordered by `ProviderCapability.priority` (100 = primary, 50 = fallback). The chain tries providers in order; `NotFound` falls through, `Success` short-circuits.
+// RIGHT — append, with a default
+suspend fun EnrichmentEngine.albumProfile(
+    title: String, artist: String, mbid: String? = null,
+    types: Set<EnrichmentType> = DEFAULT_ALBUM_TYPES,
+    identifiers: EnrichmentIdentifiers? = null,       // appended
+)
+```
 
-3. **Fan-out** — `DefaultEnrichmentEngine.resolveTypes()` runs all requested type chains concurrently via `coroutineScope { async {} }`.
+Consequence: every positional caller re-binds silently. **The demo canary proves consumers still
+compile; it does not prove argument order held** — v0.9.2 escaped it and was caught only by a type
+mismatch; a `String?` inserted between `artist` and `mbid` would have compiled green and wrong.
+`make api-check` plus reading the `.api` diff is the guard. Also recorded at v0.6.0
+(`EnrichmentConfig.radioDiscoveryMode`) and v0.5.0 (`Metadata.genreTags`).
 
-4. **Confidence filtering** — Results below `EnrichmentConfig.minConfidence` (default 0.5) are discarded. Per-provider overrides via `confidenceOverrides` map.
+### 2. `catch (e: Exception)` in a suspend function eats cancellation
 
-Key types:
-- `EnrichmentEngine` — public interface + Builder. Builder wires providers → `ProviderRegistry` → `DefaultEnrichmentEngine`.
-- `EnrichmentRequest` — sealed class: `ForAlbum`, `ForArtist`, `ForTrack`. Carries `EnrichmentIdentifiers` that get progressively filled.
-- `EnrichmentResult` — sealed class: `Success`, `NotFound`, `RateLimited`, `Error`.
-- `EnrichmentProvider` — interface each provider implements. Each provider has its own `Api` class (HTTP calls), `Models` (response parsing), and `Provider` (enrichment logic).
+```kotlin
+// WRONG
+try { cache.get(key, type) } catch (e: Exception) { logger.warn(TAG, e.message); null }
 
-Provider internal structure (each under `provider/<name>/`):
-- `*Api.kt` — raw HTTP calls, returns parsed models
-- `*Models.kt` — data classes for API responses
-- `*Mapper.kt` — transforms API models into `EnrichmentData` types
-- `*Provider.kt` — implements `EnrichmentProvider`, orchestrates Api → Mapper → `EnrichmentResult`
+// RIGHT — engine/CacheGuard.kt, engine/StrategyGuard.kt
+try { block() }
+catch (e: CancellationException) { throw e }
+catch (e: Exception) { logger.warn(TAG, "…"); fallback }
+```
 
-Infrastructure in `http/`:
-- `HttpClient` interface with `DefaultHttpClient` (java.net.HttpURLConnection)
-- `RateLimiter` — per-provider delay between requests
-- `CircuitBreaker` — per-provider, shared across chains via `ProviderRegistry`
+Consequence: `CancellationException` is an `Exception`, so swallowing it defeats
+`withTimeout(config.enrichTimeoutMs)` and leaves `enrich()` working for a caller that has gone away.
+Both guards exist because a throwing cache (#22) and a throwing merger (#28) escaped `enrich()`;
+every consumer-implementable interface needs one (`EnrichmentProvider`'s lives in `ProviderChain`).
 
-### musicmeta-android
+### 3. `org.json` returns a default for a missing key — it does not fail
 
-Adds Android-specific integrations on top of core:
-- `RoomEnrichmentCache` — Room-backed persistent cache implementing `EnrichmentCache`
-- `HiltEnrichmentModule` — Hilt DI wiring for the cache
-- `EnrichmentWorker` — WorkManager base worker for background enrichment
+```kotlin
+// WRONG — shipped in 0.9.0; ListenBrainz sends recording_name, not track_name
+title = item.optString("track_name", "")        // every TopTrack title was ""
 
-## Testing Patterns
+// RIGHT — read the field the API actually sends, and treat blank as absent
+val mbid = item.optString("recording_mbid").takeIf { it.isNotBlank() } ?: continue
+albumName = item.optString("release_name").takeIf { it.isNotBlank() }
+```
 
-- Fakes over mocks — use fakes from `testutil/`: `FakeProvider`, `FakeHttpClient`, `FakeEnrichmentCache`
-- Tests use `kotlinx.coroutines.test.runTest` for coroutine testing
-- E2E tests in `e2e/` are gated by `-Dinclude.e2e=true` system property (forwarded in build.gradle.kts)
-- Android tests use Robolectric
-- Test names use backtick style: `` `provider returns NotFound when album has no art` ``
-- Tests follow Given-When-Then structure with comments - using proper: what is given, what action is taken, and what outcome is expected — not just bare section markers.
+Consequence: no exception, no `NotFound` — empty strings enriched, cached, and persisted, needing a
+0.9.1 fix plus a "clear your cache" migration note. Provider tests must assert against a fixture
+copied from a real response, and `provider-drift.yml` watches for the fields moving again.
 
-## Code Style
+### 4. On a `@Serializable` payload the same insertion also breaks stored data
 
-- Files: 200 lines target, 300 max
-- Functions: 20 lines target, 40 max
-- No `!!` — handle nullability properly
-- Pure functions when possible
-- Explicit over implicit — no magic
-- **Comments:** Explain only non-obvious constraints, traps, guards, or safety rationale — plus the Given-When-Then narration tests require (see Testing Patterns). Do not restate code or preserve history; put that in issues, PRs, or docs. Remove comments when the related code is removed.
-- **Comment brevity:** Keep comments short — a line or two. If the rationale needs a paragraph, it belongs in `STORIES.md` or the PR, not inline. This applies to CI/YAML too: `.github/workflows/**` was cut from ~330 comment lines to ~190 and now matches this rule, so it is the standard, not an exception. The multi-line blocks left in `provider-drift.yml` are deliberate and narrow — secret redaction into a public issue body, fail-closed promotion, `pipefail` traps, GitHub's 65536 caps. Match that bar: a block earns extra lines by preventing a leak or a silent failure, never by defending a decision. Before writing one, check whether `CLAUDE.md`, `STORIES.md` or `CHANGELOG.md` already says it — the same rationale sitting in a doc *and* inline is the duplication that made the workflows a third comments.
+```kotlin
+// WRONG — v0.5.0 inserted genreTags between genres and label
+data class Metadata(val genres: List<String>? = null,
+    val genreTags: List<GenreTag>? = null,   // every following element index shifted
+    val label: String? = null, …)
 
-## Modeling Rules
+// RIGHT — append: data class Metadata(val genres…, val label…, …, val genreTags…)
+```
 
-- Enums for fixed sets — never string constants
-- Sealed classes for variants with different data — each variant is a data class
-- Interfaces for contracts and strategies (providers, cache, mergers)
-- Data classes over Pair/Triple/Map for structured fields
-- Collection wrappers only when they carry semantic meaning (sealed class variants) — not for API return types
-- @Serializable only on public API payload types (EnrichmentData subtypes, EnrichmentIdentifiers) — never on provider models or infrastructure
+Consequence: name-based JSON survives, but element indices shift for index-based formats and
+hand-written serializers, and positional `copy()` rebinds. v0.4.0 went further — replacing
+`SimilarArtist.musicBrainzId` with `identifiers` broke every entry already persisted in the Room
+cache, which is why a payload change asks whether it needs a cache-clear note in `CHANGELOG.md`.
 
-## Backwards Compatibility
+### 5. `Error` and `NotFound` are not interchangeable in a provider
 
-This library is published on Maven Central and JitPack — assume external consumers exist.
+```kotlin
+// WRONG — "the API has no cover art for this release" is not a failure
+if (url == null) return EnrichmentResult.Error(type, id, "no artwork")
 
-**Versioning stance — the 0.x carve-out.** This project is pre-1.0, and during the `0.x` series semver permits breaking changes on minor releases. This repo adopts that carve-out explicitly, because the earlier "no breaks without a major bump" rule was never actually true of practice and that gap is what let the audit findings accumulate (see `STORIES.md`, 2026-07-21):
+// RIGHT
+if (url == null) return EnrichmentResult.NotFound(type, id)
+```
 
-- **Minor releases (`0.x.0`) MAY contain breaking public-API changes** — but every break MUST be documented under a `### Breaking Changes` heading in `CHANGELOG.md` and be visible in the reviewed `api/*.api` diff. A break that is neither documented nor visible in the `.api` diff is a defect, not a release.
-- **Patch releases (`0.x.y`, `y > 0`) may NOT break the public API.** Patches are for fixes that keep the signature and ABI stable. (v0.9.2 broke this by inserting a parameter mid-list in a patch — the specific mistake this rule exists to stop recurring.)
-- **At `1.0.0` the full semver rule takes effect:** no breaking change to the public API without a major version bump, from then on.
+Consequence: `ProviderChain` records a breaker *failure* on `Error` and a *success* on `NotFound`, so
+mislabelling opens the circuit breaker against a healthy provider, and `CacheMode.STALE_IF_ERROR`
+starts serving stale data. Reserve `Error`/`RateLimited` for transport and protocol problems —
+`mapError()` on `EnrichmentProvider` classifies those into the right `ErrorKind` for you.
 
-Whatever the release channel, evolve the API additively wherever possible:
+### 6. A capability's `identifierRequirement` defaults to `NONE`
 
-- Breaking = removing/renaming public classes, functions, or parameters; changing return types; reordering non-named parameters; changing enum/sealed-class variants consumers may match on.
-- Prefer adding new overloads or default parameters over modifying existing signatures.
-- Deprecate before removing — add `@Deprecated` with `ReplaceWith` and keep for at least one minor release before removal.
-- **Append new parameters at the end with a default — never insert mid-list.** A mid-list insertion silently re-binds every positional argument after it. (Note: on the JVM, adding a parameter *anywhere* to a function with default parameters changes the generated method descriptor, so it is a binary break for pre-compiled callers regardless of position — appending is the source-compatible floor, not a full ABI guarantee. A 0.x minor is the place for either.)
-- Internal code (`internal` visibility, `provider/*/` internals, `http/` infrastructure) can change freely — and this is now enforced by visibility, not just aspiration: the `*Api`/`*Mapper`/`*Models` behind each provider, `MusicBrainzParser`, `CircuitBreaker`, and the `engine/` mergers/synthesizers are all `internal` and absent from the `.api` baselines. The public surface is the `*Provider` classes, `HttpClient`/`HttpResult`/`HttpResponse`/`DefaultHttpClient`/`RateLimiter`, and the `ResultMerger`/`CompositeSynthesizer` extension-point interfaces.
-- When you make a breaking change, document it in `CHANGELOG.md` under a `### Breaking Changes` heading and flag it to the user before proceeding.
+```kotlin
+// WRONG — this provider needs an MBID, but the chain will call it without one
+ProviderCapability(type = EnrichmentType.ALBUM_ART, priority = 100)
 
-**Enforcement.** `binary-compatibility-validator` dumps the public ABI to `api/*.api` in each module.
-`apiCheck` runs as part of `./gradlew build` and in `release.yml`, so a diverging signature
-fails the build rather than being caught by review alone. An intentional API change means running
-`./gradlew apiDump` and reviewing the committed `.api` diff — that diff, not the source diff, is the
-record of what consumers see.
+// RIGHT
+ProviderCapability(EnrichmentType.ALBUM_ART, priority = 100,
+    identifierRequirement = IdentifierRequirement.MUSICBRAINZ_ID)
+```
 
-> **The provider/http/engine surface was narrowed (2026-07-21, issue #5).** 80 top-level types that
-> were public only by omission — the `*Api`/`*Mapper`/`*Models` behind each provider, `MusicBrainzParser`,
-> `http/CircuitBreaker`, and the `engine/` mergers/synthesizers — are now `internal` and no longer in the
-> `.api` baselines. A refactor confined to those internals no longer touches the public ABI, so `apiCheck`
-> stays green and no `apiDump` commit is needed. `RateLimiter` stays public deliberately: it is a
-> parameter of nearly every public `*Provider` constructor, so hiding it would break the provider
-> constructor surface far more than it narrows anything. What remains public under `engine/`
-> (`ProviderRegistry`, `ProviderChain`, `DefaultEnrichmentEngine`, `ArtistMatcher`, `ConfidenceCalculator`)
-> is engine wiring/helpers left for a future pass. One exception was forced here: `ProviderChain`'s
-> constructor became `internal` (its default `circuitBreakers` parameter referenced the now-internal
-> `CircuitBreaker`); the class itself stays public and is reachable via `ProviderRegistry.chainFor()`.
+Consequence: `ProviderChain.hasRequiredIdentifiers()` is the only thing keeping an ID-only provider
+from being called with nothing to look up. Undeclared, it burns a rate-limited request and returns
+`NotFound` — which records breaker **success**, so a provider that never works looks healthy while a
+lower-priority fallback wins the type. Declare it on every capability entry, not just the first.
 
-## Git Rules
+### 7. Deleting an unused constructor parameter is still an ABI break
 
-- **DO NOT** add Co-Authored-By, "Generated with Claude", or any AI/Anthropic/tool attribution in commits, PR titles and bodies, issue comments, or any other text that leaves this machine
-- **DO NOT** use `git revert` to undo changes — use `git reset` or manual edits instead
-- Always ask permission before running destructive git commands
+```kotlin
+// WRONG as a "dead code cleanup" — this is a public constructor
+class DefaultEnrichmentEngine(
+    private val registry: ProviderRegistry,
+    override val cache: EnrichmentCache,
+-   private val httpClient: HttpClient,      // detekt: UnusedPrivateProperty
+    private val config: EnrichmentConfig,
+)
+// RIGHT — a documented break in a 0.x *minor*, with an api-dump and a ### Breaking Changes
+// entry — or it waits. Tracked in #48.
+```
 
-## Key Conventions
+Consequence: `Builder.build()` allocates a second `DefaultHttpClient` purely to fill it, so it looks
+like free cleanup — but it changes a published signature and cannot ride a patch. Same for anything
+in `config/detekt-baseline-*.xml`: check whether the finding sits on a public signature first.
 
-- Package: `com.landofoz.musicmeta` (core), `com.landofoz.musicmeta.android` (android module)
-- Group ID: `io.github.famesjranko`
-- Java 17 target
-- Dependencies managed via `gradle/libs.versions.toml` version catalog
-- JSON parsing uses `org.json` (not Gson/Moshi); serialization uses `kotlinx.serialization`
-- MusicBrainz requires a descriptive User-Agent string — always set via `DefaultHttpClient` constructor or `EnrichmentConfig.userAgent`
+## Backwards compatibility
+
+Published to Maven Central and JitPack — assume external consumers exist.
+
+**The 0.x carve-out.** Pre-1.0, semver permits breaking changes on minor releases, and this repo
+takes that carve-out explicitly:
+
+- **Minor (`0.x.0`) MAY break the public API** — every break documented under a
+  `### Breaking Changes` heading in `CHANGELOG.md` *and* visible in the reviewed `api/*.api` diff.
+  A break that is in neither is a defect, not a release.
+- **Patch (`0.x.y`) may NOT break the public API.** v0.9.2 did exactly this (pitfall 1); that is why
+  the rule is written down.
+- **At `1.0.0`** full semver applies: no break without a major bump.
+
+Whatever the channel, evolve additively, and flag any break to the user before proceeding. Breaking
+means removing or renaming public classes, functions or parameters; changing a return type;
+reordering non-named parameters; changing enum or sealed-class variants a consumer may `when` over.
+Prefer a new overload or a defaulted parameter appended at the end; deprecate with
+`@Deprecated(ReplaceWith(...))` for at least one minor before removal. On the JVM, adding a
+parameter *anywhere* to a function with defaults changes the method descriptor, so appending is the
+source-compatible floor, not a full ABI guarantee — a 0.x minor is the place for either.
+
+## Git rules
+
+- **Never** add `Co-Authored-By`, "Generated with Claude", or any AI/Anthropic/tool attribution to
+  commits, PR titles or bodies, issue comments, or anything else that leaves this machine.
+- **Never** use `git revert` — it loses the change and records both the mistake and the undo. Use
+  `git reset` or a manual edit.
+- Always ask before running a destructive git command.
+
+## Key conventions
+
+- Group id `io.github.famesjranko`, Java 17, dependencies via `gradle/libs.versions.toml`.
+- Provider responses are parsed with `org.json`; consumer-facing payloads use
+  `kotlinx.serialization`.
+- MusicBrainz needs a descriptive User-Agent and max 1 request/second — see the `RateLimiter(1100)`
+  in `Builder.withDefaultProviders()` and `EnrichmentConfig.userAgent`.
+- Comments explain non-obvious constraints, traps and guards — not what the code says — and stay to
+  a line or two. Nothing enforces this (`ARCHITECTURE.md`, *Not enforced*); it is a judgement call.
