@@ -42,6 +42,8 @@ Mostly docs and CI, plus one engine fix consumers should know about (#53).
 ### Removed
 - The 300-line main-source file cap, and the grandfather list of four files already over it. It was a preference with a mechanism, not a defect the mechanism prevented; detekt's complexity rules cover the case that actually matters (#60)
 - The convention gate's hand-written Kotlin scanner, its `KotlinLexer` oracle and the differential test that kept it honest — 900 lines and a `kotlin-compiler-embeddable` dependency, all of it there so a `!!` inside a comment would not be reported. The bans are absolute instead, which is simpler and stricter (#60)
+- `api-drift.yml` — a weekly scheduled job that regenerated the API baselines and filed a tracking issue. `apiCheck` runs inside `./check` on every push and PR, and an ABI baseline cannot drift without a commit, so 245 lines were watching for something the gate had already caught
+- The tracking-issue machinery in `provider-drift.yml` — 434 of its 476 lines built a summary and then created, updated, reopened and closed a public issue with a redacted body. The job now runs the live-API suite and fails, uploading the test report; a failed scheduled run already emails and keeps its log
 - `publish.yml` — superseded by `release.yml`, which cannot be started by a bot-pushed tag
 
 ## [0.10.1] - 2026-07-22
