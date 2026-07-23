@@ -78,6 +78,10 @@ lint: ## All four layers without building
 	mypy
 	python3 scripts/checks/check_conventions.py
 
+.PHONY: mask-check
+mask-check: ## Differential-test the conventions scanner against Kotlin's own lexer (also in ./check)
+	python3 scripts/checks/test_code_mask.py --verbose
+
 # --- public API ---
 
 .PHONY: api-check

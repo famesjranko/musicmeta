@@ -73,6 +73,9 @@ python3 scripts/checks/check_conventions.py
 step "script self-tests"
 # Unguarded, a regression in a release script surfaces only as a release check that silently passes.
 for t in scripts/checks/test_*.py scripts/github-workflows/test_*.py; do
+    # test_code_mask.py is a full step below, not part of this loop — at ~5s it is the most
+    # expensive thing in --fast, and it only guards _code_mask(), which changes about twice a year.
+    [ "$t" = "scripts/checks/test_code_mask.py" ] && continue
     python3 "$t" >/dev/null 2>&1 || { python3 "$t"; exit 1; }
 done
 echo "all script self-tests pass"
@@ -82,9 +85,16 @@ step "kotlin format + static analysis (ktlint, detekt)"
 ./gradlew ktlintCheck detekt --quiet
 
 if [ "$FAST" = 1 ]; then
-    printf '\n\033[1m--fast: skipped build and demo canary\033[0m\n'
+    printf '\n\033[1m--fast: skipped the lexer differential, build and demo canary\033[0m\n'
     exit 0
 fi
+
+step "conventions scanner vs the Kotlin lexer"
+# Deliberately below the --fast exit. It lexes every .kt file in the repo with the compiler's own
+# lexer to prove check_conventions.py classifies code the same way, which is what stops that gate
+# reporting green while silently checking nothing. Worth ~5s and a JVM on a push; not worth it on
+# every edit, since nothing above this line can change the answer.
+python3 scripts/checks/test_code_mask.py
 
 step "build (compile, test, apiCheck)"
 ./gradlew build
