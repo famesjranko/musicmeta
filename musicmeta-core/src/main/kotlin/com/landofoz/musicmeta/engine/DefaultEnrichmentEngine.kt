@@ -108,6 +108,8 @@ class DefaultEnrichmentEngine(
             }
         }
 
+        // Stale fallback and write-back are outside the withTimeout above on purpose: a timeout
+        // must not discard results already fetched. Don't move these inside the try.
         if (config.cacheMode == CacheMode.STALE_IF_ERROR) {
             applyStaleCache(request, results, uncachedTypes)
         }

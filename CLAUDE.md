@@ -51,12 +51,11 @@ Paths below are relative to `musicmeta-core/src/main/kotlin/com/landofoz/musicme
 
 6. **Post-processing and write-back** — `engine/CatalogFilter.kt`, identity-match stamping,
    `CacheMode.STALE_IF_ERROR` fallback to expired entries, then non-stale successes are cached under
-   the primary key and, when identity added an MBID, the name-alias key too. Steps 2–5 sit inside
-   `withTimeout(config.enrichTimeoutMs)`; on expiry unfinished types become
-   `Error(..., ErrorKind.TIMEOUT)`. **Step 6 is outside it** — the `withTimeout` block closes before
-   the stale fallback and write-back, so results survive a timeout rather than being discarded by it.
-   Every cache call site in `enrich()` is therefore outside the deadline; only the strategy guard
-   sits inside.
+   the primary key and, when identity added an MBID, the name-alias key too. The provider fan-out
+   runs under `withTimeout(config.enrichTimeoutMs)`; on expiry unfinished types become
+   `Error(..., ErrorKind.TIMEOUT)`. The stale fallback and write-back run after that block, so a
+   timeout does not discard results already fetched — the invariant is pinned by a comment next to
+   the code, not tracked step-by-step here.
 
 Root-package types: `EnrichmentEngine.kt` (interface + the `Builder` wiring providers →
 `ProviderRegistry` → `DefaultEnrichmentEngine`), `EnrichmentRequest.kt` (sealed:
