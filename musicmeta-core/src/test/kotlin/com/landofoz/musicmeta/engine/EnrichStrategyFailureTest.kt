@@ -5,6 +5,10 @@ import com.landofoz.musicmeta.testutil.FakeEnrichmentCache
 import com.landofoz.musicmeta.testutil.FakeHttpClient
 import com.landofoz.musicmeta.testutil.FakeProvider
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
 import org.junit.Before
@@ -127,7 +131,7 @@ class EnrichStrategyFailureTest {
 
     // --- the guard itself ---
 
-    @Test fun `guarded strategy converts an ordinary failure into an Error for the type`() {
+    @Test fun `guarded strategy converts an ordinary failure into an Error for the type`() = runTest {
         // Given — a strategy that throws a plain exception
         // When — run through the guard
         val result = guardedStrategy(EnrichmentLogger.NoOp, genre, "merger") {
@@ -140,20 +144,73 @@ class EnrichStrategyFailureTest {
         assertEquals("boom", result.message)
     }
 
-    @Test fun `guarded strategy rethrows CancellationException`() {
-        // Given — a strategy that throws CancellationException, as a consumer's own cancelled work can
-        var propagated = false
+    // --- cancellation: the two directions must be told apart (#61) ---
+    //
+    // Same split as `CacheGuard`. `merge`/`synthesize` are not suspend, so a consumer reaching for
+    // a deadline writes `runBlocking { withTimeout { … } }` and its expiry arrives here as a bare
+    // CancellationException — which is what these tests throw.
 
-        // When — run through the guard
-        try {
-            guardedStrategy(EnrichmentLogger.NoOp, genre, "merger") {
-                throw CancellationException("cancelled")
+    @Test fun `guarded strategy propagates a cancellation of our own job`() = runTest {
+        // Given — our job genuinely cancelled. Both call sites sit inside enrich()'s withTimeout,
+        // so this is also how enrichTimeoutMs must continue to be delivered.
+        // Observed from inside the coroutine, and joined rather than awaited — `await()` on a
+        // cancelled Deferred throws regardless of what the guard did, which makes the obvious
+        // version of this test pass with the guard deleted.
+        var rethrew = false
+        var degraded = false
+        val running = CoroutineScope(Job()).async {
+            // Captured out here: the guarded block is not suspend, so it cannot reach the context
+            // itself — which is precisely why the guard has to be told to look, and cannot infer
+            // ownership from the exception type.
+            val job = currentCoroutineContext()[Job]
+            try {
+                guardedStrategy(EnrichmentLogger.NoOp, genre, "merger") {
+                    job?.cancel()
+                    throw CancellationException("caller went away")
+                }
+                degraded = true
+            } catch (_: CancellationException) {
+                rethrew = true
             }
-        } catch (_: CancellationException) {
-            propagated = true
         }
 
-        // Then — it is rethrown rather than converted to an Error, as structured concurrency requires
-        assertTrue("cancellation must not be swallowed by the strategy guard", propagated)
+        // When — letting the guarded merge finish
+        running.join()
+
+        // Then — it stops, rather than reporting a type that nobody is waiting for
+        assertTrue("a cancelled enrichment must not be converted into a per-type Error", rethrew)
+        assertFalse("our own cancellation must not become that type's Error", degraded)
+    }
+
+    @Test fun `guarded strategy reports an Error when the strategy's own timeout expires`() = runTest {
+        // Given — a consumer merger whose own deadline expired, our job healthy
+        val result = guardedStrategy(EnrichmentLogger.NoOp, genre, "merger") {
+            throw CancellationException("the merger's own withTimeout expired")
+        }
+
+        // Then — contained as that type's failure. Escaping here cancels the sibling types resolving
+        // alongside it and is reported to the caller as enrichTimeoutMs expiring.
+        assertTrue("a merger's own timeout is that merger's failure", result is EnrichmentResult.Error)
+        assertEquals(genre, (result as EnrichmentResult.Error).type)
+    }
+
+    @Test fun `enrich reports a typed Error when the merger's own timeout expires`() = runTest {
+        // Given — the same at the public API, on the async fan-out path where an escaping
+        // cancellation takes the sibling types down with it
+        val cancellingMerger = object : ResultMerger {
+            override val type = genre
+            override fun merge(results: List<EnrichmentResult.Success>): EnrichmentResult =
+                throw CancellationException("the merger's own withTimeout expired")
+        }
+
+        // When — enriching both a merged type and an ordinary one
+        val results = engine(
+            listOf(providerFor(genre, bio)),
+            mergers = listOf(cancellingMerger),
+        ).enrich(req, setOf(genre, bio))
+
+        // Then — enrich() returns, GENRE carries the failure, and ARTIST_BIO is untouched by it
+        assertTrue(results.raw[genre] is EnrichmentResult.Error)
+        assertEquals("p", (results.raw[bio] as EnrichmentResult.Success).provider)
     }
 }

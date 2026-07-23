@@ -7,7 +7,9 @@ import com.landofoz.musicmeta.EnrichmentType
 /** A cache operation that [FakeEnrichmentCache] can be told to fail, to exercise cache-failure paths. */
 enum class CacheOp { GET, GET_INCLUDING_EXPIRED, PUT, INVALIDATE }
 
-class FakeEnrichmentCache : EnrichmentCache {
+// `open`, like FakeProvider: a test that needs one operation to misbehave in a way `failing` cannot
+// express — suspending, or raising a CancellationException — subclasses and overrides that one.
+open class FakeEnrichmentCache : EnrichmentCache {
     val stored = mutableMapOf<String, EnrichmentResult.Success>()
     val storedTtls = mutableMapOf<String, Long>()
     val expiredStore = mutableMapOf<String, EnrichmentResult.Success>()

@@ -74,7 +74,8 @@ than it looks like, each learned the hard way.
   that a *foreign* `CancellationException` stays contained as one provider's error. A textual rule
   was written for this and deleted: it could not see the fallback-returning catches that were the
   actual bugs, and the remediation it printed (`catch (CancellationException) { throw e }`) was
-  itself the defect. `CacheGuard` and `StrategyGuard` still carry that blanket form — #61.
+  itself the defect. `CacheGuard` and `StrategyGuard` carried that blanket form until #61 and now
+  match; `EnrichCacheFailureTest` and `EnrichStrategyFailureTest` pin both directions for them.
 - **Bash-written Kotlin is not formatted on write.** The hook only sees files an `Edit`/`Write`
   payload names. Sweeping everything dirty at end of turn was built and deleted: it reformats
   uncommitted work the agent never touched. `ktlintCheck` catches it, one `./check` later.

@@ -51,9 +51,12 @@ Paths below are relative to `musicmeta-core/src/main/kotlin/com/landofoz/musicme
 
 6. **Post-processing and write-back** — `engine/CatalogFilter.kt`, identity-match stamping,
    `CacheMode.STALE_IF_ERROR` fallback to expired entries, then non-stale successes are cached under
-   the primary key and, when identity added an MBID, the name-alias key too. Steps 2–6 sit inside
+   the primary key and, when identity added an MBID, the name-alias key too. Steps 2–5 sit inside
    `withTimeout(config.enrichTimeoutMs)`; on expiry unfinished types become
-   `Error(..., ErrorKind.TIMEOUT)`.
+   `Error(..., ErrorKind.TIMEOUT)`. **Step 6 is outside it** — the `withTimeout` block closes at
+   `DefaultEnrichmentEngine.kt:100`, and stale fallback and write-back run after the `catch`, so
+   results survive a timeout rather than being discarded by it. Every cache call site is therefore
+   outside the deadline; only the strategy guard sits inside.
 
 Root-package types: `EnrichmentEngine.kt` (interface + the `Builder` wiring providers →
 `ProviderRegistry` → `DefaultEnrichmentEngine`), `EnrichmentRequest.kt` (sealed:
@@ -191,9 +194,16 @@ chain, cancels sibling providers, and is reported to the caller as the engine's 
 one provider's error. Both directions were shipped and caught during #53; the behaviour is pinned
 by `ProviderChainCancellationTest`, not by a lint rule.
 
-`engine/CacheGuard.kt` and `engine/StrategyGuard.kt` still carry the blanket rethrow. They predate
-#53 and were not revisited, so they are the second form above, not the third — tracked in #61. Copy
-`ProviderChain`, not those two.
+`engine/CacheGuard.kt` and `engine/StrategyGuard.kt` carried the blanket rethrow until #61 — they
+predated #53 and were not revisited. Both now use `ensureActive()`, so **every guard in the tree is
+the third form** and any of them is safe to copy. `guardedStrategy` is `suspend` purely to reach the
+job: `ResultMerger.merge` and `CompositeSynthesizer.synthesize` are not suspend, so the block cannot
+ask about cancellation itself.
+
+Their tests are worth reading before writing a cancellation test of your own. The obvious shape —
+cancel the job, then assert `await()` throws — proves nothing: a `Deferred` whose job was cancelled
+throws from `await()` whether the guard rethrew or swallowed and returned. That version stayed green
+with the guard **deleted**. Observe the outcome inside the coroutine and `join()` instead. (#61)
 
 **Do not reason that a swallowed cancellation is harmless because "it re-asserts at the next
 suspension point".** It is not a guarantee — cancellation is cooperative, and a suspend function
