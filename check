@@ -7,7 +7,8 @@
 # fails in a second rather than after a full Gradle build.
 #
 #   ./check              everything
-#   ./check --fast       skip the build and the demo canary — for the edit loop, not a push
+#   ./check --fast       skip detekt, the lexer differential, the build and the demo canary —
+#                        for the edit loop, not a push
 #   ./check --skip-demo  CI only: the demo canary is a separate required check there
 set -euo pipefail
 cd "$(dirname "$0")"

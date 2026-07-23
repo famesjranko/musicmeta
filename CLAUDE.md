@@ -109,7 +109,7 @@ make test           # core unit tests
 make test-all       # every module
 make test-e2e       # live third-party APIs, needs keys
 make format         # rewrite Kotlin and Python to house style
-make lint           # all four lint layers without building
+make lint           # all four lint layers, no tests — detekt compiles first, its rules need types
 make api-check      # public ABI vs the committed api/*.api baselines
 make api-dump       # regenerate them after an intentional change — the .api diff is the record
 make demo           # compile demo/, the external-consumer canary
