@@ -62,8 +62,10 @@ and it is where drift accumulates silently — so it gets read, not skimmed.
   the doc or the threshold should move; nothing currently holds the gap.
 - **46 pre-existing detekt findings** sit in `config/detekt-baseline-*.xml` so new code must be
   clean while existing debt stays visible. One deserves a decision rather than a baseline:
-  `DefaultEnrichmentEngine` takes an unused `private val httpClient` constructor property. Removing
-  it changes a public constructor signature, so it is a documented breaking change, not a cleanup.
+  `DefaultEnrichmentEngine` takes an unused `private val httpClient` constructor property, and
+  `Builder.build()` allocates a second `DefaultHttpClient` to fill it. Removing the parameter
+  changes a public constructor signature, so it is a documented breaking change, not a cleanup —
+  tracked in #48.
 - **Test-file length.** Excluded from the 300-line cap on purpose: given-when-then narratives are
   legitimately long, and a cap here would push people to split coherent suites for the wrong reason.
 - **Test-source style.** Wildcard imports and SCREAMING_CASE fixture names are allowed in tests
