@@ -171,10 +171,13 @@ catch (e: Exception) {
 Consequence: `CancellationException` is an `Exception`, so swallowing it defeats
 `withTimeout(config.enrichTimeoutMs)` and leaves `enrich()` working for a caller that has gone away.
 Both guards exist because a throwing cache (#22) and a throwing merger (#28) escaped `enrich()`;
-every consumer-implementable interface needs one. `EnrichmentProvider`'s lives in two places:
-`ProviderChain` rethrows around `provider.enrich(...)`, and `mapError()` rethrows rather than
-classifying — which is why a provider's `catch (e: Exception)` should call `mapError(type, e)`
-instead of building an `EnrichmentResult.Error` by hand.
+every consumer-implementable interface needs one. `EnrichmentProvider`'s is `ProviderChain`, which
+catches broadly around `provider.enrich(...)` and then calls `ensureActive()` before it touches the
+breaker. `mapError()` deliberately does **not** special-case `CancellationException` — it is not a
+suspend function, so it cannot tell our cancellation from a provider's own `withTimeout`, and it
+says so in its KDoc. A provider's `catch (e: Exception)` should still call `mapError(type, e)`
+rather than building an `EnrichmentResult.Error` by hand, for the `ErrorKind` classification; the
+cancellation question is settled one level up, not there.
 
 The worst version is not the swallowed cancellation but what the result does next: an `Error`
 makes `ProviderChain` record a circuit-breaker **failure**, so before #53 every `enrichTimeoutMs`

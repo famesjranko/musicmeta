@@ -11,7 +11,7 @@ because the config is the thing that fails.
 ```bash
 ./scripts/bootstrap.sh   # once: installs the pinned tools ./check requires
 ./check                  # everything
-./check --fast           # skips build and demo canary — for the edit loop, not for a push
+./check --fast           # skips the lexer differential, build and demo canary — edit loop only
 ```
 
 `./check` runs four layers — a formatter, a linter, a type checker, and a custom linter for rules
