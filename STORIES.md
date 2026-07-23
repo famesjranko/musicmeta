@@ -7,6 +7,29 @@
 
 ## Decisions
 
+### 2026-07-23: A convention gate cannot lex Kotlin with regex
+
+`check_conventions.py` must know which characters are code before it can ban `!!`. Two regex
+attempts each shipped a silent false negative, and both were found only by review.
+
+**Attempt 1** — five sequential `re.sub` passes. The line-comment pass ran over text the string
+pass had not consumed, so the `//` in `"https://host/"` blanked the rest of the line and
+`"https://host/" + u!!.trim()` reported clean. This repo builds URLs on nearly every provider line.
+
+**Attempt 2** — one alternation, single pass. Its string branch could not span the nested quote in
+`"${enc(id!!, "UTF-8")}"`, so it truncated the literal and blanked the expression it existed to
+preserve. `WikidataApi.kt` already ships that shape. Leaked literal text then reached the `'` and
+`/*` branches, which swallowed every line to the next match.
+
+**Rejected — a third regex.** The failure is structural: Kotlin nests, and regex cannot express
+recursion. A third attempt would have been the same bet twice.
+
+**Rejected — a full Kotlin parser.** The question is only "is this character code", which a
+scanner answers completely and a parser answers expensively.
+
+Now a character scanner over a context stack: correct by construction for nesting, and length- and
+newline-preserving, so a reported line number is never wrong even if a classification is.
+
 ### 2026-07-22: Pin Kotlin's jvmTarget, don't adopt a toolchain
 
 **Context**: only `musicmeta-android` declared `jvmTarget`. The two JVM modules set
