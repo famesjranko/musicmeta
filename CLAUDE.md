@@ -7,9 +7,8 @@ here**, and where a document and a config disagree the config wins, because the 
 that fails. Elsewhere: `README.md` (consumer-facing), `CHANGELOG.md` (one line per change, headline
 plus `(#issue)`), `ROADMAP.md`, `docs/project/workflow.md`, `docs/project/release.md`.
 
-There is no history document. `STORIES.md` was deleted (2026-07-23): git and the PR hold what
-happened, and *why* a thing is the way it is belongs in a comment next to the mechanism. If an entry
-can become wrong, it was never history.
+There is no history document, and none should be added: git and the PR hold what happened, and *why*
+a thing is the way it is belongs in a comment next to the mechanism.
 
 ## Architecture map
 
@@ -20,8 +19,9 @@ Paths below are relative to `musicmeta-core/src/main/kotlin/com/landofoz/musicme
 1. **Cache** — `forceRefresh` invalidates first, then each type is read via `guardedCacheRead`. Hits
    return without touching a provider; the rest become `uncachedTypes`. Keys come from
    `engine/EntityKey.kt` (`entityKeyFor`, plus the name-alias `entityKeyForName`). Every cache read
-   and write inside `enrich()` goes through `engine/CacheGuard.kt` — a throwing cache degrades to a
-   miss, never a failed `enrich()`.
+   and write **inside `enrich()`** goes through `engine/CacheGuard.kt` — a throwing cache degrades to
+   a miss, never a failed `enrich()`. `invalidate()`, `isManuallySelected` and `markManuallySelected`
+   call the cache directly and are **not** guarded; a throwing cache still takes those down.
 
 2. **Identity resolution** — gated on `EnrichmentConfig.enableIdentityResolution` and
    `needsIdentityResolution()` (`engine/IdentityHelper.kt`, data-driven from capabilities).
@@ -51,9 +51,12 @@ Paths below are relative to `musicmeta-core/src/main/kotlin/com/landofoz/musicme
 
 6. **Post-processing and write-back** — `engine/CatalogFilter.kt`, identity-match stamping,
    `CacheMode.STALE_IF_ERROR` fallback to expired entries, then non-stale successes are cached under
-   the primary key and, when identity added an MBID, the name-alias key too. Steps 2–6 sit inside
+   the primary key and, when identity added an MBID, the name-alias key too. Steps 2–5 sit inside
    `withTimeout(config.enrichTimeoutMs)`; on expiry unfinished types become
-   `Error(..., ErrorKind.TIMEOUT)`.
+   `Error(..., ErrorKind.TIMEOUT)`. **Step 6 is outside it** — the `withTimeout` block closes before
+   the stale fallback and write-back, so results survive a timeout rather than being discarded by it.
+   Every cache call site in `enrich()` is therefore outside the deadline; only the strategy guard
+   sits inside.
 
 Root-package types: `EnrichmentEngine.kt` (interface + the `Builder` wiring providers →
 `ProviderRegistry` → `DefaultEnrichmentEngine`), `EnrichmentRequest.kt` (sealed:
@@ -73,8 +76,9 @@ Root-package types: `EnrichmentEngine.kt` (interface + the `Builder` wiring prov
   in-tree consumer that compiles against the published surface the way an external one does. Exempt
   from house Kotlin style on purpose (`ARCHITECTURE.md`); `demo/run.sh` is still shellchecked.
 
-Each provider lives in `provider/<name>/` as four files, and the split is load-bearing — the first
-three are `internal`, so they can be renamed freely without an `apiDump`:
+Each provider lives in `provider/<name>/` and splits along these four roles — `musicbrainz/` adds
+three `internal` files, `deezer/` a second public provider. The split is load-bearing: the first
+three roles are `internal`, so they can be renamed freely without an `apiDump`:
 
 | File | Holds | Visibility |
 |---|---|---|
@@ -146,8 +150,7 @@ suspend fun EnrichmentEngine.albumProfile(
 Consequence: every positional caller re-binds silently. **The demo canary proves consumers still
 compile; it does not prove argument order held** — v0.9.2 escaped it and was caught only by a type
 mismatch; a `String?` inserted between `artist` and `mbid` would have compiled green and wrong.
-`make api-check` plus reading the `.api` diff is the guard. Also recorded at v0.6.0
-(`EnrichmentConfig.radioDiscoveryMode`) and v0.5.0 (`Metadata.genreTags`).
+`make api-check` plus reading the `.api` diff is the guard.
 
 ### 2. `catch (e: Exception)` in a suspend function eats cancellation
 
@@ -168,37 +171,24 @@ catch (e: Exception) {
 }
 ```
 
-Consequence: `CancellationException` is an `Exception`, so swallowing it defeats
-`withTimeout(config.enrichTimeoutMs)` and leaves `enrich()` working for a caller that has gone away.
-Both guards exist because a throwing cache (#22) and a throwing merger (#28) escaped `enrich()`;
-every consumer-implementable interface needs one. `EnrichmentProvider`'s is `ProviderChain`, which
-catches broadly around `provider.enrich(...)` and then calls `ensureActive()` before it touches the
-breaker. `mapError()` deliberately does **not** special-case `CancellationException` — it is not a
-suspend function, so it cannot tell our cancellation from a provider's own `withTimeout`, and it
-says so in its KDoc. A provider's `catch (e: Exception)` should still call `mapError(type, e)`
-rather than building an `EnrichmentResult.Error` by hand, for the `ErrorKind` classification; the
-cancellation question is settled one level up, not there.
+Swallowing defeats `withTimeout(config.enrichTimeoutMs)`, and the resulting `Error` makes
+`ProviderChain` record a circuit-breaker **failure** — an expiry counted against a provider that
+never failed. Every consumer-implementable interface needs a guard; copy the RIGHT form above.
 
-The worst version is not the swallowed cancellation but what the result does next: an `Error`
-makes `ProviderChain` record a circuit-breaker **failure**, so before #53 every `enrichTimeoutMs`
-expiry counted against providers that never failed.
+The blanket rethrow fails the other way: a `CancellationException` can come from *inside* a provider
+— its own `withTimeout` — while our job is healthy, and rethrowing that cancels sibling providers
+and reports the engine's deadline. `ensureActive()` throws only when *this* job was cancelled.
+`guardedStrategy` is `suspend` purely to reach the job, since `ResultMerger.merge` and
+`CompositeSynthesizer.synthesize` are not. Enforced by behaviour, not a lint rule —
+`ARCHITECTURE.md`, *Known gaps*, and read `EnrichCacheFailureTest` before writing a cancellation
+test of your own.
 
-**Use `ensureActive()`, not `catch (CancellationException) { throw e }`.** The blanket rethrow is
-wrong in the other direction: a `CancellationException` can also come from *inside* a provider —
-its own `withTimeout` expiring — while our job is perfectly healthy. Rethrowing that escapes the
-chain, cancels sibling providers, and is reported to the caller as the engine's deadline.
-`ensureActive()` throws only when *this* job is cancelled, so the foreign case stays contained as
-one provider's error. Both directions were shipped and caught during #53; the behaviour is pinned
-by `ProviderChainCancellationTest`, not by a lint rule.
-
-`engine/CacheGuard.kt` and `engine/StrategyGuard.kt` still carry the blanket rethrow. They predate
-#53 and were not revisited, so they are the second form above, not the third — tracked in #61. Copy
-`ProviderChain`, not those two.
+A provider's own `catch` should call `mapError(type, e)` for the `ErrorKind`; it deliberately does
+not special-case `CancellationException` (its KDoc says why).
 
 **Do not reason that a swallowed cancellation is harmless because "it re-asserts at the next
-suspension point".** It is not a guarantee — cancellation is cooperative, and a suspend function
-may return without ever suspending again. That claim was written here during #53 and used to wave
-through five real bugs. See [Kotlin's cancellation docs](https://kotlinlang.org/docs/cancellation-and-timeouts.html).
+suspension point"** — cancellation is cooperative and a suspend function may never suspend again.
+See [Kotlin's cancellation docs](https://kotlinlang.org/docs/cancellation-and-timeouts.html).
 
 ### 3. `org.json` returns a default for a missing key — it does not fail
 
@@ -300,7 +290,7 @@ reordering non-named parameters; changing enum or sealed-class variants a consum
 Prefer a new overload or a defaulted parameter appended at the end; deprecate with
 `@Deprecated(ReplaceWith(...))` for at least one minor before removal. On the JVM, adding a
 parameter *anywhere* to a function with defaults changes the method descriptor, so appending is the
-source-compatible floor, not a full ABI guarantee — a 0.x minor is the place for either.
+source-compatible floor, not a full ABI guarantee.
 
 ## Git rules
 

@@ -7,7 +7,13 @@ import com.landofoz.musicmeta.testutil.FakeEnrichmentCache
 import com.landofoz.musicmeta.testutil.FakeHttpClient
 import com.landofoz.musicmeta.testutil.FakeProvider
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
@@ -123,20 +129,83 @@ class EnrichCacheFailureTest {
         assertNull(value)
     }
 
-    @Test fun `guarded cache read rethrows CancellationException`() = runTest {
-        // Given — a read that throws CancellationException, as a cancelled caller causes
-        var propagated = false
+    // --- cancellation: the two directions must be told apart (#61) ---
+    //
+    // The guard cannot ask "was this a CancellationException" — it must ask "is *our* job
+    // cancelled". `ensureActive()` answers the second question; a blanket rethrow answers the
+    // first, and gets the foreign case wrong. Both tests below are needed: the propagate case
+    // alone is satisfied by the blanket rethrow this issue removes.
 
-        // When — run through the guard
-        try {
-            guardedCacheRead<String>(EnrichmentLogger.NoOp, "get") {
-                throw CancellationException("cancelled")
+    @Test fun `guarded cache read propagates a cancellation of our own job`() = runTest {
+        // Given — the caller genuinely went away, so the cache call is cancelled with it. The
+        // cancel() matters: throwing while the job is still active is a foreign cancellation, not
+        // ours, and is the case immediately below.
+        //
+        // Both flags are observed from *inside* the coroutine deliberately. Reading the outcome
+        // through `await()` proves nothing: a Deferred whose job was cancelled throws
+        // CancellationException from await() whether the guard rethrew or swallowed and returned,
+        // so that version of this test stayed green with the guard deleted entirely.
+        var rethrew = false
+        var degraded = false
+        val running = CoroutineScope(Job()).async {
+            val job = currentCoroutineContext()[Job]
+            try {
+                guardedCacheRead<String>(EnrichmentLogger.NoOp, "get") {
+                    job?.cancel()
+                    throw CancellationException("caller went away")
+                }
+                // Reached only if the guard degraded. There is no suspension point between the
+                // cancel() and here, so the cancellation does *not* re-assert on its own — the
+                // assumption CLAUDE.md pitfall 2 warns about.
+                degraded = true
+            } catch (_: CancellationException) {
+                rethrew = true
             }
-        } catch (_: CancellationException) {
-            propagated = true
         }
 
-        // Then — it is rethrown, so a cancelled enrichment actually stops
-        assertTrue("cancellation must not be swallowed by the cache guard", propagated)
+        // When — letting it finish. join(), not await(): join does not throw on cancellation, so
+        // the assertions below can only be satisfied by the guard's own behaviour.
+        running.join()
+
+        // Then — enrichment stops, rather than working on behalf of a caller that has gone
+        assertTrue("a cancelled caller must not be left waiting on a cache round-trip", rethrew)
+        assertFalse("our own cancellation must not degrade to a cache miss", degraded)
+    }
+
+    @Test fun `guarded cache read degrades when the cache's own timeout expires`() = runTest {
+        // Given — a consumer cache running its own withTimeout while our job is perfectly healthy.
+        // EnrichmentCache is consumer-implementable and the shipped one does disk I/O, so this is
+        // the ordinary case, not a hypothetical. TimeoutCancellationException IS a
+        // CancellationException, so the blanket rethrow escaped enrich() here.
+        val value = guardedCacheRead<String>(EnrichmentLogger.NoOp, "get") {
+            withTimeout(1) {
+                delay(1_000)
+                "never reached"
+            }
+        }
+
+        // Then — a slow cache is a cache miss, exactly like a throwing one. It is not the engine's
+        // deadline, and it must not be reported to the caller as one.
+        assertNull("a cache that timed itself out is a miss, not a cancelled enrichment", value)
+    }
+
+    @Test fun `enrich survives a cache whose own timeout expires mid-read`() = runTest {
+        // Given — the same thing at the public API: the guard's degradation has to actually reach
+        // the caller, not just the unit test. This is the failure #61 describes end to end.
+        val p = provider(art("fresh"))
+        cache = object : FakeEnrichmentCache() {
+            override suspend fun get(entityKey: String, type: EnrichmentType): EnrichmentResult.Success? =
+                withTimeout(1) {
+                    delay(1_000)
+                    null
+                }
+        }
+
+        // When — enriching, with our own job healthy throughout
+        val results = engine(p).enrich(req, setOf(artType))
+
+        // Then — enrich() completes and the provider answers. Before the fix this threw a bare
+        // CancellationException out of enrich(), which the caller reads as the engine's deadline.
+        assertEquals("fresh", (results.raw[artType] as EnrichmentResult.Success).provider)
     }
 }
