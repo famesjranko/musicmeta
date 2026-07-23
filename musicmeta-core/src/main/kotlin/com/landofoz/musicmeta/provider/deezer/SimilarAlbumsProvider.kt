@@ -6,7 +6,6 @@ import com.landofoz.musicmeta.EnrichmentProvider
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
-import com.landofoz.musicmeta.ErrorKind
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.SimilarAlbum
 import com.landofoz.musicmeta.engine.ArtistMatcher
@@ -53,12 +52,10 @@ class SimilarAlbumsProvider internal constructor(
         return try {
             enrichSimilarAlbums(request)
         } catch (e: Exception) {
-            val kind = when (e) {
-                is java.io.IOException -> ErrorKind.NETWORK
-                is org.json.JSONException -> ErrorKind.PARSE
-                else -> ErrorKind.UNKNOWN
-            }
-            EnrichmentResult.Error(type, id, e.message ?: "Unknown error", e, kind)
+            // mapError, not a hand-rolled copy of it: it is the one place that rethrows
+            // CancellationException, so a cancelled call cannot be recorded as a provider
+            // failure against the circuit breaker. (#53)
+            mapError(type, e)
         }
     }
 

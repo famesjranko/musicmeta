@@ -8,6 +8,7 @@ import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.IdentifierRequirement
 import com.landofoz.musicmeta.http.CircuitBreaker
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -36,6 +37,11 @@ class ProviderChain internal constructor(
                 val breaker = circuitBreakers[provider.id]
                 val result = try {
                     provider.enrich(request, type)
+                } catch (e: CancellationException) {
+                    // Not a provider failure. Swallowing it would record a breaker failure against
+                    // a healthy provider every time enrichTimeoutMs expires, and repeated timeouts
+                    // would open the circuit against one that never failed. (#53)
+                    throw e
                 } catch (e: Exception) {
                     EnrichmentResult.Error(type, provider.id, e.message ?: "Unknown error", e)
                 }
@@ -84,6 +90,8 @@ class ProviderChain internal constructor(
 
             val result = try {
                 provider.enrich(request, type)
+            } catch (e: CancellationException) {
+                throw e // see resolveAll — a cancelled call is not a breaker failure (#53)
             } catch (e: Exception) {
                 EnrichmentResult.Error(type, provider.id, e.message ?: "Unknown error", e)
             }

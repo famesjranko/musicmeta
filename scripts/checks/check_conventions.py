@@ -15,6 +15,7 @@ ARCHITECTURE.md under "Not enforced" rather than left implicit here.
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 from pathlib import Path
 
@@ -33,6 +34,17 @@ GRANDFATHERED_LONG_FILES = {
 # silently widens the serialized surface consumers cache, so a later rename breaks their stored
 # JSON rather than their compile.
 SERIALIZABLE_BANNED_DIRS = ("/provider/", "/http/")
+
+# `CancellationException` is an `Exception`, so `catch (e: Exception)` catches it. Turning that
+# into an `EnrichmentResult.Error` is the specific shape that hurts: `ProviderChain` records an
+# `Error` as a circuit-breaker *failure*, so every `enrichTimeoutMs` expiry counted against
+# providers that never failed, and repeated timeouts opened the circuit against a healthy one
+# (#53). A broad catch that merely logs and returns is not this bug — cancellation re-asserts at
+# the next suspension point — which is why the rule looks at what the catch *produces*, not at
+# whether a broad catch exists. `mapError()` is the sanctioned path: it rethrows, so the ~35
+# provider call sites that delegate to it are correct by construction.
+CATCH_CLAUSE = re.compile(r"\bcatch\s*\(\s*[\w_]+\s*:\s*([\w.]+)\s*\)")
+BROAD_EXCEPTION_TYPES = ("Exception", "Throwable")
 
 # A hand-written scanner, not a regex. Kotlin nests: a string can hold a `${...}` template, that
 # template holds code, and that code can hold another string. Regex cannot express that, and two
@@ -225,6 +237,52 @@ def check_no_double_bang(path: Path, rel: str, source: str) -> list[str]:
     return findings
 
 
+def _catch_body(code: str, start: int) -> str:
+    """The `{...}` block of the catch clause beginning at `start`, brace-balanced."""
+    open_brace = code.find("{", code.find(")", start))
+    if open_brace < 0:
+        return ""
+    depth = 0
+    for i in range(open_brace, len(code)):
+        if code[i] == "{":
+            depth += 1
+        elif code[i] == "}":
+            depth -= 1
+            if depth == 0:
+                return code[open_brace : i + 1]
+    return code[open_brace:]
+
+
+def check_cancellation_not_an_error(path: Path, rel: str, source: str) -> list[str]:
+    """Report a broad catch that turns a cancellation into an `EnrichmentResult.Error`.
+
+    Preceded by a `catch (… : CancellationException)` clause, or delegating to `mapError()`,
+    is what makes it safe. Both are checked against the code mask, so a match inside a comment
+    or a string cannot satisfy or trigger the rule.
+    """
+    code = strip_noise(source)
+    clauses = [(m.start(), m.group(1)) for m in CATCH_CLAUSE.finditer(code)]
+    findings = []
+    for index, (position, caught) in enumerate(clauses):
+        if caught not in BROAD_EXCEPTION_TYPES:
+            continue
+        body = _catch_body(code, position)
+        if "EnrichmentResult.Error(" not in body or "mapError(" in body:
+            continue
+        previous = clauses[index - 1][1] if index else ""
+        if "CancellationException" in previous:
+            continue
+        lineno = code.count("\n", 0, position) + 1
+        findings.append(
+            f"::error file={rel},line={lineno}::this catch turns a cancellation into an "
+            f"EnrichmentResult.Error. CancellationException is an Exception, and ProviderChain "
+            f"records an Error as a circuit-breaker failure — so a timeout would open the circuit "
+            f"against a healthy provider. Call `mapError(type, e)` instead, or add "
+            f"`catch (e: CancellationException) {{ throw e }}` before this clause."
+        )
+    return findings
+
+
 def check_serializable_placement(path: Path, rel: str, source: str) -> list[str]:
     posix = path.as_posix()
     if not any(marker in posix for marker in SERIALIZABLE_BANNED_DIRS):
@@ -254,7 +312,12 @@ def check_file_length(path: Path, rel: str, source: str) -> list[str]:
     ]
 
 
-CHECKS = (check_no_double_bang, check_serializable_placement, check_file_length)
+CHECKS = (
+    check_no_double_bang,
+    check_serializable_placement,
+    check_file_length,
+    check_cancellation_not_an_error,
+)
 
 
 def run(root: Path) -> list[str]:

@@ -164,7 +164,17 @@ catch (e: Exception) { logger.warn(TAG, "…"); fallback }
 Consequence: `CancellationException` is an `Exception`, so swallowing it defeats
 `withTimeout(config.enrichTimeoutMs)` and leaves `enrich()` working for a caller that has gone away.
 Both guards exist because a throwing cache (#22) and a throwing merger (#28) escaped `enrich()`;
-every consumer-implementable interface needs one (`EnrichmentProvider`'s lives in `ProviderChain`).
+every consumer-implementable interface needs one. `EnrichmentProvider`'s lives in two places:
+`ProviderChain` rethrows around `provider.enrich(...)`, and `mapError()` rethrows rather than
+classifying — which is why a provider's `catch (e: Exception)` should call `mapError(type, e)`
+instead of building an `EnrichmentResult.Error` by hand.
+
+The worst version of this is not the swallowed cancellation itself but what the result does next:
+an `Error` makes `ProviderChain` record a circuit-breaker **failure**, so before #53 every
+`enrichTimeoutMs` expiry counted against providers that never failed and repeated timeouts opened
+the circuit against a healthy one. `check_conventions.py` now fails on a broad catch that produces
+an `Error` without a rethrow. A broad catch that merely logs and returns a fallback is *not* this
+bug — cancellation re-asserts at the next suspension point — and is deliberately not flagged.
 
 ### 3. `org.json` returns a default for a missing key — it does not fail
 

@@ -40,6 +40,7 @@ local/CI disagreement one command is supposed to remove.
 | No `!!` in main sources | `scripts/checks/check_conventions.py` | `./check` |
 | `@Serializable` stays off `provider/` and `http/` types | `scripts/checks/check_conventions.py` | `./check` |
 | Main-source files ≤ 300 lines | `scripts/checks/check_conventions.py` | `./check` |
+| A cancellation never becomes an `EnrichmentResult.Error` | `scripts/checks/check_conventions.py` | `./check` |
 | The conventions scanner classifies Kotlin the way Kotlin does | `scripts/checks/test_code_mask.py` vs `KotlinLexer` | `./check` |
 | Python formatting and lint | `pyproject.toml` + ruff | `./check` |
 | Python types | `pyproject.toml` + mypy | `./check` |
