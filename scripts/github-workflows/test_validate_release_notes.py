@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Runnable self-check: `python3 test_validate_release_notes.py` (no framework needed)."""
+
 from validate_release_notes import validate
 
 GOOD = """Patch release — first since 0.10.0.
@@ -22,7 +23,10 @@ implementation("com.github.famesjranko.musicmeta:musicmeta-core:v0.10.1")
 **Full Changelog**: https://github.com/famesjranko/musicmeta/compare/v0.10.0...v0.10.1
 """
 
-FLOATING = GOOD + "\n[![Maven Central](https://img.shields.io/maven-central/v/io.github.famesjranko/musicmeta-core)](https://central.sonatype.com/artifact/io.github.famesjranko/musicmeta-core)\n"
+FLOATING = (
+    GOOD
+    + "\n[![Maven Central](https://img.shields.io/maven-central/v/io.github.famesjranko/musicmeta-core)](https://central.sonatype.com/artifact/io.github.famesjranko/musicmeta-core)\n"
+)
 WRONG_MVN = GOOD.replace("musicmeta-okhttp:0.10.1", "musicmeta-okhttp:0.10.0")
 WRONG_JIT = GOOD.replace("musicmeta-core:v0.10.1", "musicmeta-core:v0.9.9")  # only the JitPack coord has the 'v'
 MISSING = "Just a one-line summary, no install block.\n"
@@ -49,11 +53,17 @@ def main() -> None:
     assert any("not pinned" in e for e in validate(GOOD.replace(":0.10.1", ":0.10.10"), "0.10.1"))
 
     # The JitPack floating badge is the other alternation branch — it must be caught too.
-    jit_float = GOOD + "\n[![JitPack](https://jitpack.io/v/famesjranko/musicmeta.svg)](https://jitpack.io/#famesjranko/musicmeta)\n"
+    jit_float = (
+        GOOD
+        + "\n[![JitPack](https://jitpack.io/v/famesjranko/musicmeta.svg)](https://jitpack.io/#famesjranko/musicmeta)\n"
+    )
     assert any("floating" in e for e in validate(jit_float, "0.10.1")), validate(jit_float, "0.10.1")
 
     # A version-PINNED static badge is legitimate and must NOT be flagged.
-    static_badge = GOOD + "\n[![Maven Central](https://img.shields.io/badge/Maven_Central-0.10.1-blue)](https://central.sonatype.com/artifact/io.github.famesjranko/musicmeta-core/0.10.1)\n"
+    static_badge = (
+        GOOD
+        + "\n[![Maven Central](https://img.shields.io/badge/Maven_Central-0.10.1-blue)](https://central.sonatype.com/artifact/io.github.famesjranko/musicmeta-core/0.10.1)\n"
+    )
     assert validate(static_badge, "0.10.1") == [], validate(static_badge, "0.10.1")
 
     # A -SNAPSHOT suffix must not pass as a pinned release.

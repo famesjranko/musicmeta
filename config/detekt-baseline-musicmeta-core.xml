@@ -1,0 +1,49 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>ComplexCondition:WikidataProvider.kt$WikidataProvider$metadata.country == null &amp;&amp; metadata.beginDate == null &amp;&amp; metadata.endDate == null &amp;&amp; metadata.artistType == null</ID>
+    <ID>CyclomaticComplexMethod:DefaultEnrichmentEngine.kt$DefaultEnrichmentEngine$override suspend fun enrich( request: EnrichmentRequest, types: Set&lt;EnrichmentType&gt;, forceRefresh: Boolean, ): EnrichmentResults</ID>
+    <ID>CyclomaticComplexMethod:DefaultEnrichmentEngine.kt$DefaultEnrichmentEngine$private suspend fun resolveIdentity( request: EnrichmentRequest, results: MutableMap&lt;EnrichmentType, EnrichmentResult&gt;, uncachedTypes: MutableSet&lt;EnrichmentType&gt;, ): Pair&lt;EnrichmentRequest, EnrichmentResult?&gt;</ID>
+    <ID>CyclomaticComplexMethod:DiscogsMapper.kt$DiscogsMapper$internal fun mapRoleCategory(role: String): String?</ID>
+    <ID>CyclomaticComplexMethod:DiscogsProvider.kt$DiscogsProvider$override suspend fun enrich( request: EnrichmentRequest, type: EnrichmentType, ): EnrichmentResult</ID>
+    <ID>CyclomaticComplexMethod:IdentityHelper.kt$internal fun needsIdentityResolution( request: EnrichmentRequest, types: Set&lt;EnrichmentType&gt;, registry: ProviderRegistry, ): Boolean</ID>
+    <ID>CyclomaticComplexMethod:LastFmProvider.kt$LastFmProvider$override suspend fun enrich( request: EnrichmentRequest, type: EnrichmentType, ): EnrichmentResult</ID>
+    <ID>CyclomaticComplexMethod:MusicBrainzCreditParser.kt$MusicBrainzCreditParser$fun parseRecordingCredits(json: JSONObject): List&lt;MusicBrainzCredit&gt;</ID>
+    <ID>CyclomaticComplexMethod:MusicBrainzEnricher.kt$MusicBrainzEnricher$internal suspend fun enrichArtistNewType( request: EnrichmentRequest.ForArtist, type: EnrichmentType, ): EnrichmentResult</ID>
+    <ID>CyclomaticComplexMethod:WikipediaApi.kt$WikipediaApi$private fun parseMediaList(json: org.json.JSONObject): List&lt;WikipediaMediaItem&gt;</ID>
+    <ID>EmptyElseBlock:DefaultHttpClient.kt$DefaultHttpClient$if (attempt == maxRetries - 1) return null</ID>
+    <ID>EmptyFunctionBlock:EnrichmentEngineExtensionsTest.kt$EnrichmentEngineExtensionsTest.FakeEngine${}</ID>
+    <ID>FunctionOnlyReturningConstant:ConfidenceCalculator.kt$ConfidenceCalculator$fun authoritative(): Float</ID>
+    <ID>FunctionOnlyReturningConstant:ConfidenceCalculator.kt$ConfidenceCalculator$fun idBasedLookup(): Float</ID>
+    <ID>LongMethod:DefaultEnrichmentEngine.kt$DefaultEnrichmentEngine$override suspend fun enrich( request: EnrichmentRequest, types: Set&lt;EnrichmentType&gt;, forceRefresh: Boolean, ): EnrichmentResults</ID>
+    <ID>LoopWithTooManyJumpStatements:CatalogFilter.kt$for</ID>
+    <ID>LoopWithTooManyJumpStatements:MusicBrainzCreditParser.kt$MusicBrainzCreditParser$for</ID>
+    <ID>LoopWithTooManyJumpStatements:MusicBrainzParser.kt$MusicBrainzParser$for</ID>
+    <ID>LoopWithTooManyJumpStatements:ProviderChain.kt$ProviderChain$for</ID>
+    <ID>LoopWithTooManyJumpStatements:WikipediaApi.kt$WikipediaApi$for</ID>
+    <ID>MayBeConst:SimilarAlbumsProviderTest.kt$SimilarAlbumsProviderTest.Companion$// Era test fixtures: Muse album from 1975 (far from 1990 seed), Portishead album from 1993 (close to 1990 seed) val ERA_MUSE_OLD_ALBUM = """{"data":[ {"id":4001,"title":"Old Muse Album","release_date":"1975-01-01","record_type":"album","cover_small":null,"cover_medium":null} ]}"""</ID>
+    <ID>MayBeConst:SimilarAlbumsProviderTest.kt$SimilarAlbumsProviderTest.Companion$val ARTIST_SEARCH = """{"data":[{"id":399,"name":"Radiohead"}]}"""</ID>
+    <ID>MayBeConst:SimilarAlbumsProviderTest.kt$SimilarAlbumsProviderTest.Companion$val ERA_PORTISHEAD_CLOSE_ALBUM = """{"data":[ {"id":4002,"title":"Close Era Album","release_date":"1993-01-01","record_type":"album","cover_small":null,"cover_medium":null} ]}"""</ID>
+    <ID>MayBeConst:SimilarAlbumsProviderTest.kt$SimilarAlbumsProviderTest.Companion$val MUSE_ALBUMS = """{"data":[ {"id":2001,"title":"Origin of Symmetry","release_date":"2001-07-17","record_type":"album","cover_small":null,"cover_medium":"https://img.dz/muse_oos.jpg"}, {"id":2002,"title":"Absolution","release_date":"2003-09-15","record_type":"album","cover_small":null,"cover_medium":"https://img.dz/muse_abs.jpg"} ]}"""</ID>
+    <ID>MayBeConst:SimilarAlbumsProviderTest.kt$SimilarAlbumsProviderTest.Companion$val PORTISHEAD_ALBUMS = """{"data":[ {"id":3001,"title":"Dummy","release_date":"1994-08-22","record_type":"album","cover_small":null,"cover_medium":null} ]}"""</ID>
+    <ID>MayBeConst:SimilarAlbumsProviderTest.kt$SimilarAlbumsProviderTest.Companion$val RELATED_ARTISTS_3 = """{"data":[ {"id":1001,"name":"Muse"}, {"id":1002,"name":"Portishead"}, {"id":1003,"name":"Sigur Ros"} ]}"""</ID>
+    <ID>MayBeConst:SimilarAlbumsProviderTest.kt$SimilarAlbumsProviderTest.Companion$val RELATED_ARTISTS_5 = """{"data":[ {"id":1001,"name":"Muse"}, {"id":1002,"name":"Portishead"}, {"id":1003,"name":"Sigur Ros"}, {"id":1004,"name":"Massive Attack"}, {"id":1005,"name":"Bjork"} ]}"""</ID>
+    <ID>MayBeConst:SimilarAlbumsProviderTest.kt$SimilarAlbumsProviderTest.Companion$val SIGUR_ROS_ALBUMS = """{"data":[]}"""</ID>
+    <ID>NestedBlockDepth:DefaultEnrichmentEngine.kt$DefaultEnrichmentEngine$private suspend fun resolveIdentity( request: EnrichmentRequest, results: MutableMap&lt;EnrichmentType, EnrichmentResult&gt;, uncachedTypes: MutableSet&lt;EnrichmentType&gt;, ): Pair&lt;EnrichmentRequest, EnrichmentResult?&gt;</ID>
+    <ID>NestedBlockDepth:FanartTvProvider.kt$FanartTvProvider$override suspend fun enrich( request: EnrichmentRequest, type: EnrichmentType, ): EnrichmentResult</ID>
+    <ID>NestedBlockDepth:MusicBrainzCreditParser.kt$MusicBrainzCreditParser$fun parseRecordingCredits(json: JSONObject): List&lt;MusicBrainzCredit&gt;</ID>
+    <ID>TooManyFunctions:DeezerMapper.kt$DeezerMapper</ID>
+    <ID>TooManyFunctions:EnrichmentResults.kt$EnrichmentResults</ID>
+    <ID>TooManyFunctions:HttpClient.kt$HttpClient</ID>
+    <ID>TooManyFunctions:MusicBrainzMapper.kt$MusicBrainzMapper</ID>
+    <ID>TooManyFunctions:MusicBrainzParser.kt$MusicBrainzParser</ID>
+    <ID>UnusedPrivateMember:CatalogFilteringTest.kt$CatalogFilteringTest$private fun similarTracks(vararg titles: String): EnrichmentResult.Success</ID>
+    <ID>UnusedPrivateProperty:DefaultEnrichmentEngine.kt$DefaultEnrichmentEngine$private val httpClient: HttpClient</ID>
+    <ID>UnusedPrivateProperty:EnrichBatchTest.kt$EnrichBatchTest$val emitted = mutableListOf&lt;EnrichmentRequest&gt;()</ID>
+    <ID>UnusedPrivateProperty:ListenBrainzRadioDiscoveryTest.kt$ListenBrainzRadioDiscoveryTest$private val JSPF_MINIMAL_RESPONSE = """{ "payload": { "jspf": { "playlist": { "track": [ { "title": "Minimal Track", "creator": "Minimal Artist" } ] } } } }"""</ID>
+    <ID>UseCheckOrError:EnrichStrategyFailureTest.kt$EnrichStrategyFailureTest.ThrowingMerger$throw IllegalStateException("merger boom")</ID>
+    <ID>UseCheckOrError:EnrichStrategyFailureTest.kt$EnrichStrategyFailureTest.ThrowingSynthesizer$throw IllegalStateException("synthesizer boom")</ID>
+    <ID>UseCheckOrError:FakeEnrichmentCache.kt$FakeEnrichmentCache$throw IllegalStateException("simulated cache failure: $op on $entityKey")</ID>
+  </CurrentIssues>
+</SmellBaseline>

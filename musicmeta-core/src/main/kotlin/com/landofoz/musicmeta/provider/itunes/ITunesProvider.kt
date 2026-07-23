@@ -11,6 +11,8 @@ import com.landofoz.musicmeta.engine.ArtistMatcher
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 
 /**
  * Enrichment provider using Apple's iTunes Search and Lookup APIs.
@@ -48,18 +50,21 @@ class ITunesProvider(
         val term = "${request.artist} ${request.title}"
         return try {
             api.searchAlbums(term, limit).map { it.toCandidate() }
-        } catch (_: Exception) { emptyList() }
+        } catch (_: Exception) {
+            // A suspend call, and emptyList() returns without suspending again, so a cancelled
+            // caller would otherwise be told the search simply found nothing. (#53)
+            currentCoroutineContext().ensureActive()
+            emptyList()
+        }
     }
 
     override suspend fun enrich(
         request: EnrichmentRequest,
         type: EnrichmentType,
-    ): EnrichmentResult {
-        return when (type) {
-            EnrichmentType.ALBUM_TRACKS -> enrichAlbumTracks(request, type)
-            EnrichmentType.ARTIST_DISCOGRAPHY -> enrichArtistDiscography(request, type)
-            else -> enrichAlbumType(request, type)
-        }
+    ): EnrichmentResult = when (type) {
+        EnrichmentType.ALBUM_TRACKS -> enrichAlbumTracks(request, type)
+        EnrichmentType.ARTIST_DISCOGRAPHY -> enrichArtistDiscography(request, type)
+        else -> enrichAlbumType(request, type)
     }
 
     private suspend fun enrichAlbumTracks(

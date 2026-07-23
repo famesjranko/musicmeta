@@ -7,6 +7,61 @@ plugins {
     alias(libs.plugins.kotlin.serialization) apply false
     alias(libs.plugins.vanniktech.publish) apply false
     alias(libs.plugins.binary.compatibility.validator)
+    alias(libs.plugins.ktlint) apply false
+    alias(libs.plugins.detekt) apply false
+}
+
+// Applied to every module rather than per-module, so a new module is formatted by default instead
+// of by remembering. `demo/` is a separate composite build and is not covered — it is the consumer
+// canary, and its job is to compile against the published surface, not to match house style.
+subprojects {
+    apply(plugin = "org.jlleitschuh.gradle.ktlint")
+    apply(plugin = "io.gitlab.arturbosch.detekt")
+
+    extensions.configure<io.gitlab.arturbosch.detekt.extensions.DetektExtension> {
+        config.setFrom(rootProject.file("config/detekt.yml"))
+        buildUponDefaultConfig = true
+        // Per module, not one shared file: `detektBaseline` writes the whole baseline for the
+        // module it runs in, so three modules pointed at one path would each overwrite the others.
+        baseline = rootProject.file("config/detekt-baseline-${project.name}.xml")
+    }
+
+    // Type resolution, and the reason the plain task is switched off rather than left alongside.
+    //
+    // `detekt` analyses syntax only. Every rule that has to resolve a type — UnsafeCallOnNullableType,
+    // UnnecessaryNotNullOperator, UnreachableCode and the rest — silently does nothing under it and
+    // reports no finding and no warning, so the run is green for reasons that have nothing to do
+    // with the code. detektMain/detektTest resolve the compiled classpath and found 57 issues the
+    // gate had never reported, including a dead elvis branch on a non-null field.
+    //
+    // Leaving `detekt` enabled would not be harmless: it is wired into Gradle's `check`, so
+    // `./gradlew build` would run the untyped pass again after ./check has already run the typed
+    // one — the same rules, a weaker answer, twice the time.
+    //
+    // These tasks are marked EXPERIMENTAL by the plugin. That is not a reason to avoid them: in
+    // detekt 1.23.x *every* route to type resolution is experimental — these tasks, hand-wiring
+    // `classpath`/`jvmTarget`, the CLI flags, and the compiler plugin. The choice is typed and
+    // experimental, or stable and not actually checking. (#58)
+    //
+    // `matching {}.configureEach` rather than `named()`: the Android plugin registers `check` after
+    // this block runs, so `named("check")` fails configuration on musicmeta-android.
+    // Both untyped tasks become aliases for their typed pair rather than being switched off. A
+    // disabled task still runs its dependencies and still reports success, so `./gradlew detekt` —
+    // the conventional command, and what an IDE or a stray script will reach for — keeps meaning
+    // "analyse this project" instead of quietly meaning "do nothing, successfully". The same
+    // applies to `detektBaseline`, which writes the *whole* baseline from an untyped run and would
+    // otherwise drop every type-resolved entry the moment someone regenerated it.
+    tasks.matching { it.name == "detekt" }.configureEach {
+        enabled = false
+        dependsOn("detektMain", "detektTest")
+    }
+    tasks.matching { it.name == "detektBaseline" }.configureEach {
+        enabled = false
+        dependsOn("detektBaselineMain", "detektBaselineTest")
+    }
+    // `check` already reaches the typed tasks through the alias above; naming them is belt and
+    // braces against the alias being unpicked without the dependency being noticed.
+    tasks.matching { it.name == "check" }.configureEach { dependsOn("detektMain", "detektTest") }
 }
 
 // Public ABI baselines live in each module's api/ directory. apiCheck is wired into `check`, so

@@ -17,10 +17,10 @@ import com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzProvider
 import com.landofoz.musicmeta.provider.wikidata.WikidataProvider
 import com.landofoz.musicmeta.provider.wikipedia.WikipediaProvider
 import kotlinx.coroutines.runBlocking
+import org.junit.Assert.*
 import org.junit.Assume
 import org.junit.Before
 import org.junit.Test
-import org.junit.Assert.*
 
 /**
  * End-to-end tests against real APIs.
@@ -140,7 +140,7 @@ class RealApiEndToEndTest {
         if (photo is EnrichmentResult.Success) {
             val artwork = photo.data as EnrichmentData.Artwork
             // With ArtworkMerger, primary may be from any provider; Wikidata may be in alternatives
-            val allUrls = listOf(artwork.url) + (artwork.alternatives?.map { it.url } ?: emptyList())
+            val allUrls = listOf(artwork.url) + (artwork.alternatives?.map { it.url }.orEmpty())
             val hasWikimedia = allUrls.any { it.contains("wikimedia") || it.contains("commons") }
             println("  Photo URL: ${artwork.url} (provider: ${photo.provider})")
             println("  Alternatives: ${artwork.alternatives?.map { "${it.provider}: ${it.url.take(60)}" } ?: "none"}")
@@ -206,7 +206,7 @@ class RealApiEndToEndTest {
         val success = synced as? EnrichmentResult.Success ?: plain as? EnrichmentResult.Success
         assertNotNull("Should find lyrics for Creep", success)
         val lyrics = success!!.data as EnrichmentData.Lyrics
-        val text = lyrics.syncedLyrics ?: lyrics.plainLyrics ?: ""
+        val text = lyrics.syncedLyrics ?: lyrics.plainLyrics.orEmpty()
         assertTrue("Lyrics should contain recognizable text", text.isNotBlank())
         println("  Has synced: ${lyrics.syncedLyrics != null}")
         println("  Has plain: ${lyrics.plainLyrics != null}")

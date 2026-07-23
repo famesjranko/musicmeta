@@ -97,5 +97,4 @@ class LrcLibProvider(
             confidence = confidence,
         )
     }
-
 }

@@ -1,9 +1,8 @@
 version: 2
 updates:
   # Keeps the SHA-pinned actions in the release workflows current, which is what makes pinning
-  # maintainable. dev, not the default branch: main is release-only and merge-commit gated.
+  # maintainable. No target-branch: with one permanent branch, the default is the only answer.
   - package-ecosystem: github-actions
     directory: /
-    target-branch: dev
     schedule:
       interval: weekly

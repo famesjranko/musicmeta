@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Docs and CI only — no library code, so consumers see nothing new beyond 0.10.1.
+Mostly docs and CI, plus one engine fix consumers should know about (#53).
 
 ### Added
 - Releases run from two dispatched workflows: `prepare-release.yml` writes the version everywhere it is consumed, `release.yml` verifies, publishes, then tags
@@ -25,6 +25,8 @@ Docs and CI only — no library code, so consumers see nothing new beyond 0.10.1
 - Release notes are checked against the tag they document, and the check carries its own self-test
 
 ### Changed
+- **One permanent branch.** `main` is the default, integration and release branch; `dev` is gone. Protection had sat on `main`, which took release merges only, while `dev` took every change and required nothing. `main` now needs a PR with `build` and `demo-canary` green, linear history, squash-only merges and **no bypass actors** (#68)
+- Preparing a release pushes a `release/<version>` branch instead of committing straight to the integration branch, and refuses to run if that branch already exists. You open and squash-merge the PR — nothing writes to the protected branch directly, including CI
 - Preparing a release needs no hand edits: CI pins the `CHANGELOG` heading to the version and date, opens a fresh empty `[Unreleased]`, and moves the `ROADMAP` heading. Write `[Unreleased]` as you go and that is the whole preparation
 - **Prepare release** takes the version as a required input and refuses one that is already tagged, instead of deriving it from the top pinned heading — which read the *previous* release until `[Unreleased]` was pinned
 - A `## [x.y.z]` section is now the release note itself, capped at 3000 characters and 400 per line — replacing the ask for concise notes that produced 8.6k- and 6.6k-char walls in v0.10.0 and v0.10.1
@@ -33,9 +35,18 @@ Docs and CI only — no library code, so consumers see nothing new beyond 0.10.1
 - `build.yml` gains a permissions block, job timeouts, and a shared version check it now uses with `release.yml`
 
 ### Fixed
+- **A cancelled or timed-out `enrich()` no longer opens circuit breakers against healthy providers** — `CancellationException` is an `Exception`, so the broad `catch` on the provider path converted it into `EnrichmentResult.Error`, and `ProviderChain` records an `Error` as a circuit-breaker *failure*. Every `enrichTimeoutMs` expiry therefore counted against providers that never failed, and repeated timeouts opened the circuit against a healthy one, which then got skipped entirely by the eligibility check. `ProviderChain` now calls `ensureActive()` before it touches the breaker, at both `provider.enrich(...)` call sites, so neither a cancelled caller nor a custom provider that swallows the cancellation itself and returns an `Error` can record a failure; `SimilarAlbumsProvider` now calls `mapError()` rather than hand-rolling its body. Six further sites that swallowed cancellation are fixed: both `search()` paths and identity resolution in `DefaultEnrichmentEngine`, `searchCandidates` in `DeezerProvider` and `ITunesProvider`, and the batch loop in `EnrichmentWorker` (which previously walked the rest of the batch after a stop). Public API is unchanged (`apiCheck` green). The guard is `ensureActive()` rather than a blanket `catch (CancellationException) { throw e }`, deliberately: a `CancellationException` raised *inside* a provider — its own `withTimeout` expiring — must stay that provider's error rather than escaping to be reported as the engine's deadline, and a blanket rethrow got that backwards. (#53)
 - The build works when the default JDK is not 17 — `musicmeta-core`, `musicmeta-okhttp` and `demo/` now declare Kotlin's `jvmTarget`, which only `musicmeta-android` did. Kotlin otherwise targeted whatever JDK ran Gradle, failing `./gradlew build` and the demo canary on JDK 21. Published bytecode and the `api/*.api` baselines are unchanged
+- `./check` no longer passes on a tree containing unresolved merge-conflict markers. ktlint and detekt read only Kotlin, ruff and mypy only Python, and nothing read Markdown or YAML, so a half-finished merge in a document went green (#65)
+- detekt now runs with type resolution (`detektMain`/`detektTest`), so the rules that need a resolved type actually execute — they had been silently doing nothing, including `UnsafeCallOnNullableType` and `UnreachableCode`. 57 findings the gate never reported are resolved; the untyped task is disabled so `build` does not run the weaker pass again. `--fast` skips detekt now, since it compiles first (#58)
+- Onboarding no longer teaches the bug it warns about: `CLAUDE.md` pitfall 2 showed `catch (CancellationException) { throw e }` as the correct form, then explained twenty lines later that it is wrong. `ARCHITECTURE.md` claimed 46 baseline detekt findings against an actual 43, and credited the untyped `detekt` task with rules that only run under type resolution (#57)
 
 ### Removed
+- The `release-readiness` CI job and its required-check entry. It was added (#35) when publication was tag-triggered and a version mismatch could only surface after an immutable tag existed. `release.yml` now asserts the same agreement before publishing and tags last, so that mismatch already fails cheaply (#68)
+- The 300-line main-source file cap, and the grandfather list of four files already over it. It was a preference with a mechanism, not a defect the mechanism prevented; detekt's complexity rules cover the case that actually matters (#60)
+- The convention gate's hand-written Kotlin scanner, its `KotlinLexer` oracle and the differential test that kept it honest — 900 lines and a `kotlin-compiler-embeddable` dependency, all of it there so a `!!` inside a comment would not be reported. The bans are absolute instead, which is simpler and stricter (#60)
+- `api-drift.yml` — a weekly scheduled job that regenerated the API baselines and filed a tracking issue. `apiCheck` runs inside `./check` on every push and PR, and an ABI baseline cannot drift without a commit, so 245 lines were watching for something the gate had already caught
+- The tracking-issue machinery in `provider-drift.yml` — 434 of its 476 lines built a summary and then created, updated, reopened and closed a public issue with a redacted body. The job now runs the live-API suite and fails, uploading the test report; a failed scheduled run already emails and keeps its log
 - `publish.yml` — superseded by `release.yml`, which cannot be started by a bot-pushed tag
 
 ## [0.10.1] - 2026-07-22

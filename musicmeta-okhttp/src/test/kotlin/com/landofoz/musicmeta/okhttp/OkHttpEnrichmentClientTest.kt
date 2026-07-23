@@ -6,7 +6,6 @@ import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import okio.Buffer
-import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Test

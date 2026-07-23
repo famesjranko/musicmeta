@@ -587,7 +587,7 @@ class MusicBrainzParserTest {
             }
         """.trimIndent()
 
-    // EXISTING FIXTURES BELOW
+        // EXISTING FIXTURES BELOW
 
         private val RELEASE_SEARCH_RESPONSE = """
             {

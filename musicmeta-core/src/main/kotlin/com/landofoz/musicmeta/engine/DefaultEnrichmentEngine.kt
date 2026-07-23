@@ -4,14 +4,14 @@ import com.landofoz.musicmeta.EnrichmentCache
 import com.landofoz.musicmeta.EnrichmentConfig
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentEngine
-import com.landofoz.musicmeta.ErrorKind
-import com.landofoz.musicmeta.IdentityMatch
 import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentLogger
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentResults
 import com.landofoz.musicmeta.EnrichmentType
+import com.landofoz.musicmeta.ErrorKind
+import com.landofoz.musicmeta.IdentityMatch
 import com.landofoz.musicmeta.IdentityResolution
 import com.landofoz.musicmeta.ProviderInfo
 import com.landofoz.musicmeta.SearchCandidate
@@ -21,6 +21,8 @@ import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withTimeout
@@ -76,7 +78,8 @@ class DefaultEnrichmentEngine(
         try {
             withTimeout(config.enrichTimeoutMs) {
                 var identityResult: EnrichmentResult? = null
-                val enrichedRequest = if (config.enableIdentityResolution && needsIdentityResolution(request, uncachedTypes, registry)) {
+                val enrichedRequest = if (config.enableIdentityResolution &&
+                    needsIdentityResolution(request, uncachedTypes, registry)) {
                     resolveIdentity(request, results, uncachedTypes).also { identityResult = it.second }.first
                 } else request
 
@@ -99,7 +102,8 @@ class DefaultEnrichmentEngine(
             logger.warn(TAG, "Enrich timed out after ${config.enrichTimeoutMs}ms")
             for (type in types) {
                 if (type !in results) {
-                    results[type] = EnrichmentResult.Error(type, "engine", "Enrichment timed out", errorKind = ErrorKind.TIMEOUT)
+                    results[type] =
+                        EnrichmentResult.Error(type, "engine", "Enrichment timed out", errorKind = ErrorKind.TIMEOUT)
                 }
             }
         }
@@ -154,6 +158,11 @@ class DefaultEnrichmentEngine(
             try {
                 identity.searchCandidates(request, limit)
             } catch (e: Exception) {
+                // ensureActive() throws only when *this* job is cancelled. A CancellationException
+                // from elsewhere — a provider's own withTimeout — falls through and is handled as
+                // the failure it is, rather than escaping to be reported as our deadline. Plain
+                // `catch (CancellationException) { throw e }` gets that second case wrong. (#53)
+                currentCoroutineContext().ensureActive()
                 logger.warn(TAG, "Identity search failed: ${e.message}", e)
                 emptyList()
             }
@@ -167,6 +176,7 @@ class DefaultEnrichmentEngine(
             try {
                 provider.searchCandidates(request, remaining)
             } catch (e: Exception) {
+                currentCoroutineContext().ensureActive() // as above
                 logger.warn(TAG, "Search failed for ${provider.id}: ${e.message}", e)
                 emptyList()
             }
@@ -201,9 +211,15 @@ class DefaultEnrichmentEngine(
         uncachedTypes: MutableSet<EnrichmentType>,
     ): Pair<EnrichmentRequest, EnrichmentResult?> {
         val provider = registry.identityProvider() ?: return request to null
+        // The rethrow is not optional. An earlier note here claimed the bare catch was safe because
+        // "cancellation re-asserts at the next suspension point" — that is not a guarantee. Kotlin
+        // cancellation is cooperative: a suspend function may return without ever suspending again,
+        // and this one only happened to be caught downstream by resolveTypes()'s coroutineScope.
+        // It also logged a cancelled call as a provider failure. (#53)
         val result = try {
             provider.resolveIdentity(request)
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             logger.warn(TAG, "Identity resolution failed: ${e.message}", e)
             return request to null
         }
@@ -225,11 +241,16 @@ class DefaultEnrichmentEngine(
             return request to result
         }
 
-        logger.debug(TAG, "Identity resolved: mbid=${resolved.musicBrainzId}, wikidataId=${resolved.wikidataId}, wpTitle=${resolved.wikipediaTitle}")
+        logger.debug(
+            TAG,
+            "Identity resolved: mbid=${resolved.musicBrainzId}, " +
+                "wikidataId=${resolved.wikidataId}, wpTitle=${resolved.wikipediaTitle}",
+        )
 
         val mergedIds = EnrichmentIdentifiers(
             musicBrainzId = resolved.musicBrainzId ?: request.identifiers.musicBrainzId,
-            musicBrainzReleaseGroupId = resolved.musicBrainzReleaseGroupId ?: request.identifiers.musicBrainzReleaseGroupId,
+            musicBrainzReleaseGroupId =
+            resolved.musicBrainzReleaseGroupId ?: request.identifiers.musicBrainzReleaseGroupId,
             wikidataId = resolved.wikidataId ?: request.identifiers.wikidataId,
             isrc = resolved.isrc ?: request.identifiers.isrc,
             barcode = resolved.barcode ?: request.identifiers.barcode,
@@ -267,7 +288,7 @@ class DefaultEnrichmentEngine(
         val regularTypes = standardTypes - mergeableRequested
 
         val compositeSubTypes = compositeTypes
-            .flatMap { compositeDependencies[it] ?: emptySet() }
+            .flatMap { compositeDependencies[it].orEmpty() }
             .toSet() - regularTypes - mergeableRequested
 
         val allRegularToResolve = regularTypes + compositeSubTypes
@@ -282,7 +303,7 @@ class DefaultEnrichmentEngine(
         val mergeableResults = mergeableRequested.map { mergeType ->
             async {
                 val chain = registry.chainFor(mergeType)
-                val allResults = chain?.resolveAll(request) ?: emptyList()
+                val allResults = chain?.resolveAll(request).orEmpty()
                 val filtered = allResults.mapNotNull { filterByConfidence(it) as? EnrichmentResult.Success }
                 val merger = mergers[mergeType]
                 mergeType to if (merger == null) {

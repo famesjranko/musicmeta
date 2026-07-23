@@ -20,6 +20,6 @@ object E2ETestFixture {
 
     fun prop(name: String): String = System.getProperty(
         name,
-        System.getenv(name.replace(".", "_").uppercase()) ?: "",
+        System.getenv(name.replace(".", "_").uppercase()).orEmpty(),
     )
 }

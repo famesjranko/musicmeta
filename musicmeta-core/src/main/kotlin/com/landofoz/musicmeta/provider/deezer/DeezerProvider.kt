@@ -1,6 +1,5 @@
 package com.landofoz.musicmeta.provider.deezer
 
-import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentProvider
 import com.landofoz.musicmeta.EnrichmentRequest
@@ -12,6 +11,8 @@ import com.landofoz.musicmeta.engine.ArtistMatcher
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 
 /**
  * Enrichment provider using Deezer's public search API.
@@ -51,29 +52,32 @@ class DeezerProvider(
         val query = "${request.artist} ${request.title}"
         return try {
             api.searchAlbums(query, limit).map { it.toCandidate() }
-        } catch (_: Exception) { emptyList() }
+        } catch (_: Exception) {
+            // A suspend call, and emptyList() returns without suspending again, so a cancelled
+            // caller would otherwise be told the search simply found nothing. (#53)
+            currentCoroutineContext().ensureActive()
+            emptyList()
+        }
     }
 
     override suspend fun enrich(
         request: EnrichmentRequest,
         type: EnrichmentType,
-    ): EnrichmentResult {
-        return try {
-            when (type) {
-                EnrichmentType.ARTIST_PHOTO -> enrichArtistPhoto(request)
-                EnrichmentType.ARTIST_TOP_TRACKS -> enrichTopTracks(request)
-                EnrichmentType.ARTIST_DISCOGRAPHY -> enrichDiscography(request)
-                EnrichmentType.ALBUM_TRACKS -> enrichAlbumTracks(request)
-                EnrichmentType.ALBUM_METADATA -> enrichAlbumMetadata(request, type)
-                EnrichmentType.SIMILAR_ARTISTS -> enrichSimilarArtists(request)
-                EnrichmentType.SIMILAR_TRACKS -> enrichSimilarTracks(request)
-                EnrichmentType.ARTIST_RADIO -> enrichArtistRadio(request)
-                EnrichmentType.TRACK_PREVIEW -> enrichTrackPreview(request)
-                else -> enrichAlbumArt(request, type)
-            }
-        } catch (e: Exception) {
-            mapError(type, e)
+    ): EnrichmentResult = try {
+        when (type) {
+            EnrichmentType.ARTIST_PHOTO -> enrichArtistPhoto(request)
+            EnrichmentType.ARTIST_TOP_TRACKS -> enrichTopTracks(request)
+            EnrichmentType.ARTIST_DISCOGRAPHY -> enrichDiscography(request)
+            EnrichmentType.ALBUM_TRACKS -> enrichAlbumTracks(request)
+            EnrichmentType.ALBUM_METADATA -> enrichAlbumMetadata(request, type)
+            EnrichmentType.SIMILAR_ARTISTS -> enrichSimilarArtists(request)
+            EnrichmentType.SIMILAR_TRACKS -> enrichSimilarTracks(request)
+            EnrichmentType.ARTIST_RADIO -> enrichArtistRadio(request)
+            EnrichmentType.TRACK_PREVIEW -> enrichTrackPreview(request)
+            else -> enrichAlbumArt(request, type)
         }
+    } catch (e: Exception) {
+        mapError(type, e)
     }
 
     private suspend fun enrichArtistPhoto(request: EnrichmentRequest): EnrichmentResult {

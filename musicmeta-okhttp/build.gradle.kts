@@ -43,7 +43,10 @@ dependencies {
 mavenPublishing {
     // A stage rehearsal passes -PautoRelease=false, leaving the deployment validated-but-
     // unpublished in the portal so it can be inspected and dropped. See docs/project/release.md.
-    publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL, automaticRelease = project.findProperty("autoRelease") != "false")
+    publishToMavenCentral(
+        SonatypeHost.CENTRAL_PORTAL,
+        automaticRelease = project.findProperty("autoRelease") != "false",
+    )
     if (project.hasProperty("signing.keyId") || project.hasProperty("signingInMemoryKey")) {
         signAllPublications()
     }

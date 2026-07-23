@@ -201,7 +201,7 @@ internal object MusicBrainzParser {
         return buildString {
             for (i in 0 until credits.length()) {
                 val credit = credits.getJSONObject(i)
-                append(credit.optJSONObject("artist")?.optString("name") ?: "")
+                append(credit.optJSONObject("artist")?.optString("name").orEmpty())
                 append(credit.optString("joinphrase", ""))
             }
         }.takeIf { it.isNotBlank() }

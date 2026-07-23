@@ -4,14 +4,19 @@ package com.landofoz.musicmeta
 enum class ErrorKind {
     /** Network connectivity or timeout failure. */
     NETWORK,
+
     /** Authentication or authorization failure (401/403). */
     AUTH,
+
     /** Response parsing failure (malformed JSON, unexpected schema). */
     PARSE,
+
     /** Rate limit exceeded (429). */
     RATE_LIMIT,
+
     /** Engine-level enrichment timeout — type was not resolved before deadline. */
     TIMEOUT,
+
     /** Uncategorized error. */
     UNKNOWN,
 }
@@ -31,8 +36,10 @@ enum class ErrorKind {
 enum class IdentityMatch {
     /** Identity resolution matched an entity. [EnrichmentResult.Success.identityMatchScore] has the score. */
     RESOLVED,
+
     /** Identity resolution failed. Results are from unverified fuzzy provider searches. */
     BEST_EFFORT,
+
     /** Identity resolution failed but found near-miss candidates. Check [EnrichmentResult.NotFound.suggestions]. */
     SUGGESTIONS,
 }

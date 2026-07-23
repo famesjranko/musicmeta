@@ -21,7 +21,7 @@ internal fun buildIdentityResolution(
         identifiers = enrichedRequest.identifiers,
         match = if (identityResult.suggestions != null) IdentityMatch.SUGGESTIONS else IdentityMatch.BEST_EFFORT,
         matchScore = null,
-        suggestions = identityResult.suggestions ?: emptyList(),
+        suggestions = identityResult.suggestions.orEmpty(),
     )
     else -> null
 }
@@ -71,7 +71,8 @@ internal fun needsIdentityResolution(
                 IdentifierRequirement.WIKIPEDIA_TITLE -> ids.wikipediaTitle == null && ids.wikidataId == null
                 IdentifierRequirement.ANY_IDENTIFIER -> ids.musicBrainzId == null &&
                     ids.musicBrainzReleaseGroupId == null &&
-                    ids.wikidataId == null && ids.wikipediaTitle == null
+                    ids.wikidataId == null &&
+                    ids.wikipediaTitle == null
             }
             if (missing) return true
         }

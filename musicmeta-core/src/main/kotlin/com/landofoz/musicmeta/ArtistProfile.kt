@@ -13,7 +13,7 @@ data class ArtistProfile(val name: String, val results: EnrichmentResults) {
     val identifiers: EnrichmentIdentifiers get() = results.identity?.identifiers ?: EnrichmentIdentifiers()
     val identityMatch: IdentityMatch? get() = results.identity?.match
     val identityMatchScore: Int? get() = results.identity?.matchScore
-    val suggestions: List<SearchCandidate> get() = results.identity?.suggestions ?: emptyList()
+    val suggestions: List<SearchCandidate> get() = results.identity?.suggestions.orEmpty()
 
     // --- Artwork ---
     val photo: EnrichmentData.Artwork? get() = results.artistPhoto()
@@ -28,11 +28,11 @@ data class ArtistProfile(val name: String, val results: EnrichmentResults) {
 
     // --- Members & Relationships ---
     val members: List<BandMember> get() =
-        results.get<EnrichmentData.BandMembers>(EnrichmentType.BAND_MEMBERS)?.members ?: emptyList()
+        results.get<EnrichmentData.BandMembers>(EnrichmentType.BAND_MEMBERS)?.members.orEmpty()
     val links: List<ExternalLink> get() =
-        results.get<EnrichmentData.ArtistLinks>(EnrichmentType.ARTIST_LINKS)?.links ?: emptyList()
+        results.get<EnrichmentData.ArtistLinks>(EnrichmentType.ARTIST_LINKS)?.links.orEmpty()
     val discography: List<DiscographyAlbum> get() =
-        results.discography()?.albums ?: emptyList()
+        results.discography()?.albums.orEmpty()
 
     // --- Stats & Recommendations ---
     val popularity: EnrichmentData.Popularity? get() = results.artistPopularity()
@@ -43,7 +43,7 @@ data class ArtistProfile(val name: String, val results: EnrichmentResults) {
         results.get<EnrichmentData.RadioPlaylist>(EnrichmentType.ARTIST_RADIO_DISCOVERY)
     val similarAlbums: EnrichmentData.SimilarAlbums? get() = results.similarAlbums()
     val timeline: List<TimelineEvent> get() =
-        results.get<EnrichmentData.ArtistTimeline>(EnrichmentType.ARTIST_TIMELINE)?.events ?: emptyList()
+        results.get<EnrichmentData.ArtistTimeline>(EnrichmentType.ARTIST_TIMELINE)?.events.orEmpty()
     val genreDiscovery: List<GenreAffinity> get() =
-        results.get<EnrichmentData.GenreDiscovery>(EnrichmentType.GENRE_DISCOVERY)?.relatedGenres ?: emptyList()
+        results.get<EnrichmentData.GenreDiscovery>(EnrichmentType.GENRE_DISCOVERY)?.relatedGenres.orEmpty()
 }

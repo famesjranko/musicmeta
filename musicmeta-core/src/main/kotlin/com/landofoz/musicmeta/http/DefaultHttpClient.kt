@@ -35,7 +35,11 @@ class DefaultHttpClient(
         try {
             val conn = openConnection(url).apply { instanceFollowRedirects = false; connect() }
             try {
-                when { conn.responseCode in 200..299 -> url; conn.responseCode in 300..399 -> conn.getHeaderField("Location"); else -> null }
+                when {
+                    conn.responseCode in 200..299 -> url
+                    conn.responseCode in 300..399 -> conn.getHeaderField("Location")
+                    else -> null
+                }
             } finally { conn.disconnect() }
         } catch (_: IOException) { null }
     }

@@ -1,11 +1,10 @@
 package com.landofoz.musicmeta.e2e
 
 import com.landofoz.musicmeta.EnrichmentData
+import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
-import com.landofoz.musicmeta.http.DefaultHttpClient
-import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.provider.coverartarchive.CoverArtArchiveProvider
 import com.landofoz.musicmeta.provider.deezer.DeezerProvider
 import com.landofoz.musicmeta.provider.itunes.ITunesProvider
@@ -13,12 +12,11 @@ import com.landofoz.musicmeta.provider.lrclib.LrcLibProvider
 import com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzProvider
 import com.landofoz.musicmeta.provider.wikidata.WikidataProvider
 import com.landofoz.musicmeta.provider.wikipedia.WikipediaProvider
-import com.landofoz.musicmeta.EnrichmentIdentifiers
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.*
 import org.junit.Assume
 import org.junit.Before
 import org.junit.Test
-import org.junit.Assert.*
 
 /**
  * Tests each provider individually against real APIs.

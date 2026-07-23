@@ -84,12 +84,12 @@ v0.9.0, v0.9.2), four undeprecated removals or renames (v0.4.0), and `@Deprecate
   the build instead of reaching Maven Central. The `.api` diff is now the review artifact.
 - **CI gates** — `build.yml` runs build + tests + `apiCheck` on PRs and pushes, plus the `demo/`
   composite-build canary that `./gradlew build` never compiles.
-- **Scheduled drift watch, both directions** — `api-drift.yml` files, updates, and auto-closes a
-  single tracking issue when `dev` drifts from its baselines. `provider-drift.yml` does the inverse:
-  it runs the gated E2E suite daily against the live third-party APIs and files a tracking issue when
-  a provider changes its JSON or endpoints underneath us — a failure that is otherwise silent,
-  because `org.json`'s `opt*` family turns a renamed field into an empty value inside a *successful*
-  enrichment, and arrives with zero commits to this repo.
+- **Scheduled provider drift watch** — `provider-drift.yml` runs the gated E2E suite daily against
+  the live third-party APIs and fails, with the test report retained, when a provider changes its
+  JSON or endpoints underneath us. That failure is otherwise silent, because `org.json`'s `opt*`
+  family turns a renamed field into an empty value inside a *successful* enrichment, and it arrives
+  with zero commits to this repo. (The matching `api-drift.yml` was deleted: `apiCheck` runs on
+  every push and PR, and an ABI baseline cannot drift without a commit.)
 - **Cache failures no longer escape `enrich()`** — a throwing `EnrichmentCache` degrades to a miss
   and is logged, matching what `README.md` already promised consumers.
 - **Narrowed public surface** — 80 top-level types that were public only by omission (provider

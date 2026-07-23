@@ -66,7 +66,7 @@ suspend fun EnrichmentEngine.albumProfile(
     forceRefresh: Boolean = false,
 ): AlbumProfile = albumProfile(
     candidate.title,
-    candidate.artist ?: "",
+    candidate.artist.orEmpty(),
     candidate.identifiers.musicBrainzId,
     identifiers = candidate.identifiers,
     types = types,
@@ -104,7 +104,7 @@ suspend fun EnrichmentEngine.trackProfile(
     forceRefresh: Boolean = false,
 ): TrackProfile = trackProfile(
     candidate.title,
-    candidate.artist ?: "",
+    candidate.artist.orEmpty(),
     album,
     candidate.identifiers.musicBrainzId,
     identifiers = candidate.identifiers,

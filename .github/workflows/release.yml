@@ -99,12 +99,6 @@ jobs:
         if: ${{ inputs.mode != 'stage' }}
         run: python3 scripts/github-workflows/build_release_notes.py "${{ steps.resolve.outputs.version }}"
 
-      # Recoverable, so it runs before anything irreversible. Fast-forward by construction after a
-      # merge-commit release PR — unless dev has moved since, which is exactly what this catches.
-      - name: Fast-forward dev to main
-        if: ${{ inputs.mode == 'release' }}
-        run: git push origin main:dev
-
   publish:
     needs: verify
     runs-on: ubuntu-latest

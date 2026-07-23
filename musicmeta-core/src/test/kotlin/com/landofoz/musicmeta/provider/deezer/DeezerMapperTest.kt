@@ -1,7 +1,6 @@
 package com.landofoz.musicmeta.provider.deezer
 
 import com.landofoz.musicmeta.EnrichmentData
-import com.landofoz.musicmeta.RadioTrack
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull

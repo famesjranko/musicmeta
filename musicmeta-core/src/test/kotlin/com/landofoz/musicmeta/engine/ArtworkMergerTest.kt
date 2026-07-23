@@ -1,7 +1,6 @@
 package com.landofoz.musicmeta.engine
 
 import com.landofoz.musicmeta.ArtworkSize
-import com.landofoz.musicmeta.ArtworkSource
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentResult
@@ -75,7 +74,7 @@ class ArtworkMergerTest {
         val alts = art.alternatives!!
         assertEquals(2, alts.size)
         assertEquals("fanarttv", alts[0].provider) // 0.9 confidence
-        assertEquals("deezer", alts[1].provider)   // 0.8 confidence
+        assertEquals("deezer", alts[1].provider) // 0.8 confidence
         assertEquals("https://deezer.com/artist_thumb.jpg", alts[1].thumbnailUrl)
     }
 

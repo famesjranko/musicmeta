@@ -1,0 +1,95 @@
+# Layered on detekt's defaults (buildUponDefaultConfig = true), so this file holds only deltas.
+#
+# Raw defaults produce 898 findings here, which is not a signal — it is a reason to stop reading
+# the report. Two thirds are one rule, and two more duplicate gates that already run. What is left
+# after the deltas below is small enough to act on, which is the only state in which a linter does
+# anything. Anything structural that survives goes in detekt-baseline.xml, so new code must be
+# clean while existing debt stays visible.
+
+build:
+  maxIssues: 0
+
+style:
+  # 477 of the 898. This is a metadata library: provider priorities (100/80/50/30), confidence
+  # thresholds, HTTP status ranges and retry counts are the domain, and every one of them is
+  # already a named parameter or named constant at its use site. The rule cannot tell those from
+  # an unexplained literal, so it reports the domain rather than a defect.
+  MagicNumber:
+    active: false
+
+  # ktlint already enforces 120 with a documented test-source exemption. Two tools disagreeing
+  # about line length means whichever runs first owns it and the other only adds noise.
+  MaxLineLength:
+    active: false
+
+  # Same overlap: ktlint's no-wildcard-imports owns this, including the deliberate test exemption
+  # for org.junit.Assert.*.
+  WildcardImport:
+    active: false
+
+  # Guard-clause style is used throughout — `?: return NotFound`, early returns on unavailable
+  # providers. That is how this codebase avoids nesting, and the rule argues against it.
+  ReturnCount:
+    active: false
+
+complexity:
+  # Test sources are long and repetitive on purpose: given-when-then narration and fixture setup.
+  # These rules measure something real in main sources and something meaningless in tests.
+  LongMethod:
+    excludes: ['**/test/**', '**/androidTest/**']
+  LongParameterList:
+    excludes: ['**/test/**', '**/androidTest/**']
+    ignoreDefaultParameters: true
+  CyclomaticComplexMethod:
+    excludes: ['**/test/**', '**/androidTest/**']
+  NestedBlockDepth:
+    excludes: ['**/test/**', '**/androidTest/**']
+  TooManyFunctions:
+    excludes: ['**/test/**', '**/androidTest/**']
+    thresholdInClasses: 20
+    thresholdInFiles: 20
+    ignorePrivate: true
+  LargeClass:
+    excludes: ['**/test/**', '**/androidTest/**']
+
+naming:
+  # Provider file layout is *Api.kt / *Models.kt / *Mapper.kt by convention (CLAUDE.md), so a
+  # Models file whose single class is named differently is the convention, not a mismatch.
+  MatchingDeclarationName:
+    active: false
+  VariableNaming:
+    excludes: ['**/test/**']
+
+coroutines:
+  # 20 of the 57 findings the typed tasks add, and all 20 sit in the two HttpClient implementations.
+  # The rule exists so a dispatcher can be swapped for a test one, but HttpClient *is* the seam
+  # here: it is a public interface and tests inject a FakeHttpClient rather than a dispatcher.
+  # Making the dispatcher a constructor parameter would add a public parameter to both classes to
+  # satisfy a rule whose goal the design already meets.
+  #
+  # Scoped to those two files rather than turned off. Evidence about two classes is not evidence
+  # about the repository: a hard-coded Dispatchers.IO in an engine, worker, cache or provider has
+  # none of the reasoning above behind it, and must still fail.
+  InjectDispatcher:
+    excludes:
+      - '**/http/DefaultHttpClient.kt'
+      - '**/okhttp/OkHttpEnrichmentClient.kt'
+
+potential-bugs:
+  # `!!` in test sources stays allowed, and this makes that a decision rather than an inherited
+  # default. detekt ships UnsafeCallOnNullableType already excluding **/test/**; the sibling rule
+  # does not, so it is listed here too. 100 `!!` live in tests, asserting a fixture is present —
+  # a failed assertion there is a test failure with a stack trace, not a consumer's crash.
+  # Main sources are covered by check_conventions.py, which bans every `!!` including on platform
+  # types that neither detekt rule sees (#60).
+  UnnecessaryNotNullOperator:
+    excludes: ['**/test/**', '**/androidTest/**']
+
+exceptions:
+  # Providers deliberately catch broadly and map anything to EnrichmentResult.Error, because a
+  # provider failure must degrade the chain rather than propagate. Narrowing these would change
+  # documented behaviour, not improve it.
+  TooGenericExceptionCaught:
+    active: false
+  TooGenericExceptionThrown:
+    excludes: ['**/test/**']
