@@ -251,8 +251,9 @@ MUTATIONS: list[tuple[str, str, str]] = [
     ),
     (
         "block comments do not nest",
-        # Anchored on the enclosing `if` as well as the increment: a bare "depth += 1" also
-        # matches _catch_body(), and this suite fails loudly rather than mutating the wrong one.
+        # Anchored on the enclosing `if` as well as the increment. A bare "depth += 1" once
+        # matched a second function too, and this suite failed loudly rather than mutating the
+        # wrong one — which is the behaviour to preserve, so the anchor stays specific.
         'if source.startswith("/*", i):\n                    depth += 1',
         'if source.startswith("/*", i):\n                    pass  # mutation',
     ),

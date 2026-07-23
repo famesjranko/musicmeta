@@ -11,7 +11,8 @@ import com.landofoz.musicmeta.engine.ArtistMatcher
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
-import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 
 /**
  * Enrichment provider using Deezer's public search API.
@@ -51,9 +52,12 @@ class DeezerProvider(
         val query = "${request.artist} ${request.title}"
         return try {
             api.searchAlbums(query, limit).map { it.toCandidate() }
-        } catch (e: CancellationException) {
-            throw e // suspend call, and emptyList() returns without suspending again (#53)
-        } catch (_: Exception) { emptyList() }
+        } catch (_: Exception) {
+            // A suspend call, and emptyList() returns without suspending again, so a cancelled
+            // caller would otherwise be told the search simply found nothing. (#53)
+            currentCoroutineContext().ensureActive()
+            emptyList()
+        }
     }
 
     override suspend fun enrich(

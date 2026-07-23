@@ -9,7 +9,8 @@ import com.landofoz.musicmeta.EnrichmentEngine
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResults
 import com.landofoz.musicmeta.EnrichmentType
-import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 
 /**
  * WorkManager worker for batch enrichment processing.
@@ -56,12 +57,17 @@ abstract class EnrichmentWorker(
             try {
                 val results = engine.enrich(request, types)
                 onItemEnriched(request, results)
-            } catch (e: CancellationException) {
-                // A stopped worker is not an item failure. Without this the loop swallows the
-                // cancellation and walks the rest of the batch; it only exited before because
-                // setProgress() below happens to suspend, which is an accident, not a guard. (#53)
-                throw e
             } catch (_: Exception) {
+                // A stopped worker is not an item failure: without this the loop swallows the
+                // cancellation and walks the rest of the batch, exiting only because setProgress()
+                // below happens to suspend — an accident, not a guard.
+                //
+                // ensureActive(), not `catch (CancellationException) { throw e }`. The latter also
+                // propagates a CancellationException raised inside a consumer's onItemEnriched
+                // (its own withTimeout, say), and WorkManager reads a generic cancellation escaping
+                // doWork() as *failed* work — losing the batch output and failing dependent work,
+                // where before it was one skipped item. (#53)
+                currentCoroutineContext().ensureActive()
                 // Individual item failure doesn't stop the batch
             }
 

@@ -1,7 +1,5 @@
 package com.landofoz.musicmeta
 
-import kotlinx.coroutines.CancellationException
-
 /**
  * A source of enrichment data. Each provider wraps a single external API
  * (MusicBrainz, LRCLIB, etc.) and declares what types of data it can supply.
@@ -65,14 +63,14 @@ interface EnrichmentProvider {
     /**
      * Maps exceptions to typed [EnrichmentResult.Error] with appropriate [ErrorKind].
      *
-     * [CancellationException] is rethrown, never classified. It is an [Exception], so every
-     * provider's `catch (e: Exception)` hands it here — and returning an [EnrichmentResult.Error]
-     * for it makes a cancelled call indistinguishable from a provider failure, which
-     * [com.landofoz.musicmeta.engine.ProviderChain] then records against the circuit breaker. A
-     * timeout would otherwise open the circuit against a provider that never failed. (#53)
+     * This deliberately does *not* special-case [CancellationException]. It is not a suspend
+     * function, so it cannot tell "the caller cancelled us" from "a provider's own `withTimeout`
+     * expired" — and those need opposite handling: the first must propagate, the second is a
+     * genuine failure of that provider. `ensureActive()` in
+     * [com.landofoz.musicmeta.engine.ProviderChain] makes that distinction, before any circuit
+     * breaker is touched. (#53)
      */
     fun mapError(type: EnrichmentType, e: Exception): EnrichmentResult.Error {
-        if (e is CancellationException) throw e
         val kind = when (e) {
             is java.io.IOException -> ErrorKind.NETWORK
             is org.json.JSONException -> ErrorKind.PARSE

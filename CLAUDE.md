@@ -169,20 +169,22 @@ every consumer-implementable interface needs one. `EnrichmentProvider`'s lives i
 classifying — which is why a provider's `catch (e: Exception)` should call `mapError(type, e)`
 instead of building an `EnrichmentResult.Error` by hand.
 
-The worst version of this is not the swallowed cancellation itself but what the result does next:
-an `Error` makes `ProviderChain` record a circuit-breaker **failure**, so before #53 every
-`enrichTimeoutMs` expiry counted against providers that never failed and repeated timeouts opened
-the circuit against a healthy one. `ProviderChain` also calls `ensureActive()` before touching the
-breaker, because `EnrichmentProvider` is public and a consumer's provider can swallow the
-cancellation and hand back an `Error` that no rethrow of ours can intercept.
+The worst version is not the swallowed cancellation but what the result does next: an `Error`
+makes `ProviderChain` record a circuit-breaker **failure**, so before #53 every `enrichTimeoutMs`
+expiry counted against providers that never failed.
+
+**Use `ensureActive()`, not `catch (CancellationException) { throw e }`.** The blanket rethrow is
+wrong in the other direction: a `CancellationException` can also come from *inside* a provider —
+its own `withTimeout` expiring — while our job is perfectly healthy. Rethrowing that escapes the
+chain, cancels sibling providers, and is reported to the caller as the engine's deadline.
+`ensureActive()` throws only when *this* job is cancelled, so the foreign case stays contained as
+one provider's error. Both directions were shipped and caught during #53; the behaviour is pinned
+by `ProviderChainCancellationTest`, not by a lint rule.
 
 **Do not reason that a swallowed cancellation is harmless because "it re-asserts at the next
 suspension point".** It is not a guarantee — cancellation is cooperative, and a suspend function
-may return without ever suspending again. That claim was written here during #53 and was used to
-wave through five real bugs before an outside review caught it. Whether swallowing is harmful
-depends on what happens next, so it is a judgement call: `check_conventions.py` mechanises only the
-part that is decidable from the text — no catch that can capture a cancellation may construct an
-`EnrichmentResult.Error` — and the rest is on review.
+may return without ever suspending again. That claim was written here during #53 and used to wave
+through five real bugs. See [Kotlin's cancellation docs](https://kotlinlang.org/docs/cancellation-and-timeouts.html).
 
 ### 3. `org.json` returns a default for a missing key — it does not fail
 

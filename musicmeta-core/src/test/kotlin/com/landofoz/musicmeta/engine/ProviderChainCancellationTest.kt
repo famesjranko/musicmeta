@@ -10,7 +10,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
@@ -30,99 +32,145 @@ import org.junit.Test
 class ProviderChainCancellationTest {
     private val req = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
 
+    /**
+     * Cancels the job it is running under, then throws — a caller that has genuinely gone away.
+     *
+     * The cancel() matters: a bare `throw CancellationException()` while the job is still active is
+     * not a cancelled call at all, and is correctly treated as a provider failure.
+     */
     private class CancellingProvider(id: String) : FakeProvider(id = id) {
-        override suspend fun enrich(request: EnrichmentRequest, type: EnrichmentType): EnrichmentResult =
+        override suspend fun enrich(request: EnrichmentRequest, type: EnrichmentType): EnrichmentResult {
+            currentCoroutineContext()[Job]?.cancel()
             throw CancellationException("caller went away")
+        }
+    }
+
+    /** Runs [provider] through a chain in its own scope, since it cancels the job it runs under. */
+    private suspend fun runCancelledInOwnScope(
+        provider: FakeProvider,
+        breaker: CircuitBreaker,
+        type: EnrichmentType = EnrichmentType.ALBUM_ART,
+    ): CircuitBreaker.State {
+        val chain = ProviderChain(type, listOf(provider), mapOf(provider.id to breaker))
+        val running = CoroutineScope(Job()).async { chain.resolve(req) }
+        try {
+            running.await()
+            fail("expected the cancellation to propagate, not become a recorded failure")
+        } catch (_: CancellationException) {
+            // expected
+        }
+        return breaker.state
     }
 
     @Test fun `resolve propagates cancellation and records no breaker failure`() = runTest {
-        // Given — the only provider is cancelled mid-call, and one failure would open its circuit
+        // Given the only provider is cancelled mid-call, and one failure would open its circuit
         val breaker = CircuitBreaker(failureThreshold = 1)
-        val chain = ProviderChain(EnrichmentType.ALBUM_ART, listOf(CancellingProvider("p1")), mapOf("p1" to breaker))
 
-        // When — resolving
-        try {
-            chain.resolve(req)
-            fail("expected the CancellationException to propagate, not become an Error result")
-        } catch (e: CancellationException) {
-            assertEquals("caller went away", e.message)
-        }
-
-        // Then — the provider is still healthy; cancellation said nothing about it
-        assertEquals(CircuitBreaker.State.CLOSED, breaker.state)
+        // When resolving, then the provider is still healthy — cancellation said nothing about it
+        assertEquals(CircuitBreaker.State.CLOSED, runCancelledInOwnScope(CancellingProvider("p1"), breaker))
         assertTrue(breaker.allowRequest())
     }
 
     @Test fun `resolveAll propagates cancellation and records no breaker failure`() = runTest {
-        // Given — the mergeable path, which fans out through async rather than iterating
+        // Given the mergeable path, which fans out through async rather than iterating
         val breaker = CircuitBreaker(failureThreshold = 1)
         val chain = ProviderChain(EnrichmentType.GENRE, listOf(CancellingProvider("p1")), mapOf("p1" to breaker))
+        val running = CoroutineScope(Job()).async { chain.resolveAll(req) }
 
-        // When — collecting from every provider
+        // When collecting from every provider
         try {
-            chain.resolveAll(req)
+            running.await()
             fail("expected the CancellationException to propagate, not become an Error result")
         } catch (_: CancellationException) {
             // expected
         }
 
-        // Then — no failure recorded against a provider that was merely cancelled
+        // Then no failure recorded against a provider that was merely cancelled
         assertEquals(CircuitBreaker.State.CLOSED, breaker.state)
     }
 
-    @Test fun `a provider that routes cancellation through mapError records no breaker failure`() = runTest {
-        // Given — the shape every real provider has: one broad catch around the whole call,
-        // delegating classification to mapError. This is the path that matters, because ~35 call
-        // sites look exactly like this and none of them rethrows on its own.
+    @Test fun `a real cancellation routed through mapError records no breaker failure`() = runTest {
+        // Given the shape every provider has — one broad catch delegating to mapError — with the
+        // job genuinely cancelled first. mapError does not special-case cancellation (it cannot
+        // tell ours from a provider's own withTimeout), so the Error it returns is stopped by
+        // ensureActive() before the breaker sees it.
         val breaker = CircuitBreaker(failureThreshold = 1)
         val provider = object : FakeProvider(id = "p1") {
             override suspend fun enrich(request: EnrichmentRequest, type: EnrichmentType): EnrichmentResult =
                 try {
+                    currentCoroutineContext()[Job]?.cancel()
                     throw CancellationException("caller went away")
                 } catch (e: Exception) {
                     mapError(type, e)
                 }
         }
+        val breakerState = runCancelledInOwnScope(provider, breaker)
+
+        // Then the cancellation never counted against the provider
+        assertEquals(CircuitBreaker.State.CLOSED, breakerState)
+    }
+
+    @Test fun `a foreign cancellation is still a provider failure`() = runTest {
+        // Given a provider whose OWN withTimeout expired while our job is perfectly healthy. This
+        // is the case a blanket `catch (CancellationException) { throw e }` got wrong: it escaped
+        // the chain, cancelled sibling providers, and was reported as the engine's deadline.
+        val breaker = CircuitBreaker(failureThreshold = 1)
+        val provider = object : FakeProvider(id = "p1") {
+            override suspend fun enrich(request: EnrichmentRequest, type: EnrichmentType): EnrichmentResult =
+                withTimeout(1) {
+                    delay(1_000)
+                    EnrichmentResult.NotFound(type, id)
+                }
+        }
         val chain = ProviderChain(EnrichmentType.ALBUM_ART, listOf(provider), mapOf("p1" to breaker))
 
-        // When — resolving
-        try {
-            chain.resolve(req)
-            fail("expected mapError to rethrow the CancellationException, not classify it")
-        } catch (_: CancellationException) {
-            // expected
-        }
+        // When resolving — the timeout belongs to the provider, not to us
+        val result = chain.resolve(req)
 
-        // Then — the cancellation never became an Error, so the breaker never saw a failure
-        assertEquals(CircuitBreaker.State.CLOSED, breaker.state)
+        // Then it stays contained: an Error for that provider, and its breaker opens. It must not
+        // propagate, because the engine would report it as enrichTimeoutMs expiring.
+        assertTrue(result is EnrichmentResult.Error)
+        assertEquals(CircuitBreaker.State.OPEN, breaker.state)
     }
 
     @Test fun `a provider that swallows cancellation and returns an Error records no breaker failure`() = runTest {
-        // Given a hostile provider — the case the rethrows cannot reach. EnrichmentProvider is
-        // public, so a consumer's implementation may catch the cancellation itself and hand back
-        // an Error, which would otherwise be recorded as a failure against it.
+        // Given a hostile provider — the case no rethrow of ours can reach. EnrichmentProvider is
+        // public, so a consumer's implementation may catch the cancellation itself and hand back an
+        // Error, which would otherwise be recorded as a failure against it.
         val breaker = CircuitBreaker(failureThreshold = 1)
         val provider = object : FakeProvider(id = "p1") {
             override suspend fun enrich(request: EnrichmentRequest, type: EnrichmentType): EnrichmentResult {
-                val job = currentCoroutineContext()[Job]
-                job?.cancel()
+                currentCoroutineContext()[Job]?.cancel()
                 return EnrichmentResult.Error(type, id, "swallowed the cancellation", null)
             }
         }
-        val chain = ProviderChain(EnrichmentType.ALBUM_ART, listOf(provider), mapOf("p1" to breaker))
 
-        // When — resolving in its own scope, because the provider cancels the job it runs under
-        // and that must not take the test coroutine with it
-        val scope = CoroutineScope(Job())
-        val running = scope.async { chain.resolve(req) }
+        // Then ensureActive() stops it before the breaker is touched
+        assertEquals(CircuitBreaker.State.CLOSED, runCancelledInOwnScope(provider, breaker))
+    }
+
+    @Test fun `resolveAll also guards the breaker against a swallowed cancellation`() = runTest {
+        // Given the same hostile provider on the mergeable path. Without this the resolveAll guard
+        // could be deleted and every other test here would stay green.
+        val breaker = CircuitBreaker(failureThreshold = 1)
+        val provider = object : FakeProvider(id = "p1") {
+            override suspend fun enrich(request: EnrichmentRequest, type: EnrichmentType): EnrichmentResult {
+                currentCoroutineContext()[Job]?.cancel()
+                return EnrichmentResult.Error(type, id, "swallowed the cancellation", null)
+            }
+        }
+        val chain = ProviderChain(EnrichmentType.GENRE, listOf(provider), mapOf("p1" to breaker))
+        val running = CoroutineScope(Job()).async { chain.resolveAll(req) }
+
+        // When collecting from every provider
         try {
             running.await()
-            fail("expected ensureActive() to reject the result of a cancelled call")
+            fail("expected the cancellation to propagate out of resolveAll")
         } catch (_: CancellationException) {
             // expected
         }
 
-        // Then — ensureActive() stopped it before the breaker was touched
+        // Then no failure was recorded
         assertEquals(CircuitBreaker.State.CLOSED, breaker.state)
     }
 

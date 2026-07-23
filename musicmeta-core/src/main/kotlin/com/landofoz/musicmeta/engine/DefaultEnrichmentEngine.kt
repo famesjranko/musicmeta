@@ -17,11 +17,12 @@ import com.landofoz.musicmeta.ProviderInfo
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.cache.CacheMode
 import com.landofoz.musicmeta.http.HttpClient
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withTimeout
@@ -156,9 +157,12 @@ class DefaultEnrichmentEngine(
         val primary = if (identity != null) {
             try {
                 identity.searchCandidates(request, limit)
-            } catch (e: CancellationException) {
-                throw e // search() has no enclosing withTimeout, so nothing downstream re-asserts (#53)
             } catch (e: Exception) {
+                // ensureActive() throws only when *this* job is cancelled. A CancellationException
+                // from elsewhere — a provider's own withTimeout — falls through and is handled as
+                // the failure it is, rather than escaping to be reported as our deadline. Plain
+                // `catch (CancellationException) { throw e }` gets that second case wrong. (#53)
+                currentCoroutineContext().ensureActive()
                 logger.warn(TAG, "Identity search failed: ${e.message}", e)
                 emptyList()
             }
@@ -171,9 +175,8 @@ class DefaultEnrichmentEngine(
             if (!provider.isAvailable) return@flatMap emptyList()
             try {
                 provider.searchCandidates(request, remaining)
-            } catch (e: CancellationException) {
-                throw e // as above — only CPU-bound collection follows, so cancellation would be lost
             } catch (e: Exception) {
+                currentCoroutineContext().ensureActive() // as above
                 logger.warn(TAG, "Search failed for ${provider.id}: ${e.message}", e)
                 emptyList()
             }
@@ -215,9 +218,8 @@ class DefaultEnrichmentEngine(
         // It also logged a cancelled call as a provider failure. (#53)
         val result = try {
             provider.resolveIdentity(request)
-        } catch (e: CancellationException) {
-            throw e
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             logger.warn(TAG, "Identity resolution failed: ${e.message}", e)
             return request to null
         }
