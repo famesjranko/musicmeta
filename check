@@ -7,8 +7,7 @@
 # fails in a second rather than after a full Gradle build.
 #
 #   ./check              everything
-#   ./check --fast       skip detekt, the lexer differential, the build and the demo canary —
-#                        for the edit loop, not a push
+#   ./check --fast       skip detekt, the build and the demo canary — edit loop, not a push
 #   ./check --skip-demo  CI only: the demo canary is a separate required check there
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -74,9 +73,6 @@ python3 scripts/checks/check_conventions.py
 step "script self-tests"
 # Unguarded, a regression in a release script surfaces only as a release check that silently passes.
 for t in scripts/checks/test_*.py scripts/github-workflows/test_*.py; do
-    # test_code_mask.py is a full step below, not part of this loop — at ~5s it is the most
-    # expensive thing in --fast, and it only guards _code_mask(), which changes about twice a year.
-    [ "$t" = "scripts/checks/test_code_mask.py" ] && continue
     python3 "$t" >/dev/null 2>&1 || { python3 "$t"; exit 1; }
 done
 echo "all script self-tests pass"
@@ -85,7 +81,7 @@ step "kotlin format (ktlint)"
 ./gradlew ktlintCheck --quiet
 
 if [ "$FAST" = 1 ]; then
-    printf '\n\033[1m--fast: skipped detekt, the lexer differential, build and demo canary\033[0m\n'
+    printf '\n\033[1m--fast: skipped detekt, the build and the demo canary\033[0m\n'
     exit 0
 fi
 
@@ -93,18 +89,12 @@ step "kotlin static analysis (detekt, type-resolved)"
 # Below the --fast exit for two reasons. detektMain/detektTest resolve the compiled classpath, so
 # they compile Kotlin before they analyse — that is not an edit-loop cost — and the Android variants
 # need ANDROID_HOME, which nothing above this line does. The edit loop keeps ktlint and
-# check_conventions.py, which is why the `!!` ban lives there and not in detekt (#60).
+# check_conventions.py, which is where the `!!` ban lives — detekt cannot see one on a Java
+# platform type, so the two are not interchangeable (#60).
 #
 # `./gradlew build` below runs these again through Gradle's `check`. They are up-to-date by then;
 # running them here buys a named failure before a full compile-and-test cycle.
 ./gradlew detektMain detektTest --quiet
-
-step "conventions scanner vs the Kotlin lexer"
-# Deliberately below the --fast exit. It lexes every .kt file in the repo with the compiler's own
-# lexer to prove check_conventions.py classifies code the same way, which is what stops that gate
-# reporting green while silently checking nothing. Worth ~5s and a JVM on a push; not worth it on
-# every edit, since nothing above this line can change the answer.
-python3 scripts/checks/test_code_mask.py
 
 step "build (compile, test, apiCheck)"
 ./gradlew build
