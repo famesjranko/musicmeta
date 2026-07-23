@@ -52,9 +52,10 @@ class SimilarAlbumsProvider internal constructor(
         return try {
             enrichSimilarAlbums(request)
         } catch (e: Exception) {
-            // mapError, not a hand-rolled copy of it: it is the one place that rethrows
-            // CancellationException, so a cancelled call cannot be recorded as a provider
-            // failure against the circuit breaker. (#53)
+            // mapError, not a hand-rolled copy of it: it owns the ErrorKind classification, and
+            // keeping every provider on it means that classification changes in one place.
+            // Cancellation is not decided here — mapError cannot tell ours from a provider's own
+            // withTimeout, so ProviderChain's ensureActive() settles it before the breaker. (#53)
             mapError(type, e)
         }
     }

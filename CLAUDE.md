@@ -152,22 +152,32 @@ mismatch; a `String?` inserted between `artist` and `mbid` would have compiled g
 ### 2. `catch (e: Exception)` in a suspend function eats cancellation
 
 ```kotlin
-// WRONG
+// WRONG — swallows our caller's cancellation
 try { cache.get(key, type) } catch (e: Exception) { logger.warn(TAG, e.message); null }
 
-// RIGHT — engine/CacheGuard.kt, engine/StrategyGuard.kt
+// ALSO WRONG — rethrows a cancellation that was never ours (see the note below)
 try { block() }
 catch (e: CancellationException) { throw e }
 catch (e: Exception) { logger.warn(TAG, "…"); fallback }
+
+// RIGHT — engine/ProviderChain.kt, engine/DefaultEnrichmentEngine.kt
+try { block() }
+catch (e: Exception) {
+    currentCoroutineContext().ensureActive()   // throws only if *this* job was cancelled
+    logger.warn(TAG, "…"); fallback
+}
 ```
 
 Consequence: `CancellationException` is an `Exception`, so swallowing it defeats
 `withTimeout(config.enrichTimeoutMs)` and leaves `enrich()` working for a caller that has gone away.
 Both guards exist because a throwing cache (#22) and a throwing merger (#28) escaped `enrich()`;
-every consumer-implementable interface needs one. `EnrichmentProvider`'s lives in two places:
-`ProviderChain` rethrows around `provider.enrich(...)`, and `mapError()` rethrows rather than
-classifying — which is why a provider's `catch (e: Exception)` should call `mapError(type, e)`
-instead of building an `EnrichmentResult.Error` by hand.
+every consumer-implementable interface needs one. `EnrichmentProvider`'s is `ProviderChain`, which
+catches broadly around `provider.enrich(...)` and then calls `ensureActive()` before it touches the
+breaker. `mapError()` deliberately does **not** special-case `CancellationException` — it is not a
+suspend function, so it cannot tell our cancellation from a provider's own `withTimeout`, and it
+says so in its KDoc. A provider's `catch (e: Exception)` should still call `mapError(type, e)`
+rather than building an `EnrichmentResult.Error` by hand, for the `ErrorKind` classification; the
+cancellation question is settled one level up, not there.
 
 The worst version is not the swallowed cancellation but what the result does next: an `Error`
 makes `ProviderChain` record a circuit-breaker **failure**, so before #53 every `enrichTimeoutMs`
@@ -180,6 +190,10 @@ chain, cancels sibling providers, and is reported to the caller as the engine's 
 `ensureActive()` throws only when *this* job is cancelled, so the foreign case stays contained as
 one provider's error. Both directions were shipped and caught during #53; the behaviour is pinned
 by `ProviderChainCancellationTest`, not by a lint rule.
+
+`engine/CacheGuard.kt` and `engine/StrategyGuard.kt` still carry the blanket rethrow. They predate
+#53 and were not revisited, so they are the second form above, not the third — tracked in #61. Copy
+`ProviderChain`, not those two.
 
 **Do not reason that a swallowed cancellation is harmless because "it re-asserts at the next
 suspension point".** It is not a guarantee — cancellation is cooperative, and a suspend function

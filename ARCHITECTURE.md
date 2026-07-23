@@ -11,7 +11,7 @@ because the config is the thing that fails.
 ```bash
 ./scripts/bootstrap.sh   # once: installs the pinned tools ./check requires
 ./check                  # everything
-./check --fast           # skips build and demo canary — for the edit loop, not for a push
+./check --fast           # skips the lexer differential, build and demo canary — edit loop only
 ```
 
 `./check` runs four layers — a formatter, a linter, a type checker, and a custom linter for rules
@@ -36,7 +36,7 @@ local/CI disagreement one command is supposed to remove.
 |---|---|---|
 | Public ABI matches the committed baseline | `api/*.api` + binary-compatibility-validator | `./gradlew apiCheck` (inside `build`) |
 | Kotlin formatting and import hygiene | `.editorconfig` + ktlint | `./gradlew ktlintCheck` |
-| Kotlin complexity, dead code, bug patterns | `config/detekt.yml` + baselines | `./gradlew detekt` |
+| Kotlin complexity and structure — *syntactic rules only* | `config/detekt.yml` + baselines | `./gradlew detekt` |
 | No `!!` in main sources | `scripts/checks/check_conventions.py` | `./check` |
 | `@Serializable` stays off `provider/` and `http/` types | `scripts/checks/check_conventions.py` | `./check` |
 | Main-source files ≤ 300 lines | `scripts/checks/check_conventions.py` | `./check` |
@@ -62,12 +62,19 @@ and it is where drift accumulates silently — so it gets read, not skimmed.
 - **Function length (20 target / 40 max).** detekt's `LongMethod` covers the 60-line end of this
   with a baseline, but the 20/40 numbers in `CLAUDE.md` are stricter than anything enforced. Either
   the doc or the threshold should move; nothing currently holds the gap.
-- **46 pre-existing detekt findings** sit in `config/detekt-baseline-*.xml` so new code must be
+- **43 pre-existing detekt findings** sit in `config/detekt-baseline-*.xml` so new code must be
   clean while existing debt stays visible. One deserves a decision rather than a baseline:
   `DefaultEnrichmentEngine` takes an unused `private val httpClient` constructor property, and
   `Builder.build()` allocates a second `DefaultHttpClient` to fill it. Removing the parameter
   changes a public constructor signature, so it is a documented breaking change, not a cleanup —
   tracked in #48.
+- **Every detekt rule that needs type resolution.** The `detekt` task analyses syntax only, so rules
+  that must resolve a type never run and never say so: `UnsafeCallOnNullableType`,
+  `UnnecessaryNotNullOperator`, `UnreachableCode` and the rest of that class. The typed tasks
+  (`detektMain`/`detektTest`) find 57 issues the gate currently reports nothing about. They are
+  marked EXPERIMENTAL by the plugin and pull an `ANDROID_HOME` requirement into `--fast`, so the
+  switch is its own decision — tracked in #58. Until then this row is why the `!!` ban is a
+  `check_conventions.py` rule and not a detekt one.
 - **Test-file length.** Excluded from the 300-line cap on purpose: given-when-then narratives are
   legitimately long, and a cap here would push people to split coherent suites for the wrong reason.
 - **Test-source style.** Wildcard imports and SCREAMING_CASE fixture names are allowed in tests
