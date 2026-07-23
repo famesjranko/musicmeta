@@ -64,27 +64,6 @@ subprojects {
     tasks.matching { it.name == "check" }.configureEach { dependsOn("detektMain", "detektTest") }
 }
 
-// The oracle for scripts/checks/test_code_mask.py: Kotlin's own lexer, resolved through Gradle so
-// the classpath is never a hardcoded ~/.gradle path (content-addressed, and CI moves
-// GRADLE_USER_HOME). It lives on the root project, which is not published, so nothing here can
-// reach api/*.api or a consumer's classpath.
-//
-// kotlin-stdlib is not optional: javac links against the embeddable jar alone, but IElementType's
-// static init needs kotlin/jvm/internal/markers/KMappedMarker, so omitting it fails only at runtime.
-val ktLexer: Configuration by configurations.creating
-dependencies {
-    ktLexer(libs.kotlin.compiler.embeddable)
-    ktLexer(libs.kotlin.stdlib)
-}
-
-tasks.register("ktLexerClasspath") {
-    description = "Print the classpath holding Kotlin's lexer, for the code-mask differential test."
-    val classpath = ktLexer
-    // Resolution at execution time, not configuration time — otherwise every Gradle invocation in
-    // the repo pays for it.
-    doLast { println(classpath.asPath) }
-}
-
 // Public ABI baselines live in each module's api/ directory. apiCheck is wired into `check`, so
 // `./gradlew build` fails when a signature diverges from the committed dump. Regenerate with
 // `./gradlew apiDump` and review the resulting diff — that diff is the record of an intentional

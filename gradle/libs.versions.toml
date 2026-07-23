@@ -47,12 +47,6 @@ robolectric = "4.13"
 androidx-test-core = "1.6.1"
 
 [libraries]
-# Kotlin's own lexer, used as the oracle for the convention gate's code/comment scanner. Pinned to
-# `kotlin` on purpose: the oracle must be the lexer of the compiler that builds this project, so a
-# Kotlin bump moves both together. Not a dependency of any published module — see build.gradle.kts.
-kotlin-compiler-embeddable = { module = "org.jetbrains.kotlin:kotlin-compiler-embeddable", version.ref = "kotlin" }
-kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlin" }
-
 # Room
 room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
