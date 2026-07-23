@@ -172,9 +172,17 @@ instead of building an `EnrichmentResult.Error` by hand.
 The worst version of this is not the swallowed cancellation itself but what the result does next:
 an `Error` makes `ProviderChain` record a circuit-breaker **failure**, so before #53 every
 `enrichTimeoutMs` expiry counted against providers that never failed and repeated timeouts opened
-the circuit against a healthy one. `check_conventions.py` now fails on a broad catch that produces
-an `Error` without a rethrow. A broad catch that merely logs and returns a fallback is *not* this
-bug — cancellation re-asserts at the next suspension point — and is deliberately not flagged.
+the circuit against a healthy one. `ProviderChain` also calls `ensureActive()` before touching the
+breaker, because `EnrichmentProvider` is public and a consumer's provider can swallow the
+cancellation and hand back an `Error` that no rethrow of ours can intercept.
+
+**Do not reason that a swallowed cancellation is harmless because "it re-asserts at the next
+suspension point".** It is not a guarantee — cancellation is cooperative, and a suspend function
+may return without ever suspending again. That claim was written here during #53 and was used to
+wave through five real bugs before an outside review caught it. Whether swallowing is harmful
+depends on what happens next, so it is a judgement call: `check_conventions.py` mechanises only the
+part that is decidable from the text — no catch that can capture a cancellation may construct an
+`EnrichmentResult.Error` — and the rest is on review.
 
 ### 3. `org.json` returns a default for a missing key — it does not fail
 

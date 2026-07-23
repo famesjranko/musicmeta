@@ -11,6 +11,7 @@ import com.landofoz.musicmeta.engine.ArtistMatcher
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
+import kotlinx.coroutines.CancellationException
 
 /**
  * Enrichment provider using Apple's iTunes Search and Lookup APIs.
@@ -48,6 +49,8 @@ class ITunesProvider(
         val term = "${request.artist} ${request.title}"
         return try {
             api.searchAlbums(term, limit).map { it.toCandidate() }
+        } catch (e: CancellationException) {
+            throw e // suspend call, and emptyList() returns without suspending again (#53)
         } catch (_: Exception) { emptyList() }
     }
 

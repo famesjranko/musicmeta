@@ -12,6 +12,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 
 class ProviderChain internal constructor(
     val type: EnrichmentType,
@@ -45,6 +47,11 @@ class ProviderChain internal constructor(
                 } catch (e: Exception) {
                     EnrichmentResult.Error(type, provider.id, e.message ?: "Unknown error", e)
                 }
+                // The rethrow above only covers a provider that lets the cancellation escape.
+                // EnrichmentProvider is public, so a consumer's provider may swallow it and return
+                // an Error of its own — which would still be recorded as a breaker failure below.
+                // This is the boundary that holds regardless of what the provider did. (#53)
+                currentCoroutineContext().ensureActive()
                 when (result) {
                     is EnrichmentResult.Success -> { breaker?.recordSuccess(); result }
                     is EnrichmentResult.NotFound -> { breaker?.recordSuccess(); null }
@@ -95,6 +102,7 @@ class ProviderChain internal constructor(
             } catch (e: Exception) {
                 EnrichmentResult.Error(type, provider.id, e.message ?: "Unknown error", e)
             }
+            currentCoroutineContext().ensureActive() // see resolveAll — holds even if the provider swallowed it
 
             onResult(provider, breaker, result)
         }

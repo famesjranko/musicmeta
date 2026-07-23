@@ -40,7 +40,7 @@ local/CI disagreement one command is supposed to remove.
 | No `!!` in main sources | `scripts/checks/check_conventions.py` | `./check` |
 | `@Serializable` stays off `provider/` and `http/` types | `scripts/checks/check_conventions.py` | `./check` |
 | Main-source files ≤ 300 lines | `scripts/checks/check_conventions.py` | `./check` |
-| A cancellation never becomes an `EnrichmentResult.Error` | `scripts/checks/check_conventions.py` | `./check` |
+| No catch that can capture a cancellation constructs an `EnrichmentResult.Error` | `scripts/checks/check_conventions.py` | `./check` |
 | The conventions scanner classifies Kotlin the way Kotlin does | `scripts/checks/test_code_mask.py` vs `KotlinLexer` | `./check` |
 | Python formatting and lint | `pyproject.toml` + ruff | `./check` |
 | Python types | `pyproject.toml` + mypy | `./check` |
@@ -75,6 +75,14 @@ and it is where drift accumulates silently — so it gets read, not skimmed.
   (`.editorconfig`). Both stay enforced in main sources, where they currently pass clean.
 - **Comment density and placement.** "Explain non-obvious constraints, not what the code says" is
   a judgement call no linter makes well.
+- **Whether swallowing a cancellation elsewhere is harmful.** The gate mechanises only the
+  decidable half — no catch that can capture a `CancellationException` may construct an
+  `EnrichmentResult.Error`. Whether a broad catch that *logs and returns a fallback* is a bug
+  depends on what runs before the next suspension point, which no textual rule can see. #53 shipped
+  with the opposite belief written into `CLAUDE.md` ("cancellation re-asserts at the next
+  suspension point"), and it was used to wave through five real bugs; the claim is false, and the
+  judgement is now review's, not the gate's.
+
 - **Conventional commit format.** Nothing validates commit messages. A `commit-msg` hook or a PR
   title check would close this.
 - **"Write each change down once."** The doc-ownership split between CHANGELOG, ROADMAP and the

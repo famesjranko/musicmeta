@@ -35,16 +35,24 @@ GRANDFATHERED_LONG_FILES = {
 # JSON rather than their compile.
 SERIALIZABLE_BANNED_DIRS = ("/provider/", "/http/")
 
-# `CancellationException` is an `Exception`, so `catch (e: Exception)` catches it. Turning that
-# into an `EnrichmentResult.Error` is the specific shape that hurts: `ProviderChain` records an
-# `Error` as a circuit-breaker *failure*, so every `enrichTimeoutMs` expiry counted against
-# providers that never failed, and repeated timeouts opened the circuit against a healthy one
-# (#53). A broad catch that merely logs and returns is not this bug — cancellation re-asserts at
-# the next suspension point — which is why the rule looks at what the catch *produces*, not at
-# whether a broad catch exists. `mapError()` is the sanctioned path: it rethrows, so the ~35
-# provider call sites that delegate to it are correct by construction.
+# `CancellationException` is an `Exception`, so `catch (e: Exception)` catches it. Building an
+# `EnrichmentResult.Error` from it is the shape that hurts: `ProviderChain` records an `Error` as a
+# circuit-breaker *failure*, so every `enrichTimeoutMs` expiry counted against providers that never
+# failed, and repeated timeouts opened the circuit against a healthy one (#53).
+#
+# This rule checks exactly one thing — that no catch clause capable of capturing a cancellation
+# constructs an `Error` — and the ARCHITECTURE.md row says only that. It is deliberately NOT
+# "every broad catch must rethrow": Kotlin cancellation is cooperative, so whether swallowing it
+# elsewhere is harmful depends on what happens next, which no textual rule can see.
+#
+# An earlier version of this comment claimed a logging-only catch was safe because "cancellation
+# re-asserts at the next suspension point". That is not a guarantee — a suspend function may return
+# without ever suspending again — and the claim was used to wave through five real bugs. Recorded
+# so it is not re-derived.
 CATCH_CLAUSE = re.compile(r"\bcatch\s*\(\s*[\w_]+\s*:\s*([\w.]+)\s*\)")
-BROAD_EXCEPTION_TYPES = ("Exception", "Throwable")
+# Naming CancellationException directly and then building an Error is the same defect, written
+# explicitly rather than by accident, so it belongs in the same rule.
+CANCELLATION_CAPTURING_TYPES = ("Exception", "Throwable", "CancellationException")
 
 # A hand-written scanner, not a regex. Kotlin nests: a string can hold a `${...}` template, that
 # template holds code, and that code can hold another string. Regex cannot express that, and two
@@ -237,11 +245,11 @@ def check_no_double_bang(path: Path, rel: str, source: str) -> list[str]:
     return findings
 
 
-def _catch_body(code: str, start: int) -> str:
-    """The `{...}` block of the catch clause beginning at `start`, brace-balanced."""
+def _catch_body(code: str, start: int) -> tuple[str, int]:
+    """The `{...}` block of the catch clause at `start`, brace-balanced, plus where it ends."""
     open_brace = code.find("{", code.find(")", start))
     if open_brace < 0:
-        return ""
+        return "", start
     depth = 0
     for i in range(open_brace, len(code)):
         if code[i] == "{":
@@ -249,36 +257,45 @@ def _catch_body(code: str, start: int) -> str:
         elif code[i] == "}":
             depth -= 1
             if depth == 0:
-                return code[open_brace : i + 1]
-    return code[open_brace:]
+                return code[open_brace : i + 1], i + 1
+    return code[open_brace:], len(code)
 
 
 def check_cancellation_not_an_error(path: Path, rel: str, source: str) -> list[str]:
-    """Report a broad catch that turns a cancellation into an `EnrichmentResult.Error`.
+    """Report a catch that turns a cancellation into an `EnrichmentResult.Error`.
 
-    Preceded by a `catch (… : CancellationException)` clause, or delegating to `mapError()`,
-    is what makes it safe. Both are checked against the code mask, so a match inside a comment
-    or a string cannot satisfy or trigger the rule.
+    Only an immediately preceding clause in the *same* chain that catches `CancellationException`
+    and rethrows makes it safe. Three near-misses are deliberately not accepted: a preceding clause
+    that catches it and does something else, one separated by other code so it belongs to a
+    different `try`, and a body that mentions `mapError()` while still building an `Error` by hand.
+
+    Read off the code mask, so a match inside a comment or a string can neither satisfy nor
+    trigger the rule.
     """
     code = strip_noise(source)
     clauses = [(m.start(), m.group(1)) for m in CATCH_CLAUSE.finditer(code)]
     findings = []
     for index, (position, caught) in enumerate(clauses):
-        if caught not in BROAD_EXCEPTION_TYPES:
+        if caught not in CANCELLATION_CAPTURING_TYPES:
             continue
-        body = _catch_body(code, position)
-        if "EnrichmentResult.Error(" not in body or "mapError(" in body:
+        body, _ = _catch_body(code, position)
+        if "EnrichmentResult.Error(" not in body:
             continue
-        previous = clauses[index - 1][1] if index else ""
-        if "CancellationException" in previous:
-            continue
+        if index:
+            previous_position, previous_caught = clauses[index - 1]
+            previous_body, previous_end = _catch_body(code, previous_position)
+            # Adjacency matters: a CancellationException clause separated by other code belongs to
+            # a different try, and rethrowing there says nothing about this one.
+            adjacent = not code[previous_end:position].strip()
+            if adjacent and previous_caught == "CancellationException" and "throw" in previous_body:
+                continue
         lineno = code.count("\n", 0, position) + 1
         findings.append(
             f"::error file={rel},line={lineno}::this catch turns a cancellation into an "
             f"EnrichmentResult.Error. CancellationException is an Exception, and ProviderChain "
             f"records an Error as a circuit-breaker failure — so a timeout would open the circuit "
-            f"against a healthy provider. Call `mapError(type, e)` instead, or add "
-            f"`catch (e: CancellationException) {{ throw e }}` before this clause."
+            f"against a healthy provider. Call `mapError(type, e)`, which rethrows, or put "
+            f"`catch (e: CancellationException) {{ throw e }}` immediately before this clause."
         )
     return findings
 

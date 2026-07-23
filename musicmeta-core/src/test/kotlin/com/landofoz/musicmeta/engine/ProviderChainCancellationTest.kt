@@ -6,6 +6,10 @@ import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.http.CircuitBreaker
 import com.landofoz.musicmeta.testutil.FakeProvider
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -90,6 +94,35 @@ class ProviderChainCancellationTest {
         }
 
         // Then — the cancellation never became an Error, so the breaker never saw a failure
+        assertEquals(CircuitBreaker.State.CLOSED, breaker.state)
+    }
+
+    @Test fun `a provider that swallows cancellation and returns an Error records no breaker failure`() = runTest {
+        // Given a hostile provider — the case the rethrows cannot reach. EnrichmentProvider is
+        // public, so a consumer's implementation may catch the cancellation itself and hand back
+        // an Error, which would otherwise be recorded as a failure against it.
+        val breaker = CircuitBreaker(failureThreshold = 1)
+        val provider = object : FakeProvider(id = "p1") {
+            override suspend fun enrich(request: EnrichmentRequest, type: EnrichmentType): EnrichmentResult {
+                val job = currentCoroutineContext()[Job]
+                job?.cancel()
+                return EnrichmentResult.Error(type, id, "swallowed the cancellation", null)
+            }
+        }
+        val chain = ProviderChain(EnrichmentType.ALBUM_ART, listOf(provider), mapOf("p1" to breaker))
+
+        // When — resolving in its own scope, because the provider cancels the job it runs under
+        // and that must not take the test coroutine with it
+        val scope = CoroutineScope(Job())
+        val running = scope.async { chain.resolve(req) }
+        try {
+            running.await()
+            fail("expected ensureActive() to reject the result of a cancelled call")
+        } catch (_: CancellationException) {
+            // expected
+        }
+
+        // Then — ensureActive() stopped it before the breaker was touched
         assertEquals(CircuitBreaker.State.CLOSED, breaker.state)
     }
 

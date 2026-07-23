@@ -464,6 +464,76 @@ class ConventionsTest(unittest.TestCase):
         # Then it passes
         self.assertEqual(findings, [])
 
+    # --- the three near-misses an outside review found in the first version of the rule ---
+
+    def test_map_error_mentioned_but_error_still_built_by_hand_is_reported(self):
+        # Given a body that names mapError but still constructs the Error itself. The first version
+        # of this rule suppressed on any mention of mapError anywhere in the body.
+        body = (
+            "suspend fun f(): EnrichmentResult = try {\n"
+            "    call()\n"
+            "} catch (e: Exception) {\n"
+            "    // fall back rather than mapError(type, e)\n"
+            '    EnrichmentResult.Error(type, id, e.message ?: "x", e)\n'
+            "}\n"
+        )
+        # When the check runs
+        findings = self.findings_for("musicmeta-core/src/main/kotlin/P.kt", body)
+        # Then it is still reported
+        self.assertEqual(len(findings), 1)
+
+    def test_preceding_cancellation_clause_that_does_not_rethrow_is_reported(self):
+        # Given a CancellationException clause that swallows instead of rethrowing. The first
+        # version accepted any preceding clause naming the type, regardless of what it did.
+        body = (
+            "suspend fun f(): EnrichmentResult = try {\n"
+            "    call()\n"
+            "} catch (e: CancellationException) {\n"
+            '    logger.warn(TAG, "cancelled")\n'
+            "} catch (e: Exception) {\n"
+            '    EnrichmentResult.Error(type, id, e.message ?: "x", e)\n'
+            "}\n"
+        )
+        # When the check runs
+        findings = self.findings_for("musicmeta-core/src/main/kotlin/P.kt", body)
+        # Then it is reported, because nothing rethrows
+        self.assertEqual(len(findings), 1)
+
+    def test_cancellation_clause_from_a_different_try_does_not_excuse_a_later_catch(self):
+        # Given a correct rethrow in one try, and a separate later try that builds an Error. The
+        # first version looked only at the previous clause in the file, not at adjacency.
+        body = (
+            "suspend fun a(): String = try {\n"
+            "    call()\n"
+            "} catch (e: CancellationException) {\n"
+            "    throw e\n"
+            "}\n"
+            "\n"
+            "suspend fun b(): EnrichmentResult = try {\n"
+            "    call()\n"
+            "} catch (e: Exception) {\n"
+            '    EnrichmentResult.Error(type, id, e.message ?: "x", e)\n'
+            "}\n"
+        )
+        # When the check runs
+        findings = self.findings_for("musicmeta-core/src/main/kotlin/P.kt", body)
+        # Then the second try is reported — the rethrow belongs to a different chain
+        self.assertEqual(len(findings), 1)
+
+    def test_catching_cancellation_and_building_an_error_is_reported(self):
+        # Given the defect written explicitly rather than by accident
+        body = (
+            "suspend fun f(): EnrichmentResult = try {\n"
+            "    call()\n"
+            "} catch (e: CancellationException) {\n"
+            '    EnrichmentResult.Error(type, id, "cancelled", e)\n'
+            "}\n"
+        )
+        # When the check runs
+        findings = self.findings_for("musicmeta-core/src/main/kotlin/P.kt", body)
+        # Then it is reported, same as the broad-catch form
+        self.assertEqual(len(findings), 1)
+
     # --- noise stripping ---
 
     def test_strip_noise_preserves_line_numbers(self):
