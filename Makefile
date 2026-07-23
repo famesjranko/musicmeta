@@ -72,8 +72,8 @@ format: ## Rewrite Kotlin and Python to house style
 	ruff format .
 
 .PHONY: lint
-lint: ## All four layers without building
-	$(GRADLE) ktlintCheck detekt
+lint: ## All four layers, no tests — detekt compiles Kotlin, since its rules need resolved types
+	$(GRADLE) ktlintCheck detektMain detektTest
 	ruff check .
 	mypy
 	python3 scripts/checks/check_conventions.py
