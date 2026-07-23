@@ -288,7 +288,7 @@ class DefaultEnrichmentEngine(
         val regularTypes = standardTypes - mergeableRequested
 
         val compositeSubTypes = compositeTypes
-            .flatMap { compositeDependencies[it] ?: emptySet() }
+            .flatMap { compositeDependencies[it].orEmpty() }
             .toSet() - regularTypes - mergeableRequested
 
         val allRegularToResolve = regularTypes + compositeSubTypes
@@ -303,7 +303,7 @@ class DefaultEnrichmentEngine(
         val mergeableResults = mergeableRequested.map { mergeType ->
             async {
                 val chain = registry.chainFor(mergeType)
-                val allResults = chain?.resolveAll(request) ?: emptyList()
+                val allResults = chain?.resolveAll(request).orEmpty()
                 val filtered = allResults.mapNotNull { filterByConfidence(it) as? EnrichmentResult.Success }
                 val merger = mergers[mergeType]
                 mergeType to if (merger == null) {
