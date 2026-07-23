@@ -70,13 +70,11 @@ data class EnrichmentResults(
 
     fun genres(): List<String> =
         metadata(EnrichmentType.GENRE)?.genres
-            ?: metadata(EnrichmentType.ALBUM_METADATA)?.genres
-            ?: emptyList()
+            ?: metadata(EnrichmentType.ALBUM_METADATA)?.genres.orEmpty()
 
     fun genreTags(): List<GenreTag> =
         metadata(EnrichmentType.GENRE)?.genreTags
-            ?: metadata(EnrichmentType.ALBUM_METADATA)?.genreTags
-            ?: emptyList()
+            ?: metadata(EnrichmentType.ALBUM_METADATA)?.genreTags.orEmpty()
 
     fun label(): String? =
         metadata(EnrichmentType.LABEL)?.label

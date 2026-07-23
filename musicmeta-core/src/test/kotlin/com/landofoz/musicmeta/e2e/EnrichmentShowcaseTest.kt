@@ -318,7 +318,7 @@ class EnrichmentShowcaseTest {
             val data = timeline.data as EnrichmentData.ArtistTimeline
             println("    ${data.events.size} events")
             data.events.forEach { e ->
-                val entity = e.relatedEntity?.let { " ($it)" } ?: ""
+                val entity = e.relatedEntity?.let { " ($it)" }.orEmpty()
                 println("    %-12s %-18s %s%s".format(e.date, e.type, e.description.take(50), entity))
             }
         } else printSingleResult(EnrichmentType.ARTIST_TIMELINE, timeline)

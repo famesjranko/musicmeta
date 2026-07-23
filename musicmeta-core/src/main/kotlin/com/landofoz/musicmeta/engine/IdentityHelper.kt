@@ -21,7 +21,7 @@ internal fun buildIdentityResolution(
         identifiers = enrichedRequest.identifiers,
         match = if (identityResult.suggestions != null) IdentityMatch.SUGGESTIONS else IdentityMatch.BEST_EFFORT,
         matchScore = null,
-        suggestions = identityResult.suggestions ?: emptyList(),
+        suggestions = identityResult.suggestions.orEmpty(),
     )
     else -> null
 }
