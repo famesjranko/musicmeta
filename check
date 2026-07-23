@@ -80,14 +80,23 @@ for t in scripts/checks/test_*.py scripts/github-workflows/test_*.py; do
 done
 echo "all script self-tests pass"
 
-step "kotlin format + static analysis (ktlint, detekt)"
-# One Gradle invocation rather than two — the daemon start dominates either way.
-./gradlew ktlintCheck detekt --quiet
+step "kotlin format (ktlint)"
+./gradlew ktlintCheck --quiet
 
 if [ "$FAST" = 1 ]; then
-    printf '\n\033[1m--fast: skipped the lexer differential, build and demo canary\033[0m\n'
+    printf '\n\033[1m--fast: skipped detekt, the lexer differential, build and demo canary\033[0m\n'
     exit 0
 fi
+
+step "kotlin static analysis (detekt, type-resolved)"
+# Below the --fast exit for two reasons. detektMain/detektTest resolve the compiled classpath, so
+# they compile Kotlin before they analyse — that is not an edit-loop cost — and the Android variants
+# need ANDROID_HOME, which nothing above this line does. The edit loop keeps ktlint and
+# check_conventions.py, which is why the `!!` ban lives there and not in detekt (#60).
+#
+# `./gradlew build` below runs these again through Gradle's `check`. They are up-to-date by then;
+# running them here buys a named failure before a full compile-and-test cycle.
+./gradlew detektMain detektTest --quiet
 
 step "conventions scanner vs the Kotlin lexer"
 # Deliberately below the --fast exit. It lexes every .kt file in the repo with the compiler's own
