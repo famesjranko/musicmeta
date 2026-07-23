@@ -24,16 +24,6 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Self-check the release-notes scripts
-        # Unguarded, a regression here would surface only as a release check that silently passes.
-        working-directory: scripts/github-workflows
-        run: for t in test_*.py; do python3 "$t"; done
-
-      - name: Enforce the STORIES entry cap
-        # STORIES has no consumer to fail, so without this the cap is an unenforced ask — which is
-        # what produced the release-note walls in the first place.
-        run: python3 scripts/github-workflows/check_doc_caps.py
-
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -41,8 +31,10 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v6
 
-      - name: Build and test
-        run: ./gradlew build
+      - name: Run the check command
+        # The same command developers and agents run locally. CI having its own step list is what
+        # makes a CI failure a guessing game, so there is deliberately only one thing to run here.
+        run: ./check
 
       - name: Upload test reports
         if: failure()
@@ -54,6 +46,11 @@ jobs:
 
   # `demo/` is a separate composite build, so `./gradlew build` never compiles it — this is the only
   # in-tree consumer compiling like an external one. Not a parameter-position guard; see CLAUDE.md.
+  #
+  # `./check` already runs this, so the compile happens twice per CI run. The job stays because
+  # `demo-canary` is a required status check in the `main` protection ruleset and reports the
+  # failure under its own name; deleting it means editing that ruleset first, or merges to `main`
+  # block forever waiting for a check that no longer runs.
   demo-canary:
     runs-on: ubuntu-latest
     timeout-minutes: 30

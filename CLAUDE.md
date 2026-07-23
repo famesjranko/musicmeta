@@ -2,10 +2,17 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+**Run `./check` before you push.** It is the whole verification surface — ktlint, the house
+convention rules, doc caps, script self-tests, the build, and the demo canary — and CI runs
+exactly it. `./check --fast` skips the build and canary for the edit loop.
+[`ARCHITECTURE.md`](ARCHITECTURE.md) records which rules are enforced by a mechanism and which are
+only intended; where it and this file disagree, the mechanism wins.
+
 ## Documentation
 
 | File | Purpose |
 |------|---------|
+| `ARCHITECTURE.md` | What is enforced, what is admitted as unenforced, and the decisions behind both |
 | `README.md` | Project overview, setup instructions, API examples |
 | `CLAUDE.md` | AI coding instructions (this file) |
 | `STORIES.md` | Architectural decisions, progress log, rationale |
