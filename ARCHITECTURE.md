@@ -52,7 +52,12 @@ local/CI disagreement one command is supposed to remove.
 | Release publishes only from `main` | `release.yml` ref guard | the workflow refusing to run |
 
 Format-on-write (`scripts/format-kotlin.sh`, wired in `.claude/settings.json`) is a convenience,
-not a gate. It no-ops when the ktlint CLI is absent; `ktlintCheck` is what actually fails.
+not a gate. It no-ops when the ktlint CLI is absent, and swallows formatter failures because a file
+mid-edit may not parse; `ktlintCheck` is what actually fails. Two hooks: `PostToolUse` on
+`Edit|Write` formats the file the payload names, and `Stop` sweeps every dirty Kotlin file at the
+end of a turn — which is what covers writes through Bash, since a Bash payload names no file. Target
+selection is pinned by `scripts/checks/test_format_kotlin.py`, because a hook that formats nothing
+exits 0 exactly like one that works.
 
 ## Not enforced
 
@@ -84,6 +89,10 @@ and it is where drift accumulates silently — so it gets read, not skimmed.
   row exists for. detekt 1.23.8 is also built against Kotlin 2.0.21 / AGP 8.8.1 while this repo runs
   Kotlin 2.1.0 / AGP 8.7.3, so a detekt or AGP bump needs all three modules' tasks re-run, not just
   core's.
+- **Kotlin written and committed inside one Bash command.** The `Stop` sweep reads `git status`, so
+  a command that writes a file and commits it in the same breath leaves a clean tree and nothing to
+  format. `ktlintCheck` still fails on it in `./check`, which is the point — the hook shortens the
+  loop, it has never been what holds the line.
 - **Test-file length.** Excluded from the 300-line cap on purpose: given-when-then narratives are
   legitimately long, and a cap here would push people to split coherent suites for the wrong reason.
 - **Test-source style.** Wildcard imports and SCREAMING_CASE fixture names are allowed in tests
