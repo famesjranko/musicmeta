@@ -31,8 +31,15 @@ class RateLimiterTest {
         // Given — limiter with 100ms interval
         val limiter = RateLimiter(100)
 
-        // When / Then — exception propagates to caller
-        try { limiter.execute { throw IllegalStateException("err") }; fail() } catch (e: IllegalStateException) { assertEquals("err", e.message) }
+        // When / Then — exception propagates to caller. The type argument is explicit so the call
+        // is not inferred as Nothing, which would make anything written after it dead code.
+        var caught: String? = null
+        try {
+            limiter.execute<Unit> { throw IllegalStateException("err") }
+        } catch (e: IllegalStateException) {
+            caught = e.message
+        }
+        assertEquals("err", caught)
     }
 
     @Test fun `execute delays when called faster than interval`() = runTest {
