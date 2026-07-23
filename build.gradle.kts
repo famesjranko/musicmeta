@@ -7,6 +7,14 @@ plugins {
     alias(libs.plugins.kotlin.serialization) apply false
     alias(libs.plugins.vanniktech.publish) apply false
     alias(libs.plugins.binary.compatibility.validator)
+    alias(libs.plugins.ktlint) apply false
+}
+
+// Applied to every module rather than per-module, so a new module is formatted by default instead
+// of by remembering. `demo/` is a separate composite build and is not covered — it is the consumer
+// canary, and its job is to compile against the published surface, not to match house style.
+subprojects {
+    apply(plugin = "org.jlleitschuh.gradle.ktlint")
 }
 
 // Public ABI baselines live in each module's api/ directory. apiCheck is wired into `check`, so

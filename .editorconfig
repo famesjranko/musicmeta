@@ -1,0 +1,66 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{kt,kts}]
+indent_style = space
+indent_size = 4
+max_line_length = 120
+
+# `intellij_idea`, not ktlint's own `ktlint_official` default: 6022 violations against this
+# codebase versus 3568, almost all of them wrapping preference rather than defect.
+ktlint_code_style = intellij_idea
+
+# Wrapping rules are disabled deliberately. They accounted for ~3000 of the 3568 remaining
+# violations, and every one of them reformats already-readable code to impose a line-break
+# opinion. A formatter earns its place by making formatting stop being a decision; rewriting
+# 171 files to relocate arguments is the opposite trade. What stays enabled is the part that
+# catches real inconsistency: indentation, imports, spacing, blank lines, line length.
+ktlint_standard_argument-list-wrapping = disabled
+ktlint_standard_parameter-list-wrapping = disabled
+ktlint_standard_property-wrapping = disabled
+ktlint_standard_statement-wrapping = disabled
+ktlint_standard_wrapping = disabled
+ktlint_standard_multiline-if-else = disabled
+ktlint_standard_multiline-expression-wrapping = disabled
+ktlint_standard_function-signature = disabled
+ktlint_standard_class-signature = disabled
+ktlint_standard_function-literal = disabled
+ktlint_standard_chain-method-continuation = disabled
+
+# Trailing commas are a diff-noise preference, not a correctness rule, and the codebase is
+# inconsistent about them. Left off rather than churning every call site.
+ktlint_standard_trailing-comma-on-call-site = disabled
+ktlint_standard_trailing-comma-on-declaration-site = disabled
+
+# Without these, `ktlintFormat` collapses 5+ same-package imports into a star import and then
+# `ktlintCheck` fails them under no-wildcard-imports — format and check disagreeing, which makes
+# the gate unfixable by running the formatter. Observed on org.junit.Assert.* in three test files.
+ij_kotlin_name_count_to_use_star_import = 2147483647
+ij_kotlin_name_count_to_use_star_import_for_members = 2147483647
+
+# CLAUDE.md documents the provider layout as `*Api.kt` / `*Models.kt` / `*Mapper.kt` / `*Provider.kt`,
+# so a `*Models.kt` holding one data class is the convention working, not a defect. The rule would
+# rename three files to fight a structure the project chose on purpose.
+ktlint_standard_filename = disabled
+
+# Test fixtures carry JSON payloads and expected-value strings that cannot be wrapped without
+# making them harder to compare against the real API response. 188 of the 211 line-length
+# violations were here; all 19 in main sources were fixed rather than exempted.
+[**/src/test/**.{kt,kts}]
+max_line_length = off
+
+# Test idiom that main sources should not inherit. `org.junit.Assert.*` is the universal JUnit
+# import and expanding 23 of them buys nothing; SCREAMING_CASE names the JSPF/JSON fixture blobs.
+# Both rules stay enabled for main sources, where they currently pass clean.
+ktlint_standard_no-wildcard-imports = disabled
+ktlint_standard_property-naming = disabled
+
+# Generated ABI dumps: apiCheck compares them byte-for-byte, including a trailing blank line.
+[api/*.api]
+insert_final_newline = false
+trim_trailing_whitespace = false
