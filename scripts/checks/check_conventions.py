@@ -15,7 +15,6 @@ ARCHITECTURE.md under "Not enforced" rather than left implicit here.
 from __future__ import annotations
 
 import argparse
-import re
 import sys
 from pathlib import Path
 
@@ -35,81 +34,135 @@ GRANDFATHERED_LONG_FILES = {
 # JSON rather than their compile.
 SERIALIZABLE_BANNED_DIRS = ("/provider/", "/http/")
 
-# ONE alternation matched in a single left-to-right pass. Running these as five sequential
-# re.sub passes is wrong and silently disables the gate: `LINE_COMMENT` applied before
-# `STRING_LITERAL` treats the `//` in "https://host/" as a comment and blanks the rest of the
-# line, so `"https://host/" + u!!.trim()` reported clean. A single pass cannot do that, because
-# whichever construct opens first consumes the ones nested inside it.
+# A hand-written scanner, not a regex. Kotlin nests: a string can hold a `${...}` template, that
+# template holds code, and that code can hold another string. Regex cannot express that, and two
+# review rounds each found a hole proving it — first five sequential passes letting the `//` in
+# "https://host/" blank real code, then a single alternation whose string branch could not span
+# the nested quote in `"${enc(id!!, "UTF-8")}"` and silently dropped the `!!`. A ~60-line state
+# machine is both correct here and easier to reason about than the alternation it replaces.
 #
-# Order within the alternation is the tie-break at a given position: `"""` must be tried before
-# `"`, and both before the `//` that may sit inside them.
-NOISE = re.compile(
-    r"(?P<block>/\*.*?\*/)"
-    r'|(?P<triple>""".*?""")'
-    r"|(?P<line>//[^\n]*)"
-    r"|(?P<char>'(?:\\.|[^'\\])*')"
-    r'|(?P<string>"(?:\\.|[^"\\\n])*")',
-    re.DOTALL,
-)
+# Returns a same-length mask so reported line numbers always match the source.
 
 
-def _blank_run(text: str) -> str:
-    """Whitespace of the same length, keeping newlines so line numbers survive."""
-    return re.sub(r"[^\n]", " ", text)
-
-
-def _blank_literal(text: str) -> str:
-    """Blank a string literal but keep `${...}` template expressions, which are code.
-
-    `"name is ${u!!.trim()}"` contains a real not-null assertion. Blanking the whole literal
-    hides it, and interpolation is where `!!` most often hides in Kotlin.
-    """
-    out: list[str] = []
+def _code_mask(source: str) -> list[bool]:
+    """True where a character is code, False inside comments and string literal text."""
+    n = len(source)
+    mask = [True] * n
+    stack: list[str] = []  # "string" | "raw" | "template" | "brace"
     i = 0
-    while i < len(text):
-        start = text.find("${", i)
-        if start < 0:
-            out.append(_blank_run(text[i:]))
-            break
-        out.append(_blank_run(text[i:start]))
 
-        # Walk to the brace that closes this one, so `${list.map { it }}` survives intact.
-        depth = 0
-        end = start + 1
-        while end < len(text):
-            if text[end] == "{":
-                depth += 1
-            elif text[end] == "}":
-                depth -= 1
-                if depth == 0:
-                    end += 1
+    def blank(start: int, stop: int) -> None:
+        for k in range(start, min(stop, n)):
+            mask[k] = False
+
+    while i < n:
+        ctx = stack[-1] if stack else None
+
+        # Inside a string literal, everything is text until it ends or a template opens.
+        if ctx in ("string", "raw"):
+            # Escapes exist in normal strings only; a raw string treats backslash literally, so
+            # `"""\"""` ends where it looks like it ends.
+            if ctx == "string" and source[i] == "\\":
+                blank(i, i + 2)
+                i += 2
+                continue
+            # `\$` is a literal dollar, already consumed above — so reaching here means a real
+            # template. Its expression is code and must stay visible.
+            if source[i] == "$" and i + 1 < n and source[i + 1] == "{":
+                stack.append("template")
+                blank(i, i + 2)
+                i += 2
+                continue
+            if ctx == "raw" and source.startswith('"""', i):
+                stack.pop()
+                blank(i, i + 3)
+                i += 3
+                continue
+            if ctx == "string" and source[i] == '"':
+                stack.pop()
+                blank(i, i + 1)
+                i += 1
+                continue
+            blank(i, i + 1)
+            i += 1
+            continue
+
+        # Code position — including inside a template, which is why a nested string works.
+        if source.startswith("//", i):
+            stop = source.find("\n", i)
+            stop = n if stop < 0 else stop
+            blank(i, stop)
+            i = stop
+            continue
+
+        if source.startswith("/*", i):
+            # Kotlin block comments nest, unlike Java's. A lazy regex stopped at the first `*/`
+            # and scanned the remainder of a commented-out region as live code.
+            depth = 1
+            blank(i, i + 2)
+            i += 2
+            while i < n and depth:
+                if source.startswith("/*", i):
+                    depth += 1
+                    blank(i, i + 2)
+                    i += 2
+                elif source.startswith("*/", i):
+                    depth -= 1
+                    blank(i, i + 2)
+                    i += 2
+                else:
+                    blank(i, i + 1)
+                    i += 1
+            continue
+
+        if source.startswith('"""', i):
+            stack.append("raw")
+            blank(i, i + 3)
+            i += 3
+            continue
+
+        if source[i] == '"':
+            stack.append("string")
+            blank(i, i + 1)
+            i += 1
+            continue
+
+        if source[i] == "'":
+            blank(i, i + 1)
+            i += 1
+            while i < n:
+                if source[i] == "\\":
+                    blank(i, i + 2)
+                    i += 2
+                    continue
+                blank(i, i + 1)
+                i += 1
+                if source[i - 1] == "'":
                     break
-            end += 1
-        else:
-            # Unterminated — treat the remainder as literal rather than guessing.
-            out.append(_blank_run(text[start:]))
-            break
+            continue
 
-        # Blank the `${` and `}` delimiters, keep the expression. Lengths are preserved so the
-        # reported column and every later line number still match the original file.
-        out.append("  " + text[start + 2 : end - 1] + " ")
-        i = end
-    return "".join(out)
+        # Brace tracking so the `}` closing a template is told apart from one closing a lambda
+        # inside it: `"${list.map { it }}"`.
+        if source[i] == "{" and ctx in ("template", "brace"):
+            stack.append("brace")
+        elif source[i] == "}" and ctx == "brace":
+            stack.pop()
+        elif source[i] == "}" and ctx == "template":
+            stack.pop()
+            blank(i, i + 1)
+        i += 1
+
+    return mask
 
 
 def strip_noise(source: str) -> str:
-    """Blank comments and string literals so a `!!` inside one is not a violation.
+    """Blank comments and string text so a `!!` inside one is not a violation.
 
-    Replaces with same-length whitespace rather than deleting, so reported line numbers still
-    match the original file.
+    Same length and same newline positions as the input, so every reported line number still
+    matches the original file.
     """
-
-    def blank(match: re.Match[str]) -> str:
-        if match.lastgroup in ("string", "triple"):
-            return _blank_literal(match.group(0))
-        return _blank_run(match.group(0))
-
-    return NOISE.sub(blank, source)
+    mask = _code_mask(source)
+    return "".join(c if (mask[i] or c == "\n") else " " for i, c in enumerate(source))
 
 
 def main_sources(root: Path) -> list[Path]:

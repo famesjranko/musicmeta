@@ -16,9 +16,10 @@ shared checkout.
   `ANDROID_HOME`, and Gradle dependencies resolve through the shared user cache.
 - The `demo/` composite build uses `includeBuild("..")`; inside a worktree it correctly resolves that
   worktree's library. Do not replace the relative path with an absolute one.
-- `.claude/settings.json` and `.claude/rules/` are tracked, so the format-on-write hook reaches
-  every worktree. Only `.claude/settings.local.json` is ignored, and it holds local tool
-  permissions — its absence affects prompting, not build correctness.
+- `.claude/` is ignored except for `.claude/settings.json`, which is tracked so the format-on-write
+  hook reaches every worktree. `.claude/rules/` is un-ignored too but does not exist yet. Everything
+  else there — `settings.local.json`, agent worktrees, local tooling — stays untracked and affects
+  prompting, not build correctness.
 - A fresh worktree needs the pinned tools on `PATH`. They install to `~/.local/bin`, which is shared
   across worktrees, so `./scripts/bootstrap.sh` is a once-per-machine step, not once per worktree.
 

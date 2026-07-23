@@ -14,6 +14,19 @@ MYPY_VERSION="2.3.0"
 SHELLCHECK_VERSION="0.11.0"
 KTLINT_VERSION="1.8.0"
 
+# These three are raw downloads of executables that then run in CI with repository access, so the
+# artifact is pinned by content, not just by version tag — a retagged or substituted release fails
+# here instead of executing. ruff and mypy need no entry: uv resolves them through PyPI, which
+# verifies its own hashes.
+#
+# The uv digest was cross-checked against the .sha256 published beside its release. shellcheck and
+# ktlint publish no checksums, so theirs were recorded from a verified download and are
+# trust-on-first-use: they cannot prove the first fetch was honest, but any later substitution
+# fails. Re-pinning a version means updating the digest in the same reviewed commit.
+UV_SHA256="8cc1cd82d434ec565376f98bd938d4b715b5791a80ff2d3aa78821cf85091b4b"
+SHELLCHECK_SHA256="8c3be12b05d5c177a04c29e3c78ce89ac86f1595681cab149b65b97c4e227198"
+KTLINT_SHA256="a3fd620207d5c40da6ca789b95e7f823c54e854b7fade7f613e91096a3706d75"
+
 BIN_DIR="${BIN_DIR:-$HOME/.local/bin}"
 mkdir -p "$BIN_DIR"
 
@@ -31,6 +44,16 @@ fi
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 
+verify() { # verify <file> <expected-sha256>
+    actual="$(sha256sum "$1" | awk '{print $1}')"
+    if [ "$actual" != "$2" ]; then
+        echo "error: checksum mismatch for $1" >&2
+        echo "  expected $2" >&2
+        echo "  actual   $actual" >&2
+        exit 1
+    fi
+}
+
 # Exact version token, not a substring: a plain `grep 0.11.3` is satisfied by 0.11.31, so a pin
 # could silently accept the wrong build.
 version_is() { # version_is <command> <expected-version>
@@ -45,6 +68,7 @@ else
     echo "installing uv $UV_VERSION"
     curl -fsSL -o "$tmp/uv.tar.gz" \
         "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-x86_64-unknown-linux-gnu.tar.gz"
+    verify "$tmp/uv.tar.gz" "$UV_SHA256"
     tar xzf "$tmp/uv.tar.gz" -C "$tmp"
     install -m 755 "$tmp/uv-x86_64-unknown-linux-gnu/uv" "$BIN_DIR/uv"
 fi
@@ -76,6 +100,7 @@ else
     echo "installing shellcheck $SHELLCHECK_VERSION"
     curl -fsSL -o "$tmp/sc.tar.xz" \
         "https://github.com/koalaman/shellcheck/releases/download/v${SHELLCHECK_VERSION}/shellcheck-v${SHELLCHECK_VERSION}.linux.x86_64.tar.xz"
+    verify "$tmp/sc.tar.xz" "$SHELLCHECK_SHA256"
     tar xJf "$tmp/sc.tar.xz" -C "$tmp"
     install -m 755 "$tmp/shellcheck-v${SHELLCHECK_VERSION}/shellcheck" "$BIN_DIR/shellcheck"
 fi
@@ -87,6 +112,7 @@ else
     echo "installing ktlint $KTLINT_VERSION (optional — powers format-on-write)"
     curl -fsSL -o "$tmp/ktlint" \
         "https://github.com/pinterest/ktlint/releases/download/${KTLINT_VERSION}/ktlint"
+    verify "$tmp/ktlint" "$KTLINT_SHA256"
     install -m 755 "$tmp/ktlint" "$BIN_DIR/ktlint"
 fi
 

@@ -133,6 +133,87 @@ class ConventionsTest(unittest.TestCase):
         # Then nothing is reported — only the ${...} span counts as code
         self.assertEqual(findings, [])
 
+    # --- nesting holes found in the second review of #47. Regex could not express these. ---
+
+    def test_double_bang_survives_a_nested_string_inside_a_template(self):
+        # Given the shape WikidataApi.kt already ships: a quoted argument inside ${...}
+        body = 'package a\n\nfun url(id: String?) = "&p=${URLEncoder.encode(id!!, "UTF-8")}&f=json"\n'
+        # When the check runs
+        findings = self.findings_for("musicmeta-core/src/main/kotlin/A.kt", body)
+        # Then the `!!` is reported — the nested quote must not truncate the outer literal
+        self.assertEqual(len(findings), 1)
+
+    def test_apostrophe_in_a_nested_string_does_not_swallow_later_lines(self):
+        # Given an apostrophe inside a nested string, which previously leaked into code position
+        # and opened a char literal spanning the lines after it
+        body = (
+            "package a\n\n"
+            'fun a(m: Map<String, String>) = "${m["it\'s"]}"\n'
+            "fun b(u: String?) = u!!.trim()\n"
+            'fun c(m: Map<String, String>) = "${m["don\'t"]}"\n'
+        )
+        # When the check runs
+        findings = self.findings_for("musicmeta-core/src/main/kotlin/A.kt", body)
+        # Then the `!!` between them is still seen
+        self.assertEqual(len(findings), 1)
+        self.assertIn("line=4", findings[0])
+
+    def test_block_comment_open_in_a_nested_string_does_not_swallow_later_lines(self):
+        # Given "/*" inside a nested string, the same leak with unbounded reach
+        body = (
+            "package a\n\n"
+            'fun a(m: Map<String, String>) = "${m["/*"]}"\n'
+            "fun b(u: String?) = u!!.trim()\n"
+            'fun c(m: Map<String, String>) = "${m["*/"]}"\n'
+        )
+        # When the check runs
+        findings = self.findings_for("musicmeta-core/src/main/kotlin/A.kt", body)
+        # Then the `!!` is still reported
+        self.assertEqual(len(findings), 1)
+
+    def test_nested_block_comments_are_fully_commented_out(self):
+        # Given a commented-out region containing KDoc — Kotlin block comments nest, unlike Java's
+        body = "package a\n\n/* disabled\n/** Old doc. */\nfun old(u: String?) = u!!.trim()\n*/\n"
+        # When the check runs
+        findings = self.findings_for("musicmeta-core/src/main/kotlin/A.kt", body)
+        # Then nothing is reported — a lazy match stopped at the first `*/` and scanned the rest
+        self.assertEqual(findings, [])
+
+    def test_escaped_dollar_is_not_a_template(self):
+        # Given `\$` which is a literal dollar in Kotlin, not the start of interpolation
+        body = 'package a\n\nval s = "\\${a!!b}"\n'
+        # When the check runs
+        findings = self.findings_for("musicmeta-core/src/main/kotlin/A.kt", body)
+        # Then nothing is reported — the braces are literal text
+        self.assertEqual(findings, [])
+
+    def test_raw_string_ignores_backslash_escapes(self):
+        # Given a raw string ending in a backslash, where escape processing would misread the end
+        body = 'package a\n\nval r = """back\\"""\nfun g(u: String?) = u!!.trim()\n'
+        # When the check runs
+        findings = self.findings_for("musicmeta-core/src/main/kotlin/A.kt", body)
+        # Then the code after the raw string is still scanned
+        self.assertEqual(len(findings), 1)
+
+    def test_strip_noise_is_length_preserving_on_pathological_input(self):
+        # Given constructs that previously desynchronised the scanner
+        for source in (
+            'val a = "${m["x"]}"\n',
+            "/* /* nested */ */\n",
+            'val r = """raw ${x["y"]} end"""\n',
+            'val u = "unterminated ${\n',
+            "val c = '\\''\n",
+        ):
+            # When noise is blanked
+            stripped = strip_noise(source)
+            # Then length and newline positions are identical, or every later line number is wrong
+            self.assertEqual(len(stripped), len(source), repr(source))
+            self.assertEqual(
+                [i for i, c in enumerate(source) if c == "\n"],
+                [i for i, c in enumerate(stripped) if c == "\n"],
+                repr(source),
+            )
+
     def test_root_given_as_dot_still_excludes_demo(self):
         # Given --root passed as a relative path, where prefix matching previously failed
         with tempfile.TemporaryDirectory() as tmp:

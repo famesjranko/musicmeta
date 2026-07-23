@@ -88,12 +88,14 @@ and it is where drift accumulates silently — so it gets read, not skimmed.
 - **`demo/` is exempt from house style.** Neither ktlint nor the convention rules cover it, because
   its job is to compile against the published surface like an external consumer would. Its shell
   (`demo/run.sh`) *is* shellchecked — that exemption is about Kotlin style, not correctness.
-- **`check_conventions.py` approximates the Kotlin lexer.** `strip_noise()` handles comments,
-  string literals, raw strings, char literals and `${...}` interpolation, which covers the shapes
-  that occur here, but it is regex-based and a sufficiently strange construct could still fool it.
-  Every hole found so far has a regression test. The known false positive is repeated negation
-  (`!!!flag`), reported as a violation; that trade is deliberate, because a false positive is loud
-  and a false negative is silent.
+- **`check_conventions.py` lexes Kotlin partially.** `strip_noise()` is a hand-written scanner
+  covering comments (including nested block comments), strings, raw strings, char literals,
+  escapes, and `${...}` interpolation with arbitrary nesting of strings and braces inside it. It
+  is not a full parser and does not need to be — it only has to decide "is this character code".
+  Length and newline positions are preserved, verified against all main sources and 200k fuzz
+  inputs, so a reported line number is never wrong even if a classification is. The one known
+  false positive is repeated negation (`!!!flag`), reported as a violation; that trade is
+  deliberate, because a false positive is loud and a false negative is silent.
 
 ## Decisions
 
@@ -135,7 +137,26 @@ change is a reviewed commit rather than a CI failure nobody caused.
 Rejected: black + flake8 + isort. ruff is one binary covering all three, and this repo needed a
 formatter and a linter for 940 lines of script, not three dependencies.
 
-### 2026-07-23: the convention gate lexes in one pass, not five
+### 2026-07-23: the convention gate scans, it does not match
+
+Two review rounds each found silent false negatives in a regex-based `strip_noise()`, and the
+second round's were the same class as the first. Kotlin nests — a string holds a `${...}` template,
+the template holds code, that code holds another string — and a regex cannot express recursion. The
+first attempt ran five sequential passes, so the `//` in `"https://host/"` blanked real code. The
+second was one alternation, but its string branch could not span the nested quote in
+`"${enc(id!!, "UTF-8")}"`, so it truncated the literal, hit the unterminated-template path, and
+blanked the expression it existed to preserve — on a line shape `WikidataApi.kt` already ships.
+
+Replaced with a ~90-line character scanner tracking an explicit context stack. It is correct by
+construction for nesting rather than approximately correct, and it is easier to reason about than
+the alternation plus brace-walker it replaced. Length and newline positions are preserved so a
+reported line number is never wrong; verified across all main sources and 200k fuzz inputs.
+
+Rejected: a third regex. The failure mode was structural, not a missing case, and a third attempt
+would have been the same bet twice. Also rejected: a full Kotlin parser — the question is only
+"is this character code", which a scanner answers completely.
+
+### 2026-07-23: superseded — the convention gate lexes in one pass, not five
 
 `strip_noise()` originally applied five regexes in sequence — block comment, raw string, line
 comment, char, string. That is wrong in a way that fails silently: the line-comment pass runs over

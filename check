@@ -57,8 +57,12 @@ ruff format --check .
 ruff check .
 
 step "shell lint (shellcheck)"
-# ./check is itself a gate, so it is the last thing that should go unchecked.
-shellcheck check scripts/*.sh scripts/github-workflows/*.sh demo/run.sh
+# Discovered, not a fixed glob: a hand-listed set silently stops covering the next script someone
+# adds, which is the same silent-skip failure this gate exists to prevent. `check` has no
+# extension so it is named explicitly. `.claude/` is excluded because agent worktrees under it are
+# whole copies of this repo — without that, every script gets linted once per live worktree.
+find . -name '*.sh' -not -path './.git/*' -not -path './.claude/*' -not -path '*/build/*' \
+    -print0 | sort -z | xargs -0 shellcheck check
 
 step "python types (mypy)"
 mypy
