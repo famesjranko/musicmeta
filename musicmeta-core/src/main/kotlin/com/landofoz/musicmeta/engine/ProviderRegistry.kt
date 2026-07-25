@@ -6,7 +6,7 @@ import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ProviderInfo
 import com.landofoz.musicmeta.http.CircuitBreaker
 
-class ProviderRegistry(
+internal class ProviderRegistry(
     providers: List<EnrichmentProvider>,
     private val priorityOverrides: Map<String, Map<EnrichmentType, Int>> = emptyMap(),
     private val logger: EnrichmentLogger = EnrichmentLogger.NoOp,

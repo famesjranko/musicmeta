@@ -153,7 +153,6 @@ interface EnrichmentEngine {
             return DefaultEnrichmentEngine(
                 registry = registry,
                 cache = cache ?: InMemoryEnrichmentCache(),
-                httpClient = httpClient ?: DefaultHttpClient(config.userAgent),
                 config = config,
                 logger = logger,
                 mergers = allMergers,

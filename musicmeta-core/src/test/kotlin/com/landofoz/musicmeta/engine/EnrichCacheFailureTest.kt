@@ -4,7 +4,6 @@ import com.landofoz.musicmeta.*
 import com.landofoz.musicmeta.cache.CacheMode
 import com.landofoz.musicmeta.testutil.CacheOp
 import com.landofoz.musicmeta.testutil.FakeEnrichmentCache
-import com.landofoz.musicmeta.testutil.FakeHttpClient
 import com.landofoz.musicmeta.testutil.FakeProvider
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -35,7 +34,7 @@ class EnrichCacheFailureTest {
         EnrichmentResult.Success(artType, EnrichmentData.Artwork("https://x.com/art.jpg"), p, 0.95f)
 
     private fun engine(provider: FakeProvider, cfg: EnrichmentConfig = config) =
-        DefaultEnrichmentEngine(ProviderRegistry(listOf(provider)), cache, FakeHttpClient(), cfg)
+        DefaultEnrichmentEngine(ProviderRegistry(listOf(provider)), cache, cfg)
 
     private fun provider(result: EnrichmentResult) =
         FakeProvider(id = "p", capabilities = listOf(ProviderCapability(artType, 100)))

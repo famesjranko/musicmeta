@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Mostly docs and CI, plus one engine fix consumers should know about (#53).
 
+### Breaking Changes
+- **`engine/` internals are no longer published.** `DefaultEnrichmentEngine`, `ProviderRegistry`, `ProviderChain`, `ArtistMatcher` and `ConfidenceCalculator` are `internal`. Build engines with `EnrichmentEngine.Builder`, which covers every constructor parameter. `ResultMerger` and `CompositeSynthesizer` stay public — they are the documented extension points (#02)
+
 ### Added
 - Releases run from two dispatched workflows: `prepare-release.yml` writes the version everywhere it is consumed, `release.yml` verifies, publishes, then tags
 - GitHub Release notes are assembled from this file, with the install block and compare link generated so they cannot go stale

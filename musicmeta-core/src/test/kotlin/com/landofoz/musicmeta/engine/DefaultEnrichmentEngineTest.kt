@@ -2,7 +2,6 @@ package com.landofoz.musicmeta.engine
 
 import com.landofoz.musicmeta.*
 import com.landofoz.musicmeta.testutil.FakeEnrichmentCache
-import com.landofoz.musicmeta.testutil.FakeHttpClient
 import com.landofoz.musicmeta.testutil.FakeProvider
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
@@ -21,7 +20,7 @@ class DefaultEnrichmentEngineTest {
     private fun genre(p: String) = EnrichmentResult.Success(EnrichmentType.GENRE, EnrichmentData.Metadata(genres = listOf("rock")), p, 0.9f)
 
     private fun engine(vararg providers: FakeProvider) =
-        DefaultEnrichmentEngine(ProviderRegistry(providers.toList()), cache, FakeHttpClient(), config)
+        DefaultEnrichmentEngine(ProviderRegistry(providers.toList()), cache, config)
 
     @Test fun `enrich returns cached result`() = runTest {
         // Given — cache pre-populated with an art result
@@ -44,7 +43,7 @@ class DefaultEnrichmentEngineTest {
         for (type in types) {
             cache.put(DefaultEnrichmentEngine.entityKeyFor(req, type), type, art("cached"))
         }
-        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider)), cache, FakeHttpClient(), EnrichmentConfig(enableIdentityResolution = true))
+        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider)), cache, EnrichmentConfig(enableIdentityResolution = true))
 
         // When — enriching with everything already cached
         val results = e.enrich(req, types)
@@ -200,7 +199,7 @@ class DefaultEnrichmentEngineTest {
             .also { it.givenIdentityResult(EnrichmentResult.Success(EnrichmentType.GENRE, EnrichmentData.Metadata(genres = listOf("rock")), "mb", 0.95f, resolvedIdentifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-123", wikidataId = "Q123"))) }
         val artProvider = FakeProvider(id = "caa", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100, identifierRequirement = IdentifierRequirement.MUSICBRAINZ_ID)))
             .also { it.givenResult(EnrichmentType.ALBUM_ART, art("caa")) }
-        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider, artProvider)), cache, FakeHttpClient(), EnrichmentConfig(enableIdentityResolution = true))
+        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider, artProvider)), cache, EnrichmentConfig(enableIdentityResolution = true))
 
         // When — enriching both types
         e.enrich(req, setOf(EnrichmentType.ALBUM_ART, EnrichmentType.GENRE))
@@ -265,7 +264,7 @@ class DefaultEnrichmentEngineTest {
                 it.givenIdentityResult(EnrichmentResult.Success(EnrichmentType.GENRE, metadata, "mb", 0.95f, resolvedIdentifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-123", wikidataId = "Q123")))
                 it.givenResult(EnrichmentType.GENRE, EnrichmentResult.Success(EnrichmentType.GENRE, metadata, "mb", 0.95f))
             }
-        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider)), cache, FakeHttpClient(), EnrichmentConfig(enableIdentityResolution = true))
+        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider)), cache, EnrichmentConfig(enableIdentityResolution = true))
 
         // When — enriching GENRE and LABEL (both identity types, but GENRE is mergeable)
         val results = e.enrich(req, setOf(EnrichmentType.GENRE, EnrichmentType.LABEL))
@@ -288,7 +287,7 @@ class DefaultEnrichmentEngineTest {
         val bioProvider = FakeProvider(id = "wp", capabilities = listOf(ProviderCapability(EnrichmentType.ARTIST_BIO, 100, identifierRequirement = IdentifierRequirement.WIKIPEDIA_TITLE)))
             .also { it.givenResult(EnrichmentType.ARTIST_BIO, EnrichmentResult.Success(EnrichmentType.ARTIST_BIO, EnrichmentData.Biography("bio text", "Wikipedia"), "wp", 0.9f)) }
         val artistReq = EnrichmentRequest.forArtist("Radiohead")
-        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider, bioProvider)), cache, FakeHttpClient(), EnrichmentConfig(enableIdentityResolution = true))
+        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider, bioProvider)), cache, EnrichmentConfig(enableIdentityResolution = true))
 
         // When — enriching genre + bio
         e.enrich(artistReq, setOf(EnrichmentType.GENRE, EnrichmentType.ARTIST_BIO))
@@ -313,7 +312,7 @@ class DefaultEnrichmentEngineTest {
                 it.givenResult(EnrichmentType.GENRE, EnrichmentResult.Success(EnrichmentType.GENRE, metadata, "mb", 0.95f))
             }
         val lastfm = genreProviderWithTags("lastfm", listOf(GenreTag("alternative rock", 0.3f, listOf("lastfm"))))
-        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider, lastfm)), cache, FakeHttpClient(), EnrichmentConfig(enableIdentityResolution = true))
+        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider, lastfm)), cache, EnrichmentConfig(enableIdentityResolution = true))
 
         // When — enriching GENRE with identity resolution enabled
         val results = e.enrich(req, setOf(EnrichmentType.GENRE))
@@ -335,7 +334,7 @@ class DefaultEnrichmentEngineTest {
             .also { it.givenIdentityResult(EnrichmentResult.Success(EnrichmentType.GENRE, EnrichmentData.Metadata(genres = listOf("rock")), "mb", 0.85f, resolvedIdentifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-123"))) }
         val artProvider = FakeProvider(id = "caa", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100, identifierRequirement = IdentifierRequirement.MUSICBRAINZ_ID)))
             .also { it.givenResult(EnrichmentType.ALBUM_ART, art("caa")) }
-        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider, artProvider)), cache, FakeHttpClient(), EnrichmentConfig(enableIdentityResolution = true))
+        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider, artProvider)), cache, EnrichmentConfig(enableIdentityResolution = true))
 
         // When — enriching with identity resolution
         val results = e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
@@ -371,7 +370,7 @@ class DefaultEnrichmentEngineTest {
             .also { it.givenIdentityResult(EnrichmentResult.NotFound(EnrichmentType.GENRE, "mb", suggestions = suggestions)) }
         val artProvider = FakeProvider(id = "deezer", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 50)))
             .also { it.givenResult(EnrichmentType.ALBUM_ART, art("deezer")) }
-        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider, artProvider)), cache, FakeHttpClient(), EnrichmentConfig(enableIdentityResolution = true))
+        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider, artProvider)), cache, EnrichmentConfig(enableIdentityResolution = true))
 
         // When — enriching with identity resolution that fails with suggestions
         val results = e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
@@ -390,7 +389,7 @@ class DefaultEnrichmentEngineTest {
             .also { it.givenIdentityResult(EnrichmentResult.NotFound(EnrichmentType.GENRE, "mb")) }
         val artProvider = FakeProvider(id = "deezer", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 50)))
             .also { it.givenResult(EnrichmentType.ALBUM_ART, art("deezer")) }
-        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider, artProvider)), cache, FakeHttpClient(), EnrichmentConfig(enableIdentityResolution = true))
+        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider, artProvider)), cache, EnrichmentConfig(enableIdentityResolution = true))
 
         // When — enriching (identity fails, providers try fuzzy search)
         val results = e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
@@ -466,7 +465,7 @@ class DefaultEnrichmentEngineTest {
             .also { it.givenIdentityResult(EnrichmentResult.Success(EnrichmentType.GENRE, metadata, "mb", 0.95f, resolvedIdentifiers = resolvedIds)) }
         val artProvider = FakeProvider(id = "caa", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100, identifierRequirement = IdentifierRequirement.MUSICBRAINZ_ID)))
             .also { it.givenResult(EnrichmentType.ALBUM_ART, art("caa")) }
-        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider, artProvider)), cache, FakeHttpClient(), EnrichmentConfig(enableIdentityResolution = true))
+        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider, artProvider)), cache, EnrichmentConfig(enableIdentityResolution = true))
 
         // When — enriching ALBUM_ART with no identifiers
         e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
@@ -481,7 +480,7 @@ class DefaultEnrichmentEngineTest {
         val artProvider = FakeProvider(id = "deezer", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100)))
             .also { it.givenResult(EnrichmentType.ALBUM_ART, art("deezer")) }
         val reqWithMbid = EnrichmentRequest.ForAlbum(EnrichmentIdentifiers(musicBrainzId = "existing-mbid"), "Test", "Artist")
-        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider, artProvider)), cache, FakeHttpClient(), EnrichmentConfig(enableIdentityResolution = true))
+        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider, artProvider)), cache, EnrichmentConfig(enableIdentityResolution = true))
 
         // When — enriching ALBUM_ART only (all providers use NONE, MBID present)
         e.enrich(reqWithMbid, setOf(EnrichmentType.ALBUM_ART))
@@ -496,7 +495,7 @@ class DefaultEnrichmentEngineTest {
         val artProvider = FakeProvider(id = "caa", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100, identifierRequirement = IdentifierRequirement.MUSICBRAINZ_ID)))
             .also { it.givenResult(EnrichmentType.ALBUM_ART, art("caa")) }
         val reqWithMbid = EnrichmentRequest.ForAlbum(EnrichmentIdentifiers(musicBrainzId = "existing-mbid"), "OK Computer", "Radiohead")
-        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider, artProvider)), cache, FakeHttpClient(), EnrichmentConfig(enableIdentityResolution = true))
+        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider, artProvider)), cache, EnrichmentConfig(enableIdentityResolution = true))
 
         // When — enriching ALBUM_ART with MBID already present
         e.enrich(reqWithMbid, setOf(EnrichmentType.ALBUM_ART))
@@ -516,7 +515,7 @@ class DefaultEnrichmentEngineTest {
                 it.givenIdentityResult(EnrichmentResult.Success(EnrichmentType.GENRE, metadata, "mb", 0.95f, resolvedIdentifiers = resolvedIds))
                 it.givenResult(EnrichmentType.GENRE, EnrichmentResult.Success(EnrichmentType.GENRE, metadata, "mb", 0.95f))
             }
-        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider)), cache, FakeHttpClient(), EnrichmentConfig(enableIdentityResolution = true))
+        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider)), cache, EnrichmentConfig(enableIdentityResolution = true))
 
         // When — enriching with name-only request (no MBID)
         val nameReq = EnrichmentRequest.forArtist("Radiohead")
@@ -553,7 +552,7 @@ class DefaultEnrichmentEngineTest {
             enableIdentityResolution = false,
             ttlOverrides = mapOf(EnrichmentType.ALBUM_ART to 999_000L),
         )
-        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(p)), cache, FakeHttpClient(), overrideConfig)
+        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(p)), cache, overrideConfig)
 
         // When — enriching
         e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
@@ -583,7 +582,7 @@ class DefaultEnrichmentEngineTest {
         val p = FakeProvider(id = "itunes", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100)))
             .also { it.givenResult(EnrichmentType.ALBUM_ART, EnrichmentResult.Success(EnrichmentType.ALBUM_ART, EnrichmentData.Artwork("url"), "itunes", 0.65f)) }
         val overrideConfig = EnrichmentConfig(enableIdentityResolution = false, confidenceOverrides = mapOf("itunes" to 0.9f))
-        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(p)), cache, FakeHttpClient(), overrideConfig)
+        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(p)), cache, overrideConfig)
 
         // When — enriching
         val results = e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
@@ -597,7 +596,7 @@ class DefaultEnrichmentEngineTest {
         val p = FakeProvider(id = "disc", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100)))
             .also { it.givenResult(EnrichmentType.ALBUM_ART, EnrichmentResult.Success(EnrichmentType.ALBUM_ART, EnrichmentData.Artwork("url"), "disc", 0.8f)) }
         val overrideConfig = EnrichmentConfig(enableIdentityResolution = false, confidenceOverrides = mapOf("disc" to 0.3f))
-        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(p)), cache, FakeHttpClient(), overrideConfig)
+        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(p)), cache, overrideConfig)
 
         // When — enriching
         val results = e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
@@ -663,7 +662,6 @@ class DefaultEnrichmentEngineTest {
         val e = DefaultEnrichmentEngine(
             ProviderRegistry(listOf(idProvider, discoProvider, membersProvider)),
             cache,
-            FakeHttpClient(),
             EnrichmentConfig(enableIdentityResolution = true),
         )
 
@@ -688,7 +686,6 @@ class DefaultEnrichmentEngineTest {
         val e = DefaultEnrichmentEngine(
             ProviderRegistry(listOf(idProvider, discoProvider, membersProvider)),
             cache,
-            FakeHttpClient(),
             EnrichmentConfig(enableIdentityResolution = true),
         )
 
@@ -707,7 +704,6 @@ class DefaultEnrichmentEngineTest {
         val e = DefaultEnrichmentEngine(
             ProviderRegistry(listOf(idProvider)),
             cache,
-            FakeHttpClient(),
             EnrichmentConfig(enableIdentityResolution = true),
         )
 
@@ -731,7 +727,6 @@ class DefaultEnrichmentEngineTest {
         val e = DefaultEnrichmentEngine(
             ProviderRegistry(listOf(idProvider, discoProvider, membersProvider)),
             cache,
-            FakeHttpClient(),
             EnrichmentConfig(enableIdentityResolution = true),
         )
 
@@ -822,7 +817,6 @@ class DefaultEnrichmentEngineTest {
         val e = DefaultEnrichmentEngine(
             ProviderRegistry(listOf(idProvider, discoProvider, membersProvider)),
             cache,
-            FakeHttpClient(),
             EnrichmentConfig(enableIdentityResolution = true),
         )
 
@@ -873,7 +867,6 @@ class DefaultEnrichmentEngineTest {
         val e = DefaultEnrichmentEngine(
             ProviderRegistry(listOf(providerA, providerB)),
             cache,
-            FakeHttpClient(),
             config,
             mergers = listOf(GenreMerger, SimilarArtistMerger),
         )
@@ -924,7 +917,6 @@ class DefaultEnrichmentEngineTest {
         val e = DefaultEnrichmentEngine(
             ProviderRegistry(listOf(providerA, providerB)),
             cache,
-            FakeHttpClient(),
             config,
             mergers = listOf(GenreMerger, SimilarArtistMerger),
         )
@@ -966,7 +958,6 @@ class DefaultEnrichmentEngineTest {
         val e = DefaultEnrichmentEngine(
             ProviderRegistry(listOf(providerA, providerB)),
             cache,
-            FakeHttpClient(),
             config,
             mergers = listOf(GenreMerger, SimilarArtistMerger),
         )
@@ -1000,7 +991,6 @@ class DefaultEnrichmentEngineTest {
         val e = DefaultEnrichmentEngine(
             ProviderRegistry(listOf(providerA, providerB)),
             cache,
-            FakeHttpClient(),
             config,
             mergers = listOf(GenreMerger, SimilarArtistMerger),
         )
@@ -1029,7 +1019,7 @@ class DefaultEnrichmentEngineTest {
             delayMs = 5_000,
         ).also { it.givenResult(EnrichmentType.ALBUM_ART, art("slow")) }
         val shortTimeout = EnrichmentConfig(enableIdentityResolution = false, enrichTimeoutMs = 100)
-        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(slow)), cache, FakeHttpClient(), shortTimeout)
+        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(slow)), cache, shortTimeout)
 
         // When — enriching with a timeout shorter than the provider's delay
         val results = e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
@@ -1050,7 +1040,7 @@ class DefaultEnrichmentEngineTest {
             delayMs = 5_000,
         ).also { it.givenResult(EnrichmentType.ALBUM_ART, art("slow")) }
         val shortTimeout = EnrichmentConfig(enableIdentityResolution = false, enrichTimeoutMs = 100)
-        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(slow)), cache, FakeHttpClient(), shortTimeout)
+        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(slow)), cache, shortTimeout)
 
         // When — requesting both types
         val results = e.enrich(req, setOf(EnrichmentType.ALBUM_ART, EnrichmentType.GENRE))
@@ -1070,7 +1060,7 @@ class DefaultEnrichmentEngineTest {
             delayMs = 5_000,
         ).also { it.givenResult(EnrichmentType.ALBUM_ART, art("slow")) }
         val shortTimeout = EnrichmentConfig(enableIdentityResolution = false, enrichTimeoutMs = 100)
-        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(slow)), cache, FakeHttpClient(), shortTimeout)
+        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(slow)), cache, shortTimeout)
 
         // When — enriching (will time out)
         e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
@@ -1086,7 +1076,7 @@ class DefaultEnrichmentEngineTest {
         cacheMode = com.landofoz.musicmeta.cache.CacheMode.STALE_IF_ERROR,
     )
     private fun staleEngine(vararg providers: FakeProvider) =
-        DefaultEnrichmentEngine(ProviderRegistry(providers.toList()), cache, FakeHttpClient(), staleConfig)
+        DefaultEnrichmentEngine(ProviderRegistry(providers.toList()), cache, staleConfig)
 
     @Test fun `STALE_IF_ERROR serves expired cache when provider returns Error`() = runTest {
         // Given — provider returns Error, expiredStore has stale art data
@@ -1238,7 +1228,6 @@ class DefaultEnrichmentEngineTest {
         val e = DefaultEnrichmentEngine(
             ProviderRegistry(listOf(idProvider, discoProvider, membersProvider)),
             cache,
-            FakeHttpClient(),
             EnrichmentConfig(enableIdentityResolution = true),
         )
 

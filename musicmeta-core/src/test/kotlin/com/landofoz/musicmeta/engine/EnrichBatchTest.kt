@@ -8,7 +8,6 @@ import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.testutil.FakeEnrichmentCache
-import com.landofoz.musicmeta.testutil.FakeHttpClient
 import com.landofoz.musicmeta.testutil.FakeProvider
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.test.runTest
@@ -35,7 +34,7 @@ class EnrichBatchTest {
     )
 
     private fun engine(vararg providers: FakeProvider) =
-        DefaultEnrichmentEngine(ProviderRegistry(providers.toList()), cache, FakeHttpClient(), config)
+        DefaultEnrichmentEngine(ProviderRegistry(providers.toList()), cache, config)
 
     @Test fun `enrichBatch emits result for each request in order`() = runTest {
         // Given — three distinct album requests and a provider that returns success for each
@@ -142,7 +141,7 @@ class EnrichBatchTest {
         val key1 = DefaultEnrichmentEngine.entityKeyFor(req1, EnrichmentType.ALBUM_ART)
         staleCache.expiredStore["$key1:${EnrichmentType.ALBUM_ART}"] = artSuccess("stale-art")
         val staleEngine = DefaultEnrichmentEngine(
-            ProviderRegistry(listOf(provider)), staleCache, FakeHttpClient(), staleConfig,
+            ProviderRegistry(listOf(provider)), staleCache, staleConfig,
         )
 
         // When — batch enriching both requests

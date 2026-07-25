@@ -14,7 +14,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 
-class ProviderChain internal constructor(
+internal class ProviderChain(
     val type: EnrichmentType,
     private val providers: List<EnrichmentProvider>,
     private val circuitBreakers: Map<String, CircuitBreaker> =
@@ -51,10 +51,13 @@ class ProviderChain internal constructor(
                 currentCoroutineContext().ensureActive()
                 when (result) {
                     is EnrichmentResult.Success -> { breaker?.recordSuccess(); result }
+
                     is EnrichmentResult.NotFound -> { breaker?.recordSuccess(); null }
+
                     is EnrichmentResult.RateLimited -> {
                         logger.debug(TAG, "${type.name}: ${provider.id} rate limited, skipping"); null
                     }
+
                     is EnrichmentResult.Error -> {
                         breaker?.recordFailure()
                         logger.debug(TAG, "${type.name}: ${provider.id} error: ${result.message}"); null
@@ -110,11 +113,16 @@ class ProviderChain internal constructor(
         val capability = provider.capabilities.firstOrNull { it.type == type } ?: return true
         return when (capability.identifierRequirement) {
             IdentifierRequirement.NONE -> true
+
             IdentifierRequirement.MUSICBRAINZ_ID -> identifiers.musicBrainzId != null
+
             IdentifierRequirement.MUSICBRAINZ_RELEASE_GROUP_ID -> identifiers.musicBrainzReleaseGroupId != null
+
             IdentifierRequirement.WIKIDATA_ID -> identifiers.wikidataId != null
+
             IdentifierRequirement.WIKIPEDIA_TITLE -> identifiers.wikipediaTitle != null ||
                 identifiers.wikidataId != null
+
             IdentifierRequirement.ANY_IDENTIFIER -> identifiers.musicBrainzId != null ||
                 identifiers.musicBrainzReleaseGroupId != null ||
                 identifiers.wikidataId != null ||
@@ -123,8 +131,6 @@ class ProviderChain internal constructor(
     }
 
     fun providers(): List<EnrichmentProvider> = providers
-
-    fun providerCount(): Int = providers.size
 
     private companion object {
         const val TAG = "ProviderChain"

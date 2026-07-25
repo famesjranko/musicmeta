@@ -16,7 +16,6 @@ import com.landofoz.musicmeta.IdentityResolution
 import com.landofoz.musicmeta.ProviderInfo
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.cache.CacheMode
-import com.landofoz.musicmeta.http.HttpClient
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -27,10 +26,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withTimeout
 
-class DefaultEnrichmentEngine(
+internal class DefaultEnrichmentEngine(
     private val registry: ProviderRegistry,
     override val cache: EnrichmentCache,
-    private val httpClient: HttpClient,
     private val config: EnrichmentConfig,
     private val logger: EnrichmentLogger = EnrichmentLogger.NoOp,
     mergers: List<ResultMerger> = listOf(GenreMerger),

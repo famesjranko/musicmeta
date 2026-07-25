@@ -31,11 +31,14 @@ new parameters and fields, which go last with a default.
 - **Source callers** — positional arguments rebind silently. The demo canary proves consumers still
   *compile*, not that argument order held; v0.9.2 was caught only by a type mismatch, and a `String?`
   inserted between two `String?`s would have compiled green and wrong.
-- **ABI** — removing a parameter breaks even when provably dead. `DefaultEnrichmentEngine` is public
-  (`musicmeta-core/api/musicmeta-core.api`), so deleting its unused `httpClient` is a documented minor
-  with an api-dump, or it waits (#48). detekt flags it `UnusedPrivateProperty`, suppressed in
-  `config/detekt-baseline-musicmeta-core.xml` for exactly this reason: **the tooling recommends this
-  mistake.** Check whether a baseline finding sits on a public signature before acting on it.
+- **ABI** — removing a parameter breaks even when provably dead. `DefaultEnrichmentEngine` carried an
+  unused `httpClient` under a detekt `UnusedPrivateProperty` suppression precisely because deleting it
+  from a public constructor was the break; it went only once the class itself went `internal` (#48).
+  **The tooling recommends this mistake** — detekt sees a dead property, not a frozen signature. The
+  live case is `OkHttpEnrichmentClient(client, userAgent)`: publishing it *is* `musicmeta-okhttp`, so
+  it can never be narrowed out of the way, and a parameter that goes dead there costs a documented
+  minor to remove. Check whether a baseline finding sits on a published signature
+  (`*/api/*.api`) before acting on it.
 
 ### What counts as breaking
 

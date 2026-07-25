@@ -13,7 +13,7 @@ package com.landofoz.musicmeta.engine
  * | 0.8   | fuzzyMatch(true) | Artist name matched, good catalog |
  * | 0.6   | fuzzyMatch(false) | No artist verification, weaker match |
  */
-object ConfidenceCalculator {
+internal object ConfidenceCalculator {
 
     /** Deterministic lookup by exact ID (MBID, Wikidata QID, etc.) */
     fun idBasedLookup(): Float = 1.0f
