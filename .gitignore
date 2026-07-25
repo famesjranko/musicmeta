@@ -15,6 +15,7 @@ local.properties
 !.claude/settings.json
 !.claude/rules/
 .planning
+.scratch
 secrets.properties
 
 # Python bytecode (scripts/)
