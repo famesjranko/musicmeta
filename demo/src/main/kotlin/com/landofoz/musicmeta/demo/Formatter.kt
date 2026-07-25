@@ -2,6 +2,7 @@ package com.landofoz.musicmeta.demo
 
 import com.landofoz.musicmeta.AlbumProfile
 import com.landofoz.musicmeta.ArtistProfile
+import com.landofoz.musicmeta.BandMember
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentResults
@@ -14,6 +15,10 @@ import com.landofoz.musicmeta.demo.ui.Terminal
 
 /** Formats enrichment results, profiles, and search results for terminal display. */
 object Formatter {
+
+    /** "5 members: Thom Yorke, Jonny Greenwood, ..." — used by both the profile and result views. */
+    private fun membersSummary(members: List<BandMember>) =
+        "${members.size} members: ${members.take(4).joinToString(", ") { it.name }}"
 
     // --- Profile display (Tier 1) ---
 
@@ -43,7 +48,7 @@ object Formatter {
         val genres = profile.genres.take(4).joinToString(", ") { it.name }
         if (genres.isNotEmpty()) term.keyValue("Genres:", genres)
         profile.country?.let { term.keyValue("Country:", it) }
-        if (profile.members.isNotEmpty()) term.keyValue("Members:", "${profile.members.size} members: ${profile.members.take(4).joinToString(", ") { it.name }}")
+        if (profile.members.isNotEmpty()) term.keyValue("Members:", membersSummary(profile.members))
         profile.popularity?.let { p ->
             p.listenerCount?.let { term.keyValue("Listeners:", "%,d".format(it)) }
         }
@@ -91,8 +96,8 @@ object Formatter {
 
     private fun artworkLabel(art: EnrichmentData.Artwork): String {
         val dims = art.sizes?.maxByOrNull { (it.width ?: 0) * (it.height ?: 0) }
-            ?.let { s -> s.width?.let { w -> s.height?.let { h -> "${w}x${h}" } } }
-            ?: art.width?.let { w -> art.height?.let { h -> "${w}x${h}" } }
+            ?.let { s -> s.width?.let { w -> s.height?.let { h -> "${w}x$h" } } }
+            ?: art.width?.let { w -> art.height?.let { h -> "${w}x$h" } }
         return dims ?: "image"
     }
 
@@ -118,7 +123,8 @@ object Formatter {
             }
             val staleTag = if (result.isStale) " ${term.styled("[stale]", term.theme.warning)}" else ""
             if (result.identityMatch == IdentityMatch.BEST_EFFORT) {
-                term.warning(typeName(type), "$detail  $conf ${term.styled("[unverified]", term.theme.warning)}$staleTag")
+                val unverified = term.styled("[unverified]", term.theme.warning)
+                term.warning(typeName(type), "$detail  $conf $unverified$staleTag")
             } else {
                 term.success(typeName(type), "$detail  $conf$staleTag")
             }
@@ -130,8 +136,13 @@ object Formatter {
                 is EnrichmentResult.NotFound -> { notFound++; term.missing(typeName(type), "") }
                 is EnrichmentResult.RateLimited -> { errors++; term.warning(typeName(type), "rate limited") }
                 is EnrichmentResult.Error -> {
-                    if (result.errorKind == ErrorKind.TIMEOUT) { timedOut++; term.warning(typeName(type), "timed out") }
-                    else { errors++; term.error(typeName(type), "${result.errorKind}: ${result.message.take(50)}") }
+                    if (result.errorKind == ErrorKind.TIMEOUT) {
+                        timedOut++
+                        term.warning(typeName(type), "timed out")
+                    } else {
+                        errors++
+                        term.error(typeName(type), "${result.errorKind}: ${result.message.take(50)}")
+                    }
                 }
                 is EnrichmentResult.Success -> {}
             }
@@ -167,7 +178,11 @@ object Formatter {
             val score = term.styled("${c.score}%", if (c.score >= 90) term.theme.success else term.theme.warning)
 
             val tags = listOfNotNull(c.country, c.releaseType, c.year?.take(4))
-            val tagStr = if (tags.isNotEmpty()) term.styled(tags.joinToString(" ${term.theme.dot} "), term.theme.muted) else ""
+            val tagStr = if (tags.isEmpty()) {
+                ""
+            } else {
+                term.styled(tags.joinToString(" ${term.theme.dot} "), term.theme.muted)
+            }
             term.println("  $num $name$artist  $score  $tagStr")
 
             c.disambiguation?.let { term.println("     ${term.styled(it, term.theme.muted)}") }
@@ -220,16 +235,18 @@ object Formatter {
         }
         is EnrichmentData.Biography -> "\"${data.text.replace(Regex("<[^>]*>"), "").trim().take(80)}...\""
         is EnrichmentData.SimilarArtists ->
-            "${data.artists.size} artists: " + data.artists.take(3).joinToString(", ") { "${it.name}(%.1f)".format(it.matchScore) }
+            "${data.artists.size} artists: " +
+                data.artists.take(3).joinToString(", ") { "${it.name}(%.1f)".format(it.matchScore) }
         is EnrichmentData.Popularity -> buildString {
             data.listenerCount?.let { append("listeners=$it ") }
             data.listenCount?.let { append("plays=$it ") }
             data.topTracks?.firstOrNull()?.let { append("top: ${it.title}") }
         }
-        is EnrichmentData.BandMembers -> "${data.members.size} members: ${data.members.take(4).joinToString(", ") { it.name }}"
+        is EnrichmentData.BandMembers -> membersSummary(data.members)
         is EnrichmentData.Discography -> "${data.albums.size} albums"
         is EnrichmentData.Tracklist -> "${data.tracks.size} tracks"
-        is EnrichmentData.SimilarTracks -> data.tracks.take(3).joinToString(", ") { "${it.title}(%.1f)".format(it.matchScore) }
+        is EnrichmentData.SimilarTracks ->
+            data.tracks.take(3).joinToString(", ") { "${it.title}(%.1f)".format(it.matchScore) }
         is EnrichmentData.ArtistLinks -> data.links.take(3).joinToString(", ") { it.type }
         is EnrichmentData.Credits -> {
             val cats = data.credits.groupBy { it.roleCategory ?: "other" }
@@ -244,10 +261,11 @@ object Formatter {
         is EnrichmentData.SimilarAlbums ->
             "${data.albums.size} albums: " + data.albums.take(3).joinToString(", ") { "${it.title} by ${it.artist}" }
         is EnrichmentData.GenreDiscovery ->
-            "${data.relatedGenres.size} genres: " + data.relatedGenres.take(3).joinToString(", ") { "${it.name}(%.2f)".format(it.affinity) }
+            "${data.relatedGenres.size} genres: " +
+                data.relatedGenres.take(3).joinToString(", ") { "${it.name}(%.2f)".format(it.affinity) }
         is EnrichmentData.TopTracks ->
             "${data.tracks.size} tracks: " + data.tracks.take(3).joinToString(", ") {
-                val plays = it.listenCount?.let { c -> " (${c})" } ?: ""
+                val plays = it.listenCount?.let { c -> " ($c)" } ?: ""
                 "${it.title}$plays"
             }
     }

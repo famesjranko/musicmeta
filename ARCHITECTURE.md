@@ -25,7 +25,7 @@ because the config is the thing that fails.
 | Shell | shellcheck | `scripts/**`, `check`, `demo/run.sh` |
 | Conventions | `scripts/checks/check_conventions.py` | no `!!` and no `@Serializable` under `provider/`/`http/` in main sources; conflict markers anywhere |
 | Script self-tests | `scripts/**/test_*.py` | the release-note and convention scripts still behave |
-| Kotlin format | ktlint | all modules; `demo/` exempt on purpose |
+| Kotlin format | ktlint (version pinned in `libs.versions.toml`) | all modules, and `demo/` |
 | Kotlin static analysis | detekt, **type-resolved** (`detektMain`/`detektTest`) | complexity, dead code, bug patterns |
 | Build | `./gradlew build` | compile, all unit tests, `apiCheck` against `api/*.api` |
 | Consumer canary | `demo/` composite build | an external consumer still compiles |
@@ -42,7 +42,9 @@ reintroduces exactly the local/CI disagreement one command is supposed to remove
 
 Format-on-write (`scripts/format-on-write.sh`, wired in `.claude/settings.json`) is a convenience,
 not a gate. It runs ktlint on `.kt`/`.kts` and ruff on `.py`, and no-ops when either CLI is absent;
-`ktlintCheck` and the ruff check are what actually fail.
+`ktlintCheck` and the ruff check are what actually fail. It also no-ops on `demo/`, and when the
+`ktlint` on `PATH` is not the `ktlint-cli` version pinned in `libs.versions.toml` — a CLI running a
+different rule set writes formatting the gate never asked for, and nothing fails to say so.
 
 ## Known gaps
 
@@ -81,6 +83,9 @@ than it looks like, each learned the hard way.
   payload names. Sweeping everything dirty at end of turn was built and deleted: it reformats
   uncommitted work the agent never touched. `ktlintCheck` catches it, one `./check` later.
 
-- **`demo/` is exempt from house style.** Neither ktlint nor the convention rules cover it: its job
-  is to compile against the published surface like an external consumer, not to match our style.
-  `demo/run.sh` *is* shellchecked — that exemption is about Kotlin style, not correctness.
+- **`demo/` is exempt from house conventions, not from formatting.** The convention rules govern how
+  we build internals, and its job is to compile against the published surface like an external
+  consumer — holding it to them would make the canary about us instead of about consumers. Formatting
+  is the opposite case: it cannot affect that job, and `demo/` is the worked example people read, so
+  it applies the same ktlint against the same `.editorconfig` and `./check` gates it. `demo/run.sh`
+  is shellchecked — that was never about style.

@@ -21,9 +21,24 @@ print(payload.get("tool_input", {}).get("file_path", ""))
 
 [ -n "$FILE" ] && [ -f "$FILE" ] || exit 0
 
+# A CLI whose rule set differs from the gate's is worse than no CLI: it rewrites files to a style
+# `./check` never asked for, so unrelated formatting rides along in every diff and nothing fails.
+# Treat a mismatch exactly like an absent tool — do nothing, and say why once per edit.
+ktlint_version_matches() {
+    local want have
+    want="$(sed -n 's/^ktlint-cli = "\(.*\)"$/\1/p' "$(dirname "${BASH_SOURCE[0]}")/../gradle/libs.versions.toml")"
+    have="$(ktlint --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)"
+    [ -n "$want" ] && [ "$want" = "$have" ] && return 0
+    echo "format-on-write: ktlint ${have:-?} on PATH, gate pins ${want:-?} — skipping. Install $want to re-enable." >&2
+    return 1
+}
+
+# `demo/` is included on purpose: it applies the same ktlint against the same `.editorconfig`, and
+# `./check` gates it. It stays exempt from house *conventions*, which is a separate check.
+#
 # Rewrites in place. Failures are non-fatal: a file mid-edit may not parse, and blocking the write
 # on that would be worse than leaving it for ./check.
 case "$FILE" in
-    *.kt|*.kts) command -v ktlint >/dev/null 2>&1 && ktlint --format --relative "$FILE" >/dev/null 2>&1 ;;
+    *.kt|*.kts) command -v ktlint >/dev/null 2>&1 && ktlint_version_matches && ktlint --format --relative "$FILE" >/dev/null 2>&1 ;;
     *.py)       command -v ruff   >/dev/null 2>&1 && ruff format "$FILE" >/dev/null 2>&1 ;;
 esac || true

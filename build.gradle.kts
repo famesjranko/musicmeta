@@ -11,12 +11,23 @@ plugins {
     alias(libs.plugins.detekt) apply false
 }
 
+// Read here rather than inside `subprojects {}`: the type-safe `libs` accessor resolves against the
+// root project only, and the block below runs against each subproject.
+val ktlintVersion = libs.versions.ktlint.cli.get()
+
 // Applied to every module rather than per-module, so a new module is formatted by default instead
 // of by remembering. `demo/` is a separate composite build and is not covered — it is the consumer
 // canary, and its job is to compile against the published surface, not to match house style.
 subprojects {
     apply(plugin = "org.jlleitschuh.gradle.ktlint")
     apply(plugin = "io.gitlab.arturbosch.detekt")
+
+    // Pinned, not the plugin's default. Left implicit, a ktlint-gradle bump silently swaps the
+    // rule set underneath the gate — and the write-time hook has no number to match against, so it
+    // formats to a style the gate never asked for. See `ktlint-cli` in libs.versions.toml.
+    extensions.configure<org.jlleitschuh.gradle.ktlint.KtlintExtension> {
+        version.set(ktlintVersion)
+    }
 
     extensions.configure<io.gitlab.arturbosch.detekt.extensions.DetektExtension> {
         config.setFrom(rootProject.file("config/detekt.yml"))

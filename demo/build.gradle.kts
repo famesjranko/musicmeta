@@ -1,6 +1,23 @@
 plugins {
     kotlin("jvm") version "2.1.0"
     application
+    id("org.jlleitschuh.gradle.ktlint") version "14.2.0"
+}
+
+// Formatting is shared with the parent build; conventions are not. A demo stands in for an external
+// consumer, so the house rules about *how we build internals* would defeat the point of the canary —
+// but nothing about line length or import order affects whether this compiles against the published
+// surface, and this is the worked example people read. Same `.editorconfig`, same ktlint.
+//
+// Read from the parent catalog rather than hardcoded: two copies of a version number is the exact
+// defect that let the gate and the write-time hook drift apart. Moving demo/ to its own repo already
+// means dropping `includeBuild("..")` in settings.gradle.kts; this line goes at the same time.
+ktlint {
+    version.set(
+        file("../gradle/libs.versions.toml").readLines()
+            .first { it.startsWith("ktlint-cli = ") }
+            .substringAfter('"').substringBefore('"'),
+    )
 }
 
 repositories {

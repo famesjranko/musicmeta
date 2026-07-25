@@ -32,6 +32,13 @@ ktlint_standard_class-signature = disabled
 ktlint_standard_function-literal = disabled
 ktlint_standard_chain-method-continuation = disabled
 
+# The write-time hook runs whatever `ktlint` is on PATH; the gate runs the version ktlint-gradle
+# pins (1.5.0). A newer CLI therefore enforces rules the gate has never heard of, and rewrites files
+# it touches with changes unrelated to the edit. This rule is the whole of that gap: 114 sites in
+# main sources, 65 more in demo/, all of them blank-line placement. Disabled so the two agree — a
+# newer CLI ignores nothing here, and 1.5.0 ignores a property it does not know.
+ktlint_standard_blank-line-between-when-conditions = disabled
+
 # Trailing commas are a diff-noise preference, not a correctness rule, and the codebase is
 # inconsistent about them. Left off rather than churning every call site.
 ktlint_standard_trailing-comma-on-call-site = disabled

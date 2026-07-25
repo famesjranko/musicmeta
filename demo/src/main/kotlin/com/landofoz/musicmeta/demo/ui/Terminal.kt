@@ -21,7 +21,8 @@ class Terminal(val theme: Theme) {
         val border = theme.boxH.repeat(width)
         println()
         println(styled("${theme.boxTL}$border${theme.boxTR}", theme.primary))
-        println("${styled(theme.boxV, theme.primary)}  ${styled(title, theme.bold)}${" ".repeat(maxOf(pad, 0))}${styled(theme.boxV, theme.primary)}")
+        val edge = styled(theme.boxV, theme.primary)
+        println("$edge  ${styled(title, theme.bold)}${" ".repeat(maxOf(pad, 0))}$edge")
         println(styled("${theme.boxBL}$border${theme.boxBR}", theme.primary))
     }
 
@@ -31,17 +32,21 @@ class Terminal(val theme: Theme) {
         println("  ${styled(theme.thinBar.repeat(56), theme.muted)}")
     }
 
+    /** One result row: icon, label padded to a common column, then the detail. */
+    private fun row(icon: String, iconStyle: String, labelStyle: String, label: String, detail: String) =
+        println("  ${styled(icon, iconStyle)} ${styled(label.padEnd(20), labelStyle)} $detail")
+
     fun success(label: String, detail: String) =
-        println("  ${styled(theme.check, theme.success)} ${styled(label.padEnd(20), theme.bold)} $detail")
+        row(theme.check, theme.success, theme.bold, label, detail)
 
     fun missing(label: String, detail: String) =
-        println("  ${styled(theme.dot, theme.muted)} ${styled(label.padEnd(20), theme.muted)} ${styled(detail, theme.muted)}")
+        row(theme.dot, theme.muted, theme.muted, label, styled(detail, theme.muted))
 
     fun error(label: String, detail: String) =
-        println("  ${styled(theme.cross, theme.error)} ${styled(label.padEnd(20), theme.bold)} ${styled(detail, theme.error)}")
+        row(theme.cross, theme.error, theme.bold, label, styled(detail, theme.error))
 
     fun warning(label: String, detail: String) =
-        println("  ${styled(theme.warn, theme.warning)} ${styled(label.padEnd(20), theme.bold)} ${styled(detail, theme.warning)}")
+        row(theme.warn, theme.warning, theme.bold, label, styled(detail, theme.warning))
 
     fun info(text: String) = println(styled("  $text", theme.muted))
 

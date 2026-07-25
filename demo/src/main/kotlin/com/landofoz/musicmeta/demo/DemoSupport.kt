@@ -66,8 +66,12 @@ class TrackingCache(
         delegate.getIncludingExpired(entityKey, type)
 
     override suspend fun invalidate(entityKey: String, type: EnrichmentType?) = delegate.invalidate(entityKey, type)
-    override suspend fun isManuallySelected(entityKey: String, type: EnrichmentType) = delegate.isManuallySelected(entityKey, type)
-    override suspend fun markManuallySelected(entityKey: String, type: EnrichmentType) = delegate.markManuallySelected(entityKey, type)
+    override suspend fun isManuallySelected(entityKey: String, type: EnrichmentType) =
+        delegate.isManuallySelected(entityKey, type)
+
+    override suspend fun markManuallySelected(entityKey: String, type: EnrichmentType) =
+        delegate.markManuallySelected(entityKey, type)
+
     override suspend fun clear() { delegate.clear(); resetStats() }
     fun resetStats() { hits = 0; misses = 0 }
 }

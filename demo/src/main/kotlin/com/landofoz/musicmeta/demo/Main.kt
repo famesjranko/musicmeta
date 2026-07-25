@@ -10,11 +10,11 @@ import com.landofoz.musicmeta.RadioDiscoveryMode
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.albumProfile
 import com.landofoz.musicmeta.artistProfile
-import com.landofoz.musicmeta.okhttp.OkHttpEnrichmentClient
-import com.landofoz.musicmeta.trackProfile
 import com.landofoz.musicmeta.demo.ui.Spinner
 import com.landofoz.musicmeta.demo.ui.Terminal
 import com.landofoz.musicmeta.demo.ui.Theme
+import com.landofoz.musicmeta.okhttp.OkHttpEnrichmentClient
+import com.landofoz.musicmeta.trackProfile
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 
@@ -50,6 +50,7 @@ class DemoState(
     var radioMode: RadioDiscoveryMode = RadioDiscoveryMode.EASY,
 ) {
     lateinit var engine: EnrichmentEngine
+
     /** Last search results — used by 'pick' command for disambiguation flow. */
     var lastSearchResults: List<SearchCandidate> = emptyList()
     var lastSearchType: String? = null // "artist", "album", "track"
@@ -96,7 +97,14 @@ private fun repl(state: DemoState, term: Terminal, spinner: Spinner) {
             trimmed.equals("providers", ignoreCase = true) ->
                 InfoFormatter.printProviders(state.engine.getProviders(), term)
             trimmed.equals("config", ignoreCase = true) ->
-                InfoFormatter.printConfig(state.config, state.logger.enabled, state.catalogMode, state.httpBackend, state.radioMode, term)
+                InfoFormatter.printConfig(
+                    state.config,
+                    state.logger.enabled,
+                    state.catalogMode,
+                    state.httpBackend,
+                    state.radioMode,
+                    term,
+                )
             trimmed.startsWith("config ", ignoreCase = true) ->
                 handleConfig(trimmed.substringAfter("config ").trim(), state, term)
             trimmed.equals("verbose", ignoreCase = true) -> toggleVerbose(state, term)

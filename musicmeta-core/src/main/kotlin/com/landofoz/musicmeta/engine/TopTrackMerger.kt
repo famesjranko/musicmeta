@@ -6,14 +6,10 @@ import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.TopTrack
 
 /**
- * Merges top tracks from multiple providers (Last.fm, ListenBrainz, Deezer).
- * Deduplicates by normalized title (+ MBID when available), sums listen counts,
- * merges sources, and ranks by combined popularity.
- */
-/**
- * Merges top tracks from all providers. Each provider fetches its API max.
- * Results are deduplicated, listen counts summed, and ranked by combined popularity.
- * Returns everything — the developer filters to their needs.
+ * Merges top tracks from all providers (Last.fm, ListenBrainz, Deezer). Each provider fetches its
+ * API max. Deduplicates by normalized title (+ MBID when available), sums listen counts, merges
+ * sources, and ranks by combined popularity. Returns everything — the developer filters to their
+ * needs.
  */
 internal object TopTrackMerger : ResultMerger {
 

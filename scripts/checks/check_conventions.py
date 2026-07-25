@@ -53,9 +53,11 @@ CONFLICT_FIX = "unresolved merge-conflict marker. Finish the merge before commit
 def main_sources(root: Path) -> list[Path]:
     """Main sources of the published modules.
 
-    `demo/` is excluded for the same reason ktlint skips it: it is a separate composite build whose
-    job is to compile against the published surface like an external consumer, not to match house
-    style. Holding it to these rules would make the canary about us instead of about consumers.
+    `demo/` is excluded, and ktlint deliberately no longer follows suit. These rules govern how we
+    build internals; the canary's job is to compile against the published surface the way an outside
+    consumer does, and holding it to them would make the canary about us instead of about consumers.
+    Formatting is the opposite case — it has no bearing on that job, and demo/ is the worked example
+    people read — so `demo/build.gradle.kts` applies ktlint against this repo's `.editorconfig`.
     """
     return sorted(
         path

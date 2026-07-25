@@ -38,9 +38,10 @@ exhaustive. Paths are relative to `musicmeta-core/src/main/kotlin/com/landofoz/m
   `### Breaking Changes` heading in `CHANGELOG.md` *and* visible in the reviewed `api/*.api` diff — a
   break in neither is a defect. Patch (`0.x.y`) may not break; v0.9.2 did. Full semver at `1.0.0`.
   What counts as breaking, and the JVM descriptor caveat: `docs/pitfalls.md` §1.
-- `demo/` is a separate composite build: never compiled by `./gradlew build`, and exempt from house
-  Kotlin style on purpose — don't un-exempt it. It is the only in-tree consumer compiling against
-  the published surface.
+- `demo/` is a separate composite build, never compiled by `./gradlew build`. It is the only in-tree
+  consumer compiling against the published surface, so it is exempt from the house **conventions**
+  on purpose — don't un-exempt it. It is **not** exempt from formatting: it runs the same ktlint
+  against the same `.editorconfig`, because it is the worked example people read.
 - `e2e/` tests hit live APIs behind `-Dinclude.e2e=true` and never gate a merge, so an e2e test is
   not coverage for a change.
 - A new provider is `provider/<name>/` as `*Api`, `*Models`, `*Mapper` (all `internal`) and a public
