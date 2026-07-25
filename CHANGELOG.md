@@ -13,55 +13,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Docs and CI, plus one engine fix consumers should know about (#53).
+One breaking change to `engine/`, two cancellation fixes, and a round of doc corrections.
 
 ### Breaking Changes
-- **5 `engine/` classes are now `internal`**: `DefaultEnrichmentEngine`, `ProviderRegistry`, `ProviderChain`, `ArtistMatcher`, `ConfidenceCalculator`. Use `EnrichmentEngine.Builder`
+- **`engine/` internals are no longer published.** `DefaultEnrichmentEngine`, `ProviderRegistry`, `ProviderChain`, `ArtistMatcher` and `ConfidenceCalculator` are `internal`. Build engines with `EnrichmentEngine.Builder`, which covers every constructor parameter; `ResultMerger` and `CompositeSynthesizer` stay public as the documented extension points
 
 ### Added
-- Dispatched `prepare-release.yml` (pins the version) and `release.yml` (publishes, tags)
-- Release notes assembled from this file, install block generated
-- Automatic Maven Central publication, gated on all modules resolving
-- Weekly Dependabot updates for GitHub Actions
-- The release warms the JitPack build
-- A `stage` mode uploads a droppable `-rc.N` rehearsal
-- Release notes are checked against their tag
-- A `### Breaking Changes` release cannot be pinned to a patch version
-
-### Changed
-- **One permanent branch**: `main` is default and release; `dev` is gone (#68)
-- Release prep pushes `release/<version>` to squash-merge and pins the headings — nothing writes to `main`
-- **Prepare release** takes the version as input, refusing one already tagged
-- A `## [x.y.z]` section is the release note, capped at 3000 chars and 400 per line, checked by `./check`
-- Release notes must be version-pinned; all seven were rewritten
-- `build.yml` gains permissions, job timeouts, and a shared version check
-- Format-on-write covers Python as well as Kotlin
+- A release carrying a `### Breaking Changes` section cannot be pinned to a patch version, so v0.9.2 — which broke the profile extensions in a patch — cannot happen the same way twice
 
 ### Fixed
-- **A cancelled or timed-out `enrich()` no longer opens circuit breakers against healthy providers**, across eight sites that swallowed cancellation (#53)
-- Every module declares Kotlin's `jvmTarget`, so the build works on JDK 21
-- `./check` no longer passes on unresolved merge-conflict markers (#65)
-- detekt runs type-resolved, so its type-dependent rules execute — 57 fixes (#58)
-- A consumer cache or strategy's `withTimeout` is not our deadline (#61)
-- Onboarding no longer teaches the cancellation bug it warns about (#57)
-- `configuration.md`: `withDefaultProviders()` must go last
-- `how-it-works.md`: only 2 of 8 artwork types use `ArtworkMerger`
-- The genre taxonomy is 189 relationships, not `~70`
-- Four wrong `README.md` claims corrected
-- `README.md` is a README again, not a copy of the guides
-- The ktlint the gate runs is pinned, not inherited from `PATH`; it found a stacked-KDoc defect
-- `demo/` is now formatted, and exempt only from house *conventions*
-
-### Removed
-- The `release-readiness` CI job and its required check (#68)
-- The 300-line main-source file cap and its grandfather list (#60)
-- The convention gate's hand-written Kotlin scanner and its test (#60)
-- `api-drift.yml` — `apiCheck` already runs in `./check`
-- The tracking-issue machinery in `provider-drift.yml`
-- `publish.yml` — superseded by `release.yml`
-- `STORIES.md` — a change's rationale belongs in the PR that makes it
-- `DefaultEnrichmentEngine`'s unused `httpClient` parameter (#48)
-- `CoverArtArchiveApi.buildReleaseUrl()` and `buildGroupUrl()`
+- **A cancelled or timed-out `enrich()` no longer opens circuit breakers against healthy providers.** Every `enrichTimeoutMs` expiry counted against providers that never failed, and repeated timeouts opened the circuit against a healthy one. Fixed across eight sites that swallowed cancellation (#53)
+- A consumer cache or merge strategy with its own `withTimeout` no longer surfaces as the engine's deadline (#61)
+- The build works when the default JDK is not 17 — every module now declares Kotlin's `jvmTarget`. Published bytecode and the `api/*.api` baselines are unchanged
+- `configuration.md` no longer teaches a builder order that silently misconfigures the engine: `withDefaultProviders()` reads the keys and config already set, so it must be called last
+- `how-it-works.md` claimed all 8 artwork types use `ArtworkMerger`; it is registered for `ALBUM_ART` and `ARTIST_PHOTO` only, and the other six resolve first-wins
+- The genre taxonomy is documented as 189 relationships across 12 families, not `~70`, in the four places that repeated the old figure
+- Four wrong claims in `README.md`: a 600px Wikidata photo that is actually `?width=1200`; missing keys described as `isAvailable = false` when the provider is never constructed; four latency figures no benchmark produces; and dates/occupation credited to Wikidata
+- `README.md` is a README again rather than a second copy of the guides — 392 lines to 216
 
 ## [0.10.1] - 2026-07-22
 

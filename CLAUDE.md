@@ -46,5 +46,7 @@ exhaustive. Paths are relative to `musicmeta-core/src/main/kotlin/com/landofoz/m
   not coverage for a change.
 - A new provider is `provider/<name>/` as `*Api`, `*Models`, `*Mapper` (all `internal`) and a public
   `*Provider`. Keeping the first three `internal` is what lets them be renamed without an `apiDump`.
-- Add a `CHANGELOG.md` line for every change — headline plus `(#issue)`; for a payload change, ask
-  the user about a cache-clear note. A new trap that cost something goes in `docs/pitfalls.md`.
+- Add a `CHANGELOG.md` line for every **consumer-visible** change — one line, headline plus
+  `(#issue)`. Consumer-visible = published artifacts, public API, runtime behaviour, documented
+  usage, or the compatibility promise; CI, tooling and repo hygiene are not. For a payload change,
+  ask the user about a cache-clear note. A new trap that cost something goes in `docs/pitfalls.md`.
