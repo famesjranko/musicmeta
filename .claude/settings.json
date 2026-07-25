@@ -1,6 +1,6 @@
 {
   "permissions": {
-    "ask": ["Edit(CLAUDE.md)", "Write(CLAUDE.md)"]
+    "ask": ["Edit(CLAUDE.md)"]
   },
   "hooks": {
     "PostToolUse": [
