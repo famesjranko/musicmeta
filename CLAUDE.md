@@ -15,6 +15,7 @@ detekt, the build and the demo canary, so **it is never evidence for a push**. `
 | Pipeline behaviour end to end, consumer-facing | `docs/how-it-works.md` |
 | Consumer how-to: identity, results/errors, cache, config, extension points, Android | `docs/guides/` |
 | One provider's endpoints and response fields | `docs/providers/<name>.md` |
+| Whether a thing is in scope at all, and what `1.0.0` is waiting on | `ROADMAP.md` |
 | Branch topology, issue lifecycle, worktrees, verification selection | `docs/project/workflow.md` |
 | Release preparation, tagging, publication | `docs/project/release.md` |
 | Where issues live (`.scratch/`, not GitHub Issues) | `docs/agents/issue-tracker.md` |
