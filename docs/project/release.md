@@ -21,12 +21,11 @@ SHA at gate 2 and confirm the Release run is on it.
 **Write the `[Unreleased]` section of `CHANGELOG.md` as you go.** That is the whole preparation, and
 it is the ordinary habit of keeping a changelog — nothing release-specific.
 
-It matters because **that section becomes the release note verbatim**: one line per change, headline
-plus `(#issue)`, reasoning left in the issue or PR. Capped at 3000 characters and 400 per line, and
-`./check` enforces that cap on every commit — so an over-long entry fails while you are still the one
-writing it, not at release prep. To read the assembled note, run
-`python3 scripts/github-workflows/build_release_notes.py <next-version>` after pinning locally, or
-run gate 1 as a dry run.
+It matters because **that section becomes the release note verbatim**. `CHANGELOG.md`'s own header
+states what belongs in one and how long it may be; `./check` enforces the length caps on every
+commit, so an over-long entry fails while you are still the one writing it, not at release prep. To
+read the assembled note, run `python3 scripts/github-workflows/build_release_notes.py <next-version>`
+after pinning locally, or run gate 1 as a dry run.
 
 Choose the version under the `0.x` compatibility policy in `CLAUDE.md` — a patch release cannot
 contain a breaking public API change. That choice is the one judgement call in the release.

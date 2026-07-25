@@ -5,11 +5,18 @@ All notable changes to musicmeta will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-> **Each `## [x.y.z]` section below is the GitHub Release note, used verbatim.** One line per change
-> — headline plus its `(#issue)` where one exists — with the reasoning left in the issue or PR.
-> `scripts/github-workflows/build_release_notes.py` caps a section at 3000 characters and any single
-> line at 400. `./check` runs that cap against `[Unreleased]` on every commit, and the release fails
-> if it does not fit. Sections before 0.11.0 predate this and run considerably longer.
+> **Each `## [x.y.z]` section below is the GitHub Release note, used verbatim** — read by someone
+> deciding whether to upgrade. The rules for writing one live here, not elsewhere:
+>
+> - One line per **consumer-visible** change: headline plus its `(#issue)` where one exists, with
+>   the reasoning left in the issue or PR. Never a paragraph.
+> - Consumer-visible means it changes the published artifacts, the public API, runtime behaviour,
+>   documented usage, or the compatibility promise. CI, tooling, formatting and repo hygiene are
+>   **not** — that record belongs in the PR and in git. An entry nobody can act on is noise.
+> - For a payload change, ask the user about a cache-clear note.
+> - `scripts/github-workflows/build_release_notes.py` caps a section at 3000 characters and any
+>   single line at 400; `./check` runs that cap against `[Unreleased]` on every commit, and the
+>   release fails if it does not fit. Sections before 0.11.0 predate this and run longer.
 
 ## [Unreleased]
 
