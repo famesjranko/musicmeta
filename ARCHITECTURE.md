@@ -40,8 +40,9 @@ its tool is absent reports green while checking nothing, which is worse than no 
 verifies the pinned version too: formatter output differs between releases, so an unpinned tool
 reintroduces exactly the local/CI disagreement one command is supposed to remove.
 
-Format-on-write (`scripts/format-kotlin.sh`, wired in `.claude/settings.json`) is a convenience, not
-a gate. It no-ops when the ktlint CLI is absent; `ktlintCheck` is what actually fails.
+Format-on-write (`scripts/format-on-write.sh`, wired in `.claude/settings.json`) is a convenience,
+not a gate. It runs ktlint on `.kt`/`.kts` and ruff on `.py`, and no-ops when either CLI is absent;
+`ktlintCheck` and the ruff check are what actually fail.
 
 ## Known gaps
 
