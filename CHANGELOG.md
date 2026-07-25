@@ -8,8 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > **Each `## [x.y.z]` section below is the GitHub Release note, used verbatim** — read by someone
 > deciding whether to upgrade. The rules for writing one live here, not elsewhere:
 >
-> - One line per **consumer-visible** change: headline plus its `(#issue)` where one exists, with
->   the reasoning left in the issue or PR. Never a paragraph.
+> - One line per **consumer-visible** change: plain prose, headline first, a sentence or two of
+>   what it means for a consumer, then its `(#issue)` where one exists. Full reasoning stays in the
+>   issue or PR — the 400-character line cap below is what stops a sentence becoming an essay.
 > - Consumer-visible means it changes the published artifacts, the public API, runtime behaviour,
 >   documented usage, or the compatibility promise. CI, tooling, formatting and repo hygiene are
 >   **not** — that record belongs in the PR and in git. An entry nobody can act on is noise.
@@ -20,23 +21,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-One breaking change to `engine/`, two cancellation fixes, and a round of doc corrections.
+This release makes the `engine/` package internal, fixes two cancellation bugs, and corrects a round of documentation errors.
 
 ### Breaking Changes
-- **`engine/` internals are no longer published.** `DefaultEnrichmentEngine`, `ProviderRegistry`, `ProviderChain`, `ArtistMatcher` and `ConfidenceCalculator` are `internal`. Build engines with `EnrichmentEngine.Builder`, which covers every constructor parameter; `ResultMerger` and `CompositeSynthesizer` stay public as the documented extension points
+- `engine/` internals are no longer published. `DefaultEnrichmentEngine`, `ProviderRegistry`, `ProviderChain`, `ArtistMatcher` and `ConfidenceCalculator` are now `internal`. Build engines with `EnrichmentEngine.Builder`, which covers every constructor parameter. `ResultMerger` and `CompositeSynthesizer` remain public, as the documented extension points
 
 ### Added
-- A release carrying a `### Breaking Changes` section cannot be pinned to a patch version, so v0.9.2 — which broke the profile extensions in a patch — cannot happen the same way twice
+- Patch releases can no longer contain a breaking change — the release tooling refuses to pin one to a patch version. v0.9.2 broke the profile extensions in a patch, and cannot happen the same way twice
 
 ### Fixed
-- **A cancelled or timed-out `enrich()` no longer opens circuit breakers against healthy providers.** Every `enrichTimeoutMs` expiry counted against providers that never failed, and repeated timeouts opened the circuit against a healthy one. Fixed across eight sites that swallowed cancellation (#53)
+- A cancelled or timed-out `enrich()` no longer opens circuit breakers against healthy providers. Every `enrichTimeoutMs` expiry was recorded as a failure against providers that had not failed, and repeated timeouts opened the circuit against a healthy one. Fixed across the eight sites that swallowed cancellation (#53)
 - A consumer cache or merge strategy with its own `withTimeout` no longer surfaces as the engine's deadline (#61)
-- The build works when the default JDK is not 17 — every module now declares Kotlin's `jvmTarget`. Published bytecode and the `api/*.api` baselines are unchanged
-- `configuration.md` no longer teaches a builder order that silently misconfigures the engine: `withDefaultProviders()` reads the keys and config already set, so it must be called last
-- `how-it-works.md` claimed all 8 artwork types use `ArtworkMerger`; it is registered for `ALBUM_ART` and `ARTIST_PHOTO` only, and the other six resolve first-wins
-- The genre taxonomy is documented as 189 relationships across 12 families, not `~70`, in the four places that repeated the old figure
-- Four wrong claims in `README.md`: a 600px Wikidata photo that is actually `?width=1200`; missing keys described as `isAvailable = false` when the provider is never constructed; four latency figures no benchmark produces; and dates/occupation credited to Wikidata
-- `README.md` is a README again rather than a second copy of the guides — 392 lines to 216
+- The build now works when the default JDK is not 17, because every module declares Kotlin's `jvmTarget`. Published bytecode and the `api/*.api` baselines are unchanged
+- `configuration.md` no longer teaches a builder order that silently misconfigures the engine. `withDefaultProviders()` reads the keys and configuration already set, so it must be called last
+- `how-it-works.md` claimed that all 8 artwork types use `ArtworkMerger`. It is registered for `ALBUM_ART` and `ARTIST_PHOTO` only, and the other six resolve first-wins
+- The genre taxonomy is documented as 189 relationships across 12 families, correcting the `~70` figure that was repeated in four places
+- Four claims in `README.md` were wrong: the Wikidata photo is requested at `?width=1200` rather than 600px, a missing key means the provider is never constructed rather than reporting `isAvailable = false`, four latency figures came from no benchmark, and dates and occupation were credited to Wikidata though no enrichment type exposes them
+- `README.md` is a README again rather than a second copy of the guides, down from 392 lines to 216
 
 ## [0.10.1] - 2026-07-22
 
