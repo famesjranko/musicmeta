@@ -1,7 +1,7 @@
 package com.landofoz.musicmeta.engine
 
 /**
- * Static genre taxonomy covering ~70 relationships across 12 genre families:
+ * Static genre taxonomy covering 189 relationships over 56 genres, across 12 genre families:
  * rock, pop, hip-hop, electronic, jazz, metal, folk, country, classical, r&b/soul, punk, blues.
  *
  * Each entry maps a normalized genre name to its related genres with relationship type and weight.

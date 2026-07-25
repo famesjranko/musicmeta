@@ -9,7 +9,7 @@ import com.landofoz.musicmeta.GenreAffinity
 /**
  * Pure-logic composite synthesizer that builds a [EnrichmentData.GenreDiscovery] from
  * the GENRE sub-type result. Looks up each input genre tag in a static taxonomy of
- * ~70 relationships across 12 genre families (see [GENRE_TAXONOMY]) and scores
+ * 189 relationships across 12 genre families (see [GENRE_TAXONOMY]) and scores
  * neighbors by `inputConfidence * relationshipWeight`.
  *
  * Relationship weights: sibling=0.9, child=0.8, parent=0.7

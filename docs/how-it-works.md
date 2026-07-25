@@ -149,7 +149,7 @@ Types that are synthesized from other resolved types rather than fetched from a 
 | Synthesizer | Type | Dependencies | Strategy |
 |-------------|------|-------------|----------|
 | `TimelineSynthesizer` | ARTIST_TIMELINE | ARTIST_DISCOGRAPHY + BAND_MEMBERS | Extracts chronological events (formed, albums, member changes) from identity metadata + sub-type results |
-| `GenreAffinityMatcher` | GENRE_DISCOVERY | GENRE | Looks up each input genre tag in a static taxonomy (~70 relationships across 12 genre families), scores neighbors by `inputConfidence * relationshipWeight` |
+| `GenreAffinityMatcher` | GENRE_DISCOVERY | GENRE | Looks up each input genre tag in a static taxonomy (189 relationships across 12 genre families), scores neighbors by `inputConfidence * relationshipWeight` |
 
 The engine resolves dependencies first (standard rules), then passes results + identity metadata to the synthesizer. Sub-types are excluded from returned results unless the caller explicitly requested them.
 
@@ -237,7 +237,11 @@ Successful results are cached with per-type TTLs:
 | ALBUM_ART_BACK | CAA(100) | Via JSON metadata endpoint |
 | ALBUM_BOOKLET | CAA(100) | Via JSON metadata endpoint |
 
-All artwork types use `ArtworkMerger`: highest-confidence image becomes primary, others become `alternatives` — consumers get every available image from every provider in one result.
+`ArtworkMerger` is registered for **ALBUM_ART and ARTIST_PHOTO only** — the two types with more than
+two sources. For those, the highest-confidence image becomes primary and the rest become
+`alternatives`, so consumers get every available image from every provider in one result. The other
+six artwork types resolve first-wins down the priority chain, including CD_ART: Fanart.tv answers it
+when a key is present, and CAA is a fallback, not a second entry in the same result.
 
 ### Metadata (6 types)
 | Type | Providers (by priority) | Notes |
@@ -430,8 +434,8 @@ When a provider fails with `Error` or `RateLimited` and an expired cache entry e
 
 ```kotlin
 val engine = EnrichmentEngine.Builder()
-    .withDefaultProviders()
     .config(EnrichmentConfig(cacheMode = CacheMode.STALE_IF_ERROR))
+    .withDefaultProviders()
     .build()
 ```
 
