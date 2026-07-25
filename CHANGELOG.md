@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Mostly docs and CI, plus one engine fix consumers should know about (#53).
 
 ### Breaking Changes
-- **`engine/` internals are no longer published.** `DefaultEnrichmentEngine`, `ProviderRegistry`, `ProviderChain`, `ArtistMatcher` and `ConfidenceCalculator` are `internal`. Build engines with `EnrichmentEngine.Builder`, which covers every constructor parameter. `ResultMerger` and `CompositeSynthesizer` stay public — they are the documented extension points (#02)
+- **`engine/` internals are no longer published.** `DefaultEnrichmentEngine`, `ProviderRegistry`, `ProviderChain`, `ArtistMatcher` and `ConfidenceCalculator` are `internal`. Build engines with `EnrichmentEngine.Builder`, which covers every constructor parameter. `ResultMerger` and `CompositeSynthesizer` stay public — they are the documented extension points
 
 ### Added
 - Releases run from two dispatched workflows: `prepare-release.yml` writes the version everywhere it is consumed, `release.yml` verifies, publishes, then tags
@@ -53,6 +53,7 @@ Mostly docs and CI, plus one engine fix consumers should know about (#53).
 - `api-drift.yml` — a weekly scheduled job that regenerated the API baselines and filed a tracking issue. `apiCheck` runs inside `./check` on every push and PR, and an ABI baseline cannot drift without a commit, so 245 lines were watching for something the gate had already caught
 - The tracking-issue machinery in `provider-drift.yml` — 434 of its 476 lines built a summary and then created, updated, reopened and closed a public issue with a redacted body. The job now runs the live-API suite and fails, uploading the test report; a failed scheduled run already emails and keeps its log
 - `publish.yml` — superseded by `release.yml`, which cannot be started by a bot-pushed tag
+- `DefaultEnrichmentEngine`'s unused `httpClient` constructor parameter, and the detekt `UnusedPrivateProperty` suppression that covered it. It waited because deleting a parameter from a published constructor is an ABI break even when the parameter is provably dead; the class going `internal` in the same change makes it free. Nothing published changes (#48)
 - `CoverArtArchiveApi.buildReleaseUrl()` and `buildGroupUrl()` — two URL builders with no caller anywhere in the repo, including `demo/`. The declaring class is `internal` and absent from the API dump, so nothing published changes
 
 ## [0.10.1] - 2026-07-22
