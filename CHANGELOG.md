@@ -8,62 +8,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > **Each `## [x.y.z]` section below is the GitHub Release note, used verbatim.** One line per change
 > — headline plus its `(#issue)` where one exists — with the reasoning left in the issue or PR.
 > `scripts/github-workflows/build_release_notes.py` caps a section at 3000 characters and any single
-> line at 400, and the release fails if it does not fit. Sections before 0.11.0 predate this and run
-> considerably longer.
+> line at 400. `./check` runs that cap against `[Unreleased]` on every commit, and the release fails
+> if it does not fit. Sections before 0.11.0 predate this and run considerably longer.
 
 ## [Unreleased]
 
-Mostly docs and CI, plus one engine fix consumers should know about (#53).
+Docs and CI, plus one engine fix consumers should know about (#53).
 
 ### Breaking Changes
-- **`engine/` internals are no longer published.** `DefaultEnrichmentEngine`, `ProviderRegistry`, `ProviderChain`, `ArtistMatcher` and `ConfidenceCalculator` are `internal`. Build engines with `EnrichmentEngine.Builder`, which covers every constructor parameter. `ResultMerger` and `CompositeSynthesizer` stay public — they are the documented extension points
+- **5 `engine/` classes are now `internal`**: `DefaultEnrichmentEngine`, `ProviderRegistry`, `ProviderChain`, `ArtistMatcher`, `ConfidenceCalculator`. Use `EnrichmentEngine.Builder`
 
 ### Added
-- Releases run from two dispatched workflows: `prepare-release.yml` writes the version everywhere it is consumed, `release.yml` verifies, publishes, then tags
-- GitHub Release notes are assembled from this file, with the install block and compare link generated so they cannot go stale
-- `automaticRelease` publishes to Maven Central without the portal click, gated on all three modules resolving before the release is announced
-- Weekly Dependabot updates for GitHub Actions, targeting `dev`
-- The release warms the JitPack build for the new tag, so a broken JitPack build shows up in the release run rather than under the first consumer who follows the link
-- A `stage` release mode that uploads a droppable `-rc.N` rehearsal to the Central Portal, so the credentials, signing and upload path can be exercised without publishing or consuming a version
-- Release notes are checked against the tag they document, and the check carries its own self-test
-- A release carrying a `### Breaking Changes` section cannot be pinned to a patch version. `pin_release.py` refuses it against the previous released version, so v0.9.2 — which broke the profile extensions in a patch — could not happen the same way twice. An unlabelled break still slips, which is why the rule stays written down as well
+- Dispatched `prepare-release.yml` (pins the version) and `release.yml` (publishes, tags)
+- Release notes assembled from this file, install block generated
+- Automatic Maven Central publication, gated on all modules resolving
+- Weekly Dependabot updates for GitHub Actions
+- The release warms the JitPack build
+- A `stage` mode uploads a droppable `-rc.N` rehearsal
+- Release notes are checked against their tag
+- A `### Breaking Changes` release cannot be pinned to a patch version
 
 ### Changed
-- **One permanent branch.** `main` is the default, integration and release branch; `dev` is gone. Protection had sat on `main`, which took release merges only, while `dev` took every change and required nothing. `main` now needs a PR with `build` and `demo-canary` green, linear history, squash-only merges and **no bypass actors** (#68)
-- Preparing a release pushes a `release/<version>` branch instead of committing straight to the integration branch, and refuses to run if that branch already exists. You open and squash-merge the PR — nothing writes to the protected branch directly, including CI
-- Preparing a release needs no hand edits: CI pins the `CHANGELOG` heading to the version and date, opens a fresh empty `[Unreleased]`, and moves the `ROADMAP` heading. Write `[Unreleased]` as you go and that is the whole preparation
-- **Prepare release** takes the version as a required input and refuses one that is already tagged, instead of deriving it from the top pinned heading — which read the *previous* release until `[Unreleased]` was pinned
-- A `## [x.y.z]` section is now the release note itself, capped at 3000 characters and 400 per line — replacing the ask for concise notes that produced 8.6k- and 6.6k-char walls in v0.10.0 and v0.10.1
-- `STORIES.md` entries are capped at 1500 characters, enforced by `build.yml`, so the rationale for a change lives in its PR rather than being rewritten across three documents
-- Release notes must be version-pinned, not a verbatim dump of this file; all seven existing releases were rewritten
-- `build.yml` gains a permissions block, job timeouts, and a shared version check it now uses with `release.yml`
-- Format-on-write covers Python as well as Kotlin — `scripts/format-kotlin.sh` becomes `scripts/format-on-write.sh` and runs `ruff format` on `.py`, so the `scripts/` tree no longer reaches a commit unformatted
+- **One permanent branch**: `main` is default and release; `dev` is gone (#68)
+- Release prep pushes `release/<version>` to squash-merge and pins the headings — nothing writes to `main`
+- **Prepare release** takes the version as input, refusing one already tagged
+- A `## [x.y.z]` section is the release note, capped at 3000 chars and 400 per line, checked by `./check`
+- Release notes must be version-pinned; all seven were rewritten
+- `build.yml` gains permissions, job timeouts, and a shared version check
+- Format-on-write covers Python as well as Kotlin
 
 ### Fixed
-- **A cancelled or timed-out `enrich()` no longer opens circuit breakers against healthy providers** — `CancellationException` is an `Exception`, so the broad `catch` on the provider path converted it into `EnrichmentResult.Error`, and `ProviderChain` records an `Error` as a circuit-breaker *failure*. Every `enrichTimeoutMs` expiry therefore counted against providers that never failed, and repeated timeouts opened the circuit against a healthy one, which then got skipped entirely by the eligibility check. `ProviderChain` now calls `ensureActive()` before it touches the breaker, at both `provider.enrich(...)` call sites, so neither a cancelled caller nor a custom provider that swallows the cancellation itself and returns an `Error` can record a failure; `SimilarAlbumsProvider` now calls `mapError()` rather than hand-rolling its body. Six further sites that swallowed cancellation are fixed: both `search()` paths and identity resolution in `DefaultEnrichmentEngine`, `searchCandidates` in `DeezerProvider` and `ITunesProvider`, and the batch loop in `EnrichmentWorker` (which previously walked the rest of the batch after a stop). Public API is unchanged (`apiCheck` green). The guard is `ensureActive()` rather than a blanket `catch (CancellationException) { throw e }`, deliberately: a `CancellationException` raised *inside* a provider — its own `withTimeout` expiring — must stay that provider's error rather than escaping to be reported as the engine's deadline, and a blanket rethrow got that backwards. (#53)
-- The build works when the default JDK is not 17 — `musicmeta-core`, `musicmeta-okhttp` and `demo/` now declare Kotlin's `jvmTarget`, which only `musicmeta-android` did. Kotlin otherwise targeted whatever JDK ran Gradle, failing `./gradlew build` and the demo canary on JDK 21. Published bytecode and the `api/*.api` baselines are unchanged
-- `./check` no longer passes on a tree containing unresolved merge-conflict markers. ktlint and detekt read only Kotlin, ruff and mypy only Python, and nothing read Markdown or YAML, so a half-finished merge in a document went green (#65)
-- detekt now runs with type resolution (`detektMain`/`detektTest`), so the rules that need a resolved type actually execute — they had been silently doing nothing, including `UnsafeCallOnNullableType` and `UnreachableCode`. 57 findings the gate never reported are resolved; the untyped task is disabled so `build` does not run the weaker pass again. `--fast` skips detekt now, since it compiles first (#58)
-- A consumer cache or merge strategy with its own `withTimeout` no longer surfaces as the engine's deadline. `CacheGuard` and `StrategyGuard` kept the blanket rethrow that #53 replaced everywhere else, so a cancellation raised *inside* a consumer's `EnrichmentCache` or `ResultMerger` escaped `enrich()`. Both now use `ensureActive()` (#61)
-- Onboarding no longer teaches the bug it warns about: `CLAUDE.md` pitfall 2 showed `catch (CancellationException) { throw e }` as the correct form, then explained twenty lines later that it is wrong. `ARCHITECTURE.md` claimed 46 baseline detekt findings against an actual 43, and credited the untyped `detekt` task with rules that only run under type resolution (#57)
-- `configuration.md` no longer teaches a builder order that silently misconfigures the engine. `withDefaultProviders()` reads the keys and config already set, so calling it first registers no keyed provider and leaves every provider on the default User-Agent. The rule — call it last — is now stated, and two other snippets corrected
-- `how-it-works.md` claimed all 8 artwork types use `ArtworkMerger`; it is registered for `ALBUM_ART` and `ARTIST_PHOTO` only, and the other six resolve first-wins
-- The genre taxonomy is documented as 189 relationships across 12 families, not `~70`, in the four places that repeated the old figure. `configuration.md` also claimed `withDefaultProviders()` registers "all 11 providers" when 3 need a key
-- Four wrong claims in `README.md`: a 600px Wikidata photo that is actually `?width=1200`; missing keys described as `isAvailable = false` when the provider is never constructed; four latency figures no benchmark produces; and dates/occupation credited to Wikidata, which no enrichment type exposes
-- `README.md` is a README again rather than a second copy of the guides — 392 lines to 216. Failure-isolation, the pre-resolved-identifier fast path and local-consumption notes moved to the guides that should have held them; the rest was already duplicated verbatim
-- **The ktlint the gate runs is now declared, not inherited.** `libs.versions.toml` pinned `ktlint-gradle` but never ktlint itself, so a plugin bump would have swapped the rule set silently. `ktlint-cli` is now a catalog entry the gate binds to
-- The write-time formatter and the gate no longer disagree. `format-on-write.sh` runs whatever `ktlint` is on `PATH`, so a newer CLI queued 114 rewrites in main sources under a rule the gate has never heard of. It now reads the pinned version and skips on a mismatch; the rule is disabled in `.editorconfig`. One real defect it found is fixed: `TopTrackMerger` had two stacked KDoc blocks
-- **`demo/` is now formatted, and exempt only from house *conventions*.** One exemption was doing two jobs: the convention rules rightly skip a build standing in for an external consumer, but formatting cannot affect that, and `demo/` is the worked example people read. It ran the same ktlint under `./check`, fixing 21 over-length lines — two of them wrapped mid-condition
+- **A cancelled or timed-out `enrich()` no longer opens circuit breakers against healthy providers**, across eight sites that swallowed cancellation (#53)
+- Every module declares Kotlin's `jvmTarget`, so the build works on JDK 21
+- `./check` no longer passes on unresolved merge-conflict markers (#65)
+- detekt runs type-resolved, so its type-dependent rules execute — 57 fixes (#58)
+- A consumer cache or strategy's `withTimeout` is not our deadline (#61)
+- Onboarding no longer teaches the cancellation bug it warns about (#57)
+- `configuration.md`: `withDefaultProviders()` must go last
+- `how-it-works.md`: only 2 of 8 artwork types use `ArtworkMerger`
+- The genre taxonomy is 189 relationships, not `~70`
+- Four wrong `README.md` claims corrected
+- `README.md` is a README again, not a copy of the guides
+- The ktlint the gate runs is pinned, not inherited from `PATH`; it found a stacked-KDoc defect
+- `demo/` is now formatted, and exempt only from house *conventions*
 
 ### Removed
-- The `release-readiness` CI job and its required-check entry. It was added (#35) when publication was tag-triggered and a version mismatch could only surface after an immutable tag existed. `release.yml` now asserts the same agreement before publishing and tags last, so that mismatch already fails cheaply (#68)
-- The 300-line main-source file cap, and the grandfather list of four files already over it. It was a preference with a mechanism, not a defect the mechanism prevented; detekt's complexity rules cover the case that actually matters (#60)
-- The convention gate's hand-written Kotlin scanner, its `KotlinLexer` oracle and the differential test that kept it honest — 900 lines and a `kotlin-compiler-embeddable` dependency, all of it there so a `!!` inside a comment would not be reported. The bans are absolute instead, which is simpler and stricter (#60)
-- `api-drift.yml` — a weekly scheduled job that regenerated the API baselines and filed a tracking issue. `apiCheck` runs inside `./check` on every push and PR, and an ABI baseline cannot drift without a commit, so 245 lines were watching for something the gate had already caught
-- The tracking-issue machinery in `provider-drift.yml` — 434 of its 476 lines built a summary and then created, updated, reopened and closed a public issue with a redacted body. The job now runs the live-API suite and fails, uploading the test report; a failed scheduled run already emails and keeps its log
-- `publish.yml` — superseded by `release.yml`, which cannot be started by a bot-pushed tag
-- `DefaultEnrichmentEngine`'s unused `httpClient` constructor parameter, and the detekt `UnusedPrivateProperty` suppression that covered it. It waited because deleting a parameter from a published constructor is an ABI break even when the parameter is provably dead; the class going `internal` in the same change makes it free. Nothing published changes (#48)
-- `CoverArtArchiveApi.buildReleaseUrl()` and `buildGroupUrl()` — two URL builders with no caller anywhere in the repo, including `demo/`. The declaring class is `internal` and absent from the API dump, so nothing published changes
+- The `release-readiness` CI job and its required check (#68)
+- The 300-line main-source file cap and its grandfather list (#60)
+- The convention gate's hand-written Kotlin scanner and its test (#60)
+- `api-drift.yml` — `apiCheck` already runs in `./check`
+- The tracking-issue machinery in `provider-drift.yml`
+- `publish.yml` — superseded by `release.yml`
+- `STORIES.md` — a change's rationale belongs in the PR that makes it
+- `DefaultEnrichmentEngine`'s unused `httpClient` parameter (#48)
+- `CoverArtArchiveApi.buildReleaseUrl()` and `buildGroupUrl()`
 
 ## [0.10.1] - 2026-07-22
 

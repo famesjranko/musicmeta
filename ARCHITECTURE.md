@@ -24,6 +24,7 @@ because the config is the thing that fails.
 | Python types | mypy | `scripts/**` |
 | Shell | shellcheck | `scripts/**`, `check`, `demo/run.sh` |
 | Conventions | `scripts/checks/check_conventions.py` | no `!!` and no `@Serializable` under `provider/`/`http/` in main sources; conflict markers anywhere |
+| Release-note caps | `build_release_notes.py Unreleased` | `CHANGELOG.md`'s `[Unreleased]` stays under 3000 chars and 400 per line — the same `check_caps()` the release runs, so it fails here rather than at release prep. An empty section passes: `pin_release.py` opens one on every release branch |
 | Script self-tests | `scripts/**/test_*.py` | the release-note and convention scripts still behave |
 | Kotlin format | ktlint (version pinned in `libs.versions.toml`) | all modules, and `demo/` |
 | Kotlin static analysis | detekt, **type-resolved** (`detektMain`/`detektTest`) | complexity, dead code, bug patterns |

@@ -7,9 +7,11 @@ to leave stale. Length caps keep the section release-note shaped rather than an 
 v0.10.0 and v0.10.1 first shipped 8.6k- and 6.6k-char walls copied from an uncapped changelog.
 
     python3 build_release_notes.py <version> [--changelog PATH] [--out PATH]
+    python3 build_release_notes.py Unreleased    # caps only, no build — what ./check runs
 
-Exit codes: 0 = valid, 1 = file/version not found, 2 = the section violates a cap.
-Importable: extract_section(text, version) -> str, build(text, version) -> str.
+Exit codes: 0 = valid, 1 = file/section not found, 2 = the section violates a cap. Both modes.
+Importable: extract_section(text, version) -> str, build(text, version) -> str,
+check_unreleased(text) -> None.
 """
 
 from __future__ import annotations
@@ -45,12 +47,21 @@ def released_versions(text: str) -> list[str]:
     return [m.group(1) for line in text.splitlines() if (m := VERSION_HEADING.match(line))]
 
 
-def extract_section(text: str, version: str) -> str:
-    """Return the body of the `## [version]` section, without its heading line.
+def section_body(text: str, label: str) -> str:
+    """Return the body of the `## [label]` section, without its heading line.
 
-    Ends at the next `## ` heading. Raises BuildError if the version is absent or its body is empty.
+    `label` is matched literally — `0.11.0` or `Unreleased` — so finding a section never consults
+    `released_versions()`. That separation is the point: the caps gate has to reach `[Unreleased]`,
+    and widening VERSION_HEADING to let it would put `Unreleased` in the released-version list and
+    generate a `compare/vUnreleased...v0.11.0` link in the next real release.
+
+    Ends at the next `## ` heading. Raises BuildError if the heading is absent; returns "" if the
+    heading is there with nothing under it, because whether that is an error depends on the caller.
     """
-    ver = version.removeprefix("v")
+    # Same shape as VERSION_HEADING, with the label escaped in place of the semver group, so the two
+    # matchers cannot disagree about what counts as a heading. `##  [0.11.0]` must not be a released
+    # version that no one can then find the body of.
+    heading = re.compile(r"^##\s+\[" + re.escape(label) + r"\]")
     collected: list[str] = []
     found = False
 
@@ -60,22 +71,31 @@ def extract_section(text: str, version: str) -> str:
         if found:
             collected.append(line)
             continue
-        match = VERSION_HEADING.match(line)
-        if match and match.group(1) == ver:
+        if heading.match(line):
             found = True
 
     if not found:
-        raise BuildError(f"CHANGELOG has no '## [{ver}]' heading — pin the [Unreleased] section first.")
+        raise BuildError(f"CHANGELOG has no '## [{label}]' heading — pin the [Unreleased] section first.")
 
     while collected and not collected[0].strip():
         collected.pop(0)
     while collected and not collected[-1].strip():
         collected.pop()
 
-    if not collected:
-        raise BuildError(f"The '## [{ver}]' section is empty — it is the release note, so write it.")
-
     return "\n".join(collected)
+
+
+def extract_section(text: str, version: str) -> str:
+    """The body of a pinned `## [x.y.z]` section, without its heading line.
+
+    Empty is an error here: the section IS the release note, so a release with nothing in it is a
+    release with nothing to say.
+    """
+    ver = version.removeprefix("v")
+    section = section_body(text, ver)
+    if not section:
+        raise BuildError(f"The '## [{ver}]' section is empty — it is the release note, so write it.")
+    return section
 
 
 def check_caps(section: str, version: str) -> None:
@@ -101,6 +121,21 @@ def check_caps(section: str, version: str) -> None:
         )
 
 
+def check_unreleased(text: str) -> None:
+    """Run the caps against `[Unreleased]`, so a section cannot go over between releases.
+
+    Caps-only on purpose: no version list, no compare link, no install block — none of which exist
+    for an unpinned section. `check_caps()` is reused unchanged, so what `./check` enforces and what
+    the release refuses are the same rule rather than two copies of it.
+
+    An empty `[Unreleased]` passes. `pin_release.py` opens a fresh empty one immediately after
+    pinning the outgoing section, so treating empty as a failure would turn every release branch
+    red on the gate that is supposed to protect it. Nothing to cap is not a cap violation, and
+    `pin_release.py` already refuses to release an empty section.
+    """
+    check_caps(section_body(text, "Unreleased"), "Unreleased")
+
+
 def installation_block(version: str) -> str:
     """Generated, so a coordinate cannot be left pinned to a previous release."""
     maven = "\n".join(f'implementation("{GROUP}:{m}:{version}"){MODULE_NOTES.get(m, "")}' for m in MODULES)
@@ -118,13 +153,19 @@ def installation_block(version: str) -> str:
 def build(text: str, version: str) -> str:
     """Assemble the full release body. Raises BuildError if the section is unusable."""
     ver = version.removeprefix("v")
+
+    # section_body() matches any literal label, so this is what still insists on a *pinned* version.
+    # Without it `versions.index(ver)` below raises ValueError rather than something readable.
+    versions = released_versions(text)
+    if ver not in versions:
+        raise BuildError(f"CHANGELOG has no '## [{ver}]' heading — pin the [Unreleased] section first.")
+
     section = extract_section(text, ver)
     check_caps(section, ver)
 
     parts = [section, installation_block(ver)]
 
     # The previous release is the next pinned heading below this one. A first release has none.
-    versions = released_versions(text)
     index = versions.index(ver)
     if index + 1 < len(versions):
         previous = versions[index + 1]
@@ -141,7 +182,10 @@ def build(text: str, version: str) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Assemble a GitHub Release body from CHANGELOG.md.")
-    parser.add_argument("version", help="release version, e.g. 0.11.0 (leading v allowed)")
+    parser.add_argument(
+        "version",
+        help="release version, e.g. 0.11.0 (leading v allowed), or 'Unreleased' to check the caps only",
+    )
     parser.add_argument("--changelog", help="path to CHANGELOG.md (default: cwd, then repo root)")
     parser.add_argument("--out", help="write the body here instead of stdout")
     args = parser.parse_args(argv)
@@ -157,8 +201,19 @@ def main(argv: list[str] | None = None) -> int:
         print(f"::error::CHANGELOG not found at {changelog}", file=sys.stderr)
         return 1
 
+    text = changelog.read_text(encoding="utf-8")
+
+    # One try, so both modes report a missing section as 1 and a cap violation as 2. Splitting them
+    # is how the two drift into disagreeing about what the same failure means.
     try:
-        body = build(changelog.read_text(encoding="utf-8"), args.version)
+        # `./check` runs this mode on every commit. An unpinned section has no version to install
+        # or compare against, so there is nothing to build — only the caps to enforce, early enough
+        # that whoever wrote the entry is still the one who has to fix it.
+        if args.version == "Unreleased":
+            check_unreleased(text)
+            print("[Unreleased] is release-note shaped.")
+            return 0
+        body = build(text, args.version)
     except BuildError as e:
         print(f"::error::{e}", file=sys.stderr)
         return 1 if "no '## [" in str(e) else 2
