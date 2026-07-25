@@ -21,3 +21,6 @@ secrets.properties
 # Python bytecode (scripts/)
 __pycache__/
 *.pyc
+
+# graphify knowledge graph — regenerable from the tree, and the cache/ is large
+graphify-out/
