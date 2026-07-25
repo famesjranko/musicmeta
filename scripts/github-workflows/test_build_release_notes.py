@@ -140,8 +140,15 @@ tmp.write_text("# Changelog\n\n## [0.11.0] - 2026\n\nNotes.\n", encoding="utf-8"
 assert main(["Unreleased", "--changelog", str(tmp)]) == 1, "a missing section must exit 1, not 2"
 
 # --- the real CHANGELOG ---------------------------------------------------------------------
-# 0.10.1 predates the convention and is ~6.6KB. It MUST fail — that wall is why the caps exist.
 real = (Path(__file__).resolve().parent.parent.parent / "CHANGELOG.md").read_text(encoding="utf-8")
-expect_error(lambda: build(real, "0.10.1"), "not release-note shaped")
+
+# 0.10.0 and 0.10.1 were rewritten to match the notes actually published on GitHub, so they are the
+# oldest sections that conform. Building them proves the file did not regain a wall by paste.
+build(real, "0.10.0")
+build(real, "0.10.1")
+
+# 0.9.2 still predates the convention — a 825-char line. It MUST fail: a cap that has never fired
+# on real prose is a cap nobody has tested, and every fixture above is one we wrote to fit.
+expect_error(lambda: build(real, "0.9.2"), "not release-note shaped")
 
 print("build_release_notes: all checks passed")
