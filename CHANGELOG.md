@@ -26,6 +26,7 @@ Mostly docs and CI, plus one engine fix consumers should know about (#53).
 - The release warms the JitPack build for the new tag, so a broken JitPack build shows up in the release run rather than under the first consumer who follows the link
 - A `stage` release mode that uploads a droppable `-rc.N` rehearsal to the Central Portal, so the credentials, signing and upload path can be exercised without publishing or consuming a version
 - Release notes are checked against the tag they document, and the check carries its own self-test
+- A release carrying a `### Breaking Changes` section cannot be pinned to a patch version. `pin_release.py` refuses it against the previous released version, so v0.9.2 — which broke the profile extensions in a patch — could not happen the same way twice. An unlabelled break still slips, which is why the rule stays written down as well
 
 ### Changed
 - **One permanent branch.** `main` is the default, integration and release branch; `dev` is gone. Protection had sat on `main`, which took release merges only, while `dev` took every change and required nothing. `main` now needs a PR with `build` and `demo-canary` green, linear history, squash-only merges and **no bypass actors** (#68)

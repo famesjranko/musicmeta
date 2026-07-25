@@ -60,6 +60,26 @@ expect_error(lambda: pin_changelog("## [Unreleased]\n\n   \n\n## [0.10.1] - 2026
 # An [Unreleased] with no following version heading (first ever release) still pins.
 assert "## [1.0.0] - 2026-07-23" in pin_changelog("# C\n\n## [Unreleased]\n\n- first (#1)\n", "1.0.0", "2026-07-23")
 
+# --- a break cannot ship in a patch ---------------------------------------------------------------
+BREAKS = """# Changelog
+
+## [Unreleased]
+
+### Breaking Changes
+- Something narrowed
+
+## [0.10.1] - 2026-07-22
+"""
+expect_error(lambda: pin_changelog(BREAKS, "0.10.2", "2026-07-23"), "cannot be a patch release over 0.10.1")
+# The same content pins fine as a minor, and as a major.
+assert "## [0.11.0]" in pin_changelog(BREAKS, "0.11.0", "2026-07-23")
+assert "## [1.0.0]" in pin_changelog(BREAKS, "1.0.0", "2026-07-23")
+# A patch with no Breaking Changes section is still allowed.
+assert "## [0.10.2]" in pin_changelog(BREAKS.replace("### Breaking Changes", "### Fixed"), "0.10.2", "2026-07-23")
+# The heading only counts inside [Unreleased] — an older section's break must not block a patch.
+OLD_BREAK = "# C\n\n## [Unreleased]\n\n### Fixed\n- x\n\n## [0.10.1] - 2026\n\n### Breaking Changes\n- old\n"
+assert "## [0.10.2]" in pin_changelog(OLD_BREAK, "0.10.2", "2026-07-23")
+
 # --- roadmap ------------------------------------------------------------------------------------
 assert pin_roadmap("## Where We Are (v0.10.1)\n\ntext\n", "0.11.0") == "## Where We Are (v0.11.0)\n\ntext\n"
 # Only the first, and a missing heading is not an error.
@@ -70,5 +90,10 @@ root = Path(__file__).resolve().parent.parent.parent
 real = pin_changelog((root / "CHANGELOG.md").read_text(encoding="utf-8"), "0.11.0", "2026-07-23")
 assert extract_section(real, "0.11.0"), "the live [Unreleased] section must pin and extract"
 assert "## Where We Are (v0.11.0)" in pin_roadmap((root / "ROADMAP.md").read_text(encoding="utf-8"), "0.11.0")
+# The live [Unreleased] narrows the published surface, so the next release cannot be 0.10.2.
+expect_error(
+    lambda: pin_changelog((root / "CHANGELOG.md").read_text(encoding="utf-8"), "0.10.2", "2026-07-23"),
+    "cannot be a patch release over 0.10.1",
+)
 
 print("pin_release: all checks passed")
