@@ -50,6 +50,7 @@ Mostly docs and CI, plus one engine fix consumers should know about (#53).
 - `api-drift.yml` — a weekly scheduled job that regenerated the API baselines and filed a tracking issue. `apiCheck` runs inside `./check` on every push and PR, and an ABI baseline cannot drift without a commit, so 245 lines were watching for something the gate had already caught
 - The tracking-issue machinery in `provider-drift.yml` — 434 of its 476 lines built a summary and then created, updated, reopened and closed a public issue with a redacted body. The job now runs the live-API suite and fails, uploading the test report; a failed scheduled run already emails and keeps its log
 - `publish.yml` — superseded by `release.yml`, which cannot be started by a bot-pushed tag
+- `CoverArtArchiveApi.buildReleaseUrl()` and `buildGroupUrl()` — two URL builders with no caller anywhere in the repo, including `demo/`. The declaring class is `internal` and absent from the API dump, so nothing published changes
 
 ## [0.10.1] - 2026-07-22
 
