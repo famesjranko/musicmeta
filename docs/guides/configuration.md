@@ -347,7 +347,7 @@ println(preview?.durationMs) // 30000
 println(preview?.source)     // "deezer"
 ```
 
-Typical use: resolve a preview URL for a track the user discovered via radio or similar artists, so they can audition it before adding it to their library. See `docs/v0.9.0-lb-radio-feature-plan.md` Consumer Usage Patterns for a full discovery-with-preview example.
+Typical use: resolve a preview URL for a track the user discovered via radio or similar artists, so they can audition it before adding it to their library.
 
 ### Artist radio
 
