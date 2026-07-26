@@ -29,6 +29,7 @@ This release makes the `engine/` package internal, fixes two cancellation bugs, 
 - `engine/` internals are no longer published. `DefaultEnrichmentEngine`, `ProviderRegistry`, `ProviderChain`, `ArtistMatcher` and `ConfidenceCalculator` are now `internal`. Build engines with `EnrichmentEngine.Builder`, which covers every constructor parameter. `ResultMerger` and `CompositeSynthesizer` remain public, as the documented extension points
 
 ### Fixed
+- iTunes search candidates now carry `itunesCollectionId` in their `identifiers`, which were empty before. Passing a picked candidate's identifiers into the next `ALBUM_TRACKS` request now resolves it by direct lookup at 1.0 confidence instead of repeating the search
 - Back cover, booklet and CD art from the Cover Art Archive now read the canonical `"250"` thumbnail key, falling back to the deprecated `"small"` alias
 - A cancelled or timed-out `enrich()` no longer opens circuit breakers against healthy providers, across the eight sites that swallowed cancellation (#53)
 - A consumer cache or merge strategy with its own `withTimeout` no longer surfaces as the engine's deadline (#61)
