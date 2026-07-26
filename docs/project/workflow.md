@@ -147,7 +147,7 @@ Gradle may report `UP-TO-DATE` without executing tests. Verification evidence mu
 | Changed surface | Additional evidence |
 |---|---|
 | `musicmeta-core/**` | `./gradlew :musicmeta-core:test` |
-| Public core API or any `api/*.api` | `./gradlew apiCheck`, review the API diff against `CLAUDE.md` → **Backwards Compatibility**, then `cd demo && ../gradlew compileKotlin` |
+| Public core API or any `api/*.api` | `./gradlew apiCheck`, review the API diff against `docs/pitfalls.md` §1, then `cd demo && ../gradlew compileKotlin` |
 | `provider/<name>/**` | Matching provider tests, then the full core suite |
 | `musicmeta-android/**` | `ANDROID_HOME=~/Android/Sdk ./gradlew :musicmeta-android:test` plus `apiCheck` |
 | Android Room cache | Android tests plus explicit schema and migration review |
