@@ -1,141 +1,78 @@
-# iTunes Provider
+# iTunes
 
-> Apple's public search API. Free, no auth required. Album art fallback with a URL trick for arbitrary image sizes. Aggressive rate limiting.
-
-## API Overview
+What our code does with the iTunes Search API. For the API itself — endpoints, request shapes, error
+codes, rate limits — follow the upstream link; that is authoritative and this is not.
 
 | | |
 |---|---|
-| **Base URL** | `https://itunes.apple.com` |
+| **Package** | `provider/itunes/` |
+| **Provider ids** | `itunes` |
+| **Upstream API docs** | https://performance-partners.apple.com/search-api |
 | **Auth** | None |
-| **Rate Limit** | ~20 requests/minute (aggressive); we use 3000ms |
-| **Format** | JSON |
-| **Reference Docs** | https://developer.apple.com/library/archive/documentation/AudioVideo/Conceptual/iTuneSearchAPI/ |
-| **API Key Required** | No |
+| **Deviations from the house pattern** | None — the four files, as `CLAUDE.md` describes them |
 
-## Endpoints We Use
-
-### Album Search
-```
-GET /search?media=music&entity=album&term={query}&limit={n}
-```
-
-Query: free text, typically `"artist name album title"`. Default limit is 50; maximum is 200.
-
-Response:
-```json
-{
-  "resultCount": 1,
-  "results": [
-    {
-      "wrapperType": "collection",
-      "collectionType": "Album",
-      "collectionId": 1097862062,
-      "collectionName": "OK Computer",
-      "artistName": "Radiohead",
-      "artistId": 657515,
-      "artworkUrl60": "https://is1-ssl.mzstatic.com/.../60x60bb.jpg",
-      "artworkUrl100": "https://is1-ssl.mzstatic.com/.../100x100bb.jpg",
-      "releaseDate": "1997-06-16T07:00:00Z",
-      "primaryGenreName": "Alternative",
-      "country": "USA",
-      "trackCount": 12,
-      "collectionPrice": 9.99,
-      "currency": "USD",
-      "collectionExplicitness": "notExplicit",
-      "amgArtistId": 41092,
-      "collectionViewUrl": "https://music.apple.com/us/album/..."
-    }
-  ]
-}
-```
-
-## Artwork URL Trick
-
-iTunes returns `artworkUrl100` — a 100x100 thumbnail. But the URL contains the size in the filename:
-
-```
-https://is1-ssl.mzstatic.com/.../100x100bb.jpg
-```
-
-Replace `100x100bb` with any size:
-
-| Replacement | Result |
-|-------------|--------|
-| `250x250bb` | 250px |
-| `500x500bb` | 500px |
-| `1200x1200bb` | 1200px (our default) |
-| `3000x3000bb` | Max resolution |
-
-This gives us **arbitrary image sizes from a single API response**. We return the high-res URL as main artwork and the original 100x100 as thumbnail.
+**Why this provider.** A no-key album search that returns artwork at any size from one URL, so it is
+the fallback when MusicBrainz has no MBID and the Cover Art Archive therefore cannot be asked. It is
+also the most aggressively rate-limited provider in the tree: `RateLimiter(3000)` by constructor
+default, which `withDefaultProviders()` takes, against roughly 20 requests a minute upstream.
 
 ## What We Extract
 
-| Field | Source | Notes |
-|-------|--------|-------|
-| Album title | `collectionName` | |
-| Artist name | `artistName` | Verified via `ArtistMatcher.isMatch()` |
-| Artwork URL | `artworkUrl100` → replaced to 1200x1200 | High-res via URL manipulation |
-| Thumbnail URL | `artworkUrl100` | Original 100x100 (also `artworkUrl60` available at 60x60) |
+One row per entry in `ITunesProvider.capabilities`. The two lists are compared by
+`scripts/checks/check_provider_capabilities.py` on every `./check`.
 
-## What We DON'T Extract (Available Data)
+| EnrichmentType | Request | Upstream call | What we keep |
+|---|---|---|---|
+| `ALBUM_ART` | `ForAlbum` | `/search?entity=album&limit=5` | `artworkUrl100`, rewritten to `artworkSize` (1200) plus 250/500/1000/3000 variants |
+| `ALBUM_METADATA` | `ForAlbum` | the same search | `trackCount`, `primaryGenreName`, `country`, `releaseDate` |
+| `ALBUM_TRACKS` | `ForAlbum` | `/lookup?id={collectionId}&entity=song`, after a search if needed | `trackName`, `trackNumber`, `trackTimeMillis` |
+| `ARTIST_DISCOGRAPHY` | `ForArtist` | `/search?entity=musicArtist`, then `/lookup?id={artistId}&entity=album` | `collectionName`, `releaseDate` year, `artworkUrl100`, `collectionId` |
 
-### From Current Response (ignored)
+Every priority is low — 40 for art, 30 for the rest — so iTunes wins only when the sources above it
+return nothing.
 
-| Field | Where | Useful For |
-|-------|-------|------------|
-| `collectionId` | Result | Needed for lookup endpoint |
-| `artistId` | Result | Needed for artist lookup |
-| `amgArtistId` | Result | AllMusic cross-reference ID |
-| `releaseDate` | Result | RELEASE_DATE (ISO 8601 format) |
-| `primaryGenreName` | Result | GENRE |
-| `country` | Result | COUNTRY (store region, not release country) |
-| `trackCount` | Result | Validation |
-| `collectionPrice` / `currency` | Result | Pricing info |
-| `collectionExplicitness` | Result | Content rating |
-| `collectionViewUrl` | Result | Apple Music link |
+**The artwork trick.** iTunes hands back a 100×100 thumbnail URL and every other size is a string
+substitution: `ITunesMapper.toArtwork` replaces `100x100bb` with `{size}x{size}bb`. If Apple ever
+changes that URL segment, the substitution silently no-ops and every size in `ArtworkSize` becomes
+the same 100px image — a successful, wrong result. `thumbnailUrl` is deliberately the untouched
+100×100 URL.
 
-### Endpoints Not Yet Called
+**Artist matching is real here,** unlike most providers: `ALBUM_ART`, `ALBUM_METADATA` and the search
+path of `ALBUM_TRACKS` all take the first of five results that passes `ArtistMatcher.isMatch`, and
+score it `fuzzyMatch(hasArtistMatch = true)`, 0.8. No match at all is `NotFound`, not the first row.
 
-| Endpoint | Data | Useful For |
-|----------|------|------------|
-| `GET /search?entity=musicArtist&term={name}` | Artist search: artist name, genre, primary URL | Artist lookup |
-| `GET /search?entity=song&term={query}` | Track search with preview URLs | Track lookup |
-| `GET /lookup?id={collectionId}&entity=song` | All tracks in an album | ALBUM_TRACKS |
-| `GET /lookup?id={artistId}&entity=album` | All albums by an artist | ARTIST_DISCOGRAPHY |
-| `GET /lookup?amgArtistId={id}` | Lookup by AllMusic ID | Cross-reference |
-| `GET /lookup?upc={barcode}` | Lookup album by UPC barcode | Precise, ID-based album lookup when barcode is available from MusicBrainz/Discogs |
+**Two capabilities feed identifiers back.** `ALBUM_TRACKS` and `ARTIST_DISCOGRAPHY` return
+`resolvedIdentifiers` carrying `itunesCollectionId` / `itunesArtistId` as `EnrichmentIdentifiers`
+extras. On a later request that already carries the id, both skip the search entirely and score
+`idBasedLookup()`, 1.0 — the only path in this package that reaches deterministic confidence.
 
-## Gotchas & Edge Cases
+## What We DON'T Extract
 
-- **`attribute` parameter**: The `attribute` parameter restricts which field `term` matches: `albumTerm`, `artistTerm`, `songTerm`, `composerTerm`, etc. Could improve search precision.
-- **`explicit` parameter**: `explicit=Yes` or `explicit=No` filters results by explicit content flag.
-- **`country` format mismatch**: Request parameter uses 2-letter ISO codes (`US`, `GB`); response `country` field returns 3-letter codes (`USA`, `GBR`).
-- **Aggressive rate limiting**: ~20 requests/minute is very low. Our 3000ms (3-second) interval is conservative but necessary. Exceeding the limit returns a 403 or empty results without clear error messaging.
-- **No rate limit headers**: iTunes doesn't return `Retry-After` or `X-RateLimit-*` headers. You just get 403'd or silently throttled.
-- **Lowest confidence (0.65)**: Pure text search with no ID-based lookup. Artist matching helps but the result may still be wrong.
-- **Low priority (40)**: Only tried after CAA (100) and Deezer (50) fail. This is the last-resort album art source.
-- **`artworkUrl100` may be missing**: Some results have an empty or null `artworkUrl100`. We return `NotFound` in this case.
-- **Search is US-biased**: The API defaults to the US iTunes Store. Results may differ by region. The `country` field in results reflects the store region, not the album's origin.
-- **Release date is ISO 8601**: `"1997-06-16T07:00:00Z"` — we extract `take(4)` for just the year in search candidates.
-- **URL size limits**: While `3000x3000bb` technically works, many album artworks are stored at lower native resolutions. Requesting larger just returns the max available.
-- **mzstatic.com CDN**: Image URLs point to Apple's CDN. These are stable and cacheable.
-- **AMG Artist ID**: `amgArtistId` is an AllMusic Guide identifier — useful for cross-referencing with AllMusic's database but we don't use it.
-- **Dated documentation**: Official docs are in Apple's Documentation Archive (dated 2017-09-19) — the API works but docs may not reflect undocumented changes since then.
+`searchCandidates` is implemented for `ForAlbum` (five results, `SearchCandidate.score` hardcoded to
+70 rather than derived from anything) but **returns `EnrichmentIdentifiers()` — empty**. Picking an
+iTunes candidate in a disambiguation flow therefore carries no `collectionId` forward, so the very
+next request re-searches. `ITunesMapper.toSearchCandidate` has the id in hand when it does this.
 
-## Apple Music API
+Fields on a result we already fetch and never read: `collectionViewUrl`, `collectionPrice`,
+`copyright`, `contentAdvisoryRating`, `collectionExplicitness`, `amgArtistId`, and `artistViewUrl`.
+From a track lookup: `previewUrl` (Deezer supplies `TRACK_PREVIEW` instead), `discNumber`,
+`discCount`, `trackPrice`, `isStreamable`.
 
-Apple offers the Apple Music API (MusicKit) as a more capable alternative with editorial notes, ISRC codes, charts, and recommendations. Requires an Apple Developer account + JWT auth.
+Entities we never search: `song`, `musicVideo`, `podcast`, `audiobook`. `ITunesApi.searchAlbum`
+(singular) is dead code — no caller.
 
-## Internal Architecture
+## Gotchas
 
-```
-ITunesProvider
-├── ITunesApi       — album search + parsing
-└── ITunesModels    — DTO: ITunesAlbumResult (collectionId, collectionName, artistName, artworkUrl, releaseDate, primaryGenreName, country)
-```
+- `docs/pitfalls.md` §3 — `parseAlbumResult` is `optString`/`optLong`/`optInt` throughout, with
+  `takeIfNotEmpty()` turning a moved field into null rather than `""`. A renamed `artworkUrl100` reads
+  as an album with no art.
+- `docs/pitfalls.md` §2 — `searchCandidates` is the worked example: it swallows exceptions to return
+  `emptyList()`, so it calls `currentCoroutineContext().ensureActive()` first. That guard is load
+  bearing; the function does not suspend again.
+- `docs/pitfalls.md` §4 — no artist match, an empty tracklist and a missing `collectionId` are all
+  `NotFound`, so they record breaker *success*.
+- `docs/pitfalls.md` §5 — nothing declares an `identifierRequirement`, correctly: this is a name
+  search, and the `itunes*Id` extras are an optimisation rather than a precondition.
 
-Constructor params:
-- `httpClient: HttpClient`
-- `rateLimiter: RateLimiter` — **3000ms recommended** (iTunes is very rate-limit sensitive)
-- `artworkSize: Int = 1200` — pixel size for URL replacement
+Ours: the `100x100bb` substitution and the hardcoded `listOf(250, 500, 1000, 3000)` are the two
+places where a size the API stops serving becomes a broken URL we report as a `Success`.

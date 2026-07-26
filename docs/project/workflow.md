@@ -193,6 +193,6 @@ Use conventional commits scoped by area, for example `fix(provider): handle null
 | Breaking public API change | `CHANGELOG.md` under `### Breaking Changes` |
 | Why a decision was made, or an approach rejected | Inline at the mechanism; the PR for the rest |
 | Coverage, gap, or milestone shift | `ROADMAP.md` |
-| New provider | `docs/providers/<name>.md` and provider index |
+| New provider | `docs/providers/<name>.md` and the index beside it. `## What We Extract` is checked against the declared `capabilities`; the rest is not |
 | New public capability | Relevant `docs/guides/*.md` |
 | Release preparation or publication | [release.md](release.md) |

@@ -1,184 +1,114 @@
-# MusicBrainz Provider
+# MusicBrainz
 
-> The identity backbone of the enrichment engine. Resolves MBIDs, Wikidata IDs, and Wikipedia titles that downstream providers use for precise lookups.
-
-## API Overview
+What our code does with MusicBrainz. For the API itself — endpoints, request shapes, error codes,
+rate limits — follow the upstream link; that is authoritative and this is not.
 
 | | |
 |---|---|
-| **Base URL** | `https://musicbrainz.org/ws/2` |
-| **Auth** | None — but a descriptive `User-Agent` is **required** |
-| **Rate Limit** | 1 request/second average (sliding window; we use 1100ms). Returns HTTP 503 when exceeded. |
-| **Format** | JSON (`?fmt=json`). Also accepts `Accept: application/json` header. |
-| **Query Syntax** | Lucene (special chars must be escaped) |
-| **Reference Docs** | https://musicbrainz.org/doc/MusicBrainz_API |
-| **Search Docs** | https://musicbrainz.org/doc/MusicBrainz_API/Search |
-| **Rate Limit Docs** | https://musicbrainz.org/doc/MusicBrainz_API/Rate_Limiting |
-| **API Key Required** | No (OAuth2 available for write operations) |
+| **Package** | `provider/musicbrainz/` |
+| **Provider ids** | `musicbrainz` |
+| **Upstream API docs** | https://musicbrainz.org/doc/MusicBrainz_API |
+| **Auth** | None — but a descriptive User-Agent is required, and `DefaultHttpClient` supplies it |
+| **Deviations from the house pattern** | Three extra files: `MusicBrainzEnricher.kt`, `MusicBrainzParser.kt`, `MusicBrainzCreditParser.kt`. See below |
 
-## User-Agent Requirement
+**Why this provider.** It is the identity backbone: `isIdentityProvider = true`, so it runs first and
+its `resolvedIdentifiers` are what let the Cover Art Archive, Fanart.tv, Wikidata, Wikipedia and
+ListenBrainz be called at all. It is also the only provider whose `NotFound` can carry `suggestions`,
+which short-circuits the entire fan-out — see `enrich()` in `engine/DefaultEnrichmentEngine.kt`.
 
-MusicBrainz will block requests without a descriptive User-Agent. Format:
+`withDefaultProviders()` gives it `RateLimiter(1100)` — its own limiter, against upstream's 1 req/sec.
+Every other provider shares a 100ms one.
 
-```
-AppName/Version (contact-url-or-email)
-```
+## Deviation: three extra files
 
-Example: `MusicMetaShowcase/1.0 (https://github.com/famesjranko/musicmeta)`
+`CLAUDE.md` states the house four-file pattern. This package adds three files to it:
 
-This is set via `DefaultHttpClient(userAgent)` and applies to all providers, but MusicBrainz is the one that enforces it.
+| File | What it does | Why it is separate |
+|---|---|---|
+| `MusicBrainzEnricher.kt` | All per-entity enrichment logic, plus the artist lookup cache | `MusicBrainzProvider` would otherwise be ~440 lines. It routes by request subtype and hands off; the Enricher decides search-vs-lookup, ranks candidates and builds every result |
+| `MusicBrainzParser.kt` | Every JSON → DTO conversion for search and lookup responses | The other packages parse inline in `*Api`. Eleven capabilities across three entity types and two response shapes each is more than an API client should hold |
+| `MusicBrainzCreditParser.kt` | `CREDITS` and `RELEASE_EDITIONS` only: recording `artist-rels`/`work-rels`, and release-group `releases` | These two read **raw `JSONObject`**, not DTOs — `lookupRecording` and `lookupReleaseGroup` return the response unparsed, unlike every other call in the package. It also owns the relation-type → role mapping |
 
-## API Request Types
-
-MusicBrainz has three request types:
-
-1. **Search** — Lucene full-text queries. Returns scored results but no relationships or sub-entity details. Supports `limit` and `offset` for pagination.
-2. **Lookup** — Fetch a single entity by MBID with `inc` parameters to include related data. Always returns score 100.
-3. **Browse** — Retrieve all entities linked to another entity (e.g., all release-groups by an artist). Supports `inc` parameters, `limit`, and `offset`. Unlike search, results are unscored but complete.
-
-Browse is essential for features like artist discography and is more efficient than search for linked-entity traversal.
-
-## Endpoints We Use
-
-### Search: Release
-```
-GET /ws/2/release?query={lucene}&fmt=json&limit={n}&offset={n}
-```
-Lucene query: `release:"OK Computer" AND artist:"Radiohead"`
-
-Returns: `releases[]` — each with id, title, artist-credit, date, country, barcode, tags, label-info, release-group (id, primary-type), cover-art-archive.front, disambiguation, score.
-
-### Search: Artist
-```
-GET /ws/2/artist?query={lucene}&fmt=json&limit={n}&offset={n}
-```
-Lucene query: `artist:"Radiohead"`
-
-Returns: `artists[]` — each with id, name, type, country, life-span, tags, disambiguation, score. **No relations in search** — need lookup for those.
-
-Note: Our provider re-ranks artist candidates via `pickBestArtist()` — prioritizing exact name match with tags over raw score. This means the highest-scoring MusicBrainz result may not be selected.
-
-### Search: Recording
-```
-GET /ws/2/recording?query={lucene}&fmt=json&limit={n}&offset={n}
-```
-Lucene query: `recording:"Bohemian Rhapsody" AND artist:"Queen"`
-
-Returns: `recordings[]` — each with id, title, tags, score, length, first-release-date, artist-credit, releases[].
-
-Note: ISRCs are **not** returned in search results — only available via lookup with `inc=isrcs`.
-
-### Lookup: Release
-```
-GET /ws/2/release/{mbid}?fmt=json&inc=artist-credits+labels+release-groups+tags
-```
-Full release detail. Score is always 100 for direct lookups.
-
-### Lookup: Artist
-```
-GET /ws/2/artist/{mbid}?fmt=json&inc=tags+url-rels
-```
-Full artist detail with URL relations (wikidata, wikipedia, etc).
-
-### Lookup: Recording (not yet used)
-```
-GET /ws/2/recording/{mbid}?fmt=json&inc=artist-credits+isrcs+tags+releases
-```
-Full recording detail with ISRCs (not available in search), linked releases, and credits.
+`MusicBrainzEnricher` holds a `ConcurrentHashMap<String, MusicBrainzArtist>` guarded by a `Mutex`,
+because `BAND_MEMBERS`, `ARTIST_LINKS` and `GENRE` all need the same `artist/{mbid}?inc=…` response.
+It is **never evicted and unbounded** — one entry per artist MBID, for the lifetime of the provider
+instance. Recorded, not changed.
 
 ## What We Extract
 
-| Field | Source | Notes |
-|-------|--------|-------|
-| MBID | `id` | Primary identifier for all downstream providers |
-| Release Group ID | `release-group.id` | Used by Cover Art Archive as fallback |
-| Title | `title` | |
-| Artist Credit | `artist-credit[].artist.name + joinphrase` | Handles "feat." and "&" cases |
-| Date | `date` | Format varies: "2003", "2003-06", "2003-06-09" |
-| Country | `country` | ISO 3166-1 alpha-2 |
-| Barcode | `barcode` | UPC/EAN |
-| Tags/Genres | `tags[].name` (sorted by `count` desc) | Falls back to `release-group.tags` |
-| Label | `label-info[0].label.name` | First label only |
-| Release Type | `release-group.primary-type` | "Album", "Single", "EP", etc. |
-| Wikidata ID | `relations[type=wikidata].url.resource` → extract Q-ID | Lookup only (not in search) |
-| Wikipedia Title | `relations[type=wikipedia].url.resource` → extract title | Lookup only |
-| Has Front Cover | `cover-art-archive.front` | Boolean — avoids 404s on CAA |
-| Artist Type | `type` | "Person", "Group", "Orchestra", "Choir", etc. |
-| Life Span | `life-span.begin`, `life-span.end` | Band formation/dissolution or birth/death |
-| Disambiguation | `disambiguation` | Distinguishes same-name entities |
+One row per entry in `MusicBrainzProvider.capabilities`. The two lists are compared by
+`scripts/checks/check_provider_capabilities.py` on every `./check`.
 
-## What We DON'T Extract (Available Data)
+| EnrichmentType | Identifier | Upstream call | What we keep |
+|---|---|---|---|
+| `GENRE` | — | `release`/`artist`/`recording` search, or `…/{mbid}` lookup | `tags` plus their counts as `GenreTag` |
+| `LABEL` | — | the same | `label-info[0].label.name` |
+| `RELEASE_DATE` | — | the same | `date` |
+| `RELEASE_TYPE` | — | the same | `release-group.primary-type` |
+| `COUNTRY` | — | the same | `country` |
+| `ALBUM_TRACKS` | — | `release/{mbid}?inc=…media+recordings` | title, position, duration per track |
+| `BAND_MEMBERS` | — | `artist/{mbid}?inc=tags+url-rels+artist-rels` | member name, MBID, instruments, begin/end; a `Person` with no members maps to itself |
+| `ARTIST_DISCOGRAPHY` | — | `release-group?artist={mbid}` | release-group title, year, type, MBID |
+| `ARTIST_LINKS` | — | `artist/{mbid}?inc=…url-rels` | every URL relation, by type |
+| `CREDITS` | `MUSICBRAINZ_ID` | `recording/{mbid}?inc=artist-rels+work-rels` | credit name, role, role category |
+| `RELEASE_EDITIONS` | `MUSICBRAINZ_RELEASE_GROUP_ID` | `release-group/{mbid}?inc=releases` | per-release title, format, country, date, barcode |
 
-### From Current Responses (just ignored)
+**The first five rows are one result, not five.** `buildAlbumResult` and `buildArtistResult` ignore
+`type` entirely and return the whole `EnrichmentData.Metadata` — genres, label, date, type, country,
+barcode, disambiguation — so asking for `COUNTRY` returns the label too, and asking for all five
+costs five identical requests. Only `ALBUM_TRACKS`, the three `ARTIST_NEW_TYPES` and the two
+identifier-gated types take their own path.
 
-| Field | Where | Useful For |
-|-------|-------|------------|
-| `media[]` (tracklist) | Release lookup | ALBUM_TRACKS — track titles, positions, durations, ISRCs |
-| `media[].format` | Release lookup | Vinyl, CD, Digital, etc. |
-| `relations[]` (non-wiki) | Artist lookup | All URL relations: official site, bandcamp, spotify, youtube, twitter, etc. |
-| `status` | Release | "Official", "Promotion", "Bootleg" |
-| `packaging` | Release | "Jewel Case", "Digipak", etc. |
-| `text-representation.language` | Release | Album language |
-| `artist.gender` | Artist lookup | Male/Female/Non-binary/Other |
-| `artist.area` | Artist lookup | More specific than country |
-| `recording.length` | Recording search | Track duration in ms |
-| `recording.first-release-date` | Recording | When track first appeared |
-| `cover-art-archive.count` | Release | Total number of images available |
-| `cover-art-archive.back` | Release | Boolean — has back cover art |
+**Confidence tracks how we got there.** An MBID in the request means a direct lookup at
+`idBasedLookup()`, 1.0. A search means `searchScore(best.score)` — MusicBrainz's own 0–100 score
+divided by 100 — and anything under `minMatchScore` (80 by default) is rejected as `NotFound` rather
+than returned at low confidence.
 
-### From Endpoints Not Yet Called
+**`NotFound` here can carry `suggestions`**, up to 3, built from either the strict search results or
+a fuzzy retry. That is the disambiguation path, and per `CLAUDE.md` an identity `NotFound` with
+suggestions stops the whole provider fan-out.
 
-| Endpoint | Type | Data | Useful For |
-|----------|------|------|------------|
-| `GET /ws/2/release-group?artist={mbid}&type=album&limit=100&offset=0` | Browse | All release groups by artist | ARTIST_DISCOGRAPHY |
-| `GET /ws/2/recording/{mbid}?inc=artist-credits+isrcs+tags+releases` | Lookup | Full recording detail with ISRCs | Track metadata |
-| `GET /ws/2/artist/{mbid}?inc=artist-rels+tags+url-rels` | Lookup | Band member relationships | BAND_MEMBERS |
-| `GET /ws/2/release/{mbid}?inc=recordings+artist-credits+recording-level-rels` | Lookup | Tracklist with per-track credits | ALBUM_TRACKS, CREDITS |
-| `GET /ws/2/recording/{mbid}?inc=artist-rels+work-rels` | Lookup | Composer, lyricist, performer | CREDITS |
-| `GET /ws/2/work/{id}?inc=artist-rels` | Lookup | Songwriting credits | CREDITS |
-| `GET /ws/2/release-group/{mbid}?inc=releases+tags+genres` | Lookup | All releases in a group + genre data | RELEASE_EDITIONS |
+`pickBestArtist` does not take the top-scored candidate. It ranks exact-name-with-tags above
+exact-name above has-tags above everything else, then takes the first — so a lower-scored exact match
+beats a higher-scored near-miss.
 
-### `genres` vs `tags` inc parameter
+Beyond `capabilities`, this provider also implements `searchCandidates` (albums and artists;
+`ForTrack` returns an empty list) and `resolveIdentity`, which simply calls `enrich(request, GENRE)`
+for its identifiers.
 
-MusicBrainz has a newer `genres` inc parameter that returns curated genre data (as opposed to free-form user-submitted `tags`). Using `inc=genres` returns a `genres[]` array that is more reliable for genre classification. Consider using `inc=genres` alongside or instead of `inc=tags`.
+## What We DON'T Extract
 
-### Relationship Types Available
+`RELATION_DEPENDENT_TYPES` in `MusicBrainzEnricher` lists `ARTIST_PHOTO`, `ARTIST_BIO`,
+`ARTIST_BACKGROUND` and `ARTIST_LOGO` and triggers a full lookup for them — but **the provider
+declares none of those capabilities**, so the engine never routes them here and that branch of
+`enrichAlbum` is unreachable in practice. Recorded, not changed.
 
-When `inc=artist-rels` is added, the `relations[]` array contains:
-- `member of band` — who is/was in the group (with time periods)
-- `collaboration` — joint projects
-- `is person` — real name behind stage name
-- `supporting musician` — live/session musicians
-- `vocal`, `instrument`, `performer` — recording credits
+Parsed and dropped, or present in a response we already fetch:
 
-When `inc=url-rels` is added (already used):
-- `wikidata`, `wikipedia` — **currently extracted**
-- `official homepage`, `bandcamp`, `soundcloud`, `youtube`, `social network`, `streaming`, `discogs`, `allmusic`, `setlist.fm`, `songkick` — **not extracted**
+| Field | Would give |
+|---|---|
+| `isrcs` beyond the first | `toTrackMetadata` keeps `isrcs.firstOrNull()`; a recording often has several |
+| `release.packaging`, `status`, `quality` | Physical format and data-quality signals |
+| `media[].format` | CD vs vinyl vs digital, per disc |
+| `artist.aliases`, `sort-name` | Alternate names for matching, which `ArtistMatcher` would use |
+| `artist.life-span.ended` | Whether a band split, distinct from having an end date |
+| `label-info[]` beyond the first | Co-releases and reissues |
+| `annotation`, `rating` | Editorial notes and community ratings |
 
-## Gotchas & Edge Cases
+Endpoints and `inc=` values we never request: `works`, `series`, `events`, `places`, `instruments`,
+`genres` (the curated list, as opposed to the `tags` we do read), `collections`, and the whole
+`/ws/2/…?inc=aliases` surface. There is no cover-art call here — the Cover Art Archive provider
+handles that, keyed on the identifiers this one resolves.
 
-- **Rate limiting is strict**: 1 req/sec average (sliding window). Exceeding it returns HTTP 503. Our `RateLimiter(1100)` adds buffer. Authenticated requests (OAuth2) may receive preferential treatment.
-- **Lucene special chars**: Characters `+ - & | ! ( ) { } [ ] ^ " ~ * ? : \` must be escaped. `MusicBrainzApi.escapeLucene()` handles this (also escapes `/` which is harmless). Watch for artist names like "AC/DC", "Guns N' Roses", "!!!".
-- **Search vs Lookup**: Search results include metadata (tags, labels) but **not** URL relations. Lookups include relations but cost an extra request. The provider only does lookups when the requested type needs relations (ARTIST_PHOTO, ARTIST_BIO, etc.).
-- **Score interpretation**: Search scores are 0–100. We map directly to confidence (score/100). `minMatchScore` (default 80) filters poor matches.
-- **Artist ranking**: For artist search, `pickBestArtist()` re-ranks candidates by exact name match + tag presence before applying the score threshold. The highest-scoring result may not be selected.
-- **Artist credit join phrases**: "The Beatles" is simple, but "Eminem feat. Rihanna" has a joinphrase " feat. ". The parser concatenates `artist.name + joinphrase` for each credit.
-- **Tags on release-groups, not releases**: Genre tags are primarily on release-groups in MusicBrainz. The parser falls back: `release.tags` → `release-group.tags`. Note: the `inc=tags` on release lookup only returns release-level tags; release-group tags require `inc=release-group-level-rels` or a separate lookup.
-- **Empty results ≠ rate limited**: Empty search results with HTTP 200 mean "not found." Rate limiting returns HTTP 503. Our code currently treats empty results as `RateLimited` — this is a known bug that misclassifies legitimate "not found" cases.
-- **Date format varies**: Can be "2003", "2003-06", or "2003-06-09" — consumers should handle all three.
-- **Search pagination**: Search supports `offset` parameter alongside `limit` for paginating through large result sets. We currently only fetch the first page.
+## Gotchas
 
-## Internal Architecture
-
-```
-MusicBrainzProvider
-├── MusicBrainzApi          — HTTP calls + rate limiting + Lucene escaping
-├── MusicBrainzParser       — JSON → DTOs (extractors for tags, labels, relations, etc.)
-└── MusicBrainzModels       — DTOs: MusicBrainzRelease, MusicBrainzArtist, MusicBrainzRecording
-```
-
-Constructor params:
-- `httpClient: HttpClient` — shared HTTP client
-- `rateLimiter: RateLimiter` — should be 1100ms for MusicBrainz
-- `minMatchScore: Int = 80` — minimum search score to accept
-- `thumbnailSize: Int = 250` — CAA thumbnail size for search candidates
+- `docs/pitfalls.md` §5 — nine capabilities declare no `identifierRequirement`, which is right: this
+  is the provider that *produces* identifiers, so requiring one would deadlock identity resolution.
+  The two that do declare one genuinely cannot start from a name.
+- `docs/pitfalls.md` §3 — `MusicBrainzParser` is `optString`/`optJSONObject` throughout. A renamed
+  field yields an empty tag list or a null label and reads as a sparse release.
+- `docs/pitfalls.md` §4 — a below-threshold score, an empty tracklist and a missing release group are
+  all `NotFound`, so they record breaker *success*. That matters more here than anywhere: this
+  provider runs first on every request.
+- `docs/pitfalls.md` §2 — the single `catch` is in `MusicBrainzProvider.enrich`, wrapping all three
+  `Enricher` entry points, and routes to `mapError`.

@@ -1,175 +1,78 @@
-# ListenBrainz Provider
+# ListenBrainz
 
-> Open-source listen tracking platform (MetaBrainz project). Provides popularity, top tracks, discography, similar artists, and radio discovery based on real user listening habits. Most endpoints require no API key; LB Radio requires a free user token.
-
-## API Overview
+What our code does with ListenBrainz. For the API itself — endpoints, request shapes, error codes,
+rate limits — follow the upstream link; that is authoritative and this is not.
 
 | | |
 |---|---|
-| **Base URL** | `https://api.listenbrainz.org/1` |
-| **Auth** | None for read endpoints; `Authorization: Token {token}` for LB Radio |
-| **Rate Limit** | Not strictly documented; we use 100ms |
-| **Format** | JSON (top-level array for popularity endpoints) |
-| **Reference Docs** | https://listenbrainz.readthedocs.io/en/latest/users/api/index.html |
-| **API Key Required** | No for most endpoints; yes for `ARTIST_RADIO_DISCOVERY` (free ListenBrainz account) |
+| **Package** | `provider/listenbrainz/` |
+| **Provider ids** | `listenbrainz` |
+| **Upstream API docs** | https://listenbrainz.readthedocs.io/en/latest/users/api/ |
+| **Auth** | Optional token — `LISTENBRAINZ_TOKEN`, see [README](../../README.md). Unlocks `ARTIST_RADIO_DISCOVERY` only |
+| **Deviations from the house pattern** | None — the four files, as `CLAUDE.md` describes them |
 
-## Endpoints We Use
-
-### Top Recordings for Artist
-```
-GET /1/popularity/top-recordings-for-artist/{artistMbid}
-```
-
-Returns a **JSON array** (not object — note: `fetchJsonArray()` not `fetchJson()`):
-
-```json
-[
-  {
-    "artist_mbids": ["a74b1b7f-..."],
-    "artist_name": "Radiohead",
-    "recording_mbid": "b3015bab-...",
-    "recording_name": "Creep",
-    "total_listen_count": 234567,
-    "total_user_count": 45678,
-    "release_name": "Pablo Honey",
-    "release_mbid": "abc123-...",
-    "release_color": {"red": 120, "green": 80, "blue": 60},
-    "caa_id": 12345678,
-    "caa_release_mbid": "abc123-...",
-    "length": 238000
-  }
-]
-```
-
-### LB Radio
-```
-GET /1/explore/lb-radio?prompt=artist:({mbid_or_name})&mode={easy|medium|hard}
-Authorization: Token {listenBrainzToken}
-```
-
-`prompt` accepts either an artist MBID (`artist:(a74b1b7f-71a5-4011-9441-d0b5e4122711)`) or an artist name (`artist:(Radiohead)`) when no MBID is available. The `mode` parameter controls discovery depth: `easy` stays close to the seed artist, `hard` ventures further.
-
-Response (JSPF playlist format):
-```json
-{
-  "payload": {
-    "jspf": {
-      "playlist": {
-        "track": [
-          {
-            "title": "Everything In Its Right Place",
-            "creator": "Radiohead",
-            "album": "Kid A",
-            "duration": 248000,
-            "identifier": ["https://musicbrainz.org/recording/{recording_mbid}"],
-            "extension": {
-              "https://musicbrainz.org/doc/jspf#playlist": {
-                "artist_identifiers": ["https://musicbrainz.org/artist/{artist_mbid}"],
-                "release_identifier": "https://musicbrainz.org/release/{release_mbid}"
-              }
-            }
-          }
-        ]
-      }
-    }
-  }
-}
-```
-
-JSPF `duration` is already in milliseconds. MBIDs are embedded in full MusicBrainz URLs — extracted via `substringAfterLast("/")`.
+**Why this provider.** Open listen counts keyed on MBIDs rather than a name search, which makes it
+the only popularity source that cannot mismatch the artist, and the only source in the tree for
+`ARTIST_RADIO_DISCOVERY`. Every result scores `authoritative()`, 0.95.
 
 ## What We Extract
 
-**From top recordings (`/1/popularity/top-recordings-for-artist`):**
+One row per entry in `ListenBrainzProvider.capabilities`. The two lists are compared by
+`scripts/checks/check_provider_capabilities.py` on every `./check`.
 
-| Field | Source | Notes |
-|-------|--------|-------|
-| Track title | `recording_name` | |
-| Recording MBID | `recording_mbid` | Cross-reference with MusicBrainz |
-| Listen count | `total_listen_count` | Cumulative across all users |
-| Rank | Array index + 1 | Implicit ordering by listen count |
+| EnrichmentType | Identifier | Upstream call | What we keep |
+|---|---|---|---|
+| `ARTIST_POPULARITY` | `MUSICBRAINZ_ID` | `POST /1/popularity/artist`, then `GET /1/popularity/top-recordings-for-artist/{mbid}` | `total_listen_count`, `total_user_count`; on the fallback, a ranked `topTracks` list instead |
+| `TRACK_POPULARITY` | `MUSICBRAINZ_ID` | `POST /1/popularity/recording` | `total_listen_count`, `total_user_count` |
+| `ARTIST_TOP_TRACKS` | `MUSICBRAINZ_ID` | `GET /1/popularity/top-recordings-for-artist/{mbid}` | title, artist, album, duration, listen and listener counts, recording MBID, rank by position |
+| `ARTIST_DISCOGRAPHY` | `MUSICBRAINZ_ID` | `GET /1/popularity/top-release-groups-for-artist/{mbid}` | release-group name and MBID |
+| `SIMILAR_ARTISTS` | `MUSICBRAINZ_ID` | `GET /1/explore/lb-radio/artist/{mbid}/similar` | up to 20: `artist_name`, `artist_mbid`, `score` |
+| `ARTIST_RADIO_DISCOVERY` | none | `GET /1/explore/lb-radio?prompt=artist:(…)&mode=` | JSPF playlist: title, creator, album, duration, recording / artist / release MBIDs |
 
-**From LB Radio (`/1/explore/lb-radio`):**
+**`ARTIST_RADIO_DISCOVERY` is registered conditionally.** `capabilities` is a `buildList` that adds
+it only when `authToken != null`, so without a token the engine never routes the type here — the one
+per-capability auth gate in the tree. Everything else works unauthenticated.
 
-| Field | Source | Notes |
-|-------|--------|-------|
-| Track title | `track.title` | |
-| Artist name | `track.creator` | |
-| Album title | `track.album` | Nullable |
-| Duration | `track.duration` | Already in milliseconds |
-| Recording MBID | `track.identifier[0]` | Extracted from MusicBrainz URL |
-| Artist MBID | `extension…artist_identifiers[0]` | Extracted from MusicBrainz URL |
-| Release MBID | `extension…release_identifier` | Extracted from MusicBrainz URL |
+Priorities split two ways: `ARTIST_POPULARITY`, `ARTIST_TOP_TRACKS` and `ARTIST_RADIO_DISCOVERY` are
+100; `TRACK_POPULARITY`, `ARTIST_DISCOGRAPHY` and `SIMILAR_ARTISTS` are 50, behind Last.fm and
+MusicBrainz respectively.
 
-## What We DON'T Extract (Available Data)
+Two shapes worth knowing:
 
-### From Current Response (ignored)
+- **`ARTIST_POPULARITY` returns two different payloads.** The batch endpoint gives scalar listen and
+  listener counts. When it comes back empty, the fallback returns `Popularity` carrying only a ranked
+  `topTracks` list and no counts at all — the same `EnrichmentType`, a structurally different result.
+- **`ARTIST_RADIO_DISCOVERY` takes the MBID when present and the artist *name* otherwise**, wrapping
+  either in the prompt `artist:(…)`. It is the only capability here that will run on a name, which is
+  why it declares `IdentifierRequirement.NONE`. It also requires a `ForArtist` request, and
+  `config.radioDiscoveryMode` (`easy` / `medium` / `hard`, default `easy`) chooses the mode.
 
-| Field | Where | Useful For |
-|-------|-------|------------|
-| `total_user_count` | Each recording | Listener count (distinct users vs total plays) |
-| `release_name` | Each recording | Album/release name (top-level string, not nested) |
-| `release` | Each recording | Object with `mbid`, `name`, `color` — links to release |
-| `caa_id` | Each recording | Cover Art Archive image ID |
-| `caa_release_mbid` | Each recording | Release MBID for Cover Art Archive lookup |
-| `length` | Each recording | Track duration in milliseconds |
-| `artist_mbids[]` | Each recording | Multiple artist MBIDs (for collaborations) |
+## What We DON'T Extract
 
-### Endpoints Not Yet Called
+The `top-recordings-for-artist` and `top-release-groups-for-artist` responses are already fetched:
 
-#### Popularity Endpoints
+| Field | Would give |
+|---|---|
+| `artist_name` on a release group | Parsed into `ListenBrainzTopReleaseGroup.artistName` and dropped by the mapper |
+| `listen_count` on a release group | Ranking for `ARTIST_DISCOGRAPHY`, which currently returns albums in response order with no counts |
+| `caa_id` / `caa_release_mbid` | Cover art for a discography entry without a second provider |
+| `release_name`, `release_mbid` on a top recording | Which album a top track came from, beyond the plain `albumName` |
 
-| Endpoint | Data | Useful For |
-|----------|------|------------|
-| `GET /1/popularity/top-release-groups-for-artist/{mbid}` | Top albums by listen count | HIGH VALUE — album popularity ranking |
-| `POST /1/popularity/recording` | Batch lookup: send `{"recording_mbids": [...]}`, get listen count + user count per recording | TRACK_POPULARITY (batch) |
-| `POST /1/popularity/artist` | Batch lookup: send `{"artist_mbids": [...]}`, get listen count + user count per artist | ARTIST_POPULARITY (batch) |
-| `POST /1/popularity/release` | Batch lookup for releases | RELEASE_POPULARITY (batch) |
-| `POST /1/popularity/release-group` | Batch lookup for release groups | RELEASE_GROUP_POPULARITY (batch) |
+Endpoints we never call: `/1/stats/**` (sitewide and per-user charts), `/1/user/**` (listens, playing
+now, follows), `/1/metadata/**` (recording, release and artist metadata lookup), `/1/similar-users`,
+and every submit endpoint. The `count` parameter on `getSimilarArtists` defaults to 20 and no caller
+passes anything else.
 
-#### Statistics Endpoints
+## Gotchas
 
-| Endpoint | Data | Useful For |
-|----------|------|------------|
-| `GET /1/stats/artist/{mbid}/listeners` | Top listeners for specific artist | ARTIST_POPULARITY |
-| `GET /1/stats/release-group/{mbid}/listeners` | Top listeners for specific release group | RELEASE_GROUP_POPULARITY |
-| `GET /1/stats/sitewide/artists` | Global top artists (params: `count`, `offset`, `range`) | Rankings |
-| `GET /1/stats/sitewide/recordings` | Global top recordings | Rankings |
-| `GET /1/stats/sitewide/releases` | Global top releases | Rankings |
-| `GET /1/stats/sitewide/release-groups` | Global top release groups | Rankings |
+- `docs/pitfalls.md` §3 — this package is the pitfall's worked example: 0.9.0 read `track_name` where
+  ListenBrainz sends `recording_name`, so every `TopTrack` title shipped as `""` until 0.9.1. The
+  parsers still use `optString`/`optLong` throughout, so the same class of break stays silent.
+- `docs/pitfalls.md` §5 — five of six declare `MUSICBRAINZ_ID`; the sixth declares `NONE` because it
+  genuinely runs on a name. That split is deliberate, not an oversight.
+- `docs/pitfalls.md` §4 — a blank MBID, an empty batch response and an empty playlist are all
+  `NotFound`, so they record breaker *success*.
 
-Range parameter values: `this_week`, `this_month`, `this_year`, `week`, `month`, `quarter`, `year`, `half_yearly`, `all_time`.
-
-#### Recommendation Endpoints (future potential)
-
-| Endpoint | Data | Useful For |
-|----------|------|------------|
-| `GET /1/cf/recommendation/user/{user}/recording` | Collaborative filtering recommendations | Similar tracks |
-| `GET /1/explore/similar-artists/{mbid}` | Similar artists by listening patterns | SIMILAR_ARTISTS (alternative to Last.fm) |
-| `GET /1/explore/fresh-releases` | Recent notable releases | Discovery |
-
-## Gotchas & Edge Cases
-
-- **Requires artist MBID**: Top recordings endpoint requires MBID — no text search. Depends entirely on MusicBrainz identity resolution.
-- **LB Radio requires auth**: `ARTIST_RADIO_DISCOVERY` is silently absent when `ApiKeyConfig.listenBrainzToken` is not set. Other ListenBrainz endpoints (top recordings, similar artists, discography) continue working without any token. The token is free — create a ListenBrainz account at https://listenbrainz.org.
-- **JSON array response**: Unlike most APIs, the popularity endpoint returns a bare JSON array, not `{ "data": [...] }`. Our code uses `httpClient.fetchJsonArray()` for this.
-- **Smaller user base than Last.fm**: ListenBrainz has fewer users, so listen counts are lower. But it's growing and is fully open-source.
-- **Data freshness**: Stats are updated periodically, not real-time. May not reflect very recent releases.
-- **No rate limit headers**: ListenBrainz doesn't document strict rate limits for read endpoints, but be respectful. 100ms between requests is safe.
-- **Empty array = no data**: Returns `[]` for unknown artists, not 404. We treat empty as `NotFound`.
-- **Open source**: ListenBrainz is part of the MetaBrainz ecosystem (same org as MusicBrainz). Data is CC0 licensed.
-- **Recording MBIDs**: The recording_mbid values can be used to look up full track details in MusicBrainz.
-- **Batch POST endpoints**: The popularity POST endpoints accept arrays of MBIDs and return results in the same order. Up to MAX_ITEMS_PER_GET items per request. Null values in the response indicate the entity was not found.
-
-## Internal Architecture
-
-```
-ListenBrainzProvider
-├── ListenBrainzApi       — top recordings + LB Radio (auth-gated) + parsing
-└── ListenBrainzModels    — DTOs: ListenBrainzPopularTrack, ListenBrainzRadioTrack
-```
-
-Constructor params:
-- `httpClient: HttpClient`
-- `rateLimiter: RateLimiter` — 100ms is fine
-- `authToken: String?` — optional; enables `ARTIST_RADIO_DISCOVERY` when present
+Ours: `getRadio` returns `emptyList()` when `authToken` is null rather than failing, so a provider
+constructed without a token but registered by hand — bypassing the `buildList` gate — reports
+`NotFound` for radio rather than an auth error.

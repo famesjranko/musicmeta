@@ -1,129 +1,93 @@
-# Last.fm Provider
+# Last.fm
 
-> Community-driven music data. Primary source for similar artists and genre tags. Good artist popularity stats from decades of scrobble data.
-
-## API Overview
+What our code does with Last.fm. For the API itself — endpoints, request shapes, error codes, rate
+limits — follow the upstream link; that is authoritative and this is not.
 
 | | |
 |---|---|
-| **Base URL** | `https://ws.audioscrobbler.com/2.0/` |
-| **Auth** | API key (query param `api_key`) |
-| **Rate Limit** | 5 requests/second (we use 200ms) |
-| **Format** | JSON (`&format=json`) |
-| **Reference Docs** | https://www.last.fm/api |
-| **Get API Key** | https://www.last.fm/api/account/create |
-| **API Key Required** | Yes |
+| **Package** | `provider/lastfm/` |
+| **Provider ids** | `lastfm` |
+| **Upstream API docs** | https://www.last.fm/api |
+| **Auth** | API key required — `lastfm.apikey` / `LASTFM_API_KEY`, see [README](../../README.md) |
+| **Deviations from the house pattern** | None — the four files, as `CLAUDE.md` describes them |
 
-> **Note:** HTTPS is supported and recommended. API keys are sent as query parameters, so using HTTP exposes them in cleartext. Our code currently hardcodes `http://` — this should be updated.
-
-## Getting an API Key
-
-1. Create a Last.fm account at https://www.last.fm/join
-2. Create an API application at https://www.last.fm/api/account/create
-3. You get an **API Key** (public) and a **Shared Secret** (only needed for authenticated methods — we don't use those)
-4. Pass the API key as `lastfm.apikey` system property or `LASTFM_API_KEY` env var
-
-## Endpoints We Use
-
-### artist.getinfo
-```
-GET /?method=artist.getinfo&artist={name}&api_key={key}&format=json
-```
-
-Response:
-```json
-{
-  "artist": {
-    "name": "Radiohead",
-    "bio": { "summary": "...", "content": "..." },
-    "tags": { "tag": [{ "name": "alternative", "url": "..." }] },
-    "stats": { "listeners": "5123456", "playcount": "312000000" },
-    "similar": { "artist": [...] },
-    "image": [{ "#text": "url", "size": "small|medium|large|extralarge|mega" }]
-  }
-}
-```
-
-We extract: name, bio.summary, tags, stats.listeners, stats.playcount.
-
-### artist.getsimilar
-```
-GET /?method=artist.getsimilar&artist={name}&api_key={key}&format=json&limit=20
-```
-
-Response:
-```json
-{
-  "similarartists": {
-    "artist": [
-      { "name": "Thom Yorke", "match": "0.87", "mbid": "..." }
-    ]
-  }
-}
-```
-
-We extract: name, match (float 0-1), mbid.
+**Why this provider.** It is the only source in the tree for artist tags-as-genre and artist-level
+similarity, and it holds the widest capability set of any single provider here: eight types across
+all three request kinds. Everything it returns is community-scrobbled, so it is popular-artist rich
+and long-tail poor.
 
 ## What We Extract
 
-| Field | Source | Used For |
-|-------|--------|----------|
-| Bio summary | `artist.bio.summary` | ARTIST_BIO (priority 50, fallback to Wikipedia) |
-| Genre tags | `artist.tags.tag[].name` | GENRE (priority 100) |
-| Similar artists | `similarartists.artist[]` | SIMILAR_ARTISTS |
-| Listener count | `artist.stats.listeners` | ARTIST_POPULARITY |
-| Play count | `artist.stats.playcount` | ARTIST_POPULARITY |
+One row per entry in `LastFmProvider.capabilities`. The two lists are compared by
+`scripts/checks/check_provider_capabilities.py` on every `./check`, so a row added or removed here
+without the matching code change fails the build.
 
-## What We DON'T Extract (Available Data)
+| EnrichmentType | Request | Upstream call | What we keep |
+|---|---|---|---|
+| `SIMILAR_ARTISTS` | `ForArtist` | `artist.getsimilar`, `limit=20` | `name`, `match` → `matchScore`, `mbid` |
+| `GENRE` | `ForArtist` | `artist.getinfo` | `tags.tag[].name`, in response order, blanks dropped |
+| `ARTIST_BIO` | `ForArtist` | `artist.getinfo` | `bio.summary` only, verbatim |
+| `ARTIST_POPULARITY` | `ForArtist` | `artist.getinfo` | `stats.listeners`, `stats.playcount` |
+| `ARTIST_TOP_TRACKS` | `ForArtist` | `artist.gettoptracks`, `limit=1000` | `name`, `artist.name`, `playcount`, `listeners`, `mbid`; `rank` from array position |
+| `SIMILAR_TRACKS` | `ForTrack` | `track.getsimilar`, `limit=20` | `name`, `artist.name`, `match`, `mbid` |
+| `TRACK_POPULARITY` | `ForTrack` | `track.getInfo` | `playcount`, `listeners` |
+| `ALBUM_METADATA` | `ForAlbum` | `album.getinfo` | `tags.tag[].name`, and `tracks.track[]` length as `trackCount` |
 
-### From Current Responses
+Priorities are in the code, not restated here — they move, and `ProviderRegistry` is what reads them.
+The two that are not the default `100`: `ARTIST_BIO` is `50` (Wikipedia outranks it at 100) and
+`ALBUM_METADATA` is `40` (Deezer outranks it at 50; Discogs ties at 40).
 
-| Field | Where | Useful For |
-|-------|-------|------------|
-| `artist.bio.content` | artist.getinfo | Full bio text (not just summary) |
-| `artist.image[]` | artist.getinfo | Artist images at multiple sizes. **Warning:** Last.fm stopped serving most artist images ~2020. The `image` array still appears in responses but URLs are typically empty or broken. |
-| `artist.similar.artist[]` | artist.getinfo | Similar artists (redundant with getsimilar, but saves a call) |
-| `artist.url` | artist.getinfo | Last.fm profile URL |
+Three things hold for every row:
 
-### From Endpoints Not Yet Called
+- **No `identifierRequirement`.** Every capability is name-searched, so the engine will call this
+  provider with nothing but a name — see `docs/pitfalls.md` §5 for when that is the wrong default.
+- **Confidence is a constant `0.8`.** `ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true)` is
+  passed literally at every success site; nothing here measures whether the returned artist is the
+  one asked for. It clears `filterByConfidence()`'s `0.5` floor unconditionally.
+- **A tag becomes a `GenreTag` at confidence `0.3`,** fixed, for both `GENRE` and `ALBUM_METADATA`.
 
-| Endpoint | Data | Useful For |
-|----------|------|------------|
-| `artist.gettoptracks` | Top tracks by playcount | TRACK_POPULARITY, ARTIST_POPULARITY |
-| `artist.gettopalbums` | Top albums by playcount | Album rankings |
-| `album.getinfo` | Album bio, playcount, listeners, tags, wiki, images | Album metadata & popularity |
-| `track.getinfo` | Track playcount, listeners, tags, wiki | TRACK_POPULARITY |
-| `track.getsimilar` | Similar tracks with match scores | SIMILAR_TRACKS |
-| `tag.gettopartists` | Top artists for a genre tag | Genre exploration |
-| `tag.gettopalbums` | Top albums for a genre tag | Genre exploration |
-| `chart.getTopArtists` | Sitewide top artists chart | Trending/popular artists |
-| `chart.getTopTracks` | Sitewide top tracks chart | Trending/popular tracks |
+`ALBUM_METADATA` has one extra exit: `enrichAlbumMetadata` returns `NotFound` when both `genres` and
+`trackCount` come back empty, so an album that exists upstream but carries neither reads as a miss.
 
-## Gotchas & Edge Cases
+## What We DON'T Extract
 
-- **Bio contains HTML**: `bio.summary` often includes `<a href="...">` links. Consumers should strip HTML or render it.
-- **Bio may include a "Read more" link**: The summary often ends with `<a href="https://www.last.fm/music/...">Read more on Last.fm</a>`. You may want to strip this.
-- **Artist-only provider**: Currently only handles `ForArtist` requests. Album and track requests return `NotFound`. This is the biggest gap — Last.fm has rich album/track data.
-- **`match` score for similar artists**: Float 0.0–1.0 where 1.0 = most similar. We pass this through as `matchScore`.
-- **Tags are user-contributed**: Quality varies. "rock" and "alternative" are reliable; long-tail tags like "albums I listened to in 2019" appear but sort low. We sort by vote count.
-- **Empty API key = provider disabled**: `isAvailable` checks if the key is non-blank. Gracefully degrades.
-- **Rate limit**: 5 req/s is generous but shared across all Last.fm calls in a session. Our 200ms limiter stays within bounds.
-- **HTTP not HTTPS**: The API base URL uses `http://` — it works with HTTPS too but the official docs reference HTTP. HTTPS is strongly recommended since API keys travel as query params.
-- **Stats are cumulative**: Listener/playcount numbers represent all-time Last.fm scrobbles. Active scrobblers skew toward certain demographics.
-- **`mbid` parameter**: Most methods accept an `mbid` parameter for MusicBrainz ID-based lookups instead of name matching. When available, prefer `mbid` over `artist`/`album`/`track` name params for precise results.
-- **`autocorrect` parameter**: Most methods accept `autocorrect=1` to enable fuzzy name matching (e.g., "Radiohd" corrects to "Radiohead"). Default is 0 (off).
-- **Error response format**: Errors return `{"error": <code>, "message": "..."}`. Key error codes: 6 = not found, 10 = invalid API key, 29 = rate limit exceeded.
-- **TRACK_POPULARITY mismatch**: The provider declares TRACK_POPULARITY capability but `enrichPopularity()` calls `artist.getinfo` which returns artist-level stats, not track-level data. This should use `track.getinfo` instead.
+Parsed into a DTO and then dropped by the mapper — the cheapest to add, since the request already
+happens and the field is already read:
 
-## Internal Architecture
+| Field | Call | DTO field |
+|---|---|---|
+| Album `playcount`, `listeners` | `album.getinfo` | `LastFmAlbumInfo.playcount`, `.listeners` |
+| Album `wiki.summary` | `album.getinfo` | `LastFmAlbumInfo.wiki` |
+| Album `name`, `artist` | `album.getinfo` | `LastFmAlbumInfo.name`, `.artist` |
+| Track `mbid` | `track.getInfo` | `LastFmTrackInfo.mbid` |
 
-```
-LastFmProvider
-├── LastFmApi       — HTTP calls + parsing (inline, no separate parser)
-└── LastFmModels    — DTOs: LastFmArtistInfo, LastFmSimilarArtist
-```
+In responses we already fetch but never read:
 
-Constructor params:
-- `apiKey: String` (or `apiKeyProvider: () -> String` for lazy loading)
-- `httpClient: HttpClient`
-- `rateLimiter: RateLimiter` — 200ms recommended
+| Field | Call | Useful for |
+|---|---|---|
+| `artist.bio.content` | `artist.getinfo` | Full bio; we take `summary` only |
+| `artist.similar.artist[]` | `artist.getinfo` | Similar artists without the second `artist.getsimilar` call |
+| `artist.url` | `artist.getinfo` | Last.fm profile link, for `ARTIST_LINKS` |
+| `artist.image[]` | `artist.getinfo` | Artist photos. Widely reported as empty or dead since ~2020 — upstream behaviour, not verified here |
+| `tag.count` / `tag.url` | `artist.getinfo` | Tag vote weight, which would let us rank tags rather than trust response order |
+
+Endpoints we never call: `artist.gettopalbums`, `album.getTopTags`, `track.getTopTags`,
+`tag.getTopArtists`, `tag.getTopAlbums`, `chart.getTopArtists`, `chart.getTopTracks`, and everything
+under `geo.` and `user.`. Authenticated methods need the shared secret, which we never read.
+
+## Gotchas
+
+Nothing here is Last.fm-specific enough to restate — the general traps that bite this package are:
+
+- `docs/pitfalls.md` §3 — `LastFmApi` reads every field through `optString`/`optJSONObject`, so a
+  renamed upstream field yields `""` or an empty list rather than a failure. `parseArtistInfo`
+  returning a `LastFmArtistInfo` with `name = ""` is indistinguishable from a real one.
+- `docs/pitfalls.md` §2 — the four `catch (e: Exception)` sites in `LastFmProvider.enrich` all route
+  to `mapError`, which deliberately does not special-case cancellation; `ProviderChain` settles it.
+- `docs/pitfalls.md` §4 — a blank API key, a wrong request subtype, and an empty result list all
+  return `NotFound`, not `Error`, and so record breaker *success*.
+
+One thing that is ours: `isAvailable` is `apiKeyProvider().isNotBlank()`, re-read on every access, so
+a key supplied late is picked up without rebuilding the engine. `withDefaultProviders()` never
+constructs the provider at all when no key is configured, so the blank-key path only occurs when a
+consumer registers it by hand.

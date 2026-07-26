@@ -1,157 +1,78 @@
-# Wikipedia Provider
+# Wikipedia
 
-> Free encyclopedia. Primary source for artist biographies. High quality for notable artists. Requires a Wikipedia title or Wikidata ID (resolved from MusicBrainz).
-
-## API Overview
+What our code does with Wikipedia. For the API itself — endpoints, request shapes, error codes, rate
+limits — follow the upstream link; that is authoritative and this is not.
 
 | | |
 |---|---|
-| **Base URL** | `https://en.wikipedia.org/api/rest_v1` |
+| **Package** | `provider/wikipedia/` |
+| **Provider ids** | `wikipedia` |
+| **Upstream API docs** | https://en.wikipedia.org/api/rest_v1/ |
 | **Auth** | None |
-| **Rate Limit** | Wikimedia requires a descriptive User-Agent and will throttle or block clients without one. Stay well under 200 req/s. Our 100ms rate limiter is safe. |
-| **Format** | JSON |
-| **Reference Docs** | https://en.wikipedia.org/api/rest_v1/ |
-| **Wikimedia REST API Docs** | https://www.mediawiki.org/wiki/Wikimedia_REST_API |
-| **API Key Required** | No |
+| **Deviations from the house pattern** | None — the four files, as `CLAUDE.md` describes them |
 
-## User-Agent Requirement
-
-Like MusicBrainz, Wikimedia APIs expect a descriptive User-Agent. Not strictly enforced for light usage, but required per their terms. Our `DefaultHttpClient` sets this globally.
-
-## Endpoints We Use
-
-### Page Summary
-```
-GET /page/summary/{title}
-```
-
-Returns a concise summary of the Wikipedia article:
-
-```json
-{
-  "type": "standard",
-  "title": "Radiohead",
-  "displaytitle": "Radiohead",
-  "namespace": { "id": 0, "text": "" },
-  "wikibase_item": "Q44191",
-  "description": "English rock band",
-  "extract": "Radiohead are an English rock band formed in Abingdon, Oxfordshire, in 1985. The band consists of Thom Yorke (vocals, guitar, piano), brothers Jonny Greenwood (lead guitar, keyboards) and Colin Greenwood (bass)...",
-  "thumbnail": {
-    "source": "https://upload.wikimedia.org/...",
-    "width": 320,
-    "height": 213
-  },
-  "originalimage": {
-    "source": "https://upload.wikimedia.org/...",
-    "width": 3888,
-    "height": 2592
-  },
-  "content_urls": {
-    "desktop": { "page": "https://en.wikipedia.org/wiki/Radiohead" },
-    "mobile": { "page": "https://en.m.wikipedia.org/wiki/Radiohead" }
-  }
-}
-```
-
-### Wikidata Sitelink Resolution (internal)
-
-When only a Wikidata ID is available (no direct Wikipedia title from MusicBrainz), the provider resolves it:
-
-```
-GET https://www.wikidata.org/w/api.php?action=wbgetentities&ids={wikidataId}&props=sitelinks&sitefilter=enwiki&format=json
-```
-
-Returns:
-```json
-{
-  "entities": {
-    "Q44191": {
-      "sitelinks": {
-        "enwiki": { "site": "enwiki", "title": "Radiohead" }
-      }
-    }
-  }
-}
-```
-
-## Title Resolution Strategy
-
-1. Use `request.identifiers.wikipediaTitle` if available (from MusicBrainz URL relations)
-2. If not, resolve from `request.identifiers.wikidataId` via sitelinks
-3. If neither is available, return `NotFound`
+**Why this provider.** It outranks Last.fm for `ARTIST_BIO` (100 against 50) because the extract is
+editorial prose rather than a scrobbler's summary, and it is the highest-confidence bio in the tree
+at `authoritative()`, 0.95. English only.
 
 ## What We Extract
 
-| Field | Source | Notes |
-|-------|--------|-------|
-| Bio text | `extract` | Lead section summary (first paragraph or first few sentences). Length varies significantly by article. |
-| Source label | Hardcoded "Wikipedia" | For attribution |
-| Thumbnail URL | `thumbnail.source` | Small image from the article |
+One row per entry in `WikipediaProvider.capabilities`. The two lists are compared by
+`scripts/checks/check_provider_capabilities.py` on every `./check`.
 
-## What We DON'T Extract (Available Data)
+| EnrichmentType | Identifier | Upstream call | What we keep |
+|---|---|---|---|
+| `ARTIST_BIO` | `WIKIPEDIA_TITLE` | `/page/summary/{title}` | `extract` as the text, `thumbnail.source`, source label `"Wikipedia"` |
+| `ARTIST_PHOTO` | `WIKIPEDIA_TITLE` | `/page/media-list/{title}` | first surviving image's `original.source`, `width`, `height` |
 
-### From Current Response (ignored)
+`WIKIPEDIA_TITLE` is satisfied by *either* `wikipediaTitle` or `wikidataId` — see
+`ProviderChain.hasRequiredIdentifiers()`. With only a `wikidataId`, `resolveFromWikidata` first calls
+`wbgetentities&props=sitelinks&sitefilter=enwiki` **on the Wikidata API, from this provider**, on its
+own `wikidataRateLimiter`, before any Wikipedia call happens. That is a second host reached from
+`provider/wikipedia/`, and it duplicates a call `provider/wikidata/` already makes.
 
-| Field | Where | Useful For |
-|-------|-------|------------|
-| `description` | Page summary | Short one-line description ("English rock band") |
-| `originalimage` | Page summary | Full-resolution article image (better than thumbnail) |
-| `wikibase_item` | Page summary | Wikidata Q-ID (cross-reference) |
-| `content_urls` | Page summary | Links to desktop/mobile Wikipedia pages |
-| `extract_html` | Page summary | Same content as `extract` but with HTML formatting preserved |
-| `type` | Page summary | Can be `standard`, `disambiguation`, `no-extract`, or `mainpage`. Checking this can detect disambiguation pages programmatically. |
-| `revision` | Page summary | Revision ID, useful for cache invalidation |
-| `tid` | Page summary | Time-based UUID, useful for cache invalidation |
+`ARTIST_PHOTO` is priority 30 — the lowest photo source we have, below Fanart.tv, Deezer and
+Wikidata — and scores `fuzzyMatch(hasArtistMatch = false)`, 0.6, because nothing verifies that the
+first image on an article depicts the artist. `parseMediaList` is what stands in for that check: it
+keeps `type == "image"` only, drops `.svg`, drops any title containing `icon` or `logo`, drops
+anything under 100px wide, and `enrichArtistPhoto` then takes `firstOrNull()` — first in article
+order, not best.
 
-### Endpoints Not Yet Called
+`getPageSummary` returns null when `extract` is blank, so a stub article reads as `NotFound`.
 
-| Endpoint | Data | Useful For |
-|----------|------|------------|
-| `GET /page/mobile-sections/{title}` | *(deprecated -- removed in 2023)* | Was: article split into sections with headings |
-| `GET /page/media-list/{title}` | All media files on the page | ARTIST_PHOTO — band photos, concert shots, album covers |
-| `GET /page/related/{title}` | Related Wikipedia articles | Discovery / similar artists |
-| `GET /page/html/{title}` | Full HTML content | Rich content parsing (infobox data, tables) |
+## What We DON'T Extract
 
-### Wikipedia Infobox Data
+From `/page/summary`, already fetched for every `ARTIST_BIO`:
 
-Wikipedia band/artist articles have structured infoboxes containing:
-- Origin, genres, years active, labels, associated acts, members, past members, website
+| Field | Useful for |
+|---|---|
+| `description` | The one-line "English rock band" gloss — parsed into `WikipediaSummary.description`, then dropped by the mapper |
+| `originalimage` | Full-resolution lead image; we take the ~320px `thumbnail` instead |
+| `extract_html` | The same text with markup, for consumers that render rather than display |
+| `wikibase_item` | The Wikidata Q-id, which would let us skip a resolution step elsewhere |
+| `type` | `standard` / `disambiguation` / `no-extract` — the only programmatic way to notice we landed on a disambiguation page |
+| `revision`, `tid` | Cache invalidation keys |
+| `content_urls` | Desktop and mobile article links, for `ARTIST_LINKS` |
 
-This data is in the HTML but not in the REST API summary. Parsing it requires either:
-- Fetching `/page/html/{title}` and parsing the infobox
-- Using the MediaWiki API (`action=parse`) with `prop=wikitext` and extracting template parameters
-- Or better: getting this data from Wikidata instead (structured, not HTML parsing)
+From `/page/media-list`, already fetched for every `ARTIST_PHOTO`: every image after the first, and
+each item's `caption`, `srcset` and thumbnail sizes.
 
-## Newer Wikimedia API
+Endpoints we never call: `/page/html/{title}` and the MediaWiki `action=parse` path, which is where
+the infobox lives (origin, years active, labels, members) — structured data we take from Wikidata
+instead. Non-English Wikipedias are never queried; `BASE_URL` hardcodes `en.wikipedia.org`.
 
-A newer API exists at `https://api.wikimedia.org/core/v1/wikipedia/{language}/page/{title}` with OAuth2 support, cleaner design, and explicit language routing. May become the recommended path forward.
+## Gotchas
 
-## Language Support
+- `docs/pitfalls.md` §3 — `optString`/`optJSONObject` throughout. A `thumbnail` object present
+  without a `source` yields `thumbnailUrl = ""` rather than null, because `?.optString("source")`
+  returns the empty default and nothing filters it; the mapper passes that into
+  `Biography.thumbnailUrl`.
+- `docs/pitfalls.md` §4 — a missing title, a blank extract, and an empty media list are all
+  `NotFound`, so they record breaker *success*.
+- `docs/pitfalls.md` §5 — both capabilities declare `WIKIPEDIA_TITLE`, correctly: there is no text
+  search here, and without an identifier from MusicBrainz the provider has nothing to look up.
 
-Other languages are accessible by changing the subdomain: `fr.wikipedia.org/api/rest_v1/...` for French, `de.wikipedia.org/api/rest_v1/...` for German, etc. Non-English artists may have better articles in their native language Wikipedia.
-
-## Gotchas & Edge Cases
-
-- **Requires identifier**: No text search. Depends on MusicBrainz providing either `wikipediaTitle` or `wikidataId`.
-- **Title encoding**: Wikipedia titles use underscores for spaces. Our code URL-encodes and replaces `+` with `%20`.
-- **Disambiguation pages**: If MusicBrainz links to "Air (French band)" but there's also "Air (Japanese band)", the title must be exact. MusicBrainz usually provides the correct disambiguated title.
-- **Extract quality**: The `extract` is a plain text rendering of the article lead section. It's usually well-written for notable artists but may be short for obscure ones.
-- **Bio may contain HTML remnants**: The page/summary extract is supposed to be plain text, but occasional markup leaks through. Less of an issue than Last.fm.
-- **English only**: We only query `en.wikipedia.org`. Non-English artists may have better articles in other language Wikipedias. Wikidata sitelinks could be used to find the best available language.
-- **Two API calls for Wikidata fallback**: When only `wikidataId` is available, we make one call to Wikidata for sitelink resolution, then one to Wikipedia for the summary. This could be combined with the Wikidata provider's call.
-- **Thumbnail is small**: `thumbnail.source` is typically 320px wide. `originalimage.source` has the full resolution but we don't extract it.
-- **Not all artists have articles**: Obscure artists may not have a Wikipedia page at all.
-
-## Internal Architecture
-
-```
-WikipediaProvider
-├── WikipediaApi       — page summary fetch + parsing
-└── WikipediaModels    — DTO: WikipediaSummary (title, extract, description, thumbnailUrl)
-```
-
-Constructor params:
-- `httpClient: HttpClient` — shared (also used for Wikidata sitelink resolution)
-- `rateLimiter: RateLimiter` — for Wikipedia calls
-- `wikidataRateLimiter: RateLimiter` — separate limiter for the Wikidata sitelink call (default 100ms)
-- `logger: EnrichmentLogger` — debug logging
+Ours: **`resolveFromWikidata` runs outside `enrich`'s error handling.** The two enrich helpers each
+have their own `try`/`mapError`, but the sitelink call does not, so an exception there escapes to
+`ProviderChain`, which turns it into a plain `EnrichmentResult.Error` — a breaker failure without
+`mapError`'s `ErrorKind` classification. Recorded, not changed.

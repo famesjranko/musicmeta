@@ -1,139 +1,70 @@
-# LRCLIB Provider
+# LRCLIB
 
-> Free, open lyrics API. Primary source for synced (timed) and plain lyrics. No API key required. One of our most fully-utilized providers.
-
-## API Overview
+What our code does with LRCLIB. For the API itself — endpoints, request shapes, error codes, rate
+limits — follow the upstream link; that is authoritative and this is not.
 
 | | |
 |---|---|
-| **Base URL** | `https://lrclib.net` |
+| **Package** | `provider/lrclib/` |
+| **Provider ids** | `lrclib` |
+| **Upstream API docs** | https://lrclib.net/docs |
 | **Auth** | None |
-| **Rate Limit** | Not strictly documented; we use 200ms |
-| **Format** | JSON |
-| **Reference Docs** | https://lrclib.net/docs |
-| **Source Code** | https://github.com/tranxuanthang/lrclib |
-| **API Key Required** | No |
+| **Deviations from the house pattern** | None — the four files, as `CLAUDE.md` describes them |
 
-## Endpoints We Use
-
-### Exact Match Lookup
-```
-GET /api/get?artist_name={artist}&track_name={track}&album_name={album}&duration={seconds}
-```
-
-Returns a single result or 404:
-
-```json
-{
-  "id": 12345,
-  "trackName": "Creep",
-  "artistName": "Radiohead",
-  "albumName": "Pablo Honey",
-  "duration": 238,
-  "instrumental": false,
-  "syncedLyrics": "[00:00.00] When you were here before\n[00:04.50] Couldn't look you in the eye...",
-  "plainLyrics": "When you were here before\nCouldn't look you in the eye..."
-}
-```
-
-`album_name` and `duration` are optional but improve match accuracy.
-
-### Search
-```
-GET /api/search?artist_name={artist}&track_name={track}
-```
-
-Also supports `?q={freetext}` for free-text search when you don't have cleanly separated artist/track fields.
-
-Returns a JSON array of candidates:
-
-```json
-[
-  {
-    "id": 12345,
-    "trackName": "Creep",
-    "artistName": "Radiohead",
-    "albumName": "Pablo Honey",
-    "duration": 238,
-    "instrumental": false,
-    "syncedLyrics": "...",
-    "plainLyrics": "..."
-  }
-]
-```
-
-## Matching Strategy
-
-1. **Try exact match first** with all available fields (artist, track, album, duration)
-2. If exact match fails (404), **fall back to search** (artist + track only)
-3. Take first search result
-
-Confidence:
-- Exact match: **0.95** (very high — exact artist+track+album+duration)
-- Search match: **0.70** (good but may be wrong version/remix)
+**Why this provider.** It is the only lyrics source in the tree, and the only provider whose
+capabilities are track-level and nothing else. Free, no key, community-submitted.
 
 ## What We Extract
 
-| Field | Source | Notes |
-|-------|--------|-------|
-| Synced lyrics | `syncedLyrics` | LRC format with timestamps `[mm:ss.cc]` |
-| Plain lyrics | `plainLyrics` | Text only, no timestamps |
-| Is instrumental | `instrumental` | Boolean — if true, no lyrics expected |
+One row per entry in `LrcLibProvider.capabilities`. The two lists are compared by
+`scripts/checks/check_provider_capabilities.py` on every `./check`.
 
-## What We DON'T Extract (available but unused)
+| EnrichmentType | Request | Upstream call | What we keep |
+|---|---|---|---|
+| `LYRICS_SYNCED` | `ForTrack` | `/api/get`, then `/api/search` | `syncedLyrics`, `plainLyrics`, `instrumental` |
+| `LYRICS_PLAIN` | `ForTrack` | `/api/get`, then `/api/search` | `syncedLyrics`, `plainLyrics`, `instrumental` |
 
-| Field | Where | Useful For |
-|-------|-------|------------|
-| `id` | Result | Could cache by LRCLIB ID for faster re-lookups |
-| `duration` | Result | Track duration validation |
-| `albumName` | Result | Cross-reference verification |
+**Both rows are the same request and the same payload.** `enrichTrack` never branches on `type`, so
+asking for `LYRICS_PLAIN` returns synced lyrics too when the track has them, and asking for
+`LYRICS_SYNCED` returns a plain-only result rather than `NotFound`. The comment in
+`toEnrichmentResult` is explicit that this is deliberate: the caller decides whether plain is an
+acceptable fallback. Requesting both types costs two identical round trips.
 
-The API is minimal by design — we're already using most of it.
+Two calls, in order, with different confidence:
 
-### Endpoints Not Yet Called
+1. `/api/get` with artist, track, and — when the request carries them — album and duration in
+   *seconds*, converted from `durationMs`. A hit scores `ConfidenceCalculator.authoritative()`, 0.95.
+2. On a miss, `/api/search` on artist and track only; we take `firstOrNull()` and score it
+   `fuzzyMatch(hasArtistMatch = false)`, 0.6. Nothing re-checks that the first search result is the
+   track that was asked for — it clears `filterByConfidence()`'s 0.5 floor on the API's ranking alone.
 
-| Endpoint | Data | Useful For |
-|----------|------|------------|
-| `GET /api/get/{id}` | Fetch by LRCLIB ID | Fast re-lookup if ID is cached |
-| `POST /api/request-challenge` | Returns a proof-of-work challenge for spam prevention | Required before publishing lyrics |
-| `POST /api/publish` | Submit lyrics (requires solving a cryptographic challenge) | Write-only; not relevant for our read-only use case |
+A result with `instrumental = false` and both lyrics fields blank becomes `NotFound`;
+`instrumental = true` with no lyrics is a `Success`, which is the correct reading of the field.
 
-## Synced Lyrics Format (LRC)
+## What We DON'T Extract
 
-Synced lyrics use the standard LRC format:
-```
-[00:00.00] When you were here before
-[00:04.50] Couldn't look you in the eye
-[00:08.65] You're just like an angel
-```
+Parsed into `LrcLibResult` and then dropped by the mapper — the API returns them on every call we
+already make:
 
-Each line has `[mm:ss.cc]` timestamp + text. Consumers need to parse this for karaoke-style display.
+| Field | Useful for |
+|---|---|
+| `id` | LRCLIB's own id; `GET /api/get/{id}` would re-fetch without a search |
+| `trackName`, `artistName` | Verifying that the search fallback returned the right track |
+| `albumName` | The same, at album level |
+| `duration` | The same, and the strongest signal of a mismatched match |
 
-## User-Agent Requirement
+Endpoints we never call: `GET /api/get/{id}`, and the write path — `POST /api/request-challenge` and
+`POST /api/publish`, which need a proof-of-work solution and would make this a write client.
 
-LRCLIB expects a descriptive User-Agent header, similar to MusicBrainz. Our `DefaultHttpClient` handles this.
+## Gotchas
 
-## Gotchas & Edge Cases
+- `docs/pitfalls.md` §3 — `parseResult` reads everything through `optString`/`optDouble`, so a
+  renamed field yields `""`, and `""` is then dropped by the mapper's `takeIf { it.isNotBlank() }`.
+  A response whose shape moved reads as a track with no lyrics, not as a failure.
+- `docs/pitfalls.md` §4 — a non-`ForTrack` request, an empty search, and a blank-lyrics result all
+  return `NotFound`, so they record breaker *success*.
+- `docs/pitfalls.md` §5 — no capability declares an `identifierRequirement`, which is right here:
+  LRCLIB is searched by name, never by MBID.
 
-- **Track-only**: Only handles `ForTrack` requests. Album and artist requests return `NotFound`.
-- **Duration is in seconds**: The API expects seconds (numeric, may include decimals), not milliseconds. Our provider converts: `(it / 1000).toInt()`, which loses sub-second precision.
-- **Instrumental detection**: `instrumental: true` means the track has no vocals. We return this as `EnrichmentData.Lyrics(isInstrumental = true)` — it's a successful result, not NotFound.
-- **Synced vs plain availability**: Some tracks have synced lyrics, some have only plain, some have both. We return whatever is available. If requesting `LYRICS_SYNCED` but only plain exists, we still return the data (caller decides).
-- **404 on exact match is normal**: Many tracks don't have an exact match with album+duration. The search fallback usually finds them.
-- **Empty lyrics strings**: Sometimes `syncedLyrics` or `plainLyrics` is an empty string rather than null. We filter with `.takeIf { it.isNotBlank() }`.
-- **Community-submitted**: Lyrics are user-contributed. Quality varies, especially for non-English tracks.
-- **LRC timestamps may vary**: Different submissions for the same song may have slightly different timestamps.
-- **No bulk endpoint**: Each track requires its own request. For large playlists, this means many sequential calls.
-- **Rate limiting returns HTTP 429**: The API returns 429 when rate limits are exceeded. Exact limits are not published; our 200ms delay is a precaution.
-
-## Internal Architecture
-
-```
-LrcLibProvider
-├── LrcLibApi       — exact match + search endpoints + parsing
-└── LrcLibModels    — DTO: LrcLibResult (id, trackName, artistName, albumName, duration, instrumental, syncedLyrics, plainLyrics)
-```
-
-Constructor params:
-- `httpClient: HttpClient`
-- `rateLimiter: RateLimiter` — 200ms recommended
+Ours, and not a pitfall: synced lyrics arrive as one LRC string (`[mm:ss.cc] line`). We do not parse
+it; `EnrichmentData.Lyrics.syncedLyrics` hands the consumer the raw LRC body.

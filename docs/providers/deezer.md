@@ -1,182 +1,103 @@
-# Deezer Provider
+# Deezer
 
-> Free public API with no auth required. Used for album art, artist metadata, radio playlists, similar artists, album tracks, and track previews.
-
-## API Overview
+What our code does with Deezer. For the API itself — endpoints, request shapes, error codes, rate
+limits — follow the upstream link; that is authoritative and this is not.
 
 | | |
 |---|---|
-| **Base URL** | `https://api.deezer.com` |
-| **Auth** | None for search/public endpoints |
-| **Rate Limit** | Not officially published; commonly cited as ~50 requests / 5 seconds. We use 100ms. |
-| **Format** | JSON |
-| **Reference Docs** | https://developers.deezer.com/api |
-| **Explorer** | https://developers.deezer.com/api/explorer |
-| **API Key Required** | No (public endpoints) |
+| **Package** | `provider/deezer/` |
+| **Provider ids** | `deezer`, `deezer-similar-albums` |
+| **Upstream API docs** | https://developers.deezer.com/api |
+| **Auth** | None |
+| **Deviations from the house pattern** | `SimilarAlbumsProvider.kt` — a second public provider in the package. See below |
 
-## Capabilities
+**Why this provider.** The widest no-key catalogue in the tree: ten capabilities from `DeezerProvider`
+plus one from `SimilarAlbumsProvider`, and the only source of `ARTIST_RADIO`, `TRACK_PREVIEW` and
+`SIMILAR_ALBUMS`. Artwork comes back in four fixed sizes without a URL trick.
 
-| Type | Notes |
-|------|-------|
-| `ALBUM_ART` | From album search results |
-| `ARTIST_PHOTO` | From `artist.picture_*` in album search results |
-| `ARTIST_DISCOGRAPHY` | Via `/artist/{id}/albums` |
-| `ALBUM_TRACKS` | Via `/album/{id}/tracks` |
-| `ALBUM_METADATA` | Via album search |
-| `ARTIST_RADIO` | Via `/artist/{id}/radio` |
-| `SIMILAR_ARTISTS` | Via `/artist/{id}/related` |
-| `SIMILAR_ALBUMS` | Via `SimilarAlbumsProvider` (separate provider, direct API calls) |
-| `SIMILAR_TRACKS` | Via `/track/{id}/radio` |
-| `ARTIST_TOP_TRACKS` | Via `/artist/{id}/top` |
-| `TRACK_PREVIEW` | Via `/search/track` — 30-second MP3 CDN URL |
+## Deviation: a second provider class
 
-## Endpoints We Use
+`SimilarAlbumsProvider` is a public `EnrichmentProvider` in this package, registered separately by
+`withDefaultProviders()` under its own id `deezer-similar-albums` — so it gets its own
+`CircuitBreaker`, and can be enabled or disabled without touching `deezer`.
 
-### Album Search
-```
-GET /search/album?q={query}&limit={n}
-```
+It exists because `SIMILAR_ALBUMS` is *derived*, not fetched: Deezer has no similar-albums endpoint.
+`enrichSimilarAlbums` takes up to 5 related artists, pulls up to 3 albums each, scores every album by
+the artist's rank (`1.0 − index/count × 0.9`) times an era multiplier against the seed album's year
+(±5 years 1.2×, ±10 years 1.0×, beyond 0.8×), dedupes by lowercased title + artist, sorts by score and
+caps at 20. That is up to **6 HTTP calls per request** and a scoring model with four constants in it.
 
-Query format: `"artist name album title"` (free text).
-
-Response:
-```json
-{
-  "data": [
-    {
-      "id": 103248,
-      "title": "OK Computer",
-      "artist": {
-        "id": 399,
-        "name": "Radiohead",
-        "picture_small": "...",
-        "picture_medium": "...",
-        "picture_big": "...",
-        "picture_xl": "..."
-      },
-      "cover_small": "https://api.deezer.com/album/103248/image?size=small",
-      "cover_medium": "...",
-      "cover_big": "...",
-      "cover_xl": "...",
-      "nb_tracks": 12,
-      "release_date": "1997-06-16",
-      "record_type": "album",
-      "explicit_lyrics": false,
-      "fans": 45678
-    }
-  ]
-}
-```
-
-### Track Search
-```
-GET /search/track?q={query}&limit={n}
-```
-
-Query format: `"artist name track title"` (free text).
-
-Response (abbreviated):
-```json
-{
-  "data": [
-    {
-      "id": 3135556,
-      "title": "Creep",
-      "artist": { "name": "Radiohead" },
-      "album": { "title": "Pablo Honey" },
-      "duration": 238,
-      "preview": "https://cdns-preview-d.dzcdn.net/stream/c-dce2...30s.mp3"
-    }
-  ]
-}
-```
-
-The `preview` field is a 30-second 128kbps MP3 CDN URL. Present for most tracks; `null` or empty for a small minority without preview rights.
-
-## Cover Image Sizes
-
-| Field | Pixels | URL Pattern |
-|-------|--------|-------------|
-| `cover_small` | 56x56 | `/image?size=small` |
-| `cover_medium` | 250x250 | `/image?size=medium` |
-| `cover_big` | 500x500 | `/image?size=big` |
-| `cover_xl` | 1000x1000 | `/image?size=xl` |
-
-We prefer `cover_xl` → `cover_big` → `cover_medium` → `cover_small`, with `cover_medium` as thumbnail.
+Its own class comment says why it is not a `CompositeSynthesizer`: all the Deezer calls happen here
+rather than inside a synthesizer, so it stays a plain provider that the engine schedules and
+rate-limits like any other. It shares the package's `DeezerApi` — `withDefaultProviders()` constructs
+one `DeezerApi` and hands it to both — so the two providers share a `RateLimiter`.
 
 ## What We Extract
 
-**From album search (`/search/album`):**
+One row per entry in `capabilities` across **both** provider classes in the package. The two lists are
+compared by `scripts/checks/check_provider_capabilities.py` on every `./check`.
 
-| Field | Source | Notes |
-|-------|--------|-------|
-| Album title | `data[].title` | |
-| Artist name | `data[].artist.name` | Verified via `ArtistMatcher.isMatch()` |
-| Cover URLs | `cover_small` through `cover_xl` | Best available used as main, medium as thumbnail |
+| EnrichmentType | Request | Upstream call | What we keep |
+|---|---|---|---|
+| `ALBUM_ART` | `ForAlbum` | `/search/album?limit=5` | `cover_xl` → `big` → `medium` → `small`, first non-null; all four as `ArtworkSize` at 56/250/500/1000 |
+| `ALBUM_METADATA` | `ForAlbum` | the same search | `nb_tracks`, `record_type`, `explicit_lyrics` |
+| `ALBUM_TRACKS` | `ForAlbum` | `/search/album?limit=1`, then `/album/{id}/tracks` | title, position, duration |
+| `ARTIST_PHOTO` | `ForArtist` | `/search/artist?limit=1` | `picture_xl` → … → `small`, plus all four as sizes |
+| `ARTIST_DISCOGRAPHY` | `ForArtist` | `/search/artist`, then `/artist/{id}/albums?limit=50` | title, year, `record_type`, cover thumbnail, Deezer id |
+| `ARTIST_TOP_TRACKS` | `ForArtist` | `/artist/{id}/top?limit=100` | title, artist, rank by position |
+| `SIMILAR_ARTISTS` | `ForArtist` | `/artist/{id}/related?limit=20` | name and Deezer id; **`matchScore` is synthesised from list position** |
+| `SIMILAR_TRACKS` | `ForTrack` | `/search/track?limit=5`, then `/track/{id}/radio?limit=25` | title, artist; `matchScore` synthesised the same way |
+| `ARTIST_RADIO` | `ForArtist` | `/artist/{id}/radio?limit=radioLimit` (50) | a `RadioPlaylist` of tracks |
+| `TRACK_PREVIEW` | `ForTrack` | `/track/{id}` or `/search/track` | the 30-second `preview` URL |
+| `SIMILAR_ALBUMS` | `ForAlbum` | `/search/artist`, `/artist/{id}/related?limit=5`, then `/artist/{id}/albums?limit=3` ×5 | up to 20 scored albums — see the deviation section |
 
-**From track search (`/search/track`):**
+`ARTIST_RADIO`, `TRACK_PREVIEW` and `SIMILAR_ALBUMS` are priority 100 — all three uncontested, and
+the last is on `SimilarAlbumsProvider` rather than `DeezerProvider`. `ARTIST_PHOTO` is 60,
+`SIMILAR_ARTISTS` 30, and the remaining five 50.
 
-| Field | Source | Notes |
-|-------|--------|-------|
-| Track title | `data[].title` | |
-| Artist name | `data[].artist.name` | Verified via `ArtistMatcher.isMatch()` |
-| Preview URL | `data[].preview` | 30-second MP3 CDN URL; null when not available |
-| Duration | `data[].duration` | In seconds; stored as `durationMs` (×1000) |
-| Album title | `data[].album.title` | Contextual — not validated against request |
+**`matchScore` on `SIMILAR_ARTISTS` and `SIMILAR_TRACKS` is not Deezer's.** Deezer returns no score,
+so `DeezerMapper` computes `1.0 − index/count × 0.9` from the array position. A consumer comparing it
+against Last.fm's real `match` value is comparing a similarity measurement with a rank.
 
-## What We DON'T Extract (Available Data)
+**Most artist-keyed capabilities short-circuit on a cached id.** `SIMILAR_ARTISTS`,
+`ARTIST_TOP_TRACKS`, `ARTIST_RADIO`, `TRACK_PREVIEW` and `SIMILAR_ALBUMS` read `deezerId` from
+`EnrichmentIdentifiers.extra` and skip the search when it is present — and every success writes it
+back via `resolvedIdentifiers`. When the id is used, **the `ArtistMatcher.isMatch` verification is
+skipped with it**, since there is no search result left to check.
 
-### From Current Search Response (ignored)
+Confidence is `fuzzyMatch(hasArtistMatch = true)`, 0.8, everywhere except `ARTIST_DISCOGRAPHY` and
+`ALBUM_TRACKS`, which use 0.6 — correctly, since neither verifies the artist. `ALBUM_TRACKS` takes
+`searchAlbums(query, 1).firstOrNull()` with no match check at all.
 
-| Field | Where | Useful For |
-|-------|-------|------------|
-| `id` | Album object | Needed for detailed album lookup |
-| `artist.id` | Artist object | Needed for artist endpoints |
-| `artist.picture_*` | Artist object | ARTIST_PHOTO — 4 sizes available! |
-| `nb_tracks` | Album object | Track count validation |
-| `release_date` | Album object | RELEASE_DATE |
-| `record_type` | Album object | RELEASE_TYPE ("album", "single", "ep", "compilation") |
-| `explicit_lyrics` | Album object | Content filtering |
-| `fans` | Album object | Album popularity metric |
+## What We DON'T Extract
 
-### Endpoints Not Yet Called
+Fields on results we already fetch:
 
-| Endpoint | Data | Useful For |
-|----------|------|------------|
-| `GET /album/{id}` | Full album details: tracklist URL, genres, label, duration, rating, contributors, UPC | Album metadata |
-| `GET /album/{id}/tracks` | Tracklist with title, duration, preview URL, disk_number, track_position, ISRC | ALBUM_TRACKS |
-| `GET /artist/{id}` | Bio snippet, image, nb_album, nb_fan, radio | Artist profile |
-| `GET /artist/{id}/albums` | Full discography with release dates and types | ARTIST_DISCOGRAPHY |
-| `GET /artist/{id}/related` | Related/similar artists | SIMILAR_ARTISTS |
-| `GET /artist/{id}/top` | Top 5 tracks by popularity | Track rankings |
-| `GET /artist/{id}/radio` | Auto-generated radio tracks | Similar tracks |
-| `GET /search/artist?q={name}` | Artist search | Artist lookup |
-| `GET /genre` | All genres | Genre taxonomy |
-| `GET /genre/{id}/artists` | Top artists per genre | Genre exploration |
+| Field | Would give |
+|---|---|
+| `album.release_date` on a search result | Release date; we read it only inside `ARTIST_DISCOGRAPHY` |
+| `album.genre_id` / `genres` | `GENRE` — Deezer declares no genre capability at all |
+| `album.label`, `album.upc` | `LABEL`, and a barcode nothing else supplies |
+| `artist.nb_fan`, `nb_album` | `ARTIST_POPULARITY` — Deezer's fan count is unused |
+| `track.rank`, `track.bpm`, `track.gain` | Real popularity and audio features, in place of positional scores |
+| `track.duration` on radio and top-track results | Runtime on `SIMILAR_TRACKS` and `RadioPlaylist` entries |
+| `contributors`, `explicit_content_lyrics` | `CREDITS`, and a finer explicit flag than the boolean |
 
-## Gotchas & Edge Cases
+Endpoints we never call: `/chart`, `/genre`, `/editorial`, `/playlist/{id}`, `/podcast`, and every
+`/user/**` path. `DeezerApi.searchAlbum` (singular) is dead code — no caller.
 
-- **Search is fuzzy**: `q=Radiohead OK Computer` may return unrelated results if the exact album isn't in Deezer. We use `ArtistMatcher.isMatch()` to verify.
-- **No auth but rate limited**: 50 requests per 5 seconds. Exceeding returns 429. Our 100ms limiter is within bounds for sequential use but could be tight under fan-out.
-- **Image URLs are proxied**: Deezer cover URLs go through `api.deezer.com/album/{id}/image?size=...` which redirects to CDN. These are stable for caching.
-- **Artist images in search results**: Every album search result includes `artist.picture_*` at 4 sizes — we throw these away entirely.
-- **`record_type` values**: "album", "single", "ep", "compilation". Useful for filtering.
-- **Regional availability**: Some albums may not be available in all regions. The API returns them regardless.
-- **Preview URLs**: 30-second 128kbps MP3 CDN URLs via `data[].preview` in track search. Exposed as `TRACK_PREVIEW` enrichment type. TTL is 24 hours — CDN URLs are stable but may rotate. Not available for all tracks; `DeezerMapper.toTrackPreview()` returns `null` when `previewUrl` is blank.
-- **Deezer ToS for previews**: Free for non-commercial use. Check Deezer's terms for commercial applications.
-- **Deezer IDs are numeric**: Unlike MusicBrainz UUIDs, Deezer uses numeric IDs. No cross-reference unless you search.
-- **Docs behind login wall**: The full Deezer API documentation at developers.deezer.com requires login to view. Public third-party mirrors exist but may be outdated.
-- **OAuth 2.0 available**: For user-specific data (playlists, recommendations, favorites). Not needed for public search/catalog endpoints.
-- **API status (as of March 2026)**: The Deezer API remains publicly accessible with no sunset announcements. The Deezer Native SDK was deprecated but the REST API continues operating.
+## Gotchas
 
-## Internal Architecture
+- `docs/pitfalls.md` §2 — `searchCandidates` on `DeezerProvider` is one of the two worked examples:
+  it swallows exceptions to return `emptyList()`, so it calls `ensureActive()` first. Removing that
+  line makes a cancelled caller read as "the search found nothing".
+- `docs/pitfalls.md` §3 — the parsers are `optString`/`optLong`/`optInt` throughout; a renamed cover
+  field falls through the four-way `?:` chain to null and reads as an album with no art.
+- `docs/pitfalls.md` §4 — no artist match, an empty tracklist and a missing preview URL are all
+  `NotFound`, so they record breaker *success*.
+- `docs/pitfalls.md` §5 — nothing declares an `identifierRequirement`, correctly: every path can
+  start from a name, and `deezerId` is an optimisation rather than a precondition.
 
-```
-DeezerProvider
-├── DeezerApi       — album search + track search + parsing
-└── DeezerModels    — DTOs: DeezerAlbumResult, DeezerTrackSearchResult (id, title, artistName, previewUrl, durationSec, albumTitle)
-```
-
-Constructor params:
-- `httpClient: HttpClient`
-- `rateLimiter: RateLimiter` — 100ms recommended
+Ours: the four `ArtworkSize` widths (56/250/500/1000) are hardcoded in the mapper, not read from the
+response. If Deezer changes what `cover_medium` renders at, the reported dimensions become wrong
+while the URL stays valid.

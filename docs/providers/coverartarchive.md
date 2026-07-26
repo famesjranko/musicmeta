@@ -1,132 +1,76 @@
-# Cover Art Archive Provider
+# Cover Art Archive
 
-> Primary source for album artwork. ID-based lookups via MusicBrainz release/release-group MBIDs — no fuzzy search, highest confidence.
-
-## API Overview
+What our code does with the Cover Art Archive. For the API itself — endpoints, request shapes, error
+codes, rate limits — follow the upstream link; that is authoritative and this is not.
 
 | | |
 |---|---|
-| **Base URL** | `https://coverartarchive.org` |
+| **Package** | `provider/coverartarchive/` |
+| **Provider ids** | `coverartarchive` |
+| **Upstream API docs** | https://musicbrainz.org/doc/Cover_Art_Archive/API |
 | **Auth** | None |
-| **Rate Limit** | None documented (but returns 503 when overloaded); we use 100ms between requests |
-| **Format** | Image redirects (307 → archive.org) or JSON metadata |
-| **Reference Docs** | https://musicbrainz.org/doc/Cover_Art_Archive/API |
-| **API Key Required** | No |
+| **Deviations from the house pattern** | None — the four files, as `CLAUDE.md` describes them |
 
-## How It Works
-
-CAA doesn't serve images directly. It returns **307 redirects** to Internet Archive (archive.org) where the actual images are hosted. Our `HttpClient.fetchRedirectUrl()` captures the redirect Location header without following it — that URL is the artwork URL we return.
-
-## Endpoints We Use
-
-### Front Cover by Release
-```
-GET /release/{mbid}/front-{size}
-→ 307 redirect to https://archive.org/...
-→ 404 if no artwork
-```
-
-Sizes: numeric pixel values. Common: `250`, `500`, `1200`. Original: omit size suffix.
-
-### Front Cover by Release Group (fallback)
-```
-GET /release-group/{mbid}/front-{size}
-→ 307 redirect or 404
-```
-
-Falls back to the "best" front cover across all releases in the group.
-
-### Endpoints Available (Not Currently Used)
-
-```
-GET /release/{mbid}/back          → back cover (307 redirect or 404)
-GET /release/{mbid}/back-{size}   → back cover at specific size
-GET /release/{mbid}/{id}          → specific artwork by image ID
-```
+**Why this provider.** It is the only artwork source keyed on a MusicBrainz release rather than on a
+name search, so its results are the ones we trust at `idBasedLookup()` confidence (1.0), and the only
+source in the tree for the non-front images — back cover, booklet, disc.
 
 ## What We Extract
 
-| Field | Source | Notes |
-|-------|--------|-------|
-| Artwork URL | Redirect Location header | Full-size (default 1200px) |
-| Thumbnail URL | Second request at 250px | Separate HTTP call |
+One row per entry in `CoverArtArchiveProvider.capabilities`. The two lists are compared by
+`scripts/checks/check_provider_capabilities.py` on every `./check`.
 
-## What We DON'T Extract (Available Data)
+| EnrichmentType | Identifier | Upstream call | What we keep |
+|---|---|---|---|
+| `ALBUM_ART` | `MUSICBRAINZ_ID` | `/release/{mbid}/front-{size}` redirect, twice, then `/release/{mbid}` | redirect URL, thumbnail URL, and every `thumbnails` entry of the first `front` image as `ArtworkSize` |
+| `ALBUM_ART_BACK` | `MUSICBRAINZ_ID` | `/release/{mbid}` | first image whose `types` holds `"Back"`: `image`, `thumbnails["small"]`, all sizes |
+| `ALBUM_BOOKLET` | `MUSICBRAINZ_ID` | `/release/{mbid}` | the same, for `"Booklet"` |
+| `CD_ART` | `MUSICBRAINZ_ID` | `/release/{mbid}` | the same, for `"Medium"` |
 
-### JSON Metadata Endpoint (not currently called)
+Every result is `ConfidenceCalculator.idBasedLookup()`, 1.0 — correct, because nothing here is a
+name match. `CD_ART` is priority 50, below Fanart.tv; the other three are 100 and uncontested.
 
-```
-GET /release/{mbid}
-→ JSON with ALL available images
-```
+`ALBUM_ART` costs up to **three** HTTP calls on a hit: a redirect check at `artworkSize` (1200), a
+second at `thumbnailSize` (250), and the JSON metadata call that supplies `sizes`. The three
+type-specific capabilities cost one, and read the full-size `image` URL straight from the JSON rather
+than through a redirect.
 
-Response structure:
-```json
-{
-  "images": [
-    {
-      "types": ["Front"],
-      "front": true,
-      "back": false,
-      "comment": "",
-      "image": "http://archive.org/.../full.jpg",
-      "thumbnails": {
-        "250": "http://archive.org/.../250.jpg",
-        "500": "http://archive.org/.../500.jpg",
-        "1200": "http://archive.org/.../1200.jpg",
-        "large": "http://archive.org/.../large.jpg",
-        "small": "http://archive.org/.../small.jpg"
-      },
-      // Note: "small" and "large" are deprecated aliases for "250" and "500" respectively.
-      // Prefer numeric keys ("250", "500", "1200") in new code.
-      "approved": true,
-      "id": 12345
-    }
-  ],
-  "release": "https://musicbrainz.org/release/{mbid}"
-}
-```
+There is a **release-group fallback** in `findArtwork` — `/release-group/{id}/front-{size}` when the
+release has no art — that the engine cannot reach. All four capabilities declare
+`MUSICBRAINZ_ID`, so `ProviderChain.hasRequiredIdentifiers()` skips the provider outright when only a
+release-group id is present. It runs only for a consumer calling the provider directly, or when both
+identifiers are set and the release genuinely has no art. `ANY_IDENTIFIER` is the declaration that
+would match the code. Recorded, not changed — see `docs/pitfalls.md` §5.
 
-This endpoint gives us:
+## What We DON'T Extract
 
-| Field | Useful For |
-|-------|------------|
-| `images[].types` | All image types: "Front", "Back", "Booklet", "Medium", "Obi", "Spine", "Track", "Tray", "Sticker", "Poster", "Liner", "Watermark", "Raw/Unedited", "Matrix/Runout", "Top", "Bottom" |
-| `images[].thumbnails` | All size variants in one response (avoids multiple redirect checks) |
-| `images[].front` / `images[].back` | Quick boolean checks |
-| `images[].comment` | Community notes about the image |
-| Multiple images per type | Some releases have alternate front covers |
+`/release/{mbid}` is already fetched for every capability above, so these cost nothing but code:
 
-### Other Image Types Available
+| Field | Useful for |
+|---|---|
+| `images[].comment` | Community note — which of several front covers this is |
+| `images[].approved` | Whether the image passed review; we take the first match either way |
+| `images[].id` | Stable per-image id, for `/release/{mbid}/{id}-{size}` |
+| `images[].back` | We match on `types`, so this boolean is redundant but cheaper |
+| Every `types` value we do not map | `"Obi"`, `"Spine"`, `"Track"`, `"Tray"`, `"Sticker"`, `"Poster"`, `"Liner"`, `"Watermark"`, `"Raw/Unedited"`, `"Matrix/Runout"`, `"Top"`, `"Bottom"` |
+| Second and later images of a type | `firstOrNull` takes one; alternate pressings' art is discarded |
 
-Any image type from the `types` array can be requested by name:
-```
-GET /release/{mbid}/{type}
-GET /release/{mbid}/{type}-{size}
-```
+`/release-group/{id}` JSON is never called, only its `front-{size}` redirect, which is why the
+release-group path returns no `sizes`.
 
-See "Endpoints Available (Not Currently Used)" above for back cover and image-by-ID endpoints.
+## Gotchas
 
-## Gotchas & Edge Cases
+- `docs/pitfalls.md` §5 — see the release-group note above. This is the pitfall's own worked example,
+  and the declaration is still narrower than the code.
+- `docs/pitfalls.md` §3 — `parseImageList` reads through `optJSONArray`/`optBoolean`/`optString`, so a
+  moved field yields an empty image list, which reads as "nobody uploaded art".
+- `docs/pitfalls.md` §4 — a 404 (no art) arrives as a null redirect and becomes `NotFound`, correctly:
+  no artwork is not a provider failure.
 
-- **Requires MBID**: Cannot search by title/artist. Depends entirely on MusicBrainz identity resolution.
-- **Release vs Release Group**: A "release" is a specific pressing (US CD, UK vinyl). A "release group" is the abstract album. If the specific release has no art, the release-group endpoint often has one from another pressing.
-- **Two HTTP calls for artwork + thumbnail**: We currently make two separate redirect-check calls (one for full size, one for thumbnail). The JSON endpoint would give all sizes in one call.
-- **404 = no artwork**: Not an error, just means nobody has uploaded art for this release.
-- **Archive.org URLs are stable**: Once an image is on archive.org, the URL doesn't change. Safe to cache long-term.
-- **No rate limit headers**: CAA doesn't document rate limits, but it's backed by archive.org infrastructure. Be respectful.
-- **503 when overloaded**: The API returns HTTP 503 when overloaded, even though no formal rate limits are documented. Treat 503 as a transient error and retry with backoff.
-- **Size `1200` is our default**: High enough for most displays without being wasteful. Original images can be very large (4000px+).
+Two that are ours:
 
-## Internal Architecture
-
-```
-CoverArtArchiveProvider
-└── CoverArtArchiveApi    — redirect-check calls + URL builders
-```
-
-Constructor params:
-- `httpClient: HttpClient`
-- `rateLimiter: RateLimiter` — 100ms is fine
-- `artworkSize: Int = 1200` — pixel size for main artwork
-- `thumbnailSize: Int = 250` — pixel size for thumbnails
+- **The provider is not rate limited.** The constructor takes a `RateLimiter` and marks it
+  `@Suppress("UNUSED_PARAMETER")`; no call goes through it. Every other provider's calls are spaced.
+- **`thumbnails["small"]` is a deprecated alias** for `"250"`. The three type-specific capabilities
+  read it, so they return a null thumbnail against any response that has dropped the alias, while
+  `sizes` still carries the numeric keys.

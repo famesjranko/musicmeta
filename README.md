@@ -187,7 +187,7 @@ To consume a local checkout instead, see [docs/project/workflow.md](docs/project
 |----------|---------|
 | [docs/guides/](docs/guides/README.md) | Developer guides — quick start, identity resolution, results & errors, cache management, configuration, extension points, Android |
 | [docs/how-it-works.md](docs/how-it-works.md) | Complete pipeline trace -- from `enrich()` call to results |
-| [docs/providers/](docs/providers/) | Per-provider API documentation and endpoint inventory |
+| [docs/providers/](docs/providers/README.md) | Per-provider feature docs — what our code takes from each provider, what it leaves, and where it departs from the house pattern |
 | [docs/project/workflow.md](docs/project/workflow.md) | Branch topology, issue lifecycle, worktrees, and verification selection |
 | [docs/project/release.md](docs/project/release.md) | Release preparation, tagging, and publication |
 | [CHANGELOG.md](CHANGELOG.md) | Release history |

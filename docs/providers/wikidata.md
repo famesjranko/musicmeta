@@ -1,172 +1,77 @@
-# Wikidata Provider
+# Wikidata
 
-> Structured knowledge base. Currently used only for artist photos (P18 property), but contains a wealth of structured data about artists, albums, and recordings.
-
-## API Overview
+What our code does with Wikidata. For the API itself — endpoints, request shapes, error codes, rate
+limits — follow the upstream link; that is authoritative and this is not.
 
 | | |
 |---|---|
-| **Base URL** | `https://www.wikidata.org/w/api.php` |
+| **Package** | `provider/wikidata/` |
+| **Provider ids** | `wikidata` |
+| **Upstream API docs** | https://www.wikidata.org/wiki/Wikidata:Data_access |
 | **Auth** | None |
-| **Rate Limit** | ~5 requests/second for unauthenticated clients. Exceeding returns `maxlag` errors or HTTP 429. We use 100ms. |
-| **Format** | JSON (`&format=json`) |
-| **Reference Docs** | https://www.wikidata.org/wiki/Wikidata:Data_access |
-| **API Docs** | https://www.wikidata.org/w/api.php?action=help |
-| **Property Directory** | https://www.wikidata.org/wiki/Wikidata:List_of_properties |
-| **API Key Required** | No |
+| **Deviations from the house pattern** | None — the four files, as `CLAUDE.md` describes them |
 
-## How Wikidata Works
-
-Wikidata stores structured data as **entities** (items starting with Q) that have **properties** (starting with P). Each property has one or more **claims** (statements with values).
-
-Example: Radiohead (Q44191) has:
-- P18 (image) = "Radiohead at Austin City Limits 2016.jpg"
-- P569 (birth date) — N/A for groups
-- P571 (inception) = 1985
-- P27 (country of citizenship) — N/A for groups
-- P495 (country of origin) = United Kingdom (Q145)
-- P136 (genre) = alternative rock, art rock, electronic music
-- P264 (record label) = Parlophone, XL Recordings, Capitol Records
-- P527 (has parts) = Thom Yorke (Q44857), Jonny Greenwood (Q192668), etc.
-
-## Endpoints We Use
-
-### Get Claims (single property)
-```
-GET /w/api.php?action=wbgetclaims&entity={wikidataId}&property=P18&format=json
-```
-
-Response:
-```json
-{
-  "claims": {
-    "P18": [
-      {
-        "mainsnak": {
-          "snaktype": "value",
-          "property": "P18",
-          "datavalue": {
-            "value": "Radiohead at Austin City Limits 2016.jpg",
-            "type": "string"
-          }
-        },
-        "rank": "normal"
-      }
-    ]
-  }
-}
-```
-
-### Image URL Construction
-
-Wikidata stores filenames, not URLs. We construct Wikimedia Commons URLs:
-
-```
-https://commons.wikimedia.org/wiki/Special:FilePath/{filename}?width={size}
-```
-
-Spaces → underscores. Note: `Special:FilePath?width=` now auto-renders SVG and TIFF to PNG thumbnails. Appending `.png` to the filename (as our code does) is no longer strictly required but is harmless.
+**Why this provider.** Structured claims instead of prose or user tags, keyed on a Q-id that
+MusicBrainz hands us, so both capabilities score `authoritative()`, 0.95. It is also our only route
+to Wikimedia Commons imagery at an arbitrary width.
 
 ## What We Extract
 
-| Field | Source | Notes |
-|-------|--------|-------|
-| Artist photo URL | P18 claim → Commons URL | First claim only, at configured size (default 1200px) |
+One row per entry in `WikidataProvider.capabilities`. The two lists are compared by
+`scripts/checks/check_provider_capabilities.py` on every `./check`.
 
-## What We DON'T Extract (Available Data)
+| EnrichmentType | Identifier | Upstream call | What we keep |
+|---|---|---|---|
+| `ARTIST_PHOTO` | `WIKIDATA_ID` | `wbgetclaims`, `property=P18\|P569\|P570\|P495\|P106` | P18 filename → a Commons `Special:FilePath` URL at `imageSize`, default 1200 |
+| `COUNTRY` | `WIKIDATA_ID` | the same single call | P495 country, **and** P569 birth date, P570 death date, P106 occupation |
 
-Wikidata is a **treasure trove** of structured data. We only touch P18.
+**One request serves both.** `getEntityProperties` asks for all five properties at once and `enrich`
+picks from the result, so asking for both types costs two identical round trips rather than one each
+of two shapes.
 
-### Music-Relevant Properties
+Two things about `COUNTRY` that its name does not say:
 
-| Property | Code | Data Type | Useful For |
-|----------|------|-----------|------------|
-| **Image** | P18 | filename | **Currently extracted** |
-| Genre | P136 | Item (Q-ID) | GENRE — structured, not free-text tags |
-| Record label | P264 | Item (Q-ID) | LABEL |
-| Country of origin | P495 | Item (Q-ID) | COUNTRY |
-| Country of citizenship | P27 | Item (Q-ID) | Artist nationality |
-| Inception date | P571 | time | Band formation date |
-| Dissolution date | P576 | time | Band breakup date |
-| Birth date | P569 | time | Artist birth |
-| Death date | P570 | time | Artist death |
-| Has parts / Members | P527 | Item (Q-ID) | BAND_MEMBERS (links to member Q-IDs) |
-| Part of | P361 | Item (Q-ID) | What groups an artist belongs to |
-| Occupation | P106 | Item (Q-ID) | "Singer", "Guitarist", "Composer" |
-| Gender | P21 | Item (Q-ID) | |
-| Instrument | P1303 | Item (Q-ID) | What instrument they play |
-| Official website | P856 | URL | ARTIST_LINKS |
-| Discography | P358 | Item (Q-ID) | Links to discography article |
-| Awards received | P166 | Item (Q-ID) | Grammy, Brit Awards, etc. |
-| Nominated for | P1411 | Item (Q-ID) | Award nominations |
-| Commons category | P373 | string | More images on Wikimedia Commons |
-| Social media | P2013 (Facebook), P2002 (Twitter), P2003 (Instagram) | string | ARTIST_LINKS |
-| Spotify artist ID | P1902 | string | Streaming cross-reference |
-| MusicBrainz artist ID | P434 | string | Reverse lookup |
-| AllMusic artist ID | P1728 | string | Cross-reference |
-| Discogs artist ID | P1953 | string | Cross-reference to Discogs |
-| Performer | P175 | Item (Q-ID) | Track/album performer |
-| Producer | P162 | Item (Q-ID) | Producer credits |
-| Lyrics by | P676 | Item (Q-ID) | Lyricist credits |
-| Composer | P86 | Item (Q-ID) | Composer credits |
-| Publication date | P577 | time | Release / publication date |
-| MusicBrainz release group ID | P4404 | string | Cross-reference to MusicBrainz release groups |
-| MusicBrainz work ID | P4407 | string | Cross-reference to MusicBrainz works |
-| MusicBrainz recording ID | P8052 | string | Cross-reference to MusicBrainz recordings |
+- It carries four fields, not one. `WikidataMapper.toMetadata` fills `country`, `beginDate`,
+  `endDate` and `artistType` on a single `EnrichmentData.Metadata`.
+- It **succeeds when `country` is null**, as long as any one of the other three is present. A
+  consumer asking for `COUNTRY` can get a `Success` whose country is absent.
 
-### Full Entity Endpoint (not called)
+`selectClaim` takes the first claim of rank `preferred`, falling back to the array's first entry — so
+a `deprecated` claim can still win if it is first and nothing is preferred. `buildCommonsUrl`
+underscores spaces, URL-encodes, and appends `.png` for `svg`, `tif` and `tiff` so Commons rasterises
+them.
 
-```
-GET /w/api.php?action=wbgetentities&ids={wikidataId}&format=json
-```
+**Q-ids leak through when unmapped.** `COUNTRY_MAP` holds 14 countries and `OCCUPATION_MAP` five
+occupations, both applied as `MAP[qid] ?: qid`. Anything outside those lists reaches the consumer as
+the raw `"Q…"` string in `Metadata.country` or `Metadata.artistType`.
 
-Returns ALL properties, labels, descriptions, and sitelinks in one call. Much more efficient than requesting individual properties if we need multiple.
+## What We DON'T Extract
 
-```
-GET /w/api.php?action=wbgetentities&ids={wikidataId}&props=claims|descriptions|labels|sitelinks&format=json
-```
+The five properties above are all we request, so everything else needs another call. Wikidata's
+music-relevant claims that no provider in the tree reads:
 
-The `sitelinks` property is how Wikipedia provider resolves Wikipedia article titles — could be done in one Wikidata call instead of two separate ones.
+| Property | Would give |
+|---|---|
+| P136 genre, P264 record label | `GENRE`, `LABEL` — as Q-ids, needing the same label lookup the maps above hand-roll |
+| P527 has-part, P361 part-of | `BAND_MEMBERS`, and which groups an artist belongs to |
+| P571 / P576 inception and dissolution | Band formation and breakup, distinct from the P569/P570 person dates we do read |
+| P856 official website, P2002 / P2003 / P2013 socials | `ARTIST_LINKS` |
+| P434, P4404, P4407, P8052 MusicBrainz ids | Reverse identity resolution |
+| P1902, P1728, P1953 Spotify / AllMusic / Discogs ids | Cross-provider identity |
+| P373 Commons category, P1303 instrument, P166 awards | More imagery, and detail nothing else supplies |
 
-### Wikidata REST API
+Endpoints we never call: `wbgetentities` for labels and descriptions — which is what would turn a
+Q-id into a name and retire both hardcoded maps — the newer REST API at `/w/rest.php/wikibase/v1/`,
+and the SPARQL endpoint. Note that `provider/wikipedia/` *does* call `wbgetentities` on this same
+host, for sitelinks, on its own rate limiter.
 
-Wikidata has a newer REST API at `https://www.wikidata.org/w/rest.php/wikibase/v1/` with endpoints like `GET /entities/items/{id}/statements?property=P18`. It returns cleaner JSON and is recommended for new integrations.
+## Gotchas
 
-### SPARQL Endpoint
+- `docs/pitfalls.md` §3 — every hop is `optJSONObject`/`optString`, so a claim structure that moves
+  yields null and reads as "this artist has no image", not as a failure.
+- `docs/pitfalls.md` §4 — a blank `wikidataId`, a null claims object, and an entity with none of the
+  five properties are all `NotFound`, so they record breaker *success*.
+- `docs/pitfalls.md` §5 — both capabilities declare `WIKIDATA_ID`, correctly: there is no text search
+  here.
 
-The SPARQL endpoint at `https://query.wikidata.org/sparql` allows complex batch queries — e.g., fetching P18, P136, P264, P527 for an artist in one request. More efficient than individual `wbgetclaims` calls.
-
-## User-Agent Requirement
-
-Wikidata/Wikimedia APIs expect a descriptive User-Agent header. Requests without one may be throttled or blocked. Our `DefaultHttpClient` handles this.
-
-## `maxlag` Parameter
-
-The `maxlag` parameter is recommended for all requests to handle server load gracefully. When the server is under heavy load, requests with `maxlag` will receive a retry-later response instead of stale data.
-
-## Gotchas & Edge Cases
-
-- **Requires Wikidata ID**: No text search from this provider. Depends on MusicBrainz identity resolution to provide the `wikidataId`.
-- **Properties return Q-IDs, not labels**: P136 (genre) returns `Q11399` not "alternative rock". To get the human-readable name, you'd need a separate entity lookup or use the labels prop. For common values, a local lookup table is more efficient.
-- **Image filename encoding**: Filenames may contain spaces, parentheses, diacritics. Must URL-encode after replacing spaces with underscores.
-- **SVG/TIFF handling**: If the image is SVG or TIFF, Commons can render it as PNG — append `.png` to the URL. Our code handles this, though `Special:FilePath?width=` now auto-renders these formats.
-- **Multiple claims per property**: An artist might have multiple P18 images. Claims have `rank`: "preferred", "normal", "deprecated". We take `[0]` — should respect rank ordering.
-- **Claim rank selection**: Our code takes `[0]` from the claims array, but the API does not guarantee ordering by rank. Should filter for `rank: preferred` first, then `normal`, skipping `deprecated`.
-- **Qualifiers on claims**: Claims can have qualifiers (e.g., P527 "has parts" might have P580 "start time" and P582 "end time" qualifiers for when a member joined/left). Important for band member histories.
-- **Not all entities are equal**: Coverage varies wildly. Major artists have 50+ properties; obscure ones might have only a name.
-- **WikiCommons Special:FilePath**: This URL does a redirect to the actual image. It supports `?width=` for on-the-fly resizing (up to original dimensions).
-- **Redundant HTTP request**: The Wikipedia provider also calls `wbgetentities` for sitelinks. A single call with `props=claims|sitelinks` could serve both providers, eliminating a redundant HTTP request.
-
-## Internal Architecture
-
-```
-WikidataProvider
-└── WikidataApi       — single property fetch + Commons URL construction
-```
-
-No Models file — parsing is inline in the API class.
-
-Constructor params:
-- `httpClient: HttpClient`
-- `rateLimiter: RateLimiter` — 100ms is fine
-- `imageSize: Int = 1200` — pixel width for image URLs
+Ours: `getArtistImageUrl` is dead code — a one-line wrapper over `getEntityProperties` with no caller.

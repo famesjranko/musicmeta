@@ -1,145 +1,91 @@
-# Discogs Provider
+# Discogs
 
-> The definitive database for physical releases — vinyl, CD, cassette. Strong on labels, pressings, and credits. Requires a personal access token.
-
-## API Overview
+What our code does with Discogs. For the API itself — endpoints, request shapes, error codes, rate
+limits — follow the upstream link; that is authoritative and this is not.
 
 | | |
 |---|---|
-| **Base URL** | `https://api.discogs.com` |
-| **Auth** | Personal access token (query param `token` or `Authorization: Discogs token=PERSONAL_ACCESS_TOKEN` header) |
-| **Rate Limit** | 60 requests/minute (authenticated); 25/min unauthenticated |
-| **Format** | JSON |
-| **Reference Docs** | https://www.discogs.com/developers |
-| **API Key Required** | Yes (personal access token) |
-| **User-Agent** | **Required** — descriptive User-Agent header. Requests without one may be throttled or rejected with 403. |
+| **Package** | `provider/discogs/` |
+| **Provider ids** | `discogs` |
+| **Upstream API docs** | https://www.discogs.com/developers |
+| **Auth** | Personal token required — `discogs.token` / `DISCOGS_TOKEN`, see [README](../../README.md) |
+| **Deviations from the house pattern** | None — the four files, as `CLAUDE.md` describes them |
 
-## Getting a Token
-
-1. Create a Discogs account at https://www.discogs.com/users/create
-2. Go to https://www.discogs.com/settings/developers
-3. Click "Generate new token"
-4. Pass as `discogs.token` system property or `DISCOGS_TOKEN` env var
-
-Note: This is a **personal access token**, not OAuth. It gives read-only access to the public database.
-
-Discogs also supports (and recommends) the `Authorization: Discogs token=PERSONAL_ACCESS_TOKEN` header instead of the query param. The header method avoids token leakage in logs.
-
-## Endpoints We Use
-
-### Database Search
-```
-GET /database/search?type=release&title={title}&artist={artist}&per_page={limit}&token={token}
-```
-
-Response:
-```json
-{
-  "results": [
-    {
-      "id": 1234567,
-      "title": "Radiohead - OK Computer",
-      "label": ["Parlophone", "Capitol Records"],
-      "year": "1997",
-      "country": "UK",
-      "cover_image": "https://i.discogs.com/...",
-      "thumb": "https://i.discogs.com/...",
-      "type": "release",
-      "format": ["CD", "Album"],
-      "genre": ["Electronic", "Rock"],
-      "style": ["Alternative Rock", "Art Rock"],
-      "resource_url": "https://api.discogs.com/releases/1234567",
-      "barcode": ["724385522925"]
-    }
-  ],
-  "pagination": { "pages": 5, "items": 47 }
-}
-```
+**Why this provider.** Pressing-level detail nothing else in the tree has: catalogue numbers,
+per-edition formats, and per-track engineering credits. Every priority is a fallback — nothing here
+outranks MusicBrainz for the types they share.
 
 ## What We Extract
 
-| Field | Source | Notes |
-|-------|--------|-------|
-| Title | `results[].title` | Format: "Artist - Album". Splitting on " - " to verify artist. |
-| Label | `results[].label[0]` | First label only |
-| Year | `results[].year` | String |
-| Country | `results[].country` | |
-| Cover image | `results[].cover_image` | Full-size image |
-| Release type | `results[].type` | Usually "release" |
+One row per entry in `DiscogsProvider.capabilities`. The two lists are compared by
+`scripts/checks/check_provider_capabilities.py` on every `./check`.
 
-## What We DON'T Extract (Available Data)
+| EnrichmentType | Request | Upstream call | What we keep |
+|---|---|---|---|
+| `ALBUM_ART` | `ForAlbum` | `/database/search?type=release`, 5 results | `cover_image` as the URL, nothing else |
+| `LABEL` | `ForAlbum` | the same search | first `label` |
+| `RELEASE_TYPE` | `ForAlbum` | the same search | `format` |
+| `ALBUM_METADATA` | `ForAlbum` | the same search, **plus** `/releases/{id}` | label, year, format, country, `catno`, `genres` + `styles`, `community.rating.average` |
+| `ARTIST_PHOTO` | `ForArtist` | `/database/search?type=artist&per_page=1`, then `/artists/{id}` | `primary` image, or the first; `uri150` as thumbnail; every image as an `ArtworkSize` |
+| `BAND_MEMBERS` | `ForArtist` | the same two calls | member `name` and `id` |
+| `CREDITS` | `ForTrack` | `/releases/{id}` | track-level `extraartists`, falling back to release-level |
+| `RELEASE_EDITIONS` | `ForAlbum` | `/masters/{id}/versions?per_page=100` | title, format, country, year, label, `catno` |
 
-### From Current Search Response (ignored)
+Priorities run 20 (`ALBUM_ART`, the lowest in the tree) to 50. Every result scores
+`fuzzyMatch(hasArtistMatch = false)`, 0.6 — including the two that are genuine id lookups. That is a
+hair above `filterByConfidence()`'s 0.5 floor.
 
-| Field | Where | Useful For |
-|-------|-------|------------|
-| `id` | Each result | **Critical** — needed for detailed release lookup |
-| `resource_url` | Each result | Direct URL to full release API |
-| `thumb` | Each result | Smaller thumbnail image |
-| `format[]` | Each result | "CD", "Vinyl", "Cassette", "Digital" — format info |
-| `genre[]` | Each result | GENRE — Discogs has its own genre taxonomy |
-| `style[]` | Each result | Sub-genres (more specific than genre) |
-| `master_id` | Each result | Links to master release |
-| `master_url` | Each result | API URL for master release |
-| `catno` | Each result | Catalog number |
-| `barcode[]` | Each result | UPC/EAN for cross-referencing |
-| Multiple labels | `label[]` | We only take `[0]`, but releases often have multiple |
+**Two capabilities cannot start from a name.** `CREDITS` needs a `discogsReleaseId` and
+`RELEASE_EDITIONS` a `discogsMasterId`, both read from `EnrichmentIdentifiers.extra`. Neither
+declares an `identifierRequirement` — `IdentifierRequirement` has no Discogs member — so the engine
+routes to them regardless and they return `NotFound` before making any call. The only thing that
+seeds those extras is an earlier Discogs album result: `success()` attaches `resolvedIdentifiers`
+carrying both ids on `ALBUM_ART`, `LABEL`, `RELEASE_TYPE` and `ALBUM_METADATA`.
 
-### Endpoints Not Yet Called
+**The artist check falls through.** The album search takes the first of five results whose
+`title.substringBefore(" - ")` passes `ArtistMatcher.isMatch` — and on no match at all,
+`?: releases.firstOrNull()` takes the first result anyway. A wrong-artist album is a `Success` at
+0.6, not a `NotFound`. `searchArtist` is the same shape with `per_page=1` and no name check at all.
+Recorded, not changed.
 
-| Endpoint | Data | Useful For |
-|----------|------|------------|
-| `GET /releases/{id}` | Full release: tracklist with credits, notes, companies, formats, images[], videos[], genres, styles, community rating. Includes `community.have`, `community.want` counts and `rating` with `average` and `count` — useful for popularity signals. | Everything |
-| `GET /masters/{id}` | Master release (canonical version): main_release, versions_url, tracklist, images | RELEASE_EDITIONS — all pressings |
-| `GET /masters/{id}/versions` | All versions/pressings with format, label, country, year | RELEASE_EDITIONS |
-| `GET /artists/{id}` | **Artist profile**: realname, profile (bio), namevariations, urls[], images[], members[], groups[] | ARTIST_BIO, BAND_MEMBERS, ARTIST_LINKS |
-| `GET /artists/{id}/releases` | Full discography with role (Main, Remix, Producer, etc.) | ARTIST_DISCOGRAPHY |
-| `GET /database/search?type=artist` | Artist search by name | Artist lookup |
+**`CREDITS` role categories are a substring ladder.** `DiscogsMapper.mapRoleCategory` tests ~30
+lowercase substrings in order and returns `performance`, `production`, `songwriting` or null. First
+match wins, so "Vocal Arrangement" is categorised `performance` on `vocal` before `arrang` is
+reached, and any role matching none of the 30 arrives with a null category.
 
-### Artist Members Endpoint (high value)
+## What We DON'T Extract
 
-```
-GET /artists/{id}
-```
+Parsed from `/releases/{id}`, which `ALBUM_METADATA` and `CREDITS` already fetch, then dropped:
 
-Response includes:
-```json
-{
-  "members": [
-    { "id": 270222, "name": "Thom Yorke", "active": true, "resource_url": "..." },
-    { "id": 354187, "name": "Jonny Greenwood", "active": true, "resource_url": "..." }
-  ],
-  "groups": [
-    { "id": 3840, "name": "Atoms for Peace", "active": false, "resource_url": "..." }
-  ]
-}
-```
+| Field | DTO field |
+|---|---|
+| `community.rating.count` | `DiscogsReleaseDetail.ratingCount` |
+| `community.have` / `community.want` | `.haveCount`, `.wantCount` |
+| tracklist positions and titles | `DiscogsTrackItem.position` — read only to match the requested title |
+| member active/inactive flag | `DiscogsMember.active` |
 
-This is one of the best sources for **band member lists**.
+`DiscogsMapper.toAlbumMetadataFromDetail` builds a `Metadata` from the community rating and has no
+caller in main sources — only `DiscogsMapperTest` — because `enrichAlbumMetadataWithCommunity` uses
+`baseMetadata.copy(communityRating = …)` instead.
 
-## Gotchas & Edge Cases
+From a search result: `thumb` (so `ALBUM_ART` returns no thumbnail and no `sizes`, unlike
+`ARTIST_PHOTO`), `barcode`, `formats[].descriptions`, `resource_url`, `community`.
 
-- **Title format**: Discogs titles are `"Artist - Album"`, not separate fields. We split on ` - ` and use `ArtistMatcher.isMatch()` to verify the artist half.
-- **Physical-release focus**: Discogs excels at physical media. Digital-only releases may be missing or have poor metadata. This is why confidence is low (0.6).
-- **Multiple pressings**: Searching "OK Computer" may return the UK CD, US vinyl, Japanese special edition, etc. Each is a separate result with different labels, countries, barcodes.
-- **Image CDN**: `cover_image` URLs point to `i.discogs.com` CDN. These require the same `User-Agent` header or they may return 403.
-- **Not extracting `id`**: This is the biggest current gap. Without the release `id`, we can't do detailed lookups for tracklists, credits, or full metadata.
-- **Rate limit is per-minute, not per-second**: 60/min = 1/sec average, but bursts are allowed. The `RateLimiter(100)` in code means 100ms minimum between requests, which allows bursts within the 60/min budget.
-- **Genre vs Style**: Discogs has a curated genre taxonomy (broad: "Rock", "Electronic") and styles (specific: "Shoegaze", "IDM"). Both are in search results but we extract neither.
-- **Authenticated rate limit**: 60/min with token, 25/min without. Always use the token.
-- **Pagination**: Search results are paginated. We only fetch page 1. For comprehensive results, would need to follow `pagination.urls.next`.
-- **`year: "0"` edge case**: Unknown year returns `"0"` not blank. Our `takeIf { it.isNotBlank() }` doesn't filter this.
-- **Rate limit response headers**: `X-Discogs-Ratelimit` (total allowed/min), `X-Discogs-Ratelimit-Used` (used in current window), `X-Discogs-Ratelimit-Remaining` (remaining). Useful for adaptive rate limiting.
+Endpoints we never call: `/artists/{id}/releases` (discography — MusicBrainz and iTunes cover it),
+`/labels/{id}` and `/labels/{id}/releases`, the marketplace and inventory endpoints, and every user
+collection endpoint. `ReleaseEdition.barcode` is set to null explicitly because
+`/masters/{id}/versions` does not carry it; `/releases/{id}` does.
 
-## Internal Architecture
+## Gotchas
 
-```
-DiscogsProvider
-├── DiscogsApi       — search endpoint + parsing
-└── DiscogsModels    — DTO: DiscogsRelease (title, label, year, country, coverImage, releaseType)
-```
+- `docs/pitfalls.md` §5 — nothing declares an `identifierRequirement`, and for the six name-searched
+  capabilities that is right. For `CREDITS` and `RELEASE_EDITIONS` it is a gap the enum cannot
+  currently express.
+- `docs/pitfalls.md` §3 — the parsers are `optString`/`optInt` throughout, so a moved field yields
+  null and reads as a release with no label.
+- `docs/pitfalls.md` §4 — a blank token, a missing extra id, an empty search and an empty credits
+  list are all `NotFound`, so they record breaker *success*.
 
-Constructor params:
-- `personalToken: String` (or `tokenProvider: () -> String`)
-- `httpClient: HttpClient`
-- `rateLimiter: RateLimiter` — 100ms works within 60/min budget
+Ours: `isAvailable` is `tokenProvider().isNotBlank()`, re-read on every access;
+`withDefaultProviders()` skips the provider entirely when no token is configured. The token travels
+as a `token=` query parameter on every URL, so it appears in any log that records full URLs.
