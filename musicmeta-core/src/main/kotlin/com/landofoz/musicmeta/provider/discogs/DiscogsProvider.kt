@@ -157,7 +157,8 @@ class DiscogsProvider(
         val metadata = if (communityRating != null) {
             baseMetadata.copy(communityRating = communityRating)
         } else baseMetadata
-        return success(metadata, EnrichmentType.ALBUM_METADATA, release)
+        // Only reached with a release the album search verified against the requested artist.
+        return success(metadata, EnrichmentType.ALBUM_METADATA, release, hasArtistMatch = true)
     }
 
     private suspend fun enrichArtistType(
@@ -201,7 +202,8 @@ class DiscogsProvider(
             EnrichmentType.ALBUM_METADATA -> DiscogsMapper.toAlbumMetadata(release)
             else -> null
         } ?: return EnrichmentResult.NotFound(type, id)
-        return success(data, type, release)
+        // Only reached with a release the album search verified against the requested artist.
+        return success(data, type, release, hasArtistMatch = true)
     }
 
     private fun buildResolvedIdentifiers(release: DiscogsRelease): EnrichmentIdentifiers? {
@@ -219,11 +221,13 @@ class DiscogsProvider(
         data: EnrichmentData,
         type: EnrichmentType,
         release: DiscogsRelease? = null,
+        // Defaults false: the id- and artist-search paths verify no artist name.
+        hasArtistMatch: Boolean = false,
     ) = EnrichmentResult.Success(
         type = type,
         data = data,
         provider = id,
-        confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = false),
+        confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch),
         resolvedIdentifiers = release?.let { buildResolvedIdentifiers(it) },
     )
 }
