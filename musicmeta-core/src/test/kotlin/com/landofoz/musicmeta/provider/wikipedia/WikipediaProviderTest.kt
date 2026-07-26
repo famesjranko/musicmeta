@@ -269,7 +269,55 @@ class WikipediaProviderTest {
         assertEquals("wikipedia", result.provider)
     }
 
+    @Test
+    fun `enrich returns Error with NETWORK ErrorKind when the Wikidata sitelink lookup fails`() = runTest {
+        // Given — no wikipediaTitle, so the title comes from the Wikidata sitelink call, which throws
+        httpClient.givenIoException("wikidata.org")
+        val request = EnrichmentRequest.ForArtist(
+            identifiers = EnrichmentIdentifiers(wikidataId = "Q123"),
+            name = "Radiohead",
+        )
+
+        // When — enriching for artist bio
+        val result = provider.enrich(request, EnrichmentType.ARTIST_BIO)
+
+        // Then — Error with NETWORK kind, not a propagated IOException
+        assertTrue(result is EnrichmentResult.Error)
+        assertEquals(ErrorKind.NETWORK, (result as EnrichmentResult.Error).errorKind)
+        assertEquals("wikipedia", result.provider)
+    }
+
+    @Test
+    fun `enrich resolves the title from Wikidata sitelinks when no wikipediaTitle is given`() = runTest {
+        // Given — Wikidata returns an enwiki sitelink and Wikipedia returns that page's summary
+        httpClient.givenJsonResponse("wikidata.org", SITELINKS_JSON)
+        httpClient.givenJsonResponse("wikipedia.org", SUMMARY_JSON)
+        val request = EnrichmentRequest.ForArtist(
+            identifiers = EnrichmentIdentifiers(wikidataId = "Q123"),
+            name = "Radiohead",
+        )
+
+        // When — enriching for artist bio
+        val result = provider.enrich(request, EnrichmentType.ARTIST_BIO)
+
+        // Then — Success, and the resolved title was used for the summary request
+        assertTrue(result is EnrichmentResult.Success)
+        val bio = (result as EnrichmentResult.Success).data as EnrichmentData.Biography
+        assertEquals("Radiohead are an English rock band.", bio.text)
+        assertTrue(httpClient.requestedUrls.any { it.contains("wikipedia.org") && it.contains("Radiohead") })
+    }
+
     private companion object {
+        val SITELINKS_JSON = """{
+            "entities": {
+                "Q123": {
+                    "sitelinks": {
+                        "enwiki": { "title": "Radiohead" }
+                    }
+                }
+            }
+        }""".trimIndent()
+
         val SUMMARY_JSON = """{
             "title": "Radiohead",
             "extract": "Radiohead are an English rock band.",

@@ -50,8 +50,11 @@ class WikipediaProvider(
         type: EnrichmentType,
     ): EnrichmentResult {
         logger.debug(TAG, "wpTitle=${request.identifiers.wikipediaTitle}, wikidataId=${request.identifiers.wikidataId}")
-        val title = request.identifiers.wikipediaTitle
-            ?: resolveFromWikidata(request.identifiers.wikidataId)
+        val title = request.identifiers.wikipediaTitle ?: try {
+            resolveFromWikidata(request.identifiers.wikidataId)
+        } catch (e: Exception) {
+            return mapError(type, e)
+        }
         logger.debug(TAG, "Resolved title=$title")
         if (title == null) return EnrichmentResult.NotFound(type, id)
 
