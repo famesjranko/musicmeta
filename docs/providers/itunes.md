@@ -19,7 +19,7 @@ default, which `withDefaultProviders()` takes, against roughly 20 requests a min
 ## What We Extract
 
 One row per entry in `ITunesProvider.capabilities`. The two lists are compared by
-`scripts/checks/check_provider_capabilities.py` on every `./check`.
+`ProviderFeatureDocsTest` on every `./check`.
 
 | EnrichmentType | Request | Upstream call | What we keep |
 |---|---|---|---|

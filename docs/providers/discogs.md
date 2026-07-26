@@ -18,7 +18,7 @@ outranks MusicBrainz for the types they share.
 ## What We Extract
 
 One row per entry in `DiscogsProvider.capabilities`. The two lists are compared by
-`scripts/checks/check_provider_capabilities.py` on every `./check`.
+`ProviderFeatureDocsTest` on every `./check`.
 
 | EnrichmentType | Request | Upstream call | What we keep |
 |---|---|---|---|

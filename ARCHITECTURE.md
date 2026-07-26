@@ -24,12 +24,11 @@ because the config is the thing that fails.
 | Python types | mypy | `scripts/**` |
 | Shell | shellcheck | `scripts/**`, `check`, `demo/run.sh` |
 | Conventions | `scripts/checks/check_conventions.py` | no `!!` and no `@Serializable` under `provider/`/`http/` in main sources; conflict markers anywhere |
-| Provider feature docs | `scripts/checks/check_provider_capabilities.py` | `## What We Extract` in each `docs/providers/<name>.md` matches the `EnrichmentType`s that package declares, both directions. A `capabilities` shape it cannot parse fails naming the file; a package with no doc is skipped so docs can land one at a time |
 | Release-note caps | `build_release_notes.py Unreleased` | `CHANGELOG.md`'s `[Unreleased]` stays under 3000 chars and 400 per line — the same `check_caps()` the release runs, so it fails here rather than at release prep. An empty section passes: `pin_release.py` opens one on every release branch |
-| Script self-tests | `scripts/**/test_*.py` | discovered, not listed — every script with a `test_*.py` beside it still behaves: release notes, conventions, provider feature docs |
+| Script self-tests | `scripts/**/test_*.py` | discovered, not listed — every script with a `test_*.py` beside it still behaves: release notes, conventions |
 | Kotlin format | ktlint (version pinned in `libs.versions.toml`) | all modules, and `demo/` |
 | Kotlin static analysis | detekt, **type-resolved** (`detektMain`/`detektTest`) | complexity, dead code, bug patterns |
-| Build | `./gradlew build` | compile, all unit tests, `apiCheck` against `api/*.api` |
+| Build | `./gradlew build` | compile, all unit tests, `apiCheck` against `api/*.api`. Includes `ProviderFeatureDocsTest`: `## What We Extract` in each `docs/providers/<name>.md` against the `EnrichmentType`s that package declares at runtime, both directions |
 | Consumer canary | `demo/` composite build | an external consumer still compiles |
 
 Beyond `./check`: `main`'s ruleset requires a pull request with `build` and `demo-canary` green,
@@ -63,13 +62,12 @@ than it looks like, each learned the hard way.
   `KotlinLexer` oracle and a 337-line differential test. There are no such comments in the tree. If
   one is ever needed, reword it.
 - **One column of a provider feature doc is checked; the rest is prose.**
-  `check_provider_capabilities.py` compares `## What We Extract`'s `EnrichmentType` names against the
-  package's `capabilities` and nothing else — a row whose endpoint, request kind or kept-fields
-  column has gone stale still passes, as does every other section. That is the whole gate, and it is
-  deliberate: the previous generation of these docs was unenforced end to end and went four months
-  stale. It parses Kotlin with regexes, which a Kotlin test reading the runtime `capabilities` would
-  not have to; that trade is argued in the script's docstring, and the reason to revisit it is the
-  parser costing more than it saves rather than any new rule.
+  `ProviderFeatureDocsTest` compares `## What We Extract`'s `EnrichmentType` names against the
+  package's runtime `capabilities` and nothing else — a row whose endpoint, request kind or
+  kept-fields column has gone stale still passes, as does every other section. Deliberate: the
+  previous generation of these docs was unenforced end to end and went four months stale.
+- **The feature-doc check does not run under `./check --fast`,** which skips the build. It is a unit
+  test, not a script step; `--fast` was never evidence for a push.
 - **detekt is not in `--fast`.** The typed tasks compile before they analyse and the Android
   variants need `ANDROID_HOME`. The edit loop is ktlint plus the conventions check; detekt runs on
   every push and in CI. `--fast` was never evidence for a push.

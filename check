@@ -70,12 +70,6 @@ mypy
 step "conventions"
 python3 scripts/checks/check_conventions.py
 
-step "provider feature docs"
-# The one checkable claim in docs/providers/: `## What We Extract` against the provider's declared
-# `capabilities`. Everything else in those docs is unenforced prose, which is exactly how the
-# previous generation of them went four months stale.
-python3 scripts/checks/check_provider_capabilities.py
-
 step "script self-tests"
 # Unguarded, a regression in a release script surfaces only as a release check that silently passes.
 for t in scripts/checks/test_*.py scripts/github-workflows/test_*.py; do

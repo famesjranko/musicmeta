@@ -35,7 +35,7 @@ one `DeezerApi` and hands it to both — so the two providers share a `RateLimit
 ## What We Extract
 
 One row per entry in `capabilities` across **both** provider classes in the package. The two lists are
-compared by `scripts/checks/check_provider_capabilities.py` on every `./check`.
+compared by `ProviderFeatureDocsTest` on every `./check`.
 
 | EnrichmentType | Request | Upstream call | What we keep |
 |---|---|---|---|

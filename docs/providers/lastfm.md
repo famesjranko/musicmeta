@@ -19,7 +19,7 @@ and long-tail poor.
 ## What We Extract
 
 One row per entry in `LastFmProvider.capabilities`. The two lists are compared by
-`scripts/checks/check_provider_capabilities.py` on every `./check`, so a row added or removed here
+`ProviderFeatureDocsTest` on every `./check`, so a row added or removed here
 without the matching code change fails the build.
 
 | EnrichmentType | Request | Upstream call | What we keep |

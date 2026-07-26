@@ -16,10 +16,10 @@ The house four-file pattern is stated once, in `CLAUDE.md`, and not repeated her
 ## What is checked, and what is not
 
 `## What We Extract` in each doc lists `EnrichmentType` names in the first column of a table.
-`scripts/checks/check_provider_capabilities.py` compares that set against the `capabilities` the
-package declares, on every `./check`, and fails in both directions. Everything else here is
-unenforced prose — written knowing that, and knowing what unenforced prose about a moving package
-turned into last time.
+`ProviderFeatureDocsTest` compares that set against the `capabilities` each package declares at
+runtime, on every `./check`, and fails in both directions — plus a package with no doc, a doc with no
+package, and a provider that stops being registered. Everything else here is unenforced prose —
+written knowing that, and knowing what unenforced prose about a moving package turned into last time.
 
 ## The providers
 

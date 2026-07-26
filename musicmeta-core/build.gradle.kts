@@ -40,6 +40,12 @@ tasks.withType<Test> {
     apiKeys.forEach { (prop, env) ->
         systemProperty(prop, System.getProperty(prop) ?: System.getenv(env) ?: "")
     }
+
+    // ProviderFeatureDocsTest reads docs/providers/ off disk, and Gradle cannot see that. Undeclared,
+    // a doc-only edit leaves the test task up-to-date and the comparison silently never re-runs —
+    // measured, not assumed: an invented capability row passed until this line existed. The provider
+    // sources need no such line; a package change recompiles, which invalidates the task anyway.
+    inputs.dir(rootProject.file("docs/providers")).withPropertyName("providerFeatureDocs")
 }
 
 dependencies {

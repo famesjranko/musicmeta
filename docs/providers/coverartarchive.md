@@ -18,7 +18,7 @@ source in the tree for the non-front images — back cover, booklet, disc.
 ## What We Extract
 
 One row per entry in `CoverArtArchiveProvider.capabilities`. The two lists are compared by
-`scripts/checks/check_provider_capabilities.py` on every `./check`.
+`ProviderFeatureDocsTest` on every `./check`.
 
 | EnrichmentType | Identifier | Upstream call | What we keep |
 |---|---|---|---|

@@ -37,7 +37,7 @@ instance. Recorded, not changed.
 ## What We Extract
 
 One row per entry in `MusicBrainzProvider.capabilities`. The two lists are compared by
-`scripts/checks/check_provider_capabilities.py` on every `./check`.
+`ProviderFeatureDocsTest` on every `./check`.
 
 | EnrichmentType | Identifier | Upstream call | What we keep |
 |---|---|---|---|
