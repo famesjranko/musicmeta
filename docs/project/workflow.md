@@ -132,11 +132,9 @@ Run these for every change:
 git diff --check -- ':!*/api/*.api'
 ```
 
-`./check` is the whole verification surface and is exactly what CI runs — formatter, linter, type
-checker and custom linter across Kotlin, Python and shell, then the build and the demo canary. Use
-`./check --fast` during the edit loop, never as the evidence for a push.
-[ARCHITECTURE.md](../../ARCHITECTURE.md) records which rules it enforces and which are only
-intended.
+`./check` is the whole verification surface and is exactly what CI runs;
+[ARCHITECTURE.md](../../ARCHITECTURE.md) has the step table under *What `./check` runs* and, under
+*Known gaps*, where a green run means less than it looks like.
 
 The API dump exclusion is intentional: its generator writes a trailing blank line that `apiCheck`
 compares byte-for-byte. Do not hand-edit generated dumps to satisfy whitespace checking.
@@ -188,7 +186,7 @@ Use conventional commits scoped by area, for example `fix(provider): handle null
 
 | Change | Update |
 |---|---|
-| New or changed gate, or a rule that gains/loses a mechanism | `ARCHITECTURE.md` — the *Enforced by* table or the *Not enforced* list |
+| New or changed gate, or a rule that gains/loses a mechanism | The mechanism itself — the `check` step, the config key, the script docstring. `ARCHITECTURE.md` for what a green run then covers (*What `./check` runs*) or misses (*Known gaps*) |
 | Feature or bug fix | `CHANGELOG.md` |
 | Breaking public API change | `CHANGELOG.md` under `### Breaking Changes` |
 | Why a decision was made, or an approach rejected | Inline at the mechanism; the PR for the rest |

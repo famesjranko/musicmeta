@@ -12,8 +12,7 @@ because the config is the thing that fails.
 
 ```bash
 ./scripts/bootstrap.sh   # once: installs the pinned tools ./check requires
-./check                  # everything
-./check --fast           # skips detekt, the build and the demo canary — edit loop, not a push
+./check                  # everything — `check`'s header lists the flags and what each skips
 ```
 
 ## What `./check` runs
@@ -71,7 +70,7 @@ than it looks like, each learned the hard way.
   compiler or a test can see. Hand-verified 2026-07-26; that date is the only warranty.
 - **detekt is not in `--fast`.** The typed tasks compile before they analyse and the Android
   variants need `ANDROID_HOME`. The edit loop is ktlint plus the conventions check; detekt runs on
-  every push and in CI. `--fast` was never evidence for a push.
+  every push and in CI.
 - **Type resolution in detekt is EXPERIMENTAL**, and so is every alternative in 1.23.x — hand-wiring
   `classpath`, the CLI flags, the compiler plugin. Accepted: the stable task does not run the rules
   this exists for. detekt 1.23.8 is built against Kotlin 2.0.21 / AGP 8.8.1 while this repo runs

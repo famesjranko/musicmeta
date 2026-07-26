@@ -127,9 +127,8 @@ verified. A tag that disagrees with what was published is no longer possible to 
 
 ## Release notes
 
-The `## [x.y.z]` section of `CHANGELOG.md` **is** the note. Only the `## Installation` block and the
-`**Full Changelog**` link are generated, which is what stops them going stale: every release from
-v0.8.1 to v0.10.1 carried a versionless badge that rendered the live-latest version on every page.
+What is hand-written and what is generated is stated in `build_release_notes.py`'s docstring; why
+nothing generated may float is in `validate_release_notes.py`'s.
 
 Check any release's notes at any time:
 
