@@ -1,8 +1,8 @@
 package com.landofoz.musicmeta.provider.discogs
 
 import com.landofoz.musicmeta.http.HttpClient
-import com.landofoz.musicmeta.http.HttpResult
 import com.landofoz.musicmeta.http.RateLimiter
+import com.landofoz.musicmeta.http.bodyOrThrowAuth
 import org.json.JSONObject
 import java.net.URLEncoder
 
@@ -24,12 +24,7 @@ internal class DiscogsApi(
         val encodedArtist = URLEncoder.encode(artist, "UTF-8")
         val url = "$SEARCH_URL?type=release&title=$encodedTitle" +
             "&artist=$encodedArtist&per_page=$limit&token=${tokenProvider()}"
-        val json = rateLimiter.execute {
-            when (val r = httpClient.fetchJsonResult(url)) {
-                is HttpResult.Ok -> r.body
-                else -> return@execute null
-            }
-        } ?: return emptyList()
+        val json = rateLimiter.execute { httpClient.fetchJsonResult(url).bodyOrThrowAuth() } ?: return emptyList()
         return parseReleaseResults(json)
     }
 
@@ -37,12 +32,7 @@ internal class DiscogsApi(
     suspend fun searchArtist(name: String): Long? {
         val encoded = URLEncoder.encode(name, "UTF-8")
         val url = "$SEARCH_URL?type=artist&q=$encoded&per_page=1&token=${tokenProvider()}"
-        val json = rateLimiter.execute {
-            when (val r = httpClient.fetchJsonResult(url)) {
-                is HttpResult.Ok -> r.body
-                else -> return@execute null
-            }
-        } ?: return null
+        val json = rateLimiter.execute { httpClient.fetchJsonResult(url).bodyOrThrowAuth() } ?: return null
         val results = json.optJSONArray("results") ?: return null
         if (results.length() == 0) return null
         val id = results.getJSONObject(0).optLong("id", 0L)
@@ -52,36 +42,21 @@ internal class DiscogsApi(
     /** Fetch artist details including band members. */
     suspend fun getArtist(artistId: Long): DiscogsArtist? {
         val url = "$ARTISTS_URL/$artistId?token=${tokenProvider()}"
-        val json = rateLimiter.execute {
-            when (val r = httpClient.fetchJsonResult(url)) {
-                is HttpResult.Ok -> r.body
-                else -> return@execute null
-            }
-        } ?: return null
+        val json = rateLimiter.execute { httpClient.fetchJsonResult(url).bodyOrThrowAuth() } ?: return null
         return parseArtist(json)
     }
 
     /** Fetch all versions of a master release (pressings, editions). */
     suspend fun getMasterVersions(masterId: Long): List<DiscogsMasterVersion> {
         val url = "$MASTERS_URL/$masterId/versions?per_page=100&token=${tokenProvider()}"
-        val json = rateLimiter.execute {
-            when (val r = httpClient.fetchJsonResult(url)) {
-                is HttpResult.Ok -> r.body
-                else -> return@execute null
-            }
-        } ?: return emptyList()
+        val json = rateLimiter.execute { httpClient.fetchJsonResult(url).bodyOrThrowAuth() } ?: return emptyList()
         return parseMasterVersions(json)
     }
 
     /** Fetch release details including extraartists and tracklist. */
     suspend fun getReleaseDetails(releaseId: Long): DiscogsReleaseDetail? {
         val url = "$RELEASES_URL/$releaseId?token=${tokenProvider()}"
-        val json = rateLimiter.execute {
-            when (val r = httpClient.fetchJsonResult(url)) {
-                is HttpResult.Ok -> r.body
-                else -> return@execute null
-            }
-        } ?: return null
+        val json = rateLimiter.execute { httpClient.fetchJsonResult(url).bodyOrThrowAuth() } ?: return null
         return parseReleaseDetail(json)
     }
 

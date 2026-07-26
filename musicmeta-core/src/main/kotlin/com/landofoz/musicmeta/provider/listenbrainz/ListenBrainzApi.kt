@@ -1,8 +1,8 @@
 package com.landofoz.musicmeta.provider.listenbrainz
 
 import com.landofoz.musicmeta.http.HttpClient
-import com.landofoz.musicmeta.http.HttpResult
 import com.landofoz.musicmeta.http.RateLimiter
+import com.landofoz.musicmeta.http.bodyOrThrowAuth
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -20,10 +20,8 @@ internal class ListenBrainzApi(
         artistMbid: String,
     ): List<ListenBrainzPopularTrack> = rateLimiter.execute {
         val url = "$BASE_URL/popularity/top-recordings-for-artist/$artistMbid"
-        val jsonArray = when (val r = httpClient.fetchJsonArrayResult(url)) {
-            is HttpResult.Ok -> r.body
-            else -> return@execute emptyList()
-        }
+        val jsonArray = httpClient.fetchJsonArrayResult(url).bodyOrThrowAuth()
+            ?: return@execute emptyList()
         parseRecordings(jsonArray)
     }
 
@@ -32,10 +30,8 @@ internal class ListenBrainzApi(
         recordingMbids: List<String>,
     ): List<ListenBrainzRecordingPopularity> = rateLimiter.execute {
         val body = JSONObject().put("recording_mbids", JSONArray(recordingMbids)).toString()
-        val jsonArray = when (val r = httpClient.postJsonArrayResult("$BASE_URL/popularity/recording", body)) {
-            is HttpResult.Ok -> r.body
-            else -> return@execute emptyList()
-        }
+        val jsonArray = httpClient.postJsonArrayResult("$BASE_URL/popularity/recording", body).bodyOrThrowAuth()
+            ?: return@execute emptyList()
         parseRecordingPopularity(jsonArray)
     }
 
@@ -44,10 +40,8 @@ internal class ListenBrainzApi(
         artistMbids: List<String>,
     ): List<ListenBrainzArtistPopularity> = rateLimiter.execute {
         val body = JSONObject().put("artist_mbids", JSONArray(artistMbids)).toString()
-        val jsonArray = when (val r = httpClient.postJsonArrayResult("$BASE_URL/popularity/artist", body)) {
-            is HttpResult.Ok -> r.body
-            else -> return@execute emptyList()
-        }
+        val jsonArray = httpClient.postJsonArrayResult("$BASE_URL/popularity/artist", body).bodyOrThrowAuth()
+            ?: return@execute emptyList()
         parseArtistPopularity(jsonArray)
     }
 
@@ -56,10 +50,8 @@ internal class ListenBrainzApi(
         artistMbid: String,
     ): List<ListenBrainzTopReleaseGroup> = rateLimiter.execute {
         val url = "$BASE_URL/popularity/top-release-groups-for-artist/$artistMbid"
-        val jsonArray = when (val r = httpClient.fetchJsonArrayResult(url)) {
-            is HttpResult.Ok -> r.body
-            else -> return@execute emptyList()
-        }
+        val jsonArray = httpClient.fetchJsonArrayResult(url).bodyOrThrowAuth()
+            ?: return@execute emptyList()
         parseTopReleaseGroups(jsonArray)
     }
 
@@ -122,10 +114,8 @@ internal class ListenBrainzApi(
         count: Int = 20,
     ): List<ListenBrainzSimilarArtist> = rateLimiter.execute {
         val url = "$BASE_URL/explore/lb-radio/artist/$artistMbid/similar"
-        val json = when (val r = httpClient.fetchJsonResult(url)) {
-            is HttpResult.Ok -> r.body
-            else -> return@execute emptyList()
-        }
+        val json = httpClient.fetchJsonResult(url).bodyOrThrowAuth()
+            ?: return@execute emptyList()
         val payload = json.optJSONArray("payload") ?: return@execute emptyList()
         val results = mutableListOf<ListenBrainzSimilarArtist>()
         for (i in 0 until minOf(payload.length(), count)) {
@@ -150,10 +140,8 @@ internal class ListenBrainzApi(
             val encoded = java.net.URLEncoder.encode("artist:($artistPrompt)", "UTF-8")
             val url = "$BASE_URL/explore/lb-radio?prompt=$encoded&mode=$mode"
             val headers = mapOf("Authorization" to "Token $token")
-            val json = when (val r = httpClient.fetchJsonResult(url, headers)) {
-                is HttpResult.Ok -> r.body
-                else -> return@execute emptyList()
-            }
+            val json = httpClient.fetchJsonResult(url, headers).bodyOrThrowAuth()
+                ?: return@execute emptyList()
             parseJspfPlaylist(json)
         }
     }
