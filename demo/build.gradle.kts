@@ -1,7 +1,7 @@
 plugins {
-    kotlin("jvm") version "2.1.0"
+    alias(libs.plugins.kotlin.jvm)
     application
-    id("org.jlleitschuh.gradle.ktlint") version "14.2.0"
+    alias(libs.plugins.ktlint)
 }
 
 // Formatting is shared with the parent build; conventions are not. A demo stands in for an external
@@ -13,11 +13,7 @@ plugins {
 // defect that let the gate and the write-time hook drift apart. Moving demo/ to its own repo already
 // means dropping `includeBuild("..")` in settings.gradle.kts; this line goes at the same time.
 ktlint {
-    version.set(
-        file("../gradle/libs.versions.toml").readLines()
-            .first { it.startsWith("ktlint-cli = ") }
-            .substringAfter('"').substringBefore('"'),
-    )
+    version.set(libs.versions.ktlint.cli)
 }
 
 repositories {
