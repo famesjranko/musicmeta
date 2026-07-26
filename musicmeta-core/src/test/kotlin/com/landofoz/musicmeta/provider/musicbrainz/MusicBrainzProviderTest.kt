@@ -502,7 +502,80 @@ class MusicBrainzProviderTest {
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
+    @Test
+    fun `enrich album GENRE looks the release up when the search hit has no tags`() = runTest {
+        // Given — a high-scoring search hit with neither tags nor a label
+        httpClient.givenJsonResponse("release?query", RELEASE_SEARCH_THIN)
+        httpClient.givenJsonResponse("release/thin1", RELEASE_LOOKUP_FULL)
+        val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+
+        // When — enriching for GENRE
+        val result = provider.enrich(request, EnrichmentType.GENRE)
+
+        // Then — the lookup filled the genres, and the search score still sets confidence
+        val success = result as EnrichmentResult.Success
+        assertEquals(listOf("alternative rock"), (success.data as EnrichmentData.Metadata).genres)
+        assertEquals(0.98f, success.confidence, 0.01f)
+        assertTrue(httpClient.requestedUrls.any { it.contains("release/thin1") })
+    }
+
+    @Test
+    fun `enrich album LABEL looks the release up when the search hit has no label`() = runTest {
+        // Given — a high-scoring search hit with no label
+        httpClient.givenJsonResponse("release?query", RELEASE_SEARCH_THIN)
+        httpClient.givenJsonResponse("release/thin1", RELEASE_LOOKUP_FULL)
+        val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+
+        // When — enriching for LABEL
+        val result = provider.enrich(request, EnrichmentType.LABEL)
+
+        // Then — the lookup filled the label
+        val success = result as EnrichmentResult.Success
+        assertEquals("Parlophone", (success.data as EnrichmentData.Metadata).label)
+    }
+
+    @Test
+    fun `enrich album GENRE does not look the release up when the search hit has tags`() = runTest {
+        // Given — a search hit that already carries release-group tags and a label
+        httpClient.givenJsonResponse("release?query", RELEASE_SEARCH_HIGH_SCORE)
+        val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+
+        // When — enriching for GENRE
+        provider.enrich(request, EnrichmentType.GENRE)
+
+        // Then — the search was the only call
+        assertEquals(1, httpClient.requestedUrls.size)
+    }
+
     companion object {
+        private val RELEASE_SEARCH_THIN = """
+            {
+              "releases": [{
+                "id": "thin1",
+                "score": 98,
+                "title": "OK Computer",
+                "artist-credit": [{"artist": {"id": "def456", "name": "Radiohead"}}],
+                "date": "1997-06-16",
+                "release-group": {"id": "group123", "primary-type": "Album"}
+              }]
+            }
+        """.trimIndent()
+
+        private val RELEASE_LOOKUP_FULL = """
+            {
+              "id": "thin1",
+              "title": "OK Computer",
+              "date": "1997-06-16",
+              "country": "GB",
+              "label-info": [{"label": {"name": "Parlophone"}}],
+              "release-group": {
+                "id": "group123",
+                "primary-type": "Album",
+                "tags": [{"name": "alternative rock", "count": 5}]
+              }
+            }
+        """.trimIndent()
+
         private val RELEASE_SEARCH_HIGH_SCORE = """
             {
               "releases": [{

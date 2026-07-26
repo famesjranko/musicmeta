@@ -62,7 +62,16 @@ internal class MusicBrainzEnricher(
         val best = releases.firstOrNull { it.score >= minMatchScore }
             ?: return EnrichmentResult.NotFound(type, providerId,
                 suggestions = releases.take(MAX_SUGGESTIONS).map { it.toCandidate() })
-        return buildAlbumResult(best, type, ConfidenceCalculator.searchScore(best.score))
+        // A search hit carries tags only when the release group happens to have them, and often no
+        // label at all; the release lookup is what fills both. Pay the second call only for the two
+        // types that read those fields, and only when the hit is actually missing the field.
+        val thin = when (type) {
+            EnrichmentType.GENRE -> best.tags.isEmpty()
+            EnrichmentType.LABEL -> best.label == null
+            else -> false
+        }
+        val resolved = if (thin) api.lookupRelease(best.id) ?: best else best
+        return buildAlbumResult(resolved, type, ConfidenceCalculator.searchScore(best.score))
     }
 
     internal suspend fun enrichAlbumTracks(
