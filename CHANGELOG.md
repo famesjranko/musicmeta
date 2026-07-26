@@ -14,6 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > - Consumer-visible means it changes the published artifacts, the public API, runtime behaviour,
 >   documented usage, or the compatibility promise. CI, tooling, formatting and repo hygiene are
 >   **not** — that record belongs in the PR and in git. An entry nobody can act on is noise.
+> - A **behaviour** change counts only where the affected call was one we advertised. Changing what
+>   a documented extension point does is an entry; changing what a provider returns for a type it
+>   never declared as a capability is not. The test is not whether behaviour moved — it is whether
+>   a consumer could legitimately have depended on it. Off-contract, the only action available is
+>   "stop making a call that was never supported", which the line above rules out as noise.
 > - For a payload change, ask the user about a cache-clear note.
 > - `scripts/github-workflows/build_release_notes.py` caps a section at 3000 characters and any
 >   single line at 400; `./check` runs that cap against `[Unreleased]` on every commit, and the
