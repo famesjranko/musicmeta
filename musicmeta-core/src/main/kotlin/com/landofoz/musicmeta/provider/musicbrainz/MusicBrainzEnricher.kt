@@ -8,7 +8,6 @@ import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Handles per-entity enrichment logic for MusicBrainz.
@@ -20,21 +19,25 @@ internal class MusicBrainzEnricher(
     private val minMatchScore: Int,
 ) {
 
-    /** Cache artist lookups by MBID to avoid redundant API calls across types. */
-    private val artistCache = ConcurrentHashMap<String, MusicBrainzArtist>()
+    /**
+     * Cache artist lookups by MBID to avoid redundant API calls across types.
+     * Access-ordered and capped: one enricher lives as long as the engine does, so an
+     * unbounded map would grow with every distinct artist a long-lived process ever sees.
+     * Access order means every read mutates it, so all access is under [artistLookupMutex].
+     */
+    private val artistCache = LinkedHashMap<String, MusicBrainzArtist>(ARTIST_CACHE_MAX_ENTRIES, 0.75f, true)
     private val artistLookupMutex = Mutex()
 
     /** Lookup artist with rels (superset), caching to avoid redundant calls.
      *  BAND_MEMBERS, ARTIST_LINKS, and GENRE all need artist data for the same MBID. */
-    private suspend fun cachedArtistLookup(mbid: String): MusicBrainzArtist? {
-        artistCache[mbid]?.let { return it }
-        return artistLookupMutex.withLock {
+    private suspend fun cachedArtistLookup(mbid: String): MusicBrainzArtist? =
+        artistLookupMutex.withLock {
             artistCache[mbid]?.let { return@withLock it }
-            val result = api.lookupArtistWithRels(mbid)
-            result?.let { artistCache[mbid] = it }
-            result
+            api.lookupArtistWithRels(mbid)?.also {
+                artistCache[mbid] = it
+                while (artistCache.size > ARTIST_CACHE_MAX_ENTRIES) artistCache.remove(artistCache.keys.first())
+            }
         }
-    }
 
     internal suspend fun enrichAlbum(
         request: EnrichmentRequest.ForAlbum, type: EnrichmentType,
@@ -292,6 +295,9 @@ internal class MusicBrainzEnricher(
 
     companion object {
         private const val MAX_SUGGESTIONS = 3
+
+        /** Cap on [artistCache], matching InMemoryEnrichmentCache's default. */
+        internal const val ARTIST_CACHE_MAX_ENTRIES = 500
 
         /** New artist types routed through enrichArtistNewType(). */
         private val ARTIST_NEW_TYPES = setOf(
