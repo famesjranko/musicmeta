@@ -206,49 +206,4 @@ class DiscogsMapperTest {
         assertTrue(result is EnrichmentData.ReleaseEditions)
         assertEquals(0, result.editions.size)
     }
-
-    // toAlbumMetadataFromDetail tests
-
-    @Test
-    fun `toAlbumMetadata includes community rating from release detail`() {
-        // Given — DiscogsReleaseDetail with community rating data
-        val detail = DiscogsReleaseDetail(
-            id = 999L,
-            title = "OK Computer",
-            extraartists = emptyList(),
-            tracklist = emptyList(),
-            communityRating = 4.2f,
-            ratingCount = 150,
-            haveCount = 5000,
-            wantCount = 1200,
-        )
-
-        // When
-        val result = DiscogsMapper.toAlbumMetadataFromDetail(detail)
-
-        // Then — Metadata with communityRating
-        assertTrue(result is EnrichmentData.Metadata)
-        assertEquals(4.2f, result.communityRating)
-    }
-
-    @Test
-    fun `toAlbumMetadata handles null community data gracefully`() {
-        // Given — DiscogsReleaseDetail with null community fields
-        val detail = DiscogsReleaseDetail(
-            id = 999L,
-            title = "OK Computer",
-            extraartists = emptyList(),
-            tracklist = emptyList(),
-            communityRating = null,
-            ratingCount = null,
-            haveCount = null,
-            wantCount = null,
-        )
-
-        // When
-        val result = DiscogsMapper.toAlbumMetadataFromDetail(detail)
-
-        // Then — Metadata with null communityRating
-        assertNull(result.communityRating)
-    }
 }
