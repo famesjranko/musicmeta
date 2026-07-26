@@ -42,7 +42,7 @@ ktlint-gradle = "14.2.0"
 # number: `build.gradle.kts` sets the gate to it, and `scripts/format-on-write.sh` refuses to format
 # unless the CLI on PATH matches. Bumping it is a rule-set change — expect new violations, and read
 # the ktlint release notes before you do.
-ktlint-cli = "1.5.0"
+ktlint-cli = "1.8.0"
 
 # Static analysis — the linter layer ktlint does not cover (complexity, bug patterns, dead code)
 detekt = "1.23.8"
