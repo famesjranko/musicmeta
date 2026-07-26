@@ -38,10 +38,11 @@ binary-compatibility-validator = "0.18.1"
 # ktlint's own default and disables the wrapping rules, each with its reasoning next to it.
 ktlint-gradle = "14.2.0"
 
-# The ktlint the plugin runs, pinned rather than left to the plugin's default. Two things read this
-# number: `build.gradle.kts` sets the gate to it, and `scripts/format-on-write.sh` refuses to format
-# unless the CLI on PATH matches. Bumping it is a rule-set change — expect new violations, and read
-# the ktlint release notes before you do.
+# The ktlint the plugin runs, pinned rather than left to the plugin's default. Three things read
+# this number: `build.gradle.kts` sets the gate to it, `scripts/format-on-write.sh` refuses to
+# format unless the CLI on PATH matches, and `scripts/bootstrap.sh` installs it — so bumping here
+# also requires that script's `KTLINT_SHA256`, which fails the download until you do.
+# Bumping it is a rule-set change — expect new violations, and read the ktlint release notes first.
 ktlint-cli = "1.8.0"
 
 # Static analysis — the linter layer ktlint does not cover (complexity, bug patterns, dead code)

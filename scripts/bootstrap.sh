@@ -12,7 +12,11 @@ UV_VERSION="0.11.31"
 RUFF_VERSION="0.15.22"
 MYPY_VERSION="2.3.0"
 SHELLCHECK_VERSION="0.11.0"
-KTLINT_VERSION="1.8.0"
+# Read from the catalogue rather than pinned again here: this script and the gate disagreeing is
+# what made format-on-write silently no-op on every .kt edit. A bump there now makes the download
+# below fail its digest check until KTLINT_SHA256 is updated in the same commit — which is what the
+# header already asks for, now enforced instead of requested.
+KTLINT_VERSION="$(sed -n 's/^ktlint-cli = "\(.*\)"$/\1/p' "$(dirname "${BASH_SOURCE[0]}")/../gradle/libs.versions.toml")"
 
 # These three are raw downloads of executables that then run in CI with repository access, so the
 # artifact is pinned by content, not just by version tag — a retagged or substituted release fails
