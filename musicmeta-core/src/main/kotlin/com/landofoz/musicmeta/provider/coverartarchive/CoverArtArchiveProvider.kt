@@ -125,7 +125,10 @@ class CoverArtArchiveProvider(
             ?: return EnrichmentResult.NotFound(type, id)
         return EnrichmentResult.Success(
             type = type,
-            data = CoverArtArchiveMapper.toArtwork(image.url, image.thumbnails["small"], image),
+            // "small" is a deprecated upstream alias for "250"; prefer the canonical key.
+            data = CoverArtArchiveMapper.toArtwork(
+                image.url, image.thumbnails["250"] ?: image.thumbnails["small"], image,
+            ),
             provider = id,
             confidence = ConfidenceCalculator.idBasedLookup(),
         )
