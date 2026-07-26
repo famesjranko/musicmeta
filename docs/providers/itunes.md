@@ -19,8 +19,7 @@ get — see [README](README.md#rate-limiting).
 
 ## What We Extract
 
-One row per entry in `ITunesProvider.capabilities`. The two lists are compared by
-`ProviderFeatureDocsTest` on every `./check`.
+One row per entry in `ITunesProvider.capabilities`.
 
 | EnrichmentType | Request | Upstream call | What we keep |
 |---|---|---|---|

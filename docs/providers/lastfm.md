@@ -18,9 +18,7 @@ and long-tail poor.
 
 ## What We Extract
 
-One row per entry in `LastFmProvider.capabilities`. The two lists are compared by
-`ProviderFeatureDocsTest` on every `./check`, so a row added or removed here
-without the matching code change fails the build.
+One row per entry in `LastFmProvider.capabilities`.
 
 | EnrichmentType | Request | Upstream call | What we keep |
 |---|---|---|---|

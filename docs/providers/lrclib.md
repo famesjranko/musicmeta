@@ -16,8 +16,7 @@ capabilities are track-level and nothing else. Free, no key, community-submitted
 
 ## What We Extract
 
-One row per entry in `LrcLibProvider.capabilities`. The two lists are compared by
-`ProviderFeatureDocsTest` on every `./check`.
+One row per entry in `LrcLibProvider.capabilities`.
 
 | EnrichmentType | Request | Upstream call | What we keep |
 |---|---|---|---|

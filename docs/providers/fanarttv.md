@@ -17,8 +17,7 @@ MusicBrainz id, so every result scores `authoritative()`, 0.95.
 
 ## What We Extract
 
-One row per entry in `FanartTvProvider.capabilities`. The two lists are compared by
-`ProviderFeatureDocsTest` on every `./check`.
+One row per entry in `FanartTvProvider.capabilities`.
 
 | EnrichmentType | Identifier | Upstream call | JSON key we read |
 |---|---|---|---|

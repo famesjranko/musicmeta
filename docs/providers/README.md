@@ -13,13 +13,17 @@ and by the time they were read again one of them was still reporting a fixed `ht
 The house four-file pattern is stated once, in `CLAUDE.md`, and not repeated here. These docs carry
 **deviations** from it, not the pattern itself — a provider that follows it says so in one line.
 
-## What is checked, and what is not
+## Nothing here is checked
 
-`## What We Extract` in each doc lists `EnrichmentType` names in the first column of a table.
-`ProviderFeatureDocsTest` compares that set against the `capabilities` each package declares at
-runtime, on every `./check`, and fails in both directions — plus a package with no doc, a doc with no
-package, and a provider that stops being registered. Everything else here is unenforced prose —
-written knowing that, and knowing what unenforced prose about a moving package turned into last time.
+**No mechanism verifies any of this.** A test that compared each `## What We Extract` table against
+the package's declared `capabilities` was built and then deleted as not worth its keep; if a doc and
+its package disagree, only a reader will notice.
+
+Every table was verified against its package by hand on **2026-07-26** — endpoints, limits, `inc=`
+parameters and POST-vs-GET, all eleven, no corrections needed. That date is the warranty. Capability
+declarations changed in 29 commits over the four months to that date, so treat anything older than a
+glance at `provider/<name>/` as a claim rather than a fact, and re-check the package before relying
+on a row.
 
 ## Rate limiting
 

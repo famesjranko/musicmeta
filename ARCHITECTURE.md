@@ -28,7 +28,7 @@ because the config is the thing that fails.
 | Script self-tests | `scripts/**/test_*.py` | discovered, not listed — every script with a `test_*.py` beside it still behaves: release notes, conventions |
 | Kotlin format | ktlint (version pinned in `libs.versions.toml`) | all modules, and `demo/` |
 | Kotlin static analysis | detekt, **type-resolved** (`detektMain`/`detektTest`) | complexity, dead code, bug patterns |
-| Build | `./gradlew build` | compile, all unit tests, `apiCheck` against `api/*.api`. Includes `ProviderFeatureDocsTest`: `## What We Extract` in each `docs/providers/<name>.md` against the `EnrichmentType`s that package declares at runtime, both directions |
+| Build | `./gradlew build` | compile, all unit tests, `apiCheck` against `api/*.api` |
 | Consumer canary | `demo/` composite build | an external consumer still compiles |
 
 Beyond `./check`: `main`'s ruleset requires a pull request with `build` and `demo-canary` green,
@@ -61,13 +61,13 @@ than it looks like, each learned the hard way.
   them skip comments is what previously cost a 155-line hand-written Kotlin scanner, a 118-line
   `KotlinLexer` oracle and a 337-line differential test. There are no such comments in the tree. If
   one is ever needed, reword it.
-- **One column of a provider feature doc is checked; the rest is prose.**
-  `ProviderFeatureDocsTest` compares `## What We Extract`'s `EnrichmentType` names against the
-  package's runtime `capabilities` and nothing else — a row whose endpoint, request kind or
-  kept-fields column has gone stale still passes, as does every other section. Deliberate: the
-  previous generation of these docs was unenforced end to end and went four months stale.
-- **The feature-doc check does not run under `./check --fast`,** which skips the build. It is a unit
-  test, not a script step; `--fast` was never evidence for a push.
+- **Nothing checks `docs/providers/`.** Two mechanisms for it were built and both were deleted: a
+  Kotlin-parsing Python script, then a unit test comparing `## What We Extract` against each
+  package's runtime `capabilities`. The test worked — 8/8 mutations killed, including a Gradle
+  up-to-date hole it exposed — and was cut anyway, as too much standing machinery for one column of
+  one directory of prose. `git log -S ProviderFeatureDocsTest` has it if the judgement changes. Every
+  table was hand-verified against its package on 2026-07-26; that date is the only warranty, and
+  capability declarations changed in 29 commits over the four months before it.
 - **detekt is not in `--fast`.** The typed tasks compile before they analyse and the Android
   variants need `ANDROID_HOME`. The edit loop is ktlint plus the conventions check; detekt runs on
   every push and in CI. `--fast` was never evidence for a push.

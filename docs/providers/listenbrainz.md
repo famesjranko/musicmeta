@@ -17,8 +17,7 @@ the only popularity source that cannot mismatch the artist, and the only source 
 
 ## What We Extract
 
-One row per entry in `ListenBrainzProvider.capabilities`. The two lists are compared by
-`ProviderFeatureDocsTest` on every `./check`.
+One row per entry in `ListenBrainzProvider.capabilities`.
 
 | EnrichmentType | Identifier | Upstream call | What we keep |
 |---|---|---|---|

@@ -17,8 +17,7 @@ source in the tree for the non-front images — back cover, booklet, disc.
 
 ## What We Extract
 
-One row per entry in `CoverArtArchiveProvider.capabilities`. The two lists are compared by
-`ProviderFeatureDocsTest` on every `./check`.
+One row per entry in `CoverArtArchiveProvider.capabilities`.
 
 | EnrichmentType | Identifier | Upstream call | What we keep |
 |---|---|---|---|

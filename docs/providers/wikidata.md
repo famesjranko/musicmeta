@@ -17,8 +17,7 @@ to Wikimedia Commons imagery at an arbitrary width.
 
 ## What We Extract
 
-One row per entry in `WikidataProvider.capabilities`. The two lists are compared by
-`ProviderFeatureDocsTest` on every `./check`.
+One row per entry in `WikidataProvider.capabilities`.
 
 | EnrichmentType | Identifier | Upstream call | What we keep |
 |---|---|---|---|

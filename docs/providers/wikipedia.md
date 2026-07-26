@@ -17,8 +17,7 @@ at `authoritative()`, 0.95. English only.
 
 ## What We Extract
 
-One row per entry in `WikipediaProvider.capabilities`. The two lists are compared by
-`ProviderFeatureDocsTest` on every `./check`.
+One row per entry in `WikipediaProvider.capabilities`.
 
 | EnrichmentType | Identifier | Upstream call | What we keep |
 |---|---|---|---|
