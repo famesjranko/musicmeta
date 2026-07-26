@@ -77,7 +77,11 @@ internal object ITunesMapper {
             releaseType = null,
             score = score,
             thumbnailUrl = result.artworkUrl,
-            identifiers = EnrichmentIdentifiers(),
+            identifiers = if (result.collectionId > 0) {
+                EnrichmentIdentifiers().withExtra("itunesCollectionId", result.collectionId.toString())
+            } else {
+                EnrichmentIdentifiers()
+            },
             provider = providerId,
         )
     }

@@ -11,6 +11,7 @@ import com.landofoz.musicmeta.testutil.FakeHttpClient
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -317,6 +318,39 @@ class ITunesProviderTest {
         val resolved = (result as EnrichmentResult.Success).resolvedIdentifiers
         assertNotNull(resolved)
         assertEquals("203558498", resolved?.get("itunesCollectionId"))
+    }
+
+    @Test
+    fun `picked search candidate resolves ALBUM_TRACKS by lookup instead of a second search`() = runTest {
+        // Given — a search that returns an album with a collectionId, and a lookup for its tracks
+        httpClient.givenJsonResponse("search", ITUNES_SEARCH_WITH_ID_RESPONSE)
+        httpClient.givenJsonResponse("lookup", ITUNES_LOOKUP_TRACKS_RESPONSE)
+        val search = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+
+        // When — a candidate is picked and its identifiers are carried into the next request
+        val candidate = provider.searchCandidates(search, 5).first()
+        val picked = EnrichmentRequest.ForAlbum(candidate.identifiers, "OK Computer", "Radiohead")
+        val result = provider.enrich(picked, EnrichmentType.ALBUM_TRACKS)
+
+        // Then — the candidate carried the id, and enrich took the id lookup path at 1.0 confidence
+        assertEquals("203558498", candidate.identifiers.get("itunesCollectionId"))
+        assertTrue(result is EnrichmentResult.Success)
+        assertEquals(1.0f, (result as EnrichmentResult.Success).confidence, 0.0f)
+        assertTrue(httpClient.requestedUrls.any { it.contains("/lookup?") })
+        assertEquals(1, httpClient.requestedUrls.count { it.contains("/search?") })
+    }
+
+    @Test
+    fun `search candidate has no identifiers when the result carries no collectionId`() = runTest {
+        // Given — a search result without a collectionId
+        httpClient.givenJsonResponse("search", ITUNES_RESPONSE)
+        val search = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+
+        // When — building candidates
+        val candidate = provider.searchCandidates(search, 5).first()
+
+        // Then — no itunesCollectionId is invented from the 0 default
+        assertNull(candidate.identifiers.get("itunesCollectionId"))
     }
 
     @Test
