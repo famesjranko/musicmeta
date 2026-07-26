@@ -94,7 +94,7 @@ v0.9.0, v0.9.2), four undeprecated removals or renames (v0.4.0), and `@Deprecate
   and is logged, matching what `README.md` already promised consumers.
 - **Narrowed public surface** — 80 top-level types that were public only by omission (provider
   `*Api`/`*Mapper`/`*Models`, `MusicBrainzParser`, `http/CircuitBreaker`, the `engine/` mergers and
-  synthesizers) are now `internal`. See `CHANGELOG.md` → Breaking Changes.
+  synthesizers) are now `internal`. See `CHANGELOG.md`.
 - **0.x semver carve-out** — minor `0.x.0` releases may break if documented and visible in the `.api`
   diff; patch `0.x.y` releases may not. Full semver from `1.0.0`.
 
