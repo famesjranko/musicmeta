@@ -185,7 +185,6 @@ mapped verification:
 ## Commit and documentation routing
 
 Use conventional commits scoped by area, for example `fix(provider): handle null release year`.
-Follow the no-attribution and destructive-Git rules in `CLAUDE.md`.
 
 | Change | Update |
 |---|---|
