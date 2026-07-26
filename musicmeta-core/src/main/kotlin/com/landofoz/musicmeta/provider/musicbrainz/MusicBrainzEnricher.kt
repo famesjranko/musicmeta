@@ -59,9 +59,7 @@ internal class MusicBrainzEnricher(
         val best = releases.firstOrNull { it.score >= minMatchScore }
             ?: return EnrichmentResult.NotFound(type, providerId,
                 suggestions = releases.take(MAX_SUGGESTIONS).map { it.toCandidate() })
-        val needsLookup = type in RELATION_DEPENDENT_TYPES && best.tags.isEmpty() && best.label == null
-        val resolved = if (needsLookup) api.lookupRelease(best.id) ?: best else best
-        return buildAlbumResult(resolved, type, ConfidenceCalculator.searchScore(best.score))
+        return buildAlbumResult(best, type, ConfidenceCalculator.searchScore(best.score))
     }
 
     internal suspend fun enrichAlbumTracks(
@@ -294,14 +292,6 @@ internal class MusicBrainzEnricher(
 
     companion object {
         private const val MAX_SUGGESTIONS = 3
-
-        /** Types that require a full lookup (not just search) to get URL relations. */
-        private val RELATION_DEPENDENT_TYPES = setOf(
-            EnrichmentType.ARTIST_PHOTO,
-            EnrichmentType.ARTIST_BIO,
-            EnrichmentType.ARTIST_BACKGROUND,
-            EnrichmentType.ARTIST_LOGO,
-        )
 
         /** New artist types routed through enrichArtistNewType(). */
         private val ARTIST_NEW_TYPES = setOf(
