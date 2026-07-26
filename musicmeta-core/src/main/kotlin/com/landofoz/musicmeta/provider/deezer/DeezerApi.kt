@@ -15,9 +15,6 @@ internal class DeezerApi(
     private val rateLimiter: RateLimiter,
 ) {
 
-    suspend fun searchAlbum(query: String): DeezerAlbumResult? =
-        searchAlbums(query, 1).firstOrNull()
-
     suspend fun searchAlbums(query: String, limit: Int): List<DeezerAlbumResult> {
         val encoded = URLEncoder.encode(query, "UTF-8")
         val url = "$BASE_URL/search/album?q=$encoded&limit=$limit"

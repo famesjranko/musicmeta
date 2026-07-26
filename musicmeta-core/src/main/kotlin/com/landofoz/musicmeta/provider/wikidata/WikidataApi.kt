@@ -16,11 +16,6 @@ internal class WikidataApi(
     private val rateLimiter: RateLimiter,
 ) {
 
-    suspend fun getArtistImageUrl(
-        wikidataId: String,
-        size: Int = DEFAULT_IMAGE_SIZE,
-    ): String? = getEntityProperties(wikidataId, size)?.imageUrl
-
     /**
      * Fetch expanded entity properties in a single API call.
      * Returns birth/death dates, country of origin, occupation, and image URL.

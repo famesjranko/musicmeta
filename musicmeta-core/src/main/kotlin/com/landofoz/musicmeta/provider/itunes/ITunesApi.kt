@@ -15,9 +15,6 @@ internal class ITunesApi(
     private val rateLimiter: RateLimiter,
 ) {
 
-    suspend fun searchAlbum(term: String): ITunesAlbumResult? =
-        searchAlbums(term, 1).firstOrNull()
-
     suspend fun searchAlbums(term: String, limit: Int): List<ITunesAlbumResult> {
         val encoded = URLEncoder.encode(term, "UTF-8")
         val url = "$BASE_URL/search?media=music&entity=album&term=$encoded&limit=$limit"

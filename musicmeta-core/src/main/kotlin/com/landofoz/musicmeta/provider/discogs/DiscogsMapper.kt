@@ -63,11 +63,6 @@ internal object DiscogsMapper {
         )
     }
 
-    fun toAlbumMetadataFromDetail(detail: DiscogsReleaseDetail): EnrichmentData.Metadata =
-        EnrichmentData.Metadata(
-            communityRating = detail.communityRating,
-        )
-
     fun toCredits(credits: List<DiscogsCredit>): EnrichmentData.Credits =
         EnrichmentData.Credits(
             credits = credits.map { credit ->
