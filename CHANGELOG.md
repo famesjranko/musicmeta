@@ -28,9 +28,6 @@ This release makes the `engine/` package internal, fixes two cancellation bugs, 
 ### Breaking Changes
 - `engine/` internals are no longer published. `DefaultEnrichmentEngine`, `ProviderRegistry`, `ProviderChain`, `ArtistMatcher` and `ConfidenceCalculator` are now `internal`. Build engines with `EnrichmentEngine.Builder`, which covers every constructor parameter. `ResultMerger` and `CompositeSynthesizer` remain public, as the documented extension points
 
-### Added
-- Patch releases can no longer contain a breaking change — the release tooling refuses to pin one to a patch version. v0.9.2 broke the profile extensions in a patch, and cannot happen the same way twice
-
 ### Fixed
 - A cancelled or timed-out `enrich()` no longer opens circuit breakers against healthy providers. Every `enrichTimeoutMs` expiry was recorded as a failure against providers that had not failed, and repeated timeouts opened the circuit against a healthy one. Fixed across the eight sites that swallowed cancellation (#53)
 - A consumer cache or merge strategy with its own `withTimeout` no longer surfaces as the engine's deadline (#61)
