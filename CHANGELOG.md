@@ -29,6 +29,7 @@ This release makes the `engine/` package internal, fixes two cancellation bugs, 
 - `engine/` internals are no longer published. `DefaultEnrichmentEngine`, `ProviderRegistry`, `ProviderChain`, `ArtistMatcher` and `ConfidenceCalculator` are now `internal`. Build engines with `EnrichmentEngine.Builder`, which covers every constructor parameter. `ResultMerger` and `CompositeSynthesizer` remain public, as the documented extension points
 
 ### Fixed
+- Back cover, booklet and CD art from the Cover Art Archive now read the canonical `"250"` thumbnail key, falling back to the deprecated `"small"` alias. The URLs are identical today, so nothing changes now; the day the archive drops the alias these three types keep a thumbnail instead of returning `null`
 - A cancelled or timed-out `enrich()` no longer opens circuit breakers against healthy providers. Every `enrichTimeoutMs` expiry was recorded as a failure against providers that had not failed, and repeated timeouts opened the circuit against a healthy one. Fixed across the eight sites that swallowed cancellation (#53)
 - A consumer cache or merge strategy with its own `withTimeout` no longer surfaces as the engine's deadline (#61)
 - The build now works when the default JDK is not 17, because every module declares Kotlin's `jvmTarget`. Published bytecode and the `api/*.api` baselines are unchanged

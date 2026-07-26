@@ -273,6 +273,32 @@ class CoverArtArchiveProviderTest {
     }
 
     @Test
+    fun `enrich returns back cover thumbnail from numeric key when small alias is absent`() = runTest {
+        // Given -- CAA metadata whose thumbnails carry only the numeric keys, no deprecated aliases
+        httpClient.givenJsonResponse(
+            "release/back-numeric",
+            """{
+                "images": [
+                    {"front": false, "types": ["Back"], "image": "https://archive.org/img/back.jpg", "thumbnails": {"250": "https://archive.org/img/back-250.jpg", "500": "https://archive.org/img/back-500.jpg", "1200": "https://archive.org/img/back-1200.jpg"}}
+                ]
+            }""",
+        )
+        val request = EnrichmentRequest.ForAlbum(
+            identifiers = EnrichmentIdentifiers(musicBrainzId = "back-numeric"),
+            title = "OK Computer",
+            artist = "Radiohead",
+        )
+
+        // When -- enriching for back cover art
+        val result = provider.enrich(request, EnrichmentType.ALBUM_ART_BACK)
+
+        // Then -- the 250px thumbnail is still found
+        assertTrue("Expected Success but got $result", result is EnrichmentResult.Success)
+        val artwork = (result as EnrichmentResult.Success).data as EnrichmentData.Artwork
+        assertEquals("https://archive.org/img/back-250.jpg", artwork.thumbnailUrl)
+    }
+
+    @Test
     fun `enrich returns NotFound for ALBUM_ART_BACK when no back image exists`() = runTest {
         // Given -- CAA metadata has only a Front image, no Back
         httpClient.givenJsonResponse(
