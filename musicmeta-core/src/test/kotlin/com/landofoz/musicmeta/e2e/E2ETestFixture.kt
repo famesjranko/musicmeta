@@ -16,6 +16,8 @@ object E2ETestFixture {
     val defaultRateLimiter = RateLimiter(100)
     val lrcLibRateLimiter = RateLimiter(200)
     val lastFmRateLimiter = RateLimiter(200)
+    val listenBrainzRateLimiter = RateLimiter(400) // measured 2026-07-27: 30 req/10s, with headroom
+    val discogsRateLimiter = RateLimiter(1000) // documented: 60 req/min authenticated
     val itunesRateLimiter = RateLimiter(3000)
 
     fun prop(name: String): String = System.getProperty(

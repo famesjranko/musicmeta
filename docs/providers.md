@@ -46,18 +46,20 @@ deliberate:
 
 ## Rate limiting
 
-`withDefaultProviders()` builds **one** `RateLimiter(100)` and hands that same mutex-guarded instance
-to ten providers, so they share a single 10 req/s budget rather than getting one each — a provider
-shares by declaring no default and taking what it is handed. Two sit outside it: MusicBrainz gets its
-own `RateLimiter(1100)`, iTunes falls through to its constructor default of `RateLimiter(3000)`.
-Wikipedia additionally holds a `RateLimiter(100)` for the Wikidata host it reaches.
+`withDefaultProviders()` builds **one `RateLimiter` per host**, as `RateLimiter`'s KDoc requires.
+A limiter holds its mutex across the request itself, so a shared instance would make unrelated hosts'
+round-trips sequential; rate limits are per-host and no host here asks to be throttled against
+another's traffic. The two Deezer providers share one limiter because they share a host; Wikipedia
+takes the Wikidata limiter for the Wikidata host it reaches, alongside its own. iTunes takes its
+constructor default of `RateLimiter(3000)`.
 
-`RateLimiter`'s own KDoc says each provider should have its own instance. The default wiring does
-not. Open as **#50**, undecided: nobody has recorded whether the sharing is a deliberate global
-politeness budget or incidental, and that answer decides whether the code changes or the KDoc does.
-
-No upstream limit is stated here. Those numbers are not checkable from this repo — Last.fm's API
-terms publish no figure at all, only "limits... in our sole discretion". Follow the upstream links.
+The intervals live in that one function, each with a comment naming its basis — **published**,
+**measured** from live rate-limit headers, or **judgement**. Only MusicBrainz (1100ms, 1 req/sec),
+ListenBrainz (400ms, measured at 30 req/10s) and Discogs (1000ms, 60 req/min authenticated) rest on a
+number the upstream states; the rest are judgement, and the safety net is 429 → `Retry-After` →
+backoff. Do not read a judgement figure here or there as a documented one — Last.fm's API terms
+publish no figure at all, only "limits... in our sole discretion". A provider constructed directly
+takes whatever limiter the caller passes; nothing checks it against this page.
 
 ## What we don't extract
 

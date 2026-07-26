@@ -47,6 +47,7 @@ This release makes the `engine/` package internal, fixes two cancellation bugs, 
 - Four claims in `README.md` were wrong: the Wikidata photo width, `isAvailable = false` on a missing key, four latency figures from no benchmark, and dates and occupation credited to Wikidata though no enrichment type exposes them
 - `README.md` is a README again rather than a second copy of the guides, down from 392 lines to 216
 - `docs/providers/` held eleven drifted copies of third-party API references, one still reporting a fixed `http://` bug as open. Replaced by a single `docs/providers.md`
+- Each host gets its own `RateLimiter`; ten providers shared one, serialising every fan-out (#50)
 
 ## [0.10.1] - 2026-07-22
 
