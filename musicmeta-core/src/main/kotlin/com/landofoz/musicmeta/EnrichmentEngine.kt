@@ -94,6 +94,7 @@ interface EnrichmentEngine {
             GenreMerger, SimilarArtistMerger, SimilarTrackMerger,
             ArtworkMerger(EnrichmentType.ARTIST_PHOTO),
             ArtworkMerger(EnrichmentType.ALBUM_ART),
+            TopTrackMerger,
         )
         private val synthesizers = mutableListOf<CompositeSynthesizer>(TimelineSynthesizer, GenreAffinityMatcher)
 
@@ -148,14 +149,13 @@ interface EnrichmentEngine {
         }
 
         fun build(): EnrichmentEngine {
-            val allMergers = mergers + TopTrackMerger
             val registry = ProviderRegistry(providers, config.priorityOverrides, logger)
             return DefaultEnrichmentEngine(
                 registry = registry,
                 cache = cache ?: InMemoryEnrichmentCache(),
                 config = config,
                 logger = logger,
-                mergers = allMergers,
+                mergers = mergers.toList(),
                 synthesizers = synthesizers.toList(),
             )
         }
