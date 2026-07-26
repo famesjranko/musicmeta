@@ -11,8 +11,6 @@ internal data class FanartTvArtistImages(
     val backgrounds: List<FanartTvImage>,
     val logos: List<FanartTvImage>,
     val banners: List<FanartTvImage>,
-    val albumCovers: List<FanartTvImage> = emptyList(),
-    val cdArt: List<FanartTvImage> = emptyList(),
 )
 
 /** Album-specific images from the Fanart.tv album endpoint (/v3/music/albums/{releaseGroupMbid}). */
