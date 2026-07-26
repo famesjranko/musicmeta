@@ -25,7 +25,7 @@ because the config is the thing that fails.
 | Shell | shellcheck | `scripts/**`, `check`, `demo/run.sh` |
 | Conventions | `scripts/checks/check_conventions.py` | no `!!` and no `@Serializable` under `provider/`/`http/` in main sources; conflict markers anywhere |
 | Release-note caps | `build_release_notes.py Unreleased` | `CHANGELOG.md`'s `[Unreleased]` stays under 3000 chars and 400 per line — the same `check_caps()` the release runs, so it fails here rather than at release prep. An empty section passes: `pin_release.py` opens one on every release branch |
-| Script self-tests | `scripts/**/test_*.py` | the release-note and convention scripts still behave |
+| Script self-tests | `scripts/**/test_*.py` | discovered, not listed — every script with a `test_*.py` beside it still behaves: release notes, conventions |
 | Kotlin format | ktlint (version pinned in `libs.versions.toml`) | all modules, and `demo/` |
 | Kotlin static analysis | detekt, **type-resolved** (`detektMain`/`detektTest`) | complexity, dead code, bug patterns |
 | Build | `./gradlew build` | compile, all unit tests, `apiCheck` against `api/*.api` |
@@ -61,6 +61,14 @@ than it looks like, each learned the hard way.
   them skip comments is what previously cost a 155-line hand-written Kotlin scanner, a 118-line
   `KotlinLexer` oracle and a 337-line differential test. There are no such comments in the tree. If
   one is ever needed, reword it.
+- **Nothing checks `docs/providers.md`.** Two mechanisms for it were built and both were deleted: a
+  Kotlin-parsing Python script, then a unit test comparing a per-capability table against each
+  package's runtime `capabilities`. The test worked — 8/8 mutations killed, including a Gradle
+  up-to-date hole it exposed — and was cut anyway, as too much standing machinery for one column of
+  prose. `git log -S ProviderFeatureDocsTest` has it if the judgement changes. The tables it checked
+  are gone with it: what a provider extracts is now read off `provider/<name>/`, and the doc keeps
+  only the upstream links, the two pattern deviations and the fields we drop — none of which a
+  compiler or a test can see. Hand-verified 2026-07-26; that date is the only warranty.
 - **detekt is not in `--fast`.** The typed tasks compile before they analyse and the Android
   variants need `ANDROID_HOME`. The edit loop is ktlint plus the conventions check; detekt runs on
   every push and in CI. `--fast` was never evidence for a push.
