@@ -35,6 +35,14 @@ interface EnrichmentEngine {
     /**
      * Enriches a music entity with the requested data types.
      *
+     * **On timeout the result is partial, not empty.** When [EnrichmentConfig.enrichTimeoutMs]
+     * expires, whatever was already fetched is returned as it stands, and every type with no result
+     * yet becomes an [EnrichmentResult.Error] with [ErrorKind.TIMEOUT] and provider `"engine"` — the
+     * presence of such an entry is how a caller tells a truncated run from a complete one. A
+     * returned [EnrichmentResult.Success] from a truncated run may have skipped later processing:
+     * catalog filtering, notably, may not have reached it. Nothing a timed-out run produced is
+     * written to the cache for that reason, so the next call re-fetches.
+     *
      * @param forceRefresh When true, bypasses the cache for the requested types and fetches fresh
      *   data from providers. Existing cache entries (including manual selections) are cleared first
      *   on a best-effort basis: if the cache throws while clearing, the failure is logged and fresh

@@ -39,6 +39,7 @@ This release makes the `engine/` package internal, fixes two cancellation bugs, 
 - Back cover, booklet and CD art from the Cover Art Archive now read the canonical `"250"` thumbnail key, falling back to the deprecated `"small"` alias
 - A cancelled or timed-out `enrich()` no longer opens circuit breakers against healthy providers, across the eight sites that swallowed cancellation (#53)
 - A consumer cache or merge strategy with its own `withTimeout` no longer surfaces as the engine's deadline (#61)
+- A timed-out `enrich()` caches nothing, and a foreign timeout is not reported as ours (#56, #55)
 - A throwing `HttpClient` on Wikipedia's Wikidata sitelink lookup now yields an `EnrichmentResult.Error` with a classified `errorKind` instead of escaping the provider as `UNKNOWN`. Affects requests carrying a `wikidataId` but no `wikipediaTitle`
 - The build now works when the default JDK is not 17, because every module declares Kotlin's `jvmTarget`. Published bytecode and the `api/*.api` baselines are unchanged
 - `configuration.md` no longer teaches a builder order that silently misconfigures the engine: `withDefaultProviders()` reads the keys already set, so it must be called last
