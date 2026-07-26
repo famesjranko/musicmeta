@@ -221,6 +221,33 @@ val profile = engine.artistProfile(
 
 ---
 
+## Fast path: pre-resolved identifiers
+
+Enrichment results carry the identifiers they were resolved with, and top tracks carry their own
+(`deezerId`, for one). Passing them back in skips identity resolution entirely, so the call goes
+straight to the provider that can answer it:
+
+```kotlin
+// Skips MusicBrainz, goes straight to Deezer
+val preview = engine.trackProfile(
+    title = topTrack.title,
+    artist = topTrack.artist,
+    identifiers = topTrack.identifiers,  // has deezerId
+    types = setOf(EnrichmentType.TRACK_PREVIEW),
+)
+```
+
+`resolveTrackPreviews` does the same for a list, resolving concurrently:
+
+```kotlin
+val previews = engine.resolveTrackPreviews(
+    topTracks.map { TrackPreviewRequest(it.title, it.artist, identifiers = it.identifiers) }
+)
+previews.forEach { println("${it.title}: ${it.preview?.url}") }
+```
+
+---
+
 ## Bulk enrichment
 
 Enrich a list of requests as a `Flow` — results emit one at a time as each completes:

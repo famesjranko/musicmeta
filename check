@@ -77,6 +77,15 @@ for t in scripts/checks/test_*.py scripts/github-workflows/test_*.py; do
 done
 echo "all script self-tests pass"
 
+step "changelog release-note caps"
+# The caps already existed in build_release_notes.py, but only ran at release prep — an over-long
+# entry passed every local gate and failed in CI weeks later, in front of whoever was releasing
+# rather than whoever wrote it. Same check_caps(), just called early. (03)
+#
+# Below the self-tests on purpose: this runs the script, so the test that proves the script is
+# intact should have run first — otherwise a broken build_release_notes.py reports a green gate.
+python3 scripts/github-workflows/build_release_notes.py Unreleased
+
 step "kotlin format (ktlint)"
 ./gradlew ktlintCheck --quiet
 
@@ -109,7 +118,9 @@ if [ "$SKIP_DEMO" = 1 ]; then
     printf '\n\033[1m--skip-demo: demo canary left to its own CI job\033[0m\n'
 else
     step "demo canary"
-    (cd demo && ../gradlew compileKotlin --quiet)
+    # ktlintCheck too: demo/ is exempt from house *conventions* (see check_conventions.py) but not
+    # from formatting — it is the worked example, and nothing about style affects the canary's job.
+    (cd demo && ../gradlew compileKotlin ktlintCheck --quiet)
 fi
 
 printf '\n\033[1;32mAll checks passed.\033[0m\n'

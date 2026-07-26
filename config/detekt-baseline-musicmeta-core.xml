@@ -39,7 +39,6 @@
     <ID>TooManyFunctions:MusicBrainzMapper.kt$MusicBrainzMapper</ID>
     <ID>TooManyFunctions:MusicBrainzParser.kt$MusicBrainzParser</ID>
     <ID>UnusedPrivateMember:CatalogFilteringTest.kt$CatalogFilteringTest$private fun similarTracks(vararg titles: String): EnrichmentResult.Success</ID>
-    <ID>UnusedPrivateProperty:DefaultEnrichmentEngine.kt$DefaultEnrichmentEngine$private val httpClient: HttpClient</ID>
     <ID>UnusedPrivateProperty:EnrichBatchTest.kt$EnrichBatchTest$val emitted = mutableListOf&lt;EnrichmentRequest&gt;()</ID>
     <ID>UnusedPrivateProperty:ListenBrainzRadioDiscoveryTest.kt$ListenBrainzRadioDiscoveryTest$private val JSPF_MINIMAL_RESPONSE = """{ "payload": { "jspf": { "playlist": { "track": [ { "title": "Minimal Track", "creator": "Minimal Artist" } ] } } } }"""</ID>
     <ID>UseCheckOrError:EnrichStrategyFailureTest.kt$EnrichStrategyFailureTest.ThrowingMerger$throw IllegalStateException("merger boom")</ID>

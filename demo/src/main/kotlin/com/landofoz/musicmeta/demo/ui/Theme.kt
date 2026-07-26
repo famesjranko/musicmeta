@@ -30,15 +30,15 @@ data class Theme(
 ) {
     companion object {
         val Default = Theme(
-            primary = "\u001b[36m",    // cyan
-            success = "\u001b[32m",    // green
-            warning = "\u001b[33m",    // yellow
-            error = "\u001b[31m",      // red
-            muted = "\u001b[2m",       // dim
-            accent = "\u001b[35m",     // magenta
-            info = "\u001b[34m",       // blue
-            bold = "\u001b[1m",        // bold
-            reset = "\u001b[0m",       // reset
+            primary = "\u001b[36m", // cyan
+            success = "\u001b[32m", // green
+            warning = "\u001b[33m", // yellow
+            error = "\u001b[31m", // red
+            muted = "\u001b[2m", // dim
+            accent = "\u001b[35m", // magenta
+            info = "\u001b[34m", // blue
+            bold = "\u001b[1m", // bold
+            reset = "\u001b[0m", // reset
             check = "\u2713", cross = "\u2717", dot = "\u00b7",
             warn = "\u25b2", arrow = "\u203a", bullet = "\u2022",
             boxTL = "\u256d", boxTR = "\u256e",

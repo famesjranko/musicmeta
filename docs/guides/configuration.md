@@ -98,15 +98,25 @@ Providers with missing keys report `isAvailable = false` and are skipped. Their 
 
 ## Builder: withDefaultProviders() vs manual wiring
 
-**`withDefaultProviders()`** registers all 11 providers with sensible defaults:
+**`withDefaultProviders()`** registers the 8 keyless providers, plus each key-requiring provider
+whose key you have supplied.
+
+**It reads the builder's state at the moment you call it**, so `.apiKeys()`, `.config()` and
+`.httpClient()` must come first. Called in the wrong order it fails silently rather than throwing:
+a key supplied afterwards registers no provider, and a `userAgent` supplied afterwards reaches the
+engine but not the providers it already constructed — which is exactly the case MusicBrainz and
+Wikimedia throttle for.
 
 ```kotlin
 val engine = EnrichmentEngine.Builder()
-    .withDefaultProviders()
     .apiKeys(ApiKeyConfig(lastFmKey = "..."))
     .config(EnrichmentConfig(userAgent = "MyApp/1.0"))
+    .withDefaultProviders()  // last: consumes the keys and config set above
     .build()
 ```
+
+Everything else on `EnrichmentConfig` is read at `build()` time, so only `userAgent` and `radioLimit`
+are order-sensitive. Ordering `withDefaultProviders()` last is the rule that holds for all of them.
 
 **Manual wiring** gives you full control over which providers are included and how they are configured:
 
@@ -347,7 +357,7 @@ println(preview?.durationMs) // 30000
 println(preview?.source)     // "deezer"
 ```
 
-Typical use: resolve a preview URL for a track the user discovered via radio or similar artists, so they can audition it before adding it to their library. See `docs/v0.9.0-lb-radio-feature-plan.md` Consumer Usage Patterns for a full discovery-with-preview example.
+Typical use: resolve a preview URL for a track the user discovered via radio or similar artists, so they can audition it before adding it to their library.
 
 ### Artist radio
 
@@ -383,7 +393,7 @@ results.topTracks()?.tracks?.forEach { track ->
 
 ### Genre discovery
 
-Uses a static genre affinity taxonomy covering ~70 genre relationships. Include `GENRE` in the same request or ensure it is cached:
+Uses a static genre affinity taxonomy covering 189 genre relationships. Include `GENRE` in the same request or ensure it is cached:
 
 ```kotlin
 val results = engine.enrich(

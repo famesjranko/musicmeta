@@ -2,7 +2,6 @@ package com.landofoz.musicmeta.engine
 
 import com.landofoz.musicmeta.*
 import com.landofoz.musicmeta.testutil.FakeEnrichmentCache
-import com.landofoz.musicmeta.testutil.FakeHttpClient
 import com.landofoz.musicmeta.testutil.FakeProvider
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -53,7 +52,7 @@ class EnrichStrategyFailureTest {
         mergers: List<ResultMerger> = emptyList(),
         synthesizers: List<CompositeSynthesizer> = emptyList(),
     ) = DefaultEnrichmentEngine(
-        ProviderRegistry(providers), cache, FakeHttpClient(), config,
+        ProviderRegistry(providers), cache, config,
         mergers = mergers, synthesizers = synthesizers,
     )
 

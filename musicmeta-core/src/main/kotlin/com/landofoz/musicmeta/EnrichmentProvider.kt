@@ -66,9 +66,8 @@ interface EnrichmentProvider {
      * This deliberately does *not* special-case [CancellationException]. It is not a suspend
      * function, so it cannot tell "the caller cancelled us" from "a provider's own `withTimeout`
      * expired" — and those need opposite handling: the first must propagate, the second is a
-     * genuine failure of that provider. `ensureActive()` in
-     * [com.landofoz.musicmeta.engine.ProviderChain] makes that distinction, before any circuit
-     * breaker is touched. (#53)
+     * genuine failure of that provider. `ensureActive()` in the engine's provider chain makes that
+     * distinction, before any circuit breaker is touched. (#53)
      */
     fun mapError(type: EnrichmentType, e: Exception): EnrichmentResult.Error {
         val kind = when (e) {

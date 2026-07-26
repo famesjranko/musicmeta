@@ -34,8 +34,15 @@ vanniktech-publish = "0.30.0"
 # Public API compatibility (ABI baselines under each module's api/ directory)
 binary-compatibility-validator = "0.18.1"
 
-# Formatting and style (official Kotlin style, no rule tuning — see ARCHITECTURE.md)
+# Formatting and style. Not stock: `.editorconfig` selects the `intellij_idea` code style over
+# ktlint's own default and disables the wrapping rules, each with its reasoning next to it.
 ktlint-gradle = "14.2.0"
+
+# The ktlint the plugin runs, pinned rather than left to the plugin's default. Two things read this
+# number: `build.gradle.kts` sets the gate to it, and `scripts/format-on-write.sh` refuses to format
+# unless the CLI on PATH matches. Bumping it is a rule-set change — expect new violations, and read
+# the ktlint release notes before you do.
+ktlint-cli = "1.5.0"
 
 # Static analysis — the linter layer ktlint does not cover (complexity, bug patterns, dead code)
 detekt = "1.23.8"

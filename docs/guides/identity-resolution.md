@@ -155,8 +155,8 @@ You can also disable resolution globally:
 
 ```kotlin
 val engine = EnrichmentEngine.Builder()
-    .withDefaultProviders()
     .config(EnrichmentConfig(enableIdentityResolution = false))
+    .withDefaultProviders()
     .build()
 ```
 

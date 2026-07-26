@@ -149,7 +149,7 @@ Types that are synthesized from other resolved types rather than fetched from a 
 | Synthesizer | Type | Dependencies | Strategy |
 |-------------|------|-------------|----------|
 | `TimelineSynthesizer` | ARTIST_TIMELINE | ARTIST_DISCOGRAPHY + BAND_MEMBERS | Extracts chronological events (formed, albums, member changes) from identity metadata + sub-type results |
-| `GenreAffinityMatcher` | GENRE_DISCOVERY | GENRE | Looks up each input genre tag in a static taxonomy (~70 relationships across 12 genre families), scores neighbors by `inputConfidence * relationshipWeight` |
+| `GenreAffinityMatcher` | GENRE_DISCOVERY | GENRE | Looks up each input genre tag in a static taxonomy (189 relationships across 12 genre families), scores neighbors by `inputConfidence * relationshipWeight` |
 
 The engine resolves dependencies first (standard rules), then passes results + identity metadata to the synthesizer. Sub-types are excluded from returned results unless the caller explicitly requested them.
 
@@ -237,7 +237,11 @@ Successful results are cached with per-type TTLs:
 | ALBUM_ART_BACK | CAA(100) | Via JSON metadata endpoint |
 | ALBUM_BOOKLET | CAA(100) | Via JSON metadata endpoint |
 
-All artwork types use `ArtworkMerger`: highest-confidence image becomes primary, others become `alternatives` — consumers get every available image from every provider in one result.
+`ArtworkMerger` is registered for **ALBUM_ART and ARTIST_PHOTO only** — the two types with more than
+two sources. For those, the highest-confidence image becomes primary and the rest become
+`alternatives`, so consumers get every available image from every provider in one result. The other
+six artwork types resolve first-wins down the priority chain, including CD_ART: Fanart.tv answers it
+when a key is present, and CAA is a fallback, not a second entry in the same result.
 
 ### Metadata (6 types)
 | Type | Providers (by priority) | Notes |
@@ -430,8 +434,8 @@ When a provider fails with `Error` or `RateLimited` and an expired cache entry e
 
 ```kotlin
 val engine = EnrichmentEngine.Builder()
-    .withDefaultProviders()
     .config(EnrichmentConfig(cacheMode = CacheMode.STALE_IF_ERROR))
+    .withDefaultProviders()
     .build()
 ```
 
@@ -491,97 +495,3 @@ val engine = EnrichmentEngine.Builder()
 - No built-in retry logic — add retries via OkHttp interceptors
 - Gzip decompression handled transparently by OkHttp (no manual `Accept-Encoding` header)
 - Timeouts inherited from the `OkHttpClient` instance
-
----
-
-## Architecture
-
-```
-musicmeta-core/src/main/kotlin/com/landofoz/musicmeta/
-├── EnrichmentEngine.kt              # Public interface + Builder
-├── EnrichmentRequest.kt             # ForAlbum / ForArtist / ForTrack + default type sets
-├── EnrichmentResult.kt              # Success / NotFound / Error / RateLimited
-├── EnrichmentResults.kt             # Batch wrapper + 21 named accessors
-├── EnrichmentData.kt                # 19 sealed subtypes (Artwork, Credits, TopTracks, TrackPreview, etc.)
-├── EnrichmentType.kt                # 34 enum values with TTLs
-├── EnrichmentConfig.kt              # Configuration (confidence, timeouts, overrides)
-├── EnrichmentProvider.kt            # Provider interface + ProviderCapability
-├── EnrichmentCache.kt               # Cache interface
-├── IdentityResolution.kt            # Identity outcome (match, score, suggestions)
-├── CatalogProvider.kt               # Catalog availability interface
-├── ArtistProfile.kt                 # Tier 1 structured view for artists
-├── AlbumProfile.kt                  # Tier 1 structured view for albums
-├── TrackProfile.kt                  # Tier 1 structured view for tracks
-├── EnrichmentEngineExtensions.kt    # Profile builder extension functions
-├── EnrichmentLogger.kt              # Logging interface
-├── StringExtensions.kt              # Utility functions
-├── engine/
-│   ├── DefaultEnrichmentEngine.kt   # Pipeline orchestration
-│   ├── ProviderRegistry.kt          # Registers providers, builds chains
-│   ├── ProviderChain.kt             # resolve() + resolveAll()
-│   ├── EntityKey.kt                 # Cache key computation
-│   ├── IdentityHelper.kt            # Identity resolution + stamping logic
-│   ├── ConfidenceCalculator.kt      # Standardized scoring
-│   ├── ArtistMatcher.kt             # Fuzzy name matching
-│   ├── CatalogFilter.kt             # Recommendation filtering
-│   ├── ResultMerger.kt              # Merger interface
-│   ├── GenreMerger.kt               # Multi-provider genre merge
-│   ├── ArtworkMerger.kt             # Multi-provider artwork merge
-│   ├── SimilarArtistMerger.kt       # Multi-provider similar artist merge
-│   ├── SimilarTrackMerger.kt        # Multi-provider similar track merge
-│   ├── TopTrackMerger.kt            # Multi-provider top track merge
-│   ├── CompositeSynthesizer.kt      # Synthesizer interface
-│   ├── TimelineSynthesizer.kt       # Composite timeline synthesis
-│   ├── GenreAffinityMatcher.kt      # Composite genre discovery synthesis
-│   └── GenreTaxonomy.kt             # Static genre relationship data
-├── http/
-│   ├── HttpClient.kt                # Abstract HTTP interface
-│   ├── DefaultHttpClient.kt         # java.net implementation
-│   ├── HttpResponse.kt              # Response model
-│   ├── HttpResult.kt                # Ok / ClientError / ServerError / RateLimited / NetworkError
-│   ├── RateLimiter.kt               # Per-provider delay
-│   └── CircuitBreaker.kt            # Failure tracking
-├── cache/
-│   └── InMemoryEnrichmentCache.kt   # LRU cache with TTL
-└── provider/
-    ├── musicbrainz/                  # Identity backbone + primary metadata
-    │   ├── MusicBrainzApi.kt
-    │   ├── MusicBrainzModels.kt
-    │   ├── MusicBrainzParser.kt
-    │   ├── MusicBrainzMapper.kt
-    │   ├── MusicBrainzEnricher.kt
-    │   ├── MusicBrainzCreditParser.kt
-    │   └── MusicBrainzProvider.kt
-    ├── coverartarchive/              # Same 4-file pattern (Api/Models/Mapper/Provider)
-    ├── wikidata/
-    ├── wikipedia/
-    ├── lrclib/
-    ├── deezer/                       # + SimilarAlbumsProvider.kt
-    ├── itunes/
-    ├── listenbrainz/
-    ├── lastfm/
-    ├── fanarttv/
-    └── discogs/
-```
-
-musicmeta-okhttp/src/main/kotlin/com/landofoz/musicmeta/okhttp/
-└── OkHttpEnrichmentClient.kt      # OkHttp 4.12.0 adapter for HttpClient
-```
-
-```
-musicmeta-android/src/main/kotlin/com/landofoz/musicmeta/android/
-├── cache/
-│   ├── EnrichmentCacheDao.kt      # Room DAO
-│   ├── RoomEnrichmentCache.kt     # Room-backed persistent cache
-│   └── EnrichmentCacheEntity.kt   # Room entity
-├── HiltEnrichmentModule.kt        # Hilt DI wiring
-└── EnrichmentWorker.kt            # WorkManager base worker
-```
-
-Each provider follows the same pattern:
-- `*Api.kt` — raw HTTP calls, returns parsed models
-- `*Models.kt` — data classes for API responses
-- `*Mapper.kt` — maps API models → `EnrichmentData` (pure functions)
-- `*Provider.kt` — implements `EnrichmentProvider`, orchestrates Api → Mapper
-
-This isolation means changes to the public API only touch mappers, and changes to a provider's API only touch its Api class.

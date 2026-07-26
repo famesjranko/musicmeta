@@ -14,7 +14,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 
-class ProviderChain internal constructor(
+internal class ProviderChain(
     val type: EnrichmentType,
     private val providers: List<EnrichmentProvider>,
     private val circuitBreakers: Map<String, CircuitBreaker> =
@@ -123,8 +123,6 @@ class ProviderChain internal constructor(
     }
 
     fun providers(): List<EnrichmentProvider> = providers
-
-    fun providerCount(): Int = providers.size
 
     private companion object {
         const val TAG = "ProviderChain"

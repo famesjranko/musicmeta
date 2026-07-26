@@ -257,3 +257,47 @@ results.raw.filter { (_, r) ->
 ```
 
 Types that complete before the timeout are not affected, even if other types are still in flight.
+
+---
+
+## Failure isolation guarantees
+
+The engine resolves each enrichment type independently, and `enrich()` never throws. A provider
+failure — network error, rate limit, timeout — is a typed result on that one type; every other type
+returns as normal. Profile accessors are independently nullable for the same reason:
+
+```kotlin
+val profile = engine.artistProfile("Radiohead")
+
+// Genre was rate limited, but bio and photo succeeded
+profile.results.result(EnrichmentType.GENRE)         // -> RateLimited
+profile.results.result(EnrichmentType.ARTIST_BIO)    // -> Success
+
+profile.bio?.text    // -> "Radiohead are an English rock band..."
+profile.genres       // -> emptyList() (failed gracefully)
+```
+
+### A throwing cache degrades to a miss
+
+The cache is an optimisation, so if your `EnrichmentCache` throws — a Room disk error, say —
+`enrich()` logs it and carries on. A failed read degrades to a cache miss and the providers are
+queried; a failed write degrades to the result simply not being cached. It is never surfaced to the
+caller as an exception.
+
+### A throwing merger or synthesizer is reported, not degraded
+
+A `ResultMerger` or `CompositeSynthesizer` registered via `addMerger` / `addSynthesizer` runs
+guarded: if yours throws, that type comes back as `Error` and every other type in the call —
+including results already resolved and cache hits already collected — is returned as normal.
+
+It is reported rather than degraded to a miss because a merger *produces* the type's result, so
+swallowing the failure would be indistinguishable from a genuine `NotFound`.
+
+### Cancellation still propagates
+
+If the calling coroutine is cancelled, `CancellationException` is rethrown as structured concurrency
+requires — swallowing it would make `enrich()` uncancellable. That is not a failure result to
+handle; it means the caller went away.
+
+The `enrichTimeoutMs` deadline is *not* this case: expiry is caught internally and returned as
+`Error` results with `ErrorKind.TIMEOUT`, as above.

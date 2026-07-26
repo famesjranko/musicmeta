@@ -23,6 +23,25 @@ shared checkout.
 - A fresh worktree needs the pinned tools on `PATH`. They install to `~/.local/bin`, which is shared
   across worktrees, so `./scripts/bootstrap.sh` is a once-per-machine step, not once per worktree.
 
+## Consuming a local checkout
+
+To try a change from another project before it is published, either substitute the build or publish
+locally. A composite build needs no publish step and picks up edits immediately:
+
+```kotlin
+// the consumer's settings.gradle.kts
+includeBuild("../musicmeta")
+```
+
+```kotlin
+// the consumer's build.gradle.kts — no version, the included build supplies it
+implementation("io.github.famesjranko:musicmeta-core")
+```
+
+`./gradlew publishToMavenLocal` is the alternative: consume the current `version` from
+gradle.properties via `mavenLocal()`. It exercises the real publication, so it is the one to use
+when the packaging itself is what you are checking.
+
 ## Branch topology
 
 **`main` is the only permanent branch.** It is the default branch, the integration branch and the
@@ -128,7 +147,7 @@ Gradle may report `UP-TO-DATE` without executing tests. Verification evidence mu
 | Changed surface | Additional evidence |
 |---|---|
 | `musicmeta-core/**` | `./gradlew :musicmeta-core:test` |
-| Public core API or any `api/*.api` | `./gradlew apiCheck`, review the API diff against `CLAUDE.md` → **Backwards Compatibility**, then `cd demo && ../gradlew compileKotlin` |
+| Public core API or any `api/*.api` | `./gradlew apiCheck`, review the API diff against `docs/pitfalls.md` §1, then `cd demo && ../gradlew compileKotlin` |
 | `provider/<name>/**` | Matching provider tests, then the full core suite |
 | `musicmeta-android/**` | `ANDROID_HOME=~/Android/Sdk ./gradlew :musicmeta-android:test` plus `apiCheck` |
 | Android Room cache | Android tests plus explicit schema and migration review |
@@ -139,6 +158,14 @@ Gradle may report `UP-TO-DATE` without executing tests. Verification evidence mu
 
 E2E tests hit live third-party APIs and are never merge-gating. Record useful E2E coverage as a
 deferred maintainer-run proof surface rather than allowing rate limits or outages to block a PR.
+They run only under `-Dinclude.e2e=true`; the showcase produces a readable diagnostic report across
+diverse queries, and keys passed as system properties activate the three key-requiring providers:
+
+```bash
+./gradlew :musicmeta-core:test -Dinclude.e2e=true \
+  -Dlastfm.apikey=KEY -Dfanarttv.apikey=KEY -Ddiscogs.token=TOKEN \
+  --tests "*.EnrichmentShowcaseTest"
+```
 
 ## High-risk surfaces
 
@@ -158,7 +185,6 @@ mapped verification:
 ## Commit and documentation routing
 
 Use conventional commits scoped by area, for example `fix(provider): handle null release year`.
-Follow the no-attribution and destructive-Git rules in `CLAUDE.md`.
 
 | Change | Update |
 |---|---|

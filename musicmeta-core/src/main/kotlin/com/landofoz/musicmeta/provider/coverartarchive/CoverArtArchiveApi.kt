@@ -67,14 +67,6 @@ internal class CoverArtArchiveApi(
         }
     }
 
-    /** Build a canonical CAA URL without checking availability. */
-    fun buildReleaseUrl(releaseId: String, size: Int = 1200): String =
-        "$BASE_URL/release/$releaseId/front-$size"
-
-    /** Build a canonical release-group CAA URL without checking availability. */
-    fun buildGroupUrl(releaseGroupId: String, size: Int = 1200): String =
-        "$BASE_URL/release-group/$releaseGroupId/front-$size"
-
     companion object {
         const val BASE_URL = "https://coverartarchive.org"
     }

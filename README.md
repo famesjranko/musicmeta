@@ -24,7 +24,7 @@ A Kotlin library that gives Android and JVM music apps access to rich metadata, 
 |                             |  11 providers
 |  MusicBrainz ---------------+--> Identity (MBID), genre, label, credits, editions
 |  Cover Art Archive ---------+--> Album art front/back/booklet (multi-size)
-|  Wikidata ------------------+--> Artist photo, country, dates
+|  Wikidata ------------------+--> Artist photo, country of origin
 |  Wikipedia -----------------+--> Artist biography, supplemental photos
 |  LRCLIB --------------------+--> Synced + plain lyrics
 |  Deezer --------------------+--> Artist photos, album art, discography, tracklists, similar artists, radio, similar albums
@@ -32,12 +32,12 @@ A Kotlin library that gives Android and JVM music apps access to rich metadata, 
 |  Last.fm -------------------+--> Genres, similar artists/tracks, album metadata
 |  ListenBrainz --------------+--> Popularity, discography, similar artists, radio discovery (with token)
 |  Fanart.tv -----------------+--> Backgrounds, logos, banners, CD art
-|  Discogs -------------------+--> Credits, editions, labels, community data
+|  Discogs -------------------+--> Credits, editions, labels, artwork, community data
 +-----------------------------+
          |
          v
   ArtistProfile / AlbumProfile / TrackProfile
-    profile.photo?.url           -> 600px photo from Wikidata (conf=1.0)
+    profile.photo?.url           -> artist photo from Wikidata
     profile.bio?.text            -> biography from Wikipedia
     profile.genres               -> [GenreTag("alternative rock", 0.70)]
     profile.discography          -> 9 studio albums
@@ -48,10 +48,6 @@ A Kotlin library that gives Android and JVM music apps access to rich metadata, 
 The engine handles the hard parts: MusicBrainz resolves identifiers first, then downstream providers use those IDs for precise lookups. Rate limiting, circuit breaking, confidence scoring, and caching are all built in. 8 of 11 providers work without API keys.
 
 ## Quick start
-
-### Simple: profile methods
-
-One call, structured result. The engine picks sensible default types for the entity kind.
 
 ```kotlin
 val engine = EnrichmentEngine.Builder()
@@ -64,23 +60,11 @@ val profile = engine.artistProfile("Radiohead")
 println(profile.photo?.url)
 println(profile.bio?.text)
 profile.genres.forEach { println("${it.name} (${it.confidence})") }
-profile.members.forEach { println("${it.name} — ${it.role}") }
 profile.discography.forEach { println("${it.title} (${it.year})") }
-
-// Album profile -- artwork, tracklist, genres, editions, ...
-val album = engine.albumProfile("OK Computer", "Radiohead")
-println(album.artwork?.url)
-album.tracks.forEach { println("${it.position}. ${it.title} (${it.durationMs}ms)") }
-
-// Track profile -- lyrics, credits, genres, popularity, ...
-val track = engine.trackProfile("Bohemian Rhapsody", "Queen")
-println(track.lyrics?.syncedLyrics ?: track.lyrics?.plainLyrics)
-track.credits?.credits?.groupBy { it.roleCategory }?.forEach { (cat, members) ->
-    println("[$cat] ${members.joinToString { it.name }}")
-}
 ```
 
-Request only the types you need to skip unnecessary API calls:
+`albumProfile()` and `trackProfile()` are the same shape. Each picks sensible default types for its
+entity kind; pass `types` to request less and skip the API calls you do not need:
 
 ```kotlin
 val minimal = engine.artistProfile("Radiohead", types = setOf(
@@ -88,142 +72,21 @@ val minimal = engine.artistProfile("Radiohead", types = setOf(
 ))
 ```
 
-### Fast path: pre-resolved identifiers
+The engine resolves every type independently and `enrich()` never throws — a provider that fails,
+rate limits or times out yields a typed result on that one type, and the rest of the profile is
+unaffected. `profile.results` carries the per-type outcome when you need to tell "no data" from
+"could not fetch".
 
-When you already have identifiers from a previous enrichment (e.g., top tracks carry `deezerId`), pass them through to skip identity resolution:
-
-```kotlin
-// Single track -- skips MusicBrainz, goes straight to Deezer (~540ms vs ~3s)
-val preview = engine.trackProfile(
-    title = topTrack.title,
-    artist = topTrack.artist,
-    identifiers = topTrack.identifiers,  // has deezerId
-    types = setOf(EnrichmentType.TRACK_PREVIEW),
-)
-
-// Batch -- resolves 10 preview URLs concurrently (~5s vs ~30s)
-val previews = engine.resolveTrackPreviews(
-    topTracks.map { TrackPreviewRequest(it.title, it.artist, identifiers = it.identifiers) }
-)
-previews.forEach { println("${it.title}: ${it.preview?.url}") }
-```
-
-### Flexible: enrich + named accessors
-
-For full control over the request and per-type diagnostics:
-
-```kotlin
-val results = engine.enrich(
-    EnrichmentRequest.forAlbum("OK Computer", "Radiohead"),
-    setOf(EnrichmentType.ALBUM_ART, EnrichmentType.GENRE, EnrichmentType.ALBUM_TRACKS),
-)
-
-// Named accessors -- no casting needed
-val art = results.albumArt()
-val genres = results.genreTags()
-val tracks = results.get<EnrichmentData.Tracklist>(EnrichmentType.ALBUM_TRACKS)
-
-// Diagnostics: was this type requested? What happened?
-if (results.wasRequested(EnrichmentType.ALBUM_ART)) {
-    when (val raw = results.result(EnrichmentType.ALBUM_ART)) {
-        is EnrichmentResult.Success -> println("Cover: ${art?.url}")
-        is EnrichmentResult.RateLimited -> println("Rate limited, try later")
-        is EnrichmentResult.Error -> println("Error: ${raw.message}")
-        is EnrichmentResult.NotFound -> println("No art found")
-        null -> {}
-    }
-}
-
-// Identity resolution is on the result, not buried in individual results
-val identity = results.identity
-println("Match: ${identity?.match}, score: ${identity?.matchScore}%")
-```
-
-Power users can access the raw result map via `results.raw[EnrichmentType.GENRE]`.
-
-### Partial failure resilience
-
-The engine resolves each enrichment type independently. If one provider fails (network error, rate limit, timeout), other types still return successfully. The engine never throws from `enrich()` -- provider failures are represented as typed results:
-
-```kotlin
-val profile = engine.artistProfile("Radiohead")
-
-// Genre failed (rate limited), but bio and photo succeeded
-profile.results.result(EnrichmentType.GENRE)       // -> RateLimited
-profile.results.result(EnrichmentType.ARTIST_BIO)   // -> Success
-profile.results.result(EnrichmentType.ARTIST_PHOTO)  // -> Success
-
-// Profile accessors return null for failed types, populated for successful ones
-profile.bio?.text    // -> "Radiohead are an English rock band..."
-profile.genres       // -> emptyList() (failed gracefully)
-```
-
-This means callers can safely use a single `artistProfile()` call without worrying about all-or-nothing failures. Each field on the profile is independently nullable based on whether its enrichment type succeeded.
-
-A failing `EnrichmentCache` is covered by the same guarantee. The cache is an optimisation, so if your
-implementation throws -- a Room disk error, say -- `enrich()` logs it and carries on: a failed read
-degrades to a cache miss and the providers are queried, and a failed write degrades to the result
-simply not being cached. It is never surfaced to the caller as an exception.
-
-**Cancellation still propagates.** If the calling coroutine is cancelled, `CancellationException` is
-rethrown as structured concurrency requires -- swallowing it would make `enrich()` uncancellable.
-That is not a failure result to handle; it means the caller went away. (The `enrichTimeoutMs`
-deadline is *not* this case: expiry is caught internally and returned as `Error` results with
-`ErrorKind.TIMEOUT`.)
-
-The same holds for the other extension points you can supply. A `ResultMerger` or
-`CompositeSynthesizer` registered via `addMerger` / `addSynthesizer` runs guarded: if yours throws,
-that type comes back as `Error` and every other type in the call — including results already
-resolved and cache hits already collected — is returned as normal. It is reported rather than
-degraded to a miss, because a merger *produces* the type's result, so swallowing the failure would
-be indistinguishable from a genuine `NotFound`.
-
-### Disambiguation
-
-```kotlin
-// Search first, then enrich with the chosen candidate
-val candidates = engine.search(EnrichmentRequest.forArtist("Bush"), limit = 5)
-// -> Show to user, they pick one...
-val profile = engine.artistProfile(candidates.first())
-```
-
-### Android (musicmeta-android)
-
-The `musicmeta-android` module adds Room-backed persistent caching, a Hilt DI module, and a WorkManager base worker.
-
-```kotlin
-// build.gradle.kts
-dependencies {
-    implementation("io.github.famesjranko:musicmeta-core:0.10.1")
-    implementation("io.github.famesjranko:musicmeta-android:0.10.1") // Android only
-}
-```
-
-```kotlin
-// Hilt wiring -- HiltEnrichmentModule auto-provides RoomEnrichmentCache
-@Module
-@InstallIn(SingletonComponent::class)
-object MyEnrichmentModule {
-
-    @Provides @Singleton
-    fun provideEngine(
-        roomCache: RoomEnrichmentCache,
-    ): EnrichmentEngine {
-        return EnrichmentEngine.Builder()
-            .cache(roomCache)  // Persistent Room cache instead of in-memory
-            .withDefaultProviders()
-            .build()
-    }
-}
-```
+For the full API — pre-resolved identifiers, named accessors, the raw result map, disambiguation,
+and the failure-isolation guarantees — see the [developer guides](docs/guides/README.md).
 
 ## Providers
 
 | Provider | Data | API Key | Rate Limit |
 |----------|------|---------|------------|
 | MusicBrainz | Identity (MBID), genre, label, dates, members, discography, tracks, links, credits, editions | No | 1 req/sec |
-| Cover Art Archive | Album art front/back/booklet (multi-size) | No | None |
-| Wikidata | Artist photo, country, dates, occupation | No | None |
+| Cover Art Archive | Album art front/back/booklet (multi-size), CD art | No | None |
+| Wikidata | Artist photo, country of origin | No | None |
 | Wikipedia | Artist biography, supplemental photos | No | None |
 | LRCLIB | Synced + plain lyrics | No | None |
 | Deezer | Artist photos, album art, discography, tracklists, album metadata, similar artists/tracks, artist radio, top tracks, similar albums, track previews | No | None |
@@ -231,9 +94,11 @@ object MyEnrichmentModule {
 | ListenBrainz | Popularity, listen counts, discography, similar artists, top tracks, radio discovery (optional token) | Optional | None |
 | Last.fm | Genres, similar artists/tracks, bios, popularity, album metadata | Yes | None |
 | Fanart.tv | Artist photos/backgrounds/logos/banners, CD art, album art | Yes | None |
-| Discogs | Labels, members, credits, editions, community ratings | Yes | None |
+| Discogs | Labels, members, credits, editions, artwork, album metadata, community ratings | Yes | None |
 
-8 of 11 providers work without API keys. Providers with missing keys report `isAvailable = false` and are skipped automatically.
+8 of 11 providers work without API keys. `withDefaultProviders()` registers a key-requiring provider
+only when you supply its key, so the types it would have served simply fall through to the providers
+you do have.
 
 **Getting API keys (all free):**
 - Last.fm: https://www.last.fm/api/account/create
@@ -256,20 +121,20 @@ val engine = EnrichmentEngine.Builder()
 
 | Category | Types | Multi-provider |
 |----------|-------|----------------|
-| **Artwork** | ALBUM_ART, ALBUM_ART_BACK, ALBUM_BOOKLET, ARTIST_PHOTO, ARTIST_BACKGROUND, ARTIST_LOGO, ARTIST_BANNER, CD_ART | ALBUM_ART merged (5 providers via ArtworkMerger), ARTIST_PHOTO merged (5: Wikidata, Fanart.tv, Deezer, Discogs, Wikipedia) |
-| **Metadata** | GENRE, LABEL, RELEASE_DATE, RELEASE_TYPE, COUNTRY, BAND_MEMBERS, ARTIST_DISCOGRAPHY, ALBUM_TRACKS, ALBUM_METADATA | GENRE merged from 2+, DISCOGRAPHY (4), TRACKS (3), METADATA (4) |
+| **Artwork** | ALBUM_ART, ALBUM_ART_BACK, ALBUM_BOOKLET, ARTIST_PHOTO, ARTIST_BACKGROUND, ARTIST_LOGO, ARTIST_BANNER, CD_ART | ALBUM_ART merged (5 via ArtworkMerger), ARTIST_PHOTO merged (5: Wikidata, Fanart.tv, Deezer, Discogs, Wikipedia), CD_ART (2) |
+| **Metadata** | GENRE, LABEL, RELEASE_DATE, RELEASE_TYPE, COUNTRY, BAND_MEMBERS, ARTIST_DISCOGRAPHY, ALBUM_TRACKS, ALBUM_METADATA | DISCOGRAPHY (4), METADATA (4), TRACKS (3), GENRE (2), LABEL (2), RELEASE_TYPE (2), COUNTRY (2), BAND_MEMBERS (2) |
 | **Credits** | CREDITS | MusicBrainz (recording rels) + Discogs (extraartists) |
 | **Editions** | RELEASE_EDITIONS | MusicBrainz (release-group) + Discogs (master versions) |
 | **Text** | ARTIST_BIO, LYRICS_SYNCED, LYRICS_PLAIN | BIO (2) |
-| **Relationships** | SIMILAR_ARTISTS, SIMILAR_TRACKS, ARTIST_LINKS | SIMILAR_ARTISTS merged (3: Last.fm, ListenBrainz, Deezer) |
-| **Top Tracks** | ARTIST_TOP_TRACKS | Merged from 3 providers (Last.fm, ListenBrainz, Deezer) via TopTrackMerger |
+| **Relationships** | SIMILAR_ARTISTS, SIMILAR_TRACKS, ARTIST_LINKS | SIMILAR_ARTISTS (3: Last.fm, ListenBrainz, Deezer), SIMILAR_TRACKS (2) |
+| **Top Tracks** | ARTIST_TOP_TRACKS | Merged from 3 (Last.fm, ListenBrainz, Deezer) via TopTrackMerger |
 | **Statistics** | ARTIST_POPULARITY, TRACK_POPULARITY | Both from 2 providers |
 | **Composite** | ARTIST_TIMELINE, GENRE_DISCOVERY | ARTIST_TIMELINE: discography + members + life-span; GENRE_DISCOVERY: static affinity taxonomy |
 | **Radio** | ARTIST_RADIO, ARTIST_RADIO_DISCOVERY | ARTIST_RADIO: Deezer curated playlist; ARTIST_RADIO_DISCOVERY: ListenBrainz LB Radio (easy/medium/hard modes, optional token) |
 | **Preview** | TRACK_PREVIEW | Deezer 30-second MP3 preview URL (on-demand, not in default types) |
 | **Discovery** | SIMILAR_ALBUMS | Deezer related artists + era scoring |
 
-19 of 34 types have multi-provider coverage with automatic fallback. Artwork types (ALBUM_ART, ARTIST_PHOTO) are merged from all providers -- the best image is primary, alternatives are available via `Artwork.alternatives`.
+19 of 34 types have multi-provider coverage with automatic fallback. Artwork types (ALBUM_ART, ARTIST_PHOTO) are merged rather than first-wins -- the best image is primary, alternatives are available via `Artwork.alternatives`.
 
 ## Installation
 
@@ -308,30 +173,13 @@ dependencies {
 }
 ```
 
-### Composite build
+To consume a local checkout instead, see [docs/project/workflow.md](docs/project/workflow.md).
 
-Clone the repo alongside your project:
+## Requirements
 
-```kotlin
-// settings.gradle.kts
-includeBuild("../musicmeta")
-```
-
-```kotlin
-// build.gradle.kts
-dependencies {
-    implementation("io.github.famesjranko:musicmeta-core")
-    implementation("io.github.famesjranko:musicmeta-android")
-}
-```
-
-### Maven Local
-
-```bash
-./gradlew publishToMavenLocal
-```
-
-Then consume as `io.github.famesjranko:musicmeta-core:0.10.1` from `mavenLocal()`.
+- **JVM**: Java 17+, Kotlin 2.1+
+- **Android**: Min SDK 21 (Android 5.0) for `musicmeta-android`
+- **User-Agent**: MusicBrainz and Wikimedia APIs require a descriptive User-Agent string. Set it via `EnrichmentConfig.userAgent` or the `DefaultHttpClient` constructor.
 
 ## Documentation
 
@@ -347,7 +195,7 @@ Then consume as `io.github.famesjranko:musicmeta-core:0.10.1` from `mavenLocal()
 
 ## Interactive demo
 
-The `demo/` module is a standalone CLI that showcases all three API tiers (profiles, named accessors, raw results), cache management, and the disambiguation flow. 8 of 11 providers work without API keys. To enable all providers, create a `secrets.properties` file or set environment variables (`LASTFM_API_KEY`, `FANARTTV_API_KEY`, `DISCOGS_TOKEN`, `LISTENBRAINZ_TOKEN`).
+The `demo/` module is a standalone CLI that showcases all three API tiers (profiles, named accessors, raw results), cache management, and the disambiguation flow. To enable the key-requiring providers, create a `secrets.properties` file or set environment variables (`LASTFM_API_KEY`, `FANARTTV_API_KEY`, `DISCOGS_TOKEN`, `LISTENBRAINZ_TOKEN`).
 
 ```bash
 cd demo && ../gradlew run -q --console=plain
@@ -362,30 +210,6 @@ musicmeta> pick 1
 musicmeta> refresh artist radiohead
 musicmeta> invalidate artist radiohead
 ```
-
-## Running tests
-
-```bash
-# Unit tests (no API keys needed, no network)
-./gradlew :musicmeta-core:test
-
-# E2E showcase -- readable diagnostic report across diverse queries
-./gradlew :musicmeta-core:test -Dinclude.e2e=true \
-  --tests "*.EnrichmentShowcaseTest"
-
-# E2E with all 11 providers active (pass API keys)
-./gradlew :musicmeta-core:test -Dinclude.e2e=true \
-  -Dlastfm.apikey=YOUR_KEY \
-  -Dfanarttv.apikey=YOUR_KEY \
-  -Ddiscogs.token=YOUR_TOKEN \
-  --tests "*.EnrichmentShowcaseTest"
-```
-
-## Requirements
-
-- **JVM**: Java 17+, Kotlin 2.1+
-- **Android**: Min SDK 21 (Android 5.0) for `musicmeta-android`
-- **User-Agent**: MusicBrainz and Wikimedia APIs require a descriptive User-Agent string. Set it via `EnrichmentConfig.userAgent` or the `DefaultHttpClient` constructor.
 
 ## License
 

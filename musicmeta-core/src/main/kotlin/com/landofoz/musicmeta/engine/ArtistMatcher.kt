@@ -6,7 +6,7 @@ import java.text.Normalizer
  * Music-aware string matching for verifying search results.
  * Handles common variations in artist/album naming across APIs.
  */
-object ArtistMatcher {
+internal object ArtistMatcher {
 
     /** Default minimum fraction of expected tokens that must appear in candidate. */
     const val DEFAULT_MIN_TOKEN_OVERLAP = 0.5f

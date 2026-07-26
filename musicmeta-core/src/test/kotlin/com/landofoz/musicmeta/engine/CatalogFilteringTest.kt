@@ -2,7 +2,6 @@ package com.landofoz.musicmeta.engine
 
 import com.landofoz.musicmeta.*
 import com.landofoz.musicmeta.testutil.FakeEnrichmentCache
-import com.landofoz.musicmeta.testutil.FakeHttpClient
 import com.landofoz.musicmeta.testutil.FakeProvider
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
@@ -80,7 +79,7 @@ class CatalogFilteringTest {
             catalogProvider = catalogProvider,
             catalogFilterMode = mode,
         )
-        return DefaultEnrichmentEngine(ProviderRegistry(listOf(provider)), FakeEnrichmentCache(), FakeHttpClient(), config)
+        return DefaultEnrichmentEngine(ProviderRegistry(listOf(provider)), FakeEnrichmentCache(), config)
     }
 
     // --- Test 1: AVAILABLE_ONLY removes unavailable SimilarArtist items ---

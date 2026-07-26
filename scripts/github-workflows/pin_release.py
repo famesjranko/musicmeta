@@ -20,11 +20,17 @@ from pathlib import Path
 
 UNRELEASED = re.compile(r"^## \[Unreleased\][ \t]*$", re.MULTILINE)
 PINNED = re.compile(r"^## \[([0-9]+\.[0-9]+\.[0-9]+)\]", re.MULTILINE)
+BREAKING = re.compile(r"^### Breaking Changes[ \t]*$", re.MULTILINE)
 ROADMAP_HEADING = re.compile(r"^## Where We Are \(v[0-9]+\.[0-9]+\.[0-9]+\)[ \t]*$", re.MULTILINE)
 
 
 class PinError(Exception):
     """Raised when there is nothing to pin, or nothing worth pinning."""
+
+
+def _same_minor(a: str, b: str) -> bool:
+    """True when two versions differ only in the patch component, i.e. one is a patch of the other."""
+    return a.split(".")[:2] == b.split(".")[:2]
 
 
 def pin_changelog(text: str, version: str, date: str) -> str:
@@ -44,6 +50,16 @@ def pin_changelog(text: str, version: str, date: str) -> str:
     body = rest if next_heading == -1 else rest[:next_heading]
     if not body.strip():
         raise PinError("the [Unreleased] section is empty — there is nothing to release")
+
+    # A break may ship in a minor (0.x.0), never in a patch (CLAUDE.md, Compatibility). v0.9.2 broke
+    # the profile extensions in a patch and there was nothing to stop it; this is that stop.
+    previous = PINNED.findall(text)
+    if BREAKING.search(body) and previous and _same_minor(previous[0], version):
+        raise PinError(
+            f"[Unreleased] has a '### Breaking Changes' section, so {version} cannot be a patch "
+            f"release over {previous[0]} — a break ships in a minor. Bump the minor, or move the "
+            "entry out of Breaking Changes if it does not belong there."
+        )
 
     return text[: match.start()] + f"## [Unreleased]\n\n## [{version}] - {date}" + text[match.end() :]
 

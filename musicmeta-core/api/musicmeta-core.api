@@ -1973,64 +1973,10 @@ public final class com/landofoz/musicmeta/cache/InMemoryEnrichmentCache : com/la
 	public fun put (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lcom/landofoz/musicmeta/EnrichmentResult$Success;JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 
-public final class com/landofoz/musicmeta/engine/ArtistMatcher {
-	public static final field DEFAULT_MIN_TOKEN_OVERLAP F
-	public static final field INSTANCE Lcom/landofoz/musicmeta/engine/ArtistMatcher;
-	public final fun isMatch (Ljava/lang/String;Ljava/lang/String;F)Z
-	public static synthetic fun isMatch$default (Lcom/landofoz/musicmeta/engine/ArtistMatcher;Ljava/lang/String;Ljava/lang/String;FILjava/lang/Object;)Z
-}
-
 public abstract interface class com/landofoz/musicmeta/engine/CompositeSynthesizer {
 	public abstract fun getDependencies ()Ljava/util/Set;
 	public abstract fun getType ()Lcom/landofoz/musicmeta/EnrichmentType;
 	public abstract fun synthesize (Ljava/util/Map;Lcom/landofoz/musicmeta/EnrichmentResult;Lcom/landofoz/musicmeta/EnrichmentRequest;)Lcom/landofoz/musicmeta/EnrichmentResult;
-}
-
-public final class com/landofoz/musicmeta/engine/ConfidenceCalculator {
-	public static final field INSTANCE Lcom/landofoz/musicmeta/engine/ConfidenceCalculator;
-	public final fun authoritative ()F
-	public final fun fuzzyMatch (Z)F
-	public final fun idBasedLookup ()F
-	public final fun searchScore (II)F
-	public static synthetic fun searchScore$default (Lcom/landofoz/musicmeta/engine/ConfidenceCalculator;IIILjava/lang/Object;)F
-}
-
-public final class com/landofoz/musicmeta/engine/DefaultEnrichmentEngine : com/landofoz/musicmeta/EnrichmentEngine {
-	public static final field Companion Lcom/landofoz/musicmeta/engine/DefaultEnrichmentEngine$Companion;
-	public fun <init> (Lcom/landofoz/musicmeta/engine/ProviderRegistry;Lcom/landofoz/musicmeta/EnrichmentCache;Lcom/landofoz/musicmeta/http/HttpClient;Lcom/landofoz/musicmeta/EnrichmentConfig;Lcom/landofoz/musicmeta/EnrichmentLogger;Ljava/util/List;Ljava/util/List;)V
-	public synthetic fun <init> (Lcom/landofoz/musicmeta/engine/ProviderRegistry;Lcom/landofoz/musicmeta/EnrichmentCache;Lcom/landofoz/musicmeta/http/HttpClient;Lcom/landofoz/musicmeta/EnrichmentConfig;Lcom/landofoz/musicmeta/EnrichmentLogger;Ljava/util/List;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public fun enrich (Lcom/landofoz/musicmeta/EnrichmentRequest;Ljava/util/Set;ZLkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public fun enrichBatch (Ljava/util/List;Ljava/util/Set;Z)Lkotlinx/coroutines/flow/Flow;
-	public fun getCache ()Lcom/landofoz/musicmeta/EnrichmentCache;
-	public fun getProviders ()Ljava/util/List;
-	public fun invalidate (Lcom/landofoz/musicmeta/EnrichmentRequest;Lcom/landofoz/musicmeta/EnrichmentType;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public fun isManuallySelected (Lcom/landofoz/musicmeta/EnrichmentRequest;Lcom/landofoz/musicmeta/EnrichmentType;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public fun markManuallySelected (Lcom/landofoz/musicmeta/EnrichmentRequest;Lcom/landofoz/musicmeta/EnrichmentType;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public fun search (Lcom/landofoz/musicmeta/EnrichmentRequest;ILkotlin/coroutines/Continuation;)Ljava/lang/Object;
-}
-
-public final class com/landofoz/musicmeta/engine/DefaultEnrichmentEngine$Companion {
-	public final fun entityKeyFor (Lcom/landofoz/musicmeta/EnrichmentRequest;Lcom/landofoz/musicmeta/EnrichmentType;)Ljava/lang/String;
-	public final fun entityKeyForName (Lcom/landofoz/musicmeta/EnrichmentRequest;Lcom/landofoz/musicmeta/EnrichmentType;)Ljava/lang/String;
-}
-
-public final class com/landofoz/musicmeta/engine/ProviderChain {
-	public static final field TAG Ljava/lang/String;
-	public final fun getType ()Lcom/landofoz/musicmeta/EnrichmentType;
-	public final fun providerCount ()I
-	public final fun providers ()Ljava/util/List;
-	public final fun resolve (Lcom/landofoz/musicmeta/EnrichmentRequest;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public final fun resolveAll (Lcom/landofoz/musicmeta/EnrichmentRequest;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-}
-
-public final class com/landofoz/musicmeta/engine/ProviderRegistry {
-	public fun <init> (Ljava/util/List;Ljava/util/Map;Lcom/landofoz/musicmeta/EnrichmentLogger;)V
-	public synthetic fun <init> (Ljava/util/List;Ljava/util/Map;Lcom/landofoz/musicmeta/EnrichmentLogger;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public final fun chainFor (Lcom/landofoz/musicmeta/EnrichmentType;)Lcom/landofoz/musicmeta/engine/ProviderChain;
-	public final fun identityProvider ()Lcom/landofoz/musicmeta/EnrichmentProvider;
-	public final fun providerInfos ()Ljava/util/List;
-	public final fun searchProviders ()Ljava/util/List;
-	public final fun supportedTypes ()Ljava/util/Set;
 }
 
 public abstract interface class com/landofoz/musicmeta/engine/ResultMerger {

@@ -4,14 +4,13 @@ import com.landofoz.musicmeta.CatalogFilterMode
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
-import com.landofoz.musicmeta.ErrorKind
 import com.landofoz.musicmeta.RadioDiscoveryMode
 import com.landofoz.musicmeta.albumProfile
 import com.landofoz.musicmeta.artistProfile
 import com.landofoz.musicmeta.cache.CacheMode
-import com.landofoz.musicmeta.trackProfile
 import com.landofoz.musicmeta.demo.ui.Spinner
 import com.landofoz.musicmeta.demo.ui.Terminal
+import com.landofoz.musicmeta.trackProfile
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.runBlocking
 
@@ -22,7 +21,8 @@ fun handleConfig(args: String, state: DemoState, term: Terminal) {
 
     if (value == null) {
         term.info("Usage: config <key> <value>")
-        term.info("Keys: timeout <ms>, confidence <0.0-1.0>, identity on|off, http default|okhttp, stale on|off, radiomode easy|medium|hard")
+        term.info("Keys: timeout <ms>, confidence <0.0-1.0>, identity on|off,")
+        term.info("      http default|okhttp, stale on|off, radiomode easy|medium|hard")
         return
     }
 
@@ -134,20 +134,42 @@ internal suspend fun enrichProfile(
     forceRefresh: Boolean = false,
 ): EnrichedProfile = when (request) {
     is EnrichmentRequest.ForArtist -> {
-        val p = state.engine.artistProfile(request.name, request.identifiers.musicBrainzId, types = types, forceRefresh = forceRefresh)
+        val p = state.engine.artistProfile(
+            request.name,
+            request.identifiers.musicBrainzId,
+            types = types,
+            forceRefresh = forceRefresh,
+        )
         EnrichedProfile.Artist(p)
     }
     is EnrichmentRequest.ForAlbum -> {
-        val p = state.engine.albumProfile(request.title, request.artist, request.identifiers.musicBrainzId, types = types, forceRefresh = forceRefresh)
+        val p = state.engine.albumProfile(
+            request.title,
+            request.artist,
+            request.identifiers.musicBrainzId,
+            types = types,
+            forceRefresh = forceRefresh,
+        )
         EnrichedProfile.Album(p)
     }
     is EnrichmentRequest.ForTrack -> {
-        val p = state.engine.trackProfile(request.title, request.artist, mbid = request.identifiers.musicBrainzId, types = types, forceRefresh = forceRefresh)
+        val p = state.engine.trackProfile(
+            request.title,
+            request.artist,
+            mbid = request.identifiers.musicBrainzId,
+            types = types,
+            forceRefresh = forceRefresh,
+        )
         EnrichedProfile.Track(p)
     }
 }
 
-internal fun printEnrichedProfile(profile: EnrichedProfile, request: EnrichmentRequest, term: Terminal, cacheHits: Int) {
+internal fun printEnrichedProfile(
+    profile: EnrichedProfile,
+    request: EnrichmentRequest,
+    term: Terminal,
+    cacheHits: Int,
+) {
     when (profile) {
         is EnrichedProfile.Artist -> Formatter.printProfile(profile.value, term, cacheHits)
         is EnrichedProfile.Album -> Formatter.printProfile(profile.value, term, cacheHits)
@@ -311,13 +333,21 @@ fun executeBatch(input: String, state: DemoState, term: Terminal) {
             "artist" -> EnrichmentRequest.forArtist(item)
             "album" -> {
                 val parts = item.split(BY_REGEX, limit = 2)
-                if (parts.size < 2) { term.info("Skipping \"$item\" — use: title by artist"); null }
-                else EnrichmentRequest.forAlbum(parts[0].trim(), parts[1].trim())
+                if (parts.size < 2) {
+                    term.info("Skipping \"$item\" — use: title by artist")
+                    null
+                } else {
+                    EnrichmentRequest.forAlbum(parts[0].trim(), parts[1].trim())
+                }
             }
             "track" -> {
                 val parts = item.split(BY_REGEX, limit = 2)
-                if (parts.size < 2) { term.info("Skipping \"$item\" — use: title by artist"); null }
-                else EnrichmentRequest.forTrack(parts[0].trim(), parts[1].trim())
+                if (parts.size < 2) {
+                    term.info("Skipping \"$item\" — use: title by artist")
+                    null
+                } else {
+                    EnrichmentRequest.forTrack(parts[0].trim(), parts[1].trim())
+                }
             }
             else -> null
         }
