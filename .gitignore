@@ -16,6 +16,7 @@ local.properties
 !.claude/rules/
 .planning
 .scratch
+.out-of-scope
 secrets.properties
 
 # Python bytecode (scripts/)
