@@ -29,17 +29,17 @@ This release makes the `engine/` package internal, fixes two cancellation bugs, 
 - `engine/` internals are no longer published. `DefaultEnrichmentEngine`, `ProviderRegistry`, `ProviderChain`, `ArtistMatcher` and `ConfidenceCalculator` are now `internal`. Build engines with `EnrichmentEngine.Builder`, which covers every constructor parameter. `ResultMerger` and `CompositeSynthesizer` remain public, as the documented extension points
 
 ### Fixed
-- Back cover, booklet and CD art from the Cover Art Archive now read the canonical `"250"` thumbnail key, falling back to the deprecated `"small"` alias. The URLs are identical today, so nothing changes now; the day the archive drops the alias these three types keep a thumbnail instead of returning `null`
-- A cancelled or timed-out `enrich()` no longer opens circuit breakers against healthy providers. Every `enrichTimeoutMs` expiry was recorded as a failure against providers that had not failed, and repeated timeouts opened the circuit against a healthy one. Fixed across the eight sites that swallowed cancellation (#53)
+- Back cover, booklet and CD art from the Cover Art Archive now read the canonical `"250"` thumbnail key, falling back to the deprecated `"small"` alias
+- A cancelled or timed-out `enrich()` no longer opens circuit breakers against healthy providers, across the eight sites that swallowed cancellation (#53)
 - A consumer cache or merge strategy with its own `withTimeout` no longer surfaces as the engine's deadline (#61)
-- A throwing `HttpClient` on Wikipedia's Wikidata sitelink lookup now yields an `EnrichmentResult.Error` with a classified `errorKind` (`NETWORK` for an `IOException`, `PARSE` for a `JSONException`) instead of an exception escaping the provider and being recorded as `UNKNOWN`. Affects requests carrying a `wikidataId` but no `wikipediaTitle`
+- A throwing `HttpClient` on Wikipedia's Wikidata sitelink lookup now yields an `EnrichmentResult.Error` with a classified `errorKind` instead of escaping the provider as `UNKNOWN`. Affects requests carrying a `wikidataId` but no `wikipediaTitle`
 - The build now works when the default JDK is not 17, because every module declares Kotlin's `jvmTarget`. Published bytecode and the `api/*.api` baselines are unchanged
-- `configuration.md` no longer teaches a builder order that silently misconfigures the engine. `withDefaultProviders()` reads the keys and configuration already set, so it must be called last
+- `configuration.md` no longer teaches a builder order that silently misconfigures the engine: `withDefaultProviders()` reads the keys already set, so it must be called last
 - `how-it-works.md` claimed that all 8 artwork types use `ArtworkMerger`. It is registered for `ALBUM_ART` and `ARTIST_PHOTO` only, and the other six resolve first-wins
 - The genre taxonomy is documented as 189 relationships across 12 families, correcting the `~70` figure that was repeated in four places
-- Four claims in `README.md` were wrong: the Wikidata photo is requested at `?width=1200` rather than 600px, a missing key means the provider is never constructed rather than reporting `isAvailable = false`, four latency figures came from no benchmark, and dates and occupation were credited to Wikidata though no enrichment type exposes them
+- Four claims in `README.md` were wrong: the Wikidata photo width, `isAvailable = false` on a missing key, four latency figures from no benchmark, and dates and occupation credited to Wikidata though no enrichment type exposes them
 - `README.md` is a README again rather than a second copy of the guides, down from 392 lines to 216
-- `docs/providers/` held eleven copies of third-party API references that had drifted — one still reported a fixed `http://` bug as open. Replaced by a single `docs/providers.md`: the upstream doc link per provider, the two packages that depart from the house pattern, and the fields each upstream returns that we drop. What a provider extracts is read off `provider/<name>/`
+- `docs/providers/` held eleven drifted copies of third-party API references, one still reporting a fixed `http://` bug as open. Replaced by a single `docs/providers.md`
 
 ## [0.10.1] - 2026-07-22
 
