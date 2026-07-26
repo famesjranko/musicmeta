@@ -37,7 +37,7 @@ This release makes the `engine/` package internal, fixes two cancellation bugs, 
 - The genre taxonomy is documented as 189 relationships across 12 families, correcting the `~70` figure that was repeated in four places
 - Four claims in `README.md` were wrong: the Wikidata photo is requested at `?width=1200` rather than 600px, a missing key means the provider is never constructed rather than reporting `isAvailable = false`, four latency figures came from no benchmark, and dates and occupation were credited to Wikidata though no enrichment type exposes them
 - `README.md` is a README again rather than a second copy of the guides, down from 392 lines to 216
-- `docs/providers/` documents what our code does with each provider — capabilities, what we leave, and where the implementation departs — instead of restating third-party API references that had drifted. Each doc now links upstream for endpoints and auth, and `lastfm.md` no longer reports a fixed `http://` bug as open
+- `docs/providers/` held eleven copies of third-party API references that had drifted — one still reported a fixed `http://` bug as open. Replaced by a single `docs/providers.md`: the upstream doc link per provider, the two packages that depart from the house pattern, and the fields each upstream returns that we drop. What a provider extracts is read off `provider/<name>/`
 
 ## [0.10.1] - 2026-07-22
 

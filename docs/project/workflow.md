@@ -193,6 +193,6 @@ Use conventional commits scoped by area, for example `fix(provider): handle null
 | Breaking public API change | `CHANGELOG.md` under `### Breaking Changes` |
 | Why a decision was made, or an approach rejected | Inline at the mechanism; the PR for the rest |
 | Coverage, gap, or milestone shift | `ROADMAP.md` |
-| New provider | `docs/providers/<name>.md` and the index beside it. `## What We Extract` is checked against the declared `capabilities`; the rest is not |
+| New provider | `docs/providers.md` — a row in the table, plus a `What we don't extract` block if the upstream returns more than we take. Nothing checks either |
 | New public capability | Relevant `docs/guides/*.md` |
 | Release preparation or publication | [release.md](release.md) |
