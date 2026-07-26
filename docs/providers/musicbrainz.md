@@ -16,8 +16,9 @@ its `resolvedIdentifiers` are what let the Cover Art Archive, Fanart.tv, Wikidat
 ListenBrainz be called at all. It is also the only provider whose `NotFound` can carry `suggestions`,
 which short-circuits the entire fan-out — see `enrich()` in `engine/DefaultEnrichmentEngine.kt`.
 
-`withDefaultProviders()` gives it `RateLimiter(1100)` — its own limiter, against upstream's 1 req/sec.
-Every other provider shares a 100ms one.
+`withDefaultProviders()` gives it `RateLimiter(1100)` — one of only two providers with a limiter of
+its own. Nine others share a single `RateLimiter(100)` instance between them; see
+[README](README.md#rate-limiting).
 
 ## Deviation: three extra files
 

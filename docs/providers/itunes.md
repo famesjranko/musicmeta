@@ -14,7 +14,8 @@ codes, rate limits — follow the upstream link; that is authoritative and this 
 **Why this provider.** A no-key album search that returns artwork at any size from one URL, so it is
 the fallback when MusicBrainz has no MBID and the Cover Art Archive therefore cannot be asked. It is
 also the most aggressively rate-limited provider in the tree: `RateLimiter(3000)` by constructor
-default, which `withDefaultProviders()` takes, against roughly 20 requests a minute upstream.
+default, which `withDefaultProviders()` takes rather than passing the shared limiter the other nine
+get — see [README](README.md#rate-limiting).
 
 ## What We Extract
 

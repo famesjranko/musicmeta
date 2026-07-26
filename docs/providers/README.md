@@ -21,6 +21,24 @@ runtime, on every `./check`, and fails in both directions — plus a package wit
 package, and a provider that stops being registered. Everything else here is unenforced prose —
 written knowing that, and knowing what unenforced prose about a moving package turned into last time.
 
+## Rate limiting
+
+`withDefaultProviders()` builds **one** `RateLimiter(100)` and hands that same instance to nine
+providers — Cover Art Archive, Wikidata, Wikipedia, Deezer (and its `DeezerApi`, so
+`deezer-similar-albums` too), ListenBrainz, LRCLIB, Last.fm, Fanart.tv and Discogs. It is
+mutex-guarded, so those nine share a single 10 req/s budget rather than getting 10 req/s each, and
+one busy provider can consume all of it. Two providers sit outside that: MusicBrainz gets its own
+`RateLimiter(1100)`, and iTunes falls through to its constructor default of `RateLimiter(3000)`.
+Wikipedia additionally holds a separate limiter for the Wikidata host it reaches.
+
+`RateLimiter`'s own KDoc says "Each provider should have its own RateLimiter instance." The default
+wiring does not do that. Recorded, not changed.
+
+**No upstream limit is stated here.** The previous generation of these docs carried a
+limits-at-a-glance table; it was wrong about our own settings, and the third-party numbers in it are
+not checkable from this repo — Last.fm's API terms publish no figure at all, only "limits... in our
+sole discretion". Follow each doc's upstream link.
+
 ## The providers
 
 | Provider | Auth | Notable |
