@@ -84,9 +84,10 @@ than it looks like, each learned the hard way.
   payload names. Sweeping everything dirty at end of turn was built and deleted: it reformats
   uncommitted work the agent never touched. `ktlintCheck` catches it, one `./check` later.
 
-- **`demo/` is exempt from house conventions, not from formatting.** The convention rules govern how
-  we build internals, and its job is to compile against the published surface like an external
-  consumer — holding it to them would make the canary about us instead of about consumers. Formatting
-  is the opposite case: it cannot affect that job, and `demo/` is the worked example people read, so
-  it applies the same ktlint against the same `.editorconfig` and `./check` gates it. `demo/run.sh`
-  is shellchecked — that was never about style.
+- **`demo/` is exempt from house conventions, not from formatting.** It is a separate composite
+  build, never compiled by `./gradlew build`, so a green build says nothing about it — that is what
+  the canary is for. The convention rules govern how we build internals, and `demo/`'s job is to
+  compile against the published surface like an external consumer; holding it to them would make the
+  canary about us instead of about consumers. Formatting is the opposite case: it cannot affect that
+  job, and `demo/` is the worked example people read, so it applies the same ktlint against the same
+  `.editorconfig` and `./check` gates it. `demo/run.sh` is shellchecked — that was never about style.
