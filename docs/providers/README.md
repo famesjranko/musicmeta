@@ -27,16 +27,19 @@ on a row.
 
 ## Rate limiting
 
-`withDefaultProviders()` builds **one** `RateLimiter(100)` and hands that same instance to nine
-providers — Cover Art Archive, Wikidata, Wikipedia, Deezer (and its `DeezerApi`, so
-`deezer-similar-albums` too), ListenBrainz, LRCLIB, Last.fm, Fanart.tv and Discogs. It is
-mutex-guarded, so those nine share a single 10 req/s budget rather than getting 10 req/s each, and
-one busy provider can consume all of it. Two providers sit outside that: MusicBrainz gets its own
-`RateLimiter(1100)`, and iTunes falls through to its constructor default of `RateLimiter(3000)`.
-Wikipedia additionally holds a separate limiter for the Wikidata host it reaches.
+`withDefaultProviders()` builds **one** `RateLimiter(100)` and hands that same instance to ten
+providers — Cover Art Archive, Wikidata, Wikipedia, Deezer, `deezer-similar-albums` (via the
+`DeezerApi` it shares with Deezer), ListenBrainz, LRCLIB, Last.fm, Fanart.tv and Discogs. It is
+mutex-guarded, so those ten share a single 10 req/s budget rather than getting 10 req/s each, and one
+busy provider can consume all of it. Two providers sit outside that: MusicBrainz gets its own
+`RateLimiter(1100)`, and iTunes falls through to its constructor default of `RateLimiter(3000)` —
+which is the whole mechanism, since a provider shares only by declaring no default and taking what it
+is handed. Wikipedia additionally holds its own `RateLimiter(100)` for the Wikidata host it reaches.
 
 `RateLimiter`'s own KDoc says "Each provider should have its own RateLimiter instance." The default
-wiring does not do that. Recorded, not changed.
+wiring does not do that. Open as **#50**, undecided: nobody has recorded whether the sharing is a
+deliberate global politeness budget or incidental, and that answer decides whether the code changes
+or the KDoc does.
 
 **No upstream limit is stated here.** The previous generation of these docs carried a
 limits-at-a-glance table; it was wrong about our own settings, and the third-party numbers in it are
