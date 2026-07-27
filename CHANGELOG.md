@@ -34,6 +34,7 @@ This release makes the `engine/` package internal, fixes two cancellation bugs, 
 - `engine/` internals are no longer published. `DefaultEnrichmentEngine`, `ProviderRegistry`, `ProviderChain`, `ArtistMatcher` and `ConfidenceCalculator` are now `internal`. Build engines with `EnrichmentEngine.Builder`, which covers every constructor parameter. `ResultMerger` and `CompositeSynthesizer` remain public, as the documented extension points
 
 ### Fixed
+- Fanart.tv `ALBUM_ART`/`CD_ART` need a release group id; the wrong-album fallback is gone
 - A 401 or 403 on a call carrying a key (Last.fm, Discogs, Fanart.tv, ListenBrainz radio) is now `Error(ErrorKind.AUTH)`, not `NotFound`; five in a row open the breaker, one gets through a minute later
 - An `ARTIST_TOP_TRACKS` merger registered via `Builder.addMerger` now overrides the built-in `TopTrackMerger`, as the other five merger types already did; merged output changes for anyone who registered one (#49)
 - iTunes search candidates now carry `itunesCollectionId` in `identifiers` (empty before); a follow-up `ALBUM_TRACKS` request with them resolves by direct lookup at 1.0 confidence instead of re-searching
