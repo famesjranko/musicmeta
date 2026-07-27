@@ -260,6 +260,78 @@ class EmptyPayloadDemotionTest {
         )
     }
 
+    @Test
+    fun `a synthesizer returning an empty payload is demoted`() = runTest {
+        // Given — a composite synthesizer that reports Success with no events, as TimelineSynthesizer
+        // does for an artist with no dates anywhere
+        val emptySynthesizer = object : CompositeSynthesizer {
+            override val type = EnrichmentType.ARTIST_TIMELINE
+            override val dependencies = emptySet<EnrichmentType>()
+            override fun synthesize(
+                resolved: Map<EnrichmentType, EnrichmentResult>,
+                identityResult: EnrichmentResult?,
+                request: EnrichmentRequest,
+            ) = EnrichmentResult.Success(
+                type, EnrichmentData.ArtistTimeline(emptyList()), "timeline_synthesizer", 0.95f,
+            )
+        }
+        val engine = DefaultEnrichmentEngine(
+            ProviderRegistry(emptyList()),
+            FakeEnrichmentCache(),
+            EnrichmentConfig(enableIdentityResolution = false),
+            synthesizers = listOf(emptySynthesizer),
+        )
+
+        // When
+        val results = engine.enrich(
+            EnrichmentRequest.forArtist("Radiohead"),
+            setOf(EnrichmentType.ARTIST_TIMELINE),
+        )
+
+        // Then — CompositeSynthesizer is a public extension point; its output is gated too
+        assertTrue(results.raw[EnrichmentType.ARTIST_TIMELINE] is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `a merger returning an empty payload is demoted`() = runTest {
+        // Given — a provider with a real genre, and a merger that loses it. ResultMerger is a public
+        // extension point too, and a built-in can merge to nothing (GenreMerger returns its first
+        // input as-is when there are no tags to merge).
+        val emptyMerger = object : ResultMerger {
+            override val type = EnrichmentType.GENRE
+            override fun merge(results: List<EnrichmentResult.Success>) =
+                EnrichmentResult.Success(type, EnrichmentData.Metadata(), "empty_merger", 1.0f)
+        }
+        val provider = FakeProvider(
+            id = "p",
+            capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)),
+        ).also {
+            it.givenResult(
+                EnrichmentType.GENRE,
+                EnrichmentResult.Success(
+                    EnrichmentType.GENRE,
+                    EnrichmentData.Metadata(genreTags = listOf(GenreTag("rock", 0.9f))),
+                    "p", 0.9f,
+                ),
+            )
+        }
+        val engine = DefaultEnrichmentEngine(
+            ProviderRegistry(listOf(provider)),
+            FakeEnrichmentCache(),
+            EnrichmentConfig(enableIdentityResolution = false),
+            mergers = listOf(emptyMerger),
+        )
+
+        // When — the merger runs on a non-empty input, so this gates the *output*, not the input
+        val results = engine.enrich(
+            EnrichmentRequest.forAlbum("OK Computer", "Radiohead"),
+            setOf(EnrichmentType.GENRE),
+        )
+
+        // Then
+        assertTrue(results.raw[EnrichmentType.GENRE] is EnrichmentResult.NotFound)
+    }
+
     // --- The enumeration itself ---
 
     @Test
