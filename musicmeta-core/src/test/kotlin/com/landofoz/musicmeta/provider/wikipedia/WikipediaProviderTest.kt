@@ -309,7 +309,7 @@ class WikipediaProviderTest {
 
     @Test
     fun `enrich picks the enwiki sitelink, not the first one, when the entity has many languages`() = runTest {
-        // Given — Q191352's sitelinks with arwiki and frwiki ahead of enwiki in map order
+        // Given — Q191352's sitelinks with arwiki, frwiki and dewiki ahead of enwiki in map order
         httpClient.givenJsonResponse("wikidata.org", MULTI_LANGUAGE_SITELINKS_JSON)
         httpClient.givenJsonResponse("wikipedia.org", PORTISHEAD_SUMMARY_JSON)
         val request = EnrichmentRequest.ForArtist(

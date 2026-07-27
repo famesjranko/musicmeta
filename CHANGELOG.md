@@ -55,7 +55,7 @@ This release makes `engine/` internal, hardens providers and the engine, and cor
 - Each host gets its own `RateLimiter` — Cover Art Archive's is now actually used; ten providers shared one, serialising every fan-out (#50)
 - A timed-out `enrich()` now caches nothing; no half-filtered result persists (#56)
 - A 429 on the typed `HttpResult` calls now retries within the enrich deadline; standalone, an `HttpClient` may block up to 120s rather than return at once
-- A MusicBrainz Wikipedia relation is only used when it points at `en.wikipedia.org`; artists like Portishead now get an English `ARTIST_BIO` via the Wikidata `enwiki` sitelink (#106)
+- `EnrichmentIdentifiers.wikipediaTitle` is null unless MusicBrainz has an `en.wikipedia.org` relation; artists like Portishead get an English `ARTIST_BIO` via the Wikidata `enwiki` sitelink (#106)
 
 ## [0.10.1] - 2026-07-22
 

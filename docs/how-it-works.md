@@ -111,7 +111,9 @@ When needed, MusicBrainz searches by title/artist and returns:
 - `musicBrainzId` (MBID) — the universal music identifier
 - `musicBrainzReleaseGroupId` — for album editions
 - `wikidataId` — extracted from MusicBrainz URL relations
-- `wikipediaTitle` — extracted from MusicBrainz URL relations
+- `wikipediaTitle` — extracted from MusicBrainz URL relations, English only: a relation pointing at
+  another language wiki is ignored, leaving this null so `WikipediaProvider` falls back to the
+  Wikidata `enwiki` sitelink
 - Provider-specific IDs (Discogs, etc.) — stored in the `extra` map
 
 These identifiers are merged into the request via `request.withIdentifiers(mergedIds)`. All downstream providers then use these IDs for precise lookups instead of fuzzy search.
