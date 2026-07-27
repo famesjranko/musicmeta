@@ -35,6 +35,7 @@ This release makes `engine/` internal, hardens providers and the engine, and cor
 - `engine/` internals are no longer published. `DefaultEnrichmentEngine`, `ProviderRegistry`, `ProviderChain`, `ArtistMatcher` and `ConfidenceCalculator` are now `internal`. Build engines with `EnrichmentEngine.Builder`. `ResultMerger` and `CompositeSynthesizer` remain public
 
 ### Fixed
+- Discogs sends its token in an `Authorization` header, not the URL query
 - Fanart.tv `ALBUM_ART`/`CD_ART` need a release group id; the wrong-album fallback is gone
 - A 401/403 on a call carrying a key (Last.fm, Discogs, Fanart.tv, ListenBrainz radio) is now `Error(ErrorKind.AUTH)`, not `NotFound`; five in a row open the breaker, one retries a minute later
 - An `ARTIST_TOP_TRACKS` merger registered via `Builder.addMerger` now overrides the built-in `TopTrackMerger`; merged output changes for anyone who registered one (#49)
