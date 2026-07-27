@@ -7,12 +7,16 @@ import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
 import com.landofoz.musicmeta.http.HttpResult
 import com.landofoz.musicmeta.http.RateLimiter
+import com.landofoz.musicmeta.provider.coverartarchive.CoverArtArchiveProvider
 import com.landofoz.musicmeta.provider.deezer.DeezerProvider
 import com.landofoz.musicmeta.provider.discogs.DiscogsProvider
 import com.landofoz.musicmeta.provider.fanarttv.FanartTvProvider
 import com.landofoz.musicmeta.provider.itunes.ITunesProvider
 import com.landofoz.musicmeta.provider.lastfm.LastFmProvider
 import com.landofoz.musicmeta.provider.listenbrainz.ListenBrainzProvider
+import com.landofoz.musicmeta.provider.lrclib.LrcLibProvider
+import com.landofoz.musicmeta.provider.wikidata.WikidataProvider
+import com.landofoz.musicmeta.provider.wikipedia.WikipediaProvider
 import com.landofoz.musicmeta.testutil.FakeHttpClient
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -197,11 +201,112 @@ class ProviderTransientFailureTest {
         assertNetworkError(provider.enrich(ARTIST_WITH_MBID, EnrichmentType.ARTIST_RADIO_DISCOVERY))
     }
 
+    // --- Cover Art Archive --------------------------------------------------------------------
+
+    /**
+     * The metadata endpoint (`/release/{mbid}`), the one Cover Art Archive call that returns an
+     * `HttpResult`. The `front-` availability checks go through `fetchRedirectUrl`, which returns
+     * `String?` and cannot carry a status — exempted, see the PR survey.
+     */
+    @Test
+    fun `coverartarchive metadata rate limited is an Error`() = runTest {
+        rateLimit("coverartarchive.org")
+        val provider = CoverArtArchiveProvider(http, RateLimiter(0))
+
+        assertNetworkError(provider.enrich(ALBUM_WITH_RELEASE_GROUP, EnrichmentType.ALBUM_ART_BACK))
+    }
+
+    @Test
+    fun `coverartarchive metadata server error is an Error`() = runTest {
+        http.givenHttpResult("coverartarchive.org", HttpResult.ServerError(503))
+        val provider = CoverArtArchiveProvider(http, RateLimiter(0))
+
+        assertNetworkError(provider.enrich(ALBUM_WITH_RELEASE_GROUP, EnrichmentType.ALBUM_BOOKLET))
+    }
+
+    // --- LRCLIB -------------------------------------------------------------------------------
+
+    /** The exact-match GET returning a JSON object. */
+    @Test
+    fun `lrclib exact lookup rate limited is an Error`() = runTest {
+        rateLimit("lrclib.net")
+        val provider = LrcLibProvider(http, RateLimiter(0))
+
+        assertNetworkError(provider.enrich(TRACK, EnrichmentType.LYRICS_SYNCED))
+    }
+
+    /** The search fallback returning a JSON *array* — the second call shape in `LrcLibApi`. */
+    @Test
+    fun `lrclib search server error is an Error`() = runTest {
+        http.givenHttpResult("/api/get", HttpResult.ClientError(404))
+        http.givenHttpResultArray("/api/search", HttpResult.ServerError(500))
+        val provider = LrcLibProvider(http, RateLimiter(0))
+
+        assertNetworkError(provider.enrich(TRACK, EnrichmentType.LYRICS_SYNCED))
+    }
+
+    // --- Wikidata -----------------------------------------------------------------------------
+
+    @Test
+    fun `wikidata claims rate limited is an Error`() = runTest {
+        rateLimit("wikidata.org")
+        val provider = WikidataProvider(http, RateLimiter(0))
+
+        assertNetworkError(provider.enrich(ARTIST_WITH_WIKIDATA_ID, EnrichmentType.ARTIST_PHOTO))
+    }
+
+    @Test
+    fun `wikidata claims network drop is an Error`() = runTest {
+        http.givenHttpResult("wikidata.org", HttpResult.NetworkError("connection reset"))
+        val provider = WikidataProvider(http, RateLimiter(0))
+
+        assertNetworkError(provider.enrich(ARTIST_WITH_WIKIDATA_ID, EnrichmentType.COUNTRY))
+    }
+
+    // --- Wikipedia ----------------------------------------------------------------------------
+
+    @Test
+    fun `wikipedia summary rate limited is an Error`() = runTest {
+        rateLimit("wikipedia.org")
+        val provider = WikipediaProvider(http, RateLimiter(0))
+
+        assertNetworkError(provider.enrich(ARTIST_WITH_WIKIPEDIA_TITLE, EnrichmentType.ARTIST_BIO))
+    }
+
+    @Test
+    fun `wikipedia media list server error is an Error`() = runTest {
+        http.givenHttpResult("wikipedia.org", HttpResult.ServerError(503))
+        val provider = WikipediaProvider(http, RateLimiter(0))
+
+        assertNetworkError(provider.enrich(ARTIST_WITH_WIKIPEDIA_TITLE, EnrichmentType.ARTIST_PHOTO))
+    }
+
+    /**
+     * The seventh site: `WikipediaProvider.resolveFromWikidata` calls `wikidata.org` itself rather
+     * than through `WikidataApi`, so an API-class-keyed survey misses it.
+     */
+    @Test
+    fun `wikipedia title resolution via wikidata rate limited is an Error`() = runTest {
+        rateLimit("wikidata.org")
+        val provider = WikipediaProvider(http, RateLimiter(0))
+
+        assertNetworkError(provider.enrich(ARTIST_WITH_WIKIDATA_ID, EnrichmentType.ARTIST_BIO))
+    }
+
     private companion object {
         private const val MBID = "8f6bd1e4-fbe1-4f50-aa9b-94c450ec0f11"
         private const val RELEASE_GROUP_MBID = "3a3a1a7e-1111-2222-3333-444455556666"
 
         val ARTIST = EnrichmentRequest.forArtist("Portishead")
+        val TRACK = EnrichmentRequest.forTrack("Glory Box", "Portishead")
+        val ARTIST_WITH_WIKIDATA_ID = EnrichmentRequest.forArtist(
+            "Portishead",
+            identifiers = EnrichmentIdentifiers(wikidataId = "Q189599"),
+        )
+        val ARTIST_WITH_WIKIPEDIA_TITLE = EnrichmentRequest.forArtist(
+            "Portishead",
+            identifiers = EnrichmentIdentifiers(wikipediaTitle = "Portishead (band)"),
+        )
         val ALBUM = EnrichmentRequest.forAlbum("Dummy", "Portishead")
         val ARTIST_WITH_MBID = EnrichmentRequest.forArtist("Portishead", mbid = MBID)
         val ALBUM_WITH_RELEASE_GROUP = EnrichmentRequest.forAlbum(
