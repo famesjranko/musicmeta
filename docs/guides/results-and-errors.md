@@ -177,13 +177,17 @@ sealed class EnrichmentResult {
 | `TIMEOUT` | Engine-level enrichment timeout expired |
 | `UNKNOWN` | Uncategorized error |
 
-A 429, a 5xx and a dropped connection all reach you as `NETWORK`: every provider classifies a
-transient transport failure through one shared helper (`bodyOrThrowTransient`), which throws a plain
-`IOException`, and `mapError()` maps that to `NETWORK`. `ProviderTransientFailureTest` and
-`MusicBrainzTransientFailureTest` pin it for all seven providers. So **do not branch on
-`RATE_LIMIT`** — the value is part of the published enum and cannot be removed without a breaking
-change, but nothing sets it. The same is true of the `EnrichmentResult.RateLimited` variant: the
-engine handles it, no provider returns it.
+From MusicBrainz, Deezer, iTunes, Last.fm, Discogs, Fanart.tv and ListenBrainz, a 429, a 5xx and a
+dropped connection all reach you as `NETWORK`: those seven classify a transient transport failure
+through one shared helper (`bodyOrThrowTransient`), which throws a plain `IOException`, and
+`mapError()` maps that to `NETWORK`. `MusicBrainzTransientFailureTest` and
+`ProviderTransientFailureTest` pin it. The remaining providers — Cover Art Archive, LrcLib, Wikidata
+and Wikipedia — still collapse a transient into an empty result, so a 429 from one of those is
+indistinguishable from a genuine "not found".
+
+Either way, **do not branch on `RATE_LIMIT`**: the value is part of the published enum and cannot be
+removed without a breaking change, but nothing sets it. The same is true of the
+`EnrichmentResult.RateLimited` variant — the engine handles it, no provider returns it.
 
 ---
 
