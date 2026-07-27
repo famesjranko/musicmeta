@@ -102,7 +102,7 @@ interface EnrichmentEngine {
         fun cache(cache: EnrichmentCache) = apply { this.cache = cache }
         fun httpClient(client: HttpClient) = apply { this.httpClient = client }
         fun config(config: EnrichmentConfig) = apply { this.config = config }
-        fun logger(logger: EnrichmentLogger) = apply { this.logger = logger }
+        fun logger(logger: EnrichmentLogger) = apply { this.logger = logger.guarded() }
         fun apiKeys(config: ApiKeyConfig) = apply { this.apiKeyConfig = config }
         fun catalog(provider: CatalogProvider, mode: CatalogFilterMode = CatalogFilterMode.UNFILTERED) = apply {
             this.config = this.config.copy(catalogProvider = provider, catalogFilterMode = mode)

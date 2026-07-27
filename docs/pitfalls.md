@@ -78,9 +78,12 @@ rethrow fails the other way: a `CancellationException` can come from inside a pr
 Every consumer-implementable interface needs the RIGHT form verbatim. It is live in `ProviderChain`,
 `CacheGuard`, `StrategyGuard`, `DefaultEnrichmentEngine`, `ITunesProvider` and `DeezerProvider`.
 `guardedStrategy` is `suspend` purely to reach the job, since `ResultMerger.merge` and
-`CompositeSynthesizer.synthesize` are not. Enforced by behaviour, not a rule — a textual rule was
-written and deleted because the remediation it printed was itself the defect (`ARCHITECTURE.md`).
-Read `EnrichCacheFailureTest`, `EnrichStrategyFailureTest` and
+`CompositeSynthesizer.synthesize` are not. `EnrichmentLogger` is the one consumer-implementable
+interface guarded *without* `ensureActive()` — its two methods are not `suspend`, so cancellation
+cannot be delivered into them and a `CancellationException` there can only be one the consumer's
+logger built itself. `EnrichmentLogger.guarded()` holds the reasoning; the wrapper is applied at
+`EnrichmentEngine.Builder.logger` so no call site repeats it (#71). Enforced by behaviour, not a rule — a textual rule was
+written and deleted because the remediation it printed was itself the defect (`ARCHITECTURE.md`). Read `EnrichCacheFailureTest`, `EnrichStrategyFailureTest` and
 `ProviderChainCancellationTest` before writing a cancellation test of your own. A provider's own
 `catch` calls `mapError(type, e)` and deliberately does not special-case `CancellationException`.
 
