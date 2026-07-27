@@ -27,8 +27,9 @@ exhaustive. Paths are relative to `musicmeta-core/src/main/kotlin/com/landofoz/m
 - An identity `NotFound` carrying `suggestions` short-circuits the whole provider fan-out.
 - One `http/CircuitBreaker.kt` per provider id, shared across every chain.
 - A `CompositeSynthesizer`'s `dependencies` are resolved even when the caller did not ask for them.
-- Only the stale fallback and write-back sit outside `withTimeout(enrichTimeoutMs)`, so an expiry
-  does not discard results already fetched.
+- `withTimeoutOrNull(enrichTimeoutMs)` returns null for *that* deadline only; a nested one
+  propagates. An expiry does not discard results already fetched, but the write-back is skipped, so
+  a timed-out run caches nothing. The stale fallback and write-back sit outside the timed block.
 - `filterByConfidence()` demotes a `Success` below `minConfidence` (0.5) to `NotFound`.
 
 ## Rules with no mechanism

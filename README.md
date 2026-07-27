@@ -72,9 +72,8 @@ val minimal = engine.artistProfile("Radiohead", types = setOf(
 ))
 ```
 
-The engine resolves every type independently and `enrich()` never throws — a provider that fails,
-rate limits or times out yields a typed result on that one type, and the rest of the profile is
-unaffected. `profile.results` carries the per-type outcome when you need to tell "no data" from
+The engine resolves every type independently — a provider that fails, rate limits or times out
+yields a typed result on that one type, and the rest of the profile is unaffected. `profile.results` carries the per-type outcome when you need to tell "no data" from
 "could not fetch".
 
 For the full API — pre-resolved identifiers, named accessors, the raw result map, disambiguation,
