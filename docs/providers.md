@@ -147,7 +147,10 @@ only, so an artist with just an SD logo reads as having none), `hdmusicbanner` (
 `musicbanner` we do read), `likes` (parsed into `FanartTvImage.likes` and ignored — the ranking
 signal for every list, discarded at the point it arrives), `id` (used as an `ArtworkSize` label and
 nowhere else; it addresses a specific image upstream), `lang`/`disc`/`size` on `cdart`,
-`name`/`mbid_id` on the artist object (verification that the id resolved to the artist we meant).
+`name`/`mbid_id` on the artist object (verification that the id resolved to the artist we meant),
+`albums` on the artist document (album art keyed by release group — deliberately unread, since it
+cannot be attributed to the album asked for without the release group id the album endpoint needs
+anyway).
 Everything after the first image of each type is dropped except as an unlabelled `sizes` entry.
 
 **Discogs.** Parsed from `/releases/{id}` — which `ALBUM_METADATA` and `CREDITS` already fetch — then

@@ -16,7 +16,6 @@ import com.landofoz.musicmeta.IdentityResolution
 import com.landofoz.musicmeta.ProviderInfo
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.cache.CacheMode
-import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -24,7 +23,7 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 
 internal class DefaultEnrichmentEngine(
     private val registry: ProviderRegistry,
@@ -73,30 +72,34 @@ internal class DefaultEnrichmentEngine(
 
         var identityResolution: IdentityResolution? = null
 
-        try {
-            withTimeout(config.enrichTimeoutMs) {
-                var identityResult: EnrichmentResult? = null
-                val enrichedRequest = if (config.enableIdentityResolution &&
-                    needsIdentityResolution(request, uncachedTypes, registry)) {
-                    resolveIdentity(request, results, uncachedTypes).also { identityResult = it.second }.first
-                } else request
+        // withTimeoutOrNull returns null only when *this* deadline expired. A nested withTimeout's
+        // expiry — a consumer's CatalogProvider, say — propagates instead of being caught by type
+        // and mislabelled as enrichTimeoutMs. (#55)
+        val completed = withTimeoutOrNull(config.enrichTimeoutMs) {
+            var identityResult: EnrichmentResult? = null
+            val enrichedRequest = if (config.enableIdentityResolution &&
+                needsIdentityResolution(request, uncachedTypes, registry)) {
+                resolveIdentity(request, results, uncachedTypes).also { identityResult = it.second }.first
+            } else request
 
-                identityResolution = buildIdentityResolution(identityResult, enrichedRequest)
+            identityResolution = buildIdentityResolution(identityResult, enrichedRequest)
 
-                // Short-circuit: when identity failed with suggestions, skip provider fan-out
-                val identityNotFound = identityResult as? EnrichmentResult.NotFound
-                if (identityNotFound?.suggestions != null) {
-                    for (type in uncachedTypes) {
-                        results[type] = EnrichmentResult.NotFound(type, "engine",
-                            suggestions = identityNotFound.suggestions, identityMatch = IdentityMatch.SUGGESTIONS)
-                    }
-                } else {
-                    results.putAll(resolveTypes(enrichedRequest, uncachedTypes, identityResult))
-                    applyCatalogFiltering(results, config.catalogProvider, config.catalogFilterMode)
-                    stampIdentityMatch(results, identityResult)
+            // Short-circuit: when identity failed with suggestions, skip provider fan-out
+            val identityNotFound = identityResult as? EnrichmentResult.NotFound
+            if (identityNotFound?.suggestions != null) {
+                for (type in uncachedTypes) {
+                    results[type] = EnrichmentResult.NotFound(type, "engine",
+                        suggestions = identityNotFound.suggestions, identityMatch = IdentityMatch.SUGGESTIONS)
                 }
+            } else {
+                results.putAll(resolveTypes(enrichedRequest, uncachedTypes, identityResult))
+                applyCatalogFiltering(results, config.catalogProvider, config.catalogFilterMode)
+                stampIdentityMatch(results, identityResult)
             }
-        } catch (_: TimeoutCancellationException) {
+            true
+        } ?: false
+
+        if (!completed) {
             logger.warn(TAG, "Enrich timed out after ${config.enrichTimeoutMs}ms")
             for (type in types) {
                 if (type !in results) {
@@ -106,28 +109,39 @@ internal class DefaultEnrichmentEngine(
             }
         }
 
-        // Stale fallback and write-back are outside the withTimeout above on purpose: a timeout
-        // must not discard results already fetched. Don't move these inside the try.
+        // Stale fallback and write-back are outside the timed block above on purpose: a timeout
+        // must not discard results already fetched. Don't move these inside it.
         if (config.cacheMode == CacheMode.STALE_IF_ERROR) {
             applyStaleCache(request, results, uncachedTypes)
         }
 
+        // A timed-out run persists nothing. The deadline can fire part-way through a step that
+        // rewrites entries in `results` — catalog filtering does exactly that, per type — so what
+        // survives is a mix of finished and unfinished work. Returning it is the contract; caching
+        // it would outlive the call that truncated it. (#56)
+        if (completed) writeBack(request, results, identityResolution)
+
+        return EnrichmentResults(results, types, identityResolution)
+    }
+
+    private suspend fun writeBack(
+        request: EnrichmentRequest,
+        results: Map<EnrichmentType, EnrichmentResult>,
+        identityResolution: IdentityResolution?,
+    ) {
         val resolvedMbid = identityResolution?.identifiers?.musicBrainzId
         for ((type, result) in results) {
-            if (result is EnrichmentResult.Success && !result.isStale) {
-                val ttl = config.ttlOverrides[type] ?: type.defaultTtlMs
-                val primaryKey = entityKeyFor(request, type)
-                guardedCacheWrite(logger, "put") { cache.put(primaryKey, type, result, ttl) }
+            if (result !is EnrichmentResult.Success || result.isStale) continue
+            val ttl = config.ttlOverrides[type] ?: type.defaultTtlMs
+            guardedCacheWrite(logger, "put") { cache.put(entityKeyFor(request, type), type, result, ttl) }
 
-                // Alias: when identity resolution added an MBID, also cache under the
-                // name-based key so future name-only lookups find MBID-resolved data.
-                if (resolvedMbid != null && request.identifiers.musicBrainzId == null) {
-                    val nameKey = entityKeyForName(request, type)
-                    guardedCacheWrite(logger, "put") { cache.put(nameKey, type, result, ttl) }
-                }
+            // Alias: when identity resolution added an MBID, also cache under the
+            // name-based key so future name-only lookups find MBID-resolved data.
+            if (resolvedMbid != null && request.identifiers.musicBrainzId == null) {
+                val nameKey = entityKeyForName(request, type)
+                guardedCacheWrite(logger, "put") { cache.put(nameKey, type, result, ttl) }
             }
         }
-        return EnrichmentResults(results, types, identityResolution)
     }
 
     override fun enrichBatch(

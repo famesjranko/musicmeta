@@ -6,6 +6,7 @@ import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.IdentifierRequirement.MUSICBRAINZ_ID
+import com.landofoz.musicmeta.IdentifierRequirement.MUSICBRAINZ_RELEASE_GROUP_ID
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.http.HttpClient
@@ -36,8 +37,16 @@ class FanartTvProvider(
         ProviderCapability(EnrichmentType.ARTIST_PHOTO, priority = 80, identifierRequirement = MUSICBRAINZ_ID),
         ProviderCapability(EnrichmentType.ARTIST_BACKGROUND, priority = 100, identifierRequirement = MUSICBRAINZ_ID),
         ProviderCapability(EnrichmentType.ARTIST_LOGO, priority = 100, identifierRequirement = MUSICBRAINZ_ID),
-        ProviderCapability(EnrichmentType.ALBUM_ART, priority = 30, identifierRequirement = MUSICBRAINZ_ID),
-        ProviderCapability(EnrichmentType.CD_ART, priority = 100, identifierRequirement = MUSICBRAINZ_ID),
+        ProviderCapability(
+            EnrichmentType.ALBUM_ART,
+            priority = 30,
+            identifierRequirement = MUSICBRAINZ_RELEASE_GROUP_ID,
+        ),
+        ProviderCapability(
+            EnrichmentType.CD_ART,
+            priority = 100,
+            identifierRequirement = MUSICBRAINZ_RELEASE_GROUP_ID,
+        ),
         ProviderCapability(EnrichmentType.ARTIST_BANNER, priority = 100, identifierRequirement = MUSICBRAINZ_ID),
     )
 
@@ -46,51 +55,43 @@ class FanartTvProvider(
         type: EnrichmentType,
     ): EnrichmentResult {
         if (!isAvailable) return EnrichmentResult.NotFound(type, id)
-        val mbid = request.identifiers.musicBrainzId
-            ?: return EnrichmentResult.NotFound(type, id)
-
-        // Album art and CD art need artist context, artist types need ForArtist
-        if (type != EnrichmentType.ALBUM_ART &&
-            type != EnrichmentType.CD_ART &&
-            request !is EnrichmentRequest.ForArtist
-        ) {
-            return EnrichmentResult.NotFound(type, id)
-        }
 
         return try {
-            // For ALBUM_ART and CD_ART, try the album-specific endpoint first when available
+            // Album-scoped types resolve only through the album endpoint, which is keyed by
+            // release group id. There is no artist-endpoint fallback: an artist document merges
+            // albumcover/cdart across every album, so it can only return another album's art.
             if (type == EnrichmentType.ALBUM_ART || type == EnrichmentType.CD_ART) {
                 val releaseGroupMbid = request.identifiers.musicBrainzReleaseGroupId
-                if (releaseGroupMbid != null) {
-                    val albumResult = enrichAlbumArtFromAlbumEndpoint(releaseGroupMbid, type)
-                    if (albumResult != null) return albumResult
+                    ?: return EnrichmentResult.NotFound(type, id)
+                enrichAlbumArt(releaseGroupMbid, type)
+            } else {
+                if (request !is EnrichmentRequest.ForArtist) {
+                    return EnrichmentResult.NotFound(type, id)
                 }
+                val mbid = request.identifiers.musicBrainzId
+                    ?: return EnrichmentResult.NotFound(type, id)
+                val images = api.getArtistImages(mbid)
+                    ?: return EnrichmentResult.NotFound(type, id)
+                enrichFromImages(images, type)
             }
-            // Fall through to existing artist endpoint logic
-            val images = api.getArtistImages(mbid)
-                ?: return EnrichmentResult.NotFound(type, id)
-            enrichFromImages(images, type)
         } catch (e: Exception) {
             mapError(type, e)
         }
     }
 
-    /**
-     * Tries to fetch album art from the Fanart.tv album-specific endpoint.
-     * Returns null to signal fall-through to the artist endpoint.
-     */
-    private suspend fun enrichAlbumArtFromAlbumEndpoint(
+    /** Fetches album art for a release group from the Fanart.tv album-specific endpoint. */
+    private suspend fun enrichAlbumArt(
         releaseGroupMbid: String,
         type: EnrichmentType,
-    ): EnrichmentResult? {
-        val albumImages = api.getAlbumImages(releaseGroupMbid) ?: return null
+    ): EnrichmentResult {
+        val albumImages = api.getAlbumImages(releaseGroupMbid)
+            ?: return EnrichmentResult.NotFound(type, id)
         val imageList = when (type) {
-            EnrichmentType.ALBUM_ART -> albumImages.albumCovers
             EnrichmentType.CD_ART -> albumImages.cdArt
-            else -> return null
+            else -> albumImages.albumCovers
         }
-        if (imageList.isEmpty()) return null
-        return success(FanartTvMapper.toArtwork(imageList.first(), imageList), type)
+        val image = imageList.firstOrNull() ?: return EnrichmentResult.NotFound(type, id)
+        return success(FanartTvMapper.toArtwork(image, imageList), type)
     }
 
     private fun enrichFromImages(
@@ -101,8 +102,6 @@ class FanartTvProvider(
             EnrichmentType.ARTIST_PHOTO -> images.thumbnails
             EnrichmentType.ARTIST_BACKGROUND -> images.backgrounds
             EnrichmentType.ARTIST_LOGO -> images.logos
-            EnrichmentType.ALBUM_ART -> images.albumCovers
-            EnrichmentType.CD_ART -> images.cdArt
             EnrichmentType.ARTIST_BANNER -> images.banners
             else -> null
         } ?: return EnrichmentResult.NotFound(type, id)

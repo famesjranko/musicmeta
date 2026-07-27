@@ -262,9 +262,10 @@ Types that complete before the timeout are not affected, even if other types are
 
 ## Failure isolation guarantees
 
-The engine resolves each enrichment type independently, and `enrich()` never throws. A provider
-failure — network error, rate limit, timeout — is a typed result on that one type; every other type
-returns as normal. Profile accessors are independently nullable for the same reason:
+The engine resolves each enrichment type independently: a provider failure — network error, rate
+limit, timeout — is a typed result on that one type, and every other type returns as normal.
+`enrich()` throws only for the two cases below, both of which mean something outside the engine
+went wrong. Profile accessors are independently nullable for the same reason:
 
 ```kotlin
 val profile = engine.artistProfile("Radiohead")
@@ -299,5 +300,14 @@ If the calling coroutine is cancelled, `CancellationException` is rethrown as st
 requires — swallowing it would make `enrich()` uncancellable. That is not a failure result to
 handle; it means the caller went away.
 
-The `enrichTimeoutMs` deadline is *not* this case: expiry is caught internally and returned as
+The `enrichTimeoutMs` deadline is *not* this case: its expiry is handled internally and returned as
 `Error` results with `ErrorKind.TIMEOUT`, as above.
+
+### A `CatalogProvider`'s own deadline propagates
+
+`CatalogProvider` is the one consumer-implementable interface the engine calls unguarded, so if your
+`checkAvailability` throws — including the `TimeoutCancellationException` from a `withTimeout` of
+your own — it escapes `enrich()` rather than becoming a result. The engine only reports
+`ErrorKind.TIMEOUT` for `enrichTimeoutMs`; attributing your deadline to ours would send you tuning
+the wrong number. Catch inside your `checkAvailability` if you want a partial catalog answer instead
+of a failed call.
