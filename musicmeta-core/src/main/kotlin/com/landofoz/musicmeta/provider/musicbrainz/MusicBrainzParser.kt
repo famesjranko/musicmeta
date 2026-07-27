@@ -267,6 +267,15 @@ internal object MusicBrainzParser {
         return null
     }
 
+    /**
+     * Extract an **English** Wikipedia article title from a MusicBrainz `wikipedia` URL relation.
+     *
+     * Only `en.wikipedia.org` relations count: the title is consumed by `WikipediaProvider`, which
+     * only ever queries `en.wikipedia.org`, so a title from another language wiki 404s and the bio
+     * comes back `NotFound`. An artist whose only relation is another language (Portishead carries
+     * `fr.wikipedia.org/wiki/Portishead_(groupe)` and nothing else) yields `null` here and resolves
+     * through the Wikidata `enwiki` sitelink instead.
+     */
     internal fun extractWikipediaTitle(obj: JSONObject): String? {
         val relations = obj.optJSONArray("relations") ?: return null
         for (i in 0 until relations.length()) {
@@ -274,6 +283,7 @@ internal object MusicBrainzParser {
             if (rel.optString("type") == "wikipedia") {
                 val url = rel.optJSONObject("url")?.optString("resource") ?: continue
                 // URL format: https://en.wikipedia.org/wiki/Title_Name
+                if (!url.contains("//en.wikipedia.org/")) continue
                 return url.substringAfterLast("/wiki/").takeIf { it.isNotBlank() }
             }
         }
