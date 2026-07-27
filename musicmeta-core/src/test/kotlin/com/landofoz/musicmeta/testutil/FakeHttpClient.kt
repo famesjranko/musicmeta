@@ -63,8 +63,8 @@ class FakeHttpClient : HttpClient {
     override suspend fun fetchRedirectUrlResult(url: String): HttpResult<String> {
         requestedUrls.add(url)
         if (ioExceptions.any { url.contains(it) }) throw IOException("Simulated network error: $url")
-        redirectResults.entries.firstOrNull { url.contains(it.key) }?.let { return it.value }
         if (errors.any { url.contains(it) }) return HttpResult.NetworkError("Simulated network error")
+        redirectResults.entries.firstOrNull { url.contains(it.key) }?.let { return it.value }
         // Unstubbed mirrors fetchRedirectUrl: the request URL itself, as a 2xx no-op redirect.
         return HttpResult.Ok(jsonResponses.entries.firstOrNull { url.contains(it.key) }?.value ?: url)
     }
