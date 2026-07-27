@@ -196,6 +196,32 @@ class MusicBrainzProviderTest {
     }
 
     @Test
+    fun `artist cache serves repeat lookups but evicts once past its cap`() = runTest {
+        // Given -- every artist lookup resolves
+        httpClient.givenJsonResponse("artist/", ARTIST_LOOKUP_WITH_MEMBERS)
+        suspend fun lookup(mbid: String) = provider.enrich(
+            EnrichmentRequest.forArtist("Radiohead")
+                .withIdentifiers(EnrichmentIdentifiers(musicBrainzId = mbid)),
+            EnrichmentType.BAND_MEMBERS,
+        )
+        fun lookupsFor(mbid: String) = httpClient.requestedUrls.count { it.contains("artist/$mbid?") }
+
+        // When -- the same MBID is looked up twice
+        lookup("art1")
+        lookup("art1")
+
+        // Then -- the second one is served from the cache (the ~1.1s saving this map exists for)
+        assertEquals(1, lookupsFor("art1"))
+
+        // When -- enough distinct MBIDs follow to push art1 out of an access-ordered cap
+        repeat(MusicBrainzEnricher.ARTIST_CACHE_MAX_ENTRIES) { lookup("filler$it") }
+        lookup("art1")
+
+        // Then -- art1 was evicted rather than the map growing without bound
+        assertEquals(2, lookupsFor("art1"))
+    }
+
+    @Test
     fun `enrich returns NotFound for BandMembers when no members in relations`() = runTest {
         // Given -- artist lookup returns no member-of-band relations
         httpClient.givenJsonResponse("artist/art1?fmt=json&inc=tags+url-rels+artist-rels", ARTIST_LOOKUP_NO_MEMBERS)

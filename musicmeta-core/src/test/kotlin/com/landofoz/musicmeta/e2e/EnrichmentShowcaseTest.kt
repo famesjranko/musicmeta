@@ -65,12 +65,12 @@ class EnrichmentShowcaseTest {
             .addProvider(SimilarAlbumsProvider(deezerApi))
             .addProvider(ITunesProvider(f.httpClient, f.itunesRateLimiter))
             .addProvider(ListenBrainzProvider(
-                f.httpClient, f.defaultRateLimiter,
+                f.httpClient, f.listenBrainzRateLimiter,
                 authToken = f.prop("listenbrainz.token").takeIf { it.isNotBlank() },
             ))
             .addProvider(LastFmProvider(f.prop("lastfm.apikey"), f.httpClient, f.lastFmRateLimiter))
             .addProvider(FanartTvProvider(f.prop("fanarttv.apikey"), f.httpClient, f.defaultRateLimiter))
-            .addProvider(DiscogsProvider(f.prop("discogs.token"), f.httpClient, f.defaultRateLimiter))
+            .addProvider(DiscogsProvider(f.prop("discogs.token"), f.httpClient, f.discogsRateLimiter))
             .build()
     }
 
@@ -682,7 +682,7 @@ class EnrichmentShowcaseTest {
             println("\n  --- ARTIST_RADIO_DISCOVERY: SKIPPED (no listenbrainz.token) ---")
             println("    Set -Dlistenbrainz.token=TOKEN or LISTENBRAINZ_TOKEN env var")
             println("    Auth gating verified: ARTIST_RADIO_DISCOVERY not in capabilities without token")
-            val noTokenProvider = ListenBrainzProvider(E2ETestFixture.httpClient, E2ETestFixture.defaultRateLimiter)
+            val noTokenProvider = ListenBrainzProvider(E2ETestFixture.httpClient, E2ETestFixture.listenBrainzRateLimiter)
             val hasRadio = noTokenProvider.capabilities.any { it.type == EnrichmentType.ARTIST_RADIO_DISCOVERY }
             println("    Provider without token has ARTIST_RADIO_DISCOVERY: $hasRadio")
         }
