@@ -166,3 +166,23 @@ marker at all. That mix is fine to return and was never fine to cache: the write
 the deadline and persisted it under the primary *and* name-alias keys, so every later lookup was a
 hit that skipped filtering (#56). Anything added inside that block inherits the same shape, which is
 why the guard is on the write-back rather than on catalog filtering.
+
+## 7. A search API's hit 0 is a ranking, not an answer
+
+```kotlin
+// WRONG — shipped until #05; Deezer ranks an empty "Radiohead" (0 albums, 470 fans) above id 399
+val url = "$BASE_URL/search/artist?q=$encoded&limit=1"
+val artist = data.getJSONObject(0)              // caller's ArtistMatcher check passes: name is exact
+
+// RIGHT — fetch a pool, keep the name matches, break the tie on popularity
+.filter { ArtistMatcher.isMatch(name, it.optString("name", "")) }
+.maxWithOrNull(compareBy({ ArtistMatcher.isExactMatch(name, …) }, { it.optLong("nb_fan") }, …))
+```
+
+A name check on one hit cannot separate a ghost from the real artist when both names are exact — it
+only rejects a wrong name, and every duplicate-name entry survives it. `limit=1` also throws away
+the evidence that would decide it, so the check has to sit where the pool is, in the shared search
+call, not in the six callers that each re-verify the single hit they were handed. Order the tie so
+popularity can only rank candidates the name already accepted; ranking first and name-checking
+second promotes whatever the API happened to make famous. `ITunesApi.searchArtist` and
+`DiscogsApi.searchArtist` still take hit 0 from a `limit=1`/`per_page=1` search.

@@ -53,8 +53,9 @@ internal class DeezerApi(
      *
      * Deezer's result order is not trustworthy: "Radiohead" returns an exact-name ghost
      * (0 albums, 470 fans) ahead of the real artist (id 399). So fetch a pool of candidates,
-     * keep only those whose name matches, and break the tie on popularity — an exact name
-     * beats a looser one, then more fans wins. Popularity never promotes a non-matching name.
+     * keep only those whose name matches, and break the tie on popularity — an exact name beats
+     * a looser one, then more fans, then more albums. Popularity never promotes a non-matching
+     * name, so a hugely popular wrong-name artist still loses to a modest right-name one.
      */
     suspend fun searchArtist(name: String): DeezerArtistSearchResult? {
         val encoded = URLEncoder.encode(name, "UTF-8")
@@ -72,7 +73,7 @@ internal class DeezerApi(
             .filter { ArtistMatcher.isMatch(name, it.optString("name", "")) }
             .maxWithOrNull(
                 compareBy(
-                    { it.optString("name", "").trim().equals(name.trim(), ignoreCase = true) },
+                    { ArtistMatcher.isExactMatch(name, it.optString("name", "")) },
                     { it.optLong("nb_fan") },
                     { it.optLong("nb_album") },
                 ),

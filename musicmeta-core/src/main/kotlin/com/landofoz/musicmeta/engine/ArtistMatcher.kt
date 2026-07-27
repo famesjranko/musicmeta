@@ -51,6 +51,21 @@ internal object ArtistMatcher {
     }
 
     /**
+     * Returns true if [candidate] is the *same* name as [expected] — equal once normalized, or
+     * once spaces are dropped too (AC/DC vs ACDC). This is [isMatch]'s first two tiers without
+     * the containment and token-overlap fuzz, so "Radiohead" is exact and "DJ Radiohead" is not.
+     * Use it to rank an exact hit above a merely plausible one; [isMatch] decides whether a
+     * candidate is plausible at all.
+     */
+    fun isExactMatch(expected: String, candidate: String): Boolean {
+        if (expected.isBlank() || candidate.isBlank()) return false
+        val normExpected = normalize(expected)
+        val normCandidate = normalize(candidate)
+        return normExpected == normCandidate ||
+            normExpected.replace(" ", "") == normCandidate.replace(" ", "")
+    }
+
+    /**
      * Normalize a name for comparison:
      * - Lowercase
      * - Strip diacritics (Björk → bjork)

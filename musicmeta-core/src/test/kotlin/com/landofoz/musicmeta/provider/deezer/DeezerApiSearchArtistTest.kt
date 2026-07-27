@@ -9,8 +9,11 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Selection rules for [DeezerApi.searchArtist]. Payloads are trimmed copies of live
- * `api.deezer.com/search/artist` responses (2026-07-27).
+ * Selection rules for [DeezerApi.searchArtist].
+ *
+ * [RADIOHEAD_GHOST_FIRST] and [PORTISHEAD_CORRECT_FIRST] are trimmed copies of live
+ * `api.deezer.com/search/artist` responses (2026-07-27) — those two pin the real field names
+ * and the real ordering. The rest are constructed to pin one tie-break each.
  */
 class DeezerApiSearchArtistTest {
 
@@ -86,7 +89,19 @@ class DeezerApiSearchArtistTest {
         api.searchArtist("Radiohead")
 
         // Then — the search asks for a candidate pool, not a single hit
-        assertTrue(httpClient.requestedUrls.single().endsWith("limit=$ARTIST_SEARCH_LIMIT"))
+        assertTrue(httpClient.requestedUrls.single().endsWith("limit=10"))
+    }
+
+    @Test
+    fun `the exact-name tier compares normalized names`() = runTest {
+        // Given — the punctuated real name is outranked on fans by a looser match
+        httpClient.givenJsonResponse("search/artist", PUNCTUATED_EXACT_NAME)
+
+        // When — searching with the unpunctuated spelling
+        val result = api.searchArtist("ACDC")
+
+        // Then — "AC/DC" normalizes to an exact match, so it beats the tribute act
+        assertEquals(115L, result?.id)
     }
 
     private companion object {
@@ -119,6 +134,13 @@ class DeezerApiSearchArtistTest {
             {"data":[
               {"id":1111,"name":"Taylor Swift","nb_album":60,"nb_fan":9000000},
               {"id":2222,"name":"Boards of Canada","nb_album":12,"nb_fan":400000}
+            ]}
+        """
+
+        const val PUNCTUATED_EXACT_NAME = """
+            {"data":[
+              {"id":9999,"name":"ACDC Tribute Band","nb_album":4,"nb_fan":900000},
+              {"id":115,"name":"AC/DC","nb_album":40,"nb_fan":3000}
             ]}
         """
 
