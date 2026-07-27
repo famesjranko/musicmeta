@@ -520,18 +520,30 @@ class MusicBrainzProviderTest {
     }
 
     @Test
-    fun `enrich album LABEL looks the release up when the search hit has no label`() = runTest {
-        // Given — a high-scoring search hit with no label
+    fun `release cache serves repeat lookups but evicts once past its cap`() = runTest {
+        // Given — a thin search hit, so GENRE takes the lookup path
         httpClient.givenJsonResponse("release?query", RELEASE_SEARCH_THIN)
-        httpClient.givenJsonResponse("release/thin1", RELEASE_LOOKUP_FULL)
-        val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+        httpClient.givenJsonResponse("release/", RELEASE_LOOKUP_FULL)
+        suspend fun byMbid(mbid: String) = provider.enrich(
+            EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+                .withIdentifiers(EnrichmentIdentifiers(musicBrainzId = mbid)),
+            EnrichmentType.GENRE,
+        )
+        fun lookupsFor(mbid: String) = httpClient.requestedUrls.count { it.contains("release/$mbid?") }
 
-        // When — enriching for LABEL
-        val result = provider.enrich(request, EnrichmentType.LABEL)
+        // When — the search path resolves thin1, then the fan-out re-enters on the MBID it exposed
+        provider.enrich(EnrichmentRequest.forAlbum("OK Computer", "Radiohead"), EnrichmentType.GENRE)
+        byMbid("thin1")
 
-        // Then — the lookup filled the label
-        val success = result as EnrichmentResult.Success
-        assertEquals("Parlophone", (success.data as EnrichmentData.Metadata).label)
+        // Then — the second one is served from the cache, not fetched ~1.1s later
+        assertEquals(1, lookupsFor("thin1"))
+
+        // When — enough distinct MBIDs follow to push thin1 out of an access-ordered cap
+        repeat(MusicBrainzEnricher.RELEASE_CACHE_MAX_ENTRIES) { byMbid("filler$it") }
+        byMbid("thin1")
+
+        // Then — thin1 was evicted rather than the map growing without bound
+        assertEquals(2, lookupsFor("thin1"))
     }
 
     @Test
