@@ -76,7 +76,8 @@ assert "img.shields.io" not in body and "jitpack.io/v/" not in body, "no floatin
 assert "**Full Changelog**" not in build(GOOD, "0.10.1")
 
 # --- caps -----------------------------------------------------------------------------------
-too_long = GOOD.replace("### Added", "### Added\n" + "- padding line with some words in it (#1)\n" * 90)
+padding = "- padding line with some words in it (#1)\n"
+too_long = GOOD.replace("### Added", "### Added\n" + padding * (MAX_SECTION_CHARS // len(padding) + 5))
 expect_error(lambda: build(too_long, "0.11.0"), f"limit {MAX_SECTION_CHARS}")
 
 one_fat_line = GOOD.replace(
@@ -116,7 +117,7 @@ expect_error(lambda: build(UNRELEASED, "Unreleased"), "no '## [Unreleased]'")
 expect_error(lambda: build("## [1.0.0] - 2026\n\n## [0.9.0] - 2025\n", "1.0.0"), "is empty")
 fat = UNRELEASED.replace("- Something small (#44)", "- " + "x" * (MAX_LINE_CHARS + 1))
 expect_error(lambda: check_unreleased(fat), f"limit {MAX_LINE_CHARS}")
-bulky = UNRELEASED.replace("- Something small (#44)", "- padding line with some words in it (#1)\n" * 90)
+bulky = UNRELEASED.replace("- Something small (#44)", padding * (MAX_SECTION_CHARS // len(padding) + 5))
 expect_error(lambda: check_unreleased(bulky), f"limit {MAX_SECTION_CHARS}")
 
 # The two heading matchers must agree: released_versions() accepts `##  [x]` via `\s+`, so
@@ -142,13 +143,13 @@ assert main(["Unreleased", "--changelog", str(tmp)]) == 1, "a missing section mu
 # --- the real CHANGELOG ---------------------------------------------------------------------
 real = (Path(__file__).resolve().parent.parent.parent / "CHANGELOG.md").read_text(encoding="utf-8")
 
-# 0.10.0 and 0.10.1 were rewritten to match the notes actually published on GitHub, so they are the
-# oldest sections that conform. Building them proves the file did not regain a wall by paste.
-build(real, "0.10.0")
-build(real, "0.10.1")
+# Released sections stay as published on GitHub, and 0.10.x and earlier predate the 200-char
+# per-entry cap (#104), so the forward guard against a wall-of-text paste is [Unreleased] — the
+# section ./check gates on every commit.
+check_unreleased(real)
 
-# 0.9.2 still predates the convention — a 825-char line. It MUST fail: a cap that has never fired
-# on real prose is a cap nobody has tested, and every fixture above is one we wrote to fit.
+# 0.9.2 predates every cap — a 825-char line. It MUST fail: a cap that has never fired on real
+# prose is a cap nobody has tested, and every fixture above is one we wrote to fit.
 expect_error(lambda: build(real, "0.9.2"), "not release-note shaped")
 
 print("build_release_notes: all checks passed")
