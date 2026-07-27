@@ -111,8 +111,6 @@ class ITunesApiSearchArtistTest {
             ]}
         """
 
-        // The right-name candidate is deliberately NOT an exact match, so the assertion rests on
-        // the name filter rejecting Taylor Swift — not on the same-name rank carrying it.
         const val WRONG_NAME_FIRST = """
             {"resultCount":2,"results":[
               {"artistName":"Taylor Swift","artistId":1111},
@@ -127,6 +125,10 @@ class ITunesApiSearchArtistTest {
             ]}
         """
 
+        // This fixture is what makes the name filter load-bearing, and it is the only one that
+        // can be: with the filter deleted every candidate still scores QUALITY_NONE, so the
+        // ranking cannot separate them and maxWithOrNull hands back Taylor Swift instead of null.
+        // A wrong-name-*first* fixture could never carry the filter — rank alone already sorts it.
         const val NO_NAME_MATCH = """
             {"resultCount":2,"results":[
               {"artistName":"Taylor Swift","artistId":1111},

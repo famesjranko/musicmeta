@@ -40,15 +40,19 @@ class DiscogsApiSearchArtistTest {
     }
 
     @Test
-    fun `a disambiguated exact name beats a longer name ranked below it`() = runTest {
-        // Given — the live response: "Girls (5)" (the SF indie band) then "Spice Girls"
+    fun `a disambiguated exact name beats the longer names ranked below it`() = runTest {
+        // Given — the live response: "Girls (5)" (the SF indie band) then "Spice Girls",
+        // "Indigo Girls", "Girls Aloud"
         httpClient.givenJsonResponse("type=artist", GIRLS_LIVE)
 
         // When — searching for the artist
         val result = api.searchArtist("Girls")
 
-        // Then — without stripping the suffix both would score as mere containing matches and the
-        // ranking would be a coin toss; with it, "Girls (5)" is an outright name match
+        // Then — the indie band is selected. Stripping the suffix is what makes that a *decisive*
+        // same-name match rather than one containment match among four, but this fixture does not
+        // guard the strip: without it every candidate ties at QUALITY_CONTAINS and first-maximum
+        // still keeps "Girls (5)" at hit 0. The Bad Company fixture above is the strip's guardrail;
+        // this one pins the live payload shape — `title`, the " (n)" suffix — against drift.
         assertEquals(1572552L, result)
     }
 
@@ -135,8 +139,6 @@ class DiscogsApiSearchArtistTest {
             ]}
         """
 
-        // The right-name candidate is deliberately NOT an exact match, so the assertion rests on
-        // the name filter rejecting Taylor Swift — not on the same-name rank carrying it.
         const val WRONG_NAME_FIRST = """
             {"results":[
               {"id":1111,"type":"artist","title":"Taylor Swift"},
@@ -151,6 +153,10 @@ class DiscogsApiSearchArtistTest {
             ]}
         """
 
+        // This fixture is what makes the name filter load-bearing, and it is the only one that
+        // can be: with the filter deleted every candidate still scores QUALITY_NONE, so the
+        // ranking cannot separate them and maxWithOrNull hands back Taylor Swift instead of null.
+        // A wrong-name-*first* fixture could never carry the filter — rank alone already sorts it.
         const val NO_NAME_MATCH = """
             {"results":[
               {"id":1111,"type":"artist","title":"Taylor Swift"},
