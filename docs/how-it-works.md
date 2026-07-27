@@ -288,7 +288,7 @@ when a key is present, and CAA is a fallback, not a second entry in the same res
 | ARTIST_RADIO | Deezer(100) | Tracks for a "radio station" seeded by artist |
 | ARTIST_RADIO_DISCOVERY | ListenBrainz(100) | Community-driven radio via LB Radio; requires `listenBrainzToken` |
 | ARTIST_TOP_TRACKS | Last.fm(100), ListenBrainz(100), Deezer(50) | **Mergeable** — deduplicates, sums listen counts |
-| SIMILAR_ALBUMS | Deezer(100) | **Artist-derived** — Deezer has no album-similarity endpoint, so this is albums by artists related to the seed *artist*, era-filtered. Two albums by one artist give near-identical lists |
+| SIMILAR_ALBUMS | Deezer(100) | **Artist-derived** — Deezer has no album-similarity endpoint, so this is albums by artists related to the seed *artist*, era-weighted (re-ranked, nothing dropped). Two albums by one artist give near-identical lists |
 | GENRE_DISCOVERY | GenreAffinityMatcher | **Composite** — taxonomy lookup from resolved GENRE tags |
 
 ### Preview (1 type)

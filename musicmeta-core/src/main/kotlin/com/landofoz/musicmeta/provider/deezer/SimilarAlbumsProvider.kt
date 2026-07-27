@@ -22,7 +22,8 @@ import com.landofoz.musicmeta.http.RateLimiter
  * API has no album-similarity resource — `/album/{id}/related`, `/similar`, `/radio` and
  * `/recommendations` all return `InvalidQueryException` (code 600), and the `/album/{id}`
  * payload carries no similarity field. `/artist/{id}/related` is the only similarity signal
- * on offer, so results are "albums by artists similar to the *artist*", filtered by era.
+ * on offer, so results are "albums by artists similar to the *artist*", weighted by era.
+ * Nothing is dropped for its era — [eraMultiplier] only re-ranks.
  *
  * The consequence a consumer must plan for: the seed album's *title* is never sent anywhere.
  * The only album-level input is [EnrichmentRequest.ForAlbum.year], which feeds
@@ -126,10 +127,12 @@ class SimilarAlbumsProvider internal constructor(
             type = EnrichmentType.SIMILAR_ALBUMS,
             data = EnrichmentData.SimilarAlbums(deduped),
             provider = id,
-            // 0.8 scores the *lookup* — the seed artist name was verified — not the strength of
-            // the recommendation. Deriving from related artists is a property of the type here
-            // (there is no album-level source to be more confident than), so it belongs in the
-            // KDoc above, not smuggled into a number consumers rank providers by.
+            // 0.8 scores the *lookup*, not the strength of the recommendation. Note it overstates
+            // on the `deezerId` branch above, which trusts the caller's id and so runs neither
+            // searchArtist nor ArtistMatcher — only the search path actually verifies the name.
+            // Deriving from related artists is a property of the type here (there is no
+            // album-level source to be more confident than), so that caveat belongs in the KDoc
+            // above, not smuggled into a number consumers rank providers by.
             confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
             resolvedIdentifiers = EnrichmentIdentifiers().withExtra("deezerId", seedArtist.id.toString()),
         )

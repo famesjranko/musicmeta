@@ -236,8 +236,10 @@ data class RadioTrack(
  * [artistMatchScore]. Two albums by one artist therefore yield near-identical lists. See
  * `SimilarAlbumsProvider`'s KDoc.
  *
- * @property artistMatchScore 0.0-1.0; the source artist's similarity rank, scaled by how close
- *   this album's year is to the seed album's.
+ * @property artistMatchScore the source artist's similarity rank (1.0 for the closest, falling
+ *   with rank) multiplied by an era-proximity factor of 1.2, 1.0 or 0.8. **Not normalised and not
+ *   clamped**: the product can exceed 1.0, up to 1.2, and never reaches 0. Rank within one
+ *   result list; do not read it as a probability or compare it across providers.
  */
 @Serializable
 data class SimilarAlbum(
