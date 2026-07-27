@@ -13,6 +13,7 @@ lists the rest; `ls docs/` lists the docs.
 | Before | Read |
 |---|---|
 | Changing a public signature, a `catch`, a provider's parsing, or a `ProviderCapability` | `docs/pitfalls.md` |
+| Touching `enrich()` or anything it calls | `docs/pitfalls.md` — "Traps in the pipeline" |
 | Treating a green run as proof | `ARCHITECTURE.md` — what each check skips |
 | Deciding whether a thing is in scope, or what `1.0.0` waits on | `ROADMAP.md` |
 | Looking for the issue list | `.scratch/`, **not** GitHub Issues — `docs/agents/issue-tracker.md` |
@@ -27,21 +28,6 @@ Every finding has exactly one home; this file is the home only for the last row.
 | Consumer-visible change | a `CHANGELOG.md` line — that file's header defines consumer-visible and the shape |
 | Work item, or a finding to triage later | a `.scratch/` ticket — `docs/agents/issue-tracker.md` |
 | Rule no mechanism catches | here, and nowhere else |
-
-## Traps in the pipeline
-
-Read `enrich()` in `engine/DefaultEnrichmentEngine.kt` — it is the map, and this list is not
-exhaustive. Paths are relative to `musicmeta-core/src/main/kotlin/com/landofoz/musicmeta/`.
-
-- `CacheGuard.kt` degrades a throwing cache to a miss, but public `invalidate()`,
-  `is`/`markManuallySelected()` and `getIncludingExpired()` are unguarded.
-- An identity `NotFound` carrying `suggestions` short-circuits the whole provider fan-out.
-- One `http/CircuitBreaker.kt` per provider id, shared across every chain.
-- A `CompositeSynthesizer`'s `dependencies` are resolved even when the caller did not ask for them.
-- `withTimeoutOrNull(enrichTimeoutMs)` returns null for *that* deadline only; a nested one
-  propagates. An expiry does not discard results already fetched, but the write-back is skipped, so
-  a timed-out run caches nothing. The stale fallback and write-back sit outside the timed block.
-- `filterByConfidence()` demotes a `Success` below `minConfidence` (0.5) to `NotFound`.
 
 ## Rules with no mechanism
 

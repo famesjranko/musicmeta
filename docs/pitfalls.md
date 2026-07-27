@@ -4,6 +4,22 @@ Each of these cost a release, an issue, or a backfilled `### Breaking Changes` e
 carries the one-line rule; this file carries the worked example and the reason. Read the entry before
 touching the thing it names.
 
+## Traps in the pipeline
+
+Read `enrich()` in `engine/DefaultEnrichmentEngine.kt` — it is the map, and this list is not
+exhaustive. Paths are relative to `musicmeta-core/src/main/kotlin/com/landofoz/musicmeta/`.
+
+- `CacheGuard.kt` degrades a throwing cache to a miss, but public `invalidate()`,
+  `is`/`markManuallySelected()` and `getIncludingExpired()` are unguarded.
+- An identity `NotFound` carrying `suggestions` short-circuits the whole provider fan-out.
+- One `http/CircuitBreaker.kt` per provider id, shared across every chain.
+- A `CompositeSynthesizer`'s `dependencies` are resolved even when the caller did not ask for them.
+- `withTimeoutOrNull(enrichTimeoutMs)` returns null for *that* deadline only; a nested one
+  propagates. An expiry does not discard results already fetched, but the write-back is skipped, so
+  a timed-out run caches nothing. The stale fallback and write-back sit outside the timed block.
+  §6 below holds the worked example.
+- `filterByConfidence()` demotes a `Success` below `minConfidence` (0.5) to `NotFound`.
+
 ## 1. The published surface only grows by appending
 
 One law, three blast radii. `make api-check` is the guard, and **reading the `.api` diff is the
