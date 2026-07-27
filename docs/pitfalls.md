@@ -20,8 +20,8 @@ exhaustive. Paths are relative to `musicmeta-core/src/main/kotlin/com/landofoz/m
   §6 below holds the worked example.
 - `filterByConfidence()` demotes a `Success` below `minConfidence` (0.5) to `NotFound`; its sibling
   `demoteUnanswered()` demotes one whose payload does not `answers()` its type, at any confidence,
-  and runs on the cache read too — so an entry written by an older build is re-judged, not trusted
-  (§8).
+  and runs on the cache read too — where an unanswered entry counts as a *miss*, so one written by
+  an older build is refetched and healed rather than pinned for its TTL (§8).
 
 ## 1. The published surface only grows by appending
 
@@ -225,11 +225,14 @@ The two signals are independent, and the identity score is the wrong one to reac
 payload only mislabels a match that was in fact perfect. `answers()` in `engine/PayloadAnswers.kt` is
 the second gate, and the engine applies it to everything that can reach a consumer — every provider
 result, merger and synthesizer output, the identity fan-out, and both cache paths. No provider needs
-its own check, and the cache read is gated because an empty `Success` written by an older build
-otherwise outlives the fix by the type's TTL (90 days for `GENRE`).
+its own check. On the cache read the gate means *miss*, not `NotFound`: an empty `Success` written by
+an older build otherwise outlives the fix by the type's TTL (90 days for `GENRE`), re-demoted on
+every call and never refetched. Treating it as a miss lets the providers run and the write-back heal
+the entry.
 
 Extending it: one `EnrichmentData.Metadata` serves six types, so **which field answers which type is
 per type** — `label` answers `LABEL` and nothing else, and only `ALBUM_METADATA` accepts any field at
 all. Every other payload answers its type iff it carries anything. The `when` is exhaustive over payload
 *classes*, so the compiler asks about a new one — it is **not** exhaustive over types, so a new type
-served by `Metadata` silently inherits grab-bag semantics.
+served by `Metadata` inherits grab-bag semantics. That fails lenient, which is the right direction:
+the gate's job is to catch payloads answering *nothing*, not to adjudicate partial ones.

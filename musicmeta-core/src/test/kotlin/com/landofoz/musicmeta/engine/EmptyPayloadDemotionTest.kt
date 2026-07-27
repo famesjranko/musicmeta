@@ -8,6 +8,7 @@ import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.GenreTag
 import com.landofoz.musicmeta.ProviderCapability
+import com.landofoz.musicmeta.cache.CacheMode
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzProvider
 import com.landofoz.musicmeta.testutil.FakeEnrichmentCache
@@ -174,59 +175,89 @@ class EmptyPayloadDemotionTest {
         assertTrue(results.raw[EnrichmentType.LABEL] is EnrichmentResult.NotFound)
     }
 
+    /**
+     * A cached empty `Success` is a miss, not a `NotFound`. Demoting it in place would pin the entry
+     * for its whole TTL — 90 days for `GENRE` — re-demoted on every call and never refetched.
+     */
     @Test
-    fun `a cached empty Success is demoted on read`() = runTest {
-        // Given — an empty GENRE Success already in the cache, as an older build would have written
+    fun `a cached empty Success is refetched and healed, not just demoted`() = runTest {
+        // Given — an empty GENRE Success in the cache, as an older build would have written, and a
+        // provider that has a real answer
         val cache = FakeEnrichmentCache()
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+        val key = DefaultEnrichmentEngine.entityKeyFor(request, EnrichmentType.GENRE)
         cache.put(
-            DefaultEnrichmentEngine.entityKeyFor(request, EnrichmentType.GENRE),
-            EnrichmentType.GENRE,
-            EnrichmentResult.Success(EnrichmentType.GENRE, EnrichmentData.Metadata(), "mb", 1.0f),
+            key, EnrichmentType.GENRE,
+            EnrichmentResult.Success(EnrichmentType.GENRE, EnrichmentData.Metadata(), "stale-empty", 1.0f),
         )
+        val provider = FakeProvider(
+            id = "p",
+            capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)),
+        ).also {
+            it.givenResult(
+                EnrichmentType.GENRE,
+                EnrichmentResult.Success(
+                    EnrichmentType.GENRE,
+                    EnrichmentData.Metadata(genreTags = listOf(GenreTag("alternative rock", 0.9f))),
+                    "p", 0.9f,
+                ),
+            )
+        }
         val engine = DefaultEnrichmentEngine(
-            ProviderRegistry(emptyList()),
+            ProviderRegistry(listOf(provider)),
             cache,
             EnrichmentConfig(enableIdentityResolution = false),
         )
 
-        // When — the entry is still within its 90-day TTL
+        // When — the empty entry is still well within its TTL
         val results = engine.enrich(request, setOf(EnrichmentType.GENRE))
 
-        // Then — the fix is not outlived by what is already cached
-        assertTrue(results.raw[EnrichmentType.GENRE] is EnrichmentResult.NotFound)
+        // Then — the provider was consulted rather than the empty entry being served or demoted...
+        assertEquals(1, provider.enrichCalls.size)
+        val success = results.raw[EnrichmentType.GENRE] as EnrichmentResult.Success
+        assertEquals(listOf("alternative rock"), (success.data as EnrichmentData.Metadata).genres)
+
+        // ...and the cache entry healed, so the next call is a hit on real data
+        val rewritten = cache.get(key, EnrichmentType.GENRE)
+        assertTrue(
+            "cached entry should have been overwritten, still: ${rewritten?.data}",
+            rewritten != null && rewritten.data.answers(EnrichmentType.GENRE),
+        )
     }
 
     @Test
-    fun `a synthesizer returning an empty payload is demoted`() = runTest {
-        // Given — a composite synthesizer that reports Success with no events, as TimelineSynthesizer
-        // does for an artist with no dates anywhere
-        val emptySynthesizer = object : CompositeSynthesizer {
-            override val type = EnrichmentType.ARTIST_TIMELINE
-            override val dependencies = emptySet<EnrichmentType>()
-            override fun synthesize(
-                resolved: Map<EnrichmentType, EnrichmentResult>,
-                identityResult: EnrichmentResult?,
-                request: EnrichmentRequest,
-            ) = EnrichmentResult.Success(
-                type, EnrichmentData.ArtistTimeline(emptyList()), "timeline_synthesizer", 0.95f,
+    fun `an empty stale entry does not replace the Error that would tell a consumer to retry`() = runTest {
+        // Given — STALE_IF_ERROR, a failing provider, and an expired empty entry to fall back on.
+        // LABEL, not GENRE: a mergeable type turns a provider Error into the merger's NotFound,
+        // which never reaches the stale fallback at all.
+        val cache = FakeEnrichmentCache()
+        val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+        val key = DefaultEnrichmentEngine.entityKeyFor(request, EnrichmentType.LABEL)
+        cache.expiredStore["$key:${EnrichmentType.LABEL}"] =
+            EnrichmentResult.Success(EnrichmentType.LABEL, EnrichmentData.Metadata(), "stale-empty", 1.0f)
+        val provider = FakeProvider(
+            id = "failing",
+            capabilities = listOf(ProviderCapability(EnrichmentType.LABEL, 100)),
+        ).also {
+            it.givenResult(
+                EnrichmentType.LABEL,
+                EnrichmentResult.Error(EnrichmentType.LABEL, "failing", "API down"),
             )
         }
         val engine = DefaultEnrichmentEngine(
-            ProviderRegistry(emptyList()),
-            FakeEnrichmentCache(),
-            EnrichmentConfig(enableIdentityResolution = false),
-            synthesizers = listOf(emptySynthesizer),
+            ProviderRegistry(listOf(provider)),
+            cache,
+            EnrichmentConfig(enableIdentityResolution = false, cacheMode = CacheMode.STALE_IF_ERROR),
         )
 
         // When
-        val results = engine.enrich(
-            EnrichmentRequest.forArtist("Radiohead"),
-            setOf(EnrichmentType.ARTIST_TIMELINE),
-        )
+        val results = engine.enrich(request, setOf(EnrichmentType.LABEL))
 
-        // Then — CompositeSynthesizer is a public extension point; its output is gated too
-        assertTrue(results.raw[EnrichmentType.ARTIST_TIMELINE] is EnrichmentResult.NotFound)
+        // Then — the Error survives; a stale entry answering nothing is worse than being told to retry
+        assertTrue(
+            "expected the Error to survive, got ${results.raw[EnrichmentType.LABEL]}",
+            results.raw[EnrichmentType.LABEL] is EnrichmentResult.Error,
+        )
     }
 
     // --- The enumeration itself ---

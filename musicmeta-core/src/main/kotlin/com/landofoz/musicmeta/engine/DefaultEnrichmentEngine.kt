@@ -66,10 +66,15 @@ internal class DefaultEnrichmentEngine(
             val cached = if (forceRefresh) null else {
                 guardedCacheRead(logger, "get") { cache.get(entityKeyFor(request, type), type) }
             }
-            // Gated like a fresh result: an empty Success written by an older build sits in a
-            // consumer's cache for up to the type's TTL (90 days for GENRE) and would otherwise
-            // outlive this fix on the very path it was reported from.
-            if (cached != null) results[type] = demoteUnanswered(cached) else uncachedTypes.add(type)
+            // A cached Success answering nothing is a *miss*, not a NotFound. An empty entry written
+            // by an older build would otherwise outlive this fix by the type's TTL — 90 days for
+            // GENRE — re-demoted on every call and never refetched. Leaving the type uncached lets
+            // the providers run and the write-back overwrite it, so the entry heals itself.
+            if (cached != null && cached.data.answers(type)) {
+                results[type] = cached
+            } else {
+                uncachedTypes.add(type)
+            }
         }
         if (uncachedTypes.isEmpty()) {
             return EnrichmentResults(results, types, identity = null)
@@ -385,8 +390,9 @@ internal class DefaultEnrichmentEngine(
      * answer is a `NotFound` — whether the payload is empty or merely fills some *other* type's
      * field. [filterByConfidence] cannot do this — confidence scores identification, and a perfect
      * identity match on an entity carrying no data scores 1.0. Sited here rather than in each
-     * provider because every provider had the same hole, and applied to everything that can reach a
-     * consumer: chain results, merger and synthesizer output, the identity fan-out and the cache.
+     * provider because every provider had the same hole. [answers] gates everything that can reach a
+     * consumer: chain results, merger and synthesizer output, the identity fan-out, and both cache
+     * paths — on the cache read as a *miss*, so the entry is refetched rather than pinned.
      */
     private fun demoteUnanswered(result: EnrichmentResult): EnrichmentResult =
         if (result is EnrichmentResult.Success && !result.data.answers(result.type)) {

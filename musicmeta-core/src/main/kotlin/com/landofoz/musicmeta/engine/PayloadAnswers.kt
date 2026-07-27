@@ -70,5 +70,10 @@ private fun EnrichmentData.Metadata.answersMetadata(type: EnrichmentType): Boole
     // ALBUM_METADATA is the grab bag — any field answers it. A type a future provider decides to
     // answer with Metadata lands here too and gets the same lenient reading; the `when` is not
     // exhaustive over types, so nothing will prompt you. Name its fields above if it needs more.
-    else -> this != EnrichmentData.Metadata()
+    // The two list fields are emptied first, so an empty list reads as absent here exactly as it
+    // does for GENRE above.
+    else -> copy(
+        genres = genres?.takeIf { it.isNotEmpty() },
+        genreTags = genreTags?.takeIf { it.isNotEmpty() },
+    ) != EnrichmentData.Metadata()
 }
