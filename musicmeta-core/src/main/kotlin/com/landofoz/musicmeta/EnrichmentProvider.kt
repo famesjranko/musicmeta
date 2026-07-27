@@ -71,6 +71,7 @@ interface EnrichmentProvider {
      */
     fun mapError(type: EnrichmentType, e: Exception): EnrichmentResult.Error {
         val kind = when (e) {
+            is com.landofoz.musicmeta.http.AuthException -> ErrorKind.AUTH
             is java.io.IOException -> ErrorKind.NETWORK
             is org.json.JSONException -> ErrorKind.PARSE
             else -> ErrorKind.UNKNOWN
