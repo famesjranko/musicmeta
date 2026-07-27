@@ -2,7 +2,7 @@
 
 This document is authoritative for preparing, merging, tagging, and verifying a musicmeta release.
 Branch topology and ordinary issue handling live in [workflow.md](workflow.md); version compatibility
-rules live in `CLAUDE.md` → **Rules with no mechanism**.
+rules live in `CLAUDE.md`.
 
 A release is three human actions. Everything between them is CI.
 
