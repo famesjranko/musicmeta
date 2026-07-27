@@ -77,7 +77,58 @@ class ProviderTransientFailureTest {
         assertNetworkError(provider.enrich(ALBUM, EnrichmentType.ALBUM_ART))
     }
 
+    /**
+     * Deezer answers a quota rejection with **HTTP 200** and an `error` object in place of the
+     * payload, so no HTTP-layer classification can see it (`DeezerApi.fetchJson`). `code: 4` is
+     * community-corroborated, not an official constant — Deezer's error table is login-gated.
+     */
+    @Test
+    fun `deezer 200 quota body is an Error`() = runTest {
+        http.givenJsonResponse("api.deezer.com", QUOTA_ENVELOPE)
+        val provider = DeezerProvider(http, RateLimiter(0))
+
+        assertNetworkError(provider.enrich(ARTIST, EnrichmentType.ARTIST_PHOTO))
+    }
+
+    /**
+     * The other direction, load-bearing: a `DataException` envelope is a genuine "no such thing"
+     * (observed live for a missing artist) and must stay `NotFound`, not become an `Error`.
+     */
+    @Test
+    fun `deezer 200 no-data body is still NotFound, not an Error`() = runTest {
+        http.givenJsonResponse("api.deezer.com", NO_DATA_ENVELOPE)
+        val provider = DeezerProvider(http, RateLimiter(0))
+
+        val result = provider.enrich(ARTIST, EnrichmentType.ARTIST_PHOTO)
+
+        assertTrue("Expected NotFound, got ${result::class.simpleName}", result is EnrichmentResult.NotFound)
+    }
+
     // --- iTunes -------------------------------------------------------------------------------
+
+    /**
+     * iTunes throttles with 403, not 429 — undocumented by Apple except on its own developer
+     * forums (thread 66399). The classification is iTunes-local: these endpoints send no
+     * credentials, so a 403 here cannot be a rejected key.
+     */
+    @Test
+    fun `itunes 403 is an Error, not NotFound`() = runTest {
+        http.givenHttpResult("itunes.apple.com", HttpResult.ClientError(403))
+        val provider = ITunesProvider(http, RateLimiter(0))
+
+        assertNetworkError(provider.enrich(ALBUM, EnrichmentType.ALBUM_ART))
+    }
+
+    /** A genuine 404 is still "no such thing" — the behaviour the 403 reading must not disturb. */
+    @Test
+    fun `itunes 404 is still NotFound, not an Error`() = runTest {
+        http.givenHttpResult("itunes.apple.com", HttpResult.ClientError(404))
+        val provider = ITunesProvider(http, RateLimiter(0))
+
+        val result = provider.enrich(ALBUM, EnrichmentType.ALBUM_ART)
+
+        assertTrue("Expected NotFound, got ${result::class.simpleName}", result is EnrichmentResult.NotFound)
+    }
 
     @Test
     fun `itunes album search rate limited is an Error`() = runTest {
@@ -294,6 +345,12 @@ class ProviderTransientFailureTest {
     }
 
     private companion object {
+        /** Deezer's quota rejection, served with HTTP 200. Community-corroborated shape. */
+        const val QUOTA_ENVELOPE = """{"error":{"type":"Exception","message":"Quota limit exceeded","code":4}}"""
+
+        /** Observed live for `GET /artist/999999999999` — a genuine "no such thing". */
+        const val NO_DATA_ENVELOPE = """{"error":{"type":"DataException","message":"no data","code":800}}"""
+
         private const val MBID = "8f6bd1e4-fbe1-4f50-aa9b-94c450ec0f11"
         private const val RELEASE_GROUP_MBID = "3a3a1a7e-1111-2222-3333-444455556666"
 

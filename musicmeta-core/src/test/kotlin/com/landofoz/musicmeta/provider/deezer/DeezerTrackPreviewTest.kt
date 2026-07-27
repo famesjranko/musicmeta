@@ -158,6 +158,32 @@ class DeezerTrackPreviewTest {
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
+    /**
+     * `getTrack` reads no `data` key, so before the `fetchJson` helper it built a **non-null**
+     * `DeezerTrackSearchResult(id = 0, title = "", artistName = "", previewUrl = null)` out of
+     * Deezer's HTTP-200 error envelope — a confidently wrong record, not "no answer".
+     */
+    @Test
+    fun `getTrack returns null for a no-data error envelope instead of a fabricated record`() = runTest {
+        httpClient.givenJsonResponse(
+            "track/789",
+            """{"error":{"type":"DataException","message":"no data","code":800}}""",
+        )
+
+        assertNull(DeezerApi(httpClient, RateLimiter(0)).getTrack(789L))
+    }
+
+    /** The quota envelope on the same call is transient: it must throw, not answer. */
+    @Test(expected = java.io.IOException::class)
+    fun `getTrack throws on a quota error envelope`() = runTest {
+        httpClient.givenJsonResponse(
+            "track/789",
+            """{"error":{"type":"Exception","message":"Quota limit exceeded","code":4}}""",
+        )
+
+        DeezerApi(httpClient, RateLimiter(0)).getTrack(789L)
+    }
+
     @Test
     fun `capabilities includes TRACK_PREVIEW with priority 100`() {
         // Given — the DeezerProvider
