@@ -3,9 +3,12 @@ package com.landofoz.musicmeta.provider.itunes
 import com.landofoz.musicmeta.engine.ArtistMatcher
 import com.landofoz.musicmeta.engine.bestArtistMatch
 import com.landofoz.musicmeta.http.HttpClient
+import com.landofoz.musicmeta.http.HttpResult
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.http.bodyOrThrowTransient
 import com.landofoz.musicmeta.takeIfNotEmpty
+import org.json.JSONObject
+import java.io.IOException
 import java.net.URLEncoder
 
 /**
@@ -20,9 +23,7 @@ internal class ITunesApi(
     suspend fun searchAlbums(term: String, limit: Int): List<ITunesAlbumResult> {
         val encoded = URLEncoder.encode(term, "UTF-8")
         val url = "$BASE_URL/search?media=music&entity=album&term=$encoded&limit=$limit"
-        val json = rateLimiter.execute {
-            httpClient.fetchJsonResult(url).bodyOrThrowTransient()
-        } ?: return emptyList()
+        val json = fetchJson(url) ?: return emptyList()
 
         val results = json.optJSONArray("results") ?: return emptyList()
         return (0 until results.length()).map { i ->
@@ -33,9 +34,7 @@ internal class ITunesApi(
 
     suspend fun lookupAlbumTracks(collectionId: Long): List<ITunesTrackResult> {
         val url = "$BASE_URL/lookup?id=$collectionId&entity=song"
-        val json = rateLimiter.execute {
-            httpClient.fetchJsonResult(url).bodyOrThrowTransient()
-        } ?: return emptyList()
+        val json = fetchJson(url) ?: return emptyList()
 
         val results = json.optJSONArray("results") ?: return emptyList()
         return (0 until results.length()).mapNotNull { i ->
@@ -54,9 +53,7 @@ internal class ITunesApi(
 
     suspend fun lookupArtistAlbums(artistId: Long): List<ITunesAlbumResult> {
         val url = "$BASE_URL/lookup?id=$artistId&entity=album"
-        val json = rateLimiter.execute {
-            httpClient.fetchJsonResult(url).bodyOrThrowTransient()
-        } ?: return emptyList()
+        val json = fetchJson(url) ?: return emptyList()
 
         val results = json.optJSONArray("results") ?: return emptyList()
         return (0 until results.length()).mapNotNull { i ->
@@ -85,9 +82,7 @@ internal class ITunesApi(
         val encoded = URLEncoder.encode(artistName, "UTF-8")
         val url = "$BASE_URL/search?media=music&entity=musicArtist" +
             "&term=$encoded&limit=$ARTIST_SEARCH_LIMIT"
-        val json = rateLimiter.execute {
-            httpClient.fetchJsonResult(url).bodyOrThrowTransient()
-        } ?: return null
+        val json = fetchJson(url) ?: return null
         val results = json.optJSONArray("results") ?: return null
         val artistId = (0 until results.length())
             // A non-object element is skipped, not thrown: a JSONException here would surface as
@@ -98,7 +93,33 @@ internal class ITunesApi(
         return if (artistId > 0) artistId else null
     }
 
-    private fun parseAlbumResult(album: org.json.JSONObject): ITunesAlbumResult =
+    /**
+     * The single fetch every call above goes through: rate limit, then classification.
+     *
+     * On top of the shared [bodyOrThrowTransient] rules, **a 403 from iTunes is a throttle**, not a
+     * client error — thrown as [IOException] so it travels the provider's existing
+     * `catch { mapError(type, e) }` into `Error(ErrorKind.NETWORK)` rather than collapsing to
+     * `NotFound` and recording a breaker *success* on a throttled provider (`docs/pitfalls.md` §4).
+     *
+     * **Undocumented, and deliberately iTunes-local.** Apple's Search API doc states the ~20
+     * calls/minute limit but never the response; the 403 is only acknowledged by Apple staff on
+     * Apple's own developer forums (thread 66399) and reproduced by the community. It is not a
+     * contract and may change without notice. It is safe to read this way *here* because these
+     * endpoints send no credentials and have no other documented 403 — which is exactly why it must
+     * not go into the shared helper, where a keyed provider's 403 means a rejected key.
+     *
+     * The response carries no `Retry-After` and no `X-RateLimit-*`, so there is no wait hint to
+     * preserve.
+     */
+    private suspend fun fetchJson(url: String): JSONObject? = rateLimiter.execute {
+        val result = httpClient.fetchJsonResult(url)
+        if (result is HttpResult.ClientError && result.statusCode == THROTTLE_STATUS) {
+            throw IOException("HTTP 403: iTunes rate limited")
+        }
+        result.bodyOrThrowTransient()
+    }
+
+    private fun parseAlbumResult(album: JSONObject): ITunesAlbumResult =
         ITunesAlbumResult(
             collectionId = album.optLong("collectionId"),
             collectionName = album.optString("collectionName", ""),
@@ -115,5 +136,8 @@ internal class ITunesApi(
 
         /** Candidate pool size for artist search — enough hits for a wrong name to be passed over. */
         const val ARTIST_SEARCH_LIMIT = 10
+
+        /** iTunes answers a rate limit with 403; see [fetchJson] for why that reading is safe here. */
+        private const val THROTTLE_STATUS = 403
     }
 }
