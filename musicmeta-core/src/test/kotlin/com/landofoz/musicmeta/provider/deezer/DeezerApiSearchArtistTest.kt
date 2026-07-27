@@ -93,6 +93,31 @@ class DeezerApiSearchArtistTest {
     }
 
     @Test
+    fun `a closer loose match beats a looser one with far more fans`() = runTest {
+        // Given — no exact name in the pool: a containing match, and a popular half-token match
+        httpClient.givenJsonResponse("search/artist", LOOSE_MATCH_BEATS_LOOSER_MATCH)
+
+        // When — searching for the artist
+        val result = api.searchArtist("Bad Company")
+
+        // Then — name quality is ranked before popularity, so 9M fans does not carry Bad Bunny
+        assertEquals(2002L, result?.id)
+    }
+
+    @Test
+    fun `a non-object element does not fail the whole search`() = runTest {
+        // Given — a malformed first element ahead of the real artist
+        httpClient.givenJsonResponse("search/artist", MALFORMED_ELEMENT_FIRST)
+
+        // When — searching for the artist
+        val result = api.searchArtist("Radiohead")
+
+        // Then — it is skipped, not thrown: a JSONException here would surface as Error and
+        // open the circuit breaker against a healthy Deezer (docs/pitfalls.md §4)
+        assertEquals(399L, result?.id)
+    }
+
+    @Test
     fun `the exact-name tier compares normalized names`() = runTest {
         // Given — the punctuated real name is outranked on fans by a looser match
         httpClient.givenJsonResponse("search/artist", PUNCTUATED_EXACT_NAME)
@@ -123,10 +148,26 @@ class DeezerApiSearchArtistTest {
             ]}
         """
 
+        // The right-name candidate is deliberately NOT an exact match, so the assertion rests on
+        // the name filter rejecting Taylor Swift — not on the same-name rank carrying it.
         const val WRONG_NAME_MORE_POPULAR = """
             {"data":[
               {"id":1111,"name":"Taylor Swift","nb_album":60,"nb_fan":9000000},
-              {"id":7777,"name":"Autechre","nb_album":25,"nb_fan":120000}
+              {"id":7777,"name":"Autechre (Live)","nb_album":25,"nb_fan":120000}
+            ]}
+        """
+
+        const val LOOSE_MATCH_BEATS_LOOSER_MATCH = """
+            {"data":[
+              {"id":2001,"name":"Bad Bunny","nb_album":20,"nb_fan":9000000},
+              {"id":2002,"name":"Bad Company Live In Concert","nb_album":3,"nb_fan":5000}
+            ]}
+        """
+
+        const val MALFORMED_ELEMENT_FIRST = """
+            {"data":[
+              null,
+              {"id":399,"name":"Radiohead","nb_album":45,"nb_fan":4065028}
             ]}
         """
 

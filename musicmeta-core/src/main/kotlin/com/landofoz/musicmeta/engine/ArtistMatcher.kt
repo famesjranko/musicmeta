@@ -11,6 +11,18 @@ internal object ArtistMatcher {
     /** Default minimum fraction of expected tokens that must appear in candidate. */
     const val DEFAULT_MIN_TOKEN_OVERLAP = 0.5f
 
+    /** [matchQuality]: same name once normalized, or once spaces are dropped (AC/DC vs ACDC). */
+    const val QUALITY_SAME_NAME = 3
+
+    /** [matchQuality]: one name contains the other — "Radiohead" vs "DJ Radiohead". */
+    const val QUALITY_CONTAINS = 2
+
+    /** [matchQuality]: only enough tokens overlap — "Bad Company" vs "Bad Bunny". */
+    const val QUALITY_TOKEN_OVERLAP = 1
+
+    /** [matchQuality]: not a plausible match at all. */
+    const val QUALITY_NONE = 0
+
     /**
      * Returns true if [candidate] is a plausible match for [expected].
      * Handles: case, "The" prefix, punctuation, diacritics, feat. credits,
@@ -24,45 +36,51 @@ internal object ArtistMatcher {
         expected: String,
         candidate: String,
         minTokenOverlap: Float = DEFAULT_MIN_TOKEN_OVERLAP,
-    ): Boolean {
-        if (expected.isBlank() || candidate.isBlank()) return false
+    ): Boolean = matchQuality(expected, candidate, minTokenOverlap) > QUALITY_NONE
+
+    /**
+     * How *well* [candidate] matches [expected], as one of the `QUALITY_` ranks above —
+     * the tiers [isMatch] already tests, kept rather than collapsed to a boolean.
+     *
+     * Use it to rank candidates that [isMatch] all accepts. Ranking matters because [isMatch] is
+     * deliberately loose at the bottom: for "Bad Company" it accepts both "Bad Company Live In
+     * Concert" (contains) and "Bad Bunny" (half the tokens). Sorting on a popularity signal alone
+     * would hand that pool to Bad Bunny, so sort on this first and let popularity break ties
+     * *within* a rank.
+     *
+     * @param minTokenOverlap as [isMatch].
+     */
+    fun matchQuality(
+        expected: String,
+        candidate: String,
+        minTokenOverlap: Float = DEFAULT_MIN_TOKEN_OVERLAP,
+    ): Int {
+        if (expected.isBlank() || candidate.isBlank()) return QUALITY_NONE
 
         val normExpected = normalize(expected)
         val normCandidate = normalize(candidate)
 
         // Exact match after normalization
-        if (normExpected == normCandidate) return true
+        if (normExpected == normCandidate) return QUALITY_SAME_NAME
 
         // Compact form (no spaces) — catches AC/DC vs ACDC
         val compactExpected = normExpected.replace(" ", "")
         val compactCandidate = normCandidate.replace(" ", "")
-        if (compactExpected == compactCandidate) return true
+        if (compactExpected == compactCandidate) return QUALITY_SAME_NAME
 
         // One contains the other (handles "feat." suffixes)
-        if (normCandidate.contains(normExpected) || normExpected.contains(normCandidate)) return true
+        if (normCandidate.contains(normExpected) || normExpected.contains(normCandidate)) {
+            return QUALITY_CONTAINS
+        }
 
         // Token overlap — at least minTokenOverlap of expected tokens appear in candidate
         val expectedTokens = tokenize(normExpected)
         val candidateTokens = tokenize(normCandidate)
-        if (expectedTokens.isEmpty()) return false
+        if (expectedTokens.isEmpty()) return QUALITY_NONE
 
         val overlap = expectedTokens.count { it in candidateTokens }
-        return overlap.toFloat() / expectedTokens.size >= minTokenOverlap
-    }
-
-    /**
-     * Returns true if [candidate] is the *same* name as [expected] — equal once normalized, or
-     * once spaces are dropped too (AC/DC vs ACDC). This is [isMatch]'s first two tiers without
-     * the containment and token-overlap fuzz, so "Radiohead" is exact and "DJ Radiohead" is not.
-     * Use it to rank an exact hit above a merely plausible one; [isMatch] decides whether a
-     * candidate is plausible at all.
-     */
-    fun isExactMatch(expected: String, candidate: String): Boolean {
-        if (expected.isBlank() || candidate.isBlank()) return false
-        val normExpected = normalize(expected)
-        val normCandidate = normalize(candidate)
-        return normExpected == normCandidate ||
-            normExpected.replace(" ", "") == normCandidate.replace(" ", "")
+        val enough = overlap.toFloat() / expectedTokens.size >= minTokenOverlap
+        return if (enough) QUALITY_TOKEN_OVERLAP else QUALITY_NONE
     }
 
     /**

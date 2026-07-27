@@ -174,15 +174,20 @@ why the guard is on the write-back rather than on catalog filtering.
 val url = "$BASE_URL/search/artist?q=$encoded&limit=1"
 val artist = data.getJSONObject(0)              // caller's ArtistMatcher check passes: name is exact
 
-// RIGHT — fetch a pool, keep the name matches, break the tie on popularity
+// RIGHT — fetch a pool, keep the name matches, rank by name quality, break ties on popularity
 .filter { ArtistMatcher.isMatch(name, it.optString("name", "")) }
-.maxWithOrNull(compareBy({ ArtistMatcher.isExactMatch(name, …) }, { it.optLong("nb_fan") }, …))
+.maxWithOrNull(compareBy({ ArtistMatcher.matchQuality(name, …) }, { it.optLong("nb_fan") }, …))
 ```
 
 A name check on one hit cannot separate a ghost from the real artist when both names are exact — it
 only rejects a wrong name, and every duplicate-name entry survives it. `limit=1` also throws away
 the evidence that would decide it, so the check has to sit where the pool is, in the shared search
-call, not in the six callers that each re-verify the single hit they were handed. Order the tie so
-popularity can only rank candidates the name already accepted; ranking first and name-checking
-second promotes whatever the API happened to make famous. `ITunesApi.searchArtist` and
-`DiscogsApi.searchArtist` still take hit 0 from a `limit=1`/`per_page=1` search.
+call, not in the six callers that each re-verify the single hit they were handed.
+
+Filtering on `isMatch` alone is not enough to order the survivors, because `isMatch` is deliberately
+loose at the bottom — bare containment, then 50% token overlap. For "Bad Company" it accepts both
+"Bad Company Live In Concert" and "Bad Bunny", so sorting that pool on `nb_fan` hands it to Bad
+Bunny. Rank on `matchQuality` first and let popularity break ties only *within* a rank: a
+popularity signal must never outrank name quality, only settle candidates whose names are equally
+good. `ITunesApi.searchArtist` and `DiscogsApi.searchArtist` still take hit 0 from a
+`limit=1`/`per_page=1` search.

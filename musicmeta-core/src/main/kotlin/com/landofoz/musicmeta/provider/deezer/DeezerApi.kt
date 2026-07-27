@@ -7,9 +7,6 @@ import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.takeIfNotEmpty
 import java.net.URLEncoder
 
-/** Candidate pool size for artist search — enough hits for a ghost to be outvoted. */
-internal const val ARTIST_SEARCH_LIMIT = 10
-
 /**
  * Deezer public search API. No authentication required.
  * Rate limit: ~10 requests/second.
@@ -53,9 +50,13 @@ internal class DeezerApi(
      *
      * Deezer's result order is not trustworthy: "Radiohead" returns an exact-name ghost
      * (0 albums, 470 fans) ahead of the real artist (id 399). So fetch a pool of candidates,
-     * keep only those whose name matches, and break the tie on popularity — an exact name beats
-     * a looser one, then more fans, then more albums. Popularity never promotes a non-matching
-     * name, so a hugely popular wrong-name artist still loses to a modest right-name one.
+     * keep the ones [ArtistMatcher.isMatch] accepts, and rank those by name quality first
+     * ([ArtistMatcher.matchQuality]) and only then by fans and albums.
+     *
+     * Name quality outranks popularity at every step, so a popular wrong-name artist cannot win:
+     * not one the matcher rejects, and not one it accepts only loosely while a closer name is in
+     * the pool. Popularity decides between candidates whose names are equally good — which is the
+     * ghost case, two entries both named exactly "Radiohead".
      */
     suspend fun searchArtist(name: String): DeezerArtistSearchResult? {
         val encoded = URLEncoder.encode(name, "UTF-8")
@@ -69,11 +70,11 @@ internal class DeezerApi(
 
         val data = json.optJSONArray("data") ?: return null
         return (0 until data.length())
-            .map { data.getJSONObject(it) }
+            .mapNotNull { data.optJSONObject(it) }
             .filter { ArtistMatcher.isMatch(name, it.optString("name", "")) }
             .maxWithOrNull(
                 compareBy(
-                    { ArtistMatcher.isExactMatch(name, it.optString("name", "")) },
+                    { ArtistMatcher.matchQuality(name, it.optString("name", "")) },
                     { it.optLong("nb_fan") },
                     { it.optLong("nb_album") },
                 ),
@@ -273,5 +274,8 @@ internal class DeezerApi(
 
     private companion object {
         const val BASE_URL = "https://api.deezer.com"
+
+        /** Candidate pool size for artist search — enough hits for a ghost to be outvoted. */
+        const val ARTIST_SEARCH_LIMIT = 10
     }
 }
