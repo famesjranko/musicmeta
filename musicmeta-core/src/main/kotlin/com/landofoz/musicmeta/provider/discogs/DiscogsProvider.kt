@@ -170,7 +170,8 @@ class DiscogsProvider(
                 ?: return EnrichmentResult.NotFound(type, id)
             val artist = api.getArtist(artistId)
                 ?: return EnrichmentResult.NotFound(type, id)
-            // searchArtist is per_page=1 with no name check; verify before use
+            // searchArtist already name-matches the pool; this re-checks the *detail* record,
+            // whose `name` is a different field from the search result's `title`.
             if (!ArtistMatcher.isMatch(request.name, artist.name)) {
                 return EnrichmentResult.NotFound(type, id)
             }
