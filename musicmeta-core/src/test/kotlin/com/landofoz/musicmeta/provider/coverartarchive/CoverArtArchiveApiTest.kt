@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.provider.coverartarchive
 
+import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.testutil.FakeHttpClient
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -15,7 +16,21 @@ class CoverArtArchiveApiTest {
     @Before
     fun setUp() {
         httpClient = FakeHttpClient()
-        api = CoverArtArchiveApi(httpClient)
+        api = CoverArtArchiveApi(httpClient, RateLimiter(0))
+    }
+
+    @Test
+    fun `every call goes through the rate limiter`() = runTest {
+        // Given -- a frozen clock, so the limiter waits its full interval ahead of every call
+        val limited = CoverArtArchiveApi(httpClient, RateLimiter(1000, clock = { 0L }))
+
+        // When -- each of the three endpoints is called once
+        limited.getArtworkUrl("mbid")
+        limited.getGroupArtworkUrl("rgid")
+        limited.getArtworkMetadata("mbid")
+
+        // Then -- three intervals were waited out; an unwrapped call would not advance the clock
+        assertEquals(3000L, testScheduler.currentTime)
     }
 
     @Test

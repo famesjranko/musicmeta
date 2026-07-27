@@ -2,14 +2,19 @@ package com.landofoz.musicmeta.provider.coverartarchive
 
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.HttpResult
+import com.landofoz.musicmeta.http.RateLimiter
 import org.json.JSONObject
 
 /**
  * Cover Art Archive API client. Checks artwork availability via redirect URLs
  * and fetches image metadata (thumbnails/sizes) from the JSON endpoint.
+ *
+ * Upstream publishes no rate limit (judgement 2026-07-27), so the interval is politeness to a
+ * volunteer service; the figure lives with the other per-host limiters in `withDefaultProviders()`.
  */
 internal class CoverArtArchiveApi(
     private val httpClient: HttpClient,
+    private val rateLimiter: RateLimiter,
 ) {
 
     /**
@@ -18,7 +23,7 @@ internal class CoverArtArchiveApi(
      */
     suspend fun getArtworkUrl(releaseId: String, size: Int = 1200): String? {
         val url = "$BASE_URL/release/$releaseId/front-$size"
-        return httpClient.fetchRedirectUrl(url)
+        return rateLimiter.execute { httpClient.fetchRedirectUrl(url) }
     }
 
     /**
@@ -27,7 +32,7 @@ internal class CoverArtArchiveApi(
      */
     suspend fun getGroupArtworkUrl(releaseGroupId: String, size: Int = 1200): String? {
         val url = "$BASE_URL/release-group/$releaseGroupId/front-$size"
-        return httpClient.fetchRedirectUrl(url)
+        return rateLimiter.execute { httpClient.fetchRedirectUrl(url) }
     }
 
     /**
@@ -36,10 +41,12 @@ internal class CoverArtArchiveApi(
      */
     suspend fun getArtworkMetadata(releaseId: String): List<CoverArtArchiveImage>? {
         val url = "$BASE_URL/release/$releaseId"
-        val json = when (val result = httpClient.fetchJsonResult(url)) {
-            is HttpResult.Ok -> result.body
-            else -> return null
-        }
+        val json = rateLimiter.execute {
+            when (val result = httpClient.fetchJsonResult(url)) {
+                is HttpResult.Ok -> result.body
+                else -> return@execute null
+            }
+        } ?: return null
         return parseImageList(json)
     }
 
