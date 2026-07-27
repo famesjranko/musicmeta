@@ -34,7 +34,7 @@ This release makes the `engine/` package internal, fixes two cancellation bugs, 
 - `engine/` internals are no longer published. `DefaultEnrichmentEngine`, `ProviderRegistry`, `ProviderChain`, `ArtistMatcher` and `ConfidenceCalculator` are now `internal`. Build engines with `EnrichmentEngine.Builder`, which covers every constructor parameter. `ResultMerger` and `CompositeSynthesizer` remain public, as the documented extension points
 
 ### Fixed
-- A 401 or 403 from Last.fm, Discogs, Fanart.tv or ListenBrainz is now `Error(ErrorKind.AUTH)`, not `NotFound`, so a bad key no longer looks like empty data — until five in a row open its breaker
+- A 401 or 403 on a call carrying a key (Last.fm, Discogs, Fanart.tv, ListenBrainz radio) is now `Error(ErrorKind.AUTH)`, not `NotFound`; five in a row open the breaker, one gets through a minute later
 - A `ResultMerger` registered for `ARTIST_TOP_TRACKS` via `EnrichmentEngine.Builder.addMerger` now runs instead of being silently discarded by the built-in `TopTrackMerger`, matching the other five built-in merger types. Merged top-track output changes for anyone who registered an override (#49)
 - iTunes search candidates now carry `itunesCollectionId` in their `identifiers`, which were empty before. Passing a picked candidate's identifiers into the next `ALBUM_TRACKS` request now resolves it by direct lookup at 1.0 confidence instead of repeating the search
 - Back cover, booklet and CD art from the Cover Art Archive now read the canonical `"250"` thumbnail key, falling back to the deprecated `"small"` alias
