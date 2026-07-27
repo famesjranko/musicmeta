@@ -148,6 +148,81 @@ class OkHttpEnrichmentClientTest {
         assertNull(result)
     }
 
+    // ---- fetchRedirectUrlResult ----
+
+    @Test fun `fetchRedirectUrlResult returns Ok with Location header for 307 response`() = runTest {
+        // Given
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(307)
+                .setHeader("Location", "https://example.com/redirected")
+        )
+
+        // When
+        val result = client.fetchRedirectUrlResult(url())
+
+        // Then
+        assertTrue(result is HttpResult.Ok)
+        assertEquals("https://example.com/redirected", (result as HttpResult.Ok).body)
+        assertEquals(307, result.statusCode)
+    }
+
+    @Test fun `fetchRedirectUrlResult returns Ok with original URL for 200 response`() = runTest {
+        // Given
+        server.enqueue(MockResponse().setResponseCode(200).setBody("ok"))
+        val requestUrl = url()
+
+        // When
+        val result = client.fetchRedirectUrlResult(requestUrl)
+
+        // Then
+        assertEquals(requestUrl, (result as HttpResult.Ok).body)
+    }
+
+    @Test fun `fetchRedirectUrlResult returns ClientError for 404 response`() = runTest {
+        // Given — no artwork at that address, a genuine empty result
+        server.enqueue(MockResponse().setResponseCode(404))
+
+        // When
+        val result = client.fetchRedirectUrlResult(url())
+
+        // Then
+        assertEquals(404, (result as HttpResult.ClientError).statusCode)
+    }
+
+    @Test fun `fetchRedirectUrlResult returns RateLimited for 429 response`() = runTest {
+        // Given
+        server.enqueue(MockResponse().setResponseCode(429).setHeader("Retry-After", "5"))
+
+        // When
+        val result = client.fetchRedirectUrlResult(url())
+
+        // Then — the status a plain fetchRedirectUrl collapsed into an indistinguishable null
+        assertEquals(5000L, (result as HttpResult.RateLimited).retryAfterMs)
+    }
+
+    @Test fun `fetchRedirectUrlResult returns ServerError for 500 response`() = runTest {
+        // Given
+        server.enqueue(MockResponse().setResponseCode(500).setBody("error"))
+
+        // When
+        val result = client.fetchRedirectUrlResult(url())
+
+        // Then
+        assertEquals(500, (result as HttpResult.ServerError).statusCode)
+    }
+
+    @Test fun `fetchRedirectUrlResult returns ClientError for a 3xx with no Location header`() = runTest {
+        // Given
+        server.enqueue(MockResponse().setResponseCode(302))
+
+        // When
+        val result = client.fetchRedirectUrlResult(url())
+
+        // Then — a redirect with nowhere to go is not a usable URL
+        assertEquals(302, (result as HttpResult.ClientError).statusCode)
+    }
+
     // ---- postJson ----
 
     @Test fun `postJson returns JSONObject for 200 response and request body is transmitted`() = runTest {

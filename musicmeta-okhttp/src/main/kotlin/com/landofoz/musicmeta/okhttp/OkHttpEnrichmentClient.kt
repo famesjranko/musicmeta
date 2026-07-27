@@ -124,6 +124,29 @@ class OkHttpEnrichmentClient(
         }
     }
 
+    override suspend fun fetchRedirectUrlResult(url: String): HttpResult<String> =
+        withContext(Dispatchers.IO) {
+            try {
+                noRedirectClient.newCall(buildGetRequest(url)).execute().use { response ->
+                    val code = response.code
+                    when {
+                        code == 429 -> {
+                            val retryAfterMs = response.header("Retry-After")?.toLongOrNull()?.let { it * 1000 }
+                            HttpResult.RateLimited(retryAfterMs)
+                        }
+                        code in 200..299 -> HttpResult.Ok(url, code)
+                        code in 300..399 -> response.header("Location")
+                            ?.let { HttpResult.Ok(it, code) }
+                            ?: HttpResult.ClientError(code, "redirect without a Location header")
+                        code in 500..599 -> HttpResult.ServerError(code, response.body?.string())
+                        else -> HttpResult.ClientError(code, response.body?.string())
+                    }
+                }
+            } catch (e: IOException) {
+                HttpResult.NetworkError(e.message ?: "Network error", e)
+            }
+        }
+
     override suspend fun fetchJsonArrayResult(url: String): HttpResult<JSONArray> =
         withContext(Dispatchers.IO) {
             try {

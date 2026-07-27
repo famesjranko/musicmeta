@@ -6,6 +6,7 @@ import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
+import com.landofoz.musicmeta.http.HttpResult
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.testutil.FakeHttpClient
 import kotlinx.coroutines.test.runTest
@@ -60,7 +61,7 @@ class CoverArtArchiveProviderTest {
     @Test
     fun `enrich falls back to release-group when release has no art`() = runTest {
         // Given — release has no art (404), but release-group does
-        httpClient.givenError("release/abc123/front-")
+        httpClient.givenRedirectResult("release/abc123/front-", HttpResult.ClientError(404))
         httpClient.givenJsonResponse(
             "release-group/group1/front-1200",
             "https://archive.org/image/group1-1200.jpg",
@@ -132,9 +133,9 @@ class CoverArtArchiveProviderTest {
 
     @Test
     fun `enrich returns NotFound when neither release nor group has art`() = runTest {
-        // Given — both release and release-group return errors (no artwork)
-        httpClient.givenError("release/abc123/front-")
-        httpClient.givenError("release-group/group1/front-")
+        // Given — both release and release-group 404 (no artwork)
+        httpClient.givenRedirectResult("release/abc123/front-", HttpResult.ClientError(404))
+        httpClient.givenRedirectResult("release-group/group1/front-", HttpResult.ClientError(404))
         val request = EnrichmentRequest.ForAlbum(
             identifiers = EnrichmentIdentifiers(
                 musicBrainzId = "abc123",
@@ -185,7 +186,7 @@ class CoverArtArchiveProviderTest {
         // When — enriching for album art
         val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
 
-        // Then — Success but with empty URL (fetchRedirectUrl returns the string as-is)
+        // Then — Success but with empty URL (the redirect fetch returns the string as-is)
         assertTrue(result is EnrichmentResult.Success)
         val artwork = (result as EnrichmentResult.Success).data as EnrichmentData.Artwork
         assertEquals("", artwork.url)
@@ -423,10 +424,10 @@ class CoverArtArchiveProviderTest {
     }
 
     @Test
-    fun `enrich returns NotFound when both release and group return null redirect`() = runTest {
-        // Given — both release and release-group fetchRedirectUrl return null (404)
-        httpClient.givenError("release/no-art/front-")
-        httpClient.givenError("release-group/no-art-group/front-")
+    fun `enrich returns NotFound when both release and group 404 the redirect`() = runTest {
+        // Given — both release and release-group redirect fetches 404
+        httpClient.givenRedirectResult("release/no-art/front-", HttpResult.ClientError(404))
+        httpClient.givenRedirectResult("release-group/no-art-group/front-", HttpResult.ClientError(404))
         val request = EnrichmentRequest.ForAlbum(
             identifiers = EnrichmentIdentifiers(
                 musicBrainzId = "no-art",

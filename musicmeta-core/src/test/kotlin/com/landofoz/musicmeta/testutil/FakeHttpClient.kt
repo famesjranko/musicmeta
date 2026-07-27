@@ -12,6 +12,7 @@ class FakeHttpClient : HttpClient {
     private val ioExceptions = mutableSetOf<String>()
     private val httpResultResponses = mutableMapOf<String, HttpResult<JSONObject>>()
     private val httpResultArrayResponses = mutableMapOf<String, HttpResult<JSONArray>>()
+    private val redirectResults = mutableMapOf<String, HttpResult<String>>()
     val requestedUrls = mutableListOf<String>()
     val requestedHeaders = mutableListOf<Map<String, String>>()
 
@@ -27,6 +28,13 @@ class FakeHttpClient : HttpClient {
     fun givenIoException(urlContains: String) { ioExceptions.add(urlContains) }
     fun givenHttpResult(urlContains: String, result: HttpResult<JSONObject>) { httpResultResponses[urlContains] = result }
     fun givenHttpResultArray(urlContains: String, result: HttpResult<JSONArray>) { httpResultArrayResponses[urlContains] = result }
+
+    /**
+     * The status channel for redirect fetches — the only way to say "429" or "no artwork (404)"
+     * to [fetchRedirectUrlResult]. [givenError] cannot: it means a dropped connection, which is a
+     * transient the provider now reports as `Error`, not the empty result most tests mean.
+     */
+    fun givenRedirectResult(urlContains: String, result: HttpResult<String>) { redirectResults[urlContains] = result }
 
     override suspend fun fetchJson(url: String): JSONObject? {
         requestedUrls.add(url)
@@ -50,6 +58,15 @@ class FakeHttpClient : HttpClient {
         requestedUrls.add(url)
         if (errors.any { url.contains(it) }) return null
         return jsonResponses.entries.firstOrNull { url.contains(it.key) }?.value ?: url
+    }
+
+    override suspend fun fetchRedirectUrlResult(url: String): HttpResult<String> {
+        requestedUrls.add(url)
+        if (ioExceptions.any { url.contains(it) }) throw IOException("Simulated network error: $url")
+        redirectResults.entries.firstOrNull { url.contains(it.key) }?.let { return it.value }
+        if (errors.any { url.contains(it) }) return HttpResult.NetworkError("Simulated network error")
+        // Unstubbed mirrors fetchRedirectUrl: the request URL itself, as a 2xx no-op redirect.
+        return HttpResult.Ok(jsonResponses.entries.firstOrNull { url.contains(it.key) }?.value ?: url)
     }
 
     override suspend fun postJson(url: String, body: String): JSONObject? {
