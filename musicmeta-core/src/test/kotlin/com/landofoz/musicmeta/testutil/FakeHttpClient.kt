@@ -79,7 +79,7 @@ class FakeHttpClient : HttpClient {
         if (configured != null) return configured.value
         // Fall back to existing fetchJson behavior for backward compatibility
         val json = jsonResponses.entries.firstOrNull { url.contains(it.key) }?.value
-        return if (json != null) HttpResult.Ok(JSONObject(json)) else HttpResult.NetworkError("No response configured")
+        return if (json != null) HttpResult.Ok(JSONObject(json)) else UNSTUBBED
     }
 
     override suspend fun fetchJsonArrayResult(url: String): HttpResult<JSONArray> {
@@ -90,7 +90,7 @@ class FakeHttpClient : HttpClient {
         if (configured != null) return configured.value
         // Fall back to existing fetchJsonArray behavior for backward compatibility
         val json = fetchJsonArray(url)
-        return if (json != null) HttpResult.Ok(json) else HttpResult.NetworkError("No response configured")
+        return if (json != null) HttpResult.Ok(json) else UNSTUBBED
     }
 
     override suspend fun postJsonResult(url: String, body: String): HttpResult<JSONObject> {
@@ -101,7 +101,7 @@ class FakeHttpClient : HttpClient {
         if (configured != null) return configured.value
         // Fall back to existing postJson behavior for backward compatibility
         val json = postJson(url, body)
-        return if (json != null) HttpResult.Ok(json) else HttpResult.NetworkError("No response configured")
+        return if (json != null) HttpResult.Ok(json) else UNSTUBBED
     }
 
     override suspend fun postJsonArrayResult(url: String, body: String): HttpResult<JSONArray> {
@@ -112,6 +112,16 @@ class FakeHttpClient : HttpClient {
         if (configured != null) return configured.value
         // Fall back to existing postJsonArray behavior for backward compatibility
         val json = postJsonArray(url, body)
-        return if (json != null) HttpResult.Ok(json) else HttpResult.NetworkError("No response configured")
+        return if (json != null) HttpResult.Ok(json) else UNSTUBBED
+    }
+
+    companion object {
+        /**
+         * An unstubbed URL: the fake has nothing at that address, which is a 404, not a dropped
+         * connection. It must not be a transient variant — providers treat 429/5xx/network as a
+         * retryable `Error`, so a `NetworkError` here would make every test that simply omits a stub
+         * assert the transient path instead of the empty-result path it means to test.
+         */
+        private val UNSTUBBED = HttpResult.ClientError(404, "No response configured")
     }
 }

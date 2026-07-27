@@ -1,8 +1,8 @@
 package com.landofoz.musicmeta.provider.musicbrainz
 
 import com.landofoz.musicmeta.http.HttpClient
-import com.landofoz.musicmeta.http.HttpResult
 import com.landofoz.musicmeta.http.RateLimiter
+import com.landofoz.musicmeta.http.bodyOrThrowTransient
 import org.json.JSONObject
 import java.net.URLEncoder
 
@@ -22,10 +22,7 @@ internal class MusicBrainzApi(
     ): List<MusicBrainzRelease> {
         val query = buildQuery("release", title, "artistname", artist)
         val json = rateLimiter.execute {
-            when (val r = httpClient.fetchJsonResult("$BASE_URL/release?query=$query&fmt=json&limit=$limit")) {
-                is HttpResult.Ok -> r.body
-                else -> return@execute null
-            }
+            httpClient.fetchJsonResult("$BASE_URL/release?query=$query&fmt=json&limit=$limit").bodyOrThrowTransient()
         } ?: return emptyList()
         return MusicBrainzParser.parseReleases(json)
     }
@@ -38,10 +35,7 @@ internal class MusicBrainzApi(
     ): List<MusicBrainzRelease> {
         val query = encode("release:${escapeLucene(title)}~ AND artistname:${escapeLucene(artist)}~")
         val json = rateLimiter.execute {
-            when (val r = httpClient.fetchJsonResult("$BASE_URL/release?query=$query&fmt=json&limit=$limit")) {
-                is HttpResult.Ok -> r.body
-                else -> return@execute null
-            }
+            httpClient.fetchJsonResult("$BASE_URL/release?query=$query&fmt=json&limit=$limit").bodyOrThrowTransient()
         } ?: return emptyList()
         return MusicBrainzParser.parseReleases(json)
     }
@@ -52,10 +46,7 @@ internal class MusicBrainzApi(
     ): List<MusicBrainzArtist> {
         val query = encode("artist:\"${escapeLucene(name)}\"")
         val json = rateLimiter.execute {
-            when (val r = httpClient.fetchJsonResult("$BASE_URL/artist?query=$query&fmt=json&limit=$limit")) {
-                is HttpResult.Ok -> r.body
-                else -> return@execute null
-            }
+            httpClient.fetchJsonResult("$BASE_URL/artist?query=$query&fmt=json&limit=$limit").bodyOrThrowTransient()
         } ?: return emptyList()
         return MusicBrainzParser.parseArtists(json)
     }
@@ -67,10 +58,7 @@ internal class MusicBrainzApi(
     ): List<MusicBrainzArtist> {
         val query = encode("artist:${escapeLucene(name)}~")
         val json = rateLimiter.execute {
-            when (val r = httpClient.fetchJsonResult("$BASE_URL/artist?query=$query&fmt=json&limit=$limit")) {
-                is HttpResult.Ok -> r.body
-                else -> return@execute null
-            }
+            httpClient.fetchJsonResult("$BASE_URL/artist?query=$query&fmt=json&limit=$limit").bodyOrThrowTransient()
         } ?: return emptyList()
         return MusicBrainzParser.parseArtists(json)
     }
@@ -82,33 +70,24 @@ internal class MusicBrainzApi(
     ): List<MusicBrainzRecording> {
         val query = buildQuery("recording", title, "artistname", artist)
         val json = rateLimiter.execute {
-            when (val r = httpClient.fetchJsonResult("$BASE_URL/recording?query=$query&fmt=json&limit=$limit")) {
-                is HttpResult.Ok -> r.body
-                else -> return@execute null
-            }
+            httpClient.fetchJsonResult("$BASE_URL/recording?query=$query&fmt=json&limit=$limit").bodyOrThrowTransient()
         } ?: return emptyList()
         return MusicBrainzParser.parseRecordings(json)
     }
 
     suspend fun lookupRelease(mbid: String): MusicBrainzRelease? {
         val json = rateLimiter.execute {
-            when (val r = httpClient.fetchJsonResult(
+            httpClient.fetchJsonResult(
                 "$BASE_URL/release/$mbid?fmt=json" +
                     "&inc=artist-credits+labels+release-groups+tags+media+recordings",
-            )) {
-                is HttpResult.Ok -> r.body
-                else -> return@execute null
-            }
+            ).bodyOrThrowTransient()
         } ?: return null
         return MusicBrainzParser.parseLookupRelease(json)
     }
 
     suspend fun lookupArtist(mbid: String): MusicBrainzArtist? {
         val json = rateLimiter.execute {
-            when (val r = httpClient.fetchJsonResult("$BASE_URL/artist/$mbid?fmt=json&inc=tags+url-rels")) {
-                is HttpResult.Ok -> r.body
-                else -> return@execute null
-            }
+            httpClient.fetchJsonResult("$BASE_URL/artist/$mbid?fmt=json&inc=tags+url-rels").bodyOrThrowTransient()
         } ?: return null
         return MusicBrainzParser.parseLookupArtist(json)
     }
@@ -116,10 +95,8 @@ internal class MusicBrainzApi(
     /** Lookup artist with artist-rels included (needed for band member relationships). */
     suspend fun lookupArtistWithRels(mbid: String): MusicBrainzArtist? {
         val json = rateLimiter.execute {
-            when (val r = httpClient.fetchJsonResult("$BASE_URL/artist/$mbid?fmt=json&inc=tags+url-rels+artist-rels")) {
-                is HttpResult.Ok -> r.body
-                else -> return@execute null
-            }
+            httpClient.fetchJsonResult("$BASE_URL/artist/$mbid?fmt=json&inc=tags+url-rels+artist-rels")
+                .bodyOrThrowTransient()
         } ?: return null
         return MusicBrainzParser.parseLookupArtist(json)
     }
@@ -127,12 +104,9 @@ internal class MusicBrainzApi(
     /** Lookup a release-group by MBID with releases (needed for editions). */
     suspend fun lookupReleaseGroup(releaseGroupMbid: String): JSONObject? {
         val json = rateLimiter.execute {
-            when (val r = httpClient.fetchJsonResult(
+            httpClient.fetchJsonResult(
                 "$BASE_URL/release-group/$releaseGroupMbid?fmt=json&inc=releases",
-            )) {
-                is HttpResult.Ok -> r.body
-                else -> return@execute null
-            }
+            ).bodyOrThrowTransient()
         }
         return json
     }
@@ -140,12 +114,9 @@ internal class MusicBrainzApi(
     /** Lookup a recording by MBID with artist-rels and work-rels (needed for credits). */
     suspend fun lookupRecording(mbid: String): JSONObject? {
         val json = rateLimiter.execute {
-            when (val r = httpClient.fetchJsonResult(
+            httpClient.fetchJsonResult(
                 "$BASE_URL/recording/$mbid?fmt=json&inc=artist-rels+work-rels",
-            )) {
-                is HttpResult.Ok -> r.body
-                else -> return@execute null
-            }
+            ).bodyOrThrowTransient()
         }
         return json
     }
@@ -156,13 +127,10 @@ internal class MusicBrainzApi(
         limit: Int = 100,
     ): List<MusicBrainzReleaseGroup> {
         val json = rateLimiter.execute {
-            when (val r = httpClient.fetchJsonResult(
+            httpClient.fetchJsonResult(
                 "$BASE_URL/release-group?artist=$artistMbid" +
                     "&type=album|ep|single&fmt=json&limit=$limit",
-            )) {
-                is HttpResult.Ok -> r.body
-                else -> return@execute null
-            }
+            ).bodyOrThrowTransient()
         } ?: return emptyList()
         return MusicBrainzParser.parseReleaseGroups(json)
     }
