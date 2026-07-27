@@ -8,6 +8,8 @@
 # nothing here; ktlint's CLI is optional and only powers the format-on-write hook.
 set -euo pipefail
 
+# `./check` reads these three back out of this file rather than pinning them again, so a bump here
+# is the whole change.
 UV_VERSION="0.11.31"
 RUFF_VERSION="0.15.22"
 MYPY_VERSION="2.3.0"

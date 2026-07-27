@@ -50,10 +50,10 @@ class EdgeAnalysisTest {
                 .addProvider(LrcLibProvider(f.httpClient, f.lrcLibRateLimiter))
                 .addProvider(DeezerProvider(f.httpClient, f.defaultRateLimiter))
                 .addProvider(ITunesProvider(f.httpClient, f.itunesRateLimiter))
-                .addProvider(ListenBrainzProvider(f.httpClient, f.defaultRateLimiter))
+                .addProvider(ListenBrainzProvider(f.httpClient, f.listenBrainzRateLimiter))
                 .addProvider(LastFmProvider(f.prop("lastfm.apikey"), f.httpClient, f.lastFmRateLimiter))
                 .addProvider(FanartTvProvider(f.prop("fanarttv.apikey"), f.httpClient, f.defaultRateLimiter))
-                .addProvider(DiscogsProvider(f.prop("discogs.token"), f.httpClient, f.defaultRateLimiter))
+                .addProvider(DiscogsProvider(f.prop("discogs.token"), f.httpClient, f.discogsRateLimiter))
                 .build()
         }
 

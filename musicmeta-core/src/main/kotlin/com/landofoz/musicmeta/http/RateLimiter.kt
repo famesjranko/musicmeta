@@ -6,7 +6,9 @@ import kotlinx.coroutines.sync.withLock
 
 /**
  * Enforces a minimum interval between requests.
- * Each provider should have its own RateLimiter instance.
+ * One instance per host: rate limits are per-host, and the mutex is held across the request
+ * itself, so providers sharing an instance make unrelated hosts' round-trips sequential.
+ * Providers on the same host share one instance.
  *
  * @param intervalMs Minimum milliseconds between requests
  * @param clock Time source (injectable for testing)

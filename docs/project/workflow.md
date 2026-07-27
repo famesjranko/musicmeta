@@ -133,8 +133,8 @@ git diff --check -- ':!*/api/*.api'
 ```
 
 `./check` is the whole verification surface and is exactly what CI runs;
-[ARCHITECTURE.md](../../ARCHITECTURE.md) has the step table under *What `./check` runs* and, under
-*Known gaps*, where a green run means less than it looks like.
+[ARCHITECTURE.md](../../ARCHITECTURE.md) has the step table, and where a green run means less than
+it looks like.
 
 The API dump exclusion is intentional: its generator writes a trailing blank line that `apiCheck`
 compares byte-for-byte. Do not hand-edit generated dumps to satisfy whitespace checking.
@@ -145,7 +145,7 @@ Gradle may report `UP-TO-DATE` without executing tests. Verification evidence mu
 | Changed surface | Additional evidence |
 |---|---|
 | `musicmeta-core/**` | `./gradlew :musicmeta-core:test` |
-| Public core API or any `api/*.api` | `./gradlew apiCheck`, review the API diff against `docs/pitfalls.md` §1, then `cd demo && ../gradlew compileKotlin` |
+| Public core API or any `api/*.api` | `./gradlew apiCheck`, review the API diff against `docs/pitfalls.md`, then `cd demo && ../gradlew compileKotlin` |
 | `provider/<name>/**` | Matching provider tests, then the full core suite |
 | `musicmeta-android/**` | `ANDROID_HOME=~/Android/Sdk ./gradlew :musicmeta-android:test` plus `apiCheck` |
 | Android Room cache | Android tests plus explicit schema and migration review |
@@ -186,7 +186,7 @@ Use conventional commits scoped by area, for example `fix(provider): handle null
 
 | Change | Update |
 |---|---|
-| New or changed gate, or a rule that gains/loses a mechanism | The mechanism itself — the `check` step, the config key, the script docstring. `ARCHITECTURE.md` for what a green run then covers (*What `./check` runs*) or misses (*Known gaps*) |
+| New or changed gate, or a rule that gains/loses a mechanism | The mechanism itself — the `check` step, the config key, the script docstring. `ARCHITECTURE.md` for what a green run then covers or misses |
 | Feature or bug fix | `CHANGELOG.md` |
 | Breaking public API change | `CHANGELOG.md` under `### Breaking Changes` |
 | Why a decision was made, or an approach rejected | Inline at the mechanism; the PR for the rest |

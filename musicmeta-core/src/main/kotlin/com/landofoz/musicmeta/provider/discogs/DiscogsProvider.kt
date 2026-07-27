@@ -85,8 +85,7 @@ class DiscogsProvider(
             val release = releases.firstOrNull {
                 val discogsArtist = it.title.substringBefore(" - ").trim()
                 ArtistMatcher.isMatch(albumRequest.artist, discogsArtist)
-            } ?: releases.firstOrNull()
-                ?: return EnrichmentResult.NotFound(type, id)
+            } ?: return EnrichmentResult.NotFound(type, id)
             if (type == EnrichmentType.ALBUM_METADATA) {
                 enrichAlbumMetadataWithCommunity(release, albumRequest.identifiers)
             } else {
@@ -170,6 +169,10 @@ class DiscogsProvider(
                 ?: return EnrichmentResult.NotFound(type, id)
             val artist = api.getArtist(artistId)
                 ?: return EnrichmentResult.NotFound(type, id)
+            // searchArtist is per_page=1 with no name check; verify before use
+            if (!ArtistMatcher.isMatch(request.name, artist.name)) {
+                return EnrichmentResult.NotFound(type, id)
+            }
             when (type) {
                 EnrichmentType.ARTIST_PHOTO -> {
                     val artwork = DiscogsMapper.toArtistPhoto(artist)

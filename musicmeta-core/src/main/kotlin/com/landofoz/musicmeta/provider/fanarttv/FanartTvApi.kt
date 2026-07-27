@@ -1,8 +1,8 @@
 package com.landofoz.musicmeta.provider.fanarttv
 
 import com.landofoz.musicmeta.http.HttpClient
-import com.landofoz.musicmeta.http.HttpResult
 import com.landofoz.musicmeta.http.RateLimiter
+import com.landofoz.musicmeta.http.bodyOrThrowAuth
 import org.json.JSONObject
 
 /**
@@ -26,12 +26,7 @@ internal class FanartTvApi(
      */
     suspend fun getAlbumImages(releaseGroupMbid: String): FanartTvAlbumImages? {
         val url = "$BASE_URL/albums/$releaseGroupMbid?api_key=${projectKeyProvider()}"
-        val json = rateLimiter.execute {
-            when (val r = httpClient.fetchJsonResult(url)) {
-                is HttpResult.Ok -> r.body
-                else -> return@execute null
-            }
-        } ?: return null
+        val json = rateLimiter.execute { httpClient.fetchJsonResult(url).bodyOrThrowAuth() } ?: return null
         val albumObj = json.optJSONObject(releaseGroupMbid) ?: return null
         return FanartTvAlbumImages(
             albumCovers = extractImages(albumObj, "albumcover"),
@@ -41,36 +36,18 @@ internal class FanartTvApi(
 
     suspend fun getArtistImages(mbid: String): FanartTvArtistImages? {
         val url = "$BASE_URL/$mbid?api_key=${projectKeyProvider()}"
-        val json = rateLimiter.execute {
-            when (val r = httpClient.fetchJsonResult(url)) {
-                is HttpResult.Ok -> r.body
-                else -> return@execute null
-            }
-        } ?: return null
+        val json = rateLimiter.execute { httpClient.fetchJsonResult(url).bodyOrThrowAuth() } ?: return null
         return parseArtistImages(json)
     }
 
-    private fun parseArtistImages(json: JSONObject): FanartTvArtistImages {
-        // Album images are nested inside "albums" -> {mbid} -> "albumcover"/"cdart"
-        val albumCovers = mutableListOf<FanartTvImage>()
-        val cdArt = mutableListOf<FanartTvImage>()
-        val albums = json.optJSONObject("albums")
-        if (albums != null) {
-            for (key in albums.keys()) {
-                val album = albums.optJSONObject(key) ?: continue
-                albumCovers.addAll(extractImages(album, "albumcover"))
-                cdArt.addAll(extractImages(album, "cdart"))
-            }
-        }
-        return FanartTvArtistImages(
-            thumbnails = extractImages(json, "artistthumb"),
-            backgrounds = extractImages(json, "artistbackground"),
-            logos = extractImages(json, "hdmusiclogo"),
-            banners = extractImages(json, "musicbanner"),
-            albumCovers = albumCovers,
-            cdArt = cdArt,
-        )
-    }
+    // The artist document's nested "albums" map is not read: it merges albumcover/cdart across
+    // every album under the artist, so album art is taken from getAlbumImages() only.
+    private fun parseArtistImages(json: JSONObject) = FanartTvArtistImages(
+        thumbnails = extractImages(json, "artistthumb"),
+        backgrounds = extractImages(json, "artistbackground"),
+        logos = extractImages(json, "hdmusiclogo"),
+        banners = extractImages(json, "musicbanner"),
+    )
 
     private fun extractImages(json: JSONObject, key: String): List<FanartTvImage> {
         val array = json.optJSONArray(key) ?: return emptyList()

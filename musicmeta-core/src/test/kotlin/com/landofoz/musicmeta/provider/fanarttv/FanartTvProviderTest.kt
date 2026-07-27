@@ -6,6 +6,7 @@ import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
+import com.landofoz.musicmeta.IdentifierRequirement
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.testutil.FakeHttpClient
 import kotlinx.coroutines.test.runTest
@@ -158,22 +159,18 @@ class FanartTvProviderTest {
     }
 
     @Test
-    fun `enrich returns NotFound when albums key has no album objects`() = runTest {
-        // Given — Fanart.tv returns an albums object that is empty (no album MBIDs)
-        httpClient.givenJsonResponse("fanart.tv", """{
-            "artistthumb": [],
-            "artistbackground": [],
-            "hdmusiclogo": [],
-            "musicbanner": [],
-            "albums": {}
-        }""")
+    fun `enrich ALBUM_ART returns NotFound without a request when no releaseGroupMbid`() = runTest {
+        // Given — an artist MBID but no release group id, and an artist document that does carry
+        // album art nested under "albums"
+        httpClient.givenJsonResponse("fanart.tv", ALBUM_VIA_ARTIST_JSON)
         val request = artistRequest()
 
         // When — enriching for album art
         val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
 
-        // Then — NotFound because albumCovers list is empty
+        // Then — NotFound, and no rate-limited request spent on the artist endpoint
         assertTrue(result is EnrichmentResult.NotFound)
+        assertTrue(httpClient.requestedUrls.isEmpty())
     }
 
     @Test
@@ -272,8 +269,8 @@ class FanartTvProviderTest {
     }
 
     @Test
-    fun `enrich ALBUM_ART falls back to artist endpoint when album endpoint returns null`() = runTest {
-        // Given -- album endpoint configured to error (returns null), artist endpoint responds
+    fun `enrich ALBUM_ART does not fall back to artist endpoint when album endpoint misses`() = runTest {
+        // Given -- album endpoint errors, and the artist endpoint would have answered
         httpClient.givenError("/albums/")
         httpClient.givenJsonResponse("fanart.tv", ALBUM_VIA_ARTIST_JSON)
         val request = albumRequest()
@@ -281,28 +278,17 @@ class FanartTvProviderTest {
         // When -- enriching for ALBUM_ART
         val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
 
-        // Then -- Success from artist endpoint fallback
-        assertTrue(result is EnrichmentResult.Success)
-        val data = (result as EnrichmentResult.Success).data as EnrichmentData.Artwork
-        assertEquals("https://assets.fanart.tv/fanart/album-cover-artist.jpg", data.url)
+        // Then -- NotFound, and the artist endpoint was never called with the release id
+        assertTrue(result is EnrichmentResult.NotFound)
+        assertTrue(httpClient.requestedUrls.none { it.contains("release-mbid") })
     }
 
     @Test
-    fun `enrich ALBUM_ART uses artist endpoint when no releaseGroupMbid`() = runTest {
-        // Given -- request with only musicBrainzId (artist), no releaseGroupMbid
-        httpClient.givenJsonResponse("fanart.tv", ALBUM_VIA_ARTIST_JSON)
-        val request = EnrichmentRequest.ForAlbum(
-            identifiers = EnrichmentIdentifiers(musicBrainzId = "artist-mbid"),
-            title = "OK Computer",
-            artist = "Radiohead",
-        )
-
-        // When -- enriching for ALBUM_ART
-        val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
-
-        // Then -- Success from artist endpoint (no album endpoint called)
-        assertTrue(result is EnrichmentResult.Success)
-        assertTrue(httpClient.requestedUrls.none { it.contains("/albums/") })
+    fun `ALBUM_ART and CD_ART capabilities require a release group id`() {
+        val albumTypes = setOf(EnrichmentType.ALBUM_ART, EnrichmentType.CD_ART)
+        provider.capabilities.filter { it.type in albumTypes }.forEach {
+            assertEquals(IdentifierRequirement.MUSICBRAINZ_RELEASE_GROUP_ID, it.identifierRequirement)
+        }
     }
 
     @Test
@@ -322,10 +308,9 @@ class FanartTvProviderTest {
     }
 
     @Test
-    fun `enrich ALBUM_ART returns NotFound when both endpoints return nothing`() = runTest {
-        // Given -- both endpoints return null/empty
+    fun `enrich ALBUM_ART returns NotFound when the album endpoint has no covers`() = runTest {
+        // Given -- the album endpoint returns nothing for this release group
         httpClient.givenError("/albums/")
-        httpClient.givenJsonResponse("fanart.tv", EMPTY_IMAGES_JSON)
         val request = albumRequest()
 
         // When -- enriching for ALBUM_ART
@@ -335,9 +320,10 @@ class FanartTvProviderTest {
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
+    // musicBrainzId is the *release* id on a ForAlbum request — MusicBrainzMapper.toAlbumIdentifiers
     private fun albumRequest() = EnrichmentRequest.ForAlbum(
         identifiers = EnrichmentIdentifiers(
-            musicBrainzId = "artist-mbid",
+            musicBrainzId = "release-mbid",
             musicBrainzReleaseGroupId = "rg-mbid",
         ),
         title = "OK Computer",
@@ -396,6 +382,10 @@ class FanartTvProviderTest {
               "albums": {
                 "rg-mbid": {
                   "albumcover": [{"url": "https://assets.fanart.tv/fanart/album-cover-artist.jpg", "id": "10", "likes": "2"}],
+                  "cdart": []
+                },
+                "other-rg-mbid": {
+                  "albumcover": [{"url": "https://assets.fanart.tv/fanart/other-album-cover.jpg", "id": "11", "likes": "9"}],
                   "cdart": []
                 }
               }

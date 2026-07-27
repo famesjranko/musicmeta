@@ -32,22 +32,28 @@ This release makes the `engine/` package internal, fixes cancellation and timeou
 
 ### Breaking Changes
 - A `CatalogProvider`'s own `withTimeout` expiry now propagates out of `enrich()` instead of reported as ours (#55)
-- `engine/` internals are no longer published. `DefaultEnrichmentEngine`, `ProviderRegistry`, `ProviderChain`, `ArtistMatcher` and `ConfidenceCalculator` are now `internal`. Build engines with `EnrichmentEngine.Builder`, which covers every constructor parameter. `ResultMerger` and `CompositeSynthesizer` remain public, as the documented extension points
+- `engine/` internals are no longer published. `DefaultEnrichmentEngine`, `ProviderRegistry`, `ProviderChain`, `ArtistMatcher` and `ConfidenceCalculator` are now `internal`. Build engines with `EnrichmentEngine.Builder`. `ResultMerger` and `CompositeSynthesizer` remain public
 
 ### Fixed
-- A `ResultMerger` registered for `ARTIST_TOP_TRACKS` via `EnrichmentEngine.Builder.addMerger` now runs instead of being silently discarded by the built-in `TopTrackMerger`, matching the other five built-in merger types. Merged top-track output changes for anyone who registered an override (#49)
-- iTunes search candidates now carry `itunesCollectionId` in their `identifiers`, which were empty before. Passing a picked candidate's identifiers into the next `ALBUM_TRACKS` request now resolves it by direct lookup at 1.0 confidence instead of repeating the search
+- Fanart.tv `ALBUM_ART`/`CD_ART` need a release group id; the wrong-album fallback is gone
+- A 401 or 403 on a call carrying a key (Last.fm, Discogs, Fanart.tv, ListenBrainz radio) is now `Error(ErrorKind.AUTH)`, not `NotFound`; five in a row open the breaker, one gets through a minute later
+- An `ARTIST_TOP_TRACKS` merger registered via `Builder.addMerger` now overrides the built-in `TopTrackMerger`, as the other five merger types already did; merged output changes for anyone who registered one (#49)
+- iTunes search candidates now carry `itunesCollectionId` in `identifiers` (empty before); a follow-up `ALBUM_TRACKS` request with them resolves by direct lookup at 1.0 confidence instead of re-searching
+- A consumer `EnrichmentLogger` that throws no longer fails `enrich()`; the log line is lost (#71)
+- MusicBrainz's artist-lookup cache, once unbounded, now evicts least-recently-used past 500 artists
+- Discogs verifies the artist name on both searches, returning `NotFound` over a wrong-artist result
 - Back cover, booklet and CD art from the Cover Art Archive now read the canonical `"250"` thumbnail key, falling back to the deprecated `"small"` alias
-- A cancelled or timed-out `enrich()` no longer opens circuit breakers against healthy providers, across the eight sites that swallowed cancellation (#53)
+- A cancelled or timed-out `enrich()` no longer opens circuit breakers against healthy providers (#53)
 - A consumer cache or merge strategy with its own `withTimeout` no longer surfaces as the engine's deadline (#61)
-- A timed-out `enrich()` now caches nothing, so no half-filtered result persists (#56)
-- A throwing `HttpClient` on Wikipedia's Wikidata sitelink lookup now yields an `EnrichmentResult.Error` with a classified `errorKind` instead of escaping the provider as `UNKNOWN`. Affects requests carrying a `wikidataId` but no `wikipediaTitle`
-- The build now works when the default JDK is not 17, because every module declares Kotlin's `jvmTarget`. Published bytecode and the `api/*.api` baselines are unchanged
-- `configuration.md` no longer teaches a builder order that silently misconfigures the engine: `withDefaultProviders()` reads the keys already set, so it must be called last
-- `how-it-works.md` claimed that all 8 artwork types use `ArtworkMerger`. It is registered for `ALBUM_ART` and `ARTIST_PHOTO` only, and the other six resolve first-wins
-- The genre taxonomy is documented as 189 relationships across 12 families, correcting the `~70` figure that was repeated in four places
-- Four claims in `README.md` were wrong: the Wikidata photo width, `isAvailable = false` on a missing key, four latency figures from no benchmark, and dates and occupation credited to Wikidata though no enrichment type exposes them
-- `docs/providers/` held eleven drifted copies of third-party API references, one still reporting a fixed `http://` bug as open. Replaced by a single `docs/providers.md`
+- A throwing `HttpClient` on Wikipedia's Wikidata sitelink lookup now yields `Error` with a classified `errorKind` instead of escaping as `UNKNOWN`
+- The build works when the default JDK is not 17: every module declares Kotlin's `jvmTarget`; published bytecode and baselines unchanged
+- Docs: `configuration.md` now says `withDefaultProviders()` must be called last — it reads the keys already set
+- Docs: `ArtworkMerger` covers only `ALBUM_ART` and `ARTIST_PHOTO`; the other six artwork types resolve first-wins (`how-it-works.md` said all 8)
+- Docs: the genre taxonomy is 189 relationships across 12 families, not `~70`
+- Docs: four wrong `README.md` claims removed (Wikidata photo width, `isAvailable` on a missing key, unbenchmarked latency figures, Wikidata dates/occupation)
+- Docs: eleven drifted third-party API references in `docs/providers/` replaced by one `docs/providers.md`
+- Each host gets its own `RateLimiter`; ten providers shared one, serialising every fan-out (#50)
+- A timed-out `enrich()` now caches nothing; no half-filtered result persists (#56)
 
 ## [0.10.1] - 2026-07-22
 
