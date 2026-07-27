@@ -16,12 +16,12 @@ import com.landofoz.musicmeta.http.RateLimiter
  */
 class CoverArtArchiveProvider(
     httpClient: HttpClient,
-    @Suppress("UNUSED_PARAMETER") rateLimiter: RateLimiter,
+    rateLimiter: RateLimiter,
     private val artworkSize: Int = DEFAULT_ARTWORK_SIZE,
     private val thumbnailSize: Int = DEFAULT_THUMBNAIL_SIZE,
 ) : EnrichmentProvider {
 
-    private val api = CoverArtArchiveApi(httpClient)
+    private val api = CoverArtArchiveApi(httpClient, rateLimiter)
 
     override val id: String = "coverartarchive"
     override val displayName: String = "Cover Art Archive"
