@@ -120,7 +120,7 @@ object Formatter {
                 artworkSnippet(result.data as EnrichmentData.Artwork, result.provider, term)
             } else {
                 snippet(type, result.data)
-            }.ifBlank { term.styled("(provider returned no value)", term.theme.muted) }
+            }.ifBlank { term.styled("(no value for this field)", term.theme.muted) }
             val staleTag = if (result.isStale) " ${term.styled("[stale]", term.theme.warning)}" else ""
             if (result.identityMatch == IdentityMatch.BEST_EFFORT) {
                 val unverified = term.styled("[unverified]", term.theme.warning)
@@ -238,15 +238,18 @@ object Formatter {
                 genreSnippet(data), data.label, data.releaseDate, data.releaseType, data.country,
             ).joinToString(" | ")
         }.orEmpty()
-        is EnrichmentData.Lyrics -> buildString {
-            if (data.isInstrumental) append("[instrumental] ")
-            if (type != EnrichmentType.LYRICS_PLAIN) {
-                data.syncedLyrics?.let { append("synced=${it.lines().size} lines ") }
-            }
-            if (type != EnrichmentType.LYRICS_SYNCED) {
-                data.plainLyrics?.let { append("plain=${it.lines().size} lines") }
-            }
-        }.trim()
+        is EnrichmentData.Lyrics -> {
+            val synced = data.syncedLyrics?.let { "synced=${it.lines().size} lines" }
+            val plain = data.plainLyrics?.let { "plain=${it.lines().size} lines" }
+            // LRCLIB answers a synced request with plain-only lyrics on purpose; show what came
+            // back, labelled, rather than blanking the row.
+            val (own, sibling) =
+                if (type == EnrichmentType.LYRICS_PLAIN) plain to synced else synced to plain
+            listOfNotNull(
+                "[instrumental]".takeIf { data.isInstrumental },
+                own ?: sibling?.let { "$it (fallback)" },
+            ).joinToString(" ")
+        }
         is EnrichmentData.Biography -> "\"${data.text.replace(Regex("<[^>]*>"), "").trim().take(80)}...\""
         is EnrichmentData.SimilarArtists ->
             "${data.artists.size} artists: " +
