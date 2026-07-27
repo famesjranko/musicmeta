@@ -307,7 +307,49 @@ class WikipediaProviderTest {
         assertTrue(httpClient.requestedUrls.any { it.contains("wikipedia.org") && it.contains("Radiohead") })
     }
 
+    @Test
+    fun `enrich picks the enwiki sitelink, not the first one, when the entity has many languages`() = runTest {
+        // Given — Q191352's sitelinks with arwiki, frwiki and dewiki ahead of enwiki in map order
+        httpClient.givenJsonResponse("wikidata.org", MULTI_LANGUAGE_SITELINKS_JSON)
+        httpClient.givenJsonResponse("wikipedia.org", PORTISHEAD_SUMMARY_JSON)
+        val request = EnrichmentRequest.ForArtist(
+            identifiers = EnrichmentIdentifiers(wikidataId = "Q191352"),
+            name = "Portishead",
+        )
+
+        // When — enriching for artist bio
+        val result = provider.enrich(request, EnrichmentType.ARTIST_BIO)
+
+        // Then — the English article was requested, never the French or Arabic one
+        assertTrue(result is EnrichmentResult.Success)
+        val bio = (result as EnrichmentResult.Success).data as EnrichmentData.Biography
+        assertEquals("Portishead are an English band formed in 1991.", bio.text)
+        val wikipediaUrls = httpClient.requestedUrls.filter { it.contains("wikipedia.org") }
+        assertTrue(wikipediaUrls.any { it.contains("Portishead%20%28band%29") })
+        assertTrue(wikipediaUrls.none { it.contains("groupe") })
+    }
+
     private companion object {
+        /** enwiki is deliberately last: selection must be by key, not by map order. */
+        val MULTI_LANGUAGE_SITELINKS_JSON = """{
+            "entities": {
+                "Q191352": {
+                    "sitelinks": {
+                        "arwiki": { "title": "بورتس هيد" },
+                        "frwiki": { "title": "Portishead (groupe)" },
+                        "dewiki": { "title": "Portishead (Band)" },
+                        "enwiki": { "title": "Portishead (band)" }
+                    }
+                }
+            }
+        }""".trimIndent()
+
+        val PORTISHEAD_SUMMARY_JSON = """{
+            "title": "Portishead (band)",
+            "extract": "Portishead are an English band formed in 1991.",
+            "description": "English band"
+        }""".trimIndent()
+
         val SITELINKS_JSON = """{
             "entities": {
                 "Q123": {
