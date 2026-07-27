@@ -119,8 +119,8 @@ object Formatter {
             val detail = if (result.data is EnrichmentData.Artwork) {
                 artworkSnippet(result.data as EnrichmentData.Artwork, result.provider, term)
             } else {
-                snippet(result.data)
-            }
+                snippet(type, result.data)
+            }.ifBlank { term.styled("(provider returned no value)", term.theme.muted) }
             val staleTag = if (result.isStale) " ${term.styled("[stale]", term.theme.warning)}" else ""
             if (result.identityMatch == IdentityMatch.BEST_EFFORT) {
                 val unverified = term.styled("[unverified]", term.theme.warning)
@@ -212,6 +212,10 @@ object Formatter {
     internal fun typeName(type: EnrichmentType): String =
         type.name.lowercase().split("_").joinToString(" ") { it.replaceFirstChar(Char::uppercase) }
 
+    private fun genreSnippet(data: EnrichmentData.Metadata): String? =
+        data.genreTags?.take(3)?.joinToString(", ") { "${it.name}(%.2f)".format(it.confidence) }
+            ?: data.genres?.take(4)?.joinToString(", ")
+
     private fun artworkSnippet(data: EnrichmentData.Artwork, provider: String, term: Terminal): String {
         val label = artworkLabel(data).let { if (it != "image") "$provider $it" else provider }
         val primary = term.link(data.url, label)
@@ -221,18 +225,28 @@ object Formatter {
         return "$primary (+${alts.size} alt: $altLinks)"
     }
 
-    private fun snippet(data: EnrichmentData): String = when (data) {
+    /** One Metadata/Lyrics payload answers several types; each row shows only the field it names. */
+    private fun snippet(type: EnrichmentType, data: EnrichmentData): String = when (data) {
         is EnrichmentData.Artwork -> data.url.take(70) + if (data.url.length > 70) "..." else ""
-        is EnrichmentData.Metadata -> listOfNotNull(
-            data.genreTags?.let { tags -> tags.take(3).joinToString(", ") { "${it.name}(%.2f)".format(it.confidence) } }
-                ?: data.genres?.take(4)?.joinToString(", "),
-            data.label, data.releaseDate, data.releaseType, data.country,
-        ).joinToString(" | ")
+        is EnrichmentData.Metadata -> when (type) {
+            EnrichmentType.GENRE -> genreSnippet(data)
+            EnrichmentType.LABEL -> data.label
+            EnrichmentType.RELEASE_DATE -> data.releaseDate
+            EnrichmentType.RELEASE_TYPE -> data.releaseType
+            EnrichmentType.COUNTRY -> data.country
+            else -> listOfNotNull(
+                genreSnippet(data), data.label, data.releaseDate, data.releaseType, data.country,
+            ).joinToString(" | ")
+        }.orEmpty()
         is EnrichmentData.Lyrics -> buildString {
             if (data.isInstrumental) append("[instrumental] ")
-            data.syncedLyrics?.let { append("synced=${it.lines().size} lines ") }
-            data.plainLyrics?.let { append("plain=${it.lines().size} lines") }
-        }
+            if (type != EnrichmentType.LYRICS_PLAIN) {
+                data.syncedLyrics?.let { append("synced=${it.lines().size} lines ") }
+            }
+            if (type != EnrichmentType.LYRICS_SYNCED) {
+                data.plainLyrics?.let { append("plain=${it.lines().size} lines") }
+            }
+        }.trim()
         is EnrichmentData.Biography -> "\"${data.text.replace(Regex("<[^>]*>"), "").trim().take(80)}...\""
         is EnrichmentData.SimilarArtists ->
             "${data.artists.size} artists: " +
