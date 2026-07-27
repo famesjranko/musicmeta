@@ -1,8 +1,8 @@
 package com.landofoz.musicmeta.provider.wikipedia
 
 import com.landofoz.musicmeta.http.HttpClient
-import com.landofoz.musicmeta.http.HttpResult
 import com.landofoz.musicmeta.http.RateLimiter
+import com.landofoz.musicmeta.http.bodyOrThrowTransient
 import java.net.URLEncoder
 
 /**
@@ -17,10 +17,7 @@ internal class WikipediaApi(
     suspend fun getPageSummary(title: String): WikipediaSummary? = rateLimiter.execute {
         val encoded = URLEncoder.encode(title, "UTF-8").replace("+", "%20")
         val url = "$BASE_URL/$encoded"
-        val json = when (val r = httpClient.fetchJsonResult(url)) {
-            is HttpResult.Ok -> r.body
-            else -> return@execute null
-        }
+        val json = httpClient.fetchJsonResult(url).bodyOrThrowTransient() ?: return@execute null
 
         val extract = json.optString("extract").takeIf { it.isNotBlank() }
             ?: return@execute null
@@ -36,10 +33,7 @@ internal class WikipediaApi(
     suspend fun getPageMediaList(title: String): List<WikipediaMediaItem> = rateLimiter.execute {
         val encoded = URLEncoder.encode(title, "UTF-8").replace("+", "%20")
         val url = "$MEDIA_LIST_BASE_URL/$encoded"
-        val json = when (val r = httpClient.fetchJsonResult(url)) {
-            is HttpResult.Ok -> r.body
-            else -> return@execute emptyList()
-        }
+        val json = httpClient.fetchJsonResult(url).bodyOrThrowTransient() ?: return@execute emptyList()
         parseMediaList(json)
     }
 

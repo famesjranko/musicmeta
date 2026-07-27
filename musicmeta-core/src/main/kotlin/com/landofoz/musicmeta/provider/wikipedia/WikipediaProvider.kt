@@ -9,8 +9,8 @@ import com.landofoz.musicmeta.IdentifierRequirement
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.http.HttpClient
-import com.landofoz.musicmeta.http.HttpResult
 import com.landofoz.musicmeta.http.RateLimiter
+import com.landofoz.musicmeta.http.bodyOrThrowTransient
 
 /**
  * Provides artist biographies and photos from Wikipedia page summaries.
@@ -111,10 +111,7 @@ class WikipediaProvider(
         val url = "$WIKIDATA_API?action=wbgetentities&ids=$wikidataId" +
             "&props=sitelinks&sitefilter=enwiki&format=json"
         val json = wikidataRateLimiter.execute {
-            when (val r = httpClient.fetchJsonResult(url)) {
-                is HttpResult.Ok -> r.body
-                else -> return@execute null
-            }
+            httpClient.fetchJsonResult(url).bodyOrThrowTransient()
         } ?: return null
         return json.optJSONObject("entities")
             ?.optJSONObject(wikidataId)

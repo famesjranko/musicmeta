@@ -1,8 +1,8 @@
 package com.landofoz.musicmeta.provider.wikidata
 
 import com.landofoz.musicmeta.http.HttpClient
-import com.landofoz.musicmeta.http.HttpResult
 import com.landofoz.musicmeta.http.RateLimiter
+import com.landofoz.musicmeta.http.bodyOrThrowTransient
 import org.json.JSONObject
 import java.net.URLEncoder
 
@@ -26,10 +26,7 @@ internal class WikidataApi(
     ): WikidataEntityProperties? = rateLimiter.execute {
         val url = "$BASE_URL?action=wbgetclaims&entity=$wikidataId" +
             "&property=${URLEncoder.encode("P18|P569|P570|P495|P106", "UTF-8")}&format=json"
-        val json = when (val r = httpClient.fetchJsonResult(url)) {
-            is HttpResult.Ok -> r.body
-            else -> return@execute null
-        }
+        val json = httpClient.fetchJsonResult(url).bodyOrThrowTransient() ?: return@execute null
         val claims = json.optJSONObject("claims") ?: return@execute null
         parseEntityProperties(claims, imageSize)
     }
