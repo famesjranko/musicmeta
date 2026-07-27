@@ -306,7 +306,7 @@ when a key is present, and CAA is a fallback, not a second entry in the same res
 ## Resilience
 
 ### Rate Limiting
-Each provider has its own `RateLimiter(intervalMs)`. MusicBrainz requires 1 req/sec (we use 1.1s). Others range from 100ms to 3000ms (iTunes). The limiter delays requests to stay within bounds.
+Each host has its own `RateLimiter(intervalMs)`. MusicBrainz requires 1 req/sec (we use 1.1s). Others range from 100ms to 3000ms (iTunes). The limiter delays requests to stay within bounds.
 
 ### Circuit Breaker
 Per-provider. Tracks consecutive failures:

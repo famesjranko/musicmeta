@@ -5,7 +5,9 @@ import com.landofoz.musicmeta.EnrichmentEngine
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
+import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.testutil.FakeHttpClient
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
 import org.junit.Test
@@ -99,6 +101,51 @@ class BuilderDefaultProvidersTest {
 
         // Then -- MusicBrainz has capabilities (identity provider)
         assertTrue(mb.capabilities.isNotEmpty())
+    }
+
+    @Test fun `providers on different hosts do not serialise against each other`() = runTest {
+        // Given -- the default wiring, watched for overlapping in-flight requests
+        val watched = InFlightHttpClient(httpClient)
+        val engine = EnrichmentEngine.Builder()
+            .httpClient(watched)
+            .withDefaultProviders()
+            .build()
+
+        // When -- a fan-out that reaches lrclib.net and api.deezer.com in the same phase
+        engine.enrich(
+            EnrichmentRequest.forTrack("Test Track", "Test Artist"),
+            setOf(EnrichmentType.LYRICS_PLAIN, EnrichmentType.SIMILAR_TRACKS, EnrichmentType.TRACK_PREVIEW),
+        )
+
+        // Then -- the two hosts overlapped. A shared RateLimiter holds its mutex across the
+        // request itself, so sharing one would pin this at 1 (#50).
+        assertTrue(
+            "Providers on different hosts must not serialise; max in flight was ${watched.maxInFlight}",
+            watched.maxInFlight > 1,
+        )
+    }
+
+    /** Delegates every call, tracking how many requests are in flight at once. */
+    private class InFlightHttpClient(private val inner: HttpClient) : HttpClient by inner {
+        var maxInFlight = 0
+            private set
+        private var inFlight = 0
+
+        private suspend fun <T> track(block: suspend () -> T): T {
+            inFlight++
+            maxInFlight = maxOf(maxInFlight, inFlight)
+            try {
+                delay(50) // hold the request open long enough for a sibling to start
+                return block()
+            } finally {
+                inFlight--
+            }
+        }
+
+        override suspend fun fetchJsonResult(url: String) = track { inner.fetchJsonResult(url) }
+        override suspend fun fetchJsonResult(url: String, headers: Map<String, String>) =
+            track { inner.fetchJsonResult(url, headers) }
+        override suspend fun fetchJsonArrayResult(url: String) = track { inner.fetchJsonArrayResult(url) }
     }
 
     @Test fun `withDefaultProviders registers genre_affinity_matcher synthesizer for GENRE_DISCOVERY`() = runTest {

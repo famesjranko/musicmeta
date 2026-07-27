@@ -37,7 +37,7 @@ exhaustive. Paths are relative to `musicmeta-core/src/main/kotlin/com/landofoz/m
   JitPack, so assume external consumers exist. Minor (`0.x.0`) may break, if the break is under a
   `### Breaking Changes` heading in `CHANGELOG.md` *and* visible in the reviewed `api/*.api` diff — a
   break in neither is a defect. Patch (`0.x.y`) may not break; v0.9.2 did. Full semver at `1.0.0`.
-  What counts as breaking, and the JVM descriptor caveat: `docs/pitfalls.md` §1.
+  What counts as breaking, and the JVM descriptor caveat: `docs/pitfalls.md`.
 - `e2e/` tests hit live APIs behind `-Dinclude.e2e=true` and never gate a merge, so an e2e test is
   not coverage for a change.
 - A new provider is `provider/<name>/` as `*Api`, `*Models`, `*Mapper` (all `internal`) and a public

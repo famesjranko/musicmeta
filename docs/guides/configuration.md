@@ -122,15 +122,18 @@ are order-sensitive. Ordering `withDefaultProviders()` last is the rule that hol
 
 ```kotlin
 val http = DefaultHttpClient("MyApp/1.0 (contact@example.com)")
+// One limiter per host — a shared instance serialises unrelated hosts' requests
 val mbRateLimiter = RateLimiter(1100)  // MusicBrainz: max 1 req/sec
-val defaultRateLimiter = RateLimiter(100)
+val caaRateLimiter = RateLimiter(100)
+val wikidataRateLimiter = RateLimiter(100)
+val deezerRateLimiter = RateLimiter(100)
 
 val engine = EnrichmentEngine.Builder()
     .httpClient(http)
     .addProvider(MusicBrainzProvider(http, mbRateLimiter))
-    .addProvider(CoverArtArchiveProvider(http, defaultRateLimiter))
-    .addProvider(WikidataProvider(http, defaultRateLimiter))
-    .addProvider(DeezerProvider(http, defaultRateLimiter))
+    .addProvider(CoverArtArchiveProvider(http, caaRateLimiter))
+    .addProvider(WikidataProvider(http, wikidataRateLimiter))
+    .addProvider(DeezerProvider(http, deezerRateLimiter))
     // Omit providers you do not need
     .config(EnrichmentConfig(userAgent = "MyApp/1.0 (contact@example.com)"))
     .build()
