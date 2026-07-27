@@ -26,8 +26,8 @@ from validate_release_notes import validate
 # Measured against the six hand-rewritten v0.8.2-v0.10.1 notes: prose ran 188-1643 chars with a
 # longest line of 375. The total is the load-bearing cap; the per-line cap is a backstop that also
 # rejects a pasted 0.10.x-era changelog bullet (786-1538 chars) on sight.
-MAX_SECTION_CHARS = 3000
-MAX_LINE_CHARS = 400
+MAX_SECTION_CHARS = 8000
+MAX_LINE_CHARS = 200
 
 REPO = "famesjranko/musicmeta"
 GROUP = "io.github.famesjranko"

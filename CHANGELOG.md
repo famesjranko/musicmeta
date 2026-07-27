@@ -8,9 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > **Each `## [x.y.z]` section below is the GitHub Release note, used verbatim** — read by someone
 > deciding whether to upgrade. The rules for writing one live here, not elsewhere:
 >
-> - One line per **consumer-visible** change: plain prose, headline first, a sentence or two of
->   what it means for a consumer, then its `(#issue)` where one exists. Full reasoning stays in the
->   issue or PR — the 400-character line cap below is what stops a sentence becoming an essay.
+> - One **single-line dot point** per consumer-visible change: headline, the consequence a
+>   consumer acts on, then its `(#issue)` where one exists. Two rendered lines is the ceiling,
+>   and only when genuinely needed. Full reasoning stays in the issue or PR.
 > - Consumer-visible means it changes the published artifacts, the public API, runtime behaviour,
 >   documented usage, or the compatibility promise. CI, tooling, formatting and repo hygiene are
 >   **not** — that record belongs in the PR and in git. An entry nobody can act on is noise.
@@ -20,8 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 >   a consumer could legitimately have depended on it. Off-contract, the only action available is
 >   "stop making a call that was never supported", which the line above rules out as noise.
 > - For a payload change, ask the user about a cache-clear note.
-> - `scripts/github-workflows/build_release_notes.py` caps a section at 3000 characters and any
->   single line at 400; `./check` runs that cap against `[Unreleased]` on every commit, and the
+> - `scripts/github-workflows/build_release_notes.py` caps any single line at 200 characters
+>   (a paragraph is not a bullet) and a section at 8000; `./check` runs both against
+>   `[Unreleased]` on every commit, and the
 >   release fails if it does not fit. Sections from 0.10.0 down were written before the cap and run
 >   longer — except 0.10.0 and 0.10.1 themselves, rewritten to match the notes GitHub actually
 >   published, which is what a consumer read either way.
@@ -32,7 +33,8 @@ This release makes `engine/` internal, hardens providers and the engine, and cor
 
 ### Breaking Changes
 - A `CatalogProvider`'s own `withTimeout` expiry now propagates out of `enrich()` instead of reported as ours (#55)
-- `engine/` internals are no longer published. `DefaultEnrichmentEngine`, `ProviderRegistry`, `ProviderChain`, `ArtistMatcher` and `ConfidenceCalculator` are now `internal`. Build engines with `EnrichmentEngine.Builder`. `ResultMerger` and `CompositeSynthesizer` remain public
+- `engine/` internals (`DefaultEnrichmentEngine`, `ProviderRegistry`, `ProviderChain`, `ArtistMatcher`, `ConfidenceCalculator`) are now `internal`; build engines with `EnrichmentEngine.Builder`
+- `ResultMerger` and `CompositeSynthesizer` stay public, as the documented extension points
 
 ### Fixed
 - Discogs sends its token in an `Authorization` header, not the URL query
