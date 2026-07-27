@@ -79,8 +79,8 @@ Every consumer-implementable interface needs the RIGHT form verbatim. It is live
 `CacheGuard`, `StrategyGuard`, `DefaultEnrichmentEngine`, `ITunesProvider` and `DeezerProvider`.
 `guardedStrategy` is `suspend` purely to reach the job, since `ResultMerger.merge` and
 `CompositeSynthesizer.synthesize` are not. Enforced by behaviour, not a rule — a textual rule was
-written and deleted because the remediation it printed was itself the defect (`ARCHITECTURE.md`,
-*Known gaps*). Read `EnrichCacheFailureTest`, `EnrichStrategyFailureTest` and
+written and deleted because the remediation it printed was itself the defect (`ARCHITECTURE.md`).
+Read `EnrichCacheFailureTest`, `EnrichStrategyFailureTest` and
 `ProviderChainCancellationTest` before writing a cancellation test of your own. A provider's own
 `catch` calls `mapError(type, e)` and deliberately does not special-case `CancellationException`.
 
