@@ -7,6 +7,7 @@ import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
 import com.landofoz.musicmeta.IdentifierRequirement
+import com.landofoz.musicmeta.http.HttpResult
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.testutil.FakeHttpClient
 import kotlinx.coroutines.test.runTest
@@ -270,8 +271,10 @@ class FanartTvProviderTest {
 
     @Test
     fun `enrich ALBUM_ART does not fall back to artist endpoint when album endpoint misses`() = runTest {
-        // Given -- album endpoint errors, and the artist endpoint would have answered
-        httpClient.givenError("/albums/")
+        // Given -- the album endpoint has nothing for this release group (a 404, not a transient:
+        // a 429/5xx is now an Error, so givenError() here would assert the wrong path), and the
+        // artist endpoint would have answered
+        httpClient.givenHttpResult("/albums/", HttpResult.ClientError(404))
         httpClient.givenJsonResponse("fanart.tv", ALBUM_VIA_ARTIST_JSON)
         val request = albumRequest()
 
@@ -309,8 +312,9 @@ class FanartTvProviderTest {
 
     @Test
     fun `enrich ALBUM_ART returns NotFound when the album endpoint has no covers`() = runTest {
-        // Given -- the album endpoint returns nothing for this release group
-        httpClient.givenError("/albums/")
+        // Given -- the album endpoint returns nothing for this release group (a 404; a transient
+        // is an Error, which is a different test)
+        httpClient.givenHttpResult("/albums/", HttpResult.ClientError(404))
         val request = albumRequest()
 
         // When -- enriching for ALBUM_ART

@@ -1,8 +1,8 @@
 package com.landofoz.musicmeta.provider.itunes
 
 import com.landofoz.musicmeta.http.HttpClient
-import com.landofoz.musicmeta.http.HttpResult
 import com.landofoz.musicmeta.http.RateLimiter
+import com.landofoz.musicmeta.http.bodyOrThrowTransient
 import com.landofoz.musicmeta.takeIfNotEmpty
 import java.net.URLEncoder
 
@@ -19,10 +19,7 @@ internal class ITunesApi(
         val encoded = URLEncoder.encode(term, "UTF-8")
         val url = "$BASE_URL/search?media=music&entity=album&term=$encoded&limit=$limit"
         val json = rateLimiter.execute {
-            when (val r = httpClient.fetchJsonResult(url)) {
-                is HttpResult.Ok -> r.body
-                else -> return@execute null
-            }
+            httpClient.fetchJsonResult(url).bodyOrThrowTransient()
         } ?: return emptyList()
 
         val results = json.optJSONArray("results") ?: return emptyList()
@@ -35,10 +32,7 @@ internal class ITunesApi(
     suspend fun lookupAlbumTracks(collectionId: Long): List<ITunesTrackResult> {
         val url = "$BASE_URL/lookup?id=$collectionId&entity=song"
         val json = rateLimiter.execute {
-            when (val r = httpClient.fetchJsonResult(url)) {
-                is HttpResult.Ok -> r.body
-                else -> return@execute null
-            }
+            httpClient.fetchJsonResult(url).bodyOrThrowTransient()
         } ?: return emptyList()
 
         val results = json.optJSONArray("results") ?: return emptyList()
@@ -59,10 +53,7 @@ internal class ITunesApi(
     suspend fun lookupArtistAlbums(artistId: Long): List<ITunesAlbumResult> {
         val url = "$BASE_URL/lookup?id=$artistId&entity=album"
         val json = rateLimiter.execute {
-            when (val r = httpClient.fetchJsonResult(url)) {
-                is HttpResult.Ok -> r.body
-                else -> return@execute null
-            }
+            httpClient.fetchJsonResult(url).bodyOrThrowTransient()
         } ?: return emptyList()
 
         val results = json.optJSONArray("results") ?: return emptyList()
@@ -77,10 +68,7 @@ internal class ITunesApi(
         val encoded = URLEncoder.encode(artistName, "UTF-8")
         val url = "$BASE_URL/search?media=music&entity=musicArtist&term=$encoded&limit=1"
         val json = rateLimiter.execute {
-            when (val r = httpClient.fetchJsonResult(url)) {
-                is HttpResult.Ok -> r.body
-                else -> return@execute null
-            }
+            httpClient.fetchJsonResult(url).bodyOrThrowTransient()
         } ?: return null
         val results = json.optJSONArray("results") ?: return null
         if (results.length() == 0) return null

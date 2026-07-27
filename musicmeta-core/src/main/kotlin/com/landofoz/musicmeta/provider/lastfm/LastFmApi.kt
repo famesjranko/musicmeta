@@ -2,7 +2,7 @@ package com.landofoz.musicmeta.provider.lastfm
 
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
-import com.landofoz.musicmeta.http.bodyOrThrowAuth
+import com.landofoz.musicmeta.http.bodyOrThrowAuthOrTransient
 import org.json.JSONObject
 import java.net.URLEncoder
 
@@ -22,43 +22,47 @@ internal class LastFmApi(
 
     suspend fun getArtistInfo(artistName: String): LastFmArtistInfo? {
         val url = buildUrl("artist.getinfo", artistName)
-        val json = rateLimiter.execute { httpClient.fetchJsonResult(url).bodyOrThrowAuth() } ?: return null
+        val json = rateLimiter.execute { httpClient.fetchJsonResult(url).bodyOrThrowAuthOrTransient() } ?: return null
         return parseArtistInfo(json)
     }
 
     suspend fun getSimilarArtists(artistName: String): List<LastFmSimilarArtist> {
         val url = buildUrl("artist.getsimilar", artistName) + "&limit=20"
-        val json = rateLimiter.execute { httpClient.fetchJsonResult(url).bodyOrThrowAuth() } ?: return emptyList()
+        val json = rateLimiter.execute { httpClient.fetchJsonResult(url).bodyOrThrowAuthOrTransient() }
+            ?: return emptyList()
         return parseSimilarArtists(json)
     }
 
     suspend fun getArtistTopTags(artistName: String): List<String> {
         val url = buildUrl("artist.getinfo", artistName)
-        val json = rateLimiter.execute { httpClient.fetchJsonResult(url).bodyOrThrowAuth() } ?: return emptyList()
+        val json = rateLimiter.execute { httpClient.fetchJsonResult(url).bodyOrThrowAuthOrTransient() }
+            ?: return emptyList()
         return parseTags(json)
     }
 
     suspend fun getSimilarTracks(trackTitle: String, artistName: String, limit: Int = 20): List<LastFmSimilarTrack> {
         val url = buildTrackUrl("track.getsimilar", trackTitle, artistName) + "&limit=$limit"
-        val json = rateLimiter.execute { httpClient.fetchJsonResult(url).bodyOrThrowAuth() } ?: return emptyList()
+        val json = rateLimiter.execute { httpClient.fetchJsonResult(url).bodyOrThrowAuthOrTransient() }
+            ?: return emptyList()
         return parseSimilarTracks(json)
     }
 
     suspend fun getArtistTopTracks(artistName: String, limit: Int = 20): List<LastFmTopTrack> {
         val url = buildUrl("artist.gettoptracks", artistName) + "&limit=$limit"
-        val json = rateLimiter.execute { httpClient.fetchJsonResult(url).bodyOrThrowAuth() } ?: return emptyList()
+        val json = rateLimiter.execute { httpClient.fetchJsonResult(url).bodyOrThrowAuthOrTransient() }
+            ?: return emptyList()
         return parseTopTracks(json)
     }
 
     suspend fun getAlbumInfo(album: String, artist: String): LastFmAlbumInfo? {
         val url = buildAlbumUrl("album.getinfo", album, artist)
-        val json = rateLimiter.execute { httpClient.fetchJsonResult(url).bodyOrThrowAuth() } ?: return null
+        val json = rateLimiter.execute { httpClient.fetchJsonResult(url).bodyOrThrowAuthOrTransient() } ?: return null
         return parseAlbumInfo(json)
     }
 
     suspend fun getTrackInfo(trackTitle: String, artistName: String): LastFmTrackInfo? {
         val url = buildTrackUrl("track.getInfo", trackTitle, artistName)
-        val json = rateLimiter.execute { httpClient.fetchJsonResult(url).bodyOrThrowAuth() } ?: return null
+        val json = rateLimiter.execute { httpClient.fetchJsonResult(url).bodyOrThrowAuthOrTransient() } ?: return null
         return parseTrackInfo(json)
     }
 

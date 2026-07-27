@@ -2,7 +2,7 @@ package com.landofoz.musicmeta.provider.discogs
 
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
-import com.landofoz.musicmeta.http.bodyOrThrowAuth
+import com.landofoz.musicmeta.http.bodyOrThrowAuthOrTransient
 import org.json.JSONObject
 import java.net.URLEncoder
 
@@ -63,7 +63,7 @@ internal class DiscogsApi(
     /** Discogs takes the token as a header; keeping it out of the URL keeps it out of access logs. */
     private suspend fun fetch(url: String): JSONObject? {
         val headers = mapOf("Authorization" to "Discogs token=${tokenProvider()}")
-        return httpClient.fetchJsonResult(url, headers).bodyOrThrowAuth()
+        return httpClient.fetchJsonResult(url, headers).bodyOrThrowAuthOrTransient()
     }
 
     private fun parseReleaseDetail(json: JSONObject): DiscogsReleaseDetail {
