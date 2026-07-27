@@ -66,7 +66,10 @@ internal class DefaultEnrichmentEngine(
             val cached = if (forceRefresh) null else {
                 guardedCacheRead(logger, "get") { cache.get(entityKeyFor(request, type), type) }
             }
-            if (cached != null) results[type] = cached else uncachedTypes.add(type)
+            // Gated like a fresh result: an empty Success written by an older build sits in a
+            // consumer's cache for up to the type's TTL (90 days for GENRE) and would otherwise
+            // outlive this fix on the very path it was reported from.
+            if (cached != null) results[type] = demoteUnanswered(cached) else uncachedTypes.add(type)
         }
         if (uncachedTypes.isEmpty()) {
             return EnrichmentResults(results, types, identity = null)
@@ -324,7 +327,7 @@ internal class DefaultEnrichmentEngine(
             async {
                 val chain = registry.chainFor(type)
                 val result = chain?.resolve(request) ?: EnrichmentResult.NotFound(type, "no_provider")
-                type to demoteEmptyPayload(filterByConfidence(result))
+                type to gate(result)
             }
         }.awaitAll().toMap().toMutableMap()
 
@@ -332,9 +335,7 @@ internal class DefaultEnrichmentEngine(
             async {
                 val chain = registry.chainFor(mergeType)
                 val allResults = chain?.resolveAll(request).orEmpty()
-                val filtered = allResults.mapNotNull {
-                    demoteEmptyPayload(filterByConfidence(it)) as? EnrichmentResult.Success
-                }
+                val filtered = allResults.mapNotNull { gate(it) as? EnrichmentResult.Success }
                 val merger = mergers[mergeType]
                 mergeType to if (merger == null) {
                     EnrichmentResult.NotFound(mergeType, "no_merger")
@@ -342,7 +343,7 @@ internal class DefaultEnrichmentEngine(
                     // Also gated on the way out: a merger may return one of its inputs as-is, or
                     // merge to nothing. Confidence is not re-filtered — the inputs already passed,
                     // and a merger's own provider id is not a consumer's override key.
-                    demoteEmptyPayload(guardedStrategy(logger, mergeType, "merger") { merger.merge(filtered) })
+                    demoteUnanswered(guardedStrategy(logger, mergeType, "merger") { merger.merge(filtered) })
                 }
             }
         }.awaitAll()
@@ -353,9 +354,13 @@ internal class DefaultEnrichmentEngine(
             resolved[compositeType] = if (synthesizer == null) {
                 EnrichmentResult.NotFound(compositeType, "no_composite_handler")
             } else {
-                guardedStrategy(logger, compositeType, "synthesizer") {
-                    synthesizer.synthesize(resolved, identityResult, request)
-                }
+                // TimelineSynthesizer returns Success even with no events, and CompositeSynthesizer
+                // is a public extension point — a consumer's synthesizer has the same freedom.
+                demoteUnanswered(
+                    guardedStrategy(logger, compositeType, "synthesizer") {
+                        synthesizer.synthesize(resolved, identityResult, request)
+                    },
+                )
             }
         }
 
@@ -372,13 +377,18 @@ internal class DefaultEnrichmentEngine(
         return if (override != null) result.copy(confidence = override) else result
     }
 
+    /** Both per-result gates, for anything arriving from a provider chain. */
+    private fun gate(result: EnrichmentResult): EnrichmentResult = demoteUnanswered(filterByConfidence(result))
+
     /**
      * The second per-result gate: a `Success` whose payload does not [answers] the type it claims to
-     * answer is a `NotFound`. [filterByConfidence] cannot do this — confidence scores identification,
-     * and a perfect identity match on an entity carrying no data scores 1.0. Sited here rather than
-     * in each provider because every provider had the same hole.
+     * answer is a `NotFound` — whether the payload is empty or merely fills some *other* type's
+     * field. [filterByConfidence] cannot do this — confidence scores identification, and a perfect
+     * identity match on an entity carrying no data scores 1.0. Sited here rather than in each
+     * provider because every provider had the same hole, and applied to everything that can reach a
+     * consumer: chain results, merger and synthesizer output, the identity fan-out and the cache.
      */
-    private fun demoteEmptyPayload(result: EnrichmentResult): EnrichmentResult =
+    private fun demoteUnanswered(result: EnrichmentResult): EnrichmentResult =
         if (result is EnrichmentResult.Success && !result.data.answers(result.type)) {
             EnrichmentResult.NotFound(result.type, result.provider)
         } else {
@@ -396,7 +406,9 @@ internal class DefaultEnrichmentEngine(
                 val stale = guardedCacheRead(logger, "getIncludingExpired") {
                     cache.getIncludingExpired(entityKeyFor(request, type), type)
                 }
-                if (stale != null) {
+                // A stale entry that answers nothing is worse than the Error it would replace:
+                // the Error at least tells the consumer to retry.
+                if (stale != null && stale.data.answers(type)) {
                     results[type] = stale.copy(isStale = true)
                 }
             }

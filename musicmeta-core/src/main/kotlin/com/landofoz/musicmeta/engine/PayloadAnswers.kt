@@ -62,11 +62,13 @@ internal fun EnrichmentData.answers(type: EnrichmentType): Boolean = when (this)
  */
 private fun EnrichmentData.Metadata.answersMetadata(type: EnrichmentType): Boolean = when (type) {
     EnrichmentType.GENRE -> !genres.isNullOrEmpty() || !genreTags.isNullOrEmpty()
-    EnrichmentType.LABEL -> label != null
-    EnrichmentType.RELEASE_DATE -> releaseDate != null
-    EnrichmentType.RELEASE_TYPE -> releaseType != null
-    EnrichmentType.COUNTRY -> country != null
-    // ALBUM_METADATA is the grab bag — any field answers it. Same for a type a future provider
-    // decides to answer with Metadata: only all-null is empty until someone names its fields.
+    // Blank, not just null: an upstream that returns "" has answered nothing either.
+    EnrichmentType.LABEL -> !label.isNullOrBlank()
+    EnrichmentType.RELEASE_DATE -> !releaseDate.isNullOrBlank()
+    EnrichmentType.RELEASE_TYPE -> !releaseType.isNullOrBlank()
+    EnrichmentType.COUNTRY -> !country.isNullOrBlank()
+    // ALBUM_METADATA is the grab bag — any field answers it. A type a future provider decides to
+    // answer with Metadata lands here too and gets the same lenient reading; the `when` is not
+    // exhaustive over types, so nothing will prompt you. Name its fields above if it needs more.
     else -> this != EnrichmentData.Metadata()
 }

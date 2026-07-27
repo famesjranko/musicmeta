@@ -174,6 +174,61 @@ class EmptyPayloadDemotionTest {
         assertTrue(results.raw[EnrichmentType.LABEL] is EnrichmentResult.NotFound)
     }
 
+    @Test
+    fun `a cached empty Success is demoted on read`() = runTest {
+        // Given — an empty GENRE Success already in the cache, as an older build would have written
+        val cache = FakeEnrichmentCache()
+        val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+        cache.put(
+            DefaultEnrichmentEngine.entityKeyFor(request, EnrichmentType.GENRE),
+            EnrichmentType.GENRE,
+            EnrichmentResult.Success(EnrichmentType.GENRE, EnrichmentData.Metadata(), "mb", 1.0f),
+        )
+        val engine = DefaultEnrichmentEngine(
+            ProviderRegistry(emptyList()),
+            cache,
+            EnrichmentConfig(enableIdentityResolution = false),
+        )
+
+        // When — the entry is still within its 90-day TTL
+        val results = engine.enrich(request, setOf(EnrichmentType.GENRE))
+
+        // Then — the fix is not outlived by what is already cached
+        assertTrue(results.raw[EnrichmentType.GENRE] is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `a synthesizer returning an empty payload is demoted`() = runTest {
+        // Given — a composite synthesizer that reports Success with no events, as TimelineSynthesizer
+        // does for an artist with no dates anywhere
+        val emptySynthesizer = object : CompositeSynthesizer {
+            override val type = EnrichmentType.ARTIST_TIMELINE
+            override val dependencies = emptySet<EnrichmentType>()
+            override fun synthesize(
+                resolved: Map<EnrichmentType, EnrichmentResult>,
+                identityResult: EnrichmentResult?,
+                request: EnrichmentRequest,
+            ) = EnrichmentResult.Success(
+                type, EnrichmentData.ArtistTimeline(emptyList()), "timeline_synthesizer", 0.95f,
+            )
+        }
+        val engine = DefaultEnrichmentEngine(
+            ProviderRegistry(emptyList()),
+            FakeEnrichmentCache(),
+            EnrichmentConfig(enableIdentityResolution = false),
+            synthesizers = listOf(emptySynthesizer),
+        )
+
+        // When
+        val results = engine.enrich(
+            EnrichmentRequest.forArtist("Radiohead"),
+            setOf(EnrichmentType.ARTIST_TIMELINE),
+        )
+
+        // Then — CompositeSynthesizer is a public extension point; its output is gated too
+        assertTrue(results.raw[EnrichmentType.ARTIST_TIMELINE] is EnrichmentResult.NotFound)
+    }
+
     // --- The enumeration itself ---
 
     @Test

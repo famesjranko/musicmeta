@@ -223,10 +223,13 @@ The two signals are independent, and the identity score is the wrong one to reac
 *highest* exactly when the entity matched perfectly and happened to carry nothing. So
 `filterByConfidence()` cannot demote an empty result, and lowering the score to express a thin
 payload only mislabels a match that was in fact perfect. `answers()` in `engine/PayloadAnswers.kt` is
-the second gate, and the engine applies it to every provider result, every merger output and the
-identity fan-out — no provider needs its own check.
+the second gate, and the engine applies it to everything that can reach a consumer — every provider
+result, merger and synthesizer output, the identity fan-out, and both cache paths. No provider needs
+its own check, and the cache read is gated because an empty `Success` written by an older build
+otherwise outlives the fix by the type's TTL (90 days for `GENRE`).
 
 Extending it: one `EnrichmentData.Metadata` serves six types, so **which field answers which type is
 per type** — `label` answers `LABEL` and nothing else, and only `ALBUM_METADATA` accepts any field at
-all. Every other payload answers its type iff it carries anything. A new payload class must be added
-to the `when`; it is exhaustive so the compiler asks.
+all. Every other payload answers its type iff it carries anything. The `when` is exhaustive over payload
+*classes*, so the compiler asks about a new one — it is **not** exhaustive over types, so a new type
+served by `Metadata` silently inherits grab-bag semantics.
