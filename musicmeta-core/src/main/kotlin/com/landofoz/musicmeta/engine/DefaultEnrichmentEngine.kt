@@ -16,6 +16,7 @@ import com.landofoz.musicmeta.IdentityResolution
 import com.landofoz.musicmeta.ProviderInfo
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.cache.CacheMode
+import com.landofoz.musicmeta.http.EnrichDeadline
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -23,6 +24,7 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
 internal class DefaultEnrichmentEngine(
@@ -75,28 +77,32 @@ internal class DefaultEnrichmentEngine(
         // withTimeoutOrNull returns null only when *this* deadline expired. A nested withTimeout's
         // expiry — a consumer's CatalogProvider, say — propagates instead of being caught by type
         // and mislabelled as enrichTimeoutMs. (#55)
+        // EnrichDeadline carries the budget down to DefaultHttpClient, so a 429 retry can decline to
+        // sleep past this deadline — an expiry mid-fan-out loses every provider's in-flight work.
         val completed = withTimeoutOrNull(config.enrichTimeoutMs) {
-            var identityResult: EnrichmentResult? = null
-            val enrichedRequest = if (config.enableIdentityResolution &&
-                needsIdentityResolution(request, uncachedTypes, registry)) {
-                resolveIdentity(request, results, uncachedTypes).also { identityResult = it.second }.first
-            } else request
+            withContext(EnrichDeadline(config.enrichTimeoutMs)) {
+                var identityResult: EnrichmentResult? = null
+                val enrichedRequest = if (config.enableIdentityResolution &&
+                    needsIdentityResolution(request, uncachedTypes, registry)) {
+                    resolveIdentity(request, results, uncachedTypes).also { identityResult = it.second }.first
+                } else request
 
-            identityResolution = buildIdentityResolution(identityResult, enrichedRequest)
+                identityResolution = buildIdentityResolution(identityResult, enrichedRequest)
 
-            // Short-circuit: when identity failed with suggestions, skip provider fan-out
-            val identityNotFound = identityResult as? EnrichmentResult.NotFound
-            if (identityNotFound?.suggestions != null) {
-                for (type in uncachedTypes) {
-                    results[type] = EnrichmentResult.NotFound(type, "engine",
-                        suggestions = identityNotFound.suggestions, identityMatch = IdentityMatch.SUGGESTIONS)
+                // Short-circuit: when identity failed with suggestions, skip provider fan-out
+                val identityNotFound = identityResult as? EnrichmentResult.NotFound
+                if (identityNotFound?.suggestions != null) {
+                    for (type in uncachedTypes) {
+                        results[type] = EnrichmentResult.NotFound(type, "engine",
+                            suggestions = identityNotFound.suggestions, identityMatch = IdentityMatch.SUGGESTIONS)
+                    }
+                } else {
+                    results.putAll(resolveTypes(enrichedRequest, uncachedTypes, identityResult))
+                    applyCatalogFiltering(results, config.catalogProvider, config.catalogFilterMode)
+                    stampIdentityMatch(results, identityResult)
                 }
-            } else {
-                results.putAll(resolveTypes(enrichedRequest, uncachedTypes, identityResult))
-                applyCatalogFiltering(results, config.catalogProvider, config.catalogFilterMode)
-                stampIdentityMatch(results, identityResult)
+                true
             }
-            true
         } ?: false
 
         if (!completed) {
