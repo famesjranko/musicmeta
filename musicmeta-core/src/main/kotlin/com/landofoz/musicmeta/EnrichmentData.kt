@@ -228,6 +228,17 @@ data class RadioTrack(
     val identifiers: EnrichmentIdentifiers = EnrichmentIdentifiers(),
 )
 
+/**
+ * An album recommended alongside a seed album.
+ *
+ * The only shipped `SIMILAR_ALBUMS` provider derives these from artists similar to the seed
+ * *artist* — Deezer exposes no album-level similarity — which is why the score is named
+ * [artistMatchScore]. Two albums by one artist therefore yield near-identical lists. See
+ * `SimilarAlbumsProvider`'s KDoc.
+ *
+ * @property artistMatchScore 0.0-1.0; the source artist's similarity rank, scaled by how close
+ *   this album's year is to the seed album's.
+ */
 @Serializable
 data class SimilarAlbum(
     val title: String,

@@ -18,6 +18,18 @@ import com.landofoz.musicmeta.http.RateLimiter
  * and sampling their discographies. Scores results by artist similarity rank
  * and era proximity to the seed album's release year.
  *
+ * **This is an artist-derived approximation, not album-level similarity.** Deezer's public
+ * API has no album-similarity resource — `/album/{id}/related`, `/similar`, `/radio` and
+ * `/recommendations` all return `InvalidQueryException` (code 600), and the `/album/{id}`
+ * payload carries no similarity field. `/artist/{id}/related` is the only similarity signal
+ * on offer, so results are "albums by artists similar to the *artist*", filtered by era.
+ *
+ * The consequence a consumer must plan for: the seed album's *title* is never sent anywhere.
+ * The only album-level input is [EnrichmentRequest.ForAlbum.year], which feeds
+ * [eraMultiplier] — so two albums by the same artist return a near-identical list, and an
+ * identical one when the caller passes no `year`. Present it as "if you like this artist",
+ * not "albums like this record".
+ *
  * Standalone provider (not composite): all Deezer API calls happen here,
  * not inside a synthesizer.
  */
@@ -40,6 +52,11 @@ class SimilarAlbumsProvider internal constructor(
     override val requiresApiKey = false
     override val isAvailable = true
 
+    /**
+     * `SIMILAR_ALBUMS` is derived from `/artist/{id}/related`, not from any album-similarity
+     * endpoint — see the class KDoc for what that costs a consumer. No
+     * `identifierRequirement`: the artist is resolved by name search when `deezerId` is absent.
+     */
     override val capabilities = listOf(
         ProviderCapability(EnrichmentType.SIMILAR_ALBUMS, priority = 100),
     )
@@ -109,6 +126,10 @@ class SimilarAlbumsProvider internal constructor(
             type = EnrichmentType.SIMILAR_ALBUMS,
             data = EnrichmentData.SimilarAlbums(deduped),
             provider = id,
+            // 0.8 scores the *lookup* — the seed artist name was verified — not the strength of
+            // the recommendation. Deriving from related artists is a property of the type here
+            // (there is no album-level source to be more confident than), so it belongs in the
+            // KDoc above, not smuggled into a number consumers rank providers by.
             confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
             resolvedIdentifiers = EnrichmentIdentifiers().withExtra("deezerId", seedArtist.id.toString()),
         )
