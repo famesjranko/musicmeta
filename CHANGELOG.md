@@ -44,7 +44,7 @@ This release makes `engine/` internal, hardens providers and the engine, and cor
 - A MusicBrainz 429/5xx/network failure is now `Error(ErrorKind.NETWORK)`, not an empty result; identity stops refusing a resolvable query with a "did you mean" list whose top entry scores 100%
 - A 429/5xx/network failure from Deezer, iTunes, Last.fm, Discogs, Fanart.tv or ListenBrainz is now `Error(ErrorKind.NETWORK)`, not an empty result; the breaker sees it and `STALE_IF_ERROR` engages
 - A 429/5xx/network failure from Cover Art Archive, LRCLIB, Wikidata or Wikipedia is now `Error(ErrorKind.NETWORK)`, not an empty or partial result; the breaker sees it and `STALE_IF_ERROR` engages
-- A Deezer quota body (HTTP 200, `error.code` 4) and an iTunes 403 are now `Error(ErrorKind.NETWORK)`, not an empty result; Deezer `TRACK_PREVIEW` no longer answers with an empty fabricated track
+- A Deezer quota body (HTTP 200, `error.code` 4) and an iTunes 403 are now `Error(ErrorKind.NETWORK)`, not an empty result; the breaker sees it and `STALE_IF_ERROR` engages
 - An `ARTIST_TOP_TRACKS` merger registered via `Builder.addMerger` now overrides the built-in `TopTrackMerger`; merged output changes for anyone who registered one (#49)
 - iTunes search candidates now carry `itunesCollectionId`; a follow-up `ALBUM_TRACKS` request resolves by direct lookup instead of re-searching
 - A consumer `EnrichmentLogger` that throws no longer fails `enrich()`; the log line is lost (#71)
