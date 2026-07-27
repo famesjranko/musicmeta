@@ -17,6 +17,17 @@ lists the rest; `ls docs/` lists the docs.
 | Deciding whether a thing is in scope, or what `1.0.0` waits on | `ROADMAP.md` |
 | Looking for the issue list | `.scratch/`, **not** GitHub Issues — `docs/agents/issue-tracker.md` |
 
+## Where it goes
+
+Every finding has exactly one home; this file is the home only for the last row.
+
+| A new | Goes in |
+|---|---|
+| Trap that cost something | `docs/pitfalls.md` |
+| Consumer-visible change | a `CHANGELOG.md` line — that file's header defines consumer-visible and the shape |
+| Work item, or a finding to triage later | a `.scratch/` ticket — `docs/agents/issue-tracker.md` |
+| Rule no mechanism catches | here, and nowhere else |
+
 ## Traps in the pipeline
 
 Read `enrich()` in `engine/DefaultEnrichmentEngine.kt` — it is the map, and this list is not
@@ -43,5 +54,3 @@ exhaustive. Paths are relative to `musicmeta-core/src/main/kotlin/com/landofoz/m
   not coverage for a change.
 - A new provider is `provider/<name>/` as `*Api`, `*Models`, `*Mapper` (all `internal`) and a public
   `*Provider`. Keeping the first three `internal` is what lets them be renamed without an `apiDump`.
-- Add a `CHANGELOG.md` line for every consumer-visible change — that file's header defines
-  consumer-visible and the shape. A new trap that cost something goes in `docs/pitfalls.md`.
