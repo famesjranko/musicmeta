@@ -194,9 +194,14 @@ val url = "$BASE_URL/search/artist?q=$encoded&limit=1"
 val artist = data.getJSONObject(0)              // caller's ArtistMatcher check passes: name is exact
 
 // RIGHT — fetch a pool, keep the name matches, rank by name quality, break ties on popularity
-.filter { ArtistMatcher.isMatch(name, it.optString("name", "")) }
-.maxWithOrNull(compareBy({ ArtistMatcher.matchQuality(name, …) }, { it.optLong("nb_fan") }, …))
+.bestArtistMatch(name, tieBreak = compareBy({ it.optLong("nb_fan") }, { it.optLong("nb_album") })) {
+    it.optString("name", "")
+}
 ```
+
+`bestArtistMatch` (beside `ArtistMatcher` in `engine/`) is that chain, shared by all three
+name-search providers. What stays at the call site is what is genuinely per API: the name field, any
+cleanup of it, and whether there is a popularity `tieBreak` at all.
 
 A name check on one hit cannot separate a ghost from the real artist when both names are exact — it
 only rejects a wrong name, and every duplicate-name entry survives it. `limit=1` also throws away
@@ -216,7 +221,7 @@ copy the Deezer tail: an iTunes `musicArtist` result carries no popularity field
 `artistId`, `artistName`, genre and sometimes an AllMusic id), and a Discogs artist result carries
 none either (`id`, `title`, `uri`, `thumb`, `cover_image`, `resource_url` — the have/want/rating
 counts are on *release* results). So both rank on `matchQuality` alone and let equal names fall back
-to the provider's own order, which `maxWithOrNull` gives for free by keeping the first maximum.
+to the provider's own order, which `bestArtistMatch` gives for free by keeping the first maximum.
 
 Discogs adds a trap on top: its name field is **`title`**, not `name`, and it carries a `" (n)"`
 homonym counter that is **arbitrary** — the bare name goes to whoever was catalogued first.

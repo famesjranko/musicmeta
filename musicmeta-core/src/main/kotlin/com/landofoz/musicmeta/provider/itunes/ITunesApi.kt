@@ -1,6 +1,7 @@
 package com.landofoz.musicmeta.provider.itunes
 
 import com.landofoz.musicmeta.engine.ArtistMatcher
+import com.landofoz.musicmeta.engine.bestArtistMatch
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.http.bodyOrThrowTransient
@@ -77,7 +78,7 @@ internal class ITunesApi(
      * iTunes `musicArtist` result is only `artistId`, `artistName`, `artistType`, `artistLinkUrl`,
      * `primaryGenreName`/`Id` and sometimes `amgArtistId` (an AllMusic identifier, not a measure).
      * Nothing separates the four entries named exactly "Nirvana". So equal-quality candidates fall
-     * back to iTunes' own order — [maxWithOrNull] keeps the first maximum — which makes this a
+     * back to iTunes' own order — [bestArtistMatch] keeps the first maximum — which makes this a
      * strict narrowing of the old behaviour rather than a re-ranking of it.
      */
     suspend fun searchArtist(artistName: String): Long? {
@@ -92,8 +93,7 @@ internal class ITunesApi(
             // A non-object element is skipped, not thrown: a JSONException here would surface as
             // Error and open the breaker against a healthy iTunes (docs/pitfalls.md §4).
             .mapNotNull { results.optJSONObject(it) }
-            .filter { ArtistMatcher.isMatch(artistName, it.optString("artistName", "")) }
-            .maxWithOrNull(compareBy { ArtistMatcher.matchQuality(artistName, it.optString("artistName", "")) })
+            .bestArtistMatch(artistName) { it.optString("artistName", "") }
             ?.optLong("artistId") ?: return null
         return if (artistId > 0) artistId else null
     }
