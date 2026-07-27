@@ -1,6 +1,7 @@
 package com.landofoz.musicmeta.provider.deezer
 
 import com.landofoz.musicmeta.engine.ArtistMatcher
+import com.landofoz.musicmeta.engine.bestArtistMatch
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.http.bodyOrThrowTransient
@@ -65,14 +66,10 @@ internal class DeezerApi(
         val data = json.optJSONArray("data") ?: return null
         return (0 until data.length())
             .mapNotNull { data.optJSONObject(it) }
-            .filter { ArtistMatcher.isMatch(name, it.optString("name", "")) }
-            .maxWithOrNull(
-                compareBy(
-                    { ArtistMatcher.matchQuality(name, it.optString("name", "")) },
-                    { it.optLong("nb_fan") },
-                    { it.optLong("nb_album") },
-                ),
-            )
+            .bestArtistMatch(
+                expected = name,
+                tieBreak = compareBy({ it.optLong("nb_fan") }, { it.optLong("nb_album") }),
+            ) { it.optString("name", "") }
             ?.let { artist ->
                 DeezerArtistSearchResult(
                     id = artist.optLong("id"),

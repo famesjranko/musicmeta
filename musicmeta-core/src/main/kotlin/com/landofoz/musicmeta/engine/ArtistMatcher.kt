@@ -115,3 +115,25 @@ internal object ArtistMatcher {
     private fun tokenize(normalized: String): Set<String> =
         normalized.split(" ").filter { it.isNotBlank() }.toSet()
 }
+
+/**
+ * The best match for [expected] in a search pool, or null if nothing in it matches.
+ *
+ * The selection rule every name-search provider needs (`docs/pitfalls.md` §7): keep the candidates
+ * [ArtistMatcher.isMatch] accepts, rank them by [ArtistMatcher.matchQuality], and let the provider's
+ * own order settle a tie — `maxWithOrNull` keeps the first maximum, so hit 0 wins among equals.
+ *
+ * @param nameOf pulls the name to match from a candidate; the field and any cleanup are per API.
+ * @param tieBreak an optional popularity comparator, applied *within* a quality rank and never
+ *   across ranks — sorting the whole pool on popularity picks "Bad Bunny" for "Bad Company".
+ *   Providers whose search payload carries no popularity signal pass nothing.
+ */
+internal fun <T> Iterable<T>.bestArtistMatch(
+    expected: String,
+    tieBreak: Comparator<T>? = null,
+    nameOf: (T) -> String,
+): T? {
+    val byQuality = compareBy<T> { ArtistMatcher.matchQuality(expected, nameOf(it)) }
+    return filter { ArtistMatcher.isMatch(expected, nameOf(it)) }
+        .maxWithOrNull(if (tieBreak == null) byQuality else byQuality.then(tieBreak))
+}

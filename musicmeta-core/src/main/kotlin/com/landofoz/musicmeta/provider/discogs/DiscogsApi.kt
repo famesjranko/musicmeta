@@ -1,6 +1,7 @@
 package com.landofoz.musicmeta.provider.discogs
 
 import com.landofoz.musicmeta.engine.ArtistMatcher
+import com.landofoz.musicmeta.engine.bestArtistMatch
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.http.bodyOrThrowAuthOrTransient
@@ -47,8 +48,8 @@ internal class DiscogsApi(
      * 2. **The payload carries no popularity signal** — an artist result is only `id`, `type`,
      *    `master_id`, `master_url`, `uri`, `title`, `thumb`, `cover_image`, `resource_url`. The
      *    have/want/rating counts exist on *release* results, not these. So there is no popularity
-     *    tiebreak: equal-quality candidates fall back to Discogs's own order, since [maxWithOrNull]
-     *    keeps the first maximum.
+     *    tiebreak: equal-quality candidates fall back to Discogs's own order, since
+     *    [bestArtistMatch] keeps the first maximum.
      *
      * Name quality is therefore the only ranking, never overridden by anything.
      */
@@ -61,8 +62,7 @@ internal class DiscogsApi(
             // A non-object element is skipped, not thrown: a JSONException here would surface as
             // Error and open the breaker against a healthy Discogs (docs/pitfalls.md §4).
             .mapNotNull { results.optJSONObject(it) }
-            .filter { ArtistMatcher.isMatch(name, it.candidateName()) }
-            .maxWithOrNull(compareBy { ArtistMatcher.matchQuality(name, it.candidateName()) })
+            .bestArtistMatch(name) { it.candidateName() }
             ?.optLong("id", 0L) ?: return null
         return if (id > 0) id else null
     }
