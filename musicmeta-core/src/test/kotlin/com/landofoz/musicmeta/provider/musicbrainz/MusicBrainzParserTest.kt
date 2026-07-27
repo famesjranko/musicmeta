@@ -102,6 +102,32 @@ class MusicBrainzParserTest {
     }
 
     @Test
+    fun `parseArtists ignores a non-English Wikipedia URL relation`() {
+        // Given — Portishead's real MusicBrainz relations: wikidata plus a fr-only wikipedia link
+        val json = JSONObject(ARTIST_WITH_FRENCH_WIKIPEDIA)
+
+        // When — parsing artists
+        val artists = MusicBrainzParser.parseArtists(json)
+
+        // Then — no title, so WikipediaProvider falls back to the Wikidata enwiki sitelink
+        assertEquals(1, artists.size)
+        assertNull(artists[0].wikipediaTitle)
+        assertEquals("Q191352", artists[0].wikidataId)
+    }
+
+    @Test
+    fun `parseArtists prefers the English Wikipedia relation over an earlier non-English one`() {
+        // Given — a fr relation listed before the en relation
+        val json = JSONObject(ARTIST_WITH_FRENCH_AND_ENGLISH_WIKIPEDIA)
+
+        // When — parsing artists
+        val artists = MusicBrainzParser.parseArtists(json)
+
+        // Then — the English title wins regardless of relation order
+        assertEquals("Portishead_(band)", artists[0].wikipediaTitle)
+    }
+
+    @Test
     fun `parseRecording extracts ISRCs`() {
         // Given — recording JSON with ISRCs array
         val json = JSONObject(RECORDING_SEARCH_RESPONSE)
@@ -659,6 +685,46 @@ class MusicBrainzParserTest {
                   {
                     "type": "wikipedia",
                     "url": {"resource": "https://en.wikipedia.org/wiki/Radiohead"}
+                  }
+                ]
+              }]
+            }
+        """.trimIndent()
+
+        private val ARTIST_WITH_FRENCH_WIKIPEDIA = """
+            {
+              "artists": [{
+                "id": "8f6bd1e4-fbe1-4f50-aa9b-94c450ec0f11",
+                "name": "Portishead",
+                "score": 100,
+                "relations": [
+                  {
+                    "type": "wikidata",
+                    "url": {"resource": "https://www.wikidata.org/wiki/Q191352"}
+                  },
+                  {
+                    "type": "wikipedia",
+                    "url": {"resource": "https://fr.wikipedia.org/wiki/Portishead_(groupe)"}
+                  }
+                ]
+              }]
+            }
+        """.trimIndent()
+
+        private val ARTIST_WITH_FRENCH_AND_ENGLISH_WIKIPEDIA = """
+            {
+              "artists": [{
+                "id": "8f6bd1e4-fbe1-4f50-aa9b-94c450ec0f11",
+                "name": "Portishead",
+                "score": 100,
+                "relations": [
+                  {
+                    "type": "wikipedia",
+                    "url": {"resource": "https://fr.wikipedia.org/wiki/Portishead_(groupe)"}
+                  },
+                  {
+                    "type": "wikipedia",
+                    "url": {"resource": "https://en.wikipedia.org/wiki/Portishead_(band)"}
                   }
                 ]
               }]

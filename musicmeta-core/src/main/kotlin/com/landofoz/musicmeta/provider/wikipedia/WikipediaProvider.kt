@@ -13,10 +13,17 @@ import com.landofoz.musicmeta.http.HttpResult
 import com.landofoz.musicmeta.http.RateLimiter
 
 /**
- * Provides artist biographies from Wikipedia page summaries.
- * Resolves the Wikipedia title from either:
- * 1. Direct wikipediaTitle in identifiers (from MusicBrainz URL relations)
- * 2. Wikidata sitelinks (when only wikidataId is available)
+ * Provides artist biographies and photos from Wikipedia page summaries.
+ *
+ * **English only.** Every request goes to `en.wikipedia.org`, so the resolved title must be an
+ * English article title. Title resolution, in order:
+ * 1. `EnrichmentIdentifiers.wikipediaTitle` — set from a MusicBrainz `wikipedia` URL relation, and
+ *    only ever from an `en.wikipedia.org` one; other-language relations are ignored upstream.
+ * 2. The `enwiki` sitelink of `EnrichmentIdentifiers.wikidataId`, fetched with `sitefilter=enwiki`
+ *    so no other language can be returned.
+ *
+ * There is no other-language fallback: if neither yields an English title the result is `NotFound`.
+ * A non-English article is never used, because its text would not be a usable English bio.
  */
 class WikipediaProvider(
     private val httpClient: HttpClient,
