@@ -40,6 +40,7 @@ This release makes `engine/` internal, hardens providers and the engine, and cor
 - Discogs sends its token in an `Authorization` header, not the URL query
 - Fanart.tv `ALBUM_ART`/`CD_ART` need a release group id; the wrong-album fallback is gone
 - A 401/403 on a call carrying a key (Last.fm, Discogs, Fanart.tv, ListenBrainz radio) is now `Error(ErrorKind.AUTH)`, not `NotFound`; five in a row open the breaker, one retries a minute later
+- A MusicBrainz 429/5xx/network failure is now `Error(ErrorKind.NETWORK)`, not an empty result; identity stops refusing a resolvable query with a "did you mean" list whose top entry scores 100%
 - An `ARTIST_TOP_TRACKS` merger registered via `Builder.addMerger` now overrides the built-in `TopTrackMerger`; merged output changes for anyone who registered one (#49)
 - iTunes search candidates now carry `itunesCollectionId`; a follow-up `ALBUM_TRACKS` request resolves by direct lookup instead of re-searching
 - A consumer `EnrichmentLogger` that throws no longer fails `enrich()`; the log line is lost (#71)

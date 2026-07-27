@@ -13,24 +13,21 @@ lists the rest; `ls docs/` lists the docs.
 | Before | Read |
 |---|---|
 | Changing a public signature, a `catch`, a provider's parsing, or a `ProviderCapability` | `docs/pitfalls.md` |
+| Touching `enrich()` or anything it calls | `docs/pitfalls.md` — "Traps in the pipeline" |
 | Treating a green run as proof | `ARCHITECTURE.md` — what each check skips |
 | Deciding whether a thing is in scope, or what `1.0.0` waits on | `ROADMAP.md` |
 | Looking for the issue list | `.scratch/`, **not** GitHub Issues — `docs/agents/issue-tracker.md` |
 
-## Traps in the pipeline
+## Where it goes
 
-Read `enrich()` in `engine/DefaultEnrichmentEngine.kt` — it is the map, and this list is not
-exhaustive. Paths are relative to `musicmeta-core/src/main/kotlin/com/landofoz/musicmeta/`.
+Every finding has exactly one home; this file is the home only for the last row.
 
-- `CacheGuard.kt` degrades a throwing cache to a miss, but public `invalidate()`,
-  `is`/`markManuallySelected()` and `getIncludingExpired()` are unguarded.
-- An identity `NotFound` carrying `suggestions` short-circuits the whole provider fan-out.
-- One `http/CircuitBreaker.kt` per provider id, shared across every chain.
-- A `CompositeSynthesizer`'s `dependencies` are resolved even when the caller did not ask for them.
-- `withTimeoutOrNull(enrichTimeoutMs)` returns null for *that* deadline only; a nested one
-  propagates. An expiry does not discard results already fetched, but the write-back is skipped, so
-  a timed-out run caches nothing. The stale fallback and write-back sit outside the timed block.
-- `filterByConfidence()` demotes a `Success` below `minConfidence` (0.5) to `NotFound`.
+| A new | Goes in |
+|---|---|
+| Trap that cost something | `docs/pitfalls.md` |
+| Consumer-visible change | a `CHANGELOG.md` line — that file's header defines consumer-visible and the shape |
+| Work item, or a finding to triage later | a `.scratch/` ticket — `docs/agents/issue-tracker.md` |
+| Rule no mechanism catches | here, and nowhere else |
 
 ## Rules with no mechanism
 
@@ -43,5 +40,3 @@ exhaustive. Paths are relative to `musicmeta-core/src/main/kotlin/com/landofoz/m
   not coverage for a change.
 - A new provider is `provider/<name>/` as `*Api`, `*Models`, `*Mapper` (all `internal`) and a public
   `*Provider`. Keeping the first three `internal` is what lets them be renamed without an `apiDump`.
-- Add a `CHANGELOG.md` line for every consumer-visible change — that file's header defines
-  consumer-visible and the shape. A new trap that cost something goes in `docs/pitfalls.md`.

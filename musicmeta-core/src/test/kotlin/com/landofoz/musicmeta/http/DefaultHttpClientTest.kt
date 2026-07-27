@@ -133,15 +133,18 @@ class DefaultHttpClientTest {
         assertTrue((result as HttpResult.Ok).body.getBoolean("fallback"))
     }
 
-    @Test fun `FakeHttpClient fetchJsonResult returns NetworkError when no response configured`() = runTest {
+    @Test fun `FakeHttpClient fetchJsonResult returns a 404 when no response configured`() = runTest {
         // Given — no responses configured
         val fake = FakeHttpClient()
 
         // When
         val result = fake.fetchJsonResult("https://api.example.com/unknown")
 
-        // Then — NetworkError fallback
-        assertTrue(result is HttpResult.NetworkError)
+        // Then — a 404: the fake has nothing at that address. Deliberately not a transient variant,
+        // which providers treat as a retryable Error — that would make every test that merely omits
+        // a stub assert the transient path instead of the empty-result path it means to test.
+        assertTrue(result is HttpResult.ClientError)
+        assertEquals(404, (result as HttpResult.ClientError).statusCode)
     }
 
     @Test fun `FakeHttpClient fetchJsonResult records URL`() = runTest {

@@ -1,5 +1,7 @@
 package com.landofoz.musicmeta.http
 
+import java.io.IOException
+
 /**
  * Typed HTTP response that preserves status information for callers.
  * Unlike the nullable returns of [HttpClient.fetchJson], this captures
@@ -40,4 +42,28 @@ internal fun <T> HttpResult<T>.bodyOrThrowAuth(): T? = when (this) {
     is HttpResult.ClientError ->
         if (statusCode == 401 || statusCode == 403) throw AuthException(statusCode) else null
     else -> null
+}
+
+/**
+ * The body on success, `null` on a [HttpResult.ClientError] — a genuine "no such thing" — and a
+ * thrown [IOException] on a transient transport failure (429, 5xx, network drop).
+ *
+ * For a search endpoint, where `null` becomes an empty result list. An empty list is
+ * indistinguishable from a rate-limit or a dropped connection collapsed to `null`, and at identity
+ * resolution that difference decides the whole run: a `NotFound` carrying `suggestions`
+ * short-circuits the entire provider fan-out, so a 429 answered this way refuses a query the
+ * upstream would have matched perfectly.
+ *
+ * Throwing is the same trick [AuthException] uses, for the same reason (`docs/pitfalls.md` §4): it
+ * travels the provider's existing `catch (e: Exception) { mapError(type, e) }` into an
+ * `Error(ErrorKind.NETWORK)`, which the chain records as a breaker *failure*. Collapsed to `null` it
+ * would be a `NotFound` — a breaker *success* — and the provider would look healthy while a rate
+ * limit made it answer "no results" to everything.
+ */
+internal fun <T> HttpResult<T>.bodyOrThrowTransient(): T? = when (this) {
+    is HttpResult.Ok -> body
+    is HttpResult.ClientError -> null
+    is HttpResult.RateLimited -> throw IOException("HTTP 429: rate limited")
+    is HttpResult.ServerError -> throw IOException("HTTP $statusCode: server error")
+    is HttpResult.NetworkError -> throw IOException(message, cause)
 }
