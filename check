@@ -27,17 +27,26 @@ done
 # Version, not just presence. bootstrap.sh pins these precisely because formatter output and
 # lint rules differ between releases, so accepting any version on PATH reintroduces the local/CI
 # disagreement the single command exists to remove.
+#
+# The pins are read out of bootstrap.sh rather than restated here: a second copy is what let the
+# gate and the format-on-write hook drift apart on ktlint (#84). A rename or a removal there yields
+# an empty pin, which fails below rather than matching every version.
+pin() { # pin <bootstrap-variable>
+    sed -n "s/^$1=\"\([^\"]*\)\"\$/\1/p" scripts/bootstrap.sh
+}
 bad=""
 require() { # require <command> <pinned-version>
-    if ! command -v "$1" >/dev/null 2>&1; then
+    if [ -z "$2" ]; then
+        bad="$bad $1(no pin in scripts/bootstrap.sh)"
+    elif ! command -v "$1" >/dev/null 2>&1; then
         bad="$bad $1(absent)"
     elif ! "$1" --version 2>/dev/null | grep -qE "(^|[^0-9.])${2//./\\.}([^0-9.]|$)"; then
         bad="$bad $1(want $2)"
     fi
 }
-require ruff 0.15.22
-require mypy 2.3.0
-require shellcheck 0.11.0
+require ruff "$(pin RUFF_VERSION)"
+require mypy "$(pin MYPY_VERSION)"
+require shellcheck "$(pin SHELLCHECK_VERSION)"
 if [ -n "$bad" ]; then
     echo "tooling mismatch:$bad" >&2
     echo "run ./scripts/bootstrap.sh to install the pinned versions" >&2
