@@ -2,8 +2,8 @@ package com.landofoz.musicmeta.provider.listenbrainz
 
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
-import com.landofoz.musicmeta.http.bodyOrNull
-import com.landofoz.musicmeta.http.bodyOrThrowAuth
+import com.landofoz.musicmeta.http.bodyOrThrowAuthOrTransient
+import com.landofoz.musicmeta.http.bodyOrThrowTransient
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -21,7 +21,7 @@ internal class ListenBrainzApi(
         artistMbid: String,
     ): List<ListenBrainzPopularTrack> = rateLimiter.execute {
         val url = "$BASE_URL/popularity/top-recordings-for-artist/$artistMbid"
-        val jsonArray = httpClient.fetchJsonArrayResult(url).bodyOrNull()
+        val jsonArray = httpClient.fetchJsonArrayResult(url).bodyOrThrowTransient()
             ?: return@execute emptyList()
         parseRecordings(jsonArray)
     }
@@ -31,7 +31,7 @@ internal class ListenBrainzApi(
         recordingMbids: List<String>,
     ): List<ListenBrainzRecordingPopularity> = rateLimiter.execute {
         val body = JSONObject().put("recording_mbids", JSONArray(recordingMbids)).toString()
-        val jsonArray = httpClient.postJsonArrayResult("$BASE_URL/popularity/recording", body).bodyOrNull()
+        val jsonArray = httpClient.postJsonArrayResult("$BASE_URL/popularity/recording", body).bodyOrThrowTransient()
             ?: return@execute emptyList()
         parseRecordingPopularity(jsonArray)
     }
@@ -41,7 +41,7 @@ internal class ListenBrainzApi(
         artistMbids: List<String>,
     ): List<ListenBrainzArtistPopularity> = rateLimiter.execute {
         val body = JSONObject().put("artist_mbids", JSONArray(artistMbids)).toString()
-        val jsonArray = httpClient.postJsonArrayResult("$BASE_URL/popularity/artist", body).bodyOrNull()
+        val jsonArray = httpClient.postJsonArrayResult("$BASE_URL/popularity/artist", body).bodyOrThrowTransient()
             ?: return@execute emptyList()
         parseArtistPopularity(jsonArray)
     }
@@ -51,7 +51,7 @@ internal class ListenBrainzApi(
         artistMbid: String,
     ): List<ListenBrainzTopReleaseGroup> = rateLimiter.execute {
         val url = "$BASE_URL/popularity/top-release-groups-for-artist/$artistMbid"
-        val jsonArray = httpClient.fetchJsonArrayResult(url).bodyOrNull()
+        val jsonArray = httpClient.fetchJsonArrayResult(url).bodyOrThrowTransient()
             ?: return@execute emptyList()
         parseTopReleaseGroups(jsonArray)
     }
@@ -115,7 +115,7 @@ internal class ListenBrainzApi(
         count: Int = 20,
     ): List<ListenBrainzSimilarArtist> = rateLimiter.execute {
         val url = "$BASE_URL/explore/lb-radio/artist/$artistMbid/similar"
-        val json = httpClient.fetchJsonResult(url).bodyOrNull()
+        val json = httpClient.fetchJsonResult(url).bodyOrThrowTransient()
             ?: return@execute emptyList()
         val payload = json.optJSONArray("payload") ?: return@execute emptyList()
         val results = mutableListOf<ListenBrainzSimilarArtist>()
@@ -141,7 +141,7 @@ internal class ListenBrainzApi(
             val encoded = java.net.URLEncoder.encode("artist:($artistPrompt)", "UTF-8")
             val url = "$BASE_URL/explore/lb-radio?prompt=$encoded&mode=$mode"
             val headers = mapOf("Authorization" to "Token $token")
-            val json = httpClient.fetchJsonResult(url, headers).bodyOrThrowAuth()
+            val json = httpClient.fetchJsonResult(url, headers).bodyOrThrowAuthOrTransient()
                 ?: return@execute emptyList()
             parseJspfPlaylist(json)
         }

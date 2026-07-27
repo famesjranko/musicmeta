@@ -173,9 +173,21 @@ sealed class EnrichmentResult {
 | `NETWORK` | Connectivity or timeout failure |
 | `AUTH` | 401/403 — check API key |
 | `PARSE` | Malformed JSON or unexpected schema |
-| `RATE_LIMIT` | 429 response |
+| `RATE_LIMIT` | **Not produced by any provider** — a 429 arrives as `NETWORK` (see below) |
 | `TIMEOUT` | Engine-level enrichment timeout expired |
 | `UNKNOWN` | Uncategorized error |
+
+From MusicBrainz, Deezer, iTunes, Last.fm, Discogs, Fanart.tv and ListenBrainz, a 429, a 5xx and a
+dropped connection all reach you as `NETWORK`: those seven classify a transient transport failure
+through one shared helper (`bodyOrThrowTransient`), which throws a plain `IOException`, and
+`mapError()` maps that to `NETWORK`. `MusicBrainzTransientFailureTest` and
+`ProviderTransientFailureTest` pin it. The remaining providers — Cover Art Archive, LrcLib, Wikidata
+and Wikipedia — still collapse a transient into an empty result, so a 429 from one of those is
+indistinguishable from a genuine "not found".
+
+Either way, **do not branch on `RATE_LIMIT`**: the value is part of the published enum and cannot be
+removed without a breaking change, but nothing sets it. The same is true of the
+`EnrichmentResult.RateLimited` variant — the engine handles it, no provider returns it.
 
 ---
 

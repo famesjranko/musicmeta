@@ -5,7 +5,8 @@ package com.landofoz.musicmeta
  *
  * All fields are computed properties that delegate to [results], so they
  * always reflect the underlying data without duplication. Use [results]
- * directly for error diagnostics (e.g., checking if a type was [EnrichmentResult.RateLimited]).
+ * directly for error diagnostics (e.g., checking if a type was [EnrichmentResult.Error] and what
+ * its [ErrorKind] was).
  */
 data class ArtistProfile(val name: String, val results: EnrichmentResults) {
 

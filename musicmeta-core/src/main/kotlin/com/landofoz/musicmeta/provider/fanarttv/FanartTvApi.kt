@@ -2,7 +2,7 @@ package com.landofoz.musicmeta.provider.fanarttv
 
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
-import com.landofoz.musicmeta.http.bodyOrThrowAuth
+import com.landofoz.musicmeta.http.bodyOrThrowAuthOrTransient
 import org.json.JSONObject
 
 /**
@@ -26,7 +26,7 @@ internal class FanartTvApi(
      */
     suspend fun getAlbumImages(releaseGroupMbid: String): FanartTvAlbumImages? {
         val url = "$BASE_URL/albums/$releaseGroupMbid?api_key=${projectKeyProvider()}"
-        val json = rateLimiter.execute { httpClient.fetchJsonResult(url).bodyOrThrowAuth() } ?: return null
+        val json = rateLimiter.execute { httpClient.fetchJsonResult(url).bodyOrThrowAuthOrTransient() } ?: return null
         val albumObj = json.optJSONObject(releaseGroupMbid) ?: return null
         return FanartTvAlbumImages(
             albumCovers = extractImages(albumObj, "albumcover"),
@@ -36,7 +36,7 @@ internal class FanartTvApi(
 
     suspend fun getArtistImages(mbid: String): FanartTvArtistImages? {
         val url = "$BASE_URL/$mbid?api_key=${projectKeyProvider()}"
-        val json = rateLimiter.execute { httpClient.fetchJsonResult(url).bodyOrThrowAuth() } ?: return null
+        val json = rateLimiter.execute { httpClient.fetchJsonResult(url).bodyOrThrowAuthOrTransient() } ?: return null
         return parseArtistImages(json)
     }
 
