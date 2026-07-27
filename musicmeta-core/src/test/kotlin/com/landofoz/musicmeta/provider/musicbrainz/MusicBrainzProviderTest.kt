@@ -502,7 +502,92 @@ class MusicBrainzProviderTest {
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
+    @Test
+    fun `enrich album GENRE looks the release up when the search hit has no tags`() = runTest {
+        // Given — a high-scoring search hit with neither tags nor a label
+        httpClient.givenJsonResponse("release?query", RELEASE_SEARCH_THIN)
+        httpClient.givenJsonResponse("release/thin1", RELEASE_LOOKUP_FULL)
+        val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+
+        // When — enriching for GENRE
+        val result = provider.enrich(request, EnrichmentType.GENRE)
+
+        // Then — the lookup filled the genres, and the search score still sets confidence
+        val success = result as EnrichmentResult.Success
+        assertEquals(listOf("alternative rock"), (success.data as EnrichmentData.Metadata).genres)
+        assertEquals(0.98f, success.confidence, 0.01f)
+        assertTrue(httpClient.requestedUrls.any { it.contains("release/thin1") })
+    }
+
+    @Test
+    fun `release cache serves repeat lookups but evicts once past its cap`() = runTest {
+        // Given — a thin search hit, so GENRE takes the lookup path
+        httpClient.givenJsonResponse("release?query", RELEASE_SEARCH_THIN)
+        httpClient.givenJsonResponse("release/", RELEASE_LOOKUP_FULL)
+        suspend fun byMbid(mbid: String) = provider.enrich(
+            EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+                .withIdentifiers(EnrichmentIdentifiers(musicBrainzId = mbid)),
+            EnrichmentType.GENRE,
+        )
+        fun lookupsFor(mbid: String) = httpClient.requestedUrls.count { it.contains("release/$mbid?") }
+
+        // When — the search path resolves thin1, then the fan-out re-enters on the MBID it exposed
+        provider.enrich(EnrichmentRequest.forAlbum("OK Computer", "Radiohead"), EnrichmentType.GENRE)
+        byMbid("thin1")
+
+        // Then — the second one is served from the cache, not fetched ~1.1s later
+        assertEquals(1, lookupsFor("thin1"))
+
+        // When — enough distinct MBIDs follow to push thin1 out of an access-ordered cap
+        repeat(MusicBrainzEnricher.RELEASE_CACHE_MAX_ENTRIES) { byMbid("filler$it") }
+        byMbid("thin1")
+
+        // Then — thin1 was evicted rather than the map growing without bound
+        assertEquals(2, lookupsFor("thin1"))
+    }
+
+    @Test
+    fun `enrich album GENRE does not look the release up when the search hit has tags`() = runTest {
+        // Given — a search hit that already carries release-group tags and a label
+        httpClient.givenJsonResponse("release?query", RELEASE_SEARCH_HIGH_SCORE)
+        val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+
+        // When — enriching for GENRE
+        provider.enrich(request, EnrichmentType.GENRE)
+
+        // Then — the search was the only call
+        assertEquals(1, httpClient.requestedUrls.size)
+    }
+
     companion object {
+        private val RELEASE_SEARCH_THIN = """
+            {
+              "releases": [{
+                "id": "thin1",
+                "score": 98,
+                "title": "OK Computer",
+                "artist-credit": [{"artist": {"id": "def456", "name": "Radiohead"}}],
+                "date": "1997-06-16",
+                "release-group": {"id": "group123", "primary-type": "Album"}
+              }]
+            }
+        """.trimIndent()
+
+        private val RELEASE_LOOKUP_FULL = """
+            {
+              "id": "thin1",
+              "title": "OK Computer",
+              "date": "1997-06-16",
+              "country": "GB",
+              "label-info": [{"label": {"name": "Parlophone"}}],
+              "release-group": {
+                "id": "group123",
+                "primary-type": "Album",
+                "tags": [{"name": "alternative rock", "count": 5}]
+              }
+            }
+        """.trimIndent()
+
         private val RELEASE_SEARCH_HIGH_SCORE = """
             {
               "releases": [{

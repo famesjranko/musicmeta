@@ -10,6 +10,16 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 /**
+ * Store under an access-ordered cap, evicting least-recently-used until it fits.
+ * Only correct on an access-ordered [LinkedHashMap], and only under that map's mutex — every read
+ * of such a map is a write.
+ */
+private fun <V> MutableMap<String, V>.putCapped(key: String, value: V, cap: Int) {
+    put(key, value)
+    while (size > cap) remove(keys.first())
+}
+
+/**
  * Handles per-entity enrichment logic for MusicBrainz.
  * Called by [MusicBrainzProvider] after routing by request/type.
  */
@@ -28,15 +38,28 @@ internal class MusicBrainzEnricher(
     private val artistCache = LinkedHashMap<String, MusicBrainzArtist>(ARTIST_CACHE_MAX_ENTRIES, 0.75f, true)
     private val artistLookupMutex = Mutex()
 
+    /**
+     * Cache release lookups by MBID, same shape and cap as [artistCache].
+     * One album is looked up more than once per `enrich()`: GENRE resolves it as identity and again
+     * in the fan-out the identity MBID enables, and ALBUM_TRACKS wants the same response a third
+     * time. Each repeat is a ~1.1s wait on the shared MusicBrainz limiter.
+     * Access order means every read mutates it, so all access is under [releaseLookupMutex].
+     */
+    private val releaseCache = LinkedHashMap<String, MusicBrainzRelease>(RELEASE_CACHE_MAX_ENTRIES, 0.75f, true)
+    private val releaseLookupMutex = Mutex()
+
+    private suspend fun cachedReleaseLookup(mbid: String): MusicBrainzRelease? =
+        releaseLookupMutex.withLock {
+            releaseCache[mbid]?.let { return@withLock it }
+            api.lookupRelease(mbid)?.also { releaseCache.putCapped(mbid, it, RELEASE_CACHE_MAX_ENTRIES) }
+        }
+
     /** Lookup artist with rels (superset), caching to avoid redundant calls.
      *  BAND_MEMBERS, ARTIST_LINKS, and GENRE all need artist data for the same MBID. */
     private suspend fun cachedArtistLookup(mbid: String): MusicBrainzArtist? =
         artistLookupMutex.withLock {
             artistCache[mbid]?.let { return@withLock it }
-            api.lookupArtistWithRels(mbid)?.also {
-                artistCache[mbid] = it
-                while (artistCache.size > ARTIST_CACHE_MAX_ENTRIES) artistCache.remove(artistCache.keys.first())
-            }
+            api.lookupArtistWithRels(mbid)?.also { artistCache.putCapped(mbid, it, ARTIST_CACHE_MAX_ENTRIES) }
         }
 
     internal suspend fun enrichAlbum(
@@ -49,7 +72,7 @@ internal class MusicBrainzEnricher(
         if (type == EnrichmentType.RELEASE_EDITIONS) return enrichAlbumEditions(request)
         val mbid = request.identifiers.musicBrainzId
         if (mbid != null) {
-            val full = api.lookupRelease(mbid)
+            val full = cachedReleaseLookup(mbid)
                 ?: return EnrichmentResult.NotFound(type, providerId)
             return buildAlbumResult(full, type, ConfidenceCalculator.idBasedLookup())
         }
@@ -62,7 +85,15 @@ internal class MusicBrainzEnricher(
         val best = releases.firstOrNull { it.score >= minMatchScore }
             ?: return EnrichmentResult.NotFound(type, providerId,
                 suggestions = releases.take(MAX_SUGGESTIONS).map { it.toCandidate() })
-        return buildAlbumResult(best, type, ConfidenceCalculator.searchScore(best.score))
+        // A search hit carries tags only when its release group happens to have them; the release
+        // lookup is what fills them. GENRE is the one type that reads them and the one this path
+        // reaches — LABEL is answered from the identity payload and never gets here.
+        val resolved = if (type == EnrichmentType.GENRE && best.tags.isEmpty()) {
+            cachedReleaseLookup(best.id) ?: best
+        } else {
+            best
+        }
+        return buildAlbumResult(resolved, type, ConfidenceCalculator.searchScore(best.score))
     }
 
     internal suspend fun enrichAlbumTracks(
@@ -73,7 +104,7 @@ internal class MusicBrainzEnricher(
             api.searchReleases(request.title, request.artist)
                 .firstOrNull { it.score >= minMatchScore }?.id
         } ?: return EnrichmentResult.NotFound(type, providerId)
-        val release = api.lookupRelease(mbid)
+        val release = cachedReleaseLookup(mbid)
             ?: return EnrichmentResult.NotFound(type, providerId)
         if (release.tracks.isEmpty()) return EnrichmentResult.NotFound(type, providerId)
         return EnrichmentResult.Success(
@@ -298,6 +329,9 @@ internal class MusicBrainzEnricher(
 
         /** Cap on [artistCache], matching InMemoryEnrichmentCache's default. */
         internal const val ARTIST_CACHE_MAX_ENTRIES = 500
+
+        /** Cap on [releaseCache]. Same default, counted separately — an album run fills both. */
+        internal const val RELEASE_CACHE_MAX_ENTRIES = 500
 
         /** New artist types routed through enrichArtistNewType(). */
         private val ARTIST_NEW_TYPES = setOf(

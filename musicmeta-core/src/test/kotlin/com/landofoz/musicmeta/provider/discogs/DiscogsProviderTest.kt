@@ -52,7 +52,7 @@ class DiscogsProviderTest {
             "https://img.discogs.com/cover.jpg",
             (data as EnrichmentData.Artwork).url,
         )
-        assertEquals(0.6f, success.confidence)
+        assertEquals(0.8f, success.confidence)
     }
 
     @Test
@@ -232,7 +232,9 @@ class DiscogsProviderTest {
 
         // Then — success with 2 band members
         assertTrue(result is EnrichmentResult.Success)
-        val data = (result as EnrichmentResult.Success).data as EnrichmentData.BandMembers
+        // and this is not the album search, so success() keeps its fuzzyMatch(false) default
+        assertEquals(0.6f, (result as EnrichmentResult.Success).confidence)
+        val data = result.data as EnrichmentData.BandMembers
         assertEquals(2, data.members.size)
         assertEquals("Thom Yorke", data.members[0].name)
         assertEquals("Jonny Greenwood", data.members[1].name)
