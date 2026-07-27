@@ -12,6 +12,11 @@ package com.landofoz.musicmeta.engine
  * | 0-1   | searchScore() | Provider returns its own match score |
  * | 0.8   | fuzzyMatch(true) | Artist name matched, good catalog |
  * | 0.6   | fuzzyMatch(false) | No artist verification, weaker match |
+ *
+ * Every method here scores *how well the entity was identified*, not how much data came back — a
+ * perfect identity match on an entity carrying nothing still scores 1.0. Whether a result answers
+ * the type asked for is the separate signal in [answers], enforced by the engine. Do not conflate
+ * them by reaching for a lower score to express a thin payload.
  */
 internal object ConfidenceCalculator {
 

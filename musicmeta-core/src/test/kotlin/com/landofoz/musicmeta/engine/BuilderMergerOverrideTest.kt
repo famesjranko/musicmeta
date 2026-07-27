@@ -15,9 +15,10 @@ import org.junit.Test
 /** Regression cover for #49: a caller's `addMerger` must win for every built-in merger type. */
 class BuilderMergerOverrideTest {
 
+    /** The payload has to answer its type — an empty one is demoted to NotFound before it lands. */
     private class StubMerger(override val type: EnrichmentType) : ResultMerger {
         override fun merge(results: List<EnrichmentResult.Success>) =
-            EnrichmentResult.Success(type, EnrichmentData.Metadata(), "caller_merger", 1.0f)
+            EnrichmentResult.Success(type, EnrichmentData.Metadata(genres = listOf("rock")), "caller_merger", 1.0f)
     }
 
     private val builtInMergerTypes = listOf(

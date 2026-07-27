@@ -259,7 +259,7 @@ internal class DefaultEnrichmentEngine(
             logger.debug(TAG, "Identity resolution returned no resolvedIdentifiers")
             if (result.data is EnrichmentData.Metadata) {
                 for (type in IDENTITY_TYPES) {
-                    if (type in uncachedTypes && type !in mergeableTypes) {
+                    if (type in uncachedTypes && type !in mergeableTypes && result.data.answers(type)) {
                         results[type] = result.copy(type = type); uncachedTypes.remove(type)
                     }
                 }
@@ -285,8 +285,10 @@ internal class DefaultEnrichmentEngine(
         )
 
         if (result.data is EnrichmentData.Metadata) {
+            // A type the identity payload does not answer is left in uncachedTypes on purpose, so
+            // the provider chain still gets its turn at it rather than inheriting an empty Success.
             for (type in IDENTITY_TYPES) {
-                if (type in uncachedTypes && type !in mergeableTypes) {
+                if (type in uncachedTypes && type !in mergeableTypes && result.data.answers(type)) {
                     results[type] = EnrichmentResult.Success(
                         type = type,
                         data = result.data,
@@ -322,7 +324,7 @@ internal class DefaultEnrichmentEngine(
             async {
                 val chain = registry.chainFor(type)
                 val result = chain?.resolve(request) ?: EnrichmentResult.NotFound(type, "no_provider")
-                type to filterByConfidence(result)
+                type to demoteEmptyPayload(filterByConfidence(result))
             }
         }.awaitAll().toMap().toMutableMap()
 
@@ -330,12 +332,17 @@ internal class DefaultEnrichmentEngine(
             async {
                 val chain = registry.chainFor(mergeType)
                 val allResults = chain?.resolveAll(request).orEmpty()
-                val filtered = allResults.mapNotNull { filterByConfidence(it) as? EnrichmentResult.Success }
+                val filtered = allResults.mapNotNull {
+                    demoteEmptyPayload(filterByConfidence(it)) as? EnrichmentResult.Success
+                }
                 val merger = mergers[mergeType]
                 mergeType to if (merger == null) {
                     EnrichmentResult.NotFound(mergeType, "no_merger")
                 } else {
-                    guardedStrategy(logger, mergeType, "merger") { merger.merge(filtered) }
+                    // Also gated on the way out: a merger may return one of its inputs as-is, or
+                    // merge to nothing. Confidence is not re-filtered — the inputs already passed,
+                    // and a merger's own provider id is not a consumer's override key.
+                    demoteEmptyPayload(guardedStrategy(logger, mergeType, "merger") { merger.merge(filtered) })
                 }
             }
         }.awaitAll()
@@ -364,6 +371,19 @@ internal class DefaultEnrichmentEngine(
         }
         return if (override != null) result.copy(confidence = override) else result
     }
+
+    /**
+     * The second per-result gate: a `Success` whose payload does not [answers] the type it claims to
+     * answer is a `NotFound`. [filterByConfidence] cannot do this — confidence scores identification,
+     * and a perfect identity match on an entity carrying no data scores 1.0. Sited here rather than
+     * in each provider because every provider had the same hole.
+     */
+    private fun demoteEmptyPayload(result: EnrichmentResult): EnrichmentResult =
+        if (result is EnrichmentResult.Success && !result.data.answers(result.type)) {
+            EnrichmentResult.NotFound(result.type, result.provider)
+        } else {
+            result
+        }
 
     private suspend fun applyStaleCache(
         request: EnrichmentRequest,

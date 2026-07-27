@@ -18,7 +18,10 @@ exhaustive. Paths are relative to `musicmeta-core/src/main/kotlin/com/landofoz/m
   propagates. An expiry does not discard results already fetched, but the write-back is skipped, so
   a timed-out run caches nothing. The stale fallback and write-back sit outside the timed block.
   §6 below holds the worked example.
-- `filterByConfidence()` demotes a `Success` below `minConfidence` (0.5) to `NotFound`.
+- `filterByConfidence()` demotes a `Success` below `minConfidence` (0.5) to `NotFound`; its sibling
+  `demoteUnanswered()` demotes one whose payload does not `answers()` its type, at any confidence,
+  and runs on the cache read too — so an entry written by an older build is re-judged, not trusted
+  (§8).
 
 ## 1. The published surface only grows by appending
 
@@ -207,3 +210,23 @@ Bunny. Rank on `matchQuality` first and let popularity break ties only *within* 
 popularity signal must never outrank name quality, only settle candidates whose names are equally
 good. `ITunesApi.searchArtist` and `DiscogsApi.searchArtist` still take hit 0 from a
 `limit=1`/`per_page=1` search.
+## 8. `confidence` scores identification, not the payload
+
+```kotlin
+// WRONG — a tagless recording matched at score 100 becomes GENRE Success, confidence 1.0, all fields null
+val best = recordings.firstOrNull { it.score >= minMatchScore } ?: return NotFound(type, providerId)
+return Success(type, MusicBrainzMapper.toTrackMetadata(best), providerId,
+    ConfidenceCalculator.searchScore(best.score))
+```
+
+The two signals are independent, and the identity score is the wrong one to reach for: it is
+*highest* exactly when the entity matched perfectly and happened to carry nothing. So
+`filterByConfidence()` cannot demote an empty result, and lowering the score to express a thin
+payload only mislabels a match that was in fact perfect. `answers()` in `engine/PayloadAnswers.kt` is
+the second gate, and the engine applies it to every provider result, every merger output and the
+identity fan-out — no provider needs its own check.
+
+Extending it: one `EnrichmentData.Metadata` serves six types, so **which field answers which type is
+per type** — `label` answers `LABEL` and nothing else, and only `ALBUM_METADATA` accepts any field at
+all. Every other payload answers its type iff it carries anything. A new payload class must be added
+to the `when`; it is exhaustive so the compiler asks.
