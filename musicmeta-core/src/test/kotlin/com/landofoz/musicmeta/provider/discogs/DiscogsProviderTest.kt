@@ -629,6 +629,46 @@ class DiscogsProviderTest {
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
+    @Test
+    fun `every request carries the token as a header and none carries it in the URL`() = runTest {
+        // Given — responses for all five endpoints the API client calls
+        httpClient.givenJsonResponse("search?type=release", SEARCH_RESULTS_JSON)
+        httpClient.givenJsonResponse("search?type=artist", ARTIST_SEARCH_JSON)
+        httpClient.givenJsonResponse("artists/12345", ARTIST_DETAIL_JSON)
+        httpClient.givenJsonResponse("releases/999", RELEASE_DETAIL_WITH_TRACK_CREDITS_JSON)
+        httpClient.givenJsonResponse("masters/55002/versions", MASTER_VERSIONS_JSON)
+
+        // When — one request per endpoint
+        provider.enrich(
+            EnrichmentRequest.forAlbum("OK Computer", "Radiohead"),
+            EnrichmentType.ALBUM_ART,
+        )
+        provider.enrich(EnrichmentRequest.forArtist("Radiohead"), EnrichmentType.BAND_MEMBERS)
+        provider.enrich(
+            EnrichmentRequest.ForTrack(
+                identifiers = EnrichmentIdentifiers().withExtra("discogsReleaseId", "999"),
+                title = "Paranoid Android",
+                artist = "Radiohead",
+            ),
+            EnrichmentType.CREDITS,
+        )
+        provider.enrich(
+            EnrichmentRequest.ForAlbum(
+                identifiers = EnrichmentIdentifiers().withExtra("discogsMasterId", "55002"),
+                title = "OK Computer",
+                artist = "Radiohead",
+            ),
+            EnrichmentType.RELEASE_EDITIONS,
+        )
+
+        // Then — all five endpoints were hit, token in the header and never in the URL
+        assertEquals(5, httpClient.requestedUrls.size)
+        assertTrue(httpClient.requestedUrls.none { it.contains("token") })
+        assertTrue(
+            httpClient.requestedHeaders.all { it["Authorization"] == "Discogs token=test-token" },
+        )
+    }
+
     private companion object {
         val METADATA_SEARCH_JSON = """
             {
