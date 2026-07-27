@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.provider.deezer
 
+import com.landofoz.musicmeta.engine.ArtistMatcher
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.HttpResult
 import com.landofoz.musicmeta.http.RateLimiter
@@ -44,9 +45,22 @@ internal class DeezerApi(
         }
     }
 
+    /**
+     * Finds the artist a human would mean by [name].
+     *
+     * Deezer's result order is not trustworthy: "Radiohead" returns an exact-name ghost
+     * (0 albums, 470 fans) ahead of the real artist (id 399). So fetch a pool of candidates,
+     * keep the ones [ArtistMatcher.isMatch] accepts, and rank those by name quality first
+     * ([ArtistMatcher.matchQuality]) and only then by fans and albums.
+     *
+     * Name quality outranks popularity at every step, so a popular wrong-name artist cannot win:
+     * not one the matcher rejects, and not one it accepts only loosely while a closer name is in
+     * the pool. Popularity decides between candidates whose names are equally good — which is the
+     * ghost case, two entries both named exactly "Radiohead".
+     */
     suspend fun searchArtist(name: String): DeezerArtistSearchResult? {
         val encoded = URLEncoder.encode(name, "UTF-8")
-        val url = "$BASE_URL/search/artist?q=$encoded&limit=1"
+        val url = "$BASE_URL/search/artist?q=$encoded&limit=$ARTIST_SEARCH_LIMIT"
         val json = rateLimiter.execute {
             when (val r = httpClient.fetchJsonResult(url)) {
                 is HttpResult.Ok -> r.body
@@ -55,16 +69,26 @@ internal class DeezerApi(
         } ?: return null
 
         val data = json.optJSONArray("data") ?: return null
-        if (data.length() == 0) return null
-        val artist = data.getJSONObject(0)
-        return DeezerArtistSearchResult(
-            id = artist.optLong("id"),
-            name = artist.optString("name", ""),
-            pictureSmall = artist.optString("picture_small").takeIfNotEmpty(),
-            pictureMedium = artist.optString("picture_medium").takeIfNotEmpty(),
-            pictureBig = artist.optString("picture_big").takeIfNotEmpty(),
-            pictureXl = artist.optString("picture_xl").takeIfNotEmpty(),
-        )
+        return (0 until data.length())
+            .mapNotNull { data.optJSONObject(it) }
+            .filter { ArtistMatcher.isMatch(name, it.optString("name", "")) }
+            .maxWithOrNull(
+                compareBy(
+                    { ArtistMatcher.matchQuality(name, it.optString("name", "")) },
+                    { it.optLong("nb_fan") },
+                    { it.optLong("nb_album") },
+                ),
+            )
+            ?.let { artist ->
+                DeezerArtistSearchResult(
+                    id = artist.optLong("id"),
+                    name = artist.optString("name", ""),
+                    pictureSmall = artist.optString("picture_small").takeIfNotEmpty(),
+                    pictureMedium = artist.optString("picture_medium").takeIfNotEmpty(),
+                    pictureBig = artist.optString("picture_big").takeIfNotEmpty(),
+                    pictureXl = artist.optString("picture_xl").takeIfNotEmpty(),
+                )
+            }
     }
 
     suspend fun getArtistAlbums(artistId: Long, limit: Int = 50): List<DeezerArtistAlbum> {
@@ -250,5 +274,8 @@ internal class DeezerApi(
 
     private companion object {
         const val BASE_URL = "https://api.deezer.com"
+
+        /** Candidate pool size for artist search — enough hits for a ghost to be outvoted. */
+        const val ARTIST_SEARCH_LIMIT = 10
     }
 }
