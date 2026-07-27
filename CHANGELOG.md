@@ -50,7 +50,7 @@ This release makes `engine/` internal, hardens providers and the engine, and cor
 - The build works when the default JDK is not 17 (every module declares `jvmTarget`; bytecode unchanged)
 - Docs: `withDefaultProviders()` must be called last; `ArtworkMerger` covers only `ALBUM_ART`/`ARTIST_PHOTO`; the genre taxonomy is 189 relationships in 12 families, not `~70`
 - Docs: four wrong `README.md` claims removed; eleven drifted API references in `docs/providers/` replaced by one `docs/providers.md`
-- Each host gets its own `RateLimiter`; ten providers shared one, serialising every fan-out (#50)
+- Each host gets its own `RateLimiter` — Cover Art Archive's is now actually used; ten providers shared one, serialising every fan-out (#50)
 - A timed-out `enrich()` now caches nothing; no half-filtered result persists (#56)
 
 ## [0.10.1] - 2026-07-22
