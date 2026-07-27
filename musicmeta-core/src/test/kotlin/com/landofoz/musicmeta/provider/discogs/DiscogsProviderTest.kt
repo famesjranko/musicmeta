@@ -232,7 +232,9 @@ class DiscogsProviderTest {
 
         // Then — success with 2 band members
         assertTrue(result is EnrichmentResult.Success)
-        val data = (result as EnrichmentResult.Success).data as EnrichmentData.BandMembers
+        // and this is not the album search, so success() keeps its fuzzyMatch(false) default
+        assertEquals(0.6f, (result as EnrichmentResult.Success).confidence)
+        val data = result.data as EnrichmentData.BandMembers
         assertEquals(2, data.members.size)
         assertEquals("Thom Yorke", data.members[0].name)
         assertEquals("Jonny Greenwood", data.members[1].name)
@@ -525,9 +527,7 @@ class DiscogsProviderTest {
 
         // Then
         assertTrue(result is EnrichmentResult.Success)
-        // and an id-based path verifies no artist name, so it stays at fuzzyMatch(false)
-        assertEquals(0.6f, (result as EnrichmentResult.Success).confidence)
-        val data = result.data as EnrichmentData.ReleaseEditions
+        val data = (result as EnrichmentResult.Success).data as EnrichmentData.ReleaseEditions
         assertEquals(2, data.editions.size)
         assertEquals("OK Computer", data.editions[0].title)
         assertEquals("Vinyl, LP", data.editions[0].format)

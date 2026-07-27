@@ -40,7 +40,7 @@ This release makes the `engine/` package internal, fixes two cancellation bugs, 
 - A consumer `EnrichmentLogger` that throws no longer fails `enrich()`; the log line is lost (#71)
 - MusicBrainz's artist-lookup cache, once unbounded, now evicts least-recently-used past 500 artists
 - Discogs verifies the artist name on both searches, returning `NotFound` over a wrong-artist result
-- A verified Discogs album result reports 0.8 confidence, not 0.6, clearing a stricter `minConfidence`
+- A verified Discogs album result reports 0.8, not 0.6, clearing a stricter `minConfidence`
 - Back cover, booklet and CD art from the Cover Art Archive now read the canonical `"250"` thumbnail key, falling back to the deprecated `"small"` alias
 - A cancelled or timed-out `enrich()` no longer opens circuit breakers against healthy providers, across the eight sites that swallowed cancellation (#53)
 - A consumer cache or merge strategy with its own `withTimeout` no longer surfaces as the engine's deadline (#61)

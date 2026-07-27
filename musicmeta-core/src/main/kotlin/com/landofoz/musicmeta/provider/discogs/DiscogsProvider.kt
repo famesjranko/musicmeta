@@ -221,7 +221,7 @@ class DiscogsProvider(
         data: EnrichmentData,
         type: EnrichmentType,
         release: DiscogsRelease? = null,
-        // Defaults false: the id- and artist-search paths verify no artist name.
+        // Defaults false: only the album search matches on an artist name.
         hasArtistMatch: Boolean = false,
     ) = EnrichmentResult.Success(
         type = type,
