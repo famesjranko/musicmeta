@@ -28,9 +28,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-This release makes the `engine/` package internal, fixes two cancellation bugs, and corrects a round of documentation errors.
+This release makes the `engine/` package internal, fixes cancellation and timeout bugs, and corrects documentation errors.
 
 ### Breaking Changes
+- A `CatalogProvider`'s own `withTimeout` expiry now propagates out of `enrich()` instead of reported as ours (#55)
 - `engine/` internals are no longer published. `DefaultEnrichmentEngine`, `ProviderRegistry`, `ProviderChain`, `ArtistMatcher` and `ConfidenceCalculator` are now `internal`. Build engines with `EnrichmentEngine.Builder`, which covers every constructor parameter. `ResultMerger` and `CompositeSynthesizer` remain public, as the documented extension points
 
 ### Fixed
@@ -39,14 +40,13 @@ This release makes the `engine/` package internal, fixes two cancellation bugs, 
 - Back cover, booklet and CD art from the Cover Art Archive now read the canonical `"250"` thumbnail key, falling back to the deprecated `"small"` alias
 - A cancelled or timed-out `enrich()` no longer opens circuit breakers against healthy providers, across the eight sites that swallowed cancellation (#53)
 - A consumer cache or merge strategy with its own `withTimeout` no longer surfaces as the engine's deadline (#61)
-- A timed-out `enrich()` caches nothing, and a foreign timeout is not reported as ours (#56, #55)
+- A timed-out `enrich()` now caches nothing, so no half-filtered result persists (#56)
 - A throwing `HttpClient` on Wikipedia's Wikidata sitelink lookup now yields an `EnrichmentResult.Error` with a classified `errorKind` instead of escaping the provider as `UNKNOWN`. Affects requests carrying a `wikidataId` but no `wikipediaTitle`
 - The build now works when the default JDK is not 17, because every module declares Kotlin's `jvmTarget`. Published bytecode and the `api/*.api` baselines are unchanged
 - `configuration.md` no longer teaches a builder order that silently misconfigures the engine: `withDefaultProviders()` reads the keys already set, so it must be called last
 - `how-it-works.md` claimed that all 8 artwork types use `ArtworkMerger`. It is registered for `ALBUM_ART` and `ARTIST_PHOTO` only, and the other six resolve first-wins
 - The genre taxonomy is documented as 189 relationships across 12 families, correcting the `~70` figure that was repeated in four places
 - Four claims in `README.md` were wrong: the Wikidata photo width, `isAvailable = false` on a missing key, four latency figures from no benchmark, and dates and occupation credited to Wikidata though no enrichment type exposes them
-- `README.md` is a README again rather than a second copy of the guides, down from 392 lines to 216
 - `docs/providers/` held eleven drifted copies of third-party API references, one still reporting a fixed `http://` bug as open. Replaced by a single `docs/providers.md`
 
 ## [0.10.1] - 2026-07-22

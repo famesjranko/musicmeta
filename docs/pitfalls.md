@@ -137,3 +137,29 @@ Last.fm, LrcLib). ID-keyed providers declare on every entry (Cover Art Archive, 
 Wikipedia, ListenBrainz). MusicBrainz declares on exactly 2 of 11 — `CREDITS` and `RELEASE_EDITIONS`
 — because it searches by name for the rest. The only test is whether *this* capability can resolve
 without the identifier.
+
+## 6. Catching `TimeoutCancellationException` by type cannot tell whose deadline fired
+
+```kotlin
+// WRONG — shipped until #55; any nested withTimeout lands here too
+try { withTimeout(config.enrichTimeoutMs) { … } }
+catch (_: TimeoutCancellationException) { /* stamp every unfinished type ErrorKind.TIMEOUT */ }
+
+// RIGHT — null means *this* deadline and nothing else; a nested expiry propagates
+val completed = withTimeoutOrNull(config.enrichTimeoutMs) { …; true } ?: false
+```
+
+The type carries no identity, so a consumer's `CatalogProvider` running its own `withTimeout` was
+reported as `enrichTimeoutMs` expiring, from provider `"engine"` — sending them to tune a number
+that was never the problem. `withTimeoutOrNull` discriminates because it compares the exception's
+coroutine with its own. `CatalogProvider` is the live case only because it is the one
+consumer-implementable call the engine makes unguarded; the cache, merge strategies and providers
+reach it through `ensureActive()` guards instead (§2).
+
+**A timed-out `results` map is a mix, not a prefix.** `applyCatalogFiltering()` rewrites entries one
+type at a time inside the deadline, so an expiry mid-loop leaves some types filtered and some raw,
+and the timeout backfill only fills types that are *missing* — a half-filtered `Success` carries no
+marker at all. That mix is fine to return and was never fine to cache: the write-back ran outside
+the deadline and persisted it under the primary *and* name-alias keys, so every later lookup was a
+hit that skipped filtering (#56). Anything added inside that block inherits the same shape, which is
+why the guard is on the write-back rather than on catalog filtering.

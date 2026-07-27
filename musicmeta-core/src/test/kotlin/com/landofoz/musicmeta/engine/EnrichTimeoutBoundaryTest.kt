@@ -86,7 +86,12 @@ class EnrichTimeoutBoundaryTest {
         // When — enriching two recommendation types
         val results = engine(catalog).enrich(req, types)
 
-        // Then — nothing written back at all: not the filtered type, not the unfiltered one, and
+        // Then — the alias key is genuinely in play: identity resolved an MBID the request lacked,
+        // which is the condition for the second write. Without this the empty-cache assertion below
+        // could pass for the wrong reason.
+        assertEquals("mbid-123", results.identity?.identifiers?.musicBrainzId)
+
+        // And — nothing written back at all: not the filtered type, not the unfiltered one, and
         // neither under the primary key nor under the MBID-resolved name alias.
         assertEquals("a timed-out run caches nothing", emptyMap<String, EnrichmentResult>(), cache.stored)
 
