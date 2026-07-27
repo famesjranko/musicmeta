@@ -47,6 +47,7 @@ This release makes the `engine/` package internal, fixes two cancellation bugs, 
 - Docs: the genre taxonomy is 189 relationships across 12 families, not `~70`
 - Docs: four wrong `README.md` claims removed (Wikidata photo width, `isAvailable` on a missing key, unbenchmarked latency figures, Wikidata dates/occupation)
 - Docs: eleven drifted third-party API references in `docs/providers/` replaced by one `docs/providers.md`
+- Each host gets its own `RateLimiter`; ten providers shared one, serialising every fan-out (#50)
 
 ## [0.10.1] - 2026-07-22
 
