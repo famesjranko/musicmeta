@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.provider.discogs
 
+import com.landofoz.musicmeta.engine.ArtistMatcher
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.http.bodyOrThrowAuth
@@ -28,16 +29,46 @@ internal class DiscogsApi(
         return parseReleaseResults(json)
     }
 
-    /** Search for an artist by name and return the first match's Discogs ID. */
+    /**
+     * Finds the Discogs ID of the artist a human would mean by [name].
+     *
+     * A search API's hit 0 is a ranking, not an answer (docs/pitfalls.md §7), and this call asked
+     * for `per_page=1`, so the caller's name check saw one hit and never the pool. Fetch a pool,
+     * keep the candidates [ArtistMatcher] accepts, and rank them by [ArtistMatcher.matchQuality].
+     *
+     * Two Discogs specifics shape this, both confirmed against live payloads:
+     *
+     * 1. The name field is **`title`**, not `name`, and it carries Discogs's `" (n)"` disambiguator.
+     *    That suffix is **arbitrary** — the bare name goes to whoever was catalogued first, not to
+     *    the better-known artist. Searching "Bad Company" returns `Bad Company (3)` (the Paul
+     *    Rodgers rock band) at rank 0 and `Bad Company` (a UK drum & bass group) at rank 1, so
+     *    ranking the bare name higher would pick the *wrong* artist. [stripDisambiguator] removes it
+     *    before matching, which puts both at the same rank and lets Discogs's order settle it.
+     * 2. **The payload carries no popularity signal** — an artist result is only `id`, `type`,
+     *    `master_id`, `master_url`, `uri`, `title`, `thumb`, `cover_image`, `resource_url`. The
+     *    have/want/rating counts exist on *release* results, not these. So there is no popularity
+     *    tiebreak: equal-quality candidates fall back to Discogs's own order, since [maxWithOrNull]
+     *    keeps the first maximum.
+     *
+     * Name quality is therefore the only ranking, never overridden by anything.
+     */
     suspend fun searchArtist(name: String): Long? {
         val encoded = URLEncoder.encode(name, "UTF-8")
-        val url = "$SEARCH_URL?type=artist&q=$encoded&per_page=1"
+        val url = "$SEARCH_URL?type=artist&q=$encoded&per_page=$ARTIST_SEARCH_LIMIT"
         val json = rateLimiter.execute { fetch(url) } ?: return null
         val results = json.optJSONArray("results") ?: return null
-        if (results.length() == 0) return null
-        val id = results.getJSONObject(0).optLong("id", 0L)
+        val id = (0 until results.length())
+            // A non-object element is skipped, not thrown: a JSONException here would surface as
+            // Error and open the breaker against a healthy Discogs (docs/pitfalls.md §4).
+            .mapNotNull { results.optJSONObject(it) }
+            .filter { ArtistMatcher.isMatch(name, it.candidateName()) }
+            .maxWithOrNull(compareBy { ArtistMatcher.matchQuality(name, it.candidateName()) })
+            ?.optLong("id", 0L) ?: return null
         return if (id > 0) id else null
     }
+
+    private fun JSONObject.candidateName(): String =
+        stripDisambiguator(optString("title", ""))
 
     /** Fetch artist details including band members. */
     suspend fun getArtist(artistId: Long): DiscogsArtist? {
@@ -197,6 +228,20 @@ internal class DiscogsApi(
 
     private companion object {
         const val SEARCH_URL = "https://api.discogs.com/database/search"
+
+        /** Candidate pool size for artist search — enough hits for a wrong name to be passed over. */
+        const val ARTIST_SEARCH_LIMIT = 10
+
+        /** Discogs's trailing homonym counter: "Nirvana (2)", "Bad Company (3)". */
+        private val DISAMBIGUATOR_REGEX = Regex("\\s*\\(\\d+\\)$")
+
+        /**
+         * Drops Discogs's `" (n)"` homonym counter so two artists sharing a name compare as equals.
+         * Only a trailing all-digit group goes — "Bad Company (3)" becomes "Bad Company", while a
+         * meaningful parenthetical like "Air (French Band)" is left alone.
+         */
+        fun stripDisambiguator(title: String): String =
+            title.replace(DISAMBIGUATOR_REGEX, "").trim()
         const val ARTISTS_URL = "https://api.discogs.com/artists"
         const val RELEASES_URL = "https://api.discogs.com/releases"
         const val MASTERS_URL = "https://api.discogs.com/masters"

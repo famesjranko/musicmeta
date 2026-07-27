@@ -60,6 +60,7 @@ This release makes `engine/` internal, hardens providers and the engine, and cor
 - A 429 on the typed `HttpResult` calls now retries within the enrich deadline; standalone, an `HttpClient` may block up to 120s rather than return at once
 - `EnrichmentIdentifiers.wikipediaTitle` is null unless MusicBrainz has an `en.wikipedia.org` relation; artists like Portishead get an English `ARTIST_BIO` via the Wikidata `enwiki` sitelink (#106)
 - Deezer artist search picks the best name match, popularity only as tiebreak: Radiohead resolves to id 399, not the empty same-name ghost at hit 0; a supplied `deezerId` wins, so clear stale caches
+- iTunes and Discogs artist search rank a candidate pool by name match instead of taking hit 0 of a 1-result search; a stored `itunesArtistId` still wins, so clear stale caches
 
 ## [0.10.1] - 2026-07-22
 

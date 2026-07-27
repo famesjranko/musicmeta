@@ -208,8 +208,30 @@ loose at the bottom — bare containment, then 50% token overlap. For "Bad Compa
 "Bad Company Live In Concert" and "Bad Bunny", so sorting that pool on `nb_fan` hands it to Bad
 Bunny. Rank on `matchQuality` first and let popularity break ties only *within* a rank: a
 popularity signal must never outrank name quality, only settle candidates whose names are equally
-good. `ITunesApi.searchArtist` and `DiscogsApi.searchArtist` still take hit 0 from a
-`limit=1`/`per_page=1` search.
+good.
+
+**The tiebreak must be a signal the payload actually sends, and "same name" is not always one.**
+`ITunesApi.searchArtist` and `DiscogsApi.searchArtist` got the same treatment, and neither could
+copy the Deezer tail: an iTunes `musicArtist` result carries no popularity field at all (only
+`artistId`, `artistName`, genre and sometimes an AllMusic id), and a Discogs artist result carries
+none either (`id`, `title`, `uri`, `thumb`, `cover_image`, `resource_url` — the have/want/rating
+counts are on *release* results). So both rank on `matchQuality` alone and let equal names fall back
+to the provider's own order, which `maxWithOrNull` gives for free by keeping the first maximum.
+
+Discogs adds a trap on top: its name field is **`title`**, not `name`, and it carries a `" (n)"`
+homonym counter that is **arbitrary** — the bare name goes to whoever was catalogued first.
+
+```
+q=Bad Company → 261941 "Bad Company (3)"   the Paul Rodgers rock band, at hit 0
+                  2017 "Bad Company"       a UK drum & bass group, at hit 1
+```
+
+Ranking the bare name as the exact match therefore picks the *wrong* artist — a regression the
+`per_page=1` code it replaced did not have, caught only because the live payload was pulled before
+the code was written. `DiscogsApi` strips a trailing ` (n)` before matching so homonyms tie and
+Discogs' order settles them. Fact-check the payload before porting a selection rule between
+providers; the shape that makes it work is per API.
+
 ## 8. `confidence` scores identification, not the payload
 
 ```kotlin

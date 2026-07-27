@@ -688,8 +688,11 @@ class DiscogsProviderTest {
             }
         """.trimIndent()
 
+        // A Discogs artist search result names the artist in `title`, not `name` — verified
+        // against a live api.discogs.com/database/search?type=artist response. This fixture said
+        // `name` until the searchArtist name filter was added and started reading the field.
         val ARTIST_SEARCH_JSON = """
-            {"results":[{"id":12345,"name":"Radiohead"}]}
+            {"results":[{"id":12345,"type":"artist","title":"Radiohead"}]}
         """.trimIndent()
 
         val ARTIST_DETAIL_JSON = """
