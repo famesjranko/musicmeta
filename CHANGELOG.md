@@ -35,19 +35,18 @@ This release makes `engine/` internal, hardens providers and the engine, and cor
 - `engine/` internals are no longer published. `DefaultEnrichmentEngine`, `ProviderRegistry`, `ProviderChain`, `ArtistMatcher` and `ConfidenceCalculator` are now `internal`. Build engines with `EnrichmentEngine.Builder`. `ResultMerger` and `CompositeSynthesizer` remain public
 
 ### Fixed
-- A verified Discogs album result reports 0.8, not 0.6, clearing a stricter minConfidence
 - Fanart.tv `ALBUM_ART`/`CD_ART` need a release group id; the wrong-album fallback is gone
 - A 401/403 on a call carrying a key (Last.fm, Discogs, Fanart.tv, ListenBrainz radio) is now `Error(ErrorKind.AUTH)`, not `NotFound`; five in a row open the breaker, one retries a minute later
 - An `ARTIST_TOP_TRACKS` merger registered via `Builder.addMerger` now overrides the built-in `TopTrackMerger`; merged output changes for anyone who registered one (#49)
-- iTunes search candidates now carry `itunesCollectionId`; a follow-up `ALBUM_TRACKS` request with them resolves by direct lookup at 1.0 confidence instead of re-searching
+- iTunes search candidates now carry `itunesCollectionId`; a follow-up `ALBUM_TRACKS` request resolves by direct lookup instead of re-searching
 - A consumer `EnrichmentLogger` that throws no longer fails `enrich()`; the log line is lost (#71)
 - MusicBrainz caches artist and release lookups (LRU, 500); album `GENRE` fills empty genres by lookup
-- Discogs verifies the artist name on both searches, returning `NotFound` over a wrong-artist result
+- Discogs verifies the artist name on both searches (`NotFound` over a wrong-artist hit); a verified album result reports 0.8, not 0.6
 - Cover Art Archive back covers, booklets and CD art read the canonical `"250"` thumbnail key, not the deprecated `"small"` alias
 - A cancelled or timed-out `enrich()` no longer opens circuit breakers against healthy providers (#53)
 - A consumer cache or merge strategy with its own `withTimeout` no longer surfaces as the engine's deadline (#61)
 - A throwing `HttpClient` on Wikipedia's Wikidata sitelink lookup now yields `Error` with a classified `errorKind` instead of escaping as `UNKNOWN`
-- The build works when the default JDK is not 17: every module declares Kotlin's `jvmTarget`; published bytecode and baselines unchanged
+- The build works when the default JDK is not 17 (every module declares `jvmTarget`; bytecode unchanged)
 - Docs: `withDefaultProviders()` must be called last; `ArtworkMerger` covers only `ALBUM_ART`/`ARTIST_PHOTO`; the genre taxonomy is 189 relationships in 12 families, not `~70`
 - Docs: four wrong `README.md` claims removed; eleven drifted API references in `docs/providers/` replaced by one `docs/providers.md`
 - Each host gets its own `RateLimiter`; ten providers shared one, serialising every fan-out (#50)
