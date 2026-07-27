@@ -123,6 +123,43 @@ class DiscogsProviderTest {
     }
 
     @Test
+    fun `enrich returns NotFound when no search result matches the requested artist`() = runTest {
+        // Given — every result is by a different artist
+        httpClient.givenJsonResponse("discogs.com", """{
+            "results": [{
+                "title": "Weird Al Yankovic - OK Computer",
+                "label": ["Parlophone"],
+                "year": "1997",
+                "cover_image": "https://img.discogs.com/wrong.jpg"
+            }]
+        }""")
+        val request = EnrichmentRequest.forAlbum(
+            title = "OK Computer",
+            artist = "Radiohead",
+        )
+
+        // When
+        val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
+
+        // Then — no fall-through to Discogs' own ranking
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `enrich returns NotFound when artist search resolves a different artist`() = runTest {
+        // Given — Discogs' per_page=1 artist search returns someone else
+        httpClient.givenJsonResponse("search?type=artist", ARTIST_SEARCH_JSON)
+        httpClient.givenJsonResponse("artists/12345", ARTIST_DETAIL_JSON)
+        val request = EnrichmentRequest.forArtist(name = "Portishead")
+
+        // When
+        val result = provider.enrich(request, EnrichmentType.BAND_MEMBERS)
+
+        // Then — the returned artist's name is verified before use
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
     fun `enrich returns NotFound when results field is missing from JSON`() = runTest {
         // Given — Discogs API returns JSON without a "results" array
         httpClient.givenJsonResponse("discogs.com", """{"pagination":{"pages":0}}""")

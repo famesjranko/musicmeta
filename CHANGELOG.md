@@ -39,6 +39,7 @@ This release makes the `engine/` package internal, fixes two cancellation bugs, 
 - iTunes search candidates now carry `itunesCollectionId` in `identifiers` (empty before); a follow-up `ALBUM_TRACKS` request with them resolves by direct lookup at 1.0 confidence instead of re-searching
 - A consumer `EnrichmentLogger` that throws no longer fails `enrich()`; the log line is lost (#71)
 - MusicBrainz's artist-lookup cache, once unbounded, now evicts least-recently-used past 500 artists
+- Discogs verifies the artist name on both searches, returning `NotFound` over a wrong-artist result
 - Back cover, booklet and CD art from the Cover Art Archive now read the canonical `"250"` thumbnail key, falling back to the deprecated `"small"` alias
 - A cancelled or timed-out `enrich()` no longer opens circuit breakers against healthy providers, across the eight sites that swallowed cancellation (#53)
 - A consumer cache or merge strategy with its own `withTimeout` no longer surfaces as the engine's deadline (#61)
