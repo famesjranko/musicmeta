@@ -6,6 +6,8 @@ import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.http.bodyOrThrowTransient
 import com.landofoz.musicmeta.takeIfNotEmpty
+import org.json.JSONObject
+import java.io.IOException
 import java.net.URLEncoder
 
 /**
@@ -20,9 +22,7 @@ internal class DeezerApi(
     suspend fun searchAlbums(query: String, limit: Int): List<DeezerAlbumResult> {
         val encoded = URLEncoder.encode(query, "UTF-8")
         val url = "$BASE_URL/search/album?q=$encoded&limit=$limit"
-        val json = rateLimiter.execute {
-            httpClient.fetchJsonResult(url).bodyOrThrowTransient()
-        } ?: return emptyList()
+        val json = fetchJson(url) ?: return emptyList()
 
         val data = json.optJSONArray("data") ?: return emptyList()
         return (0 until data.length()).map { i ->
@@ -59,9 +59,7 @@ internal class DeezerApi(
     suspend fun searchArtist(name: String): DeezerArtistSearchResult? {
         val encoded = URLEncoder.encode(name, "UTF-8")
         val url = "$BASE_URL/search/artist?q=$encoded&limit=$ARTIST_SEARCH_LIMIT"
-        val json = rateLimiter.execute {
-            httpClient.fetchJsonResult(url).bodyOrThrowTransient()
-        } ?: return null
+        val json = fetchJson(url) ?: return null
 
         val data = json.optJSONArray("data") ?: return null
         return (0 until data.length())
@@ -84,9 +82,7 @@ internal class DeezerApi(
 
     suspend fun getArtistAlbums(artistId: Long, limit: Int = 50): List<DeezerArtistAlbum> {
         val url = "$BASE_URL/artist/$artistId/albums?limit=$limit"
-        val json = rateLimiter.execute {
-            httpClient.fetchJsonResult(url).bodyOrThrowTransient()
-        } ?: return emptyList()
+        val json = fetchJson(url) ?: return emptyList()
 
         val data = json.optJSONArray("data") ?: return emptyList()
         return (0 until data.length()).map { i ->
@@ -104,9 +100,7 @@ internal class DeezerApi(
 
     suspend fun getAlbumTracks(albumId: Long): List<DeezerTrack> {
         val url = "$BASE_URL/album/$albumId/tracks"
-        val json = rateLimiter.execute {
-            httpClient.fetchJsonResult(url).bodyOrThrowTransient()
-        } ?: return emptyList()
+        val json = fetchJson(url) ?: return emptyList()
 
         val data = json.optJSONArray("data") ?: return emptyList()
         return (0 until data.length()).map { i ->
@@ -122,9 +116,7 @@ internal class DeezerApi(
 
     suspend fun getRelatedArtists(artistId: Long, limit: Int = 20): List<DeezerRelatedArtist> {
         val url = "$BASE_URL/artist/$artistId/related?limit=$limit"
-        val json = rateLimiter.execute {
-            httpClient.fetchJsonResult(url).bodyOrThrowTransient()
-        } ?: return emptyList()
+        val json = fetchJson(url) ?: return emptyList()
 
         val data = json.optJSONArray("data") ?: return emptyList()
         return (0 until data.length()).map { i ->
@@ -139,9 +131,7 @@ internal class DeezerApi(
     suspend fun searchTrack(title: String, artist: String): DeezerTrackSearchResult? {
         val query = URLEncoder.encode("$artist $title", "UTF-8")
         val url = "$BASE_URL/search/track?q=$query&limit=5"
-        val json = rateLimiter.execute {
-            httpClient.fetchJsonResult(url).bodyOrThrowTransient()
-        } ?: return null
+        val json = fetchJson(url) ?: return null
 
         val data = json.optJSONArray("data") ?: return null
         for (i in 0 until data.length()) {
@@ -162,9 +152,7 @@ internal class DeezerApi(
 
     suspend fun getTrackRadio(trackId: Long, limit: Int = 25): List<DeezerRadioTrack> {
         val url = "$BASE_URL/track/$trackId/radio?limit=$limit"
-        val json = rateLimiter.execute {
-            httpClient.fetchJsonResult(url).bodyOrThrowTransient()
-        } ?: return emptyList()
+        val json = fetchJson(url) ?: return emptyList()
 
         val data = json.optJSONArray("data") ?: return emptyList()
         return (0 until data.length()).map { i ->
@@ -183,9 +171,7 @@ internal class DeezerApi(
 
     suspend fun getArtistTop(artistId: Long, limit: Int = 10): List<DeezerTopTrack> {
         val url = "$BASE_URL/artist/$artistId/top?limit=$limit"
-        val json = rateLimiter.execute {
-            httpClient.fetchJsonResult(url).bodyOrThrowTransient()
-        } ?: return emptyList()
+        val json = fetchJson(url) ?: return emptyList()
 
         val data = json.optJSONArray("data") ?: return emptyList()
         return (0 until data.length()).map { i ->
@@ -205,9 +191,7 @@ internal class DeezerApi(
 
     suspend fun getArtistRadio(artistId: Long, limit: Int = 25): List<DeezerRadioTrack> {
         val url = "$BASE_URL/artist/$artistId/radio?limit=$limit"
-        val json = rateLimiter.execute {
-            httpClient.fetchJsonResult(url).bodyOrThrowTransient()
-        } ?: return emptyList()
+        val json = fetchJson(url) ?: return emptyList()
 
         val data = json.optJSONArray("data") ?: return emptyList()
         return (0 until data.length()).map { i ->
@@ -225,11 +209,10 @@ internal class DeezerApi(
     }
 
     /** Fetches a single track by Deezer ID. Returns preview URL and metadata. */
-    suspend fun getTrack(trackId: Long): DeezerTrackSearchResult? = rateLimiter.execute {
-        val url = "$BASE_URL/track/$trackId"
-        val json = httpClient.fetchJsonResult(url).bodyOrThrowTransient() ?: return@execute null
+    suspend fun getTrack(trackId: Long): DeezerTrackSearchResult? {
+        val json = fetchJson("$BASE_URL/track/$trackId") ?: return null
         val artist = json.optJSONObject("artist")
-        DeezerTrackSearchResult(
+        return DeezerTrackSearchResult(
             id = json.optLong("id"),
             title = json.optString("title", ""),
             artistName = artist?.optString("name", "").orEmpty(),
@@ -239,10 +222,41 @@ internal class DeezerApi(
         )
     }
 
+    /**
+     * The single fetch every call above goes through: rate limit, HTTP-level transient
+     * classification ([bodyOrThrowTransient]), then Deezer's own application-level one.
+     *
+     * Deezer answers application errors with **HTTP 200** and an `error` object in place of the
+     * payload, so no HTTP-layer classification can see them — `{"error":{"type":"DataException",
+     * "message":"no data","code":800}}` was observed live for a missing artist. Left alone, every
+     * caller's `optJSONArray("data")` reads that as an empty result, and a throttled Deezer records
+     * a breaker *success* while answering "nothing" to everything (`docs/pitfalls.md` §4).
+     *
+     * The split: `code == 4` is the quota rejection, thrown as [IOException] so it travels the
+     * provider's existing `catch { mapError(type, e) }` into `Error(ErrorKind.NETWORK)`. Any other
+     * `error` object is a genuine "no such thing" and returns `null`, which stays `NotFound`.
+     *
+     * **`code == 4` is a heuristic, not a contract.** Deezer's own error-code table is login-gated,
+     * so there is no citable official list; the quota shape is community-corroborated only, and may
+     * change without notice. Widen it when another transient code is actually observed — not
+     * speculatively.
+     */
+    private suspend fun fetchJson(url: String): JSONObject? = rateLimiter.execute {
+        val json = httpClient.fetchJsonResult(url).bodyOrThrowTransient() ?: return@execute null
+        val error = json.optJSONObject("error") ?: return@execute json
+        if (error.optInt("code") == QUOTA_ERROR_CODE) {
+            throw IOException("Deezer quota exceeded: ${error.optString("message")}")
+        }
+        null
+    }
+
     private companion object {
         const val BASE_URL = "https://api.deezer.com"
 
         /** Candidate pool size for artist search — enough hits for a ghost to be outvoted. */
         const val ARTIST_SEARCH_LIMIT = 10
+
+        /** Deezer's "Quota limit exceeded" code, carried in a 200 response's `error` object. */
+        const val QUOTA_ERROR_CODE = 4
     }
 }
