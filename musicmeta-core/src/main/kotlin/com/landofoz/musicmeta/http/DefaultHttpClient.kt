@@ -327,10 +327,11 @@ class DefaultHttpClient(
      */
     private suspend fun retryWaitMs(retryAfterMs: Long?, attempt: Int): Long? {
         val base = retryAfterMs ?: 2000L * (1L shl attempt)
-        val wait = (base + (base * 0.25 * (Random.nextDouble() * 2 - 1)).toLong()).coerceAtLeast(1000L)
         val budgetMs = currentCoroutineContext()[EnrichDeadline]?.remainingMs
             ?: (MAX_RETRY_AFTER_SEC * 1000)
-        return wait.takeIf { it <= budgetMs }
+        // Compared before jitter, so the ceiling is a hard figure rather than a coin flip near it.
+        if (base > budgetMs) return null
+        return (base + (base * 0.25 * (Random.nextDouble() * 2 - 1)).toLong()).coerceAtLeast(1000L)
     }
 
     private companion object {

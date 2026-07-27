@@ -172,7 +172,13 @@ internal class DefaultEnrichmentEngine(
         cache.markManuallySelected(entityKeyFor(request, type), type)
     }
 
-    override suspend fun search(request: EnrichmentRequest, limit: Int): List<SearchCandidate> {
+    // search() has no deadline of its own, but its providers use the same typed HTTP calls, so
+    // without a budget a 429 there retries against DefaultHttpClient's 120s standalone ceiling.
+    // enrichTimeoutMs is the budget a consumer already stated for a call of this kind.
+    override suspend fun search(request: EnrichmentRequest, limit: Int): List<SearchCandidate> =
+        withContext(EnrichDeadline(config.enrichTimeoutMs)) { searchCandidates(request, limit) }
+
+    private suspend fun searchCandidates(request: EnrichmentRequest, limit: Int): List<SearchCandidate> {
         val identity = registry.identityProvider()
         val primary = if (identity != null) {
             try {

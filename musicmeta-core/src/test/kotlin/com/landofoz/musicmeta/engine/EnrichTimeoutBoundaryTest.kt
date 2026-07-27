@@ -123,6 +123,28 @@ class EnrichTimeoutBoundaryTest {
         assertTrue("remaining $remaining should be within enrichTimeoutMs", remaining!! in 0..100)
     }
 
+    @Test fun `search() installs the deadline too, having no timeout of its own`() = runTest {
+        // Given — a search provider that reports what budget it was given. search() runs no
+        // withTimeout, so without this its providers' 429s would retry against the standalone
+        // 120s ceiling — minutes of stall on a call that used to fail fast.
+        var remaining: Long? = null
+        val searcher = object : FakeProvider(id = "search", isIdentityProvider = true) {
+            override suspend fun searchCandidates(request: EnrichmentRequest, limit: Int): List<SearchCandidate> {
+                remaining = currentCoroutineContext()[EnrichDeadline]?.remainingMs
+                return emptyList()
+            }
+        }
+
+        // When
+        DefaultEnrichmentEngine(
+            ProviderRegistry(listOf(searcher)), cache, EnrichmentConfig(enrichTimeoutMs = 100),
+        ).search(req, limit = 5)
+
+        // Then
+        assertNotNull("search() must install EnrichDeadline", remaining)
+        assertTrue("remaining $remaining should be within enrichTimeoutMs", remaining!! in 0..100)
+    }
+
     @Test fun `a catalog's own timeout is not reported as the engine's deadline`() = runTest {
         // Given — a consumer catalog running its own withTimeout while our job is perfectly healthy.
         // `catch (_: TimeoutCancellationException)` could not tell this from enrichTimeoutMs expiring.
