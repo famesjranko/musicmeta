@@ -112,38 +112,54 @@ interface EnrichmentEngine {
 
         fun withDefaultProviders() = apply {
             val client = httpClient ?: DefaultHttpClient(config.userAgent)
-            val mbRateLimiter = RateLimiter(1100) // MusicBrainz: max 1 req/sec
-            val defaultRateLimiter = RateLimiter(100)
+
+            // One limiter per host. RateLimiter holds its mutex across block(), so a shared
+            // instance makes unrelated hosts' round-trips sequential; rate limits are per-host
+            // and no host here asks to be throttled against another's traffic (#50).
+            // Each interval says which of three it is — published, measured or judgement.
+            // Do not read a judgement figure as a documented one.
+            val musicBrainzLimiter = RateLimiter(1100) // published 2026-07-27: 1 req/sec
+            val listenBrainzLimiter = RateLimiter(400) // measured 2026-07-27: 30 req/10s, with headroom
+            val coverArtArchiveLimiter = RateLimiter(100) // judgement 2026-07-27: CAA documents no limit
+            val wikidataLimiter = RateLimiter(100) // judgement 2026-07-27
+            val wikipediaLimiter = RateLimiter(100) // judgement 2026-07-27
+            val deezerLimiter = RateLimiter(100) // judgement 2026-07-27; one host, both Deezer providers share it
+            val lrcLibLimiter = RateLimiter(100) // judgement 2026-07-27
+            val lastFmLimiter = RateLimiter(200) // judgement 2026-07-27: no published figure (API ToS §4.4)
+            val fanartTvLimiter = RateLimiter(100) // judgement 2026-07-27
+            // judgement 2026-07-27: 60 req/min authenticated is the figure in circulation, but the
+            // Discogs developer page 403s non-browser clients, so we could not read it at the source
+            val discogsLimiter = RateLimiter(1000)
 
             // Always-available providers (no API key needed)
-            addProvider(MusicBrainzProvider(client, mbRateLimiter))
-            addProvider(CoverArtArchiveProvider(client, defaultRateLimiter))
-            addProvider(WikidataProvider(client, defaultRateLimiter))
-            addProvider(WikipediaProvider(client, defaultRateLimiter))
-            addProvider(DeezerProvider(client, defaultRateLimiter,
+            addProvider(MusicBrainzProvider(client, musicBrainzLimiter))
+            addProvider(CoverArtArchiveProvider(client, coverArtArchiveLimiter))
+            addProvider(WikidataProvider(client, wikidataLimiter))
+            addProvider(WikipediaProvider(client, wikipediaLimiter, wikidataLimiter))
+            addProvider(DeezerProvider(client, deezerLimiter,
                 radioLimit = config.radioLimit))
-            val deezerApi = DeezerApi(client, defaultRateLimiter)
+            val deezerApi = DeezerApi(client, deezerLimiter)
             addProvider(SimilarAlbumsProvider(deezerApi))
-            addProvider(ITunesProvider(client))
+            addProvider(ITunesProvider(client)) // its own RateLimiter(3000) by constructor default
             addProvider(ListenBrainzProvider(
                 httpClient = client,
-                rateLimiter = defaultRateLimiter,
+                rateLimiter = listenBrainzLimiter,
                 authToken = apiKeyConfig?.listenBrainzToken,
                 config = config,
             ))
-            addProvider(LrcLibProvider(client, defaultRateLimiter))
+            addProvider(LrcLibProvider(client, lrcLibLimiter))
 
             // Key-requiring providers (only added if key is provided)
             val keys = apiKeyConfig
             if (keys != null) {
                 keys.lastFmKey?.let {
-                    addProvider(LastFmProvider(it, client, defaultRateLimiter))
+                    addProvider(LastFmProvider(it, client, lastFmLimiter))
                 }
                 keys.fanartTvProjectKey?.let {
-                    addProvider(FanartTvProvider(it, client, defaultRateLimiter))
+                    addProvider(FanartTvProvider(it, client, fanartTvLimiter))
                 }
                 keys.discogsPersonalToken?.let {
-                    addProvider(DiscogsProvider(it, client, defaultRateLimiter))
+                    addProvider(DiscogsProvider(it, client, discogsLimiter))
                 }
             }
         }
