@@ -1,9 +1,11 @@
 package com.landofoz.musicmeta.engine
 
 import com.landofoz.musicmeta.*
+import com.landofoz.musicmeta.http.EnrichDeadline
 import com.landofoz.musicmeta.testutil.FakeEnrichmentCache
 import com.landofoz.musicmeta.testutil.FakeProvider
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
@@ -102,6 +104,45 @@ class EnrichTimeoutBoundaryTest {
         assertEquals(1, (filtered.data as EnrichmentData.SimilarArtists).artists.size)
         val unfiltered = results.raw[EnrichmentType.SIMILAR_TRACKS] as EnrichmentResult.Success
         assertEquals(2, (unfiltered.data as EnrichmentData.SimilarTracks).tracks.size)
+    }
+
+    @Test fun `the deadline is readable inside the timed block, so a 429 retry can respect it`() = runTest {
+        // Given — a catalog standing in for anything running inside the fan-out; DefaultHttpClient
+        // reads the same element to decide whether a Retry-After fits in what is left.
+        var remaining: Long? = null
+        val catalog = CatalogProvider { queries ->
+            remaining = currentCoroutineContext()[EnrichDeadline]?.remainingMs
+            queries.map { CatalogMatch(available = true, source = "test") }
+        }
+
+        // When
+        engine(catalog).enrich(req, types)
+
+        // Then — present, and no larger than the budget it was built from
+        assertNotNull("enrich() must install EnrichDeadline", remaining)
+        assertTrue("remaining $remaining should be within enrichTimeoutMs", remaining!! in 0..100)
+    }
+
+    @Test fun `search() installs the deadline too, having no timeout of its own`() = runTest {
+        // Given — a search provider that reports what budget it was given. search() runs no
+        // withTimeout, so without this its providers' 429s would retry against the standalone
+        // 120s ceiling — minutes of stall on a call that used to fail fast.
+        var remaining: Long? = null
+        val searcher = object : FakeProvider(id = "search", isIdentityProvider = true) {
+            override suspend fun searchCandidates(request: EnrichmentRequest, limit: Int): List<SearchCandidate> {
+                remaining = currentCoroutineContext()[EnrichDeadline]?.remainingMs
+                return emptyList()
+            }
+        }
+
+        // When
+        DefaultEnrichmentEngine(
+            ProviderRegistry(listOf(searcher)), cache, EnrichmentConfig(enrichTimeoutMs = 100),
+        ).search(req, limit = 5)
+
+        // Then
+        assertNotNull("search() must install EnrichDeadline", remaining)
+        assertTrue("remaining $remaining should be within enrichTimeoutMs", remaining!! in 0..100)
     }
 
     @Test fun `a catalog's own timeout is not reported as the engine's deadline`() = runTest {
