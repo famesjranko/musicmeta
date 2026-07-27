@@ -53,13 +53,15 @@ another's traffic. The two Deezer providers share one limiter because they share
 takes the Wikidata limiter for the Wikidata host it reaches, alongside its own. iTunes takes its
 constructor default of `RateLimiter(3000)`.
 
-The intervals live in that one function, each with a comment naming its basis — **published**,
-**measured** from live rate-limit headers, or **judgement**. Only MusicBrainz (1100ms, 1 req/sec),
-ListenBrainz (400ms, measured at 30 req/10s) and Discogs (1000ms, 60 req/min authenticated) rest on a
-number the upstream states; the rest are judgement, and the safety net is 429 → `Retry-After` →
-backoff. Do not read a judgement figure here or there as a documented one — Last.fm's API terms
-publish no figure at all, only "limits... in our sole discretion". A provider constructed directly
-takes whatever limiter the caller passes; nothing checks it against this page.
+The intervals live in that one function, each with a dated comment naming its basis — **published**,
+**measured** from live rate-limit headers, or **judgement**. Exactly two rest on a number we read at
+the source: MusicBrainz (1100ms, published 1 req/sec) and ListenBrainz (400ms, measured at 30
+req/10s). Everything else is judgement, including Discogs at 1000ms — 60 req/min authenticated is the
+figure in circulation, but the Discogs developer page 403s non-browser clients, so it is unverified.
+Do not read a judgement figure here or there as a documented one; Last.fm's API terms publish no
+figure at all, only "limits... in our sole discretion". The safety net is 429 → `Retry-After` →
+backoff. A provider constructed directly takes whatever limiter the caller passes; nothing checks it
+against this page.
 
 ## What we don't extract
 

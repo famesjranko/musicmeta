@@ -118,16 +118,18 @@ interface EnrichmentEngine {
             // and no host here asks to be throttled against another's traffic (#50).
             // Each interval says which of three it is — published, measured or judgement.
             // Do not read a judgement figure as a documented one.
-            val musicBrainzLimiter = RateLimiter(1100) // published: 1 req/sec
+            val musicBrainzLimiter = RateLimiter(1100) // published 2026-07-27: 1 req/sec
             val listenBrainzLimiter = RateLimiter(400) // measured 2026-07-27: 30 req/10s, with headroom
-            val coverArtArchiveLimiter = RateLimiter(100) // judgement: CAA documents no limit
-            val wikidataLimiter = RateLimiter(100) // judgement
-            val wikipediaLimiter = RateLimiter(100) // judgement
-            val deezerLimiter = RateLimiter(100) // judgement; one host, so both Deezer providers share it
-            val lrcLibLimiter = RateLimiter(100) // judgement
-            val lastFmLimiter = RateLimiter(200) // judgement: no published figure (API ToS §4.4)
-            val fanartTvLimiter = RateLimiter(100) // judgement
-            val discogsLimiter = RateLimiter(1000) // documented: 60 req/min authenticated
+            val coverArtArchiveLimiter = RateLimiter(100) // judgement 2026-07-27: CAA documents no limit
+            val wikidataLimiter = RateLimiter(100) // judgement 2026-07-27
+            val wikipediaLimiter = RateLimiter(100) // judgement 2026-07-27
+            val deezerLimiter = RateLimiter(100) // judgement 2026-07-27; one host, both Deezer providers share it
+            val lrcLibLimiter = RateLimiter(100) // judgement 2026-07-27
+            val lastFmLimiter = RateLimiter(200) // judgement 2026-07-27: no published figure (API ToS §4.4)
+            val fanartTvLimiter = RateLimiter(100) // judgement 2026-07-27
+            // judgement 2026-07-27: 60 req/min authenticated is the figure in circulation, but the
+            // Discogs developer page 403s non-browser clients, so we could not read it at the source
+            val discogsLimiter = RateLimiter(1000)
 
             // Always-available providers (no API key needed)
             addProvider(MusicBrainzProvider(client, musicBrainzLimiter))

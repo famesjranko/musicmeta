@@ -8,7 +8,8 @@ import java.net.URLEncoder
 
 /**
  * Last.fm API client. Requires an API key from https://www.last.fm/api.
- * Rate limited to 5 requests/second (200ms interval).
+ * Last.fm publishes no numeric rate limit — its API terms §4.4 set limits "in our sole
+ * discretion" — so the 200ms the default wiring passes is a judgement, not a documented figure.
  */
 internal class LastFmApi(
     private val apiKeyProvider: () -> String,
