@@ -11,7 +11,14 @@ enum class ErrorKind {
     /** Response parsing failure (malformed JSON, unexpected schema). */
     PARSE,
 
-    /** Rate limit exceeded (429). */
+    /**
+     * Not produced by any provider — a 429 arrives as [NETWORK].
+     *
+     * Every provider classifies a transient transport failure (429, 5xx, dropped connection)
+     * through one shared helper, which throws a plain `IOException`, and `mapError()` maps that to
+     * [NETWORK]. Do not branch on this value; nothing sets it. Retained because removing a value
+     * from a published enum is a breaking change. See `docs/guides/results-and-errors.md`.
+     */
     RATE_LIMIT,
 
     /** Engine-level enrichment timeout — type was not resolved before deadline. */
@@ -105,7 +112,14 @@ sealed class EnrichmentResult {
         val identityMatch: IdentityMatch? = null,
     ) : EnrichmentResult()
 
-    /** Provider is rate limited — try later. */
+    /**
+     * Not returned by any provider — a rate limit arrives as [Error] with [ErrorKind.NETWORK].
+     *
+     * The engine handles this variant, but no provider constructs it: a 429 is classified as a
+     * transient transport failure alongside 5xx and a dropped connection. Retained because
+     * removing a variant from a published sealed class is a breaking change. See
+     * `docs/guides/results-and-errors.md`.
+     */
     data class RateLimited(
         val type: EnrichmentType,
         val provider: String,
