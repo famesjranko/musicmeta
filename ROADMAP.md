@@ -280,38 +280,10 @@ Ranked by **impact to consumers × implementation effort**:
 | Links | All MusicBrainz URL relation types | ✅ **Complete** |
 | Credits | Performers, producers, composers, engineers | ✅ **Complete** |
 | Recommendations | 6 modules shipped; credit discovery + CF deferred | 🟡 **Mostly complete** |
-| Developer Experience | EnrichmentResults wrapper, profiles, default type sets, identity resolution, cache management | ✅ **Complete** — `artistProfile()`, `albumProfile()`, `trackProfile()` with computed properties, 19 named accessors, `wasRequested()`/`result()` diagnostics, `invalidate()`, `forceRefresh`, manual selection |
+| Developer Experience | EnrichmentResults wrapper, profiles, default type sets, identity resolution, cache management | ✅ **Complete** |
 | Catalog Awareness | Interface shipped; implementations deferred | 🟡 **Interface only** |
 
 **9/10 goal categories complete or mostly complete.** Remaining: Catalog Awareness implementations (interface shipped, concrete implementations deferred).
-
-**Production readiness gaps identified by external review:** HttpURLConnection-only HTTP stack (no OkHttp adapter), JitPack-only distribution, no offline/stale cache mode, no bulk enrichment API. All addressed in v0.8.0. Flow-based progressive API assessed and deferred — marginal benefit vs complexity.
-
-#### Recommendation Module Status
-
-| Module | Status | Details |
-|--------|--------|---------|
-| Similar Artists | ✅ **Shipped (v0.6.0)** | 3-provider merge (Last.fm + ListenBrainz + Deezer) via SimilarArtistMerger |
-| Similar Tracks | ✅ **Shipped** | 2-provider merge (Last.fm + Deezer track radio) via SimilarTrackMerger |
-| Similar Albums | ✅ **Shipped (v0.6.0)** | SimilarAlbumsProvider with era-proximity scoring |
-| Radio/Mix | ✅ **Shipped** | ARTIST_RADIO (v0.6.0) via Deezer `/artist/{id}/radio`. ARTIST_RADIO_DISCOVERY (v0.9.0) via ListenBrainz LB Radio — JSPF playlist with MBIDs, three modes (easy/medium/hard), requires free user token. Separate types, not merged. |
-| Top Tracks | ✅ **Shipped** | 3-provider merge (Last.fm + ListenBrainz + Deezer) via TopTrackMerger. Fetches API max, no artificial cap. |
-| Credit-Based Discovery | ❌ Deferred (v0.8.0+) | Cross-entity query pattern; CREDITS data exists |
-| Genre Discovery | ✅ **Shipped (v0.6.0)** | GenreAffinityMatcher with 189-relationship static taxonomy |
-| Listening-Based | ❌ Deferred (v0.8.0+) | User-scoped; needs user identity in EnrichmentRequest |
-
-#### Developer Experience Status
-
-The consumer API now covers the full developer journey: build → get → update → refresh. Profile methods handle the 80% case; `EnrichmentResults` accessors handle the rest.
-
-| Issue | Impact | Status |
-|-------|--------|--------|
-| Verbose result handling (Map + casting) | High — every consumer writes boilerplate | ✅ Done — `EnrichmentResults` wrapper with 19 named accessors + generic `get<T>()` |
-| No high-level profile methods | High — "give me an artist page" is the #1 use case | ✅ Done — `artistProfile()`, `albumProfile()`, `trackProfile()` extension functions |
-| No type safety per request kind | Medium — ForArtist + LYRICS_SYNCED = wasted call | ✅ Done — `DEFAULT_ARTIST_TYPES`, `DEFAULT_ALBUM_TYPES`, `DEFAULT_TRACK_TYPES` with `defaultTypesFor()` |
-| Cache management requires internal keys | High — consumers can't invalidate or refresh cleanly | ✅ Done — `engine.invalidate(request)`, `forceRefresh` param, `markManuallySelected()`/`isManuallySelected()` |
-| Metadata class overloaded | Medium — 16 nullable fields, unclear which are populated | ✅ Resolved — profile properties and named accessors unwrap individual fields; Tier 3 power users can still access raw `Metadata` but rarely need to |
-| "All types" returns noisy NotFounds | Low — 11 NotFounds for ForAlbum is confusing | ✅ Done — default type sets + `wasRequested()` distinguish requested vs unrequested |
 
 ---
 
