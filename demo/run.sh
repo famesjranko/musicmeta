@@ -3,7 +3,7 @@
 # Usage:
 #   ./run.sh                          # interactive mode
 #   ./run.sh artist Radiohead         # single command
-#   ./run.sh album "OK Computer" Radiohead
+#   ./run.sh album OK Computer by Radiohead
 cd "$(dirname "$0")" || exit 1
 
 if [ $# -gt 0 ]; then
