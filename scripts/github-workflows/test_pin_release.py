@@ -3,7 +3,7 @@
 
 from pathlib import Path
 
-from build_release_notes import extract_section
+from build_release_notes import extract_section, released_versions
 from pin_release import PinError, pin_changelog, pin_roadmap
 
 BEFORE = """# Changelog
@@ -86,14 +86,22 @@ assert pin_roadmap("## Where We Are (v0.10.1)\n\ntext\n", "0.11.0") == "## Where
 assert pin_roadmap("no heading here\n", "0.11.0") == "no heading here\n"
 
 # --- against the real files ---------------------------------------------------------------------
+# State-agnostic on purpose: this runs on every commit, including the release branch (target
+# version freshly pinned, [Unreleased] empty) and main right after a release merges. A hard-coded
+# target version made the release branch unmergeable by construction. So derive the target from
+# the last pinned version, and accept the one refusal a freshly-cut release legitimately produces.
+# The refusal *logic* (empty, double-pin, break-in-a-patch) is covered by the fixtures above.
 root = Path(__file__).resolve().parent.parent.parent
-real = pin_changelog((root / "CHANGELOG.md").read_text(encoding="utf-8"), "0.11.0", "2026-07-23")
-assert extract_section(real, "0.11.0"), "the live [Unreleased] section must pin and extract"
-assert "## Where We Are (v0.11.0)" in pin_roadmap((root / "ROADMAP.md").read_text(encoding="utf-8"), "0.11.0")
-# The live [Unreleased] narrows the published surface, so the next release cannot be 0.10.2.
-expect_error(
-    lambda: pin_changelog((root / "CHANGELOG.md").read_text(encoding="utf-8"), "0.10.2", "2026-07-23"),
-    "cannot be a patch release over 0.10.1",
-)
+live = (root / "CHANGELOG.md").read_text(encoding="utf-8")
+last = released_versions(live)[0]
+major, minor, _ = (int(p) for p in last.split("."))
+next_minor = f"{major}.{minor + 1}.0"
+try:
+    real = pin_changelog(live, next_minor, "2026-07-23")
+    assert extract_section(real, next_minor), "the live [Unreleased] section must pin and extract"
+    roadmap = pin_roadmap((root / "ROADMAP.md").read_text(encoding="utf-8"), next_minor)
+    assert f"## Where We Are (v{next_minor})" in roadmap
+except PinError as e:
+    assert "empty" in str(e), f"live CHANGELOG refused to pin for an unexpected reason: {e}"
 
 print("pin_release: all checks passed")
