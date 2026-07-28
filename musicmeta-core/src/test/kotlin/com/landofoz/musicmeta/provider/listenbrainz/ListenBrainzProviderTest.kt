@@ -111,7 +111,7 @@ class ListenBrainzProviderTest {
 
     @Test
     fun `enrich handles API returning null response`() = runTest {
-        // Given - no response configured, so fetchJsonArray returns null
+        // Given - no response configured, so fetchJsonArrayResult is an unstubbed 404
         val artistMbid = "11111111-1111-1111-1111-111111111111"
 
         val request = EnrichmentRequest.ForArtist(

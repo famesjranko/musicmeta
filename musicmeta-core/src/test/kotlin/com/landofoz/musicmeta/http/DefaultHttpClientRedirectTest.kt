@@ -10,7 +10,8 @@ import java.net.InetSocketAddress
 
 /**
  * `fetchRedirectUrlResult` against a real socket: the status has to survive the wire, since it is
- * the whole reason the method exists. `fetchRedirectUrl` maps every one of these to `null`.
+ * the whole reason the method exists — a status that arrives as an indistinguishable failure is
+ * a transient the provider reports as "no artwork".
  */
 class DefaultHttpClientRedirectTest {
 
@@ -84,7 +85,7 @@ class DefaultHttpClientRedirectTest {
         assertEquals(404, (result as HttpResult.ClientError).statusCode)
     }
 
-    @Test fun `a 429 is RateLimited, the status fetchRedirectUrl could not carry`() = runTest {
+    @Test fun `a 429 is RateLimited, not an indistinguishable failure`() = runTest {
         // Given
         status = 429
 
@@ -95,7 +96,7 @@ class DefaultHttpClientRedirectTest {
         assertTrue("expected RateLimited, got $result", result is HttpResult.RateLimited)
     }
 
-    @Test fun `a 503 is a ServerError, the status fetchRedirectUrl could not carry`() = runTest {
+    @Test fun `a 503 is a ServerError, not an indistinguishable failure`() = runTest {
         // Given
         status = 503
 

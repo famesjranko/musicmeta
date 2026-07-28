@@ -121,14 +121,14 @@ class DefaultHttpClientTest {
     }
 
     @Test fun `FakeHttpClient fetchJsonResult falls back to fetchJson behavior`() = runTest {
-        // Given — configure fetchJson response but no fetchJsonResult response
+        // Given — a plain body stub, with no HttpResult stub over it
         val fake = FakeHttpClient()
         fake.givenJsonResponse("api.example.com", """{"fallback":true}""")
 
         // When
         val result = fake.fetchJsonResult("https://api.example.com/data")
 
-        // Then — falls back to Ok wrapping fetchJson result
+        // Then — falls back to Ok wrapping the stubbed body
         assertTrue(result is HttpResult.Ok)
         assertTrue((result as HttpResult.Ok).body.getBoolean("fallback"))
     }

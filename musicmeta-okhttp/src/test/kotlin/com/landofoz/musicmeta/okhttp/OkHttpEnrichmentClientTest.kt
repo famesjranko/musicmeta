@@ -71,7 +71,7 @@ class OkHttpEnrichmentClientTest {
         // When
         val result = client.fetchRedirectUrlResult(url())
 
-        // Then — the status a plain fetchRedirectUrl collapsed into an indistinguishable null
+        // Then — a status, not the indistinguishable failure a nullable return collapsed it to
         assertEquals(5000L, (result as HttpResult.RateLimited).retryAfterMs)
     }
 

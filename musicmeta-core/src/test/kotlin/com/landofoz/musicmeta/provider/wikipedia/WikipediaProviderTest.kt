@@ -79,7 +79,7 @@ class WikipediaProviderTest {
 
     @Test
     fun `enrich returns NotFound for non-existent article`() = runTest {
-        // Given - no response configured, so fetchJson returns null
+        // Given - no response configured, so fetchJsonResult is an unstubbed 404
         val request = EnrichmentRequest.ForArtist(
             identifiers = EnrichmentIdentifiers(wikipediaTitle = "NonExistentBandXYZ123"),
             name = "NonExistentBandXYZ123",
