@@ -45,7 +45,7 @@ The library is a tool for developers to wield for their needs, not a framework t
 
 ---
 
-## Where We Are (v0.10.1)
+## Where We Are (v0.11.0)
 
 v0.10.1 is published to Maven Central and JitPack. Everything below the *Unreleased* block has
 shipped; the version is declared once, in root `gradle.properties`.
