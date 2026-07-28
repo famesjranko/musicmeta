@@ -10,8 +10,7 @@ import org.junit.Test
 import java.net.InetSocketAddress
 
 /**
- * A 429 is retried whichever overload the caller reached for — the typed family used to hand it
- * straight back while `get()` retried three times.
+ * A 429 is retried on every method — it used to be handed straight back.
  *
  * The retry sleeps inside the provider's held `RateLimiter` mutex, which is why it waits for a
  * per-host limiter to exist: it stops further traffic to the host that just 429'd, and costs the
@@ -93,19 +92,6 @@ class DefaultHttpClientRetryTest {
         // Then — the 120s ceiling is what applies instead
         assertEquals(HttpResult.RateLimited(125_000L), result)
         assertEquals(1, requests)
-    }
-
-    @Test fun `the null-returning family gives up too when the deadline leaves no room`() = runTest {
-        // Given — nothing listening, so the first attempt fails with an IOException. That path
-        // retries after a backoff of its own, which the deadline has to be able to veto.
-        val deadRef = "http://127.0.0.1:1/data"
-
-        // When — a budget smaller than the 2s first backoff
-        val result = withContext(EnrichDeadline(budgetMs = 1)) { client.fetchJson(deadRef) }
-
-        // Then — null now, rather than sleeping past a deadline it cannot beat
-        assertNull(result)
-        assertEquals("must not sleep", 0L, testScheduler.currentTime)
     }
 
     @Test fun `a persistent 429 surfaces as RateLimited after the retries are spent`() = runTest {

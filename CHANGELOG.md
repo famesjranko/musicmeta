@@ -33,6 +33,8 @@ This release makes `engine/` internal, hardens providers and the engine, and cor
 
 ### Breaking Changes
 - A `CatalogProvider`'s own `withTimeout` expiry now propagates out of `enrich()` instead of reported as ours (#55)
+- **`HttpClient` is now six abstract `HttpResult` methods** — nullable `fetchJson`, `fetchJsonArray`, `fetchBody`, `fetchRedirectUrl`, `postJson`, `postJsonArray` deleted; implement the `*Result` ones
+- `fetchJsonResult(url, headers)` and `fetchRedirectUrlResult` are no longer defaulted — implement both, or `Authorization` headers go unsent and a 429 on the artwork path reads as "no artwork"
 - `engine/` internals (`DefaultEnrichmentEngine`, `ProviderRegistry`, `ProviderChain`, `ArtistMatcher`, `ConfidenceCalculator`) are now `internal`; build engines with `EnrichmentEngine.Builder`
 - `ResultMerger` and `CompositeSynthesizer` stay public, as the documented extension points
 

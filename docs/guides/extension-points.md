@@ -145,20 +145,14 @@ Call `.httpClient()` **before** `.withDefaultProviders()` so all default provide
 
 ### Custom HTTP clients
 
-For other HTTP libraries (Ktor, Fuel, etc.), implement the `HttpClient` interface (12 methods, two of them defaulted):
+For other HTTP libraries (Ktor, Fuel, etc.), implement the `HttpClient` interface — six methods, none defaulted, every one returning an `HttpResult`:
 
 ```kotlin
 class MyHttpClient : HttpClient {
-    override suspend fun fetchJson(url: String): JSONObject? { /* ... */ }
-    override suspend fun fetchJsonResult(url: String): HttpResult<JSONObject> { /* ... */ }
-    override suspend fun fetchJsonResult(url: String, headers: Map<String, String>): HttpResult<JSONObject> = fetchJsonResult(url)  // default: ignores headers
-    override suspend fun fetchJsonArray(url: String): JSONArray? { /* ... */ }
+    override suspend fun fetchJsonResult(url: String): HttpResult<JSONObject> = fetchJsonResult(url, emptyMap())
+    override suspend fun fetchJsonResult(url: String, headers: Map<String, String>): HttpResult<JSONObject> { /* ... */ }
     override suspend fun fetchJsonArrayResult(url: String): HttpResult<JSONArray> { /* ... */ }
-    override suspend fun fetchBody(url: String): String? { /* ... */ }
-    override suspend fun fetchRedirectUrl(url: String): String? { /* ... */ }
-    override suspend fun fetchRedirectUrlResult(url: String): HttpResult<String> { /* ... */ }  // default: wraps fetchRedirectUrl, so a 429 there reads as "no artwork"
-    override suspend fun postJson(url: String, body: String): JSONObject? { /* ... */ }
-    override suspend fun postJsonArray(url: String, body: String): JSONArray? { /* ... */ }
+    override suspend fun fetchRedirectUrlResult(url: String): HttpResult<String> { /* ... */ }
     override suspend fun postJsonResult(url: String, body: String): HttpResult<JSONObject> { /* ... */ }
     override suspend fun postJsonArrayResult(url: String, body: String): HttpResult<JSONArray> { /* ... */ }
 }
@@ -168,6 +162,12 @@ val engine = EnrichmentEngine.Builder()
     .withDefaultProviders()
     .build()
 ```
+
+Return the real status in every case: a `RateLimited`, `ServerError` or `NetworkError` is what makes a
+provider report `Error` — retryable, breaker-visible, `STALE_IF_ERROR`-eligible — instead of `NotFound`.
+Collapsing failures into a 404 (or dropping the `headers` map, which is where `Authorization` arrives)
+is silent, and shows up only as missing enrichment.
+
 
 ---
 
