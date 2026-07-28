@@ -4,9 +4,9 @@ Holds only the rules no mechanism catches, so silence here is not permission. Wh
 config disagree, follow the config — the config is the thing that fails. Don't write history into
 docs; git and the PR hold what happened.
 
-Run `make check` before claiming anything works; CI runs the same script. `make check-fast` skips
-detekt, the build and the demo canary — edit loop only, **never evidence for a push**. `make help`
-lists the rest; `ls docs/` lists the docs.
+Run `make check` before claiming anything works; CI runs the same script. `make check-fast` is edit loop
+only, **never evidence for a push**; `check`'s header lists what it skips. `make help` lists the
+rest; `ls docs/` lists the docs.
 
 ## Read first
 
@@ -34,7 +34,7 @@ Every finding has exactly one home; this file is the home only for the last row.
 - Compatibility: **flag any break to the user before proceeding.** Published to Maven Central and
   JitPack, so assume external consumers exist. Minor (`0.x.0`) may break, if the break is under a
   `### Breaking Changes` heading in `CHANGELOG.md` *and* visible in the reviewed `api/*.api` diff — a
-  break in neither is a defect. Patch (`0.x.y`) may not break; v0.9.2 did. Full semver at `1.0.0`.
+  break in neither is a defect. Patch (`0.x.y`) may not break. Full semver at `1.0.0`.
   What counts as breaking, and the JVM descriptor caveat: `docs/pitfalls.md`.
 - `e2e/` tests hit live APIs behind `-Dinclude.e2e=true` and never gate a merge, so an e2e test is
   not coverage for a change.

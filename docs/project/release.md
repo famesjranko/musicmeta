@@ -54,7 +54,6 @@ to pin an empty `[Unreleased]` — so a mistaken re-run stops rather than double
 ## Gate 2 — the release PR
 
 Open `release/<version>` → `main` yourself with the release evidence, and **squash**-merge it.
-`main` requires `build` and `demo-canary`.
 
 `main` is the default branch, so a closing keyword here *does* close its issue — which is fine, but
 keep release PRs free of them anyway: the release is not what resolved the work.

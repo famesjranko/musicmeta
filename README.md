@@ -19,21 +19,15 @@ A Kotlin library that gives Android and JVM music apps access to rich metadata, 
 "OK Computer" by Radiohead
          |
          v
-+-----------------------------+
-|  EnrichmentEngine           |  34 enrichment types
-|                             |  11 providers
-|  MusicBrainz ---------------+--> Identity (MBID), genre, label, credits, editions
-|  Cover Art Archive ---------+--> Album art front/back/booklet (multi-size)
-|  Wikidata ------------------+--> Artist photo, country of origin
-|  Wikipedia -----------------+--> Artist biography, supplemental photos
-|  LRCLIB --------------------+--> Synced + plain lyrics
-|  Deezer --------------------+--> Artist photos, album art, discography, tracklists, similar artists, radio, similar albums
-|  iTunes --------------------+--> Album art, tracklists, discography
-|  Last.fm -------------------+--> Genres, similar artists/tracks, album metadata
-|  ListenBrainz --------------+--> Popularity, discography, similar artists, radio discovery (with token)
-|  Fanart.tv -----------------+--> Backgrounds, logos, banners, CD art
-|  Discogs -------------------+--> Credits, editions, labels, artwork, community data
-+-----------------------------+
++-----------------------------------------------+
+|  EnrichmentEngine                             |
+|  11 providers -> 34 enrichment types          |
+|                                               |
+|  MusicBrainz    Cover Art Archive  Wikidata   |
+|  Wikipedia      LRCLIB             Deezer     |
+|  iTunes         Last.fm            Fanart.tv  |
+|  ListenBrainz   Discogs                       |
++-----------------------------------------------+
          |
          v
   ArtistProfile / AlbumProfile / TrackProfile

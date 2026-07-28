@@ -18,15 +18,8 @@ println(artist.similarArtists)     // Similar artists from multiple sources
 
 The consumer never needs to know which APIs exist, how they authenticate, or how to correlate identifiers across services.
 
-### Three API Tiers
-
-musicmeta offers three levels of access — use whichever fits your use case:
-
-| Tier | Entry Point | Best For |
-|------|------------|----------|
-| **1. Profiles** | `engine.artistProfile()` | Structured result, sensible defaults, zero casting |
-| **2. Accessors** | `results.albumArt()`, `results.genres()` | Per-type data without casting, custom type sets |
-| **3. Raw Map** | `results.raw[type]` | Error diagnostics, full control, custom logic |
+This document traces the pipeline. How to *call* it — the three API tiers, error handling,
+disambiguation, caching, batching and the OkHttp adapter — is in [guides/](guides/README.md).
 
 ---
 
@@ -249,7 +242,7 @@ when a key is present, and CAA is a fallback, not a second entry in the same res
 ### Metadata (6 types)
 | Type | Providers (by priority) | Notes |
 |------|------------------------|-------|
-| GENRE | MusicBrainz(100), Last.fm(100) | **Mergeable** — GenreTag with confidence + sources |
+| GENRE | MusicBrainz(100), Last.fm(100) | **Mergeable** — GenreTag with confidence + sources. Only these two serve the type; `genres()`/`genreTags()` additionally fall back to genre strings carried inside ALBUM_METADATA, which Discogs and iTunes also populate |
 | LABEL | MusicBrainz(100), Discogs(50) | |
 | RELEASE_DATE | MusicBrainz(100) | |
 | RELEASE_TYPE | MusicBrainz(100), Discogs(50) | |
@@ -309,7 +302,7 @@ when a key is present, and CAA is a fallback, not a second entry in the same res
 ## Resilience
 
 ### Rate Limiting
-Each host has its own `RateLimiter(intervalMs)`. MusicBrainz requires 1 req/sec (we use 1.1s). Others range from 100ms to 3000ms (iTunes). The limiter delays requests to stay within bounds.
+Each host has its own `RateLimiter`, which delays requests to stay within bounds. The intervals and the basis for each are in [providers.md](providers.md) §Rate limiting.
 
 ### Circuit Breaker
 Per-provider. Tracks consecutive failures:
@@ -326,175 +319,3 @@ Prevents hammering a down provider and slowing the entire pipeline.
 - Individual type failure → other types still resolve
 - Identity resolution failure → results continue with `BEST_EFFORT` match quality
 - Catalog provider unavailable → recommendations returned unfiltered
-
----
-
-## Consumer Patterns
-
-### Tier 1: Profiles (simplest)
-```kotlin
-// One call, sensible defaults, zero casting
-val artist = engine.artistProfile("Radiohead")
-
-println(artist.photo?.url)
-println(artist.bio?.text)
-println(artist.genres.map { "${it.name} (${it.confidence})" })
-println(artist.similarArtists?.artists?.map { it.name })
-println(artist.topTracks?.tracks?.map { it.title })
-
-// Albums and tracks have profiles too
-val album = engine.albumProfile("OK Computer", "Radiohead")
-println(album.artwork?.url)
-println(album.tracks)
-println(album.genres)
-
-val track = engine.trackProfile("Paranoid Android", "Radiohead")
-println(track.lyrics?.syncedLyrics)
-println(track.credits?.credits?.groupBy { it.roleCategory })
-```
-
-### Tier 2: Named Accessors (mid-level)
-```kotlin
-// Custom type set, type-safe accessors, no casting
-val results = engine.enrich(
-    EnrichmentRequest.forAlbum("OK Computer", "Radiohead"),
-    setOf(EnrichmentType.ALBUM_ART, EnrichmentType.GENRE, EnrichmentType.ALBUM_TRACKS),
-)
-
-println(results.albumArt()?.url)
-println(results.genres())           // List<String> with GENRE→ALBUM_METADATA fallback
-println(results.genreTags())        // List<GenreTag> with confidence + sources
-println(results.lyrics())           // synced → plain fallback
-```
-
-### Tier 3: Raw Map (full control)
-```kotlin
-results.raw.forEach { (type, result) ->
-    when (result) {
-        is EnrichmentResult.Success -> {
-            println("${type.name}: ${result.provider} (conf=${result.confidence})")
-            println("  identityMatch=${result.identityMatch}, score=${result.identityMatchScore}")
-        }
-        is EnrichmentResult.NotFound -> {
-            result.suggestions?.let { println("  Did you mean: ${it.map { s -> s.title }}") }
-        }
-        is EnrichmentResult.Error -> println("${type.name}: Error(${result.errorKind})")
-        is EnrichmentResult.RateLimited -> println("${type.name}: retry after ${result.retryAfterMs}ms")
-    }
-}
-```
-
-### Search + Enrich: Manual Disambiguation
-```kotlin
-val candidates = engine.search(EnrichmentRequest.forAlbum("Homesick", ""), limit = 10)
-// User picks the right match
-val chosen = candidates[2]
-val album = engine.albumProfile(chosen)  // uses candidate's identifiers
-```
-
-### Identity Match Handling
-```kotlin
-val artist = engine.artistProfile("Radiohed")  // typo
-
-when (artist.identityMatch) {
-    IdentityMatch.RESOLVED -> {
-        // Confident match — identityMatchScore is 0-100
-        println("Match score: ${artist.identityMatchScore}")
-    }
-    IdentityMatch.SUGGESTIONS -> {
-        // Near-miss candidates available
-        println("Did you mean: ${artist.suggestions.map { it.title }}")
-        // Re-enrich with the right one
-        val corrected = engine.artistProfile(artist.suggestions.first())
-    }
-    IdentityMatch.BEST_EFFORT -> {
-        // Identity failed, results from unverified fuzzy searches
-        println("Results may be inaccurate")
-    }
-    null -> {
-        // Identity resolution wasn't needed (MBID pre-provided or cached)
-    }
-}
-```
-
-### Force Refresh + Cache Invalidation
-```kotlin
-// Bypass cache for a single request
-val fresh = engine.artistProfile("Radiohead", forceRefresh = true)
-
-// Invalidate specific type
-engine.invalidate(EnrichmentRequest.forArtist("Radiohead"), EnrichmentType.ARTIST_PHOTO)
-
-// Invalidate all cached data for an entity
-engine.invalidate(EnrichmentRequest.forArtist("Radiohead"))
-```
-
----
-
-## Stale Cache (Offline Fallback)
-
-When a provider fails with `Error` or `RateLimited` and an expired cache entry exists, the engine can serve the stale data instead of returning the error. Enable via `CacheMode.STALE_IF_ERROR`:
-
-```kotlin
-val engine = EnrichmentEngine.Builder()
-    .config(EnrichmentConfig(cacheMode = CacheMode.STALE_IF_ERROR))
-    .withDefaultProviders()
-    .build()
-```
-
-Stale results have `isStale = true` on `EnrichmentResult.Success`, so consumers can show a staleness indicator:
-
-```kotlin
-val result = results.result(EnrichmentType.GENRE) as? EnrichmentResult.Success
-if (result?.isStale == true) {
-    println("Showing cached data — refresh when online")
-}
-```
-
-**Key rules:**
-- Stale is only served for `Error` and `RateLimited` — never for `NotFound` (which means the provider searched and found nothing)
-- Stale results are not re-written to cache (the expired entry's TTL is not renewed)
-- `NETWORK_FIRST` (default) never serves stale — errors are returned as-is
-
----
-
-## Bulk Enrichment
-
-Enrich multiple requests with a single call using `enrichBatch()`. Results emit as a `Flow` — each request's results are emitted as they complete:
-
-```kotlin
-engine.enrichBatch(
-    requests = listOf(
-        EnrichmentRequest.forAlbum("OK Computer", "Radiohead"),
-        EnrichmentRequest.forAlbum("Kid A", "Radiohead"),
-        EnrichmentRequest.forAlbum("The Bends", "Radiohead"),
-    ),
-    types = setOf(EnrichmentType.ALBUM_ART, EnrichmentType.GENRE),
-).collect { (request, results) ->
-    val title = (request as EnrichmentRequest.ForAlbum).title
-    println("$title: ${results.genres()}")
-}
-```
-
-- Sequential iteration — MusicBrainz rate limiter naturally throttles at 1 req/sec
-- Cache hits return immediately without rate limiter delay
-- Cancellation via `take(N)` or scope cancellation stops processing remaining requests
-- `forceRefresh` parameter propagates to each underlying `enrich()` call
-
----
-
-## OkHttp Adapter
-
-The optional `musicmeta-okhttp` module provides `OkHttpEnrichmentClient` — an `HttpClient` implementation backed by OkHttp 4.12.0. Pass your existing `OkHttpClient` instance to leverage interceptors, certificate pinning, connection pooling, and proxy configuration:
-
-```kotlin
-val engine = EnrichmentEngine.Builder()
-    .httpClient(OkHttpEnrichmentClient(myOkHttpClient, "MyApp/1.0"))
-    .withDefaultProviders()
-    .build()
-```
-
-**Differences from `DefaultHttpClient`:**
-- No built-in retry logic — add retries via OkHttp interceptors
-- Gzip decompression handled transparently by OkHttp (no manual `Accept-Encoding` header)
-- Timeouts inherited from the `OkHttpClient` instance
