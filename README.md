@@ -136,9 +136,9 @@ val engine = EnrichmentEngine.Builder()
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("io.github.famesjranko:musicmeta-core:0.10.1")
-    implementation("io.github.famesjranko:musicmeta-okhttp:0.10.1")   // Optional: OkHttp adapter
-    implementation("io.github.famesjranko:musicmeta-android:0.10.1")  // Optional: Android (Room cache, Hilt, WorkManager)
+    implementation("io.github.famesjranko:musicmeta-core:0.11.0")
+    implementation("io.github.famesjranko:musicmeta-okhttp:0.11.0")   // Optional: OkHttp adapter
+    implementation("io.github.famesjranko:musicmeta-android:0.11.0")  // Optional: Android (Room cache, Hilt, WorkManager)
 }
 ```
 
@@ -160,9 +160,9 @@ dependencyResolutionManagement {
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("com.github.famesjranko.musicmeta:musicmeta-core:v0.10.1")
-    implementation("com.github.famesjranko.musicmeta:musicmeta-okhttp:v0.10.1")   // Optional: OkHttp adapter
-    implementation("com.github.famesjranko.musicmeta:musicmeta-android:v0.10.1")  // Optional: Android
+    implementation("com.github.famesjranko.musicmeta:musicmeta-core:v0.11.0")
+    implementation("com.github.famesjranko.musicmeta:musicmeta-okhttp:v0.11.0")   // Optional: OkHttp adapter
+    implementation("com.github.famesjranko.musicmeta:musicmeta-android:v0.11.0")  // Optional: Android
 }
 ```
 
