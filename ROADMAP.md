@@ -75,7 +75,7 @@ Which providers serve each type, and in what priority order, is in
 | | RELEASE_DATE | OK |
 | | RELEASE_TYPE | OK |
 | | COUNTRY | Good |
-| | BAND_MEMBERS | Good |
+| | BAND_MEMBERS | Good — deduplicated by MBID with roles merged; a solo (Person) artist returns themselves |
 | | ARTIST_DISCOGRAPHY | **Excellent** — 4 providers |
 | | ALBUM_TRACKS | Good — 3 providers |
 | | ALBUM_METADATA | **Excellent** — 4 providers |
@@ -142,20 +142,14 @@ val results = engine.enrich(
 
 This two-step flow is the right answer for the unopinionated principle: the library provides candidates, the app decides. When an MBID is provided, the engine skips fuzzy matching entirely and does precise ID-based lookups across all providers.
 
-**Shipped:**
-- `SearchCandidate.disambiguation` — MusicBrainz disambiguation text (e.g., "British rock band" vs "Canadian band") included in search results so developers can show users meaningful choices
-- `SearchCandidate.releaseType` already carries artist type ("Group", "Person") and release type for albums
-- `SearchCandidate.identifiers` carries MBIDs for the pick-and-enrich flow
+The `SearchCandidate` fields this flow relies on are documented in
+[docs/guides/identity-resolution.md](docs/guides/identity-resolution.md).
 
 **What still needs improvement:**
 
 | Gap | Problem | Impact | Status |
 |-----|---------|--------|--------|
-| **Match quality indicator on `enrich()`** | Auto mode returns results with no indication of how confident the identity match was | Developer can't detect ambiguous matches to prompt for disambiguation | ✅ Shipped — `identityMatchScore` on `Success` |
-| **"Did you mean?" on NotFound** | When search finds no match above threshold, returns empty — no close matches suggested | Developer can't help users fix typos | ✅ Shipped — `NotFound.suggestions` |
 | **Provider factual conflicts not surfaced** | If MusicBrainz says country=UK and Wikidata says country=GB, first provider wins silently | Minor — most factual conflicts are equivalent representations, not real disagreements | Open |
-
-**Shipped — `identityMatchScore` on `EnrichmentResult.Success`**: Each `Success` result now carries `identityMatchScore: Int?` (0-100, same scale as `SearchCandidate.score`). `null` when identity was pre-resolved (MBID provided) or result was cached. The engine stamps the MusicBrainz search score onto all results after identity resolution. Developers can use this to decide: high score → show immediately, low score → prompt user with `search()` candidates for disambiguation.
 
 **Remaining design question — strict mode**: Some apps want to never show wrong data (e.g., a metadata editor). A mode where `enrich()` refuses to auto-pick below a configurable threshold and returns candidates instead would serve this use case without changing the default behavior.
 
@@ -168,6 +162,7 @@ This two-step flow is the right answer for the unopinionated principle: the libr
 - **Credit-Based Discovery** — "more from this producer/composer" via CREDITS data; cross-entity query pattern, deferred to v0.7.0+
 - ~~**ListenBrainz LB Radio**~~ — ✅ Shipped (v0.9.0): `ARTIST_RADIO_DISCOVERY` via `/1/explore/lb-radio`. Separate type (not merged with ARTIST_RADIO). Auth-gated per-capability: `listenBrainzToken` unlocks radio while existing endpoints remain keyless.
 - **ListenBrainz collaborative filtering** — user-scoped recommendations; needs user identity concept in EnrichmentRequest, deferred to v0.8.0+
+- ~~**Flow-based progressive API**~~ — assessed and deferred: marginal benefit against the complexity, and a caller who wants results in stages can split their `enrich()` calls
 
 ### Catalog Awareness — Interface Shipped, Implementations Remaining
 
@@ -183,14 +178,7 @@ The `CatalogProvider` interface shipped in v0.6.0 with three filtering modes (UN
 
 **Principle: never discard data the API already returns.** If multiple providers have images for an artist, return all of them. The consumer decides which to display.
 
-**Shipped:**
-- **ArtworkMerger** — ARTIST_PHOTO and ALBUM_ART are now mergeable types. All providers are queried and results merged: highest-confidence image is primary, others are available via `Artwork.alternatives: List<ArtworkSource>`.
-- **Deezer artist photos** — `picture_small/medium/big/xl` (4 sizes up to 1000x1000) now parsed and returned. Gives artist photos for niche artists like Ochre that have no Wikidata/Fanart.tv coverage.
-- **Discogs artist photos** — `images[]` array from existing `getArtist()` response now parsed. ARTIST_PHOTO has 5 providers.
-- **CD_ART from Cover Art Archive** — CAA's "Medium" image type was already in the API response but the capability wasn't registered.
-- **ErrorKind.TIMEOUT** — timed-out types get explicit `Error(TIMEOUT)` instead of being silently missing.
-- **Band member deduplication** — MusicBrainz members deduplicated by ID, roles merged. Solo (Person-type) artists return themselves as the sole member.
-- **Performance** — MusicBrainz lookup caching eliminates redundant API calls (~2s saved). `resolveAll` runs providers concurrently for mergeable types.
+Which types merge, and from how many providers, is in the Current Coverage table above.
 
 **Remaining:**
 - **ARTIST_BACKGROUND/LOGO/BANNER** — still single-provider (Fanart.tv only). No other API provides these semantic image types.
@@ -205,66 +193,7 @@ Endpoints with diminishing returns (niche, write APIs, deprecated):
 
 ---
 
-## Priority Scorecard
-
-Ranked by **impact to consumers × implementation effort**:
-
-| # | Feature | New Types | Impact | Effort | Status |
-|---|---------|-----------|--------|--------|--------|
-| 1 | Multiple art sizes | Enhancement | High | Medium | ✅ Done (v0.4.0) |
-| 2 | Album tracklist | ALBUM_TRACKS | High | Low | ✅ Done (v0.4.0) |
-| 3 | Artist discography | ARTIST_DISCOGRAPHY | High | Medium | ✅ Done (v0.4.0) |
-| 4 | Band members | BAND_MEMBERS | High | Medium | ✅ Done (v0.4.0) |
-| 5 | Artist links | ARTIST_LINKS | Medium | Low | ✅ Done (v0.4.0) |
-| 6 | Artist banner | ARTIST_BANNER | Medium | Very low | ✅ Done (v0.4.0) |
-| 7 | Similar tracks | SIMILAR_TRACKS | Medium | Low | ✅ Done (v0.4.0) — Last.fm only |
-| 8 | Wikidata enrichment | Enhancement | Medium | Low | ✅ Done (v0.4.0) |
-| 9 | Album back/booklet art | Enhancement | Medium | Low | ✅ Done (v0.4.0) |
-| 10 | Credits & personnel | CREDITS | High | High | ✅ Done (v0.5.0) — MB + Discogs |
-| 11 | Wikipedia media | Enhancement | Low | Medium | ✅ Done (v0.4.0) |
-| 12 | Release editions | RELEASE_EDITIONS | Low | Medium | ✅ Done (v0.5.0) — MB + Discogs |
-| 13 | Artist timeline | ARTIST_TIMELINE | Medium | Medium | ✅ Done (v0.5.0) — Composite type |
-| 14 | Genre confidence scores | Enhancement | Medium | Medium | ✅ Done (v0.5.0) — GenreMerger |
-| 15 | Provider coverage expansion | Enhancement | Medium | Low | ✅ Done (v0.5.0) — 5 providers deepened |
-| 16 | HttpResult/ErrorKind adoption | Enhancement | Low | Medium | ✅ Done — typed results in all 11 providers (v0.5.0); correct transient classification landed later, across #112, #113, #116–#118 |
-| 17 | Similar artists merge | SIMILAR_ARTISTS | High | Medium | ✅ Done (v0.6.0) — 3 providers via SimilarArtistMerger |
-| 18 | Artist radio | ARTIST_RADIO | Medium | Low | ✅ Done (v0.6.0) — Deezer radio endpoint |
-| 19 | Similar albums | SIMILAR_ALBUMS | Medium | Medium | ✅ Done (v0.6.0) — era-proximity scoring |
-| 20 | Genre discovery | GENRE_DISCOVERY | Medium | Medium | ✅ Done (v0.6.0) — GenreAffinityMatcher |
-| 21 | Catalog filtering | Enhancement | High | Medium | ✅ Done (v0.6.0) — CatalogProvider interface + 3 modes |
-| 22 | Artwork merging | Enhancement | High | Medium | ✅ Done — ArtworkMerger, ARTIST_PHOTO (5 providers), ALBUM_ART (5 merged) |
-| 23 | Deezer + Discogs artist photos | Enhancement | Medium | Low | ✅ Done — stopped discarding image data from existing API calls |
-| 24 | Artist top tracks | ARTIST_TOP_TRACKS | High | Medium | ✅ Done — 3 providers merged, no artificial cap |
-| 25 | ErrorKind.TIMEOUT | Enhancement | Medium | Low | ✅ Done — timed-out types get explicit errors |
-| 26 | Band member dedup + solo artists | Enhancement | Medium | Low | ✅ Done — MBID dedup, Person-type returns sole member |
-| 27 | Performance (MB caching + parallel resolveAll) | Enhancement | Medium | Medium | ✅ Done — ~6s faster for artist enrichment |
-| 28 | Search disambiguation | Enhancement | Medium | Low | ✅ Done — SearchCandidate.disambiguation + pick-and-enrich flow |
-| 29 | OkHttp adapter | Enhancement | High | Low | ✅ Done (v0.8.0) — `musicmeta-okhttp` module |
-| 30 | Stale-while-revalidate cache | Enhancement | High | Medium | ✅ Done (v0.8.0) — `CacheMode.STALE_IF_ERROR`, offline fallback |
-| 31 | Bulk enrichment (simple) | Enhancement | High | Low | ✅ Done (v0.8.0) — sequential `enrichBatch()` with Flow emission |
-| 32 | Maven Central publishing | Enhancement | High | Medium | ✅ Done (v0.8.0) — `io.github.famesjranko` on Maven Central |
-| 33 | ARTIST_RADIO_DISCOVERY + TRACK_PREVIEW | 2 new types | Medium | Medium | ✅ Done (v0.9.0) — LB Radio as separate type, Deezer 30s previews |
-| 34 | API stability (v1.0.0) | Milestone | High | Low | In progress — enforcement landed (`binary-compatibility-validator`, committed `api/*.api` baselines, `apiCheck` in `build` and publish); accidentally-public `provider/`/`http/`/`engine/` surface narrowed (issue #5 — 80 types now `internal`, ~1350-line `.api` shrink); `engine/` decided per class, 5 more narrowed, `ResultMerger`/`CompositeSynthesizer` kept as extension points. Remaining: a per-class pass on the `(root)` package — 47 top-level types, 157 entries in the dump counting nested — never audited, and `1.0.0` makes every one of them permanent; then freeze |
-| — | ~~Flow-based progressive API~~ | Enhancement | Medium | High | Deferred — marginal benefit vs complexity; callers can split enrich() calls |
-
----
-
 ## Summary
-
-| Dimension | v0.1.0 | v0.4.0 | v0.5.0 | v0.6.0 | v0.7.0 | v0.8.x | v0.9.0 | v1.0.0 (planned) |
-|-----------|--------|--------|--------|--------|--------|--------|--------|------------------|
-| Enrichment types | 16 | 25 (+9) | 28 (+3) | 32 (+4) | 32 | 32 | 34 (+2) | 34 |
-| Provider utilization | ~30% avg | ~48% avg | ~57% avg | ~60% avg | ~60% avg | ~60% avg | ~62% avg | ~62% avg |
-| Engine concepts | Provider chains | + Typed identifiers, mapper pattern, confidence calculator | + Composite types, mergeable types, GenreMerger | + ResultMerger/CompositeSynthesizer interfaces, CatalogProvider filtering, ArtworkMerger | + EnrichmentResults wrapper, IdentityResolution, profiles, default type sets | + OkHttp adapter, stale cache, bulk enrichment | + TRACK_PREVIEW, ARTIST_RADIO_DISCOVERY, RadioDiscoveryMode, per-capability auth | API freeze, semver |
-| "App-ready" artist page | Partial | Full | **Complete** | **Complete** + radio, genre discovery | `engine.artistProfile("Radiohead")` — one call, structured result | + offline support, bulk loading | Stable |
-| "App-ready" album page | Partial | Full | **Complete** | **Complete** + similar albums | `engine.albumProfile("OK Computer", "Radiohead")` | + offline support, bulk loading | Stable |
-| "App-ready" now-playing | Partial | Rich | **Complete** | **Complete** + catalog-aware | `engine.trackProfile("Creep", "Radiohead")` | + offline support | Stable |
-| Android integration | Room cache | + Hilt module | + WorkManager | + WorkManager | + WorkManager | + OkHttp adapter | Stable |
-| Distribution | JitPack | JitPack | JitPack | JitPack | JitPack | JitPack + Maven Central | Maven Central |
-
-> **v0.10.0** is not a column above because it moved none of these dimensions: it added no enrichment
-> types (still 34) and no provider coverage. It was an API-hygiene release — committed ABI baselines,
-> CI gates, a narrowed public surface, and the 0.x semver carve-out. See "Where We Are" above.
 
 **The metadata + recommendations story is nearly complete.** A music app using musicmeta now gets metadata, discovery, and radio features from a single `enrich()` call. The architecture supports four enrichment patterns: standard provider chains, composite synthesis, multi-provider merging, and catalog-aware filtering.
 
@@ -272,7 +201,7 @@ Ranked by **impact to consumers × implementation effort**:
 
 | Goal Category | Coverage | Assessment |
 |--------------|----------|------------|
-| Artwork | 8 types, ALBUM_ART (5 merged) + ARTIST_PHOTO (5 merged) + CD_ART (2) | ✅ **Complete** — ArtworkMerger collects from all providers with alternatives. Deezer + Discogs artist photos added for niche coverage. |
+| Artwork | 8 types, ALBUM_ART (5 merged) + ARTIST_PHOTO (5 merged) + CD_ART (2) | ✅ **Complete** — ArtworkMerger collects from all providers, alternatives preserved |
 | Metadata | 9 types including credits + editions | ✅ **Complete** |
 | Text content | Bios + synced/plain lyrics | ✅ **Complete** |
 | Relationships | Similar artists (3 merged), similar tracks, links | ✅ **Complete** |
@@ -293,3 +222,8 @@ Shipped milestones are in `CHANGELOG.md`, one section per release.
 
 ### v1.0.0 — API Stability
 Freeze the public API surface. Semantic versioning guarantees from this point forward. Migration guide from pre-1.0. All deprecated APIs removed. Published to Maven Central with stable coordinates.
+
+**What it still waits on:** a per-class pass on the `(root)` package — 47 top-level types, 157
+entries in the dump counting nested — which has never been audited, and `1.0.0` makes every one of
+them permanent. Then the freeze. Enforcement itself is already in place (`api/*.api` baselines and
+`apiCheck`), and `provider/`, `http/` and `engine/` have had their pass.
