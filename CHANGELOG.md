@@ -61,6 +61,7 @@ This release makes `engine/` internal, hardens providers and the engine, and cor
 - Docs: the guides and `ErrorKind` KDoc no longer claim four providers collapse a transient into an empty result — all eleven classify it; the custom-provider sample uses `fetchJsonResult`
 - Docs: the `GENRE` roster is corrected — two providers, MusicBrainz and Last.fm, not four
 - Docs: `ROADMAP.md` drops the shipped-milestone status tables its own pointer sends to `CHANGELOG.md`; the deferred items they listed keep their home under ROADMAP's Remaining Gaps
+- Docs: `ROADMAP.md` drops the priority scorecard, version-evolution table and shipped inventories; what `1.0.0` waits on sits under Planned Milestones, the deferred Flow API under Remaining Gaps
 - Each host gets its own `RateLimiter` — Cover Art Archive's is now actually used; ten providers shared one, serialising every fan-out (#50)
 - A timed-out `enrich()` now caches nothing; no half-filtered result persists (#56)
 - A 429 on the typed `HttpResult` calls now retries within the enrich deadline; standalone, an `HttpClient` may block up to 120s rather than return at once
