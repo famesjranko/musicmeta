@@ -19,20 +19,20 @@ internal class CoverArtArchiveApi(
 
     /**
      * Check if artwork exists for a release and return the redirect URL.
-     * Returns null if no artwork is available (404).
+     * Returns null if no artwork is available (404); throws on a transient (429/5xx/transport).
      */
     suspend fun getArtworkUrl(releaseId: String, size: Int = 1200): String? {
         val url = "$BASE_URL/release/$releaseId/front-$size"
-        return rateLimiter.execute { httpClient.fetchRedirectUrl(url) }
+        return rateLimiter.execute { httpClient.fetchRedirectUrlResult(url).bodyOrThrowTransient() }
     }
 
     /**
      * Check if artwork exists for a release group (fallback).
-     * Returns null if no artwork is available.
+     * Returns null if no artwork is available; throws on a transient (429/5xx/transport).
      */
     suspend fun getGroupArtworkUrl(releaseGroupId: String, size: Int = 1200): String? {
         val url = "$BASE_URL/release-group/$releaseGroupId/front-$size"
-        return rateLimiter.execute { httpClient.fetchRedirectUrl(url) }
+        return rateLimiter.execute { httpClient.fetchRedirectUrlResult(url).bodyOrThrowTransient() }
     }
 
     /**

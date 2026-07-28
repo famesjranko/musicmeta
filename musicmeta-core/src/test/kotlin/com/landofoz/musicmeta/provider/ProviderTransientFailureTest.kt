@@ -49,6 +49,7 @@ class ProviderTransientFailureTest {
     private fun rateLimit(host: String) {
         http.givenHttpResult(host, HttpResult.RateLimited(retryAfterMs = 1000))
         http.givenHttpResultArray(host, HttpResult.RateLimited(retryAfterMs = 1000))
+        http.givenRedirectResult(host, HttpResult.RateLimited(retryAfterMs = 1000))
     }
 
     private fun assertNetworkError(result: EnrichmentResult) {
@@ -254,11 +255,7 @@ class ProviderTransientFailureTest {
 
     // --- Cover Art Archive --------------------------------------------------------------------
 
-    /**
-     * The metadata endpoint (`/release/{mbid}`), the one Cover Art Archive call that returns an
-     * `HttpResult`. The `front-` availability checks go through `fetchRedirectUrl`, which returns
-     * `String?` and cannot carry a status — exempted, see the PR survey.
-     */
+    /** The metadata endpoint (`/release/{mbid}`), reached by the metadata-driven image types. */
     @Test
     fun `coverartarchive metadata rate limited is an Error`() = runTest {
         rateLimit("coverartarchive.org")
@@ -273,6 +270,33 @@ class ProviderTransientFailureTest {
         val provider = CoverArtArchiveProvider(http, RateLimiter(0))
 
         assertNetworkError(provider.enrich(ALBUM_WITH_RELEASE_GROUP, EnrichmentType.ALBUM_BOOKLET))
+    }
+
+    /**
+     * The `front-{size}` redirect that resolves `ALBUM_ART`, Cover Art Archive's top-priority
+     * capability — a `String?` path until now, so a 429 here was indistinguishable from no artwork.
+     *
+     * Only the redirect is transient here, deliberately: `rateLimit()` would rate-limit the
+     * decorative metadata call too, and the `Error` would arrive from there even with the redirect
+     * still collapsing.
+     */
+    @Test
+    fun `coverartarchive release artwork redirect rate limited is an Error`() = runTest {
+        http.givenHttpResult("coverartarchive.org", HttpResult.ClientError(404))
+        http.givenRedirectResult("coverartarchive.org", HttpResult.RateLimited(retryAfterMs = 1000))
+        val provider = CoverArtArchiveProvider(http, RateLimiter(0))
+
+        assertNetworkError(provider.enrich(ALBUM_WITH_RELEASE_GROUP, EnrichmentType.ALBUM_ART))
+    }
+
+    /** The release-group fallback redirect — the second call shape on the same path. */
+    @Test
+    fun `coverartarchive release-group artwork redirect server error is an Error`() = runTest {
+        http.givenRedirectResult("/release/", HttpResult.ClientError(404))
+        http.givenRedirectResult("/release-group/", HttpResult.ServerError(503))
+        val provider = CoverArtArchiveProvider(http, RateLimiter(0))
+
+        assertNetworkError(provider.enrich(ALBUM_WITH_RELEASE_GROUP, EnrichmentType.ALBUM_ART))
     }
 
     // --- LRCLIB -------------------------------------------------------------------------------

@@ -23,6 +23,21 @@ interface HttpClient {
     suspend fun fetchRedirectUrl(url: String): String?
 
     /**
+     * [fetchRedirectUrl] returning a typed [HttpResult], so a 429, a 5xx or a dropped connection on
+     * the redirect path is distinguishable from "no such artwork" instead of collapsing to `null`.
+     *
+     * `Ok` carries the resolved URL: the request URL itself on a 2xx, the `Location` header on a
+     * 3xx. A 3xx with no `Location` is a [HttpResult.ClientError] — there is no URL to return.
+     *
+     * The default preserves the old semantics exactly (a `null` becomes a 404 `ClientError`), so
+     * every existing implementor keeps compiling and behaving as before. Override it wherever the
+     * status is actually available.
+     */
+    suspend fun fetchRedirectUrlResult(url: String): HttpResult<String> =
+        fetchRedirectUrl(url)?.let { HttpResult.Ok(it) }
+            ?: HttpResult.ClientError(404, "fetchRedirectUrl returned null")
+
+    /**
      * GET request returning typed [HttpResult] with parsed JSON body.
      * Unlike [fetchJson] which returns null on any failure, this preserves
      * the specific HTTP status for precise error handling.

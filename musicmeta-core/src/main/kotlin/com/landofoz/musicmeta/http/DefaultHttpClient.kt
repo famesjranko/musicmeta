@@ -62,6 +62,32 @@ class DefaultHttpClient(
         } catch (_: IOException) { null }
     }
 
+    override suspend fun fetchRedirectUrlResult(url: String): HttpResult<String> =
+        retryingRateLimited { fetchRedirectUrlOnce(url) }
+
+    private suspend fun fetchRedirectUrlOnce(url: String): HttpResult<String> =
+        withContext(Dispatchers.IO) {
+            try {
+                val conn = openConnection(url).apply { instanceFollowRedirects = false; connect() }
+                try {
+                    val code = conn.responseCode
+                    when {
+                        code == 429 -> HttpResult.RateLimited(conn.retryAfterMs())
+                        code in 200..299 -> HttpResult.Ok(url, code)
+                        code in 300..399 -> conn.getHeaderField("Location")
+                            ?.let { HttpResult.Ok(it, code) }
+                            ?: HttpResult.ClientError(code, "redirect without a Location header")
+                        code in 500..599 -> HttpResult.ServerError(code, readErrorBody(conn))
+                        else -> HttpResult.ClientError(code, readErrorBody(conn))
+                    }
+                } finally {
+                    conn.disconnect()
+                }
+            } catch (e: IOException) {
+                HttpResult.NetworkError(e.message ?: "Network error", e)
+            }
+        }
+
     override suspend fun fetchJsonResult(url: String): HttpResult<JSONObject> =
         fetchJsonResult(url, emptyMap())
 

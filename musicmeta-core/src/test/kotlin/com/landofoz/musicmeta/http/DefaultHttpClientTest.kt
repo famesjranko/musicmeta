@@ -158,4 +158,47 @@ class DefaultHttpClientTest {
         // Then
         assertTrue(fake.requestedUrls.contains("https://api.example.com/rate-limited"))
     }
+
+    // --- The fetchRedirectUrlResult default: what an existing implementor inherits ---
+
+    @Test fun `default fetchRedirectUrlResult wraps a resolved URL in Ok`() = runTest {
+        // Given — a consumer's implementation from before this method existed
+        val legacy = LegacyRedirectOnlyClient("https://archive.org/image/front.jpg")
+
+        // When
+        val result = legacy.fetchRedirectUrlResult("https://coverartarchive.org/release/x/front-1200")
+
+        // Then
+        assertEquals("https://archive.org/image/front.jpg", (result as HttpResult.Ok).body)
+    }
+
+    @Test fun `default fetchRedirectUrlResult turns a null into a 404, not a transient`() = runTest {
+        // Given — the same implementation, answering null as it always has
+        val legacy = LegacyRedirectOnlyClient(null)
+
+        // When
+        val result = legacy.fetchRedirectUrlResult("https://coverartarchive.org/release/x/front-1200")
+
+        // Then — a ClientError, so `bodyOrThrowTransient()` still yields null and the old NotFound
+        // stands. Anything transient here would turn every legacy implementor's "no artwork" into
+        // an Error the moment they upgraded.
+        assertEquals(404, (result as HttpResult.ClientError).statusCode)
+    }
+
+    /** Overrides only what [HttpClient] required before `fetchRedirectUrlResult` existed. */
+    private class LegacyRedirectOnlyClient(private val redirect: String?) : HttpClient {
+        override suspend fun fetchRedirectUrl(url: String): String? = redirect
+
+        override suspend fun fetchJson(url: String) = unused()
+        override suspend fun fetchJsonArray(url: String) = unused()
+        override suspend fun fetchBody(url: String) = unused()
+        override suspend fun fetchJsonResult(url: String) = unused()
+        override suspend fun fetchJsonArrayResult(url: String) = unused()
+        override suspend fun postJson(url: String, body: String) = unused()
+        override suspend fun postJsonArray(url: String, body: String) = unused()
+        override suspend fun postJsonResult(url: String, body: String) = unused()
+        override suspend fun postJsonArrayResult(url: String, body: String) = unused()
+
+        private fun unused(): Nothing = error("not part of this test")
+    }
 }

@@ -132,7 +132,7 @@ Call `.httpClient()` **before** `.withDefaultProviders()` so all default provide
 
 ### Custom HTTP clients
 
-For other HTTP libraries (Ktor, Fuel, etc.), implement the `HttpClient` interface (11 methods):
+For other HTTP libraries (Ktor, Fuel, etc.), implement the `HttpClient` interface (12 methods, two of them defaulted):
 
 ```kotlin
 class MyHttpClient : HttpClient {
@@ -143,6 +143,7 @@ class MyHttpClient : HttpClient {
     override suspend fun fetchJsonArrayResult(url: String): HttpResult<JSONArray> { /* ... */ }
     override suspend fun fetchBody(url: String): String? { /* ... */ }
     override suspend fun fetchRedirectUrl(url: String): String? { /* ... */ }
+    override suspend fun fetchRedirectUrlResult(url: String): HttpResult<String> { /* ... */ }  // default: wraps fetchRedirectUrl, so a 429 there reads as "no artwork"
     override suspend fun postJson(url: String, body: String): JSONObject? { /* ... */ }
     override suspend fun postJsonArray(url: String, body: String): JSONArray? { /* ... */ }
     override suspend fun postJsonResult(url: String, body: String): HttpResult<JSONObject> { /* ... */ }
