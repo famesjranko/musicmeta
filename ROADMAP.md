@@ -212,7 +212,7 @@ Endpoints with diminishing returns (niche, write APIs, deprecated):
 | Developer Experience | EnrichmentResults wrapper, profiles, default type sets, identity resolution, cache management | ✅ **Complete** |
 | Catalog Awareness | Interface shipped; implementations deferred | 🟡 **Interface only** |
 
-**9/10 goal categories complete or mostly complete.** Remaining: Catalog Awareness implementations (interface shipped, concrete implementations deferred).
+**9/10 goal categories complete or mostly complete** (8 ✅ complete, plus Recommendations 🟡 mostly complete; Catalog Awareness is interface-only). Remaining: Catalog Awareness implementations (interface shipped, concrete implementations deferred).
 
 ---
 
