@@ -32,6 +32,11 @@ interface HttpClient {
      * The default preserves the old semantics exactly (a `null` becomes a 404 `ClientError`), so
      * every existing implementor keeps compiling and behaving as before. Override it wherever the
      * status is actually available.
+     *
+     * The consequence of inheriting that default: [fetchRedirectUrl] also returns `null` on a 429,
+     * a 5xx and a dropped connection, so all three report as "no artwork" (`ClientError(404)`, which
+     * the providers turn back into `NotFound`) rather than as transient failures. Implement this
+     * overload to get them classified.
      */
     suspend fun fetchRedirectUrlResult(url: String): HttpResult<String> =
         fetchRedirectUrl(url)?.let { HttpResult.Ok(it) }
