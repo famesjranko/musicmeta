@@ -75,8 +75,9 @@ consumer's implementation compiled against the previous release does not carry t
 calling it throws `AbstractMethodError` until they recompile — while the `.api` diff shows only an
 addition and every check stays green. `HttpClient` carried two such defaults
 (`fetchJsonResult(String, Map)`, `fetchRedirectUrlResult`) until they went with the nullable methods
-they papered over; `musicmeta-core.api` no longer has a `DefaultImpls` block, which is the only place
-the distinction was ever visible. Kotlin 2.2 flips that compiler default, so re-verify this on a
+they papered over; `HttpClient$DefaultImpls` is gone from `musicmeta-core.api` as a result, and that
+block was the only place the distinction was ever visible for this interface. Other interfaces still
+have theirs. Kotlin 2.2 flips that compiler default, so re-verify this on a
 toolchain bump — `apiDump` would show any `DefaultImpls` disappearing. Any public interface a
 consumer implements is exposed to this, so a defaulted addition to one needs the same
 `### Breaking Changes` line a removal would get.

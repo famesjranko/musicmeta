@@ -120,7 +120,7 @@ class DefaultHttpClientTest {
         assertEquals(404, (result as HttpResult.ClientError).statusCode)
     }
 
-    @Test fun `FakeHttpClient fetchJsonResult falls back to fetchJson behavior`() = runTest {
+    @Test fun `FakeHttpClient fetchJsonResult falls back to a plain body stub`() = runTest {
         // Given — a plain body stub, with no HttpResult stub over it
         val fake = FakeHttpClient()
         fake.givenJsonResponse("api.example.com", """{"fallback":true}""")

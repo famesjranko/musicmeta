@@ -43,8 +43,8 @@ class SpotifyProvider(
         val url = "https://api.spotify.com/v1/search?q=${artist.name}&type=artist"
 
         return try {
-            // Use fetchJsonResult, not fetchJson: the nullable form collapses a 429 or a 5xx into
-            // the same null a genuine 404 gives you, and a NotFound counts as a circuit-breaker
+            // Act on which failure it is: treating a 429 or a 5xx the same as a genuine 404 makes
+            // it a NotFound, and a NotFound counts as a circuit-breaker
             // *success* — the provider looks healthy while a throttle makes it answer nothing.
             // Throwing on a transient sends it through the catch below into Error(NETWORK), which
             // the breaker records as a failure. See docs/pitfalls.md §4.

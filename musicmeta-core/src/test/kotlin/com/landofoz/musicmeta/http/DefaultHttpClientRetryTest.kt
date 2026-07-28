@@ -81,6 +81,22 @@ class DefaultHttpClientRetryTest {
         assertEquals("must not sleep", 0L, testScheduler.currentTime)
     }
 
+    @Test fun `a 429 with no Retry-After gives up when the default backoff will not fit`() = runTest {
+        // Given — no Retry-After header, so the wait is the exponential default (2s on the first
+        // attempt) rather than a figure the server named, against a budget of one second. This is
+        // the only test that exercises that arm of the backoff against a deadline: every other
+        // deadline test here supplies a Retry-After, which replaces the default outright.
+        scripted += 429 to null
+
+        // When
+        val result = withContext(EnrichDeadline(budgetMs = 1_000)) { client.fetchJsonResult(url()) }
+
+        // Then — handed back unretried, because 2s does not fit in the second that is left
+        assertEquals(HttpResult.RateLimited(null), result)
+        assertEquals("must not retry into a certain timeout", 1, requests)
+        assertEquals("must not sleep", 0L, testScheduler.currentTime)
+    }
+
     @Test fun `standalone, a Retry-After past MAX_RETRY_AFTER_SEC still bails out`() = runTest {
         // Given — no EnrichDeadline in context: an HttpClient driven directly by a consumer. 125s is
         // just past the 120s ceiling, which only holds because the comparison is made before jitter.
