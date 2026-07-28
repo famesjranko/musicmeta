@@ -59,7 +59,7 @@ This release makes `engine/` internal, hardens providers and the engine, and cor
 - Docs: `withDefaultProviders()` must be called last; `ArtworkMerger` covers only `ALBUM_ART`/`ARTIST_PHOTO`; the genre taxonomy is 189 relationships in 12 families, not `~70`
 - Docs: four wrong `README.md` claims removed; eleven drifted API references in `docs/providers/` replaced by one `docs/providers.md`
 - Docs: the guides and `ErrorKind` KDoc no longer claim four providers collapse a transient into an empty result — all eleven classify it; the custom-provider sample uses `fetchJsonResult`
-- Docs: duplicated content removed so each fact has one home; the `GENRE` roster is corrected to its two providers, MusicBrainz and Last.fm
+- Docs: the `GENRE` roster is corrected — two providers, MusicBrainz and Last.fm, not four
 - Each host gets its own `RateLimiter` — Cover Art Archive's is now actually used; ten providers shared one, serialising every fan-out (#50)
 - A timed-out `enrich()` now caches nothing; no half-filtered result persists (#56)
 - A 429 on the typed `HttpResult` calls now retries within the enrich deadline; standalone, an `HttpClient` may block up to 120s rather than return at once

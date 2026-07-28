@@ -2,7 +2,7 @@
 
 What the eleven packages under `provider/` take from their upstreams, and — mostly — what they
 deliberately leave. Capabilities, endpoints and confidence values are **not** here, and neither are
-the per-provider limiter intervals (`EnrichmentEngine.kt:129-140`): they are one glance at the code
+the per-provider limiter intervals (`withDefaultProviders()`): they are one glance at the code
 away, and a copy of them rots while it moves. §Rate limiting keeps the one-limiter-per-host
 topology and where each interval's basis comes from.
 
