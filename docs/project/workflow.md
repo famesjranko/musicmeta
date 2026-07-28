@@ -154,10 +154,9 @@ Gradle may report `UP-TO-DATE` without executing tests. Verification evidence mu
 | `.github/workflows/**` | Syntax validation plus an honest statement of behavior not exercised locally |
 | Documentation only | The two always-checks |
 
-E2E tests hit live third-party APIs and are never merge-gating. Record useful E2E coverage as a
-deferred maintainer-run proof surface rather than allowing rate limits or outages to block a PR.
-They run only under `-Dinclude.e2e=true`; the showcase produces a readable diagnostic report across
-diverse queries, and keys passed as system properties activate the three key-requiring providers:
+What an e2e test is and is not evidence for: `CLAUDE.md`. To run the showcase — a readable
+diagnostic report across diverse queries — keys passed as system properties activate the three
+key-requiring providers:
 
 ```bash
 ./gradlew :musicmeta-core:test -Dinclude.e2e=true \

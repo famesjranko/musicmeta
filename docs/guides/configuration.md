@@ -264,7 +264,7 @@ The library includes several discovery types that go beyond basic metadata.
 
 ### Similar artists (merged from 3 providers)
 
-Last.fm, ListenBrainz, and Deezer each return similar artists. The `SimilarArtistMerger` deduplicates them, combines scores, and tracks which providers contributed each match:
+Last.fm, ListenBrainz, and Deezer each return similar artists. The engine deduplicates them, combines scores, and tracks which providers contributed each match:
 
 ```kotlin
 val results = engine.enrich(
@@ -381,7 +381,7 @@ The default radio limit is 50 tracks. Configure it via `EnrichmentConfig.radioLi
 
 ### Artist top tracks (merged from 3 providers)
 
-Last.fm, ListenBrainz, and Deezer each provide top tracks. The `TopTrackMerger` deduplicates, combines listen counts, and tracks sources:
+Last.fm, ListenBrainz, and Deezer each provide top tracks. The engine deduplicates, combines listen counts, and tracks sources:
 
 ```kotlin
 val results = engine.enrich(

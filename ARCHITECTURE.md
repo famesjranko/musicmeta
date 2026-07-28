@@ -1,11 +1,8 @@
 # ARCHITECTURE
 
 What `./check` runs, and the gaps in it worth knowing about. **This is not a complete inventory of
-the project's invariants and does not try to be.** It used to claim otherwise — "every invariant is
-in exactly one of the two lists below" — and that claim manufactured work: it turned every
-preference into either a gate somebody had to build or a debt somebody had to record, which is how a
-convention scanner grew a Kotlin lexer, an oracle and a mutation suite. Most conventions are
-review's job, and that is fine.
+the project's invariants and does not try to be.** Most conventions are review's job, and that is
+fine.
 
 The check command is the authority. Where a document and a config disagree, the config wins,
 because the config is the thing that fails.
@@ -30,10 +27,8 @@ because the config is the thing that fails.
 | Build | `./gradlew build` | compile, all unit tests, `apiCheck` against `api/*.api` |
 | Consumer canary | `demo/` composite build | an external consumer still compiles |
 
-Beyond `./check`: `main`'s ruleset requires a pull request with `build` and `demo-canary` green,
-linear history, squash-only merges and **no bypass actors** — nothing writes to it directly,
-including the release workflow. `release.yml` refuses to publish from any ref but `main`, and
-asserts version/README/notes agreement before anything irreversible; the tag is pushed last.
+Gates exist beyond `./check` and this table does not list them: `main`'s branch protection lives in
+`docs/project/workflow.md`, the release workflow's own verification in `docs/project/release.md`.
 
 **A missing *or mismatched* tool fails the run — it never skips.** A gate that silently skips when
 its tool is absent reports green while checking nothing, which is worse than no gate. `./check`
@@ -65,9 +60,8 @@ than it looks like, each learned the hard way.
   package's runtime `capabilities`. The test worked — 8/8 mutations killed, including a Gradle
   up-to-date hole it exposed — and was cut anyway, as too much standing machinery for one column of
   prose. `git log -S ProviderFeatureDocsTest` has it if the judgement changes. The tables it checked
-  are gone with it: what a provider extracts is now read off `provider/<name>/`, and the doc keeps
-  only the upstream links, the two pattern deviations and the fields we drop — none of which a
-  compiler or a test can see. Hand-verified 2026-07-26; that date is the only warranty.
+  went with it; what the doc kept is what no compiler or test can see. It states its own scope and
+  the date it was last hand-verified — that date is the only warranty.
 - **detekt is not in `--fast`.** The typed tasks compile before they analyse and the Android
   variants need `ANDROID_HOME`. The edit loop is ktlint plus the conventions check; detekt runs on
   every push and in CI.

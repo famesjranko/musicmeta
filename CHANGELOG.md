@@ -55,11 +55,11 @@ This release makes `engine/` internal, hardens providers and the engine, and cor
 - A cancelled or timed-out `enrich()` no longer opens circuit breakers against healthy providers (#53)
 - A consumer cache or merge strategy with its own `withTimeout` no longer surfaces as the engine's deadline (#61)
 - A throwing `HttpClient` on Wikipedia's Wikidata sitelink lookup now yields `Error` with a classified `errorKind` instead of escaping as `UNKNOWN`
-- The build works when the default JDK is not 17 (every module declares `jvmTarget`; bytecode unchanged)
 - Docs: `SIMILAR_ALBUMS` is documented as artist-derived — Deezer has no album-similarity endpoint, so two albums by one artist return near-identical lists (#107)
 - Docs: `withDefaultProviders()` must be called last; `ArtworkMerger` covers only `ALBUM_ART`/`ARTIST_PHOTO`; the genre taxonomy is 189 relationships in 12 families, not `~70`
 - Docs: four wrong `README.md` claims removed; eleven drifted API references in `docs/providers/` replaced by one `docs/providers.md`
 - Docs: the guides and `ErrorKind` KDoc no longer claim four providers collapse a transient into an empty result — all eleven classify it; the custom-provider sample uses `fetchJsonResult`
+- Docs: duplicated content removed so each fact has one home; the `GENRE` roster is corrected to its two providers, MusicBrainz and Last.fm
 - Each host gets its own `RateLimiter` — Cover Art Archive's is now actually used; ten providers shared one, serialising every fan-out (#50)
 - A timed-out `enrich()` now caches nothing; no half-filtered result persists (#56)
 - A 429 on the typed `HttpResult` calls now retries within the enrich deadline; standalone, an `HttpClient` may block up to 120s rather than return at once

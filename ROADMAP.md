@@ -53,121 +53,49 @@ shipped; the version is declared once, in root `gradle.properties`.
 ### Unreleased — lands in the next release
 
 Docs and CI only. No library code, so the published 0.10.1 artifact is unaffected and consumers see
-nothing new yet. Releasing is now three dispatched actions instead of a seven-step manual checklist,
-and the `CHANGELOG` section is the release note. See the `[Unreleased]` block in `CHANGELOG.md`.
-
-### What Changed in v0.10.1
-
-v0.10.1 is a patch — no public-API change (`api/*.api` unchanged), so it carries no break under the
-0.x carve-out.
-
-- **A throwing `ResultMerger`/`CompositeSynthesizer` no longer escapes `enrich()`** — the last of the
-  three consumer-supplied extension points is now guarded, matching `EnrichmentProvider` and
-  `EnrichmentCache`. `internal`-only.
-- **CI hardening** — the publish workflow refuses a tag that disagrees with the declared module
-  versions; the API-drift watch keys on a label instead of brittle title text; all workflows are off
-  the deprecated Node 20 runtime.
-- **Release safety** — the release version is declared once in root `gradle.properties`, so
-  cross-module drift is now unrepresentable; a `release-readiness` gate — required on `main`'s ruleset
-  — asserts the three module versions and the pinned `CHANGELOG` heading agree before any tag exists.
-
-### What Changed in v0.10.0
-
-v0.10.0 is **Public API compatibility enforcement** — epic #7, 2026-07-22.
-
-The backwards-compatibility contract in `CLAUDE.md` was asserted but unenforced, and an audit of the
-tag history found it had been missed repeatedly: four mid-list parameter insertions (v0.5.0, v0.7.0,
-v0.9.0, v0.9.2), four undeprecated removals or renames (v0.4.0), and `@Deprecated` never once used.
-
-- **Committed ABI baselines** — `binary-compatibility-validator` dumps each module's public API to
-  `api/*.api`. `apiCheck` runs via `build` and on the publish path, so a diverging signature fails
-  the build instead of reaching Maven Central. The `.api` diff is now the review artifact.
-- **CI gates** — `build.yml` runs build + tests + `apiCheck` on PRs and pushes, plus the `demo/`
-  composite-build canary that `./gradlew build` never compiles.
-- **Scheduled provider drift watch** — `provider-drift.yml` runs the gated E2E suite daily against
-  the live third-party APIs and fails, with the test report retained, when a provider changes its
-  JSON or endpoints underneath us. That failure is otherwise silent, because `org.json`'s `opt*`
-  family turns a renamed field into an empty value inside a *successful* enrichment, and it arrives
-  with zero commits to this repo. (The matching `api-drift.yml` was deleted: `apiCheck` runs on
-  every push and PR, and an ABI baseline cannot drift without a commit.)
-- **Cache failures no longer escape `enrich()`** — a throwing `EnrichmentCache` degrades to a miss
-  and is logged, matching what `README.md` already promised consumers.
-- **Narrowed public surface** — 80 top-level types that were public only by omission (provider
-  `*Api`/`*Mapper`/`*Models`, `MusicBrainzParser`, `http/CircuitBreaker`, the `engine/` mergers and
-  synthesizers) are now `internal`. See `CHANGELOG.md`.
-- **0.x semver carve-out** — minor `0.x.0` releases may break if documented and visible in the `.api`
-  diff; patch `0.x.y` releases may not. Full semver from `1.0.0`.
-
-### What Changed in v0.9.0
-
-v0.9.0 was **LB Radio & Track Preview** — shipped 2026-03-26.
-
-Key additions:
-- **TRACK_PREVIEW** — 30-second MP3 preview URL via Deezer. On-demand, no API key. `TrackProfile.preview`, `EnrichmentResults.trackPreview()`.
-- **ARTIST_RADIO_DISCOVERY** — community-driven radio via ListenBrainz LB Radio. Requires free user token (`ApiKeyConfig.listenBrainzToken`). `RadioDiscoveryMode` enum for discovery depth. `ArtistProfile.radioDiscovery`, `EnrichmentResults.radioDiscovery()`. Included in `DEFAULT_ARTIST_TYPES`.
-- **HttpClient header support** — `fetchJsonResult(url, headers)` overload for authenticated requests.
-
-### What Changed Since v0.6.0
-
-v0.7.0 was **Developer Experience** — shipped 2026-03-24.
-
-Key additions:
-- **Profile methods** — `engine.artistProfile("Radiohead")`, `engine.albumProfile(...)`, `engine.trackProfile(...)` returning structured data classes with computed properties
-- **`EnrichmentResults` wrapper** — 19 named accessors, top-level `IdentityResolution`, `wasRequested()`/`result()` diagnostics, generic `get<T>()`
-- **Default type sets** — `DEFAULT_ARTIST_TYPES` (15), `DEFAULT_ALBUM_TYPES` (14), `DEFAULT_TRACK_TYPES` (8), composable via set algebra
-- **Cache management API** — `engine.invalidate(request, type?)`, `forceRefresh` parameter on `enrich()` and all profile extensions, `engine.isManuallySelected()`/`markManuallySelected()` without cache key knowledge
-- **Bug fixes** — ProviderChain failure preservation, Room cache identity round-tripping, cache key convergence after disambiguation
-
-### What Changed in v0.6.0
-
-v0.6.0 was **Recommendations Engine** — shipped 2026-03-23.
-
-Key additions:
-- **SIMILAR_ARTISTS multi-provider merge** — Deezer `/artist/{id}/related` added as third provider. SIMILAR_ARTISTS promoted to mergeable type (like GENRE). `SimilarArtistMerger` deduplicates by name, uses additive scoring capped at 1.0, and tracks contributing sources per artist.
-- **ARTIST_RADIO** — New enrichment type backed by Deezer `/artist/{id}/radio`. Returns ordered `RadioPlaylist` (default 50 tracks, configurable via `radioLimit`). 7-day TTL.
-- **SIMILAR_ALBUMS** — New enrichment type via standalone `SimilarAlbumsProvider`. Fetches Deezer related artists + their top albums, scored by artist similarity and era proximity (±5yr = 1.2x multiplier). 30-day TTL.
-- **GENRE_DISCOVERY** — New composite type via `GenreAffinityMatcher`. Static genre taxonomy of 189 relationships over 56 genres, across 12 families. Produces affinity-scored genre neighbors with relationship type (parent/child/sibling).
-- **CatalogProvider interface** — Consumers implement `checkAvailability()` to filter recommendation results by availability. Three modes: UNFILTERED (default), AVAILABLE_ONLY, AVAILABLE_FIRST.
-- **Engine extensibility** — `ResultMerger` and `CompositeSynthesizer` interfaces extracted from engine. New mergeable types and composite types plug in without modifying `DefaultEnrichmentEngine`.
+nothing new yet. See the `[Unreleased]` block in `CHANGELOG.md`.
 
 ### Current Coverage (34 enrichment types)
 
-| Category | Type | Providers | Depth |
-|----------|------|-----------|-------|
-| **Artwork** | ALBUM_ART | CAA, Fanart.tv, Deezer, iTunes, Wikipedia | **Excellent** — 5 providers merged via ArtworkMerger, alternatives preserved |
-| | ALBUM_ART_BACK | CAA | Good — via JSON metadata endpoint |
-| | ALBUM_BOOKLET | CAA | Good — via JSON metadata endpoint |
-| | ARTIST_PHOTO | Wikidata, Fanart.tv, Deezer, Discogs, Wikipedia | **Excellent** — 5 providers merged via ArtworkMerger, covers niche artists |
-| | ARTIST_BACKGROUND | Fanart.tv | Thin — requires API key + MBID |
-| | ARTIST_LOGO | Fanart.tv | Thin — requires API key + MBID |
-| | ARTIST_BANNER | Fanart.tv | OK — requires API key + MBID |
-| | CD_ART | Fanart.tv, CAA | Good — 2 providers |
-| **Metadata** | GENRE | MusicBrainz, Last.fm, Discogs, iTunes | **Excellent** — 4 providers merged via GenreMerger |
-| | LABEL | MusicBrainz, Discogs | Good |
-| | RELEASE_DATE | MusicBrainz | OK |
-| | RELEASE_TYPE | MusicBrainz, Discogs | OK |
-| | COUNTRY | MusicBrainz, Wikidata | Good |
-| | BAND_MEMBERS | MusicBrainz, Discogs | Good |
-| | ARTIST_DISCOGRAPHY | MusicBrainz, Deezer, ListenBrainz, iTunes | **Excellent** — 4 providers |
-| | ALBUM_TRACKS | MusicBrainz, Deezer, iTunes | Good — 3 providers |
-| | ALBUM_METADATA | Deezer, Last.fm, Discogs, iTunes | **Excellent** — 4 providers |
-| | CREDITS | MusicBrainz, Discogs | Good — recording rels + extraartists with roleCategory |
-| | RELEASE_EDITIONS | MusicBrainz, Discogs | Good — release-group releases + master versions |
-| **Text** | ARTIST_BIO | Wikipedia, Last.fm | Good |
-| | LYRICS_SYNCED | LRCLIB | Good |
-| | LYRICS_PLAIN | LRCLIB | Good |
-| **Relationships** | SIMILAR_ARTISTS | Last.fm, ListenBrainz, Deezer | **Excellent** — 3 providers merged via SimilarArtistMerger |
-| | SIMILAR_TRACKS | Last.fm, Deezer | Good — 2 providers merged via SimilarTrackMerger |
-| | ARTIST_LINKS | MusicBrainz | Good — all URL relation types parsed |
-| **Statistics** | ARTIST_POPULARITY | Last.fm, ListenBrainz | Good — batch endpoints available |
-| | TRACK_POPULARITY | Last.fm, ListenBrainz | Good |
-| **Composite** | ARTIST_TIMELINE | TimelineSynthesizer | Good — auto-resolves sub-types, synthesizes chronological events |
-| | GENRE_DISCOVERY | GenreAffinityMatcher | **v0.6.0** — static taxonomy, ~70 genre relationships |
-| **Top Tracks** | ARTIST_TOP_TRACKS | Last.fm, ListenBrainz, Deezer | **Excellent** — 3 providers merged via TopTrackMerger, fetches API max, no artificial cap |
-| **Recommendations** | ARTIST_RADIO | Deezer | **v0.6.0** — ordered playlist (default 50 tracks, configurable), 7-day TTL. For community-driven discovery, see ARTIST_RADIO_DISCOVERY |
-| | ARTIST_RADIO_DISCOVERY | ListenBrainz (LB Radio) | **v0.9.0** — community-driven discovery radio, configurable depth (EASY/MEDIUM/HARD), requires free user token, catalog-filtered |
-| | SIMILAR_ALBUMS | Deezer (SimilarAlbumsProvider) | **v0.6.0** — era-proximity scored, 30-day TTL |
-| **Preview** | TRACK_PREVIEW | Deezer | **v0.9.0** — 30-second MP3 preview URL, on-demand (not in DEFAULT_TRACK_TYPES), 24-hour TTL |
+Which providers serve each type, and in what priority order, is in
+[docs/how-it-works.md](docs/how-it-works.md) — this is the assessment of how well each is covered.
+
+| Category | Type | Depth |
+|----------|------|-------|
+| **Artwork** | ALBUM_ART | **Excellent** — 5 providers merged via ArtworkMerger, alternatives preserved |
+| | ALBUM_ART_BACK | Good — via JSON metadata endpoint |
+| | ALBUM_BOOKLET | Good — via JSON metadata endpoint |
+| | ARTIST_PHOTO | **Excellent** — 5 providers merged via ArtworkMerger, covers niche artists |
+| | ARTIST_BACKGROUND | Thin — requires API key + MBID |
+| | ARTIST_LOGO | Thin — requires API key + MBID |
+| | ARTIST_BANNER | OK — requires API key + MBID |
+| | CD_ART | Good — 2 providers |
+| **Metadata** | GENRE | Good — 2 providers merged, confidence summed where they agree |
+| | LABEL | Good |
+| | RELEASE_DATE | OK |
+| | RELEASE_TYPE | OK |
+| | COUNTRY | Good |
+| | BAND_MEMBERS | Good |
+| | ARTIST_DISCOGRAPHY | **Excellent** — 4 providers |
+| | ALBUM_TRACKS | Good — 3 providers |
+| | ALBUM_METADATA | **Excellent** — 4 providers |
+| | CREDITS | Good — recording rels + extraartists with roleCategory |
+| | RELEASE_EDITIONS | Good — release-group releases + master versions |
+| **Text** | ARTIST_BIO | Good |
+| | LYRICS_SYNCED | Good |
+| | LYRICS_PLAIN | Good |
+| **Relationships** | SIMILAR_ARTISTS | **Excellent** — 3 providers merged via SimilarArtistMerger |
+| | SIMILAR_TRACKS | Good — 2 providers merged via SimilarTrackMerger |
+| | ARTIST_LINKS | Good — all URL relation types parsed |
+| **Statistics** | ARTIST_POPULARITY | Good — batch endpoints available |
+| | TRACK_POPULARITY | Good |
+| **Composite** | ARTIST_TIMELINE | Good — auto-resolves sub-types, synthesizes chronological events |
+| | GENRE_DISCOVERY | **v0.6.0** — static taxonomy, 189 genre relationships |
+| **Top Tracks** | ARTIST_TOP_TRACKS | **Excellent** — 3 providers merged via TopTrackMerger, fetches API max, no artificial cap |
+| **Recommendations** | ARTIST_RADIO | **v0.6.0** — ordered playlist (default 50 tracks, configurable), 7-day TTL. For community-driven discovery, see ARTIST_RADIO_DISCOVERY |
+| | ARTIST_RADIO_DISCOVERY | **v0.9.0** — community-driven discovery radio, configurable depth (EASY/MEDIUM/HARD), requires free user token, catalog-filtered |
+| | SIMILAR_ALBUMS | **v0.6.0** — era-proximity scored, 30-day TTL |
+| **Preview** | TRACK_PREVIEW | **v0.9.0** — 30-second MP3 preview URL, on-demand (not in DEFAULT_TRACK_TYPES), 24-hour TTL |
 
 ### Provider Utilization
 
@@ -389,20 +317,7 @@ The consumer API now covers the full developer journey: build → get → update
 
 ## Planned Milestones
 
-### ✅ v0.6.0 — Recommendations Engine — SHIPPED 2026-03-23
-Built discovery features: multi-provider SIMILAR_ARTISTS merge (Last.fm + ListenBrainz + Deezer), ARTIST_RADIO (Deezer radio endpoint), SIMILAR_ALBUMS (synthesized from related artists + era scoring), GENRE_DISCOVERY (static genre affinity taxonomy), and CatalogProvider interface for library-aware filtering.
-
-### ✅ v0.7.0 — Developer Experience — SHIPPED 2026-03-24
-Added a convenience layer: `EnrichmentResults` wrapper with 19 named accessors, profile extension functions (`artistProfile()`, `albumProfile()`, `trackProfile()`), default type sets, cache management API (`invalidate()`, `forceRefresh`, `markManuallySelected()`). Fixed ProviderChain failure preservation, Room cache identity round-tripping, and cache key convergence. Developer guide split into 7 focused pages under `docs/guides/`.
-
-### ✅ v0.8.0 — Production Readiness — SHIPPED 2026-03-24
-Addressed four adoption blockers: `musicmeta-okhttp` module (OkHttp adapter), `CacheMode.STALE_IF_ERROR` (offline fallback), `enrichBatch()` (bulk enrichment via Flow), Maven Central publishing via vanniktech plugin.
-
-### ✅ v0.8.2 — Patch — SHIPPED 2026-03-25
-Search fuzzy fallback fix, demo v0.8.0 features (OkHttp toggle, batch, stale cache), Maven group ID changed to `io.github.famesjranko`, CI workflow for automated publishing.
-
-### ✅ v0.9.0 — LB Radio & Track Preview — SHIPPED 2026-03-26
-Added two new enrichment types: `TRACK_PREVIEW` (30-second MP3 preview URL via Deezer track search, on-demand, no API key) and `ARTIST_RADIO_DISCOVERY` (community-driven radio via ListenBrainz LB Radio, requires free user token, configurable depth via `RadioDiscoveryMode`). HttpClient header support for authenticated requests. 34 enrichment types total.
+Shipped milestones are in `CHANGELOG.md`, one section per release.
 
 ### v1.0.0 — API Stability
 Freeze the public API surface. Semantic versioning guarantees from this point forward. Migration guide from pre-1.0. All deprecated APIs removed. Published to Maven Central with stable coordinates.
