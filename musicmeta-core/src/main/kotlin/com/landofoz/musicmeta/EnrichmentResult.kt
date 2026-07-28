@@ -14,12 +14,10 @@ enum class ErrorKind {
     /**
      * Not produced by any provider — a 429 arrives as [NETWORK].
      *
-     * MusicBrainz, Deezer, iTunes, Last.fm, Discogs, Fanart.tv and ListenBrainz classify a
-     * transient transport failure (429, 5xx, dropped connection) through one shared helper, which
-     * throws a plain `IOException`, and `mapError()` maps that to [NETWORK]. The rest — Cover Art
-     * Archive, LrcLib, Wikidata, Wikipedia — still collapse a transient into an empty result.
-     * Either way, do not branch on this value; nothing sets it. Retained because removing a value
-     * from a published enum is a breaking change. See `docs/guides/results-and-errors.md`.
+     * All eleven providers classify a transient transport failure (429, 5xx, dropped connection)
+     * as [NETWORK], never as an empty result. Do not branch on this value; nothing sets it.
+     * Retained because removing a value from a published enum is a breaking change. See
+     * `docs/guides/results-and-errors.md`.
      */
     RATE_LIMIT,
 
@@ -115,10 +113,9 @@ sealed class EnrichmentResult {
     ) : EnrichmentResult()
 
     /**
-     * Not returned by any provider. From MusicBrainz, Deezer, iTunes, Last.fm, Discogs, Fanart.tv
-     * and ListenBrainz a rate limit arrives as [Error] with [ErrorKind.NETWORK], classified as a
-     * transient transport failure alongside 5xx and a dropped connection; from the rest it still
-     * collapses into an empty result.
+     * Not returned by any provider. From all eleven, a rate limit arrives as [Error] with
+     * [ErrorKind.NETWORK], classified as a transient transport failure alongside 5xx and a
+     * dropped connection.
      *
      * The engine handles this variant, but nothing constructs it. Retained because
      * removing a variant from a published sealed class is a breaking change. See

@@ -171,19 +171,21 @@ sealed class EnrichmentResult {
 | Value | Cause |
 |-------|-------|
 | `NETWORK` | Connectivity or timeout failure |
-| `AUTH` | 401/403 — check API key |
+| `AUTH` | 401/403 on a call that sent credentials — check API key |
 | `PARSE` | Malformed JSON or unexpected schema |
 | `RATE_LIMIT` | **Not produced by any provider** — a 429 arrives as `NETWORK` (see below) |
 | `TIMEOUT` | Engine-level enrichment timeout expired |
 | `UNKNOWN` | Uncategorized error |
 
-From MusicBrainz, Deezer, iTunes, Last.fm, Discogs, Fanart.tv and ListenBrainz, a 429, a 5xx and a
-dropped connection all reach you as `NETWORK`: those seven classify a transient transport failure
-through one shared helper (`bodyOrThrowTransient`), which throws a plain `IOException`, and
-`mapError()` maps that to `NETWORK`. `MusicBrainzTransientFailureTest` and
-`ProviderTransientFailureTest` pin it. The remaining providers — Cover Art Archive, LrcLib, Wikidata
-and Wikipedia — still collapse a transient into an empty result, so a 429 from one of those is
-indistinguishable from a genuine "not found".
+From every one of the eleven providers, a 429, a 5xx and a dropped connection reach you as
+`Error` with `NETWORK` — never as an empty result. Two upstream quirks are classified the same way:
+a Deezer quota refusal arrives as HTTP 200 with an `error.code` of 4, and iTunes answers a throttle
+with 403.
+
+`AUTH` is narrower than the status code suggests: only a call that actually sends credentials
+(Last.fm, Discogs, Fanart.tv, and ListenBrainz's token-bearing radio call) turns a 401/403 into
+`AUTH`. On a keyless endpoint there is no key to be wrong, so a 403 there is either a genuine
+client error or — for iTunes — a throttle, and neither is `AUTH`.
 
 Either way, **do not branch on `RATE_LIMIT`**: the value is part of the published enum and cannot be
 removed without a breaking change, but nothing sets it. The same is true of the
