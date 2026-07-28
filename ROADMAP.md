@@ -126,7 +126,7 @@ Key additions:
 - **SIMILAR_ARTISTS multi-provider merge** — Deezer `/artist/{id}/related` added as third provider. SIMILAR_ARTISTS promoted to mergeable type (like GENRE). `SimilarArtistMerger` deduplicates by name, uses additive scoring capped at 1.0, and tracks contributing sources per artist.
 - **ARTIST_RADIO** — New enrichment type backed by Deezer `/artist/{id}/radio`. Returns ordered `RadioPlaylist` (default 50 tracks, configurable via `radioLimit`). 7-day TTL.
 - **SIMILAR_ALBUMS** — New enrichment type via standalone `SimilarAlbumsProvider`. Fetches Deezer related artists + their top albums, scored by artist similarity and era proximity (±5yr = 1.2x multiplier). 30-day TTL.
-- **GENRE_DISCOVERY** — New composite type via `GenreAffinityMatcher`. Static genre taxonomy of ~70 relationships across 12 families. Produces affinity-scored genre neighbors with relationship type (parent/child/sibling).
+- **GENRE_DISCOVERY** — New composite type via `GenreAffinityMatcher`. Static genre taxonomy of 189 relationships over 56 genres, across 12 families. Produces affinity-scored genre neighbors with relationship type (parent/child/sibling).
 - **CatalogProvider interface** — Consumers implement `checkAvailability()` to filter recommendation results by availability. Three modes: UNFILTERED (default), AVAILABLE_ONLY, AVAILABLE_FIRST.
 - **Engine extensibility** — `ResultMerger` and `CompositeSynthesizer` interfaces extracted from engine. New mergeable types and composite types plug in without modifying `DefaultEnrichmentEngine`.
 
@@ -298,7 +298,7 @@ Ranked by **impact to consumers × implementation effort**:
 | 13 | Artist timeline | ARTIST_TIMELINE | Medium | Medium | ✅ Done (v0.5.0) — Composite type |
 | 14 | Genre confidence scores | Enhancement | Medium | Medium | ✅ Done (v0.5.0) — GenreMerger |
 | 15 | Provider coverage expansion | Enhancement | Medium | Low | ✅ Done (v0.5.0) — 5 providers deepened |
-| 16 | HttpResult/ErrorKind adoption | Enhancement | Low | Medium | ✅ Done (v0.5.0) — all 11 providers |
+| 16 | HttpResult/ErrorKind adoption | Enhancement | Low | Medium | ✅ Done — typed results in all 11 providers (v0.5.0); correct transient classification landed later, across #112, #113, #116–#118 |
 | 17 | Similar artists merge | SIMILAR_ARTISTS | High | Medium | ✅ Done (v0.6.0) — 3 providers via SimilarArtistMerger |
 | 18 | Artist radio | ARTIST_RADIO | Medium | Low | ✅ Done (v0.6.0) — Deezer radio endpoint |
 | 19 | Similar albums | SIMILAR_ALBUMS | Medium | Medium | ✅ Done (v0.6.0) — era-proximity scoring |
@@ -369,7 +369,7 @@ Ranked by **impact to consumers × implementation effort**:
 | Radio/Mix | ✅ **Shipped** | ARTIST_RADIO (v0.6.0) via Deezer `/artist/{id}/radio`. ARTIST_RADIO_DISCOVERY (v0.9.0) via ListenBrainz LB Radio — JSPF playlist with MBIDs, three modes (easy/medium/hard), requires free user token. Separate types, not merged. |
 | Top Tracks | ✅ **Shipped** | 3-provider merge (Last.fm + ListenBrainz + Deezer) via TopTrackMerger. Fetches API max, no artificial cap. |
 | Credit-Based Discovery | ❌ Deferred (v0.8.0+) | Cross-entity query pattern; CREDITS data exists |
-| Genre Discovery | ✅ **Shipped (v0.6.0)** | GenreAffinityMatcher with ~70-relationship static taxonomy |
+| Genre Discovery | ✅ **Shipped (v0.6.0)** | GenreAffinityMatcher with 189-relationship static taxonomy |
 | Listening-Based | ❌ Deferred (v0.8.0+) | User-scoped; needs user identity in EnrichmentRequest |
 
 #### Developer Experience Status

@@ -81,19 +81,19 @@ and the failure-isolation guarantees — see the [developer guides](docs/guides/
 
 ## Providers
 
-| Provider | Data | API Key | Rate Limit |
-|----------|------|---------|------------|
-| MusicBrainz | Identity (MBID), genre, label, dates, members, discography, tracks, links, credits, editions | No | 1 req/sec |
-| Cover Art Archive | Album art front/back/booklet (multi-size), CD art | No | None |
-| Wikidata | Artist photo, country of origin | No | None |
-| Wikipedia | Artist biography, supplemental photos | No | None |
-| LRCLIB | Synced + plain lyrics | No | None |
-| Deezer | Artist photos, album art, discography, tracklists, album metadata, similar artists/tracks, artist radio, top tracks, similar albums, track previews | No | None |
-| iTunes | Album art, tracklists, discography, album metadata | No | ~1 req/3sec |
-| ListenBrainz | Popularity, listen counts, discography, similar artists, top tracks, radio discovery (optional token) | Optional | None |
-| Last.fm | Genres, similar artists/tracks, bios, popularity, album metadata | Yes | None |
-| Fanart.tv | Artist photos/backgrounds/logos/banners, CD art, album art | Yes | None |
-| Discogs | Labels, members, credits, editions, artwork, album metadata, community ratings | Yes | None |
+| Provider | Data | API Key |
+|----------|------|---------|
+| MusicBrainz | Identity (MBID), genre, label, dates, members, discography, tracks, links, credits, editions | No |
+| Cover Art Archive | Album art front/back/booklet (multi-size), CD art | No |
+| Wikidata | Artist photo, country of origin | No |
+| Wikipedia | Artist biography, supplemental photos | No |
+| LRCLIB | Synced + plain lyrics | No |
+| Deezer | Artist photos, album art, discography, tracklists, album metadata, similar artists/tracks, artist radio, top tracks, similar albums, track previews | No |
+| iTunes | Album art, tracklists, discography, album metadata | No |
+| ListenBrainz | Popularity, listen counts, discography, similar artists, top tracks, radio discovery (optional token) | Optional |
+| Last.fm | Genres, similar artists/tracks, bios, popularity, album metadata | Yes |
+| Fanart.tv | Artist photos/backgrounds/logos/banners, CD art, album art | Yes |
+| Discogs | Labels, members, credits, editions, artwork, album metadata, community ratings | Yes |
 
 8 of 11 providers work without API keys. `withDefaultProviders()` registers a key-requiring provider
 only when you supply its key, so the types it would have served simply fall through to the providers
@@ -120,13 +120,13 @@ val engine = EnrichmentEngine.Builder()
 
 | Category | Types | Multi-provider |
 |----------|-------|----------------|
-| **Artwork** | ALBUM_ART, ALBUM_ART_BACK, ALBUM_BOOKLET, ARTIST_PHOTO, ARTIST_BACKGROUND, ARTIST_LOGO, ARTIST_BANNER, CD_ART | ALBUM_ART merged (5 via ArtworkMerger), ARTIST_PHOTO merged (5: Wikidata, Fanart.tv, Deezer, Discogs, Wikipedia), CD_ART (2) |
+| **Artwork** | ALBUM_ART, ALBUM_ART_BACK, ALBUM_BOOKLET, ARTIST_PHOTO, ARTIST_BACKGROUND, ARTIST_LOGO, ARTIST_BANNER, CD_ART | ALBUM_ART merged (5), ARTIST_PHOTO merged (5: Wikidata, Fanart.tv, Deezer, Discogs, Wikipedia), CD_ART (2) |
 | **Metadata** | GENRE, LABEL, RELEASE_DATE, RELEASE_TYPE, COUNTRY, BAND_MEMBERS, ARTIST_DISCOGRAPHY, ALBUM_TRACKS, ALBUM_METADATA | DISCOGRAPHY (4), METADATA (4), TRACKS (3), GENRE (2), LABEL (2), RELEASE_TYPE (2), COUNTRY (2), BAND_MEMBERS (2) |
 | **Credits** | CREDITS | MusicBrainz (recording rels) + Discogs (extraartists) |
 | **Editions** | RELEASE_EDITIONS | MusicBrainz (release-group) + Discogs (master versions) |
 | **Text** | ARTIST_BIO, LYRICS_SYNCED, LYRICS_PLAIN | BIO (2) |
 | **Relationships** | SIMILAR_ARTISTS, SIMILAR_TRACKS, ARTIST_LINKS | SIMILAR_ARTISTS (3: Last.fm, ListenBrainz, Deezer), SIMILAR_TRACKS (2) |
-| **Top Tracks** | ARTIST_TOP_TRACKS | Merged from 3 (Last.fm, ListenBrainz, Deezer) via TopTrackMerger |
+| **Top Tracks** | ARTIST_TOP_TRACKS | Merged from 3 (Last.fm, ListenBrainz, Deezer) |
 | **Statistics** | ARTIST_POPULARITY, TRACK_POPULARITY | Both from 2 providers |
 | **Composite** | ARTIST_TIMELINE, GENRE_DISCOVERY | ARTIST_TIMELINE: discography + members + life-span; GENRE_DISCOVERY: static affinity taxonomy |
 | **Radio** | ARTIST_RADIO, ARTIST_RADIO_DISCOVERY | ARTIST_RADIO: Deezer curated playlist; ARTIST_RADIO_DISCOVERY: ListenBrainz LB Radio (easy/medium/hard modes, optional token) |

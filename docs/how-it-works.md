@@ -128,7 +128,8 @@ All requested types resolve **concurrently** via `coroutineScope { async {} }`. 
 Most types. A `ProviderChain` tries providers in priority order:
 - Priority 100 (primary) → 50 (fallback) → 30 (tertiary)
 - First `Success` wins, remaining providers skipped
-- `NotFound` falls through to next provider
+- `NotFound` and `Error` both fall through to the next provider
+- If no provider succeeds, the last failure (`Error` or `RateLimited`) is returned; only if there was none is the outcome `NotFound`
 - Circuit-broken or unavailable providers skipped
 - Providers whose identifier requirements aren't met are skipped
 

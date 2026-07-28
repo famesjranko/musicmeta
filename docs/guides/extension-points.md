@@ -40,9 +40,22 @@ class SpotifyProvider(
         val artist = request as? EnrichmentRequest.ForArtist
             ?: return EnrichmentResult.NotFound(EnrichmentType.ARTIST_POPULARITY, id)
 
+        val url = "https://api.spotify.com/v1/search?q=${artist.name}&type=artist"
+
         return try {
-            val json = httpClient.fetchJson("https://api.spotify.com/v1/search?q=${artist.name}&type=artist")
-                ?: return EnrichmentResult.NotFound(EnrichmentType.ARTIST_POPULARITY, id)
+            // Use fetchJsonResult, not fetchJson: the nullable form collapses a 429 or a 5xx into
+            // the same null a genuine 404 gives you, and a NotFound counts as a circuit-breaker
+            // *success* — the provider looks healthy while a throttle makes it answer nothing.
+            // Throwing on a transient sends it through the catch below into Error(NETWORK), which
+            // the breaker records as a failure. See docs/pitfalls.md §4.
+            val json = when (val result = httpClient.fetchJsonResult(url)) {
+                is HttpResult.Ok -> result.body
+                is HttpResult.ClientError ->
+                    return EnrichmentResult.NotFound(EnrichmentType.ARTIST_POPULARITY, id)
+                is HttpResult.RateLimited -> throw IOException("HTTP 429: rate limited")
+                is HttpResult.ServerError -> throw IOException("HTTP ${result.statusCode}: server error")
+                is HttpResult.NetworkError -> throw IOException(result.message, result.cause)
+            }
 
             val popularity = json.getJSONObject("artists")
                 .getJSONArray("items").getJSONObject(0)
@@ -113,7 +126,7 @@ The `musicmeta-okhttp` module ships a ready-to-use `OkHttpEnrichmentClient`. Add
 
 ```kotlin
 // build.gradle.kts
-implementation("io.github.famesjranko:musicmeta-okhttp:0.8.2")
+implementation("io.github.famesjranko:musicmeta-okhttp:0.10.1")
 ```
 
 ```kotlin

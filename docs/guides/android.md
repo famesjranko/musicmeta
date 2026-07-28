@@ -7,8 +7,8 @@ The `musicmeta-android` module adds Android-specific integrations on top of `mus
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("com.github.famesjranko.musicmeta:musicmeta-core:v0.7.0")
-    implementation("com.github.famesjranko.musicmeta:musicmeta-android:v0.7.0")
+    implementation("com.github.famesjranko.musicmeta:musicmeta-core:v0.10.1")
+    implementation("com.github.famesjranko.musicmeta:musicmeta-android:v0.10.1")
 }
 ```
 

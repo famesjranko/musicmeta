@@ -67,6 +67,19 @@ or a defaulted parameter appended last; deprecate with `@Deprecated(ReplaceWith(
 one minor. On the JVM, adding a parameter anywhere to a function with defaults changes the method
 descriptor, so appending is the source-compatible floor, not a full ABI guarantee.
 
+Adding a **method with a default body to a public interface** is source-compatible and binary
+*incompatible*, and `apiCheck` will not tell you. This build sets no `-Xjvm-default`, and Kotlin
+2.1.0 defaults it to `disable`, so the method dumps as `abstract` on the interface with the body in
+a generated `DefaultImpls` class — `HttpClient.fetchJsonResult(String, Map)` and
+`HttpClient.fetchRedirectUrlResult` in `musicmeta-core/api/musicmeta-core.api` (the one-argument
+`fetchJsonResult(String)` has no default body and is plainly abstract). A consumer's implementation
+compiled against the previous release does not carry the new override, so calling it throws
+`AbstractMethodError` until they recompile — while the `.api` diff shows only an addition and every
+check stays green. Kotlin 2.2 flips that compiler default, so re-verify this on a toolchain bump;
+`apiDump` would show `DefaultImpls` disappearing. Any public
+interface a consumer implements is exposed to this, so a defaulted addition to one needs the same
+`### Breaking Changes` line a removal would get.
+
 The surface was narrowed to the four-role boundary in v0.10.0 (#5). `CircuitBreaker`,
 `MusicBrainzParser` and the built-in mergers/synthesizers are `internal`, so a refactor confined to
 them leaves `apiCheck` green. `RateLimiter` is public only because it is a parameter of nearly every
@@ -189,7 +202,7 @@ why the guard is on the write-back rather than on catalog filtering.
 ## 7. A search API's hit 0 is a ranking, not an answer
 
 ```kotlin
-// WRONG — shipped until #05; Deezer ranks an empty "Radiohead" (0 albums, 470 fans) above id 399
+// WRONG — shipped until #110; Deezer ranks an empty "Radiohead" (0 albums, 470 fans) above id 399
 val url = "$BASE_URL/search/artist?q=$encoded&limit=1"
 val artist = data.getJSONObject(0)              // caller's ArtistMatcher check passes: name is exact
 
