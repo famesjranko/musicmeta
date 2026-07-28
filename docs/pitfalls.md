@@ -68,12 +68,15 @@ one minor. On the JVM, adding a parameter anywhere to a function with defaults c
 descriptor, so appending is the source-compatible floor, not a full ABI guarantee.
 
 Adding a **method with a default body to a public interface** is source-compatible and binary
-*incompatible*, and `apiCheck` will not tell you. This build sets no `-Xjvm-default`, so the method
-dumps as `abstract` on the interface with the body in a generated `DefaultImpls` class
-(`HttpClient.fetchJsonResult` and `HttpClient.fetchRedirectUrlResult` in
-`musicmeta-core/api/musicmeta-core.api`). A consumer's implementation compiled against the previous
-release does not carry the new override, so calling it throws `AbstractMethodError` until they
-recompile — while the `.api` diff shows only an addition and every check stays green. Any public
+*incompatible*, and `apiCheck` will not tell you. This build sets no `-Xjvm-default`, and Kotlin
+2.1.0 defaults it to `disable`, so the method dumps as `abstract` on the interface with the body in
+a generated `DefaultImpls` class — `HttpClient.fetchJsonResult(String, Map)` and
+`HttpClient.fetchRedirectUrlResult` in `musicmeta-core/api/musicmeta-core.api` (the one-argument
+`fetchJsonResult(String)` has no default body and is plainly abstract). A consumer's implementation
+compiled against the previous release does not carry the new override, so calling it throws
+`AbstractMethodError` until they recompile — while the `.api` diff shows only an addition and every
+check stays green. Kotlin 2.2 flips that compiler default, so re-verify this on a toolchain bump;
+`apiDump` would show `DefaultImpls` disappearing. Any public
 interface a consumer implements is exposed to this, so a defaulted addition to one needs the same
 `### Breaking Changes` line a removal would get.
 

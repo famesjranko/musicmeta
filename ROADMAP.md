@@ -298,7 +298,7 @@ Ranked by **impact to consumers × implementation effort**:
 | 13 | Artist timeline | ARTIST_TIMELINE | Medium | Medium | ✅ Done (v0.5.0) — Composite type |
 | 14 | Genre confidence scores | Enhancement | Medium | Medium | ✅ Done (v0.5.0) — GenreMerger |
 | 15 | Provider coverage expansion | Enhancement | Medium | Low | ✅ Done (v0.5.0) — 5 providers deepened |
-| 16 | HttpResult/ErrorKind adoption | Enhancement | Low | Medium | ✅ Done — typed results in all 11 providers (v0.5.0); correct transient classification landed later, across #112–#118 |
+| 16 | HttpResult/ErrorKind adoption | Enhancement | Low | Medium | ✅ Done — typed results in all 11 providers (v0.5.0); correct transient classification landed later, across #112, #113, #116–#118 |
 | 17 | Similar artists merge | SIMILAR_ARTISTS | High | Medium | ✅ Done (v0.6.0) — 3 providers via SimilarArtistMerger |
 | 18 | Artist radio | ARTIST_RADIO | Medium | Low | ✅ Done (v0.6.0) — Deezer radio endpoint |
 | 19 | Similar albums | SIMILAR_ALBUMS | Medium | Medium | ✅ Done (v0.6.0) — era-proximity scoring |

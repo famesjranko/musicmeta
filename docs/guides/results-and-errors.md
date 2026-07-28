@@ -177,8 +177,8 @@ sealed class EnrichmentResult {
 | `TIMEOUT` | Engine-level enrichment timeout expired |
 | `UNKNOWN` | Uncategorized error |
 
-From every one of the eleven providers, a 429, a 5xx and a dropped connection reach you as
-`Error` with `NETWORK` — never as an empty result. Two upstream quirks are classified the same way:
+Within `enrich()`, a 429, a 5xx and a dropped connection reach you as `Error` with `NETWORK` from
+every one of the eleven providers, never as an empty result. Two upstream quirks are classified the same way:
 a Deezer quota refusal arrives as HTTP 200 with an `error.code` of 4, and iTunes answers a throttle
 with 403.
 
