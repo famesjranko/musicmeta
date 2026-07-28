@@ -37,31 +37,6 @@ class DefaultHttpClient(
     private val maxRetries: Int = 3,
 ) : HttpClient {
 
-    override suspend fun fetchJson(url: String): JSONObject? = withContext(Dispatchers.IO) {
-        try { get(url)?.let { JSONObject(it) } } catch (_: JSONException) { null }
-    }
-
-    override suspend fun fetchJsonArray(url: String): JSONArray? = withContext(Dispatchers.IO) {
-        try { get(url)?.let { JSONArray(it) } } catch (_: JSONException) { null }
-    }
-
-    override suspend fun fetchBody(url: String): String? = withContext(Dispatchers.IO) {
-        try { get(url) } catch (_: IOException) { null }
-    }
-
-    override suspend fun fetchRedirectUrl(url: String): String? = withContext(Dispatchers.IO) {
-        try {
-            val conn = openConnection(url).apply { instanceFollowRedirects = false; connect() }
-            try {
-                when {
-                    conn.responseCode in 200..299 -> url
-                    conn.responseCode in 300..399 -> conn.getHeaderField("Location")
-                    else -> null
-                }
-            } finally { conn.disconnect() }
-        } catch (_: IOException) { null }
-    }
-
     override suspend fun fetchRedirectUrlResult(url: String): HttpResult<String> =
         retryingRateLimited { fetchRedirectUrlOnce(url) }
 
@@ -178,44 +153,6 @@ class DefaultHttpClient(
             }
         }
 
-    override suspend fun postJson(url: String, body: String): JSONObject? =
-        withContext(Dispatchers.IO) {
-            try {
-                val conn = openConnection(url).apply {
-                    requestMethod = "POST"
-                    setRequestProperty("Content-Type", "application/json")
-                    doOutput = true
-                }
-                conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
-                try {
-                    if (conn.responseCode !in 200..299) return@withContext null
-                    val text = conn.responseStream().bufferedReader().use { it.readText() }
-                    JSONObject(text)
-                } finally {
-                    conn.disconnect()
-                }
-            } catch (_: IOException) { null } catch (_: JSONException) { null }
-        }
-
-    override suspend fun postJsonArray(url: String, body: String): JSONArray? =
-        withContext(Dispatchers.IO) {
-            try {
-                val conn = openConnection(url).apply {
-                    requestMethod = "POST"
-                    setRequestProperty("Content-Type", "application/json")
-                    doOutput = true
-                }
-                conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
-                try {
-                    if (conn.responseCode !in 200..299) return@withContext null
-                    val text = conn.responseStream().bufferedReader().use { it.readText() }
-                    JSONArray(text)
-                } finally {
-                    conn.disconnect()
-                }
-            } catch (_: IOException) { null } catch (_: JSONException) { null }
-        }
-
     override suspend fun postJsonResult(url: String, body: String): HttpResult<JSONObject> =
         retryingRateLimited { postJsonOnce(url, body) }
 
@@ -292,8 +229,8 @@ class DefaultHttpClient(
         try { conn.errorStream?.bufferedReader()?.use { it.readText() } } catch (_: IOException) { null }
 
     /**
-     * Retries a [HttpResult.RateLimited] on the same terms as [get] — up to [maxRetries] attempts,
-     * honouring `Retry-After` — so a 429 does not depend on which overload the caller reached for.
+     * Retries a [HttpResult.RateLimited] — up to [maxRetries] attempts, honouring `Retry-After` —
+     * so a 429 does not depend on which method the caller reached for.
      * Returns the `RateLimited` unretried when the wait does not fit in the time left.
      */
     private suspend fun <T> retryingRateLimited(request: suspend () -> HttpResult<T>): HttpResult<T> {
@@ -303,27 +240,6 @@ class DefaultHttpClient(
             delay(retryWaitMs(result.retryAfterMs, attempt) ?: return result)
         }
         return request()
-    }
-
-    private suspend fun get(url: String): String? {
-        repeat(maxRetries) { attempt ->
-            try {
-                val conn = openConnection(url).apply { connect() }
-                try {
-                    if (conn.responseCode == 429 || conn.responseCode == 503) {
-                        // Bail out rather than wait longer than the caller can afford.
-                        delay(retryWaitMs(conn.retryAfterMs(), attempt) ?: return null)
-                        return@repeat
-                    }
-                    if (conn.responseCode !in 200..299) return null
-                    return conn.responseStream().bufferedReader().use { it.readText() }
-                } finally { conn.disconnect() }
-            } catch (_: IOException) {
-                if (attempt == maxRetries - 1) return null
-                delay(retryWaitMs(null, attempt) ?: return null)
-            }
-        }
-        return null // All retries exhausted (429/503 on every attempt)
     }
 
     private fun openConnection(url: String): HttpURLConnection {

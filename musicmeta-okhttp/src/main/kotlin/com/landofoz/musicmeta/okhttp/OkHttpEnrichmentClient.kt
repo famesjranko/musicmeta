@@ -32,77 +32,6 @@ class OkHttpEnrichmentClient(
 
     private val noRedirectClient = client.newBuilder().followRedirects(false).build()
 
-    // region Nullable GET methods
-
-    override suspend fun fetchJson(url: String): JSONObject? = withContext(Dispatchers.IO) {
-        try {
-            client.newCall(buildGetRequest(url)).execute().use { response ->
-                if (response.code !in 200..299) return@withContext null
-                val text = response.body?.string() ?: return@withContext null
-                try { JSONObject(text) } catch (_: JSONException) { null }
-            }
-        } catch (_: IOException) { null }
-    }
-
-    override suspend fun fetchJsonArray(url: String): JSONArray? = withContext(Dispatchers.IO) {
-        try {
-            client.newCall(buildGetRequest(url)).execute().use { response ->
-                if (response.code !in 200..299) return@withContext null
-                val text = response.body?.string() ?: return@withContext null
-                try { JSONArray(text) } catch (_: JSONException) { null }
-            }
-        } catch (_: IOException) { null }
-    }
-
-    override suspend fun fetchBody(url: String): String? = withContext(Dispatchers.IO) {
-        try {
-            client.newCall(buildGetRequest(url)).execute().use { response ->
-                if (response.code !in 200..299) return@withContext null
-                response.body?.string()
-            }
-        } catch (_: IOException) { null }
-    }
-
-    override suspend fun fetchRedirectUrl(url: String): String? = withContext(Dispatchers.IO) {
-        try {
-            noRedirectClient.newCall(buildGetRequest(url)).execute().use { response ->
-                when {
-                    response.code in 300..399 -> response.header("Location")
-                    response.code in 200..299 -> url
-                    else -> null
-                }
-            }
-        } catch (_: IOException) { null }
-    }
-
-    // endregion
-
-    // region Nullable POST methods
-
-    override suspend fun postJson(url: String, body: String): JSONObject? = withContext(Dispatchers.IO) {
-        try {
-            client.newCall(buildPostRequest(url, body)).execute().use { response ->
-                if (response.code !in 200..299) return@withContext null
-                val text = response.body?.string() ?: return@withContext null
-                try { JSONObject(text) } catch (_: JSONException) { null }
-            }
-        } catch (_: IOException) { null }
-    }
-
-    override suspend fun postJsonArray(url: String, body: String): JSONArray? = withContext(Dispatchers.IO) {
-        try {
-            client.newCall(buildPostRequest(url, body)).execute().use { response ->
-                if (response.code !in 200..299) return@withContext null
-                val text = response.body?.string() ?: return@withContext null
-                try { JSONArray(text) } catch (_: JSONException) { null }
-            }
-        } catch (_: IOException) { null }
-    }
-
-    // endregion
-
-    // region HttpResult GET methods
-
     override suspend fun fetchJsonResult(url: String): HttpResult<JSONObject> =
         fetchJsonResult(url, emptyMap())
 
@@ -158,10 +87,6 @@ class OkHttpEnrichmentClient(
             }
         }
 
-    // endregion
-
-    // region HttpResult POST methods
-
     override suspend fun postJsonResult(url: String, body: String): HttpResult<JSONObject> =
         withContext(Dispatchers.IO) {
             try {
@@ -183,10 +108,6 @@ class OkHttpEnrichmentClient(
                 HttpResult.NetworkError(e.message ?: "Network error", e)
             }
         }
-
-    // endregion
-
-    // region Private helpers
 
     private fun buildGetRequest(url: String): Request = Request.Builder()
         .url(url)
@@ -225,6 +146,4 @@ class OkHttpEnrichmentClient(
             else -> HttpResult.ClientError(code)
         }
     }
-
-    // endregion
 }

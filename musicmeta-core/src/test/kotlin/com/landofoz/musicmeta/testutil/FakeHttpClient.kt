@@ -32,53 +32,17 @@ class FakeHttpClient : HttpClient {
     /**
      * The status channel for redirect fetches — the only way to say "429" or "no artwork (404)"
      * to [fetchRedirectUrlResult]. [givenError] cannot: it means a dropped connection, which is a
-     * transient the provider now reports as `Error`, not the empty result most tests mean.
+     * transient the provider reports as `Error`, not the empty result most tests mean.
      */
     fun givenRedirectResult(urlContains: String, result: HttpResult<String>) { redirectResults[urlContains] = result }
-
-    override suspend fun fetchJson(url: String): JSONObject? {
-        requestedUrls.add(url)
-        if (errors.any { url.contains(it) }) return null
-        return jsonResponses.entries.firstOrNull { url.contains(it.key) }?.value?.let { JSONObject(it) }
-    }
-
-    override suspend fun fetchJsonArray(url: String): JSONArray? {
-        requestedUrls.add(url)
-        if (errors.any { url.contains(it) }) return null
-        return jsonResponses.entries.firstOrNull { url.contains(it.key) }?.value?.let { JSONArray(it) }
-    }
-
-    override suspend fun fetchBody(url: String): String? {
-        requestedUrls.add(url)
-        if (errors.any { url.contains(it) }) return null
-        return jsonResponses.entries.firstOrNull { url.contains(it.key) }?.value
-    }
-
-    override suspend fun fetchRedirectUrl(url: String): String? {
-        requestedUrls.add(url)
-        if (errors.any { url.contains(it) }) return null
-        return jsonResponses.entries.firstOrNull { url.contains(it.key) }?.value ?: url
-    }
 
     override suspend fun fetchRedirectUrlResult(url: String): HttpResult<String> {
         requestedUrls.add(url)
         if (ioExceptions.any { url.contains(it) }) throw IOException("Simulated network error: $url")
         if (errors.any { url.contains(it) }) return HttpResult.NetworkError("Simulated network error")
         redirectResults.entries.firstOrNull { url.contains(it.key) }?.let { return it.value }
-        // Unstubbed mirrors fetchRedirectUrl: the request URL itself, as a 2xx no-op redirect.
+        // Unstubbed resolves to the request URL itself, as a 2xx no-op redirect.
         return HttpResult.Ok(jsonResponses.entries.firstOrNull { url.contains(it.key) }?.value ?: url)
-    }
-
-    override suspend fun postJson(url: String, body: String): JSONObject? {
-        requestedUrls.add(url)
-        if (errors.any { url.contains(it) }) return null
-        return jsonResponses.entries.firstOrNull { url.contains(it.key) }?.value?.let { JSONObject(it) }
-    }
-
-    override suspend fun postJsonArray(url: String, body: String): JSONArray? {
-        requestedUrls.add(url)
-        if (errors.any { url.contains(it) }) return null
-        return jsonResponses.entries.firstOrNull { url.contains(it.key) }?.value?.let { JSONArray(it) }
     }
 
     override suspend fun fetchJsonResult(url: String): HttpResult<JSONObject> =
@@ -94,7 +58,6 @@ class FakeHttpClient : HttpClient {
         if (errors.any { url.contains(it) }) return HttpResult.NetworkError("Simulated network error")
         val configured = httpResultResponses.entries.firstOrNull { url.contains(it.key) }
         if (configured != null) return configured.value
-        // Fall back to existing fetchJson behavior for backward compatibility
         val json = jsonResponses.entries.firstOrNull { url.contains(it.key) }?.value
         return if (json != null) HttpResult.Ok(JSONObject(json)) else UNSTUBBED
     }
@@ -105,9 +68,8 @@ class FakeHttpClient : HttpClient {
         if (errors.any { url.contains(it) }) return HttpResult.NetworkError("Simulated network error")
         val configured = httpResultArrayResponses.entries.firstOrNull { url.contains(it.key) }
         if (configured != null) return configured.value
-        // Fall back to existing fetchJsonArray behavior for backward compatibility
-        val json = fetchJsonArray(url)
-        return if (json != null) HttpResult.Ok(json) else UNSTUBBED
+        val json = jsonResponses.entries.firstOrNull { url.contains(it.key) }?.value
+        return if (json != null) HttpResult.Ok(JSONArray(json)) else UNSTUBBED
     }
 
     override suspend fun postJsonResult(url: String, body: String): HttpResult<JSONObject> {
@@ -116,9 +78,8 @@ class FakeHttpClient : HttpClient {
         if (errors.any { url.contains(it) }) return HttpResult.NetworkError("Simulated network error")
         val configured = httpResultResponses.entries.firstOrNull { url.contains(it.key) }
         if (configured != null) return configured.value
-        // Fall back to existing postJson behavior for backward compatibility
-        val json = postJson(url, body)
-        return if (json != null) HttpResult.Ok(json) else UNSTUBBED
+        val json = jsonResponses.entries.firstOrNull { url.contains(it.key) }?.value
+        return if (json != null) HttpResult.Ok(JSONObject(json)) else UNSTUBBED
     }
 
     override suspend fun postJsonArrayResult(url: String, body: String): HttpResult<JSONArray> {
@@ -127,9 +88,8 @@ class FakeHttpClient : HttpClient {
         if (errors.any { url.contains(it) }) return HttpResult.NetworkError("Simulated network error")
         val configured = httpResultArrayResponses.entries.firstOrNull { url.contains(it.key) }
         if (configured != null) return configured.value
-        // Fall back to existing postJsonArray behavior for backward compatibility
-        val json = postJsonArray(url, body)
-        return if (json != null) HttpResult.Ok(json) else UNSTUBBED
+        val json = jsonResponses.entries.firstOrNull { url.contains(it.key) }?.value
+        return if (json != null) HttpResult.Ok(JSONArray(json)) else UNSTUBBED
     }
 
     companion object {

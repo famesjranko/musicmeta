@@ -10,8 +10,7 @@ import org.junit.Test
 import java.net.InetSocketAddress
 
 /**
- * A 429 is retried whichever overload the caller reached for — the typed family used to hand it
- * straight back while `get()` retried three times.
+ * A 429 is retried on every method — it used to be handed straight back.
  *
  * The retry sleeps inside the provider's held `RateLimiter` mutex, which is why it waits for a
  * per-host limiter to exist: it stops further traffic to the host that just 429'd, and costs the
@@ -82,6 +81,22 @@ class DefaultHttpClientRetryTest {
         assertEquals("must not sleep", 0L, testScheduler.currentTime)
     }
 
+    @Test fun `a 429 with no Retry-After gives up when the default backoff will not fit`() = runTest {
+        // Given — no Retry-After header, so the wait is the exponential default (2s on the first
+        // attempt) rather than a figure the server named, against a budget of one second. This is
+        // the only test that exercises that arm of the backoff against a deadline: every other
+        // deadline test here supplies a Retry-After, which replaces the default outright.
+        scripted += 429 to null
+
+        // When
+        val result = withContext(EnrichDeadline(budgetMs = 1_000)) { client.fetchJsonResult(url()) }
+
+        // Then — handed back unretried, because 2s does not fit in the second that is left
+        assertEquals(HttpResult.RateLimited(null), result)
+        assertEquals("must not retry into a certain timeout", 1, requests)
+        assertEquals("must not sleep", 0L, testScheduler.currentTime)
+    }
+
     @Test fun `standalone, a Retry-After past MAX_RETRY_AFTER_SEC still bails out`() = runTest {
         // Given — no EnrichDeadline in context: an HttpClient driven directly by a consumer. 125s is
         // just past the 120s ceiling, which only holds because the comparison is made before jitter.
@@ -93,19 +108,6 @@ class DefaultHttpClientRetryTest {
         // Then — the 120s ceiling is what applies instead
         assertEquals(HttpResult.RateLimited(125_000L), result)
         assertEquals(1, requests)
-    }
-
-    @Test fun `the null-returning family gives up too when the deadline leaves no room`() = runTest {
-        // Given — nothing listening, so the first attempt fails with an IOException. That path
-        // retries after a backoff of its own, which the deadline has to be able to veto.
-        val deadRef = "http://127.0.0.1:1/data"
-
-        // When — a budget smaller than the 2s first backoff
-        val result = withContext(EnrichDeadline(budgetMs = 1)) { client.fetchJson(deadRef) }
-
-        // Then — null now, rather than sleeping past a deadline it cannot beat
-        assertNull(result)
-        assertEquals("must not sleep", 0L, testScheduler.currentTime)
     }
 
     @Test fun `a persistent 429 surfaces as RateLimited after the retries are spent`() = runTest {

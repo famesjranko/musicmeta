@@ -22,132 +22,6 @@ class OkHttpEnrichmentClientTest {
 
     private fun url(path: String = "/test"): String = server.url(path).toString()
 
-    // ---- fetchJson ----
-
-    @Test fun `fetchJson returns JSONObject for 200 response`() = runTest {
-        // Given
-        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"name":"test"}"""))
-
-        // When
-        val result = client.fetchJson(url())
-
-        // Then
-        assertNotNull(result)
-        assertEquals("test", result!!.getString("name"))
-    }
-
-    @Test fun `fetchJson returns null for 500 response`() = runTest {
-        // Given
-        server.enqueue(MockResponse().setResponseCode(500).setBody("Internal Server Error"))
-
-        // When
-        val result = client.fetchJson(url())
-
-        // Then
-        assertNull(result)
-    }
-
-    @Test fun `fetchJson returns null for invalid JSON body`() = runTest {
-        // Given
-        server.enqueue(MockResponse().setResponseCode(200).setBody("not-json"))
-
-        // When
-        val result = client.fetchJson(url())
-
-        // Then
-        assertNull(result)
-    }
-
-    // ---- fetchJsonArray ----
-
-    @Test fun `fetchJsonArray returns JSONArray for 200 response`() = runTest {
-        // Given
-        server.enqueue(MockResponse().setResponseCode(200).setBody("""[{"id":1},{"id":2}]"""))
-
-        // When
-        val result = client.fetchJsonArray(url())
-
-        // Then
-        assertNotNull(result)
-        assertEquals(2, result!!.length())
-        assertEquals(1, result.getJSONObject(0).getInt("id"))
-    }
-
-    @Test fun `fetchJsonArray returns null for 404 response`() = runTest {
-        // Given
-        server.enqueue(MockResponse().setResponseCode(404).setBody("Not Found"))
-
-        // When
-        val result = client.fetchJsonArray(url())
-
-        // Then
-        assertNull(result)
-    }
-
-    // ---- fetchBody ----
-
-    @Test fun `fetchBody returns raw string body for 200 response`() = runTest {
-        // Given
-        server.enqueue(MockResponse().setResponseCode(200).setBody("raw body text"))
-
-        // When
-        val result = client.fetchBody(url())
-
-        // Then
-        assertEquals("raw body text", result)
-    }
-
-    @Test fun `fetchBody returns null for 500 response`() = runTest {
-        // Given
-        server.enqueue(MockResponse().setResponseCode(500).setBody("error"))
-
-        // When
-        val result = client.fetchBody(url())
-
-        // Then
-        assertNull(result)
-    }
-
-    // ---- fetchRedirectUrl ----
-
-    @Test fun `fetchRedirectUrl returns Location header value for 307 response`() = runTest {
-        // Given
-        server.enqueue(
-            MockResponse()
-                .setResponseCode(307)
-                .setHeader("Location", "https://example.com/redirected")
-        )
-
-        // When
-        val result = client.fetchRedirectUrl(url())
-
-        // Then
-        assertEquals("https://example.com/redirected", result)
-    }
-
-    @Test fun `fetchRedirectUrl returns original URL for 200 response`() = runTest {
-        // Given
-        server.enqueue(MockResponse().setResponseCode(200).setBody("ok"))
-        val requestUrl = url()
-
-        // When
-        val result = client.fetchRedirectUrl(requestUrl)
-
-        // Then
-        assertEquals(requestUrl, result)
-    }
-
-    @Test fun `fetchRedirectUrl returns null for 500 response`() = runTest {
-        // Given
-        server.enqueue(MockResponse().setResponseCode(500).setBody("error"))
-
-        // When
-        val result = client.fetchRedirectUrl(url())
-
-        // Then
-        assertNull(result)
-    }
-
     // ---- fetchRedirectUrlResult ----
 
     @Test fun `fetchRedirectUrlResult returns Ok with Location header for 307 response`() = runTest {
@@ -197,7 +71,7 @@ class OkHttpEnrichmentClientTest {
         // When
         val result = client.fetchRedirectUrlResult(url())
 
-        // Then — the status a plain fetchRedirectUrl collapsed into an indistinguishable null
+        // Then — a status, not the indistinguishable failure a nullable return collapsed it to
         assertEquals(5000L, (result as HttpResult.RateLimited).retryAfterMs)
     }
 
@@ -223,51 +97,6 @@ class OkHttpEnrichmentClientTest {
         assertEquals(302, (result as HttpResult.ClientError).statusCode)
     }
 
-    // ---- postJson ----
-
-    @Test fun `postJson returns JSONObject for 200 response and request body is transmitted`() = runTest {
-        // Given
-        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"created":true}"""))
-        val sentBody = """{"title":"Abbey Road"}"""
-
-        // When
-        val result = client.postJson(url(), sentBody)
-
-        // Then — response is parsed
-        assertNotNull(result)
-        assertTrue(result!!.getBoolean("created"))
-
-        // Then — request body was transmitted correctly
-        val request = server.takeRequest()
-        assertEquals(sentBody, request.body.readUtf8())
-        assertTrue(request.getHeader("Content-Type")!!.contains("application/json"))
-    }
-
-    @Test fun `postJson returns null for 400 response`() = runTest {
-        // Given
-        server.enqueue(MockResponse().setResponseCode(400).setBody("Bad Request"))
-
-        // When
-        val result = client.postJson(url(), """{}""")
-
-        // Then
-        assertNull(result)
-    }
-
-    // ---- postJsonArray ----
-
-    @Test fun `postJsonArray returns JSONArray for 200 response`() = runTest {
-        // Given
-        server.enqueue(MockResponse().setResponseCode(200).setBody("""[{"status":"ok"}]"""))
-
-        // When
-        val result = client.postJsonArray(url(), """{"query":"all"}""")
-
-        // Then
-        assertNotNull(result)
-        assertEquals(1, result!!.length())
-    }
-
     // ---- User-Agent header ----
 
     @Test fun `User-Agent header is sent on every request`() = runTest {
@@ -275,7 +104,7 @@ class OkHttpEnrichmentClientTest {
         server.enqueue(MockResponse().setResponseCode(200).setBody("""{"ok":true}"""))
 
         // When
-        client.fetchJson(url())
+        client.fetchJsonResult(url())
 
         // Then
         val request = server.takeRequest()
@@ -284,7 +113,7 @@ class OkHttpEnrichmentClientTest {
 
     // ---- Gzip decompression ----
 
-    @Test fun `fetchJson decompresses gzip-encoded response transparently`() = runTest {
+    @Test fun `fetchJsonResult decompresses gzip-encoded response transparently`() = runTest {
         // Given — compress a JSON body with GZIP
         val jsonBody = """{"artist":"The Beatles"}"""
         val compressed = ByteArrayOutputStream().apply {
@@ -300,11 +129,10 @@ class OkHttpEnrichmentClientTest {
         )
 
         // When
-        val result = client.fetchJson(url())
+        val result = client.fetchJsonResult(url())
 
         // Then — OkHttp decompresses transparently; JSON is parsed correctly
-        assertNotNull(result)
-        assertEquals("The Beatles", result!!.getString("artist"))
+        assertEquals("The Beatles", (result as HttpResult.Ok).body.getString("artist"))
     }
 
     // ---- fetchJsonResult ----
@@ -452,6 +280,17 @@ class OkHttpEnrichmentClientTest {
         assertTrue(request.getHeader("Content-Type")!!.contains("application/json"))
     }
 
+    @Test fun `postJsonResult returns HttpResult ClientError for 400 response`() = runTest {
+        // Given
+        server.enqueue(MockResponse().setResponseCode(400).setBody("Bad Request"))
+
+        // When
+        val result = client.postJsonResult(url(), """{}""")
+
+        // Then
+        assertEquals(400, (result as HttpResult.ClientError).statusCode)
+    }
+
     @Test fun `postJsonResult returns HttpResult ServerError for 500 response`() = runTest {
         // Given
         server.enqueue(MockResponse().setResponseCode(500).setBody("Internal Server Error"))
@@ -493,20 +332,9 @@ class OkHttpEnrichmentClientTest {
         assertTrue("Expected NetworkError for empty body, got $result", result is HttpResult.NetworkError)
     }
 
-    @Test fun `fetchJson returns null when 200 body is empty string`() = runTest {
-        // Given — server returns 200 with empty body
-        server.enqueue(MockResponse().setResponseCode(200).setBody(""))
-
-        // When
-        val result = client.fetchJson(url())
-
-        // Then — empty string is not valid JSON object
-        assertNull(result)
-    }
-
     // ---- Edge case: 301 redirect ----
 
-    @Test fun `fetchRedirectUrl returns Location header for 301 redirect`() = runTest {
+    @Test fun `fetchRedirectUrlResult returns Location header for 301 redirect`() = runTest {
         // Given — server returns 301 (permanent redirect)
         server.enqueue(
             MockResponse()
@@ -515,10 +343,10 @@ class OkHttpEnrichmentClientTest {
         )
 
         // When
-        val result = client.fetchRedirectUrl(url())
+        val result = client.fetchRedirectUrlResult(url())
 
         // Then — Location header extracted, same as 307
-        assertEquals("https://cdn.example.com/image.jpg", result)
+        assertEquals("https://cdn.example.com/image.jpg", (result as HttpResult.Ok).body)
     }
 
     // ---- Edge case: 429 on POST methods (Retry-After parsing) ----

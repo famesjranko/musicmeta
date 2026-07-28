@@ -4,9 +4,9 @@ import java.io.IOException
 
 /**
  * Typed HTTP response that preserves status information for callers.
- * Unlike the nullable returns of [HttpClient.fetchJson], this captures
- * the specific failure mode so providers can react differently to
- * 404 (not found) vs 429 (rate limited) vs 500 (server error).
+ * Every [HttpClient] method returns one, so providers can react differently to
+ * 404 (not found) vs 429 (rate limited) vs 500 (server error) instead of seeing
+ * one indistinguishable failure.
  */
 sealed class HttpResult<out T> {
     data class Ok<T>(val body: T, val statusCode: Int = 200) : HttpResult<T>()
