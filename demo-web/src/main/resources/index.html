@@ -102,9 +102,10 @@
   .summary .subtitle.enrich-row { cursor: pointer; border-bottom: 1px dotted var(--accent); display: inline-block; }
   .summary .subtitle.enrich-row:hover { color: var(--text); border-color: var(--text); }
   .summary .text {
-    color: #c7cbd4; font-size: 0.85rem; line-height: 1.5;
+    color: #c7cbd4; font-size: 0.85rem; line-height: 1.5; white-space: pre-line;
     max-height: 5.4em; overflow: hidden;
   }
+  .summary .text.expanded { max-height: none; }
   .summary .source { color: var(--muted); font-size: 0.74rem; margin-top: 0.35rem; }
 
   .sections { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 0.85rem; }
@@ -305,7 +306,7 @@ function render(data) {
     ? `<img src="${esc(summary.imageUrl)}" alt="" onerror="this.remove()" />`
     : '';
   const text = summary.text
-    ? `<div class="text">${esc(summary.text)}</div>${summary.textSource ? `<div class="source">source: ${esc(summary.textSource)}</div>` : ''}`
+    ? `<div class="text">${esc(summary.text)}</div><button type="button" class="show-more text-toggle" style="display:none">Show all</button>${summary.textSource ? `<div class="source">source: ${esc(summary.textSource)}</div>` : ''}`
     : '';
   const summaryPreview = previewButtonHtml(summary.previewTitle, summary.previewArtist, summary.previewAlbum);
   const subtitle = summary.subtitle
@@ -343,6 +344,23 @@ function render(data) {
       </details>
     </div>
   `;
+
+  setupTextToggle();
+}
+
+// Shows the summary text's "Show all" toggle only when the collapsed block actually clips
+// content. Measured post-render (scrollHeight vs clientHeight) rather than a character-count
+// heuristic, since the collapsed height is a fixed em value and how much text fits it depends on
+// panel width and font metrics, not character count.
+function setupTextToggle() {
+  const textEl = resultEl.querySelector('.summary .text');
+  const toggle = resultEl.querySelector('.summary .text-toggle');
+  if (!textEl || !toggle) return;
+  if (textEl.scrollHeight > textEl.clientHeight + 1) {
+    toggle.style.display = '';
+  } else {
+    toggle.remove();
+  }
 }
 
 // Data-attributes carrying an EnrichTarget (kind/name/artist/album) for the click-delegation
@@ -386,18 +404,26 @@ function previewButtonHtml(title, artist, album) {
 
 resultEl.addEventListener('click', (e) => {
   const toggle = e.target.closest('.show-more');
-  if (toggle) {
-    const card = toggle.closest('.section');
-    const hidden = card.querySelectorAll('li.item-hidden');
-    const expanding = hidden.length > 0;
-    if (expanding) {
-      hidden.forEach((li) => li.classList.remove('item-hidden'));
-      toggle.textContent = 'Show fewer';
-    } else {
-      card.querySelectorAll('li').forEach((li, i) => { if (i >= MAX_VISIBLE) li.classList.add('item-hidden'); });
-      toggle.textContent = 'Show all ' + card.querySelectorAll('li').length;
-      card.scrollIntoView({ block: 'nearest' });
-    }
+  if (!toggle) return;
+
+  if (toggle.classList.contains('text-toggle')) {
+    const textEl = toggle.previousElementSibling;
+    const expanding = !textEl.classList.contains('expanded');
+    textEl.classList.toggle('expanded', expanding);
+    toggle.textContent = expanding ? 'Show fewer' : 'Show all';
+    return;
+  }
+
+  const card = toggle.closest('.section');
+  const hidden = card.querySelectorAll('li.item-hidden');
+  const expanding = hidden.length > 0;
+  if (expanding) {
+    hidden.forEach((li) => li.classList.remove('item-hidden'));
+    toggle.textContent = 'Show fewer';
+  } else {
+    card.querySelectorAll('li').forEach((li, i) => { if (i >= MAX_VISIBLE) li.classList.add('item-hidden'); });
+    toggle.textContent = 'Show all ' + card.querySelectorAll('li').length;
+    card.scrollIntoView({ block: 'nearest' });
   }
 });
 

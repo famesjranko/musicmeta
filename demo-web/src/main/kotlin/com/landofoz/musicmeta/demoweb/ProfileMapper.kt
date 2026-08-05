@@ -228,7 +228,7 @@ fun TrackProfile.toDemoResponse(
             subtitle = artist,
             subtitleEnrich = artistEnrich(artist),
             imageUrl = r.albumArt()?.url,
-            text = (lyrics?.syncedLyrics ?: lyrics?.plainLyrics)?.take(400),
+            text = lyrics.readingText(),
             textSource = lyrics?.let { "lyrics" },
             previewTitle = title,
             previewArtist = artist,
@@ -298,6 +298,19 @@ private fun albumEnrich(title: String, artist: String): EnrichTarget? =
 private fun trackEnrich(title: String, artist: String, album: String? = null): EnrichTarget? =
     if (title.isNotBlank() &&
         artist.isNotBlank()) EnrichTarget("track", title, artist = artist, album = album) else null
+
+/** One or more consecutive `[mm:ss.xx]`-style LRC timing tags anchored to the start of a line. */
+private val LRC_TIMESTAMP_PREFIX = Regex("""^(?:\[\d{1,2}:\d{2}(?:\.\d{1,3})?\]\s*)+""")
+
+/**
+ * Full reading-view text for a track's lyrics: [EnrichmentData.Lyrics.plainLyrics] when present,
+ * else [EnrichmentData.Lyrics.syncedLyrics] with its per-line LRC timing tags stripped. Never
+ * truncated — the frontend owns collapsing/expanding for display.
+ */
+private fun EnrichmentData.Lyrics?.readingText(): String? =
+    this?.plainLyrics ?: this?.syncedLyrics?.lineSequence()?.joinToString("\n") {
+        it.replaceFirst(LRC_TIMESTAMP_PREFIX, "")
+    }
 
 private fun Long.formatDuration(): String {
     val totalSeconds = this / 1000
