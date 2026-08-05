@@ -158,7 +158,7 @@
   .dot.error { background: var(--err); }
 
   #empty { color: var(--muted); font-size: 0.88rem; padding: 2rem 0; text-align: center; }
-  .loading {
+  .loading-panel {
     display: flex; align-items: center; justify-content: center; gap: 0.7rem;
     color: var(--muted); font-size: 0.9rem; padding: 2.5rem 0;
   }
@@ -267,7 +267,7 @@ async function runQuery() {
   submitBtn.innerHTML = '<span class="spinner"></span>Enriching…';
   statusEl.className = '';
   statusEl.textContent = '';
-  resultEl.innerHTML = '<div class="loading"><span class="spinner"></span>Calling providers — this can take a few seconds…</div>';
+  resultEl.innerHTML = '<div class="loading-panel"><span class="spinner"></span>Calling providers — this can take a few seconds…</div>';
 
   const params = new URLSearchParams({ kind, name, artist, album });
   try {
