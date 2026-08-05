@@ -74,15 +74,19 @@ private fun handleEnrich(exchange: HttpExchange, engine: EnrichmentEngine) {
                 "artist" -> engine.artistProfile(name).toDemoResponse(System.currentTimeMillis() - started)
                 "album" ->
                     coroutineScope {
-                        val profile = async { engine.albumProfile(name, artist) }
-                        val radio = async { fetchArtistRadioSection(engine, artist) }
-                        profile.await().toDemoResponse(System.currentTimeMillis() - started, radio.await())
+                        val profileDeferred = async { engine.albumProfile(name, artist) }
+                        val radioDeferred = async { fetchArtistRadioSection(engine, artist) }
+                        val profile = profileDeferred.await()
+                        val radio = radioDeferred.await()
+                        profile.toDemoResponse(System.currentTimeMillis() - started, radio)
                     }
                 else ->
                     coroutineScope {
-                        val profile = async { engine.trackProfile(name, artist, album) }
-                        val radio = async { fetchArtistRadioSection(engine, artist) }
-                        profile.await().toDemoResponse(System.currentTimeMillis() - started, radio.await())
+                        val profileDeferred = async { engine.trackProfile(name, artist, album) }
+                        val radioDeferred = async { fetchArtistRadioSection(engine, artist) }
+                        val profile = profileDeferred.await()
+                        val radio = radioDeferred.await()
+                        profile.toDemoResponse(System.currentTimeMillis() - started, radio)
                     }
             }
         }
@@ -94,9 +98,9 @@ private fun handleEnrich(exchange: HttpExchange, engine: EnrichmentEngine) {
 
 /**
  * Fetches [EnrichmentType.ARTIST_RADIO] for the track/album's artist — the narrowest engine call
- * that produces it, rather than a full [com.landofoz.musicmeta.artistProfile] (radio is an
- * artist-only concept; see `.scratch/demo-web-polish/issues/01-artist-radio-on-track-album-pages.md`).
- * Any failure or empty result just means no section — never surfaced to the caller, never blocking
+ * that produces it, rather than a full [com.landofoz.musicmeta.artistProfile]. Radio is an
+ * artist-only concept in the core type system, so track/album pages borrow the artist's. Any
+ * failure or empty result just means no section — never surfaced to the caller, never blocking
  * the main profile fetch it runs alongside.
  */
 private suspend fun fetchArtistRadioSection(engine: EnrichmentEngine, artist: String): Section? =
