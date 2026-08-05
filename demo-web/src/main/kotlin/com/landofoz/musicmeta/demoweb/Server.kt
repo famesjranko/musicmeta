@@ -1,6 +1,9 @@
 package com.landofoz.musicmeta.demoweb
 
+import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentEngine
+import com.landofoz.musicmeta.EnrichmentRequest
+import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.TrackPreviewRequest
 import com.landofoz.musicmeta.albumProfile
 import com.landofoz.musicmeta.artistProfile
@@ -8,6 +11,10 @@ import com.landofoz.musicmeta.resolveTrackPreviews
 import com.landofoz.musicmeta.trackProfile
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpServer
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -65,10 +72,18 @@ private fun handleEnrich(exchange: HttpExchange, engine: EnrichmentEngine) {
         val response = runBlocking {
             when (kind) {
                 "artist" -> engine.artistProfile(name).toDemoResponse(System.currentTimeMillis() - started)
-                "album" -> engine.albumProfile(name, artist).toDemoResponse(System.currentTimeMillis() - started)
+                "album" ->
+                    coroutineScope {
+                        val profile = async { engine.albumProfile(name, artist) }
+                        val radio = async { fetchArtistRadioSection(engine, artist) }
+                        profile.await().toDemoResponse(System.currentTimeMillis() - started, radio.await())
+                    }
                 else ->
-                    engine.trackProfile(name, artist, album)
-                        .toDemoResponse(System.currentTimeMillis() - started)
+                    coroutineScope {
+                        val profile = async { engine.trackProfile(name, artist, album) }
+                        val radio = async { fetchArtistRadioSection(engine, artist) }
+                        profile.await().toDemoResponse(System.currentTimeMillis() - started, radio.await())
+                    }
             }
         }
         exchange.respondJson(200, response)
@@ -76,6 +91,22 @@ private fun handleEnrich(exchange: HttpExchange, engine: EnrichmentEngine) {
         exchange.respondJson(500, ApiError(e.message ?: e.javaClass.simpleName))
     }
 }
+
+/**
+ * Fetches [EnrichmentType.ARTIST_RADIO] for the track/album's artist — the narrowest engine call
+ * that produces it, rather than a full [com.landofoz.musicmeta.artistProfile] (radio is an
+ * artist-only concept; see `.scratch/demo-web-polish/issues/01-artist-radio-on-track-album-pages.md`).
+ * Any failure or empty result just means no section — never surfaced to the caller, never blocking
+ * the main profile fetch it runs alongside.
+ */
+private suspend fun fetchArtistRadioSection(engine: EnrichmentEngine, artist: String): Section? =
+    try {
+        val results = engine.enrich(EnrichmentRequest.forArtist(artist), setOf(EnrichmentType.ARTIST_RADIO))
+        artistRadioSection(results.get<EnrichmentData.RadioPlaylist>(EnrichmentType.ARTIST_RADIO))
+    } catch (e: Exception) {
+        currentCoroutineContext().ensureActive() // rethrows only if this job was cancelled
+        null
+    }
 
 private fun handlePreview(exchange: HttpExchange, engine: EnrichmentEngine) {
     try {

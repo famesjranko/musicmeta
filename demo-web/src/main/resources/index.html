@@ -186,7 +186,7 @@
         <option value="album">Album</option>
         <option value="track">Track</option>
       </select>
-      <input id="name" type="text" placeholder="Name (e.g. Radiohead)" autocomplete="off" />
+      <input id="name" type="text" placeholder="Artist name (e.g. Radiohead)" autocomplete="off" />
       <input id="artist" type="text" placeholder="Artist (for album / track)" autocomplete="off" style="display:none" />
       <input id="album" type="text" placeholder="Album (optional, helps track matching)" autocomplete="off" style="display:none" />
       <button id="submit" type="submit">Enrich</button>
@@ -214,10 +214,17 @@ const resultEl = document.getElementById('result');
 const submitBtn = document.getElementById('submit');
 const MAX_VISIBLE = 8;
 
+const NAME_PLACEHOLDERS = {
+  artist: 'Artist name (e.g. Radiohead)',
+  album: 'Album title (e.g. OK Computer)',
+  track: 'Track title (e.g. Karma Police)',
+};
+
 function syncArtistField() {
   artistEl.style.display = kindEl.value === 'artist' ? 'none' : '';
   artistEl.placeholder = kindEl.value === 'album' ? 'Artist (required)' : 'Artist (for track)';
   albumEl.style.display = kindEl.value === 'track' ? '' : 'none';
+  nameEl.placeholder = NAME_PLACEHOLDERS[kindEl.value] || NAME_PLACEHOLDERS.artist;
 }
 kindEl.addEventListener('change', syncArtistField);
 syncArtistField();

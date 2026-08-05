@@ -36,17 +36,7 @@ fun ArtistProfile.toDemoResponse(elapsedMs: Long): DemoResponse {
                 )
             }
         }
-        section("radio", "Radio") {
-            r.radio()?.tracks?.map {
-                SectionItem(
-                    primary = it.title,
-                    secondary = it.album,
-                    previewTitle = it.title,
-                    previewArtist = it.artist,
-                    previewAlbum = it.album,
-                )
-            }
-        }
+        section("radio", "Radio") { radioItems(r.radio()) }
         section("discography", "Discography") {
             r.discography()?.albums?.map {
                 SectionItem(primary = it.title, secondary = it.year, imageUrl = it.thumbnailUrl, meta = it.type)
@@ -101,7 +91,7 @@ fun ArtistProfile.toDemoResponse(elapsedMs: Long): DemoResponse {
     )
 }
 
-fun AlbumProfile.toDemoResponse(elapsedMs: Long): DemoResponse {
+fun AlbumProfile.toDemoResponse(elapsedMs: Long, artistRadio: Section? = null): DemoResponse {
     val r = results
 
     val details = buildList {
@@ -144,6 +134,7 @@ fun AlbumProfile.toDemoResponse(elapsedMs: Long): DemoResponse {
                 )
             }
         }
+        artistRadio?.let { add(it) }
     }
 
     return DemoResponse(
@@ -156,7 +147,7 @@ fun AlbumProfile.toDemoResponse(elapsedMs: Long): DemoResponse {
     )
 }
 
-fun TrackProfile.toDemoResponse(elapsedMs: Long): DemoResponse {
+fun TrackProfile.toDemoResponse(elapsedMs: Long, artistRadio: Section? = null): DemoResponse {
     val r = results
     val lyrics = r.lyrics()
     val stats = r.trackPopularity()
@@ -194,6 +185,7 @@ fun TrackProfile.toDemoResponse(elapsedMs: Long): DemoResponse {
                 )
             }
         }
+        artistRadio?.let { add(it) }
     }
 
     return DemoResponse(
@@ -236,6 +228,26 @@ private fun EnrichmentResults.toMeta(elapsedMs: Long): Meta {
 private fun MutableList<Section>.section(key: String, label: String, items: () -> List<SectionItem>?) {
     val list = items().orEmpty()
     if (list.isNotEmpty()) add(Section(key, label, list))
+}
+
+private fun radioItems(radio: EnrichmentData.RadioPlaylist?): List<SectionItem>? = radio?.tracks?.map {
+    SectionItem(
+        primary = it.title,
+        secondary = it.album,
+        previewTitle = it.title,
+        previewArtist = it.artist,
+        previewAlbum = it.album,
+    )
+}
+
+/**
+ * Builds the "Radio (from artist)" section shown on track/album pages — same item shape as the
+ * artist page's own "Radio" section, since it's the same [EnrichmentType.ARTIST_RADIO] data, just
+ * fetched for the track/album's resolved artist rather than an artist lookup itself.
+ */
+fun artistRadioSection(radio: EnrichmentData.RadioPlaylist?): Section? {
+    val items = radioItems(radio).orEmpty()
+    return items.takeIf { it.isNotEmpty() }?.let { Section("artist_radio", "Radio (from artist)", it) }
 }
 
 private fun Long.formatDuration(): String {
