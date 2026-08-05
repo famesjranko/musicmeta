@@ -130,6 +130,9 @@ else
     # ktlintCheck too: demo/ is exempt from house *conventions* (see check_conventions.py) but not
     # from formatting — it is the worked example, and nothing about style affects the canary's job.
     (cd demo && ../gradlew compileKotlin ktlintCheck --quiet)
+    # demo-web/ is the same shape: a separate composite build `./gradlew build` never compiles,
+    # consuming the library like an external app. Without this line nothing gates it.
+    (cd demo-web && ../gradlew compileKotlin ktlintCheck --quiet)
 fi
 
 printf '\n\033[1;32mAll checks passed.\033[0m\n'
