@@ -99,6 +99,8 @@
   .summary .titlerow { display: flex; align-items: baseline; gap: 0.55rem; flex-wrap: wrap; }
   .summary h2 { margin: 0; font-size: 1.15rem; }
   .summary .subtitle { color: var(--accent); font-size: 0.84rem; margin: 0.15rem 0 0.45rem; }
+  .summary .subtitle.enrich-row { cursor: pointer; border-bottom: 1px dotted var(--accent); display: inline-block; }
+  .summary .subtitle.enrich-row:hover { color: var(--text); border-color: var(--text); }
   .summary .text {
     color: #c7cbd4; font-size: 0.85rem; line-height: 1.5;
     max-height: 5.4em; overflow: hidden;
@@ -122,6 +124,10 @@
   .section li .primary { flex: 1; min-width: 0; overflow-wrap: anywhere; }
   .section li .primary a { color: var(--text); text-decoration: none; border-bottom: 1px dotted var(--muted); }
   .section li .primary a:hover { color: var(--accent); border-color: var(--accent); }
+  .section li .primary .enrich-link { border-bottom: 1px dotted var(--muted); }
+  .section li.enrich-row { cursor: pointer; }
+  .section li.enrich-row:hover { background: rgba(124, 156, 255, 0.08); }
+  .section li.enrich-row:hover .enrich-link { color: var(--accent); border-color: var(--accent); }
   .section li .secondary { color: var(--muted); font-size: 0.78rem; }
   .section li .meta {
     color: var(--muted); font-size: 0.72rem; background: #0f1115;
@@ -229,15 +235,21 @@ function syncArtistField() {
 kindEl.addEventListener('change', syncArtistField);
 syncArtistField();
 
+// Fills the form and runs a search — shared by the "Try:" buttons and by clicking an
+// internal-navigation target (SectionItem.enrich / SummaryCard.subtitleEnrich) elsewhere on the page.
+function fillAndRun(kind, name, artist, album) {
+  kindEl.value = kind;
+  nameEl.value = name || '';
+  artistEl.value = artist || '';
+  albumEl.value = album || '';
+  syncArtistField();
+  runQuery();
+}
+
 document.getElementById('examples').addEventListener('click', (e) => {
   const btn = e.target.closest('button[data-kind]');
   if (!btn) return;
-  kindEl.value = btn.dataset.kind;
-  nameEl.value = btn.dataset.name;
-  artistEl.value = btn.dataset.artist || '';
-  albumEl.value = btn.dataset.album || '';
-  syncArtistField();
-  runQuery();
+  fillAndRun(btn.dataset.kind, btn.dataset.name, btn.dataset.artist, btn.dataset.album);
 });
 
 document.getElementById('query-form').addEventListener('submit', (e) => {
@@ -296,6 +308,9 @@ function render(data) {
     ? `<div class="text">${esc(summary.text)}</div>${summary.textSource ? `<div class="source">source: ${esc(summary.textSource)}</div>` : ''}`
     : '';
   const summaryPreview = previewButtonHtml(summary.previewTitle, summary.previewArtist, summary.previewAlbum);
+  const subtitle = summary.subtitle
+    ? `<div class="subtitle${summary.subtitleEnrich ? ' enrich-row' : ''}"${enrichAttrs(summary.subtitleEnrich)}>${esc(summary.subtitle)}</div>`
+    : '';
 
   const sections = data.sections.map(sectionHtml).join('');
   const totalItems = data.sections.reduce((n, s) => n + s.items.length, 0);
@@ -313,7 +328,7 @@ function render(data) {
       ${img}
       <div class="body">
         <div class="titlerow"><h2>${esc(summary.title)}</h2>${summaryPreview}</div>
-        ${summary.subtitle ? `<div class="subtitle">${esc(summary.subtitle)}</div>` : ''}
+        ${subtitle}
         ${text}
       </div>
     </div>
@@ -330,15 +345,26 @@ function render(data) {
   `;
 }
 
+// Data-attributes carrying an EnrichTarget (kind/name/artist/album) for the click-delegation
+// handler below. Every value goes through esc() like any other interpolated field.
+function enrichAttrs(enrich) {
+  if (!enrich) return '';
+  return ` data-enrich-kind="${esc(enrich.kind)}" data-enrich-name="${esc(enrich.name)}"` +
+    ` data-enrich-artist="${esc(enrich.artist || '')}" data-enrich-album="${esc(enrich.album || '')}"`;
+}
+
 function sectionHtml(section) {
   const items = section.items.map((it, i) => {
     const hidden = i >= MAX_VISIBLE ? ' item-hidden' : '';
+    const rowClass = it.enrich ? ' enrich-row' : '';
     const primaryHtml = it.link
       ? `<a href="${esc(it.link)}" target="_blank" rel="noopener">${esc(it.primary)}</a>`
-      : esc(it.primary);
+      : it.enrich
+        ? `<span class="enrich-link">${esc(it.primary)}</span>`
+        : esc(it.primary);
     const preview = previewButtonHtml(it.previewTitle, it.previewArtist, it.previewAlbum);
     return `
-      <li class="${hidden.trim()}">
+      <li class="${(hidden + rowClass).trim()}"${enrichAttrs(it.enrich)}>
         ${it.imageUrl ? `<img src="${esc(it.imageUrl)}" alt="" onerror="this.remove()" />` : ''}
         <span class="primary">${primaryHtml}${it.secondary ? ` <span class="secondary">${esc(it.secondary)}</span>` : ''}</span>
         ${it.meta ? `<span class="meta">${esc(it.meta)}</span>` : ''}
@@ -373,6 +399,18 @@ resultEl.addEventListener('click', (e) => {
       card.scrollIntoView({ block: 'nearest' });
     }
   }
+});
+
+// --- Internal cross-navigation (result items, artist name on track/album pages) ---
+// Reuses the same fill-form-and-submit flow as the "Try:" buttons. Delegated on resultEl so it
+// also covers items revealed by "Show all N"; excludes clicks that belong to another row
+// affordance (external link, preview button, show-more) so those keep their own behaviour.
+
+resultEl.addEventListener('click', (e) => {
+  if (e.target.closest('a, .preview-btn, .show-more')) return;
+  const target = e.target.closest('[data-enrich-kind]');
+  if (!target) return;
+  fillAndRun(target.dataset.enrichKind, target.dataset.enrichName, target.dataset.enrichArtist, target.dataset.enrichAlbum);
 });
 
 // --- 30s preview playback ---

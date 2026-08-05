@@ -21,6 +21,7 @@ fun ArtistProfile.toDemoResponse(elapsedMs: Long): DemoResponse {
                     primary = it.name,
                     secondary = "match ${(it.matchScore * 100).toInt()}%",
                     meta = it.sources.joinToString(", ").ifBlank { null },
+                    enrich = artistEnrich(it.name),
                 )
             }
         }
@@ -33,18 +34,30 @@ fun ArtistProfile.toDemoResponse(elapsedMs: Long): DemoResponse {
                     previewTitle = it.title,
                     previewArtist = name,
                     previewAlbum = it.album,
+                    enrich = trackEnrich(it.title, name, it.album),
                 )
             }
         }
         section("radio", "Radio") { radioItems(r.radio()) }
         section("discography", "Discography") {
             r.discography()?.albums?.map {
-                SectionItem(primary = it.title, secondary = it.year, imageUrl = it.thumbnailUrl, meta = it.type)
+                SectionItem(
+                    primary = it.title,
+                    secondary = it.year,
+                    imageUrl = it.thumbnailUrl,
+                    meta = it.type,
+                    enrich = albumEnrich(it.title, name),
+                )
             }
         }
         section("band_members", "Band Members") {
             r.get<EnrichmentData.BandMembers>(EnrichmentType.BAND_MEMBERS)?.members?.map {
-                SectionItem(primary = it.name, secondary = it.role, meta = it.activePeriod)
+                SectionItem(
+                    primary = it.name,
+                    secondary = it.role,
+                    meta = it.activePeriod,
+                    enrich = artistEnrich(it.name),
+                )
             }
         }
         section("links", "Links") {
@@ -122,6 +135,7 @@ fun AlbumProfile.toDemoResponse(elapsedMs: Long, artistRadio: Section? = null): 
                     secondary = it.artist,
                     imageUrl = it.thumbnailUrl,
                     meta = "score %.2f".format(it.artistMatchScore),
+                    enrich = albumEnrich(it.title, it.artist),
                 )
             }
         }
@@ -141,7 +155,12 @@ fun AlbumProfile.toDemoResponse(elapsedMs: Long, artistRadio: Section? = null): 
         kind = "album",
         name = title,
         artist = artist,
-        summary = SummaryCard(title = title, subtitle = artist, imageUrl = r.albumArt()?.url),
+        summary = SummaryCard(
+            title = title,
+            subtitle = artist,
+            subtitleEnrich = artistEnrich(artist),
+            imageUrl = r.albumArt()?.url,
+        ),
         sections = sections,
         meta = r.toMeta(elapsedMs),
     )
@@ -171,6 +190,7 @@ fun TrackProfile.toDemoResponse(elapsedMs: Long, artistRadio: Section? = null): 
                     meta = "score %.2f".format(it.matchScore),
                     previewTitle = it.title,
                     previewArtist = it.artist,
+                    enrich = trackEnrich(it.title, it.artist),
                 )
             }
         }
@@ -195,6 +215,7 @@ fun TrackProfile.toDemoResponse(elapsedMs: Long, artistRadio: Section? = null): 
         summary = SummaryCard(
             title = title,
             subtitle = artist,
+            subtitleEnrich = artistEnrich(artist),
             imageUrl = r.albumArt()?.url,
             text = (lyrics?.syncedLyrics ?: lyrics?.plainLyrics)?.take(400),
             textSource = lyrics?.let { "lyrics" },
@@ -237,6 +258,7 @@ private fun radioItems(radio: EnrichmentData.RadioPlaylist?): List<SectionItem>?
         previewTitle = it.title,
         previewArtist = it.artist,
         previewAlbum = it.album,
+        enrich = trackEnrich(it.title, it.artist, it.album),
     )
 }
 
@@ -249,6 +271,22 @@ fun artistRadioSection(radio: EnrichmentData.RadioPlaylist?): Section? {
     val items = radioItems(radio).orEmpty()
     return items.takeIf { it.isNotEmpty() }?.let { Section("artist_radio", "Radio (from artist)", it) }
 }
+
+/**
+ * Internal-navigation targets for [SectionItem.enrich] / [SummaryCard.subtitleEnrich] — one
+ * constructor per [EnrichTarget.kind] so a caller can't set `kind` without the fields it needs.
+ * Blank names/artists (defensive; the core models this maps from are non-nullable but not
+ * guaranteed non-blank) simply produce no target rather than a lookup that can't resolve.
+ */
+private fun artistEnrich(name: String): EnrichTarget? =
+    name.takeIf { it.isNotBlank() }?.let { EnrichTarget("artist", it) }
+
+private fun albumEnrich(title: String, artist: String): EnrichTarget? =
+    if (title.isNotBlank() && artist.isNotBlank()) EnrichTarget("album", title, artist = artist) else null
+
+private fun trackEnrich(title: String, artist: String, album: String? = null): EnrichTarget? =
+    if (title.isNotBlank() &&
+        artist.isNotBlank()) EnrichTarget("track", title, artist = artist, album = album) else null
 
 private fun Long.formatDuration(): String {
     val totalSeconds = this / 1000
