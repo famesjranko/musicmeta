@@ -166,13 +166,24 @@ fun AlbumProfile.toDemoResponse(elapsedMs: Long, artistRadio: Section? = null): 
     )
 }
 
-fun TrackProfile.toDemoResponse(elapsedMs: Long, artistRadio: Section? = null): DemoResponse {
+/**
+ * @param requestedAlbum the album name the caller typed, if any. Nothing in [TrackProfile] resolves
+ *   a confirmed album for a track — `DEFAULT_TRACK_TYPES` fetches no album-bearing type, and neither
+ *   the resolved identifiers nor identity-resolution suggestions carry a title — so this unconfirmed
+ *   value is the best available source and is shown as such, never invented.
+ */
+fun TrackProfile.toDemoResponse(
+    elapsedMs: Long,
+    artistRadio: Section? = null,
+    requestedAlbum: String? = null,
+): DemoResponse {
     val r = results
     val lyrics = r.lyrics()
     val stats = r.trackPopularity()
 
     val details = buildList {
         r.genres().takeIf { it.isNotEmpty() }?.let { add(SectionItem("Genres", it.joinToString(", "))) }
+        requestedAlbum?.let { add(SectionItem("Album", it, meta = "as entered")) }
     }
 
     val sections = buildList {

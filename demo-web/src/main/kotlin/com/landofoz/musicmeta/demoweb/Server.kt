@@ -86,7 +86,7 @@ private fun handleEnrich(exchange: HttpExchange, engine: EnrichmentEngine) {
                         val radioDeferred = async { fetchArtistRadioSection(engine, artist) }
                         val profile = profileDeferred.await()
                         val radio = radioDeferred.await()
-                        profile.toDemoResponse(System.currentTimeMillis() - started, radio)
+                        profile.toDemoResponse(System.currentTimeMillis() - started, radio, album)
                     }
             }
         }
