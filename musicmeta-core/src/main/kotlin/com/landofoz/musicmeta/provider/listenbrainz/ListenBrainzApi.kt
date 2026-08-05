@@ -109,28 +109,6 @@ internal class ListenBrainzApi(
         return results
     }
 
-    /** GET /1/explore/lb-radio/artist/{mbid}/similar — returns similar artists with match scores. */
-    suspend fun getSimilarArtists(
-        artistMbid: String,
-        count: Int = 20,
-    ): List<ListenBrainzSimilarArtist> = rateLimiter.execute {
-        val url = "$BASE_URL/explore/lb-radio/artist/$artistMbid/similar"
-        val json = httpClient.fetchJsonResult(url).bodyOrThrowTransient()
-            ?: return@execute emptyList()
-        val payload = json.optJSONArray("payload") ?: return@execute emptyList()
-        val results = mutableListOf<ListenBrainzSimilarArtist>()
-        for (i in 0 until minOf(payload.length(), count)) {
-            val item = payload.getJSONObject(i)
-            val mbid = item.optString("artist_mbid").takeIf { it.isNotBlank() } ?: continue
-            results += ListenBrainzSimilarArtist(
-                artistMbid = mbid,
-                name = item.optString("artist_name", ""),
-                score = item.optDouble("score", 0.0).toFloat(),
-            )
-        }
-        results
-    }
-
     /** GET /1/explore/lb-radio?prompt=artist:({prompt})&mode={mode}. Requires authToken. */
     suspend fun getRadio(
         artistPrompt: String,

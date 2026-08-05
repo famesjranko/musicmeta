@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Wikidata's artist lookup used a call Wikidata always rejected; birth/death date, country and occupation are now returned instead of nothing, every time
+- ListenBrainz's SIMILAR_ARTISTS called a route that never existed and always returned nothing; capability dropped, Last.fm and Deezer already serve it (#18)
 
 ## [0.11.0] - 2026-07-28
 
