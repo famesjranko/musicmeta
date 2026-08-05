@@ -326,25 +326,53 @@ class DeezerProviderTest {
         assertEquals(1.0f, data[0].matchScore, 0.01f)
     }
 
-    // SIMILAR_TRACKS tests
+    // SIMILAR_TRACKS tests — artist-derived via /artist/{id}/related + /artist/{id}/top, since
+    // /track/{id}/radio does not exist on Deezer's public API (see
+    // .scratch/provider-code-findings/issues/16-deezer-track-radio-endpoint-does-not-exist.md).
 
     @Test
-    fun `enrich returns SimilarTracks for track`() = runTest {
-        // Given — Deezer returns a matching track search result and track radio
+    fun `enrich returns SimilarTracks derived from related artists' top tracks`() = runTest {
+        // Given — Karma Police resolves to Radiohead (artist id 399 comes off the track search
+        // result itself), which has 3 related artists each with a top track
         httpClient.givenJsonResponse("search/track", TRACK_SEARCH_RESPONSE)
-        httpClient.givenJsonResponse("track/789/radio", TRACK_RADIO_RESPONSE)
+        httpClient.givenJsonResponse("artist/399/related", RELATED_ARTISTS_RESPONSE)
+        httpClient.givenJsonResponse("artist/1001/top", MUSE_TOP_TRACKS)
+        httpClient.givenJsonResponse("artist/1002/top", SIGUR_ROS_TOP_TRACKS)
+        httpClient.givenJsonResponse("artist/1003/top", PORTISHEAD_TOP_TRACKS)
         val request = EnrichmentRequest.forTrack("Karma Police", "Radiohead")
 
         // When — enriching for similar tracks
         val result = provider.enrich(request, EnrichmentType.SIMILAR_TRACKS)
 
-        // Then — success with SimilarTracks data
+        // Then — success with one top track per related artist, all sourced from deezer
         assertTrue(result is EnrichmentResult.Success)
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.SimilarTracks
-        assertEquals(2, data.tracks.size)
-        assertEquals("No Surprises", data.tracks[0].title)
-        assertEquals("Radiohead", data.tracks[0].artist)
-        assertEquals(listOf("deezer"), data.tracks[0].sources)
+        assertEquals(3, data.tracks.size)
+        assertTrue(data.tracks.any { it.title == "Knights of Cydonia" && it.artist == "Muse" })
+        assertTrue(data.tracks.all { it.sources == listOf("deezer") })
+    }
+
+    @Test
+    fun `enrich sends the exact related and top URL contract for SimilarTracks, with no search_artist call`() = runTest {
+        // Given — same fixtures as the happy path
+        httpClient.givenJsonResponse("search/track", TRACK_SEARCH_RESPONSE)
+        httpClient.givenJsonResponse("artist/399/related", RELATED_ARTISTS_RESPONSE)
+        httpClient.givenJsonResponse("artist/1001/top", MUSE_TOP_TRACKS)
+        httpClient.givenJsonResponse("artist/1002/top", SIGUR_ROS_TOP_TRACKS)
+        httpClient.givenJsonResponse("artist/1003/top", PORTISHEAD_TOP_TRACKS)
+        val request = EnrichmentRequest.forTrack("Karma Police", "Radiohead")
+
+        // When
+        provider.enrich(request, EnrichmentType.SIMILAR_TRACKS)
+
+        // Then — pins the real replacement endpoints and their limits; a hand-rolled mock response
+        // for /track/{id}/radio (as this test suite used to have) cannot catch a route Deezer
+        // doesn't serve, only a URL assertion like this can. Also pins that the artist id comes off
+        // the track search result directly — no redundant search/artist round trip.
+        assertTrue(httpClient.requestedUrls.any { it == "https://api.deezer.com/artist/399/related?limit=5" })
+        assertTrue(httpClient.requestedUrls.any { it == "https://api.deezer.com/artist/1001/top?limit=3" })
+        assertTrue(httpClient.requestedUrls.none { it.contains("/radio") })
+        assertTrue(httpClient.requestedUrls.none { it.contains("search/artist") })
     }
 
     @Test
@@ -386,19 +414,82 @@ class DeezerProviderTest {
     }
 
     @Test
-    fun `enrich returns SimilarTracks with positional match scores`() = runTest {
-        // Given — Deezer returns track search and radio results
-        httpClient.givenJsonResponse("search/track", TRACK_SEARCH_RESPONSE)
-        httpClient.givenJsonResponse("track/789/radio", TRACK_RADIO_RESPONSE)
+    fun `enrich returns NotFound for SimilarTracks when track search result has no artist id`() = runTest {
+        // Given — the track resolves and its artist name matches, but the search payload carries
+        // no artist id (no name-search fallback: this is treated as absent data, not re-resolved)
+        httpClient.givenJsonResponse(
+            "search/track",
+            """{"data":[{"id":789,"title":"Karma Police","artist":{"name":"Radiohead"}}]}""",
+        )
         val request = EnrichmentRequest.forTrack("Karma Police", "Radiohead")
 
         // When — enriching for similar tracks
         val result = provider.enrich(request, EnrichmentType.SIMILAR_TRACKS)
 
-        // Then — first track has higher score than last
+        // Then — NotFound because there's no artist id to fetch related artists with
+        assertTrue(result is EnrichmentResult.NotFound)
+        assertTrue(httpClient.requestedUrls.none { it.contains("related") })
+    }
+
+    @Test
+    fun `enrich returns NotFound for SimilarTracks when related artists endpoint returns empty list`() = runTest {
+        // Given — the seed artist (from the track search result) has no related artists
+        httpClient.givenJsonResponse("search/track", TRACK_SEARCH_RESPONSE)
+        httpClient.givenJsonResponse("artist/399/related", """{"data":[]}""")
+        val request = EnrichmentRequest.forTrack("Karma Police", "Radiohead")
+
+        // When — enriching for similar tracks
+        val result = provider.enrich(request, EnrichmentType.SIMILAR_TRACKS)
+
+        // Then — NotFound because there are no related artists to sample top tracks from
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `enrich excludes the seed track from related artists' top tracks by id and by title plus artist`() = runTest {
+        // Given — Muse's top tracks include the seed by exact id; Sigur Ros's include the same
+        // title+artist under a different id (e.g. a cover); only Portishead's track is genuinely new
+        httpClient.givenJsonResponse("search/track", TRACK_SEARCH_RESPONSE) // id=789 Karma Police/Radiohead
+        httpClient.givenJsonResponse("artist/399/related", RELATED_ARTISTS_RESPONSE)
+        httpClient.givenJsonResponse(
+            "artist/1001/top",
+            """{"data":[{"id":789,"title":"Karma Police","artist":{"name":"Radiohead"},"duration":253,"rank":900000}]}""",
+        )
+        httpClient.givenJsonResponse(
+            "artist/1002/top",
+            """{"data":[{"id":9999,"title":"Karma Police","artist":{"name":"Radiohead"},"duration":253,"rank":800000}]}""",
+        )
+        httpClient.givenJsonResponse("artist/1003/top", PORTISHEAD_TOP_TRACKS)
+        val request = EnrichmentRequest.forTrack("Karma Police", "Radiohead")
+
+        // When — enriching for similar tracks
+        val result = provider.enrich(request, EnrichmentType.SIMILAR_TRACKS)
+
+        // Then — only Portishead's track survives; both seed duplicates are excluded
+        assertTrue(result is EnrichmentResult.Success)
+        val data = (result as EnrichmentResult.Success).data as EnrichmentData.SimilarTracks
+        assertEquals(1, data.tracks.size)
+        assertEquals("Portishead", data.tracks[0].artist)
+    }
+
+    @Test
+    fun `enrich returns SimilarTracks with positional match scores by related-artist rank`() = runTest {
+        // Given — Deezer returns track search, related artists, and top tracks
+        httpClient.givenJsonResponse("search/track", TRACK_SEARCH_RESPONSE)
+        httpClient.givenJsonResponse("artist/399/related", RELATED_ARTISTS_RESPONSE)
+        httpClient.givenJsonResponse("artist/1001/top", MUSE_TOP_TRACKS)
+        httpClient.givenJsonResponse("artist/1002/top", SIGUR_ROS_TOP_TRACKS)
+        httpClient.givenJsonResponse("artist/1003/top", PORTISHEAD_TOP_TRACKS)
+        val request = EnrichmentRequest.forTrack("Karma Police", "Radiohead")
+
+        // When — enriching for similar tracks
+        val result = provider.enrich(request, EnrichmentType.SIMILAR_TRACKS)
+
+        // Then — Muse (index 0, highest-ranked related artist) outscores the last-ranked artist's track
         val data = ((result as EnrichmentResult.Success).data as EnrichmentData.SimilarTracks).tracks
-        assertTrue(data[0].matchScore > data[1].matchScore)
+        assertTrue(data[0].matchScore > data[2].matchScore)
         assertEquals(1.0f, data[0].matchScore, 0.01f)
+        assertEquals("Muse", data[0].artist)
     }
 
     // ARTIST_RADIO tests
@@ -670,7 +761,7 @@ class DeezerProviderTest {
 
         val TRACK_SEARCH_RESPONSE = """
             {"data":[
-                {"id":789,"title":"Karma Police","artist":{"name":"Radiohead"}}
+                {"id":789,"title":"Karma Police","artist":{"id":399,"name":"Radiohead"}}
             ]}
         """.trimIndent()
 
@@ -686,10 +777,21 @@ class DeezerProviderTest {
             ]}
         """.trimIndent()
 
-        val TRACK_RADIO_RESPONSE = """
+        val MUSE_TOP_TRACKS = """
             {"data":[
-                {"id":201,"title":"No Surprises","artist":{"name":"Radiohead"},"album":{"title":"OK Computer"},"duration":229},
-                {"id":202,"title":"Exit Music (For a Film)","artist":{"name":"Radiohead"},"album":{"title":"OK Computer"},"duration":277}
+                {"id":5001,"title":"Knights of Cydonia","artist":{"name":"Muse"},"album":{"title":"Black Holes and Revelations"},"duration":366,"rank":950000}
+            ]}
+        """.trimIndent()
+
+        val SIGUR_ROS_TOP_TRACKS = """
+            {"data":[
+                {"id":5002,"title":"Hoppipolla","artist":{"name":"Sigur Ros"},"album":{"title":"Takk..."},"duration":271,"rank":800000}
+            ]}
+        """.trimIndent()
+
+        val PORTISHEAD_TOP_TRACKS = """
+            {"data":[
+                {"id":5003,"title":"Glory Box","artist":{"name":"Portishead"},"album":{"title":"Dummy"},"duration":304,"rank":700000}
             ]}
         """.trimIndent()
 

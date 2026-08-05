@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.provider.deezer
 
+import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentProvider
 import com.landofoz.musicmeta.EnrichmentRequest
@@ -7,6 +8,7 @@ import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.SearchCandidate
+import com.landofoz.musicmeta.SimilarTrack
 import com.landofoz.musicmeta.engine.ArtistMatcher
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.http.HttpClient
@@ -180,28 +182,90 @@ class DeezerProvider(
         )
     }
 
+    /**
+     * `SIMILAR_TRACKS` is artist-derived, the same approximation [SimilarAlbumsProvider] uses for
+     * `SIMILAR_ALBUMS`: Deezer has no track-similarity endpoint (`/track/{id}/radio` doesn't exist —
+     * see `.scratch/provider-code-findings/issues/16-...`), so this takes the seed track's artist id
+     * straight off the `/search/track` result (`DeezerTrackSearchResult.artistId`), walks
+     * `/artist/{id}/related`, and samples each related artist's `/artist/{id}/top`. Results rank by
+     * *artist* similarity applied uniformly to that artist's top tracks, not genuine track-level
+     * similarity — see [SimilarTrack.matchScore] KDoc for the consequence.
+     *
+     * No second `search/artist` round trip: the id the track search already returned is
+     * authoritative for the artist the track actually belongs to, where a fresh name search could
+     * land on a different, same-named artist. `ArtistMatcher.isMatch` still runs once, against the
+     * track search result's own artist name, to validate that the track search itself landed on the
+     * right artist.
+     *
+     * Deliberately does not reuse `request.identifiers.extra["deezerId"]` as a shortcut to the
+     * artist id the way [enrichArtistRadio] does: on a `ForTrack` request that key already means
+     * the *track's* own Deezer id (written by this method and read by [enrichTrackPreview]), so
+     * treating it as an artist id would look up an unrelated artist silently.
+     */
     private suspend fun enrichSimilarTracks(request: EnrichmentRequest): EnrichmentResult {
         val trackRequest = request as? EnrichmentRequest.ForTrack
             ?: return EnrichmentResult.NotFound(EnrichmentType.SIMILAR_TRACKS, id)
 
-        val searchResult = api.searchTrack(trackRequest.title, trackRequest.artist)
+        val seedTrack = api.searchTrack(trackRequest.title, trackRequest.artist)
             ?: return EnrichmentResult.NotFound(EnrichmentType.SIMILAR_TRACKS, id)
 
-        if (!ArtistMatcher.isMatch(trackRequest.artist, searchResult.artistName)) {
+        if (!ArtistMatcher.isMatch(trackRequest.artist, seedTrack.artistName)) {
             return EnrichmentResult.NotFound(EnrichmentType.SIMILAR_TRACKS, id)
         }
 
-        val tracks = api.getTrackRadio(searchResult.id)
+        // No name-search fallback: Deezer always populates artist.id on a track search result, so
+        // a missing id is treated as absent data rather than silently re-resolved by name.
+        val seedArtistId = seedTrack.artistId
+            ?: return EnrichmentResult.NotFound(EnrichmentType.SIMILAR_TRACKS, id)
+
+        // Fetch up to 5 related artists — same fan-out bound as SimilarAlbumsProvider.
+        val relatedArtists = api.getRelatedArtists(seedArtistId, limit = RELATED_ARTISTS_LIMIT)
+        if (relatedArtists.isEmpty()) return EnrichmentResult.NotFound(EnrichmentType.SIMILAR_TRACKS, id)
+
+        val tracks = similarTracksFromRelatedArtists(relatedArtists, seedTrack)
         if (tracks.isEmpty()) return EnrichmentResult.NotFound(EnrichmentType.SIMILAR_TRACKS, id)
 
         return EnrichmentResult.Success(
             type = EnrichmentType.SIMILAR_TRACKS,
-            data = DeezerMapper.toSimilarTracks(tracks),
+            data = EnrichmentData.SimilarTracks(dedupeSimilarTracks(tracks)),
             provider = id,
             confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
-            resolvedIdentifiers = EnrichmentIdentifiers().withExtra("deezerId", searchResult.id.toString()),
+            resolvedIdentifiers = EnrichmentIdentifiers().withExtra("deezerId", seedTrack.id.toString()),
         )
     }
+
+    /**
+     * Samples up to [TOP_TRACKS_PER_ARTIST] top tracks from each of [relatedArtists], scored by
+     * that artist's similarity rank, excluding [seedTrack] by Deezer id and by title+artist (in
+     * case it resurfaces as a cover/duplicate title under a different id).
+     */
+    private suspend fun similarTracksFromRelatedArtists(
+        relatedArtists: List<DeezerRelatedArtist>,
+        seedTrack: DeezerTrackSearchResult,
+    ): List<SimilarTrack> {
+        val count = relatedArtists.size.coerceAtLeast(1)
+        val seedKey = similarTrackKey(seedTrack.title, seedTrack.artistName)
+        return relatedArtists.withIndex().flatMap { (index, artist) ->
+            val artistScore = 1.0f - (index.toFloat() / count) * 0.9f
+            api.getArtistTop(artist.id, limit = TOP_TRACKS_PER_ARTIST)
+                .filterNot { it.id == seedTrack.id || similarTrackKey(it.title, it.artistName) == seedKey }
+                .map { DeezerMapper.toSimilarTrack(it, artistScore) }
+        }
+    }
+
+    /**
+     * Deduplicates by title+artist (case-insensitive, e.g. two related artists sharing a feature
+     * track), sorts by score desc, and caps at 20 — mirrors SimilarAlbumsProvider.
+     */
+    private fun dedupeSimilarTracks(tracks: List<SimilarTrack>): List<SimilarTrack> =
+        tracks
+            .groupBy { similarTrackKey(it.title, it.artist) }
+            .map { (_, dupes) -> dupes.maxByOrNull { it.matchScore } ?: dupes.first() }
+            .sortedByDescending { it.matchScore }
+            .take(SIMILAR_TRACKS_LIMIT)
+
+    private fun similarTrackKey(title: String, artist: String): String =
+        "${title.trim().lowercase()}|${artist.trim().lowercase()}"
 
     private suspend fun enrichArtistRadio(request: EnrichmentRequest): EnrichmentResult {
         val artistRequest = request as? EnrichmentRequest.ForArtist
@@ -333,5 +397,14 @@ class DeezerProvider(
 
     private companion object {
         const val SEARCH_SCORE = 75
+
+        /** Related-artist fan-out bound for SIMILAR_TRACKS — mirrors SimilarAlbumsProvider. */
+        private const val RELATED_ARTISTS_LIMIT = 5
+
+        /** Top tracks sampled per related artist — mirrors SimilarAlbumsProvider's per-artist cap. */
+        private const val TOP_TRACKS_PER_ARTIST = 3
+
+        /** Cap on the final SIMILAR_TRACKS list — mirrors SimilarAlbumsProvider's SIMILAR_ALBUMS cap. */
+        private const val SIMILAR_TRACKS_LIMIT = 20
     }
 }
