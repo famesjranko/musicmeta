@@ -19,15 +19,27 @@ internal class WikidataApi(
     /**
      * Fetch expanded entity properties in a single API call.
      * Returns birth/death dates, country of origin, occupation, and image URL.
+     *
+     * Uses `wbgetentities` with `props=claims`, not `wbgetclaims`: `wbgetclaims`'s `property`
+     * parameter is single-valued, so a pipe-delimited "P18|P569|..." list is rejected with
+     * `param-invalid` — at HTTP 200, so [bodyOrThrowTransient] never sees it. `wbgetentities`
+     * returns the full claims set for the entity in one call, no property-list encoding needed.
+     *
+     * Response shape: claims live under `entities.<id>.claims`. A missing or invalid id comes
+     * back as either `entities.<id>` with no `claims` key (bare "missing" marker) or a top-level
+     * `error` key with no `entities` key at all — both fall through the `optJSONObject` chain
+     * below to `null`, same as an empty claims object.
      */
     suspend fun getEntityProperties(
         wikidataId: String,
         imageSize: Int = DEFAULT_IMAGE_SIZE,
     ): WikidataEntityProperties? = rateLimiter.execute {
-        val url = "$BASE_URL?action=wbgetclaims&entity=$wikidataId" +
-            "&property=${URLEncoder.encode("P18|P569|P570|P495|P106", "UTF-8")}&format=json"
+        val url = "$BASE_URL?action=wbgetentities&ids=$wikidataId&props=claims&format=json"
         val json = httpClient.fetchJsonResult(url).bodyOrThrowTransient() ?: return@execute null
-        val claims = json.optJSONObject("claims") ?: return@execute null
+        val claims = json.optJSONObject("entities")
+            ?.optJSONObject(wikidataId)
+            ?.optJSONObject("claims")
+            ?: return@execute null
         parseEntityProperties(claims, imageSize)
     }
 

@@ -82,8 +82,8 @@ class SimilarTrackMergerTest {
     }
 
     @Test
-    fun `merge sums scores capped at 1_0`() {
-        // Given — same track from both providers with high scores
+    fun `merge keeps Last_fm's score outright on overlap with Deezer, does not sum`() {
+        // Given — same track from both providers; Deezer's score is artist-derived, not genuine
         val lastfmResult = EnrichmentResult.Success(
             type = EnrichmentType.SIMILAR_TRACKS,
             data = EnrichmentData.SimilarTracks(tracks = listOf(
@@ -104,7 +104,37 @@ class SimilarTrackMergerTest {
         // When
         val result = SimilarTrackMerger.merge(listOf(lastfmResult, deezerResult))
 
-        // Then — matchScore = min(0.9 + 0.8, 1.0) = 1.0, not 1.7
+        // Then — matchScore is Last.fm's 0.9 outright, not 0.9 + 0.8 (would overstate the match)
+        val data = (result as EnrichmentResult.Success).data as EnrichmentData.SimilarTracks
+        assertEquals(0.9f, data.tracks[0].matchScore, 0.001f)
+        assertTrue("lastfm" in data.tracks[0].sources)
+        assertTrue("deezer" in data.tracks[0].sources)
+    }
+
+    @Test
+    fun `merge sums scores capped at 1_0 when neither source is Last_fm`() {
+        // Given — same track recommended by two non-genuine sources, both artist-derived
+        val sourceAResult = EnrichmentResult.Success(
+            type = EnrichmentType.SIMILAR_TRACKS,
+            data = EnrichmentData.SimilarTracks(tracks = listOf(
+                SimilarTrack("Lucky", "Radiohead", matchScore = 0.9f, sources = listOf("sourceA")),
+            )),
+            provider = "sourceA",
+            confidence = 0.9f,
+        )
+        val sourceBResult = EnrichmentResult.Success(
+            type = EnrichmentType.SIMILAR_TRACKS,
+            data = EnrichmentData.SimilarTracks(tracks = listOf(
+                SimilarTrack("Lucky", "Radiohead", matchScore = 0.8f, sources = listOf("sourceB")),
+            )),
+            provider = "sourceB",
+            confidence = 0.8f,
+        )
+
+        // When
+        val result = SimilarTrackMerger.merge(listOf(sourceAResult, sourceBResult))
+
+        // Then — matchScore = min(0.9 + 0.8, 1.0) = 1.0, not 1.7 — additive agreement still applies
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.SimilarTracks
         assertEquals(1.0f, data.tracks[0].matchScore, 0.001f)
     }

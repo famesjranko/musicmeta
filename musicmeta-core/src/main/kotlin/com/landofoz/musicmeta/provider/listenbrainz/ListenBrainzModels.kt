@@ -33,13 +33,6 @@ internal data class ListenBrainzTopReleaseGroup(
     val listenCount: Long,
 )
 
-/** A similar artist from GET /1/explore/lb-radio/artist/{mbid}/similar. */
-internal data class ListenBrainzSimilarArtist(
-    val artistMbid: String,
-    val name: String,
-    val score: Float,
-)
-
 /** A track from the LB Radio JSPF playlist response. */
 internal data class ListenBrainzRadioTrack(
     val title: String,

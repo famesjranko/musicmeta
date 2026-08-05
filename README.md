@@ -35,7 +35,7 @@ A Kotlin library that gives Android and JVM music apps access to rich metadata, 
     profile.bio?.text            -> biography from Wikipedia
     profile.genres               -> [GenreTag("alternative rock", 0.70)]
     profile.discography          -> 9 studio albums
-    profile.similarArtists       -> merged from Last.fm + ListenBrainz + Deezer
+    profile.similarArtists       -> merged from Last.fm + Deezer
     ...
 ```
 
@@ -84,7 +84,7 @@ and the failure-isolation guarantees — see the [developer guides](docs/guides/
 | LRCLIB | Synced + plain lyrics | No |
 | Deezer | Artist photos, album art, discography, tracklists, album metadata, similar artists/tracks, artist radio, top tracks, similar albums, track previews | No |
 | iTunes | Album art, tracklists, discography, album metadata | No |
-| ListenBrainz | Popularity, listen counts, discography, similar artists, top tracks, radio discovery (optional token) | Optional |
+| ListenBrainz | Popularity, listen counts, discography, top tracks, radio discovery (optional token) | Optional |
 | Last.fm | Genres, similar artists/tracks, bios, popularity, album metadata | Yes |
 | Fanart.tv | Artist photos/backgrounds/logos/banners, CD art, album art | Yes |
 | Discogs | Labels, members, credits, editions, artwork, album metadata, community ratings | Yes |
@@ -119,7 +119,7 @@ val engine = EnrichmentEngine.Builder()
 | **Credits** | CREDITS | MusicBrainz (recording rels) + Discogs (extraartists) |
 | **Editions** | RELEASE_EDITIONS | MusicBrainz (release-group) + Discogs (master versions) |
 | **Text** | ARTIST_BIO, LYRICS_SYNCED, LYRICS_PLAIN | BIO (2) |
-| **Relationships** | SIMILAR_ARTISTS, SIMILAR_TRACKS, ARTIST_LINKS | SIMILAR_ARTISTS (3: Last.fm, ListenBrainz, Deezer), SIMILAR_TRACKS (2) |
+| **Relationships** | SIMILAR_ARTISTS, SIMILAR_TRACKS, ARTIST_LINKS | SIMILAR_ARTISTS (2: Last.fm, Deezer), SIMILAR_TRACKS (2) |
 | **Top Tracks** | ARTIST_TOP_TRACKS | Merged from 3 (Last.fm, ListenBrainz, Deezer) |
 | **Statistics** | ARTIST_POPULARITY, TRACK_POPULARITY | Both from 2 providers |
 | **Composite** | ARTIST_TIMELINE, GENRE_DISCOVERY | ARTIST_TIMELINE: discography + members + life-span; GENRE_DISCOVERY: static affinity taxonomy |

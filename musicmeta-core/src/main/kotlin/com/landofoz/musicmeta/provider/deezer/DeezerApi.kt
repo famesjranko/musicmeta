@@ -145,28 +145,10 @@ internal class DeezerApi(
                 previewUrl = track.optString("preview").takeIf { it.isNotBlank() },
                 durationSec = track.optInt("duration").takeIf { it > 0 },
                 albumTitle = track.optJSONObject("album")?.optString("title")?.takeIf { it.isNotBlank() },
+                artistId = trackArtist?.optLong("id")?.takeIf { it != 0L },
             )
         }
         return null
-    }
-
-    suspend fun getTrackRadio(trackId: Long, limit: Int = 25): List<DeezerRadioTrack> {
-        val url = "$BASE_URL/track/$trackId/radio?limit=$limit"
-        val json = fetchJson(url) ?: return emptyList()
-
-        val data = json.optJSONArray("data") ?: return emptyList()
-        return (0 until data.length()).map { i ->
-            val track = data.getJSONObject(i)
-            val trackArtist = track.optJSONObject("artist")
-            val album = track.optJSONObject("album")
-            DeezerRadioTrack(
-                id = track.optLong("id"),
-                title = track.optString("title", ""),
-                artistName = trackArtist?.optString("name", "").orEmpty(),
-                albumTitle = album?.optString("title")?.takeIf { it.isNotBlank() },
-                durationSec = track.optInt("duration", 0),
-            )
-        }
     }
 
     suspend fun getArtistTop(artistId: Long, limit: Int = 10): List<DeezerTopTrack> {

@@ -95,20 +95,19 @@ internal object DeezerMapper {
         )
     }
 
-    fun toSimilarTracks(tracks: List<DeezerRadioTrack>): EnrichmentData.SimilarTracks {
-        val count = tracks.size.coerceAtLeast(1)
-        return EnrichmentData.SimilarTracks(
-            tracks = tracks.mapIndexed { index, track ->
-                SimilarTrack(
-                    title = track.title,
-                    artist = track.artistName,
-                    matchScore = 1.0f - (index.toFloat() / count) * 0.9f,
-                    identifiers = EnrichmentIdentifiers().withExtra("deezerId", track.id.toString()),
-                    sources = listOf("deezer"),
-                )
-            },
-        )
-    }
+    /**
+     * Builds a `SIMILAR_TRACKS` entry from one of a related artist's top tracks. [score] is the
+     * *artist's* similarity rank, not a track-level signal — Deezer has none. See
+     * [SimilarTrack.matchScore] KDoc for what that means for a consumer comparing this against a
+     * Last.fm entry.
+     */
+    fun toSimilarTrack(track: DeezerTopTrack, score: Float): SimilarTrack = SimilarTrack(
+        title = track.title,
+        artist = track.artistName,
+        matchScore = score,
+        identifiers = EnrichmentIdentifiers().withExtra("deezerId", track.id.toString()),
+        sources = listOf("deezer"),
+    )
 
     fun toSearchCandidate(
         result: DeezerAlbumResult,
