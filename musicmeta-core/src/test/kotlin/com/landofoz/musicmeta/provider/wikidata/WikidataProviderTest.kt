@@ -31,7 +31,9 @@ class WikidataProviderTest {
         val wikidataId = "Q44802"
         httpClient.givenJsonResponse(
             "wikidata.org",
-            """{"claims":{"P18":[{"mainsnak":{"datavalue":{"value":"Radiohead 2016.jpg","type":"string"}}}]}}""",
+            """{"entities":{"$wikidataId":{"claims":
+                {"P18":[{"mainsnak":{"datavalue":{"value":"Radiohead 2016.jpg","type":"string"}}}]}
+            }}}""",
         )
 
         val request = EnrichmentRequest.ForArtist(
@@ -73,7 +75,7 @@ class WikidataProviderTest {
     fun `enrich returns NotFound when P18 property missing`() = runTest {
         // Given
         val wikidataId = "Q99999"
-        httpClient.givenJsonResponse("wikidata.org", """{"claims":{}}""")
+        httpClient.givenJsonResponse("wikidata.org", """{"entities":{"$wikidataId":{"claims":{}}}}""")
 
         val request = EnrichmentRequest.ForArtist(
             identifiers = EnrichmentIdentifiers(wikidataId = wikidataId),
@@ -93,7 +95,9 @@ class WikidataProviderTest {
         val wikidataId = "Q12345"
         httpClient.givenJsonResponse(
             "wikidata.org",
-            """{"claims":{"P18":[{"mainsnak":{"datavalue":{"value":"Logo.svg","type":"string"}}}]}}""",
+            """{"entities":{"$wikidataId":{"claims":
+                {"P18":[{"mainsnak":{"datavalue":{"value":"Logo.svg","type":"string"}}}]}
+            }}}""",
         )
 
         val request = EnrichmentRequest.ForArtist(
@@ -118,10 +122,10 @@ class WikidataProviderTest {
         // Given - P18 has two claims: normal rank first, preferred rank second
         httpClient.givenJsonResponse(
             "wikidata.org",
-            """{"claims":{"P18":[
+            """{"entities":{"Q44802":{"claims":{"P18":[
                 {"rank":"normal","mainsnak":{"datavalue":{"value":"Old_photo.jpg","type":"string"}}},
                 {"rank":"preferred","mainsnak":{"datavalue":{"value":"New_photo.jpg","type":"string"}}}
-            ]}}""",
+            ]}}}}""",
         )
 
         val request = EnrichmentRequest.ForArtist(
@@ -146,10 +150,10 @@ class WikidataProviderTest {
         // Given - P18 has two claims both with normal rank
         httpClient.givenJsonResponse(
             "wikidata.org",
-            """{"claims":{"P18":[
+            """{"entities":{"Q44802":{"claims":{"P18":[
                 {"rank":"normal","mainsnak":{"datavalue":{"value":"First.jpg","type":"string"}}},
                 {"rank":"normal","mainsnak":{"datavalue":{"value":"Second.jpg","type":"string"}}}
-            ]}}""",
+            ]}}}}""",
         )
 
         val request = EnrichmentRequest.ForArtist(
@@ -174,9 +178,9 @@ class WikidataProviderTest {
         // Given - P18 has a single claim with no "rank" key
         httpClient.givenJsonResponse(
             "wikidata.org",
-            """{"claims":{"P18":[
+            """{"entities":{"Q44802":{"claims":{"P18":[
                 {"mainsnak":{"datavalue":{"value":"Only_photo.jpg","type":"string"}}}
-            ]}}""",
+            ]}}}}""",
         )
 
         val request = EnrichmentRequest.ForArtist(
@@ -198,9 +202,14 @@ class WikidataProviderTest {
 
     @Test
     fun `enrich returns NotFound when claims object is missing entirely`() = runTest {
-        // Given — Wikidata API returns JSON without a "claims" key
+        // Given — Wikidata's real "missing entity" shape: entities.<id> present, no claims key
+        // (confirmed live: wbgetentities?ids=Q999999999&props=claims -> {"entities":{"Q999999999":
+        // {"id":"Q999999999","missing":""}},"success":1})
         val wikidataId = "Q99998"
-        httpClient.givenJsonResponse("wikidata.org", """{"entity":"$wikidataId"}""")
+        httpClient.givenJsonResponse(
+            "wikidata.org",
+            """{"entities":{"$wikidataId":{"id":"$wikidataId","missing":""}},"success":1}""",
+        )
 
         val request = EnrichmentRequest.ForArtist(
             identifiers = EnrichmentIdentifiers(wikidataId = wikidataId),
@@ -210,15 +219,92 @@ class WikidataProviderTest {
         // When — enriching for artist photo
         val result = provider.enrich(request, EnrichmentType.ARTIST_PHOTO)
 
-        // Then — NotFound because extractImageFilename returns null when claims is absent
+        // Then — NotFound because a missing entity has no "claims" key
         assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `enrich returns NotFound when Wikidata answers HTTP 200 with an error body`() = runTest {
+        // Given — Wikidata's real error shape for a bad/no-such-entity id, still HTTP 200
+        // (confirmed live: wbgetentities?ids=notanid&props=claims -> {"error":{"code":
+        // "no-such-entity",...}} with no "entities" key at all)
+        val wikidataId = "Qbad"
+        httpClient.givenJsonResponse(
+            "wikidata.org",
+            """{"error":{"code":"no-such-entity","info":"Could not find an entity with the ID \"$wikidataId\"."}}""",
+        )
+
+        val request = EnrichmentRequest.ForArtist(
+            identifiers = EnrichmentIdentifiers(wikidataId = wikidataId),
+            name = "Unknown Artist",
+        )
+
+        // When — enriching for artist photo
+        val result = provider.enrich(request, EnrichmentType.ARTIST_PHOTO)
+
+        // Then — NotFound, not a crash and not a permanent failure mistaken for one: there is no
+        // "entities" key to read claims from, so the lookup chain falls through to null. This is
+        // the regression this ticket guards against — the old wbgetclaims call hit this exact
+        // shape (param-invalid) on every single call, forever.
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `getEntityProperties sends the exact wbgetentities URL contract`() = runTest {
+        // Given
+        val wikidataId = "Q44802"
+        httpClient.givenJsonResponse(
+            "wikidata.org",
+            """{"entities":{"$wikidataId":{"claims":
+                {"P18":[{"mainsnak":{"datavalue":{"value":"Photo.jpg","type":"string"}}}]}
+            }}}""",
+        )
+        val request = EnrichmentRequest.ForArtist(
+            identifiers = EnrichmentIdentifiers(wikidataId = wikidataId),
+            name = "Radiohead",
+        )
+
+        // When
+        provider.enrich(request, EnrichmentType.ARTIST_PHOTO)
+
+        // Then — pins action=wbgetentities, ids=<id>, props=claims, format=json: the exact contract
+        // Wikidata's `paraminfo` module accepts. wbgetclaims's `property` param is not multi-valued
+        // and rejects a pipe-delimited list with param-invalid at HTTP 200 — this is what regressed.
+        assertEquals(
+            "https://www.wikidata.org/w/api.php?action=wbgetentities&ids=$wikidataId&props=claims&format=json",
+            httpClient.requestedUrls.single(),
+        )
+    }
+
+    @Test
+    fun `getEntityProperties parses claims nested under entities id claims`() = runTest {
+        // Given — the wbgetentities response shape: claims live at entities.<id>.claims, not
+        // top-level "claims" the way wbgetclaims used to return them.
+        httpClient.givenJsonResponse(
+            "wikidata.org",
+            """{"entities":{"Q7259":{"type":"item","id":"Q7259","claims":{
+                "P569":[{"mainsnak":{"datavalue":{"value":{"time":"+1912-06-23T00:00:00Z"},"type":"time"}}}]
+            }}}}""",
+        )
+        val request = EnrichmentRequest.ForArtist(
+            identifiers = EnrichmentIdentifiers(wikidataId = "Q7259"),
+            name = "Alan Turing",
+        )
+
+        // When
+        val result = provider.enrich(request, EnrichmentType.COUNTRY)
+
+        // Then
+        assertTrue(result is EnrichmentResult.Success)
+        val metadata = (result as EnrichmentResult.Success).data as EnrichmentData.Metadata
+        assertEquals("1912-06-23", metadata.beginDate)
     }
 
     @Test
     fun `enrich returns NotFound when P18 array is empty`() = runTest {
         // Given — Wikidata API returns claims with an empty P18 array
         val wikidataId = "Q99997"
-        httpClient.givenJsonResponse("wikidata.org", """{"claims":{"P18":[]}}""")
+        httpClient.givenJsonResponse("wikidata.org", """{"entities":{"$wikidataId":{"claims":{"P18":[]}}}}""")
 
         val request = EnrichmentRequest.ForArtist(
             identifiers = EnrichmentIdentifiers(wikidataId = wikidataId),
@@ -236,12 +322,14 @@ class WikidataProviderTest {
     fun `enrich returns Metadata with birth and death dates from Wikidata properties`() = runTest {
         // Given — Wikidata has P569 (birth), P570 (death), P495 (country Q30=US)
         httpClient.givenJsonResponse("wikidata.org", """{
-            "claims": {
-                "P569": [{"mainsnak":{"datavalue":{"value":{"time":"+1968-10-07T00:00:00Z"},"type":"time"}}}],
-                "P570": [{"mainsnak":{"datavalue":{"value":{"time":"+2045-01-01T00:00:00Z"},"type":"time"}}}],
-                "P495": [{"mainsnak":{"datavalue":{"value":{"id":"Q30"},"type":"wikibase-entityid"}}}],
-                "P106": [{"mainsnak":{"datavalue":{"value":{"id":"Q177220"},"type":"wikibase-entityid"}}}]
-            }
+            "entities": {"Q12345": {
+                "claims": {
+                    "P569": [{"mainsnak":{"datavalue":{"value":{"time":"+1968-10-07T00:00:00Z"},"type":"time"}}}],
+                    "P570": [{"mainsnak":{"datavalue":{"value":{"time":"+2045-01-01T00:00:00Z"},"type":"time"}}}],
+                    "P495": [{"mainsnak":{"datavalue":{"value":{"id":"Q30"},"type":"wikibase-entityid"}}}],
+                    "P106": [{"mainsnak":{"datavalue":{"value":{"id":"Q177220"},"type":"wikibase-entityid"}}}]
+                }
+            }}
         }""")
 
         val request = EnrichmentRequest.ForArtist(
@@ -264,7 +352,7 @@ class WikidataProviderTest {
     @Test
     fun `enrich returns NotFound for COUNTRY when no properties present`() = runTest {
         // Given — Wikidata returns claims with no relevant properties
-        httpClient.givenJsonResponse("wikidata.org", """{"claims":{}}""")
+        httpClient.givenJsonResponse("wikidata.org", """{"entities":{"Q99996":{"claims":{}}}}""")
 
         val request = EnrichmentRequest.ForArtist(
             identifiers = EnrichmentIdentifiers(wikidataId = "Q99996"),
