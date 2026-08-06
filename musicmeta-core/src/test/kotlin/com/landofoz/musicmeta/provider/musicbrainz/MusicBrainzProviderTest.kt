@@ -196,6 +196,25 @@ class MusicBrainzProviderTest {
     }
 
     @Test
+    fun `enrich track fills musicBrainzReleaseGroupId from the ranked recording's Official Album`() =
+        runTest {
+            // Given — the ranked recording (rec-studio) carries an Official Album release-group id
+            httpClient.givenJsonResponse("recording?query", ENTER_SANDMAN_RANK_POOL_WITH_GROUP_ID)
+            val request = EnrichmentRequest.forTrack("Enter Sandman", "Metallica")
+
+            // When — enriching for genre (drives identity resolution through enrichTrack)
+            val result = provider.enrich(request, EnrichmentType.GENRE)
+
+            // Then — resolvedIdentifiers carries the recording id AND the release-group id, so CAA
+            // can serve front-cover art for the track without ever treating the recording id as a
+            // release id (CoverArtArchiveProvider)
+            assertTrue(result is EnrichmentResult.Success)
+            val success = result as EnrichmentResult.Success
+            assertEquals("rec-studio", success.resolvedIdentifiers?.musicBrainzId)
+            assertEquals("rg-studio", success.resolvedIdentifiers?.musicBrainzReleaseGroupId)
+        }
+
+    @Test
     fun `enrich track still rejects a pool with no candidate at or above the score threshold`() = runTest {
         // Given — every candidate scores below the default minimum match score (80)
         httpClient.givenJsonResponse(
@@ -880,6 +899,27 @@ class MusicBrainzProviderTest {
                 },
                 {
                   "id": "rec-cover-ulrich", "score": 100, "title": "Enter Sandman (Ulrich)"
+                }
+              ]
+            }
+        """.trimIndent()
+
+        /**
+         * Single-candidate variant of [ENTER_SANDMAN_RANK_POOL]: the winning recording's Official
+         * Album release carries a release-group id, pinning that
+         * [MusicBrainzMapper.toTrackIdentifiers] fills `musicBrainzReleaseGroupId` from it.
+         */
+        private val ENTER_SANDMAN_RANK_POOL_WITH_GROUP_ID = """
+            {
+              "recordings": [
+                {
+                  "id": "rec-studio", "score": 100, "title": "Enter Sandman",
+                  "releases": [
+                    {
+                      "status": "Official",
+                      "release-group": {"id": "rg-studio", "primary-type": "Album"}
+                    }
+                  ]
                 }
               ]
             }

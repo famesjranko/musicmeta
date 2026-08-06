@@ -91,25 +91,28 @@ internal object MusicBrainzParser {
             tagCounts = tagCounts,
             score = obj.optInt("score", 0),
             disambiguation = obj.optString("disambiguation").takeIf { it.isNotBlank() },
-            hasOfficialAlbumRelease = extractHasOfficialAlbumRelease(obj),
+            hasOfficialAlbumRelease = findOfficialAlbumReleaseGroup(obj) != null,
+            officialAlbumReleaseGroupId = findOfficialAlbumReleaseGroup(obj)
+                ?.optString("id")?.takeIf { it.isNotBlank() },
         )
     }
 
     /**
-     * True when a recording search hit's `releases` array (MB embeds a handful per recording)
-     * contains an Official release whose release-group primary-type is Album. Used to prefer the
-     * studio album cut over a single/compilation/non-official recording when ranking a search
-     * pool, entirely from what the recording search response already carries.
+     * The release-group object of a recording search hit's first Official release whose
+     * release-group primary-type is Album (MB embeds a handful of `releases` per recording hit).
+     * Backs both [MusicBrainzRecording.hasOfficialAlbumRelease] (studio-take ranking) and
+     * [MusicBrainzRecording.officialAlbumReleaseGroupId] (CAA release-group art for tracks) from
+     * the same scan, entirely from what the recording search response already carries.
      */
-    private fun extractHasOfficialAlbumRelease(recording: JSONObject): Boolean {
-        val releases = recording.optJSONArray("releases") ?: return false
+    private fun findOfficialAlbumReleaseGroup(recording: JSONObject): JSONObject? {
+        val releases = recording.optJSONArray("releases") ?: return null
         for (i in 0 until releases.length()) {
             val release = releases.getJSONObject(i)
             if (release.optString("status") != "Official") continue
-            val primaryType = release.optJSONObject("release-group")?.optString("primary-type")
-            if (primaryType == "Album") return true
+            val group = release.optJSONObject("release-group") ?: continue
+            if (group.optString("primary-type") == "Album") return group
         }
-        return false
+        return null
     }
 
     /** Parse band members from artist-rels in an artist lookup response.

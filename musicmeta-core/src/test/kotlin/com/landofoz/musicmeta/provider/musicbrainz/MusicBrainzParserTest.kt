@@ -6,6 +6,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -141,6 +142,58 @@ class MusicBrainzParserTest {
         assertEquals("Paranoid Android", recordings[0].title)
         assertEquals(listOf("GBAYE9700100"), recordings[0].isrcs)
         assertEquals(95, recordings[0].score)
+    }
+
+    @Test
+    fun `parseRecording fills officialAlbumReleaseGroupId from the Official Album release`() {
+        // Given — a recording hit carrying an Official release on an Album release-group with an id
+        val json = JSONObject(
+            """
+            {
+              "recordings": [{
+                "id": "rec-studio",
+                "score": 100,
+                "title": "Enter Sandman",
+                "releases": [
+                  {"status": "Official", "release-group": {"id": "rg-studio", "primary-type": "Album"}}
+                ]
+              }]
+            }
+            """.trimIndent(),
+        )
+
+        // When — parsing recordings
+        val recordings = MusicBrainzParser.parseRecordings(json)
+
+        // Then — both the boolean and the id are filled from the same scan
+        assertTrue(recordings[0].hasOfficialAlbumRelease)
+        assertEquals("rg-studio", recordings[0].officialAlbumReleaseGroupId)
+    }
+
+    @Test
+    fun `parseRecording leaves officialAlbumReleaseGroupId null when no Official Album release`() {
+        // Given — a recording hit with only a live release, no Official Album
+        val json = JSONObject(
+            """
+            {
+              "recordings": [{
+                "id": "rec-live",
+                "score": 100,
+                "title": "Enter Sandman",
+                "releases": [
+                  {"status": "Bootleg", "release-group": {"id": "rg-live", "primary-type": "Album"}}
+                ]
+              }]
+            }
+            """.trimIndent(),
+        )
+
+        // When — parsing recordings
+        val recordings = MusicBrainzParser.parseRecordings(json)
+
+        // Then — neither signal fires
+        assertFalse(recordings[0].hasOfficialAlbumRelease)
+        assertNull(recordings[0].officialAlbumReleaseGroupId)
     }
 
     @Test

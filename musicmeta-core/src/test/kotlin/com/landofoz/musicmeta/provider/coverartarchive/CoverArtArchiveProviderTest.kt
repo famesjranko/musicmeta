@@ -444,6 +444,101 @@ class CoverArtArchiveProviderTest {
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
+    // --- ForTrack requests: musicBrainzId is a recording MBID, never a release MBID ---
+
+    @Test
+    fun `enrich serves ALBUM_ART via release-group for a track with an Official Album group`() = runTest {
+        // Given — a track request whose identifiers carry a recording MBID (musicBrainzId) and the
+        // release-group id MusicBrainzMapper.toTrackIdentifiers fills from the Official Album release
+        httpClient.givenJsonResponse(
+            "release-group/rg-studio/front-1200",
+            "https://archive.org/image/rg-studio-1200.jpg",
+        )
+        httpClient.givenJsonResponse(
+            "release-group/rg-studio/front-250",
+            "https://archive.org/image/rg-studio-250.jpg",
+        )
+        val request = EnrichmentRequest.ForTrack(
+            identifiers = EnrichmentIdentifiers(
+                musicBrainzId = "rec-studio",
+                musicBrainzReleaseGroupId = "rg-studio",
+            ),
+            title = "Enter Sandman",
+            artist = "Metallica",
+        )
+
+        // When — enriching for album art
+        val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
+
+        // Then — succeeds from the release-group endpoint, and the recording MBID is never sent to
+        // the release endpoint (the only "release/" URL requested would 404 on a recording id)
+        assertTrue("Expected Success but got $result", result is EnrichmentResult.Success)
+        val artwork = (result as EnrichmentResult.Success).data as EnrichmentData.Artwork
+        assertEquals("https://archive.org/image/rg-studio-1200.jpg", artwork.url)
+        assertTrue(httpClient.requestedUrls.none { it.contains("release/rec-studio") })
+    }
+
+    @Test
+    fun `enrich returns NotFound for track ALBUM_ART with no release-group id, no HTTP call`() = runTest {
+        // Given — a track request with only the recording MBID, no Official Album release-group
+        val request = EnrichmentRequest.ForTrack(
+            identifiers = EnrichmentIdentifiers(musicBrainzId = "rec-solo"),
+            title = "Solo Track",
+            artist = "Nobody",
+        )
+
+        // When — enriching for album art
+        val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
+
+        // Then — NotFound, and the doomed release-endpoint call (recording id as release id) never
+        // happens: it would burn a throttled request and always 404
+        assertTrue(result is EnrichmentResult.NotFound)
+        assertTrue(httpClient.requestedUrls.isEmpty())
+    }
+
+    @Test
+    fun `enrich returns NotFound for track ALBUM_ART_BACK without a doomed HTTP call`() = runTest {
+        // Given — a track request; ALBUM_ART_BACK is release-level with no release-group equivalent
+        val request = EnrichmentRequest.ForTrack(
+            identifiers = EnrichmentIdentifiers(
+                musicBrainzId = "rec-studio",
+                musicBrainzReleaseGroupId = "rg-studio",
+            ),
+            title = "Enter Sandman",
+            artist = "Metallica",
+        )
+
+        // When — enriching for back cover art
+        val result = provider.enrich(request, EnrichmentType.ALBUM_ART_BACK)
+
+        // Then — NotFound with zero HTTP calls, not a 404 from treating the recording id as a
+        // release id
+        assertTrue(result is EnrichmentResult.NotFound)
+        assertTrue(httpClient.requestedUrls.isEmpty())
+    }
+
+    @Test
+    fun `enrich returns NotFound for track ALBUM_BOOKLET and CD_ART without a doomed HTTP call`() = runTest {
+        // Given — a track request with both a recording MBID and a release-group id
+        val request = EnrichmentRequest.ForTrack(
+            identifiers = EnrichmentIdentifiers(
+                musicBrainzId = "rec-studio",
+                musicBrainzReleaseGroupId = "rg-studio",
+            ),
+            title = "Enter Sandman",
+            artist = "Metallica",
+        )
+
+        // When — enriching for booklet and CD art
+        val booklet = provider.enrich(request, EnrichmentType.ALBUM_BOOKLET)
+        val cdArt = provider.enrich(request, EnrichmentType.CD_ART)
+
+        // Then — both cleanly NotFound, no HTTP call for either
+        assertTrue(booklet is EnrichmentResult.NotFound)
+        assertTrue(cdArt is EnrichmentResult.NotFound)
+        assertTrue(httpClient.requestedUrls.isEmpty())
+    }
+
     @Test
     fun `enrich returns Error with NETWORK ErrorKind when metadata endpoint throws IOException`() = runTest {
         // Given — metadata endpoint throws IOException (network failure)
