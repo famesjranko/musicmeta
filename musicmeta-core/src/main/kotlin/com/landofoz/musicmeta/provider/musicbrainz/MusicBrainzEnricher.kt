@@ -236,7 +236,7 @@ internal class MusicBrainzEnricher(
         val recordings = api.searchRecordings(request.title, request.artist, request.album)
         if (recordings.isEmpty()) return EnrichmentResult.NotFound(type, providerId)
 
-        val best = pickBestRecording(request.title, recordings)
+        val best = pickBestRecording(request.title, recordings, request.album)
             ?: return EnrichmentResult.NotFound(type, providerId)
 
         val data = if (type == EnrichmentType.TRACK_METADATA) {
@@ -317,8 +317,7 @@ internal class MusicBrainzEnricher(
     /**
      * Rank the recording pool above [minMatchScore] instead of taking `firstOrNull` — MB search
      * ties score-100 hits and puts demo/live/bootleg/cover takes ahead of the studio original
-     * (`docs/pitfalls.md` §7). Score stays the floor: everything below [minMatchScore] is out
-     * before ranking starts. Among survivors, highest tier first, keeping pool order among ties
+     * (`docs/pitfalls.md` §7). Among survivors, highest tier first, keeping pool order among ties
      * (`maxWithOrNull` keeps the first maximum, same convention as [pickBestArtist]'s sibling in
      * `DeezerApi.rankTracks`):
      *
@@ -326,7 +325,17 @@ internal class MusicBrainzEnricher(
      *    cover/karaoke recording titled e.g. "Enter Sandman (Ulrich)" carries no disambiguation at
      *    all and would still beat the studio original on tiers 2/3 alone, so title has to be
      *    checked first, same tier order as `DeezerApi.rankTracks`'s tier 1
-     * 2. blank [MusicBrainzRecording.disambiguation] — a canonical recording carries none; ANY
+     * 2. [albumTitle] present and matches (via [MusicBrainzRecording.artReleaseGroupTitle], already
+     *    tier-0-preferring an exact album match — see `MusicBrainzParser.findArtReleaseGroup`) — an
+     *    explicit album request is the strongest available signal, so it outranks both the
+     *    disambiguation and video checks below. No-op (constant `false` for every candidate) when
+     *    [albumTitle] is null, so an album-less request falls straight through to tier 3.
+     * 3. not [MusicBrainzRecording.isVideo] — MB's own structural flag for a music-video take, not
+     *    a keyword match on disambiguation text (`docs/pitfalls.md` §7's rejected pattern):
+     *    verified live, Radiohead's "Karma Police" music-video recording is the *only* exact-title,
+     *    score-100 hit for an album-hinted "OK Computer" search, so it would otherwise win tier 1
+     *    outright with nothing to lose to.
+     * 4. blank [MusicBrainzRecording.disambiguation] — a canonical recording carries none; ANY
      *    disambiguation marks a variant. MB's disambiguation vocabulary is open (demo, live,
      *    "bootleg edited version", instrumental, acoustic, radio edit, mono/stereo, single
      *    version, …) and cannot be enumerated by keyword — verified live: "bootleg edited version"
@@ -335,26 +344,51 @@ internal class MusicBrainzEnricher(
      *    edge: a request that explicitly asks for a variant edition (title itself names it) still
      *    resolves via tier 1's exact-title match, because MB puts variant information in
      *    disambiguation, not in the recording title — blank-preference never fights an exact title.
-     * 3. carries an Official release on an Album release-group
+     * 5. carries an Official release on an Album release-group
      *    ([MusicBrainzRecording.hasOfficialAlbumRelease]) — prefers the studio album cut over a
      *    single/compilation-only recording when neither carries a disambiguation
+     *
+     * The score floor itself is relaxed for a candidate whose [albumTitle] matches: verified live,
+     * Radiohead's actual studio "Karma Police" recording (the one the "OK Computer" release itself
+     * carries) scores only 77 under MB's own relevance ranking — well below the default 80 — while
+     * the wrong (music-video) exact-title candidate scores 100. An explicit, request-supplied album
+     * match is independent evidence of correctness that MB's fuzzy text-relevance score doesn't
+     * capture, so it is allowed to override the floor rather than leaving the correct candidate
+     * filtered out before ranking ever sees it.
      */
-    private fun pickBestRecording(title: String, recordings: List<MusicBrainzRecording>): MusicBrainzRecording? =
-        recordings.filter { it.score >= minMatchScore }
-            .map { it to it.recordingRank(title) }
+    private fun pickBestRecording(
+        title: String,
+        recordings: List<MusicBrainzRecording>,
+        albumTitle: String? = null,
+    ): MusicBrainzRecording? {
+        val album = albumTitle?.trim()?.takeIf { it.isNotBlank() }
+        return recordings
+            .filter { it.score >= minMatchScore || (album != null && it.matchesAlbum(album)) }
+            .map { it to it.recordingRank(title, album) }
             .maxWithOrNull(
-                compareBy({ it.second.exactTitle }, { it.second.blankDisambiguation }, { it.second.officialAlbum }),
+                compareBy(
+                    { it.second.exactTitle }, { it.second.albumMatch }, { it.second.notVideo },
+                    { it.second.blankDisambiguation }, { it.second.officialAlbum },
+                ),
             )
             ?.first
+    }
 
-    private fun MusicBrainzRecording.recordingRank(title: String) = RecordingRank(
+    private fun MusicBrainzRecording.matchesAlbum(album: String): Boolean =
+        artReleaseGroupTitle?.trim()?.equals(album, ignoreCase = true) == true
+
+    private fun MusicBrainzRecording.recordingRank(title: String, album: String?) = RecordingRank(
         exactTitle = this.title.trim().equals(title.trim(), ignoreCase = true),
+        albumMatch = album != null && matchesAlbum(album),
+        notVideo = !isVideo,
         blankDisambiguation = disambiguation.isNullOrBlank(),
         officialAlbum = hasOfficialAlbumRelease,
     )
 
     private data class RecordingRank(
         val exactTitle: Boolean,
+        val albumMatch: Boolean,
+        val notVideo: Boolean,
         val blankDisambiguation: Boolean,
         val officialAlbum: Boolean,
     )
