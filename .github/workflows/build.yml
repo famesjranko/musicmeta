@@ -1,9 +1,8 @@
 name: Build
 
 on:
+  # No base filter: stacked PRs (based on another PR's branch) must get CI too.
   pull_request:
-    branches:
-      - main
   push:
     branches:
       - main

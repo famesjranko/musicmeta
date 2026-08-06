@@ -64,7 +64,7 @@ internal class MusicBrainzEnricher(
      * `needsRelations` lookup.
      */
     private val releaseGroupWikiCache = LinkedHashMap<String, Pair<String?, String?>>(
-        RELEASE_CACHE_MAX_ENTRIES, 0.75f, true,
+        RELEASE_GROUP_WIKI_CACHE_MAX_ENTRIES, 0.75f, true,
     )
     private val releaseGroupWikiMutex = Mutex()
 
@@ -72,7 +72,7 @@ internal class MusicBrainzEnricher(
         releaseGroupWikiMutex.withLock {
             releaseGroupWikiCache[releaseGroupMbid]?.let { return@withLock it }
             api.lookupReleaseGroupWikiLinks(releaseGroupMbid)
-                .also { releaseGroupWikiCache.putCapped(releaseGroupMbid, it, RELEASE_CACHE_MAX_ENTRIES) }
+                .also { releaseGroupWikiCache.putCapped(releaseGroupMbid, it, RELEASE_GROUP_WIKI_CACHE_MAX_ENTRIES) }
         }
 
     /** Lookup artist with rels (superset), caching to avoid redundant calls.
@@ -471,6 +471,9 @@ internal class MusicBrainzEnricher(
 
         /** Cap on [releaseCache]. Same default, counted separately — an album run fills both. */
         internal const val RELEASE_CACHE_MAX_ENTRIES = 500
+
+        /** Cap on [releaseGroupWikiCache]. Same default; keyed by release-group MBID, not release. */
+        internal const val RELEASE_GROUP_WIKI_CACHE_MAX_ENTRIES = 500
 
         /** New artist types routed through enrichArtistNewType(). */
         private val ARTIST_NEW_TYPES = setOf(
