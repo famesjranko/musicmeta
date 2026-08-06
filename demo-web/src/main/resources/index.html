@@ -147,7 +147,13 @@
   .preview-btn:hover { background: var(--accent); color: #0f1115; }
   .preview-btn.playing { background: var(--ok); color: #0f1115; }
   .preview-btn.loading { opacity: 0.6; }
+  .preview-btn.error { color: var(--err); }
+  .preview-btn .spinner {
+    width: 10px; height: 10px; border-width: 1.5px; margin: 0;
+    border-color: rgba(230, 232, 236, 0.35); border-top-color: var(--text);
+  }
   .summary .preview-btn { width: 30px; height: 30px; font-size: 0.8rem; }
+  .summary .preview-btn .spinner { width: 14px; height: 14px; }
 
   details.meta-panel { margin-top: 0.1rem; }
   details.meta-panel summary {
@@ -444,12 +450,25 @@ resultEl.addEventListener('click', (e) => {
 
 const audio = new Audio();
 let activeBtn = null;
+const PLAY_GLYPH = '&#9654;';
+const PLAY_TITLE = 'Play 30s preview';
 
 audio.addEventListener('ended', stopPreview);
 
+// Clears loading/playing/error and any pending error-revert timer, restoring the glyph. Keyed on
+// the button element itself (not the shared activeBtn/errorTimer bookkeeping) so resetting one
+// button never disturbs a different button's independent error-revert countdown.
+function resetBtn(btn) {
+  clearTimeout(btn._errorTimer);
+  btn._errorTimer = null;
+  btn.classList.remove('playing', 'loading', 'error');
+  btn.innerHTML = PLAY_GLYPH;
+  btn.title = PLAY_TITLE;
+}
+
 function stopPreview() {
   audio.pause();
-  if (activeBtn) activeBtn.classList.remove('playing', 'loading');
+  if (activeBtn) resetBtn(activeBtn);
   activeBtn = null;
 }
 
@@ -461,9 +480,11 @@ resultEl.addEventListener('click', async (e) => {
     stopPreview();
     return;
   }
+  resetBtn(btn); // this button may still be mid error-revert from an earlier attempt
   stopPreview();
   activeBtn = btn;
   btn.classList.add('loading');
+  btn.innerHTML = '<span class="spinner"></span>';
 
   const params = new URLSearchParams({
     title: btn.dataset.title,
@@ -478,13 +499,21 @@ resultEl.addEventListener('click', async (e) => {
     audio.src = data.url;
     await audio.play();
     btn.classList.remove('loading');
+    btn.innerHTML = PLAY_GLYPH;
     btn.classList.add('playing');
   } catch (err) {
-    if (btn === activeBtn) {
-      btn.classList.remove('loading');
-      btn.title = 'No preview available';
-      activeBtn = null;
-    }
+    if (btn !== activeBtn) return; // superseded before the failure arrived; already reset
+    activeBtn = null;
+    btn.classList.remove('loading');
+    btn.classList.add('error');
+    btn.innerHTML = '!';
+    btn.title = 'No preview available: ' + err.message;
+    btn._errorTimer = setTimeout(() => {
+      btn.classList.remove('error');
+      btn.innerHTML = PLAY_GLYPH;
+      btn.title = PLAY_TITLE;
+      btn._errorTimer = null;
+    }, 2000);
   }
 });
 </script>
