@@ -12,8 +12,7 @@ import com.landofoz.musicmeta.http.RateLimiter
 
 /**
  * Last.fm enrichment provider. Supplies similar artists, genre tags,
- * artist bios, and popularity data. Requires a Last.fm API key.
- * Only handles artist-level requests.
+ * artist bios, album descriptions, and popularity data. Requires a Last.fm API key.
  */
 class LastFmProvider(
     private val apiKeyProvider: () -> String,
@@ -40,6 +39,9 @@ class LastFmProvider(
         ProviderCapability(EnrichmentType.SIMILAR_TRACKS, priority = 100),
         ProviderCapability(EnrichmentType.TRACK_POPULARITY, priority = 100),
         ProviderCapability(EnrichmentType.ALBUM_METADATA, priority = 40),
+        // Below Wikipedia's keyless ALBUM_DESCRIPTION (priority 100): same priority relationship
+        // ARTIST_BIO has to Wikipedia's.
+        ProviderCapability(EnrichmentType.ALBUM_DESCRIPTION, priority = 50),
     )
 
     override suspend fun enrich(
@@ -48,12 +50,16 @@ class LastFmProvider(
     ): EnrichmentResult {
         if (!isAvailable) return EnrichmentResult.NotFound(type, id)
 
-        // ALBUM_METADATA requires a ForAlbum request
-        if (type == EnrichmentType.ALBUM_METADATA) {
+        // ALBUM_METADATA and ALBUM_DESCRIPTION require a ForAlbum request
+        if (type == EnrichmentType.ALBUM_METADATA || type == EnrichmentType.ALBUM_DESCRIPTION) {
             val albumRequest = request as? EnrichmentRequest.ForAlbum
                 ?: return EnrichmentResult.NotFound(type, id)
             return try {
-                enrichAlbumMetadata(albumRequest, type)
+                if (type == EnrichmentType.ALBUM_METADATA) {
+                    enrichAlbumMetadata(albumRequest, type)
+                } else {
+                    enrichAlbumDescription(albumRequest, type)
+                }
             } catch (e: Exception) {
                 mapError(type, e)
             }
@@ -166,6 +172,16 @@ class LastFmProvider(
             return EnrichmentResult.NotFound(type, id)
         }
         return success(metadata, type)
+    }
+
+    private suspend fun enrichAlbumDescription(
+        request: EnrichmentRequest.ForAlbum,
+        type: EnrichmentType,
+    ): EnrichmentResult {
+        val info = api.getAlbumInfo(request.title, request.artist)
+            ?: return EnrichmentResult.NotFound(type, id)
+        val wiki = info.wiki ?: return EnrichmentResult.NotFound(type, id)
+        return success(LastFmMapper.toAlbumDescription(wiki), type)
     }
 
     private fun success(data: EnrichmentData, type: EnrichmentType) = EnrichmentResult.Success(

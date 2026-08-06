@@ -25,10 +25,16 @@ internal object MusicBrainzMapper {
             disambiguation = release.disambiguation,
         )
 
-    fun toAlbumIdentifiers(release: MusicBrainzRelease): EnrichmentIdentifiers =
+    fun toAlbumIdentifiers(
+        release: MusicBrainzRelease,
+        wikidataId: String? = null,
+        wikipediaTitle: String? = null,
+    ): EnrichmentIdentifiers =
         EnrichmentIdentifiers(
             musicBrainzId = release.id,
             musicBrainzReleaseGroupId = release.releaseGroupId,
+            wikidataId = wikidataId,
+            wikipediaTitle = wikipediaTitle,
         )
 
     fun toArtistMetadata(artist: MusicBrainzArtist): EnrichmentData.Metadata =

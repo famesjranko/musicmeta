@@ -12,6 +12,7 @@ public final class com/landofoz/musicmeta/AlbumProfile {
 	public final fun getBooklet ()Lcom/landofoz/musicmeta/EnrichmentData$Artwork;
 	public final fun getCdArt ()Lcom/landofoz/musicmeta/EnrichmentData$Artwork;
 	public final fun getCountry ()Ljava/lang/String;
+	public final fun getDescription ()Lcom/landofoz/musicmeta/EnrichmentData$Biography;
 	public final fun getEditions ()Ljava/util/List;
 	public final fun getGenreDiscovery ()Ljava/util/List;
 	public final fun getGenres ()Ljava/util/List;
@@ -1289,6 +1290,7 @@ public final class com/landofoz/musicmeta/EnrichmentResult$Success : com/landofo
 public final class com/landofoz/musicmeta/EnrichmentResults {
 	public fun <init> (Ljava/util/Map;Ljava/util/Set;Lcom/landofoz/musicmeta/IdentityResolution;)V
 	public final fun albumArt ()Lcom/landofoz/musicmeta/EnrichmentData$Artwork;
+	public final fun albumDescription ()Lcom/landofoz/musicmeta/EnrichmentData$Biography;
 	public final fun artistPhoto ()Lcom/landofoz/musicmeta/EnrichmentData$Artwork;
 	public final fun artistPopularity ()Lcom/landofoz/musicmeta/EnrichmentData$Popularity;
 	public final fun biography ()Lcom/landofoz/musicmeta/EnrichmentData$Biography;
@@ -1329,6 +1331,7 @@ public final class com/landofoz/musicmeta/EnrichmentType : java/lang/Enum {
 	public static final field ALBUM_ART Lcom/landofoz/musicmeta/EnrichmentType;
 	public static final field ALBUM_ART_BACK Lcom/landofoz/musicmeta/EnrichmentType;
 	public static final field ALBUM_BOOKLET Lcom/landofoz/musicmeta/EnrichmentType;
+	public static final field ALBUM_DESCRIPTION Lcom/landofoz/musicmeta/EnrichmentType;
 	public static final field ALBUM_METADATA Lcom/landofoz/musicmeta/EnrichmentType;
 	public static final field ALBUM_TRACKS Lcom/landofoz/musicmeta/EnrichmentType;
 	public static final field ARTIST_BACKGROUND Lcom/landofoz/musicmeta/EnrichmentType;

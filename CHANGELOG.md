@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - `TRACK_METADATA`/`EnrichmentData.TrackMetadata` (duration, resolved album title, disambiguation), already fetched but dropped by MusicBrainz, Deezer, LRCLIB; in `DEFAULT_TRACK_TYPES`
 - `PopularTrack` now carries `listenerCount`, `durationMs` and `album`, matching what `TopTrack` already exposes from the same ListenBrainz data
+- `ALBUM_DESCRIPTION` (`EnrichmentData.Biography`), from Wikipedia and Last.fm's `wiki` block; in `DEFAULT_ALBUM_TYPES`, top source is keyless and long-cached
 
 ### Fixed
 - Wikidata's artist lookup used a call Wikidata always rejected; birth/death date, country and occupation are now returned instead of nothing, every time

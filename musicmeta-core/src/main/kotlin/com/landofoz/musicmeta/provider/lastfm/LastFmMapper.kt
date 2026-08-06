@@ -61,6 +61,11 @@ internal object LastFmMapper {
     fun toBiography(bio: String): EnrichmentData.Biography =
         EnrichmentData.Biography(text = bio, source = "Last.fm")
 
+    /** [LastFmAlbumInfo.wiki] is the album.getInfo `wiki` block's summary — same shape as the
+     * artist bio, just off the album payload instead. */
+    fun toAlbumDescription(wiki: String): EnrichmentData.Biography =
+        EnrichmentData.Biography(text = wiki, source = "Last.fm")
+
     fun toPopularity(info: LastFmArtistInfo): EnrichmentData.Popularity =
         EnrichmentData.Popularity(
             listenerCount = info.listeners,

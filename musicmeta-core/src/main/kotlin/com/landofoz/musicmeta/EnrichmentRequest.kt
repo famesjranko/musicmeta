@@ -94,7 +94,14 @@ sealed class EnrichmentRequest {
             EnrichmentType.ARTIST_TOP_TRACKS, EnrichmentType.GENRE_DISCOVERY,
         )
 
-        /** Types meaningful for [ForAlbum] requests. */
+        /**
+         * Types meaningful for [ForAlbum] requests.
+         *
+         * [EnrichmentType.ALBUM_DESCRIPTION] is included: its top source is keyless Wikipedia and
+         * the type is long-cached (30 days), the same precedent that put [EnrichmentType.SIMILAR_ALBUMS]
+         * and [EnrichmentType.GENRE_DISCOVERY] here. A consumer who doesn't want the extra fetch
+         * passes an explicit type set instead of this default.
+         */
         val DEFAULT_ALBUM_TYPES: Set<EnrichmentType> = setOf(
             EnrichmentType.ALBUM_ART, EnrichmentType.ALBUM_ART_BACK,
             EnrichmentType.ALBUM_BOOKLET, EnrichmentType.CD_ART,
@@ -103,6 +110,7 @@ sealed class EnrichmentRequest {
             EnrichmentType.COUNTRY, EnrichmentType.ALBUM_METADATA,
             EnrichmentType.ALBUM_TRACKS, EnrichmentType.RELEASE_EDITIONS,
             EnrichmentType.SIMILAR_ALBUMS, EnrichmentType.GENRE_DISCOVERY,
+            EnrichmentType.ALBUM_DESCRIPTION,
         )
 
         /** Types meaningful for [ForTrack] requests. */
