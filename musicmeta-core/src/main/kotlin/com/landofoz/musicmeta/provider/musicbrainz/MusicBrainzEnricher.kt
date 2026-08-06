@@ -233,10 +233,10 @@ internal class MusicBrainzEnricher(
     ): EnrichmentResult {
         if (type == EnrichmentType.CREDITS) return enrichTrackCredits(request)
 
-        val recordings = api.searchRecordings(request.title, request.artist)
+        val recordings = api.searchRecordings(request.title, request.artist, request.album)
         if (recordings.isEmpty()) return EnrichmentResult.NotFound(type, providerId)
 
-        val best = recordings.firstOrNull { it.score >= minMatchScore }
+        val best = pickBestRecording(recordings)
             ?: return EnrichmentResult.NotFound(type, providerId)
 
         return EnrichmentResult.Success(
@@ -308,6 +308,43 @@ internal class MusicBrainzEnricher(
         }
     }.first()
 
+    /**
+     * Rank the recording pool above [minMatchScore] instead of taking `firstOrNull` — MB search
+     * ties score-100 hits and puts demo/live takes ahead of the studio original
+     * (`docs/pitfalls.md` §7). Score stays the floor: everything below [minMatchScore] is out
+     * before ranking starts. Among survivors, highest tier first, keeping pool order among ties
+     * (`maxWithOrNull` keeps the first maximum, same convention as [pickBestArtist]'s sibling in
+     * `DeezerApi.rankTracks`):
+     *
+     * 1. no unrequested disambiguation marker (demo/live/remix/remaster) — separates "Enter
+     *    Sandman" from "Enter Sandman" disambiguated "demo: 1990-08-13"
+     * 2. carries an Official release on an Album release-group
+     *    ([MusicBrainzRecording.hasOfficialAlbumRelease]) — prefers the studio album cut over a
+     *    single/compilation-only recording when neither carries a disambiguation marker
+     */
+    private fun pickBestRecording(recordings: List<MusicBrainzRecording>): MusicBrainzRecording? =
+        recordings.filter { it.score >= minMatchScore }
+            .map { it to it.recordingRank() }
+            .maxWithOrNull(compareBy({ it.second.cleanDisambiguation }, { it.second.officialAlbum }))
+            ?.first
+
+    private fun MusicBrainzRecording.recordingRank() = RecordingRank(
+        cleanDisambiguation = !hasUnrequestedMarker(disambiguation),
+        officialAlbum = hasOfficialAlbumRelease,
+    )
+
+    private data class RecordingRank(
+        val cleanDisambiguation: Boolean,
+        val officialAlbum: Boolean,
+    )
+
+    /** True when [disambiguation] carries a demo/live/remix/remaster marker. */
+    private fun hasUnrequestedMarker(disambiguation: String?): Boolean {
+        if (disambiguation.isNullOrBlank()) return false
+        val lower = disambiguation.lowercase()
+        return UNREQUESTED_DISAMBIGUATION_MARKERS.any { lower.contains(it) }
+    }
+
     private fun MusicBrainzRelease.toCandidate() = SearchCandidate(
         title = title, artist = artistCredit, year = date,
         country = country, releaseType = releaseType, score = score,
@@ -339,5 +376,8 @@ internal class MusicBrainzEnricher(
             EnrichmentType.ARTIST_DISCOGRAPHY,
             EnrichmentType.ARTIST_LINKS,
         )
+
+        /** Disambiguation markers that make a recording a worse identity match — see [pickBestRecording]. */
+        private val UNREQUESTED_DISAMBIGUATION_MARKERS = listOf("demo", "live", "remix", "remaster")
     }
 }

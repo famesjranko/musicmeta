@@ -63,16 +63,42 @@ internal class MusicBrainzApi(
         return MusicBrainzParser.parseArtists(json)
     }
 
+    /**
+     * Finds recordings matching [title]/[artist], optionally narrowed by [album].
+     *
+     * Same disease as [searchArtists]/[searchReleases] (`docs/pitfalls.md` §7): MB's recording
+     * search ties score-100 hits and its own ordering is not trustworthy — a demo or live take can
+     * sort ahead of the studio original. Adding a `release:"…"` term when [album] is known asks MB
+     * to filter by album up front, the same shape as the two-field query [buildQuery] already
+     * builds. Album titles drift across editions, so a hinted query that comes back empty falls
+     * back to the hint-less query rather than reporting no match. Ranking the returned pool (rather
+     * than trusting hit 0) is the caller's job — [MusicBrainzEnricher] has the score threshold and
+     * the disambiguation/release-type signals to do it.
+     */
     suspend fun searchRecordings(
         title: String,
         artist: String,
+        album: String? = null,
         limit: Int = 5,
     ): List<MusicBrainzRecording> {
-        val query = buildQuery("recording", title, "artistname", artist)
+        val hinted = album?.takeIf { it.isNotBlank() }
+            ?.let { fetchRecordings(recordingQuery(title, artist, it), limit) }
+        return hinted?.takeIf { it.isNotEmpty() }
+            ?: fetchRecordings(recordingQuery(title, artist, null), limit)
+    }
+
+    private suspend fun fetchRecordings(query: String, limit: Int): List<MusicBrainzRecording> {
         val json = rateLimiter.execute {
             httpClient.fetchJsonResult("$BASE_URL/recording?query=$query&fmt=json&limit=$limit").bodyOrThrowTransient()
         } ?: return emptyList()
         return MusicBrainzParser.parseRecordings(json)
+    }
+
+    /** Lucene query for a recording search, with an optional `release:"…"` term when [album] is known. */
+    private fun recordingQuery(title: String, artist: String, album: String?): String {
+        val base = "recording:\"${escapeLucene(title)}\" AND artistname:\"${escapeLucene(artist)}\""
+        val withAlbum = if (album.isNullOrBlank()) base else "$base AND release:\"${escapeLucene(album)}\""
+        return encode(withAlbum)
     }
 
     suspend fun lookupRelease(mbid: String): MusicBrainzRelease? {
