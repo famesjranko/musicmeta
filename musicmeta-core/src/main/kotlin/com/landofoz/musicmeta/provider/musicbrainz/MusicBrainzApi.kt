@@ -83,17 +83,26 @@ internal class MusicBrainzApi(
         album: String? = null,
         limit: Int = RECORDING_SEARCH_LIMIT,
     ): List<MusicBrainzRecording> {
-        val hinted = album?.takeIf { it.isNotBlank() }
-            ?.let { fetchRecordings(recordingQuery(title, artist, it), limit) }
+        val albumHint = album?.takeIf { it.isNotBlank() }
+        val hinted = albumHint?.let { fetchRecordings(recordingQuery(title, artist, it), limit, it) }
         return hinted?.takeIf { it.isNotEmpty() }
-            ?: fetchRecordings(recordingQuery(title, artist, null), limit)
+            ?: fetchRecordings(recordingQuery(title, artist, null), limit, albumHint)
     }
 
-    private suspend fun fetchRecordings(query: String, limit: Int): List<MusicBrainzRecording> {
+    /**
+     * [albumHint] is always the request's own album (independent of whether [query] itself carries
+     * a `release:` term) — even the hint-less fallback query wants it, so [MusicBrainzParser]'s
+     * album-match tier can still prefer the right release-group among whatever this query returns.
+     */
+    private suspend fun fetchRecordings(
+        query: String,
+        limit: Int,
+        albumHint: String? = null,
+    ): List<MusicBrainzRecording> {
         val json = rateLimiter.execute {
             httpClient.fetchJsonResult("$BASE_URL/recording?query=$query&fmt=json&limit=$limit").bodyOrThrowTransient()
         } ?: return emptyList()
-        return MusicBrainzParser.parseRecordings(json)
+        return MusicBrainzParser.parseRecordings(json, albumHint)
     }
 
     /** Lucene query for a recording search, with an optional `release:"…"` term when [album] is known. */
