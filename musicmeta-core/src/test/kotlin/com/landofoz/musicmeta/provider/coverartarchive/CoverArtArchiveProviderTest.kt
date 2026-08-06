@@ -497,6 +497,30 @@ class CoverArtArchiveProviderTest {
     }
 
     @Test
+    fun `enrich degrades a track's release-group art miss to NotFound, no release-endpoint call`() = runTest {
+        // Given — a track request whose release-group id (e.g. a tier-3 bootleg fallback) has no
+        // artwork on CAA at all
+        httpClient.givenRedirectResult("release-group/rg-no-art/front-", HttpResult.ClientError(404))
+        val request = EnrichmentRequest.ForTrack(
+            identifiers = EnrichmentIdentifiers(
+                musicBrainzId = "rec-studio",
+                musicBrainzReleaseGroupId = "rg-no-art",
+            ),
+            title = "Enter Sandman",
+            artist = "Metallica",
+        )
+
+        // When — enriching for album art
+        val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
+
+        // Then — a plain NotFound (a healthy provider that found nothing), not an Error, and the
+        // recording id is never sent to the release endpoint
+        assertTrue("Expected NotFound but got $result", result is EnrichmentResult.NotFound)
+        assertTrue(httpClient.requestedUrls.none { it.contains("release/rec-studio") })
+        assertTrue(httpClient.requestedUrls.all { it.contains("release-group/rg-no-art") })
+    }
+
+    @Test
     fun `enrich returns NotFound for track ALBUM_ART_BACK without a doomed HTTP call`() = runTest {
         // Given — a track request; ALBUM_ART_BACK is release-level with no release-group equivalent
         val request = EnrichmentRequest.ForTrack(
