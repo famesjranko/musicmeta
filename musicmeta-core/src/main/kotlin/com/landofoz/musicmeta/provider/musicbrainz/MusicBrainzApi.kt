@@ -73,13 +73,15 @@ internal class MusicBrainzApi(
      * builds. Album titles drift across editions, so a hinted query that comes back empty falls
      * back to the hint-less query rather than reporting no match. Ranking the returned pool (rather
      * than trusting hit 0) is the caller's job — [MusicBrainzEnricher] has the score threshold and
-     * the disambiguation/release-type signals to do it.
+     * the disambiguation/release-type signals to do it. [limit] defaults to
+     * [RECORDING_SEARCH_LIMIT], wide enough for the studio original to still be in the pool when
+     * several score-100 live/bootleg/cover takes sort ahead of it.
      */
     suspend fun searchRecordings(
         title: String,
         artist: String,
         album: String? = null,
-        limit: Int = 5,
+        limit: Int = RECORDING_SEARCH_LIMIT,
     ): List<MusicBrainzRecording> {
         val hinted = album?.takeIf { it.isNotBlank() }
             ?.let { fetchRecordings(recordingQuery(title, artist, it), limit) }
@@ -171,6 +173,15 @@ internal class MusicBrainzApi(
     companion object {
         private const val BASE_URL = "https://musicbrainz.org/ws/2"
         private val LUCENE_SPECIAL_CHARS = """[+\-&|!()\{}\[\]^"~*?:\\/]""".toRegex()
+
+        /**
+         * Default candidate pool size for [searchRecordings]. A well-covered track's score-100
+         * ties can run to a handful of live/bootleg/cover takes before the studio original appears
+         * — verified live for "Enter Sandman"/Metallica, where the first clean-disambiguation
+         * studio hit sits at index 6. `limit=5` (this constant's previous value) never gave
+         * [MusicBrainzEnricher.pickBestRecording] a pool that contained it to rank.
+         */
+        const val RECORDING_SEARCH_LIMIT = 25
 
         fun escapeLucene(value: String): String =
             value.replace(LUCENE_SPECIAL_CHARS) { "\\${it.value}" }

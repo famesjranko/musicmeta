@@ -236,7 +236,7 @@ internal class MusicBrainzEnricher(
         val recordings = api.searchRecordings(request.title, request.artist, request.album)
         if (recordings.isEmpty()) return EnrichmentResult.NotFound(type, providerId)
 
-        val best = pickBestRecording(recordings)
+        val best = pickBestRecording(request.title, recordings)
             ?: return EnrichmentResult.NotFound(type, providerId)
 
         return EnrichmentResult.Success(
@@ -310,30 +310,38 @@ internal class MusicBrainzEnricher(
 
     /**
      * Rank the recording pool above [minMatchScore] instead of taking `firstOrNull` — MB search
-     * ties score-100 hits and puts demo/live takes ahead of the studio original
+     * ties score-100 hits and puts demo/live/cover takes ahead of the studio original
      * (`docs/pitfalls.md` §7). Score stays the floor: everything below [minMatchScore] is out
      * before ranking starts. Among survivors, highest tier first, keeping pool order among ties
      * (`maxWithOrNull` keeps the first maximum, same convention as [pickBestArtist]'s sibling in
      * `DeezerApi.rankTracks`):
      *
-     * 1. no unrequested disambiguation marker (demo/live/remix/remaster) — separates "Enter
+     * 1. exact (case-insensitive) title match against [title] — verified live: a per-member
+     *    cover/karaoke recording titled e.g. "Enter Sandman (Ulrich)" can carry a clean
+     *    disambiguation and still beat the studio original on tiers 2/3 alone, so title has to be
+     *    checked first, same tier order as `DeezerApi.rankTracks`'s tier 1
+     * 2. no unrequested disambiguation marker (demo/live/remix/remaster) — separates "Enter
      *    Sandman" from "Enter Sandman" disambiguated "demo: 1990-08-13"
-     * 2. carries an Official release on an Album release-group
+     * 3. carries an Official release on an Album release-group
      *    ([MusicBrainzRecording.hasOfficialAlbumRelease]) — prefers the studio album cut over a
      *    single/compilation-only recording when neither carries a disambiguation marker
      */
-    private fun pickBestRecording(recordings: List<MusicBrainzRecording>): MusicBrainzRecording? =
+    private fun pickBestRecording(title: String, recordings: List<MusicBrainzRecording>): MusicBrainzRecording? =
         recordings.filter { it.score >= minMatchScore }
-            .map { it to it.recordingRank() }
-            .maxWithOrNull(compareBy({ it.second.cleanDisambiguation }, { it.second.officialAlbum }))
+            .map { it to it.recordingRank(title) }
+            .maxWithOrNull(
+                compareBy({ it.second.exactTitle }, { it.second.cleanDisambiguation }, { it.second.officialAlbum }),
+            )
             ?.first
 
-    private fun MusicBrainzRecording.recordingRank() = RecordingRank(
+    private fun MusicBrainzRecording.recordingRank(title: String) = RecordingRank(
+        exactTitle = this.title.trim().equals(title.trim(), ignoreCase = true),
         cleanDisambiguation = !hasUnrequestedMarker(disambiguation),
         officialAlbum = hasOfficialAlbumRelease,
     )
 
     private data class RecordingRank(
+        val exactTitle: Boolean,
         val cleanDisambiguation: Boolean,
         val officialAlbum: Boolean,
     )
