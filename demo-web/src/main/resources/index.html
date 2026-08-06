@@ -330,7 +330,7 @@ async function runQuery() {
 function render(data) {
   const summary = data.summary;
   const backdrop = summary.backgroundImageUrl
-    ? `<div class="backdrop" style="background-image:url(${esc(summary.backgroundImageUrl)})"></div>`
+    ? `<div class="backdrop" style="background-image:url('${esc(summary.backgroundImageUrl)}')"></div>`
     : '';
   const img = summary.imageUrl
     ? `<img src="${esc(summary.imageUrl)}" alt="" onerror="this.remove()" />`
