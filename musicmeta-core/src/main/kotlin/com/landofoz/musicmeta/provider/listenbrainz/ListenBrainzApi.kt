@@ -75,39 +75,51 @@ internal class ListenBrainzApi(
         return results
     }
 
+    /**
+     * `POST /1/popularity/recording` returns a non-empty entry even when LB has no data for a
+     * recording: `total_listen_count` and `total_user_count` come back as JSON null rather than
+     * the key being absent. `optLong(key, 0L)` cannot tell that apart from a genuine `0`, so an
+     * entry whose `total_listen_count` is null is dropped here -- it carries no information, and
+     * dropping it lets an all-null batch fall through the caller's `isEmpty()` guard to
+     * `NotFound` instead of a fake `Success(0, 0)`.
+     *
+     * A genuine `total_listen_count: 0` is kept: it is real information (nobody has listened
+     * to this recording), not an absence of data, so it is not treated the same as null.
+     */
     private fun parseRecordingPopularity(
         jsonArray: JSONArray,
-    ): List<ListenBrainzRecordingPopularity> {
-        val results = mutableListOf<ListenBrainzRecordingPopularity>()
-        for (i in 0 until jsonArray.length()) {
-            val item = jsonArray.getJSONObject(i)
-            val mbid = item.optString("recording_mbid").takeIf { it.isNotBlank() }
-                ?: continue
-            results += ListenBrainzRecordingPopularity(
-                recordingMbid = mbid,
-                totalListenCount = item.optLong("total_listen_count", 0L),
-                totalUserCount = item.optLong("total_user_count", 0L),
-            )
-        }
-        return results
+    ): List<ListenBrainzRecordingPopularity> =
+        (0 until jsonArray.length()).mapNotNull { parseRecordingPopularityItem(jsonArray.getJSONObject(it)) }
+
+    private fun parseRecordingPopularityItem(item: JSONObject): ListenBrainzRecordingPopularity? {
+        val mbid = item.optString("recording_mbid").takeIf { it.isNotBlank() } ?: return null
+        if (item.isNull("total_listen_count")) return null
+        return ListenBrainzRecordingPopularity(
+            recordingMbid = mbid,
+            totalListenCount = item.optLong("total_listen_count", 0L),
+            totalUserCount = optNullableLong(item, "total_user_count"),
+        )
     }
 
+    /** Same null-vs-zero handling as [parseRecordingPopularity]; see its KDoc. */
     private fun parseArtistPopularity(
         jsonArray: JSONArray,
-    ): List<ListenBrainzArtistPopularity> {
-        val results = mutableListOf<ListenBrainzArtistPopularity>()
-        for (i in 0 until jsonArray.length()) {
-            val item = jsonArray.getJSONObject(i)
-            val mbid = item.optString("artist_mbid").takeIf { it.isNotBlank() }
-                ?: continue
-            results += ListenBrainzArtistPopularity(
-                artistMbid = mbid,
-                totalListenCount = item.optLong("total_listen_count", 0L),
-                totalUserCount = item.optLong("total_user_count", 0L),
-            )
-        }
-        return results
+    ): List<ListenBrainzArtistPopularity> =
+        (0 until jsonArray.length()).mapNotNull { parseArtistPopularityItem(jsonArray.getJSONObject(it)) }
+
+    private fun parseArtistPopularityItem(item: JSONObject): ListenBrainzArtistPopularity? {
+        val mbid = item.optString("artist_mbid").takeIf { it.isNotBlank() } ?: return null
+        if (item.isNull("total_listen_count")) return null
+        return ListenBrainzArtistPopularity(
+            artistMbid = mbid,
+            totalListenCount = item.optLong("total_listen_count", 0L),
+            totalUserCount = optNullableLong(item, "total_user_count"),
+        )
     }
+
+    /** `null` when [key] is JSON-null or absent, the value otherwise -- `optLong` cannot tell those apart. */
+    private fun optNullableLong(item: JSONObject, key: String): Long? =
+        if (item.isNull(key)) null else item.optLong(key, 0L)
 
     /** GET /1/explore/lb-radio?prompt=artist:({prompt})&mode={mode}. Requires authToken. */
     suspend fun getRadio(

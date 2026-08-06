@@ -35,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Deezer's SIMILAR_TRACKS called `/track/{id}/radio`, which doesn't exist, and always returned nothing; now derived from the seed track's artist's related artists and their top tracks
 - Deezer track search ignored the album hint and always took Deezer's first hit; previews and lookups could resolve to a remix or live take instead of the requested edition
 - MusicBrainz track search took the first score-100 tie, which could be a demo or live take; identity, popularity, and other downstream track data now resolve to the studio recording
+- ListenBrainz's recording/artist popularity treated a JSON-null listen count as zero and kept it; a track or artist with no LB data now returns NotFound instead of a fake 0/0
 
 ## [0.11.0] - 2026-07-28
 
