@@ -308,7 +308,9 @@ private fun relatedGenresItems(genreDiscovery: List<GenreAffinity>): List<Sectio
  * resolution landed on [com.landofoz.musicmeta.IdentityMatch.SUGGESTIONS]. Each candidate becomes
  * a clickable [SectionItem] via the same [EnrichTarget] flow as any other cross-nav row; a
  * candidate whose fields can't build a valid target (e.g. no artist for an album/track suggestion)
- * is dropped rather than rendered as a dead click.
+ * is dropped rather than rendered as a dead click. Upstream candidates that differ only by an
+ * identifier the row never renders (e.g. release MBID) collapse to indistinguishable duplicates —
+ * deduped on the rendered identity (primary/secondary/meta), keeping the first (highest-ranked).
  */
 private fun didYouMeanSection(
     suggestions: List<SearchCandidate>,
@@ -324,7 +326,7 @@ private fun didYouMeanSection(
                 enrich = et,
             )
         }
-    }
+    }.distinctBy { Triple(it.primary, it.secondary, it.meta) }
     return items.takeIf { it.isNotEmpty() }?.let { Section("did_you_mean", "Did You Mean?", it) }
 }
 

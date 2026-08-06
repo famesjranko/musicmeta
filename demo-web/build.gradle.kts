@@ -39,4 +39,6 @@ dependencies {
     implementation("io.github.famesjranko:musicmeta-core")
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.serialization.json)
+
+    testImplementation(libs.junit)
 }
