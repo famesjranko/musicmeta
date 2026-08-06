@@ -211,6 +211,49 @@ class LrcLibProviderTest {
     }
 
     @Test
+    fun `enrich returns TrackMetadata with duration and album title for TRACK_METADATA`() = runTest {
+        // Given
+        httpClient.givenJsonResponse("/api/get", SYNCED_LYRICS_JSON)
+        val request = EnrichmentRequest.forTrack(
+            title = "Creep",
+            artist = "Radiohead",
+            album = "Pablo Honey",
+            durationMs = 238_000L,
+        )
+
+        // When
+        val result = provider.enrich(request, EnrichmentType.TRACK_METADATA)
+
+        // Then
+        assertTrue(result is EnrichmentResult.Success)
+        val metadata = (result as EnrichmentResult.Success).data as EnrichmentData.TrackMetadata
+        assertEquals(238000L, metadata.durationMs)
+        assertEquals("Pablo Honey", metadata.albumTitle)
+    }
+
+    @Test
+    fun `enrich returns NotFound for TRACK_METADATA when duration and album are both absent`() = runTest {
+        // Given — LrcLib returns a result with no duration and no album
+        httpClient.givenJsonResponse("/api/get", """{
+            "id": 999,
+            "trackName": "Mystery Track",
+            "artistName": "Unknown",
+            "albumName": null,
+            "duration": null,
+            "instrumental": false,
+            "syncedLyrics": "some lyrics",
+            "plainLyrics": null
+        }""")
+        val request = EnrichmentRequest.forTrack(title = "Mystery Track", artist = "Unknown")
+
+        // When
+        val result = provider.enrich(request, EnrichmentType.TRACK_METADATA)
+
+        // Then
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
     fun `enrich returns Error with NETWORK ErrorKind when API throws IOException`() = runTest {
         // Given — fetchJsonResult throws IOException simulating a network failure
         httpClient.givenIoException("/api/get")

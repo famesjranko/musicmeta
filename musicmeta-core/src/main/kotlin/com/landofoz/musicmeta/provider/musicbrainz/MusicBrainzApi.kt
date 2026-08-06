@@ -139,6 +139,20 @@ internal class MusicBrainzApi(
         return json
     }
 
+    /**
+     * Wikidata/Wikipedia URL relations for a release-group, needed for `ALBUM_DESCRIPTION`
+     * (`Wikipedia`'s title/wikidata resolution) — a separate lookup because a release-group's own
+     * relations are never embedded in a release search or release lookup response.
+     */
+    suspend fun lookupReleaseGroupWikiLinks(releaseGroupMbid: String): Pair<String?, String?> {
+        val json = rateLimiter.execute {
+            httpClient.fetchJsonResult(
+                "$BASE_URL/release-group/$releaseGroupMbid?fmt=json&inc=url-rels",
+            ).bodyOrThrowTransient()
+        } ?: return null to null
+        return MusicBrainzParser.parseReleaseGroupWikiLinks(json)
+    }
+
     /** Lookup a recording by MBID with artist-rels and work-rels (needed for credits). */
     suspend fun lookupRecording(mbid: String): JSONObject? {
         val json = rateLimiter.execute {

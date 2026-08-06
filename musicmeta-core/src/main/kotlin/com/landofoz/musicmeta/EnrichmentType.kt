@@ -66,4 +66,12 @@ enum class EnrichmentType(val defaultTtlMs: Long) {
     // Discovery / recommendations — 30 days
     SIMILAR_ALBUMS(30L * 24 * 60 * 60 * 1000),
     GENRE_DISCOVERY(30L * 24 * 60 * 60 * 1000),
+
+    // Track-level structured metadata (duration, resolved album title, disambiguation) — 90 days,
+    // matching ALBUM_METADATA/GENRE: sourced from the same lookups, not expected to churn.
+    TRACK_METADATA(90L * 24 * 60 * 60 * 1000),
+
+    // Album prose, reusing EnrichmentData.Biography — 30 days, matching ARTIST_BIO: same shape,
+    // same Wikipedia-primary source, same edit cadence.
+    ALBUM_DESCRIPTION(30L * 24 * 60 * 60 * 1000),
 }

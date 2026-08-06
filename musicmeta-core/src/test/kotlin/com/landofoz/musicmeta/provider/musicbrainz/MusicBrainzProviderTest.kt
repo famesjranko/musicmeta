@@ -93,6 +93,60 @@ class MusicBrainzProviderTest {
     }
 
     @Test
+    fun `enrich album extracts Wikidata ID and Wikipedia title from release-group relations`() = runTest {
+        // Given — release search resolves release-group "group123"; its dedicated url-rels lookup
+        // carries both a wikidata and an en.wikipedia.org relation (ALBUM_DESCRIPTION's plumbing)
+        httpClient.givenJsonResponse("release?query", RELEASE_SEARCH_HIGH_SCORE)
+        httpClient.givenJsonResponse("release-group/group123", RELEASE_GROUP_WITH_WIKI_RELATIONS)
+        val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+
+        // When — enriching for genre (triggers identity resolution, which resolves the release)
+        val result = provider.enrich(request, EnrichmentType.GENRE)
+
+        // Then — resolvedIdentifiers carries both, for WikipediaProvider's ALBUM_DESCRIPTION to use
+        assertTrue(result is EnrichmentResult.Success)
+        val success = result as EnrichmentResult.Success
+        assertEquals("Q82539", success.resolvedIdentifiers?.wikidataId)
+        assertEquals("OK_Computer", success.resolvedIdentifiers?.wikipediaTitle)
+    }
+
+    @Test
+    fun `enrich album leaves wikidataId and wikipediaTitle null when release-group has no wiki relations`() =
+        runTest {
+            // Given — release-group lookup returns no relations at all
+            httpClient.givenJsonResponse("release?query", RELEASE_SEARCH_HIGH_SCORE)
+            httpClient.givenJsonResponse("release-group/group123", """{"id": "group123", "relations": []}""")
+            val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+
+            // When
+            val result = provider.enrich(request, EnrichmentType.GENRE)
+
+            // Then
+            assertTrue(result is EnrichmentResult.Success)
+            val success = result as EnrichmentResult.Success
+            assertEquals(null, success.resolvedIdentifiers?.wikidataId)
+            assertEquals(null, success.resolvedIdentifiers?.wikipediaTitle)
+        }
+
+    @Test
+    fun `enrich album release-group wiki lookup is cached across repeated type resolution`() = runTest {
+        // Given — same album resolved for two types in the same MusicBrainzProvider instance
+        httpClient.givenJsonResponse("release?query", RELEASE_SEARCH_HIGH_SCORE)
+        httpClient.givenJsonResponse("release-group/group123", RELEASE_GROUP_WITH_WIKI_RELATIONS)
+        val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+
+        // When — GENRE resolves identity, then LABEL is resolved for the same (uncached) request
+        provider.enrich(request, EnrichmentType.GENRE)
+        httpClient.requestedUrls.clear()
+        val result = provider.enrich(request, EnrichmentType.LABEL)
+
+        // Then — the second call re-searches (no cached MBID on this request) but hits the
+        // release-group wiki cache rather than repeating the release-group/group123 request
+        assertTrue(result is EnrichmentResult.Success)
+        assertTrue(httpClient.requestedUrls.none { it.contains("release-group/group123") })
+    }
+
+    @Test
     fun `enrich returns NotFound on null response`() = runTest {
         // Given — no canned response configured (API returns null -> emptyList)
         val request = EnrichmentRequest.forAlbum("Test", "Test")
@@ -246,6 +300,57 @@ class MusicBrainzProviderTest {
         // Then — the Lucene query carries the album's release:"..." term
         val url = httpClient.requestedUrls.single { it.contains("recording?query") }
         assertTrue(url.contains("release%3A%22OK+Computer%22"))
+    }
+
+    @Test
+    fun `enrich track TRACK_METADATA returns duration, album title and disambiguation`() = runTest {
+        // Given — a recording carrying length, an art release-group title, and a disambiguation
+        httpClient.givenJsonResponse(
+            "recording?query",
+            """
+            {
+              "recordings": [{
+                "id": "rec-studio",
+                "score": 95,
+                "title": "Enter Sandman",
+                "length": 331000,
+                "disambiguation": "",
+                "releases": [
+                  {"status": "Official", "release-group": {"id": "rg-studio", "primary-type": "Album", "title": "Metallica"}}
+                ]
+              }]
+            }
+            """.trimIndent(),
+        )
+        val request = EnrichmentRequest.forTrack("Enter Sandman", "Metallica")
+
+        // When
+        val result = provider.enrich(request, EnrichmentType.TRACK_METADATA)
+
+        // Then
+        assertTrue(result is EnrichmentResult.Success)
+        val success = result as EnrichmentResult.Success
+        val data = success.data as EnrichmentData.TrackMetadata
+        assertEquals(331000L, data.durationMs)
+        assertEquals("Metallica", data.albumTitle)
+        assertEquals("rec-studio", success.resolvedIdentifiers?.musicBrainzId)
+        assertEquals("rg-studio", success.resolvedIdentifiers?.musicBrainzReleaseGroupId)
+    }
+
+    @Test
+    fun `enrich track TRACK_METADATA returns NotFound when no candidate meets the score threshold`() = runTest {
+        // Given
+        httpClient.givenJsonResponse(
+            "recording?query",
+            """{"recordings":[{"id":"rec-low","score":50,"title":"Enter Sandman"}]}""",
+        )
+        val request = EnrichmentRequest.forTrack("Enter Sandman", "Metallica")
+
+        // When
+        val result = provider.enrich(request, EnrichmentType.TRACK_METADATA)
+
+        // Then
+        assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
@@ -627,8 +732,11 @@ class MusicBrainzProviderTest {
         // When — enriching for GENRE
         provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then — the search was the only call
-        assertEquals(1, httpClient.requestedUrls.size)
+        // Then — the search plus one release-group wiki-links lookup (ALBUM_DESCRIPTION's
+        // wikidata/wikipedia resolution, `buildAlbumResult` §MusicBrainzEnricher) — no full release
+        // lookup, since the search hit already carried tags.
+        assertEquals(2, httpClient.requestedUrls.size)
+        assertTrue(httpClient.requestedUrls.any { it.contains("release-group/group123") })
     }
 
     companion object {
@@ -677,6 +785,22 @@ class MusicBrainzProviderTest {
                 },
                 "cover-art-archive": {"front": true}
               }]
+            }
+        """.trimIndent()
+
+        private val RELEASE_GROUP_WITH_WIKI_RELATIONS = """
+            {
+              "id": "group123",
+              "relations": [
+                {
+                  "type": "wikidata",
+                  "url": {"resource": "https://www.wikidata.org/wiki/Q82539"}
+                },
+                {
+                  "type": "wikipedia",
+                  "url": {"resource": "https://en.wikipedia.org/wiki/OK_Computer"}
+                }
+              ]
             }
         """.trimIndent()
 

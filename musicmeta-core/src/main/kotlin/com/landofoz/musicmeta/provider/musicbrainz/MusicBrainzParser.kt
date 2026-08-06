@@ -38,6 +38,15 @@ internal object MusicBrainzParser {
         return parseArtistObject(json, defaultScore = 100)
     }
 
+    /**
+     * Wikidata/Wikipedia URL relations off a release-group lookup — same relation shape the
+     * artist path reads via [extractWikidataId]/[extractWikipediaTitle], but a release-group's
+     * relations are never embedded in a release search or release lookup response, so this reads
+     * a dedicated `inc=url-rels` release-group lookup.
+     */
+    fun parseReleaseGroupWikiLinks(json: JSONObject): Pair<String?, String?> =
+        extractWikidataId(json) to extractWikipediaTitle(json)
+
     private fun parseReleaseObject(obj: JSONObject, defaultScore: Int = 0): MusicBrainzRelease {
         val tagCounts = extractReleaseTagCounts(obj)
         return MusicBrainzRelease(
@@ -83,6 +92,7 @@ internal object MusicBrainzParser {
 
     private fun parseRecordingObject(obj: JSONObject): MusicBrainzRecording {
         val tagCounts = extractTagsWithCounts(obj)
+        val artReleaseGroup = findArtReleaseGroup(obj)
         return MusicBrainzRecording(
             id = obj.getString("id"),
             title = obj.getString("title"),
@@ -92,7 +102,9 @@ internal object MusicBrainzParser {
             score = obj.optInt("score", 0),
             disambiguation = obj.optString("disambiguation").takeIf { it.isNotBlank() },
             hasOfficialAlbumRelease = findStrictOfficialAlbumReleaseGroup(obj) != null,
-            artReleaseGroupId = findArtReleaseGroup(obj)?.optString("id")?.takeIf { it.isNotBlank() },
+            artReleaseGroupId = artReleaseGroup?.optString("id")?.takeIf { it.isNotBlank() },
+            artReleaseGroupTitle = artReleaseGroup?.optString("title")?.takeIf { it.isNotBlank() },
+            lengthMs = obj.optLong("length", 0L).takeIf { it > 0 },
         )
     }
 

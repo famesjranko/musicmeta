@@ -19,6 +19,9 @@ data class AlbumProfile(val title: String, val artist: String, val results: Enri
     val booklet: EnrichmentData.Artwork? get() = results.get(EnrichmentType.ALBUM_BOOKLET)
     val cdArt: EnrichmentData.Artwork? get() = results.get(EnrichmentType.CD_ART)
 
+    // --- Text ---
+    val description: EnrichmentData.Biography? get() = results.albumDescription()
+
     // --- Metadata ---
     val genres: List<GenreTag> get() = results.genreTags()
     val label: String? get() = results.label()

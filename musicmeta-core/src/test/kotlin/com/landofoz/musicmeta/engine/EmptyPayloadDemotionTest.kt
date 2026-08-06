@@ -365,6 +365,15 @@ class EmptyPayloadDemotionTest {
         assertFalse(EnrichmentData.Lyrics().answers(EnrichmentType.LYRICS_PLAIN))
     }
 
+    @Test
+    fun `TrackMetadata answers iff it carries duration, album title or disambiguation`() {
+        assertTrue(EnrichmentData.TrackMetadata(durationMs = 1000L).answers(EnrichmentType.TRACK_METADATA))
+        assertTrue(EnrichmentData.TrackMetadata(albumTitle = "OK Computer").answers(EnrichmentType.TRACK_METADATA))
+        assertTrue(EnrichmentData.TrackMetadata(disambiguation = "live").answers(EnrichmentType.TRACK_METADATA))
+        assertFalse(EnrichmentData.TrackMetadata().answers(EnrichmentType.TRACK_METADATA))
+        assertFalse(EnrichmentData.TrackMetadata(albumTitle = " ").answers(EnrichmentType.TRACK_METADATA))
+    }
+
     private companion object {
         val TAGLESS_RECORDING_SCORE_100 = """
             {

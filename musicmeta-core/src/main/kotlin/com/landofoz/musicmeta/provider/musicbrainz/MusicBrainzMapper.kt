@@ -25,10 +25,16 @@ internal object MusicBrainzMapper {
             disambiguation = release.disambiguation,
         )
 
-    fun toAlbumIdentifiers(release: MusicBrainzRelease): EnrichmentIdentifiers =
+    fun toAlbumIdentifiers(
+        release: MusicBrainzRelease,
+        wikidataId: String? = null,
+        wikipediaTitle: String? = null,
+    ): EnrichmentIdentifiers =
         EnrichmentIdentifiers(
             musicBrainzId = release.id,
             musicBrainzReleaseGroupId = release.releaseGroupId,
+            wikidataId = wikidataId,
+            wikipediaTitle = wikipediaTitle,
         )
 
     fun toArtistMetadata(artist: MusicBrainzArtist): EnrichmentData.Metadata =
@@ -54,6 +60,19 @@ internal object MusicBrainzMapper {
             genres = recording.tags.takeIf { it.isNotEmpty() },
             genreTags = buildGenreTags(recording.tagCounts),
             isrc = recording.isrcs.firstOrNull(),
+        )
+
+    /**
+     * Structured track fields dropped by [toTrackMetadata]: duration, the resolved album title
+     * (from the same release-group [MusicBrainzRecording.artReleaseGroupId] is drawn from — same
+     * tiered fallback, no extra lookup), and disambiguation (already parsed for internal ranking,
+     * previously never exposed).
+     */
+    fun toTrackMetadataDetails(recording: MusicBrainzRecording): EnrichmentData.TrackMetadata =
+        EnrichmentData.TrackMetadata(
+            durationMs = recording.lengthMs,
+            albumTitle = recording.artReleaseGroupTitle,
+            disambiguation = recording.disambiguation,
         )
 
     /**

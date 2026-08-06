@@ -71,6 +71,10 @@ internal data class MusicBrainzRecording(
      * `musicBrainzReleaseGroupId` from this field with no extra lookup.
      */
     val artReleaseGroupId: String? = null,
+    /** The `title` of the same release-group object [artReleaseGroupId] is drawn from — same tiers, no extra lookup. */
+    val artReleaseGroupTitle: String? = null,
+    /** Recording length in milliseconds, from the search hit's own `length` field. */
+    val lengthMs: Long? = null,
 )
 
 internal data class MusicBrainzBandMember(

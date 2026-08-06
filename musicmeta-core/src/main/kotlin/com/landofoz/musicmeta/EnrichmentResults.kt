@@ -41,6 +41,7 @@ data class EnrichmentResults(
     // --- Text ---
 
     fun biography(): EnrichmentData.Biography? = get(EnrichmentType.ARTIST_BIO)
+    fun albumDescription(): EnrichmentData.Biography? = get(EnrichmentType.ALBUM_DESCRIPTION)
 
     /** Returns synced lyrics if available, falling back to plain lyrics. */
     fun lyrics(): EnrichmentData.Lyrics? =
@@ -65,6 +66,7 @@ data class EnrichmentResults(
     fun artistPopularity(): EnrichmentData.Popularity? = get(EnrichmentType.ARTIST_POPULARITY)
     fun trackPopularity(): EnrichmentData.Popularity? = get(EnrichmentType.TRACK_POPULARITY)
     fun similarTracks(): EnrichmentData.SimilarTracks? = get(EnrichmentType.SIMILAR_TRACKS)
+    fun trackMetadata(): EnrichmentData.TrackMetadata? = get(EnrichmentType.TRACK_METADATA)
 
     // --- Metadata field accessors (unwrapped, with GENRE→ALBUM_METADATA fallback) ---
 

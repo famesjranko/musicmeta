@@ -121,6 +121,8 @@ class EdgeAnalysisTest {
         is EnrichmentData.GenreDiscovery -> "${data.relatedGenres.size} related genres"
         is EnrichmentData.TopTracks -> "${data.tracks.size} top tracks"
         is EnrichmentData.TrackPreview -> "url=${data.url.take(50)} duration=${data.durationMs}ms source=${data.source}"
+        is EnrichmentData.TrackMetadata ->
+            "duration=${data.durationMs}ms album=${data.albumTitle} disambig=${data.disambiguation}"
     }
 
     // =================================================================

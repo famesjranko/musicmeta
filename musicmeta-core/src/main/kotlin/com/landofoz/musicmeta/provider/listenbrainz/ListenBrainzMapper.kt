@@ -18,6 +18,9 @@ internal object ListenBrainzMapper {
                     identifiers = EnrichmentIdentifiers(musicBrainzId = track.recordingMbid),
                     listenCount = track.listenCount,
                     rank = index + 1,
+                    listenerCount = track.listenerCount,
+                    durationMs = track.durationMs,
+                    album = track.albumName,
                 )
             },
         )
