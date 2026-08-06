@@ -177,16 +177,19 @@ class MusicBrainzProviderTest {
     }
 
     @Test
-    fun `enrich track ranks a score-100 pool to the studio recording over demo and live takes`() = runTest {
-        // Given — a 4-candidate pool mirroring live musicbrainz.org "Enter Sandman"/Metallica
-        // evidence (2026-08-06): demo hit first, two live takes, studio original last, all score 100
+    fun `enrich track ranks a wide score-100 pool to the exact-title studio recording`() = runTest {
+        // Given — an 8-candidate pool mirroring live musicbrainz.org "Enter Sandman"/Metallica
+        // evidence (2026-08-06): six live/bootleg hits first (all score 100), then the studio
+        // original with an exact title and an Official Album release, then a clean-disambiguation
+        // per-member cover ("Enter Sandman (Ulrich)") that a title-blind ranking would prefer
         httpClient.givenJsonResponse("recording?query", ENTER_SANDMAN_RANK_POOL)
         val request = EnrichmentRequest.forTrack("Enter Sandman", "Metallica")
 
         // When — enriching for genre (drives identity resolution through enrichTrack)
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then — the studio recording wins, not the demo MB search ranked first
+        // Then — the exact-title studio recording wins, not a live take or a clean-disambiguation
+        // title variant
         assertTrue(result is EnrichmentResult.Success)
         val success = result as EnrichmentResult.Success
         assertEquals("rec-studio", success.resolvedIdentifiers?.musicBrainzId)
@@ -836,17 +839,15 @@ class MusicBrainzProviderTest {
 
         /**
          * Mirrors live musicbrainz.org "recording:Enter Sandman AND artistname:Metallica" evidence
-         * (2026-08-06): three score-100 candidates with the demo first, then two live takes — the
-         * studio original was not even in that top 3. A fourth, official-album-carrying studio hit
-         * is added last, to pin [MusicBrainzEnricher.pickBestRecording]'s ranking over the pool.
+         * (2026-08-06): six score-100 live/bootleg candidates before the studio original, which
+         * carries an exact title and an Official Album release at index 6. A clean-disambiguation
+         * per-member cover ("Enter Sandman (Ulrich)") follows at index 7 — clean disambiguation and
+         * an earlier pool position alone would pick it over the studio original if title were not
+         * ranked first, so it pins [MusicBrainzEnricher.pickBestRecording]'s tier order.
          */
         private val ENTER_SANDMAN_RANK_POOL = """
             {
               "recordings": [
-                {
-                  "id": "rec-demo", "score": 100, "title": "Enter Sandman",
-                  "disambiguation": "demo: 1990-08-13"
-                },
                 {
                   "id": "rec-live-1", "score": 100, "title": "Enter Sandman",
                   "disambiguation": "live"
@@ -856,10 +857,29 @@ class MusicBrainzProviderTest {
                   "disambiguation": "live at Moscow"
                 },
                 {
+                  "id": "rec-live-3", "score": 100, "title": "Enter Sandman",
+                  "disambiguation": "live at Seattle"
+                },
+                {
+                  "id": "rec-bootleg-1", "score": 100, "title": "Enter Sandman",
+                  "disambiguation": "live bootleg"
+                },
+                {
+                  "id": "rec-bootleg-2", "score": 100, "title": "Enter Sandman",
+                  "disambiguation": "live bootleg 1991"
+                },
+                {
+                  "id": "rec-demo", "score": 100, "title": "Enter Sandman",
+                  "disambiguation": "demo: 1990-08-13"
+                },
+                {
                   "id": "rec-studio", "score": 100, "title": "Enter Sandman",
                   "releases": [
                     {"status": "Official", "release-group": {"primary-type": "Album"}}
                   ]
+                },
+                {
+                  "id": "rec-cover-ulrich", "score": 100, "title": "Enter Sandman (Ulrich)"
                 }
               ]
             }

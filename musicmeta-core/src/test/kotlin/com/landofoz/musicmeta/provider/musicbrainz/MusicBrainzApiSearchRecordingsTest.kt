@@ -26,12 +26,25 @@ class MusicBrainzApiSearchRecordingsTest {
         // When — searching without an album hint
         api.searchRecordings("Enter Sandman", "Metallica")
 
-        // Then — no release term in the Lucene query
+        // Then — no release term in the Lucene query, default limit of 25
         val url = httpClient.requestedUrls.single()
         assertTrue(url.startsWith("https://musicbrainz.org/ws/2/recording?query="))
         assertTrue(url.contains("recording%3A%22Enter+Sandman%22"))
         assertTrue(url.contains("artistname%3A%22Metallica%22"))
         assertTrue(!url.contains("release%3A"))
+        assertTrue(url.endsWith("&limit=25"))
+    }
+
+    @Test
+    fun `still accepts an explicit limit override for tests that need a smaller pool`() = runTest {
+        // Given — a single matching recording
+        httpClient.givenJsonResponse("recording?query", SINGLE_MATCH)
+
+        // When — searching with an explicit, non-default limit
+        api.searchRecordings("Enter Sandman", "Metallica", limit = 3)
+
+        // Then — the override reaches the URL, not the default
+        assertTrue(httpClient.requestedUrls.single().endsWith("&limit=3"))
     }
 
     @Test
@@ -47,7 +60,7 @@ class MusicBrainzApiSearchRecordingsTest {
         assertEquals(
             "https://musicbrainz.org/ws/2/recording?query=" +
                 "recording%3A%22Enter+Sandman%22+AND+artistname%3A%22Metallica%22+AND+release%3A%22Metallica%22" +
-                "&fmt=json&limit=5",
+                "&fmt=json&limit=25",
             url,
         )
     }
