@@ -6,6 +6,8 @@ import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -296,9 +298,7 @@ internal class MusicBrainzEnricher(
         type: EnrichmentType,
         confidence: Float,
     ): EnrichmentResult.Success {
-        val (wikidataId, wikipediaTitle) = release.releaseGroupId
-            ?.let { cachedReleaseGroupWikiLookup(it) }
-            ?: (null to null)
+        val (wikidataId, wikipediaTitle) = resolveReleaseGroupWikiLinks(release.releaseGroupId)
         return EnrichmentResult.Success(
             type = type,
             data = MusicBrainzMapper.toAlbumMetadata(release),
@@ -306,6 +306,36 @@ internal class MusicBrainzEnricher(
             confidence = confidence,
             resolvedIdentifiers = MusicBrainzMapper.toAlbumIdentifiers(release, wikidataId, wikipediaTitle),
         )
+    }
+
+    /**
+     * Best-effort: [type] here is whatever the caller actually asked for (GENRE, LABEL, …), never
+     * `ALBUM_DESCRIPTION` — MusicBrainz has no capability for it, so this side lookup only ever runs
+     * as a byproduct of resolving a different type's *own*, already-successful data. A transient
+     * failure here must not fail that unrelated type: it would turn a legitimate `Success` into an
+     * `Error`, record a MusicBrainz breaker failure for a hiccup that had nothing to do with the
+     * type being resolved, and — since identity resolution still fans out to every requested type on
+     * an `Error` (`DefaultEnrichmentEngine`) — drop the resolved identifiers the *rest* of that run's
+     * types would otherwise have used. So this degrades to "unresolved this call" instead of
+     * propagating, mirroring [bodyOrThrowTransient]'s own split (null only for a genuine
+     * [com.landofoz.musicmeta.http.HttpResult.ClientError] absence) one level up.
+     *
+     * The transient is never written to [releaseGroupWikiCache] (the write only happens on the
+     * success path inside [cachedReleaseGroupWikiLookup]), so it is retried — not pinned as "no
+     * wiki links" — on the next type that resolves this release-group within this enricher's
+     * lifetime.
+     */
+    // SwallowedException: intentional — see the KDoc above. This enricher has no logger to hand the
+    // exception to; degrading silently is the fix, not an oversight (detekt cannot tell them apart).
+    @Suppress("SwallowedException")
+    private suspend fun resolveReleaseGroupWikiLinks(releaseGroupMbid: String?): Pair<String?, String?> {
+        if (releaseGroupMbid == null) return null to null
+        return try {
+            cachedReleaseGroupWikiLookup(releaseGroupMbid)
+        } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
+            null to null
+        }
     }
 
     private fun buildArtistResult(
