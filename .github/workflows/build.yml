@@ -74,3 +74,8 @@ jobs:
         # demo/ has no wrapper of its own — it borrows the root one via ../gradlew.
         working-directory: demo
         run: ../gradlew compileKotlin
+
+      - name: Compile demo-web composite build
+        # Same shape as demo/: a separate composite build nothing else compiles.
+        working-directory: demo-web
+        run: ../gradlew compileKotlin

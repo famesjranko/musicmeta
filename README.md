@@ -204,6 +204,13 @@ musicmeta> refresh artist radiohead
 musicmeta> invalidate artist radiohead
 ```
 
+The [`demo-web/`](demo-web/README.md) module is the same idea as a web app — artist, album, and
+track pages rendering everything the library exposes:
+
+```bash
+cd demo-web && ./run.sh   # http://localhost:8099
+```
+
 ## License
 
 Licensed under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).

@@ -22,10 +22,10 @@ because the config is the thing that fails.
 | Conventions | `scripts/checks/check_conventions.py` | no `!!` and no `@Serializable` under `provider/`/`http/` in main sources; conflict markers anywhere |
 | Release-note caps | `build_release_notes.py Unreleased` | `CHANGELOG.md`'s `[Unreleased]` stays under 3000 chars and 400 per line — the same `check_caps()` the release runs, so it fails here rather than at release prep. An empty section passes: `pin_release.py` opens one on every release branch |
 | Script self-tests | `scripts/**/test_*.py` | discovered, not listed — every script with a `test_*.py` beside it still behaves: release notes, conventions |
-| Kotlin format | ktlint (version pinned in `libs.versions.toml`) | all modules, and `demo/` |
+| Kotlin format | ktlint (version pinned in `libs.versions.toml`) | all modules, `demo/`, and `demo-web/` |
 | Kotlin static analysis | detekt, **type-resolved** (`detektMain`/`detektTest`) | complexity, dead code, bug patterns |
 | Build | `./gradlew build` | compile, all unit tests, `apiCheck` against `api/*.api` |
-| Consumer canary | `demo/` composite build | an external consumer still compiles |
+| Consumer canary | `demo/` and `demo-web/` composite builds | an external consumer still compiles |
 
 Gates exist beyond `./check` and this table does not list them: `main`'s branch protection lives in
 `docs/project/workflow.md`, the release workflow's own verification in `docs/project/release.md`.
