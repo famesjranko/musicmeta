@@ -91,26 +91,59 @@ internal object MusicBrainzParser {
             tagCounts = tagCounts,
             score = obj.optInt("score", 0),
             disambiguation = obj.optString("disambiguation").takeIf { it.isNotBlank() },
-            hasOfficialAlbumRelease = findOfficialAlbumReleaseGroup(obj) != null,
-            officialAlbumReleaseGroupId = findOfficialAlbumReleaseGroup(obj)
-                ?.optString("id")?.takeIf { it.isNotBlank() },
+            hasOfficialAlbumRelease = findStrictOfficialAlbumReleaseGroup(obj) != null,
+            artReleaseGroupId = findArtReleaseGroup(obj)?.optString("id")?.takeIf { it.isNotBlank() },
         )
     }
 
     /**
      * The release-group object of a recording search hit's first Official release whose
      * release-group primary-type is Album (MB embeds a handful of `releases` per recording hit).
-     * Backs both [MusicBrainzRecording.hasOfficialAlbumRelease] (studio-take ranking) and
-     * [MusicBrainzRecording.officialAlbumReleaseGroupId] (CAA release-group art for tracks) from
-     * the same scan, entirely from what the recording search response already carries.
+     * Strict on purpose — backs [MusicBrainzRecording.hasOfficialAlbumRelease], which prefers the
+     * studio-album cut when ranking a recording search pool.
      */
-    private fun findOfficialAlbumReleaseGroup(recording: JSONObject): JSONObject? {
+    private fun findStrictOfficialAlbumReleaseGroup(recording: JSONObject): JSONObject? {
         val releases = recording.optJSONArray("releases") ?: return null
         for (i in 0 until releases.length()) {
             val release = releases.getJSONObject(i)
             if (release.optString("status") != "Official") continue
             val group = release.optJSONObject("release-group") ?: continue
             if (group.optString("primary-type") == "Album") return group
+        }
+        return null
+    }
+
+    /**
+     * The release-group object to try CAA art against, from the same `releases` MB embeds on a
+     * recording search hit. Looser than [findStrictOfficialAlbumReleaseGroup] on purpose: MB embeds
+     * only the releases matching the search query's own `release:` hint, so the "right" Album-type
+     * release is often simply not in the payload at all — verified live for "Enter Sandman" under
+     * the "Metallica" album hint, whose embedded release is Official on an "Other" (box-set)
+     * release-group. Backs [MusicBrainzRecording.artReleaseGroupId]. Three tiers, first match within
+     * the best tier wins:
+     *
+     * 1. Official release, release-group primary-type Album (delegates to
+     *    [findStrictOfficialAlbumReleaseGroup] — the same shape [hasOfficialAlbumRelease] requires).
+     * 2. release status exactly `"Official"`, any release-group primary-type — e.g. a box set,
+     *    single, or compilation MB status-marks Official. Deliberately status-exact, not
+     *    status-exclusion: MB's other statuses (`Promotion`, `Bootleg`, `Pseudo-Release`,
+     *    `Withdrawn`, `Cancelled`) all fall through to tier 3 rather than being special-cased here.
+     * 3. any release carrying a release-group id at all, regardless of status — including
+     *    `Bootleg`/unofficial releases, accepted deliberately as a last resort: some art (or a cheap
+     *    CAA NotFound when the group has no images) beats none, and a bootleg's release-group is
+     *    frequently the *only* release-group MB's search embeds for a bootleg-only recording.
+     */
+    private fun findArtReleaseGroup(recording: JSONObject): JSONObject? {
+        findStrictOfficialAlbumReleaseGroup(recording)?.let { return it }
+        val releases = recording.optJSONArray("releases") ?: return null
+        for (i in 0 until releases.length()) {
+            val release = releases.getJSONObject(i)
+            if (release.optString("status") != "Official") continue
+            release.optJSONObject("release-group")?.let { return it }
+        }
+        for (i in 0 until releases.length()) {
+            val group = releases.getJSONObject(i).optJSONObject("release-group") ?: continue
+            if (group.optString("id").isNotBlank()) return group
         }
         return null
     }

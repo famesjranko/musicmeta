@@ -145,7 +145,7 @@ class MusicBrainzParserTest {
     }
 
     @Test
-    fun `parseRecording fills officialAlbumReleaseGroupId from the Official Album release`() {
+    fun `parseRecording fills artReleaseGroupId from an Official Album release, tier 1`() {
         // Given — a recording hit carrying an Official release on an Album release-group with an id
         val json = JSONObject(
             """
@@ -165,14 +165,42 @@ class MusicBrainzParserTest {
         // When — parsing recordings
         val recordings = MusicBrainzParser.parseRecordings(json)
 
-        // Then — both the boolean and the id are filled from the same scan
+        // Then — both the strict ranking boolean and the (tier-1) art id are filled from this shape
         assertTrue(recordings[0].hasOfficialAlbumRelease)
-        assertEquals("rg-studio", recordings[0].officialAlbumReleaseGroupId)
+        assertEquals("rg-studio", recordings[0].artReleaseGroupId)
     }
 
     @Test
-    fun `parseRecording leaves officialAlbumReleaseGroupId null when no Official Album release`() {
-        // Given — a recording hit with only a live release, no Official Album
+    fun `parseRecording keeps a tier-2 id from an Official non-Album release, ranking bool false`() {
+        // Given — live evidence shape: "Enter Sandman" under the "Metallica" album hint embeds only
+        // an Official release on an "Other" (box-set) release-group, not a plain Album
+        val json = JSONObject(
+            """
+            {
+              "recordings": [{
+                "id": "rec-studio",
+                "score": 100,
+                "title": "Enter Sandman",
+                "releases": [
+                  {"status": "Official", "release-group": {"id": "rg-boxset", "primary-type": "Other"}}
+                ]
+              }]
+            }
+            """.trimIndent(),
+        )
+
+        // When — parsing recordings
+        val recordings = MusicBrainzParser.parseRecordings(json)
+
+        // Then — the strict ranking boolean stays false (not a plain Album), but the art id is kept
+        // via tier 2 so CAA still has a release-group to try
+        assertFalse(recordings[0].hasOfficialAlbumRelease)
+        assertEquals("rg-boxset", recordings[0].artReleaseGroupId)
+    }
+
+    @Test
+    fun `parseRecording keeps a tier-3 id from a non-Official release with a release-group id`() {
+        // Given — a recording hit with only a bootleg release, no Official release at all
         val json = JSONObject(
             """
             {
@@ -191,9 +219,118 @@ class MusicBrainzParserTest {
         // When — parsing recordings
         val recordings = MusicBrainzParser.parseRecordings(json)
 
+        // Then — the ranking boolean is false, but tier 3 still keeps the id: some art beats none
+        assertFalse(recordings[0].hasOfficialAlbumRelease)
+        assertEquals("rg-live", recordings[0].artReleaseGroupId)
+    }
+
+    @Test
+    fun `parseRecording leaves artReleaseGroupId null when no release carries a release-group id`() {
+        // Given — a release with no release-group object at all, so no tier can match
+        val json = JSONObject(
+            """
+            {
+              "recordings": [{
+                "id": "rec-no-group",
+                "score": 100,
+                "title": "Enter Sandman",
+                "releases": [
+                  {"status": "Bootleg"}
+                ]
+              }]
+            }
+            """.trimIndent(),
+        )
+
+        // When — parsing recordings
+        val recordings = MusicBrainzParser.parseRecordings(json)
+
         // Then — neither signal fires
         assertFalse(recordings[0].hasOfficialAlbumRelease)
-        assertNull(recordings[0].officialAlbumReleaseGroupId)
+        assertNull(recordings[0].artReleaseGroupId)
+    }
+
+    @Test
+    fun `parseRecording keeps a tier-2 id for a Single-only recording`() {
+        // Given — the only embedded release is Official on a Single release-group, not an Album
+        val json = JSONObject(
+            """
+            {
+              "recordings": [{
+                "id": "rec-single",
+                "score": 100,
+                "title": "Enter Sandman",
+                "releases": [
+                  {"status": "Official", "release-group": {"id": "rg-single", "primary-type": "Single"}}
+                ]
+              }]
+            }
+            """.trimIndent(),
+        )
+
+        // When — parsing recordings
+        val recordings = MusicBrainzParser.parseRecordings(json)
+
+        // Then — not a plain Album, so ranking stays false, but the Official single's group is kept
+        assertFalse(recordings[0].hasOfficialAlbumRelease)
+        assertEquals("rg-single", recordings[0].artReleaseGroupId)
+    }
+
+    @Test
+    fun `parseRecording keeps a tier-2 id for a Compilation-only recording`() {
+        // Given — the only embedded release is Official on a Compilation release-group
+        val json = JSONObject(
+            """
+            {
+              "recordings": [{
+                "id": "rec-comp",
+                "score": 100,
+                "title": "Enter Sandman",
+                "releases": [
+                  {
+                    "status": "Official",
+                    "release-group": {"id": "rg-comp", "primary-type": "Compilation"}
+                  }
+                ]
+              }]
+            }
+            """.trimIndent(),
+        )
+
+        // When — parsing recordings
+        val recordings = MusicBrainzParser.parseRecordings(json)
+
+        // Then — not a plain Album, so ranking stays false, but the Official compilation's group is kept
+        assertFalse(recordings[0].hasOfficialAlbumRelease)
+        assertEquals("rg-comp", recordings[0].artReleaseGroupId)
+    }
+
+    @Test
+    fun `parseRecording prefers the Official release-group over a Pseudo-Release alongside it`() {
+        // Given — a Pseudo-Release entry (MB's transliteration duplicate of a real release) listed
+        // before the genuine Official release; tier order must not let it win
+        val json = JSONObject(
+            """
+            {
+              "recordings": [{
+                "id": "rec-studio",
+                "score": 100,
+                "title": "Enter Sandman",
+                "releases": [
+                  {"status": "Pseudo-Release", "release-group": {"id": "rg-pseudo", "primary-type": "Album"}},
+                  {"status": "Official", "release-group": {"id": "rg-real", "primary-type": "Album"}}
+                ]
+              }]
+            }
+            """.trimIndent(),
+        )
+
+        // When — parsing recordings
+        val recordings = MusicBrainzParser.parseRecordings(json)
+
+        // Then — the genuine Official release's group wins tier 1, not the Pseudo-Release's
+        assertTrue(recordings[0].hasOfficialAlbumRelease)
+        assertEquals("rg-real", recordings[0].artReleaseGroupId)
     }
 
     @Test
