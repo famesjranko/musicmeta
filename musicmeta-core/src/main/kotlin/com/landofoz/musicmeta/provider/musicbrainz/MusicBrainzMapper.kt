@@ -56,8 +56,20 @@ internal object MusicBrainzMapper {
             isrc = recording.isrcs.firstOrNull(),
         )
 
+    /**
+     * [EnrichmentIdentifiers.musicBrainzId] here is always the **recording** MBID, never a release
+     * MBID — [CoverArtArchiveProvider] depends on that contract to tell a track request's identifier
+     * apart from an album request's. `musicBrainzReleaseGroupId` is filled from
+     * [MusicBrainzRecording.artReleaseGroupId] when one exists, so CAA can try its release-group
+     * endpoint for the track's art — that field is tiered rather than strictly the studio album (see
+     * its KDoc), because the recording search payload often does not embed the plain Album release
+     * at all.
+     */
     fun toTrackIdentifiers(recording: MusicBrainzRecording): EnrichmentIdentifiers =
-        EnrichmentIdentifiers(musicBrainzId = recording.id)
+        EnrichmentIdentifiers(
+            musicBrainzId = recording.id,
+            musicBrainzReleaseGroupId = recording.artReleaseGroupId,
+        )
 
     fun toBandMembers(members: List<MusicBrainzBandMember>): EnrichmentData.BandMembers =
         EnrichmentData.BandMembers(

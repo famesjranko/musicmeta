@@ -128,45 +128,154 @@ internal class DeezerApi(
         }
     }
 
-    suspend fun searchTrack(title: String, artist: String): DeezerTrackSearchResult? {
-        val query = URLEncoder.encode("$artist $title", "UTF-8")
-        val url = "$BASE_URL/search/track?q=$query&limit=5"
-        val json = fetchJson(url) ?: return null
-
-        val data = json.optJSONArray("data") ?: return null
-        for (i in 0 until data.length()) {
-            val track = data.getJSONObject(i)
-            val trackArtist = track.optJSONObject("artist")
-            val artistName = trackArtist?.optString("name", "").orEmpty()
-            return DeezerTrackSearchResult(
-                id = track.optLong("id"),
-                title = track.optString("title", ""),
-                artistName = artistName,
-                previewUrl = track.optString("preview").takeIf { it.isNotBlank() },
-                durationSec = track.optInt("duration").takeIf { it > 0 },
-                albumTitle = track.optJSONObject("album")?.optString("title")?.takeIf { it.isNotBlank() },
-            )
+    /**
+     * Finds the track a human would mean by [title]/[artist], optionally narrowed by [album].
+     *
+     * Same disease as [searchArtist] (`docs/pitfalls.md` §7), one hop further: Deezer's plain
+     * `q=<artist> <title>` query not only orders candidates untrustworthily, it can omit the
+     * studio original from the pool entirely when a live/remix take is more popular — measured
+     * live 2026-08-06: neither "Harvester of Sorrow"'s nor "Blackened"'s studio take appeared
+     * anywhere in the plain query's top 5. The advanced field query `artist:"…" track:"…"` does
+     * return the studio take (first, in both measurements), with or without an `album:"…"` field —
+     * so the field query is the primary query even when no [album] hint exists, not an
+     * album-only refinement. Ranking alone cannot compensate: a studio take absent from the pool
+     * cannot be ranked into first place.
+     *
+     * The queries run narrowest-first, and a tier falls through when it yields no candidate that
+     * survives the [ArtistMatcher] filter (a raw-but-all-wrong-artist pool is as useless as an
+     * empty one): field query with `album:` (titles drift across editions, so its misses are
+     * expected) → field query without `album:` (a literal `"` in any field breaks the syntax and
+     * returns zero, observed live) → plain keyword query as the last resort.
+     *
+     * Whichever query produced the pool, it is then ranked — the original `for` loop here returned
+     * hit 0 unconditionally, so a five-candidate pool never mattered. [rankTracks] is this
+     * provider's version of [ArtistMatcher]-driven pool ranking; see its KDoc for the tier order.
+     */
+    suspend fun searchTrack(title: String, artist: String, album: String? = null): DeezerTrackSearchResult? {
+        val queries = buildList {
+            album?.takeIf { it.isNotBlank() }?.let { add(advancedTrackUrl(artist, title, it)) }
+            add(advancedTrackUrl(artist, title, album = null))
+            add(plainTrackUrl(artist, title))
+        }
+        for (url in queries) {
+            val candidates = fetchTrackPool(url)
+                .orEmpty()
+                .filter { ArtistMatcher.isMatch(artist, it.optJSONObject("artist")?.optString("name", "").orEmpty()) }
+            if (candidates.isNotEmpty()) {
+                return candidates.rankTracks(title, artist, album)?.toTrackSearchResult()
+            }
         }
         return null
     }
 
-    suspend fun getTrackRadio(trackId: Long, limit: Int = 25): List<DeezerRadioTrack> {
-        val url = "$BASE_URL/track/$trackId/radio?limit=$limit"
-        val json = fetchJson(url) ?: return emptyList()
+    private suspend fun fetchTrackPool(url: String): List<JSONObject>? {
+        val json = fetchJson(url) ?: return null
+        val data = json.optJSONArray("data") ?: return null
+        return (0 until data.length()).mapNotNull { data.optJSONObject(it) }
+    }
 
-        val data = json.optJSONArray("data") ?: return emptyList()
-        return (0 until data.length()).map { i ->
-            val track = data.getJSONObject(i)
-            val trackArtist = track.optJSONObject("artist")
-            val album = track.optJSONObject("album")
-            DeezerRadioTrack(
-                id = track.optLong("id"),
-                title = track.optString("title", ""),
-                artistName = trackArtist?.optString("name", "").orEmpty(),
-                albumTitle = album?.optString("title")?.takeIf { it.isNotBlank() },
-                durationSec = track.optInt("duration", 0),
-            )
+    private fun plainTrackUrl(artist: String, title: String): String {
+        val encoded = URLEncoder.encode("$artist $title", "UTF-8")
+        return "$BASE_URL/search/track?q=$encoded&limit=$TRACK_SEARCH_LIMIT"
+    }
+
+    private fun advancedTrackUrl(artist: String, title: String, album: String?): String {
+        val query = buildString {
+            append("""artist:"$artist" track:"$title"""")
+            if (album != null) append(""" album:"$album"""")
         }
+        val encoded = URLEncoder.encode(query, "UTF-8")
+        return "$BASE_URL/search/track?q=$encoded&limit=$TRACK_SEARCH_LIMIT"
+    }
+
+    private fun JSONObject.toTrackSearchResult(): DeezerTrackSearchResult {
+        val trackArtist = optJSONObject("artist")
+        return DeezerTrackSearchResult(
+            id = optLong("id"),
+            title = optString("title", ""),
+            artistName = trackArtist?.optString("name", "").orEmpty(),
+            previewUrl = optString("preview").takeIf { it.isNotBlank() },
+            durationSec = optInt("duration").takeIf { it > 0 },
+            albumTitle = optJSONObject("album")?.optString("title")?.takeIf { it.isNotBlank() },
+            artistId = trackArtist?.optLong("id")?.takeIf { it != 0L },
+        )
+    }
+
+    /**
+     * Ranks a candidate pool for [title]/[artist] (already filtered to artist-name matches),
+     * highest tier first, keeping pool order among ties (`maxWithOrNull` keeps the first maximum,
+     * same convention as [com.landofoz.musicmeta.engine.bestArtistMatch]):
+     *
+     * 1. exact (case-insensitive) title match — separates "Blackened" from "Blackened 2020"
+     * 2. artist name quality ([ArtistMatcher.matchQuality]) — a closer name beats a looser one
+     * 3. album containment, when [album] is given — the hinted album's edition over any other
+     * 4. no edition marker the request didn't ask for ([hasUnrequestedMarker]) — prefers
+     *    "Harvester of Sorrow" over "Harvester Of Sorrow (Live In Mexico City)" when neither is an
+     *    exact title match
+     *
+     * Tier 1 alone resolves most of tier 4's job — a live/remix title is rarely an exact string
+     * match to begin with — but tier 4 still matters when *no* candidate has the exact title, so
+     * ranking has to choose among approximations.
+     */
+    private fun List<JSONObject>.rankTracks(title: String, artist: String, album: String?): JSONObject? =
+        map { it to it.trackRank(title, artist, album) }
+            .maxWithOrNull(
+                compareBy(
+                    { it.second.exactTitle },
+                    { it.second.artistQuality },
+                    { it.second.albumMatch },
+                    { it.second.cleanTitle },
+                ),
+            )
+            ?.first
+
+    private data class TrackRank(
+        val exactTitle: Boolean,
+        val artistQuality: Int,
+        val albumMatch: Boolean,
+        val cleanTitle: Boolean,
+    )
+
+    private fun JSONObject.trackRank(title: String, artist: String, album: String?): TrackRank {
+        val candidateTitle = optString("title", "")
+        val candidateArtist = optJSONObject("artist")?.optString("name", "").orEmpty()
+        val candidateAlbum = optJSONObject("album")?.optString("title", "").orEmpty()
+        return TrackRank(
+            exactTitle = candidateTitle.trim().equals(title.trim(), ignoreCase = true),
+            artistQuality = ArtistMatcher.matchQuality(artist, candidateArtist),
+            albumMatch = album.isNullOrBlank() ||
+                candidateAlbum.contains(album, ignoreCase = true) ||
+                album.contains(candidateAlbum, ignoreCase = true),
+            cleanTitle = !hasUnrequestedMarker(candidateTitle, title),
+        )
+    }
+
+    /**
+     * True when [candidateTitle] carries an edition marker that [requestedTitle] does not ask
+     * for. A marker the request itself contains (a genuine request for the live take) is not
+     * penalised. Two shapes, both observed live:
+     *
+     * - a parenthetical containing a live/remaster/demo/remix word — "(Live In Mexico City)"
+     * - a bare suffix appended to the requested title — Deezer titles the "Blackened" remix
+     *   "Blackened 2020" (no parentheses, marked only by the trailing year) and live/rehearsal
+     *   takes as `" - Live at …"` dash suffixes, so the suffix is checked for the same marker
+     *   words *and* for a bare year. The suffix check only fires when the candidate extends the
+     *   requested title, so a title that legitimately contains a year ("1979") is never penalised
+     *   by its own name.
+     */
+    private fun hasUnrequestedMarker(candidateTitle: String, requestedTitle: String): Boolean {
+        val requestedLower = requestedTitle.trim().lowercase()
+        val parenthetical = PARENTHETICAL_REGEX.findAll(candidateTitle).any { match ->
+            val marker = match.groupValues[1].lowercase()
+            UNREQUESTED_TITLE_MARKERS.any { marker.contains(it) && !requestedLower.contains(it) }
+        }
+        if (parenthetical) return true
+
+        val candidateLower = candidateTitle.trim().lowercase()
+        if (!candidateLower.startsWith(requestedLower)) return false
+        val suffix = candidateLower.substring(requestedLower.length)
+        return UNREQUESTED_TITLE_MARKERS.any { suffix.contains(it) && !requestedLower.contains(it) } ||
+            (YEAR_REGEX.containsMatchIn(suffix) && !YEAR_REGEX.containsMatchIn(requestedLower))
     }
 
     suspend fun getArtistTop(artistId: Long, limit: Int = 10): List<DeezerTopTrack> {
@@ -256,7 +365,19 @@ internal class DeezerApi(
         /** Candidate pool size for artist search — enough hits for a ghost to be outvoted. */
         const val ARTIST_SEARCH_LIMIT = 10
 
+        /** Candidate pool size for track search — enough hits for a wrong edition to be outranked. */
+        const val TRACK_SEARCH_LIMIT = 5
+
         /** Deezer's "Quota limit exceeded" code, carried in a 200 response's `error` object. */
         const val QUOTA_ERROR_CODE = 4
+
+        /** Matches a `(...)` group in a track title, to test its contents against [UNREQUESTED_TITLE_MARKERS]. */
+        val PARENTHETICAL_REGEX = Regex("""\(([^)]*)\)""")
+
+        /** Edition markers that make a title a worse match unless the request itself asked for one. */
+        val UNREQUESTED_TITLE_MARKERS = listOf("live", "remaster", "demo", "remix")
+
+        /** A bare year in a title suffix marks a reissue/remix edition — "Blackened 2020", live. */
+        val YEAR_REGEX = Regex("""\b(19|20)\d{2}\b""")
     }
 }

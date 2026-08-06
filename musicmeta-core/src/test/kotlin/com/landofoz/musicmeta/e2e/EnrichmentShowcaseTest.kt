@@ -247,7 +247,7 @@ class EnrichmentShowcaseTest {
         println("  $multiCount/${EnrichmentType.entries.size} types have multi-provider coverage")
         println("\n  ENGINE FEATURES (v0.9.0):")
         println("    - GENRE uses GenreMerger (multi-provider merge, not short-circuit)")
-        println("    - SIMILAR_ARTISTS uses SimilarArtistMerger (Last.fm + ListenBrainz + Deezer)")
+        println("    - SIMILAR_ARTISTS uses SimilarArtistMerger (Last.fm + Deezer)")
         println("    - ARTIST_TIMELINE is composite (auto-resolves DISCOGRAPHY + BAND_MEMBERS)")
         println("    - GENRE_DISCOVERY is composite (GenreAffinityMatcher via static taxonomy)")
         println("    - ARTIST_RADIO backed by Deezer /artist/{id}/radio (7-day TTL)")
@@ -346,7 +346,7 @@ class EnrichmentShowcaseTest {
     fun `10 - v0_6_0 feature spotlight`() = runBlocking {
         banner("v0.6.0 FEATURES: RECOMMENDATIONS ENGINE")
 
-        // SIMILAR_ARTISTS merge: Radiohead — should show sources=[lastfm, listenbrainz, deezer]
+        // SIMILAR_ARTISTS merge: Radiohead — should show sources=[lastfm, deezer]
         println("  --- SIMILAR_ARTISTS MERGE: Radiohead ---")
         val similarArtistResults = engine.enrich(
             EnrichmentRequest.forArtist("Radiohead"),

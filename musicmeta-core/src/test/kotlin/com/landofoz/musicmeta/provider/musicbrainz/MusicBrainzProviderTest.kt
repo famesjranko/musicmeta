@@ -177,6 +177,78 @@ class MusicBrainzProviderTest {
     }
 
     @Test
+    fun `enrich track ranks a wide score-100 pool to the blank-disambiguation exact-title studio recording`() =
+        runTest {
+            // Given — a 9-candidate pool mirroring live musicbrainz.org "Enter Sandman"/Metallica
+            // evidence (2026-08-06): seven non-blank-disambiguation hits first (all score 100,
+            // including a "bootleg edited version" that no demo/live/remix/remaster keyword list
+            // would catch), then the blank-disambiguation studio original, then a blank-
+            // disambiguation per-member cover ("Enter Sandman (Ulrich)") that a title-blind ranking
+            // would prefer
+            httpClient.givenJsonResponse("recording?query", ENTER_SANDMAN_RANK_POOL)
+            val request = EnrichmentRequest.forTrack("Enter Sandman", "Metallica")
+
+            // When — enriching for genre (drives identity resolution through enrichTrack)
+            val result = provider.enrich(request, EnrichmentType.GENRE)
+
+            // Then — the blank-disambiguation, exact-title studio recording wins, not a
+            // non-blank-disambiguation take (however it's worded) or a blank-disambiguation title
+            // variant
+            assertTrue(result is EnrichmentResult.Success)
+            val success = result as EnrichmentResult.Success
+            assertEquals("rec-studio", success.resolvedIdentifiers?.musicBrainzId)
+        }
+
+    @Test
+    fun `enrich track fills musicBrainzReleaseGroupId from the ranked recording's Official Album`() =
+        runTest {
+            // Given — the ranked recording (rec-studio) carries an Official Album release-group id
+            httpClient.givenJsonResponse("recording?query", ENTER_SANDMAN_RANK_POOL_WITH_GROUP_ID)
+            val request = EnrichmentRequest.forTrack("Enter Sandman", "Metallica")
+
+            // When — enriching for genre (drives identity resolution through enrichTrack)
+            val result = provider.enrich(request, EnrichmentType.GENRE)
+
+            // Then — resolvedIdentifiers carries the recording id AND the release-group id, so CAA
+            // can serve front-cover art for the track without ever treating the recording id as a
+            // release id (CoverArtArchiveProvider)
+            assertTrue(result is EnrichmentResult.Success)
+            val success = result as EnrichmentResult.Success
+            assertEquals("rec-studio", success.resolvedIdentifiers?.musicBrainzId)
+            assertEquals("rg-studio", success.resolvedIdentifiers?.musicBrainzReleaseGroupId)
+        }
+
+    @Test
+    fun `enrich track still rejects a pool with no candidate at or above the score threshold`() = runTest {
+        // Given — every candidate scores below the default minimum match score (80)
+        httpClient.givenJsonResponse(
+            "recording?query",
+            """{"recordings":[{"id":"rec-low","score":50,"title":"Enter Sandman"}]}""",
+        )
+        val request = EnrichmentRequest.forTrack("Enter Sandman", "Metallica")
+
+        // When — enriching for genre
+        val result = provider.enrich(request, EnrichmentType.GENRE)
+
+        // Then — NotFound; the ranking pass never gets a candidate to choose from
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `enrich track sends the release-hinted query when the request carries an album hint`() = runTest {
+        // Given — a matching recording behind the release-hinted query
+        httpClient.givenJsonResponse("recording?query", RECORDING_SEARCH)
+        val request = EnrichmentRequest.forTrack("Paranoid Android", "Radiohead", album = "OK Computer")
+
+        // When — enriching for genre
+        provider.enrich(request, EnrichmentType.GENRE)
+
+        // Then — the Lucene query carries the album's release:"..." term
+        val url = httpClient.requestedUrls.single { it.contains("recording?query") }
+        assertTrue(url.contains("release%3A%22OK+Computer%22"))
+    }
+
+    @Test
     fun `enrich returns BandMembers for artist with members`() = runTest {
         // Given -- artist lookup with artist-rels returns band member relations
         httpClient.givenJsonResponse("artist/art1?fmt=json&inc=tags+url-rels+artist-rels", ARTIST_LOOKUP_WITH_MEMBERS)
@@ -785,6 +857,86 @@ class MusicBrainzProviderTest {
                 "isrcs": ["GBAYE9700100"],
                 "tags": [{"name": "alternative rock", "count": 3}]
               }]
+            }
+        """.trimIndent()
+
+        /**
+         * Mirrors live musicbrainz.org "recording:Enter Sandman AND artistname:Metallica" evidence
+         * (2026-08-06): seven score-100 candidates carrying a non-blank disambiguation before the
+         * studio original, which carries none and an Official Album release, at index 7. The demo
+         * and live entries exercise blank-vs-non-blank the same way keyword markers used to; the
+         * "bootleg edited version" entry is the live-shaped candidate that a keyword list missed —
+         * not "demo"/"live"/"remix"/"remaster", but still non-blank, so blank-preference still
+         * ranks it below the studio original. A blank-disambiguation per-member cover ("Enter
+         * Sandman (Ulrich)") follows last — blank disambiguation and pool position alone would pick
+         * it over the studio original if title were not ranked first, so it still pins
+         * [MusicBrainzEnricher.pickBestRecording]'s tier order.
+         */
+        private val ENTER_SANDMAN_RANK_POOL = """
+            {
+              "recordings": [
+                {
+                  "id": "rec-live-1", "score": 100, "title": "Enter Sandman",
+                  "disambiguation": "live"
+                },
+                {
+                  "id": "rec-live-2", "score": 100, "title": "Enter Sandman",
+                  "disambiguation": "live at Moscow"
+                },
+                {
+                  "id": "rec-live-3", "score": 100, "title": "Enter Sandman",
+                  "disambiguation": "live at Seattle"
+                },
+                {
+                  "id": "rec-bootleg-1", "score": 100, "title": "Enter Sandman",
+                  "disambiguation": "live bootleg"
+                },
+                {
+                  "id": "rec-bootleg-2", "score": 100, "title": "Enter Sandman",
+                  "disambiguation": "live bootleg 1991"
+                },
+                {
+                  "id": "rec-demo", "score": 100, "title": "Enter Sandman",
+                  "disambiguation": "demo: 1990-08-13"
+                },
+                {
+                  "id": "rec-bootleg-edited", "score": 100, "title": "Enter Sandman",
+                  "disambiguation": "bootleg edited version",
+                  "releases": [
+                    {"status": "Bootleg", "release-group": {"primary-type": "Album"}}
+                  ]
+                },
+                {
+                  "id": "rec-studio", "score": 100, "title": "Enter Sandman",
+                  "releases": [
+                    {"status": "Official", "release-group": {"primary-type": "Other"}}
+                  ]
+                },
+                {
+                  "id": "rec-cover-ulrich", "score": 100, "title": "Enter Sandman (Ulrich)"
+                }
+              ]
+            }
+        """.trimIndent()
+
+        /**
+         * Single-candidate variant of [ENTER_SANDMAN_RANK_POOL]: the winning recording's Official
+         * Album release carries a release-group id, pinning that
+         * [MusicBrainzMapper.toTrackIdentifiers] fills `musicBrainzReleaseGroupId` from it.
+         */
+        private val ENTER_SANDMAN_RANK_POOL_WITH_GROUP_ID = """
+            {
+              "recordings": [
+                {
+                  "id": "rec-studio", "score": 100, "title": "Enter Sandman",
+                  "releases": [
+                    {
+                      "status": "Official",
+                      "release-group": {"id": "rg-studio", "primary-type": "Album"}
+                    }
+                  ]
+                }
+              ]
             }
         """.trimIndent()
 

@@ -63,16 +63,44 @@ internal class MusicBrainzApi(
         return MusicBrainzParser.parseArtists(json)
     }
 
+    /**
+     * Finds recordings matching [title]/[artist], optionally narrowed by [album].
+     *
+     * Same disease as [searchArtists]/[searchReleases] (`docs/pitfalls.md` §7): MB's recording
+     * search ties score-100 hits and its own ordering is not trustworthy — a demo or live take can
+     * sort ahead of the studio original. Adding a `release:"…"` term when [album] is known asks MB
+     * to filter by album up front, the same shape as the two-field query [buildQuery] already
+     * builds. Album titles drift across editions, so a hinted query that comes back empty falls
+     * back to the hint-less query rather than reporting no match. Ranking the returned pool (rather
+     * than trusting hit 0) is the caller's job — [MusicBrainzEnricher] has the score threshold and
+     * the disambiguation/release-type signals to do it. [limit] defaults to
+     * [RECORDING_SEARCH_LIMIT], wide enough for the studio original to still be in the pool when
+     * several score-100 live/bootleg/cover takes sort ahead of it.
+     */
     suspend fun searchRecordings(
         title: String,
         artist: String,
-        limit: Int = 5,
+        album: String? = null,
+        limit: Int = RECORDING_SEARCH_LIMIT,
     ): List<MusicBrainzRecording> {
-        val query = buildQuery("recording", title, "artistname", artist)
+        val hinted = album?.takeIf { it.isNotBlank() }
+            ?.let { fetchRecordings(recordingQuery(title, artist, it), limit) }
+        return hinted?.takeIf { it.isNotEmpty() }
+            ?: fetchRecordings(recordingQuery(title, artist, null), limit)
+    }
+
+    private suspend fun fetchRecordings(query: String, limit: Int): List<MusicBrainzRecording> {
         val json = rateLimiter.execute {
             httpClient.fetchJsonResult("$BASE_URL/recording?query=$query&fmt=json&limit=$limit").bodyOrThrowTransient()
         } ?: return emptyList()
         return MusicBrainzParser.parseRecordings(json)
+    }
+
+    /** Lucene query for a recording search, with an optional `release:"…"` term when [album] is known. */
+    private fun recordingQuery(title: String, artist: String, album: String?): String {
+        val base = "recording:\"${escapeLucene(title)}\" AND artistname:\"${escapeLucene(artist)}\""
+        val withAlbum = if (album.isNullOrBlank()) base else "$base AND release:\"${escapeLucene(album)}\""
+        return encode(withAlbum)
     }
 
     suspend fun lookupRelease(mbid: String): MusicBrainzRelease? {
@@ -145,6 +173,19 @@ internal class MusicBrainzApi(
     companion object {
         private const val BASE_URL = "https://musicbrainz.org/ws/2"
         private val LUCENE_SPECIAL_CHARS = """[+\-&|!()\{}\[\]^"~*?:\\/]""".toRegex()
+
+        /**
+         * Default candidate pool size for [searchRecordings]. A well-covered track's score-100
+         * ties can run deep in live/bootleg/cover takes — "Enter Sandman"/Metallica has ~750 tied
+         * recordings, and measured live (2026-08-06) `limit=5`, and in some runs even `limit=15`,
+         * returned *no* clean-disambiguation studio hit at all, so
+         * [MusicBrainzEnricher.pickBestRecording] had nothing to rank. Where the studio hit lands
+         * inside the pool is not stable across requests (MB's tie order shifts with the limit
+         * itself), so the value is headroom, not a measured index: 25 reliably contained several
+         * studio candidates in repeated runs. A pathologically over-tied track could still
+         * overflow it.
+         */
+        const val RECORDING_SEARCH_LIMIT = 25
 
         fun escapeLucene(value: String): String =
             value.replace(LUCENE_SPECIAL_CHARS) { "\\${it.value}" }

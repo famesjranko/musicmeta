@@ -7,9 +7,16 @@ import com.landofoz.musicmeta.SimilarTrack
 
 /**
  * Deduplicates and merges similar track results from multiple providers.
- * Additive scoring: tracks recommended by multiple providers rank higher.
+ *
+ * Additive scoring: tracks recommended by multiple providers rank higher — *except* when Last.fm
+ * (genuine track-level similarity) and Deezer (artist-similarity applied to an artist's top tracks,
+ * see [SimilarTrack.matchScore]) agree on the same track. There, summing would let an
+ * artist-derived approximation inflate a real score, so Last.fm's score wins outright instead.
  */
 internal object SimilarTrackMerger : ResultMerger {
+
+    /** The one source whose [SimilarTrack.matchScore] is genuine track-level similarity. */
+    private const val GENUINE_SOURCE = "lastfm"
 
     override val type: EnrichmentType = EnrichmentType.SIMILAR_TRACKS
 
@@ -43,7 +50,8 @@ internal object SimilarTrackMerger : ResultMerger {
         return grouped.values
             .map { group ->
                 val first = group.first()
-                val totalScore = group
+                val genuineEntry = group.firstOrNull { GENUINE_SOURCE in it.sources }
+                val totalScore = genuineEntry?.matchScore ?: group
                     .map { it.matchScore }
                     .fold(0f) { acc, s -> acc + s }
                     .coerceAtMost(1.0f)

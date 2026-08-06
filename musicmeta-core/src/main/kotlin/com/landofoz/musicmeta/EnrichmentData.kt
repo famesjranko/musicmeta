@@ -171,6 +171,16 @@ data class TrackInfo(
 data class SimilarTrack(
     val title: String,
     val artist: String,
+    /**
+     * How closely this track matches the seed track — **semantics depend on [sources]**. Last.fm's
+     * `track.getSimilar` is genuine track-level similarity. Deezer has no track-similarity endpoint,
+     * so its entries are derived from `/artist/{id}/related` + `/artist/{id}/top`: the score there
+     * ranks the *artist's* similarity to the seed artist, not similarity between the tracks
+     * themselves, applied uniformly to that artist's top tracks. A single non-nullable field is
+     * kept (rather than a distinct field per source, as [SimilarAlbum.artistMatchScore] does for
+     * albums) because [SimilarTrackMerger][com.landofoz.musicmeta.engine.SimilarTrackMerger]
+     * already keeps the genuine Last.fm score on overlap, so provenance is enough to interpret it.
+     */
     val matchScore: Float,
     val identifiers: EnrichmentIdentifiers = EnrichmentIdentifiers(),
     val sources: List<String> = emptyList(),

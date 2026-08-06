@@ -233,10 +233,10 @@ internal class MusicBrainzEnricher(
     ): EnrichmentResult {
         if (type == EnrichmentType.CREDITS) return enrichTrackCredits(request)
 
-        val recordings = api.searchRecordings(request.title, request.artist)
+        val recordings = api.searchRecordings(request.title, request.artist, request.album)
         if (recordings.isEmpty()) return EnrichmentResult.NotFound(type, providerId)
 
-        val best = recordings.firstOrNull { it.score >= minMatchScore }
+        val best = pickBestRecording(request.title, recordings)
             ?: return EnrichmentResult.NotFound(type, providerId)
 
         return EnrichmentResult.Success(
@@ -307,6 +307,51 @@ internal class MusicBrainzEnricher(
             else -> 0
         }
     }.first()
+
+    /**
+     * Rank the recording pool above [minMatchScore] instead of taking `firstOrNull` — MB search
+     * ties score-100 hits and puts demo/live/bootleg/cover takes ahead of the studio original
+     * (`docs/pitfalls.md` §7). Score stays the floor: everything below [minMatchScore] is out
+     * before ranking starts. Among survivors, highest tier first, keeping pool order among ties
+     * (`maxWithOrNull` keeps the first maximum, same convention as [pickBestArtist]'s sibling in
+     * `DeezerApi.rankTracks`):
+     *
+     * 1. exact (case-insensitive) title match against [title] — verified live: a per-member
+     *    cover/karaoke recording titled e.g. "Enter Sandman (Ulrich)" carries no disambiguation at
+     *    all and would still beat the studio original on tiers 2/3 alone, so title has to be
+     *    checked first, same tier order as `DeezerApi.rankTracks`'s tier 1
+     * 2. blank [MusicBrainzRecording.disambiguation] — a canonical recording carries none; ANY
+     *    disambiguation marks a variant. MB's disambiguation vocabulary is open (demo, live,
+     *    "bootleg edited version", instrumental, acoustic, radio edit, mono/stereo, single
+     *    version, …) and cannot be enumerated by keyword — verified live: "bootleg edited version"
+     *    isn't a "demo"/"live"/"remix"/"remaster" keyword match, so a keyword list let it tie the
+     *    studio original and win on pool order. Blank-vs-non-blank has no such gap. The accepted
+     *    edge: a request that explicitly asks for a variant edition (title itself names it) still
+     *    resolves via tier 1's exact-title match, because MB puts variant information in
+     *    disambiguation, not in the recording title — blank-preference never fights an exact title.
+     * 3. carries an Official release on an Album release-group
+     *    ([MusicBrainzRecording.hasOfficialAlbumRelease]) — prefers the studio album cut over a
+     *    single/compilation-only recording when neither carries a disambiguation
+     */
+    private fun pickBestRecording(title: String, recordings: List<MusicBrainzRecording>): MusicBrainzRecording? =
+        recordings.filter { it.score >= minMatchScore }
+            .map { it to it.recordingRank(title) }
+            .maxWithOrNull(
+                compareBy({ it.second.exactTitle }, { it.second.blankDisambiguation }, { it.second.officialAlbum }),
+            )
+            ?.first
+
+    private fun MusicBrainzRecording.recordingRank(title: String) = RecordingRank(
+        exactTitle = this.title.trim().equals(title.trim(), ignoreCase = true),
+        blankDisambiguation = disambiguation.isNullOrBlank(),
+        officialAlbum = hasOfficialAlbumRelease,
+    )
+
+    private data class RecordingRank(
+        val exactTitle: Boolean,
+        val blankDisambiguation: Boolean,
+        val officialAlbum: Boolean,
+    )
 
     private fun MusicBrainzRelease.toCandidate() = SearchCandidate(
         title = title, artist = artistCredit, year = date,

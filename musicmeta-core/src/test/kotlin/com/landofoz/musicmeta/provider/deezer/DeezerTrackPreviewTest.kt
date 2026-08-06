@@ -185,6 +185,22 @@ class DeezerTrackPreviewTest {
     }
 
     @Test
+    fun `enrich sends the advanced field query when the request carries an album hint`() = runTest {
+        // Given — a ForTrack request with an album hint, and a matching advanced-query result
+        httpClient.givenJsonResponse("search/track", TRACK_SEARCH_WITH_PREVIEW_RESPONSE)
+        val request = EnrichmentRequest.forTrack("Karma Police", "Radiohead", album = "OK Computer")
+
+        // When — enriching for track preview
+        provider.enrich(request, EnrichmentType.TRACK_PREVIEW)
+
+        // Then — the advanced artist:/track:/album: field query was sent, not the plain one
+        val url = httpClient.requestedUrls.single { it.contains("search/track") }
+        assertTrue(url.contains("artist%3A%22Radiohead%22"))
+        assertTrue(url.contains("track%3A%22Karma+Police%22"))
+        assertTrue(url.contains("album%3A%22OK+Computer%22"))
+    }
+
+    @Test
     fun `capabilities includes TRACK_PREVIEW with priority 100`() {
         // Given — the DeezerProvider
         // When — checking capabilities

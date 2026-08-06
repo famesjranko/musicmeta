@@ -68,7 +68,7 @@ val keys = ApiKeyConfig(
 )
 ```
 
-`listenBrainzToken` unlocks `ARTIST_RADIO_DISCOVERY` (LB Radio). All other ListenBrainz endpoints — popularity, similar artists, discography — remain keyless and continue working without a token.
+`listenBrainzToken` unlocks `ARTIST_RADIO_DISCOVERY` (LB Radio). All other ListenBrainz endpoints — popularity, discography — remain keyless and continue working without a token.
 
 Pass keys to the builder. `withDefaultProviders()` conditionally registers key-requiring providers only when their key is present:
 
@@ -262,9 +262,9 @@ val minimal = setOf(EnrichmentType.ALBUM_ART, EnrichmentType.GENRE)
 
 The library includes several discovery types that go beyond basic metadata.
 
-### Similar artists (merged from 3 providers)
+### Similar artists (merged from 2 providers)
 
-Last.fm, ListenBrainz, and Deezer each return similar artists. The engine deduplicates them, combines scores, and tracks which providers contributed each match:
+Last.fm and Deezer each return similar artists. The engine deduplicates them, combines scores, and tracks which providers contributed each match:
 
 ```kotlin
 val results = engine.enrich(

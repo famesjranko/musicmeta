@@ -224,6 +224,67 @@ class FanartTvProviderTest {
     }
 
     @Test
+    fun `enrich selects the most-liked thumbnail even when it is not first`() = runTest {
+        // Given -- the highest-liked thumbnail is listed second, not first
+        httpClient.givenJsonResponse("fanart.tv", NOT_FIRST_MOST_LIKED_JSON)
+        val request = artistRequest()
+
+        // When -- enriching for artist photo
+        val result = provider.enrich(request, EnrichmentType.ARTIST_PHOTO)
+
+        // Then -- the most-liked image wins, not list order
+        assertTrue(result is EnrichmentResult.Success)
+        val artwork = (result as EnrichmentResult.Success).data as EnrichmentData.Artwork
+        assertEquals("https://assets.fanart.tv/fanart/thumb-most-liked.jpg", artwork.url)
+    }
+
+    @Test
+    fun `enrich keeps list order among tied likes counts`() = runTest {
+        // Given -- two thumbnails tied on likes; the first in list order should win
+        httpClient.givenJsonResponse("fanart.tv", TIED_LIKES_JSON)
+        val request = artistRequest()
+
+        // When -- enriching for artist photo
+        val result = provider.enrich(request, EnrichmentType.ARTIST_PHOTO)
+
+        // Then -- the first tied entry is selected
+        assertTrue(result is EnrichmentResult.Success)
+        val artwork = (result as EnrichmentResult.Success).data as EnrichmentData.Artwork
+        assertEquals("https://assets.fanart.tv/fanart/thumb-tied-first.jpg", artwork.url)
+    }
+
+    @Test
+    fun `enrich ranks missing or garbage likes lowest without crashing`() = runTest {
+        // Given -- one thumbnail has garbage likes, one is missing likes entirely, one has a
+        // real positive count -- neither of the first two should ever beat the real count
+        httpClient.givenJsonResponse("fanart.tv", GARBAGE_LIKES_JSON)
+        val request = artistRequest()
+
+        // When -- enriching for artist photo
+        val result = provider.enrich(request, EnrichmentType.ARTIST_PHOTO)
+
+        // Then -- no crash, and the only thumbnail with a real likes count wins
+        assertTrue(result is EnrichmentResult.Success)
+        val artwork = (result as EnrichmentResult.Success).data as EnrichmentData.Artwork
+        assertEquals("https://assets.fanart.tv/fanart/thumb-real-likes.jpg", artwork.url)
+    }
+
+    @Test
+    fun `enrich ALBUM_ART selects the most-liked album cover even when it is not first`() = runTest {
+        // Given -- the album endpoint lists the lower-liked cover first
+        httpClient.givenJsonResponse("/albums/", ALBUM_NOT_FIRST_MOST_LIKED_JSON)
+        val request = albumRequest()
+
+        // When -- enriching for ALBUM_ART
+        val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
+
+        // Then -- the most-liked cover wins, not list order
+        assertTrue(result is EnrichmentResult.Success)
+        val artwork = (result as EnrichmentResult.Success).data as EnrichmentData.Artwork
+        assertEquals("https://fanart.tv/album-cover-most-liked.jpg", artwork.url)
+    }
+
+    @Test
     fun `enrich returns artwork without sizes when single image`() = runTest {
         // Given -- Fanart.tv returns a single thumbnail
         httpClient.givenJsonResponse("fanart.tv", ARTIST_IMAGES_JSON)
@@ -371,6 +432,47 @@ class FanartTvProviderTest {
               "hdmusiclogo": [],
               "musicbanner": []
             }
+        """.trimIndent()
+
+        val NOT_FIRST_MOST_LIKED_JSON = """
+            {
+              "artistthumb": [
+                {"url": "https://assets.fanart.tv/fanart/thumb-low-likes.jpg", "id": "200", "likes": "2"},
+                {"url": "https://assets.fanart.tv/fanart/thumb-most-liked.jpg", "id": "201", "likes": "10"}
+              ],
+              "artistbackground": [],
+              "hdmusiclogo": []
+            }
+        """.trimIndent()
+
+        val TIED_LIKES_JSON = """
+            {
+              "artistthumb": [
+                {"url": "https://assets.fanart.tv/fanart/thumb-tied-first.jpg", "id": "300", "likes": "5"},
+                {"url": "https://assets.fanart.tv/fanart/thumb-tied-second.jpg", "id": "301", "likes": "5"}
+              ],
+              "artistbackground": [],
+              "hdmusiclogo": []
+            }
+        """.trimIndent()
+
+        val GARBAGE_LIKES_JSON = """
+            {
+              "artistthumb": [
+                {"url": "https://assets.fanart.tv/fanart/thumb-garbage-likes.jpg", "id": "400", "likes": "not-a-number"},
+                {"url": "https://assets.fanart.tv/fanart/thumb-missing-likes.jpg", "id": "401"},
+                {"url": "https://assets.fanart.tv/fanart/thumb-real-likes.jpg", "id": "402", "likes": "1"}
+              ],
+              "artistbackground": [],
+              "hdmusiclogo": []
+            }
+        """.trimIndent()
+
+        val ALBUM_NOT_FIRST_MOST_LIKED_JSON = """
+            {"rg-mbid": {"albumcover": [
+                {"url": "https://fanart.tv/album-cover-low-likes.jpg", "id": "1", "likes": "1"},
+                {"url": "https://fanart.tv/album-cover-most-liked.jpg", "id": "2", "likes": "20"}
+              ], "cdart": []}}
         """.trimIndent()
 
         val ALBUM_ENDPOINT_JSON = """

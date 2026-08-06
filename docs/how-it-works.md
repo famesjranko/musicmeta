@@ -210,7 +210,7 @@ Successful results are cached with per-type TTLs:
 | **LRCLIB** | None | Synced + plain lyrics | Only lyrics source |
 | **Deezer** | None | Album art, artist photos, discography, tracklists, album metadata, similar artists/tracks, artist radio, top tracks, similar albums, track previews | Fallback metadata + primary radio/similar albums |
 | **iTunes** | None (rate sensitive) | Album art, album metadata, tracklists, discography | Tertiary fallback |
-| **ListenBrainz** | None | Artist/track popularity, discography, similar artists, top tracks, radio discovery | Listening-based stats + community radio (token for radio) |
+| **ListenBrainz** | None | Artist/track popularity, discography, top tracks, radio discovery | Listening-based stats + community radio (token for radio) |
 | **Last.fm** | API key | Similar artists/tracks, genres, bios, popularity, album metadata, top tracks | Social/scrobble data |
 | **Fanart.tv** | API key | Artist photos/backgrounds/logos/banners, CD art, album art | High-quality fan artwork |
 | **Discogs** | Token | Artist photos, album art, labels, release types, band members, album metadata, credits, editions | Physical release metadata |
@@ -259,7 +259,7 @@ when a key is present, and CAA is a fallback, not a second entry in the same res
 ### Relationships (5 types)
 | Type | Providers (by priority) | Notes |
 |------|------------------------|-------|
-| SIMILAR_ARTISTS | Last.fm(100), ListenBrainz(50), Deezer(30) | **Mergeable** — deduplicates, sums matchScores |
+| SIMILAR_ARTISTS | Last.fm(100), Deezer(30) | **Mergeable** — deduplicates, sums matchScores |
 | SIMILAR_TRACKS | Last.fm(100), Deezer(50) | **Mergeable** — deduplicates, sums matchScores |
 | BAND_MEMBERS | MusicBrainz(100), Discogs(50) | From artist-rels |
 | ARTIST_LINKS | MusicBrainz(100) | All URL relation types |

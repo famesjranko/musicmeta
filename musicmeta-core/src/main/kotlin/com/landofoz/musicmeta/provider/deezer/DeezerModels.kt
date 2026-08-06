@@ -56,6 +56,8 @@ internal data class DeezerTrackSearchResult(
     val previewUrl: String? = null,
     val durationSec: Int? = null,
     val albumTitle: String? = null,
+    /** The track's artist's Deezer id, straight off the search payload — null when absent/0. */
+    val artistId: Long? = null,
 )
 
 /** Top track entry from Deezer /artist/{id}/top endpoint. */
@@ -68,7 +70,7 @@ internal data class DeezerTopTrack(
     val rank: Int = 0,
 )
 
-/** Radio track entry from Deezer /artist/{id}/radio or /track/{id}/radio endpoint. */
+/** Radio track entry from Deezer /artist/{id}/radio endpoint. */
 internal data class DeezerRadioTrack(
     val id: Long,
     val title: String,

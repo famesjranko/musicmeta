@@ -45,6 +45,32 @@ internal data class MusicBrainzRecording(
     val tags: List<String>,
     val tagCounts: List<TagCount> = emptyList(),
     val score: Int,
+    val disambiguation: String? = null,
+    /**
+     * True when at least one of the recording's carried `releases` is status "Official" on an
+     * Album release-group — a same-response signal (no extra lookup) that this take is the studio
+     * original rather than a single/compilation-only or non-official recording.
+     */
+    val hasOfficialAlbumRelease: Boolean = false,
+    /**
+     * A release-group id CAA can try for the recording's art, picked from the recording's carried
+     * `releases` by tier (first match within the best tier wins — see
+     * `MusicBrainzParser.findArtReleaseGroup`):
+     * 1. Official release, release-group primary-type Album — same shape as
+     *    [hasOfficialAlbumRelease].
+     * 2. release status exactly "Official", any release-group primary-type (e.g. a box set the
+     *    search payload embedded instead of the plain album, since MB only embeds releases matching
+     *    the query's `release:` hint). MB's other statuses (Promotion, Bootleg, Pseudo-Release,
+     *    Withdrawn, Cancelled) are not special-cased here — they all fall through to tier 3.
+     * 3. any release carrying a release-group id at all, regardless of status — including a
+     *    Bootleg-only recording's release-group, accepted deliberately as a last resort.
+     *
+     * Null when none of the three tiers finds a release-group id. Deliberately looser than
+     * [hasOfficialAlbumRelease], which stays strict for ranking — some art (or a cheap CAA
+     * NotFound) beats none for [MusicBrainzMapper.toTrackIdentifiers], which fills
+     * `musicBrainzReleaseGroupId` from this field with no extra lookup.
+     */
+    val artReleaseGroupId: String? = null,
 )
 
 internal data class MusicBrainzBandMember(
