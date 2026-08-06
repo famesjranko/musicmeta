@@ -395,6 +395,64 @@ class LastFmProviderTest {
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
+    // ALBUM_DESCRIPTION capability tests
+
+    @Test
+    fun `capabilities include ALBUM_DESCRIPTION at priority 50`() {
+        // Given — provider instance
+
+        // When — checking capabilities
+        val capability = provider.capabilities.find { it.type == EnrichmentType.ALBUM_DESCRIPTION }
+
+        // Then — ALBUM_DESCRIPTION capability exists with priority 50, below Wikipedia's 100
+        assertNotNull(capability)
+        assertEquals(50, capability!!.priority)
+    }
+
+    @Test
+    fun `enrich returns album description from album getinfo wiki block`() = runTest {
+        // Given — Last.fm returns album.getinfo JSON with a wiki summary
+        httpClient.givenJsonResponse("album.getinfo", ALBUM_INFO_JSON)
+        val request = EnrichmentRequest.forAlbum(title = "OK Computer", artist = "Radiohead")
+
+        // When — enriching for ALBUM_DESCRIPTION
+        val result = provider.enrich(request, EnrichmentType.ALBUM_DESCRIPTION)
+
+        // Then — Success with Biography from the wiki summary
+        assertTrue(result is EnrichmentResult.Success)
+        val data = (result as EnrichmentResult.Success).data as EnrichmentData.Biography
+        assertEquals("OK Computer is the third studio album by Radiohead.", data.text)
+        assertEquals("Last.fm", data.source)
+    }
+
+    @Test
+    fun `enrich returns NotFound for ALBUM_DESCRIPTION when wiki block is absent`() = runTest {
+        // Given — Last.fm returns album.getinfo JSON without a wiki block
+        httpClient.givenJsonResponse(
+            "album.getinfo",
+            """{"album": {"name": "Obscure Album", "artist": "Nobody", "tags": {"tag": []}}}""",
+        )
+        val request = EnrichmentRequest.forAlbum(title = "Obscure Album", artist = "Nobody")
+
+        // When — enriching for ALBUM_DESCRIPTION
+        val result = provider.enrich(request, EnrichmentType.ALBUM_DESCRIPTION)
+
+        // Then — NotFound because there is no wiki summary to map
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `enrich returns NotFound for ALBUM_DESCRIPTION with ForArtist request`() = runTest {
+        // Given — ForArtist request (ALBUM_DESCRIPTION requires ForAlbum)
+        val request = EnrichmentRequest.forArtist(name = "Radiohead")
+
+        // When — enriching for ALBUM_DESCRIPTION
+        val result = provider.enrich(request, EnrichmentType.ALBUM_DESCRIPTION)
+
+        // Then — NotFound because ALBUM_DESCRIPTION requires ForAlbum
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
     private companion object {
         val ALBUM_INFO_JSON = """
             {
