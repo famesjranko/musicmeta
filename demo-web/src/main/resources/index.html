@@ -91,11 +91,28 @@
     padding: 1rem 1.1rem;
     margin-bottom: 0.85rem;
   }
-  .summary { display: flex; gap: 1rem; }
+  .summary { display: flex; gap: 1rem; position: relative; overflow: hidden; isolation: isolate; }
+  .summary .backdrop {
+    position: absolute; inset: 0; z-index: -1;
+    background-size: cover; background-position: center;
+    opacity: 0.22; filter: blur(1px);
+  }
+  .summary .backdrop::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(120deg, var(--panel) 30%, rgba(23, 26, 33, 0.75));
+  }
   .summary img {
     width: 96px; height: 96px; object-fit: cover; border-radius: 10px;
     background: #0f1115; flex: none;
   }
+
+  .gallery { display: flex; gap: 0.5rem; flex-wrap: wrap; padding: 0.85rem 1.1rem; }
+  .gallery figure { margin: 0; flex: none; text-align: center; }
+  .gallery img {
+    width: 72px; height: 72px; object-fit: cover; border-radius: 8px;
+    background: #0f1115; display: block;
+  }
+  .gallery figcaption { color: var(--muted); font-size: 0.68rem; margin-top: 0.25rem; }
   .summary .body { min-width: 0; flex: 1; }
   .summary .titlerow { display: flex; align-items: baseline; gap: 0.55rem; flex-wrap: wrap; }
   .summary h2 { margin: 0; font-size: 1.15rem; }
@@ -312,6 +329,9 @@ async function runQuery() {
 
 function render(data) {
   const summary = data.summary;
+  const backdrop = summary.backgroundImageUrl
+    ? `<div class="backdrop" style="background-image:url(${esc(summary.backgroundImageUrl)})"></div>`
+    : '';
   const img = summary.imageUrl
     ? `<img src="${esc(summary.imageUrl)}" alt="" onerror="this.remove()" />`
     : '';
@@ -326,6 +346,14 @@ function render(data) {
   const sections = data.sections.map(sectionHtml).join('');
   const totalItems = data.sections.reduce((n, s) => n + s.items.length, 0);
 
+  const gallery = (data.gallery && data.gallery.length)
+    ? `<div class="card gallery">${data.gallery.map((g) => `
+      <figure>
+        <img src="${esc(g.url)}" alt="${esc(g.label || '')}" onerror="this.closest('figure').remove()" />
+        ${g.label ? `<figcaption>${esc(g.label)}</figcaption>` : ''}
+      </figure>`).join('')}</div>`
+    : '';
+
   const providers = data.meta.providers.map((p) => `
     <tr>
       <td><span class="dot ${esc(p.status.split(':')[0])}"></span>${esc(p.type)}</td>
@@ -336,6 +364,7 @@ function render(data) {
 
   resultEl.innerHTML = `
     <div class="card summary">
+      ${backdrop}
       ${img}
       <div class="body">
         <div class="titlerow"><h2>${esc(summary.title)}</h2>${summaryPreview}</div>
@@ -343,6 +372,7 @@ function render(data) {
         ${text}
       </div>
     </div>
+    ${gallery}
     <div class="sections">${sections}</div>
     <div class="card">
       <details class="meta-panel">

@@ -9,6 +9,8 @@ data class DemoResponse(
     val artist: String? = null,
     val summary: SummaryCard,
     val sections: List<Section>,
+    /** Small image strip (album art extras, artist logo/banner) — absent when nothing resolved. */
+    val gallery: List<GalleryImage> = emptyList(),
     val meta: Meta,
 )
 
@@ -19,11 +21,19 @@ data class SummaryCard(
     /** When set, the frontend makes [subtitle] (the artist name on track/album pages) clickable. */
     val subtitleEnrich: EnrichTarget? = null,
     val imageUrl: String? = null,
+    /** Artist background artwork, rendered as a dimmed backdrop behind the summary card. */
+    val backgroundImageUrl: String? = null,
     val text: String? = null,
     val textSource: String? = null,
     val previewTitle: String? = null,
     val previewArtist: String? = null,
     val previewAlbum: String? = null,
+)
+
+@Serializable
+data class GalleryImage(
+    val url: String,
+    val label: String? = null,
 )
 
 @Serializable

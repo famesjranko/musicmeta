@@ -71,11 +71,6 @@ fun ArtistProfile.toDemoResponse(elapsedMs: Long): DemoResponse {
                 SectionItem(primary = it.description, secondary = it.date, meta = it.type)
             }
         }
-        section("related_genres", "Related Genres") {
-            r.get<EnrichmentData.GenreDiscovery>(EnrichmentType.GENRE_DISCOVERY)?.relatedGenres?.map {
-                SectionItem(primary = it.name, secondary = it.relationship, meta = "%.2f".format(it.affinity))
-            }
-        }
         section("stats", "Popularity") {
             stats?.let {
                 listOf(
@@ -89,17 +84,24 @@ fun ArtistProfile.toDemoResponse(elapsedMs: Long): DemoResponse {
         }
     }
 
+    val gallery = buildList {
+        r.get<EnrichmentData.Artwork>(EnrichmentType.ARTIST_LOGO)?.url?.let { add(GalleryImage(it, "Logo")) }
+        r.get<EnrichmentData.Artwork>(EnrichmentType.ARTIST_BANNER)?.url?.let { add(GalleryImage(it, "Banner")) }
+    }
+
     return DemoResponse(
         kind = "artist",
         name = name,
         summary = SummaryCard(
             title = name,
             subtitle = genres.joinToString(", ").ifBlank { null },
-            imageUrl = r.artistPhoto()?.url,
+            imageUrl = r.artistPhoto()?.url ?: bio?.thumbnailUrl,
+            backgroundImageUrl = r.get<EnrichmentData.Artwork>(EnrichmentType.ARTIST_BACKGROUND)?.url,
             text = bio?.text,
             textSource = bio?.source,
         ),
         sections = sections,
+        gallery = gallery,
         meta = r.toMeta(elapsedMs),
     )
 }
@@ -152,6 +154,12 @@ fun AlbumProfile.toDemoResponse(elapsedMs: Long, artistRadio: Section? = null): 
         artistRadio?.let { add(it) }
     }
 
+    val gallery = buildList {
+        r.get<EnrichmentData.Artwork>(EnrichmentType.ALBUM_ART_BACK)?.url?.let { add(GalleryImage(it, "Back")) }
+        r.get<EnrichmentData.Artwork>(EnrichmentType.ALBUM_BOOKLET)?.url?.let { add(GalleryImage(it, "Booklet")) }
+        r.get<EnrichmentData.Artwork>(EnrichmentType.CD_ART)?.url?.let { add(GalleryImage(it, "CD Art")) }
+    }
+
     return DemoResponse(
         kind = "album",
         name = title,
@@ -163,6 +171,7 @@ fun AlbumProfile.toDemoResponse(elapsedMs: Long, artistRadio: Section? = null): 
             imageUrl = r.albumArt()?.url,
         ),
         sections = sections,
+        gallery = gallery,
         meta = r.toMeta(elapsedMs),
     )
 }
