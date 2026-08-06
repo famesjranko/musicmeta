@@ -372,8 +372,9 @@ function enrichAttrs(enrich) {
 }
 
 function sectionHtml(section) {
+  const collapsing = section.items.length > MAX_VISIBLE + 2;
   const items = section.items.map((it, i) => {
-    const hidden = i >= MAX_VISIBLE ? ' item-hidden' : '';
+    const hidden = collapsing && i >= MAX_VISIBLE ? ' item-hidden' : '';
     const rowClass = it.enrich ? ' enrich-row' : '';
     const primaryHtml = it.link
       ? `<a href="${esc(it.link)}" target="_blank" rel="noopener">${esc(it.primary)}</a>`
@@ -389,7 +390,7 @@ function sectionHtml(section) {
         ${preview}
       </li>`;
   }).join('');
-  const toggle = section.items.length > MAX_VISIBLE
+  const toggle = collapsing
     ? `<button type="button" class="show-more" data-remaining="${section.items.length - MAX_VISIBLE}">Show all ${section.items.length}</button>`
     : '';
   return `<div class="card section"><h3>${esc(section.label)} <span class="count">${section.items.length}</span></h3><ul>${items}</ul>${toggle}</div>`;
