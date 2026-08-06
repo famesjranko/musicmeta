@@ -41,6 +41,7 @@ data class EnrichmentResults(
     // --- Text ---
 
     fun biography(): EnrichmentData.Biography? = get(EnrichmentType.ARTIST_BIO)
+    fun albumDescription(): EnrichmentData.Biography? = get(EnrichmentType.ALBUM_DESCRIPTION)
 
     /** Returns synced lyrics if available, falling back to plain lyrics. */
     fun lyrics(): EnrichmentData.Lyrics? =
