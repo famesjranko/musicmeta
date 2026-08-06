@@ -1,6 +1,8 @@
 package com.landofoz.musicmeta.demoweb
 
 import com.landofoz.musicmeta.AlbumProfile
+import com.landofoz.musicmeta.ArtistProfile
+import com.landofoz.musicmeta.ArtworkSource
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentResult
@@ -12,6 +14,7 @@ import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.TrackProfile
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ProfileMapperTest {
@@ -174,5 +177,109 @@ class ProfileMapperTest {
 
         assertNull(response.summary.text)
         assertNull(response.summary.textSource)
+    }
+
+    @Test
+    fun `artist gallery includes photo alternatives labelled by provider`() {
+        val results = resultsOf(
+            EnrichmentType.ARTIST_PHOTO to EnrichmentData.Artwork(
+                url = "https://example.com/primary.jpg",
+                alternatives = listOf(
+                    ArtworkSource(provider = "fanarttv", url = "https://example.com/fanarttv.jpg"),
+                    ArtworkSource(provider = "wikidata", url = "https://example.com/wikidata.jpg"),
+                ),
+            ),
+        )
+        val profile = ArtistProfile(name = "Metallica", results = results)
+
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        assertTrue(response.gallery.any { it.url == "https://example.com/fanarttv.jpg" && it.label == "fanarttv" })
+        assertTrue(response.gallery.any { it.url == "https://example.com/wikidata.jpg" && it.label == "wikidata" })
+    }
+
+    @Test
+    fun `artist gallery dedupes an alternative that matches the primary photo`() {
+        val results = resultsOf(
+            EnrichmentType.ARTIST_PHOTO to EnrichmentData.Artwork(
+                url = "https://example.com/primary.jpg",
+                alternatives = listOf(
+                    ArtworkSource(provider = "fanarttv", url = "https://example.com/primary.jpg"),
+                    ArtworkSource(provider = "wikidata", url = "https://example.com/wikidata.jpg"),
+                ),
+            ),
+        )
+        val profile = ArtistProfile(name = "Metallica", results = results)
+
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        assertEquals(0, response.gallery.count { it.url == "https://example.com/primary.jpg" })
+        assertEquals(1, response.gallery.count { it.url == "https://example.com/wikidata.jpg" })
+    }
+
+    @Test
+    fun `artist gallery dedupes alternatives that repeat each other and a logo-banner url`() {
+        val results = resultsOf(
+            EnrichmentType.ARTIST_LOGO to EnrichmentData.Artwork(url = "https://example.com/shared.jpg"),
+            EnrichmentType.ARTIST_PHOTO to EnrichmentData.Artwork(
+                url = "https://example.com/primary.jpg",
+                alternatives = listOf(
+                    ArtworkSource(provider = "fanarttv", url = "https://example.com/shared.jpg"),
+                    ArtworkSource(provider = "wikidata", url = "https://example.com/shared.jpg"),
+                ),
+            ),
+        )
+        val profile = ArtistProfile(name = "Metallica", results = results)
+
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        assertEquals(1, response.gallery.count { it.url == "https://example.com/shared.jpg" })
+        assertEquals("Logo", response.gallery.first { it.url == "https://example.com/shared.jpg" }.label)
+    }
+
+    @Test
+    fun `artist gallery absent when nothing resolved`() {
+        val results = resultsOf()
+        val profile = ArtistProfile(name = "Metallica", results = results)
+
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        assertTrue(response.gallery.isEmpty())
+    }
+
+    @Test
+    fun `album gallery includes art alternatives alongside back-booklet-cdart`() {
+        val results = resultsOf(
+            EnrichmentType.ALBUM_ART_BACK to EnrichmentData.Artwork(url = "https://example.com/back.jpg"),
+            EnrichmentType.ALBUM_ART to EnrichmentData.Artwork(
+                url = "https://example.com/primary.jpg",
+                alternatives = listOf(
+                    ArtworkSource(provider = "coverartarchive", url = "https://example.com/caa.jpg"),
+                ),
+            ),
+        )
+        val profile = AlbumProfile(title = "Master of Puppets", artist = "Metallica", results = results)
+
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        assertTrue(response.gallery.any { it.url == "https://example.com/back.jpg" && it.label == "Back" })
+        assertTrue(response.gallery.any { it.url == "https://example.com/caa.jpg" && it.label == "coverartarchive" })
+    }
+
+    @Test
+    fun `album gallery dedupes an alternative that matches the primary art`() {
+        val results = resultsOf(
+            EnrichmentType.ALBUM_ART to EnrichmentData.Artwork(
+                url = "https://example.com/primary.jpg",
+                alternatives = listOf(
+                    ArtworkSource(provider = "coverartarchive", url = "https://example.com/primary.jpg"),
+                ),
+            ),
+        )
+        val profile = AlbumProfile(title = "Master of Puppets", artist = "Metallica", results = results)
+
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        assertTrue(response.gallery.isEmpty())
     }
 }

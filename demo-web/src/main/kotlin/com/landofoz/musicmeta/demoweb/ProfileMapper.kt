@@ -96,9 +96,13 @@ fun ArtistProfile.toDemoResponse(elapsedMs: Long): DemoResponse {
         }
     }
 
+    val photo = r.artistPhoto()
+    val primaryImage = photo?.url ?: bio?.thumbnailUrl
     val gallery = buildList {
-        r.get<EnrichmentData.Artwork>(EnrichmentType.ARTIST_LOGO)?.url?.let { add(GalleryImage(it, "Logo")) }
-        r.get<EnrichmentData.Artwork>(EnrichmentType.ARTIST_BANNER)?.url?.let { add(GalleryImage(it, "Banner")) }
+        val seen = mutableSetOf<String>().apply { primaryImage?.let { add(it) } }
+        addIfNew(seen, r.get<EnrichmentData.Artwork>(EnrichmentType.ARTIST_LOGO)?.url, "Logo")
+        addIfNew(seen, r.get<EnrichmentData.Artwork>(EnrichmentType.ARTIST_BANNER)?.url, "Banner")
+        addAlternatives(seen, photo)
     }
 
     return DemoResponse(
@@ -107,7 +111,7 @@ fun ArtistProfile.toDemoResponse(elapsedMs: Long): DemoResponse {
         summary = SummaryCard(
             title = name,
             subtitle = genres.joinToString(", ").ifBlank { null },
-            imageUrl = r.artistPhoto()?.url ?: bio?.thumbnailUrl,
+            imageUrl = primaryImage,
             backgroundImageUrl = r.get<EnrichmentData.Artwork>(EnrichmentType.ARTIST_BACKGROUND)?.url,
             text = bio?.text,
             textSource = bio?.source,
@@ -174,10 +178,13 @@ fun AlbumProfile.toDemoResponse(elapsedMs: Long, artistRadio: Section? = null): 
         artistRadio?.let { add(it) }
     }
 
+    val albumArt = r.albumArt()
     val gallery = buildList {
-        r.get<EnrichmentData.Artwork>(EnrichmentType.ALBUM_ART_BACK)?.url?.let { add(GalleryImage(it, "Back")) }
-        r.get<EnrichmentData.Artwork>(EnrichmentType.ALBUM_BOOKLET)?.url?.let { add(GalleryImage(it, "Booklet")) }
-        r.get<EnrichmentData.Artwork>(EnrichmentType.CD_ART)?.url?.let { add(GalleryImage(it, "CD Art")) }
+        val seen = mutableSetOf<String>().apply { albumArt?.url?.let { add(it) } }
+        addIfNew(seen, r.get<EnrichmentData.Artwork>(EnrichmentType.ALBUM_ART_BACK)?.url, "Back")
+        addIfNew(seen, r.get<EnrichmentData.Artwork>(EnrichmentType.ALBUM_BOOKLET)?.url, "Booklet")
+        addIfNew(seen, r.get<EnrichmentData.Artwork>(EnrichmentType.CD_ART)?.url, "CD Art")
+        addAlternatives(seen, albumArt)
     }
 
     return DemoResponse(
@@ -188,7 +195,7 @@ fun AlbumProfile.toDemoResponse(elapsedMs: Long, artistRadio: Section? = null): 
             title = title,
             subtitle = artist,
             subtitleEnrich = artistEnrich(artist),
-            imageUrl = r.albumArt()?.url,
+            imageUrl = albumArt?.url,
             text = description?.text,
             textSource = description?.source,
         ),
@@ -309,6 +316,21 @@ private fun EnrichmentResults.toMeta(elapsedMs: Long): Meta {
 private fun MutableList<Section>.section(key: String, label: String, items: () -> List<SectionItem>?) {
     val list = items().orEmpty()
     if (list.isNotEmpty()) add(Section(key, label, list))
+}
+
+/** Appends [url] to the gallery, deduped by [seen] against the primary image and every prior entry. */
+private fun MutableList<GalleryImage>.addIfNew(seen: MutableSet<String>, url: String?, label: String) {
+    if (url != null && seen.add(url)) add(GalleryImage(url, label))
+}
+
+/**
+ * Appends [EnrichmentData.Artwork.alternatives] — other providers' images that lost the merge —
+ * one per provider, deduped by [seen] the same way as any other gallery entry.
+ */
+private fun MutableList<GalleryImage>.addAlternatives(seen: MutableSet<String>, artwork: EnrichmentData.Artwork?) {
+    artwork?.alternatives?.forEach { alt ->
+        if (alt.url.isNotBlank() && seen.add(alt.url)) add(GalleryImage(alt.url, alt.provider))
+    }
 }
 
 private fun relatedGenresItems(genreDiscovery: List<GenreAffinity>): List<SectionItem>? =
