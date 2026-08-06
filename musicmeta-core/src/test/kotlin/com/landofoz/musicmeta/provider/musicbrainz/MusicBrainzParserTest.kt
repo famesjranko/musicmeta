@@ -476,6 +476,131 @@ class MusicBrainzParserTest {
         assertEquals(2, tracks[1].position)
     }
 
+    // Case matrix for issue: MusicBrainz tracklist flattening bonus video media into the audio
+    // tracklist duplicated positions (St. Anger: CD 11 tracks + bonus DVD-Video 11 tracks -> 22).
+
+    @Test
+    fun `parseMedia keeps a single CD medium unchanged`() {
+        // Given -- one CD medium, no video media in sight
+        val json = JSONObject(MEDIA_SINGLE_CD)
+
+        // When -- parsing media tracks
+        val tracks = MusicBrainzParser.parseMedia(json)
+
+        // Then -- unchanged, positions 1..n
+        assertEquals(2, tracks.size)
+        assertEquals(1, tracks[0].position)
+        assertEquals(2, tracks[1].position)
+    }
+
+    @Test
+    fun `parseMedia skips a bonus DVD-Video medium and keeps only the CD`() {
+        // Given -- CD (11 tracks) + bonus DVD-Video (11 tracks) with duplicated titles, St. Anger's shape
+        val json = JSONObject(MEDIA_CD_PLUS_DVD_VIDEO)
+
+        // When -- parsing media tracks
+        val tracks = MusicBrainzParser.parseMedia(json)
+
+        // Then -- the video medium is dropped; 11 tracks, positions 1-11, no duplicates
+        assertEquals(11, tracks.size)
+        assertEquals((1..11).toList(), tracks.map { it.position })
+        assertEquals(1, tracks.count { it.title == "Frantic" })
+    }
+
+    @Test
+    fun `parseMedia keeps both CDs of a double album with cumulative positions`() {
+        // Given -- 2x CD, 11 tracks each
+        val json = JSONObject(MEDIA_DOUBLE_CD)
+
+        // When -- parsing media tracks
+        val tracks = MusicBrainzParser.parseMedia(json)
+
+        // Then -- both kept, disc 2 track 1 continues at position 12
+        assertEquals(22, tracks.size)
+        assertEquals((1..22).toList(), tracks.map { it.position })
+        assertEquals("Disc 2 Track 1", tracks[11].title)
+        assertEquals(12, tracks[11].position)
+    }
+
+    @Test
+    fun `parseMedia keeps a bonus audio disc with cumulative positions`() {
+        // Given -- CD + a second, unlabelled bonus audio disc (deluxe edition shape)
+        val json = JSONObject(MEDIA_CD_PLUS_BONUS_AUDIO)
+
+        // When -- parsing media tracks
+        val tracks = MusicBrainzParser.parseMedia(json)
+
+        // Then -- bonus audio is content, not noise: both kept, cumulative
+        assertEquals(12, tracks.size)
+        assertEquals("Bonus Track", tracks[11].title)
+        assertEquals(12, tracks[11].position)
+    }
+
+    @Test
+    fun `parseMedia keeps a DVD-Audio medium, not fooled by the DVD substring`() {
+        // Given -- CD + DVD-Audio, an audio format that merely has "DVD" in its name
+        val json = JSONObject(MEDIA_CD_PLUS_DVD_AUDIO)
+
+        // When -- parsing media tracks
+        val tracks = MusicBrainzParser.parseMedia(json)
+
+        // Then -- both kept, cumulative -- a substring "DVD" filter is the trap this row exists to kill
+        assertEquals(22, tracks.size)
+        assertEquals((1..22).toList(), tracks.map { it.position })
+    }
+
+    @Test
+    fun `parseMedia treats a bare DVD format as video`() {
+        // Given -- CD + a medium whose format is the bare "DVD" (editor didn't specify a child format)
+        val json = JSONObject(MEDIA_CD_PLUS_BARE_DVD)
+
+        // When -- parsing media tracks
+        val tracks = MusicBrainzParser.parseMedia(json)
+
+        // Then -- documented judgement call: bare "DVD" is treated as video and skipped
+        assertEquals(11, tracks.size)
+        assertEquals((1..11).toList(), tracks.map { it.position })
+    }
+
+    @Test
+    fun `parseMedia keeps all media when every medium is video`() {
+        // Given -- a video-only release (concert DVD), no audio medium at all
+        val json = JSONObject(MEDIA_VIDEO_ONLY)
+
+        // When -- parsing media tracks
+        val tracks = MusicBrainzParser.parseMedia(json)
+
+        // Then -- an all-video tracklist beats an empty one
+        assertEquals(3, tracks.size)
+        assertEquals((1..3).toList(), tracks.map { it.position })
+    }
+
+    @Test
+    fun `parseMedia keeps a medium with absent format`() {
+        // Given -- a medium with no "format" key at all
+        val json = JSONObject(MEDIA_ABSENT_FORMAT)
+
+        // When -- parsing media tracks
+        val tracks = MusicBrainzParser.parseMedia(json)
+
+        // Then -- dropping unknown media silently truncates albums, so it is kept
+        assertEquals(2, tracks.size)
+        assertEquals((1..2).toList(), tracks.map { it.position })
+    }
+
+    @Test
+    fun `parseMedia keeps both discs of a 2x LP vinyl release with cumulative positions`() {
+        // Given -- 2x 12" Vinyl
+        val json = JSONObject(MEDIA_DOUBLE_VINYL)
+
+        // When -- parsing media tracks
+        val tracks = MusicBrainzParser.parseMedia(json)
+
+        // Then -- audio, both kept, cumulative positions
+        assertEquals(8, tracks.size)
+        assertEquals((1..8).toList(), tracks.map { it.position })
+    }
+
     @Test
     fun `parseUrlRelations extracts external links and excludes wikidata and wikipedia`() {
         // Given -- artist with URL relations including wikidata and wikipedia
@@ -733,6 +858,141 @@ class MusicBrainzParserTest {
     }
 
     companion object {
+        private fun cdTrack(title: String, position: Int, recordingId: String) = """
+            {
+              "title": "$title",
+              "position": $position,
+              "length": 200000,
+              "recording": {"id": "$recordingId"}
+            }
+        """.trimIndent()
+
+        private val MEDIA_SINGLE_CD = """
+            {
+              "media": [{
+                "format": "CD",
+                "tracks": [
+                  ${cdTrack("Track One", 1, "rec-1")},
+                  ${cdTrack("Track Two", 2, "rec-2")}
+                ]
+              }]
+            }
+        """.trimIndent()
+
+        private val MEDIA_CD_PLUS_DVD_VIDEO = """
+            {
+              "media": [
+                {
+                  "format": "CD",
+                  "tracks": [${(1..11).joinToString(",") { cdTrack(if (it == 1) "Frantic" else "CD Track $it", it, "cd-rec-$it") }}]
+                },
+                {
+                  "format": "DVD-Video",
+                  "tracks": [${(1..11).joinToString(",") { cdTrack(if (it == 1) "Frantic" else "DVD Track $it", it, "dvd-rec-$it") }}]
+                }
+              ]
+            }
+        """.trimIndent()
+
+        private val MEDIA_DOUBLE_CD = """
+            {
+              "media": [
+                {
+                  "format": "CD",
+                  "tracks": [${(1..11).joinToString(",") { cdTrack("Disc 1 Track $it", it, "d1-rec-$it") }}]
+                },
+                {
+                  "format": "CD",
+                  "tracks": [${(1..11).joinToString(",") { cdTrack("Disc 2 Track $it", it, "d2-rec-$it") }}]
+                }
+              ]
+            }
+        """.trimIndent()
+
+        private val MEDIA_CD_PLUS_BONUS_AUDIO = """
+            {
+              "media": [
+                {
+                  "format": "CD",
+                  "tracks": [${(1..11).joinToString(",") { cdTrack("Track $it", it, "cd-rec-$it") }}]
+                },
+                {
+                  "format": "CD",
+                  "tracks": [${cdTrack("Bonus Track", 1, "bonus-rec-1")}]
+                }
+              ]
+            }
+        """.trimIndent()
+
+        private val MEDIA_CD_PLUS_DVD_AUDIO = """
+            {
+              "media": [
+                {
+                  "format": "CD",
+                  "tracks": [${(1..11).joinToString(",") { cdTrack("CD Track $it", it, "cd-rec-$it") }}]
+                },
+                {
+                  "format": "DVD-Audio",
+                  "tracks": [${(1..11).joinToString(",") { cdTrack("Hi-Res Track $it", it, "hr-rec-$it") }}]
+                }
+              ]
+            }
+        """.trimIndent()
+
+        private val MEDIA_CD_PLUS_BARE_DVD = """
+            {
+              "media": [
+                {
+                  "format": "CD",
+                  "tracks": [${(1..11).joinToString(",") { cdTrack("Track $it", it, "cd-rec-$it") }}]
+                },
+                {
+                  "format": "DVD",
+                  "tracks": [${(1..11).joinToString(",") { cdTrack("Bonus DVD Track $it", it, "dvd-rec-$it") }}]
+                }
+              ]
+            }
+        """.trimIndent()
+
+        private val MEDIA_VIDEO_ONLY = """
+            {
+              "media": [{
+                "format": "DVD-Video",
+                "tracks": [
+                  ${cdTrack("Concert Part 1", 1, "v-rec-1")},
+                  ${cdTrack("Concert Part 2", 2, "v-rec-2")},
+                  ${cdTrack("Concert Part 3", 3, "v-rec-3")}
+                ]
+              }]
+            }
+        """.trimIndent()
+
+        private val MEDIA_ABSENT_FORMAT = """
+            {
+              "media": [{
+                "tracks": [
+                  ${cdTrack("Track One", 1, "rec-1")},
+                  ${cdTrack("Track Two", 2, "rec-2")}
+                ]
+              }]
+            }
+        """.trimIndent()
+
+        private val MEDIA_DOUBLE_VINYL = """
+            {
+              "media": [
+                {
+                  "format": "12\" Vinyl",
+                  "tracks": [${(1..4).joinToString(",") { cdTrack("Side A Track $it", it, "lp1-rec-$it") }}]
+                },
+                {
+                  "format": "12\" Vinyl",
+                  "tracks": [${(1..4).joinToString(",") { cdTrack("Side B Track $it", it, "lp2-rec-$it") }}]
+                }
+              ]
+            }
+        """.trimIndent()
+
         private val RECORDING_WITH_VOCAL_REL = """
             {
               "id": "rec1",

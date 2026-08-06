@@ -211,12 +211,53 @@ internal object MusicBrainzParser {
         }
     }
 
-    /** Parse tracks from media array in a release lookup response. */
+    /**
+     * MusicBrainz medium `format` names that mean "moving picture", not audio, per MusicBrainz's
+     * documented format list (musicbrainz.org/doc/Release/Format). Matched by *exact* name,
+     * case-insensitively, never by substring: a substring `"DVD"` filter would also reject
+     * `"DVD-Audio"`, which the same page lists as an audio format, and `"Blu-ray"` similarly must
+     * not reject a hypothetical audio-only Blu-ray release.
+     *
+     * Two entries are judgement calls the page leaves unstated, both resolved the same way — treat
+     * the ambiguous bare name as the video variant, since that is the overwhelmingly common case for
+     * an unspecified bonus disc:
+     * - bare `"DVD"` (an editor who didn't record a child format). Known cost: a true audio-only
+     *   disc catalogued as plain "DVD" instead of "DVD-Audio" loses its tracklist.
+     * - bare `"Blu-ray"` — the documented list has no distinct "Blu-ray Audio" entry at all (only
+     *   "Blu-ray" and the writable "Blu-ray-R"), so a plain "Blu-ray" medium is presumed video.
+     *
+     * Known gap: formats absent from this set but also video (e.g. "Blu-ray-R", "DVD-R Video",
+     * "CDV", "VHD", "Ultra HD Blu-ray") are treated as audio and kept — narrower false-negatives
+     * were preferred over a broader list risking a false-positive on an audio format not yet seen.
+     */
+    private val VIDEO_MEDIA_FORMATS = setOf(
+        "dvd", "dvd-video", "blu-ray", "hd-dvd", "vhs", "vcd", "svcd", "betamax", "laserdisc", "umd",
+    )
+
+    private fun isVideoFormat(format: String?): Boolean =
+        format != null && format.trim().lowercase() in VIDEO_MEDIA_FORMATS
+
+    /**
+     * Parse tracks from the `media` array in a release lookup response.
+     *
+     * Video media (see [VIDEO_MEDIA_FORMATS]) are dropped — MusicBrainz release lookups embed a
+     * bonus DVD/Blu-ray's own tracklist alongside the audio disc's, and flattening both produced
+     * duplicated positions (e.g. St. Anger's CD + bonus DVD-Video rendering 22 "tracks" for an
+     * 11-track album). A release with nothing but video media keeps it: an all-video tracklist beats
+     * an empty one. Audio media (including legitimate multi-disc releases — a 2×CD or 2×LP) are all
+     * kept, with positions made cumulative across media in document order, since [TrackInfo.position]
+     * is the release's only ordering slot and per-medium numbering would otherwise collide (disc 2
+     * track 1 would repeat position 1 instead of continuing at 12 for an 11-track disc 1).
+     */
     fun parseMedia(json: JSONObject): List<MusicBrainzTrack> {
         val media = json.optJSONArray("media") ?: return emptyList()
+        val allMedia = (0 until media.length()).map { media.getJSONObject(it) }
+        val audioMedia = allMedia.filterNot { isVideoFormat(it.optString("format").takeIf(String::isNotBlank)) }
+        val chosenMedia = audioMedia.ifEmpty { allMedia }
+
         val tracks = mutableListOf<MusicBrainzTrack>()
-        for (m in 0 until media.length()) {
-            val medium = media.getJSONObject(m)
+        var positionOffset = 0
+        for (medium in chosenMedia) {
             val trackList = medium.optJSONArray("tracks") ?: continue
             for (t in 0 until trackList.length()) {
                 val track = trackList.getJSONObject(t)
@@ -225,12 +266,13 @@ internal object MusicBrainzParser {
                 tracks.add(
                     MusicBrainzTrack(
                         title = track.getString("title"),
-                        position = track.getInt("position"),
+                        position = track.getInt("position") + positionOffset,
                         durationMs = track.optLong("length", 0L).takeIf { it > 0 },
                         id = recordingId ?: track.optString("id").takeIf { it.isNotBlank() },
                     ),
                 )
             }
+            positionOffset += trackList.length()
         }
         return tracks
     }
