@@ -45,6 +45,13 @@ internal data class MusicBrainzRecording(
     val tags: List<String>,
     val tagCounts: List<TagCount> = emptyList(),
     val score: Int,
+    val disambiguation: String? = null,
+    /**
+     * True when at least one of the recording's carried `releases` is status "Official" on an
+     * Album release-group — a same-response signal (no extra lookup) that this take is the studio
+     * original rather than a single/compilation-only or non-official recording.
+     */
+    val hasOfficialAlbumRelease: Boolean = false,
 )
 
 internal data class MusicBrainzBandMember(

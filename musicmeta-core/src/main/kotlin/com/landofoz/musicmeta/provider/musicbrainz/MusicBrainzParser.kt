@@ -90,7 +90,26 @@ internal object MusicBrainzParser {
             tags = tagCounts.map { it.name },
             tagCounts = tagCounts,
             score = obj.optInt("score", 0),
+            disambiguation = obj.optString("disambiguation").takeIf { it.isNotBlank() },
+            hasOfficialAlbumRelease = extractHasOfficialAlbumRelease(obj),
         )
+    }
+
+    /**
+     * True when a recording search hit's `releases` array (MB embeds a handful per recording)
+     * contains an Official release whose release-group primary-type is Album. Used to prefer the
+     * studio album cut over a single/compilation/non-official recording when ranking a search
+     * pool, entirely from what the recording search response already carries.
+     */
+    private fun extractHasOfficialAlbumRelease(recording: JSONObject): Boolean {
+        val releases = recording.optJSONArray("releases") ?: return false
+        for (i in 0 until releases.length()) {
+            val release = releases.getJSONObject(i)
+            if (release.optString("status") != "Official") continue
+            val primaryType = release.optJSONObject("release-group")?.optString("primary-type")
+            if (primaryType == "Album") return true
+        }
+        return false
     }
 
     /** Parse band members from artist-rels in an artist lookup response.

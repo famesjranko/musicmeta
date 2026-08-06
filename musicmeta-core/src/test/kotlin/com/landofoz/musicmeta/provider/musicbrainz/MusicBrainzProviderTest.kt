@@ -177,6 +177,52 @@ class MusicBrainzProviderTest {
     }
 
     @Test
+    fun `enrich track ranks a score-100 pool to the studio recording over demo and live takes`() = runTest {
+        // Given — a 4-candidate pool mirroring live musicbrainz.org "Enter Sandman"/Metallica
+        // evidence (2026-08-06): demo hit first, two live takes, studio original last, all score 100
+        httpClient.givenJsonResponse("recording?query", ENTER_SANDMAN_RANK_POOL)
+        val request = EnrichmentRequest.forTrack("Enter Sandman", "Metallica")
+
+        // When — enriching for genre (drives identity resolution through enrichTrack)
+        val result = provider.enrich(request, EnrichmentType.GENRE)
+
+        // Then — the studio recording wins, not the demo MB search ranked first
+        assertTrue(result is EnrichmentResult.Success)
+        val success = result as EnrichmentResult.Success
+        assertEquals("rec-studio", success.resolvedIdentifiers?.musicBrainzId)
+    }
+
+    @Test
+    fun `enrich track still rejects a pool with no candidate at or above the score threshold`() = runTest {
+        // Given — every candidate scores below the default minimum match score (80)
+        httpClient.givenJsonResponse(
+            "recording?query",
+            """{"recordings":[{"id":"rec-low","score":50,"title":"Enter Sandman"}]}""",
+        )
+        val request = EnrichmentRequest.forTrack("Enter Sandman", "Metallica")
+
+        // When — enriching for genre
+        val result = provider.enrich(request, EnrichmentType.GENRE)
+
+        // Then — NotFound; the ranking pass never gets a candidate to choose from
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `enrich track sends the release-hinted query when the request carries an album hint`() = runTest {
+        // Given — a matching recording behind the release-hinted query
+        httpClient.givenJsonResponse("recording?query", RECORDING_SEARCH)
+        val request = EnrichmentRequest.forTrack("Paranoid Android", "Radiohead", album = "OK Computer")
+
+        // When — enriching for genre
+        provider.enrich(request, EnrichmentType.GENRE)
+
+        // Then — the Lucene query carries the album's release:"..." term
+        val url = httpClient.requestedUrls.single { it.contains("recording?query") }
+        assertTrue(url.contains("release%3A%22OK+Computer%22"))
+    }
+
+    @Test
     fun `enrich returns BandMembers for artist with members`() = runTest {
         // Given -- artist lookup with artist-rels returns band member relations
         httpClient.givenJsonResponse("artist/art1?fmt=json&inc=tags+url-rels+artist-rels", ARTIST_LOOKUP_WITH_MEMBERS)
@@ -785,6 +831,37 @@ class MusicBrainzProviderTest {
                 "isrcs": ["GBAYE9700100"],
                 "tags": [{"name": "alternative rock", "count": 3}]
               }]
+            }
+        """.trimIndent()
+
+        /**
+         * Mirrors live musicbrainz.org "recording:Enter Sandman AND artistname:Metallica" evidence
+         * (2026-08-06): three score-100 candidates with the demo first, then two live takes — the
+         * studio original was not even in that top 3. A fourth, official-album-carrying studio hit
+         * is added last, to pin [MusicBrainzEnricher.pickBestRecording]'s ranking over the pool.
+         */
+        private val ENTER_SANDMAN_RANK_POOL = """
+            {
+              "recordings": [
+                {
+                  "id": "rec-demo", "score": 100, "title": "Enter Sandman",
+                  "disambiguation": "demo: 1990-08-13"
+                },
+                {
+                  "id": "rec-live-1", "score": 100, "title": "Enter Sandman",
+                  "disambiguation": "live"
+                },
+                {
+                  "id": "rec-live-2", "score": 100, "title": "Enter Sandman",
+                  "disambiguation": "live at Moscow"
+                },
+                {
+                  "id": "rec-studio", "score": 100, "title": "Enter Sandman",
+                  "releases": [
+                    {"status": "Official", "release-group": {"primary-type": "Album"}}
+                  ]
+                }
+              ]
             }
         """.trimIndent()
 
