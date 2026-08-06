@@ -134,28 +134,38 @@ internal class DeezerApi(
      * Same disease as [searchArtist] (`docs/pitfalls.md` §7), one hop further: Deezer's plain
      * `q=<artist> <title>` query not only orders candidates untrustworthily, it can omit the
      * studio original from the pool entirely when a live/remix take is more popular — measured
-     * live 2026-08-06: "Harvester of Sorrow"'s studio take was absent from the plain query's
-     * top 5. When [album] is known, the advanced
-     * field query `artist:"…" track:"…" album:"…"` asks Deezer to filter by album up front and
-     * genuinely finds the studio track that the plain query's top 5 does not contain. Album
-     * titles drift across editions ("(Remastered)" suffixes, regional retitles), so an advanced
-     * query that comes back empty falls back to the plain query rather than reporting NotFound.
+     * live 2026-08-06: neither "Harvester of Sorrow"'s nor "Blackened"'s studio take appeared
+     * anywhere in the plain query's top 5. The advanced field query `artist:"…" track:"…"` does
+     * return the studio take (first, in both measurements), with or without an `album:"…"` field —
+     * so the field query is the primary query even when no [album] hint exists, not an
+     * album-only refinement. Ranking alone cannot compensate: a studio take absent from the pool
+     * cannot be ranked into first place.
      *
-     * Whichever query ran, the pool is then ranked — the original `for` loop here returned hit 0
-     * unconditionally, so a five-candidate pool never mattered. [rankTracks] is this provider's
-     * version of [ArtistMatcher]-driven pool ranking; see its KDoc for the tier order.
+     * The queries run narrowest-first, and a tier falls through when it yields no candidate that
+     * survives the [ArtistMatcher] filter (a raw-but-all-wrong-artist pool is as useless as an
+     * empty one): field query with `album:` (titles drift across editions, so its misses are
+     * expected) → field query without `album:` (a literal `"` in any field breaks the syntax and
+     * returns zero, observed live) → plain keyword query as the last resort.
+     *
+     * Whichever query produced the pool, it is then ranked — the original `for` loop here returned
+     * hit 0 unconditionally, so a five-candidate pool never mattered. [rankTracks] is this
+     * provider's version of [ArtistMatcher]-driven pool ranking; see its KDoc for the tier order.
      */
     suspend fun searchTrack(title: String, artist: String, album: String? = null): DeezerTrackSearchResult? {
-        val advancedPool = album?.takeIf { it.isNotBlank() }
-            ?.let { fetchTrackPool(advancedTrackUrl(artist, title, it)) }
-        val pool = advancedPool?.takeIf { it.isNotEmpty() }
-            ?: fetchTrackPool(plainTrackUrl(artist, title))
-            ?: return null
-
-        return pool
-            .filter { ArtistMatcher.isMatch(artist, it.optJSONObject("artist")?.optString("name", "").orEmpty()) }
-            .rankTracks(title, artist, album)
-            ?.toTrackSearchResult()
+        val queries = buildList {
+            album?.takeIf { it.isNotBlank() }?.let { add(advancedTrackUrl(artist, title, it)) }
+            add(advancedTrackUrl(artist, title, album = null))
+            add(plainTrackUrl(artist, title))
+        }
+        for (url in queries) {
+            val candidates = fetchTrackPool(url)
+                .orEmpty()
+                .filter { ArtistMatcher.isMatch(artist, it.optJSONObject("artist")?.optString("name", "").orEmpty()) }
+            if (candidates.isNotEmpty()) {
+                return candidates.rankTracks(title, artist, album)?.toTrackSearchResult()
+            }
+        }
+        return null
     }
 
     private suspend fun fetchTrackPool(url: String): List<JSONObject>? {
@@ -169,8 +179,11 @@ internal class DeezerApi(
         return "$BASE_URL/search/track?q=$encoded&limit=$TRACK_SEARCH_LIMIT"
     }
 
-    private fun advancedTrackUrl(artist: String, title: String, album: String): String {
-        val query = """artist:"$artist" track:"$title" album:"$album""""
+    private fun advancedTrackUrl(artist: String, title: String, album: String?): String {
+        val query = buildString {
+            append("""artist:"$artist" track:"$title"""")
+            if (album != null) append(""" album:"$album"""")
+        }
         val encoded = URLEncoder.encode(query, "UTF-8")
         return "$BASE_URL/search/track?q=$encoded&limit=$TRACK_SEARCH_LIMIT"
     }
@@ -196,7 +209,7 @@ internal class DeezerApi(
      * 1. exact (case-insensitive) title match — separates "Blackened" from "Blackened 2020"
      * 2. artist name quality ([ArtistMatcher.matchQuality]) — a closer name beats a looser one
      * 3. album containment, when [album] is given — the hinted album's edition over any other
-     * 4. no parenthetical marker the request didn't ask for (live/remaster/demo/remix) — prefers
+     * 4. no edition marker the request didn't ask for ([hasUnrequestedMarker]) — prefers
      *    "Harvester of Sorrow" over "Harvester Of Sorrow (Live In Mexico City)" when neither is an
      *    exact title match
      *
@@ -233,21 +246,36 @@ internal class DeezerApi(
             albumMatch = album.isNullOrBlank() ||
                 candidateAlbum.contains(album, ignoreCase = true) ||
                 album.contains(candidateAlbum, ignoreCase = true),
-            cleanTitle = !hasUnrequestedParenthetical(candidateTitle, title),
+            cleanTitle = !hasUnrequestedMarker(candidateTitle, title),
         )
     }
 
     /**
-     * True when [candidateTitle] carries a parenthetical live/remaster/demo/remix marker that
-     * [requestedTitle] does not ask for — e.g. "(Live In Mexico City)" on a plain title request.
-     * A marker the request itself contains (a genuine request for the live take) is not penalised.
+     * True when [candidateTitle] carries an edition marker that [requestedTitle] does not ask
+     * for. A marker the request itself contains (a genuine request for the live take) is not
+     * penalised. Two shapes, both observed live:
+     *
+     * - a parenthetical containing a live/remaster/demo/remix word — "(Live In Mexico City)"
+     * - a bare suffix appended to the requested title — Deezer titles the "Blackened" remix
+     *   "Blackened 2020" (no parentheses, marked only by the trailing year) and live/rehearsal
+     *   takes as `" - Live at …"` dash suffixes, so the suffix is checked for the same marker
+     *   words *and* for a bare year. The suffix check only fires when the candidate extends the
+     *   requested title, so a title that legitimately contains a year ("1979") is never penalised
+     *   by its own name.
      */
-    private fun hasUnrequestedParenthetical(candidateTitle: String, requestedTitle: String): Boolean {
-        val requestedLower = requestedTitle.lowercase()
-        return PARENTHETICAL_REGEX.findAll(candidateTitle).any { match ->
+    private fun hasUnrequestedMarker(candidateTitle: String, requestedTitle: String): Boolean {
+        val requestedLower = requestedTitle.trim().lowercase()
+        val parenthetical = PARENTHETICAL_REGEX.findAll(candidateTitle).any { match ->
             val marker = match.groupValues[1].lowercase()
             UNREQUESTED_TITLE_MARKERS.any { marker.contains(it) && !requestedLower.contains(it) }
         }
+        if (parenthetical) return true
+
+        val candidateLower = candidateTitle.trim().lowercase()
+        if (!candidateLower.startsWith(requestedLower)) return false
+        val suffix = candidateLower.substring(requestedLower.length)
+        return UNREQUESTED_TITLE_MARKERS.any { suffix.contains(it) && !requestedLower.contains(it) } ||
+            (YEAR_REGEX.containsMatchIn(suffix) && !YEAR_REGEX.containsMatchIn(requestedLower))
     }
 
     suspend fun getArtistTop(artistId: Long, limit: Int = 10): List<DeezerTopTrack> {
@@ -348,5 +376,8 @@ internal class DeezerApi(
 
         /** Edition markers that make a title a worse match unless the request itself asked for one. */
         val UNREQUESTED_TITLE_MARKERS = listOf("live", "remaster", "demo", "remix")
+
+        /** A bare year in a title suffix marks a reissue/remix edition — "Blackened 2020", live. */
+        val YEAR_REGEX = Regex("""\b(19|20)\d{2}\b""")
     }
 }

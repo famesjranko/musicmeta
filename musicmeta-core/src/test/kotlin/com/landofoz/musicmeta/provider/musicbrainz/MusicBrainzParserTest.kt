@@ -550,6 +550,32 @@ class MusicBrainzParserTest {
     }
 
     @Test
+    fun `parseMedia skips a DualDisc's DVD-Video side and keeps its CD side`() {
+        // Given -- a DualDisc, listed per side; only the "(DVD-Video side)" name is video
+        val json = JSONObject(MEDIA_DUALDISC)
+
+        // When -- parsing media tracks
+        val tracks = MusicBrainzParser.parseMedia(json)
+
+        // Then -- the video side is dropped, the audio side kept with unchanged positions
+        assertEquals(11, tracks.size)
+        assertEquals((1..11).toList(), tracks.map { it.position })
+    }
+
+    @Test
+    fun `parseMedia treats a sized LaserDisc as video like the bare name`() {
+        // Given -- CD + a 12" LaserDisc (MB lists LaserDisc bare and sized; all are video)
+        val json = JSONObject(MEDIA_CD_PLUS_SIZED_LASERDISC)
+
+        // When -- parsing media tracks
+        val tracks = MusicBrainzParser.parseMedia(json)
+
+        // Then -- the sized LaserDisc is dropped like a bare "LaserDisc" would be
+        assertEquals(11, tracks.size)
+        assertEquals((1..11).toList(), tracks.map { it.position })
+    }
+
+    @Test
     fun `parseMedia treats a bare DVD format as video`() {
         // Given -- CD + a medium whose format is the bare "DVD" (editor didn't specify a child format)
         val json = JSONObject(MEDIA_CD_PLUS_BARE_DVD)
@@ -889,6 +915,36 @@ class MusicBrainzParserTest {
                 {
                   "format": "DVD-Video",
                   "tracks": [${(1..11).joinToString(",") { cdTrack(if (it == 1) "Frantic" else "DVD Track $it", it, "dvd-rec-$it") }}]
+                }
+              ]
+            }
+        """.trimIndent()
+
+        private val MEDIA_DUALDISC = """
+            {
+              "media": [
+                {
+                  "format": "DualDisc (CD side)",
+                  "tracks": [${(1..11).joinToString(",") { cdTrack("CD Side Track $it", it, "cds-rec-$it") }}]
+                },
+                {
+                  "format": "DualDisc (DVD-Video side)",
+                  "tracks": [${(1..11).joinToString(",") { cdTrack("Video Side Track $it", it, "vs-rec-$it") }}]
+                }
+              ]
+            }
+        """.trimIndent()
+
+        private val MEDIA_CD_PLUS_SIZED_LASERDISC = """
+            {
+              "media": [
+                {
+                  "format": "CD",
+                  "tracks": [${(1..11).joinToString(",") { cdTrack("CD Track $it", it, "cd-rec-$it") }}]
+                },
+                {
+                  "format": "12\" LaserDisc",
+                  "tracks": [${(1..11).joinToString(",") { cdTrack("LD Track $it", it, "ld-rec-$it") }}]
                 }
               ]
             }
