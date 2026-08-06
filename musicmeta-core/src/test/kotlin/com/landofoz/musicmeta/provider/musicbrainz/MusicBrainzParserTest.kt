@@ -219,6 +219,115 @@ class MusicBrainzParserTest {
     }
 
     @Test
+    fun `parseRecording fills isVideo from the recording's own video flag`() {
+        // Given
+        val json = JSONObject(
+            """{"recordings": [{"id": "rec1", "score": 100, "title": "Karma Police", "video": true}]}""",
+        )
+
+        // When
+        val recordings = MusicBrainzParser.parseRecordings(json)
+
+        // Then
+        assertTrue(recordings[0].isVideo)
+    }
+
+    @Test
+    fun `parseRecording defaults isVideo to false when the field is absent`() {
+        // Given
+        val json = JSONObject(
+            """{"recordings": [{"id": "rec1", "score": 100, "title": "Karma Police"}]}""",
+        )
+
+        // When
+        val recordings = MusicBrainzParser.parseRecordings(json)
+
+        // Then
+        assertFalse(recordings[0].isVideo)
+    }
+
+    @Test
+    fun `parseRecordings with an albumHint prefers a release-group title match over an earlier Official Album`() {
+        // Given — mirrors the live Radiohead "Karma Police" shape: "The Best Of" (a compilation)
+        // sits first in the releases array, "OK Computer" (the requested album) sits third, both
+        // Official Album release-groups
+        val json = JSONObject(
+            """
+            {
+              "recordings": [{
+                "id": "video-id",
+                "score": 100,
+                "title": "Karma Police",
+                "releases": [
+                  {"status": "Official", "release-group": {"id": "rg-best-of", "primary-type": "Album", "title": "The Best Of"}},
+                  {"status": "Official", "release-group": {"id": "rg-ok-computer", "primary-type": "Album", "title": "OK Computer"}}
+                ]
+              }]
+            }
+            """.trimIndent(),
+        )
+
+        // When — parsing with an album hint vs. without one
+        val hinted = MusicBrainzParser.parseRecordings(json, albumHint = "OK Computer")
+        val unhinted = MusicBrainzParser.parseRecordings(json)
+
+        // Then — the hint changes which release-group wins the art/album-title tier
+        assertEquals("OK Computer", hinted[0].artReleaseGroupTitle)
+        assertEquals("rg-ok-computer", hinted[0].artReleaseGroupId)
+        assertEquals("The Best Of", unhinted[0].artReleaseGroupTitle)
+    }
+
+    @Test
+    fun `parseRecordings album hint match is case-insensitive and trims whitespace`() {
+        // Given
+        val json = JSONObject(
+            """
+            {
+              "recordings": [{
+                "id": "rec1",
+                "score": 100,
+                "title": "Karma Police",
+                "releases": [
+                  {"status": "Bootleg", "release-group": {"id": "rg-ok-computer", "primary-type": "Album", "title": "ok computer"}}
+                ]
+              }]
+            }
+            """.trimIndent(),
+        )
+
+        // When
+        val recordings = MusicBrainzParser.parseRecordings(json, albumHint = "  OK Computer  ")
+
+        // Then — matched despite case/whitespace differences and a non-Official status
+        assertEquals("ok computer", recordings[0].artReleaseGroupTitle)
+    }
+
+    @Test
+    fun `parseRecordings falls back to the existing tiers when albumHint matches nothing`() {
+        // Given — no release-group title matches the hint
+        val json = JSONObject(
+            """
+            {
+              "recordings": [{
+                "id": "rec1",
+                "score": 100,
+                "title": "Karma Police",
+                "releases": [
+                  {"status": "Official", "release-group": {"id": "rg-a", "primary-type": "Album", "title": "Amnesiac"}}
+                ]
+              }]
+            }
+            """.trimIndent(),
+        )
+
+        // When
+        val recordings = MusicBrainzParser.parseRecordings(json, albumHint = "OK Computer")
+
+        // Then — tier 1 (Official Album) still applies
+        assertEquals("Amnesiac", recordings[0].artReleaseGroupTitle)
+    }
+
+    @Test
     fun `parseRecording leaves lengthMs null when length is absent or zero`() {
         // Given — no length field at all
         val json = JSONObject(

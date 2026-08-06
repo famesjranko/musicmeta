@@ -40,6 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Deezer's SIMILAR_TRACKS called `/track/{id}/radio`, which doesn't exist, and always returned nothing; now derived from the seed track's artist's related artists and their top tracks
 - Deezer track search ignored the album hint and always took Deezer's first hit; previews and lookups could resolve to a remix or live take instead of the requested edition
 - MusicBrainz track search took the first score-100 tie, which could be a demo or live take; identity, popularity, and other downstream track data now resolve to the studio recording
+- MusicBrainz track ranking ignored a typed album and never penalized a music-video take; a requested album is now preferred and a video recording no longer beats a studio one
 - ListenBrainz's recording/artist popularity treated a JSON-null listen count as zero and kept it; a track or artist with no LB data now returns NotFound instead of a fake 0/0
 - Cover Art Archive sent a track's recording MBID to its release endpoint, which always 404s; ALBUM_ART on tracks now resolves via the release-group id instead of failing every time
 - MusicBrainz ALBUM_TRACKS flattened a bonus video disc into the tracklist; a release with a DVD/Blu-ray extra no longer duplicates every position

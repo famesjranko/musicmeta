@@ -7,6 +7,7 @@ import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
 import com.landofoz.musicmeta.IdentifierRequirement
+import com.landofoz.musicmeta.http.HttpResult
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.testutil.FakeHttpClient
 import kotlinx.coroutines.test.runTest
@@ -144,6 +145,66 @@ class MusicBrainzProviderTest {
         // release-group wiki cache rather than repeating the release-group/group123 request
         assertTrue(result is EnrichmentResult.Success)
         assertTrue(httpClient.requestedUrls.none { it.contains("release-group/group123") })
+    }
+
+    @Test
+    fun `a transient on the release-group wiki lookup does not fail GENRE`() = runTest {
+        // Given — the release search succeeds, but the release-group's dedicated wiki-links lookup
+        // 503s. Before the fix this propagated out of buildAlbumResult and turned GENRE itself into
+        // an Error, even though GENRE's own data (genres, label, dates) was already in hand — the
+        // live symptom this pins: ALBUM_DESCRIPTION not_found on one run, ok on the identical next.
+        httpClient.givenJsonResponse("release?query", RELEASE_SEARCH_HIGH_SCORE)
+        httpClient.givenHttpResult("release-group/group123", HttpResult.ServerError(503))
+        val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+
+        // When
+        val result = provider.enrich(request, EnrichmentType.GENRE)
+
+        // Then — GENRE still succeeds with its own data; the wiki-links transient just leaves
+        // wikidataId/wikipediaTitle unresolved for this call rather than masquerading as "this
+        // release-group has none" or failing the type that never asked for wiki data.
+        assertTrue(result is EnrichmentResult.Success)
+        val success = result as EnrichmentResult.Success
+        assertTrue(success.data is EnrichmentData.Metadata)
+        assertEquals(null, success.resolvedIdentifiers?.wikidataId)
+        assertEquals(null, success.resolvedIdentifiers?.wikipediaTitle)
+    }
+
+    @Test
+    fun `a timeout on the release-group wiki lookup does not fail LABEL`() = runTest {
+        // Given — same shape, a different type and a network-level transient (not an HTTP status)
+        httpClient.givenJsonResponse("release?query", RELEASE_SEARCH_HIGH_SCORE)
+        httpClient.givenIoException("release-group/group123")
+        val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+
+        // When
+        val result = provider.enrich(request, EnrichmentType.LABEL)
+
+        // Then
+        assertTrue(result is EnrichmentResult.Success)
+    }
+
+    @Test
+    fun `a transient release-group wiki lookup is retried, not cached as absence`() = runTest {
+        // Given — the first call 503s; the second call (a different type resolving the same
+        // release-group, still within this enricher's lifetime) succeeds
+        httpClient.givenJsonResponse("release?query", RELEASE_SEARCH_HIGH_SCORE)
+        httpClient.givenHttpResult("release-group/group123", HttpResult.ServerError(503))
+        val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+        provider.enrich(request, EnrichmentType.GENRE)
+
+        // When — the transient clears and LABEL resolves the same album
+        httpClient.givenHttpResult(
+            "release-group/group123",
+            HttpResult.Ok(org.json.JSONObject(RELEASE_GROUP_WITH_WIKI_RELATIONS)),
+        )
+        val result = provider.enrich(request, EnrichmentType.LABEL)
+
+        // Then — the earlier failure was never cached as "no wiki links", so this call resolves
+        // the real relations rather than being stuck with a false negative
+        assertTrue(result is EnrichmentResult.Success)
+        val success = result as EnrichmentResult.Success
+        assertEquals("Q82539", success.resolvedIdentifiers?.wikidataId)
     }
 
     @Test

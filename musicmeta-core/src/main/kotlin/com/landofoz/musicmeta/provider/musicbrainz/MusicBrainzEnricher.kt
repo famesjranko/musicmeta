@@ -6,6 +6,8 @@ import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -255,7 +257,7 @@ internal class MusicBrainzEnricher(
         val recordings = api.searchRecordings(request.title, request.artist, request.album)
         if (recordings.isEmpty()) return EnrichmentResult.NotFound(type, providerId)
 
-        val best = pickBestRecording(request.title, recordings)
+        val best = pickBestRecording(request.title, recordings, request.album)
             ?: return EnrichmentResult.NotFound(type, providerId)
 
         val data = if (type == EnrichmentType.TRACK_METADATA) {
@@ -296,9 +298,7 @@ internal class MusicBrainzEnricher(
         type: EnrichmentType,
         confidence: Float,
     ): EnrichmentResult.Success {
-        val (wikidataId, wikipediaTitle) = release.releaseGroupId
-            ?.let { cachedReleaseGroupWikiLookup(it) }
-            ?: (null to null)
+        val (wikidataId, wikipediaTitle) = resolveReleaseGroupWikiLinks(release.releaseGroupId)
         return EnrichmentResult.Success(
             type = type,
             data = MusicBrainzMapper.toAlbumMetadata(release),
@@ -306,6 +306,36 @@ internal class MusicBrainzEnricher(
             confidence = confidence,
             resolvedIdentifiers = MusicBrainzMapper.toAlbumIdentifiers(release, wikidataId, wikipediaTitle),
         )
+    }
+
+    /**
+     * Best-effort: [type] here is whatever the caller actually asked for (GENRE, LABEL, …), never
+     * `ALBUM_DESCRIPTION` — MusicBrainz has no capability for it, so this side lookup only ever runs
+     * as a byproduct of resolving a different type's *own*, already-successful data. A transient
+     * failure here must not fail that unrelated type: it would turn a legitimate `Success` into an
+     * `Error`, record a MusicBrainz breaker failure for a hiccup that had nothing to do with the
+     * type being resolved, and — since identity resolution still fans out to every requested type on
+     * an `Error` (`DefaultEnrichmentEngine`) — drop the resolved identifiers the *rest* of that run's
+     * types would otherwise have used. So this degrades to "unresolved this call" instead of
+     * propagating, mirroring [bodyOrThrowTransient]'s own split (null only for a genuine
+     * [com.landofoz.musicmeta.http.HttpResult.ClientError] absence) one level up.
+     *
+     * The transient is never written to [releaseGroupWikiCache] (the write only happens on the
+     * success path inside [cachedReleaseGroupWikiLookup]), so it is retried — not pinned as "no
+     * wiki links" — on the next type that resolves this release-group within this enricher's
+     * lifetime.
+     */
+    // SwallowedException: intentional — see the KDoc above. This enricher has no logger to hand the
+    // exception to; degrading silently is the fix, not an oversight (detekt cannot tell them apart).
+    @Suppress("SwallowedException")
+    private suspend fun resolveReleaseGroupWikiLinks(releaseGroupMbid: String?): Pair<String?, String?> {
+        if (releaseGroupMbid == null) return null to null
+        return try {
+            cachedReleaseGroupWikiLookup(releaseGroupMbid)
+        } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
+            null to null
+        }
     }
 
     private fun buildArtistResult(
@@ -341,8 +371,7 @@ internal class MusicBrainzEnricher(
     /**
      * Rank the recording pool above [minMatchScore] instead of taking `firstOrNull` — MB search
      * ties score-100 hits and puts demo/live/bootleg/cover takes ahead of the studio original
-     * (`docs/pitfalls.md` §7). Score stays the floor: everything below [minMatchScore] is out
-     * before ranking starts. Among survivors, highest tier first, keeping pool order among ties
+     * (`docs/pitfalls.md` §7). Among survivors, highest tier first, keeping pool order among ties
      * (`maxWithOrNull` keeps the first maximum, same convention as [pickBestArtist]'s sibling in
      * `DeezerApi.rankTracks`):
      *
@@ -350,7 +379,17 @@ internal class MusicBrainzEnricher(
      *    cover/karaoke recording titled e.g. "Enter Sandman (Ulrich)" carries no disambiguation at
      *    all and would still beat the studio original on tiers 2/3 alone, so title has to be
      *    checked first, same tier order as `DeezerApi.rankTracks`'s tier 1
-     * 2. blank [MusicBrainzRecording.disambiguation] — a canonical recording carries none; ANY
+     * 2. [albumTitle] present and matches (via [MusicBrainzRecording.artReleaseGroupTitle], already
+     *    tier-0-preferring an exact album match — see `MusicBrainzParser.findArtReleaseGroup`) — an
+     *    explicit album request is the strongest available signal, so it outranks both the
+     *    disambiguation and video checks below. No-op (constant `false` for every candidate) when
+     *    [albumTitle] is null, so an album-less request falls straight through to tier 3.
+     * 3. not [MusicBrainzRecording.isVideo] — MB's own structural flag for a music-video take, not
+     *    a keyword match on disambiguation text (`docs/pitfalls.md` §7's rejected pattern):
+     *    verified live, Radiohead's "Karma Police" music-video recording is the *only* exact-title,
+     *    score-100 hit for an album-hinted "OK Computer" search, so it would otherwise win tier 1
+     *    outright with nothing to lose to.
+     * 4. blank [MusicBrainzRecording.disambiguation] — a canonical recording carries none; ANY
      *    disambiguation marks a variant. MB's disambiguation vocabulary is open (demo, live,
      *    "bootleg edited version", instrumental, acoustic, radio edit, mono/stereo, single
      *    version, …) and cannot be enumerated by keyword — verified live: "bootleg edited version"
@@ -359,26 +398,51 @@ internal class MusicBrainzEnricher(
      *    edge: a request that explicitly asks for a variant edition (title itself names it) still
      *    resolves via tier 1's exact-title match, because MB puts variant information in
      *    disambiguation, not in the recording title — blank-preference never fights an exact title.
-     * 3. carries an Official release on an Album release-group
+     * 5. carries an Official release on an Album release-group
      *    ([MusicBrainzRecording.hasOfficialAlbumRelease]) — prefers the studio album cut over a
      *    single/compilation-only recording when neither carries a disambiguation
+     *
+     * The score floor itself is relaxed for a candidate whose [albumTitle] matches: verified live,
+     * Radiohead's actual studio "Karma Police" recording (the one the "OK Computer" release itself
+     * carries) scores only 77 under MB's own relevance ranking — well below the default 80 — while
+     * the wrong (music-video) exact-title candidate scores 100. An explicit, request-supplied album
+     * match is independent evidence of correctness that MB's fuzzy text-relevance score doesn't
+     * capture, so it is allowed to override the floor rather than leaving the correct candidate
+     * filtered out before ranking ever sees it.
      */
-    private fun pickBestRecording(title: String, recordings: List<MusicBrainzRecording>): MusicBrainzRecording? =
-        recordings.filter { it.score >= minMatchScore }
-            .map { it to it.recordingRank(title) }
+    private fun pickBestRecording(
+        title: String,
+        recordings: List<MusicBrainzRecording>,
+        albumTitle: String? = null,
+    ): MusicBrainzRecording? {
+        val album = albumTitle?.trim()?.takeIf { it.isNotBlank() }
+        return recordings
+            .filter { it.score >= minMatchScore || (album != null && it.matchesAlbum(album)) }
+            .map { it to it.recordingRank(title, album) }
             .maxWithOrNull(
-                compareBy({ it.second.exactTitle }, { it.second.blankDisambiguation }, { it.second.officialAlbum }),
+                compareBy(
+                    { it.second.exactTitle }, { it.second.albumMatch }, { it.second.notVideo },
+                    { it.second.blankDisambiguation }, { it.second.officialAlbum },
+                ),
             )
             ?.first
+    }
 
-    private fun MusicBrainzRecording.recordingRank(title: String) = RecordingRank(
+    private fun MusicBrainzRecording.matchesAlbum(album: String): Boolean =
+        artReleaseGroupTitle?.trim()?.equals(album, ignoreCase = true) == true
+
+    private fun MusicBrainzRecording.recordingRank(title: String, album: String?) = RecordingRank(
         exactTitle = this.title.trim().equals(title.trim(), ignoreCase = true),
+        albumMatch = album != null && matchesAlbum(album),
+        notVideo = !isVideo,
         blankDisambiguation = disambiguation.isNullOrBlank(),
         officialAlbum = hasOfficialAlbumRelease,
     )
 
     private data class RecordingRank(
         val exactTitle: Boolean,
+        val albumMatch: Boolean,
+        val notVideo: Boolean,
         val blankDisambiguation: Boolean,
         val officialAlbum: Boolean,
     )
