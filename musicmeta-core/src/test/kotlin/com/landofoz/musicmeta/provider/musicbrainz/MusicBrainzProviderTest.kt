@@ -848,8 +848,35 @@ class MusicBrainzProviderTest {
         )
     }
 
+    @Test
+    fun `a transient artist-relations lookup no longer throws, and marks the run's transient set instead`() = runTest {
+        // Given — the artist search hit needs the full relations fetch (no wikidataId/wikipediaTitle
+        // on the search result), and that fetch 503s. Before this fix, cachedArtistLookup(best.id)
+        // at MusicBrainzEnricher's `needsRelations` branch was called with no try/catch at all — a
+        // transient there propagated straight out of enrichArtist.
+        httpClient.givenJsonResponse("artist?query", ARTIST_SEARCH_NO_WIKI_RELATIONS)
+        httpClient.givenHttpResult("artist/", HttpResult.ServerError(503))
+        val request = EnrichmentRequest.forArtist("Radiohead")
+
+        // When — enriching for GENRE, which never asked for wiki data
+        val result = provider.enrich(request, EnrichmentType.GENRE)
+
+        // Then — GENRE still succeeds with the search-hit data rather than the enricher throwing
+        assertTrue("expected Success, got $result", result is EnrichmentResult.Success)
+    }
 
     companion object {
+        private val ARTIST_SEARCH_NO_WIKI_RELATIONS = """
+            {
+              "artists": [{
+                "id": "artist1",
+                "name": "Radiohead",
+                "score": 100,
+                "type": "Group"
+              }]
+            }
+        """.trimIndent()
+
         private val RELEASE_SEARCH_THIN = """
             {
               "releases": [{
