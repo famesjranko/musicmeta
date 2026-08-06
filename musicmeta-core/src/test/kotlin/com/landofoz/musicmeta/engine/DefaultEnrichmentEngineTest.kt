@@ -1242,6 +1242,120 @@ class DefaultEnrichmentEngineTest {
         assertTrue("ARTIST_TIMELINE should be Success on second call", results.raw[EnrichmentType.ARTIST_TIMELINE] is EnrichmentResult.Success)
         assertEquals("Discography provider should not be called again on cache hit", discoCallsAfterFirst, discoProvider.enrichCalls.size)
     }
+
+    // --- issue 06: transient side-lookup must not resolve to a cacheable NotFound ---
+
+    @Test fun `a transient in identity resolution reclassifies an identifier-gated type to Error even when a same-chain provider with no requirement ran and returned its own NotFound`() = runTest {
+        // Given — identity resolution throws a transient (mirrors MusicBrainz hiccuping); the target
+        // type's chain has one provider requiring WIKIPEDIA_TITLE (skipped — never called) and one
+        // requiring nothing (Last.fm-shaped — eligible, runs, returns its own genuine NotFound).
+        // This is ALBUM_DESCRIPTION's real chain shape and the exact scenario the design review
+        // flagged: the chain's own resolve() collapses to NotFound("all_providers") because the
+        // second provider ran, so any fix keyed off that return value alone would miss this case.
+        val idProvider = ThrowingIdentityProvider("mb")
+        val wikipediaLike = FakeProvider(
+            id = "wikipedia",
+            capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_DESCRIPTION, 100, identifierRequirement = IdentifierRequirement.WIKIPEDIA_TITLE)),
+        )
+        val lastfmLike = FakeProvider(
+            id = "lastfm",
+            capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_DESCRIPTION, 50)),
+        ).also { it.givenResult(EnrichmentType.ALBUM_DESCRIPTION, EnrichmentResult.NotFound(EnrichmentType.ALBUM_DESCRIPTION, "lastfm")) }
+        val e = DefaultEnrichmentEngine(
+            ProviderRegistry(listOf(idProvider, wikipediaLike, lastfmLike)),
+            cache,
+            EnrichmentConfig(enableIdentityResolution = true),
+        )
+
+        // When — enriching a request with no pre-existing MBID
+        val results = e.enrich(req, setOf(EnrichmentType.ALBUM_DESCRIPTION))
+
+        // Then — the chain behaved exactly as it does on main (Last.fm ran, Wikipedia skipped)...
+        assertEquals(1, lastfmLike.enrichCalls.size)
+        assertEquals(0, wikipediaLike.enrichCalls.size)
+        // ...but the type's final result is Error, not a cacheable NotFound
+        assertTrue(
+            "expected Error, got ${results.raw[EnrichmentType.ALBUM_DESCRIPTION]}",
+            results.raw[EnrichmentType.ALBUM_DESCRIPTION] is EnrichmentResult.Error,
+        )
+
+        // And — nothing was cached for it (Error is never cached)
+        assertTrue(cache.stored.keys.none { it.endsWith(":${EnrichmentType.ALBUM_DESCRIPTION}") })
+    }
+
+    @Test fun `a transient reclassifies a merger-consumed type too`() = runTest {
+        // Given — production wiring merges ARTIST_PHOTO via ArtworkMerger (EnrichmentEngine.kt),
+        // which produces its own NotFound on an empty resolveAll() rather than going through
+        // ProviderChain.resolve() at all.
+        val idProvider = ThrowingIdentityProvider("mb")
+        val wikidataLike = FakeProvider(
+            id = "wikidata",
+            capabilities = listOf(ProviderCapability(EnrichmentType.ARTIST_PHOTO, 100, identifierRequirement = IdentifierRequirement.WIKIDATA_ID)),
+        )
+        val wikipediaLike = FakeProvider(
+            id = "wikipedia",
+            capabilities = listOf(ProviderCapability(EnrichmentType.ARTIST_PHOTO, 90, identifierRequirement = IdentifierRequirement.WIKIPEDIA_TITLE)),
+        )
+        val e = DefaultEnrichmentEngine(
+            ProviderRegistry(listOf(idProvider, wikidataLike, wikipediaLike)),
+            cache,
+            EnrichmentConfig(enableIdentityResolution = true),
+            mergers = listOf(GenreMerger, ArtworkMerger(EnrichmentType.ARTIST_PHOTO)),
+        )
+
+        // When
+        val results = e.enrich(req, setOf(EnrichmentType.ARTIST_PHOTO))
+
+        // Then — both providers skipped (neither identifier ever resolved), merger's own
+        // NotFound("all_providers") reclassified to Error
+        assertEquals(0, wikidataLike.enrichCalls.size)
+        assertEquals(0, wikipediaLike.enrichCalls.size)
+        assertTrue(
+            "expected Error, got ${results.raw[EnrichmentType.ARTIST_PHOTO]}",
+            results.raw[EnrichmentType.ARTIST_PHOTO] is EnrichmentResult.Error,
+        )
+    }
+
+    @Test fun `no reclassification when the identifier gap is permanent, not transient`() = runTest {
+        // Given — same shape as the BLOCKING-defect probe, but identity resolution succeeds this
+        // time with a Success carrying no wiki identifiers (a genuine, non-transient absence) —
+        // Forbidden State #4: must stay NotFound.
+        val idProvider = FakeProvider(id = "mb", isIdentityProvider = true)
+            .also {
+                it.givenIdentityResult(
+                    EnrichmentResult.Success(
+                        EnrichmentType.GENRE, EnrichmentData.Metadata(genres = listOf("rock")), "mb", 0.9f,
+                        resolvedIdentifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-1"),
+                    ),
+                )
+            }
+        val wikipediaLike = FakeProvider(
+            id = "wikipedia",
+            capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_DESCRIPTION, 100, identifierRequirement = IdentifierRequirement.WIKIPEDIA_TITLE)),
+        )
+        val lastfmLike = FakeProvider(
+            id = "lastfm",
+            capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_DESCRIPTION, 50)),
+        ).also { it.givenResult(EnrichmentType.ALBUM_DESCRIPTION, EnrichmentResult.NotFound(EnrichmentType.ALBUM_DESCRIPTION, "lastfm")) }
+        val e = DefaultEnrichmentEngine(
+            ProviderRegistry(listOf(idProvider, wikipediaLike, lastfmLike)),
+            cache,
+            EnrichmentConfig(enableIdentityResolution = true),
+        )
+
+        // When
+        val results = e.enrich(req, setOf(EnrichmentType.ALBUM_DESCRIPTION))
+
+        // Then — still NotFound; no transient fired this run
+        assertTrue(results.raw[EnrichmentType.ALBUM_DESCRIPTION] is EnrichmentResult.NotFound)
+    }
+}
+
+/** Identity provider whose [resolveIdentity] throws a transient — exercises the `catch` in
+ *  `DefaultEnrichmentEngine.resolveIdentity`, not a returned `Error`/`NotFound`. */
+private class ThrowingIdentityProvider(id: String) : FakeProvider(id = id, isIdentityProvider = true) {
+    override suspend fun resolveIdentity(request: EnrichmentRequest): EnrichmentResult =
+        throw java.io.IOException("simulated transient")
 }
 
 private class SlowProvider(

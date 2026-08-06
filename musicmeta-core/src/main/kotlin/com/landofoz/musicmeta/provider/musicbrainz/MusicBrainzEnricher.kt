@@ -4,8 +4,10 @@ import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
+import com.landofoz.musicmeta.IdentifierRequirement
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
+import com.landofoz.musicmeta.engine.TransientIdentifierMarker
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
@@ -334,6 +336,14 @@ internal class MusicBrainzEnricher(
             cachedReleaseGroupWikiLookup(releaseGroupMbid)
         } catch (e: Exception) {
             currentCoroutineContext().ensureActive()
+            // This run's wikidataId/wikipediaTitle came back unresolved because of a transient, not
+            // because this release-group genuinely has none — record that so a type gated on either
+            // (e.g. ALBUM_DESCRIPTION's Wikipedia requirement) can be told apart from a genuine
+            // absence and reclassified to Error instead of a cacheable NotFound (issue 06).
+            currentCoroutineContext()[TransientIdentifierMarker]?.mark(
+                IdentifierRequirement.WIKIDATA_ID,
+                IdentifierRequirement.WIKIPEDIA_TITLE,
+            )
             null to null
         }
     }

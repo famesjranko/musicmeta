@@ -326,4 +326,45 @@ class ProviderChainTest {
         assertEquals("p2", results[0].provider)
         assertEquals(0, p1.enrichCalls.size)
     }
+
+    // --- skippedIdentifierRequirements (issue 06) ---
+
+    @Test fun `skippedIdentifierRequirements reports a skip even when another eligible provider ran`() = runTest {
+        // Given — p1 (Wikipedia-shaped) requires WIKIPEDIA_TITLE, p2 (Last.fm-shaped) requires
+        // nothing and is stubbed to return its own NotFound. Request has neither wikipediaTitle
+        // nor wikidataId.
+        val p1 = FakeProvider(
+            id = "wikipedia",
+            capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_DESCRIPTION, 100, identifierRequirement = IdentifierRequirement.WIKIPEDIA_TITLE)),
+        )
+        val p2 = FakeProvider(
+            id = "lastfm",
+            capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_DESCRIPTION, 50)),
+        ).also { it.givenResult(EnrichmentType.ALBUM_DESCRIPTION, EnrichmentResult.NotFound(EnrichmentType.ALBUM_DESCRIPTION, "lastfm")) }
+        val chain = ProviderChain(EnrichmentType.ALBUM_DESCRIPTION, listOf(p1, p2))
+
+        // When — computing skipped requirements, independent of resolve()
+        val skipped = chain.skippedIdentifierRequirements(req.identifiers)
+
+        // Then — WIKIPEDIA_TITLE reported as a skip
+        assertEquals(setOf(IdentifierRequirement.WIKIPEDIA_TITLE), skipped)
+
+        // And — resolve() itself is completely unchanged: p2 (eligible) ran and its NotFound
+        // is what the chain returns; p1 (skipped) never ran. This is Forbidden State #3.
+        val result = chain.resolve(req)
+        assertTrue(result is EnrichmentResult.NotFound)
+        assertEquals("all_providers", (result as EnrichmentResult.NotFound).provider)
+        assertEquals(1, p2.enrichCalls.size)
+        assertEquals(0, p1.enrichCalls.size)
+    }
+
+    @Test fun `skippedIdentifierRequirements is empty when nothing was skipped for an identifier`() = runTest {
+        // Given — both providers are eligible (no identifier requirement)
+        val p1 = FakeProvider(id = "p1", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100)))
+        val p2 = FakeProvider(id = "p2", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 50)))
+        val chain = ProviderChain(EnrichmentType.ALBUM_ART, listOf(p1, p2))
+
+        // When / Then — nothing skipped
+        assertTrue(chain.skippedIdentifierRequirements(req.identifiers).isEmpty())
+    }
 }

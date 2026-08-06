@@ -88,7 +88,9 @@ internal class DefaultEnrichmentEngine(
         // EnrichDeadline carries the budget down to DefaultHttpClient, so a 429 retry can decline to
         // sleep past this deadline — an expiry mid-fan-out loses every provider's in-flight work.
         val completed = withTimeoutOrNull(config.enrichTimeoutMs) {
-            withContext(EnrichDeadline(config.enrichTimeoutMs)) {
+            // TransientIdentifierMarker: this call's record of which IdentifierRequirements a
+            // transient left unresolved this run, read back by reclassifyTransientGap (issue 06).
+            withContext(EnrichDeadline(config.enrichTimeoutMs) + TransientIdentifierMarker()) {
                 var identityResult: EnrichmentResult? = null
                 val enrichedRequest = if (config.enableIdentityResolution &&
                     needsIdentityResolution(request, uncachedTypes, registry)) {
@@ -255,6 +257,9 @@ internal class DefaultEnrichmentEngine(
         } catch (e: Exception) {
             currentCoroutineContext().ensureActive()
             logger.warn(TAG, "Identity resolution failed: ${e.message}", e)
+            // Tells reclassifyTransientGap "skipped because this run's identity resolution
+            // hiccupped" from "skipped because the request genuinely has none of these" (issue 06).
+            currentCoroutineContext()[TransientIdentifierMarker]?.markAllConcreteIdentifiers()
             return request to null
         }
         if (result !is EnrichmentResult.Success) {
@@ -332,7 +337,7 @@ internal class DefaultEnrichmentEngine(
             async {
                 val chain = registry.chainFor(type)
                 val result = chain?.resolve(request) ?: EnrichmentResult.NotFound(type, "no_provider")
-                type to gate(result)
+                type to reclassifyTransientGap(chain, request.identifiers, type, gate(result))
             }
         }.awaitAll().toMap().toMutableMap()
 
@@ -342,7 +347,7 @@ internal class DefaultEnrichmentEngine(
                 val allResults = chain?.resolveAll(request).orEmpty()
                 val filtered = allResults.mapNotNull { gate(it) as? EnrichmentResult.Success }
                 val merger = mergers[mergeType]
-                mergeType to if (merger == null) {
+                val merged = if (merger == null) {
                     EnrichmentResult.NotFound(mergeType, "no_merger")
                 } else {
                     // Also gated on the way out: a merger may return one of its inputs as-is, or
@@ -350,6 +355,7 @@ internal class DefaultEnrichmentEngine(
                     // and a merger's own provider id is not a consumer's override key.
                     demoteUnanswered(guardedStrategy(logger, mergeType, "merger") { merger.merge(filtered) })
                 }
+                mergeType to reclassifyTransientGap(chain, request.identifiers, mergeType, merged)
             }
         }.awaitAll()
         for ((type, result) in mergeableResults) { resolved[type] = result }
@@ -384,6 +390,42 @@ internal class DefaultEnrichmentEngine(
 
     /** Both per-result gates, for anything arriving from a provider chain. */
     private fun gate(result: EnrichmentResult): EnrichmentResult = demoteUnanswered(filterByConfidence(result))
+
+    /**
+     * Turns a [type]'s `NotFound` into an `Error` when it rode on a provider skipped for an
+     * identifier requirement that a transient — somewhere else in this run — left unresolved,
+     * rather than genuinely absent (issue 06). Independent of [ProviderChain.resolve]/
+     * [ProviderChain.resolveAll]'s own return values on purpose: a chain can have skipped one
+     * provider for an unresolved identifier while a *different*, unrelated provider in the same
+     * chain was still eligible, ran, and returned its own genuine `NotFound` (e.g. Last.fm
+     * alongside a skipped Wikipedia for `ALBUM_DESCRIPTION`) — the chain's own result would be
+     * indistinguishable from "everyone genuinely had nothing" in that case.
+     *
+     * Benign race: [TransientIdentifierMarker.mark] and this read both run inside the same
+     * `enrich()` call's `coroutineScope`, launched as sibling `async` children — a type resolved
+     * concurrently with, but *before*, the mark that would have covered it can miss the mark and
+     * fall through to today's behaviour (a plain `NotFound`) instead of `Error`. That degrades to
+     * the pre-fix outcome, never invents a false `Error` for a genuinely-absent identifier.
+     */
+    private suspend fun reclassifyTransientGap(
+        chain: ProviderChain?,
+        identifiers: EnrichmentIdentifiers,
+        type: EnrichmentType,
+        result: EnrichmentResult,
+    ): EnrichmentResult {
+        if (result !is EnrichmentResult.NotFound || chain == null) return result
+        val marker = currentCoroutineContext()[TransientIdentifierMarker] ?: return result
+        val skipped = chain.skippedIdentifierRequirements(identifiers)
+        return if (skipped.isNotEmpty() && marker.matches(skipped)) {
+            EnrichmentResult.Error(
+                type, "engine",
+                "A prerequisite identifier lookup failed transiently this run",
+                errorKind = ErrorKind.NETWORK,
+            )
+        } else {
+            result
+        }
+    }
 
     /**
      * The second per-result gate: a `Success` whose payload does not [answers] the type it claims to
