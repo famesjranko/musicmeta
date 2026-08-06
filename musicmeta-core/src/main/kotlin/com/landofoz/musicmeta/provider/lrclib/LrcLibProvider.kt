@@ -36,6 +36,10 @@ class LrcLibProvider(
             type = EnrichmentType.LYRICS_PLAIN,
             priority = 100,
         ),
+        ProviderCapability(
+            type = EnrichmentType.TRACK_METADATA,
+            priority = 40,
+        ),
     )
 
     override suspend fun enrich(
@@ -82,6 +86,19 @@ class LrcLibProvider(
         type: EnrichmentType,
         confidence: Float,
     ): EnrichmentResult {
+        if (type == EnrichmentType.TRACK_METADATA) {
+            val metadata = LrcLibMapper.toTrackMetadata(result)
+            if (metadata.durationMs == null && metadata.albumTitle == null) {
+                return EnrichmentResult.NotFound(type, id)
+            }
+            return EnrichmentResult.Success(
+                type = type,
+                data = metadata,
+                provider = id,
+                confidence = confidence,
+            )
+        }
+
         val lyrics = LrcLibMapper.toLyrics(result)
 
         // If requesting synced lyrics but only plain is available, still return
