@@ -87,13 +87,10 @@ class LrcLibProvider(
         confidence: Float,
     ): EnrichmentResult {
         if (type == EnrichmentType.TRACK_METADATA) {
-            val metadata = LrcLibMapper.toTrackMetadata(result)
-            if (metadata.durationMs == null && metadata.albumTitle == null) {
-                return EnrichmentResult.NotFound(type, id)
-            }
+            // An all-null payload is demoted by the engine's answers() gate (docs/pitfalls.md §8).
             return EnrichmentResult.Success(
                 type = type,
-                data = metadata,
+                data = LrcLibMapper.toTrackMetadata(result),
                 provider = id,
                 confidence = confidence,
             )
