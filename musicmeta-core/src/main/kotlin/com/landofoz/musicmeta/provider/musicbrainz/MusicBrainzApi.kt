@@ -176,10 +176,14 @@ internal class MusicBrainzApi(
 
         /**
          * Default candidate pool size for [searchRecordings]. A well-covered track's score-100
-         * ties can run to a handful of live/bootleg/cover takes before the studio original appears
-         * — verified live for "Enter Sandman"/Metallica, where the first clean-disambiguation
-         * studio hit sits at index 6. `limit=5` (this constant's previous value) never gave
-         * [MusicBrainzEnricher.pickBestRecording] a pool that contained it to rank.
+         * ties can run deep in live/bootleg/cover takes — "Enter Sandman"/Metallica has ~750 tied
+         * recordings, and measured live (2026-08-06) `limit=5`, and in some runs even `limit=15`,
+         * returned *no* clean-disambiguation studio hit at all, so
+         * [MusicBrainzEnricher.pickBestRecording] had nothing to rank. Where the studio hit lands
+         * inside the pool is not stable across requests (MB's tie order shifts with the limit
+         * itself), so the value is headroom, not a measured index: 25 reliably contained several
+         * studio candidates in repeated runs. A pathologically over-tied track could still
+         * overflow it.
          */
         const val RECORDING_SEARCH_LIMIT = 25
 

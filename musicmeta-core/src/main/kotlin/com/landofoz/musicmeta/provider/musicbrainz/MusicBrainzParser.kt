@@ -226,12 +226,18 @@ internal object MusicBrainzParser {
      * - bare `"Blu-ray"` — the documented list has no distinct "Blu-ray Audio" entry at all (only
      *   "Blu-ray" and the writable "Blu-ray-R"), so a plain "Blu-ray" medium is presumed video.
      *
-     * Known gap: formats absent from this set but also video (e.g. "Blu-ray-R", "DVD-R Video",
-     * "CDV", "VHD", "Ultra HD Blu-ray") are treated as audio and kept — narrower false-negatives
-     * were preferred over a broader list risking a false-positive on an audio format not yet seen.
+     * Hybrid discs are listed per side: only the `"… (DVD-Video side)"` names are video; the
+     * `(CD side)`/`(DVD-Audio side)` siblings stay audio. LaserDisc appears both bare and sized
+     * (`8" LaserDisc`, `12" LaserDisc`) — all three are video.
+     *
+     * Known gap: formats absent from this set but also video (e.g. "Blu-ray-R", "CDV", "VHD",
+     * "Ultra HD Blu-ray") are treated as audio and kept — narrower false-negatives were preferred
+     * over a broader list risking a false-positive on an audio format not yet seen.
      */
     private val VIDEO_MEDIA_FORMATS = setOf(
-        "dvd", "dvd-video", "blu-ray", "hd-dvd", "vhs", "vcd", "svcd", "betamax", "laserdisc", "umd",
+        "dvd", "dvd-video", "blu-ray", "hd-dvd", "vhs", "vcd", "svcd", "betamax", "umd",
+        "laserdisc", "8\" laserdisc", "12\" laserdisc",
+        "dualdisc (dvd-video side)", "dvdplus (dvd-video side)",
     )
 
     private fun isVideoFormat(format: String?): Boolean =
