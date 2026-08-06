@@ -44,6 +44,7 @@ class DeezerProvider(
         ProviderCapability(EnrichmentType.ARTIST_RADIO, priority = 100),
         ProviderCapability(EnrichmentType.ARTIST_TOP_TRACKS, priority = 50),
         ProviderCapability(EnrichmentType.TRACK_PREVIEW, priority = 100),
+        ProviderCapability(EnrichmentType.TRACK_METADATA, priority = 70),
     )
 
     override suspend fun searchCandidates(
@@ -76,6 +77,7 @@ class DeezerProvider(
             EnrichmentType.SIMILAR_TRACKS -> enrichSimilarTracks(request)
             EnrichmentType.ARTIST_RADIO -> enrichArtistRadio(request)
             EnrichmentType.TRACK_PREVIEW -> enrichTrackPreview(request)
+            EnrichmentType.TRACK_METADATA -> enrichTrackMetadata(request)
             else -> enrichAlbumArt(request, type)
         }
     } catch (e: Exception) {
@@ -323,6 +325,31 @@ class DeezerProvider(
         return EnrichmentResult.Success(
             type = EnrichmentType.TRACK_PREVIEW,
             data = preview,
+            provider = id,
+            confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
+            resolvedIdentifiers = EnrichmentIdentifiers().withExtra("deezerId", trackResult.id.toString()),
+        )
+    }
+
+    private suspend fun enrichTrackMetadata(request: EnrichmentRequest): EnrichmentResult {
+        val trackRequest = request as? EnrichmentRequest.ForTrack
+            ?: return EnrichmentResult.NotFound(EnrichmentType.TRACK_METADATA, id)
+
+        val deezerId = request.identifiers.extra["deezerId"]?.toLongOrNull()
+        val trackResult = if (deezerId != null) {
+            api.getTrack(deezerId)
+        } else {
+            val result = api.searchTrack(trackRequest.title, trackRequest.artist, trackRequest.album)
+                ?: return EnrichmentResult.NotFound(EnrichmentType.TRACK_METADATA, id)
+            if (!ArtistMatcher.isMatch(trackRequest.artist, result.artistName)) {
+                return EnrichmentResult.NotFound(EnrichmentType.TRACK_METADATA, id)
+            }
+            result
+        } ?: return EnrichmentResult.NotFound(EnrichmentType.TRACK_METADATA, id)
+
+        return EnrichmentResult.Success(
+            type = EnrichmentType.TRACK_METADATA,
+            data = DeezerMapper.toTrackMetadata(trackResult),
             provider = id,
             confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
             resolvedIdentifiers = EnrichmentIdentifiers().withExtra("deezerId", trackResult.id.toString()),

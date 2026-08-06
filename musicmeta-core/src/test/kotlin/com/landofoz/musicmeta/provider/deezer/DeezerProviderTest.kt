@@ -735,6 +735,59 @@ class DeezerProviderTest {
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
+    // TRACK_METADATA tests
+
+    @Test
+    fun `enrich returns TrackMetadata with real duration and album title`() = runTest {
+        // Given — Deezer returns a track with a 253s duration and album title (not the 30s preview)
+        httpClient.givenJsonResponse("search/track", TRACK_SEARCH_WITH_PREVIEW_RESPONSE)
+        val request = EnrichmentRequest.forTrack("Karma Police", "Radiohead")
+
+        // When — enriching for track metadata
+        val result = provider.enrich(request, EnrichmentType.TRACK_METADATA)
+
+        // Then — Success with the real track length, not a hardcoded preview duration
+        assertTrue(result is EnrichmentResult.Success)
+        val data = (result as EnrichmentResult.Success).data as EnrichmentData.TrackMetadata
+        assertEquals(253000L, data.durationMs)
+        assertEquals("OK Computer", data.albumTitle)
+    }
+
+    @Test
+    fun `enrich returns NotFound for TRACK_METADATA when artist name does not match`() = runTest {
+        // Given — Deezer returns a track from a different artist
+        httpClient.givenJsonResponse("search/track", """{"data":[{"id":999,"title":"Karma Police","artist":{"name":"Completely Different Band"},"duration":200}]}""")
+        val request = EnrichmentRequest.forTrack("Karma Police", "Radiohead")
+
+        // When
+        val result = provider.enrich(request, EnrichmentType.TRACK_METADATA)
+
+        // Then
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `enrich returns NotFound for TRACK_METADATA on artist request`() = runTest {
+        // Given — a ForArtist request (TRACK_METADATA requires ForTrack)
+        val request = EnrichmentRequest.forArtist("Radiohead")
+
+        // When
+        val result = provider.enrich(request, EnrichmentType.TRACK_METADATA)
+
+        // Then
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `capabilities include TRACK_METADATA with priority 70`() {
+        // When
+        val cap = provider.capabilities.find { it.type == EnrichmentType.TRACK_METADATA }
+
+        // Then
+        assertNotNull(cap)
+        assertEquals(70, cap!!.priority)
+    }
+
     companion object {
         val RADIO_RESPONSE = """
             {"data":[

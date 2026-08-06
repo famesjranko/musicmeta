@@ -162,6 +162,16 @@ internal object DeezerMapper {
         )
     }
 
+    /**
+     * The track's *actual* length (not the 30-second preview clip [toTrackPreview] hardcodes) plus
+     * the album title the search hit was matched against.
+     */
+    fun toTrackMetadata(result: DeezerTrackSearchResult): EnrichmentData.TrackMetadata =
+        EnrichmentData.TrackMetadata(
+            durationMs = result.durationSec?.takeIf { it > 0 }?.let { it.toLong() * 1000 },
+            albumTitle = result.albumTitle,
+        )
+
     fun toSimilarAlbum(
         album: DeezerArtistAlbum,
         artistName: String,
