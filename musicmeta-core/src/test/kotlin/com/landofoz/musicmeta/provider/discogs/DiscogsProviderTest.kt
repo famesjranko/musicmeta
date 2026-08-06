@@ -636,6 +636,21 @@ class DiscogsProviderTest {
     }
 
     @Test
+    fun `enrich ALBUM_METADATA still returns Error when the primary search is transient`() = runTest {
+        // Given — the primary search call itself fails with a transient. The degrade guard covers
+        // only the optional side fetch; the primary lookup must keep surfacing as Error.
+        httpClient.givenIoException("database/search")
+        val request = EnrichmentRequest.forAlbum(title = "OK Computer", artist = "Radiohead")
+
+        // When — enriching for album metadata
+        val result = provider.enrich(request, EnrichmentType.ALBUM_METADATA)
+
+        // Then — Error with NETWORK kind, not a degraded Success
+        assertTrue("Expected Error but got $result", result is EnrichmentResult.Error)
+        assertEquals(ErrorKind.NETWORK, (result as EnrichmentResult.Error).errorKind)
+    }
+
+    @Test
     fun `enrich RELEASE_EDITIONS returns NotFound for non-ForAlbum request`() = runTest {
         // Given — ForTrack request instead of ForAlbum
         val request = EnrichmentRequest.forTrack(title = "Paranoid Android", artist = "Radiohead")
