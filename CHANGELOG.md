@@ -45,6 +45,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Cover Art Archive sent a track's recording MBID to its release endpoint, which always 404s; ALBUM_ART on tracks now resolves via the release-group id instead of failing every time
 - MusicBrainz ALBUM_TRACKS flattened a bonus video disc into the tracklist; a release with a DVD/Blu-ray extra no longer duplicates every position
 - Fanart.tv ignored each image's community likes and always took the first one; artist and album art now resolve to the most-liked image
+- A transient MusicBrainz side-lookup could leave a type's identifier (e.g. `ALBUM_DESCRIPTION`'s Wikipedia title) unresolved and masquerade as NotFound; now Error, eligible for `STALE_IF_ERROR`
+- A transient on MusicBrainz's full-artist lookup (fetching URL relations for a search match) threw out of artist enrichment and failed it entirely; now degrades to the search result without relations
 
 ## [0.11.0] - 2026-07-28
 

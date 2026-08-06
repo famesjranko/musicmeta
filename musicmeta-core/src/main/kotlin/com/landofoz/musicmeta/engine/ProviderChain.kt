@@ -122,6 +122,25 @@ internal class ProviderChain(
         }
     }
 
+    /**
+     * Which [IdentifierRequirement]s caused >=1 provider in this chain to be skipped for
+     * [identifiers], regardless of whether some *other* provider in the chain was eligible and ran.
+     * Deliberately independent of [resolve] and [resolveAll]'s outcomes: a provider skipped for an
+     * unresolved identifier is equally suspect whether the chain's overall result ends up `Success`
+     * (another provider covered it), a genuine `NotFound` (another provider ran and had nothing —
+     * e.g. Last.fm alongside a skipped Wikipedia for `ALBUM_DESCRIPTION`), or feeds a merger instead
+     * of [resolve] directly. Availability and circuit-breaker state play no part — only the
+     * identifier gate does.
+     */
+    fun skippedIdentifierRequirements(identifiers: EnrichmentIdentifiers): Set<IdentifierRequirement> =
+        providers.mapNotNull { provider ->
+            val requirement = provider.capabilities.firstOrNull { it.type == type }
+                ?.identifierRequirement
+                ?.takeIf { it != IdentifierRequirement.NONE }
+                ?: return@mapNotNull null
+            requirement.takeUnless { hasRequiredIdentifiers(provider, identifiers) }
+        }.toSet()
+
     fun providers(): List<EnrichmentProvider> = providers
 
     private companion object {

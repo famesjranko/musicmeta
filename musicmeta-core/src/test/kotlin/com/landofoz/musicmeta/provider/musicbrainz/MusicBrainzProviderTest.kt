@@ -800,7 +800,83 @@ class MusicBrainzProviderTest {
         assertTrue(httpClient.requestedUrls.any { it.contains("release-group/group123") })
     }
 
+    // --- issue 06: transient side-lookup must not resolve to a cacheable NotFound ---
+
+    @Test
+    fun `a transient release-group wiki lookup reclassifies ALBUM_DESCRIPTION to Error in the same run that resolves GENRE`() = runTest {
+        // Given — the release search succeeds and GENRE resolves fine, but the release-group's
+        // dedicated wiki-links lookup 503s (transient). ALBUM_DESCRIPTION has no MusicBrainz
+        // capability at all — this is the ticket's literal end-to-end scenario, real
+        // MusicBrainzProvider + real WikipediaProvider (never actually called — skipped for its
+        // unresolved WIKIPEDIA_TITLE requirement) + a Last.fm-shaped fake that has no requirement
+        // and returns its own genuine NotFound.
+        httpClient.givenJsonResponse("release?query", RELEASE_SEARCH_HIGH_SCORE)
+        httpClient.givenHttpResult("release-group/group123", HttpResult.ServerError(503))
+        val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+
+        val wikipedia = com.landofoz.musicmeta.provider.wikipedia.WikipediaProvider(httpClient, RateLimiter(0))
+        val lastfmLike = com.landofoz.musicmeta.testutil.FakeProvider(
+            id = "lastfm",
+            capabilities = listOf(
+                com.landofoz.musicmeta.ProviderCapability(EnrichmentType.ALBUM_DESCRIPTION, 50),
+            ),
+        ).also {
+            it.givenResult(
+                EnrichmentType.ALBUM_DESCRIPTION,
+                EnrichmentResult.NotFound(EnrichmentType.ALBUM_DESCRIPTION, "lastfm"),
+            )
+        }
+        val engine = com.landofoz.musicmeta.engine.DefaultEnrichmentEngine(
+            com.landofoz.musicmeta.engine.ProviderRegistry(listOf(provider, wikipedia, lastfmLike)),
+            com.landofoz.musicmeta.testutil.FakeEnrichmentCache(),
+            com.landofoz.musicmeta.EnrichmentConfig(enableIdentityResolution = true),
+            // GenreMerger excluded: GENRE is IDENTITY_TYPES-eligible and is meant to be served
+            // directly from identity resolution's own Success here, not refetched by MBID (which
+            // this test doesn't mock a canned response for) via a second resolveAll() call.
+            mergers = emptyList(),
+        )
+
+        // When
+        val results = engine.enrich(request, setOf(EnrichmentType.GENRE, EnrichmentType.ALBUM_DESCRIPTION))
+
+        // Then — GENRE resolved fine (the unrelated type the transient rode in on)...
+        assertTrue(results.raw[EnrichmentType.GENRE] is EnrichmentResult.Success)
+        // ...and ALBUM_DESCRIPTION is Error, not a cacheable NotFound
+        assertTrue(
+            "expected Error, got ${results.raw[EnrichmentType.ALBUM_DESCRIPTION]}",
+            results.raw[EnrichmentType.ALBUM_DESCRIPTION] is EnrichmentResult.Error,
+        )
+    }
+
+    @Test
+    fun `a transient artist-relations lookup no longer throws, and marks the run's transient set instead`() = runTest {
+        // Given — the artist search hit needs the full relations fetch (no wikidataId/wikipediaTitle
+        // on the search result), and that fetch 503s. Before this fix, cachedArtistLookup(best.id)
+        // at MusicBrainzEnricher's `needsRelations` branch was called with no try/catch at all — a
+        // transient there propagated straight out of enrichArtist.
+        httpClient.givenJsonResponse("artist?query", ARTIST_SEARCH_NO_WIKI_RELATIONS)
+        httpClient.givenHttpResult("artist/", HttpResult.ServerError(503))
+        val request = EnrichmentRequest.forArtist("Radiohead")
+
+        // When — enriching for GENRE, which never asked for wiki data
+        val result = provider.enrich(request, EnrichmentType.GENRE)
+
+        // Then — GENRE still succeeds with the search-hit data rather than the enricher throwing
+        assertTrue("expected Success, got $result", result is EnrichmentResult.Success)
+    }
+
     companion object {
+        private val ARTIST_SEARCH_NO_WIKI_RELATIONS = """
+            {
+              "artists": [{
+                "id": "artist1",
+                "name": "Radiohead",
+                "score": 100,
+                "type": "Group"
+              }]
+            }
+        """.trimIndent()
+
         private val RELEASE_SEARCH_THIN = """
             {
               "releases": [{
