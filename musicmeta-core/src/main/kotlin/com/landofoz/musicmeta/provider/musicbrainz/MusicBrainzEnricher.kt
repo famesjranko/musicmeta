@@ -4,8 +4,10 @@ import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
+import com.landofoz.musicmeta.IdentifierRequirement
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
+import com.landofoz.musicmeta.engine.TransientIdentifierMarker
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
@@ -187,13 +189,31 @@ internal class MusicBrainzEnricher(
         // (wikidata, wikipedia). Do the full lookup when these are missing so
         // downstream providers (Wikidata, Wikipedia) can use them.
         val needsRelations = best.wikidataId == null && best.wikipediaTitle == null
-        val resolved = if (needsRelations) {
-            cachedArtistLookup(best.id) ?: best
-        } else {
-            best
-        }
+        val resolved = if (needsRelations) resolveArtistRelations(best) else best
 
         return buildArtistResult(resolved, type, ConfidenceCalculator.searchScore(best.score))
+    }
+
+    /**
+     * Best-effort, mirroring [resolveReleaseGroupWikiLinks]'s shape: a transient on the full-artist
+     * lookup must not fail the type being resolved (GENRE, LABEL, …) just because it also happens to
+     * carry wikidata/wikipedia relations as a byproduct — it degrades to [best] (the search hit,
+     * already a valid [MusicBrainzArtist]) instead of propagating. Previously uncaught, which let a
+     * transient here throw straight out of [enrichArtist].
+     */
+    // SwallowedException: intentional — see the KDoc above, matching resolveReleaseGroupWikiLinks.
+    @Suppress("SwallowedException")
+    private suspend fun resolveArtistRelations(best: MusicBrainzArtist): MusicBrainzArtist = try {
+        cachedArtistLookup(best.id) ?: best
+    } catch (e: Exception) {
+        currentCoroutineContext().ensureActive()
+        // Same reasoning as resolveReleaseGroupWikiLinks: this run's wikidataId/wikipediaTitle for
+        // this artist came back unresolved because of a transient, not a genuine absence (issue 06).
+        currentCoroutineContext()[TransientIdentifierMarker]?.mark(
+            IdentifierRequirement.WIKIDATA_ID,
+            IdentifierRequirement.WIKIPEDIA_TITLE,
+        )
+        best
     }
 
     internal suspend fun enrichArtistNewType(
@@ -334,6 +354,14 @@ internal class MusicBrainzEnricher(
             cachedReleaseGroupWikiLookup(releaseGroupMbid)
         } catch (e: Exception) {
             currentCoroutineContext().ensureActive()
+            // This run's wikidataId/wikipediaTitle came back unresolved because of a transient, not
+            // because this release-group genuinely has none — record that so a type gated on either
+            // (e.g. ALBUM_DESCRIPTION's Wikipedia requirement) can be told apart from a genuine
+            // absence and reclassified to Error instead of a cacheable NotFound (issue 06).
+            currentCoroutineContext()[TransientIdentifierMarker]?.mark(
+                IdentifierRequirement.WIKIDATA_ID,
+                IdentifierRequirement.WIKIPEDIA_TITLE,
+            )
             null to null
         }
     }
