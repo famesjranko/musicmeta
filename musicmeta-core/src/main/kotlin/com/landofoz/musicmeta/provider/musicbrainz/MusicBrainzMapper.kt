@@ -56,8 +56,18 @@ internal object MusicBrainzMapper {
             isrc = recording.isrcs.firstOrNull(),
         )
 
+    /**
+     * [EnrichmentIdentifiers.musicBrainzId] here is always the **recording** MBID, never a release
+     * MBID — [CoverArtArchiveProvider] depends on that contract to tell a track request's identifier
+     * apart from an album request's. `musicBrainzReleaseGroupId` is filled from the same
+     * Official+Album release-group [MusicBrainzEnricher.pickBestRecording] already used to rank
+     * [recording] up, when one exists, so CAA can serve front-cover art for the track's release group.
+     */
     fun toTrackIdentifiers(recording: MusicBrainzRecording): EnrichmentIdentifiers =
-        EnrichmentIdentifiers(musicBrainzId = recording.id)
+        EnrichmentIdentifiers(
+            musicBrainzId = recording.id,
+            musicBrainzReleaseGroupId = recording.officialAlbumReleaseGroupId,
+        )
 
     fun toBandMembers(members: List<MusicBrainzBandMember>): EnrichmentData.BandMembers =
         EnrichmentData.BandMembers(

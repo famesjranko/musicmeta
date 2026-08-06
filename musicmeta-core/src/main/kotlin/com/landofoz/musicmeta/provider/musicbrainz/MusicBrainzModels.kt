@@ -52,6 +52,13 @@ internal data class MusicBrainzRecording(
      * original rather than a single/compilation-only or non-official recording.
      */
     val hasOfficialAlbumRelease: Boolean = false,
+    /**
+     * The release-group id of the first Official+Album release in [hasOfficialAlbumRelease]'s scan
+     * (null when that scan finds nothing, or the matching release-group carries no id). Lets
+     * [MusicBrainzMapper.toTrackIdentifiers] fill `musicBrainzReleaseGroupId` for a track without an
+     * extra lookup — the recording search response already carries it.
+     */
+    val officialAlbumReleaseGroupId: String? = null,
 )
 
 internal data class MusicBrainzBandMember(

@@ -34,6 +34,20 @@ class CoverArtArchiveApiTest {
     }
 
     @Test
+    fun `getGroupArtworkUrl requests the release-group front-cover endpoint`() = runTest {
+        // Given — no stub; the request URL is what this test pins
+        // When — fetching front-cover art for a release-group id
+        api.getGroupArtworkUrl("rg-studio", 1200)
+
+        // Then — the exact path shape live-verified against coverartarchive.org (307 redirect to
+        // the archive.org image, same convention as the release endpoint's own redirect handling)
+        assertEquals(
+            listOf("https://coverartarchive.org/release-group/rg-studio/front-1200"),
+            httpClient.requestedUrls,
+        )
+    }
+
+    @Test
     fun `parseImageList extracts types array from each image`() = runTest {
         // Given -- CAA JSON with images containing types arrays
         httpClient.givenJsonResponse(
