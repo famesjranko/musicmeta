@@ -55,10 +55,10 @@ class LastFmProvider(
             val albumRequest = request as? EnrichmentRequest.ForAlbum
                 ?: return EnrichmentResult.NotFound(type, id)
             return try {
-                when (type) {
-                    EnrichmentType.ALBUM_METADATA -> enrichAlbumMetadata(albumRequest, type)
-                    EnrichmentType.ALBUM_DESCRIPTION -> enrichAlbumDescription(albumRequest, type)
-                    else -> EnrichmentResult.NotFound(type, id)
+                if (type == EnrichmentType.ALBUM_METADATA) {
+                    enrichAlbumMetadata(albumRequest, type)
+                } else {
+                    enrichAlbumDescription(albumRequest, type)
                 }
             } catch (e: Exception) {
                 mapError(type, e)
