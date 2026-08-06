@@ -11,6 +11,8 @@ import com.landofoz.musicmeta.engine.ArtistMatcher
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 
 /**
  * Discogs enrichment provider. Searches for album releases to supply
@@ -152,7 +154,7 @@ class DiscogsProvider(
         val releaseId = release.releaseId
             ?: identifiers.get("discogsReleaseId")?.toLongOrNull()
         val communityRating = if (releaseId != null) {
-            api.getReleaseDetails(releaseId)?.communityRating
+            degradeSideFetch { api.getReleaseDetails(releaseId)?.communityRating }
         } else null
         val metadata = if (communityRating != null) {
             baseMetadata.copy(communityRating = communityRating)
@@ -160,6 +162,26 @@ class DiscogsProvider(
         // Only reached with a release the album search verified against the requested artist.
         return success(metadata, EnrichmentType.ALBUM_METADATA, release, hasArtistMatch = true)
     }
+
+    /**
+     * Best-effort: [block] is a supplementary Discogs call (the release-detail fetch for
+     * `communityRating`) made *after* the primary answer for the type is already resolved. A
+     * transient here must not turn an achievable [EnrichmentResult.Success] into an
+     * [EnrichmentResult.Error] — that would also open the circuit breaker against a healthy Discogs
+     * for a failure the primary lookup never had (docs/pitfalls.md §4), and it would discard
+     * `baseMetadata` the caller already has in hand. Mirrors
+     * [com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzEnricher.resolveReleaseGroupWikiLinks].
+     */
+    // SwallowedException: intentional — see the KDoc above. This provider has no logger to hand the
+    // exception to; degrading silently is the fix, not an oversight (detekt cannot tell them apart).
+    @Suppress("SwallowedException")
+    private suspend fun <T> degradeSideFetch(block: suspend () -> T): T? =
+        try {
+            block()
+        } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
+            null
+        }
 
     private suspend fun enrichArtistType(
         request: EnrichmentRequest.ForArtist,

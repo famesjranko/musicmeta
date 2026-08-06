@@ -37,7 +37,7 @@ internal class CoverArtArchiveApi(
 
     /**
      * Fetch full image metadata for a release, including thumbnail sizes.
-     * Returns the list of images with their thumbnails, or null on error.
+     * Returns null if no metadata is available (404); throws on a transient (429/5xx/transport).
      */
     suspend fun getArtworkMetadata(releaseId: String): List<CoverArtArchiveImage>? {
         val url = "$BASE_URL/release/$releaseId"

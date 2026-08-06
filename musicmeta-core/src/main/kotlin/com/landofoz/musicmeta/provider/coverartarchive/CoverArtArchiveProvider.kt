@@ -9,6 +9,8 @@ import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 
 /**
  * Enrichment provider for album cover art from the Cover Art Archive.
@@ -91,10 +93,10 @@ class CoverArtArchiveProvider(
     ): EnrichmentResult {
         // Try release-specific art first
         if (releaseId != null) {
-            val url = api.getArtworkUrl(releaseId, artworkSize)
+            val url = api.getArtworkUrl(releaseId, artworkSize) // primary — keeps throwing
             if (url != null) {
-                val thumbUrl = api.getArtworkUrl(releaseId, thumbnailSize)
-                val frontImage = fetchFrontImage(releaseId)
+                val thumbUrl = degradeSideFetch { api.getArtworkUrl(releaseId, thumbnailSize) }
+                val frontImage = degradeSideFetch { fetchFrontImage(releaseId) }
                 return EnrichmentResult.Success(
                     type = type,
                     data = CoverArtArchiveMapper.toArtwork(url, thumbUrl, frontImage),
@@ -106,9 +108,9 @@ class CoverArtArchiveProvider(
 
         // Fall back to release-group art
         if (groupId != null) {
-            val url = api.getGroupArtworkUrl(groupId, artworkSize)
+            val url = api.getGroupArtworkUrl(groupId, artworkSize) // primary — keeps throwing
             if (url != null) {
-                val thumbUrl = api.getGroupArtworkUrl(groupId, thumbnailSize)
+                val thumbUrl = degradeSideFetch { api.getGroupArtworkUrl(groupId, thumbnailSize) }
                 return EnrichmentResult.Success(
                     type = type,
                     data = CoverArtArchiveMapper.toArtwork(url, thumbUrl),
@@ -120,6 +122,26 @@ class CoverArtArchiveProvider(
 
         return EnrichmentResult.NotFound(type, id)
     }
+
+    /**
+     * Best-effort: [block] is a supplementary CAA call (the thumbnail-size redirect, or
+     * [fetchFrontImage]'s metadata lookup) made *after* the primary front-cover url is already
+     * resolved. A transient here must not turn an achievable ALBUM_ART [EnrichmentResult.Success]
+     * into an [EnrichmentResult.Error] — that would also open the circuit breaker against a healthy
+     * Cover Art Archive for a failure the primary lookup never had (docs/pitfalls.md §4), and it
+     * would discard a url the caller already has in hand. Mirrors
+     * [com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzEnricher.resolveReleaseGroupWikiLinks].
+     */
+    // SwallowedException: intentional — see the KDoc above. This provider has no logger to hand the
+    // exception to; degrading silently is the fix, not an oversight (detekt cannot tell them apart).
+    @Suppress("SwallowedException")
+    private suspend fun <T> degradeSideFetch(block: suspend () -> T): T? =
+        try {
+            block()
+        } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
+            null
+        }
 
     /** Find an image by its CAA type (e.g., "Back", "Booklet") from metadata. */
     private suspend fun findImageByType(

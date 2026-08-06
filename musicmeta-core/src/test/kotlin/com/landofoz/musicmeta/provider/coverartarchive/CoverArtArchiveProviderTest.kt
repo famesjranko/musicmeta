@@ -581,4 +581,102 @@ class CoverArtArchiveProviderTest {
         assertTrue("Expected Error but got $result", result is EnrichmentResult.Error)
         assertEquals(ErrorKind.NETWORK, (result as EnrichmentResult.Error).errorKind)
     }
+
+    @Test
+    fun `enrich ALBUM_ART degrades to null thumbnail when the thumbnail-size fetch is transient`() = runTest {
+        // Given — full-size front cover resolves, but the thumbnail-size redirect call (a separate
+        // request) hits a transient failure. Ticket 25: this must degrade the thumbnail, not throw
+        // away the already-resolved full-size ALBUM_ART url.
+        httpClient.givenJsonResponse(
+            "release/abc123/front-1200",
+            "https://archive.org/image/abc123-1200.jpg",
+        )
+        httpClient.givenError("release/abc123/front-250")
+        val request = EnrichmentRequest.ForAlbum(
+            identifiers = EnrichmentIdentifiers(musicBrainzId = "abc123"),
+            title = "OK Computer",
+            artist = "Radiohead",
+        )
+
+        // When
+        val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
+
+        // Then — Success (not Error) with the full-size url intact and thumbnailUrl absent
+        assertTrue("Expected Success but got $result", result is EnrichmentResult.Success)
+        val artwork = (result as EnrichmentResult.Success).data as EnrichmentData.Artwork
+        assertEquals("https://archive.org/image/abc123-1200.jpg", artwork.url)
+        assertEquals(null, artwork.thumbnailUrl)
+    }
+
+    @Test
+    fun `enrich ALBUM_ART degrades to null sizes when the front-image metadata fetch is transient`() = runTest {
+        // Given — full-size front cover resolves, but the JSON metadata call fetchFrontImage uses
+        // (a different endpoint, no /front-N suffix) hits a transient failure. Ticket 25: this must
+        // degrade the front-image-derived sizes, not throw away the already-resolved ALBUM_ART url.
+        // givenHttpResult only affects fetchJsonResult (the metadata GET), leaving the redirect-based
+        // front-1200 call untouched even though its URL contains this key as a prefix.
+        httpClient.givenJsonResponse(
+            "release/abc123/front-1200",
+            "https://archive.org/image/abc123-1200.jpg",
+        )
+        httpClient.givenHttpResult("release/abc123", HttpResult.ServerError(503))
+        val request = EnrichmentRequest.ForAlbum(
+            identifiers = EnrichmentIdentifiers(musicBrainzId = "abc123"),
+            title = "OK Computer",
+            artist = "Radiohead",
+        )
+
+        // When
+        val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
+
+        // Then — Success (not Error) with the full-size url intact and sizes absent
+        assertTrue("Expected Success but got $result", result is EnrichmentResult.Success)
+        val artwork = (result as EnrichmentResult.Success).data as EnrichmentData.Artwork
+        assertEquals("https://archive.org/image/abc123-1200.jpg", artwork.url)
+        assertEquals(null, artwork.sizes)
+    }
+
+    @Test
+    fun `enrich ALBUM_ART degrades to null group thumbnail when the group thumbnail-size fetch is transient`() = runTest {
+        // Given — no release id, so findArtwork falls back to the release-group branch; the
+        // full-size group cover resolves, but the group thumbnail-size call is transient.
+        httpClient.givenJsonResponse(
+            "release-group/group1/front-1200",
+            "https://archive.org/image/group1-1200.jpg",
+        )
+        httpClient.givenError("release-group/group1/front-250")
+        val request = EnrichmentRequest.ForAlbum(
+            identifiers = EnrichmentIdentifiers(musicBrainzReleaseGroupId = "group1"),
+            title = "OK Computer",
+            artist = "Radiohead",
+        )
+
+        // When
+        val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
+
+        // Then — Success (not Error) with the group full-size url intact and thumbnailUrl absent
+        assertTrue("Expected Success but got $result", result is EnrichmentResult.Success)
+        val artwork = (result as EnrichmentResult.Success).data as EnrichmentData.Artwork
+        assertEquals("https://archive.org/image/group1-1200.jpg", artwork.url)
+        assertEquals(null, artwork.thumbnailUrl)
+    }
+
+    @Test
+    fun `enrich ALBUM_ART still returns Error when the primary full-size fetch is transient`() = runTest {
+        // Negative guard — the primary existence check must keep throwing to Error; only the
+        // supplementary thumbnail/front-image calls degrade.
+        httpClient.givenError("release/abc123/front-1200")
+        val request = EnrichmentRequest.ForAlbum(
+            identifiers = EnrichmentIdentifiers(musicBrainzId = "abc123"),
+            title = "OK Computer",
+            artist = "Radiohead",
+        )
+
+        // When
+        val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
+
+        // Then — Error with NETWORK ErrorKind, unchanged from pre-fix behaviour
+        assertTrue("Expected Error but got $result", result is EnrichmentResult.Error)
+        assertEquals(ErrorKind.NETWORK, (result as EnrichmentResult.Error).errorKind)
+    }
 }

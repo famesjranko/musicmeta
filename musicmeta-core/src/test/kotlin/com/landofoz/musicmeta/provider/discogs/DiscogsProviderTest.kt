@@ -618,6 +618,24 @@ class DiscogsProviderTest {
     }
 
     @Test
+    fun `enrich ALBUM_METADATA degrades to null communityRating when release detail fetch is transient`() = runTest {
+        // Given — search succeeds with a discogsReleaseId, but the community-rating side fetch
+        // (getReleaseDetails) hits a transient failure after baseMetadata is already built. Ticket 25:
+        // this must degrade the optional field, not throw away the already-resolved ALBUM_METADATA.
+        httpClient.givenJsonResponse("database/search", METADATA_SEARCH_WITH_ID_JSON)
+        httpClient.givenError("releases/99001")
+        val request = EnrichmentRequest.forAlbum(title = "OK Computer", artist = "Radiohead")
+
+        // When — enriching for album metadata
+        val result = provider.enrich(request, EnrichmentType.ALBUM_METADATA)
+
+        // Then — Success (not Error) with the base metadata intact and communityRating absent
+        assertTrue("Expected Success but got $result", result is EnrichmentResult.Success)
+        val data = (result as EnrichmentResult.Success).data as EnrichmentData.Metadata
+        assertNull(data.communityRating)
+    }
+
+    @Test
     fun `enrich RELEASE_EDITIONS returns NotFound for non-ForAlbum request`() = runTest {
         // Given — ForTrack request instead of ForAlbum
         val request = EnrichmentRequest.forTrack(title = "Paranoid Android", artist = "Radiohead")
