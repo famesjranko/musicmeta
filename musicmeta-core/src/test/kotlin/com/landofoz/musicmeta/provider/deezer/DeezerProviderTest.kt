@@ -376,6 +376,26 @@ class DeezerProviderTest {
     }
 
     @Test
+    fun `enrich sends the advanced field query for SimilarTracks seed resolution when the request carries an album hint`() = runTest {
+        // Given — same fixtures as the happy path, but the request also carries an album hint
+        httpClient.givenJsonResponse("search/track", TRACK_SEARCH_RESPONSE)
+        httpClient.givenJsonResponse("artist/399/related", RELATED_ARTISTS_RESPONSE)
+        httpClient.givenJsonResponse("artist/1001/top", MUSE_TOP_TRACKS)
+        httpClient.givenJsonResponse("artist/1002/top", SIGUR_ROS_TOP_TRACKS)
+        httpClient.givenJsonResponse("artist/1003/top", PORTISHEAD_TOP_TRACKS)
+        val request = EnrichmentRequest.forTrack("Karma Police", "Radiohead", album = "OK Computer")
+
+        // When — enriching for similar tracks
+        provider.enrich(request, EnrichmentType.SIMILAR_TRACKS)
+
+        // Then — the seed track resolution used the advanced artist:/track:/album: field query
+        val url = httpClient.requestedUrls.single { it.contains("search/track") }
+        assertTrue(url.contains("artist%3A%22Radiohead%22"))
+        assertTrue(url.contains("track%3A%22Karma+Police%22"))
+        assertTrue(url.contains("album%3A%22OK+Computer%22"))
+    }
+
+    @Test
     fun `enrich returns NotFound for SimilarTracks when no search result`() = runTest {
         // Given — Deezer returns no track search results
         httpClient.givenJsonResponse("search/track", """{"data":[]}""")
