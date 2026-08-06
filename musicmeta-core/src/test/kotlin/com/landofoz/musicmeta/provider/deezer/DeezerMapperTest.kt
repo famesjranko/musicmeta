@@ -152,4 +152,43 @@ class DeezerMapperTest {
         // Then — preview duration is always 30000ms (Deezer previews are 30 seconds)
         assertEquals(30000L, preview!!.durationMs)
     }
+
+    @Test
+    fun `toTrackMetadata converts durationSec to durationMs and copies albumTitle`() {
+        // Given — a track search result with the track's actual (not preview) duration
+        val result = DeezerTrackSearchResult(
+            id = 4L, title = "Creep", artistName = "Radiohead",
+            durationSec = 238, albumTitle = "Pablo Honey",
+        )
+
+        // When
+        val metadata = DeezerMapper.toTrackMetadata(result)
+
+        // Then
+        assertEquals(238000L, metadata.durationMs)
+        assertEquals("Pablo Honey", metadata.albumTitle)
+    }
+
+    @Test
+    fun `toTrackMetadata leaves durationMs null when durationSec is absent or zero`() {
+        // Given
+        val absent = DeezerTrackSearchResult(id = 5L, title = "T", artistName = "A", durationSec = null)
+        val zero = DeezerTrackSearchResult(id = 6L, title = "T", artistName = "A", durationSec = 0)
+
+        // When / Then
+        assertNull(DeezerMapper.toTrackMetadata(absent).durationMs)
+        assertNull(DeezerMapper.toTrackMetadata(zero).durationMs)
+    }
+
+    @Test
+    fun `toTrackMetadata leaves albumTitle null when the result carries none`() {
+        // Given
+        val result = DeezerTrackSearchResult(id = 7L, title = "T", artistName = "A", albumTitle = null)
+
+        // When
+        val metadata = DeezerMapper.toTrackMetadata(result)
+
+        // Then
+        assertNull(metadata.albumTitle)
+    }
 }

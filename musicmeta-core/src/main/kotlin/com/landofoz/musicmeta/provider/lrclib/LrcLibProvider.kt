@@ -36,6 +36,10 @@ class LrcLibProvider(
             type = EnrichmentType.LYRICS_PLAIN,
             priority = 100,
         ),
+        ProviderCapability(
+            type = EnrichmentType.TRACK_METADATA,
+            priority = 40,
+        ),
     )
 
     override suspend fun enrich(
@@ -82,6 +86,16 @@ class LrcLibProvider(
         type: EnrichmentType,
         confidence: Float,
     ): EnrichmentResult {
+        if (type == EnrichmentType.TRACK_METADATA) {
+            // An all-null payload is demoted by the engine's answers() gate (docs/pitfalls.md §8).
+            return EnrichmentResult.Success(
+                type = type,
+                data = LrcLibMapper.toTrackMetadata(result),
+                provider = id,
+                confidence = confidence,
+            )
+        }
+
         val lyrics = LrcLibMapper.toLyrics(result)
 
         // If requesting synced lyrics but only plain is available, still return

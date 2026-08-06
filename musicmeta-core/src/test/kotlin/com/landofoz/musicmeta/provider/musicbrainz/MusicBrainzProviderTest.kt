@@ -249,6 +249,57 @@ class MusicBrainzProviderTest {
     }
 
     @Test
+    fun `enrich track TRACK_METADATA returns duration, album title and disambiguation`() = runTest {
+        // Given — a recording carrying length, an art release-group title, and a disambiguation
+        httpClient.givenJsonResponse(
+            "recording?query",
+            """
+            {
+              "recordings": [{
+                "id": "rec-studio",
+                "score": 95,
+                "title": "Enter Sandman",
+                "length": 331000,
+                "disambiguation": "",
+                "releases": [
+                  {"status": "Official", "release-group": {"id": "rg-studio", "primary-type": "Album", "title": "Metallica"}}
+                ]
+              }]
+            }
+            """.trimIndent(),
+        )
+        val request = EnrichmentRequest.forTrack("Enter Sandman", "Metallica")
+
+        // When
+        val result = provider.enrich(request, EnrichmentType.TRACK_METADATA)
+
+        // Then
+        assertTrue(result is EnrichmentResult.Success)
+        val success = result as EnrichmentResult.Success
+        val data = success.data as EnrichmentData.TrackMetadata
+        assertEquals(331000L, data.durationMs)
+        assertEquals("Metallica", data.albumTitle)
+        assertEquals("rec-studio", success.resolvedIdentifiers?.musicBrainzId)
+        assertEquals("rg-studio", success.resolvedIdentifiers?.musicBrainzReleaseGroupId)
+    }
+
+    @Test
+    fun `enrich track TRACK_METADATA returns NotFound when no candidate meets the score threshold`() = runTest {
+        // Given
+        httpClient.givenJsonResponse(
+            "recording?query",
+            """{"recordings":[{"id":"rec-low","score":50,"title":"Enter Sandman"}]}""",
+        )
+        val request = EnrichmentRequest.forTrack("Enter Sandman", "Metallica")
+
+        // When
+        val result = provider.enrich(request, EnrichmentType.TRACK_METADATA)
+
+        // Then
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
     fun `enrich returns BandMembers for artist with members`() = runTest {
         // Given -- artist lookup with artist-rels returns band member relations
         httpClient.givenJsonResponse("artist/art1?fmt=json&inc=tags+url-rels+artist-rels", ARTIST_LOOKUP_WITH_MEMBERS)

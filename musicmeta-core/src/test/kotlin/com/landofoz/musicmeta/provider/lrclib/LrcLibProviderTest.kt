@@ -5,10 +5,12 @@ import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
+import com.landofoz.musicmeta.engine.answers
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.testutil.FakeHttpClient
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -208,6 +210,50 @@ class LrcLibProviderTest {
 
         // Then — NotFound because both lyrics are null and track is not instrumental
         assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `enrich returns TrackMetadata with duration and album title for TRACK_METADATA`() = runTest {
+        // Given
+        httpClient.givenJsonResponse("/api/get", SYNCED_LYRICS_JSON)
+        val request = EnrichmentRequest.forTrack(
+            title = "Creep",
+            artist = "Radiohead",
+            album = "Pablo Honey",
+            durationMs = 238_000L,
+        )
+
+        // When
+        val result = provider.enrich(request, EnrichmentType.TRACK_METADATA)
+
+        // Then
+        assertTrue(result is EnrichmentResult.Success)
+        val metadata = (result as EnrichmentResult.Success).data as EnrichmentData.TrackMetadata
+        assertEquals(238000L, metadata.durationMs)
+        assertEquals("Pablo Honey", metadata.albumTitle)
+    }
+
+    @Test
+    fun `an empty TRACK_METADATA payload is a Success the engine's answers() gate demotes`() = runTest {
+        // Given — LrcLib returns a result with no duration and no album
+        httpClient.givenJsonResponse("/api/get", """{
+            "id": 999,
+            "trackName": "Mystery Track",
+            "artistName": "Unknown",
+            "albumName": null,
+            "duration": null,
+            "instrumental": false,
+            "syncedLyrics": "some lyrics",
+            "plainLyrics": null
+        }""")
+        val request = EnrichmentRequest.forTrack(title = "Mystery Track", artist = "Unknown")
+
+        // When
+        val result = provider.enrich(request, EnrichmentType.TRACK_METADATA)
+
+        // Then — the provider does not gate; PayloadAnswers owns empty-payload demotion
+        val data = (result as EnrichmentResult.Success).data
+        assertFalse(data.answers(EnrichmentType.TRACK_METADATA))
     }
 
     @Test

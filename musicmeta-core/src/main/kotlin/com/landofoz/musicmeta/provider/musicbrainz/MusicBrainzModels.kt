@@ -56,6 +56,11 @@ internal data class MusicBrainzRecording(
      * A release-group id CAA can try for the recording's art, picked from the recording's carried
      * `releases` by tier (first match within the best tier wins — see
      * `MusicBrainzParser.findArtReleaseGroup`):
+     * 0. (only when the search carried an album hint) a release whose release-group title matches
+     *    the requested album, regardless of status — the recording's `releases` array is not
+     *    ordered by relevance to the request, so a compilation ("The Best Of") can sort ahead of
+     *    the actually-requested album ("OK Computer") even when both are embedded (#seen live for
+     *    Radiohead "Karma Police" / "OK Computer").
      * 1. Official release, release-group primary-type Album — same shape as
      *    [hasOfficialAlbumRelease].
      * 2. release status exactly "Official", any release-group primary-type (e.g. a box set the
@@ -65,12 +70,25 @@ internal data class MusicBrainzRecording(
      * 3. any release carrying a release-group id at all, regardless of status — including a
      *    Bootleg-only recording's release-group, accepted deliberately as a last resort.
      *
-     * Null when none of the three tiers finds a release-group id. Deliberately looser than
+     * Null when none of the tiers finds a release-group id. Deliberately looser than
      * [hasOfficialAlbumRelease], which stays strict for ranking — some art (or a cheap CAA
      * NotFound) beats none for [MusicBrainzMapper.toTrackIdentifiers], which fills
      * `musicBrainzReleaseGroupId` from this field with no extra lookup.
      */
     val artReleaseGroupId: String? = null,
+    /** The `title` of the same release-group object [artReleaseGroupId] is drawn from — same tiers, no extra lookup. */
+    val artReleaseGroupTitle: String? = null,
+    /** Recording length in milliseconds, from the search hit's own `length` field. */
+    val lengthMs: Long? = null,
+    /**
+     * MusicBrainz's own `video` flag on the recording — true for a music-video audio track, not a
+     * text heuristic on [disambiguation]. Verified live: Radiohead's "Karma Police" music-video
+     * recording carries both `"video": true` and `disambiguation: "music video"`, but the flag is
+     * the structural signal — a studio take's disambiguation can just as easily be non-blank for an
+     * unrelated reason, and a keyword match on disambiguation text is the exact anti-pattern
+     * `docs/pitfalls.md` §7 already rejects for MB/Discogs ranking.
+     */
+    val isVideo: Boolean = false,
 )
 
 internal data class MusicBrainzBandMember(
