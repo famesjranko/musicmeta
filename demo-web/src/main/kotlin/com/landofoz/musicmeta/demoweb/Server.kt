@@ -48,15 +48,20 @@ private data class HealthResponse(val ready: Boolean)
 fun startServer(engine: EnrichmentEngine, port: Int) {
     val indexHtml = ResourceAnchor::class.java.getResourceAsStream("/index.html")?.readBytes()
         ?: error("index.html missing from demo-web resources")
+    val indexCss = ResourceAnchor::class.java.getResourceAsStream("/index.css")?.readBytes()
+        ?: error("index.css missing from demo-web resources")
+    val indexJs = ResourceAnchor::class.java.getResourceAsStream("/index.js")?.readBytes()
+        ?: error("index.js missing from demo-web resources")
 
     val server = HttpServer.create(InetSocketAddress(port), 0)
     server.executor = Executors.newFixedThreadPool(4)
 
     server.createContext("/") { exchange ->
-        if (exchange.requestURI.path == "/") {
-            exchange.respond(200, "text/html; charset=utf-8", indexHtml)
-        } else {
-            exchange.respond(404, "text/plain", "not found".toByteArray())
+        when (exchange.requestURI.path) {
+            "/" -> exchange.respond(200, "text/html; charset=utf-8", indexHtml)
+            "/index.css" -> exchange.respond(200, "text/css; charset=utf-8", indexCss)
+            "/index.js" -> exchange.respond(200, "text/javascript; charset=utf-8", indexJs)
+            else -> exchange.respond(404, "text/plain", "not found".toByteArray())
         }
     }
 
