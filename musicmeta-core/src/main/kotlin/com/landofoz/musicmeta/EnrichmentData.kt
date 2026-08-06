@@ -107,6 +107,18 @@ sealed class EnrichmentData {
         val durationMs: Long = 30000,
         val source: String,
     ) : EnrichmentData()
+
+    /**
+     * Track-level structured metadata that doesn't fit [Metadata]'s album/artist-shaped fields.
+     * [durationMs] is the *actual track length*, not a preview clip — see [TrackPreview] for that.
+     * [albumTitle] is provider-confirmed, unlike an "as entered" caller-supplied string.
+     */
+    @Serializable
+    data class TrackMetadata(
+        val durationMs: Long? = null,
+        val albumTitle: String? = null,
+        val disambiguation: String? = null,
+    ) : EnrichmentData()
 }
 
 @Serializable
@@ -140,6 +152,15 @@ data class PopularTrack(
     val identifiers: EnrichmentIdentifiers = EnrichmentIdentifiers(),
     val listenCount: Long,
     val rank: Int,
+    /**
+     * Fields the sibling [TopTrack] already carries from the same upstream DTO
+     * ([com.landofoz.musicmeta.provider.listenbrainz.ListenBrainzPopularTrack]); appended here so
+     * [EnrichmentData.Popularity.topTracks] doesn't drop them purely because this type predates
+     * `TopTrack`. `null` when the source didn't carry it.
+     */
+    val listenerCount: Long? = null,
+    val durationMs: Long? = null,
+    val album: String? = null,
 )
 
 @Serializable

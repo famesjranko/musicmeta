@@ -111,6 +111,7 @@ sealed class EnrichmentRequest {
             EnrichmentType.LYRICS_PLAIN, EnrichmentType.TRACK_POPULARITY,
             EnrichmentType.SIMILAR_TRACKS, EnrichmentType.CREDITS,
             EnrichmentType.ALBUM_ART, EnrichmentType.GENRE_DISCOVERY,
+            EnrichmentType.TRACK_METADATA,
         )
 
         /** Returns the default type set for a given request kind. */

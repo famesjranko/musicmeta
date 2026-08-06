@@ -809,6 +809,8 @@ class EnrichmentShowcaseTest {
             "${data.tracks.size} top tracks: ${data.tracks.take(3).joinToString(", ") { "${it.title}(${it.listenCount ?: 0})" }}"
         is EnrichmentData.TrackPreview ->
             "url=${data.url.take(70)} duration=${data.durationMs}ms source=${data.source}"
+        is EnrichmentData.TrackMetadata ->
+            "duration=${data.durationMs}ms album=${data.albumTitle} disambig=${data.disambiguation}"
     }
 
     private fun printSingleResult(type: EnrichmentType, result: EnrichmentResult?) {

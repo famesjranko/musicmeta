@@ -52,6 +52,8 @@ internal fun EnrichmentData.answers(type: EnrichmentType): Boolean = when (this)
     is EnrichmentData.SimilarTracks -> tracks.isNotEmpty()
     is EnrichmentData.TopTracks -> tracks.isNotEmpty()
     is EnrichmentData.Tracklist -> tracks.isNotEmpty()
+    is EnrichmentData.TrackMetadata -> durationMs != null || !albumTitle.isNullOrBlank() ||
+        !disambiguation.isNullOrBlank()
 }
 
 /**

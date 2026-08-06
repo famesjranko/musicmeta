@@ -285,5 +285,10 @@ object Formatter {
                 val plays = it.listenCount?.let { c -> " ($c)" } ?: ""
                 "${it.title}$plays"
             }
+        is EnrichmentData.TrackMetadata -> listOfNotNull(
+            data.durationMs?.let { "${it / 1000}s" },
+            data.albumTitle,
+            data.disambiguation,
+        ).joinToString(" | ")
     }
 }

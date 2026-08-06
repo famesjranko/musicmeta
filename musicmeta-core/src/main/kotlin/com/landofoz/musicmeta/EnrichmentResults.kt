@@ -65,6 +65,7 @@ data class EnrichmentResults(
     fun artistPopularity(): EnrichmentData.Popularity? = get(EnrichmentType.ARTIST_POPULARITY)
     fun trackPopularity(): EnrichmentData.Popularity? = get(EnrichmentType.TRACK_POPULARITY)
     fun similarTracks(): EnrichmentData.SimilarTracks? = get(EnrichmentType.SIMILAR_TRACKS)
+    fun trackMetadata(): EnrichmentData.TrackMetadata? = get(EnrichmentType.TRACK_METADATA)
 
     // --- Metadata field accessors (unwrapped, with GENRE→ALBUM_METADATA fallback) ---
 
