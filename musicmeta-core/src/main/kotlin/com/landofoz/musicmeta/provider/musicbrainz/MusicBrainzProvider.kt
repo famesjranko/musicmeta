@@ -42,6 +42,7 @@ class MusicBrainzProvider(
         ProviderCapability(EnrichmentType.ARTIST_DISCOGRAPHY, priority = 100),
         ProviderCapability(EnrichmentType.ALBUM_TRACKS, priority = 100),
         ProviderCapability(EnrichmentType.ARTIST_LINKS, priority = 100),
+        ProviderCapability(EnrichmentType.TRACK_METADATA, priority = 100),
         ProviderCapability(
             EnrichmentType.CREDITS,
             priority = 100,

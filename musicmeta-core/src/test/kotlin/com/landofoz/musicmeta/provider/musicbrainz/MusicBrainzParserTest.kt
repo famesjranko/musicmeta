@@ -171,6 +171,76 @@ class MusicBrainzParserTest {
     }
 
     @Test
+    fun `parseRecording fills artReleaseGroupTitle alongside artReleaseGroupId from the same object`() {
+        // Given — same tier-1 shape as above, but with a title on the release-group object
+        val json = JSONObject(
+            """
+            {
+              "recordings": [{
+                "id": "rec-studio",
+                "score": 100,
+                "title": "Enter Sandman",
+                "releases": [
+                  {"status": "Official", "release-group": {"id": "rg-studio", "primary-type": "Album", "title": "Metallica"}}
+                ]
+              }]
+            }
+            """.trimIndent(),
+        )
+
+        // When
+        val recordings = MusicBrainzParser.parseRecordings(json)
+
+        // Then — the title comes from the same release-group object as the id, no extra lookup
+        assertEquals("Metallica", recordings[0].artReleaseGroupTitle)
+    }
+
+    @Test
+    fun `parseRecording fills lengthMs from the recording's own length field`() {
+        // Given — a recording search hit carrying its own duration
+        val json = JSONObject(
+            """
+            {
+              "recordings": [{
+                "id": "rec1",
+                "score": 95,
+                "title": "Paranoid Android",
+                "length": 383000
+              }]
+            }
+            """.trimIndent(),
+        )
+
+        // When
+        val recordings = MusicBrainzParser.parseRecordings(json)
+
+        // Then
+        assertEquals(383000L, recordings[0].lengthMs)
+    }
+
+    @Test
+    fun `parseRecording leaves lengthMs null when length is absent or zero`() {
+        // Given — no length field at all
+        val json = JSONObject(
+            """
+            {
+              "recordings": [{
+                "id": "rec1",
+                "score": 95,
+                "title": "Paranoid Android"
+              }]
+            }
+            """.trimIndent(),
+        )
+
+        // When
+        val recordings = MusicBrainzParser.parseRecordings(json)
+
+        // Then
+        assertNull(recordings[0].lengthMs)
+    }
+
+    @Test
     fun `parseRecording keeps a tier-2 id from an Official non-Album release, ranking bool false`() {
         // Given — live evidence shape: "Enter Sandman" under the "Metallica" album hint embeds only
         // an Official release on an "Other" (box-set) release-group, not a plain Album

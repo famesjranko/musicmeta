@@ -239,9 +239,15 @@ internal class MusicBrainzEnricher(
         val best = pickBestRecording(request.title, recordings)
             ?: return EnrichmentResult.NotFound(type, providerId)
 
+        val data = if (type == EnrichmentType.TRACK_METADATA) {
+            MusicBrainzMapper.toTrackMetadataDetails(best)
+        } else {
+            MusicBrainzMapper.toTrackMetadata(best)
+        }
+
         return EnrichmentResult.Success(
             type = type,
-            data = MusicBrainzMapper.toTrackMetadata(best),
+            data = data,
             provider = providerId,
             confidence = ConfidenceCalculator.searchScore(best.score),
             resolvedIdentifiers = MusicBrainzMapper.toTrackIdentifiers(best),

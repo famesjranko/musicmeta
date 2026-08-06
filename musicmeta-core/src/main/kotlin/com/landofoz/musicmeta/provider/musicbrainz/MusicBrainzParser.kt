@@ -83,6 +83,7 @@ internal object MusicBrainzParser {
 
     private fun parseRecordingObject(obj: JSONObject): MusicBrainzRecording {
         val tagCounts = extractTagsWithCounts(obj)
+        val artReleaseGroup = findArtReleaseGroup(obj)
         return MusicBrainzRecording(
             id = obj.getString("id"),
             title = obj.getString("title"),
@@ -92,7 +93,9 @@ internal object MusicBrainzParser {
             score = obj.optInt("score", 0),
             disambiguation = obj.optString("disambiguation").takeIf { it.isNotBlank() },
             hasOfficialAlbumRelease = findStrictOfficialAlbumReleaseGroup(obj) != null,
-            artReleaseGroupId = findArtReleaseGroup(obj)?.optString("id")?.takeIf { it.isNotBlank() },
+            artReleaseGroupId = artReleaseGroup?.optString("id")?.takeIf { it.isNotBlank() },
+            artReleaseGroupTitle = artReleaseGroup?.optString("title")?.takeIf { it.isNotBlank() },
+            lengthMs = obj.optLong("length", 0L).takeIf { it > 0 },
         )
     }
 

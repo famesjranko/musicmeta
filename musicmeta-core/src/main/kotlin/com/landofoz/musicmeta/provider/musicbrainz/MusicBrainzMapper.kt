@@ -57,6 +57,19 @@ internal object MusicBrainzMapper {
         )
 
     /**
+     * Structured track fields dropped by [toTrackMetadata]: duration, the resolved album title
+     * (from the same release-group [MusicBrainzRecording.artReleaseGroupId] is drawn from — same
+     * tiered fallback, no extra lookup), and disambiguation (already parsed for internal ranking,
+     * previously never exposed).
+     */
+    fun toTrackMetadataDetails(recording: MusicBrainzRecording): EnrichmentData.TrackMetadata =
+        EnrichmentData.TrackMetadata(
+            durationMs = recording.lengthMs,
+            albumTitle = recording.artReleaseGroupTitle,
+            disambiguation = recording.disambiguation,
+        )
+
+    /**
      * [EnrichmentIdentifiers.musicBrainzId] here is always the **recording** MBID, never a release
      * MBID — [CoverArtArchiveProvider] depends on that contract to tell a track request's identifier
      * apart from an album request's. `musicBrainzReleaseGroupId` is filled from
