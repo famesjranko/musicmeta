@@ -192,6 +192,18 @@
   .dot.rate_limited { background: var(--warn); }
   .dot.error { background: var(--err); }
 
+  .summary img, .gallery img { cursor: zoom-in; }
+  .lightbox {
+    position: fixed; inset: 0; z-index: 1000; cursor: zoom-out;
+    background: rgba(4, 5, 7, 0.88);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .lightbox[hidden] { display: none; }
+  .lightbox img {
+    max-width: 92vw; max-height: 92vh; width: auto; height: auto;
+    border-radius: 6px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+  }
+
   #empty { color: var(--muted); font-size: 0.88rem; padding: 2rem 0; text-align: center; }
   .loading-panel {
     display: flex; align-items: center; justify-content: center; gap: 0.7rem;
@@ -238,6 +250,9 @@
       Backed by a local instance of <code>musicmeta-core</code> — see <a href="https://github.com/famesjranko/musicmeta" target="_blank" rel="noopener">github.com/famesjranko/musicmeta</a>.
     </footer>
   </main>
+  <div id="lightbox" class="lightbox" hidden>
+    <img id="lightbox-img" src="" alt="" />
+  </div>
 
 <script>
 const kindEl = document.getElementById('kind');
@@ -540,6 +555,38 @@ resultEl.addEventListener('click', (e) => {
   const target = e.target.closest('[data-enrich-kind]');
   if (!target) return;
   fillAndRun(target.dataset.enrichKind, target.dataset.enrichName, target.dataset.enrichArtist, target.dataset.enrichAlbum);
+});
+
+// --- Artwork lightbox ---
+// Full-size overlay for the summary image or any gallery image. The summary card's *backdrop* is
+// a plain div with a CSS background-image, not an <img>, so it's excluded by construction — the
+// selector below only ever matches an actual <img> element. src is read straight off the live DOM
+// node (already resolved/decoded by the browser), not re-parsed from markup, so no extra esc()
+// call is needed here beyond the one already used to build the <img src="..."> in the first place.
+
+const lightbox = document.getElementById('lightbox');
+const lightboxImg = document.getElementById('lightbox-img');
+
+function openLightbox(src) {
+  lightboxImg.src = src;
+  lightbox.hidden = false;
+}
+
+function closeLightbox() {
+  lightbox.hidden = true;
+  lightboxImg.src = '';
+}
+
+resultEl.addEventListener('click', (e) => {
+  const img = e.target.closest('.summary img, .gallery img');
+  if (!img) return;
+  openLightbox(img.src);
+});
+
+lightbox.addEventListener('click', closeLightbox);
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !lightbox.hidden) closeLightbox();
 });
 
 // --- 30s preview playback ---
