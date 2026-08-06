@@ -177,23 +177,27 @@ class MusicBrainzProviderTest {
     }
 
     @Test
-    fun `enrich track ranks a wide score-100 pool to the exact-title studio recording`() = runTest {
-        // Given — an 8-candidate pool mirroring live musicbrainz.org "Enter Sandman"/Metallica
-        // evidence (2026-08-06): six live/bootleg hits first (all score 100), then the studio
-        // original with an exact title and an Official Album release, then a clean-disambiguation
-        // per-member cover ("Enter Sandman (Ulrich)") that a title-blind ranking would prefer
-        httpClient.givenJsonResponse("recording?query", ENTER_SANDMAN_RANK_POOL)
-        val request = EnrichmentRequest.forTrack("Enter Sandman", "Metallica")
+    fun `enrich track ranks a wide score-100 pool to the blank-disambiguation exact-title studio recording`() =
+        runTest {
+            // Given — a 9-candidate pool mirroring live musicbrainz.org "Enter Sandman"/Metallica
+            // evidence (2026-08-06): seven non-blank-disambiguation hits first (all score 100,
+            // including a "bootleg edited version" that no demo/live/remix/remaster keyword list
+            // would catch), then the blank-disambiguation studio original, then a blank-
+            // disambiguation per-member cover ("Enter Sandman (Ulrich)") that a title-blind ranking
+            // would prefer
+            httpClient.givenJsonResponse("recording?query", ENTER_SANDMAN_RANK_POOL)
+            val request = EnrichmentRequest.forTrack("Enter Sandman", "Metallica")
 
-        // When — enriching for genre (drives identity resolution through enrichTrack)
-        val result = provider.enrich(request, EnrichmentType.GENRE)
+            // When — enriching for genre (drives identity resolution through enrichTrack)
+            val result = provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then — the exact-title studio recording wins, not a live take or a clean-disambiguation
-        // title variant
-        assertTrue(result is EnrichmentResult.Success)
-        val success = result as EnrichmentResult.Success
-        assertEquals("rec-studio", success.resolvedIdentifiers?.musicBrainzId)
-    }
+            // Then — the blank-disambiguation, exact-title studio recording wins, not a
+            // non-blank-disambiguation take (however it's worded) or a blank-disambiguation title
+            // variant
+            assertTrue(result is EnrichmentResult.Success)
+            val success = result as EnrichmentResult.Success
+            assertEquals("rec-studio", success.resolvedIdentifiers?.musicBrainzId)
+        }
 
     @Test
     fun `enrich track fills musicBrainzReleaseGroupId from the ranked recording's Official Album`() =
@@ -858,11 +862,15 @@ class MusicBrainzProviderTest {
 
         /**
          * Mirrors live musicbrainz.org "recording:Enter Sandman AND artistname:Metallica" evidence
-         * (2026-08-06): six score-100 live/bootleg candidates before the studio original, which
-         * carries an exact title and an Official Album release at index 6. A clean-disambiguation
-         * per-member cover ("Enter Sandman (Ulrich)") follows at index 7 — clean disambiguation and
-         * an earlier pool position alone would pick it over the studio original if title were not
-         * ranked first, so it pins [MusicBrainzEnricher.pickBestRecording]'s tier order.
+         * (2026-08-06): seven score-100 candidates carrying a non-blank disambiguation before the
+         * studio original, which carries none and an Official Album release, at index 7. The demo
+         * and live entries exercise blank-vs-non-blank the same way keyword markers used to; the
+         * "bootleg edited version" entry is the live-shaped candidate that a keyword list missed —
+         * not "demo"/"live"/"remix"/"remaster", but still non-blank, so blank-preference still
+         * ranks it below the studio original. A blank-disambiguation per-member cover ("Enter
+         * Sandman (Ulrich)") follows last — blank disambiguation and pool position alone would pick
+         * it over the studio original if title were not ranked first, so it still pins
+         * [MusicBrainzEnricher.pickBestRecording]'s tier order.
          */
         private val ENTER_SANDMAN_RANK_POOL = """
             {
@@ -892,9 +900,16 @@ class MusicBrainzProviderTest {
                   "disambiguation": "demo: 1990-08-13"
                 },
                 {
+                  "id": "rec-bootleg-edited", "score": 100, "title": "Enter Sandman",
+                  "disambiguation": "bootleg edited version",
+                  "releases": [
+                    {"status": "Bootleg", "release-group": {"primary-type": "Album"}}
+                  ]
+                },
+                {
                   "id": "rec-studio", "score": 100, "title": "Enter Sandman",
                   "releases": [
-                    {"status": "Official", "release-group": {"primary-type": "Album"}}
+                    {"status": "Official", "release-group": {"primary-type": "Other"}}
                   ]
                 },
                 {
