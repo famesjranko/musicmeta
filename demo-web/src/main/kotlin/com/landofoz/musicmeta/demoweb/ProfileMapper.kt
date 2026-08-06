@@ -120,6 +120,7 @@ fun ArtistProfile.toDemoResponse(elapsedMs: Long): DemoResponse {
 
 fun AlbumProfile.toDemoResponse(elapsedMs: Long, artistRadio: Section? = null): DemoResponse {
     val r = results
+    val description = r.albumDescription()
 
     val details = buildList {
         r.label()?.let { add(SectionItem("Label", it)) }
@@ -188,6 +189,8 @@ fun AlbumProfile.toDemoResponse(elapsedMs: Long, artistRadio: Section? = null): 
             subtitle = artist,
             subtitleEnrich = artistEnrich(artist),
             imageUrl = r.albumArt()?.url,
+            text = description?.text,
+            textSource = description?.source,
         ),
         sections = sections,
         gallery = gallery,
@@ -196,10 +199,10 @@ fun AlbumProfile.toDemoResponse(elapsedMs: Long, artistRadio: Section? = null): 
 }
 
 /**
- * @param requestedAlbum the album name the caller typed, if any. Nothing in [TrackProfile] resolves
- *   a confirmed album for a track — `DEFAULT_TRACK_TYPES` fetches no album-bearing type, and neither
- *   the resolved identifiers nor identity-resolution suggestions carry a title — so this unconfirmed
- *   value is the best available source and is shown as such, never invented.
+ * @param requestedAlbum the album name the caller typed, if any. [TrackProfile.trackMetadata] can
+ *   carry a provider-confirmed album title (from the same release-group MusicBrainz's art
+ *   resolution already found), which the Details row prefers when present; [requestedAlbum] is
+ *   shown, labelled "as entered", only as a fallback when nothing confirmed one.
  */
 fun TrackProfile.toDemoResponse(
     elapsedMs: Long,
@@ -210,9 +213,19 @@ fun TrackProfile.toDemoResponse(
     val lyrics = r.lyrics()
     val stats = r.trackPopularity()
 
+    val trackMetadata = r.trackMetadata()
+
     val details = buildList {
         r.genres().takeIf { it.isNotEmpty() }?.let { add(SectionItem("Genres", it.joinToString(", "))) }
-        requestedAlbum?.let { add(SectionItem("Album", it, meta = "as entered")) }
+        trackMetadata?.durationMs?.let { add(SectionItem("Duration", it.formatDuration())) }
+        // Provider-confirmed album title wins over the caller's unconfirmed input; "as entered"
+        // stays as the fallback when nothing resolved one (see the class doc above).
+        val confirmedAlbum = trackMetadata?.albumTitle
+        when {
+            confirmedAlbum != null -> add(SectionItem("Album", confirmedAlbum))
+            requestedAlbum != null -> add(SectionItem("Album", requestedAlbum, meta = "as entered"))
+        }
+        trackMetadata?.disambiguation?.let { add(SectionItem("Variant", it)) }
     }
 
     val sections = buildList {

@@ -1,16 +1,29 @@
 package com.landofoz.musicmeta.demoweb
 
 import com.landofoz.musicmeta.AlbumProfile
+import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
+import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentResults
+import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.IdentityMatch
 import com.landofoz.musicmeta.IdentityResolution
 import com.landofoz.musicmeta.SearchCandidate
+import com.landofoz.musicmeta.TrackProfile
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
 class ProfileMapperTest {
+
+    private fun resultsOf(vararg entries: Pair<EnrichmentType, EnrichmentData>): EnrichmentResults =
+        EnrichmentResults(
+            raw = entries.associate { (type, data) ->
+                type to EnrichmentResult.Success(type, data, provider = "test", confidence = 1.0f)
+            },
+            requestedTypes = entries.map { it.first }.toSet(),
+            identity = null,
+        )
 
     @Test
     fun `did-you-mean section dedupes candidates that render identically`() {
@@ -81,5 +94,85 @@ class ProfileMapperTest {
         val response = profile.toDemoResponse(elapsedMs = 0)
 
         assertNull(response.sections.firstOrNull { it.key == "did_you_mean" })
+    }
+
+    @Test
+    fun `track details show duration formatted as mm-ss`() {
+        val results = resultsOf(
+            EnrichmentType.TRACK_METADATA to EnrichmentData.TrackMetadata(durationMs = 391_000L),
+        )
+        val profile = TrackProfile(title = "Master of Puppets", artist = "Metallica", results = results)
+
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        val details = response.sections.first { it.key == "details" }
+        val duration = details.items.first { it.primary == "Duration" }
+        assertEquals("6:31", duration.secondary)
+    }
+
+    @Test
+    fun `track album row prefers provider-confirmed title over as-entered`() {
+        val results = resultsOf(
+            EnrichmentType.TRACK_METADATA to EnrichmentData.TrackMetadata(albumTitle = "Master of Puppets"),
+        )
+        val profile = TrackProfile(title = "Battery", artist = "Metallica", results = results)
+
+        val response = profile.toDemoResponse(elapsedMs = 0, requestedAlbum = "master of puppets (typo)")
+
+        val details = response.sections.first { it.key == "details" }
+        val album = details.items.first { it.primary == "Album" }
+        assertEquals("Master of Puppets", album.secondary)
+        assertNull(album.meta)
+    }
+
+    @Test
+    fun `track album row falls back to as-entered when nothing confirmed it`() {
+        val results = resultsOf()
+        val profile = TrackProfile(title = "Battery", artist = "Metallica", results = results)
+
+        val response = profile.toDemoResponse(elapsedMs = 0, requestedAlbum = "Master of Puppets")
+
+        val details = response.sections.first { it.key == "details" }
+        val album = details.items.first { it.primary == "Album" }
+        assertEquals("Master of Puppets", album.secondary)
+        assertEquals("as entered", album.meta)
+    }
+
+    @Test
+    fun `track details omit album row when neither confirmed nor entered`() {
+        val results = resultsOf()
+        val profile = TrackProfile(title = "Battery", artist = "Metallica", results = results)
+
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        val details = response.sections.firstOrNull { it.key == "details" }
+        assertNull(details?.items?.firstOrNull { it.primary == "Album" })
+    }
+
+    @Test
+    fun `album summary renders description text and source when present`() {
+        val results = resultsOf(
+            EnrichmentType.ALBUM_DESCRIPTION to EnrichmentData.Biography(
+                text = "A landmark thrash metal album.",
+                source = "wikipedia",
+            ),
+        )
+        val profile = AlbumProfile(title = "Master of Puppets", artist = "Metallica", results = results)
+
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        assertEquals("A landmark thrash metal album.", response.summary.text)
+        assertEquals("wikipedia", response.summary.textSource)
+    }
+
+    @Test
+    fun `album summary text absent when no description resolved`() {
+        val results = resultsOf()
+        val profile = AlbumProfile(title = "Master of Puppets", artist = "Metallica", results = results)
+
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        assertNull(response.summary.text)
+        assertNull(response.summary.textSource)
     }
 }
