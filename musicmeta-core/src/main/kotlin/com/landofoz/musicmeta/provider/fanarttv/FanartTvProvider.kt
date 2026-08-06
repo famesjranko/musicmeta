@@ -90,7 +90,7 @@ class FanartTvProvider(
             EnrichmentType.CD_ART -> albumImages.cdArt
             else -> albumImages.albumCovers
         }
-        val image = imageList.firstOrNull() ?: return EnrichmentResult.NotFound(type, id)
+        val image = imageList.mostLiked() ?: return EnrichmentResult.NotFound(type, id)
         return success(FanartTvMapper.toArtwork(image, imageList), type)
     }
 
@@ -105,9 +105,14 @@ class FanartTvProvider(
             EnrichmentType.ARTIST_BANNER -> images.banners
             else -> null
         } ?: return EnrichmentResult.NotFound(type, id)
-        val image = imageList.firstOrNull() ?: return EnrichmentResult.NotFound(type, id)
+        val image = imageList.mostLiked() ?: return EnrichmentResult.NotFound(type, id)
         return success(FanartTvMapper.toArtwork(image, imageList), type)
     }
+
+    // fanart.tv's community likes are its own quality signal, not guaranteed best-first ordering.
+    // maxByOrNull keeps the first maximum on ties — same convention as bestArtistMatch /
+    // pickBestRecording — so list order still breaks ties deterministically.
+    private fun List<FanartTvImage>.mostLiked(): FanartTvImage? = maxByOrNull { it.likes }
 
     private fun success(data: EnrichmentData, type: EnrichmentType) = EnrichmentResult.Success(
         type = type,
