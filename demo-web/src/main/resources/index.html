@@ -390,14 +390,21 @@ function render(data) {
 }
 
 // Shows the summary text's "Show all" toggle only when the collapsed block actually clips
-// content. Measured post-render (scrollHeight vs clientHeight) rather than a character-count
-// heuristic, since the collapsed height is a fixed em value and how much text fits it depends on
-// panel width and font metrics, not character count.
+// content, and — when it does — snaps the collapsed height down to a whole multiple of the
+// text's line-height so the cut always lands between lines, never through the middle of one.
+// Measured post-render (scrollHeight vs the CSS max-height in clientHeight) rather than a
+// character-count heuristic, since how much text fits depends on panel width and font metrics.
 function setupTextToggle() {
   const textEl = resultEl.querySelector('.summary .text');
   const toggle = resultEl.querySelector('.summary .text-toggle');
   if (!textEl || !toggle) return;
+  textEl.style.maxHeight = ''; // re-baseline to the CSS cap before remeasuring
   if (textEl.scrollHeight > textEl.clientHeight + 1) {
+    const lineHeight = parseFloat(getComputedStyle(textEl).lineHeight) || textEl.clientHeight;
+    const lines = Math.max(1, Math.floor(textEl.clientHeight / lineHeight));
+    const snapped = lines * lineHeight;
+    textEl.dataset.collapsedHeight = String(snapped);
+    textEl.style.maxHeight = snapped + 'px';
     toggle.style.display = '';
   } else {
     toggle.remove();
@@ -439,9 +446,11 @@ function sectionHtml(section) {
 // Per-card measure-after-render, mirroring setupTextToggle: a card's list is only "genuinely
 // clipped" if its rendered content overflows the room the row actually gave it (ul.scrollHeight >
 // ul.clientHeight), which depends on the tallest sibling in the row and can't be known from item
-// count alone. Re-run after any toggle (a grown/shrunk row changes every sibling's room) and on
-// resize. A card whose list is already expanded always keeps its "Show fewer" button — collapsing
-// is always a valid action regardless of measurement.
+// count alone. When it is clipped, the cap is snapped down from that room to the bottom edge of
+// the last <li> that fully fits — never a fixed pixel value — so the visible cut always lands on
+// an item boundary instead of mid-row. Re-run after any toggle (a grown/shrunk row changes every
+// sibling's room) and on resize. A card whose list is already expanded always keeps its "Show
+// fewer" button — collapsing is always a valid action regardless of measurement.
 function setupSectionToggles() {
   resultEl.querySelectorAll('.section').forEach((card) => {
     const ul = card.querySelector('ul');
@@ -451,7 +460,27 @@ function setupSectionToggles() {
       toggle.style.display = '';
       return;
     }
-    toggle.style.display = ul.scrollHeight > ul.clientHeight + 1 ? '' : 'none';
+    ul.style.maxHeight = ''; // re-baseline to the CSS cap (var(--section-cap)) before remeasuring
+    if (ul.scrollHeight <= ul.clientHeight + 1) {
+      toggle.style.display = 'none';
+      return;
+    }
+    const room = ul.clientHeight;
+    const ulTop = ul.getBoundingClientRect().top;
+    const items = Array.from(ul.children);
+    let snapped = 0;
+    for (const item of items) {
+      const bottom = item.getBoundingClientRect().bottom - ulTop;
+      if (bottom > room) break;
+      snapped = bottom;
+    }
+    // Guard: a single item taller than the available room (e.g. a very long primary/secondary on
+    // a narrow panel) would otherwise snap to 0 and hide everything — show that one item in full.
+    if (snapped <= 0 && items.length > 0) {
+      snapped = items[0].getBoundingClientRect().bottom - ulTop;
+    }
+    ul.style.maxHeight = snapped + 'px';
+    toggle.style.display = '';
   });
 }
 
@@ -475,6 +504,10 @@ resultEl.addEventListener('click', (e) => {
   if (toggle.classList.contains('text-toggle')) {
     const textEl = toggle.previousElementSibling;
     const expanding = !textEl.classList.contains('expanded');
+    // Inline max-height (the line-snapped collapsed height) outranks the stylesheet's
+    // `.expanded { max-height: none }` rule, so expanding must clear it; collapsing restores the
+    // already-computed snapped height instead of remeasuring (width/content haven't changed).
+    textEl.style.maxHeight = expanding ? '' : (textEl.dataset.collapsedHeight || '') + 'px';
     textEl.classList.toggle('expanded', expanding);
     toggle.textContent = expanding ? 'Show fewer' : 'Show all';
     return;
@@ -483,6 +516,9 @@ resultEl.addEventListener('click', (e) => {
   const card = toggle.closest('.section');
   const ul = card.querySelector('ul');
   const expanding = !ul.classList.contains('expanded');
+  // Same inline-vs-class precedence issue as the text toggle above; setupSectionToggles()
+  // recomputes and reapplies the item-snapped height on collapse.
+  if (expanding) ul.style.maxHeight = '';
   ul.classList.toggle('expanded', expanding);
   if (expanding) {
     toggle.textContent = 'Show fewer';
