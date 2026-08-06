@@ -9,13 +9,6 @@ consumes `musicmeta-core` the way an external app would.
 PORT=9000 ./run.sh      # different port
 ```
 
-Works keyless. To enable the key-requiring providers, create a `secrets.properties` here or in the
-repo root, or set environment variables (`LASTFM_API_KEY`, `FANARTTV_API_KEY`, `DISCOGS_TOKEN`,
-`LISTENBRAINZ_TOKEN`):
-
-```properties
-lastfm.apikey=...
-fanarttv.apikey=...
-discogs.token=...
-listenbrainz.token=...
-```
+Works keyless. To enable the key-requiring providers, copy `secrets.properties.example` (repo root)
+to `secrets.properties` here or in the repo root and fill in the keys, or set environment variables
+(`LASTFM_API_KEY`, `FANARTTV_API_KEY`, `DISCOGS_TOKEN`, `LISTENBRAINZ_TOKEN`).
