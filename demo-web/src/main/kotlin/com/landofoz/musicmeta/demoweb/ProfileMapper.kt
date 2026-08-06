@@ -6,6 +6,7 @@ import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentResults
 import com.landofoz.musicmeta.EnrichmentType
+import com.landofoz.musicmeta.GenreAffinity
 import com.landofoz.musicmeta.TrackProfile
 
 fun ArtistProfile.toDemoResponse(elapsedMs: Long): DemoResponse {
@@ -39,6 +40,9 @@ fun ArtistProfile.toDemoResponse(elapsedMs: Long): DemoResponse {
             }
         }
         section("radio", "Radio") { radioItems(r.radio()) }
+        section("radio_discovery", "Radio Discovery") {
+            radioItems(r.get<EnrichmentData.RadioPlaylist>(EnrichmentType.ARTIST_RADIO_DISCOVERY))
+        }
         section("discography", "Discography") {
             r.discography()?.albums?.map {
                 SectionItem(
@@ -70,6 +74,10 @@ fun ArtistProfile.toDemoResponse(elapsedMs: Long): DemoResponse {
             r.get<EnrichmentData.ArtistTimeline>(EnrichmentType.ARTIST_TIMELINE)?.events?.map {
                 SectionItem(primary = it.description, secondary = it.date, meta = it.type)
             }
+        }
+        section("related_genres", "Related Genres") {
+            val discovery = r.get<EnrichmentData.GenreDiscovery>(EnrichmentType.GENRE_DISCOVERY)
+            relatedGenresItems(discovery?.relatedGenres.orEmpty())
         }
         section("stats", "Popularity") {
             stats?.let {
@@ -151,6 +159,10 @@ fun AlbumProfile.toDemoResponse(elapsedMs: Long, artistRadio: Section? = null): 
                 )
             }
         }
+        section("related_genres", "Related Genres") {
+            val discovery = r.get<EnrichmentData.GenreDiscovery>(EnrichmentType.GENRE_DISCOVERY)
+            relatedGenresItems(discovery?.relatedGenres.orEmpty())
+        }
         artistRadio?.let { add(it) }
     }
 
@@ -215,6 +227,10 @@ fun TrackProfile.toDemoResponse(
                 )
             }
         }
+        section("related_genres", "Related Genres") {
+            val discovery = r.get<EnrichmentData.GenreDiscovery>(EnrichmentType.GENRE_DISCOVERY)
+            relatedGenresItems(discovery?.relatedGenres.orEmpty())
+        }
         section("stats", "Popularity") {
             stats?.let {
                 listOf(
@@ -271,6 +287,11 @@ private fun MutableList<Section>.section(key: String, label: String, items: () -
     val list = items().orEmpty()
     if (list.isNotEmpty()) add(Section(key, label, list))
 }
+
+private fun relatedGenresItems(genreDiscovery: List<GenreAffinity>): List<SectionItem>? =
+    genreDiscovery.takeIf { it.isNotEmpty() }?.map {
+        SectionItem(primary = it.name, secondary = it.relationship, meta = "%.2f".format(it.affinity))
+    }
 
 private fun radioItems(radio: EnrichmentData.RadioPlaylist?): List<SectionItem>? = radio?.tracks?.map {
     SectionItem(
