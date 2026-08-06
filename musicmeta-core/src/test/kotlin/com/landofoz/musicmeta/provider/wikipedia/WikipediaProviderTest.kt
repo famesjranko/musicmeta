@@ -308,6 +308,72 @@ class WikipediaProviderTest {
     }
 
     @Test
+    fun `enrich returns album description from page summary`() = runTest {
+        // Given — album requests reuse the same title-resolution and Biography mapping as ARTIST_BIO
+        httpClient.givenJsonResponse(
+            "wikipedia.org",
+            """{
+                "title": "OK Computer",
+                "extract": "OK Computer is the third studio album by English rock band Radiohead.",
+                "description": "1997 studio album by Radiohead"
+            }""",
+        )
+        val request = EnrichmentRequest.ForAlbum(
+            identifiers = EnrichmentIdentifiers(wikipediaTitle = "OK Computer"),
+            title = "OK Computer",
+            artist = "Radiohead",
+        )
+
+        // When
+        val result = provider.enrich(request, EnrichmentType.ALBUM_DESCRIPTION)
+
+        // Then
+        assertTrue(result is EnrichmentResult.Success)
+        val bio = (result as EnrichmentResult.Success).data as EnrichmentData.Biography
+        assertEquals(
+            "OK Computer is the third studio album by English rock band Radiohead.",
+            bio.text,
+        )
+        assertEquals("Wikipedia", bio.source)
+    }
+
+    @Test
+    fun `enrich resolves album description title from Wikidata sitelinks`() = runTest {
+        // Given — album identifiers carry only a wikidataId, resolved from the release-group relation
+        httpClient.givenJsonResponse("wikidata.org", SITELINKS_JSON)
+        httpClient.givenJsonResponse("wikipedia.org", SUMMARY_JSON)
+        val request = EnrichmentRequest.ForAlbum(
+            identifiers = EnrichmentIdentifiers(wikidataId = "Q123"),
+            title = "Radiohead",
+            artist = "Radiohead",
+        )
+
+        // When
+        val result = provider.enrich(request, EnrichmentType.ALBUM_DESCRIPTION)
+
+        // Then
+        assertTrue(result is EnrichmentResult.Success)
+        val bio = (result as EnrichmentResult.Success).data as EnrichmentData.Biography
+        assertEquals("Radiohead are an English rock band.", bio.text)
+    }
+
+    @Test
+    fun `enrich returns NotFound for ALBUM_DESCRIPTION when no identifiers resolve a title`() = runTest {
+        // Given — no wikipediaTitle and no wikidataId
+        val request = EnrichmentRequest.ForAlbum(
+            identifiers = EnrichmentIdentifiers(),
+            title = "Unknown Album",
+            artist = "Unknown Artist",
+        )
+
+        // When
+        val result = provider.enrich(request, EnrichmentType.ALBUM_DESCRIPTION)
+
+        // Then
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
     fun `enrich picks the enwiki sitelink, not the first one, when the entity has many languages`() = runTest {
         // Given — Q191352's sitelinks with arwiki, frwiki and dewiki ahead of enwiki in map order
         httpClient.givenJsonResponse("wikidata.org", MULTI_LANGUAGE_SITELINKS_JSON)

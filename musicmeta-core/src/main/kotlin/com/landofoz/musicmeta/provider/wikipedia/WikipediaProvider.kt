@@ -13,7 +13,11 @@ import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.http.bodyOrThrowTransient
 
 /**
- * Provides artist biographies and photos from Wikipedia page summaries.
+ * Provides artist biographies, album descriptions and photos from Wikipedia page summaries.
+ *
+ * `ALBUM_DESCRIPTION` reuses the same title-resolution and `Biography` mapping as `ARTIST_BIO`;
+ * only the identifiers differ — for an album request they come from the release-group's Wikidata
+ * relation (`MusicBrainzEnricher.buildAlbumResult`), not the artist's.
  *
  * **English only.** Every request goes to `en.wikipedia.org`, so the resolved title must be an
  * English article title. Title resolution, in order:
@@ -50,6 +54,11 @@ class WikipediaProvider(
             priority = 30,
             identifierRequirement = IdentifierRequirement.WIKIPEDIA_TITLE,
         ),
+        ProviderCapability(
+            type = EnrichmentType.ALBUM_DESCRIPTION,
+            priority = 100,
+            identifierRequirement = IdentifierRequirement.WIKIPEDIA_TITLE,
+        ),
     )
 
     override suspend fun enrich(
@@ -66,7 +75,7 @@ class WikipediaProvider(
         if (title == null) return EnrichmentResult.NotFound(type, id)
 
         return when (type) {
-            EnrichmentType.ARTIST_BIO -> enrichBio(title, type)
+            EnrichmentType.ARTIST_BIO, EnrichmentType.ALBUM_DESCRIPTION -> enrichBio(title, type)
             EnrichmentType.ARTIST_PHOTO -> enrichArtistPhoto(title, type)
             else -> EnrichmentResult.NotFound(type, id)
         }
