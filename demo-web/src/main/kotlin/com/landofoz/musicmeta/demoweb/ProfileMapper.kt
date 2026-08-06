@@ -7,6 +7,7 @@ import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentResults
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.GenreAffinity
+import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.TrackProfile
 
 fun ArtistProfile.toDemoResponse(elapsedMs: Long): DemoResponse {
@@ -16,6 +17,9 @@ fun ArtistProfile.toDemoResponse(elapsedMs: Long): DemoResponse {
     val stats = r.artistPopularity()
 
     val sections = buildList {
+        r.identity?.suggestions?.let { s ->
+            didYouMeanSection(s) { artistEnrich(it.title) }?.let { add(it) }
+        }
         section("similar_artists", "Similar Artists") {
             r.similarArtists()?.artists?.map {
                 SectionItem(
@@ -126,6 +130,9 @@ fun AlbumProfile.toDemoResponse(elapsedMs: Long, artistRadio: Section? = null): 
     }
 
     val sections = buildList {
+        r.identity?.suggestions?.let { s ->
+            didYouMeanSection(s) { c -> c.artist?.let { a -> albumEnrich(c.title, a) } }?.let { add(it) }
+        }
         if (details.isNotEmpty()) add(Section("details", "Details", details))
         section("tracklist", "Tracklist") {
             r.get<EnrichmentData.Tracklist>(EnrichmentType.ALBUM_TRACKS)?.tracks?.sortedBy { it.position }?.map {
@@ -209,6 +216,9 @@ fun TrackProfile.toDemoResponse(
     }
 
     val sections = buildList {
+        r.identity?.suggestions?.let { s ->
+            didYouMeanSection(s) { c -> c.artist?.let { a -> trackEnrich(c.title, a) } }?.let { add(it) }
+        }
         if (details.isNotEmpty()) add(Section("details", "Details", details))
         section("credits", "Credits") {
             r.credits()?.credits?.map {
@@ -292,6 +302,31 @@ private fun relatedGenresItems(genreDiscovery: List<GenreAffinity>): List<Sectio
     genreDiscovery.takeIf { it.isNotEmpty() }?.map {
         SectionItem(primary = it.name, secondary = it.relationship, meta = "%.2f".format(it.affinity))
     }
+
+/**
+ * "Did you mean?" candidates from [EnrichmentResults.identity], populated only when identity
+ * resolution landed on [com.landofoz.musicmeta.IdentityMatch.SUGGESTIONS]. Each candidate becomes
+ * a clickable [SectionItem] via the same [EnrichTarget] flow as any other cross-nav row; a
+ * candidate whose fields can't build a valid target (e.g. no artist for an album/track suggestion)
+ * is dropped rather than rendered as a dead click.
+ */
+private fun didYouMeanSection(
+    suggestions: List<SearchCandidate>,
+    target: (SearchCandidate) -> EnrichTarget?,
+): Section? {
+    val items = suggestions.mapNotNull { candidate ->
+        target(candidate)?.let { et ->
+            SectionItem(
+                primary = candidate.title,
+                secondary = candidate.artist,
+                imageUrl = candidate.thumbnailUrl,
+                meta = listOfNotNull(candidate.year, candidate.disambiguation).joinToString(" · ").ifBlank { null },
+                enrich = et,
+            )
+        }
+    }
+    return items.takeIf { it.isNotEmpty() }?.let { Section("did_you_mean", "Did You Mean?", it) }
+}
 
 private fun radioItems(radio: EnrichmentData.RadioPlaylist?): List<SectionItem>? = radio?.tracks?.map {
     SectionItem(
