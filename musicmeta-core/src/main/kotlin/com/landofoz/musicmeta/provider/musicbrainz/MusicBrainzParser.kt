@@ -38,6 +38,15 @@ internal object MusicBrainzParser {
         return parseArtistObject(json, defaultScore = 100)
     }
 
+    /**
+     * Wikidata/Wikipedia URL relations off a release-group lookup — same relation shape the
+     * artist path reads via [extractWikidataId]/[extractWikipediaTitle], but a release-group's
+     * relations are never embedded in a release search or release lookup response, so this reads
+     * a dedicated `inc=url-rels` release-group lookup.
+     */
+    fun parseReleaseGroupWikiLinks(json: JSONObject): Pair<String?, String?> =
+        extractWikidataId(json) to extractWikipediaTitle(json)
+
     private fun parseReleaseObject(obj: JSONObject, defaultScore: Int = 0): MusicBrainzRelease {
         val tagCounts = extractReleaseTagCounts(obj)
         return MusicBrainzRelease(

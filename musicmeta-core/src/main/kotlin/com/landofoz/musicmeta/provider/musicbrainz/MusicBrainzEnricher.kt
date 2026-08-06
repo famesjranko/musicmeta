@@ -54,6 +54,25 @@ internal class MusicBrainzEnricher(
             api.lookupRelease(mbid)?.also { releaseCache.putCapped(mbid, it, RELEASE_CACHE_MAX_ENTRIES) }
         }
 
+    /**
+     * Cache release-group Wikidata/Wikipedia relations by release-group MBID, same shape and cap
+     * as [releaseCache]. A release search never embeds these (they live on the release-group, not
+     * the release), so this is a cache-miss on the first type resolved for an album and a hit for
+     * every other type in the same enrichment — same amortized cost as the artist bio path's
+     * `needsRelations` lookup.
+     */
+    private val releaseGroupWikiCache = LinkedHashMap<String, Pair<String?, String?>>(
+        RELEASE_CACHE_MAX_ENTRIES, 0.75f, true,
+    )
+    private val releaseGroupWikiMutex = Mutex()
+
+    private suspend fun cachedReleaseGroupWikiLookup(releaseGroupMbid: String): Pair<String?, String?> =
+        releaseGroupWikiMutex.withLock {
+            releaseGroupWikiCache[releaseGroupMbid]?.let { return@withLock it }
+            api.lookupReleaseGroupWikiLinks(releaseGroupMbid)
+                .also { releaseGroupWikiCache.putCapped(releaseGroupMbid, it, RELEASE_CACHE_MAX_ENTRIES) }
+        }
+
     /** Lookup artist with rels (superset), caching to avoid redundant calls.
      *  BAND_MEMBERS, ARTIST_LINKS, and GENRE all need artist data for the same MBID. */
     private suspend fun cachedArtistLookup(mbid: String): MusicBrainzArtist? =
@@ -272,17 +291,22 @@ internal class MusicBrainzEnricher(
         )
     }
 
-    private fun buildAlbumResult(
+    private suspend fun buildAlbumResult(
         release: MusicBrainzRelease,
         type: EnrichmentType,
         confidence: Float,
-    ): EnrichmentResult.Success = EnrichmentResult.Success(
-        type = type,
-        data = MusicBrainzMapper.toAlbumMetadata(release),
-        provider = providerId,
-        confidence = confidence,
-        resolvedIdentifiers = MusicBrainzMapper.toAlbumIdentifiers(release),
-    )
+    ): EnrichmentResult.Success {
+        val (wikidataId, wikipediaTitle) = release.releaseGroupId
+            ?.let { cachedReleaseGroupWikiLookup(it) }
+            ?: (null to null)
+        return EnrichmentResult.Success(
+            type = type,
+            data = MusicBrainzMapper.toAlbumMetadata(release),
+            provider = providerId,
+            confidence = confidence,
+            resolvedIdentifiers = MusicBrainzMapper.toAlbumIdentifiers(release, wikidataId, wikipediaTitle),
+        )
+    }
 
     private fun buildArtistResult(
         artist: MusicBrainzArtist,
