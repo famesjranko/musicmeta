@@ -5,10 +5,12 @@ import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
+import com.landofoz.musicmeta.engine.answers
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.testutil.FakeHttpClient
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -232,7 +234,7 @@ class LrcLibProviderTest {
     }
 
     @Test
-    fun `enrich returns NotFound for TRACK_METADATA when duration and album are both absent`() = runTest {
+    fun `an empty TRACK_METADATA payload is a Success the engine's answers() gate demotes`() = runTest {
         // Given — LrcLib returns a result with no duration and no album
         httpClient.givenJsonResponse("/api/get", """{
             "id": 999,
@@ -249,8 +251,9 @@ class LrcLibProviderTest {
         // When
         val result = provider.enrich(request, EnrichmentType.TRACK_METADATA)
 
-        // Then
-        assertTrue(result is EnrichmentResult.NotFound)
+        // Then — the provider does not gate; PayloadAnswers owns empty-payload demotion
+        val data = (result as EnrichmentResult.Success).data
+        assertFalse(data.answers(EnrichmentType.TRACK_METADATA))
     }
 
     @Test
