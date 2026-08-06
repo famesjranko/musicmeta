@@ -133,8 +133,9 @@ internal class DeezerApi(
      *
      * Same disease as [searchArtist] (`docs/pitfalls.md` §7), one hop further: Deezer's plain
      * `q=<artist> <title>` query not only orders candidates untrustworthily, it can omit the
-     * studio original from the pool entirely when a live/remix take is more popular
-     * (`.scratch/provider-code-findings/issues/19-...`). When [album] is known, the advanced
+     * studio original from the pool entirely when a live/remix take is more popular — measured
+     * live 2026-08-06: "Harvester of Sorrow"'s studio take was absent from the plain query's
+     * top 5. When [album] is known, the advanced
      * field query `artist:"…" track:"…" album:"…"` asks Deezer to filter by album up front and
      * genuinely finds the studio track that the plain query's top 5 does not contain. Album
      * titles drift across editions ("(Remastered)" suffixes, regional retitles), so an advanced
