@@ -201,12 +201,16 @@ class DeezerProvider(
      * artist id the way [enrichArtistRadio] does: on a `ForTrack` request that key already means
      * the *track's* own Deezer id (written by this method and read by [enrichTrackPreview]), so
      * treating it as an artist id would look up an unrelated artist silently.
+     *
+     * Passes `trackRequest.album` into [DeezerApi.searchTrack] like [enrichTrackPreview] does: the
+     * seed track itself must be the right edition, or the "related artist" derivation below starts
+     * from the wrong artist entirely on a title that only the wrong edition happens to share.
      */
     private suspend fun enrichSimilarTracks(request: EnrichmentRequest): EnrichmentResult {
         val trackRequest = request as? EnrichmentRequest.ForTrack
             ?: return EnrichmentResult.NotFound(EnrichmentType.SIMILAR_TRACKS, id)
 
-        val seedTrack = api.searchTrack(trackRequest.title, trackRequest.artist)
+        val seedTrack = api.searchTrack(trackRequest.title, trackRequest.artist, trackRequest.album)
             ?: return EnrichmentResult.NotFound(EnrichmentType.SIMILAR_TRACKS, id)
 
         if (!ArtistMatcher.isMatch(trackRequest.artist, seedTrack.artistName)) {
@@ -305,7 +309,7 @@ class DeezerProvider(
         val trackResult = if (deezerId != null) {
             api.getTrack(deezerId)
         } else {
-            val result = api.searchTrack(trackRequest.title, trackRequest.artist)
+            val result = api.searchTrack(trackRequest.title, trackRequest.artist, trackRequest.album)
                 ?: return EnrichmentResult.NotFound(EnrichmentType.TRACK_PREVIEW, id)
             if (!ArtistMatcher.isMatch(trackRequest.artist, result.artistName)) {
                 return EnrichmentResult.NotFound(EnrichmentType.TRACK_PREVIEW, id)
