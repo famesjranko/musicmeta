@@ -125,6 +125,7 @@ fun AlbumProfile.toDemoResponse(elapsedMs: Long, artistRadio: Section? = null): 
                     previewTitle = it.title,
                     previewArtist = artist,
                     previewAlbum = title,
+                    enrich = trackEnrich(it.title, artist, title),
                 )
             }
         }
