@@ -18,6 +18,13 @@ internal data class MusicBrainzRelease(
     val score: Int,
     val hasFrontCover: Boolean = false,
     val tracks: List<MusicBrainzTrack> = emptyList(),
+    /**
+     * Each credited artist's name individually (not joined with join phrases like [artistCredit]).
+     * Used only by [MusicBrainzQualifierFallback]'s authoritative-match check — a release can carry
+     * multiple credited artists, and the caller's requested artist may be any one of them, not just
+     * the first.
+     */
+    val artistCredits: List<String> = emptyList(),
 )
 
 internal data class MusicBrainzArtist(
@@ -89,6 +96,8 @@ internal data class MusicBrainzRecording(
      * `docs/pitfalls.md` §7 already rejects for MB/Discogs ranking.
      */
     val isVideo: Boolean = false,
+    /** Each credited artist's name individually — same shape and purpose as [MusicBrainzRelease.artistCredits]. */
+    val artistCredits: List<String> = emptyList(),
 )
 
 internal data class MusicBrainzBandMember(
