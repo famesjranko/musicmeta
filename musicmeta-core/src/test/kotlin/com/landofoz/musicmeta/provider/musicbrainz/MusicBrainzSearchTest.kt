@@ -81,7 +81,7 @@ class MusicBrainzSearchTest {
         val candidates = provider.searchCandidates(request, 10)
 
         // Then — both candidates returned, with year/country/releaseType/thumbnailUrl left null
-        // (a recording search hit carries none of those — see MusicBrainzEnricher.toCandidate)
+        // (a recording search hit carries none of those — see MusicBrainzProvider.searchTrackCandidates)
         assertEquals(2, candidates.size)
 
         val first = candidates[0]

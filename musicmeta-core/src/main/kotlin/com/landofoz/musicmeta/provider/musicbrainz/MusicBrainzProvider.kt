@@ -113,7 +113,21 @@ class MusicBrainzProvider(
     ): List<SearchCandidate> {
         val recordings = api.searchRecordings(request.title, request.artist, request.album, limit)
             .ifEmpty { api.searchRecordingsFuzzy(request.title, request.artist, limit) }
-        return enricher.toTrackCandidates(recordings)
+        return recordings.map { recording ->
+            // year/country/releaseType/thumbnailUrl are null — a recording search hit carries
+            // none of its own (see MusicBrainzEnricher's MusicBrainzRecording.toCandidate).
+            SearchCandidate(
+                title = recording.title, artist = recording.artistCredit,
+                year = null, country = null,
+                releaseType = null, score = recording.score,
+                thumbnailUrl = null, provider = id,
+                identifiers = EnrichmentIdentifiers(
+                    musicBrainzId = recording.id,
+                    musicBrainzReleaseGroupId = recording.artReleaseGroupId,
+                ),
+                disambiguation = recording.disambiguation,
+            )
+        }
     }
 
     override suspend fun enrich(

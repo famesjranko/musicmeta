@@ -109,7 +109,8 @@ internal class MusicBrainzApi(
      * Broader fuzzy search (unquoted + Lucene `~`) for near-miss suggestions — same shape as
      * [searchReleasesFuzzy]/[searchArtistsFuzzy]. [searchRecordings]'s own hint-less retry only
      * drops the `release:"…"` album term; it re-sends [title] quoted, so it can never rescue a typo
-     * the way this loosened match can.
+     * the way this loosened match can. Like the release/artist variants, this deliberately takes no
+     * album hint — a fuzzy near-miss query is already loose, and a release term would narrow it.
      */
     suspend fun searchRecordingsFuzzy(
         title: String,

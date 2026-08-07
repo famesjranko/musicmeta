@@ -357,24 +357,28 @@ class MusicBrainzProviderTest {
     @Test
     fun `enrich track identity resolution surfaces suggestions for a gibberish title, mirroring album-artist`() =
         runTest {
-            // Given — a real 200 carrying zero recordings for a made-up title, mirroring
-            // MusicBrainzTransientFailureTest's "a genuinely empty search still returns NotFound
-            // with suggestions" for the artist path. Recordings have no separate fuzzy search
-            // (searchRecordings already retries hint-less internally), so the near-miss pool here is
-            // the same strict search's own (non-matching) hits.
+            // Given — the strict search returns a non-empty pool that fails to rank, so the
+            // suggestions must come from that pool itself; the fuzzy search (stubbed with a decoy)
+            // must not run. MusicBrainzTransientFailureTest covers the empty-pool → fuzzy branch.
             httpClient.givenJsonResponse(
-                "recording?query",
+                "recording%3A%22Zzxxqwerty12345%22",
                 """{"recordings":[{"id":"rec-near","score":60,"title":"Metallica Anthology"}]}""",
+            )
+            httpClient.givenJsonResponse(
+                "recording%3AZzxxqwerty12345%7E",
+                """{"recordings":[{"id":"rec-decoy","score":50,"title":"Fuzzy Decoy"}]}""",
             )
             val request = EnrichmentRequest.forTrack("Zzxxqwerty12345", "Metallica")
 
             // When — resolving identity (what DefaultEnrichmentEngine calls before fan-out)
             val result = provider.resolveIdentity(request)
 
-            // Then — NotFound carrying suggestions, so IdentityMatch.SUGGESTIONS becomes reachable
+            // Then — NotFound carrying the strict pool as suggestions, so IdentityMatch.SUGGESTIONS
+            // becomes reachable, and the fuzzy search was never queried
             assertTrue(result is EnrichmentResult.NotFound)
             val suggestions = (result as EnrichmentResult.NotFound).suggestions
             assertEquals(listOf("Metallica Anthology"), suggestions?.map { it.title })
+            assertTrue(httpClient.requestedUrls.none { it.contains("Zzxxqwerty12345%7E") })
         }
 
     @Test
