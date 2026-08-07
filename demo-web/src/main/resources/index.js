@@ -198,12 +198,28 @@ function render(data) {
   const unresolvedTitle = summary.identityVerdict === 'SUGGESTIONS'
     ? `No exact match for &ldquo;${esc(data.name)}&rdquo;`
     : null;
+  const unverified = summary.identityVerdict === 'UNVERIFIED';
   const bestEffortBadge = summary.identityVerdict === 'BEST_EFFORT'
     ? '<span class="badge badge-warn">Best-effort match</span>'
-    : '';
+    : unverified
+      ? '<span class="badge badge-warn">Unverified — lookup failed</span>'
+      : '';
   const titleHtml = unresolvedTitle || esc(summary.title);
 
-  const sections = data.sections.map(sectionHtml).join('');
+  // UNVERIFIED means the identity lookup errored (usually transiently) — distinct from
+  // BEST_EFFORT's "searched, no match". Retry is manual only: an automatic re-run under
+  // concurrent load compounds the very starvation that produced the failure.
+  const unverifiedBanner = unverified
+    ? `<div class="identity-banner">
+        <span aria-hidden="true">&#9888;&#65039;</span>
+        <span class="identity-banner-text">We couldn&rsquo;t verify this match &mdash; the identity
+        lookup didn&rsquo;t respond. Everything below is an unverified fuzzy match and may describe
+        a different ${esc(kindEl.value)} entirely. This is usually temporary.</span>
+        <button type="button" id="identity-retry">Retry lookup</button>
+      </div>`
+    : '';
+
+  const sections = data.sections.map((s) => sectionHtml(s, unverified)).join('');
   const totalItems = data.sections.reduce((n, s) => n + s.items.length, 0);
 
   const gallery = (data.gallery && data.gallery.length)
@@ -232,8 +248,9 @@ function render(data) {
         ${text}
       </div>
     </div>
+    ${unverifiedBanner}
     ${gallery}
-    <div class="sections">${sections}</div>
+    <div class="sections${unverified ? ' unverified' : ''}">${sections}</div>
     <div class="card">
       <details class="meta-panel">
         <summary>${data.meta.elapsedMs}ms · ${totalItems} items across ${data.sections.length} sections${data.meta.identityMatch ? ' · identity: ' + esc(data.meta.identityMatch) : ''} — how we got this</summary>
@@ -279,7 +296,7 @@ function enrichAttrs(enrich) {
     ` data-enrich-artist="${esc(enrich.artist || '')}" data-enrich-album="${esc(enrich.album || '')}"`;
 }
 
-function sectionHtml(section) {
+function sectionHtml(section, unverified) {
   const items = section.items.map((it) => {
     const rowClass = it.enrich ? ' enrich-row' : '';
     const primaryHtml = it.link
@@ -300,7 +317,8 @@ function sectionHtml(section) {
   // room, not item count, and can only be answered post-render (see setupSectionToggles). Starts
   // hidden so a section that never clips never shows a flash of a button.
   const toggle = `<button type="button" class="show-more" style="display:none">Show all ${section.items.length}</button>`;
-  return `<div class="card section"><h3>${esc(section.label)} <span class="count">${section.items.length}</span></h3><ul>${items}</ul>${toggle}</div>`;
+  const chip = unverified ? ' <span class="badge badge-warn section-chip">unverified</span>' : '';
+  return `<div class="card section"><h3>${esc(section.label)} <span class="count">${section.items.length}</span>${chip}</h3><ul>${items}</ul>${toggle}</div>`;
 }
 
 // Per-card measure-after-render, mirroring setupTextToggle: a card's list is only "genuinely
@@ -354,6 +372,12 @@ function previewButtonHtml(title, artist, album) {
   if (!title || !artist) return '';
   return `<button type="button" class="preview-btn" data-title="${esc(title)}" data-artist="${esc(artist)}" data-album="${esc(album || '')}" title="Play 30s preview">&#9654;</button>`;
 }
+
+// --- Unverified-identity retry (manual only — see the banner comment in render()) ---
+
+resultEl.addEventListener('click', (e) => {
+  if (e.target.closest('#identity-retry')) runQuery();
+});
 
 // --- Show more / show fewer (event delegation, no extra network calls) ---
 

@@ -373,6 +373,47 @@ button:disabled { opacity: 0.56; cursor: wait; }
   color: var(--warn);
 }
 
+.identity-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0.9rem 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid rgba(239, 189, 93, 0.35);
+  border-radius: 12px;
+  background: rgba(239, 189, 93, 0.08);
+  color: var(--warn);
+  font-size: 0.86rem;
+}
+
+.identity-banner-text {
+  flex: 1;
+}
+
+.identity-banner button {
+  flex: none;
+  border: 0;
+  border-radius: 8px;
+  padding: 0.45rem 0.9rem;
+  background: var(--warn);
+  color: var(--bg);
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.sections.unverified .card.section {
+  opacity: 0.6;
+}
+
+.section-chip {
+  font-size: 0.6rem;
+  padding: 0.12rem 0.45rem;
+  vertical-align: middle;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
 .summary .subtitle {
   width: fit-content;
   margin: 0.28rem 0 0.65rem;

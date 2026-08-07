@@ -8,6 +8,8 @@ package com.landofoz.musicmeta
  *
  * `null` on [EnrichmentResults.identity] means identity resolution was not
  * attempted (MBID was pre-provided, all types cached, or resolution disabled).
+ * A resolution that was attempted but failed is never `null` — it carries
+ * [IdentityMatch.UNVERIFIED].
  */
 data class IdentityResolution(
     /** Resolved identifiers (MBIDs, Wikidata, Wikipedia). */

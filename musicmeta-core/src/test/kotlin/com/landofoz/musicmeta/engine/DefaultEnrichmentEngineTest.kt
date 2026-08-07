@@ -400,6 +400,70 @@ class DefaultEnrichmentEngineTest {
         assertNull(artResult.identityMatchScore)
     }
 
+    @Test fun `enrich stamps UNVERIFIED when identity provider throws`() = runTest {
+        // Given — identity provider throws (transient network failure)
+        val idProvider = object : FakeProvider(id = "mb", isIdentityProvider = true, capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100))) {
+            override suspend fun resolveIdentity(request: EnrichmentRequest): EnrichmentResult =
+                throw RuntimeException("connection reset")
+        }
+        val artProvider = FakeProvider(id = "deezer", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 50)))
+            .also { it.givenResult(EnrichmentType.ALBUM_ART, art("deezer")) }
+        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider, artProvider)), cache, EnrichmentConfig(enableIdentityResolution = true))
+
+        // When — enriching (identity throws, providers still try fuzzy search)
+        val results = e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
+
+        // Then — identity is UNVERIFIED, never null (null reads as confident), and results are stamped
+        assertEquals(IdentityMatch.UNVERIFIED, results.identity?.match)
+        val artResult = results.raw[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success
+        assertEquals(IdentityMatch.UNVERIFIED, artResult.identityMatch)
+        assertNull(artResult.identityMatchScore)
+    }
+
+    @Test fun `enrich stamps UNVERIFIED when identity provider returns Error`() = runTest {
+        // Given — identity provider returns Error (e.g. mapped transport failure)
+        val idProvider = FakeProvider(id = "mb", isIdentityProvider = true, capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)))
+            .also { it.givenIdentityResult(EnrichmentResult.Error(EnrichmentType.GENRE, "mb", "timeout", errorKind = ErrorKind.NETWORK)) }
+        val artProvider = FakeProvider(id = "deezer", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 50)))
+            .also { it.givenResult(EnrichmentType.ALBUM_ART, art("deezer")) }
+        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider, artProvider)), cache, EnrichmentConfig(enableIdentityResolution = true))
+
+        // When
+        val results = e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
+
+        // Then — same UNVERIFIED treatment as the throwing path
+        assertEquals(IdentityMatch.UNVERIFIED, results.identity?.match)
+        val artResult = results.raw[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success
+        assertEquals(IdentityMatch.UNVERIFIED, artResult.identityMatch)
+    }
+
+    @Test fun `UNVERIFIED results are not cached so a retry re-resolves`() = runTest {
+        // Given — identity provider that throws once, then resolves
+        var identityCalls = 0
+        val idProvider = object : FakeProvider(id = "mb", isIdentityProvider = true, capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100))) {
+            override suspend fun resolveIdentity(request: EnrichmentRequest): EnrichmentResult {
+                identityCalls++
+                if (identityCalls == 1) throw RuntimeException("connection reset")
+                return EnrichmentResult.Success(EnrichmentType.GENRE, EnrichmentData.Metadata(genres = listOf("rock")), "mb", 0.9f, resolvedIdentifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-123"))
+            }
+        }
+        val artProvider = FakeProvider(id = "deezer", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 50)))
+            .also { it.givenResult(EnrichmentType.ALBUM_ART, art("deezer")) }
+        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider, artProvider)), cache, EnrichmentConfig(enableIdentityResolution = true))
+
+        // When — first run fails identity, second run (the user's retry) succeeds
+        val first = e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
+        val second = e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
+
+        // Then — the UNVERIFIED result was not cached: the retry re-ran identity resolution and
+        // came back RESOLVED, instead of a cache hit rendering identity == null (confident)
+        assertEquals(IdentityMatch.UNVERIFIED, first.identity?.match)
+        assertEquals(2, identityCalls)
+        assertEquals(IdentityMatch.RESOLVED, second.identity?.match)
+        val artResult = second.raw[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success
+        assertEquals(IdentityMatch.RESOLVED, artResult.identityMatch)
+    }
+
     // --- Manual selection flag ---
 
     @Test fun `enrich preserves manually selected cache entries`() = runTest {

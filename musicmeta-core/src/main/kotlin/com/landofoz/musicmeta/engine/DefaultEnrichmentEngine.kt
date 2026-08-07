@@ -147,7 +147,14 @@ internal class DefaultEnrichmentEngine(
     ) {
         val resolvedMbid = identityResolution?.identifiers?.musicBrainzId
         for ((type, result) in results) {
-            if (result !is EnrichmentResult.Success || result.isStale) continue
+            // UNVERIFIED results are fuzzy guesses fetched while the identity provider was down —
+            // caching them would serve them as cache hits (identity == null, which reads as
+            // confident) for the type's whole TTL, and a retry could never heal them.
+            if (result !is EnrichmentResult.Success || result.isStale ||
+                result.identityMatch == IdentityMatch.UNVERIFIED
+            ) {
+                continue
+            }
             val ttl = config.ttlOverrides[type] ?: type.defaultTtlMs
             guardedCacheWrite(logger, "put") { cache.put(entityKeyFor(request, type), type, result, ttl) }
 
@@ -240,6 +247,18 @@ internal class DefaultEnrichmentEngine(
         for (key in cacheKeysFor(request, type)) cache.invalidate(key, type)
     }
 
+    /** The identity provider's failure as a result, classified so consumers see a real [ErrorKind]. */
+    private fun identityFailure(providerId: String, e: Exception): EnrichmentResult.Error {
+        val kind = when (e) {
+            is java.io.IOException -> ErrorKind.NETWORK
+            else -> ErrorKind.UNKNOWN
+        }
+        return EnrichmentResult.Error(
+            EnrichmentType.GENRE, providerId, e.message ?: e.javaClass.simpleName,
+            cause = e, errorKind = kind,
+        )
+    }
+
     /** Returns the enriched request and the raw identity result (for composite type synthesis). */
     private suspend fun resolveIdentity(
         request: EnrichmentRequest,
@@ -260,7 +279,9 @@ internal class DefaultEnrichmentEngine(
             // Tells reclassifyTransientGap "skipped because this run's identity resolution
             // hiccupped" from "skipped because the request genuinely has none of these" (issue 06).
             currentCoroutineContext()[TransientIdentifierMarker]?.markAllConcreteIdentifiers()
-            return request to null
+            // Must not collapse to null: null identity means "not attempted" and reads as
+            // confident. GENRE matches the type the identity provider itself reports under.
+            return request to identityFailure(provider.id, e)
         }
         if (result !is EnrichmentResult.Success) {
             logger.debug(TAG, "Identity resolution returned ${result::class.simpleName}")

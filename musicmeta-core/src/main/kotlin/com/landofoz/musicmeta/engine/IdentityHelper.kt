@@ -23,7 +23,14 @@ internal fun buildIdentityResolution(
         matchScore = null,
         suggestions = identityResult.suggestions.orEmpty(),
     )
-    else -> null
+    // Error / RateLimited: the provider was asked and failed, which must stay distinguishable
+    // from null ("resolution was not attempted") — a transient failure is not a confident match.
+    is EnrichmentResult.Error, is EnrichmentResult.RateLimited -> IdentityResolution(
+        identifiers = enrichedRequest.identifiers,
+        match = IdentityMatch.UNVERIFIED,
+        matchScore = null,
+    )
+    null -> null
 }
 
 /** Stamps [IdentityMatch] and score on all freshly resolved results. */
@@ -47,7 +54,14 @@ internal fun stampIdentityMatch(
                 }
             }
         }
-        else -> {}
+        is EnrichmentResult.Error, is EnrichmentResult.RateLimited -> {
+            for ((type, result) in results) {
+                if (result is EnrichmentResult.Success && result.identityMatch == null) {
+                    results[type] = result.copy(identityMatch = IdentityMatch.UNVERIFIED)
+                }
+            }
+        }
+        null -> {}
     }
 }
 
