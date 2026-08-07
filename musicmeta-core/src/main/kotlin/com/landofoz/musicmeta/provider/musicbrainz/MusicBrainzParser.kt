@@ -59,6 +59,7 @@ internal object MusicBrainzParser {
             id = obj.getString("id"),
             title = obj.getString("title"),
             artistCredit = extractArtistCredit(obj),
+            artistCredits = extractArtistCreditNames(obj),
             date = obj.optString("date").takeIf { it.isNotBlank() },
             country = obj.optString("country").takeIf { it.isNotBlank() },
             barcode = obj.optString("barcode").takeIf { it.isNotBlank() },
@@ -107,6 +108,7 @@ internal object MusicBrainzParser {
             tagCounts = tagCounts,
             score = obj.optInt("score", 0),
             disambiguation = obj.optString("disambiguation").takeIf { it.isNotBlank() },
+            artistCredits = extractArtistCreditNames(obj),
             hasOfficialAlbumRelease = findStrictOfficialAlbumReleaseGroup(obj) != null,
             artReleaseGroupId = artReleaseGroup?.optString("id")?.takeIf { it.isNotBlank() },
             artReleaseGroupTitle = artReleaseGroup?.optString("title")?.takeIf { it.isNotBlank() },
@@ -345,6 +347,18 @@ internal object MusicBrainzParser {
                 append(credit.optString("joinphrase", ""))
             }
         }.takeIf { it.isNotBlank() }
+    }
+
+    /**
+     * Each credited artist's name individually, unlike [extractArtistCredit]'s single join-phrase
+     * string — a multi-artist credit ("Artist A & Artist B") should still match a caller-requested
+     * artist that is only one of them, which a joined-string equality check cannot do.
+     */
+    internal fun extractArtistCreditNames(obj: JSONObject): List<String> {
+        val credits = obj.optJSONArray("artist-credit") ?: return emptyList()
+        return (0 until credits.length()).mapNotNull { i ->
+            credits.getJSONObject(i).optJSONObject("artist")?.optString("name")?.takeIf { it.isNotBlank() }
+        }
     }
 
     /**

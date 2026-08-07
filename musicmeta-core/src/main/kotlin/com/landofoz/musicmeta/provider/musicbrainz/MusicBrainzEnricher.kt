@@ -99,15 +99,15 @@ internal class MusicBrainzEnricher(
                 ?: return EnrichmentResult.NotFound(type, providerId)
             return buildAlbumResult(full, type, ConfidenceCalculator.idBasedLookup())
         }
-        val releases = api.searchReleases(request.title, request.artist)
-        if (releases.isEmpty()) {
+        val search = resolveAlbumSearch(request.title, request.artist)
+        val best = search.release ?: return if (search.originalPool.isEmpty()) {
             val fuzzy = api.searchReleasesFuzzy(request.title, request.artist)
-            return EnrichmentResult.NotFound(type, providerId,
+            EnrichmentResult.NotFound(type, providerId,
                 suggestions = fuzzy.takeIf { it.isNotEmpty() }?.take(MAX_SUGGESTIONS)?.map { it.toCandidate() })
+        } else {
+            EnrichmentResult.NotFound(type, providerId,
+                suggestions = search.originalPool.take(MAX_SUGGESTIONS).map { it.toCandidate() })
         }
-        val best = releases.firstOrNull { it.score >= minMatchScore }
-            ?: return EnrichmentResult.NotFound(type, providerId,
-                suggestions = releases.take(MAX_SUGGESTIONS).map { it.toCandidate() })
         // A search hit carries tags only when its release group happens to have them; the release
         // lookup is what fills them. GENRE is the one type that reads them and the one this path
         // reaches — LABEL is answered from the identity payload and never gets here.
@@ -123,10 +123,9 @@ internal class MusicBrainzEnricher(
         request: EnrichmentRequest.ForAlbum,
     ): EnrichmentResult {
         val type = EnrichmentType.ALBUM_TRACKS
-        val mbid = request.identifiers.musicBrainzId ?: run {
-            api.searchReleases(request.title, request.artist)
-                .firstOrNull { it.score >= minMatchScore }?.id
-        } ?: return EnrichmentResult.NotFound(type, providerId)
+        val mbid = request.identifiers.musicBrainzId
+            ?: resolveAlbumSearch(request.title, request.artist).release?.id
+            ?: return EnrichmentResult.NotFound(type, providerId)
         val release = cachedReleaseLookup(mbid)
             ?: return EnrichmentResult.NotFound(type, providerId)
         if (release.tracks.isEmpty()) return EnrichmentResult.NotFound(type, providerId)
@@ -275,9 +274,8 @@ internal class MusicBrainzEnricher(
         if (type == EnrichmentType.CREDITS) return enrichTrackCredits(request)
 
         val recordings = api.searchRecordings(request.title, request.artist, request.album)
-        if (recordings.isEmpty()) return EnrichmentResult.NotFound(type, providerId)
-
         val best = pickBestRecording(request.title, recordings, request.album)
+            ?: resolveTrackQualifierFallback(request.title, request.artist, request.album)
             ?: return EnrichmentResult.NotFound(type, providerId)
 
         val data = if (type == EnrichmentType.TRACK_METADATA) {
@@ -474,6 +472,90 @@ internal class MusicBrainzEnricher(
         val blankDisambiguation: Boolean,
         val officialAlbum: Boolean,
     )
+
+    /** [release]: the resolved match, if any; [originalPool]: [request.title]'s own search results, for suggestions. */
+    private data class AlbumSearchResult(val release: MusicBrainzRelease?, val originalPool: List<MusicBrainzRelease>)
+
+    /**
+     * Resolves an album search, trying [title]/[artist] as-is first — unchanged from today's
+     * behavior — and only falling back to [MusicBrainzQualifierFallback]'s progressively-stripped
+     * candidates when the direct search finds nothing at or above [minMatchScore]. Shared by
+     * [enrichAlbum] and [enrichAlbumTracks], which both need identical album-resolution semantics.
+     */
+    private suspend fun resolveAlbumSearch(title: String, artist: String): AlbumSearchResult {
+        val releases = api.searchReleases(title, artist)
+        val direct = releases.firstOrNull { it.score >= minMatchScore }
+        return AlbumSearchResult(direct ?: resolveAlbumQualifierFallback(title, artist), releases)
+    }
+
+    /**
+     * Tries each of [MusicBrainzQualifierFallback]'s fallback candidates (dropping the original
+     * title — [resolveAlbumSearch] already tried that) in most-specific-first order, stopping at the
+     * first one [resolve] resolves. Shared shape for [resolveAlbumQualifierFallback] and
+     * [resolveTrackQualifierFallback], which differ only in how a candidate resolves.
+     */
+    private suspend fun <T> resolveViaQualifierFallback(
+        title: String,
+        resolve: suspend (MusicBrainzQualifierFallback.FallbackCandidate) -> T?,
+    ): T? {
+        for (candidate in MusicBrainzQualifierFallback.qualifierFallbackCandidates(title).drop(1)) {
+            resolve(candidate)?.let { return it }
+        }
+        return null
+    }
+
+    /**
+     * Searches MB for each fallback candidate's exact text and requires an "authoritative" hit: at
+     * or above [minMatchScore], normalized title equality with the searched candidate (score alone
+     * is not proof of identity — quoted Lucene is phrase search, not string equality), and a
+     * matching credited artist. Among a same-score tie within one candidate's authoritative hits,
+     * ranks by the tags actually stripped to reach that candidate.
+     */
+    private suspend fun resolveAlbumQualifierFallback(title: String, artist: String): MusicBrainzRelease? {
+        val artistNorm = MusicBrainzQualifierFallback.normalize(artist)
+        return resolveViaQualifierFallback(title) { candidate ->
+            val candidateNorm = MusicBrainzQualifierFallback.normalize(candidate.title)
+            val authoritative = api.searchReleases(candidate.title, artist).filter {
+                it.score >= minMatchScore &&
+                    MusicBrainzQualifierFallback.normalize(it.title) == candidateNorm &&
+                    anyArtistMatches(it.artistCredits, artistNorm)
+            }
+            MusicBrainzQualifierFallback.pickBestMatch(
+                authoritative, candidate.removedTags,
+                scoreOf = { it.score },
+                textOf = { "${it.disambiguation.orEmpty()} ${it.title}" },
+            )
+        }
+    }
+
+    /**
+     * Same qualifier-fallback candidate search as [resolveAlbumQualifierFallback] — requires the
+     * same "authoritative" hit (score floor, normalized title equality, matching credited artist;
+     * score alone is not proof of identity) before ranking survivors — but for recordings, reuses
+     * [pickBestRecording]'s existing ranking on the authoritative pool rather than introducing a
+     * second, parallel tie-break primitive: recordings already have a tie-break shaped for their own
+     * signals (video flag, official-album release, blank disambiguation), which the generic kind/year
+     * tag tie-break would not improve on.
+     */
+    private suspend fun resolveTrackQualifierFallback(
+        title: String,
+        artist: String,
+        album: String?,
+    ): MusicBrainzRecording? {
+        val artistNorm = MusicBrainzQualifierFallback.normalize(artist)
+        return resolveViaQualifierFallback(title) { candidate ->
+            val candidateNorm = MusicBrainzQualifierFallback.normalize(candidate.title)
+            val authoritative = api.searchRecordings(candidate.title, artist, album).filter {
+                it.score >= minMatchScore &&
+                    MusicBrainzQualifierFallback.normalize(it.title) == candidateNorm &&
+                    anyArtistMatches(it.artistCredits, artistNorm)
+            }
+            pickBestRecording(candidate.title, authoritative, album)
+        }
+    }
+
+    private fun anyArtistMatches(credits: List<String>, expectedNorm: String): Boolean =
+        credits.any { MusicBrainzQualifierFallback.normalize(it) == expectedNorm }
 
     private fun MusicBrainzRelease.toCandidate() = SearchCandidate(
         title = title, artist = artistCredit, year = date,
