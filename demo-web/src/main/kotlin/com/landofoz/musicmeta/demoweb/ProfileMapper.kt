@@ -305,8 +305,8 @@ fun TrackProfile.toDemoResponse(
 
 /**
  * Whether the summary card may present its title/preview as a match. A `null` identity means
- * resolution wasn't needed and counts as confident; [IdentityMatch.BEST_EFFORT] and
- * [IdentityMatch.SUGGESTIONS] do not.
+ * resolution wasn't needed and counts as confident; [IdentityMatch.BEST_EFFORT],
+ * [IdentityMatch.SUGGESTIONS] and [IdentityMatch.UNVERIFIED] do not.
  */
 private val EnrichmentResults.identityResolved: Boolean
     get() = identity == null || identity?.match == IdentityMatch.RESOLVED

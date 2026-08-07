@@ -22,6 +22,7 @@ Every enrichment result carries an `identityMatch` field describing how the reso
 | `RESOLVED` | MusicBrainz found a confident match | Show results normally |
 | `BEST_EFFORT` | Identity resolution failed, but providers returned results via fuzzy search | Show results with a caveat — they may be for the wrong entity |
 | `SUGGESTIONS` | Identity resolution found near-miss candidates but no confident match | Show a "did you mean?" prompt |
+| `UNVERIFIED` | The identity provider errored (threw or returned `Error`) — usually transient | Show results with a caveat; offer a retry, which may resolve |
 
 A `null` identity match on `results.identity` means resolution was not attempted — either an MBID was provided upfront, results came from cache, or resolution is disabled. Treat as confident.
 
@@ -79,6 +80,10 @@ when (results.identity?.match) {
     IdentityMatch.BEST_EFFORT -> {
         // Results came from fuzzy search — may be wrong
         println("Results may not be accurate: ${results.genres()}")
+    }
+    IdentityMatch.UNVERIFIED -> {
+        // Identity provider errored (usually transient) — same fuzzy results, but retrying may fix
+        println("Couldn't verify the match — try again: ${results.genres()}")
     }
     null -> {
         // Resolution not attempted (MBID provided, cached, or disabled)

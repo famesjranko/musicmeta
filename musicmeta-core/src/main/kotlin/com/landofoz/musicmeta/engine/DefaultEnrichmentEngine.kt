@@ -147,7 +147,14 @@ internal class DefaultEnrichmentEngine(
     ) {
         val resolvedMbid = identityResolution?.identifiers?.musicBrainzId
         for ((type, result) in results) {
-            if (result !is EnrichmentResult.Success || result.isStale) continue
+            // UNVERIFIED results are fuzzy guesses fetched while the identity provider was down —
+            // caching them would serve them as cache hits (identity == null, which reads as
+            // confident) for the type's whole TTL, and a retry could never heal them.
+            if (result !is EnrichmentResult.Success || result.isStale ||
+                result.identityMatch == IdentityMatch.UNVERIFIED
+            ) {
+                continue
+            }
             val ttl = config.ttlOverrides[type] ?: type.defaultTtlMs
             guardedCacheWrite(logger, "put") { cache.put(entityKeyFor(request, type), type, result, ttl) }
 
@@ -260,7 +267,11 @@ internal class DefaultEnrichmentEngine(
             // Tells reclassifyTransientGap "skipped because this run's identity resolution
             // hiccupped" from "skipped because the request genuinely has none of these" (issue 06).
             currentCoroutineContext()[TransientIdentifierMarker]?.markAllConcreteIdentifiers()
-            return request to null
+            // Must not collapse to null: null identity means "not attempted" and reads as
+            // confident. GENRE matches the type the identity provider itself reports under.
+            // mapError is the one classifier: consumers key retry policy off ErrorKind, so an
+            // AUTH or PARSE failure must not arrive here as UNKNOWN.
+            return request to provider.mapError(EnrichmentType.GENRE, e)
         }
         if (result !is EnrichmentResult.Success) {
             logger.debug(TAG, "Identity resolution returned ${result::class.simpleName}")

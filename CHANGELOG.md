@@ -29,6 +29,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Breaking Changes
+- New `IdentityMatch.UNVERIFIED`: an identity provider throwing or returning `Error`/`RateLimited` now reports it instead of the `null`/unstamped values that read as confident; `when`s need a branch
+- `UNVERIFIED` results are excluded from the cache write-back, so a retry after a transient identity failure re-resolves instead of serving the unverified guess for the type's TTL
+- `CompositeSynthesizer.synthesize` now receives the identity provider's `Error` when identity resolution failed, where it previously received `null` (the "not attempted" value)
+
 ### Added
 - `TRACK_METADATA`/`EnrichmentData.TrackMetadata` (duration, resolved album title, disambiguation), already fetched but dropped by MusicBrainz, Deezer, LRCLIB; in `DEFAULT_TRACK_TYPES`
 - `PopularTrack` now carries `listenerCount`, `durationMs` and `album`, matching what `TopTrack` already exposes from the same ListenBrainz data

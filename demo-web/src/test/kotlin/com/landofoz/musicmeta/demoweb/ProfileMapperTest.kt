@@ -529,6 +529,17 @@ class ProfileMapperTest {
     }
 
     @Test
+    fun `artist summary identityResolved false on UNVERIFIED and verdict passes through`() {
+        val results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(IdentityMatch.UNVERIFIED))
+        val profile = ArtistProfile(name = "Metallica", results = results)
+
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        assertEquals(false, response.summary.identityResolved)
+        assertEquals("UNVERIFIED", response.summary.identityVerdict)
+    }
+
+    @Test
     fun `SUGGESTIONS with no usable suggestions still carries identityVerdict, not just section absence`() {
         // identityOf() builds with empty suggestions, so no "did_you_mean" section gets built —
         // the frontend must not infer the verdict from section presence (it would land on

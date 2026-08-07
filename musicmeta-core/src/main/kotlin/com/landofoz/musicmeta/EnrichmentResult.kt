@@ -49,6 +49,13 @@ enum class IdentityMatch {
 
     /** Identity resolution failed but found near-miss candidates. Check [EnrichmentResult.NotFound.suggestions]. */
     SUGGESTIONS,
+
+    /**
+     * Identity resolution was attempted but the identity provider errored (threw, or returned
+     * [EnrichmentResult.Error]). Results are unverified fuzzy matches, as with [BEST_EFFORT] —
+     * but unlike [BEST_EFFORT] the failure is typically transient, so retrying may resolve.
+     */
+    UNVERIFIED,
 }
 
 /**

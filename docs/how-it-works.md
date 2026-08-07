@@ -74,7 +74,7 @@ enrich(request, types, forceRefresh)
               │
               ▼
 ┌────────────────────────────┐
-│ 8. Identity Stamp          │── mark RESOLVED/BEST_EFFORT + score
+│ 8. Identity Stamp          │── mark RESOLVED/BEST_EFFORT/UNVERIFIED + score
 └─────────────┬──────────────┘
               │
               ▼
@@ -180,7 +180,8 @@ Each Success result is stamped with identity resolution metadata:
 | `identityMatch` | Meaning |
 |-----------------|---------|
 | `RESOLVED` | MusicBrainz found a confident match. `identityMatchScore` (0–100) indicates match quality. |
-| `BEST_EFFORT` | Identity resolution failed. Results came from unverified fuzzy searches. |
+| `BEST_EFFORT` | Identity resolution searched and found no match. Results came from unverified fuzzy searches. |
+| `UNVERIFIED` | The identity provider errored (usually transient). Same fuzzy results, but a retry may resolve — and they are not cached. |
 | `null` | Identity resolution wasn't needed (MBID pre-provided, cached, or disabled). |
 
 This lets consumers decide how much to trust results — a `RESOLVED` match with score 95 is much more reliable than `BEST_EFFORT`.
@@ -317,5 +318,6 @@ Prevents hammering a down provider and slowing the entire pipeline.
 - Provider failure → chain tries next provider at lower priority
 - Timeout → returns partial results (whatever finished within `enrichTimeoutMs`)
 - Individual type failure → other types still resolve
-- Identity resolution failure → results continue with `BEST_EFFORT` match quality
+- Identity resolution found no match → results continue with `BEST_EFFORT` match quality
+- Identity provider errored → results continue with `UNVERIFIED` match quality, uncached so a retry can heal
 - Catalog provider unavailable → recommendations returned unfiltered
