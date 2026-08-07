@@ -406,6 +406,18 @@ button:disabled { opacity: 0.56; cursor: wait; }
   opacity: 0.6;
 }
 
+/* The artwork is as unverified as the sections are — it is the fuzzy match's face, and left at full
+   strength it reads as confirmation directly above a banner saying nothing here is confirmed. The
+   backdrop carries its own 0.24 opacity, so it is dimmed by filter instead of overriding that. */
+.summary.unverified img,
+.gallery.unverified img {
+  opacity: 0.6;
+}
+
+.summary.unverified .backdrop {
+  filter: blur(16px) saturate(1.1) brightness(0.6);
+}
+
 .section-chip {
   font-size: 0.6rem;
   padding: 0.12rem 0.45rem;

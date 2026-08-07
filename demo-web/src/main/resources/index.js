@@ -223,7 +223,7 @@ function render(data) {
   const totalItems = data.sections.reduce((n, s) => n + s.items.length, 0);
 
   const gallery = (data.gallery && data.gallery.length)
-    ? `<div class="card gallery">${data.gallery.map((g) => `
+    ? `<div class="card gallery${unverified ? ' unverified' : ''}">${data.gallery.map((g) => `
       <figure>
         <img src="${esc(g.url)}" alt="${esc(g.label || '')}" onerror="this.closest('figure').remove()" />
         ${g.label ? `<figcaption>${esc(g.label)}</figcaption>` : ''}
@@ -239,7 +239,7 @@ function render(data) {
     </tr>`).join('');
 
   resultEl.innerHTML = `
-    <div class="card summary">
+    <div class="card summary${unverified ? ' unverified' : ''}">
       ${backdrop}
       ${img}
       <div class="body">
