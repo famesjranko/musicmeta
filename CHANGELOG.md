@@ -35,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ALBUM_DESCRIPTION` (`EnrichmentData.Biography`), from Wikipedia and Last.fm's `wiki` block; in `DEFAULT_ALBUM_TYPES`, top source is keyless and long-cached
 
 ### Fixed
+- MusicBrainz `searchCandidates` returned an empty list for tracks; tracks now get candidates and "did you mean?" suggestions (`IdentityMatch.SUGGESTIONS`), matching album/artist behaviour
 - Wikidata's artist lookup used a call Wikidata always rejected; birth/death date, country and occupation are now returned instead of nothing, every time
 - ListenBrainz's SIMILAR_ARTISTS called a route that never existed and always returned nothing; capability dropped, Last.fm and Deezer already serve it (#18)
 - Deezer's SIMILAR_TRACKS called `/track/{id}/radio`, which doesn't exist, and always returned nothing; now derived from the seed track's artist's related artists and their top tracks

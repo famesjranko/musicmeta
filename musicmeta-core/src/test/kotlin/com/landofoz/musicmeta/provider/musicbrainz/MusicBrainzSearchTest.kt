@@ -7,7 +7,6 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -73,16 +72,55 @@ class MusicBrainzSearchTest {
     }
 
     @Test
-    fun `searchCandidates returns empty list for track requests`() = runTest {
-        // Given — a track-level request (search only supports albums/artists)
+    fun `searchCandidates returns track candidates with correct fields`() = runTest {
+        // Given — MusicBrainz returns two recordings for "Paranoid Android"
+        httpClient.givenJsonResponse("recording?query", RECORDING_SEARCH_MULTIPLE)
         val request = EnrichmentRequest.forTrack("Paranoid Android", "Radiohead")
 
         // When — searching for candidates
         val candidates = provider.searchCandidates(request, 10)
 
-        // Then — empty because track search is not supported
-        assertTrue(candidates.isEmpty())
+        // Then — both candidates returned, with year/country/releaseType/thumbnailUrl left null
+        // (a recording search hit carries none of those — see MusicBrainzEnricher.toCandidate)
+        assertEquals(2, candidates.size)
+
+        val first = candidates[0]
+        assertEquals("Paranoid Android", first.title)
+        assertEquals("Radiohead", first.artist)
+        assertNull(first.year)
+        assertNull(first.country)
+        assertNull(first.releaseType)
+        assertNull(first.thumbnailUrl)
+        assertEquals(95, first.score)
+        assertEquals("rec1", first.identifiers.musicBrainzId)
+        assertEquals("group123", first.identifiers.musicBrainzReleaseGroupId)
+        assertEquals("musicbrainz", first.provider)
+        assertNull(first.disambiguation)
+
+        val second = candidates[1]
+        assertEquals("Paranoid Android", second.title)
+        assertEquals("live", second.disambiguation)
+        assertEquals(88, second.score)
     }
+
+    @Test
+    fun `searchCandidates falls back to fuzzy track search when the strict recording search returns nothing`() =
+        runTest {
+            // Given — the strict, quoted query ("Enter Sandmanz Xyzqq") comes back empty (a typo,
+            // not a transient), but the fuzzy (unquoted + Lucene ~) query finds the near-miss —
+            // same shape as searchAlbumCandidates'/searchArtistCandidates' .ifEmpty { fuzzy }.
+            httpClient.givenJsonResponse(STRICT_TYPO_QUERY, """{"recordings":[]}""")
+            httpClient.givenJsonResponse(FUZZY_TYPO_QUERY, RECORDING_SEARCH_FUZZY_MATCH)
+            val request = EnrichmentRequest.forTrack("Enter Sandmanz Xyzqq", "Metallica")
+
+            // When — searching for candidates
+            val candidates = provider.searchCandidates(request, 10)
+
+            // Then — the fuzzy hit is returned, not an empty list
+            assertEquals(1, candidates.size)
+            assertEquals("Enter Sandman", candidates[0].title)
+            assertEquals("rec-fuzzy", candidates[0].identifiers.musicBrainzId)
+        }
 
     @Test
     fun `searchCandidates includes thumbnail URL when front cover exists`() = runTest {
@@ -106,6 +144,20 @@ class MusicBrainzSearchTest {
     }
 
     companion object {
+        /** `recording:"Enter Sandmanz Xyzqq" AND artistname:"Metallica"` URL-encoded — the strict query. */
+        private const val STRICT_TYPO_QUERY = "recording%3A%22Enter+Sandmanz+Xyzqq%22"
+
+        /** `recording:Enter Sandmanz Xyzqq~ AND artistname:Metallica~` URL-encoded — the fuzzy query. */
+        private const val FUZZY_TYPO_QUERY = "recording%3AEnter+Sandmanz+Xyzqq%7E"
+
+        private val RECORDING_SEARCH_FUZZY_MATCH = """
+            {
+              "recordings": [
+                {"id": "rec-fuzzy", "score": 82, "title": "Enter Sandman"}
+              ]
+            }
+        """.trimIndent()
+
         private val RELEASE_SEARCH_MULTIPLE = """
             {
               "releases": [
@@ -158,6 +210,32 @@ class MusicBrainzSearchTest {
                   "score": 60,
                   "type": "Group",
                   "country": "US"
+                }
+              ]
+            }
+        """.trimIndent()
+
+        private val RECORDING_SEARCH_MULTIPLE = """
+            {
+              "recordings": [
+                {
+                  "id": "rec1",
+                  "score": 95,
+                  "title": "Paranoid Android",
+                  "artist-credit": [{"artist": {"id": "def456", "name": "Radiohead"}}],
+                  "releases": [
+                    {
+                      "status": "Official",
+                      "release-group": {"id": "group123", "primary-type": "Album", "title": "OK Computer"}
+                    }
+                  ]
+                },
+                {
+                  "id": "rec2",
+                  "score": 88,
+                  "title": "Paranoid Android",
+                  "disambiguation": "live",
+                  "artist-credit": [{"artist": {"id": "def456", "name": "Radiohead"}}]
                 }
               ]
             }

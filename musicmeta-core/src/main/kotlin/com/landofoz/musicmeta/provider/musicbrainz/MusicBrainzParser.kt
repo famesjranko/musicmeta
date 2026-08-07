@@ -108,6 +108,7 @@ internal object MusicBrainzParser {
             tagCounts = tagCounts,
             score = obj.optInt("score", 0),
             disambiguation = obj.optString("disambiguation").takeIf { it.isNotBlank() },
+            artistCredit = extractArtistCredit(obj),
             artistCredits = extractArtistCreditNames(obj),
             hasOfficialAlbumRelease = findStrictOfficialAlbumReleaseGroup(obj) != null,
             artReleaseGroupId = artReleaseGroup?.optString("id")?.takeIf { it.isNotBlank() },

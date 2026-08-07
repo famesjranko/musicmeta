@@ -140,6 +140,27 @@ class MusicBrainzTransientFailureTest {
         assertEquals(listOf("Mortishead", "Portishell"), suggestions?.map { it.title })
     }
 
+    @Test
+    fun `a genuinely empty track search still returns NotFound with suggestions`() = runTest {
+        // Given — a real 200 carrying zero recordings for a typo'd title (searchRecordings' own
+        // hint-less retry only drops the release:"…" album term, it still re-sends the title
+        // quoted, so it never rescues a typo), and a fuzzy (unquoted + Lucene ~) search offering
+        // the near-miss. Mirrors the artist/album equivalents above.
+        httpClient.givenJsonResponse(STRICT_TRACK_QUERY, """{"recordings":[]}""")
+        httpClient.givenJsonResponse(FUZZY_TRACK_QUERY, FUZZY_RECORDINGS_NEAR_MISS)
+
+        // When — resolving identity for the track
+        val result = provider.resolveIdentity(EnrichmentRequest.forTrack("Enter Sandmanz Xyzqq", "Metallica"))
+
+        // Then — NotFound carrying the near miss, so IdentityMatch.SUGGESTIONS becomes reachable
+        assertTrue(
+            "Expected NotFound, got ${result::class.simpleName}",
+            result is EnrichmentResult.NotFound,
+        )
+        val suggestions = (result as EnrichmentResult.NotFound).suggestions
+        assertEquals(listOf("Enter Sandman"), suggestions?.map { it.title })
+    }
+
     companion object {
         /** `artist:"Portishead"` URL-encoded — the strict search. */
         private const val STRICT_QUERY = "artist%3A%22Portishead%22"
@@ -175,6 +196,18 @@ class MusicBrainzTransientFailureTest {
             {"artists":[
               {"id":"11111111-1111-1111-1111-111111111111","name":"Mortishead","score":72,"type":"Group"},
               {"id":"22222222-2222-2222-2222-222222222222","name":"Portishell","score":68,"type":"Group"}
+            ]}
+        """.trimIndent()
+
+        /** `recording:"Enter Sandmanz Xyzqq" AND artistname:"Metallica"` URL-encoded — the strict track search. */
+        private const val STRICT_TRACK_QUERY = "recording%3A%22Enter+Sandmanz+Xyzqq%22"
+
+        /** `recording:Enter Sandmanz Xyzqq~ AND artistname:Metallica~` URL-encoded — the fuzzy track search. */
+        private const val FUZZY_TRACK_QUERY = "recording%3AEnter+Sandmanz+Xyzqq%7E"
+
+        private val FUZZY_RECORDINGS_NEAR_MISS = """
+            {"recordings":[
+              {"id":"33333333-3333-3333-3333-333333333333","title":"Enter Sandman","score":68}
             ]}
         """.trimIndent()
     }

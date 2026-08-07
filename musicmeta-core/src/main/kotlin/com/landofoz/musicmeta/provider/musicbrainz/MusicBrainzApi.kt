@@ -105,6 +105,24 @@ internal class MusicBrainzApi(
         return MusicBrainzParser.parseRecordings(json, albumHint)
     }
 
+    /**
+     * Broader fuzzy search (unquoted + Lucene `~`) for near-miss suggestions — same shape as
+     * [searchReleasesFuzzy]/[searchArtistsFuzzy]. [searchRecordings]'s own hint-less retry only
+     * drops the `release:"…"` album term; it re-sends [title] quoted, so it can never rescue a typo
+     * the way this loosened match can.
+     */
+    suspend fun searchRecordingsFuzzy(
+        title: String,
+        artist: String,
+        limit: Int = 3,
+    ): List<MusicBrainzRecording> {
+        val query = encode("recording:${escapeLucene(title)}~ AND artistname:${escapeLucene(artist)}~")
+        val json = rateLimiter.execute {
+            httpClient.fetchJsonResult("$BASE_URL/recording?query=$query&fmt=json&limit=$limit").bodyOrThrowTransient()
+        } ?: return emptyList()
+        return MusicBrainzParser.parseRecordings(json)
+    }
+
     /** Lucene query for a recording search, with an optional `release:"…"` term when [album] is known. */
     private fun recordingQuery(title: String, artist: String, album: String?): String {
         val base = "recording:\"${escapeLucene(title)}\" AND artistname:\"${escapeLucene(artist)}\""

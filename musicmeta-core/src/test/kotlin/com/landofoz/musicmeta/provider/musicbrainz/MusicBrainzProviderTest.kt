@@ -254,8 +254,9 @@ class MusicBrainzProviderTest {
         // When — enriching for genre
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then — NotFound because no recordings matched
+        // Then — NotFound because no recordings matched, and no suggestions invented from nothing
         assertTrue(result is EnrichmentResult.NotFound)
+        assertEquals(null, (result as EnrichmentResult.NotFound).suggestions)
     }
 
     @Test
@@ -345,9 +346,36 @@ class MusicBrainzProviderTest {
         // When — enriching for genre
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then — NotFound; the ranking pass never gets a candidate to choose from
+        // Then — NotFound; the ranking pass never gets a candidate to choose from, but the raw pool
+        // that failed to rank is still carried as a suggestion, same as enrichAlbum/enrichArtist
         assertTrue(result is EnrichmentResult.NotFound)
+        val suggestions = (result as EnrichmentResult.NotFound).suggestions
+        assertEquals(listOf("Enter Sandman"), suggestions?.map { it.title })
+        assertEquals("rec-low", suggestions?.single()?.identifiers?.musicBrainzId)
     }
+
+    @Test
+    fun `enrich track identity resolution surfaces suggestions for a gibberish title, mirroring album-artist`() =
+        runTest {
+            // Given — a real 200 carrying zero recordings for a made-up title, mirroring
+            // MusicBrainzTransientFailureTest's "a genuinely empty search still returns NotFound
+            // with suggestions" for the artist path. Recordings have no separate fuzzy search
+            // (searchRecordings already retries hint-less internally), so the near-miss pool here is
+            // the same strict search's own (non-matching) hits.
+            httpClient.givenJsonResponse(
+                "recording?query",
+                """{"recordings":[{"id":"rec-near","score":60,"title":"Metallica Anthology"}]}""",
+            )
+            val request = EnrichmentRequest.forTrack("Zzxxqwerty12345", "Metallica")
+
+            // When — resolving identity (what DefaultEnrichmentEngine calls before fan-out)
+            val result = provider.resolveIdentity(request)
+
+            // Then — NotFound carrying suggestions, so IdentityMatch.SUGGESTIONS becomes reachable
+            assertTrue(result is EnrichmentResult.NotFound)
+            val suggestions = (result as EnrichmentResult.NotFound).suggestions
+            assertEquals(listOf("Metallica Anthology"), suggestions?.map { it.title })
+        }
 
     @Test
     fun `enrich track sends the release-hinted query when the request carries an album hint`() = runTest {

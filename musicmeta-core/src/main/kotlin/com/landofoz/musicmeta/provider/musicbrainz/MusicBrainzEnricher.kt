@@ -276,7 +276,20 @@ internal class MusicBrainzEnricher(
         val recordings = api.searchRecordings(request.title, request.artist, request.album)
         val best = pickBestRecording(request.title, recordings, request.album)
             ?: resolveTrackQualifierFallback(request.title, request.artist, request.album)
-            ?: return EnrichmentResult.NotFound(type, providerId)
+            // Same shape as enrichAlbum's search.originalPool branch. recordings' own hint-less
+            // retry (see searchRecordings' KDoc) only drops the release:"…" album term — it still
+            // re-sends title quoted, so it can never rescue a typo the way api.searchRecordingsFuzzy
+            // (unquoted + Lucene ~) can. Fuzzy only runs when the strict pool came back genuinely
+            // empty; a non-empty strict pool that still failed to rank is suggested as-is, same as
+            // enrichAlbum's else branch.
+            ?: return if (recordings.isEmpty()) {
+                val fuzzy = api.searchRecordingsFuzzy(request.title, request.artist)
+                EnrichmentResult.NotFound(type, providerId,
+                    suggestions = fuzzy.takeIf { it.isNotEmpty() }?.take(MAX_SUGGESTIONS)?.map { it.toCandidate() })
+            } else {
+                EnrichmentResult.NotFound(type, providerId,
+                    suggestions = recordings.take(MAX_SUGGESTIONS).map { it.toCandidate() })
+            }
 
         val data = if (type == EnrichmentType.TRACK_METADATA) {
             MusicBrainzMapper.toTrackMetadataDetails(best)
@@ -572,6 +585,29 @@ internal class MusicBrainzEnricher(
         identifiers = EnrichmentIdentifiers(musicBrainzId = id),
         disambiguation = disambiguation,
     )
+
+    /**
+     * Unlike [MusicBrainzRelease]/[MusicBrainzArtist], a recording search hit carries no release
+     * date, country or release-type of its own — those live on the release(s) it appears on, not
+     * the recording, and a search hit does not resolve which one is "the" release without an extra
+     * lookup. [year]/[country]/[releaseType] are left null rather than guessed from
+     * [MusicBrainzRecording.artReleaseGroupId]'s release-group, which this class never looks up
+     * (unlike [enrichTrack]'s [MusicBrainzMapper.toTrackMetadataDetails] path, which only reads its
+     * title). [thumbnailUrl] is null for the same reason [MusicBrainzRelease.toCandidate] needs
+     * [MusicBrainzRelease.hasFrontCover] first: a recording has no equivalent front-cover flag, so
+     * there is no signal here to tell a real cover from a CAA 404 without fetching one.
+     */
+    private fun MusicBrainzRecording.toCandidate() = SearchCandidate(
+        title = title, artist = artistCredit, year = null,
+        country = null, releaseType = null, score = score,
+        thumbnailUrl = null, provider = providerId,
+        identifiers = EnrichmentIdentifiers(musicBrainzId = id, musicBrainzReleaseGroupId = artReleaseGroupId),
+        disambiguation = disambiguation,
+    )
+
+    /** Maps a recording search pool to candidates, shared by [MusicBrainzProvider.searchCandidates]. */
+    internal fun toTrackCandidates(recordings: List<MusicBrainzRecording>): List<SearchCandidate> =
+        recordings.map { it.toCandidate() }
 
     companion object {
         private const val MAX_SUGGESTIONS = 3

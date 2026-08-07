@@ -54,6 +54,12 @@ internal data class MusicBrainzRecording(
     val score: Int,
     val disambiguation: String? = null,
     /**
+     * Same joined-with-joinphrases string as [MusicBrainzRelease.artistCredit] (e.g. "A feat. B"),
+     * built by the same [MusicBrainzParser.extractArtistCredit] — unlike [artistCredits], which
+     * exists for individual-name matching, this is what a candidate's display "artist" field wants.
+     */
+    val artistCredit: String? = null,
+    /**
      * True when at least one of the recording's carried `releases` is status "Official" on an
      * Album release-group — a same-response signal (no extra lookup) that this take is the studio
      * original rather than a single/compilation-only or non-official recording.

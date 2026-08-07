@@ -65,7 +65,7 @@ class MusicBrainzProvider(
         when (request) {
             is EnrichmentRequest.ForAlbum -> searchAlbumCandidates(request, limit)
             is EnrichmentRequest.ForArtist -> searchArtistCandidates(request, limit)
-            is EnrichmentRequest.ForTrack -> emptyList()
+            is EnrichmentRequest.ForTrack -> searchTrackCandidates(request, limit)
         }
 
     private suspend fun searchAlbumCandidates(
@@ -106,6 +106,14 @@ class MusicBrainzProvider(
                 disambiguation = artist.disambiguation,
             )
         }
+    }
+
+    private suspend fun searchTrackCandidates(
+        request: EnrichmentRequest.ForTrack, limit: Int,
+    ): List<SearchCandidate> {
+        val recordings = api.searchRecordings(request.title, request.artist, request.album, limit)
+            .ifEmpty { api.searchRecordingsFuzzy(request.title, request.artist, limit) }
+        return enricher.toTrackCandidates(recordings)
     }
 
     override suspend fun enrich(
