@@ -304,15 +304,14 @@ fun TrackProfile.toDemoResponse(
 }
 
 /**
- * `null` identity means resolution wasn't needed — treat as confident (per [EnrichmentResults]
- * core docs). Only [IdentityMatch.RESOLVED] (or no identity call at all) is confident enough to
- * present the summary card's title/preview as a resolved match; [IdentityMatch.BEST_EFFORT] and
- * [IdentityMatch.SUGGESTIONS] must not be presented as if they resolved.
+ * Whether the summary card may present its title/preview as a match. A `null` identity means
+ * resolution wasn't needed and counts as confident; [IdentityMatch.BEST_EFFORT] and
+ * [IdentityMatch.SUGGESTIONS] do not.
  */
 private val EnrichmentResults.identityResolved: Boolean
     get() = identity == null || identity?.match == IdentityMatch.RESOLVED
 
-/** The bare [IdentityMatch] enum name for [SummaryCard.identityVerdict], or `null` when identity resolution was skipped. */
+/** The bare [IdentityMatch] enum name, or `null` when resolution was skipped. */
 private val EnrichmentResults.identityVerdict: String?
     get() = identity?.match?.name
 

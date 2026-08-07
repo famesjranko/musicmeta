@@ -28,17 +28,12 @@ data class SummaryCard(
     val previewTitle: String? = null,
     val previewArtist: String? = null,
     val previewAlbum: String? = null,
-    /** False when identity resolution did not land on [com.landofoz.musicmeta.IdentityMatch.RESOLVED]
-     * (or `null`, which needs no resolution) — the frontend must not present [title] as a confident match. */
+    /** False unless identity resolved (or needed no resolution) — do not present [title] as a match. */
     val identityResolved: Boolean = true,
     /**
-     * The [com.landofoz.musicmeta.IdentityMatch] enum name, or `null` when identity resolution was
-     * skipped. Carries the actual verdict so the frontend doesn't have to infer it from section
-     * presence — a `SUGGESTIONS` verdict with no usable suggestions still omits the "Did You Mean?"
-     * section, which would otherwise look identical to `BEST_EFFORT`.
-     *
-     * Distinct from [Meta.identityMatch], which is a human-readable summary for display; this is
-     * the bare enum name the frontend compares against.
+     * The bare `IdentityMatch` enum name to branch on, or `null` when resolution was skipped —
+     * unlike [Meta.identityMatch], which is a display string. Section presence is not a substitute:
+     * a `SUGGESTIONS` verdict whose candidates all filtered out looks just like `BEST_EFFORT`.
      */
     val identityVerdict: String? = null,
 )

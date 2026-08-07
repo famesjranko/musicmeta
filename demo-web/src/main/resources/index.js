@@ -194,10 +194,7 @@ function render(data) {
     ? `<div class="subtitle${summary.subtitleEnrich ? ' enrich-row' : ''}"${enrichAttrs(summary.subtitleEnrich)}>${esc(summary.subtitle)}</div>`
     : '';
 
-  // Identity resolution didn't land on RESOLVED (or was skipped, which counts as confident) — the
-  // raw query must not be presented as a resolved title. Branch on the actual verdict rather than
-  // section presence: a SUGGESTIONS verdict can still omit "Did You Mean?" when every candidate got
-  // filtered out, which would otherwise look identical to BEST_EFFORT.
+  // An unresolved identity must not render the raw query as a confident title.
   const unresolvedTitle = summary.identityVerdict === 'SUGGESTIONS'
     ? `No exact match for &ldquo;${esc(data.name)}&rdquo;`
     : null;
