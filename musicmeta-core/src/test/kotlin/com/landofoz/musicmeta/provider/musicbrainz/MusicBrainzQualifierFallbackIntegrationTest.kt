@@ -280,10 +280,12 @@ class MusicBrainzQualifierFallbackIntegrationTest {
     @Test
     fun `track qualifier fallback resolves Enter Sandman Remastered 2021 via musicbrainz TRACK_METADATA`() = runTest {
         // Given — the original "(Remastered 2021)" recording search comes up empty, and the
-        // stripped "Enter Sandman" fallback returns a candidate pickBestRecording accepts
+        // stripped "Enter Sandman" fallback returns a candidate pickBestRecording accepts, with a
+        // credited artist matching the request (authoritative-match requirement)
         httpClient.givenJsonResponse(
             "recording%3A%22Enter+Sandman%22",
-            """{"recordings": [{"id": "rec-studio", "score": 100, "title": "Enter Sandman", "length": 331000}]}""",
+            """{"recordings": [{"id": "rec-studio", "score": 100, "title": "Enter Sandman", "length": 331000,
+                "artist-credit": [{"artist": {"id": "art1", "name": "Metallica"}}]}]}""",
         )
         val request = EnrichmentRequest.forTrack("Enter Sandman (Remastered 2021)", "Metallica")
 
@@ -302,7 +304,45 @@ class MusicBrainzQualifierFallbackIntegrationTest {
         // Given — the stripped-title fallback pool exists but every candidate scores below threshold
         httpClient.givenJsonResponse(
             "recording%3A%22Enter+Sandman%22",
-            """{"recordings": [{"id": "rec-low", "score": 50, "title": "Enter Sandman"}]}""",
+            """{"recordings": [{"id": "rec-low", "score": 50, "title": "Enter Sandman",
+                "artist-credit": [{"artist": {"id": "art1", "name": "Metallica"}}]}]}""",
+        )
+        val request = EnrichmentRequest.forTrack("Enter Sandman (Remastered 2021)", "Metallica")
+
+        // When
+        val result = provider.enrich(request, EnrichmentType.GENRE)
+
+        // Then
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `track qualifier fallback rejects an exact-title match from the wrong artist`() = runTest {
+        // Given — a score-100, title-exact recording exists, but it's credited to a different
+        // artist than the request — score/title alone must not be treated as proof of identity
+        httpClient.givenJsonResponse(
+            "recording%3A%22Enter+Sandman%22",
+            """{"recordings": [{"id": "rec-cover", "score": 100, "title": "Enter Sandman",
+                "artist-credit": [{"artist": {"id": "art9", "name": "Apocalyptica"}}]}]}""",
+        )
+        val request = EnrichmentRequest.forTrack("Enter Sandman (Remastered 2021)", "Metallica")
+
+        // When
+        val result = provider.enrich(request, EnrichmentType.GENRE)
+
+        // Then
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `track qualifier fallback rejects a same-score non-equal-title candidate`() = runTest {
+        // Given — the fallback pool's own search for "Enter Sandman" returns a recording whose
+        // normalized title doesn't equal the searched candidate — score alone is not proof of
+        // identity, quoted Lucene is phrase search, not string equality
+        httpClient.givenJsonResponse(
+            "recording%3A%22Enter+Sandman%22",
+            """{"recordings": [{"id": "rec-other", "score": 100, "title": "Enter Sandman (Live)",
+                "artist-credit": [{"artist": {"id": "art1", "name": "Metallica"}}]}]}""",
         )
         val request = EnrichmentRequest.forTrack("Enter Sandman (Remastered 2021)", "Metallica")
 

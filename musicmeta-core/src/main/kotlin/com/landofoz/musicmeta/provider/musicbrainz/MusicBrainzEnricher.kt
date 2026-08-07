@@ -529,18 +529,29 @@ internal class MusicBrainzEnricher(
     }
 
     /**
-     * Same qualifier-fallback candidate search as [resolveAlbumQualifierFallback], but for
-     * recordings: reuses [pickBestRecording]'s existing ranking as-is on each progressively-stripped
-     * candidate's pool, rather than introducing a second, parallel tie-break primitive — recordings
-     * already have a tie-break shaped for their own signals (video flag, official-album release,
-     * blank disambiguation), which the generic kind/year tag tie-break would not improve on.
+     * Same qualifier-fallback candidate search as [resolveAlbumQualifierFallback] — requires the
+     * same "authoritative" hit (score floor, normalized title equality, matching credited artist;
+     * score alone is not proof of identity) before ranking survivors — but for recordings, reuses
+     * [pickBestRecording]'s existing ranking on the authoritative pool rather than introducing a
+     * second, parallel tie-break primitive: recordings already have a tie-break shaped for their own
+     * signals (video flag, official-album release, blank disambiguation), which the generic kind/year
+     * tag tie-break would not improve on.
      */
     private suspend fun resolveTrackQualifierFallback(
         title: String,
         artist: String,
         album: String?,
-    ): MusicBrainzRecording? = resolveViaQualifierFallback(title) { candidate ->
-        pickBestRecording(candidate.title, api.searchRecordings(candidate.title, artist, album), album)
+    ): MusicBrainzRecording? {
+        val artistNorm = MusicBrainzQualifierFallback.normalize(artist)
+        return resolveViaQualifierFallback(title) { candidate ->
+            val candidateNorm = MusicBrainzQualifierFallback.normalize(candidate.title)
+            val authoritative = api.searchRecordings(candidate.title, artist, album).filter {
+                it.score >= minMatchScore &&
+                    MusicBrainzQualifierFallback.normalize(it.title) == candidateNorm &&
+                    anyArtistMatches(it.artistCredits, artistNorm)
+            }
+            pickBestRecording(candidate.title, authoritative, album)
+        }
     }
 
     private fun anyArtistMatches(credits: List<String>, expectedNorm: String): Boolean =
