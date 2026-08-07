@@ -72,6 +72,7 @@ class EnrichStrategyFailureTest {
         assertTrue("expected Error, got $result", result is EnrichmentResult.Error)
         assertEquals("merger boom", (result as EnrichmentResult.Error).message)
         assertEquals("merger", result.provider)
+        assertEquals(ErrorKind.UNKNOWN, result.errorKind)
     }
 
     @Test fun `enrich reports a typed Error when the synthesizer throws`() = runTest {
@@ -87,6 +88,7 @@ class EnrichStrategyFailureTest {
         assertTrue("expected Error, got $result", result is EnrichmentResult.Error)
         assertEquals("synthesizer boom", (result as EnrichmentResult.Error).message)
         assertEquals("synthesizer", result.provider)
+        assertEquals(ErrorKind.UNKNOWN, result.errorKind)
     }
 
     @Test fun `a throwing merger does not discard an unrelated type resolved in the same call`() = runTest {
