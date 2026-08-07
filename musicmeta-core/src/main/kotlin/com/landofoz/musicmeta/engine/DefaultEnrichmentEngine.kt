@@ -247,18 +247,6 @@ internal class DefaultEnrichmentEngine(
         for (key in cacheKeysFor(request, type)) cache.invalidate(key, type)
     }
 
-    /** The identity provider's failure as a result, classified so consumers see a real [ErrorKind]. */
-    private fun identityFailure(providerId: String, e: Exception): EnrichmentResult.Error {
-        val kind = when (e) {
-            is java.io.IOException -> ErrorKind.NETWORK
-            else -> ErrorKind.UNKNOWN
-        }
-        return EnrichmentResult.Error(
-            EnrichmentType.GENRE, providerId, e.message ?: e.javaClass.simpleName,
-            cause = e, errorKind = kind,
-        )
-    }
-
     /** Returns the enriched request and the raw identity result (for composite type synthesis). */
     private suspend fun resolveIdentity(
         request: EnrichmentRequest,
@@ -281,7 +269,9 @@ internal class DefaultEnrichmentEngine(
             currentCoroutineContext()[TransientIdentifierMarker]?.markAllConcreteIdentifiers()
             // Must not collapse to null: null identity means "not attempted" and reads as
             // confident. GENRE matches the type the identity provider itself reports under.
-            return request to identityFailure(provider.id, e)
+            // mapError is the one classifier: consumers key retry policy off ErrorKind, so an
+            // AUTH or PARSE failure must not arrive here as UNKNOWN.
+            return request to provider.mapError(EnrichmentType.GENRE, e)
         }
         if (result !is EnrichmentResult.Success) {
             logger.debug(TAG, "Identity resolution returned ${result::class.simpleName}")

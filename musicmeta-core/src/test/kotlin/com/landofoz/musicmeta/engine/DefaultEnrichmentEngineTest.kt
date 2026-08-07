@@ -1,6 +1,7 @@
 package com.landofoz.musicmeta.engine
 
 import com.landofoz.musicmeta.*
+import com.landofoz.musicmeta.http.AuthException
 import com.landofoz.musicmeta.testutil.FakeEnrichmentCache
 import com.landofoz.musicmeta.testutil.FakeProvider
 import kotlinx.coroutines.delay
@@ -462,6 +463,41 @@ class DefaultEnrichmentEngineTest {
         assertEquals(IdentityMatch.RESOLVED, second.identity?.match)
         val artResult = second.raw[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success
         assertEquals(IdentityMatch.RESOLVED, artResult.identityMatch)
+    }
+
+    @Test fun `identity provider failure is classified by mapError not collapsed to UNKNOWN`() = runTest {
+        // Given — identity provider throws an auth failure, and a synthesizer that captures the
+        // identity result (the only seam through which the engine hands it to a consumer)
+        val idProvider = object : FakeProvider(id = "mb", isIdentityProvider = true, capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100))) {
+            override suspend fun resolveIdentity(request: EnrichmentRequest): EnrichmentResult =
+                throw AuthException(401)
+        }
+        var captured: EnrichmentResult? = null
+        val capturing = object : CompositeSynthesizer {
+            override val type = EnrichmentType.ARTIST_TIMELINE
+            override val dependencies = emptySet<EnrichmentType>()
+            override fun synthesize(
+                resolved: Map<EnrichmentType, EnrichmentResult>,
+                identityResult: EnrichmentResult?,
+                request: EnrichmentRequest,
+            ): EnrichmentResult {
+                captured = identityResult
+                return EnrichmentResult.NotFound(type, "test")
+            }
+        }
+        val e = DefaultEnrichmentEngine(
+            ProviderRegistry(listOf(idProvider)), cache, EnrichmentConfig(enableIdentityResolution = true),
+            synthesizers = listOf(capturing),
+        )
+
+        // When
+        e.enrich(req, setOf(EnrichmentType.ARTIST_TIMELINE))
+
+        // Then — AUTH, not UNKNOWN: consumers key retry policy off ErrorKind, and an auth failure
+        // must not be retried like a transient one
+        val error = captured as EnrichmentResult.Error
+        assertEquals(ErrorKind.AUTH, error.errorKind)
+        assertEquals("mb", error.provider)
     }
 
     // --- Manual selection flag ---
