@@ -36,8 +36,11 @@ data class SummaryCard(
      * skipped. Carries the actual verdict so the frontend doesn't have to infer it from section
      * presence — a `SUGGESTIONS` verdict with no usable suggestions still omits the "Did You Mean?"
      * section, which would otherwise look identical to `BEST_EFFORT`.
+     *
+     * Distinct from [Meta.identityMatch], which is a human-readable summary for display; this is
+     * the bare enum name the frontend compares against.
      */
-    val identityMatch: String? = null,
+    val identityVerdict: String? = null,
 )
 
 @Serializable

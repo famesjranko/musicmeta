@@ -119,7 +119,7 @@ fun ArtistProfile.toDemoResponse(elapsedMs: Long): DemoResponse {
             text = bio?.text,
             textSource = bio?.source,
             identityResolved = r.identityResolved,
-            identityMatch = r.identity?.match?.name,
+            identityVerdict = r.identityVerdict,
         ),
         sections = sections,
         gallery = gallery,
@@ -204,7 +204,7 @@ fun AlbumProfile.toDemoResponse(elapsedMs: Long, artistRadio: Section? = null): 
             text = description?.text,
             textSource = description?.source,
             identityResolved = r.identityResolved,
-            identityMatch = r.identity?.match?.name,
+            identityVerdict = r.identityVerdict,
         ),
         sections = sections,
         gallery = gallery,
@@ -296,7 +296,7 @@ fun TrackProfile.toDemoResponse(
             previewTitle = title.takeIf { r.identityResolved },
             previewArtist = artist.takeIf { r.identityResolved },
             identityResolved = r.identityResolved,
-            identityMatch = r.identity?.match?.name,
+            identityVerdict = r.identityVerdict,
         ),
         sections = sections,
         meta = r.toMeta(elapsedMs),
@@ -311,6 +311,10 @@ fun TrackProfile.toDemoResponse(
  */
 private val EnrichmentResults.identityResolved: Boolean
     get() = identity == null || identity?.match == IdentityMatch.RESOLVED
+
+/** The bare [IdentityMatch] enum name for [SummaryCard.identityVerdict], or `null` when identity resolution was skipped. */
+private val EnrichmentResults.identityVerdict: String?
+    get() = identity?.match?.name
 
 private fun EnrichmentResults.toMeta(elapsedMs: Long): Meta {
     val hits = raw.entries.sortedBy { it.key.name }.map { (type, result) ->

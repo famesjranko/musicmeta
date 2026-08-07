@@ -198,10 +198,10 @@ function render(data) {
   // raw query must not be presented as a resolved title. Branch on the actual verdict rather than
   // section presence: a SUGGESTIONS verdict can still omit "Did You Mean?" when every candidate got
   // filtered out, which would otherwise look identical to BEST_EFFORT.
-  const unresolvedTitle = summary.identityMatch === 'SUGGESTIONS'
+  const unresolvedTitle = summary.identityVerdict === 'SUGGESTIONS'
     ? `No exact match for &ldquo;${esc(data.name)}&rdquo;`
     : null;
-  const bestEffortBadge = summary.identityMatch === 'BEST_EFFORT'
+  const bestEffortBadge = summary.identityVerdict === 'BEST_EFFORT'
     ? '<span class="badge badge-warn">Best-effort match</span>'
     : '';
   const titleHtml = unresolvedTitle || esc(summary.title);

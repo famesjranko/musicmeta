@@ -529,7 +529,7 @@ class ProfileMapperTest {
     }
 
     @Test
-    fun `SUGGESTIONS with no usable suggestions still carries identityMatch, not just section absence`() {
+    fun `SUGGESTIONS with no usable suggestions still carries identityVerdict, not just section absence`() {
         // identityOf() builds with empty suggestions, so no "did_you_mean" section gets built —
         // the frontend must not infer the verdict from section presence (it would land on
         // "Best-effort match" instead of "No exact match" if it did).
@@ -539,7 +539,7 @@ class ProfileMapperTest {
         val response = profile.toDemoResponse(elapsedMs = 0)
 
         assertNull(response.sections.firstOrNull { it.key == "did_you_mean" })
-        assertEquals("SUGGESTIONS", response.summary.identityMatch)
+        assertEquals("SUGGESTIONS", response.summary.identityVerdict)
         assertEquals(false, response.summary.identityResolved)
     }
 
