@@ -327,8 +327,7 @@ class DeezerProviderTest {
     }
 
     // SIMILAR_TRACKS tests — artist-derived via /artist/{id}/related + /artist/{id}/top, since
-    // /track/{id}/radio does not exist on Deezer's public API (see
-    // .scratch/provider-code-findings/issues/16-deezer-track-radio-endpoint-does-not-exist.md).
+    // /track/{id}/radio does not exist on Deezer's public API.
 
     @Test
     fun `enrich returns SimilarTracks derived from related artists' top tracks`() = runTest {

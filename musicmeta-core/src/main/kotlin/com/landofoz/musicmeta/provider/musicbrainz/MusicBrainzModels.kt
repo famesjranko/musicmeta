@@ -25,6 +25,17 @@ internal data class MusicBrainzRelease(
      * the first.
      */
     val artistCredits: List<String> = emptyList(),
+    /** MusicBrainz's release status (`"Official"`, `"Bootleg"`, `"Promotion"`, `"Pseudo-Release"`, …), used by [MusicBrainzReleaseRanking]. */
+    val status: String? = null,
+    /** The release group's secondary types (`"Live"`, `"Compilation"`, `"Remix"`, `"Soundtrack"`, …), used by [MusicBrainzReleaseRanking]. */
+    val secondaryTypes: List<String> = emptyList(),
+    /** Track count from the search hit's own `track-count` field, used by [MusicBrainzReleaseRanking] for its edition-completeness band. */
+    val trackCount: Int? = null,
+    /**
+     * The release group's own disambiguation, which MusicBrainz also echoes onto [disambiguation].
+     * [MusicBrainzReleaseRanking.pressingDisambiguation] subtracts it back out.
+     */
+    val releaseGroupDisambiguation: String? = null,
 )
 
 internal data class MusicBrainzArtist(

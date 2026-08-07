@@ -9,9 +9,8 @@ package com.landofoz.musicmeta.provider.musicbrainz
  *
  * A bare title routinely ties 25+ releases at MusicBrainz's maximum score, and the winner is
  * consumer-visible ([MusicBrainzMapper.toAlbumIdentifiers] propagates its date, label, country,
- * barcode and MBIDs). [pickBestMatch] breaks that tie with the qualifier text stripped to reach the
- * candidate, never overriding MusicBrainz's score. Ranking tied releases for a qualifier-free title
- * is out of scope — with no stripped tags the comparator reduces to score alone.
+ * barcode and MBIDs). [tagEvidence] scores how well a release evidences the qualifier stripped to
+ * reach it; [MusicBrainzReleaseRanking.pickBestRelease] is what ranks on it.
  */
 internal object MusicBrainzQualifierFallback {
 
@@ -169,16 +168,10 @@ internal object MusicBrainzQualifierFallback {
     }
 
     /**
-     * The best of [matches] by [scoreOf], with the summed [tagMatchTier] over [removedTags] breaking
-     * ties only — so qualifier evidence never outranks a higher score, and multiple matching tags
-     * outrank one. With [removedTags] empty every sum is `0` and the pool's own order is preserved.
+     * How well [text] evidences every tag in [tags], as the summed [tagMatchTier] — so multiple
+     * matching tags outrank one, and an exact year outranks a kind-only match. `0` when [tags] is
+     * empty, which makes it inert for a caller that stripped no qualifier.
      */
-    fun <T> pickBestMatch(
-        matches: List<T>,
-        removedTags: List<QualifierTag>,
-        scoreOf: (T) -> Int,
-        textOf: (T) -> String,
-    ): T? = matches.maxWithOrNull(
-        compareBy<T> { scoreOf(it) }.thenBy { candidate -> removedTags.sumOf { tagMatchTier(textOf(candidate), it) } },
-    )
+    fun tagEvidence(text: String, tags: List<QualifierTag>): Int =
+        tags.sumOf { tagMatchTier(text, it) }
 }

@@ -71,8 +71,7 @@ The part no reading of the code can give you: fields that arrive in responses we
 are dropped, and endpoints we never call. A to-do list for whoever adds the next capability.
 
 **MusicBrainz.** `isrcs` beyond the first (`toTrackMetadata` keeps one; a recording often has
-several), `label-info[]` beyond the first (co-releases and reissues), `release.packaging`/`status`/
-`quality`, `media[].format` (CD vs vinyl vs digital, per disc), `artist.aliases`/`sort-name` (which
+several), `label-info[]` beyond the first (co-releases and reissues), `release.packaging`/`quality`, `media[].format` (CD vs vinyl vs digital, per disc), `artist.aliases`/`sort-name` (which
 `ArtistMatcher` would use), `artist.life-span.ended` (a split, distinct from having an end date),
 `annotation`, `rating`. Never requested: `works`, `series`, `events`, `places`, `instruments`,
 `genres` (the curated list, as opposed to the `tags` we read), `collections`, `inc=aliases`. No

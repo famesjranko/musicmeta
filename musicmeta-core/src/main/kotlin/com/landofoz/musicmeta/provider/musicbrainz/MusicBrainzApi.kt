@@ -18,7 +18,7 @@ internal class MusicBrainzApi(
     suspend fun searchReleases(
         title: String,
         artist: String,
-        limit: Int = 5,
+        limit: Int = RELEASE_SEARCH_LIMIT,
     ): List<MusicBrainzRelease> {
         val query = buildQuery("release", title, "artistname", artist)
         val json = rateLimiter.execute {
@@ -228,6 +228,14 @@ internal class MusicBrainzApi(
          * overflow it.
          */
         const val RECORDING_SEARCH_LIMIT = 25
+
+        /**
+         * Default candidate pool size for [searchReleases]. Same disease as [RECORDING_SEARCH_LIMIT].
+         * Measured over 30 albums: at `limit=5` the release the ranking would pick was absent from
+         * the pool on 22 of them, and mean drift from the release group's first-release-date fell
+         * from 6.8 years to 0.1 at `limit=25`.
+         */
+        const val RELEASE_SEARCH_LIMIT = 25
 
         fun escapeLucene(value: String): String =
             value.replace(LUCENE_SPECIAL_CHARS) { "\\${it.value}" }

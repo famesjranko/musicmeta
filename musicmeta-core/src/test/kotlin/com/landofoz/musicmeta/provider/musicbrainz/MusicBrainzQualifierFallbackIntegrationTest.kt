@@ -12,9 +12,8 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * Enricher-level (mocked-HTTP) coverage for the qualifier-fallback search fix
- * (`.scratch/mb-search-parenthetical-qualifiers/issues/01-...`), exercising the wiring
- * [MusicBrainzQualifierFallbackTest] can't: multi-step search orchestration (original title tried
+ * Enricher-level (mocked-HTTP) coverage for the qualifier-fallback search fix, exercising the
+ * wiring [MusicBrainzQualifierFallbackTest] can't: multi-step search orchestration (original title tried
  * first, fallback only on a genuine miss), and the resulting `EnrichmentResult`.
  *
  * A qualifier-suffixed original title's search is deliberately left unstubbed everywhere it should
