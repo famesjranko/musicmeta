@@ -3,6 +3,7 @@ package com.landofoz.musicmeta.demoweb
 import com.landofoz.musicmeta.AlbumProfile
 import com.landofoz.musicmeta.ArtistProfile
 import com.landofoz.musicmeta.ArtworkSource
+import com.landofoz.musicmeta.DiscographyAlbum
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentResult
@@ -281,5 +282,202 @@ class ProfileMapperTest {
         val response = profile.toDemoResponse(elapsedMs = 0)
 
         assertTrue(response.gallery.isEmpty())
+    }
+
+    @Test
+    fun `discography groups qualifier-suffixed editions of the same album into one row`() {
+        val results = resultsOf(
+            EnrichmentType.ARTIST_DISCOGRAPHY to EnrichmentData.Discography(
+                albums = listOf(
+                    DiscographyAlbum(title = "Master Of Puppets", year = "1986", type = "album"),
+                    DiscographyAlbum(title = "Master Of Puppets (Remastered)", year = "1986", type = "album"),
+                    DiscographyAlbum(
+                        title = "Master Of Puppets (Deluxe Box Set / Remastered)",
+                        year = "2017",
+                        type = "album",
+                    ),
+                ),
+            ),
+        )
+        val profile = ArtistProfile(name = "Metallica", results = results)
+
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        val discography = response.sections.first { it.key == "discography" }
+        assertEquals(1, discography.items.size)
+        val row = discography.items.first()
+        assertEquals("Master Of Puppets", row.primary)
+        assertEquals("1986", row.secondary)
+        assertEquals("album · 3 editions", row.meta)
+    }
+
+    @Test
+    fun `discography preserves a genuine parenthetical title as its own row`() {
+        val results = resultsOf(
+            EnrichmentType.ARTIST_DISCOGRAPHY to EnrichmentData.Discography(
+                albums = listOf(
+                    DiscographyAlbum(title = "Master Of Puppets", year = "1986", type = "album"),
+                    DiscographyAlbum(title = "Welcome Home (Sanitarium)", year = "1986", type = "track"),
+                ),
+            ),
+        )
+        val profile = ArtistProfile(name = "Metallica", results = results)
+
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        val discography = response.sections.first { it.key == "discography" }
+        assertEquals(2, discography.items.size)
+        assertTrue(discography.items.any { it.primary == "Master Of Puppets" })
+        assertTrue(discography.items.any { it.primary == "Welcome Home (Sanitarium)" })
+        assertTrue(discography.items.all { it.meta == "album" || it.meta == "track" })
+    }
+
+    @Test
+    fun `discography picks the earliest year across editions`() {
+        val results = resultsOf(
+            EnrichmentType.ARTIST_DISCOGRAPHY to EnrichmentData.Discography(
+                albums = listOf(
+                    DiscographyAlbum(title = "Load (Deluxe Box Set / Remastered)", year = "2025", type = "album"),
+                    DiscographyAlbum(title = "Load (Remastered)", year = "1996", type = "album"),
+                    DiscographyAlbum(title = "Load", year = "1996", type = "album"),
+                ),
+            ),
+        )
+        val profile = ArtistProfile(name = "Metallica", results = results)
+
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        val row = response.sections.first { it.key == "discography" }.items.first()
+        assertEquals("1996", row.secondary)
+    }
+
+    @Test
+    fun `discography leaves a single-edition album's row unchanged`() {
+        val results = resultsOf(
+            EnrichmentType.ARTIST_DISCOGRAPHY to EnrichmentData.Discography(
+                albums = listOf(
+                    DiscographyAlbum(
+                        title = "Ride The Lightning",
+                        year = "1984",
+                        type = "album",
+                        thumbnailUrl = "https://example.com/rtl.jpg",
+                    ),
+                ),
+            ),
+        )
+        val profile = ArtistProfile(name = "Metallica", results = results)
+
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        val row = response.sections.first { it.key == "discography" }.items.first()
+        assertEquals("Ride The Lightning", row.primary)
+        assertEquals("album", row.meta)
+        assertEquals("https://example.com/rtl.jpg", row.imageUrl)
+    }
+
+    @Test
+    fun `discography groups case-insensitively and by first occurrence order`() {
+        val results = resultsOf(
+            EnrichmentType.ARTIST_DISCOGRAPHY to EnrichmentData.Discography(
+                albums = listOf(
+                    DiscographyAlbum(title = "kill 'em all (remastered)", year = "2016", type = "album"),
+                    DiscographyAlbum(title = "Ride The Lightning", year = "1984", type = "album"),
+                    DiscographyAlbum(title = "Kill 'Em All", year = "1983", type = "album"),
+                ),
+            ),
+        )
+        val profile = ArtistProfile(name = "Metallica", results = results)
+
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        val items = response.sections.first { it.key == "discography" }.items
+        assertEquals(2, items.size)
+        // First occurrence in the source list was "kill 'em all (remastered)", so that group leads.
+        assertEquals("kill 'em all", items[0].primary.lowercase())
+        assertEquals("album · 2 editions", items[0].meta)
+        assertEquals("Ride The Lightning", items[1].primary)
+    }
+
+    @Test
+    fun `discography groups a no-separator multi-kind qualifier tail like Remastered Deluxe Box Set`() {
+        val results = resultsOf(
+            EnrichmentType.ARTIST_DISCOGRAPHY to EnrichmentData.Discography(
+                albums = listOf(
+                    DiscographyAlbum(title = "Metallica (Remastered Deluxe Box Set)", year = "2021", type = "album"),
+                    DiscographyAlbum(title = "Metallica (Remastered 2021)", year = "1991", type = "album"),
+                    DiscographyAlbum(title = "Metallica", year = "1991", type = "album"),
+                ),
+            ),
+        )
+        val profile = ArtistProfile(name = "Metallica", results = results)
+
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        val discography = response.sections.first { it.key == "discography" }
+        assertEquals(1, discography.items.size)
+        val row = discography.items.first()
+        assertEquals("Metallica", row.primary)
+        assertEquals("1991", row.secondary)
+        assertEquals("album · 3 editions", row.meta)
+    }
+
+    @Test
+    fun `discography does not strip a qualifier-shaped phrase containing a non-vocabulary word`() {
+        val results = resultsOf(
+            EnrichmentType.ARTIST_DISCOGRAPHY to EnrichmentData.Discography(
+                albums = listOf(
+                    DiscographyAlbum(title = "Somewhere", year = "1988", type = "album"),
+                    DiscographyAlbum(title = "Somewhere (Live Remastered)", year = "2016", type = "album"),
+                ),
+            ),
+        )
+        val profile = ArtistProfile(name = "Metallica", results = results)
+
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        val discography = response.sections.first { it.key == "discography" }
+        assertEquals(2, discography.items.size)
+        assertTrue(discography.items.any { it.primary == "Somewhere" })
+        assertTrue(discography.items.any { it.primary == "Somewhere (Live Remastered)" })
+    }
+
+    @Test
+    fun `discography does not strip a negated qualifier like Not Remastered`() {
+        val results = resultsOf(
+            EnrichmentType.ARTIST_DISCOGRAPHY to EnrichmentData.Discography(
+                albums = listOf(
+                    DiscographyAlbum(title = "Album", year = "1990", type = "album"),
+                    DiscographyAlbum(title = "Album (Not Remastered)", year = "2020", type = "album"),
+                ),
+            ),
+        )
+        val profile = ArtistProfile(name = "Metallica", results = results)
+
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        val discography = response.sections.first { it.key == "discography" }
+        assertEquals(2, discography.items.size)
+        assertTrue(discography.items.any { it.primary == "Album" })
+        assertTrue(discography.items.any { it.primary == "Album (Not Remastered)" })
+    }
+
+    @Test
+    fun `discography keeps a same-title different-type release as its own row`() {
+        val results = resultsOf(
+            EnrichmentType.ARTIST_DISCOGRAPHY to EnrichmentData.Discography(
+                albums = listOf(
+                    DiscographyAlbum(title = "Load", year = "1996", type = "album"),
+                    DiscographyAlbum(title = "Load", year = "1996", type = "single"),
+                ),
+            ),
+        )
+        val profile = ArtistProfile(name = "Metallica", results = results)
+
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        val discography = response.sections.first { it.key == "discography" }
+        assertEquals(2, discography.items.size)
+        assertEquals(setOf("album", "single"), discography.items.map { it.meta }.toSet())
+        assertTrue(discography.items.all { it.primary == "Load" })
     }
 }
