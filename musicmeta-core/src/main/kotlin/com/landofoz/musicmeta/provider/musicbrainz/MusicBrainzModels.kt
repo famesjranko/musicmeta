@@ -32,9 +32,8 @@ internal data class MusicBrainzRelease(
     /** Track count from the search hit's own `track-count` field, used by [MusicBrainzReleaseRanking] for its edition-completeness band. */
     val trackCount: Int? = null,
     /**
-     * The release group's own disambiguation, distinct from [disambiguation] (the release's own).
-     * MusicBrainz echoes this onto the release's [disambiguation]; used by
-     * [MusicBrainzReleaseRanking.pressingDisambiguation] to subtract it back out.
+     * The release group's own disambiguation, which MusicBrainz also echoes onto [disambiguation].
+     * [MusicBrainzReleaseRanking.pressingDisambiguation] subtracts it back out.
      */
     val releaseGroupDisambiguation: String? = null,
 )

@@ -7,8 +7,7 @@ import org.junit.Test
 
 /**
  * Offline, no-API-dependency tests for [MusicBrainzQualifierFallback] — the candidate-generation
- * and ranking primitives behind the qualifier-fallback fix
- * (`.scratch/mb-search-parenthetical-qualifiers/issues/01-...`).
+ * and ranking primitives behind the qualifier fallback.
  *
  * Live resolution behavior (search-then-fallback against a real/mocked API) is covered separately
  * in [MusicBrainzQualifierFallbackIntegrationTest] — this file only exercises the pure functions.

@@ -230,12 +230,10 @@ internal class MusicBrainzApi(
         const val RECORDING_SEARCH_LIMIT = 25
 
         /**
-         * Default candidate pool size for [searchReleases]. Same disease as [RECORDING_SEARCH_LIMIT]:
-         * a bare album title ties dozens of releases at MusicBrainz's maximum score, and at the old
-         * default of 5 the release [MusicBrainzReleaseRanking] would have picked was measured
-         * (2026-08-08) absent from the pool entirely on 22 of 30 albums. Mean drift between the
-         * chosen pressing's year and MusicBrainz's own first-release-date for its release group fell
-         * from 6.8 years at `limit=5` to 0.1 years at `limit=25` across the same corpus.
+         * Default candidate pool size for [searchReleases]. Same disease as [RECORDING_SEARCH_LIMIT].
+         * Measured over 30 albums: at `limit=5` the release the ranking would pick was absent from
+         * the pool on 22 of them, and mean drift from the release group's first-release-date fell
+         * from 6.8 years to 0.1 at `limit=25`.
          */
         const val RELEASE_SEARCH_LIMIT = 25
 

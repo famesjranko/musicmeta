@@ -9,9 +9,9 @@ import org.junit.Test
  * Offline, no-API-dependency tests for [MusicBrainzReleaseRanking] — the tie-break ladder that
  * picks a single release out of a search pool that routinely has dozens tied at the top score.
  *
- * Each test pins exactly one tier of the ladder, using the live-pool evidence recorded in
- * `.scratch/musicbrainz-release-ranking/prototypes/report.md` — a tier deleted from the
- * implementation should turn exactly the corresponding test red, not any other.
+ * Each test pins exactly one tier of the ladder against live-pool evidence: a tier deleted from
+ * the implementation should turn exactly the corresponding test red, and swapping two adjacent
+ * tiers should turn red the test that names them.
  */
 class MusicBrainzReleaseRankingTest {
 
@@ -491,10 +491,9 @@ class MusicBrainzReleaseRankingTest {
 
     @Test
     fun `Master Of Puppets - the real 76-release tied pool resolves to the 1986 original, not an arbitrary tie member`() {
-        // Given - the full top-25 window (of 76 total hits) from the live musicbrainz.org search
-        // response for release:"Master Of Puppets" AND artist:"Metallica", cached 2026-08 under
-        // `.scratch/musicbrainz-release-ranking/prototypes/fixtures/Metallica--Master_Of_Puppets.json`.
-        // All 25 score 100. Trimmed to the fields the ranking ladder reads.
+        // Given - the full top-25 window (of 76 total hits) captured 2026-08 from the live
+        // musicbrainz.org response for release:"Master Of Puppets" AND artist:"Metallica". All 25
+        // score 100; trimmed to the fields the ranking ladder reads.
         val pool = masterOfPuppetsPool()
 
         // When

@@ -512,10 +512,8 @@ internal class MusicBrainzEnricher(
      * Searches MB for each fallback candidate's exact text and requires an "authoritative" hit: at
      * or above [minMatchScore], normalized title equality with the searched candidate (score alone
      * is not proof of identity — quoted Lucene is phrase search, not string equality), and a
-     * matching credited artist. Survivors go through [MusicBrainzReleaseRanking.pickBestRelease], the
-     * same ladder the direct path uses, carrying the tags stripped to reach this candidate — so a
-     * qualified request gets the identity and edition-shape guarantees the bare-title path has, and
-     * the stripped qualifier decides only among releases that already pass them.
+     * matching credited artist. Survivors go through [MusicBrainzReleaseRanking.pickBestRelease],
+     * the same ladder the direct path uses, carrying the tags stripped to reach this candidate.
      */
     private suspend fun resolveAlbumQualifierFallback(title: String, artist: String): MusicBrainzRelease? {
         val artistNorm = MusicBrainzQualifierFallback.normalize(artist)

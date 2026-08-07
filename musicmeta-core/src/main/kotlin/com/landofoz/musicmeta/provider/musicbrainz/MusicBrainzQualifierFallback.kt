@@ -10,8 +10,7 @@ package com.landofoz.musicmeta.provider.musicbrainz
  * A bare title routinely ties 25+ releases at MusicBrainz's maximum score, and the winner is
  * consumer-visible ([MusicBrainzMapper.toAlbumIdentifiers] propagates its date, label, country,
  * barcode and MBIDs). [tagEvidence] scores how well a release evidences the qualifier stripped to
- * reach it; [MusicBrainzReleaseRanking.pickBestRelease] is what ranks on it, and decides where that
- * evidence sits against identity, score and date.
+ * reach it; [MusicBrainzReleaseRanking.pickBestRelease] is what ranks on it.
  */
 internal object MusicBrainzQualifierFallback {
 
@@ -172,9 +171,6 @@ internal object MusicBrainzQualifierFallback {
      * How well [text] evidences every tag in [tags], as the summed [tagMatchTier] — so multiple
      * matching tags outrank one, and an exact year outranks a kind-only match. `0` when [tags] is
      * empty, which makes it inert for a caller that stripped no qualifier.
-     *
-     * Ranking a release on this is [MusicBrainzReleaseRanking.pickBestRelease]'s job; it decides
-     * where the evidence sits relative to identity, score and date.
      */
     fun tagEvidence(text: String, tags: List<QualifierTag>): Int =
         tags.sumOf { tagMatchTier(text, it) }
