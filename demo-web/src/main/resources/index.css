@@ -356,6 +356,23 @@ button:disabled { opacity: 0.56; cursor: wait; }
   overflow-wrap: anywhere;
 }
 
+.badge {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  border-radius: 999px;
+  padding: 0.22rem 0.6rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.badge-warn {
+  border: 1px solid rgba(239, 189, 93, 0.35);
+  background: rgba(239, 189, 93, 0.1);
+  color: var(--warn);
+}
+
 .summary .subtitle {
   width: fit-content;
   margin: 0.28rem 0 0.65rem;

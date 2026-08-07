@@ -194,6 +194,18 @@ function render(data) {
     ? `<div class="subtitle${summary.subtitleEnrich ? ' enrich-row' : ''}"${enrichAttrs(summary.subtitleEnrich)}>${esc(summary.subtitle)}</div>`
     : '';
 
+  // Identity resolution didn't land on RESOLVED (or was skipped, which counts as confident) — the
+  // raw query must not be presented as a resolved title. Branch on the actual verdict rather than
+  // section presence: a SUGGESTIONS verdict can still omit "Did You Mean?" when every candidate got
+  // filtered out, which would otherwise look identical to BEST_EFFORT.
+  const unresolvedTitle = summary.identityMatch === 'SUGGESTIONS'
+    ? `No exact match for &ldquo;${esc(data.name)}&rdquo;`
+    : null;
+  const bestEffortBadge = summary.identityMatch === 'BEST_EFFORT'
+    ? '<span class="badge badge-warn">Best-effort match</span>'
+    : '';
+  const titleHtml = unresolvedTitle || esc(summary.title);
+
   const sections = data.sections.map(sectionHtml).join('');
   const totalItems = data.sections.reduce((n, s) => n + s.items.length, 0);
 
@@ -218,7 +230,7 @@ function render(data) {
       ${backdrop}
       ${img}
       <div class="body">
-        <div class="titlerow"><h2>${esc(summary.title)}</h2>${summaryPreview}</div>
+        <div class="titlerow"><h2>${titleHtml}</h2>${bestEffortBadge}${summaryPreview}</div>
         ${subtitle}
         ${text}
       </div>

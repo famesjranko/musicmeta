@@ -7,6 +7,7 @@ import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentResults
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.GenreAffinity
+import com.landofoz.musicmeta.IdentityMatch
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.TrackProfile
 
@@ -117,6 +118,8 @@ fun ArtistProfile.toDemoResponse(elapsedMs: Long): DemoResponse {
             backgroundImageUrl = r.get<EnrichmentData.Artwork>(EnrichmentType.ARTIST_BACKGROUND)?.url,
             text = bio?.text,
             textSource = bio?.source,
+            identityResolved = r.identityResolved,
+            identityMatch = r.identity?.match?.name,
         ),
         sections = sections,
         gallery = gallery,
@@ -177,7 +180,7 @@ fun AlbumProfile.toDemoResponse(elapsedMs: Long, artistRadio: Section? = null): 
             val discovery = r.get<EnrichmentData.GenreDiscovery>(EnrichmentType.GENRE_DISCOVERY)
             relatedGenresItems(discovery?.relatedGenres.orEmpty())
         }
-        artistRadio?.let { add(it) }
+        artistRadio?.takeIf { r.identityResolved }?.let { add(it) }
     }
 
     val albumArt = r.albumArt()
@@ -200,6 +203,8 @@ fun AlbumProfile.toDemoResponse(elapsedMs: Long, artistRadio: Section? = null): 
             imageUrl = albumArt?.url,
             text = description?.text,
             textSource = description?.source,
+            identityResolved = r.identityResolved,
+            identityMatch = r.identity?.match?.name,
         ),
         sections = sections,
         gallery = gallery,
@@ -274,7 +279,7 @@ fun TrackProfile.toDemoResponse(
                 )
             }
         }
-        artistRadio?.let { add(it) }
+        artistRadio?.takeIf { r.identityResolved }?.let { add(it) }
     }
 
     return DemoResponse(
@@ -288,13 +293,24 @@ fun TrackProfile.toDemoResponse(
             imageUrl = r.albumArt()?.url,
             text = lyrics.readingText(),
             textSource = lyrics?.let { "lyrics" },
-            previewTitle = title,
-            previewArtist = artist,
+            previewTitle = title.takeIf { r.identityResolved },
+            previewArtist = artist.takeIf { r.identityResolved },
+            identityResolved = r.identityResolved,
+            identityMatch = r.identity?.match?.name,
         ),
         sections = sections,
         meta = r.toMeta(elapsedMs),
     )
 }
+
+/**
+ * `null` identity means resolution wasn't needed — treat as confident (per [EnrichmentResults]
+ * core docs). Only [IdentityMatch.RESOLVED] (or no identity call at all) is confident enough to
+ * present the summary card's title/preview as a resolved match; [IdentityMatch.BEST_EFFORT] and
+ * [IdentityMatch.SUGGESTIONS] must not be presented as if they resolved.
+ */
+private val EnrichmentResults.identityResolved: Boolean
+    get() = identity == null || identity?.match == IdentityMatch.RESOLVED
 
 private fun EnrichmentResults.toMeta(elapsedMs: Long): Meta {
     val hits = raw.entries.sortedBy { it.key.name }.map { (type, result) ->
