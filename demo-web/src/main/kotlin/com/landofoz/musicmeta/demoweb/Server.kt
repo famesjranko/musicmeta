@@ -77,6 +77,10 @@ fun startServer(engine: EnrichmentEngine, port: Int) {
  * Fires a single throwaway enrichment off its own thread at startup, outside any request's timeout
  * budget, purely to pay the cold-start cost up front. Success or failure doesn't matter — only that
  * the round-trip happened — so any exception is swallowed.
+ *
+ * The blanket `catch (_: Exception)` here skips the `docs/pitfalls.md` §2 `ensureActive()` guard
+ * safely: `runBlocking` on this daemon thread starts its own root job, so there is no caller
+ * cancellation to honor and nothing this swallow can defeat.
  */
 private fun warmUp(engine: EnrichmentEngine) {
     thread(name = "warmup", isDaemon = true) {
