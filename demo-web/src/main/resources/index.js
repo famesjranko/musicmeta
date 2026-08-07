@@ -194,6 +194,15 @@ function render(data) {
     ? `<div class="subtitle${summary.subtitleEnrich ? ' enrich-row' : ''}"${enrichAttrs(summary.subtitleEnrich)}>${esc(summary.subtitle)}</div>`
     : '';
 
+  // An unresolved identity must not render the raw query as a confident title.
+  const unresolvedTitle = summary.identityVerdict === 'SUGGESTIONS'
+    ? `No exact match for &ldquo;${esc(data.name)}&rdquo;`
+    : null;
+  const bestEffortBadge = summary.identityVerdict === 'BEST_EFFORT'
+    ? '<span class="badge badge-warn">Best-effort match</span>'
+    : '';
+  const titleHtml = unresolvedTitle || esc(summary.title);
+
   const sections = data.sections.map(sectionHtml).join('');
   const totalItems = data.sections.reduce((n, s) => n + s.items.length, 0);
 
@@ -218,7 +227,7 @@ function render(data) {
       ${backdrop}
       ${img}
       <div class="body">
-        <div class="titlerow"><h2>${esc(summary.title)}</h2>${summaryPreview}</div>
+        <div class="titlerow"><h2>${titleHtml}</h2>${bestEffortBadge}${summaryPreview}</div>
         ${subtitle}
         ${text}
       </div>

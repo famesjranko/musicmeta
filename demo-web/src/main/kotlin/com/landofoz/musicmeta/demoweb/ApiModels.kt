@@ -28,6 +28,14 @@ data class SummaryCard(
     val previewTitle: String? = null,
     val previewArtist: String? = null,
     val previewAlbum: String? = null,
+    /** False unless identity resolved (or needed no resolution) — do not present [title] as a match. */
+    val identityResolved: Boolean = true,
+    /**
+     * The bare `IdentityMatch` enum name to branch on, or `null` when resolution was skipped —
+     * unlike [Meta.identityMatch], which is a display string. Section presence is not a substitute:
+     * a `SUGGESTIONS` verdict whose candidates all filtered out looks just like `BEST_EFFORT`.
+     */
+    val identityVerdict: String? = null,
 )
 
 @Serializable

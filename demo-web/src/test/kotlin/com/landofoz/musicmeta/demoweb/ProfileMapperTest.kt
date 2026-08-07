@@ -499,4 +499,181 @@ class ProfileMapperTest {
         assertEquals(2, discography.items.size)
         assertEquals(listOf("Ride", "Ride Live"), discography.items.map { it.primary })
     }
+
+    private fun identityOf(match: IdentityMatch): com.landofoz.musicmeta.IdentityResolution =
+        com.landofoz.musicmeta.IdentityResolution(
+            identifiers = EnrichmentIdentifiers(),
+            match = match,
+            matchScore = null,
+            suggestions = emptyList(),
+        )
+
+    @Test
+    fun `artist summary identityResolved false on BEST_EFFORT`() {
+        val results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(IdentityMatch.BEST_EFFORT))
+        val profile = ArtistProfile(name = "Metallica", results = results)
+
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        assertEquals(false, response.summary.identityResolved)
+    }
+
+    @Test
+    fun `artist summary identityResolved false on SUGGESTIONS`() {
+        val results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(IdentityMatch.SUGGESTIONS))
+        val profile = ArtistProfile(name = "Metallica", results = results)
+
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        assertEquals(false, response.summary.identityResolved)
+    }
+
+    @Test
+    fun `SUGGESTIONS with no usable suggestions still carries identityVerdict, not just section absence`() {
+        // identityOf() builds with empty suggestions, so no "did_you_mean" section gets built —
+        // the frontend must not infer the verdict from section presence (it would land on
+        // "Best-effort match" instead of "No exact match" if it did).
+        val results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(IdentityMatch.SUGGESTIONS))
+        val profile = ArtistProfile(name = "Metallica", results = results)
+
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        assertNull(response.sections.firstOrNull { it.key == "did_you_mean" })
+        assertEquals("SUGGESTIONS", response.summary.identityVerdict)
+        assertEquals(false, response.summary.identityResolved)
+    }
+
+    @Test
+    fun `artist summary identityResolved true on RESOLVED and on null identity`() {
+        val resolved = ArtistProfile(
+            name = "Metallica",
+            results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(IdentityMatch.RESOLVED)),
+        ).toDemoResponse(elapsedMs = 0)
+        val noIdentity = ArtistProfile(
+            name = "Metallica",
+            results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = null),
+        ).toDemoResponse(elapsedMs = 0)
+
+        assertEquals(true, resolved.summary.identityResolved)
+        assertEquals(true, noIdentity.summary.identityResolved)
+    }
+
+    @Test
+    fun `album summary identityResolved false on BEST_EFFORT and SUGGESTIONS`() {
+        val bestEffort = AlbumProfile(
+            title = "Master of Puppets",
+            artist = "Metallica",
+            results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(IdentityMatch.BEST_EFFORT)),
+        ).toDemoResponse(elapsedMs = 0)
+        val suggestions = AlbumProfile(
+            title = "Master of Puppets",
+            artist = "Metallica",
+            results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(IdentityMatch.SUGGESTIONS)),
+        ).toDemoResponse(elapsedMs = 0)
+
+        assertEquals(false, bestEffort.summary.identityResolved)
+        assertEquals(false, suggestions.summary.identityResolved)
+    }
+
+    @Test
+    fun `album summary identityResolved true on RESOLVED and on null identity`() {
+        val resolved = AlbumProfile(
+            title = "Master of Puppets",
+            artist = "Metallica",
+            results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(IdentityMatch.RESOLVED)),
+        ).toDemoResponse(elapsedMs = 0)
+        val noIdentity = AlbumProfile(
+            title = "Master of Puppets",
+            artist = "Metallica",
+            results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = null),
+        ).toDemoResponse(elapsedMs = 0)
+
+        assertEquals(true, resolved.summary.identityResolved)
+        assertEquals(true, noIdentity.summary.identityResolved)
+    }
+
+    @Test
+    fun `track summary suppresses preview fields when identity not RESOLVED`() {
+        val bestEffort = TrackProfile(
+            title = "Enter Sandman",
+            artist = "Metallica",
+            results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(IdentityMatch.BEST_EFFORT)),
+        ).toDemoResponse(elapsedMs = 0)
+        val suggestions = TrackProfile(
+            title = "Enter Sandman",
+            artist = "Metallica",
+            results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(IdentityMatch.SUGGESTIONS)),
+        ).toDemoResponse(elapsedMs = 0)
+
+        assertEquals(false, bestEffort.summary.identityResolved)
+        assertNull(bestEffort.summary.previewTitle)
+        assertNull(bestEffort.summary.previewArtist)
+        assertEquals(false, suggestions.summary.identityResolved)
+        assertNull(suggestions.summary.previewTitle)
+        assertNull(suggestions.summary.previewArtist)
+    }
+
+    @Test
+    fun `track summary populates preview fields when identity RESOLVED or absent`() {
+        val resolved = TrackProfile(
+            title = "Enter Sandman",
+            artist = "Metallica",
+            results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(IdentityMatch.RESOLVED)),
+        ).toDemoResponse(elapsedMs = 0)
+        val noIdentity = TrackProfile(
+            title = "Enter Sandman",
+            artist = "Metallica",
+            results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = null),
+        ).toDemoResponse(elapsedMs = 0)
+
+        assertEquals(true, resolved.summary.identityResolved)
+        assertEquals("Enter Sandman", resolved.summary.previewTitle)
+        assertEquals("Metallica", resolved.summary.previewArtist)
+        assertEquals(true, noIdentity.summary.identityResolved)
+        assertEquals("Enter Sandman", noIdentity.summary.previewTitle)
+        assertEquals("Metallica", noIdentity.summary.previewArtist)
+    }
+
+    private fun radioSection(): Section =
+        Section("artist_radio", "Radio (from artist)", listOf(SectionItem(primary = "Some Song")))
+
+    @Test
+    fun `album drops artist_radio section when identity not resolved`() {
+        val results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(IdentityMatch.SUGGESTIONS))
+        val profile = AlbumProfile(title = "Master of Puppets", artist = "Metallica", results = results)
+
+        val response = profile.toDemoResponse(elapsedMs = 0, artistRadio = radioSection())
+
+        assertNull(response.sections.firstOrNull { it.key == "artist_radio" })
+    }
+
+    @Test
+    fun `album keeps artist_radio section when identity resolved`() {
+        val results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(IdentityMatch.RESOLVED))
+        val profile = AlbumProfile(title = "Master of Puppets", artist = "Metallica", results = results)
+
+        val response = profile.toDemoResponse(elapsedMs = 0, artistRadio = radioSection())
+
+        assertEquals("artist_radio", response.sections.first { it.key == "artist_radio" }.key)
+    }
+
+    @Test
+    fun `track drops artist_radio section when identity not resolved`() {
+        val results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(IdentityMatch.SUGGESTIONS))
+        val profile = TrackProfile(title = "Enter Sandman", artist = "Metallica", results = results)
+
+        val response = profile.toDemoResponse(elapsedMs = 0, artistRadio = radioSection())
+
+        assertNull(response.sections.firstOrNull { it.key == "artist_radio" })
+    }
+
+    @Test
+    fun `track keeps artist_radio section when identity resolved`() {
+        val results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(IdentityMatch.RESOLVED))
+        val profile = TrackProfile(title = "Enter Sandman", artist = "Metallica", results = results)
+
+        val response = profile.toDemoResponse(elapsedMs = 0, artistRadio = radioSection())
+
+        assertEquals("artist_radio", response.sections.first { it.key == "artist_radio" }.key)
+    }
 }
