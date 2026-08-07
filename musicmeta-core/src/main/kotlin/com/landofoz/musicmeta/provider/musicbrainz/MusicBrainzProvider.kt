@@ -65,7 +65,7 @@ class MusicBrainzProvider(
         when (request) {
             is EnrichmentRequest.ForAlbum -> searchAlbumCandidates(request, limit)
             is EnrichmentRequest.ForArtist -> searchArtistCandidates(request, limit)
-            is EnrichmentRequest.ForTrack -> emptyList()
+            is EnrichmentRequest.ForTrack -> searchTrackCandidates(request, limit)
         }
 
     private suspend fun searchAlbumCandidates(
@@ -104,6 +104,28 @@ class MusicBrainzProvider(
                 thumbnailUrl = null, provider = id,
                 identifiers = EnrichmentIdentifiers(musicBrainzId = artist.id),
                 disambiguation = artist.disambiguation,
+            )
+        }
+    }
+
+    private suspend fun searchTrackCandidates(
+        request: EnrichmentRequest.ForTrack, limit: Int,
+    ): List<SearchCandidate> {
+        val recordings = api.searchRecordings(request.title, request.artist, request.album, limit)
+            .ifEmpty { api.searchRecordingsFuzzy(request.title, request.artist, limit) }
+        return recordings.map { recording ->
+            // year/country/releaseType/thumbnailUrl are null — a recording search hit carries
+            // none of its own (see MusicBrainzEnricher's MusicBrainzRecording.toCandidate).
+            SearchCandidate(
+                title = recording.title, artist = recording.artistCredit,
+                year = null, country = null,
+                releaseType = null, score = recording.score,
+                thumbnailUrl = null, provider = id,
+                identifiers = EnrichmentIdentifiers(
+                    musicBrainzId = recording.id,
+                    musicBrainzReleaseGroupId = recording.artReleaseGroupId,
+                ),
+                disambiguation = recording.disambiguation,
             )
         }
     }

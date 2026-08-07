@@ -100,14 +100,10 @@ internal class MusicBrainzEnricher(
             return buildAlbumResult(full, type, ConfidenceCalculator.idBasedLookup())
         }
         val search = resolveAlbumSearch(request.title, request.artist)
-        val best = search.release ?: return if (search.originalPool.isEmpty()) {
-            val fuzzy = api.searchReleasesFuzzy(request.title, request.artist)
-            EnrichmentResult.NotFound(type, providerId,
-                suggestions = fuzzy.takeIf { it.isNotEmpty() }?.take(MAX_SUGGESTIONS)?.map { it.toCandidate() })
-        } else {
-            EnrichmentResult.NotFound(type, providerId,
-                suggestions = search.originalPool.take(MAX_SUGGESTIONS).map { it.toCandidate() })
-        }
+        val best = search.release ?: return notFoundWithSuggestions(
+            type, search.originalPool,
+            fuzzy = { api.searchReleasesFuzzy(request.title, request.artist, MAX_SUGGESTIONS) },
+        ) { it.toCandidate() }
         // A search hit carries tags only when its release group happens to have them; the release
         // lookup is what fills them. GENRE is the one type that reads them and the one this path
         // reaches — LABEL is answered from the identity payload and never gets here.
@@ -173,15 +169,18 @@ internal class MusicBrainzEnricher(
 
         val artists = api.searchArtists(request.name)
         if (artists.isEmpty()) {
-            val fuzzy = api.searchArtistsFuzzy(request.name)
-            return EnrichmentResult.NotFound(type, providerId,
-                suggestions = fuzzy.takeIf { it.isNotEmpty() }?.take(MAX_SUGGESTIONS)?.map { it.toCandidate() })
+            return notFoundWithSuggestions(
+                type, artists,
+                fuzzy = { api.searchArtistsFuzzy(request.name, MAX_SUGGESTIONS) },
+            ) { it.toCandidate() }
         }
 
         val best = pickBestArtist(request.name, artists)
         if (best.score < minMatchScore) {
-            return EnrichmentResult.NotFound(type, providerId,
-                suggestions = artists.take(MAX_SUGGESTIONS).map { it.toCandidate() })
+            return notFoundWithSuggestions(
+                type, artists,
+                fuzzy = { api.searchArtistsFuzzy(request.name, MAX_SUGGESTIONS) },
+            ) { it.toCandidate() }
         }
 
         // Search results have metadata (genres, country) but lack URL relations
@@ -276,7 +275,12 @@ internal class MusicBrainzEnricher(
         val recordings = api.searchRecordings(request.title, request.artist, request.album)
         val best = pickBestRecording(request.title, recordings, request.album)
             ?: resolveTrackQualifierFallback(request.title, request.artist, request.album)
-            ?: return EnrichmentResult.NotFound(type, providerId)
+            // searchRecordings' own hint-less retry re-sends the title quoted (see its KDoc), so
+            // only the fuzzy search can rescue a typo — and only an empty strict pool triggers it.
+            ?: return notFoundWithSuggestions(
+                type, recordings,
+                fuzzy = { api.searchRecordingsFuzzy(request.title, request.artist, MAX_SUGGESTIONS) },
+            ) { it.toCandidate() }
 
         val data = if (type == EnrichmentType.TRACK_METADATA) {
             MusicBrainzMapper.toTrackMetadataDetails(best)
@@ -572,6 +576,37 @@ internal class MusicBrainzEnricher(
         identifiers = EnrichmentIdentifiers(musicBrainzId = id),
         disambiguation = disambiguation,
     )
+
+    /**
+     * [year]/[country]/[releaseType] are null because a recording search hit carries none of its
+     * own — those live on its releases, and picking "the" release needs a lookup this class never
+     * does. [thumbnailUrl] is null because a recording has no [MusicBrainzRelease.hasFrontCover]
+     * equivalent to tell a real cover from a CAA 404.
+     */
+    private fun MusicBrainzRecording.toCandidate() = SearchCandidate(
+        title = title, artist = artistCredit, year = null,
+        country = null, releaseType = null, score = score,
+        thumbnailUrl = null, provider = providerId,
+        identifiers = EnrichmentIdentifiers(musicBrainzId = id, musicBrainzReleaseGroupId = artReleaseGroupId),
+        disambiguation = disambiguation,
+    )
+
+    /**
+     * The shared NotFound cascade: an empty strict [pool] asks [fuzzy] for near-misses; a
+     * non-empty pool that still failed to rank is suggested as-is.
+     */
+    private suspend fun <T> notFoundWithSuggestions(
+        type: EnrichmentType,
+        pool: List<T>,
+        fuzzy: suspend () -> List<T>,
+        toCandidate: (T) -> SearchCandidate,
+    ): EnrichmentResult.NotFound = if (pool.isEmpty()) {
+        EnrichmentResult.NotFound(type, providerId,
+            suggestions = fuzzy().takeIf { it.isNotEmpty() }?.take(MAX_SUGGESTIONS)?.map(toCandidate))
+    } else {
+        EnrichmentResult.NotFound(type, providerId,
+            suggestions = pool.take(MAX_SUGGESTIONS).map(toCandidate))
+    }
 
     companion object {
         private const val MAX_SUGGESTIONS = 3
