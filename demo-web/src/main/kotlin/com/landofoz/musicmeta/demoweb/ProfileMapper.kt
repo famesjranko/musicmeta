@@ -48,13 +48,15 @@ fun ArtistProfile.toDemoResponse(elapsedMs: Long): DemoResponse {
             radioItems(r.get<EnrichmentData.RadioPlaylist>(EnrichmentType.ARTIST_RADIO_DISCOVERY))
         }
         section("discography", "Discography") {
-            r.discography()?.albums?.map {
+            r.discography()?.albums?.let { DiscographyGrouping.group(it) }?.map {
                 SectionItem(
-                    primary = it.title,
+                    primary = it.displayTitle,
                     secondary = it.year,
                     imageUrl = it.thumbnailUrl,
-                    meta = it.type,
-                    enrich = albumEnrich(it.title, name),
+                    meta = listOfNotNull(it.type, "${it.editionCount} editions".takeIf { _ -> it.editionCount > 1 })
+                        .joinToString(" · ")
+                        .ifBlank { null },
+                    enrich = albumEnrich(it.displayTitle, name),
                 )
             }
         }

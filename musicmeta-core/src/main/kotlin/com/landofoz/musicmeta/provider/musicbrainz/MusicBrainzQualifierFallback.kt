@@ -1,32 +1,17 @@
 package com.landofoz.musicmeta.provider.musicbrainz
 
 /**
- * Candidate generation and release/recording selection for the qualifier-fallback search fix
- * (`.scratch/mb-search-parenthetical-qualifiers/issues/01-album-title-qualifier-kills-search.md`).
+ * Candidate generation and release/recording selection when a provider-sourced title carries a
+ * reissue/edition qualifier (`"Master Of Puppets (Remastered)"`) that MusicBrainz's own title does
+ * not, which makes the exact-quoted-Lucene search come back empty. Order matters: some MusicBrainz
+ * titles legitimately contain edition wording (`"2112 (deluxe edition)"`), so the caller's exact
+ * title is always tried first and stripped candidates only follow when it comes up empty.
  *
- * A provider-sourced title routinely carries a reissue/edition qualifier
- * (`"Master Of Puppets (Remastered)"`) that MusicBrainz's own release title does not literally
- * contain, so the existing exact-quoted-Lucene search comes back empty even though the album
- * exists. Some MusicBrainz titles legitimately DO contain edition wording though
- * (`"2112 (deluxe edition)"`/Rush, `"Abbey Road (anniversary edition)"`/The Beatles, both verified
- * live) — so the fix cannot strip first; it must try the caller's exact title, and only fall back
- * to a progressively-stripped candidate when the exact title comes up empty.
- *
- * This also reopens the `docs/pitfalls.md` §7 trap ("a search API's hit 0 is a ranking, not an
- * answer") for releases specifically: a bare, qualifier-free title like `"Master Of Puppets"`
- * routinely ties 25+ distinct releases at MusicBrainz's own maximum score, and once the fallback
- * makes that tie reachable via a confident match (instead of failing outright), which release wins
- * the tie becomes newly consumer-visible ([MusicBrainzMapper.toAlbumIdentifiers] propagates the
- * concrete release's date, label, country, barcode, and both MBIDs downstream). [pickBestMatch]
- * settles that tie using the qualifier text that was actually stripped to reach the resolving
- * candidate — free evidence of the caller's edition intent that would otherwise be discarded once
- * it had served its purpose in the search fallback — never overriding MusicBrainz's own score, only
- * ranking within a same-score tier, and falling back to today's existing (unmodified) pool order
- * when no qualifier evidence distinguishes the tie. General release ranking for an ordinary,
- * qualifier-free title is explicitly out of scope
- * (`.scratch/musicbrainz-release-ranking/issues/01-choose-deterministically-among-tied-releases.md`)
- * — this tie-break only ever fires with qualifier tags already in hand as a byproduct of the
- * fallback search, and does nothing for a title that never triggers it.
+ * A bare title routinely ties 25+ releases at MusicBrainz's maximum score, and the winner is
+ * consumer-visible ([MusicBrainzMapper.toAlbumIdentifiers] propagates its date, label, country,
+ * barcode and MBIDs). [pickBestMatch] breaks that tie with the qualifier text stripped to reach the
+ * candidate, never overriding MusicBrainz's score. Ranking tied releases for a qualifier-free title
+ * is out of scope — with no stripped tags the comparator reduces to score alone.
  */
 internal object MusicBrainzQualifierFallback {
 
@@ -43,11 +28,9 @@ internal object MusicBrainzQualifierFallback {
     private data class KindPattern(val kind: String, val pattern: Regex)
 
     /**
-     * Deliberately excludes `live`/`mono`/`stereo`/`edit`/`version`/`explicit` — those can name a
-     * genuinely different edition (not just a different pressing of the same one), so stripping them
-     * risks a confident match to the *wrong* release rather than just missing a reissue. Order
-     * matters: more specific kinds are tried first (`super_deluxe`/`deluxe_box_set` before bare
-     * `deluxe`) so a two-word phrase classifies as the specific kind, not the generic one.
+     * Deliberately excludes `live`/`mono`/`stereo`/`edit`/`version`/`explicit` — those name a
+     * different edition, not a different pressing, so stripping them risks matching the wrong
+     * release. Specific kinds come first, so `"deluxe box set"` doesn't classify as bare `deluxe`.
      */
     private val KIND_PATTERNS: List<KindPattern> = listOf(
         KindPattern("remaster", Regex("""(\d{4}\s+)?remaster(ed)?(\s+\d{4})?""", RegexOption.IGNORE_CASE)),
@@ -68,11 +51,8 @@ internal object MusicBrainzQualifierFallback {
 
     /**
      * Full-phrase keywords each kind must match against a candidate's disambiguation/title text —
-     * NOT bare words. `edition` is intentionally absent from every other kind's keyword list (it
-     * would otherwise let the single generic word "edition" cross-match any release whose
-     * disambiguation happens to contain it — reproduced live pre-fix: a `"special edition"` release
-     * beat the correct `"legacy edition"` one purely because "edition" matched first) and carries an
-     * empty list itself, so it can never be an independent positive signal at all.
+     * NOT bare words. `edition` appears in no keyword list, its own included, so the generic word
+     * can never cross-match a release whose disambiguation merely contains it.
      */
     private val KIND_KEYWORDS: Map<String, List<String>> = mapOf(
         "remaster" to listOf("remaster", "remastered"),
@@ -97,10 +77,8 @@ internal object MusicBrainzQualifierFallback {
     private val YEAR_TOKEN = Regex("""\b(19|20)\d{2}\b""")
 
     /**
-     * Matching `"not "`/`"non-"`/`"non "` immediately before a keyword, so a negation isn't read as
-     * the positive signal it negates (`"unremastered"`/`"not remastered"` must not match `remaster`;
-     * `"non-deluxe"` must not match `deluxe`) while a genuine whole-word occurrence still matches
-     * (`"super deluxe"` contains `deluxe` as a real word, not a negation, and is allowed through).
+     * Rejects `"not "`/`"non-"`/`"non "` immediately before a keyword, so `"not remastered"` doesn't
+     * match `remaster`, while a genuine occurrence (`"super deluxe"` for `deluxe`) still does.
      */
     private const val NEGATION_LOOKBEHIND = """(?<!not )(?<!non-)(?<!non )"""
 
@@ -132,12 +110,9 @@ internal object MusicBrainzQualifierFallback {
     }
 
     /**
-     * [title] itself, followed by progressively-stripped fallback candidates — most-specific first,
-     * one trailing qualifier group removed at a time, stopping as soon as a trailing group doesn't
-     * whole-group-conform (so an unrelated leading parenthetical, or a mixed non-conforming group,
-     * is never touched). Each candidate's [FallbackCandidate.removedTags] accumulates only the tags
-     * actually peeled off to reach it — a title stripped in two steps does not offer the
-     * first-stripped tag as evidence for a candidate that only needed the second strip.
+     * [title] itself, followed by progressively-stripped candidates — one trailing qualifier group
+     * removed at a time, stopping as soon as a trailing group doesn't whole-group-conform. Each
+     * candidate's [FallbackCandidate.removedTags] holds only the tags peeled off to reach it.
      */
     fun qualifierFallbackCandidates(title: String): List<FallbackCandidate> {
         val candidates = mutableListOf(FallbackCandidate(title, emptyList()))
@@ -154,9 +129,8 @@ internal object MusicBrainzQualifierFallback {
 
     /**
      * One stripping step: [cur] with its trailing qualifier group removed, and that group's tags —
-     * or null if [cur] has no trailing group, or its trailing group doesn't whole-group-conform to
-     * the vocabulary (an empty [cur] also naturally returns null here, ending the loop in
-     * [qualifierFallbackCandidates] without a second exit condition).
+     * or null if there is no trailing group or it doesn't conform (an empty [cur] included, which is
+     * what ends the loop in [qualifierFallbackCandidates]).
      */
     private fun nextFallbackStep(cur: String): Pair<String, List<QualifierTag>>? {
         val match = TRAILING_GROUP.find(cur) ?: return null
@@ -195,15 +169,9 @@ internal object MusicBrainzQualifierFallback {
     }
 
     /**
-     * The best of [matches] by [scoreOf] primary, summed [tagMatchTier] (across every tag in
-     * [removedTags], against [textOf]) breaking a tie only — the same `maxWithOrNull(compareBy(...)
-     * .thenBy(...))` shape as [pickBestRecording]/`bestArtistMatch`, where the primary comparator
-     * alone decides unless it ties. [scoreOf] is lexicographically primary, so qualifier evidence can
-     * never override a higher score, only rank within one; combined evidence (multiple tags matching
-     * one candidate) outranks a single match. When [removedTags] is empty (the direct, first-try hit
-     * needed no fallback), every candidate's tag-tier sum is equally `0`, so the comparator reduces
-     * to [scoreOf] alone and `maxWithOrNull` keeping the first maximum preserves the pool's existing
-     * order, unchanged from before this fallback existed.
+     * The best of [matches] by [scoreOf], with the summed [tagMatchTier] over [removedTags] breaking
+     * ties only — so qualifier evidence never outranks a higher score, and multiple matching tags
+     * outrank one. With [removedTags] empty every sum is `0` and the pool's own order is preserved.
      */
     fun <T> pickBestMatch(
         matches: List<T>,
