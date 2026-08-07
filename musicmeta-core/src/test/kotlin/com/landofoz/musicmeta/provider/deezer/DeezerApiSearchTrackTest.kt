@@ -10,8 +10,7 @@ import org.junit.Test
 
 /**
  * Selection rules for [DeezerApi.searchTrack] — the track-search instance of the same
- * first-hit-wins disease [DeezerApiSearchArtistTest] pins for artists
- * (`.scratch/provider-code-findings/issues/19-deezer-track-search-drops-album-hint-first-hit-wins.md`).
+ * first-hit-wins disease [DeezerApiSearchArtistTest] pins for artists.
  *
  * [BLACKENED_PLAIN_POOL] and [BLACKENED_ADVANCED_POOL] are trimmed from the live api.deezer.com
  * payloads for `q=Metallica Blackened` and `q=artist:"Metallica" track:"Blackened"` (2026-08-06):
