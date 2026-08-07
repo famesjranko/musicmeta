@@ -480,4 +480,23 @@ class ProfileMapperTest {
         assertEquals(setOf("album", "single"), discography.items.map { it.meta }.toSet())
         assertTrue(discography.items.all { it.primary == "Load" })
     }
+
+    @Test
+    fun `discography does not blur the title-type boundary when grouping`() {
+        val results = resultsOf(
+            EnrichmentType.ARTIST_DISCOGRAPHY to EnrichmentData.Discography(
+                albums = listOf(
+                    DiscographyAlbum(title = "Ride", year = "1984", type = "live album"),
+                    DiscographyAlbum(title = "Ride Live", year = "1985", type = "album"),
+                ),
+            ),
+        )
+        val profile = ArtistProfile(name = "Metallica", results = results)
+
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        val discography = response.sections.first { it.key == "discography" }
+        assertEquals(2, discography.items.size)
+        assertEquals(listOf("Ride", "Ride Live"), discography.items.map { it.primary })
+    }
 }
