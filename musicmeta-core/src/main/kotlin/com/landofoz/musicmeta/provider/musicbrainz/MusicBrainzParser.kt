@@ -55,6 +55,7 @@ internal object MusicBrainzParser {
 
     private fun parseReleaseObject(obj: JSONObject, defaultScore: Int = 0): MusicBrainzRelease {
         val tagCounts = extractReleaseTagCounts(obj)
+        val group = obj.optJSONObject("release-group")
         return MusicBrainzRelease(
             id = obj.getString("id"),
             title = obj.getString("title"),
@@ -72,7 +73,18 @@ internal object MusicBrainzParser {
             score = obj.optInt("score", defaultScore),
             hasFrontCover = extractHasFrontCover(obj),
             tracks = parseMedia(obj),
+            status = obj.optString("status").takeIf { it.isNotBlank() },
+            secondaryTypes = extractSecondaryTypes(group),
+            trackCount = obj.optInt("track-count", -1).takeIf { it >= 0 },
+            releaseGroupTitle = group?.optString("title")?.takeIf { it.isNotBlank() },
+            releaseGroupDisambiguation = group?.optString("disambiguation")?.takeIf { it.isNotBlank() },
         )
+    }
+
+    /** The release group's `secondary-types` array, absent in some responses (a release lookup included). */
+    private fun extractSecondaryTypes(group: JSONObject?): List<String> {
+        val types = group?.optJSONArray("secondary-types") ?: return emptyList()
+        return (0 until types.length()).mapNotNull { types.optString(it).takeIf { s -> s.isNotBlank() } }
     }
 
     private fun parseArtistObject(obj: JSONObject, defaultScore: Int = 0): MusicBrainzArtist {

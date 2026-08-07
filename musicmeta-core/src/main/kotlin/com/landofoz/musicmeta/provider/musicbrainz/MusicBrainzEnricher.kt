@@ -488,7 +488,7 @@ internal class MusicBrainzEnricher(
      */
     private suspend fun resolveAlbumSearch(title: String, artist: String): AlbumSearchResult {
         val releases = api.searchReleases(title, artist)
-        val direct = releases.firstOrNull { it.score >= minMatchScore }
+        val direct = MusicBrainzReleaseRanking.pickBestRelease(releases, minMatchScore)
         return AlbumSearchResult(direct ?: resolveAlbumQualifierFallback(title, artist), releases)
     }
 
@@ -512,8 +512,10 @@ internal class MusicBrainzEnricher(
      * Searches MB for each fallback candidate's exact text and requires an "authoritative" hit: at
      * or above [minMatchScore], normalized title equality with the searched candidate (score alone
      * is not proof of identity — quoted Lucene is phrase search, not string equality), and a
-     * matching credited artist. Among a same-score tie within one candidate's authoritative hits,
-     * ranks by the tags actually stripped to reach that candidate.
+     * matching credited artist. Survivors go through [MusicBrainzReleaseRanking.pickBestRelease], the
+     * same ladder the direct path uses, carrying the tags stripped to reach this candidate — so a
+     * qualified request gets the identity and edition-shape guarantees the bare-title path has, and
+     * the stripped qualifier decides only among releases that already pass them.
      */
     private suspend fun resolveAlbumQualifierFallback(title: String, artist: String): MusicBrainzRelease? {
         val artistNorm = MusicBrainzQualifierFallback.normalize(artist)
@@ -524,11 +526,7 @@ internal class MusicBrainzEnricher(
                     MusicBrainzQualifierFallback.normalize(it.title) == candidateNorm &&
                     anyArtistMatches(it.artistCredits, artistNorm)
             }
-            MusicBrainzQualifierFallback.pickBestMatch(
-                authoritative, candidate.removedTags,
-                scoreOf = { it.score },
-                textOf = { "${it.disambiguation.orEmpty()} ${it.title}" },
-            )
+            MusicBrainzReleaseRanking.pickBestRelease(authoritative, minMatchScore, candidate.removedTags)
         }
     }
 

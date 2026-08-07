@@ -96,17 +96,25 @@ class MusicBrainzQualifierFallbackTest {
         assertEquals(1, candidates.size)
     }
 
-    // --- pickBestMatch: score-primary, structured kind/year tie-break ---
+    // --- tagEvidence: structured kind/year qualifier evidence, ranked under score ---
 
     private data class Mock(val id: String, val title: String, val disambiguation: String?, val score: Int = 100)
 
+    /**
+     * Ranks [pool] the way production does — score first, then qualifier evidence — so these tests
+     * keep pinning [MusicBrainzQualifierFallback.tagEvidence]'s tier semantics on their own, without
+     * dragging in the identity and edition tiers that
+     * [MusicBrainzReleaseRanking.pickBestRelease] adds around it.
+     */
     private fun pick(
         pool: List<Mock>,
         removedTags: List<MusicBrainzQualifierFallback.QualifierTag>,
-    ): Mock? = MusicBrainzQualifierFallback.pickBestMatch(
-        pool, removedTags,
-        scoreOf = { it.score },
-        textOf = { "${it.disambiguation.orEmpty()} ${it.title}" },
+    ): Mock? = pool.maxWithOrNull(
+        compareBy<Mock> { it.score }.thenBy { candidate ->
+            MusicBrainzQualifierFallback.tagEvidence(
+                "${candidate.disambiguation.orEmpty()} ${candidate.title}", removedTags,
+            )
+        },
     )
 
     private fun tagsFor(title: String, candidateTitle: String) =
