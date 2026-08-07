@@ -19,14 +19,26 @@ class MusicBrainzQualifierFallbackTest {
 
     @Test
     fun `original title is always the first candidate, with no removed tags`() {
-        val candidates = MusicBrainzQualifierFallback.qualifierFallbackCandidates("Master Of Puppets (Remastered)")
+        // Given
+        val title = "Master Of Puppets (Remastered)"
+
+        // When
+        val candidates = MusicBrainzQualifierFallback.qualifierFallbackCandidates(title)
+
+        // Then
         assertEquals("Master Of Puppets (Remastered)", candidates.first().title)
         assertTrue(candidates.first().removedTags.isEmpty())
     }
 
     @Test
     fun `a single trailing qualifier group is peeled into a second candidate`() {
-        val candidates = MusicBrainzQualifierFallback.qualifierFallbackCandidates("Master Of Puppets (Remastered)")
+        // Given
+        val title = "Master Of Puppets (Remastered)"
+
+        // When
+        val candidates = MusicBrainzQualifierFallback.qualifierFallbackCandidates(title)
+
+        // Then
         assertEquals(2, candidates.size)
         assertEquals("Master Of Puppets", candidates[1].title)
         assertEquals(listOf("remaster"), candidates[1].removedTags.map { it.kind })
@@ -34,23 +46,30 @@ class MusicBrainzQualifierFallbackTest {
 
     @Test
     fun `two trailing qualifier groups are peeled most-specific-first`() {
-        val candidates = MusicBrainzQualifierFallback.qualifierFallbackCandidates(
-            "Ride The Lightning (Deluxe) (Remastered)",
-        )
+        // Given
+        val title = "Ride The Lightning (Deluxe) (Remastered)"
+
+        // When
+        val candidates = MusicBrainzQualifierFallback.qualifierFallbackCandidates(title)
+
+        // Then - the second candidate has only (Remastered) stripped so far; the third has both
         assertEquals(
             listOf("Ride The Lightning (Deluxe) (Remastered)", "Ride The Lightning (Deluxe)", "Ride The Lightning"),
             candidates.map { it.title },
         )
-        // The second candidate has only the (Remastered) tag stripped so far; the third has both.
         assertEquals(listOf("remaster"), candidates[1].removedTags.map { it.kind })
         assertEquals(listOf("deluxe", "remaster"), candidates[2].removedTags.map { it.kind })
     }
 
     @Test
     fun `a slash-separated group strips as one group with multiple tags`() {
-        val candidates = MusicBrainzQualifierFallback.qualifierFallbackCandidates(
-            "Master Of Puppets (Deluxe Box Set / Remastered)",
-        )
+        // Given
+        val title = "Master Of Puppets (Deluxe Box Set / Remastered)"
+
+        // When
+        val candidates = MusicBrainzQualifierFallback.qualifierFallbackCandidates(title)
+
+        // Then
         assertEquals(2, candidates.size)
         assertEquals("Master Of Puppets", candidates[1].title)
         assertEquals(listOf("deluxe_box_set", "remaster"), candidates[1].removedTags.map { it.kind })
@@ -58,41 +77,73 @@ class MusicBrainzQualifierFallbackTest {
 
     @Test
     fun `Album (Not Remastered) is left untouched, not wrongly stripped`() {
-        val candidates = MusicBrainzQualifierFallback.qualifierFallbackCandidates("Album (Not Remastered)")
+        // Given
+        val title = "Album (Not Remastered)"
+
+        // When
+        val candidates = MusicBrainzQualifierFallback.qualifierFallbackCandidates(title)
+
+        // Then
         assertEquals(1, candidates.size)
     }
 
     @Test
     fun `Album (Live over Remastered) mixed group is left untouched`() {
-        val candidates = MusicBrainzQualifierFallback.qualifierFallbackCandidates("Album (Live / Remastered)")
+        // Given
+        val title = "Album (Live / Remastered)"
+
+        // When
+        val candidates = MusicBrainzQualifierFallback.qualifierFallbackCandidates(title)
+
+        // Then
         assertEquals(1, candidates.size)
     }
 
     @Test
     fun `a qualifier word embedded in a longer non-conforming phrase is left untouched`() {
-        val candidates = MusicBrainzQualifierFallback.qualifierFallbackCandidates(
-            "Album (Deluxe Edition soundtrack)",
-        )
+        // Given
+        val title = "Album (Deluxe Edition soundtrack)"
+
+        // When
+        val candidates = MusicBrainzQualifierFallback.qualifierFallbackCandidates(title)
+
+        // Then
         assertEquals(1, candidates.size)
     }
 
     @Test
     fun `mismatched bracket delimiters are left untouched`() {
-        val candidates = MusicBrainzQualifierFallback.qualifierFallbackCandidates("Album (Deluxe]")
+        // Given
+        val title = "Album (Deluxe]"
+
+        // When
+        val candidates = MusicBrainzQualifierFallback.qualifierFallbackCandidates(title)
+
+        // Then
         assertEquals(1, candidates.size)
     }
 
     @Test
     fun `Live is not a recognized qualifier, so no fallback candidate is generated`() {
-        val candidates = MusicBrainzQualifierFallback.qualifierFallbackCandidates("Master Of Puppets (Live)")
+        // Given
+        val title = "Master Of Puppets (Live)"
+
+        // When
+        val candidates = MusicBrainzQualifierFallback.qualifierFallbackCandidates(title)
+
+        // Then
         assertEquals(1, candidates.size)
     }
 
     @Test
     fun `a legitimate parenthetical with no qualifier vocabulary produces no fallback`() {
-        val candidates = MusicBrainzQualifierFallback.qualifierFallbackCandidates(
-            "Welcome Home (Sanitarium)",
-        )
+        // Given
+        val title = "Welcome Home (Sanitarium)"
+
+        // When
+        val candidates = MusicBrainzQualifierFallback.qualifierFallbackCandidates(title)
+
+        // Then
         assertEquals(1, candidates.size)
     }
 
@@ -101,10 +152,10 @@ class MusicBrainzQualifierFallbackTest {
     private data class Mock(val id: String, val title: String, val disambiguation: String?, val score: Int = 100)
 
     /**
-     * Ranks [pool] the way production does — score first, then qualifier evidence — so these tests
-     * keep pinning [MusicBrainzQualifierFallback.tagEvidence]'s tier semantics on their own, without
-     * dragging in the identity and edition tiers that
-     * [MusicBrainzReleaseRanking.pickBestRelease] adds around it.
+     * Ranks [pool] by score, then by qualifier evidence, so these tests pin
+     * [MusicBrainzQualifierFallback.tagEvidence]'s own tier semantics in isolation. This is NOT
+     * production's ladder: [MusicBrainzReleaseRanking.pickBestRelease] puts identity above score and
+     * the edition band between score and evidence.
      */
     private fun pick(
         pool: List<Mock>,
@@ -124,107 +175,181 @@ class MusicBrainzQualifierFallbackTest {
 
     @Test
     fun `legacy-vs-special - the generic edition word must not cross-match`() {
+        // Given
         val tags = tagsFor("Kind of Blue (Legacy Edition)", "Kind of Blue")
         val pool = listOf(
             Mock("A", "Kind of Blue", "special edition"),
             Mock("B", "Kind of Blue", "legacy edition"),
         )
-        assertEquals("B", pick(pool, tags)?.id)
+
+        // When
+        val result = pick(pool, tags)
+
+        // Then
+        assertEquals("B", result?.id)
     }
 
     @Test
     fun `remaster-year specificity - exact year outranks kind-only no-year match`() {
+        // Given
         val tags = tagsFor("Enter Sandman (Remastered 2021)", "Enter Sandman")
         val pool = listOf(
             Mock("A", "Enter Sandman", "remastered 2017"),
             Mock("B", "Enter Sandman", "remastered 2021"),
         )
-        assertEquals("B", pick(pool, tags)?.id)
+
+        // When
+        val result = pick(pool, tags)
+
+        // Then
+        assertEquals("B", result?.id)
     }
 
     @Test
     fun `combined evidence - two matched tags outrank one`() {
+        // Given
         val tags = tagsFor("Ride The Lightning (Deluxe) (Remastered)", "Ride The Lightning")
         val pool = listOf(
             Mock("A", "Ride The Lightning", "deluxe edition"),
             Mock("B", "Ride The Lightning", "remastered"),
             Mock("C", "Ride The Lightning", "deluxe / remastered"),
         )
-        assertEquals("C", pick(pool, tags)?.id)
+
+        // When
+        val result = pick(pool, tags)
+
+        // Then
+        assertEquals("C", result?.id)
     }
 
     @Test
-    fun `no match preserves the pool's existing order, unchanged from today's behavior`() {
+    fun `no match preserves the pool's existing order`() {
+        // Given
         val tags = tagsFor("Master Of Puppets (Remastered)", "Master Of Puppets")
         val pool = listOf(
             Mock("A", "Master of Puppets", "DCC Compact Classics"),
             Mock("B", "Master of Puppets", "45 RPM Series"),
         )
-        assertEquals("A", pick(pool, tags)?.id)
+
+        // When
+        val result = pick(pool, tags)
+
+        // Then
+        assertEquals("A", result?.id)
     }
 
     @Test
     fun `MusicBrainz score is primary, a lower-scoring qualifier match must not beat a higher score`() {
+        // Given
         val tags = tagsFor("Master Of Puppets (Legacy Edition)", "Master Of Puppets")
         val pool = listOf(
             Mock("A", "Master of Puppets", "no qualifier evidence", score = 100),
             Mock("B", "Master of Puppets", "legacy edition", score = 80),
         )
-        assertEquals("A", pick(pool, tags)?.id)
+
+        // When
+        val result = pick(pool, tags)
+
+        // Then
+        assertEquals("A", result?.id)
     }
 
     @Test
     fun `unknown year beats an explicitly conflicting year, not a tie with it`() {
+        // Given
         val tags = tagsFor("Enter Sandman (Remastered 2021)", "Enter Sandman")
         val pool = listOf(
             Mock("A", "Enter Sandman", "remastered 2017"),
             Mock("B", "Enter Sandman", "remastered"),
         )
-        assertEquals("B", pick(pool, tags)?.id)
+
+        // When
+        val result = pick(pool, tags)
+
+        // Then
+        assertEquals("B", result?.id)
     }
 
     @Test
     fun `not remastered and unremastered must not match the remaster keyword`() {
+        // Given
         val tags = tagsFor("Master Of Puppets (Remastered)", "Master Of Puppets")
         val pool = listOf(
             Mock("A", "Master of Puppets", "not remastered"),
             Mock("B", "Master of Puppets", "unremastered mix"),
             Mock("C", "Master of Puppets", "no qualifier evidence at all"),
         )
-        // All three score 0 for the remaster tag -> stable order preserved, A stays first.
-        assertEquals("A", pick(pool, tags)?.id)
+
+        // When
+        val result = pick(pool, tags)
+
+        // Then - all three score 0 for the remaster tag, so the stable order preserves A first
+        assertEquals("A", result?.id)
     }
 
     @Test
     fun `non-deluxe must not match deluxe, but super deluxe may`() {
+        // Given
         val tags = tagsFor("Ride The Lightning (Deluxe)", "Ride The Lightning")
         val pool = listOf(
             Mock("A", "Ride The Lightning", "non-deluxe pressing"),
             Mock("B", "Ride The Lightning", "super deluxe box"),
         )
-        assertEquals("B", pick(pool, tags)?.id)
+
+        // When
+        val result = pick(pool, tags)
+
+        // Then
+        assertEquals("B", result?.id)
     }
 
     @Test
     fun `an empty pool has no best match`() {
-        assertNull(pick(emptyList(), emptyList()))
+        // Given
+        val pool = emptyList<Mock>()
+
+        // When
+        val result = pick(pool, emptyList())
+
+        // Then
+        assertNull(result)
     }
 
     @Test
-    fun `no removed tags returns the pool's first entry, matching firstOrNull today`() {
+    fun `no removed tags returns the pool's first entry`() {
+        // Given
         val pool = listOf(Mock("A", "Master of Puppets", "DCC Compact Classics"), Mock("B", "Master of Puppets", null))
-        assertEquals("A", pick(pool, emptyList())?.id)
+
+        // When
+        val result = pick(pool, emptyList())
+
+        // Then
+        assertEquals("A", result?.id)
     }
 
     // --- normalize ---
 
     @Test
     fun `normalize lowercases, collapses whitespace, and trims`() {
-        assertEquals("master of puppets", MusicBrainzQualifierFallback.normalize("  Master   Of Puppets  "))
+        // Given
+        val raw = "  Master   Of Puppets  "
+
+        // When
+        val result = MusicBrainzQualifierFallback.normalize(raw)
+
+        // Then
+        assertEquals("master of puppets", result)
     }
 
     @Test
     fun `normalize maps curly apostrophe to straight`() {
-        assertEquals("collector's edition", MusicBrainzQualifierFallback.normalize("collector’s edition"))
+        // Given
+        val raw = "collector’s edition"
+
+        // When
+        val result = MusicBrainzQualifierFallback.normalize(raw)
+
+        // Then
+        assertEquals("collector's edition", result)
     }
 }

@@ -3,9 +3,9 @@ package com.landofoz.musicmeta.provider.musicbrainz
 /**
  * Tie-break policy for [MusicBrainzEnricher.resolveAlbumSearch]'s release pool. A bare album title
  * routinely ties dozens of releases at MusicBrainz's maximum search score — "Master Of Puppets" ties
- * the top 25 of 76 hits at score 100 — so `firstOrNull { it.score >= minMatchScore }` picks whichever
+ * the top 25 of 76 hits at score 100 — so taking the first hit at or above the floor yields whichever
  * release MB's own, undocumented tie order happened to return: live bootlegs, promo pressings, box
- * sets and same-titled singles have all won that way.
+ * sets and same-titled singles all win that way.
  *
  * [pickBestRelease] ranks identity (is this even the right KIND of record?) ABOVE MusicBrainz's own
  * score, unlike a naive "score first" ladder: "Purple Rain"/Prince's only score-100 release is a live
@@ -70,7 +70,14 @@ internal object MusicBrainzReleaseRanking {
     private fun qualifierText(release: MusicBrainzRelease): String =
         "${release.disambiguation.orEmpty()} ${release.title}"
 
-    /** Neither a partial pressing nor a box set relative to [modal] — 0.8x..1.25x inclusive. A null [MusicBrainzRelease.trackCount] or null [modal] always counts as inside the band. */
+    /**
+     * Neither a partial pressing nor a box set relative to [modal] — 0.8x..1.25x inclusive. A null
+     * [MusicBrainzRelease.trackCount] or null [modal] always counts as inside the band.
+     *
+     * Deliberately the opposite default to the date tier, where a missing date sorts last: a search
+     * hit that omits `track-count` is far more often an ordinary pressing MB has not fully entered
+     * than an unlisted box set, so treating the absence as out-of-band would discard real pressings.
+     */
     private fun inBand(release: MusicBrainzRelease, modal: Int?): Boolean {
         val count = release.trackCount ?: return true
         val centre = modal ?: return true

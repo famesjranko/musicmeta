@@ -76,7 +76,6 @@ internal object MusicBrainzParser {
             status = obj.optString("status").takeIf { it.isNotBlank() },
             secondaryTypes = extractSecondaryTypes(group),
             trackCount = obj.optInt("track-count", -1).takeIf { it >= 0 },
-            releaseGroupTitle = group?.optString("title")?.takeIf { it.isNotBlank() },
             releaseGroupDisambiguation = group?.optString("disambiguation")?.takeIf { it.isNotBlank() },
         )
     }

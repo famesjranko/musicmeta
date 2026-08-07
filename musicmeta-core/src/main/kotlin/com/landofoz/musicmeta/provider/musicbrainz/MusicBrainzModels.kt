@@ -31,8 +31,6 @@ internal data class MusicBrainzRelease(
     val secondaryTypes: List<String> = emptyList(),
     /** Track count from the search hit's own `track-count` field, used by [MusicBrainzReleaseRanking] for its edition-completeness band. */
     val trackCount: Int? = null,
-    /** The release group's own title, distinct from [title] (the release's own, pressing-specific title). */
-    val releaseGroupTitle: String? = null,
     /**
      * The release group's own disambiguation, distinct from [disambiguation] (the release's own).
      * MusicBrainz echoes this onto the release's [disambiguation]; used by

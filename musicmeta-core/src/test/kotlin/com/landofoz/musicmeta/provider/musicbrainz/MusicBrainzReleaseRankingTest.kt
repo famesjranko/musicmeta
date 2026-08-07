@@ -25,7 +25,6 @@ class MusicBrainzReleaseRankingTest {
         disambiguation: String? = null,
         score: Int = 100,
         trackCount: Int? = null,
-        releaseGroupTitle: String? = null,
         releaseGroupDisambiguation: String? = null,
     ): MusicBrainzRelease = MusicBrainzRelease(
         id = id,
@@ -43,7 +42,6 @@ class MusicBrainzReleaseRankingTest {
         status = status,
         secondaryTypes = secondaryTypes,
         trackCount = trackCount,
-        releaseGroupTitle = releaseGroupTitle,
         releaseGroupDisambiguation = releaseGroupDisambiguation,
     )
 
@@ -63,195 +61,310 @@ class MusicBrainzReleaseRankingTest {
 
     @Test
     fun `identity outranks score - a score-100 Live Bootleg Album loses to a score-97 plain Official Album`() {
-        // Real case: Prince "Purple Rain" — the only release scoring 100 is an Album+Live Bootleg;
-        // every genuine Official soundtrack pressing scores 97.
+        // Given - real case: Prince "Purple Rain", whose only release scoring 100 is an Album+Live
+        // Bootleg while every genuine Official soundtrack pressing scores 97
         val bootleg = release(id = "a", score = 100, status = "Bootleg", secondaryTypes = listOf("Live"), date = "1984")
         val official = release(id = "b", score = 97, date = "1984")
-        assertEquals(official, pick(listOf(bootleg, official)))
+
+        // When
+        val result = pick(listOf(bootleg, official))
+
+        // Then
+        assertEquals(official, result)
     }
 
     @Test
     fun `score still decides within one identity class`() {
+        // Given
         val lowerScore = release(id = "a", score = 88, date = "1984")
         val higherScore = release(id = "b", score = 100, date = "1984")
-        assertEquals(higherScore, pick(listOf(lowerScore, higherScore)))
+
+        // When
+        val result = pick(listOf(lowerScore, higherScore))
+
+        // Then
+        assertEquals(higherScore, result)
     }
 
     @Test
     fun `an all-Live pool still resolves rather than returning null`() {
-        // Real case: Nirvana "MTV Unplugged in New York" — every candidate carries secondary type
-        // Live, so the tier must not eliminate the entire pool for being genuinely a live album.
+        // Given - real case: Nirvana "MTV Unplugged in New York", where every candidate carries
+        // secondary type Live, so the tier must not eliminate the whole pool
         val earlier = release(id = "a", secondaryTypes = listOf("Live"), date = "1994")
         val later = release(id = "b", secondaryTypes = listOf("Live"), date = "2019")
-        assertEquals(earlier, pick(listOf(later, earlier)))
+
+        // When
+        val result = pick(listOf(later, earlier))
+
+        // Then
+        assertEquals(earlier, result)
     }
 
     @Test
     fun `an all-non-Official pool still resolves rather than returning null`() {
+        // Given
         val earlier = release(id = "a", status = "Bootleg", date = "1994")
         val later = release(id = "b", status = "Bootleg", date = "2019")
-        assertEquals(earlier, pick(listOf(later, earlier)))
+
+        // When
+        val result = pick(listOf(later, earlier))
+
+        // Then
+        assertEquals(earlier, result)
     }
 
     @Test
     fun `a same-titled Single loses to the Album even at equal score`() {
-        // Real case: Metallica "Master Of Puppets" — the pool contains a 2-track Single tied at
-        // score 100 with the 8-track Album releases.
+        // Given - real case: Metallica "Master Of Puppets", whose pool holds a 2-track Single tied
+        // at score 100 with the 8-track Album releases
         val album = release(id = "album", releaseType = "Album", score = 100, date = "1986", trackCount = 8)
         val single = release(id = "single", releaseType = "Single", score = 100, date = "1986", trackCount = 2)
-        assertEquals(album, pick(listOf(single, album)))
+
+        // When
+        val result = pick(listOf(single, album))
+
+        // Then
+        assertEquals(album, result)
     }
 
     // --- pressingDisambiguation: release-group disambiguation subtracted ---
 
     @Test
     fun `pressingDisambiguation subtracts an exact release-group disambiguation down to blank`() {
+        // Given
         val blue = release(id = "a", disambiguation = "blue album", releaseGroupDisambiguation = "Blue Album")
-        assertEquals("", MusicBrainzReleaseRanking.pressingDisambiguation(blue))
+
+        // When
+        val result = MusicBrainzReleaseRanking.pressingDisambiguation(blue)
+
+        // Then
+        assertEquals("", result)
     }
 
     @Test
     fun `pressingDisambiguation leaves the pressing-specific remainder after subtracting`() {
+        // Given
         val deluxe = release(id = "a", disambiguation = "Red Album, deluxe", releaseGroupDisambiguation = "Red Album")
-        assertEquals("deluxe", MusicBrainzReleaseRanking.pressingDisambiguation(deluxe))
+
+        // When
+        val result = MusicBrainzReleaseRanking.pressingDisambiguation(deluxe)
+
+        // Then
+        assertEquals("deluxe", result)
     }
 
     @Test
     fun `a bare-title request over the Weezer pool returns the 1994 Blue Album, not the undisambiguated 2019 Black Album`() {
-        // Real case: six distinct albums are titled "Weezer"; MB echoes the release group's own
+        // Given - six distinct albums are titled "Weezer", and MB echoes the release group's own
         // identity down onto the release's disambiguation ("blue album"), which a blank-disambiguation
-        // tier would otherwise misread as "this is the plain, undecorated pressing".
+        // tier would otherwise misread as "this is the plain, undecorated pressing"
         val blueAlbum1994 = release(
             id = "blue", date = "1994-05-10", disambiguation = "blue album", releaseGroupDisambiguation = "Blue Album",
         )
         val blackAlbum2019 = release(
             id = "black", date = "2019-03-01", disambiguation = null, releaseGroupDisambiguation = "Black Album",
         )
-        assertEquals(blueAlbum1994, pick(listOf(blackAlbum2019, blueAlbum1994)))
+
+        // When
+        val result = pick(listOf(blackAlbum2019, blueAlbum1994))
+
+        // Then
+        assertEquals(blueAlbum1994, result)
     }
 
     // --- the edition band (tier 5) is symmetric ---
 
     @Test
     fun `a box set loses even though it ties on score and date`() {
-        // Real case: "Abbey Road" — a 92-track box set against 17-track pressings.
+        // Given - real case: "Abbey Road", a 92-track box set against 17-track pressings
         val normal = (1..3).map { release(id = "n$it", trackCount = 17, date = "1969") }
         val boxSet = release(id = "box", trackCount = 92, date = "1969")
-        assertNotEquals(boxSet, pick(listOf(boxSet) + normal))
+
+        // When
+        val result = pick(listOf(boxSet) + normal)
+
+        // Then
+        assertNotEquals(boxSet, result)
     }
 
     @Test
     fun `a partial pressing loses even though it ties on score and date`() {
-        // Real case: "Kind of Blue" — a 3-track pressing against the 5-track original.
+        // Given - real case: "Kind of Blue", a 3-track pressing against the 5-track original
         val normal = (1..3).map { release(id = "n$it", trackCount = 5, date = "1959") }
         val partial = release(id = "partial", trackCount = 3, date = "1959")
-        assertNotEquals(partial, pick(listOf(partial) + normal))
+
+        // When
+        val result = pick(listOf(partial) + normal)
+
+        // Then
+        assertNotEquals(partial, result)
     }
 
     // --- modalTrackCount: the band centres on the mode, not the median ---
 
     @Test
     fun `modalTrackCount centres on the mode, not the median`() {
-        // Real case: "A Love Supreme" counts are [3x10, 4x9, 6, 13x5]. The median (4) would let a
-        // 3-track pressing into a naive 0.7-of-median band; the mode (3) is the actual typical
-        // edition.
+        // Given - real case: "A Love Supreme", counts [3x10, 4x9, 6, 13x5]. The median (4) would let
+        // a 3-track pressing into a naive 0.7-of-median band; the mode (3) is the typical edition.
         val counts = List(10) { 3 } + List(9) { 4 } + listOf(6) + List(5) { 13 }
         val candidates = counts.mapIndexed { index, count -> release(id = "c$index", trackCount = count) }
-        assertEquals(3, MusicBrainzReleaseRanking.modalTrackCount(candidates))
+
+        // When
+        val result = MusicBrainzReleaseRanking.modalTrackCount(candidates)
+
+        // Then
+        assertEquals(3, result)
     }
 
     @Test
     fun `modalTrackCount ties break to the lower count`() {
+        // Given
         val candidates = listOf(
             release(id = "a", trackCount = 8),
             release(id = "b", trackCount = 8),
             release(id = "c", trackCount = 20),
             release(id = "d", trackCount = 20),
         )
-        assertEquals(8, MusicBrainzReleaseRanking.modalTrackCount(candidates))
+
+        // When
+        val result = MusicBrainzReleaseRanking.modalTrackCount(candidates)
+
+        // Then
+        assertEquals(8, result)
     }
 
     @Test
     fun `modalTrackCount does not filter by score`() {
-        // A low-score candidate that would never survive pickBestRelease's own floor must still
-        // contribute to the mode: modalTrackCount takes no minMatchScore parameter at all.
+        // Given - a low-score candidate that would never survive pickBestRelease's own floor must
+        // still contribute to the mode: modalTrackCount takes no minMatchScore parameter at all
         val candidates = listOf(
             release(id = "a", trackCount = 8, score = 5),
             release(id = "b", trackCount = 8, score = 5),
             release(id = "c", trackCount = 92, score = 100),
         )
-        assertEquals(8, MusicBrainzReleaseRanking.modalTrackCount(candidates))
+
+        // When
+        val result = MusicBrainzReleaseRanking.modalTrackCount(candidates)
+
+        // Then
+        assertEquals(8, result)
     }
 
     @Test
     fun `modalTrackCount is null when no candidate carries a track count`() {
+        // Given
         val candidates = listOf(release(id = "a", trackCount = null), release(id = "b", trackCount = null))
-        assertNull(MusicBrainzReleaseRanking.modalTrackCount(candidates))
+
+        // When
+        val result = MusicBrainzReleaseRanking.modalTrackCount(candidates)
+
+        // Then
+        assertNull(result)
     }
 
     // --- date (tier 6) outranks the pressing preference (tier 7) ---
 
     @Test
     fun `date outranks the pressing preference - Pet Sounds' 1966 'duophonic stereo' original beats an unlabelled 1990 reissue`() {
+        // Given
         val original = release(id = "original", date = "1966-05-16", disambiguation = "duophonic stereo")
         val reissue = release(id = "reissue", date = "1990-09-17", disambiguation = null)
-        assertEquals(original, pick(listOf(reissue, original)))
+
+        // When
+        val result = pick(listOf(reissue, original))
+
+        // Then
+        assertEquals(original, result)
     }
 
     @Test
     fun `date outranks the pressing preference - A Love Supreme's 1965 mono original beats an unlabelled 1986 reissue`() {
+        // Given
         val original = release(id = "original", date = "1965", disambiguation = "mono")
         val reissue = release(id = "reissue", date = "1986", disambiguation = null)
-        assertEquals(original, pick(listOf(reissue, original)))
+
+        // When
+        val result = pick(listOf(reissue, original))
+
+        // Then
+        assertEquals(original, result)
     }
 
     @Test
     fun `an undated release never wins by default against a dated one`() {
+        // Given
         val undated = release(id = "undated", date = null)
         val dated = release(id = "dated", date = "1986")
-        assertEquals(dated, pick(listOf(undated, dated)))
+
+        // When
+        val result = pick(listOf(undated, dated))
+
+        // Then
+        assertEquals(dated, result)
     }
 
     // --- determinism ---
 
     @Test
     fun `the pick does not depend on input order`() {
+        // Given
         val pool = ('a'..'f').map { release(id = it.toString(), date = "1986") }
-        assertEquals(pick(pool)?.id, pick(pool.reversed())?.id)
+
+        // When
+        val forwards = pick(pool)
+        val backwards = pick(pool.reversed())
+
+        // Then
+        assertEquals(forwards?.id, backwards?.id)
     }
 
     @Test
     fun `an all-else-equal pool resolves to the lowest id`() {
-        // Reversed so the expected winner is not already at the head of the list: an
-        // implementation that ignored the tie-break entirely would otherwise pass this.
+        // Given - reversed so the expected winner is not already at the head of the list: an
+        // implementation that ignored the tie-break entirely would otherwise pass this
         val pool = ('a'..'f').map { release(id = it.toString(), date = "1986") }.reversed()
-        assertEquals("a", pick(pool)?.id)
+
+        // When
+        val result = pick(pool)
+
+        // Then
+        assertEquals("a", result?.id)
     }
 
     // --- tiers pinned in isolation, so deleting any one of them turns exactly one test red ---
 
     @Test
     fun `a secondary-typed release loses to a plain album that is otherwise identical`() {
-        // Isolates tier 2: same score, same status, same year, so only the secondary type differs.
+        // Given - isolates tier 2: same score, same status, same year, so only the secondary type differs
         val live = release(id = "a", secondaryTypes = listOf("Live"), date = "1984")
         val plain = release(id = "b", date = "1984")
-        assertEquals(plain, pick(listOf(live, plain)))
+
+        // When
+        val result = pick(listOf(live, plain))
+
+        // Then
+        assertEquals(plain, result)
     }
 
     @Test
     fun `a non-Official release loses to an Official one that is otherwise identical`() {
-        // Isolates tier 3: same score, same type, same year, so only the status differs. Real case:
-        // Nirvana "Nevermind", where today's behaviour returns a Promotion pressing.
+        // Given - isolates tier 3: same score, same type, same year, so only the status differs.
+        // Real case: Nirvana "Nevermind", where the previous behaviour returned a Promotion pressing.
         val promo = release(id = "a", status = "Promotion", date = "1991")
         val official = release(id = "b", date = "1991")
-        assertEquals(official, pick(listOf(promo, official)))
+
+        // When
+        val result = pick(listOf(promo, official))
+
+        // Then
+        assertEquals(official, result)
     }
 
     @Test
     fun `among same-year pressings the one with no pressing-specific disambiguation wins`() {
-        // Isolates tier 7, which every other test resolves before reaching: both are the 2008 Red
-        // Album, so the ladder gets as far as the pressing text. The group's own name is subtracted
-        // from both, leaving "deluxe" on one and nothing on the other.
+        // Given - isolates tier 7, which every other test resolves before reaching: both are the 2008
+        // Red Album, so the ladder gets as far as the pressing text. The group's own name is
+        // subtracted from both, leaving "deluxe" on one and nothing on the other.
         val deluxe = release(
             id = "a", date = "2008-06-16",
             disambiguation = "Red Album, deluxe", releaseGroupDisambiguation = "Red Album",
@@ -260,98 +373,213 @@ class MusicBrainzReleaseRankingTest {
             id = "b", date = "2008-06-24",
             disambiguation = "Red Album", releaseGroupDisambiguation = "Red Album",
         )
-        assertEquals(plain, pick(listOf(deluxe, plain)))
+
+        // When
+        val result = pick(listOf(deluxe, plain))
+
+        // Then
+        assertEquals(plain, result)
     }
 
     @Test
     fun `the edition band admits a pressing at its lower edge and rejects one just outside`() {
-        // Pins the band width itself, not merely its direction: against a modal count of 10, an
-        // 8-track pressing is inside (0.8x exactly) and a 7-track one is not.
+        // Given - pins the band width itself, not merely its direction: against a modal count of 10,
+        // an 8-track pressing is inside (0.8x exactly) and a 7-track one is not
         val modal = (1..3).map { release(id = "modal$it", date = "2000", trackCount = 10) }
         val edge = release(id = "a-edge", date = "1990", trackCount = 8)
-        assertEquals(edge, pick(modal + edge))
         val outside = release(id = "a-outside", date = "1990", trackCount = 7)
-        assertNotEquals(outside, pick(modal + outside))
+
+        // When
+        val atEdge = pick(modal + edge)
+        val justOutside = pick(modal + outside)
+
+        // Then
+        assertEquals(edge, atEdge)
+        assertNotEquals(outside, justOutside)
+    }
+
+    // --- tier ORDER pinned: each of these fails if the two tiers it names are swapped ---
+
+    @Test
+    fun `an Album carrying a secondary type still outranks a Single that carries none`() {
+        // Given - pins tier 1 above tier 2. Each tier alone prefers a different candidate, so this is
+        // the only shape that distinguishes their order: a live album is still the album asked for.
+        val single = release(id = "a", releaseType = "Single", date = "1984")
+        val liveAlbum = release(id = "b", secondaryTypes = listOf("Live"), date = "1984")
+
+        // When
+        val result = pick(listOf(single, liveAlbum))
+
+        // Then
+        assertEquals(liveAlbum, result)
+    }
+
+    @Test
+    fun `a plain Bootleg outranks an Official release carrying a secondary type`() {
+        // Given - pins tier 2 above tier 3. A bootleg of the studio album is the record asked for; an
+        // Official live recording of it is a different record.
+        val officialLive = release(id = "a", secondaryTypes = listOf("Live"), date = "1984")
+        val plainBootleg = release(id = "b", status = "Bootleg", date = "1984")
+
+        // When
+        val result = pick(listOf(officialLive, plainBootleg))
+
+        // Then
+        assertEquals(plainBootleg, result)
+    }
+
+    @Test
+    fun `a higher-scoring box set outranks an in-band pressing that scores lower`() {
+        // Given - pins tier 4 above tier 5, the one boundary every other band test leaves open by
+        // tying score deliberately. Score is MusicBrainz's own judgement of whether this is the right
+        // record at all; the band only distinguishes editions of a record already matched.
+        val inBand = (1..3).map { release(id = "n$it", score = 97, trackCount = 10, date = "1969") }
+        val boxSet = release(id = "box", score = 100, trackCount = 92, date = "1969")
+
+        // When
+        val result = pick(listOf(boxSet) + inBand)
+
+        // Then
+        assertEquals(boxSet, result)
+    }
+
+    // --- the band's treatment of a missing track count ---
+
+    @Test
+    fun `a release with no track count counts as in-band rather than sorting last`() {
+        // Given - the opposite default to the date tier one rung down, and deliberate: MB omitting
+        // `track-count` from a search hit usually means an under-entered ordinary pressing
+        val modal = (1..3).map { release(id = "n$it", trackCount = 10, date = "2000") }
+        val untracked = release(id = "a-untracked", trackCount = null, date = "1990")
+
+        // When
+        val result = pick(modal + untracked)
+
+        // Then - it wins on its earlier date rather than losing tier 5 for having no count
+        assertEquals(untracked, result)
     }
 
     // --- the score floor filters rather than ranks ---
 
     @Test
     fun `everything below minMatchScore yields null`() {
+        // Given
         val pool = listOf(release(id = "a", score = 50), release(id = "b", score = 60))
-        assertNull(pick(pool, minMatchScore = 80))
+
+        // When
+        val result = pick(pool, minMatchScore = 80)
+
+        // Then
+        assertNull(result)
     }
 
     @Test
     fun `minMatchScore is honoured as passed, not hardcoded`() {
+        // Given
         val pool = listOf(release(id = "a", score = 65))
-        assertNull(pick(pool, minMatchScore = 70))
-        assertEquals(pool[0], pick(pool, minMatchScore = 60))
+
+        // When
+        val belowFloor = pick(pool, minMatchScore = 70)
+        val aboveFloor = pick(pool, minMatchScore = 60)
+
+        // Then
+        assertNull(belowFloor)
+        assertEquals(pool[0], aboveFloor)
     }
 
     // --- fixture-backed regression: the real "Master Of Puppets" tied pool ---
 
     @Test
     fun `Master Of Puppets - the real 76-release tied pool resolves to the 1986 original, not an arbitrary tie member`() {
-        // The full top-25 window (of 76 total hits) from the live musicbrainz.org search response
-        // for release:"Master Of Puppets" AND artist:"Metallica", cached 2026-08 under
+        // Given - the full top-25 window (of 76 total hits) from the live musicbrainz.org search
+        // response for release:"Master Of Puppets" AND artist:"Metallica", cached 2026-08 under
         // `.scratch/musicbrainz-release-ranking/prototypes/fixtures/Metallica--Master_Of_Puppets.json`.
         // All 25 score 100. Trimmed to the fields the ranking ladder reads.
         val pool = masterOfPuppetsPool()
-        // Every 1986-dated Album is a tied candidate on identity, score, band and blank pressing
-        // disambiguation; the id tiebreak resolves to the lexicographically-lowest of that group.
-        assertEquals("03e4ebe1-0a44-411c-8e19-78e0768603f8", pick(pool)?.id)
+
+        // When
+        val result = pick(pool)
+
+        // Then - every 1986-dated Album ties on identity, score, band and blank pressing
+        // disambiguation, so the id tiebreak resolves to the lexicographically-lowest of that group
+        assertEquals("03e4ebe1-0a44-411c-8e19-78e0768603f8", result?.id)
     }
 
     @Test
     fun `Master Of Puppets (Remastered) - resolves to the 8-track remaster, not the 137-track box set`() {
-        // The qualified query returns 0 hits from MusicBrainz, so the request reaches this pool via
-        // the stripped-qualifier fallback. Two releases evidence "remastered"; only one is the album.
-        val pick = pick(masterOfPuppetsPool(), removedTags = remasteredTags())
-        assertEquals("4c659607-ad3d-46b1-a7d6-cb4a3530deb0", pick?.id)
-        assertEquals(8, pick?.trackCount)
+        // Given - the qualified query returns 0 hits from MusicBrainz, so the request reaches this
+        // pool via the stripped-qualifier fallback. Two releases evidence "remastered"; one is the album.
+        val pool = masterOfPuppetsPool()
+
+        // When
+        val result = pick(pool, removedTags = remasteredTags())
+
+        // Then
+        assertEquals("4c659607-ad3d-46b1-a7d6-cb4a3530deb0", result?.id)
+        assertEquals(8, result?.trackCount)
     }
 
     @Test
     fun `qualifier evidence outranks the earliest-date preference`() {
-        // A caller who asked for "(Remastered)" wants the remaster, not the 1986 original that the
-        // bare-title ladder would hand them.
+        // Given - a caller who asked for "(Remastered)" wants the remaster, not the 1986 original
+        // that the bare-title ladder would hand them
         val original = release(id = "a", date = "1986", trackCount = 8)
         val remaster = release(id = "b", date = "2017", disambiguation = "remastered", trackCount = 8)
-        assertEquals(original, pick(listOf(original, remaster)))
-        assertEquals(remaster, pick(listOf(original, remaster), removedTags = remasteredTags()))
+
+        // When
+        val bareTitle = pick(listOf(original, remaster))
+        val qualified = pick(listOf(original, remaster), removedTags = remasteredTags())
+
+        // Then
+        assertEquals(original, bareTitle)
+        assertEquals(remaster, qualified)
     }
 
     @Test
     fun `qualifier evidence does not outrank the edition band`() {
-        // The regression this pins: a 137-track box set whose text says "remastered deluxe version"
-        // must not beat a plain 8-track remaster just for containing the keyword.
+        // Given - the regression this pins: a 137-track box set whose text says "remastered deluxe
+        // version" must not beat a plain 8-track remaster just for containing the keyword
         val boxSet = release(id = "a", date = "2017", disambiguation = "remastered deluxe version", trackCount = 137)
         val remaster = release(id = "b", date = "2017", disambiguation = "remastered", trackCount = 8)
         val filler = (1..3).map { release(id = "f$it", date = "1986", trackCount = 8) }
-        assertEquals(remaster, pick(listOf(boxSet, remaster) + filler, removedTags = remasteredTags()))
+
+        // When
+        val result = pick(listOf(boxSet, remaster) + filler, removedTags = remasteredTags())
+
+        // Then
+        assertEquals(remaster, result)
     }
 
     @Test
     fun `a box set with stronger qualifier evidence still loses to an in-band pressing`() {
-        // Pins the ORDER of the band and qualifier tiers, not merely their presence: the box set
-        // states the exact requested year (the strongest tag tier) and the in-band remaster states
-        // none. Rank the qualifier above the band and the 137-track box wins.
+        // Given - pins the ORDER of the band and qualifier tiers, not merely their presence: the box
+        // set states the exact requested year (the strongest tag tier) and the in-band remaster
+        // states none. Rank the qualifier above the band and the 137-track box wins.
         val tags = MusicBrainzQualifierFallback.qualifierFallbackCandidates("Master Of Puppets (Remastered 2017)")
             .first { MusicBrainzQualifierFallback.normalize(it.title) == "master of puppets" }
             .removedTags
         val boxSet = release(id = "a", date = "2017", disambiguation = "remastered 2017 deluxe", trackCount = 137)
         val remaster = release(id = "b", date = "2017", disambiguation = "remastered", trackCount = 8)
         val filler = (1..3).map { release(id = "f$it", date = "1986", trackCount = 8) }
-        assertEquals(remaster, pick(listOf(boxSet, remaster) + filler, removedTags = tags))
+
+        // When
+        val result = pick(listOf(boxSet, remaster) + filler, removedTags = tags)
+
+        // Then
+        assertEquals(remaster, result)
     }
 
     @Test
     fun `qualifier evidence does not outrank identity`() {
-        // Tag text is free-form: a single or a bootleg can claim "remastered" as readily as an album.
+        // Given - tag text is free-form: a single or a bootleg can claim "remastered" as readily as an album
         val single = release(id = "a", releaseType = "Single", date = "2017", disambiguation = "remastered", trackCount = 2)
         val album = release(id = "b", date = "1986", trackCount = 8)
-        assertEquals(album, pick(listOf(single, album), removedTags = remasteredTags()))
+
+        // When
+        val result = pick(listOf(single, album), removedTags = remasteredTags())
+
+        // Then
+        assertEquals(album, result)
     }
 
     private fun masterOfPuppetsPool() = listOf(
