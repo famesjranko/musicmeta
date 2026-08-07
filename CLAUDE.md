@@ -38,5 +38,9 @@ Every finding has exactly one home; this file is the home only for the last row.
   What counts as breaking, and the JVM descriptor caveat: `docs/pitfalls.md`.
 - `e2e/` tests hit live APIs behind `-Dinclude.e2e=true` and never gate a merge, so an e2e test is
   not coverage for a change.
+- Comments carry the contract, not the history. KDoc states what a caller must know; a rationale
+  that isn't a caller's problem gets one sentence, not a paragraph. No PR/issue numbers, `.scratch/`
+  paths, or "previously we…" in code — git and the PR hold those. A comment that restates the code
+  under it, or that documents nothing (an orphaned KDoc above a blank line), is a defect.
 - A new provider is `provider/<name>/` as `*Api`, `*Models`, `*Mapper` (all `internal`) and a public
   `*Provider`. Keeping the first three `internal` is what lets them be renamed without an `apiDump`.

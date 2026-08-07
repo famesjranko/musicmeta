@@ -3,15 +3,9 @@ package com.landofoz.musicmeta.demoweb
 import com.landofoz.musicmeta.DiscographyAlbum
 
 /**
- * Collapses a raw discography (one row per provider release, e.g. Deezer's `ARTIST_DISCOGRAPHY`
- * catalogs every physical/digital edition separately) into one row per base album, so "Master Of
- * Puppets" doesn't render as 6+ rows just because Deezer has 6+ pressings of it.
- * (`.scratch/demo-web-discography-quirks/issues/01-discography-passes-raw-edition-title-to-reenrich.md`)
- *
- * Grouping only — this module never changes what a click re-enriches (`ProfileMapper.albumEnrich`
- * already gets a clean target because the displayed/clicked title here is the group's bare base
- * title). Core PRs #139/#141 independently fixed the re-enrich-time qualifier problem for
- * MusicBrainz search itself; this is the display-time dedupe, which stays useful regardless.
+ * Collapses a raw discography (one row per provider release — Deezer's `ARTIST_DISCOGRAPHY` catalogs
+ * every physical/digital edition separately) into one row per base album. Display only: the title a
+ * caller shows and re-enriches is the group's bare base title.
  */
 internal object DiscographyGrouping {
 
@@ -24,25 +18,15 @@ internal object DiscographyGrouping {
         val editionCount: Int,
     )
 
-    /**
-     * Groups [albums] by [EditionQualifier.baseTitle] (case-insensitive) AND [DiscographyAlbum.type]
-     * (case-insensitive, null normalized to blank) — two releases can legitimately share a base
-     * title but be different things (Deezer's "Load" album vs. a "Load" single), and merging those
-     * would silently drop one from the list rather than just deduping editions of the same release.
-     * Preserves the section's existing order by each group's first occurrence. Within a group: the
-     * canonical entry is the one whose title IS the bare base title if present, else the entry with
-     * the shortest (least-qualified) title, ties broken by first occurrence — display title is
-     * always the base title, year is the earliest non-null year in the group, thumbnail/type come
-     * from the canonical entry, and [GroupedAlbum.editionCount] is the group's row count so a caller
-     * can surface "N editions" only when there's more than one.
-     */
-
-    // A group's identity. A data class rather than a concatenated string so the base-title and type
-    // boundary can't blur — "Ride" + type "live album" and "Ride Live" + type "album" are different
-    // groups, which any single-separator join of the two would have to encode by picking a
-    // character that can't occur in either field.
+    /** A group's identity. Two fields, not a joined string, so no separator can occur in either. */
     private data class GroupKey(val base: String, val type: String)
 
+    /**
+     * Groups [albums] by base title and [DiscographyAlbum.type], both case-insensitive — a base
+     * title alone would merge Deezer's "Load" album into its "Load" single, dropping one row.
+     * Group order and [GroupedAlbum.editionCount] follow the input; within a group, title is the
+     * base title, year is the earliest, and type/thumbnail come from the least-qualified entry.
+     */
     fun group(albums: List<DiscographyAlbum>): List<GroupedAlbum> {
         val order = mutableListOf<GroupKey>()
         val byKey = mutableMapOf<GroupKey, MutableList<DiscographyAlbum>>()
@@ -74,35 +58,20 @@ internal object DiscographyGrouping {
 }
 
 /**
- * Strips a trailing edition/reissue qualifier parenthetical from a provider-sourced title, so
- * discography rows for the same album group under one base title. The qualifier vocabulary/regex
- * here deliberately mirrors core's
- * `musicmeta-core/src/main/kotlin/com/landofoz/musicmeta/provider/musicbrainz/MusicBrainzQualifierFallback.kt`
- * (`internal` to core, so it can't be called directly from this separate module) — keep the two in
- * sync by hand if that vocabulary changes. Only a trailing `(...)`/`[...]` group whose content
- * fully classifies against the vocabulary is stripped, so a real title like `"Welcome Home
- * (Sanitarium)"` is never touched, and stripping repeats (most-specific-first) so a title with two
- * bracket groups reduces all the way to the bare base title.
+ * Strips trailing edition/reissue qualifier brackets from a provider-sourced title. Only a whole
+ * `(...)`/`[...]` group that fully classifies against [KIND_PATTERNS] is stripped, so
+ * `"Welcome Home (Sanitarium)"` is untouched; stripping repeats until a group doesn't conform.
  *
- * Classification is deliberately LOOSER than core's in one respect, a demo-web-only extension:
- * each `/`-, `&`-, or `,`-separated sub-phrase may itself be a greedy whitespace-separated
- * *sequence* of kind matches (see [isQualifierPhrase]) — `"Remastered Deluxe Box Set"` (no
- * separator at all, seen live on Metallica's "Metallica"/"ReLoad"/"...And Justice for All")
- * classifies as `remaster` + `deluxe_box_set` even though core's fallback only ever tries
- * single-kind-per-sub-phrase matches. That's safe here specifically because a wrong group in this
- * module only misgroups a *display* row (cosmetic — worst case, two different album pressings show
- * as one row) whereas core's stricter rule guards a live MusicBrainz *search*, where a
- * wrongly-stripped qualifier risks a confident match to the wrong release. No unrelated word (e.g.
- * `"live"`, `"sanitarium"`) is ever in [KIND_PATTERNS], so `"Live Remastered"` and
- * `"Not Remastered"` still fail to classify — the extension only chains together phrases that
- * were already individually recognized qualifier kinds, nothing more.
+ * Duplicates the vocabulary in core's `MusicBrainzQualifierFallback` (`internal` to that module) —
+ * keep them in sync by hand. Looser than core's in one respect: a sub-phrase may be a *sequence* of
+ * kinds (see [isQualifierPhrase]), so `"Remastered Deluxe Box Set"` classifies. Safe only because a
+ * wrong result here misgroups a display row, where core's guards a live search.
  */
 internal object EditionQualifier {
 
     private data class KindPattern(val kind: String, val pattern: Regex)
 
-    // Order matters: more specific kinds first, so a two-word phrase classifies as the specific
-    // kind rather than a generic prefix/suffix of it (mirrors KIND_PATTERNS order in core).
+    // Order matters: specific kinds first, so "deluxe box set" doesn't classify as bare "deluxe".
     private val KIND_PATTERNS: List<KindPattern> = listOf(
         KindPattern("remaster", Regex("""(\d{4}\s+)?remaster(ed)?(\s+\d{4})?""", RegexOption.IGNORE_CASE)),
         KindPattern("super_deluxe", Regex("""super\s+deluxe(\s+edition)?""", RegexOption.IGNORE_CASE)),
@@ -127,13 +96,9 @@ internal object EditionQualifier {
         KIND_PATTERNS.firstOrNull { it.pattern.matches(phrase) }?.kind
 
     /**
-     * Whether [phrase] is fully consumed by one or more whitespace-separated kind matches —
-     * the demo-web-only sequence extension described in the class doc. Base case: [phrase] alone
-     * fullmatches a kind ([classifyKind]). Recursive case: some [KIND_PATTERNS] entry matches at
-     * the very start of [phrase], and the remainder after that match (trimmed) is itself fully
-     * consumable the same way — tried against every kind, most-specific-first, so a match that
-     * doesn't lead anywhere backtracks to the next candidate kind rather than failing outright.
-     * Termination is guaranteed because every match consumes at least one character.
+     * Whether [phrase] is fully consumed by one or more whitespace-separated kind matches. Tries
+     * every kind at the start of [phrase] and recurses on the remainder, so a leading match that
+     * leads nowhere backtracks. Terminates because every match consumes at least one character.
      */
     private fun isQualifierPhrase(phrase: String): Boolean {
         val trimmed = phrase.trim()
@@ -157,11 +122,7 @@ internal object EditionQualifier {
         return true
     }
 
-    /**
-     * [title] with every trailing qualifying `(...)`/`[...]` group stripped, most-specific-first,
-     * stopping the moment a trailing group doesn't whole-group-conform (so an unrelated leading
-     * parenthetical, or a mixed non-conforming group, is never touched).
-     */
+    /** [title] with every trailing qualifying `(...)`/`[...]` group stripped; never empty. */
     fun baseTitle(title: String): String {
         var cur = title.trim()
         while (true) {
