@@ -24,8 +24,11 @@ from a `\"\"\"` a comment mentions, or from a `//` inside an ordinary string lit
 either wrong leaves the tracker stuck open — which blanks the rest of the file, `@Test` lines
 included, and reports it clean without reading it. That shipped once and hid 43 tests in one file
 behind a green gate. Distinguishing the cases needs a real tokenizer, which is out of proportion
-to what this check is for, so the misparse stays: it costs a visible `::error` on a well-formed
-test, which a reader can see and dispute, and never a silent pass.
+to what this check is for, so the misparse stays. What it buys is bounded blast radius, not
+freedom from silence: fixture text whose own content happens to read as a *well-formed* label
+satisfies the Given check, so that one test passes without being read. That edge is accepted and
+pinned by a test. The failure it replaces was the same shape at file scale — one stuck tracker,
+every test below it unread — and no line of output to say so either way.
 
     python3 check_test_shape.py [--root PATH]
     python3 check_test_shape.py --file PATH   # one file, for format-on-write.sh

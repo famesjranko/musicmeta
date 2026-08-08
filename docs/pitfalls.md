@@ -294,12 +294,19 @@ is inside them — was implemented twice and was wrong both times, in the same d
   tracker sticks open again. This one was live on `DeezerProviderTest.kt`: **43 of its 49 tests were
   invisible to the checker while `check` printed `Test shape clean across 86 test sources`.**
 
-The asymmetry is the lesson. The misparse being repaired costs a visible `::error` on a well-formed
-test — a human sees it and disputes it. Every failed repair costs *silence*: the gate reports clean
-on a file it never read, and nothing in the output distinguishes that from real compliance. A check
-that skips lines can always skip the wrong ones, and skipping fails quiet.
+Scale is the lesson, not visibility. The misparse being repaired is *mostly* visible — a bare label
+or an embedded `class` costs an `::error` on a well-formed test, which a human sees and disputes —
+but not entirely: fixture text that happens to read as a well-formed label satisfies the Given check
+and that one test passes unread. What the failed repairs cost was the same silence at **file** scale.
+One stuck tracker and every test below it goes unread, with nothing in the output to distinguish
+that from compliance. Both states can pass a test that should fail; only the repair can pass 43.
+
+The shared defect was an unbounded toggle: an "am I inside a string" flag with no invariant checked
+at end of file. A scheme that treated *still inside at EOF* as an error would have failed loudly on
+`DeezerProviderTest.kt` the day it was written. Any heuristic tracking enter/exit state over a file
+needs that circuit breaker, because getting stuck fails quiet all the way to the end.
 
 Telling a comment's `//` from a string's, or a delimiter from a mention, needs a real tokenizer.
-That is out of proportion to a house convention check, so the misparse stays, pinned by two tests
-that assert the false positive *is* reported. Before adding line-skipping to any check here, ask
-what happens when the skip runs away — and if the answer is "it passes", it is worse than the bug.
+That is out of proportion to a house convention check, so the misparse stays, pinned by three tests:
+two asserting the false positives *are* reported, one asserting the silent edge, so a future repair
+has to confront all three rather than trade a visible cost for an invisible one.

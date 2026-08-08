@@ -327,6 +327,27 @@ private class Helper {
         self.assertEqual(len(findings), 1)
         self.assertIn("no `// Given -` line", findings[0])
 
+    def test_well_formed_label_inside_a_raw_string_satisfies_the_given_check(self):
+        # Given a raw string whose fixture text contains a line that reads as a *well-formed*
+        # label, in a test that has no real labels of its own
+        body = '''class ATest {
+    @Test
+    fun f() {
+        val generatedSource = """
+        // Given - the fixture text itself looks like a valid label
+        fun exampleTest() {}
+"""
+        assertEquals(1, generatedSource.length)
+    }
+}
+'''
+        # When the test-shape check runs
+        # Then nothing is reported — the third face of the same limitation, and the only one that
+        # fails silent. Pinned because it is the counter-example to "the misparse is always
+        # visible": accepted for the same disproportionate-tokenizer reason, and bounded to the one
+        # test, where the delimiter-tracking repair failed the same way for a whole file.
+        self.assertEqual(self.findings_for("m/src/test/kotlin/ATest.kt", body), [])
+
     def test_declaration_inside_a_raw_string_closes_the_window_early(self):
         # Given a raw string whose fixture text opens with `class` at column 0, placed *before*
         # this test's `// Given -` line
