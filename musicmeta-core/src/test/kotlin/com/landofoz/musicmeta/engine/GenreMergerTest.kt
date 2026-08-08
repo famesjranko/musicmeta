@@ -9,25 +9,25 @@ class GenreMergerTest {
 
     @Test
     fun `merge returns empty list for empty input`() {
-        // Given — an empty list of genre tags
+        // Given - an empty list of genre tags
         val tags = emptyList<GenreTag>()
 
-        // When — merging the tags
+        // When - merging the tags
         val result = GenreMerger.merge(tags)
 
-        // Then — the result is empty
+        // Then - the result is empty
         assertTrue(result.isEmpty())
     }
 
     @Test
     fun `merge normalizes tag names to lowercase`() {
-        // Given — a single tag with an uppercase name
+        // Given - a single tag with an uppercase name
         val tags = listOf(GenreTag(name = "ROCK", confidence = 0.8f))
 
-        // When — merging the tags then normalizing the name directly
+        // When - merging the tags then normalizing the name directly
         val result = GenreMerger.merge(tags)
 
-        // Then — the display name is preserved and normalize lowercases it
+        // Then - the display name is preserved and normalize lowercases it
         assertEquals("ROCK", result.single().name) // display name preserved from first seen
         assertEquals("rock", GenreMerger.normalize("ROCK")) // normalize to lowercase
     }
@@ -40,10 +40,10 @@ class GenreMergerTest {
             GenreTag(name = "hip hop", confidence = 0.6f),
         )
 
-        // When — merging the tags
+        // When - merging the tags
         val result = GenreMerger.merge(tags)
 
-        // Then — the aliased genre names appear in the result
+        // Then - the aliased genre names appear in the result
         val names = result.map { it.name }
         assertTrue("alternative rock" in names)
         assertTrue("hip-hop" in names)
@@ -57,10 +57,10 @@ class GenreMergerTest {
             GenreTag(name = "rock", confidence = 0.3f, sources = listOf("lastfm")),
         )
 
-        // When — merging the tags
+        // When - merging the tags
         val result = GenreMerger.merge(tags)
 
-        // Then — the duplicate tags collapse into one with combined confidence and sources
+        // Then - the duplicate tags collapse into one with combined confidence and sources
         assertEquals(1, result.size)
         assertEquals("Rock", result.single().name) // first-seen casing preserved
         assertEquals(0.7f, result.single().confidence, 0.001f)
@@ -76,10 +76,10 @@ class GenreMergerTest {
             GenreTag(name = "rock", confidence = 0.6f, sources = listOf("lastfm")),
         )
 
-        // When — merging the tags
+        // When - merging the tags
         val result = GenreMerger.merge(tags)
 
-        // Then — the combined confidence is capped at 1.0 instead of summing to 1.2
+        // Then - the combined confidence is capped at 1.0 instead of summing to 1.2
         assertEquals(1, result.size)
         assertEquals(1.0f, result.single().confidence, 0.001f)
     }
@@ -93,10 +93,10 @@ class GenreMergerTest {
             GenreTag(name = "Jazz", confidence = 0.5f),
         )
 
-        // When — merging the tags
+        // When - merging the tags
         val result = GenreMerger.merge(tags)
 
-        // Then — the result is ordered from highest to lowest confidence
+        // Then - the result is ordered from highest to lowest confidence
         assertEquals(listOf(0.8f, 0.5f, 0.3f), result.map { it.confidence })
     }
 
@@ -108,7 +108,7 @@ class GenreMergerTest {
             GenreTag(name = "rock", confidence = 0.4f, sources = listOf("lastfm")),
         )
 
-        // When — merging the tags
+        // When - merging the tags
         val result = GenreMerger.merge(tags)
 
         // Then - display name from first-seen ("Rock") is kept
@@ -117,13 +117,13 @@ class GenreMergerTest {
 
     @Test
     fun `merge handles single provider input`() {
-        // Given — two distinct tags both sourced from a single provider
+        // Given - two distinct tags both sourced from a single provider
         val tags = listOf(
             GenreTag(name = "Electronic", confidence = 0.9f, sources = listOf("lastfm")),
             GenreTag(name = "Ambient", confidence = 0.6f, sources = listOf("lastfm")),
         )
 
-        // When — merging the tags
+        // When - merging the tags
         val result = GenreMerger.merge(tags)
 
         // Then - tags are returned sorted by confidence; display name is first-seen casing

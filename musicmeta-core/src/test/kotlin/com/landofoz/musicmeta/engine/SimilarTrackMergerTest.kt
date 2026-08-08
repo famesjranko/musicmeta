@@ -13,20 +13,20 @@ class SimilarTrackMergerTest {
 
     @Test
     fun `merge returns NotFound for empty results`() {
-        // Given — no provider results at all
+        // Given - no provider results at all
         val results = emptyList<EnrichmentResult.Success>()
 
-        // When — merging the empty list
+        // When - merging the empty list
         val result = SimilarTrackMerger.merge(results)
 
-        // Then — NotFound is returned with provider "all_providers"
+        // Then - NotFound is returned with provider "all_providers"
         assertTrue(result is EnrichmentResult.NotFound)
         assertEquals("all_providers", (result as EnrichmentResult.NotFound).provider)
     }
 
     @Test
     fun `merge returns single provider results unchanged`() {
-        // Given — lastfm returns 2 tracks
+        // Given - lastfm returns 2 tracks
         val tracks = listOf(
             SimilarTrack("Lucky", "Radiohead", matchScore = 0.9f, sources = listOf("lastfm")),
             SimilarTrack("Karma Police", "Radiohead", matchScore = 0.7f, sources = listOf("lastfm")),
@@ -40,10 +40,10 @@ class SimilarTrackMergerTest {
             )
         )
 
-        // When — merging the single-provider result list
+        // When - merging the single-provider result list
         val result = SimilarTrackMerger.merge(results)
 
-        // Then — both tracks returned with original sources
+        // Then - both tracks returned with original sources
         assertTrue(result is EnrichmentResult.Success)
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.SimilarTracks
         assertEquals(2, data.tracks.size)
@@ -53,7 +53,7 @@ class SimilarTrackMergerTest {
 
     @Test
     fun `merge deduplicates tracks by title and artist`() {
-        // Given — lastfm has "Lucky" by Radiohead, deezer has "lucky" by "radiohead" (case difference)
+        // Given - lastfm has "Lucky" by Radiohead, deezer has "lucky" by "radiohead" (case difference)
         val lastfmResult = EnrichmentResult.Success(
             type = EnrichmentType.SIMILAR_TRACKS,
             data = EnrichmentData.SimilarTracks(tracks = listOf(
@@ -71,10 +71,10 @@ class SimilarTrackMergerTest {
             confidence = 0.8f,
         )
 
-        // When — merging the lastfm and deezer results
+        // When - merging the lastfm and deezer results
         val result = SimilarTrackMerger.merge(listOf(lastfmResult, deezerResult))
 
-        // Then — only 1 "Lucky" entry (merged from both)
+        // Then - only 1 "Lucky" entry (merged from both)
         assertTrue(result is EnrichmentResult.Success)
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.SimilarTracks
         assertEquals(1, data.tracks.size)
@@ -83,7 +83,7 @@ class SimilarTrackMergerTest {
 
     @Test
     fun `merge keeps Last_fm's score outright on overlap with Deezer, does not sum`() {
-        // Given — same track from both providers; Deezer's score is artist-derived, not genuine
+        // Given - same track from both providers; Deezer's score is artist-derived, not genuine
         val lastfmResult = EnrichmentResult.Success(
             type = EnrichmentType.SIMILAR_TRACKS,
             data = EnrichmentData.SimilarTracks(tracks = listOf(
@@ -101,10 +101,10 @@ class SimilarTrackMergerTest {
             confidence = 0.8f,
         )
 
-        // When — merging the lastfm and deezer results
+        // When - merging the lastfm and deezer results
         val result = SimilarTrackMerger.merge(listOf(lastfmResult, deezerResult))
 
-        // Then — matchScore is Last.fm's 0.9 outright, not 0.9 + 0.8 (would overstate the match)
+        // Then - matchScore is Last.fm's 0.9 outright, not 0.9 + 0.8 (would overstate the match)
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.SimilarTracks
         assertEquals(0.9f, data.tracks[0].matchScore, 0.001f)
         assertTrue("lastfm" in data.tracks[0].sources)
@@ -113,7 +113,7 @@ class SimilarTrackMergerTest {
 
     @Test
     fun `merge sums scores capped at 1_0 when neither source is Last_fm`() {
-        // Given — same track recommended by two non-genuine sources, both artist-derived
+        // Given - same track recommended by two non-genuine sources, both artist-derived
         val sourceAResult = EnrichmentResult.Success(
             type = EnrichmentType.SIMILAR_TRACKS,
             data = EnrichmentData.SimilarTracks(tracks = listOf(
@@ -131,17 +131,17 @@ class SimilarTrackMergerTest {
             confidence = 0.8f,
         )
 
-        // When — merging the two non-Last.fm results
+        // When - merging the two non-Last.fm results
         val result = SimilarTrackMerger.merge(listOf(sourceAResult, sourceBResult))
 
-        // Then — matchScore = min(0.9 + 0.8, 1.0) = 1.0, not 1.7 — additive agreement still applies
+        // Then - matchScore = min(0.9 + 0.8, 1.0) = 1.0, not 1.7 — additive agreement still applies
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.SimilarTracks
         assertEquals(1.0f, data.tracks[0].matchScore, 0.001f)
     }
 
     @Test
     fun `merge combines sources from multiple providers`() {
-        // Given — same track from lastfm and deezer
+        // Given - same track from lastfm and deezer
         val lastfmResult = EnrichmentResult.Success(
             type = EnrichmentType.SIMILAR_TRACKS,
             data = EnrichmentData.SimilarTracks(tracks = listOf(
@@ -159,10 +159,10 @@ class SimilarTrackMergerTest {
             confidence = 0.8f,
         )
 
-        // When — merging the lastfm and deezer results
+        // When - merging the lastfm and deezer results
         val result = SimilarTrackMerger.merge(listOf(lastfmResult, deezerResult))
 
-        // Then — both sources listed
+        // Then - both sources listed
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.SimilarTracks
         val sources = data.tracks[0].sources
         assertTrue("lastfm" in sources)
@@ -171,7 +171,7 @@ class SimilarTrackMergerTest {
 
     @Test
     fun `merge prefers MBID from provider that has it`() {
-        // Given — lastfm has MBID, deezer has deezerId
+        // Given - lastfm has MBID, deezer has deezerId
         val lastfmResult = EnrichmentResult.Success(
             type = EnrichmentType.SIMILAR_TRACKS,
             data = EnrichmentData.SimilarTracks(tracks = listOf(
@@ -201,10 +201,10 @@ class SimilarTrackMergerTest {
             confidence = 0.8f,
         )
 
-        // When — merging the lastfm and deezer results
+        // When - merging the lastfm and deezer results
         val result = SimilarTrackMerger.merge(listOf(lastfmResult, deezerResult))
 
-        // Then — merged result has both MBID and deezerId
+        // Then - merged result has both MBID and deezerId
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.SimilarTracks
         val merged = data.tracks[0]
         assertEquals("lucky-mbid", merged.identifiers.musicBrainzId)
@@ -213,7 +213,7 @@ class SimilarTrackMergerTest {
 
     @Test
     fun `merge sorts by matchScore descending`() {
-        // Given — tracks from different providers with varying scores
+        // Given - tracks from different providers with varying scores
         val lastfmResult = EnrichmentResult.Success(
             type = EnrichmentType.SIMILAR_TRACKS,
             data = EnrichmentData.SimilarTracks(tracks = listOf(
@@ -232,10 +232,10 @@ class SimilarTrackMergerTest {
             confidence = 0.8f,
         )
 
-        // When — merging the lastfm and deezer results
+        // When - merging the lastfm and deezer results
         val result = SimilarTrackMerger.merge(listOf(lastfmResult, deezerResult))
 
-        // Then — sorted by matchScore descending
+        // Then - sorted by matchScore descending
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.SimilarTracks
         val scores = data.tracks.map { it.matchScore }
         assertEquals(listOf(0.9f, 0.75f, 0.6f), scores)
@@ -243,7 +243,7 @@ class SimilarTrackMergerTest {
 
     @Test
     fun `merge handles tracks unique to each provider`() {
-        // Given — "Lucky" only from lastfm, "No Surprises" only from deezer
+        // Given - "Lucky" only from lastfm, "No Surprises" only from deezer
         val lastfmResult = EnrichmentResult.Success(
             type = EnrichmentType.SIMILAR_TRACKS,
             data = EnrichmentData.SimilarTracks(tracks = listOf(
@@ -261,10 +261,10 @@ class SimilarTrackMergerTest {
             confidence = 0.8f,
         )
 
-        // When — merging the lastfm and deezer results
+        // When - merging the lastfm and deezer results
         val result = SimilarTrackMerger.merge(listOf(lastfmResult, deezerResult))
 
-        // Then — both appear once with their original single-provider sources
+        // Then - both appear once with their original single-provider sources
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.SimilarTracks
         assertEquals(2, data.tracks.size)
         val titles = data.tracks.map { it.title }
@@ -274,7 +274,7 @@ class SimilarTrackMergerTest {
 
     @Test
     fun `merge distinguishes tracks with same title but different artists`() {
-        // Given — "Lucky" by Radiohead and "Lucky" by Britney Spears are different tracks
+        // Given - "Lucky" by Radiohead and "Lucky" by Britney Spears are different tracks
         val lastfmResult = EnrichmentResult.Success(
             type = EnrichmentType.SIMILAR_TRACKS,
             data = EnrichmentData.SimilarTracks(tracks = listOf(
@@ -292,10 +292,10 @@ class SimilarTrackMergerTest {
             confidence = 0.8f,
         )
 
-        // When — merging the lastfm and deezer results
+        // When - merging the lastfm and deezer results
         val result = SimilarTrackMerger.merge(listOf(lastfmResult, deezerResult))
 
-        // Then — 2 distinct entries (different artists means different tracks)
+        // Then - 2 distinct entries (different artists means different tracks)
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.SimilarTracks
         assertEquals(2, data.tracks.size)
     }

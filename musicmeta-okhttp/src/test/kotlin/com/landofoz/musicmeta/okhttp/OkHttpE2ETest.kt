@@ -43,14 +43,14 @@ class OkHttpE2ETest {
 
     @Test
     fun `OkHttp engine resolves Radiohead artist with genre and photo`() = runBlocking {
-        // Given — real API request via OkHttp adapter
+        // Given - real API request via OkHttp adapter
         val request = EnrichmentRequest.forArtist("Radiohead")
         val types = setOf(EnrichmentType.GENRE, EnrichmentType.ARTIST_PHOTO)
 
-        // When — enriching through OkHttp transport
+        // When - enriching through OkHttp transport
         val results = engine.enrich(request, types)
 
-        // Then — at least genre should resolve (MusicBrainz + free providers)
+        // Then - at least genre should resolve (MusicBrainz + free providers)
         val genre = results.raw[EnrichmentType.GENRE]
         assertTrue(
             "GENRE should be Success via OkHttp adapter, got $genre",
@@ -61,14 +61,14 @@ class OkHttpE2ETest {
 
     @Test
     fun `OkHttp engine resolves OK Computer album art`() = runBlocking {
-        // Given — album art request (Cover Art Archive returns 307 redirect)
+        // Given - album art request (Cover Art Archive returns 307 redirect)
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
         val types = setOf(EnrichmentType.ALBUM_ART)
 
-        // When — enriching through OkHttp transport
+        // When - enriching through OkHttp transport
         val results = engine.enrich(request, types)
 
-        // Then — Cover Art Archive should resolve album art via redirect
+        // Then - Cover Art Archive should resolve album art via redirect
         val art = results.raw[EnrichmentType.ALBUM_ART]
         assertTrue(
             "ALBUM_ART should be Success via OkHttp adapter, got $art",
@@ -81,13 +81,13 @@ class OkHttpE2ETest {
 
     @Test
     fun `OkHttp engine handles enrichBatch with Flow`() = runBlocking {
-        // Given — multiple album requests via OkHttp transport
+        // Given - multiple album requests via OkHttp transport
         val requests = listOf(
             EnrichmentRequest.forAlbum("OK Computer", "Radiohead"),
             EnrichmentRequest.forAlbum("Kid A", "Radiohead"),
         )
 
-        // When — batch enriching via Flow
+        // When - batch enriching via Flow
         var count = 0
         engine.enrichBatch(requests, setOf(EnrichmentType.GENRE)).collect { (request, results) ->
             count++
@@ -96,7 +96,7 @@ class OkHttpE2ETest {
             println("  [$count] $label: ${genre?.javaClass?.simpleName}")
         }
 
-        // Then — both requests emitted
+        // Then - both requests emitted
         assertEquals("Both requests should emit results", 2, count)
     }
 }

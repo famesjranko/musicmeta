@@ -61,13 +61,13 @@ class EnrichStrategyFailureTest {
             .also { p -> types.forEach { p.givenResult(it, success(it, id)) } }
 
     @Test fun `enrich reports a typed Error when the merger throws`() = runTest {
-        // Given — a GENRE provider with data, and a merger for GENRE that throws
+        // Given - a GENRE provider with data, and a merger for GENRE that throws
         val p = providerFor(genre)
 
-        // When — enriching the mergeable type
+        // When - enriching the mergeable type
         val results = engine(listOf(p), mergers = listOf(ThrowingMerger(genre))).enrich(req, setOf(genre))
 
-        // Then — the failure comes back as an Error for that type rather than escaping enrich()
+        // Then - the failure comes back as an Error for that type rather than escaping enrich()
         val result = results.raw[genre]
         assertTrue("expected Error, got $result", result is EnrichmentResult.Error)
         assertEquals("merger boom", (result as EnrichmentResult.Error).message)
@@ -76,14 +76,14 @@ class EnrichStrategyFailureTest {
     }
 
     @Test fun `enrich reports a typed Error when the synthesizer throws`() = runTest {
-        // Given — a composite type whose synthesizer throws
+        // Given - a composite type whose synthesizer throws
         val p = providerFor(bio)
 
-        // When — enriching the composite type
+        // When - enriching the composite type
         val results = engine(listOf(p), synthesizers = listOf(ThrowingSynthesizer(timeline)))
             .enrich(req, setOf(timeline))
 
-        // Then — the failure comes back as an Error for that type rather than escaping enrich()
+        // Then - the failure comes back as an Error for that type rather than escaping enrich()
         val result = results.raw[timeline]
         assertTrue("expected Error, got $result", result is EnrichmentResult.Error)
         assertEquals("synthesizer boom", (result as EnrichmentResult.Error).message)
@@ -92,54 +92,54 @@ class EnrichStrategyFailureTest {
     }
 
     @Test fun `a throwing merger does not discard an unrelated type resolved in the same call`() = runTest {
-        // Given — one provider serving both a mergeable type whose merger throws and an
+        // Given - one provider serving both a mergeable type whose merger throws and an
         // unrelated regular type; previously the throw unwound the whole call and both were lost
         val p = providerFor(genre, bio)
 
-        // When — enriching both in one call
+        // When - enriching both in one call
         val results = engine(listOf(p), mergers = listOf(ThrowingMerger(genre)))
             .enrich(req, setOf(genre, bio))
 
-        // Then — only the merged type fails; the unrelated type's work survives
+        // Then - only the merged type fails; the unrelated type's work survives
         assertTrue(results.raw[genre] is EnrichmentResult.Error)
         assertEquals("p", (results.raw[bio] as EnrichmentResult.Success).provider)
     }
 
     @Test fun `a throwing merger does not discard a cache hit collected in the same call`() = runTest {
-        // Given — a cached result for an unrelated type, and a merger that throws
+        // Given - a cached result for an unrelated type, and a merger that throws
         val p = providerFor(genre)
         cache.put(DefaultEnrichmentEngine.entityKeyFor(req, bio), bio, success(bio, "cached"))
 
-        // When — enriching the cached type alongside the failing merged type
+        // When - enriching the cached type alongside the failing merged type
         val results = engine(listOf(p), mergers = listOf(ThrowingMerger(genre)))
             .enrich(req, setOf(genre, bio))
 
-        // Then — the cache hit is still returned, not thrown away with the merge failure
+        // Then - the cache hit is still returned, not thrown away with the merge failure
         assertEquals("cached", (results.raw[bio] as EnrichmentResult.Success).provider)
     }
 
     @Test fun `a type with no merger registered resolves through the chain untouched`() = runTest {
-        // Given — GENRE requested with no merger registered, so it is not a mergeable type at all
+        // Given - GENRE requested with no merger registered, so it is not a mergeable type at all
         // and never reaches the guarded merge path
         val p = providerFor(genre)
 
-        // When — enriching that type
+        // When - enriching that type
         val results = engine(listOf(p)).enrich(req, setOf(genre))
 
-        // Then — it resolves as an ordinary type; the guard only ever sees a merger that exists
+        // Then - it resolves as an ordinary type; the guard only ever sees a merger that exists
         assertEquals("p", (results.raw[genre] as EnrichmentResult.Success).provider)
     }
 
     // --- the guard itself ---
 
     @Test fun `guarded strategy converts an ordinary failure into an Error for the type`() = runTest {
-        // Given — a strategy that throws a plain exception
-        // When — run through the guard
+        // Given - a strategy that throws a plain exception
+        // When - run through the guard
         val result = guardedStrategy(EnrichmentLogger.NoOp, genre, "merger") {
             throw IllegalStateException("boom")
         }
 
-        // Then — it becomes a typed Error naming the type and the strategy
+        // Then - it becomes a typed Error naming the type and the strategy
         assertTrue(result is EnrichmentResult.Error)
         assertEquals(genre, (result as EnrichmentResult.Error).type)
         assertEquals("boom", result.message)
@@ -152,7 +152,7 @@ class EnrichStrategyFailureTest {
     // CancellationException — which is what these tests throw.
 
     @Test fun `guarded strategy propagates a cancellation of our own job`() = runTest {
-        // Given — our job genuinely cancelled. Both call sites sit inside enrich()'s withTimeout,
+        // Given - our job genuinely cancelled. Both call sites sit inside enrich()'s withTimeout,
         // so this is also how enrichTimeoutMs must continue to be delivered.
         // Observed from inside the coroutine, and joined rather than awaited — `await()` on a
         // cancelled Deferred throws regardless of what the guard did, which makes the obvious
@@ -175,28 +175,28 @@ class EnrichStrategyFailureTest {
             }
         }
 
-        // When — letting the guarded merge finish
+        // When - letting the guarded merge finish
         running.join()
 
-        // Then — it stops, rather than reporting a type that nobody is waiting for
+        // Then - it stops, rather than reporting a type that nobody is waiting for
         assertTrue("a cancelled enrichment must not be converted into a per-type Error", rethrew)
         assertFalse("our own cancellation must not become that type's Error", degraded)
     }
 
     @Test fun `guarded strategy reports an Error when the strategy's own timeout expires`() = runTest {
-        // Given — a consumer merger whose own deadline expired, our job healthy
+        // Given - a consumer merger whose own deadline expired, our job healthy
         val result = guardedStrategy(EnrichmentLogger.NoOp, genre, "merger") {
             throw CancellationException("the merger's own withTimeout expired")
         }
 
-        // Then — contained as that type's failure. Escaping here cancels the sibling types resolving
+        // Then - contained as that type's failure. Escaping here cancels the sibling types resolving
         // alongside it and is reported to the caller as enrichTimeoutMs expiring.
         assertTrue("a merger's own timeout is that merger's failure", result is EnrichmentResult.Error)
         assertEquals(genre, (result as EnrichmentResult.Error).type)
     }
 
     @Test fun `enrich reports a typed Error when the merger's own timeout expires`() = runTest {
-        // Given — the same at the public API, on the async fan-out path where an escaping
+        // Given - the same at the public API, on the async fan-out path where an escaping
         // cancellation takes the sibling types down with it
         val cancellingMerger = object : ResultMerger {
             override val type = genre
@@ -204,13 +204,13 @@ class EnrichStrategyFailureTest {
                 throw CancellationException("the merger's own withTimeout expired")
         }
 
-        // When — enriching both a merged type and an ordinary one
+        // When - enriching both a merged type and an ordinary one
         val results = engine(
             listOf(providerFor(genre, bio)),
             mergers = listOf(cancellingMerger),
         ).enrich(req, setOf(genre, bio))
 
-        // Then — enrich() returns, GENRE carries the failure, and ARTIST_BIO is untouched by it
+        // Then - enrich() returns, GENRE carries the failure, and ARTIST_BIO is untouched by it
         assertTrue(results.raw[genre] is EnrichmentResult.Error)
         assertEquals("p", (results.raw[bio] as EnrichmentResult.Success).provider)
     }

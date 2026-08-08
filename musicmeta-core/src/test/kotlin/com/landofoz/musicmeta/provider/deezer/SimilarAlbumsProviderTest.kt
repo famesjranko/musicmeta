@@ -20,7 +20,7 @@ class SimilarAlbumsProviderTest {
 
     @Test
     fun `enrich returns SimilarAlbums for ForAlbum request`() = runTest {
-        // Given — Deezer returns matching artist, 3 related artists, and albums for each
+        // Given - Deezer returns matching artist, 3 related artists, and albums for each
         httpClient.givenJsonResponse("search/artist", ARTIST_SEARCH)
         httpClient.givenJsonResponse("artist/399/related", RELATED_ARTISTS_3)
         httpClient.givenJsonResponse("artist/1001/albums", MUSE_ALBUMS)
@@ -28,10 +28,10 @@ class SimilarAlbumsProviderTest {
         httpClient.givenJsonResponse("artist/1003/albums", SIGUR_ROS_ALBUMS)
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
 
-        // When — enriching for similar albums
+        // When - enriching for similar albums
         val result = provider.enrich(request, EnrichmentType.SIMILAR_ALBUMS)
 
-        // Then — success with 3 albums (2 from Muse + 1 from Portishead, Sigur Ros is empty)
+        // Then - success with 3 albums (2 from Muse + 1 from Portishead, Sigur Ros is empty)
         assertTrue(result is EnrichmentResult.Success)
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.SimilarAlbums
         assertEquals(3, data.albums.size)
@@ -39,7 +39,7 @@ class SimilarAlbumsProviderTest {
 
     @Test
     fun `enrich returns albums sorted by score descending with deezerId in identifiers`() = runTest {
-        // Given — Deezer returns matching artist and related artists with albums
+        // Given - Deezer returns matching artist and related artists with albums
         httpClient.givenJsonResponse("search/artist", ARTIST_SEARCH)
         httpClient.givenJsonResponse("artist/399/related", RELATED_ARTISTS_3)
         httpClient.givenJsonResponse("artist/1001/albums", MUSE_ALBUMS)
@@ -47,11 +47,11 @@ class SimilarAlbumsProviderTest {
         httpClient.givenJsonResponse("artist/1003/albums", SIGUR_ROS_ALBUMS)
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
 
-        // When — enriching for similar albums
+        // When - enriching for similar albums
         val result = provider.enrich(request, EnrichmentType.SIMILAR_ALBUMS) as EnrichmentResult.Success
         val albums = (result.data as EnrichmentData.SimilarAlbums).albums
 
-        // Then — Muse (index 0) albums rank above Portishead (index 1), all have deezerId
+        // Then - Muse (index 0) albums rank above Portishead (index 1), all have deezerId
         assertEquals("Muse", albums[0].artist)
         assertEquals("Portishead", albums.last().artist)
         assertTrue(albums[0].artistMatchScore > albums.last().artistMatchScore)
@@ -61,73 +61,73 @@ class SimilarAlbumsProviderTest {
 
     @Test
     fun `enrich returns NotFound for ForArtist request`() = runTest {
-        // Given — a ForArtist request (SIMILAR_ALBUMS only supports ForAlbum)
+        // Given - a ForArtist request (SIMILAR_ALBUMS only supports ForAlbum)
         val request = EnrichmentRequest.forArtist("Radiohead")
 
-        // When — enriching for similar albums
+        // When - enriching for similar albums
         val result = provider.enrich(request, EnrichmentType.SIMILAR_ALBUMS)
 
-        // Then — NotFound immediately, no HTTP calls made
+        // Then - NotFound immediately, no HTTP calls made
         assertTrue(result is EnrichmentResult.NotFound)
         assertTrue(httpClient.requestedUrls.isEmpty())
     }
 
     @Test
     fun `enrich returns NotFound for ForTrack request`() = runTest {
-        // Given — a ForTrack request
+        // Given - a ForTrack request
         val request = EnrichmentRequest.forTrack("Karma Police", "Radiohead")
 
-        // When — enriching for similar albums
+        // When - enriching for similar albums
         val result = provider.enrich(request, EnrichmentType.SIMILAR_ALBUMS)
 
-        // Then — NotFound immediately, no HTTP calls made
+        // Then - NotFound immediately, no HTTP calls made
         assertTrue(result is EnrichmentResult.NotFound)
         assertTrue(httpClient.requestedUrls.isEmpty())
     }
 
     @Test
     fun `enrich returns NotFound when artist search returns no results`() = runTest {
-        // Given — Deezer returns no artist search results
+        // Given - Deezer returns no artist search results
         httpClient.givenJsonResponse("search/artist", """{"data":[]}""")
         val request = EnrichmentRequest.forAlbum("OK Computer", "Nonexistent Artist")
 
-        // When — enriching for similar albums
+        // When - enriching for similar albums
         val result = provider.enrich(request, EnrichmentType.SIMILAR_ALBUMS)
 
-        // Then — NotFound because no artist matched
+        // Then - NotFound because no artist matched
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `enrich returns NotFound when artist name does not match`() = runTest {
-        // Given — Deezer returns a completely different artist
+        // Given - Deezer returns a completely different artist
         httpClient.givenJsonResponse("search/artist", """{"data":[{"id":999,"name":"Completely Different Band"}]}""")
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
 
-        // When — enriching for similar albums
+        // When - enriching for similar albums
         val result = provider.enrich(request, EnrichmentType.SIMILAR_ALBUMS)
 
-        // Then — NotFound because ArtistMatcher.isMatch() rejects the result
+        // Then - NotFound because ArtistMatcher.isMatch() rejects the result
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `enrich returns NotFound when related artists endpoint returns empty list`() = runTest {
-        // Given — Deezer returns matching artist but no related artists
+        // Given - Deezer returns matching artist but no related artists
         httpClient.givenJsonResponse("search/artist", ARTIST_SEARCH)
         httpClient.givenJsonResponse("artist/399/related", """{"data":[]}""")
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
 
-        // When — enriching for similar albums
+        // When - enriching for similar albums
         val result = provider.enrich(request, EnrichmentType.SIMILAR_ALBUMS)
 
-        // Then — NotFound because no related artists were returned
+        // Then - NotFound because no related artists were returned
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `enrich returns NotFound when all related artists return empty album lists`() = runTest {
-        // Given — related artists exist but all their album lists are empty
+        // Given - related artists exist but all their album lists are empty
         httpClient.givenJsonResponse("search/artist", ARTIST_SEARCH)
         httpClient.givenJsonResponse("artist/399/related", RELATED_ARTISTS_3)
         httpClient.givenJsonResponse("artist/1001/albums", """{"data":[]}""")
@@ -135,16 +135,16 @@ class SimilarAlbumsProviderTest {
         httpClient.givenJsonResponse("artist/1003/albums", """{"data":[]}""")
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
 
-        // When — enriching for similar albums
+        // When - enriching for similar albums
         val result = provider.enrich(request, EnrichmentType.SIMILAR_ALBUMS)
 
-        // Then — NotFound because all related artist album lists are empty
+        // Then - NotFound because all related artist album lists are empty
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `enrich returns albums from artists that have albums even when others are empty`() = runTest {
-        // Given — only Muse has albums, Portishead and Sigur Ros are empty
+        // Given - only Muse has albums, Portishead and Sigur Ros are empty
         httpClient.givenJsonResponse("search/artist", ARTIST_SEARCH)
         httpClient.givenJsonResponse("artist/399/related", RELATED_ARTISTS_3)
         httpClient.givenJsonResponse("artist/1001/albums", MUSE_ALBUMS)
@@ -152,10 +152,10 @@ class SimilarAlbumsProviderTest {
         httpClient.givenJsonResponse("artist/1003/albums", SIGUR_ROS_ALBUMS)
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
 
-        // When — enriching for similar albums
+        // When - enriching for similar albums
         val result = provider.enrich(request, EnrichmentType.SIMILAR_ALBUMS)
 
-        // Then — success with only Muse albums (partial success still returns results)
+        // Then - success with only Muse albums (partial success still returns results)
         assertTrue(result is EnrichmentResult.Success)
         val albums = ((result as EnrichmentResult.Success).data as EnrichmentData.SimilarAlbums).albums
         assertEquals(2, albums.size)
@@ -164,7 +164,7 @@ class SimilarAlbumsProviderTest {
 
     @Test
     fun `era proximity causes album from lower-ranked artist to outscore album from higher-ranked artist`() = runTest {
-        // Given — 5 related artists so position scores are:
+        // Given - 5 related artists so position scores are:
         //   index 0 (Muse): 1.0 - (0/5)*0.9 = 1.0
         //   index 1 (Portishead): 1.0 - (1/5)*0.9 = 0.82
         // Seed year 1990; Muse album 1975 (diff=15, era 0.8x) → finalScore 0.80
@@ -179,11 +179,11 @@ class SimilarAlbumsProviderTest {
         httpClient.givenJsonResponse("artist/1005/albums", """{"data":[]}""")
         val request = EnrichmentRequest.ForAlbum(EnrichmentIdentifiers(), "Dummy", "Radiohead", year = 1990)
 
-        // When — enriching for similar albums
+        // When - enriching for similar albums
         val result = provider.enrich(request, EnrichmentType.SIMILAR_ALBUMS) as EnrichmentResult.Success
         val albums = (result.data as EnrichmentData.SimilarAlbums).albums
 
-        // Then — Portishead's close-era album ranks above Muse's far-era album
+        // Then - Portishead's close-era album ranks above Muse's far-era album
         assertTrue(albums.size >= 2)
         val museAlbum = albums.first { it.artist == "Muse" }
         val portisheadAlbum = albums.first { it.artist == "Portishead" }
@@ -195,7 +195,7 @@ class SimilarAlbumsProviderTest {
 
     @Test
     fun `enrich skips artist search when deezerId is present in request identifiers`() = runTest {
-        // Given — request already has deezerId cached; only related and album endpoints are needed
+        // Given - request already has deezerId cached; only related and album endpoints are needed
         httpClient.givenJsonResponse("artist/399/related", RELATED_ARTISTS_3)
         httpClient.givenJsonResponse("artist/1001/albums", MUSE_ALBUMS)
         httpClient.givenJsonResponse("artist/1002/albums", PORTISHEAD_ALBUMS)
@@ -204,10 +204,10 @@ class SimilarAlbumsProviderTest {
             identifiers = EnrichmentIdentifiers().withExtra("deezerId", "399"),
         )
 
-        // When — enriching for similar albums
+        // When - enriching for similar albums
         val result = provider.enrich(request, EnrichmentType.SIMILAR_ALBUMS)
 
-        // Then — success without any search/artist call
+        // Then - success without any search/artist call
         assertTrue(result is EnrichmentResult.Success)
         assertTrue(httpClient.requestedUrls.none { it.contains("search/artist") })
     }

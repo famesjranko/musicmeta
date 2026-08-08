@@ -78,16 +78,16 @@ class EnrichmentShowcaseTest {
 
     @Test
     fun `01 - provider availability report`() {
-        // Given — the configured engine's registered providers
+        // Given - the configured engine's registered providers
         banner("PROVIDER AVAILABILITY")
-        // When — listing provider availability and capabilities
+        // When - listing provider availability and capabilities
         val providers = engine.getProviders()
         providers.forEach { p ->
             val status = if (p.isAvailable) "ACTIVE" else "MISSING KEY"
             val types = p.capabilities.joinToString(", ") { it.type.name }
             println("  %-16s %-12s %s".format(p.displayName, status, types))
         }
-        // Then — the active/total provider count is printed for manual review
+        // Then - the active/total provider count is printed for manual review
         val active = providers.count { it.isAvailable }
         println("\n  $active/${providers.size} providers active")
     }
@@ -96,14 +96,14 @@ class EnrichmentShowcaseTest {
 
     @Test
     fun `02 - artist deep dive - Radiohead`() = runBlocking {
-        // Given — a well-known artist
+        // Given - a well-known artist
         banner("ARTIST: Radiohead")
-        // When — enriching for every enrichment type
+        // When - enriching for every enrichment type
         val results = engine.enrich(
             EnrichmentRequest.forArtist("Radiohead"),
             ALL_TYPES,
         )
-        // Then — the found/missing/error counts per type are printed for manual review
+        // Then - the found/missing/error counts per type are printed for manual review
         printResults(results)
     }
 
@@ -111,14 +111,14 @@ class EnrichmentShowcaseTest {
 
     @Test
     fun `03 - album deep dive - OK Computer`() = runBlocking {
-        // Given — a well-known album
+        // Given - a well-known album
         banner("ALBUM: OK Computer by Radiohead")
-        // When — enriching for every enrichment type
+        // When - enriching for every enrichment type
         val results = engine.enrich(
             EnrichmentRequest.forAlbum("OK Computer", "Radiohead"),
             ALL_TYPES,
         )
-        // Then — the found/missing/error counts per type are printed for manual review
+        // Then - the found/missing/error counts per type are printed for manual review
         printResults(results)
     }
 
@@ -126,9 +126,9 @@ class EnrichmentShowcaseTest {
 
     @Test
     fun `04 - track deep dive - Bohemian Rhapsody`() = runBlocking {
-        // Given — a well-known track
+        // Given - a well-known track
         banner("TRACK: Bohemian Rhapsody by Queen")
-        // When — enriching for every enrichment type
+        // When - enriching for every enrichment type
         val results = engine.enrich(
             EnrichmentRequest.forTrack(
                 "Bohemian Rhapsody", "Queen",
@@ -136,7 +136,7 @@ class EnrichmentShowcaseTest {
             ),
             ALL_TYPES,
         )
-        // Then — the found/missing/error counts per type are printed for manual review
+        // Then - the found/missing/error counts per type are printed for manual review
         printResults(results)
     }
 
@@ -144,9 +144,9 @@ class EnrichmentShowcaseTest {
 
     @Test
     fun `05 - cross-genre - Kendrick Lamar + DAMN`() = runBlocking {
-        // Given — a modern hip-hop artist and one of their albums
+        // Given - a modern hip-hop artist and one of their albums
         banner("CROSS-GENRE: Kendrick Lamar (hip-hop)")
-        // When — enriching the artist for a subset of types
+        // When - enriching the artist for a subset of types
         val artistResults = engine.enrich(
             EnrichmentRequest.forArtist("Kendrick Lamar"),
             setOf(
@@ -155,11 +155,11 @@ class EnrichmentShowcaseTest {
                 EnrichmentType.ARTIST_POPULARITY,
             ),
         )
-        // Then — the found/missing/error counts for the artist types are printed for manual review
+        // Then - the found/missing/error counts for the artist types are printed for manual review
         printResults(artistResults)
 
         println("\n  --- Album: DAMN. ---")
-        // When — enriching the album for a subset of types
+        // When - enriching the album for a subset of types
         val albumResults = engine.enrich(
             EnrichmentRequest.forAlbum("DAMN.", "Kendrick Lamar"),
             setOf(
@@ -167,7 +167,7 @@ class EnrichmentShowcaseTest {
                 EnrichmentType.LABEL, EnrichmentType.RELEASE_DATE,
             ),
         )
-        // Then — the found/missing/error counts for the album types are printed for manual review
+        // Then - the found/missing/error counts for the album types are printed for manual review
         printResults(albumResults)
     }
 
@@ -175,39 +175,39 @@ class EnrichmentShowcaseTest {
 
     @Test
     fun `06 - edge cases`() = runBlocking {
-        // Given — artist/track names and requests chosen to stress edge cases: a slash in the
+        // Given - artist/track names and requests chosen to stress edge cases: a slash in the
         // name, non-ASCII characters, an instrumental track, an obscure artist, and an electronic album
         banner("EDGE CASES")
 
-        // When — enriching AC/DC for GENRE and ARTIST_BIO
+        // When - enriching AC/DC for GENRE and ARTIST_BIO
         println("  --- AC/DC (slash in name) ---")
         printResults(engine.enrich(
             EnrichmentRequest.forArtist("AC/DC"),
             setOf(EnrichmentType.GENRE, EnrichmentType.ARTIST_BIO),
         ))
 
-        // When — enriching Björk (non-ASCII name) for GENRE and ARTIST_PHOTO
+        // When - enriching Björk (non-ASCII name) for GENRE and ARTIST_PHOTO
         println("\n  --- Bjork (non-ASCII) ---")
         printResults(engine.enrich(
             EnrichmentRequest.forArtist("Björk"),
             setOf(EnrichmentType.GENRE, EnrichmentType.ARTIST_PHOTO),
         ))
 
-        // When — enriching an instrumental track for LYRICS_SYNCED and LYRICS_PLAIN
+        // When - enriching an instrumental track for LYRICS_SYNCED and LYRICS_PLAIN
         println("\n  --- Instrumental: Orion by Metallica ---")
         printResults(engine.enrich(
             EnrichmentRequest.forTrack("Orion", "Metallica", album = "Master of Puppets"),
             setOf(EnrichmentType.LYRICS_SYNCED, EnrichmentType.LYRICS_PLAIN),
         ))
 
-        // When — enriching an obscure artist for ARTIST_PHOTO, ARTIST_BIO, and GENRE
+        // When - enriching an obscure artist for ARTIST_PHOTO, ARTIST_BIO, and GENRE
         println("\n  --- Obscure: The Gerogerigegege ---")
         printResults(engine.enrich(
             EnrichmentRequest.forArtist("The Gerogerigegege"),
             setOf(EnrichmentType.ARTIST_PHOTO, EnrichmentType.ARTIST_BIO, EnrichmentType.GENRE),
         ))
 
-        // When — enriching an electronic album for album-oriented types
+        // When - enriching an electronic album for album-oriented types
         println("\n  --- Electronic: Random Access Memories by Daft Punk ---")
         printResults(engine.enrich(
             EnrichmentRequest.forAlbum("Random Access Memories", "Daft Punk"),
@@ -216,46 +216,46 @@ class EnrichmentShowcaseTest {
                 EnrichmentType.LABEL, EnrichmentType.RELEASE_DATE,
             ),
         ))
-        // Then — none of the five requests crashes; each prints its found/missing/error counts
+        // Then - none of the five requests crashes; each prints its found/missing/error counts
     }
 
     // --- 7. Search disambiguation ---
 
     @Test
     fun `07 - search disambiguation`() = runBlocking {
-        // Given — a well-known track, an ambiguous artist name, and an album shared by multiple artists
+        // Given - a well-known track, an ambiguous artist name, and an album shared by multiple artists
         banner("SEARCH DISAMBIGUATION")
 
-        // When — searching for the track, limited to 5 candidates
+        // When - searching for the track, limited to 5 candidates
         println("  --- Track: 'Yesterday' by The Beatles ---")
         engine.search(EnrichmentRequest.forTrack("Yesterday", "The Beatles"), limit = 5)
             .forEach { c ->
                 println("    ${c.title} by ${c.artist} (${c.year}) score=${c.score}")
             }
 
-        // When — searching for the ambiguous artist name, limited to 5 candidates
+        // When - searching for the ambiguous artist name, limited to 5 candidates
         println("\n  --- Artist: 'Air' (ambiguous) ---")
         engine.search(EnrichmentRequest.forArtist("Air"), limit = 5)
             .forEach { c ->
                 println("    ${c.title} (${c.country}, ${c.releaseType}) score=${c.score}")
             }
 
-        // When — searching for the album shared by multiple artists, limited to 5 candidates
+        // When - searching for the album shared by multiple artists, limited to 5 candidates
         println("\n  --- Album: 'Homesick' (multiple artists) ---")
         engine.search(EnrichmentRequest.forAlbum("Homesick", "A Day to Remember"), limit = 5)
             .forEach { c ->
                 println("    ${c.title} by ${c.artist} (${c.year}) score=${c.score}")
             }
-        // Then — each search returns candidates with title, disambiguating fields, and a score, printed for review
+        // Then - each search returns candidates with title, disambiguating fields, and a score, printed for review
     }
 
     // --- 8. Coverage matrix ---
 
     @Test
     fun `08 - coverage matrix`() {
-        // Given — the configured engine's registered providers and every EnrichmentType
+        // Given - the configured engine's registered providers and every EnrichmentType
         banner("COVERAGE MATRIX (v0.9.0)")
-        // When — tallying, per type, how many providers support it
+        // When - tallying, per type, how many providers support it
         val providers = engine.getProviders()
         var multiCount = 0
         EnrichmentType.entries.forEach { type ->
@@ -275,7 +275,7 @@ class EnrichmentShowcaseTest {
             }
             println("  $marker %-22s %s".format(type.name, providerList))
         }
-        // Then — the per-type provider marker/list and multi-provider coverage summary are printed
+        // Then - the per-type provider marker/list and multi-provider coverage summary are printed
         println("\n  M+/M = multi-provider, S = single provider, - = no provider")
         println("  $multiCount/${EnrichmentType.entries.size} types have multi-provider coverage")
         println("\n  ENGINE FEATURES (v0.9.0):")
@@ -301,11 +301,11 @@ class EnrichmentShowcaseTest {
 
     @Test
     fun `09 - v0_5_0 feature spotlight`() = runBlocking {
-        // Given — a well-known track, album, and artist to exercise CREDITS, RELEASE_EDITIONS,
+        // Given - a well-known track, album, and artist to exercise CREDITS, RELEASE_EDITIONS,
         // ARTIST_TIMELINE, and GENRE merge
         banner("v0.5.0 FEATURES")
 
-        // When — enriching the track for CREDITS
+        // When - enriching the track for CREDITS
         // Credits: Bohemian Rhapsody (well-known credits)
         println("  --- CREDITS: Bohemian Rhapsody by Queen ---")
         val creditResults = engine.enrich(
@@ -323,7 +323,7 @@ class EnrichmentShowcaseTest {
             }
         } else printSingleResult(EnrichmentType.CREDITS, credits)
 
-        // When — enriching the album for RELEASE_EDITIONS
+        // When - enriching the album for RELEASE_EDITIONS
         // Release Editions: OK Computer (many pressings)
         println("\n  --- RELEASE EDITIONS: OK Computer by Radiohead ---")
         val editionResults = engine.enrich(
@@ -343,7 +343,7 @@ class EnrichmentShowcaseTest {
             if (data.editions.size > 8) println("    ... and ${data.editions.size - 8} more")
         } else printSingleResult(EnrichmentType.RELEASE_EDITIONS, editions)
 
-        // When — enriching the artist for ARTIST_TIMELINE
+        // When - enriching the artist for ARTIST_TIMELINE
         // Artist Timeline: Radiohead
         println("\n  --- ARTIST TIMELINE: Radiohead ---")
         val timelineResults = engine.enrich(
@@ -361,7 +361,7 @@ class EnrichmentShowcaseTest {
             }
         } else printSingleResult(EnrichmentType.ARTIST_TIMELINE, timeline)
 
-        // When — enriching the artist for GENRE
+        // When - enriching the artist for GENRE
         // Genre merge: Radiohead
         println("\n  --- GENRE MERGE: Radiohead ---")
         val genreResults = engine.enrich(
@@ -377,18 +377,18 @@ class EnrichmentShowcaseTest {
             } ?: println("    genres: ${data.genres}")
             println("    backward-compat genres: ${data.genres?.take(5)}")
         } else printSingleResult(EnrichmentType.GENRE, genre)
-        // Then — each of the four requests either prints its Success detail or its NotFound/Error status
+        // Then - each of the four requests either prints its Success detail or its NotFound/Error status
     }
 
     // --- 10. v0.6.0 feature spotlight ---
 
     @Test
     fun `10 - v0_6_0 feature spotlight`() = runBlocking {
-        // Given — well-known artists and an album to exercise SIMILAR_ARTISTS, ARTIST_RADIO,
+        // Given - well-known artists and an album to exercise SIMILAR_ARTISTS, ARTIST_RADIO,
         // SIMILAR_ALBUMS, and GENRE_DISCOVERY
         banner("v0.6.0 FEATURES: RECOMMENDATIONS ENGINE")
 
-        // When — enriching the artist for SIMILAR_ARTISTS
+        // When - enriching the artist for SIMILAR_ARTISTS
         // SIMILAR_ARTISTS merge: Radiohead — should show sources=[lastfm, deezer]
         println("  --- SIMILAR_ARTISTS MERGE: Radiohead ---")
         val similarArtistResults = engine.enrich(
@@ -407,7 +407,7 @@ class EnrichmentShowcaseTest {
             println("    $multiSource/${data.artists.size} artists contributed by 2+ providers")
         } else printSingleResult(EnrichmentType.SIMILAR_ARTISTS, similarArtists)
 
-        // When — enriching a different artist for ARTIST_RADIO
+        // When - enriching a different artist for ARTIST_RADIO
         // ARTIST_RADIO: Daft Punk — Deezer radio tracks
         println("\n  --- ARTIST_RADIO: Daft Punk ---")
         val radioResults = engine.enrich(
@@ -425,7 +425,7 @@ class EnrichmentShowcaseTest {
             }
         } else printSingleResult(EnrichmentType.ARTIST_RADIO, radio)
 
-        // When — enriching an album for SIMILAR_ALBUMS
+        // When - enriching an album for SIMILAR_ALBUMS
         // SIMILAR_ALBUMS: OK Computer — scored by artist similarity + era
         println("\n  --- SIMILAR_ALBUMS: OK Computer by Radiohead ---")
         val albumResults = engine.enrich(
@@ -445,7 +445,7 @@ class EnrichmentShowcaseTest {
             }
         } else printSingleResult(EnrichmentType.SIMILAR_ALBUMS, albums)
 
-        // When — enriching the artist for GENRE_DISCOVERY
+        // When - enriching the artist for GENRE_DISCOVERY
         // GENRE_DISCOVERY: Radiohead — affinity-scored genre neighbors
         println("\n  --- GENRE_DISCOVERY: Radiohead ---")
         val genreDiscoveryResults = engine.enrich(
@@ -463,17 +463,17 @@ class EnrichmentShowcaseTest {
                 ))
             }
         } else printSingleResult(EnrichmentType.GENRE_DISCOVERY, genreDiscovery)
-        // Then — each of the four requests either prints its Success detail or its NotFound/Error status
+        // Then - each of the four requests either prints its Success detail or its NotFound/Error status
     }
 
     // --- 11. v0.7.0 feature spotlight ---
 
     @Test
     fun `11 - v0_7_0 feature spotlight`() = runBlocking {
-        // Given — well-known artists, albums, and tracks to exercise the v0.7.0 developer-experience surface
+        // Given - well-known artists, albums, and tracks to exercise the v0.7.0 developer-experience surface
         banner("v0.7.0 FEATURES: DEVELOPER EXPERIENCE")
 
-        // When — calling artistProfile()
+        // When - calling artistProfile()
         // Tier 1: Profile methods — one call, structured result
         println("  --- TIER 1: artistProfile() ---")
         val profile = engine.artistProfile("Radiohead")
@@ -489,7 +489,7 @@ class EnrichmentShowcaseTest {
         println("    Similar: ${profile.similarArtists?.artists?.take(3)?.joinToString(", ") { it.name } ?: "none"}")
         println("    Top tracks: ${profile.topTracks?.tracks?.take(3)?.joinToString(", ") { it.title } ?: "none"}")
 
-        // When — calling albumProfile()
+        // When - calling albumProfile()
         println("\n  --- TIER 1: albumProfile() ---")
         val albumProf = engine.albumProfile("OK Computer", "Radiohead")
         println("    Title: ${albumProf.title} by ${albumProf.artist}")
@@ -499,7 +499,7 @@ class EnrichmentShowcaseTest {
         println("    Release date: ${albumProf.releaseDate}")
         println("    Tracks: ${albumProf.tracks.size}")
 
-        // When — calling trackProfile()
+        // When - calling trackProfile()
         println("\n  --- TIER 1: trackProfile() ---")
         val trackProf = engine.trackProfile("Creep", "Radiohead")
         println("    Title: ${trackProf.title} by ${trackProf.artist}")
@@ -507,7 +507,7 @@ class EnrichmentShowcaseTest {
         val lyricsData = trackProf.lyrics
         println("    Lyrics: ${if (lyricsData != null) "${lyricsData.plainLyrics?.lines()?.size ?: 0} lines" else "none"}")
 
-        // When — enriching an album and reading EnrichmentResults' named accessors
+        // When - enriching an album and reading EnrichmentResults' named accessors
         // Tier 2: EnrichmentResults named accessors
         println("\n  --- TIER 2: Named accessors on EnrichmentResults ---")
         val results = engine.enrich(
@@ -526,14 +526,14 @@ class EnrichmentShowcaseTest {
         println("    country(): ${results.country()}")
         println("    releaseType(): ${results.releaseType()}")
 
-        // When — calling wasRequested() and result() diagnostics on the same results
+        // When - calling wasRequested() and result() diagnostics on the same results
         println("\n  --- DIAGNOSTICS: wasRequested() + result() ---")
         println("    wasRequested(ALBUM_ART): ${results.wasRequested(EnrichmentType.ALBUM_ART)}")
         println("    wasRequested(LYRICS_SYNCED): ${results.wasRequested(EnrichmentType.LYRICS_SYNCED)}")
         val artResult = results.result(EnrichmentType.ALBUM_ART)
         println("    result(ALBUM_ART): ${artResult?.javaClass?.simpleName} provider=${(artResult as? EnrichmentResult.Success)?.provider}")
 
-        // When — reading the identity resolution on the same results
+        // When - reading the identity resolution on the same results
         println("\n  --- IDENTITY RESOLUTION ---")
         val identity = results.identity
         println("    match: ${identity?.match}")
@@ -541,7 +541,7 @@ class EnrichmentShowcaseTest {
         println("    MBID: ${identity?.identifiers?.musicBrainzId}")
         println("    suggestions: ${identity?.suggestions?.size ?: 0}")
 
-        // When — reading the default type sets and defaultTypesFor()
+        // When - reading the default type sets and defaultTypesFor()
         println("\n  --- DEFAULT TYPE SETS ---")
         println("    DEFAULT_ARTIST_TYPES: ${EnrichmentRequest.DEFAULT_ARTIST_TYPES.size} types")
         println("      ${EnrichmentRequest.DEFAULT_ARTIST_TYPES.joinToString(", ") { it.name }}")
@@ -551,7 +551,7 @@ class EnrichmentShowcaseTest {
         println("      ${EnrichmentRequest.DEFAULT_TRACK_TYPES.joinToString(", ") { it.name }}")
         println("    defaultTypesFor(ForArtist) == DEFAULT_ARTIST_TYPES: ${EnrichmentRequest.defaultTypesFor(EnrichmentRequest.forArtist("test")) == EnrichmentRequest.DEFAULT_ARTIST_TYPES}")
 
-        // When — calling artistProfile() with forceRefresh=true
+        // When - calling artistProfile() with forceRefresh=true
         println("\n  --- FORCE REFRESH ---")
         val freshProfile = engine.artistProfile("Radiohead",
             types = setOf(EnrichmentType.GENRE),
@@ -559,7 +559,7 @@ class EnrichmentShowcaseTest {
         )
         println("    forceRefresh=true: genres=${freshProfile.genres.take(2).joinToString(", ") { it.name }}")
 
-        // When — calling invalidate() for a single type, then for all types
+        // When - calling invalidate() for a single type, then for all types
         println("\n  --- INVALIDATE ---")
         val req = EnrichmentRequest.forArtist("Radiohead")
         engine.invalidate(req, EnrichmentType.GENRE)
@@ -567,13 +567,13 @@ class EnrichmentShowcaseTest {
         engine.invalidate(req)
         println("    invalidate(Radiohead, all types): done")
 
-        // When — checking isManuallySelected() before and after markManuallySelected()
+        // When - checking isManuallySelected() before and after markManuallySelected()
         println("\n  --- MANUAL SELECTION ---")
         val photoReq = EnrichmentRequest.forArtist("Radiohead")
         val wasBefore = engine.isManuallySelected(photoReq, EnrichmentType.ARTIST_PHOTO)
         engine.markManuallySelected(photoReq, EnrichmentType.ARTIST_PHOTO)
         val wasAfter = engine.isManuallySelected(photoReq, EnrichmentType.ARTIST_PHOTO)
-        // Then — the selection flag flips from unselected to selected, printed for review
+        // Then - the selection flag flips from unselected to selected, printed for review
         println("    isManuallySelected before: $wasBefore, after markManuallySelected: $wasAfter")
     }
 
@@ -581,11 +581,11 @@ class EnrichmentShowcaseTest {
 
     @Test
     fun `12 - v0_8_0 feature spotlight`() = runBlocking {
-        // Given — a fresh engine configured with STALE_IF_ERROR caching, and a set of albums
+        // Given - a fresh engine configured with STALE_IF_ERROR caching, and a set of albums
         banner("v0.8.0 FEATURES: PRODUCTION READINESS")
         println("  (OkHttp adapter E2E tested in musicmeta-okhttp module)")
 
-        // When — enriching the same album/type twice to warm then hit the cache
+        // When - enriching the same album/type twice to warm then hit the cache
         // Stale-while-revalidate cache: demonstrate isStale flag
         println("\n  --- STALE CACHE (STALE_IF_ERROR) ---")
         val staleConfig = com.landofoz.musicmeta.EnrichmentConfig(
@@ -609,10 +609,10 @@ class EnrichmentShowcaseTest {
             setOf(EnrichmentType.GENRE),
         )
         val cachedGenre = cached.raw[EnrichmentType.GENRE]
-        // Then — the warmup and cache-hit isStale flags are printed for manual review
+        // Then - the warmup and cache-hit isStale flags are printed for manual review
         println("    Cache hit: GENRE ${if (cachedGenre is EnrichmentResult.Success) "isStale=${cachedGenre.isStale}" else "miss"}")
 
-        // When — running enrichBatch() over three albums for GENRE and ALBUM_ART
+        // When - running enrichBatch() over three albums for GENRE and ALBUM_ART
         // enrichBatch: demonstrate Flow-based bulk enrichment
         println("\n  --- BULK ENRICHMENT (enrichBatch) ---")
         val albums = listOf(
@@ -636,7 +636,7 @@ class EnrichmentShowcaseTest {
             val label = (request as? EnrichmentRequest.ForAlbum)?.title ?: request.toString()
             println("    [$batchCount/3] $label: GENRE=$genreStatus, ART=$artStatus")
         }
-        // Then — one batch entry is emitted per album, and the total count matches
+        // Then - one batch entry is emitted per album, and the total count matches
         println("    Batch complete: $batchCount/${albums.size} results emitted")
 
         // Maven Central publishing status
@@ -651,10 +651,10 @@ class EnrichmentShowcaseTest {
 
     @Test
     fun `13 - v0_9_0 feature spotlight`() = runBlocking {
-        // Given — well-known tracks and, if a ListenBrainz token is configured, an artist for LB Radio
+        // Given - well-known tracks and, if a ListenBrainz token is configured, an artist for LB Radio
         banner("v0.9.0 FEATURES: LB RADIO & TRACK PREVIEW")
 
-        // When — enriching a track for TRACK_PREVIEW
+        // When - enriching a track for TRACK_PREVIEW
         // TRACK_PREVIEW: Deezer 30s preview URL (no API key needed)
         println("  --- TRACK_PREVIEW: Paranoid Android by Radiohead ---")
         val previewResults = engine.enrich(
@@ -670,7 +670,7 @@ class EnrichmentShowcaseTest {
             println("    source: ${data.source}")
         } else printSingleResult(EnrichmentType.TRACK_PREVIEW, preview)
 
-        // When — calling trackProfile() with TRACK_PREVIEW added to the default types
+        // When - calling trackProfile() with TRACK_PREVIEW added to the default types
         // TRACK_PREVIEW via TrackProfile accessor
         println("\n  --- TRACK_PREVIEW: trackProfile().preview accessor ---")
         val trackProf = engine.trackProfile(
@@ -680,12 +680,12 @@ class EnrichmentShowcaseTest {
         println("    preview: ${trackProf.preview?.url?.take(60) ?: "null (not in Deezer catalog?)"}")
         println("    TRACK_PREVIEW in DEFAULT_TRACK_TYPES: ${EnrichmentType.TRACK_PREVIEW in EnrichmentRequest.DEFAULT_TRACK_TYPES}")
 
-        // When — calling the trackPreview() accessor on the earlier preview results
+        // When - calling the trackPreview() accessor on the earlier preview results
         // EnrichmentResults.trackPreview() accessor
         println("\n  --- EnrichmentResults.trackPreview() accessor ---")
         println("    trackPreview(): ${previewResults.trackPreview()?.url?.take(60) ?: "null"}")
 
-        // When — enriching an artist for ARTIST_RADIO_DISCOVERY if a ListenBrainz token is configured
+        // When - enriching an artist for ARTIST_RADIO_DISCOVERY if a ListenBrainz token is configured
         // ARTIST_RADIO_DISCOVERY: ListenBrainz LB Radio (requires auth token)
         val lbToken = E2ETestFixture.prop("listenbrainz.token")
         if (lbToken.isNotBlank()) {
@@ -750,10 +750,10 @@ class EnrichmentShowcaseTest {
             println("    Provider without token has ARTIST_RADIO_DISCOVERY: $hasRadio")
         }
 
-        // When — reading the default type set membership for ARTIST_RADIO_DISCOVERY and TRACK_PREVIEW
+        // When - reading the default type set membership for ARTIST_RADIO_DISCOVERY and TRACK_PREVIEW
         // ARTIST_RADIO_DISCOVERY in DEFAULT_ARTIST_TYPES and RECOMMENDATION_TYPES
         println("\n  --- Integration checks ---")
-        // Then — ARTIST_RADIO_DISCOVERY is in DEFAULT_ARTIST_TYPES and TRACK_PREVIEW is not in DEFAULT_TRACK_TYPES
+        // Then - ARTIST_RADIO_DISCOVERY is in DEFAULT_ARTIST_TYPES and TRACK_PREVIEW is not in DEFAULT_TRACK_TYPES
         println("    ARTIST_RADIO_DISCOVERY in DEFAULT_ARTIST_TYPES: ${EnrichmentType.ARTIST_RADIO_DISCOVERY in EnrichmentRequest.DEFAULT_ARTIST_TYPES}")
         println("    TRACK_PREVIEW NOT in DEFAULT_TRACK_TYPES: ${EnrichmentType.TRACK_PREVIEW !in EnrichmentRequest.DEFAULT_TRACK_TYPES}")
     }

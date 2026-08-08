@@ -66,9 +66,9 @@ class AuthErrorTest {
     }
 
     @Test fun `401 is an AUTH error, not NotFound`() = runTest {
-        // Given — providers whose fake HTTP client returns a 401 response
-        // When — each provider enriches its request
-        // Then — each result is an Error with errorKind AUTH
+        // Given - providers whose fake HTTP client returns a 401 response
+        // When - each provider enriches its request
+        // Then - each result is an Error with errorKind AUTH
         assertAuthError(lastFm(), EnrichmentType.SIMILAR_ARTISTS)
         assertAuthError(discogs(), EnrichmentType.ALBUM_ART)
         assertAuthError(fanartTv(), EnrichmentType.ARTIST_PHOTO)
@@ -76,9 +76,9 @@ class AuthErrorTest {
     }
 
     @Test fun `403 is an AUTH error too`() = runTest {
-        // Given — providers whose fake HTTP client returns a 403 response
-        // When — each provider enriches its request
-        // Then — each result is an Error with errorKind AUTH
+        // Given - providers whose fake HTTP client returns a 403 response
+        // When - each provider enriches its request
+        // Then - each result is an Error with errorKind AUTH
         assertAuthError(lastFm(403), EnrichmentType.SIMILAR_ARTISTS)
         assertAuthError(discogs(403), EnrichmentType.ALBUM_ART)
         assertAuthError(fanartTv(403), EnrichmentType.ARTIST_PHOTO)
@@ -86,9 +86,9 @@ class AuthErrorTest {
     }
 
     @Test fun `other 4xx responses stay NotFound`() = runTest {
-        // Given — providers whose fake HTTP client returns a 404 response
-        // When — each provider enriches its request
-        // Then — each result is NotFound rather than an AUTH error
+        // Given - providers whose fake HTTP client returns a 404 response
+        // When - each provider enriches its request
+        // Then - each result is NotFound rather than an AUTH error
         assertNotFound(lastFm(404), EnrichmentType.SIMILAR_ARTISTS)
         assertNotFound(discogs(404), EnrichmentType.ALBUM_ART)
         assertNotFound(fanartTv(404), EnrichmentType.ARTIST_PHOTO)
@@ -96,21 +96,21 @@ class AuthErrorTest {
     }
 
     @Test fun `a 403 from a public ListenBrainz endpoint is not an auth failure`() = runTest {
-        // Given — popularity sends no token, so a 403 there is nothing the consumer can fix
+        // Given - popularity sends no token, so a 403 there is nothing the consumer can fix
         assertNotFound(listenBrainz(403), EnrichmentType.ARTIST_POPULARITY)
         assertNotFound(listenBrainz(401), EnrichmentType.SIMILAR_ARTISTS)
     }
 
     @Test fun `the breaker records a failure on a 401, not a success`() = runTest {
-        // Given — a chain whose breaker opens on a single failure
+        // Given - a chain whose breaker opens on a single failure
         val (provider, request) = discogs()
         val breaker = CircuitBreaker(failureThreshold = 1)
         val chain = ProviderChain(EnrichmentType.ALBUM_ART, listOf(provider), mapOf(provider.id to breaker))
 
-        // When — one 401
+        // When - one 401
         chain.resolve(request)
 
-        // Then — the breaker opened. A NotFound would have recorded a success and left it closed.
+        // Then - the breaker opened. A NotFound would have recorded a success and left it closed.
         assertEquals(CircuitBreaker.State.OPEN, breaker.state)
         assertFalse(breaker.allowRequest())
     }

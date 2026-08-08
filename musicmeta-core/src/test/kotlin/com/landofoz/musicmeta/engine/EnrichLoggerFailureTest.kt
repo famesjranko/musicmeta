@@ -68,12 +68,12 @@ class EnrichLoggerFailureTest {
         .build()
 
     @Test fun `a throwing logger does not fail a successful enrich`() = runTest {
-        // Given -- a healthy engine whose consumer logger throws from every call. Identity
+        // Given - a healthy engine whose consumer logger throws from every call. Identity
         // resolution is on so the happy-path logger.debug calls are reached: those report no
         // failure at all, so a throw there takes down an enrich() that had nothing wrong with it.
         val logger = ThrowingLogger()
 
-        // When -- enriching
+        // When - enriching
         val results = engine(
             logger,
             FakeEnrichmentCache(),
@@ -81,21 +81,21 @@ class EnrichLoggerFailureTest {
             extraProvider = identityProvider(),
         ).enrich(request, setOf(artType))
 
-        // Then -- the type resolves; the logging side effect is the only thing lost
+        // Then - the type resolves; the logging side effect is the only thing lost
         assertEquals("p", (results.raw[artType] as EnrichmentResult.Success).provider)
         assertTrue("the logger must actually have been reached", logger.calls > 0)
     }
 
     @Test fun `a throwing logger does not fail an enrich the cache guard is already degrading`() = runTest {
-        // Given -- a cache whose get() throws, so CacheGuard reports the degradation through the
+        // Given - a cache whose get() throws, so CacheGuard reports the degradation through the
         // logger from inside its own catch. Nothing above that re-catches.
         val logger = ThrowingLogger()
         val cache = FakeEnrichmentCache().also { it.failing = setOf(CacheOp.GET) }
 
-        // When -- enriching
+        // When - enriching
         val results = engine(logger, cache).enrich(request, setOf(artType))
 
-        // Then -- the cache failure still degrades to a miss and the provider answers
+        // Then - the cache failure still degrades to a miss and the provider answers
         assertEquals("p", (results.raw[artType] as EnrichmentResult.Success).provider)
         assertTrue("the guard's warn must actually have been reached", logger.calls > 0)
     }

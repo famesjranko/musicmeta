@@ -1,18 +1,20 @@
 #!/usr/bin/env python3
 """Fail on `@Test` bodies with no given/when/then structure, or with malformed labels.
 
-`CLAUDE.md`'s rule: `// Given — <what is set up>`, `// When — <the one call>`, `// Then — <what
-must hold>`, each on its own line, em dash and a clause on every one. Neither ktlint nor
+`CLAUDE.md`'s rule: `// Given - <what is set up>`, `// When - <the one call>`, `// Then - <what
+must hold>`, each on its own line, a hyphen and a clause on every one. Neither ktlint nor
 type-resolved detekt can express this — it is house test-writing convention, not general Kotlin
 advice or a bug pattern — so it stayed a convention nobody checked until two MusicBrainz test files
 landed with no given/when/then at all and passed every gate (03).
 
 A `@Test`-annotated function's body is the text window from its `@Test` line to the next `@Test`
-line, or the end of the file, whichever comes first. `@Test`-annotated functions cannot nest in
-Kotlin, so that boundary is exact without brace-matching or any other structural parsing (05).
+line or the next top-level `class`/`object` declaration, whichever comes first. `@Test`-annotated
+functions cannot nest in Kotlin, so a window never starts inside another one; the declaration bound
+is what stops the last `@Test` in a multi-class file from swallowing the next class's helpers.
+Neither bound needs brace-matching or any other structural parsing (05).
 
-Test sources only (`*/src/test/**/*.kt`) — this has no opinion on main sources, and does not fire on
-a helper function that happens to mention "given" in prose.
+Kotlin test sources only (`*/src/test/**/*.kt`), on both entry points — this has no opinion on main
+sources, and does not fire on a helper function that happens to mention "given" in prose.
 
     python3 check_test_shape.py [--root PATH]
     python3 check_test_shape.py --file PATH   # one file, for format-on-write.sh
@@ -26,35 +28,53 @@ import sys
 from pathlib import Path
 
 TEST_ANNOTATION_RE = re.compile(r"^\s*@Test\b")
-LABEL_WORD_RE = re.compile(r"\b(Given|When|Then)\b")
-# A well-formed label: `// <Word> — <clause>`, the label alone on its line. `\S` after the dash
-# requires a real clause, not just trailing whitespace. `-` and `—` are both accepted: a plain
-# hyphen carries the same "label, then its clause" structure as the em dash `CLAUDE.md` names, and
-# a repo-wide audit found only the em dash form worth mechanising as a distinction from "no dash at
-# all" — not from each other.
-WELL_FORMED_LABEL_RE = re.compile(r"^\s*//\s*(Given|When|Then)\s*[-—]\s*\S")
-# A line that opens with `//` and names a Given/When/Then word at all — this is the trigger for
-# "this line is trying to be a label," so it's what bare-label and combined-label violations are
-# both diagnosed against.
-LABEL_LINE_RE = re.compile(r"^\s*//.*\b(Given|When|Then)\b")
+# A top-level `class`/`object` closes the previous `@Test`'s window. Anchored at column 0 so a
+# nested or local declaration inside a test body doesn't truncate the window it belongs to.
+DECLARATION_RE = re.compile(r"^(?:\w+\s+)*(?:class|object|interface)\b")
+# A label line: `//` then a Given/When/Then word in *label position* — the first thing after the
+# slashes. Anchoring here is what keeps prose that merely mentions one of the words ("// the When
+# branch is taken below") out of the check entirely; an unanchored match reports correct code and
+# offers no opt-out. A comment that *opens* with a label word is still read as a label — that case
+# is genuinely ambiguous, and rewording it is the opt-out.
+LABEL_LINE_RE = re.compile(r"^\s*//\s*(Given|When|Then)\b")
+# Two label words in label position, separated by a slash, comma, ampersand, "and", or whitespace —
+# `// Given / When - x`. Only label position counts: a well-formed `// Then - the When branch ran`
+# names two of the words but is not a combined label.
+COMBINED_LABEL_RE = re.compile(r"^\s*//\s*(?:Given|When|Then)(?:\s*[/,&]\s*|\s+and\s+|\s+)(?:Given|When|Then)\b")
+# A well-formed label: `// <Word> - <clause>`, the label alone on its line. `\S` after the hyphen
+# requires a real clause, not just trailing whitespace. `(?!-)` rejects `--`, which is neither the
+# documented form nor a form anyone chose.
+WELL_FORMED_LABEL_RE = re.compile(r"^\s*//\s*(Given|When|Then)\s*-(?!-)\s*\S")
 
 NO_GIVEN_FIX = (
-    "`@Test` body has no `// Given —` line. Every test states what it sets up, does, and checks: "
-    "`// Given — <what is set up>`, `// When — <the one call>`, `// Then — <what must hold>`."
+    "`@Test` body has no `// Given -` line. Every test states what it sets up, does, and checks: "
+    "`// Given - <what is set up>`, `// When - <the one call>`, `// Then - <what must hold>`."
 )
 BARE_LABEL_FIX = (
-    "given/when/then label is missing the em dash and a clause. Use `// Given — <what is set "
-    "up>` (or When/Then), not a bare label — the clause is what makes the label discoverable "
-    "without grepping."
+    "given/when/then label is missing the hyphen and a clause. Use `// Given - <what is set up>` "
+    "(or When/Then), not a bare label — the clause is what makes the label discoverable without "
+    "grepping."
 )
 COMBINED_LABEL_FIX = (
     "one comment line names more than one of Given/When/Then. Each label goes on its own line, "
     "even when the setup and the call are one line of code."
 )
 
+TEST_SOURCE_RE = re.compile(r"/src/test/.*\.kt$")
+
 
 def test_sources(root: Path) -> list[Path]:
     return sorted(path for path in root.glob("*/src/test/**/*.kt") if "/build/" not in path.as_posix())
+
+
+def is_test_source(path: Path) -> bool:
+    """Whether `--file` should check this path, matching `test_sources()`'s scope exactly.
+
+    The two entry points must agree: a file the gate ignores must not fail at write-time, and a
+    file the gate checks must not pass there.
+    """
+    posix = path.as_posix()
+    return bool(TEST_SOURCE_RE.search(posix)) and "/build/" not in posix
 
 
 def error(rel: str, lineno: int, message: str) -> str:
@@ -67,20 +87,28 @@ def check_window(rel: str, lines: list[str], start: int, end: int) -> list[str]:
     has_given = False
     for lineno in range(start, end):
         line = lines[lineno]
-        if not LABEL_LINE_RE.match(line):
+        match = LABEL_LINE_RE.match(line)
+        if not match:
             continue
-        words = LABEL_WORD_RE.findall(line)
-        if len(words) > 1:
+        if COMBINED_LABEL_RE.match(line):
             findings.append(error(rel, lineno + 1, COMBINED_LABEL_FIX))
             continue
         if not WELL_FORMED_LABEL_RE.match(line):
             findings.append(error(rel, lineno + 1, BARE_LABEL_FIX))
             continue
-        if words[0] == "Given":
+        if match.group(1) == "Given":
             has_given = True
     if not has_given:
         findings.append(error(rel, start + 1, NO_GIVEN_FIX))
     return findings
+
+
+def window_end(lines: list[str], start: int, limit: int) -> int:
+    """Where the `@Test` window opening at `start` ends, at or before `limit`."""
+    for lineno in range(start + 1, limit):
+        if DECLARATION_RE.match(lines[lineno]):
+            return lineno
+    return limit
 
 
 def check_file(rel: str, path: Path) -> list[str]:
@@ -88,8 +116,8 @@ def check_file(rel: str, path: Path) -> list[str]:
     lines = path.read_text(encoding="utf-8").split("\n")
     test_lines = [i for i, line in enumerate(lines) if TEST_ANNOTATION_RE.match(line)]
     for i, start in enumerate(test_lines):
-        end = test_lines[i + 1] if i + 1 < len(test_lines) else len(lines)
-        findings.extend(check_window(rel, lines, start, end))
+        limit = test_lines[i + 1] if i + 1 < len(test_lines) else len(lines)
+        findings.extend(check_window(rel, lines, start, window_end(lines, start, limit)))
     return findings
 
 
@@ -98,6 +126,15 @@ def run(root: Path) -> list[str]:
     for path in test_sources(root):
         findings.extend(check_file(path.relative_to(root).as_posix(), path))
     return findings
+
+
+def report(findings: list[str]) -> int:
+    for finding in findings:
+        print(finding, file=sys.stderr)
+    if findings:
+        print(f"\n{len(findings)} test-shape violation(s).", file=sys.stderr)
+        return 2
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -110,24 +147,14 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.file:
         path = Path(args.file).resolve()
-        findings = check_file(path.as_posix(), path) if path.is_file() else []
-        for finding in findings:
-            print(finding, file=sys.stderr)
-        if findings:
-            print(f"\n{len(findings)} test-shape violation(s).", file=sys.stderr)
-            return 2
-        return 0
+        if not path.is_file() or not is_test_source(path):
+            return 0
+        return report(check_file(path.as_posix(), path))
 
-    findings = run(root)
-
-    for finding in findings:
-        print(finding, file=sys.stderr)
-    if findings:
-        print(f"\n{len(findings)} test-shape violation(s).", file=sys.stderr)
-        return 2
-
-    print(f"Test shape clean across {len(test_sources(root))} test sources.")
-    return 0
+    exit_code = report(run(root))
+    if exit_code == 0:
+        print(f"Test shape clean across {len(test_sources(root))} test sources.")
+    return exit_code
 
 
 if __name__ == "__main__":

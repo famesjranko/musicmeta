@@ -57,13 +57,13 @@ class RealApiEndToEndTest {
 
     @Test
     fun `MusicBrainz resolves OK Computer by Radiohead`() = runBlocking {
-        // Given — a well-known album request
+        // Given - a well-known album request
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
 
-        // When — enriching for genre (triggers MusicBrainz identity resolution)
+        // When - enriching for genre (triggers MusicBrainz identity resolution)
         val result = engine.enrich(request, setOf(EnrichmentType.GENRE))
 
-        // Then — MBID resolved with high confidence
+        // Then - MBID resolved with high confidence
         val resolution = extractResolution(result)
         assertNotNull("Should resolve MBID", resolution)
         assertNotNull("Should have MBID", resolution!!.musicBrainzId)
@@ -75,13 +75,13 @@ class RealApiEndToEndTest {
 
     @Test
     fun `MusicBrainz resolves Radiohead artist`() = runBlocking {
-        // Given — a well-known artist request
+        // Given - a well-known artist request
         val request = EnrichmentRequest.forArtist("Radiohead")
 
-        // When — enriching for genre (triggers MusicBrainz identity resolution)
+        // When - enriching for genre (triggers MusicBrainz identity resolution)
         val result = engine.enrich(request, setOf(EnrichmentType.GENRE))
 
-        // Then — artist MBID resolved with Wikidata link
+        // Then - artist MBID resolved with Wikidata link
         val resolution = extractResolution(result)
         assertNotNull("Should resolve artist MBID", resolution)
         assertNotNull("Should have wikidataId", resolution!!.wikidataId)
@@ -92,13 +92,13 @@ class RealApiEndToEndTest {
 
     @Test
     fun `MusicBrainz resolves Dark Side of the Moon by Pink Floyd`() = runBlocking {
-        // Given — another well-known album for cross-validation
+        // Given - another well-known album for cross-validation
         val request = EnrichmentRequest.forAlbum("The Dark Side of the Moon", "Pink Floyd")
 
-        // When — enriching for genre and label
+        // When - enriching for genre and label
         val result = engine.enrich(request, setOf(EnrichmentType.GENRE, EnrichmentType.LABEL))
 
-        // Then — high-confidence match with metadata
+        // Then - high-confidence match with metadata
         val resolution = extractResolution(result)
         assertNotNull("Should resolve", resolution)
         assertTrue("Score should be high", resolution!!.score >= 90)
@@ -110,13 +110,13 @@ class RealApiEndToEndTest {
 
     @Test
     fun `Cover Art Archive returns artwork for OK Computer`() = runBlocking {
-        // Given — a well-known album with cover art in CAA
+        // Given - a well-known album with cover art in CAA
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
 
-        // When — enriching for album art (MusicBrainz resolves MBID, then CAA fetches art)
+        // When - enriching for album art (MusicBrainz resolves MBID, then CAA fetches art)
         val result = engine.enrich(request, setOf(EnrichmentType.ALBUM_ART))
 
-        // Then — artwork URL returned via HTTP
+        // Then - artwork URL returned via HTTP
         val art = result.raw[EnrichmentType.ALBUM_ART]
         assertTrue("Should find album art", art is EnrichmentResult.Success)
         val artwork = (art as EnrichmentResult.Success).data as EnrichmentData.Artwork
@@ -129,13 +129,13 @@ class RealApiEndToEndTest {
 
     @Test
     fun `Wikidata returns artist photo for Radiohead`() = runBlocking {
-        // Given — a well-known artist that may have a P18 image on Wikidata
+        // Given - a well-known artist that may have a P18 image on Wikidata
         val request = EnrichmentRequest.forArtist("Radiohead")
 
-        // When — enriching for artist photo
+        // When - enriching for artist photo
         val result = engine.enrich(request, setOf(EnrichmentType.ARTIST_PHOTO))
 
-        // Then — photo should be available (primary or alternative may be from Wikidata)
+        // Then - photo should be available (primary or alternative may be from Wikidata)
         val photo = result.raw[EnrichmentType.ARTIST_PHOTO]
         if (photo is EnrichmentResult.Success) {
             val artwork = photo.data as EnrichmentData.Artwork
@@ -156,13 +156,13 @@ class RealApiEndToEndTest {
 
     @Test
     fun `Wikipedia returns biography for Radiohead`() = runBlocking {
-        // Given — a well-known English band with a Wikipedia article
+        // Given - a well-known English band with a Wikipedia article
         val request = EnrichmentRequest.forArtist("Radiohead")
 
-        // When — enriching for artist biography
+        // When - enriching for artist biography
         val result = engine.enrich(request, setOf(EnrichmentType.ARTIST_BIO))
 
-        // Then — biography text mentioning "English" with Wikipedia as source
+        // Then - biography text mentioning "English" with Wikipedia as source
         val bio = result.raw[EnrichmentType.ARTIST_BIO]
         assertTrue("Should find biography", bio is EnrichmentResult.Success)
         val biography = (bio as EnrichmentResult.Success).data as EnrichmentData.Biography
@@ -173,13 +173,13 @@ class RealApiEndToEndTest {
 
     @Test
     fun `Wikipedia resolves bio via Wikidata sitelinks for Air`() = runBlocking {
-        // Given — "Air" has Wikidata but no direct Wikipedia relation in MusicBrainz
+        // Given - "Air" has Wikidata but no direct Wikipedia relation in MusicBrainz
         val request = EnrichmentRequest.forArtist("Air")
 
-        // When — enriching for artist biography (resolves via Wikidata sitelinks)
+        // When - enriching for artist biography (resolves via Wikidata sitelinks)
         val result = engine.enrich(request, setOf(EnrichmentType.ARTIST_BIO))
 
-        // Then — biography found via the Wikidata→Wikipedia sitelink path
+        // Then - biography found via the Wikidata→Wikipedia sitelink path
         val bio = result.raw[EnrichmentType.ARTIST_BIO]
         assertTrue("Should find Air biography via Wikidata sitelinks", bio is EnrichmentResult.Success)
         val biography = (bio as EnrichmentResult.Success).data as EnrichmentData.Biography
@@ -191,16 +191,16 @@ class RealApiEndToEndTest {
 
     @Test
     fun `LRCLIB returns synced lyrics for Creep by Radiohead`() = runBlocking {
-        // Given — a well-known track with lyrics in LRCLIB
+        // Given - a well-known track with lyrics in LRCLIB
         val request = EnrichmentRequest.forTrack("Creep", "Radiohead", album = "Pablo Honey")
 
-        // When — enriching for both synced and plain lyrics
+        // When - enriching for both synced and plain lyrics
         val result = engine.enrich(
             request,
             setOf(EnrichmentType.LYRICS_SYNCED, EnrichmentType.LYRICS_PLAIN),
         )
 
-        // Then — at least one lyrics format returned with non-blank text
+        // Then - at least one lyrics format returned with non-blank text
         val synced = result.raw[EnrichmentType.LYRICS_SYNCED]
         val plain = result.raw[EnrichmentType.LYRICS_PLAIN]
         val success = synced as? EnrichmentResult.Success ?: plain as? EnrichmentResult.Success
@@ -215,16 +215,16 @@ class RealApiEndToEndTest {
 
     @Test
     fun `LRCLIB detects instrumental track`() = runBlocking {
-        // Given — "Treefingers" by Radiohead is an instrumental track
+        // Given - "Treefingers" by Radiohead is an instrumental track
         val request = EnrichmentRequest.forTrack("Treefingers", "Radiohead", album = "Kid A")
 
-        // When — enriching for lyrics
+        // When - enriching for lyrics
         val result = engine.enrich(
             request,
             setOf(EnrichmentType.LYRICS_SYNCED, EnrichmentType.LYRICS_PLAIN),
         )
 
-        // Then — either marked as instrumental or not found in LRCLIB
+        // Then - either marked as instrumental or not found in LRCLIB
         val success = result.raw.values.filterIsInstance<EnrichmentResult.Success>()
             .firstOrNull { it.data is EnrichmentData.Lyrics }
         if (success != null) {
@@ -240,17 +240,17 @@ class RealApiEndToEndTest {
 
     @Test
     fun `Deezer returns album art as fallback`() = runBlocking {
-        // Given — engine with only Deezer (no MusicBrainz/CAA) to isolate fallback
+        // Given - engine with only Deezer (no MusicBrainz/CAA) to isolate fallback
         val httpClient = DefaultHttpClient(USER_AGENT)
         val deezerOnly = EnrichmentEngine.Builder()
             .addProvider(DeezerProvider(httpClient, RateLimiter(100)))
             .build()
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
 
-        // When — enriching for album art through Deezer only
+        // When - enriching for album art through Deezer only
         val result = deezerOnly.enrich(request, setOf(EnrichmentType.ALBUM_ART))
 
-        // Then — artwork URL from Deezer CDN
+        // Then - artwork URL from Deezer CDN
         val art = result.raw[EnrichmentType.ALBUM_ART]
         assertTrue("Deezer should find album art", art is EnrichmentResult.Success)
         val artwork = (art as EnrichmentResult.Success).data as EnrichmentData.Artwork
@@ -262,17 +262,17 @@ class RealApiEndToEndTest {
 
     @Test
     fun `iTunes returns album art as fallback`() = runBlocking {
-        // Given — engine with only iTunes to isolate fallback
+        // Given - engine with only iTunes to isolate fallback
         val httpClient = DefaultHttpClient(USER_AGENT)
         val itunesOnly = EnrichmentEngine.Builder()
             .addProvider(ITunesProvider(httpClient, RateLimiter(3000)))
             .build()
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
 
-        // When — enriching for album art through iTunes only
+        // When - enriching for album art through iTunes only
         val result = itunesOnly.enrich(request, setOf(EnrichmentType.ALBUM_ART))
 
-        // Then — artwork URL upscaled to 1200x1200
+        // Then - artwork URL upscaled to 1200x1200
         val art = result.raw[EnrichmentType.ALBUM_ART]
         assertTrue("iTunes should find album art", art is EnrichmentResult.Success)
         val artwork = (art as EnrichmentResult.Success).data as EnrichmentData.Artwork
@@ -284,7 +284,7 @@ class RealApiEndToEndTest {
 
     @Test
     fun `full album enrichment pipeline for OK Computer`() = runBlocking {
-        // Given — all enrichment types requested for a well-known album
+        // Given - all enrichment types requested for a well-known album
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
         val types = setOf(
             EnrichmentType.ALBUM_ART,
@@ -295,10 +295,10 @@ class RealApiEndToEndTest {
             EnrichmentType.COUNTRY,
         )
 
-        // When — full pipeline: MusicBrainz → CAA → metadata extraction
+        // When - full pipeline: MusicBrainz → CAA → metadata extraction
         val result = engine.enrich(request, types)
 
-        // Then — identity resolved, artwork found, and metadata populated
+        // Then - identity resolved, artwork found, and metadata populated
         println("  Results:")
         result.raw.forEach { (type, res) ->
             val status = when (res) {
@@ -325,14 +325,14 @@ class RealApiEndToEndTest {
 
     @Test
     fun `full artist enrichment pipeline for Pink Floyd`() = runBlocking {
-        // Given — artist enrichment requesting photo, bio, and genre
+        // Given - artist enrichment requesting photo, bio, and genre
         val request = EnrichmentRequest.forArtist("Pink Floyd")
         val types = setOf(EnrichmentType.ARTIST_PHOTO, EnrichmentType.ARTIST_BIO, EnrichmentType.GENRE)
 
-        // When — full pipeline: MusicBrainz → Wikidata → Wikipedia
+        // When - full pipeline: MusicBrainz → Wikidata → Wikipedia
         val result = engine.enrich(request, types)
 
-        // Then — biography found with substantial text
+        // Then - biography found with substantial text
         println("  Results:")
         result.raw.forEach { (type, res) ->
             val status = when (res) {
@@ -354,13 +354,13 @@ class RealApiEndToEndTest {
 
     @Test
     fun `search returns multiple album candidates`() = runBlocking {
-        // Given — a partial album name to test fuzzy matching
+        // Given - a partial album name to test fuzzy matching
         val request = EnrichmentRequest.forAlbum("Dark Side", "Pink Floyd")
 
-        // When — searching for album candidates
+        // When - searching for album candidates
         val candidates = engine.search(request, limit = 5)
 
-        // Then — multiple candidates returned
+        // Then - multiple candidates returned
         assertTrue("Should return candidates", candidates.isNotEmpty())
         println("  Candidates:")
         candidates.forEach { c ->
@@ -370,13 +370,13 @@ class RealApiEndToEndTest {
 
     @Test
     fun `search returns multiple artist candidates`() = runBlocking {
-        // Given — a common artist name with multiple matches (band vs. solo vs. tribute)
+        // Given - a common artist name with multiple matches (band vs. solo vs. tribute)
         val request = EnrichmentRequest.forArtist("Air")
 
-        // When — searching for artist candidates
+        // When - searching for artist candidates
         val candidates = engine.search(request, limit = 5)
 
-        // Then — multiple candidates returned
+        // Then - multiple candidates returned
         assertTrue("Should return candidates", candidates.isNotEmpty())
         println("  Candidates:")
         candidates.forEach { c ->
@@ -388,16 +388,16 @@ class RealApiEndToEndTest {
 
     @Test
     fun `handles obscure album gracefully`() = runBlocking {
-        // Given — a completely nonexistent album/artist combination
+        // Given - a completely nonexistent album/artist combination
         val request = EnrichmentRequest.forAlbum("zxqwvnmkjhgf", "NonexistentArtist12345")
 
-        // When — enriching for art and genre
+        // When - enriching for art and genre
         val result = engine.enrich(
             request,
             setOf(EnrichmentType.ALBUM_ART, EnrichmentType.GENRE),
         )
 
-        // Then — does not crash, returns NotFound results
+        // Then - does not crash, returns NotFound results
         println("  Results for nonexistent album:")
         result.raw.forEach { (type, res) ->
             println("    $type: ${res::class.simpleName}")
@@ -407,13 +407,13 @@ class RealApiEndToEndTest {
 
     @Test
     fun `handles special characters in search`() = runBlocking {
-        // Given — "AC/DC" has a slash that needs Lucene escaping
+        // Given - "AC/DC" has a slash that needs Lucene escaping
         val request = EnrichmentRequest.forArtist("AC/DC")
 
-        // When — enriching for genre
+        // When - enriching for genre
         val result = engine.enrich(request, setOf(EnrichmentType.GENRE))
 
-        // Then — resolves despite the special character
+        // Then - resolves despite the special character
         val resolution = extractResolution(result)
         println("  AC/DC: MBID=${resolution?.musicBrainzId}, score=${resolution?.score}")
         assertNotNull("Should resolve AC/DC", resolution)

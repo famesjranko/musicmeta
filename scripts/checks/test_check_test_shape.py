@@ -15,18 +15,18 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from check_test_shape import run  # noqa: E402
+from check_test_shape import main, run  # noqa: E402
 
 WELL_FORMED = """package a
 
 class ATest {
     @Test
     fun `does the thing`() {
-        // Given — a fixture
+        // Given - a fixture
         val x = 1
-        // When — the call happens
+        // When - the call happens
         val y = x + 1
-        // Then — the result is correct
+        // Then - the result is correct
         assertEquals(2, y)
     }
 }
@@ -55,17 +55,17 @@ class TestShapeTest(unittest.TestCase):
         self.assertEqual(self.findings_for("m/src/test/kotlin/ATest.kt", WELL_FORMED), [])
 
     def test_multiple_when_labels_naming_separate_acts_are_allowed(self):
-        # Given a test with two acts, each with its own `// When —` line
+        # Given a test with two acts, each with its own `// When -` line
         body = """class ATest {
     @Test
     fun f() {
-        // Given — a fixture
+        // Given - a fixture
         val x = 1
-        // When — the first call happens
+        // When - the first call happens
         val y = x + 1
-        // When — the second call happens
+        // When - the second call happens
         val z = y + 1
-        // Then — the result is correct
+        // Then - the result is correct
         assertEquals(3, z)
     }
 }
@@ -77,7 +77,7 @@ class TestShapeTest(unittest.TestCase):
     # --- missing Given ---
 
     def test_test_with_no_given_label_is_reported(self):
-        # Given a `@Test` body with no `// Given —` line at all
+        # Given a `@Test` body with no `// Given -` line at all
         body = """class ATest {
     @Test
     fun f() {
@@ -91,19 +91,19 @@ class TestShapeTest(unittest.TestCase):
         # Then it is reported, anchored to the `@Test` line
         self.assertEqual(len(findings), 1)
         self.assertIn("line=2", findings[0])
-        self.assertIn("no `// Given —` line", findings[0])
+        self.assertIn("no `// Given -` line", findings[0])
 
     # --- bare labels ---
 
     def test_bare_given_label_is_reported(self):
-        # Given a `// Given` with no em dash and no clause
+        # Given a `// Given` with no hyphen and no clause
         body = """class ATest {
     @Test
     fun f() {
         // Given
         val x = 1
-        // When — the call happens
-        // Then — it holds
+        // When - the call happens
+        // Then - it holds
         assertEquals(1, x)
     }
 }
@@ -111,20 +111,20 @@ class TestShapeTest(unittest.TestCase):
         # When the test-shape check runs
         findings = self.findings_for("m/src/test/kotlin/ATest.kt", body)
         # Then the bare label is reported on its own line, and — since a malformed Given doesn't
-        # count as present — the window is also reported as missing a real `// Given —`
+        # count as present — the window is also reported as missing a real `// Given -`
         self.assertEqual(len(findings), 2)
         self.assertIn("line=4", findings[0])
-        self.assertIn("em dash", findings[0])
+        self.assertIn("hyphen", findings[0])
 
     def test_given_with_dash_but_no_clause_is_reported(self):
-        # Given a `// Given —` with the dash but nothing after it
+        # Given a `// Given -` with the dash but nothing after it
         body = """class ATest {
     @Test
     fun f() {
-        // Given —
+        // Given -
         val x = 1
-        // When — the call happens
-        // Then — it holds
+        // When - the call happens
+        // Then - it holds
         assertEquals(1, x)
     }
 }
@@ -142,9 +142,9 @@ class TestShapeTest(unittest.TestCase):
         body = """class ATest {
     @Test
     fun f() {
-        // Given / When — construct without explicit kind
+        // Given / When - construct without explicit kind
         val x = 1
-        // Then — it holds
+        // Then - it holds
         assertEquals(1, x)
     }
 }
@@ -156,6 +156,60 @@ class TestShapeTest(unittest.TestCase):
         self.assertEqual(len(findings), 2)
         self.assertIn("more than one", findings[0])
 
+    def test_label_naming_a_second_step_in_its_clause_is_not_combined(self):
+        # Given a well-formed `// Then -` whose clause happens to name another label word
+        body = """class ATest {
+    @Test
+    fun f() {
+        // Given - a fixture
+        // When - the call happens
+        // Then - the When branch is the one taken
+        assertEquals(1, 1)
+    }
+}
+"""
+        # When the test-shape check runs
+        # Then nothing is reported — only label position counts, so a clause may say "When"
+        self.assertEqual(self.findings_for("m/src/test/kotlin/ATest.kt", body), [])
+
+    def test_prose_comment_mentioning_a_label_word_is_not_a_label(self):
+        # Given a plain comment inside a `@Test` body that mentions Given without being a label
+        body = """class ATest {
+    @Test
+    fun f() {
+        // Given - a fixture
+        // the When branch is the expensive one, which is why this is warmed up first
+        // When - the call happens
+        // Then - it holds
+        assertEquals(1, 1)
+    }
+}
+"""
+        # When the test-shape check runs
+        # Then nothing is reported — the word is not in label position, so the line is prose. An
+        # unanchored trigger would report this correct code with no way to opt out. A comment that
+        # *opens* with a label word is still read as a label: that case is genuinely ambiguous, and
+        # rewording it is the opt-out.
+        self.assertEqual(self.findings_for("m/src/test/kotlin/ATest.kt", body), [])
+
+    def test_double_hyphen_label_is_reported(self):
+        # Given a `// Given --`, a form neither CLAUDE.md nor anyone else chose
+        body = """class ATest {
+    @Test
+    fun f() {
+        // Given -- a fixture
+        // When - the call happens
+        // Then - it holds
+        assertEquals(1, 1)
+    }
+}
+"""
+        # When the test-shape check runs
+        findings = self.findings_for("m/src/test/kotlin/ATest.kt", body)
+        # Then it is reported as malformed, plus the missing-Given finding
+        self.assertEqual(len(findings), 2)
+        self.assertIn("hyphen", findings[0])
+
     # --- window boundary ---
 
     def test_second_test_in_same_class_is_checked_independently(self):
@@ -165,9 +219,9 @@ class TestShapeTest(unittest.TestCase):
         body = """class ATest {
     @Test
     fun first() {
-        // Given — a fixture
-        // When — the call happens
-        // Then — it holds
+        // Given - a fixture
+        // When - the call happens
+        // Then - it holds
         assertEquals(1, 1)
     }
 
@@ -182,6 +236,30 @@ class TestShapeTest(unittest.TestCase):
         # Then only the second function is reported
         self.assertEqual(len(findings), 1)
         self.assertIn("line=10", findings[0])
+
+    def test_window_stops_at_the_next_class_declaration(self):
+        # Given a helper class *after* the last `@Test` in the file, with a comment naming a label
+        # word — the direction the "next `@Test` or end of file" bound got wrong, since the file
+        # end is not the end of the enclosing class
+        body = """class ATest {
+    @Test
+    fun f() {
+        // Given - a fixture
+        // When - the call happens
+        // Then - it holds
+        assertEquals(1, 1)
+    }
+}
+
+private class Helper {
+    fun build() {
+        // Then write the file out
+    }
+}
+"""
+        # When the test-shape check runs
+        # Then nothing is reported — the trailing class closes the last `@Test`'s window
+        self.assertEqual(self.findings_for("m/src/test/kotlin/ATest.kt", body), [])
 
     # --- scope ---
 
@@ -206,9 +284,9 @@ class TestShapeTest(unittest.TestCase):
 
     @Test
     fun f() {
-        // Given — a fixture
-        // When — the call happens
-        // Then — it holds
+        // Given - a fixture
+        // When - the call happens
+        // Then - it holds
         assertEquals(1, 1)
     }
 }
@@ -216,6 +294,40 @@ class TestShapeTest(unittest.TestCase):
         # When the test-shape check runs
         # Then nothing is reported — the helper's comment sits outside any `@Test` window
         self.assertEqual(self.findings_for("m/src/test/kotlin/ATest.kt", body), [])
+
+    # --- the two entry points agree ---
+
+    def exit_code_for_file(self, rel: str, body: str) -> int:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.write(root, rel, body)
+            return main(["--file", str(root / rel)])
+
+    def test_file_mode_reports_a_violation_in_a_test_source(self):
+        # Given a test source with no `// Given -` line
+        body = """class ATest {
+    @Test
+    fun f() {
+        assertEquals(1, 1)
+    }
+}
+"""
+        # When it is checked through `--file`, the path format-on-write.sh uses
+        # Then it exits 2 — the hook blocks only on 2, so anything else is a silent gate
+        self.assertEqual(self.exit_code_for_file("m/src/test/kotlin/ATest.kt", body), 2)
+
+    def test_file_mode_ignores_a_path_outside_the_gate_scope(self):
+        # Given the same violation in a main source, which the full-repo gate never scans
+        body = """class ATest {
+    @Test
+    fun f() {
+        assertEquals(1, 1)
+    }
+}
+"""
+        # When it is checked through `--file`
+        # Then it passes — a file the gate ignores must not fail at write-time
+        self.assertEqual(self.exit_code_for_file("m/src/main/kotlin/ATest.kt", body), 0)
 
 
 if __name__ == "__main__":

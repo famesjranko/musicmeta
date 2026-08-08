@@ -52,14 +52,14 @@ class MusicBrainzMapperGenreTest {
 
     @Test
     fun `toAlbumMetadata populates genreTags with 0_4f confidence and musicbrainz source`() {
-        // Given — a release with two tag counts
+        // Given - a release with two tag counts
         val tagCounts = listOf(TagCount("rock", 10), TagCount("pop", 5))
         val release = makeRelease(tagCounts)
 
-        // When — mapping to album metadata
+        // When - mapping to album metadata
         val metadata = MusicBrainzMapper.toAlbumMetadata(release)
 
-        // Then — genreTags carries both tags at 0.4f confidence, sourced from musicbrainz
+        // Then - genreTags carries both tags at 0.4f confidence, sourced from musicbrainz
         val genreTags = metadata.genreTags
         assertTrue(genreTags != null)
         assertEquals(2, genreTags!!.size)
@@ -72,39 +72,39 @@ class MusicBrainzMapperGenreTest {
 
     @Test
     fun `toAlbumMetadata still populates genres for backward compatibility`() {
-        // Given — a release with two tag counts
+        // Given - a release with two tag counts
         val tagCounts = listOf(TagCount("jazz", 8), TagCount("blues", 3))
         val release = makeRelease(tagCounts)
 
-        // When — mapping to album metadata
+        // When - mapping to album metadata
         val metadata = MusicBrainzMapper.toAlbumMetadata(release)
 
-        // Then — the legacy genres list still carries the tag names
+        // Then - the legacy genres list still carries the tag names
         assertEquals(listOf("jazz", "blues"), metadata.genres)
     }
 
     @Test
     fun `toAlbumMetadata returns null genreTags when tagCounts is empty`() {
-        // Given — a release with no tag counts
+        // Given - a release with no tag counts
         val release = makeRelease(emptyList())
 
-        // When — mapping to album metadata
+        // When - mapping to album metadata
         val metadata = MusicBrainzMapper.toAlbumMetadata(release)
 
-        // Then — genreTags is null rather than an empty list
+        // Then - genreTags is null rather than an empty list
         assertNull(metadata.genreTags)
     }
 
     @Test
     fun `toArtistMetadata populates genreTags with 0_4f confidence and musicbrainz source`() {
-        // Given — an artist with one tag count
+        // Given - an artist with one tag count
         val tagCounts = listOf(TagCount("metal", 15))
         val artist = makeArtist(tagCounts)
 
-        // When — mapping to artist metadata
+        // When - mapping to artist metadata
         val metadata = MusicBrainzMapper.toArtistMetadata(artist)
 
-        // Then — genreTags carries the tag at 0.4f confidence, sourced from musicbrainz
+        // Then - genreTags carries the tag at 0.4f confidence, sourced from musicbrainz
         val genreTags = metadata.genreTags
         assertTrue(genreTags != null)
         assertEquals(1, genreTags!!.size)
@@ -115,26 +115,26 @@ class MusicBrainzMapperGenreTest {
 
     @Test
     fun `toArtistMetadata returns null genreTags when tagCounts is empty`() {
-        // Given — an artist with no tag counts
+        // Given - an artist with no tag counts
         val artist = makeArtist(emptyList())
 
-        // When — mapping to artist metadata
+        // When - mapping to artist metadata
         val metadata = MusicBrainzMapper.toArtistMetadata(artist)
 
-        // Then — genreTags is null rather than an empty list
+        // Then - genreTags is null rather than an empty list
         assertNull(metadata.genreTags)
     }
 
     @Test
     fun `toTrackMetadata populates genreTags with 0_4f confidence and musicbrainz source`() {
-        // Given — a recording with one tag count
+        // Given - a recording with one tag count
         val tagCounts = listOf(TagCount("electronic", 7))
         val recording = makeRecording(tagCounts)
 
-        // When — mapping to track metadata
+        // When - mapping to track metadata
         val metadata = MusicBrainzMapper.toTrackMetadata(recording)
 
-        // Then — genreTags carries the tag at 0.4f confidence, sourced from musicbrainz
+        // Then - genreTags carries the tag at 0.4f confidence, sourced from musicbrainz
         val genreTags = metadata.genreTags
         assertTrue(genreTags != null)
         assertEquals(1, genreTags!!.size)
@@ -145,13 +145,13 @@ class MusicBrainzMapperGenreTest {
 
     @Test
     fun `toTrackMetadata returns null genreTags when tagCounts is empty`() {
-        // Given — a recording with no tag counts
+        // Given - a recording with no tag counts
         val recording = makeRecording(emptyList())
 
-        // When — mapping to track metadata
+        // When - mapping to track metadata
         val metadata = MusicBrainzMapper.toTrackMetadata(recording)
 
-        // Then — genreTags is null rather than an empty list
+        // Then - genreTags is null rather than an empty list
         assertNull(metadata.genreTags)
     }
 
@@ -159,7 +159,7 @@ class MusicBrainzMapperGenreTest {
 
     @Test
     fun `toBandMembers normalizes full dates to year-only in activePeriod`() {
-        // Given — member with YYYY-MM-DD dates from MusicBrainz
+        // Given - member with YYYY-MM-DD dates from MusicBrainz
         val members = listOf(
             MusicBrainzBandMember(
                 name = "Dave Grohl",
@@ -171,16 +171,16 @@ class MusicBrainzMapperGenreTest {
             ),
         )
 
-        // When — mapping to band members
+        // When - mapping to band members
         val result = MusicBrainzMapper.toBandMembers(members)
 
-        // Then — activePeriod uses year-only format
+        // Then - activePeriod uses year-only format
         assertEquals("1990-2003", result.members[0].activePeriod)
     }
 
     @Test
     fun `toBandMembers normalizes YYYY-MM dates to year-only`() {
-        // Given — member with YYYY-MM dates
+        // Given - member with YYYY-MM dates
         val members = listOf(
             MusicBrainzBandMember(
                 name = "Pat Smear",
@@ -192,16 +192,16 @@ class MusicBrainzMapperGenreTest {
             ),
         )
 
-        // When — mapping to band members
+        // When - mapping to band members
         val result = MusicBrainzMapper.toBandMembers(members)
 
-        // Then — an open-ended member shows "present" as the end year
+        // Then - an open-ended member shows "present" as the end year
         assertEquals("1994-present", result.members[0].activePeriod)
     }
 
     @Test
     fun `toBandMembers handles year-only dates without change`() {
-        // Given — member with plain YYYY dates
+        // Given - member with plain YYYY dates
         val members = listOf(
             MusicBrainzBandMember(
                 name = "Nate Mendel",
@@ -213,10 +213,10 @@ class MusicBrainzMapperGenreTest {
             ),
         )
 
-        // When — mapping to band members
+        // When - mapping to band members
         val result = MusicBrainzMapper.toBandMembers(members)
 
-        // Then — plain year-only dates pass through unchanged
+        // Then - plain year-only dates pass through unchanged
         assertEquals("1995-2010", result.members[0].activePeriod)
     }
 }

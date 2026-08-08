@@ -79,9 +79,6 @@ mypy
 step "conventions"
 python3 scripts/checks/check_conventions.py
 
-step "test shape (given/when/then)"
-python3 scripts/checks/check_test_shape.py
-
 step "script self-tests"
 # Unguarded, a regression in a release script surfaces only as a release check that silently passes.
 for t in scripts/checks/test_*.py scripts/github-workflows/test_*.py; do
@@ -97,6 +94,11 @@ step "changelog release-note caps"
 # Below the self-tests on purpose: this runs the script, so the test that proves the script is
 # intact should have run first — otherwise a broken build_release_notes.py reports a green gate.
 python3 scripts/github-workflows/build_release_notes.py Unreleased
+
+step "test shape (given/when/then)"
+# Below the self-tests for the same reason as the caps above: this runs check_test_shape.py, and a
+# broken checker reporting a green gate is the failure this gate exists to prevent.
+python3 scripts/checks/check_test_shape.py
 
 step "kotlin format (ktlint)"
 ./gradlew ktlintCheck --quiet

@@ -37,15 +37,15 @@ class MusicBrainzTransientFailureTest {
 
     @Test
     fun `rate-limited artist search is an Error, not a NotFound carrying a 100 percent suggestion`() = runTest {
-        // Given — the strict search is rate limited, while the fuzzy search would happily answer
+        // Given - the strict search is rate limited, while the fuzzy search would happily answer
         // with a perfect match. This is the exact live shape: MusicBrainz scores Portishead 100.
         httpClient.givenHttpResult(STRICT_QUERY, HttpResult.RateLimited(retryAfterMs = 1000))
         httpClient.givenJsonResponse(FUZZY_QUERY, FUZZY_ARTISTS_TOP_SCORE_100)
 
-        // When — resolving identity for the artist
+        // When - resolving identity for the artist
         val result = provider.resolveIdentity(EnrichmentRequest.forArtist("Portishead"))
 
-        // Then — a transient failure, classified as one
+        // Then - a transient failure, classified as one
         assertTrue(
             "Expected Error, got ${result::class.simpleName}",
             result is EnrichmentResult.Error,
@@ -61,13 +61,13 @@ class MusicBrainzTransientFailureTest {
 
     @Test
     fun `server error on artist search is an Error, not a NotFound`() = runTest {
-        // Given — MusicBrainz is 503ing
+        // Given - MusicBrainz is 503ing
         httpClient.givenHttpResult(STRICT_QUERY, HttpResult.ServerError(503))
 
-        // When — resolving identity
+        // When - resolving identity
         val result = provider.resolveIdentity(EnrichmentRequest.forArtist("Portishead"))
 
-        // Then — Error, so the circuit breaker records a failure rather than a healthy "no match"
+        // Then - Error, so the circuit breaker records a failure rather than a healthy "no match"
         assertTrue(
             "Expected Error, got ${result::class.simpleName}",
             result is EnrichmentResult.Error,
@@ -76,16 +76,16 @@ class MusicBrainzTransientFailureTest {
 
     @Test
     fun `rate-limited album search is an Error, not a NotFound carrying suggestions`() = runTest {
-        // Given — the same trap on the album identity path: enrichAlbum has the identical
+        // Given - the same trap on the album identity path: enrichAlbum has the identical
         // isEmpty() -> fuzzy -> NotFound(suggestions) branch, and an identity NotFound carrying
         // suggestions short-circuits the fan-out for albums exactly as it does for artists.
         httpClient.givenHttpResult(STRICT_RELEASE_QUERY, HttpResult.RateLimited(retryAfterMs = 1000))
         httpClient.givenJsonResponse(FUZZY_RELEASE_QUERY, FUZZY_RELEASES_TOP_SCORE_100)
 
-        // When — resolving identity for the album
+        // When - resolving identity for the album
         val result = provider.resolveIdentity(EnrichmentRequest.forAlbum("Dummy", "Portishead"))
 
-        // Then — a transient failure, classified as one
+        // Then - a transient failure, classified as one
         assertTrue(
             "Expected Error, got ${result::class.simpleName}",
             result is EnrichmentResult.Error,
@@ -99,7 +99,7 @@ class MusicBrainzTransientFailureTest {
 
     @Test
     fun `rate-limited lookup is an Error, not a NotFound`() = runTest {
-        // Given — an MBID is already known, so the search is skipped and lookupRelease runs.
+        // Given - an MBID is already known, so the search is skipped and lookupRelease runs.
         // The lookup half of MusicBrainzApi returns null rather than an empty list, so it collapsed
         // a transient into a plain NotFound: no bogus suggestions, but the breaker still scored a
         // rate-limited provider as healthy.
@@ -110,10 +110,10 @@ class MusicBrainzTransientFailureTest {
             identifiers = EnrichmentIdentifiers(musicBrainzId = RELEASE_MBID),
         )
 
-        // When — enriching a type that resolves by direct lookup
+        // When - enriching a type that resolves by direct lookup
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then — Error, so the chain records a breaker failure
+        // Then - Error, so the chain records a breaker failure
         assertTrue(
             "Expected Error, got ${result::class.simpleName}",
             result is EnrichmentResult.Error,
@@ -123,15 +123,15 @@ class MusicBrainzTransientFailureTest {
 
     @Test
     fun `a genuinely empty search still returns NotFound with suggestions`() = runTest {
-        // Given — a real 200 carrying zero artists, and a fuzzy search offering near misses.
+        // Given - a real 200 carrying zero artists, and a fuzzy search offering near misses.
         // This is the behaviour the fix must NOT disturb: an empty result is still an empty result.
         httpClient.givenJsonResponse(STRICT_QUERY, """{"artists":[]}""")
         httpClient.givenJsonResponse(FUZZY_QUERY, FUZZY_ARTISTS_NEAR_MISSES)
 
-        // When — resolving identity
+        // When - resolving identity
         val result = provider.resolveIdentity(EnrichmentRequest.forArtist("Portishead"))
 
-        // Then — NotFound carrying the near misses, exactly as before
+        // Then - NotFound carrying the near misses, exactly as before
         assertTrue(
             "Expected NotFound, got ${result::class.simpleName}",
             result is EnrichmentResult.NotFound,
@@ -142,17 +142,17 @@ class MusicBrainzTransientFailureTest {
 
     @Test
     fun `a genuinely empty track search still returns NotFound with suggestions`() = runTest {
-        // Given — a real 200 carrying zero recordings for a typo'd title (searchRecordings' own
+        // Given - a real 200 carrying zero recordings for a typo'd title (searchRecordings' own
         // hint-less retry only drops the release:"…" album term, it still re-sends the title
         // quoted, so it never rescues a typo), and a fuzzy (unquoted + Lucene ~) search offering
         // the near-miss. Mirrors the artist/album equivalents above.
         httpClient.givenJsonResponse(STRICT_TRACK_QUERY, """{"recordings":[]}""")
         httpClient.givenJsonResponse(FUZZY_TRACK_QUERY, FUZZY_RECORDINGS_NEAR_MISS)
 
-        // When — resolving identity for the track
+        // When - resolving identity for the track
         val result = provider.resolveIdentity(EnrichmentRequest.forTrack("Enter Sandmanz Xyzqq", "Metallica"))
 
-        // Then — NotFound carrying the near miss, so IdentityMatch.SUGGESTIONS becomes reachable
+        // Then - NotFound carrying the near miss, so IdentityMatch.SUGGESTIONS becomes reachable
         assertTrue(
             "Expected NotFound, got ${result::class.simpleName}",
             result is EnrichmentResult.NotFound,

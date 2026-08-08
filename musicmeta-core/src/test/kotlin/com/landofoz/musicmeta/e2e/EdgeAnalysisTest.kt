@@ -131,7 +131,7 @@ class EdgeAnalysisTest {
 
     @Test
     fun `01 - special characters in names`() = runBlocking {
-        // Given — artist/album pairs with slashes, diacritics, apostrophes, periods, and symbols
+        // Given - artist/album pairs with slashes, diacritics, apostrophes, periods, and symbols
         banner("SPECIAL CHARACTERS")
         val cases = listOf(
             Triple("AC/DC", "Back in Black", "slash in artist"),
@@ -143,7 +143,7 @@ class EdgeAnalysisTest {
             Triple("Mötley Crüe", "Dr. Feelgood", "umlauts"),
             Triple("Sunn O)))", "Monoliths & Dimensions", "parens + ampersand"),
         )
-        // When — enriching each pair for GENRE, ALBUM_ART, and ALBUM_METADATA
+        // When - enriching each pair for GENRE, ALBUM_ART, and ALBUM_METADATA
         for ((artist, album, note) in cases) {
             log("    --- $artist / $album ($note) ---")
             val results = engine.enrich(
@@ -155,7 +155,7 @@ class EdgeAnalysisTest {
                 val s = if (r is EnrichmentResult.Success) "OK" else "NF"
                 "${t.name}=$s"
             }
-            // Then — none of the special characters crashes the request; the per-type hit count is logged
+            // Then - none of the special characters crashes the request; the per-type hit count is logged
             log("      $found/3 found: $types")
         }
     }
@@ -166,7 +166,7 @@ class EdgeAnalysisTest {
 
     @Test
     fun `02 - non-latin scripts`() = runBlocking {
-        // Given — artist/album pairs written in Japanese, Cyrillic, Korean, Chinese, and Hebrew scripts
+        // Given - artist/album pairs written in Japanese, Cyrillic, Korean, Chinese, and Hebrew scripts
         banner("NON-LATIN SCRIPTS")
         val cases = listOf(
             Triple("坂本龍一", "async", "Japanese (Ryuichi Sakamoto)"),
@@ -175,7 +175,7 @@ class EdgeAnalysisTest {
             Triple("周杰倫", "范特西", "Chinese (Jay Chou / Fantasy)"),
             Triple("אביב גפן", "Winter", "Hebrew (Aviv Geffen)"),
         )
-        // When — enriching each pair for GENRE and ALBUM_ART
+        // When - enriching each pair for GENRE and ALBUM_ART
         for ((artist, album, note) in cases) {
             log("    --- $artist / $album ($note) ---")
             val results = engine.enrich(
@@ -183,7 +183,7 @@ class EdgeAnalysisTest {
                 setOf(EnrichmentType.GENRE, EnrichmentType.ALBUM_ART),
             )
             val found = results.raw.count { it.value is EnrichmentResult.Success }
-            // Then — none of the non-latin scripts crashes the request; the per-type hit count is logged
+            // Then - none of the non-latin scripts crashes the request; the per-type hit count is logged
             log("      $found/2 found: ${results.raw.entries.joinToString { "${it.key.name}=${if (it.value is EnrichmentResult.Success) "OK" else "NF"}" }}")
         }
     }
@@ -194,7 +194,7 @@ class EdgeAnalysisTest {
 
     @Test
     fun `03 - nonexistent and garbage input`() = runBlocking {
-        // Given — fake, empty, overlong, SQL-injection, and XSS-style artist/album inputs
+        // Given - fake, empty, overlong, SQL-injection, and XSS-style artist/album inputs
         banner("NONEXISTENT / GARBAGE INPUT")
         val cases = listOf(
             Triple("xyznonexistent12345", "fakealbumabc", "completely fake"),
@@ -205,7 +205,7 @@ class EdgeAnalysisTest {
             Triple("'; DROP TABLE artists;--", "sql injection", "SQL injection attempt"),
             Triple("<script>alert(1)</script>", "xss", "XSS attempt"),
         )
-        // When — enriching each garbage input for GENRE, catching any thrown exception
+        // When - enriching each garbage input for GENRE, catching any thrown exception
         for ((artist, album, note) in cases) {
             log("    --- ($note) ---")
             try {
@@ -221,10 +221,10 @@ class EdgeAnalysisTest {
                     is EnrichmentResult.RateLimited -> "RateLimited"
                     null -> "null (no provider)"
                 }
-                // Then — the request completes without throwing; the resulting status is logged
+                // Then - the request completes without throwing; the resulting status is logged
                 log("      $status")
             } catch (e: Exception) {
-                // Then — a thrown exception is caught and logged rather than failing the test
+                // Then - a thrown exception is caught and logged rather than failing the test
                 log("      EXCEPTION: ${e::class.simpleName}: ${e.message?.take(80)}")
             }
         }
@@ -236,10 +236,10 @@ class EdgeAnalysisTest {
 
     @Test
     fun `04 - composite type edges`() = runBlocking {
-        // Given — a solo artist, a classical composer, a many-member group, and a brand-new artist
+        // Given - a solo artist, a classical composer, a many-member group, and a brand-new artist
         banner("COMPOSITE TYPE EDGES (ARTIST_TIMELINE)")
 
-        // When — enriching the solo artist for ARTIST_TIMELINE
+        // When - enriching the solo artist for ARTIST_TIMELINE
         // Solo artist (no band members)
         log("    --- Solo artist: Ed Sheeran ---")
         var results = engine.enrich(
@@ -248,7 +248,7 @@ class EdgeAnalysisTest {
         )
         logTimelineResult(results)
 
-        // When — enriching the classical composer for ARTIST_TIMELINE
+        // When - enriching the classical composer for ARTIST_TIMELINE
         // Classical composer (long timeline)
         log("    --- Classical: Ludwig van Beethoven ---")
         results = engine.enrich(
@@ -257,7 +257,7 @@ class EdgeAnalysisTest {
         )
         logTimelineResult(results)
 
-        // When — enriching the many-member group for ARTIST_TIMELINE
+        // When - enriching the many-member group for ARTIST_TIMELINE
         // Active supergroup with many member changes
         log("    --- Many members: Foo Fighters ---")
         results = engine.enrich(
@@ -266,7 +266,7 @@ class EdgeAnalysisTest {
         )
         logTimelineResult(results)
 
-        // When — enriching the brand-new artist for ARTIST_TIMELINE
+        // When - enriching the brand-new artist for ARTIST_TIMELINE
         // Brand new artist (minimal data)
         log("    --- New artist: Chappell Roan ---")
         results = engine.enrich(
@@ -275,7 +275,7 @@ class EdgeAnalysisTest {
         )
         logTimelineResult(results)
 
-        // When — enriching for ARTIST_TIMELINE plus its sub-types (ARTIST_DISCOGRAPHY, BAND_MEMBERS) explicitly
+        // When - enriching for ARTIST_TIMELINE plus its sub-types (ARTIST_DISCOGRAPHY, BAND_MEMBERS) explicitly
         // Request ARTIST_TIMELINE + its sub-types explicitly
         log("    --- Explicit sub-types + composite: Radiohead ---")
         results = engine.enrich(
@@ -289,7 +289,7 @@ class EdgeAnalysisTest {
         val timeline = results.raw[EnrichmentType.ARTIST_TIMELINE]
         val disco = results.raw[EnrichmentType.ARTIST_DISCOGRAPHY]
         val members = results.raw[EnrichmentType.BAND_MEMBERS]
-        // Then — each of the five scenarios logs its ARTIST_TIMELINE (and sub-type) result without crashing
+        // Then - each of the five scenarios logs its ARTIST_TIMELINE (and sub-type) result without crashing
         log("      TIMELINE: ${if (timeline is EnrichmentResult.Success) "${(timeline.data as EnrichmentData.ArtistTimeline).events.size} events" else timeline?.let { it::class.simpleName } ?: "null"}")
         log("      DISCOGRAPHY: ${if (disco is EnrichmentResult.Success) "${(disco.data as EnrichmentData.Discography).albums.size} albums" else disco?.let { it::class.simpleName } ?: "null"}")
         log("      BAND_MEMBERS: ${if (members is EnrichmentResult.Success) "${(members.data as EnrichmentData.BandMembers).members.size} members" else members?.let { it::class.simpleName } ?: "null"}")
@@ -314,10 +314,10 @@ class EdgeAnalysisTest {
 
     @Test
     fun `05 - credits edge cases`() = runBlocking {
-        // Given — an instrumental track, a classical piece, an electronic track, and a very recent track
+        // Given - an instrumental track, a classical piece, an electronic track, and a very recent track
         banner("CREDITS EDGE CASES")
 
-        // When — enriching the instrumental track for CREDITS
+        // When - enriching the instrumental track for CREDITS
         // Instrumental track (no vocals credit)
         log("    --- Instrumental: YYZ by Rush ---")
         var results = engine.enrich(
@@ -326,7 +326,7 @@ class EdgeAnalysisTest {
         )
         logCreditsResult(results)
 
-        // When — enriching the classical piece for CREDITS
+        // When - enriching the classical piece for CREDITS
         // Classical with many performers
         log("    --- Classical: Symphony No. 9 by Beethoven ---")
         results = engine.enrich(
@@ -335,7 +335,7 @@ class EdgeAnalysisTest {
         )
         logCreditsResult(results)
 
-        // When — enriching the electronic track for CREDITS
+        // When - enriching the electronic track for CREDITS
         // Electronic (likely producer-heavy)
         log("    --- Electronic: Around the World by Daft Punk ---")
         results = engine.enrich(
@@ -344,14 +344,14 @@ class EdgeAnalysisTest {
         )
         logCreditsResult(results)
 
-        // When — enriching the very recent track for CREDITS
+        // When - enriching the very recent track for CREDITS
         // Very recent track
         log("    --- Recent: APT. by ROSÉ & Bruno Mars ---")
         results = engine.enrich(
             EnrichmentRequest.forTrack("APT.", "ROSÉ", album = "rosie"),
             setOf(EnrichmentType.CREDITS),
         )
-        // Then — each of the four scenarios logs its CREDITS result without crashing
+        // Then - each of the four scenarios logs its CREDITS result without crashing
         logCreditsResult(results)
     }
 
@@ -380,7 +380,7 @@ class EdgeAnalysisTest {
 
     @Test
     fun `06 - genre merge behavior`() = runBlocking {
-        // Given — artists spanning rock, hip-hop, jazz, pop, and niche subgenres
+        // Given - artists spanning rock, hip-hop, jazz, pop, and niche subgenres
         banner("GENRE MERGE BEHAVIOR")
 
         val artists = listOf(
@@ -391,7 +391,7 @@ class EdgeAnalysisTest {
             "Amon Amarth" to "melodic death metal (niche genre)",
             "Boards of Canada" to "IDM/ambient (obscure subgenres)",
         )
-        // When — enriching each artist for GENRE
+        // When - enriching each artist for GENRE
         for ((artist, note) in artists) {
             log("    --- $artist ($note) ---")
             val results = engine.enrich(
@@ -399,7 +399,7 @@ class EdgeAnalysisTest {
                 setOf(EnrichmentType.GENRE),
             )
             val genre = results.raw[EnrichmentType.GENRE]
-            // Then — the provider (and whether genre_merger ran) and genre tags/genres are logged
+            // Then - the provider (and whether genre_merger ran) and genre tags/genres are logged
             if (genre is EnrichmentResult.Success) {
                 val data = genre.data as EnrichmentData.Metadata
                 log("      provider=${genre.provider} merged=${genre.provider == "genre_merger"}")
@@ -418,7 +418,7 @@ class EdgeAnalysisTest {
 
     @Test
     fun `07 - release editions edge cases`() = runBlocking {
-        // Given — albums with heavy reissue history, best-seller status, unusual titles, and single-char titles
+        // Given - albums with heavy reissue history, best-seller status, unusual titles, and single-char titles
         banner("RELEASE EDITIONS EDGE CASES")
 
         val albums = listOf(
@@ -428,7 +428,7 @@ class EdgeAnalysisTest {
             Triple("LP1", "FKA twigs", "short ambiguous title"),
             Triple("I", "Meshuggah", "single-character album name"),
         )
-        // When — enriching each album for RELEASE_EDITIONS
+        // When - enriching each album for RELEASE_EDITIONS
         for ((album, artist, note) in albums) {
             log("    --- $album by $artist ($note) ---")
             val results = engine.enrich(
@@ -436,7 +436,7 @@ class EdgeAnalysisTest {
                 setOf(EnrichmentType.RELEASE_EDITIONS),
             )
             val ed = results.raw[EnrichmentType.RELEASE_EDITIONS]
-            // Then — the edition count, countries, and years are logged on Success; status logged otherwise
+            // Then - the edition count, countries, and years are logged on Success; status logged otherwise
             if (ed is EnrichmentResult.Success) {
                 val data = ed.data as EnrichmentData.ReleaseEditions
                 val countries = data.editions.mapNotNull { it.country }.distinct()
@@ -461,10 +461,10 @@ class EdgeAnalysisTest {
 
     @Test
     fun `08 - provider fallback chains`() = runBlocking {
-        // Given — a high-confidence, well-known album and an obscure album
+        // Given - a high-confidence, well-known album and an obscure album
         banner("PROVIDER FALLBACK BEHAVIOR")
 
-        // When — enriching the well-known album for every enrichment type
+        // When - enriching the well-known album for every enrichment type
         // Album with strong MusicBrainz match — should get primary providers
         log("    --- High-confidence: Abbey Road by The Beatles ---")
         val allTypes = EnrichmentType.entries.toSet()
@@ -472,10 +472,10 @@ class EdgeAnalysisTest {
             EnrichmentRequest.forAlbum("Abbey Road", "The Beatles"),
             allTypes,
         )
-        // Then — the success/notfound/error/ratelimited breakdown is logged for manual review
+        // Then - the success/notfound/error/ratelimited breakdown is logged for manual review
         resultSummary("Abbey Road (all types)", results, allTypes)
 
-        // When — enriching the obscure album for a subset of album types
+        // When - enriching the obscure album for a subset of album types
         // Obscure album — tests fallback behavior
         log("\n    --- Obscure: Cosmogramma by Flying Lotus ---")
         val results2 = engine.enrich(
@@ -486,7 +486,7 @@ class EdgeAnalysisTest {
                 EnrichmentType.CREDITS, EnrichmentType.RELEASE_EDITIONS,
             ),
         )
-        // Then — the success/notfound/error/ratelimited breakdown is logged for manual review
+        // Then - the success/notfound/error/ratelimited breakdown is logged for manual review
         resultSummary("Cosmogramma", results2, results2.raw.keys)
     }
 
@@ -496,13 +496,13 @@ class EdgeAnalysisTest {
 
     @Test
     fun `09 - cache behavior`() = runBlocking {
-        // Given — the same artist request for GENRE, ARTIST_BIO, and SIMILAR_ARTISTS
+        // Given - the same artist request for GENRE, ARTIST_BIO, and SIMILAR_ARTISTS
         banner("CACHE BEHAVIOR (same request twice)")
 
         val request = EnrichmentRequest.forArtist("Daft Punk")
         val types = setOf(EnrichmentType.GENRE, EnrichmentType.ARTIST_BIO, EnrichmentType.SIMILAR_ARTISTS)
 
-        // When — enriching that request twice in a row, timing each call
+        // When - enriching that request twice in a row, timing each call
         val start1 = System.currentTimeMillis()
         val results1 = engine.enrich(request, types)
         val time1 = System.currentTimeMillis() - start1
@@ -511,7 +511,7 @@ class EdgeAnalysisTest {
         val results2 = engine.enrich(request, types)
         val time2 = System.currentTimeMillis() - start2
 
-        // Then — call durations, success counts, speedup, and result-key equality are logged for review
+        // Then - call durations, success counts, speedup, and result-key equality are logged for review
         log("    First call:  ${time1}ms (${results1.raw.count { it.value is EnrichmentResult.Success }} success)")
         log("    Second call: ${time2}ms (${results2.raw.count { it.value is EnrichmentResult.Success }} success)")
         log("    Speedup: ${if (time2 > 0) "${time1 / time2}x" else "instant"}")
@@ -524,26 +524,26 @@ class EdgeAnalysisTest {
 
     @Test
     fun `10 - all types for all request kinds`() = runBlocking {
-        // Given — the same artist requested as ForArtist, ForAlbum, and ForTrack
+        // Given - the same artist requested as ForArtist, ForAlbum, and ForTrack
         banner("ALL TYPES BY REQUEST KIND")
         val allTypes = EnrichmentType.entries.toSet()
 
-        // When — enriching the ForArtist request for every enrichment type
+        // When - enriching the ForArtist request for every enrichment type
         log("    --- ForArtist: Radiohead ---")
         val artistR = engine.enrich(EnrichmentRequest.forArtist("Radiohead"), allTypes)
         val artistSuccess = artistR.raw.count { it.value is EnrichmentResult.Success }
-        // Then — the per-request-kind success count and successful type names are logged for review
+        // Then - the per-request-kind success count and successful type names are logged for review
         log("      $artistSuccess/${allTypes.size} types returned data")
         log("      Successful: ${artistR.raw.filter { it.value is EnrichmentResult.Success }.keys.joinToString { it.name }}")
 
-        // When — enriching the ForAlbum request for every enrichment type
+        // When - enriching the ForAlbum request for every enrichment type
         log("    --- ForAlbum: OK Computer by Radiohead ---")
         val albumR = engine.enrich(EnrichmentRequest.forAlbum("OK Computer", "Radiohead"), allTypes)
         val albumSuccess = albumR.raw.count { it.value is EnrichmentResult.Success }
         log("      $albumSuccess/${allTypes.size} types returned data")
         log("      Successful: ${albumR.raw.filter { it.value is EnrichmentResult.Success }.keys.joinToString { it.name }}")
 
-        // When — enriching the ForTrack request for every enrichment type
+        // When - enriching the ForTrack request for every enrichment type
         log("    --- ForTrack: Paranoid Android by Radiohead ---")
         val trackR = engine.enrich(
             EnrichmentRequest.forTrack("Paranoid Android", "Radiohead", album = "OK Computer"),
@@ -560,10 +560,10 @@ class EdgeAnalysisTest {
 
     @Test
     fun `11 - analysis summary`() {
-        // Given — the diagnostic output logged by the tests that ran earlier in this suite
-        // When — printing a closing banner and review checklist
+        // Given - the diagnostic output logged by the tests that ran earlier in this suite
+        // When - printing a closing banner and review checklist
         banner("ANALYSIS COMPLETE")
-        // Then — the checklist of things to review in the full output above is logged
+        // Then - the checklist of things to review in the full output above is logged
         log("    Full output above. Review for:")
         log("      - Types that consistently return NotFound")
         log("      - Error patterns (ErrorKind distribution)")

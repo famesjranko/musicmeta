@@ -31,14 +31,14 @@ class LastFmProviderTest {
 
     @Test
     fun `enrich returns similar artists`() = runTest {
-        // Given — Last.fm returns similar artists for Radiohead
+        // Given - Last.fm returns similar artists for Radiohead
         httpClient.givenJsonResponse("artist.getsimilar", SIMILAR_ARTISTS_JSON)
         val request = EnrichmentRequest.forArtist(name = "Radiohead")
 
-        // When — enriching for SIMILAR_ARTISTS
+        // When - enriching for SIMILAR_ARTISTS
         val result = provider.enrich(request, EnrichmentType.SIMILAR_ARTISTS)
 
-        // Then — Success with the mapped similar artists
+        // Then - Success with the mapped similar artists
         assertTrue(result is EnrichmentResult.Success)
         val data = (result as EnrichmentResult.Success).data
         assertTrue(data is EnrichmentData.SimilarArtists)
@@ -52,28 +52,28 @@ class LastFmProviderTest {
 
     @Test
     fun `similar artists have sources set to lastfm`() = runTest {
-        // Given — Last.fm returns similar artists for Radiohead
+        // Given - Last.fm returns similar artists for Radiohead
         httpClient.givenJsonResponse("artist.getsimilar", SIMILAR_ARTISTS_JSON)
         val request = EnrichmentRequest.forArtist(name = "Radiohead")
 
-        // When — enriching for SIMILAR_ARTISTS
+        // When - enriching for SIMILAR_ARTISTS
         val result = provider.enrich(request, EnrichmentType.SIMILAR_ARTISTS)
 
-        // Then — each SimilarArtist includes "lastfm" in sources
+        // Then - each SimilarArtist includes "lastfm" in sources
         val similar = ((result as EnrichmentResult.Success).data as EnrichmentData.SimilarArtists).artists
         assertTrue(similar.all { it.sources == listOf("lastfm") })
     }
 
     @Test
     fun `enrich returns genre tags`() = runTest {
-        // Given — Last.fm returns artist info with tags
+        // Given - Last.fm returns artist info with tags
         httpClient.givenJsonResponse("artist.getinfo", ARTIST_INFO_JSON)
         val request = EnrichmentRequest.forArtist(name = "Radiohead")
 
-        // When — enriching for GENRE
+        // When - enriching for GENRE
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then — Success with the mapped genres
+        // Then - Success with the mapped genres
         assertTrue(result is EnrichmentResult.Success)
         val data = (result as EnrichmentResult.Success).data
         assertTrue(data is EnrichmentData.Metadata)
@@ -85,14 +85,14 @@ class LastFmProviderTest {
 
     @Test
     fun `enrich returns artist bio`() = runTest {
-        // Given — Last.fm returns artist info with a bio summary
+        // Given - Last.fm returns artist info with a bio summary
         httpClient.givenJsonResponse("artist.getinfo", ARTIST_INFO_JSON)
         val request = EnrichmentRequest.forArtist(name = "Radiohead")
 
-        // When — enriching for ARTIST_BIO
+        // When - enriching for ARTIST_BIO
         val result = provider.enrich(request, EnrichmentType.ARTIST_BIO)
 
-        // Then — Success with the mapped biography
+        // Then - Success with the mapped biography
         assertTrue(result is EnrichmentResult.Success)
         val data = (result as EnrichmentResult.Success).data
         assertTrue(data is EnrichmentData.Biography)
@@ -103,7 +103,7 @@ class LastFmProviderTest {
 
     @Test
     fun `enrich returns NotFound when API key is blank`() = runTest {
-        // Given — a provider configured with a blank API key
+        // Given - a provider configured with a blank API key
         val blankProvider = LastFmProvider(
             apiKey = "",
             httpClient = httpClient,
@@ -111,35 +111,35 @@ class LastFmProviderTest {
         )
         val request = EnrichmentRequest.forArtist(name = "Radiohead")
 
-        // When — enriching for GENRE
+        // When - enriching for GENRE
         val result = blankProvider.enrich(request, EnrichmentType.GENRE)
 
-        // Then — NotFound because the API key is blank
+        // Then - NotFound because the API key is blank
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `enrich returns NotFound for album requests`() = runTest {
-        // Given — a ForAlbum request (GENRE requires ForArtist)
+        // Given - a ForAlbum request (GENRE requires ForArtist)
         val request = EnrichmentRequest.forAlbum(title = "OK Computer", artist = "Radiohead")
 
-        // When — enriching for GENRE
+        // When - enriching for GENRE
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then — NotFound because GENRE requires ForArtist
+        // Then - NotFound because GENRE requires ForArtist
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `enrich returns artist popularity`() = runTest {
-        // Given — Last.fm returns artist info with listener/play stats
+        // Given - Last.fm returns artist info with listener/play stats
         httpClient.givenJsonResponse("artist.getinfo", ARTIST_INFO_JSON)
         val request = EnrichmentRequest.forArtist(name = "Radiohead")
 
-        // When — enriching for ARTIST_POPULARITY
+        // When - enriching for ARTIST_POPULARITY
         val result = provider.enrich(request, EnrichmentType.ARTIST_POPULARITY)
 
-        // Then — Success with the mapped popularity counts
+        // Then - Success with the mapped popularity counts
         assertTrue(result is EnrichmentResult.Success)
         val data = (result as EnrichmentResult.Success).data
         assertTrue(data is EnrichmentData.Popularity)
@@ -150,20 +150,20 @@ class LastFmProviderTest {
 
     @Test
     fun `enrich returns NotFound when artist object is missing from response`() = runTest {
-        // Given — Last.fm returns JSON without the top-level "artist" object
+        // Given - Last.fm returns JSON without the top-level "artist" object
         httpClient.givenJsonResponse("artist.getinfo", """{"error":6,"message":"Artist not found"}""")
         val request = EnrichmentRequest.forArtist(name = "Nonexistent")
 
-        // When — enriching for genre
+        // When - enriching for genre
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then — NotFound because parseTags returns empty when "artist" key is absent
+        // Then - NotFound because parseTags returns empty when "artist" key is absent
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `enrich returns NotFound when tags array is empty`() = runTest {
-        // Given — Last.fm returns artist info with an empty tags array
+        // Given - Last.fm returns artist info with an empty tags array
         httpClient.givenJsonResponse("artist.getinfo", """{
             "artist": {
                 "name": "Radiohead",
@@ -174,16 +174,16 @@ class LastFmProviderTest {
         }""")
         val request = EnrichmentRequest.forArtist(name = "Radiohead")
 
-        // When — enriching for genre
+        // When - enriching for genre
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then — NotFound because tags list is empty after filtering
+        // Then - NotFound because tags list is empty after filtering
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `enrich returns popularity with null counts when stats object is missing`() = runTest {
-        // Given — Last.fm returns artist info without a "stats" object
+        // Given - Last.fm returns artist info without a "stats" object
         httpClient.givenJsonResponse("artist.getinfo", """{
             "artist": {
                 "name": "Radiohead",
@@ -193,10 +193,10 @@ class LastFmProviderTest {
         }""")
         val request = EnrichmentRequest.forArtist(name = "Radiohead")
 
-        // When — enriching for popularity
+        // When - enriching for popularity
         val result = provider.enrich(request, EnrichmentType.ARTIST_POPULARITY)
 
-        // Then — Success with null listener/play counts since stats is absent
+        // Then - Success with null listener/play counts since stats is absent
         assertTrue(result is EnrichmentResult.Success)
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.Popularity
         assertEquals(null, data.listenerCount)
@@ -205,38 +205,38 @@ class LastFmProviderTest {
 
     @Test
     fun `API calls use HTTPS`() = runTest {
-        // Given — valid artist info response configured
+        // Given - valid artist info response configured
         httpClient.givenJsonResponse("artist.getinfo", ARTIST_INFO_JSON)
         val request = EnrichmentRequest.forArtist(name = "Radiohead")
 
-        // When — any API call is made
+        // When - any API call is made
         provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then — all requested URLs use HTTPS
+        // Then - all requested URLs use HTTPS
         assertTrue(httpClient.requestedUrls.isNotEmpty())
         assertTrue(httpClient.requestedUrls.all { it.startsWith("https://") })
     }
 
     @Test
     fun `capabilities include TRACK_POPULARITY`() {
-        // Given — provider instance
+        // Given - provider instance
 
-        // When — checking capabilities
+        // When - checking capabilities
 
-        // Then — TRACK_POPULARITY capability exists with priority 100
+        // Then - TRACK_POPULARITY capability exists with priority 100
         assertTrue(provider.capabilities.any { it.type == EnrichmentType.TRACK_POPULARITY })
     }
 
     @Test
     fun `enrich returns track popularity for ForTrack request`() = runTest {
-        // Given — Last.fm returns track.getInfo JSON with playcount and listeners
+        // Given - Last.fm returns track.getInfo JSON with playcount and listeners
         httpClient.givenJsonResponse("track.getInfo", TRACK_INFO_JSON)
         val request = EnrichmentRequest.forTrack(title = "Karma Police", artist = "Radiohead")
 
-        // When — enriching for TRACK_POPULARITY
+        // When - enriching for TRACK_POPULARITY
         val result = provider.enrich(request, EnrichmentType.TRACK_POPULARITY)
 
-        // Then — Success with track-level playcount and listeners
+        // Then - Success with track-level playcount and listeners
         assertTrue(result is EnrichmentResult.Success)
         val data = (result as EnrichmentResult.Success).data
         assertTrue(data is EnrichmentData.Popularity)
@@ -247,39 +247,39 @@ class LastFmProviderTest {
 
     @Test
     fun `enrich returns NotFound for TRACK_POPULARITY with ForArtist request`() = runTest {
-        // Given — valid artist info response configured
+        // Given - valid artist info response configured
         httpClient.givenJsonResponse("artist.getinfo", ARTIST_INFO_JSON)
         val request = EnrichmentRequest.forArtist(name = "Radiohead")
 
-        // When — enriching for TRACK_POPULARITY (requires ForTrack)
+        // When - enriching for TRACK_POPULARITY (requires ForTrack)
         val result = provider.enrich(request, EnrichmentType.TRACK_POPULARITY)
 
-        // Then — NotFound because TRACK_POPULARITY requires ForTrack
+        // Then - NotFound because TRACK_POPULARITY requires ForTrack
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `enrich returns NotFound for TRACK_POPULARITY when API returns null`() = runTest {
-        // Given — no response configured for track.getInfo
+        // Given - no response configured for track.getInfo
         val request = EnrichmentRequest.forTrack(title = "Nonexistent", artist = "Nobody")
 
-        // When — enriching for TRACK_POPULARITY
+        // When - enriching for TRACK_POPULARITY
         val result = provider.enrich(request, EnrichmentType.TRACK_POPULARITY)
 
-        // Then — NotFound because track.getInfo returns null
+        // Then - NotFound because track.getInfo returns null
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `enrich returns SimilarTracks for track`() = runTest {
-        // Given — Last.fm returns similar tracks
+        // Given - Last.fm returns similar tracks
         httpClient.givenJsonResponse("track.getsimilar", SIMILAR_TRACKS_JSON)
         val request = EnrichmentRequest.forTrack(title = "Paranoid Android", artist = "Radiohead")
 
-        // When — enriching for similar tracks
+        // When - enriching for similar tracks
         val result = provider.enrich(request, EnrichmentType.SIMILAR_TRACKS)
 
-        // Then — success with SimilarTracks data
+        // Then - success with SimilarTracks data
         assertTrue(result is EnrichmentResult.Success)
         val data = (result as EnrichmentResult.Success).data
         assertTrue(data is EnrichmentData.SimilarTracks)
@@ -294,27 +294,27 @@ class LastFmProviderTest {
 
     @Test
     fun `enrich returns NotFound for SimilarTracks when no similar tracks`() = runTest {
-        // Given — Last.fm returns empty similar tracks
+        // Given - Last.fm returns empty similar tracks
         httpClient.givenJsonResponse("track.getsimilar", """{"similartracks":{"track":[]}}""")
         val request = EnrichmentRequest.forTrack(title = "Unknown", artist = "Nobody")
 
-        // When — enriching for similar tracks
+        // When - enriching for similar tracks
         val result = provider.enrich(request, EnrichmentType.SIMILAR_TRACKS)
 
-        // Then — NotFound because no similar tracks returned
+        // Then - NotFound because no similar tracks returned
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `enrich returns Error with ErrorKind NETWORK when network fails`() = runTest {
-        // Given — Last.fm API throws an IOException
+        // Given - Last.fm API throws an IOException
         httpClient.givenIoException("audioscrobbler.com")
         val request = EnrichmentRequest.forArtist(name = "Radiohead")
 
-        // When — enriching for genre
+        // When - enriching for genre
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then — Error with NETWORK kind
+        // Then - Error with NETWORK kind
         assertTrue(result is EnrichmentResult.Error)
         val error = result as EnrichmentResult.Error
         assertEquals(ErrorKind.NETWORK, error.errorKind)
@@ -324,26 +324,26 @@ class LastFmProviderTest {
 
     @Test
     fun `capabilities include ALBUM_METADATA at priority 40`() {
-        // Given — provider instance
+        // Given - provider instance
 
-        // When — checking capabilities
+        // When - checking capabilities
         val capability = provider.capabilities.find { it.type == EnrichmentType.ALBUM_METADATA }
 
-        // Then — ALBUM_METADATA capability exists with priority 40
+        // Then - ALBUM_METADATA capability exists with priority 40
         assertNotNull(capability)
         assertEquals(40, capability!!.priority)
     }
 
     @Test
     fun `enrich returns album metadata from album getinfo`() = runTest {
-        // Given — Last.fm returns album.getinfo JSON for OK Computer
+        // Given - Last.fm returns album.getinfo JSON for OK Computer
         httpClient.givenJsonResponse("album.getinfo", ALBUM_INFO_JSON)
         val request = EnrichmentRequest.forAlbum(title = "OK Computer", artist = "Radiohead")
 
-        // When — enriching for ALBUM_METADATA
+        // When - enriching for ALBUM_METADATA
         val result = provider.enrich(request, EnrichmentType.ALBUM_METADATA)
 
-        // Then — Success with Metadata containing trackCount and genres
+        // Then - Success with Metadata containing trackCount and genres
         assertTrue(result is EnrichmentResult.Success)
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.Metadata
         assertEquals(12, data.trackCount)
@@ -352,14 +352,14 @@ class LastFmProviderTest {
 
     @Test
     fun `enrich returns album metadata with genreTags`() = runTest {
-        // Given — Last.fm returns album.getinfo JSON with tags
+        // Given - Last.fm returns album.getinfo JSON with tags
         httpClient.givenJsonResponse("album.getinfo", ALBUM_INFO_JSON)
         val request = EnrichmentRequest.forAlbum(title = "OK Computer", artist = "Radiohead")
 
-        // When — enriching for ALBUM_METADATA
+        // When - enriching for ALBUM_METADATA
         val result = provider.enrich(request, EnrichmentType.ALBUM_METADATA)
 
-        // Then — Success with genreTags at confidence 0.3f with source "lastfm"
+        // Then - Success with genreTags at confidence 0.3f with source "lastfm"
         assertTrue(result is EnrichmentResult.Success)
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.Metadata
         val tags = data.genreTags
@@ -372,26 +372,26 @@ class LastFmProviderTest {
 
     @Test
     fun `enrich returns NotFound for ALBUM_METADATA when album not found`() = runTest {
-        // Given — Last.fm returns error JSON for album not found
+        // Given - Last.fm returns error JSON for album not found
         httpClient.givenJsonResponse("album.getinfo", """{"error":6,"message":"Album not found"}""")
         val request = EnrichmentRequest.forAlbum(title = "Nonexistent", artist = "Nobody")
 
-        // When — enriching for ALBUM_METADATA
+        // When - enriching for ALBUM_METADATA
         val result = provider.enrich(request, EnrichmentType.ALBUM_METADATA)
 
-        // Then — NotFound
+        // Then - NotFound
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `enrich returns NotFound for ALBUM_METADATA with ForArtist request`() = runTest {
-        // Given — ForArtist request (ALBUM_METADATA requires ForAlbum)
+        // Given - ForArtist request (ALBUM_METADATA requires ForAlbum)
         val request = EnrichmentRequest.forArtist(name = "Radiohead")
 
-        // When — enriching for ALBUM_METADATA
+        // When - enriching for ALBUM_METADATA
         val result = provider.enrich(request, EnrichmentType.ALBUM_METADATA)
 
-        // Then — NotFound because ALBUM_METADATA requires ForAlbum
+        // Then - NotFound because ALBUM_METADATA requires ForAlbum
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
@@ -399,26 +399,26 @@ class LastFmProviderTest {
 
     @Test
     fun `capabilities include ALBUM_DESCRIPTION at priority 50`() {
-        // Given — provider instance
+        // Given - provider instance
 
-        // When — checking capabilities
+        // When - checking capabilities
         val capability = provider.capabilities.find { it.type == EnrichmentType.ALBUM_DESCRIPTION }
 
-        // Then — ALBUM_DESCRIPTION capability exists with priority 50, below Wikipedia's 100
+        // Then - ALBUM_DESCRIPTION capability exists with priority 50, below Wikipedia's 100
         assertNotNull(capability)
         assertEquals(50, capability!!.priority)
     }
 
     @Test
     fun `enrich returns album description from album getinfo wiki block`() = runTest {
-        // Given — Last.fm returns album.getinfo JSON with a wiki summary
+        // Given - Last.fm returns album.getinfo JSON with a wiki summary
         httpClient.givenJsonResponse("album.getinfo", ALBUM_INFO_JSON)
         val request = EnrichmentRequest.forAlbum(title = "OK Computer", artist = "Radiohead")
 
-        // When — enriching for ALBUM_DESCRIPTION
+        // When - enriching for ALBUM_DESCRIPTION
         val result = provider.enrich(request, EnrichmentType.ALBUM_DESCRIPTION)
 
-        // Then — Success with Biography from the wiki summary
+        // Then - Success with Biography from the wiki summary
         assertTrue(result is EnrichmentResult.Success)
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.Biography
         assertEquals("OK Computer is the third studio album by Radiohead.", data.text)
@@ -427,29 +427,29 @@ class LastFmProviderTest {
 
     @Test
     fun `enrich returns NotFound for ALBUM_DESCRIPTION when wiki block is absent`() = runTest {
-        // Given — Last.fm returns album.getinfo JSON without a wiki block
+        // Given - Last.fm returns album.getinfo JSON without a wiki block
         httpClient.givenJsonResponse(
             "album.getinfo",
             """{"album": {"name": "Obscure Album", "artist": "Nobody", "tags": {"tag": []}}}""",
         )
         val request = EnrichmentRequest.forAlbum(title = "Obscure Album", artist = "Nobody")
 
-        // When — enriching for ALBUM_DESCRIPTION
+        // When - enriching for ALBUM_DESCRIPTION
         val result = provider.enrich(request, EnrichmentType.ALBUM_DESCRIPTION)
 
-        // Then — NotFound because there is no wiki summary to map
+        // Then - NotFound because there is no wiki summary to map
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `enrich returns NotFound for ALBUM_DESCRIPTION with ForArtist request`() = runTest {
-        // Given — ForArtist request (ALBUM_DESCRIPTION requires ForAlbum)
+        // Given - ForArtist request (ALBUM_DESCRIPTION requires ForAlbum)
         val request = EnrichmentRequest.forArtist(name = "Radiohead")
 
-        // When — enriching for ALBUM_DESCRIPTION
+        // When - enriching for ALBUM_DESCRIPTION
         val result = provider.enrich(request, EnrichmentType.ALBUM_DESCRIPTION)
 
-        // Then — NotFound because ALBUM_DESCRIPTION requires ForAlbum
+        // Then - NotFound because ALBUM_DESCRIPTION requires ForAlbum
         assertTrue(result is EnrichmentResult.NotFound)
     }
 

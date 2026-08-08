@@ -62,15 +62,15 @@ class V060EdgeTest {
 
     @Test
     fun `01 - similar artists merge - well-known artist returns results with valid scores`() = runBlocking {
-        // Given — a well-known artist expected to have multi-source similar-artist data
+        // Given - a well-known artist expected to have multi-source similar-artist data
         println("\n  --- Radiohead (well-known, expect multi-source) ---")
-        // When — enriching for SIMILAR_ARTISTS
+        // When - enriching for SIMILAR_ARTISTS
         val results = engine.enrich(
             EnrichmentRequest.forArtist("Radiohead"),
             setOf(EnrichmentType.SIMILAR_ARTISTS),
         )
         val sa = results.raw[EnrichmentType.SIMILAR_ARTISTS]
-        // Then — Success with valid scores, non-blank names, sources, and no duplicate artists
+        // Then - Success with valid scores, non-blank names, sources, and no duplicate artists
         assertTrue("Expected Success for Radiohead similar artists", sa is EnrichmentResult.Success)
         val data = (sa as EnrichmentResult.Success).data as EnrichmentData.SimilarArtists
         val artists = data.artists
@@ -104,15 +104,15 @@ class V060EdgeTest {
 
     @Test
     fun `02 - similar artists merge - obscure artist`() = runBlocking {
-        // Given — a niche artist that may not have similar-artist data from every provider
+        // Given - a niche artist that may not have similar-artist data from every provider
         println("\n  --- Boards of Canada (niche) ---")
-        // When — enriching for SIMILAR_ARTISTS
+        // When - enriching for SIMILAR_ARTISTS
         val results = engine.enrich(
             EnrichmentRequest.forArtist("Boards of Canada"),
             setOf(EnrichmentType.SIMILAR_ARTISTS),
         )
         val sa = results.raw[EnrichmentType.SIMILAR_ARTISTS]
-        // Then — on Success, scores are in range and artists have no duplicates; NotFound is also acceptable
+        // Then - on Success, scores are in range and artists have no duplicates; NotFound is also acceptable
         // Obscure artists may legitimately return NotFound — only assert invariants on Success
         if (sa is EnrichmentResult.Success) {
             val data = sa.data as EnrichmentData.SimilarArtists
@@ -129,15 +129,15 @@ class V060EdgeTest {
 
     @Test
     fun `03 - similar artists merge - non-latin artist`() = runBlocking {
-        // Given — an artist name written in non-latin characters
+        // Given - an artist name written in non-latin characters
         println("\n  --- 坂本龍一 (Ryuichi Sakamoto — Japanese characters) ---")
-        // When — enriching for SIMILAR_ARTISTS
+        // When - enriching for SIMILAR_ARTISTS
         val results = engine.enrich(
             EnrichmentRequest.forArtist("坂本龍一"),
             setOf(EnrichmentType.SIMILAR_ARTISTS),
         )
         val sa = results.raw[EnrichmentType.SIMILAR_ARTISTS]
-        // Then — a non-null result of any type, with valid scores if Success
+        // Then - a non-null result of any type, with valid scores if Success
         // Non-latin should not crash — any result type is acceptable
         assertNotNull("Result should not be null", sa)
         if (sa is EnrichmentResult.Success) {
@@ -153,14 +153,14 @@ class V060EdgeTest {
 
     @Test
     fun `04 - similar artists - wrong request type returns NotFound`() = runBlocking {
-        // Given — an album-scoped request
-        // When — enriching for SIMILAR_ARTISTS, which requires an artist-scoped request
+        // Given - an album-scoped request
+        // When - enriching for SIMILAR_ARTISTS, which requires an artist-scoped request
         val results = engine.enrich(
             EnrichmentRequest.forAlbum("OK Computer", "Radiohead"),
             setOf(EnrichmentType.SIMILAR_ARTISTS),
         )
         val sa = results.raw[EnrichmentType.SIMILAR_ARTISTS]
-        // Then — the result is NotFound
+        // Then - the result is NotFound
         assertTrue(
             "ForAlbum should return NotFound for SIMILAR_ARTISTS but got ${sa?.let { it::class.simpleName }}",
             sa is EnrichmentResult.NotFound,
@@ -173,12 +173,12 @@ class V060EdgeTest {
 
     @Test
     fun `05 - artist radio - well-known artist returns tracks with metadata`() = runBlocking {
-        // Given — a well-known artist expected to have radio data
+        // Given - a well-known artist expected to have radio data
         println("\n  --- Radiohead ARTIST_RADIO ---")
-        // When — enriching for ARTIST_RADIO
+        // When - enriching for ARTIST_RADIO
         val results = engine.enrich(EnrichmentRequest.forArtist("Radiohead"), setOf(EnrichmentType.ARTIST_RADIO))
         val radio = results.raw[EnrichmentType.ARTIST_RADIO]
-        // Then — Success with non-blank track/artist fields, no duplicates, and multiple distinct artists
+        // Then - Success with non-blank track/artist fields, no duplicates, and multiple distinct artists
         assertTrue("Expected Success for Radiohead radio", radio is EnrichmentResult.Success)
         val data = (radio as EnrichmentResult.Success).data as EnrichmentData.RadioPlaylist
 
@@ -204,9 +204,9 @@ class V060EdgeTest {
 
     @Test
     fun `05b - artist radio - wrong request types return NotFound`() = runBlocking {
-        // Given — an album-scoped and a track-scoped request
-        // When — enriching each for ARTIST_RADIO, which requires an artist-scoped request
-        // Then — both return NotFound
+        // Given - an album-scoped and a track-scoped request
+        // When - enriching each for ARTIST_RADIO, which requires an artist-scoped request
+        // Then - both return NotFound
         // ForAlbum
         val albumResults = engine.enrich(
             EnrichmentRequest.forAlbum("OK Computer", "Radiohead"),
@@ -230,11 +230,11 @@ class V060EdgeTest {
 
     @Test
     fun `05c - artist radio - special characters handled`() = runBlocking {
-        // Given — an artist name containing a slash
-        // When — enriching for ARTIST_RADIO
+        // Given - an artist name containing a slash
+        // When - enriching for ARTIST_RADIO
         val results = engine.enrich(EnrichmentRequest.forArtist("AC/DC"), setOf(EnrichmentType.ARTIST_RADIO))
         val radio = results.raw[EnrichmentType.ARTIST_RADIO]
-        // Then — the slash does not crash the request; Success returns non-empty tracks
+        // Then - the slash does not crash the request; Success returns non-empty tracks
         // AC/DC is well-known enough that it should succeed; slash in name should not crash
         if (radio is EnrichmentResult.Success) {
             val data = radio.data as EnrichmentData.RadioPlaylist
@@ -251,15 +251,15 @@ class V060EdgeTest {
 
     @Test
     fun `06 - similar albums - well-known album has valid scores and no self-reference`() = runBlocking {
-        // Given — a well-known album expected to have similar-album data
+        // Given - a well-known album expected to have similar-album data
         println("\n  --- OK Computer by Radiohead (SIMILAR_ALBUMS) ---")
-        // When — enriching for SIMILAR_ALBUMS
+        // When - enriching for SIMILAR_ALBUMS
         val results = engine.enrich(
             EnrichmentRequest.forAlbum("OK Computer", "Radiohead"),
             setOf(EnrichmentType.SIMILAR_ALBUMS),
         )
         val sa = results.raw[EnrichmentType.SIMILAR_ALBUMS]
-        // Then — Success with valid scores, no self-referencing albums, and no duplicates
+        // Then - Success with valid scores, no self-referencing albums, and no duplicates
         assertTrue("Expected Success for OK Computer similar albums", sa is EnrichmentResult.Success)
         val data = (sa as EnrichmentResult.Success).data as EnrichmentData.SimilarAlbums
 
@@ -290,10 +290,10 @@ class V060EdgeTest {
 
     @Test
     fun `06b - similar albums - wrong request type returns NotFound`() = runBlocking {
-        // Given — an artist-scoped request
-        // When — enriching for SIMILAR_ALBUMS, which requires an album-scoped request
+        // Given - an artist-scoped request
+        // When - enriching for SIMILAR_ALBUMS, which requires an album-scoped request
         val results = engine.enrich(EnrichmentRequest.forArtist("Radiohead"), setOf(EnrichmentType.SIMILAR_ALBUMS))
-        // Then — the result is NotFound
+        // Then - the result is NotFound
         assertTrue(
             "ForArtist should return NotFound for SIMILAR_ALBUMS",
             results.raw[EnrichmentType.SIMILAR_ALBUMS] is EnrichmentResult.NotFound,
@@ -302,14 +302,14 @@ class V060EdgeTest {
 
     @Test
     fun `06c - similar albums - single-char album name does not crash`() = runBlocking {
-        // Given — an album title that is a single character
-        // When — enriching for SIMILAR_ALBUMS
+        // Given - an album title that is a single character
+        // When - enriching for SIMILAR_ALBUMS
         val results = engine.enrich(
             EnrichmentRequest.forAlbum("I", "Meshuggah"),
             setOf(EnrichmentType.SIMILAR_ALBUMS),
         )
         val sa = results.raw[EnrichmentType.SIMILAR_ALBUMS]
-        // Then — a non-null result of any type; the single-char title does not crash
+        // Then - a non-null result of any type; the single-char title does not crash
         // Single-char should not crash — any result type is acceptable
         assertNotNull("Result should not be null", sa)
         if (sa is EnrichmentResult.Success) {
@@ -326,15 +326,15 @@ class V060EdgeTest {
 
     @Test
     fun `07 - genre discovery - well-known artist returns related genres with valid affinities`() = runBlocking {
-        // Given — a well-known artist expected to have genre discovery data
+        // Given - a well-known artist expected to have genre discovery data
         println("\n  --- Radiohead GENRE_DISCOVERY ---")
-        // When — enriching for GENRE_DISCOVERY
+        // When - enriching for GENRE_DISCOVERY
         val results = engine.enrich(
             EnrichmentRequest.forArtist("Radiohead"),
             setOf(EnrichmentType.GENRE_DISCOVERY),
         )
         val gd = results.raw[EnrichmentType.GENRE_DISCOVERY]
-        // Then — Success with non-blank genre names/relationships and affinities in [0, 1.0]
+        // Then - Success with non-blank genre names/relationships and affinities in [0, 1.0]
         assertTrue("Expected Success for Radiohead genre discovery", gd is EnrichmentResult.Success)
         val data = (gd as EnrichmentResult.Success).data as EnrichmentData.GenreDiscovery
 
@@ -354,9 +354,9 @@ class V060EdgeTest {
 
     @Test
     fun `07b - genre discovery - works for ForAlbum and ForTrack`() = runBlocking {
-        // Given — an album-scoped and a track-scoped request
-        // When — enriching each for GENRE_DISCOVERY
-        // Then — album genre discovery returns genres on Success; track result is non-null of any type
+        // Given - an album-scoped and a track-scoped request
+        // When - enriching each for GENRE_DISCOVERY
+        // Then - album genre discovery returns genres on Success; track result is non-null of any type
         // ForAlbum should work (albums have genre data)
         val albumResults = engine.enrich(
             EnrichmentRequest.forAlbum("OK Computer", "Radiohead"),
@@ -387,7 +387,7 @@ class V060EdgeTest {
 
     @Test
     fun `07c - top tracks - well-known artist returns tracks with non-blank titles`() = runBlocking {
-        // Given — a well-known artist with expected ListenBrainz data
+        // Given - a well-known artist with expected ListenBrainz data
         println("\n  --- Radiohead ARTIST_TOP_TRACKS ---")
         val results = engine.enrich(
             EnrichmentRequest.forArtist("Radiohead"),
@@ -395,7 +395,7 @@ class V060EdgeTest {
         )
         val tt = results.raw[EnrichmentType.ARTIST_TOP_TRACKS]
 
-        // Then — Success with non-blank titles, artists, and valid ranks
+        // Then - Success with non-blank titles, artists, and valid ranks
         assertTrue("Expected Success for Radiohead top tracks", tt is EnrichmentResult.Success)
         val data = (tt as EnrichmentResult.Success).data as EnrichmentData.TopTracks
         assertTrue("Should return at least 1 top track", data.tracks.isNotEmpty())
@@ -418,7 +418,7 @@ class V060EdgeTest {
 
     @Test
     fun `07d - artist popularity - well-known artist has listen counts`() = runBlocking {
-        // Given — a well-known artist
+        // Given - a well-known artist
         println("\n  --- Radiohead ARTIST_POPULARITY ---")
         val results = engine.enrich(
             EnrichmentRequest.forArtist("Radiohead"),
@@ -426,7 +426,7 @@ class V060EdgeTest {
         )
         val pop = results.raw[EnrichmentType.ARTIST_POPULARITY]
 
-        // Then — Success with non-null popularity data
+        // Then - Success with non-null popularity data
         assertTrue("Expected Success for Radiohead popularity", pop is EnrichmentResult.Success)
         val data = (pop as EnrichmentResult.Success).data as EnrichmentData.Popularity
 
@@ -453,10 +453,10 @@ class V060EdgeTest {
 
     @Test
     fun `08 - all v060 types concurrent - no errors under fan-out`() = runBlocking {
-        // Given — an artist and five enrichment types requested together
+        // Given - an artist and five enrichment types requested together
         println("\n  --- Daft Punk (5 types concurrent) ---")
         val start = System.currentTimeMillis()
-        // When — enriching for all five types concurrently
+        // When - enriching for all five types concurrently
         val results = engine.enrich(
             EnrichmentRequest.forArtist("Daft Punk"),
             setOf(
@@ -469,7 +469,7 @@ class V060EdgeTest {
         )
         val elapsed = System.currentTimeMillis() - start
 
-        // Then — every requested type has a result present and none is an Error
+        // Then - every requested type has a result present and none is an Error
         // All 5 types should be present in results (even if NotFound)
         val requestedTypes = setOf(
             EnrichmentType.SIMILAR_ARTISTS, EnrichmentType.ARTIST_RADIO,
@@ -497,15 +497,15 @@ class V060EdgeTest {
 
     @Test
     fun `08b - concurrent album types - no errors under fan-out`() = runBlocking {
-        // Given — an album and three enrichment types requested together
+        // Given - an album and three enrichment types requested together
         println("\n  --- Random Access Memories (3 types concurrent) ---")
-        // When — enriching for all three types concurrently
+        // When - enriching for all three types concurrently
         val results = engine.enrich(
             EnrichmentRequest.forAlbum("Random Access Memories", "Daft Punk"),
             setOf(EnrichmentType.SIMILAR_ALBUMS, EnrichmentType.GENRE_DISCOVERY, EnrichmentType.GENRE),
         )
 
-        // Then — none of the returned results is an Error
+        // Then - none of the returned results is an Error
         for (type in results.raw.keys) {
             assertTrue(
                 "$type should not be Error: ${(results.raw[type] as? EnrichmentResult.Error)?.message}",

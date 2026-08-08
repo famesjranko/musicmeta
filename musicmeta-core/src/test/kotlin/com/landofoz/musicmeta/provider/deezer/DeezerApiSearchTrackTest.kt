@@ -26,13 +26,13 @@ class DeezerApiSearchTrackTest {
 
     @Test
     fun `sends the advanced field query even without an album hint`() = runTest {
-        // Given — a single matching candidate
+        // Given - a single matching candidate
         httpClient.givenJsonResponse("search/track", SINGLE_MATCH_RESPONSE)
 
-        // When — searching without an album hint
+        // When - searching without an album hint
         api.searchTrack("Blackened", "Metallica")
 
-        // Then — the artist:/track: field query, not the plain "artist title" keyword query
+        // Then - the artist:/track: field query, not the plain "artist title" keyword query
         assertEquals(
             "https://api.deezer.com/search/track?q=artist%3A%22Metallica%22+track%3A%22Blackened%22&limit=5",
             httpClient.requestedUrls.single(),
@@ -41,13 +41,13 @@ class DeezerApiSearchTrackTest {
 
     @Test
     fun `sends the album field in the advanced query when an album hint is given`() = runTest {
-        // Given — a single matching candidate
+        // Given - a single matching candidate
         httpClient.givenJsonResponse("search/track", SINGLE_MATCH_RESPONSE)
 
-        // When — searching with an album hint
+        // When - searching with an album hint
         api.searchTrack("Harvester of Sorrow", "Metallica", "And Justice for All")
 
-        // Then — the advanced artist:/track:/album: field query, quoted and URL-encoded
+        // Then - the advanced artist:/track:/album: field query, quoted and URL-encoded
         assertEquals(
             "https://api.deezer.com/search/track?" +
                 "q=artist%3A%22Metallica%22+track%3A%22Harvester+of+Sorrow%22+album%3A%22And+Justice+for+All%22" +
@@ -58,17 +58,17 @@ class DeezerApiSearchTrackTest {
 
     @Test
     fun `falls back album field query, field query, plain query, narrowest first`() = runTest {
-        // Given — both field queries come back empty; only the plain query has the candidate.
+        // Given - both field queries come back empty; only the plain query has the candidate.
         // Registration order matters: FakeHttpClient matches first-registered substring, and the
         // album%3A key is the only one that distinguishes the album-hinted URL.
         httpClient.givenJsonResponse("album%3A", """{"data":[],"total":0}""")
         httpClient.givenJsonResponse("track%3A%22Harvester", """{"data":[],"total":0}""")
         httpClient.givenJsonResponse("q=Metallica+Harvester", SINGLE_MATCH_RESPONSE)
 
-        // When — searching with an album hint neither field query can satisfy
+        // When - searching with an album hint neither field query can satisfy
         val result = api.searchTrack("Harvester of Sorrow", "Metallica", "Some Renamed Edition")
 
-        // Then — all three queries were sent, narrowest first, and the plain candidate wins
+        // Then - all three queries were sent, narrowest first, and the plain candidate wins
         assertEquals(3, httpClient.requestedUrls.size)
         assertTrue(httpClient.requestedUrls[0].contains("album%3A"))
         assertTrue(httpClient.requestedUrls[1].contains("track%3A%22Harvester"))
@@ -79,7 +79,7 @@ class DeezerApiSearchTrackTest {
 
     @Test
     fun `falls back when a query's pool filters down to zero artist matches`() = runTest {
-        // Given — the field query's pool is non-empty but every hit is a different artist;
+        // Given - the field query's pool is non-empty but every hit is a different artist;
         // the plain query has the real candidate. A raw-but-all-wrong-artist pool must fall
         // through like an empty one, not swallow the search as a miss.
         httpClient.givenJsonResponse(
@@ -88,39 +88,39 @@ class DeezerApiSearchTrackTest {
         )
         httpClient.givenJsonResponse("q=Metallica+Harvester", SINGLE_MATCH_RESPONSE)
 
-        // When — searching without an album hint
+        // When - searching without an album hint
         val result = api.searchTrack("Harvester of Sorrow", "Metallica")
 
-        // Then — the plain query was still tried and its candidate returned
+        // Then - the plain query was still tried and its candidate returned
         assertEquals(2, httpClient.requestedUrls.size)
         assertEquals(555L, result?.id)
     }
 
     @Test
     fun `resolves the album-hinted advanced query to the studio edition`() = runTest {
-        // Given — Deezer's advanced query returns the studio track (verified live, 2026-08-06:
+        // Given - Deezer's advanced query returns the studio track (verified live, 2026-08-06:
         // the studio "Harvester of Sorrow | ...And Justice for All (Remastered)" first)
         httpClient.givenJsonResponse("search/track", HARVESTER_ADVANCED_RESULT)
 
-        // When — searching with the album hint
+        // When - searching with the album hint
         val result = api.searchTrack("Harvester of Sorrow", "Metallica", "And Justice for All")
 
-        // Then — the studio edition, not a live take
+        // Then - the studio edition, not a live take
         assertEquals(20L, result?.id)
         assertEquals("...And Justice for All (Remastered)", result?.albumTitle)
     }
 
     @Test
     fun `recovers the studio original the plain query's pool omits entirely`() = runTest {
-        // Given — the live 2026-08-06 shape: the field query's pool has the studio "Blackened"
+        // Given - the live 2026-08-06 shape: the field query's pool has the studio "Blackened"
         // first, the remix and live takes behind it
         httpClient.givenJsonResponse("track%3A%22Blackened", BLACKENED_ADVANCED_POOL)
         httpClient.givenJsonResponse("q=Metallica+Blackened", BLACKENED_PLAIN_POOL)
 
-        // When — searching without an album hint
+        // When - searching without an album hint
         val result = api.searchTrack("Blackened", "Metallica")
 
-        // Then — the exact-title studio track, from the field query alone; the plain query
+        // Then - the exact-title studio track, from the field query alone; the plain query
         // (whose live pool contains no studio take to rank) was never needed
         assertEquals(575867532L, result?.id)
         assertEquals("Blackened", result?.title)
@@ -129,7 +129,7 @@ class DeezerApiSearchTrackTest {
 
     @Test
     fun `ranks the exact-title studio track over an earlier-listed remix`() = runTest {
-        // Given — the field query's live pool order: "Blackened 2020" and live takes are
+        // Given - the field query's live pool order: "Blackened 2020" and live takes are
         // candidates alongside the studio original
         httpClient.givenJsonResponse(
             "search/track",
@@ -143,16 +143,16 @@ class DeezerApiSearchTrackTest {
             """.trimIndent(),
         )
 
-        // When — searching without an album hint
+        // When - searching without an album hint
         val result = api.searchTrack("Blackened", "Metallica")
 
-        // Then — the exact-title studio track wins, not the remix listed first
+        // Then - the exact-title studio track wins, not the remix listed first
         assertEquals(575867532L, result?.id)
     }
 
     @Test
     fun `treats a bare trailing year as an unrequested edition marker`() = runTest {
-        // Given — nothing has the exact requested title; Deezer marks its remix with a bare
+        // Given - nothing has the exact requested title; Deezer marks its remix with a bare
         // year suffix ("Blackened 2020", live 2026-08-06), not a parenthetical
         httpClient.givenJsonResponse(
             "search/track",
@@ -164,16 +164,16 @@ class DeezerApiSearchTrackTest {
             """.trimIndent(),
         )
 
-        // When — searching without an album hint
+        // When - searching without an album hint
         val result = api.searchTrack("Blackened", "Metallica")
 
-        // Then — the year-suffixed remix loses to the suffix without a marker
+        // Then - the year-suffixed remix loses to the suffix without a marker
         assertEquals(41L, result?.id)
     }
 
     @Test
     fun `does not penalise a year the request itself contains`() = runTest {
-        // Given — the request is for the year-suffixed edition by exact title
+        // Given - the request is for the year-suffixed edition by exact title
         httpClient.givenJsonResponse(
             "search/track",
             """
@@ -184,16 +184,16 @@ class DeezerApiSearchTrackTest {
             """.trimIndent(),
         )
 
-        // When — the request explicitly names the 2020 edition
+        // When - the request explicitly names the 2020 edition
         val result = api.searchTrack("Blackened 2020", "Metallica")
 
-        // Then — the exact-title tier wins; its own year is not held against it
+        // Then - the exact-title tier wins; its own year is not held against it
         assertEquals(50L, result?.id)
     }
 
     @Test
     fun `prefers a marker-free approximate title over a live-tagged one when nothing is exact`() = runTest {
-        // Given — neither candidate has the exact requested title; only one carries an
+        // Given - neither candidate has the exact requested title; only one carries an
         // unrequested "(Live ...)" marker
         httpClient.givenJsonResponse(
             "search/track",
@@ -205,16 +205,16 @@ class DeezerApiSearchTrackTest {
             """.trimIndent(),
         )
 
-        // When — searching without an album hint
+        // When - searching without an album hint
         val result = api.searchTrack("Harvester of Sorrow", "Metallica")
 
-        // Then — the marker-free candidate is preferred
+        // Then - the marker-free candidate is preferred
         assertEquals(11L, result?.id)
     }
 
     @Test
     fun `penalises a dash-suffixed live marker with no parentheses`() = runTest {
-        // Given — the live take is marked by a bare " - Live at …" suffix, no parentheses
+        // Given - the live take is marked by a bare " - Live at …" suffix, no parentheses
         httpClient.givenJsonResponse(
             "search/track",
             """
@@ -225,16 +225,16 @@ class DeezerApiSearchTrackTest {
             """.trimIndent(),
         )
 
-        // When — searching without an album hint
+        // When - searching without an album hint
         val result = api.searchTrack("Harvester of Sorrow", "Metallica")
 
-        // Then — the dash-suffixed live take loses like a parenthetical one would
+        // Then - the dash-suffixed live take loses like a parenthetical one would
         assertEquals(61L, result?.id)
     }
 
     @Test
     fun `does not penalise a parenthetical marker the request itself asked for`() = runTest {
-        // Given — the requested title itself names the live take
+        // Given - the requested title itself names the live take
         httpClient.givenJsonResponse(
             "search/track",
             """
@@ -245,25 +245,25 @@ class DeezerApiSearchTrackTest {
             """.trimIndent(),
         )
 
-        // When — the request explicitly asks for the live version by exact title
+        // When - the request explicitly asks for the live version by exact title
         val result = api.searchTrack("Harvester Of Sorrow (Live In Mexico City)", "Metallica")
 
-        // Then — the exact-title tier wins outright; the marker is not held against it
+        // Then - the exact-title tier wins outright; the marker is not held against it
         assertEquals(30L, result?.id)
     }
 
     @Test
     fun `returns null when no query yields a candidate with a matching artist name`() = runTest {
-        // Given — every hit, on every query, is a different artist
+        // Given - every hit, on every query, is a different artist
         httpClient.givenJsonResponse(
             "search/track",
             """{"data":[{"id":1,"title":"Blackened","artist":{"name":"Some Cover Band"}}]}""",
         )
 
-        // When — searching for the real artist
+        // When - searching for the real artist
         val result = api.searchTrack("Blackened", "Metallica")
 
-        // Then — both queries were exhausted; no wrong-artist candidate replaces a real miss
+        // Then - both queries were exhausted; no wrong-artist candidate replaces a real miss
         assertEquals(2, httpClient.requestedUrls.size)
         assertNull(result)
     }

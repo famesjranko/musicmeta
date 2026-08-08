@@ -7,49 +7,49 @@ import org.junit.Test
 class EnrichmentIdentifiersTest {
 
     @Test fun `withExtra stores key-value pair retrievable via get`() {
-        // Given — empty identifiers
+        // Given - empty identifiers
         val ids = EnrichmentIdentifiers()
 
-        // When — adding an extra identifier
+        // When - adding an extra identifier
         val updated = ids.withExtra("deezerId", "123")
 
-        // Then — value is retrievable
+        // Then - value is retrievable
         assertEquals("123", updated.get("deezerId"))
     }
 
     @Test fun `get returns null for nonexistent key`() {
-        // Given — empty identifiers
+        // Given - empty identifiers
         val ids = EnrichmentIdentifiers()
 
-        // When — a nonexistent key is looked up
-        // Then — returns null
+        // When - a nonexistent key is looked up
+        // Then - returns null
         assertNull(ids.get("nonexistent"))
     }
 
     @Test fun `withExtra preserves existing extra entries`() {
-        // Given — identifiers with one extra entry
+        // Given - identifiers with one extra entry
         val ids = EnrichmentIdentifiers().withExtra("deezerId", "123")
 
-        // When — adding another extra entry
+        // When - adding another extra entry
         val updated = ids.withExtra("spotifyId", "456")
 
-        // Then — both entries present
+        // Then - both entries present
         assertEquals("123", updated.get("deezerId"))
         assertEquals("456", updated.get("spotifyId"))
     }
 
     @Test fun `withExtra preserves existing typed fields`() {
-        // Given — identifiers with typed fields set
+        // Given - identifiers with typed fields set
         val ids = EnrichmentIdentifiers(
             musicBrainzId = "mbid-123",
             wikidataId = "Q456",
             isrc = "USRC123",
         )
 
-        // When — adding extra entry
+        // When - adding extra entry
         val updated = ids.withExtra("deezerId", "789")
 
-        // Then — typed fields unchanged
+        // Then - typed fields unchanged
         assertEquals("mbid-123", updated.musicBrainzId)
         assertEquals("Q456", updated.wikidataId)
         assertEquals("USRC123", updated.isrc)
@@ -57,21 +57,21 @@ class EnrichmentIdentifiersTest {
     }
 
     @Test fun `SimilarArtist has identifiers field`() {
-        // Given — an identifiers value
-        // When — a SimilarArtist is created with it
+        // Given - an identifiers value
+        // When - a SimilarArtist is created with it
         val artist = SimilarArtist(
             name = "Thom Yorke",
             identifiers = EnrichmentIdentifiers(musicBrainzId = "abc123"),
             matchScore = 0.8f,
         )
 
-        // Then — identifiers accessible
+        // Then - identifiers accessible
         assertEquals("abc123", artist.identifiers.musicBrainzId)
     }
 
     @Test fun `PopularTrack has identifiers field`() {
-        // Given — an identifiers value
-        // When — a PopularTrack is created with it
+        // Given - an identifiers value
+        // When - a PopularTrack is created with it
         val track = PopularTrack(
             title = "Creep",
             identifiers = EnrichmentIdentifiers(musicBrainzId = "track-123"),
@@ -79,7 +79,7 @@ class EnrichmentIdentifiersTest {
             rank = 1,
         )
 
-        // Then — identifiers accessible
+        // Then - identifiers accessible
         assertEquals("track-123", track.identifiers.musicBrainzId)
     }
 }

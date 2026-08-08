@@ -77,7 +77,7 @@ class EnrichTimeoutBoundaryTest {
     private val types = setOf(EnrichmentType.SIMILAR_ARTISTS, EnrichmentType.SIMILAR_TRACKS)
 
     @Test fun `a timeout mid-filter persists nothing, under either key`() = runTest {
-        // Given — a catalog that filters the first type and then blocks past the deadline. The
+        // Given - a catalog that filters the first type and then blocks past the deadline. The
         // second type is left in `results` unfiltered, so caching the map would poison the entry.
         var calls = 0
         val catalog = CatalogProvider { queries ->
@@ -85,10 +85,10 @@ class EnrichTimeoutBoundaryTest {
             queries.mapIndexed { i, _ -> CatalogMatch(available = i == 0, source = "test") }
         }
 
-        // When — enriching two recommendation types
+        // When - enriching two recommendation types
         val results = engine(catalog).enrich(req, types)
 
-        // Then — the alias key is genuinely in play: identity resolved an MBID the request lacked,
+        // Then - the alias key is genuinely in play: identity resolved an MBID the request lacked,
         // which is the condition for the second write. Without this the empty-cache assertion below
         // could pass for the wrong reason.
         assertEquals("mbid-123", results.identity?.identifiers?.musicBrainzId)
@@ -107,7 +107,7 @@ class EnrichTimeoutBoundaryTest {
     }
 
     @Test fun `the deadline is readable inside the timed block, so a 429 retry can respect it`() = runTest {
-        // Given — a catalog standing in for anything running inside the fan-out; DefaultHttpClient
+        // Given - a catalog standing in for anything running inside the fan-out; DefaultHttpClient
         // reads the same element to decide whether a Retry-After fits in what is left.
         var remaining: Long? = null
         val catalog = CatalogProvider { queries ->
@@ -115,16 +115,16 @@ class EnrichTimeoutBoundaryTest {
             queries.map { CatalogMatch(available = true, source = "test") }
         }
 
-        // When — enriching through the catalog
+        // When - enriching through the catalog
         engine(catalog).enrich(req, types)
 
-        // Then — present, and no larger than the budget it was built from
+        // Then - present, and no larger than the budget it was built from
         assertNotNull("enrich() must install EnrichDeadline", remaining)
         assertTrue("remaining $remaining should be within enrichTimeoutMs", remaining!! in 0..100)
     }
 
     @Test fun `search() installs the deadline too, having no timeout of its own`() = runTest {
-        // Given — a search provider that reports what budget it was given. search() runs no
+        // Given - a search provider that reports what budget it was given. search() runs no
         // withTimeout, so without this its providers' 429s would retry against the standalone
         // 120s ceiling — minutes of stall on a call that used to fail fast.
         var remaining: Long? = null
@@ -135,18 +135,18 @@ class EnrichTimeoutBoundaryTest {
             }
         }
 
-        // When — calling search()
+        // When - calling search()
         DefaultEnrichmentEngine(
             ProviderRegistry(listOf(searcher)), cache, EnrichmentConfig(enrichTimeoutMs = 100),
         ).search(req, limit = 5)
 
-        // Then — the deadline is installed even though search() has no withTimeout of its own
+        // Then - the deadline is installed even though search() has no withTimeout of its own
         assertNotNull("search() must install EnrichDeadline", remaining)
         assertTrue("remaining $remaining should be within enrichTimeoutMs", remaining!! in 0..100)
     }
 
     @Test fun `a catalog's own timeout is not reported as the engine's deadline`() = runTest {
-        // Given — a consumer catalog running its own withTimeout while our job is perfectly healthy.
+        // Given - a consumer catalog running its own withTimeout while our job is perfectly healthy.
         // `catch (_: TimeoutCancellationException)` could not tell this from enrichTimeoutMs expiring.
         val catalog = CatalogProvider {
             withTimeout(1) {
@@ -155,7 +155,7 @@ class EnrichTimeoutBoundaryTest {
             }
         }
 
-        // When — enriching
+        // When - enriching
         val thrown = try {
             val results = engine(catalog).enrich(req, types)
             fail("expected the catalog's own timeout to surface, got $results")
@@ -164,7 +164,7 @@ class EnrichTimeoutBoundaryTest {
             e
         }
 
-        // Then — it surfaces as the catalog's failure. What must not happen is the old behaviour:
+        // Then - it surfaces as the catalog's failure. What must not happen is the old behaviour:
         // every unfinished type stamped Error(TIMEOUT) by "engine", telling the consumer their
         // enrichTimeoutMs is too low when the deadline was their own.
         assertNotNull(thrown)

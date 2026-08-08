@@ -11,7 +11,7 @@ class EnrichmentDataSerializationTest {
 
     @Test
     fun `BandMembers survives round-trip serialization`() {
-        // Given — a BandMembers with members, one carrying identifiers
+        // Given - a BandMembers with members, one carrying identifiers
         val original = EnrichmentData.BandMembers(
             members = listOf(
                 BandMember(
@@ -28,17 +28,17 @@ class EnrichmentDataSerializationTest {
             ),
         )
 
-        // When — encoding then decoding
+        // When - encoding then decoding
         val encoded = json.encodeToString(original)
         val decoded = json.decodeFromString<EnrichmentData.BandMembers>(encoded)
 
-        // Then — the decoded value equals the original
+        // Then - the decoded value equals the original
         assertEquals(original, decoded)
     }
 
     @Test
     fun `Discography survives round-trip serialization`() {
-        // Given — a Discography with albums, one carrying identifiers
+        // Given - a Discography with albums, one carrying identifiers
         val original = EnrichmentData.Discography(
             albums = listOf(
                 DiscographyAlbum(
@@ -57,17 +57,17 @@ class EnrichmentDataSerializationTest {
             ),
         )
 
-        // When — encoding then decoding
+        // When - encoding then decoding
         val encoded = json.encodeToString(original)
         val decoded = json.decodeFromString<EnrichmentData.Discography>(encoded)
 
-        // Then — the decoded value equals the original
+        // Then - the decoded value equals the original
         assertEquals(original, decoded)
     }
 
     @Test
     fun `Tracklist survives round-trip serialization`() {
-        // Given — a Tracklist with several tracks
+        // Given - a Tracklist with several tracks
         val original = EnrichmentData.Tracklist(
             tracks = listOf(
                 TrackInfo(title = "Come Together", position = 1, durationMs = 259000),
@@ -76,17 +76,17 @@ class EnrichmentDataSerializationTest {
             ),
         )
 
-        // When — encoding then decoding
+        // When - encoding then decoding
         val encoded = json.encodeToString(original)
         val decoded = json.decodeFromString<EnrichmentData.Tracklist>(encoded)
 
-        // Then — the decoded value equals the original
+        // Then - the decoded value equals the original
         assertEquals(original, decoded)
     }
 
     @Test
     fun `SimilarTracks survives round-trip serialization`() {
-        // Given — a SimilarTracks with tracks, one carrying identifiers
+        // Given - a SimilarTracks with tracks, one carrying identifiers
         val original = EnrichmentData.SimilarTracks(
             tracks = listOf(
                 SimilarTrack(
@@ -105,17 +105,17 @@ class EnrichmentDataSerializationTest {
             ),
         )
 
-        // When — encoding then decoding
+        // When - encoding then decoding
         val encoded = json.encodeToString(original)
         val decoded = json.decodeFromString<EnrichmentData.SimilarTracks>(encoded)
 
-        // Then — the decoded value equals the original
+        // Then - the decoded value equals the original
         assertEquals(original, decoded)
     }
 
     @Test
     fun `ArtistLinks survives round-trip serialization`() {
-        // Given — an ArtistLinks with several external links
+        // Given - an ArtistLinks with several external links
         val original = EnrichmentData.ArtistLinks(
             links = listOf(
                 ExternalLink(type = "official", url = "https://thebeatles.com"),
@@ -128,52 +128,52 @@ class EnrichmentDataSerializationTest {
             ),
         )
 
-        // When — encoding then decoding
+        // When - encoding then decoding
         val encoded = json.encodeToString(original)
         val decoded = json.decodeFromString<EnrichmentData.ArtistLinks>(encoded)
 
-        // Then — the decoded value equals the original
+        // Then - the decoded value equals the original
         assertEquals(original, decoded)
     }
 
     @Test
     fun `ALBUM_ART_BACK is a valid EnrichmentType with 90-day TTL`() {
-        // Given -- the new ALBUM_ART_BACK type
+        // Given - the new ALBUM_ART_BACK type
         val type = EnrichmentType.ALBUM_ART_BACK
 
-        // Then -- it exists and has 90-day TTL
+        // Then - it exists and has 90-day TTL
         assertEquals(90L * 24 * 60 * 60 * 1000, type.defaultTtlMs)
     }
 
     @Test
     fun `ALBUM_BOOKLET is a valid EnrichmentType with 90-day TTL`() {
-        // Given -- the new ALBUM_BOOKLET type
+        // Given - the new ALBUM_BOOKLET type
         val type = EnrichmentType.ALBUM_BOOKLET
 
-        // Then -- it exists and has 90-day TTL
+        // Then - it exists and has 90-day TTL
         assertEquals(90L * 24 * 60 * 60 * 1000, type.defaultTtlMs)
     }
 
     @Test
     fun `GenreTag round-trip serialization works`() {
-        // Given — a GenreTag with confidence and sources
+        // Given - a GenreTag with confidence and sources
         val tag = GenreTag(
             name = "Alternative Rock",
             confidence = 0.85f,
             sources = listOf("musicbrainz", "lastfm"),
         )
 
-        // When — encoding then decoding
+        // When - encoding then decoding
         val encoded = json.encodeToString(tag)
         val decoded = json.decodeFromString<GenreTag>(encoded)
 
-        // Then — the decoded value equals the original
+        // Then - the decoded value equals the original
         assertEquals(tag, decoded)
     }
 
     @Test
     fun `Metadata with genreTags survives round-trip serialization`() {
-        // Given — a Metadata with genres and genreTags
+        // Given - a Metadata with genres and genreTags
         val original = EnrichmentData.Metadata(
             genres = listOf("rock", "alternative"),
             genreTags = listOf(
@@ -182,17 +182,17 @@ class EnrichmentDataSerializationTest {
             ),
         )
 
-        // When — encoding then decoding
+        // When - encoding then decoding
         val encoded = json.encodeToString(original)
         val decoded = json.decodeFromString<EnrichmentData.Metadata>(encoded)
 
-        // Then — the decoded value equals the original
+        // Then - the decoded value equals the original
         assertEquals(original, decoded)
     }
 
     @Test
     fun `Artwork with sizes survives round-trip serialization`() {
-        // Given — an Artwork with a list of alternate sizes
+        // Given - an Artwork with a list of alternate sizes
         val original = EnrichmentData.Artwork(
             url = "https://example.com/art.jpg",
             width = 500,
@@ -214,26 +214,26 @@ class EnrichmentDataSerializationTest {
             ),
         )
 
-        // When — encoding then decoding
+        // When - encoding then decoding
         val encoded = json.encodeToString(original)
         val decoded = json.decodeFromString<EnrichmentData.Artwork>(encoded)
 
-        // Then — the decoded value equals the original
+        // Then - the decoded value equals the original
         assertEquals(original, decoded)
     }
 
     @Test
     fun `ARTIST_RADIO is a valid EnrichmentType with 7-day TTL`() {
-        // Given -- the ARTIST_RADIO type
+        // Given - the ARTIST_RADIO type
         val type = EnrichmentType.ARTIST_RADIO
 
-        // Then -- it exists and has 7-day TTL
+        // Then - it exists and has 7-day TTL
         assertEquals(7L * 24 * 60 * 60 * 1000, type.defaultTtlMs)
     }
 
     @Test
     fun `RadioPlaylist survives round-trip serialization`() {
-        // Given — a RadioPlaylist with tracks, one carrying extra identifiers
+        // Given - a RadioPlaylist with tracks, one carrying extra identifiers
         val original = EnrichmentData.RadioPlaylist(
             tracks = listOf(
                 RadioTrack(
@@ -250,11 +250,11 @@ class EnrichmentDataSerializationTest {
             ),
         )
 
-        // When — encoding then decoding
+        // When - encoding then decoding
         val encoded = json.encodeToString(original)
         val decoded = json.decodeFromString<EnrichmentData.RadioPlaylist>(encoded)
 
-        // Then — the decoded value equals the original
+        // Then - the decoded value equals the original
         assertEquals(original, decoded)
     }
 }

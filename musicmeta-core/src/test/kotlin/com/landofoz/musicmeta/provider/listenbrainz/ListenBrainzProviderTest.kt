@@ -28,7 +28,7 @@ class ListenBrainzProviderTest {
 
     @Test
     fun `enrich returns popularity data with top tracks`() = runTest {
-        // Given — the API returns a ranked list of the artist's top tracks by listen count
+        // Given - the API returns a ranked list of the artist's top tracks by listen count
         val artistMbid = "a74b1b7f-71a5-4011-9441-d0b5e4122711"
         httpClient.givenJsonResponse(
             "listenbrainz.org",
@@ -53,10 +53,10 @@ class ListenBrainzProviderTest {
             name = "Radiohead",
         )
 
-        // When — enriching for artist popularity
+        // When - enriching for artist popularity
         val result = provider.enrich(request, EnrichmentType.ARTIST_POPULARITY)
 
-        // Then — a Success with the top tracks ranked by listen count
+        // Then - a Success with the top tracks ranked by listen count
         assertTrue(result is EnrichmentResult.Success)
         val success = result as EnrichmentResult.Success
         assertEquals("listenbrainz", success.provider)
@@ -74,16 +74,16 @@ class ListenBrainzProviderTest {
 
     @Test
     fun `enrich returns NotFound when no artist MBID in identifiers`() = runTest {
-        // Given — a request whose identifiers have no MusicBrainz ID
+        // Given - a request whose identifiers have no MusicBrainz ID
         val request = EnrichmentRequest.ForArtist(
             identifiers = EnrichmentIdentifiers(),
             name = "Radiohead",
         )
 
-        // When — enriching for artist popularity
+        // When - enriching for artist popularity
         val result = provider.enrich(request, EnrichmentType.ARTIST_POPULARITY)
 
-        // Then — NotFound because ListenBrainz requires a MusicBrainz ID
+        // Then - NotFound because ListenBrainz requires a MusicBrainz ID
         assertTrue(result is EnrichmentResult.NotFound)
         val notFound = result as EnrichmentResult.NotFound
         assertEquals("listenbrainz", notFound.provider)
@@ -91,7 +91,7 @@ class ListenBrainzProviderTest {
 
     @Test
     fun `enrich returns NotFound when API returns empty results`() = runTest {
-        // Given — the API returns an empty array
+        // Given - the API returns an empty array
         val artistMbid = "00000000-0000-0000-0000-000000000000"
         httpClient.givenJsonResponse("listenbrainz.org", "[]")
 
@@ -100,10 +100,10 @@ class ListenBrainzProviderTest {
             name = "Unknown Artist",
         )
 
-        // When — enriching for artist popularity
+        // When - enriching for artist popularity
         val result = provider.enrich(request, EnrichmentType.ARTIST_POPULARITY)
 
-        // Then — NotFound because no tracks were returned
+        // Then - NotFound because no tracks were returned
         assertTrue(result is EnrichmentResult.NotFound)
         val notFound = result as EnrichmentResult.NotFound
         assertEquals("listenbrainz", notFound.provider)
@@ -119,16 +119,16 @@ class ListenBrainzProviderTest {
             name = "Offline Artist",
         )
 
-        // When — enriching for artist popularity
+        // When - enriching for artist popularity
         val result = provider.enrich(request, EnrichmentType.ARTIST_POPULARITY)
 
-        // Then — NotFound because the unstubbed request resolves to a 404
+        // Then - NotFound because the unstubbed request resolves to a 404
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `enrich skips objects with missing recording_mbid`() = runTest {
-        // Given — API returns array where some objects lack recording_mbid
+        // Given - API returns array where some objects lack recording_mbid
         val artistMbid = "a74b1b7f-71a5-4011-9441-d0b5e4122711"
         httpClient.givenJsonResponse(
             "listenbrainz.org",
@@ -158,10 +158,10 @@ class ListenBrainzProviderTest {
             name = "Radiohead",
         )
 
-        // When — enriching for popularity
+        // When - enriching for popularity
         val result = provider.enrich(request, EnrichmentType.ARTIST_POPULARITY)
 
-        // Then — only the track with a valid recording_mbid is included
+        // Then - only the track with a valid recording_mbid is included
         assertTrue(result is EnrichmentResult.Success)
         val popularity = (result as EnrichmentResult.Success).data as EnrichmentData.Popularity
         assertEquals(1, popularity.topTracks!!.size)
@@ -171,7 +171,7 @@ class ListenBrainzProviderTest {
 
     @Test
     fun `enrich returns track popularity via batch recording endpoint`() = runTest {
-        // Given -- batch recording popularity response
+        // Given - batch recording popularity response
         val recordingMbid = "rec-mbid-123"
         httpClient.givenJsonResponse(
             "popularity/recording",
@@ -189,10 +189,10 @@ class ListenBrainzProviderTest {
             artist = "Radiohead",
         )
 
-        // When -- enriching for TRACK_POPULARITY
+        // When - enriching for TRACK_POPULARITY
         val result = provider.enrich(request, EnrichmentType.TRACK_POPULARITY)
 
-        // Then -- Success with track-level listen count and user count
+        // Then - Success with track-level listen count and user count
         assertTrue(result is EnrichmentResult.Success)
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.Popularity
         assertEquals(99000L, data.listenCount)
@@ -201,7 +201,7 @@ class ListenBrainzProviderTest {
 
     @Test
     fun `enrich returns NotFound for TRACK_POPULARITY when no recording data`() = runTest {
-        // Given -- empty batch recording response
+        // Given - empty batch recording response
         httpClient.givenJsonResponse("popularity/recording", "[]")
         val request = EnrichmentRequest.ForTrack(
             identifiers = EnrichmentIdentifiers(musicBrainzId = "no-data-mbid"),
@@ -209,16 +209,16 @@ class ListenBrainzProviderTest {
             artist = "Nobody",
         )
 
-        // When -- enriching for TRACK_POPULARITY
+        // When - enriching for TRACK_POPULARITY
         val result = provider.enrich(request, EnrichmentType.TRACK_POPULARITY)
 
-        // Then -- NotFound
+        // Then - NotFound
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `enrich returns NotFound for TRACK_POPULARITY when recording counts are JSON-null`() = runTest {
-        // Given -- LB has no data for the recording: total_listen_count is JSON null, not 0
+        // Given - LB has no data for the recording: total_listen_count is JSON null, not 0
         httpClient.givenJsonResponse(
             "popularity/recording",
             """[
@@ -235,16 +235,16 @@ class ListenBrainzProviderTest {
             artist = "Nobody",
         )
 
-        // When -- enriching for TRACK_POPULARITY
+        // When - enriching for TRACK_POPULARITY
         val result = provider.enrich(request, EnrichmentType.TRACK_POPULARITY)
 
-        // Then -- the null entry is dropped, leaving an empty list -> NotFound, not Success(0, 0)
+        // Then - the null entry is dropped, leaving an empty list -> NotFound, not Success(0, 0)
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `enrich keeps the real entry from a mixed batch of null and real recording counts`() = runTest {
-        // Given -- one entry has no data (JSON-null counts), the other is a genuine result
+        // Given - one entry has no data (JSON-null counts), the other is a genuine result
         val recordingMbid = "rec-mbid-123"
         httpClient.givenJsonResponse(
             "popularity/recording",
@@ -267,10 +267,10 @@ class ListenBrainzProviderTest {
             artist = "Radiohead",
         )
 
-        // When -- enriching for TRACK_POPULARITY
+        // When - enriching for TRACK_POPULARITY
         val result = provider.enrich(request, EnrichmentType.TRACK_POPULARITY)
 
-        // Then -- the null entry is dropped and the genuine entry survives
+        // Then - the null entry is dropped and the genuine entry survives
         assertTrue(result is EnrichmentResult.Success)
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.Popularity
         assertEquals(99000L, data.listenCount)
@@ -279,7 +279,7 @@ class ListenBrainzProviderTest {
 
     @Test
     fun `enrich returns Success with a genuine zero recording listen count`() = runTest {
-        // Given -- a real (non-null) total_listen_count of 0: documented as kept, not dropped
+        // Given - a real (non-null) total_listen_count of 0: documented as kept, not dropped
         httpClient.givenJsonResponse(
             "popularity/recording",
             """[
@@ -296,10 +296,10 @@ class ListenBrainzProviderTest {
             artist = "Nobody",
         )
 
-        // When -- enriching for TRACK_POPULARITY
+        // When - enriching for TRACK_POPULARITY
         val result = provider.enrich(request, EnrichmentType.TRACK_POPULARITY)
 
-        // Then -- Success with a genuine zero, not filtered out like a null would be
+        // Then - Success with a genuine zero, not filtered out like a null would be
         assertTrue(result is EnrichmentResult.Success)
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.Popularity
         assertEquals(0L, data.listenCount)
@@ -308,7 +308,7 @@ class ListenBrainzProviderTest {
 
     @Test
     fun `enrich returns null listener count when only total_user_count is JSON-null`() = runTest {
-        // Given -- LB has sent a genuine listen count alongside a null user count
+        // Given - LB has sent a genuine listen count alongside a null user count
         httpClient.givenJsonResponse(
             "popularity/recording",
             """[
@@ -325,10 +325,10 @@ class ListenBrainzProviderTest {
             artist = "Artist",
         )
 
-        // When -- enriching for TRACK_POPULARITY
+        // When - enriching for TRACK_POPULARITY
         val result = provider.enrich(request, EnrichmentType.TRACK_POPULARITY)
 
-        // Then -- listenCount survives, listenerCount stays null rather than flattening to 0
+        // Then - listenCount survives, listenerCount stays null rather than flattening to 0
         assertTrue(result is EnrichmentResult.Success)
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.Popularity
         assertEquals(100L, data.listenCount)
@@ -337,7 +337,7 @@ class ListenBrainzProviderTest {
 
     @Test
     fun `enrich returns artist popularity via batch artist endpoint`() = runTest {
-        // Given -- batch artist popularity response
+        // Given - batch artist popularity response
         val artistMbid = "a74b1b7f-71a5-4011-9441-d0b5e4122711"
         httpClient.givenJsonResponse(
             "popularity/artist",
@@ -354,10 +354,10 @@ class ListenBrainzProviderTest {
             name = "Radiohead",
         )
 
-        // When -- enriching for ARTIST_POPULARITY
+        // When - enriching for ARTIST_POPULARITY
         val result = provider.enrich(request, EnrichmentType.ARTIST_POPULARITY)
 
-        // Then -- Success with batch artist popularity data
+        // Then - Success with batch artist popularity data
         assertTrue(result is EnrichmentResult.Success)
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.Popularity
         assertEquals(500000L, data.listenCount)
@@ -366,7 +366,7 @@ class ListenBrainzProviderTest {
 
     @Test
     fun `enrich falls back to top-recordings when batch artist returns empty`() = runTest {
-        // Given -- empty batch artist response but valid top-recordings
+        // Given - empty batch artist response but valid top-recordings
         val artistMbid = "a74b1b7f-71a5-4011-9441-d0b5e4122711"
         httpClient.givenJsonResponse("popularity/artist", "[]")
         httpClient.givenJsonResponse(
@@ -385,10 +385,10 @@ class ListenBrainzProviderTest {
             name = "Radiohead",
         )
 
-        // When -- enriching for ARTIST_POPULARITY
+        // When - enriching for ARTIST_POPULARITY
         val result = provider.enrich(request, EnrichmentType.ARTIST_POPULARITY)
 
-        // Then -- Success with fallback top-recordings data
+        // Then - Success with fallback top-recordings data
         assertTrue(result is EnrichmentResult.Success)
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.Popularity
         assertEquals(1, data.topTracks!!.size)
@@ -397,7 +397,7 @@ class ListenBrainzProviderTest {
 
     @Test
     fun `enrich falls back and returns NotFound when batch artist counts are all JSON-null`() = runTest {
-        // Given -- LB has no data for the artist via the batch endpoint (JSON-null counts,
+        // Given - LB has no data for the artist via the batch endpoint (JSON-null counts,
         // not zeros), and the top-recordings fallback also has nothing
         val artistMbid = "a74b1b7f-71a5-4011-9441-d0b5e4122711"
         httpClient.givenJsonResponse(
@@ -416,16 +416,16 @@ class ListenBrainzProviderTest {
             name = "Radiohead",
         )
 
-        // When -- enriching for ARTIST_POPULARITY
+        // When - enriching for ARTIST_POPULARITY
         val result = provider.enrich(request, EnrichmentType.ARTIST_POPULARITY)
 
-        // Then -- the null batch entry is dropped, the fallback is empty too -> NotFound
+        // Then - the null batch entry is dropped, the fallback is empty too -> NotFound
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `enrich keeps the real entry from a mixed batch of null and real artist counts`() = runTest {
-        // Given -- one entry has no data (JSON-null counts), the other is a genuine result
+        // Given - one entry has no data (JSON-null counts), the other is a genuine result
         val artistMbid = "a74b1b7f-71a5-4011-9441-d0b5e4122711"
         httpClient.givenJsonResponse(
             "popularity/artist",
@@ -447,10 +447,10 @@ class ListenBrainzProviderTest {
             name = "Radiohead",
         )
 
-        // When -- enriching for ARTIST_POPULARITY
+        // When - enriching for ARTIST_POPULARITY
         val result = provider.enrich(request, EnrichmentType.ARTIST_POPULARITY)
 
-        // Then -- the null entry is dropped and the genuine entry survives
+        // Then - the null entry is dropped and the genuine entry survives
         assertTrue(result is EnrichmentResult.Success)
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.Popularity
         assertEquals(500000L, data.listenCount)
@@ -459,7 +459,7 @@ class ListenBrainzProviderTest {
 
     @Test
     fun `enrich returns Success with a genuine zero artist listen count via batch endpoint`() = runTest {
-        // Given -- a real (non-null) total_listen_count of 0: documented as kept, not dropped
+        // Given - a real (non-null) total_listen_count of 0: documented as kept, not dropped
         val artistMbid = "a74b1b7f-71a5-4011-9441-d0b5e4122711"
         httpClient.givenJsonResponse(
             "popularity/artist",
@@ -476,10 +476,10 @@ class ListenBrainzProviderTest {
             name = "Radiohead",
         )
 
-        // When -- enriching for ARTIST_POPULARITY
+        // When - enriching for ARTIST_POPULARITY
         val result = provider.enrich(request, EnrichmentType.ARTIST_POPULARITY)
 
-        // Then -- Success with a genuine zero, not filtered out like a null would be
+        // Then - Success with a genuine zero, not filtered out like a null would be
         assertTrue(result is EnrichmentResult.Success)
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.Popularity
         assertEquals(0L, data.listenCount)
@@ -488,7 +488,7 @@ class ListenBrainzProviderTest {
 
     @Test
     fun `enrich returns Success with zero listen count`() = runTest {
-        // Given — API returns a track with total_listen_count of zero
+        // Given - API returns a track with total_listen_count of zero
         val artistMbid = "a74b1b7f-71a5-4011-9441-d0b5e4122711"
         httpClient.givenJsonResponse(
             "listenbrainz.org",
@@ -507,10 +507,10 @@ class ListenBrainzProviderTest {
             name = "Radiohead",
         )
 
-        // When — enriching for popularity
+        // When - enriching for popularity
         val result = provider.enrich(request, EnrichmentType.ARTIST_POPULARITY)
 
-        // Then — Success with zero listen count (not filtered out)
+        // Then - Success with zero listen count (not filtered out)
         assertTrue(result is EnrichmentResult.Success)
         val popularity = (result as EnrichmentResult.Success).data as EnrichmentData.Popularity
         assertEquals(1, popularity.topTracks!!.size)
@@ -519,7 +519,7 @@ class ListenBrainzProviderTest {
 
     @Test
     fun `enrich returns Error with ErrorKind NETWORK when network fails`() = runTest {
-        // Given — ListenBrainz API throws an IOException
+        // Given - ListenBrainz API throws an IOException
         httpClient.givenIoException("listenbrainz.org")
         val artistMbid = "a74b1b7f-71a5-4011-9441-d0b5e4122711"
         val request = EnrichmentRequest.ForArtist(
@@ -527,10 +527,10 @@ class ListenBrainzProviderTest {
             name = "Radiohead",
         )
 
-        // When — enriching for artist popularity
+        // When - enriching for artist popularity
         val result = provider.enrich(request, EnrichmentType.ARTIST_POPULARITY)
 
-        // Then — Error with NETWORK kind
+        // Then - Error with NETWORK kind
         assertTrue(result is EnrichmentResult.Error)
         val error = result as EnrichmentResult.Error
         assertEquals(ErrorKind.NETWORK, error.errorKind)
@@ -538,7 +538,7 @@ class ListenBrainzProviderTest {
 
     @Test
     fun `enrich returns discography from top release groups`() = runTest {
-        // Given — the API returns a ranked list of the artist's top release groups
+        // Given - the API returns a ranked list of the artist's top release groups
         httpClient.givenJsonResponse(
             "top-release-groups-for-artist",
             """[
@@ -551,10 +551,10 @@ class ListenBrainzProviderTest {
             name = "Radiohead",
         )
 
-        // When — enriching for artist discography
+        // When - enriching for artist discography
         val result = provider.enrich(request, EnrichmentType.ARTIST_DISCOGRAPHY)
 
-        // Then — a Success with the release groups mapped to albums
+        // Then - a Success with the release groups mapped to albums
         assertTrue(result is EnrichmentResult.Success)
         val success = result as EnrichmentResult.Success
         val discography = success.data as EnrichmentData.Discography
@@ -565,64 +565,64 @@ class ListenBrainzProviderTest {
 
     @Test
     fun `enrich returns NotFound for ARTIST_DISCOGRAPHY when no release groups`() = runTest {
-        // Given — the API returns an empty array of release groups
+        // Given - the API returns an empty array of release groups
         httpClient.givenJsonResponse("top-release-groups-for-artist", "[]")
         val request = EnrichmentRequest.ForArtist(
             identifiers = EnrichmentIdentifiers(musicBrainzId = "artist-mbid"),
             name = "Radiohead",
         )
 
-        // When — enriching for artist discography
+        // When - enriching for artist discography
         val result = provider.enrich(request, EnrichmentType.ARTIST_DISCOGRAPHY)
 
-        // Then — NotFound because no release groups were returned
+        // Then - NotFound because no release groups were returned
         assertTrue(result is EnrichmentResult.NotFound)
         assertEquals("listenbrainz", (result as EnrichmentResult.NotFound).provider)
     }
 
     @Test
     fun `enrich returns NotFound for ARTIST_DISCOGRAPHY without MBID`() = runTest {
-        // Given — no MBID in identifiers
+        // Given - no MBID in identifiers
         val request = EnrichmentRequest.ForArtist(
             identifiers = EnrichmentIdentifiers(),
             name = "Radiohead",
         )
 
-        // When — enriching for artist discography
+        // When - enriching for artist discography
         val result = provider.enrich(request, EnrichmentType.ARTIST_DISCOGRAPHY)
 
-        // Then — NotFound because ListenBrainz requires a MusicBrainz ID
+        // Then - NotFound because ListenBrainz requires a MusicBrainz ID
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `capabilities include ARTIST_DISCOGRAPHY at priority 50`() {
-        // Given — the provider's declared capabilities list
-        // When — searching it for ARTIST_DISCOGRAPHY
-        // Then — the declared capabilities list ARTIST_DISCOGRAPHY at priority 50
+        // Given - the provider's declared capabilities list
+        // When - searching it for ARTIST_DISCOGRAPHY
+        // Then - the declared capabilities list ARTIST_DISCOGRAPHY at priority 50
         assertTrue(provider.capabilities.any { it.type == EnrichmentType.ARTIST_DISCOGRAPHY && it.priority == 50 })
     }
 
     @Test
     fun `capabilities do not include SIMILAR_ARTISTS -- no real ListenBrainz endpoint returns it`() {
-        // Given — the provider's declared capabilities list
-        // When — searching it for SIMILAR_ARTISTS
-        // Then — no real ListenBrainz endpoint returns SIMILAR_ARTISTS, so it is absent; Deezer covers the type
+        // Given - the provider's declared capabilities list
+        // When - searching it for SIMILAR_ARTISTS
+        // Then - no real ListenBrainz endpoint returns SIMILAR_ARTISTS, so it is absent; Deezer covers the type
         assertFalse(provider.capabilities.any { it.type == EnrichmentType.SIMILAR_ARTISTS })
     }
 
     @Test
     fun `enrich returns NotFound for SIMILAR_ARTISTS since the capability was removed`() = runTest {
-        // Given — a request for the removed SIMILAR_ARTISTS capability
+        // Given - a request for the removed SIMILAR_ARTISTS capability
         val request = EnrichmentRequest.ForArtist(
             identifiers = EnrichmentIdentifiers(musicBrainzId = "a74b1b7f-71a5-4011-9441-d0b5e4122711"),
             name = "Radiohead",
         )
 
-        // When — enriching for similar artists
+        // When - enriching for similar artists
         val result = provider.enrich(request, EnrichmentType.SIMILAR_ARTISTS)
 
-        // Then -- falls through the `when`'s else branch, no HTTP call made
+        // Then - falls through the `when`'s else branch, no HTTP call made
         assertTrue(result is EnrichmentResult.NotFound)
     }
 }

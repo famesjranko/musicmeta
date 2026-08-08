@@ -30,14 +30,14 @@ class MusicBrainzProviderTest {
 
     @Test
     fun `enrich album returns metadata for high-confidence match`() = runTest {
-        // Given — MusicBrainz returns a release with score 98
+        // Given - MusicBrainz returns a release with score 98
         httpClient.givenJsonResponse("release?query", RELEASE_SEARCH_HIGH_SCORE)
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
 
-        // When — enriching for genre (triggers identity resolution)
+        // When - enriching for genre (triggers identity resolution)
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then — success with MBID, release-group ID, and high confidence
+        // Then - success with MBID, release-group ID, and high confidence
         assertTrue(result is EnrichmentResult.Success)
         val success = result as EnrichmentResult.Success
         assertEquals("musicbrainz", success.provider)
@@ -50,27 +50,27 @@ class MusicBrainzProviderTest {
 
     @Test
     fun `enrich album returns NotFound when score below threshold`() = runTest {
-        // Given — MusicBrainz returns a low-score result (40)
+        // Given - MusicBrainz returns a low-score result (40)
         httpClient.givenJsonResponse("release?query", RELEASE_SEARCH_LOW_SCORE)
         val request = EnrichmentRequest.forAlbum("Obscure Album", "Unknown")
 
-        // When — enriching for genre
+        // When - enriching for genre
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then — NotFound because score is below minimum threshold
+        // Then - NotFound because score is below minimum threshold
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `enrich artist extracts Wikidata ID`() = runTest {
-        // Given — MusicBrainz artist has a Wikidata relation
+        // Given - MusicBrainz artist has a Wikidata relation
         httpClient.givenJsonResponse("artist?query", ARTIST_SEARCH_WITH_WIKIDATA)
         val request = EnrichmentRequest.forArtist("Radiohead")
 
-        // When — enriching for genre (triggers identity resolution)
+        // When - enriching for genre (triggers identity resolution)
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then — Wikidata ID extracted from the relation URL
+        // Then - Wikidata ID extracted from the relation URL
         assertTrue(result is EnrichmentResult.Success)
         val success = result as EnrichmentResult.Success
         assertTrue(success.data is EnrichmentData.Metadata)
@@ -79,14 +79,14 @@ class MusicBrainzProviderTest {
 
     @Test
     fun `enrich artist extracts Wikipedia title`() = runTest {
-        // Given — MusicBrainz artist has both Wikidata and Wikipedia relations
+        // Given - MusicBrainz artist has both Wikidata and Wikipedia relations
         httpClient.givenJsonResponse("artist?query", ARTIST_SEARCH_WITH_WIKIPEDIA)
         val request = EnrichmentRequest.forArtist("Radiohead")
 
-        // When — enriching for genre
+        // When - enriching for genre
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then — Wikipedia title extracted from the en.wikipedia.org URL
+        // Then - Wikipedia title extracted from the en.wikipedia.org URL
         assertTrue(result is EnrichmentResult.Success)
         val success = result as EnrichmentResult.Success
         assertTrue(success.data is EnrichmentData.Metadata)
@@ -95,16 +95,16 @@ class MusicBrainzProviderTest {
 
     @Test
     fun `enrich album extracts Wikidata ID and Wikipedia title from release-group relations`() = runTest {
-        // Given — release search resolves release-group "group123"; its dedicated url-rels lookup
+        // Given - release search resolves release-group "group123"; its dedicated url-rels lookup
         // carries both a wikidata and an en.wikipedia.org relation (ALBUM_DESCRIPTION's plumbing)
         httpClient.givenJsonResponse("release?query", RELEASE_SEARCH_HIGH_SCORE)
         httpClient.givenJsonResponse("release-group/group123", RELEASE_GROUP_WITH_WIKI_RELATIONS)
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
 
-        // When — enriching for genre (triggers identity resolution, which resolves the release)
+        // When - enriching for genre (triggers identity resolution, which resolves the release)
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then — resolvedIdentifiers carries both, for WikipediaProvider's ALBUM_DESCRIPTION to use
+        // Then - resolvedIdentifiers carries both, for WikipediaProvider's ALBUM_DESCRIPTION to use
         assertTrue(result is EnrichmentResult.Success)
         val success = result as EnrichmentResult.Success
         assertEquals("Q82539", success.resolvedIdentifiers?.wikidataId)
@@ -114,15 +114,15 @@ class MusicBrainzProviderTest {
     @Test
     fun `enrich album leaves wikidataId and wikipediaTitle null when release-group has no wiki relations`() =
         runTest {
-            // Given — release-group lookup returns no relations at all
+            // Given - release-group lookup returns no relations at all
             httpClient.givenJsonResponse("release?query", RELEASE_SEARCH_HIGH_SCORE)
             httpClient.givenJsonResponse("release-group/group123", """{"id": "group123", "relations": []}""")
             val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
 
-            // When — enriching for genre
+            // When - enriching for genre
             val result = provider.enrich(request, EnrichmentType.GENRE)
 
-            // Then — succeeds, with the wiki identifiers left unset
+            // Then - succeeds, with the wiki identifiers left unset
             assertTrue(result is EnrichmentResult.Success)
             val success = result as EnrichmentResult.Success
             assertEquals(null, success.resolvedIdentifiers?.wikidataId)
@@ -131,17 +131,17 @@ class MusicBrainzProviderTest {
 
     @Test
     fun `enrich album release-group wiki lookup is cached across repeated type resolution`() = runTest {
-        // Given — same album resolved for two types in the same MusicBrainzProvider instance
+        // Given - same album resolved for two types in the same MusicBrainzProvider instance
         httpClient.givenJsonResponse("release?query", RELEASE_SEARCH_HIGH_SCORE)
         httpClient.givenJsonResponse("release-group/group123", RELEASE_GROUP_WITH_WIKI_RELATIONS)
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
 
-        // When — GENRE resolves identity, then LABEL is resolved for the same (uncached) request
+        // When - GENRE resolves identity, then LABEL is resolved for the same (uncached) request
         provider.enrich(request, EnrichmentType.GENRE)
         httpClient.requestedUrls.clear()
         val result = provider.enrich(request, EnrichmentType.LABEL)
 
-        // Then — the second call re-searches (no cached MBID on this request) but hits the
+        // Then - the second call re-searches (no cached MBID on this request) but hits the
         // release-group wiki cache rather than repeating the release-group/group123 request
         assertTrue(result is EnrichmentResult.Success)
         assertTrue(httpClient.requestedUrls.none { it.contains("release-group/group123") })
@@ -149,7 +149,7 @@ class MusicBrainzProviderTest {
 
     @Test
     fun `a transient on the release-group wiki lookup does not fail GENRE`() = runTest {
-        // Given — the release search succeeds, but the release-group's dedicated wiki-links lookup
+        // Given - the release search succeeds, but the release-group's dedicated wiki-links lookup
         // 503s. Before the fix this propagated out of buildAlbumResult and turned GENRE itself into
         // an Error, even though GENRE's own data (genres, label, dates) was already in hand — the
         // live symptom this pins: ALBUM_DESCRIPTION not_found on one run, ok on the identical next.
@@ -157,10 +157,10 @@ class MusicBrainzProviderTest {
         httpClient.givenHttpResult("release-group/group123", HttpResult.ServerError(503))
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
 
-        // When — enriching for genre
+        // When - enriching for genre
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then — GENRE still succeeds with its own data; the wiki-links transient just leaves
+        // Then - GENRE still succeeds with its own data; the wiki-links transient just leaves
         // wikidataId/wikipediaTitle unresolved for this call rather than masquerading as "this
         // release-group has none" or failing the type that never asked for wiki data.
         assertTrue(result is EnrichmentResult.Success)
@@ -172,35 +172,35 @@ class MusicBrainzProviderTest {
 
     @Test
     fun `a timeout on the release-group wiki lookup does not fail LABEL`() = runTest {
-        // Given — same shape, a different type and a network-level transient (not an HTTP status)
+        // Given - same shape, a different type and a network-level transient (not an HTTP status)
         httpClient.givenJsonResponse("release?query", RELEASE_SEARCH_HIGH_SCORE)
         httpClient.givenIoException("release-group/group123")
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
 
-        // When — enriching for label
+        // When - enriching for label
         val result = provider.enrich(request, EnrichmentType.LABEL)
 
-        // Then — LABEL still succeeds despite the timeout on the side lookup
+        // Then - LABEL still succeeds despite the timeout on the side lookup
         assertTrue(result is EnrichmentResult.Success)
     }
 
     @Test
     fun `a transient release-group wiki lookup is retried, not cached as absence`() = runTest {
-        // Given — the first call 503s; the second call (a different type resolving the same
+        // Given - the first call 503s; the second call (a different type resolving the same
         // release-group, still within this enricher's lifetime) succeeds
         httpClient.givenJsonResponse("release?query", RELEASE_SEARCH_HIGH_SCORE)
         httpClient.givenHttpResult("release-group/group123", HttpResult.ServerError(503))
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
         provider.enrich(request, EnrichmentType.GENRE)
 
-        // When — the transient clears and LABEL resolves the same album
+        // When - the transient clears and LABEL resolves the same album
         httpClient.givenHttpResult(
             "release-group/group123",
             HttpResult.Ok(org.json.JSONObject(RELEASE_GROUP_WITH_WIKI_RELATIONS)),
         )
         val result = provider.enrich(request, EnrichmentType.LABEL)
 
-        // Then — the earlier failure was never cached as "no wiki links", so this call resolves
+        // Then - the earlier failure was never cached as "no wiki links", so this call resolves
         // the real relations rather than being stuck with a false negative
         assertTrue(result is EnrichmentResult.Success)
         val success = result as EnrichmentResult.Success
@@ -209,83 +209,83 @@ class MusicBrainzProviderTest {
 
     @Test
     fun `enrich returns NotFound on null response`() = runTest {
-        // Given — no canned response configured (API returns null -> emptyList)
+        // Given - no canned response configured (API returns null -> emptyList)
         val request = EnrichmentRequest.forAlbum("Test", "Test")
 
-        // When — enriching for genre
+        // When - enriching for genre
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then — NotFound because empty results mean no match
+        // Then - NotFound because empty results mean no match
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `empty album search results return NotFound`() = runTest {
-        // Given — MusicBrainz returns an empty releases array
+        // Given - MusicBrainz returns an empty releases array
         httpClient.givenJsonResponse("release?query", """{"releases":[]}""")
         val request = EnrichmentRequest.forAlbum("Nothing", "Nobody")
 
-        // When — enriching for genre
+        // When - enriching for genre
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then — NotFound because no releases matched
+        // Then - NotFound because no releases matched
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `empty artist search results return NotFound`() = runTest {
-        // Given — MusicBrainz returns an empty artists array
+        // Given - MusicBrainz returns an empty artists array
         httpClient.givenJsonResponse("artist?query", """{"artists":[]}""")
         val request = EnrichmentRequest.forArtist("Nobody")
 
-        // When — enriching for genre
+        // When - enriching for genre
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then — NotFound because no artists matched
+        // Then - NotFound because no artists matched
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `empty recording search results return NotFound`() = runTest {
-        // Given — MusicBrainz returns an empty recordings array
+        // Given - MusicBrainz returns an empty recordings array
         httpClient.givenJsonResponse("recording?query", """{"recordings":[]}""")
         val request = EnrichmentRequest.forTrack("Nothing", "Nobody")
 
-        // When — enriching for genre
+        // When - enriching for genre
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then — NotFound because no recordings matched, and no suggestions invented from nothing
+        // Then - NotFound because no recordings matched, and no suggestions invented from nothing
         assertTrue(result is EnrichmentResult.NotFound)
         assertEquals(null, (result as EnrichmentResult.NotFound).suggestions)
     }
 
     @Test
     fun `enrich returns Error on malformed JSON`() = runTest {
-        // Given — response has a release object missing the required 'id' field
+        // Given - response has a release object missing the required 'id' field
         httpClient.givenJsonResponse(
             "release?query",
             """{"releases":[{"title":"NoId"}]}""",
         )
         val request = EnrichmentRequest.forAlbum("Test", "Test")
 
-        // When — enriching for genre
+        // When - enriching for genre
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then — Error with a descriptive message about the parse failure
+        // Then - Error with a descriptive message about the parse failure
         assertTrue(result is EnrichmentResult.Error)
         assertNotNull((result as EnrichmentResult.Error).message)
     }
 
     @Test
     fun `enrich track returns identifier for high-confidence match`() = runTest {
-        // Given — MusicBrainz returns a recording match with score 95
+        // Given - MusicBrainz returns a recording match with score 95
         httpClient.givenJsonResponse("recording?query", RECORDING_SEARCH)
         val request = EnrichmentRequest.forTrack("Paranoid Android", "Radiohead")
 
-        // When — enriching for genre
+        // When - enriching for genre
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then — recording MBID resolved successfully
+        // Then - recording MBID resolved successfully
         assertTrue(result is EnrichmentResult.Success)
         val success = result as EnrichmentResult.Success
         assertTrue(success.data is EnrichmentData.Metadata)
@@ -295,7 +295,7 @@ class MusicBrainzProviderTest {
     @Test
     fun `enrich track ranks a wide score-100 pool to the blank-disambiguation exact-title studio recording`() =
         runTest {
-            // Given — a 9-candidate pool mirroring live musicbrainz.org "Enter Sandman"/Metallica
+            // Given - a 9-candidate pool mirroring live musicbrainz.org "Enter Sandman"/Metallica
             // evidence (2026-08-06): seven non-blank-disambiguation hits first (all score 100,
             // including a "bootleg edited version" that no demo/live/remix/remaster keyword list
             // would catch), then the blank-disambiguation studio original, then a blank-
@@ -304,10 +304,10 @@ class MusicBrainzProviderTest {
             httpClient.givenJsonResponse("recording?query", ENTER_SANDMAN_RANK_POOL)
             val request = EnrichmentRequest.forTrack("Enter Sandman", "Metallica")
 
-            // When — enriching for genre (drives identity resolution through enrichTrack)
+            // When - enriching for genre (drives identity resolution through enrichTrack)
             val result = provider.enrich(request, EnrichmentType.GENRE)
 
-            // Then — the blank-disambiguation, exact-title studio recording wins, not a
+            // Then - the blank-disambiguation, exact-title studio recording wins, not a
             // non-blank-disambiguation take (however it's worded) or a blank-disambiguation title
             // variant
             assertTrue(result is EnrichmentResult.Success)
@@ -318,14 +318,14 @@ class MusicBrainzProviderTest {
     @Test
     fun `enrich track fills musicBrainzReleaseGroupId from the ranked recording's Official Album`() =
         runTest {
-            // Given — the ranked recording (rec-studio) carries an Official Album release-group id
+            // Given - the ranked recording (rec-studio) carries an Official Album release-group id
             httpClient.givenJsonResponse("recording?query", ENTER_SANDMAN_RANK_POOL_WITH_GROUP_ID)
             val request = EnrichmentRequest.forTrack("Enter Sandman", "Metallica")
 
-            // When — enriching for genre (drives identity resolution through enrichTrack)
+            // When - enriching for genre (drives identity resolution through enrichTrack)
             val result = provider.enrich(request, EnrichmentType.GENRE)
 
-            // Then — resolvedIdentifiers carries the recording id AND the release-group id, so CAA
+            // Then - resolvedIdentifiers carries the recording id AND the release-group id, so CAA
             // can serve front-cover art for the track without ever treating the recording id as a
             // release id (CoverArtArchiveProvider)
             assertTrue(result is EnrichmentResult.Success)
@@ -336,17 +336,17 @@ class MusicBrainzProviderTest {
 
     @Test
     fun `enrich track still rejects a pool with no candidate at or above the score threshold`() = runTest {
-        // Given — every candidate scores below the default minimum match score (80)
+        // Given - every candidate scores below the default minimum match score (80)
         httpClient.givenJsonResponse(
             "recording?query",
             """{"recordings":[{"id":"rec-low","score":50,"title":"Enter Sandman"}]}""",
         )
         val request = EnrichmentRequest.forTrack("Enter Sandman", "Metallica")
 
-        // When — enriching for genre
+        // When - enriching for genre
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then — NotFound; the ranking pass never gets a candidate to choose from, but the raw pool
+        // Then - NotFound; the ranking pass never gets a candidate to choose from, but the raw pool
         // that failed to rank is still carried as a suggestion, same as enrichAlbum/enrichArtist
         assertTrue(result is EnrichmentResult.NotFound)
         val suggestions = (result as EnrichmentResult.NotFound).suggestions
@@ -357,7 +357,7 @@ class MusicBrainzProviderTest {
     @Test
     fun `enrich track identity resolution surfaces suggestions for a gibberish title, mirroring album-artist`() =
         runTest {
-            // Given — the strict search returns a non-empty pool that fails to rank, so the
+            // Given - the strict search returns a non-empty pool that fails to rank, so the
             // suggestions must come from that pool itself; the fuzzy search (stubbed with a decoy)
             // must not run. MusicBrainzTransientFailureTest covers the empty-pool → fuzzy branch.
             httpClient.givenJsonResponse(
@@ -370,10 +370,10 @@ class MusicBrainzProviderTest {
             )
             val request = EnrichmentRequest.forTrack("Zzxxqwerty12345", "Metallica")
 
-            // When — resolving identity (what DefaultEnrichmentEngine calls before fan-out)
+            // When - resolving identity (what DefaultEnrichmentEngine calls before fan-out)
             val result = provider.resolveIdentity(request)
 
-            // Then — NotFound carrying the strict pool as suggestions, so IdentityMatch.SUGGESTIONS
+            // Then - NotFound carrying the strict pool as suggestions, so IdentityMatch.SUGGESTIONS
             // becomes reachable, and the fuzzy search was never queried
             assertTrue(result is EnrichmentResult.NotFound)
             val suggestions = (result as EnrichmentResult.NotFound).suggestions
@@ -383,21 +383,21 @@ class MusicBrainzProviderTest {
 
     @Test
     fun `enrich track sends the release-hinted query when the request carries an album hint`() = runTest {
-        // Given — a matching recording behind the release-hinted query
+        // Given - a matching recording behind the release-hinted query
         httpClient.givenJsonResponse("recording?query", RECORDING_SEARCH)
         val request = EnrichmentRequest.forTrack("Paranoid Android", "Radiohead", album = "OK Computer")
 
-        // When — enriching for genre
+        // When - enriching for genre
         provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then — the Lucene query carries the album's release:"..." term
+        // Then - the Lucene query carries the album's release:"..." term
         val url = httpClient.requestedUrls.single { it.contains("recording?query") }
         assertTrue(url.contains("release%3A%22OK+Computer%22"))
     }
 
     @Test
     fun `enrich track TRACK_METADATA returns duration, album title and disambiguation`() = runTest {
-        // Given — a recording carrying length, an art release-group title, and a disambiguation
+        // Given - a recording carrying length, an art release-group title, and a disambiguation
         httpClient.givenJsonResponse(
             "recording?query",
             """
@@ -417,10 +417,10 @@ class MusicBrainzProviderTest {
         )
         val request = EnrichmentRequest.forTrack("Enter Sandman", "Metallica")
 
-        // When — enriching for track metadata
+        // When - enriching for track metadata
         val result = provider.enrich(request, EnrichmentType.TRACK_METADATA)
 
-        // Then — duration, album title, and identifiers are all populated
+        // Then - duration, album title, and identifiers are all populated
         assertTrue(result is EnrichmentResult.Success)
         val success = result as EnrichmentResult.Success
         val data = success.data as EnrichmentData.TrackMetadata
@@ -432,31 +432,31 @@ class MusicBrainzProviderTest {
 
     @Test
     fun `enrich track TRACK_METADATA returns NotFound when no candidate meets the score threshold`() = runTest {
-        // Given — the only candidate scores below the default minimum match score (80)
+        // Given - the only candidate scores below the default minimum match score (80)
         httpClient.givenJsonResponse(
             "recording?query",
             """{"recordings":[{"id":"rec-low","score":50,"title":"Enter Sandman"}]}""",
         )
         val request = EnrichmentRequest.forTrack("Enter Sandman", "Metallica")
 
-        // When — enriching for track metadata
+        // When - enriching for track metadata
         val result = provider.enrich(request, EnrichmentType.TRACK_METADATA)
 
-        // Then — NotFound because no candidate meets the threshold
+        // Then - NotFound because no candidate meets the threshold
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `enrich returns BandMembers for artist with members`() = runTest {
-        // Given -- artist lookup with artist-rels returns band member relations
+        // Given - artist lookup with artist-rels returns band member relations
         httpClient.givenJsonResponse("artist/art1?fmt=json&inc=tags+url-rels+artist-rels", ARTIST_LOOKUP_WITH_MEMBERS)
         val request = EnrichmentRequest.forArtist("Radiohead")
             .withIdentifiers(EnrichmentIdentifiers(musicBrainzId = "art1"))
 
-        // When -- enriching for BAND_MEMBERS
+        // When - enriching for BAND_MEMBERS
         val result = provider.enrich(request, EnrichmentType.BAND_MEMBERS)
 
-        // Then -- Success with BandMembers data containing member names and roles
+        // Then - Success with BandMembers data containing member names and roles
         assertTrue(result is EnrichmentResult.Success)
         val success = result as EnrichmentResult.Success
         val data = success.data as EnrichmentData.BandMembers
@@ -467,7 +467,7 @@ class MusicBrainzProviderTest {
 
     @Test
     fun `artist cache serves repeat lookups but evicts once past its cap`() = runTest {
-        // Given -- every artist lookup resolves
+        // Given - every artist lookup resolves
         httpClient.givenJsonResponse("artist/", ARTIST_LOOKUP_WITH_MEMBERS)
         suspend fun lookup(mbid: String) = provider.enrich(
             EnrichmentRequest.forArtist("Radiohead")
@@ -476,47 +476,47 @@ class MusicBrainzProviderTest {
         )
         fun lookupsFor(mbid: String) = httpClient.requestedUrls.count { it.contains("artist/$mbid?") }
 
-        // When -- the same MBID is looked up twice
+        // When - the same MBID is looked up twice
         lookup("art1")
         lookup("art1")
 
-        // Then -- the second one is served from the cache (the ~1.1s saving this map exists for)
+        // Then - the second one is served from the cache (the ~1.1s saving this map exists for)
         assertEquals(1, lookupsFor("art1"))
 
-        // When -- enough distinct MBIDs follow to push art1 out of an access-ordered cap
+        // When - enough distinct MBIDs follow to push art1 out of an access-ordered cap
         repeat(MusicBrainzEnricher.ARTIST_CACHE_MAX_ENTRIES) { lookup("filler$it") }
         lookup("art1")
 
-        // Then -- art1 was evicted rather than the map growing without bound
+        // Then - art1 was evicted rather than the map growing without bound
         assertEquals(2, lookupsFor("art1"))
     }
 
     @Test
     fun `enrich returns NotFound for BandMembers when no members in relations`() = runTest {
-        // Given -- artist lookup returns no member-of-band relations
+        // Given - artist lookup returns no member-of-band relations
         httpClient.givenJsonResponse("artist/art1?fmt=json&inc=tags+url-rels+artist-rels", ARTIST_LOOKUP_NO_MEMBERS)
         val request = EnrichmentRequest.forArtist("Radiohead")
             .withIdentifiers(EnrichmentIdentifiers(musicBrainzId = "art1"))
 
-        // When -- enriching for BAND_MEMBERS
+        // When - enriching for BAND_MEMBERS
         val result = provider.enrich(request, EnrichmentType.BAND_MEMBERS)
 
-        // Then -- NotFound because no band members in relations
+        // Then - NotFound because no band members in relations
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `enrich returns Discography for artist`() = runTest {
-        // Given -- artist search followed by release-group browse
+        // Given - artist search followed by release-group browse
         httpClient.givenJsonResponse("artist?query", ARTIST_SEARCH_WITH_WIKIDATA)
         httpClient.givenJsonResponse("release-group?artist=art1", RELEASE_GROUP_BROWSE)
         val request = EnrichmentRequest.forArtist("Radiohead")
             .withIdentifiers(EnrichmentIdentifiers(musicBrainzId = "art1"))
 
-        // When -- enriching for ARTIST_DISCOGRAPHY
+        // When - enriching for ARTIST_DISCOGRAPHY
         val result = provider.enrich(request, EnrichmentType.ARTIST_DISCOGRAPHY)
 
-        // Then -- Success with Discography data
+        // Then - Success with Discography data
         assertTrue(result is EnrichmentResult.Success)
         val success = result as EnrichmentResult.Success
         val data = success.data as EnrichmentData.Discography
@@ -528,15 +528,15 @@ class MusicBrainzProviderTest {
 
     @Test
     fun `enrich returns Tracklist for album`() = runTest {
-        // Given -- release lookup with media array
+        // Given - release lookup with media array
         httpClient.givenJsonResponse("release/rel1?fmt=json", RELEASE_LOOKUP_WITH_TRACKS)
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
             .withIdentifiers(EnrichmentIdentifiers(musicBrainzId = "rel1"))
 
-        // When -- enriching for ALBUM_TRACKS
+        // When - enriching for ALBUM_TRACKS
         val result = provider.enrich(request, EnrichmentType.ALBUM_TRACKS)
 
-        // Then -- Success with Tracklist data
+        // Then - Success with Tracklist data
         assertTrue(result is EnrichmentResult.Success)
         val success = result as EnrichmentResult.Success
         val data = success.data as EnrichmentData.Tracklist
@@ -548,15 +548,15 @@ class MusicBrainzProviderTest {
 
     @Test
     fun `enrich returns ArtistLinks for artist`() = runTest {
-        // Given -- artist lookup with URL relations
+        // Given - artist lookup with URL relations
         httpClient.givenJsonResponse("artist/art1?fmt=json&inc=tags+url-rels", ARTIST_LOOKUP_WITH_LINKS)
         val request = EnrichmentRequest.forArtist("Radiohead")
             .withIdentifiers(EnrichmentIdentifiers(musicBrainzId = "art1"))
 
-        // When -- enriching for ARTIST_LINKS
+        // When - enriching for ARTIST_LINKS
         val result = provider.enrich(request, EnrichmentType.ARTIST_LINKS)
 
-        // Then -- Success with ArtistLinks data, wikidata/wikipedia excluded
+        // Then - Success with ArtistLinks data, wikidata/wikipedia excluded
         assertTrue(result is EnrichmentResult.Success)
         val success = result as EnrichmentResult.Success
         val data = success.data as EnrichmentData.ArtistLinks
@@ -567,24 +567,24 @@ class MusicBrainzProviderTest {
 
     @Test
     fun `enrich returns Error with NETWORK ErrorKind when API throws IOException`() = runTest {
-        // Given — fetchJsonResult throws IOException simulating a network failure
+        // Given - fetchJsonResult throws IOException simulating a network failure
         httpClient.givenIoException("musicbrainz.org")
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
 
-        // When — enriching for genre (triggers searchReleases which throws)
+        // When - enriching for genre (triggers searchReleases which throws)
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then — Error with NETWORK ErrorKind
+        // Then - Error with NETWORK ErrorKind
         assertTrue("Expected Error but got $result", result is EnrichmentResult.Error)
         assertEquals(ErrorKind.NETWORK, (result as EnrichmentResult.Error).errorKind)
     }
 
     @Test
     fun `provider has CREDITS capability at priority 100 with MUSICBRAINZ_ID requirement`() {
-        // Given -- provider capabilities list
+        // Given - provider capabilities list
         val capability = provider.capabilities.find { it.type == EnrichmentType.CREDITS }
 
-        // Then -- CREDITS capability exists with correct priority and identifier requirement
+        // Then - CREDITS capability exists with correct priority and identifier requirement
         assertNotNull(capability)
         assertEquals(100, capability!!.priority)
         assertEquals(com.landofoz.musicmeta.IdentifierRequirement.MUSICBRAINZ_ID, capability.identifierRequirement)
@@ -592,15 +592,15 @@ class MusicBrainzProviderTest {
 
     @Test
     fun `enrich ForTrack CREDITS with MBID returns Success with credits`() = runTest {
-        // Given -- recording lookup returns artist-rels and work-rels
+        // Given - recording lookup returns artist-rels and work-rels
         httpClient.givenJsonResponse("recording/rec1", RECORDING_WITH_CREDITS_JSON)
         val request = EnrichmentRequest.forTrack("Paranoid Android", "Radiohead")
             .withIdentifiers(EnrichmentIdentifiers(musicBrainzId = "rec1"))
 
-        // When -- enriching for CREDITS
+        // When - enriching for CREDITS
         val result = provider.enrich(request, EnrichmentType.CREDITS)
 
-        // Then -- Success with Credits data, at least 3 credits, confidence 1.0
+        // Then - Success with Credits data, at least 3 credits, confidence 1.0
         assertTrue("Expected Success but got $result", result is EnrichmentResult.Success)
         val success = result as EnrichmentResult.Success
         val data = success.data as EnrichmentData.Credits
@@ -610,36 +610,36 @@ class MusicBrainzProviderTest {
 
     @Test
     fun `enrich ForTrack CREDITS returns NotFound when recording has no relations`() = runTest {
-        // Given -- recording with empty relations
+        // Given - recording with empty relations
         httpClient.givenJsonResponse("recording/rec1", """{"id":"rec1","title":"Song","relations":[]}""")
         val request = EnrichmentRequest.forTrack("Song", "Artist")
             .withIdentifiers(EnrichmentIdentifiers(musicBrainzId = "rec1"))
 
-        // When -- enriching for CREDITS
+        // When - enriching for CREDITS
         val result = provider.enrich(request, EnrichmentType.CREDITS)
 
-        // Then -- NotFound because no credits parsed
+        // Then - NotFound because no credits parsed
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `enrich ForTrack CREDITS returns NotFound when no MBID`() = runTest {
-        // Given -- ForTrack request without MBID
+        // Given - ForTrack request without MBID
         val request = EnrichmentRequest.forTrack("Song", "Artist")
 
-        // When -- enriching for CREDITS directly (no MBID)
+        // When - enriching for CREDITS directly (no MBID)
         val result = provider.enrich(request, EnrichmentType.CREDITS)
 
-        // Then -- NotFound because no MBID available for lookup
+        // Then - NotFound because no MBID available for lookup
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `provider has RELEASE_EDITIONS capability at priority 100 with MUSICBRAINZ_RELEASE_GROUP_ID requirement`() {
-        // Given -- provider capabilities list
+        // Given - provider capabilities list
         val capability = provider.capabilities.find { it.type == EnrichmentType.RELEASE_EDITIONS }
 
-        // Then -- RELEASE_EDITIONS capability exists with correct priority and identifier requirement
+        // Then - RELEASE_EDITIONS capability exists with correct priority and identifier requirement
         assertNotNull(capability)
         assertEquals(100, capability!!.priority)
         assertEquals(com.landofoz.musicmeta.IdentifierRequirement.MUSICBRAINZ_RELEASE_GROUP_ID, capability.identifierRequirement)
@@ -647,15 +647,15 @@ class MusicBrainzProviderTest {
 
     @Test
     fun `enrichAlbumEditions returns Success with ReleaseEditions when release-group has releases`() = runTest {
-        // Given -- release-group lookup returns JSON with releases
+        // Given - release-group lookup returns JSON with releases
         httpClient.givenJsonResponse("release-group/rg1", RELEASE_GROUP_WITH_RELEASES_JSON)
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
             .withIdentifiers(EnrichmentIdentifiers(musicBrainzReleaseGroupId = "rg1"))
 
-        // When -- enriching for RELEASE_EDITIONS
+        // When - enriching for RELEASE_EDITIONS
         val result = provider.enrich(request, EnrichmentType.RELEASE_EDITIONS)
 
-        // Then -- Success with ReleaseEditions data containing editions
+        // Then - Success with ReleaseEditions data containing editions
         assertTrue("Expected Success but got $result", result is EnrichmentResult.Success)
         val success = result as EnrichmentResult.Success
         val data = success.data as EnrichmentData.ReleaseEditions
@@ -665,55 +665,55 @@ class MusicBrainzProviderTest {
 
     @Test
     fun `enrichAlbumEditions returns NotFound when release-group MBID missing from identifiers`() = runTest {
-        // Given -- ForAlbum request without release-group MBID
+        // Given - ForAlbum request without release-group MBID
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
 
-        // When -- enriching for RELEASE_EDITIONS
+        // When - enriching for RELEASE_EDITIONS
         val result = provider.enrich(request, EnrichmentType.RELEASE_EDITIONS)
 
-        // Then -- NotFound because no release-group MBID available
+        // Then - NotFound because no release-group MBID available
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `enrichAlbumEditions returns NotFound when lookupReleaseGroup returns null`() = runTest {
-        // Given -- no canned response for release-group lookup (returns null)
+        // Given - no canned response for release-group lookup (returns null)
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
             .withIdentifiers(EnrichmentIdentifiers(musicBrainzReleaseGroupId = "rg1"))
 
-        // When -- enriching for RELEASE_EDITIONS (no HTTP response configured)
+        // When - enriching for RELEASE_EDITIONS (no HTTP response configured)
         val result = provider.enrich(request, EnrichmentType.RELEASE_EDITIONS)
 
-        // Then -- NotFound because lookupReleaseGroup returned null
+        // Then - NotFound because lookupReleaseGroup returned null
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `enrichAlbumEditions returns Error with NETWORK ErrorKind on IOException`() = runTest {
-        // Given -- release-group lookup throws IOException
+        // Given - release-group lookup throws IOException
         httpClient.givenIoException("release-group/")
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
             .withIdentifiers(EnrichmentIdentifiers(musicBrainzReleaseGroupId = "rg1"))
 
-        // When -- enriching for RELEASE_EDITIONS
+        // When - enriching for RELEASE_EDITIONS
         val result = provider.enrich(request, EnrichmentType.RELEASE_EDITIONS)
 
-        // Then -- Error with NETWORK ErrorKind
+        // Then - Error with NETWORK ErrorKind
         assertTrue("Expected Error but got $result", result is EnrichmentResult.Error)
         assertEquals(ErrorKind.NETWORK, (result as EnrichmentResult.Error).errorKind)
     }
 
     @Test
     fun `enrich ForTrack CREDITS returns Error with NETWORK ErrorKind on IOException`() = runTest {
-        // Given -- recording lookup throws IOException
+        // Given - recording lookup throws IOException
         httpClient.givenIoException("recording/")
         val request = EnrichmentRequest.forTrack("Song", "Artist")
             .withIdentifiers(EnrichmentIdentifiers(musicBrainzId = "rec1"))
 
-        // When -- enriching for CREDITS
+        // When - enriching for CREDITS
         val result = provider.enrich(request, EnrichmentType.CREDITS)
 
-        // Then -- Error with NETWORK ErrorKind
+        // Then - Error with NETWORK ErrorKind
         assertTrue("Expected Error but got $result", result is EnrichmentResult.Error)
         assertEquals(ErrorKind.NETWORK, (result as EnrichmentResult.Error).errorKind)
     }
@@ -722,67 +722,67 @@ class MusicBrainzProviderTest {
 
     @Test
     fun `enrichAlbum returns NotFound for BAND_MEMBERS`() = runTest {
-        // Given — ForAlbum request
+        // Given - ForAlbum request
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
             .withIdentifiers(EnrichmentIdentifiers(musicBrainzId = "rel1"))
 
-        // When — enriching for BAND_MEMBERS (artist-only type)
+        // When - enriching for BAND_MEMBERS (artist-only type)
         val result = provider.enrich(request, EnrichmentType.BAND_MEMBERS)
 
-        // Then — NotFound instead of leaking Metadata
+        // Then - NotFound instead of leaking Metadata
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `enrichAlbum returns NotFound for ARTIST_DISCOGRAPHY`() = runTest {
-        // Given — ForAlbum request
+        // Given - ForAlbum request
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
             .withIdentifiers(EnrichmentIdentifiers(musicBrainzId = "rel1"))
 
-        // When — enriching for ARTIST_DISCOGRAPHY (artist-only type)
+        // When - enriching for ARTIST_DISCOGRAPHY (artist-only type)
         val result = provider.enrich(request, EnrichmentType.ARTIST_DISCOGRAPHY)
 
-        // Then — NotFound
+        // Then - NotFound
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `enrichAlbum returns NotFound for ARTIST_LINKS`() = runTest {
-        // Given — ForAlbum request
+        // Given - ForAlbum request
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
             .withIdentifiers(EnrichmentIdentifiers(musicBrainzId = "rel1"))
 
-        // When — enriching for ARTIST_LINKS (artist-only type)
+        // When - enriching for ARTIST_LINKS (artist-only type)
         val result = provider.enrich(request, EnrichmentType.ARTIST_LINKS)
 
-        // Then — NotFound
+        // Then - NotFound
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `enrichAlbum returns NotFound for CREDITS`() = runTest {
-        // Given — ForAlbum request
+        // Given - ForAlbum request
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
             .withIdentifiers(EnrichmentIdentifiers(musicBrainzId = "rel1"))
 
-        // When — enriching for CREDITS (track-only type)
+        // When - enriching for CREDITS (track-only type)
         val result = provider.enrich(request, EnrichmentType.CREDITS)
 
-        // Then — NotFound
+        // Then - NotFound
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `enrich album GENRE looks the release up when the search hit has no tags`() = runTest {
-        // Given — a high-scoring search hit with neither tags nor a label
+        // Given - a high-scoring search hit with neither tags nor a label
         httpClient.givenJsonResponse("release?query", RELEASE_SEARCH_THIN)
         httpClient.givenJsonResponse("release/thin1", RELEASE_LOOKUP_FULL)
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
 
-        // When — enriching for GENRE
+        // When - enriching for GENRE
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then — the lookup filled the genres, and the search score still sets confidence
+        // Then - the lookup filled the genres, and the search score still sets confidence
         val success = result as EnrichmentResult.Success
         assertEquals(listOf("alternative rock"), (success.data as EnrichmentData.Metadata).genres)
         assertEquals(0.98f, success.confidence, 0.01f)
@@ -791,7 +791,7 @@ class MusicBrainzProviderTest {
 
     @Test
     fun `release cache serves repeat lookups but evicts once past its cap`() = runTest {
-        // Given — a thin search hit, so GENRE takes the lookup path
+        // Given - a thin search hit, so GENRE takes the lookup path
         httpClient.givenJsonResponse("release?query", RELEASE_SEARCH_THIN)
         httpClient.givenJsonResponse("release/", RELEASE_LOOKUP_FULL)
         suspend fun byMbid(mbid: String) = provider.enrich(
@@ -801,31 +801,31 @@ class MusicBrainzProviderTest {
         )
         fun lookupsFor(mbid: String) = httpClient.requestedUrls.count { it.contains("release/$mbid?") }
 
-        // When — the search path resolves thin1, then the fan-out re-enters on the MBID it exposed
+        // When - the search path resolves thin1, then the fan-out re-enters on the MBID it exposed
         provider.enrich(EnrichmentRequest.forAlbum("OK Computer", "Radiohead"), EnrichmentType.GENRE)
         byMbid("thin1")
 
-        // Then — the second one is served from the cache, not fetched ~1.1s later
+        // Then - the second one is served from the cache, not fetched ~1.1s later
         assertEquals(1, lookupsFor("thin1"))
 
-        // When — enough distinct MBIDs follow to push thin1 out of an access-ordered cap
+        // When - enough distinct MBIDs follow to push thin1 out of an access-ordered cap
         repeat(MusicBrainzEnricher.RELEASE_CACHE_MAX_ENTRIES) { byMbid("filler$it") }
         byMbid("thin1")
 
-        // Then — thin1 was evicted rather than the map growing without bound
+        // Then - thin1 was evicted rather than the map growing without bound
         assertEquals(2, lookupsFor("thin1"))
     }
 
     @Test
     fun `enrich album GENRE does not look the release up when the search hit has tags`() = runTest {
-        // Given — a search hit that already carries release-group tags and a label
+        // Given - a search hit that already carries release-group tags and a label
         httpClient.givenJsonResponse("release?query", RELEASE_SEARCH_HIGH_SCORE)
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
 
-        // When — enriching for GENRE
+        // When - enriching for GENRE
         provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then — the search plus one release-group wiki-links lookup (ALBUM_DESCRIPTION's
+        // Then - the search plus one release-group wiki-links lookup (ALBUM_DESCRIPTION's
         // wikidata/wikipedia resolution, `buildAlbumResult` §MusicBrainzEnricher) — no full release
         // lookup, since the search hit already carried tags.
         assertEquals(2, httpClient.requestedUrls.size)
@@ -836,7 +836,7 @@ class MusicBrainzProviderTest {
 
     @Test
     fun `a transient release-group wiki lookup reclassifies ALBUM_DESCRIPTION to Error in the same run that resolves GENRE`() = runTest {
-        // Given — the release search succeeds and GENRE resolves fine, but the release-group's
+        // Given - the release search succeeds and GENRE resolves fine, but the release-group's
         // dedicated wiki-links lookup 503s (transient). ALBUM_DESCRIPTION has no MusicBrainz
         // capability at all — this is the ticket's literal end-to-end scenario, real
         // MusicBrainzProvider + real WikipediaProvider (never actually called — skipped for its
@@ -868,10 +868,10 @@ class MusicBrainzProviderTest {
             mergers = emptyList(),
         )
 
-        // When — enriching for both GENRE and ALBUM_DESCRIPTION in the same engine run
+        // When - enriching for both GENRE and ALBUM_DESCRIPTION in the same engine run
         val results = engine.enrich(request, setOf(EnrichmentType.GENRE, EnrichmentType.ALBUM_DESCRIPTION))
 
-        // Then — GENRE resolved fine (the unrelated type the transient rode in on)...
+        // Then - GENRE resolved fine (the unrelated type the transient rode in on)...
         assertTrue(results.raw[EnrichmentType.GENRE] is EnrichmentResult.Success)
         // ...and ALBUM_DESCRIPTION is Error, not a cacheable NotFound
         assertTrue(
@@ -882,7 +882,7 @@ class MusicBrainzProviderTest {
 
     @Test
     fun `a transient artist-relations lookup no longer throws, and marks the run's transient set instead`() = runTest {
-        // Given — the artist search hit needs the full relations fetch (no wikidataId/wikipediaTitle
+        // Given - the artist search hit needs the full relations fetch (no wikidataId/wikipediaTitle
         // on the search result), and that fetch 503s. Before this fix, cachedArtistLookup(best.id)
         // at MusicBrainzEnricher's `needsRelations` branch was called with no try/catch at all — a
         // transient there propagated straight out of enrichArtist.
@@ -890,10 +890,10 @@ class MusicBrainzProviderTest {
         httpClient.givenHttpResult("artist/", HttpResult.ServerError(503))
         val request = EnrichmentRequest.forArtist("Radiohead")
 
-        // When — enriching for GENRE, which never asked for wiki data
+        // When - enriching for GENRE, which never asked for wiki data
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then — GENRE still succeeds with the search-hit data rather than the enricher throwing
+        // Then - GENRE still succeeds with the search-hit data rather than the enricher throwing
         assertTrue("expected Success, got $result", result is EnrichmentResult.Success)
     }
 

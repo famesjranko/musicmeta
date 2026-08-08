@@ -39,82 +39,82 @@ class DefaultHttpClientRedirectTest {
     private fun url() = "http://127.0.0.1:${server.address.port}/front-1200"
 
     @Test fun `a 307 is Ok carrying the Location header`() = runTest {
-        // Given — how Cover Art Archive answers an available front cover
+        // Given - how Cover Art Archive answers an available front cover
         status = 307
         location = "https://archive.org/image/front.jpg"
 
-        // When — the redirect URL is fetched
+        // When - the redirect URL is fetched
         val result = client.fetchRedirectUrlResult(url())
 
-        // Then — result is Ok carrying the Location header value
+        // Then - result is Ok carrying the Location header value
         assertEquals("https://archive.org/image/front.jpg", (result as HttpResult.Ok).body)
         assertEquals(307, result.statusCode)
     }
 
     @Test fun `a 200 is Ok carrying the request URL`() = runTest {
-        // Given — server responds 200, no redirect
+        // Given - server responds 200, no redirect
         status = 200
 
-        // When — the redirect URL is fetched
+        // When - the redirect URL is fetched
         val result = client.fetchRedirectUrlResult(url())
 
-        // Then — nothing to follow, so the URL asked for is the answer
+        // Then - nothing to follow, so the URL asked for is the answer
         assertEquals(url(), (result as HttpResult.Ok).body)
     }
 
     @Test fun `a 3xx with no Location is a ClientError, not an Ok with nothing in it`() = runTest {
-        // Given — server responds 302 with no Location header
+        // Given - server responds 302 with no Location header
         status = 302
         location = null
 
-        // When — the redirect URL is fetched
+        // When - the redirect URL is fetched
         val result = client.fetchRedirectUrlResult(url())
 
-        // Then — result is ClientError carrying the 302 status
+        // Then - result is ClientError carrying the 302 status
         assertEquals(302, (result as HttpResult.ClientError).statusCode)
     }
 
     @Test fun `a 404 is a ClientError — no artwork, a genuine empty result`() = runTest {
-        // Given — server responds 404
+        // Given - server responds 404
         status = 404
 
-        // When — the redirect URL is fetched
+        // When - the redirect URL is fetched
         val result = client.fetchRedirectUrlResult(url())
 
-        // Then — result is ClientError carrying the 404 status
+        // Then - result is ClientError carrying the 404 status
         assertEquals(404, (result as HttpResult.ClientError).statusCode)
     }
 
     @Test fun `a 429 is RateLimited, not an indistinguishable failure`() = runTest {
-        // Given — server responds 429
+        // Given - server responds 429
         status = 429
 
-        // When — the redirect URL is fetched
+        // When - the redirect URL is fetched
         val result = client.fetchRedirectUrlResult(url())
 
-        // Then — result is RateLimited
+        // Then - result is RateLimited
         assertTrue("expected RateLimited, got $result", result is HttpResult.RateLimited)
     }
 
     @Test fun `a 503 is a ServerError, not an indistinguishable failure`() = runTest {
-        // Given — server responds 503
+        // Given - server responds 503
         status = 503
 
-        // When — the redirect URL is fetched
+        // When - the redirect URL is fetched
         val result = client.fetchRedirectUrlResult(url())
 
-        // Then — result is ServerError carrying the 503 status
+        // Then - result is ServerError carrying the 503 status
         assertEquals(503, (result as HttpResult.ServerError).statusCode)
     }
 
     @Test fun `an unreachable host is a NetworkError`() = runTest {
-        // Given — a port nothing is listening on
+        // Given - a port nothing is listening on
         val dead = "http://127.0.0.1:1/front-1200"
 
-        // When — the redirect URL is fetched from that address
+        // When - the redirect URL is fetched from that address
         val result = client.fetchRedirectUrlResult(dead)
 
-        // Then — result is NetworkError
+        // Then - result is NetworkError
         assertTrue("expected NetworkError, got $result", result is HttpResult.NetworkError)
     }
 }

@@ -14,7 +14,7 @@ class ProfileTest {
     // --- ArtistProfile ---
 
     @Test fun `artist profile exposes all fields from results`() {
-        // Given — an EnrichmentResults with every artist enrichment type resolved and a RESOLVED identity
+        // Given - an EnrichmentResults with every artist enrichment type resolved and a RESOLVED identity
         val results = EnrichmentResults(
             raw = mapOf(
                 EnrichmentType.ARTIST_PHOTO to success(EnrichmentType.ARTIST_PHOTO,
@@ -40,10 +40,10 @@ class ProfileTest {
             ),
         )
 
-        // When — building an ArtistProfile from the results
+        // When - building an ArtistProfile from the results
         val profile = ArtistProfile("Radiohead", results)
 
-        // Then — every profile field reflects the corresponding enrichment result
+        // Then - every profile field reflects the corresponding enrichment result
         assertEquals("Radiohead", profile.name)
         assertEquals("abc-123", profile.identifiers.musicBrainzId)
         assertEquals(IdentityMatch.RESOLVED, profile.identityMatch)
@@ -61,12 +61,12 @@ class ProfileTest {
     }
 
     @Test fun `artist profile returns empty collections for missing types`() {
-        // Given — an EnrichmentResults with no raw results and no identity
+        // Given - an EnrichmentResults with no raw results and no identity
         val results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = null)
-        // When — building an ArtistProfile from the results
+        // When - building an ArtistProfile from the results
         val profile = ArtistProfile("Unknown", results)
 
-        // Then — all collection fields are empty and all optional fields are null
+        // Then - all collection fields are empty and all optional fields are null
         assertTrue(profile.genres.isEmpty())
         assertTrue(profile.members.isEmpty())
         assertTrue(profile.links.isEmpty())
@@ -81,7 +81,7 @@ class ProfileTest {
     }
 
     @Test fun `artist profile surfaces suggestions from identity resolution`() {
-        // Given — an EnrichmentResults whose identity resolution carries SUGGESTIONS candidates
+        // Given - an EnrichmentResults whose identity resolution carries SUGGESTIONS candidates
         val candidates = listOf(
             SearchCandidate("Bush", "Bush", null, "GB", "Group", 80, null,
                 EnrichmentIdentifiers(musicBrainzId = "mbid-1"), "musicbrainz", "British rock band"),
@@ -100,10 +100,10 @@ class ProfileTest {
             ),
         )
 
-        // When — building an ArtistProfile from the results
+        // When - building an ArtistProfile from the results
         val profile = ArtistProfile("Bush", results)
 
-        // Then — the profile carries the SUGGESTIONS match and the candidate list
+        // Then - the profile carries the SUGGESTIONS match and the candidate list
         assertEquals(IdentityMatch.SUGGESTIONS, profile.identityMatch)
         assertEquals(2, profile.suggestions.size)
         assertEquals("British rock band", profile.suggestions[0].disambiguation)
@@ -112,7 +112,7 @@ class ProfileTest {
     // --- AlbumProfile ---
 
     @Test fun `album profile exposes metadata and tracklist`() {
-        // Given — an EnrichmentResults with album art, label, tracklist, and release type resolved
+        // Given - an EnrichmentResults with album art, label, tracklist, and release type resolved
         val results = EnrichmentResults(
             raw = mapOf(
                 EnrichmentType.ALBUM_ART to success(EnrichmentType.ALBUM_ART,
@@ -131,10 +131,10 @@ class ProfileTest {
             identity = null,
         )
 
-        // When — building an AlbumProfile from the results
+        // When - building an AlbumProfile from the results
         val profile = AlbumProfile("OK Computer", "Radiohead", results)
 
-        // Then — every profile field reflects the corresponding enrichment result
+        // Then - every profile field reflects the corresponding enrichment result
         assertEquals("OK Computer", profile.title)
         assertEquals("Radiohead", profile.artist)
         assertNotNull(profile.artwork)
@@ -147,7 +147,7 @@ class ProfileTest {
     // --- TrackProfile ---
 
     @Test fun `track profile exposes lyrics and credits`() {
-        // Given — an EnrichmentResults with synced lyrics, credits, and popularity resolved
+        // Given - an EnrichmentResults with synced lyrics, credits, and popularity resolved
         val results = EnrichmentResults(
             raw = mapOf(
                 EnrichmentType.LYRICS_SYNCED to success(EnrichmentType.LYRICS_SYNCED,
@@ -161,10 +161,10 @@ class ProfileTest {
             identity = null,
         )
 
-        // When — building a TrackProfile from the results
+        // When - building a TrackProfile from the results
         val profile = TrackProfile("Creep", "Radiohead", results)
 
-        // Then — every profile field reflects the corresponding enrichment result
+        // Then - every profile field reflects the corresponding enrichment result
         assertEquals("Creep", profile.title)
         assertNotNull(profile.lyrics)
         assertEquals("[00:01]But I'm a creep", profile.lyrics!!.syncedLyrics)

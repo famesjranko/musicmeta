@@ -36,7 +36,7 @@ class EnrichmentEngineExtensionsTest {
     // --- artistProfile ---
 
     @Test fun `artistProfile calls enrich with ForArtist and default types`() = runTest {
-        // Given — a fake engine returning a GENRE success result
+        // Given - a fake engine returning a GENRE success result
         val engine = FakeEngine()
         engine.resultsToReturn = mapOf(
             EnrichmentType.GENRE to EnrichmentResult.Success(
@@ -44,10 +44,10 @@ class EnrichmentEngineExtensionsTest {
             ),
         )
 
-        // When — requesting an artist profile
+        // When - requesting an artist profile
         val profile = engine.artistProfile("Radiohead")
 
-        // Then — the profile and the request passed to enrich are correct
+        // Then - the profile and the request passed to enrich are correct
         assertEquals("Radiohead", profile.name)
         assertTrue(engine.lastRequest is EnrichmentRequest.ForArtist)
         assertEquals("Radiohead", (engine.lastRequest as EnrichmentRequest.ForArtist).name)
@@ -55,31 +55,31 @@ class EnrichmentEngineExtensionsTest {
     }
 
     @Test fun `artistProfile passes MBID to request`() = runTest {
-        // Given — a fake engine
+        // Given - a fake engine
         val engine = FakeEngine()
 
-        // When — requesting an artist profile with an explicit MBID
+        // When - requesting an artist profile with an explicit MBID
         engine.artistProfile("Radiohead", mbid = "abc-123")
 
-        // Then — the request passed to enrich carries that MBID
+        // Then - the request passed to enrich carries that MBID
         val req = engine.lastRequest as EnrichmentRequest.ForArtist
         assertEquals("abc-123", req.identifiers.musicBrainzId)
     }
 
     @Test fun `artistProfile accepts custom type set`() = runTest {
-        // Given — a fake engine and a custom set of enrichment types
+        // Given - a fake engine and a custom set of enrichment types
         val engine = FakeEngine()
         val customTypes = setOf(EnrichmentType.GENRE, EnrichmentType.ARTIST_PHOTO)
 
-        // When — requesting an artist profile with that custom type set
+        // When - requesting an artist profile with that custom type set
         engine.artistProfile("Radiohead", types = customTypes)
 
-        // Then — enrich received exactly the custom type set
+        // Then - enrich received exactly the custom type set
         assertEquals(customTypes, engine.lastTypes)
     }
 
     @Test fun `artistProfile from SearchCandidate uses candidate MBID`() = runTest {
-        // Given — a fake engine and a search candidate carrying an MBID
+        // Given - a fake engine and a search candidate carrying an MBID
         val engine = FakeEngine()
         val candidate = SearchCandidate(
             title = "Radiohead",
@@ -94,10 +94,10 @@ class EnrichmentEngineExtensionsTest {
             disambiguation = "British rock band",
         )
 
-        // When — requesting an artist profile from that candidate
+        // When - requesting an artist profile from that candidate
         val profile = engine.artistProfile(candidate)
 
-        // Then — the profile name and the request's MBID come from the candidate
+        // Then - the profile name and the request's MBID come from the candidate
         assertEquals("Radiohead", profile.name)
         val req = engine.lastRequest as EnrichmentRequest.ForArtist
         assertEquals("candidate-mbid", req.identifiers.musicBrainzId)
@@ -106,13 +106,13 @@ class EnrichmentEngineExtensionsTest {
     // --- albumProfile ---
 
     @Test fun `albumProfile calls enrich with ForAlbum and default types`() = runTest {
-        // Given — a fake engine
+        // Given - a fake engine
         val engine = FakeEngine()
 
-        // When — requesting an album profile
+        // When - requesting an album profile
         val profile = engine.albumProfile("OK Computer", "Radiohead")
 
-        // Then — the profile and the request passed to enrich are correct
+        // Then - the profile and the request passed to enrich are correct
         assertEquals("OK Computer", profile.title)
         assertEquals("Radiohead", profile.artist)
         assertTrue(engine.lastRequest is EnrichmentRequest.ForAlbum)
@@ -123,7 +123,7 @@ class EnrichmentEngineExtensionsTest {
     }
 
     @Test fun `albumProfile from SearchCandidate uses candidate MBID and artist`() = runTest {
-        // Given — a fake engine and a search candidate carrying an MBID
+        // Given - a fake engine and a search candidate carrying an MBID
         val engine = FakeEngine()
         val candidate = SearchCandidate(
             title = "OK Computer",
@@ -137,10 +137,10 @@ class EnrichmentEngineExtensionsTest {
             provider = "musicbrainz",
         )
 
-        // When — requesting an album profile from that candidate
+        // When - requesting an album profile from that candidate
         val profile = engine.albumProfile(candidate)
 
-        // Then — the profile fields and the request's MBID come from the candidate
+        // Then - the profile fields and the request's MBID come from the candidate
         assertEquals("OK Computer", profile.title)
         assertEquals("Radiohead", profile.artist)
         val req = engine.lastRequest as EnrichmentRequest.ForAlbum
@@ -150,13 +150,13 @@ class EnrichmentEngineExtensionsTest {
     // --- trackProfile ---
 
     @Test fun `trackProfile calls enrich with ForTrack and default types`() = runTest {
-        // Given — a fake engine
+        // Given - a fake engine
         val engine = FakeEngine()
 
-        // When — requesting a track profile with an album
+        // When - requesting a track profile with an album
         val profile = engine.trackProfile("Creep", "Radiohead", album = "Pablo Honey")
 
-        // Then — the profile and the request passed to enrich are correct
+        // Then - the profile and the request passed to enrich are correct
         assertEquals("Creep", profile.title)
         assertEquals("Radiohead", profile.artist)
         assertTrue(engine.lastRequest is EnrichmentRequest.ForTrack)
@@ -168,7 +168,7 @@ class EnrichmentEngineExtensionsTest {
     }
 
     @Test fun `trackProfile from SearchCandidate uses candidate MBID`() = runTest {
-        // Given — a fake engine and a search candidate carrying an MBID
+        // Given - a fake engine and a search candidate carrying an MBID
         val engine = FakeEngine()
         val candidate = SearchCandidate(
             title = "Creep",
@@ -182,10 +182,10 @@ class EnrichmentEngineExtensionsTest {
             provider = "musicbrainz",
         )
 
-        // When — requesting a track profile from that candidate with an album
+        // When - requesting a track profile from that candidate with an album
         val profile = engine.trackProfile(candidate, album = "Pablo Honey")
 
-        // Then — the request carries the candidate's MBID and the album
+        // Then - the request carries the candidate's MBID and the album
         val req = engine.lastRequest as EnrichmentRequest.ForTrack
         assertEquals("track-mbid", req.identifiers.musicBrainzId)
         assertEquals("Pablo Honey", req.album)
@@ -194,7 +194,7 @@ class EnrichmentEngineExtensionsTest {
     // --- Profile wiring: results flow through to profile fields ---
 
     @Test fun `profile fields reflect enrich results`() = runTest {
-        // Given — a fake engine returning photo, bio, and a resolved identity
+        // Given - a fake engine returning photo, bio, and a resolved identity
         val engine = FakeEngine()
         engine.resultsToReturn = mapOf(
             EnrichmentType.ARTIST_PHOTO to EnrichmentResult.Success(
@@ -214,10 +214,10 @@ class EnrichmentEngineExtensionsTest {
             matchScore = 98,
         )
 
-        // When — requesting an artist profile
+        // When - requesting an artist profile
         val profile = engine.artistProfile("Radiohead")
 
-        // Then — the profile's fields reflect the returned results and identity
+        // Then - the profile's fields reflect the returned results and identity
         assertEquals("https://example.com/photo.jpg", profile.photo?.url)
         assertEquals("A band from Oxford", profile.bio?.text)
         assertEquals(IdentityMatch.RESOLVED, profile.identityMatch)
@@ -226,13 +226,13 @@ class EnrichmentEngineExtensionsTest {
     }
 
     @Test fun `profile handles empty results gracefully`() = runTest {
-        // Given — a fake engine returning no results at all
+        // Given - a fake engine returning no results at all
         val engine = FakeEngine()
 
-        // When — requesting an artist profile
+        // When - requesting an artist profile
         val profile = engine.artistProfile("Unknown Artist")
 
-        // Then — every optional field is empty or null rather than throwing
+        // Then - every optional field is empty or null rather than throwing
         assertNull(profile.photo)
         assertNull(profile.bio)
         assertTrue(profile.genres.isEmpty())
@@ -243,11 +243,11 @@ class EnrichmentEngineExtensionsTest {
     // --- defaultTypesFor ---
 
     @Test fun `defaultTypesFor returns correct set per request kind`() {
-        // Given — no fake state; defaultTypesFor is a pure function of request kind
+        // Given - no fake state; defaultTypesFor is a pure function of request kind
 
-        // When — calling defaultTypesFor for the artist, album, and track request kinds
+        // When - calling defaultTypesFor for the artist, album, and track request kinds
 
-        // Then — each returns the matching default type set
+        // Then - each returns the matching default type set
         assertEquals(
             EnrichmentRequest.DEFAULT_ARTIST_TYPES,
             EnrichmentRequest.defaultTypesFor(EnrichmentRequest.forArtist("test")),
@@ -265,77 +265,77 @@ class EnrichmentEngineExtensionsTest {
     // --- forceRefresh ---
 
     @Test fun `artistProfile passes forceRefresh to enrich`() = runTest {
-        // Given — a fake engine that records forceRefresh
+        // Given - a fake engine that records forceRefresh
         val engine = FakeEngine()
 
-        // When — calling artistProfile with forceRefresh=true
+        // When - calling artistProfile with forceRefresh=true
         engine.artistProfile("Radiohead", forceRefresh = true)
 
-        // Then — enrich received forceRefresh=true
+        // Then - enrich received forceRefresh=true
         assertTrue(engine.lastForceRefresh)
     }
 
     @Test fun `albumProfile passes forceRefresh to enrich`() = runTest {
-        // Given — a fake engine that records forceRefresh
+        // Given - a fake engine that records forceRefresh
         val engine = FakeEngine()
-        // When — calling albumProfile with forceRefresh=true
+        // When - calling albumProfile with forceRefresh=true
         engine.albumProfile("OK Computer", "Radiohead", forceRefresh = true)
-        // Then — enrich received forceRefresh=true
+        // Then - enrich received forceRefresh=true
         assertTrue(engine.lastForceRefresh)
     }
 
     @Test fun `trackProfile passes forceRefresh to enrich`() = runTest {
-        // Given — a fake engine that records forceRefresh
+        // Given - a fake engine that records forceRefresh
         val engine = FakeEngine()
-        // When — calling trackProfile with forceRefresh=true
+        // When - calling trackProfile with forceRefresh=true
         engine.trackProfile("Creep", "Radiohead", forceRefresh = true)
-        // Then — enrich received forceRefresh=true
+        // Then - enrich received forceRefresh=true
         assertTrue(engine.lastForceRefresh)
     }
 
     // --- identifiers passthrough ---
 
     @Test fun `trackProfile passes identifiers with deezerId to request`() = runTest {
-        // Given — identifiers with a deezerId from a previous top tracks enrichment
+        // Given - identifiers with a deezerId from a previous top tracks enrichment
         val engine = FakeEngine()
         val ids = EnrichmentIdentifiers(musicBrainzId = "rec-mbid").withExtra("deezerId", "789")
 
-        // When — calling trackProfile with pre-resolved identifiers
+        // When - calling trackProfile with pre-resolved identifiers
         engine.trackProfile("Karma Police", "Radiohead", identifiers = ids)
 
-        // Then — the request carries both musicBrainzId and deezerId
+        // Then - the request carries both musicBrainzId and deezerId
         val req = engine.lastRequest as EnrichmentRequest.ForTrack
         assertEquals("rec-mbid", req.identifiers.musicBrainzId)
         assertEquals("789", req.identifiers.extra["deezerId"])
     }
 
     @Test fun `forTrack merges mbid into provided identifiers`() {
-        // Given — identifiers with deezerId, plus a separate mbid
+        // Given - identifiers with deezerId, plus a separate mbid
         val ids = EnrichmentIdentifiers().withExtra("deezerId", "789")
 
-        // When — creating a request with both mbid and identifiers
+        // When - creating a request with both mbid and identifiers
         val request = EnrichmentRequest.forTrack("Karma Police", "Radiohead", mbid = "override-mbid", identifiers = ids)
 
-        // Then — mbid is merged into identifiers, deezerId is preserved
+        // Then - mbid is merged into identifiers, deezerId is preserved
         assertEquals("override-mbid", request.identifiers.musicBrainzId)
         assertEquals("789", request.identifiers.extra["deezerId"])
     }
 
     @Test fun `artistProfile passes identifiers to request`() = runTest {
-        // Given — identifiers carrying a deezerId
+        // Given - identifiers carrying a deezerId
         val engine = FakeEngine()
         val ids = EnrichmentIdentifiers().withExtra("deezerId", "399")
 
-        // When — calling artistProfile with those pre-resolved identifiers
+        // When - calling artistProfile with those pre-resolved identifiers
         engine.artistProfile("Radiohead", identifiers = ids)
 
-        // Then — the request carries the deezerId through
+        // Then - the request carries the deezerId through
         val req = engine.lastRequest as EnrichmentRequest.ForArtist
         assertEquals("399", req.identifiers.extra["deezerId"])
     }
 
     @Test fun `resolveTrackPreviews returns previews for tracks with deezerId`() = runTest {
-        // Given — engine returns preview for requested track
+        // Given - engine returns preview for requested track
         val engine = FakeEngine()
         engine.resultsToReturn = mapOf(
             EnrichmentType.TRACK_PREVIEW to EnrichmentResult.Success(
@@ -345,13 +345,13 @@ class EnrichmentEngineExtensionsTest {
             ),
         )
 
-        // When — resolving preview for a track with deezerId
+        // When - resolving preview for a track with deezerId
         val results = engine.resolveTrackPreviews(
             listOf(TrackPreviewRequest("Karma Police", "Radiohead",
                 identifiers = EnrichmentIdentifiers().withExtra("deezerId", "789"))),
         )
 
-        // Then — preview is returned
+        // Then - preview is returned
         assertEquals(1, results.size)
         assertEquals("Karma Police", results[0].title)
         assertNotNull(results[0].preview)
@@ -361,12 +361,12 @@ class EnrichmentEngineExtensionsTest {
     // --- defaultTypesFor ---
 
     @Test fun `default type sets are composable via set algebra`() {
-        // Given — the default artist and album type sets
-        // When — subtracting a type from the artist set and adding a type to the album set
+        // Given - the default artist and album type sets
+        // When - subtracting a type from the artist set and adding a type to the album set
         val withoutTimeline = EnrichmentRequest.DEFAULT_ARTIST_TYPES - setOf(EnrichmentType.ARTIST_TIMELINE)
         val withLyrics = EnrichmentRequest.DEFAULT_ALBUM_TYPES + setOf(EnrichmentType.LYRICS_SYNCED)
 
-        // Then — the subtracted type is gone while others remain, and the added type joins the rest
+        // Then - the subtracted type is gone while others remain, and the added type joins the rest
         assertTrue(EnrichmentType.GENRE in withoutTimeline)
         assertTrue(EnrichmentType.ARTIST_TIMELINE !in withoutTimeline)
         assertTrue(EnrichmentType.LYRICS_SYNCED in withLyrics)

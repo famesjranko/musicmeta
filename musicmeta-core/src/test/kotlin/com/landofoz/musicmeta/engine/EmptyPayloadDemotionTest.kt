@@ -35,7 +35,7 @@ class EmptyPayloadDemotionTest {
      */
     @Test
     fun `tagless recording at a perfect identity score is NotFound for GENRE`() = runTest {
-        // Given — a perfect-score recording match with no tags at all
+        // Given - a perfect-score recording match with no tags at all
         val http = FakeHttpClient()
         http.givenJsonResponse("recording?query", TAGLESS_RECORDING_SCORE_100)
         val engine = DefaultEnrichmentEngine(
@@ -44,13 +44,13 @@ class EmptyPayloadDemotionTest {
             EnrichmentConfig(enableIdentityResolution = false),
         )
 
-        // When — asking for the one type that empty payload claimed to answer
+        // When - asking for the one type that empty payload claimed to answer
         val results = engine.enrich(
             EnrichmentRequest.forTrack("Paranoid Android", "Radiohead"),
             setOf(EnrichmentType.GENRE),
         )
 
-        // Then — NotFound, not a 100%-confident Success carrying nothing
+        // Then - NotFound, not a 100%-confident Success carrying nothing
         assertTrue(
             "expected NotFound, got ${results.raw[EnrichmentType.GENRE]}",
             results.raw[EnrichmentType.GENRE] is EnrichmentResult.NotFound,
@@ -59,7 +59,7 @@ class EmptyPayloadDemotionTest {
 
     @Test
     fun `a tagged recording is still a GENRE Success`() = runTest {
-        // Given — the same shape, but the recording carries a tag
+        // Given - the same shape, but the recording carries a tag
         val http = FakeHttpClient()
         http.givenJsonResponse("recording?query", TAGGED_RECORDING_SCORE_100)
         val engine = DefaultEnrichmentEngine(
@@ -68,13 +68,13 @@ class EmptyPayloadDemotionTest {
             EnrichmentConfig(enableIdentityResolution = false),
         )
 
-        // When — asking for GENRE
+        // When - asking for GENRE
         val results = engine.enrich(
             EnrichmentRequest.forTrack("Paranoid Android", "Radiohead"),
             setOf(EnrichmentType.GENRE),
         )
 
-        // Then — the gate demotes empty payloads only
+        // Then - the gate demotes empty payloads only
         val success = results.raw[EnrichmentType.GENRE] as EnrichmentResult.Success
         assertEquals(listOf("alternative rock"), (success.data as EnrichmentData.Metadata).genres)
     }
@@ -109,7 +109,7 @@ class EmptyPayloadDemotionTest {
      */
     @Test
     fun `a Metadata answers only the type whose field it filled`() = runTest {
-        // Given — a payload that answers LABEL and nothing else, offered for four types
+        // Given - a payload that answers LABEL and nothing else, offered for four types
         val onlyLabel = EnrichmentData.Metadata(label = "Parlophone")
         val types = listOf(
             EnrichmentType.LABEL, EnrichmentType.GENRE,
@@ -117,10 +117,10 @@ class EmptyPayloadDemotionTest {
         )
         val engine = engineWith(*types.map { success(it, onlyLabel) }.toTypedArray())
 
-        // When — asking for all four types
+        // When - asking for all four types
         val results = engine.enrich(EnrichmentRequest.forAlbum("OK Computer", "Radiohead"), types.toSet())
 
-        // Then — LABEL is Success and the other three are demoted to NotFound
+        // Then - LABEL is Success and the other three are demoted to NotFound
         assertTrue(results.raw[EnrichmentType.LABEL] is EnrichmentResult.Success)
         for (type in types - EnrichmentType.LABEL) {
             assertTrue("$type should be demoted", results.raw[type] is EnrichmentResult.NotFound)
@@ -129,24 +129,24 @@ class EmptyPayloadDemotionTest {
 
     @Test
     fun `an empty list payload is demoted`() = runTest {
-        // Given — a provider claiming success with no members
+        // Given - a provider claiming success with no members
         val engine = engineWith(
             success(EnrichmentType.BAND_MEMBERS, EnrichmentData.BandMembers(emptyList())),
         )
 
-        // When — asking for BAND_MEMBERS
+        // When - asking for BAND_MEMBERS
         val results = engine.enrich(
             EnrichmentRequest.forArtist("Radiohead"),
             setOf(EnrichmentType.BAND_MEMBERS),
         )
 
-        // Then — the empty list is demoted to NotFound
+        // Then - the empty list is demoted to NotFound
         assertTrue(results.raw[EnrichmentType.BAND_MEMBERS] is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `identity fan-out does not spread a payload to types it cannot answer`() = runTest {
-        // Given — identity resolves with a payload that only carries a country
+        // Given - identity resolves with a payload that only carries a country
         val identity = EnrichmentResult.Success(
             EnrichmentType.COUNTRY, EnrichmentData.Metadata(country = "GB"), "mb", 1.0f,
             resolvedIdentifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-1"),
@@ -164,13 +164,13 @@ class EmptyPayloadDemotionTest {
             EnrichmentConfig(enableIdentityResolution = true),
         )
 
-        // When — asking for the type it answers and one it does not
+        // When - asking for the type it answers and one it does not
         val results = engine.enrich(
             EnrichmentRequest.forAlbum("OK Computer", "Radiohead"),
             setOf(EnrichmentType.COUNTRY, EnrichmentType.LABEL),
         )
 
-        // Then — COUNTRY inherited from identity, LABEL not handed the same empty answer
+        // Then - COUNTRY inherited from identity, LABEL not handed the same empty answer
         assertTrue(results.raw[EnrichmentType.COUNTRY] is EnrichmentResult.Success)
         assertTrue(results.raw[EnrichmentType.LABEL] is EnrichmentResult.NotFound)
     }
@@ -181,7 +181,7 @@ class EmptyPayloadDemotionTest {
      */
     @Test
     fun `a cached empty Success is refetched and healed, not just demoted`() = runTest {
-        // Given — an empty GENRE Success in the cache, as an older build would have written, and a
+        // Given - an empty GENRE Success in the cache, as an older build would have written, and a
         // provider that has a real answer
         val cache = FakeEnrichmentCache()
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
@@ -209,10 +209,10 @@ class EmptyPayloadDemotionTest {
             EnrichmentConfig(enableIdentityResolution = false),
         )
 
-        // When — the empty entry is still well within its TTL
+        // When - the empty entry is still well within its TTL
         val results = engine.enrich(request, setOf(EnrichmentType.GENRE))
 
-        // Then — the provider was consulted rather than the empty entry being served or demoted...
+        // Then - the provider was consulted rather than the empty entry being served or demoted...
         assertEquals(1, provider.enrichCalls.size)
         val success = results.raw[EnrichmentType.GENRE] as EnrichmentResult.Success
         assertEquals(listOf("alternative rock"), (success.data as EnrichmentData.Metadata).genres)
@@ -227,7 +227,7 @@ class EmptyPayloadDemotionTest {
 
     @Test
     fun `an empty stale entry does not replace the Error that would tell a consumer to retry`() = runTest {
-        // Given — STALE_IF_ERROR, a failing provider, and an expired empty entry to fall back on.
+        // Given - STALE_IF_ERROR, a failing provider, and an expired empty entry to fall back on.
         // LABEL, not GENRE: a mergeable type turns a provider Error into the merger's NotFound,
         // which never reaches the stale fallback at all.
         val cache = FakeEnrichmentCache()
@@ -250,10 +250,10 @@ class EmptyPayloadDemotionTest {
             EnrichmentConfig(enableIdentityResolution = false, cacheMode = CacheMode.STALE_IF_ERROR),
         )
 
-        // When — asking for LABEL
+        // When - asking for LABEL
         val results = engine.enrich(request, setOf(EnrichmentType.LABEL))
 
-        // Then — the Error survives; a stale entry answering nothing is worse than being told to retry
+        // Then - the Error survives; a stale entry answering nothing is worse than being told to retry
         assertTrue(
             "expected the Error to survive, got ${results.raw[EnrichmentType.LABEL]}",
             results.raw[EnrichmentType.LABEL] is EnrichmentResult.Error,
@@ -262,7 +262,7 @@ class EmptyPayloadDemotionTest {
 
     @Test
     fun `a synthesizer returning an empty payload is demoted`() = runTest {
-        // Given — a composite synthesizer that reports Success with no events, as TimelineSynthesizer
+        // Given - a composite synthesizer that reports Success with no events, as TimelineSynthesizer
         // does for an artist with no dates anywhere
         val emptySynthesizer = object : CompositeSynthesizer {
             override val type = EnrichmentType.ARTIST_TIMELINE
@@ -282,19 +282,19 @@ class EmptyPayloadDemotionTest {
             synthesizers = listOf(emptySynthesizer),
         )
 
-        // When — asking for ARTIST_TIMELINE
+        // When - asking for ARTIST_TIMELINE
         val results = engine.enrich(
             EnrichmentRequest.forArtist("Radiohead"),
             setOf(EnrichmentType.ARTIST_TIMELINE),
         )
 
-        // Then — CompositeSynthesizer is a public extension point; its output is gated too
+        // Then - CompositeSynthesizer is a public extension point; its output is gated too
         assertTrue(results.raw[EnrichmentType.ARTIST_TIMELINE] is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `a merger returning an empty payload is demoted`() = runTest {
-        // Given — a provider with a real genre, and a merger that loses it. ResultMerger is a public
+        // Given - a provider with a real genre, and a merger that loses it. ResultMerger is a public
         // extension point too, and a built-in can merge to nothing (GenreMerger returns its first
         // input as-is when there are no tags to merge).
         val emptyMerger = object : ResultMerger {
@@ -322,13 +322,13 @@ class EmptyPayloadDemotionTest {
             mergers = listOf(emptyMerger),
         )
 
-        // When — the merger runs on a non-empty input, so this gates the *output*, not the input
+        // When - the merger runs on a non-empty input, so this gates the *output*, not the input
         val results = engine.enrich(
             EnrichmentRequest.forAlbum("OK Computer", "Radiohead"),
             setOf(EnrichmentType.GENRE),
         )
 
-        // Then — the merger's empty output is demoted to NotFound
+        // Then - the merger's empty output is demoted to NotFound
         assertTrue(results.raw[EnrichmentType.GENRE] is EnrichmentResult.NotFound)
     }
 
@@ -336,9 +336,9 @@ class EmptyPayloadDemotionTest {
 
     @Test
     fun `answers enumerates which Metadata field answers which type`() {
-        // Given — Metadata instances each populated with one field relevant to a given type
-        // When — calling answers() for the matching type on each instance
-        // Then — a populated field answers, a null or empty field does not
+        // Given - Metadata instances each populated with one field relevant to a given type
+        // When - calling answers() for the matching type on each instance
+        // Then - a populated field answers, a null or empty field does not
         assertTrue(EnrichmentData.Metadata(genres = listOf("rock")).answers(EnrichmentType.GENRE))
         assertTrue(
             EnrichmentData.Metadata(genreTags = listOf(GenreTag("rock", 0.9f)))
@@ -357,9 +357,9 @@ class EmptyPayloadDemotionTest {
 
     @Test
     fun `answers rejects blank strings in payloads that cannot be null`() {
-        // Given — Artwork and Biography instances with blank, non-blank, or empty string fields
-        // When — calling answers() for the matching type on each instance
-        // Then — blank/empty strings do not answer, a non-blank string does
+        // Given - Artwork and Biography instances with blank, non-blank, or empty string fields
+        // When - calling answers() for the matching type on each instance
+        // Then - blank/empty strings do not answer, a non-blank string does
         assertFalse(EnrichmentData.Artwork(url = " ").answers(EnrichmentType.ALBUM_ART))
         assertTrue(EnrichmentData.Artwork(url = "https://x/a.jpg").answers(EnrichmentType.ALBUM_ART))
         assertFalse(EnrichmentData.Biography(text = "", source = "wp").answers(EnrichmentType.ARTIST_BIO))
@@ -367,18 +367,18 @@ class EmptyPayloadDemotionTest {
 
     @Test
     fun `an instrumental track answers a lyrics request`() {
-        // Given — a Lyrics instance flagged instrumental, and one with no lyrics data
-        // When — calling answers() for LYRICS_PLAIN on each instance
-        // Then — the instrumental flag answers, the empty instance does not
+        // Given - a Lyrics instance flagged instrumental, and one with no lyrics data
+        // When - calling answers() for LYRICS_PLAIN on each instance
+        // Then - the instrumental flag answers, the empty instance does not
         assertTrue(EnrichmentData.Lyrics(isInstrumental = true).answers(EnrichmentType.LYRICS_PLAIN))
         assertFalse(EnrichmentData.Lyrics().answers(EnrichmentType.LYRICS_PLAIN))
     }
 
     @Test
     fun `TrackMetadata answers iff it carries duration, album title or disambiguation`() {
-        // Given — TrackMetadata instances each populated with one relevant field, or none, or a blank one
-        // When — calling answers() for TRACK_METADATA on each instance
-        // Then — duration, album title, or disambiguation each answer; empty or blank does not
+        // Given - TrackMetadata instances each populated with one relevant field, or none, or a blank one
+        // When - calling answers() for TRACK_METADATA on each instance
+        // Then - duration, album title, or disambiguation each answer; empty or blank does not
         assertTrue(EnrichmentData.TrackMetadata(durationMs = 1000L).answers(EnrichmentType.TRACK_METADATA))
         assertTrue(EnrichmentData.TrackMetadata(albumTitle = "OK Computer").answers(EnrichmentType.TRACK_METADATA))
         assertTrue(EnrichmentData.TrackMetadata(disambiguation = "live").answers(EnrichmentType.TRACK_METADATA))
