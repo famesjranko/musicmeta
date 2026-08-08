@@ -30,9 +30,17 @@ class ConventionsTest(unittest.TestCase):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(body, encoding="utf-8")
 
-    def findings_for(self, rel: str, body: str) -> list[str]:
+    def findings_for(self, rel: str, body: str, *, with_api_dump: bool = True) -> list[str]:
+        """Findings for a tree holding just this one file, plus an empty `api/*.api`.
+
+        A real tree always carries the baselines, and their *absence* is itself a finding — so a
+        fixture without one reports that instead of what the test is about. `with_api_dump=False`
+        is for the tests that are about the absence.
+        """
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
+            if with_api_dump:
+                self.write(root, "musicmeta-core/api/musicmeta-core.api", "")
             self.write(root, rel, body)
             return run(root)
 
@@ -173,6 +181,86 @@ class ConventionsTest(unittest.TestCase):
         # When the conventions check runs
         # Then it is not a finding
         self.assertEqual(self.findings_for("README.md", body), [])
+
+    # --- only `*Provider` is public under provider/ ---
+
+    def test_public_provider_model_is_reported(self):
+        # Given an `api/*.api` dump carrying a provider model that lost its `internal`
+        body = "public final class com/landofoz/musicmeta/provider/deezer/DeezerModels {\n"
+        # When the conventions check runs
+        findings = self.findings_for("musicmeta-core/api/musicmeta-core.api", body)
+        # Then it names the type and says to re-dump, since `apiCheck` goes green once dumped
+        self.assertEqual(len(findings), 1)
+        self.assertIn("DeezerModels", findings[0])
+        self.assertIn("apiDump", findings[0])
+
+    def test_public_provider_is_not_reported(self):
+        # Given the one public type the layout allows, and its compiler-generated companion
+        body = (
+            "public final class com/landofoz/musicmeta/provider/deezer/DeezerProvider {\n"
+            "public final class com/landofoz/musicmeta/provider/deezer/DeezerProvider$Companion {\n"
+        )
+        # When the conventions check runs
+        # Then neither is a finding
+        self.assertEqual(self.findings_for("musicmeta-core/api/musicmeta-core.api", body), [])
+
+    def test_nested_type_of_a_public_model_is_reported(self):
+        # Given a nested type, the case a `grep internal` over sources cannot see — the modifier
+        # can sit correctly on the file's other declarations while this one escapes
+        body = "public final class com/landofoz/musicmeta/provider/deezer/DeezerModels$Track {\n"
+        # When the conventions check runs
+        findings = self.findings_for("musicmeta-core/api/musicmeta-core.api", body)
+        # Then it is judged by its outer name, not its own
+        self.assertEqual(len(findings), 1)
+        self.assertIn("DeezerModels", findings[0])
+
+    def test_public_top_level_function_facade_is_reported(self):
+        # Given a public top-level `fun` in a provider file, which BCV emits as a `…Kt` facade —
+        # a modifier scan looking for `class`/`object` declarations would miss it entirely
+        body = "public final class com/landofoz/musicmeta/provider/deezer/DeezerApiKt {\n"
+        # When the conventions check runs
+        # Then the facade is reported like any other public provider type
+        self.assertEqual(len(self.findings_for("musicmeta-core/api/musicmeta-core.api", body)), 1)
+
+    def test_no_api_dump_at_all_is_reported(self):
+        # Given a tree with main sources but no `api/*.api` — a rename, a module move, or a
+        # baseline nobody generated. The scan has nothing to read and would otherwise report the
+        # same "clean" as a full run, which is the failure mode this whole rule exists to avoid.
+        body = "package a\n"
+        # When the conventions check runs
+        findings = self.findings_for("musicmeta-core/src/main/kotlin/A.kt", body, with_api_dump=False)
+        # Then the silence itself is the finding
+        self.assertEqual(len(findings), 1)
+        self.assertIn("checked nothing", findings[0])
+
+    def test_api_dump_below_a_parent_directory_is_still_scanned(self):
+        # Given a module nested one level deeper than the published layout puts it today. A fixed
+        # `*/api/*.api` depth silently stops covering it, which is invisible without the check above.
+        body = "public final class com/landofoz/musicmeta/provider/deezer/DeezerModels {\n"
+        # When the conventions check runs
+        findings = self.findings_for("libs/musicmeta-core/api/musicmeta-core.api", body)
+        # Then the violation is still reported from its new home
+        self.assertEqual(len(findings), 1)
+        self.assertIn("DeezerModels", findings[0])
+
+    def test_public_type_outside_provider_is_not_reported(self):
+        # Given a public type elsewhere in the surface — the rule is about `provider/` only, and
+        # the rest of the published API is `apiCheck`'s business
+        body = "public final class com/landofoz/musicmeta/EnrichmentRequest {\n"
+        # When the conventions check runs
+        # Then it is not a finding
+        self.assertEqual(self.findings_for("musicmeta-core/api/musicmeta-core.api", body), [])
+
+    def test_member_of_a_provider_type_is_not_reported(self):
+        # Given an indented member line, which carries its owner's binary name in the descriptor.
+        # Only column-0 declarations are judged, or every method on a legitimate type would report.
+        body = (
+            "public final class com/landofoz/musicmeta/provider/deezer/DeezerProvider {\n"
+            "\tpublic final fun get (Lcom/landofoz/musicmeta/provider/deezer/DeezerModels;)V\n"
+        )
+        # When the conventions check runs
+        # Then the member is not a finding
+        self.assertEqual(self.findings_for("musicmeta-core/api/musicmeta-core.api", body), [])
 
 
 if __name__ == "__main__":

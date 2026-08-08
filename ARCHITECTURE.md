@@ -19,7 +19,7 @@ because the config is the thing that fails.
 | Python format and lint | ruff | `scripts/**` |
 | Python types | mypy | `scripts/**` |
 | Shell | shellcheck | `scripts/**`, `check`, `demo/run.sh` |
-| Conventions | `scripts/checks/check_conventions.py` | no `!!` and no `@Serializable` under `provider/`/`http/` in main sources; conflict markers anywhere |
+| Conventions | `scripts/checks/check_conventions.py` | no `!!` and no `@Serializable` under `provider/`/`http/` in main sources; only `*Provider` public under `provider/` in the committed `api/*.api`; conflict markers anywhere |
 | Test shape | `scripts/checks/check_test_shape.py` | every `@Test` body has `// Given -`/`// When -`/`// Then -`, each on its own line with a plain hyphen and a real clause — Kotlin test sources only, on both the `check` gate and the `format-on-write.sh` hook |
 | Release-note caps | `build_release_notes.py Unreleased` | `CHANGELOG.md`'s `[Unreleased]` stays under 3000 chars and 400 per line — the same `check_caps()` the release runs, so it fails here rather than at release prep. An empty section passes: `pin_release.py` opens one on every release branch |
 | Script self-tests | `scripts/**/test_*.py` | discovered, not listed — every script with a `test_*.py` beside it still behaves: release notes, conventions |
