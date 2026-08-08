@@ -6,7 +6,8 @@ import org.junit.Test
 class EnrichmentResultTest {
 
     @Test fun `ErrorKind has all six values`() {
-        // Given / When — access all enum values
+        // Given — the ErrorKind enum
+        // When — all values are accessed
         val values = ErrorKind.entries
 
         // Then — exactly 6 values in the expected order
@@ -20,7 +21,8 @@ class EnrichmentResultTest {
     }
 
     @Test fun `Error defaults errorKind to UNKNOWN`() {
-        // Given / When — construct Error without explicit errorKind
+        // Given — no explicit errorKind
+        // When — an Error is constructed
         val error = EnrichmentResult.Error(
             type = EnrichmentType.ALBUM_ART,
             provider = "test",
@@ -32,7 +34,8 @@ class EnrichmentResultTest {
     }
 
     @Test fun `Error preserves explicit errorKind`() {
-        // Given / When — construct Error with explicit NETWORK errorKind
+        // Given — an explicit NETWORK errorKind
+        // When — an Error is constructed with it
         val error = EnrichmentResult.Error(
             type = EnrichmentType.ALBUM_ART,
             provider = "test",
@@ -46,7 +49,8 @@ class EnrichmentResultTest {
     }
 
     @Test fun `existing 4-arg construction defaults to UNKNOWN`() {
-        // Given / When — use the existing 4-argument pattern used by all providers
+        // Given — the existing 4-argument pattern used by all providers
+        // When — an Error is constructed with it
         val cause = RuntimeException("boom")
         val error = EnrichmentResult.Error(
             type = EnrichmentType.GENRE,

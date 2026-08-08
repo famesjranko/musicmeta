@@ -35,14 +35,18 @@ class LrcLibMapperTest {
 
     @Test
     fun `toTrackMetadata leaves durationMs null when duration is absent or zero`() {
-        // Given / When / Then
+        // Given — duration absent or zero
+        // When — mapped to track metadata
+        // Then — durationMs stays null
         assertNull(LrcLibMapper.toTrackMetadata(makeResult(duration = null)).durationMs)
         assertNull(LrcLibMapper.toTrackMetadata(makeResult(duration = 0.0)).durationMs)
     }
 
     @Test
     fun `toTrackMetadata leaves albumTitle null when albumName is null or blank`() {
-        // Given / When / Then
+        // Given — albumName null or blank
+        // When — mapped to track metadata
+        // Then — albumTitle stays null
         assertNull(LrcLibMapper.toTrackMetadata(makeResult(albumName = null)).albumTitle)
         assertNull(LrcLibMapper.toTrackMetadata(makeResult(albumName = "  ")).albumTitle)
     }

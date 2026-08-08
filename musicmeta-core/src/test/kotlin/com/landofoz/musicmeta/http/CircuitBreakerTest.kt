@@ -10,7 +10,8 @@ class CircuitBreakerTest {
         // Given — fresh circuit breaker
         val breaker = CircuitBreaker()
 
-        // When / Then — closed and allowing requests
+        // When — state and allowRequest are read
+        // Then — closed and allowing requests
         assertEquals(CircuitBreaker.State.CLOSED, breaker.state)
         assertTrue(breaker.allowRequest())
     }
@@ -123,16 +124,19 @@ class CircuitBreakerTest {
         breaker.recordFailure()
         breaker.recordFailure()
 
-        // When / Then — blocked at 1s after opening
+        // When — clock advances to 1s after opening
         time.set(2000L)
+        // Then — still blocked
         assertFalse(breaker.allowRequest())
 
-        // When / Then — still blocked at 4.9s
+        // When — clock advances to 4.9s after opening
         time.set(5900L)
+        // Then — still blocked
         assertFalse(breaker.allowRequest())
 
-        // When / Then — allowed at exactly 5s (cooldown expired)
+        // When — clock advances to exactly 5s (cooldown expired)
         time.set(6000L)
+        // Then — allowed
         assertTrue(breaker.allowRequest())
     }
 }

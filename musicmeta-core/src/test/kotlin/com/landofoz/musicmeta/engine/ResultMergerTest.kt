@@ -14,7 +14,9 @@ class ResultMergerTest {
 
     @Test
     fun `GenreMerger type is GENRE`() {
-        // Given / When / Then
+        // Given — the GenreMerger object
+        // When — its type is read
+        // Then — it is GENRE
         assertEquals(EnrichmentType.GENRE, GenreMerger.type)
     }
 
