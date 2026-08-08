@@ -278,3 +278,28 @@ all. Every other payload answers its type iff it carries anything. The `when` is
 *classes*, so the compiler asks about a new one — it is **not** exhaustive over types, so a new type
 served by `Metadata` inherits grab-bag semantics. That fails lenient, which is the right direction:
 the gate's job is to catch payloads answering *nothing*, not to adjudicate partial ones.
+
+## 9. A line-based check that decides which lines to skip can stop reading a file entirely
+
+`check_test_shape.py` scans lines. Kotlin fixture text inside a `"""` raw string is source to the
+file and prose to the check, so a `// Given` in one is graded as a label and a `class` at column 0
+in one closes the enclosing `@Test` window early. The obvious repair — track raw strings, skip what
+is inside them — was implemented twice and was wrong both times, in the same direction:
+
+- Toggling on any line whose count of `"""` is odd treats a *comment mentioning* the delimiter as an
+  opener. The tracker never closes, every line below is skipped, and `@Test` annotations go with
+  them.
+- Ignoring the part of a line after `//` treats the `//` in a URL inside an ordinary `"..."` string
+  as a comment. On a line that also carries a `"""`, the cut hides the closing delimiter and the
+  tracker sticks open again. This one was live on `DeezerProviderTest.kt`: **43 of its 49 tests were
+  invisible to the checker while `check` printed `Test shape clean across 86 test sources`.**
+
+The asymmetry is the lesson. The misparse being repaired costs a visible `::error` on a well-formed
+test — a human sees it and disputes it. Every failed repair costs *silence*: the gate reports clean
+on a file it never read, and nothing in the output distinguishes that from real compliance. A check
+that skips lines can always skip the wrong ones, and skipping fails quiet.
+
+Telling a comment's `//` from a string's, or a delimiter from a mention, needs a real tokenizer.
+That is out of proportion to a house convention check, so the misparse stays, pinned by two tests
+that assert the false positive *is* reported. Before adding line-skipping to any check here, ask
+what happens when the skip runs away — and if the answer is "it passes", it is worse than the bug.

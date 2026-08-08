@@ -281,9 +281,9 @@ private class Helper {
         # Then nothing is reported — the trailing class closes the last `@Test`'s window
         self.assertEqual(self.findings_for("m/src/test/kotlin/ATest.kt", body), [])
 
-    def test_comment_inside_a_raw_string_is_not_graded_as_a_label(self):
+    def test_comment_inside_a_raw_string_is_graded_as_a_label(self):
         # Given a raw string holding fixture text with a bare `// Given` in it — content, not a
-        # label. The real labels around it are well formed.
+        # label, but the scan is line-based and has no concept of a string literal
         body = '''class ATest {
     @Test
     fun f() {
@@ -299,9 +299,13 @@ private class Helper {
 }
 '''
         # When the test-shape check runs
-        # Then nothing is reported — grading raw string content would fail a test for the shape of
-        # a string it merely holds
-        self.assertEqual(self.findings_for("m/src/test/kotlin/ATest.kt", body), [])
+        findings = self.findings_for("m/src/test/kotlin/ATest.kt", body)
+        # Then the fixture's comment is reported as a bare label. This pins a known limitation
+        # rather than endorsing it: the alternative, tracking raw strings by counting delimiters,
+        # was tried and hid 43 tests behind a green gate. A visible false positive can be seen and
+        # disputed. If this is ever fixed properly, this test is the one to update.
+        self.assertEqual(len(findings), 1)
+        self.assertIn("hyphen", findings[0])
 
     def test_comment_mentioning_a_raw_string_delimiter_does_not_blank_the_file(self):
         # Given a prose comment naming the `\"\"\"` delimiter an odd number of times, above a
@@ -316,13 +320,14 @@ private class Helper {
 '''
         # When the test-shape check runs
         findings = self.findings_for("m/src/test/kotlin/ATest.kt", body)
-        # Then the missing labels are still reported — treating that comment as a string opener
-        # would blank every line below it, `@Test` included, and report the file clean without
-        # ever reading it. A silent false negative is worse than the misparse it guards against.
+        # Then the missing labels are still reported. This guards the direction that matters: any
+        # scheme that decides which lines are raw-string body risks getting stuck open and blanking
+        # the rest of the file, `@Test` lines included, reporting it clean without reading it.
+        # A silent false negative is worse than the misparse such a scheme would fix.
         self.assertEqual(len(findings), 1)
         self.assertIn("no `// Given -` line", findings[0])
 
-    def test_declaration_inside_a_raw_string_does_not_close_the_window(self):
+    def test_declaration_inside_a_raw_string_closes_the_window_early(self):
         # Given a raw string whose fixture text opens with `class` at column 0, placed *before*
         # this test's `// Given -` line
         body = '''class ATest {
@@ -341,9 +346,12 @@ class Embedded {
 }
 '''
         # When the test-shape check runs
-        # Then nothing is reported — were the embedded declaration read as source it would close
-        # the window early, and the real `// Given -` after it would count as missing
-        self.assertEqual(self.findings_for("m/src/test/kotlin/ATest.kt", body), [])
+        findings = self.findings_for("m/src/test/kotlin/ATest.kt", body)
+        # Then the embedded declaration closes the window and the real `// Given -` after it reads
+        # as missing — the other half of the same known limitation, pinned for the same reason. The
+        # cost is bounded: one visible finding on one test, not a file the gate stops reading.
+        self.assertEqual(len(findings), 1)
+        self.assertIn("no `// Given -` line", findings[0])
 
     # --- scope ---
 

@@ -16,6 +16,17 @@ Neither bound needs brace-matching or any other structural parsing (05).
 Kotlin test sources only (`*/src/test/**/*.kt`), on both entry points — this has no opinion on main
 sources, and does not fire on a helper function that happens to mention "given" in prose.
 
+Known limitation, accepted deliberately: the scan is line-based and does not know what a string
+literal is, so Kotlin fixture text inside a `\"\"\"` raw string is read as source. A `// Given` in
+one is graded as a label, and a `class` at column 0 in one closes the enclosing window early. Both
+were tried and rejected: tracking raw strings by counting delimiters per line cannot tell an opener
+from a `\"\"\"` a comment mentions, or from a `//` inside an ordinary string literal, and getting
+either wrong leaves the tracker stuck open — which blanks the rest of the file, `@Test` lines
+included, and reports it clean without reading it. That shipped once and hid 43 tests in one file
+behind a green gate. Distinguishing the cases needs a real tokenizer, which is out of proportion
+to what this check is for, so the misparse stays: it costs a visible `::error` on a well-formed
+test, which a reader can see and dispute, and never a silent pass.
+
     python3 check_test_shape.py [--root PATH]
     python3 check_test_shape.py --file PATH   # one file, for format-on-write.sh
 """
@@ -123,33 +134,9 @@ def window_end(lines: list[str], start: int, limit: int) -> int:
     return limit
 
 
-def strip_raw_strings(lines: list[str]) -> list[str]:
-    """Blank out lines inside `\"\"\"` raw strings, keeping the line count so numbers stay true.
-
-    A raw string holding Kotlin fixture text is source to the file and prose to this check: a
-    `class Foo` at column 0 inside one would close a window early and silently exempt the rest of
-    the test's labels, and a `// Given` inside one would be graded as a label. Neither is code the
-    rule has any opinion about.
-
-    Outside a raw string, only the part of a line before `//` can open one — otherwise a comment
-    that merely mentions `\"\"\"` an odd number of times would blank the rest of the file, including
-    the `@Test` lines, and the check would report a file it never read as clean. Inside one, `//`
-    is content (a URL in fixture text, say), so the whole line counts.
-    """
-    stripped = []
-    inside = False
-    for line in lines:
-        opened_inside = inside
-        code = line if inside else line.split("//", 1)[0]
-        if code.count('"""') % 2 == 1:
-            inside = not inside
-        stripped.append("" if opened_inside else line)
-    return stripped
-
-
 def check_file(rel: str, path: Path) -> list[str]:
     findings = []
-    lines = strip_raw_strings(path.read_text(encoding="utf-8").split("\n"))
+    lines = path.read_text(encoding="utf-8").split("\n")
     test_lines = [i for i, line in enumerate(lines) if TEST_ANNOTATION_RE.match(line)]
     for i, start in enumerate(test_lines):
         limit = test_lines[i + 1] if i + 1 < len(test_lines) else len(lines)
