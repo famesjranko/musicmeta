@@ -72,12 +72,13 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v6
 
-      - name: Compile demo composite build
-        # demo/ has no wrapper of its own — it borrows the root one via ../gradlew.
+      - name: Compile and test demo composite build
+        # demo/ has no wrapper of its own — it borrows the root one via ../gradlew. No test
+        # sources yet; the test task reports NO-SOURCE and passes rather than failing.
         working-directory: demo
-        run: ../gradlew compileKotlin
+        run: ../gradlew compileKotlin test
 
-      - name: Compile demo-web composite build
+      - name: Compile and test demo-web composite build
         # Same shape as demo/: a separate composite build nothing else compiles.
         working-directory: demo-web
-        run: ../gradlew compileKotlin
+        run: ../gradlew compileKotlin test

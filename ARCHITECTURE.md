@@ -25,7 +25,7 @@ because the config is the thing that fails.
 | Kotlin format | ktlint (version pinned in `libs.versions.toml`) | all modules, `demo/`, and `demo-web/` |
 | Kotlin static analysis | detekt, **type-resolved** (`detektMain`/`detektTest`) | complexity, dead code, bug patterns |
 | Build | `./gradlew build` | compile, all unit tests, `apiCheck` against `api/*.api` |
-| Consumer canary | `demo/` and `demo-web/` composite builds | an external consumer still compiles |
+| Consumer canary | `demo/` and `demo-web/` composite builds | an external consumer still compiles, and their tests run (`demo-web/`'s 36 `ProfileMapperTest` cases; `demo/` has none yet) |
 
 Gates exist beyond `./check` and this table does not list them: `main`'s branch protection lives in
 `docs/project/workflow.md`, the release workflow's own verification in `docs/project/release.md`.
