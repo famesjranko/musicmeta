@@ -210,6 +210,26 @@ class TestShapeTest(unittest.TestCase):
         self.assertEqual(len(findings), 2)
         self.assertIn("hyphen", findings[0])
 
+    def test_arrow_and_run_on_separators_are_reported(self):
+        # Given labels using near misses of the ` - ` separator: an arrow, and a hyphen with no
+        # space before the clause
+        for separator in ("->", "-"):
+            body = f"""class ATest {{
+    @Test
+    fun f() {{
+        // Given {separator}a fixture
+        // When - the call happens
+        // Then - it holds
+        assertEquals(1, 1)
+    }}
+}}
+"""
+            # When the test-shape check runs
+            findings = self.findings_for("m/src/test/kotlin/ATest.kt", body)
+            # Then each is reported as malformed — one separator, not a family of them
+            self.assertEqual(len(findings), 2, separator)
+            self.assertIn("hyphen", findings[0])
+
     # --- window boundary ---
 
     def test_second_test_in_same_class_is_checked_independently(self):
@@ -261,6 +281,51 @@ private class Helper {
         # Then nothing is reported — the trailing class closes the last `@Test`'s window
         self.assertEqual(self.findings_for("m/src/test/kotlin/ATest.kt", body), [])
 
+    def test_comment_inside_a_raw_string_is_not_graded_as_a_label(self):
+        # Given a raw string holding fixture text with a bare `// Given` in it — content, not a
+        # label. The real labels around it are well formed.
+        body = '''class ATest {
+    @Test
+    fun f() {
+        // Given - a fixture source file
+        val source = """
+    // Given
+    fun g() = 1
+"""
+        // When - the call happens
+        // Then - it holds
+        assertEquals(1, source.length)
+    }
+}
+'''
+        # When the test-shape check runs
+        # Then nothing is reported — grading raw string content would fail a test for the shape of
+        # a string it merely holds
+        self.assertEqual(self.findings_for("m/src/test/kotlin/ATest.kt", body), [])
+
+    def test_declaration_inside_a_raw_string_does_not_close_the_window(self):
+        # Given a raw string whose fixture text opens with `class` at column 0, placed *before*
+        # this test's `// Given -` line
+        body = '''class ATest {
+    @Test
+    fun f() {
+        val source = """
+class Embedded {
+    fun g() = 1
+}
+"""
+        // Given - the fixture above
+        // When - the call happens
+        // Then - it holds
+        assertEquals(1, source.length)
+    }
+}
+'''
+        # When the test-shape check runs
+        # Then nothing is reported — were the embedded declaration read as source it would close
+        # the window early, and the real `// Given -` after it would count as missing
+        self.assertEqual(self.findings_for("m/src/test/kotlin/ATest.kt", body), [])
+
     # --- scope ---
 
     def test_non_test_helper_mentioning_given_is_not_scanned(self):
@@ -301,7 +366,7 @@ private class Helper {
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             self.write(root, rel, body)
-            return main(["--file", str(root / rel)])
+            return main(["--root", str(root), "--file", str(root / rel)])
 
     def test_file_mode_reports_a_violation_in_a_test_source(self):
         # Given a test source with no `// Given -` line
@@ -315,6 +380,21 @@ private class Helper {
         # When it is checked through `--file`, the path format-on-write.sh uses
         # Then it exits 2 — the hook blocks only on 2, so anything else is a silent gate
         self.assertEqual(self.exit_code_for_file("m/src/test/kotlin/ATest.kt", body), 2)
+
+    def test_file_mode_ignores_a_test_source_the_gate_never_walks(self):
+        # Given a test source nested two directories below the root — the shape an agent worktree
+        # under `.claude/` has, which the gate's `*/src/test/**` glob does not reach
+        body = """class ATest {
+    @Test
+    fun f() {
+        assertEquals(1, 1)
+    }
+}
+"""
+        # When it is checked through `--file`
+        # Then it passes — a substring test for `/src/test/` would block a write at a depth the
+        # gate never enforces, so the hook would fail what CI does not
+        self.assertEqual(self.exit_code_for_file(".claude/worktrees/w/m/src/test/kotlin/ATest.kt", body), 0)
 
     def test_file_mode_ignores_a_path_outside_the_gate_scope(self):
         # Given the same violation in a main source, which the full-repo gate never scans

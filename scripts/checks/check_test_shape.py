@@ -41,10 +41,12 @@ LABEL_LINE_RE = re.compile(r"^\s*//\s*(Given|When|Then)\b")
 # `// Given / When - x`. Only label position counts: a well-formed `// Then - the When branch ran`
 # names two of the words but is not a combined label.
 COMBINED_LABEL_RE = re.compile(r"^\s*//\s*(?:Given|When|Then)(?:\s*[/,&]\s*|\s+and\s+|\s+)(?:Given|When|Then)\b")
-# A well-formed label: `// <Word> - <clause>`, the label alone on its line. `\S` after the hyphen
-# requires a real clause, not just trailing whitespace. `(?!-)` rejects `--`, which is neither the
-# documented form nor a form anyone chose.
-WELL_FORMED_LABEL_RE = re.compile(r"^\s*//\s*(Given|When|Then)\s*-(?!-)\s*\S")
+# A well-formed label: `// <Word> - <clause>`, the label alone on its line, one space either side
+# of the hyphen. `\S` after it requires a real clause, not just trailing whitespace. Spelling the
+# separator out as a literal ` - ` rather than a permissive `\s*-\s*` is what rejects the near
+# misses — `--`, `->`, `-clause` — each of which is a form nobody chose and every one of which a
+# looser pattern waves through.
+WELL_FORMED_LABEL_RE = re.compile(r"^\s*//\s*(Given|When|Then) - \S")
 
 NO_GIVEN_FIX = (
     "`@Test` body has no `// Given -` line. Every test states what it sets up, does, and checks: "
@@ -60,21 +62,31 @@ COMBINED_LABEL_FIX = (
     "even when the setup and the call are one line of code."
 )
 
-TEST_SOURCE_RE = re.compile(r"/src/test/.*\.kt$")
+TEST_SOURCE_GLOB = "*/src/test/**/*.kt"
 
 
 def test_sources(root: Path) -> list[Path]:
-    return sorted(path for path in root.glob("*/src/test/**/*.kt") if "/build/" not in path.as_posix())
+    return sorted(path for path in root.glob(TEST_SOURCE_GLOB) if "/build/" not in path.as_posix())
 
 
-def is_test_source(path: Path) -> bool:
+def is_test_source(path: Path, root: Path) -> bool:
     """Whether `--file` should check this path, matching `test_sources()`'s scope exactly.
 
     The two entry points must agree: a file the gate ignores must not fail at write-time, and a
-    file the gate checks must not pass there.
+    file the gate checks must not pass there. This spells `TEST_SOURCE_GLOB` out against the same
+    root rather than substring-testing for `/src/test/`: the two look equivalent but are not, since
+    the glob's leading `*` admits exactly one module directory below the root while a substring
+    match admits any depth — an agent worktree under `.claude/`, say, which the gate never walks.
+    (`PurePath.match` is not the shortcut it appears to be either: it does not anchor `**` the way
+    `glob` does.)
     """
-    posix = path.as_posix()
-    return bool(TEST_SOURCE_RE.search(posix)) and "/build/" not in posix
+    try:
+        parts = path.relative_to(root).parts
+    except ValueError:
+        return False
+    return (
+        len(parts) >= 4 and parts[1:3] == ("src", "test") and path.suffix == ".kt" and "/build/" not in path.as_posix()
+    )
 
 
 def error(rel: str, lineno: int, message: str) -> str:
@@ -111,9 +123,27 @@ def window_end(lines: list[str], start: int, limit: int) -> int:
     return limit
 
 
+def strip_raw_strings(lines: list[str]) -> list[str]:
+    """Blank out lines inside `\"\"\"` raw strings, keeping the line count so numbers stay true.
+
+    A raw string holding Kotlin fixture text is source to the file and prose to this check: a
+    `class Foo` at column 0 inside one would close a window early and silently exempt the rest of
+    the test's labels, and a `// Given` inside one would be graded as a label. Neither is code the
+    rule has any opinion about.
+    """
+    stripped = []
+    inside = False
+    for line in lines:
+        opens_inside = inside
+        if line.count('"""') % 2 == 1:
+            inside = not inside
+        stripped.append("" if opens_inside else line)
+    return stripped
+
+
 def check_file(rel: str, path: Path) -> list[str]:
     findings = []
-    lines = path.read_text(encoding="utf-8").split("\n")
+    lines = strip_raw_strings(path.read_text(encoding="utf-8").split("\n"))
     test_lines = [i for i, line in enumerate(lines) if TEST_ANNOTATION_RE.match(line)]
     for i, start in enumerate(test_lines):
         limit = test_lines[i + 1] if i + 1 < len(test_lines) else len(lines)
@@ -147,7 +177,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.file:
         path = Path(args.file).resolve()
-        if not path.is_file() or not is_test_source(path):
+        if not path.is_file() or not is_test_source(path, root):
             return 0
         return report(check_file(path.as_posix(), path))
 
