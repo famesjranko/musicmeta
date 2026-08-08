@@ -303,6 +303,25 @@ private class Helper {
         # a string it merely holds
         self.assertEqual(self.findings_for("m/src/test/kotlin/ATest.kt", body), [])
 
+    def test_comment_mentioning_a_raw_string_delimiter_does_not_blank_the_file(self):
+        # Given a prose comment naming the `\"\"\"` delimiter an odd number of times, above a
+        # `@Test` with no labels at all
+        body = '''class ATest {
+    // Kotlin raw strings open with """ and this line only mentions it
+    @Test
+    fun f() {
+        assertEquals(1, 1)
+    }
+}
+'''
+        # When the test-shape check runs
+        findings = self.findings_for("m/src/test/kotlin/ATest.kt", body)
+        # Then the missing labels are still reported — treating that comment as a string opener
+        # would blank every line below it, `@Test` included, and report the file clean without
+        # ever reading it. A silent false negative is worse than the misparse it guards against.
+        self.assertEqual(len(findings), 1)
+        self.assertIn("no `// Given -` line", findings[0])
+
     def test_declaration_inside_a_raw_string_does_not_close_the_window(self):
         # Given a raw string whose fixture text opens with `class` at column 0, placed *before*
         # this test's `// Given -` line

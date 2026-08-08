@@ -130,14 +130,20 @@ def strip_raw_strings(lines: list[str]) -> list[str]:
     `class Foo` at column 0 inside one would close a window early and silently exempt the rest of
     the test's labels, and a `// Given` inside one would be graded as a label. Neither is code the
     rule has any opinion about.
+
+    Outside a raw string, only the part of a line before `//` can open one — otherwise a comment
+    that merely mentions `\"\"\"` an odd number of times would blank the rest of the file, including
+    the `@Test` lines, and the check would report a file it never read as clean. Inside one, `//`
+    is content (a URL in fixture text, say), so the whole line counts.
     """
     stripped = []
     inside = False
     for line in lines:
-        opens_inside = inside
-        if line.count('"""') % 2 == 1:
+        opened_inside = inside
+        code = line if inside else line.split("//", 1)[0]
+        if code.count('"""') % 2 == 1:
             inside = not inside
-        stripped.append("" if opens_inside else line)
+        stripped.append("" if opened_inside else line)
     return stripped
 
 
