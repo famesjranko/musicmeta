@@ -165,22 +165,28 @@ class DeezerTrackPreviewTest {
      */
     @Test
     fun `getTrack returns null for a no-data error envelope instead of a fabricated record`() = runTest {
+        // Given — an HTTP-200 response whose body is Deezer's "no data" error envelope
         httpClient.givenJsonResponse(
             "track/789",
             """{"error":{"type":"DataException","message":"no data","code":800}}""",
         )
 
+        // When — calling getTrack
+        // Then — null is returned instead of a fabricated zero-value record
         assertNull(DeezerApi(httpClient, RateLimiter(0)).getTrack(789L))
     }
 
     /** The quota envelope on the same call is transient: it must throw, not answer. */
     @Test(expected = java.io.IOException::class)
     fun `getTrack throws on a quota error envelope`() = runTest {
+        // Given — an HTTP-200 response whose body is Deezer's quota-exceeded error envelope
         httpClient.givenJsonResponse(
             "track/789",
             """{"error":{"type":"Exception","message":"Quota limit exceeded","code":4}}""",
         )
 
+        // When — calling getTrack
+        // Then — an IOException is thrown rather than returning a value
         DeezerApi(httpClient, RateLimiter(0)).getTrack(789L)
     }
 

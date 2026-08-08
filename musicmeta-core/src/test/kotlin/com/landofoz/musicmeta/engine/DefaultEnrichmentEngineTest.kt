@@ -632,18 +632,30 @@ class DefaultEnrichmentEngineTest {
     // --- TTL on EnrichmentType ---
 
     @Test fun `EnrichmentType ALBUM_ART has 90-day default TTL`() {
+        // Given — the ALBUM_ART enrichment type
+        // When — reading its default TTL
+        // Then — the TTL is 90 days in milliseconds
         assertEquals(7_776_000_000L, EnrichmentType.ALBUM_ART.defaultTtlMs)
     }
 
     @Test fun `EnrichmentType TRACK_POPULARITY has 7-day default TTL`() {
+        // Given — the TRACK_POPULARITY enrichment type
+        // When — reading its default TTL
+        // Then — the TTL is 7 days in milliseconds
         assertEquals(604_800_000L, EnrichmentType.TRACK_POPULARITY.defaultTtlMs)
     }
 
     @Test fun `EnrichmentType LABEL has 365-day default TTL`() {
+        // Given — the LABEL enrichment type
+        // When — reading its default TTL
+        // Then — the TTL is 365 days in milliseconds
         assertEquals(31_536_000_000L, EnrichmentType.LABEL.defaultTtlMs)
     }
 
     @Test fun `EnrichmentType ARTIST_PHOTO has 30-day default TTL`() {
+        // Given — the ARTIST_PHOTO enrichment type
+        // When — reading its default TTL
+        // Then — the TTL is 30 days in milliseconds
         assertEquals(2_592_000_000L, EnrichmentType.ARTIST_PHOTO.defaultTtlMs)
     }
 

@@ -60,6 +60,9 @@ class TimelineSynthesizerTest {
 
     @Test
     fun `ARTIST_TIMELINE has 30-day TTL`() {
+        // Given — the ARTIST_TIMELINE enrichment type
+        // When — reading its default TTL
+        // Then — the TTL is 30 days in milliseconds
         assertEquals(2_592_000_000L, EnrichmentType.ARTIST_TIMELINE.defaultTtlMs)
     }
 

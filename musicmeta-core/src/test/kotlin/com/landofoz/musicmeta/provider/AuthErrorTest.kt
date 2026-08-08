@@ -66,6 +66,9 @@ class AuthErrorTest {
     }
 
     @Test fun `401 is an AUTH error, not NotFound`() = runTest {
+        // Given — providers whose fake HTTP client returns a 401 response
+        // When — each provider enriches its request
+        // Then — each result is an Error with errorKind AUTH
         assertAuthError(lastFm(), EnrichmentType.SIMILAR_ARTISTS)
         assertAuthError(discogs(), EnrichmentType.ALBUM_ART)
         assertAuthError(fanartTv(), EnrichmentType.ARTIST_PHOTO)
@@ -73,6 +76,9 @@ class AuthErrorTest {
     }
 
     @Test fun `403 is an AUTH error too`() = runTest {
+        // Given — providers whose fake HTTP client returns a 403 response
+        // When — each provider enriches its request
+        // Then — each result is an Error with errorKind AUTH
         assertAuthError(lastFm(403), EnrichmentType.SIMILAR_ARTISTS)
         assertAuthError(discogs(403), EnrichmentType.ALBUM_ART)
         assertAuthError(fanartTv(403), EnrichmentType.ARTIST_PHOTO)
@@ -80,6 +86,9 @@ class AuthErrorTest {
     }
 
     @Test fun `other 4xx responses stay NotFound`() = runTest {
+        // Given — providers whose fake HTTP client returns a 404 response
+        // When — each provider enriches its request
+        // Then — each result is NotFound rather than an AUTH error
         assertNotFound(lastFm(404), EnrichmentType.SIMILAR_ARTISTS)
         assertNotFound(discogs(404), EnrichmentType.ALBUM_ART)
         assertNotFound(fanartTv(404), EnrichmentType.ARTIST_PHOTO)

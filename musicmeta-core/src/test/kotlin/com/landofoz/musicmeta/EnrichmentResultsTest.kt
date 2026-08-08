@@ -61,12 +61,15 @@ class EnrichmentResultsTest {
     }
 
     @Test fun `wasRequested distinguishes requested from unrequested types`() {
+        // Given — requestedTypes containing GENRE and ALBUM_ART but not ARTIST_BIO
         val results = EnrichmentResults(
             raw = emptyMap(),
             requestedTypes = setOf(EnrichmentType.GENRE, EnrichmentType.ALBUM_ART),
             identity = null,
         )
 
+        // When — checking wasRequested for each of the three types
+        // Then — GENRE and ALBUM_ART report true, ARTIST_BIO reports false
         assertTrue(results.wasRequested(EnrichmentType.GENRE))
         assertTrue(results.wasRequested(EnrichmentType.ALBUM_ART))
         assertFalse(results.wasRequested(EnrichmentType.ARTIST_BIO))
@@ -164,6 +167,7 @@ class EnrichmentResultsTest {
     }
 
     @Test fun `label accessor falls back to ALBUM_METADATA`() {
+        // Given — only ALBUM_METADATA present, carrying a label
         val metadata = EnrichmentData.Metadata(label = "Island Records")
         val results = EnrichmentResults(
             raw = mapOf(EnrichmentType.ALBUM_METADATA to success(EnrichmentType.ALBUM_METADATA, metadata)),
@@ -171,12 +175,17 @@ class EnrichmentResultsTest {
             identity = null,
         )
 
+        // When — calling label()
+        // Then — the ALBUM_METADATA label is returned
         assertEquals("Island Records", results.label())
     }
 
     @Test fun `metadata accessors return null when no data`() {
+        // Given — an EnrichmentResults with no raw results
         val results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = null)
 
+        // When — calling each metadata accessor
+        // Then — collection accessors return empty and scalar accessors return null
         assertEquals(emptyList<String>(), results.genres())
         assertEquals(emptyList<GenreTag>(), results.genreTags())
         assertNull(results.label())
@@ -186,6 +195,7 @@ class EnrichmentResultsTest {
     }
 
     @Test fun `identity resolution is accessible`() {
+        // Given — an EnrichmentResults carrying a RESOLVED identity resolution
         val ids = EnrichmentIdentifiers(musicBrainzId = "abc-123", wikidataId = "Q123")
         val identity = IdentityResolution(
             identifiers = ids,
@@ -194,6 +204,8 @@ class EnrichmentResultsTest {
         )
         val results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identity)
 
+        // When — reading the identity field
+        // Then — the match, score, and identifiers are accessible
         assertEquals(IdentityMatch.RESOLVED, results.identity?.match)
         assertEquals(95, results.identity?.matchScore)
         assertEquals("abc-123", results.identity?.identifiers?.musicBrainzId)

@@ -16,6 +16,9 @@ class GenreAffinityMatcherTest {
 
     @Test
     fun `GENRE_DISCOVERY has 30-day TTL`() {
+        // Given — the GENRE_DISCOVERY enrichment type
+        // When — reading its default TTL
+        // Then — the TTL is 30 days in milliseconds
         assertEquals(2_592_000_000L, EnrichmentType.GENRE_DISCOVERY.defaultTtlMs)
     }
 
@@ -134,7 +137,7 @@ class GenreAffinityMatcherTest {
 
     @Test
     fun `synthesize computes affinity as confidence times relationship weight`() {
-        // Given: "rock" has sibling "blues" at weight 0.9 (but checking child "alternative rock" at 0.8)
+        // Given — the known genre tag "rock", whose taxonomy child "alternative rock" has weight 0.8
         val resolved = mapOf(
             EnrichmentType.GENRE to genreResult(listOf(GenreTag("rock", 1.0f))),
         )
@@ -142,7 +145,7 @@ class GenreAffinityMatcherTest {
         // When — synthesizing genre discovery
         val result = GenreAffinityMatcher.synthesize(resolved, null, fakeRequest())
 
-        // Then: alternative rock is a child (weight 0.8) of rock; affinity = 1.0 * 0.8 = 0.8
+        // Then — alternative rock is a child (weight 0.8) of rock; affinity = 1.0 * 0.8 = 0.8
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.GenreDiscovery
         val altRock = data.relatedGenres.find { it.name == "alternative rock" }
         assertTrue("alternative rock should be in results", altRock != null)
@@ -168,9 +171,9 @@ class GenreAffinityMatcherTest {
 
     @Test
     fun `synthesize deduplicates by name keeping highest affinity`() {
-        // Given: both "rock" and "hard rock" map to "classic rock" as sibling
-        // rock → classic rock (child, 0.8): affinity = 0.8 * 0.8 = 0.64
-        // hard rock → classic rock (sibling, 0.9): affinity = 0.7 * 0.9 = 0.63
+        // Given — both "rock" and "hard rock" map to "classic rock": rock → classic rock (child,
+        // 0.8) is affinity 0.8 * 0.8 = 0.64, hard rock → classic rock (sibling, 0.9) is affinity
+        // 0.7 * 0.9 = 0.63
         val resolved = mapOf(
             EnrichmentType.GENRE to genreResult(listOf(
                 GenreTag("rock", 0.8f),
@@ -181,7 +184,7 @@ class GenreAffinityMatcherTest {
         // When — synthesizing genre discovery
         val result = GenreAffinityMatcher.synthesize(resolved, null, fakeRequest())
 
-        // Then: "classic rock" should appear only once
+        // Then — "classic rock" appears only once, keeping the higher affinity
         val genres = ((result as EnrichmentResult.Success).data as EnrichmentData.GenreDiscovery).relatedGenres
         val classicRockCount = genres.count { it.name == "classic rock" }
         assertEquals(1, classicRockCount)
@@ -197,7 +200,7 @@ class GenreAffinityMatcherTest {
         // When — synthesizing genre discovery
         val result = GenreAffinityMatcher.synthesize(resolved, null, fakeRequest())
 
-        // Then: sourceGenres should contain normalized form
+        // Then — sourceGenres contains the normalized form
         val genres = ((result as EnrichmentResult.Success).data as EnrichmentData.GenreDiscovery).relatedGenres
         assertTrue(genres.isNotEmpty())
         assertTrue(genres.all { it.sourceGenres.contains("alternative rock") })
@@ -219,11 +222,17 @@ class GenreAffinityMatcherTest {
 
     @Test
     fun `synthesize type is GENRE_DISCOVERY`() {
+        // Given — the GenreAffinityMatcher singleton
+        // When — reading its declared enrichment type
+        // Then — it is GENRE_DISCOVERY
         assertEquals(EnrichmentType.GENRE_DISCOVERY, GenreAffinityMatcher.type)
     }
 
     @Test
     fun `synthesize dependencies contains GENRE`() {
+        // Given — the GenreAffinityMatcher singleton
+        // When — reading its declared dependencies
+        // Then — GENRE is among them
         assertTrue(EnrichmentType.GENRE in GenreAffinityMatcher.dependencies)
     }
 

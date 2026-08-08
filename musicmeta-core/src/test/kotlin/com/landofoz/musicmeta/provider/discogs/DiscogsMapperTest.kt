@@ -12,51 +12,81 @@ class DiscogsMapperTest {
 
     @Test
     fun `mapRoleCategory returns performance for Vocals`() {
+        // Given — the role string "Vocals"
+        // When — mapping it to a role category
+        // Then — the category is "performance"
         assertEquals("performance", DiscogsMapper.mapRoleCategory("Vocals"))
     }
 
     @Test
     fun `mapRoleCategory returns production for Producer`() {
+        // Given — the role string "Producer"
+        // When — mapping it to a role category
+        // Then — the category is "production"
         assertEquals("production", DiscogsMapper.mapRoleCategory("Producer"))
     }
 
     @Test
     fun `mapRoleCategory returns songwriting for Written-By`() {
+        // Given — the role string "Written-By"
+        // When — mapping it to a role category
+        // Then — the category is "songwriting"
         assertEquals("songwriting", DiscogsMapper.mapRoleCategory("Written-By"))
     }
 
     @Test
     fun `mapRoleCategory returns null for unmapped role`() {
+        // Given — the role string "Photography By", which has no category mapping
+        // When — mapping it to a role category
+        // Then — the result is null
         assertNull(DiscogsMapper.mapRoleCategory("Photography By"))
     }
 
     @Test
     fun `mapRoleCategory returns performance for Guitar`() {
+        // Given — the role string "Guitar"
+        // When — mapping it to a role category
+        // Then — the category is "performance"
         assertEquals("performance", DiscogsMapper.mapRoleCategory("Guitar"))
     }
 
     @Test
     fun `mapRoleCategory returns performance for Bass`() {
+        // Given — the role string "Bass"
+        // When — mapping it to a role category
+        // Then — the category is "performance"
         assertEquals("performance", DiscogsMapper.mapRoleCategory("Bass"))
     }
 
     @Test
     fun `mapRoleCategory returns production for Mixed By`() {
+        // Given — the role string "Mixed By"
+        // When — mapping it to a role category
+        // Then — the category is "production"
         assertEquals("production", DiscogsMapper.mapRoleCategory("Mixed By"))
     }
 
     @Test
     fun `mapRoleCategory returns production for Mastered By`() {
+        // Given — the role string "Mastered By"
+        // When — mapping it to a role category
+        // Then — the category is "production"
         assertEquals("production", DiscogsMapper.mapRoleCategory("Mastered By"))
     }
 
     @Test
     fun `mapRoleCategory returns songwriting for Composed By`() {
+        // Given — the role string "Composed By"
+        // When — mapping it to a role category
+        // Then — the category is "songwriting"
         assertEquals("songwriting", DiscogsMapper.mapRoleCategory("Composed By"))
     }
 
     @Test
     fun `mapRoleCategory is case insensitive`() {
+        // Given — role strings in mixed, lower, and hyphenated casing
+        // When — mapping each to a role category
+        // Then — each resolves to the same category as its canonical casing
         assertEquals("performance", DiscogsMapper.mapRoleCategory("VOCALS"))
         assertEquals("production", DiscogsMapper.mapRoleCategory("producer"))
         assertEquals("songwriting", DiscogsMapper.mapRoleCategory("written-by"))

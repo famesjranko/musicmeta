@@ -663,8 +663,8 @@ class CoverArtArchiveProviderTest {
 
     @Test
     fun `enrich ALBUM_ART still returns Error when the primary full-size fetch is transient`() = runTest {
-        // Negative guard — the primary existence check must keep throwing to Error; only the
-        // supplementary thumbnail/front-image calls degrade.
+        // Given — the primary full-size front-image fetch fails transiently; only the
+        // supplementary thumbnail/front-image calls are allowed to degrade
         httpClient.givenError("release/abc123/front-1200")
         val request = EnrichmentRequest.ForAlbum(
             identifiers = EnrichmentIdentifiers(musicBrainzId = "abc123"),

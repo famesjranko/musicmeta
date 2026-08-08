@@ -779,6 +779,7 @@ class DeezerProviderTest {
 
     @Test
     fun `capabilities include TRACK_METADATA with priority 70`() {
+        // Given — the provider's declared capabilities list
         // When — checking for TRACK_METADATA capability
         val cap = provider.capabilities.find { it.type == EnrichmentType.TRACK_METADATA }
 

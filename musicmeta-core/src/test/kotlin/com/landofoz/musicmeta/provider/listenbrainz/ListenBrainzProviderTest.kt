@@ -597,14 +597,17 @@ class ListenBrainzProviderTest {
 
     @Test
     fun `capabilities include ARTIST_DISCOGRAPHY at priority 50`() {
+        // Given — the provider's declared capabilities list
+        // When — searching it for ARTIST_DISCOGRAPHY
         // Then — the declared capabilities list ARTIST_DISCOGRAPHY at priority 50
         assertTrue(provider.capabilities.any { it.type == EnrichmentType.ARTIST_DISCOGRAPHY && it.priority == 50 })
     }
 
     @Test
     fun `capabilities do not include SIMILAR_ARTISTS -- no real ListenBrainz endpoint returns it`() {
-        // Then -- pins the removal in #18: the invented lb-radio similar-artists route never
-        // existed, so ListenBrainz no longer claims SIMILAR_ARTISTS; Deezer covers the type
+        // Given — the provider's declared capabilities list
+        // When — searching it for SIMILAR_ARTISTS
+        // Then — no real ListenBrainz endpoint returns SIMILAR_ARTISTS, so it is absent; Deezer covers the type
         assertFalse(provider.capabilities.any { it.type == EnrichmentType.SIMILAR_ARTISTS })
     }
 

@@ -336,6 +336,9 @@ class EmptyPayloadDemotionTest {
 
     @Test
     fun `answers enumerates which Metadata field answers which type`() {
+        // Given — Metadata instances each populated with one field relevant to a given type
+        // When — calling answers() for the matching type on each instance
+        // Then — a populated field answers, a null or empty field does not
         assertTrue(EnrichmentData.Metadata(genres = listOf("rock")).answers(EnrichmentType.GENRE))
         assertTrue(
             EnrichmentData.Metadata(genreTags = listOf(GenreTag("rock", 0.9f)))
@@ -354,6 +357,9 @@ class EmptyPayloadDemotionTest {
 
     @Test
     fun `answers rejects blank strings in payloads that cannot be null`() {
+        // Given — Artwork and Biography instances with blank, non-blank, or empty string fields
+        // When — calling answers() for the matching type on each instance
+        // Then — blank/empty strings do not answer, a non-blank string does
         assertFalse(EnrichmentData.Artwork(url = " ").answers(EnrichmentType.ALBUM_ART))
         assertTrue(EnrichmentData.Artwork(url = "https://x/a.jpg").answers(EnrichmentType.ALBUM_ART))
         assertFalse(EnrichmentData.Biography(text = "", source = "wp").answers(EnrichmentType.ARTIST_BIO))
@@ -361,12 +367,18 @@ class EmptyPayloadDemotionTest {
 
     @Test
     fun `an instrumental track answers a lyrics request`() {
+        // Given — a Lyrics instance flagged instrumental, and one with no lyrics data
+        // When — calling answers() for LYRICS_PLAIN on each instance
+        // Then — the instrumental flag answers, the empty instance does not
         assertTrue(EnrichmentData.Lyrics(isInstrumental = true).answers(EnrichmentType.LYRICS_PLAIN))
         assertFalse(EnrichmentData.Lyrics().answers(EnrichmentType.LYRICS_PLAIN))
     }
 
     @Test
     fun `TrackMetadata answers iff it carries duration, album title or disambiguation`() {
+        // Given — TrackMetadata instances each populated with one relevant field, or none, or a blank one
+        // When — calling answers() for TRACK_METADATA on each instance
+        // Then — duration, album title, or disambiguation each answer; empty or blank does not
         assertTrue(EnrichmentData.TrackMetadata(durationMs = 1000L).answers(EnrichmentType.TRACK_METADATA))
         assertTrue(EnrichmentData.TrackMetadata(albumTitle = "OK Computer").answers(EnrichmentType.TRACK_METADATA))
         assertTrue(EnrichmentData.TrackMetadata(disambiguation = "live").answers(EnrichmentType.TRACK_METADATA))

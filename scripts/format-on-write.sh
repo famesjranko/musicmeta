@@ -42,3 +42,10 @@ case "$FILE" in
     *.kt|*.kts) command -v ktlint >/dev/null 2>&1 && ktlint_version_matches && ktlint --format --relative "$FILE" >/dev/null 2>&1 ;;
     *.py)       command -v ruff   >/dev/null 2>&1 && ruff format "$FILE" >/dev/null 2>&1 ;;
 esac || true
+
+# Given/when/then shape, immediate feedback while the file is still in the writer's context. Same
+# script `check` runs, so hook and gate agree by construction. src/test/ only, matching the script's
+# own scope — main sources have no test-shape rule to enforce.
+case "$FILE" in
+    */src/test/*.kt) python3 "$(dirname "${BASH_SOURCE[0]}")/checks/check_test_shape.py" --file "$FILE" >&2 || true ;;
+esac

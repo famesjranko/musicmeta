@@ -349,7 +349,10 @@ class FanartTvProviderTest {
 
     @Test
     fun `ALBUM_ART and CD_ART capabilities require a release group id`() {
+        // Given — the provider's declared capabilities list
         val albumTypes = setOf(EnrichmentType.ALBUM_ART, EnrichmentType.CD_ART)
+        // When — filtering for the ALBUM_ART and CD_ART capabilities
+        // Then — each declares MUSICBRAINZ_RELEASE_GROUP_ID as its identifier requirement
         provider.capabilities.filter { it.type in albumTypes }.forEach {
             assertEquals(IdentifierRequirement.MUSICBRAINZ_RELEASE_GROUP_ID, it.identifierRequirement)
         }

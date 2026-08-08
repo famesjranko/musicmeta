@@ -195,6 +195,7 @@ class RoomEnrichmentCacheTest {
 
     @Test
     fun `returns null for non-existent key`() = runTest {
+        // Given — an empty cache
         // When — getting a key that was never put
         val result = cache.get("nonexistent:key", EnrichmentType.ALBUM_ART)
 

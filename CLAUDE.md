@@ -44,8 +44,7 @@ Every finding has exactly one home; this file is the home only for the last row.
   under it, or that documents nothing (an orphaned KDoc above a blank line), is a defect.
 - A new provider is `provider/<name>/` as `*Api`, `*Models`, `*Mapper` (all `internal`) and a public
   `*Provider`. Keeping the first three `internal` is what lets them be renamed without an `apiDump`.
-- A test body is `// Given — <what is set up>`, `// When — <the one call>`, `// Then — <what must
-  hold>`, each on its own line. Em dash and a clause on every one: a bare `// Given` marks a phase
-  without stating it, and is what the reader needed. Multiple acts get one `// When` naming each.
-  `// Given / When — <clause>` and other combined-label lines are not allowed, even when the setup
-  and the call are one line of code — split into separate `// Given —` / `// When —` lines regardless.
+- A test body needs `// Given —`/`// When —`/`// Then —`, each on its own line with a dash (`-` or
+  `—`) and a real clause — one label per line, never combined. Shape and exact form:
+  `scripts/checks/check_test_shape.py`, which mechanises this and gates it in `format-on-write.sh`
+  and `check`.

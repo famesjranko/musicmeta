@@ -396,6 +396,7 @@ class DiscogsProviderTest {
 
     @Test
     fun `provider has CREDITS capability at priority 50`() {
+        // Given — the provider's declared capabilities list
         // When — looking up the CREDITS capability
         val capability = provider.capabilities.find { it.type == EnrichmentType.CREDITS }
 
@@ -503,6 +504,7 @@ class DiscogsProviderTest {
 
     @Test
     fun `provider has RELEASE_EDITIONS capability at priority 50`() {
+        // Given — the provider's declared capabilities list
         // When — looking up the RELEASE_EDITIONS capability
         val capability = provider.capabilities.find { it.type == EnrichmentType.RELEASE_EDITIONS }
 
