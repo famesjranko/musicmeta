@@ -17,6 +17,7 @@ rest; `ls docs/` lists the docs.
 | Treating a green run as proof | `ARCHITECTURE.md` — what each check skips |
 | Deciding whether a thing is in scope, or what `1.0.0` waits on | `ROADMAP.md` |
 | Looking for the issue list | `.scratch/`, **not** GitHub Issues — `docs/agents/issue-tracker.md` |
+| Reviewing a diff, a branch, or a PR | `docs/agents/review-checklist.md` — the unmechanised rules only |
 
 ## Where it goes
 
