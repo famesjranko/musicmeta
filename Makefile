@@ -61,8 +61,17 @@ test-e2e: ## E2E tests against live third-party APIs — never merge-gating, nee
 	$(GRADLE) :musicmeta-core:test -Dinclude.e2e=true
 
 .PHONY: demo
-demo: ## Compile demo/, the only in-tree consumer of the published surface
-	cd demo && ../gradlew compileKotlin
+demo: ## Compile and test demo/ and demo-web/, matching CI's demo-canary job
+	cd demo && ../gradlew compileKotlin test
+	cd demo-web && ../gradlew compileKotlin test
+
+.PHONY: demo-run
+demo-run: ## Run the demo CLI (interactive if ARGS unset, else ARGS="artist Radiohead")
+	cd demo && ../gradlew run --console=plain -q $(if $(ARGS),--args="$(ARGS)")
+
+.PHONY: demo-web-run
+demo-web-run: ## Start the demo web server on http://localhost:8099
+	cd demo-web && ../gradlew run --console=plain -q
 
 # --- code quality ---
 
