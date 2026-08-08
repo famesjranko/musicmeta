@@ -35,14 +35,14 @@ class FanartTvProviderTest {
 
     @Test
     fun `enrich returns artist photo`() = runTest {
-        // Given
+        // Given — Fanart.tv returns artist images including a thumbnail
         httpClient.givenJsonResponse("fanart.tv", ARTIST_IMAGES_JSON)
         val request = artistRequest()
 
-        // When
+        // When — enriching for artist photo
         val result = provider.enrich(request, EnrichmentType.ARTIST_PHOTO)
 
-        // Then
+        // Then — success with the thumbnail artwork
         assertTrue(result is EnrichmentResult.Success)
         val data = (result as EnrichmentResult.Success).data
         assertTrue(data is EnrichmentData.Artwork)
@@ -54,14 +54,14 @@ class FanartTvProviderTest {
 
     @Test
     fun `enrich returns artist background`() = runTest {
-        // Given
+        // Given — Fanart.tv returns artist images including a background
         httpClient.givenJsonResponse("fanart.tv", ARTIST_IMAGES_JSON)
         val request = artistRequest()
 
-        // When
+        // When — enriching for artist background
         val result = provider.enrich(request, EnrichmentType.ARTIST_BACKGROUND)
 
-        // Then
+        // Then — success with the background artwork
         assertTrue(result is EnrichmentResult.Success)
         val data = (result as EnrichmentResult.Success).data
         assertTrue(data is EnrichmentData.Artwork)
@@ -73,14 +73,14 @@ class FanartTvProviderTest {
 
     @Test
     fun `enrich returns artist logo`() = runTest {
-        // Given
+        // Given — Fanart.tv returns artist images including a logo
         httpClient.givenJsonResponse("fanart.tv", ARTIST_IMAGES_JSON)
         val request = artistRequest()
 
-        // When
+        // When — enriching for artist logo
         val result = provider.enrich(request, EnrichmentType.ARTIST_LOGO)
 
-        // Then
+        // Then — success with the logo artwork
         assertTrue(result is EnrichmentResult.Success)
         val data = (result as EnrichmentResult.Success).data
         assertTrue(data is EnrichmentData.Artwork)
@@ -98,10 +98,10 @@ class FanartTvProviderTest {
             name = "Radiohead",
         )
 
-        // When
+        // When — enriching for artist background
         val result = provider.enrich(request, EnrichmentType.ARTIST_BACKGROUND)
 
-        // Then
+        // Then — NotFound because there is no MBID to query with
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
@@ -111,16 +111,16 @@ class FanartTvProviderTest {
         httpClient.givenJsonResponse("fanart.tv", EMPTY_IMAGES_JSON)
         val request = artistRequest()
 
-        // When
+        // When — enriching for artist background
         val result = provider.enrich(request, EnrichmentType.ARTIST_BACKGROUND)
 
-        // Then
+        // Then — NotFound because the API returned no images
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `enrich returns NotFound when API key is blank`() = runTest {
-        // Given
+        // Given — a provider configured with a blank project key
         val blankProvider = FanartTvProvider(
             projectKey = "",
             httpClient = httpClient,
@@ -128,10 +128,10 @@ class FanartTvProviderTest {
         )
         val request = artistRequest()
 
-        // When
+        // When — enriching for artist photo
         val result = blankProvider.enrich(request, EnrichmentType.ARTIST_PHOTO)
 
-        // Then
+        // Then — NotFound because a blank key short-circuits the request
         assertTrue(result is EnrichmentResult.NotFound)
     }
 

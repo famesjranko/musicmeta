@@ -115,7 +115,7 @@ class EnrichTimeoutBoundaryTest {
             queries.map { CatalogMatch(available = true, source = "test") }
         }
 
-        // When
+        // When — enriching through the catalog
         engine(catalog).enrich(req, types)
 
         // Then — present, and no larger than the budget it was built from
@@ -135,12 +135,12 @@ class EnrichTimeoutBoundaryTest {
             }
         }
 
-        // When
+        // When — calling search()
         DefaultEnrichmentEngine(
             ProviderRegistry(listOf(searcher)), cache, EnrichmentConfig(enrichTimeoutMs = 100),
         ).search(req, limit = 5)
 
-        // Then
+        // Then — the deadline is installed even though search() has no withTimeout of its own
         assertNotNull("search() must install EnrichDeadline", remaining)
         assertTrue("remaining $remaining should be within enrichTimeoutMs", remaining!! in 0..100)
     }

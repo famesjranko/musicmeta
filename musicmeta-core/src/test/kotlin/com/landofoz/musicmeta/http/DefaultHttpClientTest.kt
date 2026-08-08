@@ -11,111 +11,119 @@ class DefaultHttpClientTest {
     // --- HttpResult sealed class type tests ---
 
     @Test fun `HttpResult Ok carries body and statusCode`() {
-        // Given / When
+        // Given — a JSON body
         val json = JSONObject("""{"name":"test"}""")
+        // When — an Ok is constructed with an explicit statusCode
         val result = HttpResult.Ok(json, 200)
 
-        // Then
+        // Then — body and statusCode round-trip unchanged
         assertEquals("test", result.body.getString("name"))
         assertEquals(200, result.statusCode)
     }
 
     @Test fun `HttpResult Ok defaults statusCode to 200`() {
-        // Given / When
+        // Given — an empty JSON body
+        // When — an Ok is constructed with no explicit statusCode
         val result = HttpResult.Ok(JSONObject())
 
-        // Then
+        // Then — statusCode defaults to 200
         assertEquals(200, result.statusCode)
     }
 
     @Test fun `HttpResult ClientError carries statusCode and body`() {
-        // Given / When
+        // Given — a statusCode and body
+        // When — a ClientError is constructed from them
         val result = HttpResult.ClientError(404, "Not Found")
 
-        // Then
+        // Then — statusCode and body round-trip unchanged
         assertEquals(404, result.statusCode)
         assertEquals("Not Found", result.body)
     }
 
     @Test fun `HttpResult ClientError body defaults to null`() {
-        // Given / When
+        // Given — only a statusCode
+        // When — a ClientError is constructed with no explicit body
         val result = HttpResult.ClientError(401)
 
-        // Then
+        // Then — body defaults to null
         assertEquals(401, result.statusCode)
         assertNull(result.body)
     }
 
     @Test fun `HttpResult ServerError carries statusCode`() {
-        // Given / When
+        // Given — a statusCode and body
+        // When — a ServerError is constructed from them
         val result = HttpResult.ServerError(500, "Internal Server Error")
 
-        // Then
+        // Then — statusCode and body round-trip unchanged
         assertEquals(500, result.statusCode)
         assertEquals("Internal Server Error", result.body)
     }
 
     @Test fun `HttpResult RateLimited carries retryAfterMs`() {
-        // Given / When
+        // Given — an explicit retryAfterMs
+        // When — a RateLimited is constructed with it
         val result = HttpResult.RateLimited(5000L)
 
-        // Then
+        // Then — retryAfterMs round-trips unchanged
         assertEquals(5000L, result.retryAfterMs)
     }
 
     @Test fun `HttpResult RateLimited retryAfterMs defaults to null`() {
-        // Given / When
+        // Given — no retryAfterMs supplied
+        // When — a RateLimited is constructed
         val result = HttpResult.RateLimited()
 
-        // Then
+        // Then — retryAfterMs defaults to null
         assertNull(result.retryAfterMs)
     }
 
     @Test fun `HttpResult NetworkError carries message and cause`() {
-        // Given
+        // Given — an underlying IOException
         val cause = java.io.IOException("connection reset")
 
-        // When
+        // When — a NetworkError is constructed with that cause
         val result = HttpResult.NetworkError("Network failure", cause)
 
-        // Then
+        // Then — message and cause round-trip unchanged
         assertEquals("Network failure", result.message)
         assertSame(cause, result.cause)
     }
 
     @Test fun `HttpResult NetworkError cause defaults to null`() {
-        // Given / When
+        // Given — a message and no cause
+        // When — a NetworkError is constructed
         val result = HttpResult.NetworkError("timeout")
 
-        // Then
+        // Then — cause defaults to null
         assertNull(result.cause)
     }
 
     // --- FakeHttpClient fetchJsonResult tests ---
 
     @Test fun `FakeHttpClient fetchJsonResult returns configured result`() = runTest {
-        // Given
+        // Given — an Ok result stubbed for the host
         val fake = FakeHttpClient()
         val json = JSONObject("""{"id":42}""")
         fake.givenHttpResult("api.example.com", HttpResult.Ok(json))
 
-        // When
+        // When — a request is made to a URL under that host
         val result = fake.fetchJsonResult("https://api.example.com/data")
 
-        // Then
+        // Then — the stubbed Ok result is returned
         assertTrue(result is HttpResult.Ok)
         assertEquals(42, (result as HttpResult.Ok).body.getInt("id"))
     }
 
     @Test fun `FakeHttpClient fetchJsonResult returns configured error`() = runTest {
-        // Given
+        // Given — a ClientError result stubbed for the host
         val fake = FakeHttpClient()
         fake.givenHttpResult("api.example.com", HttpResult.ClientError(404))
 
-        // When
+        // When — a request is made to a URL under that host
         val result = fake.fetchJsonResult("https://api.example.com/missing")
 
-        // Then
+        // Then — the stubbed ClientError result is returned
         assertTrue(result is HttpResult.ClientError)
         assertEquals(404, (result as HttpResult.ClientError).statusCode)
     }
@@ -125,7 +133,7 @@ class DefaultHttpClientTest {
         val fake = FakeHttpClient()
         fake.givenJsonResponse("api.example.com", """{"fallback":true}""")
 
-        // When
+        // When — a request is made to a URL under that host
         val result = fake.fetchJsonResult("https://api.example.com/data")
 
         // Then — falls back to Ok wrapping the stubbed body
@@ -137,7 +145,7 @@ class DefaultHttpClientTest {
         // Given — no responses configured
         val fake = FakeHttpClient()
 
-        // When
+        // When — a request is made to a URL with no stubbed response
         val result = fake.fetchJsonResult("https://api.example.com/unknown")
 
         // Then — a 404: the fake has nothing at that address. Deliberately not a transient variant,
@@ -148,14 +156,14 @@ class DefaultHttpClientTest {
     }
 
     @Test fun `FakeHttpClient fetchJsonResult records URL`() = runTest {
-        // Given
+        // Given — a result stubbed for the host
         val fake = FakeHttpClient()
         fake.givenHttpResult("api", HttpResult.RateLimited(1000L))
 
-        // When
+        // When — a request is made to a URL under that host
         fake.fetchJsonResult("https://api.example.com/rate-limited")
 
-        // Then
+        // Then — the requested URL is recorded
         assertTrue(fake.requestedUrls.contains("https://api.example.com/rate-limited"))
     }
 }

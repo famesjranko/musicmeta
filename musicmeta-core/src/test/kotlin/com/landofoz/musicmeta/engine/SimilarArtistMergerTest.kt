@@ -15,13 +15,13 @@ class SimilarArtistMergerTest {
 
     @Test
     fun `merge returns NotFound for empty results`() {
-        // Given
+        // Given — an empty list of provider results
         val results = emptyList<EnrichmentResult.Success>()
 
-        // When
+        // When — merging the empty list
         val result = SimilarArtistMerger.merge(results)
 
-        // Then
+        // Then — a NotFound result is returned for "all_providers"
         assertTrue(result is EnrichmentResult.NotFound)
         assertEquals("all_providers", (result as EnrichmentResult.NotFound).provider)
     }
@@ -43,7 +43,7 @@ class SimilarArtistMergerTest {
             )
         )
 
-        // When
+        // When — merging the single-provider result list
         val result = SimilarArtistMerger.merge(results)
 
         // Then — all 3 artists returned with original sources
@@ -74,7 +74,7 @@ class SimilarArtistMergerTest {
             confidence = 0.8f,
         )
 
-        // When
+        // When — merging results with the case-differing duplicate
         val result = SimilarArtistMerger.merge(listOf(lastfmResult, deezerResult))
 
         // Then — only 1 "Muse" entry (merged from both)
@@ -104,7 +104,7 @@ class SimilarArtistMergerTest {
             confidence = 0.8f,
         )
 
-        // When
+        // When — merging the results with the duplicate "Muse" entries
         val result = SimilarArtistMerger.merge(listOf(lastfmResult, deezerResult))
 
         // Then — matchScore = min(0.9 + 0.8, 1.0) = 1.0, not 1.7
@@ -133,7 +133,7 @@ class SimilarArtistMergerTest {
             confidence = 0.8f,
         )
 
-        // When
+        // When — merging the results with the duplicate "Muse" entries
         val result = SimilarArtistMerger.merge(listOf(lastfmResult, deezerResult))
 
         // Then — both sources listed
@@ -173,7 +173,7 @@ class SimilarArtistMergerTest {
             confidence = 0.8f,
         )
 
-        // When
+        // When — merging the results with the shared "Muse" entry
         val result = SimilarArtistMerger.merge(listOf(lastfmResult, deezerResult))
 
         // Then — merged result has both MBID and deezerId
@@ -211,7 +211,7 @@ class SimilarArtistMergerTest {
             confidence = 0.85f,
         )
 
-        // When
+        // When — merging the three single-artist provider results
         val result = SimilarArtistMerger.merge(listOf(lastfmResult, deezerResult, lbResult))
 
         // Then — sorted by matchScore descending
@@ -240,7 +240,7 @@ class SimilarArtistMergerTest {
             confidence = 0.8f,
         )
 
-        // When
+        // When — merging the results with the disjoint artists
         val result = SimilarArtistMerger.merge(listOf(lastfmResult, deezerResult))
 
         // Then — both appear once with their original single-provider sources

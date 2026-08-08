@@ -80,7 +80,7 @@ class ProfileMapperTest {
         )
         val profile = AlbumProfile(title = "Master of Pupets", artist = "Metalica", results = results)
 
-        // When
+        // When — mapping to a demo response
         val response = profile.toDemoResponse(elapsedMs = 0)
 
         // Then — the two identical-looking rows collapse to one, keeping the higher-ranked first

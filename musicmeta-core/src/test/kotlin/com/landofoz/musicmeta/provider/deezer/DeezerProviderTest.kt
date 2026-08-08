@@ -361,7 +361,7 @@ class DeezerProviderTest {
         httpClient.givenJsonResponse("artist/1003/top", PORTISHEAD_TOP_TRACKS)
         val request = EnrichmentRequest.forTrack("Karma Police", "Radiohead")
 
-        // When
+        // When — enriching for similar tracks
         provider.enrich(request, EnrichmentType.SIMILAR_TRACKS)
 
         // Then — pins the real replacement endpoints and their limits; a hand-rolled mock response
@@ -758,10 +758,10 @@ class DeezerProviderTest {
         httpClient.givenJsonResponse("search/track", """{"data":[{"id":999,"title":"Karma Police","artist":{"name":"Completely Different Band"},"duration":200}]}""")
         val request = EnrichmentRequest.forTrack("Karma Police", "Radiohead")
 
-        // When
+        // When — enriching for track metadata
         val result = provider.enrich(request, EnrichmentType.TRACK_METADATA)
 
-        // Then
+        // Then — NotFound because ArtistMatcher.isMatch() rejects the result
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
@@ -770,19 +770,19 @@ class DeezerProviderTest {
         // Given — a ForArtist request (TRACK_METADATA requires ForTrack)
         val request = EnrichmentRequest.forArtist("Radiohead")
 
-        // When
+        // When — enriching for track metadata
         val result = provider.enrich(request, EnrichmentType.TRACK_METADATA)
 
-        // Then
+        // Then — NotFound because TRACK_METADATA requires ForTrack
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `capabilities include TRACK_METADATA with priority 70`() {
-        // When
+        // When — checking for TRACK_METADATA capability
         val cap = provider.capabilities.find { it.type == EnrichmentType.TRACK_METADATA }
 
-        // Then
+        // Then — exists with priority 70
         assertNotNull(cap)
         assertEquals(70, cap!!.priority)
     }

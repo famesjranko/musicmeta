@@ -598,7 +598,7 @@ class CoverArtArchiveProviderTest {
             artist = "Radiohead",
         )
 
-        // When
+        // When — enriching for ALBUM_ART
         val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
 
         // Then — Success (not Error) with the full-size url intact and thumbnailUrl absent
@@ -626,7 +626,7 @@ class CoverArtArchiveProviderTest {
             artist = "Radiohead",
         )
 
-        // When
+        // When — enriching for ALBUM_ART
         val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
 
         // Then — Success (not Error) with the full-size url intact and sizes absent
@@ -651,7 +651,7 @@ class CoverArtArchiveProviderTest {
             artist = "Radiohead",
         )
 
-        // When
+        // When — enriching for ALBUM_ART
         val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
 
         // Then — Success (not Error) with the group full-size url intact and thumbnailUrl absent
@@ -672,7 +672,7 @@ class CoverArtArchiveProviderTest {
             artist = "Radiohead",
         )
 
-        // When
+        // When — enriching for ALBUM_ART
         val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
 
         // Then — Error with NETWORK ErrorKind, unchanged from pre-fix behaviour

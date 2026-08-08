@@ -119,10 +119,10 @@ class MusicBrainzProviderTest {
             httpClient.givenJsonResponse("release-group/group123", """{"id": "group123", "relations": []}""")
             val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
 
-            // When
+            // When — enriching for genre
             val result = provider.enrich(request, EnrichmentType.GENRE)
 
-            // Then
+            // Then — succeeds, with the wiki identifiers left unset
             assertTrue(result is EnrichmentResult.Success)
             val success = result as EnrichmentResult.Success
             assertEquals(null, success.resolvedIdentifiers?.wikidataId)
@@ -157,7 +157,7 @@ class MusicBrainzProviderTest {
         httpClient.givenHttpResult("release-group/group123", HttpResult.ServerError(503))
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
 
-        // When
+        // When — enriching for genre
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
         // Then — GENRE still succeeds with its own data; the wiki-links transient just leaves
@@ -177,10 +177,10 @@ class MusicBrainzProviderTest {
         httpClient.givenIoException("release-group/group123")
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
 
-        // When
+        // When — enriching for label
         val result = provider.enrich(request, EnrichmentType.LABEL)
 
-        // Then
+        // Then — LABEL still succeeds despite the timeout on the side lookup
         assertTrue(result is EnrichmentResult.Success)
     }
 
@@ -417,10 +417,10 @@ class MusicBrainzProviderTest {
         )
         val request = EnrichmentRequest.forTrack("Enter Sandman", "Metallica")
 
-        // When
+        // When — enriching for track metadata
         val result = provider.enrich(request, EnrichmentType.TRACK_METADATA)
 
-        // Then
+        // Then — duration, album title, and identifiers are all populated
         assertTrue(result is EnrichmentResult.Success)
         val success = result as EnrichmentResult.Success
         val data = success.data as EnrichmentData.TrackMetadata
@@ -432,17 +432,17 @@ class MusicBrainzProviderTest {
 
     @Test
     fun `enrich track TRACK_METADATA returns NotFound when no candidate meets the score threshold`() = runTest {
-        // Given
+        // Given — the only candidate scores below the default minimum match score (80)
         httpClient.givenJsonResponse(
             "recording?query",
             """{"recordings":[{"id":"rec-low","score":50,"title":"Enter Sandman"}]}""",
         )
         val request = EnrichmentRequest.forTrack("Enter Sandman", "Metallica")
 
-        // When
+        // When — enriching for track metadata
         val result = provider.enrich(request, EnrichmentType.TRACK_METADATA)
 
-        // Then
+        // Then — NotFound because no candidate meets the threshold
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
@@ -868,7 +868,7 @@ class MusicBrainzProviderTest {
             mergers = emptyList(),
         )
 
-        // When
+        // When — enriching for both GENRE and ALBUM_DESCRIPTION in the same engine run
         val results = engine.enrich(request, setOf(EnrichmentType.GENRE, EnrichmentType.ALBUM_DESCRIPTION))
 
         // Then — GENRE resolved fine (the unrelated type the transient rode in on)...

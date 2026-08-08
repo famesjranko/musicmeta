@@ -9,13 +9,13 @@ class LastFmMapperGenreTest {
 
     @Test
     fun `toGenre populates genreTags with 0_3f confidence and lastfm source`() {
-        // Given
+        // Given — three tags
         val tags = listOf("indie", "rock", "alternative")
 
-        // When
+        // When — mapping tags to genre metadata
         val metadata = LastFmMapper.toGenre(tags)
 
-        // Then
+        // Then — each genreTag has 0.3f confidence and lastfm source
         val genreTags = metadata.genreTags
         assertTrue(genreTags != null)
         assertEquals(3, genreTags!!.size)
@@ -31,37 +31,37 @@ class LastFmMapperGenreTest {
 
     @Test
     fun `toGenre still populates genres for backward compatibility`() {
-        // Given
+        // Given — two tags
         val tags = listOf("jazz", "soul")
 
-        // When
+        // When — mapping tags to genre metadata
         val metadata = LastFmMapper.toGenre(tags)
 
-        // Then
+        // Then — genres retains the original tag list
         assertEquals(listOf("jazz", "soul"), metadata.genres)
     }
 
     @Test
     fun `toGenre returns null genreTags for empty tag list`() {
-        // Given
+        // Given — an empty tag list
         val tags = emptyList<String>()
 
-        // When
+        // When — mapping tags to genre metadata
         val metadata = LastFmMapper.toGenre(tags)
 
-        // Then
+        // Then — genreTags is null
         assertNull(metadata.genreTags)
     }
 
     @Test
     fun `toGenre returns empty genres for empty tag list`() {
-        // Given
+        // Given — an empty tag list
         val tags = emptyList<String>()
 
-        // When
+        // When — mapping tags to genre metadata
         val metadata = LastFmMapper.toGenre(tags)
 
-        // Then
+        // Then — genres is an empty (non-null) list
         // genres was previously `tags` directly, so empty list maps to empty genres
         // The existing contract: toGenre(emptyList()) returns Metadata(genres = emptyList())
         // but that's non-null empty list. Let's check what the original did:
@@ -72,13 +72,13 @@ class LastFmMapperGenreTest {
 
     @Test
     fun `toGenre with single tag produces one genreTag`() {
-        // Given
+        // Given — a single tag
         val tags = listOf("classical")
 
-        // When
+        // When — mapping tags to genre metadata
         val metadata = LastFmMapper.toGenre(tags)
 
-        // Then
+        // Then — genreTags contains exactly one entry
         val genreTags = metadata.genreTags
         assertTrue(genreTags != null)
         assertEquals(1, genreTags!!.size)

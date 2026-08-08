@@ -66,16 +66,16 @@ class DiscogsMapperTest {
 
     @Test
     fun `toCredits maps DiscogsCredit list to Credits with correct fields`() {
-        // Given
+        // Given — two DiscogsCredit entries with distinct roles and ids
         val credits = listOf(
             DiscogsCredit(name = "John Smith", role = "Producer", id = 12345L),
             DiscogsCredit(name = "Jane Doe", role = "Vocals", id = 67890L),
         )
 
-        // When
+        // When — mapping to Credits
         val result = DiscogsMapper.toCredits(credits)
 
-        // Then
+        // Then — both credits carry their mapped roleCategory and discogsArtistId
         assertEquals(2, result.credits.size)
         val first = result.credits[0]
         assertEquals("John Smith", first.name)
@@ -97,7 +97,7 @@ class DiscogsMapperTest {
             DiscogsCredit(name = "Someone", role = "Photography By", id = null),
         )
 
-        // When
+        // When — mapping to Credits
         val result = DiscogsMapper.toCredits(credits)
 
         // Then — roleCategory is null for unmapped roles
@@ -112,7 +112,7 @@ class DiscogsMapperTest {
             DiscogsCredit(name = "John Doe", role = "Producer", id = null),
         )
 
-        // When
+        // When — mapping to Credits
         val result = DiscogsMapper.toCredits(credits)
 
         // Then — no discogsArtistId in identifiers
@@ -121,13 +121,13 @@ class DiscogsMapperTest {
 
     @Test
     fun `toCredits returns empty Credits for empty list`() {
-        // Given
+        // Given — an empty DiscogsCredit list
         val credits = emptyList<DiscogsCredit>()
 
-        // When
+        // When — mapping to Credits
         val result = DiscogsMapper.toCredits(credits)
 
-        // Then
+        // Then — no credits are produced
         assertEquals(0, result.credits.size)
     }
 
@@ -135,7 +135,7 @@ class DiscogsMapperTest {
 
     @Test
     fun `toReleaseEditions maps DiscogsMasterVersion list to ReleaseEditions with correct fields`() {
-        // Given
+        // Given — a single DiscogsMasterVersion with all fields populated
         val versions = listOf(
             DiscogsMasterVersion(
                 id = 12345L,
@@ -148,10 +148,10 @@ class DiscogsMapperTest {
             ),
         )
 
-        // When
+        // When — mapping to ReleaseEditions
         val result = DiscogsMapper.toReleaseEditions(versions)
 
-        // Then
+        // Then — the edition carries all the mapped fields
         assertTrue(result is EnrichmentData.ReleaseEditions)
         assertEquals(1, result.editions.size)
         val edition = result.editions[0]
@@ -166,43 +166,43 @@ class DiscogsMapperTest {
 
     @Test
     fun `toReleaseEditions stores discogsReleaseId in identifiers when version id is positive`() {
-        // Given
+        // Given — a version with a positive id
         val versions = listOf(
             DiscogsMasterVersion(id = 99001L, title = "Some Album", format = null,
                 label = null, country = null, year = null, catno = null),
         )
 
-        // When
+        // When — mapping to ReleaseEditions
         val result = DiscogsMapper.toReleaseEditions(versions)
 
-        // Then
+        // Then — discogsReleaseId is stored in identifiers
         assertEquals("99001", result.editions[0].identifiers.get("discogsReleaseId"))
     }
 
     @Test
     fun `toReleaseEditions omits discogsReleaseId when version id is 0`() {
-        // Given
+        // Given — a version with id 0 (no real release id)
         val versions = listOf(
             DiscogsMasterVersion(id = 0L, title = "Some Album", format = null,
                 label = null, country = null, year = null, catno = null),
         )
 
-        // When
+        // When — mapping to ReleaseEditions
         val result = DiscogsMapper.toReleaseEditions(versions)
 
-        // Then
+        // Then — discogsReleaseId is absent from identifiers
         assertNull(result.editions[0].identifiers.get("discogsReleaseId"))
     }
 
     @Test
     fun `toReleaseEditions handles empty versions list`() {
-        // Given
+        // Given — an empty DiscogsMasterVersion list
         val versions = emptyList<DiscogsMasterVersion>()
 
-        // When
+        // When — mapping to ReleaseEditions
         val result = DiscogsMapper.toReleaseEditions(versions)
 
-        // Then
+        // Then — no editions are produced
         assertTrue(result is EnrichmentData.ReleaseEditions)
         assertEquals(0, result.editions.size)
     }

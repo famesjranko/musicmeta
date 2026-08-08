@@ -21,7 +21,7 @@ class GenreAffinityMatcherTest {
 
     @Test
     fun `GenreAffinity round-trip serialization works`() {
-        // Given
+        // Given — a GenreAffinity instance
         val affinity = GenreAffinity(
             name = "indie rock",
             affinity = 0.81f,
@@ -29,17 +29,17 @@ class GenreAffinityMatcherTest {
             sourceGenres = listOf("alternative rock"),
         )
 
-        // When
+        // When — encoding to JSON then decoding back
         val json = Json.encodeToString(GenreAffinity.serializer(), affinity)
         val decoded = Json.decodeFromString(GenreAffinity.serializer(), json)
 
-        // Then
+        // Then — the decoded value equals the original
         assertEquals(affinity, decoded)
     }
 
     @Test
     fun `GenreDiscovery round-trip serialization works`() {
-        // Given
+        // Given — a GenreDiscovery containing one related genre
         val discovery = EnrichmentData.GenreDiscovery(
             relatedGenres = listOf(
                 GenreAffinity(
@@ -51,11 +51,11 @@ class GenreAffinityMatcherTest {
             ),
         )
 
-        // When
+        // When — encoding to JSON then decoding back
         val json = Json.encodeToString(EnrichmentData.GenreDiscovery.serializer(), discovery)
         val decoded = Json.decodeFromString(EnrichmentData.GenreDiscovery.serializer(), json)
 
-        // Then
+        // Then — the decoded value equals the original
         assertEquals(discovery, decoded)
     }
 
@@ -63,71 +63,70 @@ class GenreAffinityMatcherTest {
 
     @Test
     fun `synthesize returns NotFound when GENRE result is missing`() {
-        // Given
+        // Given — a resolved map with no GENRE entry
         val resolved = emptyMap<EnrichmentType, EnrichmentResult>()
 
-        // When
+        // When — synthesizing genre discovery
         val result = GenreAffinityMatcher.synthesize(resolved, null, fakeRequest())
 
-        // Then
+        // Then — a NotFound for GENRE_DISCOVERY is returned
         assertTrue(result is EnrichmentResult.NotFound)
         assertEquals(EnrichmentType.GENRE_DISCOVERY, (result as EnrichmentResult.NotFound).type)
     }
 
     @Test
     fun `synthesize returns NotFound when GENRE result is NotFound`() {
-        // Given
+        // Given — a resolved map whose GENRE entry is itself NotFound
         val resolved = mapOf(
             EnrichmentType.GENRE to EnrichmentResult.NotFound(EnrichmentType.GENRE, "no_data"),
         )
 
-        // When
+        // When — synthesizing genre discovery
         val result = GenreAffinityMatcher.synthesize(resolved, null, fakeRequest())
 
-        // Then
+        // Then — a NotFound is returned
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `synthesize returns NotFound when genre tags list is empty`() {
-        // Given
+        // Given — a GENRE result with an empty genre tags list
         val resolved = mapOf(
             EnrichmentType.GENRE to genreResult(emptyList()),
         )
 
-        // When
+        // When — synthesizing genre discovery
         val result = GenreAffinityMatcher.synthesize(resolved, null, fakeRequest())
 
-        // Then
+        // Then — a NotFound is returned
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `synthesize returns NotFound for unknown genre tags`() {
-        // Given
+        // Given — a GENRE result containing only an unrecognized genre tag
         val resolved = mapOf(
             EnrichmentType.GENRE to genreResult(listOf(GenreTag("zork_xenomorph", 0.9f))),
         )
 
-        // When
+        // When — synthesizing genre discovery
         val result = GenreAffinityMatcher.synthesize(resolved, null, fakeRequest())
 
-        // Then
-        // Unknown genre → no taxonomy entries → effectively empty results → NotFound
+        // Then — unknown genre yields no taxonomy entries, so a NotFound is returned
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `synthesize returns Success with related genres for known input genre`() {
-        // Given
+        // Given — a GENRE result with the known genre tag "rock"
         val resolved = mapOf(
             EnrichmentType.GENRE to genreResult(listOf(GenreTag("rock", 1.0f))),
         )
 
-        // When
+        // When — synthesizing genre discovery
         val result = GenreAffinityMatcher.synthesize(resolved, null, fakeRequest())
 
-        // Then
+        // Then — a Success with a non-empty related genres list is returned
         assertTrue(result is EnrichmentResult.Success)
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.GenreDiscovery
         assertTrue(data.relatedGenres.isNotEmpty())
@@ -140,7 +139,7 @@ class GenreAffinityMatcherTest {
             EnrichmentType.GENRE to genreResult(listOf(GenreTag("rock", 1.0f))),
         )
 
-        // When
+        // When — synthesizing genre discovery
         val result = GenreAffinityMatcher.synthesize(resolved, null, fakeRequest())
 
         // Then: alternative rock is a child (weight 0.8) of rock; affinity = 1.0 * 0.8 = 0.8
@@ -153,15 +152,15 @@ class GenreAffinityMatcherTest {
 
     @Test
     fun `synthesize results are sorted by affinity descending`() {
-        // Given
+        // Given — a GENRE result with the known genre tag "rock"
         val resolved = mapOf(
             EnrichmentType.GENRE to genreResult(listOf(GenreTag("rock", 1.0f))),
         )
 
-        // When
+        // When — synthesizing genre discovery
         val result = GenreAffinityMatcher.synthesize(resolved, null, fakeRequest())
 
-        // Then
+        // Then — related genres are ordered by descending affinity
         val genres = ((result as EnrichmentResult.Success).data as EnrichmentData.GenreDiscovery).relatedGenres
         val affinities = genres.map { it.affinity }
         assertEquals(affinities.sortedDescending(), affinities)
@@ -179,7 +178,7 @@ class GenreAffinityMatcherTest {
             )),
         )
 
-        // When
+        // When — synthesizing genre discovery
         val result = GenreAffinityMatcher.synthesize(resolved, null, fakeRequest())
 
         // Then: "classic rock" should appear only once
@@ -190,12 +189,12 @@ class GenreAffinityMatcherTest {
 
     @Test
     fun `synthesize sourceGenres contains normalized input genre name`() {
-        // Given
+        // Given — a GENRE result with an unnormalized genre tag name
         val resolved = mapOf(
             EnrichmentType.GENRE to genreResult(listOf(GenreTag("Alternative Rock", 0.9f))),
         )
 
-        // When
+        // When — synthesizing genre discovery
         val result = GenreAffinityMatcher.synthesize(resolved, null, fakeRequest())
 
         // Then: sourceGenres should contain normalized form
@@ -206,15 +205,15 @@ class GenreAffinityMatcherTest {
 
     @Test
     fun `synthesize provider string is genre_affinity_matcher`() {
-        // Given
+        // Given — a GENRE result with the known genre tag "jazz"
         val resolved = mapOf(
             EnrichmentType.GENRE to genreResult(listOf(GenreTag("jazz", 0.9f))),
         )
 
-        // When
+        // When — synthesizing genre discovery
         val result = GenreAffinityMatcher.synthesize(resolved, null, fakeRequest())
 
-        // Then
+        // Then — the Success result's provider string is "genre_affinity_matcher"
         assertEquals("genre_affinity_matcher", (result as EnrichmentResult.Success).provider)
     }
 

@@ -43,19 +43,19 @@ class DefaultHttpClientRedirectTest {
         status = 307
         location = "https://archive.org/image/front.jpg"
 
-        // When
+        // When — the redirect URL is fetched
         val result = client.fetchRedirectUrlResult(url())
 
-        // Then
+        // Then — result is Ok carrying the Location header value
         assertEquals("https://archive.org/image/front.jpg", (result as HttpResult.Ok).body)
         assertEquals(307, result.statusCode)
     }
 
     @Test fun `a 200 is Ok carrying the request URL`() = runTest {
-        // Given
+        // Given — server responds 200, no redirect
         status = 200
 
-        // When
+        // When — the redirect URL is fetched
         val result = client.fetchRedirectUrlResult(url())
 
         // Then — nothing to follow, so the URL asked for is the answer
@@ -63,47 +63,47 @@ class DefaultHttpClientRedirectTest {
     }
 
     @Test fun `a 3xx with no Location is a ClientError, not an Ok with nothing in it`() = runTest {
-        // Given
+        // Given — server responds 302 with no Location header
         status = 302
         location = null
 
-        // When
+        // When — the redirect URL is fetched
         val result = client.fetchRedirectUrlResult(url())
 
-        // Then
+        // Then — result is ClientError carrying the 302 status
         assertEquals(302, (result as HttpResult.ClientError).statusCode)
     }
 
     @Test fun `a 404 is a ClientError — no artwork, a genuine empty result`() = runTest {
-        // Given
+        // Given — server responds 404
         status = 404
 
-        // When
+        // When — the redirect URL is fetched
         val result = client.fetchRedirectUrlResult(url())
 
-        // Then
+        // Then — result is ClientError carrying the 404 status
         assertEquals(404, (result as HttpResult.ClientError).statusCode)
     }
 
     @Test fun `a 429 is RateLimited, not an indistinguishable failure`() = runTest {
-        // Given
+        // Given — server responds 429
         status = 429
 
-        // When
+        // When — the redirect URL is fetched
         val result = client.fetchRedirectUrlResult(url())
 
-        // Then
+        // Then — result is RateLimited
         assertTrue("expected RateLimited, got $result", result is HttpResult.RateLimited)
     }
 
     @Test fun `a 503 is a ServerError, not an indistinguishable failure`() = runTest {
-        // Given
+        // Given — server responds 503
         status = 503
 
-        // When
+        // When — the redirect URL is fetched
         val result = client.fetchRedirectUrlResult(url())
 
-        // Then
+        // Then — result is ServerError carrying the 503 status
         assertEquals(503, (result as HttpResult.ServerError).statusCode)
     }
 
@@ -111,10 +111,10 @@ class DefaultHttpClientRedirectTest {
         // Given — a port nothing is listening on
         val dead = "http://127.0.0.1:1/front-1200"
 
-        // When
+        // When — the redirect URL is fetched from that address
         val result = client.fetchRedirectUrlResult(dead)
 
-        // Then
+        // Then — result is NetworkError
         assertTrue("expected NetworkError, got $result", result is HttpResult.NetworkError)
     }
 }
