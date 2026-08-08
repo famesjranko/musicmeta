@@ -31,7 +31,7 @@ class ArtworkMergerTest {
         // Given — no results
         val result = merger.merge(emptyList())
 
-        // Then
+        // Then — NotFound is returned
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
@@ -60,7 +60,7 @@ class ArtworkMergerTest {
             artwork("fanarttv", "https://fanart.tv/thumb.jpg", confidence = 0.9f),
         )
 
-        // When
+        // When — merging the three results
         val result = merger.merge(results)
 
         // Then — wikidata wins primary (highest confidence), others are alternatives
@@ -85,7 +85,7 @@ class ArtworkMergerTest {
             artwork("providerB", "https://example.com/photo.jpg", confidence = 0.8f),
         )
 
-        // When
+        // When — merging the results with the duplicate URL
         val result = merger.merge(results)
 
         // Then — no alternatives since the duplicate URL is removed
@@ -102,7 +102,7 @@ class ArtworkMergerTest {
                 identifiers = EnrichmentIdentifiers().withExtra("deezerId", "456")),
         )
 
-        // When
+        // When — merging the results
         val result = merger.merge(results)
 
         // Then — merged identifiers include both
@@ -122,7 +122,7 @@ class ArtworkMergerTest {
             artwork("deezer", "https://deezer.com/1000.jpg", confidence = 0.8f, sizes = deezerSizes),
         )
 
-        // When
+        // When — merging the results
         val result = merger.merge(results)
 
         // Then — deezer's sizes are preserved in its alternative entry
@@ -149,7 +149,7 @@ class ArtworkMergerTest {
             ),
         )
 
-        // When
+        // When — merging the ALBUM_ART results
         val result = albumMerger.merge(results)
 
         // Then — works the same way

@@ -68,7 +68,7 @@ class EmptyPayloadDemotionTest {
             EnrichmentConfig(enableIdentityResolution = false),
         )
 
-        // When
+        // When — asking for GENRE
         val results = engine.enrich(
             EnrichmentRequest.forTrack("Paranoid Android", "Radiohead"),
             setOf(EnrichmentType.GENRE),
@@ -117,10 +117,10 @@ class EmptyPayloadDemotionTest {
         )
         val engine = engineWith(*types.map { success(it, onlyLabel) }.toTypedArray())
 
-        // When
+        // When — asking for all four types
         val results = engine.enrich(EnrichmentRequest.forAlbum("OK Computer", "Radiohead"), types.toSet())
 
-        // Then
+        // Then — LABEL is Success and the other three are demoted to NotFound
         assertTrue(results.raw[EnrichmentType.LABEL] is EnrichmentResult.Success)
         for (type in types - EnrichmentType.LABEL) {
             assertTrue("$type should be demoted", results.raw[type] is EnrichmentResult.NotFound)
@@ -134,13 +134,13 @@ class EmptyPayloadDemotionTest {
             success(EnrichmentType.BAND_MEMBERS, EnrichmentData.BandMembers(emptyList())),
         )
 
-        // When
+        // When — asking for BAND_MEMBERS
         val results = engine.enrich(
             EnrichmentRequest.forArtist("Radiohead"),
             setOf(EnrichmentType.BAND_MEMBERS),
         )
 
-        // Then
+        // Then — the empty list is demoted to NotFound
         assertTrue(results.raw[EnrichmentType.BAND_MEMBERS] is EnrichmentResult.NotFound)
     }
 
@@ -250,7 +250,7 @@ class EmptyPayloadDemotionTest {
             EnrichmentConfig(enableIdentityResolution = false, cacheMode = CacheMode.STALE_IF_ERROR),
         )
 
-        // When
+        // When — asking for LABEL
         val results = engine.enrich(request, setOf(EnrichmentType.LABEL))
 
         // Then — the Error survives; a stale entry answering nothing is worse than being told to retry
@@ -282,7 +282,7 @@ class EmptyPayloadDemotionTest {
             synthesizers = listOf(emptySynthesizer),
         )
 
-        // When
+        // When — asking for ARTIST_TIMELINE
         val results = engine.enrich(
             EnrichmentRequest.forArtist("Radiohead"),
             setOf(EnrichmentType.ARTIST_TIMELINE),
@@ -328,7 +328,7 @@ class EmptyPayloadDemotionTest {
             setOf(EnrichmentType.GENRE),
         )
 
-        // Then
+        // Then — the merger's empty output is demoted to NotFound
         assertTrue(results.raw[EnrichmentType.GENRE] is EnrichmentResult.NotFound)
     }
 

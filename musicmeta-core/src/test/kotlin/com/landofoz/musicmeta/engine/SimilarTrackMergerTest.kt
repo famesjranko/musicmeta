@@ -13,13 +13,13 @@ class SimilarTrackMergerTest {
 
     @Test
     fun `merge returns NotFound for empty results`() {
-        // Given
+        // Given — no provider results at all
         val results = emptyList<EnrichmentResult.Success>()
 
-        // When
+        // When — merging the empty list
         val result = SimilarTrackMerger.merge(results)
 
-        // Then
+        // Then — NotFound is returned with provider "all_providers"
         assertTrue(result is EnrichmentResult.NotFound)
         assertEquals("all_providers", (result as EnrichmentResult.NotFound).provider)
     }
@@ -40,7 +40,7 @@ class SimilarTrackMergerTest {
             )
         )
 
-        // When
+        // When — merging the single-provider result list
         val result = SimilarTrackMerger.merge(results)
 
         // Then — both tracks returned with original sources
@@ -71,7 +71,7 @@ class SimilarTrackMergerTest {
             confidence = 0.8f,
         )
 
-        // When
+        // When — merging the lastfm and deezer results
         val result = SimilarTrackMerger.merge(listOf(lastfmResult, deezerResult))
 
         // Then — only 1 "Lucky" entry (merged from both)
@@ -101,7 +101,7 @@ class SimilarTrackMergerTest {
             confidence = 0.8f,
         )
 
-        // When
+        // When — merging the lastfm and deezer results
         val result = SimilarTrackMerger.merge(listOf(lastfmResult, deezerResult))
 
         // Then — matchScore is Last.fm's 0.9 outright, not 0.9 + 0.8 (would overstate the match)
@@ -131,7 +131,7 @@ class SimilarTrackMergerTest {
             confidence = 0.8f,
         )
 
-        // When
+        // When — merging the two non-Last.fm results
         val result = SimilarTrackMerger.merge(listOf(sourceAResult, sourceBResult))
 
         // Then — matchScore = min(0.9 + 0.8, 1.0) = 1.0, not 1.7 — additive agreement still applies
@@ -159,7 +159,7 @@ class SimilarTrackMergerTest {
             confidence = 0.8f,
         )
 
-        // When
+        // When — merging the lastfm and deezer results
         val result = SimilarTrackMerger.merge(listOf(lastfmResult, deezerResult))
 
         // Then — both sources listed
@@ -201,7 +201,7 @@ class SimilarTrackMergerTest {
             confidence = 0.8f,
         )
 
-        // When
+        // When — merging the lastfm and deezer results
         val result = SimilarTrackMerger.merge(listOf(lastfmResult, deezerResult))
 
         // Then — merged result has both MBID and deezerId
@@ -232,7 +232,7 @@ class SimilarTrackMergerTest {
             confidence = 0.8f,
         )
 
-        // When
+        // When — merging the lastfm and deezer results
         val result = SimilarTrackMerger.merge(listOf(lastfmResult, deezerResult))
 
         // Then — sorted by matchScore descending
@@ -261,7 +261,7 @@ class SimilarTrackMergerTest {
             confidence = 0.8f,
         )
 
-        // When
+        // When — merging the lastfm and deezer results
         val result = SimilarTrackMerger.merge(listOf(lastfmResult, deezerResult))
 
         // Then — both appear once with their original single-provider sources
@@ -292,7 +292,7 @@ class SimilarTrackMergerTest {
             confidence = 0.8f,
         )
 
-        // When
+        // When — merging the lastfm and deezer results
         val result = SimilarTrackMerger.merge(listOf(lastfmResult, deezerResult))
 
         // Then — 2 distinct entries (different artists means different tracks)

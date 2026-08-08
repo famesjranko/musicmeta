@@ -96,7 +96,7 @@ class CatalogFilteringTest {
             capabilities = listOf(ProviderCapability(EnrichmentType.SIMILAR_ARTISTS, 100)),
         ).also { it.givenResult(EnrichmentType.SIMILAR_ARTISTS, similarArtists("Artist A", "Artist B", "Artist C")) }
 
-        // When
+        // When — enriching with AVAILABLE_ONLY filtering
         val results = engine(provider, fakeCatalog).enrich(req, setOf(EnrichmentType.SIMILAR_ARTISTS))
 
         // Then — middle item removed, first and third remain
@@ -121,7 +121,7 @@ class CatalogFilteringTest {
             capabilities = listOf(ProviderCapability(EnrichmentType.ARTIST_RADIO, 100)),
         ).also { it.givenResult(EnrichmentType.ARTIST_RADIO, radioTracks("Track 1", "Track 2")) }
 
-        // When
+        // When — enriching with AVAILABLE_ONLY filtering
         val results = engine(provider, fakeCatalog).enrich(req, setOf(EnrichmentType.ARTIST_RADIO))
 
         // Then — first track removed, second remains
@@ -145,7 +145,7 @@ class CatalogFilteringTest {
             capabilities = listOf(ProviderCapability(EnrichmentType.SIMILAR_ALBUMS, 100)),
         ).also { it.givenResult(EnrichmentType.SIMILAR_ALBUMS, similarAlbums("Album X", "Album Y")) }
 
-        // When
+        // When — enriching with AVAILABLE_ONLY filtering
         val results = engine(provider, fakeCatalog).enrich(req, setOf(EnrichmentType.SIMILAR_ALBUMS))
 
         // Then — second album removed, first remains
@@ -169,7 +169,7 @@ class CatalogFilteringTest {
             capabilities = listOf(ProviderCapability(EnrichmentType.SIMILAR_ARTISTS, 100)),
         ).also { it.givenResult(EnrichmentType.SIMILAR_ARTISTS, similarArtists("A0-unavail", "A1-avail", "A2-unavail", "A3-avail")) }
 
-        // When
+        // When — enriching with AVAILABLE_FIRST filtering
         val results = engine(provider, fakeCatalog, mode = CatalogFilterMode.AVAILABLE_FIRST)
             .enrich(req, setOf(EnrichmentType.SIMILAR_ARTISTS))
 
@@ -195,7 +195,7 @@ class CatalogFilteringTest {
             capabilities = listOf(ProviderCapability(EnrichmentType.SIMILAR_ARTISTS, 100)),
         ).also { it.givenResult(EnrichmentType.SIMILAR_ARTISTS, similarArtists("Artist A", "Artist B")) }
 
-        // When
+        // When — enriching with UNFILTERED mode
         val results = engine(provider, fakeCatalog, mode = CatalogFilterMode.UNFILTERED)
             .enrich(req, setOf(EnrichmentType.SIMILAR_ARTISTS))
 
@@ -214,7 +214,7 @@ class CatalogFilteringTest {
             capabilities = listOf(ProviderCapability(EnrichmentType.SIMILAR_ARTISTS, 100)),
         ).also { it.givenResult(EnrichmentType.SIMILAR_ARTISTS, similarArtists("Artist A", "Artist B")) }
 
-        // When
+        // When — enriching without a catalog provider configured
         val results = engine(provider, catalogProvider = null)
             .enrich(req, setOf(EnrichmentType.SIMILAR_ARTISTS))
 
@@ -238,7 +238,7 @@ class CatalogFilteringTest {
             capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100)),
         ).also { it.givenResult(EnrichmentType.ALBUM_ART, albumArt()) }
 
-        // When
+        // When — enriching for ALBUM_ART
         val results = engine(provider, fakeCatalog).enrich(req, setOf(EnrichmentType.ALBUM_ART))
 
         // Then — ALBUM_ART result unchanged, checkAvailability never called
@@ -259,7 +259,7 @@ class CatalogFilteringTest {
             capabilities = listOf(ProviderCapability(EnrichmentType.SIMILAR_ARTISTS, 100)),
         ).also { it.givenResult(EnrichmentType.SIMILAR_ARTISTS, similarArtists("Artist A", "Artist B", "Artist C")) }
 
-        // When
+        // When — enriching with AVAILABLE_ONLY filtering
         val results = engine(provider, fakeCatalog).enrich(req, setOf(EnrichmentType.SIMILAR_ARTISTS))
 
         // Then — all 3 items returned
@@ -280,7 +280,7 @@ class CatalogFilteringTest {
             capabilities = listOf(ProviderCapability(EnrichmentType.SIMILAR_ARTISTS, 100)),
         ).also { it.givenResult(EnrichmentType.SIMILAR_ARTISTS, similarArtists("Artist A", "Artist B")) }
 
-        // When
+        // When — enriching with AVAILABLE_ONLY filtering
         val results = engine(provider, fakeCatalog).enrich(req, setOf(EnrichmentType.SIMILAR_ARTISTS))
 
         // Then — NotFound returned because all items filtered out

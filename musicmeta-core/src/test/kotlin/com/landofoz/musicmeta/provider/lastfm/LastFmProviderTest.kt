@@ -31,14 +31,14 @@ class LastFmProviderTest {
 
     @Test
     fun `enrich returns similar artists`() = runTest {
-        // Given
+        // Given — Last.fm returns similar artists for Radiohead
         httpClient.givenJsonResponse("artist.getsimilar", SIMILAR_ARTISTS_JSON)
         val request = EnrichmentRequest.forArtist(name = "Radiohead")
 
-        // When
+        // When — enriching for SIMILAR_ARTISTS
         val result = provider.enrich(request, EnrichmentType.SIMILAR_ARTISTS)
 
-        // Then
+        // Then — Success with the mapped similar artists
         assertTrue(result is EnrichmentResult.Success)
         val data = (result as EnrichmentResult.Success).data
         assertTrue(data is EnrichmentData.SimilarArtists)
@@ -52,11 +52,11 @@ class LastFmProviderTest {
 
     @Test
     fun `similar artists have sources set to lastfm`() = runTest {
-        // Given
+        // Given — Last.fm returns similar artists for Radiohead
         httpClient.givenJsonResponse("artist.getsimilar", SIMILAR_ARTISTS_JSON)
         val request = EnrichmentRequest.forArtist(name = "Radiohead")
 
-        // When
+        // When — enriching for SIMILAR_ARTISTS
         val result = provider.enrich(request, EnrichmentType.SIMILAR_ARTISTS)
 
         // Then — each SimilarArtist includes "lastfm" in sources
@@ -66,14 +66,14 @@ class LastFmProviderTest {
 
     @Test
     fun `enrich returns genre tags`() = runTest {
-        // Given
+        // Given — Last.fm returns artist info with tags
         httpClient.givenJsonResponse("artist.getinfo", ARTIST_INFO_JSON)
         val request = EnrichmentRequest.forArtist(name = "Radiohead")
 
-        // When
+        // When — enriching for GENRE
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then
+        // Then — Success with the mapped genres
         assertTrue(result is EnrichmentResult.Success)
         val data = (result as EnrichmentResult.Success).data
         assertTrue(data is EnrichmentData.Metadata)
@@ -85,14 +85,14 @@ class LastFmProviderTest {
 
     @Test
     fun `enrich returns artist bio`() = runTest {
-        // Given
+        // Given — Last.fm returns artist info with a bio summary
         httpClient.givenJsonResponse("artist.getinfo", ARTIST_INFO_JSON)
         val request = EnrichmentRequest.forArtist(name = "Radiohead")
 
-        // When
+        // When — enriching for ARTIST_BIO
         val result = provider.enrich(request, EnrichmentType.ARTIST_BIO)
 
-        // Then
+        // Then — Success with the mapped biography
         assertTrue(result is EnrichmentResult.Success)
         val data = (result as EnrichmentResult.Success).data
         assertTrue(data is EnrichmentData.Biography)
@@ -103,7 +103,7 @@ class LastFmProviderTest {
 
     @Test
     fun `enrich returns NotFound when API key is blank`() = runTest {
-        // Given
+        // Given — a provider configured with a blank API key
         val blankProvider = LastFmProvider(
             apiKey = "",
             httpClient = httpClient,
@@ -111,35 +111,35 @@ class LastFmProviderTest {
         )
         val request = EnrichmentRequest.forArtist(name = "Radiohead")
 
-        // When
+        // When — enriching for GENRE
         val result = blankProvider.enrich(request, EnrichmentType.GENRE)
 
-        // Then
+        // Then — NotFound because the API key is blank
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `enrich returns NotFound for album requests`() = runTest {
-        // Given
+        // Given — a ForAlbum request (GENRE requires ForArtist)
         val request = EnrichmentRequest.forAlbum(title = "OK Computer", artist = "Radiohead")
 
-        // When
+        // When — enriching for GENRE
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then
+        // Then — NotFound because GENRE requires ForArtist
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `enrich returns artist popularity`() = runTest {
-        // Given
+        // Given — Last.fm returns artist info with listener/play stats
         httpClient.givenJsonResponse("artist.getinfo", ARTIST_INFO_JSON)
         val request = EnrichmentRequest.forArtist(name = "Radiohead")
 
-        // When
+        // When — enriching for ARTIST_POPULARITY
         val result = provider.enrich(request, EnrichmentType.ARTIST_POPULARITY)
 
-        // Then
+        // Then — Success with the mapped popularity counts
         assertTrue(result is EnrichmentResult.Success)
         val data = (result as EnrichmentResult.Success).data
         assertTrue(data is EnrichmentData.Popularity)

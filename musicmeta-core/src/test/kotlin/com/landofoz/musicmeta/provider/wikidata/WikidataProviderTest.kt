@@ -27,7 +27,7 @@ class WikidataProviderTest {
 
     @Test
     fun `enrich returns artist photo URL from P18 property`() = runTest {
-        // Given
+        // Given — Wikidata returns a P18 image claim for the artist
         val wikidataId = "Q44802"
         httpClient.givenJsonResponse(
             "wikidata.org",
@@ -41,10 +41,10 @@ class WikidataProviderTest {
             name = "Radiohead",
         )
 
-        // When
+        // When — enriching for artist photo
         val result = provider.enrich(request, EnrichmentType.ARTIST_PHOTO)
 
-        // Then
+        // Then — success with an Artwork URL built from the P18 filename
         assertTrue(result is EnrichmentResult.Success)
         val success = result as EnrichmentResult.Success
         assertEquals("wikidata", success.provider)
@@ -56,16 +56,16 @@ class WikidataProviderTest {
 
     @Test
     fun `enrich returns NotFound when no wikidataId in identifiers`() = runTest {
-        // Given
+        // Given — identifiers carry no wikidataId
         val request = EnrichmentRequest.ForArtist(
             identifiers = EnrichmentIdentifiers(),
             name = "Radiohead",
         )
 
-        // When
+        // When — enriching for artist photo
         val result = provider.enrich(request, EnrichmentType.ARTIST_PHOTO)
 
-        // Then
+        // Then — NotFound because there is no wikidataId to query
         assertTrue(result is EnrichmentResult.NotFound)
         val notFound = result as EnrichmentResult.NotFound
         assertEquals("wikidata", notFound.provider)
@@ -73,7 +73,7 @@ class WikidataProviderTest {
 
     @Test
     fun `enrich returns NotFound when P18 property missing`() = runTest {
-        // Given
+        // Given — Wikidata returns claims with no P18 property
         val wikidataId = "Q99999"
         httpClient.givenJsonResponse("wikidata.org", """{"entities":{"$wikidataId":{"claims":{}}}}""")
 
@@ -82,16 +82,16 @@ class WikidataProviderTest {
             name = "Unknown",
         )
 
-        // When
+        // When — enriching for artist photo
         val result = provider.enrich(request, EnrichmentType.ARTIST_PHOTO)
 
-        // Then
+        // Then — NotFound because P18 is absent
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `enrich handles SVG files by appending png extension`() = runTest {
-        // Given
+        // Given — P18 points at an SVG file
         val wikidataId = "Q12345"
         httpClient.givenJsonResponse(
             "wikidata.org",
@@ -105,10 +105,10 @@ class WikidataProviderTest {
             name = "Test",
         )
 
-        // When
+        // When — enriching for artist photo
         val result = provider.enrich(request, EnrichmentType.ARTIST_PHOTO)
 
-        // Then
+        // Then — the SVG filename gets .png appended for the rendered thumbnail URL
         assertTrue(result is EnrichmentResult.Success)
         val artwork = (result as EnrichmentResult.Success).data as EnrichmentData.Artwork
         assertTrue(
@@ -133,7 +133,7 @@ class WikidataProviderTest {
             name = "Radiohead",
         )
 
-        // When
+        // When — enriching for artist photo
         val result = provider.enrich(request, EnrichmentType.ARTIST_PHOTO)
 
         // Then - should use the preferred-rank claim (New_photo.jpg)
@@ -161,7 +161,7 @@ class WikidataProviderTest {
             name = "Radiohead",
         )
 
-        // When
+        // When — enriching for artist photo
         val result = provider.enrich(request, EnrichmentType.ARTIST_PHOTO)
 
         // Then - should use the first claim (First.jpg) when no preferred exists
@@ -188,7 +188,7 @@ class WikidataProviderTest {
             name = "Radiohead",
         )
 
-        // When
+        // When — enriching for artist photo
         val result = provider.enrich(request, EnrichmentType.ARTIST_PHOTO)
 
         // Then - should work (backward-compatible) and use the only claim
@@ -251,7 +251,7 @@ class WikidataProviderTest {
 
     @Test
     fun `getEntityProperties sends the exact wbgetentities URL contract`() = runTest {
-        // Given
+        // Given — Wikidata returns a P18 claim so enrich completes normally
         val wikidataId = "Q44802"
         httpClient.givenJsonResponse(
             "wikidata.org",
@@ -264,7 +264,7 @@ class WikidataProviderTest {
             name = "Radiohead",
         )
 
-        // When
+        // When — enriching for artist photo
         provider.enrich(request, EnrichmentType.ARTIST_PHOTO)
 
         // Then — pins action=wbgetentities, ids=<id>, props=claims, format=json: the exact contract
@@ -291,10 +291,10 @@ class WikidataProviderTest {
             name = "Alan Turing",
         )
 
-        // When
+        // When — enriching for COUNTRY type
         val result = provider.enrich(request, EnrichmentType.COUNTRY)
 
-        // Then
+        // Then — success with the birth date parsed from the nested P569 claim
         assertTrue(result is EnrichmentResult.Success)
         val metadata = (result as EnrichmentResult.Success).data as EnrichmentData.Metadata
         assertEquals("1912-06-23", metadata.beginDate)

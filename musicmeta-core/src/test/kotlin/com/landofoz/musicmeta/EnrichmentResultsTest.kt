@@ -13,7 +13,7 @@ class EnrichmentResultsTest {
         EnrichmentResult.Success(type, data, provider, 0.9f)
 
     @Test fun `get returns typed data for matching type`() {
-        // Given
+        // Given — a results map containing an ALBUM_ART success result
         val artwork = EnrichmentData.Artwork(url = "https://example.com/art.jpg")
         val results = EnrichmentResults(
             raw = mapOf(EnrichmentType.ALBUM_ART to success(EnrichmentType.ALBUM_ART, artwork)),
@@ -21,16 +21,16 @@ class EnrichmentResultsTest {
             identity = null,
         )
 
-        // When
+        // When — getting the typed data for ALBUM_ART
         val retrieved = results.get<EnrichmentData.Artwork>(EnrichmentType.ALBUM_ART)
 
-        // Then
+        // Then — the artwork is returned
         assertNotNull(retrieved)
         assertEquals("https://example.com/art.jpg", retrieved!!.url)
     }
 
     @Test fun `get returns null for wrong data type`() {
-        // Given
+        // Given — a GENRE success result holding Metadata
         val metadata = EnrichmentData.Metadata(genres = listOf("rock"))
         val results = EnrichmentResults(
             raw = mapOf(EnrichmentType.GENRE to success(EnrichmentType.GENRE, metadata)),
@@ -38,25 +38,25 @@ class EnrichmentResultsTest {
             identity = null,
         )
 
-        // When
+        // When — requesting it as Artwork instead of Metadata
         val retrieved = results.get<EnrichmentData.Artwork>(EnrichmentType.GENRE)
 
-        // Then
+        // Then — null is returned instead of a cast failure
         assertNull(retrieved)
     }
 
     @Test fun `get returns null for NotFound result`() {
-        // Given
+        // Given — an ALBUM_ART entry that is a NotFound result, not a Success
         val results = EnrichmentResults(
             raw = mapOf(EnrichmentType.ALBUM_ART to EnrichmentResult.NotFound(EnrichmentType.ALBUM_ART, "test")),
             requestedTypes = setOf(EnrichmentType.ALBUM_ART),
             identity = null,
         )
 
-        // When
+        // When — getting the typed data for ALBUM_ART
         val retrieved = results.get<EnrichmentData.Artwork>(EnrichmentType.ALBUM_ART)
 
-        // Then
+        // Then — null is returned
         assertNull(retrieved)
     }
 
@@ -73,7 +73,7 @@ class EnrichmentResultsTest {
     }
 
     @Test fun `named accessors return typed data`() {
-        // Given
+        // Given — success results for both ARTIST_PHOTO and ARTIST_BIO
         val artwork = EnrichmentData.Artwork(url = "https://example.com/photo.jpg")
         val bio = EnrichmentData.Biography(text = "A band", source = "wikipedia", language = "en")
         val results = EnrichmentResults(
@@ -85,7 +85,7 @@ class EnrichmentResultsTest {
             identity = null,
         )
 
-        // Then
+        // Then — the named accessors return the unwrapped data
         assertEquals("https://example.com/photo.jpg", results.artistPhoto()?.url)
         assertEquals("A band", results.biography()?.text)
     }

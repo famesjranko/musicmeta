@@ -65,7 +65,7 @@ class MusicBrainzQualifierFallbackIntegrationTest {
         )
         val request = EnrichmentRequest.forAlbum("Master Of Puppets (Remastered)", "Metallica")
 
-        // When
+        // When — enriching for genre
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
         // Then — the qualifier-matching release wins the tie, not the first-in-pool one
@@ -95,7 +95,7 @@ class MusicBrainzQualifierFallbackIntegrationTest {
         )
         val request = EnrichmentRequest.forAlbum("2112 (deluxe edition)", "Rush")
 
-        // When
+        // When — enriching for genre
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
         // Then — resolved on the original title, and only one release search was ever made
@@ -126,10 +126,10 @@ class MusicBrainzQualifierFallbackIntegrationTest {
         )
         val request = EnrichmentRequest.forAlbum("Abbey Road (anniversary edition)", "The Beatles")
 
-        // When
+        // When — enriching for genre
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then
+        // Then — resolved on the original title, with zero fallback searches
         assertTrue(result is EnrichmentResult.Success)
         val success = result as EnrichmentResult.Success
         assertEquals("beatles-abbey-road-anniversary", success.resolvedIdentifiers?.musicBrainzId)
@@ -181,7 +181,7 @@ class MusicBrainzQualifierFallbackIntegrationTest {
         httpClient.givenJsonResponse("release?query", """{"releases": []}""")
         val request = EnrichmentRequest.forAlbum("Master Of Puppets (Live)", "Metallica")
 
-        // When
+        // When — enriching for genre
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
         // Then — NotFound, and exactly one release search (the original) plus the fuzzy-suggestions
@@ -210,10 +210,10 @@ class MusicBrainzQualifierFallbackIntegrationTest {
         )
         val request = EnrichmentRequest.forAlbum("Master Of Puppets (Deluxe Box Set / Remastered)", "Metallica")
 
-        // When
+        // When — enriching for genre
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then
+        // Then — the single box-set candidate resolves via the one stripped-title fallback
         assertTrue(result is EnrichmentResult.Success)
         val success = result as EnrichmentResult.Success
         assertEquals("box-set-release", success.resolvedIdentifiers?.musicBrainzId)
@@ -238,7 +238,7 @@ class MusicBrainzQualifierFallbackIntegrationTest {
         )
         val request = EnrichmentRequest.forAlbum("Master Of Puppets (Remastered)", "Metallica")
 
-        // When
+        // When — enriching for genre
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
         // Then — not authoritative, falls through to NotFound rather than a confident wrong match
@@ -269,10 +269,10 @@ class MusicBrainzQualifierFallbackIntegrationTest {
         )
         val request = EnrichmentRequest.forAlbum("Master Of Puppets (Remastered)", "Metallica")
 
-        // When
+        // When — enriching for album tracks
         val result = provider.enrich(request, EnrichmentType.ALBUM_TRACKS)
 
-        // Then
+        // Then — resolved via the same qualifier-fallback path as GENRE
         assertTrue(result is EnrichmentResult.Success)
     }
 
@@ -308,10 +308,10 @@ class MusicBrainzQualifierFallbackIntegrationTest {
         )
         val request = EnrichmentRequest.forTrack("Enter Sandman (Remastered 2021)", "Metallica")
 
-        // When
+        // When — enriching for genre
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then
+        // Then — NotFound because the only fallback candidate is below the match threshold
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
@@ -326,10 +326,10 @@ class MusicBrainzQualifierFallbackIntegrationTest {
         )
         val request = EnrichmentRequest.forTrack("Enter Sandman (Remastered 2021)", "Metallica")
 
-        // When
+        // When — enriching for genre
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then
+        // Then — NotFound because the candidate's credited artist doesn't match
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
@@ -345,10 +345,10 @@ class MusicBrainzQualifierFallbackIntegrationTest {
         )
         val request = EnrichmentRequest.forTrack("Enter Sandman (Remastered 2021)", "Metallica")
 
-        // When
+        // When — enriching for genre
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then
+        // Then — NotFound because the candidate's title doesn't match the searched-for one
         assertTrue(result is EnrichmentResult.NotFound)
     }
 }

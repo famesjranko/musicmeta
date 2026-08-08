@@ -21,7 +21,7 @@ class DeezerMapperTest {
             ),
         )
 
-        // When
+        // When — mapping the tracks to a RadioPlaylist
         val result = DeezerMapper.toRadioPlaylist(tracks)
 
         // Then — track fields mapped correctly
@@ -41,7 +41,7 @@ class DeezerMapperTest {
             DeezerRadioTrack(id = 1L, title = "T", artistName = "A", durationSec = 180),
         )
 
-        // When
+        // When — mapping the track to a RadioPlaylist
         val result = DeezerMapper.toRadioPlaylist(tracks)
 
         // Then — duration is 180 * 1000 = 180000 ms
@@ -55,7 +55,7 @@ class DeezerMapperTest {
             DeezerRadioTrack(id = 2L, title = "T", artistName = "A", durationSec = 0),
         )
 
-        // When
+        // When — mapping the track to a RadioPlaylist
         val result = DeezerMapper.toRadioPlaylist(tracks)
 
         // Then — durationMs is null for unknown duration
@@ -69,7 +69,7 @@ class DeezerMapperTest {
             DeezerRadioTrack(id = 3L, title = "T", artistName = "A", albumTitle = null),
         )
 
-        // When
+        // When — mapping the track to a RadioPlaylist
         val result = DeezerMapper.toRadioPlaylist(tracks)
 
         // Then — album is null
@@ -81,7 +81,7 @@ class DeezerMapperTest {
         // Given — empty track list
         val tracks = emptyList<DeezerRadioTrack>()
 
-        // When
+        // When — mapping the empty list to a RadioPlaylist
         val result = DeezerMapper.toRadioPlaylist(tracks)
 
         // Then — empty playlist
@@ -95,7 +95,7 @@ class DeezerMapperTest {
             DeezerRadioTrack(id = 999L, title = "T", artistName = "A"),
         )
 
-        // When
+        // When — mapping the track to a RadioPlaylist
         val result = DeezerMapper.toRadioPlaylist(tracks)
 
         // Then — deezerId is stored as string
@@ -116,7 +116,7 @@ class DeezerMapperTest {
             albumTitle = "OK Computer",
         )
 
-        // When
+        // When — mapping the search result to a TrackPreview
         val preview = DeezerMapper.toTrackPreview(result)
 
         // Then — TrackPreview has correct fields
@@ -131,7 +131,7 @@ class DeezerMapperTest {
         // Given — a track search result without preview URL
         val result = DeezerTrackSearchResult(id = 1L, title = "T", artistName = "A", previewUrl = null)
 
-        // When
+        // When — mapping the search result to a TrackPreview
         val preview = DeezerMapper.toTrackPreview(result)
 
         // Then — null because no preview available
@@ -146,7 +146,7 @@ class DeezerMapperTest {
             previewUrl = "https://example.com/preview.mp3", durationSec = 45,
         )
 
-        // When
+        // When — mapping the search result to a TrackPreview
         val preview = DeezerMapper.toTrackPreview(result)
 
         // Then — preview duration is always 30000ms (Deezer previews are 30 seconds)
@@ -161,17 +161,17 @@ class DeezerMapperTest {
             durationSec = 238, albumTitle = "Pablo Honey",
         )
 
-        // When
+        // When — mapping the search result to TrackMetadata
         val metadata = DeezerMapper.toTrackMetadata(result)
 
-        // Then
+        // Then — durationMs and albumTitle are carried over correctly
         assertEquals(238000L, metadata.durationMs)
         assertEquals("Pablo Honey", metadata.albumTitle)
     }
 
     @Test
     fun `toTrackMetadata leaves durationMs null when durationSec is absent or zero`() {
-        // Given
+        // Given — two search results, one with durationSec absent and one with it zero
         val absent = DeezerTrackSearchResult(id = 5L, title = "T", artistName = "A", durationSec = null)
         val zero = DeezerTrackSearchResult(id = 6L, title = "T", artistName = "A", durationSec = 0)
 
@@ -182,13 +182,13 @@ class DeezerMapperTest {
 
     @Test
     fun `toTrackMetadata leaves albumTitle null when the result carries none`() {
-        // Given
+        // Given — a search result with no albumTitle
         val result = DeezerTrackSearchResult(id = 7L, title = "T", artistName = "A", albumTitle = null)
 
-        // When
+        // When — mapping the search result to TrackMetadata
         val metadata = DeezerMapper.toTrackMetadata(result)
 
-        // Then
+        // Then — albumTitle stays null
         assertNull(metadata.albumTitle)
     }
 }

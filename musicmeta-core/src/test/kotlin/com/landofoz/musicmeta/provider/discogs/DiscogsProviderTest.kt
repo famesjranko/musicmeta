@@ -33,17 +33,17 @@ class DiscogsProviderTest {
 
     @Test
     fun `enrich returns album art from search`() = runTest {
-        // Given
+        // Given — search results containing a cover_image
         httpClient.givenJsonResponse("discogs.com", SEARCH_RESULTS_JSON)
         val request = EnrichmentRequest.forAlbum(
             title = "OK Computer",
             artist = "Radiohead",
         )
 
-        // When
+        // When — enriching for album art
         val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
 
-        // Then
+        // Then — success with the Artwork url from cover_image
         assertTrue(result is EnrichmentResult.Success)
         val success = result as EnrichmentResult.Success
         val data = success.data
@@ -57,17 +57,17 @@ class DiscogsProviderTest {
 
     @Test
     fun `enrich returns label from search`() = runTest {
-        // Given
+        // Given — search results containing a label
         httpClient.givenJsonResponse("discogs.com", SEARCH_RESULTS_JSON)
         val request = EnrichmentRequest.forAlbum(
             title = "OK Computer",
             artist = "Radiohead",
         )
 
-        // When
+        // When — enriching for label
         val result = provider.enrich(request, EnrichmentType.LABEL)
 
-        // Then
+        // Then — success with the Metadata label
         assertTrue(result is EnrichmentResult.Success)
         val data = (result as EnrichmentResult.Success).data
         assertTrue(data is EnrichmentData.Metadata)
@@ -76,35 +76,35 @@ class DiscogsProviderTest {
 
     @Test
     fun `enrich returns NotFound when no results`() = runTest {
-        // Given
+        // Given — search returns an empty results array
         httpClient.givenJsonResponse("discogs.com", EMPTY_RESULTS_JSON)
         val request = EnrichmentRequest.forAlbum(
             title = "Nonexistent Album",
             artist = "Unknown",
         )
 
-        // When
+        // When — enriching for album art
         val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
 
-        // Then
+        // Then — NotFound because there are no results
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `enrich returns NotFound for artist requests`() = runTest {
-        // Given
+        // Given — a ForArtist-shaped request
         val request = EnrichmentRequest.forArtist(name = "Radiohead")
 
-        // When
+        // When — enriching for album art, which only ForAlbum supports
         val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
 
-        // Then
+        // Then — NotFound because ALBUM_ART cannot handle an artist request
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `enrich returns NotFound when API key is blank`() = runTest {
-        // Given
+        // Given — a provider constructed with a blank personal token
         val blankProvider = DiscogsProvider(
             personalToken = "",
             httpClient = httpClient,
@@ -115,10 +115,10 @@ class DiscogsProviderTest {
             artist = "Radiohead",
         )
 
-        // When
+        // When — enriching for album art
         val result = blankProvider.enrich(request, EnrichmentType.ALBUM_ART)
 
-        // Then
+        // Then — NotFound because the token is blank
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
@@ -138,7 +138,7 @@ class DiscogsProviderTest {
             artist = "Radiohead",
         )
 
-        // When
+        // When — enriching for album art
         val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
 
         // Then — no fall-through to Discogs' own ranking
@@ -152,7 +152,7 @@ class DiscogsProviderTest {
         httpClient.givenJsonResponse("artists/12345", ARTIST_DETAIL_JSON)
         val request = EnrichmentRequest.forArtist(name = "Portishead")
 
-        // When
+        // When — enriching for band members
         val result = provider.enrich(request, EnrichmentType.BAND_MEMBERS)
 
         // Then — the returned artist's name is verified before use
@@ -341,10 +341,10 @@ class DiscogsProviderTest {
         }""")
         val request = EnrichmentRequest.forAlbum(title = "OK Computer", artist = "Radiohead")
 
-        // When
+        // When — enriching for album art
         val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
 
-        // Then
+        // Then — success with both discogsReleaseId and discogsMasterId resolved
         assertTrue(result is EnrichmentResult.Success)
         val success = result as EnrichmentResult.Success
         assertNotNull(success.resolvedIdentifiers)
@@ -367,10 +367,10 @@ class DiscogsProviderTest {
         }""")
         val request = EnrichmentRequest.forAlbum(title = "OK Computer", artist = "Radiohead")
 
-        // When
+        // When — enriching for album art
         val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
 
-        // Then
+        // Then — success with discogsReleaseId set but no discogsMasterId
         assertTrue(result is EnrichmentResult.Success)
         val success = result as EnrichmentResult.Success
         assertEquals("99001", success.resolvedIdentifiers!!.get("discogsReleaseId"))
@@ -383,10 +383,10 @@ class DiscogsProviderTest {
         httpClient.givenJsonResponse("discogs.com", SEARCH_RESULTS_JSON)
         val request = EnrichmentRequest.forAlbum(title = "OK Computer", artist = "Radiohead")
 
-        // When
+        // When — enriching for album art
         val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
 
-        // Then
+        // Then — resolvedIdentifiers is null since the search result has no id
         assertTrue(result is EnrichmentResult.Success)
         val success = result as EnrichmentResult.Success
         assertNull(success.resolvedIdentifiers)
@@ -396,10 +396,10 @@ class DiscogsProviderTest {
 
     @Test
     fun `provider has CREDITS capability at priority 50`() {
-        // When
+        // When — looking up the CREDITS capability
         val capability = provider.capabilities.find { it.type == EnrichmentType.CREDITS }
 
-        // Then
+        // Then — capability exists at priority 50
         assertNotNull(capability)
         assertEquals(50, capability!!.priority)
     }
@@ -415,7 +415,7 @@ class DiscogsProviderTest {
         )
         httpClient.givenJsonResponse("releases/999", RELEASE_DETAIL_WITH_TRACK_CREDITS_JSON)
 
-        // When
+        // When — enriching for credits
         val result = provider.enrich(request, EnrichmentType.CREDITS)
 
         // Then — success with track-level credit (Jane Doe, Vocals)
@@ -438,7 +438,7 @@ class DiscogsProviderTest {
         )
         httpClient.givenJsonResponse("releases/999", RELEASE_DETAIL_NO_TRACK_MATCH_JSON)
 
-        // When
+        // When — enriching for credits
         val result = provider.enrich(request, EnrichmentType.CREDITS)
 
         // Then — success with release-level credit (John Smith, Mixed By)
@@ -455,7 +455,7 @@ class DiscogsProviderTest {
         // Given — ForTrack with no extra identifiers
         val request = EnrichmentRequest.forTrack(title = "Paranoid Android", artist = "Radiohead")
 
-        // When
+        // When — enriching for credits
         val result = provider.enrich(request, EnrichmentType.CREDITS)
 
         // Then — NotFound because no discogsReleaseId
@@ -473,7 +473,7 @@ class DiscogsProviderTest {
         )
         httpClient.givenIoException("releases/")
 
-        // When
+        // When — enriching for credits
         val result = provider.enrich(request, EnrichmentType.CREDITS)
 
         // Then — Error with NETWORK kind
@@ -492,7 +492,7 @@ class DiscogsProviderTest {
         )
         httpClient.givenJsonResponse("releases/999", RELEASE_DETAIL_NO_CREDITS_JSON)
 
-        // When
+        // When — enriching for credits
         val result = provider.enrich(request, EnrichmentType.CREDITS)
 
         // Then — NotFound because credits list is empty
@@ -503,10 +503,10 @@ class DiscogsProviderTest {
 
     @Test
     fun `provider has RELEASE_EDITIONS capability at priority 50`() {
-        // When
+        // When — looking up the RELEASE_EDITIONS capability
         val capability = provider.capabilities.find { it.type == EnrichmentType.RELEASE_EDITIONS }
 
-        // Then
+        // Then — capability exists at priority 50
         assertNotNull(capability)
         assertEquals(50, capability!!.priority)
     }
@@ -522,10 +522,10 @@ class DiscogsProviderTest {
         )
         httpClient.givenJsonResponse("masters/55002/versions", MASTER_VERSIONS_JSON)
 
-        // When
+        // When — enriching for release editions
         val result = provider.enrich(request, EnrichmentType.RELEASE_EDITIONS)
 
-        // Then
+        // Then — success with both versions mapped to editions
         assertTrue(result is EnrichmentResult.Success)
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.ReleaseEditions
         assertEquals(2, data.editions.size)
@@ -542,7 +542,7 @@ class DiscogsProviderTest {
         // Given — ForAlbum with no discogsMasterId in identifiers
         val request = EnrichmentRequest.forAlbum(title = "OK Computer", artist = "Radiohead")
 
-        // When
+        // When — enriching for release editions
         val result = provider.enrich(request, EnrichmentType.RELEASE_EDITIONS)
 
         // Then — NotFound because no discogsMasterId
@@ -560,7 +560,7 @@ class DiscogsProviderTest {
         )
         httpClient.givenJsonResponse("masters/55002/versions", """{"versions":[]}""")
 
-        // When
+        // When — enriching for release editions
         val result = provider.enrich(request, EnrichmentType.RELEASE_EDITIONS)
 
         // Then — NotFound because versions list is empty
@@ -578,7 +578,7 @@ class DiscogsProviderTest {
         )
         httpClient.givenIoException("masters/")
 
-        // When
+        // When — enriching for release editions
         val result = provider.enrich(request, EnrichmentType.RELEASE_EDITIONS)
 
         // Then — Error with NETWORK kind
@@ -655,7 +655,7 @@ class DiscogsProviderTest {
         // Given — ForTrack request instead of ForAlbum
         val request = EnrichmentRequest.forTrack(title = "Paranoid Android", artist = "Radiohead")
 
-        // When
+        // When — enriching for release editions
         val result = provider.enrich(request, EnrichmentType.RELEASE_EDITIONS)
 
         // Then — NotFound because RELEASE_EDITIONS only handles ForAlbum

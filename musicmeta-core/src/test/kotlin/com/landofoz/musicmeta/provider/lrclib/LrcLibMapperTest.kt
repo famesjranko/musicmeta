@@ -22,13 +22,13 @@ class LrcLibMapperTest {
 
     @Test
     fun `toTrackMetadata converts duration seconds to durationMs and copies albumName`() {
-        // Given
+        // Given — a result with a duration in seconds and an album name
         val result = makeResult(duration = 238.0, albumName = "Pablo Honey")
 
-        // When
+        // When — mapping the result to track metadata
         val metadata = LrcLibMapper.toTrackMetadata(result)
 
-        // Then
+        // Then — duration is converted to milliseconds and albumName is copied
         assertEquals(238000L, metadata.durationMs)
         assertEquals("Pablo Honey", metadata.albumTitle)
     }

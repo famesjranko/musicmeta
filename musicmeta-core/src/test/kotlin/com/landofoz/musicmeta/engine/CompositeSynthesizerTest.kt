@@ -24,14 +24,14 @@ class CompositeSynthesizerTest {
         // Given / When
         val deps = TimelineSynthesizer.dependencies
 
-        // Then
+        // Then — both ARTIST_DISCOGRAPHY and BAND_MEMBERS are listed as dependencies
         assertTrue(EnrichmentType.ARTIST_DISCOGRAPHY in deps)
         assertTrue(EnrichmentType.BAND_MEMBERS in deps)
     }
 
     @Test
     fun `TimelineSynthesizer synthesize with ForArtist request returns Success with ArtistTimeline`() {
-        // Given
+        // Given — a resolved ARTIST_DISCOGRAPHY result for a ForArtist request
         val request = EnrichmentRequest.ForArtist(
             identifiers = EnrichmentIdentifiers(),
             name = "Radiohead",
@@ -48,10 +48,10 @@ class CompositeSynthesizerTest {
             EnrichmentType.ARTIST_DISCOGRAPHY to discography,
         )
 
-        // When
+        // When — synthesizing the artist timeline
         val result = TimelineSynthesizer.synthesize(resolved, null, request)
 
-        // Then
+        // Then — a Success ArtistTimeline result is returned
         assertTrue(result is EnrichmentResult.Success)
         val success = result as EnrichmentResult.Success
         assertEquals(EnrichmentType.ARTIST_TIMELINE, success.type)
@@ -60,17 +60,17 @@ class CompositeSynthesizerTest {
 
     @Test
     fun `TimelineSynthesizer synthesize with ForAlbum request returns NotFound artist_only`() {
-        // Given
+        // Given — a ForAlbum request with no resolved dependencies
         val request = EnrichmentRequest.ForAlbum(
             identifiers = EnrichmentIdentifiers(),
             title = "OK Computer",
             artist = "Radiohead",
         )
 
-        // When
+        // When — synthesizing the artist timeline for the album request
         val result = TimelineSynthesizer.synthesize(emptyMap(), null, request)
 
-        // Then
+        // Then — a NotFound result with provider "artist_only" is returned
         assertTrue(result is EnrichmentResult.NotFound)
         val notFound = result as EnrichmentResult.NotFound
         assertEquals("artist_only", notFound.provider)
@@ -78,7 +78,7 @@ class CompositeSynthesizerTest {
 
     @Test
     fun `TimelineSynthesizer synthesize with ForArtist and band members produces member events`() {
-        // Given
+        // Given — a resolved BAND_MEMBERS result for a ForArtist request
         val request = EnrichmentRequest.ForArtist(
             identifiers = EnrichmentIdentifiers(),
             name = "Radiohead",
@@ -93,11 +93,11 @@ class CompositeSynthesizerTest {
         )
         val resolved = mapOf(EnrichmentType.BAND_MEMBERS to members)
 
-        // When
+        // When — synthesizing the artist timeline
         val result = TimelineSynthesizer.synthesize(resolved, null, request) as EnrichmentResult.Success
         val timeline = result.data as EnrichmentData.ArtistTimeline
 
-        // Then
+        // Then — a member_joined event exists for Thom Yorke
         assertTrue(timeline.events.any { it.type == "member_joined" && it.relatedEntity == "Thom Yorke" })
     }
 }

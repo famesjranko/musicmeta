@@ -188,7 +188,7 @@ class MusicBrainzParserTest {
             """.trimIndent(),
         )
 
-        // When
+        // When — parsing recordings
         val recordings = MusicBrainzParser.parseRecordings(json)
 
         // Then — the title comes from the same release-group object as the id, no extra lookup
@@ -211,38 +211,38 @@ class MusicBrainzParserTest {
             """.trimIndent(),
         )
 
-        // When
+        // When — parsing recordings
         val recordings = MusicBrainzParser.parseRecordings(json)
 
-        // Then
+        // Then — lengthMs is copied from the recording's length field
         assertEquals(383000L, recordings[0].lengthMs)
     }
 
     @Test
     fun `parseRecording fills isVideo from the recording's own video flag`() {
-        // Given
+        // Given — a recording carrying video=true
         val json = JSONObject(
             """{"recordings": [{"id": "rec1", "score": 100, "title": "Karma Police", "video": true}]}""",
         )
 
-        // When
+        // When — parsing recordings
         val recordings = MusicBrainzParser.parseRecordings(json)
 
-        // Then
+        // Then — isVideo is true
         assertTrue(recordings[0].isVideo)
     }
 
     @Test
     fun `parseRecording defaults isVideo to false when the field is absent`() {
-        // Given
+        // Given — a recording with no video field at all
         val json = JSONObject(
             """{"recordings": [{"id": "rec1", "score": 100, "title": "Karma Police"}]}""",
         )
 
-        // When
+        // When — parsing recordings
         val recordings = MusicBrainzParser.parseRecordings(json)
 
-        // Then
+        // Then — isVideo defaults to false
         assertFalse(recordings[0].isVideo)
     }
 
@@ -279,7 +279,7 @@ class MusicBrainzParserTest {
 
     @Test
     fun `parseRecordings album hint match is case-insensitive and trims whitespace`() {
-        // Given
+        // Given — a release-group title differing only in case, plus a padded, mixed-case hint
         val json = JSONObject(
             """
             {
@@ -295,7 +295,7 @@ class MusicBrainzParserTest {
             """.trimIndent(),
         )
 
-        // When
+        // When — parsing recordings with the padded, mixed-case album hint
         val recordings = MusicBrainzParser.parseRecordings(json, albumHint = "  OK Computer  ")
 
         // Then — matched despite case/whitespace differences and a non-Official status
@@ -320,7 +320,7 @@ class MusicBrainzParserTest {
             """.trimIndent(),
         )
 
-        // When
+        // When — parsing recordings with an album hint that matches no release-group title
         val recordings = MusicBrainzParser.parseRecordings(json, albumHint = "OK Computer")
 
         // Then — tier 1 (Official Album) still applies
@@ -342,10 +342,10 @@ class MusicBrainzParserTest {
             """.trimIndent(),
         )
 
-        // When
+        // When — parsing recordings
         val recordings = MusicBrainzParser.parseRecordings(json)
 
-        // Then
+        // Then — lengthMs stays null
         assertNull(recordings[0].lengthMs)
     }
 

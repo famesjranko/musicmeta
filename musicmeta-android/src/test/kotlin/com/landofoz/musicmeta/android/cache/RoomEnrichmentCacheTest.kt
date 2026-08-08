@@ -46,7 +46,7 @@ class RoomEnrichmentCacheTest {
 
     @Test
     fun `stores and retrieves artwork result`() = runTest {
-        // Given
+        // Given — an artwork success result
         val data = EnrichmentData.Artwork(
             url = "https://example.com/art.jpg",
             thumbnailUrl = "https://example.com/thumb.jpg",
@@ -60,11 +60,11 @@ class RoomEnrichmentCacheTest {
             confidence = 0.95f,
         )
 
-        // When
+        // When — putting then getting it from the cache
         cache.put("album:123", EnrichmentType.ALBUM_ART, result)
         val retrieved = cache.get("album:123", EnrichmentType.ALBUM_ART)
 
-        // Then
+        // Then — the retrieved result matches what was stored
         assertNotNull(retrieved)
         assertEquals("coverartarchive", retrieved!!.provider)
         assertEquals(0.95f, retrieved.confidence)
@@ -77,7 +77,7 @@ class RoomEnrichmentCacheTest {
 
     @Test
     fun `stores and retrieves metadata result`() = runTest {
-        // Given
+        // Given — a metadata success result
         val data = EnrichmentData.Metadata(
             genres = listOf("Rock", "Alternative"),
             label = "Island Records",
@@ -92,11 +92,11 @@ class RoomEnrichmentCacheTest {
             confidence = 0.9f,
         )
 
-        // When
+        // When — putting then getting it from the cache
         cache.put("album:456", EnrichmentType.GENRE, result)
         val retrieved = cache.get("album:456", EnrichmentType.GENRE)
 
-        // Then
+        // Then — the retrieved result matches what was stored
         assertNotNull(retrieved)
         assertEquals("musicbrainz", retrieved!!.provider)
         val metaData = retrieved.data as EnrichmentData.Metadata
@@ -109,7 +109,7 @@ class RoomEnrichmentCacheTest {
 
     @Test
     fun `stores and retrieves lyrics result`() = runTest {
-        // Given
+        // Given — a lyrics success result
         val data = EnrichmentData.Lyrics(
             syncedLyrics = "[00:01.00]Hello world",
             plainLyrics = "Hello world",
@@ -122,11 +122,11 @@ class RoomEnrichmentCacheTest {
             confidence = 0.85f,
         )
 
-        // When
+        // When — putting then getting it from the cache
         cache.put("track:789", EnrichmentType.LYRICS_SYNCED, result)
         val retrieved = cache.get("track:789", EnrichmentType.LYRICS_SYNCED)
 
-        // Then
+        // Then — the retrieved result matches what was stored
         assertNotNull(retrieved)
         assertEquals("lrclib", retrieved!!.provider)
         val lyricsData = retrieved.data as EnrichmentData.Lyrics
@@ -137,7 +137,7 @@ class RoomEnrichmentCacheTest {
 
     @Test
     fun `stores and retrieves biography result`() = runTest {
-        // Given
+        // Given — a biography success result
         val data = EnrichmentData.Biography(
             text = "A legendary band formed in 1976.",
             source = "wikipedia",
@@ -151,11 +151,11 @@ class RoomEnrichmentCacheTest {
             confidence = 0.8f,
         )
 
-        // When
+        // When — putting then getting it from the cache
         cache.put("artist:abc", EnrichmentType.ARTIST_BIO, result)
         val retrieved = cache.get("artist:abc", EnrichmentType.ARTIST_BIO)
 
-        // Then
+        // Then — the retrieved result matches what was stored
         assertNotNull(retrieved)
         assertEquals("wikipedia", retrieved!!.provider)
         val bioData = retrieved.data as EnrichmentData.Biography
@@ -188,17 +188,17 @@ class RoomEnrichmentCacheTest {
         now = 1_006_000L
         val afterExpiry = clockCache.get("album:exp", EnrichmentType.ALBUM_ART)
 
-        // Then
+        // Then — valid before expiry, null after
         assertNotNull(beforeExpiry)
         assertNull(afterExpiry)
     }
 
     @Test
     fun `returns null for non-existent key`() = runTest {
-        // When
+        // When — getting a key that was never put
         val result = cache.get("nonexistent:key", EnrichmentType.ALBUM_ART)
 
-        // Then
+        // Then — null is returned
         assertNull(result)
     }
 
@@ -230,7 +230,7 @@ class RoomEnrichmentCacheTest {
 
     @Test
     fun `invalidate with null type removes all types for entity`() = runTest {
-        // Given
+        // Given — two different types for the same entity
         val artResult = EnrichmentResult.Success(
             type = EnrichmentType.ALBUM_ART,
             data = EnrichmentData.Artwork(url = "https://example.com/art.jpg"),
@@ -256,7 +256,7 @@ class RoomEnrichmentCacheTest {
 
     @Test
     fun `handles manual selection flag`() = runTest {
-        // Given
+        // Given — a cached artwork result
         val result = EnrichmentResult.Success(
             type = EnrichmentType.ALBUM_ART,
             data = EnrichmentData.Artwork(url = "https://example.com/art.jpg"),
@@ -268,13 +268,13 @@ class RoomEnrichmentCacheTest {
         // When — initially not manual
         val beforeMark = cache.isManuallySelected("album:manual", EnrichmentType.ALBUM_ART)
 
-        // Then
+        // Then — manual selection defaults to false
         assertFalse(beforeMark)
 
         // When — mark as manual
         cache.markManuallySelected("album:manual", EnrichmentType.ALBUM_ART)
 
-        // Then
+        // Then — manual selection is now true
         assertTrue(cache.isManuallySelected("album:manual", EnrichmentType.ALBUM_ART))
     }
 
@@ -296,10 +296,10 @@ class RoomEnrichmentCacheTest {
         cache.put("album:1", EnrichmentType.ALBUM_ART, result1)
         cache.put("artist:1", EnrichmentType.ARTIST_BIO, result2)
 
-        // When
+        // When — clearing the cache
         cache.clear()
 
-        // Then
+        // Then — no entries remain
         assertNull(cache.get("album:1", EnrichmentType.ALBUM_ART))
         assertNull(cache.get("artist:1", EnrichmentType.ARTIST_BIO))
     }
@@ -322,7 +322,7 @@ class RoomEnrichmentCacheTest {
             identityMatch = IdentityMatch.RESOLVED,
         )
 
-        // When
+        // When — putting then getting it from the cache
         cache.put("artist:radiohead", EnrichmentType.GENRE, result)
         val retrieved = cache.get("artist:radiohead", EnrichmentType.GENRE)
 
@@ -346,7 +346,7 @@ class RoomEnrichmentCacheTest {
             confidence = 0.95f,
         )
 
-        // When
+        // When — putting then getting it from the cache
         cache.put("album:no-id", EnrichmentType.ALBUM_ART, result)
         val retrieved = cache.get("album:no-id", EnrichmentType.ALBUM_ART)
 

@@ -30,7 +30,7 @@ class LrcLibProviderTest {
 
     @Test
     fun `enrich returns synced lyrics when available`() = runTest {
-        // Given
+        // Given — the API returns a track with both synced and plain lyrics
         httpClient.givenJsonResponse("/api/get", SYNCED_LYRICS_JSON)
         val request = EnrichmentRequest.forTrack(
             title = "Creep",
@@ -39,10 +39,10 @@ class LrcLibProviderTest {
             durationMs = 238_000L,
         )
 
-        // When
+        // When — enriching for synced lyrics
         val result = provider.enrich(request, EnrichmentType.LYRICS_SYNCED)
 
-        // Then
+        // Then — a Success with the synced lyrics, plain lyrics, and confidence
         assertTrue(result is EnrichmentResult.Success)
         val success = result as EnrichmentResult.Success
         val lyrics = success.data as EnrichmentData.Lyrics
@@ -54,14 +54,14 @@ class LrcLibProviderTest {
 
     @Test
     fun `enrich returns plain lyrics when no synced available`() = runTest {
-        // Given
+        // Given — the API returns a track with only plain lyrics, no synced lyrics
         httpClient.givenJsonResponse("/api/get", PLAIN_ONLY_LYRICS_JSON)
         val request = EnrichmentRequest.forTrack(title = "Some Song", artist = "Some Artist")
 
-        // When
+        // When — enriching for plain lyrics
         val result = provider.enrich(request, EnrichmentType.LYRICS_PLAIN)
 
-        // Then
+        // Then — a Success with null synced lyrics and the plain lyrics
         assertTrue(result is EnrichmentResult.Success)
         val lyrics = (result as EnrichmentResult.Success).data as EnrichmentData.Lyrics
         assertNull(lyrics.syncedLyrics)
@@ -70,7 +70,7 @@ class LrcLibProviderTest {
 
     @Test
     fun `enrich returns instrumental flag`() = runTest {
-        // Given
+        // Given — the API returns a track marked instrumental
         httpClient.givenJsonResponse("/api/get", INSTRUMENTAL_JSON)
         val request = EnrichmentRequest.forTrack(
             title = "Treefingers",
@@ -78,10 +78,10 @@ class LrcLibProviderTest {
             album = "Kid A",
         )
 
-        // When
+        // When — enriching for synced lyrics
         val result = provider.enrich(request, EnrichmentType.LYRICS_SYNCED)
 
-        // Then
+        // Then — a Success whose lyrics are flagged instrumental
         assertTrue(result is EnrichmentResult.Success)
         val lyrics = (result as EnrichmentResult.Success).data as EnrichmentData.Lyrics
         assertTrue(lyrics.isInstrumental)
@@ -93,10 +93,10 @@ class LrcLibProviderTest {
         httpClient.givenJsonArrayResponse("/api/search", SEARCH_RESULTS_JSON)
         val request = EnrichmentRequest.forTrack(title = "Creep", artist = "Radiohead")
 
-        // When
+        // When — enriching for synced lyrics
         val result = provider.enrich(request, EnrichmentType.LYRICS_SYNCED)
 
-        // Then
+        // Then — a Success sourced from the search fallback, with lower confidence
         assertTrue(result is EnrichmentResult.Success)
         val success = result as EnrichmentResult.Success
         assertEquals(0.6f, success.confidence)
@@ -106,13 +106,13 @@ class LrcLibProviderTest {
 
     @Test
     fun `enrich returns NotFound for album requests`() = runTest {
-        // Given
+        // Given — an album-level enrichment request, which LrcLib does not support
         val request = EnrichmentRequest.forAlbum(title = "Pablo Honey", artist = "Radiohead")
 
-        // When
+        // When — enriching for synced lyrics
         val result = provider.enrich(request, EnrichmentType.LYRICS_SYNCED)
 
-        // Then
+        // Then — NotFound because LrcLib only handles track-level requests
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
@@ -122,16 +122,16 @@ class LrcLibProviderTest {
         httpClient.givenJsonArrayResponse("/api/search", "[]")
         val request = EnrichmentRequest.forTrack(title = "Nonexistent", artist = "Nobody")
 
-        // When
+        // When — enriching for synced lyrics
         val result = provider.enrich(request, EnrichmentType.LYRICS_SYNCED)
 
-        // Then
+        // Then — NotFound because neither exact match nor search returned a result
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `enrich uses album and duration for exact match when available`() = runTest {
-        // Given
+        // Given — a track request with album and duration set
         httpClient.givenJsonResponse("/api/get", SYNCED_LYRICS_JSON)
         val request = EnrichmentRequest.forTrack(
             title = "Creep",
@@ -140,7 +140,7 @@ class LrcLibProviderTest {
             durationMs = 238_000L,
         )
 
-        // When
+        // When — enriching for synced lyrics
         provider.enrich(request, EnrichmentType.LYRICS_SYNCED)
 
         // Then - verify the URL contains album and duration params
@@ -160,7 +160,7 @@ class LrcLibProviderTest {
             durationMs = 238_500L,
         )
 
-        // When
+        // When — enriching for synced lyrics
         provider.enrich(request, EnrichmentType.LYRICS_SYNCED)
 
         // Then - URL should contain duration=238.5 (not duration=238)
@@ -179,7 +179,7 @@ class LrcLibProviderTest {
             durationMs = 180_000L,
         )
 
-        // When
+        // When — enriching for synced lyrics
         provider.enrich(request, EnrichmentType.LYRICS_SYNCED)
 
         // Then - URL should contain duration=180.0 (float format)
@@ -214,7 +214,7 @@ class LrcLibProviderTest {
 
     @Test
     fun `enrich returns TrackMetadata with duration and album title for TRACK_METADATA`() = runTest {
-        // Given
+        // Given — the API returns a track with duration and album populated
         httpClient.givenJsonResponse("/api/get", SYNCED_LYRICS_JSON)
         val request = EnrichmentRequest.forTrack(
             title = "Creep",
@@ -223,10 +223,10 @@ class LrcLibProviderTest {
             durationMs = 238_000L,
         )
 
-        // When
+        // When — enriching for track metadata
         val result = provider.enrich(request, EnrichmentType.TRACK_METADATA)
 
-        // Then
+        // Then — a Success with the duration and album title populated
         assertTrue(result is EnrichmentResult.Success)
         val metadata = (result as EnrichmentResult.Success).data as EnrichmentData.TrackMetadata
         assertEquals(238000L, metadata.durationMs)
@@ -248,7 +248,7 @@ class LrcLibProviderTest {
         }""")
         val request = EnrichmentRequest.forTrack(title = "Mystery Track", artist = "Unknown")
 
-        // When
+        // When — enriching for track metadata
         val result = provider.enrich(request, EnrichmentType.TRACK_METADATA)
 
         // Then — the provider does not gate; PayloadAnswers owns empty-payload demotion

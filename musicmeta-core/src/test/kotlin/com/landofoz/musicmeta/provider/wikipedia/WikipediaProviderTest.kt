@@ -27,7 +27,7 @@ class WikipediaProviderTest {
 
     @Test
     fun `enrich returns biography from page summary`() = runTest {
-        // Given
+        // Given — Wikipedia returns a page summary with extract and thumbnail
         val title = "Radiohead"
         httpClient.givenJsonResponse(
             "wikipedia.org",
@@ -46,10 +46,10 @@ class WikipediaProviderTest {
             name = "Radiohead",
         )
 
-        // When
+        // When — enriching for artist bio
         val result = provider.enrich(request, EnrichmentType.ARTIST_BIO)
 
-        // Then
+        // Then — success with a Biography built from the extract and thumbnail
         assertTrue(result is EnrichmentResult.Success)
         val success = result as EnrichmentResult.Success
         assertEquals("wikipedia", success.provider)
@@ -62,16 +62,16 @@ class WikipediaProviderTest {
 
     @Test
     fun `enrich returns NotFound when no wikipediaTitle in identifiers`() = runTest {
-        // Given
+        // Given — identifiers carry no wikipediaTitle and no wikidataId to resolve one
         val request = EnrichmentRequest.ForArtist(
             identifiers = EnrichmentIdentifiers(),
             name = "Radiohead",
         )
 
-        // When
+        // When — enriching for artist bio
         val result = provider.enrich(request, EnrichmentType.ARTIST_BIO)
 
-        // Then
+        // Then — NotFound because there is no title to look up
         assertTrue(result is EnrichmentResult.NotFound)
         val notFound = result as EnrichmentResult.NotFound
         assertEquals("wikipedia", notFound.provider)
@@ -85,16 +85,16 @@ class WikipediaProviderTest {
             name = "NonExistentBandXYZ123",
         )
 
-        // When
+        // When — enriching for artist bio
         val result = provider.enrich(request, EnrichmentType.ARTIST_BIO)
 
-        // Then
+        // Then — NotFound because the unstubbed request resolves to an HTTP 404
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `enrich includes article thumbnail URL`() = runTest {
-        // Given
+        // Given — Wikipedia returns a page summary with a thumbnail source
         val title = "Beck"
         val thumbnailUrl = "https://upload.wikimedia.org/thumb/beck.jpg/320px-beck.jpg"
         httpClient.givenJsonResponse(
@@ -112,10 +112,10 @@ class WikipediaProviderTest {
             name = "Beck",
         )
 
-        // When
+        // When — enriching for artist bio
         val result = provider.enrich(request, EnrichmentType.ARTIST_BIO)
 
-        // Then
+        // Then — success with the thumbnail URL carried through to the Biography
         assertTrue(result is EnrichmentResult.Success)
         val bio = (result as EnrichmentResult.Success).data as EnrichmentData.Biography
         assertEquals("Beck Hansen is an American musician.", bio.text)
@@ -324,10 +324,10 @@ class WikipediaProviderTest {
             artist = "Radiohead",
         )
 
-        // When
+        // When — enriching for ALBUM_DESCRIPTION
         val result = provider.enrich(request, EnrichmentType.ALBUM_DESCRIPTION)
 
-        // Then
+        // Then — success with the page extract mapped into a Biography
         assertTrue(result is EnrichmentResult.Success)
         val bio = (result as EnrichmentResult.Success).data as EnrichmentData.Biography
         assertEquals(
@@ -348,10 +348,10 @@ class WikipediaProviderTest {
             artist = "Radiohead",
         )
 
-        // When
+        // When — enriching for ALBUM_DESCRIPTION
         val result = provider.enrich(request, EnrichmentType.ALBUM_DESCRIPTION)
 
-        // Then
+        // Then — success, the title resolved via the Wikidata sitelink lookup
         assertTrue(result is EnrichmentResult.Success)
         val bio = (result as EnrichmentResult.Success).data as EnrichmentData.Biography
         assertEquals("Radiohead are an English rock band.", bio.text)
@@ -366,10 +366,10 @@ class WikipediaProviderTest {
             artist = "Unknown Artist",
         )
 
-        // When
+        // When — enriching for ALBUM_DESCRIPTION
         val result = provider.enrich(request, EnrichmentType.ALBUM_DESCRIPTION)
 
-        // Then
+        // Then — NotFound because no title could be resolved
         assertTrue(result is EnrichmentResult.NotFound)
     }
 

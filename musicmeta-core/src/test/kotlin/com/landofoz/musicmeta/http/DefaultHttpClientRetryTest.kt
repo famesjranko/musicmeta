@@ -47,7 +47,7 @@ class DefaultHttpClientRetryTest {
         // Given — one 429 with no Retry-After, then a normal response
         scripted += 429 to null
 
-        // When
+        // When — the JSON result is fetched
         val result = client.fetchJsonResult(url())
 
         // Then — the caller never sees the 429
@@ -59,7 +59,7 @@ class DefaultHttpClientRetryTest {
         // Given — the server asks for 30s, fifteen times the 2s first backoff
         scripted += 429 to "30"
 
-        // When
+        // When — the JSON result is fetched
         val result = client.fetchJsonResult(url())
 
         // Then — it waited roughly what was asked (jitter is ±25%), not the default 2s
@@ -72,7 +72,7 @@ class DefaultHttpClientRetryTest {
         // and a timeout mid-fan-out loses every other provider's in-flight work.
         scripted += 429 to "60"
 
-        // When
+        // When — the JSON result is fetched under a 1s enrich deadline
         val result = withContext(EnrichDeadline(budgetMs = 1_000)) { client.fetchJsonResult(url()) }
 
         // Then — handed back immediately, with the server's figure intact for the consumer
@@ -88,7 +88,7 @@ class DefaultHttpClientRetryTest {
         // deadline test here supplies a Retry-After, which replaces the default outright.
         scripted += 429 to null
 
-        // When
+        // When — the JSON result is fetched under a 1s enrich deadline
         val result = withContext(EnrichDeadline(budgetMs = 1_000)) { client.fetchJsonResult(url()) }
 
         // Then — handed back unretried, because 2s does not fit in the second that is left
@@ -102,7 +102,7 @@ class DefaultHttpClientRetryTest {
         // just past the 120s ceiling, which only holds because the comparison is made before jitter.
         scripted += 429 to "125"
 
-        // When
+        // When — the JSON result is fetched
         val result = client.fetchJsonResult(url())
 
         // Then — the 120s ceiling is what applies instead
@@ -114,7 +114,7 @@ class DefaultHttpClientRetryTest {
         // Given — every attempt rate limited
         repeat(3) { scripted += 429 to null }
 
-        // When
+        // When — the JSON result is fetched
         val result = client.fetchJsonResult(url())
 
         // Then — RateLimited still reaches the consumer, narrowed to "still limited after retries"

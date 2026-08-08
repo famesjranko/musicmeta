@@ -36,7 +36,7 @@ class EnrichmentEngineExtensionsTest {
     // --- artistProfile ---
 
     @Test fun `artistProfile calls enrich with ForArtist and default types`() = runTest {
-        // Given
+        // Given — a fake engine returning a GENRE success result
         val engine = FakeEngine()
         engine.resultsToReturn = mapOf(
             EnrichmentType.GENRE to EnrichmentResult.Success(
@@ -44,10 +44,10 @@ class EnrichmentEngineExtensionsTest {
             ),
         )
 
-        // When
+        // When — requesting an artist profile
         val profile = engine.artistProfile("Radiohead")
 
-        // Then
+        // Then — the profile and the request passed to enrich are correct
         assertEquals("Radiohead", profile.name)
         assertTrue(engine.lastRequest is EnrichmentRequest.ForArtist)
         assertEquals("Radiohead", (engine.lastRequest as EnrichmentRequest.ForArtist).name)

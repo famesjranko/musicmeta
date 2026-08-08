@@ -35,11 +35,11 @@ class MusicBrainzKarmaPoliceRegressionTest {
 
     @Test
     fun `TRACK_METADATA resolves to the studio recording and the requested album, not the music video`() = runTest {
-        // Given
+        // Given — the album-hinted candidate pool with the video take scoring highest
         httpClient.givenJsonResponse("recording?query", KARMA_POLICE_ALBUM_HINTED_POOL)
         val request = EnrichmentRequest.forTrack("Karma Police", "Radiohead", album = "OK Computer")
 
-        // When
+        // When — resolving track metadata
         val result = provider.enrich(request, EnrichmentType.TRACK_METADATA)
 
         // Then — the blank-disambiguation, non-video studio recording wins despite scoring lower
@@ -59,10 +59,10 @@ class MusicBrainzKarmaPoliceRegressionTest {
         httpClient.givenJsonResponse("recording?query", KARMA_POLICE_ALBUM_HINTED_POOL)
         val request = EnrichmentRequest.forTrack("Karma Police", "Radiohead", album = "OK Computer")
 
-        // When
+        // When — resolving genre
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then
+        // Then — the studio recording is still the one that wins
         assertTrue(result is EnrichmentResult.Success)
         val success = result as EnrichmentResult.Success
         assertEquals("studio-recording-id", success.resolvedIdentifiers?.musicBrainzId)
@@ -89,7 +89,7 @@ class MusicBrainzKarmaPoliceRegressionTest {
         )
         val request = EnrichmentRequest.forTrack("Karma Police", "Radiohead")
 
-        // When
+        // When — resolving genre with no album hint
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
         // Then — the non-video candidate wins even though pool order favours the video one

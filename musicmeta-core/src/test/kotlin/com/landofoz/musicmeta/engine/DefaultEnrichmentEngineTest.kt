@@ -429,7 +429,7 @@ class DefaultEnrichmentEngineTest {
             .also { it.givenResult(EnrichmentType.ALBUM_ART, art("deezer")) }
         val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider, artProvider)), cache, EnrichmentConfig(enableIdentityResolution = true))
 
-        // When
+        // When — enriching for ALBUM_ART
         val results = e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
 
         // Then — same UNVERIFIED treatment as the throwing path
@@ -490,7 +490,7 @@ class DefaultEnrichmentEngineTest {
             synthesizers = listOf(capturing),
         )
 
-        // When
+        // When — enriching for ARTIST_TIMELINE
         e.enrich(req, setOf(EnrichmentType.ARTIST_TIMELINE))
 
         // Then — AUTH, not UNKNOWN: consumers key retry policy off ErrorKind, and an auth failure
@@ -1062,7 +1062,7 @@ class DefaultEnrichmentEngineTest {
             mergers = listOf(GenreMerger, SimilarArtistMerger),
         )
 
-        // When
+        // When — enriching for SIMILAR_ARTISTS
         val results = e.enrich(
             EnrichmentRequest.forArtist("Radiohead"),
             setOf(EnrichmentType.SIMILAR_ARTISTS),
@@ -1095,7 +1095,7 @@ class DefaultEnrichmentEngineTest {
             mergers = listOf(GenreMerger, SimilarArtistMerger),
         )
 
-        // When
+        // When — enriching for SIMILAR_ARTISTS
         val results = e.enrich(
             EnrichmentRequest.forArtist("Radiohead"),
             setOf(EnrichmentType.SIMILAR_ARTISTS),
@@ -1403,7 +1403,7 @@ class DefaultEnrichmentEngineTest {
             mergers = listOf(GenreMerger, ArtworkMerger(EnrichmentType.ARTIST_PHOTO)),
         )
 
-        // When
+        // When — enriching for ARTIST_PHOTO
         val results = e.enrich(req, setOf(EnrichmentType.ARTIST_PHOTO))
 
         // Then — both providers skipped (neither identifier ever resolved), merger's own
@@ -1443,7 +1443,7 @@ class DefaultEnrichmentEngineTest {
             EnrichmentConfig(enableIdentityResolution = true),
         )
 
-        // When
+        // When — enriching for ALBUM_DESCRIPTION
         val results = e.enrich(req, setOf(EnrichmentType.ALBUM_DESCRIPTION))
 
         // Then — still NotFound; no transient fired this run
