@@ -122,7 +122,7 @@ step "kotlin static analysis (detekt, type-resolved)"
 step "build (compile, test, apiCheck)"
 ./gradlew build
 
-# demo/ is a separate composite build that `./gradlew build` never compiles, so this is the only
+# demo-cli/ is a separate composite build that `./gradlew build` never compiles, so this is the only
 # in-tree consumer compiling the way an external one does. It has no wrapper — it borrows the root.
 #
 # --skip-demo exists for CI only, where `demo-canary` is a separate required status check and
@@ -133,11 +133,12 @@ if [ "$SKIP_DEMO" = 1 ]; then
     printf '\n\033[1m--skip-demo: demo canary left to its own CI job\033[0m\n'
 else
     step "demo canary"
-    # ktlintCheck before test: demo/ is exempt from house *conventions* (see check_conventions.py)
-    # but not from formatting — it is the worked example, and nothing about style affects the
-    # canary's job. test after ktlintCheck so a formatting failure reports first. demo/ has no
-    # test sources yet; Gradle's test task reports NO-SOURCE and passes rather than failing.
-    (cd demo && ../gradlew compileKotlin ktlintCheck test --quiet)
+    # ktlintCheck before test: demo-cli/ is exempt from house *conventions* (see
+    # check_conventions.py) but not from formatting — it is the worked example, and nothing about
+    # style affects the canary's job. test after ktlintCheck so a formatting failure reports first.
+    # demo-cli/ has no test sources yet; Gradle's test task reports NO-SOURCE and passes rather
+    # than failing.
+    (cd demo-cli && ../gradlew compileKotlin ktlintCheck test --quiet)
     # demo-web/ is the same shape: a separate composite build `./gradlew build` never compiles,
     # consuming the library like an external app. Without this line nothing gates its tests either.
     (cd demo-web && ../gradlew compileKotlin ktlintCheck test --quiet)

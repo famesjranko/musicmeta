@@ -1,4 +1,4 @@
-rootProject.name = "musicmeta-demo"
+rootProject.name = "musicmeta-demo-cli"
 
 // Composite build: resolves musicmeta-core from local source during development.
 // To move to own repo: remove includeBuild, add JitPack repo + dependency.

@@ -1,7 +1,7 @@
 # musicmeta web demo
 
 A standalone web app that renders everything the library exposes — artist, album, and track pages
-with imagery, discovery, lyrics, and suggestions. Like `demo/`, it is a composite build that
+with imagery, discovery, lyrics, and suggestions. Like `demo-cli/`, it is a composite build that
 consumes `musicmeta-core` the way an external app would.
 
 ```bash

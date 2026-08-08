@@ -14,7 +14,7 @@ shared checkout.
   the project directory, so an in-tree worktree looks like a second copy of every module.
 - A fresh worktree needs no copied build inputs. `secrets.properties` is runtime-only, Android uses
   `ANDROID_HOME`, and Gradle dependencies resolve through the shared user cache.
-- The `demo/` composite build uses `includeBuild("..")`; inside a worktree it correctly resolves that
+- The `demo-cli/` composite build uses `includeBuild("..")`; inside a worktree it correctly resolves that
   worktree's library. Do not replace the relative path with an absolute one.
 - `.claude/` is ignored except for `.claude/settings.json`, which is tracked so the format-on-write
   hook reaches every worktree. `.claude/rules/` is un-ignored too but does not exist yet. Everything
@@ -145,7 +145,7 @@ Gradle may report `UP-TO-DATE` without executing tests. Verification evidence mu
 | Changed surface | Additional evidence |
 |---|---|
 | `musicmeta-core/**` | `./gradlew :musicmeta-core:test` |
-| Public core API or any `api/*.api` | `./gradlew apiCheck`, review the API diff against `docs/pitfalls.md`, then `cd demo && ../gradlew compileKotlin` |
+| Public core API or any `api/*.api` | `./gradlew apiCheck`, review the API diff against `docs/pitfalls.md`, then `cd demo-cli && ../gradlew compileKotlin` |
 | `provider/<name>/**` | Matching provider tests, then the full core suite |
 | `musicmeta-android/**` | `ANDROID_HOME=~/Android/Sdk ./gradlew :musicmeta-android:test` plus `apiCheck` |
 | Android Room cache | Android tests plus explicit schema and migration review |

@@ -5,8 +5,8 @@
 # `./check` stays the implementation of verification (CI runs it directly, and it takes flags).
 # `make check` calls it. They are not competing entry points.
 #
-# .PHONY on everything matters here: `check` and `demo` are also real paths in this repo, and
-# without it make would see the file, call the target up to date, and silently do nothing.
+# .PHONY on everything matters here: `check` is also a real path in this repo, and without it
+# make would see the file, call the target up to date, and silently do nothing.
 
 SHELL := /usr/bin/env bash
 GRADLE := ./gradlew
@@ -61,13 +61,13 @@ test-e2e: ## E2E tests against live third-party APIs — never merge-gating, nee
 	$(GRADLE) :musicmeta-core:test -Dinclude.e2e=true
 
 .PHONY: demo
-demo: ## Compile and test demo/ and demo-web/, matching CI's demo-canary job
-	cd demo && ../gradlew compileKotlin test
+demo: ## Compile and test demo-cli/ and demo-web/, matching CI's demo-canary job
+	cd demo-cli && ../gradlew compileKotlin test
 	cd demo-web && ../gradlew compileKotlin test
 
-.PHONY: demo-run
-demo-run: ## Run the demo CLI (interactive if ARGS unset, else ARGS="artist Radiohead")
-	cd demo && ../gradlew run --console=plain -q $(if $(ARGS),--args="$(ARGS)")
+.PHONY: demo-cli-run
+demo-cli-run: ## Run the demo CLI (interactive if ARGS unset, else ARGS="artist Radiohead")
+	cd demo-cli && ../gradlew run --console=plain -q $(if $(ARGS),--args="$(ARGS)")
 
 .PHONY: demo-web-run
 demo-web-run: ## Start the demo web server on http://localhost:8099
