@@ -33,7 +33,7 @@ ktlint_version_matches() {
     return 1
 }
 
-# `demo/` is included on purpose: it applies the same ktlint against the same `.editorconfig`, and
+# `demo-cli/` is included on purpose: it applies the same ktlint against the same `.editorconfig`, and
 # `./check` gates it. It stays exempt from house *conventions*, which is a separate check.
 #
 # Rewrites in place. Failures are non-fatal: a file mid-edit may not parse, and blocking the write

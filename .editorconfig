@@ -33,8 +33,8 @@ ktlint_standard_function-literal = disabled
 ktlint_standard_chain-method-continuation = disabled
 
 # Newer ktlint enables this rule by default; 1.5.0 did not have it. Enforced, it inserts a blank
-# line between multiline `when` branches — 114 sites in main sources, 65 more in demo/ when it was
-# measured. Disabled as a style choice: blank-line placement noise, not correctness. The hook and
+# line between multiline `when` branches — 114 sites in main sources, 65 more in demo-cli/ when it
+# was measured. Disabled as a style choice: blank-line placement noise, not correctness. The hook and
 # the gate both read their ktlint version from `gradle/libs.versions.toml`, so they agree on this.
 ktlint_standard_blank-line-between-when-conditions = disabled
 

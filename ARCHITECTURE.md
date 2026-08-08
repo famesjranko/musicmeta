@@ -18,15 +18,15 @@ because the config is the thing that fails.
 |---|---|---|
 | Python format and lint | ruff | `scripts/**` |
 | Python types | mypy | `scripts/**` |
-| Shell | shellcheck | `scripts/**`, `check`, `demo/run.sh` |
+| Shell | shellcheck | `scripts/**`, `check`, `demo-cli/run.sh` |
 | Conventions | `scripts/checks/check_conventions.py` | no `!!` and no `@Serializable` under `provider/`/`http/` in main sources; only `*Provider` public under `provider/` in the committed `api/*.api`; conflict markers anywhere |
 | Test shape | `scripts/checks/check_test_shape.py` | every `@Test` body has `// Given -`/`// When -`/`// Then -`, each on its own line with a plain hyphen and a real clause — Kotlin test sources only, on both the `check` gate and the `format-on-write.sh` hook |
 | Release-note caps | `build_release_notes.py Unreleased` | `CHANGELOG.md`'s `[Unreleased]` stays under 3000 chars and 400 per line — the same `check_caps()` the release runs, so it fails here rather than at release prep. An empty section passes: `pin_release.py` opens one on every release branch |
 | Script self-tests | `scripts/**/test_*.py` | discovered, not listed — every script with a `test_*.py` beside it still behaves: release notes, conventions |
-| Kotlin format | ktlint (version pinned in `libs.versions.toml`) | all modules, `demo/`, and `demo-web/` |
+| Kotlin format | ktlint (version pinned in `libs.versions.toml`) | all modules, `demo-cli/`, and `demo-web/` |
 | Kotlin static analysis | detekt, **type-resolved** (`detektMain`/`detektTest`) | complexity, dead code, bug patterns |
 | Build | `./gradlew build` | compile, all unit tests, `apiCheck` against `api/*.api` |
-| Consumer canary | `demo/` and `demo-web/` composite builds | an external consumer still compiles, and their tests run (`demo-web/`'s 36 `ProfileMapperTest` cases; `demo/` has none yet) |
+| Consumer canary | `demo-cli/` and `demo-web/` composite builds | an external consumer still compiles, and their tests run (`demo-web/`'s 36 `ProfileMapperTest` cases; `demo-cli/` has none yet) |
 
 Gates exist beyond `./check` and this table does not list them: `main`'s branch protection lives in
 `docs/project/workflow.md`, the release workflow's own verification in `docs/project/release.md`.
@@ -38,9 +38,10 @@ reintroduces exactly the local/CI disagreement one command is supposed to remove
 
 Format-on-write (`scripts/format-on-write.sh`, wired in `.claude/settings.json`) is a convenience,
 not a gate. It runs ktlint on `.kt`/`.kts` and ruff on `.py`, and no-ops when either CLI is absent;
-`ktlintCheck` and the ruff check are what actually fail. It also no-ops on `demo/`, and when the
-`ktlint` on `PATH` is not the `ktlint-cli` version pinned in `libs.versions.toml` — a CLI running a
-different rule set writes formatting the gate never asked for, and nothing fails to say so.
+`ktlintCheck` and the ruff check are what actually fail. It also no-ops when the `ktlint` on `PATH`
+is not the `ktlint-cli` version pinned in `libs.versions.toml` — a CLI running a different rule set
+writes formatting the gate never asked for, and nothing fails to say so. It does not skip
+`demo-cli/`: formatting is shared with the parent build even though house conventions are not.
 
 ## Known gaps
 
@@ -86,10 +87,10 @@ than it looks like, each learned the hard way.
   payload names. Sweeping everything dirty at end of turn was built and deleted: it reformats
   uncommitted work the agent never touched. `ktlintCheck` catches it, one `./check` later.
 
-- **`demo/` is exempt from house conventions, not from formatting.** It is a separate composite
+- **`demo-cli/` is exempt from house conventions, not from formatting.** It is a separate composite
   build, never compiled by `./gradlew build`, so a green build says nothing about it — that is what
-  the canary is for. The convention rules govern how we build internals, and `demo/`'s job is to
+  the canary is for. The convention rules govern how we build internals, and `demo-cli/`'s job is to
   compile against the published surface like an external consumer; holding it to them would make the
   canary about us instead of about consumers. Formatting is the opposite case: it cannot affect that
-  job, and `demo/` is the worked example people read, so it applies the same ktlint against the same
-  `.editorconfig` and `./check` gates it. `demo/run.sh` is shellchecked — that was never about style.
+  job, and `demo-cli/` is the worked example people read, so it applies the same ktlint against the same
+  `.editorconfig` and `./check` gates it. `demo-cli/run.sh` is shellchecked — that was never about style.
