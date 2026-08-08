@@ -16,13 +16,13 @@ class MusicBrainzParserTest {
 
     @Test
     fun `parseReleases extracts all fields from search response`() {
-        // Given — full MusicBrainz release search JSON with all fields populated
+        // Given - full MusicBrainz release search JSON with all fields populated
         val json = JSONObject(RELEASE_SEARCH_RESPONSE)
 
-        // When — parsing releases
+        // When - parsing releases
         val releases = MusicBrainzParser.parseReleases(json)
 
-        // Then — all fields extracted: id, title, artist, date, country, label, group, type, score, cover, tags
+        // Then - all fields extracted: id, title, artist, date, country, label, group, type, score, cover, tags
         assertEquals(1, releases.size)
         val release = releases[0]
         assertEquals("abc123", release.id)
@@ -40,15 +40,15 @@ class MusicBrainzParserTest {
 
     @Test
     fun `parseReleases handles missing optional fields`() {
-        // Given — minimal release JSON with only id, score, and title
+        // Given - minimal release JSON with only id, score, and title
         val json = JSONObject(
             """{"releases":[{"id":"min1","score":70,"title":"Minimal"}]}""",
         )
 
-        // When — parsing releases
+        // When - parsing releases
         val releases = MusicBrainzParser.parseReleases(json)
 
-        // Then — required fields populated, all optional fields are null/empty
+        // Then - required fields populated, all optional fields are null/empty
         assertEquals(1, releases.size)
         val release = releases[0]
         assertEquals("min1", release.id)
@@ -65,52 +65,52 @@ class MusicBrainzParserTest {
 
     @Test
     fun `parseReleases falls back to release-group tags`() {
-        // Given — release has no top-level tags, but release-group has tags
+        // Given - release has no top-level tags, but release-group has tags
         val json = JSONObject(RELEASE_WITH_GROUP_TAGS)
 
-        // When — parsing releases
+        // When - parsing releases
         val releases = MusicBrainzParser.parseReleases(json)
 
-        // Then — tags sourced from release-group
+        // Then - tags sourced from release-group
         assertEquals(1, releases.size)
         assertEquals(listOf("electronic", "ambient"), releases[0].tags)
     }
 
     @Test
     fun `parseArtists extracts Wikidata ID from URL relations`() {
-        // Given — artist JSON with a Wikidata URL relation
+        // Given - artist JSON with a Wikidata URL relation
         val json = JSONObject(ARTIST_SEARCH_WITH_RELATIONS)
 
-        // When — parsing artists
+        // When - parsing artists
         val artists = MusicBrainzParser.parseArtists(json)
 
-        // Then — Wikidata ID extracted from the URL path
+        // Then - Wikidata ID extracted from the URL path
         assertEquals(1, artists.size)
         assertEquals("Q188451", artists[0].wikidataId)
     }
 
     @Test
     fun `parseArtists extracts Wikipedia title from URL relations`() {
-        // Given — artist JSON with both Wikidata and Wikipedia relations
+        // Given - artist JSON with both Wikidata and Wikipedia relations
         val json = JSONObject(ARTIST_WITH_WIKIPEDIA)
 
-        // When — parsing artists
+        // When - parsing artists
         val artists = MusicBrainzParser.parseArtists(json)
 
-        // Then — Wikipedia title extracted from en.wikipedia.org URL
+        // Then - Wikipedia title extracted from en.wikipedia.org URL
         assertEquals(1, artists.size)
         assertEquals("Radiohead", artists[0].wikipediaTitle)
     }
 
     @Test
     fun `parseArtists ignores a non-English Wikipedia URL relation`() {
-        // Given — Portishead's real MusicBrainz relations: wikidata plus a fr-only wikipedia link
+        // Given - Portishead's real MusicBrainz relations: wikidata plus a fr-only wikipedia link
         val json = JSONObject(ARTIST_WITH_FRENCH_WIKIPEDIA)
 
-        // When — parsing artists
+        // When - parsing artists
         val artists = MusicBrainzParser.parseArtists(json)
 
-        // Then — no title, so WikipediaProvider falls back to the Wikidata enwiki sitelink
+        // Then - no title, so WikipediaProvider falls back to the Wikidata enwiki sitelink
         assertEquals(1, artists.size)
         assertNull(artists[0].wikipediaTitle)
         assertEquals("Q191352", artists[0].wikidataId)
@@ -118,25 +118,25 @@ class MusicBrainzParserTest {
 
     @Test
     fun `parseArtists prefers the English Wikipedia relation over an earlier non-English one`() {
-        // Given — a fr relation listed before the en relation
+        // Given - a fr relation listed before the en relation
         val json = JSONObject(ARTIST_WITH_FRENCH_AND_ENGLISH_WIKIPEDIA)
 
-        // When — parsing artists
+        // When - parsing artists
         val artists = MusicBrainzParser.parseArtists(json)
 
-        // Then — the English title wins regardless of relation order
+        // Then - the English title wins regardless of relation order
         assertEquals("Portishead_(band)", artists[0].wikipediaTitle)
     }
 
     @Test
     fun `parseRecording extracts ISRCs`() {
-        // Given — recording JSON with ISRCs array
+        // Given - recording JSON with ISRCs array
         val json = JSONObject(RECORDING_SEARCH_RESPONSE)
 
-        // When — parsing recordings
+        // When - parsing recordings
         val recordings = MusicBrainzParser.parseRecordings(json)
 
-        // Then — recording fields and ISRCs extracted
+        // Then - recording fields and ISRCs extracted
         assertEquals(1, recordings.size)
         assertEquals("rec1", recordings[0].id)
         assertEquals("Paranoid Android", recordings[0].title)
@@ -146,7 +146,7 @@ class MusicBrainzParserTest {
 
     @Test
     fun `parseRecording fills artReleaseGroupId from an Official Album release, tier 1`() {
-        // Given — a recording hit carrying an Official release on an Album release-group with an id
+        // Given - a recording hit carrying an Official release on an Album release-group with an id
         val json = JSONObject(
             """
             {
@@ -162,17 +162,17 @@ class MusicBrainzParserTest {
             """.trimIndent(),
         )
 
-        // When — parsing recordings
+        // When - parsing recordings
         val recordings = MusicBrainzParser.parseRecordings(json)
 
-        // Then — both the strict ranking boolean and the (tier-1) art id are filled from this shape
+        // Then - both the strict ranking boolean and the (tier-1) art id are filled from this shape
         assertTrue(recordings[0].hasOfficialAlbumRelease)
         assertEquals("rg-studio", recordings[0].artReleaseGroupId)
     }
 
     @Test
     fun `parseRecording fills artReleaseGroupTitle alongside artReleaseGroupId from the same object`() {
-        // Given — same tier-1 shape as above, but with a title on the release-group object
+        // Given - same tier-1 shape as above, but with a title on the release-group object
         val json = JSONObject(
             """
             {
@@ -188,16 +188,16 @@ class MusicBrainzParserTest {
             """.trimIndent(),
         )
 
-        // When — parsing recordings
+        // When - parsing recordings
         val recordings = MusicBrainzParser.parseRecordings(json)
 
-        // Then — the title comes from the same release-group object as the id, no extra lookup
+        // Then - the title comes from the same release-group object as the id, no extra lookup
         assertEquals("Metallica", recordings[0].artReleaseGroupTitle)
     }
 
     @Test
     fun `parseRecording fills lengthMs from the recording's own length field`() {
-        // Given — a recording search hit carrying its own duration
+        // Given - a recording search hit carrying its own duration
         val json = JSONObject(
             """
             {
@@ -211,44 +211,44 @@ class MusicBrainzParserTest {
             """.trimIndent(),
         )
 
-        // When — parsing recordings
+        // When - parsing recordings
         val recordings = MusicBrainzParser.parseRecordings(json)
 
-        // Then — lengthMs is copied from the recording's length field
+        // Then - lengthMs is copied from the recording's length field
         assertEquals(383000L, recordings[0].lengthMs)
     }
 
     @Test
     fun `parseRecording fills isVideo from the recording's own video flag`() {
-        // Given — a recording carrying video=true
+        // Given - a recording carrying video=true
         val json = JSONObject(
             """{"recordings": [{"id": "rec1", "score": 100, "title": "Karma Police", "video": true}]}""",
         )
 
-        // When — parsing recordings
+        // When - parsing recordings
         val recordings = MusicBrainzParser.parseRecordings(json)
 
-        // Then — isVideo is true
+        // Then - isVideo is true
         assertTrue(recordings[0].isVideo)
     }
 
     @Test
     fun `parseRecording defaults isVideo to false when the field is absent`() {
-        // Given — a recording with no video field at all
+        // Given - a recording with no video field at all
         val json = JSONObject(
             """{"recordings": [{"id": "rec1", "score": 100, "title": "Karma Police"}]}""",
         )
 
-        // When — parsing recordings
+        // When - parsing recordings
         val recordings = MusicBrainzParser.parseRecordings(json)
 
-        // Then — isVideo defaults to false
+        // Then - isVideo defaults to false
         assertFalse(recordings[0].isVideo)
     }
 
     @Test
     fun `parseRecordings with an albumHint prefers a release-group title match over an earlier Official Album`() {
-        // Given — mirrors the live Radiohead "Karma Police" shape: "The Best Of" (a compilation)
+        // Given - mirrors the live Radiohead "Karma Police" shape: "The Best Of" (a compilation)
         // sits first in the releases array, "OK Computer" (the requested album) sits third, both
         // Official Album release-groups
         val json = JSONObject(
@@ -267,11 +267,11 @@ class MusicBrainzParserTest {
             """.trimIndent(),
         )
 
-        // When — parsing with an album hint vs. without one
+        // When - parsing with an album hint vs. without one
         val hinted = MusicBrainzParser.parseRecordings(json, albumHint = "OK Computer")
         val unhinted = MusicBrainzParser.parseRecordings(json)
 
-        // Then — the hint changes which release-group wins the art/album-title tier
+        // Then - the hint changes which release-group wins the art/album-title tier
         assertEquals("OK Computer", hinted[0].artReleaseGroupTitle)
         assertEquals("rg-ok-computer", hinted[0].artReleaseGroupId)
         assertEquals("The Best Of", unhinted[0].artReleaseGroupTitle)
@@ -279,7 +279,7 @@ class MusicBrainzParserTest {
 
     @Test
     fun `parseRecordings album hint match is case-insensitive and trims whitespace`() {
-        // Given — a release-group title differing only in case, plus a padded, mixed-case hint
+        // Given - a release-group title differing only in case, plus a padded, mixed-case hint
         val json = JSONObject(
             """
             {
@@ -295,16 +295,16 @@ class MusicBrainzParserTest {
             """.trimIndent(),
         )
 
-        // When — parsing recordings with the padded, mixed-case album hint
+        // When - parsing recordings with the padded, mixed-case album hint
         val recordings = MusicBrainzParser.parseRecordings(json, albumHint = "  OK Computer  ")
 
-        // Then — matched despite case/whitespace differences and a non-Official status
+        // Then - matched despite case/whitespace differences and a non-Official status
         assertEquals("ok computer", recordings[0].artReleaseGroupTitle)
     }
 
     @Test
     fun `parseRecordings falls back to the existing tiers when albumHint matches nothing`() {
-        // Given — no release-group title matches the hint
+        // Given - no release-group title matches the hint
         val json = JSONObject(
             """
             {
@@ -320,16 +320,16 @@ class MusicBrainzParserTest {
             """.trimIndent(),
         )
 
-        // When — parsing recordings with an album hint that matches no release-group title
+        // When - parsing recordings with an album hint that matches no release-group title
         val recordings = MusicBrainzParser.parseRecordings(json, albumHint = "OK Computer")
 
-        // Then — tier 1 (Official Album) still applies
+        // Then - tier 1 (Official Album) still applies
         assertEquals("Amnesiac", recordings[0].artReleaseGroupTitle)
     }
 
     @Test
     fun `parseRecording leaves lengthMs null when length is absent or zero`() {
-        // Given — no length field at all
+        // Given - no length field at all
         val json = JSONObject(
             """
             {
@@ -342,16 +342,16 @@ class MusicBrainzParserTest {
             """.trimIndent(),
         )
 
-        // When — parsing recordings
+        // When - parsing recordings
         val recordings = MusicBrainzParser.parseRecordings(json)
 
-        // Then — lengthMs stays null
+        // Then - lengthMs stays null
         assertNull(recordings[0].lengthMs)
     }
 
     @Test
     fun `parseRecording keeps a tier-2 id from an Official non-Album release, ranking bool false`() {
-        // Given — live evidence shape: "Enter Sandman" under the "Metallica" album hint embeds only
+        // Given - live evidence shape: "Enter Sandman" under the "Metallica" album hint embeds only
         // an Official release on an "Other" (box-set) release-group, not a plain Album
         val json = JSONObject(
             """
@@ -368,10 +368,10 @@ class MusicBrainzParserTest {
             """.trimIndent(),
         )
 
-        // When — parsing recordings
+        // When - parsing recordings
         val recordings = MusicBrainzParser.parseRecordings(json)
 
-        // Then — the strict ranking boolean stays false (not a plain Album), but the art id is kept
+        // Then - the strict ranking boolean stays false (not a plain Album), but the art id is kept
         // via tier 2 so CAA still has a release-group to try
         assertFalse(recordings[0].hasOfficialAlbumRelease)
         assertEquals("rg-boxset", recordings[0].artReleaseGroupId)
@@ -379,7 +379,7 @@ class MusicBrainzParserTest {
 
     @Test
     fun `parseRecording keeps a tier-3 id from a non-Official release with a release-group id`() {
-        // Given — a recording hit with only a bootleg release, no Official release at all
+        // Given - a recording hit with only a bootleg release, no Official release at all
         val json = JSONObject(
             """
             {
@@ -395,17 +395,17 @@ class MusicBrainzParserTest {
             """.trimIndent(),
         )
 
-        // When — parsing recordings
+        // When - parsing recordings
         val recordings = MusicBrainzParser.parseRecordings(json)
 
-        // Then — the ranking boolean is false, but tier 3 still keeps the id: some art beats none
+        // Then - the ranking boolean is false, but tier 3 still keeps the id: some art beats none
         assertFalse(recordings[0].hasOfficialAlbumRelease)
         assertEquals("rg-live", recordings[0].artReleaseGroupId)
     }
 
     @Test
     fun `parseRecording leaves artReleaseGroupId null when no release carries a release-group id`() {
-        // Given — a release with no release-group object at all, so no tier can match
+        // Given - a release with no release-group object at all, so no tier can match
         val json = JSONObject(
             """
             {
@@ -421,17 +421,17 @@ class MusicBrainzParserTest {
             """.trimIndent(),
         )
 
-        // When — parsing recordings
+        // When - parsing recordings
         val recordings = MusicBrainzParser.parseRecordings(json)
 
-        // Then — neither signal fires
+        // Then - neither signal fires
         assertFalse(recordings[0].hasOfficialAlbumRelease)
         assertNull(recordings[0].artReleaseGroupId)
     }
 
     @Test
     fun `parseRecording keeps a tier-2 id for a Single-only recording`() {
-        // Given — the only embedded release is Official on a Single release-group, not an Album
+        // Given - the only embedded release is Official on a Single release-group, not an Album
         val json = JSONObject(
             """
             {
@@ -447,17 +447,17 @@ class MusicBrainzParserTest {
             """.trimIndent(),
         )
 
-        // When — parsing recordings
+        // When - parsing recordings
         val recordings = MusicBrainzParser.parseRecordings(json)
 
-        // Then — not a plain Album, so ranking stays false, but the Official single's group is kept
+        // Then - not a plain Album, so ranking stays false, but the Official single's group is kept
         assertFalse(recordings[0].hasOfficialAlbumRelease)
         assertEquals("rg-single", recordings[0].artReleaseGroupId)
     }
 
     @Test
     fun `parseRecording keeps a tier-2 id for a Compilation-only recording`() {
-        // Given — the only embedded release is Official on a Compilation release-group
+        // Given - the only embedded release is Official on a Compilation release-group
         val json = JSONObject(
             """
             {
@@ -476,17 +476,17 @@ class MusicBrainzParserTest {
             """.trimIndent(),
         )
 
-        // When — parsing recordings
+        // When - parsing recordings
         val recordings = MusicBrainzParser.parseRecordings(json)
 
-        // Then — not a plain Album, so ranking stays false, but the Official compilation's group is kept
+        // Then - not a plain Album, so ranking stays false, but the Official compilation's group is kept
         assertFalse(recordings[0].hasOfficialAlbumRelease)
         assertEquals("rg-comp", recordings[0].artReleaseGroupId)
     }
 
     @Test
     fun `parseRecording prefers the Official release-group over a Pseudo-Release alongside it`() {
-        // Given — a Pseudo-Release entry (MB's transliteration duplicate of a real release) listed
+        // Given - a Pseudo-Release entry (MB's transliteration duplicate of a real release) listed
         // before the genuine Official release; tier order must not let it win
         val json = JSONObject(
             """
@@ -504,47 +504,47 @@ class MusicBrainzParserTest {
             """.trimIndent(),
         )
 
-        // When — parsing recordings
+        // When - parsing recordings
         val recordings = MusicBrainzParser.parseRecordings(json)
 
-        // Then — the genuine Official release's group wins tier 1, not the Pseudo-Release's
+        // Then - the genuine Official release's group wins tier 1, not the Pseudo-Release's
         assertTrue(recordings[0].hasOfficialAlbumRelease)
         assertEquals("rg-real", recordings[0].artReleaseGroupId)
     }
 
     @Test
     fun `parseReleases handles empty search results`() {
-        // Given — valid JSON with an empty releases array
+        // Given - valid JSON with an empty releases array
         val json = JSONObject("""{"releases":[]}""")
 
-        // When — parsing releases
+        // When - parsing releases
         val releases = MusicBrainzParser.parseReleases(json)
 
-        // Then — returns empty list, no errors
+        // Then - returns empty list, no errors
         assertTrue(releases.isEmpty())
     }
 
     @Test
     fun `parseReleases handles missing releases key`() {
-        // Given — JSON object with no "releases" key at all
+        // Given - JSON object with no "releases" key at all
         val json = JSONObject("""{}""")
 
-        // When — parsing releases
+        // When - parsing releases
         val releases = MusicBrainzParser.parseReleases(json)
 
-        // Then — returns empty list gracefully
+        // Then - returns empty list gracefully
         assertTrue(releases.isEmpty())
     }
 
     @Test
     fun `parseLookupRelease parses top-level entity`() {
-        // Given — a direct lookup response (not wrapped in a search array)
+        // Given - a direct lookup response (not wrapped in a search array)
         val json = JSONObject(LOOKUP_RELEASE)
 
-        // When — parsing as a lookup release
+        // When - parsing as a lookup release
         val release = MusicBrainzParser.parseLookupRelease(json)
 
-        // Then — id, title, and implicit score=100 extracted
+        // Then - id, title, and implicit score=100 extracted
         assertEquals("look1", release?.id)
         assertEquals("The Bends", release?.title)
         assertEquals(100, release?.score)
@@ -552,13 +552,13 @@ class MusicBrainzParserTest {
 
     @Test
     fun `parseLookupArtist parses top-level entity with relations`() {
-        // Given — a direct artist lookup response with Wikidata and Wikipedia relations
+        // Given - a direct artist lookup response with Wikidata and Wikipedia relations
         val json = JSONObject(LOOKUP_ARTIST)
 
-        // When — parsing as a lookup artist
+        // When - parsing as a lookup artist
         val artist = MusicBrainzParser.parseLookupArtist(json)
 
-        // Then — all fields including external IDs extracted
+        // Then - all fields including external IDs extracted
         assertEquals("art1", artist?.id)
         assertEquals("Radiohead", artist?.name)
         assertEquals("Q188451", artist?.wikidataId)
@@ -568,13 +568,13 @@ class MusicBrainzParserTest {
 
     @Test
     fun `parseBandMembers extracts members from artist-rels`() {
-        // Given -- artist lookup response with member-of-band relations
+        // Given - artist lookup response with member-of-band relations
         val json = JSONObject(ARTIST_WITH_BAND_MEMBERS)
 
-        // When -- parsing band members
+        // When - parsing band members
         val members = MusicBrainzParser.parseBandMembers(json)
 
-        // Then -- members extracted with name, role, dates
+        // Then - members extracted with name, role, dates
         assertEquals(2, members.size)
         assertEquals("Thom Yorke", members[0].name)
         assertEquals("lead vocals", members[0].role)
@@ -587,7 +587,7 @@ class MusicBrainzParserTest {
 
     @Test
     fun `parseBandMembers ignores forward relations for solo artists`() {
-        // Given -- a solo artist (like Moby) whose relations point to bands they belong to
+        // Given - a solo artist (like Moby) whose relations point to bands they belong to
         val json = JSONObject("""
             {
               "id": "solo1",
@@ -614,22 +614,22 @@ class MusicBrainzParserTest {
             }
         """.trimIndent())
 
-        // When -- parsing band members
+        // When - parsing band members
         val members = MusicBrainzParser.parseBandMembers(json)
 
-        // Then -- no members returned (these are bands the person belongs to, not members)
+        // Then - no members returned (these are bands the person belongs to, not members)
         assertTrue(members.isEmpty())
     }
 
     @Test
     fun `parseReleaseGroups extracts albums from browse response`() {
-        // Given -- browse release-groups response
+        // Given - browse release-groups response
         val json = JSONObject(RELEASE_GROUPS_BROWSE)
 
-        // When -- parsing release groups
+        // When - parsing release groups
         val groups = MusicBrainzParser.parseReleaseGroups(json)
 
-        // Then -- release groups extracted with title, type, date
+        // Then - release groups extracted with title, type, date
         assertEquals(2, groups.size)
         assertEquals("OK Computer", groups[0].title)
         assertEquals("Album", groups[0].primaryType)
@@ -639,13 +639,13 @@ class MusicBrainzParserTest {
 
     @Test
     fun `parseMedia extracts tracks from release`() {
-        // Given -- release lookup with media array
+        // Given - release lookup with media array
         val json = JSONObject(RELEASE_WITH_MEDIA)
 
-        // When -- parsing media tracks
+        // When - parsing media tracks
         val tracks = MusicBrainzParser.parseMedia(json)
 
-        // Then -- tracks extracted with title, position, length, recording id
+        // Then - tracks extracted with title, position, length, recording id
         assertEquals(2, tracks.size)
         assertEquals("Airbag", tracks[0].title)
         assertEquals(1, tracks[0].position)
@@ -660,13 +660,13 @@ class MusicBrainzParserTest {
 
     @Test
     fun `parseMedia keeps a single CD medium unchanged`() {
-        // Given -- one CD medium, no video media in sight
+        // Given - one CD medium, no video media in sight
         val json = JSONObject(MEDIA_SINGLE_CD)
 
-        // When -- parsing media tracks
+        // When - parsing media tracks
         val tracks = MusicBrainzParser.parseMedia(json)
 
-        // Then -- unchanged, positions 1..n
+        // Then - unchanged, positions 1..n
         assertEquals(2, tracks.size)
         assertEquals(1, tracks[0].position)
         assertEquals(2, tracks[1].position)
@@ -674,13 +674,13 @@ class MusicBrainzParserTest {
 
     @Test
     fun `parseMedia skips a bonus DVD-Video medium and keeps only the CD`() {
-        // Given -- CD (11 tracks) + bonus DVD-Video (11 tracks) with duplicated titles, St. Anger's shape
+        // Given - CD (11 tracks) + bonus DVD-Video (11 tracks) with duplicated titles, St. Anger's shape
         val json = JSONObject(MEDIA_CD_PLUS_DVD_VIDEO)
 
-        // When -- parsing media tracks
+        // When - parsing media tracks
         val tracks = MusicBrainzParser.parseMedia(json)
 
-        // Then -- the video medium is dropped; 11 tracks, positions 1-11, no duplicates
+        // Then - the video medium is dropped; 11 tracks, positions 1-11, no duplicates
         assertEquals(11, tracks.size)
         assertEquals((1..11).toList(), tracks.map { it.position })
         assertEquals(1, tracks.count { it.title == "Frantic" })
@@ -688,13 +688,13 @@ class MusicBrainzParserTest {
 
     @Test
     fun `parseMedia keeps both CDs of a double album with cumulative positions`() {
-        // Given -- 2x CD, 11 tracks each
+        // Given - 2x CD, 11 tracks each
         val json = JSONObject(MEDIA_DOUBLE_CD)
 
-        // When -- parsing media tracks
+        // When - parsing media tracks
         val tracks = MusicBrainzParser.parseMedia(json)
 
-        // Then -- both kept, disc 2 track 1 continues at position 12
+        // Then - both kept, disc 2 track 1 continues at position 12
         assertEquals(22, tracks.size)
         assertEquals((1..22).toList(), tracks.map { it.position })
         assertEquals("Disc 2 Track 1", tracks[11].title)
@@ -703,13 +703,13 @@ class MusicBrainzParserTest {
 
     @Test
     fun `parseMedia keeps a bonus audio disc with cumulative positions`() {
-        // Given -- CD + a second, unlabelled bonus audio disc (deluxe edition shape)
+        // Given - CD + a second, unlabelled bonus audio disc (deluxe edition shape)
         val json = JSONObject(MEDIA_CD_PLUS_BONUS_AUDIO)
 
-        // When -- parsing media tracks
+        // When - parsing media tracks
         val tracks = MusicBrainzParser.parseMedia(json)
 
-        // Then -- bonus audio is content, not noise: both kept, cumulative
+        // Then - bonus audio is content, not noise: both kept, cumulative
         assertEquals(12, tracks.size)
         assertEquals("Bonus Track", tracks[11].title)
         assertEquals(12, tracks[11].position)
@@ -717,104 +717,104 @@ class MusicBrainzParserTest {
 
     @Test
     fun `parseMedia keeps a DVD-Audio medium, not fooled by the DVD substring`() {
-        // Given -- CD + DVD-Audio, an audio format that merely has "DVD" in its name
+        // Given - CD + DVD-Audio, an audio format that merely has "DVD" in its name
         val json = JSONObject(MEDIA_CD_PLUS_DVD_AUDIO)
 
-        // When -- parsing media tracks
+        // When - parsing media tracks
         val tracks = MusicBrainzParser.parseMedia(json)
 
-        // Then -- both kept, cumulative -- a substring "DVD" filter is the trap this row exists to kill
+        // Then - both kept, cumulative -- a substring "DVD" filter is the trap this row exists to kill
         assertEquals(22, tracks.size)
         assertEquals((1..22).toList(), tracks.map { it.position })
     }
 
     @Test
     fun `parseMedia skips a DualDisc's DVD-Video side and keeps its CD side`() {
-        // Given -- a DualDisc, listed per side; only the "(DVD-Video side)" name is video
+        // Given - a DualDisc, listed per side; only the "(DVD-Video side)" name is video
         val json = JSONObject(MEDIA_DUALDISC)
 
-        // When -- parsing media tracks
+        // When - parsing media tracks
         val tracks = MusicBrainzParser.parseMedia(json)
 
-        // Then -- the video side is dropped, the audio side kept with unchanged positions
+        // Then - the video side is dropped, the audio side kept with unchanged positions
         assertEquals(11, tracks.size)
         assertEquals((1..11).toList(), tracks.map { it.position })
     }
 
     @Test
     fun `parseMedia treats a sized LaserDisc as video like the bare name`() {
-        // Given -- CD + a 12" LaserDisc (MB lists LaserDisc bare and sized; all are video)
+        // Given - CD + a 12" LaserDisc (MB lists LaserDisc bare and sized; all are video)
         val json = JSONObject(MEDIA_CD_PLUS_SIZED_LASERDISC)
 
-        // When -- parsing media tracks
+        // When - parsing media tracks
         val tracks = MusicBrainzParser.parseMedia(json)
 
-        // Then -- the sized LaserDisc is dropped like a bare "LaserDisc" would be
+        // Then - the sized LaserDisc is dropped like a bare "LaserDisc" would be
         assertEquals(11, tracks.size)
         assertEquals((1..11).toList(), tracks.map { it.position })
     }
 
     @Test
     fun `parseMedia treats a bare DVD format as video`() {
-        // Given -- CD + a medium whose format is the bare "DVD" (editor didn't specify a child format)
+        // Given - CD + a medium whose format is the bare "DVD" (editor didn't specify a child format)
         val json = JSONObject(MEDIA_CD_PLUS_BARE_DVD)
 
-        // When -- parsing media tracks
+        // When - parsing media tracks
         val tracks = MusicBrainzParser.parseMedia(json)
 
-        // Then -- documented judgement call: bare "DVD" is treated as video and skipped
+        // Then - documented judgement call: bare "DVD" is treated as video and skipped
         assertEquals(11, tracks.size)
         assertEquals((1..11).toList(), tracks.map { it.position })
     }
 
     @Test
     fun `parseMedia keeps all media when every medium is video`() {
-        // Given -- a video-only release (concert DVD), no audio medium at all
+        // Given - a video-only release (concert DVD), no audio medium at all
         val json = JSONObject(MEDIA_VIDEO_ONLY)
 
-        // When -- parsing media tracks
+        // When - parsing media tracks
         val tracks = MusicBrainzParser.parseMedia(json)
 
-        // Then -- an all-video tracklist beats an empty one
+        // Then - an all-video tracklist beats an empty one
         assertEquals(3, tracks.size)
         assertEquals((1..3).toList(), tracks.map { it.position })
     }
 
     @Test
     fun `parseMedia keeps a medium with absent format`() {
-        // Given -- a medium with no "format" key at all
+        // Given - a medium with no "format" key at all
         val json = JSONObject(MEDIA_ABSENT_FORMAT)
 
-        // When -- parsing media tracks
+        // When - parsing media tracks
         val tracks = MusicBrainzParser.parseMedia(json)
 
-        // Then -- dropping unknown media silently truncates albums, so it is kept
+        // Then - dropping unknown media silently truncates albums, so it is kept
         assertEquals(2, tracks.size)
         assertEquals((1..2).toList(), tracks.map { it.position })
     }
 
     @Test
     fun `parseMedia keeps both discs of a 2x LP vinyl release with cumulative positions`() {
-        // Given -- 2x 12" Vinyl
+        // Given - 2x 12" Vinyl
         val json = JSONObject(MEDIA_DOUBLE_VINYL)
 
-        // When -- parsing media tracks
+        // When - parsing media tracks
         val tracks = MusicBrainzParser.parseMedia(json)
 
-        // Then -- audio, both kept, cumulative positions
+        // Then - audio, both kept, cumulative positions
         assertEquals(8, tracks.size)
         assertEquals((1..8).toList(), tracks.map { it.position })
     }
 
     @Test
     fun `parseUrlRelations extracts external links and excludes wikidata and wikipedia`() {
-        // Given -- artist with URL relations including wikidata and wikipedia
+        // Given - artist with URL relations including wikidata and wikipedia
         val json = JSONObject(ARTIST_WITH_URL_RELATIONS)
 
-        // When -- parsing URL relations
+        // When - parsing URL relations
         val relations = MusicBrainzParser.parseUrlRelations(json)
 
-        // Then -- external links extracted, wikidata and wikipedia excluded
+        // Then - external links extracted, wikidata and wikipedia excluded
         assertEquals(2, relations.size)
         assertEquals("official homepage", relations[0].type)
         assertEquals("https://radiohead.com", relations[0].url)
@@ -824,7 +824,7 @@ class MusicBrainzParserTest {
 
     @Test
     fun `extractArtistCredit concatenates names with join phrases`() {
-        // Given — artist-credit array with two artists and a "feat." join phrase
+        // Given - artist-credit array with two artists and a "feat." join phrase
         val obj = JSONObject(
             """{"artist-credit":[
                 {"artist":{"name":"Massive Attack"},"joinphrase":" feat. "},
@@ -832,22 +832,22 @@ class MusicBrainzParserTest {
             ]}""",
         )
 
-        // When — extracting artist credit
+        // When - extracting artist credit
         val credit = MusicBrainzParser.extractArtistCredit(obj)
 
-        // Then — names concatenated with join phrase
+        // Then - names concatenated with join phrase
         assertEquals("Massive Attack feat. Tricky", credit)
     }
 
     @Test
     fun `parseRecordingCredits extracts vocal relation with lead vocals roleCategory performance`() {
-        // Given -- recording lookup response with a vocal artist-rel
+        // Given - recording lookup response with a vocal artist-rel
         val json = JSONObject(RECORDING_WITH_VOCAL_REL)
 
-        // When -- parsing recording credits
+        // When - parsing recording credits
         val credits = MusicBrainzCreditParser.parseRecordingCredits(json)
 
-        // Then -- vocal credit extracted with role "lead vocals" and roleCategory "performance"
+        // Then - vocal credit extracted with role "lead vocals" and roleCategory "performance"
         assertEquals(1, credits.size)
         assertEquals("Thom Yorke", credits[0].name)
         assertEquals("lead vocals", credits[0].role)
@@ -857,13 +857,13 @@ class MusicBrainzParserTest {
 
     @Test
     fun `parseRecordingCredits extracts instrument relation with guitar roleCategory performance`() {
-        // Given -- recording with instrument artist-rel with attribute "guitar"
+        // Given - recording with instrument artist-rel with attribute "guitar"
         val json = JSONObject(RECORDING_WITH_INSTRUMENT_REL)
 
-        // When -- parsing recording credits
+        // When - parsing recording credits
         val credits = MusicBrainzCreditParser.parseRecordingCredits(json)
 
-        // Then -- instrument credit with role from attribute and roleCategory "performance"
+        // Then - instrument credit with role from attribute and roleCategory "performance"
         assertEquals(1, credits.size)
         assertEquals("Jonny Greenwood", credits[0].name)
         assertEquals("guitar", credits[0].role)
@@ -872,13 +872,13 @@ class MusicBrainzParserTest {
 
     @Test
     fun `parseRecordingCredits extracts producer relation with roleCategory production`() {
-        // Given -- recording with producer artist-rel
+        // Given - recording with producer artist-rel
         val json = JSONObject(RECORDING_WITH_PRODUCER_REL)
 
-        // When -- parsing recording credits
+        // When - parsing recording credits
         val credits = MusicBrainzCreditParser.parseRecordingCredits(json)
 
-        // Then -- producer credit with roleCategory "production"
+        // Then - producer credit with roleCategory "production"
         assertEquals(1, credits.size)
         assertEquals("Nigel Godrich", credits[0].name)
         assertEquals("producer", credits[0].role)
@@ -887,13 +887,13 @@ class MusicBrainzParserTest {
 
     @Test
     fun `parseRecordingCredits extracts composer from work-rels with roleCategory songwriting`() {
-        // Given -- recording with a work-rel containing a composer relation
+        // Given - recording with a work-rel containing a composer relation
         val json = JSONObject(RECORDING_WITH_WORK_REL)
 
-        // When -- parsing recording credits
+        // When - parsing recording credits
         val credits = MusicBrainzCreditParser.parseRecordingCredits(json)
 
-        // Then -- composer credit with roleCategory "songwriting"
+        // Then - composer credit with roleCategory "songwriting"
         val composer = credits.find { it.role == "composer" }
         assertNotNull(composer)
         assertEquals("Thom Yorke", composer!!.name)
@@ -902,28 +902,28 @@ class MusicBrainzParserTest {
 
     @Test
     fun `parseRecordingCredits returns empty list when no relations present`() {
-        // Given -- recording with no relations
+        // Given - recording with no relations
         val json = JSONObject("""{"id":"rec1","title":"Song","relations":[]}""")
 
-        // When -- parsing recording credits
+        // When - parsing recording credits
         val credits = MusicBrainzCreditParser.parseRecordingCredits(json)
 
-        // Then -- empty list returned
+        // Then - empty list returned
         assertTrue(credits.isEmpty())
     }
 
     @Test
     fun `toCredits maps MusicBrainzCredit list to EnrichmentData Credits with correct fields`() {
-        // Given -- a list of MusicBrainzCredit DTOs
+        // Given - a list of MusicBrainzCredit DTOs
         val dtos = listOf(
             MusicBrainzCredit(name = "Thom Yorke", id = "ty1", role = "lead vocals", roleCategory = "performance"),
             MusicBrainzCredit(name = "Nigel Godrich", id = "ng1", role = "producer", roleCategory = "production"),
         )
 
-        // When -- mapping to EnrichmentData.Credits
+        // When - mapping to EnrichmentData.Credits
         val result = MusicBrainzMapper.toCredits(dtos)
 
-        // Then -- Credits data class with correct Credit fields
+        // Then - Credits data class with correct Credit fields
         assertEquals(2, result.credits.size)
         assertEquals("Thom Yorke", result.credits[0].name)
         assertEquals("lead vocals", result.credits[0].role)
@@ -936,7 +936,7 @@ class MusicBrainzParserTest {
 
     @Test
     fun `Credits round-trip serialization works`() {
-        // Given -- a Credits instance with mixed credits
+        // Given - a Credits instance with mixed credits
         val original = EnrichmentData.Credits(
             credits = listOf(
                 com.landofoz.musicmeta.Credit(
@@ -948,11 +948,11 @@ class MusicBrainzParserTest {
             ),
         )
 
-        // When -- serializing and deserializing
+        // When - serializing and deserializing
         val json = Json.encodeToString(original)
         val restored = Json.decodeFromString<EnrichmentData.Credits>(json)
 
-        // Then -- restored instance matches original
+        // Then - restored instance matches original
         assertEquals(original, restored)
         assertEquals("Thom Yorke", restored.credits[0].name)
         assertEquals("performance", restored.credits[0].roleCategory)
@@ -960,13 +960,13 @@ class MusicBrainzParserTest {
 
     @Test
     fun `parseReleaseGroupDetail parses releases array into MusicBrainzReleaseGroupDetail`() {
-        // Given -- release-group lookup response with releases array
+        // Given - release-group lookup response with releases array
         val json = JSONObject(RELEASE_GROUP_WITH_RELEASES)
 
-        // When -- parsing release group detail
+        // When - parsing release group detail
         val detail = MusicBrainzCreditParser.parseReleaseGroupDetail(json)
 
-        // Then -- detail has correct id, title, and list of releases
+        // Then - detail has correct id, title, and list of releases
         assertEquals("rg1", detail.id)
         assertEquals("OK Computer", detail.title)
         assertEquals(2, detail.releases.size)
@@ -974,13 +974,13 @@ class MusicBrainzParserTest {
 
     @Test
     fun `parseReleaseGroupDetail extracts all fields from release object`() {
-        // Given -- release-group lookup response with fully populated release
+        // Given - release-group lookup response with fully populated release
         val json = JSONObject(RELEASE_GROUP_WITH_RELEASES)
 
-        // When -- parsing release group detail
+        // When - parsing release group detail
         val detail = MusicBrainzCreditParser.parseReleaseGroupDetail(json)
 
-        // Then -- first release has all fields extracted
+        // Then - first release has all fields extracted
         val release = detail.releases[0]
         assertEquals("rel1", release.id)
         assertEquals("OK Computer", release.title)
@@ -994,20 +994,20 @@ class MusicBrainzParserTest {
 
     @Test
     fun `parseReleaseGroupDetail returns empty releases list when releases array absent`() {
-        // Given -- release-group JSON with no releases key
+        // Given - release-group JSON with no releases key
         val json = JSONObject("""{"id":"rg1","title":"No Releases"}""")
 
-        // When -- parsing release group detail
+        // When - parsing release group detail
         val detail = MusicBrainzCreditParser.parseReleaseGroupDetail(json)
 
-        // Then -- releases list is empty
+        // Then - releases list is empty
         assertEquals("rg1", detail.id)
         assertTrue(detail.releases.isEmpty())
     }
 
     @Test
     fun `toReleaseEditions maps MusicBrainzEdition list to ReleaseEditions with correct fields`() {
-        // Given -- a list of MusicBrainzEdition DTOs
+        // Given - a list of MusicBrainzEdition DTOs
         val editions = listOf(
             MusicBrainzEdition(
                 id = "rel1", title = "OK Computer",
@@ -1016,12 +1016,12 @@ class MusicBrainzParserTest {
             ),
         )
 
-        // When -- mapping to ReleaseEditions
+        // When - mapping to ReleaseEditions
         val result = MusicBrainzMapper.toReleaseEditions(
             MusicBrainzReleaseGroupDetail(id = "rg1", title = "OK Computer", releases = editions),
         )
 
-        // Then -- ReleaseEditions contains correctly mapped ReleaseEdition
+        // Then - ReleaseEditions contains correctly mapped ReleaseEdition
         assertEquals(1, result.editions.size)
         val edition = result.editions[0]
         assertEquals("OK Computer", edition.title)
@@ -1036,7 +1036,7 @@ class MusicBrainzParserTest {
 
     @Test
     fun `ReleaseEditions round-trip serialization works`() {
-        // Given -- a ReleaseEditions instance with one edition
+        // Given - a ReleaseEditions instance with one edition
         val original = com.landofoz.musicmeta.EnrichmentData.ReleaseEditions(
             editions = listOf(
                 com.landofoz.musicmeta.ReleaseEdition(
@@ -1052,11 +1052,11 @@ class MusicBrainzParserTest {
             ),
         )
 
-        // When -- serializing and deserializing
+        // When - serializing and deserializing
         val json = kotlinx.serialization.json.Json.encodeToString(original)
         val restored = kotlinx.serialization.json.Json.decodeFromString<com.landofoz.musicmeta.EnrichmentData.ReleaseEditions>(json)
 
-        // Then -- restored instance matches original
+        // Then - restored instance matches original
         assertEquals(original, restored)
         assertEquals("OK Computer", restored.editions[0].title)
         assertEquals(1997, restored.editions[0].year)

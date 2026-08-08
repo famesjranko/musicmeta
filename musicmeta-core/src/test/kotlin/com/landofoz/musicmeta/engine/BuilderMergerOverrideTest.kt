@@ -33,15 +33,15 @@ class BuilderMergerOverrideTest {
     private val request = EnrichmentRequest.forArtist("Radiohead")
 
     @Test fun `addMerger overrides the built-in merger for every built-in type including ARTIST_TOP_TRACKS`() = runTest {
-        // Given -- one engine with a caller merger registered for all six built-in merger types
+        // Given - one engine with a caller merger registered for all six built-in merger types
         val builder = EnrichmentEngine.Builder()
         builtInMergerTypes.forEach { builder.addMerger(StubMerger(it)) }
         val engine = builder.build()
 
-        // When -- enriching all six at once
+        // When - enriching all six at once
         val results = engine.enrich(request, builtInMergerTypes.toSet())
 
-        // Then -- the caller's merger ran for each; a built-in winning anywhere fails here
+        // Then - the caller's merger ran for each; a built-in winning anywhere fails here
         val providers = builtInMergerTypes.associateWith {
             (results.raw[it] as? EnrichmentResult.Success)?.provider
         }
@@ -49,7 +49,7 @@ class BuilderMergerOverrideTest {
     }
 
     @Test fun `ARTIST_TOP_TRACKS still resolves through the built-in merger with no override`() = runTest {
-        // Given -- a provider returning top tracks and no caller merger
+        // Given - a provider returning top tracks and no caller merger
         val provider = FakeProvider(
             id = "p",
             capabilities = listOf(ProviderCapability(EnrichmentType.ARTIST_TOP_TRACKS, 100)),
@@ -66,10 +66,10 @@ class BuilderMergerOverrideTest {
         }
         val engine = EnrichmentEngine.Builder().addProvider(provider).build()
 
-        // When -- enriching top tracks
+        // When - enriching top tracks
         val results = engine.enrich(request, setOf(EnrichmentType.ARTIST_TOP_TRACKS))
 
-        // Then -- TopTrackMerger produced the result
+        // Then - TopTrackMerger produced the result
         val success = results.raw[EnrichmentType.ARTIST_TOP_TRACKS] as EnrichmentResult.Success
         assertEquals("top_track_merger", success.provider)
     }

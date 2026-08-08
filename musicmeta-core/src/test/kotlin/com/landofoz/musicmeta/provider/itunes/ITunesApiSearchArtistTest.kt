@@ -26,74 +26,74 @@ class ITunesApiSearchArtistTest {
 
     @Test
     fun `keeps hit 0 when it is already the best name match`() = runTest {
-        // Given — the live response, where iTunes already ranks the grunge band first
+        // Given - the live response, where iTunes already ranks the grunge band first
         httpClient.givenJsonResponse("entity=musicArtist", NIRVANA_LIVE)
 
-        // When — searching for the artist
+        // When - searching for the artist
         val result = api.searchArtist("Nirvana")
 
-        // Then — hit 0 is kept; the fix narrows the old behaviour, it does not re-rank it
+        // Then - hit 0 is kept; the fix narrows the old behaviour, it does not re-rank it
         assertEquals(112018L, result)
     }
 
     @Test
     fun `picks the name match over a wrong-name artist listed first`() = runTest {
-        // Given — iTunes ranks an unrelated artist ahead of the real one
+        // Given - iTunes ranks an unrelated artist ahead of the real one
         httpClient.givenJsonResponse("entity=musicArtist", WRONG_NAME_FIRST)
 
-        // When — searching for the artist
+        // When - searching for the artist
         val result = api.searchArtist("Autechre")
 
-        // Then — result order does not decide it, the name does
+        // Then - result order does not decide it, the name does
         assertEquals(7777L, result)
     }
 
     @Test
     fun `prefers an exact name over a looser containing match listed first`() = runTest {
-        // Given — "DJ Radiohead" is ranked ahead of the exact-name entry
+        // Given - "DJ Radiohead" is ranked ahead of the exact-name entry
         httpClient.givenJsonResponse("entity=musicArtist", LOOSE_MATCH_FIRST)
 
-        // When — searching for the artist
+        // When - searching for the artist
         val result = api.searchArtist("Radiohead")
 
-        // Then — name quality is ranked, not just filtered
+        // Then - name quality is ranked, not just filtered
         assertEquals(399L, result)
     }
 
     @Test
     fun `returns null when no candidate name matches`() = runTest {
-        // Given — every hit is a different artist
+        // Given - every hit is a different artist
         httpClient.givenJsonResponse("entity=musicArtist", NO_NAME_MATCH)
 
-        // When — searching for the artist
+        // When - searching for the artist
         val result = api.searchArtist("Autechre")
 
-        // Then — no wrong artist is returned in place of a real miss
+        // Then - no wrong artist is returned in place of a real miss
         assertNull(result)
     }
 
     @Test
     fun `a non-object element does not fail the whole search`() = runTest {
-        // Given — a malformed first element ahead of the real artist
+        // Given - a malformed first element ahead of the real artist
         httpClient.givenJsonResponse("entity=musicArtist", MALFORMED_ELEMENT_FIRST)
 
-        // When — searching for the artist
+        // When - searching for the artist
         val result = api.searchArtist("Radiohead")
 
-        // Then — it is skipped, not thrown: a JSONException here would surface as Error and
+        // Then - it is skipped, not thrown: a JSONException here would surface as Error and
         // open the circuit breaker against a healthy iTunes (docs/pitfalls.md §4)
         assertEquals(399L, result)
     }
 
     @Test
     fun `requests more than one hit so a wrong name can be passed over`() = runTest {
-        // Given — any response
+        // Given - any response
         httpClient.givenJsonResponse("entity=musicArtist", NIRVANA_LIVE)
 
-        // When — searching for the artist
+        // When - searching for the artist
         api.searchArtist("Nirvana")
 
-        // Then — the search asks for a candidate pool, not a single hit
+        // Then - the search asks for a candidate pool, not a single hit
         assertTrue(httpClient.requestedUrls.single().endsWith("limit=10"))
     }
 

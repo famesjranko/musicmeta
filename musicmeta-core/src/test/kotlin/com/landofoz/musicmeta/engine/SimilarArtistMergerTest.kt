@@ -15,20 +15,20 @@ class SimilarArtistMergerTest {
 
     @Test
     fun `merge returns NotFound for empty results`() {
-        // Given — an empty list of provider results
+        // Given - an empty list of provider results
         val results = emptyList<EnrichmentResult.Success>()
 
-        // When — merging the empty list
+        // When - merging the empty list
         val result = SimilarArtistMerger.merge(results)
 
-        // Then — a NotFound result is returned for "all_providers"
+        // Then - a NotFound result is returned for "all_providers"
         assertTrue(result is EnrichmentResult.NotFound)
         assertEquals("all_providers", (result as EnrichmentResult.NotFound).provider)
     }
 
     @Test
     fun `merge returns single provider results unchanged`() {
-        // Given — lastfm returns 3 artists
+        // Given - lastfm returns 3 artists
         val artists = listOf(
             SimilarArtist("Muse", matchScore = 0.9f, sources = listOf("lastfm")),
             SimilarArtist("Bjork", matchScore = 0.7f, sources = listOf("lastfm")),
@@ -43,10 +43,10 @@ class SimilarArtistMergerTest {
             )
         )
 
-        // When — merging the single-provider result list
+        // When - merging the single-provider result list
         val result = SimilarArtistMerger.merge(results)
 
-        // Then — all 3 artists returned with original sources
+        // Then - all 3 artists returned with original sources
         assertTrue(result is EnrichmentResult.Success)
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.SimilarArtists
         assertEquals(3, data.artists.size)
@@ -56,7 +56,7 @@ class SimilarArtistMergerTest {
 
     @Test
     fun `merge deduplicates artists by normalized name`() {
-        // Given — lastfm has "Muse" at 0.9, deezer has "muse" (lowercase) at 0.5
+        // Given - lastfm has "Muse" at 0.9, deezer has "muse" (lowercase) at 0.5
         val lastfmResult = EnrichmentResult.Success(
             type = EnrichmentType.SIMILAR_ARTISTS,
             data = EnrichmentData.SimilarArtists(artists = listOf(
@@ -74,10 +74,10 @@ class SimilarArtistMergerTest {
             confidence = 0.8f,
         )
 
-        // When — merging results with the case-differing duplicate
+        // When - merging results with the case-differing duplicate
         val result = SimilarArtistMerger.merge(listOf(lastfmResult, deezerResult))
 
-        // Then — only 1 "Muse" entry (merged from both)
+        // Then - only 1 "Muse" entry (merged from both)
         assertTrue(result is EnrichmentResult.Success)
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.SimilarArtists
         assertEquals(1, data.artists.size)
@@ -86,7 +86,7 @@ class SimilarArtistMergerTest {
 
     @Test
     fun `merge sums matchScores capped at 1_0`() {
-        // Given — "Muse" appears in both providers with scores 0.9 and 0.8
+        // Given - "Muse" appears in both providers with scores 0.9 and 0.8
         val lastfmResult = EnrichmentResult.Success(
             type = EnrichmentType.SIMILAR_ARTISTS,
             data = EnrichmentData.SimilarArtists(artists = listOf(
@@ -104,10 +104,10 @@ class SimilarArtistMergerTest {
             confidence = 0.8f,
         )
 
-        // When — merging the results with the duplicate "Muse" entries
+        // When - merging the results with the duplicate "Muse" entries
         val result = SimilarArtistMerger.merge(listOf(lastfmResult, deezerResult))
 
-        // Then — matchScore = min(0.9 + 0.8, 1.0) = 1.0, not 1.7
+        // Then - matchScore = min(0.9 + 0.8, 1.0) = 1.0, not 1.7
         assertTrue(result is EnrichmentResult.Success)
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.SimilarArtists
         assertEquals(1.0f, data.artists[0].matchScore, 0.001f)
@@ -115,7 +115,7 @@ class SimilarArtistMergerTest {
 
     @Test
     fun `merge combines sources from multiple providers`() {
-        // Given — "Muse" from lastfm and deezer
+        // Given - "Muse" from lastfm and deezer
         val lastfmResult = EnrichmentResult.Success(
             type = EnrichmentType.SIMILAR_ARTISTS,
             data = EnrichmentData.SimilarArtists(artists = listOf(
@@ -133,10 +133,10 @@ class SimilarArtistMergerTest {
             confidence = 0.8f,
         )
 
-        // When — merging the results with the duplicate "Muse" entries
+        // When - merging the results with the duplicate "Muse" entries
         val result = SimilarArtistMerger.merge(listOf(lastfmResult, deezerResult))
 
-        // Then — both sources listed
+        // Then - both sources listed
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.SimilarArtists
         val sources = data.artists[0].sources
         assertTrue("lastfm" in sources)
@@ -145,7 +145,7 @@ class SimilarArtistMergerTest {
 
     @Test
     fun `merge prefers MBID from provider that has it`() {
-        // Given — lastfm has MBID for "Muse", deezer has deezerId in extra
+        // Given - lastfm has MBID for "Muse", deezer has deezerId in extra
         val lastfmResult = EnrichmentResult.Success(
             type = EnrichmentType.SIMILAR_ARTISTS,
             data = EnrichmentData.SimilarArtists(artists = listOf(
@@ -173,10 +173,10 @@ class SimilarArtistMergerTest {
             confidence = 0.8f,
         )
 
-        // When — merging the results with the shared "Muse" entry
+        // When - merging the results with the shared "Muse" entry
         val result = SimilarArtistMerger.merge(listOf(lastfmResult, deezerResult))
 
-        // Then — merged result has both MBID and deezerId
+        // Then - merged result has both MBID and deezerId
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.SimilarArtists
         val merged = data.artists[0]
         assertEquals("muse-mbid", merged.identifiers.musicBrainzId)
@@ -185,7 +185,7 @@ class SimilarArtistMergerTest {
 
     @Test
     fun `merge sorts by matchScore descending`() {
-        // Given — three providers each contributing a unique artist with varying scores
+        // Given - three providers each contributing a unique artist with varying scores
         val lastfmResult = EnrichmentResult.Success(
             type = EnrichmentType.SIMILAR_ARTISTS,
             data = EnrichmentData.SimilarArtists(artists = listOf(
@@ -211,10 +211,10 @@ class SimilarArtistMergerTest {
             confidence = 0.85f,
         )
 
-        // When — merging the three single-artist provider results
+        // When - merging the three single-artist provider results
         val result = SimilarArtistMerger.merge(listOf(lastfmResult, deezerResult, lbResult))
 
-        // Then — sorted by matchScore descending
+        // Then - sorted by matchScore descending
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.SimilarArtists
         val scores = data.artists.map { it.matchScore }
         assertEquals(listOf(0.9f, 0.75f, 0.6f), scores)
@@ -222,7 +222,7 @@ class SimilarArtistMergerTest {
 
     @Test
     fun `merge handles artists unique to each provider`() {
-        // Given — "Muse" only from lastfm, "Portishead" only from deezer
+        // Given - "Muse" only from lastfm, "Portishead" only from deezer
         val lastfmResult = EnrichmentResult.Success(
             type = EnrichmentType.SIMILAR_ARTISTS,
             data = EnrichmentData.SimilarArtists(artists = listOf(
@@ -240,10 +240,10 @@ class SimilarArtistMergerTest {
             confidence = 0.8f,
         )
 
-        // When — merging the results with the disjoint artists
+        // When - merging the results with the disjoint artists
         val result = SimilarArtistMerger.merge(listOf(lastfmResult, deezerResult))
 
-        // Then — both appear once with their original single-provider sources
+        // Then - both appear once with their original single-provider sources
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.SimilarArtists
         assertEquals(2, data.artists.size)
         val names = data.artists.map { it.name }

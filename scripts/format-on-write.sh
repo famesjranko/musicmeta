@@ -42,3 +42,15 @@ case "$FILE" in
     *.kt|*.kts) command -v ktlint >/dev/null 2>&1 && ktlint_version_matches && ktlint --format --relative "$FILE" >/dev/null 2>&1 ;;
     *.py)       command -v ruff   >/dev/null 2>&1 && ruff format "$FILE" >/dev/null 2>&1 ;;
 esac || true
+
+# Given/when/then shape, immediate feedback while the file is still in the writer's context. Same
+# script `check` runs, so hook and gate agree by construction. src/test/ only, matching the script's
+# own scope — main sources have no test-shape rule to enforce.
+#
+# Exits 2 on a violation rather than swallowing it: a PostToolUse hook's stderr reaches the writer
+# only at exit 2, so `|| true` here would leave the write-time half printing into a void while
+# `CLAUDE.md` and `ARCHITECTURE.md` both claim it gates. Unlike the formatters above, this reports
+# rather than rewrites, so failing loudly costs nothing mid-edit.
+case "$FILE" in
+    */src/test/*.kt) python3 "$(dirname "${BASH_SOURCE[0]}")/checks/check_test_shape.py" --file "$FILE" >&2 || exit 2 ;;
+esac

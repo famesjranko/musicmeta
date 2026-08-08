@@ -6,11 +6,11 @@ import org.junit.Test
 class EnrichmentResultTest {
 
     @Test fun `ErrorKind has all six values`() {
-        // Given — the ErrorKind enum
-        // When — all values are accessed
+        // Given - the ErrorKind enum
+        // When - all values are accessed
         val values = ErrorKind.entries
 
-        // Then — exactly 6 values in the expected order
+        // Then - exactly 6 values in the expected order
         assertEquals(6, values.size)
         assertEquals(ErrorKind.NETWORK, values[0])
         assertEquals(ErrorKind.AUTH, values[1])
@@ -21,21 +21,21 @@ class EnrichmentResultTest {
     }
 
     @Test fun `Error defaults errorKind to UNKNOWN`() {
-        // Given — no explicit errorKind
-        // When — an Error is constructed
+        // Given - no explicit errorKind
+        // When - an Error is constructed
         val error = EnrichmentResult.Error(
             type = EnrichmentType.ALBUM_ART,
             provider = "test",
             message = "something failed",
         )
 
-        // Then — defaults to UNKNOWN
+        // Then - defaults to UNKNOWN
         assertEquals(ErrorKind.UNKNOWN, error.errorKind)
     }
 
     @Test fun `Error preserves explicit errorKind`() {
-        // Given — an explicit NETWORK errorKind
-        // When — an Error is constructed with it
+        // Given - an explicit NETWORK errorKind
+        // When - an Error is constructed with it
         val error = EnrichmentResult.Error(
             type = EnrichmentType.ALBUM_ART,
             provider = "test",
@@ -44,13 +44,13 @@ class EnrichmentResultTest {
             errorKind = ErrorKind.NETWORK,
         )
 
-        // Then — errorKind is NETWORK
+        // Then - errorKind is NETWORK
         assertEquals(ErrorKind.NETWORK, error.errorKind)
     }
 
     @Test fun `existing 4-arg construction defaults to UNKNOWN`() {
-        // Given — the existing 4-argument pattern used by all providers
-        // When — an Error is constructed with it
+        // Given - the existing 4-argument pattern used by all providers
+        // When - an Error is constructed with it
         val cause = RuntimeException("boom")
         val error = EnrichmentResult.Error(
             type = EnrichmentType.GENRE,
@@ -59,14 +59,14 @@ class EnrichmentResultTest {
             cause = cause,
         )
 
-        // Then — errorKind defaults to UNKNOWN (backward compatible)
+        // Then - errorKind defaults to UNKNOWN (backward compatible)
         assertEquals(ErrorKind.UNKNOWN, error.errorKind)
         assertEquals("boom", error.message)
         assertSame(cause, error.cause)
     }
 
     @Test fun `each ErrorKind value is distinct`() {
-        // Given — all error kinds
+        // Given - all error kinds
         val kinds = listOf(
             ErrorKind.NETWORK,
             ErrorKind.AUTH,
@@ -76,7 +76,7 @@ class EnrichmentResultTest {
             ErrorKind.UNKNOWN,
         )
 
-        // Then — all distinct
+        // Then - all distinct
         assertEquals(6, kinds.toSet().size)
     }
 }

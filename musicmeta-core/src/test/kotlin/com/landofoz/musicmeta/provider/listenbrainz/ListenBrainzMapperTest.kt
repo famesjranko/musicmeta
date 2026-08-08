@@ -8,7 +8,7 @@ class ListenBrainzMapperTest {
 
     @Test
     fun `toPopularity carries listenerCount, durationMs and album from the same DTO toTopTracks uses`() {
-        // Given — the same ListenBrainzPopularTrack shape toTopTracks maps from
+        // Given - the same ListenBrainzPopularTrack shape toTopTracks maps from
         val tracks = listOf(
             ListenBrainzPopularTrack(
                 recordingMbid = "rec1",
@@ -21,10 +21,10 @@ class ListenBrainzMapperTest {
             ),
         )
 
-        // When — mapping the tracks to popularity
+        // When - mapping the tracks to popularity
         val popularity = ListenBrainzMapper.toPopularity(tracks)
 
-        // Then — PopularTrack no longer drops the fields toTopTracks already keeps
+        // Then - PopularTrack no longer drops the fields toTopTracks already keeps
         val track = popularity.topTracks!!.first()
         assertEquals(500L, track.listenCount)
         assertEquals(120L, track.listenerCount)
@@ -35,7 +35,7 @@ class ListenBrainzMapperTest {
 
     @Test
     fun `toPopularity leaves the new fields null when the DTO doesn't carry them`() {
-        // Given — a track DTO without listenerCount, durationMs or albumName
+        // Given - a track DTO without listenerCount, durationMs or albumName
         val tracks = listOf(
             ListenBrainzPopularTrack(
                 recordingMbid = "rec1",
@@ -45,10 +45,10 @@ class ListenBrainzMapperTest {
             ),
         )
 
-        // When — mapping the tracks to popularity
+        // When - mapping the tracks to popularity
         val popularity = ListenBrainzMapper.toPopularity(tracks)
 
-        // Then — the missing fields stay null rather than being defaulted
+        // Then - the missing fields stay null rather than being defaulted
         val track = popularity.topTracks!!.first()
         assertNull(track.listenerCount)
         assertNull(track.durationMs)

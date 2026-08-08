@@ -22,110 +22,110 @@ class DeezerApiSearchArtistTest {
 
     @Test
     fun `picks the popular real artist over an exact-name ghost listed first`() = runTest {
-        // Given — Deezer returns a ghost "Radiohead" (0 albums, 470 fans) ahead of id 399
+        // Given - Deezer returns a ghost "Radiohead" (0 albums, 470 fans) ahead of id 399
         httpClient.givenJsonResponse("search/artist", RADIOHEAD_GHOST_FIRST)
 
-        // When — searching for the artist
+        // When - searching for the artist
         val result = api.searchArtist("Radiohead")
 
-        // Then — the real artist wins on fan count, not on result order
+        // Then - the real artist wins on fan count, not on result order
         assertEquals(399L, result?.id)
     }
 
     @Test
     fun `keeps hit 0 when it is already the best match`() = runTest {
-        // Given — Deezer returns the real Portishead first, a fringe credit second
+        // Given - Deezer returns the real Portishead first, a fringe credit second
         httpClient.givenJsonResponse("search/artist", PORTISHEAD_CORRECT_FIRST)
 
-        // When — searching for the artist
+        // When - searching for the artist
         val result = api.searchArtist("Portishead")
 
-        // Then — hit 0 is kept
+        // Then - hit 0 is kept
         assertEquals(1069L, result?.id)
     }
 
     @Test
     fun `a hugely popular wrong-name artist never beats a name match`() = runTest {
-        // Given — a wrong-name artist with millions of fans outranks the modest real match
+        // Given - a wrong-name artist with millions of fans outranks the modest real match
         httpClient.givenJsonResponse("search/artist", WRONG_NAME_MORE_POPULAR)
 
-        // When — searching for the artist
+        // When - searching for the artist
         val result = api.searchArtist("Autechre")
 
-        // Then — popularity is only a tiebreak among name matches
+        // Then - popularity is only a tiebreak among name matches
         assertEquals(7777L, result?.id)
     }
 
     @Test
     fun `returns null when no candidate name matches`() = runTest {
-        // Given — every hit is a different artist
+        // Given - every hit is a different artist
         httpClient.givenJsonResponse("search/artist", NO_NAME_MATCH)
 
-        // When — searching for the artist
+        // When - searching for the artist
         val result = api.searchArtist("Autechre")
 
-        // Then — no ghost is returned in place of a real miss
+        // Then - no ghost is returned in place of a real miss
         assertNull(result)
     }
 
     @Test
     fun `prefers an exact name over a looser containing match with more fans`() = runTest {
-        // Given — "DJ Radiohead" has more fans than the exact-name entry
+        // Given - "DJ Radiohead" has more fans than the exact-name entry
         httpClient.givenJsonResponse("search/artist", LOOSE_MATCH_MORE_POPULAR)
 
-        // When — searching for the artist
+        // When - searching for the artist
         val result = api.searchArtist("Radiohead")
 
-        // Then — the exact name wins regardless of popularity
+        // Then - the exact name wins regardless of popularity
         assertEquals(399L, result?.id)
     }
 
     @Test
     fun `requests more than one hit so a ghost can be outvoted`() = runTest {
-        // Given — any response
+        // Given - any response
         httpClient.givenJsonResponse("search/artist", RADIOHEAD_GHOST_FIRST)
 
-        // When — searching for the artist
+        // When - searching for the artist
         api.searchArtist("Radiohead")
 
-        // Then — the search asks for a candidate pool, not a single hit
+        // Then - the search asks for a candidate pool, not a single hit
         assertTrue(httpClient.requestedUrls.single().endsWith("limit=10"))
     }
 
     @Test
     fun `a closer loose match beats a looser one with far more fans`() = runTest {
-        // Given — no exact name in the pool: a containing match, and a popular half-token match
+        // Given - no exact name in the pool: a containing match, and a popular half-token match
         httpClient.givenJsonResponse("search/artist", LOOSE_MATCH_BEATS_LOOSER_MATCH)
 
-        // When — searching for the artist
+        // When - searching for the artist
         val result = api.searchArtist("Bad Company")
 
-        // Then — name quality is ranked before popularity, so 9M fans does not carry Bad Bunny
+        // Then - name quality is ranked before popularity, so 9M fans does not carry Bad Bunny
         assertEquals(2002L, result?.id)
     }
 
     @Test
     fun `a non-object element does not fail the whole search`() = runTest {
-        // Given — a malformed first element ahead of the real artist
+        // Given - a malformed first element ahead of the real artist
         httpClient.givenJsonResponse("search/artist", MALFORMED_ELEMENT_FIRST)
 
-        // When — searching for the artist
+        // When - searching for the artist
         val result = api.searchArtist("Radiohead")
 
-        // Then — it is skipped, not thrown: a JSONException here would surface as Error and
+        // Then - it is skipped, not thrown: a JSONException here would surface as Error and
         // open the circuit breaker against a healthy Deezer (docs/pitfalls.md §4)
         assertEquals(399L, result?.id)
     }
 
     @Test
     fun `the exact-name tier compares normalized names`() = runTest {
-        // Given — the punctuated real name is outranked on fans by a looser match
+        // Given - the punctuated real name is outranked on fans by a looser match
         httpClient.givenJsonResponse("search/artist", PUNCTUATED_EXACT_NAME)
 
-        // When — searching with the unpunctuated spelling
+        // When - searching with the unpunctuated spelling
         val result = api.searchArtist("ACDC")
 
-        // Then — "AC/DC" normalizes to an exact match, so it beats the tribute act
+        // Then - "AC/DC" normalizes to an exact match, so it beats the tribute act
         assertEquals(115L, result?.id)
     }
 

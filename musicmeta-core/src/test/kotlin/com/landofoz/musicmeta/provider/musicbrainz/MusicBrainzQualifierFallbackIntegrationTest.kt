@@ -35,7 +35,7 @@ class MusicBrainzQualifierFallbackIntegrationTest {
 
     @Test
     fun `album qualifier fallback resolves and the disambiguation tie-break picks the remastered release`() = runTest {
-        // Given — the original "(Remastered)" title search comes up empty (left unstubbed), and
+        // Given - the original "(Remastered)" title search comes up empty (left unstubbed), and
         // the stripped "Master Of Puppets" fallback search returns a same-score tie: one release
         // with no relevant disambiguation, one whose disambiguation actually says "remastered"
         httpClient.givenJsonResponse(
@@ -65,10 +65,10 @@ class MusicBrainzQualifierFallbackIntegrationTest {
         )
         val request = EnrichmentRequest.forAlbum("Master Of Puppets (Remastered)", "Metallica")
 
-        // When — enriching for genre
+        // When - enriching for genre
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then — the qualifier-matching release wins the tie, not the first-in-pool one
+        // Then - the qualifier-matching release wins the tie, not the first-in-pool one
         assertTrue(result is EnrichmentResult.Success)
         val success = result as EnrichmentResult.Success
         assertEquals("remaster-2017", success.resolvedIdentifiers?.musicBrainzId)
@@ -77,7 +77,7 @@ class MusicBrainzQualifierFallbackIntegrationTest {
 
     @Test
     fun `album literal title resolves directly, with zero fallback searches`() = runTest {
-        // Given — "2112 (deluxe edition)" IS Rush's literal MusicBrainz release title (verified
+        // Given - "2112 (deluxe edition)" IS Rush's literal MusicBrainz release title (verified
         // live), so the ORIGINAL exact search must already succeed
         httpClient.givenJsonResponse(
             "release%3A%222112+%5C%28deluxe+edition%5C%29%22",
@@ -95,10 +95,10 @@ class MusicBrainzQualifierFallbackIntegrationTest {
         )
         val request = EnrichmentRequest.forAlbum("2112 (deluxe edition)", "Rush")
 
-        // When — enriching for genre
+        // When - enriching for genre
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then — resolved on the original title, and only one release search was ever made
+        // Then - resolved on the original title, and only one release search was ever made
         assertTrue(result is EnrichmentResult.Success)
         val success = result as EnrichmentResult.Success
         assertEquals("rush-2112-deluxe", success.resolvedIdentifiers?.musicBrainzId)
@@ -107,7 +107,7 @@ class MusicBrainzQualifierFallbackIntegrationTest {
 
     @Test
     fun `album literal title regression, Abbey Road anniversary edition, also resolves with zero fallback`() = runTest {
-        // Given — "Abbey Road (anniversary edition)" IS The Beatles' literal MusicBrainz release
+        // Given - "Abbey Road (anniversary edition)" IS The Beatles' literal MusicBrainz release
         // title too (verified live), the second regression case the design decision names
         // explicitly alongside "2112 (deluxe edition)"
         httpClient.givenJsonResponse(
@@ -126,10 +126,10 @@ class MusicBrainzQualifierFallbackIntegrationTest {
         )
         val request = EnrichmentRequest.forAlbum("Abbey Road (anniversary edition)", "The Beatles")
 
-        // When — enriching for genre
+        // When - enriching for genre
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then — resolved on the original title, with zero fallback searches
+        // Then - resolved on the original title, with zero fallback searches
         assertTrue(result is EnrichmentResult.Success)
         val success = result as EnrichmentResult.Success
         assertEquals("beatles-abbey-road-anniversary", success.resolvedIdentifiers?.musicBrainzId)
@@ -138,7 +138,7 @@ class MusicBrainzQualifierFallbackIntegrationTest {
 
     @Test
     fun `qualifier-suffixed lookup resolves to the same release-group as the qualifier-free lookup`() = runTest {
-        // Given — one stubbed pool, reachable both directly (bare title) and via fallback
+        // Given - one stubbed pool, reachable both directly (bare title) and via fallback
         // (qualifier-suffixed title) — the contract is parity with the unmodified qualifier-free
         // path, not a new, independent proof of correctness
         httpClient.givenJsonResponse(
@@ -156,14 +156,14 @@ class MusicBrainzQualifierFallbackIntegrationTest {
             """.trimIndent(),
         )
 
-        // When — the same album, once via the plain (already-working) path, once via the
+        // When - the same album, once via the plain (already-working) path, once via the
         // qualifier-suffixed fallback path
         val bare = provider.enrich(EnrichmentRequest.forAlbum("Master Of Puppets", "Metallica"), EnrichmentType.GENRE)
         val qualified = provider.enrich(
             EnrichmentRequest.forAlbum("Master Of Puppets (Remastered)", "Metallica"), EnrichmentType.GENRE,
         )
 
-        // Then — both resolve to the same release-group
+        // Then - both resolve to the same release-group
         assertTrue(bare is EnrichmentResult.Success)
         assertTrue(qualified is EnrichmentResult.Success)
         assertEquals(
@@ -175,16 +175,16 @@ class MusicBrainzQualifierFallbackIntegrationTest {
 
     @Test
     fun `album edition-ambiguity negative case stays NotFound, Live is not a recognized qualifier`() = runTest {
-        // Given — the original "(Live)" title search comes up empty, and "Live" is deliberately
+        // Given - the original "(Live)" title search comes up empty, and "Live" is deliberately
         // excluded from the qualifier vocabulary (docs on MusicBrainzQualifierFallback.KIND_PATTERNS),
         // so no fallback candidate is ever generated or searched
         httpClient.givenJsonResponse("release?query", """{"releases": []}""")
         val request = EnrichmentRequest.forAlbum("Master Of Puppets (Live)", "Metallica")
 
-        // When — enriching for genre
+        // When - enriching for genre
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then — NotFound, and exactly one release search (the original) plus the fuzzy-suggestions
+        // Then - NotFound, and exactly one release search (the original) plus the fuzzy-suggestions
         // search — never a fallback search for a bare "Master Of Puppets" title
         assertTrue(result is EnrichmentResult.NotFound)
         assertEquals(0, httpClient.requestedUrls.count { it.contains("release%3A%22Master+Of+Puppets%22") })
@@ -192,7 +192,7 @@ class MusicBrainzQualifierFallbackIntegrationTest {
 
     @Test
     fun `album multi-group qualifier strips as one fallback candidate`() = runTest {
-        // Given — a single bracket group with two slash-separated qualifiers strips as one step
+        // Given - a single bracket group with two slash-separated qualifiers strips as one step
         httpClient.givenJsonResponse(
             "release%3A%22Master+Of+Puppets%22",
             """
@@ -210,10 +210,10 @@ class MusicBrainzQualifierFallbackIntegrationTest {
         )
         val request = EnrichmentRequest.forAlbum("Master Of Puppets (Deluxe Box Set / Remastered)", "Metallica")
 
-        // When — enriching for genre
+        // When - enriching for genre
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then — the single box-set candidate resolves via the one stripped-title fallback
+        // Then - the single box-set candidate resolves via the one stripped-title fallback
         assertTrue(result is EnrichmentResult.Success)
         val success = result as EnrichmentResult.Success
         assertEquals("box-set-release", success.resolvedIdentifiers?.musicBrainzId)
@@ -221,7 +221,7 @@ class MusicBrainzQualifierFallbackIntegrationTest {
 
     @Test
     fun `album qualifier fallback requires an artist match, not just a title match`() = runTest {
-        // Given — the stripped-title pool's only hit is credited to a different artist entirely
+        // Given - the stripped-title pool's only hit is credited to a different artist entirely
         httpClient.givenJsonResponse(
             "release%3A%22Master+Of+Puppets%22",
             """
@@ -238,16 +238,16 @@ class MusicBrainzQualifierFallbackIntegrationTest {
         )
         val request = EnrichmentRequest.forAlbum("Master Of Puppets (Remastered)", "Metallica")
 
-        // When — enriching for genre
+        // When - enriching for genre
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then — not authoritative, falls through to NotFound rather than a confident wrong match
+        // Then - not authoritative, falls through to NotFound rather than a confident wrong match
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `enrichAlbumTracks resolves a qualifier-suffixed title via the same fallback`() = runTest {
-        // Given — same stripped-title pool, single unambiguous hit
+        // Given - same stripped-title pool, single unambiguous hit
         httpClient.givenJsonResponse(
             "release%3A%22Master+Of+Puppets%22",
             """
@@ -269,16 +269,16 @@ class MusicBrainzQualifierFallbackIntegrationTest {
         )
         val request = EnrichmentRequest.forAlbum("Master Of Puppets (Remastered)", "Metallica")
 
-        // When — enriching for album tracks
+        // When - enriching for album tracks
         val result = provider.enrich(request, EnrichmentType.ALBUM_TRACKS)
 
-        // Then — resolved via the same qualifier-fallback path as GENRE
+        // Then - resolved via the same qualifier-fallback path as GENRE
         assertTrue(result is EnrichmentResult.Success)
     }
 
     @Test
     fun `track qualifier fallback resolves Enter Sandman Remastered 2021 via musicbrainz TRACK_METADATA`() = runTest {
-        // Given — the original "(Remastered 2021)" recording search comes up empty, and the
+        // Given - the original "(Remastered 2021)" recording search comes up empty, and the
         // stripped "Enter Sandman" fallback returns a candidate pickBestRecording accepts, with a
         // credited artist matching the request (authoritative-match requirement)
         httpClient.givenJsonResponse(
@@ -288,10 +288,10 @@ class MusicBrainzQualifierFallbackIntegrationTest {
         )
         val request = EnrichmentRequest.forTrack("Enter Sandman (Remastered 2021)", "Metallica")
 
-        // When — TRACK_METADATA, matching the ticket's named acceptance criterion, rather than GENRE
+        // When - TRACK_METADATA, matching the ticket's named acceptance criterion, rather than GENRE
         val result = provider.enrich(request, EnrichmentType.TRACK_METADATA)
 
-        // Then — resolved via musicbrainz itself, not degraded to some other provider's fuzzy match
+        // Then - resolved via musicbrainz itself, not degraded to some other provider's fuzzy match
         assertTrue(result is EnrichmentResult.Success)
         val success = result as EnrichmentResult.Success
         assertEquals("musicbrainz", success.provider)
@@ -300,7 +300,7 @@ class MusicBrainzQualifierFallbackIntegrationTest {
 
     @Test
     fun `track qualifier fallback still rejects a pool with nothing pickBestRecording accepts`() = runTest {
-        // Given — the stripped-title fallback pool exists but every candidate scores below threshold
+        // Given - the stripped-title fallback pool exists but every candidate scores below threshold
         httpClient.givenJsonResponse(
             "recording%3A%22Enter+Sandman%22",
             """{"recordings": [{"id": "rec-low", "score": 50, "title": "Enter Sandman",
@@ -308,16 +308,16 @@ class MusicBrainzQualifierFallbackIntegrationTest {
         )
         val request = EnrichmentRequest.forTrack("Enter Sandman (Remastered 2021)", "Metallica")
 
-        // When — enriching for genre
+        // When - enriching for genre
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then — NotFound because the only fallback candidate is below the match threshold
+        // Then - NotFound because the only fallback candidate is below the match threshold
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `track qualifier fallback rejects an exact-title match from the wrong artist`() = runTest {
-        // Given — a score-100, title-exact recording exists, but it's credited to a different
+        // Given - a score-100, title-exact recording exists, but it's credited to a different
         // artist than the request — score/title alone must not be treated as proof of identity
         httpClient.givenJsonResponse(
             "recording%3A%22Enter+Sandman%22",
@@ -326,16 +326,16 @@ class MusicBrainzQualifierFallbackIntegrationTest {
         )
         val request = EnrichmentRequest.forTrack("Enter Sandman (Remastered 2021)", "Metallica")
 
-        // When — enriching for genre
+        // When - enriching for genre
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then — NotFound because the candidate's credited artist doesn't match
+        // Then - NotFound because the candidate's credited artist doesn't match
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `track qualifier fallback rejects a same-score non-equal-title candidate`() = runTest {
-        // Given — the fallback pool's own search for "Enter Sandman" returns a recording whose
+        // Given - the fallback pool's own search for "Enter Sandman" returns a recording whose
         // normalized title doesn't equal the searched candidate — score alone is not proof of
         // identity, quoted Lucene is phrase search, not string equality
         httpClient.givenJsonResponse(
@@ -345,10 +345,10 @@ class MusicBrainzQualifierFallbackIntegrationTest {
         )
         val request = EnrichmentRequest.forTrack("Enter Sandman (Remastered 2021)", "Metallica")
 
-        // When — enriching for genre
+        // When - enriching for genre
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
-        // Then — NotFound because the candidate's title doesn't match the searched-for one
+        // Then - NotFound because the candidate's title doesn't match the searched-for one
         assertTrue(result is EnrichmentResult.NotFound)
     }
 }

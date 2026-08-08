@@ -23,14 +23,14 @@ class MusicBrainzSearchTest {
 
     @Test
     fun `searchCandidates returns album candidates with correct fields`() = runTest {
-        // Given — MusicBrainz returns two releases for "OK Computer"
+        // Given - MusicBrainz returns two releases for "OK Computer"
         httpClient.givenJsonResponse("release?query", RELEASE_SEARCH_MULTIPLE)
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
 
-        // When — searching for candidates
+        // When - searching for candidates
         val candidates = provider.searchCandidates(request, 10)
 
-        // Then — both candidates returned with all metadata fields populated
+        // Then - both candidates returned with all metadata fields populated
         assertEquals(2, candidates.size)
 
         val first = candidates[0]
@@ -51,14 +51,14 @@ class MusicBrainzSearchTest {
 
     @Test
     fun `searchCandidates returns artist candidates`() = runTest {
-        // Given — MusicBrainz returns two artist matches
+        // Given - MusicBrainz returns two artist matches
         httpClient.givenJsonResponse("artist?query", ARTIST_SEARCH_MULTIPLE)
         val request = EnrichmentRequest.forArtist("Radiohead")
 
-        // When — searching for artist candidates
+        // When - searching for artist candidates
         val candidates = provider.searchCandidates(request, 10)
 
-        // Then — artist fields populated correctly (no "artist" field, title=name)
+        // Then - artist fields populated correctly (no "artist" field, title=name)
         assertEquals(2, candidates.size)
 
         val first = candidates[0]
@@ -73,14 +73,14 @@ class MusicBrainzSearchTest {
 
     @Test
     fun `searchCandidates returns track candidates with correct fields`() = runTest {
-        // Given — MusicBrainz returns two recordings for "Paranoid Android"
+        // Given - MusicBrainz returns two recordings for "Paranoid Android"
         httpClient.givenJsonResponse("recording?query", RECORDING_SEARCH_MULTIPLE)
         val request = EnrichmentRequest.forTrack("Paranoid Android", "Radiohead")
 
-        // When — searching for candidates
+        // When - searching for candidates
         val candidates = provider.searchCandidates(request, 10)
 
-        // Then — both candidates returned, with year/country/releaseType/thumbnailUrl left null
+        // Then - both candidates returned, with year/country/releaseType/thumbnailUrl left null
         // (a recording search hit carries none of those — see MusicBrainzProvider.searchTrackCandidates)
         assertEquals(2, candidates.size)
 
@@ -106,17 +106,17 @@ class MusicBrainzSearchTest {
     @Test
     fun `searchCandidates falls back to fuzzy track search when the strict recording search returns nothing`() =
         runTest {
-            // Given — the strict, quoted query ("Enter Sandmanz Xyzqq") comes back empty (a typo,
+            // Given - the strict, quoted query ("Enter Sandmanz Xyzqq") comes back empty (a typo,
             // not a transient), but the fuzzy (unquoted + Lucene ~) query finds the near-miss —
             // same shape as searchAlbumCandidates'/searchArtistCandidates' .ifEmpty { fuzzy }.
             httpClient.givenJsonResponse(STRICT_TYPO_QUERY, """{"recordings":[]}""")
             httpClient.givenJsonResponse(FUZZY_TYPO_QUERY, RECORDING_SEARCH_FUZZY_MATCH)
             val request = EnrichmentRequest.forTrack("Enter Sandmanz Xyzqq", "Metallica")
 
-            // When — searching for candidates
+            // When - searching for candidates
             val candidates = provider.searchCandidates(request, 10)
 
-            // Then — the fuzzy hit is returned, not an empty list
+            // Then - the fuzzy hit is returned, not an empty list
             assertEquals(1, candidates.size)
             assertEquals("Enter Sandman", candidates[0].title)
             assertEquals("rec-fuzzy", candidates[0].identifiers.musicBrainzId)
@@ -124,14 +124,14 @@ class MusicBrainzSearchTest {
 
     @Test
     fun `searchCandidates includes thumbnail URL when front cover exists`() = runTest {
-        // Given — first release has front cover, second does not
+        // Given - first release has front cover, second does not
         httpClient.givenJsonResponse("release?query", RELEASE_SEARCH_MULTIPLE)
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
 
-        // When — searching for candidates
+        // When - searching for candidates
         val candidates = provider.searchCandidates(request, 10)
 
-        // Then — thumbnail URL derived from CAA for release with cover art
+        // Then - thumbnail URL derived from CAA for release with cover art
         val withCover = candidates[0]
         assertNotNull(withCover.thumbnailUrl)
         assertEquals(

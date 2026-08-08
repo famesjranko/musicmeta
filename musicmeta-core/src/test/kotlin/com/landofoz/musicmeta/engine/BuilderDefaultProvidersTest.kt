@@ -17,16 +17,16 @@ class BuilderDefaultProvidersTest {
     private val httpClient = FakeHttpClient()
 
     @Test fun `withDefaultProviders without keys creates 9 providers`() {
-        // Given -- no API keys configured
+        // Given - no API keys configured
         val engine = EnrichmentEngine.Builder()
             .httpClient(httpClient)
             .withDefaultProviders()
             .build()
 
-        // When -- listing providers
+        // When - listing providers
         val providers = engine.getProviders()
 
-        // Then -- 9 keyless providers registered (includes SimilarAlbumsProvider)
+        // Then - 9 keyless providers registered (includes SimilarAlbumsProvider)
         assertEquals(9, providers.size)
         val ids = providers.map { it.id }.toSet()
         assertTrue("musicbrainz" in ids)
@@ -45,7 +45,7 @@ class BuilderDefaultProvidersTest {
     }
 
     @Test fun `withDefaultProviders with all API keys creates 11 providers`() {
-        // Given -- all API keys provided
+        // Given - all API keys provided
         val engine = EnrichmentEngine.Builder()
             .httpClient(httpClient)
             .apiKeys(
@@ -58,10 +58,10 @@ class BuilderDefaultProvidersTest {
             .withDefaultProviders()
             .build()
 
-        // When -- listing providers
+        // When - listing providers
         val providers = engine.getProviders()
 
-        // Then -- all 12 providers registered (9 keyless + 3 key-requiring)
+        // Then - all 12 providers registered (9 keyless + 3 key-requiring)
         assertEquals(12, providers.size)
         val ids = providers.map { it.id }.toSet()
         assertTrue("lastfm" in ids)
@@ -70,17 +70,17 @@ class BuilderDefaultProvidersTest {
     }
 
     @Test fun `apiKeys with single key enables only that provider`() {
-        // Given -- only Last.fm key provided
+        // Given - only Last.fm key provided
         val engine = EnrichmentEngine.Builder()
             .httpClient(httpClient)
             .apiKeys(ApiKeyConfig(lastFmKey = "test-key"))
             .withDefaultProviders()
             .build()
 
-        // When -- listing providers
+        // When - listing providers
         val providers = engine.getProviders()
 
-        // Then -- 10 providers (9 keyless + Last.fm)
+        // Then - 10 providers (9 keyless + Last.fm)
         assertEquals(10, providers.size)
         val ids = providers.map { it.id }.toSet()
         assertTrue("lastfm" in ids)
@@ -89,35 +89,35 @@ class BuilderDefaultProvidersTest {
     }
 
     @Test fun `withDefaultProviders registers identity provider`() {
-        // Given -- default providers
+        // Given - default providers
         val engine = EnrichmentEngine.Builder()
             .httpClient(httpClient)
             .withDefaultProviders()
             .build()
 
-        // When -- checking providers
+        // When - checking providers
         val providers = engine.getProviders()
         val mb = providers.first { it.id == "musicbrainz" }
 
-        // Then -- MusicBrainz has capabilities (identity provider)
+        // Then - MusicBrainz has capabilities (identity provider)
         assertTrue(mb.capabilities.isNotEmpty())
     }
 
     @Test fun `providers on different hosts do not serialise against each other`() = runTest {
-        // Given -- the default wiring, watched for overlapping in-flight requests
+        // Given - the default wiring, watched for overlapping in-flight requests
         val watched = InFlightHttpClient(httpClient)
         val engine = EnrichmentEngine.Builder()
             .httpClient(watched)
             .withDefaultProviders()
             .build()
 
-        // When -- a fan-out that reaches lrclib.net and api.deezer.com in the same phase
+        // When - a fan-out that reaches lrclib.net and api.deezer.com in the same phase
         engine.enrich(
             EnrichmentRequest.forTrack("Test Track", "Test Artist"),
             setOf(EnrichmentType.LYRICS_PLAIN, EnrichmentType.SIMILAR_TRACKS, EnrichmentType.TRACK_PREVIEW),
         )
 
-        // Then -- the two hosts overlapped. A shared RateLimiter holds its mutex across the
+        // Then - the two hosts overlapped. A shared RateLimiter holds its mutex across the
         // request itself, so sharing one would pin this at 1 (#50).
         assertTrue(
             "Providers on different hosts must not serialise; max in flight was ${watched.maxInFlight}",
@@ -149,20 +149,20 @@ class BuilderDefaultProvidersTest {
     }
 
     @Test fun `withDefaultProviders registers genre_affinity_matcher synthesizer for GENRE_DISCOVERY`() = runTest {
-        // Given -- default providers; no HTTP stubs so all provider calls return NotFound
+        // Given - default providers; no HTTP stubs so all provider calls return NotFound
         val engine = EnrichmentEngine.Builder()
             .httpClient(httpClient)
             .withDefaultProviders()
             .build()
 
-        // When -- requesting GENRE_DISCOVERY (a composite type handled by GenreAffinityMatcher)
+        // When - requesting GENRE_DISCOVERY (a composite type handled by GenreAffinityMatcher)
         val results = engine.enrich(
             EnrichmentRequest.forArtist("Test Artist"),
             setOf(EnrichmentType.GENRE_DISCOVERY),
         )
         val result = results.raw[EnrichmentType.GENRE_DISCOVERY]
 
-        // Then -- synthesizer handled the request (provider is "genre_affinity_matcher", not "no_composite_handler")
+        // Then - synthesizer handled the request (provider is "genre_affinity_matcher", not "no_composite_handler")
         // Result is NotFound because no GENRE data is available, but the synthesizer WAS invoked
         assertTrue("GENRE_DISCOVERY result must be present", result != null)
         val notFound = result as? EnrichmentResult.NotFound

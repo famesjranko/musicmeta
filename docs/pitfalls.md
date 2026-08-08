@@ -278,3 +278,20 @@ all. Every other payload answers its type iff it carries anything. The `when` is
 *classes*, so the compiler asks about a new one — it is **not** exhaustive over types, so a new type
 served by `Metadata` inherits grab-bag semantics. That fails lenient, which is the right direction:
 the gate's job is to catch payloads answering *nothing*, not to adjudicate partial ones.
+
+## 9. A line-based check that skips lines can stop reading a file entirely
+
+`check_test_shape.py` scans lines, so Kotlin fixture text inside a `"""` raw string is read as
+source. The obvious repair — track the delimiter, skip what is inside — shipped twice and was wrong
+both times in the same direction. Parity cannot tell an opener from a `"""` a comment mentions, nor
+from a `//` inside an ordinary string literal; either wrong guess leaves the tracker stuck open, and
+everything below is skipped, `@Test` lines included. Live on `DeezerProviderTest.kt`: **43 of its 49
+tests were invisible while `check` printed clean across 86 test sources.**
+
+`check_raw_string_content` tracks the same unreliable parity but *complains* about suspect lines
+instead of skipping them, and only ever adds a finding. A wrong guess is now one visible error,
+fixed by rewording the fixture. Precision unchanged; blast radius inverted.
+
+**When a heuristic can't be made accurate, make it fail in the direction that shows.** A filter's
+wrong guess hides work, a tripwire's is an annoyance. Any enter/exit flag also needs an end-of-file
+invariant — getting stuck fails quiet all the way down.

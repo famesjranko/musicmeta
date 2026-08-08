@@ -95,6 +95,11 @@ step "changelog release-note caps"
 # intact should have run first — otherwise a broken build_release_notes.py reports a green gate.
 python3 scripts/github-workflows/build_release_notes.py Unreleased
 
+step "test shape (given/when/then)"
+# Below the self-tests for the same reason as the caps above: this runs check_test_shape.py, and a
+# broken checker reporting a green gate is the failure this gate exists to prevent.
+python3 scripts/checks/check_test_shape.py
+
 step "kotlin format (ktlint)"
 ./gradlew ktlintCheck --quiet
 

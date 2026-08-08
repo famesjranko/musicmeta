@@ -22,31 +22,31 @@ class LrcLibMapperTest {
 
     @Test
     fun `toTrackMetadata converts duration seconds to durationMs and copies albumName`() {
-        // Given — a result with a duration in seconds and an album name
+        // Given - a result with a duration in seconds and an album name
         val result = makeResult(duration = 238.0, albumName = "Pablo Honey")
 
-        // When — mapping the result to track metadata
+        // When - mapping the result to track metadata
         val metadata = LrcLibMapper.toTrackMetadata(result)
 
-        // Then — duration is converted to milliseconds and albumName is copied
+        // Then - duration is converted to milliseconds and albumName is copied
         assertEquals(238000L, metadata.durationMs)
         assertEquals("Pablo Honey", metadata.albumTitle)
     }
 
     @Test
     fun `toTrackMetadata leaves durationMs null when duration is absent or zero`() {
-        // Given — duration absent or zero
-        // When — mapped to track metadata
-        // Then — durationMs stays null
+        // Given - duration absent or zero
+        // When - mapped to track metadata
+        // Then - durationMs stays null
         assertNull(LrcLibMapper.toTrackMetadata(makeResult(duration = null)).durationMs)
         assertNull(LrcLibMapper.toTrackMetadata(makeResult(duration = 0.0)).durationMs)
     }
 
     @Test
     fun `toTrackMetadata leaves albumTitle null when albumName is null or blank`() {
-        // Given — albumName null or blank
-        // When — mapped to track metadata
-        // Then — albumTitle stays null
+        // Given - albumName null or blank
+        // When - mapped to track metadata
+        // Then - albumTitle stays null
         assertNull(LrcLibMapper.toTrackMetadata(makeResult(albumName = null)).albumTitle)
         assertNull(LrcLibMapper.toTrackMetadata(makeResult(albumName = "  ")).albumTitle)
     }

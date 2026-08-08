@@ -25,17 +25,17 @@ class MusicBrainzMapperTrackMetadataTest {
 
     @Test
     fun `toTrackMetadataDetails copies duration, album title and disambiguation`() {
-        // Given — a recording carrying length, an art release-group title, and a disambiguation
+        // Given - a recording carrying length, an art release-group title, and a disambiguation
         val recording = makeRecording(
             lengthMs = 245_000L,
             artReleaseGroupTitle = "OK Computer",
             disambiguation = "live, 1992-04-20: Wembley Arena, London, England",
         )
 
-        // When — mapping to track metadata details
+        // When - mapping to track metadata details
         val metadata = MusicBrainzMapper.toTrackMetadataDetails(recording)
 
-        // Then — duration, album title, and disambiguation are all copied across
+        // Then - duration, album title, and disambiguation are all copied across
         assertEquals(245_000L, metadata.durationMs)
         assertEquals("OK Computer", metadata.albumTitle)
         assertEquals("live, 1992-04-20: Wembley Arena, London, England", metadata.disambiguation)
@@ -43,13 +43,13 @@ class MusicBrainzMapperTrackMetadataTest {
 
     @Test
     fun `toTrackMetadataDetails returns all-null fields when the recording carries none of them`() {
-        // Given — a recording with no length, art release-group title, or disambiguation
+        // Given - a recording with no length, art release-group title, or disambiguation
         val recording = makeRecording()
 
-        // When — mapping to track metadata details
+        // When - mapping to track metadata details
         val metadata = MusicBrainzMapper.toTrackMetadataDetails(recording)
 
-        // Then — all three fields come back null
+        // Then - all three fields come back null
         assertNull(metadata.durationMs)
         assertNull(metadata.albumTitle)
         assertNull(metadata.disambiguation)
@@ -57,17 +57,17 @@ class MusicBrainzMapperTrackMetadataTest {
 
     @Test
     fun `toTrackMetadata still drops duration, album title and disambiguation for GENRE`() {
-        // Given — the pre-existing mapper used by GENRE/CREDITS-adjacent lookups
+        // Given - the pre-existing mapper used by GENRE/CREDITS-adjacent lookups
         val recording = makeRecording(
             lengthMs = 245_000L,
             artReleaseGroupTitle = "OK Computer",
             disambiguation = "live take",
         )
 
-        // When — mapping to the legacy metadata shape
+        // When - mapping to the legacy metadata shape
         val metadata = MusicBrainzMapper.toTrackMetadata(recording)
 
-        // Then — unchanged behaviour, this mapper answers EnrichmentData.Metadata only
+        // Then - unchanged behaviour, this mapper answers EnrichmentData.Metadata only
         assertNull(metadata.disambiguation)
     }
 }

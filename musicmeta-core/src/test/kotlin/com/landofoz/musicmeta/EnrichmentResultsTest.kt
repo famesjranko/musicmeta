@@ -13,7 +13,7 @@ class EnrichmentResultsTest {
         EnrichmentResult.Success(type, data, provider, 0.9f)
 
     @Test fun `get returns typed data for matching type`() {
-        // Given — a results map containing an ALBUM_ART success result
+        // Given - a results map containing an ALBUM_ART success result
         val artwork = EnrichmentData.Artwork(url = "https://example.com/art.jpg")
         val results = EnrichmentResults(
             raw = mapOf(EnrichmentType.ALBUM_ART to success(EnrichmentType.ALBUM_ART, artwork)),
@@ -21,16 +21,16 @@ class EnrichmentResultsTest {
             identity = null,
         )
 
-        // When — getting the typed data for ALBUM_ART
+        // When - getting the typed data for ALBUM_ART
         val retrieved = results.get<EnrichmentData.Artwork>(EnrichmentType.ALBUM_ART)
 
-        // Then — the artwork is returned
+        // Then - the artwork is returned
         assertNotNull(retrieved)
         assertEquals("https://example.com/art.jpg", retrieved!!.url)
     }
 
     @Test fun `get returns null for wrong data type`() {
-        // Given — a GENRE success result holding Metadata
+        // Given - a GENRE success result holding Metadata
         val metadata = EnrichmentData.Metadata(genres = listOf("rock"))
         val results = EnrichmentResults(
             raw = mapOf(EnrichmentType.GENRE to success(EnrichmentType.GENRE, metadata)),
@@ -38,42 +38,45 @@ class EnrichmentResultsTest {
             identity = null,
         )
 
-        // When — requesting it as Artwork instead of Metadata
+        // When - requesting it as Artwork instead of Metadata
         val retrieved = results.get<EnrichmentData.Artwork>(EnrichmentType.GENRE)
 
-        // Then — null is returned instead of a cast failure
+        // Then - null is returned instead of a cast failure
         assertNull(retrieved)
     }
 
     @Test fun `get returns null for NotFound result`() {
-        // Given — an ALBUM_ART entry that is a NotFound result, not a Success
+        // Given - an ALBUM_ART entry that is a NotFound result, not a Success
         val results = EnrichmentResults(
             raw = mapOf(EnrichmentType.ALBUM_ART to EnrichmentResult.NotFound(EnrichmentType.ALBUM_ART, "test")),
             requestedTypes = setOf(EnrichmentType.ALBUM_ART),
             identity = null,
         )
 
-        // When — getting the typed data for ALBUM_ART
+        // When - getting the typed data for ALBUM_ART
         val retrieved = results.get<EnrichmentData.Artwork>(EnrichmentType.ALBUM_ART)
 
-        // Then — null is returned
+        // Then - null is returned
         assertNull(retrieved)
     }
 
     @Test fun `wasRequested distinguishes requested from unrequested types`() {
+        // Given - requestedTypes containing GENRE and ALBUM_ART but not ARTIST_BIO
         val results = EnrichmentResults(
             raw = emptyMap(),
             requestedTypes = setOf(EnrichmentType.GENRE, EnrichmentType.ALBUM_ART),
             identity = null,
         )
 
+        // When - checking wasRequested for each of the three types
+        // Then - GENRE and ALBUM_ART report true, ARTIST_BIO reports false
         assertTrue(results.wasRequested(EnrichmentType.GENRE))
         assertTrue(results.wasRequested(EnrichmentType.ALBUM_ART))
         assertFalse(results.wasRequested(EnrichmentType.ARTIST_BIO))
     }
 
     @Test fun `named accessors return typed data`() {
-        // Given — success results for both ARTIST_PHOTO and ARTIST_BIO
+        // Given - success results for both ARTIST_PHOTO and ARTIST_BIO
         val artwork = EnrichmentData.Artwork(url = "https://example.com/photo.jpg")
         val bio = EnrichmentData.Biography(text = "A band", source = "wikipedia", language = "en")
         val results = EnrichmentResults(
@@ -85,13 +88,13 @@ class EnrichmentResultsTest {
             identity = null,
         )
 
-        // Then — the named accessors return the unwrapped data
+        // Then - the named accessors return the unwrapped data
         assertEquals("https://example.com/photo.jpg", results.artistPhoto()?.url)
         assertEquals("A band", results.biography()?.text)
     }
 
     @Test fun `lyrics accessor prefers synced over plain`() {
-        // Given — both synced and plain available
+        // Given - both synced and plain available
         val synced = EnrichmentData.Lyrics(syncedLyrics = "[00:01]Hello", plainLyrics = "Hello")
         val plain = EnrichmentData.Lyrics(plainLyrics = "Hello plain")
         val results = EnrichmentResults(
@@ -103,12 +106,12 @@ class EnrichmentResultsTest {
             identity = null,
         )
 
-        // Then — synced wins
+        // Then - synced wins
         assertEquals("[00:01]Hello", results.lyrics()?.syncedLyrics)
     }
 
     @Test fun `lyrics accessor falls back to plain when synced not found`() {
-        // Given — only plain available
+        // Given - only plain available
         val plain = EnrichmentData.Lyrics(plainLyrics = "Hello plain")
         val results = EnrichmentResults(
             raw = mapOf(
@@ -119,12 +122,12 @@ class EnrichmentResultsTest {
             identity = null,
         )
 
-        // Then — falls back to plain
+        // Then - falls back to plain
         assertEquals("Hello plain", results.lyrics()?.plainLyrics)
     }
 
     @Test fun `genre accessor falls back to ALBUM_METADATA`() {
-        // Given — GENRE not requested, but ALBUM_METADATA has genre data
+        // Given - GENRE not requested, but ALBUM_METADATA has genre data
         val metadata = EnrichmentData.Metadata(
             genres = listOf("rock", "alternative"),
             genreTags = listOf(GenreTag("rock", 0.9f), GenreTag("alternative", 0.7f)),
@@ -137,14 +140,14 @@ class EnrichmentResultsTest {
             identity = null,
         )
 
-        // Then — falls back to ALBUM_METADATA
+        // Then - falls back to ALBUM_METADATA
         assertEquals(listOf("rock", "alternative"), results.genres())
         assertEquals(2, results.genreTags().size)
         assertEquals("rock", results.genreTags()[0].name)
     }
 
     @Test fun `genre accessor prefers dedicated GENRE over ALBUM_METADATA`() {
-        // Given — both GENRE (merged, 4 tags) and ALBUM_METADATA (1 tag) present
+        // Given - both GENRE (merged, 4 tags) and ALBUM_METADATA (1 tag) present
         val genreResult = EnrichmentData.Metadata(
             genreTags = listOf(GenreTag("rock", 0.9f), GenreTag("art rock", 0.7f), GenreTag("alt", 0.6f)),
             genres = listOf("rock", "art rock", "alt"),
@@ -159,11 +162,12 @@ class EnrichmentResultsTest {
             identity = null,
         )
 
-        // Then — dedicated GENRE wins
+        // Then - dedicated GENRE wins
         assertEquals(3, results.genreTags().size)
     }
 
     @Test fun `label accessor falls back to ALBUM_METADATA`() {
+        // Given - only ALBUM_METADATA present, carrying a label
         val metadata = EnrichmentData.Metadata(label = "Island Records")
         val results = EnrichmentResults(
             raw = mapOf(EnrichmentType.ALBUM_METADATA to success(EnrichmentType.ALBUM_METADATA, metadata)),
@@ -171,12 +175,17 @@ class EnrichmentResultsTest {
             identity = null,
         )
 
+        // When - calling label()
+        // Then - the ALBUM_METADATA label is returned
         assertEquals("Island Records", results.label())
     }
 
     @Test fun `metadata accessors return null when no data`() {
+        // Given - an EnrichmentResults with no raw results
         val results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = null)
 
+        // When - calling each metadata accessor
+        // Then - collection accessors return empty and scalar accessors return null
         assertEquals(emptyList<String>(), results.genres())
         assertEquals(emptyList<GenreTag>(), results.genreTags())
         assertNull(results.label())
@@ -186,6 +195,7 @@ class EnrichmentResultsTest {
     }
 
     @Test fun `identity resolution is accessible`() {
+        // Given - an EnrichmentResults carrying a RESOLVED identity resolution
         val ids = EnrichmentIdentifiers(musicBrainzId = "abc-123", wikidataId = "Q123")
         val identity = IdentityResolution(
             identifiers = ids,
@@ -194,13 +204,15 @@ class EnrichmentResultsTest {
         )
         val results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identity)
 
+        // When - reading the identity field
+        // Then - the match, score, and identifiers are accessible
         assertEquals(IdentityMatch.RESOLVED, results.identity?.match)
         assertEquals(95, results.identity?.matchScore)
         assertEquals("abc-123", results.identity?.identifiers?.musicBrainzId)
     }
 
     @Test fun `similarTracks accessor returns typed data`() {
-        // Given — results containing two similar tracks
+        // Given - results containing two similar tracks
         val tracks = EnrichmentData.SimilarTracks(listOf(
             SimilarTrack("Lucky", "Radiohead", 0.9f),
             SimilarTrack("Karma Police", "Radiohead", 0.85f),
@@ -211,16 +223,16 @@ class EnrichmentResultsTest {
             identity = null,
         )
 
-        // When — accessing via the named accessor
+        // When - accessing via the named accessor
         val similar = results.similarTracks()
 
-        // Then — returns the unwrapped SimilarTracks data
+        // Then - returns the unwrapped SimilarTracks data
         assertEquals(2, similar?.tracks?.size)
         assertEquals("Lucky", similar?.tracks?.get(0)?.title)
     }
 
     @Test fun `result accessor returns raw EnrichmentResult for diagnostics`() {
-        // Given — a rate-limited result
+        // Given - a rate-limited result
         val rateLimited = EnrichmentResult.RateLimited(EnrichmentType.ARTIST_BIO, "lastfm")
         val results = EnrichmentResults(
             raw = mapOf(EnrichmentType.ARTIST_BIO to rateLimited),
@@ -228,7 +240,7 @@ class EnrichmentResultsTest {
             identity = null,
         )
 
-        // Then — can check the raw result for error diagnostics
+        // Then - can check the raw result for error diagnostics
         val rawResult = results.result(EnrichmentType.ARTIST_BIO)
         assertTrue(rawResult is EnrichmentResult.RateLimited)
     }

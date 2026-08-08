@@ -22,7 +22,7 @@ class DeezerTrackPreviewTest {
 
     @Test
     fun `toTrackPreview returns TrackPreview with url durationMs and source when previewUrl is present`() {
-        // Given — a DeezerTrackSearchResult with all preview fields populated
+        // Given - a DeezerTrackSearchResult with all preview fields populated
         val result = DeezerTrackSearchResult(
             id = 789L,
             title = "Karma Police",
@@ -32,10 +32,10 @@ class DeezerTrackPreviewTest {
             albumTitle = "OK Computer",
         )
 
-        // When — mapping to TrackPreview
+        // When - mapping to TrackPreview
         val preview = DeezerMapper.toTrackPreview(result)
 
-        // Then — all fields are correctly mapped
+        // Then - all fields are correctly mapped
         assertNotNull(preview)
         assertEquals("https://cdns-preview.dzcdn.net/stream/c-abc123-1.mp3", preview!!.url)
         assertEquals(30000L, preview.durationMs)
@@ -44,7 +44,7 @@ class DeezerTrackPreviewTest {
 
     @Test
     fun `toTrackPreview returns null when previewUrl is null`() {
-        // Given — a DeezerTrackSearchResult with no preview URL
+        // Given - a DeezerTrackSearchResult with no preview URL
         val result = DeezerTrackSearchResult(
             id = 789L,
             title = "Karma Police",
@@ -52,16 +52,16 @@ class DeezerTrackPreviewTest {
             previewUrl = null,
         )
 
-        // When — attempting to map
+        // When - attempting to map
         val preview = DeezerMapper.toTrackPreview(result)
 
-        // Then — null because no preview URL available
+        // Then - null because no preview URL available
         assertNull(preview)
     }
 
     @Test
     fun `toTrackPreview returns TrackPreview with durationMs 30000 when durationSec is null`() {
-        // Given — a DeezerTrackSearchResult with preview URL but no duration
+        // Given - a DeezerTrackSearchResult with preview URL but no duration
         val result = DeezerTrackSearchResult(
             id = 789L,
             title = "Karma Police",
@@ -70,10 +70,10 @@ class DeezerTrackPreviewTest {
             durationSec = null,
         )
 
-        // When — mapping to TrackPreview
+        // When - mapping to TrackPreview
         val preview = DeezerMapper.toTrackPreview(result)
 
-        // Then — default durationMs of 30000 is used (Deezer previews are always 30 seconds)
+        // Then - default durationMs of 30000 is used (Deezer previews are always 30 seconds)
         assertNotNull(preview)
         assertEquals(30000L, preview!!.durationMs)
     }
@@ -82,14 +82,14 @@ class DeezerTrackPreviewTest {
 
     @Test
     fun `enrich returns Success with TrackPreview when Deezer has matching track with preview`() = runTest {
-        // Given — Deezer returns a matching track search result with a preview URL
+        // Given - Deezer returns a matching track search result with a preview URL
         httpClient.givenJsonResponse("search/track", TRACK_SEARCH_WITH_PREVIEW_RESPONSE)
         val request = EnrichmentRequest.forTrack("Karma Police", "Radiohead")
 
-        // When — enriching for track preview
+        // When - enriching for track preview
         val result = provider.enrich(request, EnrichmentType.TRACK_PREVIEW)
 
-        // Then — success with TrackPreview data
+        // Then - success with TrackPreview data
         assertTrue(result is EnrichmentResult.Success)
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.TrackPreview
         assertEquals("https://cdns-preview.dzcdn.net/stream/c-abc123-1.mp3", data.url)
@@ -99,20 +99,20 @@ class DeezerTrackPreviewTest {
 
     @Test
     fun `enrich returns NotFound for TRACK_PREVIEW when no search result`() = runTest {
-        // Given — Deezer returns no track search results
+        // Given - Deezer returns no track search results
         httpClient.givenJsonResponse("search/track", """{"data":[]}""")
         val request = EnrichmentRequest.forTrack("Nonexistent", "Nobody")
 
-        // When — enriching for track preview
+        // When - enriching for track preview
         val result = provider.enrich(request, EnrichmentType.TRACK_PREVIEW)
 
-        // Then — NotFound because no track matched
+        // Then - NotFound because no track matched
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `enrich returns NotFound for TRACK_PREVIEW when artist does not match`() = runTest {
-        // Given — Deezer returns a track from a different artist
+        // Given - Deezer returns a track from a different artist
         httpClient.givenJsonResponse("search/track", """{"data":[{
             "id":999,"title":"Karma Police",
             "artist":{"name":"Completely Different Band"},
@@ -121,16 +121,16 @@ class DeezerTrackPreviewTest {
         }]}""")
         val request = EnrichmentRequest.forTrack("Karma Police", "Radiohead")
 
-        // When — enriching for track preview
+        // When - enriching for track preview
         val result = provider.enrich(request, EnrichmentType.TRACK_PREVIEW)
 
-        // Then — NotFound because ArtistMatcher.isMatch() rejects the result
+        // Then - NotFound because ArtistMatcher.isMatch() rejects the result
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `enrich returns NotFound for TRACK_PREVIEW when previewUrl is blank or null`() = runTest {
-        // Given — Deezer returns a matching track but with no preview URL
+        // Given - Deezer returns a matching track but with no preview URL
         httpClient.givenJsonResponse("search/track", """{"data":[{
             "id":789,"title":"Karma Police",
             "artist":{"name":"Radiohead"},
@@ -139,22 +139,22 @@ class DeezerTrackPreviewTest {
         }]}""")
         val request = EnrichmentRequest.forTrack("Karma Police", "Radiohead")
 
-        // When — enriching for track preview
+        // When - enriching for track preview
         val result = provider.enrich(request, EnrichmentType.TRACK_PREVIEW)
 
-        // Then — NotFound because previewUrl is blank
+        // Then - NotFound because previewUrl is blank
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `enrich returns NotFound for TRACK_PREVIEW on ForArtist request`() = runTest {
-        // Given — a ForArtist request (TRACK_PREVIEW requires ForTrack)
+        // Given - a ForArtist request (TRACK_PREVIEW requires ForTrack)
         val request = EnrichmentRequest.forArtist("Radiohead")
 
-        // When — enriching for track preview
+        // When - enriching for track preview
         val result = provider.enrich(request, EnrichmentType.TRACK_PREVIEW)
 
-        // Then — NotFound because TRACK_PREVIEW requires ForTrack
+        // Then - NotFound because TRACK_PREVIEW requires ForTrack
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
@@ -165,35 +165,41 @@ class DeezerTrackPreviewTest {
      */
     @Test
     fun `getTrack returns null for a no-data error envelope instead of a fabricated record`() = runTest {
+        // Given - an HTTP-200 response whose body is Deezer's "no data" error envelope
         httpClient.givenJsonResponse(
             "track/789",
             """{"error":{"type":"DataException","message":"no data","code":800}}""",
         )
 
+        // When - calling getTrack
+        // Then - null is returned instead of a fabricated zero-value record
         assertNull(DeezerApi(httpClient, RateLimiter(0)).getTrack(789L))
     }
 
     /** The quota envelope on the same call is transient: it must throw, not answer. */
     @Test(expected = java.io.IOException::class)
     fun `getTrack throws on a quota error envelope`() = runTest {
+        // Given - an HTTP-200 response whose body is Deezer's quota-exceeded error envelope
         httpClient.givenJsonResponse(
             "track/789",
             """{"error":{"type":"Exception","message":"Quota limit exceeded","code":4}}""",
         )
 
+        // When - calling getTrack
+        // Then - an IOException is thrown rather than returning a value
         DeezerApi(httpClient, RateLimiter(0)).getTrack(789L)
     }
 
     @Test
     fun `enrich sends the advanced field query when the request carries an album hint`() = runTest {
-        // Given — a ForTrack request with an album hint, and a matching advanced-query result
+        // Given - a ForTrack request with an album hint, and a matching advanced-query result
         httpClient.givenJsonResponse("search/track", TRACK_SEARCH_WITH_PREVIEW_RESPONSE)
         val request = EnrichmentRequest.forTrack("Karma Police", "Radiohead", album = "OK Computer")
 
-        // When — enriching for track preview
+        // When - enriching for track preview
         provider.enrich(request, EnrichmentType.TRACK_PREVIEW)
 
-        // Then — the advanced artist:/track:/album: field query was sent, not the plain one
+        // Then - the advanced artist:/track:/album: field query was sent, not the plain one
         val url = httpClient.requestedUrls.single { it.contains("search/track") }
         assertTrue(url.contains("artist%3A%22Radiohead%22"))
         assertTrue(url.contains("track%3A%22Karma+Police%22"))
@@ -202,11 +208,11 @@ class DeezerTrackPreviewTest {
 
     @Test
     fun `capabilities includes TRACK_PREVIEW with priority 100`() {
-        // Given — the DeezerProvider
-        // When — checking capabilities
+        // Given - the DeezerProvider
+        // When - checking capabilities
         val capability = provider.capabilities.find { it.type == EnrichmentType.TRACK_PREVIEW }
 
-        // Then — TRACK_PREVIEW capability exists with priority 100
+        // Then - TRACK_PREVIEW capability exists with priority 100
         assertNotNull(capability)
         assertEquals(100, capability!!.priority)
     }

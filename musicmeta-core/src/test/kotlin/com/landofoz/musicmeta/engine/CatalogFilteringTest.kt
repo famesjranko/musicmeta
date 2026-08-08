@@ -85,7 +85,7 @@ class CatalogFilteringTest {
     // --- Test 1: AVAILABLE_ONLY removes unavailable SimilarArtist items ---
 
     @Test fun `AVAILABLE_ONLY removes unavailable SimilarArtist items`() = runTest {
-        // Given — 3 artists where the middle one is unavailable
+        // Given - 3 artists where the middle one is unavailable
         val fakeCatalog = CatalogProvider { queries ->
             queries.mapIndexed { i, _ ->
                 CatalogMatch(available = i != 1, source = "test")
@@ -96,10 +96,10 @@ class CatalogFilteringTest {
             capabilities = listOf(ProviderCapability(EnrichmentType.SIMILAR_ARTISTS, 100)),
         ).also { it.givenResult(EnrichmentType.SIMILAR_ARTISTS, similarArtists("Artist A", "Artist B", "Artist C")) }
 
-        // When — enriching with AVAILABLE_ONLY filtering
+        // When - enriching with AVAILABLE_ONLY filtering
         val results = engine(provider, fakeCatalog).enrich(req, setOf(EnrichmentType.SIMILAR_ARTISTS))
 
-        // Then — middle item removed, first and third remain
+        // Then - middle item removed, first and third remain
         val success = results.raw[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
         val artists = (success.data as EnrichmentData.SimilarArtists).artists
         assertEquals(2, artists.size)
@@ -110,7 +110,7 @@ class CatalogFilteringTest {
     // --- Test 2: AVAILABLE_ONLY removes unavailable RadioTrack items ---
 
     @Test fun `AVAILABLE_ONLY removes unavailable RadioTrack items`() = runTest {
-        // Given — 2 tracks where the first is unavailable
+        // Given - 2 tracks where the first is unavailable
         val fakeCatalog = CatalogProvider { queries ->
             queries.mapIndexed { i, _ ->
                 CatalogMatch(available = i != 0, source = "test")
@@ -121,10 +121,10 @@ class CatalogFilteringTest {
             capabilities = listOf(ProviderCapability(EnrichmentType.ARTIST_RADIO, 100)),
         ).also { it.givenResult(EnrichmentType.ARTIST_RADIO, radioTracks("Track 1", "Track 2")) }
 
-        // When — enriching with AVAILABLE_ONLY filtering
+        // When - enriching with AVAILABLE_ONLY filtering
         val results = engine(provider, fakeCatalog).enrich(req, setOf(EnrichmentType.ARTIST_RADIO))
 
-        // Then — first track removed, second remains
+        // Then - first track removed, second remains
         val success = results.raw[EnrichmentType.ARTIST_RADIO] as EnrichmentResult.Success
         val tracks = (success.data as EnrichmentData.RadioPlaylist).tracks
         assertEquals(1, tracks.size)
@@ -134,7 +134,7 @@ class CatalogFilteringTest {
     // --- Test 3: AVAILABLE_ONLY removes unavailable SimilarAlbum items ---
 
     @Test fun `AVAILABLE_ONLY removes unavailable SimilarAlbum items`() = runTest {
-        // Given — 2 albums where the second is unavailable
+        // Given - 2 albums where the second is unavailable
         val fakeCatalog = CatalogProvider { queries ->
             queries.mapIndexed { i, _ ->
                 CatalogMatch(available = i != 1, source = "test")
@@ -145,10 +145,10 @@ class CatalogFilteringTest {
             capabilities = listOf(ProviderCapability(EnrichmentType.SIMILAR_ALBUMS, 100)),
         ).also { it.givenResult(EnrichmentType.SIMILAR_ALBUMS, similarAlbums("Album X", "Album Y")) }
 
-        // When — enriching with AVAILABLE_ONLY filtering
+        // When - enriching with AVAILABLE_ONLY filtering
         val results = engine(provider, fakeCatalog).enrich(req, setOf(EnrichmentType.SIMILAR_ALBUMS))
 
-        // Then — second album removed, first remains
+        // Then - second album removed, first remains
         val success = results.raw[EnrichmentType.SIMILAR_ALBUMS] as EnrichmentResult.Success
         val albums = (success.data as EnrichmentData.SimilarAlbums).albums
         assertEquals(1, albums.size)
@@ -158,7 +158,7 @@ class CatalogFilteringTest {
     // --- Test 4: AVAILABLE_FIRST reorders preserving relative order within each group ---
 
     @Test fun `AVAILABLE_FIRST reorders so available items precede unavailable, preserving relative order`() = runTest {
-        // Given — pattern [unavailable, available, unavailable, available]
+        // Given - pattern [unavailable, available, unavailable, available]
         val fakeCatalog = CatalogProvider { queries ->
             queries.mapIndexed { i, _ ->
                 CatalogMatch(available = i % 2 == 1, source = "test")
@@ -169,11 +169,11 @@ class CatalogFilteringTest {
             capabilities = listOf(ProviderCapability(EnrichmentType.SIMILAR_ARTISTS, 100)),
         ).also { it.givenResult(EnrichmentType.SIMILAR_ARTISTS, similarArtists("A0-unavail", "A1-avail", "A2-unavail", "A3-avail")) }
 
-        // When — enriching with AVAILABLE_FIRST filtering
+        // When - enriching with AVAILABLE_FIRST filtering
         val results = engine(provider, fakeCatalog, mode = CatalogFilterMode.AVAILABLE_FIRST)
             .enrich(req, setOf(EnrichmentType.SIMILAR_ARTISTS))
 
-        // Then — available items come first [A1-avail, A3-avail, A0-unavail, A2-unavail]
+        // Then - available items come first [A1-avail, A3-avail, A0-unavail, A2-unavail]
         val success = results.raw[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
         val artists = (success.data as EnrichmentData.SimilarArtists).artists
         assertEquals(4, artists.size)
@@ -186,7 +186,7 @@ class CatalogFilteringTest {
     // --- Test 5: UNFILTERED mode returns all items unchanged ---
 
     @Test fun `UNFILTERED mode returns all items unchanged even when catalog provider returns unavailable`() = runTest {
-        // Given — catalog says everything unavailable, but mode is UNFILTERED
+        // Given - catalog says everything unavailable, but mode is UNFILTERED
         val fakeCatalog = CatalogProvider { queries ->
             queries.map { CatalogMatch(available = false, source = "test") }
         }
@@ -195,11 +195,11 @@ class CatalogFilteringTest {
             capabilities = listOf(ProviderCapability(EnrichmentType.SIMILAR_ARTISTS, 100)),
         ).also { it.givenResult(EnrichmentType.SIMILAR_ARTISTS, similarArtists("Artist A", "Artist B")) }
 
-        // When — enriching with UNFILTERED mode
+        // When - enriching with UNFILTERED mode
         val results = engine(provider, fakeCatalog, mode = CatalogFilterMode.UNFILTERED)
             .enrich(req, setOf(EnrichmentType.SIMILAR_ARTISTS))
 
-        // Then — all items returned unchanged
+        // Then - all items returned unchanged
         val success = results.raw[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
         val artists = (success.data as EnrichmentData.SimilarArtists).artists
         assertEquals(2, artists.size)
@@ -208,17 +208,17 @@ class CatalogFilteringTest {
     // --- Test 6: No CatalogProvider configured returns all items unchanged ---
 
     @Test fun `no CatalogProvider configured returns all items unchanged`() = runTest {
-        // Given — no catalog provider
+        // Given - no catalog provider
         val provider = FakeProvider(
             id = "fake",
             capabilities = listOf(ProviderCapability(EnrichmentType.SIMILAR_ARTISTS, 100)),
         ).also { it.givenResult(EnrichmentType.SIMILAR_ARTISTS, similarArtists("Artist A", "Artist B")) }
 
-        // When — enriching without a catalog provider configured
+        // When - enriching without a catalog provider configured
         val results = engine(provider, catalogProvider = null)
             .enrich(req, setOf(EnrichmentType.SIMILAR_ARTISTS))
 
-        // Then — items returned unchanged
+        // Then - items returned unchanged
         val success = results.raw[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
         val artists = (success.data as EnrichmentData.SimilarArtists).artists
         assertEquals(2, artists.size)
@@ -227,7 +227,7 @@ class CatalogFilteringTest {
     // --- Test 7: Non-recommendation types are never passed to CatalogProvider ---
 
     @Test fun `non-recommendation type results are never passed to CatalogProvider`() = runTest {
-        // Given — ALBUM_ART result, catalog says nothing is available
+        // Given - ALBUM_ART result, catalog says nothing is available
         var checkAvailabilityCalled = false
         val fakeCatalog = CatalogProvider { queries ->
             checkAvailabilityCalled = true
@@ -238,10 +238,10 @@ class CatalogFilteringTest {
             capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100)),
         ).also { it.givenResult(EnrichmentType.ALBUM_ART, albumArt()) }
 
-        // When — enriching for ALBUM_ART
+        // When - enriching for ALBUM_ART
         val results = engine(provider, fakeCatalog).enrich(req, setOf(EnrichmentType.ALBUM_ART))
 
-        // Then — ALBUM_ART result unchanged, checkAvailability never called
+        // Then - ALBUM_ART result unchanged, checkAvailability never called
         assertFalse(checkAvailabilityCalled)
         val success = results.raw[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success
         assertNotNull(success.data)
@@ -250,7 +250,7 @@ class CatalogFilteringTest {
     // --- Test 8: AVAILABLE_ONLY with all items available returns all unchanged ---
 
     @Test fun `AVAILABLE_ONLY with all items available returns all items unchanged`() = runTest {
-        // Given — all items available
+        // Given - all items available
         val fakeCatalog = CatalogProvider { queries ->
             queries.map { CatalogMatch(available = true, source = "test") }
         }
@@ -259,10 +259,10 @@ class CatalogFilteringTest {
             capabilities = listOf(ProviderCapability(EnrichmentType.SIMILAR_ARTISTS, 100)),
         ).also { it.givenResult(EnrichmentType.SIMILAR_ARTISTS, similarArtists("Artist A", "Artist B", "Artist C")) }
 
-        // When — enriching with AVAILABLE_ONLY filtering
+        // When - enriching with AVAILABLE_ONLY filtering
         val results = engine(provider, fakeCatalog).enrich(req, setOf(EnrichmentType.SIMILAR_ARTISTS))
 
-        // Then — all 3 items returned
+        // Then - all 3 items returned
         val success = results.raw[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
         val artists = (success.data as EnrichmentData.SimilarArtists).artists
         assertEquals(3, artists.size)
@@ -271,7 +271,7 @@ class CatalogFilteringTest {
     // --- Test 9: AVAILABLE_ONLY with all items unavailable returns NotFound ---
 
     @Test fun `AVAILABLE_ONLY with all items unavailable returns NotFound`() = runTest {
-        // Given — all items unavailable
+        // Given - all items unavailable
         val fakeCatalog = CatalogProvider { queries ->
             queries.map { CatalogMatch(available = false, source = "test") }
         }
@@ -280,10 +280,10 @@ class CatalogFilteringTest {
             capabilities = listOf(ProviderCapability(EnrichmentType.SIMILAR_ARTISTS, 100)),
         ).also { it.givenResult(EnrichmentType.SIMILAR_ARTISTS, similarArtists("Artist A", "Artist B")) }
 
-        // When — enriching with AVAILABLE_ONLY filtering
+        // When - enriching with AVAILABLE_ONLY filtering
         val results = engine(provider, fakeCatalog).enrich(req, setOf(EnrichmentType.SIMILAR_ARTISTS))
 
-        // Then — NotFound returned because all items filtered out
+        // Then - NotFound returned because all items filtered out
         assertTrue(results.raw[EnrichmentType.SIMILAR_ARTISTS] is EnrichmentResult.NotFound)
     }
 }
