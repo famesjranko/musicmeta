@@ -15,13 +15,16 @@ class CompositeSynthesizerTest {
 
     @Test
     fun `TimelineSynthesizer type is ARTIST_TIMELINE`() {
-        // Given / When / Then
+        // Given — the TimelineSynthesizer object
+        // When — its type is read
+        // Then — it is ARTIST_TIMELINE
         assertEquals(EnrichmentType.ARTIST_TIMELINE, TimelineSynthesizer.type)
     }
 
     @Test
     fun `TimelineSynthesizer dependencies contains ARTIST_DISCOGRAPHY and BAND_MEMBERS`() {
-        // Given / When
+        // Given — the TimelineSynthesizer object
+        // When — its dependencies are read
         val deps = TimelineSynthesizer.dependencies
 
         // Then — both ARTIST_DISCOGRAPHY and BAND_MEMBERS are listed as dependencies

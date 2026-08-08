@@ -213,12 +213,15 @@ class DefaultEnrichmentEngineTest {
         // Given — two providers
         val p1 = FakeProvider(id = "a"); val p2 = FakeProvider(id = "b")
 
-        // When / Then
+        // When — getProviders is called
+        // Then — both are returned
         assertEquals(2, engine(p1, p2).getProviders().size)
     }
 
     @Test fun `enrich with empty types returns empty map`() = runTest {
-        // When / Then
+        // Given — an empty set of types
+        // When — enrich is called
+        // Then — the result map is empty
         assertTrue(engine().enrich(req, emptySet()).raw.isEmpty())
     }
 

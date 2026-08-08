@@ -175,7 +175,8 @@ class DeezerMapperTest {
         val absent = DeezerTrackSearchResult(id = 5L, title = "T", artistName = "A", durationSec = null)
         val zero = DeezerTrackSearchResult(id = 6L, title = "T", artistName = "A", durationSec = 0)
 
-        // When / Then
+        // When — mapped to track metadata
+        // Then — durationMs stays null
         assertNull(DeezerMapper.toTrackMetadata(absent).durationMs)
         assertNull(DeezerMapper.toTrackMetadata(zero).durationMs)
     }

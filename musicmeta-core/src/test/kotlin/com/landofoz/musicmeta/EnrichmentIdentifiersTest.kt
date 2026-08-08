@@ -21,7 +21,8 @@ class EnrichmentIdentifiersTest {
         // Given — empty identifiers
         val ids = EnrichmentIdentifiers()
 
-        // When / Then — nonexistent key returns null
+        // When — a nonexistent key is looked up
+        // Then — returns null
         assertNull(ids.get("nonexistent"))
     }
 
@@ -56,7 +57,8 @@ class EnrichmentIdentifiersTest {
     }
 
     @Test fun `SimilarArtist has identifiers field`() {
-        // Given / When — creating a SimilarArtist with identifiers
+        // Given — an identifiers value
+        // When — a SimilarArtist is created with it
         val artist = SimilarArtist(
             name = "Thom Yorke",
             identifiers = EnrichmentIdentifiers(musicBrainzId = "abc123"),
@@ -68,7 +70,8 @@ class EnrichmentIdentifiersTest {
     }
 
     @Test fun `PopularTrack has identifiers field`() {
-        // Given / When — creating a PopularTrack with identifiers
+        // Given — an identifiers value
+        // When — a PopularTrack is created with it
         val track = PopularTrack(
             title = "Creep",
             identifiers = EnrichmentIdentifiers(musicBrainzId = "track-123"),

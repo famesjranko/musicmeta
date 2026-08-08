@@ -364,7 +364,8 @@ class ProviderChainTest {
         val p2 = FakeProvider(id = "p2", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 50)))
         val chain = ProviderChain(EnrichmentType.ALBUM_ART, listOf(p1, p2))
 
-        // When / Then — nothing skipped
+        // When — skippedIdentifierRequirements is queried
+        // Then — nothing skipped
         assertTrue(chain.skippedIdentifierRequirements(req.identifiers).isEmpty())
     }
 }

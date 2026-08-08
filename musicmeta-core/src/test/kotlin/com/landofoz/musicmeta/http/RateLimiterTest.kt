@@ -23,7 +23,8 @@ class RateLimiterTest {
         // Given — limiter with 100ms interval
         val limiter = RateLimiter(100)
 
-        // When / Then — integer result returned correctly
+        // When — execute runs a block returning an int
+        // Then — the integer result is returned correctly
         assertEquals(42, limiter.execute { 42 })
     }
 
@@ -31,7 +32,8 @@ class RateLimiterTest {
         // Given — limiter with 100ms interval
         val limiter = RateLimiter(100)
 
-        // When / Then — exception propagates to caller. The type argument is explicit so the call
+        // When — execute runs a block that throws
+        // Then — the exception propagates to caller. The type argument is explicit so the call
         // is not inferred as Nothing, which would make anything written after it dead code.
         var caught: String? = null
         try {
