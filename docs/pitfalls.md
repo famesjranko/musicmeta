@@ -295,3 +295,36 @@ fixed by rewording the fixture. Precision unchanged; blast radius inverted.
 **When a heuristic can't be made accurate, make it fail in the direction that shows.** A filter's
 wrong guess hides work, a tripwire's is an annoyance. Any enter/exit flag also needs an end-of-file
 invariant — getting stuck fails quiet all the way down.
+
+## 10. Comment bulk is not a function of comment size
+
+`CLAUDE.md`'s comment rule has no mechanism, and it cannot get one by counting. Neither detekt's
+`comments` ruleset (10 rules, all presence/correctness, `active: false` by default) nor ktlint caps
+comment size, so any gate here is hand-built — and every metric available to one is blind in the
+same place.
+
+Raw block *length* fares no better: the one cap that was tried picked its threshold (20 lines) to
+clear a pre-designated exemplar, and the block-size histogram could not defend it — 25, and every
+integer from 28 to 41, were equally unoccupied, so any "empirically derived" N there is a choice
+wearing a measurement. Worse, a single blank line splits an over-long block into two passing ones,
+and the failure message names the threshold, so it hands the reader the evasion.
+
+The ratio evidence: measured once, 2026-08-09, over all 573 functions in the main sources — comment
+lines against code lines per declaration, attributed over Kotlin PSI so a blank line cannot split a
+block and a declaration's KDoc, leading `//` run and in-body comments all count against the code
+they document. **To redo it:** walk `KtNamedFunction` nodes with `kotlin-compiler-embeddable`,
+count lines touched by `PsiComment` against the rest, treat a line carrying both as code. Ratios
+below are that measurement, not a live figure:
+
+- `EnrichmentEngine.enrich` — 16 comment lines, 5 code, **ratio 3.20**. It is an interface member.
+  A bodyless declaration has almost no code lines *by construction*, so the metric scores worst
+  exactly where the caller contract matters most. Excluding bodyless members removes only 16 of the
+  72 declarations at ratio ≥ 1.0.
+- `MusicBrainzEnricher.pickBestRecording` — 42 comment lines, 17 code, the worst body-bearing case
+  in the repo. Its five ranking tiers each record a live-verified failure mode (§7). So does
+  `DiscogsApi.searchArtist` at 25/11. Shortening either deletes evidence, not prose.
+
+**No cutoff separates the incident from the best documentation in the repo, because on every
+measurable axis they are the same object.** The distinction that matters — rationale a caller needs
+versus rationale that is merely long — is not a length. This one stays review's job; the gap is
+honest, and a gate here would be confidently wrong.

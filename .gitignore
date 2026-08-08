@@ -9,11 +9,13 @@
 .externalNativeBuild
 .cxx
 local.properties
-# Tracked: .claude/settings.json (the format-on-write hook) and .claude/rules/. A hook that is not
-# committed does not reach worktrees or a fresh clone, which is most of where the agent works.
+# Tracked: .claude/settings.json (the format-on-write hook), .claude/rules/ and .claude/commands/.
+# A hook that is not committed does not reach worktrees or a fresh clone, which is most of where the
+# agent works — and a command nobody else has is not wiring, it is a local habit.
 .claude/*
 !.claude/settings.json
 !.claude/rules/
+!.claude/commands/
 .planning
 .scratch
 .out-of-scope

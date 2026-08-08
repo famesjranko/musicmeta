@@ -49,6 +49,32 @@ SERIALIZABLE_FIX = (
 CONFLICT_MARKERS = ("<<<<<<< ", ">>>>>>> ")
 CONFLICT_FIX = "unresolved merge-conflict marker. Finish the merge before committing."
 
+# A provider is `provider/<name>/` as internal `*Api`, `*Models`, `*Mapper` plus a public
+# `*Provider`. Keeping the first three internal is what lets them be renamed without an `apiDump`,
+# so a missing `internal` costs the freedom the layout exists to buy.
+#
+# Read from the committed `api/*.api` rather than from the sources, because the dump is the
+# consequence: it catches a public nested type, a typealias and a top-level `fun`'s `…Kt` facade
+# just as well as a missing modifier, and it cannot disagree with what `apiCheck` gates. The
+# trade-off is that a stale dump reports clean here — `apiCheck` is what fails in that case.
+#
+# A name check, deliberately, and that is its whole scope: it does not judge whether a `*Provider`
+# deserves the name, nor whether an internal file follows the `*Api`/`*Models`/`*Mapper` layout.
+# Those stay review's job (`docs/agents/review-checklist.md`). There is no allowlist because the
+# rule has an escape hatch that a threshold rule does not: a type that legitimately needs to be
+# public is either named `*Provider` or does not belong under `provider/`.
+API_PROVIDER_SEGMENT = "/provider/"
+API_PROVIDER_SUFFIX = "Provider"
+NO_API_DUMPS_FINDING = (
+    "::error::no `api/*.api` found, so the public-surface rule checked nothing. Run "
+    "`./gradlew apiDump`, or fix `api_dumps()` if the baselines moved."
+)
+API_PROVIDER_FIX = (
+    "only `*Provider` may be public under `provider/`. Mark this `internal` (its *Api, *Models and "
+    "*Mapper siblings are) and re-run `./gradlew apiDump` — public here freezes the name under the "
+    "compatibility promise."
+)
+
 
 def main_sources(root: Path) -> list[Path]:
     """Main sources of the published modules.
@@ -79,6 +105,33 @@ def tracked_text_files(root: Path) -> list[Path]:
     )
 
 
+def api_dumps(root: Path) -> list[Path]:
+    """The committed public-ABI baselines, one per published module.
+
+    `rglob`, not a fixed `*/api/*.api` depth: a module moved under a parent directory would
+    otherwise stop being scanned, and the scan going quiet is invisible — see `run()`, which
+    refuses to report clean on an empty result for exactly that reason.
+    """
+    return sorted(path for path in root.rglob("api/*.api") if "/build/" not in path.as_posix())
+
+
+def public_provider_type(line: str) -> str | None:
+    """The offending outer type name on an `api/*.api` declaration line, or None if it is allowed.
+
+    A declaration sits at column 0 and names its type by binary name; members are indented, and
+    only a member can be `protected`, so `public` alone is the whole set at column 0. Only
+    the outer type is judged: `…Provider$Companion` is that provider's own nested type, and a
+    nested type of anything else is already condemned by its outer name.
+    """
+    if not line.startswith("public "):
+        return None
+    binary_name = next((token for token in line.split() if "/" in token), None)
+    if binary_name is None or API_PROVIDER_SEGMENT not in binary_name:
+        return None
+    outer = binary_name.rsplit("/", 1)[1].split("$", 1)[0]
+    return None if outer.endswith(API_PROVIDER_SUFFIX) else outer
+
+
 def error(rel: str, lineno: int, message: str) -> str:
     return f"::error file={rel},line={lineno}::{message}"
 
@@ -94,6 +147,22 @@ def run(root: Path) -> list[str]:
                 findings.append(error(rel, lineno, DOUBLE_BANG_FIX))
             if banned_here and "@Serializable" in line:
                 findings.append(error(rel, lineno, SERIALIZABLE_FIX))
+
+    dumps = api_dumps(root)
+    # An empty result is indistinguishable from a clean one, and this scan is the only reader of
+    # `api/*.api` — a rename or a module move would take the rule out with nothing to say so.
+    # Unconditional: an earlier `and main_sources(root)` qualifier meant a tree where *both* globs
+    # came up empty reported clean, which is the exact silence this guard exists to break. The
+    # script only ever runs from the repo root, so there is no legitimate dump-less invocation.
+    if not dumps:
+        findings.append(NO_API_DUMPS_FINDING)
+
+    for path in dumps:
+        rel = path.relative_to(root).as_posix()
+        for lineno, line in enumerate(path.read_text(encoding="utf-8").split("\n"), start=1):
+            offender = public_provider_type(line)
+            if offender is not None:
+                findings.append(error(rel, lineno, f"`{offender}`: {API_PROVIDER_FIX}"))
 
     for path in tracked_text_files(root):
         rel = path.relative_to(root).as_posix()
@@ -124,7 +193,12 @@ def main(argv: list[str] | None = None) -> int:
         print(f"\n{len(findings)} convention violation(s).", file=sys.stderr)
         return 2
 
-    print(f"Conventions clean across {len(main_sources(root))} main sources.")
+    # Every count is printed, not just the sources: a scan that found nothing to read reports the
+    # same "clean" as one that read everything, and the count is the only thing that separates them.
+    print(
+        f"Conventions clean across {len(main_sources(root))} main sources, "
+        f"{len(api_dumps(root))} api dumps, {len(tracked_text_files(root))} text files."
+    )
     return 0
 
 
