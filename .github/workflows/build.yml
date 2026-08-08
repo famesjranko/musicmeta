@@ -6,6 +6,8 @@ on:
   push:
     branches:
       - main
+  # Manual recovery valve for a dropped/undelivered pull_request webhook.
+  workflow_dispatch:
 
 permissions:
   contents: read
