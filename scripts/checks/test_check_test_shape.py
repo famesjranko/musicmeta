@@ -300,12 +300,12 @@ private class Helper {
 '''
         # When the test-shape check runs
         findings = self.findings_for("m/src/test/kotlin/ATest.kt", body)
-        # Then the fixture's comment is reported as a bare label. This pins a known limitation
-        # rather than endorsing it: the alternative, tracking raw strings by counting delimiters,
-        # was tried and hid 43 tests behind a green gate. A visible false positive can be seen and
-        # disputed. If this is ever fixed properly, this test is the one to update.
-        self.assertEqual(len(findings), 1)
-        self.assertIn("hyphen", findings[0])
+        # Then two things are reported: the misparse itself, as a bare label, and the raw-string
+        # guard naming the line as one the scan is liable to misread. The second is what tells the
+        # author the first is a misparse and not a real violation.
+        self.assertEqual(len(findings), 2)
+        self.assertIn("raw", findings[0])
+        self.assertIn("hyphen", findings[1])
 
     def test_comment_mentioning_a_raw_string_delimiter_does_not_blank_the_file(self):
         # Given a prose comment naming the `\"\"\"` delimiter an odd number of times, above a
@@ -342,11 +342,13 @@ private class Helper {
 }
 '''
         # When the test-shape check runs
-        # Then nothing is reported — the third face of the same limitation, and the only one that
-        # fails silent. Pinned because it is the counter-example to "the misparse is always
-        # visible": accepted for the same disproportionate-tokenizer reason, and bounded to the one
-        # test, where the delimiter-tracking repair failed the same way for a whole file.
-        self.assertEqual(self.findings_for("m/src/test/kotlin/ATest.kt", body), [])
+        findings = self.findings_for("m/src/test/kotlin/ATest.kt", body)
+        # Then the raw-string guard reports it. Without the guard this is the one shape that fails
+        # *silent* — the fixture's own text satisfies the Given check, so a test with no real
+        # labels passes unread. Nothing else in the checker can catch that, which is the whole
+        # reason the guard exists.
+        self.assertEqual(len(findings), 1)
+        self.assertIn("raw", findings[0])
 
     def test_declaration_inside_a_raw_string_closes_the_window_early(self):
         # Given a raw string whose fixture text opens with `class` at column 0, placed *before*
@@ -368,11 +370,12 @@ class Embedded {
 '''
         # When the test-shape check runs
         findings = self.findings_for("m/src/test/kotlin/ATest.kt", body)
-        # Then the embedded declaration closes the window and the real `// Given -` after it reads
-        # as missing — the other half of the same known limitation, pinned for the same reason. The
-        # cost is bounded: one visible finding on one test, not a file the gate stops reading.
-        self.assertEqual(len(findings), 1)
-        self.assertIn("no `// Given -` line", findings[0])
+        # Then the embedded declaration closes the window, so the real `// Given -` after it reads
+        # as missing — and the raw-string guard reports the declaration line too, which is what
+        # distinguishes this misparse from a test that genuinely lacks a Given.
+        self.assertEqual(len(findings), 2)
+        self.assertIn("raw", findings[0])
+        self.assertIn("no `// Given -` line", findings[1])
 
     # --- scope ---
 

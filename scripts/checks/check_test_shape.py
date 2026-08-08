@@ -2,10 +2,15 @@
 """Fail on `@Test` bodies with no given/when/then structure, or with malformed labels.
 
 `CLAUDE.md`'s rule: `// Given - <what is set up>`, `// When - <the one call>`, `// Then - <what
-must hold>`, each on its own line, a hyphen and a clause on every one. Neither ktlint nor
-type-resolved detekt can express this — it is house test-writing convention, not general Kotlin
-advice or a bug pattern — so it stayed a convention nobody checked until two MusicBrainz test files
-landed with no given/when/then at all and passed every gate (03).
+must hold>`, each on its own line, a hyphen and a clause on every one. No built-in ktlint or detekt
+rule expresses this — it is house test-writing convention, not general Kotlin advice or a bug
+pattern — so it stayed a convention nobody checked until two MusicBrainz test files landed with no
+given/when/then at all and passed every gate (03).
+
+A custom detekt rule *could* express it exactly, over PSI and with no type resolution, and detekt is
+already in the build. It was rejected on cost, not capability: the write-time hook wants sub-second
+feedback on one file and detekt is a JVM start, and a ruleset means a module, a jar, and permanent
+detekt-API coupling. That trade is worth revisiting if the limitation below ever starts firing.
 
 A `@Test`-annotated function's body is the text window from its `@Test` line to the next `@Test`
 line or the next top-level `class`/`object` declaration, whichever comes first. `@Test`-annotated
@@ -16,19 +21,19 @@ Neither bound needs brace-matching or any other structural parsing (05).
 Kotlin test sources only (`*/src/test/**/*.kt`), on both entry points — this has no opinion on main
 sources, and does not fire on a helper function that happens to mention "given" in prose.
 
-Known limitation, accepted deliberately: the scan is line-based and does not know what a string
-literal is, so Kotlin fixture text inside a `\"\"\"` raw string is read as source. A `// Given` in
-one is graded as a label, and a `class` at column 0 in one closes the enclosing window early. Both
-were tried and rejected: tracking raw strings by counting delimiters per line cannot tell an opener
-from a `\"\"\"` a comment mentions, or from a `//` inside an ordinary string literal, and getting
-either wrong leaves the tracker stuck open — which blanks the rest of the file, `@Test` lines
-included, and reports it clean without reading it. That shipped once and hid 43 tests in one file
-behind a green gate. Distinguishing the cases needs a real tokenizer, which is out of proportion
-to what this check is for, so the misparse stays. What it buys is bounded blast radius, not
-freedom from silence: fixture text whose own content happens to read as a *well-formed* label
-satisfies the Given check, so that one test passes without being read. That edge is accepted and
-pinned by a test. The failure it replaces was the same shape at file scale — one stuck tracker,
-every test below it unread — and no line of output to say so either way.
+Known limitation: the scan is line-based and does not know what a string literal is, so Kotlin
+fixture text inside a `\"\"\"` raw string is read as source. A `// Given` in one is graded as a
+label, a `class` at column 0 closes the enclosing window early, and — the case that fails quiet —
+fixture text reading as a *well-formed* label satisfies the Given check, so that test passes
+unread. `check_raw_string_content` is the guard: it tracks delimiter parity and complains about
+exactly those lines rather than trying to skip them, so the quiet case is now loud.
+
+Skipping was tried twice and is what the guard is deliberately not. Parity cannot tell an opener
+from a `\"\"\"` a comment mentions, nor from a `//` inside an ordinary string literal; a stripper
+that guesses wrong sticks open and blanks the rest of the file, `@Test` lines included, reporting
+it clean without reading it. That shipped once and hid 43 of one file's 49 tests behind a green
+gate. A tripwire that guesses wrong costs one visible error the author fixes by rewording. Same
+imprecise signal, opposite failure direction — which is the only property that matters in a gate.
 
     python3 check_test_shape.py [--root PATH]
     python3 check_test_shape.py --file PATH   # one file, for format-on-write.sh
@@ -74,6 +79,11 @@ BARE_LABEL_FIX = (
 COMBINED_LABEL_FIX = (
     "one comment line names more than one of Given/When/Then. Each label goes on its own line, "
     "even when the setup and the call are one line of code."
+)
+RAW_STRING_FIX = (
+    'a given/when/then label or a column-0 declaration appears to sit inside a `"""` raw '
+    "string, where this check reads it as source and can misjudge it. Reword the fixture text, or "
+    "indent the declaration, so the scan and the compiler agree about what this line is."
 )
 
 TEST_SOURCE_GLOB = "*/src/test/**/*.kt"
@@ -137,9 +147,29 @@ def window_end(lines: list[str], start: int, limit: int) -> int:
     return limit
 
 
-def check_file(rel: str, path: Path) -> list[str]:
+def check_raw_string_content(rel: str, lines: list[str]) -> list[str]:
+    """Report lines this scan is liable to misread, tracking `\"\"\"` parity across the file.
+
+    A tripwire, not a filter — it only ever adds a finding, and no other check consults it. That
+    distinction is the whole design. The same parity tracking used to *skip* what it thought was
+    string content, and its wrong guesses were unbounded: a comment merely naming the delimiter
+    opened a string that never closed, so every line below went unread and the file passed. Used
+    to complain instead, a wrong guess costs one visible error on one line, and the author's fix is
+    to reword — the same opt-out the label anchoring already relies on.
+    """
     findings = []
+    inside = False
+    for lineno, line in enumerate(lines):
+        if inside and (LABEL_LINE_RE.match(line) or DECLARATION_RE.match(line)):
+            findings.append(error(rel, lineno + 1, RAW_STRING_FIX))
+        if line.count('"""') % 2 == 1:
+            inside = not inside
+    return findings
+
+
+def check_file(rel: str, path: Path) -> list[str]:
     lines = path.read_text(encoding="utf-8").split("\n")
+    findings = check_raw_string_content(rel, lines)
     test_lines = [i for i, line in enumerate(lines) if TEST_ANNOTATION_RE.match(line)]
     for i, start in enumerate(test_lines):
         limit = test_lines[i + 1] if i + 1 < len(test_lines) else len(lines)

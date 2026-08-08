@@ -279,34 +279,19 @@ all. Every other payload answers its type iff it carries anything. The `when` is
 served by `Metadata` inherits grab-bag semantics. That fails lenient, which is the right direction:
 the gate's job is to catch payloads answering *nothing*, not to adjudicate partial ones.
 
-## 9. A line-based check that decides which lines to skip can stop reading a file entirely
+## 9. A line-based check that skips lines can stop reading a file entirely
 
-`check_test_shape.py` scans lines. Kotlin fixture text inside a `"""` raw string is source to the
-file and prose to the check, so a `// Given` in one is graded as a label and a `class` at column 0
-in one closes the enclosing `@Test` window early. The obvious repair — track raw strings, skip what
-is inside them — was implemented twice and was wrong both times, in the same direction:
+`check_test_shape.py` scans lines, so Kotlin fixture text inside a `"""` raw string is read as
+source. The obvious repair — track the delimiter, skip what is inside — shipped twice and was wrong
+both times in the same direction. Parity cannot tell an opener from a `"""` a comment mentions, nor
+from a `//` inside an ordinary string literal; either wrong guess leaves the tracker stuck open, and
+everything below is skipped, `@Test` lines included. Live on `DeezerProviderTest.kt`: **43 of its 49
+tests were invisible while `check` printed clean across 86 test sources.**
 
-- Toggling on any line whose count of `"""` is odd treats a *comment mentioning* the delimiter as an
-  opener. The tracker never closes, every line below is skipped, and `@Test` annotations go with
-  them.
-- Ignoring the part of a line after `//` treats the `//` in a URL inside an ordinary `"..."` string
-  as a comment. On a line that also carries a `"""`, the cut hides the closing delimiter and the
-  tracker sticks open again. This one was live on `DeezerProviderTest.kt`: **43 of its 49 tests were
-  invisible to the checker while `check` printed `Test shape clean across 86 test sources`.**
+`check_raw_string_content` tracks the same unreliable parity but *complains* about suspect lines
+instead of skipping them, and only ever adds a finding. A wrong guess is now one visible error,
+fixed by rewording the fixture. Precision unchanged; blast radius inverted.
 
-Scale is the lesson, not visibility. The misparse being repaired is *mostly* visible — a bare label
-or an embedded `class` costs an `::error` on a well-formed test, which a human sees and disputes —
-but not entirely: fixture text that happens to read as a well-formed label satisfies the Given check
-and that one test passes unread. What the failed repairs cost was the same silence at **file** scale.
-One stuck tracker and every test below it goes unread, with nothing in the output to distinguish
-that from compliance. Both states can pass a test that should fail; only the repair can pass 43.
-
-The shared defect was an unbounded toggle: an "am I inside a string" flag with no invariant checked
-at end of file. A scheme that treated *still inside at EOF* as an error would have failed loudly on
-`DeezerProviderTest.kt` the day it was written. Any heuristic tracking enter/exit state over a file
-needs that circuit breaker, because getting stuck fails quiet all the way to the end.
-
-Telling a comment's `//` from a string's, or a delimiter from a mention, needs a real tokenizer.
-That is out of proportion to a house convention check, so the misparse stays, pinned by three tests:
-two asserting the false positives *are* reported, one asserting the silent edge, so a future repair
-has to confront all three rather than trade a visible cost for an invisible one.
+**When a heuristic can't be made accurate, make it fail in the direction that shows.** A filter's
+wrong guess hides work, a tripwire's is an annoyance. Any enter/exit flag also needs an end-of-file
+invariant — getting stuck fails quiet all the way down.
