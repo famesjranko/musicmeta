@@ -115,6 +115,8 @@ class ConventionsTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             self.write(root, "demo/src/main/kotlin/A.kt", "package a\n\nfun f(x: String?) = x!!.length\n")
+            # An api dump, as any real root carries — its absence is a finding of its own.
+            self.write(root, "musicmeta-core/api/musicmeta-core.api", "")
             import os
 
             cwd = os.getcwd()
@@ -230,6 +232,17 @@ class ConventionsTest(unittest.TestCase):
         # When the conventions check runs
         findings = self.findings_for("musicmeta-core/src/main/kotlin/A.kt", body, with_api_dump=False)
         # Then the silence itself is the finding
+        self.assertEqual(len(findings), 1)
+        self.assertIn("checked nothing", findings[0])
+
+    def test_no_dumps_and_no_sources_is_still_reported(self):
+        # Given a tree where *both* globs come up empty — the module-move case, where sources sit
+        # deeper than the fixed-depth source glob reaches and the dumps are gone too. A guard
+        # qualified on main_sources() was silent exactly here, which review caught.
+        body = "just a doc\n"
+        # When the conventions check runs
+        findings = self.findings_for("README.md", body, with_api_dump=False)
+        # Then the missing baselines are reported unconditionally
         self.assertEqual(len(findings), 1)
         self.assertIn("checked nothing", findings[0])
 

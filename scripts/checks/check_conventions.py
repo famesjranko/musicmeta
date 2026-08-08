@@ -65,7 +65,7 @@ CONFLICT_FIX = "unresolved merge-conflict marker. Finish the merge before commit
 # public is either named `*Provider` or does not belong under `provider/`.
 API_PROVIDER_SEGMENT = "/provider/"
 API_PROVIDER_SUFFIX = "Provider"
-NO_API_DUMPS_FIX = (
+NO_API_DUMPS_FINDING = (
     "::error::no `api/*.api` found, so the public-surface rule checked nothing. Run "
     "`./gradlew apiDump`, or fix `api_dumps()` if the baselines moved."
 )
@@ -151,8 +151,11 @@ def run(root: Path) -> list[str]:
     dumps = api_dumps(root)
     # An empty result is indistinguishable from a clean one, and this scan is the only reader of
     # `api/*.api` — a rename or a module move would take the rule out with nothing to say so.
-    if not dumps and main_sources(root):
-        findings.append(NO_API_DUMPS_FIX)
+    # Unconditional: an earlier `and main_sources(root)` qualifier meant a tree where *both* globs
+    # came up empty reported clean, which is the exact silence this guard exists to break. The
+    # script only ever runs from the repo root, so there is no legitimate dump-less invocation.
+    if not dumps:
+        findings.append(NO_API_DUMPS_FINDING)
 
     for path in dumps:
         rel = path.relative_to(root).as_posix()

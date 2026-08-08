@@ -28,7 +28,7 @@ Every finding has exactly one home; this file is the home only for the last row.
 | Trap that cost something | `docs/pitfalls.md` |
 | Consumer-visible change | a `CHANGELOG.md` line — that file's header defines consumer-visible and the shape |
 | Work item, or a finding to triage later | a `.scratch/` ticket — `docs/agents/issue-tracker.md` |
-| Rule no mechanism catches | here, and nowhere else |
+| Rule no mechanism catches | here, and nowhere else — `docs/agents/review-checklist.md` may add how review *applies* a rule, never the rule itself |
 
 ## Rules with no mechanism
 
