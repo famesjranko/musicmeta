@@ -328,3 +328,23 @@ below are that measurement, not a live figure:
 measurable axis they are the same object.** The distinction that matters — rationale a caller needs
 versus rationale that is merely long — is not a length. This one stays review's job; the gap is
 honest, and a gate here would be confidently wrong.
+
+## 11. A retry ladder's coverage is not its trigger
+
+`DefaultHttpClient.retryingTransient` wraps all five request methods, so the ladder's *coverage* is
+complete. What it retries is keyed on the **result type**, not the status code — and for a long time
+only `HttpResult.RateLimited` qualified, which only a 429 produces. MusicBrainz does not shed with
+429; it sheds with 503, carrying the same `Retry-After` a 429 would. The mechanism built for
+throttling never ran against the throttling signal the highest-traffic provider actually sends.
+
+Two things follow for anyone touching the status mapping:
+
+- **The retryable 5xx set is a closed list — 502, 503, 504.** A `code in 500..599` test would
+  silently absorb every future 5xx, including a 501 that will never succeed on a retry.
+- **A retried-and-still-failing 5xx must stay `ErrorKind.NETWORK`.** `bodyOrThrowTransient` throws,
+  `mapError` classifies, `ProviderChain` records a breaker failure. "Improving" a shed response into
+  `ErrorKind.RATE_LIMIT` makes a shedding provider look healthy — §4 again, one layer down.
+
+And the header a shed response carries cannot be added to `ServerError` — it is a public
+`data class`, so a new constructor parameter breaks `copy()` for every consumer (§1). Anything a
+retry needs beyond the result type has to travel privately.

@@ -38,9 +38,9 @@ class DefaultHttpClient(
 ) : HttpClient {
 
     override suspend fun fetchRedirectUrlResult(url: String): HttpResult<String> =
-        retryingRateLimited { fetchRedirectUrlOnce(url) }
+        retryingTransient { fetchRedirectUrlOnce(url) }
 
-    private suspend fun fetchRedirectUrlOnce(url: String): HttpResult<String> =
+    private suspend fun fetchRedirectUrlOnce(url: String): Attempt<String> =
         withContext(Dispatchers.IO) {
             try {
                 val conn = openConnection(url).apply { instanceFollowRedirects = false; connect() }
@@ -55,11 +55,12 @@ class DefaultHttpClient(
                         code in 500..599 -> HttpResult.ServerError(code, readErrorBody(conn))
                         else -> HttpResult.ClientError(code, readErrorBody(conn))
                     }
+                        .withRetryAfter(conn)
                 } finally {
                     conn.disconnect()
                 }
             } catch (e: IOException) {
-                HttpResult.NetworkError(e.message ?: "Network error", e)
+                Attempt(HttpResult.NetworkError(e.message ?: "Network error", e))
             }
         }
 
@@ -69,12 +70,12 @@ class DefaultHttpClient(
     override suspend fun fetchJsonResult(
         url: String,
         headers: Map<String, String>,
-    ): HttpResult<JSONObject> = retryingRateLimited { fetchJsonOnce(url, headers) }
+    ): HttpResult<JSONObject> = retryingTransient { fetchJsonOnce(url, headers) }
 
     private suspend fun fetchJsonOnce(
         url: String,
         headers: Map<String, String>,
-    ): HttpResult<JSONObject> = withContext(Dispatchers.IO) {
+    ): Attempt<JSONObject> = withContext(Dispatchers.IO) {
         try {
             val conn = openConnection(url).apply {
                 headers.forEach { (k, v) -> setRequestProperty(k, v) }
@@ -105,18 +106,19 @@ class DefaultHttpClient(
                     }
                     else -> HttpResult.ClientError(code)
                 }
+                    .withRetryAfter(conn)
             } finally {
                 conn.disconnect()
             }
         } catch (e: IOException) {
-            HttpResult.NetworkError(e.message ?: "Network error", e)
+            Attempt(HttpResult.NetworkError(e.message ?: "Network error", e))
         }
     }
 
     override suspend fun fetchJsonArrayResult(url: String): HttpResult<JSONArray> =
-        retryingRateLimited { fetchJsonArrayOnce(url) }
+        retryingTransient { fetchJsonArrayOnce(url) }
 
-    private suspend fun fetchJsonArrayOnce(url: String): HttpResult<JSONArray> =
+    private suspend fun fetchJsonArrayOnce(url: String): Attempt<JSONArray> =
         withContext(Dispatchers.IO) {
             try {
                 val conn = openConnection(url).apply { connect() }
@@ -145,18 +147,19 @@ class DefaultHttpClient(
                         }
                         else -> HttpResult.ClientError(code)
                     }
+                        .withRetryAfter(conn)
                 } finally {
                     conn.disconnect()
                 }
             } catch (e: IOException) {
-                HttpResult.NetworkError(e.message ?: "Network error", e)
+                Attempt(HttpResult.NetworkError(e.message ?: "Network error", e))
             }
         }
 
     override suspend fun postJsonResult(url: String, body: String): HttpResult<JSONObject> =
-        retryingRateLimited { postJsonOnce(url, body) }
+        retryingTransient { postJsonOnce(url, body) }
 
-    private suspend fun postJsonOnce(url: String, body: String): HttpResult<JSONObject> =
+    private suspend fun postJsonOnce(url: String, body: String): Attempt<JSONObject> =
         withContext(Dispatchers.IO) {
             try {
                 val conn = openConnection(url).apply {
@@ -181,18 +184,19 @@ class DefaultHttpClient(
                         }
                         else -> HttpResult.ClientError(code)
                     }
+                        .withRetryAfter(conn)
                 } finally {
                     conn.disconnect()
                 }
             } catch (e: IOException) {
-                HttpResult.NetworkError(e.message ?: "Network error", e)
+                Attempt(HttpResult.NetworkError(e.message ?: "Network error", e))
             }
         }
 
     override suspend fun postJsonArrayResult(url: String, body: String): HttpResult<JSONArray> =
-        retryingRateLimited { postJsonArrayOnce(url, body) }
+        retryingTransient { postJsonArrayOnce(url, body) }
 
-    private suspend fun postJsonArrayOnce(url: String, body: String): HttpResult<JSONArray> =
+    private suspend fun postJsonArrayOnce(url: String, body: String): Attempt<JSONArray> =
         withContext(Dispatchers.IO) {
             try {
                 val conn = openConnection(url).apply {
@@ -217,11 +221,12 @@ class DefaultHttpClient(
                         }
                         else -> HttpResult.ClientError(code)
                     }
+                        .withRetryAfter(conn)
                 } finally {
                     conn.disconnect()
                 }
             } catch (e: IOException) {
-                HttpResult.NetworkError(e.message ?: "Network error", e)
+                Attempt(HttpResult.NetworkError(e.message ?: "Network error", e))
             }
         }
 
@@ -229,17 +234,39 @@ class DefaultHttpClient(
         try { conn.errorStream?.bufferedReader()?.use { it.readText() } } catch (_: IOException) { null }
 
     /**
-     * Retries a [HttpResult.RateLimited] — up to [maxRetries] attempts, honouring `Retry-After` —
-     * so a 429 does not depend on which method the caller reached for.
-     * Returns the `RateLimited` unretried when the wait does not fit in the time left.
+     * One response, plus the `Retry-After` a shed 5xx carried. [HttpResult.ServerError] has no
+     * field for it and gaining one would break every consumer that constructs or `copy()`s it, so
+     * the header travels alongside, between two private functions and no further.
      */
-    private suspend fun <T> retryingRateLimited(request: suspend () -> HttpResult<T>): HttpResult<T> {
+    private class Attempt<out T>(val result: HttpResult<T>, val retryAfterMs: Long? = null)
+
+    /**
+     * Pairs a 5xx with the `Retry-After` it carried. Must be called before the connection is
+     * disconnected. Reads the header for any [HttpResult.ServerError], leaving [retryingTransient]
+     * the only place that decides which codes retry — two copies of that predicate are one edit
+     * away from a retryable code silently losing its `Retry-After`.
+     */
+    private fun <T> HttpResult<T>.withRetryAfter(conn: HttpURLConnection): Attempt<T> =
+        Attempt(this, if (this is HttpResult.ServerError) conn.retryAfterMs() else null)
+
+    /**
+     * Retries a [HttpResult.RateLimited], and a [HttpResult.ServerError] whose code is in
+     * [RETRYABLE] — up to [maxRetries] attempts, honouring `Retry-After` — so load shedding does
+     * not depend on which code the upstream sheds with or which method the caller reached for.
+     * Returns the result unretried when the wait does not fit in the time left.
+     */
+    private suspend fun <T> retryingTransient(request: suspend () -> Attempt<T>): HttpResult<T> {
         repeat(maxRetries - 1) { attempt ->
-            val result = request()
-            if (result !is HttpResult.RateLimited) return result
-            delay(retryWaitMs(result.retryAfterMs, attempt) ?: return result)
+            val attempted = request()
+            val retryAfterMs = when (val result = attempted.result) {
+                is HttpResult.RateLimited -> result.retryAfterMs
+                is HttpResult.ServerError ->
+                    if (result.statusCode in RETRYABLE) attempted.retryAfterMs else return result
+                else -> return result
+            }
+            delay(retryWaitMs(retryAfterMs, attempt) ?: return attempted.result)
         }
-        return request()
+        return request().result
     }
 
     private fun openConnection(url: String): HttpURLConnection {
@@ -278,5 +305,13 @@ class DefaultHttpClient(
 
     private companion object {
         const val MAX_RETRY_AFTER_SEC = 120L
+
+        /**
+         * The 5xx codes a fronting proxy emits for "the upstream did not answer, try again", which
+         * is how MusicBrainz sheds load. A closed list, not a range: 500 is "something broke" with
+         * no implication that a retry helps, 501 is "not implemented" and never will be, and a
+         * range test would absorb every future 5xx alongside them.
+         */
+        val RETRYABLE = setOf(502, 503, 504)
     }
 }
