@@ -186,6 +186,24 @@ class ProviderMemoLifetimeTest {
     }
 
     @Test
+    fun `forceRefresh re-resolves which album a title means, not only that album's payload`() = runTest {
+        // Given - a title MusicBrainz first answers with the wrong release, enriched once
+        httpClient.givenJsonResponse(RELEASE_SEARCH, searchHit("wrong1"))
+        val engine = engine(identityResolution = false)
+        engine.enrich(ALBUM, setOf(EnrichmentType.GENRE))
+
+        // When - MusicBrainz corrects the mis-titled release and the consumer forces a refresh
+        httpClient.givenJsonResponse(RELEASE_SEARCH, searchHit("right1"))
+        val refreshed = engine.enrich(ALBUM, setOf(EnrichmentType.GENRE), forceRefresh = true)
+
+        // Then - the refresh resolved the title again rather than reusing the album it first picked.
+        // This is the one memo that holds an identity, so it is the one whose lifetime can serve a
+        // wrong entity that no refresh could ever correct.
+        val success = refreshed.raw[EnrichmentType.GENRE] as EnrichmentResult.Success
+        assertEquals("right1", success.resolvedIdentifiers?.musicBrainzId)
+    }
+
+    @Test
     fun `one artist's fanout looks the artist up once, not once per type`() = runTest {
         // Given - an artist known by MBID, whose members and links come from one lookup
         httpClient.givenJsonResponse("artist/art1?", ARTIST_LOOKUP_MEMBERS_AND_LINKS)
@@ -236,6 +254,26 @@ class ProviderMemoLifetimeTest {
             prefix = """{"release-groups": [""",
             postfix = "]}",
         ) { """{"id": "rg$it", "title": "Live at Somewhere $it", "primary-type": "Album"}""" }
+
+        /** A resolved hit for [ALBUM]'s title carrying its own tags, so GENRE needs no release lookup. */
+        fun searchHit(releaseId: String) = """
+            {
+              "releases": [{
+                "id": "$releaseId",
+                "score": 98,
+                "title": "OK Computer",
+                "artist-credit": [{"artist": {"id": "art1", "name": "Radiohead"}}],
+                "date": "1997-06-16",
+                "country": "GB",
+                "label-info": [{"label": {"name": "Parlophone"}}],
+                "release-group": {
+                  "id": "group-$releaseId",
+                  "primary-type": "Album",
+                  "tags": [{"name": "alternative rock", "count": 5}]
+                }
+              }]
+            }
+        """.trimIndent()
 
         /** A search hit with no tags, so GENRE has to fetch the release itself. */
         val RELEASE_SEARCH_THIN = """
