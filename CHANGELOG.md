@@ -50,6 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - MusicBrainz track search took the first score-100 tie, which could be a demo or live take; identity, popularity, and other downstream track data now resolve to the studio recording
 - MusicBrainz track ranking ignored a typed album and never penalized a music-video take; album matches are now preferred (and pass the score floor) and a video no longer beats a studio take
 - MusicBrainz album/track search failed outright on a qualifier-suffixed title even though the release/recording exists; now falls back to a stripped title, tie-broken toward the matching edition
+- An album MusicBrainz titles with symbols a caller cannot type (`F♯ A♯ ∞`) was NotFound from every ASCII spelling; the artist's release groups are now matched locally when the search finds nothing
 - ListenBrainz's recording/artist popularity treated a JSON-null listen count as zero and kept it; a track or artist with no LB data now returns NotFound instead of a fake 0/0
 - Cover Art Archive sent a track's recording MBID to its release endpoint, which always 404s; ALBUM_ART on tracks now resolves via the release-group id instead of failing every time
 - MusicBrainz ALBUM_TRACKS flattened a bonus video disc into the tracklist; a release with a DVD/Blu-ray extra no longer duplicates every position

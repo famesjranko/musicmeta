@@ -483,13 +483,19 @@ internal class MusicBrainzEnricher(
     /**
      * Resolves an album search, trying [title]/[artist] as-is first — unchanged from today's
      * behavior — and only falling back to [MusicBrainzQualifierFallback]'s progressively-stripped
-     * candidates when the direct search finds nothing at or above [minMatchScore]. Shared by
-     * [enrichAlbum] and [enrichAlbumTracks], which both need identical album-resolution semantics.
+     * candidates when the direct search finds nothing at or above [minMatchScore], then to
+     * [resolveAlbumSymbolFallback] — but only on an *empty* pool: a populated pool that merely
+     * missed the score floor means the title is searchable and the album is not there, so that
+     * fallback's extra calls would buy nothing. Shared by [enrichAlbum] and [enrichAlbumTracks],
+     * which both need identical album-resolution semantics.
      */
     private suspend fun resolveAlbumSearch(title: String, artist: String): AlbumSearchResult {
         val releases = api.searchReleases(title, artist)
         val direct = MusicBrainzReleaseRanking.pickBestRelease(releases, minMatchScore)
-        return AlbumSearchResult(direct ?: resolveAlbumQualifierFallback(title, artist), releases)
+        val resolved = direct
+            ?: resolveAlbumQualifierFallback(title, artist)
+            ?: if (releases.isEmpty()) resolveAlbumSymbolFallback(title, artist) else null
+        return AlbumSearchResult(resolved, releases)
     }
 
     /**
@@ -526,6 +532,70 @@ internal class MusicBrainzEnricher(
             }
             MusicBrainzReleaseRanking.pickBestRelease(authoritative, minMatchScore, candidate.removedTags)
         }
+    }
+
+    /**
+     * Last resort for a title no ASCII spelling can search for (`"F♯ A♯ ∞"`): the title is not
+     * searched at all, the artist's release groups are browsed and matched locally on
+     * [MusicBrainzTitleFolding.fold]. Costs an artist search, up to [SYMBOL_FALLBACK_MAX_PAGES]
+     * browse pages and one release search, all on the shared limiter; an album past that cap still
+     * needs an MBID.
+     *
+     * Identity never rests on the fold: the final search uses the release group's own title, and a
+     * survivor must sit in that group, credit the requested artist and clear [minMatchScore]
+     * (`docs/pitfalls.md` §7 — score is not proof of identity).
+     */
+    private suspend fun resolveAlbumSymbolFallback(title: String, artist: String): MusicBrainzRelease? {
+        val artistNorm = MusicBrainzQualifierFallback.normalize(artist)
+        val artistMbid = resolveArtistMbidForFallback(artist, artistNorm) ?: return null
+        val group = findReleaseGroupByFoldedTitle(artistMbid, title) ?: return null
+        val groupTitleFold = MusicBrainzTitleFolding.fold(group.title)
+        val authoritative = api.searchReleases(group.title, artist).filter {
+            it.score >= minMatchScore &&
+                it.releaseGroupId == group.id &&
+                MusicBrainzTitleFolding.fold(it.title) == groupTitleFold &&
+                anyArtistMatches(it.artistCredits, artistNorm)
+        }
+        return MusicBrainzReleaseRanking.pickBestRelease(authoritative, minMatchScore)
+    }
+
+    /**
+     * The artist MBID to browse, or null unless the artist resolves to *exactly* the requested name
+     * — stricter than [enrichArtist], because a near-miss would scope the browse to the wrong
+     * catalogue and nothing downstream would catch it.
+     */
+    private suspend fun resolveArtistMbidForFallback(artist: String, artistNorm: String): String? {
+        val artists = api.searchArtists(artist)
+        if (artists.isEmpty()) return null
+        val best = pickBestArtist(artist, artists)
+        val exact = best.score >= minMatchScore && MusicBrainzQualifierFallback.normalize(best.name) == artistNorm
+        return best.id.takeIf { exact }
+    }
+
+    /**
+     * The artist's first release group whose folded title equals [title]'s, paging until a short
+     * page ends the catalogue or [SYMBOL_FALLBACK_MAX_PAGES] pages are read. A group that merely
+     * normalizes equal is skipped — the direct search already tried that spelling and got nothing.
+     */
+    private suspend fun findReleaseGroupByFoldedTitle(
+        artistMbid: String,
+        title: String,
+    ): MusicBrainzReleaseGroup? {
+        val titleFold = MusicBrainzTitleFolding.fold(title)
+        val titleNorm = MusicBrainzQualifierFallback.normalize(title)
+        for (page in 0 until SYMBOL_FALLBACK_MAX_PAGES) {
+            val groups = api.browseReleaseGroups(
+                artistMbid,
+                MusicBrainzApi.BROWSE_PAGE_SIZE,
+                page * MusicBrainzApi.BROWSE_PAGE_SIZE,
+            )
+            groups.firstOrNull {
+                MusicBrainzTitleFolding.fold(it.title) == titleFold &&
+                    MusicBrainzQualifierFallback.normalize(it.title) != titleNorm
+            }?.let { return it }
+            if (groups.size < MusicBrainzApi.BROWSE_PAGE_SIZE) return null
+        }
+        return null
     }
 
     /**
@@ -606,6 +676,12 @@ internal class MusicBrainzEnricher(
 
     companion object {
         private const val MAX_SUGGESTIONS = 3
+
+        /**
+         * Browse pages [findReleaseGroupByFoldedTitle] reads before giving up. One is not enough:
+         * Godspeed You! Black Emperor has 107 album/EP/single release groups (live, 2026-08-10).
+         */
+        private const val SYMBOL_FALLBACK_MAX_PAGES = 3
 
         /** Cap on [artistCache], matching InMemoryEnrichmentCache's default. */
         internal const val ARTIST_CACHE_MAX_ENTRIES = 500
