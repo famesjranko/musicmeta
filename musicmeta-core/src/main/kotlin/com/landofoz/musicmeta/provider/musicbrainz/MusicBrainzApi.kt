@@ -191,15 +191,19 @@ internal class MusicBrainzApi(
         return json
     }
 
-    /** Browse release groups for an artist (for discography). */
+    /**
+     * Browse release groups for an artist (for discography). MusicBrainz does not order the browse
+     * by anything a caller can rely on, so a catalogue past [limit] needs [offset] to reach its tail.
+     */
     suspend fun browseReleaseGroups(
         artistMbid: String,
-        limit: Int = 100,
+        limit: Int = BROWSE_PAGE_SIZE,
+        offset: Int = 0,
     ): List<MusicBrainzReleaseGroup> {
         val json = rateLimiter.execute {
             httpClient.fetchJsonResult(
                 "$BASE_URL/release-group?artist=$artistMbid" +
-                    "&type=album|ep|single&fmt=json&limit=$limit",
+                    "&type=album|ep|single&fmt=json&limit=$limit&offset=$offset",
             ).bodyOrThrowTransient()
         } ?: return emptyList()
         return MusicBrainzParser.parseReleaseGroups(json)
@@ -236,6 +240,9 @@ internal class MusicBrainzApi(
          * from 6.8 years to 0.1 at `limit=25`.
          */
         const val RELEASE_SEARCH_LIMIT = 25
+
+        /** Release groups per [browseReleaseGroups] page — MusicBrainz's own maximum. */
+        const val BROWSE_PAGE_SIZE = 100
 
         fun escapeLucene(value: String): String =
             value.replace(LUCENE_SPECIAL_CHARS) { "\\${it.value}" }
