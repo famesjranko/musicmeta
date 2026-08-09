@@ -348,3 +348,30 @@ Two things follow for anyone touching the status mapping:
 And the header a shed response carries cannot be added to `ServerError` — it is a public
 `data class`, so a new constructor parameter breaks `copy()` for every consumer (§1). Anything a
 retry needs beyond the result type has to travel privately.
+
+## 12. A provider's own memo is a cache no consumer can flush
+
+`MusicBrainzEnricher` memoizes its artist, release and release-group-wiki lookups because the engine
+asks for one type at a time and `EnrichmentCache` is keyed by type — nothing above the provider can
+tell that GENRE and ALBUM_TRACKS want the same release, and each repeat is a ~1.1s wait on the
+shared limiter. That much is right; deleting the memo puts a 5-6× multiplier back on one album's
+fan-out.
+
+What was wrong was its **lifetime**, not its layer. It sat on the provider object, which lives as
+long as the engine, with no TTL and nothing able to clear it. So
+`enrich(…, forceRefresh = true)` — documented as "fetches fresh data from providers" — invalidated
+`EnrichmentCache`, called the provider, and was handed the payload the *first* call had fetched.
+`invalidate()` had the same hole, and `engine.cache.clear()` cannot be intercepted at all: `cache` is
+a public property, so a consumer clearing it never enters the engine. `ProviderCallScope` now owns
+that state for one `enrich()` call, which makes every refresh path honest by construction.
+
+Before adding provider-internal state of any kind:
+
+- **State that outlives the call is a second cache with none of `EnrichmentCache`'s guarantees.**
+  Put it in the call scope, or own a TTL and an invalidation path for it.
+- **Payload staleness is recoverable; identity staleness is not.** These memos are keyed by MBID, so
+  the worst they serve is an out-of-date payload for an entity already resolved. A memo keyed by
+  *title/artist* would cache which entity a name resolves to — and under an engine that could not
+  reach it, no refresh could ever correct a mis-resolution.
+- Per-call state rides the coroutine context, as `EnrichDeadline` and `TransientIdentifierMarker`
+  already do. A new `EnrichmentProvider` method would be a documented break instead (§1).

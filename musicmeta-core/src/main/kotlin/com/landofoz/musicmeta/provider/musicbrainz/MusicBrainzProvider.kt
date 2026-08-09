@@ -8,8 +8,10 @@ import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.IdentifierRequirement
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.SearchCandidate
+import com.landofoz.musicmeta.engine.ProviderCallScope
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
+import kotlinx.coroutines.currentCoroutineContext
 
 /**
  * Enrichment provider backed by the MusicBrainz API.
@@ -25,7 +27,17 @@ class MusicBrainzProvider(
     override val id: String = "musicbrainz"
 
     private val api = MusicBrainzApi(httpClient, rateLimiter)
-    private val enricher = MusicBrainzEnricher(api, id, minMatchScore)
+
+    /**
+     * One enricher per call, never one per provider: it memoizes the lookups a request's types
+     * repeat, and that memo must not outlive the call that filled it ([ProviderCallScope]). Inside
+     * an engine, every type of one `enrich()` shares this call's enricher — which is the whole
+     * saving; called directly, each call gets its own.
+     */
+    private suspend fun enricher(): MusicBrainzEnricher =
+        currentCoroutineContext()[ProviderCallScope]?.slot(this, ::newEnricher) ?: newEnricher()
+
+    private fun newEnricher() = MusicBrainzEnricher(api, id, minMatchScore)
 
     override val displayName: String = "MusicBrainz"
     override val requiresApiKey: Boolean = false
@@ -135,6 +147,7 @@ class MusicBrainzProvider(
         type: EnrichmentType,
     ): EnrichmentResult =
         try {
+            val enricher = enricher()
             when (request) {
                 is EnrichmentRequest.ForAlbum -> enricher.enrichAlbum(request, type)
                 is EnrichmentRequest.ForArtist -> enricher.enrichArtist(request, type)

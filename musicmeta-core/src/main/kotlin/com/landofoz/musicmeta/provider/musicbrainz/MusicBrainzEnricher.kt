@@ -14,18 +14,15 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 /**
- * Store under an access-ordered cap, evicting least-recently-used until it fits.
- * Only correct on an access-ordered [LinkedHashMap], and only under that map's mutex — every read
- * of such a map is a write.
- */
-private fun <V> MutableMap<String, V>.putCapped(key: String, value: V, cap: Int) {
-    put(key, value)
-    while (size > cap) remove(keys.first())
-}
-
-/**
  * Handles per-entity enrichment logic for MusicBrainz.
  * Called by [MusicBrainzProvider] after routing by request/type.
+ *
+ * **One instance per call**, held for that call by
+ * [com.landofoz.musicmeta.engine.ProviderCallScope] — nothing the memos below hold outlives it.
+ * They fold the lookups a request's types repeat into one call each, a repeat being a ~1.1s wait on
+ * the shared limiter, and none needs a cap: one request's types touch a handful of MBIDs. Only a
+ * successful lookup is memoized, so a `null` (genuine absence) or a thrown transient is retried by
+ * the next type that asks.
  */
 internal class MusicBrainzEnricher(
     private val api: MusicBrainzApi,
@@ -34,55 +31,48 @@ internal class MusicBrainzEnricher(
 ) {
 
     /**
-     * Cache artist lookups by MBID to avoid redundant API calls across types.
-     * Access-ordered and capped: one enricher lives as long as the engine does, so an
-     * unbounded map would grow with every distinct artist a long-lived process ever sees.
-     * Access order means every read mutates it, so all access is under [artistLookupMutex].
+     * Artist lookups by MBID: BAND_MEMBERS, ARTIST_LINKS and GENRE all want the same artist.
+     * The mutex is held across the lookup so two types resolving concurrently — the engine runs
+     * them as sibling `async` children — make one call between them, not one each.
      */
-    private val artistCache = LinkedHashMap<String, MusicBrainzArtist>(ARTIST_CACHE_MAX_ENTRIES, 0.75f, true)
-    private val artistLookupMutex = Mutex()
+    private val artistMemo = mutableMapOf<String, MusicBrainzArtist>()
+    private val artistMemoMutex = Mutex()
 
     /**
-     * Cache release lookups by MBID, same shape and cap as [artistCache].
+     * Release lookups by MBID, same shape as [artistMemo].
      * One album is looked up more than once per `enrich()`: GENRE resolves it as identity and again
      * in the fan-out the identity MBID enables, and ALBUM_TRACKS wants the same response a third
-     * time. Each repeat is a ~1.1s wait on the shared MusicBrainz limiter.
-     * Access order means every read mutates it, so all access is under [releaseLookupMutex].
+     * time.
      */
-    private val releaseCache = LinkedHashMap<String, MusicBrainzRelease>(RELEASE_CACHE_MAX_ENTRIES, 0.75f, true)
-    private val releaseLookupMutex = Mutex()
+    private val releaseMemo = mutableMapOf<String, MusicBrainzRelease>()
+    private val releaseMemoMutex = Mutex()
 
     private suspend fun cachedReleaseLookup(mbid: String): MusicBrainzRelease? =
-        releaseLookupMutex.withLock {
-            releaseCache[mbid]?.let { return@withLock it }
-            api.lookupRelease(mbid)?.also { releaseCache.putCapped(mbid, it, RELEASE_CACHE_MAX_ENTRIES) }
+        releaseMemoMutex.withLock {
+            releaseMemo[mbid]?.let { return@withLock it }
+            api.lookupRelease(mbid)?.also { releaseMemo[mbid] = it }
         }
 
     /**
-     * Cache release-group Wikidata/Wikipedia relations by release-group MBID, same shape and cap
-     * as [releaseCache]. A release search never embeds these (they live on the release-group, not
-     * the release), so this is a cache-miss on the first type resolved for an album and a hit for
-     * every other type in the same enrichment — same amortized cost as the artist bio path's
-     * `needsRelations` lookup.
+     * Release-group Wikidata/Wikipedia relations by release-group MBID, same shape as [releaseMemo].
+     * A release search never embeds these (they live on the release-group, not the release), so this
+     * is a miss on the first type resolved for an album and a hit for every other type in the same
+     * enrichment — same amortized cost as the artist bio path's `needsRelations` lookup.
      */
-    private val releaseGroupWikiCache = LinkedHashMap<String, Pair<String?, String?>>(
-        RELEASE_GROUP_WIKI_CACHE_MAX_ENTRIES, 0.75f, true,
-    )
+    private val releaseGroupWikiMemo = mutableMapOf<String, Pair<String?, String?>>()
     private val releaseGroupWikiMutex = Mutex()
 
     private suspend fun cachedReleaseGroupWikiLookup(releaseGroupMbid: String): Pair<String?, String?> =
         releaseGroupWikiMutex.withLock {
-            releaseGroupWikiCache[releaseGroupMbid]?.let { return@withLock it }
-            api.lookupReleaseGroupWikiLinks(releaseGroupMbid)
-                .also { releaseGroupWikiCache.putCapped(releaseGroupMbid, it, RELEASE_GROUP_WIKI_CACHE_MAX_ENTRIES) }
+            releaseGroupWikiMemo[releaseGroupMbid]?.let { return@withLock it }
+            api.lookupReleaseGroupWikiLinks(releaseGroupMbid).also { releaseGroupWikiMemo[releaseGroupMbid] = it }
         }
 
-    /** Lookup artist with rels (superset), caching to avoid redundant calls.
-     *  BAND_MEMBERS, ARTIST_LINKS, and GENRE all need artist data for the same MBID. */
+    /** Lookup artist with rels (superset), memoized in [artistMemo]. */
     private suspend fun cachedArtistLookup(mbid: String): MusicBrainzArtist? =
-        artistLookupMutex.withLock {
-            artistCache[mbid]?.let { return@withLock it }
-            api.lookupArtistWithRels(mbid)?.also { artistCache.putCapped(mbid, it, ARTIST_CACHE_MAX_ENTRIES) }
+        artistMemoMutex.withLock {
+            artistMemo[mbid]?.let { return@withLock it }
+            api.lookupArtistWithRels(mbid)?.also { artistMemo[mbid] = it }
         }
 
     internal suspend fun enrichAlbum(
@@ -342,10 +332,9 @@ internal class MusicBrainzEnricher(
      * propagating, mirroring [bodyOrThrowTransient]'s own split (null only for a genuine
      * [com.landofoz.musicmeta.http.HttpResult.ClientError] absence) one level up.
      *
-     * The transient is never written to [releaseGroupWikiCache] (the write only happens on the
+     * The transient is never written to [releaseGroupWikiMemo] (the write only happens on the
      * success path inside [cachedReleaseGroupWikiLookup]), so it is retried — not pinned as "no
-     * wiki links" — on the next type that resolves this release-group within this enricher's
-     * lifetime.
+     * wiki links" — by the next type in this call that resolves this release-group.
      */
     // SwallowedException: intentional — see the KDoc above. This enricher has no logger to hand the
     // exception to; degrading silently is the fix, not an oversight (detekt cannot tell them apart).
@@ -682,15 +671,6 @@ internal class MusicBrainzEnricher(
          * Godspeed You! Black Emperor has 107 album/EP/single release groups (live, 2026-08-10).
          */
         private const val SYMBOL_FALLBACK_MAX_PAGES = 3
-
-        /** Cap on [artistCache], matching InMemoryEnrichmentCache's default. */
-        internal const val ARTIST_CACHE_MAX_ENTRIES = 500
-
-        /** Cap on [releaseCache]. Same default, counted separately — an album run fills both. */
-        internal const val RELEASE_CACHE_MAX_ENTRIES = 500
-
-        /** Cap on [releaseGroupWikiCache]. Same default; keyed by release-group MBID, not release. */
-        internal const val RELEASE_GROUP_WIKI_CACHE_MAX_ENTRIES = 500
 
         /** New artist types routed through enrichArtistNewType(). */
         private val ARTIST_NEW_TYPES = setOf(

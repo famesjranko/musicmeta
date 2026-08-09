@@ -90,7 +90,11 @@ internal class DefaultEnrichmentEngine(
         val completed = withTimeoutOrNull(config.enrichTimeoutMs) {
             // TransientIdentifierMarker: this call's record of which IdentifierRequirements a
             // transient left unresolved this run, read back by reclassifyTransientGap (issue 06).
-            withContext(EnrichDeadline(config.enrichTimeoutMs) + TransientIdentifierMarker()) {
+            // ProviderCallScope: this call's home for whatever a provider memoizes across the types
+            // of one request, so nothing it holds can survive to answer the next call.
+            withContext(
+                EnrichDeadline(config.enrichTimeoutMs) + TransientIdentifierMarker() + ProviderCallScope(),
+            ) {
                 var identityResult: EnrichmentResult? = null
                 val enrichedRequest = if (config.enableIdentityResolution &&
                     needsIdentityResolution(request, uncachedTypes, registry)) {
