@@ -20,9 +20,10 @@ import kotlinx.coroutines.sync.withLock
  * **One instance per call**, held for that call by
  * [com.landofoz.musicmeta.engine.ProviderCallScope] — nothing the memos below hold outlives it.
  * They fold the lookups a request's types repeat into one call each, a repeat being a ~1.1s wait on
- * the shared limiter, and none needs a cap: one request's types touch a handful of MBIDs. Only a
- * successful lookup is memoized, so a `null` (genuine absence) or a thrown transient is retried by
- * the next type that asks.
+ * the shared limiter, and none needs a cap: one request's types resolve one album and a handful of
+ * MBIDs. A thrown transient is never memoized, so the next type that asks retries it; nor is a
+ * `null` from an MBID lookup, which is a genuine absence. [albumSearchMemo] is the one that also
+ * holds its miss, for the reason on it.
  */
 internal class MusicBrainzEnricher(
     private val api: MusicBrainzApi,
@@ -470,15 +471,44 @@ internal class MusicBrainzEnricher(
     private data class AlbumSearchResult(val release: MusicBrainzRelease?, val originalPool: List<MusicBrainzRelease>)
 
     /**
+     * Album resolution by title/artist: the whole of [searchAlbum]'s ladder, which every album type
+     * of one request otherwise re-runs — up to an artist search and [SYMBOL_FALLBACK_MAX_PAGES]
+     * browse pages each time, all on the shared limiter. Unlike the memos above it holds *which*
+     * album a title resolves to, which is only safe because nothing here outlives the call.
+     *
+     * A miss is held too, unlike the memos above: an empty result is what pays for both fallbacks in
+     * full, so it is the repeat worth collapsing most. A thrown transient still stores nothing.
+     *
+     * The key separates title from artist with NUL, not a space:
+     * [MusicBrainzQualifierFallback.normalize] collapses whitespace, so a space would let
+     * `("a b", "c")` and `("a", "b c")` share one entry.
+     */
+    private val albumSearchMemo = mutableMapOf<String, AlbumSearchResult>()
+    private val albumSearchMemoMutex = Mutex()
+
+    /**
+     * [searchAlbum], memoized in [albumSearchMemo]. Shared by [enrichAlbum] and [enrichAlbumTracks],
+     * which both need identical album-resolution semantics. The mutex is held across the ladder, as
+     * [artistMemo]'s is, so two types resolving concurrently make one pass between them.
+     */
+    private suspend fun resolveAlbumSearch(title: String, artist: String): AlbumSearchResult {
+        val key = MusicBrainzQualifierFallback.normalize(title) + KEY_SEPARATOR +
+            MusicBrainzQualifierFallback.normalize(artist)
+        return albumSearchMemoMutex.withLock {
+            albumSearchMemo[key]?.let { return@withLock it }
+            searchAlbum(title, artist).also { albumSearchMemo[key] = it }
+        }
+    }
+
+    /**
      * Resolves an album search, trying [title]/[artist] as-is first — unchanged from today's
      * behavior — and only falling back to [MusicBrainzQualifierFallback]'s progressively-stripped
      * candidates when the direct search finds nothing at or above [minMatchScore], then to
      * [resolveAlbumSymbolFallback] — but only on an *empty* pool: a populated pool that merely
      * missed the score floor means the title is searchable and the album is not there, so that
-     * fallback's extra calls would buy nothing. Shared by [enrichAlbum] and [enrichAlbumTracks],
-     * which both need identical album-resolution semantics.
+     * fallback's extra calls would buy nothing.
      */
-    private suspend fun resolveAlbumSearch(title: String, artist: String): AlbumSearchResult {
+    private suspend fun searchAlbum(title: String, artist: String): AlbumSearchResult {
         val releases = api.searchReleases(title, artist)
         val direct = MusicBrainzReleaseRanking.pickBestRelease(releases, minMatchScore)
         val resolved = direct
@@ -665,6 +695,9 @@ internal class MusicBrainzEnricher(
 
     companion object {
         private const val MAX_SUGGESTIONS = 3
+
+        /** [albumSearchMemo]'s title/artist separator — see there for why it is not a space. */
+        private const val KEY_SEPARATOR = '\u0000'
 
         /**
          * Browse pages [findReleaseGroupByFoldedTitle] reads before giving up. One is not enough:

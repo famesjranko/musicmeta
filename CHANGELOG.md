@@ -52,6 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - MusicBrainz album/track search failed outright on a qualifier-suffixed title even though the release/recording exists; now falls back to a stripped title, tie-broken toward the matching edition
 - An album MusicBrainz titles with symbols a caller cannot type (`F♯ A♯ ∞`) was NotFound from every ASCII spelling; the artist's release groups are now matched locally when the search finds nothing
 - MusicBrainz's internal lookup memo outlived the call, so `forceRefresh`, `invalidate()` and `cache.clear()` were answered from the first call's payload; it now lives for one call, not the engine's
+- MusicBrainz re-ran the whole album search ladder for every album type of one request; it now resolves once per call, so an album profile no longer waits on ~5 repeats of it on a 1 req/s limiter
 - ListenBrainz's recording/artist popularity treated a JSON-null listen count as zero and kept it; a track or artist with no LB data now returns NotFound instead of a fake 0/0
 - Cover Art Archive sent a track's recording MBID to its release endpoint, which always 404s; ALBUM_ART on tracks now resolves via the release-group id instead of failing every time
 - MusicBrainz ALBUM_TRACKS flattened a bonus video disc into the tracklist; a release with a DVD/Blu-ray extra no longer duplicates every position

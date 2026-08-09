@@ -7,6 +7,7 @@ import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.http.RateLimiter
+import com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzApi
 import com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzProvider
 import com.landofoz.musicmeta.testutil.FakeEnrichmentCache
 import com.landofoz.musicmeta.testutil.FakeHttpClient
@@ -144,6 +145,47 @@ class ProviderMemoLifetimeTest {
     }
 
     @Test
+    fun `one album's fanout searches for the album once, not once per type`() = runTest {
+        // Given - an album carrying no MBID, so every type has to resolve it by title and artist
+        httpClient.givenJsonResponse(RELEASE_SEARCH, RELEASE_SEARCH_THIN)
+        httpClient.givenJsonResponse(RELEASE_LOOKUP, releaseLookup("alternative rock"))
+
+        // When - two types are enriched in one call, identity resolution off so that the MBID it
+        // would merge into the request does not spare the second type the search
+        val results = engine(identityResolution = false)
+            .enrich(ALBUM, setOf(EnrichmentType.GENRE, EnrichmentType.ALBUM_TRACKS))
+
+        // Then - both resolved off one search, not one each on a 1 req/s limiter
+        assertEquals(listOf("alternative rock"), genresOf(results))
+        assertTrue(
+            "expected a tracklist, got ${results.raw[EnrichmentType.ALBUM_TRACKS]}",
+            results.raw[EnrichmentType.ALBUM_TRACKS] is EnrichmentResult.Success,
+        )
+        assertEquals(1, httpClient.requestedUrls.count { it.contains(RELEASE_SEARCH) })
+    }
+
+    @Test
+    fun `an absent album's fanout spends the symbol fallback once, not once per type`() = runTest {
+        // Given - a title no ASCII spelling finds, whose artist resolves exactly but whose catalogue
+        // holds no folded match, so the fallback reads every browse page it is allowed
+        httpClient.givenJsonResponse(RELEASE_SEARCH, NO_RELEASES)
+        httpClient.givenJsonResponse(ARTIST_SEARCH, ARTIST_SEARCH_EXACT)
+        httpClient.givenJsonResponse(BROWSE, FULL_BROWSE_PAGE)
+
+        // When - two types are enriched in one call, identity resolution off so that its NotFound's
+        // suggestions do not short-circuit the fan-out before the second type runs
+        val results = engine(identityResolution = false)
+            .enrich(SYMBOL_ALBUM, setOf(EnrichmentType.GENRE, EnrichmentType.ALBUM_TRACKS))
+
+        // Then - neither type resolved, and the miss cost one artist search and one run of browse
+        // pages for the call rather than one of each per type
+        assertTrue(results.raw[EnrichmentType.GENRE] is EnrichmentResult.NotFound)
+        assertTrue(results.raw[EnrichmentType.ALBUM_TRACKS] is EnrichmentResult.NotFound)
+        assertEquals(1, httpClient.requestedUrls.count { it.contains(ARTIST_SEARCH) })
+        assertEquals(SYMBOL_FALLBACK_MAX_PAGES, httpClient.requestedUrls.count { it.contains(BROWSE) })
+    }
+
+    @Test
     fun `one artist's fanout looks the artist up once, not once per type`() = runTest {
         // Given - an artist known by MBID, whose members and links come from one lookup
         httpClient.givenJsonResponse("artist/art1?", ARTIST_LOOKUP_MEMBERS_AND_LINKS)
@@ -162,9 +204,38 @@ class ProviderMemoLifetimeTest {
     private companion object {
         val ALBUM = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
 
+        /** A title MusicBrainz stores only under symbols (`F♯ A♯ ∞`), so no spelling searches for it. */
+        val SYMBOL_ALBUM = EnrichmentRequest.forAlbum("F# A# (Infinity)", "Godspeed You! Black Emperor")
+
         const val RELEASE_SEARCH = "release?query"
         const val RELEASE_LOOKUP = "release/thin1"
         const val RELEASE_GROUP = "release-group/group123"
+        const val ARTIST_SEARCH = "artist?query"
+        const val BROWSE = "release-group?artist="
+
+        /** Browse pages the symbol fallback reads before giving up, mirroring the enricher's own cap. */
+        const val SYMBOL_FALLBACK_MAX_PAGES = 3
+
+        /** What MusicBrainz really answers a search for a symbol title's ASCII spelling with. */
+        const val NO_RELEASES = """{"count": 0, "offset": 0, "releases": []}"""
+
+        /** Exact enough for the fallback to browse this artist's catalogue rather than stop. */
+        val ARTIST_SEARCH_EXACT = """
+            {
+              "artists": [{
+                "id": "gybe1",
+                "score": 100,
+                "name": "Godspeed You! Black Emperor"
+              }]
+            }
+        """.trimIndent()
+
+        /** A full page of non-matching groups, so the browse pages on instead of ending early. */
+        val FULL_BROWSE_PAGE = (1..MusicBrainzApi.BROWSE_PAGE_SIZE).joinToString(
+            separator = ",",
+            prefix = """{"release-groups": [""",
+            postfix = "]}",
+        ) { """{"id": "rg$it", "title": "Live at Somewhere $it", "primary-type": "Album"}""" }
 
         /** A search hit with no tags, so GENRE has to fetch the release itself. */
         val RELEASE_SEARCH_THIN = """

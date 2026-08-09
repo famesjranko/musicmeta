@@ -369,9 +369,9 @@ Before adding provider-internal state of any kind:
 
 - **State that outlives the call is a second cache with none of `EnrichmentCache`'s guarantees.**
   Put it in the call scope, or own a TTL and an invalidation path for it.
-- **Payload staleness is recoverable; identity staleness is not.** These memos are keyed by MBID, so
-  the worst they serve is an out-of-date payload for an entity already resolved. A memo keyed by
-  *title/artist* would cache which entity a name resolves to — and under an engine that could not
-  reach it, no refresh could ever correct a mis-resolution.
+- **Payload staleness is recoverable; identity staleness is not.** A memo keyed by MBID serves at
+  worst an out-of-date payload for an entity already resolved. `MusicBrainzEnricher`'s album-search
+  memo is keyed by *title/artist* instead, so it holds which entity a name resolves to — safe only
+  because it dies with the call. Held any longer, no refresh could ever correct a mis-resolution.
 - Per-call state rides the coroutine context, as `EnrichDeadline` and `TransientIdentifierMarker`
   already do. A new `EnrichmentProvider` method would be a documented break instead (§1).
