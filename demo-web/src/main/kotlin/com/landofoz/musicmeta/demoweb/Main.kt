@@ -18,10 +18,14 @@ fun main() {
     // mobile app with a screen to fill. This demo wants the opposite: it exists to show what every
     // provider returns, so a type dropped to meet a deadline is the failure, not the slow answer.
     //
-    // 30s is not enough for that here. MusicBrainz allows one request a second and the library holds
-    // one limiter per host, so two cold enrichments at once queue against each other rather than
-    // running side by side: measured 2026-08-11, two simultaneous cold album requests took 57s and
-    // 60s, and the second lost 11 of its 15 types to the deadline while the first lost none.
+    // 30s cannot hold that here, and the reason is structural rather than a matter of tuning.
+    // MusicBrainz allows one request a second and the library holds one limiter per host, so
+    // concurrent cold enrichments do not run side by side — they interleave into one queue. Wall
+    // clock therefore scales with the number of people clicking at once while the deadline does not,
+    // and the types that lose are whichever were still queued: a browser open in two tabs is enough.
+    //
+    // 120s is headroom for that, not a measured figure — nothing here derives it, and a busy enough
+    // demo would exhaust it too.
     val config = EnrichmentConfig(
         userAgent = "musicmeta-web-demo/1.0 (+https://github.com/famesjranko/musicmeta)",
         enrichTimeoutMs = 120_000L,
@@ -52,13 +56,12 @@ fun main() {
 private fun env(key: String): String? = System.getenv(key)?.takeIf { it.isNotBlank() }
 
 /**
- * Every `secrets.properties` on the search path, the nearer file winning per key.
+ * Every `secrets.properties` on the search path merged, the nearer file winning per key — not the
+ * first that exists, which cannot tell a template from a configuration (`docs/pitfalls.md` §13).
  *
- * Not first-file-wins, which is what this was: a template copied here with every line still
- * commented out *exists*, so it shadowed a filled-in one in the repo root and the demo ran keyless
- * with nothing to explain why — README says either location works, and it did not. A key present but
- * blank is dropped for the same reason: it must fall through to the environment variable rather than
- * beat it with an empty string.
+ * A key present but blank is dropped rather than returned as `""`: every caller reads
+ * `secrets[k] ?: env(k)`, and an empty string is non-null, so it would beat the environment variable
+ * it is meant to defer to.
  */
 private fun loadSecrets(): Map<String, String> =
     listOf(File("../secrets.properties"), File("secrets.properties"))

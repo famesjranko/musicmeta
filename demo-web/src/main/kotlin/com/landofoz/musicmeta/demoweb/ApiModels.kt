@@ -100,7 +100,12 @@ data class Meta(
     val identifiers: List<IdentifierHit> = emptyList(),
 )
 
-/** One resolved identifier: [label] names which one, [value] is the id itself. */
+/**
+ * [label] is which identifier this is, and it is decided by the entity being rendered rather than by
+ * the field it came from: `EnrichmentIdentifiers.musicBrainzId` is a recording id on a track, a
+ * release id on an album and an artist id on an artist, and an unlabelled MBID is not one a reader
+ * can act on — MusicBrainz has no endpoint that takes one without knowing its type.
+ */
 @Serializable
 data class IdentifierHit(
     val label: String,

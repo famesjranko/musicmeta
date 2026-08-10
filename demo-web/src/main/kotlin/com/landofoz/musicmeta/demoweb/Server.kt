@@ -101,10 +101,11 @@ private fun handleEnrich(exchange: HttpExchange, engine: EnrichmentEngine) {
         val name = params["name"]?.trim().orEmpty()
         val artist = params["artist"]?.trim().orEmpty()
         val album = params["album"]?.trim()?.ifBlank { null }
-        // An artist, release or recording MBID depending on [kind] — EnrichmentIdentifiers.musicBrainzId
-        // is polymorphic that way. Exposed because a name-only request cannot show what a caller's
-        // identifier does, in either direction: one MusicBrainz holds pins the exact entity, and one
-        // it does not hold resolves by name regardless.
+        // An artist, release or recording MBID depending on `kind` — EnrichmentIdentifiers.musicBrainzId
+        // is polymorphic that way. No form control sends this; it is reachable over the API only,
+        // because a name-only request cannot exercise what a caller's identifier does in either
+        // direction: one MusicBrainz holds pins the exact entity, and one it does not hold resolves
+        // by name regardless.
         val mbid = params["mbid"]?.trim()?.ifBlank { null }
 
         val valid = kind in setOf("artist", "album", "track") &&

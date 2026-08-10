@@ -277,13 +277,12 @@ private fun enrichLabel(request: EnrichmentRequest): String = when (request) {
 private fun env(key: String): String? = System.getenv(key)?.takeIf { it.isNotBlank() }
 
 /**
- * Every `secrets.properties` on the search path, the nearer file winning per key.
+ * Every `secrets.properties` on the search path merged, the nearer file winning per key — not the
+ * first that exists, which cannot tell a template from a configuration (`docs/pitfalls.md` §13).
  *
- * Not first-file-wins, which is what this was: a template copied here with every line still
- * commented out *exists*, so it shadowed a filled-in one in the repo root and the demo ran keyless
- * with nothing to explain why — README says either location works, and it did not. A key present but
- * blank is dropped for the same reason: it must fall through to the environment variable rather than
- * beat it with an empty string.
+ * A key present but blank is dropped rather than returned as `""`: every caller reads
+ * `secrets[k] ?: env(k)`, and an empty string is non-null, so it would beat the environment variable
+ * it is meant to defer to.
  */
 private fun loadSecrets(): Map<String, String> =
     listOf(java.io.File("../secrets.properties"), java.io.File("secrets.properties"))
