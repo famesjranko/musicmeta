@@ -327,7 +327,7 @@ class ProviderChainTest {
         assertEquals(0, p1.enrichCalls.size)
     }
 
-    // --- skippedIdentifierRequirements (issue 06) ---
+    // --- skippedIdentifierRequirements ---
 
     @Test fun `skippedIdentifierRequirements reports a skip even when another eligible provider ran`() = runTest {
         // Given - p1 (Wikipedia-shaped) requires WIKIPEDIA_TITLE, p2 (Last.fm-shaped) requires

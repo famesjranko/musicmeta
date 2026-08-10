@@ -58,7 +58,6 @@ internal class MusicBrainzEnricher(
     /** Artist lookups by MBID: BAND_MEMBERS, ARTIST_LINKS and GENRE all want the same artist. */
     private val artistMemo = CallMemo<String, MusicBrainzArtist>()
 
-    /** Lookup artist with rels (superset), memoized in [artistMemo]. */
     private suspend fun memoizedArtist(mbid: String): MusicBrainzArtist? =
         artistMemo.getOrNull(mbid) { api.lookupArtistWithRels(mbid) }
 
@@ -492,8 +491,8 @@ internal class MusicBrainzEnricher(
     private val albumSearchMemo = CallMemo<String, AlbumSearchResult>()
 
     /**
-     * [searchAlbum], memoized in [albumSearchMemo]. Shared by [enrichAlbum] and [enrichAlbumTracks],
-     * which both need identical album-resolution semantics.
+     * Shared by [enrichAlbum] and [enrichAlbumTracks], which both need identical album-resolution
+     * semantics.
      */
     private suspend fun memoizedAlbumSearch(title: String, artist: String): AlbumSearchResult =
         albumSearchMemo.get(albumMemoKey(title, artist)) { searchAlbum(title, artist) }

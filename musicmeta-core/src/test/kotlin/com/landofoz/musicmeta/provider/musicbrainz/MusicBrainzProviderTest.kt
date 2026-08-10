@@ -800,7 +800,7 @@ class MusicBrainzProviderTest {
         assertTrue(httpClient.requestedUrls.any { it.contains("release-group/group123") })
     }
 
-    // --- issue 06: transient side-lookup must not resolve to a cacheable NotFound ---
+    // --- transient side-lookup must not resolve to a cacheable NotFound ---
 
     @Test
     fun `a transient release-group wiki lookup reclassifies ALBUM_DESCRIPTION to Error in the same run that resolves GENRE`() = runTest {

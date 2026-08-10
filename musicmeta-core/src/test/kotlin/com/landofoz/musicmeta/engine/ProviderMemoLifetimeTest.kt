@@ -210,6 +210,31 @@ class ProviderMemoLifetimeTest {
     }
 
     @Test
+    fun `two providers sharing an id each answer with their own configuration`() = runTest {
+        // Given - two MusicBrainz providers alike but for the score floor each accepts, and a hit
+        // only the lower floor will resolve. Identity resolution is off because the strict provider
+        // is also the identity provider, and the suggestions on its NotFound would short-circuit
+        // the fan-out before the lenient one ran.
+        httpClient.givenJsonResponse(RELEASE_SEARCH, searchHit("thin1", score = 80))
+        val strict = MusicBrainzProvider(httpClient, RateLimiter(0), minMatchScore = 95)
+        val lenient = MusicBrainzProvider(httpClient, RateLimiter(0), minMatchScore = 50)
+        val engine = DefaultEnrichmentEngine(
+            ProviderRegistry(listOf(strict, lenient)),
+            FakeEnrichmentCache(),
+            EnrichmentConfig(enableIdentityResolution = false),
+            mergers = emptyList(),
+        )
+
+        // When - GENRE is enriched, so the strict provider declines and the chain falls through
+        val results = engine.enrich(ALBUM, setOf(EnrichmentType.GENRE))
+
+        // Then - the lenient provider answered on its own floor. Both carry the id "musicbrainz",
+        // so a slot keyed on that would have handed it the enricher the strict one built, and the
+        // floor that enricher was constructed with.
+        assertEquals(listOf("alternative rock"), genresOf(results))
+    }
+
+    @Test
     fun `one artist's fanout looks the artist up once, not once per type`() = runTest {
         // Given - an artist known by MBID, whose members and links come from one lookup
         httpClient.givenJsonResponse("artist/art1?", ARTIST_LOOKUP_MEMBERS_AND_LINKS)
@@ -269,11 +294,11 @@ class ProviderMemoLifetimeTest {
         ) { """{"id": "rg$it", "title": "Live at Somewhere $it", "primary-type": "Album"}""" }
 
         /** A resolved hit for [ALBUM]'s title carrying its own tags, so GENRE needs no release lookup. */
-        fun searchHit(releaseId: String) = """
+        fun searchHit(releaseId: String, score: Int = 98) = """
             {
               "releases": [{
                 "id": "$releaseId",
-                "score": 98,
+                "score": $score,
                 "title": "OK Computer",
                 "artist-credit": [{"artist": {"id": "art1", "name": "Radiohead"}}],
                 "date": "1997-06-16",

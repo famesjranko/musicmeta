@@ -89,7 +89,7 @@ internal class DefaultEnrichmentEngine(
         // sleep past this deadline — an expiry mid-fan-out loses every provider's in-flight work.
         val completed = withTimeoutOrNull(config.enrichTimeoutMs) {
             // TransientIdentifierMarker: this call's record of which IdentifierRequirements a
-            // transient left unresolved this run, read back by reclassifyTransientGap (issue 06).
+            // transient left unresolved this run, read back by reclassifyTransientGap.
             // ProviderCallScope: this call's home for whatever a provider memoizes across the types
             // of one request, so nothing it holds can survive to answer the next call.
             withContext(
@@ -269,7 +269,7 @@ internal class DefaultEnrichmentEngine(
             currentCoroutineContext().ensureActive()
             logger.warn(TAG, "Identity resolution failed: ${e.message}", e)
             // Tells reclassifyTransientGap "skipped because this run's identity resolution
-            // hiccupped" from "skipped because the request genuinely has none of these" (issue 06).
+            // hiccupped" from "skipped because the request genuinely has none of these".
             currentCoroutineContext()[TransientIdentifierMarker]?.markAllConcreteIdentifiers()
             // Must not collapse to null: null identity means "not attempted" and reads as
             // confident. GENRE matches the type the identity provider itself reports under.
@@ -409,7 +409,7 @@ internal class DefaultEnrichmentEngine(
     /**
      * Turns a [type]'s `NotFound` into an `Error` when it rode on a provider skipped for an
      * identifier requirement that a transient — somewhere else in this run — left unresolved,
-     * rather than genuinely absent (issue 06). Independent of [ProviderChain.resolve]/
+     * rather than genuinely absent. Independent of [ProviderChain.resolve]/
      * [ProviderChain.resolveAll]'s own return values on purpose: a chain can have skipped one
      * provider for an unresolved identifier while a *different*, unrelated provider in the same
      * chain was still eligible, ran, and returned its own genuine `NotFound` (e.g. Last.fm

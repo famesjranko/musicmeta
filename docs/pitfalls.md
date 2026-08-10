@@ -370,8 +370,13 @@ with each memo reduced to its bare API call.
 The resolvable path is cheap either way because `IDENTITY_TYPES` answers five of the six types from
 the identity payload and drops them before the provider chain sees them, so the fan-out is really
 one or two types wide. The miss is where the memos earn their keep: nothing is dropped, so every
-type pays the whole ladder. `ProviderMemoLifetimeTest` pins the with-memo column; a per-type repeat
-is what those counts catch.
+type pays the whole ladder.
+
+**Neither column is pinned by a test.** `ProviderMemoLifetimeTest` asserts per-kind counts over two
+or three types — one release lookup, one artist search, one run of browse pages, two release
+searches — so it catches a per-type *repeat*, which is the property worth guarding. The totals above
+are six-type figures and come from the recipe, not from an assertion: re-run it rather than trusting
+them.
 
 What was wrong was its **lifetime**, not its layer. It sat on the provider object, which lives as
 long as the engine, with no TTL and nothing able to clear it. So

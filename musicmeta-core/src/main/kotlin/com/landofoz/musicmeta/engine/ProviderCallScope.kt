@@ -18,19 +18,31 @@ import kotlin.coroutines.CoroutineContext
  */
 internal class ProviderCallScope : AbstractCoroutineContextElement(Key) {
 
-    private val slots = ConcurrentHashMap<String, Any>()
+    private val slots = ConcurrentHashMap<ProviderIdentity, Any>()
 
     /**
      * This call's state for [provider], from [create] on first use. Concurrent because the engine
      * resolves types as sibling `async` children, so two of them race for the same slot.
      *
-     * Keyed by [EnrichmentProvider.id], as [ProviderRegistry] keys its circuit breakers: the
-     * interface is public and states no `equals`/`hashCode` contract, so a consumer's provider
-     * written as a `data class` would give two differently-configured instances one slot.
+     * One slot per provider *instance*, not per [EnrichmentProvider.id]: nothing dedups ids, and two
+     * providers sharing one may be differently configured, so sharing a slot between them would let
+     * whichever filled it first answer for both.
      */
-    @Suppress("UNCHECKED_CAST") // one id, one slot, so the stored type is the one that slot stored
+    @Suppress("UNCHECKED_CAST") // one instance, one slot, so the stored type is the one it stored
     fun <T : Any> slot(provider: EnrichmentProvider, create: () -> T): T =
-        slots.computeIfAbsent(provider.id) { create() } as T
+        slots.computeIfAbsent(ProviderIdentity(provider)) { create() } as T
+
+    /**
+     * A [provider] by reference, for use as a map key. [EnrichmentProvider] is public and states no
+     * `equals`/`hashCode` contract, so a consumer's provider written as a `data class` would
+     * otherwise hand two distinct instances one slot.
+     */
+    private class ProviderIdentity(private val provider: EnrichmentProvider) {
+        override fun equals(other: Any?): Boolean =
+            other is ProviderIdentity && other.provider === provider
+
+        override fun hashCode(): Int = System.identityHashCode(provider)
+    }
 
     internal companion object Key : CoroutineContext.Key<ProviderCallScope>
 }
