@@ -104,8 +104,8 @@ private fun handleEnrich(exchange: HttpExchange, engine: EnrichmentEngine) {
         // An artist, release or recording MBID depending on `kind` — EnrichmentIdentifiers.musicBrainzId
         // is polymorphic that way. No form control sends this; it is reachable over the API only,
         // because a name-only request cannot exercise what a caller's identifier does in either
-        // direction: one MusicBrainz holds pins the exact entity, and one it does not hold resolves
-        // by name regardless.
+        // direction: an MBID MusicBrainz holds pins the exact entity, while one it does not hold
+        // resolves by name regardless.
         val mbid = params["mbid"]?.trim()?.ifBlank { null }
 
         val valid = kind in setOf("artist", "album", "track") &&

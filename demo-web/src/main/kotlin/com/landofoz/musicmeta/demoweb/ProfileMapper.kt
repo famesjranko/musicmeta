@@ -340,12 +340,6 @@ private fun EnrichmentResults.toMeta(elapsedMs: Long): Meta {
     )
 }
 
-/**
- * The resolved identifiers worth showing. `musicBrainzId` is labelled by the entity it belongs to
- * — `EnrichmentIdentifiers.musicBrainzId` is a recording id on a track, a release id on an album and
- * an artist id on an artist — because an unlabelled MBID cannot be looked up: MusicBrainz has no
- * endpoint that takes one without knowing its type.
- */
 private fun EnrichmentIdentifiers?.toIdentifierHits(): List<IdentifierHit> {
     if (this == null) return emptyList()
     return listOfNotNull(
