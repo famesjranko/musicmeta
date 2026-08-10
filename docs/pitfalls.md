@@ -397,3 +397,29 @@ Before adding provider-internal state of any kind:
   because it dies with the call. Held any longer, no refresh could ever correct a mis-resolution.
 - Per-call state rides the coroutine context, as `EnrichDeadline` and `TransientIdentifierMarker`
   already do. A new `EnrichmentProvider` method would be a documented break instead (§1).
+
+## 13. A config file that exists is not a config file that says anything
+
+Both demos looked for `secrets.properties` in the app directory and then the repo root, took the
+**first that existed**, and read only that one. `demo-web` ships a template of its own, so a copy
+sitting next to the app with every line still commented out satisfied "exists" and shadowed a
+filled-in file in the root. The demo ran keyless. The README says either location works; it did not.
+
+What made it cost an afternoon rather than a minute is that the failure is *quiet and plausible*.
+`ApiKeyConfig` treats a missing key as "skip that provider", which is a real supported mode — so
+the run looked like a correct keyless run. The only signal was one startup line that scrolls past,
+and the visible symptom was `no_provider` against exactly the keyed types, which reads as "I never
+set those up" rather than "your keys are being ignored".
+
+Two rules came out of it, and both generalise past this file:
+
+- **Presence is not content.** A search path that stops at the first file that exists cannot
+  distinguish a template from a configuration. Merge every file on the path — nearer last, so it
+  wins per key — rather than electing one.
+- **An empty value must not beat a fallback.** Every call site reads `secrets[k] ?: env(k)`, so a
+  key present-but-blank returned `""`, which is non-null and therefore *won* against the environment
+  variable it was supposed to defer to. Blank values are dropped per file, before the merge.
+
+The wider trap: any `?:` chain over a map is only as good as the map's willingness to say "absent".
+A parser that faithfully records `k=` as `k -> ""` is not being helpful — it is converting an
+absence into an answer, which is the same shape as §4 and as a `NotFound` standing in for a failure.

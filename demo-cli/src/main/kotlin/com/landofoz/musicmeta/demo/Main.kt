@@ -276,13 +276,23 @@ private fun enrichLabel(request: EnrichmentRequest): String = when (request) {
 
 private fun env(key: String): String? = System.getenv(key)?.takeIf { it.isNotBlank() }
 
-private fun loadSecrets(): Map<String, String> {
-    val paths = listOf(java.io.File("secrets.properties"), java.io.File("../secrets.properties"))
-    val file = paths.firstOrNull { it.exists() } ?: return emptyMap()
-    return file.readLines()
-        .filter { it.contains('=') && !it.trimStart().startsWith('#') }
-        .associate { line -> val (k, v) = line.split('=', limit = 2); k.trim() to v.trim() }
-}
+/**
+ * Every `secrets.properties` on the search path merged, the nearer file winning per key — not the
+ * first that exists, which cannot tell a template from a configuration (`docs/pitfalls.md` §13).
+ *
+ * A key present but blank is dropped rather than returned as `""`: every caller reads
+ * `secrets[k] ?: env(k)`, and an empty string is non-null, so it would beat the environment variable
+ * it is meant to defer to.
+ */
+private fun loadSecrets(): Map<String, String> =
+    listOf(java.io.File("../secrets.properties"), java.io.File("secrets.properties"))
+        .filter { it.exists() }
+        .fold(mutableMapOf<String, String>()) { merged, file -> merged.apply { putAll(file.readKeys()) } }
+
+private fun java.io.File.readKeys(): Map<String, String> = readLines()
+    .filter { it.contains('=') && !it.trimStart().startsWith('#') }
+    .associate { line -> val (k, v) = line.split('=', limit = 2); k.trim() to v.trim() }
+    .filterValues { it.isNotEmpty() }
 
 private sealed class Command {
     data class Enrich(val request: EnrichmentRequest) : Command()

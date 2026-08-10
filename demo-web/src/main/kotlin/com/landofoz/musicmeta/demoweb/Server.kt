@@ -101,6 +101,12 @@ private fun handleEnrich(exchange: HttpExchange, engine: EnrichmentEngine) {
         val name = params["name"]?.trim().orEmpty()
         val artist = params["artist"]?.trim().orEmpty()
         val album = params["album"]?.trim()?.ifBlank { null }
+        // An artist, release or recording MBID depending on `kind` — EnrichmentIdentifiers.musicBrainzId
+        // is polymorphic that way. No form control sends this; it is reachable over the API only,
+        // because a name-only request cannot exercise what a caller's identifier does in either
+        // direction: an MBID MusicBrainz holds pins the exact entity, while one it does not hold
+        // resolves by name regardless.
+        val mbid = params["mbid"]?.trim()?.ifBlank { null }
 
         val valid = kind in setOf("artist", "album", "track") &&
             name.isNotBlank() &&
@@ -117,30 +123,33 @@ private fun handleEnrich(exchange: HttpExchange, engine: EnrichmentEngine) {
         val response = runBlocking {
             when (kind) {
                 "artist" -> {
-                    val profile = engine.artistProfile(name)
-                    val retried = profile.results.retryTransientFailures(engine, EnrichmentRequest.forArtist(name))
+                    val profile = engine.artistProfile(name, mbid)
+                    val retried = profile.results.retryTransientFailures(
+                        engine,
+                        EnrichmentRequest.forArtist(name, mbid),
+                    )
                     profile.copy(results = retried).toDemoResponse(System.currentTimeMillis() - started)
                 }
                 "album" ->
                     coroutineScope {
-                        val profileDeferred = async { engine.albumProfile(name, artist) }
+                        val profileDeferred = async { engine.albumProfile(name, artist, mbid) }
                         val radioDeferred = async { fetchArtistRadioSection(engine, artist) }
                         val profile = profileDeferred.await()
                         val retried = profile.results.retryTransientFailures(
                             engine,
-                            EnrichmentRequest.forAlbum(name, artist),
+                            EnrichmentRequest.forAlbum(name, artist, mbid),
                         )
                         val radio = radioDeferred.await()
                         profile.copy(results = retried).toDemoResponse(System.currentTimeMillis() - started, radio)
                     }
                 else ->
                     coroutineScope {
-                        val profileDeferred = async { engine.trackProfile(name, artist, album) }
+                        val profileDeferred = async { engine.trackProfile(name, artist, album, mbid) }
                         val radioDeferred = async { fetchArtistRadioSection(engine, artist) }
                         val profile = profileDeferred.await()
                         val retried = profile.results.retryTransientFailures(
                             engine,
-                            EnrichmentRequest.forTrack(name, artist, album),
+                            EnrichmentRequest.forTrack(name, artist, album, mbid = mbid),
                         )
                         val radio = radioDeferred.await()
                         profile.copy(results = retried)

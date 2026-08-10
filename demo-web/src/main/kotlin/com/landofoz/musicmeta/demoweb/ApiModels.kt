@@ -92,6 +92,24 @@ data class Meta(
     val elapsedMs: Long,
     val identityMatch: String? = null,
     val providers: List<ProviderHit>,
+    /**
+     * What identity resolution resolved this entity to, in the order a reader wants them: the
+     * entity's own MBID first, then the ids other providers were keyed on. Empty when resolution
+     * was skipped or found nothing — an entity the library could not pin has none to show.
+     */
+    val identifiers: List<IdentifierHit> = emptyList(),
+)
+
+/**
+ * [label] is which identifier this is, and it is decided by the entity being rendered rather than by
+ * the field it came from: `EnrichmentIdentifiers.musicBrainzId` is a recording id on a track, a
+ * release id on an album and an artist id on an artist, and an unlabelled MBID is not one a reader
+ * can act on — MusicBrainz has no endpoint that takes one without knowing its type.
+ */
+@Serializable
+data class IdentifierHit(
+    val label: String,
+    val value: String,
 )
 
 @Serializable
