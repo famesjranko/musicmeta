@@ -230,6 +230,13 @@ function render(data) {
       </figure>`).join('')}</div>`
     : '';
 
+  // The identifiers identity resolution settled on. Rendered as a definition list rather than a
+  // table row: they are values a reader copies, not per-provider outcomes to scan down.
+  const identifiers = (data.meta.identifiers || []).length
+    ? `<dl class="identifiers">${data.meta.identifiers.map((i) => `
+        <div><dt>${esc(i.label)}</dt><dd><code>${esc(i.value)}</code></dd></div>`).join('')}</dl>`
+    : '';
+
   const providers = data.meta.providers.map((p) => `
     <tr>
       <td><span class="dot ${esc(p.status.split(':')[0])}"></span>${esc(p.type)}</td>
@@ -254,6 +261,7 @@ function render(data) {
     <div class="card">
       <details class="meta-panel">
         <summary>${data.meta.elapsedMs}ms · ${totalItems} items across ${data.sections.length} sections${data.meta.identityMatch ? ' · identity: ' + esc(data.meta.identityMatch) : ''} — how we got this</summary>
+        ${identifiers}
         <table class="providers">
           <thead><tr><th>Type</th><th>Provider</th><th>Status</th><th>Confidence</th></tr></thead>
           <tbody>${providers}</tbody>

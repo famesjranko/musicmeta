@@ -700,6 +700,31 @@ details.meta-panel[open] summary {
   color: var(--text-soft);
 }
 
+dl.identifiers {
+  margin: 0 0 0.85rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.4rem;
+  font-size: 0.77rem;
+}
+
+dl.identifiers > div { display: flex; align-items: baseline; gap: 0.4rem; }
+
+dl.identifiers dt {
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.68rem;
+}
+
+dl.identifiers dd { margin: 0; }
+
+dl.identifiers code {
+  color: var(--text-soft);
+  user-select: all;
+  word-break: break-all;
+}
+
 table.providers {
   width: 100%;
   border-collapse: collapse;

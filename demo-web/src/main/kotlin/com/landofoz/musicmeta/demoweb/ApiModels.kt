@@ -92,6 +92,19 @@ data class Meta(
     val elapsedMs: Long,
     val identityMatch: String? = null,
     val providers: List<ProviderHit>,
+    /**
+     * What identity resolution resolved this entity to, in the order a reader wants them: the
+     * entity's own MBID first, then the ids other providers were keyed on. Empty when resolution
+     * was skipped or found nothing — an entity the library could not pin has none to show.
+     */
+    val identifiers: List<IdentifierHit> = emptyList(),
+)
+
+/** One resolved identifier: [label] names which one, [value] is the id itself. */
+@Serializable
+data class IdentifierHit(
+    val label: String,
+    val value: String,
 )
 
 @Serializable

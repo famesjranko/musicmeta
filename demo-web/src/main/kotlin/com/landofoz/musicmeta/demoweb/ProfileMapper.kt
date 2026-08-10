@@ -3,6 +3,7 @@ package com.landofoz.musicmeta.demoweb
 import com.landofoz.musicmeta.AlbumProfile
 import com.landofoz.musicmeta.ArtistProfile
 import com.landofoz.musicmeta.EnrichmentData
+import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentResults
 import com.landofoz.musicmeta.EnrichmentType
@@ -331,7 +332,30 @@ private fun EnrichmentResults.toMeta(elapsedMs: Long): Meta {
     val identitySummary = identity?.let { id ->
         listOfNotNull(id.match?.name, id.matchScore?.let { "score $it" }).joinToString(" · ").ifBlank { null }
     }
-    return Meta(elapsedMs = elapsedMs, identityMatch = identitySummary, providers = hits)
+    return Meta(
+        elapsedMs = elapsedMs,
+        identityMatch = identitySummary,
+        providers = hits,
+        identifiers = identity?.identifiers.toIdentifierHits(),
+    )
+}
+
+/**
+ * The resolved identifiers worth showing. `musicBrainzId` is labelled by the entity it belongs to
+ * — `EnrichmentIdentifiers.musicBrainzId` is a recording id on a track, a release id on an album and
+ * an artist id on an artist — because an unlabelled MBID cannot be looked up: MusicBrainz has no
+ * endpoint that takes one without knowing its type.
+ */
+private fun EnrichmentIdentifiers?.toIdentifierHits(): List<IdentifierHit> {
+    if (this == null) return emptyList()
+    return listOfNotNull(
+        musicBrainzId?.let { IdentifierHit("MBID", it) },
+        musicBrainzReleaseGroupId?.let { IdentifierHit("Release group MBID", it) },
+        isrc?.let { IdentifierHit("ISRC", it) },
+        barcode?.let { IdentifierHit("Barcode", it) },
+        wikidataId?.let { IdentifierHit("Wikidata", it) },
+        wikipediaTitle?.let { IdentifierHit("Wikipedia", it) },
+    )
 }
 
 private fun MutableList<Section>.section(key: String, label: String, items: () -> List<SectionItem>?) {
