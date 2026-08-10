@@ -42,10 +42,12 @@ deliberate:
   `*Api`; twelve capabilities across three entity types is more than an API client should carry.
   `MusicBrainzCreditParser.kt` serves `CREDITS` and `RELEASE_EDITIONS` only — those two read raw
   `JSONObject` rather than DTOs, since `lookupRecording` and `lookupReleaseGroup` return the response
-  unparsed, and it owns the relation-type → role mapping. `MusicBrainzQualifierFallback.kt`,
-  `MusicBrainzReleaseRanking.kt` and `MusicBrainzTitleFolding.kt` are the resolution rules album and
-  track search share: stripping a title's trailing qualifier group, ranking a search pool into one
-  release, and folding a title MusicBrainz stores under symbols no caller can type.
+  unparsed, and it owns the relation-type → role mapping. `MusicBrainzQualifierFallback.kt` strips a
+  title's trailing qualifier group, and is the only one of the last three that album *and* track
+  search share; `MusicBrainzReleaseRanking.kt` (ranking a search pool into one release) and
+  `MusicBrainzTitleFolding.kt` (folding a title MusicBrainz stores under symbols no caller can type)
+  serve the album path alone — track ranking deliberately reuses `pickBestRecording` rather than
+  growing a second tie-break primitive.
 - **`deezer` has a second public provider class.** `SimilarAlbumsProvider` registers under its own id
   `deezer-similar-albums`, so it gets its own `CircuitBreaker` and can be disabled without touching
   `deezer`. It exists because `SIMILAR_ALBUMS` is *derived* — Deezer has no such endpoint, so it

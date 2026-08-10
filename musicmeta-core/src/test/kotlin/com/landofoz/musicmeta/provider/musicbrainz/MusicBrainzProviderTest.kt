@@ -851,9 +851,7 @@ class MusicBrainzProviderTest {
     @Test
     fun `a transient artist-relations lookup no longer throws, and marks the run's transient set instead`() = runTest {
         // Given - the artist search hit needs the full relations fetch (no wikidataId/wikipediaTitle
-        // on the search result), and that fetch 503s. Before this fix, cachedArtistLookup(best.id)
-        // at MusicBrainzEnricher's `needsRelations` branch was called with no try/catch at all — a
-        // transient there propagated straight out of enrichArtist.
+        // on the search result), and that fetch 503s
         httpClient.givenJsonResponse("artist?query", ARTIST_SEARCH_NO_WIKI_RELATIONS)
         httpClient.givenHttpResult("artist/", HttpResult.ServerError(503))
         val request = EnrichmentRequest.forArtist("Radiohead")

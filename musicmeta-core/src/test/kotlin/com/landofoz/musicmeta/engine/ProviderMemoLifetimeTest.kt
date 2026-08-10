@@ -264,8 +264,8 @@ class ProviderMemoLifetimeTest {
         const val BROWSE = "release-group?artist="
 
         /**
-         * `release?query=` requests one absent album costs: the ladder's strict search, then the
-         * fuzzy search that answers the empty pool with suggestions. [SYMBOL_ALBUM]'s "(Infinity)"
+         * What one absent album costs in `release?query=` requests: the ladder's strict search, then
+         * the fuzzy search that answers the empty pool with suggestions. [SYMBOL_ALBUM]'s "(Infinity)"
          * is not a qualifier group, so the qualifier fallback searches nothing between them.
          *
          * Both are spent once for the call. A per-type repeat of either is what this number catches,

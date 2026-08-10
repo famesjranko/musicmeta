@@ -489,10 +489,6 @@ internal class MusicBrainzEnricher(
      */
     private val albumSearchMemo = CallMemo<AlbumQuery, AlbumSearchResult>()
 
-    /**
-     * Shared by [enrichAlbum] and [enrichAlbumTracks], which both need identical album-resolution
-     * semantics.
-     */
     private suspend fun memoizedAlbumSearch(title: String, artist: String): AlbumSearchResult =
         albumSearchMemo.get(albumQuery(title, artist)) { searchAlbum(title, artist) }
 
@@ -541,7 +537,7 @@ internal class MusicBrainzEnricher(
 
     /**
      * Tries each of [MusicBrainzQualifierFallback]'s fallback candidates (dropping the original
-     * title — [memoizedAlbumSearch] already tried that) in most-specific-first order, stopping at the
+     * title — the caller has already searched it) in most-specific-first order, stopping at the
      * first one [resolve] resolves. Shared shape for [resolveAlbumQualifierFallback] and
      * [resolveTrackQualifierFallback], which differ only in how a candidate resolves.
      */
