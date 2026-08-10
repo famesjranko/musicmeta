@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # Whether a recording pool can be narrowed upstream instead of ranked downstream.
 #
-# The name-only track path resolves whatever MusicBrainz's relevance order puts in the top
-# RECORDING_SEARCH_LIMIT. For a heavily-covered track that pool is all live/bootleg/cover takes, so
-# pickBestRecording's blank-disambiguation tier has nothing to choose. Four questions:
+# Before searchCanonicalRecordings existed, the name-only track path resolved whatever MusicBrainz's
+# relevance order put in the top RECORDING_SEARCH_LIMIT. For a heavily-covered track that pool is all
+# live/bootleg/cover takes, so pickBestRecording's blank-disambiguation tier has nothing to choose.
+# That baseline is still the first row here, because it is what the filter has to beat. Four
+# questions:
 #
 #   1. Can the filter be expressed in the query at all? MB's recording index carries `comment`
 #      (= disambiguation), `status` and `primarytype`, so `-comment:*` is exactly tier 4.
@@ -23,11 +25,13 @@
 #
 # Not a gate: live third-party calls, and MB's order within a score tie is not stable across
 # requests -- the same query at two limits can put the same recording inside and outside the window,
-# and three runs of the identical query put it at index 19, 23 and 58. That instability is itself
-# the finding. Re-run before citing any position from this script.
+# and repeated runs of the identical query move it. That instability is itself the finding. Re-run
+# before citing any position from this script.
 #
-# Count failures by kind, not by track. One run of one title proves nothing about the shape of the
-# fix: measured 2026-08-10, two of four tracks had a filtered pool larger than the 100 ceiling.
+# Count failures by kind, not by track: one run of one title proves nothing about the shape of a fix,
+# and a filtered pool that fits under the ceiling for one title overflows it for another. This script
+# is the recipe; the figures it produced live on MusicBrainzApi.CANONICAL_SEARCH_LIMIT, which is
+# their one home. Do not copy them back here -- that is how the two drifted apart before.
 set -euo pipefail
 
 UA="${PROBE_USER_AGENT:-musicmeta-probe/1.0 ( andrewmcdonald42@gmail.com )}"
@@ -74,9 +78,10 @@ PY
 BASE_Q="recording:\"$TITLE\" AND artistname:\"$ARTIST\""
 HINT_Q="$BASE_Q AND release:\"$ALBUM\""
 
-echo "== production query today (RECORDING_SEARCH_LIMIT=25) =="
-report "as shipped, no album hint " "$BASE_Q" 25
-report "as shipped, album hint    " "$HINT_Q" 25
+echo "== the unfiltered baseline (RECORDING_SEARCH_LIMIT=25) =="
+echo "   still what an album-hinted request and the empty-pool fallback send."
+report "unfiltered, no album hint " "$BASE_Q" 25
+report "unfiltered, album hint    " "$HINT_Q" 25
 
 echo
 echo "== is the tier-4 filter expressible in the query? =="

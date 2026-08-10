@@ -6,8 +6,10 @@
 #   1. How deep is the tied-score pool for a heavily-covered track, and does RECORDING_SEARCH_LIMIT
 #      surface a blank-disambiguation (studio) candidate within it? Any claim that it does is a
 #      measurement, and a measurement decays as MusicBrainz catalogues more live recordings.
-#   2. Does lookupRecording's inc= omit `releases`, and does widening it to include
-#      releases+release-groups recover them, each carrying a release-group?
+#   2. Does a narrow `inc=artist-rels+work-rels` recording lookup omit `releases`, and does widening
+#      it to include releases+release-groups recover them, each carrying a release-group? This is
+#      what put `releases+release-groups` into RECORDING_LOOKUP_INC; the narrow arm is kept as the
+#      contrast, not as a description of what the code sends.
 #   3. When it does, does the recovered `releases` array embed in the SAME ORDER a search hit would —
 #      findArtReleaseGroup's tiers 1-3 pick the FIRST match within a tier, so order can change which
 #      release-group (and so which cover art) a request resolves to.
@@ -49,14 +51,14 @@ for r in blanks:
 sleep "$SPACING"
 
 echo
-echo "== 2. field loss: lookupRecording as coded today (inc=artist-rels+work-rels) vs releases+release-groups =="
+echo "== 2. field loss: a narrow inc=artist-rels+work-rels lookup vs releases+release-groups =="
 # Reuse a recording ID from step 1's own $LIMIT pool, not a fresh query -- MB's tied-score order
 # shifts between separate calls (even with identical params), so a second query's limit=1 hit is
 # not guaranteed to be a member of this pool, and step 3 needs it to be.
 MBID="$(python3 -c "import json; print(json.load(open('/tmp/enrichtrack-probe-pool.json'))['recordings'][0]['id'])")"
 echo "probing recording $MBID"
 TODAY_KEYS="$(curl -s -A "$UA" "$BASE/recording/$MBID?fmt=json&inc=artist-rels+work-rels" | python3 -c "import json,sys; print(sorted(json.load(sys.stdin).keys()))")"
-echo "  inc=artist-rels+work-rels (today's code) top-level keys: $TODAY_KEYS"
+echo "  inc=artist-rels+work-rels (narrow) top-level keys: $TODAY_KEYS"
 sleep "$SPACING"
 curl -s -A "$UA" "$BASE/recording/$MBID?fmt=json&inc=artist-rels+work-rels+releases+release-groups" > /tmp/enrichtrack-probe-widened.json
 # MB answers a shed request or a rejected inc= with a 200-shaped {"error": ...} body. Without this

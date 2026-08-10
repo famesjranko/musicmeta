@@ -119,7 +119,7 @@ class MusicBrainzApiSearchRecordingsTest {
     }
 
     private companion object {
-        /** MusicBrainz's own documented maximum for a search `limit`, and the ceiling it enforces. */
+        /** MusicBrainz's own maximum for a search `limit`. Past it there is no error, just 25. */
         const val MUSICBRAINZ_MAX_SEARCH_LIMIT = 100
 
         const val SINGLE_MATCH = """

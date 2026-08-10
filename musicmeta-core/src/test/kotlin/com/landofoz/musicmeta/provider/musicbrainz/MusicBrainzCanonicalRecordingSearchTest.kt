@@ -72,9 +72,9 @@ class MusicBrainzCanonicalRecordingSearchTest {
         // When - the track is enriched by name alone
         provider.enrich(EnrichmentRequest.forTrack(TITLE, ARTIST), EnrichmentType.GENRE)
 
-        // Then - one request, carrying the filter and MusicBrainz's own maximum limit. Above 100 it
-        // does not clamp — it silently serves 25 (measured 2026-08-10), so 100 is a ceiling, not a
-        // number to raise later.
+        // Then - one request, carrying the filter and the page size the constant names. That the
+        // page must stay under MusicBrainz's own maximum is asserted where it can say why:
+        // MusicBrainzApiSearchRecordingsTest, "never asks for more than MusicBrainz will serve".
         val searches = urlsMatching(RECORDING_SEARCH)
         assertEquals(1, searches.size)
         assertTrue("expected the -comment:* filter in $searches", searches.single().contains(CANONICAL_QUERY))

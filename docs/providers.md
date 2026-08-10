@@ -60,24 +60,24 @@ deliberate:
 A track request naming **no album** is resolved out of a pool MusicBrainz has already filtered with
 `-comment:*` — its own index expression of "carries no disambiguation", which is the same signal the
 ranking's fourth tier applies. Doing it upstream is the point: downstream, the tier can only rank
-what the page already let through, and for a heavily-covered title that is nothing. Measured
-2026-08-10, zero of the 25 recordings the unfiltered query returned for "Enter Sandman" carried a
-blank disambiguation, so the tier had nothing to choose and the answer fell through to a live take.
+what the page already let through, and for a heavily-covered title that is nothing at all.
 
-A request that *does* name an album is left alone. The album is the better narrowing term and the one
-the caller supplied — it took that same search from 757 candidates to 45 — and the two do not
-compose: the filter deletes candidates, so a recording that is marked *and* on the requested album
-would be gone before the ranking's album-match tier, which outranks its disambiguation tier, could
-prefer it.
+A request that *does* name an album is left alone. An album is the better narrowing term, and the two
+do not compose: the filter deletes candidates, so a recording that is marked *and* on the requested
+album would be gone before the ranking's album-match tier, which outranks its disambiguation tier,
+could prefer it.
 
-The page is 100, which is MusicBrainz's maximum and not a number to raise — above it the search does
-not clamp, it silently serves 25, so a raise would shrink the pool rather than widen it. A test
-asserts the ceiling for that reason. It is a ceiling, not a guarantee: three of seven tracks measured
-the same day had a filtered pool larger than 100 (115, 132 and 192), and where a given recording
-lands inside the pool shifts between identical calls. A filtered pool that comes back empty falls back to the
-unfiltered ladder, at the cost of one extra request on the miss path. That fallback does not cover a
-track whose canonical recording is marked while other takes are not — one of the six — which is no
-worse than before rather than fixed.
+The page is MusicBrainz's own maximum and not a number to raise — above it the search does not clamp,
+it silently serves the default 25, so a raise would shrink the pool rather than widen it. A test
+asserts that ceiling for exactly that reason. It is a ceiling and not a guarantee: some titles have a
+filtered pool larger than it, and where a given recording lands inside a pool shifts between
+identical calls. A filtered pool that comes back empty falls back to the unfiltered ladder, at one
+extra request on the miss path; a track whose canonical recording is marked while other takes are not
+is not covered by that fallback, and is no worse than before rather than fixed.
+
+The measurements behind all of this live on `MusicBrainzApi.CANONICAL_SEARCH_LIMIT`, with
+`scripts/probes/recording-pool-filter-probe.sh` as the recipe. They are not repeated here on purpose:
+figures decay as MusicBrainz's catalogue grows, and a copy rots while it moves.
 
 `searchCandidates` is deliberately not filtered. That list exists for a consumer to pick a version
 from, and one narrowed to canonical recordings cannot answer "I want the Moscow one".

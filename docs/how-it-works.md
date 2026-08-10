@@ -100,7 +100,7 @@ The key insight: most providers need identifiers (MusicBrainz ID, Wikidata ID) f
 
 **MusicBrainz acts as the identity backbone.** The engine first checks whether identity resolution is needed — it scans all uncached types and their provider chains' identifier requirements. If no provider needs an identifier the request lacks, identity resolution is skipped entirely.
 
-A track request is the one exception, and it is a consequence of what `musicBrainzId` means. The field is polymorphic — a release id on an album request, an artist id on an artist request, a *recording* id on a track request — so a capability declaring `MUSICBRAINZ_ID` is declaring "an id of the request's own kind", not which kind it can serve. A recording id cannot stand in for the release-group id cover art is keyed on, so a track request that carries no `musicBrainzReleaseGroupId` still resolves identity, however many recording ids it holds.
+A track request is the one exception, and it is a consequence of what `musicBrainzId` means. The field is polymorphic — a release id on an album request, an artist id on an artist request, a *recording* id on a track request — so a capability declaring `MUSICBRAINZ_ID` is declaring "an id of the request's own kind", not which kind it can serve. A recording id cannot stand in for the release-group id cover art is keyed on, so a track request carrying no `musicBrainzReleaseGroupId` still resolves identity even when it carries a recording id.
 
 When needed, MusicBrainz searches by title/artist and returns:
 - `musicBrainzId` (MBID) — the universal music identifier

@@ -97,33 +97,24 @@ internal class MusicBrainzApi(
      *
      * `-comment:*` is tier 4 of [MusicBrainzEnricher.pickBestRecording] — prefer a blank
      * disambiguation — expressed in MusicBrainz's own query language, which is what moves it
-     * *upstream* of the limit instead of downstream of it. Downstream it can only rank what the
-     * limit already let through, and for a heavily-covered track that is nothing: measured
-     * 2026-08-10, zero of the 25 recordings the unfiltered query returns for "Enter Sandman" carry
-     * a blank disambiguation, so the tier had nothing to choose and the ranking fell through to
-     * whichever live or demo take won on the tiers below.
+     * *upstream* of the limit instead of downstream of it. Downstream the tier can only rank what
+     * the page already let through, and for a heavily-covered track that is nothing at all.
      *
-     * **Only when the request names no album.** An album is the better narrowing term and the one
-     * the caller supplied, and the two do not compose: the filter deletes candidates, so a canonical
-     * recording that carries a disambiguation *and* sits on the requested album would be gone before
-     * [MusicBrainzEnricher.pickBestRecording]'s album-match tier — which outranks its
-     * disambiguation tier precisely because an explicit album is the stronger signal — could prefer
-     * it. A hinted request is not the failing case anyway: measured 2026-08-10, adding the album
-     * term took "Enter Sandman" from 757 candidates to 45 and "Paranoid Android" to 6. So a hinted
-     * request takes [searchRecordings] unchanged.
+     * **Only when the request names no album.** The two do not compose: the filter deletes
+     * candidates, so a recording that is marked *and* sits on the requested album would be gone
+     * before [MusicBrainzEnricher.pickBestRecording]'s album-match tier — which outranks its
+     * disambiguation tier, because an explicit album is the stronger signal — could prefer it. An
+     * album is also the better narrowing term on its own, so a hinted request takes
+     * [searchRecordings] unchanged.
      *
      * A filter can only remove candidates, so an empty filtered pool falls back to the unfiltered
      * ladder — a track whose every recording is marked must still resolve. That costs one extra
-     * request, on the miss path only.
+     * request, on the miss path only. It does not rescue a track whose canonical recording is marked
+     * while other takes are not: the right answer is removed, the pool is not empty, and nothing
+     * fires. That case is no worse than before rather than newly broken, and is not fixed here.
      *
-     * What that fallback does *not* rescue is a track whose canonical recording is marked while
-     * other takes are not: the right answer is removed and the pool is still non-empty, so nothing
-     * fires. Measured over six tracks on 2026-08-10, five kept an unmarked recording on the
-     * requested album's release-group (at indices 1, 25, 34, 56 and 58 — four of them past the 25
-     * an unfiltered search would have returned), and one, Prince's "Purple Rain", kept none. That
-     * one is no worse than before rather than newly broken: the unfiltered pool holds no such
-     * recording in its first 25 either, and the ranking's own disambiguation tier would have
-     * preferred the same unmarked non-album takes. It is not fixed here.
+     * `scripts/probes/recording-pool-filter-probe.sh` measures all of the above; the figures that
+     * bound the design live on [CANONICAL_SEARCH_LIMIT], and nowhere else.
      */
     suspend fun searchCanonicalRecordings(
         title: String,
@@ -290,13 +281,11 @@ internal class MusicBrainzApi(
         /**
          * Default candidate pool size for [searchRecordings] — the *candidate* surface, where a
          * consumer picks a version, and the fallback when [searchCanonicalRecordings] filters the
-         * pool to nothing. It is not what a track is resolved out of, and it deliberately carries
-         * no claim about containing a studio candidate: it did not hold one for
-         * "Enter Sandman"/Metallica when measured on 2026-08-10
-         * (`scripts/probes/recording-pool-filter-probe.sh`, 757 tied recordings, 0 of the returned
-         * 25 with a blank disambiguation), which is the defect [searchCanonicalRecordings] exists
-         * to fix. Raising it would not have fixed it: a wider unfiltered window is still ordered by
-         * a relevance score every one of those 757 ties shares.
+         * pool to nothing. It is not what a track is resolved out of, and it deliberately carries no
+         * claim about containing a studio candidate — it did not hold one for a heavily-covered
+         * track when measured (`scripts/probes/recording-pool-filter-probe.sh`), which is the defect
+         * [searchCanonicalRecordings] exists to fix. Raising it would not have fixed it: a wider
+         * unfiltered window is still ordered by a relevance score every tied candidate shares.
          */
         const val RECORDING_SEARCH_LIMIT = 25
 
@@ -307,14 +296,16 @@ internal class MusicBrainzApi(
          * increase would shrink the pool without failing.
          *
          * It is a ceiling rather than a bound the filter guarantees, and the overflow is not a
-         * long-tail case — it lands on the titles most likely to be asked for. Measured the same
-         * day, the filtered pool ran 71–192: "Comfortably Numb" 71, "Bohemian Rhapsody" 88, "Enter
-         * Sandman" 95 and "Smells Like Teen Spirit" 97 fit; "Paranoid Android" 115, "Whipping Post"
-         * 132 and "Yesterday" 192 did not. Where the canonical cut lands
-         * inside the pool is upstream's to decide and shifts between identical calls — indices 19,
-         * 23, 39 and 58 across four runs of the same query — so this buys a pool the ranking can
-         * work on, not a guarantee that the studio take is in it. Reaching past 100 means paging,
-         * and costs a request per page on a 1 req/s limiter.
+         * long-tail case — it lands on the titles most likely to be asked for. Measured 2026-08-10
+         * over seven tracks, filtered pools ran 71–192 and three exceeded 100. Where a given
+         * recording sits inside a pool is upstream's to decide and shifts between identical calls.
+         * So this buys a pool the ranking can work on, not a guarantee the studio take is in it.
+         * Reaching past 100 means paging, at a request per page on a 1 req/s limiter.
+         *
+         * Re-measure with `scripts/probes/recording-pool-filter-probe.sh` before relying on any of
+         * those figures; they decay as MusicBrainz's catalogue grows. This KDoc is their one home —
+         * `docs/providers.md` and the probe state the shape and point here rather than restating
+         * them, because the copies drifted apart within a day of being written.
          */
         const val CANONICAL_SEARCH_LIMIT = 100
 
