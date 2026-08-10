@@ -61,9 +61,6 @@ class MusicBrainzTrackMbidLookupTest {
         return result as EnrichmentResult.NotFound
     }
 
-    private fun suggestedIdsOf(result: EnrichmentResult?) =
-        notFoundOf(result).suggestions?.map { it.identifiers.musicBrainzId }
-
     @Test
     fun `a caller-supplied mbid resolves that recording, not the one the search ranks first`() = runTest {
         // Given - a pool holding only live takes, and a caller naming the studio recording it does not contain
@@ -99,19 +96,35 @@ class MusicBrainzTrackMbidLookupTest {
     }
 
     @Test
-    fun `a recording mbid MusicBrainz does not hold is NotFound, never a silent fall back to the search`() = runTest {
-        // Given - a pool that would resolve happily, and an MBID whose lookup answers 404
+    fun `a recording mbid MusicBrainz does not hold resolves by name, as a request carrying none does`() = runTest {
+        // Given - a pool that resolves happily, and an MBID whose lookup answers 404
         httpClient.givenJsonResponse(RECORDING_SEARCH, LIVE_ONLY_POOL)
 
         // When - the track is enriched with that MBID
-        val result = provider.enrich(trackWithMbid("rec-unknown"), EnrichmentType.GENRE)
+        val result = provider.enrich(trackWithMbid(DEAD_MBID), EnrichmentType.GENRE)
 
-        // Then - nothing in the pool is resolved *as* the answer: the caller named a recording, so
-        // a different one cannot stand in for it however well it ranks. What the pool may do is
-        // reach the consumer as suggestions, for a person to choose between. Both halves are
-        // asserted here because the result is the property; the request the suggestions cost is not
-        // part of it, and pinning that count instead would forbid offering them at all.
-        assertEquals(listOf(LIVE_MBID, "rec-live-2"), suggestedIdsOf(result))
+        // Then - the name search answers, at its own confidence. An identifier MusicBrainz holds
+        // nothing under names no recording, so no recording exists for the answer to be unfaithful
+        // to - the wrong-recording risk this path guards is the property of an identifier that
+        // resolves, and a stale third-party id would otherwise cost the request every provider.
+        val success = successOf(result)
+        assertEquals(LIVE_MBID, success.resolvedIdentifiers?.musicBrainzId)
+        assertEquals(ConfidenceCalculator.searchScore(POOL_SCORE), success.confidence, TOLERANCE)
+    }
+
+    @Test
+    fun `a lookup body the parser cannot read is not traded for a search hit`() = runTest {
+        // Given - a recording MusicBrainz answers for but the parser rejects, and a resolvable pool
+        httpClient.givenJsonResponse(STUDIO_LOOKUP, UNPARSEABLE_LOOKUP_RESPONSE)
+        httpClient.givenJsonResponse(RECORDING_SEARCH, LIVE_ONLY_POOL)
+
+        // When - the track is enriched with that MBID
+        val result = provider.enrich(trackWithMbid(STUDIO_MBID), EnrichmentType.GENRE)
+
+        // Then - MusicBrainz holds the recording the caller named, so a different one cannot stand
+        // in for it however well it ranks, and nothing is suggested for a choice already made
+        assertNull(notFoundOf(result).suggestions)
+        assertEquals(0, searches())
     }
 
     @Test
@@ -173,28 +186,29 @@ class MusicBrainzTrackMbidLookupTest {
     }
 
     @Test
-    fun `a dead caller mbid is looked up once, not once per type`() = runTest {
-        // Given - a flatly wrong recording MBID, the shape a radio pick hands over, and a pool of
-        // recordings for the track it names, which the miss must not be answered from
+    fun `a dead caller mbid costs one lookup for the whole call, not one per type`() = runTest {
+        // Given - a flatly wrong recording MBID, the shape a stale third-party id has, and a pool of
+        // recordings for the track it names
         httpClient.givenJsonResponse(RECORDING_SEARCH, LIVE_ONLY_POOL)
 
-        // When - the three track types MusicBrainz answers are enriched in one call
+        // When - two track types are enriched in one call
         val results = engine().enrich(
             trackWithMbid(DEAD_MBID),
-            setOf(EnrichmentType.GENRE, EnrichmentType.TRACK_METADATA, EnrichmentType.CREDITS),
+            setOf(EnrichmentType.GENRE, EnrichmentType.TRACK_METADATA),
         )
 
-        // Then - the miss holds for every type, and MusicBrainz was asked about the identifier once.
-        // Its answer is that it has no such recording, which no later type in the same call can get
-        // a different answer to.
-        assertTrue(results.raw[EnrichmentType.GENRE] is EnrichmentResult.NotFound)
-        assertTrue(results.raw[EnrichmentType.TRACK_METADATA] is EnrichmentResult.NotFound)
-        assertTrue(results.raw[EnrichmentType.CREDITS] is EnrichmentResult.NotFound)
+        // Then - both types answer with the recording the search resolved, and MusicBrainz was asked
+        // about the identifier once: its answer is that it holds no such recording, which no later
+        // type can get a different answer to. The pool the fall-back resolves from is held too, so a
+        // second type cannot rank a differently-ordered copy of it and answer with another take.
+        assertEquals(LIVE_MBID, successOf(results.raw[EnrichmentType.TRACK_METADATA]).resolvedIdentifiers?.musicBrainzId)
+        assertTrue(results.raw[EnrichmentType.GENRE] is EnrichmentResult.Success)
         assertEquals(1, recordingLookups())
+        assertEquals(1, searches())
     }
 
     @Test
-    fun `a dead mbid alongside a release-group id is looked up once too, with no identity gate to help`() = runTest {
+    fun `a dead mbid alongside a release-group id resolves too, with no identity gate to help`() = runTest {
         // Given - the same dead recording MBID, on a request that also names a release group, which
         // is what makes every type's identifiers complete and skips identity resolution entirely
         httpClient.givenJsonResponse(RECORDING_SEARCH, LIVE_ONLY_POOL)
@@ -204,24 +218,27 @@ class MusicBrainzTrackMbidLookupTest {
         // When - two track types are enriched in one call
         val results = engine().enrich(request, setOf(EnrichmentType.GENRE, EnrichmentType.TRACK_METADATA))
 
-        // Then - the absence is MusicBrainz's answer and is held for the call, so the second type
-        // does not re-ask a question already answered
-        assertTrue(results.raw[EnrichmentType.GENRE] is EnrichmentResult.NotFound)
-        assertTrue(results.raw[EnrichmentType.TRACK_METADATA] is EnrichmentResult.NotFound)
+        // Then - each type falls back on its own, and both the absence and the pool it falls back to
+        // are held for the call, so the second type re-asks neither question
+        assertEquals(LIVE_MBID, successOf(results.raw[EnrichmentType.TRACK_METADATA]).resolvedIdentifiers?.musicBrainzId)
+        assertTrue(results.raw[EnrichmentType.GENRE] is EnrichmentResult.Success)
         assertEquals(1, recordingLookups())
+        assertEquals(1, searches())
     }
 
     @Test
-    fun `a credits lookup miss offers the same way out as every other track miss`() = runTest {
+    fun `credits for a dead mbid suggest nothing, as credits for no mbid do`() = runTest {
         // Given - a dead recording MBID, and a pool of recordings for the track it names
         httpClient.givenJsonResponse(RECORDING_SEARCH, LIVE_ONLY_POOL)
 
-        // When - credits are enriched for that identifier
+        // When - credits are enriched for that identifier, with no identity resolution ahead of it
+        // to replace it with one that resolves
         val result = provider.enrich(trackWithMbid(DEAD_MBID), EnrichmentType.CREDITS)
 
-        // Then - MusicBrainz holds no such recording, which is the same dead end the other track
-        // types reach through it, and it is answered the same way
-        assertEquals(listOf(LIVE_MBID, "rec-live-2"), suggestedIdsOf(result))
+        // Then - credits are read off a lookup and never off a search, so an identifier naming
+        // nothing leaves this path where a request naming no recording already sits
+        assertNull(notFoundOf(result).suggestions)
+        assertEquals(0, searches())
     }
 
     @Test
@@ -359,6 +376,13 @@ class MusicBrainzTrackMbidLookupTest {
               ]
             }
         """.trimIndent()
+
+        /**
+         * A 200 the parser rejects: [MusicBrainzParser.parseLookupRecording] requires an `id`, and
+         * this body carries none. MusicBrainz answering at all is what separates this from a 404 —
+         * it holds the recording, so the request stays on the lookup path.
+         */
+        const val UNPARSEABLE_LOOKUP_RESPONSE = """{"title": "Enter Sandman", "length": 331560}"""
 
         /**
          * A `recording/<mbid>` lookup at the widened `inc=`: the recording at the top level, its

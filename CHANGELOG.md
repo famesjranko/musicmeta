@@ -47,7 +47,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A track naming an album MusicBrainz has no release titled resolves from the deep filtered pool as well as the shallow one, instead of only the 25-result search the filter exists to replace
 - A track resolved by name is searched for once per `enrich()` rather than once per type, so the identity block and every type's payload name the same recording where they could disagree
 - `NotFound` suggestions for a track come from the unfiltered pool, so a live or alternate take the consumer may have meant is offered instead of hidden by the filter that resolves the answer
-- A recording MBID MusicBrainz does not hold is looked up once per call rather than once per type, and its `NotFound` now carries suggestions rather than being a dead end
+- A recording MBID MusicBrainz does not hold no longer costs a track request every provider: it names no recording, so the request resolves by name as one carrying no MBID does
+- An album or artist MBID MusicBrainz does not hold likewise resolves the request by name, where it previously returned nothing from MusicBrainz for every type
+- A lookup body MusicBrainz answers with but that does not parse still resolves to nothing: it holds that entity, so no search hit may stand in for the one the caller named
+- An MBID MusicBrainz does not hold is looked up once per call rather than once per type, so a stale third-party id costs one request, not one per type
+- An artist name MusicBrainz holds nothing under is `NotFound` for `BAND_MEMBERS`/`ARTIST_DISCOGRAPHY`/`ARTIST_LINKS`; ranking the empty pool threw and reached consumers as a provider error
 - A track request carrying a recording MBID now resolves every MusicBrainz type from one lookup, where it previously spent a search per type plus a separate credits lookup
 - A 502, 503 or 504 now retries on the same ladder as a 429 (bounded, `Retry-After`-honouring, deadline-aware); MusicBrainz sheds with 503, so a lookup one retry would answer no longer fails
 - MusicBrainz album search took the first score-100 tie, so an album could resolve to a single, bootleg, promo or box set; identity, edition size and earliest date now pick the release

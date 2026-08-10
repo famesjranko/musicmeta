@@ -218,30 +218,25 @@ internal class MusicBrainzApi(
         return encode(if (canonicalOnly) "$withAlbum AND -comment:*" else withAlbum)
     }
 
-    suspend fun lookupRelease(mbid: String): MusicBrainzRelease? {
+    suspend fun lookupRelease(mbid: String): MusicBrainzLookup<MusicBrainzRelease> {
         val json = rateLimiter.execute {
             httpClient.fetchJsonResult(
                 "$BASE_URL/release/$mbid?fmt=json" +
                     "&inc=artist-credits+labels+release-groups+tags+media+recordings",
             ).bodyOrThrowTransient()
-        } ?: return null
-        return MusicBrainzParser.parseLookupRelease(json)
-    }
-
-    suspend fun lookupArtist(mbid: String): MusicBrainzArtist? {
-        val json = rateLimiter.execute {
-            httpClient.fetchJsonResult("$BASE_URL/artist/$mbid?fmt=json&inc=tags+url-rels").bodyOrThrowTransient()
-        } ?: return null
-        return MusicBrainzParser.parseLookupArtist(json)
+        } ?: return MusicBrainzLookup.Absent
+        val release = MusicBrainzParser.parseLookupRelease(json) ?: return MusicBrainzLookup.Unreadable
+        return MusicBrainzLookup.Found(release)
     }
 
     /** Lookup artist with artist-rels included (needed for band member relationships). */
-    suspend fun lookupArtistWithRels(mbid: String): MusicBrainzArtist? {
+    suspend fun lookupArtistWithRels(mbid: String): MusicBrainzLookup<MusicBrainzArtist> {
         val json = rateLimiter.execute {
             httpClient.fetchJsonResult("$BASE_URL/artist/$mbid?fmt=json&inc=tags+url-rels+artist-rels")
                 .bodyOrThrowTransient()
-        } ?: return null
-        return MusicBrainzParser.parseLookupArtist(json)
+        } ?: return MusicBrainzLookup.Absent
+        val artist = MusicBrainzParser.parseLookupArtist(json) ?: return MusicBrainzLookup.Unreadable
+        return MusicBrainzLookup.Found(artist)
     }
 
     /** Lookup a release-group by MBID with releases (needed for editions). */
@@ -277,14 +272,17 @@ internal class MusicBrainzApi(
      * `release-groups` is not optional alongside `releases`: without it MusicBrainz returns releases
      * carrying no `release-group` object at all, which [MusicBrainzParser] reads as "no art"
      * (verified live 2026-08-10).
+     *
+     * Never [MusicBrainzLookup.Unreadable] — this one does not parse, so whether the body reads is
+     * its two readers' answer to give, not this function's.
      */
-    suspend fun lookupRecording(mbid: String): JSONObject? {
+    suspend fun lookupRecording(mbid: String): MusicBrainzLookup<JSONObject> {
         val json = rateLimiter.execute {
             httpClient.fetchJsonResult(
                 "$BASE_URL/recording/$mbid?fmt=json&inc=$RECORDING_LOOKUP_INC",
             ).bodyOrThrowTransient()
-        }
-        return json
+        } ?: return MusicBrainzLookup.Absent
+        return MusicBrainzLookup.Found(json)
     }
 
     /**

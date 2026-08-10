@@ -106,19 +106,38 @@ leave the identity a consumer reads naming one recording while its payload descr
 
 ## Identifiers a caller supplies
 
-MusicBrainz treats an MBID on the request as the entity to describe rather than a hint — for tracks
-as for albums and artists. A recording MBID on a `ForTrack` request is looked up, not searched for,
-at `idBasedLookup()` confidence, and a recording MusicBrainz does not hold is `NotFound` rather than
-a quiet fall back to the name search: answering with a *different* recording is worse than answering
-with none.
+MusicBrainz treats an MBID on the request as the entity to describe rather than a hint, for tracks as
+for albums and artists. It is looked up, not searched for, at `idBasedLookup()` confidence, and an
+entity MusicBrainz **holds** is never traded for a search hit however well that hit ranks — including
+when the lookup body arrives unparseable. Answering with a *different* recording, release or artist
+is worse than answering with none.
 
-A dead identifier is a dead end the consumer cannot correct on its own, so that `NotFound` carries
-suggestions — offered for a person to choose between, never ranked or resolved into the answer. The
-lookup itself is spent once per call however many types ask, including when the request carries a
-release-group id too and identity resolution never runs. `CREDITS` is the one place the distinction
-matters twice over: a recording MusicBrainz does not hold suggests, a recording it holds that credits
-nobody does not, because the identifier resolved and the answer is "this track, and it credits
-nobody" rather than "did you mean a different track?".
+An MBID MusicBrainz holds **nothing** under is the case that is not a miss, and the same rule covers
+all three entity types. It names nothing, so there is no entity an answer could be unfaithful to, and
+the request resolves the way one carrying no identifier at all resolves: by name. `MusicBrainzLookup`
+is where that line lives — `Absent` may fall back, `Unreadable` may not — and `MusicBrainzApi`'s
+lookups return it rather than a bare null so the two cannot be confused at a call site.
+
+This is not a nicety. These identifiers come from third parties in practice, Last.fm's having been
+bulk-imported and never re-synced: measured 2026-08-11 over `track.getSimilar`
+(`scripts/probes/lastfm-mbid-staleness-probe.sh`, `SOURCE=similar`), **51 of the 103 recording MBIDs
+MusicBrainz answered for were held under no entity type at all**. Re-run it before quoting that;
+the rate tracks how obscure the track is, and the same probe over the chart head is far kinder.
+
+For a track the cost of treating such an identifier as authoritative was the *whole call*, not just
+the MusicBrainz types: identity resolution is where a track request meets its MBID, and a `NotFound`
+carrying suggestions tells the engine to skip the provider fan-out
+(`TrackIdentifierMissFanOutTest` pins both halves). Suggestions are for a name that resolves to
+nothing; no identifier path raises them.
+
+The lookup itself is spent once per call however many types ask — a miss included, so a dead
+identifier costs one request and not one per type — and that holds when the request carries a
+release-group id too and identity resolution never runs. `CREDITS` is the one type read off the
+lookup alone: every miss there is bare, because a search hit is not an answer it could use, and a
+recording MusicBrainz holds that credits nobody answers "this track, and it credits nobody" rather
+than "did you mean a different track?". `ARTIST_DISCOGRAPHY` browses rather than looks up, so it
+learns of no absence to recover from; in a full `enrich()` it never sees a dead identifier anyway,
+because identity resolution has replaced it by then.
 
 One MBID is exempt, and it is the one the engine put there itself. Identity resolution runs before
 the fan-out and merges the recording *its own search* picked into the request, so every type then
