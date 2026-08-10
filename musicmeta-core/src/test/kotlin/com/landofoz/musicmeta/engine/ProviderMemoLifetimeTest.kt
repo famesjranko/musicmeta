@@ -37,8 +37,9 @@ class ProviderMemoLifetimeTest {
         provider = MusicBrainzProvider(httpClient, RateLimiter(0))
     }
 
-    // mergers excluded: GENRE is IDENTITY_TYPES-eligible, so identity resolution's own Success
-    // answers it directly rather than the merge path refetching it by MBID.
+    // mergers excluded so GENRE has one predictable source, which is what makes the request counts
+    // below readable: it is IDENTITY_TYPES-eligible, so identity resolution answers it directly,
+    // where stock mergers would route it through GenreMerger to the provider chain instead.
     private fun engine(identityResolution: Boolean = true) = DefaultEnrichmentEngine(
         ProviderRegistry(listOf(provider)),
         FakeEnrichmentCache(),

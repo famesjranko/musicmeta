@@ -159,7 +159,6 @@ internal class MusicBrainzEnricher(
             return enrichArtistNewType(request, type)
         }
 
-        // If we already have an MBID, skip the search and use the memoized lookup
         val mbid = request.identifiers.musicBrainzId
         if (mbid != null) {
             val full = memoizedArtist(mbid)
@@ -512,10 +511,9 @@ internal class MusicBrainzEnricher(
         }
 
     /**
-     * [albumSearchMemo] and [albumFuzzyMemo]'s key: two normalized fields, never one joined string.
-     * [MusicBrainzQualifierFallback.normalize] collapses whitespace, so any single-character join
-     * would need a character a title cannot contain to keep `("a b", "c")` and `("a", "b c")` apart.
-     * Two fields make that unrepresentable instead of documented.
+     * [albumSearchMemo] and [albumFuzzyMemo]'s key. Two fields rather than one joined string:
+     * [MusicBrainzQualifierFallback.normalize] collapses whitespace, so a joined key would need a
+     * separator no title can contain.
      */
     private data class AlbumQuery(val title: String, val artist: String)
 
