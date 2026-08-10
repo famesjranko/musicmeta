@@ -173,3 +173,21 @@ internal data class TagCount(
     val name: String,
     val count: Int,
 )
+
+/**
+ * What a lookup by MBID answered, in the three states a caller must tell apart.
+ *
+ * [Absent] is the only one a name search may stand in for. MusicBrainz answering
+ * [com.landofoz.musicmeta.http.HttpResult.ClientError] means it holds nothing under that identifier
+ * under any entity type — so the identifier names no entity, and there is none for an answer to be
+ * unfaithful to. [Unreadable] names one: MusicBrainz holds it and the body did not parse, so a
+ * search hit would be a *different* entity standing in for the one that was asked for.
+ *
+ * Every transient is thrown by `bodyOrThrowTransient` before either can be reported, so neither is
+ * ever a blip a later type might get past — which is what lets a call hold one and stop re-asking.
+ */
+internal sealed interface MusicBrainzLookup<out T> {
+    data class Found<T>(val value: T) : MusicBrainzLookup<T>
+    data object Absent : MusicBrainzLookup<Nothing>
+    data object Unreadable : MusicBrainzLookup<Nothing>
+}

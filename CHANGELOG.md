@@ -40,6 +40,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ALBUM_DESCRIPTION` (`EnrichmentData.Biography`), from Wikipedia and Last.fm's `wiki` block; in `DEFAULT_ALBUM_TYPES`, top source is keyless and long-cached
 
 ### Fixed
+- A track given no album is resolved from recordings MusicBrainz has already filtered to unmarked ones, so a heavily-covered title reaches the studio recording instead of a live or demo take
+- A track request carrying a recording MBID no longer skips identity resolution, so its `ALBUM_ART` and identity block arrive as they do without one; the MBID used to return less than omitting it
+- A recording MBID on a track request is now looked up rather than discarded, so a track picked from a suggestions list resolves to that recording instead of whatever the name search ranked first
+- A track whose title names its own variant (`Song (Live at …)`) resolves to that recording; the canonical filter deleted it upstream, leaving a full pool and answering with the studio take
+- A track naming an album MusicBrainz has no release titled resolves from the deep filtered pool as well as the shallow one, instead of only the 25-result search the filter exists to replace
+- A track resolved by name is searched for once per `enrich()` rather than once per type, so the identity block and every type's payload name the same recording where they could disagree
+- `NotFound` suggestions for a track come from the unfiltered pool, so a live or alternate take the consumer may have meant is offered instead of hidden by the filter that resolves the answer
+- A recording MBID MusicBrainz does not hold no longer costs a track request every provider: it names no recording, so the request resolves by name as one carrying no MBID does
+- An album or artist MBID MusicBrainz does not hold likewise resolves the request by name, where it previously returned nothing from MusicBrainz for every type
+- A lookup body MusicBrainz answers with but that does not parse still resolves to nothing: it holds that entity, so no search hit may stand in for the one the caller named
+- An MBID MusicBrainz does not hold is looked up once per call rather than once per type, so a stale third-party id costs one request, not one per type
+- An artist name MusicBrainz holds nothing under is `NotFound` for `BAND_MEMBERS`/`ARTIST_DISCOGRAPHY`/`ARTIST_LINKS`; ranking the empty pool threw and reached consumers as a provider error
+- A track request carrying a recording MBID now resolves every MusicBrainz type from one lookup, where it previously spent a search per type plus a separate credits lookup
 - A 502, 503 or 504 now retries on the same ladder as a 429 (bounded, `Retry-After`-honouring, deadline-aware); MusicBrainz sheds with 503, so a lookup one retry would answer no longer fails
 - MusicBrainz album search took the first score-100 tie, so an album could resolve to a single, bootleg, promo or box set; identity, edition size and earliest date now pick the release
 - MusicBrainz `searchCandidates` returned an empty list for tracks; tracks now get candidates and "did you mean?" suggestions (`IdentityMatch.SUGGESTIONS`), matching album/artist behaviour

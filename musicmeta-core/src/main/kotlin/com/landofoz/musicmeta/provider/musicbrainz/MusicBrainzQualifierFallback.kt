@@ -127,6 +127,15 @@ internal object MusicBrainzQualifierFallback {
     }
 
     /**
+     * Whether [title] ends in a bracketed group at all, whatever it says — the *shape* a qualifier
+     * takes, as opposed to [qualifierFallbackCandidates]'s vocabulary, which strips only the groups
+     * naming a reissue or pressing. A caller that must not assume an unclassifiable group is absent
+     * asks this instead: `"(Live at Earls Court)"` conforms to nothing above, and is exactly the
+     * kind of group [MusicBrainzApi.searchCanonicalRecordings] must not filter against.
+     */
+    fun hasTrailingGroup(title: String): Boolean = TRAILING_GROUP.containsMatchIn(title)
+
+    /**
      * One stripping step: [cur] with its trailing qualifier group removed, and that group's tags —
      * or null if there is no trailing group or it doesn't conform (an empty [cur] included, which is
      * what ends the loop in [qualifierFallbackCandidates]).

@@ -12,6 +12,7 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import org.json.JSONObject
 
 /**
  * Handles per-entity enrichment logic for MusicBrainz.
@@ -55,11 +56,17 @@ internal class MusicBrainzEnricher(
         }
     }
 
-    /** Artist lookups by MBID: BAND_MEMBERS, ARTIST_LINKS and GENRE all want the same artist. */
-    private val artistMemo = CallMemo<String, MusicBrainzArtist>()
+    /**
+     * Artist lookups by MBID: BAND_MEMBERS, ARTIST_LINKS and GENRE all want the same artist.
+     *
+     * A miss is held like any other answer, which is what [MusicBrainzLookup]'s three states are
+     * for: an identifier MusicBrainz does not hold otherwise costs one lookup per type to be told
+     * the same thing each time.
+     */
+    private val artistMemo = CallMemo<String, MusicBrainzLookup<MusicBrainzArtist>>()
 
-    private suspend fun memoizedArtist(mbid: String): MusicBrainzArtist? =
-        artistMemo.getOrNull(mbid) { api.lookupArtistWithRels(mbid) }
+    private suspend fun memoizedArtist(mbid: String): MusicBrainzLookup<MusicBrainzArtist> =
+        artistMemo.get(mbid) { api.lookupArtistWithRels(mbid) }
 
     /**
      * Release lookups by MBID, same shape as [artistMemo].
@@ -67,10 +74,18 @@ internal class MusicBrainzEnricher(
      * in the fan-out the identity MBID enables, and ALBUM_TRACKS wants the same response a third
      * time.
      */
-    private val releaseMemo = CallMemo<String, MusicBrainzRelease>()
+    private val releaseMemo = CallMemo<String, MusicBrainzLookup<MusicBrainzRelease>>()
 
-    private suspend fun memoizedRelease(mbid: String): MusicBrainzRelease? =
-        releaseMemo.getOrNull(mbid) { api.lookupRelease(mbid) }
+    private suspend fun memoizedRelease(mbid: String): MusicBrainzLookup<MusicBrainzRelease> =
+        releaseMemo.get(mbid) { api.lookupRelease(mbid) }
+
+    /**
+     * The value a lookup resolved to, or null for either miss — for the call sites where an
+     * identifier this call resolved *itself* is being looked up, so [MusicBrainzLookup.Absent]
+     * cannot mean "the caller named something that does not exist" and both misses degrade the
+     * same way.
+     */
+    private fun <T> MusicBrainzLookup<T>.valueOrNull(): T? = (this as? MusicBrainzLookup.Found)?.value
 
     /**
      * Release-group Wikidata/Wikipedia relations by release-group MBID, same shape as [releaseMemo].
@@ -85,6 +100,41 @@ internal class MusicBrainzEnricher(
     private suspend fun memoizedReleaseGroupWiki(releaseGroupMbid: String): Pair<String?, String?> =
         releaseGroupWikiMemo.get(releaseGroupMbid) { api.lookupReleaseGroupWikiLinks(releaseGroupMbid) }
 
+    /**
+     * Raw recording lookups by MBID, same shape as [releaseMemo] — held raw because CREDITS and the
+     * recording's own fields parse the same response two different ways
+     * ([MusicBrainzApi.lookupRecording]), so one call serves every track type of a request that
+     * carries an MBID.
+     */
+    private val recordingMemo = CallMemo<String, MusicBrainzLookup<JSONObject>>()
+
+    private suspend fun memoizedRecording(mbid: String): MusicBrainzLookup<JSONObject> =
+        recordingMemo.get(mbid) { api.lookupRecording(mbid) }
+
+    /**
+     * Recording ids [enrichTrack] resolved *by search* during this call.
+     *
+     * This is what tells a caller's MBID apart from the engine's own echo of one. Identity
+     * resolution runs on this instance before the fan-out
+     * ([com.landofoz.musicmeta.engine.DefaultEnrichmentEngine]) and merges the recording it picked
+     * into the request, so every type then sees an MBID that was not there when the call started.
+     * Looking *that* up would change which release-group answers a name-only request; looking up one
+     * that came from outside the call is what this path exists to do. Nothing else can draw the line
+     * — the request carries no provenance, and does not need to.
+     *
+     * Guarded like [CallMemo]'s map, and for the same reason: sibling types resolve as concurrent
+     * `async` children.
+     */
+    private val searchResolvedRecordings = mutableSetOf<String>()
+    private val searchResolvedMutex = Mutex()
+
+    private suspend fun rememberSearchResolved(recordingId: String) {
+        searchResolvedMutex.withLock { searchResolvedRecordings.add(recordingId) }
+    }
+
+    private suspend fun isOwnSearchEcho(mbid: String): Boolean =
+        searchResolvedMutex.withLock { mbid in searchResolvedRecordings }
+
     internal suspend fun enrichAlbum(
         request: EnrichmentRequest.ForAlbum, type: EnrichmentType,
     ): EnrichmentResult {
@@ -95,9 +145,14 @@ internal class MusicBrainzEnricher(
         if (type == EnrichmentType.RELEASE_EDITIONS) return enrichAlbumEditions(request)
         val mbid = request.identifiers.musicBrainzId
         if (mbid != null) {
-            val full = memoizedRelease(mbid)
-                ?: return EnrichmentResult.NotFound(type, providerId)
-            return buildAlbumResult(full, type, ConfidenceCalculator.idBasedLookup())
+            when (val lookup = memoizedRelease(mbid)) {
+                is MusicBrainzLookup.Found ->
+                    return buildAlbumResult(lookup.value, type, ConfidenceCalculator.idBasedLookup())
+                MusicBrainzLookup.Unreadable -> return EnrichmentResult.NotFound(type, providerId)
+                // Absent: the identifier names no release, so the request resolves by name below,
+                // exactly as one carrying no identifier does. See [MusicBrainzLookup].
+                MusicBrainzLookup.Absent -> Unit
+            }
         }
         val search = memoizedAlbumSearch(request.title, request.artist)
         val best = search.release ?: return notFoundWithSuggestions(
@@ -108,7 +163,7 @@ internal class MusicBrainzEnricher(
         // lookup is what fills them. GENRE is the one type that reads them and the one this path
         // reaches — LABEL is answered from the identity payload and never gets here.
         val resolved = if (type == EnrichmentType.GENRE && best.tags.isEmpty()) {
-            memoizedRelease(best.id) ?: best
+            memoizedRelease(best.id).valueOrNull() ?: best
         } else {
             best
         }
@@ -120,10 +175,20 @@ internal class MusicBrainzEnricher(
     ): EnrichmentResult {
         val type = EnrichmentType.ALBUM_TRACKS
         val mbid = request.identifiers.musicBrainzId
-            ?: memoizedAlbumSearch(request.title, request.artist).release?.id
-            ?: return EnrichmentResult.NotFound(type, providerId)
-        val release = memoizedRelease(mbid)
-            ?: return EnrichmentResult.NotFound(type, providerId)
+        // An identifier MusicBrainz holds nothing under falls through to the name search, as it does
+        // in enrichAlbum; a release it holds whose body will not parse does not (see
+        // [MusicBrainzLookup]), so the search is only reached when there is no release to be lost.
+        val lookup = mbid?.let { memoizedRelease(it) }
+        val release = when (lookup) {
+            is MusicBrainzLookup.Found -> lookup.value
+            MusicBrainzLookup.Unreadable -> return EnrichmentResult.NotFound(type, providerId)
+            MusicBrainzLookup.Absent, null -> {
+                val searched = memoizedAlbumSearch(request.title, request.artist).release?.id
+                    ?: return EnrichmentResult.NotFound(type, providerId)
+                memoizedRelease(searched).valueOrNull()
+                    ?: return EnrichmentResult.NotFound(type, providerId)
+            }
+        }
         if (release.tracks.isEmpty()) return EnrichmentResult.NotFound(type, providerId)
         return EnrichmentResult.Success(
             type = type, data = MusicBrainzMapper.toTracklist(release.tracks),
@@ -161,21 +226,21 @@ internal class MusicBrainzEnricher(
 
         val mbid = request.identifiers.musicBrainzId
         if (mbid != null) {
-            val full = memoizedArtist(mbid)
-                ?: return EnrichmentResult.NotFound(type, providerId)
-            return buildArtistResult(full, type, ConfidenceCalculator.idBasedLookup())
+            when (val lookup = memoizedArtist(mbid)) {
+                is MusicBrainzLookup.Found ->
+                    return buildArtistResult(lookup.value, type, ConfidenceCalculator.idBasedLookup())
+                MusicBrainzLookup.Unreadable -> return EnrichmentResult.NotFound(type, providerId)
+                // Absent: the identifier names no artist, so the request resolves by name below,
+                // exactly as one carrying no identifier does. See [MusicBrainzLookup].
+                MusicBrainzLookup.Absent -> Unit
+            }
         }
 
         val artists = api.searchArtists(request.name)
-        if (artists.isEmpty()) {
-            return notFoundWithSuggestions(
-                type, artists,
-                fuzzy = { api.searchArtistsFuzzy(request.name, MAX_SUGGESTIONS) },
-            ) { it.toCandidate() }
-        }
-
+        // An empty pool and a pool whose best is below the bar are one answer, not two: neither
+        // names an artist to describe, and both offer the pool (or a fuzzy retry) to choose from.
         val best = pickBestArtist(request.name, artists)
-        if (best.score < minMatchScore) {
+        if (best == null || best.score < minMatchScore) {
             return notFoundWithSuggestions(
                 type, artists,
                 fuzzy = { api.searchArtistsFuzzy(request.name, MAX_SUGGESTIONS) },
@@ -200,7 +265,7 @@ internal class MusicBrainzEnricher(
     // SwallowedException: intentional — see the KDoc above, matching resolveReleaseGroupWikiLinks.
     @Suppress("SwallowedException")
     private suspend fun resolveArtistRelations(best: MusicBrainzArtist): MusicBrainzArtist = try {
-        memoizedArtist(best.id) ?: best
+        memoizedArtist(best.id).valueOrNull() ?: best
     } catch (e: Exception) {
         currentCoroutineContext().ensureActive()
         // Same reasoning as resolveReleaseGroupWikiLinks: this run's wikidataId/wikipediaTitle for
@@ -216,15 +281,13 @@ internal class MusicBrainzEnricher(
         request: EnrichmentRequest.ForArtist,
         type: EnrichmentType,
     ): EnrichmentResult {
-        val mbid = request.identifiers.musicBrainzId ?: run {
-            val artists = api.searchArtists(request.name)
-            val best = pickBestArtist(request.name, artists)
-            if (best.score >= minMatchScore) best.id else null
-        } ?: return EnrichmentResult.NotFound(type, providerId)
+        val mbid = request.identifiers.musicBrainzId
+            ?: nameResolvedArtistId(request)
+            ?: return EnrichmentResult.NotFound(type, providerId)
 
         return when (type) {
             EnrichmentType.BAND_MEMBERS -> {
-                val artist = memoizedArtist(mbid)
+                val artist = lookedUpOrNameResolvedArtist(request, mbid)
                     ?: return EnrichmentResult.NotFound(type, providerId)
                 val members = if (artist.bandMembers.isNotEmpty()) {
                     MusicBrainzMapper.toBandMembers(artist.bandMembers)
@@ -250,7 +313,7 @@ internal class MusicBrainzEnricher(
                 )
             }
             EnrichmentType.ARTIST_LINKS -> {
-                val artist = memoizedArtist(mbid)
+                val artist = lookedUpOrNameResolvedArtist(request, mbid)
                     ?: return EnrichmentResult.NotFound(type, providerId)
                 if (artist.urlRelations.isEmpty()) return EnrichmentResult.NotFound(type, providerId)
                 EnrichmentResult.Success(
@@ -264,44 +327,145 @@ internal class MusicBrainzEnricher(
         }
     }
 
+    /**
+     * The artist [mbid] names, or — when MusicBrainz holds nothing under it — the one the name
+     * search picks instead, as [enrichArtist] resolves the same case. Null is a genuine miss.
+     *
+     * [MusicBrainzLookup.Unreadable] is not a miss to recover from: MusicBrainz holds that artist,
+     * so another cannot stand in for it.
+     *
+     * `ARTIST_DISCOGRAPHY` needs no equivalent. It browses rather than looks up, so it has nothing
+     * to learn an absence from without paying for a lookup it does not otherwise want — and in a
+     * full [com.landofoz.musicmeta.engine.EnrichmentEngine.enrich] it never sees the dead identifier
+     * anyway, because identity resolution has already replaced it with the one it resolved.
+     */
+    private suspend fun lookedUpOrNameResolvedArtist(
+        request: EnrichmentRequest.ForArtist,
+        mbid: String,
+    ): MusicBrainzArtist? = when (val lookup = memoizedArtist(mbid)) {
+        is MusicBrainzLookup.Found -> lookup.value
+        MusicBrainzLookup.Unreadable -> null
+        MusicBrainzLookup.Absent ->
+            nameResolvedArtistId(request)?.let { memoizedArtist(it).valueOrNull() }
+    }
+
+    /** The artist id [request]'s name resolves to, above [minMatchScore]. Null if no name matches. */
+    private suspend fun nameResolvedArtistId(request: EnrichmentRequest.ForArtist): String? =
+        pickBestArtist(request.name, api.searchArtists(request.name))
+            ?.takeIf { it.score >= minMatchScore }
+            ?.id
+
     internal suspend fun enrichTrack(
         request: EnrichmentRequest.ForTrack,
         type: EnrichmentType,
     ): EnrichmentResult {
         if (type == EnrichmentType.CREDITS) return enrichTrackCredits(request)
-
-        val recordings = api.searchRecordings(request.title, request.artist, request.album)
-        val best = pickBestRecording(request.title, recordings, request.album)
-            ?: resolveTrackQualifierFallback(request.title, request.artist, request.album)
-            // searchRecordings' own hint-less retry re-sends the title quoted (see its KDoc), so
-            // only the fuzzy search can rescue a typo — and only an empty strict pool triggers it.
-            ?: return notFoundWithSuggestions(
-                type, recordings,
-                fuzzy = { api.searchRecordingsFuzzy(request.title, request.artist, MAX_SUGGESTIONS) },
-            ) { it.toCandidate() }
-
-        val data = if (type == EnrichmentType.TRACK_METADATA) {
-            MusicBrainzMapper.toTrackMetadataDetails(best)
-        } else {
-            MusicBrainzMapper.toTrackMetadata(best)
+        val mbid = request.identifiers.musicBrainzId
+        if (mbid != null && !isOwnSearchEcho(mbid)) {
+            enrichTrackByMbid(request, mbid, type)?.let { return it }
         }
-
-        return EnrichmentResult.Success(
-            type = type,
-            data = data,
-            provider = providerId,
-            confidence = ConfidenceCalculator.searchScore(best.score),
-            resolvedIdentifiers = MusicBrainzMapper.toTrackIdentifiers(best),
-        )
+        return enrichTrackBySearch(request, type)
     }
 
+    /**
+     * The MBID reached this call from outside it — a caller's, or a foreign identity provider's —
+     * so it names the recording the answer must describe, exactly as [enrichAlbum] and [enrichArtist]
+     * treat theirs. A recording MusicBrainz *holds* is never traded for a search hit: answering with
+     * a different recording is the defect this path exists to close, and that holds whether the
+     * lookup's body parses or not.
+     *
+     * [MusicBrainzLookup.Absent] is the one case that is not a miss: MusicBrainz has stated it holds
+     * no such recording under any entity type. An identifier naming nothing names no recording to be
+     * faithful to, so there is no wrong-recording risk in resolving the request the way one carrying
+     * no identifier at all resolves — and [enrichTrack] does exactly that with the null this returns
+     * for it. Treating the two alike costs a consumer the whole track for a stale third-party id,
+     * which is what these identifiers are in practice.
+     *
+     * Nothing here returns [trackMiss]. Its suggestions mean "name the entity you meant", which the
+     * engine reads as grounds to skip the provider fan-out entirely
+     * ([com.landofoz.musicmeta.engine.DefaultEnrichmentEngine]) — right for a name that resolves to
+     * nothing, wrong for an identifier, whose miss must never cost the request the providers that
+     * did not need it.
+     */
+    private suspend fun enrichTrackByMbid(
+        request: EnrichmentRequest.ForTrack,
+        mbid: String,
+        type: EnrichmentType,
+    ): EnrichmentResult? {
+        val json = memoizedRecording(mbid).valueOrNull() ?: return null
+        val recording = MusicBrainzParser.parseLookupRecording(json, request.album)
+            ?: return EnrichmentResult.NotFound(type, providerId)
+        return trackResult(recording, type, ConfidenceCalculator.idBasedLookup())
+    }
+
+    private suspend fun enrichTrackBySearch(
+        request: EnrichmentRequest.ForTrack,
+        type: EnrichmentType,
+    ): EnrichmentResult {
+        val recordings = memoizedTrackSearch(request)
+        val best = pickBestRecording(request.title, recordings, request.album)
+            ?: resolveTrackQualifierFallback(request.title, request.artist, request.album)
+            ?: return trackMiss(request, type)
+
+        rememberSearchResolved(best.id)
+        return trackResult(best, type, ConfidenceCalculator.searchScore(best.score))
+    }
+
+    /**
+     * The answer when a *name* resolves to no recording. Suggestions only — nothing offered here is
+     * remembered by [rememberSearchResolved] or can become the answer.
+     *
+     * Reached from [enrichTrackBySearch] and nowhere else, which is load-bearing rather than
+     * incidental: see [enrichTrackByMbid] for what these suggestions cost a request that reaches the
+     * engine's identity resolution.
+     *
+     * [MusicBrainzApi.searchRecordings]' own hint-less retry re-sends the title quoted (see its
+     * KDoc), so only the fuzzy search can rescue a typo, and only an empty suggestion pool asks for
+     * it.
+     */
+    private suspend fun trackMiss(
+        request: EnrichmentRequest.ForTrack,
+        type: EnrichmentType,
+    ): EnrichmentResult.NotFound = notFoundWithSuggestions(
+        type, memoizedTrackSuggestions(request),
+        fuzzy = { memoizedFuzzyRecordings(request) },
+    ) { it.toCandidate() }
+
+    private fun trackResult(
+        recording: MusicBrainzRecording,
+        type: EnrichmentType,
+        confidence: Float,
+    ): EnrichmentResult.Success = EnrichmentResult.Success(
+        type = type,
+        data = if (type == EnrichmentType.TRACK_METADATA) {
+            MusicBrainzMapper.toTrackMetadataDetails(recording)
+        } else {
+            MusicBrainzMapper.toTrackMetadata(recording)
+        },
+        provider = providerId,
+        confidence = confidence,
+        resolvedIdentifiers = MusicBrainzMapper.toTrackIdentifiers(recording),
+    )
+
+    /**
+     * Credits are read off a recording lookup and never off a search, so every miss here is bare —
+     * including an identifier MusicBrainz does not hold, which [enrichTrackByMbid] answers by
+     * resolving the request as if it carried no identifier. This path has no such answer to fall
+     * back to: a request carrying no identifier is already a [EnrichmentResult.NotFound]. In a full
+     * [com.landofoz.musicmeta.engine.EnrichmentEngine.enrich] the point is close to moot, because
+     * identity resolution replaces the dead identifier with the one it resolved before this runs.
+     *
+     * A recording it *does* hold that credits nobody is a different miss again: the caller's
+     * identifier resolved, and offering other recordings would answer "did you mean a different
+     * track?" when the answer is "this track, and it credits nobody".
+     */
     internal suspend fun enrichTrackCredits(
         request: EnrichmentRequest.ForTrack,
     ): EnrichmentResult {
         val type = EnrichmentType.CREDITS
         val mbid = request.identifiers.musicBrainzId
             ?: return EnrichmentResult.NotFound(type, providerId)
-        val json = api.lookupRecording(mbid)
+        val json = memoizedRecording(mbid).valueOrNull()
             ?: return EnrichmentResult.NotFound(type, providerId)
         val credits = MusicBrainzCreditParser.parseRecordingCredits(json)
         if (credits.isEmpty()) return EnrichmentResult.NotFound(type, providerId)
@@ -380,11 +544,13 @@ internal class MusicBrainzEnricher(
     /**
      * Rank artist candidates: exact name match with tags > exact name match >
      * has tags with high score > highest score.
+     *
+     * Null for an empty pool: a name MusicBrainz knows nothing of is a miss, not a failure.
      */
     private fun pickBestArtist(
         query: String,
         candidates: List<MusicBrainzArtist>,
-    ): MusicBrainzArtist = candidates.sortedByDescending { artist ->
+    ): MusicBrainzArtist? = candidates.sortedByDescending { artist ->
         val exactMatch = artist.name.equals(query, ignoreCase = true)
         val hasTags = artist.tags.isNotEmpty()
         when {
@@ -393,7 +559,7 @@ internal class MusicBrainzEnricher(
             hasTags -> 1
             else -> 0
         }
-    }.first()
+    }.firstOrNull()
 
     /**
      * Rank the recording pool above [minMatchScore] instead of taking `firstOrNull` — MB search
@@ -416,15 +582,21 @@ internal class MusicBrainzEnricher(
      *    verified live, Radiohead's "Karma Police" music-video recording is the *only* exact-title,
      *    score-100 hit for an album-hinted "OK Computer" search, so it would otherwise win tier 1
      *    outright with nothing to lose to.
-     * 4. blank [MusicBrainzRecording.disambiguation] — a canonical recording carries none; ANY
+     * 4. blank [MusicBrainzRecording.disambiguation] — normally decided upstream, since
+     *    [MusicBrainzApi.searchCanonicalRecordings] asks MusicBrainz for exactly this tier and a
+     *    filtered pool is all blanks; it still fires on the unfiltered pools that reach here (the
+     *    qualifier fallback's, and the fallback when the filter empties the pool). A canonical
+     *    recording carries no disambiguation; ANY
      *    disambiguation marks a variant. MB's disambiguation vocabulary is open (demo, live,
      *    "bootleg edited version", instrumental, acoustic, radio edit, mono/stereo, single
      *    version, …) and cannot be enumerated by keyword — verified live: "bootleg edited version"
      *    isn't a "demo"/"live"/"remix"/"remaster" keyword match, so a keyword list let it tie the
-     *    studio original and win on pool order. Blank-vs-non-blank has no such gap. The accepted
-     *    edge: a request that explicitly asks for a variant edition (title itself names it) still
-     *    resolves via tier 1's exact-title match, because MB puts variant information in
-     *    disambiguation, not in the recording title — blank-preference never fights an exact title.
+     *    studio original and win on pool order. Blank-vs-non-blank has no such gap. A request that
+     *    explicitly asks for a variant edition (title itself names it) resolves on tier 1 instead,
+     *    which outranks this one — but only while that recording is in the pool, and MB routinely
+     *    repeats the variant in the disambiguation as well as the title, which `-comment:*` removes
+     *    upstream. [MusicBrainzApi.searchCanonicalRecordings] keeps the filter off such a request
+     *    for exactly that reason.
      * 5. carries an Official release on an Album release-group
      *    ([MusicBrainzRecording.hasOfficialAlbumRelease]) — prefers the studio album cut over a
      *    single/compilation-only recording when neither carries a disambiguation
@@ -519,6 +691,63 @@ internal class MusicBrainzEnricher(
     )
 
     /**
+     * The recording pool a track request resolves out of. Keyed like [albumSearchMemo], and holding
+     * which recording a name resolves to under the same protection: nothing here outlives the call.
+     *
+     * A track repeats this search where an album does not. Identity resolution merges the recording
+     * it picked into the request, and [enrichTrack] deliberately routes that MBID back to the search
+     * rather than looking it up ([isOwnSearchEcho]), so identity's query and every type's query are
+     * the same one. Two of them are not equivalent to one: MusicBrainz does not order identical
+     * searches identically, and [pickBestRecording] keeps the first maximum among ties, so a second
+     * search ranks a differently-ordered pool and can pick a different recording — leaving the
+     * identity a consumer reads naming one recording while its payload describes another.
+     */
+    private val trackSearchMemo = CallMemo<TrackQuery, List<MusicBrainzRecording>>()
+
+    private suspend fun memoizedTrackSearch(request: EnrichmentRequest.ForTrack): List<MusicBrainzRecording> =
+        trackSearchMemo.get(trackQuery(request)) {
+            api.searchCanonicalRecordings(request.title, request.artist, request.album)
+        }
+
+    /**
+     * The pool a track miss *suggests* from, keyed as [trackSearchMemo] is.
+     *
+     * Unfiltered, and never what a request resolves out of: a suggestion list is a choose-a-version
+     * surface, built the way [MusicBrainzProvider.searchCandidates] builds its own, because a list
+     * narrowed to canonical recordings cannot answer "I want the Moscow one" — and the resolution
+     * pool is narrowed to exactly that. A different query from [trackSearchMemo]'s, so it holds its
+     * own answer; one extra request, on the miss path only.
+     */
+    private val trackSuggestionMemo = CallMemo<TrackQuery, List<MusicBrainzRecording>>()
+
+    private suspend fun memoizedTrackSuggestions(request: EnrichmentRequest.ForTrack): List<MusicBrainzRecording> =
+        trackSuggestionMemo.get(trackQuery(request)) {
+            api.searchRecordings(request.title, request.artist, request.album)
+        }
+
+    /**
+     * Near-miss suggestions for a track no pool holds, keyed as [trackSuggestionMemo] is and
+     * memoized for the reason [albumFuzzyMemo] is: the pool that decides they are needed is
+     * memoized, so an absent track would otherwise pay a full `recording?query=` per type for the
+     * same three suggestions.
+     */
+    private val trackFuzzyMemo = CallMemo<TrackQuery, List<MusicBrainzRecording>>()
+
+    private suspend fun memoizedFuzzyRecordings(request: EnrichmentRequest.ForTrack): List<MusicBrainzRecording> =
+        trackFuzzyMemo.get(trackQuery(request)) {
+            api.searchRecordingsFuzzy(request.title, request.artist, MAX_SUGGESTIONS)
+        }
+
+    /** [trackSearchMemo]'s key, in fields for the reason [AlbumQuery] is. A blank album is no album. */
+    private data class TrackQuery(val title: String, val artist: String, val album: String)
+
+    private fun trackQuery(request: EnrichmentRequest.ForTrack) = TrackQuery(
+        MusicBrainzQualifierFallback.normalize(request.title),
+        MusicBrainzQualifierFallback.normalize(request.artist),
+        MusicBrainzQualifierFallback.normalize(request.album),
+    )
+
+    /**
      * Resolves an album search, trying [title]/[artist] as-is first — unchanged from today's
      * behavior — and only falling back to [MusicBrainzQualifierFallback]'s progressively-stripped
      * candidates when the direct search finds nothing at or above [minMatchScore], then to
@@ -602,9 +831,7 @@ internal class MusicBrainzEnricher(
      * catalogue and nothing downstream would catch it.
      */
     private suspend fun resolveArtistMbidForFallback(artist: String, artistNorm: String): String? {
-        val artists = api.searchArtists(artist)
-        if (artists.isEmpty()) return null
-        val best = pickBestArtist(artist, artists)
+        val best = pickBestArtist(artist, api.searchArtists(artist)) ?: return null
         val exact = best.score >= minMatchScore && MusicBrainzQualifierFallback.normalize(best.name) == artistNorm
         return best.id.takeIf { exact }
     }

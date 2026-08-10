@@ -8,6 +8,7 @@ import java.io.IOException
 
 class FakeHttpClient : HttpClient {
     private val jsonResponses = mutableMapOf<String, String>()
+    private val sequencedResponses = mutableMapOf<String, MutableList<String>>()
     private val errors = mutableSetOf<String>()
     private val ioExceptions = mutableSetOf<String>()
     private val httpResultResponses = mutableMapOf<String, HttpResult<JSONObject>>()
@@ -17,6 +18,17 @@ class FakeHttpClient : HttpClient {
     val requestedHeaders = mutableListOf<Map<String, String>>()
 
     fun givenJsonResponse(urlContains: String, json: String) { jsonResponses[urlContains] = json }
+
+    /**
+     * Successive answers to the *same* URL, in order, the last one repeating — for an upstream
+     * whose ordering is not stable between identical calls. MusicBrainz's recording search is one:
+     * the same query returns the same recordings in a different order run to run, which is what
+     * makes a repeated search a correctness question and not only a cost one.
+     */
+    fun givenJsonResponsesInTurn(urlContains: String, vararg json: String) {
+        sequencedResponses[urlContains] = json.toMutableList()
+    }
+
     fun givenJsonArrayResponse(urlContains: String, json: String) { jsonResponses[urlContains] = json }
     fun givenError(urlContains: String) { errors.add(urlContains) }
 
@@ -42,7 +54,7 @@ class FakeHttpClient : HttpClient {
         if (errors.any { url.contains(it) }) return HttpResult.NetworkError("Simulated network error")
         redirectResults.entries.firstOrNull { url.contains(it.key) }?.let { return it.value }
         // Unstubbed resolves to the request URL itself, as a 2xx no-op redirect.
-        return HttpResult.Ok(jsonResponses.entries.firstOrNull { url.contains(it.key) }?.value ?: url)
+        return HttpResult.Ok(bodyFor(url) ?: url)
     }
 
     override suspend fun fetchJsonResult(url: String): HttpResult<JSONObject> =
@@ -58,7 +70,7 @@ class FakeHttpClient : HttpClient {
         if (errors.any { url.contains(it) }) return HttpResult.NetworkError("Simulated network error")
         val configured = httpResultResponses.entries.firstOrNull { url.contains(it.key) }
         if (configured != null) return configured.value
-        val json = jsonResponses.entries.firstOrNull { url.contains(it.key) }?.value
+        val json = bodyFor(url)
         return if (json != null) HttpResult.Ok(JSONObject(json)) else UNSTUBBED
     }
 
@@ -68,7 +80,7 @@ class FakeHttpClient : HttpClient {
         if (errors.any { url.contains(it) }) return HttpResult.NetworkError("Simulated network error")
         val configured = httpResultArrayResponses.entries.firstOrNull { url.contains(it.key) }
         if (configured != null) return configured.value
-        val json = jsonResponses.entries.firstOrNull { url.contains(it.key) }?.value
+        val json = bodyFor(url)
         return if (json != null) HttpResult.Ok(JSONArray(json)) else UNSTUBBED
     }
 
@@ -78,7 +90,7 @@ class FakeHttpClient : HttpClient {
         if (errors.any { url.contains(it) }) return HttpResult.NetworkError("Simulated network error")
         val configured = httpResultResponses.entries.firstOrNull { url.contains(it.key) }
         if (configured != null) return configured.value
-        val json = jsonResponses.entries.firstOrNull { url.contains(it.key) }?.value
+        val json = bodyFor(url)
         return if (json != null) HttpResult.Ok(JSONObject(json)) else UNSTUBBED
     }
 
@@ -88,8 +100,15 @@ class FakeHttpClient : HttpClient {
         if (errors.any { url.contains(it) }) return HttpResult.NetworkError("Simulated network error")
         val configured = httpResultArrayResponses.entries.firstOrNull { url.contains(it.key) }
         if (configured != null) return configured.value
-        val json = jsonResponses.entries.firstOrNull { url.contains(it.key) }?.value
+        val json = bodyFor(url)
         return if (json != null) HttpResult.Ok(JSONArray(json)) else UNSTUBBED
+    }
+
+    /** A sequenced stub answers first, so a URL can be given an order as well as a body. */
+    private fun bodyFor(url: String): String? {
+        val queued = sequencedResponses.entries.firstOrNull { url.contains(it.key) }?.value
+        if (queued != null) return if (queued.size > 1) queued.removeAt(0) else queued.first()
+        return jsonResponses.entries.firstOrNull { url.contains(it.key) }?.value
     }
 
     companion object {
