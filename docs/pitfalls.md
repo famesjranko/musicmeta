@@ -348,3 +348,52 @@ Two things follow for anyone touching the status mapping:
 And the header a shed response carries cannot be added to `ServerError` — it is a public
 `data class`, so a new constructor parameter breaks `copy()` for every consumer (§1). Anything a
 retry needs beyond the result type has to travel privately.
+
+## 12. A provider's own memo is a cache no consumer can flush
+
+`MusicBrainzEnricher` memoizes its artist, release, release-group-wiki, album-search and
+album-suggestion lookups because the engine asks for one type at a time and `EnrichmentCache` is
+keyed by type — nothing above the provider can tell that GENRE and ALBUM_TRACKS want the same
+release, and each repeat is a ~1.1s wait on the shared limiter.
+
+That much is right, and what deleting them costs depends entirely on whether the album resolves.
+Measured over the six album types MusicBrainz declares a capability for, on the shipped defaults —
+in-process against `FakeHttpClient`, so no live number decays here. The recipe, if you need it
+again: count the upstream requests one `enrich()` makes over all six types, then count them again
+with each memo reduced to its bare API call.
+
+| One album's fan-out | With the memos | Without |
+|---|---|---|
+| Album resolves | 3 requests | 6 — **2×** |
+| Album is absent | 6 requests | 41 — **~7×** |
+
+The resolvable path is cheap either way because `IDENTITY_TYPES` answers five of the six types from
+the identity payload and drops them before the provider chain sees them, so the fan-out is really
+one or two types wide. The miss is where the memos earn their keep: nothing is dropped, so every
+type pays the whole ladder.
+
+**Neither column is pinned by a test.** `ProviderMemoLifetimeTest` asserts per-kind counts over two
+or three types — one release lookup, one artist search, one run of browse pages, two release
+searches — so it catches a per-type *repeat*, which is the property worth guarding. The totals above
+are six-type figures and come from the recipe, not from an assertion: re-run it rather than trusting
+them.
+
+What was wrong was its **lifetime**, not its layer. It sat on the provider object, which lives as
+long as the engine, with no TTL and nothing able to clear it. So
+`enrich(…, forceRefresh = true)` — documented as "fetches fresh data from providers" — invalidated
+`EnrichmentCache`, called the provider, and was handed the payload the *first* call had fetched.
+`invalidate()` had the same hole, and `engine.cache.clear()` cannot be intercepted at all: `cache` is
+a public property, so a consumer clearing it never enters the engine. `ProviderCallScope` now owns
+that state for one `enrich()` call, which makes every refresh path honest by construction.
+
+Before adding provider-internal state of any kind:
+
+- **State that outlives the call is a second cache with none of `EnrichmentCache`'s guarantees.**
+  Put it in the call scope, or own a TTL and an invalidation path for it. `ProviderCallScope` is
+  `internal`, so a provider outside this repo has only the second option.
+- **Payload staleness is recoverable; identity staleness is not.** A memo keyed by MBID serves at
+  worst an out-of-date payload for an entity already resolved. `MusicBrainzEnricher`'s album-search
+  memo is keyed by *title/artist* instead, so it holds which entity a name resolves to — safe only
+  because it dies with the call. Held any longer, no refresh could ever correct a mis-resolution.
+- Per-call state rides the coroutine context, as `EnrichDeadline` and `TransientIdentifierMarker`
+  already do. A new `EnrichmentProvider` method would be a documented break instead (§1).

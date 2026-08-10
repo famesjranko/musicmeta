@@ -130,24 +130,6 @@ class MusicBrainzProviderTest {
         }
 
     @Test
-    fun `enrich album release-group wiki lookup is cached across repeated type resolution`() = runTest {
-        // Given - same album resolved for two types in the same MusicBrainzProvider instance
-        httpClient.givenJsonResponse("release?query", RELEASE_SEARCH_HIGH_SCORE)
-        httpClient.givenJsonResponse("release-group/group123", RELEASE_GROUP_WITH_WIKI_RELATIONS)
-        val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
-
-        // When - GENRE resolves identity, then LABEL is resolved for the same (uncached) request
-        provider.enrich(request, EnrichmentType.GENRE)
-        httpClient.requestedUrls.clear()
-        val result = provider.enrich(request, EnrichmentType.LABEL)
-
-        // Then - the second call re-searches (no cached MBID on this request) but hits the
-        // release-group wiki cache rather than repeating the release-group/group123 request
-        assertTrue(result is EnrichmentResult.Success)
-        assertTrue(httpClient.requestedUrls.none { it.contains("release-group/group123") })
-    }
-
-    @Test
     fun `a transient on the release-group wiki lookup does not fail GENRE`() = runTest {
         // Given - the release search succeeds, but the release-group's dedicated wiki-links lookup
         // 503s. Before the fix this propagated out of buildAlbumResult and turned GENRE itself into
@@ -466,7 +448,7 @@ class MusicBrainzProviderTest {
     }
 
     @Test
-    fun `artist cache serves repeat lookups but evicts once past its cap`() = runTest {
+    fun `the artist memo does not outlive the call that filled it`() = runTest {
         // Given - every artist lookup resolves
         httpClient.givenJsonResponse("artist/", ARTIST_LOOKUP_WITH_MEMBERS)
         suspend fun lookup(mbid: String) = provider.enrich(
@@ -474,21 +456,15 @@ class MusicBrainzProviderTest {
                 .withIdentifiers(EnrichmentIdentifiers(musicBrainzId = mbid)),
             EnrichmentType.BAND_MEMBERS,
         )
-        fun lookupsFor(mbid: String) = httpClient.requestedUrls.count { it.contains("artist/$mbid?") }
 
-        // When - the same MBID is looked up twice
+        // When - the same MBID is asked for by two separate calls
         lookup("art1")
         lookup("art1")
 
-        // Then - the second one is served from the cache (the ~1.1s saving this map exists for)
-        assertEquals(1, lookupsFor("art1"))
-
-        // When - enough distinct MBIDs follow to push art1 out of an access-ordered cap
-        repeat(MusicBrainzEnricher.ARTIST_CACHE_MAX_ENTRIES) { lookup("filler$it") }
-        lookup("art1")
-
-        // Then - art1 was evicted rather than the map growing without bound
-        assertEquals(2, lookupsFor("art1"))
+        // Then - the second call fetched it again rather than answering from the first call's memo,
+        // which is what lets a consumer's forceRefresh reach MusicBrainz. The saving the memo does
+        // buy — one lookup for every type of a single call — is pinned in ProviderMemoLifetimeTest.
+        assertEquals(2, httpClient.requestedUrls.count { it.contains("artist/art1?") })
     }
 
     @Test
@@ -790,30 +766,22 @@ class MusicBrainzProviderTest {
     }
 
     @Test
-    fun `release cache serves repeat lookups but evicts once past its cap`() = runTest {
+    fun `the release memo does not outlive the call that filled it`() = runTest {
         // Given - a thin search hit, so GENRE takes the lookup path
         httpClient.givenJsonResponse("release?query", RELEASE_SEARCH_THIN)
         httpClient.givenJsonResponse("release/", RELEASE_LOOKUP_FULL)
-        suspend fun byMbid(mbid: String) = provider.enrich(
+
+        // When - one call resolves thin1 by search, and a second asks for it by MBID
+        provider.enrich(EnrichmentRequest.forAlbum("OK Computer", "Radiohead"), EnrichmentType.GENRE)
+        provider.enrich(
             EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
-                .withIdentifiers(EnrichmentIdentifiers(musicBrainzId = mbid)),
+                .withIdentifiers(EnrichmentIdentifiers(musicBrainzId = "thin1")),
             EnrichmentType.GENRE,
         )
-        fun lookupsFor(mbid: String) = httpClient.requestedUrls.count { it.contains("release/$mbid?") }
 
-        // When - the search path resolves thin1, then the fan-out re-enters on the MBID it exposed
-        provider.enrich(EnrichmentRequest.forAlbum("OK Computer", "Radiohead"), EnrichmentType.GENRE)
-        byMbid("thin1")
-
-        // Then - the second one is served from the cache, not fetched ~1.1s later
-        assertEquals(1, lookupsFor("thin1"))
-
-        // When - enough distinct MBIDs follow to push thin1 out of an access-ordered cap
-        repeat(MusicBrainzEnricher.RELEASE_CACHE_MAX_ENTRIES) { byMbid("filler$it") }
-        byMbid("thin1")
-
-        // Then - thin1 was evicted rather than the map growing without bound
-        assertEquals(2, lookupsFor("thin1"))
+        // Then - the second call fetched the release again rather than answering from the first
+        // call's memo; the within-a-call saving is pinned in ProviderMemoLifetimeTest.
+        assertEquals(2, httpClient.requestedUrls.count { it.contains("release/thin1?") })
     }
 
     @Test
@@ -832,7 +800,7 @@ class MusicBrainzProviderTest {
         assertTrue(httpClient.requestedUrls.any { it.contains("release-group/group123") })
     }
 
-    // --- issue 06: transient side-lookup must not resolve to a cacheable NotFound ---
+    // --- transient side-lookup must not resolve to a cacheable NotFound ---
 
     @Test
     fun `a transient release-group wiki lookup reclassifies ALBUM_DESCRIPTION to Error in the same run that resolves GENRE`() = runTest {
@@ -883,9 +851,7 @@ class MusicBrainzProviderTest {
     @Test
     fun `a transient artist-relations lookup no longer throws, and marks the run's transient set instead`() = runTest {
         // Given - the artist search hit needs the full relations fetch (no wikidataId/wikipediaTitle
-        // on the search result), and that fetch 503s. Before this fix, cachedArtistLookup(best.id)
-        // at MusicBrainzEnricher's `needsRelations` branch was called with no try/catch at all — a
-        // transient there propagated straight out of enrichArtist.
+        // on the search result), and that fetch 503s
         httpClient.givenJsonResponse("artist?query", ARTIST_SEARCH_NO_WIKI_RELATIONS)
         httpClient.givenHttpResult("artist/", HttpResult.ServerError(503))
         val request = EnrichmentRequest.forArtist("Radiohead")

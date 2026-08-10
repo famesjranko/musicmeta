@@ -1358,7 +1358,7 @@ class DefaultEnrichmentEngineTest {
         assertEquals("Discography provider should not be called again on cache hit", discoCallsAfterFirst, discoProvider.enrichCalls.size)
     }
 
-    // --- issue 06: transient side-lookup must not resolve to a cacheable NotFound ---
+    // --- transient side-lookup must not resolve to a cacheable NotFound ---
 
     @Test fun `a transient in identity resolution reclassifies an identifier-gated type to Error even when a same-chain provider with no requirement ran and returned its own NotFound`() = runTest {
         // Given - identity resolution throws a transient (mirrors MusicBrainz hiccuping); the target
