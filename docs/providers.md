@@ -7,7 +7,7 @@ away, and a copy of them rots while it moves. §Rate limiting keeps the one-limi
 topology and where each interval's basis comes from.
 
 **Nothing here is checked.** No mechanism verifies a word of it. Hand-verified against the packages
-on **2026-08-10**; treat anything after that as a claim, not a fact. §What we don't extract is the
+on **2026-08-11**; treat anything after that as a claim, not a fact. §What we don't extract is the
 part that rots fastest — most of what it lists is a to-do, and a to-do that gets done reads as a
 still-open one until someone re-reads the code.
 
@@ -62,10 +62,25 @@ A track request naming **no album** is resolved out of a pool MusicBrainz has al
 ranking's fourth tier applies. Doing it upstream is the point: downstream, the tier can only rank
 what the page already let through, and for a heavily-covered title that is nothing at all.
 
-A request that *does* name an album is left alone. An album is the better narrowing term, and the two
-do not compose: the filter deletes candidates, so a recording that is marked *and* on the requested
-album would be gone before the ranking's album-match tier, which outranks its disambiguation tier,
-could prefer it.
+A request that *does* name an album, and whose album term finds recordings, is left alone. An album is
+the better narrowing term, and the two do not compose: the filter deletes candidates, so a recording
+that is marked *and* on the requested album would be gone before the ranking's album-match tier,
+which outranks its disambiguation tier, could prefer it.
+
+An album term that finds **nothing** is a different case, and a reachable one — the query matches
+release titles while the ranking matches release-*group* titles, so an empty hinted pool is not
+evidence the album is absent. The hint-less retry asks for both pools, filtered and unfiltered, and
+ranks their union: the filtered one for the depth above, the unfiltered one so a marked take on the
+requested album is still there for the album-match tier to prefer. One extra request, on that path
+only.
+
+A request whose **own title ends in a bracketed group** takes the unfiltered ladder whole. Such a
+title is how a consumer asks for a variant by name, and MusicBrainz routinely repeats the variant in
+the disambiguation as well as the title — so the filter deletes precisely the recording that was
+asked for, leaves the pool full, and answers with the studio take. The test is structural rather than
+a vocabulary of variant words, so a canonical title that merely ends in brackets takes that ladder
+too; that is the safe direction, degrading to the pool that shipped before the filter existed rather
+than to a different recording.
 
 The page is MusicBrainz's own maximum and not a number to raise — above it the search does not clamp,
 it silently serves the default 25, so a raise would shrink the pool rather than widen it. A test
@@ -79,8 +94,15 @@ The measurements behind all of this live on `MusicBrainzApi.CANONICAL_SEARCH_LIM
 `scripts/probes/recording-pool-filter-probe.sh` as the recipe. They are not repeated here on purpose:
 figures decay as MusicBrainz's catalogue grows, and a copy rots while it moves.
 
-`searchCandidates` is deliberately not filtered. That list exists for a consumer to pick a version
-from, and one narrowed to canonical recordings cannot answer "I want the Moscow one".
+Neither surface a consumer *chooses* from is filtered: not `searchCandidates`, and not the
+suggestions on a `NotFound`. Both exist for picking a version, and one narrowed to canonical
+recordings cannot answer "I want the Moscow one" — so a miss searches unfiltered to build them,
+which is the one request that path costs.
+
+The pool is searched **once per `enrich()`**, not once per type. That is a correctness rule before it
+is a cost one: MusicBrainz does not order identical searches identically, and the ranking keeps the
+first maximum among ties, so a second search of the same query can pick a different recording and
+leave the identity a consumer reads naming one recording while its payload describes another.
 
 ## Identifiers a caller supplies
 
@@ -89,6 +111,14 @@ as for albums and artists. A recording MBID on a `ForTrack` request is looked up
 at `idBasedLookup()` confidence, and a recording MusicBrainz does not hold is `NotFound` rather than
 a quiet fall back to the name search: answering with a *different* recording is worse than answering
 with none.
+
+A dead identifier is a dead end the consumer cannot correct on its own, so that `NotFound` carries
+suggestions — offered for a person to choose between, never ranked or resolved into the answer. The
+lookup itself is spent once per call however many types ask, including when the request carries a
+release-group id too and identity resolution never runs. `CREDITS` is the one place the distinction
+matters twice over: a recording MusicBrainz does not hold suggests, a recording it holds that credits
+nobody does not, because the identifier resolved and the answer is "this track, and it credits
+nobody" rather than "did you mean a different track?".
 
 One MBID is exempt, and it is the one the engine put there itself. Identity resolution runs before
 the fan-out and merges the recording *its own search* picked into the request, so every type then
