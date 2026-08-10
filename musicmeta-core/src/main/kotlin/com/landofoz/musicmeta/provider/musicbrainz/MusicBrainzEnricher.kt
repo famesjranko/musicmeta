@@ -488,14 +488,14 @@ internal class MusicBrainzEnricher(
      * an empty result is what pays for both fallbacks in full, so it is the repeat worth collapsing
      * most.
      */
-    private val albumSearchMemo = CallMemo<String, AlbumSearchResult>()
+    private val albumSearchMemo = CallMemo<AlbumQuery, AlbumSearchResult>()
 
     /**
      * Shared by [enrichAlbum] and [enrichAlbumTracks], which both need identical album-resolution
      * semantics.
      */
     private suspend fun memoizedAlbumSearch(title: String, artist: String): AlbumSearchResult =
-        albumSearchMemo.get(albumMemoKey(title, artist)) { searchAlbum(title, artist) }
+        albumSearchMemo.get(albumQuery(title, artist)) { searchAlbum(title, artist) }
 
     /**
      * Near-miss suggestions for an album title nothing strict resolves, keyed as [albumSearchMemo]
@@ -504,21 +504,25 @@ internal class MusicBrainzEnricher(
      * they are needed is memoized, so this has to be as well, or an absent album pays a full
      * `release?query=` per type for the same three suggestions.
      */
-    private val albumFuzzyMemo = CallMemo<String, List<MusicBrainzRelease>>()
+    private val albumFuzzyMemo = CallMemo<AlbumQuery, List<MusicBrainzRelease>>()
 
     private suspend fun memoizedFuzzyReleases(title: String, artist: String): List<MusicBrainzRelease> =
-        albumFuzzyMemo.get(albumMemoKey(title, artist)) {
+        albumFuzzyMemo.get(albumQuery(title, artist)) {
             api.searchReleasesFuzzy(title, artist, MAX_SUGGESTIONS)
         }
 
     /**
-     * [albumSearchMemo] and [albumFuzzyMemo]'s key. The separator is NUL, not a space, because
-     * [MusicBrainzQualifierFallback.normalize] collapses whitespace — a space would let
-     * `("a b", "c")` and `("a", "b c")` share one entry.
+     * [albumSearchMemo] and [albumFuzzyMemo]'s key: two normalized fields, never one joined string.
+     * [MusicBrainzQualifierFallback.normalize] collapses whitespace, so any single-character join
+     * would need a character a title cannot contain to keep `("a b", "c")` and `("a", "b c")` apart.
+     * Two fields make that unrepresentable instead of documented.
      */
-    private fun albumMemoKey(title: String, artist: String): String =
-        MusicBrainzQualifierFallback.normalize(title) + KEY_SEPARATOR +
-            MusicBrainzQualifierFallback.normalize(artist)
+    private data class AlbumQuery(val title: String, val artist: String)
+
+    private fun albumQuery(title: String, artist: String) = AlbumQuery(
+        MusicBrainzQualifierFallback.normalize(title),
+        MusicBrainzQualifierFallback.normalize(artist),
+    )
 
     /**
      * Resolves an album search, trying [title]/[artist] as-is first — unchanged from today's
@@ -715,9 +719,6 @@ internal class MusicBrainzEnricher(
 
     companion object {
         private const val MAX_SUGGESTIONS = 3
-
-        /** The album memos' title/artist separator — see [albumMemoKey] for why it is not a space. */
-        private const val KEY_SEPARATOR = '\u0000'
 
         /**
          * Browse pages [findReleaseGroupByFoldedTitle] reads before giving up. One is not enough:
