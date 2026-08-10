@@ -12,6 +12,7 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import org.json.JSONObject
 
 /**
  * Handles per-entity enrichment logic for MusicBrainz.
@@ -84,6 +85,41 @@ internal class MusicBrainzEnricher(
 
     private suspend fun memoizedReleaseGroupWiki(releaseGroupMbid: String): Pair<String?, String?> =
         releaseGroupWikiMemo.get(releaseGroupMbid) { api.lookupReleaseGroupWikiLinks(releaseGroupMbid) }
+
+    /**
+     * Raw recording lookups by MBID, same shape as [releaseMemo] — held raw because CREDITS and the
+     * recording's own fields parse the same response two different ways
+     * ([MusicBrainzApi.lookupRecording]), so one call serves every track type of a request that
+     * carries an MBID.
+     */
+    private val recordingMemo = CallMemo<String, JSONObject>()
+
+    private suspend fun memoizedRecording(mbid: String): JSONObject? =
+        recordingMemo.getOrNull(mbid) { api.lookupRecording(mbid) }
+
+    /**
+     * Recording ids [enrichTrack] resolved *by search* during this call.
+     *
+     * This is what tells a caller's MBID apart from the engine's own echo of one. Identity
+     * resolution runs on this instance before the fan-out
+     * ([com.landofoz.musicmeta.engine.DefaultEnrichmentEngine]) and merges the recording it picked
+     * into the request, so every type then sees an MBID that was not there when the call started.
+     * Looking *that* up would change which release-group answers a name-only request; looking up one
+     * that came from outside the call is the whole point of this ticket's fix. Nothing else can draw
+     * the line — the request carries no provenance, and does not need to.
+     *
+     * Guarded like [CallMemo]'s map, and for the same reason: sibling types resolve as concurrent
+     * `async` children.
+     */
+    private val searchResolvedRecordings = mutableSetOf<String>()
+    private val searchResolvedMutex = Mutex()
+
+    private suspend fun rememberSearchResolved(recordingId: String) {
+        searchResolvedMutex.withLock { searchResolvedRecordings.add(recordingId) }
+    }
+
+    private suspend fun isOwnSearchEcho(mbid: String): Boolean =
+        searchResolvedMutex.withLock { mbid in searchResolvedRecordings }
 
     internal suspend fun enrichAlbum(
         request: EnrichmentRequest.ForAlbum, type: EnrichmentType,
@@ -269,7 +305,33 @@ internal class MusicBrainzEnricher(
         type: EnrichmentType,
     ): EnrichmentResult {
         if (type == EnrichmentType.CREDITS) return enrichTrackCredits(request)
+        val mbid = request.identifiers.musicBrainzId
+        if (mbid != null && !isOwnSearchEcho(mbid)) return enrichTrackByMbid(request, mbid, type)
+        return enrichTrackBySearch(request, type)
+    }
 
+    /**
+     * The MBID reached this call from outside it — a caller's, or a foreign identity provider's —
+     * so it names the recording the answer must describe, exactly as [enrichAlbum] and [enrichArtist]
+     * treat theirs. A miss is [EnrichmentResult.NotFound] and never a fall back to the name search:
+     * answering with a *different* recording is the defect this path exists to close.
+     */
+    private suspend fun enrichTrackByMbid(
+        request: EnrichmentRequest.ForTrack,
+        mbid: String,
+        type: EnrichmentType,
+    ): EnrichmentResult {
+        val json = memoizedRecording(mbid)
+            ?: return EnrichmentResult.NotFound(type, providerId)
+        val recording = MusicBrainzParser.parseLookupRecording(json, request.album)
+            ?: return EnrichmentResult.NotFound(type, providerId)
+        return trackResult(recording, type, ConfidenceCalculator.idBasedLookup())
+    }
+
+    private suspend fun enrichTrackBySearch(
+        request: EnrichmentRequest.ForTrack,
+        type: EnrichmentType,
+    ): EnrichmentResult {
         val recordings = api.searchRecordings(request.title, request.artist, request.album)
         val best = pickBestRecording(request.title, recordings, request.album)
             ?: resolveTrackQualifierFallback(request.title, request.artist, request.album)
@@ -280,20 +342,25 @@ internal class MusicBrainzEnricher(
                 fuzzy = { api.searchRecordingsFuzzy(request.title, request.artist, MAX_SUGGESTIONS) },
             ) { it.toCandidate() }
 
-        val data = if (type == EnrichmentType.TRACK_METADATA) {
-            MusicBrainzMapper.toTrackMetadataDetails(best)
-        } else {
-            MusicBrainzMapper.toTrackMetadata(best)
-        }
-
-        return EnrichmentResult.Success(
-            type = type,
-            data = data,
-            provider = providerId,
-            confidence = ConfidenceCalculator.searchScore(best.score),
-            resolvedIdentifiers = MusicBrainzMapper.toTrackIdentifiers(best),
-        )
+        rememberSearchResolved(best.id)
+        return trackResult(best, type, ConfidenceCalculator.searchScore(best.score))
     }
+
+    private fun trackResult(
+        recording: MusicBrainzRecording,
+        type: EnrichmentType,
+        confidence: Float,
+    ): EnrichmentResult.Success = EnrichmentResult.Success(
+        type = type,
+        data = if (type == EnrichmentType.TRACK_METADATA) {
+            MusicBrainzMapper.toTrackMetadataDetails(recording)
+        } else {
+            MusicBrainzMapper.toTrackMetadata(recording)
+        },
+        provider = providerId,
+        confidence = confidence,
+        resolvedIdentifiers = MusicBrainzMapper.toTrackIdentifiers(recording),
+    )
 
     internal suspend fun enrichTrackCredits(
         request: EnrichmentRequest.ForTrack,
@@ -301,7 +368,7 @@ internal class MusicBrainzEnricher(
         val type = EnrichmentType.CREDITS
         val mbid = request.identifiers.musicBrainzId
             ?: return EnrichmentResult.NotFound(type, providerId)
-        val json = api.lookupRecording(mbid)
+        val json = memoizedRecording(mbid)
             ?: return EnrichmentResult.NotFound(type, providerId)
         val credits = MusicBrainzCreditParser.parseRecordingCredits(json)
         if (credits.isEmpty()) return EnrichmentResult.NotFound(type, providerId)

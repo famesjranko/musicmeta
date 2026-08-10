@@ -45,6 +45,20 @@ internal object MusicBrainzParser {
     }
 
     /**
+     * Parse a lookup response for a recording at the top level. [albumHint] is the request's own
+     * album, exactly as on [parseRecordings] — a lookup has no query to take it from, but the
+     * request that asked for the lookup does, and it is the only thing that decides tier 0 of
+     * [findArtReleaseGroup].
+     *
+     * `defaultScore = 100` for the same reason [parseLookupRelease] uses it: a lookup response
+     * carries no `score`, and a zero would be filtered out by every score floor downstream.
+     */
+    fun parseLookupRecording(json: JSONObject, albumHint: String? = null): MusicBrainzRecording? {
+        json.optString("id").takeIf { it.isNotBlank() } ?: return null
+        return parseRecordingObject(json, albumHint, defaultScore = 100)
+    }
+
+    /**
      * Wikidata/Wikipedia URL relations off a release-group lookup — same relation shape the
      * artist path reads via [extractWikidataId]/[extractWikipediaTitle], but a release-group's
      * relations are never embedded in a release search or release lookup response, so this reads
@@ -108,7 +122,11 @@ internal object MusicBrainzParser {
         )
     }
 
-    private fun parseRecordingObject(obj: JSONObject, albumHint: String? = null): MusicBrainzRecording {
+    private fun parseRecordingObject(
+        obj: JSONObject,
+        albumHint: String? = null,
+        defaultScore: Int = 0,
+    ): MusicBrainzRecording {
         val tagCounts = extractTagsWithCounts(obj)
         val artReleaseGroup = findArtReleaseGroup(obj, albumHint)
         return MusicBrainzRecording(
@@ -117,7 +135,7 @@ internal object MusicBrainzParser {
             isrcs = extractIsrcs(obj),
             tags = tagCounts.map { it.name },
             tagCounts = tagCounts,
-            score = obj.optInt("score", 0),
+            score = obj.optInt("score", defaultScore),
             disambiguation = obj.optString("disambiguation").takeIf { it.isNotBlank() },
             artistCredit = extractArtistCredit(obj),
             artistCredits = extractArtistCreditNames(obj),

@@ -55,6 +55,21 @@ deliberate:
   comment says why it is not a `CompositeSynthesizer`: keeping the calls in a plain provider means
   the engine schedules and rate-limits it like any other.
 
+## Identifiers a caller supplies
+
+MusicBrainz treats an MBID on the request as the entity to describe rather than a hint — for tracks
+as for albums and artists. A recording MBID on a `ForTrack` request is looked up, not searched for,
+at `idBasedLookup()` confidence, and a recording MusicBrainz does not hold is `NotFound` rather than
+a quiet fall back to the name search: answering with a *different* recording is worse than answering
+with none.
+
+One MBID is exempt, and it is the one the engine put there itself. Identity resolution runs before
+the fan-out and merges the recording *its own search* picked into the request, so every type then
+sees an identifier that was absent when the call began. The enricher remembers what it resolved by
+search this call and keeps searching for those, which is what stops a name-only request quietly
+changing which release-group answers it. An MBID from anywhere else — a caller's, a foreign identity
+provider's — reads as external.
+
 ## Rate limiting
 
 `withDefaultProviders()` builds **one `RateLimiter` per host**, as `RateLimiter`'s KDoc requires.

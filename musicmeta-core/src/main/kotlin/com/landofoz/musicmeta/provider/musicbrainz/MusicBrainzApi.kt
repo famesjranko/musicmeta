@@ -181,11 +181,20 @@ internal class MusicBrainzApi(
         return MusicBrainzParser.parseReleaseGroupWikiLinks(json)
     }
 
-    /** Lookup a recording by MBID with artist-rels and work-rels (needed for credits). */
+    /**
+     * Lookup a recording by MBID, at the union of what every track type reads: `artist-rels` and
+     * `work-rels` for CREDITS, the rest for the recording itself. Returned raw because the two
+     * readers parse it differently — [MusicBrainzCreditParser.parseRecordingCredits] and
+     * [MusicBrainzParser.parseLookupRecording] — off one response and so one upstream request.
+     *
+     * `release-groups` is not optional alongside `releases`: without it MusicBrainz returns releases
+     * carrying no `release-group` object at all, which [MusicBrainzParser] reads as "no art"
+     * (verified live 2026-08-10).
+     */
     suspend fun lookupRecording(mbid: String): JSONObject? {
         val json = rateLimiter.execute {
             httpClient.fetchJsonResult(
-                "$BASE_URL/recording/$mbid?fmt=json&inc=artist-rels+work-rels",
+                "$BASE_URL/recording/$mbid?fmt=json&inc=$RECORDING_LOOKUP_INC",
             ).bodyOrThrowTransient()
         }
         return json
@@ -243,6 +252,10 @@ internal class MusicBrainzApi(
 
         /** Release groups per [browseReleaseGroups] page — MusicBrainz's own maximum. */
         const val BROWSE_PAGE_SIZE = 100
+
+        /** [lookupRecording]'s `inc=`; see its KDoc for why each half is there. */
+        private const val RECORDING_LOOKUP_INC =
+            "artist-rels+work-rels+artists+releases+release-groups+isrcs+tags"
 
         fun escapeLucene(value: String): String =
             value.replace(LUCENE_SPECIAL_CHARS) { "\\${it.value}" }
