@@ -40,10 +40,21 @@ fun main() {
 
 private fun env(key: String): String? = System.getenv(key)?.takeIf { it.isNotBlank() }
 
-private fun loadSecrets(): Map<String, String> {
-    val paths = listOf(File("secrets.properties"), File("../secrets.properties"))
-    val file = paths.firstOrNull { it.exists() } ?: return emptyMap()
-    return file.readLines()
-        .filter { it.contains('=') && !it.trimStart().startsWith('#') }
-        .associate { line -> val (k, v) = line.split('=', limit = 2); k.trim() to v.trim() }
-}
+/**
+ * Every `secrets.properties` on the search path, the nearer file winning per key.
+ *
+ * Not first-file-wins, which is what this was: a template copied here with every line still
+ * commented out *exists*, so it shadowed a filled-in one in the repo root and the demo ran keyless
+ * with nothing to explain why — README says either location works, and it did not. A key present but
+ * blank is dropped for the same reason: it must fall through to the environment variable rather than
+ * beat it with an empty string.
+ */
+private fun loadSecrets(): Map<String, String> =
+    listOf(File("../secrets.properties"), File("secrets.properties"))
+        .filter { it.exists() }
+        .fold(mutableMapOf<String, String>()) { merged, file -> merged.apply { putAll(file.readKeys()) } }
+
+private fun File.readKeys(): Map<String, String> = readLines()
+    .filter { it.contains('=') && !it.trimStart().startsWith('#') }
+    .associate { line -> val (k, v) = line.split('=', limit = 2); k.trim() to v.trim() }
+    .filterValues { it.isNotEmpty() }
