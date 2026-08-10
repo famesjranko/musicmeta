@@ -332,7 +332,7 @@ internal class MusicBrainzEnricher(
         request: EnrichmentRequest.ForTrack,
         type: EnrichmentType,
     ): EnrichmentResult {
-        val recordings = api.searchRecordings(request.title, request.artist, request.album)
+        val recordings = api.searchCanonicalRecordings(request.title, request.artist, request.album)
         val best = pickBestRecording(request.title, recordings, request.album)
             ?: resolveTrackQualifierFallback(request.title, request.artist, request.album)
             // searchRecordings' own hint-less retry re-sends the title quoted (see its KDoc), so
@@ -483,7 +483,11 @@ internal class MusicBrainzEnricher(
      *    verified live, Radiohead's "Karma Police" music-video recording is the *only* exact-title,
      *    score-100 hit for an album-hinted "OK Computer" search, so it would otherwise win tier 1
      *    outright with nothing to lose to.
-     * 4. blank [MusicBrainzRecording.disambiguation] — a canonical recording carries none; ANY
+     * 4. blank [MusicBrainzRecording.disambiguation] — normally decided upstream, since
+     *    [MusicBrainzApi.searchCanonicalRecordings] asks MusicBrainz for exactly this tier and a
+     *    filtered pool is all blanks; it still fires on the unfiltered pools that reach here (the
+     *    qualifier fallback's, and the fallback when the filter empties the pool). A canonical
+     *    recording carries no disambiguation; ANY
      *    disambiguation marks a variant. MB's disambiguation vocabulary is open (demo, live,
      *    "bootleg edited version", instrumental, acoustic, radio edit, mono/stereo, single
      *    version, …) and cannot be enumerated by keyword — verified live: "bootleg edited version"

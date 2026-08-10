@@ -73,9 +73,11 @@ internal class MusicBrainzApi(
      * builds. Album titles drift across editions, so a hinted query that comes back empty falls
      * back to the hint-less query rather than reporting no match. Ranking the returned pool (rather
      * than trusting hit 0) is the caller's job — [MusicBrainzEnricher] has the score threshold and
-     * the disambiguation/release-type signals to do it. [limit] defaults to
-     * [RECORDING_SEARCH_LIMIT], wide enough for the studio original to still be in the pool when
-     * several score-100 live/bootleg/cover takes sort ahead of it.
+     * the disambiguation/release-type signals to do it.
+     *
+     * This is the pool a consumer *chooses* from, so it stays unfiltered: a "did you mean?" list
+     * narrowed to canonical recordings cannot answer "I want the Moscow one".
+     * [searchCanonicalRecordings] is what a track is resolved out of.
      */
     suspend fun searchRecordings(
         title: String,
@@ -87,6 +89,36 @@ internal class MusicBrainzApi(
         val hinted = albumHint?.let { fetchRecordings(recordingQuery(title, artist, it), limit, it) }
         return hinted?.takeIf { it.isNotEmpty() }
             ?: fetchRecordings(recordingQuery(title, artist, null), limit, albumHint)
+    }
+
+    /**
+     * The pool a track request is *resolved* out of, as opposed to the one
+     * [MusicBrainzProvider.searchCandidates] offers a consumer to choose from.
+     *
+     * `-comment:*` is tier 4 of [MusicBrainzEnricher.pickBestRecording] — prefer a blank
+     * disambiguation — expressed in MusicBrainz's own query language, which is what moves it
+     * *upstream* of the limit instead of downstream of it. Downstream it can only rank what the
+     * limit already let through, and for a heavily-covered track that is nothing: measured
+     * 2026-08-10, zero of the 25 recordings the unfiltered query returns for "Enter Sandman" carry
+     * a blank disambiguation, so the tier had nothing to choose and the ranking fell through to
+     * whichever live or demo take won on the tiers below.
+     *
+     * A filter can only remove candidates, so it falls back to the unfiltered ladder when nothing
+     * survives — a track whose canonical recording genuinely carries a disambiguation must still
+     * resolve. That costs one extra request, on the miss path only.
+     */
+    suspend fun searchCanonicalRecordings(
+        title: String,
+        artist: String,
+        album: String? = null,
+    ): List<MusicBrainzRecording> {
+        val albumHint = album?.takeIf { it.isNotBlank() }
+        val canonical = fetchRecordings(
+            recordingQuery(title, artist, albumHint, canonicalOnly = true),
+            CANONICAL_SEARCH_LIMIT,
+            albumHint,
+        )
+        return canonical.ifEmpty { searchRecordings(title, artist, album) }
     }
 
     /**
@@ -124,11 +156,20 @@ internal class MusicBrainzApi(
         return MusicBrainzParser.parseRecordings(json)
     }
 
-    /** Lucene query for a recording search, with an optional `release:"…"` term when [album] is known. */
-    private fun recordingQuery(title: String, artist: String, album: String?): String {
+    /**
+     * Lucene query for a recording search, with an optional `release:"…"` term when [album] is
+     * known and, for [canonicalOnly], the `-comment:*` term that excludes every recording carrying
+     * a disambiguation. Both terms narrow; neither reorders.
+     */
+    private fun recordingQuery(
+        title: String,
+        artist: String,
+        album: String?,
+        canonicalOnly: Boolean = false,
+    ): String {
         val base = "recording:\"${escapeLucene(title)}\" AND artistname:\"${escapeLucene(artist)}\""
         val withAlbum = if (album.isNullOrBlank()) base else "$base AND release:\"${escapeLucene(album)}\""
-        return encode(withAlbum)
+        return encode(if (canonicalOnly) "$withAlbum AND -comment:*" else withAlbum)
     }
 
     suspend fun lookupRelease(mbid: String): MusicBrainzRelease? {
@@ -230,17 +271,33 @@ internal class MusicBrainzApi(
         private val LUCENE_SPECIAL_CHARS = """[+\-&|!()\{}\[\]^"~*?:\\/]""".toRegex()
 
         /**
-         * Default candidate pool size for [searchRecordings]. A well-covered track's score-100
-         * ties can run deep in live/bootleg/cover takes — "Enter Sandman"/Metallica has ~750 tied
-         * recordings, and measured live (2026-08-06) `limit=5`, and in some runs even `limit=15`,
-         * returned *no* clean-disambiguation studio hit at all, so
-         * [MusicBrainzEnricher.pickBestRecording] had nothing to rank. Where the studio hit lands
-         * inside the pool is not stable across requests (MB's tie order shifts with the limit
-         * itself), so the value is headroom, not a measured index: 25 reliably contained several
-         * studio candidates in repeated runs. A pathologically over-tied track could still
-         * overflow it.
+         * Default candidate pool size for [searchRecordings] — the *candidate* surface, where a
+         * consumer picks a version, and the fallback when [searchCanonicalRecordings] filters the
+         * pool to nothing. It is not what a track is resolved out of, and it deliberately carries
+         * no claim about containing a studio candidate: it did not hold one for
+         * "Enter Sandman"/Metallica when measured on 2026-08-10
+         * (`scripts/probes/recording-pool-filter-probe.sh`, 757 tied recordings, 0 of the returned
+         * 25 with a blank disambiguation), which is the defect [searchCanonicalRecordings] exists
+         * to fix. Raising it would not have fixed it: a wider unfiltered window is still ordered by
+         * a relevance score every one of those 757 ties shares.
          */
         const val RECORDING_SEARCH_LIMIT = 25
+
+        /**
+         * Pool size for [searchCanonicalRecordings], and **MusicBrainz's own maximum** — not
+         * headroom, and not a number to raise. Above 100 the search does not clamp; it silently
+         * serves the default 25 (`limit=115` → `returned=25`, measured 2026-08-10), so a later
+         * increase would shrink the pool without failing.
+         *
+         * It is a ceiling rather than a bound the filter guarantees. Measured over four tracks the
+         * same day, the filtered pool ran 71–132: "Enter Sandman" 95 and "Comfortably Numb" 71 fit,
+         * "Paranoid Android" 115 and "Whipping Post" 132 did not. Where the canonical cut lands
+         * inside the pool is upstream's to decide and shifts between identical calls — indices 19,
+         * 23, 39 and 58 across four runs of the same query — so this buys a pool the ranking can
+         * work on, not a guarantee that the studio take is in it. Reaching past 100 means paging,
+         * and costs a request per page on a 1 req/s limiter.
+         */
+        const val CANONICAL_SEARCH_LIMIT = 100
 
         /**
          * Default candidate pool size for [searchReleases]. Same disease as [RECORDING_SEARCH_LIMIT].

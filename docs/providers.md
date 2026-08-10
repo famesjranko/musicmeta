@@ -55,6 +55,25 @@ deliberate:
   comment says why it is not a `CompositeSynthesizer`: keeping the calls in a plain provider means
   the engine schedules and rate-limits it like any other.
 
+## Resolving a track by name
+
+A track request with no MBID is resolved out of a pool MusicBrainz has already filtered with
+`-comment:*` — its own index expression of "carries no disambiguation", which is the same signal the
+ranking's fourth tier applies. Doing it upstream is the point: downstream, the tier can only rank
+what the page already let through, and for a heavily-covered title that is nothing. Measured
+2026-08-10, zero of the 25 recordings the unfiltered query returned for "Enter Sandman" carried a
+blank disambiguation, so the tier had nothing to choose and the answer fell through to a live take.
+
+The page is 100, which is MusicBrainz's maximum and not a number to raise — above it the search does
+not clamp, it silently serves 25. It is a ceiling, not a guarantee: two of four tracks measured the
+same day had a filtered pool larger than 100 (115 and 132), and where the canonical recording lands
+inside the pool shifts between identical calls. A filtered pool that comes back empty falls back to
+the unfiltered ladder, so a track whose canonical recording genuinely carries a disambiguation still
+resolves — at the cost of one extra request, on the miss path only.
+
+`searchCandidates` is deliberately not filtered. That list exists for a consumer to pick a version
+from, and one narrowed to canonical recordings cannot answer "I want the Moscow one".
+
 ## Identifiers a caller supplies
 
 MusicBrainz treats an MBID on the request as the entity to describe rather than a hint — for tracks
