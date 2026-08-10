@@ -71,9 +71,10 @@ would be gone before the ranking's album-match tier, which outranks its disambig
 prefer it.
 
 The page is 100, which is MusicBrainz's maximum and not a number to raise — above it the search does
-not clamp, it silently serves 25. It is a ceiling, not a guarantee: two of six tracks measured the
-same day had a filtered pool larger than 100 (115 and 132), and where a given recording lands inside
-the pool shifts between identical calls. A filtered pool that comes back empty falls back to the
+not clamp, it silently serves 25, so a raise would shrink the pool rather than widen it. A test
+asserts the ceiling for that reason. It is a ceiling, not a guarantee: three of seven tracks measured
+the same day had a filtered pool larger than 100 (115, 132 and 192), and where a given recording
+lands inside the pool shifts between identical calls. A filtered pool that comes back empty falls back to the
 unfiltered ladder, at the cost of one extra request on the miss path. That fallback does not cover a
 track whose canonical recording is marked while other takes are not — one of the six — which is no
 worse than before rather than fixed.

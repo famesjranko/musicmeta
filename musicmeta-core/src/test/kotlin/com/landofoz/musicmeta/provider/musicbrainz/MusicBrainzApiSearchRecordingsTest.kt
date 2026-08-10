@@ -96,7 +96,32 @@ class MusicBrainzApiSearchRecordingsTest {
         assertEquals("rec-studio", result.single().id)
     }
 
+    @Test
+    fun `the resolution search never asks for more than MusicBrainz will serve`() = runTest {
+        // Given - a single matching recording for the filtered resolution query
+        httpClient.givenJsonResponse("recording?query", SINGLE_MATCH)
+
+        // When - the hint-less resolution search runs, which is the only caller of the larger page
+        api.searchCanonicalRecordings("Enter Sandman", "Metallica")
+
+        // Then - the page it asks for is within MusicBrainz's own maximum, asserted on the constant
+        // and on the URL alike so a hardcoded literal cannot slip past either. Above 100 the search
+        // does not clamp and does not error — it silently serves the default 25 (measured
+        // 2026-08-10: limit=101, 115 and 200 all served 25 against the same total), so raising this
+        // makes the pool smaller than before the filter existed, with nothing else to say so.
+        assertTrue(
+            "CANONICAL_SEARCH_LIMIT is ${MusicBrainzApi.CANONICAL_SEARCH_LIMIT}; above 100 " +
+                "MusicBrainz silently serves 25 instead, so the pool would shrink, not grow",
+            MusicBrainzApi.CANONICAL_SEARCH_LIMIT <= MUSICBRAINZ_MAX_SEARCH_LIMIT,
+        )
+        val limit = httpClient.requestedUrls.single().substringAfter("&limit=").toInt()
+        assertTrue("requested limit=$limit, past MusicBrainz's maximum", limit <= MUSICBRAINZ_MAX_SEARCH_LIMIT)
+    }
+
     private companion object {
+        /** MusicBrainz's own documented maximum for a search `limit`, and the ceiling it enforces. */
+        const val MUSICBRAINZ_MAX_SEARCH_LIMIT = 100
+
         const val SINGLE_MATCH = """
             {
               "recordings": [

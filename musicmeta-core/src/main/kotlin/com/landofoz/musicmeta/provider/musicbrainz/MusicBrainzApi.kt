@@ -306,9 +306,11 @@ internal class MusicBrainzApi(
          * serves the default 25 (`limit=115` → `returned=25`, measured 2026-08-10), so a later
          * increase would shrink the pool without failing.
          *
-         * It is a ceiling rather than a bound the filter guarantees. Measured over four tracks the
-         * same day, the filtered pool ran 71–132: "Enter Sandman" 95 and "Comfortably Numb" 71 fit,
-         * "Paranoid Android" 115 and "Whipping Post" 132 did not. Where the canonical cut lands
+         * It is a ceiling rather than a bound the filter guarantees, and the overflow is not a
+         * long-tail case — it lands on the titles most likely to be asked for. Measured the same
+         * day, the filtered pool ran 71–192: "Comfortably Numb" 71, "Bohemian Rhapsody" 88, "Enter
+         * Sandman" 95 and "Smells Like Teen Spirit" 97 fit; "Paranoid Android" 115, "Whipping Post"
+         * 132 and "Yesterday" 192 did not. Where the canonical cut lands
          * inside the pool is upstream's to decide and shifts between identical calls — indices 19,
          * 23, 39 and 58 across four runs of the same query — so this buys a pool the ranking can
          * work on, not a guarantee that the studio take is in it. Reaching past 100 means paging,
