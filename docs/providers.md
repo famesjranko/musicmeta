@@ -7,7 +7,9 @@ away, and a copy of them rots while it moves. §Rate limiting keeps the one-limi
 topology and where each interval's basis comes from.
 
 **Nothing here is checked.** No mechanism verifies a word of it. Hand-verified against the packages
-on **2026-07-26**; treat anything after that as a claim, not a fact.
+on **2026-08-10**; treat anything after that as a claim, not a fact. §What we don't extract is the
+part that rots fastest — most of what it lists is a to-do, and a to-do that gets done reads as a
+still-open one until someone re-reads the code.
 
 ## The providers
 
@@ -32,13 +34,18 @@ Auth keys and how to supply them are in [README.md](../README.md).
 `CLAUDE.md` states the four-file pattern. Two packages depart from it, and both departures are
 deliberate:
 
-- **`musicbrainz` adds three files.** `MusicBrainzEnricher.kt` holds the per-entity enrichment logic
-  and the artist lookup cache, because `MusicBrainzProvider` would otherwise run to ~440 lines.
+- **`musicbrainz` adds six files.** `MusicBrainzEnricher.kt` holds the per-entity enrichment logic
+  and the memos that fold the lookups one request's types repeat into one call each — per *call*,
+  not per provider, so `forceRefresh` reaches upstream (§12 of `pitfalls.md` has why that matters).
+  Inlining it would put `MusicBrainzProvider` near 900 lines.
   `MusicBrainzParser.kt` holds every JSON → DTO conversion, which the other packages do inline in
-  `*Api`; eleven capabilities across three entity types is more than an API client should carry.
+  `*Api`; twelve capabilities across three entity types is more than an API client should carry.
   `MusicBrainzCreditParser.kt` serves `CREDITS` and `RELEASE_EDITIONS` only — those two read raw
   `JSONObject` rather than DTOs, since `lookupRecording` and `lookupReleaseGroup` return the response
-  unparsed, and it owns the relation-type → role mapping.
+  unparsed, and it owns the relation-type → role mapping. `MusicBrainzQualifierFallback.kt`,
+  `MusicBrainzReleaseRanking.kt` and `MusicBrainzTitleFolding.kt` are the resolution rules album and
+  track search share: stripping a title's trailing qualifier group, ranking a search pool into one
+  release, and folding a title MusicBrainz stores under symbols no caller can type.
 - **`deezer` has a second public provider class.** `SimilarAlbumsProvider` registers under its own id
   `deezer-similar-albums`, so it gets its own `CircuitBreaker` and can be disabled without touching
   `deezer`. It exists because `SIMILAR_ALBUMS` is *derived* — Deezer has no such endpoint, so it
@@ -71,11 +78,15 @@ The part no reading of the code can give you: fields that arrive in responses we
 are dropped, and endpoints we never call. A to-do list for whoever adds the next capability.
 
 **MusicBrainz.** `isrcs` beyond the first (`toTrackMetadata` keeps one; a recording often has
-several), `label-info[]` beyond the first (co-releases and reissues), `release.packaging`/`quality`, `media[].format` (CD vs vinyl vs digital, per disc), `artist.aliases`/`sort-name` (which
-`ArtistMatcher` would use), `artist.life-span.ended` (a split, distinct from having an end date),
-`annotation`, `rating`. Never requested: `works`, `series`, `events`, `places`, `instruments`,
-`genres` (the curated list, as opposed to the `tags` we read), `collections`, `inc=aliases`. No
-cover-art call — that is the Cover Art Archive provider, keyed on the identifiers this one resolves.
+several), `label-info[]` beyond the first (co-releases and reissues), `release.packaging`/`quality`,
+`artist.aliases` (which `ArtistMatcher` would use), `artist.life-span.ended` (a split, distinct from
+having an end date), `annotation`, `rating`. `media[].format` *is* read, but only to drop video discs
+from a tracklist and to label a `RELEASE_EDITIONS` entry — never surfaced per disc; `sort-name` is
+read too, to reorder a Person's "Last, First". Never requested: `works`, `series`, `events`,
+`places`, `instruments`, `genres` (the curated list, as opposed to the `tags` we read),
+`collections`, `inc=aliases`. No cover-art call — that is the Cover Art Archive provider, keyed on
+the identifiers this one resolves; the `cover-art-archive.front` flag embedded in a release is read,
+and is what puts a thumbnail URL on a search candidate.
 
 **Cover Art Archive.** `/release/{mbid}` is fetched for every capability, so these cost only code:
 `images[].comment` (which of several front covers this is), `.approved` (we take the first match
@@ -87,23 +98,24 @@ its `front-{size}` redirect, which is why that path returns no `sizes`.
 
 **Deezer.** On results we already fetch: `album.release_date` (read only inside
 `ARTIST_DISCOGRAPHY`), `album.genre_id`/`genres` (Deezer declares no genre capability at all),
-`album.label`, `album.upc` (a barcode nothing else supplies), `artist.nb_fan`/`nb_album`
-(`ARTIST_POPULARITY`), `track.rank`/`bpm`/`gain` (real popularity and audio features, in place of the
+`album.label`, `album.upc` (a barcode nothing else supplies),
+`track.rank`/`bpm`/`gain` (real popularity and audio features, in place of the
 positional scores the mapper synthesises), `track.duration` on radio and top-track results,
-`contributors` (`CREDITS`), `explicit_content_lyrics` (finer than the boolean). Never called:
+`contributors` (`CREDITS`), `explicit_content_lyrics` (finer than the boolean).
+`artist.nb_fan`/`nb_album` are read, but only as the artist search's tie-break — neither reaches
+`ARTIST_POPULARITY`. Never called:
 `/chart`, `/genre`, `/editorial`, `/playlist/{id}`, `/podcast`, every `/user/**`.
 
-**iTunes.** `searchCandidates` returns an **empty** `EnrichmentIdentifiers` even though
-`toSearchCandidate` has the `collectionId` in hand, so picking an iTunes candidate in a
-disambiguation flow carries nothing forward and the next request re-searches. Never read on results
+**iTunes.** Never read on results
 we fetch: `collectionViewUrl`, `collectionPrice`, `copyright`, `contentAdvisoryRating`,
 `collectionExplicitness`, `amgArtistId`, `artistViewUrl`; from a track lookup, `previewUrl` (Deezer
 serves `TRACK_PREVIEW`), `discNumber`, `discCount`, `trackPrice`, `isStreamable`. Entities never
 searched: `song`, `musicVideo`, `podcast`, `audiobook`.
 
 **LRCLIB.** Parsed into `LrcLibResult` and dropped: `id` (`GET /api/get/{id}` would re-fetch without
-a search), `trackName`/`artistName`/`albumName`/`duration` — all four would verify that the search
-fallback returned the right track, and `duration` is the strongest mismatch signal. Never called:
+a search), `trackName`/`artistName` — both would verify that the search fallback returned the right
+track, which nothing currently does. `albumName` and `duration` *are* read, into
+`TRACK_METADATA`'s album title and `durationMs`. Never called:
 `GET /api/get/{id}`, and the write path (`POST /api/request-challenge`, `POST /api/publish`), which
 needs a proof-of-work solution and would make this a write client.
 
@@ -113,9 +125,10 @@ record label (`GENRE`, `LABEL` — as Q-ids, needing the label lookup `COUNTRY_M
 P571/P576 inception and dissolution (bands, as opposed to the P569/P570 person dates we read), P856
 and P2002/P2003/P2013 (`ARTIST_LINKS`), P434/P4404/P4407/P8052 MusicBrainz ids (reverse identity),
 P1902/P1728/P1953 Spotify, AllMusic and Discogs ids, P373 Commons category, P1303 instrument, P166
-awards. Never called: `wbgetentities` for labels and descriptions — which is what would retire both
-hardcoded maps — the REST API at `/w/rest.php/wikibase/v1/`, and SPARQL. Note `provider/wikipedia/`
-*does* call `wbgetentities` on this same host, for sitelinks, on its own rate limiter.
+awards. `wbgetentities` is how the claims themselves are fetched (`props=claims`), but never with
+`props=labels`/`descriptions` — which is what would retire both hardcoded maps. Never called: the
+REST API at `/w/rest.php/wikibase/v1/`, and SPARQL. Note `provider/wikipedia/` *also* calls
+`wbgetentities` on this host, for sitelinks, on its own rate limiter.
 
 **Wikipedia.** From `/page/summary`, fetched for every `ARTIST_BIO`: `description` (the "English rock
 band" gloss — parsed, then dropped), `originalimage` (we take the ~320px thumbnail), `extract_html`,
@@ -130,12 +143,15 @@ hardcodes `en.wikipedia.org`, so no other language is ever queried.
 `ListenBrainzTopReleaseGroup.artistName`, dropped by the mapper), `listen_count` on a release group
 (ranking for `ARTIST_DISCOGRAPHY`, which currently returns response order with no counts),
 `caa_id`/`caa_release_mbid` (cover art for a discography entry without a second provider),
-`release_name`/`release_mbid` on a top recording (which album a top track came from). Never called:
+`release_mbid` on a top recording (its album's identity, as opposed to the `release_name` a top
+track now carries). Never called:
 `/1/stats/**`, `/1/user/**`, `/1/metadata/**`, `/1/similar-users`, and every submit endpoint.
 
 **Last.fm.** Parsed into a DTO and dropped by the mapper — cheapest to add, since both the request
-and the read already happen: album `playcount`/`listeners`, album `wiki.summary`, album
-`name`/`artist`, track `mbid`. Fetched but never read: `artist.bio.content` (we take `summary`),
+and the read already happen: album `playcount`/`listeners` (the artist and track equivalents both
+reach `Popularity`; the album pair does not), album `name`/`artist`, track `mbid`. Album
+`wiki.summary` is no longer among them — it is `ALBUM_DESCRIPTION`'s Last.fm source.
+Fetched but never read: `artist.bio.content` (we take `summary`),
 `artist.similar.artist[]` (similar artists without the second `artist.getsimilar` call), `artist.url`
 (`ARTIST_LINKS`), `artist.image[]` (widely reported empty since ~2020 — upstream behaviour, not
 verified here), `tag.count`/`tag.url` (vote weight, which would let us rank tags rather than trust
@@ -145,8 +161,7 @@ shared secret, which we never read.
 
 **Fanart.tv.** Keys in a response we already fetch: `musiclogo` (the SD logo — we read `hdmusiclogo`
 only, so an artist with just an SD logo reads as having none), `hdmusicbanner` (next to the
-`musicbanner` we do read), `likes` (parsed into `FanartTvImage.likes` and ignored — the ranking
-signal for every list, discarded at the point it arrives), `id` (used as an `ArtworkSize` label and
+`musicbanner` we do read), `id` (used as an `ArtworkSize` label and
 nowhere else; it addresses a specific image upstream), `lang`/`disc`/`size` on `cdart`,
 `name`/`mbid_id` on the artist object (verification that the id resolved to the artist we meant),
 `albums` on the artist document (album art keyed by release group — deliberately unread, since it

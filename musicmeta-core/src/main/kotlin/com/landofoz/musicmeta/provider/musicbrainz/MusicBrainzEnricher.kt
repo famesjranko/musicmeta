@@ -18,12 +18,10 @@ import kotlinx.coroutines.sync.withLock
  * Called by [MusicBrainzProvider] after routing by request/type.
  *
  * **One instance per call**, held for that call by
- * [com.landofoz.musicmeta.engine.ProviderCallScope] — nothing the memos below hold outlives it.
- * They fold the lookups a request's types repeat into one call each, a repeat being a ~1.1s wait on
- * the shared limiter, and none needs a cap: one request's types resolve one album and a handful of
- * MBIDs. A thrown transient is never memoized, so the next type that asks retries it; nor is a
- * `null` from an MBID lookup, which is a genuine absence. [albumSearchMemo] is the one that also
- * holds its miss, for the reason on it.
+ * [com.landofoz.musicmeta.engine.ProviderCallScope] — nothing the [CallMemo]s below hold outlives
+ * it. They fold the lookups a request's types repeat into one call each, a repeat being a ~1.1s
+ * wait on the shared limiter, and none needs a cap: one request's types resolve one album and a
+ * handful of MBIDs.
  */
 internal class MusicBrainzEnricher(
     private val api: MusicBrainzApi,
@@ -32,12 +30,37 @@ internal class MusicBrainzEnricher(
 ) {
 
     /**
-     * Artist lookups by MBID: BAND_MEMBERS, ARTIST_LINKS and GENRE all want the same artist.
-     * The mutex is held across the lookup so two types resolving concurrently — the engine runs
-     * them as sibling `async` children — make one call between them, not one each.
+     * One upstream answer per key for as long as this enricher lives, which is one `enrich()` call.
+     *
+     * The mutex is held across [fetch], not merely around the map: the engine resolves a request's
+     * types as sibling `async` children, so two types asking the same question concurrently have to
+     * make one call between them rather than one each.
+     *
+     * A thrown transient is never held — the write is on the success path — so the next type that
+     * asks retries it. What an *absence* costs is the difference between the two entry points.
      */
-    private val artistMemo = mutableMapOf<String, MusicBrainzArtist>()
-    private val artistMemoMutex = Mutex()
+    private class CallMemo<K : Any, V : Any> {
+
+        private val entries = mutableMapOf<K, V>()
+        private val mutex = Mutex()
+
+        /** [fetch]'s answer for [key], held for the call whatever it is — including a negative one. */
+        suspend fun get(key: K, fetch: suspend () -> V): V = mutex.withLock {
+            entries[key] ?: fetch().also { entries[key] = it }
+        }
+
+        /** As [get], except a `null` from [fetch] is a genuine absence and is not held. */
+        suspend fun getOrNull(key: K, fetch: suspend () -> V?): V? = mutex.withLock {
+            entries[key] ?: fetch()?.also { entries[key] = it }
+        }
+    }
+
+    /** Artist lookups by MBID: BAND_MEMBERS, ARTIST_LINKS and GENRE all want the same artist. */
+    private val artistMemo = CallMemo<String, MusicBrainzArtist>()
+
+    /** Lookup artist with rels (superset), memoized in [artistMemo]. */
+    private suspend fun memoizedArtist(mbid: String): MusicBrainzArtist? =
+        artistMemo.getOrNull(mbid) { api.lookupArtistWithRels(mbid) }
 
     /**
      * Release lookups by MBID, same shape as [artistMemo].
@@ -45,36 +68,23 @@ internal class MusicBrainzEnricher(
      * in the fan-out the identity MBID enables, and ALBUM_TRACKS wants the same response a third
      * time.
      */
-    private val releaseMemo = mutableMapOf<String, MusicBrainzRelease>()
-    private val releaseMemoMutex = Mutex()
+    private val releaseMemo = CallMemo<String, MusicBrainzRelease>()
 
-    private suspend fun cachedReleaseLookup(mbid: String): MusicBrainzRelease? =
-        releaseMemoMutex.withLock {
-            releaseMemo[mbid]?.let { return@withLock it }
-            api.lookupRelease(mbid)?.also { releaseMemo[mbid] = it }
-        }
+    private suspend fun memoizedRelease(mbid: String): MusicBrainzRelease? =
+        releaseMemo.getOrNull(mbid) { api.lookupRelease(mbid) }
 
     /**
      * Release-group Wikidata/Wikipedia relations by release-group MBID, same shape as [releaseMemo].
      * A release search never embeds these (they live on the release-group, not the release), so this
      * is a miss on the first type resolved for an album and a hit for every other type in the same
      * enrichment — same amortized cost as the artist bio path's `needsRelations` lookup.
+     *
+     * `(null, null)` is a real answer — "this release-group has no wiki links" — so it is held.
      */
-    private val releaseGroupWikiMemo = mutableMapOf<String, Pair<String?, String?>>()
-    private val releaseGroupWikiMutex = Mutex()
+    private val releaseGroupWikiMemo = CallMemo<String, Pair<String?, String?>>()
 
-    private suspend fun cachedReleaseGroupWikiLookup(releaseGroupMbid: String): Pair<String?, String?> =
-        releaseGroupWikiMutex.withLock {
-            releaseGroupWikiMemo[releaseGroupMbid]?.let { return@withLock it }
-            api.lookupReleaseGroupWikiLinks(releaseGroupMbid).also { releaseGroupWikiMemo[releaseGroupMbid] = it }
-        }
-
-    /** Lookup artist with rels (superset), memoized in [artistMemo]. */
-    private suspend fun cachedArtistLookup(mbid: String): MusicBrainzArtist? =
-        artistMemoMutex.withLock {
-            artistMemo[mbid]?.let { return@withLock it }
-            api.lookupArtistWithRels(mbid)?.also { artistMemo[mbid] = it }
-        }
+    private suspend fun memoizedReleaseGroupWiki(releaseGroupMbid: String): Pair<String?, String?> =
+        releaseGroupWikiMemo.get(releaseGroupMbid) { api.lookupReleaseGroupWikiLinks(releaseGroupMbid) }
 
     internal suspend fun enrichAlbum(
         request: EnrichmentRequest.ForAlbum, type: EnrichmentType,
@@ -86,20 +96,20 @@ internal class MusicBrainzEnricher(
         if (type == EnrichmentType.RELEASE_EDITIONS) return enrichAlbumEditions(request)
         val mbid = request.identifiers.musicBrainzId
         if (mbid != null) {
-            val full = cachedReleaseLookup(mbid)
+            val full = memoizedRelease(mbid)
                 ?: return EnrichmentResult.NotFound(type, providerId)
             return buildAlbumResult(full, type, ConfidenceCalculator.idBasedLookup())
         }
-        val search = resolveAlbumSearch(request.title, request.artist)
+        val search = memoizedAlbumSearch(request.title, request.artist)
         val best = search.release ?: return notFoundWithSuggestions(
             type, search.originalPool,
-            fuzzy = { api.searchReleasesFuzzy(request.title, request.artist, MAX_SUGGESTIONS) },
+            fuzzy = { memoizedFuzzyReleases(request.title, request.artist) },
         ) { it.toCandidate() }
         // A search hit carries tags only when its release group happens to have them; the release
         // lookup is what fills them. GENRE is the one type that reads them and the one this path
         // reaches — LABEL is answered from the identity payload and never gets here.
         val resolved = if (type == EnrichmentType.GENRE && best.tags.isEmpty()) {
-            cachedReleaseLookup(best.id) ?: best
+            memoizedRelease(best.id) ?: best
         } else {
             best
         }
@@ -111,9 +121,9 @@ internal class MusicBrainzEnricher(
     ): EnrichmentResult {
         val type = EnrichmentType.ALBUM_TRACKS
         val mbid = request.identifiers.musicBrainzId
-            ?: resolveAlbumSearch(request.title, request.artist).release?.id
+            ?: memoizedAlbumSearch(request.title, request.artist).release?.id
             ?: return EnrichmentResult.NotFound(type, providerId)
-        val release = cachedReleaseLookup(mbid)
+        val release = memoizedRelease(mbid)
             ?: return EnrichmentResult.NotFound(type, providerId)
         if (release.tracks.isEmpty()) return EnrichmentResult.NotFound(type, providerId)
         return EnrichmentResult.Success(
@@ -150,10 +160,10 @@ internal class MusicBrainzEnricher(
             return enrichArtistNewType(request, type)
         }
 
-        // If we already have an MBID, skip search and use cached lookup
+        // If we already have an MBID, skip the search and use the memoized lookup
         val mbid = request.identifiers.musicBrainzId
         if (mbid != null) {
-            val full = cachedArtistLookup(mbid)
+            val full = memoizedArtist(mbid)
                 ?: return EnrichmentResult.NotFound(type, providerId)
             return buildArtistResult(full, type, ConfidenceCalculator.idBasedLookup())
         }
@@ -187,17 +197,16 @@ internal class MusicBrainzEnricher(
      * Best-effort, mirroring [resolveReleaseGroupWikiLinks]'s shape: a transient on the full-artist
      * lookup must not fail the type being resolved (GENRE, LABEL, …) just because it also happens to
      * carry wikidata/wikipedia relations as a byproduct — it degrades to [best] (the search hit,
-     * already a valid [MusicBrainzArtist]) instead of propagating. Previously uncaught, which let a
-     * transient here throw straight out of [enrichArtist].
+     * already a valid [MusicBrainzArtist]) instead of propagating.
      */
     // SwallowedException: intentional — see the KDoc above, matching resolveReleaseGroupWikiLinks.
     @Suppress("SwallowedException")
     private suspend fun resolveArtistRelations(best: MusicBrainzArtist): MusicBrainzArtist = try {
-        cachedArtistLookup(best.id) ?: best
+        memoizedArtist(best.id) ?: best
     } catch (e: Exception) {
         currentCoroutineContext().ensureActive()
         // Same reasoning as resolveReleaseGroupWikiLinks: this run's wikidataId/wikipediaTitle for
-        // this artist came back unresolved because of a transient, not a genuine absence (issue 06).
+        // this artist came back unresolved because of a transient, not a genuine absence.
         currentCoroutineContext()[TransientIdentifierMarker]?.mark(
             IdentifierRequirement.WIKIDATA_ID,
             IdentifierRequirement.WIKIPEDIA_TITLE,
@@ -217,7 +226,7 @@ internal class MusicBrainzEnricher(
 
         return when (type) {
             EnrichmentType.BAND_MEMBERS -> {
-                val artist = cachedArtistLookup(mbid)
+                val artist = memoizedArtist(mbid)
                     ?: return EnrichmentResult.NotFound(type, providerId)
                 val members = if (artist.bandMembers.isNotEmpty()) {
                     MusicBrainzMapper.toBandMembers(artist.bandMembers)
@@ -243,7 +252,7 @@ internal class MusicBrainzEnricher(
                 )
             }
             EnrichmentType.ARTIST_LINKS -> {
-                val artist = cachedArtistLookup(mbid)
+                val artist = memoizedArtist(mbid)
                     ?: return EnrichmentResult.NotFound(type, providerId)
                 if (artist.urlRelations.isEmpty()) return EnrichmentResult.NotFound(type, providerId)
                 EnrichmentResult.Success(
@@ -334,7 +343,7 @@ internal class MusicBrainzEnricher(
      * [com.landofoz.musicmeta.http.HttpResult.ClientError] absence) one level up.
      *
      * The transient is never written to [releaseGroupWikiMemo] (the write only happens on the
-     * success path inside [cachedReleaseGroupWikiLookup]), so it is retried — not pinned as "no
+     * success path inside [memoizedReleaseGroupWiki]), so it is retried — not pinned as "no
      * wiki links" — by the next type in this call that resolves this release-group.
      */
     // SwallowedException: intentional — see the KDoc above. This enricher has no logger to hand the
@@ -343,13 +352,13 @@ internal class MusicBrainzEnricher(
     private suspend fun resolveReleaseGroupWikiLinks(releaseGroupMbid: String?): Pair<String?, String?> {
         if (releaseGroupMbid == null) return null to null
         return try {
-            cachedReleaseGroupWikiLookup(releaseGroupMbid)
+            memoizedReleaseGroupWiki(releaseGroupMbid)
         } catch (e: Exception) {
             currentCoroutineContext().ensureActive()
             // This run's wikidataId/wikipediaTitle came back unresolved because of a transient, not
             // because this release-group genuinely has none — record that so a type gated on either
             // (e.g. ALBUM_DESCRIPTION's Wikipedia requirement) can be told apart from a genuine
-            // absence and reclassified to Error instead of a cacheable NotFound (issue 06).
+            // absence and reclassified to Error instead of a cacheable NotFound.
             currentCoroutineContext()[TransientIdentifierMarker]?.mark(
                 IdentifierRequirement.WIKIDATA_ID,
                 IdentifierRequirement.WIKIPEDIA_TITLE,
@@ -476,29 +485,41 @@ internal class MusicBrainzEnricher(
      * browse pages each time, all on the shared limiter. Unlike the memos above it holds *which*
      * album a title resolves to, which is only safe because nothing here outlives the call.
      *
-     * A miss is held too, unlike the memos above: an empty result is what pays for both fallbacks in
-     * full, so it is the repeat worth collapsing most. A thrown transient still stores nothing.
-     *
-     * The key separates title from artist with NUL, not a space:
-     * [MusicBrainzQualifierFallback.normalize] collapses whitespace, so a space would let
-     * `("a b", "c")` and `("a", "b c")` share one entry.
+     * A result that resolved nothing is held like any other, and matters more here than elsewhere:
+     * an empty result is what pays for both fallbacks in full, so it is the repeat worth collapsing
+     * most.
      */
-    private val albumSearchMemo = mutableMapOf<String, AlbumSearchResult>()
-    private val albumSearchMemoMutex = Mutex()
+    private val albumSearchMemo = CallMemo<String, AlbumSearchResult>()
 
     /**
      * [searchAlbum], memoized in [albumSearchMemo]. Shared by [enrichAlbum] and [enrichAlbumTracks],
-     * which both need identical album-resolution semantics. The mutex is held across the ladder, as
-     * [artistMemo]'s is, so two types resolving concurrently make one pass between them.
+     * which both need identical album-resolution semantics.
      */
-    private suspend fun resolveAlbumSearch(title: String, artist: String): AlbumSearchResult {
-        val key = MusicBrainzQualifierFallback.normalize(title) + KEY_SEPARATOR +
-            MusicBrainzQualifierFallback.normalize(artist)
-        return albumSearchMemoMutex.withLock {
-            albumSearchMemo[key]?.let { return@withLock it }
-            searchAlbum(title, artist).also { albumSearchMemo[key] = it }
+    private suspend fun memoizedAlbumSearch(title: String, artist: String): AlbumSearchResult =
+        albumSearchMemo.get(albumMemoKey(title, artist)) { searchAlbum(title, artist) }
+
+    /**
+     * Near-miss suggestions for an album title nothing strict resolves, keyed as [albumSearchMemo]
+     * is. [notFoundWithSuggestions] asks for these whenever the strict pool is empty, which — for an
+     * album MusicBrainz does not hold — is once per album type of the request. The pool that decides
+     * they are needed is memoized, so this has to be as well, or an absent album pays a full
+     * `release?query=` per type for the same three suggestions.
+     */
+    private val albumFuzzyMemo = CallMemo<String, List<MusicBrainzRelease>>()
+
+    private suspend fun memoizedFuzzyReleases(title: String, artist: String): List<MusicBrainzRelease> =
+        albumFuzzyMemo.get(albumMemoKey(title, artist)) {
+            api.searchReleasesFuzzy(title, artist, MAX_SUGGESTIONS)
         }
-    }
+
+    /**
+     * [albumSearchMemo] and [albumFuzzyMemo]'s key. The separator is NUL, not a space, because
+     * [MusicBrainzQualifierFallback.normalize] collapses whitespace — a space would let
+     * `("a b", "c")` and `("a", "b c")` share one entry.
+     */
+    private fun albumMemoKey(title: String, artist: String): String =
+        MusicBrainzQualifierFallback.normalize(title) + KEY_SEPARATOR +
+            MusicBrainzQualifierFallback.normalize(artist)
 
     /**
      * Resolves an album search, trying [title]/[artist] as-is first — unchanged from today's
@@ -519,7 +540,7 @@ internal class MusicBrainzEnricher(
 
     /**
      * Tries each of [MusicBrainzQualifierFallback]'s fallback candidates (dropping the original
-     * title — [resolveAlbumSearch] already tried that) in most-specific-first order, stopping at the
+     * title — [memoizedAlbumSearch] already tried that) in most-specific-first order, stopping at the
      * first one [resolve] resolves. Shared shape for [resolveAlbumQualifierFallback] and
      * [resolveTrackQualifierFallback], which differ only in how a candidate resolves.
      */
@@ -696,14 +717,14 @@ internal class MusicBrainzEnricher(
     companion object {
         private const val MAX_SUGGESTIONS = 3
 
-        /** [albumSearchMemo]'s title/artist separator — see there for why it is not a space. */
+        /** The album memos' title/artist separator — see [albumMemoKey] for why it is not a space. */
         private const val KEY_SEPARATOR = '\u0000'
 
         /**
          * Browse pages [findReleaseGroupByFoldedTitle] reads before giving up. One is not enough:
          * Godspeed You! Black Emperor has 107 album/EP/single release groups (live, 2026-08-10).
          */
-        private const val SYMBOL_FALLBACK_MAX_PAGES = 3
+        internal const val SYMBOL_FALLBACK_MAX_PAGES = 3
 
         /** New artist types routed through enrichArtistNewType(). */
         private val ARTIST_NEW_TYPES = setOf(

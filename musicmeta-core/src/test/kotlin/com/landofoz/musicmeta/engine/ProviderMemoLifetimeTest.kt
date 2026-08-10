@@ -8,6 +8,7 @@ import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzApi
+import com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzEnricher
 import com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzProvider
 import com.landofoz.musicmeta.testutil.FakeEnrichmentCache
 import com.landofoz.musicmeta.testutil.FakeHttpClient
@@ -20,12 +21,10 @@ import org.junit.Test
 /**
  * A provider's own memo lives for one [EnrichmentEngine.enrich] call and no longer.
  *
- * Two properties, and the fix has to hold both. MusicBrainz answers several enrichment types from
- * one upstream resource and only the provider knows it — [EnrichmentCache] is keyed by type, so
- * GENRE's answer never serves ALBUM_TRACKS's — which is why the memo exists at all. But it used to
- * live as long as the provider object, which made `forceRefresh = true` a lie: the engine cleared
- * its own cache, called the provider, and got back the payload the provider had held since the
- * first call.
+ * Two properties, and both have to hold. MusicBrainz answers several enrichment types from one
+ * upstream resource and only the provider knows it — [EnrichmentCache] is keyed by type, so GENRE's
+ * answer never serves ALBUM_TRACKS's — which is why the memo exists at all. And nothing it holds
+ * outlives the call, which is what keeps `forceRefresh`, `invalidate()` and `cache.clear()` honest.
  */
 class ProviderMemoLifetimeTest {
 
@@ -172,17 +171,24 @@ class ProviderMemoLifetimeTest {
         httpClient.givenJsonResponse(ARTIST_SEARCH, ARTIST_SEARCH_EXACT)
         httpClient.givenJsonResponse(BROWSE, FULL_BROWSE_PAGE)
 
-        // When - two types are enriched in one call, identity resolution off so that its NotFound's
-        // suggestions do not short-circuit the fan-out before the second type runs
-        val results = engine(identityResolution = false)
-            .enrich(SYMBOL_ALBUM, setOf(EnrichmentType.GENRE, EnrichmentType.ALBUM_TRACKS))
+        // When - three album types are enriched in one call
+        val results = engine().enrich(
+            SYMBOL_ALBUM,
+            setOf(EnrichmentType.GENRE, EnrichmentType.LABEL, EnrichmentType.ALBUM_TRACKS),
+        )
 
-        // Then - neither type resolved, and the miss cost one artist search and one run of browse
-        // pages for the call rather than one of each per type
+        // Then - no type resolved, and the miss cost one run of the ladder, one artist search and
+        // one run of browse pages for the whole call rather than one of each per type. The release
+        // searches are counted because they are what a per-type repeat shows up as first.
         assertTrue(results.raw[EnrichmentType.GENRE] is EnrichmentResult.NotFound)
+        assertTrue(results.raw[EnrichmentType.LABEL] is EnrichmentResult.NotFound)
         assertTrue(results.raw[EnrichmentType.ALBUM_TRACKS] is EnrichmentResult.NotFound)
+        assertEquals(RELEASE_SEARCHES_PER_ABSENT_ALBUM, httpClient.requestedUrls.count { it.contains(RELEASE_SEARCH) })
         assertEquals(1, httpClient.requestedUrls.count { it.contains(ARTIST_SEARCH) })
-        assertEquals(SYMBOL_FALLBACK_MAX_PAGES, httpClient.requestedUrls.count { it.contains(BROWSE) })
+        assertEquals(
+            MusicBrainzEnricher.SYMBOL_FALLBACK_MAX_PAGES,
+            httpClient.requestedUrls.count { it.contains(BROWSE) },
+        )
     }
 
     @Test
@@ -231,8 +237,15 @@ class ProviderMemoLifetimeTest {
         const val ARTIST_SEARCH = "artist?query"
         const val BROWSE = "release-group?artist="
 
-        /** Browse pages the symbol fallback reads before giving up, mirroring the enricher's own cap. */
-        const val SYMBOL_FALLBACK_MAX_PAGES = 3
+        /**
+         * `release?query=` requests one absent album costs: the ladder's strict search, then the
+         * fuzzy search that answers the empty pool with suggestions. [SYMBOL_ALBUM]'s "(Infinity)"
+         * is not a qualifier group, so the qualifier fallback searches nothing between them.
+         *
+         * Both are spent once for the call. A per-type repeat of either is what this number catches,
+         * and the fuzzy one is only reached when nothing strict resolved.
+         */
+        const val RELEASE_SEARCHES_PER_ABSENT_ALBUM = 2
 
         /** What MusicBrainz really answers a search for a symbol title's ASCII spelling with. */
         const val NO_RELEASES = """{"count": 0, "offset": 0, "releases": []}"""

@@ -351,11 +351,27 @@ retry needs beyond the result type has to travel privately.
 
 ## 12. A provider's own memo is a cache no consumer can flush
 
-`MusicBrainzEnricher` memoizes its artist, release and release-group-wiki lookups because the engine
-asks for one type at a time and `EnrichmentCache` is keyed by type — nothing above the provider can
-tell that GENRE and ALBUM_TRACKS want the same release, and each repeat is a ~1.1s wait on the
-shared limiter. That much is right; deleting the memo puts a 5-6× multiplier back on one album's
-fan-out.
+`MusicBrainzEnricher` memoizes its artist, release, release-group-wiki, album-search and
+album-suggestion lookups because the engine asks for one type at a time and `EnrichmentCache` is
+keyed by type — nothing above the provider can tell that GENRE and ALBUM_TRACKS want the same
+release, and each repeat is a ~1.1s wait on the shared limiter.
+
+That much is right, and what deleting them costs depends entirely on whether the album resolves.
+Measured over the six album types MusicBrainz declares a capability for, on the shipped defaults —
+in-process against `FakeHttpClient`, so no live number decays here. The recipe, if you need it
+again: count the upstream requests one `enrich()` makes over all six types, then count them again
+with each memo reduced to its bare API call.
+
+| One album's fan-out | With the memos | Without |
+|---|---|---|
+| Album resolves | 3 requests | 6 — **2×** |
+| Album is absent | 6 requests | 41 — **~7×** |
+
+The resolvable path is cheap either way because `IDENTITY_TYPES` answers five of the six types from
+the identity payload and drops them before the provider chain sees them, so the fan-out is really
+one or two types wide. The miss is where the memos earn their keep: nothing is dropped, so every
+type pays the whole ladder. `ProviderMemoLifetimeTest` pins the with-memo column; a per-type repeat
+is what those counts catch.
 
 What was wrong was its **lifetime**, not its layer. It sat on the provider object, which lives as
 long as the engine, with no TTL and nothing able to clear it. So
@@ -368,7 +384,8 @@ that state for one `enrich()` call, which makes every refresh path honest by con
 Before adding provider-internal state of any kind:
 
 - **State that outlives the call is a second cache with none of `EnrichmentCache`'s guarantees.**
-  Put it in the call scope, or own a TTL and an invalidation path for it.
+  Put it in the call scope, or own a TTL and an invalidation path for it. `ProviderCallScope` is
+  `internal`, so a provider outside this repo has only the second option.
 - **Payload staleness is recoverable; identity staleness is not.** A memo keyed by MBID serves at
   worst an out-of-date payload for an entity already resolved. `MusicBrainzEnricher`'s album-search
   memo is keyed by *title/artist* instead, so it holds which entity a name resolves to — safe only

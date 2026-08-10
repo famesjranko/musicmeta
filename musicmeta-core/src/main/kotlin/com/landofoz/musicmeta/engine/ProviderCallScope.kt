@@ -18,15 +18,19 @@ import kotlin.coroutines.CoroutineContext
  */
 internal class ProviderCallScope : AbstractCoroutineContextElement(Key) {
 
-    private val slots = ConcurrentHashMap<EnrichmentProvider, Any>()
+    private val slots = ConcurrentHashMap<String, Any>()
 
     /**
      * This call's state for [provider], from [create] on first use. Concurrent because the engine
      * resolves types as sibling `async` children, so two of them race for the same slot.
+     *
+     * Keyed by [EnrichmentProvider.id], as [ProviderRegistry] keys its circuit breakers: the
+     * interface is public and states no `equals`/`hashCode` contract, so a consumer's provider
+     * written as a `data class` would give two differently-configured instances one slot.
      */
-    @Suppress("UNCHECKED_CAST") // one provider, one slot, so the stored type is the one it stored
+    @Suppress("UNCHECKED_CAST") // one id, one slot, so the stored type is the one that slot stored
     fun <T : Any> slot(provider: EnrichmentProvider, create: () -> T): T =
-        slots.computeIfAbsent(provider) { create() } as T
+        slots.computeIfAbsent(provider.id) { create() } as T
 
     internal companion object Key : CoroutineContext.Key<ProviderCallScope>
 }
