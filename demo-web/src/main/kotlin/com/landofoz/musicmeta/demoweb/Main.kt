@@ -14,7 +14,18 @@ fun main() {
         discogsPersonalToken = secrets["discogs.token"] ?: env("DISCOGS_TOKEN"),
         listenBrainzToken = secrets["listenbrainz.token"] ?: env("LISTENBRAINZ_TOKEN"),
     )
-    val config = EnrichmentConfig(userAgent = "musicmeta-web-demo/1.0 (+https://github.com/famesjranko/musicmeta)")
+    // The library's 30s default suits a consumer that would rather answer fast and partially — a
+    // mobile app with a screen to fill. This demo wants the opposite: it exists to show what every
+    // provider returns, so a type dropped to meet a deadline is the failure, not the slow answer.
+    //
+    // 30s is not enough for that here. MusicBrainz allows one request a second and the library holds
+    // one limiter per host, so two cold enrichments at once queue against each other rather than
+    // running side by side: measured 2026-08-11, two simultaneous cold album requests took 57s and
+    // 60s, and the second lost 11 of its 15 types to the deadline while the first lost none.
+    val config = EnrichmentConfig(
+        userAgent = "musicmeta-web-demo/1.0 (+https://github.com/famesjranko/musicmeta)",
+        enrichTimeoutMs = 120_000L,
+    )
     val engine = EnrichmentEngine.Builder()
         .apiKeys(keys)
         .config(config)
