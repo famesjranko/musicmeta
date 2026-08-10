@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.engine
 
+import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
@@ -65,7 +66,18 @@ internal fun stampIdentityMatch(
     }
 }
 
-/** Whether identity resolution is needed for the given request and types. */
+/**
+ * Whether identity resolution is needed for the given request and types.
+ *
+ * [EnrichmentIdentifiers.musicBrainzId] is polymorphic — a release id on
+ * [EnrichmentRequest.ForAlbum], an artist id on [EnrichmentRequest.ForArtist], a recording id on
+ * [EnrichmentRequest.ForTrack] — so [IdentifierRequirement.MUSICBRAINZ_ID] means "an id of the
+ * request's own kind", and a capability declaring it says nothing about which kind it can serve.
+ * On a track request that gap is real and reachable: cover art is keyed on a release-group, a
+ * recording id cannot stand in for one, and nothing but resolution fills
+ * [EnrichmentIdentifiers.musicBrainzReleaseGroupId]. Without the track clause below, supplying a
+ * correct recording MBID returns strictly less than supplying nothing.
+ */
 internal fun needsIdentityResolution(
     request: EnrichmentRequest,
     types: Set<EnrichmentType>,
@@ -73,6 +85,7 @@ internal fun needsIdentityResolution(
 ): Boolean {
     val ids = request.identifiers
     if (ids.musicBrainzId == null && ids.musicBrainzReleaseGroupId == null) return true
+    if (request is EnrichmentRequest.ForTrack && ids.musicBrainzReleaseGroupId == null) return true
     for (type in types) {
         val chain = registry.chainFor(type) ?: continue
         for (provider in chain.providers()) {
