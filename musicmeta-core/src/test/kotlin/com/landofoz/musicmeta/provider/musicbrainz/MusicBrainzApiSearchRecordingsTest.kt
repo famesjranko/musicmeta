@@ -118,14 +118,89 @@ class MusicBrainzApiSearchRecordingsTest {
         assertTrue("requested limit=$limit, past MusicBrainz's maximum", limit <= MUSICBRAINZ_MAX_SEARCH_LIMIT)
     }
 
+    @Test
+    fun `an album hint that finds recordings costs one request and no filter`() = runTest {
+        // Given - a hinted query that finds something
+        httpClient.givenJsonResponse("recording?query", SINGLE_MATCH)
+
+        // When - the resolution search runs with an album hint MusicBrainz can satisfy
+        api.searchCanonicalRecordings("Enter Sandman", "Metallica", "Metallica")
+
+        // Then - that pool answers alone, unfiltered: the extra request below is the miss path's cost
+        val url = httpClient.requestedUrls.single()
+        assertTrue("expected the release term in $url", url.contains("release%3A%22Metallica%22"))
+        assertTrue("expected no filter on a hinted request, got $url", !url.contains(CANONICAL_FILTER))
+    }
+
+    @Test
+    fun `an album hint that finds nothing unions both hint-less pools`() = runTest {
+        // Given - a hinted query with no hits, and two hint-less pools sharing one recording
+        httpClient.givenJsonResponse("release%3A%22Some+Renamed+Edition%22", EMPTY_POOL)
+        httpClient.givenJsonResponse(CANONICAL_FILTER, FILTERED_POOL)
+        httpClient.givenJsonResponse("recording?query", UNFILTERED_POOL)
+
+        // When - the resolution search runs with an album hint MusicBrainz has no release for
+        val result = api.searchCanonicalRecordings("Enter Sandman", "Metallica", "Some Renamed Edition")
+
+        // Then - three requests, the extra one being the deep filtered pool this function exists for
+        val urls = httpClient.requestedUrls
+        assertEquals(3, urls.size)
+        assertTrue("expected the hint first, got ${urls[0]}", urls[0].contains("release%3A%22Some+Renamed+Edition%22"))
+        assertTrue("expected the filter on the deep pool, got ${urls[1]}", urls[1].contains(CANONICAL_FILTER))
+        assertTrue("expected the deep pool at limit=100, got ${urls[1]}", urls[1].endsWith("&limit=100"))
+        assertTrue("expected no release term on the deep pool, got ${urls[1]}", !urls[1].contains("release%3A"))
+        assertTrue("expected no filter on the shallow pool, got ${urls[2]}", !urls[2].contains(CANONICAL_FILTER))
+        assertTrue("expected the shallow pool at limit=25, got ${urls[2]}", urls[2].endsWith("&limit=25"))
+
+        // Then - both pools reach the caller, deduplicated by recording id, deep pool first
+        assertEquals(listOf("rec-studio", "rec-shared", "rec-live"), result.map { it.id })
+    }
+
+    @Test
+    fun `a title that names its own variant takes the unfiltered ladder`() = runTest {
+        // Given - a single matching recording for whichever query is sent
+        httpClient.givenJsonResponse("recording?query", SINGLE_MATCH)
+
+        // When - the request's own title carries a trailing qualifier group
+        api.searchCanonicalRecordings("Comfortably Numb (Live at Earls Court)", "Pink Floyd")
+
+        // Then - one unfiltered request: the filter would delete the very recording the title names
+        val url = httpClient.requestedUrls.single()
+        assertTrue("expected no filter for a title naming a variant, got $url", !url.contains(CANONICAL_FILTER))
+        assertTrue("expected the unfiltered page size, got $url", url.endsWith("&limit=25"))
+    }
+
     private companion object {
         /** MusicBrainz's own maximum for a search `limit`. Past it there is no error, just 25. */
         const val MUSICBRAINZ_MAX_SEARCH_LIMIT = 100
+
+        /** `-comment:*` as `URLEncoder` writes it — `:` escapes, `*` and `-` do not. */
+        const val CANONICAL_FILTER = "-comment%3A*"
 
         const val SINGLE_MATCH = """
             {
               "recordings": [
                 {"id": "rec-studio", "score": 100, "title": "Enter Sandman"}
+              ]
+            }
+        """
+
+        const val EMPTY_POOL = """{"count": 0, "recordings": []}"""
+
+        const val FILTERED_POOL = """
+            {
+              "recordings": [
+                {"id": "rec-studio", "score": 100, "title": "Enter Sandman"},
+                {"id": "rec-shared", "score": 100, "title": "Enter Sandman"}
+              ]
+            }
+        """
+
+        const val UNFILTERED_POOL = """
+            {
+              "recordings": [
+                {"id": "rec-shared", "score": 100, "title": "Enter Sandman"},
+                {"id": "rec-live", "score": 100, "title": "Enter Sandman"}
               ]
             }
         """

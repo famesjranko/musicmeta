@@ -91,11 +91,20 @@ internal class MusicBrainzEnricher(
      * recording's own fields parse the same response two different ways
      * ([MusicBrainzApi.lookupRecording]), so one call serves every track type of a request that
      * carries an MBID.
+     *
+     * A miss is held too, unlike [artistMemo]'s and [releaseMemo]'s. [MusicBrainzApi.lookupRecording]
+     * returns null only for an [com.landofoz.musicmeta.http.HttpResult.ClientError], every transient
+     * having been thrown by `bodyOrThrowTransient` before it — so a null is MusicBrainz stating that
+     * it has no such recording, not a blip a later type might get past. A dead identifier a caller
+     * supplied otherwise costs one lookup per type to be told the same thing each time.
      */
-    private val recordingMemo = CallMemo<String, JSONObject>()
+    private val recordingMemo = CallMemo<String, RecordingLookup>()
 
     private suspend fun memoizedRecording(mbid: String): JSONObject? =
-        recordingMemo.getOrNull(mbid) { api.lookupRecording(mbid) }
+        recordingMemo.get(mbid) { RecordingLookup(api.lookupRecording(mbid)) }.json
+
+    /** [recordingMemo]'s value: a null body is an answer, so [CallMemo.get] can hold it like any other. */
+    private data class RecordingLookup(val json: JSONObject?)
 
     /**
      * Recording ids [enrichTrack] resolved *by search* during this call.
@@ -314,17 +323,18 @@ internal class MusicBrainzEnricher(
      * The MBID reached this call from outside it — a caller's, or a foreign identity provider's —
      * so it names the recording the answer must describe, exactly as [enrichAlbum] and [enrichArtist]
      * treat theirs. A miss is [EnrichmentResult.NotFound] and never a fall back to the name search:
-     * answering with a *different* recording is the defect this path exists to close.
+     * answering with a *different* recording is the defect this path exists to close. It carries
+     * [trackMiss]'s suggestions, as the search miss does — an identifier the consumer cannot correct
+     * is a dead end — and they stay suggestions: none is ranked, resolved or remembered.
      */
     private suspend fun enrichTrackByMbid(
         request: EnrichmentRequest.ForTrack,
         mbid: String,
         type: EnrichmentType,
     ): EnrichmentResult {
-        val json = memoizedRecording(mbid)
-            ?: return EnrichmentResult.NotFound(type, providerId)
+        val json = memoizedRecording(mbid) ?: return trackMiss(request, type)
         val recording = MusicBrainzParser.parseLookupRecording(json, request.album)
-            ?: return EnrichmentResult.NotFound(type, providerId)
+            ?: return trackMiss(request, type)
         return trackResult(recording, type, ConfidenceCalculator.idBasedLookup())
     }
 
@@ -332,19 +342,30 @@ internal class MusicBrainzEnricher(
         request: EnrichmentRequest.ForTrack,
         type: EnrichmentType,
     ): EnrichmentResult {
-        val recordings = api.searchCanonicalRecordings(request.title, request.artist, request.album)
+        val recordings = memoizedTrackSearch(request)
         val best = pickBestRecording(request.title, recordings, request.album)
             ?: resolveTrackQualifierFallback(request.title, request.artist, request.album)
-            // searchRecordings' own hint-less retry re-sends the title quoted (see its KDoc), so
-            // only the fuzzy search can rescue a typo — and only an empty strict pool triggers it.
-            ?: return notFoundWithSuggestions(
-                type, recordings,
-                fuzzy = { api.searchRecordingsFuzzy(request.title, request.artist, MAX_SUGGESTIONS) },
-            ) { it.toCandidate() }
+            ?: return trackMiss(request, type)
 
         rememberSearchResolved(best.id)
         return trackResult(best, type, ConfidenceCalculator.searchScore(best.score))
     }
+
+    /**
+     * The answer when no recording resolves, whichever path failed to find one. Suggestions only —
+     * nothing offered here is remembered by [rememberSearchResolved] or can become the answer.
+     *
+     * [MusicBrainzApi.searchRecordings]' own hint-less retry re-sends the title quoted (see its
+     * KDoc), so only the fuzzy search can rescue a typo, and only an empty suggestion pool asks for
+     * it.
+     */
+    private suspend fun trackMiss(
+        request: EnrichmentRequest.ForTrack,
+        type: EnrichmentType,
+    ): EnrichmentResult.NotFound = notFoundWithSuggestions(
+        type, memoizedTrackSuggestions(request),
+        fuzzy = { memoizedFuzzyRecordings(request) },
+    ) { it.toCandidate() }
 
     private fun trackResult(
         recording: MusicBrainzRecording,
@@ -362,14 +383,22 @@ internal class MusicBrainzEnricher(
         resolvedIdentifiers = MusicBrainzMapper.toTrackIdentifiers(recording),
     )
 
+    /**
+     * Only the *lookup* miss suggests, and the two bare misses here are not oversights.
+     *
+     * A recording MusicBrainz does not hold is the same dead end [enrichTrackByMbid] reaches, so it
+     * is answered the same way. A recording it does hold that credits nobody is not: the caller's
+     * identifier resolved, and offering other recordings would answer "did you mean a different
+     * track?" when the answer is "this track, and it credits nobody". A request naming no recording
+     * at all asked MusicBrainz nothing, so there is no miss to recover from.
+     */
     internal suspend fun enrichTrackCredits(
         request: EnrichmentRequest.ForTrack,
     ): EnrichmentResult {
         val type = EnrichmentType.CREDITS
         val mbid = request.identifiers.musicBrainzId
             ?: return EnrichmentResult.NotFound(type, providerId)
-        val json = memoizedRecording(mbid)
-            ?: return EnrichmentResult.NotFound(type, providerId)
+        val json = memoizedRecording(mbid) ?: return trackMiss(request, type)
         val credits = MusicBrainzCreditParser.parseRecordingCredits(json)
         if (credits.isEmpty()) return EnrichmentResult.NotFound(type, providerId)
         return EnrichmentResult.Success(
@@ -492,10 +521,12 @@ internal class MusicBrainzEnricher(
      *    "bootleg edited version", instrumental, acoustic, radio edit, mono/stereo, single
      *    version, …) and cannot be enumerated by keyword — verified live: "bootleg edited version"
      *    isn't a "demo"/"live"/"remix"/"remaster" keyword match, so a keyword list let it tie the
-     *    studio original and win on pool order. Blank-vs-non-blank has no such gap. The accepted
-     *    edge: a request that explicitly asks for a variant edition (title itself names it) still
-     *    resolves via tier 1's exact-title match, because MB puts variant information in
-     *    disambiguation, not in the recording title — blank-preference never fights an exact title.
+     *    studio original and win on pool order. Blank-vs-non-blank has no such gap. A request that
+     *    explicitly asks for a variant edition (title itself names it) resolves on tier 1 instead,
+     *    which outranks this one — but only while that recording is in the pool, and MB routinely
+     *    repeats the variant in the disambiguation as well as the title, which `-comment:*` removes
+     *    upstream. [MusicBrainzApi.searchCanonicalRecordings] keeps the filter off such a request
+     *    for exactly that reason.
      * 5. carries an Official release on an Album release-group
      *    ([MusicBrainzRecording.hasOfficialAlbumRelease]) — prefers the studio album cut over a
      *    single/compilation-only recording when neither carries a disambiguation
@@ -587,6 +618,63 @@ internal class MusicBrainzEnricher(
     private fun albumQuery(title: String, artist: String) = AlbumQuery(
         MusicBrainzQualifierFallback.normalize(title),
         MusicBrainzQualifierFallback.normalize(artist),
+    )
+
+    /**
+     * The recording pool a track request resolves out of. Keyed like [albumSearchMemo], and holding
+     * which recording a name resolves to under the same protection: nothing here outlives the call.
+     *
+     * A track repeats this search where an album does not. Identity resolution merges the recording
+     * it picked into the request, and [enrichTrack] deliberately routes that MBID back to the search
+     * rather than looking it up ([isOwnSearchEcho]), so identity's query and every type's query are
+     * the same one. Two of them are not equivalent to one: MusicBrainz does not order identical
+     * searches identically, and [pickBestRecording] keeps the first maximum among ties, so a second
+     * search ranks a differently-ordered pool and can pick a different recording — leaving the
+     * identity a consumer reads naming one recording while its payload describes another.
+     */
+    private val trackSearchMemo = CallMemo<TrackQuery, List<MusicBrainzRecording>>()
+
+    private suspend fun memoizedTrackSearch(request: EnrichmentRequest.ForTrack): List<MusicBrainzRecording> =
+        trackSearchMemo.get(trackQuery(request)) {
+            api.searchCanonicalRecordings(request.title, request.artist, request.album)
+        }
+
+    /**
+     * The pool a track miss *suggests* from, keyed as [trackSearchMemo] is.
+     *
+     * Unfiltered, and never what a request resolves out of: a suggestion list is a choose-a-version
+     * surface, built the way [MusicBrainzProvider.searchCandidates] builds its own, because a list
+     * narrowed to canonical recordings cannot answer "I want the Moscow one" — and the resolution
+     * pool is narrowed to exactly that. A different query from [trackSearchMemo]'s, so it holds its
+     * own answer; one extra request, on the miss path only.
+     */
+    private val trackSuggestionMemo = CallMemo<TrackQuery, List<MusicBrainzRecording>>()
+
+    private suspend fun memoizedTrackSuggestions(request: EnrichmentRequest.ForTrack): List<MusicBrainzRecording> =
+        trackSuggestionMemo.get(trackQuery(request)) {
+            api.searchRecordings(request.title, request.artist, request.album)
+        }
+
+    /**
+     * Near-miss suggestions for a track no pool holds, keyed as [trackSuggestionMemo] is and
+     * memoized for the reason [albumFuzzyMemo] is: the pool that decides they are needed is
+     * memoized, so an absent track would otherwise pay a full `recording?query=` per type for the
+     * same three suggestions.
+     */
+    private val trackFuzzyMemo = CallMemo<TrackQuery, List<MusicBrainzRecording>>()
+
+    private suspend fun memoizedFuzzyRecordings(request: EnrichmentRequest.ForTrack): List<MusicBrainzRecording> =
+        trackFuzzyMemo.get(trackQuery(request)) {
+            api.searchRecordingsFuzzy(request.title, request.artist, MAX_SUGGESTIONS)
+        }
+
+    /** [trackSearchMemo]'s key, in fields for the reason [AlbumQuery] is. A blank album is no album. */
+    private data class TrackQuery(val title: String, val artist: String, val album: String)
+
+    private fun trackQuery(request: EnrichmentRequest.ForTrack) = TrackQuery(
+        MusicBrainzQualifierFallback.normalize(request.title),
+        MusicBrainzQualifierFallback.normalize(request.artist),
+        MusicBrainzQualifierFallback.normalize(request.album),
     )
 
     /**

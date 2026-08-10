@@ -100,34 +100,72 @@ internal class MusicBrainzApi(
      * *upstream* of the limit instead of downstream of it. Downstream the tier can only rank what
      * the page already let through, and for a heavily-covered track that is nothing at all.
      *
-     * **Only when the request names no album.** The two do not compose: the filter deletes
-     * candidates, so a recording that is marked *and* sits on the requested album would be gone
-     * before [MusicBrainzEnricher.pickBestRecording]'s album-match tier — which outranks its
-     * disambiguation tier, because an explicit album is the stronger signal — could prefer it. An
-     * album is also the better narrowing term on its own, so a hinted request takes
-     * [searchRecordings] unchanged.
+     * The filter only ever removes candidates, so the whole ladder here is about the requests where
+     * the one it removes is the answer:
      *
-     * A filter can only remove candidates, so an empty filtered pool falls back to the unfiltered
-     * ladder — a track whose every recording is marked must still resolve. That costs one extra
-     * request, on the miss path only. It does not rescue a track whose canonical recording is marked
-     * while other takes are not: the right answer is removed, the pool is not empty, and nothing
-     * fires. That case is no worse than before rather than newly broken, and is not fixed here.
+     * - **[title] itself ends in a bracketed group** — the request names the variant it wants, and
+     *   the filter deletes precisely that recording while leaving the pool full, so no fallback
+     *   fires and the unmarked studio take wins instead. Verified live 2026-08-10: U2's "Where the
+     *   Streets Have No Name (live at Rotterdam)" carries the variant in its title *and* in its
+     *   disambiguation, and that title queried with `-comment:*` returns count 0 — MusicBrainz
+     *   keeping variant text out of the title is the common case, not a rule. Such a request takes
+     *   the unfiltered [searchRecordings] ladder whole. The test is structural rather than a
+     *   vocabulary of variant words (`docs/pitfalls.md` §7), so a canonical title that merely ends
+     *   in brackets ("Sgt. Pepper's Lonely Hearts Club Band (Reprise)") takes that ladder too. That
+     *   is the safe direction: it degrades to the pool that shipped before the filter existed,
+     *   never to a different recording.
+     * - **an album hint that finds nothing** — [recordingQuery]'s `release:"…"` term matches release
+     *   (edition) titles, while [MusicBrainzEnricher.pickBestRecording] matches on
+     *   [MusicBrainzRecording.artReleaseGroupTitle], the release *group* title. The two genuinely
+     *   diverge, so an empty hinted pool is not evidence the album is absent, and the hint-less
+     *   retry has to serve both readings: the filtered pool at [CANONICAL_SEARCH_LIMIT] for the
+     *   depth this function exists for, and the unfiltered one at [RECORDING_SEARCH_LIMIT] to keep
+     *   a recording that is marked *and* sits on the requested album reachable — the album-match
+     *   tier outranks the disambiguation tier, so the filter would delete a candidate the ranking
+     *   would have preferred. Their union, deduplicated by recording id, is that pool. One extra
+     *   request, on the miss path only.
+     * - **an empty filtered pool** on a hint-less request — a track whose every recording is marked
+     *   must still resolve, so the unfiltered query follows. Also one extra request, on that path
+     *   only. It does not rescue a track whose canonical recording is marked while other takes are
+     *   not: the right answer is removed, the pool is not empty, and nothing fires. That case is no
+     *   worse than before rather than newly broken, and is not fixed here.
      *
-     * `scripts/probes/recording-pool-filter-probe.sh` measures all of the above; the figures that
-     * bound the design live on [CANONICAL_SEARCH_LIMIT], and nowhere else.
+     * A hinted query that does find recordings answers alone and unfiltered. The two do not compose
+     * — the filter would delete the marked album take the hint was asking for — and an album is the
+     * better narrowing term on its own.
+     *
+     * `scripts/probes/recording-pool-filter-probe.sh` measures the pools; the figures that bound the
+     * design live on [CANONICAL_SEARCH_LIMIT], and nowhere else.
      */
     suspend fun searchCanonicalRecordings(
         title: String,
         artist: String,
         album: String? = null,
     ): List<MusicBrainzRecording> {
-        if (!album.isNullOrBlank()) return searchRecordings(title, artist, album)
-        val canonical = fetchRecordings(
-            recordingQuery(title, artist, null, canonicalOnly = true),
-            CANONICAL_SEARCH_LIMIT,
-        )
-        return canonical.ifEmpty { searchRecordings(title, artist, null) }
+        if (MusicBrainzQualifierFallback.hasTrailingGroup(title)) return searchRecordings(title, artist, album)
+        val albumHint = album?.takeIf { it.isNotBlank() }
+        if (albumHint == null) return canonicalPool(title, artist).ifEmpty { shallowPool(title, artist, null) }
+        val hinted = fetchRecordings(recordingQuery(title, artist, albumHint), RECORDING_SEARCH_LIMIT, albumHint)
+        return hinted.ifEmpty {
+            (canonicalPool(title, artist, albumHint) + shallowPool(title, artist, albumHint)).distinctBy { it.id }
+        }
     }
+
+    /** The hint-less filtered pool, at the deep page — what buys the depth the filter is for. */
+    private suspend fun canonicalPool(
+        title: String,
+        artist: String,
+        albumHint: String? = null,
+    ): List<MusicBrainzRecording> =
+        fetchRecordings(recordingQuery(title, artist, null, canonicalOnly = true), CANONICAL_SEARCH_LIMIT, albumHint)
+
+    /** The hint-less unfiltered pool, at the shallow page — the shape that shipped before the filter. */
+    private suspend fun shallowPool(
+        title: String,
+        artist: String,
+        albumHint: String?,
+    ): List<MusicBrainzRecording> =
+        fetchRecordings(recordingQuery(title, artist, null), RECORDING_SEARCH_LIMIT, albumHint)
 
     /**
      * [albumHint] is always the request's own album (independent of whether [query] itself carries

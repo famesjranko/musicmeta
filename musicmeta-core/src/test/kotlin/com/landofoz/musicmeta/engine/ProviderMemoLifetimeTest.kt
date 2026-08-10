@@ -251,8 +251,47 @@ class ProviderMemoLifetimeTest {
         assertEquals(1, httpClient.requestedUrls.count { it.contains("artist/art1?") })
     }
 
+    @Test
+    fun `one track's fanout searches for the recording once, not once per type`() = runTest {
+        // Given - a track carrying no MBID, whose best recording has no tags of its own, so GENRE
+        // is not answered by the identity payload and reaches the provider chain like any other type
+        httpClient.givenJsonResponse(RECORDING_SEARCH, RECORDING_SEARCH_HIT)
+
+        // When - two track types are enriched in one call
+        val results = engine().enrich(TRACK, setOf(EnrichmentType.GENRE, EnrichmentType.TRACK_METADATA))
+
+        // Then - one search served the call, not identity's own plus one per type. Every one of
+        // those repeats is a fresh ranking of a pool MusicBrainz is free to reorder, so the saving
+        // is a consistent answer as much as a request on the 1 req/s limiter.
+        assertTrue(
+            "expected track metadata, got ${results.raw[EnrichmentType.TRACK_METADATA]}",
+            results.raw[EnrichmentType.TRACK_METADATA] is EnrichmentResult.Success,
+        )
+        assertEquals(1, httpClient.requestedUrls.count { it.contains(RECORDING_SEARCH) })
+    }
+
+    @Test
+    fun `an absent track's fanout spends the search ladder once, not once per type`() = runTest {
+        // Given - a track MusicBrainz holds no recording of at all, so nothing on the ladder resolves
+        httpClient.givenJsonResponse(RECORDING_SEARCH, NO_RECORDINGS)
+
+        // When - two track types are enriched in one call. Nothing suggests either, so identity does
+        // not short-circuit the fan-out and both types run the whole ladder for themselves.
+        val results = engine().enrich(TRACK, setOf(EnrichmentType.GENRE, EnrichmentType.TRACK_METADATA))
+
+        // Then - no type resolved, and the miss cost one run of the ladder for the call
+        assertTrue(results.raw[EnrichmentType.GENRE] is EnrichmentResult.NotFound)
+        assertTrue(results.raw[EnrichmentType.TRACK_METADATA] is EnrichmentResult.NotFound)
+        assertEquals(
+            RECORDING_SEARCHES_PER_ABSENT_TRACK,
+            httpClient.requestedUrls.count { it.contains(RECORDING_SEARCH) },
+        )
+    }
+
     private companion object {
         val ALBUM = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+
+        val TRACK = EnrichmentRequest.forTrack("Enter Sandman", "Metallica")
 
         /** A title MusicBrainz stores only under symbols (`F♯ A♯ ∞`), so no spelling searches for it. */
         val SYMBOL_ALBUM = EnrichmentRequest.forAlbum("F# A# (Infinity)", "Godspeed You! Black Emperor")
@@ -262,6 +301,37 @@ class ProviderMemoLifetimeTest {
         const val RELEASE_GROUP = "release-group/group123"
         const val ARTIST_SEARCH = "artist?query"
         const val BROWSE = "release-group?artist="
+        const val RECORDING_SEARCH = "recording?query"
+
+        /**
+         * What one absent track costs in `recording?query=` requests: the filtered resolution
+         * search, the unfiltered retry an empty filtered pool falls back to, the unfiltered pool the
+         * miss suggests from, and the fuzzy near-miss search an empty suggestion pool asks for.
+         * "Enter Sandman" carries no qualifier group, so the qualifier fallback searches nothing.
+         *
+         * Each is spent once for the call. A per-type repeat of any of them is what this catches.
+         */
+        const val RECORDING_SEARCHES_PER_ABSENT_TRACK = 4
+
+        /** What MusicBrainz answers a search for a track it holds no recording of with. */
+        const val NO_RECORDINGS = """{"count": 0, "offset": 0, "recordings": []}"""
+
+        /** A recording the ranking resolves, carrying no tags — so it answers TRACK_METADATA and not GENRE. */
+        val RECORDING_SEARCH_HIT = """
+            {
+              "recordings": [{
+                "id": "rec1",
+                "score": 100,
+                "title": "Enter Sandman",
+                "length": 331560,
+                "artist-credit": [{"artist": {"id": "art-metallica", "name": "Metallica"}}],
+                "releases": [{
+                  "status": "Official",
+                  "release-group": {"id": "rg-studio", "title": "Metallica", "primary-type": "Album"}
+                }]
+              }]
+            }
+        """.trimIndent()
 
         /**
          * What one absent album costs in `release?query=` requests: the ladder's strict search, then

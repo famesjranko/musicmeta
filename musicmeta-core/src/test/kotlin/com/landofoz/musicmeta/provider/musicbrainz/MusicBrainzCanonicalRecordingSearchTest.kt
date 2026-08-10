@@ -127,17 +127,87 @@ class MusicBrainzCanonicalRecordingSearchTest {
         assertTrue("expected no filter on a hinted request", urlsMatching(CANONICAL_QUERY).isEmpty())
     }
 
+    @Test
+    fun `an album hint MusicBrainz has no release for still resolves out of the deep pool`() = runTest {
+        // Given - an album whose release title MusicBrainz does not carry, so the hinted query is empty,
+        // and a shallow hint-less pool holding nothing but marked takes
+        httpClient.givenJsonResponse("release%3A%22Some+Renamed+Edition%22", EMPTY_POOL)
+        givenCanonicalPool(CANONICAL_POOL)
+        httpClient.givenJsonResponse(RECORDING_SEARCH, ALL_VARIANTS_POOL)
+        val request = EnrichmentRequest.forTrack(TITLE, ARTIST, album = "Some Renamed Edition")
+
+        // When - the track's metadata is enriched
+        val result = provider.enrich(request, EnrichmentType.TRACK_METADATA)
+
+        // Then - the studio cut wins, which only the filtered pool held; the shallow pool the miss
+        // path used to fall back to alone would have answered with a live take
+        assertEquals(STUDIO_MBID, resolvedIdOf(result))
+        assertEquals(3, urlsMatching(RECORDING_SEARCH).size)
+    }
+
+    @Test
+    fun `a request whose own title names the variant resolves to it, not the studio cut`() = runTest {
+        // Given - a pool holding both the studio cut and a take whose title carries the variant
+        givenCanonicalPool(CANONICAL_POOL)
+        httpClient.givenJsonResponse(RECORDING_SEARCH, VARIANT_TITLED_POOL)
+        val request = EnrichmentRequest.forTrack(VARIANT_TITLE, ARTIST)
+
+        // When - the track's metadata is enriched
+        val result = provider.enrich(request, EnrichmentType.TRACK_METADATA)
+
+        // Then - the exact-title tier reaches the marked take, which the filter would have deleted
+        // upstream while leaving a pool too full for the empty-pool fallback to fire
+        assertEquals(WEMBLEY_MBID, resolvedIdOf(result))
+        assertTrue("expected no filter for a title naming a variant", urlsMatching(CANONICAL_QUERY).isEmpty())
+        assertEquals(1, urlsMatching(RECORDING_SEARCH).size)
+    }
+
+    @Test
+    fun `a miss suggests from the pool a consumer chooses out of, not the filtered one`() = runTest {
+        // Given - a filtered pool nothing in which clears the score floor, and an unfiltered pool
+        // holding the marked take a consumer would have wanted offered
+        givenCanonicalPool(WEAK_POOL)
+        httpClient.givenJsonResponse(RECORDING_SEARCH, ALL_VARIANTS_POOL)
+
+        // When - the track is enriched by name alone
+        val result = provider.enrich(EnrichmentRequest.forTrack(TITLE, ARTIST), EnrichmentType.TRACK_METADATA)
+
+        // Then - the suggestions are the unfiltered pool's: a "did you mean?" list narrowed to
+        // canonical recordings cannot answer "I want the Moscow one", and the resolution pool is
+        // narrowed to exactly that. One extra request buys it, and only this path spends it.
+        val notFound = result as EnrichmentResult.NotFound
+        assertEquals(listOf(LIVE_MBID, "rec-demo"), notFound.suggestions?.map { it.identifiers.musicBrainzId })
+        assertEquals(2, urlsMatching(RECORDING_SEARCH).size)
+    }
+
     private companion object {
         const val TITLE = "Enter Sandman"
+        const val VARIANT_TITLE = "Enter Sandman (live at Wembley)"
         const val ARTIST = "Metallica"
         const val STUDIO_MBID = "rec-studio"
         const val LIVE_MBID = "rec-live-1"
+        const val WEMBLEY_MBID = "rec-wembley"
         const val RECORDING_SEARCH = "recording?query"
 
         /** `-comment:*` as `URLEncoder` writes it — `:` escapes, `*` and `-` do not. */
         const val CANONICAL_QUERY = "-comment%3A*"
 
         const val EMPTY_POOL = """{"count": 0, "recordings": []}"""
+
+        /**
+         * A filtered pool that is populated but resolves nothing: unmarked B-sides and remixes MB
+         * scores far below the floor. The shape that leaves the fuzzy near-miss search unreached —
+         * it is gated on an *empty* pool — while the pool itself is no use as a suggestion.
+         */
+        val WEAK_POOL = """
+            {
+              "count": 2,
+              "recordings": [
+                {"id": "rec-b-side", "score": 50, "title": "Enter Sandman (early version)"},
+                {"id": "rec-remix", "score": 45, "title": "Sandman"}
+              ]
+            }
+        """.trimIndent()
 
         /**
          * What the shipped query returns for a heavily-covered track: every candidate marked, so
@@ -161,6 +231,34 @@ class MusicBrainzCanonicalRecordingSearchTest {
                   "releases": [{
                     "status": "Official",
                     "release-group": {"id": "rg-studio", "title": "Metallica", "primary-type": "Album"}
+                  }]
+                }
+              ]
+            }
+        """.trimIndent()
+
+        /**
+         * MusicBrainz repeating the variant in the recording *title* as well as the disambiguation
+         * — the shape `-comment:*` deletes without emptying the pool. Verified live 2026-08-10 on
+         * U2's "Where the Streets Have No Name (live at Rotterdam)".
+         */
+        val VARIANT_TITLED_POOL = """
+            {
+              "count": 41,
+              "recordings": [
+                {
+                  "id": "rec-studio", "score": 100, "title": "Enter Sandman",
+                  "releases": [{
+                    "status": "Official",
+                    "release-group": {"id": "rg-studio", "title": "Metallica", "primary-type": "Album"}
+                  }]
+                },
+                {
+                  "id": "rec-wembley", "score": 100, "title": "Enter Sandman (live at Wembley)",
+                  "disambiguation": "live, 1992-04-20: Wembley Stadium, London, UK",
+                  "releases": [{
+                    "status": "Official",
+                    "release-group": {"id": "rg-live", "title": "Live Shit", "primary-type": "Album"}
                   }]
                 }
               ]
