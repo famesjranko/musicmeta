@@ -1,21 +1,21 @@
 #!/usr/bin/env bash
-# Backs the decision in .scratch/provider-code-findings/issues/26-enrichtrack-ignores-a-known-recording-mbid.md.
+# What a recording search returns against what a recording lookup returns.
 #
 # Three live questions, none answerable from the code alone:
 #
-#   1. How deep is the tied-score pool for a heavily-covered track, and does the shipped
-#      RECORDING_SEARCH_LIMIT=25 reliably surface a blank-disambiguation (studio) candidate within it?
-#      MusicBrainzApi.kt's own comment claims yes, "measured live (2026-08-06)". This re-checks it.
-#   2. Does lookupRecording's current inc=artist-rels+work-rels really omit `releases` (option A's
-#      field-loss claim), and does widening inc= to include releases+release-groups recover it?
+#   1. How deep is the tied-score pool for a heavily-covered track, and does RECORDING_SEARCH_LIMIT
+#      surface a blank-disambiguation (studio) candidate within it? Any claim that it does is a
+#      measurement, and a measurement decays as MusicBrainz catalogues more live recordings.
+#   2. Does lookupRecording's inc= omit `releases`, and does widening it to include
+#      releases+release-groups recover them, each carrying a release-group?
 #   3. When it does, does the recovered `releases` array embed in the SAME ORDER a search hit would —
 #      findArtReleaseGroup's tiers 1-3 pick the FIRST match within a tier, so order can change which
 #      release-group (and so which cover art) a request resolves to.
 #
 # Not a gate: live third-party calls, answers drift as MusicBrainz's catalogue grows (new live
 # recordings are added constantly for touring bands). Run it, paste the block into whatever claim
-# needs backing, and date it. One run is a sample — MB's own tie order "shifts with the limit itself"
-# per MusicBrainzApi.kt, so re-run before trusting a single result.
+# needs backing, and date it. One run is a sample — MB's own tie order shifts with the limit
+# itself — so re-run before trusting a single result.
 #
 #   TITLE="Enter Sandman" ARTIST="Metallica" ./scripts/probes/enrichtrack-mbid-probe.sh
 #

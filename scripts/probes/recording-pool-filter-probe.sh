@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Backs the decision in .scratch/track-mbid-honoured/issues/03-recording-search-limit-no-longer-holds-a-studio-candidate.md.
+# Whether a recording pool can be narrowed upstream instead of ranked downstream.
 #
 # The name-only track path resolves whatever MusicBrainz's relevance order puts in the top
 # RECORDING_SEARCH_LIMIT. For a heavily-covered track that pool is all live/bootleg/cover takes, so

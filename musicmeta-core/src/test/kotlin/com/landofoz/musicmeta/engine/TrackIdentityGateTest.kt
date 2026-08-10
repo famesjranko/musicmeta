@@ -113,6 +113,20 @@ class TrackIdentityGateTest {
     }
 
     @Test
+    fun `a track request whose types declare no identifier resolves nothing, and spends nothing`() = runTest {
+        // Given - a track known by MBID and a type answered from a name, declaring no identifier
+        val request = EnrichmentRequest.forTrack(TITLE, ARTIST, mbid = RECORDING_MBID)
+
+        // When - only that type is enriched
+        val results = engine().enrich(request, setOf(EnrichmentType.TRACK_METADATA))
+
+        // Then - no resolution, because nothing in the request's chains wants an identifier it lacks.
+        // The track rule qualifies what MUSICBRAINZ_ID means rather than short-circuiting the scan,
+        // so it cannot bill a request that had no identifier gap to close.
+        assertNull(results.identity)
+    }
+
+    @Test
     fun `an album request carrying a release mbid still skips identity resolution`() = runTest {
         // Given - an album known by MBID, where musicBrainzId already means the release CAA wants
         httpClient.givenJsonResponse("release/rel-1?", RELEASE)

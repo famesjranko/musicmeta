@@ -105,8 +105,8 @@ internal class MusicBrainzEnricher(
      * ([com.landofoz.musicmeta.engine.DefaultEnrichmentEngine]) and merges the recording it picked
      * into the request, so every type then sees an MBID that was not there when the call started.
      * Looking *that* up would change which release-group answers a name-only request; looking up one
-     * that came from outside the call is the whole point of this ticket's fix. Nothing else can draw
-     * the line — the request carries no provenance, and does not need to.
+     * that came from outside the call is what this path exists to do. Nothing else can draw the line
+     * — the request carries no provenance, and does not need to.
      *
      * Guarded like [CallMemo]'s map, and for the same reason: sibling types resolve as concurrent
      * `async` children.

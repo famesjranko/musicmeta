@@ -57,19 +57,26 @@ deliberate:
 
 ## Resolving a track by name
 
-A track request with no MBID is resolved out of a pool MusicBrainz has already filtered with
+A track request naming **no album** is resolved out of a pool MusicBrainz has already filtered with
 `-comment:*` — its own index expression of "carries no disambiguation", which is the same signal the
 ranking's fourth tier applies. Doing it upstream is the point: downstream, the tier can only rank
 what the page already let through, and for a heavily-covered title that is nothing. Measured
 2026-08-10, zero of the 25 recordings the unfiltered query returned for "Enter Sandman" carried a
 blank disambiguation, so the tier had nothing to choose and the answer fell through to a live take.
 
+A request that *does* name an album is left alone. The album is the better narrowing term and the one
+the caller supplied — it took that same search from 757 candidates to 45 — and the two do not
+compose: the filter deletes candidates, so a recording that is marked *and* on the requested album
+would be gone before the ranking's album-match tier, which outranks its disambiguation tier, could
+prefer it.
+
 The page is 100, which is MusicBrainz's maximum and not a number to raise — above it the search does
-not clamp, it silently serves 25. It is a ceiling, not a guarantee: two of four tracks measured the
-same day had a filtered pool larger than 100 (115 and 132), and where the canonical recording lands
-inside the pool shifts between identical calls. A filtered pool that comes back empty falls back to
-the unfiltered ladder, so a track whose canonical recording genuinely carries a disambiguation still
-resolves — at the cost of one extra request, on the miss path only.
+not clamp, it silently serves 25. It is a ceiling, not a guarantee: two of six tracks measured the
+same day had a filtered pool larger than 100 (115 and 132), and where a given recording lands inside
+the pool shifts between identical calls. A filtered pool that comes back empty falls back to the
+unfiltered ladder, at the cost of one extra request on the miss path. That fallback does not cover a
+track whose canonical recording is marked while other takes are not — one of the six — which is no
+worse than before rather than fixed.
 
 `searchCandidates` is deliberately not filtered. That list exists for a consumer to pick a version
 from, and one narrowed to canonical recordings cannot answer "I want the Moscow one".

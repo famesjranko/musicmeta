@@ -85,14 +85,17 @@ internal fun needsIdentityResolution(
 ): Boolean {
     val ids = request.identifiers
     if (ids.musicBrainzId == null && ids.musicBrainzReleaseGroupId == null) return true
-    if (request is EnrichmentRequest.ForTrack && ids.musicBrainzReleaseGroupId == null) return true
+    // Qualifies MUSICBRAINZ_ID below rather than short-circuiting here: a track request whose types
+    // declare no identifier at all still has nothing to resolve, and must not pay for a lookup.
+    val trackIdIsRecordingOnly =
+        request is EnrichmentRequest.ForTrack && ids.musicBrainzReleaseGroupId == null
     for (type in types) {
         val chain = registry.chainFor(type) ?: continue
         for (provider in chain.providers()) {
             val cap = provider.capabilities.firstOrNull { it.type == type } ?: continue
             val missing = when (cap.identifierRequirement) {
                 IdentifierRequirement.NONE -> false
-                IdentifierRequirement.MUSICBRAINZ_ID -> ids.musicBrainzId == null
+                IdentifierRequirement.MUSICBRAINZ_ID -> ids.musicBrainzId == null || trackIdIsRecordingOnly
                 IdentifierRequirement.MUSICBRAINZ_RELEASE_GROUP_ID -> ids.musicBrainzReleaseGroupId == null
                 IdentifierRequirement.WIKIDATA_ID -> ids.wikidataId == null
                 IdentifierRequirement.WIKIPEDIA_TITLE -> ids.wikipediaTitle == null && ids.wikidataId == null

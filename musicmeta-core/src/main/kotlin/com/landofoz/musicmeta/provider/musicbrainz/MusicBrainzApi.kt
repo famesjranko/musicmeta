@@ -103,22 +103,39 @@ internal class MusicBrainzApi(
      * a blank disambiguation, so the tier had nothing to choose and the ranking fell through to
      * whichever live or demo take won on the tiers below.
      *
-     * A filter can only remove candidates, so it falls back to the unfiltered ladder when nothing
-     * survives — a track whose canonical recording genuinely carries a disambiguation must still
-     * resolve. That costs one extra request, on the miss path only.
+     * **Only when the request names no album.** An album is the better narrowing term and the one
+     * the caller supplied, and the two do not compose: the filter deletes candidates, so a canonical
+     * recording that carries a disambiguation *and* sits on the requested album would be gone before
+     * [MusicBrainzEnricher.pickBestRecording]'s album-match tier — which outranks its
+     * disambiguation tier precisely because an explicit album is the stronger signal — could prefer
+     * it. A hinted request is not the failing case anyway: measured 2026-08-10, adding the album
+     * term took "Enter Sandman" from 757 candidates to 45 and "Paranoid Android" to 6. So a hinted
+     * request takes [searchRecordings] unchanged.
+     *
+     * A filter can only remove candidates, so an empty filtered pool falls back to the unfiltered
+     * ladder — a track whose every recording is marked must still resolve. That costs one extra
+     * request, on the miss path only.
+     *
+     * What that fallback does *not* rescue is a track whose canonical recording is marked while
+     * other takes are not: the right answer is removed and the pool is still non-empty, so nothing
+     * fires. Measured over six tracks on 2026-08-10, five kept an unmarked recording on the
+     * requested album's release-group (at indices 1, 25, 34, 56 and 58 — four of them past the 25
+     * an unfiltered search would have returned), and one, Prince's "Purple Rain", kept none. That
+     * one is no worse than before rather than newly broken: the unfiltered pool holds no such
+     * recording in its first 25 either, and the ranking's own disambiguation tier would have
+     * preferred the same unmarked non-album takes. It is not fixed here.
      */
     suspend fun searchCanonicalRecordings(
         title: String,
         artist: String,
         album: String? = null,
     ): List<MusicBrainzRecording> {
-        val albumHint = album?.takeIf { it.isNotBlank() }
+        if (!album.isNullOrBlank()) return searchRecordings(title, artist, album)
         val canonical = fetchRecordings(
-            recordingQuery(title, artist, albumHint, canonicalOnly = true),
+            recordingQuery(title, artist, null, canonicalOnly = true),
             CANONICAL_SEARCH_LIMIT,
-            albumHint,
         )
-        return canonical.ifEmpty { searchRecordings(title, artist, album) }
+        return canonical.ifEmpty { searchRecordings(title, artist, null) }
     }
 
     /**

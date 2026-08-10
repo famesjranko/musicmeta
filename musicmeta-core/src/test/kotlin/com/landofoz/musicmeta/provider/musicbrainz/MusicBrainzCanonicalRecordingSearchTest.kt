@@ -8,6 +8,7 @@ import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.testutil.FakeHttpClient
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -52,8 +53,14 @@ class MusicBrainzCanonicalRecordingSearchTest {
         // When - the track is enriched by name alone
         val result = provider.enrich(EnrichmentRequest.forTrack(TITLE, ARTIST), EnrichmentType.TRACK_METADATA)
 
-        // Then - the studio recording answers, which no ranking of the unfiltered pool could reach
-        assertEquals(STUDIO_MBID, resolvedIdOf(result))
+        // Then - the answer is right in kind — unmarked, on an Official Album release-group — which
+        // no ranking of the unfiltered pool could have reached. Asserted by kind and not by id
+        // alone: MusicBrainz holds several such recordings and may reorder them between calls, so
+        // pinning one mastering would pin something upstream is free to move.
+        val data = (result as EnrichmentResult.Success).data as EnrichmentData.TrackMetadata
+        assertNull("expected an unmarked recording, got ${data.disambiguation}", data.disambiguation)
+        assertEquals("Metallica", data.albumTitle)
+        assertEquals(STUDIO_MBID, result.resolvedIdentifiers?.musicBrainzId)
     }
 
     @Test
@@ -104,8 +111,8 @@ class MusicBrainzCanonicalRecordingSearchTest {
     }
 
     @Test
-    fun `an album hint still narrows the filtered query, and still resolves from it`() = runTest {
-        // Given - a request naming the album, so the query carries both the release term and the filter
+    fun `an album hint keeps the filter out of the way, so a marked album take can still win`() = runTest {
+        // Given - a request naming the album, whose only album-matching take carries a disambiguation
         givenCanonicalPool(CANONICAL_POOL)
         httpClient.givenJsonResponse(RECORDING_SEARCH, ALL_VARIANTS_POOL)
         val request = EnrichmentRequest.forTrack(TITLE, ARTIST, album = "Metallica")
@@ -113,10 +120,11 @@ class MusicBrainzCanonicalRecordingSearchTest {
         // When - the track's metadata is enriched
         val result = provider.enrich(request, EnrichmentType.TRACK_METADATA)
 
-        // Then - the studio cut answers off one hinted, filtered request
-        assertEquals(STUDIO_MBID, resolvedIdOf(result))
+        // Then - the album-match tier reaches it, which it could not have done from a filtered pool:
+        // the filter deletes marked candidates, and an explicit album outranks the mark either way
+        assertEquals("rec-demo", resolvedIdOf(result))
         assertEquals("Metallica", ((result as EnrichmentResult.Success).data as EnrichmentData.TrackMetadata).albumTitle)
-        assertTrue(urlsMatching(CANONICAL_QUERY).single().contains("release"))
+        assertTrue("expected no filter on a hinted request", urlsMatching(CANONICAL_QUERY).isEmpty())
     }
 
     private companion object {

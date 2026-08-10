@@ -40,7 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ALBUM_DESCRIPTION` (`EnrichmentData.Biography`), from Wikipedia and Last.fm's `wiki` block; in `DEFAULT_ALBUM_TYPES`, top source is keyless and long-cached
 
 ### Fixed
-- A track given no album is resolved from recordings MusicBrainz has already filtered to canonical ones, so a heavily-covered title reaches the studio recording instead of a live or demo take
+- A track given no album is resolved from recordings MusicBrainz has already filtered to unmarked ones, so a heavily-covered title reaches the studio recording instead of a live or demo take
 - A track request carrying a recording MBID no longer skips identity resolution, so its `ALBUM_ART` and identity block arrive as they do without one; the MBID used to return less than omitting it
 - A recording MBID on a track request is now looked up rather than discarded, so a track picked from a suggestions list resolves to that recording instead of whatever the name search ranked first
 - A track request carrying a recording MBID now resolves every MusicBrainz type from one lookup, where it previously spent a search per type plus a separate credits lookup
