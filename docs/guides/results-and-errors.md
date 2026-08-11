@@ -244,6 +244,12 @@ when (val r = results.result(EnrichmentType.ALBUM_ART)) {
 }
 ```
 
+`NotFound` means at least one provider was asked and answered. Two cases that would otherwise look
+like a clean absence are `Error` with `NETWORK` instead:
+
+- **Every provider for the type is in circuit-breaker cooldown.** After five consecutive failures a provider is skipped for 60 seconds. When that leaves nobody to ask — an upstream outage on a single-source type, say — no provider answers, so nothing is known about the data. Retry after the cooldown.
+- **A merged type's providers all failed.** `GENRE`, `ALBUM_ART`, `ARTIST_PHOTO`, `SIMILAR_ARTISTS`, `SIMILAR_TRACKS` and `ARTIST_TOP_TRACKS` combine every provider's answer. The merger sees only successes, so when there are none the chain's own failure stands in for it.
+
 ---
 
 ## Timeout behavior

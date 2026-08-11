@@ -6,6 +6,7 @@ import com.landofoz.musicmeta.EnrichmentProvider
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
+import com.landofoz.musicmeta.ErrorKind
 import com.landofoz.musicmeta.IdentifierRequirement
 import com.landofoz.musicmeta.http.CircuitBreaker
 import kotlinx.coroutines.async
@@ -13,6 +14,19 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+
+/**
+ * What a whole chain had to say for a mergeable type: every provider's [EnrichmentResult.Success],
+ * and separately the last [failure] any of them reported — or the chain's own, where an open breaker
+ * meant nobody was asked. Both are reported because a caller merging [successes] cannot see what the
+ * providers that contributed none of them did; a `null` [failure] alongside no successes is the one
+ * case where every provider was asked and genuinely had nothing. Which of the two speaks for the
+ * chain is the caller's decision, not this type's.
+ */
+internal data class ChainResults(
+    val successes: List<EnrichmentResult.Success>,
+    val failure: EnrichmentResult?,
+)
 
 internal class ProviderChain(
     val type: EnrichmentType,
@@ -22,18 +36,17 @@ internal class ProviderChain(
     private val logger: EnrichmentLogger = EnrichmentLogger.NoOp,
 ) {
     /**
-     * Collects ALL Success results from every eligible provider concurrently.
+     * Collects ALL Success results from every eligible provider concurrently, and separately what
+     * the providers that produced none of them did — see [ChainResults].
      * Used for mergeable types (e.g. GENRE, ARTIST_PHOTO) where multiple providers contribute data.
      * Respects availability, identifier requirements, and circuit breaker checks.
      */
-    suspend fun resolveAll(request: EnrichmentRequest): List<EnrichmentResult.Success> = coroutineScope {
-        val eligible = providers.filter { provider ->
-            provider.isAvailable &&
-                hasRequiredIdentifiers(provider, request.identifiers) &&
-                (circuitBreakers[provider.id]?.allowRequest() ?: true)
-        }
+    suspend fun resolveAll(request: EnrichmentRequest): ChainResults = coroutineScope {
+        val (tripped, eligible) = providers
+            .filter { couldAnswer(it, request.identifiers) }
+            .partition { isTripped(it) }
 
-        eligible.map { provider ->
+        val outcomes = eligible.map { provider ->
             async {
                 val breaker = circuitBreakers[provider.id]
                 val result = try {
@@ -53,20 +66,27 @@ internal class ProviderChain(
                     is EnrichmentResult.Success -> { breaker?.recordSuccess(); result }
                     is EnrichmentResult.NotFound -> { breaker?.recordSuccess(); null }
                     is EnrichmentResult.RateLimited -> {
-                        logger.debug(TAG, "${type.name}: ${provider.id} rate limited, skipping"); null
+                        logger.debug(TAG, "${type.name}: ${provider.id} rate limited, skipping"); result
                     }
                     is EnrichmentResult.Error -> {
                         breaker?.recordFailure()
-                        logger.debug(TAG, "${type.name}: ${provider.id} error: ${result.message}"); null
+                        logger.debug(TAG, "${type.name}: ${provider.id} error: ${result.message}"); result
                     }
                 }
             }
         }.awaitAll().filterNotNull()
+
+        val successes = outcomes.filterIsInstance<EnrichmentResult.Success>()
+        // The last failure, matching what `resolve` keeps: both walk the chain in priority order.
+        val failure = outcomes.lastOrNull { it !is EnrichmentResult.Success }
+        ChainResults(successes, failure ?: outageOrNull(eligible.isNotEmpty(), tripped))
     }
 
     suspend fun resolve(request: EnrichmentRequest): EnrichmentResult {
         var lastFailure: EnrichmentResult? = null
-        forEachEligible(request) { _, breaker, result ->
+        var answered = false
+        val tripped = forEachEligible(request) { _, breaker, result ->
+            answered = true
             when (result) {
                 is EnrichmentResult.Success -> { breaker?.recordSuccess(); return result }
                 is EnrichmentResult.NotFound -> { breaker?.recordSuccess() }
@@ -74,24 +94,49 @@ internal class ProviderChain(
                 is EnrichmentResult.Error -> { breaker?.recordFailure(); lastFailure = result }
             }
         }
-        return lastFailure ?: EnrichmentResult.NotFound(type, "all_providers")
+        return lastFailure
+            ?: outageOrNull(answered, tripped)
+            ?: EnrichmentResult.NotFound(type, "all_providers")
+    }
+
+    /**
+     * The `Error` owed to a chain that produced nothing because it never asked anyone: every
+     * provider that could have answered was skipped for an open breaker. Without it the caller
+     * reports a clean absence, and a consumer keying retry off [ErrorKind] reads an outage as
+     * "this entity has no such data". `null` while any provider did run — one that answers has
+     * spoken for the chain, and one skipped for an unmet identifier or a missing key is not an
+     * outage.
+     */
+    private fun outageOrNull(
+        answered: Boolean,
+        tripped: List<EnrichmentProvider>,
+    ): EnrichmentResult.Error? {
+        if (answered || tripped.isEmpty()) return null
+        return EnrichmentResult.Error(
+            type, "all_providers",
+            "Every provider for ${type.name} is in circuit-breaker cooldown " +
+                "(${tripped.joinToString { it.id }}); the data was not looked up",
+            errorKind = ErrorKind.NETWORK,
+        )
     }
 
     /**
      * Iterates eligible providers, calling each and passing the result to [onResult].
      * Handles availability, identifier requirements, and circuit breaker checks.
+     * Returns the providers skipped for an open breaker.
      */
     private suspend inline fun forEachEligible(
         request: EnrichmentRequest,
         onResult: (EnrichmentProvider, CircuitBreaker?, EnrichmentResult) -> Unit,
-    ) {
+    ): List<EnrichmentProvider> {
+        val tripped = mutableListOf<EnrichmentProvider>()
         for (provider in providers) {
-            if (!provider.isAvailable) continue
-            if (!hasRequiredIdentifiers(provider, request.identifiers)) continue
+            if (!couldAnswer(provider, request.identifiers)) continue
+            // Read as the walk reaches each provider, not up front: a breaker these calls share with
+            // another type's chain can open mid-walk, and the fresher answer is the honest one.
+            if (isTripped(provider)) { tripped.add(provider); continue }
 
             val breaker = circuitBreakers[provider.id]
-            if (breaker != null && !breaker.allowRequest()) continue
-
             val result = try {
                 provider.enrich(request, type)
             } catch (e: Exception) {
@@ -101,7 +146,16 @@ internal class ProviderChain(
 
             onResult(provider, breaker, result)
         }
+        return tripped
     }
+
+    /** Whether [provider] is in a position to answer at all, leaving its breaker out of it. */
+    private fun couldAnswer(provider: EnrichmentProvider, identifiers: EnrichmentIdentifiers): Boolean =
+        provider.isAvailable && hasRequiredIdentifiers(provider, identifiers)
+
+    /** Whether [provider]'s breaker is open. A provider with no breaker is never skipped. */
+    private fun isTripped(provider: EnrichmentProvider): Boolean =
+        circuitBreakers[provider.id]?.allowRequest() == false
 
     private fun hasRequiredIdentifiers(
         provider: EnrichmentProvider,
