@@ -42,11 +42,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `IdentifierNamespace` enum plus `EnrichmentIdentifiers.get(ns)`/`.with(ns, value)`: typed accessors over the existing untyped `extra` map, additive, no key or wire-format change
 - MusicBrainz, Discogs, Spotify and Apple Music artist ids are now carried on Wikidata results' identifiers, parsed from claims already fetched; nothing consumes them for resolution yet
 - Wikidata is a second `ARTIST_LINKS` source (priority 50), contributing the official website (P856) where MusicBrainz has no relations
+- `GenreTag.curated`: MusicBrainz's controlled genre vocabulary is now marked and ranked ahead of community tags; `null` means an entry cached before the field, which refetches rather than pinning
 
 ### Changed
 - Provider terms are now documented (docs/providers.md): keyless is not permission; Deezer and Last.fm restrict commercial use. README opening reworded to match.
 
 ### Fixed
+- An artist named by one of its MusicBrainz aliases now resolves: the search asked `artist:"…"` only, which does not reach the alias index, so a localised or former name found nothing
+- `identityMatchScore` now distinguishes an artist matched on its own name from one matched on an alias, scaling the score by which of the two it was
+- A cached `GENRE` entry written before curated genres existed reads as a miss and refetches, rather than serving unmarked tags for the type's 90-day TTL
 - Discogs limiter now has headroom, so jitter no longer tips it into a 429 (was `Error`/`NETWORK`)
 - A type whose every provider is circuit-broken is now `Error` (`ErrorKind.NETWORK`), not `NotFound`: an outage had read as "no such data" and carried no retry signal
 - A merged type (`GENRE`, `ALBUM_ART`, `SIMILAR_ARTISTS`, …) whose providers all errored is now `Error` too; the merger sees only successes, dropping every failure before the consumer

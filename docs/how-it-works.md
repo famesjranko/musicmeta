@@ -133,7 +133,7 @@ Types where multiple providers contribute complementary data. The chain calls **
 
 | Merger | Type(s) | Strategy |
 |--------|---------|----------|
-| `GenreMerger` | GENRE | Normalizes tags, deduplicates, sums confidence (capped 1.0), merges sources |
+| `GenreMerger` | GENRE | Normalizes tags, deduplicates, sums confidence (capped 1.0), merges sources; curated genres rank ahead of community tags |
 | `ArtworkMerger` | All 8 artwork types | Highest-confidence as primary, others as `alternatives` |
 | `SimilarArtistMerger` | SIMILAR_ARTISTS | Deduplicates by name, sums matchScores, merges sources |
 | `SimilarTrackMerger` | SIMILAR_TRACKS | Deduplicates by name, sums matchScores, merges sources |
@@ -245,7 +245,7 @@ when a key is present, and CAA is a fallback, not a second entry in the same res
 ### Metadata (6 types)
 | Type | Providers (by priority) | Notes |
 |------|------------------------|-------|
-| GENRE | MusicBrainz(100), Last.fm(100) | **Mergeable** — GenreTag with confidence + sources. Only these two serve the type; `genres()`/`genreTags()` additionally fall back to genre strings carried inside ALBUM_METADATA, which Discogs and iTunes also populate |
+| GENRE | MusicBrainz(100), Last.fm(100) | **Mergeable** — GenreTag with confidence, sources and `curated` (MusicBrainz's controlled vocabulary vs free-text tags; `null` only on entries cached before the marking existed, which read as a cache miss and refetch). Only these two serve the type; `genres()`/`genreTags()` additionally fall back to genre strings carried inside ALBUM_METADATA, which Discogs and iTunes also populate |
 | LABEL | MusicBrainz(100), Discogs(50) | |
 | RELEASE_DATE | MusicBrainz(100) | |
 | RELEASE_TYPE | MusicBrainz(100), Discogs(50) | |
