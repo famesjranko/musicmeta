@@ -7,7 +7,7 @@ away, and a copy of them rots while it moves. §Rate limiting keeps the one-limi
 topology and where each interval's basis comes from.
 
 **Nothing here is checked.** No mechanism verifies a word of it. Hand-verified against the packages
-on **2026-08-11**; treat anything after that as a claim, not a fact. §What we don't extract is the
+on **2026-08-12**; treat anything after that as a claim, not a fact. §What we don't extract is the
 part that rots fastest — most of what it lists is a to-do, and a to-do that gets done reads as a
 still-open one until someone re-reads the code.
 
@@ -158,12 +158,16 @@ constructor default of `RateLimiter(3000)`.
 The intervals live in that one function, each with a dated comment naming its basis — **published**,
 **measured** from live rate-limit headers, or **judgement**. Exactly three rest on a number we read
 at the source: MusicBrainz (1100ms, published 1 req/sec), ListenBrainz (400ms, measured at 30
-req/10s) and Discogs (1000ms, measured at `x-discogs-ratelimit: 60` — the developer page 403s
-non-browser clients, but the live response headers carry the figure).
+req/10s) and Discogs (1100ms, measured at `x-discogs-ratelimit: 60` authenticated — the developer
+page 403s non-browser clients, but the live response headers carry the figure).
 Do not read a judgement figure here or there as a documented one; Last.fm's API terms publish no
 figure at all, only "limits... in our sole discretion". The safety net is 429 → `Retry-After` →
 backoff. A provider constructed directly takes whatever limiter the caller passes; nothing checks it
 against this page.
+
+Discogs also gates the whole provider behind a token (`requiresApiKey = true`), kept deliberately: a
+tokenless tier exists at 25 req/min (probed 2026-08-12), but shipping that as musicmeta's default
+would make the library the reason a shared IP gets throttled.
 
 ## What we don't extract
 

@@ -40,6 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ALBUM_DESCRIPTION` (`EnrichmentData.Biography`), from Wikipedia and Last.fm's `wiki` block; in `DEFAULT_ALBUM_TYPES`, top source is keyless and long-cached
 
 ### Fixed
+- Discogs limiter now has headroom, so jitter no longer tips it into a 429 (was `Error`/`NETWORK`)
 - A type whose every provider is in circuit-breaker cooldown is now `Error` (`ErrorKind.NETWORK`), not `NotFound`: an outage read as "this entity has no such data" and carried no signal to retry
 - A merged type (`GENRE`, `ALBUM_ART`, `SIMILAR_ARTISTS`, …) whose providers all errored is likewise `Error`; the merger sees only successes, so every failure was dropped before reaching a consumer
 - A track given no album is resolved from recordings MusicBrainz has already filtered to unmarked ones, so a heavily-covered title reaches the studio recording instead of a live or demo take
