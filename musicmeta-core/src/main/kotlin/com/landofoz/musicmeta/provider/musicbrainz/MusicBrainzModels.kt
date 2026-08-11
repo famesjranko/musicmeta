@@ -11,6 +11,8 @@ internal data class MusicBrainzRelease(
     val barcode: String?,
     val tags: List<String>,
     val tagCounts: List<TagCount> = emptyList(),
+    /** The curated `genres` subset of [tagCounts], present on any response asking for `inc=genres`. */
+    val genreCounts: List<TagCount> = emptyList(),
     val label: String?,
     val releaseType: String?,
     val releaseGroupId: String?,
@@ -48,12 +50,47 @@ internal data class MusicBrainzArtist(
     val endDate: String?,
     val tags: List<String>,
     val tagCounts: List<TagCount> = emptyList(),
+    /** The curated `genres` subset of [tagCounts], present on any response asking for `inc=genres`. */
+    val genreCounts: List<TagCount> = emptyList(),
     val disambiguation: String?,
     val wikidataId: String?,
     val wikipediaTitle: String?,
     val score: Int,
     val urlRelations: List<MusicBrainzUrlRelation> = emptyList(),
     val bandMembers: List<MusicBrainzBandMember> = emptyList(),
+    /** Alternative names MusicBrainz holds for this artist; a search hit carries them without `inc=`. */
+    val aliases: List<MusicBrainzAlias> = emptyList(),
+    /** Community rating from `inc=ratings`; null unless someone has voted. */
+    val rating: MusicBrainzRating? = null,
+)
+
+/**
+ * MusicBrainz's community rating, 1–5 with a vote count.
+ *
+ * Parsed but not yet mapped: no `EnrichmentData` payload carries a rating, so this stops at the DTO
+ * until a popularity-signal surface exists to hold it. It rides free on lookups already made for
+ * other reasons, which is why it is read now rather than when that surface lands.
+ */
+internal data class MusicBrainzRating(
+    val value: Float,
+    val votes: Int,
+)
+
+/**
+ * One entry of an artist's `aliases` array.
+ *
+ * [primary] and [locale] together are MusicBrainz's own signal that a name is one the artist is
+ * published under rather than a search aid: a locale-tagged alias is a localisation of the name, and
+ * `primary: true` marks the one to prefer within that locale. [type] is `"Artist name"`,
+ * `"Search hint"` or `"Legal name"` — the "Search hint" entries are misspellings and typo-catchers
+ * MusicBrainz keeps for its own indexer, which is why they are not treated as names the artist goes
+ * by.
+ */
+internal data class MusicBrainzAlias(
+    val name: String,
+    val type: String?,
+    val locale: String?,
+    val primary: Boolean,
 )
 
 internal data class MusicBrainzRecording(
@@ -62,6 +99,10 @@ internal data class MusicBrainzRecording(
     val isrcs: List<String>,
     val tags: List<String>,
     val tagCounts: List<TagCount> = emptyList(),
+    /** The curated `genres` subset of [tagCounts], present on any response asking for `inc=genres`. */
+    val genreCounts: List<TagCount> = emptyList(),
+    /** Community rating from `inc=ratings`; null unless someone has voted. See [MusicBrainzRating]. */
+    val rating: MusicBrainzRating? = null,
     val score: Int,
     val disambiguation: String? = null,
     /**

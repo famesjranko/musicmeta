@@ -6,8 +6,11 @@ import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.IdentifierRequirement
 import com.landofoz.musicmeta.SearchCandidate
+import com.landofoz.musicmeta.engine.AlternativeName
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
+import com.landofoz.musicmeta.engine.NameMatchTier
 import com.landofoz.musicmeta.engine.TransientIdentifierMarker
+import com.landofoz.musicmeta.engine.nameMatchTier
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
@@ -253,7 +256,7 @@ internal class MusicBrainzEnricher(
         val needsRelations = best.wikidataId == null && best.wikipediaTitle == null
         val resolved = if (needsRelations) resolveArtistRelations(best) else best
 
-        return buildArtistResult(resolved, type, ConfidenceCalculator.searchScore(best.score))
+        return buildArtistResult(resolved, type, artistMatchConfidence(request.name, best))
     }
 
     /**
@@ -542,24 +545,50 @@ internal class MusicBrainzEnricher(
     )
 
     /**
-     * Rank artist candidates: exact name match with tags > exact name match >
-     * has tags with high score > highest score.
+     * Rank artist candidates on how the requested name matched first, then on whether the candidate
+     * carries tags, then on MusicBrainz's own order.
+     *
+     * The name tier leads because [MusicBrainzApi.searchArtists] searches aliases as well as names,
+     * so the pool now holds candidates matched on a name the artist merely *also* goes by — and a
+     * canonical hit must always beat one of those, however well tagged. Within a tier the tags check
+     * survives unchanged: it separates the real entity from the near-empty duplicate MusicBrainz also
+     * holds under that name.
      *
      * Null for an empty pool: a name MusicBrainz knows nothing of is a miss, not a failure.
      */
     private fun pickBestArtist(
         query: String,
         candidates: List<MusicBrainzArtist>,
-    ): MusicBrainzArtist? = candidates.sortedByDescending { artist ->
-        val exactMatch = artist.name.equals(query, ignoreCase = true)
-        val hasTags = artist.tags.isNotEmpty()
-        when {
-            exactMatch && hasTags -> 3
-            exactMatch -> 2
-            hasTags -> 1
-            else -> 0
-        }
-    }.firstOrNull()
+    ): MusicBrainzArtist? = candidates.maxWithOrNull(
+        compareBy({ -artistNameTier(query, it).ordinal }, { it.tags.isNotEmpty() }),
+    )
+
+    /**
+     * MusicBrainz's own relevance score for [artist], scaled by how [query] reached it.
+     *
+     * A search that matches aliases resolves artists it previously could not, and a caller has to be
+     * able to tell those apart from a canonical-name hit — `identityMatchScore` is that signal, and
+     * it would say nothing if an alias hit and a name hit both scored 100. Still identification and
+     * not payload (`docs/pitfalls.md` §8): the tier says how sure we are this is the right entity,
+     * never how much it carried.
+     */
+    private fun artistMatchConfidence(query: String, artist: MusicBrainzArtist): Float =
+        ConfidenceCalculator.searchScore(artist.score) * artistNameTier(query, artist).confidenceFactor
+
+    /**
+     * How [query] matched [artist]: its own name, a name it is published under, or one of the search
+     * hints MusicBrainz also stores. A "Search hint" alias counts as the weakest tier because
+     * MusicBrainz keeps typo-catchers ("Coolplay") in the same array as localised names
+     * ("コールドプレイ"), and only the second kind is a name the artist actually goes by.
+     */
+    private fun artistNameTier(query: String, artist: MusicBrainzArtist): NameMatchTier =
+        nameMatchTier(
+            requested = query,
+            canonical = artist.name,
+            aliases = artist.aliases.map {
+                AlternativeName(name = it.name, official = it.primary || it.locale != null)
+            },
+        )
 
     /**
      * Rank the recording pool above [minMatchScore] instead of taking `firstOrNull` — MB search
