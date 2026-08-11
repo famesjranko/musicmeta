@@ -60,7 +60,7 @@ class DefaultHttpClient(
                     conn.disconnect()
                 }
             } catch (e: IOException) {
-                Attempt(HttpResult.NetworkError(e.message ?: "Network error", e))
+                Attempt(HttpResult.NetworkError(e.message ?: "Network error", e), transportFailure = true)
             }
         }
 
@@ -111,7 +111,7 @@ class DefaultHttpClient(
                 conn.disconnect()
             }
         } catch (e: IOException) {
-            Attempt(HttpResult.NetworkError(e.message ?: "Network error", e))
+            Attempt(HttpResult.NetworkError(e.message ?: "Network error", e), transportFailure = true)
         }
     }
 
@@ -152,7 +152,7 @@ class DefaultHttpClient(
                     conn.disconnect()
                 }
             } catch (e: IOException) {
-                Attempt(HttpResult.NetworkError(e.message ?: "Network error", e))
+                Attempt(HttpResult.NetworkError(e.message ?: "Network error", e), transportFailure = true)
             }
         }
 
@@ -167,8 +167,9 @@ class DefaultHttpClient(
                     setRequestProperty("Content-Type", "application/json")
                     doOutput = true
                 }
-                conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
                 try {
+                    // Inside the try that disconnects: a write that fails out here leaks the socket.
+                    conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
                     val code = conn.responseCode
                     when {
                         code == 429 -> HttpResult.RateLimited(conn.retryAfterMs())
@@ -189,7 +190,7 @@ class DefaultHttpClient(
                     conn.disconnect()
                 }
             } catch (e: IOException) {
-                Attempt(HttpResult.NetworkError(e.message ?: "Network error", e))
+                Attempt(HttpResult.NetworkError(e.message ?: "Network error", e), transportFailure = true)
             }
         }
 
@@ -204,8 +205,9 @@ class DefaultHttpClient(
                     setRequestProperty("Content-Type", "application/json")
                     doOutput = true
                 }
-                conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
                 try {
+                    // Inside the try that disconnects: a write that fails out here leaks the socket.
+                    conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
                     val code = conn.responseCode
                     when {
                         code == 429 -> HttpResult.RateLimited(conn.retryAfterMs())
@@ -226,7 +228,7 @@ class DefaultHttpClient(
                     conn.disconnect()
                 }
             } catch (e: IOException) {
-                Attempt(HttpResult.NetworkError(e.message ?: "Network error", e))
+                Attempt(HttpResult.NetworkError(e.message ?: "Network error", e), transportFailure = true)
             }
         }
 
@@ -234,11 +236,21 @@ class DefaultHttpClient(
         try { conn.errorStream?.bufferedReader()?.use { it.readText() } } catch (_: IOException) { null }
 
     /**
-     * One response, plus the `Retry-After` a shed 5xx carried. [HttpResult.ServerError] has no
-     * field for it and gaining one would break every consumer that constructs or `copy()`s it, so
-     * the header travels alongside, between two private functions and no further.
+     * One response, plus what the retry needs that the result type does not carry:
+     *
+     * - the `Retry-After` a shed 5xx sent. [HttpResult.ServerError] has no field for it and gaining
+     *   one would break every consumer that constructs or `copy()`s it.
+     * - whether a [HttpResult.NetworkError] came from the transport. The same type also carries a
+     *   body that would not parse, which is a working transport and a response a second identical
+     *   request reproduces — the shape a provider changing its JSON arrives in.
+     *
+     * Both travel alongside the result, between two private functions and no further.
      */
-    private class Attempt<out T>(val result: HttpResult<T>, val retryAfterMs: Long? = null)
+    private class Attempt<out T>(
+        val result: HttpResult<T>,
+        val retryAfterMs: Long? = null,
+        val transportFailure: Boolean = false,
+    )
 
     /**
      * Pairs a 5xx with the `Retry-After` it carried. Must be called before the connection is
@@ -250,10 +262,14 @@ class DefaultHttpClient(
         Attempt(this, if (this is HttpResult.ServerError) conn.retryAfterMs() else null)
 
     /**
-     * Retries a [HttpResult.RateLimited], and a [HttpResult.ServerError] whose code is in
-     * [RETRYABLE] — up to [maxRetries] attempts, honouring `Retry-After` — so load shedding does
-     * not depend on which code the upstream sheds with or which method the caller reached for.
-     * Returns the result unretried when the wait does not fit in the time left.
+     * Retries a [HttpResult.RateLimited], a [HttpResult.ServerError] whose code is in [RETRYABLE],
+     * and a transport failure — up to [maxRetries] attempts, honouring `Retry-After` — so load
+     * shedding does not depend on which code the upstream sheds with, or on it sending one at all,
+     * or on which method the caller reached for. Returns the result unretried when the wait, plus
+     * whatever another attempt may spend, does not fit in the time left.
+     *
+     * A transport failure is charged [timeoutMs] on top of the wait, because the attempt itself is
+     * what a hanging upstream spends. A shed status fails in milliseconds and is charged nothing.
      */
     private suspend fun <T> retryingTransient(request: suspend () -> Attempt<T>): HttpResult<T> {
         repeat(maxRetries - 1) { attempt ->
@@ -262,9 +278,12 @@ class DefaultHttpClient(
                 is HttpResult.RateLimited -> result.retryAfterMs
                 is HttpResult.ServerError ->
                     if (result.statusCode in RETRYABLE) attempted.retryAfterMs else return result
+                is HttpResult.NetworkError ->
+                    if (attempted.transportFailure) null else return result
                 else -> return result
             }
-            delay(retryWaitMs(retryAfterMs, attempt) ?: return attempted.result)
+            val nextAttemptMs = if (attempted.transportFailure) timeoutMs.toLong() else 0L
+            delay(retryWaitMs(retryAfterMs, attempt, nextAttemptMs) ?: return attempted.result)
         }
         return request().result
     }
@@ -289,17 +308,18 @@ class DefaultHttpClient(
         getHeaderField("Retry-After")?.toLongOrNull()?.let { it * 1000 }
 
     /**
-     * How long to wait before retrying, or `null` when that wait does not fit in the time left —
-     * sleeping past the enclosing [EnrichDeadline] guarantees a timeout that loses every other
+     * How long to wait before retrying, or `null` when that wait plus [nextAttemptMs] — what the
+     * retry itself may spend before it can fail the same way — does not fit in the time left.
+     * Running past the enclosing [EnrichDeadline] guarantees a timeout that loses every other
      * provider's in-flight work, so returning what we already have beats waiting for it. Standalone,
      * with no deadline installed, the budget is [MAX_RETRY_AFTER_SEC].
      */
-    private suspend fun retryWaitMs(retryAfterMs: Long?, attempt: Int): Long? {
+    private suspend fun retryWaitMs(retryAfterMs: Long?, attempt: Int, nextAttemptMs: Long): Long? {
         val base = retryAfterMs ?: 2000L * (1L shl attempt)
         val budgetMs = currentCoroutineContext()[EnrichDeadline]?.remainingMs
             ?: (MAX_RETRY_AFTER_SEC * 1000)
         // Compared before jitter, so the ceiling is a hard figure rather than a coin flip near it.
-        if (base > budgetMs) return null
+        if (base + nextAttemptMs > budgetMs) return null
         return (base + (base * 0.25 * (Random.nextDouble() * 2 - 1)).toLong()).coerceAtLeast(1000L)
     }
 
