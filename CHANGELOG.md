@@ -30,23 +30,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Breaking Changes
-- New `IdentityMatch.UNVERIFIED`: an identity provider throwing or returning `Error`/`RateLimited` now reports it instead of the `null`/unstamped values that read as confident; `when`s need a branch
-- `UNVERIFIED` results are excluded from the cache write-back, so a retry after a transient identity failure re-resolves instead of serving the unverified guess for the type's TTL
+- New `IdentityMatch.UNVERIFIED`: an identity provider throwing or returning `Error`/`RateLimited` now reports as that, not `null`/unstamped confident values; `when`s need a branch
+- `UNVERIFIED` results are excluded from the cache write-back, so a retry after a transient identity failure re-resolves rather than serving the unverified guess for the TTL
 - `CompositeSynthesizer.synthesize` now receives the identity provider's `Error` when identity resolution failed, where it previously received `null` (the "not attempted" value)
 
 ### Added
-- `TRACK_METADATA`/`EnrichmentData.TrackMetadata` (duration, resolved album title, disambiguation), already fetched but dropped by MusicBrainz, Deezer, LRCLIB; in `DEFAULT_TRACK_TYPES`
+- `TRACK_METADATA`/`EnrichmentData.TrackMetadata` (duration, album title, disambiguation), already fetched but dropped by MusicBrainz, Deezer, LRCLIB; in `DEFAULT_TRACK_TYPES`
 - `PopularTrack` now carries `listenerCount`, `durationMs` and `album`, matching what `TopTrack` already exposes from the same ListenBrainz data
 - `ALBUM_DESCRIPTION` (`EnrichmentData.Biography`), from Wikipedia and Last.fm's `wiki` block; in `DEFAULT_ALBUM_TYPES`, top source is keyless and long-cached
 
+### Changed
+- Provider terms are now documented (docs/providers.md): keyless is not permission; Deezer and Last.fm restrict commercial use. README opening reworded to match.
+
 ### Fixed
 - Discogs limiter now has headroom, so jitter no longer tips it into a 429 (was `Error`/`NETWORK`)
-- A type whose every provider is in circuit-breaker cooldown is now `Error` (`ErrorKind.NETWORK`), not `NotFound`: an outage read as "this entity has no such data" and carried no signal to retry
-- A merged type (`GENRE`, `ALBUM_ART`, `SIMILAR_ARTISTS`, …) whose providers all errored is likewise `Error`; the merger sees only successes, so every failure was dropped before reaching a consumer
+- A type whose every provider is circuit-broken is now `Error` (`ErrorKind.NETWORK`), not `NotFound`: an outage had read as "no such data" and carried no retry signal
+- A merged type (`GENRE`, `ALBUM_ART`, `SIMILAR_ARTISTS`, …) whose providers all errored is now `Error` too; the merger sees only successes, dropping every failure before the consumer
 - A track given no album is resolved from recordings MusicBrainz has already filtered to unmarked ones, so a heavily-covered title reaches the studio recording instead of a live or demo take
-- A track request carrying a recording MBID no longer skips identity resolution, so its `ALBUM_ART` and identity block arrive as they do without one; the MBID used to return less than omitting it
-- A recording MBID on a track request is now looked up rather than discarded, so a track picked from a suggestions list resolves to that recording instead of whatever the name search ranked first
-- A track whose title names its own variant (`Song (Live at …)`) resolves to that recording; the canonical filter deleted it upstream, leaving a full pool and answering with the studio take
+- A recording-MBID track request no longer skips identity resolution: `ALBUM_ART` and identity arrive as they do without one; the MBID used to return less
+- A recording MBID on a track request is now looked up, not discarded, so a suggestions-list pick resolves to that recording, not whatever the name search ranked first
+- A track whose title names its variant (`Song (Live at …)`) resolves to that recording; the canonical filter deleted it, leaving a full pool answering with the studio take
 - A track naming an album MusicBrainz has no release titled resolves from the deep filtered pool as well as the shallow one, instead of only the 25-result search the filter exists to replace
 - A track resolved by name is searched for once per `enrich()` rather than once per type, so the identity block and every type's payload name the same recording where they could disagree
 - `NotFound` suggestions for a track come from the unfiltered pool, so a live or alternate take the consumer may have meant is offered instead of hidden by the filter that resolves the answer
