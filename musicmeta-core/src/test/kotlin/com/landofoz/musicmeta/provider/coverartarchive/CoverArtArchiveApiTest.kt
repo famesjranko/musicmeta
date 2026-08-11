@@ -8,6 +8,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
+// synthetic: fixtures match the documented public CAA JSON schema
+// (coverartarchive.org/release/{mbid} — images[].{image,thumbnails,front,back,types})
 class CoverArtArchiveApiTest {
 
     private lateinit var httpClient: FakeHttpClient
