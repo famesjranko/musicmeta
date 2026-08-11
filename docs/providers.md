@@ -146,6 +146,66 @@ search this call and keeps searching for those, which is what stops a name-only 
 changing which release-group answers it. An MBID from anywhere else — a caller's, a foreign identity
 provider's — reads as external.
 
+## Terms, licences, attribution
+
+What each provider's terms said on **2026-08-12** — verify before relying on any of it. This is not
+a compliance promise and not legal advice: it is a dated snapshot of public terms pages, collected
+once, with no mechanism keeping it current. musicmeta takes no standing position on any provider's
+terms; a consumer enabling a provider is bound by that provider's terms, not by anything below.
+
+| Provider | Commercial | Licence | Attribution | Source | Date |
+|---|---|---|---|---|---|
+| MusicBrainz | Non-commercial free; commercial plans required | Core CC0; supplementary CC BY-NC-SA 3.0 (field split unresolved) | None for CC0; credit + ShareAlike for supplementary | musicbrainz.org/doc/About/Data_License; musicbrainz.org/doc/MusicBrainz_API | 2026-08-12 |
+| Cover Art Archive | Not stated | Per-image copyright, rights holders retain; no licence field in API | Not specified | coverartarchive.org; musicbrainz.org/doc/Cover_Art_Archive/API | 2026-08-12 |
+| ListenBrainz | Could not verify | Could not verify | Could not verify | listenbrainz.readthedocs.io/en/latest/users/api/index.html | 2026-08-12 |
+| Wikidata | Allowed, free, unauthenticated | CC0 (exact wording not verbatim-confirmed) | None required | wikidata.org/wiki/Wikidata:Data_access | 2026-08-12 |
+| Wikipedia | Allowed, free; UA policy binding | Text CC BY-SA 4.0 / GFDL; media per-file | Required: link, stable copy, or author list + licence notice | en.wikipedia.org/wiki/Wikipedia:Reusing_Wikipedia_content | 2026-08-12 |
+| Deezer | **Prohibited** — strictly non-commercial, incl. indirect revenue | Reproduction forbidden without express authorisation | Trademark Guidelines incorporated (content unverified) | developers.deezer.com/termsofuse | 2026-08-12 |
+| iTunes/Apple | Conditional (badge, streaming-only, promo rules) | Search JSON caching encouraged; preview-media restriction unverified | "provided courtesy of iTunes" when previews shown | performance-partners.apple.com/search-api | 2026-08-12 |
+| LRCLIB | Could not verify — no terms published at all | Could not verify; MIT covers server code only | Could not verify | lrclib.net; github.com/tranxuanthang/lrclib | 2026-08-12 |
+| Last.fm | **Non-commercial only**; commercial needs written agreement | Copy/adapt/distribute, capped at 100 MB total storage; no sub-licensing, no DRM | "must credit Last.fm and include links to the Last.fm site" | last.fm/api/tos | 2026-08-12 |
+| Fanart.tv | Could not verify — Cloudflare 403 | Could not verify | Could not verify | fanart.tv/terms-of-use/ (403) | 2026-08-12 |
+| Discogs | Allowed; may not fee-gate free API content without permission | Dumps CC0; image carve-out could not be verified | "This application uses Discogs' API but is not affiliated with, sponsored or endorsed by Discogs" | support.discogs.com/hc/en-us/articles/360009334593; discogs.com/developers | 2026-08-12 |
+
+**MusicBrainz is the sharpest case.** It is on the path of nearly every `enrich()` call — the
+identity provider, not one optional source among many — and the hosted web service is
+non-commercial free, with commercial plans expected for a revenue-bearing consumer. Its core data
+is CC0, but the terms page never enumerates which fields are "core" versus the CC BY-NC-SA 3.0
+"supplementary" set; whether folksonomy tags/genres fall on one side or the other is unresolved,
+and it is the highest-value open question here, since it decides whether `genre_merger`'s output
+carries CC BY-NC-SA obligations — attribution *and* non-commercial, not just provenance.
+
+**"Could not verify" rows are a finding, not a gap papered over.** Fanart.tv's terms page 403s a
+non-browser client; ListenBrainz's terms page is JS-only; LRCLIB publishes no terms instrument at
+all (its MIT licence covers the server code, not the lyrics it serves — those are third-party
+copyrighted works regardless). Apple is only partially verified: performance-partners.apple.com's
+Search API page is the source for the row above, but Apple's governing ToS document 404s, so the
+preview-media caching rule could not be confirmed against it.
+
+**Deezer is strictly non-commercial**, including indirect revenue, with no separate-agreement
+escape hatch on its terms page. It ships enabled by default, and the README's audience is any
+Android or JVM app, commercial included — a consumer who leaves Deezer on in a commercial product
+is relying on a provider whose terms forbid that use.
+
+**Last.fm's Reasonable Usage Cap covers more than storage** — the clause reads "any use, storage,
+publication, distribution, communication, making available or otherwise" of Last.fm data, capped
+at 100 MB total, plus header-driven caching. `EnrichmentCache` persists Last.fm payloads for the
+enrichment type's TTL — up to 90 days for `GENRE` — without measuring cumulative Last.fm bytes or
+reading Last.fm's response headers; a consumer relying on the cache to stay under the cap has
+nothing in musicmeta enforcing it.
+
+**Wikipedia's text is CC BY-SA and asks for a licence notice plus a link, a stable copy, or an
+author list per reuse.** musicmeta caches and serves the text with no such notice, article URL, or
+author list retained anywhere a consumer could render it.
+
+**Cover Art Archive images are copyrighted per image by their respective rights holders**, and the
+API carries no licence field to propagate even if musicmeta wanted to surface one.
+
+Attribution obligations that survive (Last.fm's credit-and-link, Discogs' disaffiliation notice,
+Wikipedia's licence notice) currently have no public surface a consumer can render — the data is
+in the repo, but nothing in the API tells a caller they owe one or gives them the words. That gap
+is planned work, not yet shipped.
+
 ## Rate limiting
 
 `withDefaultProviders()` builds **one `RateLimiter` per host**, as `RateLimiter`'s KDoc requires.

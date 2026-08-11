@@ -9,7 +9,7 @@
 
 </div>
 
-A Kotlin library that gives Android and JVM music apps access to rich metadata, artwork, and discovery features -- without a commercial API. Ask for as much or as little as you need: all 34 enrichment types at once, a single artist photo, just lyrics, or anything in between.
+A Kotlin library that gives Android and JVM music apps access to rich metadata, artwork, and discovery features -- 8 of 11 providers work without API keys. Ask for as much or as little as you need: all 34 enrichment types at once, a single artist photo, just lyrics, or anything in between. Providers set their own terms on commercial use, licensing and attribution -- see [docs/providers.md](docs/providers.md#terms-licences-attribution) before shipping.
 
 11 public music APIs behind one engine. You choose what to request, how to use it, and what to show your users. The library handles the plumbing -- identity resolution, multi-provider merging, confidence scoring, rate limiting, caching -- so you can focus on building your app.
 
