@@ -40,9 +40,24 @@ interface HttpClient {
      */
     suspend fun fetchRedirectUrlResult(url: String): HttpResult<String>
 
-    /** POST request with a JSON body, response parsed as a JSON object. */
+    /**
+     * POST request with a JSON body, response parsed as a JSON object.
+     *
+     * **Send only what is safe to send twice.** [DefaultHttpClient] retries a POST on a dropped
+     * connection as well as on a 429 or a 5xx, and those are not the same guarantee: a shed status
+     * says the server rejected the request, while a dropped connection leaves no way to know
+     * whether it was processed. The library's own POSTs are bulk *reads* — ListenBrainz takes a
+     * list of MBIDs this way — so a repeat costs a request and nothing else. A caller reaching for
+     * this method with something that mutates state needs its own idempotency key, or its own
+     * client.
+     */
     suspend fun postJsonResult(url: String, body: String): HttpResult<JSONObject>
 
-    /** POST request with a JSON body, response parsed as a JSON array. */
+    /**
+     * POST request with a JSON body, response parsed as a JSON array.
+     *
+     * Retried on a dropped connection, same as [postJsonResult] — send only what is safe to send
+     * twice.
+     */
     suspend fun postJsonArrayResult(url: String, body: String): HttpResult<JSONArray>
 }

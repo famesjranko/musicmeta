@@ -355,6 +355,20 @@ And the header a shed response carries cannot be added to `ServerError` — it i
 `data class`, so a new constructor parameter breaks `copy()` for every consumer (§1). Anything a
 retry needs beyond the result type has to travel privately.
 
+The same lesson landed a second time, with no status code at all: a read timeout is a
+`NetworkError`, which took the `else` arm and was handed back on the first attempt after spending
+the whole `timeoutMs`. Two things a widened trigger has to get right, both of them the reason the
+predicate is not simply "retry `NetworkError`":
+
+- **`NetworkError` is two different failures.** A dropped connection is transient; a 200 whose body
+  will not parse is a working transport returning a response the retry reproduces exactly — and it
+  is the shape a provider changing its JSON arrives in, so retrying it triples the traffic of the
+  one case worth noticing. Only the `IOException` catch marks `Attempt.transportFailure`.
+- **The budget test has to charge the attempt, not just the sleep.** A shed 503 fails in
+  milliseconds, so fitting the sleep inside the `EnrichDeadline` is enough. A timeout has already
+  spent `timeoutMs` and the retry may spend it again, so the wait *plus* `timeoutMs` must fit.
+  Reuse the sleep-only test and a hang gets two attempts inside a deadline that had room for one.
+
 ## 12. A provider's own memo is a cache no consumer can flush
 
 `MusicBrainzEnricher` memoizes its artist, release, release-group-wiki, album-search and
