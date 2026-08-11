@@ -153,6 +153,17 @@ public final class com/landofoz/musicmeta/ArtworkSource$Companion {
 	public final fun serializer ()Lkotlinx/serialization/KSerializer;
 }
 
+public final class com/landofoz/musicmeta/AttributionRequirement : java/lang/Enum {
+	public static final field DEPENDS_ON_DATA Lcom/landofoz/musicmeta/AttributionRequirement;
+	public static final field NOT_REQUIRED Lcom/landofoz/musicmeta/AttributionRequirement;
+	public static final field NOT_SPECIFIED Lcom/landofoz/musicmeta/AttributionRequirement;
+	public static final field REQUIRED Lcom/landofoz/musicmeta/AttributionRequirement;
+	public static final field UNVERIFIED Lcom/landofoz/musicmeta/AttributionRequirement;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lcom/landofoz/musicmeta/AttributionRequirement;
+	public static fun values ()[Lcom/landofoz/musicmeta/AttributionRequirement;
+}
+
 public final class com/landofoz/musicmeta/BandMember {
 	public static final field Companion Lcom/landofoz/musicmeta/BandMember$Companion;
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentIdentifiers;)V
@@ -234,6 +245,17 @@ public final class com/landofoz/musicmeta/CatalogQuery {
 	public final fun getTitle ()Ljava/lang/String;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/landofoz/musicmeta/CommercialUse : java/lang/Enum {
+	public static final field ALLOWED Lcom/landofoz/musicmeta/CommercialUse;
+	public static final field CONDITIONAL Lcom/landofoz/musicmeta/CommercialUse;
+	public static final field NOT_STATED Lcom/landofoz/musicmeta/CommercialUse;
+	public static final field PROHIBITED Lcom/landofoz/musicmeta/CommercialUse;
+	public static final field UNVERIFIED Lcom/landofoz/musicmeta/CommercialUse;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lcom/landofoz/musicmeta/CommercialUse;
+	public static fun values ()[Lcom/landofoz/musicmeta/CommercialUse;
 }
 
 public final class com/landofoz/musicmeta/Credit {
@@ -1594,6 +1616,40 @@ public final class com/landofoz/musicmeta/ProviderInfo {
 	public fun hashCode ()I
 	public final fun isAvailable ()Z
 	public final fun isEnabled ()Z
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/landofoz/musicmeta/ProviderPolicies {
+	public static final field AS_READ_ON Ljava/lang/String;
+	public static final field INSTANCE Lcom/landofoz/musicmeta/ProviderPolicies;
+	public final fun get (Ljava/lang/String;)Lcom/landofoz/musicmeta/ProviderPolicy;
+	public final fun getAll ()Ljava/util/Map;
+}
+
+public final class com/landofoz/musicmeta/ProviderPolicy {
+	public fun <init> (Ljava/lang/String;Lcom/landofoz/musicmeta/CommercialUse;Ljava/lang/String;Ljava/lang/String;Lcom/landofoz/musicmeta/AttributionRequirement;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Lcom/landofoz/musicmeta/CommercialUse;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun component5 ()Lcom/landofoz/musicmeta/AttributionRequirement;
+	public final fun component6 ()Ljava/lang/String;
+	public final fun component7 ()Ljava/lang/String;
+	public final fun component8 ()Ljava/util/List;
+	public final fun component9 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Lcom/landofoz/musicmeta/CommercialUse;Ljava/lang/String;Ljava/lang/String;Lcom/landofoz/musicmeta/AttributionRequirement;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;)Lcom/landofoz/musicmeta/ProviderPolicy;
+	public static synthetic fun copy$default (Lcom/landofoz/musicmeta/ProviderPolicy;Ljava/lang/String;Lcom/landofoz/musicmeta/CommercialUse;Ljava/lang/String;Ljava/lang/String;Lcom/landofoz/musicmeta/AttributionRequirement;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;ILjava/lang/Object;)Lcom/landofoz/musicmeta/ProviderPolicy;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAsReadOn ()Ljava/lang/String;
+	public final fun getAttribution ()Lcom/landofoz/musicmeta/AttributionRequirement;
+	public final fun getAttributionNote ()Ljava/lang/String;
+	public final fun getAttributionNotice ()Ljava/lang/String;
+	public final fun getCommercialUse ()Lcom/landofoz/musicmeta/CommercialUse;
+	public final fun getCommercialUseNote ()Ljava/lang/String;
+	public final fun getDataLicence ()Ljava/lang/String;
+	public final fun getProviderId ()Ljava/lang/String;
+	public final fun getSourceUrls ()Ljava/util/List;
+	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
 
