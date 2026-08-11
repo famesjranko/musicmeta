@@ -276,14 +276,21 @@ track, which nothing currently does. `albumName` and `duration` *are* read, into
 `GET /api/get/{id}`, and the write path (`POST /api/request-challenge`, `POST /api/publish`), which
 needs a proof-of-work solution and would make this a write client.
 
-**Wikidata.** We request five properties, so everything else needs another call: P136 genre and P264
-record label (`GENRE`, `LABEL` — as Q-ids, needing the label lookup `COUNTRY_MAP` and
-`OCCUPATION_MAP` hand-roll), P527/P361 has-part and part-of (`BAND_MEMBERS`, and group membership),
-P571/P576 inception and dissolution (bands, as opposed to the P569/P570 person dates we read), P856
-and P2002/P2003/P2013 (`ARTIST_LINKS`), P434/P4404/P4407/P8052 MusicBrainz ids (reverse identity),
-P1902/P1728/P1953 Spotify, AllMusic and Discogs ids, P373 Commons category, P1303 instrument, P166
+**Wikidata.** One `wbgetentities&props=claims` call returns every claim on the entity, so what is
+left below costs code and no request. Read: P18, P569, P570, P495, P106, P856 (the sole
+`ARTIST_LINKS` entry), and the external-id claims P434, P1953, P1902 and P2850, which fill
+identifiers rather than a capability — the last two are absent on most long-tail acts, which is
+normal. Dropped: P136 genre and P264 record label (`GENRE`, `LABEL` — as Q-ids, needing the label
+lookup `COUNTRY_MAP` and `OCCUPATION_MAP` hand-roll), P527/P361 has-part and part-of
+(`BAND_MEMBERS`, and group membership), P571/P576 inception and dissolution (bands, as opposed to
+the P569/P570 person dates we read), P2002/P2003/P2013 social handles, P4404/P4407/P8052 further
+MusicBrainz ids, P1728 AllMusic id, P373 Commons category, P1303 instrument, P166
 awards. `wbgetentities` is how the claims themselves are fetched (`props=claims`), but never with
-`props=labels`/`descriptions` — which is what would retire both hardcoded maps. Never called: the
+`props=labels`/`descriptions` — which is what would retire both hardcoded maps. Retiring them was
+considered and declined on 2026-08-12: a label lives on the referenced Q-id, so it costs a second
+batched call, and an audit of every entry in both maps found all but one already matching the live
+label — the exceptions being Q30 "US" and Q145 "UK", deliberate abbreviations a swap would change
+for every US or UK artist. Never called: the
 REST API at `/w/rest.php/wikibase/v1/`, and SPARQL. Note `provider/wikipedia/` *also* calls
 `wbgetentities` on this host, for sitelinks, on its own rate limiter.
 

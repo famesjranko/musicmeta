@@ -208,7 +208,7 @@ Successful results are cached with per-type TTLs:
 |----------|------|-----------------|------|
 | **MusicBrainz** | None (1 req/sec) | Identity, genres, labels, dates, members, discography, tracks, links, credits, editions | Identity backbone + primary for most metadata |
 | **Cover Art Archive** | None | Album front/back/booklet art, CD art (multiple sizes) | Primary artwork |
-| **Wikidata** | None | Artist photo, country | Structured data supplement |
+| **Wikidata** | None | Artist photo, country, official website | Structured data supplement |
 | **Wikipedia** | None | Artist bio, supplemental photos | Text content |
 | **LRCLIB** | None | Synced + plain lyrics | Only lyrics source |
 | **Deezer** | None | Album art, artist photos, discography, tracklists, album metadata, similar artists/tracks, artist radio, top tracks, similar albums, track previews | Fallback metadata + primary radio/similar albums |
@@ -265,7 +265,7 @@ when a key is present, and CAA is a fallback, not a second entry in the same res
 | SIMILAR_ARTISTS | Last.fm(100), Deezer(30) | **Mergeable** — deduplicates, sums matchScores |
 | SIMILAR_TRACKS | Last.fm(100), Deezer(50) | **Mergeable** — deduplicates, sums matchScores |
 | BAND_MEMBERS | MusicBrainz(100), Discogs(50) | From artist-rels |
-| ARTIST_LINKS | MusicBrainz(100) | All URL relation types |
+| ARTIST_LINKS | MusicBrainz(100), Wikidata(50) | All URL relation types; Wikidata contributes P856 only |
 | CREDITS | MusicBrainz(100), Discogs(50) | Recording rels + extraartists, roleCategory grouping |
 
 ### Additional Data (3 types)

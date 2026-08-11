@@ -11,9 +11,11 @@ import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 
 /**
- * Provides artist photos and metadata from Wikidata properties.
+ * Provides artist photos, metadata and links from Wikidata properties.
  * P18 = image, P569 = birth date, P570 = death date,
- * P495 = country of origin, P106 = occupation.
+ * P495 = country of origin, P106 = occupation, P856 = official website.
+ * Every success also carries the external-id claims (P434 MusicBrainz, P1953 Discogs,
+ * P1902 Spotify, P2850 Apple Music) as resolved identifiers, from the same single request.
  * Requires a wikidataId in the request identifiers.
  */
 class WikidataProvider(
@@ -40,6 +42,11 @@ class WikidataProvider(
             priority = 50,
             identifierRequirement = IdentifierRequirement.WIKIDATA_ID,
         ),
+        ProviderCapability(
+            type = EnrichmentType.ARTIST_LINKS,
+            priority = 50,
+            identifierRequirement = IdentifierRequirement.WIKIDATA_ID,
+        ),
     )
 
     override suspend fun enrich(
@@ -58,6 +65,8 @@ class WikidataProvider(
             return mapError(type, e)
         }
 
+        val resolvedIdentifiers = WikidataMapper.toIdentifiers(props)
+
         return when (type) {
             EnrichmentType.ARTIST_PHOTO -> {
                 val imageUrl = props.imageUrl
@@ -67,6 +76,7 @@ class WikidataProvider(
                     WikidataMapper.toArtwork(imageUrl),
                     id,
                     ConfidenceCalculator.authoritative(),
+                    resolvedIdentifiers = resolvedIdentifiers,
                 )
             }
             EnrichmentType.COUNTRY -> {
@@ -78,7 +88,24 @@ class WikidataProvider(
                 ) {
                     return EnrichmentResult.NotFound(type, id)
                 }
-                EnrichmentResult.Success(type, metadata, id, ConfidenceCalculator.authoritative())
+                EnrichmentResult.Success(
+                    type,
+                    metadata,
+                    id,
+                    ConfidenceCalculator.authoritative(),
+                    resolvedIdentifiers = resolvedIdentifiers,
+                )
+            }
+            EnrichmentType.ARTIST_LINKS -> {
+                val website = props.officialWebsite
+                    ?: return EnrichmentResult.NotFound(type, id)
+                EnrichmentResult.Success(
+                    type,
+                    WikidataMapper.toArtistLinks(website),
+                    id,
+                    ConfidenceCalculator.authoritative(),
+                    resolvedIdentifiers = resolvedIdentifiers,
+                )
             }
             else -> EnrichmentResult.NotFound(type, id)
         }

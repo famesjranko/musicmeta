@@ -40,6 +40,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ALBUM_DESCRIPTION` (`EnrichmentData.Biography`), from Wikipedia and Last.fm's `wiki` block; in `DEFAULT_ALBUM_TYPES`, top source is keyless and long-cached
 - `ProviderPolicies`: each provider's terms as data — commercial use, licence, notice to render
 - `IdentifierNamespace` enum plus `EnrichmentIdentifiers.get(ns)`/`.with(ns, value)`: typed accessors over the existing untyped `extra` map, additive, no key or wire-format change
+- Wikidata now returns MusicBrainz, Discogs, Spotify and Apple Music artist ids as resolved identifiers, parsed from the claims it already fetched — no extra request
+- Wikidata is a second `ARTIST_LINKS` source (priority 50), contributing the official website (P856) where MusicBrainz has no relations
 
 ### Changed
 - Provider terms are now documented (docs/providers.md): keyless is not permission; Deezer and Last.fm restrict commercial use. README opening reworded to match.
@@ -65,6 +67,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A 502, 503 or 504 now retries on the same ladder as a 429 (bounded, `Retry-After`-honouring, deadline-aware); MusicBrainz sheds with 503, so a lookup one retry would answer no longer fails
 - MusicBrainz album search took the first score-100 tie, so an album could resolve to a single, bootleg, promo or box set; identity, edition size and earliest date now pick the release
 - MusicBrainz `searchCandidates` returned an empty list for tracks; tracks now get candidates and "did you mean?" suggestions (`IdentityMatch.SUGGESTIONS`), matching album/artist behaviour
+- Wikidata reported an artist whose country is Latvia (Q211) as Czech Republic; Q211 is now Latvia and Czech Republic is keyed on Q213, so `Metadata.country` changes for both
 - Wikidata's artist lookup used a call Wikidata always rejected; birth/death date, country and occupation are now returned instead of nothing, every time
 - ListenBrainz's SIMILAR_ARTISTS called a route that never existed and always returned nothing; capability dropped, Last.fm and Deezer already serve it (#18)
 - Deezer's SIMILAR_TRACKS called `/track/{id}/radio`, which doesn't exist, and always returned nothing; now derived from the seed track's artist's related artists and their top tracks

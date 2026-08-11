@@ -8,8 +8,9 @@ import java.net.URLEncoder
 
 /**
  * Fetches artist properties from Wikidata: P18 (image), P569 (birth date),
- * P570 (death date), P495 (country of origin), P106 (occupation).
- * Constructs Wikimedia Commons thumbnail URLs from image filenames.
+ * P570 (death date), P495 (country of origin), P106 (occupation), P856 (official website),
+ * and the external-id claims P434 (MusicBrainz), P1953 (Discogs), P1902 (Spotify),
+ * P2850 (Apple Music). Constructs Wikimedia Commons thumbnail URLs from image filenames.
  */
 internal class WikidataApi(
     private val httpClient: HttpClient,
@@ -59,6 +60,11 @@ internal class WikidataApi(
             deathDate = deathDate,
             countryOfOrigin = countryQid?.let { COUNTRY_MAP[it] ?: it },
             occupation = occupationQid?.let { OCCUPATION_MAP[it] ?: it },
+            musicBrainzArtistId = extractStringValue(claims, "P434"),
+            discogsArtistId = extractStringValue(claims, "P1953"),
+            spotifyArtistId = extractStringValue(claims, "P1902"),
+            iTunesArtistId = extractStringValue(claims, "P2850"),
+            officialWebsite = extractStringValue(claims, "P856"),
         )
     }
 
@@ -97,7 +103,12 @@ internal class WikidataApi(
             ?.takeIf { it.isNotBlank() }
     }
 
-    /** Select the preferred-rank claim, or fall back to the first. */
+    /**
+     * Select the preferred-rank claim, or fall back to the first.
+     *
+     * Single-valued properties only. A multi-valued property (P136 genre, P527 members) would be
+     * silently reduced to one of its values here; read the whole array instead.
+     */
     private fun selectClaim(claims: JSONObject, property: String): JSONObject? {
         val array = claims.optJSONArray(property) ?: return null
         if (array.length() == 0) return null
@@ -124,7 +135,8 @@ internal class WikidataApi(
             "Q30" to "US", "Q145" to "UK", "Q142" to "France", "Q183" to "Germany",
             "Q17" to "Japan", "Q38" to "Italy", "Q29" to "Spain", "Q16" to "Canada",
             "Q408" to "Australia", "Q36" to "Poland", "Q159" to "Russia",
-            "Q211" to "Czech Republic", "Q31" to "Belgium", "Q55" to "Netherlands",
+            "Q213" to "Czech Republic", "Q211" to "Latvia",
+            "Q31" to "Belgium", "Q55" to "Netherlands",
         )
 
         val OCCUPATION_MAP = mapOf(
