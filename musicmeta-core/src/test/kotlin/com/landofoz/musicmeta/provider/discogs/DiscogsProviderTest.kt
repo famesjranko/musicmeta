@@ -16,6 +16,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
+// synthetic: fixtures for /database/search, /artists/{id}, and /releases/{id} — no field-level
+// ground truth on file; invented (except where a constant or comment cites a live capture)
 class DiscogsProviderTest {
 
     private lateinit var httpClient: FakeHttpClient
