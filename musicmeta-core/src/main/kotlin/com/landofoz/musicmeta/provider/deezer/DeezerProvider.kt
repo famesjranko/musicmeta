@@ -104,7 +104,7 @@ class DeezerProvider(
             data = artwork,
             provider = id,
             confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
-            resolvedIdentifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DEEZER_ARTIST, artist.id.toString()),
+            resolvedIdentifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DEEZER, artist.id.toString()),
         )
     }
 
@@ -112,7 +112,7 @@ class DeezerProvider(
         val artistRequest = request as? EnrichmentRequest.ForArtist
             ?: return EnrichmentResult.NotFound(EnrichmentType.ARTIST_TOP_TRACKS, id)
 
-        val deezerId = request.identifiers.get(IdentifierNamespace.DEEZER_ARTIST)?.toLongOrNull()
+        val deezerId = request.identifiers.get(IdentifierNamespace.DEEZER)?.toLongOrNull()
         val artist = if (deezerId != null) {
             DeezerArtistSearchResult(id = deezerId, name = artistRequest.name)
         } else {
@@ -132,7 +132,7 @@ class DeezerProvider(
             data = DeezerMapper.toTopTracks(tracks),
             provider = id,
             confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
-            resolvedIdentifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DEEZER_ARTIST, artist.id.toString()),
+            resolvedIdentifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DEEZER, artist.id.toString()),
         )
     }
 
@@ -151,7 +151,7 @@ class DeezerProvider(
             data = DeezerMapper.toDiscography(albums),
             provider = id,
             confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = false),
-            resolvedIdentifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DEEZER_ARTIST, artist.id.toString()),
+            resolvedIdentifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DEEZER, artist.id.toString()),
         )
     }
 
@@ -160,7 +160,7 @@ class DeezerProvider(
             ?: return EnrichmentResult.NotFound(EnrichmentType.SIMILAR_ARTISTS, id)
 
         // Check for cached Deezer artist ID first, fall back to search
-        val deezerId = request.identifiers.get(IdentifierNamespace.DEEZER_ARTIST)?.toLongOrNull()
+        val deezerId = request.identifiers.get(IdentifierNamespace.DEEZER)?.toLongOrNull()
         val artist = if (deezerId != null) {
             DeezerArtistSearchResult(id = deezerId, name = artistRequest.name)
         } else {
@@ -181,7 +181,7 @@ class DeezerProvider(
             data = DeezerMapper.toSimilarArtists(related),
             provider = id,
             confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
-            resolvedIdentifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DEEZER_ARTIST, artist.id.toString()),
+            resolvedIdentifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DEEZER, artist.id.toString()),
         )
     }
 
@@ -200,7 +200,7 @@ class DeezerProvider(
      * track search result's own artist name, to validate that the track search itself landed on the
      * right artist.
      *
-     * Deliberately does not reuse `request.identifiers.get(IdentifierNamespace.DEEZER_ARTIST)` as a shortcut to the
+     * Deliberately does not reuse `request.identifiers.get(IdentifierNamespace.DEEZER)` as a shortcut to the
      * artist id the way [enrichArtistRadio] does: on a `ForTrack` request that key already means
      * the *track's* own Deezer id (written by this method and read by [enrichTrackPreview]), so
      * treating it as an artist id would look up an unrelated artist silently.
@@ -238,7 +238,7 @@ class DeezerProvider(
             provider = id,
             confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
             resolvedIdentifiers = EnrichmentIdentifiers()
-                .with(IdentifierNamespace.DEEZER_ARTIST, seedTrack.id.toString()),
+                .with(IdentifierNamespace.DEEZER, seedTrack.id.toString()),
         )
     }
 
@@ -280,7 +280,7 @@ class DeezerProvider(
             ?: return EnrichmentResult.NotFound(EnrichmentType.ARTIST_RADIO, id)
 
         // Check for cached Deezer artist ID first, fall back to search
-        val deezerId = request.identifiers.get(IdentifierNamespace.DEEZER_ARTIST)?.toLongOrNull()
+        val deezerId = request.identifiers.get(IdentifierNamespace.DEEZER)?.toLongOrNull()
         val artist = if (deezerId != null) {
             DeezerArtistSearchResult(id = deezerId, name = artistRequest.name)
         } else {
@@ -301,7 +301,7 @@ class DeezerProvider(
             data = DeezerMapper.toRadioPlaylist(tracks),
             provider = id,
             confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
-            resolvedIdentifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DEEZER_ARTIST, artist.id.toString()),
+            resolvedIdentifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DEEZER, artist.id.toString()),
         )
     }
 
@@ -309,7 +309,7 @@ class DeezerProvider(
         val trackRequest = request as? EnrichmentRequest.ForTrack
             ?: return EnrichmentResult.NotFound(EnrichmentType.TRACK_PREVIEW, id)
 
-        val deezerId = request.identifiers.get(IdentifierNamespace.DEEZER_ARTIST)?.toLongOrNull()
+        val deezerId = request.identifiers.get(IdentifierNamespace.DEEZER)?.toLongOrNull()
         val trackResult = if (deezerId != null) {
             api.getTrack(deezerId)
         } else {
@@ -330,7 +330,7 @@ class DeezerProvider(
             provider = id,
             confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
             resolvedIdentifiers = EnrichmentIdentifiers()
-                .with(IdentifierNamespace.DEEZER_ARTIST, trackResult.id.toString()),
+                .with(IdentifierNamespace.DEEZER, trackResult.id.toString()),
         )
     }
 
@@ -338,7 +338,7 @@ class DeezerProvider(
         val trackRequest = request as? EnrichmentRequest.ForTrack
             ?: return EnrichmentResult.NotFound(EnrichmentType.TRACK_METADATA, id)
 
-        val deezerId = request.identifiers.get(IdentifierNamespace.DEEZER_ARTIST)?.toLongOrNull()
+        val deezerId = request.identifiers.get(IdentifierNamespace.DEEZER)?.toLongOrNull()
         val trackResult = if (deezerId != null) {
             api.getTrack(deezerId)
         } else {
@@ -356,7 +356,7 @@ class DeezerProvider(
             provider = id,
             confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
             resolvedIdentifiers = EnrichmentIdentifiers()
-                .with(IdentifierNamespace.DEEZER_ARTIST, trackResult.id.toString()),
+                .with(IdentifierNamespace.DEEZER, trackResult.id.toString()),
         )
     }
 

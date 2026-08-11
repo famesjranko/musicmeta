@@ -84,7 +84,7 @@ class SimilarAlbumsProvider internal constructor(
             ?: return EnrichmentResult.NotFound(EnrichmentType.SIMILAR_ALBUMS, id)
 
         // Resolve seed artist Deezer ID — check cache first, fall back to search
-        val deezerId = request.identifiers.get(IdentifierNamespace.DEEZER_ARTIST)?.toLongOrNull()
+        val deezerId = request.identifiers.get(IdentifierNamespace.DEEZER)?.toLongOrNull()
         val seedArtist = if (deezerId != null) {
             DeezerArtistSearchResult(id = deezerId, name = albumRequest.artist)
         } else {
@@ -136,7 +136,7 @@ class SimilarAlbumsProvider internal constructor(
             // above, not smuggled into a number consumers rank providers by.
             confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
             resolvedIdentifiers = EnrichmentIdentifiers()
-                .with(IdentifierNamespace.DEEZER_ARTIST, seedArtist.id.toString()),
+                .with(IdentifierNamespace.DEEZER, seedArtist.id.toString()),
         )
     }
 

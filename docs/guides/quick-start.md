@@ -224,15 +224,16 @@ val profile = engine.artistProfile(
 ## Fast path: pre-resolved identifiers
 
 Enrichment results carry the identifiers they were resolved with, and top tracks carry their own
-(`deezerId`, for one). Passing them back in skips identity resolution entirely, so the call goes
-straight to the provider that can answer it:
+(a Deezer id, readable via `identifiers.get(IdentifierNamespace.DEEZER)`, for one). Passing them
+back in skips identity resolution entirely, so the call goes straight to the provider that can
+answer it:
 
 ```kotlin
 // Skips MusicBrainz, goes straight to Deezer
 val preview = engine.trackProfile(
     title = topTrack.title,
     artist = topTrack.artist,
-    identifiers = topTrack.identifiers,  // has deezerId
+    identifiers = topTrack.identifiers,  // has a Deezer id
     types = setOf(EnrichmentType.TRACK_PREVIEW),
 )
 ```

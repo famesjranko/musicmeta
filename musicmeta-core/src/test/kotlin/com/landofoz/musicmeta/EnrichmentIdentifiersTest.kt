@@ -93,15 +93,15 @@ class EnrichmentIdentifiersTest {
         val ids = EnrichmentIdentifiers()
 
         // When - adding an identifier through the namespace accessor
-        val updated = ids.with(IdentifierNamespace.DEEZER_ARTIST, "123")
+        val updated = ids.with(IdentifierNamespace.DEEZER, "123")
 
         // Then - value is retrievable through the same accessor
-        assertEquals("123", updated.get(IdentifierNamespace.DEEZER_ARTIST))
+        assertEquals("123", updated.get(IdentifierNamespace.DEEZER))
     }
 
     @Test fun `get by namespace returns null for a namespace never written`() {
         // Given - identifiers carrying an unrelated namespace
-        val ids = EnrichmentIdentifiers().with(IdentifierNamespace.DEEZER_ARTIST, "123")
+        val ids = EnrichmentIdentifiers().with(IdentifierNamespace.DEEZER, "123")
 
         // When - a different namespace is looked up
         // Then - returns null
@@ -114,7 +114,7 @@ class EnrichmentIdentifiersTest {
 
         // When - the same key is read through the namespace accessor
         // Then - the value matches, proving the enum key mapping is unchanged
-        assertEquals("789", ids.get(IdentifierNamespace.DEEZER_ARTIST))
+        assertEquals("789", ids.get(IdentifierNamespace.DEEZER))
     }
 
     // synthetic — a JSON literal shaped like the pre-change wire form, not a live capture.
@@ -131,7 +131,7 @@ class EnrichmentIdentifiersTest {
 
         // Then - the round trip is lossless and the enum accessor reads the same stored value
         assertEquals(decoded, reEncoded)
-        assertEquals("123", decoded.get(IdentifierNamespace.DEEZER_ARTIST))
+        assertEquals("123", decoded.get(IdentifierNamespace.DEEZER))
         assertEquals("123", decoded.get("deezerId"))
     }
 }

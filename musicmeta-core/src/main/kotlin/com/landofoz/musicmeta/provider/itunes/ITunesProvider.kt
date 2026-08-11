@@ -126,7 +126,7 @@ class ITunesProvider(
 
         return try {
             // Try direct lookup if artistId is already stored
-            val artistId = request.identifiers.get("itunesArtistId")?.toLongOrNull()
+            val artistId = request.identifiers.get(IdentifierNamespace.ITUNES_ARTIST)?.toLongOrNull()
                 ?: api.searchArtist(request.name)
                 ?: return EnrichmentResult.NotFound(type, id)
 

@@ -1504,7 +1504,7 @@ public final class com/landofoz/musicmeta/GenreTag$Companion {
 }
 
 public final class com/landofoz/musicmeta/IdentifierNamespace : java/lang/Enum {
-	public static final field DEEZER_ARTIST Lcom/landofoz/musicmeta/IdentifierNamespace;
+	public static final field DEEZER Lcom/landofoz/musicmeta/IdentifierNamespace;
 	public static final field DISCOGS_ARTIST Lcom/landofoz/musicmeta/IdentifierNamespace;
 	public static final field ITUNES_ARTIST Lcom/landofoz/musicmeta/IdentifierNamespace;
 	public static final field MUSICBRAINZ_ARTIST Lcom/landofoz/musicmeta/IdentifierNamespace;

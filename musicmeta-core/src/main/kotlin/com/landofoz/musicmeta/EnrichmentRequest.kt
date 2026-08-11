@@ -131,7 +131,10 @@ sealed class EnrichmentRequest {
     }
 }
 
-/** Namespaces a `String`-keyed external id. Members may only be appended; keep a consumer `when` over this non-exhaustive. */
+/**
+ * Namespaces a `String`-keyed external id. Members may only be appended; keep a consumer
+ * `when` over this non-exhaustive.
+ */
 enum class IdentifierNamespace(internal val key: String) {
     MUSICBRAINZ_ARTIST("artistMbid"),
     MUSICBRAINZ_RELEASE("releaseMbid"),
@@ -139,7 +142,9 @@ enum class IdentifierNamespace(internal val key: String) {
     DISCOGS_ARTIST("discogsArtistId"),
     SPOTIFY_ARTIST("spotifyArtistId"),
     ITUNES_ARTIST("itunesArtistId"),
-    DEEZER_ARTIST("deezerId"),
+
+    /** The key's meaning depends on the request: an artist, album or track id. */
+    DEEZER("deezerId"),
 }
 
 /**
