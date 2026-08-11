@@ -27,6 +27,12 @@
 #                          LUCENE_SPECIAL_CHARS, so escapeLucene passes them through unescaped --
 #                          the one class the ticket's four inputs miss, found by reading the regex.
 #
+# NUL is the one byte bash's command substitution cannot carry (`ignored null byte in input`), so
+# this script's control-chars row only exercises a bare newline. A real NUL was verified separately
+# with `curl -G --data-urlencode "query@file"` reading a phrase containing one
+# (`release:"abc\0def" AND artist:"radiohead"`) -- 200, measured 2026-08-12 -- so that class is
+# covered too, just not reproducibly by this script.
+#
 # Respects MusicBrainz's 1 req/s limit (SPACING below). Not a gate: live third-party calls, so it
 # cannot decide whether this repo's code is correct. Run it, read the status column, date it.
 #
