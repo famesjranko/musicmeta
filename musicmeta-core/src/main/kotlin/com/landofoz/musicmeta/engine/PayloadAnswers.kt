@@ -57,6 +57,24 @@ internal fun EnrichmentData.answers(type: EnrichmentType): Boolean = when (this)
 }
 
 /**
+ * Was this cached payload written before providers reported whether a genre was curated?
+ *
+ * [com.landofoz.musicmeta.GenreTag.curated] is `null` only on an entry persisted by a build that had
+ * no such field, so a cached `GENRE` result carrying one answers a strictly poorer question than a
+ * fresh call would — it cannot say which of its names came from a controlled vocabulary. GENRE's TTL
+ * is 90 days, so waiting it out would hide the curated ranking for a quarter of a year on every
+ * entity a consumer had already looked up.
+ *
+ * Read on the cache path only, as a *miss*: the providers run and the write-back replaces the entry,
+ * exactly as an unanswered entry heals ([answers]). It cannot loop, because every shipped provider
+ * now states `curated` either way — an entity with no curated genres writes `false`, not `null`.
+ */
+internal fun EnrichmentData.predatesCuratedGenres(type: EnrichmentType): Boolean =
+    type == EnrichmentType.GENRE &&
+        this is EnrichmentData.Metadata &&
+        genreTags?.any { it.curated == null } == true
+
+/**
  * One [EnrichmentData.Metadata] serves six types, and a provider fills only the fields its upstream
  * happened to return — so "non-empty" is not the question, "did it fill the field this type asks
  * about" is. GENRE reads two fields because a provider may supply plain names, weighted tags, or

@@ -13,10 +13,11 @@ import com.landofoz.musicmeta.TrackInfo
 /** Maps MusicBrainz DTOs to EnrichmentData subclasses. */
 internal object MusicBrainzMapper {
 
-    fun toAlbumMetadata(release: MusicBrainzRelease): EnrichmentData.Metadata =
-        EnrichmentData.Metadata(
-            genres = release.tags.takeIf { it.isNotEmpty() },
-            genreTags = buildGenreTags(release.tagCounts),
+    fun toAlbumMetadata(release: MusicBrainzRelease): EnrichmentData.Metadata {
+        val genreTags = buildGenreTags(release.tagCounts, release.genreCounts)
+        return EnrichmentData.Metadata(
+            genres = genreTags?.map { it.name },
+            genreTags = genreTags,
             label = release.label,
             releaseDate = release.date,
             releaseType = release.releaseType,
@@ -24,6 +25,7 @@ internal object MusicBrainzMapper {
             barcode = release.barcode,
             disambiguation = release.disambiguation,
         )
+    }
 
     fun toAlbumIdentifiers(
         release: MusicBrainzRelease,
@@ -37,16 +39,18 @@ internal object MusicBrainzMapper {
             wikipediaTitle = wikipediaTitle,
         )
 
-    fun toArtistMetadata(artist: MusicBrainzArtist): EnrichmentData.Metadata =
-        EnrichmentData.Metadata(
-            genres = artist.tags.takeIf { it.isNotEmpty() },
-            genreTags = buildGenreTags(artist.tagCounts),
+    fun toArtistMetadata(artist: MusicBrainzArtist): EnrichmentData.Metadata {
+        val genreTags = buildGenreTags(artist.tagCounts, artist.genreCounts)
+        return EnrichmentData.Metadata(
+            genres = genreTags?.map { it.name },
+            genreTags = genreTags,
             country = artist.country,
             disambiguation = artist.disambiguation,
             artistType = artist.type,
             beginDate = artist.beginDate,
             endDate = artist.endDate,
         )
+    }
 
     fun toArtistIdentifiers(artist: MusicBrainzArtist): EnrichmentIdentifiers =
         EnrichmentIdentifiers(
@@ -55,12 +59,14 @@ internal object MusicBrainzMapper {
             wikipediaTitle = artist.wikipediaTitle,
         )
 
-    fun toTrackMetadata(recording: MusicBrainzRecording): EnrichmentData.Metadata =
-        EnrichmentData.Metadata(
-            genres = recording.tags.takeIf { it.isNotEmpty() },
-            genreTags = buildGenreTags(recording.tagCounts),
+    fun toTrackMetadata(recording: MusicBrainzRecording): EnrichmentData.Metadata {
+        val genreTags = buildGenreTags(recording.tagCounts, recording.genreCounts)
+        return EnrichmentData.Metadata(
+            genres = genreTags?.map { it.name },
+            genreTags = genreTags,
             isrc = recording.isrcs.firstOrNull(),
         )
+    }
 
     /**
      * Structured track fields dropped by [toTrackMetadata]: duration, the resolved album title
@@ -198,8 +204,38 @@ internal object MusicBrainzMapper {
         return "$begin-$end"
     }
 
-    private fun buildGenreTags(tagCounts: List<TagCount>): List<GenreTag>? =
-        tagCounts.map { tag ->
-            GenreTag(name = tag.name, confidence = 0.4f, sources = listOf("musicbrainz"))
-        }.takeIf { it.isNotEmpty() }
+    /**
+     * MusicBrainz's curated genres ahead of its community tags, both as [GenreTag]s.
+     *
+     * The two are different claims about the same entity. `genres` is MusicBrainz's controlled
+     * vocabulary — the tags an editor accepted as genres — and `tags` is everything anyone typed,
+     * which on a real response includes "british", "parlophone" and "soothing" alongside real
+     * genres. So the curated names lead, carry the higher confidence, and are marked
+     * [GenreTag.curated] so a consumer (and [com.landofoz.musicmeta.engine.GenreMerger]) can keep
+     * them ahead of a community tag that several providers happened to agree on.
+     *
+     * `genres` is a subset of `tags` carrying the same vote counts, so a curated name is dropped from
+     * the community half rather than emitted twice.
+     */
+    private fun buildGenreTags(
+        tagCounts: List<TagCount>,
+        genreCounts: List<TagCount> = emptyList(),
+    ): List<GenreTag>? {
+        val curatedNames = genreCounts.map { it.name.lowercase() }.toSet()
+        val curated = genreCounts.map { genre ->
+            GenreTag(genre.name, CURATED_CONFIDENCE, listOf(PROVIDER_SOURCE), curated = true)
+        }
+        val community = tagCounts
+            .filterNot { it.name.lowercase() in curatedNames }
+            .map { tag -> GenreTag(tag.name, TAG_CONFIDENCE, listOf(PROVIDER_SOURCE), curated = false) }
+        return (curated + community).takeIf { it.isNotEmpty() }
+    }
+
+    private const val PROVIDER_SOURCE = "musicbrainz"
+
+    /** A name an editor accepted into MusicBrainz's genre vocabulary, ranked above a free-text tag. */
+    private const val CURATED_CONFIDENCE = 0.7f
+
+    /** Free-text community input: a real genre, a mood, a country, or a record label. */
+    private const val TAG_CONFIDENCE = 0.4f
 }

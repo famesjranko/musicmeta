@@ -132,4 +132,51 @@ class GenreMergerTest {
         assertEquals("Ambient", result[1].name) // first-seen casing preserved
         assertEquals(0.9f, result[0].confidence, 0.001f)
     }
+
+    @Test
+    fun `a curated genre outranks a community tag several providers agreed on`() {
+        // Given - one curated genre against a tag whose summed confidence is higher
+        val tags = listOf(
+            GenreTag("british", 0.4f, listOf("lastfm"), curated = false),
+            GenreTag("british", 0.4f, listOf("discogs"), curated = false),
+            GenreTag("alternative rock", 0.7f, listOf("musicbrainz"), curated = true),
+        )
+
+        // When - merging the tags
+        val result = GenreMerger.merge(tags)
+
+        // Then - the curated name leads, because summed agreement is not curation
+        assertEquals("alternative rock", result[0].name)
+        assertEquals(true, result[0].curated)
+    }
+
+    @Test
+    fun `a name one provider curated stays curated once merged`() {
+        // Given - the same name from a curated source and an uncurated one
+        val tags = listOf(
+            GenreTag("rock", 0.4f, listOf("lastfm"), curated = false),
+            GenreTag("rock", 0.7f, listOf("musicbrainz"), curated = true),
+        )
+
+        // When - merging the tags
+        val result = GenreMerger.merge(tags)
+
+        // Then - the merged tag keeps the stronger claim
+        assertEquals(true, result.single().curated)
+    }
+
+    @Test
+    fun `electronica is no longer folded into electronic`() {
+        // Given - two names MusicBrainz's genre vocabulary holds as distinct genres
+        val tags = listOf(
+            GenreTag("electronica", 0.7f, listOf("musicbrainz"), curated = true),
+            GenreTag("electronic", 0.7f, listOf("musicbrainz"), curated = true),
+        )
+
+        // When - merging the tags
+        val result = GenreMerger.merge(tags)
+
+        // Then - both survive, rather than the alias map collapsing one curated genre onto another
+        assertEquals(listOf("electronica", "electronic"), result.map { it.name })
+    }
 }

@@ -70,7 +70,9 @@ internal class DefaultEnrichmentEngine(
             // by an older build would otherwise outlive this fix by the type's TTL — 90 days for
             // GENRE — re-demoted on every call and never refetched. Leaving the type uncached lets
             // the providers run and the write-back overwrite it, so the entry heals itself.
-            if (cached != null && cached.data.answers(type)) {
+            // A GENRE entry written before genre tags carried their curated marking takes the same
+            // route for the same reason: see predatesCuratedGenres.
+            if (cached != null && cached.data.answers(type) && !cached.data.predatesCuratedGenres(type)) {
                 results[type] = cached
             } else {
                 uncachedTypes.add(type)

@@ -243,11 +243,20 @@ data class TimelineEvent(
     val identifiers: EnrichmentIdentifiers = EnrichmentIdentifiers(),
 )
 
+/**
+ * One genre or tag claim about an entity.
+ *
+ * @property curated whether the source drew this name from its own controlled genre vocabulary
+ *   (`true`) or from free-text community input (`false`). `null` means the source said nothing —
+ *   the only entries that carry it are ones persisted before providers reported the distinction,
+ *   so read `null` as "unknown", never as "community".
+ */
 @Serializable
 data class GenreTag(
     val name: String,
     val confidence: Float,
     val sources: List<String> = emptyList(),
+    val curated: Boolean? = null,
 )
 
 @Serializable
