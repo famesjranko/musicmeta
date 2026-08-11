@@ -119,6 +119,19 @@ class FanartTvProviderTest {
     }
 
     @Test
+    fun `enrich returns NotFound for an unknown artist mbid`() = runTest {
+        // Given - an unrecognised artist MBID, which fanart.tv answers 200 with an empty object
+        httpClient.givenJsonResponse("fanart.tv", UNKNOWN_ARTIST_JSON)
+        val request = artistRequest()
+
+        // When - enriching for artist background
+        val result = provider.enrich(request, EnrichmentType.ARTIST_BACKGROUND)
+
+        // Then - NotFound because the bare {} response carries no image categories at all
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
     fun `enrich returns NotFound when API key is blank`() = runTest {
         // Given - a provider configured with a blank project key
         val blankProvider = FanartTvProvider(
@@ -399,6 +412,8 @@ class FanartTvProviderTest {
     )
 
     private companion object {
+        // synthetic: no ground truth available for v3 field-level shapes (the per-category
+        // list is documented only under v3.2)
         val MULTI_THUMB_JSON = """
             {
               "artistthumb": [
@@ -411,6 +426,7 @@ class FanartTvProviderTest {
             }
         """.trimIndent()
 
+        // synthetic: no ground truth available for v3 field-level shapes
         val BANNER_IMAGES_JSON = """
             {
               "artistthumb": [],
@@ -420,6 +436,7 @@ class FanartTvProviderTest {
             }
         """.trimIndent()
 
+        // synthetic: no ground truth available for v3 field-level shapes
         val ARTIST_IMAGES_JSON = """
             {
               "artistthumb": [{"url": "https://assets.fanart.tv/fanart/thumb1.jpg"}],
@@ -428,6 +445,9 @@ class FanartTvProviderTest {
             }
         """.trimIndent()
 
+        // synthetic: no ground truth available for v3 field-level shapes (this represents a
+        // recognised artist with no images of any type — distinct from an unrecognised MBID,
+        // which the live API answers with a bare `{}`, see UNKNOWN_ARTIST_JSON below)
         val EMPTY_IMAGES_JSON = """
             {
               "artistthumb": [],
@@ -437,6 +457,10 @@ class FanartTvProviderTest {
             }
         """.trimIndent()
 
+        // synthetic: unrecognised MBID answers 200 {} (probed 2026-08-11, GET /v3/music/{mbid})
+        const val UNKNOWN_ARTIST_JSON = "{}"
+
+        // synthetic: no ground truth available for v3 field-level shapes
         val NOT_FIRST_MOST_LIKED_JSON = """
             {
               "artistthumb": [
@@ -448,6 +472,7 @@ class FanartTvProviderTest {
             }
         """.trimIndent()
 
+        // synthetic: no ground truth available for v3 field-level shapes
         val TIED_LIKES_JSON = """
             {
               "artistthumb": [
@@ -459,6 +484,7 @@ class FanartTvProviderTest {
             }
         """.trimIndent()
 
+        // synthetic: no ground truth available for v3 field-level shapes
         val GARBAGE_LIKES_JSON = """
             {
               "artistthumb": [
@@ -471,6 +497,7 @@ class FanartTvProviderTest {
             }
         """.trimIndent()
 
+        // synthetic: no ground truth available for v3 field-level shapes
         val ALBUM_NOT_FIRST_MOST_LIKED_JSON = """
             {"rg-mbid": {"albumcover": [
                 {"url": "https://fanart.tv/album-cover-low-likes.jpg", "id": "1", "likes": "1"},
@@ -478,10 +505,12 @@ class FanartTvProviderTest {
               ], "cdart": []}}
         """.trimIndent()
 
+        // synthetic: no ground truth available for v3 field-level shapes
         val ALBUM_ENDPOINT_JSON = """
             {"rg-mbid": {"albumcover": [{"url": "https://fanart.tv/album-cover.jpg", "id": "1", "likes": "5"}], "cdart": [{"url": "https://fanart.tv/cd-art.jpg", "id": "2", "likes": "3"}]}}
         """.trimIndent()
 
+        // synthetic: no ground truth available for v3 field-level shapes
         val ALBUM_VIA_ARTIST_JSON = """
             {
               "artistthumb": [],
