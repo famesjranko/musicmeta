@@ -259,7 +259,7 @@ class ProviderChainTest {
         val p2 = FakeProvider(id = "p2").also { it.givenResult(EnrichmentType.GENRE, g2) }
 
         // When - calling resolveAll
-        val results = ProviderChain(EnrichmentType.GENRE, listOf(p1, p2)).resolveAll(req)
+        val results = ProviderChain(EnrichmentType.GENRE, listOf(p1, p2)).resolveAll(req).successes
 
         // Then - both provider results are returned
         assertEquals(2, results.size)
@@ -274,7 +274,7 @@ class ProviderChainTest {
         val p2 = FakeProvider(id = "p2").also { it.givenResult(EnrichmentType.GENRE, g2) }
 
         // When - calling resolveAll
-        val results = ProviderChain(EnrichmentType.GENRE, listOf(p1, p2)).resolveAll(req)
+        val results = ProviderChain(EnrichmentType.GENRE, listOf(p1, p2)).resolveAll(req).successes
 
         // Then - only p2's result is returned
         assertEquals(1, results.size)
@@ -287,7 +287,7 @@ class ProviderChainTest {
         val p2 = FakeProvider(id = "p2") // returns NotFound by default
 
         // When - calling resolveAll
-        val results = ProviderChain(EnrichmentType.GENRE, listOf(p1, p2)).resolveAll(req)
+        val results = ProviderChain(EnrichmentType.GENRE, listOf(p1, p2)).resolveAll(req).successes
 
         // Then - empty list returned
         assertTrue(results.isEmpty())
@@ -304,7 +304,7 @@ class ProviderChainTest {
         )
 
         // When - calling resolveAll
-        val results = ProviderChain(EnrichmentType.GENRE, listOf(p1, p2), breakers).resolveAll(req)
+        val results = ProviderChain(EnrichmentType.GENRE, listOf(p1, p2), breakers).resolveAll(req).successes
 
         // Then - only p2's result (p1 skipped due to open circuit)
         assertEquals(1, results.size)
@@ -319,7 +319,7 @@ class ProviderChainTest {
         val p2 = FakeProvider(id = "p2").also { it.givenResult(EnrichmentType.GENRE, g2) }
 
         // When - calling resolveAll
-        val results = ProviderChain(EnrichmentType.GENRE, listOf(p1, p2)).resolveAll(req)
+        val results = ProviderChain(EnrichmentType.GENRE, listOf(p1, p2)).resolveAll(req).successes
 
         // Then - only p2's result (p1 skipped)
         assertEquals(1, results.size)

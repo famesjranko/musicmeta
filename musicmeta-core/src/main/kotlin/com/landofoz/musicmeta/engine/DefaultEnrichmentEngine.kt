@@ -359,8 +359,9 @@ internal class DefaultEnrichmentEngine(
         val mergeableResults = mergeableRequested.map { mergeType ->
             async {
                 val chain = registry.chainFor(mergeType)
-                val allResults = chain?.resolveAll(request).orEmpty()
-                val filtered = allResults.mapNotNull { gate(it) as? EnrichmentResult.Success }
+                val allResults = chain?.resolveAll(request)
+                val filtered = allResults?.successes.orEmpty()
+                    .mapNotNull { gate(it) as? EnrichmentResult.Success }
                 val merger = mergers[mergeType]
                 val merged = if (merger == null) {
                     EnrichmentResult.NotFound(mergeType, "no_merger")
@@ -370,7 +371,17 @@ internal class DefaultEnrichmentEngine(
                     // and a merger's own provider id is not a consumer's override key.
                     demoteUnanswered(guardedStrategy(logger, mergeType, "merger") { merger.merge(filtered) })
                 }
-                mergeType to reclassifyTransientGap(chain, request.identifiers, mergeType, merged)
+                // The merger sees only successes, so "nobody succeeded" reaches it as the same empty
+                // list whether the providers had nothing or never answered. The chain's own failure
+                // tells those apart — but only where no provider produced a Success at all, so a
+                // result this gate dropped for confidence still counts as the chain having been
+                // answered. That is the test [ProviderChain.resolve] applies to its own lastFailure.
+                val outcome = if (merged is EnrichmentResult.NotFound && allResults?.successes.isNullOrEmpty()) {
+                    allResults?.failure ?: merged
+                } else {
+                    merged
+                }
+                mergeType to reclassifyTransientGap(chain, request.identifiers, mergeType, outcome)
             }
         }.awaitAll()
         for ((type, result) in mergeableResults) { resolved[type] = result }

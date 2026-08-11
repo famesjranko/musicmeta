@@ -153,6 +153,12 @@ opens the breaker against a healthy provider and `STALE_IF_ERROR` starts serving
 `Error`/`RateLimited` for transport and protocol problems; `mapError()` classifies those into the
 right `ErrorKind`. Nothing can check this — only you know what the response meant.
 
+The same confusion has a chain-level shape: a `NotFound` synthesised because no provider *answered*
+claims the data does not exist. `ProviderChain` therefore reports its own `Error` when every eligible
+provider was skipped for an open breaker, and `resolveAll` returns `ChainResults`, not a bare list —
+the successes alone cannot tell a merger's caller that nobody succeeded because nobody was asked. A
+signature that can only carry the happy path is how the failure went missing the first time.
+
 ## 5. A capability's `identifierRequirement` defaults to `NONE`
 
 ```kotlin

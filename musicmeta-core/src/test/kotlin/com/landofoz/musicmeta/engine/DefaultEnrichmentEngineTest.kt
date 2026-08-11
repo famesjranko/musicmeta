@@ -1050,7 +1050,7 @@ class DefaultEnrichmentEngineTest {
         assertTrue(data.artists.all { "lastfm" in it.sources })
     }
 
-    @Test fun `SIMILAR_ARTISTS returns NotFound when all providers error`() = runTest {
+    @Test fun `SIMILAR_ARTISTS returns Error when all providers error`() = runTest {
         // Given - both providers return errors
         val providerA = FakeProvider(
             id = "lastfm",
@@ -1083,10 +1083,10 @@ class DefaultEnrichmentEngineTest {
             setOf(EnrichmentType.SIMILAR_ARTISTS),
         )
 
-        // Then - NotFound since no provider succeeded
+        // Then - the failures reach the consumer; an empty merge is not a clean absence
         assertTrue(
-            "Expected NotFound but got ${results.raw[EnrichmentType.SIMILAR_ARTISTS]}",
-            results.raw[EnrichmentType.SIMILAR_ARTISTS] is EnrichmentResult.NotFound,
+            "Expected Error but got ${results.raw[EnrichmentType.SIMILAR_ARTISTS]}",
+            results.raw[EnrichmentType.SIMILAR_ARTISTS] is EnrichmentResult.Error,
         )
     }
 

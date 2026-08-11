@@ -1,5 +1,6 @@
 import com.vanniktech.maven.publish.SonatypeHost
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.kotlin.jvm)
@@ -26,11 +27,19 @@ kotlin {
     compilerOptions { jvmTarget = JvmTarget.JVM_17 }
 }
 
+// secrets.properties is where the keys actually live on a developer machine — it is what
+// secrets.properties.example tells you to create, and what demo-web already reads. Without this the
+// e2e suite runs keyless and still reports success, because every key-requiring test skips itself.
+val secrets = Properties().apply {
+    rootProject.file("secrets.properties").takeIf { it.isFile }?.inputStream()?.use { load(it) }
+}
+
 tasks.withType<Test> {
     // Forward system properties to test JVM (for E2E test gating)
     systemProperty("include.e2e", System.getProperty("include.e2e") ?: "false")
 
-    // Forward API keys (system property > environment variable > empty)
+    // Forward API keys. Precedence is the one secrets.properties itself documents — the file wins
+    // over the environment — with an explicit -D above both, so one run can override without edits.
     val apiKeys = mapOf(
         "lastfm.apikey" to "LASTFM_API_KEY",
         "fanarttv.apikey" to "FANARTTV_API_KEY",
@@ -38,7 +47,10 @@ tasks.withType<Test> {
         "listenbrainz.token" to "LISTENBRAINZ_TOKEN",
     )
     apiKeys.forEach { (prop, env) ->
-        systemProperty(prop, System.getProperty(prop) ?: System.getenv(env) ?: "")
+        systemProperty(
+            prop,
+            System.getProperty(prop) ?: secrets.getProperty(prop) ?: System.getenv(env) ?: "",
+        )
     }
 }
 
