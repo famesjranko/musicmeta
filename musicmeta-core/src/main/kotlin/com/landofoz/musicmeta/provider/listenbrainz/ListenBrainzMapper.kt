@@ -3,6 +3,7 @@ package com.landofoz.musicmeta.provider.listenbrainz
 import com.landofoz.musicmeta.DiscographyAlbum
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
+import com.landofoz.musicmeta.IdentifierNamespace
 import com.landofoz.musicmeta.PopularTrack
 import com.landofoz.musicmeta.RadioTrack
 import com.landofoz.musicmeta.TopTrack
@@ -85,8 +86,10 @@ internal object ListenBrainzMapper {
                     album = track.album,
                     durationMs = track.durationMs,
                     identifiers = EnrichmentIdentifiers(musicBrainzId = track.recordingMbid)
-                        .let { ids -> track.artistMbid?.let { ids.withExtra("artistMbid", it) } ?: ids }
-                        .let { ids -> track.releaseMbid?.let { ids.withExtra("releaseMbid", it) } ?: ids },
+                        .let { ids -> track.artistMbid?.let { ids.with(IdentifierNamespace.MUSICBRAINZ_ARTIST, it) }
+                            ?: ids }
+                        .let { ids -> track.releaseMbid?.let { ids.with(IdentifierNamespace.MUSICBRAINZ_RELEASE, it) }
+                            ?: ids },
                 )
             },
         )
