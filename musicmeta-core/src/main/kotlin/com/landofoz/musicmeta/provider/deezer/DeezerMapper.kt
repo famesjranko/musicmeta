@@ -4,6 +4,7 @@ import com.landofoz.musicmeta.ArtworkSize
 import com.landofoz.musicmeta.DiscographyAlbum
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
+import com.landofoz.musicmeta.IdentifierNamespace
 import com.landofoz.musicmeta.RadioTrack
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.SimilarAlbum
@@ -57,7 +58,7 @@ internal object DeezerMapper {
                     year = album.releaseDate?.take(4),
                     type = album.recordType,
                     thumbnailUrl = album.coverMedium ?: album.coverSmall,
-                    identifiers = EnrichmentIdentifiers().withExtra("deezerId", album.id.toString()),
+                    identifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DEEZER, album.id.toString()),
                 )
             },
         )
@@ -69,7 +70,7 @@ internal object DeezerMapper {
                     title = track.title,
                     position = track.trackPosition,
                     durationMs = track.durationSec.toLong() * 1000,
-                    identifiers = EnrichmentIdentifiers().withExtra("deezerId", track.id.toString()),
+                    identifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DEEZER, track.id.toString()),
                 )
             },
         )
@@ -87,7 +88,7 @@ internal object DeezerMapper {
             artists = artists.mapIndexed { index, artist ->
                 SimilarArtist(
                     name = artist.name,
-                    identifiers = EnrichmentIdentifiers().withExtra("deezerId", artist.id.toString()),
+                    identifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DEEZER, artist.id.toString()),
                     matchScore = 1.0f - (index.toFloat() / count) * 0.9f,
                     sources = listOf("deezer"),
                 )
@@ -105,7 +106,7 @@ internal object DeezerMapper {
         title = track.title,
         artist = track.artistName,
         matchScore = score,
-        identifiers = EnrichmentIdentifiers().withExtra("deezerId", track.id.toString()),
+        identifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DEEZER, track.id.toString()),
         sources = listOf("deezer"),
     )
 
@@ -135,7 +136,7 @@ internal object DeezerMapper {
                     durationMs = if (t.durationSec > 0) t.durationSec.toLong() * 1000 else null,
                     rank = index + 1,
                     sources = listOf("deezer"),
-                    identifiers = EnrichmentIdentifiers().withExtra("deezerId", t.id.toString()),
+                    identifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DEEZER, t.id.toString()),
                 )
             },
         )
@@ -148,7 +149,7 @@ internal object DeezerMapper {
                     artist = track.artistName,
                     album = track.albumTitle,
                     durationMs = if (track.durationSec > 0) track.durationSec.toLong() * 1000 else null,
-                    identifiers = EnrichmentIdentifiers().withExtra("deezerId", track.id.toString()),
+                    identifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DEEZER, track.id.toString()),
                 )
             },
         )
@@ -182,6 +183,6 @@ internal object DeezerMapper {
         year = album.releaseDate?.take(4)?.toIntOrNull(),
         artistMatchScore = score,
         thumbnailUrl = album.coverMedium ?: album.coverSmall,
-        identifiers = EnrichmentIdentifiers().withExtra("deezerId", album.id.toString()),
+        identifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DEEZER, album.id.toString()),
     )
 }

@@ -6,6 +6,7 @@ import com.landofoz.musicmeta.EnrichmentProvider
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
+import com.landofoz.musicmeta.IdentifierNamespace
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.SimilarAlbum
 import com.landofoz.musicmeta.engine.ArtistMatcher
@@ -83,7 +84,7 @@ class SimilarAlbumsProvider internal constructor(
             ?: return EnrichmentResult.NotFound(EnrichmentType.SIMILAR_ALBUMS, id)
 
         // Resolve seed artist Deezer ID — check cache first, fall back to search
-        val deezerId = request.identifiers.extra["deezerId"]?.toLongOrNull()
+        val deezerId = request.identifiers.get(IdentifierNamespace.DEEZER)?.toLongOrNull()
         val seedArtist = if (deezerId != null) {
             DeezerArtistSearchResult(id = deezerId, name = albumRequest.artist)
         } else {
@@ -134,7 +135,8 @@ class SimilarAlbumsProvider internal constructor(
             // album-level source to be more confident than), so that caveat belongs in the KDoc
             // above, not smuggled into a number consumers rank providers by.
             confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
-            resolvedIdentifiers = EnrichmentIdentifiers().withExtra("deezerId", seedArtist.id.toString()),
+            resolvedIdentifiers = EnrichmentIdentifiers()
+                .with(IdentifierNamespace.DEEZER, seedArtist.id.toString()),
         )
     }
 

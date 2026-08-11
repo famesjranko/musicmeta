@@ -5,6 +5,7 @@ import com.landofoz.musicmeta.EnrichmentProvider
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
+import com.landofoz.musicmeta.IdentifierNamespace
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.engine.ArtistMatcher
@@ -125,7 +126,7 @@ class ITunesProvider(
 
         return try {
             // Try direct lookup if artistId is already stored
-            val artistId = request.identifiers.get("itunesArtistId")?.toLongOrNull()
+            val artistId = request.identifiers.get(IdentifierNamespace.ITUNES_ARTIST)?.toLongOrNull()
                 ?: api.searchArtist(request.name)
                 ?: return EnrichmentResult.NotFound(type, id)
 
@@ -137,7 +138,8 @@ class ITunesProvider(
                 data = ITunesMapper.toDiscography(albums),
                 provider = id,
                 confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
-                resolvedIdentifiers = EnrichmentIdentifiers().withExtra("itunesArtistId", artistId.toString()),
+                resolvedIdentifiers = EnrichmentIdentifiers()
+                    .with(IdentifierNamespace.ITUNES_ARTIST, artistId.toString()),
             )
         } catch (e: Exception) {
             mapError(type, e)

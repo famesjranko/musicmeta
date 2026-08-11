@@ -132,6 +132,22 @@ sealed class EnrichmentRequest {
 }
 
 /**
+ * Namespaces a `String`-keyed external id. Members may only be appended; keep a consumer
+ * `when` over this non-exhaustive.
+ */
+enum class IdentifierNamespace(internal val key: String) {
+    MUSICBRAINZ_ARTIST("artistMbid"),
+    MUSICBRAINZ_RELEASE("releaseMbid"),
+    MUSICBRAINZ_RECORDING("recordingMbid"),
+    DISCOGS_ARTIST("discogsArtistId"),
+    SPOTIFY_ARTIST("spotifyArtistId"),
+    ITUNES_ARTIST("itunesArtistId"),
+
+    /** The key's meaning depends on the request: an artist, album or track id. */
+    DEEZER("deezerId"),
+}
+
+/**
  * Known identifiers for a music entity, progressively filled during enrichment.
  * MusicBrainz identity resolution populates most of these.
  */
@@ -151,4 +167,11 @@ data class EnrichmentIdentifiers(
     /** Returns a copy with the given extra identifier added (immutable). */
     fun withExtra(key: String, value: String): EnrichmentIdentifiers =
         copy(extra = extra + (key to value))
+
+    /** Retrieves an extra identifier by namespace, or null if not present. */
+    fun get(ns: IdentifierNamespace): String? = extra[ns.key]
+
+    /** Returns a copy with the given namespaced identifier added (immutable). */
+    fun with(ns: IdentifierNamespace, value: String): EnrichmentIdentifiers =
+        copy(extra = extra + (ns.key to value))
 }

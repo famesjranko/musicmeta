@@ -6,6 +6,7 @@ import com.landofoz.musicmeta.Credit
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.GenreTag
+import com.landofoz.musicmeta.IdentifierNamespace
 import com.landofoz.musicmeta.ReleaseEdition
 
 /** Maps Discogs DTOs to EnrichmentData subclasses. */
@@ -71,7 +72,7 @@ internal object DiscogsMapper {
                     role = credit.role,
                     roleCategory = mapRoleCategory(credit.role),
                     identifiers = if (credit.id != null) {
-                        EnrichmentIdentifiers().withExtra("discogsArtistId", credit.id.toString())
+                        EnrichmentIdentifiers().with(IdentifierNamespace.DISCOGS_ARTIST, credit.id.toString())
                     } else EnrichmentIdentifiers(),
                 )
             },
@@ -120,7 +121,7 @@ internal object DiscogsMapper {
                 BandMember(
                     name = member.name,
                     identifiers = EnrichmentIdentifiers()
-                        .withExtra("discogsArtistId", member.id.toString()),
+                        .with(IdentifierNamespace.DISCOGS_ARTIST, member.id.toString()),
                 )
             },
         )
