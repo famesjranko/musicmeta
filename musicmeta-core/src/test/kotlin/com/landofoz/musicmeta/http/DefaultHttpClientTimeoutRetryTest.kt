@@ -17,8 +17,8 @@ import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * A read timeout is retried like a shed 5xx, on a stricter budget test: it carries no status code,
- * so the ladder used to hand it back on the first attempt after spending the whole `timeoutMs` of
- * the enclosing [EnrichDeadline].
+ * so the ladder used to hand it back on the first attempt — having spent the client's whole
+ * `timeoutMs` out of the enclosing [EnrichDeadline]'s budget to learn nothing.
  *
  * The strictness is the point. A shed 503 fails in milliseconds, so the ladder only has to fit the
  * sleep; a timeout has already spent `timeoutMs` and another attempt may spend it again, so the
