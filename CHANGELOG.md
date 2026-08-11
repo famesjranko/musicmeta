@@ -38,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `TRACK_METADATA`/`EnrichmentData.TrackMetadata` (duration, album title, disambiguation), already fetched but dropped by MusicBrainz, Deezer, LRCLIB; in `DEFAULT_TRACK_TYPES`
 - `PopularTrack` now carries `listenerCount`, `durationMs` and `album`, matching what `TopTrack` already exposes from the same ListenBrainz data
 - `ALBUM_DESCRIPTION` (`EnrichmentData.Biography`), from Wikipedia and Last.fm's `wiki` block; in `DEFAULT_ALBUM_TYPES`, top source is keyless and long-cached
+- `ProviderPolicies`: each provider's terms as data — commercial use, licence, notice to render
 
 ### Changed
 - Provider terms are now documented (docs/providers.md): keyless is not permission; Deezer and Last.fm restrict commercial use. README opening reworded to match.
@@ -71,15 +72,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - MusicBrainz track ranking ignored a typed album and never penalized a music-video take; album matches are now preferred (and pass the score floor) and a video no longer beats a studio take
 - MusicBrainz album/track search failed outright on a qualifier-suffixed title even though the release/recording exists; now falls back to a stripped title, tie-broken toward the matching edition
 - An album MusicBrainz titles with symbols a caller cannot type (`F♯ A♯ ∞`) was NotFound from every ASCII spelling; the artist's release groups are now matched locally when the search finds nothing
-- MusicBrainz's internal lookup memo outlived the call, so `forceRefresh`, `invalidate()` and `cache.clear()` were answered from the first call's payload; it now lives for one call, not the engine's
-- MusicBrainz re-ran the whole album search ladder, and its suggestion search, once per album type; both now resolve once per call, so an album it cannot find costs 6 upstream requests instead of 41
-- Outside an engine, `MusicBrainzProvider` re-fetches the release and release-group per type instead of holding them for the process; route multi-type requests through the engine to share one memo
+- MusicBrainz's lookup memo outlived the call, so `forceRefresh`, `invalidate()` and `cache.clear()` were answered from the first call's payload; it now lives for one call, not the engine's
+- MusicBrainz re-ran the album search ladder, and its suggestion search, once per album type; both now resolve once per call, so an album it cannot find costs 6 upstream requests, not 41
+- Outside an engine, `MusicBrainzProvider` re-fetches the release and release-group per type; route multi-type requests through the engine to share one memo
 - ListenBrainz's recording/artist popularity treated a JSON-null listen count as zero and kept it; a track or artist with no LB data now returns NotFound instead of a fake 0/0
 - Cover Art Archive sent a track's recording MBID to its release endpoint, which always 404s; ALBUM_ART on tracks now resolves via the release-group id instead of failing every time
 - MusicBrainz ALBUM_TRACKS flattened a bonus video disc into the tracklist; a release with a DVD/Blu-ray extra no longer duplicates every position
 - Fanart.tv ignored each image's community likes and always took the first one; artist and album art now resolve to the most-liked image
 - A transient MusicBrainz side-lookup could leave a type's identifier (e.g. `ALBUM_DESCRIPTION`'s Wikipedia title) unresolved and masquerade as NotFound; now Error, eligible for `STALE_IF_ERROR`
-- A transient on MusicBrainz's full-artist lookup (fetching URL relations for a search match) threw out of artist enrichment and failed it entirely; now degrades to the search result without relations
+- A transient on MusicBrainz's full-artist lookup (URL relations for a search match) failed artist enrichment entirely; it now degrades to the search result without relations
 - A transient on Cover Art Archive's thumbnail/front-image or Discogs's community-rating fetch discarded an already-resolved artwork/metadata answer; both now degrade the optional field instead
 
 ## [0.11.0] - 2026-07-28

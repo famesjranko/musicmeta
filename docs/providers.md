@@ -201,10 +201,10 @@ author list retained anywhere a consumer could render it.
 **Cover Art Archive images are copyrighted per image by their respective rights holders**, and the
 API carries no licence field to propagate even if musicmeta wanted to surface one.
 
-Attribution obligations that survive (Last.fm's credit-and-link, Discogs' disaffiliation notice,
-Wikipedia's licence notice) currently have no public surface a consumer can render — the data is
-in the repo, but nothing in the API tells a caller they owe one or gives them the words. That gap
-is planned work, not yet shipped.
+The same facts ship as data: `ProviderPolicies` maps a provider id to a `ProviderPolicy` carrying
+this table's row plus, for Last.fm, Discogs, iTunes and Wikipedia, the notice text to render. A
+merged result names a merger, not an upstream, so the join key is each item's `sources` list
+(`GenreTag`, `SimilarArtist`, `SimilarTrack`, `TopTrack`) looked up in the registry.
 
 ## Rate limiting
 
