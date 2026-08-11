@@ -9,6 +9,7 @@ import org.junit.Before
 import org.junit.Test
 import java.io.IOException
 import java.net.InetSocketAddress
+import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -30,8 +31,11 @@ class DefaultHttpClientTimeoutRetryTest {
 
     private lateinit var server: HttpServer
 
-    /** Whether the handler hangs, per request, in order; anything past the end answers at once. */
-    private val scripted = ArrayDeque<Boolean>()
+    /**
+     * Whether the handler hangs, per request, in order; anything past the end answers at once.
+     * Concurrent because a hung handler holds its own thread while the retry's is served.
+     */
+    private val scripted = ConcurrentLinkedQueue<Boolean>()
 
     /** Atomic because a hung handler still holds its thread while the retry's request arrives. */
     private val requests = AtomicInteger()
@@ -46,7 +50,7 @@ class DefaultHttpClientTimeoutRetryTest {
         server.executor = Executors.newCachedThreadPool { r -> Thread(r).apply { isDaemon = true } }
         server.createContext("/") { exchange ->
             requests.incrementAndGet()
-            if (scripted.removeFirstOrNull() == true) released.await(10, TimeUnit.SECONDS)
+            if (scripted.poll() == true) released.await(10, TimeUnit.SECONDS)
             val body =
                 if (exchange.requestURI.path.endsWith("array")) """[{"ok":true}]""" else """{"ok":true}"""
             // The client that timed out is gone by now, so writing to it throws; that is the
@@ -95,14 +99,16 @@ class DefaultHttpClientTimeoutRetryTest {
         )
 
         // When - each is driven through one hung request
-
-        // Then - none of them hands the timeout back
-        methods.forEach { (name, call) ->
+        val outcomes = methods.map { (name, call) ->
             requests.set(0)
             scripted += true
-            val result = call()
+            Triple(name, call(), requests.get())
+        }
+
+        // Then - none of them hands the timeout back, and each took one retry to answer
+        outcomes.forEach { (name, result, attempts) ->
             assertTrue("$name: expected Ok, got $result", result is HttpResult.Ok)
-            assertEquals("$name: expected one retry", 2, requests.get())
+            assertEquals("$name: expected one retry", 2, attempts)
         }
     }
 
