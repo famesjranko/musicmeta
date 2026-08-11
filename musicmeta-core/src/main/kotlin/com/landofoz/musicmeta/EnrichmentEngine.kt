@@ -135,9 +135,9 @@ interface EnrichmentEngine {
             val lrcLibLimiter = RateLimiter(100) // judgement 2026-07-27
             val lastFmLimiter = RateLimiter(200) // judgement 2026-07-27: no published figure (API ToS §4.4)
             val fanartTvLimiter = RateLimiter(100) // judgement 2026-07-27
-            // measured 2026-07-28: x-discogs-ratelimit: 60 in live response headers confirms
-            // 60 req/min authenticated (the developer page still 403s non-browser clients)
-            val discogsLimiter = RateLimiter(1000)
+            // measured 2026-07-28: x-discogs-ratelimit: 60 req/min authenticated. 1100ms
+            // (~54/min) is headroom below that bucket.
+            val discogsLimiter = RateLimiter(1100)
 
             // Always-available providers (no API key needed)
             addProvider(MusicBrainzProvider(client, musicBrainzLimiter))
