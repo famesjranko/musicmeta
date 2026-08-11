@@ -68,14 +68,21 @@ internal class WikidataApi(
         )
     }
 
-    /** Extract a string value from the preferred (or first) claim. */
+    /**
+     * Extract a string value from the preferred (or first) claim.
+     *
+     * `optString` renders a non-string value as JSON text rather than returning nothing, so a
+     * property whose datavalue is an object would parse as `{"id":"Q5"}`. Only a genuine string
+     * is accepted here.
+     */
     private fun extractStringValue(claims: JSONObject, property: String): String? {
         val claim = selectClaim(claims, property) ?: return null
-        return claim
-            .optJSONObject("mainsnak")
-            ?.optJSONObject("datavalue")
-            ?.optString("value")
-            ?.takeIf { it.isNotBlank() }
+        return (
+            claim
+                .optJSONObject("mainsnak")
+                ?.optJSONObject("datavalue")
+                ?.opt("value") as? String
+            )?.takeIf { it.isNotBlank() }
     }
 
     /** Extract a time value (e.g. +1968-10-07T00:00:00Z) and return date part. */
@@ -104,18 +111,18 @@ internal class WikidataApi(
     }
 
     /**
-     * Select the preferred-rank claim, or fall back to the first.
+     * Select the preferred-rank claim, or fall back to the first — skipping deprecated ones, which
+     * are statements Wikidata records as retracted (a superseded identifier, a disproven date).
      *
      * Single-valued properties only. A multi-valued property (P136 genre, P527 members) would be
      * silently reduced to one of its values here; read the whole array instead.
      */
     private fun selectClaim(claims: JSONObject, property: String): JSONObject? {
         val array = claims.optJSONArray(property) ?: return null
-        if (array.length() == 0) return null
-        val preferred = (0 until array.length())
+        val usable = (0 until array.length())
             .map { array.getJSONObject(it) }
-            .firstOrNull { it.optString("rank") == "preferred" }
-        return preferred ?: array.getJSONObject(0)
+            .filterNot { it.optString("rank") == "deprecated" }
+        return usable.firstOrNull { it.optString("rank") == "preferred" } ?: usable.firstOrNull()
     }
 
     private fun buildCommonsUrl(filename: String, size: Int): String {

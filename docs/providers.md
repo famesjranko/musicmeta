@@ -288,9 +288,9 @@ MusicBrainz ids, P1728 AllMusic id, P373 Commons category, P1303 instrument, P16
 awards. `wbgetentities` is how the claims themselves are fetched (`props=claims`), but never with
 `props=labels`/`descriptions` — which is what would retire both hardcoded maps. Retiring them was
 considered and declined on 2026-08-12: a label lives on the referenced Q-id, so it costs a second
-batched call, and an audit of every entry in both maps found all but one already matching the live
-label — the exceptions being Q30 "US" and Q145 "UK", deliberate abbreviations a swap would change
-for every US or UK artist. Never called: the
+batched call, and an audit of all 19 entries across both maps found 16 identical to the live label,
+2 deliberate abbreviations (Q30 "US", Q145 "UK") a swap would change for every US or UK artist, and
+1 wrong (Q211, fixed in place). Never called: the
 REST API at `/w/rest.php/wikibase/v1/`, and SPARQL. Note `provider/wikipedia/` *also* calls
 `wbgetentities` on this host, for sitelinks, on its own rate limiter.
 

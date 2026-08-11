@@ -391,6 +391,84 @@ class WikidataProviderTest {
     }
 
     @Test
+    fun `ARTIST_PHOTO carries the same identifiers from the same one request`() = runTest {
+        // Given - the live Coldplay entity, which carries both a P18 image and the four ids
+        httpClient.givenJsonResponse("wikidata.org", COLDPLAY_CLAIMS)
+        val request = EnrichmentRequest.ForArtist(
+            identifiers = EnrichmentIdentifiers(wikidataId = "Q45188"),
+            name = "Coldplay",
+        )
+
+        // When - enriching for artist photo
+        val result = provider.enrich(request, EnrichmentType.ARTIST_PHOTO)
+
+        // Then - the photo path resolves identifiers too, without a second call
+        val ids = (result as EnrichmentResult.Success).resolvedIdentifiers!!
+        assertEquals("cc197bad-dc9c-440d-a5b5-d52ba2e14234", ids.get(IdentifierNamespace.MUSICBRAINZ_ARTIST))
+        assertEquals("471744", ids.get(IdentifierNamespace.ITUNES_ARTIST))
+        assertEquals(1, httpClient.requestedUrls.size)
+    }
+
+    @Test
+    fun `a deprecated statement is skipped for the identifier it retracts`() = runTest {
+        // Given - P434 holds a deprecated statement first and a normal one second
+        // synthetic
+        httpClient.givenJsonResponse(
+            "wikidata.org",
+            """{"entities":{"Q99994":{"type":"item","id":"Q99994","claims":{
+              "P434":[
+                {"mainsnak":{"snaktype":"value","property":"P434","datavalue":
+                  {"value":"00000000-0000-0000-0000-000000000000","type":"string"},
+                  "datatype":"external-id"},"type":"statement","rank":"deprecated"},
+                {"mainsnak":{"snaktype":"value","property":"P434","datavalue":
+                  {"value":"cc197bad-dc9c-440d-a5b5-d52ba2e14234","type":"string"},
+                  "datatype":"external-id"},"type":"statement","rank":"normal"}],
+              "P495":[{"mainsnak":{"snaktype":"value","property":"P495","datavalue":
+                {"value":{"entity-type":"item","numeric-id":145,"id":"Q145"},"type":"wikibase-entityid"},
+                "datatype":"wikibase-item"},"type":"statement","rank":"normal"}]
+            }}},"success":1}""",
+        )
+        val request = EnrichmentRequest.ForArtist(
+            identifiers = EnrichmentIdentifiers(wikidataId = "Q99994"),
+            name = "Retracted Id Artist",
+        )
+
+        // When - enriching for COUNTRY type
+        val result = provider.enrich(request, EnrichmentType.COUNTRY)
+
+        // Then - the standing statement wins; a retracted id must never reach a consumer
+        val ids = (result as EnrichmentResult.Success).resolvedIdentifiers!!
+        assertEquals("cc197bad-dc9c-440d-a5b5-d52ba2e14234", ids.get(IdentifierNamespace.MUSICBRAINZ_ARTIST))
+    }
+
+    @Test
+    fun `a claim whose value is an object is not read as JSON text`() = runTest {
+        // Given - P434 carrying an entity-id object where a string belongs
+        // synthetic
+        httpClient.givenJsonResponse(
+            "wikidata.org",
+            """{"entities":{"Q99993":{"type":"item","id":"Q99993","claims":{
+              "P434":[{"mainsnak":{"snaktype":"value","property":"P434","datavalue":
+                {"value":{"entity-type":"item","id":"Q5"},"type":"wikibase-entityid"},
+                "datatype":"wikibase-item"},"type":"statement","rank":"normal"}],
+              "P495":[{"mainsnak":{"snaktype":"value","property":"P495","datavalue":
+                {"value":{"entity-type":"item","numeric-id":145,"id":"Q145"},"type":"wikibase-entityid"},
+                "datatype":"wikibase-item"},"type":"statement","rank":"normal"}]
+            }}},"success":1}""",
+        )
+        val request = EnrichmentRequest.ForArtist(
+            identifiers = EnrichmentIdentifiers(wikidataId = "Q99993"),
+            name = "Wrong Datatype Artist",
+        )
+
+        // When - enriching for COUNTRY type
+        val result = provider.enrich(request, EnrichmentType.COUNTRY)
+
+        // Then - no MusicBrainz id at all, rather than the object's JSON text
+        assertNull((result as EnrichmentResult.Success).resolvedIdentifiers)
+    }
+
+    @Test
     fun `enrich omits the identifier claims an entity does not carry`() = runTest {
         // Given - a long-tail Latvian act with P434 and P1953 and P1902, but no P2850
         httpClient.givenJsonResponse("wikidata.org", LATVIAN_ARTIST_CLAIMS)
@@ -412,6 +490,7 @@ class WikidataProviderTest {
     @Test
     fun `enrich leaves identifiers null when the entity carries no external-id claim`() = runTest {
         // Given - an entity whose only claim is the birth date
+        // synthetic
         httpClient.givenJsonResponse(
             "wikidata.org",
             """{"entities":{"Q7259":{"claims":{
@@ -484,7 +563,8 @@ class WikidataProviderTest {
 
     @Test
     fun `P495 of Q213 reports Czech Republic`() = runTest {
-        // Given - synthetic: an entity whose P495 is Q213, the real Czech Republic QID
+        // Given - an entity whose P495 is Q213, the real Czech Republic QID
+        // synthetic
         httpClient.givenJsonResponse(
             "wikidata.org",
             """{"entities":{"Q99995":{"claims":{"P495":[
