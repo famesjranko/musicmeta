@@ -238,7 +238,16 @@ hardcodes `en.wikipedia.org`, so no other language is ever queried.
 `caa_id`/`caa_release_mbid` (cover art for a discography entry without a second provider),
 `release_mbid` on a top recording (its album's identity, as opposed to the `release_name` a top
 track now carries). Never called:
-`/1/stats/**`, `/1/user/**`, `/1/metadata/**`, `/1/similar-users`, and every submit endpoint.
+`/1/stats/**`, `/1/user/**`, `/1/similar-users`, and every submit endpoint. Two of the unused are
+worth knowing before reaching for a third-party call. `/1/metadata/recording/` is a keyless batch
+lookup — up to 1000 recording MBIDs to titles, artists, lengths and release info in one request —
+so any source that yields MBIDs without titles costs two requests, not one per track.
+`/1/lb-radio/artist/{mbid}` is deliberately left, not overlooked: it answers where
+`/1/explore/lb-radio` is disabled, but it is LB Radio's candidate *pool* rather than its playlist.
+It is unordered (a JSON object keyed by artist MBID), non-deterministic (`ORDER BY RANDOM()`, so two
+identical requests differ), and curated only by the popularity band the caller picks. Serving
+`RadioPlaylist` from it would mean owning the assembly troi does upstream, and caching one random
+draw for the type's TTL.
 
 **Last.fm.** Parsed into a DTO and dropped by the mapper — cheapest to add, since both the request
 and the read already happen: album `playcount`/`listeners` (the artist and track equivalents both
