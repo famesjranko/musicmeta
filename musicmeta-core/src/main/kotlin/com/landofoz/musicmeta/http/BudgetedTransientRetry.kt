@@ -1,5 +1,8 @@
+@file:JvmName("HttpRetry")
+
 package com.landofoz.musicmeta.http
 
+import com.landofoz.musicmeta.MusicmetaTestApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
@@ -38,10 +41,12 @@ internal class EnrichDeadline(budgetMs: Long) : AbstractCoroutineContextElement(
  * a `NetworkError` it returns. A flag here would be a flag an implementation forgets, and forgetting
  * it silently disables retry for the failure mode that most needs it.
  *
- * Build one with [asAttempt]; there is no other constructor.
+ * Build one with [asAttempt] and hand it to [BudgetedTransientRetry.execute]; from outside this
+ * module it is a token with nothing to read, which is why neither its constructor nor its contents
+ * are public.
  */
 class HttpAttempt<out T> internal constructor(
-    val result: HttpResult<T>,
+    internal val result: HttpResult<T>,
     internal val shedRetryAfterMs: Long?,
 )
 
@@ -96,6 +101,11 @@ class BudgetedTransientRetry(
     private val attemptTimeoutMs: Int = DEFAULT_ATTEMPT_TIMEOUT_MS,
     private val maxAttempts: Int = 3,
 ) {
+
+    init {
+        require(maxAttempts >= 1) { "maxAttempts must be at least 1, was $maxAttempts" }
+        require(attemptTimeoutMs >= 0) { "attemptTimeoutMs cannot be negative, was $attemptTimeoutMs" }
+    }
 
     /**
      * Runs [attempt] until it produces a result worth keeping, the attempts run out, or the budget
@@ -157,13 +167,15 @@ class BudgetedTransientRetry(
  * Runs [block] as though an `enrich()` call with [budgetMs] left enclosed it, so a
  * [BudgetedTransientRetry] inside it refuses any wait that does not fit.
  *
- * **A test utility, and the only reason it is public.** The deadline itself is internal, so without
+ * **A test utility, and the only reason it is public** — hence the [MusicmetaTestApi] opt-in, which
+ * a production call site has to silence deliberately. The deadline itself is internal, so without
  * this an `HttpClient` living outside this module has no way to exercise the branch that refuses a
  * sleep — the branch a client with no retry at all also passes, which is how that test rots. Pair it
  * with the same fixture under a generous budget and assert the request counts differ.
  *
  * The budget is real elapsed time, not the virtual clock: `runTest` will not advance it.
  */
+@MusicmetaTestApi
 suspend fun <T> withRetryBudgetForTest(budgetMs: Long, block: suspend CoroutineScope.() -> T): T =
     withContext(EnrichDeadline(budgetMs)) { block() }
 

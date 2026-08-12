@@ -28,21 +28,23 @@ import org.json.JSONObject
  *   manually; setting it disables OkHttp's transparent decompression and delivers
  *   raw gzip bytes to the JSON parser.
  * - Timeouts inherited from the caller's [OkHttpClient] instance, which is also where the ladder
- *   gets what it charges an attempt — see [retry].
+ *   gets what it charges an attempt — see [attemptCostMs].
  * - User-Agent set on every request via the [userAgent] constructor parameter.
  *
- * @param retry the ladder each method runs through. The default reads [client]'s own timeouts, so a
- *   client configured for slow upstreams is charged for what its attempts actually cost. Pass
- *   `BudgetedTransientRetry(maxAttempts = 1)` to opt out of retrying entirely.
+ * @param maxAttempts total attempts per request, not retries: pass 1 to opt out of retrying. What
+ *   one attempt is charged against the enrich budget is not a knob — it comes from [client]'s own
+ *   timeouts, because a figure a caller supplies is a figure that can be wrong in the one direction
+ *   that silently disables the budget test.
  */
 class OkHttpEnrichmentClient(
     private val client: OkHttpClient,
     private val userAgent: String = EnrichmentConfig.DEFAULT_USER_AGENT,
-    private val retry: BudgetedTransientRetry =
-        BudgetedTransientRetry(attemptTimeoutMs = client.attemptCostMs()),
+    maxAttempts: Int = 3,
 ) : HttpClient {
 
     private val noRedirectClient = client.newBuilder().followRedirects(false).build()
+
+    private val retry = BudgetedTransientRetry(client.attemptCostMs(), maxAttempts)
 
     override suspend fun fetchJsonResult(url: String): HttpResult<JSONObject> =
         fetchJsonResult(url, emptyMap())

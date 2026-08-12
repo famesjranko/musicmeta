@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.okhttp
 
+import com.landofoz.musicmeta.MusicmetaTestApi
 import com.landofoz.musicmeta.http.BudgetedTransientRetry
 import com.landofoz.musicmeta.http.HttpResult
 import com.landofoz.musicmeta.http.withRetryBudgetForTest
@@ -22,7 +23,11 @@ import java.util.concurrent.TimeUnit
  * The sleeps are `runTest`'s virtual time, so they cost nothing here. The *budget* is not — an
  * `EnrichDeadline` reads `System.nanoTime()`, which the virtual clock does not move — so the refusal
  * test below compares a real 50ms against a wait the upstream asked a second for.
+ *
+ * The opt-in is what a consumer's own test has to write too: `withRetryBudgetForTest` is deliberately
+ * awkward to reach from anywhere but a test.
  */
+@OptIn(MusicmetaTestApi::class)
 class OkHttpTransientRetryTest {
 
     private val server = MockWebServer()
@@ -92,7 +97,8 @@ class OkHttpTransientRetryTest {
         // Then - the ladder retried it: the backoff it slept is time OkHttp's own recovery never takes
         assertTrue("expected Ok, got $result", result is HttpResult.Ok)
         assertEquals(2, server.requestCount)
-        assertTrue("must have slept", testScheduler.currentTime >= 1_000L)
+        // The first backoff, 2s jittered by up to a quarter — not the 1s floor any wait clears.
+        assertTrue("slept ${testScheduler.currentTime}ms", testScheduler.currentTime in 1_500L..2_500L)
     }
 
     @Test fun `a 404 surfaces on the first attempt and is never retried`() = runTest {
@@ -118,7 +124,8 @@ class OkHttpTransientRetryTest {
         // Then - the exponential fallback wait is taken and the retry surfaces
         assertTrue("expected Ok, got $result", result is HttpResult.Ok)
         assertEquals(2, server.requestCount)
-        assertTrue("must have slept", testScheduler.currentTime >= 1_000L)
+        // A shed response with no header waits the 2s backoff, jittered by up to a quarter.
+        assertTrue("slept ${testScheduler.currentTime}ms", testScheduler.currentTime in 1_500L..2_500L)
     }
 
     @Test fun `the attempt charge comes from the client's own timeouts, never from callTimeout alone`() {

@@ -1582,6 +1582,9 @@ public final class com/landofoz/musicmeta/MusicBrainzEntityType : java/lang/Enum
 	public static fun values ()[Lcom/landofoz/musicmeta/MusicBrainzEntityType;
 }
 
+public abstract interface annotation class com/landofoz/musicmeta/MusicmetaTestApi : java/lang/annotation/Annotation {
+}
+
 public final class com/landofoz/musicmeta/PopularTrack {
 	public static final field Companion Lcom/landofoz/musicmeta/PopularTrack$Companion;
 	public fun <init> (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentIdentifiers;JILjava/lang/Long;Ljava/lang/Long;Ljava/lang/String;)V
@@ -2195,12 +2198,6 @@ public final class com/landofoz/musicmeta/http/BudgetedTransientRetry {
 public final class com/landofoz/musicmeta/http/BudgetedTransientRetry$Companion {
 }
 
-public final class com/landofoz/musicmeta/http/BudgetedTransientRetryKt {
-	public static final fun asAttempt (Lcom/landofoz/musicmeta/http/HttpResult;Ljava/lang/String;)Lcom/landofoz/musicmeta/http/HttpAttempt;
-	public static synthetic fun asAttempt$default (Lcom/landofoz/musicmeta/http/HttpResult;Ljava/lang/String;ILjava/lang/Object;)Lcom/landofoz/musicmeta/http/HttpAttempt;
-	public static final fun withRetryBudgetForTest (JLkotlin/jvm/functions/Function2;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-}
-
 public final class com/landofoz/musicmeta/http/DefaultHttpClient : com/landofoz/musicmeta/http/HttpClient {
 	public fun <init> (Ljava/lang/String;II)V
 	public synthetic fun <init> (Ljava/lang/String;IIILkotlin/jvm/internal/DefaultConstructorMarker;)V
@@ -2213,7 +2210,6 @@ public final class com/landofoz/musicmeta/http/DefaultHttpClient : com/landofoz/
 }
 
 public final class com/landofoz/musicmeta/http/HttpAttempt {
-	public final fun getResult ()Lcom/landofoz/musicmeta/http/HttpResult;
 }
 
 public abstract interface class com/landofoz/musicmeta/http/HttpClient {
@@ -2315,6 +2311,12 @@ public final class com/landofoz/musicmeta/http/HttpResult$ServerError : com/land
 	public final fun getStatusCode ()I
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/landofoz/musicmeta/http/HttpRetry {
+	public static final fun asAttempt (Lcom/landofoz/musicmeta/http/HttpResult;Ljava/lang/String;)Lcom/landofoz/musicmeta/http/HttpAttempt;
+	public static synthetic fun asAttempt$default (Lcom/landofoz/musicmeta/http/HttpResult;Ljava/lang/String;ILjava/lang/Object;)Lcom/landofoz/musicmeta/http/HttpAttempt;
+	public static final fun withRetryBudgetForTest (JLkotlin/jvm/functions/Function2;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 
 public final class com/landofoz/musicmeta/http/RateLimiter {

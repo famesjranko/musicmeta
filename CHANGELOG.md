@@ -41,7 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `CompositeSynthesizer.synthesize` now receives the identity provider's `Error` when identity resolution failed, where it previously received `null` (the "not attempted" value)
 - Two distinct all-non-Latin artist names (e.g. two different CJK names) no longer match each other; both used to normalize to an empty string and compare equal
 - A non-Latin artist request (e.g. 東京事変) against a romanizing provider (Deezer/iTunes/Discogs) now returns no match instead of the provider's unverified top hit; recovery is tracked separately
-- `OkHttpEnrichmentClient` now retries a 429, a shed 502/503/504 and a transport failure on core's budgeted ladder; its constructor gains a defaulted third parameter for that ladder, so recompile
+- `OkHttpEnrichmentClient` now retries a 429, a shed 502/503/504 and a transport failure on core's budgeted ladder; its constructor gains a defaulted `maxAttempts`, so recompile
 - `DefaultHttpClient` no longer publishes `MAX_RETRY_AFTER_SEC`; the 120s standalone retry ceiling moved into the shared ladder
 
 ### Added
@@ -60,7 +60,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - MusicBrainz, Discogs, Spotify and Apple Music artist ids are now carried on Wikidata results' identifiers, parsed from claims already fetched; nothing consumes them for resolution yet
 - Wikidata is a second `ARTIST_LINKS` source (priority 50), contributing the official website (P856) where MusicBrainz has no relations
 - Deezer's `ALBUM_METADATA` now fills `barcode`/`label`/`releaseDate` from `GET /album/{id}`, one extra request shared with `ALBUM_TRACKS` per call; no genre (Deezer's is one coarse tag)
-- `BudgetedTransientRetry`, `HttpResult.asAttempt` and `withRetryBudgetForTest`: core's budgeted retry ladder is public, so your own `HttpClient` wraps each attempt instead of re-authoring it
+- `BudgetedTransientRetry`, `HttpResult.asAttempt`, and `withRetryBudgetForTest` behind a `@MusicmetaTestApi` opt-in: core's budgeted retry ladder is public for a client of your own
 
 ### Changed
 - `ARTIST_POPULARITY`/`TRACK_POPULARITY` are now merged across providers instead of returning the first answer: a field the leading source lacks is filled from the next that has it
@@ -83,6 +83,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `build()` warns from the User-Agent the wire will carry: the contactless default meeting MusicBrainz/Wikipedia/Wikidata, `contact()` after `withDefaultProviders()`, or `contact()` with your client
 
 ### Fixed
+- Remove any retrying OkHttp interceptor: it cannot see the enrich deadline, so its retries are unbudgeted and now stack on the ladder
 - A caller-supplied `httpClient()` only silences the contactless-User-Agent warning when it built the wire's only client; one set after `withDefaultProviders()` still warns
 - An artist named by one of its MusicBrainz aliases now resolves: the search asked `artist:"…"` only, which does not reach the alias index, so a localised or former name found nothing
 - `identityMatchScore` now distinguishes an artist matched on its own name from one matched on an alias, scaling the score by which of the two it was

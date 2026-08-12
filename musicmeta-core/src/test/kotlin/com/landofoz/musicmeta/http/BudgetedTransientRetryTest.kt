@@ -1,7 +1,9 @@
 package com.landofoz.musicmeta.http
 
+import com.landofoz.musicmeta.MusicmetaTestApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.IOException
@@ -11,8 +13,10 @@ import java.io.IOException
  * which slot the wait comes from, and what a transport failure has to look like.
  *
  * The waits are `runTest`'s virtual time. Jitter is ±25% of the base and never takes a wait under a
- * second, so the assertions are windows.
+ * second, so the assertions are windows — each chosen so the wait the ladder should *not* have taken
+ * falls outside it.
  */
+@OptIn(MusicmetaTestApi::class)
 class BudgetedTransientRetryTest {
 
     private val retry = BudgetedTransientRetry(attemptTimeoutMs = 1_000)
@@ -130,6 +134,33 @@ class BudgetedTransientRetryTest {
         // Then - it surfaces on the first attempt
         assertEquals(404, (result as HttpResult.ClientError).statusCode)
         assertEquals(1, attempts)
+    }
+
+    @Test fun `an attempt count below one is refused rather than silently read as one`() {
+        // Given - the counts a caller reaches for when they mean "do not retry" and get it wrong
+        val counts = listOf(0, -5)
+
+        // When - a ladder is built with each
+        val messages = counts.map {
+            assertThrows(IllegalArgumentException::class.java) { BudgetedTransientRetry(maxAttempts = it) }.message
+        }
+
+        // Then - construction fails saying so, instead of behaving as the 1 the KDoc does not promise
+        assertEquals(
+            listOf("maxAttempts must be at least 1, was 0", "maxAttempts must be at least 1, was -5"),
+            messages,
+        )
+    }
+
+    @Test fun `a negative attempt charge is refused`() {
+        // Given - a charge that would credit the budget instead of spending it
+        val build = { BudgetedTransientRetry(attemptTimeoutMs = -1) }
+
+        // When - a ladder is built with it
+        val thrown = assertThrows(IllegalArgumentException::class.java) { build() }
+
+        // Then - construction fails saying so
+        assertEquals("attemptTimeoutMs cannot be negative, was -1", thrown.message)
     }
 
     private fun shed(code: Int, retryAfterHeader: String?): HttpAttempt<String> =

@@ -170,7 +170,21 @@ Two things the ladder needs that `HttpResult` cannot carry:
 - **A transport failure is the `IOException` you let out of the block.** `execute` catches it. A `NetworkError` you *return* is treated as a response that arrived and will not parse — not retried, because a second identical request reproduces it, and it is the shape a provider changing its JSON arrives in.
 - **`asAttempt(retryAfterHeader)` reads the header for a `ServerError` and nothing else.** A 429's wait travels in `RateLimited.retryAfterMs`, which the ladder reads from the result itself. Pass the header unconditionally and let `asAttempt` decide; omitting it for a 5xx only falls back to exponential backoff.
 
-To test the refusal branch from outside this library, run the call inside `withRetryBudgetForTest(budgetMs = 50) { ... }`. Pair it with the same fixture under a generous budget and assert the request counts differ — a client with no retry at all also passes the refusal test on its own.
+`OkHttpEnrichmentClient(client, userAgent, maxAttempts = 1)` opts out of retrying; there is no knob for what an attempt is charged, because that comes from your `OkHttpClient`'s own timeouts.
+
+To test the refusal branch from outside this library, run the call inside `withRetryBudgetForTest`. It is marked `@MusicmetaTestApi`, so the compiler refuses a call that has not opted in — a test says so once, and a production call site has to say something it would not want to write:
+
+```kotlin
+@OptIn(MusicmetaTestApi::class)
+class MyHttpClientTest {
+    @Test fun `a wait past the enrich deadline is refused`() = runTest {
+        val result = withRetryBudgetForTest(budgetMs = 50) { client.fetchJsonResult(url) }
+        assertEquals(1, server.requestCount)
+    }
+}
+```
+
+Pair it with the same fixture under a generous budget and assert the request counts differ — a client with no retry at all also passes the refusal test on its own.
 
 ### Custom HTTP clients
 

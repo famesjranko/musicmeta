@@ -338,9 +338,9 @@ honest, and a gate here would be confidently wrong.
 ## 11. A retry ladder's coverage is not its trigger
 
 `BudgetedTransientRetry.execute` wraps every request method of both shipped clients, so the ladder's
-*coverage* is complete. What it retries is keyed on the **result type**, not the status code — and for a long time
-only `HttpResult.RateLimited` qualified, which only a 429 produces. MusicBrainz does not shed with
-429; it sheds with 503, carrying the same `Retry-After` a 429 would. The mechanism built for
+*coverage* is complete. What it retries is keyed on the **result type**, not the status code — and
+for a long time only `HttpResult.RateLimited` qualified, which only a 429 produces. MusicBrainz does
+not shed with 429; it sheds with 503, carrying the same `Retry-After` a 429 would. The mechanism for
 throttling never ran against the throttling signal the highest-traffic provider actually sends.
 
 Two things follow for anyone touching the status mapping:
@@ -353,9 +353,9 @@ Two things follow for anyone touching the status mapping:
 
 And the header a shed response carries cannot be added to `ServerError` — it is a public
 `data class`, so a new constructor parameter breaks `copy()` for every consumer (§1). Anything a
-retry needs beyond the result type travels alongside it, in `HttpAttempt`, which is why the ladder is
-public but its constructor is not: `asAttempt` is the only way to build one, and it reads the
-`Retry-After` for a `ServerError` and for nothing else.
+retry needs beyond the result type travels alongside it, in `HttpAttempt` — which is public while its
+constructor is not. `asAttempt` is the only way to build one, and it reads the `Retry-After` for a
+`ServerError` and for nothing else.
 
 The same lesson landed a second time, with no status code at all: a read timeout is a
 `NetworkError`, which took the `else` arm and was handed back on the first attempt after spending
@@ -365,15 +365,15 @@ predicate is not simply "retry `NetworkError`":
 - **`NetworkError` is two different failures.** A dropped connection is transient; a 200 whose body
   will not parse is a working transport returning a response the retry reproduces exactly — and it
   is the shape a provider changing its JSON arrives in, so retrying it triples the traffic of the
-  one case worth noticing. The two are told apart by *how* they arrive: `execute`'s own `IOException`
-  catch is the transport failure, and a returned `NetworkError` is the parse failure. A boolean on
-  `HttpAttempt` would be a boolean an implementation forgets, which silently disables retry.
+  one case worth noticing. The two are told apart by *how* they arrive: `execute`'s own
+  `IOException` catch is the transport failure, and a returned `NetworkError` is the parse failure.
+  A boolean on `HttpAttempt` would be a boolean an implementation forgets, which disables retry.
 - **The budget test has to charge the attempt, not just the sleep.** A shed 503 fails in
   milliseconds, so fitting the sleep inside the `EnrichDeadline` is enough. A timeout has already
   spent `attemptTimeoutMs` and the retry may spend it again, so the wait *plus* that must fit.
   Reuse the sleep-only test and a hang gets two attempts inside a deadline that had room for one.
-  A client that cannot name what an attempt costs — OkHttp's `callTimeout` is 0 unless set — passes
-  0 here and degrades to the sleep-only test with every test still green;
+  A client that cannot name what an attempt costs — OkHttp's `callTimeout` is 0 unless set —
+  passes 0 here and degrades to the sleep-only test with every test still green;
   `OkHttpClient.attemptCostMs()` is why the adapter charges connect plus read instead.
 
 ## 12. A provider's own memo is a cache no consumer can flush
