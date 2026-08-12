@@ -560,3 +560,68 @@ resultEl.addEventListener('click', async (e) => {
     }, 2000);
   }
 });
+
+// Provider panel + attribution. One fetch at load, deliberately never awaited by anything on the
+// enrichment path: the panel and the credits line are app-level facts, not part of a result.
+const settingsDialog = document.getElementById('settings-dialog');
+const providerPanel = document.getElementById('provider-panel');
+const creditsEl = document.getElementById('credits');
+const creditsNotices = document.getElementById('credits-notices');
+
+// Enum names arrive bare over the wire so the frontend owns presentation: CONDITIONAL -> Conditional.
+function humanizeEnum(name) {
+  const words = String(name).toLowerCase().replace(/_/g, ' ');
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+// A notice is owed outright, or owed for some of the provider's data and not others — the demo
+// cannot know which item came from where before the request runs, so both states render.
+const ATTRIBUTION_OWED = ['REQUIRED', 'DEPENDS_ON_DATA'];
+
+function providerRowHtml(provider) {
+  const availability = provider.available ? 'available' : 'unavailable';
+  const keyState = !provider.requiresApiKey
+    ? 'no key needed'
+    : provider.available
+      ? 'key configured'
+      : '<span class="keyreq">key missing</span>';
+  const policy = provider.policy;
+  return `<tr>
+      <td><span class="pdot${provider.available ? '' : ' off'}" aria-hidden="true"></span>${esc(provider.displayName)}
+        <span class="secondary">${availability}</span></td>
+      <td>${keyState}</td>
+      <td>${provider.capabilities.length}</td>
+      <td>${policy ? esc(humanizeEnum(policy.commercialUse)) : 'Not recorded'}</td>
+      <td>${policy && policy.dataLicence ? esc(policy.dataLicence) : 'Not recorded'}</td>
+    </tr>`;
+}
+
+function renderProviders(providers) {
+  providerPanel.innerHTML = `<table class="provider-table">
+      <caption>Providers this instance was built with, and the terms musicmeta records for each.</caption>
+      <thead><tr>
+        <th scope="col">Provider</th><th scope="col">Key</th><th scope="col">Types</th>
+        <th scope="col">Commercial use</th><th scope="col">Licence</th>
+      </tr></thead>
+      <tbody>${providers.map(providerRowHtml).join('')}</tbody>
+    </table>`;
+
+  const notices = providers
+    .filter((p) => p.policy && ATTRIBUTION_OWED.includes(p.policy.attribution) && p.policy.attributionNotice)
+    .map((p) => p.policy.attributionNotice);
+  if (notices.length === 0) return;
+  creditsNotices.innerHTML = notices.map((n) => `<span class="credit">${esc(n)}</span>`).join('');
+  creditsEl.hidden = false;
+}
+
+fetch('/api/providers', { cache: 'no-store' })
+  .then((res) => {
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.json();
+  })
+  .then((data) => renderProviders(data.providers || []))
+  .catch(() => { providerPanel.textContent = 'The provider list could not be loaded.'; });
+
+document.getElementById('settings-open').addEventListener('click', () => settingsDialog.showModal());
+document.getElementById('credits-link').addEventListener('click', () => settingsDialog.showModal());
+document.getElementById('settings-close').addEventListener('click', () => settingsDialog.close());

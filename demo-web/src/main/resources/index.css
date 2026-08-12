@@ -854,6 +854,168 @@ footer a {
 
 footer a:hover { color: var(--text); border-color: var(--text); }
 
+/* Attribution credits: owed content, so no card chrome — a hairline separates it from the footer. */
+.credits-footer {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--panel-border-soft);
+  color: var(--muted);
+  text-align: left;
+  line-height: 1.7;
+}
+
+.credits-footer[hidden] { display: none; }
+
+.credits-title {
+  color: var(--text-soft);
+  cursor: help;
+}
+
+/* Every notice carries its own separator, so the trailing one leads into the panel link. */
+.credits-footer .credit::after {
+  content: " · ";
+  color: var(--muted);
+}
+
+.credits-link {
+  min-height: 0;
+  border: 0;
+  border-bottom: 1px dotted rgba(146, 169, 255, 0.55);
+  border-radius: 0;
+  padding: 0;
+  background: none;
+  box-shadow: none;
+  color: var(--accent);
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.credits-link:hover:not(:disabled) {
+  transform: none;
+  filter: none;
+  box-shadow: none;
+  color: var(--text);
+  border-color: var(--text);
+}
+
+/* The gear and the dialog's close button opt out of the global gradient button entirely. */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: none;
+}
+
+.gear-btn,
+.dialog-close {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  min-height: 0;
+  flex: none;
+  border: 1px solid var(--panel-border-soft);
+  border-radius: 999px;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.035);
+  box-shadow: none;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.gear-btn:hover:not(:disabled),
+.dialog-close:hover:not(:disabled) {
+  transform: none;
+  filter: none;
+  box-shadow: none;
+  color: var(--text);
+  border-color: rgba(146, 169, 255, 0.4);
+}
+
+#settings-dialog {
+  width: min(760px, calc(100vw - 2rem));
+  max-height: 85vh;
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-md);
+  padding: 1.1rem 1.2rem 1.3rem;
+  background: var(--panel);
+  color: var(--text-soft);
+  font-size: 0.82rem;
+  overflow: auto;
+}
+
+#settings-dialog::backdrop { background: rgba(6, 9, 15, 0.66); }
+
+.dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.dialog-head h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.dialog-section + .dialog-section { margin-top: 1.2rem; }
+
+.dialog-section h3 {
+  margin: 0.9rem 0 0;
+  color: var(--text);
+  font-size: 0.8rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+#provider-panel { overflow-x: auto; }
+
+.provider-table {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+  margin-top: 0.5rem;
+  font-size: 0.78rem;
+}
+
+.provider-table caption {
+  padding-bottom: 0.45rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+  text-align: left;
+}
+
+.provider-table th {
+  padding: 0.34rem 0.5rem;
+  color: var(--muted);
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.provider-table td {
+  padding: 0.34rem 0.5rem;
+  border-top: 1px solid var(--panel-border-soft);
+  color: var(--text-soft);
+  vertical-align: top;
+}
+
+.provider-table .pdot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 0.4rem;
+  background: var(--ok);
+}
+
+.provider-table .pdot.off { background: var(--err); }
+.provider-table .secondary { color: var(--muted); font-size: 0.68rem; }
+.provider-table .keyreq { color: var(--warn); }
+
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* Genre chips under the summary title; teal outline + star marks a curated-vocabulary genre. */
