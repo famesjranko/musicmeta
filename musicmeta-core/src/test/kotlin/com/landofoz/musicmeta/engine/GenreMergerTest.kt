@@ -34,10 +34,10 @@ class GenreMergerTest {
 
     @Test
     fun `merge maps common aliases`() {
-        // Given - "alt rock" should map to "alternative rock", "hip hop" to "hip-hop"
+        // Given - "alt rock" should map to "alternative rock", "hip-hop" to "hip hop"
         val tags = listOf(
             GenreTag(name = "alt rock", confidence = 0.7f),
-            GenreTag(name = "hip hop", confidence = 0.6f),
+            GenreTag(name = "hip-hop", confidence = 0.6f),
         )
 
         // When - merging the tags
@@ -46,7 +46,7 @@ class GenreMergerTest {
         // Then - the aliased genre names appear in the result
         val names = result.map { it.name }
         assertTrue("alternative rock" in names)
-        assertTrue("hip-hop" in names)
+        assertTrue("hip hop" in names)
     }
 
     @Test
@@ -163,6 +163,48 @@ class GenreMergerTest {
 
         // Then - the merged tag keeps the stronger claim
         assertEquals(true, result.single().curated)
+    }
+
+    @Test
+    fun `a free-text hyphenated hip-hop folds into the curated spelling`() {
+        // Given - Last.fm's "hip-hop" beside the name MusicBrainz's genre vocabulary actually holds
+        val tags = listOf(
+            GenreTag("hip hop", 0.7f, listOf("musicbrainz"), curated = true),
+            GenreTag("hip-hop", 0.3f, listOf("lastfm"), curated = false),
+        )
+
+        // When - merging the tags
+        val result = GenreMerger.merge(tags)
+
+        // Then - one entry, under the curated spelling rather than the hyphenated one
+        assertEquals("hip hop", result.single().name)
+        assertEquals(true, result.single().curated)
+    }
+
+    @Test
+    fun `the cross-provider spelling folds each still collapse to one entry`() {
+        // Given - every alias-map variant beside the canonical form it exists to fold into
+        val pairs = listOf(
+            "hiphop" to "hip hop",
+            "alt rock" to "alternative rock",
+            "rnb" to "r&b",
+            "r & b" to "r&b",
+            "synth pop" to "synthpop",
+            "post punk" to "post-punk",
+        )
+
+        // When - merging each variant with its canonical form
+        val sizes = pairs.map { (variant, canonical) ->
+            variant to GenreMerger.merge(
+                listOf(
+                    GenreTag(canonical, 0.4f, listOf("musicbrainz"), curated = false),
+                    GenreTag(variant, 0.3f, listOf("lastfm"), curated = false),
+                ),
+            ).size
+        }
+
+        // Then - each pair is one genre, so deleting a fold cannot land green
+        assertEquals(pairs.map { it.first to 1 }, sizes)
     }
 
     @Test

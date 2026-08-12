@@ -44,11 +44,15 @@ internal object GenreMerger : ResultMerger {
      * or the same genre appears twice in one merged result. It stays hand-maintained for that
      * reason, and must not grow entries that map one genre onto a *different* one — MusicBrainz's
      * curated vocabulary distinguishes them, and folding them here would undo that.
+     *
+     * Where the curated vocabulary holds one of the spellings, that is the one to fold *towards*:
+     * "hip hop" is in it and "hip-hop" is not, so the hyphenated free-text form resolves to the
+     * curated name rather than renaming it.
      */
     private val ALIASES = mapOf(
         "alt rock" to "alternative rock",
-        "hip hop" to "hip-hop",
-        "hiphop" to "hip-hop",
+        "hip-hop" to "hip hop",
+        "hiphop" to "hip hop",
         "rnb" to "r&b",
         "r & b" to "r&b",
         "synth pop" to "synthpop",
