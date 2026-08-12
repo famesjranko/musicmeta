@@ -64,28 +64,34 @@ internal class ITunesApi(
     }
 
     /**
-     * Resolves a barcode to the album iTunes lists under it — an identity lookup, not a search:
-     * no ranking, no artist-name fuzz, no wrong-edition risk (`docs/pitfalls.md` §7 does not apply
-     * here). A `200` with `resultCount: 0` means "no album carries this barcode", so the caller
-     * treats a null return as absence, never as an outage.
+     * Resolves a barcode to the album(s) iTunes lists under it — an identity lookup, not a text
+     * search: no ranking against a query string, no ambiguity about *which* field matched. A `200`
+     * with `resultCount: 0` means "no album carries this barcode", so an empty return is absence,
+     * never an outage.
      *
-     * A barcode can be reused across editions in Apple's catalogue — a probe against a real UPC
-     * returned five different pressings under the one code — so this keeps the first `collection`
-     * result rather than asserting uniqueness, matching [lookupArtistAlbums]'s filter.
+     * Returns every `collection` result, not one — a barcode can be reused across editions or, per
+     * the ticket that added this call, even land on entirely unrelated real entries (a probed
+     * placeholder barcode alone returned 24). **The caller must still filter by artist name before
+     * trusting a hit**, the same gate the search paths apply; this call only proves "iTunes indexes
+     * this barcode somewhere", not "this is the right album".
      *
      * ISRC has no equivalent: `lookup?isrc=` returns `200 resultCount: 0` for an ISRC known to be
      * in catalogue, so it is silently unsupported rather than broken — do not add an `isrc`
      * parameter to this call assuming the same shape works.
+     *
+     * Apple answers some malformed parameters the same way it answers a genuine miss — `200` with
+     * an `errorMessage` body and no `results` key — so if `upc`'s shape ever changes upstream, every
+     * barcode album goes quietly `NotFound` while the circuit breaker stays healthy.
      */
-    suspend fun lookupByUpc(upc: String): ITunesAlbumResult? {
+    suspend fun lookupByUpc(upc: String): List<ITunesAlbumResult> {
         val encoded = URLEncoder.encode(upc, "UTF-8")
         val url = "$BASE_URL/lookup?upc=$encoded"
-        val json = fetchJson(url) ?: return null
-        val results = json.optJSONArray("results") ?: return null
+        val json = fetchJson(url) ?: return emptyList()
+        val results = json.optJSONArray("results") ?: return emptyList()
         return (0 until results.length())
             .mapNotNull { results.optJSONObject(it) }
-            .firstOrNull { it.optString("wrapperType") == "collection" }
-            ?.let(::parseAlbumResult)
+            .filter { it.optString("wrapperType") == "collection" }
+            .map(::parseAlbumResult)
     }
 
     /**

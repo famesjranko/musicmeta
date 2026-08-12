@@ -10,10 +10,13 @@ import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.engine.ArtistMatcher
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
+import com.landofoz.musicmeta.engine.ProviderCallScope
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * Enrichment provider using Apple's iTunes Search and Lookup APIs.
@@ -30,6 +33,25 @@ class ITunesProvider(
 ) : EnrichmentProvider {
 
     private val api = ITunesApi(httpClient, rateLimiter)
+
+    /**
+     * This call's `lookup?upc=` candidates, shared across every type asked of the same barcode —
+     * ALBUM_METADATA, an art type and ALBUM_TRACKS would otherwise each fetch the same barcode
+     * separately and, worse, each pick their own first artist-matching candidate, letting one
+     * `enrich()` answer with metadata from one edition and a tracklist from another. Held for the
+     * call only ([ProviderCallScope]); a provider used outside an engine gets its own memo per call.
+     */
+    private suspend fun upcMemo(): UpcLookupMemo =
+        currentCoroutineContext()[ProviderCallScope]?.slot(this, ::UpcLookupMemo) ?: UpcLookupMemo()
+
+    /**
+     * Resolves [barcode] to the album a human would mean by [artist] — [ITunesApi.lookupByUpc]
+     * proves only that iTunes indexes the barcode somewhere, so this applies the same name gate
+     * the search paths use ([ArtistMatcher]) before accepting a candidate. No match among the
+     * candidates is a genuine miss, not a reason to fall back to search.
+     */
+    private suspend fun lookupByBarcode(barcode: String, artist: String): ITunesAlbumResult? =
+        upcMemo().get { api.lookupByUpc(barcode) }.firstOrNull { ArtistMatcher.isMatch(artist, it.artistName) }
 
     override val id = "itunes"
     override val displayName = "iTunes"
@@ -87,6 +109,24 @@ class ITunesProvider(
                     data = ITunesMapper.toTracklist(tracks),
                     provider = id,
                     confidence = ConfidenceCalculator.idBasedLookup(),
+                )
+            }
+
+            // A barcode is an identity lookup, shared with the other album types via upcMemo() so
+            // a request asking metadata/art and tracks together resolves one collection, not two
+            // independently search-ranked ones (see upcMemo KDoc).
+            val barcode = request.identifiers.barcode
+            if (!barcode.isNullOrBlank()) {
+                val barcodeResult = lookupByBarcode(barcode, request.artist)
+                    ?: return EnrichmentResult.NotFound(type, id)
+                val barcodeTracks = api.lookupAlbumTracks(barcodeResult.collectionId)
+                if (barcodeTracks.isEmpty()) return EnrichmentResult.NotFound(type, id)
+                return EnrichmentResult.Success(
+                    type = type,
+                    data = ITunesMapper.toTracklist(barcodeTracks),
+                    provider = id,
+                    confidence = ConfidenceCalculator.idBasedLookup(),
+                    resolvedIdentifiers = buildResolvedIdentifiers(barcodeResult),
                 )
             }
 
@@ -158,14 +198,15 @@ class ITunesProvider(
         // than running before it, since the lookup is free on this call path but running it ahead
         // of an unused search would cost 3s of this provider's own serialised rate-limit budget
         // (RateLimiter(3000) above). No fallback to search on a miss: a barcode that names an
-        // edition Apple never carries is a genuine NotFound, not a reason to re-introduce the
-        // ranking risk the lookup exists to remove. ISRC has no equivalent lookup — see
-        // ITunesApi.lookupByUpc KDoc.
+        // edition Apple never carries, or a candidate none of which name this artist, is a genuine
+        // NotFound, not a reason to re-introduce the ranking risk the lookup exists to remove.
+        // ISRC has no equivalent lookup — see ITunesApi.lookupByUpc KDoc.
         val barcode = request.identifiers.barcode
-        if (barcode != null) {
+        if (!barcode.isNullOrBlank()) {
             val result = try {
-                api.lookupByUpc(barcode)
+                lookupByBarcode(barcode, request.artist)
             } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
                 return mapError(type, e)
             } ?: return EnrichmentResult.NotFound(type, id)
 
@@ -233,6 +274,21 @@ class ITunesProvider(
 
     private fun ITunesAlbumResult.toCandidate(): SearchCandidate =
         ITunesMapper.toSearchCandidate(this, id, SEARCH_SCORE)
+
+    /**
+     * One `lookup?upc=` answer per call, held whatever it is (including "no candidates") — the
+     * mutex is across [fetch] itself, not just the cache, since the engine resolves a request's
+     * types as sibling `async` children and two of them asking for the same barcode must make one
+     * call between them, matching `MusicBrainzEnricher.CallMemo`'s shape. A thrown transient is
+     * never held, so the next type that asks retries it.
+     */
+    private class UpcLookupMemo {
+        private val mutex = Mutex()
+        private var candidates: List<ITunesAlbumResult>? = null
+
+        suspend fun get(fetch: suspend () -> List<ITunesAlbumResult>): List<ITunesAlbumResult> =
+            mutex.withLock { candidates ?: fetch().also { candidates = it } }
+    }
 
     companion object {
         const val DEFAULT_ARTWORK_SIZE = 1200
