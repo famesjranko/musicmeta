@@ -21,8 +21,10 @@ import org.junit.Test
  *
  * A caller holding only an MBID has no name for the entity, and the engine already learns one to
  * hand the name-search providers. These pin that the same names reach the consumer, that a caller
- * who supplied their own still learns the canonical forms, and that a resolution which named
- * nothing says so rather than echoing the request back.
+ * who also carried the identifier alongside their own names still learns the canonical forms, and
+ * that a resolution which named nothing says so rather than echoing the request back. A request
+ * naming an entity with no identifier at all resolves by name search instead, and a search hit
+ * never backfills these fields — see [buildIdentityResolution].
  */
 class IdentityCanonicalNamesTest {
 
@@ -87,7 +89,7 @@ class IdentityCanonicalNamesTest {
     }
 
     @Test
-    fun `a caller who named the entity themselves still learns its canonical names`() = runTest {
+    fun `a caller who named the entity themselves still learns its canonical names, given an mbid too`() = runTest {
         // Given - the same recording, whose canonical title differs from the one the caller asked for
         httpClient.givenJsonResponse("recording/$UNDER_PRESSURE_MBID", UNDER_PRESSURE_RECORDING)
 
@@ -102,6 +104,24 @@ class IdentityCanonicalNamesTest {
         // with; the request's own fields still hold the caller's variant
         assertEquals("Under Pressure", results.identity?.title)
         assertEquals("Queen & David Bowie", results.identity?.artist)
+    }
+
+    @Test
+    fun `an album request carrying only an mbid comes back naming the release`() = runTest {
+        // Given - a release MusicBrainz holds under the caller's identifier, credited to Various
+        // Artists
+        httpClient.givenJsonResponse("release/$SOUNDTRACK_MBID", SOUNDTRACK_RELEASE)
+
+        // When - the request names that identifier and no title or artist at all
+        val results = engine().enrich(
+            EnrichmentRequest.forAlbumByMbid(SOUNDTRACK_MBID),
+            setOf(EnrichmentType.GENRE),
+        )
+
+        // Then - the identity carries the release's own title and artist credit, reached before the
+        // type fan-out that follows resolution
+        assertEquals("My Generation - The Soundtrack of Our Lives, Part One", results.identity?.title)
+        assertEquals("Various Artists", results.identity?.artist)
     }
 
     @Test
@@ -123,6 +143,7 @@ class IdentityCanonicalNamesTest {
         const val UNDER_PRESSURE_MBID = "6f903161-8757-4363-a6ab-54bfe1149bb8"
         const val QUEEN_MBID = "0383dadf-2a4e-4d10-a46a-e9e041da8eb3"
         const val DEAD_MBID = "60d043af-b702-30d9-b6c0-0688d7863b14"
+        const val SOUNDTRACK_MBID = "46a1cce2-a0a8-4816-9c7c-f48e0537032b"
 
         // captured 2026-08-12: GET /ws/2/recording/6f903161-...?inc=artists+releases+release-groups+isrcs, trimmed
         const val UNDER_PRESSURE_RECORDING = """
@@ -169,6 +190,37 @@ class IdentityCanonicalNamesTest {
               "country": "GB",
               "disambiguation": "UK rock group",
               "genres": [ { "name": "art rock", "count": 15 } ]
+            }
+        """
+
+        // captured 2026-08-12: GET /ws/2/release/46a1cce2-...?inc=artist-credits+labels+release-groups
+        // +tags+genres+media+recordings, trimmed
+        const val SOUNDTRACK_RELEASE = """
+            {
+              "id": "46a1cce2-a0a8-4816-9c7c-f48e0537032b",
+              "title": "My Generation - The Soundtrack of Our Lives, Part One",
+              "date": "2005-10",
+              "tags": [],
+              "genres": [],
+              "artist-credit": [
+                {
+                  "name": "Various Artists",
+                  "joinphrase": "",
+                  "artist": { "id": "89ad4ac3-39f7-470e-963a-56509c546377", "name": "Various Artists" }
+                }
+              ],
+              "release-group": {
+                "id": "13ed01fd-af02-3030-afc1-17e62c53eb02",
+                "title": "My Generation - The Soundtrack of Our Lives, Part One",
+                "primary-type": "Album",
+                "first-release-date": "2005-10"
+              },
+              "label-info": [
+                {
+                  "catalog-number": "0946 3 44062 2 2",
+                  "label": { "id": "c029628b-6633-439e-bcee-ed02e8a338f7", "name": "EMI" }
+                }
+              ]
             }
         """
     }

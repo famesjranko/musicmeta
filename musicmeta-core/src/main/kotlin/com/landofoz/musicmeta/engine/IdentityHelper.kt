@@ -11,10 +11,13 @@ import com.landofoz.musicmeta.IdentityResolution
 /**
  * Builds the top-level [IdentityResolution] from the raw identity provider result.
  *
- * [names] is what the identity provider read off the entity it looked up, and the only source for
- * [IdentityResolution.title]/[IdentityResolution.artist] — including on a request that carried
- * names of its own, whose canonical forms the caller cannot otherwise see. A resolution that named
- * nothing leaves both null rather than echoing the request back as if it had been confirmed.
+ * [names] is what the identity provider read off the entity a caller's **identifier** named, and
+ * the only source for [IdentityResolution.title]/[IdentityResolution.artist] — including on a
+ * request that carried names of its own alongside that identifier, whose canonical forms the
+ * caller cannot otherwise see. A request naming an entity with no identifier resolves by name
+ * search instead, and [names] stays null: a search hit is what a name matched, not what an
+ * identifier named, so it never backfills these fields. A resolution that named nothing leaves
+ * both null rather than echoing the request back as if it had been confirmed.
  */
 internal fun buildIdentityResolution(
     identityResult: EnrichmentResult?,
