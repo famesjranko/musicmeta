@@ -57,20 +57,17 @@ internal object ArtistMatcher {
     ): Int {
         if (expected.isBlank() || candidate.isBlank()) return QUALITY_NONE
 
-        // normalize() keeps [a-z0-9 ] only, so a name written entirely in another script
-        // (电台司令, コールドプレイ) collapses to "" — and two empty strings would compare equal.
-        // When neither side has Latin content to normalize, compare the raw names instead
-        // (case-folded, trimmed) — same fallback as NameMatchTier.sameName.
-        if (!hasLatinAlphanumeric(expected) && !hasLatinAlphanumeric(candidate)) {
-            return if (expected.trim().equals(candidate.trim(), ignoreCase = true)) {
-                QUALITY_SAME_NAME
-            } else {
-                QUALITY_NONE
-            }
-        }
-
         val normExpected = normalize(expected)
         val normCandidate = normalize(candidate)
+
+        // normalize() keeps [a-z0-9 ] only, so a name written entirely in another script
+        // (电台司令, コールドプレイ) collapses to "" — and so does a name whose only Latin content was
+        // a stripped "the " prefix ("The 電台"). Two empty strings would compare equal, and every
+        // string trivially "contains" "", so whenever either side has no normalized form, fall back
+        // to comparing the raw names instead (case-folded, whitespace collapsed away).
+        if (normExpected.isEmpty() || normCandidate.isEmpty()) {
+            return if (rawSameName(expected, candidate)) QUALITY_SAME_NAME else QUALITY_NONE
+        }
 
         // Exact match after normalization
         if (normExpected == normCandidate) return QUALITY_SAME_NAME
@@ -80,12 +77,9 @@ internal object ArtistMatcher {
         val compactCandidate = normCandidate.replace(" ", "")
         if (compactExpected == compactCandidate) return QUALITY_SAME_NAME
 
-        // One contains the other (handles "feat." suffixes). Guarded against empty: when one side
-        // is Latin and the other is entirely non-Latin, normalize() reduces the non-Latin side to
-        // "" — and every string trivially "contains" "", which would rank an unrelated non-Latin
-        // name as a partial match.
-        val bothNonEmpty = normExpected.isNotEmpty() && normCandidate.isNotEmpty()
-        if (bothNonEmpty && (normCandidate.contains(normExpected) || normExpected.contains(normCandidate))) {
+        // One contains the other (handles "feat." suffixes). Both sides are guaranteed non-empty
+        // here — the empty-normalization case above already returned.
+        if (normCandidate.contains(normExpected) || normExpected.contains(normCandidate)) {
             return QUALITY_CONTAINS
         }
 
@@ -111,10 +105,14 @@ internal object ArtistMatcher {
     private val DIACRITICS_REGEX = Regex("\\p{InCombiningDiacriticalMarks}+")
     private val NON_ALPHANUMERIC_REGEX = Regex("[^a-z0-9 ]")
     private val WHITESPACE_REGEX = Regex("\\s+")
-    private val LATIN_ALPHANUMERIC_REGEX = Regex("[a-z0-9]")
 
-    private fun hasLatinAlphanumeric(name: String): Boolean =
-        LATIN_ALPHANUMERIC_REGEX.containsMatchIn(name.lowercase())
+    /**
+     * Same-name fallback for a pair where at least one side has no normalized form: case-folded,
+     * with whitespace collapsed away entirely rather than merely trimmed, so a name split by
+     * spacing convention alone (`방탄 소년단` vs `방탄소년단`) still matches.
+     */
+    private fun rawSameName(expected: String, candidate: String): Boolean =
+        expected.replace(WHITESPACE_REGEX, "").equals(candidate.replace(WHITESPACE_REGEX, ""), ignoreCase = true)
 
     private fun normalize(name: String): String {
         var s = name.lowercase().trim()

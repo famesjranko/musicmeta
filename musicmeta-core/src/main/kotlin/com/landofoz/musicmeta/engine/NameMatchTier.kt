@@ -61,18 +61,10 @@ internal fun nameMatchTier(
     return if (matched.any { it.official }) NameMatchTier.PRIMARY_ALIAS else NameMatchTier.ALIAS
 }
 
-private val LATIN_ALPHANUMERIC = Regex("[a-z0-9]")
-
 /**
- * [ArtistMatcher.matchQuality]'s same-name rank, except for a name it cannot see: its normalization
- * keeps `[a-z0-9 ]` only, so a name written entirely in another script normalizes to the empty
- * string — and two empty strings compare equal. Localised aliases are precisely such names
- * (`コールドプレイ`, `电台司令`), so without this the alias surface would match every non-Latin name
- * to every other. Those compare raw instead, case-folded and trimmed.
+ * [ArtistMatcher.matchQuality]'s same-name rank. The empty-normalization case — a name written
+ * entirely in another script, or one whose only Latin content was a stripped "the " prefix — is
+ * [ArtistMatcher]'s rule to own; this delegates rather than keeping a second copy of it.
  */
-private fun sameName(expected: String, candidate: String): Boolean {
-    val comparable = LATIN_ALPHANUMERIC.containsMatchIn(expected.lowercase()) &&
-        LATIN_ALPHANUMERIC.containsMatchIn(candidate.lowercase())
-    if (!comparable) return expected.trim().equals(candidate.trim(), ignoreCase = true)
-    return ArtistMatcher.matchQuality(expected, candidate) == ArtistMatcher.QUALITY_SAME_NAME
-}
+private fun sameName(expected: String, candidate: String): Boolean =
+    ArtistMatcher.matchQuality(expected, candidate) == ArtistMatcher.QUALITY_SAME_NAME

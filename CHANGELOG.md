@@ -39,6 +39,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New `IdentityMatch.UNVERIFIED`: an identity provider throwing or returning `Error`/`RateLimited` now reports as that, not `null`/unstamped confident values; `when`s need a branch
 - `UNVERIFIED` results are excluded from the cache write-back, so a retry after a transient identity failure re-resolves rather than serving the unverified guess for the TTL
 - `CompositeSynthesizer.synthesize` now receives the identity provider's `Error` when identity resolution failed, where it previously received `null` (the "not attempted" value)
+- Two distinct all-non-Latin artist names (e.g. two different CJK names) no longer match each other; both used to normalize to an empty string and compare equal
+- A non-Latin artist request (e.g. 東京事変) against a romanizing provider (Deezer/iTunes/Discogs) now returns no match instead of the provider's unverified top hit; recovery is tracked separately
 
 ### Added
 - `EnrichmentRequest.forTrackByMbid`/`forAlbumByMbid`/`forArtistByMbid`: request an entity by MBID alone; identity resolution fills the names the other providers search by
@@ -103,7 +105,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Wikidata's artist lookup used a call Wikidata always rejected; birth/death date, country and occupation are now returned instead of nothing, every time
 - ListenBrainz's SIMILAR_ARTISTS called a route that never existed and always returned nothing; capability dropped, Last.fm and Deezer already serve it (#18)
 - Deezer's SIMILAR_TRACKS called `/track/{id}/radio`, which doesn't exist, and always returned nothing; now derived from the seed track's artist's related artists and their top tracks
-- Two distinct all-non-Latin artist names (e.g. two different CJK names) no longer match each other in search results; both used to normalize to an empty string and compare equal
 - Deezer track search ignored the album hint and always took Deezer's first hit; previews and lookups could resolve to a remix or live take instead of the requested edition
 - MusicBrainz track search took the first score-100 tie, which could be a demo or live take; identity, popularity, and other downstream track data now resolve to the studio recording
 - MusicBrainz track ranking ignored a typed album and never penalized a music-video take; album matches are now preferred (and pass the score floor) and a video no longer beats a studio take

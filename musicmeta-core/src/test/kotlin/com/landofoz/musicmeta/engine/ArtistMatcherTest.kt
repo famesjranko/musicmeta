@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.engine
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -90,7 +91,7 @@ class ArtistMatcherTest {
 
     @Test fun `two different all-CJK names do not match`() {
         // Given - a Chinese artist name and an unrelated Japanese artist name
-        // When - isMatch is called, where normalization would reduce both to the empty string
+        // When - isMatch is called
         // Then - false is returned, rather than every non-Latin name matching every other
         assertFalse(ArtistMatcher.isMatch("电台司令", "コールドプレイ"))
     }
@@ -136,5 +137,46 @@ class ArtistMatcherTest {
         // When - isMatch is called
         // Then - false is returned, not a spurious contains match
         assertFalse(ArtistMatcher.isMatch("Radiohead", "电台司令"))
+    }
+
+    @Test fun `two different names sharing a stripped 'the ' prefix do not match`() {
+        // Given - two unrelated CJK names, each carrying a leading "The" that normalizes away
+        // When - matchQuality is called
+        // Then - none is returned, not the top tier a shared empty normalization would produce
+        assertEquals(
+            ArtistMatcher.QUALITY_NONE,
+            ArtistMatcher.matchQuality("The 電台", "The 東京"),
+        )
+    }
+
+    @Test fun `identical name sharing a stripped 'the ' prefix still matches`() {
+        // Given - the same CJK name, both copies carrying a leading "The" that normalizes away
+        // When - matchQuality is called
+        // Then - the top tier is returned
+        assertEquals(
+            ArtistMatcher.QUALITY_SAME_NAME,
+            ArtistMatcher.matchQuality("The 電台", "The 電台"),
+        )
+    }
+
+    @Test fun `spaced and unspaced Hangul names match`() {
+        // Given - the same Korean name, spaced in one source and not in the other
+        // When - isMatch is called
+        // Then - true is returned
+        assertTrue(ArtistMatcher.isMatch("방탄 소년단", "방탄소년단"))
+    }
+
+    @Test fun `two different spaced CJK names still do not match`() {
+        // Given - two unrelated Korean names, each split by internal spacing
+        // When - isMatch is called
+        // Then - false is returned
+        assertFalse(ArtistMatcher.isMatch("방탄 소년단", "블랙 핑크"))
+    }
+
+    @Test fun `a non-Latin request does not match a romanized candidate`() {
+        // Given - a Japanese artist name and the same artist's romanization
+        // When - isMatch is called
+        // Then - false is returned; a romanizing provider's guess is not verified as this artist
+        assertFalse(ArtistMatcher.isMatch("東京事変", "Tokyo Jihen"))
     }
 }
