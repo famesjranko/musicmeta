@@ -87,4 +87,54 @@ class ArtistMatcherTest {
         // Then - false is returned
         assertFalse(ArtistMatcher.isMatch("Red Hot Chili Peppers", "Red House Painters"))
     }
+
+    @Test fun `two different all-CJK names do not match`() {
+        // Given - a Chinese artist name and an unrelated Japanese artist name
+        // When - isMatch is called, where normalization would reduce both to the empty string
+        // Then - false is returned, rather than every non-Latin name matching every other
+        assertFalse(ArtistMatcher.isMatch("电台司令", "コールドプレイ"))
+    }
+
+    @Test fun `identical CJK name still matches`() {
+        // Given - the same Japanese name from two different sources
+        // When - isMatch is called
+        // Then - true is returned
+        assertTrue(ArtistMatcher.isMatch("コールドプレイ", "コールドプレイ"))
+    }
+
+    @Test fun `two different Cyrillic names do not match`() {
+        // Given - two unrelated Russian artist names
+        // When - isMatch is called
+        // Then - false is returned
+        assertFalse(ArtistMatcher.isMatch("Мумий Тролль", "Ленинград"))
+    }
+
+    @Test fun `identical Cyrillic name still matches`() {
+        // Given - the same Russian name from two different sources
+        // When - isMatch is called
+        // Then - true is returned
+        assertTrue(ArtistMatcher.isMatch("Ленинград", "Ленинград"))
+    }
+
+    @Test fun `two different Hangul names do not match`() {
+        // Given - two unrelated Korean artist names
+        // When - isMatch is called
+        // Then - false is returned
+        assertFalse(ArtistMatcher.isMatch("방탄소년단", "블랙핑크"))
+    }
+
+    @Test fun `identical Hangul name still matches`() {
+        // Given - the same Korean name from two different sources
+        // When - isMatch is called
+        // Then - true is returned
+        assertTrue(ArtistMatcher.isMatch("방탄소년단", "방탄소년단"))
+    }
+
+    @Test fun `Latin name does not partially match an unrelated non-Latin name`() {
+        // Given - a Latin artist name and an unrelated all-CJK name, where the CJK name
+        // normalizes to the empty string that every string trivially "contains"
+        // When - isMatch is called
+        // Then - false is returned, not a spurious contains match
+        assertFalse(ArtistMatcher.isMatch("Radiohead", "电台司令"))
+    }
 }

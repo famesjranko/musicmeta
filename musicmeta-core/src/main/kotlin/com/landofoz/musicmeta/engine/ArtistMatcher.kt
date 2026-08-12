@@ -57,6 +57,18 @@ internal object ArtistMatcher {
     ): Int {
         if (expected.isBlank() || candidate.isBlank()) return QUALITY_NONE
 
+        // normalize() keeps [a-z0-9 ] only, so a name written entirely in another script
+        // (电台司令, コールドプレイ) collapses to "" — and two empty strings would compare equal.
+        // When neither side has Latin content to normalize, compare the raw names instead
+        // (case-folded, trimmed) — same fallback as NameMatchTier.sameName.
+        if (!hasLatinAlphanumeric(expected) && !hasLatinAlphanumeric(candidate)) {
+            return if (expected.trim().equals(candidate.trim(), ignoreCase = true)) {
+                QUALITY_SAME_NAME
+            } else {
+                QUALITY_NONE
+            }
+        }
+
         val normExpected = normalize(expected)
         val normCandidate = normalize(candidate)
 
@@ -68,8 +80,12 @@ internal object ArtistMatcher {
         val compactCandidate = normCandidate.replace(" ", "")
         if (compactExpected == compactCandidate) return QUALITY_SAME_NAME
 
-        // One contains the other (handles "feat." suffixes)
-        if (normCandidate.contains(normExpected) || normExpected.contains(normCandidate)) {
+        // One contains the other (handles "feat." suffixes). Guarded against empty: when one side
+        // is Latin and the other is entirely non-Latin, normalize() reduces the non-Latin side to
+        // "" — and every string trivially "contains" "", which would rank an unrelated non-Latin
+        // name as a partial match.
+        val bothNonEmpty = normExpected.isNotEmpty() && normCandidate.isNotEmpty()
+        if (bothNonEmpty && (normCandidate.contains(normExpected) || normExpected.contains(normCandidate))) {
             return QUALITY_CONTAINS
         }
 
@@ -95,6 +111,10 @@ internal object ArtistMatcher {
     private val DIACRITICS_REGEX = Regex("\\p{InCombiningDiacriticalMarks}+")
     private val NON_ALPHANUMERIC_REGEX = Regex("[^a-z0-9 ]")
     private val WHITESPACE_REGEX = Regex("\\s+")
+    private val LATIN_ALPHANUMERIC_REGEX = Regex("[a-z0-9]")
+
+    private fun hasLatinAlphanumeric(name: String): Boolean =
+        LATIN_ALPHANUMERIC_REGEX.containsMatchIn(name.lowercase())
 
     private fun normalize(name: String): String {
         var s = name.lowercase().trim()
