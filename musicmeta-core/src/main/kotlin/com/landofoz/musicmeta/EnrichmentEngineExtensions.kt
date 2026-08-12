@@ -14,8 +14,8 @@ import kotlinx.coroutines.coroutineScope
  * Costs 1 to 3 requests on MusicBrainz's 1 req/s limiter: the types are probed **recording, then
  * release, then artist**, so a recording is one request, a release two, an artist three, and an
  * identifier held under none of them three. Recording leads because that is where third-party
- * identifiers overwhelmingly come from — and a dead one is not a corner case: 51 of 103 Last.fm
- * recording MBIDs were held under no entity type when measured 2026-08-11. `docs/how-it-works.md`
+ * identifiers overwhelmingly come from — and a dead one is not a corner case: 1212 of 1710 Last.fm
+ * recording MBIDs were held under no entity type when measured 2026-08-12. `docs/how-it-works.md`
  * records the ListenBrainz alternative that was measured against this ordering and lost.
  *
  * A transient failure throws rather than answering null — an outage is not an absence. So does an

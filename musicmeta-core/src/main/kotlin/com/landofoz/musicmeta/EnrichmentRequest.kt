@@ -92,8 +92,8 @@ sealed class EnrichmentRequest {
          *
          * - **An id MusicBrainz holds nothing under leaves the request with no name at all**, and
          *   the answer is an honest `NotFound` rather than a search for something. Third-party
-         *   identifiers go stale in bulk — 51 of 103 Last.fm recording MBIDs were held under no
-         *   entity type when measured 2026-08-11 — so pass [forAlbum] with the names whenever you
+         *   identifiers go stale in bulk — 1212 of 1710 Last.fm recording MBIDs were held under no
+         *   entity type when measured 2026-08-12 — so pass [forAlbum] with the names whenever you
          *   have them, and keep this for the case where you genuinely do not.
          * - The result is cached under MusicBrainz's **canonical** name, not one you supplied,
          *   because there is none to alias to.
