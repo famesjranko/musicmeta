@@ -33,13 +33,6 @@ internal class LastFmApi(
         return parseSimilarArtists(json)
     }
 
-    suspend fun getArtistTopTags(artistName: String): List<String> {
-        val url = buildUrl("artist.getinfo", artistName)
-        val json = rateLimiter.execute { httpClient.fetchJsonResult(url).bodyOrThrowAuthOrTransient() }
-            ?: return emptyList()
-        return parseTags(json)
-    }
-
     suspend fun getSimilarTracks(trackTitle: String, artistName: String, limit: Int = 20): List<LastFmSimilarTrack> {
         val url = buildTrackUrl("track.getsimilar", trackTitle, artistName) + "&limit=$limit"
         val json = rateLimiter.execute { httpClient.fetchJsonResult(url).bodyOrThrowAuthOrTransient() }

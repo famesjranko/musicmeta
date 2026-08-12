@@ -5,9 +5,14 @@ import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
+import com.landofoz.musicmeta.engine.ProviderCallScope
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.testutil.FakeHttpClient
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -201,6 +206,94 @@ class LastFmProviderTest {
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.Popularity
         assertEquals(null, data.listenerCount)
         assertEquals(null, data.listenCount)
+    }
+
+    // artist.getinfo memoization (ProviderCallScope)
+
+    @Test
+    fun `GENRE, ARTIST_BIO and ARTIST_POPULARITY share one artist getinfo request`() = runTest {
+        // Given - Last.fm returns one artist info response, and a call-scoped provider call
+        httpClient.givenJsonResponse("artist.getinfo", ARTIST_INFO_JSON)
+        val request = EnrichmentRequest.forArtist(name = "Radiohead")
+
+        // When - all three types are resolved as concurrent siblings of one ProviderCallScope,
+        // the shape the engine's real fan-out uses — this is what pins the memo's lock, not only
+        // its dedup, since a sequential await would pass even with the mutex deleted
+        withContext(ProviderCallScope()) {
+            coroutineScope {
+                val genre = async { provider.enrich(request, EnrichmentType.GENRE) }
+                val bio = async { provider.enrich(request, EnrichmentType.ARTIST_BIO) }
+                val popularity = async { provider.enrich(request, EnrichmentType.ARTIST_POPULARITY) }
+                awaitAll(genre, bio, popularity)
+            }
+        }
+
+        // Then - one HTTP request served all three types, not one per type
+        assertEquals(1, httpClient.requestedUrls.count { it.contains("artist.getinfo") })
+    }
+
+    @Test
+    fun `each artist name in one ProviderCallScope gets its own request and its own response`() = runTest {
+        // Given - two artists whose responses carry different tags, requested within one call
+        httpClient.givenJsonResponse("artist=Radiohead", ARTIST_INFO_JSON)
+        httpClient.givenJsonResponse("artist=Muse", MUSE_ARTIST_INFO_JSON)
+        val radiohead = EnrichmentRequest.forArtist(name = "Radiohead")
+        val muse = EnrichmentRequest.forArtist(name = "Muse")
+
+        // When - GENRE is resolved for both artists inside the same ProviderCallScope
+        val results = withContext(ProviderCallScope()) {
+            listOf(
+                provider.enrich(radiohead, EnrichmentType.GENRE),
+                provider.enrich(muse, EnrichmentType.GENRE),
+            )
+        }
+
+        // Then - each artist got its own genres, not one artist's response reused for the other,
+        // and each name cost its own request
+        val radioheadGenres = ((results[0] as EnrichmentResult.Success).data as EnrichmentData.Metadata).genres
+        val museGenres = ((results[1] as EnrichmentResult.Success).data as EnrichmentData.Metadata).genres
+        assertEquals(listOf("alternative rock", "electronic"), radioheadGenres)
+        assertEquals(listOf("space rock"), museGenres)
+        assertEquals(2, httpClient.requestedUrls.count { it.contains("artist.getinfo") })
+    }
+
+    @Test
+    fun `a new ProviderCallScope reaches upstream instead of reusing a prior scope's memo`() = runTest {
+        // Given - one call that resolved GENRE, filling that call's memo
+        httpClient.givenJsonResponse("artist.getinfo", ARTIST_INFO_JSON)
+        val request = EnrichmentRequest.forArtist(name = "Radiohead")
+        withContext(ProviderCallScope()) {
+            provider.enrich(request, EnrichmentType.GENRE)
+        }
+
+        // When - a second, separate ProviderCallScope resolves GENRE again — the shape one
+        // engine `enrich()` call after another takes, each installing its own scope
+        withContext(ProviderCallScope()) {
+            provider.enrich(request, EnrichmentType.GENRE)
+        }
+
+        // Then - the second scope issued its own request rather than reusing the first scope's
+        // memo, which is what lets a consumer's forceRefresh (a fresh scope) reach upstream
+        assertEquals(2, httpClient.requestedUrls.count { it.contains("artist.getinfo") })
+    }
+
+    @Test
+    fun `an unknown artist's three types cost one request, the miss memoized too`() = runTest {
+        // Given - no artist.getinfo response configured, so Last.fm answers every request 404
+        val request = EnrichmentRequest.forArtist(name = "Nonexistent")
+
+        // When - all three types are resolved inside the same ProviderCallScope
+        val results = withContext(ProviderCallScope()) {
+            listOf(
+                provider.enrich(request, EnrichmentType.GENRE),
+                provider.enrich(request, EnrichmentType.ARTIST_BIO),
+                provider.enrich(request, EnrichmentType.ARTIST_POPULARITY),
+            )
+        }
+
+        // Then - all three are NotFound, and the miss cost one request for the call, not one per type
+        assertTrue(results.all { it is EnrichmentResult.NotFound })
+        assertEquals(1, httpClient.requestedUrls.count { it.contains("artist.getinfo") })
     }
 
     @Test
@@ -520,6 +613,24 @@ class LastFmProviderTest {
                 "playcount": "12345",
                 "listeners": "6789",
                 "mbid": "abc-123"
+              }
+            }
+        """.trimIndent()
+
+        val MUSE_ARTIST_INFO_JSON = """
+            {
+              "artist": {
+                "name": "Muse",
+                "bio": {"summary": "Muse are an English rock band..."},
+                "tags": {
+                  "tag": [
+                    {"name": "space rock"}
+                  ]
+                },
+                "stats": {
+                  "listeners": "2000000",
+                  "playcount": "150000000"
+                }
               }
             }
         """.trimIndent()
