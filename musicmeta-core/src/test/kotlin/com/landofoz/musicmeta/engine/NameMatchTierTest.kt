@@ -71,15 +71,17 @@ class NameMatchTierTest {
     }
 
     @Test
-    fun `a name matching nothing scores below every tier that did match`() {
+    fun `a name matching nothing ranks last but does not scale the confidence`() {
         // Given - a name that is neither the entity's nor any of its aliases
         val requested = "Radiohead"
 
-        // When - comparing the resulting factor with the weakest matching tier's
+        // When - tiering it
         val tier = nameMatchTier(requested, "Coldplay", coldplayAliases)
 
-        // Then - NONE ranks last and still leaves a candidate above the engine's confidence floor
+        // Then - NONE ranks last, and its factor leaves such a candidate scored as it was before
+        // aliases were read: only the two alias tiers are a decided change to confidence
         assertEquals(NameMatchTier.NONE, tier)
-        assertEquals(true, tier.confidenceFactor < NameMatchTier.ALIAS.confidenceFactor)
+        assertEquals(1.0f, tier.confidenceFactor, 0.001f)
+        assertEquals(NameMatchTier.entries.last(), tier)
     }
 }

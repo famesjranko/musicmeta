@@ -85,6 +85,18 @@ class MusicBrainzAliasIdentityTest {
     }
 
     @Test
+    fun `a locale-tagged search hint stays at the search-hint tier`() = runTest {
+        // Given - the same alias carrying a locale, which alone would promote it to primary
+        httpClient.givenJsonResponse("artist?query", ARTIST_SEARCH_LOCALE_TAGGED_HINT)
+
+        // When - resolving the artist by that alias
+        val success = resolve("Coolplay")
+
+        // Then - the alias type decides: a hint MusicBrainz keeps for its indexer is not a name
+        assertEquals(0.85f, success.confidence, 0.001f)
+    }
+
+    @Test
     fun `the search asks MusicBrainz for aliases as well as names`() = runTest {
         // Given - a request whose name is only reachable through the alias index
         val name = "Coolplay"
@@ -132,6 +144,31 @@ class MusicBrainzAliasIdentityTest {
                 { "count": 34, "name": "alternative rock" },
                 { "count": 13, "name": "pop" }
               ]
+            }
+          ]
+        }
+        """
+
+        // synthetic: the captured search hit with a locale added to its "Search hint" alias — the
+        // combination MusicBrainz allows and this capture does not happen to contain
+        const val ARTIST_SEARCH_LOCALE_TAGGED_HINT = """
+        {
+          "count": 1,
+          "artists": [
+            {
+              "id": "cc197bad-dc9c-440d-a5b5-d52ba2e14234",
+              "type": "Group",
+              "score": 100,
+              "name": "Coldplay",
+              "sort-name": "Coldplay",
+              "country": "GB",
+              "aliases": [
+                {
+                  "sort-name": "Coolplay", "name": "Coolplay", "locale": "en",
+                  "type": "Search hint", "primary": true, "begin-date": null, "end-date": null
+                }
+              ],
+              "tags": [ { "count": 34, "name": "alternative rock" } ]
             }
           ]
         }

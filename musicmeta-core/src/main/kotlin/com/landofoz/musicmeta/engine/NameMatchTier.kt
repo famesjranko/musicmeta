@@ -33,8 +33,12 @@ internal enum class NameMatchTier(val confidenceFactor: Float) {
     /** Any other alias: a search hint, a misspelling, a pseudonym. */
     ALIAS(0.85f),
 
-    /** Neither the name nor any alias matched; the candidate was picked on some other signal. */
-    NONE(0.8f),
+    /**
+     * Neither the name nor any alias matched; the candidate was picked on some other signal. Its
+     * factor is 1.0 rather than a penalty: such a candidate is ranked and scored exactly as it was
+     * before aliases were read, and only the two alias tiers are a decided change to confidence.
+     */
+    NONE(1.0f),
 }
 
 /**

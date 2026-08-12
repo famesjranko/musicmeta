@@ -577,16 +577,18 @@ internal class MusicBrainzEnricher(
 
     /**
      * How [query] matched [artist]: its own name, a name it is published under, or one of the search
-     * hints MusicBrainz also stores. A "Search hint" alias counts as the weakest tier because
-     * MusicBrainz keeps typo-catchers ("Coolplay") in the same array as localised names
-     * ("コールドプレイ"), and only the second kind is a name the artist actually goes by.
+     * hints MusicBrainz also stores. A "Search hint" alias counts as the weakest tier whatever else
+     * it carries — MusicBrainz keeps typo-catchers ("Coolplay") in the same array as localised names
+     * ("コールドプレイ"), a hint may itself be locale-tagged, and only the second kind is a name the
+     * artist actually goes by.
      */
     private fun artistNameTier(query: String, artist: MusicBrainzArtist): NameMatchTier =
         nameMatchTier(
             requested = query,
             canonical = artist.name,
             aliases = artist.aliases.map {
-                AlternativeName(name = it.name, official = it.primary || it.locale != null)
+                val isSearchHint = it.type.equals(SEARCH_HINT_ALIAS_TYPE, ignoreCase = true)
+                AlternativeName(name = it.name, official = !isSearchHint && (it.primary || it.locale != null))
             },
         )
 
@@ -969,6 +971,9 @@ internal class MusicBrainzEnricher(
 
     companion object {
         private const val MAX_SUGGESTIONS = 3
+
+        /** MusicBrainz's alias type for a name it stores for its own indexer, not for the artist. */
+        private const val SEARCH_HINT_ALIAS_TYPE = "Search hint"
 
         /**
          * Browse pages [findReleaseGroupByFoldedTitle] reads before giving up. One is not enough:
