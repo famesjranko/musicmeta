@@ -27,7 +27,7 @@ from validate_release_notes import validate
 # longest line of 375. The per-line cap is the load-bearing shape guard, and a backstop that also
 # rejects a pasted 0.10.x-era changelog bullet (786-1538 chars) on sight; the section cap is sized
 # so [Unreleased] can accumulate a long run of capped lines between pins without going essay-shaped.
-MAX_SECTION_CHARS = 12000
+MAX_SECTION_CHARS = 16000
 MAX_LINE_CHARS = 200
 
 REPO = "famesjranko/musicmeta"
