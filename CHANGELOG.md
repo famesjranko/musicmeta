@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Breaking Changes
+- `ARTIST_POPULARITY`/`TRACK_POPULARITY` results now report `provider = "popularity_merger"`, so a per-provider `confidenceOverrides` entry no longer affects those two types
 - `Builder.addProvider` now throws on a duplicate provider id, or one the engine reserves (`engine`, `all_providers`, `no_provider`, `no_merger`, `no_composite_handler`, any `*_merger`): rename yours
 - Duplicate ids previously shared one circuit breaker, so a healthy provider kept a failing twin in rotation; that configuration is now refused at registration rather than silently degrading
 - `EnrichmentData.Popularity` gains `signals` (appended last, defaulted): source-compatible, binary-incompatible until recompile (`copy`/constructor descriptors changed), as with `GenreTag.curated`
@@ -56,7 +57,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - `ARTIST_POPULARITY`/`TRACK_POPULARITY` are now merged across providers instead of returning the first answer: a field the leading source lacks is filled from the next that has it
 - Every popularity source is now queried rather than stopping at the first success
-- `Success.provider` for those two types is now `"popularity_merger"`, not a provider id, so per-provider `confidenceOverrides` no longer apply to them
 - Both types cache for 7 days, so a popularity entry written before this carries no `signals` until it is refetched: call `invalidate()` or enrich with `forceRefresh` to see them sooner
 - A 429 now reaches you as `EnrichmentResult.RateLimited` with the upstream's `retryAfterMs`, not `Error`/`NETWORK`; both were documented as unreachable, so a `when` over results may need the branch
 - A throttled provider now counts against its circuit breaker, so sustained 429s take it out of rotation for the cooldown instead of being asked on every call
