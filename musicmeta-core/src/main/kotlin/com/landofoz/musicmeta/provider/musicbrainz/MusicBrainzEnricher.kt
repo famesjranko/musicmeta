@@ -12,8 +12,8 @@ import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.engine.NameMatchTier
 import com.landofoz.musicmeta.engine.ResolvedEntityNames
 import com.landofoz.musicmeta.engine.TransientIdentifierMarker
-import com.landofoz.musicmeta.engine.hasBlankNamePart
 import com.landofoz.musicmeta.engine.nameMatchTier
+import com.landofoz.musicmeta.engine.namesNoEntity
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
@@ -160,7 +160,7 @@ internal class MusicBrainzEnricher(
                 MusicBrainzLookup.Absent -> Unit
             }
         }
-        if (namesNothing(request)) return EnrichmentResult.NotFound(type, providerId)
+        if (namesNoEntity(request)) return EnrichmentResult.NotFound(type, providerId)
         val search = memoizedAlbumSearch(request.title, request.artist)
         val best = search.release ?: return notFoundWithSuggestions(
             type, search.originalPool,
@@ -190,7 +190,7 @@ internal class MusicBrainzEnricher(
             is MusicBrainzLookup.Found -> lookup.value
             MusicBrainzLookup.Unreadable -> return EnrichmentResult.NotFound(type, providerId)
             MusicBrainzLookup.Absent, null -> {
-                if (namesNothing(request)) return EnrichmentResult.NotFound(type, providerId)
+                if (namesNoEntity(request)) return EnrichmentResult.NotFound(type, providerId)
                 val searched = memoizedAlbumSearch(request.title, request.artist).release?.id
                     ?: return EnrichmentResult.NotFound(type, providerId)
                 memoizedRelease(searched).valueOrNull()
@@ -244,7 +244,7 @@ internal class MusicBrainzEnricher(
             }
         }
 
-        if (namesNothing(request)) return EnrichmentResult.NotFound(type, providerId)
+        if (namesNoEntity(request)) return EnrichmentResult.NotFound(type, providerId)
         val artists = api.searchArtists(request.name)
         // An empty pool and a pool whose best is below the bar are one answer, not two: neither
         // names an artist to describe, and both offer the pool (or a fuzzy retry) to choose from.
@@ -360,7 +360,7 @@ internal class MusicBrainzEnricher(
 
     /** The artist id [request]'s name resolves to, above [minMatchScore]. Null if no name matches. */
     private suspend fun nameResolvedArtistId(request: EnrichmentRequest.ForArtist): String? =
-        if (namesNothing(request)) null
+        if (namesNoEntity(request)) null
         else pickBestArtist(request.name, api.searchArtists(request.name))
             ?.takeIf { it.score >= minMatchScore }
             ?.id
@@ -412,7 +412,13 @@ internal class MusicBrainzEnricher(
         request: EnrichmentRequest.ForTrack,
         type: EnrichmentType,
     ): EnrichmentResult {
-        if (namesNothing(request)) return EnrichmentResult.NotFound(type, providerId)
+        // A request naming nothing is reached when an identifier-only one
+        // ([EnrichmentRequest.forTrackByMbid] and siblings) named an entity MusicBrainz does not
+        // hold, so identity resolution had no title to backfill. Searching the blank would let
+        // whatever ranks first for a query naming nothing become this request's recording. No
+        // suggestions either: a caller who supplied no name cannot be asked which one they meant,
+        // and suggestions cost the whole provider fan-out.
+        if (namesNoEntity(request)) return EnrichmentResult.NotFound(type, providerId)
         val recordings = memoizedTrackSearch(request)
         val best = pickBestRecording(request.title, recordings, request.album)
             ?: resolveTrackQualifierFallback(request.title, request.artist, request.album)
@@ -568,20 +574,6 @@ internal class MusicBrainzEnricher(
     private suspend fun offerNames(title: String?, artist: String?) {
         currentCoroutineContext()[ResolvedEntityNames]?.offer(title, artist)
     }
-
-    /**
-     * Whether [request] leaves a name blank, in which case there is nothing to search for and the
-     * answer is a bare `NotFound`.
-     *
-     * Reached by a request built from an identifier alone
-     * ([EnrichmentRequest.Companion.forTrackByMbid] and siblings) whose identifier MusicBrainz holds
-     * nothing under: identity resolution had no entity to backfill the names from. Searching the
-     * blank would ask MusicBrainz for `recording:""`, and its answer — whatever ranks first for a
-     * query naming nothing — must never become this request's entity. No suggestions either: a
-     * caller who supplied no name cannot be asked which one they meant, and suggestions cost the
-     * whole provider fan-out (`docs/pitfalls.md`).
-     */
-    private fun namesNothing(request: EnrichmentRequest): Boolean = hasBlankNamePart(request)
 
     /**
      * What entity [mbid] names, or null when MusicBrainz holds it under none of the three.

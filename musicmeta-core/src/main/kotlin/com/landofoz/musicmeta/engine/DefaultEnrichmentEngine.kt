@@ -177,7 +177,7 @@ internal class DefaultEnrichmentEngine(
             // A request that named no entity has no caller name to alias under, so it takes
             // MusicBrainz's canonical one — the same name a later name-only lookup would ask with.
             val aliasKey = when {
-                hasBlankNamePart(request) && !hasBlankNamePart(resolvedRequest) ->
+                namesNoEntity(request) && !namesNoEntity(resolvedRequest) ->
                     entityKeyForName(resolvedRequest, type)
                 resolvedMbid != null && request.identifiers.musicBrainzId == null ->
                     entityKeyForName(request, type)

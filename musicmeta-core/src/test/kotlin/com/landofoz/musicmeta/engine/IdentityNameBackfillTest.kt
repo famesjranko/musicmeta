@@ -138,6 +138,27 @@ class IdentityNameBackfillTest {
         assertNull(cache.stored.keys.firstOrNull { it.startsWith("track:::") })
     }
 
+    @Test
+    fun `a title with no artist beside it is still a search worth making`() = runTest {
+        // Given - a recording pool for the title, and a caller who supplied no artist
+        httpClient.givenJsonResponse("recording?query", RECORDING_POOL)
+        val lyrics = namedProvider()
+
+        // When - the request names the title alone
+        engine(lyrics).enrich(
+            EnrichmentRequest.forTrack("Under Pressure", ""),
+            setOf(EnrichmentType.LYRICS_PLAIN),
+        )
+
+        // Then - MusicBrainz was asked, because it drops an empty artistname term and resolves on
+        // the title; only a blank *title* names nothing to search for
+        assertTrue(httpClient.requestedUrls.any { it.contains("recording?query") })
+        // Then - the artist that search settled on fills the blank the caller left, whichever
+        // recording an artist-less title ranks to
+        val asked = lyrics.enrichCalls.first().first as EnrichmentRequest.ForTrack
+        assertEquals("Joss Stone", asked.artist)
+    }
+
     private companion object {
         const val UNDER_PRESSURE_MBID = "6f903161-8757-4363-a6ab-54bfe1149bb8"
         const val RUSH_MBID = "4ebc64a2-e9cc-43f8-96ac-536212c4c8d4"
@@ -174,6 +195,42 @@ class IdentityNameBackfillTest {
                     "primary-type": "Album",
                     "first-release-date": "2005-10"
                   }
+                }
+              ]
+            }
+        """
+
+        // captured 2026-08-12: GET /ws/2/recording?query=recording:"Under Pressure" AND artistname:""
+        // AND -comment:*, trimmed to the first hit — the artist-less query MusicBrainz answers with
+        // 1081 hits, none of them Queen's
+        const val RECORDING_POOL = """
+            {
+              "count": 1081,
+              "recordings": [
+                {
+                  "id": "a2a656a5-e15a-4364-ab05-275f6ade9786",
+                  "score": 100,
+                  "title": "Under Pressure",
+                  "length": 267933,
+                  "artist-credit": [
+                    {
+                      "name": "Joss Stone",
+                      "joinphrase": "",
+                      "artist": { "id": "dbbc47a5-1338-4830-9298-a8d0b11c0a46", "name": "Joss Stone" }
+                    }
+                  ],
+                  "releases": [
+                    {
+                      "id": "144526f8-40ab-49b0-85d5-fc28694be43e",
+                      "title": "Killer Queen: A Tribute to Queen",
+                      "status": "Official",
+                      "release-group": {
+                        "id": "422e196f-52d0-360c-8a8d-94f9aed28ef3",
+                        "title": "Killer Queen: A Tribute to Queen",
+                        "primary-type": "Album"
+                      }
+                    }
+                  ]
                 }
               ]
             }

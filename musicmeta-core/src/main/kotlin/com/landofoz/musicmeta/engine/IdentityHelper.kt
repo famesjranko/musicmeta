@@ -86,7 +86,7 @@ internal fun needsIdentityResolution(
     // A request naming only an identifier has no name of its own, and every provider but the
     // identity one searches by name — so resolution is what makes the fan-out possible at all,
     // whatever the requested types declare.
-    if (hasBlankNamePart(request)) return true
+    if (namesNoEntity(request)) return true
     val ids = request.identifiers
     if (ids.musicBrainzId == null && ids.musicBrainzReleaseGroupId == null) return true
     // Qualifies MUSICBRAINZ_ID below rather than short-circuiting here: a track request whose types
