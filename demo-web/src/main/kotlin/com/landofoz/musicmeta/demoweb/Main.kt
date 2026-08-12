@@ -3,7 +3,11 @@ package com.landofoz.musicmeta.demoweb
 import com.landofoz.musicmeta.ApiKeyConfig
 import com.landofoz.musicmeta.EnrichmentConfig
 import com.landofoz.musicmeta.EnrichmentEngine
+import com.landofoz.musicmeta.cache.CacheMode
+import com.landofoz.musicmeta.cache.InMemoryEnrichmentCache
 import java.io.File
+
+private const val CONTACT = "https://github.com/famesjranko/musicmeta"
 
 fun main() {
     val port = env("PORT")?.toIntOrNull() ?: 8099
@@ -14,27 +18,37 @@ fun main() {
         discogsPersonalToken = secrets["discogs.token"] ?: env("DISCOGS_TOKEN"),
         listenBrainzToken = secrets["listenbrainz.token"] ?: env("LISTENBRAINZ_TOKEN"),
     )
-    // The library's 30s default suits a consumer that would rather answer fast and partially — a
-    // mobile app with a screen to fill. This demo wants the opposite: it exists to show what every
-    // provider returns, so a type dropped to meet a deadline is the failure, not the slow answer.
-    //
-    // 30s cannot hold that here, and the reason is structural rather than a matter of tuning.
-    // MusicBrainz allows one request a second and the library holds one limiter per host, so
-    // concurrent cold enrichments do not run side by side — they interleave into one queue. Wall
-    // clock therefore scales with the number of people clicking at once while the deadline does not,
-    // and the types that lose are whichever were still queued: a browser open in two tabs is enough.
-    //
-    // 120s is headroom for that, not a measured figure — nothing here derives it, and a busy enough
-    // demo would exhaust it too.
-    val config = EnrichmentConfig(
-        userAgent = "musicmeta-web-demo/1.0 (+https://github.com/famesjranko/musicmeta)",
-        enrichTimeoutMs = 120_000L,
-    )
-    val engine = EnrichmentEngine.Builder()
-        .apiKeys(keys)
-        .config(config)
-        .withDefaultProviders()
-        .build()
+    val cache = InMemoryEnrichmentCache()
+
+    fun buildEngine(cacheMode: CacheMode): EnrichmentEngine {
+        // The library's 30s default suits a consumer that would rather answer fast and partially —
+        // a mobile app with a screen to fill. This demo wants the opposite: it exists to show what
+        // every provider returns, so a type dropped to meet a deadline is the failure, not the slow
+        // answer.
+        //
+        // 30s cannot hold that here, and the reason is structural rather than a matter of tuning.
+        // MusicBrainz allows one request a second and the library holds one limiter per host, so
+        // concurrent cold enrichments do not run side by side — they interleave into one queue. Wall
+        // clock therefore scales with the number of people clicking at once while the deadline does
+        // not, and the types that lose are whichever were still queued: a browser open in two tabs
+        // is enough.
+        //
+        // 120s is headroom for that, not a measured figure — nothing here derives it, and a busy
+        // enough demo would exhaust it too.
+        val config = EnrichmentConfig(
+            enrichTimeoutMs = 120_000L,
+            cacheMode = cacheMode,
+        )
+        return EnrichmentEngine.Builder()
+            .apiKeys(keys)
+            .config(config)
+            .cache(cache)
+            .contact(CONTACT)
+            .withDefaultProviders()
+            .build()
+    }
+
+    val engine = buildEngine(CacheMode.NETWORK_FIRST)
 
     val missingKeys = listOfNotNull(
         "LASTFM_API_KEY".takeIf { keys.lastFmKey == null },
