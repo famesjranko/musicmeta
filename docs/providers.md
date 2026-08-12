@@ -125,9 +125,11 @@ Lookups request `tags+genres`. `genres` is MusicBrainz's controlled vocabulary �
 2026-08-12 — and a subset of the same response's `tags` carrying the same vote counts; `tags` is
 everything anyone typed, which for Coldplay includes "british", "parlophone" and "rock and indie". So
 curated names are marked `GenreTag.curated`, carry the higher confidence, and lead the list, while
-community tags keep their vote-weighted signal behind them. A search hit carries neither `genres` nor
-a vote-weighted `tags` array, so an artist resolved by name reads its curated genres off the lookup
-the same call already makes for URL relations.
+community tags keep their vote-weighted signal behind them. A search hit carries vote-weighted `tags`
+but no `genres` array at all — there is no `inc=` on a search to ask with — so an artist resolved by
+name reads its curated genres off the lookup the same call already makes for URL relations. Where
+that lookup does not happen, the hit's tags are marked `curated = null`: unknown, not uncurated, so
+the engine refetches rather than caching a claim nobody checked.
 
 `GenreMerger.ALIASES` survives as the Last.fm/Deezer spelling folder — neither publishes a controlled
 list — but must never fold one genre onto a *different* one, because the curated vocabulary

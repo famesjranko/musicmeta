@@ -245,7 +245,7 @@ when a key is present, and CAA is a fallback, not a second entry in the same res
 ### Metadata (6 types)
 | Type | Providers (by priority) | Notes |
 |------|------------------------|-------|
-| GENRE | MusicBrainz(100), Last.fm(100) | **Mergeable** — GenreTag with confidence, sources and `curated` (MusicBrainz's controlled vocabulary vs free-text tags; `null` only on entries cached before the marking existed, which read as a cache miss and refetch). Only these two serve the type; `genres()`/`genreTags()` additionally fall back to genre strings carried inside ALBUM_METADATA, which Discogs and iTunes also populate |
+| GENRE | MusicBrainz(100), Last.fm(100) | **Mergeable** — GenreTag with confidence, sources and `curated` (MusicBrainz's controlled vocabulary vs free-text tags; `null` where nobody could tell — an entry cached before the marking, or tags read off a search hit — which reads as a cache miss and refetches). Only these two serve the type; `genres()`/`genreTags()` additionally fall back to genre strings carried inside ALBUM_METADATA, which Discogs and iTunes also populate |
 | LABEL | MusicBrainz(100), Discogs(50) | |
 | RELEASE_DATE | MusicBrainz(100) | |
 | RELEASE_TYPE | MusicBrainz(100), Discogs(50) | |
