@@ -21,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 >   "stop making a call that was never supported", which the line above rules out as noise.
 > - For a payload change, ask the user about a cache-clear note.
 > - `scripts/github-workflows/build_release_notes.py` caps any single line at 200 characters
->   (a paragraph is not a bullet) and a section at 12000; `./check` runs both against
+>   (a paragraph is not a bullet) and a section at 16000; `./check` runs both against
 >   `[Unreleased]` on every commit, and the
 >   release fails if it does not fit. Sections from 0.10.0 down were written before the cap and run
 >   longer — except 0.10.0 and 0.10.1 themselves, rewritten to match the notes GitHub actually
