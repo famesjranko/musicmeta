@@ -86,6 +86,7 @@ lint: ## All four layers, no tests — detekt compiles Kotlin, since its rules n
 	ruff check .
 	mypy
 	python3 scripts/checks/check_conventions.py
+	python3 scripts/checks/check_pitfall_citations.py
 
 # --- public API ---
 

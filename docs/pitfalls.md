@@ -4,7 +4,12 @@ Each of these cost a release, an issue, or a backfilled `### Breaking Changes` e
 carries the one-line rule; this file carries the worked example and the reason. Read the entry before
 touching the thing it names.
 
-## Traps in the pipeline
+Pitfalls are grouped under `## Area` headings; `CLAUDE.md`'s Read-first table routes each area.
+A pitfall's number is permanent — code comments cite `docs/pitfalls.md §N` — so a new pitfall
+takes the next free number and goes under whichever area fits, in any order. If no area fits,
+add one and give it a routing row in `CLAUDE.md`.
+
+## Area — Traps in the pipeline
 
 Read `enrich()` in `engine/DefaultEnrichmentEngine.kt` — it is the map, and this list is not
 exhaustive. Paths are relative to `musicmeta-core/src/main/kotlin/com/landofoz/musicmeta/`.
@@ -22,6 +27,8 @@ exhaustive. Paths are relative to `musicmeta-core/src/main/kotlin/com/landofoz/m
   `demoteUnanswered()` demotes one whose payload does not `answers()` its type, at any confidence,
   and runs on the cache read too — where an unanswered entry counts as a *miss*, so one written by
   an older build is refetched and healed rather than pinned for its TTL (§8).
+
+## Area — The published surface
 
 ## 1. The published surface only grows by appending
 
@@ -87,6 +94,8 @@ The surface was narrowed to the four-role boundary in v0.10.0 (#5). `CircuitBrea
 them leaves `apiCheck` green. `RateLimiter` is public only because it is a parameter of nearly every
 provider constructor.
 
+## Area — Errors, cancellation, and timeouts
+
 ## 2. `catch (e: Exception)` in a suspend function eats cancellation
 
 ```kotlin
@@ -124,23 +133,6 @@ written and deleted because the remediation it printed was itself the defect (`A
 **Never reason that a swallowed cancellation is harmless because "it re-asserts at the next
 suspension point"** — cancellation is cooperative and a suspend function may never suspend again.
 
-## 3. `org.json` returns a default for a missing key — it does not fail
-
-```kotlin
-// WRONG — shipped in 0.9.0; ListenBrainz sends recording_name, not track_name
-title = item.optString("track_name", "")        // every TopTrack title was ""
-
-// RIGHT — read the field the API actually sends, and treat blank as absent
-val mbid = item.optString("recording_mbid").takeIf { it.isNotBlank() } ?: continue
-albumName = item.optString("release_name").takeIf { it.isNotBlank() }
-```
-
-No exception, no `NotFound` — empty strings enriched, cached and persisted, needing a 0.9.1 fix plus a
-"clear your cache" migration note. A provider test must assert against a fixture copied from a real
-response; that is what pins the field name. `provider-drift.yml` runs the `e2e` suite against live
-APIs on a schedule, so a moved field surfaces indirectly — it is not a field watcher and never gates
-a merge.
-
 ## 4. `Error` and `NotFound` are not interchangeable
 
 ```kotlin
@@ -158,28 +150,6 @@ claims the data does not exist. `ProviderChain` therefore reports its own `Error
 provider was skipped for an open breaker, and `resolveAll` returns `ChainResults`, not a bare list —
 the successes alone cannot tell a merger's caller that nobody succeeded because nobody was asked. A
 signature that can only carry the happy path is how the failure went missing the first time.
-
-## 5. A capability's `identifierRequirement` defaults to `NONE`
-
-```kotlin
-// WRONG — Cover Art Archive is coverartarchive.org/release/{mbid}; it cannot work without one
-ProviderCapability(type = EnrichmentType.ALBUM_ART, priority = 100)
-// RIGHT
-ProviderCapability(EnrichmentType.ALBUM_ART, priority = 100,
-    identifierRequirement = IdentifierRequirement.MUSICBRAINZ_ID)
-```
-
-`hasRequiredIdentifiers()` is the only thing keeping an ID-only provider from being called with
-nothing to look up. Undeclared, it burns a rate-limited request and returns `NotFound` — which
-records breaker **success**, so a provider that never works looks healthy while a lower-priority
-fallback wins the type.
-
-**Do not infer the answer from the surrounding lines.** Two-thirds of this tree's capabilities
-correctly declare nothing, because their providers are name-search APIs (Deezer, Discogs, iTunes,
-Last.fm, LrcLib). ID-keyed providers declare on every entry (Cover Art Archive, Fanart.tv, Wikidata,
-Wikipedia, ListenBrainz). MusicBrainz declares on exactly 2 of 11 — `CREDITS` and `RELEASE_EDITIONS`
-— because it searches by name for the rest. The only test is whether *this* capability can resolve
-without the identifier.
 
 ## 6. Catching `TimeoutCancellationException` by type cannot tell whose deadline fired
 
@@ -206,6 +176,47 @@ marker at all. That mix is fine to return and was never fine to cache: the write
 the deadline and persisted it under the primary *and* name-alias keys, so every later lookup was a
 hit that skipped filtering (#56). Anything added inside that block inherits the same shape, which is
 why the guard is on the write-back rather than on catalog filtering.
+
+## Area — Provider data and matching
+
+## 3. `org.json` returns a default for a missing key — it does not fail
+
+```kotlin
+// WRONG — shipped in 0.9.0; ListenBrainz sends recording_name, not track_name
+title = item.optString("track_name", "")        // every TopTrack title was ""
+
+// RIGHT — read the field the API actually sends, and treat blank as absent
+val mbid = item.optString("recording_mbid").takeIf { it.isNotBlank() } ?: continue
+albumName = item.optString("release_name").takeIf { it.isNotBlank() }
+```
+
+No exception, no `NotFound` — empty strings enriched, cached and persisted, needing a 0.9.1 fix plus a
+"clear your cache" migration note. A provider test must assert against a fixture copied from a real
+response; that is what pins the field name. `provider-drift.yml` runs the `e2e` suite against live
+APIs on a schedule, so a moved field surfaces indirectly — it is not a field watcher and never gates
+a merge.
+
+## 5. A capability's `identifierRequirement` defaults to `NONE`
+
+```kotlin
+// WRONG — Cover Art Archive is coverartarchive.org/release/{mbid}; it cannot work without one
+ProviderCapability(type = EnrichmentType.ALBUM_ART, priority = 100)
+// RIGHT
+ProviderCapability(EnrichmentType.ALBUM_ART, priority = 100,
+    identifierRequirement = IdentifierRequirement.MUSICBRAINZ_ID)
+```
+
+`hasRequiredIdentifiers()` is the only thing keeping an ID-only provider from being called with
+nothing to look up. Undeclared, it burns a rate-limited request and returns `NotFound` — which
+records breaker **success**, so a provider that never works looks healthy while a lower-priority
+fallback wins the type.
+
+**Do not infer the answer from the surrounding lines.** Two-thirds of this tree's capabilities
+correctly declare nothing, because their providers are name-search APIs (Deezer, Discogs, iTunes,
+Last.fm, LrcLib). ID-keyed providers declare on every entry (Cover Art Archive, Fanart.tv, Wikidata,
+Wikipedia, ListenBrainz). MusicBrainz declares on exactly 2 of 11 — `CREDITS` and `RELEASE_EDITIONS`
+— because it searches by name for the rest. The only test is whether *this* capability can resolve
+without the identifier.
 
 ## 7. A search API's hit 0 is a ranking, not an answer
 
@@ -285,55 +296,7 @@ all. Every other payload answers its type iff it carries anything. The `when` is
 served by `Metadata` inherits grab-bag semantics. That fails lenient, which is the right direction:
 the gate's job is to catch payloads answering *nothing*, not to adjudicate partial ones.
 
-## 9. A line-based check that skips lines can stop reading a file entirely
-
-`check_test_shape.py` scans lines, so Kotlin fixture text inside a `"""` raw string is read as
-source. The obvious repair — track the delimiter, skip what is inside — shipped twice and was wrong
-both times in the same direction. Parity cannot tell an opener from a `"""` a comment mentions, nor
-from a `//` inside an ordinary string literal; either wrong guess leaves the tracker stuck open, and
-everything below is skipped, `@Test` lines included. Live on `DeezerProviderTest.kt`: **43 of its 49
-tests were invisible while `check` printed clean across 86 test sources.**
-
-`check_raw_string_content` tracks the same unreliable parity but *complains* about suspect lines
-instead of skipping them, and only ever adds a finding. A wrong guess is now one visible error,
-fixed by rewording the fixture. Precision unchanged; blast radius inverted.
-
-**When a heuristic can't be made accurate, make it fail in the direction that shows.** A filter's
-wrong guess hides work, a tripwire's is an annoyance. Any enter/exit flag also needs an end-of-file
-invariant — getting stuck fails quiet all the way down.
-
-## 10. Comment bulk is not a function of comment size
-
-`CLAUDE.md`'s comment rule has no mechanism, and it cannot get one by counting. Neither detekt's
-`comments` ruleset (10 rules, all presence/correctness, `active: false` by default) nor ktlint caps
-comment size, so any gate here is hand-built — and every metric available to one is blind in the
-same place.
-
-Raw block *length* fares no better: the one cap that was tried picked its threshold (20 lines) to
-clear a pre-designated exemplar, and the block-size histogram could not defend it — 25, and every
-integer from 28 to 41, were equally unoccupied, so any "empirically derived" N there is a choice
-wearing a measurement. Worse, a single blank line splits an over-long block into two passing ones,
-and the failure message names the threshold, so it hands the reader the evasion.
-
-The ratio evidence: measured once, 2026-08-09, over all 573 functions in the main sources — comment
-lines against code lines per declaration, attributed over Kotlin PSI so a blank line cannot split a
-block and a declaration's KDoc, leading `//` run and in-body comments all count against the code
-they document. **To redo it:** walk `KtNamedFunction` nodes with `kotlin-compiler-embeddable`,
-count lines touched by `PsiComment` against the rest, treat a line carrying both as code. Ratios
-below are that measurement, not a live figure:
-
-- `EnrichmentEngine.enrich` — 16 comment lines, 5 code, **ratio 3.20**. It is an interface member.
-  A bodyless declaration has almost no code lines *by construction*, so the metric scores worst
-  exactly where the caller contract matters most. Excluding bodyless members removes only 16 of the
-  72 declarations at ratio ≥ 1.0.
-- `MusicBrainzEnricher.pickBestRecording` — 42 comment lines, 17 code, the worst body-bearing case
-  in the repo. Its five ranking tiers each record a live-verified failure mode (§7). So does
-  `DiscogsApi.searchArtist` at 25/11. Shortening either deletes evidence, not prose.
-
-**No cutoff separates the incident from the best documentation in the repo, because on every
-measurable axis they are the same object.** The distinction that matters — rationale a caller needs
-versus rationale that is merely long — is not a length. This one stays review's job; the gap is
-honest, and a gate here would be confidently wrong.
+## Area — Transport and provider state
 
 ## 11. A retry ladder's coverage is not its trigger
 
@@ -425,6 +388,58 @@ Before adding provider-internal state of any kind:
 - Per-call state rides the coroutine context, as `EnrichDeadline` and `TransientIdentifierMarker`
   already do. A new `EnrichmentProvider` method would be a documented break instead (§1).
 
+## Area — Checks, comments, and config
+
+## 9. A line-based check that skips lines can stop reading a file entirely
+
+`check_test_shape.py` scans lines, so Kotlin fixture text inside a `"""` raw string is read as
+source. The obvious repair — track the delimiter, skip what is inside — shipped twice and was wrong
+both times in the same direction. Parity cannot tell an opener from a `"""` a comment mentions, nor
+from a `//` inside an ordinary string literal; either wrong guess leaves the tracker stuck open, and
+everything below is skipped, `@Test` lines included. Live on `DeezerProviderTest.kt`: **43 of its 49
+tests were invisible while `check` printed clean across 86 test sources.**
+
+`check_raw_string_content` tracks the same unreliable parity but *complains* about suspect lines
+instead of skipping them, and only ever adds a finding. A wrong guess is now one visible error,
+fixed by rewording the fixture. Precision unchanged; blast radius inverted.
+
+**When a heuristic can't be made accurate, make it fail in the direction that shows.** A filter's
+wrong guess hides work, a tripwire's is an annoyance. Any enter/exit flag also needs an end-of-file
+invariant — getting stuck fails quiet all the way down.
+
+## 10. Comment bulk is not a function of comment size
+
+`CLAUDE.md`'s comment rule has no mechanism, and it cannot get one by counting. Neither detekt's
+`comments` ruleset (10 rules, all presence/correctness, `active: false` by default) nor ktlint caps
+comment size, so any gate here is hand-built — and every metric available to one is blind in the
+same place.
+
+Raw block *length* fares no better: the one cap that was tried picked its threshold (20 lines) to
+clear a pre-designated exemplar, and the block-size histogram could not defend it — 25, and every
+integer from 28 to 41, were equally unoccupied, so any "empirically derived" N there is a choice
+wearing a measurement. Worse, a single blank line splits an over-long block into two passing ones,
+and the failure message names the threshold, so it hands the reader the evasion.
+
+The ratio evidence: measured once, 2026-08-09, over all 573 functions in the main sources — comment
+lines against code lines per declaration, attributed over Kotlin PSI so a blank line cannot split a
+block and a declaration's KDoc, leading `//` run and in-body comments all count against the code
+they document. **To redo it:** walk `KtNamedFunction` nodes with `kotlin-compiler-embeddable`,
+count lines touched by `PsiComment` against the rest, treat a line carrying both as code. Ratios
+below are that measurement, not a live figure:
+
+- `EnrichmentEngine.enrich` — 16 comment lines, 5 code, **ratio 3.20**. It is an interface member.
+  A bodyless declaration has almost no code lines *by construction*, so the metric scores worst
+  exactly where the caller contract matters most. Excluding bodyless members removes only 16 of the
+  72 declarations at ratio ≥ 1.0.
+- `MusicBrainzEnricher.pickBestRecording` — 42 comment lines, 17 code, the worst body-bearing case
+  in the repo. Its five ranking tiers each record a live-verified failure mode (§7). So does
+  `DiscogsApi.searchArtist` at 25/11. Shortening either deletes evidence, not prose.
+
+**No cutoff separates the incident from the best documentation in the repo, because on every
+measurable axis they are the same object.** The distinction that matters — rationale a caller needs
+versus rationale that is merely long — is not a length. This one stays review's job; the gap is
+honest, and a gate here would be confidently wrong.
+
 ## 13. A config file that exists is not a config file that says anything
 
 Both demos looked for `secrets.properties` in the app directory and then the repo root, took the
@@ -450,3 +465,4 @@ Two rules came out of it, and both generalise past this file:
 The wider trap: any `?:` chain over a map is only as good as the map's willingness to say "absent".
 A parser that faithfully records `k=` as `k -> ""` is not being helpful — it is converting an
 absence into an answer, which is the same shape as §4 and as a `NotFound` standing in for a failure.
+
