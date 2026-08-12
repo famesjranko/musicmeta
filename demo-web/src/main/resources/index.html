@@ -25,6 +25,7 @@
         <option value="artist">Artist</option>
         <option value="album">Album</option>
         <option value="track">Track</option>
+        <option value="mbid">MBID</option>
       </select>
       <input id="name" type="text" placeholder="Artist name (e.g. Radiohead)" autocomplete="off" />
       <input id="artist" type="text" placeholder="Artist (for album / track)" autocomplete="off" style="display:none" />
@@ -36,6 +37,7 @@
       <button type="button" data-kind="artist" data-name="Radiohead" disabled>Radiohead</button>
       <button type="button" data-kind="album" data-name="OK Computer" data-artist="Radiohead" disabled>OK Computer</button>
       <button type="button" data-kind="track" data-name="Karma Police" data-artist="Radiohead" data-album="OK Computer" disabled>Karma Police</button>
+      <button type="button" data-kind="mbid" data-name="0383dadf-2a4e-4d10-a46a-e9e041da8eb3" disabled>An MBID</button>
     </div>
     <div id="status"></div>
     <div id="result"><div id="empty">Enter a name above and hit Enrich.</div></div>

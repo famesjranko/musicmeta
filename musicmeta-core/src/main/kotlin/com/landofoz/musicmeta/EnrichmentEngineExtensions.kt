@@ -1,8 +1,34 @@
 package com.landofoz.musicmeta
 
+import com.landofoz.musicmeta.engine.DefaultEnrichmentEngine
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+
+/**
+ * What [mbid] names, or null when MusicBrainz holds it under no entity type — the answer needed
+ * before an identifier-only request can be built, since an MBID does not say what it identifies and
+ * MusicBrainz has no endpoint that takes one without its type. Pair it with
+ * [EnrichmentRequest.forTrackByMbid] and its siblings.
+ *
+ * Costs 1 to 3 requests on MusicBrainz's 1 req/s limiter: the types are probed **recording, then
+ * release, then artist**, so a recording is one request, a release two, an artist three, and an
+ * identifier held under none of them three. Recording leads because that is where third-party
+ * identifiers overwhelmingly come from — and a dead one is not a corner case: 51 of 103 Last.fm
+ * recording MBIDs were held under no entity type when measured 2026-08-11. `docs/how-it-works.md`
+ * records the ListenBrainz alternative that was measured against this ordering and lost.
+ *
+ * A transient failure throws rather than answering null — an outage is not an absence. So does an
+ * `IllegalStateException` for either configuration this cannot answer from: an engine with no
+ * MusicBrainz identity provider registered, and an [EnrichmentEngine] that is not the built-in one
+ * (a third-party implementation has no provider registry to probe). Neither is an answer about
+ * [mbid], and returning null for them would read as one.
+ */
+suspend fun EnrichmentEngine.discoverMbidEntityType(mbid: String): MusicBrainzEntityType? {
+    val engine = this as? DefaultEnrichmentEngine
+        ?: error("Only the built-in engine can resolve an MBID's type")
+    return engine.discoverEntityType(mbid)
+}
 
 /**
  * Convenience extension: enriches an artist and returns a structured [ArtistProfile].

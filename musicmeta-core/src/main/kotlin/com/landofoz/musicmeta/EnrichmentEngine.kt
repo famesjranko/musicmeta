@@ -82,7 +82,13 @@ interface EnrichmentEngine {
 
     val cache: EnrichmentCache
 
-    /** Invalidates cached data for a request. Pass a specific [type] or null to clear all types. */
+    /**
+     * Invalidates cached data for a request. Pass a specific [type] or null to clear all types.
+     *
+     * For an identifier-only request (no names supplied), this costs one identity lookup to reach
+     * the canonical-name alias the result was also cached under. If that lookup fails transiently,
+     * the alias may survive the invalidation — retry, or enrich with `forceRefresh` instead.
+     */
     suspend fun invalidate(request: EnrichmentRequest, type: EnrichmentType? = null)
 
     /** Whether the user has manually selected data for this request/type (e.g., picked artwork). */

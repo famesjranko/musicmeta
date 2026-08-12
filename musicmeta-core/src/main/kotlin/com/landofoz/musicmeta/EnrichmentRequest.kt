@@ -82,6 +82,50 @@ sealed class EnrichmentRequest {
             durationMs = durationMs,
         )
 
+        /**
+         * An album request naming nothing but [mbid], for a caller holding a release id and no
+         * title.
+         *
+         * Identity resolution fills the title and artist from the release MusicBrainz holds under
+         * [mbid], so the name-search providers (Deezer, LRCLIB, iTunes, Last.fm, Discogs) work
+         * normally — none of them can use an MBID. Two consequences a caller has to weigh:
+         *
+         * - **An id MusicBrainz holds nothing under leaves the request with no name at all**, and
+         *   the answer is an honest `NotFound` rather than a search for something. Third-party
+         *   identifiers go stale in bulk — 51 of 103 Last.fm recording MBIDs were held under no
+         *   entity type when measured 2026-08-11 — so pass [forAlbum] with the names whenever you
+         *   have them, and keep this for the case where you genuinely do not.
+         * - The result is cached under MusicBrainz's **canonical** name, not one you supplied,
+         *   because there is none to alias to.
+         */
+        fun forAlbumByMbid(
+            mbid: String,
+            identifiers: EnrichmentIdentifiers? = null,
+        ) = ForAlbum(
+            identifiers = (identifiers ?: EnrichmentIdentifiers()).copy(musicBrainzId = mbid),
+            title = "",
+            artist = "",
+        )
+
+        /** An artist request naming nothing but [mbid]; see [forAlbumByMbid] for what that costs. */
+        fun forArtistByMbid(
+            mbid: String,
+            identifiers: EnrichmentIdentifiers? = null,
+        ) = ForArtist(
+            identifiers = (identifiers ?: EnrichmentIdentifiers()).copy(musicBrainzId = mbid),
+            name = "",
+        )
+
+        /** A track request naming nothing but [mbid]; see [forAlbumByMbid] for what that costs. */
+        fun forTrackByMbid(
+            mbid: String,
+            identifiers: EnrichmentIdentifiers? = null,
+        ) = ForTrack(
+            identifiers = (identifiers ?: EnrichmentIdentifiers()).copy(musicBrainzId = mbid),
+            title = "",
+            artist = "",
+        )
+
         /** Types meaningful for [ForArtist] requests. */
         val DEFAULT_ARTIST_TYPES: Set<EnrichmentType> = setOf(
             EnrichmentType.GENRE, EnrichmentType.ARTIST_BIO,

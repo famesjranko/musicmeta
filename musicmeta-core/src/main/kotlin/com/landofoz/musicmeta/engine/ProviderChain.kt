@@ -41,9 +41,12 @@ internal class ProviderChain(
      * Used for mergeable types (e.g. GENRE, ARTIST_PHOTO) where multiple providers contribute data.
      * Respects availability, identifier requirements, and circuit breaker checks.
      */
-    suspend fun resolveAll(request: EnrichmentRequest): ChainResults = coroutineScope {
+    suspend fun resolveAll(
+        request: EnrichmentRequest,
+        identifierOnly: Boolean = false,
+    ): ChainResults = coroutineScope {
         val (tripped, eligible) = providers
-            .filter { couldAnswer(it, request.identifiers) }
+            .filter { couldAnswer(it, request.identifiers, identifierOnly) }
             .partition { isTripped(it) }
 
         val outcomes = eligible.map { provider ->
@@ -82,10 +85,13 @@ internal class ProviderChain(
         ChainResults(successes, failure ?: outageOrNull(eligible.isNotEmpty(), tripped))
     }
 
-    suspend fun resolve(request: EnrichmentRequest): EnrichmentResult {
+    suspend fun resolve(
+        request: EnrichmentRequest,
+        identifierOnly: Boolean = false,
+    ): EnrichmentResult {
         var lastFailure: EnrichmentResult? = null
         var answered = false
-        val tripped = forEachEligible(request) { _, breaker, result ->
+        val tripped = forEachEligible(request, identifierOnly) { _, breaker, result ->
             answered = true
             when (result) {
                 is EnrichmentResult.Success -> { breaker?.recordSuccess(); return result }
@@ -127,11 +133,12 @@ internal class ProviderChain(
      */
     private suspend inline fun forEachEligible(
         request: EnrichmentRequest,
+        identifierOnly: Boolean,
         onResult: (EnrichmentProvider, CircuitBreaker?, EnrichmentResult) -> Unit,
     ): List<EnrichmentProvider> {
         val tripped = mutableListOf<EnrichmentProvider>()
         for (provider in providers) {
-            if (!couldAnswer(provider, request.identifiers)) continue
+            if (!couldAnswer(provider, request.identifiers, identifierOnly)) continue
             // Read as the walk reaches each provider, not up front: a breaker these calls share with
             // another type's chain can open mid-walk, and the fresher answer is the honest one.
             if (isTripped(provider)) { tripped.add(provider); continue }
@@ -149,9 +156,28 @@ internal class ProviderChain(
         return tripped
     }
 
-    /** Whether [provider] is in a position to answer at all, leaving its breaker out of it. */
-    private fun couldAnswer(provider: EnrichmentProvider, identifiers: EnrichmentIdentifiers): Boolean =
-        provider.isAvailable && hasRequiredIdentifiers(provider, identifiers)
+    /**
+     * Whether [provider] is in a position to answer at all, leaving its breaker out of it.
+     *
+     * [identifierOnly] narrows that to the providers whose capability for [type] is keyed on an
+     * identifier — for a request that names no entity, where a name-search provider has nothing to
+     * search with. Asking one anyway spends a live request on the empty string and lets whatever
+     * ranks first for it answer as this request's entity.
+     */
+    private fun couldAnswer(
+        provider: EnrichmentProvider,
+        identifiers: EnrichmentIdentifiers,
+        identifierOnly: Boolean = false,
+    ): Boolean =
+        provider.isAvailable &&
+            hasRequiredIdentifiers(provider, identifiers) &&
+            (!identifierOnly || requiresIdentifier(provider))
+
+    /** Whether [provider]'s capability for [type] is keyed on an identifier rather than a name. */
+    private fun requiresIdentifier(provider: EnrichmentProvider): Boolean =
+        provider.capabilities.firstOrNull { it.type == type }
+            ?.identifierRequirement
+            ?.let { it != IdentifierRequirement.NONE } ?: false
 
     /** Whether [provider]'s breaker is open. A provider with no breaker is never skipped. */
     private fun isTripped(provider: EnrichmentProvider): Boolean =

@@ -36,6 +36,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `CompositeSynthesizer.synthesize` now receives the identity provider's `Error` when identity resolution failed, where it previously received `null` (the "not attempted" value)
 
 ### Added
+- `EnrichmentRequest.forTrackByMbid`/`forAlbumByMbid`/`forArtistByMbid`: request an entity by MBID alone; identity resolution fills the names the other providers search by
+- `EnrichmentEngine.discoverMbidEntityType(mbid)`: what a bare MBID names (`MusicBrainzEntityType.RECORDING`/`RELEASE`/`ARTIST`, or null), at 1–3 requests probing in that order
+- An MBID-only result is cached under MusicBrainz's canonical name as well as its id, so a later name-only lookup for that entity hits
 - `TRACK_METADATA`/`EnrichmentData.TrackMetadata` (duration, album title, disambiguation), already fetched but dropped by MusicBrainz, Deezer, LRCLIB; in `DEFAULT_TRACK_TYPES`
 - `PopularTrack` now carries `listenerCount`, `durationMs` and `album`, matching what `TopTrack` already exposes from the same ListenBrainz data
 - `ALBUM_DESCRIPTION` (`EnrichmentData.Biography`), from Wikipedia and Last.fm's `wiki` block; in `DEFAULT_ALBUM_TYPES`, top source is keyless and long-cached
@@ -45,6 +48,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Wikidata is a second `ARTIST_LINKS` source (priority 50), contributing the official website (P856) where MusicBrainz has no relations
 
 ### Changed
+- A request that names no entity (an MBID-only one whose MBID resolves to nothing) is no longer fanned out to name-search providers: those types are `NotFound`, not a live search for the empty string
+- `invalidate()` on an MBID-only request now costs one identity lookup, to learn the canonical name its result was aliased under and drop that entry too
 - `hip-hop` now folds into `hip hop`, MusicBrainz's own curated spelling, rather than the reverse: affected artists' genre strings change spelling
 - `Metadata.genres` (the plain string list) is now the genre-tag names in tag order, so curated genres lead it as they lead `genreTags`
 - Provider terms are now documented (docs/providers.md): keyless is not permission; Deezer and Last.fm restrict commercial use. README opening reworded to match.

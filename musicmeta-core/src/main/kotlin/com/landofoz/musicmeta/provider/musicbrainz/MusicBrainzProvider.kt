@@ -6,6 +6,7 @@ import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.IdentifierRequirement
+import com.landofoz.musicmeta.MusicBrainzEntityType
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.engine.ProviderCallScope
@@ -69,6 +70,10 @@ class MusicBrainzProvider(
 
     override suspend fun resolveIdentity(request: EnrichmentRequest): EnrichmentResult =
         enrich(request, EnrichmentType.GENRE)
+
+    /** The probe behind [com.landofoz.musicmeta.discoverMbidEntityType], which holds its contract. */
+    internal suspend fun discoverEntityType(mbid: String): MusicBrainzEntityType? =
+        enricher().discoverEntityType(mbid)
 
     override suspend fun searchCandidates(
         request: EnrichmentRequest,
