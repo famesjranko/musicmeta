@@ -2,25 +2,27 @@ package com.landofoz.musicmeta.engine
 
 import com.landofoz.musicmeta.EnrichmentConfig
 import com.landofoz.musicmeta.EnrichmentData
+import com.landofoz.musicmeta.EnrichmentEngine
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.PopularitySignal
 import com.landofoz.musicmeta.PopularitySignalKind
 import com.landofoz.musicmeta.ProviderCapability
-import com.landofoz.musicmeta.testutil.FakeEnrichmentCache
 import com.landofoz.musicmeta.testutil.FakeProvider
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * That [PopularityMerger] is registered for both popularity types, end to end.
+ * That [EnrichmentEngine.Builder] registers a [PopularityMerger] for both popularity types.
  *
  * The merger existing is not the same as the engine using it: an unregistered type falls back to
  * `ProviderChain.resolve`, which returns the first `Success` and discards the rest. The demos'
  * "Listener count unavailable" was exactly that — the winning provider lacking a field the losing
- * one had filled.
+ * one had filled. These build through the real `Builder` and pass it no merger of their own, so
+ * dropping either registration from its default list fails them.
  */
 class PopularityFanOutTest {
 
@@ -39,23 +41,22 @@ class PopularityFanOutTest {
         it.givenResult(type, EnrichmentResult.Success(type, data, id, 0.9f))
     }
 
+    /** Deliberately no `addMerger`: the merger under test must come from the Builder's defaults. */
     private suspend fun popularityFrom(
         type: EnrichmentType,
         request: EnrichmentRequest,
         vararg providers: FakeProvider,
     ): EnrichmentData.Popularity {
-        val engine = DefaultEnrichmentEngine(
-            ProviderRegistry(providers.toList()),
-            FakeEnrichmentCache(),
-            EnrichmentConfig(enableIdentityResolution = false),
-            mergers = listOf(PopularityMerger(type)),
-        )
-        val result = engine.enrich(request, setOf(type)).raw[type]
+        val builder = EnrichmentEngine.Builder()
+            .config(EnrichmentConfig(enableIdentityResolution = false))
+        providers.forEach { builder.addProvider(it) }
+        val result = builder.build().enrich(request, setOf(type)).raw[type]
+        assertTrue("expected Success, got $result", result is EnrichmentResult.Success)
         return (result as EnrichmentResult.Success).data as EnrichmentData.Popularity
     }
 
     @Test
-    fun `ARTIST_POPULARITY keeps the losing provider's listener count`() = runTest {
+    fun `the Builder's defaults merge ARTIST_POPULARITY, keeping the losing provider's listener count`() = runTest {
         // Given - a leading source with plays only, and a lower-priority one carrying listeners
         val leader = provider(
             "listenbrainz", EnrichmentType.ARTIST_POPULARITY, 100,
@@ -85,7 +86,7 @@ class PopularityFanOutTest {
             "musicbrainz", EnrichmentType.TRACK_POPULARITY, 20,
             EnrichmentData.Popularity(
                 signals = listOf(
-                    PopularitySignal("musicbrainz", PopularitySignalKind.RATING, 4.4, 0.88f, 41),
+                    PopularitySignal("musicbrainz", PopularitySignalKind.RATING, 4.4, 0.85f, 41),
                 ),
             ),
         )

@@ -173,7 +173,8 @@ data class SimilarArtist(
  * counts, and comparing two signals is only meaningful when their [kind] and [source] agree —
  * Last.fm counts scrobbles, ListenBrainz counts listens, MusicBrainz reports a 1–5 community
  * rating. [normalized] is a 0..1 rendering where the source's own scale supports one, and `null`
- * where an unbounded count makes it meaningless.
+ * where an unbounded count makes it meaningless — the scale's floor maps to 0 and its ceiling to 1,
+ * so a 1–5 rating and a 0–100 score are comparable once normalised.
  *
  * The flat fields on [EnrichmentData.Popularity] are derived from these, not the other way round.
  */

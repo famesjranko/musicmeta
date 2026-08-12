@@ -71,13 +71,28 @@ class MusicBrainzParserRatingTest {
         // When - mapping it to the public popularity payload
         val popularity = MusicBrainzMapper.toPopularity(artist.rating)
 
-        // Then - one RATING signal labelled musicbrainz, normalised against the 1-5 scale
+        // Then - one RATING signal labelled musicbrainz, normalised as (value - 1) / 4
         val signal = popularity.signals.single()
         assertEquals("musicbrainz", signal.source)
         assertEquals(PopularitySignalKind.RATING, signal.kind)
         assertEquals(4.05, signal.value, 0.001)
-        assertEquals(0.81f, signal.normalized!!, 0.001f)
+        assertEquals(0.7625f, signal.normalized!!, 0.001f)
         assertEquals(49, signal.sampleSize)
+    }
+
+    @Test
+    fun `the normalisation spans the whole 0 to 1 range, not 0 point 2 upward`() {
+        // Given - the worst and best ratings MusicBrainz's one-to-five scale can carry
+        val worst = MusicBrainzRating(value = 1f, votes = 3)
+        val best = MusicBrainzRating(value = 5f, votes = 3)
+
+        // When - mapping each to a signal
+        val low = MusicBrainzMapper.toPopularity(worst).signals.single()
+        val high = MusicBrainzMapper.toPopularity(best).signals.single()
+
+        // Then - one star is 0 and five stars is 1, so the value compares with a 0-based source
+        assertEquals(0f, low.normalized!!, 0.0001f)
+        assertEquals(1f, high.normalized!!, 0.0001f)
     }
 
     @Test

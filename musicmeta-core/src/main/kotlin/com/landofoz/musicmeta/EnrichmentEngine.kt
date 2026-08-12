@@ -12,6 +12,7 @@ import com.landofoz.musicmeta.engine.SimilarArtistMerger
 import com.landofoz.musicmeta.engine.SimilarTrackMerger
 import com.landofoz.musicmeta.engine.TimelineSynthesizer
 import com.landofoz.musicmeta.engine.TopTrackMerger
+import com.landofoz.musicmeta.engine.requireRegistrableProviderId
 import com.landofoz.musicmeta.http.DefaultHttpClient
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
@@ -117,10 +118,7 @@ interface EnrichmentEngine {
 
         /** @throws IllegalArgumentException if the id is already registered, or reserved by the engine. */
         fun addProvider(provider: EnrichmentProvider) = apply {
-            com.landofoz.musicmeta.engine.requireRegistrableProviderId(
-                provider.id,
-                providers.map { it.id },
-            )
+            requireRegistrableProviderId(provider.id, providers.map { it.id })
             providers.add(provider)
         }
         fun cache(cache: EnrichmentCache) = apply { this.cache = cache }

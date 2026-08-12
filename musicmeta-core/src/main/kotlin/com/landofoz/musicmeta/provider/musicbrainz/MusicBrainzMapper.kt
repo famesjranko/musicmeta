@@ -245,8 +245,11 @@ internal object MusicBrainzMapper {
      *
      * A rating is not a count, so it fills no flat field on [EnrichmentData.Popularity] — only the
      * signal list, where [PopularitySignal.sampleSize] carries the vote count that says how much the
-     * score rests on. MusicBrainz rates 1–5, so the 0..1 normalisation is exact rather than a guess.
-     * Null rating means nobody has voted, which is not a popularity of zero.
+     * score rests on. Null rating means nobody has voted, which is not a popularity of zero.
+     *
+     * [PopularitySignal.normalized] is `(value - 1) / 4`, clamped. MusicBrainz's scale runs 1–5, so
+     * the bottom of it is one star and not zero; dividing by 5 would put the worst possible rating
+     * at 0.2 and make it incomparable with any source whose scale starts at zero.
      */
     fun toPopularity(rating: MusicBrainzRating?): EnrichmentData.Popularity =
         EnrichmentData.Popularity(
@@ -256,15 +259,16 @@ internal object MusicBrainzMapper {
                         source = PROVIDER_SOURCE,
                         kind = PopularitySignalKind.RATING,
                         value = it.value.toDouble(),
-                        normalized = it.value / MAX_RATING,
+                        normalized = ((it.value - MIN_RATING) / RATING_RANGE).coerceIn(0f, 1f),
                         sampleSize = it.votes,
                     )
                 },
             ),
         )
 
-    /** MusicBrainz's rating scale tops out at five stars, so a normalisation needs no calibration. */
-    private const val MAX_RATING = 5f
+    /** MusicBrainz rates one to five stars, so the span a normalisation divides by is four. */
+    private const val MIN_RATING = 1f
+    private const val RATING_RANGE = 4f
 
     private const val PROVIDER_SOURCE = "musicbrainz"
 

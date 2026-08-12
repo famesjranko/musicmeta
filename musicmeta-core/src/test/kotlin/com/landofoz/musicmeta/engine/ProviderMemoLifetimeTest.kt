@@ -3,6 +3,7 @@ package com.landofoz.musicmeta.engine
 import com.landofoz.musicmeta.EnrichmentConfig
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
+import com.landofoz.musicmeta.EnrichmentProvider
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
@@ -211,10 +212,51 @@ class ProviderMemoLifetimeTest {
     }
 
     /**
-     * A registry now refuses two providers sharing an id, so this is asserted against the scope
-     * directly. The slot still has to key on the instance: [EnrichmentProvider] states no
-     * `equals`/`hashCode` contract, so a consumer's provider written as a `data class` hands two
-     * differently-configured instances one key without ever repeating an id.
+     * Two MusicBrainz providers configured differently, through a real engine. Both build their
+     * enricher from the id `"musicbrainz"` — only the registered wrapper's id differs — so a slot
+     * keyed on `provider.id` rather than the instance would hand the second the enricher the first
+     * built, and with it the score floor that enricher was constructed with.
+     */
+    @Test
+    fun `two configurations of one provider each answer on their own floor`() = runTest {
+        // Given - a hit only the lower score floor accepts, behind two differently-configured
+        // MusicBrainz providers. Identity resolution is off because the strict one is also the
+        // identity provider, and the suggestions on its NotFound would short-circuit the fan-out.
+        httpClient.givenJsonResponse(RELEASE_SEARCH, searchHit("thin1", score = 80))
+        val strict = MusicBrainzProvider(httpClient, RateLimiter(0), minMatchScore = 95)
+        val lenient = MusicBrainzProvider(httpClient, RateLimiter(0), minMatchScore = 50)
+        val engine = DefaultEnrichmentEngine(
+            ProviderRegistry(
+                listOf(
+                    RenamedProvider(strict, "musicbrainz_strict"),
+                    RenamedProvider(lenient, "musicbrainz_lenient"),
+                ),
+            ),
+            FakeEnrichmentCache(),
+            EnrichmentConfig(enableIdentityResolution = false),
+            mergers = emptyList(),
+        )
+
+        // When - GENRE is enriched, so the strict provider declines and the chain falls through
+        val results = engine.enrich(ALBUM, setOf(EnrichmentType.GENRE))
+
+        // Then - the lenient provider answered on its own floor, not the strict one's
+        assertEquals(listOf("alternative rock"), genresOf(results))
+    }
+
+    /**
+     * One provider under another id, so two instances of a fixed-id provider can both register.
+     * Everything but [id] is the delegate's, including the `this` its enricher memo keys on.
+     */
+    private class RenamedProvider(
+        delegate: EnrichmentProvider,
+        override val id: String,
+    ) : EnrichmentProvider by delegate
+
+    /**
+     * The same invariant at the seam itself. [EnrichmentProvider] states no `equals`/`hashCode`
+     * contract, so a consumer's provider written as a `data class` hands two differently-configured
+     * instances one key without either of them ever repeating an id.
      */
     @Test
     fun `two provider instances alike in every field still get their own slot`() {

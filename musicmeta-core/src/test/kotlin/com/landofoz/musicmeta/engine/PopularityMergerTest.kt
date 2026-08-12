@@ -80,7 +80,7 @@ class PopularityMergerTest {
                 signals = listOf(
                     PopularitySignal(
                         "musicbrainz", PopularitySignalKind.RATING, 4.0,
-                        normalized = 0.8f, sampleSize = 12,
+                        normalized = 0.75f, sampleSize = 12,
                     ),
                 ),
             ),
@@ -114,7 +114,7 @@ class PopularityMergerTest {
                 signals = listOf(
                     PopularitySignal(
                         "musicbrainz", PopularitySignalKind.RATING, 4.0,
-                        normalized = 0.8f, sampleSize = 12,
+                        normalized = 0.75f, sampleSize = 12,
                     ),
                 ),
             ),
