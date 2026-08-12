@@ -7,8 +7,12 @@ import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
+import com.landofoz.musicmeta.engine.ProviderCallScope
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * Last.fm enrichment provider. Supplies similar artists, genre tags,
@@ -24,6 +28,36 @@ class LastFmProvider(
         this({ apiKey }, httpClient, rateLimiter)
 
     private val api = LastFmApi(apiKeyProvider, httpClient, rateLimiter)
+
+    /**
+     * `artist.getinfo` for [name], memoized for the life of one [ProviderCallScope] — GENRE,
+     * ARTIST_BIO and ARTIST_POPULARITY all read this same response. Name-keyed rather than one
+     * slot per call: a call resolving more than one artist (a future SIMILAR_ARTISTS use) must not
+     * share one artist's answer with another's. A miss is memoized too, so an unknown artist costs
+     * one request instead of one per type; called outside an engine, there is no scope to memoize
+     * in and every call hits upstream.
+     */
+    private suspend fun getArtistInfo(name: String): LastFmArtistInfo? {
+        val memo = currentCoroutineContext()[ProviderCallScope]?.slot(this, ::ArtistInfoMemo)
+            ?: return api.getArtistInfo(name)
+        return memo.get(name) { api.getArtistInfo(name) }
+    }
+
+    /** One `artist.getinfo` answer per artist name for this call, a miss included. */
+    private class ArtistInfoMemo {
+        private val entries = mutableMapOf<String, LastFmArtistInfo?>()
+        private val fetched = mutableSetOf<String>()
+        private val mutex = Mutex()
+
+        suspend fun get(name: String, fetch: suspend () -> LastFmArtistInfo?): LastFmArtistInfo? =
+            mutex.withLock {
+                if (name in fetched) return@withLock entries[name]
+                fetch().also {
+                    entries[name] = it
+                    fetched += name
+                }
+            }
+    }
 
     override val id = "lastfm"
     override val displayName = "Last.fm"
@@ -110,7 +144,7 @@ class LastFmProvider(
         request: EnrichmentRequest.ForArtist,
         type: EnrichmentType,
     ): EnrichmentResult {
-        val tags = api.getArtistTopTags(request.name)
+        val tags = getArtistInfo(request.name)?.tags.orEmpty()
         if (tags.isEmpty()) return EnrichmentResult.NotFound(type, id)
         return success(LastFmMapper.toGenre(tags), type)
     }
@@ -119,7 +153,7 @@ class LastFmProvider(
         request: EnrichmentRequest.ForArtist,
         type: EnrichmentType,
     ): EnrichmentResult {
-        val info = api.getArtistInfo(request.name)
+        val info = getArtistInfo(request.name)
             ?: return EnrichmentResult.NotFound(type, id)
         val bio = info.bio ?: return EnrichmentResult.NotFound(type, id)
         return success(LastFmMapper.toBiography(bio), type)
@@ -147,7 +181,7 @@ class LastFmProvider(
         request: EnrichmentRequest.ForArtist,
         type: EnrichmentType,
     ): EnrichmentResult {
-        val info = api.getArtistInfo(request.name)
+        val info = getArtistInfo(request.name)
             ?: return EnrichmentResult.NotFound(type, id)
         return success(LastFmMapper.toPopularity(info), type)
     }

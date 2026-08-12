@@ -5,9 +5,11 @@ import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
+import com.landofoz.musicmeta.engine.ProviderCallScope
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.testutil.FakeHttpClient
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -201,6 +203,62 @@ class LastFmProviderTest {
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.Popularity
         assertEquals(null, data.listenerCount)
         assertEquals(null, data.listenCount)
+    }
+
+    // artist.getinfo memoization (ProviderCallScope)
+
+    @Test
+    fun `GENRE, ARTIST_BIO and ARTIST_POPULARITY share one artist getinfo request`() = runTest {
+        // Given - Last.fm returns one artist info response, and a call-scoped provider call
+        httpClient.givenJsonResponse("artist.getinfo", ARTIST_INFO_JSON)
+        val request = EnrichmentRequest.forArtist(name = "Radiohead")
+
+        // When - all three types are resolved inside the same ProviderCallScope
+        withContext(ProviderCallScope()) {
+            provider.enrich(request, EnrichmentType.GENRE)
+            provider.enrich(request, EnrichmentType.ARTIST_BIO)
+            provider.enrich(request, EnrichmentType.ARTIST_POPULARITY)
+        }
+
+        // Then - one HTTP request served all three types, not one per type
+        assertEquals(1, httpClient.requestedUrls.count { it.contains("artist.getinfo") })
+    }
+
+    @Test
+    fun `forceRefresh reaches upstream because the memo does not survive the call it was filled in`() = runTest {
+        // Given - one call that resolved GENRE, filling that call's memo
+        httpClient.givenJsonResponse("artist.getinfo", ARTIST_INFO_JSON)
+        val request = EnrichmentRequest.forArtist(name = "Radiohead")
+        withContext(ProviderCallScope()) {
+            provider.enrich(request, EnrichmentType.GENRE)
+        }
+
+        // When - a second, separate call (a consumer's forceRefresh) resolves GENRE again
+        withContext(ProviderCallScope()) {
+            provider.enrich(request, EnrichmentType.GENRE)
+        }
+
+        // Then - the second call issued its own request rather than reusing the first call's memo
+        assertEquals(2, httpClient.requestedUrls.count { it.contains("artist.getinfo") })
+    }
+
+    @Test
+    fun `an unknown artist's three types cost one request, the miss memoized too`() = runTest {
+        // Given - no artist.getinfo response configured, so Last.fm answers every request 404
+        val request = EnrichmentRequest.forArtist(name = "Nonexistent")
+
+        // When - all three types are resolved inside the same ProviderCallScope
+        val results = withContext(ProviderCallScope()) {
+            listOf(
+                provider.enrich(request, EnrichmentType.GENRE),
+                provider.enrich(request, EnrichmentType.ARTIST_BIO),
+                provider.enrich(request, EnrichmentType.ARTIST_POPULARITY),
+            )
+        }
+
+        // Then - all three are NotFound, and the miss cost one request for the call, not one per type
+        assertTrue(results.all { it is EnrichmentResult.NotFound })
+        assertEquals(1, httpClient.requestedUrls.count { it.contains("artist.getinfo") })
     }
 
     @Test
