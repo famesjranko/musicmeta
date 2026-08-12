@@ -119,6 +119,10 @@ private fun warmUp(engine: EnrichmentEngine) {
 }
 
 private fun handleEnrich(exchange: HttpExchange, engine: EnrichmentEngine) {
+    if (exchange.requestMethod != "GET") {
+        exchange.respondJson(405, ApiError("GET required"))
+        return
+    }
     try {
         val params = parseQuery(exchange.requestURI.rawQuery)
         val kind = params["kind"]
@@ -400,6 +404,10 @@ private suspend fun fetchArtistRadioSection(engine: EnrichmentEngine, artist: St
  * so there is nothing to search for.
  */
 private fun handleSearch(exchange: HttpExchange, engine: EnrichmentEngine) {
+    if (exchange.requestMethod != "GET") {
+        exchange.respondJson(405, ApiError("GET required"))
+        return
+    }
     try {
         val params = parseQuery(exchange.requestURI.rawQuery)
         val kind = params["kind"]
@@ -445,6 +453,10 @@ private fun handleSearch(exchange: HttpExchange, engine: EnrichmentEngine) {
 }
 
 private fun handlePreview(exchange: HttpExchange, engine: EnrichmentEngine) {
+    if (exchange.requestMethod != "GET") {
+        exchange.respondJson(405, ApiError("GET required"))
+        return
+    }
     try {
         val params = parseQuery(exchange.requestURI.rawQuery)
         val title = params["title"]?.trim().orEmpty()
@@ -473,6 +485,10 @@ private fun handlePreview(exchange: HttpExchange, engine: EnrichmentEngine) {
  * records under the same id. Reads state the engine already holds, so nothing here suspends.
  */
 private fun handleProviders(exchange: HttpExchange, engine: EnrichmentEngine) {
+    if (exchange.requestMethod != "GET") {
+        exchange.respondJson(405, ApiError("GET required"))
+        return
+    }
     try {
         val rows = engine.getProviders().map { info ->
             ProviderRow(
