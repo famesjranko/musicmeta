@@ -152,8 +152,10 @@ internal class MusicBrainzEnricher(
         val mbid = request.identifiers.musicBrainzId
         if (mbid != null) {
             when (val lookup = memoizedRelease(mbid)) {
-                is MusicBrainzLookup.Found ->
+                is MusicBrainzLookup.Found -> {
+                    offerNames(lookup.value.title, lookup.value.artistCredit)
                     return buildAlbumResult(lookup.value, type, ConfidenceCalculator.idBasedLookup())
+                }
                 MusicBrainzLookup.Unreadable -> return EnrichmentResult.NotFound(type, providerId)
                 // Absent: the identifier names no release, so the request resolves by name below,
                 // exactly as one carrying no identifier does. See [MusicBrainzLookup].
@@ -235,8 +237,10 @@ internal class MusicBrainzEnricher(
         val mbid = request.identifiers.musicBrainzId
         if (mbid != null) {
             when (val lookup = memoizedArtist(mbid)) {
-                is MusicBrainzLookup.Found ->
+                is MusicBrainzLookup.Found -> {
+                    offerNames(lookup.value.name, null)
                     return buildArtistResult(lookup.value, type, ConfidenceCalculator.idBasedLookup())
+                }
                 MusicBrainzLookup.Unreadable -> return EnrichmentResult.NotFound(type, providerId)
                 // Absent: the identifier names no artist, so the request resolves by name below,
                 // exactly as one carrying no identifier does. See [MusicBrainzLookup].
@@ -405,6 +409,7 @@ internal class MusicBrainzEnricher(
         val json = memoizedRecording(mbid).valueOrNull() ?: return null
         val recording = MusicBrainzParser.parseLookupRecording(json, request.album)
             ?: return EnrichmentResult.NotFound(type, providerId)
+        offerNames(recording.title, recording.artistCredit)
         return trackResult(recording, type, ConfidenceCalculator.idBasedLookup())
     }
 
@@ -448,24 +453,21 @@ internal class MusicBrainzEnricher(
         fuzzy = { memoizedFuzzyRecordings(request) },
     ) { it.toCandidate() }
 
-    private suspend fun trackResult(
+    private fun trackResult(
         recording: MusicBrainzRecording,
         type: EnrichmentType,
         confidence: Float,
-    ): EnrichmentResult.Success {
-        offerNames(recording.title, recording.artistCredit)
-        return EnrichmentResult.Success(
-            type = type,
-            data = if (type == EnrichmentType.TRACK_METADATA) {
-                MusicBrainzMapper.toTrackMetadataDetails(recording)
-            } else {
-                MusicBrainzMapper.toTrackMetadata(recording)
-            },
-            provider = providerId,
-            confidence = confidence,
-            resolvedIdentifiers = MusicBrainzMapper.toTrackIdentifiers(recording),
-        )
-    }
+    ): EnrichmentResult.Success = EnrichmentResult.Success(
+        type = type,
+        data = if (type == EnrichmentType.TRACK_METADATA) {
+            MusicBrainzMapper.toTrackMetadataDetails(recording)
+        } else {
+            MusicBrainzMapper.toTrackMetadata(recording)
+        },
+        provider = providerId,
+        confidence = confidence,
+        resolvedIdentifiers = MusicBrainzMapper.toTrackIdentifiers(recording),
+    )
 
     /**
      * Credits are read off a recording lookup and never off a search, so every miss here is bare —
@@ -502,7 +504,6 @@ internal class MusicBrainzEnricher(
         type: EnrichmentType,
         confidence: Float,
     ): EnrichmentResult.Success {
-        offerNames(release.title, release.artistCredit)
         val (wikidataId, wikipediaTitle) = resolveReleaseGroupWikiLinks(release.releaseGroupId)
         return EnrichmentResult.Success(
             type = type,
@@ -550,26 +551,28 @@ internal class MusicBrainzEnricher(
         }
     }
 
-    private suspend fun buildArtistResult(
+    private fun buildArtistResult(
         artist: MusicBrainzArtist,
         type: EnrichmentType,
         confidence: Float,
-    ): EnrichmentResult.Success {
-        offerNames(artist.name, null)
-        return EnrichmentResult.Success(
-            type = type,
-            data = MusicBrainzMapper.toArtistMetadata(artist),
-            provider = providerId,
-            confidence = confidence,
-            resolvedIdentifiers = MusicBrainzMapper.toArtistIdentifiers(artist),
-        )
-    }
+    ): EnrichmentResult.Success = EnrichmentResult.Success(
+        type = type,
+        data = MusicBrainzMapper.toArtistMetadata(artist),
+        provider = providerId,
+        confidence = confidence,
+        resolvedIdentifiers = MusicBrainzMapper.toArtistIdentifiers(artist),
+    )
 
     /**
-     * Hands the engine the names of the entity this call resolved, for the request fields a caller
-     * holding only an identifier left blank ([ResolvedEntityNames]). The artist is MusicBrainz's
-     * `artist-credit` joined with its own join phrases — "Queen & David Bowie", not "Queen" — which
-     * is the string a name-search provider is asked with.
+     * Hands the engine the names of the entity a caller's **identifier** named, for the request
+     * fields a caller holding only that identifier left blank ([ResolvedEntityNames]). The artist is
+     * MusicBrainz's `artist-credit` joined with its own join phrases — "Queen & David Bowie", not
+     * "Queen" — which is the string a name-search provider is asked with.
+     *
+     * Offered from the three lookup paths and never from a search. A search hit is what a *name*
+     * resolved to, so backfilling from one would rewrite the request with whatever an under-specified
+     * query happened to rank first — for "Under Pressure" with no artist, a Joss Stone cover. The
+     * caller's own names are the better answer in that case, and they are already on the request.
      */
     private suspend fun offerNames(title: String?, artist: String?) {
         currentCoroutineContext()[ResolvedEntityNames]?.offer(title, artist)
