@@ -32,6 +32,17 @@ import com.landofoz.musicmeta.provider.wikipedia.WikipediaProvider
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
+private const val TAG = "EnrichmentEngine"
+
+/**
+ * Providers whose published policy requires contact information in the User-Agent.
+ * `ProviderPolicies["wikipedia"].commercialUseNote` carries the Wikimedia clause as data; the
+ * MusicBrainz requirement is quoted in `docs/providers.md`'s User-Agent section, not in its policy
+ * entry. Wikidata is here as a Wikimedia-hosted API under that same Wikimedia policy — an
+ * extension of the Wikipedia evidence rather than a clause cited for Wikidata itself.
+ */
+private val CONTACT_REQUIRING_PROVIDERS = setOf("musicbrainz", "wikipedia", "wikidata")
+
 interface EnrichmentEngine {
 
     /**
@@ -104,6 +115,13 @@ interface EnrichmentEngine {
         private var cache: EnrichmentCache? = null
         private var httpClient: HttpClient? = null
         private var config: EnrichmentConfig = EnrichmentConfig()
+        private var contact: String? = null
+
+        /**
+         * The User-Agent the client [withDefaultProviders] built carries, or null when it built
+         * none. What [build] warns from: the config it composes is not what the wire sends.
+         */
+        private var defaultProvidersUserAgent: String? = null
         private var logger: EnrichmentLogger = EnrichmentLogger.NoOp
         private var apiKeyConfig: ApiKeyConfig? = null
         private val mergers = mutableListOf<com.landofoz.musicmeta.engine.ResultMerger>(
@@ -124,6 +142,30 @@ interface EnrichmentEngine {
         fun cache(cache: EnrichmentCache) = apply { this.cache = cache }
         fun httpClient(client: HttpClient) = apply { this.httpClient = client }
         fun config(config: EnrichmentConfig) = apply { this.config = config }
+
+        /**
+         * A URL or email address a provider's operators can reach you at, folded into the
+         * User-Agent as `MusicEnrichmentEngine/1.0 ( contact )`.
+         *
+         * MusicBrainz and Wikimedia both require the User-Agent to carry contact information;
+         * without it MusicBrainz throttles you against a shared anonymous pool and Wikimedia may
+         * answer 403. This is the short way to comply — see [EnrichmentConfig.DEFAULT_USER_AGENT].
+         *
+         * **Ignored when [config] carries a User-Agent of its own**, which is then used verbatim:
+         * a caller who writes the whole string owns all of it, contact included. Like
+         * [apiKeys] and [config], read by [withDefaultProviders] when you call it, so it must come
+         * first — call it after and the client is already built with the contactless default, which
+         * [build] warns about. It cannot reach a client passed to [httpClient] at all: set the
+         * User-Agent on that client instead, which [build] also warns about.
+         *
+         * @throws IllegalArgumentException if [contact] is blank, carries a line break (which the
+         *   connection rejects per request), or carries a parenthesis (which closes the User-Agent
+         *   comment the policies read).
+         */
+        fun contact(contact: String) = apply {
+            requireUsableContact(contact)
+            this.contact = contact
+        }
         fun logger(logger: EnrichmentLogger) = apply { this.logger = logger.guarded() }
         fun apiKeys(config: ApiKeyConfig) = apply { this.apiKeyConfig = config }
         fun catalog(provider: CatalogProvider, mode: CatalogFilterMode = CatalogFilterMode.UNFILTERED) = apply {
@@ -133,7 +175,11 @@ interface EnrichmentEngine {
         fun addSynthesizer(synthesizer: CompositeSynthesizer) = apply { synthesizers.add(synthesizer) }
 
         fun withDefaultProviders() = apply {
-            val client = httpClient ?: DefaultHttpClient(config.userAgent)
+            val cfg = effectiveConfig()
+            val client = httpClient ?: DefaultHttpClient(cfg.userAgent).also {
+                // What the wire will carry from here on, whatever a later contact() composes.
+                defaultProvidersUserAgent = cfg.userAgent
+            }
 
             // One limiter per host. RateLimiter holds its mutex across block(), so a shared
             // instance makes unrelated hosts' round-trips sequential; rate limits are per-host
@@ -159,7 +205,7 @@ interface EnrichmentEngine {
             addProvider(WikidataProvider(client, wikidataLimiter))
             addProvider(WikipediaProvider(client, wikipediaLimiter, wikidataLimiter))
             addProvider(DeezerProvider(client, deezerLimiter,
-                radioLimit = config.radioLimit))
+                radioLimit = cfg.radioLimit))
             val deezerApi = DeezerApi(client, deezerLimiter)
             addProvider(SimilarAlbumsProvider(deezerApi))
             addProvider(ITunesProvider(client)) // its own RateLimiter(3000) by constructor default
@@ -167,7 +213,7 @@ interface EnrichmentEngine {
                 httpClient = client,
                 rateLimiter = listenBrainzLimiter,
                 authToken = apiKeyConfig?.listenBrainzToken,
-                config = config,
+                config = cfg,
             ))
             addProvider(LrcLibProvider(client, lrcLibLimiter))
 
@@ -187,15 +233,68 @@ interface EnrichmentEngine {
         }
 
         fun build(): EnrichmentEngine {
-            val registry = ProviderRegistry(providers, config.priorityOverrides, logger)
+            val cfg = effectiveConfig()
+            warnAboutUserAgentOnTheWire(cfg)
+            val registry = ProviderRegistry(providers, cfg.priorityOverrides, logger)
             return DefaultEnrichmentEngine(
                 registry = registry,
                 cache = cache ?: InMemoryEnrichmentCache(),
-                config = config,
+                config = cfg,
                 logger = logger,
                 mergers = mergers.toList(),
                 synthesizers = synthesizers.toList(),
             )
+        }
+
+        /**
+         * The config as the engine and its providers see it: [contact] folded into the User-Agent,
+         * unless the caller supplied a User-Agent of their own.
+         */
+        private fun effectiveConfig(): EnrichmentConfig {
+            val contact = this.contact ?: return config
+            if (config.userAgent != EnrichmentConfig.DEFAULT_USER_AGENT) return config
+            return config.copy(userAgent = EnrichmentConfig.userAgentWithContact(contact))
+        }
+
+        /**
+         * At most one warning per condition per `build()`, so a consumer hears it at startup rather
+         * than once per request. Read off what the wire will carry rather than off the composed
+         * config, because the two ways to reach a provider with a contactless User-Agent while
+         * believing otherwise — composing one after [withDefaultProviders] has already built the
+         * client, and composing one for a client [httpClient] supplied — are exactly the two a
+         * config-only check reads as compliant.
+         */
+        private fun warnAboutUserAgentOnTheWire(cfg: EnrichmentConfig) {
+            val affected = providers.map { it.id }.filter { it in CONTACT_REQUIRING_PROVIDERS }
+            if (affected.isEmpty()) return
+            if (cfg.userAgent == EnrichmentConfig.DEFAULT_USER_AGENT) {
+                logger.warn(
+                    TAG,
+                    "User-Agent \"${EnrichmentConfig.DEFAULT_USER_AGENT}\" carries no contact information, " +
+                        "which the policies of these registered providers require " +
+                        "(${affected.joinToString(", ")}): MusicBrainz throttles anonymous user agents " +
+                        "against one shared pool and Wikimedia may answer 403. Pass a contact URL or email " +
+                        "to EnrichmentEngine.Builder.contact(), or set EnrichmentConfig.userAgent.",
+                )
+            } else if (defaultProvidersUserAgent == EnrichmentConfig.DEFAULT_USER_AGENT) {
+                logger.warn(
+                    TAG,
+                    "withDefaultProviders() built the HTTP client before the User-Agent was set, so the " +
+                        "wire still carries the contactless default " +
+                        "\"${EnrichmentConfig.DEFAULT_USER_AGENT}\" and \"${cfg.userAgent}\" reaches no " +
+                        "provider (${affected.joinToString(", ")} require contact information). Call " +
+                        "contact() before withDefaultProviders().",
+                )
+            }
+            if (httpClient != null && contact != null) {
+                logger.warn(
+                    TAG,
+                    "contact() cannot alter a caller-supplied client's User-Agent: the client passed to " +
+                        "httpClient() sends whatever it was built with, so \"$contact\" reaches no " +
+                        "provider (${affected.joinToString(", ")} require contact information). Set the " +
+                        "User-Agent on that client — DefaultHttpClient takes it as its first argument.",
+                )
+            }
         }
     }
 }

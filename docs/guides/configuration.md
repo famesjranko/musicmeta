@@ -8,8 +8,9 @@ val config = EnrichmentConfig(
     // ID-based lookups score 1.0, fuzzy searches 0.6-0.8.
     minConfidence = 0.6f,
 
-    // User-Agent header for all HTTP requests.
-    // MusicBrainz and Wikimedia require a descriptive value.
+    // User-Agent header for all HTTP requests. MusicBrainz and Wikimedia
+    // require it to carry contact information; set it here to own the whole
+    // string, or use Builder.contact() to fill only the contact part.
     userAgent = "MyApp/1.0 (contact@example.com)",
 
     // Auto-resolve MBIDs via MusicBrainz before fan-out. Default: true.
@@ -110,13 +111,26 @@ Wikimedia throttle for.
 ```kotlin
 val engine = EnrichmentEngine.Builder()
     .apiKeys(ApiKeyConfig(lastFmKey = "..."))
-    .config(EnrichmentConfig(userAgent = "MyApp/1.0"))
-    .withDefaultProviders()  // last: consumes the keys and config set above
+    .contact("https://example.com/myapp")
+    .withDefaultProviders()  // last: consumes the keys, contact and config set above
     .build()
 ```
 
-Everything else on `EnrichmentConfig` is read at `build()` time, so only `userAgent` and `radioLimit`
-are order-sensitive. Ordering `withDefaultProviders()` last is the rule that holds for all of them.
+Everything else on `EnrichmentConfig` is read at `build()` time, so only `userAgent`, `contact` and
+`radioLimit` are order-sensitive. Ordering `withDefaultProviders()` last is the rule that holds for
+all of them.
+
+## Contact information in the User-Agent
+
+`contact()` takes a URL or email address and composes the User-Agent MusicBrainz and Wikimedia ask
+for: `MusicEnrichmentEngine/1.0 ( https://example.com/myapp )`. It is the shortest route to
+compliance and the one to prefer.
+
+A `userAgent` set on `EnrichmentConfig` wins outright and `contact()` is then ignored — a caller who
+writes the whole string owns all of it, contact included. Supplying neither logs one warning at
+`build()` when MusicBrainz, Wikipedia or Wikidata is registered. What the two policies actually
+require, and what they do when you ignore them:
+[providers.md](../providers.md#user-agent-and-contact-information).
 
 **Manual wiring** gives you full control over which providers are included and how they are configured:
 

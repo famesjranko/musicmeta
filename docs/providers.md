@@ -263,6 +263,43 @@ this table's row plus, for Last.fm, Discogs, iTunes and Wikipedia, the notice te
 merged result names a merger, not an upstream, so the join key is each item's `sources` list
 (`GenreTag`, `SimilarArtist`, `SimilarTrack`, `TopTrack`) looked up in the registry.
 
+## User-Agent and contact information
+
+Two of the shipped providers' policies require the User-Agent to identify a human. Read
+2026-08-12, same caveats as the table above.
+
+**MusicBrainz**: "you must have a meaningful user-agent string" — "there needs to be enough
+information in the User-Agent string for us to contact the maintainers". Suggested form
+`Application name/<version> ( contact-url )`. Requests without it are treated as anonymous and
+share one throttled pool, alongside the per-IP limit of roughly one request per second.
+**Wikimedia** (Wikipedia and Wikidata): the policy requires `<client name>/<version> (<contact
+information>)`, and generic user agents "may be blocked" with a 403.
+
+musicmeta ships `EnrichmentConfig.DEFAULT_USER_AGENT = "MusicEnrichmentEngine/1.0"`, which meets
+neither. The default is kept so zero-config still runs, not because it complies: a consumer who
+leaves it is the anonymous, blockable case above, on their own IP.
+
+Two ways to comply, and the first is preferred:
+
+```kotlin
+EnrichmentEngine.Builder().contact("https://example.com/myapp")   // MusicEnrichmentEngine/1.0 ( https://example.com/myapp )
+EnrichmentEngine.Builder().config(EnrichmentConfig(userAgent = "MyApp/1.0 (me@example.com)"))
+```
+
+A `userAgent` set on the config wins and `contact()` is then ignored. Supplying neither logs one
+warning through the engine's `EnrichmentLogger` at `build()` time, when any of `musicbrainz`,
+`wikipedia` or `wikidata` is registered — once per engine, never per request.
+
+`build()` warns from what the wire will carry, so the two ways to compose a compliant string that
+never reaches a provider are warned about too, once each:
+
+- `contact()` called *after* `withDefaultProviders()`, which already built the client with the
+  contactless default. Call `contact()` first.
+- a client passed to `httpClient()`, which `contact()` cannot reach. Set the User-Agent on that
+  client — `DefaultHttpClient` takes it as its first constructor argument.
+
+`ProviderPolicies["wikipedia"].commercialUseNote` carries the Wikimedia clause as data.
+
 ## Rate limiting
 
 `withDefaultProviders()` builds **one `RateLimiter` per host**, as `RateLimiter`'s KDoc requires.
