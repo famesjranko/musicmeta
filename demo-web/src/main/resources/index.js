@@ -76,7 +76,7 @@ function syncArtistField() {
   kindTabs.forEach((tab) => {
     const active = tab.dataset.kind === currentKind;
     tab.classList.toggle('active', active);
-    tab.setAttribute('aria-selected', String(active));
+    tab.setAttribute('aria-pressed', String(active));
     tab.tabIndex = active ? 0 : -1;
   });
 }
@@ -97,8 +97,16 @@ tabsEl.addEventListener('click', (e) => {
   if (tab) selectKind(tab.dataset.kind);
 });
 
-// Arrow keys move between tabs and take focus with them, as a tablist is expected to.
+// Arrow keys move between the buttons and take focus with them, as a roving tabindex group is
+// expected to. Home/End jump straight to the first/last button.
 tabsEl.addEventListener('keydown', (e) => {
+  if (e.key === 'Home' || e.key === 'End') {
+    e.preventDefault();
+    const target = kindTabs[e.key === 'Home' ? 0 : kindTabs.length - 1];
+    selectKind(target.dataset.kind);
+    target.focus();
+    return;
+  }
   const step = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
   if (!step) return;
   e.preventDefault();
@@ -182,6 +190,7 @@ document.getElementById('examples').addEventListener('click', (e) => {
 
 document.getElementById('query-form').addEventListener('submit', (e) => {
   e.preventDefault();
+  clearCandidates();
   runQuery();
 });
 
@@ -332,9 +341,9 @@ function pickCandidate(hit) {
   nameEl.value = hit.title;
   if (currentKind !== 'artist' && hit.artist) artistEl.value = hit.artist;
   saveValues(currentKind);
-  clearCandidates();
 
   if (hit.mbid) {
+    clearCandidates();
     runQuery(false, false, { kind: 'mbid', name: hit.mbid });
     return;
   }
@@ -344,6 +353,7 @@ function pickCandidate(hit) {
     statusEl.textContent = 'That match carries no artist — type one, then hit Enrich.';
     return;
   }
+  clearCandidates();
   runQuery(false, false, {
     kind: currentKind,
     name: nameEl.value.trim(),

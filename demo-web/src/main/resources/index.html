@@ -23,11 +23,11 @@
     <p>Live calls into the published library — enriches from up to 11 real music-metadata providers and merges the results.</p>
   </header>
   <main>
-    <div id="kind-tabs" class="kind-tabs" role="tablist" aria-label="What to look up">
-      <button type="button" role="tab" data-kind="artist" aria-selected="true" tabindex="0">Artist</button>
-      <button type="button" role="tab" data-kind="album" aria-selected="false" tabindex="-1">Album</button>
-      <button type="button" role="tab" data-kind="track" aria-selected="false" tabindex="-1">Track</button>
-      <button type="button" role="tab" data-kind="mbid" aria-selected="false" tabindex="-1">MBID</button>
+    <div id="kind-tabs" class="kind-tabs" aria-label="What to look up">
+      <button type="button" data-kind="artist" aria-pressed="true" tabindex="0">Artist</button>
+      <button type="button" data-kind="album" aria-pressed="false" tabindex="-1">Album</button>
+      <button type="button" data-kind="track" aria-pressed="false" tabindex="-1">Track</button>
+      <button type="button" data-kind="mbid" aria-pressed="false" tabindex="-1">MBID</button>
     </div>
     <form id="query-form">
       <div class="smartbox">
