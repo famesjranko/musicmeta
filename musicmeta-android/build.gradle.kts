@@ -40,6 +40,12 @@ android {
             isIncludeAndroidResources = true
         }
     }
+
+    // Exported Room schemas as unit-test assets, so MigrationTestHelper can build a database
+    // at an old version and verify a real migration against it, not just the ORM's current shape.
+    sourceSets.getByName("test") {
+        assets.srcDirs("$projectDir/schemas")
+    }
 }
 
 dependencies {

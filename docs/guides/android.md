@@ -21,10 +21,8 @@ Room-backed persistent cache that survives app restarts. Uses `kotlinx.serializa
 ### Manual setup (without Hilt)
 
 ```kotlin
-val db = Room.databaseBuilder(context, EnrichmentCacheDatabase::class.java, "enrichment_cache.db")
-    .addMigrations(EnrichmentCacheDatabase.MIGRATION_1_2)
-    .build()
-val cache = RoomEnrichmentCache(db.enrichmentCacheDao())
+val db = EnrichmentCacheDatabase.create(context, "enrichment_cache.db")
+val cache = RoomEnrichmentCache(db.enrichmentCacheDao(), db.negativeCacheDao())
 
 val engine = EnrichmentEngine.Builder()
     .withDefaultProviders()
@@ -33,17 +31,34 @@ val engine = EnrichmentEngine.Builder()
     .build()
 ```
 
+`EnrichmentCacheDatabase.create()` registers every migration for you, so it opens an on-device v1
+or v2 file in place instead of crashing with "migration required but not found". If you need your
+own `Room.databaseBuilder` — a different `SupportSQLiteOpenHelper.Factory`, callbacks, and so on —
+register every migration yourself, as shown in the two subsections below.
+
 ### MIGRATION_1_2
 
-If you used a previous version (database version 1), apply the migration to add identity resolution columns:
+If you used a previous version (database version 1), this migration adds identity resolution columns:
 
 ```kotlin
 Room.databaseBuilder(context, EnrichmentCacheDatabase::class.java, "enrichment_cache.db")
-    .addMigrations(EnrichmentCacheDatabase.MIGRATION_1_2)
+    .addMigrations(EnrichmentCacheDatabase.MIGRATION_1_2, EnrichmentCacheDatabase.MIGRATION_2_3)
     .build()
 ```
 
 The migration adds `identity_match`, `identity_match_score`, and `resolved_ids_json` columns to the cache table.
+
+### MIGRATION_2_3
+
+If you used a previous version (database version 2), this migration adds the `negative_cache`
+table `RoomEnrichmentCache` uses to cache a confident "providers had nothing" answer. Additive —
+it touches nothing else, and existing `enrichment_cache` rows are untouched.
+
+```kotlin
+Room.databaseBuilder(context, EnrichmentCacheDatabase::class.java, "enrichment_cache.db")
+    .addMigrations(EnrichmentCacheDatabase.MIGRATION_1_2, EnrichmentCacheDatabase.MIGRATION_2_3)
+    .build()
+```
 
 ### Cleaning up expired entries
 
@@ -66,6 +81,7 @@ If your app uses Hilt, the library provides a ready-made module that wires up Ro
 // It provides:
 //   - EnrichmentCacheDatabase (singleton)
 //   - EnrichmentCacheDao (singleton)
+//   - NegativeCacheDao (singleton)
 //   - RoomEnrichmentCache (singleton)
 //
 // Database name: "enrichment_cache.db"

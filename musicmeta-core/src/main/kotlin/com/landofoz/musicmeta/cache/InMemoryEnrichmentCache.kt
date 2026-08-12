@@ -13,6 +13,9 @@ class InMemoryEnrichmentCache(
 
     private val mutex = Mutex()
     private val entries = LinkedHashMap<String, CacheEntry>(maxEntries, 0.75f, true)
+
+    // Kept apart from `entries` so no Success-typed read can ever see a NotFound.
+    private val negativeEntries = LinkedHashMap<String, NegativeEntry>(maxEntries, 0.75f, true)
     private val manualSelections = mutableSetOf<String>()
 
     override suspend fun get(entityKey: String, type: EnrichmentType): EnrichmentResult.Success? = mutex.withLock {
@@ -36,10 +39,35 @@ class InMemoryEnrichmentCache(
         }
     }
 
+    override suspend fun getNegative(entityKey: String, type: EnrichmentType): EnrichmentResult.NotFound? =
+        mutex.withLock {
+            val key = cacheKey(entityKey, type)
+            val entry = negativeEntries[key] ?: return null
+            if (clock() > entry.expiresAt) { return null }
+            entry.result
+        }
+
+    override suspend fun putNegative(
+        entityKey: String,
+        type: EnrichmentType,
+        result: EnrichmentResult.NotFound,
+        ttlMs: Long,
+    ) {
+        mutex.withLock {
+            negativeEntries[cacheKey(entityKey, type)] = NegativeEntry(result, clock() + ttlMs)
+            while (negativeEntries.size > maxEntries) negativeEntries.remove(negativeEntries.keys.first())
+        }
+    }
+
     override suspend fun invalidate(entityKey: String, type: EnrichmentType?) {
         mutex.withLock {
-            if (type != null) entries.remove(cacheKey(entityKey, type))
-            else entries.keys.removeAll { it.startsWith("$entityKey:") }
+            if (type != null) {
+                entries.remove(cacheKey(entityKey, type))
+                negativeEntries.remove(cacheKey(entityKey, type))
+            } else {
+                entries.keys.removeAll { it.startsWith("$entityKey:") }
+                negativeEntries.keys.removeAll { it.startsWith("$entityKey:") }
+            }
         }
     }
 
@@ -51,8 +79,11 @@ class InMemoryEnrichmentCache(
         mutex.withLock { manualSelections.add(cacheKey(entityKey, type)) }
     }
 
-    override suspend fun clear() { mutex.withLock { entries.clear(); manualSelections.clear() } }
+    override suspend fun clear() {
+        mutex.withLock { entries.clear(); negativeEntries.clear(); manualSelections.clear() }
+    }
 
     private fun cacheKey(entityKey: String, type: EnrichmentType) = "$entityKey:$type"
     private data class CacheEntry(val result: EnrichmentResult.Success, val expiresAt: Long)
+    private data class NegativeEntry(val result: EnrichmentResult.NotFound, val expiresAt: Long)
 }

@@ -96,8 +96,11 @@ apiValidation {
         // Nested types are not covered by their outer class, and are matched by their binary name.
         "com.landofoz.musicmeta.android.cache.EnrichmentCacheDao_Impl\$Companion",
         "com.landofoz.musicmeta.android.cache.EnrichmentCacheDatabase_Impl",
+        "com.landofoz.musicmeta.android.cache.NegativeCacheDao_Impl",
+        "com.landofoz.musicmeta.android.cache.NegativeCacheDao_Impl\$Companion",
         "com.landofoz.musicmeta.android.di.HiltEnrichmentModule_ProvideEnrichmentCacheDaoFactory",
         "com.landofoz.musicmeta.android.di.HiltEnrichmentModule_ProvideEnrichmentCacheDatabaseFactory",
+        "com.landofoz.musicmeta.android.di.HiltEnrichmentModule_ProvideNegativeCacheDaoFactory",
         "com.landofoz.musicmeta.android.di.HiltEnrichmentModule_ProvideRoomEnrichmentCacheFactory",
     )
 }

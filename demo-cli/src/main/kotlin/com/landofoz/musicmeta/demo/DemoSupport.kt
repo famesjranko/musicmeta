@@ -65,6 +65,16 @@ class TrackingCache(
     override suspend fun getIncludingExpired(entityKey: String, type: EnrichmentType): EnrichmentResult.Success? =
         delegate.getIncludingExpired(entityKey, type)
 
+    override suspend fun getNegative(entityKey: String, type: EnrichmentType): EnrichmentResult.NotFound? =
+        delegate.getNegative(entityKey, type)
+
+    override suspend fun putNegative(
+        entityKey: String,
+        type: EnrichmentType,
+        result: EnrichmentResult.NotFound,
+        ttlMs: Long,
+    ) = delegate.putNegative(entityKey, type, result, ttlMs)
+
     override suspend fun invalidate(entityKey: String, type: EnrichmentType?) = delegate.invalidate(entityKey, type)
     override suspend fun isManuallySelected(entityKey: String, type: EnrichmentType) =
         delegate.isManuallySelected(entityKey, type)

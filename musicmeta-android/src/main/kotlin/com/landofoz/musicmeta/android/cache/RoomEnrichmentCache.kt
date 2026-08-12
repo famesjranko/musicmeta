@@ -15,6 +15,7 @@ import kotlinx.serialization.json.Json
  */
 class RoomEnrichmentCache(
     private val dao: EnrichmentCacheDao,
+    private val negativeDao: NegativeCacheDao,
     private val clock: () -> Long = System::currentTimeMillis,
     private val logger: EnrichmentLogger = EnrichmentLogger.NoOp,
 ) : EnrichmentCache {
@@ -87,8 +88,41 @@ class RoomEnrichmentCache(
         )
     }
 
+    override suspend fun getNegative(entityKey: String, type: EnrichmentType): EnrichmentResult.NotFound? {
+        val entity = negativeDao.get(entityKey, type.name, clock()) ?: return null
+        val identityMatch = entity.identityMatch?.let {
+            try { IdentityMatch.valueOf(it) } catch (_: Exception) { null }
+        }
+        return EnrichmentResult.NotFound(type = type, provider = entity.provider, identityMatch = identityMatch)
+    }
+
+    override suspend fun putNegative(
+        entityKey: String,
+        type: EnrichmentType,
+        result: EnrichmentResult.NotFound,
+        ttlMs: Long,
+    ) {
+        val now = clock()
+        negativeDao.insert(
+            NegativeCacheEntity(
+                entityKey = entityKey,
+                enrichmentType = type.name,
+                provider = result.provider,
+                identityMatch = result.identityMatch?.name,
+                cachedAt = now,
+                expiresAt = now + ttlMs,
+            ),
+        )
+    }
+
     override suspend fun invalidate(entityKey: String, type: EnrichmentType?) {
-        if (type != null) dao.delete(entityKey, type.name) else dao.deleteAll(entityKey)
+        if (type != null) {
+            dao.delete(entityKey, type.name)
+            negativeDao.delete(entityKey, type.name)
+        } else {
+            dao.deleteAll(entityKey)
+            negativeDao.deleteAll(entityKey)
+        }
     }
 
     override suspend fun isManuallySelected(
@@ -100,10 +134,16 @@ class RoomEnrichmentCache(
         dao.markManual(entityKey, type.name)
     }
 
-    override suspend fun clear() = dao.clearAll()
+    override suspend fun clear() {
+        dao.clearAll()
+        negativeDao.clearAll()
+    }
 
     /** Cleanup expired entries. Call periodically (e.g., from WorkManager). */
-    suspend fun deleteExpired() = dao.deleteExpired(clock())
+    suspend fun deleteExpired() {
+        dao.deleteExpired(clock())
+        negativeDao.deleteExpired(clock())
+    }
 
     private companion object {
         const val TAG = "RoomEnrichmentCache"
