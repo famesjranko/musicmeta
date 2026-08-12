@@ -10,6 +10,7 @@ const NAME_PLACEHOLDERS = {
   artist: 'Artist name (e.g. Radiohead)',
   album: 'Album title (e.g. OK Computer)',
   track: 'Track title (e.g. Karma Police)',
+  mbid: 'MusicBrainz id — artist, release or recording',
 };
 
 // The #name box is reused for three different semantic roles across kinds (artist name / album
@@ -22,8 +23,11 @@ const FIELD_ROLES = {
   artist: { name: 'artistName', artist: null, album: null },
   album: { name: 'albumTitle', artist: 'artistName', album: null },
   track: { name: 'trackTitle', artist: 'artistName', album: 'albumTitle' },
+  // One box, one identifier: the app resolves what it names and renders that page, so there is
+  // nothing for the artist or album boxes to hold.
+  mbid: { name: 'mbid', artist: null, album: null },
 };
-const values = { artistName: '', albumTitle: '', trackTitle: '' };
+const values = { artistName: '', albumTitle: '', trackTitle: '', mbid: '' };
 let currentKind = kindEl.value;
 
 // Reads the three boxes' current DOM values into `values`, keyed by the given kind's roles.
@@ -43,7 +47,8 @@ function loadValues(kind) {
 }
 
 function syncArtistField() {
-  artistEl.style.display = kindEl.value === 'artist' ? 'none' : '';
+  const namesOnly = kindEl.value === 'artist' || kindEl.value === 'mbid';
+  artistEl.style.display = namesOnly ? 'none' : '';
   artistEl.placeholder = kindEl.value === 'album' ? 'Artist (required)' : 'Artist (for track)';
   albumEl.style.display = kindEl.value === 'track' ? '' : 'none';
   nameEl.placeholder = NAME_PLACEHOLDERS[kindEl.value] || NAME_PLACEHOLDERS.artist;
@@ -147,8 +152,9 @@ async function runQuery() {
   const name = nameEl.value.trim();
   const artist = artistEl.value.trim();
   const album = albumEl.value.trim();
-  if (!name || (kind !== 'artist' && !artist)) {
-    statusEl.textContent = kind === 'artist' ? 'Enter a name.' : 'Enter both a name and an artist.';
+  const needsArtist = kind !== 'artist' && kind !== 'mbid';
+  if (!name || (needsArtist && !artist)) {
+    statusEl.textContent = needsArtist ? 'Enter both a name and an artist.' : 'Enter a name.';
     statusEl.className = 'err';
     return;
   }

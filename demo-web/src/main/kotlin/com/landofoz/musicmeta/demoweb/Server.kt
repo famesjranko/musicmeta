@@ -1,5 +1,7 @@
 package com.landofoz.musicmeta.demoweb
 
+import com.landofoz.musicmeta.AlbumProfile
+import com.landofoz.musicmeta.ArtistProfile
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentEngine
 import com.landofoz.musicmeta.EnrichmentRequest
@@ -7,9 +9,12 @@ import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentResults
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
+import com.landofoz.musicmeta.MusicBrainzEntityType
 import com.landofoz.musicmeta.TrackPreviewRequest
+import com.landofoz.musicmeta.TrackProfile
 import com.landofoz.musicmeta.albumProfile
 import com.landofoz.musicmeta.artistProfile
+import com.landofoz.musicmeta.discoverMbidEntityType
 import com.landofoz.musicmeta.resolveTrackPreviews
 import com.landofoz.musicmeta.trackProfile
 import com.sun.net.httpserver.HttpExchange
@@ -108,13 +113,13 @@ private fun handleEnrich(exchange: HttpExchange, engine: EnrichmentEngine) {
         // resolves by name regardless.
         val mbid = params["mbid"]?.trim()?.ifBlank { null }
 
-        val valid = kind in setOf("artist", "album", "track") &&
+        val valid = kind in setOf("artist", "album", "track", "mbid") &&
             name.isNotBlank() &&
-            (kind == "artist" || artist.isNotBlank())
+            (kind == "artist" || kind == "mbid" || artist.isNotBlank())
         if (!valid) {
             exchange.respondJson(
                 400,
-                ApiError("kind must be artist|album|track; name (and artist, for album/track) required"),
+                ApiError("kind must be artist|album|track|mbid; name (and artist, for album/track) required"),
             )
             return
         }
@@ -122,6 +127,33 @@ private fun handleEnrich(exchange: HttpExchange, engine: EnrichmentEngine) {
         val started = System.currentTimeMillis()
         val response = runBlocking {
             when (kind) {
+                // The type is an answer, not a question the user should have to answer first: one
+                // identifier goes in, and whichever page it turns out to name comes back. A blank
+                // name is what tells identity resolution to fill it from the entity it resolves.
+                "mbid" -> when (engine.discoverMbidEntityType(name)) {
+                    MusicBrainzEntityType.RECORDING -> TrackProfile(
+                        name, "",
+                        engine.enrich(
+                            EnrichmentRequest.forTrackByMbid(name),
+                            EnrichmentRequest.DEFAULT_TRACK_TYPES,
+                        ),
+                    ).toDemoResponse(System.currentTimeMillis() - started)
+                    MusicBrainzEntityType.RELEASE -> AlbumProfile(
+                        name, "",
+                        engine.enrich(
+                            EnrichmentRequest.forAlbumByMbid(name),
+                            EnrichmentRequest.DEFAULT_ALBUM_TYPES,
+                        ),
+                    ).toDemoResponse(System.currentTimeMillis() - started)
+                    MusicBrainzEntityType.ARTIST -> ArtistProfile(
+                        name,
+                        engine.enrich(
+                            EnrichmentRequest.forArtistByMbid(name),
+                            EnrichmentRequest.DEFAULT_ARTIST_TYPES,
+                        ),
+                    ).toDemoResponse(System.currentTimeMillis() - started)
+                    null -> null
+                }
                 "artist" -> {
                     val profile = engine.artistProfile(name, mbid)
                     val retried = profile.results.retryTransientFailures(
@@ -156,6 +188,12 @@ private fun handleEnrich(exchange: HttpExchange, engine: EnrichmentEngine) {
                             .toDemoResponse(System.currentTimeMillis() - started, radio, album)
                     }
             }
+        }
+        if (response == null) {
+            // An identifier MusicBrainz holds under no entity type. Not an error, and not an
+            // enrichment either — there is no page to render.
+            exchange.respondJson(404, ApiError("MusicBrainz holds no recording, release or artist under that MBID"))
+            return
         }
         exchange.respondJson(200, response)
     } catch (e: Exception) {
