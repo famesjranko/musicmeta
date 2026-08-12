@@ -210,29 +210,26 @@ class ProviderMemoLifetimeTest {
         assertEquals("right1", success.resolvedIdentifiers?.musicBrainzId)
     }
 
+    /**
+     * A registry now refuses two providers sharing an id, so this is asserted against the scope
+     * directly. The slot still has to key on the instance: [EnrichmentProvider] states no
+     * `equals`/`hashCode` contract, so a consumer's provider written as a `data class` hands two
+     * differently-configured instances one key without ever repeating an id.
+     */
     @Test
-    fun `two providers sharing an id each answer with their own configuration`() = runTest {
-        // Given - two MusicBrainz providers alike but for the score floor each accepts, and a hit
-        // only the lower floor will resolve. Identity resolution is off because the strict provider
-        // is also the identity provider, and the suggestions on its NotFound would short-circuit
-        // the fan-out before the lenient one ran.
-        httpClient.givenJsonResponse(RELEASE_SEARCH, searchHit("thin1", score = 80))
+    fun `two provider instances alike in every field still get their own slot`() {
+        // Given - a call scope and two instances a data-class equals could not tell apart
+        val scope = ProviderCallScope()
         val strict = MusicBrainzProvider(httpClient, RateLimiter(0), minMatchScore = 95)
         val lenient = MusicBrainzProvider(httpClient, RateLimiter(0), minMatchScore = 50)
-        val engine = DefaultEnrichmentEngine(
-            ProviderRegistry(listOf(strict, lenient)),
-            FakeEnrichmentCache(),
-            EnrichmentConfig(enableIdentityResolution = false),
-            mergers = emptyList(),
-        )
 
-        // When - GENRE is enriched, so the strict provider declines and the chain falls through
-        val results = engine.enrich(ALBUM, setOf(EnrichmentType.GENRE))
+        // When - each asks the scope for the state it memoizes for this call
+        val strictSlot = scope.slot(strict) { "strict" }
+        val lenientSlot = scope.slot(lenient) { "lenient" }
 
-        // Then - the lenient provider answered on its own floor. Both carry the id "musicbrainz",
-        // so a slot keyed on that would have handed it the enricher the strict one built, and the
-        // floor that enricher was constructed with.
-        assertEquals(listOf("alternative rock"), genresOf(results))
+        // Then - neither was handed whichever filled its slot first
+        assertEquals("strict", strictSlot)
+        assertEquals("lenient", lenientSlot)
     }
 
     @Test

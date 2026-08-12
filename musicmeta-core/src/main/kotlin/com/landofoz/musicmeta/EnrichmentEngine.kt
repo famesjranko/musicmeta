@@ -112,7 +112,14 @@ interface EnrichmentEngine {
         )
         private val synthesizers = mutableListOf<CompositeSynthesizer>(TimelineSynthesizer, GenreAffinityMatcher)
 
-        fun addProvider(provider: EnrichmentProvider) = apply { providers.add(provider) }
+        /** @throws IllegalArgumentException if the id is already registered, or reserved by the engine. */
+        fun addProvider(provider: EnrichmentProvider) = apply {
+            com.landofoz.musicmeta.engine.requireRegistrableProviderId(
+                provider.id,
+                providers.map { it.id },
+            )
+            providers.add(provider)
+        }
         fun cache(cache: EnrichmentCache) = apply { this.cache = cache }
         fun httpClient(client: HttpClient) = apply { this.httpClient = client }
         fun config(config: EnrichmentConfig) = apply { this.config = config }

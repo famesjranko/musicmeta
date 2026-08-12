@@ -30,6 +30,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Breaking Changes
+- `Builder.addProvider` now throws on a duplicate provider id, or one the engine reserves (`engine`, `all_providers`, `no_provider`, `no_merger`, `no_composite_handler`, any `*_merger`): rename yours
+- Duplicate ids previously shared one circuit breaker, so a healthy provider kept a failing twin in rotation; that configuration is now refused at registration rather than silently degrading
 - `GenreTag` gains `curated`, marking MusicBrainz's controlled vocabulary and ranking it first: source-compatible, binary-incompatible until recompile (`copy`/constructor descriptors changed)
 - New `IdentityMatch.UNVERIFIED`: an identity provider throwing or returning `Error`/`RateLimited` now reports as that, not `null`/unstamped confident values; `when`s need a branch
 - `UNVERIFIED` results are excluded from the cache write-back, so a retry after a transient identity failure re-resolves rather than serving the unverified guess for the TTL
