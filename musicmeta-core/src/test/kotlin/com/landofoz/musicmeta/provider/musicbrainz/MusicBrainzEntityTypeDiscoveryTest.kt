@@ -1,0 +1,151 @@
+package com.landofoz.musicmeta.provider.musicbrainz
+
+import com.landofoz.musicmeta.MusicBrainzEntityType
+import com.landofoz.musicmeta.engine.ProviderCallScope
+import com.landofoz.musicmeta.http.RateLimiter
+import com.landofoz.musicmeta.testutil.FakeHttpClient
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Test
+
+/**
+ * What a bare MBID costs to identify, asserted rather than described.
+ *
+ * MusicBrainz has no "what is this id?" endpoint — every lookup is per entity type and the wrong
+ * type answers 404, indistinguishable from the right type answering about an id it does not hold.
+ * So the probe order *is* the cost model, and the request counts below are the thing a caller
+ * budgets against on a 1 req/s limiter.
+ */
+class MusicBrainzEntityTypeDiscoveryTest {
+
+    private val httpClient = FakeHttpClient()
+    private val provider = MusicBrainzProvider(httpClient, RateLimiter(0))
+
+    private fun lookups() = httpClient.requestedUrls.count { it.contains("/ws/2/") }
+
+    @Test
+    fun `a recording mbid is identified by the first probe`() = runTest {
+        // Given - MusicBrainz holds a recording under the identifier
+        httpClient.givenJsonResponse("recording/$RECORDING_MBID", BOHEMIAN_RECORDING)
+
+        // When - the identifier is handed over with no type
+        val type = provider.discoverEntityType(RECORDING_MBID)
+
+        // Then - it is a recording, and recording-first spent one request to say so
+        assertEquals(MusicBrainzEntityType.RECORDING, type)
+        assertEquals(1, lookups())
+    }
+
+    @Test
+    fun `a release mbid costs the recording probe as well as its own`() = runTest {
+        // Given - MusicBrainz holds a release under the identifier and no recording
+        httpClient.givenJsonResponse("release/$RELEASE_MBID", RUSH_RELEASE)
+
+        // When - the identifier is handed over with no type
+        val type = provider.discoverEntityType(RELEASE_MBID)
+
+        // Then - it is a release, found second, at two requests
+        assertEquals(MusicBrainzEntityType.RELEASE, type)
+        assertEquals(2, lookups())
+    }
+
+    @Test
+    fun `an artist mbid is the last type probed`() = runTest {
+        // Given - MusicBrainz holds an artist under the identifier and nothing else
+        httpClient.givenJsonResponse("artist/$ARTIST_MBID", QUEEN_ARTIST)
+
+        // When - the identifier is handed over with no type
+        val type = provider.discoverEntityType(ARTIST_MBID)
+
+        // Then - it is an artist, found third, at three requests
+        assertEquals(MusicBrainzEntityType.ARTIST, type)
+        assertEquals(3, lookups())
+    }
+
+    @Test
+    fun `an identifier MusicBrainz holds nothing under is absent, at the full three requests`() = runTest {
+        // Given - nothing stubbed, so all three lookups answer 404 as MusicBrainz does for a dead id
+        // When - the identifier is handed over with no type
+        val type = provider.discoverEntityType(DEAD_MBID)
+
+        // Then - absence is the answer only after every type has said no
+        assertNull(type)
+        assertEquals(3, lookups())
+    }
+
+    @Test
+    fun `a miss is paid for once for as long as the call lasts`() = runTest {
+        // Given - a call scope, which is what one enrich() installs for its provider memos
+        // When - the same dead identifier is discovered twice inside it
+        val types = withContext(ProviderCallScope()) {
+            listOf(provider.discoverEntityType(DEAD_MBID), provider.discoverEntityType(DEAD_MBID))
+        }
+
+        // Then - both answers are absence, and the second one cost nothing
+        assertEquals(listOf(null, null), types)
+        assertEquals(3, lookups())
+    }
+
+    private companion object {
+        const val RECORDING_MBID = "5cf87954-1402-45f0-bbcf-e957eb332da7"
+        const val RELEASE_MBID = "4ebc64a2-e9cc-43f8-96ac-536212c4c8d4"
+        const val ARTIST_MBID = "0383dadf-2a4e-4d10-a46a-e9e041da8eb3"
+
+        /** Probed 2026-08-12: recording, release and artist lookups all answered 404 for this id. */
+        const val DEAD_MBID = "60d043af-b702-30d9-b6c0-0688d7863b14"
+
+        // captured 2026-08-12: GET /ws/2/recording/5cf87954-...?inc=artists+releases+release-groups, trimmed
+        const val BOHEMIAN_RECORDING = """
+            {
+              "id": "5cf87954-1402-45f0-bbcf-e957eb332da7",
+              "title": "Bohemian Rhapsody",
+              "length": 157000,
+              "isrcs": [],
+              "artist-credit": [
+                {
+                  "name": "Queen",
+                  "joinphrase": "",
+                  "artist": { "id": "0383dadf-2a4e-4d10-a46a-e9e041da8eb3", "name": "Queen" }
+                }
+              ]
+            }
+        """
+
+        // captured 2026-08-12: GET /ws/2/release/4ebc64a2-...?inc=artist-credits+release-groups, trimmed
+        const val RUSH_RELEASE = """
+            {
+              "id": "4ebc64a2-e9cc-43f8-96ac-536212c4c8d4",
+              "title": "A Rush of Blood to the Head",
+              "date": "2008-06-11",
+              "country": "JP",
+              "status": "Official",
+              "artist-credit": [
+                {
+                  "name": "Coldplay",
+                  "joinphrase": "",
+                  "artist": { "id": "cc197bad-dc9c-440d-a5b5-d52ba2e14234", "name": "Coldplay" }
+                }
+              ],
+              "release-group": {
+                "id": "120c786d-a3b2-3c19-b4ff-2b7b3b4435bf",
+                "title": "A Rush of Blood to the Head",
+                "primary-type": "Album"
+              }
+            }
+        """
+
+        // captured 2026-08-12: GET /ws/2/artist/0383dadf-...?inc=tags+genres+aliases+url-rels, trimmed
+        const val QUEEN_ARTIST = """
+            {
+              "id": "0383dadf-2a4e-4d10-a46a-e9e041da8eb3",
+              "name": "Queen",
+              "sort-name": "Queen",
+              "type": "Group",
+              "country": "GB",
+              "disambiguation": "UK rock group"
+            }
+        """
+    }
+}

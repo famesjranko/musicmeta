@@ -83,6 +83,9 @@ internal class DefaultEnrichmentEngine(
         }
 
         var identityResolution: IdentityResolution? = null
+        // The request as identity resolution left it — the names it backfilled are what the
+        // write-back aliases an MBID-only result under.
+        var resolvedRequest: EnrichmentRequest = request
 
         // withTimeoutOrNull returns null only when *this* deadline expired. A nested withTimeout's
         // expiry — a consumer's CatalogProvider, say — propagates instead of being caught by type
@@ -95,7 +98,8 @@ internal class DefaultEnrichmentEngine(
             // ProviderCallScope: this call's home for whatever a provider memoizes across the types
             // of one request, so nothing it holds can survive to answer the next call.
             withContext(
-                EnrichDeadline(config.enrichTimeoutMs) + TransientIdentifierMarker() + ProviderCallScope(),
+                EnrichDeadline(config.enrichTimeoutMs) + TransientIdentifierMarker() +
+                    ProviderCallScope() + ResolvedEntityNames(),
             ) {
                 var identityResult: EnrichmentResult? = null
                 val enrichedRequest = if (config.enableIdentityResolution &&
@@ -103,6 +107,7 @@ internal class DefaultEnrichmentEngine(
                     resolveIdentity(request, results, uncachedTypes).also { identityResult = it.second }.first
                 } else request
 
+                resolvedRequest = enrichedRequest
                 identityResolution = buildIdentityResolution(identityResult, enrichedRequest)
 
                 // Short-circuit: when identity failed with suggestions, skip provider fan-out
@@ -141,13 +146,14 @@ internal class DefaultEnrichmentEngine(
         // rewrites entries in `results` — catalog filtering does exactly that, per type — so what
         // survives is a mix of finished and unfinished work. Returning it is the contract; caching
         // it would outlive the call that truncated it. (#56)
-        if (completed) writeBack(request, results, identityResolution)
+        if (completed) writeBack(request, resolvedRequest, results, identityResolution)
 
         return EnrichmentResults(results, types, identityResolution)
     }
 
     private suspend fun writeBack(
         request: EnrichmentRequest,
+        resolvedRequest: EnrichmentRequest,
         results: Map<EnrichmentType, EnrichmentResult>,
         identityResolution: IdentityResolution?,
     ) {
@@ -166,9 +172,17 @@ internal class DefaultEnrichmentEngine(
 
             // Alias: when identity resolution added an MBID, also cache under the
             // name-based key so future name-only lookups find MBID-resolved data.
-            if (resolvedMbid != null && request.identifiers.musicBrainzId == null) {
-                val nameKey = entityKeyForName(request, type)
-                guardedCacheWrite(logger, "put") { cache.put(nameKey, type, result, ttl) }
+            // A request that named no entity has no caller name to alias under, so it takes
+            // MusicBrainz's canonical one — the same name a later name-only lookup would ask with.
+            val aliasKey = when {
+                hasBlankNamePart(request) && !hasBlankNamePart(resolvedRequest) ->
+                    entityKeyForName(resolvedRequest, type)
+                resolvedMbid != null && request.identifiers.musicBrainzId == null ->
+                    entityKeyForName(request, type)
+                else -> null
+            }
+            if (aliasKey != null) {
+                guardedCacheWrite(logger, "put") { cache.put(aliasKey, type, result, ttl) }
             }
         }
     }
@@ -331,7 +345,12 @@ internal class DefaultEnrichmentEngine(
             }
         }
 
-        return request.withIdentifiers(mergedIds) to result
+        // Backfill after mergedIds, into blank name fields only: a request built by
+        // EnrichmentRequest.forTrackByMbid and its siblings carries an identifier and no name, and
+        // every provider but MusicBrainz searches by name. See [withBackfilledNames] for why a name
+        // the caller did supply is never overwritten.
+        val names = currentCoroutineContext()[ResolvedEntityNames]?.resolved()
+        return request.withIdentifiers(mergedIds).withBackfilledNames(names) to result
     }
 
     private suspend fun resolveTypes(

@@ -1160,10 +1160,16 @@ public final class com/landofoz/musicmeta/EnrichmentRequest$Companion {
 	public final fun defaultTypesFor (Lcom/landofoz/musicmeta/EnrichmentRequest;)Ljava/util/Set;
 	public final fun forAlbum (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentIdentifiers;)Lcom/landofoz/musicmeta/EnrichmentRequest$ForAlbum;
 	public static synthetic fun forAlbum$default (Lcom/landofoz/musicmeta/EnrichmentRequest$Companion;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentIdentifiers;ILjava/lang/Object;)Lcom/landofoz/musicmeta/EnrichmentRequest$ForAlbum;
+	public final fun forAlbumByMbid (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentIdentifiers;)Lcom/landofoz/musicmeta/EnrichmentRequest$ForAlbum;
+	public static synthetic fun forAlbumByMbid$default (Lcom/landofoz/musicmeta/EnrichmentRequest$Companion;Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentIdentifiers;ILjava/lang/Object;)Lcom/landofoz/musicmeta/EnrichmentRequest$ForAlbum;
 	public final fun forArtist (Ljava/lang/String;Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentIdentifiers;)Lcom/landofoz/musicmeta/EnrichmentRequest$ForArtist;
 	public static synthetic fun forArtist$default (Lcom/landofoz/musicmeta/EnrichmentRequest$Companion;Ljava/lang/String;Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentIdentifiers;ILjava/lang/Object;)Lcom/landofoz/musicmeta/EnrichmentRequest$ForArtist;
+	public final fun forArtistByMbid (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentIdentifiers;)Lcom/landofoz/musicmeta/EnrichmentRequest$ForArtist;
+	public static synthetic fun forArtistByMbid$default (Lcom/landofoz/musicmeta/EnrichmentRequest$Companion;Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentIdentifiers;ILjava/lang/Object;)Lcom/landofoz/musicmeta/EnrichmentRequest$ForArtist;
 	public final fun forTrack (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Long;Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentIdentifiers;)Lcom/landofoz/musicmeta/EnrichmentRequest$ForTrack;
 	public static synthetic fun forTrack$default (Lcom/landofoz/musicmeta/EnrichmentRequest$Companion;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Long;Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentIdentifiers;ILjava/lang/Object;)Lcom/landofoz/musicmeta/EnrichmentRequest$ForTrack;
+	public final fun forTrackByMbid (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentIdentifiers;)Lcom/landofoz/musicmeta/EnrichmentRequest$ForTrack;
+	public static synthetic fun forTrackByMbid$default (Lcom/landofoz/musicmeta/EnrichmentRequest$Companion;Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentIdentifiers;ILjava/lang/Object;)Lcom/landofoz/musicmeta/EnrichmentRequest$ForTrack;
 	public final fun getDEFAULT_ALBUM_TYPES ()Ljava/util/Set;
 	public final fun getDEFAULT_ARTIST_TYPES ()Ljava/util/Set;
 	public final fun getDEFAULT_TRACK_TYPES ()Ljava/util/Set;
@@ -1556,6 +1562,15 @@ public final class com/landofoz/musicmeta/IdentityResolution {
 	public final fun getSuggestions ()Ljava/util/List;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/landofoz/musicmeta/MusicBrainzEntityType : java/lang/Enum {
+	public static final field ARTIST Lcom/landofoz/musicmeta/MusicBrainzEntityType;
+	public static final field RECORDING Lcom/landofoz/musicmeta/MusicBrainzEntityType;
+	public static final field RELEASE Lcom/landofoz/musicmeta/MusicBrainzEntityType;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lcom/landofoz/musicmeta/MusicBrainzEntityType;
+	public static fun values ()[Lcom/landofoz/musicmeta/MusicBrainzEntityType;
 }
 
 public final class com/landofoz/musicmeta/PopularTrack {
@@ -2381,6 +2396,7 @@ public final class com/landofoz/musicmeta/provider/musicbrainz/MusicBrainzProvid
 	public static final field DEFAULT_THUMBNAIL_SIZE I
 	public fun <init> (Lcom/landofoz/musicmeta/http/HttpClient;Lcom/landofoz/musicmeta/http/RateLimiter;II)V
 	public synthetic fun <init> (Lcom/landofoz/musicmeta/http/HttpClient;Lcom/landofoz/musicmeta/http/RateLimiter;IIILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun discoverEntityType (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun enrich (Lcom/landofoz/musicmeta/EnrichmentRequest;Lcom/landofoz/musicmeta/EnrichmentType;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun getCapabilities ()Ljava/util/List;
 	public fun getDisplayName ()Ljava/lang/String;

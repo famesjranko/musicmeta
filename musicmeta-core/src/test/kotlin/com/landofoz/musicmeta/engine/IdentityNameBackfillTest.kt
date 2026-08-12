@@ -1,0 +1,223 @@
+package com.landofoz.musicmeta.engine
+
+import com.landofoz.musicmeta.EnrichmentConfig
+import com.landofoz.musicmeta.EnrichmentData
+import com.landofoz.musicmeta.EnrichmentRequest
+import com.landofoz.musicmeta.EnrichmentResult
+import com.landofoz.musicmeta.EnrichmentType
+import com.landofoz.musicmeta.ProviderCapability
+import com.landofoz.musicmeta.http.RateLimiter
+import com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzProvider
+import com.landofoz.musicmeta.testutil.FakeEnrichmentCache
+import com.landofoz.musicmeta.testutil.FakeHttpClient
+import com.landofoz.musicmeta.testutil.FakeProvider
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+/**
+ * What identity resolution hands the name-search providers when the caller supplied no name, and
+ * what it must never hand them when the caller did.
+ *
+ * A request from [EnrichmentRequest.forTrackByMbid] and its siblings names an identifier and
+ * nothing else, and Deezer, LRCLIB, iTunes, Last.fm and Discogs cannot use one. Filling the blank
+ * from the resolved entity is what makes them reachable; filling a field the caller wrote is the
+ * defect two earlier efforts closed, so both directions are pinned here.
+ */
+class IdentityNameBackfillTest {
+
+    private val httpClient = FakeHttpClient()
+    private val cache = FakeEnrichmentCache()
+    private val musicBrainz = MusicBrainzProvider(httpClient, RateLimiter(0))
+
+    private fun namedProvider() = FakeProvider(
+        id = "lyrics",
+        capabilities = listOf(ProviderCapability(EnrichmentType.LYRICS_PLAIN, 100)),
+    ).also {
+        it.givenResult(
+            EnrichmentType.LYRICS_PLAIN,
+            EnrichmentResult.Success(
+                EnrichmentType.LYRICS_PLAIN,
+                EnrichmentData.Lyrics(plainLyrics = "Pressure, pushing down on me"),
+                "lyrics",
+                1f,
+            ),
+        )
+    }
+
+    private fun engine(other: FakeProvider) = DefaultEnrichmentEngine(
+        ProviderRegistry(listOf(musicBrainz, other)),
+        cache,
+        EnrichmentConfig(),
+        mergers = emptyList(),
+    )
+
+    @Test
+    fun `a track request carrying only an mbid reaches the name providers with the resolved names`() = runTest {
+        // Given - a recording MusicBrainz holds under the caller's identifier, credited to two artists
+        httpClient.givenJsonResponse("recording/$UNDER_PRESSURE_MBID", UNDER_PRESSURE_RECORDING)
+        val lyrics = namedProvider()
+
+        // When - the request names that identifier and no title or artist at all
+        engine(lyrics).enrich(
+            EnrichmentRequest.forTrackByMbid(UNDER_PRESSURE_MBID),
+            setOf(EnrichmentType.LYRICS_PLAIN),
+        )
+
+        // Then - the lyrics provider was asked for the canonical title, and for the artist-credit
+        // joined with MusicBrainz's own join phrase rather than its first artist alone
+        val asked = lyrics.enrichCalls.first().first as EnrichmentRequest.ForTrack
+        assertEquals("Under Pressure", asked.title)
+        assertEquals("Queen & David Bowie", asked.artist)
+    }
+
+    @Test
+    fun `a title the caller supplied survives identity resolution untouched`() = runTest {
+        // Given - the same recording, whose canonical title differs from the one the caller asked for
+        httpClient.givenJsonResponse("recording/$UNDER_PRESSURE_MBID", UNDER_PRESSURE_RECORDING)
+        val lyrics = namedProvider()
+
+        // When - the caller names the variant they meant alongside the identifier
+        engine(lyrics).enrich(
+            EnrichmentRequest.forTrack("Under Pressure (live at Wembley)", "Queen", mbid = UNDER_PRESSURE_MBID),
+            setOf(EnrichmentType.LYRICS_PLAIN),
+        )
+
+        // Then - the lyrics provider hunts for the variant the caller named, not the studio take
+        val asked = lyrics.enrichCalls.first().first as EnrichmentRequest.ForTrack
+        assertEquals("Under Pressure (live at Wembley)", asked.title)
+        assertEquals("Queen", asked.artist)
+    }
+
+    @Test
+    fun `an album request carrying only an mbid is filled from the release`() = runTest {
+        // Given - a release MusicBrainz holds under the caller's identifier
+        httpClient.givenJsonResponse("release/$RUSH_MBID", RUSH_RELEASE)
+        val other = namedProvider()
+
+        // When - the request names that identifier and no title or artist
+        engine(other).enrich(EnrichmentRequest.forAlbumByMbid(RUSH_MBID), setOf(EnrichmentType.GENRE))
+
+        // Then - the request the fan-out carries names the release and its artist-credit
+        assertTrue(cache.stored.keys.any { it.startsWith("album:Coldplay:A Rush of Blood to the Head:GENRE") })
+    }
+
+    @Test
+    fun `an artist request carrying only an mbid is filled from the artist`() = runTest {
+        // Given - an artist MusicBrainz holds under the caller's identifier
+        httpClient.givenJsonResponse("artist/$QUEEN_MBID", QUEEN_ARTIST)
+        val other = namedProvider()
+
+        // When - the request names that identifier and no name
+        engine(other).enrich(EnrichmentRequest.forArtistByMbid(QUEEN_MBID), setOf(EnrichmentType.GENRE))
+
+        // Then - the result is aliased under the canonical artist name, which is the key a later
+        // name-only lookup asks with
+        assertTrue(cache.stored.keys.any { it.startsWith("artist:Queen:GENRE") })
+    }
+
+    @Test
+    fun `an mbid MusicBrainz holds nothing under is a miss, not a search for nothing`() = runTest {
+        // Given - nothing stubbed, so every MusicBrainz lookup answers 404
+        val lyrics = namedProvider()
+
+        // When - a request naming only that identifier is enriched
+        val results = engine(lyrics).enrich(
+            EnrichmentRequest.forTrackByMbid(DEAD_MBID),
+            setOf(EnrichmentType.LYRICS_PLAIN),
+        )
+
+        // Then - no recording search was sent, because a blank title names nothing to search for
+        assertFalse(httpClient.requestedUrls.any { it.contains("recording?query") })
+        // Then - the lyrics provider was still asked, and answers what a blank name can
+        assertTrue(results.raw[EnrichmentType.LYRICS_PLAIN] is EnrichmentResult.Success)
+        // Then - nothing was cached under a name key naming nothing
+        assertNull(cache.stored.keys.firstOrNull { it.startsWith("track:::") })
+    }
+
+    private companion object {
+        const val UNDER_PRESSURE_MBID = "6f903161-8757-4363-a6ab-54bfe1149bb8"
+        const val RUSH_MBID = "4ebc64a2-e9cc-43f8-96ac-536212c4c8d4"
+        const val QUEEN_MBID = "0383dadf-2a4e-4d10-a46a-e9e041da8eb3"
+        const val DEAD_MBID = "60d043af-b702-30d9-b6c0-0688d7863b14"
+
+        // captured 2026-08-12: GET /ws/2/recording/6f903161-...?inc=artists+releases+release-groups+isrcs, trimmed
+        const val UNDER_PRESSURE_RECORDING = """
+            {
+              "id": "6f903161-8757-4363-a6ab-54bfe1149bb8",
+              "title": "Under Pressure",
+              "length": 235400,
+              "isrcs": ["GBUM71106916"],
+              "artist-credit": [
+                {
+                  "name": "Queen",
+                  "joinphrase": " & ",
+                  "artist": { "id": "0383dadf-2a4e-4d10-a46a-e9e041da8eb3", "name": "Queen" }
+                },
+                {
+                  "name": "David Bowie",
+                  "joinphrase": "",
+                  "artist": { "id": "5441c29d-3602-4898-b1a1-b77fa23b8e50", "name": "David Bowie" }
+                }
+              ],
+              "releases": [
+                {
+                  "id": "46a1cce2-a0a8-4816-9c7c-f48e0537032b",
+                  "title": "My Generation - The Soundtrack of Our Lives, Part One",
+                  "date": "2005-10",
+                  "release-group": {
+                    "id": "13ed01fd-af02-3030-afc1-17e62c53eb02",
+                    "title": "My Generation - The Soundtrack of Our Lives, Part One",
+                    "primary-type": "Album",
+                    "first-release-date": "2005-10"
+                  }
+                }
+              ]
+            }
+        """
+
+        // captured 2026-08-12: GET /ws/2/release/4ebc64a2-...?inc=artist-credits+labels+release-groups+genres, trimmed
+        const val RUSH_RELEASE = """
+            {
+              "id": "4ebc64a2-e9cc-43f8-96ac-536212c4c8d4",
+              "title": "A Rush of Blood to the Head",
+              "date": "2008-06-11",
+              "country": "JP",
+              "barcode": "4988006846395",
+              "status": "Official",
+              "artist-credit": [
+                {
+                  "name": "Coldplay",
+                  "joinphrase": "",
+                  "artist": { "id": "cc197bad-dc9c-440d-a5b5-d52ba2e14234", "name": "Coldplay" }
+                }
+              ],
+              "release-group": {
+                "id": "120c786d-a3b2-3c19-b4ff-2b7b3b4435bf",
+                "title": "A Rush of Blood to the Head",
+                "primary-type": "Album",
+                "secondary-types": []
+              },
+              "label-info": [ { "label": { "name": "Parlophone" } } ],
+              "genres": [ { "name": "alternative rock", "count": 9 } ]
+            }
+        """
+
+        // captured 2026-08-12: GET /ws/2/artist/0383dadf-...?inc=tags+genres+aliases+url-rels, trimmed
+        const val QUEEN_ARTIST = """
+            {
+              "id": "0383dadf-2a4e-4d10-a46a-e9e041da8eb3",
+              "name": "Queen",
+              "sort-name": "Queen",
+              "type": "Group",
+              "country": "GB",
+              "disambiguation": "UK rock group",
+              "life-span": { "begin": "1970-06-27" },
+              "genres": [ { "name": "art rock", "count": 15 } ]
+            }
+        """
+    }
+}

@@ -149,6 +149,14 @@ the request resolves the way one carrying no identifier at all resolves: by name
 is where that line lives — `Absent` may fall back, `Unreadable` may not — and `MusicBrainzApi`'s
 lookups return it rather than a bare null so the two cannot be confused at a call site.
 
+**An identifier and no name at all** is the same rule taken to its end. `EnrichmentRequest.forTrackByMbid`
+and its siblings leave the names blank for identity resolution to fill from the entity it looked up
+(`docs/how-it-works.md`, Step 3); a blank one MusicBrainz could not fill is answered `NotFound`
+rather than searched for, because whatever ranks first for `recording:""` must never become the
+request's entity. `MusicBrainzProvider.discoverEntityType` is the same absence read the other way:
+the three entity types probed in order until one answers, which is the only way to learn what a bare
+MBID names.
+
 This is not a nicety. These identifiers come from third parties in practice, Last.fm's having been
 bulk-imported and never re-synced: measured 2026-08-11 over `track.getSimilar`
 (`scripts/probes/lastfm-mbid-staleness-probe.sh`, `SOURCE=similar`), **51 of the 103 recording MBIDs
