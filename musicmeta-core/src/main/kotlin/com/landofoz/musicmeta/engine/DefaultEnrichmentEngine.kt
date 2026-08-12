@@ -110,6 +110,15 @@ internal class DefaultEnrichmentEngine(
                 } else request
 
                 resolvedRequest = enrichedRequest
+                // The canonical-name alias could not be invalidated above: the request named no
+                // entity then, and the name it is aliased under is the one resolution just learned.
+                if (forceRefresh && namesNoEntity(request) && !namesNoEntity(enrichedRequest)) {
+                    for (type in uncachedTypes) {
+                        guardedCacheWrite(logger, "invalidate") {
+                            cache.invalidate(entityKeyForName(enrichedRequest, type), type)
+                        }
+                    }
+                }
                 identityResolution = buildIdentityResolution(identityResult, enrichedRequest)
 
                 // Short-circuit: when identity failed with suggestions, skip provider fan-out
@@ -201,7 +210,10 @@ internal class DefaultEnrichmentEngine(
 
     override suspend fun invalidate(request: EnrichmentRequest, type: EnrichmentType?) {
         val types = if (type != null) listOf(type) else EnrichmentType.entries
-        for (t in types) invalidateKeys(request, t)
+        // Resolved once for every type: an identifier-only request's alias key is the *canonical*
+        // name, which nothing on the request carries, so it has to be asked for.
+        val named = canonicallyNamed(request)
+        for (t in types) invalidateKeys(request, named, t)
     }
 
     override suspend fun isManuallySelected(request: EnrichmentRequest, type: EnrichmentType): Boolean =
@@ -260,7 +272,14 @@ internal class DefaultEnrichmentEngine(
     internal suspend fun discoverEntityType(mbid: String): MusicBrainzEntityType? {
         val musicBrainz = registry.identityProvider() as? MusicBrainzProvider
             ?: error("No MusicBrainz identity provider is registered; nothing can resolve an MBID's type")
-        return withContext(ProviderCallScope()) { musicBrainz.discoverEntityType(mbid) }
+        // An ambient scope is the caller's own call, and joining it is the whole saving: a probe
+        // whose entity that call has already looked up costs nothing. Installing one unconditionally
+        // would hand every probe a cold memo instead.
+        return if (currentCoroutineContext()[ProviderCallScope] != null) {
+            musicBrainz.discoverEntityType(mbid)
+        } else {
+            withContext(ProviderCallScope()) { musicBrainz.discoverEntityType(mbid) }
+        }
     }
 
     /** The primary key, plus the name-alias key when the request carries an MBID. */
@@ -271,9 +290,40 @@ internal class DefaultEnrichmentEngine(
             listOf(entityKeyFor(request, type))
         }
 
-    /** Invalidates both the primary key and the name-alias key for a request/type. */
-    private suspend fun invalidateKeys(request: EnrichmentRequest, type: EnrichmentType) {
-        for (key in cacheKeysFor(request, type)) cache.invalidate(key, type)
+    /** Invalidates the primary key and both name-alias keys — the caller's and the canonical one. */
+    private suspend fun invalidateKeys(
+        request: EnrichmentRequest,
+        named: EnrichmentRequest,
+        type: EnrichmentType,
+    ) {
+        val keys = cacheKeysFor(request, type) +
+            if (named !== request) listOf(entityKeyForName(named, type)) else emptyList()
+        for (key in keys.distinct()) cache.invalidate(key, type)
+    }
+
+    /**
+     * [request] with the names identity resolution would fill in, for a request that names none —
+     * the only way to reach the canonical-name alias [writeBack] left behind, since the caller's
+     * own request carries no name to derive it from.
+     *
+     * Costs the identity lookup, and only for an identifier-only request. A failure degrades to the
+     * request as given: an alias that outlives one failed invalidation is recoverable, and throwing
+     * out of `invalidate()` for a transient is not.
+     */
+    // SwallowedException: the degrade is the contract above; the exception has no second reader.
+    @Suppress("SwallowedException")
+    private suspend fun canonicallyNamed(request: EnrichmentRequest): EnrichmentRequest {
+        if (!namesNoEntity(request)) return request
+        val provider = registry.identityProvider() ?: return request
+        val names = ResolvedEntityNames()
+        return try {
+            withContext(ProviderCallScope() + names) { provider.resolveIdentity(request) }
+            request.withBackfilledNames(names.resolved())
+        } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
+            logger.warn(TAG, "Could not name an identifier-only request to invalidate its alias")
+            request
+        }
     }
 
     /** Returns the enriched request and the raw identity result (for composite type synthesis). */
@@ -367,6 +417,12 @@ internal class DefaultEnrichmentEngine(
         types: Set<EnrichmentType>,
         identityResult: EnrichmentResult? = null,
     ): Map<EnrichmentType, EnrichmentResult> = coroutineScope {
+        // A request identity resolution could not name — an identifier-only one whose identifier
+        // MusicBrainz holds nothing under — reaches every provider with a blank title and artist.
+        // The name-search providers are asked for nothing at all in that state, so they are not
+        // asked: a type no identifier-keyed provider can serve is an honest NotFound, never a live
+        // search for the empty string and never an Error.
+        val identifierOnly = namesNoEntity(request)
         val compositeTypes = types.filter { it in compositeDependencies }
         val standardTypes = types - compositeTypes.toSet()
 
@@ -381,7 +437,8 @@ internal class DefaultEnrichmentEngine(
         val resolved = allRegularToResolve.map { type ->
             async {
                 val chain = registry.chainFor(type)
-                val result = chain?.resolve(request) ?: EnrichmentResult.NotFound(type, "no_provider")
+                val result = chain?.resolve(request, identifierOnly)
+                    ?: EnrichmentResult.NotFound(type, "no_provider")
                 type to reclassifyTransientGap(chain, request.identifiers, type, gate(result))
             }
         }.awaitAll().toMap().toMutableMap()
@@ -389,7 +446,7 @@ internal class DefaultEnrichmentEngine(
         val mergeableResults = mergeableRequested.map { mergeType ->
             async {
                 val chain = registry.chainFor(mergeType)
-                val allResults = chain?.resolveAll(request)
+                val allResults = chain?.resolveAll(request, identifierOnly)
                 val filtered = allResults?.successes.orEmpty()
                     .mapNotNull { gate(it) as? EnrichmentResult.Success }
                 val merger = mergers[mergeType]

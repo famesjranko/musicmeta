@@ -13,7 +13,6 @@ import com.landofoz.musicmeta.testutil.FakeHttpClient
 import com.landofoz.musicmeta.testutil.FakeProvider
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -120,8 +119,8 @@ class IdentityNameBackfillTest {
     }
 
     @Test
-    fun `an mbid MusicBrainz holds nothing under is a miss, not a search for nothing`() = runTest {
-        // Given - nothing stubbed, so every MusicBrainz lookup answers 404
+    fun `an mbid MusicBrainz holds nothing under reaches no name-search provider at all`() = runTest {
+        // Given - nothing stubbed, so every MusicBrainz lookup answers 404 as it does for a dead id
         val lyrics = namedProvider()
 
         // When - a request naming only that identifier is enriched
@@ -130,16 +129,16 @@ class IdentityNameBackfillTest {
             setOf(EnrichmentType.LYRICS_PLAIN),
         )
 
-        // Then - no recording search was sent, because a blank title names nothing to search for
-        assertFalse(httpClient.requestedUrls.any { it.contains("recording?query") })
-        // Then - the lyrics provider was still asked, and answers what a blank name can
-        assertTrue(results.raw[EnrichmentType.LYRICS_PLAIN] is EnrichmentResult.Success)
+        // Then - the lyrics provider was never asked: it searches by name, and there is no name
+        assertEquals(0, lyrics.enrichCalls.count { it.second == EnrichmentType.LYRICS_PLAIN })
+        // Then - the type is an honest NotFound rather than an Error or a guess
+        assertTrue(results.raw[EnrichmentType.LYRICS_PLAIN] is EnrichmentResult.NotFound)
         // Then - nothing was cached under a name key naming nothing
         assertNull(cache.stored.keys.firstOrNull { it.startsWith("track:::") })
     }
 
     @Test
-    fun `a title with no artist beside it is still a search worth making`() = runTest {
+    fun `a title with no artist beside it keeps the blank the caller left`() = runTest {
         // Given - a recording pool for the title, and a caller who supplied no artist
         httpClient.givenJsonResponse("recording?query", RECORDING_POOL)
         val lyrics = namedProvider()
@@ -150,13 +149,52 @@ class IdentityNameBackfillTest {
             setOf(EnrichmentType.LYRICS_PLAIN),
         )
 
-        // Then - MusicBrainz was asked, because it drops an empty artistname term and resolves on
-        // the title; only a blank *title* names nothing to search for
+        // Then - MusicBrainz was still asked, because it drops an empty artistname term and
+        // resolves on the title; only a blank *title* names nothing to search for
         assertTrue(httpClient.requestedUrls.any { it.contains("recording?query") })
-        // Then - the artist that search settled on fills the blank the caller left, whichever
-        // recording an artist-less title ranks to
+        // Then - the artist stays blank downstream: backfill reads a caller's identifier, never a
+        // search hit, so an under-specified query's top result cannot rewrite the request
         val asked = lyrics.enrichCalls.first().first as EnrichmentRequest.ForTrack
-        assertEquals("Joss Stone", asked.artist)
+        assertEquals("", asked.artist)
+    }
+
+    @Test
+    fun `a later name-only lookup hits the alias the mbid request left`() = runTest {
+        // Given - an album enriched by identifier alone, whose result is aliased under the
+        // canonical name
+        httpClient.givenJsonResponse("release/$RUSH_MBID", RUSH_RELEASE)
+        val other = namedProvider()
+        val engine = engine(other)
+        engine.enrich(EnrichmentRequest.forAlbumByMbid(RUSH_MBID), setOf(EnrichmentType.GENRE))
+        val spentOnFirst = httpClient.requestedUrls.size
+
+        // When - the same album is asked for by that name, with no identifier
+        val results = engine.enrich(
+            EnrichmentRequest.forAlbum("A Rush of Blood to the Head", "Coldplay"),
+            setOf(EnrichmentType.GENRE),
+        )
+
+        // Then - it is served from the alias: a Success, and not one upstream request more
+        assertTrue(results.raw[EnrichmentType.GENRE] is EnrichmentResult.Success)
+        assertEquals(spentOnFirst, httpClient.requestedUrls.size)
+    }
+
+    @Test
+    fun `invalidating an mbid request reaches the canonical alias too`() = runTest {
+        // Given - that same alias, sitting in the cache under the canonical name
+        httpClient.givenJsonResponse("release/$RUSH_MBID", RUSH_RELEASE)
+        val other = namedProvider()
+        val engine = engine(other)
+        val byMbid = EnrichmentRequest.forAlbumByMbid(RUSH_MBID)
+        engine.enrich(byMbid, setOf(EnrichmentType.GENRE))
+
+        // When - the caller invalidates the request as they made it, by identifier
+        engine.invalidate(byMbid, EnrichmentType.GENRE)
+
+        // Then - the name key is gone as well as the identifier key, so a name-only lookup misses
+        // rather than being served an entry its owner believes they dropped
+        assertTrue(cache.stored.keys.none { it.startsWith("album:Coldplay:A Rush of Blood to the Head") })
+        assertTrue(cache.stored.keys.none { it.startsWith("album:$RUSH_MBID") })
     }
 
     private companion object {
