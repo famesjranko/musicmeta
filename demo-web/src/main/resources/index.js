@@ -141,22 +141,34 @@ function esc(s) {
   }[c]));
 }
 
-async function runQuery() {
+// The exact request behind the page currently on screen, so the toolbar's "Fetch fresh data"
+// button can re-run precisely that lookup rather than whatever the form fields hold by then.
+let lastQuery = null;
+
+// `refresh`, when true, re-issues `lastQuery` with `forceRefresh` instead of reading the form —
+// the toolbar's "Fetch fresh data" button passes true; the search form's submit passes nothing.
+async function runQuery(refresh) {
   if (!backendReady) {
     statusEl.className = '';
     statusEl.textContent = 'The backend is still warming up. Search will unlock automatically when it is ready.';
     return;
   }
 
-  const kind = kindEl.value;
-  const name = nameEl.value.trim();
-  const artist = artistEl.value.trim();
-  const album = albumEl.value.trim();
-  const needsArtist = kind !== 'artist' && kind !== 'mbid';
-  if (!name || (needsArtist && !artist)) {
-    statusEl.textContent = needsArtist ? 'Enter both a name and an artist.' : 'Enter a name.';
-    statusEl.className = 'err';
-    return;
+  let kind, name, artist, album;
+  if (refresh) {
+    if (!lastQuery) return;
+    ({ kind, name, artist, album } = lastQuery);
+  } else {
+    kind = kindEl.value;
+    name = nameEl.value.trim();
+    artist = artistEl.value.trim();
+    album = albumEl.value.trim();
+    const needsArtist = kind !== 'artist' && kind !== 'mbid';
+    if (!name || (needsArtist && !artist)) {
+      statusEl.textContent = needsArtist ? 'Enter both a name and an artist.' : 'Enter a name.';
+      statusEl.className = 'err';
+      return;
+    }
   }
 
   stopPreview();
@@ -167,11 +179,13 @@ async function runQuery() {
   resultEl.innerHTML = '<div class="loading-panel"><span class="spinner"></span>Calling providers — this can take a few seconds…</div>';
 
   const params = new URLSearchParams({ kind, name, artist, album });
+  if (refresh) params.set('refresh', 'true');
   try {
     const res = await fetch('/api/enrich?' + params.toString());
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
-    render(data);
+    lastQuery = { kind, name, artist, album };
+    render(data, !!refresh);
   } catch (err) {
     statusEl.className = 'err';
     statusEl.textContent = 'Failed: ' + err.message;
@@ -200,7 +214,7 @@ function genreChipsHtml(genres) {
   return `<div class="genre-chips">${chips}</div>${legend}`;
 }
 
-function render(data) {
+function render(data, wasForceRefresh) {
   const summary = data.summary;
   const backdrop = summary.backgroundImageUrl
     ? `<div class="backdrop" style="background-image:url('${esc(summary.backgroundImageUrl)}')"></div>`
@@ -268,7 +282,20 @@ function render(data) {
       <td>${p.confidence != null ? p.confidence.toFixed(2) : '—'}</td>
     </tr>`).join('');
 
+  // The wire carries elapsed time only, never cache-hit provenance — Meta has no such field, and
+  // the engine doesn't expose one. "Completed in" stays honest either way; a refresh the user just
+  // triggered is the one case this page can honestly call out, because it *knows* that fetch was
+  // forced fresh.
+  const freshnessText = wasForceRefresh
+    ? `Fresh fetch in <b>${data.meta.elapsedMs} ms</b>`
+    : `Completed in <b>${data.meta.elapsedMs} ms</b>`;
+
   resultEl.innerHTML = `
+    <div class="result-toolbar">
+      <span class="freshness" role="status">${freshnessText}</span>
+      <span class="spacer"></span>
+      <button class="toolbar-btn" type="button" id="fetch-fresh-btn">⟳ Fetch fresh data</button>
+    </div>
     <div class="card summary${unverified ? ' unverified' : ''}">
       ${backdrop}
       ${img}
@@ -284,7 +311,7 @@ function render(data) {
     <div class="sections${unverified ? ' unverified' : ''}">${sections}</div>
     <div class="card">
       <details class="meta-panel">
-        <summary>${data.meta.elapsedMs}ms · ${totalItems} items across ${data.sections.length} sections${data.meta.identityMatch ? ' · identity: ' + esc(data.meta.identityMatch) : ''} — how we got this</summary>
+        <summary>${totalItems} items across ${data.sections.length} sections${data.meta.identityMatch ? ' · identity: ' + esc(data.meta.identityMatch) : ''} — how we got this</summary>
         ${identifiers}
         <table class="providers">
           <thead><tr><th>Type</th><th>Provider</th><th>Status</th><th>Confidence</th></tr></thead>
@@ -409,6 +436,12 @@ function previewButtonHtml(title, artist, album) {
 
 resultEl.addEventListener('click', (e) => {
   if (e.target.closest('#identity-retry')) runQuery();
+});
+
+// --- Result toolbar: force-refresh (child 08 adds a second button alongside this one) ---
+
+resultEl.addEventListener('click', (e) => {
+  if (e.target.closest('#fetch-fresh-btn')) runQuery(true);
 });
 
 // --- Show more / show fewer (event delegation, no extra network calls) ---

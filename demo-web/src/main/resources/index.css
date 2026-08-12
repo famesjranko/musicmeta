@@ -287,6 +287,48 @@ button:disabled { opacity: 0.56; cursor: wait; }
   box-shadow: 0 12px 38px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.025);
 }
 
+/* Result toolbar — above the summary card. Freshness chip left, action buttons right; the
+   spacer is what leaves room for child 08's second button without restructuring this markup. */
+.result-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin: 0 0 0.9rem;
+}
+.result-toolbar .freshness {
+  border: 1px solid var(--panel-border-soft);
+  border-radius: 999px;
+  padding: 0.22rem 0.65rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+.result-toolbar .freshness b { color: var(--text-soft); font-weight: 650; }
+.result-toolbar .spacer { flex: 1; }
+
+.toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 44px;
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-sm);
+  padding: 0.3rem 0.85rem;
+  background: var(--panel);
+  color: var(--text-soft);
+  font-size: 0.78rem;
+  font-weight: 650;
+  cursor: pointer;
+  box-shadow: none; /* reset the global button's gradient/shadow */
+}
+.toolbar-btn:hover:not(:disabled) {
+  transform: none;
+  filter: none;
+  box-shadow: none;
+  border-color: rgba(146, 169, 255, 0.38);
+  color: var(--text);
+}
+
 .summary {
   display: flex;
   align-items: flex-start;
