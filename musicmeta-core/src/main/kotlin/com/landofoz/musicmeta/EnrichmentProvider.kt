@@ -40,7 +40,9 @@ interface EnrichmentProvider {
      *
      * @param request The entity to enrich (album, artist, or track)
      * @param type The specific enrichment type to fetch
-     * @return Success, NotFound, RateLimited, or Error
+     * @return Success, NotFound, RateLimited, or Error. A built-in provider reports a 429 as
+     *   `Error(ErrorKind.RATE_LIMIT)` via [mapError] and the engine widens that to `RateLimited`
+     *   before a consumer sees it; returning `RateLimited` directly is equally accepted.
      */
     suspend fun enrich(
         request: EnrichmentRequest,
@@ -72,6 +74,8 @@ interface EnrichmentProvider {
     fun mapError(type: EnrichmentType, e: Exception): EnrichmentResult.Error {
         val kind = when (e) {
             is com.landofoz.musicmeta.http.AuthException -> ErrorKind.AUTH
+            // Before the IOException branch it subtypes, or a 429 reads as a plain NETWORK failure.
+            is com.landofoz.musicmeta.http.RateLimitException -> ErrorKind.RATE_LIMIT
             is java.io.IOException -> ErrorKind.NETWORK
             is org.json.JSONException -> ErrorKind.PARSE
             else -> ErrorKind.UNKNOWN

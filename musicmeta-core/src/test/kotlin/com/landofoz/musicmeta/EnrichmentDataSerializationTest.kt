@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta
 
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
@@ -253,6 +254,45 @@ class EnrichmentDataSerializationTest {
         // When - encoding then decoding
         val encoded = json.encodeToString(original)
         val decoded = json.decodeFromString<EnrichmentData.RadioPlaylist>(encoded)
+
+        // Then - the decoded value equals the original
+        assertEquals(original, decoded)
+    }
+
+    // synthetic - a JSON literal shaped like the pre-signals wire form, not a live capture.
+    private val preSignalsPopularityJson = """
+        {"listenCount":900,"listenerCount":42,"rank":3,"topTracks":null}
+    """.trimIndent()
+
+    @Test
+    fun `a popularity payload cached before signals existed still decodes`() {
+        // Given - a serialized Popularity written by a build with no signals field
+        val encoded = preSignalsPopularityJson
+
+        // When - decoding it with the post-change model
+        val decoded = json.decodeFromString<EnrichmentData.Popularity>(encoded)
+
+        // Then - the flat fields survive and signals defaults to empty rather than failing to parse
+        assertEquals(900L, decoded.listenCount)
+        assertEquals(42L, decoded.listenerCount)
+        assertEquals(3, decoded.rank)
+        assertEquals(emptyList<PopularitySignal>(), decoded.signals)
+    }
+
+    @Test
+    fun `Popularity with signals survives round-trip serialization`() {
+        // Given - a Popularity carrying one signal per source, in three different units
+        val original = EnrichmentData.Popularity(
+            listenCount = 900,
+            signals = listOf(
+                PopularitySignal("listenbrainz", PopularitySignalKind.LISTEN_COUNT, 900.0),
+                PopularitySignal("musicbrainz", PopularitySignalKind.RATING, 4.05, 0.7625f, 49),
+            ),
+        )
+
+        // When - encoding then decoding
+        val encoded = json.encodeToString(original)
+        val decoded = json.decodeFromString<EnrichmentData.Popularity>(encoded)
 
         // Then - the decoded value equals the original
         assertEquals(original, decoded)

@@ -6,11 +6,13 @@ import com.landofoz.musicmeta.engine.CompositeSynthesizer
 import com.landofoz.musicmeta.engine.DefaultEnrichmentEngine
 import com.landofoz.musicmeta.engine.GenreAffinityMatcher
 import com.landofoz.musicmeta.engine.GenreMerger
+import com.landofoz.musicmeta.engine.PopularityMerger
 import com.landofoz.musicmeta.engine.ProviderRegistry
 import com.landofoz.musicmeta.engine.SimilarArtistMerger
 import com.landofoz.musicmeta.engine.SimilarTrackMerger
 import com.landofoz.musicmeta.engine.TimelineSynthesizer
 import com.landofoz.musicmeta.engine.TopTrackMerger
+import com.landofoz.musicmeta.engine.requireRegistrableProviderId
 import com.landofoz.musicmeta.http.DefaultHttpClient
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
@@ -109,10 +111,16 @@ interface EnrichmentEngine {
             ArtworkMerger(EnrichmentType.ARTIST_PHOTO),
             ArtworkMerger(EnrichmentType.ALBUM_ART),
             TopTrackMerger,
+            PopularityMerger(EnrichmentType.ARTIST_POPULARITY),
+            PopularityMerger(EnrichmentType.TRACK_POPULARITY),
         )
         private val synthesizers = mutableListOf<CompositeSynthesizer>(TimelineSynthesizer, GenreAffinityMatcher)
 
-        fun addProvider(provider: EnrichmentProvider) = apply { providers.add(provider) }
+        /** @throws IllegalArgumentException if the id is already registered, or reserved by the engine. */
+        fun addProvider(provider: EnrichmentProvider) = apply {
+            requireRegistrableProviderId(provider.id, providers.map { it.id })
+            providers.add(provider)
+        }
         fun cache(cache: EnrichmentCache) = apply { this.cache = cache }
         fun httpClient(client: HttpClient) = apply { this.httpClient = client }
         fun config(config: EnrichmentConfig) = apply { this.config = config }

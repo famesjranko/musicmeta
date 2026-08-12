@@ -34,6 +34,14 @@ sealed class EnrichmentData {
         val trackCount: Int? = null,
         val explicit: Boolean? = null,
         val catalogNumber: String? = null,
+        /**
+         * Discogs' community rating for this *release*, on Discogs' own 1–5 scale.
+         *
+         * Album-level and single-source, which is why it is a flat field rather than a
+         * [PopularitySignal]. An artist's or a recording's rating is a popularity claim with a
+         * source and lives in [Popularity.signals] as [PopularitySignalKind.RATING] — that list is
+         * authoritative for those, and nothing back-fills this field from it.
+         */
         val communityRating: Float? = null,
     ) : EnrichmentData()
 
@@ -57,12 +65,24 @@ sealed class EnrichmentData {
         val artists: List<SimilarArtist>,
     ) : EnrichmentData()
 
+    /**
+     * [signals] is the authoritative record: one entry per source, in the unit that source measures.
+     * The flat fields above it are a derived convenience — the merger back-fills each from the
+     * first source that reported it, so a caller wanting one number does not have to pick. Where the
+     * two disagree, [signals] is what the providers actually said.
+     */
     @Serializable
     data class Popularity(
         val listenCount: Long? = null,
         val listenerCount: Long? = null,
         val rank: Int? = null,
         val topTracks: List<PopularTrack>? = null,
+        /**
+         * Every source's own claim, kept unmerged and never summed — a Last.fm scrobble count, a
+         * ListenBrainz listen count and a MusicBrainz community rating measure different things.
+         * Empty on a result that never reached the merger, or from a source carrying no signal.
+         */
+        val signals: List<PopularitySignal> = emptyList(),
     ) : EnrichmentData()
 
     @Serializable
@@ -145,6 +165,45 @@ data class SimilarArtist(
     val matchScore: Float,
     val sources: List<String> = emptyList(),
 )
+
+/**
+ * One provider's popularity claim, in the unit that provider actually measures.
+ *
+ * The canonical carrier for a rating or a count with a source attached. [kind] says what [value]
+ * counts, and comparing two signals is only meaningful when their [kind] and [source] agree —
+ * Last.fm counts scrobbles, ListenBrainz counts listens, MusicBrainz reports a 1–5 community
+ * rating. [normalized] is a 0..1 rendering where the source's own scale supports one, and `null`
+ * where an unbounded count makes it meaningless — the scale's floor maps to 0 and its ceiling to 1,
+ * so a 1–5 rating and a 0–100 score are comparable once normalised.
+ *
+ * The flat fields on [EnrichmentData.Popularity] are derived from these, not the other way round.
+ */
+@Serializable
+data class PopularitySignal(
+    /** The provider id that reported it, e.g. `lastfm`, `listenbrainz`, `musicbrainz`. */
+    val source: String,
+    val kind: PopularitySignalKind,
+    val value: Double,
+    val normalized: Float? = null,
+    /** How many people the [value] rests on, where the source says — a rating's vote count. */
+    val sampleSize: Int? = null,
+)
+
+/** What a [PopularitySignal.value] counts. Appended to only: a consumer's `when` may stay open. */
+@Serializable
+enum class PopularitySignalKind {
+    /** Total plays reported by the source (Last.fm scrobbles, ListenBrainz listens). */
+    LISTEN_COUNT,
+
+    /** Distinct people the source has seen listening. */
+    LISTENER_COUNT,
+
+    /** Position in a source's own chart, 1 being the top. */
+    RANK,
+
+    /** A community score on the source's own scale — MusicBrainz rates 1–5. */
+    RATING,
+}
 
 @Serializable
 data class PopularTrack(

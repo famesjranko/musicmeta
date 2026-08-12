@@ -173,23 +173,26 @@ sealed class EnrichmentResult {
 | `NETWORK` | Connectivity or timeout failure |
 | `AUTH` | 401/403 on a call that sent credentials — check API key |
 | `PARSE` | Malformed JSON or unexpected schema |
-| `RATE_LIMIT` | **Not produced by any provider** — a 429 arrives as `NETWORK` (see below) |
+| `RATE_LIMIT` | Upstream throttled the request (429) — normally widened to `RateLimited` (see below) |
 | `TIMEOUT` | Engine-level enrichment timeout expired |
 | `UNKNOWN` | Uncategorized error |
 
-Within `enrich()`, a 429, a 5xx and a dropped connection reach you as `Error` with `NETWORK` from
-every one of the eleven providers, never as an empty result. Two upstream quirks are classified the same way:
-a Deezer quota refusal arrives as HTTP 200 with an `error.code` of 4, and iTunes answers a throttle
-with 403.
+Within `enrich()`, a 5xx and a dropped connection reach you as `Error` with `NETWORK` from every one
+of the eleven providers, never as an empty result. A 429 that outlives the retry ladder reaches you
+as `EnrichmentResult.RateLimited` instead: the provider classifies it `RATE_LIMIT` and the engine
+widens it to that variant, carrying the upstream's `Retry-After` as `retryAfterMs` when it sent one.
+Two upstream quirks stay `NETWORK`, because neither is a 429 on the wire: a Deezer quota refusal
+arrives as HTTP 200 with an `error.code` of 4, and iTunes answers a throttle with 403.
 
 `AUTH` is narrower than the status code suggests: only a call that actually sends credentials
 (Last.fm, Discogs, Fanart.tv, and ListenBrainz's token-bearing radio call) turns a 401/403 into
 `AUTH`. On a keyless endpoint there is no key to be wrong, so a 403 there is either a genuine
 client error or — for iTunes — a throttle, and neither is `AUTH`.
 
-Either way, **do not branch on `RATE_LIMIT`**: the value is part of the published enum and cannot be
-removed without a breaking change, but nothing sets it. The same is true of the
-`EnrichmentResult.RateLimited` variant — the engine handles it, no provider returns it.
+**Branch on `EnrichmentResult.RateLimited`, not on `ErrorKind.RATE_LIMIT`.** The engine widens the
+one into the other before you see it, so an `Error` still carrying `RATE_LIMIT` is the exception, not
+the rule. A throttled provider counts against its circuit breaker, so sustained 429s take it out of
+the rotation for the cooldown rather than being retried indefinitely.
 
 ---
 

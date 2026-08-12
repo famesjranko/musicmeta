@@ -36,8 +36,11 @@ internal fun EnrichmentData.answers(type: EnrichmentType): Boolean = when (this)
     is EnrichmentData.Lyrics ->
         isInstrumental || !syncedLyrics.isNullOrBlank() || !plainLyrics.isNullOrBlank()
 
+    // signals counts on its own: a source reporting only a rating (MusicBrainz) fills no flat
+    // field, and demoting it would drop the one thing it had to say.
     is EnrichmentData.Popularity ->
-        listenCount != null || listenerCount != null || rank != null || !topTracks.isNullOrEmpty()
+        listenCount != null || listenerCount != null || rank != null ||
+            !topTracks.isNullOrEmpty() || signals.isNotEmpty()
 
     is EnrichmentData.ArtistLinks -> links.isNotEmpty()
     is EnrichmentData.ArtistTimeline -> events.isNotEmpty()
@@ -91,13 +94,48 @@ private fun EnrichmentData.Metadata.answersMetadata(type: EnrichmentType): Boole
     EnrichmentType.RELEASE_DATE -> !releaseDate.isNullOrBlank()
     EnrichmentType.RELEASE_TYPE -> !releaseType.isNullOrBlank()
     EnrichmentType.COUNTRY -> !country.isNullOrBlank()
-    // ALBUM_METADATA is the grab bag — any field answers it. A type a future provider decides to
-    // answer with Metadata lands here too and gets the same lenient reading; the `when` is not
-    // exhaustive over types, so nothing will prompt you. Name its fields above if it needs more.
-    // The two list fields are emptied first, so an empty list reads as absent here exactly as it
-    // does for GENRE above.
-    else -> copy(
-        genres = genres?.takeIf { it.isNotEmpty() },
-        genreTags = genreTags?.takeIf { it.isNotEmpty() },
-    ) != EnrichmentData.Metadata()
+
+    // ALBUM_METADATA is the grab bag — any field answers it. The two list fields are emptied first,
+    // so an empty list reads as absent here exactly as it does for GENRE above.
+    EnrichmentType.ALBUM_METADATA -> anyFieldFilled()
+
+    // Every type no provider answers with Metadata. Listed rather than elided behind `else` so the
+    // compiler asks about a new EnrichmentType instead of dropping it into the grab bag silently.
+    EnrichmentType.ALBUM_ART,
+    EnrichmentType.ARTIST_PHOTO,
+    EnrichmentType.ARTIST_BACKGROUND,
+    EnrichmentType.ARTIST_LOGO,
+    EnrichmentType.CD_ART,
+    EnrichmentType.SIMILAR_ARTISTS,
+    EnrichmentType.ARTIST_BIO,
+    EnrichmentType.LYRICS_SYNCED,
+    EnrichmentType.LYRICS_PLAIN,
+    EnrichmentType.TRACK_POPULARITY,
+    EnrichmentType.ARTIST_POPULARITY,
+    EnrichmentType.BAND_MEMBERS,
+    EnrichmentType.SIMILAR_TRACKS,
+    EnrichmentType.ARTIST_LINKS,
+    EnrichmentType.CREDITS,
+    EnrichmentType.ARTIST_DISCOGRAPHY,
+    EnrichmentType.ALBUM_TRACKS,
+    EnrichmentType.RELEASE_EDITIONS,
+    EnrichmentType.ARTIST_BANNER,
+    EnrichmentType.ALBUM_ART_BACK,
+    EnrichmentType.ALBUM_BOOKLET,
+    EnrichmentType.ARTIST_TIMELINE,
+    EnrichmentType.ARTIST_RADIO,
+    EnrichmentType.ARTIST_RADIO_DISCOVERY,
+    EnrichmentType.ARTIST_TOP_TRACKS,
+    EnrichmentType.TRACK_PREVIEW,
+    EnrichmentType.SIMILAR_ALBUMS,
+    EnrichmentType.GENRE_DISCOVERY,
+    EnrichmentType.TRACK_METADATA,
+    EnrichmentType.ALBUM_DESCRIPTION,
+    -> anyFieldFilled()
 }
+
+/** Any field carrying something, with an empty list reading as absent. */
+private fun EnrichmentData.Metadata.anyFieldFilled(): Boolean = copy(
+    genres = genres?.takeIf { it.isNotEmpty() },
+    genreTags = genreTags?.takeIf { it.isNotEmpty() },
+) != EnrichmentData.Metadata()

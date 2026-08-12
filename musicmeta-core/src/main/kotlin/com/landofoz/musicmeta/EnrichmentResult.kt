@@ -12,11 +12,12 @@ enum class ErrorKind {
     PARSE,
 
     /**
-     * Not produced by any provider — a 429 arrives as [NETWORK].
+     * The upstream throttled the request (HTTP 429) and the retry ladder did not outlast it.
      *
-     * All eleven providers classify a transient transport failure (429, 5xx, dropped connection)
-     * as [NETWORK], never as an empty result. Do not branch on this value; nothing sets it.
-     * Retained because removing a value from a published enum is a breaking change. See
+     * Set by [EnrichmentProvider.mapError], and normally widened to [EnrichmentResult.RateLimited]
+     * before a consumer sees it — so a branch on this value is reached only where the widening does
+     * not apply. Distinct from [NETWORK], which is every other transient transport failure (5xx, a
+     * dropped connection): a 429 is worth retrying later, not immediately. See
      * `docs/guides/results-and-errors.md`.
      */
     RATE_LIMIT,
@@ -120,12 +121,12 @@ sealed class EnrichmentResult {
     ) : EnrichmentResult()
 
     /**
-     * Not returned by any provider. From all eleven, a rate limit arrives as [Error] with
-     * [ErrorKind.NETWORK], classified as a transient transport failure alongside 5xx and a
-     * dropped connection.
+     * An upstream throttled the request (HTTP 429) and the retry ladder did not outlast it.
      *
-     * The engine handles this variant, but nothing constructs it. Retained because
-     * removing a variant from a published sealed class is a breaking change. See
+     * The engine widens a provider's `Error(ErrorKind.RATE_LIMIT)` into this before returning it, so
+     * a 429 is distinguishable from every other transient transport failure without every provider
+     * having to construct it. [retryAfterMs] carries the upstream's `Retry-After` when it sent one.
+     * A throttled provider counts against its circuit breaker, so a sustained 429 opens it. See
      * `docs/guides/results-and-errors.md`.
      */
     data class RateLimited(

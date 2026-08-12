@@ -50,7 +50,7 @@ class MusicBrainzTransientFailureTest {
             "Expected Error, got ${result::class.simpleName}",
             result is EnrichmentResult.Error,
         )
-        assertEquals(ErrorKind.NETWORK, (result as EnrichmentResult.Error).errorKind)
+        assertEquals(ErrorKind.RATE_LIMIT, (result as EnrichmentResult.Error).errorKind)
 
         // And — no suggestion list was invented from a search that never legitimately came back empty
         assertFalse(
@@ -90,7 +90,7 @@ class MusicBrainzTransientFailureTest {
             "Expected Error, got ${result::class.simpleName}",
             result is EnrichmentResult.Error,
         )
-        assertEquals(ErrorKind.NETWORK, (result as EnrichmentResult.Error).errorKind)
+        assertEquals(ErrorKind.RATE_LIMIT, (result as EnrichmentResult.Error).errorKind)
         assertFalse(
             "Must not fall through to the fuzzy search after a transient failure",
             httpClient.requestedUrls.any { it.contains(FUZZY_RELEASE_QUERY) },
@@ -118,7 +118,7 @@ class MusicBrainzTransientFailureTest {
             "Expected Error, got ${result::class.simpleName}",
             result is EnrichmentResult.Error,
         )
-        assertEquals(ErrorKind.NETWORK, (result as EnrichmentResult.Error).errorKind)
+        assertEquals(ErrorKind.RATE_LIMIT, (result as EnrichmentResult.Error).errorKind)
     }
 
     @Test

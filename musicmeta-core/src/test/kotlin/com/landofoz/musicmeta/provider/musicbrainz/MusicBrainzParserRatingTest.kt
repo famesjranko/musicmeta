@@ -1,14 +1,15 @@
 package com.landofoz.musicmeta.provider.musicbrainz
 
+import com.landofoz.musicmeta.PopularitySignal
+import com.landofoz.musicmeta.PopularitySignalKind
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
 /**
- * `inc=ratings` rides on lookups already made, so the rating is parsed now and stops at the DTO —
- * no `EnrichmentData` payload carries one yet. These pin the parse so the surface that eventually
- * reads it inherits a tested field rather than an unread one.
+ * `inc=ratings` rides on lookups already made, so the rating costs no request of its own. These pin
+ * the parse and the mapping onto the `PopularitySignal` that carries it into the public payload.
  */
 class MusicBrainzParserRatingTest {
 
@@ -60,6 +61,64 @@ class MusicBrainzParserRatingTest {
 
         // Then - absence is normal, not a parse failure
         assertNull(recording.rating)
+    }
+
+    @Test
+    fun `a parsed rating becomes a sourced popularity signal`() {
+        // Given - the artist lookup MusicBrainz answers with a 4.05 from 49 votes
+        val artist = MusicBrainzParser.parseLookupArtist(JSONObject(ARTIST_LOOKUP_RATED))!!
+
+        // When - mapping it to the public popularity payload
+        val popularity = MusicBrainzMapper.toPopularity(artist.rating)
+
+        // Then - one RATING signal labelled musicbrainz, normalised as (value - 1) / 4
+        val signal = popularity.signals.single()
+        assertEquals("musicbrainz", signal.source)
+        assertEquals(PopularitySignalKind.RATING, signal.kind)
+        assertEquals(4.05, signal.value, 0.001)
+        assertEquals(0.7625f, signal.normalized!!, 0.001f)
+        assertEquals(49, signal.sampleSize)
+    }
+
+    @Test
+    fun `the normalisation spans the whole 0 to 1 range, not 0 point 2 upward`() {
+        // Given - the worst and best ratings MusicBrainz's one-to-five scale can carry
+        val worst = MusicBrainzRating(value = 1f, votes = 3)
+        val best = MusicBrainzRating(value = 5f, votes = 3)
+
+        // When - mapping each to a signal
+        val low = MusicBrainzMapper.toPopularity(worst).signals.single()
+        val high = MusicBrainzMapper.toPopularity(best).signals.single()
+
+        // Then - one star is 0 and five stars is 1, so the value compares with a 0-based source
+        assertEquals(0f, low.normalized!!, 0.0001f)
+        assertEquals(1f, high.normalized!!, 0.0001f)
+    }
+
+    @Test
+    fun `a rating never fills a listen count`() {
+        // Given - the same rated artist, whose rating is a score and not a count of anything
+        val artist = MusicBrainzParser.parseLookupArtist(JSONObject(ARTIST_LOOKUP_RATED))!!
+
+        // When - mapping it
+        val popularity = MusicBrainzMapper.toPopularity(artist.rating)
+
+        // Then - the flat count fields stay empty, so no merger can blend 4.05 into a play count
+        assertNull(popularity.listenCount)
+        assertNull(popularity.listenerCount)
+        assertNull(popularity.rank)
+    }
+
+    @Test
+    fun `an unrated entity yields no signal at all`() {
+        // Given - the recording nobody has voted on
+        val recording = MusicBrainzParser.parseLookupRecording(JSONObject(RECORDING_LOOKUP_UNRATED))!!
+
+        // When - mapping its absent rating
+        val popularity = MusicBrainzMapper.toPopularity(recording.rating)
+
+        // Then - an empty list, which the provider reports as NotFound rather than a zero score
+        assertEquals(emptyList<PopularitySignal>(), popularity.signals)
     }
 
     private companion object {

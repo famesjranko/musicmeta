@@ -325,6 +325,20 @@ internal class MusicBrainzEnricher(
                     provider = providerId, confidence = ConfidenceCalculator.idBasedLookup(),
                 )
             }
+            EnrichmentType.ARTIST_POPULARITY -> {
+                // Rides the lookup the other artist types already make: `inc=ratings` is in
+                // ARTIST_LOOKUP_INC, so this costs no extra request. No votes is a genuine absence.
+                val artist = lookedUpOrNameResolvedArtist(request, mbid)
+                    ?: return EnrichmentResult.NotFound(type, providerId)
+                val popularity = MusicBrainzMapper.toPopularity(artist.rating)
+                if (popularity.signals.isEmpty()) return EnrichmentResult.NotFound(type, providerId)
+                EnrichmentResult.Success(
+                    type = type,
+                    data = popularity,
+                    provider = providerId, confidence = ConfidenceCalculator.idBasedLookup(),
+                    resolvedIdentifiers = MusicBrainzMapper.toArtistIdentifiers(artist),
+                )
+            }
             EnrichmentType.ARTIST_LINKS -> {
                 val artist = lookedUpOrNameResolvedArtist(request, mbid)
                     ?: return EnrichmentResult.NotFound(type, providerId)
@@ -459,10 +473,11 @@ internal class MusicBrainzEnricher(
         confidence: Float,
     ): EnrichmentResult.Success = EnrichmentResult.Success(
         type = type,
-        data = if (type == EnrichmentType.TRACK_METADATA) {
-            MusicBrainzMapper.toTrackMetadataDetails(recording)
-        } else {
-            MusicBrainzMapper.toTrackMetadata(recording)
+        data = when (type) {
+            // `inc=ratings` already rides RECORDING_LOOKUP_INC, so the rating costs no request.
+            EnrichmentType.TRACK_POPULARITY -> MusicBrainzMapper.toPopularity(recording.rating)
+            EnrichmentType.TRACK_METADATA -> MusicBrainzMapper.toTrackMetadataDetails(recording)
+            else -> MusicBrainzMapper.toTrackMetadata(recording)
         },
         provider = providerId,
         confidence = confidence,
@@ -1039,6 +1054,7 @@ internal class MusicBrainzEnricher(
             EnrichmentType.BAND_MEMBERS,
             EnrichmentType.ARTIST_DISCOGRAPHY,
             EnrichmentType.ARTIST_LINKS,
+            EnrichmentType.ARTIST_POPULARITY,
         )
     }
 }

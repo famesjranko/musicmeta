@@ -56,6 +56,10 @@ class MusicBrainzProvider(
         ProviderCapability(EnrichmentType.ALBUM_TRACKS, priority = 100),
         ProviderCapability(EnrichmentType.ARTIST_LINKS, priority = 100),
         ProviderCapability(EnrichmentType.TRACK_METADATA, priority = 100),
+        // Popularity at a low priority: MusicBrainz contributes a community rating, not the counts
+        // Last.fm and ListenBrainz measure, so it should never lead the merged flat fields.
+        ProviderCapability(EnrichmentType.ARTIST_POPULARITY, priority = 20),
+        ProviderCapability(EnrichmentType.TRACK_POPULARITY, priority = 20),
         ProviderCapability(
             EnrichmentType.CREDITS,
             priority = 100,

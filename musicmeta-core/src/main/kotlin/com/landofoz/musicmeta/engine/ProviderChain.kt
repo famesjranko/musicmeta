@@ -9,6 +9,7 @@ import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
 import com.landofoz.musicmeta.IdentifierRequirement
 import com.landofoz.musicmeta.http.CircuitBreaker
+import com.landofoz.musicmeta.http.RateLimitException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -27,6 +28,18 @@ internal data class ChainResults(
     val successes: List<EnrichmentResult.Success>,
     val failure: EnrichmentResult?,
 )
+
+/**
+ * The `RateLimited` a 429 owes the consumer. Every provider's broad `catch` runs `mapError` before
+ * the engine sees anything, so the throttle arrives as an `Error` already; this is the one place it
+ * is widened back out, keeping `mapError`'s published `Error` return type untouched.
+ */
+internal fun EnrichmentResult.asRateLimitedIfThrottled(): EnrichmentResult =
+    if (this is EnrichmentResult.Error && errorKind == ErrorKind.RATE_LIMIT) {
+        EnrichmentResult.RateLimited(type, provider, (cause as? RateLimitException)?.retryAfterMs)
+    } else {
+        this
+    }
 
 internal class ProviderChain(
     val type: EnrichmentType,
@@ -56,7 +69,7 @@ internal class ProviderChain(
                     provider.enrich(request, type)
                 } catch (e: Exception) {
                     EnrichmentResult.Error(type, provider.id, e.message ?: "Unknown error", e)
-                }
+                }.asRateLimitedIfThrottled()
                 // The one guard, and it is deliberately not a `catch (CancellationException)`.
                 // ensureActive() throws only when *this* job is cancelled, so a cancelled caller
                 // never records a breaker failure — while a CancellationException raised elsewhere
@@ -69,6 +82,10 @@ internal class ProviderChain(
                     is EnrichmentResult.Success -> { breaker?.recordSuccess(); result }
                     is EnrichmentResult.NotFound -> { breaker?.recordSuccess(); null }
                     is EnrichmentResult.RateLimited -> {
+                        // A failure, not a no-op: a throttled provider that records neither is a
+                        // breaker that never opens under load, which is the collapse
+                        // `bodyOrThrowTransient` throws to avoid (`docs/pitfalls.md` §4).
+                        breaker?.recordFailure()
                         logger.debug(TAG, "${type.name}: ${provider.id} rate limited, skipping"); result
                     }
                     is EnrichmentResult.Error -> {
@@ -96,7 +113,7 @@ internal class ProviderChain(
             when (result) {
                 is EnrichmentResult.Success -> { breaker?.recordSuccess(); return result }
                 is EnrichmentResult.NotFound -> { breaker?.recordSuccess() }
-                is EnrichmentResult.RateLimited -> { lastFailure = result }
+                is EnrichmentResult.RateLimited -> { breaker?.recordFailure(); lastFailure = result }
                 is EnrichmentResult.Error -> { breaker?.recordFailure(); lastFailure = result }
             }
         }
@@ -148,7 +165,7 @@ internal class ProviderChain(
                 provider.enrich(request, type)
             } catch (e: Exception) {
                 EnrichmentResult.Error(type, provider.id, e.message ?: "Unknown error", e)
-            }
+            }.asRateLimitedIfThrottled()
             currentCoroutineContext().ensureActive() // see resolveAll — the same single guard
 
             onResult(provider, breaker, result)

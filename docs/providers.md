@@ -17,7 +17,7 @@ Auth keys and how to supply them are in [README.md](../README.md).
 
 | Provider | Package | Auth | Upstream API docs | Why it is here |
 |---|---|---|---|---|
-| MusicBrainz | `musicbrainz` | none (User-Agent required) | [docs](https://musicbrainz.org/doc/MusicBrainz_API) | Identity backbone — `isIdentityProvider`, runs first, and the only `NotFound` that can carry `suggestions` |
+| MusicBrainz | `musicbrainz` | none (User-Agent required) | [docs](https://musicbrainz.org/doc/MusicBrainz_API) | Identity backbone — `isIdentityProvider`, runs first, and the only `NotFound` that can carry `suggestions`. Also the only rating source for `ARTIST_POPULARITY`/`TRACK_POPULARITY` |
 | Cover Art Archive | `coverartarchive` | none | [docs](https://musicbrainz.org/doc/Cover_Art_Archive/API) | Only artwork source keyed on a release MBID rather than a name, and the only source of back cover, booklet and disc |
 | Deezer | `deezer` | none | [docs](https://developers.deezer.com/api) | Widest no-key catalogue; only source of `ARTIST_RADIO`, `TRACK_PREVIEW`, `SIMILAR_ALBUMS` |
 | iTunes | `itunes` | none | [docs](https://performance-partners.apple.com/search-api) | No-key album search with artwork at any size; `lookup?upc=` resolves a known barcode as an identity match, replacing the search |
@@ -39,7 +39,7 @@ deliberate:
   not per provider, so `forceRefresh` reaches upstream (§12 of `pitfalls.md` has why that matters).
   Inlining it would put `MusicBrainzProvider` near 900 lines.
   `MusicBrainzParser.kt` holds every JSON → DTO conversion, which the other packages do inline in
-  `*Api`; twelve capabilities across three entity types is more than an API client should carry.
+  `*Api`; fourteen capabilities across three entity types is more than an API client should carry.
   `MusicBrainzCreditParser.kt` serves `CREDITS` and `RELEASE_EDITIONS` only — those two read raw
   `JSONObject` rather than DTOs, since `lookupRecording` and `lookupReleaseGroup` return the response
   unparsed, and it owns the relation-type → role mapping. `MusicBrainzQualifierFallback.kt` strips a
@@ -282,9 +282,8 @@ are dropped, and endpoints we never call. A to-do list for whoever adds the next
 
 **MusicBrainz.** `isrcs` beyond the first (`toTrackMetadata` keeps one; a recording often has
 several), `label-info[]` beyond the first (co-releases and reissues), `release.packaging`/`quality`,
-`artist.life-span.ended` (a split, distinct from having an end date), `annotation`. `rating` *is*
-requested and parsed (artist and recording lookups) but stops at the DTO — no payload carries a
-rating yet. `media[].format` *is* read, but only to drop video discs
+`artist.life-span.ended` (a split, distinct from having an end date), `annotation`.
+`media[].format` *is* read, but only to drop video discs
 from a tracklist and to label a `RELEASE_EDITIONS` entry — never surfaced per disc; `sort-name` is
 read too, to reorder a Person's "Last, First". Never requested: `works`, `series`, `events`,
 `places`, `instruments`, `collections`. No cover-art call — that is the Cover Art Archive provider, keyed on
@@ -310,7 +309,9 @@ of the positional scores the mapper synthesises), `track.duration` on radio and 
 own probe on credits-heavy albums before this becomes a capability),
 `explicit_content_lyrics` (finer than the boolean).
 `artist.nb_fan`/`nb_album` are read, but only as the artist search's tie-break — neither reaches
-`ARTIST_POPULARITY`. Never called:
+`ARTIST_POPULARITY`. Cheaper to add than it was: that type is merged now, so a Deezer fan count
+would arrive as one more `PopularitySignal` beside the others rather than having to beat them.
+Never called:
 `/chart`, `/genre`, `/editorial`, `/playlist/{id}`, `/podcast`, every `/user/**`.
 
 **iTunes.** Never read on results

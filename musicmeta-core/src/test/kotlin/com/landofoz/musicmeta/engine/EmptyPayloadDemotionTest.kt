@@ -7,6 +7,8 @@ import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.GenreTag
+import com.landofoz.musicmeta.PopularitySignal
+import com.landofoz.musicmeta.PopularitySignalKind
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.cache.CacheMode
 import com.landofoz.musicmeta.http.RateLimiter
@@ -353,6 +355,21 @@ class EmptyPayloadDemotionTest {
         assertFalse(EnrichmentData.Metadata().answers(EnrichmentType.ALBUM_METADATA))
         // An empty list is as unanswered as a null one
         assertFalse(EnrichmentData.Metadata(genres = emptyList()).answers(EnrichmentType.GENRE))
+    }
+
+    @Test
+    fun `a popularity payload carrying only a signal still answers`() {
+        // Given - MusicBrainz's rating, which fills a signal and none of the flat count fields
+        val ratingOnly = EnrichmentData.Popularity(
+            signals = listOf(PopularitySignal("musicbrainz", PopularitySignalKind.RATING, 4.05)),
+        )
+
+        // When - the gate asks whether it answers the type it claims
+        val answered = ratingOnly.answers(EnrichmentType.ARTIST_POPULARITY)
+
+        // Then - it answers, where reading only the flat fields would have demoted it to NotFound
+        assertTrue(answered)
+        assertFalse(EnrichmentData.Popularity().answers(EnrichmentType.ARTIST_POPULARITY))
     }
 
     @Test

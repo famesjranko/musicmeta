@@ -24,9 +24,10 @@ internal class ProviderCallScope : AbstractCoroutineContextElement(Key) {
      * This call's state for [provider], from [create] on first use. Concurrent because the engine
      * resolves types as sibling `async` children, so two of them race for the same slot.
      *
-     * One slot per provider *instance*, not per [EnrichmentProvider.id]: nothing dedups ids, and two
-     * providers sharing one may be differently configured, so sharing a slot between them would let
-     * whichever filled it first answer for both.
+     * One slot per provider *instance*, not per [EnrichmentProvider.id]. Registration rejects a
+     * duplicate id, but two differently-configured instances still reach here whenever a consumer's
+     * provider is a `data class` — [EnrichmentProvider] states no `equals`/`hashCode` contract — and
+     * sharing a slot between them would let whichever filled it first answer for both.
      */
     @Suppress("UNCHECKED_CAST") // one instance, one slot, so the stored type is the one it stored
     fun <T : Any> slot(provider: EnrichmentProvider, create: () -> T): T =
