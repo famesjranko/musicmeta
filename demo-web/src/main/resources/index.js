@@ -295,6 +295,7 @@ function render(data, wasForceRefresh) {
       <span class="freshness" role="status">${freshnessText}</span>
       <span class="spacer"></span>
       <button class="toolbar-btn" type="button" id="fetch-fresh-btn">⟳ Fetch fresh data</button>
+      ${data.kind === 'mbid' ? '' : '<button class="toolbar-btn quiet" type="button" id="invalidate-btn">✕ Clear cached result &amp; reload</button>'}
     </div>
     <div class="card summary${unverified ? ' unverified' : ''}">
       ${backdrop}
@@ -438,10 +439,35 @@ resultEl.addEventListener('click', (e) => {
   if (e.target.closest('#identity-retry')) runQuery();
 });
 
-// --- Result toolbar: force-refresh (child 08 adds a second button alongside this one) ---
+// --- Result toolbar: force-refresh, and clear-cache-then-reload ---
 
 resultEl.addEventListener('click', (e) => {
   if (e.target.closest('#fetch-fresh-btn')) runQuery(true);
+});
+
+// Invalidates the cached entry behind the page currently on screen, then re-runs the same
+// lookup — the visible effect is the same slow full fetch a first-ever search pays. Absent on
+// mbid pages: that kind is rejected by /api/invalidate (see Server.kt handleInvalidate), because
+// a bare MBID's request isn't reconstructable without the discovery round-trip render() already
+// paid to get here.
+resultEl.addEventListener('click', async (e) => {
+  const btn = e.target.closest('#invalidate-btn');
+  if (!btn || !lastQuery) return;
+  btn.disabled = true;
+  try {
+    const res = await fetch('/api/invalidate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(lastQuery),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+    runQuery(true);
+  } catch (err) {
+    statusEl.className = 'err';
+    statusEl.textContent = 'Failed: ' + err.message;
+    btn.disabled = false;
+  }
 });
 
 // --- Show more / show fewer (event delegation, no extra network calls) ---

@@ -288,7 +288,7 @@ button:disabled { opacity: 0.56; cursor: wait; }
 }
 
 /* Result toolbar — above the summary card. Freshness chip left, action buttons right; the
-   spacer is what leaves room for child 08's second button without restructuring this markup. */
+   spacer pushes the buttons flush right regardless of how many render. */
 .result-toolbar {
   display: flex;
   align-items: center;
@@ -328,6 +328,7 @@ button:disabled { opacity: 0.56; cursor: wait; }
   border-color: rgba(146, 169, 255, 0.38);
   color: var(--text);
 }
+.toolbar-btn.quiet { border-style: dashed; color: var(--muted); }
 
 .summary {
   display: flex;
