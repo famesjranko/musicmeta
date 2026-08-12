@@ -874,7 +874,7 @@ footer a:hover { color: var(--text); border-color: var(--text); }
 /* Every notice carries its own separator, so the trailing one leads into the panel link. */
 .credits-footer .credit::after {
   content: " · ";
-  color: var(--panel-border);
+  color: var(--muted);
 }
 
 .credits-link {
