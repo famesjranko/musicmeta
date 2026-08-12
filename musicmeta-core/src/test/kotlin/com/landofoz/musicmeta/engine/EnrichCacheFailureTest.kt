@@ -155,7 +155,7 @@ class EnrichCacheFailureTest {
                 }
                 // Reached only if the guard degraded. There is no suspension point between the
                 // cancel() and here, so the cancellation does *not* re-assert on its own — the
-                // assumption CLAUDE.md pitfall 2 warns about.
+                // assumption docs/pitfalls.md §2 warns about.
                 degraded = true
             } catch (_: CancellationException) {
                 rethrew = true

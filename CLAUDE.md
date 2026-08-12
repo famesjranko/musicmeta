@@ -12,8 +12,12 @@ rest; `ls docs/` lists the docs.
 
 | Before | Read |
 |---|---|
-| Changing a public signature, a `catch`, a provider's parsing, or a `ProviderCapability` | `docs/pitfalls.md` |
 | Touching `enrich()` or anything it calls | `docs/pitfalls.md` — "Traps in the pipeline" |
+| Changing a public signature, an `api/*.api` file, or a public data class | `docs/pitfalls.md` — "The published surface" |
+| Writing a `catch`, a timeout, breaker or fallback behaviour, or classifying a result as `Error`/`NotFound` | `docs/pitfalls.md` — "Errors, cancellation, and timeouts" |
+| A provider's parsing, search/ranking, `confidence`, or a `ProviderCapability` | `docs/pitfalls.md` — "Provider data and matching" |
+| Retry or status mapping, state held by a provider, or `forceRefresh`/invalidation | `docs/pitfalls.md` — "Transport and provider state" |
+| `scripts/checks/`, the comment rule, or demo config | `docs/pitfalls.md` — "Checks, comments, and config" |
 | Treating a green run as proof | `ARCHITECTURE.md` — what each check skips |
 | Deciding whether a thing is in scope, or what `1.0.0` waits on | `ROADMAP.md` |
 | Looking for the issue list | `.scratch/`, **not** GitHub Issues — `docs/agents/issue-tracker.md` |
@@ -36,7 +40,7 @@ Every finding has exactly one home; this file is the home only for the last row.
   JitPack, so assume external consumers exist. Minor (`0.x.0`) may break, if the break is under a
   `### Breaking Changes` heading in `CHANGELOG.md` *and* visible in the reviewed `api/*.api` diff — a
   break in neither is a defect. Patch (`0.x.y`) may not break. Full semver at `1.0.0`.
-  What counts as breaking, and the JVM descriptor caveat: `docs/pitfalls.md`.
+  What counts as breaking, and the JVM descriptor caveat: `docs/pitfalls.md` — "The published surface".
 - `e2e/` tests hit live APIs behind `-Dinclude.e2e=true` and never gate a merge, so an e2e test is
   not coverage for a change.
 - Comments carry the contract, not the history. KDoc states what a caller must know; a rationale
