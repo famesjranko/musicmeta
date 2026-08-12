@@ -1,6 +1,7 @@
 package com.landofoz.musicmeta.engine
 
 import com.landofoz.musicmeta.*
+import com.landofoz.musicmeta.cache.InMemoryEnrichmentCache
 import com.landofoz.musicmeta.http.AuthException
 import com.landofoz.musicmeta.testutil.FakeEnrichmentCache
 import com.landofoz.musicmeta.testutil.FakeProvider
@@ -1463,6 +1464,252 @@ class DefaultEnrichmentEngineTest {
 
         // Then - still NotFound; no transient fired this run
         assertTrue(results.raw[EnrichmentType.ALBUM_DESCRIPTION] is EnrichmentResult.NotFound)
+    }
+
+    // --- negative caching ---
+
+    @Test fun `fan-out NotFound is negative-cached and served without a re-ask`() = runTest {
+        // Given - a provider that always NotFounds, backed by a real in-memory cache
+        val negCache = InMemoryEnrichmentCache()
+        val p = FakeProvider(id = "p", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100)))
+        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(p)), negCache, config)
+
+        // When - enriching twice inside the negative TTL window
+        val first = e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
+        val second = e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
+
+        // Then - the provider was asked only once, and the served result is identical, live or cached
+        assertEquals(1, p.enrichCalls.size)
+        assertTrue(second.raw[EnrichmentType.ALBUM_ART] is EnrichmentResult.NotFound)
+        assertEquals(first.raw[EnrichmentType.ALBUM_ART], second.raw[EnrichmentType.ALBUM_ART])
+    }
+
+    @Test fun `expired negative is re-asked`() = runTest {
+        // Given - a short negative TTL and a provider that always NotFounds
+        var time = 0L
+        val negCache = InMemoryEnrichmentCache(clock = { time })
+        val p = FakeProvider(id = "p", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100)))
+        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(p)), negCache, config.copy(negativeTtlMs = 1000))
+        e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
+
+        // When - the clock advances past the negative TTL and the type is enriched again
+        time += 1500
+        e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
+
+        // Then - the provider was asked on both calls
+        assertEquals(2, p.enrichCalls.size)
+    }
+
+    @Test fun `a cache-hit negative served alongside a miss does not slide its TTL`() = runTest {
+        // Given - type ALBUM_ART already negative-cached with a short TTL, type GENRE uncached
+        var time = 0L
+        val negCache = InMemoryEnrichmentCache(clock = { time })
+        val keyA = DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.ALBUM_ART)
+        negCache.putNegative(keyA, EnrichmentType.ALBUM_ART, EnrichmentResult.NotFound(EnrichmentType.ALBUM_ART, "all_providers"), 1000)
+        val p = FakeProvider(
+            id = "p",
+            capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100), ProviderCapability(EnrichmentType.GENRE, 100)),
+        )
+        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(p)), negCache, config.copy(negativeTtlMs = 1000))
+
+        // When - enriching before ALBUM_ART's original expiry (a cache hit alongside GENRE's
+        // miss, which forces a write-back), then again after that original expiry
+        time = 800
+        e.enrich(req, setOf(EnrichmentType.ALBUM_ART, EnrichmentType.GENRE))
+        time = 1200
+        val second = e.enrich(req, setOf(EnrichmentType.ALBUM_ART, EnrichmentType.GENRE))
+
+        // Then - the mixed call at time 800 did not extend ALBUM_ART's TTL, so it expired on
+        // schedule and the provider is re-asked for it
+        assertTrue(p.enrichCalls.any { it.second == EnrichmentType.ALBUM_ART })
+        assertTrue(second.raw[EnrichmentType.ALBUM_ART] is EnrichmentResult.NotFound)
+    }
+
+    @Test fun `forceRefresh bypasses and clears a negative entry`() = runTest {
+        // Given - a negative already cached, and a provider now able to answer
+        val negCache = InMemoryEnrichmentCache()
+        val p = FakeProvider(id = "p", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100)))
+        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(p)), negCache, config)
+        e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
+        p.givenResult(EnrichmentType.ALBUM_ART, art("p"))
+
+        // When - forcing a refresh, then enriching again without forceRefresh
+        e.enrich(req, setOf(EnrichmentType.ALBUM_ART), forceRefresh = true)
+        val after = e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
+
+        // Then - forceRefresh re-asked the provider despite the cached negative, and the fresh
+        // Success is served afterwards rather than a leftover negative shadowing it
+        assertEquals(2, p.enrichCalls.size)
+        assertTrue(after.raw[EnrichmentType.ALBUM_ART] is EnrichmentResult.Success)
+    }
+
+    @Test fun `invalidate clears a negative entry`() = runTest {
+        // Given - a negative cached for the type
+        val negCache = InMemoryEnrichmentCache()
+        val p = FakeProvider(id = "p", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100)))
+        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(p)), negCache, config)
+        e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
+
+        // When - invalidating the type, then enriching again
+        e.invalidate(req, EnrichmentType.ALBUM_ART)
+        e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
+
+        // Then - the provider was asked on both calls: invalidate cleared the cached negative
+        assertEquals(2, p.enrichCalls.size)
+    }
+
+    @Test fun `Success results still round-trip through the cache unaffected by negative caching`() = runTest {
+        // Given - a provider that succeeds, backed by a real in-memory cache
+        val negCache = InMemoryEnrichmentCache()
+        val p = FakeProvider(id = "p", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100)))
+            .also { it.givenResult(EnrichmentType.ALBUM_ART, art("p")) }
+        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(p)), negCache, config)
+
+        // When - enriching twice
+        e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
+        e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
+
+        // Then - the provider was asked only once; the Success was served from cache on the repeat
+        assertEquals(1, p.enrichCalls.size)
+    }
+
+    @Test fun `STALE_IF_ERROR distinguishes an expired negative from an expired positive`() = runTest {
+        // Given - real cache holding an expired negative for art and an expired Success for genre,
+        // with a provider that now errors on both
+        var time = 0L
+        val negCache = InMemoryEnrichmentCache(clock = { time })
+        val shortTtlConfig = EnrichmentConfig(
+            enableIdentityResolution = false,
+            cacheMode = com.landofoz.musicmeta.cache.CacheMode.STALE_IF_ERROR,
+            negativeTtlMs = 1000,
+            ttlOverrides = mapOf(EnrichmentType.GENRE to 1000L),
+        )
+        val p = FakeProvider(
+            id = "p",
+            capabilities = listOf(
+                ProviderCapability(EnrichmentType.ALBUM_ART, 100),
+                ProviderCapability(EnrichmentType.GENRE, 100),
+            ),
+        ).also { it.givenResult(EnrichmentType.GENRE, genre("p")) }
+        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(p)), negCache, shortTtlConfig)
+        e.enrich(req, setOf(EnrichmentType.ALBUM_ART, EnrichmentType.GENRE))
+        time += 1500
+        p.givenResult(EnrichmentType.ALBUM_ART, EnrichmentResult.Error(EnrichmentType.ALBUM_ART, "p", "down"))
+        p.givenResult(EnrichmentType.GENRE, EnrichmentResult.Error(EnrichmentType.GENRE, "p", "down"))
+
+        // When - enriching again with both entries expired and the provider now erroring
+        val results = e.enrich(req, setOf(EnrichmentType.ALBUM_ART, EnrichmentType.GENRE))
+
+        // Then - the expired negative never resurrects as NotFound, but the expired Success still
+        // serves stale — the positive stale path is untouched
+        assertTrue(results.raw[EnrichmentType.ALBUM_ART] is EnrichmentResult.Error)
+        val genreResult = results.raw[EnrichmentType.GENRE] as EnrichmentResult.Success
+        assertTrue(genreResult.isStale)
+    }
+
+    @Test fun `a NotFound with suggestions is not negative-cached`() = runTest {
+        // Given - identity provider returns NotFound with suggestions, backed by a real cache
+        val negCache = InMemoryEnrichmentCache()
+        val suggestions = listOf(
+            SearchCandidate("Bush", null, "1992", "GB", "Group", 75, null, EnrichmentIdentifiers(musicBrainzId = "mbid-gb"), "mb", disambiguation = "British rock band"),
+        )
+        val idProvider = FakeProvider(id = "mb", isIdentityProvider = true, capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)))
+            .also { it.givenIdentityResult(EnrichmentResult.NotFound(EnrichmentType.GENRE, "mb", suggestions = suggestions)) }
+        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider)), negCache, EnrichmentConfig(enableIdentityResolution = true))
+
+        // When - enriching with identity resolution that fails with suggestions
+        e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
+
+        // Then - nothing was negative-cached for the type
+        assertNull(negCache.getNegative(DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.ALBUM_ART), EnrichmentType.ALBUM_ART))
+    }
+
+    @Test fun `a NotFound with suggestions and a RESOLVED identity is not negative-cached`() = runTest {
+        // Given - a NotFound pairing suggestions with a RESOLVED identity match, a combination
+        // enrich() itself never produces (the short-circuit that carries suggestions always
+        // stamps SUGGESTIONS), so isCacheableNegative is exercised directly on its own engine
+        val e = engine()
+        val suggestions = listOf(
+            SearchCandidate("Bush", null, "1992", "GB", "Group", 75, null, EnrichmentIdentifiers(musicBrainzId = "mbid-gb"), "mb", disambiguation = "British rock band"),
+        )
+        val result = EnrichmentResult.NotFound(
+            EnrichmentType.ALBUM_ART, "all_providers", suggestions = suggestions, identityMatch = IdentityMatch.RESOLVED,
+        )
+
+        // When - checking whether the result is cacheable as a negative
+        val cacheable = e.isCacheableNegative(result)
+
+        // Then - suggestions alone block negative caching regardless of identity confidence
+        assertFalse(cacheable)
+    }
+
+    @Test fun `a NotFound with no suggestions but an UNVERIFIED identity is not negative-cached`() = runTest {
+        // Given - a NotFound with no suggestions but an UNVERIFIED identity, a combination
+        // enrich() itself never produces (stampIdentityMatch only ever stamps UNVERIFIED onto a
+        // Success), so isCacheableNegative is exercised directly on its own engine
+        val e = engine()
+        val result = EnrichmentResult.NotFound(
+            EnrichmentType.ALBUM_ART, "all_providers", suggestions = null, identityMatch = IdentityMatch.UNVERIFIED,
+        )
+
+        // When - checking whether the result is cacheable as a negative
+        val cacheable = e.isCacheableNegative(result)
+
+        // Then - the UNVERIFIED identity alone blocks negative caching despite no suggestions
+        assertFalse(cacheable)
+    }
+
+    @Test fun `a transient-reclassified NotFound is not negative-cached`() = runTest {
+        // Given - identity resolution throws a transient; the target type's chain has a
+        // same-chain provider with no identifier requirement that ran and returned its own
+        // genuine NotFound, so the chain's own result collapses to NotFound("all_providers")
+        val negCache = InMemoryEnrichmentCache()
+        val idProvider = ThrowingIdentityProvider("mb")
+        val wikipediaLike = FakeProvider(
+            id = "wikipedia",
+            capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_DESCRIPTION, 100, identifierRequirement = IdentifierRequirement.WIKIPEDIA_TITLE)),
+        )
+        val lastfmLike = FakeProvider(
+            id = "lastfm",
+            capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_DESCRIPTION, 50)),
+        ).also { it.givenResult(EnrichmentType.ALBUM_DESCRIPTION, EnrichmentResult.NotFound(EnrichmentType.ALBUM_DESCRIPTION, "lastfm")) }
+        val e = DefaultEnrichmentEngine(
+            ProviderRegistry(listOf(idProvider, wikipediaLike, lastfmLike)),
+            negCache,
+            EnrichmentConfig(enableIdentityResolution = true),
+        )
+
+        // When - enriching a request with no pre-existing MBID
+        val results = e.enrich(req, setOf(EnrichmentType.ALBUM_DESCRIPTION))
+
+        // Then - the type resolved to Error (reclassified from the chain's own NotFound), and
+        // writeBack saw only that Error, so nothing was negative-cached
+        assertTrue(results.raw[EnrichmentType.ALBUM_DESCRIPTION] is EnrichmentResult.Error)
+        assertNull(
+            negCache.getNegative(
+                DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.ALBUM_DESCRIPTION),
+                EnrichmentType.ALBUM_DESCRIPTION,
+            ),
+        )
+    }
+
+    @Test fun `forceRefresh negative write-back reaches a manually-selected key already cleared by invalidate`() = runTest {
+        // Given - a manually-selected Success cached for the type
+        val negCache = InMemoryEnrichmentCache()
+        val key = DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.ALBUM_ART)
+        negCache.put(key, EnrichmentType.ALBUM_ART, art("manual"))
+        negCache.markManuallySelected(key, EnrichmentType.ALBUM_ART)
+        val p = FakeProvider(id = "p", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100)))
+        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(p)), negCache, config)
+
+        // When - forcing a refresh while the provider now has nothing
+        e.enrich(req, setOf(EnrichmentType.ALBUM_ART), forceRefresh = true)
+
+        // Then - forceRefresh's own invalidate already cleared the manually-selected Success the
+        // same way it clears any other entry, so the negative write-back lands on an empty slot;
+        // the manual flag is consumer-facing display metadata, not a write-back exemption
+        assertNull(negCache.get(key, EnrichmentType.ALBUM_ART))
+        assertNotNull(negCache.getNegative(key, EnrichmentType.ALBUM_ART))
     }
 }
 

@@ -334,10 +334,12 @@ public abstract interface class com/landofoz/musicmeta/EnrichmentCache {
 	public abstract fun clear (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun get (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun getIncludingExpired (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun getNegative (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun invalidate (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun isManuallySelected (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun markManuallySelected (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun put (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lcom/landofoz/musicmeta/EnrichmentResult$Success;JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun putNegative (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lcom/landofoz/musicmeta/EnrichmentResult$NotFound;JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 
 public final class com/landofoz/musicmeta/EnrichmentCache$Companion {
@@ -346,23 +348,27 @@ public final class com/landofoz/musicmeta/EnrichmentCache$Companion {
 
 public final class com/landofoz/musicmeta/EnrichmentCache$DefaultImpls {
 	public static fun getIncludingExpired (Lcom/landofoz/musicmeta/EnrichmentCache;Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static fun getNegative (Lcom/landofoz/musicmeta/EnrichmentCache;Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static synthetic fun invalidate$default (Lcom/landofoz/musicmeta/EnrichmentCache;Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun put$default (Lcom/landofoz/musicmeta/EnrichmentCache;Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lcom/landofoz/musicmeta/EnrichmentResult$Success;JLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static fun putNegative (Lcom/landofoz/musicmeta/EnrichmentCache;Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lcom/landofoz/musicmeta/EnrichmentResult$NotFound;JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 
 public final class com/landofoz/musicmeta/EnrichmentConfig {
 	public static final field Companion Lcom/landofoz/musicmeta/EnrichmentConfig$Companion;
 	public static final field DEFAULT_ENRICH_TIMEOUT_MS J
 	public static final field DEFAULT_MIN_CONFIDENCE F
+	public static final field DEFAULT_NEGATIVE_TTL_MS J
 	public static final field DEFAULT_RADIO_LIMIT I
 	public static final field DEFAULT_USER_AGENT Ljava/lang/String;
 	public fun <init> ()V
-	public fun <init> (FLjava/lang/String;ZJLjava/util/Map;Ljava/util/Map;Ljava/util/Map;Lcom/landofoz/musicmeta/CatalogProvider;Lcom/landofoz/musicmeta/CatalogFilterMode;ILcom/landofoz/musicmeta/RadioDiscoveryMode;Lcom/landofoz/musicmeta/cache/CacheMode;)V
-	public synthetic fun <init> (FLjava/lang/String;ZJLjava/util/Map;Ljava/util/Map;Ljava/util/Map;Lcom/landofoz/musicmeta/CatalogProvider;Lcom/landofoz/musicmeta/CatalogFilterMode;ILcom/landofoz/musicmeta/RadioDiscoveryMode;Lcom/landofoz/musicmeta/cache/CacheMode;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (FLjava/lang/String;ZJLjava/util/Map;Ljava/util/Map;Ljava/util/Map;Lcom/landofoz/musicmeta/CatalogProvider;Lcom/landofoz/musicmeta/CatalogFilterMode;ILcom/landofoz/musicmeta/RadioDiscoveryMode;Lcom/landofoz/musicmeta/cache/CacheMode;J)V
+	public synthetic fun <init> (FLjava/lang/String;ZJLjava/util/Map;Ljava/util/Map;Ljava/util/Map;Lcom/landofoz/musicmeta/CatalogProvider;Lcom/landofoz/musicmeta/CatalogFilterMode;ILcom/landofoz/musicmeta/RadioDiscoveryMode;Lcom/landofoz/musicmeta/cache/CacheMode;JILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()F
 	public final fun component10 ()I
 	public final fun component11 ()Lcom/landofoz/musicmeta/RadioDiscoveryMode;
 	public final fun component12 ()Lcom/landofoz/musicmeta/cache/CacheMode;
+	public final fun component13 ()J
 	public final fun component2 ()Ljava/lang/String;
 	public final fun component3 ()Z
 	public final fun component4 ()J
@@ -371,8 +377,8 @@ public final class com/landofoz/musicmeta/EnrichmentConfig {
 	public final fun component7 ()Ljava/util/Map;
 	public final fun component8 ()Lcom/landofoz/musicmeta/CatalogProvider;
 	public final fun component9 ()Lcom/landofoz/musicmeta/CatalogFilterMode;
-	public final fun copy (FLjava/lang/String;ZJLjava/util/Map;Ljava/util/Map;Ljava/util/Map;Lcom/landofoz/musicmeta/CatalogProvider;Lcom/landofoz/musicmeta/CatalogFilterMode;ILcom/landofoz/musicmeta/RadioDiscoveryMode;Lcom/landofoz/musicmeta/cache/CacheMode;)Lcom/landofoz/musicmeta/EnrichmentConfig;
-	public static synthetic fun copy$default (Lcom/landofoz/musicmeta/EnrichmentConfig;FLjava/lang/String;ZJLjava/util/Map;Ljava/util/Map;Ljava/util/Map;Lcom/landofoz/musicmeta/CatalogProvider;Lcom/landofoz/musicmeta/CatalogFilterMode;ILcom/landofoz/musicmeta/RadioDiscoveryMode;Lcom/landofoz/musicmeta/cache/CacheMode;ILjava/lang/Object;)Lcom/landofoz/musicmeta/EnrichmentConfig;
+	public final fun copy (FLjava/lang/String;ZJLjava/util/Map;Ljava/util/Map;Ljava/util/Map;Lcom/landofoz/musicmeta/CatalogProvider;Lcom/landofoz/musicmeta/CatalogFilterMode;ILcom/landofoz/musicmeta/RadioDiscoveryMode;Lcom/landofoz/musicmeta/cache/CacheMode;J)Lcom/landofoz/musicmeta/EnrichmentConfig;
+	public static synthetic fun copy$default (Lcom/landofoz/musicmeta/EnrichmentConfig;FLjava/lang/String;ZJLjava/util/Map;Ljava/util/Map;Ljava/util/Map;Lcom/landofoz/musicmeta/CatalogProvider;Lcom/landofoz/musicmeta/CatalogFilterMode;ILcom/landofoz/musicmeta/RadioDiscoveryMode;Lcom/landofoz/musicmeta/cache/CacheMode;JILjava/lang/Object;)Lcom/landofoz/musicmeta/EnrichmentConfig;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getCacheMode ()Lcom/landofoz/musicmeta/cache/CacheMode;
 	public final fun getCatalogFilterMode ()Lcom/landofoz/musicmeta/CatalogFilterMode;
@@ -381,6 +387,7 @@ public final class com/landofoz/musicmeta/EnrichmentConfig {
 	public final fun getEnableIdentityResolution ()Z
 	public final fun getEnrichTimeoutMs ()J
 	public final fun getMinConfidence ()F
+	public final fun getNegativeTtlMs ()J
 	public final fun getPriorityOverrides ()Ljava/util/Map;
 	public final fun getRadioDiscoveryMode ()Lcom/landofoz/musicmeta/RadioDiscoveryMode;
 	public final fun getRadioLimit ()I
@@ -2195,10 +2202,12 @@ public final class com/landofoz/musicmeta/cache/InMemoryEnrichmentCache : com/la
 	public fun clear (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun get (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun getIncludingExpired (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun getNegative (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun invalidate (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun isManuallySelected (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun markManuallySelected (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun put (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lcom/landofoz/musicmeta/EnrichmentResult$Success;JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun putNegative (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lcom/landofoz/musicmeta/EnrichmentResult$NotFound;JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 
 public abstract interface class com/landofoz/musicmeta/engine/CompositeSynthesizer {

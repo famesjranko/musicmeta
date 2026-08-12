@@ -43,6 +43,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A non-Latin artist request (e.g. 東京事変) against a romanizing provider (Deezer/iTunes/Discogs) now returns no match instead of the provider's unverified top hit; recovery is tracked separately
 - `OkHttpEnrichmentClient` now retries a 429, a shed 502/503/504 and a transport failure on core's budgeted ladder; its constructor gains a defaulted `maxAttempts`, so recompile
 - `DefaultHttpClient` no longer publishes `MAX_RETRY_AFTER_SEC`; the 120s standalone retry ceiling moved into the shared ladder
+- `EnrichmentCache` gains defaulted `getNegative`/`putNegative`: callers are unaffected, but an implementer must recompile, or the engine's first cache miss throws `AbstractMethodError`
+- `RoomEnrichmentCache` now takes a required `negativeDao: NegativeCacheDao` (schema v3, additive migration): recompile and wire `negativeCacheDao()`, or take `EnrichmentCacheDatabase.create()`
 
 ### Added
 - `EnrichmentRequest.forTrackByMbid`/`forAlbumByMbid`/`forArtistByMbid`: request an entity by MBID alone; identity resolution fills the names the other providers search by
@@ -62,6 +64,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Deezer's `ALBUM_METADATA` now fills `barcode`/`label`/`releaseDate` from `GET /album/{id}`, one extra request shared with `ALBUM_TRACKS` per call; no genre (Deezer's is one coarse tag)
 - `BudgetedTransientRetry`, `HttpResult.asAttempt`, and `withRetryBudgetForTest` behind a `@MusicmetaTestApi` opt-in: core's budgeted retry ladder is public for a client of your own
 - `ProviderCatalog.entries`: the providers `withDefaultProviders()` would register, with id, display name, and `KeyRequirement` naming the gating field
+- A confident `NotFound` is now cached for `EnrichmentConfig.negativeTtlMs` (default 1h), skipping the round-trip on a repeat
 
 ### Changed
 - `ARTIST_POPULARITY`/`TRACK_POPULARITY` are now merged across providers instead of returning the first answer: a field the leading source lacks is filled from the next that has it
@@ -77,8 +80,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Deezer's `ALBUM_TRACKS` now uses the same artist-matched search as `ALBUM_METADATA` (was the unfiltered top hit), so a same-titled wrong-artist album no longer supplies the tracklist
 - That same match can now reject all 5 candidates (alias, compilation, credited-as variant), so `ALBUM_TRACKS` can return `NotFound` where it previously returned the unfiltered top hit's tracks
 - `ALBUM_TRACKS`'s confidence now reflects that same artist match (was always the no-match floor), matching what `ALBUM_METADATA` and `ALBUM_ART` already reported for the identical selection
-- Wikipedia bios now come from the Action API extract, which keeps the parentheticals the old endpoint stripped (instrument credits, IPA, native-script names): bio text visibly changes
-- Wikipedia bios now come from the Action API extract, keeping parentheticals the old endpoint stripped (instrument credits, IPA, native script). `ARTIST_BIO` caches 30 days, so clear yours or wait
+- Wikipedia bios now come from the Action API extract, restoring parentheticals the old endpoint stripped (instrument credits, IPA); bio text changes, caches 30 days, so clear yours or wait
 - Wikipedia `ARTIST_PHOTO` now carries the largest rendered thumbnail and every scale in `sizes`, not the original file: `height` is null, since the media route states none
 - iTunes album resolution now does a `lookup?upc=` identity match when a barcode is known, replacing the fuzzy search — a barcode Apple doesn't carry is `NotFound`, not a search fallback
 - `build()` warns from the User-Agent the wire will carry: the contactless default meeting MusicBrainz/Wikipedia/Wikidata, `contact()` after `withDefaultProviders()`, or `contact()` with your client

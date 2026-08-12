@@ -14,10 +14,13 @@ public abstract class com/landofoz/musicmeta/android/cache/EnrichmentCacheDataba
 	public static final field Companion Lcom/landofoz/musicmeta/android/cache/EnrichmentCacheDatabase$Companion;
 	public fun <init> ()V
 	public abstract fun enrichmentCacheDao ()Lcom/landofoz/musicmeta/android/cache/EnrichmentCacheDao;
+	public abstract fun negativeCacheDao ()Lcom/landofoz/musicmeta/android/cache/NegativeCacheDao;
 }
 
 public final class com/landofoz/musicmeta/android/cache/EnrichmentCacheDatabase$Companion {
+	public final fun create (Landroid/content/Context;Ljava/lang/String;)Lcom/landofoz/musicmeta/android/cache/EnrichmentCacheDatabase;
 	public final fun getMIGRATION_1_2 ()Landroidx/room/migration/Migration;
+	public final fun getMIGRATION_2_3 ()Landroidx/room/migration/Migration;
 }
 
 public final class com/landofoz/musicmeta/android/cache/EnrichmentCacheEntity {
@@ -54,18 +57,53 @@ public final class com/landofoz/musicmeta/android/cache/EnrichmentCacheEntity {
 	public fun toString ()Ljava/lang/String;
 }
 
+public abstract interface class com/landofoz/musicmeta/android/cache/NegativeCacheDao {
+	public abstract fun clearAll (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun delete (Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun deleteAll (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun deleteExpired (JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun get (Ljava/lang/String;Ljava/lang/String;JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun insert (Lcom/landofoz/musicmeta/android/cache/NegativeCacheEntity;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class com/landofoz/musicmeta/android/cache/NegativeCacheEntity {
+	public fun <init> (JLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)V
+	public synthetic fun <init> (JLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()J
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun component5 ()Ljava/lang/String;
+	public final fun component6 ()J
+	public final fun component7 ()J
+	public final fun copy (JLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)Lcom/landofoz/musicmeta/android/cache/NegativeCacheEntity;
+	public static synthetic fun copy$default (Lcom/landofoz/musicmeta/android/cache/NegativeCacheEntity;JLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJILjava/lang/Object;)Lcom/landofoz/musicmeta/android/cache/NegativeCacheEntity;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCachedAt ()J
+	public final fun getEnrichmentType ()Ljava/lang/String;
+	public final fun getEntityKey ()Ljava/lang/String;
+	public final fun getExpiresAt ()J
+	public final fun getId ()J
+	public final fun getIdentityMatch ()Ljava/lang/String;
+	public final fun getProvider ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class com/landofoz/musicmeta/android/cache/RoomEnrichmentCache : com/landofoz/musicmeta/EnrichmentCache {
 	public static final field TAG Ljava/lang/String;
-	public fun <init> (Lcom/landofoz/musicmeta/android/cache/EnrichmentCacheDao;Lkotlin/jvm/functions/Function0;Lcom/landofoz/musicmeta/EnrichmentLogger;)V
-	public synthetic fun <init> (Lcom/landofoz/musicmeta/android/cache/EnrichmentCacheDao;Lkotlin/jvm/functions/Function0;Lcom/landofoz/musicmeta/EnrichmentLogger;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Lcom/landofoz/musicmeta/android/cache/EnrichmentCacheDao;Lcom/landofoz/musicmeta/android/cache/NegativeCacheDao;Lkotlin/jvm/functions/Function0;Lcom/landofoz/musicmeta/EnrichmentLogger;)V
+	public synthetic fun <init> (Lcom/landofoz/musicmeta/android/cache/EnrichmentCacheDao;Lcom/landofoz/musicmeta/android/cache/NegativeCacheDao;Lkotlin/jvm/functions/Function0;Lcom/landofoz/musicmeta/EnrichmentLogger;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun clear (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun deleteExpired (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun get (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun getIncludingExpired (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun getNegative (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun invalidate (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun isManuallySelected (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun markManuallySelected (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun put (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lcom/landofoz/musicmeta/EnrichmentResult$Success;JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun putNegative (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lcom/landofoz/musicmeta/EnrichmentResult$NotFound;JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 
 public final class com/landofoz/musicmeta/android/di/HiltEnrichmentModule {
@@ -73,7 +111,8 @@ public final class com/landofoz/musicmeta/android/di/HiltEnrichmentModule {
 	public static final field INSTANCE Lcom/landofoz/musicmeta/android/di/HiltEnrichmentModule;
 	public final fun provideEnrichmentCacheDao (Lcom/landofoz/musicmeta/android/cache/EnrichmentCacheDatabase;)Lcom/landofoz/musicmeta/android/cache/EnrichmentCacheDao;
 	public final fun provideEnrichmentCacheDatabase (Landroid/content/Context;)Lcom/landofoz/musicmeta/android/cache/EnrichmentCacheDatabase;
-	public final fun provideRoomEnrichmentCache (Lcom/landofoz/musicmeta/android/cache/EnrichmentCacheDao;)Lcom/landofoz/musicmeta/android/cache/RoomEnrichmentCache;
+	public final fun provideNegativeCacheDao (Lcom/landofoz/musicmeta/android/cache/EnrichmentCacheDatabase;)Lcom/landofoz/musicmeta/android/cache/NegativeCacheDao;
+	public final fun provideRoomEnrichmentCache (Lcom/landofoz/musicmeta/android/cache/EnrichmentCacheDao;Lcom/landofoz/musicmeta/android/cache/NegativeCacheDao;)Lcom/landofoz/musicmeta/android/cache/RoomEnrichmentCache;
 }
 
 public abstract class com/landofoz/musicmeta/android/worker/EnrichmentWorker : androidx/work/CoroutineWorker {

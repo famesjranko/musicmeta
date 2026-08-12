@@ -38,6 +38,10 @@ enum class RadioDiscoveryMode(val apiValue: String) {
  *   Defaults to UNFILTERED (no filtering).
  * @param cacheMode Controls fallback behavior when providers fail. NETWORK_FIRST (default)
  *   returns errors as-is. STALE_IF_ERROR serves expired cache entries on Error/RateLimited.
+ * @param negativeTtlMs How long a "providers had nothing" answer is cached before it is re-asked,
+ *   in milliseconds. Short relative to [ttlOverrides]/[EnrichmentType.defaultTtlMs] so a
+ *   newly-published entity is picked up soon after a miss, while a repeat lookup inside the
+ *   window skips the round-trip. Default is one hour.
  */
 data class EnrichmentConfig(
     val minConfidence: Float = DEFAULT_MIN_CONFIDENCE,
@@ -54,6 +58,7 @@ data class EnrichmentConfig(
     /** Discovery depth for LB Radio (ARTIST_RADIO_DISCOVERY). */
     val radioDiscoveryMode: RadioDiscoveryMode = RadioDiscoveryMode.EASY,
     val cacheMode: CacheMode = CacheMode.NETWORK_FIRST,
+    val negativeTtlMs: Long = DEFAULT_NEGATIVE_TTL_MS,
 ) {
     companion object {
         const val DEFAULT_MIN_CONFIDENCE = 0.5f
@@ -73,6 +78,7 @@ data class EnrichmentConfig(
         const val DEFAULT_USER_AGENT = "MusicEnrichmentEngine/1.0"
         const val DEFAULT_ENRICH_TIMEOUT_MS = 30_000L
         const val DEFAULT_RADIO_LIMIT = 50
+        const val DEFAULT_NEGATIVE_TTL_MS = 60 * 60 * 1000L
 
         /**
          * [DEFAULT_USER_AGENT] carrying [contact], in the form both policies ask for:

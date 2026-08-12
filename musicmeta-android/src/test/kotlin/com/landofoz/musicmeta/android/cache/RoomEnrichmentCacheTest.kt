@@ -36,7 +36,7 @@ class RoomEnrichmentCacheTest {
         database = Room.inMemoryDatabaseBuilder(context, EnrichmentCacheDatabase::class.java)
             .allowMainThreadQueries()
             .build()
-        cache = RoomEnrichmentCache(database.enrichmentCacheDao())
+        cache = RoomEnrichmentCache(database.enrichmentCacheDao(), database.negativeCacheDao())
     }
 
     @After
@@ -169,7 +169,7 @@ class RoomEnrichmentCacheTest {
     fun `returns null for expired entry`() = runTest {
         // Given - cache with a controllable clock
         var now = 1_000_000L
-        val clockCache = RoomEnrichmentCache(database.enrichmentCacheDao(), clock = { now })
+        val clockCache = RoomEnrichmentCache(database.enrichmentCacheDao(), database.negativeCacheDao(), clock = { now })
 
         val result = EnrichmentResult.Success(
             type = EnrichmentType.ALBUM_ART,
@@ -253,6 +253,77 @@ class RoomEnrichmentCacheTest {
         // Then - both gone
         assertNull(cache.get("album:all", EnrichmentType.ALBUM_ART))
         assertNull(cache.get("album:all", EnrichmentType.GENRE))
+    }
+
+    @Test
+    fun `negative entries round-trip without re-asking`() = runTest {
+        // Given - a NotFound for a type nothing answered
+        val notFound = EnrichmentResult.NotFound(
+            type = EnrichmentType.ALBUM_ART,
+            provider = "all_providers",
+            identityMatch = IdentityMatch.RESOLVED,
+        )
+
+        // When - putting then getting the negative from the cache
+        cache.putNegative("album:neg", EnrichmentType.ALBUM_ART, notFound, ttlMs = 5_000L)
+        val retrieved = cache.getNegative("album:neg", EnrichmentType.ALBUM_ART)
+
+        // Then - the retrieved negative matches what was stored
+        assertNotNull(retrieved)
+        assertEquals("all_providers", retrieved!!.provider)
+        assertEquals(IdentityMatch.RESOLVED, retrieved.identityMatch)
+    }
+
+    @Test
+    fun `returns null for an expired negative entry`() = runTest {
+        // Given - a cache with a controllable clock, and a negative put with a short TTL
+        var now = 1_000_000L
+        val clockCache = RoomEnrichmentCache(database.enrichmentCacheDao(), database.negativeCacheDao(), clock = { now })
+        val notFound = EnrichmentResult.NotFound(type = EnrichmentType.ALBUM_ART, provider = "p")
+        clockCache.putNegative("album:neg-exp", EnrichmentType.ALBUM_ART, notFound, ttlMs = 5_000L)
+
+        // When - still valid, then after the clock advances past expiry
+        val beforeExpiry = clockCache.getNegative("album:neg-exp", EnrichmentType.ALBUM_ART)
+        now = 1_006_000L
+        val afterExpiry = clockCache.getNegative("album:neg-exp", EnrichmentType.ALBUM_ART)
+
+        // Then - valid before expiry, null after — there is no expired-negative read path
+        assertNotNull(beforeExpiry)
+        assertNull(afterExpiry)
+    }
+
+    @Test
+    fun `invalidate clears a negative entry`() = runTest {
+        // Given - a negative and a positive cached for different types of the same entity
+        val notFound = EnrichmentResult.NotFound(type = EnrichmentType.ALBUM_ART, provider = "p")
+        val genreResult = EnrichmentResult.Success(
+            type = EnrichmentType.GENRE,
+            data = EnrichmentData.Metadata(genres = listOf("Rock")),
+            provider = "musicbrainz",
+            confidence = 0.85f,
+        )
+        cache.putNegative("album:neg-inv", EnrichmentType.ALBUM_ART, notFound, ttlMs = 5_000L)
+        cache.put("album:neg-inv", EnrichmentType.GENRE, genreResult)
+
+        // When - invalidating only the negative's type
+        cache.invalidate("album:neg-inv", EnrichmentType.ALBUM_ART)
+
+        // Then - the negative is gone, the unrelated positive entry is untouched
+        assertNull(cache.getNegative("album:neg-inv", EnrichmentType.ALBUM_ART))
+        assertNotNull(cache.get("album:neg-inv", EnrichmentType.GENRE))
+    }
+
+    @Test
+    fun `clear removes negative entries too`() = runTest {
+        // Given - a negative cached for one entity
+        val notFound = EnrichmentResult.NotFound(type = EnrichmentType.ALBUM_ART, provider = "p")
+        cache.putNegative("album:neg-clear", EnrichmentType.ALBUM_ART, notFound, ttlMs = 5_000L)
+
+        // When - clearing the cache
+        cache.clear()
+
+        // Then - the negative entry is gone
+        assertNull(cache.getNegative("album:neg-clear", EnrichmentType.ALBUM_ART))
     }
 
     @Test

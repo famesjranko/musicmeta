@@ -61,6 +61,7 @@ internal class DefaultEnrichmentEngine(
 
         val results = mutableMapOf<EnrichmentType, EnrichmentResult>()
         val uncachedTypes = mutableSetOf<EnrichmentType>()
+        val negativeCacheHits = mutableSetOf<EnrichmentType>()
 
         for (type in types) {
             // forceRefresh already invalidated these keys; skipping the read keeps a *failed*
@@ -76,6 +77,16 @@ internal class DefaultEnrichmentEngine(
             // for the same reason: see hasUnknownGenreCuration.
             if (cached != null && cached.data.answers(type) && !cached.data.hasUnknownGenreCuration()) {
                 results[type] = cached
+                continue
+            }
+            // A fresh negative entry answers "providers had nothing" without a re-ask; the read is
+            // skipped under forceRefresh for the same reason as the positive read above.
+            val negative = if (forceRefresh) null else {
+                guardedCacheRead(logger, "getNegative") { cache.getNegative(entityKeyFor(request, type), type) }
+            }
+            if (negative != null) {
+                results[type] = negative
+                negativeCacheHits.add(type)
             } else {
                 uncachedTypes.add(type)
             }
@@ -163,7 +174,7 @@ internal class DefaultEnrichmentEngine(
         // rewrites entries in `results` — catalog filtering does exactly that, per type — so what
         // survives is a mix of finished and unfinished work. Returning it is the contract; caching
         // it would outlive the call that truncated it. (#56)
-        if (completed) writeBack(request, resolvedRequest, results, identityResolution)
+        if (completed) writeBack(request, resolvedRequest, results, identityResolution, negativeCacheHits)
 
         return EnrichmentResults(results, types, identityResolution)
     }
@@ -173,34 +184,82 @@ internal class DefaultEnrichmentEngine(
         resolvedRequest: EnrichmentRequest,
         results: Map<EnrichmentType, EnrichmentResult>,
         identityResolution: IdentityResolution?,
+        negativeCacheHits: Set<EnrichmentType>,
     ) {
         val resolvedMbid = identityResolution?.identifiers?.musicBrainzId
         for ((type, result) in results) {
-            // UNVERIFIED results are fuzzy guesses fetched while the identity provider was down —
-            // caching them would serve them as cache hits (identity == null, which reads as
-            // confident) for the type's whole TTL, and a retry could never heal them.
-            if (result !is EnrichmentResult.Success || result.isStale ||
-                result.identityMatch == IdentityMatch.UNVERIFIED
-            ) {
-                continue
+            val aliasKey = aliasKeyFor(request, resolvedRequest, resolvedMbid, type)
+            when {
+                // A negative served from cache this call is not re-put: its short TTL is the entry's
+                // freshness contract, and a cache hit must not extend it.
+                isCacheableNegative(result) && type !in negativeCacheHits ->
+                    writeNegative(request, aliasKey, type, result as EnrichmentResult.NotFound)
+                isCacheablePositive(result) ->
+                    writePositive(request, aliasKey, type, result as EnrichmentResult.Success)
             }
-            val ttl = config.ttlOverrides[type] ?: type.defaultTtlMs
-            guardedCacheWrite(logger, "put") { cache.put(entityKeyFor(request, type), type, result, ttl) }
+        }
+    }
 
-            // Alias: when identity resolution added an MBID, also cache under the
-            // name-based key so future name-only lookups find MBID-resolved data.
-            // A request that named no entity has no caller name to alias under, so it takes
-            // MusicBrainz's canonical one — the same name a later name-only lookup would ask with.
-            val aliasKey = when {
-                namesNoEntity(request) && !namesNoEntity(resolvedRequest) ->
-                    entityKeyForName(resolvedRequest, type)
-                resolvedMbid != null && request.identifiers.musicBrainzId == null ->
-                    entityKeyForName(request, type)
-                else -> null
-            }
-            if (aliasKey != null) {
-                guardedCacheWrite(logger, "put") { cache.put(aliasKey, type, result, ttl) }
-            }
+    /**
+     * The name-alias key when identity resolution added an MBID, so a future name-only lookup
+     * finds MBID-resolved data — shared by both write branches below, so a negative write ends up
+     * under exactly the same keys a Success would, and `cacheKeysFor`/`invalidateKeys` clear it for
+     * free. A request that named no entity has no caller name to alias under, so it takes
+     * MusicBrainz's canonical one — the same name a later name-only lookup would ask with.
+     */
+    private fun aliasKeyFor(
+        request: EnrichmentRequest,
+        resolvedRequest: EnrichmentRequest,
+        resolvedMbid: String?,
+        type: EnrichmentType,
+    ): String? = when {
+        namesNoEntity(request) && !namesNoEntity(resolvedRequest) -> entityKeyForName(resolvedRequest, type)
+        resolvedMbid != null && request.identifiers.musicBrainzId == null -> entityKeyForName(request, type)
+        else -> null
+    }
+
+    /**
+     * Only a real fan-out "providers had nothing" qualifies for negative caching — never the
+     * identity short-circuit's manufactured `NotFound` (`suggestions != null`) or one riding an
+     * unverified identity. Keyed on suggestions/identityMatch, not provider id, since a merger's
+     * fan-out `NotFound` arrives as provider `"all_providers"`.
+     */
+    internal fun isCacheableNegative(result: EnrichmentResult): Boolean =
+        result is EnrichmentResult.NotFound && result.suggestions == null &&
+            (result.identityMatch == null || result.identityMatch == IdentityMatch.RESOLVED)
+
+    /**
+     * UNVERIFIED results are fuzzy guesses fetched while the identity provider was down — caching
+     * them would serve them as cache hits (identity == null, which reads as confident) for the
+     * type's whole TTL, and a retry could never heal them.
+     */
+    private fun isCacheablePositive(result: EnrichmentResult): Boolean =
+        result is EnrichmentResult.Success && !result.isStale && result.identityMatch != IdentityMatch.UNVERIFIED
+
+    private suspend fun writeNegative(
+        request: EnrichmentRequest,
+        aliasKey: String?,
+        type: EnrichmentType,
+        result: EnrichmentResult.NotFound,
+    ) {
+        guardedCacheWrite(logger, "putNegative") {
+            cache.putNegative(entityKeyFor(request, type), type, result, config.negativeTtlMs)
+        }
+        if (aliasKey != null) {
+            guardedCacheWrite(logger, "putNegative") { cache.putNegative(aliasKey, type, result, config.negativeTtlMs) }
+        }
+    }
+
+    private suspend fun writePositive(
+        request: EnrichmentRequest,
+        aliasKey: String?,
+        type: EnrichmentType,
+        result: EnrichmentResult.Success,
+    ) {
+        val ttl = config.ttlOverrides[type] ?: type.defaultTtlMs
+        guardedCacheWrite(logger, "put") { cache.put(entityKeyFor(request, type), type, result, ttl) }
+        if (aliasKey != null) {
+            guardedCacheWrite(logger, "put") { cache.put(aliasKey, type, result, ttl) }
         }
     }
 
