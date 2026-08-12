@@ -45,7 +45,15 @@ identity?.identifiers?.wikipediaTitle   // "Radiohead"
 identity?.match                         // IdentityMatch.RESOLVED
 identity?.matchScore                    // 100
 identity?.suggestions                   // List<SearchCandidate> (non-empty when SUGGESTIONS)
+identity?.title                         // canonical title of the entity, when one was looked up
+identity?.artist                        // canonical artist credit, joined as MusicBrainz joins it
 ```
+
+`title` and `artist` are the names read off the entity an **identifier** named, which is the only
+way a caller using `EnrichmentRequest.forTrackByMbid` and its siblings learns what their identifier
+resolved to. They stay `null` when resolution matched by name search: a search hit is what a *name*
+matched, not what an identifier named. An artist's own name arrives as `title` with `artist` null,
+the same shape a `SearchCandidate` for an artist has.
 
 ---
 

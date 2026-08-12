@@ -1550,19 +1550,23 @@ public final class com/landofoz/musicmeta/IdentityMatch : java/lang/Enum {
 }
 
 public final class com/landofoz/musicmeta/IdentityResolution {
-	public fun <init> (Lcom/landofoz/musicmeta/EnrichmentIdentifiers;Lcom/landofoz/musicmeta/IdentityMatch;Ljava/lang/Integer;Ljava/util/List;)V
-	public synthetic fun <init> (Lcom/landofoz/musicmeta/EnrichmentIdentifiers;Lcom/landofoz/musicmeta/IdentityMatch;Ljava/lang/Integer;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Lcom/landofoz/musicmeta/EnrichmentIdentifiers;Lcom/landofoz/musicmeta/IdentityMatch;Ljava/lang/Integer;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;)V
+	public synthetic fun <init> (Lcom/landofoz/musicmeta/EnrichmentIdentifiers;Lcom/landofoz/musicmeta/IdentityMatch;Ljava/lang/Integer;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Lcom/landofoz/musicmeta/EnrichmentIdentifiers;
 	public final fun component2 ()Lcom/landofoz/musicmeta/IdentityMatch;
 	public final fun component3 ()Ljava/lang/Integer;
 	public final fun component4 ()Ljava/util/List;
-	public final fun copy (Lcom/landofoz/musicmeta/EnrichmentIdentifiers;Lcom/landofoz/musicmeta/IdentityMatch;Ljava/lang/Integer;Ljava/util/List;)Lcom/landofoz/musicmeta/IdentityResolution;
-	public static synthetic fun copy$default (Lcom/landofoz/musicmeta/IdentityResolution;Lcom/landofoz/musicmeta/EnrichmentIdentifiers;Lcom/landofoz/musicmeta/IdentityMatch;Ljava/lang/Integer;Ljava/util/List;ILjava/lang/Object;)Lcom/landofoz/musicmeta/IdentityResolution;
+	public final fun component5 ()Ljava/lang/String;
+	public final fun component6 ()Ljava/lang/String;
+	public final fun copy (Lcom/landofoz/musicmeta/EnrichmentIdentifiers;Lcom/landofoz/musicmeta/IdentityMatch;Ljava/lang/Integer;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;)Lcom/landofoz/musicmeta/IdentityResolution;
+	public static synthetic fun copy$default (Lcom/landofoz/musicmeta/IdentityResolution;Lcom/landofoz/musicmeta/EnrichmentIdentifiers;Lcom/landofoz/musicmeta/IdentityMatch;Ljava/lang/Integer;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lcom/landofoz/musicmeta/IdentityResolution;
 	public fun equals (Ljava/lang/Object;)Z
+	public final fun getArtist ()Ljava/lang/String;
 	public final fun getIdentifiers ()Lcom/landofoz/musicmeta/EnrichmentIdentifiers;
 	public final fun getMatch ()Lcom/landofoz/musicmeta/IdentityMatch;
 	public final fun getMatchScore ()Ljava/lang/Integer;
 	public final fun getSuggestions ()Ljava/util/List;
+	public final fun getTitle ()Ljava/lang/String;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }

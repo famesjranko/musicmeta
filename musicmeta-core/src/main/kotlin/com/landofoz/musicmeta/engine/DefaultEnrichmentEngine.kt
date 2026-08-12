@@ -119,7 +119,13 @@ internal class DefaultEnrichmentEngine(
                         }
                     }
                 }
-                identityResolution = buildIdentityResolution(identityResult, enrichedRequest)
+                // The same channel the name backfill reads, so the canonical names a consumer is
+                // handed are the ones the fan-out was built from — no second resolution path.
+                identityResolution = buildIdentityResolution(
+                    identityResult,
+                    enrichedRequest,
+                    currentCoroutineContext()[ResolvedEntityNames]?.resolved(),
+                )
 
                 // Short-circuit: when identity failed with suggestions, skip provider fan-out
                 val identityNotFound = identityResult as? EnrichmentResult.NotFound
