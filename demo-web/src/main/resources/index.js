@@ -146,8 +146,11 @@ function esc(s) {
 let lastQuery = null;
 
 // `refresh`, when true, re-issues `lastQuery` with `forceRefresh` instead of reading the form —
-// the toolbar's "Fetch fresh data" button passes true; the search form's submit passes nothing.
-async function runQuery(refresh) {
+// the toolbar's "Fetch fresh data" button passes true. `replay`, when true, also re-issues
+// `lastQuery` but without forcing a refresh — the invalidate button's re-run after a successful
+// cache clear, which must look like an ordinary (post-invalidation, cache-miss) lookup rather than
+// a user-triggered force-refresh. The search form's submit passes neither.
+async function runQuery(refresh, replay) {
   if (!backendReady) {
     statusEl.className = '';
     statusEl.textContent = 'The backend is still warming up. Search will unlock automatically when it is ready.';
@@ -155,7 +158,7 @@ async function runQuery(refresh) {
   }
 
   let kind, name, artist, album;
-  if (refresh) {
+  if (refresh || replay) {
     if (!lastQuery) return;
     ({ kind, name, artist, album } = lastQuery);
   } else {
@@ -295,7 +298,7 @@ function render(data, wasForceRefresh) {
       <span class="freshness" role="status">${freshnessText}</span>
       <span class="spacer"></span>
       <button class="toolbar-btn" type="button" id="fetch-fresh-btn">⟳ Fetch fresh data</button>
-      ${data.kind === 'mbid' ? '' : '<button class="toolbar-btn quiet" type="button" id="invalidate-btn">✕ Clear cached result &amp; reload</button>'}
+      ${lastQuery && lastQuery.kind === 'mbid' ? '' : '<button class="toolbar-btn quiet" type="button" id="invalidate-btn">✕ Clear cached result &amp; reload</button>'}
     </div>
     <div class="card summary${unverified ? ' unverified' : ''}">
       ${backdrop}
@@ -462,7 +465,7 @@ resultEl.addEventListener('click', async (e) => {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
-    runQuery(true);
+    runQuery(false, true);
   } catch (err) {
     statusEl.className = 'err';
     statusEl.textContent = 'Failed: ' + err.message;
