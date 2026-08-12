@@ -919,8 +919,8 @@ class ProfileMapperTest {
     }
 
     @Test
-    fun `stats else branch renders value and lowercased kind name for an unhandled signal kind`() {
-        // Given - a track popularity payload carrying a signal kind the when doesn't name explicitly
+    fun `track stats render popularity signals through the shared helper`() {
+        // Given - a track popularity payload carrying a RANK signal
         val popularity = EnrichmentData.Popularity(
             signals = listOf(PopularitySignal(source = "musicbrainz", kind = PopularitySignalKind.RANK, value = 99.0)),
         )
@@ -930,9 +930,26 @@ class ProfileMapperTest {
         // When - mapping to a demo response
         val response = profile.toDemoResponse(elapsedMs = 0)
 
-        // Then - the row still renders via the RANK branch (sanity check that track stats wire the same helper)
+        // Then - the RANK signal renders as a chart-rank row via the same helper artist stats use
         val items = response.sections.first { it.key == "stats" }.items
         assertEquals(SectionItem(primary = "chart rank 99", secondary = "musicbrainz"), items.single())
+    }
+
+    @Test
+    fun `stats renders a RATING signal with no sampleSize without a by suffix`() {
+        // Given - an artist popularity payload carrying a RATING signal with no sampleSize
+        val popularity = EnrichmentData.Popularity(
+            signals = listOf(PopularitySignal(source = "musicbrainz", kind = PopularitySignalKind.RATING, value = 3.8)),
+        )
+        val results = resultsOf(EnrichmentType.ARTIST_POPULARITY to popularity)
+        val profile = ArtistProfile(name = "Metallica", results = results)
+
+        // When - mapping to a demo response
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        // Then - the primary text omits the by-sampleSize suffix
+        val items = response.sections.first { it.key == "stats" }.items
+        assertEquals(SectionItem(primary = "rated 3.8", secondary = "musicbrainz"), items.single())
     }
 
     @Test
