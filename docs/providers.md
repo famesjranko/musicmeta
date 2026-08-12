@@ -29,6 +29,22 @@ Auth keys and how to supply them are in [README.md](../README.md).
 | Fanart.tv | `fanarttv` | project key | [docs](https://fanarttv.docs.apiary.io/) | Only source of artist backgrounds, logos and banners |
 | Discogs | `discogs` | token | [docs](https://www.discogs.com/developers) | Pressing-level detail: catalogue numbers, editions, per-track credits |
 
+## Routes disabled upstream
+
+ListenBrainz disabled two of the five routes we call around **2026-06-30**; both answer `500` ahead
+of auth and parameter validation, so no request distinguishes itself, and neither carries a
+re-enable date (observed 2026-08-11).
+
+| Route | What it costs |
+|---|---|
+| `/1/explore/lb-radio` | `ARTIST_RADIO_DISCOVERY` is dark — ListenBrainz is its only provider |
+| `/1/popularity/top-*-for-artist/` | ListenBrainz's share of `ARTIST_DISCOGRAPHY` and `ARTIST_TOP_TRACKS`; Deezer and Last.fm still answer |
+
+`ARTIST_POPULARITY` is unaffected: it tries the batch `POST /1/popularity/artist` first, which
+works. `TRACK_POPULARITY` likewise rides `POST /1/popularity/recording`, which is not disabled
+either.
+Nothing re-probes these — treat the dates as the last time anyone looked.
+
 ## Deviations from the house pattern
 
 `CLAUDE.md` states the four-file pattern. Two packages depart from it, and both departures are
