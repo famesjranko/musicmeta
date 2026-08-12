@@ -131,27 +131,39 @@ private fun handleEnrich(exchange: HttpExchange, engine: EnrichmentEngine) {
                 // identifier goes in, and whichever page it turns out to name comes back. A blank
                 // name is what tells identity resolution to fill it from the entity it resolves.
                 "mbid" -> when (val entity = engine.discoverMbidEntityType(name)) {
-                    MusicBrainzEntityType.RECORDING -> TrackProfile(
-                        headerFor(entity, name), "",
-                        engine.enrich(
+                    MusicBrainzEntityType.RECORDING -> {
+                        val results = engine.enrich(
                             EnrichmentRequest.forTrackByMbid(name),
                             EnrichmentRequest.DEFAULT_TRACK_TYPES,
-                        ),
-                    ).toDemoResponse(System.currentTimeMillis() - started)
-                    MusicBrainzEntityType.RELEASE -> AlbumProfile(
-                        headerFor(entity, name), "",
-                        engine.enrich(
+                        )
+                        TrackProfile(
+                            results.identity?.title ?: headerFor(entity, name),
+                            results.identity?.artist.orEmpty(),
+                            results,
+                        ).toDemoResponse(System.currentTimeMillis() - started)
+                    }
+                    MusicBrainzEntityType.RELEASE -> {
+                        val results = engine.enrich(
                             EnrichmentRequest.forAlbumByMbid(name),
                             EnrichmentRequest.DEFAULT_ALBUM_TYPES,
-                        ),
-                    ).toDemoResponse(System.currentTimeMillis() - started)
-                    MusicBrainzEntityType.ARTIST -> ArtistProfile(
-                        headerFor(entity, name),
-                        engine.enrich(
+                        )
+                        AlbumProfile(
+                            results.identity?.title ?: headerFor(entity, name),
+                            results.identity?.artist.orEmpty(),
+                            results,
+                        ).toDemoResponse(System.currentTimeMillis() - started)
+                    }
+                    MusicBrainzEntityType.ARTIST -> {
+                        val results = engine.enrich(
                             EnrichmentRequest.forArtistByMbid(name),
                             EnrichmentRequest.DEFAULT_ARTIST_TYPES,
-                        ),
-                    ).toDemoResponse(System.currentTimeMillis() - started)
+                        )
+                        // An artist's own name arrives as the title, as it does on a SearchCandidate.
+                        ArtistProfile(
+                            results.identity?.title ?: headerFor(entity, name),
+                            results,
+                        ).toDemoResponse(System.currentTimeMillis() - started)
+                    }
                     null -> null
                 }
                 "artist" -> {
@@ -202,14 +214,12 @@ private fun handleEnrich(exchange: HttpExchange, engine: EnrichmentEngine) {
 }
 
 /**
- * The heading an MBID page carries: what the identifier turned out to name, and enough of the
- * identifier to recognise it by.
+ * The heading an MBID page falls back to when resolution named no entity: what the identifier
+ * turned out to name, and enough of the identifier to recognise it by.
  *
- * Not the entity's name, which is what a reader wants and what the library does not hand back — an
- * `enrich()` returns the identifiers it resolved and never the canonical title or artist it read
- * them off (`.scratch/identity-resolution-canonical-names`). A bare UUID as a page title reads as a
- * name, which is the one thing it is not, so the type leads and the id is trimmed to its first
- * group.
+ * A bare UUID as a page title reads as a name, which is the one thing it is not, so the type leads
+ * and the id is trimmed to its first group. When resolution *did* name the entity, the canonical
+ * title it read off that entity is the heading instead.
  */
 private fun headerFor(entity: MusicBrainzEntityType, mbid: String): String =
     "${entity.name.lowercase().replaceFirstChar { it.uppercase() }} ${mbid.substringBefore('-')}"

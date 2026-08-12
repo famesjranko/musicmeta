@@ -20,4 +20,18 @@ data class IdentityResolution(
     val matchScore: Int?,
     /** Near-miss candidates when [match] is [IdentityMatch.SUGGESTIONS]. */
     val suggestions: List<SearchCandidate> = emptyList(),
+    /**
+     * Canonical title of the resolved entity — an artist's name on an artist request, as on
+     * [SearchCandidate.title]. `null` when resolution named no entity: a request that resolved by
+     * search leaves it unset, because a search hit is what a *name* matched, not what an identifier
+     * named. Never overwritten onto the request — see the request's own fields for what the
+     * providers were asked with.
+     */
+    val title: String? = null,
+    /**
+     * Canonical artist credit of the resolved entity, joined as MusicBrainz joins it ("Queen &
+     * David Bowie"). `null` on an artist request, whose name is [title], and `null` whenever
+     * resolution named no entity.
+     */
+    val artist: String? = null,
 )

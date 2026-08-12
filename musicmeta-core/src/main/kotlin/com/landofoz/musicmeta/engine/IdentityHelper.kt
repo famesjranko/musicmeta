@@ -8,21 +8,36 @@ import com.landofoz.musicmeta.IdentifierRequirement
 import com.landofoz.musicmeta.IdentityMatch
 import com.landofoz.musicmeta.IdentityResolution
 
-/** Builds the top-level [IdentityResolution] from the raw identity provider result. */
+/**
+ * Builds the top-level [IdentityResolution] from the raw identity provider result.
+ *
+ * [names] is what the identity provider read off the entity a caller's **identifier** named, and
+ * the only source for [IdentityResolution.title]/[IdentityResolution.artist] — including on a
+ * request that carried names of its own alongside that identifier, whose canonical forms the
+ * caller cannot otherwise see. A request naming an entity with no identifier resolves by name
+ * search instead, and [names] stays null: a search hit is what a name matched, not what an
+ * identifier named, so it never backfills these fields. A resolution that named nothing leaves
+ * both null rather than echoing the request back as if it had been confirmed.
+ */
 internal fun buildIdentityResolution(
     identityResult: EnrichmentResult?,
     enrichedRequest: EnrichmentRequest,
+    names: EntityNames?,
 ): IdentityResolution? = when (identityResult) {
     is EnrichmentResult.Success -> IdentityResolution(
         identifiers = identityResult.resolvedIdentifiers ?: enrichedRequest.identifiers,
         match = IdentityMatch.RESOLVED,
         matchScore = (identityResult.confidence * 100).toInt(),
+        title = names?.title,
+        artist = names?.artist,
     )
     is EnrichmentResult.NotFound -> IdentityResolution(
         identifiers = enrichedRequest.identifiers,
         match = if (identityResult.suggestions != null) IdentityMatch.SUGGESTIONS else IdentityMatch.BEST_EFFORT,
         matchScore = null,
         suggestions = identityResult.suggestions.orEmpty(),
+        title = names?.title,
+        artist = names?.artist,
     )
     // Error / RateLimited: the provider was asked and failed, which must stay distinguishable
     // from null ("resolution was not attempted") — a transient failure is not a confident match.
@@ -30,6 +45,8 @@ internal fun buildIdentityResolution(
         identifiers = enrichedRequest.identifiers,
         match = IdentityMatch.UNVERIFIED,
         matchScore = null,
+        title = names?.title,
+        artist = names?.artist,
     )
     null -> null
 }
