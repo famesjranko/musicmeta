@@ -31,17 +31,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Breaking Changes
 - `ARTIST_POPULARITY`/`TRACK_POPULARITY` results now report `provider = "popularity_merger"`, so a per-provider `confidenceOverrides` entry no longer affects those two types
-- `Builder.addProvider` now throws on a duplicate provider id, or one the engine reserves (`engine`, `all_providers`, `no_provider`, `no_merger`, `no_composite_handler`, any `*_merger`): rename yours
-- Duplicate ids previously shared one circuit breaker, so a healthy provider kept a failing twin in rotation; that configuration is now refused at registration rather than silently degrading
+- `Builder.addProvider` throws on a duplicate provider id, or one the engine reserves (`engine`, `all_providers`, `no_provider`, `no_merger`, `no_composite_handler`, any `*_merger`): rename yours
+- Duplicate ids previously shared one circuit breaker, so a healthy provider kept a failing twin in rotation; that configuration is refused at registration rather than silently degrading
 - `EnrichmentData.Popularity` gains `signals` (appended last, defaulted): source-compatible, binary-incompatible until recompile (`copy`/constructor descriptors changed), as with `GenreTag.curated`
 - `IdentityResolution` gains `title`/`artist`, the canonical names it resolved (appended last, defaulted): recompile; older jars calling the constructor/`copy` throw `NoSuchMethodError`
 - `GenreTag` gains `curated`, marking MusicBrainz's controlled vocabulary and ranking it first: source-compatible, binary-incompatible until recompile (`copy`/constructor descriptors changed)
-- New `IdentityMatch.UNVERIFIED`: an identity provider throwing or returning `Error`/`RateLimited` now reports as that, not `null`/unstamped confident values; `when`s need a branch
+- New `IdentityMatch.UNVERIFIED`: an identity provider throwing or returning `Error`/`RateLimited` reports as that, not `null`/unstamped confident values; `when`s need a branch
 - `UNVERIFIED` results are excluded from the cache write-back, so a retry after a transient identity failure re-resolves rather than serving the unverified guess for the TTL
-- `CompositeSynthesizer.synthesize` now receives the identity provider's `Error` when identity resolution failed, where it previously received `null` (the "not attempted" value)
+- `CompositeSynthesizer.synthesize` receives the identity provider's `Error` when identity resolution failed, where it previously received `null` (the "not attempted" value)
 - Two distinct all-non-Latin artist names (e.g. two different CJK names) no longer match each other; both used to normalize to an empty string and compare equal
-- A non-Latin artist request (e.g. 東京事変) against a romanizing provider (Deezer/iTunes/Discogs) now returns no match instead of the provider's unverified top hit; recovery is tracked separately
-- `OkHttpEnrichmentClient` now retries a 429, a shed 502/503/504 and a transport failure on core's budgeted ladder; its constructor gains a defaulted `maxAttempts`, so recompile
+- A non-Latin artist request (e.g. 東京事変) against a romanizing provider (Deezer/iTunes/Discogs) returns no match instead of the provider's unverified top hit; recovery is tracked separately
+- `OkHttpEnrichmentClient` retries a 429, a shed 502/503/504 and a transport failure on core's budgeted ladder; its constructor gains a defaulted `maxAttempts`, so recompile
 - `DefaultHttpClient` no longer publishes `MAX_RETRY_AFTER_SEC`; the 120s standalone retry ceiling moved into the shared ladder
 
 ### Added
@@ -52,46 +52,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `PopularTrack` now carries `listenerCount`, `durationMs` and `album`, matching what `TopTrack` already exposes from the same ListenBrainz data
 - `ALBUM_DESCRIPTION` (`EnrichmentData.Biography`), from Wikipedia and Last.fm's `wiki` block; in `DEFAULT_ALBUM_TYPES`, top source is keyless and long-cached
 - `PopularitySignal`/`PopularitySignalKind`: each source's popularity claim in its own unit (scrobbles, listens, rank, a 1–5 rating), never summed — `Popularity.signals` is authoritative
-- MusicBrainz now answers `ARTIST_POPULARITY`/`TRACK_POPULARITY` with its community rating as a signal, riding the lookups it already makes, so neither type costs an extra request
+- MusicBrainz answers `ARTIST_POPULARITY`/`TRACK_POPULARITY` with its community rating as a signal, riding the lookups it already makes, so neither type costs an extra request
 - `ProviderPolicies`: each provider's terms as data — commercial use, licence, notice to render
 - `Builder.contact(urlOrEmail)` composes the User-Agent MusicBrainz and Wikimedia require (`MusicEnrichmentEngine/1.0 ( contact )`); it rejects a line break or paren, and a config `userAgent` wins
 - `EnrichmentConfig.userAgentWithContact(contact)` exposes that composition for callers wiring `DefaultHttpClient` themselves
 - `IdentifierNamespace` enum plus `EnrichmentIdentifiers.get(ns)`/`.with(ns, value)`: typed accessors over the existing untyped `extra` map, additive, no key or wire-format change
-- MusicBrainz, Discogs, Spotify and Apple Music artist ids are now carried on Wikidata results' identifiers, parsed from claims already fetched; nothing consumes them for resolution yet
+- MusicBrainz, Discogs, Spotify and Apple Music artist ids are carried on Wikidata results' identifiers, parsed from claims already fetched; nothing consumes them for resolution yet
 - Wikidata is a second `ARTIST_LINKS` source (priority 50), contributing the official website (P856) where MusicBrainz has no relations
-- Deezer's `ALBUM_METADATA` now fills `barcode`/`label`/`releaseDate` from `GET /album/{id}`, one extra request shared with `ALBUM_TRACKS` per call; no genre (Deezer's is one coarse tag)
+- Deezer's `ALBUM_METADATA` fills `barcode`/`label`/`releaseDate` from `GET /album/{id}`, one extra request shared with `ALBUM_TRACKS` per call; no genre (Deezer's is one coarse tag)
 - `BudgetedTransientRetry`, `HttpResult.asAttempt`, and `withRetryBudgetForTest` behind a `@MusicmetaTestApi` opt-in: core's budgeted retry ladder is public for a client of your own
+- `ProviderCatalog.entries`: the providers `withDefaultProviders()` would register, with id, display name, and `KeyRequirement` naming the gating field
 
 ### Changed
-- `ARTIST_POPULARITY`/`TRACK_POPULARITY` are now merged across providers instead of returning the first answer: a field the leading source lacks is filled from the next that has it
+- `ARTIST_POPULARITY`/`TRACK_POPULARITY` are merged across providers instead of returning the first answer: a field the leading source lacks is filled from the next that has it
 - Every popularity source is now queried rather than stopping at the first success
 - Both types cache for 7 days, so a popularity entry written before this carries no `signals` until it is refetched: call `invalidate()` or enrich with `forceRefresh` to see them sooner
-- A 429 now reaches you as `EnrichmentResult.RateLimited` with the upstream's `retryAfterMs`, not `Error`/`NETWORK`; both were documented as unreachable, so a `when` over results may need the branch
+- A 429 reaches you as `EnrichmentResult.RateLimited` with the upstream's `retryAfterMs`, not `Error`/`NETWORK`; both were documented as unreachable, so a `when` over results may need the branch
 - A throttled provider now counts against its circuit breaker, so sustained 429s take it out of rotation for the cooldown instead of being asked on every call
 - A request that names no entity (an MBID-only one whose MBID resolves to nothing) is no longer fanned out to name-search providers: those types are `NotFound`, not a live search for the empty string
 - `invalidate()` on an MBID-only request now costs one identity lookup, to learn the canonical name its result was aliased under and drop that entry too
 - `hip-hop` now folds into `hip hop`, MusicBrainz's own curated spelling, rather than the reverse: affected artists' genre strings change spelling
 - `Metadata.genres` (the plain string list) is now the genre-tag names in tag order, so curated genres lead it as they lead `genreTags`
 - Provider terms are now documented (docs/providers.md): keyless is not permission; Deezer and Last.fm restrict commercial use. README opening reworded to match.
-- Deezer's `ALBUM_TRACKS` now uses the same artist-matched search as `ALBUM_METADATA` (was the unfiltered top hit), so a same-titled wrong-artist album no longer supplies the tracklist
-- That same match can now reject all 5 candidates (alias, compilation, credited-as variant), so `ALBUM_TRACKS` can return `NotFound` where it previously returned the unfiltered top hit's tracks
-- `ALBUM_TRACKS`'s confidence now reflects that same artist match (was always the no-match floor), matching what `ALBUM_METADATA` and `ALBUM_ART` already reported for the identical selection
-- Wikipedia bios now come from the Action API extract, which keeps the parentheticals the old endpoint stripped (instrument credits, IPA, native-script names): bio text visibly changes
-- Wikipedia bios now come from the Action API extract, keeping parentheticals the old endpoint stripped (instrument credits, IPA, native script). `ARTIST_BIO` caches 30 days, so clear yours or wait
+- Deezer's `ALBUM_TRACKS` uses the same artist-matched search as `ALBUM_METADATA` (was the unfiltered top hit), so a same-titled wrong-artist album no longer supplies the tracklist
+- That same match can reject all 5 candidates (alias, compilation, credited-as variant), so `ALBUM_TRACKS` can return `NotFound` where it previously returned the unfiltered top hit's tracks
+- `ALBUM_TRACKS`'s confidence reflects that same artist match (was always the no-match floor), matching what `ALBUM_METADATA` and `ALBUM_ART` already reported for the identical selection
+- Wikipedia bios come from the Action API extract, which keeps the parentheticals the old endpoint stripped (instrument credits, IPA, native-script names): bio text visibly changes
+- Wikipedia bios come from the Action API extract, keeping parentheticals the old endpoint stripped (instrument credits, IPA, native script). `ARTIST_BIO` caches 30 days, so clear yours or wait
 - Wikipedia `ARTIST_PHOTO` now carries the largest rendered thumbnail and every scale in `sizes`, not the original file: `height` is null, since the media route states none
-- iTunes album resolution now does a `lookup?upc=` identity match when a barcode is known, replacing the fuzzy search — a barcode Apple doesn't carry is `NotFound`, not a search fallback
+- iTunes album resolution does a `lookup?upc=` identity match when a barcode is known, replacing the fuzzy search — a barcode Apple doesn't carry is `NotFound`, not a search fallback
 - `build()` warns from the User-Agent the wire will carry: the contactless default meeting MusicBrainz/Wikipedia/Wikidata, `contact()` after `withDefaultProviders()`, or `contact()` with your client
 
 ### Fixed
 - Remove any retrying OkHttp interceptor: it cannot see the enrich deadline, so its retries are unbudgeted and now stack on the ladder
 - A caller-supplied `httpClient()` only silences the contactless-User-Agent warning when it built the wire's only client; one set after `withDefaultProviders()` still warns
-- An artist named by one of its MusicBrainz aliases now resolves: the search asked `artist:"…"` only, which does not reach the alias index, so a localised or former name found nothing
+- An artist named by one of its MusicBrainz aliases resolves: the search asked `artist:"…"` only, which does not reach the alias index, so a localised or former name found nothing
 - `identityMatchScore` now distinguishes an artist matched on its own name from one matched on an alias, scaling the score by which of the two it was
 - A cached payload whose genre tags never learned whether they were curated reads as a miss and refetches, rather than serving unmarked tags for the type's 90-day TTL
 - Discogs limiter now has headroom, so jitter no longer tips it into a 429 (was `Error`/`NETWORK`)
-- Wikipedia `ARTIST_PHOTO` now returns the article's lead photograph; its media schema had changed, so the parser saw no image or a diagram. Caches 30 days, so clear yours or wait
+- Wikipedia `ARTIST_PHOTO` returns the article's lead photograph; its media schema had changed, so the parser saw no image or a diagram. Caches 30 days, so clear yours or wait
 - A type whose every provider is circuit-broken is now `Error` (`ErrorKind.NETWORK`), not `NotFound`: an outage had read as "no such data" and carried no retry signal
-- A merged type (`GENRE`, `ALBUM_ART`, `SIMILAR_ARTISTS`, …) whose providers all errored is now `Error` too; the merger sees only successes, dropping every failure before the consumer
+- A merged type (`GENRE`, `ALBUM_ART`, `SIMILAR_ARTISTS`, …) whose providers all errored is `Error` too; the merger sees only successes, dropping every failure before the consumer
 - A track given no album is resolved from recordings MusicBrainz has already filtered to unmarked ones, so a heavily-covered title reaches the studio recording instead of a live or demo take
 - A recording-MBID track request no longer skips identity resolution: `ALBUM_ART` and identity arrive as they do without one; the MBID used to return less
 - A recording MBID on a track request is now looked up, not discarded, so a suggestions-list pick resolves to that recording, not whatever the name search ranked first
@@ -105,29 +106,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - An MBID MusicBrainz does not hold is looked up once per call rather than once per type, so a stale third-party id costs one request, not one per type
 - An artist name MusicBrainz holds nothing under is `NotFound` for `BAND_MEMBERS`/`ARTIST_DISCOGRAPHY`/`ARTIST_LINKS`; ranking the empty pool threw and reached consumers as a provider error
 - A track request carrying a recording MBID now resolves every MusicBrainz type from one lookup, where it previously spent a search per type plus a separate credits lookup
-- A read timeout or dropped connection now retries, once the deadline left covers another whole attempt and not just the wait; it was the most common MusicBrainz failure and was never retried
-- A 502, 503 or 504 now retries on the same ladder as a 429 (bounded, `Retry-After`-honouring, deadline-aware); MusicBrainz sheds with 503, so a lookup one retry would answer no longer fails
-- MusicBrainz album search took the first score-100 tie, so an album could resolve to a single, bootleg, promo or box set; identity, edition size and earliest date now pick the release
-- MusicBrainz `searchCandidates` returned an empty list for tracks; tracks now get candidates and "did you mean?" suggestions (`IdentityMatch.SUGGESTIONS`), matching album/artist behaviour
-- Wikidata reported an artist from Latvia (Q211) as Czech Republic; Q211 is now Latvia, Czech Republic is keyed on Q213. `COUNTRY` caches 365 days, so clear yours or affected artists stay wrong
+- A read timeout or dropped connection retries, once the deadline left covers another whole attempt and not just the wait; it was the most common MusicBrainz failure and was never retried
+- A 502, 503 or 504 retries on the same ladder as a 429 (bounded, `Retry-After`-honouring, deadline-aware); MusicBrainz sheds with 503, so a lookup one retry would answer no longer fails
+- MusicBrainz album search took the first score-100 tie, so an album could resolve to a single, bootleg, promo or box set; identity, edition size and earliest date pick the release
+- MusicBrainz `searchCandidates` returned an empty list for tracks; tracks get candidates and "did you mean?" suggestions (`IdentityMatch.SUGGESTIONS`), matching album/artist behaviour
+- Wikidata reported an artist from Latvia (Q211) as Czech Republic; Q211 is Latvia, Czech Republic is keyed on Q213. `COUNTRY` caches 365 days, so clear yours or affected artists stay wrong
 - Wikidata's artist lookup used a call Wikidata always rejected; birth/death date, country and occupation are now returned instead of nothing, every time
 - ListenBrainz's SIMILAR_ARTISTS called a route that never existed and always returned nothing; capability dropped, Last.fm and Deezer already serve it (#18)
-- Deezer's SIMILAR_TRACKS called `/track/{id}/radio`, which doesn't exist, and always returned nothing; now derived from the seed track's artist's related artists and their top tracks
+- Deezer's SIMILAR_TRACKS called `/track/{id}/radio`, which doesn't exist, and always returned nothing; derived from the seed track's artist's related artists and their top tracks
 - Deezer track search ignored the album hint and always took Deezer's first hit; previews and lookups could resolve to a remix or live take instead of the requested edition
-- MusicBrainz track search took the first score-100 tie, which could be a demo or live take; identity, popularity, and other downstream track data now resolve to the studio recording
-- MusicBrainz track ranking ignored a typed album and never penalized a music-video take; album matches are now preferred (and pass the score floor) and a video no longer beats a studio take
-- MusicBrainz album/track search failed outright on a qualifier-suffixed title even though the release/recording exists; now falls back to a stripped title, tie-broken toward the matching edition
-- An album MusicBrainz titles with symbols a caller cannot type (`F♯ A♯ ∞`) was NotFound from every ASCII spelling; the artist's release groups are now matched locally when the search finds nothing
-- MusicBrainz's lookup memo outlived the call, so `forceRefresh`, `invalidate()` and `cache.clear()` were answered from the first call's payload; it now lives for one call, not the engine's
-- MusicBrainz re-ran the album search ladder, and its suggestion search, once per album type; both now resolve once per call, so an album it cannot find costs 6 upstream requests, not 41
+- MusicBrainz track search took the first score-100 tie, which could be a demo or live take; identity, popularity, and other downstream track data resolve to the studio recording
+- MusicBrainz track ranking ignored a typed album and never penalized a music-video take; album matches are preferred (and pass the score floor) and a video no longer beats a studio take
+- MusicBrainz album/track search failed outright on a qualifier-suffixed title even though the release/recording exists; falls back to a stripped title, tie-broken toward the matching edition
+- An album MusicBrainz titles with symbols a caller cannot type (`F♯ A♯ ∞`) was NotFound from every ASCII spelling; the artist's release groups are matched locally when the search finds nothing
+- MusicBrainz's lookup memo outlived the call, so `forceRefresh`, `invalidate()` and `cache.clear()` were answered from the first call's payload; it lives for one call, not the engine's
+- MusicBrainz re-ran the album search ladder, and its suggestion search, once per album type; both resolve once per call, so an album it cannot find costs 6 upstream requests, not 41
 - Outside an engine, `MusicBrainzProvider` re-fetches the release and release-group per type; route multi-type requests through the engine to share one memo
 - ListenBrainz's recording/artist popularity treated a JSON-null listen count as zero and kept it; a track or artist with no LB data now returns NotFound instead of a fake 0/0
-- Cover Art Archive sent a track's recording MBID to its release endpoint, which always 404s; ALBUM_ART on tracks now resolves via the release-group id instead of failing every time
+- Cover Art Archive sent a track's recording MBID to its release endpoint, which always 404s; ALBUM_ART on tracks resolves via the release-group id instead of failing every time
 - MusicBrainz ALBUM_TRACKS flattened a bonus video disc into the tracklist; a release with a DVD/Blu-ray extra no longer duplicates every position
 - Fanart.tv ignored each image's community likes and always took the first one; artist and album art now resolve to the most-liked image
-- A transient MusicBrainz side-lookup could leave a type's identifier (e.g. `ALBUM_DESCRIPTION`'s Wikipedia title) unresolved and masquerade as NotFound; now Error, eligible for `STALE_IF_ERROR`
+- A transient MusicBrainz side-lookup could leave a type's identifier (e.g. `ALBUM_DESCRIPTION`'s Wikipedia title) unresolved and masquerade as NotFound; is Error, eligible for `STALE_IF_ERROR`
 - A transient on MusicBrainz's full-artist lookup (URL relations for a search match) failed artist enrichment entirely; it now degrades to the search result without relations
-- A transient on Cover Art Archive's thumbnail/front-image or Discogs's community-rating fetch discarded an already-resolved artwork/metadata answer; both now degrade the optional field instead
+- A transient on Cover Art Archive's thumbnail/front-image or Discogs's community-rating fetch discarded an already-resolved artwork/metadata answer; both degrade the optional field instead
 
 ## [0.11.0] - 2026-07-28
 

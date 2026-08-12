@@ -1573,6 +1573,39 @@ public final class com/landofoz/musicmeta/IdentityResolution {
 	public fun toString ()Ljava/lang/String;
 }
 
+public abstract class com/landofoz/musicmeta/KeyRequirement {
+}
+
+public final class com/landofoz/musicmeta/KeyRequirement$None : com/landofoz/musicmeta/KeyRequirement {
+	public static final field INSTANCE Lcom/landofoz/musicmeta/KeyRequirement$None;
+}
+
+public final class com/landofoz/musicmeta/KeyRequirement$Optional : com/landofoz/musicmeta/KeyRequirement {
+	public fun <init> (Ljava/lang/String;Lkotlin/jvm/functions/Function1;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Lkotlin/jvm/functions/Function1;
+	public final fun copy (Ljava/lang/String;Lkotlin/jvm/functions/Function1;)Lcom/landofoz/musicmeta/KeyRequirement$Optional;
+	public static synthetic fun copy$default (Lcom/landofoz/musicmeta/KeyRequirement$Optional;Ljava/lang/String;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lcom/landofoz/musicmeta/KeyRequirement$Optional;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFieldName ()Ljava/lang/String;
+	public final fun getKey ()Lkotlin/jvm/functions/Function1;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/landofoz/musicmeta/KeyRequirement$Required : com/landofoz/musicmeta/KeyRequirement {
+	public fun <init> (Ljava/lang/String;Lkotlin/jvm/functions/Function1;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Lkotlin/jvm/functions/Function1;
+	public final fun copy (Ljava/lang/String;Lkotlin/jvm/functions/Function1;)Lcom/landofoz/musicmeta/KeyRequirement$Required;
+	public static synthetic fun copy$default (Lcom/landofoz/musicmeta/KeyRequirement$Required;Ljava/lang/String;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lcom/landofoz/musicmeta/KeyRequirement$Required;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFieldName ()Ljava/lang/String;
+	public final fun getKey ()Lkotlin/jvm/functions/Function1;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class com/landofoz/musicmeta/MusicBrainzEntityType : java/lang/Enum {
 	public static final field ARTIST Lcom/landofoz/musicmeta/MusicBrainzEntityType;
 	public static final field RECORDING Lcom/landofoz/musicmeta/MusicBrainzEntityType;
@@ -1688,6 +1721,26 @@ public final class com/landofoz/musicmeta/ProviderCapability {
 	public final fun getIdentifierRequirement ()Lcom/landofoz/musicmeta/IdentifierRequirement;
 	public final fun getPriority ()I
 	public final fun getType ()Lcom/landofoz/musicmeta/EnrichmentType;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/landofoz/musicmeta/ProviderCatalog {
+	public static final field INSTANCE Lcom/landofoz/musicmeta/ProviderCatalog;
+	public final fun getEntries ()Ljava/util/List;
+}
+
+public final class com/landofoz/musicmeta/ProviderCatalogEntry {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Lcom/landofoz/musicmeta/KeyRequirement;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Lcom/landofoz/musicmeta/KeyRequirement;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Lcom/landofoz/musicmeta/KeyRequirement;)Lcom/landofoz/musicmeta/ProviderCatalogEntry;
+	public static synthetic fun copy$default (Lcom/landofoz/musicmeta/ProviderCatalogEntry;Ljava/lang/String;Ljava/lang/String;Lcom/landofoz/musicmeta/KeyRequirement;ILjava/lang/Object;)Lcom/landofoz/musicmeta/ProviderCatalogEntry;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDisplayName ()Ljava/lang/String;
+	public final fun getId ()Ljava/lang/String;
+	public final fun getKeyRequirement ()Lcom/landofoz/musicmeta/KeyRequirement;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }

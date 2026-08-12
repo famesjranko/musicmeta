@@ -7,9 +7,13 @@ away, and a copy of them rots while it moves. §Rate limiting keeps the one-limi
 topology and where each interval's basis comes from.
 
 **Nothing here is checked.** No mechanism verifies a word of it. Hand-verified against the packages
-on **2026-08-12**; treat anything after that as a claim, not a fact. §What we don't extract is the
+on **2026-08-13**; treat anything after that as a claim, not a fact. §What we don't extract is the
 part that rots fastest — most of what it lists is a to-do, and a to-do that gets done reads as a
 still-open one until someone re-reads the code.
+
+The id and auth column below are the one exception: `ProviderCatalog.entries` carries a provider's
+id, display name and `KeyRequirement` as pin-tested public API, so that slice cannot drift out from
+under this table the way the rest of the file can.
 
 ## The providers
 
