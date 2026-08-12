@@ -25,8 +25,9 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * A 429, a 5xx or a dropped connection must reach the consumer as `Error(ErrorKind.NETWORK)`, never
- * as an empty result — for every provider, not just MusicBrainz (`MusicBrainzTransientFailureTest`).
+ * A 429, a 5xx or a dropped connection must reach the consumer as an `Error`, never as an empty
+ * result — for every provider, not just MusicBrainz (`MusicBrainzTransientFailureTest`). A 429
+ * carries `ErrorKind.RATE_LIMIT`, everything else transient carries `NETWORK`.
  *
  * The cost of collapsing them is breaker health (`docs/pitfalls.md` §4): a rate-limited provider
  * answering `NotFound` to everything records breaker *successes*, so it looks healthy while a
@@ -60,6 +61,19 @@ class ProviderTransientFailureTest {
         assertEquals(ErrorKind.NETWORK, (result as EnrichmentResult.Error).errorKind)
     }
 
+    /**
+     * A 429 is the one transient failure with its own kind, because it is the one worth retrying
+     * later rather than immediately. The chain widens this into `EnrichmentResult.RateLimited`;
+     * a provider called directly, as here, sees the `Error` it was widened from.
+     */
+    private fun assertRateLimitError(result: EnrichmentResult) {
+        assertTrue(
+            "Expected Error, got ${result::class.simpleName}",
+            result is EnrichmentResult.Error,
+        )
+        assertEquals(ErrorKind.RATE_LIMIT, (result as EnrichmentResult.Error).errorKind)
+    }
+
     // --- Deezer -------------------------------------------------------------------------------
 
     @Test
@@ -69,8 +83,8 @@ class ProviderTransientFailureTest {
         val provider = DeezerProvider(http, RateLimiter(0))
 
         // When - enriching an artist photo
-        // Then - the result is a NETWORK Error, not an empty result
-        assertNetworkError(provider.enrich(ARTIST, EnrichmentType.ARTIST_PHOTO))
+        // Then - the result is a RATE_LIMIT Error, not an empty result
+        assertRateLimitError(provider.enrich(ARTIST, EnrichmentType.ARTIST_PHOTO))
     }
 
     @Test
@@ -156,8 +170,8 @@ class ProviderTransientFailureTest {
         val provider = ITunesProvider(http, RateLimiter(0))
 
         // When - enriching album art
-        // Then - the result is a NETWORK Error, not an empty result
-        assertNetworkError(provider.enrich(ALBUM, EnrichmentType.ALBUM_ART))
+        // Then - the result is a RATE_LIMIT Error, not an empty result
+        assertRateLimitError(provider.enrich(ALBUM, EnrichmentType.ALBUM_ART))
     }
 
     @Test
@@ -180,8 +194,8 @@ class ProviderTransientFailureTest {
         val provider = LastFmProvider("key", http, RateLimiter(0))
 
         // When - enriching an artist bio
-        // Then - the result is a NETWORK Error, not an empty result
-        assertNetworkError(provider.enrich(ARTIST, EnrichmentType.ARTIST_BIO))
+        // Then - the result is a RATE_LIMIT Error, not an empty result
+        assertRateLimitError(provider.enrich(ARTIST, EnrichmentType.ARTIST_BIO))
     }
 
     @Test
@@ -233,8 +247,8 @@ class ProviderTransientFailureTest {
         val provider = DiscogsProvider("token", http, RateLimiter(0))
 
         // When - enriching an artist photo
-        // Then - the result is a NETWORK Error, not an empty result
-        assertNetworkError(provider.enrich(ARTIST, EnrichmentType.ARTIST_PHOTO))
+        // Then - the result is a RATE_LIMIT Error, not an empty result
+        assertRateLimitError(provider.enrich(ARTIST, EnrichmentType.ARTIST_PHOTO))
     }
 
     @Test
@@ -257,8 +271,8 @@ class ProviderTransientFailureTest {
         val provider = FanartTvProvider("key", http, RateLimiter(0))
 
         // When - enriching an artist photo
-        // Then - the result is a NETWORK Error, not an empty result
-        assertNetworkError(provider.enrich(ARTIST_WITH_MBID, EnrichmentType.ARTIST_PHOTO))
+        // Then - the result is a RATE_LIMIT Error, not an empty result
+        assertRateLimitError(provider.enrich(ARTIST_WITH_MBID, EnrichmentType.ARTIST_PHOTO))
     }
 
     @Test
@@ -282,8 +296,8 @@ class ProviderTransientFailureTest {
         val provider = ListenBrainzProvider(http, RateLimiter(0))
 
         // When - enriching an artist's top tracks
-        // Then - the result is a NETWORK Error, not an empty result
-        assertNetworkError(provider.enrich(ARTIST_WITH_MBID, EnrichmentType.ARTIST_TOP_TRACKS))
+        // Then - the result is a RATE_LIMIT Error, not an empty result
+        assertRateLimitError(provider.enrich(ARTIST_WITH_MBID, EnrichmentType.ARTIST_TOP_TRACKS))
     }
 
     /** POST returning a JSON array — a different `HttpClient` method, same collapse. */
@@ -306,8 +320,8 @@ class ProviderTransientFailureTest {
         val provider = ListenBrainzProvider(http, RateLimiter(0), authToken = "token")
 
         // When - enriching an artist's radio discovery
-        // Then - the result is a NETWORK Error, not an empty result
-        assertNetworkError(provider.enrich(ARTIST_WITH_MBID, EnrichmentType.ARTIST_RADIO_DISCOVERY))
+        // Then - the result is a RATE_LIMIT Error, not an empty result
+        assertRateLimitError(provider.enrich(ARTIST_WITH_MBID, EnrichmentType.ARTIST_RADIO_DISCOVERY))
     }
 
     // --- Cover Art Archive --------------------------------------------------------------------
@@ -320,8 +334,8 @@ class ProviderTransientFailureTest {
         val provider = CoverArtArchiveProvider(http, RateLimiter(0))
 
         // When - enriching the back cover art
-        // Then - the result is a NETWORK Error, not an empty result
-        assertNetworkError(provider.enrich(ALBUM_WITH_RELEASE_GROUP, EnrichmentType.ALBUM_ART_BACK))
+        // Then - the result is a RATE_LIMIT Error, not an empty result
+        assertRateLimitError(provider.enrich(ALBUM_WITH_RELEASE_GROUP, EnrichmentType.ALBUM_ART_BACK))
     }
 
     @Test
@@ -351,8 +365,8 @@ class ProviderTransientFailureTest {
         val provider = CoverArtArchiveProvider(http, RateLimiter(0))
 
         // When - enriching album art
-        // Then - the result is a NETWORK Error, not an empty result
-        assertNetworkError(provider.enrich(ALBUM_WITH_RELEASE_GROUP, EnrichmentType.ALBUM_ART))
+        // Then - the result is a RATE_LIMIT Error, not an empty result
+        assertRateLimitError(provider.enrich(ALBUM_WITH_RELEASE_GROUP, EnrichmentType.ALBUM_ART))
     }
 
     /** The release-group fallback redirect — the second call shape on the same path. */
@@ -378,8 +392,8 @@ class ProviderTransientFailureTest {
         val provider = LrcLibProvider(http, RateLimiter(0))
 
         // When - enriching synced lyrics
-        // Then - the result is a NETWORK Error, not an empty result
-        assertNetworkError(provider.enrich(TRACK, EnrichmentType.LYRICS_SYNCED))
+        // Then - the result is a RATE_LIMIT Error, not an empty result
+        assertRateLimitError(provider.enrich(TRACK, EnrichmentType.LYRICS_SYNCED))
     }
 
     /** The search fallback returning a JSON *array* — the second call shape in `LrcLibApi`. */
@@ -404,8 +418,8 @@ class ProviderTransientFailureTest {
         val provider = WikidataProvider(http, RateLimiter(0))
 
         // When - enriching an artist photo
-        // Then - the result is a NETWORK Error, not an empty result
-        assertNetworkError(provider.enrich(ARTIST_WITH_WIKIDATA_ID, EnrichmentType.ARTIST_PHOTO))
+        // Then - the result is a RATE_LIMIT Error, not an empty result
+        assertRateLimitError(provider.enrich(ARTIST_WITH_WIKIDATA_ID, EnrichmentType.ARTIST_PHOTO))
     }
 
     @Test
@@ -428,8 +442,8 @@ class ProviderTransientFailureTest {
         val provider = WikipediaProvider(http, RateLimiter(0))
 
         // When - enriching an artist bio
-        // Then - the result is a NETWORK Error, not an empty result
-        assertNetworkError(provider.enrich(ARTIST_WITH_WIKIPEDIA_TITLE, EnrichmentType.ARTIST_BIO))
+        // Then - the result is a RATE_LIMIT Error, not an empty result
+        assertRateLimitError(provider.enrich(ARTIST_WITH_WIKIPEDIA_TITLE, EnrichmentType.ARTIST_BIO))
     }
 
     @Test
@@ -454,8 +468,8 @@ class ProviderTransientFailureTest {
         val provider = WikipediaProvider(http, RateLimiter(0))
 
         // When - enriching an artist bio for a request with only a Wikidata id
-        // Then - the result is a NETWORK Error, not an empty result
-        assertNetworkError(provider.enrich(ARTIST_WITH_WIKIDATA_ID, EnrichmentType.ARTIST_BIO))
+        // Then - the result is a RATE_LIMIT Error, not an empty result
+        assertRateLimitError(provider.enrich(ARTIST_WITH_WIKIDATA_ID, EnrichmentType.ARTIST_BIO))
     }
 
     private companion object {

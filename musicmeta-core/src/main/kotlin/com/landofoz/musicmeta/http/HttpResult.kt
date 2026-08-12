@@ -28,6 +28,15 @@ sealed class HttpResult<out T> {
 internal class AuthException(statusCode: Int) : Exception("HTTP $statusCode: credentials rejected")
 
 /**
+ * A 429 that outlived the retry ladder. An [IOException] subtype so every existing
+ * `catch (e: IOException)` and the `is IOException -> ErrorKind.NETWORK` fallback still see it;
+ * [com.landofoz.musicmeta.EnrichmentProvider.mapError] narrows it to
+ * [com.landofoz.musicmeta.ErrorKind.RATE_LIMIT] ahead of that branch, which is what lets the engine
+ * hand a consumer an [com.landofoz.musicmeta.EnrichmentResult.RateLimited] carrying [retryAfterMs].
+ */
+internal class RateLimitException(val retryAfterMs: Long?) : IOException("HTTP 429: rate limited")
+
+/**
  * [bodyOrThrowTransient], plus: a 401 or 403 throws [AuthException], because a rejected key is a
  * configuration error the consumer can act on, not empty data.
  *
@@ -53,14 +62,15 @@ internal fun <T> HttpResult<T>.bodyOrThrowAuthOrTransient(): T? = when {
  *
  * Throwing is the same trick [AuthException] uses, for the same reason (`docs/pitfalls.md` §4): it
  * travels the provider's existing `catch (e: Exception) { mapError(type, e) }` into an
- * `Error(ErrorKind.NETWORK)`, which the chain records as a breaker *failure*. Collapsed to `null` it
+ * `Error(ErrorKind.NETWORK)` — or `ErrorKind.RATE_LIMIT` for the 429, which the chain widens back to
+ * `EnrichmentResult.RateLimited` — which the chain records as a breaker *failure*. Collapsed to `null` it
  * would be a `NotFound` — a breaker *success* — and the provider would look healthy while a rate
  * limit made it answer "no results" to everything.
  */
 internal fun <T> HttpResult<T>.bodyOrThrowTransient(): T? = when (this) {
     is HttpResult.Ok -> body
     is HttpResult.ClientError -> null
-    is HttpResult.RateLimited -> throw IOException("HTTP 429: rate limited")
+    is HttpResult.RateLimited -> throw RateLimitException(retryAfterMs)
     is HttpResult.ServerError -> throw IOException("HTTP $statusCode: server error")
     is HttpResult.NetworkError -> throw IOException(message, cause)
 }

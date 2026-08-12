@@ -350,7 +350,7 @@ internal class DefaultEnrichmentEngine(
             // confident. GENRE matches the type the identity provider itself reports under.
             // mapError is the one classifier: consumers key retry policy off ErrorKind, so an
             // AUTH or PARSE failure must not arrive here as UNKNOWN.
-            return request to provider.mapError(EnrichmentType.GENRE, e)
+            return request to provider.mapError(EnrichmentType.GENRE, e).asRateLimitedIfThrottled()
         }
         if (result !is EnrichmentResult.Success) {
             logger.debug(TAG, "Identity resolution returned ${result::class.simpleName}")

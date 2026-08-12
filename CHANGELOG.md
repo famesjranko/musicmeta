@@ -49,6 +49,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Deezer's `ALBUM_METADATA` now fills `barcode`/`label`/`releaseDate` from `GET /album/{id}`, one extra request shared with `ALBUM_TRACKS` per call; no genre (Deezer's is one coarse tag)
 
 ### Changed
+- A 429 now reaches you as `EnrichmentResult.RateLimited` with the upstream's `retryAfterMs`, not `Error`/`NETWORK`; both were documented as unreachable, so a `when` over results may need the branch
+- A throttled provider now counts against its circuit breaker, so sustained 429s take it out of rotation for the cooldown instead of being asked on every call
 - A request that names no entity (an MBID-only one whose MBID resolves to nothing) is no longer fanned out to name-search providers: those types are `NotFound`, not a live search for the empty string
 - `invalidate()` on an MBID-only request now costs one identity lookup, to learn the canonical name its result was aliased under and drop that entry too
 - `hip-hop` now folds into `hip hop`, MusicBrainz's own curated spelling, rather than the reverse: affected artists' genre strings change spelling
