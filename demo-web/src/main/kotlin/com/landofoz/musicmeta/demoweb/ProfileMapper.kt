@@ -8,6 +8,7 @@ import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentResults
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.GenreAffinity
+import com.landofoz.musicmeta.IdentifierNamespace
 import com.landofoz.musicmeta.IdentityMatch
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.TrackProfile
@@ -340,9 +341,20 @@ private fun EnrichmentResults.toMeta(elapsedMs: Long): Meta {
     )
 }
 
+private fun IdentifierNamespace.label(): String = when (this) {
+    IdentifierNamespace.MUSICBRAINZ_ARTIST -> "Artist MBID"
+    IdentifierNamespace.MUSICBRAINZ_RELEASE -> "Release MBID"
+    IdentifierNamespace.MUSICBRAINZ_RECORDING -> "Recording MBID"
+    IdentifierNamespace.DISCOGS_ARTIST -> "Discogs"
+    IdentifierNamespace.SPOTIFY_ARTIST -> "Spotify"
+    IdentifierNamespace.ITUNES_ARTIST -> "iTunes"
+    IdentifierNamespace.DEEZER -> "Deezer"
+    else -> name.lowercase().replace('_', ' ').replaceFirstChar { it.uppercase() }
+}
+
 private fun EnrichmentIdentifiers?.toIdentifierHits(): List<IdentifierHit> {
     if (this == null) return emptyList()
-    return listOfNotNull(
+    val structHits = listOfNotNull(
         musicBrainzId?.let { IdentifierHit("MBID", it) },
         musicBrainzReleaseGroupId?.let { IdentifierHit("Release group MBID", it) },
         isrc?.let { IdentifierHit("ISRC", it) },
@@ -350,6 +362,11 @@ private fun EnrichmentIdentifiers?.toIdentifierHits(): List<IdentifierHit> {
         wikidataId?.let { IdentifierHit("Wikidata", it) },
         wikipediaTitle?.let { IdentifierHit("Wikipedia", it) },
     )
+    val seenValues = structHits.map { it.value }.toSet()
+    val namespacedHits = IdentifierNamespace.entries.mapNotNull { ns ->
+        this.get(ns)?.takeIf { it !in seenValues }?.let { IdentifierHit(ns.label(), it) }
+    }
+    return structHits + namespacedHits
 }
 
 private fun MutableList<Section>.section(key: String, label: String, items: () -> List<SectionItem>?) {
