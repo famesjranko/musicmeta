@@ -154,6 +154,29 @@ class ITunesProvider(
             return EnrichmentResult.NotFound(type, id)
         }
 
+        // A barcode is an identity lookup, not a search — it replaces the search outright rather
+        // than running before it, since the lookup is free on this call path but running it ahead
+        // of an unused search would cost 3s of this provider's own serialised rate-limit budget
+        // (RateLimiter(3000) above). No fallback to search on a miss: a barcode that names an
+        // edition Apple never carries is a genuine NotFound, not a reason to re-introduce the
+        // ranking risk the lookup exists to remove. ISRC has no equivalent lookup — see
+        // ITunesApi.lookupByUpc KDoc.
+        val barcode = request.identifiers.barcode
+        if (barcode != null) {
+            val result = try {
+                api.lookupByUpc(barcode)
+            } catch (e: Exception) {
+                return mapError(type, e)
+            } ?: return EnrichmentResult.NotFound(type, id)
+
+            val confidence = ConfidenceCalculator.idBasedLookup()
+            val resolvedIdentifiers = buildResolvedIdentifiers(result)
+            return when (type) {
+                EnrichmentType.ALBUM_METADATA -> enrichAlbumMetadata(result, type, confidence, resolvedIdentifiers)
+                else -> enrichAlbumArt(result, type, confidence, resolvedIdentifiers)
+            }
+        }
+
         val term = "${request.artist} ${request.title}"
         val results = try {
             api.searchAlbums(term, 5)
@@ -165,25 +188,31 @@ class ITunesProvider(
             ArtistMatcher.isMatch(request.artist, it.artistName)
         } ?: return EnrichmentResult.NotFound(type, id)
 
+        val confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true)
         return when (type) {
-            EnrichmentType.ALBUM_METADATA -> enrichAlbumMetadata(result, type)
-            else -> enrichAlbumArt(result, type)
+            EnrichmentType.ALBUM_METADATA -> enrichAlbumMetadata(result, type, confidence, null)
+            else -> enrichAlbumArt(result, type, confidence, null)
         }
     }
 
     private fun enrichAlbumMetadata(
         result: ITunesAlbumResult,
         type: EnrichmentType,
+        confidence: Float,
+        resolvedIdentifiers: EnrichmentIdentifiers?,
     ): EnrichmentResult = EnrichmentResult.Success(
         type = type,
         data = ITunesMapper.toAlbumMetadata(result),
         provider = id,
-        confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
+        confidence = confidence,
+        resolvedIdentifiers = resolvedIdentifiers,
     )
 
     private fun enrichAlbumArt(
         result: ITunesAlbumResult,
         type: EnrichmentType,
+        confidence: Float,
+        resolvedIdentifiers: EnrichmentIdentifiers?,
     ): EnrichmentResult {
         val artwork = ITunesMapper.toArtwork(result, artworkSize)
             ?: return EnrichmentResult.NotFound(type, id)
@@ -192,7 +221,8 @@ class ITunesProvider(
             type = type,
             data = artwork,
             provider = id,
-            confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
+            confidence = confidence,
+            resolvedIdentifiers = resolvedIdentifiers,
         )
     }
 

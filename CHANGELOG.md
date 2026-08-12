@@ -60,6 +60,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Wikipedia bios now come from the Action API extract, which keeps the parentheticals the old endpoint stripped (instrument credits, IPA, native-script names): bio text visibly changes
 - Wikipedia bios now come from the Action API extract, keeping parentheticals the old endpoint stripped (instrument credits, IPA, native script). `ARTIST_BIO` caches 30 days, so clear yours or wait
 - Wikipedia `ARTIST_PHOTO` now carries the largest rendered thumbnail and every scale in `sizes`, not the original file: `height` is null, since the media route states none
+- iTunes album resolution now does a `lookup?upc=` identity match when a barcode is known, replacing the fuzzy search — a barcode Apple doesn't carry is `NotFound`, not a search fallback
 
 ### Fixed
 - An artist named by one of its MusicBrainz aliases now resolves: the search asked `artist:"…"` only, which does not reach the alias index, so a localised or former name found nothing

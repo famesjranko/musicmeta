@@ -64,6 +64,31 @@ internal class ITunesApi(
     }
 
     /**
+     * Resolves a barcode to the album iTunes lists under it — an identity lookup, not a search:
+     * no ranking, no artist-name fuzz, no wrong-edition risk (`docs/pitfalls.md` §7 does not apply
+     * here). A `200` with `resultCount: 0` means "no album carries this barcode", so the caller
+     * treats a null return as absence, never as an outage.
+     *
+     * A barcode can be reused across editions in Apple's catalogue — a probe against a real UPC
+     * returned five different pressings under the one code — so this keeps the first `collection`
+     * result rather than asserting uniqueness, matching [lookupArtistAlbums]'s filter.
+     *
+     * ISRC has no equivalent: `lookup?isrc=` returns `200 resultCount: 0` for an ISRC known to be
+     * in catalogue, so it is silently unsupported rather than broken — do not add an `isrc`
+     * parameter to this call assuming the same shape works.
+     */
+    suspend fun lookupByUpc(upc: String): ITunesAlbumResult? {
+        val encoded = URLEncoder.encode(upc, "UTF-8")
+        val url = "$BASE_URL/lookup?upc=$encoded"
+        val json = fetchJson(url) ?: return null
+        val results = json.optJSONArray("results") ?: return null
+        return (0 until results.length())
+            .mapNotNull { results.optJSONObject(it) }
+            .firstOrNull { it.optString("wrapperType") == "collection" }
+            ?.let(::parseAlbumResult)
+    }
+
+    /**
      * Finds the artist a human would mean by [artistName].
      *
      * A search API's hit 0 is a ranking, not an answer (docs/pitfalls.md §7), and this call had no

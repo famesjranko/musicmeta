@@ -20,7 +20,7 @@ Auth keys and how to supply them are in [README.md](../README.md).
 | MusicBrainz | `musicbrainz` | none (User-Agent required) | [docs](https://musicbrainz.org/doc/MusicBrainz_API) | Identity backbone — `isIdentityProvider`, runs first, and the only `NotFound` that can carry `suggestions` |
 | Cover Art Archive | `coverartarchive` | none | [docs](https://musicbrainz.org/doc/Cover_Art_Archive/API) | Only artwork source keyed on a release MBID rather than a name, and the only source of back cover, booklet and disc |
 | Deezer | `deezer` | none | [docs](https://developers.deezer.com/api) | Widest no-key catalogue; only source of `ARTIST_RADIO`, `TRACK_PREVIEW`, `SIMILAR_ALBUMS` |
-| iTunes | `itunes` | none | [docs](https://performance-partners.apple.com/search-api) | No-key album search with artwork at any size; the fallback when there is no MBID |
+| iTunes | `itunes` | none | [docs](https://performance-partners.apple.com/search-api) | No-key album search with artwork at any size; `lookup?upc=` resolves a known barcode as an identity match, replacing the search |
 | LRCLIB | `lrclib` | none | [docs](https://lrclib.net/docs) | Only lyrics source |
 | Wikidata | `wikidata` | none | [docs](https://www.wikidata.org/wiki/Wikidata:Data_access) | Structured claims keyed on a Q-id; our route to Commons imagery at any width |
 | Wikipedia | `wikipedia` | none | [docs](https://www.mediawiki.org/wiki/API:Main_page) | Highest-confidence bio; English only |
@@ -317,7 +317,9 @@ own probe on credits-heavy albums before this becomes a capability),
 we fetch: `collectionViewUrl`, `collectionPrice`, `copyright`, `contentAdvisoryRating`,
 `collectionExplicitness`, `amgArtistId`, `artistViewUrl`; from a track lookup, `previewUrl` (Deezer
 serves `TRACK_PREVIEW`), `discNumber`, `discCount`, `trackPrice`, `isStreamable`. Entities never
-searched: `song`, `musicVideo`, `podcast`, `audiobook`.
+searched: `song`, `musicVideo`, `podcast`, `audiobook`. `lookup?isrc=` looks like the ISRC
+equivalent of `lookup?upc=` and is not: it returns `200 resultCount: 0` for an ISRC known to be in
+catalogue, so it is silently unsupported rather than broken (probed 2026-08-12) — never called.
 
 **LRCLIB.** Parsed into `LrcLibResult` and dropped: `id` (`GET /api/get/{id}` would re-fetch without
 a search), `trackName`/`artistName` — both would verify that the search fallback returned the right
