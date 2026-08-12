@@ -39,6 +39,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New `IdentityMatch.UNVERIFIED`: an identity provider throwing or returning `Error`/`RateLimited` now reports as that, not `null`/unstamped confident values; `when`s need a branch
 - `UNVERIFIED` results are excluded from the cache write-back, so a retry after a transient identity failure re-resolves rather than serving the unverified guess for the TTL
 - `CompositeSynthesizer.synthesize` now receives the identity provider's `Error` when identity resolution failed, where it previously received `null` (the "not attempted" value)
+- Two distinct all-non-Latin artist names (e.g. two different CJK names) no longer match each other; both used to normalize to an empty string and compare equal
+- A non-Latin artist request (e.g. 東京事変) against a romanizing provider (Deezer/iTunes/Discogs) now returns no match instead of the provider's unverified top hit; recovery is tracked separately
 
 ### Added
 - `EnrichmentRequest.forTrackByMbid`/`forAlbumByMbid`/`forArtistByMbid`: request an entity by MBID alone; identity resolution fills the names the other providers search by
