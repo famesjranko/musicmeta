@@ -130,23 +130,23 @@ private fun handleEnrich(exchange: HttpExchange, engine: EnrichmentEngine) {
                 // The type is an answer, not a question the user should have to answer first: one
                 // identifier goes in, and whichever page it turns out to name comes back. A blank
                 // name is what tells identity resolution to fill it from the entity it resolves.
-                "mbid" -> when (engine.discoverMbidEntityType(name)) {
+                "mbid" -> when (val entity = engine.discoverMbidEntityType(name)) {
                     MusicBrainzEntityType.RECORDING -> TrackProfile(
-                        name, "",
+                        headerFor(entity, name), "",
                         engine.enrich(
                             EnrichmentRequest.forTrackByMbid(name),
                             EnrichmentRequest.DEFAULT_TRACK_TYPES,
                         ),
                     ).toDemoResponse(System.currentTimeMillis() - started)
                     MusicBrainzEntityType.RELEASE -> AlbumProfile(
-                        name, "",
+                        headerFor(entity, name), "",
                         engine.enrich(
                             EnrichmentRequest.forAlbumByMbid(name),
                             EnrichmentRequest.DEFAULT_ALBUM_TYPES,
                         ),
                     ).toDemoResponse(System.currentTimeMillis() - started)
                     MusicBrainzEntityType.ARTIST -> ArtistProfile(
-                        name,
+                        headerFor(entity, name),
                         engine.enrich(
                             EnrichmentRequest.forArtistByMbid(name),
                             EnrichmentRequest.DEFAULT_ARTIST_TYPES,
@@ -200,6 +200,19 @@ private fun handleEnrich(exchange: HttpExchange, engine: EnrichmentEngine) {
         exchange.respondJson(500, ApiError(e.message ?: e.javaClass.simpleName))
     }
 }
+
+/**
+ * The heading an MBID page carries: what the identifier turned out to name, and enough of the
+ * identifier to recognise it by.
+ *
+ * Not the entity's name, which is what a reader wants and what the library does not hand back — an
+ * `enrich()` returns the identifiers it resolved and never the canonical title or artist it read
+ * them off (`.scratch/identity-resolution-canonical-names`). A bare UUID as a page title reads as a
+ * name, which is the one thing it is not, so the type leads and the id is trimmed to its first
+ * group.
+ */
+private fun headerFor(entity: MusicBrainzEntityType, mbid: String): String =
+    "${entity.name.lowercase().replaceFirstChar { it.uppercase() }} ${mbid.substringBefore('-')}"
 
 /** [EnrichmentResult.Error] kinds a second attempt can plausibly fix — see [retryTransientFailures]. */
 private val RETRYABLE_ERROR_KINDS = setOf(ErrorKind.NETWORK, ErrorKind.TIMEOUT)
