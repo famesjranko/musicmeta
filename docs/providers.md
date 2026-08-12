@@ -11,9 +11,9 @@ on **2026-08-13**; treat anything after that as a claim, not a fact. §What we d
 part that rots fastest — most of what it lists is a to-do, and a to-do that gets done reads as a
 still-open one until someone re-reads the code.
 
-The id and auth column below are the one exception: `ProviderCatalog.entries` carries a provider's
-id, display name and `KeyRequirement` as pin-tested public API, so that slice cannot drift out from
-under this table the way the rest of the file can.
+The Auth column below restates `ProviderCatalogEntry.keyRequirement` for each provider in
+`ProviderCatalog.entries`, which is pin-tested against the code. The restatement itself is
+hand-verified like the rest of this file, not checked.
 
 ## The providers
 
@@ -23,7 +23,8 @@ Auth keys and how to supply them are in [README.md](../README.md).
 |---|---|---|---|---|
 | MusicBrainz | `musicbrainz` | none (User-Agent required) | [docs](https://musicbrainz.org/doc/MusicBrainz_API) | Identity backbone — `isIdentityProvider`, runs first, and the only `NotFound` that can carry `suggestions`. Also the only rating source for `ARTIST_POPULARITY`/`TRACK_POPULARITY` |
 | Cover Art Archive | `coverartarchive` | none | [docs](https://musicbrainz.org/doc/Cover_Art_Archive/API) | Only artwork source keyed on a release MBID rather than a name, and the only source of back cover, booklet and disc |
-| Deezer | `deezer` | none | [docs](https://developers.deezer.com/api) | Widest no-key catalogue; only source of `ARTIST_RADIO`, `TRACK_PREVIEW`, `SIMILAR_ALBUMS` |
+| Deezer | `deezer` | none | [docs](https://developers.deezer.com/api) | Widest no-key catalogue; only source of `ARTIST_RADIO`, `TRACK_PREVIEW` |
+| Deezer Similar Albums | `deezer` | none | [docs](https://developers.deezer.com/api) | Only source of `SIMILAR_ALBUMS`; an artist-derived approximation — Deezer has no album-similarity endpoint, so results are albums by similar artists, era-weighted |
 | iTunes | `itunes` | none | [docs](https://performance-partners.apple.com/search-api) | No-key album search with artwork at any size; `lookup?upc=` resolves a known barcode as an identity match, replacing the search |
 | LRCLIB | `lrclib` | none | [docs](https://lrclib.net/docs) | Only lyrics source |
 | Wikidata | `wikidata` | none | [docs](https://www.wikidata.org/wiki/Wikidata:Data_access) | Structured claims keyed on a Q-id; our route to Commons imagery at any width |

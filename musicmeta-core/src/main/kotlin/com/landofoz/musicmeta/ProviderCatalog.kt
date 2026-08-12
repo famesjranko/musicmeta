@@ -9,10 +9,10 @@ sealed class KeyRequirement {
     object None : KeyRequirement()
 
     /** The provider registers only when [key] returns non-null; otherwise it is absent. */
-    data class Required(val fieldName: String, val key: (ApiKeyConfig) -> String?) : KeyRequirement()
+    class Required(val fieldName: String, val key: (ApiKeyConfig) -> String?) : KeyRequirement()
 
     /** The provider registers regardless; a null [key] only disables part of its surface. */
-    data class Optional(val fieldName: String, val key: (ApiKeyConfig) -> String?) : KeyRequirement()
+    class Optional(val fieldName: String, val key: (ApiKeyConfig) -> String?) : KeyRequirement()
 }
 
 /**
@@ -23,7 +23,7 @@ sealed class KeyRequirement {
  *   and a key of [ProviderPolicies.all].
  * @property displayName matches [EnrichmentProvider.displayName] for the same provider.
  */
-data class ProviderCatalogEntry(
+class ProviderCatalogEntry(
     val id: String,
     val displayName: String,
     val keyRequirement: KeyRequirement,

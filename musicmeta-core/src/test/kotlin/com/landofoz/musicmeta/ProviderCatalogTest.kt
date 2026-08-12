@@ -46,7 +46,8 @@ class ProviderCatalogTest {
         }
 
         // Then - no entry's display name differs from the registered provider's
-        assertTrue("Mismatched display names: $mismatches", mismatches.isEmpty())
+        val details = mismatches.map { it.id to (it.displayName to registeredById.getValue(it.id).displayName) }
+        assertTrue("Mismatched display names (id to (catalog, registered)): $details", mismatches.isEmpty())
     }
 
     @Test fun `keyless engine is missing exactly the Required catalog ids`() {
@@ -96,6 +97,30 @@ class ProviderCatalogTest {
             assertTrue("${entry.id} should register with only its own key set", entry.id in registeredIds)
             assertEquals("solo-key", requirement.key(config))
         }
+    }
+
+    @Test fun `fullyKeyedConfig sets every ApiKeyConfig field`() {
+        // Given - fullyKeyedConfig's named fields
+        val namedFields = listOf(
+            fullyKeyedConfig.lastFmKey,
+            fullyKeyedConfig.fanartTvProjectKey,
+            fullyKeyedConfig.discogsPersonalToken,
+            fullyKeyedConfig.listenBrainzToken,
+        )
+
+        // When - counting ApiKeyConfig's real primary constructor's parameters. A data class whose
+        // parameters all default compiles to three constructors: the real primary one, a synthetic
+        // one carrying the defaults bitmask (`isSynthetic`), and — because every parameter defaults
+        // — a real bare no-arg one too. The primary constructor is the widest of the non-synthetic
+        // ones; plain java.lang.reflect, since kotlin-reflect is not on this module's test classpath.
+        val constructorParamCount = ApiKeyConfig::class.java.declaredConstructors
+            .filterNot { it.isSynthetic }
+            .maxOf { it.parameterCount }
+
+        // Then - the counts match, so a field added to ApiKeyConfig and left out here fails loudly,
+        // and every named field is actually set
+        assertEquals(constructorParamCount, namedFields.size)
+        assertTrue("fullyKeyedConfig has an unset field: $namedFields", namedFields.all { it != null })
     }
 
     @Test fun `Optional listenbrainz entry always registers and its selector reads the token`() {
