@@ -13,7 +13,7 @@ import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.http.bodyOrThrowTransient
 
 /**
- * Provides artist biographies, album descriptions and photos from Wikipedia page summaries.
+ * Provides artist biographies, album descriptions and photos from Wikipedia articles.
  *
  * `ALBUM_DESCRIPTION` reuses the same title-resolution and `Biography` mapping as `ARTIST_BIO`;
  * only the identifiers differ — for an album request they come from the release-group's Wikidata
@@ -83,7 +83,7 @@ class WikipediaProvider(
 
     private suspend fun enrichBio(title: String, type: EnrichmentType): EnrichmentResult {
         val summary = try {
-            api.getPageSummary(title) ?: return EnrichmentResult.NotFound(type, id)
+            api.getPageExtract(title) ?: return EnrichmentResult.NotFound(type, id)
         } catch (e: Exception) {
             return mapError(type, e)
         }
@@ -101,6 +101,7 @@ class WikipediaProvider(
         } catch (e: Exception) {
             return mapError(type, e)
         }
+        // The list arrives lead-image first, so the head is the article's own photograph when it has one.
         val bestImage = mediaItems.firstOrNull()
             ?: return EnrichmentResult.NotFound(type, id)
         return EnrichmentResult.Success(

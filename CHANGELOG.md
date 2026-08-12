@@ -57,12 +57,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Deezer's `ALBUM_TRACKS` now uses the same artist-matched search as `ALBUM_METADATA` (was the unfiltered top hit), so a same-titled wrong-artist album no longer supplies the tracklist
 - That same match can now reject all 5 candidates (alias, compilation, credited-as variant), so `ALBUM_TRACKS` can return `NotFound` where it previously returned the unfiltered top hit's tracks
 - `ALBUM_TRACKS`'s confidence now reflects that same artist match (was always the no-match floor), matching what `ALBUM_METADATA` and `ALBUM_ART` already reported for the identical selection
+- Wikipedia bios now come from the Action API extract, which keeps the parentheticals the old endpoint stripped (instrument credits, IPA, native-script names): bio text visibly changes
 
 ### Fixed
 - An artist named by one of its MusicBrainz aliases now resolves: the search asked `artist:"…"` only, which does not reach the alias index, so a localised or former name found nothing
 - `identityMatchScore` now distinguishes an artist matched on its own name from one matched on an alias, scaling the score by which of the two it was
 - A cached payload whose genre tags never learned whether they were curated reads as a miss and refetches, rather than serving unmarked tags for the type's 90-day TTL
 - Discogs limiter now has headroom, so jitter no longer tips it into a 429 (was `Error`/`NETWORK`)
+- Wikipedia `ARTIST_PHOTO` now returns the article's lead photograph: its media-list schema had changed, so the parser saw no image or an incidental diagram
 - A type whose every provider is circuit-broken is now `Error` (`ErrorKind.NETWORK`), not `NotFound`: an outage had read as "no such data" and carried no retry signal
 - A merged type (`GENRE`, `ALBUM_ART`, `SIMILAR_ARTISTS`, …) whose providers all errored is now `Error` too; the merger sees only successes, dropping every failure before the consumer
 - A track given no album is resolved from recordings MusicBrainz has already filtered to unmarked ones, so a heavily-covered title reaches the studio recording instead of a live or demo take
