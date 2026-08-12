@@ -70,7 +70,7 @@ fun main() {
         )
     }
 
-    startServer(engineRef, cacheModeRef, ::buildEngine, port)
+    startServer(engineRef, cacheModeRef, ::buildEngine, keys, port)
     println("musicmeta web demo running at http://localhost:$port")
 }
 
