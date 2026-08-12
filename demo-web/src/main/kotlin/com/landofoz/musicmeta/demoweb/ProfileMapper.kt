@@ -349,6 +349,7 @@ private fun IdentifierNamespace.label(): String = when (this) {
     IdentifierNamespace.SPOTIFY_ARTIST -> "Spotify"
     IdentifierNamespace.ITUNES_ARTIST -> "iTunes"
     IdentifierNamespace.DEEZER -> "Deezer"
+    else -> name.lowercase().replace('_', ' ').replaceFirstChar { it.uppercase() }
 }
 
 private fun EnrichmentIdentifiers?.toIdentifierHits(): List<IdentifierHit> {

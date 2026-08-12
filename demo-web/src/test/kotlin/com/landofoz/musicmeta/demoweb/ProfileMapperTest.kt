@@ -799,14 +799,18 @@ class ProfileMapperTest {
 
     @Test
     fun `identifiers surface namespaced ids with the prescribed labels`() {
-        // Given - an artist whose identity resolution carries Discogs and Spotify ids alongside the resolved MBID
+        // Given - an artist whose identity resolution carries every namespaced id alongside the resolved MBID
         val identifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-1")
+            .with(IdentifierNamespace.MUSICBRAINZ_RELEASE, "release-1")
+            .with(IdentifierNamespace.MUSICBRAINZ_RECORDING, "recording-1")
             .with(IdentifierNamespace.DISCOGS_ARTIST, "discogs-1")
             .with(IdentifierNamespace.SPOTIFY_ARTIST, "spotify-1")
+            .with(IdentifierNamespace.ITUNES_ARTIST, "itunes-1")
+            .with(IdentifierNamespace.DEEZER, "deezer-1")
         val results = EnrichmentResults(
             raw = emptyMap(),
             requestedTypes = emptySet(),
-            identity = com.landofoz.musicmeta.IdentityResolution(
+            identity = IdentityResolution(
                 identifiers = identifiers,
                 match = IdentityMatch.RESOLVED,
                 matchScore = null,
@@ -818,11 +822,16 @@ class ProfileMapperTest {
         // When - mapping to a demo response
         val response = profile.toDemoResponse(elapsedMs = 0)
 
-        // Then - the Discogs and Spotify ids appear labelled, alongside the struct-field MBID
+        // Then - the namespaced ids are appended after the six struct fields, labelled and in enum order
         val hits = response.meta.identifiers
-        assertTrue(hits.any { it.label == "MBID" && it.value == "mbid-1" })
-        assertTrue(hits.any { it.label == "Discogs" && it.value == "discogs-1" })
-        assertTrue(hits.any { it.label == "Spotify" && it.value == "spotify-1" })
+        assertEquals(
+            listOf("MBID", "Release MBID", "Recording MBID", "Discogs", "Spotify", "iTunes", "Deezer"),
+            hits.map { it.label },
+        )
+        assertEquals(
+            listOf("mbid-1", "release-1", "recording-1", "discogs-1", "spotify-1", "itunes-1", "deezer-1"),
+            hits.map { it.value },
+        )
     }
 
     @Test
@@ -833,7 +842,7 @@ class ProfileMapperTest {
         val results = EnrichmentResults(
             raw = emptyMap(),
             requestedTypes = emptySet(),
-            identity = com.landofoz.musicmeta.IdentityResolution(
+            identity = IdentityResolution(
                 identifiers = identifiers,
                 match = IdentityMatch.RESOLVED,
                 matchScore = null,
