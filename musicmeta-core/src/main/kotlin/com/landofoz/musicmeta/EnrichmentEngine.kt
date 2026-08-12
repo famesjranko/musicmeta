@@ -258,16 +258,17 @@ interface EnrichmentEngine {
 
         /**
          * At most one warning per condition per `build()`, so a consumer hears it at startup rather
-         * than once per request. Read off what the wire will carry rather than off the composed
-         * config, because the two ways to reach a provider with a contactless User-Agent while
-         * believing otherwise — composing one after [withDefaultProviders] has already built the
-         * client, and composing one for a client [httpClient] supplied — are exactly the two a
-         * config-only check reads as compliant.
+         * than once per request. Warns from what the wire will carry wherever the engine builds the
+         * client itself, which the composed config alone does not say: composing a contact after
+         * [withDefaultProviders] has already built the client reads as compliant to a config-only
+         * check. A client supplied to [httpClient] carries a User-Agent this class cannot read, so
+         * the contactless-default warning stays silent for it — only the contradiction of pairing
+         * that client with [contact] is warned about.
          */
         private fun warnAboutUserAgentOnTheWire(cfg: EnrichmentConfig) {
             val affected = providers.map { it.id }.filter { it in CONTACT_REQUIRING_PROVIDERS }
             if (affected.isEmpty()) return
-            if (cfg.userAgent == EnrichmentConfig.DEFAULT_USER_AGENT) {
+            if (httpClient == null && cfg.userAgent == EnrichmentConfig.DEFAULT_USER_AGENT) {
                 logger.warn(
                     TAG,
                     "User-Agent \"${EnrichmentConfig.DEFAULT_USER_AGENT}\" carries no contact information, " +
@@ -276,7 +277,10 @@ interface EnrichmentEngine {
                         "against one shared pool and Wikimedia may answer 403. Pass a contact URL or email " +
                         "to EnrichmentEngine.Builder.contact(), or set EnrichmentConfig.userAgent.",
                 )
-            } else if (defaultProvidersUserAgent == EnrichmentConfig.DEFAULT_USER_AGENT) {
+            }
+            if (defaultProvidersUserAgent == EnrichmentConfig.DEFAULT_USER_AGENT &&
+                cfg.userAgent != EnrichmentConfig.DEFAULT_USER_AGENT
+            ) {
                 logger.warn(
                     TAG,
                     "withDefaultProviders() built the HTTP client before the User-Agent was set, so the " +
@@ -292,7 +296,8 @@ interface EnrichmentEngine {
                     "contact() cannot alter a caller-supplied client's User-Agent: the client passed to " +
                         "httpClient() sends whatever it was built with, so \"$contact\" reaches no " +
                         "provider (${affected.joinToString(", ")} require contact information). Set the " +
-                        "User-Agent on that client — DefaultHttpClient takes it as its first argument.",
+                        "User-Agent where that client is constructed (OkHttpEnrichmentClient and " +
+                        "DefaultHttpClient both take it as a constructor argument).",
                 )
             }
         }

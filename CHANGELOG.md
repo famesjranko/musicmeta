@@ -80,6 +80,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `build()` warns from the User-Agent the wire will carry: the contactless default meeting MusicBrainz/Wikipedia/Wikidata, `contact()` after `withDefaultProviders()`, or `contact()` with your client
 
 ### Fixed
+- A caller-supplied `httpClient()` no longer draws the contactless-User-Agent warning: core cannot read that client's wire, so it assumes nothing; pairing it with `contact()` still warns
 - An artist named by one of its MusicBrainz aliases now resolves: the search asked `artist:"…"` only, which does not reach the alias index, so a localised or former name found nothing
 - `identityMatchScore` now distinguishes an artist matched on its own name from one matched on an alias, scaling the score by which of the two it was
 - A cached payload whose genre tags never learned whether they were curated reads as a miss and refetches, rather than serving unmarked tags for the type's 90-day TTL
