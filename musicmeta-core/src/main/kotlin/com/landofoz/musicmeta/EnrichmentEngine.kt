@@ -262,13 +262,16 @@ interface EnrichmentEngine {
          * client itself, which the composed config alone does not say: composing a contact after
          * [withDefaultProviders] has already built the client reads as compliant to a config-only
          * check. A client supplied to [httpClient] carries a User-Agent this class cannot read, so
-         * the contactless-default warning stays silent for it — only the contradiction of pairing
-         * that client with [contact] is warned about.
+         * the contactless-default warning stays silent for a build whose only client is that one;
+         * pairing [contact] with a caller-supplied [httpClient] draws a warning of its own, since
+         * this class cannot verify what User-Agent that client actually sends.
          */
         private fun warnAboutUserAgentOnTheWire(cfg: EnrichmentConfig) {
             val affected = providers.map { it.id }.filter { it in CONTACT_REQUIRING_PROVIDERS }
             if (affected.isEmpty()) return
-            if (httpClient == null && cfg.userAgent == EnrichmentConfig.DEFAULT_USER_AGENT) {
+            if ((httpClient == null || defaultProvidersUserAgent != null) &&
+                cfg.userAgent == EnrichmentConfig.DEFAULT_USER_AGENT
+            ) {
                 logger.warn(
                     TAG,
                     "User-Agent \"${EnrichmentConfig.DEFAULT_USER_AGENT}\" carries no contact information, " +

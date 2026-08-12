@@ -222,6 +222,23 @@ class BuilderUserAgentContactTest {
         assertEquals(emptyList<String>(), logger.warnings)
     }
 
+    @Test fun `a client swapped in after withDefaultProviders still warns about the one it built`() {
+        // Given - default providers built the contactless-default client, then a client replaced it
+        val logger = RecordingLogger()
+        val builder = EnrichmentEngine.Builder()
+            .logger(logger)
+            .withDefaultProviders()
+            .httpClient(FakeHttpClient())
+
+        // When - building the engine
+        builder.build()
+
+        // Then - the providers already carry the contactless-default client httpClient() cannot reach
+        assertEquals(1, logger.warnings.size)
+        val warning = logger.warnings.single()
+        assertTrue(warning, EnrichmentConfig.DEFAULT_USER_AGENT in warning)
+    }
+
     @Test fun `contact rejects a line break`() {
         // Given - a contact string carrying a header-splitting newline
         val builder = EnrichmentEngine.Builder()
