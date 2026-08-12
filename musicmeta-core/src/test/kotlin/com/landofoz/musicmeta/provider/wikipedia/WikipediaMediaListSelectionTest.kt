@@ -32,23 +32,99 @@ class WikipediaMediaListSelectionTest {
     )
 
     @Test
-    fun `enrich picks the lead image from its srcset thumbnail`() = runTest {
+    fun `enrich picks the lead image at its largest offered scale`() = runTest {
         // Given - a media list whose lead image, an SVG-sourced icon and an audio file all appear
         httpClient.givenJsonResponse("page/media-list", RADIOHEAD_MEDIA_LIST_JSON)
 
         // When - enriching for artist photo
         val result = provider.enrich(photoRequest(), EnrichmentType.ARTIST_PHOTO)
 
-        // Then - the lead photograph's 1x thumbnail is returned, with its rendered width
+        // Then - the 2x rendering wins, with the width its URL states
         assertTrue(result is EnrichmentResult.Success)
         val artwork = (result as EnrichmentResult.Success).data as EnrichmentData.Artwork
         assertEquals(
             "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/RadioheadO2211125_composite.jpg" +
-                "/500px-RadioheadO2211125_composite.jpg" +
-                "?utm_source=en.wikipedia.org&utm_campaign=parser&utm_content=thumbnail",
+                "/1280px-RadioheadO2211125_composite.jpg",
             artwork.url,
         )
-        assertEquals(500, artwork.width)
+        assertEquals(1280, artwork.width)
+    }
+
+    @Test
+    fun `enrich offers every scale the article renders in sizes`() = runTest {
+        // Given - the lead image is offered at 1x and 2x
+        httpClient.givenJsonResponse("page/media-list", RADIOHEAD_MEDIA_LIST_JSON)
+
+        // When - enriching for artist photo
+        val result = provider.enrich(photoRequest(), EnrichmentType.ARTIST_PHOTO)
+
+        // Then - both renderings are listed, largest first, each labelled with its scale
+        val artwork = (result as EnrichmentResult.Success).data as EnrichmentData.Artwork
+        val sizes = artwork.sizes.orEmpty()
+        assertEquals(listOf(1280, 500), sizes.map { it.width })
+        assertEquals(listOf("2x", "1x"), sizes.map { it.label })
+    }
+
+    @Test
+    fun `enrich strips the utm tracking parameters from every image URL`() = runTest {
+        // Given - media-list sources carry Wikimedia's parser-attribution parameters
+        httpClient.givenJsonResponse("page/media-list", RADIOHEAD_MEDIA_LIST_JSON)
+
+        // When - enriching for artist photo
+        val result = provider.enrich(photoRequest(), EnrichmentType.ARTIST_PHOTO)
+
+        // Then - neither the chosen URL nor any listed size carries one
+        val artwork = (result as EnrichmentResult.Success).data as EnrichmentData.Artwork
+        assertTrue(!artwork.url.contains("utm_"))
+        assertTrue(artwork.sizes.orEmpty().none { it.url.contains("utm_") })
+    }
+
+    @Test
+    fun `enrich falls back to the first image when the article flags no lead`() = runTest {
+        // Given - a gallery-style article where no item carries leadImage
+        httpClient.givenJsonResponse("page/media-list", NO_LEAD_FLAG_JSON)
+
+        // When - enriching for artist photo
+        val result = provider.enrich(photoRequest("Metallica"), EnrichmentType.ARTIST_PHOTO)
+
+        // Then - the first surviving image in article order is used
+        val artwork = (result as EnrichmentResult.Success).data as EnrichmentData.Artwork
+        assertTrue(artwork.url.contains("Lars_Ulrich"))
+    }
+
+    @Test
+    fun `enrich keeps a source whose URL states no rendered width`() = runTest {
+        // Given - a src with no NNNpx- segment, so its width cannot be read
+        httpClient.givenJsonResponse("page/media-list", NO_WIDTH_SEGMENT_JSON)
+
+        // When - enriching for artist photo
+        val result = provider.enrich(photoRequest(), EnrichmentType.ARTIST_PHOTO)
+
+        // Then - it is kept with a null width, not dropped as if it were narrow
+        assertTrue(result is EnrichmentResult.Success)
+        val artwork = (result as EnrichmentResult.Success).data as EnrichmentData.Artwork
+        assertNull(artwork.width)
+        assertEquals(
+            "https://upload.wikimedia.org/wikipedia/commons/a/a1/RadioheadO2211125_composite.jpg",
+            artwork.url,
+        )
+    }
+
+    @Test
+    fun `enrich passes through a source that is already absolute`() = runTest {
+        // Given - a src carrying its own https scheme instead of the protocol-relative form
+        httpClient.givenJsonResponse("page/media-list", ABSOLUTE_SOURCE_JSON)
+
+        // When - enriching for artist photo
+        val result = provider.enrich(photoRequest(), EnrichmentType.ARTIST_PHOTO)
+
+        // Then - the URL is used as given, with no second scheme prepended
+        val artwork = (result as EnrichmentResult.Success).data as EnrichmentData.Artwork
+        assertEquals(
+            "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/" +
+                "RadioheadO2211125_composite.jpg/500px-RadioheadO2211125_composite.jpg",
+            artwork.url,
+        )
     }
 
     @Test
@@ -212,6 +288,74 @@ class WikipediaMediaListSelectionTest {
                     "srcset": [
                         {
                             "src": "//upload.wikimedia.org/wikipedia/commons/thumb/8/81/Metallica_March_2024.jpg/500px-Metallica_March_2024.jpg?utm_source=en.wikipedia.org&utm_campaign=parser&utm_content=thumbnail",
+                            "scale": "1x"
+                        }
+                    ]
+                }
+            ]
+        }""".trimIndent()
+
+        // captured 2026-08-12: GET /api/rest_v1/page/media-list/Metallica, items 3 and 0, with the
+        // leadImage flag removed from both — synthetic, for the gallery-only article no sampled
+        // page produced.
+        val NO_LEAD_FLAG_JSON = """{
+            "items": [
+                {
+                    "title": "File:Lars_Ulrich_(Metallica).jpg",
+                    "leadImage": false,
+                    "section_id": 1,
+                    "type": "image",
+                    "srcset": [
+                        {
+                            "src": "//upload.wikimedia.org/wikipedia/commons/thumb/f/f5/Lars_Ulrich_%28Metallica%29.jpg/500px-Lars_Ulrich_%28Metallica%29.jpg?utm_source=en.wikipedia.org&utm_campaign=parser&utm_content=thumbnail",
+                            "scale": "1x"
+                        }
+                    ]
+                },
+                {
+                    "title": "File:Metallica_March_2024.jpg",
+                    "leadImage": false,
+                    "section_id": 2,
+                    "type": "image",
+                    "srcset": [
+                        {
+                            "src": "//upload.wikimedia.org/wikipedia/commons/thumb/8/81/Metallica_March_2024.jpg/500px-Metallica_March_2024.jpg?utm_source=en.wikipedia.org&utm_campaign=parser&utm_content=thumbnail",
+                            "scale": "1x"
+                        }
+                    ]
+                }
+            ]
+        }""".trimIndent()
+
+        // synthetic - a src pointing at the original file, which carries no /NNNpx- segment to read
+        // a width from. Wikimedia serves such URLs; no sampled media-list item used one.
+        val NO_WIDTH_SEGMENT_JSON = """{
+            "items": [
+                {
+                    "title": "File:RadioheadO2211125_composite.jpg",
+                    "leadImage": true,
+                    "type": "image",
+                    "srcset": [
+                        {
+                            "src": "//upload.wikimedia.org/wikipedia/commons/a/a1/RadioheadO2211125_composite.jpg",
+                            "scale": "1x"
+                        }
+                    ]
+                }
+            ]
+        }""".trimIndent()
+
+        // synthetic - the same lead item with an absolute https src instead of the protocol-relative
+        // form every sampled item used.
+        val ABSOLUTE_SOURCE_JSON = """{
+            "items": [
+                {
+                    "title": "File:RadioheadO2211125_composite.jpg",
+                    "leadImage": true,
+                    "type": "image",
+                    "srcset": [
+                        {
+                            "src": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/RadioheadO2211125_composite.jpg/500px-RadioheadO2211125_composite.jpg",
                             "scale": "1x"
                         }
                     ]

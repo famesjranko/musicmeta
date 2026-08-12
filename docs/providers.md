@@ -350,23 +350,29 @@ lead text, the ~320px thumbnail and the page properties. Parsed and dropped from
 `wikibase-shortdesc` (the "English rock band" gloss), `wikibase_item` (the Q-id, which would skip a
 resolution step elsewhere), `pageid`. `pageprops.disambiguation` is read and acted on — a
 disambiguation page yields `NotFound`, never a "Genesis may refer to:" biography. Images come from
-REST `/page/media-list`: every image after the lead one, and each item's `caption`, `showInGallery`
-and larger `srcset` scales. That response carries **no original-file URL and no height** — only
-rendered thumbnails — so `Artwork.width` is the 1x rendering's width, read from the URL's `NNNpx-`
-segment, and `Artwork.height` is always null. Never called: `/page/html/{title}` and
+REST `/page/media-list`: every image after the lead one, and each item's `caption` and
+`showInGallery`. That response carries **no original-file URL and no
+height** — only rendered thumbnails — so `Artwork.url` is the largest scale the article offers,
+`Artwork.width` is that rendering's width read from the URL's `NNNpx-` segment, `Artwork.sizes`
+lists every scale, and `Artwork.height` is always null. Scales are chosen by each entry's own
+`scale` field, not by array position. Where no item is flagged `leadImage`, the first surviving
+image in article order wins. `utm_*` tracking parameters are stripped from every URL we ship.
+Never called: `/page/html/{title}` and
 `action=parse`, where the infobox lives — origin, years active, labels, members, which we take from
 Wikidata instead. Both hosts are hardcoded `en.wikipedia.org`, so no other language is ever queried.
 
-**`rest_v1` wind-down, read 2026-08-12.** No sunset date is published for third parties. MediaWiki's
-[Page Content Service](https://www.mediawiki.org/wiki/Page_Content_Service) page says only that
-future deprecation is possible, tracked at
-[T328943](https://phabricator.wikimedia.org/T328943); `API:REST_API` and the Wikimedia APIs portal
-document `/w/rest.php/v1/` and the Action API without mentioning `rest_v1` either way. No
-`Deprecation`, `Sunset` or `Warning` header appeared on any live response
-(`scripts/probes/wikipedia-surface-probe.sh`, HEADERS section). `/page/media-list` stays on
-`rest_v1` because nothing else lists an article's images with a lead-image flag: `/w/rest.php/v1/…/links/media`
-carries neither ordering nor a lead marker (probed 2026-08-12). Re-run the probe before treating
-this as current.
+**`rest_v1` wind-down, read 2026-08-12.** A RESTBase sunset programme exists and is largely
+executed: [T314025 "[EPIC] Migrate PCS service away from restbase"](https://phabricator.wikimedia.org/T314025)
+and [T314764 "Branch out mobileapps for restbase deprecation"](https://phabricator.wikimedia.org/T314764)
+are both Resolved, and MediaWiki's [Page Content Service](https://www.mediawiki.org/wiki/Page_Content_Service)
+page describes PCS as deployed behind the REST API gateway "as part of RESTBase sunset". What that
+programme moved is the service behind the endpoints, not the endpoints themselves: **no sunset date
+for the third-party `/api/rest_v1/` paths was found**, and no `Deprecation`, `Sunset` or `Warning`
+header appeared on any live response (`scripts/probes/wikipedia-surface-probe.sh`, HEADERS
+section). `/page/media-list` stays on `rest_v1` because nothing else lists an article's images with
+a lead-image flag: `/w/rest.php/v1/…/links/media` carries neither ordering nor a lead marker
+(probed 2026-08-12). That one dependency is the watch item — the extract no longer rides `rest_v1`
+at all. Re-run the probe before treating this as current.
 
 **ListenBrainz.** On responses we already fetch: `artist_name` on a release group (parsed into
 `ListenBrainzTopReleaseGroup.artistName`, dropped by the mapper), `listen_count` on a release group

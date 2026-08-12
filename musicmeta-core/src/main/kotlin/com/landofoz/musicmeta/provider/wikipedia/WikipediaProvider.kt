@@ -101,7 +101,8 @@ class WikipediaProvider(
         } catch (e: Exception) {
             return mapError(type, e)
         }
-        // The list arrives lead-image first, so the head is the article's own photograph when it has one.
+        // The list arrives lead-image first; where the article flags none, the head is its first
+        // surviving image in article order.
         val bestImage = mediaItems.firstOrNull()
             ?: return EnrichmentResult.NotFound(type, id)
         return EnrichmentResult.Success(

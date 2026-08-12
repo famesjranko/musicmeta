@@ -184,6 +184,40 @@ class WikipediaProviderTest {
     }
 
     @Test
+    fun `enrich returns Error when the Action API reports maxlag inside a 200`() = runTest {
+        // Given - the Action API answers 200 with an error body, its way of shedding load
+        httpClient.givenJsonResponse("wikipedia.org", MAXLAG_ERROR_JSON)
+        val request = EnrichmentRequest.ForArtist(
+            identifiers = EnrichmentIdentifiers(wikipediaTitle = "Radiohead"),
+            name = "Radiohead",
+        )
+
+        // When - enriching for artist bio
+        val result = provider.enrich(request, EnrichmentType.ARTIST_BIO)
+
+        // Then - a retryable Error, never NotFound: the article exists and was not asked about
+        assertTrue(result is EnrichmentResult.Error)
+        assertEquals(ErrorKind.NETWORK, (result as EnrichmentResult.Error).errorKind)
+    }
+
+    @Test
+    fun `enrich strips the utm tracking parameters from the bio thumbnail`() = runTest {
+        // Given - pageimages thumbnails arrive with Wikimedia's utm_ attribution parameters
+        httpClient.givenJsonResponse("wikipedia.org", RADIOHEAD_EXTRACT_JSON)
+        val request = EnrichmentRequest.ForArtist(
+            identifiers = EnrichmentIdentifiers(wikipediaTitle = "Radiohead"),
+            name = "Radiohead",
+        )
+
+        // When - enriching for artist bio
+        val result = provider.enrich(request, EnrichmentType.ARTIST_BIO)
+
+        // Then - the URL handed to a consumer carries none of them
+        val bio = (result as EnrichmentResult.Success).data as EnrichmentData.Biography
+        assertEquals(RADIOHEAD_THUMBNAIL_URL, bio.thumbnailUrl)
+    }
+
+    @Test
     fun `enrich returns Error with NETWORK ErrorKind when API fails`() = runTest {
         // Given - simulate an IOException from the HTTP layer
         httpClient.givenIoException("wikipedia.org")
@@ -321,10 +355,16 @@ class WikipediaProviderTest {
                 "The band members are Thom Yorke (vocals, guitar, keyboards); the brothers " +
                 "Jonny Greenwood (guitar, keyboards, other instruments) and Colin Greenwood (bass)."
 
-        const val RADIOHEAD_THUMBNAIL_URL =
+        /** As captured, tracking parameters and all. */
+        const val RADIOHEAD_THUMBNAIL_RAW =
             "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/RadioheadO2211125_composite.jpg" +
                 "/330px-RadioheadO2211125_composite.jpg" +
                 "?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+
+        /** The same URL as a consumer receives it. */
+        const val RADIOHEAD_THUMBNAIL_URL =
+            "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/RadioheadO2211125_composite.jpg" +
+                "/330px-RadioheadO2211125_composite.jpg"
 
         const val OK_COMPUTER_EXTRACT_TEXT =
             "OK Computer is the third studio album by the English rock band Radiohead, " +
@@ -342,7 +382,7 @@ class WikipediaProviderTest {
                         "title": "Radiohead",
                         "extract": "$RADIOHEAD_EXTRACT_TEXT",
                         "thumbnail": {
-                            "source": "$RADIOHEAD_THUMBNAIL_URL",
+                            "source": "$RADIOHEAD_THUMBNAIL_RAW",
                             "width": 320,
                             "height": 116
                         },
@@ -448,6 +488,20 @@ class WikipediaProviderTest {
             }
         }""".trimIndent()
 
+        // captured 2026-08-12: GET /w/api.php?action=query&prop=extracts&titles=Radiohead&maxlag=-1
+        // — the Action API's own failure shape, served with HTTP 200. The `info` host and lag are
+        // as returned; `docref` dropped.
+        val MAXLAG_ERROR_JSON = """{
+            "error": {
+                "code": "maxlag",
+                "info": "Waiting for 10.64.48.169: 0.385659 seconds lagged.",
+                "host": "10.64.48.169",
+                "lag": 0.385659,
+                "type": "db"
+            },
+            "servedby": "mw-api-ext.eqiad.main-5ff7ffbb74-s5xdf"
+        }""".trimIndent()
+
         // captured 2026-08-12: same query, titles=NoSuchPageZZZQQ.
         val MISSING_PAGE_JSON = """{
             "batchcomplete": true,
@@ -456,8 +510,7 @@ class WikipediaProviderTest {
                     {
                         "ns": 0,
                         "title": "NoSuchPageZZZQQ",
-                        "missing": true,
-                        "extract": ""
+                        "missing": true
                     }
                 ]
             }
