@@ -61,6 +61,21 @@
     </div>
     <div class="dialog-sections">
       <section class="dialog-section">
+        <h3>Cache mode</h3>
+        <fieldset id="cache-mode-fieldset" class="cache-fieldset">
+          <label>
+            <input type="radio" name="cachemode" value="NETWORK_FIRST" />
+            Network first
+            <code>NETWORK_FIRST</code>
+          </label>
+          <label>
+            <input type="radio" name="cachemode" value="STALE_IF_ERROR" />
+            Stale if error
+            <code>STALE_IF_ERROR</code>
+          </label>
+        </fieldset>
+      </section>
+      <section class="dialog-section">
         <h3>Providers</h3>
         <div id="provider-panel">Loading providers…</div>
       </section>

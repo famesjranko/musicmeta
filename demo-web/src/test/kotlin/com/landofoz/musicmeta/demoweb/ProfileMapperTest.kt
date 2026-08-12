@@ -1046,4 +1046,42 @@ class ProfileMapperTest {
             assertEquals(listOf("shoegaze"), response.summary.genres.map { it.name })
         }
     }
+
+    @Test
+    fun `stale success maps to ok_stale, not a suffix on ok`() {
+        // Given - an artist whose GENRE result is a stale cache fallback
+        val results = EnrichmentResults(
+            raw = mapOf(
+                EnrichmentType.GENRE to EnrichmentResult.Success(
+                    EnrichmentType.GENRE,
+                    EnrichmentData.Metadata(genres = listOf("shoegaze")),
+                    provider = "test",
+                    confidence = 1.0f,
+                    isStale = true,
+                ),
+            ),
+            requestedTypes = setOf(EnrichmentType.GENRE),
+            identity = null,
+        )
+        val artist = ArtistProfile(name = "Metallica", results = results)
+
+        // When - mapping to a demo response
+        val response = artist.toDemoResponse(elapsedMs = 0)
+
+        // Then - the provider hit's status is its own ok_stale value, not "ok" with a suffix
+        assertEquals("ok_stale", response.meta.providers.single().status)
+    }
+
+    @Test
+    fun `fresh success maps to ok`() {
+        // Given - an artist whose GENRE result is a fresh, non-stale success
+        val results = resultsOf(EnrichmentType.GENRE to EnrichmentData.Metadata(genres = listOf("shoegaze")))
+        val artist = ArtistProfile(name = "Metallica", results = results)
+
+        // When - mapping to a demo response
+        val response = artist.toDemoResponse(elapsedMs = 0)
+
+        // Then - the provider hit's status stays "ok"
+        assertEquals("ok", response.meta.providers.single().status)
+    }
 }

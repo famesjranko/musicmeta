@@ -6,6 +6,7 @@ import com.landofoz.musicmeta.EnrichmentEngine
 import com.landofoz.musicmeta.cache.CacheMode
 import com.landofoz.musicmeta.cache.InMemoryEnrichmentCache
 import java.io.File
+import java.util.concurrent.atomic.AtomicReference
 
 private const val CONTACT = "https://github.com/famesjranko/musicmeta"
 
@@ -48,7 +49,11 @@ fun main() {
             .build()
     }
 
-    val engine = buildEngine(CacheMode.NETWORK_FIRST)
+    // The same shared `cache` above every rebuild passes to `buildEngine` is what makes the
+    // toggle honest: swapping the engine held here does not clear it, so a STALE_IF_ERROR swap
+    // has entries a NETWORK_FIRST run already warmed to serve as fallbacks.
+    val engineRef = AtomicReference(buildEngine(CacheMode.NETWORK_FIRST))
+    val cacheModeRef = AtomicReference(CacheMode.NETWORK_FIRST)
 
     val missingKeys = listOfNotNull(
         "LASTFM_API_KEY".takeIf { keys.lastFmKey == null },
@@ -63,7 +68,7 @@ fun main() {
         )
     }
 
-    startServer(engine, port)
+    startServer(engineRef, cacheModeRef, ::buildEngine, port)
     println("musicmeta web demo running at http://localhost:$port")
 }
 

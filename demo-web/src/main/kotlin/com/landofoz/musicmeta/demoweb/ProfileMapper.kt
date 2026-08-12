@@ -312,7 +312,9 @@ private fun EnrichmentResults.toMeta(elapsedMs: Long): Meta {
     val hits = raw.entries.sortedBy { it.key.name }.map { (type, result) ->
         when (result) {
             is EnrichmentResult.Success ->
-                ProviderHit(type.name, result.provider, "ok", result.confidence)
+                // A distinct status, not an "ok" suffix: the frontend derives the status-dot class
+                // from `status.split(':')[0]`, so a suffix would keep the green dot on a stale hit.
+                ProviderHit(type.name, result.provider, if (result.isStale) "ok_stale" else "ok", result.confidence)
             is EnrichmentResult.NotFound ->
                 ProviderHit(type.name, result.provider, "not_found")
             is EnrichmentResult.RateLimited ->
