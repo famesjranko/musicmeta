@@ -176,12 +176,10 @@ the three entity types probed in order until one answers, which is the only way 
 MBID names.
 
 This is not a nicety. These identifiers come from third parties in practice, Last.fm's having been
-bulk-imported and never re-synced: measured 2026-08-11 over `track.getSimilar`
-(`scripts/probes/lastfm-mbid-staleness-probe.sh`, `SOURCE=similar`), **51 of the 103 recording MBIDs
-MusicBrainz answered for were held under no entity type at all**. That run predates the fix to the
-script's artist loop, which silently dropped the last artist in `ARTISTS` and so undercounted this
-population; re-run it before quoting either number, and treat both as unconfirmed until then — the
-rate tracks how obscure the track is, and the same probe over the chart head is far kinder.
+bulk-imported and never re-synced: measured 2026-08-12 over `track.getSimilar`
+(`scripts/probes/lastfm-mbid-staleness-probe.sh`, `SOURCE=similar`), **1212 of the 1710 recording MBIDs
+MusicBrainz answered for were held under no entity type at all** — the rate tracks how obscure the
+track is, and the same probe over the chart head is far kinder.
 
 For a track the cost of treating such an identifier as authoritative was the *whole call*, not just
 the MusicBrainz types: identity resolution is where a track request meets its MBID, and a `NotFound`

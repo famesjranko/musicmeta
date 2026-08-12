@@ -56,9 +56,9 @@ collect_ids() {
     # The population trackProfile() actually meets. A similar-track pick is where a caller has a
     # recording MBID and nothing else, and Last.fm draws these from further down its catalogue than
     # either chart does -- which is the whole question, since staleness tracks obscurity.
-    echo "ARTISTS holds $ARTIST_COUNT artist(s); probing all $ARTIST_COUNT" >&2
-    printf '%s\n' "$ARTISTS" | tr '|' '\n' | while IFS= read -r a; do
+    printf '%s\n' "$ARTISTS" | tr '|' '\n' | { n=0; while IFS= read -r a; do
       [ -n "$a" ] || continue
+      n=$((n+1))
       sleep 0.25
       seeds=$(curl -sS -A "$UA" -G "https://ws.audioscrobbler.com/2.0/" \
         --data-urlencode "method=artist.gettoptracks" --data-urlencode "artist=$a" \
@@ -73,18 +73,18 @@ collect_ids() {
           --data-urlencode "format=json" --data-urlencode "limit=$LIMIT" \
           | python3 -c 'import json,sys;d=json.load(sys.stdin);print("\n".join(t["mbid"] for t in d.get("similartracks",{}).get("track",[]) if t.get("mbid")))'
       done
-    done
+    done; echo "probed $n of $ARTIST_COUNT artist(s)" >&2; }
   elif [ "$SOURCE" = "artist" ]; then
-    echo "ARTISTS holds $ARTIST_COUNT artist(s); probing all $ARTIST_COUNT" >&2
-    printf '%s\n' "$ARTISTS" | tr '|' '\n' | while IFS= read -r a; do
+    printf '%s\n' "$ARTISTS" | tr '|' '\n' | { n=0; while IFS= read -r a; do
       [ -n "$a" ] || continue
+      n=$((n+1))
       sleep 0.25
       curl -sS -A "$UA" -G "https://ws.audioscrobbler.com/2.0/" \
         --data-urlencode "method=artist.gettoptracks" --data-urlencode "artist=$a" \
         --data-urlencode "api_key=$KEY" --data-urlencode "format=json" \
         --data-urlencode "limit=$LIMIT" \
         | python3 -c 'import json,sys;d=json.load(sys.stdin);print("\n".join(t["mbid"] for t in d.get("toptracks",{}).get("track",[]) if t.get("mbid")))'
-    done
+    done; echo "probed $n of $ARTIST_COUNT artist(s)" >&2; }
   else
     curl -sS -A "$UA" -G "https://ws.audioscrobbler.com/2.0/" \
       --data-urlencode "method=chart.gettoptracks" --data-urlencode "api_key=$KEY" \
