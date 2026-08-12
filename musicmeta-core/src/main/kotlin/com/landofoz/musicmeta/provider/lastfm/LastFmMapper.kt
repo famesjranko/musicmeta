@@ -3,6 +3,8 @@ package com.landofoz.musicmeta.provider.lastfm
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.GenreTag
+import com.landofoz.musicmeta.PopularitySignal
+import com.landofoz.musicmeta.PopularitySignalKind
 import com.landofoz.musicmeta.SimilarArtist
 import com.landofoz.musicmeta.SimilarTrack
 import com.landofoz.musicmeta.TopTrack
@@ -70,6 +72,7 @@ internal object LastFmMapper {
         EnrichmentData.Popularity(
             listenerCount = info.listeners,
             listenCount = info.playcount,
+            signals = countSignals(info.playcount, info.listeners),
         )
 
     fun toTopTracks(tracks: List<LastFmTopTrack>): EnrichmentData.TopTracks =
@@ -92,5 +95,22 @@ internal object LastFmMapper {
         EnrichmentData.Popularity(
             listenCount = info.playcount,
             listenerCount = info.listeners,
+            signals = countSignals(info.playcount, info.listeners),
         )
+
+    /**
+     * Last.fm's two counts as signals. `listenCount` is scrobbles, which is not the same unit as
+     * ListenBrainz's listens, so it is labelled with its source rather than blended here.
+     */
+    private fun countSignals(playcount: Long?, listeners: Long?): List<PopularitySignal> =
+        listOfNotNull(
+            playcount?.let {
+                PopularitySignal(SOURCE, PopularitySignalKind.LISTEN_COUNT, it.toDouble())
+            },
+            listeners?.let {
+                PopularitySignal(SOURCE, PopularitySignalKind.LISTENER_COUNT, it.toDouble())
+            },
+        )
+
+    private const val SOURCE = "lastfm"
 }

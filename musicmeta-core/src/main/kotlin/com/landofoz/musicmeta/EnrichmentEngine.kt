@@ -6,6 +6,7 @@ import com.landofoz.musicmeta.engine.CompositeSynthesizer
 import com.landofoz.musicmeta.engine.DefaultEnrichmentEngine
 import com.landofoz.musicmeta.engine.GenreAffinityMatcher
 import com.landofoz.musicmeta.engine.GenreMerger
+import com.landofoz.musicmeta.engine.PopularityMerger
 import com.landofoz.musicmeta.engine.ProviderRegistry
 import com.landofoz.musicmeta.engine.SimilarArtistMerger
 import com.landofoz.musicmeta.engine.SimilarTrackMerger
@@ -109,6 +110,8 @@ interface EnrichmentEngine {
             ArtworkMerger(EnrichmentType.ARTIST_PHOTO),
             ArtworkMerger(EnrichmentType.ALBUM_ART),
             TopTrackMerger,
+            PopularityMerger(EnrichmentType.ARTIST_POPULARITY),
+            PopularityMerger(EnrichmentType.TRACK_POPULARITY),
         )
         private val synthesizers = mutableListOf<CompositeSynthesizer>(TimelineSynthesizer, GenreAffinityMatcher)
 

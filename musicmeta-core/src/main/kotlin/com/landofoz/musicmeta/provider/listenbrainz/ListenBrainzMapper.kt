@@ -5,6 +5,8 @@ import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.IdentifierNamespace
 import com.landofoz.musicmeta.PopularTrack
+import com.landofoz.musicmeta.PopularitySignal
+import com.landofoz.musicmeta.PopularitySignalKind
 import com.landofoz.musicmeta.RadioTrack
 import com.landofoz.musicmeta.TopTrack
 
@@ -33,6 +35,7 @@ internal object ListenBrainzMapper {
         return EnrichmentData.Popularity(
             listenCount = first.totalListenCount,
             listenerCount = first.totalUserCount,
+            signals = countSignals(first.totalListenCount, first.totalUserCount),
         )
     }
 
@@ -43,8 +46,25 @@ internal object ListenBrainzMapper {
         return EnrichmentData.Popularity(
             listenCount = first.totalListenCount,
             listenerCount = first.totalUserCount,
+            signals = countSignals(first.totalListenCount, first.totalUserCount),
         )
     }
+
+    /**
+     * ListenBrainz's two counts as signals. A ListenBrainz listen is not a Last.fm scrobble, so each
+     * carries its source rather than being blended into a single number here.
+     */
+    private fun countSignals(listens: Long?, users: Long?): List<PopularitySignal> =
+        listOfNotNull(
+            listens?.let {
+                PopularitySignal(SOURCE, PopularitySignalKind.LISTEN_COUNT, it.toDouble())
+            },
+            users?.let {
+                PopularitySignal(SOURCE, PopularitySignalKind.LISTENER_COUNT, it.toDouble())
+            },
+        )
+
+    private const val SOURCE = "listenbrainz"
 
     fun toTopTracks(tracks: List<ListenBrainzPopularTrack>): EnrichmentData.TopTracks =
         EnrichmentData.TopTracks(

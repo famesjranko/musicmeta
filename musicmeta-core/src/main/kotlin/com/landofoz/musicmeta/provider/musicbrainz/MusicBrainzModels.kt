@@ -79,9 +79,10 @@ internal data class MusicBrainzArtist(
 /**
  * MusicBrainz's community rating, 1–5 with a vote count.
  *
- * Parsed but not yet mapped: no `EnrichmentData` payload carries a rating, so this stops at the DTO
- * until a popularity-signal surface exists to hold it. It rides free on lookups already made for
- * other reasons, which is why it is read now rather than when that surface lands.
+ * Mapped to a [com.landofoz.musicmeta.PopularitySignal] of kind `RATING` by
+ * [MusicBrainzMapper.toPopularity], which is what `ARTIST_POPULARITY` and `TRACK_POPULARITY` answer
+ * with here. It rides free on lookups already made for other reasons, so neither type costs a
+ * request of its own.
  */
 internal data class MusicBrainzRating(
     val value: Float,

@@ -7,6 +7,8 @@ import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.ExternalLink
 import com.landofoz.musicmeta.GenreTag
+import com.landofoz.musicmeta.PopularitySignal
+import com.landofoz.musicmeta.PopularitySignalKind
 import com.landofoz.musicmeta.ReleaseEdition
 import com.landofoz.musicmeta.TrackInfo
 
@@ -237,6 +239,32 @@ internal object MusicBrainzMapper {
             .map { tag -> GenreTag(tag.name, TAG_CONFIDENCE, listOf(PROVIDER_SOURCE), curated = uncurated) }
         return (curated + community).takeIf { it.isNotEmpty() }
     }
+
+    /**
+     * MusicBrainz's community rating as a popularity claim with a source.
+     *
+     * A rating is not a count, so it fills no flat field on [EnrichmentData.Popularity] — only the
+     * signal list, where [PopularitySignal.sampleSize] carries the vote count that says how much the
+     * score rests on. MusicBrainz rates 1–5, so the 0..1 normalisation is exact rather than a guess.
+     * Null rating means nobody has voted, which is not a popularity of zero.
+     */
+    fun toPopularity(rating: MusicBrainzRating?): EnrichmentData.Popularity =
+        EnrichmentData.Popularity(
+            signals = listOfNotNull(
+                rating?.let {
+                    PopularitySignal(
+                        source = PROVIDER_SOURCE,
+                        kind = PopularitySignalKind.RATING,
+                        value = it.value.toDouble(),
+                        normalized = it.value / MAX_RATING,
+                        sampleSize = it.votes,
+                    )
+                },
+            ),
+        )
+
+    /** MusicBrainz's rating scale tops out at five stars, so a normalisation needs no calibration. */
+    private const val MAX_RATING = 5f
 
     private const val PROVIDER_SOURCE = "musicbrainz"
 
