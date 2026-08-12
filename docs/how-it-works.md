@@ -232,7 +232,7 @@ Successful results are cached with per-type TTLs:
 
 ---
 
-## The 34 Enrichment Types
+## The 36 Enrichment Types
 
 ### Artwork (8 types — all mergeable)
 | Type | Providers (by priority) | Notes |
@@ -262,12 +262,13 @@ when a key is present, and CAA is a fallback, not a second entry in the same res
 | COUNTRY | MusicBrainz(100), Wikidata(50) | |
 | ALBUM_METADATA | Deezer(50), Discogs(40), Last.fm(40), iTunes(30) | Community ratings, barcode, etc. |
 
-### Text (3 types)
+### Text (4 types)
 | Type | Providers (by priority) | Notes |
 |------|------------------------|-------|
 | ARTIST_BIO | Wikipedia(100), Last.fm(50) | |
 | LYRICS_SYNCED | LRCLIB(100) | Timestamped lines |
 | LYRICS_PLAIN | LRCLIB(100) | Plain text |
+| ALBUM_DESCRIPTION | Wikipedia(100), Last.fm(50) | Wikipedia extract, Last.fm `wiki` block |
 
 ### Relationships (5 types)
 | Type | Providers (by priority) | Notes |
@@ -278,24 +279,25 @@ when a key is present, and CAA is a fallback, not a second entry in the same res
 | ARTIST_LINKS | MusicBrainz(100), Wikidata(50) | All URL relation types; Wikidata contributes P856 only |
 | CREDITS | MusicBrainz(100), Discogs(50) | Recording rels + extraartists, roleCategory grouping |
 
-### Additional Data (3 types)
+### Additional Data (4 types)
 | Type | Providers (by priority) | Notes |
 |------|------------------------|-------|
 | ARTIST_DISCOGRAPHY | MusicBrainz(100), Deezer(50), ListenBrainz(50), iTunes(30) | 4 providers |
 | ALBUM_TRACKS | MusicBrainz(100), Deezer(50), iTunes(30) | 3 providers |
 | RELEASE_EDITIONS | MusicBrainz(100), Discogs(50) | Release-group releases + master versions |
+| TRACK_METADATA | MusicBrainz(100), Deezer(70), LRCLIB(40) | Duration, album title, disambiguation — all off responses already fetched |
 
 ### Statistics (2 types)
 | Type | Providers (by priority) | Notes |
 |------|------------------------|-------|
-| ARTIST_POPULARITY | Last.fm(100), ListenBrainz(100) | Listeners + play counts |
-| TRACK_POPULARITY | Last.fm(100), ListenBrainz(50) | Per-track stats |
+| ARTIST_POPULARITY | Last.fm(100), ListenBrainz(100), MusicBrainz(20) | **Mergeable** — each source's claim kept in its own unit as a `PopularitySignal`, never summed; MusicBrainz contributes its community rating |
+| TRACK_POPULARITY | Last.fm(100), ListenBrainz(50), MusicBrainz(20) | **Mergeable** — same shape |
 
 ### Recommendations (5 types)
 | Type | Providers (by priority) | Notes |
 |------|------------------------|-------|
 | ARTIST_RADIO | Deezer(100) | Tracks for a "radio station" seeded by artist |
-| ARTIST_RADIO_DISCOVERY | ListenBrainz(100) | Community-driven radio via LB Radio; requires `listenBrainzToken` |
+| ARTIST_RADIO_DISCOVERY | ListenBrainz(100) | Community-driven radio via LB Radio; requires `listenBrainzToken`. Its route is disabled upstream — see [providers.md](providers.md) § Routes disabled upstream |
 | ARTIST_TOP_TRACKS | Last.fm(100), ListenBrainz(100), Deezer(50) | **Mergeable** — deduplicates, sums listen counts |
 | SIMILAR_ALBUMS | Deezer(100) | **Artist-derived** — Deezer has no album-similarity endpoint, so this is albums by artists related to the seed *artist*, era-weighted (re-ranked, nothing dropped). Two albums by one artist give near-identical lists |
 | GENRE_DISCOVERY | GenreAffinityMatcher | **Composite** — taxonomy lookup from resolved GENRE tags |
