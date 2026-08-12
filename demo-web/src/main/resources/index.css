@@ -799,9 +799,44 @@ table.providers td { color: var(--text-soft); }
 }
 
 .dot.ok { background: var(--ok); box-shadow: 0 0 0 3px rgba(85, 217, 154, 0.08); }
+.dot.ok_stale { background: var(--warn); box-shadow: 0 0 0 3px rgba(239, 189, 93, 0.08); }
 .dot.not_found { background: var(--muted); }
 .dot.rate_limited { background: var(--warn); }
 .dot.error { background: var(--err); box-shadow: 0 0 0 3px rgba(255, 127, 132, 0.07); }
+
+.stale-badge {
+  display: inline-block;
+  border: 1px solid rgba(239, 189, 93, 0.35);
+  border-radius: 6px;
+  padding: 0.1rem 0.42rem;
+  margin-left: 0.3rem;
+  background: rgba(239, 189, 93, 0.1);
+  color: var(--warn);
+  font-size: 0.68rem;
+}
+
+.stale-count { color: var(--warn); }
+
+.cache-fieldset { display: flex; flex-direction: column; gap: 0.6rem; border: none; margin: 0; padding: 0; }
+.cache-fieldset legend {
+  margin: 0.9rem 0 0;
+  padding: 0;
+  color: var(--text);
+  font-size: 0.8rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.cache-fieldset label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--text-soft);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+/* Only <button> and text inputs pick up the global chrome above, so this override is needed. */
+.cache-fieldset input[type="radio"] { appearance: auto; }
+.cache-fieldset code { color: var(--muted); font-size: 0.7rem; }
 
 .summary img,
 .gallery img { cursor: zoom-in; }

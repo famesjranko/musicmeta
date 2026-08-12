@@ -177,3 +177,11 @@ data class InvalidateRequest(
 
 @Serializable
 data class InvalidateResponse(val invalidated: Boolean)
+
+/** Wire shape for both `GET /api/config` and its `POST` echo — the bare `CacheMode` enum name. */
+@Serializable
+data class ConfigResponse(val cacheMode: String)
+
+/** Wire shape for `POST /api/config` — the requested `CacheMode` enum name. */
+@Serializable
+data class ConfigRequest(val cacheMode: String)

@@ -15,6 +15,7 @@ import com.landofoz.musicmeta.TrackPreviewRequest
 import com.landofoz.musicmeta.TrackProfile
 import com.landofoz.musicmeta.albumProfile
 import com.landofoz.musicmeta.artistProfile
+import com.landofoz.musicmeta.cache.CacheMode
 import com.landofoz.musicmeta.discoverMbidEntityType
 import com.landofoz.musicmeta.resolveTrackPreviews
 import com.landofoz.musicmeta.trackProfile
@@ -34,6 +35,7 @@ import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.concurrent.thread
 
 private val json = Json { encodeDefaults = true }
@@ -52,7 +54,18 @@ private val ready = AtomicBoolean(false)
 @Serializable
 private data class HealthResponse(val ready: Boolean)
 
-fun startServer(engine: EnrichmentEngine, port: Int) {
+/**
+ * [engineRef] is read fresh per request rather than captured once, so a cache-mode swap takes
+ * effect on the very next call. [rebuildEngine] must build every engine over the same shared
+ * cache instance — that's what lets STALE_IF_ERROR serve entries a NETWORK_FIRST run warmed
+ * before the swap; see [handleConfig].
+ */
+fun startServer(
+    engineRef: AtomicReference<EnrichmentEngine>,
+    cacheModeRef: AtomicReference<CacheMode>,
+    rebuildEngine: (CacheMode) -> EnrichmentEngine,
+    port: Int,
+) {
     val indexHtml = ResourceAnchor::class.java.getResourceAsStream("/index.html")?.readBytes()
         ?: error("index.html missing from demo-web resources")
     val indexCss = ResourceAnchor::class.java.getResourceAsStream("/index.css")?.readBytes()
@@ -72,14 +85,15 @@ fun startServer(engine: EnrichmentEngine, port: Int) {
         }
     }
 
-    server.createContext("/api/enrich") { exchange -> handleEnrich(exchange, engine) }
-    server.createContext("/api/invalidate") { exchange -> handleInvalidate(exchange, engine) }
-    server.createContext("/api/preview") { exchange -> handlePreview(exchange, engine) }
-    server.createContext("/api/providers") { exchange -> handleProviders(exchange, engine) }
+    server.createContext("/api/enrich") { exchange -> handleEnrich(exchange, engineRef.get()) }
+    server.createContext("/api/invalidate") { exchange -> handleInvalidate(exchange, engineRef.get()) }
+    server.createContext("/api/preview") { exchange -> handlePreview(exchange, engineRef.get()) }
+    server.createContext("/api/providers") { exchange -> handleProviders(exchange, engineRef.get()) }
+    server.createContext("/api/config") { exchange -> handleConfig(exchange, engineRef, cacheModeRef, rebuildEngine) }
     server.createContext("/api/health") { exchange -> exchange.respondJson(200, HealthResponse(ready.get())) }
 
     server.start()
-    warmUp(engine)
+    warmUp(engineRef.get())
 }
 
 /**
@@ -227,6 +241,49 @@ private fun handleEnrich(exchange: HttpExchange, engine: EnrichmentEngine) {
         exchange.respondJson(200, response)
     } catch (e: Exception) {
         exchange.respondJson(500, ApiError(e.message ?: e.javaClass.simpleName))
+    }
+}
+
+/**
+ * `GET` reports the running [CacheMode]; `POST` rebuilds the engine over it. The rebuilt engine is
+ * handed the same shared cache every other build used — see [startServer] — so cached entries
+ * survive the swap and a STALE_IF_ERROR toggle has something to serve as a fallback.
+ */
+private fun handleConfig(
+    exchange: HttpExchange,
+    engineRef: AtomicReference<EnrichmentEngine>,
+    cacheModeRef: AtomicReference<CacheMode>,
+    rebuildEngine: (CacheMode) -> EnrichmentEngine,
+) {
+    when (exchange.requestMethod) {
+        "GET" -> exchange.respondJson(200, ConfigResponse(cacheModeRef.get().name))
+        "POST" -> try {
+            val body = exchange.requestBody.readBytes().toString(StandardCharsets.UTF_8)
+            val request = try {
+                json.decodeFromString<ConfigRequest>(body)
+            } catch (_: Exception) {
+                exchange.respondJson(400, ApiError("malformed JSON body"))
+                return
+            }
+            val mode = CacheMode.entries.find { it.name == request.cacheMode }
+            if (mode == null) {
+                exchange.respondJson(400, ApiError("cacheMode must be one of ${CacheMode.entries.map { it.name }}"))
+                return
+            }
+            if (mode == cacheModeRef.get()) {
+                exchange.respondJson(200, ConfigResponse(mode.name))
+                return
+            }
+            // cacheModeRef first: the window this leaves is a GET briefly reporting the new mode
+            // while engineRef still serves the old one — never the reverse, where a GET would report
+            // a mode the running engine has already left behind.
+            cacheModeRef.set(mode)
+            engineRef.set(rebuildEngine(mode))
+            exchange.respondJson(200, ConfigResponse(mode.name))
+        } catch (e: Exception) {
+            exchange.respondJson(500, ApiError(e.message ?: e.javaClass.simpleName))
+        }
+        else -> exchange.respondJson(405, ApiError("GET or POST required"))
     }
 }
 

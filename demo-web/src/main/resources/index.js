@@ -277,11 +277,13 @@ function render(data, wasForceRefresh) {
         <div><dt>${esc(i.label)}</dt><dd><code>${esc(i.value)}</code></dd></div>`).join('')}</dl>`
     : '';
 
+  const staleCount = data.meta.providers.filter((p) => p.status === 'ok_stale').length;
+
   const providers = data.meta.providers.map((p) => `
     <tr>
       <td><span class="dot ${esc(p.status.split(':')[0])}"></span>${esc(p.type)}</td>
       <td>${esc(p.provider)}</td>
-      <td>${esc(p.status)}</td>
+      <td>${p.status === 'ok_stale' ? 'ok <span class="stale-badge">stale fallback</span>' : esc(p.status)}</td>
       <td>${p.confidence != null ? p.confidence.toFixed(2) : '—'}</td>
     </tr>`).join('');
 
@@ -315,7 +317,7 @@ function render(data, wasForceRefresh) {
     <div class="sections${unverified ? ' unverified' : ''}">${sections}</div>
     <div class="card">
       <details class="meta-panel">
-        <summary>${totalItems} items across ${data.sections.length} sections${data.meta.identityMatch ? ' · identity: ' + esc(data.meta.identityMatch) : ''} — how we got this</summary>
+        <summary>${totalItems} items across ${data.sections.length} sections${data.meta.identityMatch ? ' · identity: ' + esc(data.meta.identityMatch) : ''}${staleCount > 0 ? ' · <b class="stale-count">' + staleCount + ' stale provider response' + (staleCount === 1 ? '' : 's') + '</b>' : ''} — how we got this</summary>
         ${identifiers}
         <table class="providers">
           <thead><tr><th>Type</th><th>Provider</th><th>Status</th><th>Confidence</th></tr></thead>
@@ -687,3 +689,40 @@ fetch('/api/providers', { cache: 'no-store' })
 document.getElementById('settings-open').addEventListener('click', () => settingsDialog.showModal());
 document.getElementById('credits-link').addEventListener('click', () => settingsDialog.showModal());
 document.getElementById('settings-close').addEventListener('click', () => settingsDialog.close());
+
+// Cache mode. One GET at load to reflect what's actually running; each change POSTs and reflects
+// the confirmed value back rather than the value clicked, so a rejected/failed change doesn't
+// leave the radio lying about which mode is live.
+const cacheModeInputs = document.querySelectorAll('#cache-mode-fieldset input[type="radio"]');
+let confirmedCacheMode = null;
+
+function setCacheModeRadio(cacheMode) {
+  confirmedCacheMode = cacheMode;
+  cacheModeInputs.forEach((input) => { input.checked = input.value === cacheMode; });
+}
+
+fetch('/api/config', { cache: 'no-store' })
+  .then((res) => {
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.json();
+  })
+  .then((data) => setCacheModeRadio(data.cacheMode))
+  .catch(() => {});
+
+cacheModeInputs.forEach((input) => {
+  input.addEventListener('change', () => {
+    const requested = input.value;
+    const lastConfirmed = confirmedCacheMode;
+    fetch('/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cacheMode: requested }),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .then((data) => setCacheModeRadio(data.cacheMode))
+      .catch(() => setCacheModeRadio(lastConfirmed));
+  });
+});
