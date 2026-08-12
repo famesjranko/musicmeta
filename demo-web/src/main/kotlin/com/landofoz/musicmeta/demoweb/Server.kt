@@ -114,6 +114,7 @@ private fun handleEnrich(exchange: HttpExchange, engine: EnrichmentEngine) {
         // direction: an MBID MusicBrainz holds pins the exact entity, while one it does not hold
         // resolves by name regardless.
         val mbid = params["mbid"]?.trim()?.ifBlank { null }
+        val forceRefresh = params["refresh"] == "true"
 
         val valid = kind in setOf("artist", "album", "track", "mbid") &&
             name.isNotBlank() &&
@@ -137,6 +138,7 @@ private fun handleEnrich(exchange: HttpExchange, engine: EnrichmentEngine) {
                         val results = engine.enrich(
                             EnrichmentRequest.forTrackByMbid(name),
                             EnrichmentRequest.DEFAULT_TRACK_TYPES,
+                            forceRefresh,
                         )
                         TrackProfile(
                             results.identity?.title ?: headerFor(entity, name),
@@ -148,6 +150,7 @@ private fun handleEnrich(exchange: HttpExchange, engine: EnrichmentEngine) {
                         val results = engine.enrich(
                             EnrichmentRequest.forAlbumByMbid(name),
                             EnrichmentRequest.DEFAULT_ALBUM_TYPES,
+                            forceRefresh,
                         )
                         AlbumProfile(
                             results.identity?.title ?: headerFor(entity, name),
@@ -159,6 +162,7 @@ private fun handleEnrich(exchange: HttpExchange, engine: EnrichmentEngine) {
                         val results = engine.enrich(
                             EnrichmentRequest.forArtistByMbid(name),
                             EnrichmentRequest.DEFAULT_ARTIST_TYPES + EnrichmentType.COUNTRY,
+                            forceRefresh,
                         )
                         // An artist's own name arrives as the title, as it does on a SearchCandidate.
                         ArtistProfile(
@@ -173,6 +177,7 @@ private fun handleEnrich(exchange: HttpExchange, engine: EnrichmentEngine) {
                         name,
                         mbid,
                         types = EnrichmentRequest.DEFAULT_ARTIST_TYPES + EnrichmentType.COUNTRY,
+                        forceRefresh = forceRefresh,
                     )
                     val retried = profile.results.retryTransientFailures(
                         engine,
@@ -182,7 +187,9 @@ private fun handleEnrich(exchange: HttpExchange, engine: EnrichmentEngine) {
                 }
                 "album" ->
                     coroutineScope {
-                        val profileDeferred = async { engine.albumProfile(name, artist, mbid) }
+                        val profileDeferred = async {
+                            engine.albumProfile(name, artist, mbid, forceRefresh = forceRefresh)
+                        }
                         val radioDeferred = async { fetchArtistRadioSection(engine, artist) }
                         val profile = profileDeferred.await()
                         val retried = profile.results.retryTransientFailures(
@@ -194,7 +201,9 @@ private fun handleEnrich(exchange: HttpExchange, engine: EnrichmentEngine) {
                     }
                 else ->
                     coroutineScope {
-                        val profileDeferred = async { engine.trackProfile(name, artist, album, mbid) }
+                        val profileDeferred = async {
+                            engine.trackProfile(name, artist, album, mbid, forceRefresh = forceRefresh)
+                        }
                         val radioDeferred = async { fetchArtistRadioSection(engine, artist) }
                         val profile = profileDeferred.await()
                         val retried = profile.results.retryTransientFailures(
