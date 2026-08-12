@@ -9,7 +9,7 @@
 
 </div>
 
-A Kotlin library that gives Android and JVM music apps access to rich metadata, artwork, and discovery features -- 8 of 11 providers work without API keys. Ask for as much or as little as you need: all 34 enrichment types at once, a single artist photo, just lyrics, or anything in between. Providers set their own terms on commercial use, licensing and attribution -- see [docs/providers.md](docs/providers.md#terms-licences-attribution) before shipping.
+A Kotlin library that gives Android and JVM music apps access to rich metadata, artwork, and discovery features -- 8 of 11 providers work without API keys. Ask for as much or as little as you need: all 36 enrichment types at once, a single artist photo, just lyrics, or anything in between. Providers set their own terms on commercial use, licensing and attribution -- see [docs/providers.md](docs/providers.md#terms-licences-attribution) before shipping.
 
 11 public music APIs behind one engine. You choose what to request, how to use it, and what to show your users. The library handles the plumbing -- identity resolution, multi-provider merging, confidence scoring, rate limiting, caching -- so you can focus on building your app.
 
@@ -21,7 +21,7 @@ A Kotlin library that gives Android and JVM music apps access to rich metadata, 
          v
 +-----------------------------------------------+
 |  EnrichmentEngine                             |
-|  11 providers -> 34 enrichment types          |
+|  11 providers -> 36 enrichment types          |
 |                                               |
 |  MusicBrainz    Cover Art Archive  Wikidata   |
 |  Wikipedia      LRCLIB             Deezer     |
@@ -110,24 +110,24 @@ val engine = EnrichmentEngine.Builder()
     .build()
 ```
 
-## Enrichment types (34)
+## Enrichment types (36)
 
 | Category | Types | Multi-provider |
 |----------|-------|----------------|
 | **Artwork** | ALBUM_ART, ALBUM_ART_BACK, ALBUM_BOOKLET, ARTIST_PHOTO, ARTIST_BACKGROUND, ARTIST_LOGO, ARTIST_BANNER, CD_ART | ALBUM_ART merged (5), ARTIST_PHOTO merged (5: Wikidata, Fanart.tv, Deezer, Discogs, Wikipedia), CD_ART (2) |
-| **Metadata** | GENRE, LABEL, RELEASE_DATE, RELEASE_TYPE, COUNTRY, BAND_MEMBERS, ARTIST_DISCOGRAPHY, ALBUM_TRACKS, ALBUM_METADATA | DISCOGRAPHY (4), METADATA (4), TRACKS (3), GENRE (2), LABEL (2), RELEASE_TYPE (2), COUNTRY (2), BAND_MEMBERS (2) |
+| **Metadata** | GENRE, LABEL, RELEASE_DATE, RELEASE_TYPE, COUNTRY, BAND_MEMBERS, ARTIST_DISCOGRAPHY, ALBUM_TRACKS, ALBUM_METADATA, TRACK_METADATA | DISCOGRAPHY (4, 3 answering -- ListenBrainz's route is disabled upstream), METADATA (4), TRACKS (3), TRACK_METADATA (3), GENRE (2), LABEL (2), RELEASE_TYPE (2), COUNTRY (2), BAND_MEMBERS (2) |
 | **Credits** | CREDITS | MusicBrainz (recording rels) + Discogs (extraartists) |
 | **Editions** | RELEASE_EDITIONS | MusicBrainz (release-group) + Discogs (master versions) |
-| **Text** | ARTIST_BIO, LYRICS_SYNCED, LYRICS_PLAIN | BIO (2) |
-| **Relationships** | SIMILAR_ARTISTS, SIMILAR_TRACKS, ARTIST_LINKS | SIMILAR_ARTISTS (2: Last.fm, Deezer), SIMILAR_TRACKS (2) |
-| **Top Tracks** | ARTIST_TOP_TRACKS | Merged from 3 (Last.fm, ListenBrainz, Deezer) |
-| **Statistics** | ARTIST_POPULARITY, TRACK_POPULARITY | Both from 2 providers |
+| **Text** | ARTIST_BIO, ALBUM_DESCRIPTION, LYRICS_SYNCED, LYRICS_PLAIN | BIO (2), ALBUM_DESCRIPTION (2) |
+| **Relationships** | SIMILAR_ARTISTS, SIMILAR_TRACKS, ARTIST_LINKS | SIMILAR_ARTISTS (2: Last.fm, Deezer), SIMILAR_TRACKS (2), ARTIST_LINKS (2: MusicBrainz, Wikidata) |
+| **Top Tracks** | ARTIST_TOP_TRACKS | Merged from 3 (Last.fm, ListenBrainz, Deezer), 2 answering -- ListenBrainz's route is disabled upstream |
+| **Statistics** | ARTIST_POPULARITY, TRACK_POPULARITY | Both merged from 3, each source's claim kept in its own unit |
 | **Composite** | ARTIST_TIMELINE, GENRE_DISCOVERY | ARTIST_TIMELINE: discography + members + life-span; GENRE_DISCOVERY: static affinity taxonomy |
-| **Radio** | ARTIST_RADIO, ARTIST_RADIO_DISCOVERY | ARTIST_RADIO: Deezer curated playlist; ARTIST_RADIO_DISCOVERY: ListenBrainz LB Radio (easy/medium/hard modes, optional token) |
+| **Radio** | ARTIST_RADIO, ARTIST_RADIO_DISCOVERY | ARTIST_RADIO: Deezer curated playlist; ARTIST_RADIO_DISCOVERY: ListenBrainz LB Radio (easy/medium/hard modes, optional token) -- its route is disabled upstream, see [docs/providers.md](docs/providers.md) |
 | **Preview** | TRACK_PREVIEW | Deezer 30-second MP3 preview URL (on-demand, not in default types) |
 | **Discovery** | SIMILAR_ALBUMS | Deezer related artists + era scoring |
 
-19 of 34 types have multi-provider coverage with automatic fallback. Artwork types (ALBUM_ART, ARTIST_PHOTO) are merged rather than first-wins -- the best image is primary, alternatives are available via `Artwork.alternatives`.
+22 of 36 types have multi-provider coverage with automatic fallback. Artwork types (ALBUM_ART, ARTIST_PHOTO) are merged rather than first-wins -- the best image is primary, alternatives are available via `Artwork.alternatives`.
 
 ## Installation
 

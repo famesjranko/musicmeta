@@ -40,7 +40,9 @@ re-enable date (observed 2026-08-11).
 | `/1/explore/lb-radio` | `ARTIST_RADIO_DISCOVERY` is dark — ListenBrainz is its only provider |
 | `/1/popularity/top-*-for-artist/` | ListenBrainz's share of `ARTIST_DISCOGRAPHY` and `ARTIST_TOP_TRACKS`; Deezer and Last.fm still answer |
 
-`ARTIST_POPULARITY` is unaffected: it tries the batch `POST /1/popularity/artist` first, which works.
+`ARTIST_POPULARITY` is unaffected: it tries the batch `POST /1/popularity/artist` first, which
+works. `TRACK_POPULARITY` likewise rides `POST /1/popularity/recording`, which is not disabled
+either.
 Nothing re-probes these — treat the dates as the last time anyone looked.
 
 ## Deviations from the house pattern

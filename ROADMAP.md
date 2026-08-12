@@ -78,7 +78,7 @@ measurement — of how well each type is covered.
 | | RELEASE_TYPE | OK |
 | | COUNTRY | Good |
 | | BAND_MEMBERS | Good — deduplicated by MBID with roles merged; a solo (Person) artist returns themselves |
-| | ARTIST_DISCOGRAPHY | **Excellent** — 4 providers |
+| | ARTIST_DISCOGRAPHY | Good — 4 providers, 3 of them live: ListenBrainz's route is disabled upstream ([docs/providers.md](docs/providers.md)) |
 | | ALBUM_TRACKS | Good — 3 providers |
 | | ALBUM_METADATA | **Excellent** — 4 providers |
 | | CREDITS | Good — recording rels + extraartists with roleCategory |
@@ -95,7 +95,7 @@ measurement — of how well each type is covered.
 | | TRACK_POPULARITY | Good — merged the same way |
 | **Composite** | ARTIST_TIMELINE | Good — auto-resolves sub-types, synthesizes chronological events |
 | | GENRE_DISCOVERY | **v0.6.0** — static taxonomy, 189 genre relationships |
-| **Top Tracks** | ARTIST_TOP_TRACKS | **Excellent** — 3 providers merged via TopTrackMerger, fetches API max, no artificial cap |
+| **Top Tracks** | ARTIST_TOP_TRACKS | Good — 3 providers merged via TopTrackMerger, 2 of them live (ListenBrainz's route is disabled upstream), fetches API max, no artificial cap |
 | **Recommendations** | ARTIST_RADIO | **v0.6.0** — ordered playlist (default 50 tracks, configurable), 7-day TTL. For community-driven discovery, see ARTIST_RADIO_DISCOVERY |
 | | ARTIST_RADIO_DISCOVERY | **Dark** — community-driven discovery radio (configurable depth, free user token, catalog-filtered), but its only provider's route `/1/explore/lb-radio` has returned 500 since ListenBrainz disabled it around 2026-06-30, with no re-enable date |
 | | SIMILAR_ALBUMS | **v0.6.0** — era-proximity scored, 30-day TTL |
@@ -109,7 +109,7 @@ Parameter variants fold into one path: Last.fm's six `method=` calls are one pat
 
 | Provider | Paths called |
 |----------|--------------|
-| **MusicBrainz** | 8 — search + lookup for artist, recording, release, release-group |
+| **MusicBrainz** | 8 — search + lookup for artist, recording and release; browse + lookup for release-group |
 | **Deezer** | 10 |
 | **ListenBrainz** | 5 — 2 of them 500 upstream, see [docs/providers.md](docs/providers.md) |
 | **Discogs** | 4 |
@@ -225,7 +225,7 @@ milestone:
 | Metadata | 12 types including credits + editions | ✅ **Complete** |
 | Text content | Artist bios, album descriptions, synced/plain lyrics | ✅ **Complete** |
 | Relationships | Similar artists (2 merged), similar tracks (2 merged), links (2 sources) | ✅ **Complete** |
-| Statistics | Artist + track popularity merged from 3 sources as per-source signals, top tracks (3 merged) | ✅ **Complete** |
+| Statistics | Artist + track popularity merged from 3 sources as per-source signals, top tracks (3 merged, 2 live) | ✅ **Complete** |
 | Links | All MusicBrainz URL relation types, plus Wikidata P856 | ✅ **Complete** |
 | Credits | Performers, producers, composers, engineers | ✅ **Complete** |
 | Recommendations | 6 modules shipped, one dark on a disabled upstream route; credit discovery + CF deferred | 🟡 **Mostly complete** |

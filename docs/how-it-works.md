@@ -282,7 +282,7 @@ when a key is present, and CAA is a fallback, not a second entry in the same res
 ### Additional Data (4 types)
 | Type | Providers (by priority) | Notes |
 |------|------------------------|-------|
-| ARTIST_DISCOGRAPHY | MusicBrainz(100), Deezer(50), ListenBrainz(50), iTunes(30) | 4 providers |
+| ARTIST_DISCOGRAPHY | MusicBrainz(100), Deezer(50), ListenBrainz(50), iTunes(30) | 4 providers, 3 answering — ListenBrainz's route is disabled upstream, see [providers.md](providers.md) § Routes disabled upstream |
 | ALBUM_TRACKS | MusicBrainz(100), Deezer(50), iTunes(30) | 3 providers |
 | RELEASE_EDITIONS | MusicBrainz(100), Discogs(50) | Release-group releases + master versions |
 | TRACK_METADATA | MusicBrainz(100), Deezer(70), LRCLIB(40) | Duration, album title, disambiguation — all off responses already fetched |
@@ -298,7 +298,7 @@ when a key is present, and CAA is a fallback, not a second entry in the same res
 |------|------------------------|-------|
 | ARTIST_RADIO | Deezer(100) | Tracks for a "radio station" seeded by artist |
 | ARTIST_RADIO_DISCOVERY | ListenBrainz(100) | Community-driven radio via LB Radio; requires `listenBrainzToken`. Its route is disabled upstream — see [providers.md](providers.md) § Routes disabled upstream |
-| ARTIST_TOP_TRACKS | Last.fm(100), ListenBrainz(100), Deezer(50) | **Mergeable** — deduplicates, sums listen counts |
+| ARTIST_TOP_TRACKS | Last.fm(100), ListenBrainz(100), Deezer(50) | **Mergeable** — deduplicates, sums listen counts. ListenBrainz's route is disabled upstream, so two of the three answer today |
 | SIMILAR_ALBUMS | Deezer(100) | **Artist-derived** — Deezer has no album-similarity endpoint, so this is albums by artists related to the seed *artist*, era-weighted (re-ranked, nothing dropped). Two albums by one artist give near-identical lists |
 | GENRE_DISCOVERY | GenreAffinityMatcher | **Composite** — taxonomy lookup from resolved GENRE tags |
 
