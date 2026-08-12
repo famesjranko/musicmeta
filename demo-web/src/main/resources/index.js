@@ -694,8 +694,10 @@ document.getElementById('settings-close').addEventListener('click', () => settin
 // the confirmed value back rather than the value clicked, so a rejected/failed change doesn't
 // leave the radio lying about which mode is live.
 const cacheModeInputs = document.querySelectorAll('#cache-mode-fieldset input[type="radio"]');
+let confirmedCacheMode = null;
 
 function setCacheModeRadio(cacheMode) {
+  confirmedCacheMode = cacheMode;
   cacheModeInputs.forEach((input) => { input.checked = input.value === cacheMode; });
 }
 
@@ -710,6 +712,7 @@ fetch('/api/config', { cache: 'no-store' })
 cacheModeInputs.forEach((input) => {
   input.addEventListener('change', () => {
     const requested = input.value;
+    const lastConfirmed = confirmedCacheMode;
     fetch('/api/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -720,6 +723,6 @@ cacheModeInputs.forEach((input) => {
         return res.json();
       })
       .then((data) => setCacheModeRadio(data.cacheMode))
-      .catch(() => setCacheModeRadio(requested === 'NETWORK_FIRST' ? 'STALE_IF_ERROR' : 'NETWORK_FIRST'));
+      .catch(() => setCacheModeRadio(lastConfirmed));
   });
 });

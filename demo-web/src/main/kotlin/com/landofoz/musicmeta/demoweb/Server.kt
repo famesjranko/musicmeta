@@ -257,7 +257,7 @@ private fun handleConfig(
 ) {
     when (exchange.requestMethod) {
         "GET" -> exchange.respondJson(200, ConfigResponse(cacheModeRef.get().name))
-        "POST" -> {
+        "POST" -> try {
             val body = exchange.requestBody.readBytes().toString(StandardCharsets.UTF_8)
             val request = try {
                 json.decodeFromString<ConfigRequest>(body)
@@ -270,9 +270,18 @@ private fun handleConfig(
                 exchange.respondJson(400, ApiError("cacheMode must be one of ${CacheMode.entries.map { it.name }}"))
                 return
             }
-            engineRef.set(rebuildEngine(mode))
+            if (mode == cacheModeRef.get()) {
+                exchange.respondJson(200, ConfigResponse(mode.name))
+                return
+            }
+            // cacheModeRef first: the window this leaves is a GET briefly reporting the new mode
+            // while engineRef still serves the old one — never the reverse, where a GET would report
+            // a mode the running engine has already left behind.
             cacheModeRef.set(mode)
+            engineRef.set(rebuildEngine(mode))
             exchange.respondJson(200, ConfigResponse(mode.name))
+        } catch (e: Exception) {
+            exchange.respondJson(500, ApiError(e.message ?: e.javaClass.simpleName))
         }
         else -> exchange.respondJson(405, ApiError("GET or POST required"))
     }

@@ -182,5 +182,6 @@ data class InvalidateResponse(val invalidated: Boolean)
 @Serializable
 data class ConfigResponse(val cacheMode: String)
 
+/** Wire shape for `POST /api/config` — the requested `CacheMode` enum name. */
 @Serializable
 data class ConfigRequest(val cacheMode: String)

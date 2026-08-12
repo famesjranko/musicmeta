@@ -51,7 +51,9 @@ fun main() {
 
     // The same shared `cache` above every rebuild passes to `buildEngine` is what makes the
     // toggle honest: swapping the engine held here does not clear it, so a STALE_IF_ERROR swap
-    // has entries a NETWORK_FIRST run already warmed to serve as fallbacks.
+    // has entries a NETWORK_FIRST run already warmed to serve as fallbacks. `withDefaultProviders()`
+    // does rebuild per-host rate limiters and circuit breakers fresh on every swap, though — those
+    // do not survive.
     val engineRef = AtomicReference(buildEngine(CacheMode.NETWORK_FIRST))
     val cacheModeRef = AtomicReference(CacheMode.NETWORK_FIRST)
 

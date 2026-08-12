@@ -818,18 +818,25 @@ table.providers td { color: var(--text-soft); }
 .stale-count { color: var(--warn); }
 
 .cache-fieldset { display: flex; flex-direction: column; gap: 0.6rem; border: none; margin: 0; padding: 0; }
+.cache-fieldset legend {
+  margin: 0.9rem 0 0;
+  padding: 0;
+  color: var(--text);
+  font-size: 0.8rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
 .cache-fieldset label {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   color: var(--text-soft);
   font-size: 0.85rem;
   cursor: pointer;
 }
-/* Radios sit inline with the label text — only <button> picks up the global button chrome above,
-   so no override is needed here, but the rule is explicit rather than assumed. */
-.cache-fieldset input[type="radio"] { appearance: auto; margin-right: 0.4rem; }
-.cache-fieldset code { color: var(--muted); font-size: 0.7rem; margin-left: 1.4rem; }
+/* Only <button> and text inputs pick up the global chrome above, so this override is needed. */
+.cache-fieldset input[type="radio"] { appearance: auto; }
+.cache-fieldset code { color: var(--muted); font-size: 0.7rem; }
 
 .summary img,
 .gallery img { cursor: zoom-in; }
