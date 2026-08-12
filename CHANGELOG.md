@@ -46,6 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `IdentifierNamespace` enum plus `EnrichmentIdentifiers.get(ns)`/`.with(ns, value)`: typed accessors over the existing untyped `extra` map, additive, no key or wire-format change
 - MusicBrainz, Discogs, Spotify and Apple Music artist ids are now carried on Wikidata results' identifiers, parsed from claims already fetched; nothing consumes them for resolution yet
 - Wikidata is a second `ARTIST_LINKS` source (priority 50), contributing the official website (P856) where MusicBrainz has no relations
+- Deezer's `ALBUM_METADATA` now fills `barcode`/`label`/`releaseDate` from `GET /album/{id}`, one extra request shared with `ALBUM_TRACKS` per call; no genre (Deezer's is one coarse tag)
 
 ### Changed
 - A request that names no entity (an MBID-only one whose MBID resolves to nothing) is no longer fanned out to name-search providers: those types are `NotFound`, not a live search for the empty string
@@ -53,6 +54,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `hip-hop` now folds into `hip hop`, MusicBrainz's own curated spelling, rather than the reverse: affected artists' genre strings change spelling
 - `Metadata.genres` (the plain string list) is now the genre-tag names in tag order, so curated genres lead it as they lead `genreTags`
 - Provider terms are now documented (docs/providers.md): keyless is not permission; Deezer and Last.fm restrict commercial use. README opening reworded to match.
+- Deezer's `ALBUM_TRACKS` now uses the same artist-matched search as `ALBUM_METADATA` (was the unfiltered top hit), so a same-titled wrong-artist album no longer supplies the tracklist
+- That same match can now reject all 5 candidates (alias, compilation, credited-as variant), so `ALBUM_TRACKS` can return `NotFound` where it previously returned the unfiltered top hit's tracks
+- `ALBUM_TRACKS`'s confidence now reflects that same artist match (was always the no-match floor), matching what `ALBUM_METADATA` and `ALBUM_ART` already reported for the identical selection
 
 ### Fixed
 - An artist named by one of its MusicBrainz aliases now resolves: the search asked `artist:"…"` only, which does not reach the alias index, so a localised or former name found nothing

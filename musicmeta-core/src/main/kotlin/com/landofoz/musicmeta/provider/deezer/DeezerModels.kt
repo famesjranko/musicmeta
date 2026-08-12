@@ -14,6 +14,14 @@ internal data class DeezerAlbumResult(
     val explicitLyrics: Boolean? = null,
 )
 
+/** Album resource from `GET /album/{id}` — carries fields the search hit does not. */
+internal data class DeezerAlbum(
+    val id: Long,
+    val upc: String? = null,
+    val label: String? = null,
+    val releaseDate: String? = null,
+)
+
 /** Artist search result from Deezer API. */
 internal data class DeezerArtistSearchResult(
     val id: Long,

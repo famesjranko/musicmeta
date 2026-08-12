@@ -98,6 +98,23 @@ internal class DeezerApi(
         }
     }
 
+    /**
+     * The album resource, one path segment past the search hit — carries `upc`/`label`/
+     * `release_date`, none of which the search response returns. `genres` is read live (12/12
+     * probed albums, 2026-08-12) but deliberately not parsed here: every case returned exactly one
+     * coarse editorial tag, a strict parent of Last.fm's vote-weighted tags, so it would outrank a
+     * real tag cloud in [com.landofoz.musicmeta.engine.GenreMerger] with none of its weight.
+     */
+    suspend fun getAlbum(albumId: Long): DeezerAlbum? {
+        val json = fetchJson("$BASE_URL/album/$albumId") ?: return null
+        return DeezerAlbum(
+            id = json.optLong("id", albumId),
+            upc = json.optString("upc").takeIfNotEmpty(),
+            label = json.optString("label").takeIfNotEmpty(),
+            releaseDate = json.optString("release_date").takeIfNotEmpty(),
+        )
+    }
+
     suspend fun getAlbumTracks(albumId: Long): List<DeezerTrack> {
         val url = "$BASE_URL/album/$albumId/tracks"
         val json = fetchJson(url) ?: return emptyList()

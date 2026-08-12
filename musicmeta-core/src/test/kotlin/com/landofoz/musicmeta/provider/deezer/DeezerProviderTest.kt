@@ -6,9 +6,11 @@ import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
+import com.landofoz.musicmeta.engine.ProviderCallScope
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.testutil.FakeHttpClient
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -190,20 +192,100 @@ class DeezerProviderTest {
     }
 
     @Test
-    fun `enrich returns album metadata from search result`() = runTest {
-        // Given - Deezer API returns album with metadata fields
-        httpClient.givenJsonResponse("api.deezer.com", DEEZER_METADATA_RESPONSE)
+    fun `enrich returns album metadata from search result and album detail`() = runTest {
+        // Given - Deezer search returns the album hit and its /album/{id} detail carries upc/label/release_date
+        httpClient.givenJsonResponse("search/album", DEEZER_METADATA_RESPONSE)
+        httpClient.givenJsonResponse("album/14879699", DEEZER_ALBUM_DETAIL_RESPONSE)
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
 
         // When - enriching for album metadata
         val result = provider.enrich(request, EnrichmentType.ALBUM_METADATA)
 
-        // Then - success with Metadata containing trackCount, explicit, releaseType
+        // Then - success with Metadata containing trackCount, explicit, releaseType, barcode, label, releaseDate
         assertTrue(result is EnrichmentResult.Success)
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.Metadata
         assertEquals(12, data.trackCount)
         assertEquals(false, data.explicit)
         assertEquals("album", data.releaseType)
+        assertEquals("634904078164", data.barcode)
+        assertEquals("XL Recordings", data.label)
+        assertEquals("1997-06-17", data.releaseDate)
+    }
+
+    @Test
+    fun `enrich leaves barcode label and releaseDate absent when album detail lacks them`() = runTest {
+        // Given - Deezer search returns an album hit but /album/{id} carries none of upc, label, release_date
+        httpClient.givenJsonResponse("search/album", DEEZER_METADATA_RESPONSE)
+        httpClient.givenJsonResponse("album/14879699", DEEZER_ALBUM_DETAIL_MISSING_FIELDS_RESPONSE)
+        val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+
+        // When - enriching for album metadata
+        val result = provider.enrich(request, EnrichmentType.ALBUM_METADATA) as EnrichmentResult.Success
+        val data = result.data as EnrichmentData.Metadata
+
+        // Then - the missing fields are absent, not empty strings
+        assertEquals(null, data.barcode)
+        assertEquals(null, data.label)
+        assertEquals(null, data.releaseDate)
+    }
+
+    @Test
+    fun `enrich shares one album search across ALBUM_TRACKS, ALBUM_METADATA and ALBUM_ART within one ProviderCallScope`() = runTest {
+        // Given - Deezer search and album detail stubbed once each, and a ProviderCallScope standing in for one enrich() fan-out
+        httpClient.givenJsonResponse("search/album", DEEZER_METADATA_RESPONSE)
+        httpClient.givenJsonResponse("album/14879699/tracks", ALBUM_TRACKS_RESPONSE)
+        httpClient.givenJsonResponse("album/14879699", DEEZER_ALBUM_DETAIL_RESPONSE)
+        val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+
+        // When - ALBUM_TRACKS, ALBUM_METADATA and ALBUM_ART all resolve inside the same ProviderCallScope, as sibling types of one enrich() call
+        withContext(ProviderCallScope()) {
+            provider.enrich(request, EnrichmentType.ALBUM_TRACKS)
+            provider.enrich(request, EnrichmentType.ALBUM_METADATA)
+            provider.enrich(request, EnrichmentType.ALBUM_ART)
+        }
+
+        // Then - one album search and one album detail fetch serve all three types
+        assertEquals(1, httpClient.requestedUrls.count { it.contains("search/album") })
+        assertEquals(1, httpClient.requestedUrls.count { it.contains("album/14879699") && !it.contains("tracks") })
+    }
+
+    @Test
+    fun `enrich resolves the album fresh in each new ProviderCallScope`() = runTest {
+        // Given - Deezer search and album detail stubbed once each, and two independent ProviderCallScope instances standing in for two separate enrich() calls
+        httpClient.givenJsonResponse("search/album", DEEZER_METADATA_RESPONSE)
+        httpClient.givenJsonResponse("album/14879699/tracks", ALBUM_TRACKS_RESPONSE)
+        httpClient.givenJsonResponse("album/14879699", DEEZER_ALBUM_DETAIL_RESPONSE)
+        val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+
+        // When - each scope resolves ALBUM_TRACKS and ALBUM_METADATA independently, one scope after the other
+        withContext(ProviderCallScope()) {
+            provider.enrich(request, EnrichmentType.ALBUM_TRACKS)
+            provider.enrich(request, EnrichmentType.ALBUM_METADATA)
+        }
+        withContext(ProviderCallScope()) {
+            provider.enrich(request, EnrichmentType.ALBUM_TRACKS)
+            provider.enrich(request, EnrichmentType.ALBUM_METADATA)
+        }
+
+        // Then - the memo does not outlive its scope, so each of the two calls pays its own search and detail fetch
+        assertEquals(2, httpClient.requestedUrls.count { it.contains("search/album") })
+        assertEquals(2, httpClient.requestedUrls.count { it.contains("album/14879699") && !it.contains("tracks") })
+    }
+
+    @Test
+    fun `enrich reaches upstream again on a forceRefresh-shaped second call outside any scope`() = runTest {
+        // Given - Deezer search and album detail stubbed once each, with no ProviderCallScope in context
+        httpClient.givenJsonResponse("search/album", DEEZER_METADATA_RESPONSE)
+        httpClient.givenJsonResponse("album/14879699", DEEZER_ALBUM_DETAIL_RESPONSE)
+        val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+
+        // When - ALBUM_METADATA is enriched twice with no shared coroutine context, as forceRefresh calls the provider fresh each time
+        provider.enrich(request, EnrichmentType.ALBUM_METADATA)
+        provider.enrich(request, EnrichmentType.ALBUM_METADATA)
+
+        // Then - the memo dies with each call, so both reach upstream: two searches and two detail fetches, not one of each
+        assertEquals(2, httpClient.requestedUrls.count { it.contains("search/album") })
+        assertEquals(2, httpClient.requestedUrls.count { it.contains("album/14879699") })
     }
 
     @Test
@@ -804,8 +886,11 @@ class DeezerProviderTest {
             ]}
         """.trimIndent()
 
+        // id 14879699 captured 2026-08-12: GET /search/album?q=Radiohead OK Computer, matches the
+        // real Radiohead "OK Computer" album that DEEZER_ALBUM_DETAIL_RESPONSE below details
         val DEEZER_METADATA_RESPONSE = """
             {"data":[{
+                "id":14879699,
                 "title":"OK Computer",
                 "artist":{"name":"Radiohead"},
                 "cover_small":"https://e-cdns-images.dzcdn.net/images/cover/small.jpg",
@@ -817,6 +902,22 @@ class DeezerProviderTest {
                 "explicit_lyrics":false
             }]}
         """.trimIndent()
+
+        // captured 2026-08-12: GET /album/14879699, trimmed to the fields ALBUM_METADATA reads —
+        // the same Radiohead "OK Computer" album DEEZER_METADATA_RESPONSE's search hit names
+        val DEEZER_ALBUM_DETAIL_RESPONSE = """
+            {
+                "id":14879699,
+                "title":"OK Computer",
+                "upc":"634904078164",
+                "label":"XL Recordings",
+                "release_date":"1997-06-17"
+            }
+        """.trimIndent()
+
+        // synthetic — no live counterpart; stands in for an album detail that carries none of
+        // upc/label/release_date
+        const val DEEZER_ALBUM_DETAIL_MISSING_FIELDS_RESPONSE = """{"id":14879699,"title":"OK Computer"}"""
 
         val ARTIST_ALBUMS_RESPONSE = """
             {"data":[
