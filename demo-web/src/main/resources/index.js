@@ -1,10 +1,13 @@
-const kindEl = document.getElementById('kind');
+const tabsEl = document.getElementById('kind-tabs');
+const kindTabs = Array.from(tabsEl.querySelectorAll('button[data-kind]'));
 const nameEl = document.getElementById('name');
 const artistEl = document.getElementById('artist');
 const albumEl = document.getElementById('album');
 const statusEl = document.getElementById('status');
 const resultEl = document.getElementById('result');
 const submitBtn = document.getElementById('submit');
+const findBtn = document.getElementById('find');
+const searchResultsEl = document.getElementById('search-results');
 
 const NAME_PLACEHOLDERS = {
   artist: 'Artist name (e.g. Radiohead)',
@@ -28,7 +31,20 @@ const FIELD_ROLES = {
   mbid: { name: 'mbid', artist: null, album: null },
 };
 const values = { artistName: '', albumTitle: '', trackTitle: '', mbid: '' };
-let currentKind = kindEl.value;
+let currentKind = 'artist';
+
+// What the primary box means per kind, for the screen-reader label and the ⌕ button's name.
+const NAME_LABELS = {
+  artist: 'Artist name',
+  album: 'Album title',
+  track: 'Track title',
+  mbid: 'MusicBrainz id',
+};
+const FIND_LABELS = {
+  artist: 'Find matching artists',
+  album: 'Find matching albums',
+  track: 'Find matching tracks',
+};
 
 // Reads the three boxes' current DOM values into `values`, keyed by the given kind's roles.
 function saveValues(kind) {
@@ -47,19 +63,51 @@ function loadValues(kind) {
 }
 
 function syncArtistField() {
-  const namesOnly = kindEl.value === 'artist' || kindEl.value === 'mbid';
+  const namesOnly = currentKind === 'artist' || currentKind === 'mbid';
   artistEl.style.display = namesOnly ? 'none' : '';
-  artistEl.placeholder = kindEl.value === 'album' ? 'Artist (required)' : 'Artist (for track)';
-  albumEl.style.display = kindEl.value === 'track' ? '' : 'none';
-  nameEl.placeholder = NAME_PLACEHOLDERS[kindEl.value] || NAME_PLACEHOLDERS.artist;
+  artistEl.placeholder = currentKind === 'album' ? 'Artist (required)' : 'Artist (for track)';
+  albumEl.style.display = currentKind === 'track' ? '' : 'none';
+  nameEl.placeholder = NAME_PLACEHOLDERS[currentKind] || NAME_PLACEHOLDERS.artist;
+  nameEl.setAttribute('aria-label', NAME_LABELS[currentKind] || NAME_LABELS.artist);
+  // An identifier names its entity outright, so there is nothing to search for under `mbid`.
+  findBtn.hidden = currentKind === 'mbid';
+  findBtn.parentElement.classList.toggle('no-find', findBtn.hidden);
+  findBtn.setAttribute('aria-label', FIND_LABELS[currentKind] || FIND_LABELS.artist);
+  kindTabs.forEach((tab) => {
+    const active = tab.dataset.kind === currentKind;
+    tab.classList.toggle('active', active);
+    tab.setAttribute('aria-selected', String(active));
+    tab.tabIndex = active ? 0 : -1;
+  });
 }
 
-kindEl.addEventListener('change', () => {
+// Moves to `kind`, carrying each box's text across by semantic role (see FIELD_ROLES). Candidates
+// found under the old kind no longer describe what the form now asks for, so they are dropped.
+function selectKind(kind) {
+  if (kind === currentKind) return;
   saveValues(currentKind);
-  currentKind = kindEl.value;
+  currentKind = kind;
   syncArtistField();
   loadValues(currentKind);
+  clearCandidates();
+}
+
+tabsEl.addEventListener('click', (e) => {
+  const tab = e.target.closest('button[data-kind]');
+  if (tab) selectKind(tab.dataset.kind);
 });
+
+// Arrow keys move between tabs and take focus with them, as a tablist is expected to.
+tabsEl.addEventListener('keydown', (e) => {
+  const step = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+  if (!step) return;
+  e.preventDefault();
+  const index = kindTabs.findIndex((tab) => tab.dataset.kind === currentKind);
+  const next = kindTabs[(index + step + kindTabs.length) % kindTabs.length];
+  selectKind(next.dataset.kind);
+  next.focus();
+});
+
 syncArtistField();
 
 // --- Cold-start readiness ---
@@ -75,6 +123,8 @@ function setSearchReady(ready) {
   backendReady = ready;
   submitBtn.disabled = !ready;
   submitBtn.setAttribute('aria-disabled', String(!ready));
+  findBtn.disabled = !ready;
+  findBtn.setAttribute('aria-disabled', String(!ready));
   exampleButtons.forEach((button) => { button.disabled = !ready; });
 }
 
@@ -114,13 +164,13 @@ pollHealth();
 // Fills the form and runs a search — shared by the "Try:" buttons and by clicking an
 // internal-navigation target (SectionItem.enrich / SummaryCard.subtitleEnrich) elsewhere on the page.
 function fillAndRun(kind, name, artist, album) {
-  kindEl.value = kind;
   currentKind = kind;
   nameEl.value = name || '';
   artistEl.value = artist || '';
   albumEl.value = album || '';
   saveValues(currentKind);
   syncArtistField();
+  clearCandidates();
   runQuery();
 }
 
@@ -149,8 +199,10 @@ let lastQuery = null;
 // the toolbar's "Fetch fresh data" button passes true. `replay`, when true, also re-issues
 // `lastQuery` but without forcing a refresh — the invalidate button's re-run after a successful
 // cache clear, which must look like an ordinary (post-invalidation, cache-miss) lookup rather than
-// a user-triggered force-refresh. The search form's submit passes neither.
-async function runQuery(refresh, replay) {
+// a user-triggered force-refresh. `pick`, when given, is a request built from a chosen search
+// candidate rather than from the boxes — it enriches what the user pointed at even where the form
+// still holds the words they searched with. The search form's submit passes none of the three.
+async function runQuery(refresh, replay, pick) {
   if (!backendReady) {
     statusEl.className = '';
     statusEl.textContent = 'The backend is still warming up. Search will unlock automatically when it is ready.';
@@ -161,8 +213,10 @@ async function runQuery(refresh, replay) {
   if (refresh || replay) {
     if (!lastQuery) return;
     ({ kind, name, artist, album } = lastQuery);
+  } else if (pick) {
+    ({ kind, name, artist = '', album = '' } = pick);
   } else {
-    kind = kindEl.value;
+    kind = currentKind;
     name = nameEl.value.trim();
     artist = artistEl.value.trim();
     album = albumEl.value.trim();
@@ -198,6 +252,114 @@ async function runQuery(refresh, replay) {
     submitBtn.textContent = 'Enrich';
   }
 }
+
+// --- Candidate search ---
+// Manual only: every ⌕ Find is one call into rate-limited upstreams, so nothing here runs off
+// typing. The candidates a run produced are held so a click can enrich the exact one picked.
+let candidates = [];
+
+function clearCandidates() {
+  candidates = [];
+  searchResultsEl.innerHTML = '';
+  searchResultsEl.hidden = true;
+}
+
+function candidateSubtitle(hit) {
+  return [hit.disambiguation, hit.artist, hit.releaseType, hit.year].filter(Boolean).join(' \u00b7 ');
+}
+
+function renderCandidates(query) {
+  if (!candidates.length) {
+    searchResultsEl.innerHTML = `<h4>No matches for &ldquo;${esc(query)}&rdquo;</h4>`;
+    searchResultsEl.hidden = false;
+    return;
+  }
+  const rows = candidates.map((hit, index) => {
+    const thumb = hit.thumbnailUrl
+      ? `<img src="${esc(hit.thumbnailUrl)}" alt="" onerror="this.remove()" />`
+      : '';
+    const subtitle = candidateSubtitle(hit);
+    return `<li><button type="button" data-index="${index}">${thumb}<span class="primary">${esc(hit.title)}${
+      subtitle ? ` <span class="secondary">${esc(subtitle)}</span>` : ''
+    }</span><span class="score">score ${esc(hit.score)}</span></button></li>`;
+  }).join('');
+  searchResultsEl.innerHTML = `<h4>Matches for &ldquo;${esc(query)}&rdquo;</h4><ul>${rows}</ul>`;
+  searchResultsEl.hidden = false;
+}
+
+async function runSearch() {
+  if (!backendReady) {
+    statusEl.className = '';
+    statusEl.textContent = 'The backend is still warming up. Search will unlock automatically when it is ready.';
+    return;
+  }
+  const query = nameEl.value.trim();
+  if (!query) {
+    statusEl.className = 'err';
+    statusEl.textContent = 'Enter something to search for.';
+    return;
+  }
+
+  const kind = currentKind;
+  // A typed artist narrows an album or track search; it is never required to run one.
+  const params = new URLSearchParams({ kind, q: query });
+  const artist = artistEl.value.trim();
+  if (kind !== 'artist' && artist) params.set('artist', artist);
+
+  findBtn.disabled = true;
+  statusEl.className = '';
+  statusEl.textContent = '';
+  searchResultsEl.innerHTML = '<h4>Searching\u2026</h4>';
+  searchResultsEl.hidden = false;
+  try {
+    const res = await fetch('/api/search?' + params.toString());
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+    candidates = data.candidates || [];
+    renderCandidates(query);
+  } catch (err) {
+    clearCandidates();
+    statusEl.className = 'err';
+    statusEl.textContent = 'Search failed: ' + err.message;
+  } finally {
+    findBtn.disabled = !backendReady;
+  }
+}
+
+// A pick fills what the candidate knows into the boxes and enriches it immediately — by MBID when
+// the candidate carries one, which is the identifier path rather than another name lookup.
+function pickCandidate(hit) {
+  nameEl.value = hit.title;
+  if (currentKind !== 'artist' && hit.artist) artistEl.value = hit.artist;
+  saveValues(currentKind);
+  clearCandidates();
+
+  if (hit.mbid) {
+    runQuery(false, false, { kind: 'mbid', name: hit.mbid });
+    return;
+  }
+  // No identifier and no artist leaves an album or track request with nothing to match against.
+  if (currentKind !== 'artist' && !artistEl.value.trim()) {
+    statusEl.className = 'err';
+    statusEl.textContent = 'That match carries no artist — type one, then hit Enrich.';
+    return;
+  }
+  runQuery(false, false, {
+    kind: currentKind,
+    name: nameEl.value.trim(),
+    artist: artistEl.value.trim(),
+    album: albumEl.value.trim(),
+  });
+}
+
+findBtn.addEventListener('click', runSearch);
+
+searchResultsEl.addEventListener('click', (e) => {
+  const row = e.target.closest('button[data-index]');
+  if (!row) return;
+  const hit = candidates[Number(row.dataset.index)];
+  if (hit) pickCandidate(hit);
+});
 
 // --- Rendering ---
 
@@ -254,7 +416,7 @@ function render(data, wasForceRefresh) {
         <span aria-hidden="true">&#9888;&#65039;</span>
         <span class="identity-banner-text">We couldn&rsquo;t verify this match &mdash; the identity
         lookup didn&rsquo;t respond. Everything below is an unverified fuzzy match and may describe
-        a different ${esc(kindEl.value)} entirely. This is usually temporary.</span>
+        a different ${esc(currentKind)} entirely. This is usually temporary.</span>
         <button type="button" id="identity-retry">Retry lookup</button>
       </div>`
     : '';
