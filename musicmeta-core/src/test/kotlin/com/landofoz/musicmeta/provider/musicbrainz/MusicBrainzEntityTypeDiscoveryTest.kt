@@ -6,6 +6,7 @@ import com.landofoz.musicmeta.discoverMbidEntityType
 import com.landofoz.musicmeta.engine.DefaultEnrichmentEngine
 import com.landofoz.musicmeta.engine.ProviderCallScope
 import com.landofoz.musicmeta.engine.ProviderRegistry
+import com.landofoz.musicmeta.http.HttpResult
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.testutil.FakeEnrichmentCache
 import com.landofoz.musicmeta.testutil.FakeHttpClient
@@ -13,7 +14,9 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.IOException
 
 /**
  * What a bare MBID costs to identify, asserted rather than described.
@@ -29,6 +32,13 @@ class MusicBrainzEntityTypeDiscoveryTest {
     private val provider = MusicBrainzProvider(httpClient, RateLimiter(0))
 
     private fun lookups() = httpClient.requestedUrls.count { it.contains("/ws/2/") }
+
+    private fun engine() = DefaultEnrichmentEngine(
+        ProviderRegistry(listOf(provider)),
+        FakeEnrichmentCache(),
+        EnrichmentConfig(),
+        mergers = emptyList(),
+    )
 
     @Test
     fun `a recording mbid is identified by the first probe`() = runTest {
@@ -82,27 +92,42 @@ class MusicBrainzEntityTypeDiscoveryTest {
 
     @Test
     fun `a miss is paid for once for as long as the call lasts`() = runTest {
-        // Given - a call scope, which is what one enrich() installs for its provider memos
-        // When - the same dead identifier is discovered twice inside it
+        // Given - the call scope one enrich() installs for its provider memos, and an engine
+        // discovering through the public entry point inside it
+        val engine = engine()
+
+        // When - the same dead identifier is discovered twice in that one call
         val types = withContext(ProviderCallScope()) {
-            listOf(provider.discoverEntityType(DEAD_MBID), provider.discoverEntityType(DEAD_MBID))
+            listOf(engine.discoverMbidEntityType(DEAD_MBID), engine.discoverMbidEntityType(DEAD_MBID))
         }
 
-        // Then - both answers are absence, and the second one cost nothing
+        // Then - both answers are absence, and the second one cost nothing: the entry point joins
+        // the call it was made in rather than starting a cold memo of its own
         assertEquals(listOf(null, null), types)
         assertEquals(3, lookups())
+    }
+
+    @Test
+    fun `a shed lookup is an outage, not an identifier held under nothing`() = runTest {
+        // Given - MusicBrainz shedding the recording lookup, as it does with a 503
+        httpClient.givenHttpResult("recording/$RECORDING_MBID", HttpResult.ServerError(503))
+
+        // When - the identifier is handed over with no type
+        val thrown = runCatching { provider.discoverEntityType(RECORDING_MBID) }.exceptionOrNull()
+
+        // Then - it propagates instead of answering, because a probe that never got an answer
+        // cannot say the identifier names nothing
+        assertTrue(thrown is IOException)
+        // Then - the release and artist probes were never reached: the ladder is for absence, and
+        // walking it on an outage would spend two more requests to reach a wrong answer
+        assertEquals(1, lookups())
     }
 
     @Test
     fun `the engine answers from the MusicBrainz provider it was built with`() = runTest {
         // Given - an engine whose identity provider is this MusicBrainz, sharing its limiter
         httpClient.givenJsonResponse("recording/$RECORDING_MBID", BOHEMIAN_RECORDING)
-        val engine = DefaultEnrichmentEngine(
-            ProviderRegistry(listOf(provider)),
-            FakeEnrichmentCache(),
-            EnrichmentConfig(),
-            mergers = emptyList(),
-        )
+        val engine = engine()
 
         // When - the identifier is handed to the public entry point
         val type = engine.discoverMbidEntityType(RECORDING_MBID)

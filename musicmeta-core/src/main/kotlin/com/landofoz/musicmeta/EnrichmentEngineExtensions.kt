@@ -19,8 +19,10 @@ import kotlinx.coroutines.coroutineScope
  * records the ListenBrainz alternative that was measured against this ordering and lost.
  *
  * A transient failure throws rather than answering null — an outage is not an absence. So does an
- * engine with no MusicBrainz identity provider registered, which is a configuration error and not
- * an answer about [mbid].
+ * `IllegalStateException` for either configuration this cannot answer from: an engine with no
+ * MusicBrainz identity provider registered, and an [EnrichmentEngine] that is not the built-in one
+ * (a third-party implementation has no provider registry to probe). Neither is an answer about
+ * [mbid], and returning null for them would read as one.
  */
 suspend fun EnrichmentEngine.discoverMbidEntityType(mbid: String): MusicBrainzEntityType? {
     val engine = this as? DefaultEnrichmentEngine
