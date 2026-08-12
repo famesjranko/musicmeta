@@ -40,11 +40,24 @@ internal class MusicBrainzApi(
         return MusicBrainzParser.parseReleases(json)
     }
 
+    /**
+     * The artist candidate pool for [name], searched by name **and** by alias.
+     *
+     * `artist:"…"` alone does not reach aliases — verified live 2026-08-12: Coldplay's documented
+     * alias "Cold Play" returns `count: 0` under `artist:"Cold Play"` and `count: 1` under
+     * `alias:"Cold Play"`. Only an unfielded query matches both, and unfielded is far too loose (the
+     * same probe returned 4152 hits). The `OR` keeps one request and leaves a canonical hit ranked
+     * where it was: MusicBrainz still scores the exact-name match 100 and returns it first.
+     *
+     * Every hit carries its own `aliases` array without an `inc=` parameter, which is what lets
+     * [MusicBrainzEnricher] score *how* a name matched rather than merely that it did.
+     */
     suspend fun searchArtists(
         name: String,
         limit: Int = 5,
     ): List<MusicBrainzArtist> {
-        val query = encode("artist:\"${escapeLucene(name)}\"")
+        val escaped = escapeLucene(name)
+        val query = encode("artist:\"$escaped\" OR alias:\"$escaped\"")
         val json = rateLimiter.execute {
             httpClient.fetchJsonResult("$BASE_URL/artist?query=$query&fmt=json&limit=$limit").bodyOrThrowTransient()
         } ?: return emptyList()
@@ -222,17 +235,25 @@ internal class MusicBrainzApi(
         val json = rateLimiter.execute {
             httpClient.fetchJsonResult(
                 "$BASE_URL/release/$mbid?fmt=json" +
-                    "&inc=artist-credits+labels+release-groups+tags+media+recordings",
+                    // No `ratings`: MusicBrainz rates release *groups*, not releases, so a release
+                    // lookup asking for them answers `"rating": null` every time (live 2026-08-12).
+                    "&inc=artist-credits+labels+release-groups+tags+genres+media+recordings",
             ).bodyOrThrowTransient()
         } ?: return MusicBrainzLookup.Absent
         val release = MusicBrainzParser.parseLookupRelease(json) ?: return MusicBrainzLookup.Unreadable
         return MusicBrainzLookup.Found(release)
     }
 
-    /** Lookup artist with artist-rels included (needed for band member relationships). */
+    /**
+     * Lookup artist with artist-rels included (needed for band member relationships).
+     *
+     * `genres` is the curated subset of `tags` and answers `GENRE` ahead of them; `aliases` lets a
+     * name that reached us as an alias still be scored as one; `ratings` rides along for a
+     * popularity surface that does not exist yet. None of the three costs a request.
+     */
     suspend fun lookupArtistWithRels(mbid: String): MusicBrainzLookup<MusicBrainzArtist> {
         val json = rateLimiter.execute {
-            httpClient.fetchJsonResult("$BASE_URL/artist/$mbid?fmt=json&inc=tags+url-rels+artist-rels")
+            httpClient.fetchJsonResult("$BASE_URL/artist/$mbid?fmt=json&inc=$ARTIST_LOOKUP_INC")
                 .bodyOrThrowTransient()
         } ?: return MusicBrainzLookup.Absent
         val artist = MusicBrainzParser.parseLookupArtist(json) ?: return MusicBrainzLookup.Unreadable
@@ -358,7 +379,10 @@ internal class MusicBrainzApi(
 
         /** [lookupRecording]'s `inc=`; see its KDoc for why each half is there. */
         private const val RECORDING_LOOKUP_INC =
-            "artist-rels+work-rels+artists+releases+release-groups+isrcs+tags"
+            "artist-rels+work-rels+artists+releases+release-groups+isrcs+tags+genres+ratings"
+
+        /** [lookupArtistWithRels]'s `inc=`; see its KDoc. */
+        private const val ARTIST_LOOKUP_INC = "tags+genres+aliases+ratings+url-rels+artist-rels"
 
         fun escapeLucene(value: String): String =
             value.replace(LUCENE_SPECIAL_CHARS) { "\\${it.value}" }

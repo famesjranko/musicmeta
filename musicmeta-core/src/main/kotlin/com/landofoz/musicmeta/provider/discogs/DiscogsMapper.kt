@@ -49,8 +49,8 @@ internal object DiscogsMapper {
 
     fun toAlbumMetadata(release: DiscogsRelease): EnrichmentData.Metadata {
         val genreTagList = buildList {
-            release.genres?.forEach { add(GenreTag(it, 0.3f, listOf("discogs"))) }
-            release.styles?.forEach { add(GenreTag(it, 0.2f, listOf("discogs"))) }
+            release.genres?.forEach { add(GenreTag(it, 0.3f, listOf("discogs"), curated = false)) }
+            release.styles?.forEach { add(GenreTag(it, 0.2f, listOf("discogs"), curated = false)) }
         }.takeIf { it.isNotEmpty() }
         return EnrichmentData.Metadata(
             label = release.label,

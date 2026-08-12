@@ -104,6 +104,37 @@ is a cost one: MusicBrainz does not order identical searches identically, and th
 first maximum among ties, so a second search of the same query can pick a different recording and
 leave the identity a consumer reads naming one recording while its payload describes another.
 
+## Resolving an artist by name, and by its other names
+
+An artist search asks for `artist:"…" OR alias:"…"`. The alias half is not redundant: `artist:"…"`
+alone does not reach the alias index, and MusicBrainz keeps localised names, former names and
+misspellings there. Measured 2026-08-12, `artist:"Cold Play"` returns 0 hits and `alias:"Cold Play"`
+returns Coldplay. An unfielded query would reach both and is far too loose — the same probe returned
+4152 hits for the bare words. It stays one request either way, and every hit carries its own
+`aliases` array without an `inc=` parameter.
+
+What the name matched then ranks the pool and scales the confidence, so `identityMatchScore` says
+*how* an artist was identified rather than only that it was: the artist's own name, then an alias
+MusicBrainz marks primary or locale-tagged, then a "Search hint" — the typo-catchers it keeps for its
+own indexer. `engine/NameMatchTier.kt` holds the tiers and is deliberately source-agnostic, so a
+second upstream publishing alternative names does not grow a second matching rule beside it.
+
+## Two genre surfaces, kept apart
+
+Lookups request `tags+genres`. `genres` is MusicBrainz's controlled vocabulary — 2184 names as of
+2026-08-12 — and a subset of the same response's `tags` carrying the same vote counts; `tags` is
+everything anyone typed, which for Coldplay includes "british", "parlophone" and "rock and indie". So
+curated names are marked `GenreTag.curated`, carry the higher confidence, and lead the list, while
+community tags keep their vote-weighted signal behind them. A search hit carries vote-weighted `tags`
+but no `genres` array at all — there is no `inc=` on a search to ask with — so an artist resolved by
+name reads its curated genres off the lookup the same call already makes for URL relations. Where
+that lookup does not happen, the hit's tags are marked `curated = null`: unknown, not uncurated, so
+the engine refetches rather than caching a claim nobody checked.
+
+`GenreMerger.ALIASES` survives as the Last.fm/Deezer spelling folder — neither publishes a controlled
+list — but must never fold one genre onto a *different* one, because the curated vocabulary
+distinguishes them.
+
 ## Identifiers a caller supplies
 
 MusicBrainz treats an MBID on the request as the entity to describe rather than a hint, for tracks as
@@ -236,12 +267,12 @@ are dropped, and endpoints we never call. A to-do list for whoever adds the next
 
 **MusicBrainz.** `isrcs` beyond the first (`toTrackMetadata` keeps one; a recording often has
 several), `label-info[]` beyond the first (co-releases and reissues), `release.packaging`/`quality`,
-`artist.aliases` (which `ArtistMatcher` would use), `artist.life-span.ended` (a split, distinct from
-having an end date), `annotation`, `rating`. `media[].format` *is* read, but only to drop video discs
+`artist.life-span.ended` (a split, distinct from having an end date), `annotation`. `rating` *is*
+requested and parsed (artist and recording lookups) but stops at the DTO — no payload carries a
+rating yet. `media[].format` *is* read, but only to drop video discs
 from a tracklist and to label a `RELEASE_EDITIONS` entry — never surfaced per disc; `sort-name` is
 read too, to reorder a Person's "Last, First". Never requested: `works`, `series`, `events`,
-`places`, `instruments`, `genres` (the curated list, as opposed to the `tags` we read),
-`collections`, `inc=aliases`. No cover-art call — that is the Cover Art Archive provider, keyed on
+`places`, `instruments`, `collections`. No cover-art call — that is the Cover Art Archive provider, keyed on
 the identifiers this one resolves; the `cover-art-archive.front` flag embedded in a release is read,
 and is what puts a thumbnail URL on a search candidate.
 

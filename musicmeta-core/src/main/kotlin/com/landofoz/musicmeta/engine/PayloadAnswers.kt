@@ -57,6 +57,28 @@ internal fun EnrichmentData.answers(type: EnrichmentType): Boolean = when (this)
 }
 
 /**
+ * Does this cached payload carry genre tags that never learned whether they were curated?
+ *
+ * [com.landofoz.musicmeta.GenreTag.curated] is `null` on an entry persisted before the field
+ * existed, and on one whose provider could not tell — so the payload answers a strictly poorer
+ * question than a fresh call would: it cannot say which of its names came from a controlled
+ * vocabulary. GENRE's TTL is 90 days, so waiting it out would hide the curated ranking for a quarter
+ * of a year on every entity a consumer had already looked up.
+ *
+ * **Not keyed on `GENRE`.** `EnrichmentResults.genres`/`genreTags` fall back to `ALBUM_METADATA`,
+ * which carries the same [EnrichmentData.Metadata] and the same `genreTags`, so a consumer asking
+ * only for `ALBUM_METADATA` reads the tags off that entry instead. Any payload holding the field is
+ * therefore the unit that heals — and only that: a payload with no `genreTags` at all is untouched,
+ * so nothing about this reopens `LABEL`, `COUNTRY`, artwork or any other cached type.
+ *
+ * Read on the cache path only, as a *miss*: the providers run and the write-back replaces the entry,
+ * exactly as an unanswered entry heals ([answers]). It cannot loop, because a provider that *did*
+ * look writes `false` — an entity with no curated genres is an answer, not an unknown.
+ */
+internal fun EnrichmentData.hasUnknownGenreCuration(): Boolean =
+    this is EnrichmentData.Metadata && genreTags?.any { it.curated == null } == true
+
+/**
  * One [EnrichmentData.Metadata] serves six types, and a provider fills only the fields its upstream
  * happened to return — so "non-empty" is not the question, "did it fill the field this type asks
  * about" is. GENRE reads two fields because a provider may supply plain names, weighted tags, or

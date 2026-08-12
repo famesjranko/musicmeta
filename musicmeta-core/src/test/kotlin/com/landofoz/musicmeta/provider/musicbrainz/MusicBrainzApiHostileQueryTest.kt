@@ -3,6 +3,7 @@ package com.landofoz.musicmeta.provider.musicbrainz
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.testutil.FakeHttpClient
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -16,6 +17,10 @@ import org.junit.Test
  * hostile, and the whole expression is URL-encoded — so nothing a title/artist can carry reaches
  * MusicBrainz as unescaped Lucene syntax or an unterminated phrase, in either shape.
  * `.scratch/mb-4xx-as-empty-pool/spec.md` question 1, answered: outcome (a), provably unreachable.
+ *
+ * Covers the release shapes ([MusicBrainzApi.searchReleases]/[MusicBrainzApi.searchReleasesFuzzy])
+ * and the artist search, whose two-field `artist:"…" OR alias:"…"` expression is the one shape here
+ * where a broken-out phrase would leave a *parseable* query meaning something else.
  */
 class MusicBrainzApiHostileQueryTest {
 
@@ -190,7 +195,100 @@ class MusicBrainzApiHostileQueryTest {
         assertTrue(url.contains("%7E+AND+artistname%3ARadiohead%7E"))
     }
 
+    @Test
+    fun `an artist name of only Lucene metacharacters is fully backslash-escaped`() = runTest {
+        // Given - a name with no alphanumeric content, only characters escapeLucene targets
+        httpClient.givenJsonResponse("artist?query", EMPTY_ARTISTS)
+
+        // When - searching for it
+        api.searchArtists("""+-&|!(){}[]^"~*?:\/""")
+
+        // Then - both terms of the name/alias expression carry the same escaped phrase
+        val decoded = decodedQuery()
+        assertTrue(
+            "expected an escaped metachar name in $decoded",
+            decoded == """artist:"\+\-\&\|\!\(\)\{\}\[\]\^\"\~\*\?\:\\\/" """ +
+                """OR alias:"\+\-\&\|\!\(\)\{\}\[\]\^\"\~\*\?\:\\\/"""",
+        )
+    }
+
+    @Test
+    fun `an injected OR term in an artist name cannot become a second clause`() = runTest {
+        // Given - a name shaped to close the phrase and append a wildcard clause of its own
+        httpClient.givenJsonResponse("artist?query", EMPTY_ARTISTS)
+
+        // When - searching for it
+        api.searchArtists("""Radiohead" OR artist:*""")
+
+        // Then - the quote, colon and star are escaped, so the whole thing stays one phrase per
+        // field and the only `OR` MusicBrainz parses is the one the query builder wrote
+        assertEquals(
+            """artist:"Radiohead\" OR artist\:\*" OR alias:"Radiohead\" OR artist\:\*"""",
+            decodedQuery(),
+        )
+    }
+
+    @Test
+    fun `bare wildcards in an artist name are escaped rather than matching everything`() = runTest {
+        // Given - the two Lucene wildcards on their own
+        httpClient.givenJsonResponse("artist?query", EMPTY_ARTISTS)
+
+        // When - searching for them
+        api.searchArtists("*?")
+
+        // Then - both are escaped, so the query cannot degrade into a match-all
+        assertEquals("""artist:"\*\?" OR alias:"\*\?"""", decodedQuery())
+    }
+
+    @Test
+    fun `unbalanced brackets in an artist name cannot unbalance the query`() = runTest {
+        // Given - a name carrying openers with no closers, which Lucene would read as grouping
+        httpClient.givenJsonResponse("artist?query", EMPTY_ARTISTS)
+
+        // When - searching for it
+        api.searchArtists("""(Sunn O))) [live""")
+
+        // Then - every bracket is escaped, so grouping stays exactly as the builder wrote it
+        assertEquals(
+            """artist:"\(Sunn O\)\)\) \[live" OR alias:"\(Sunn O\)\)\) \[live"""",
+            decodedQuery(),
+        )
+    }
+
+    @Test
+    fun `an artist name that is blank after trim still forms two well-formed phrases`() = runTest {
+        // Given - a name that is only whitespace
+        httpClient.givenJsonResponse("artist?query", EMPTY_ARTISTS)
+
+        // When - searching for it
+        api.searchArtists("   ")
+
+        // Then - both phrases are closed rather than unterminated, as the release shape behaves
+        assertEquals("""artist:"   " OR alias:"   """", decodedQuery())
+    }
+
+    @Test
+    fun `control characters in an artist name reach the URL as bytes`() = runTest {
+        // Given - a name carrying a NUL and a bare newline, neither of which escapeLucene touches
+        httpClient.givenJsonResponse("artist?query", EMPTY_ARTISTS)
+
+        // When - searching for it
+        api.searchArtists("Rad io\nhead")
+
+        // Then - URLEncoder percent-encodes both, and the expression keeps its two-phrase shape
+        val url = httpClient.requestedUrls.single()
+        assertTrue(url.contains("%00"))
+        assertTrue(url.contains("%0A") || url.contains("%0a"))
+        assertTrue(url.startsWith("https://musicbrainz.org/ws/2/artist?query=artist%3A%22"))
+    }
+
+    private fun decodedQuery(): String {
+        val url = httpClient.requestedUrls.single()
+        return java.net.URLDecoder.decode(url.substringAfter("query=").substringBefore("&fmt"), "UTF-8")
+    }
+
     private companion object {
         const val EMPTY_RELEASES = """{"releases": []}"""
+        const val EMPTY_ARTISTS = """{"artists": []}"""
     }
 }

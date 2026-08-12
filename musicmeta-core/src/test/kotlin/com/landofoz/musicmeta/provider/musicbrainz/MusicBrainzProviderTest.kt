@@ -431,7 +431,7 @@ class MusicBrainzProviderTest {
     @Test
     fun `enrich returns BandMembers for artist with members`() = runTest {
         // Given - artist lookup with artist-rels returns band member relations
-        httpClient.givenJsonResponse("artist/art1?fmt=json&inc=tags+url-rels+artist-rels", ARTIST_LOOKUP_WITH_MEMBERS)
+        httpClient.givenJsonResponse("artist/art1?fmt=json&inc=tags+genres+aliases+ratings+url-rels+artist-rels", ARTIST_LOOKUP_WITH_MEMBERS)
         val request = EnrichmentRequest.forArtist("Radiohead")
             .withIdentifiers(EnrichmentIdentifiers(musicBrainzId = "art1"))
 
@@ -470,7 +470,7 @@ class MusicBrainzProviderTest {
     @Test
     fun `enrich returns NotFound for BandMembers when no members in relations`() = runTest {
         // Given - artist lookup returns no member-of-band relations
-        httpClient.givenJsonResponse("artist/art1?fmt=json&inc=tags+url-rels+artist-rels", ARTIST_LOOKUP_NO_MEMBERS)
+        httpClient.givenJsonResponse("artist/art1?fmt=json&inc=tags+genres+aliases+ratings+url-rels+artist-rels", ARTIST_LOOKUP_NO_MEMBERS)
         val request = EnrichmentRequest.forArtist("Radiohead")
             .withIdentifiers(EnrichmentIdentifiers(musicBrainzId = "art1"))
 
@@ -525,7 +525,7 @@ class MusicBrainzProviderTest {
     @Test
     fun `enrich returns ArtistLinks for artist`() = runTest {
         // Given - artist lookup with URL relations
-        httpClient.givenJsonResponse("artist/art1?fmt=json&inc=tags+url-rels", ARTIST_LOOKUP_WITH_LINKS)
+        httpClient.givenJsonResponse("artist/art1?fmt=json&inc=tags+genres+aliases+ratings+url-rels", ARTIST_LOOKUP_WITH_LINKS)
         val request = EnrichmentRequest.forArtist("Radiohead")
             .withIdentifiers(EnrichmentIdentifiers(musicBrainzId = "art1"))
 

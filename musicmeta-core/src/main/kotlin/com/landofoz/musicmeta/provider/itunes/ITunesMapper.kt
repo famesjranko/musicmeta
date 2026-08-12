@@ -30,7 +30,7 @@ internal object ITunesMapper {
             trackCount = result.trackCount,
             genres = listOfNotNull(result.primaryGenreName),
             genreTags = result.primaryGenreName?.let {
-                listOf(GenreTag(it, 0.2f, listOf("itunes")))
+                listOf(GenreTag(it, 0.2f, listOf("itunes"), curated = false))
             },
             country = result.country,
             releaseDate = result.releaseDate,

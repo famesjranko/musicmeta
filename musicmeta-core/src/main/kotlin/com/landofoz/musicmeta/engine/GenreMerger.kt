@@ -36,17 +36,27 @@ internal object GenreMerger : ResultMerger {
         )
     }
 
-    /** Genre alias map for normalization — maps common variants to canonical forms. */
+    /**
+     * Genre alias map for normalization — maps common variants to canonical forms.
+     *
+     * A cross-provider *spelling* folder, not a vocabulary: Last.fm and Deezer emit free text and
+     * neither publishes a controlled list, so a variant spelling from either has to be folded here
+     * or the same genre appears twice in one merged result. It stays hand-maintained for that
+     * reason, and must not grow entries that map one genre onto a *different* one — MusicBrainz's
+     * curated vocabulary distinguishes them, and folding them here would undo that.
+     *
+     * Where the curated vocabulary holds one of the spellings, that is the one to fold *towards*:
+     * "hip hop" is in it and "hip-hop" is not, so the hyphenated free-text form resolves to the
+     * curated name rather than renaming it.
+     */
     private val ALIASES = mapOf(
         "alt rock" to "alternative rock",
-        "hip hop" to "hip-hop",
-        "hiphop" to "hip-hop",
+        "hip-hop" to "hip hop",
+        "hiphop" to "hip hop",
         "rnb" to "r&b",
         "r & b" to "r&b",
-        "electronica" to "electronic",
         "synth pop" to "synthpop",
         "post punk" to "post-punk",
-        "indie rock" to "indie rock",
     )
 
     /**
@@ -55,7 +65,11 @@ internal object GenreMerger : ResultMerger {
      * - Normalizes tag names (lowercase, trim, alias mapping)
      * - Deduplicates by normalized name: sums confidences (capped at 1.0), merges sources
      * - Preserves first-seen display name (casing from highest-priority provider)
-     * - Returns results sorted by confidence descending
+     * - Returns curated genres first, then by confidence descending
+     *
+     * Curated leads on its own axis rather than through its confidence, because confidences *sum*:
+     * one name three providers happened to type would otherwise outrank a genre an editor accepted
+     * into a controlled vocabulary. A merged tag counts as curated if any of its inputs was.
      */
     fun merge(tags: List<GenreTag>): List<GenreTag> {
         if (tags.isEmpty()) return emptyList()
@@ -85,9 +99,10 @@ internal object GenreMerger : ResultMerger {
                     name = displayName,
                     confidence = totalConfidence,
                     sources = allSources,
+                    curated = group.any { it.curated == true },
                 )
             }
-            .sortedByDescending { it.confidence }
+            .sortedWith(compareByDescending<GenreTag> { it.curated == true }.thenByDescending { it.confidence })
     }
 
     /** Normalizes a genre name: lowercase, trim, apply alias mapping. */
