@@ -33,9 +33,10 @@ class DeezerProvider(
     private val api = DeezerApi(httpClient, rateLimiter)
 
     /**
-     * This call's [DeezerAlbumScope], shared by ALBUM_TRACKS and ALBUM_METADATA so the two never
-     * search or fetch the same album twice in one `enrich()` fan-out ([ProviderCallScope],
-     * `docs/pitfalls.md` §12). Called directly (no engine context), each call gets its own.
+     * This call's [DeezerAlbumScope], shared by ALBUM_TRACKS, ALBUM_METADATA and ALBUM_ART so no
+     * two of them search or fetch the same album twice in one `enrich()` fan-out
+     * ([ProviderCallScope], `docs/pitfalls.md` §12). Called directly (no engine context), each
+     * call gets its own.
      */
     private suspend fun albumScope(): DeezerAlbumScope =
         currentCoroutineContext()[ProviderCallScope]?.slot(this) { DeezerAlbumScope(api) }
@@ -386,7 +387,7 @@ class DeezerProvider(
             type = EnrichmentType.ALBUM_TRACKS,
             data = DeezerMapper.toTracklist(tracks),
             provider = id,
-            confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = false),
+            confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
         )
     }
 
@@ -418,12 +419,8 @@ class DeezerProvider(
             return EnrichmentResult.NotFound(type, id)
         }
 
-        val query = "${request.artist} ${request.title}"
-        val results = api.searchAlbums(query, 5)
-
-        val result = results.firstOrNull {
-            ArtistMatcher.isMatch(request.artist, it.artistName)
-        } ?: return EnrichmentResult.NotFound(type, id)
+        val result = albumScope().resolveAlbum(request.artist, request.title)
+            ?: return EnrichmentResult.NotFound(type, id)
 
         val artwork = DeezerMapper.toArtwork(result)
             ?: return EnrichmentResult.NotFound(type, id)
@@ -455,9 +452,9 @@ class DeezerProvider(
 
 /**
  * One `enrich()` call's album search hit and album-resource detail, held only long enough to
- * serve ALBUM_TRACKS and ALBUM_METADATA from one search and (for the latter) one `/album/{id}`
- * fetch instead of two of each — see [DeezerProvider.albumScope]. Dies with the call
- * ([ProviderCallScope]), so a mis-resolved artist/title never outlives a `forceRefresh`.
+ * serve ALBUM_TRACKS, ALBUM_METADATA and ALBUM_ART from one search and (for ALBUM_METADATA) one
+ * `/album/{id}` fetch instead of one search per type — see [DeezerProvider.albumScope]. Dies with
+ * the call ([ProviderCallScope]), so a mis-resolved artist/title never outlives a `forceRefresh`.
  */
 private class DeezerAlbumScope(private val api: DeezerApi) {
 

@@ -55,6 +55,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Metadata.genres` (the plain string list) is now the genre-tag names in tag order, so curated genres lead it as they lead `genreTags`
 - Provider terms are now documented (docs/providers.md): keyless is not permission; Deezer and Last.fm restrict commercial use. README opening reworded to match.
 - Deezer's `ALBUM_TRACKS` now uses the same artist-matched search as `ALBUM_METADATA` (was the unfiltered top hit), so a same-titled wrong-artist album no longer supplies the tracklist
+- That same match can now reject all 5 candidates (alias, compilation, credited-as variant), so `ALBUM_TRACKS` can return `NotFound` where it previously returned the unfiltered top hit's tracks
+- `ALBUM_TRACKS`'s confidence now reflects that same artist match (was always the no-match floor), matching what `ALBUM_METADATA` and `ALBUM_ART` already reported for the identical selection
 
 ### Fixed
 - An artist named by one of its MusicBrainz aliases now resolves: the search asked `artist:"…"` only, which does not reach the alias index, so a localised or former name found nothing

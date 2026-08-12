@@ -101,7 +101,7 @@ internal class DeezerApi(
     /**
      * The album resource, one path segment past the search hit — carries `upc`/`label`/
      * `release_date`, none of which the search response returns. `genres` is read live (12/12
-     * probed albums, 2026-08-11) but deliberately not parsed here: every case returned exactly one
+     * probed albums, 2026-08-12) but deliberately not parsed here: every case returned exactly one
      * coarse editorial tag, a strict parent of Last.fm's vote-weighted tags, so it would outrank a
      * real tag cloud in [com.landofoz.musicmeta.engine.GenreMerger] with none of its weight.
      */
