@@ -235,7 +235,8 @@ class ProfileMapperTest {
         // When - mapping to a demo response
         val response = profile.toDemoResponse(elapsedMs = 0)
 
-        // Then - a details section with the Country row appears
+        // Then - a details section with the Country row appears first among the sections
+        assertEquals("details", response.sections.first().key)
         val section = response.sections.first { it.key == "details" }
         assertEquals("Country", section.items[0].primary)
         assertEquals("US", section.items[0].secondary)
