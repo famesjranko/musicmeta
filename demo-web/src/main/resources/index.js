@@ -184,6 +184,22 @@ async function runQuery() {
 
 // --- Rendering ---
 
+// Genre chips. `title` alone is invisible to touch and keyboard users, so the same confidence and
+// sources also go in a visually-hidden span. The legend appears only when a curated chip needs it.
+function genreChipsHtml(genres) {
+  if (!genres || !genres.length) return '';
+  const chips = genres.map((g) => {
+    const sources = (g.sources || []).join(', ');
+    const detail = `confidence ${g.confidence.toFixed(2)}${sources ? ` \u00b7 ${sources}` : ''}`;
+    const kind = g.curated === true ? 'MusicBrainz curated genre' : 'community tag';
+    return `<span class="genre-chip${g.curated === true ? ' curated' : ''}" title="${esc(detail)}">${esc(g.name)}<span class="visually-hidden"> (${esc(kind)}, ${esc(detail)})</span></span>`;
+  }).join('');
+  const legend = genres.some((g) => g.curated === true)
+    ? '<p class="genre-legend"><span aria-hidden="true">\u2726</span> MusicBrainz curated genre</p>'
+    : '';
+  return `<div class="genre-chips">${chips}</div>${legend}`;
+}
+
 function render(data) {
   const summary = data.summary;
   const backdrop = summary.backgroundImageUrl
@@ -199,6 +215,7 @@ function render(data) {
   const subtitle = summary.subtitle
     ? `<div class="subtitle${summary.subtitleEnrich ? ' enrich-row' : ''}"${enrichAttrs(summary.subtitleEnrich)}>${esc(summary.subtitle)}</div>`
     : '';
+  const genres = genreChipsHtml(summary.genres);
 
   // An unresolved identity must not render the raw query as a confident title.
   const unresolvedTitle = summary.identityVerdict === 'SUGGESTIONS'
@@ -258,6 +275,7 @@ function render(data) {
       <div class="body">
         <div class="titlerow"><h2>${titleHtml}</h2>${bestEffortBadge}${summaryPreview}</div>
         ${subtitle}
+        ${genres}
         ${text}
       </div>
     </div>

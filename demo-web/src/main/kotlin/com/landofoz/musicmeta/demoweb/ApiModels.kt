@@ -36,6 +36,16 @@ data class SummaryCard(
      * a `SUGGESTIONS` verdict whose candidates all filtered out looks just like `BEST_EFFORT`.
      */
     val identityVerdict: String? = null,
+    val genres: List<GenreChip> = emptyList(),
+)
+
+@Serializable
+data class GenreChip(
+    val name: String,
+    /** null means the source predates the curated marking — render as community, badge nothing. */
+    val curated: Boolean? = null,
+    val confidence: Float,
+    val sources: List<String> = emptyList(),
 )
 
 @Serializable
