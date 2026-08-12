@@ -165,3 +165,15 @@ data class PolicyRow(
 
 @Serializable
 data class ApiError(val error: String)
+
+@Serializable
+data class InvalidateRequest(
+    val kind: String,
+    val name: String = "",
+    val artist: String? = null,
+    val album: String? = null,
+    val mbid: String? = null,
+)
+
+@Serializable
+data class InvalidateResponse(val invalidated: Boolean)

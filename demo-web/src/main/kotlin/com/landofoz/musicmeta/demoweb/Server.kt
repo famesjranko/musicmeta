@@ -26,6 +26,7 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.net.InetSocketAddress
@@ -72,6 +73,7 @@ fun startServer(engine: EnrichmentEngine, port: Int) {
     }
 
     server.createContext("/api/enrich") { exchange -> handleEnrich(exchange, engine) }
+    server.createContext("/api/invalidate") { exchange -> handleInvalidate(exchange, engine) }
     server.createContext("/api/preview") { exchange -> handlePreview(exchange, engine) }
     server.createContext("/api/providers") { exchange -> handleProviders(exchange, engine) }
     server.createContext("/api/health") { exchange -> exchange.respondJson(200, HealthResponse(ready.get())) }
@@ -223,6 +225,53 @@ private fun handleEnrich(exchange: HttpExchange, engine: EnrichmentEngine) {
             return
         }
         exchange.respondJson(200, response)
+    } catch (e: Exception) {
+        exchange.respondJson(500, ApiError(e.message ?: e.javaClass.simpleName))
+    }
+}
+
+/**
+ * Clears cached data for a request, built exactly as [handleEnrich] builds one — `kind: "mbid"` is
+ * rejected here because a bare MBID's request object is not reconstructable without the discovery
+ * round-trip `handleEnrich` does; `forceRefresh` on that page's `/api/enrich` call covers it instead.
+ */
+private fun handleInvalidate(exchange: HttpExchange, engine: EnrichmentEngine) {
+    if (exchange.requestMethod != "POST") {
+        exchange.respondJson(405, ApiError("POST required"))
+        return
+    }
+    try {
+        val body = exchange.requestBody.readBytes().toString(StandardCharsets.UTF_8)
+        val request = try {
+            json.decodeFromString<InvalidateRequest>(body)
+        } catch (_: Exception) {
+            exchange.respondJson(400, ApiError("malformed JSON body"))
+            return
+        }
+        val kind = request.kind
+        val name = request.name.trim()
+        val artist = request.artist?.trim().orEmpty()
+        val album = request.album?.trim()?.ifBlank { null }
+        val mbid = request.mbid?.trim()?.ifBlank { null }
+
+        val valid = kind in setOf("artist", "album", "track") &&
+            name.isNotBlank() &&
+            (kind == "artist" || artist.isNotBlank())
+        if (!valid) {
+            exchange.respondJson(
+                400,
+                ApiError("kind must be artist|album|track; name (and artist, for album/track) required"),
+            )
+            return
+        }
+
+        val enrichmentRequest = when (kind) {
+            "artist" -> EnrichmentRequest.forArtist(name, mbid)
+            "album" -> EnrichmentRequest.forAlbum(name, artist, mbid)
+            else -> EnrichmentRequest.forTrack(name, artist, album, mbid = mbid)
+        }
+        runBlocking { engine.invalidate(enrichmentRequest, null) }
+        exchange.respondJson(200, InvalidateResponse(true))
     } catch (e: Exception) {
         exchange.respondJson(500, ApiError(e.message ?: e.javaClass.simpleName))
     }

@@ -146,8 +146,11 @@ function esc(s) {
 let lastQuery = null;
 
 // `refresh`, when true, re-issues `lastQuery` with `forceRefresh` instead of reading the form —
-// the toolbar's "Fetch fresh data" button passes true; the search form's submit passes nothing.
-async function runQuery(refresh) {
+// the toolbar's "Fetch fresh data" button passes true. `replay`, when true, also re-issues
+// `lastQuery` but without forcing a refresh — the invalidate button's re-run after a successful
+// cache clear, which must look like an ordinary (post-invalidation, cache-miss) lookup rather than
+// a user-triggered force-refresh. The search form's submit passes neither.
+async function runQuery(refresh, replay) {
   if (!backendReady) {
     statusEl.className = '';
     statusEl.textContent = 'The backend is still warming up. Search will unlock automatically when it is ready.';
@@ -155,7 +158,7 @@ async function runQuery(refresh) {
   }
 
   let kind, name, artist, album;
-  if (refresh) {
+  if (refresh || replay) {
     if (!lastQuery) return;
     ({ kind, name, artist, album } = lastQuery);
   } else {
@@ -295,6 +298,7 @@ function render(data, wasForceRefresh) {
       <span class="freshness" role="status">${freshnessText}</span>
       <span class="spacer"></span>
       <button class="toolbar-btn" type="button" id="fetch-fresh-btn">⟳ Fetch fresh data</button>
+      ${lastQuery && lastQuery.kind === 'mbid' ? '' : '<button class="toolbar-btn quiet" type="button" id="invalidate-btn">✕ Clear cached result &amp; reload</button>'}
     </div>
     <div class="card summary${unverified ? ' unverified' : ''}">
       ${backdrop}
@@ -438,10 +442,35 @@ resultEl.addEventListener('click', (e) => {
   if (e.target.closest('#identity-retry')) runQuery();
 });
 
-// --- Result toolbar: force-refresh (child 08 adds a second button alongside this one) ---
+// --- Result toolbar: force-refresh, and clear-cache-then-reload ---
 
 resultEl.addEventListener('click', (e) => {
   if (e.target.closest('#fetch-fresh-btn')) runQuery(true);
+});
+
+// Invalidates the cached entry behind the page currently on screen, then re-runs the same
+// lookup — the visible effect is the same slow full fetch a first-ever search pays. Absent on
+// mbid pages: that kind is rejected by /api/invalidate (see Server.kt handleInvalidate), because
+// a bare MBID's request isn't reconstructable without the discovery round-trip render() already
+// paid to get here.
+resultEl.addEventListener('click', async (e) => {
+  const btn = e.target.closest('#invalidate-btn');
+  if (!btn || !lastQuery) return;
+  btn.disabled = true;
+  try {
+    const res = await fetch('/api/invalidate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(lastQuery),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+    runQuery(false, true);
+  } catch (err) {
+    statusEl.className = 'err';
+    statusEl.textContent = 'Failed: ' + err.message;
+    btn.disabled = false;
+  }
 });
 
 // --- Show more / show fewer (event delegation, no extra network calls) ---
