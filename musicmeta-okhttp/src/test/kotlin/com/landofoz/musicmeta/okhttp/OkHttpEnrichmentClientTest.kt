@@ -97,6 +97,17 @@ class OkHttpEnrichmentClientTest {
         assertEquals(302, (result as HttpResult.ClientError).statusCode)
     }
 
+    @Test fun `fetchRedirectUrlResult returns NetworkError when the server is unreachable`() = runTest {
+        // Given - shut down the server before making a request
+        server.shutdown()
+
+        // When - the redirect URL is fetched from an unreachable address
+        val result = client.fetchRedirectUrlResult("http://localhost:1/unreachable")
+
+        // Then - a transport failure is a NetworkError, not the 404 that would read as absence
+        assertTrue("Expected NetworkError, got $result", result is HttpResult.NetworkError)
+    }
+
     // ---- User-Agent header ----
 
     @Test fun `User-Agent header is sent on every request`() = runTest {
@@ -109,6 +120,46 @@ class OkHttpEnrichmentClientTest {
         // Then - the captured request carries the configured User-Agent
         val request = server.takeRequest()
         assertEquals("TestAgent/1.0", request.getHeader("User-Agent"))
+    }
+
+    // ---- Caller-supplied headers ----
+
+    @Test fun `caller-supplied headers reach the request alongside the defaults`() = runTest {
+        // Given - server queued to respond 200, and a request carrying an Authorization header
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"ok":true}"""))
+
+        // When - a JSON request is made with a non-empty header map
+        client.fetchJsonResult(url(), mapOf("Authorization" to "Bearer token-123"))
+
+        // Then - the captured request carries the caller's header and still carries the defaults
+        val request = server.takeRequest()
+        assertEquals("Bearer token-123", request.getHeader("Authorization"))
+        assertEquals("TestAgent/1.0", request.getHeader("User-Agent"))
+        assertEquals("application/json", request.getHeader("Accept"))
+    }
+
+    // ---- Auth status codes ----
+
+    @Test fun `fetchJsonResult returns ClientError for 401 response`() = runTest {
+        // Given - server rejects the request as unauthenticated
+        server.enqueue(MockResponse().setResponseCode(401).setBody("Unauthorized"))
+
+        // When - the JSON result is fetched
+        val result = client.fetchJsonResult(url())
+
+        // Then - a credential problem is a ClientError, not a transient the engine would retry
+        assertEquals(401, (result as HttpResult.ClientError).statusCode)
+    }
+
+    @Test fun `fetchJsonResult returns ClientError for 403 response`() = runTest {
+        // Given - server rejects the request as forbidden
+        server.enqueue(MockResponse().setResponseCode(403).setBody("Forbidden"))
+
+        // When - the JSON result is fetched
+        val result = client.fetchJsonResult(url())
+
+        // Then - a refused request is a ClientError, not a transient the engine would retry
+        assertEquals(403, (result as HttpResult.ClientError).statusCode)
     }
 
     // ---- Gzip decompression ----
@@ -258,6 +309,41 @@ class OkHttpEnrichmentClientTest {
         assertEquals(400, (result as HttpResult.ClientError).statusCode)
     }
 
+    @Test fun `fetchJsonArrayResult returns RateLimited with retryAfterMs for 429 response`() = runTest {
+        // Given - server responds 429 with a Retry-After header
+        server.enqueue(MockResponse().setResponseCode(429).setHeader("Retry-After", "7"))
+
+        // When - the JSON array result is fetched
+        val result = client.fetchJsonArrayResult(url())
+
+        // Then - the throttle is signalled with the header converted to milliseconds
+        assertEquals(7000L, (result as HttpResult.RateLimited).retryAfterMs)
+    }
+
+    @Test fun `fetchJsonArrayResult returns ServerError for 503 response`() = runTest {
+        // Given - server responds 503
+        server.enqueue(MockResponse().setResponseCode(503).setBody("Service Unavailable"))
+
+        // When - the JSON array result is fetched
+        val result = client.fetchJsonArrayResult(url())
+
+        // Then - a shed request is a transient ServerError carrying the status and body
+        val err = result as HttpResult.ServerError
+        assertEquals(503, err.statusCode)
+        assertEquals("Service Unavailable", err.body)
+    }
+
+    @Test fun `fetchJsonArrayResult returns NetworkError when the server is unreachable`() = runTest {
+        // Given - shut down the server before making a request
+        server.shutdown()
+
+        // When - the JSON array result is fetched from an unreachable address
+        val result = client.fetchJsonArrayResult("http://localhost:1/unreachable")
+
+        // Then - a transport failure is a NetworkError, not a 4xx the engine reads as absence
+        assertTrue("Expected NetworkError, got $result", result is HttpResult.NetworkError)
+    }
+
     // ---- postJsonResult ----
 
     @Test fun `postJsonResult returns HttpResult Ok for 201 response and verifies request body`() = runTest {
@@ -317,6 +403,17 @@ class OkHttpEnrichmentClientTest {
         val ok = result as HttpResult.Ok
         assertEquals(1, ok.body.length())
         assertEquals("Come Together", ok.body.getJSONObject(0).getString("track"))
+    }
+
+    @Test fun `postJsonArrayResult returns ServerError for 500 response`() = runTest {
+        // Given - server responds 500
+        server.enqueue(MockResponse().setResponseCode(500).setBody("Internal Server Error"))
+
+        // When - the body is posted
+        val result = client.postJsonArrayResult(url(), """{}""")
+
+        // Then - result is ServerError carrying the 500 status
+        assertEquals(500, (result as HttpResult.ServerError).statusCode)
     }
 
     // ---- Edge case: empty body on 200 ----
