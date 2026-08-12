@@ -57,22 +57,26 @@ internal fun EnrichmentData.answers(type: EnrichmentType): Boolean = when (this)
 }
 
 /**
- * Was this cached payload written before providers reported whether a genre was curated?
+ * Does this cached payload carry genre tags that never learned whether they were curated?
  *
- * [com.landofoz.musicmeta.GenreTag.curated] is `null` only on an entry persisted by a build that had
- * no such field, so a cached `GENRE` result carrying one answers a strictly poorer question than a
- * fresh call would — it cannot say which of its names came from a controlled vocabulary. GENRE's TTL
- * is 90 days, so waiting it out would hide the curated ranking for a quarter of a year on every
- * entity a consumer had already looked up.
+ * [com.landofoz.musicmeta.GenreTag.curated] is `null` on an entry persisted before the field
+ * existed, and on one whose provider could not tell — so the payload answers a strictly poorer
+ * question than a fresh call would: it cannot say which of its names came from a controlled
+ * vocabulary. GENRE's TTL is 90 days, so waiting it out would hide the curated ranking for a quarter
+ * of a year on every entity a consumer had already looked up.
+ *
+ * **Not keyed on `GENRE`.** `EnrichmentResults.genres`/`genreTags` fall back to `ALBUM_METADATA`,
+ * which carries the same [EnrichmentData.Metadata] and the same `genreTags`, so a consumer asking
+ * only for `ALBUM_METADATA` reads the tags off that entry instead. Any payload holding the field is
+ * therefore the unit that heals — and only that: a payload with no `genreTags` at all is untouched,
+ * so nothing about this reopens `LABEL`, `COUNTRY`, artwork or any other cached type.
  *
  * Read on the cache path only, as a *miss*: the providers run and the write-back replaces the entry,
- * exactly as an unanswered entry heals ([answers]). It cannot loop, because every shipped provider
- * now states `curated` either way — an entity with no curated genres writes `false`, not `null`.
+ * exactly as an unanswered entry heals ([answers]). It cannot loop, because a provider that *did*
+ * look writes `false` — an entity with no curated genres is an answer, not an unknown.
  */
-internal fun EnrichmentData.predatesCuratedGenres(type: EnrichmentType): Boolean =
-    type == EnrichmentType.GENRE &&
-        this is EnrichmentData.Metadata &&
-        genreTags?.any { it.curated == null } == true
+internal fun EnrichmentData.hasUnknownGenreCuration(): Boolean =
+    this is EnrichmentData.Metadata && genreTags?.any { it.curated == null } == true
 
 /**
  * One [EnrichmentData.Metadata] serves six types, and a provider fills only the fields its upstream

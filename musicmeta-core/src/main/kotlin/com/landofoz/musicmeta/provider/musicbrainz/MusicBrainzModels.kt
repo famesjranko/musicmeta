@@ -13,6 +13,12 @@ internal data class MusicBrainzRelease(
     val tagCounts: List<TagCount> = emptyList(),
     /** The curated `genres` subset of [tagCounts], present on any response asking for `inc=genres`. */
     val genreCounts: List<TagCount> = emptyList(),
+    /**
+     * Whether this response could have carried curated genres at all. False for a search hit, which
+     * has no `inc=` parameter to ask with — so an empty [genreCounts] there means "not asked", and
+     * marking its tags as uncurated would state something nobody checked.
+     */
+    val curationKnown: Boolean = false,
     val label: String?,
     val releaseType: String?,
     val releaseGroupId: String?,
@@ -52,6 +58,12 @@ internal data class MusicBrainzArtist(
     val tagCounts: List<TagCount> = emptyList(),
     /** The curated `genres` subset of [tagCounts], present on any response asking for `inc=genres`. */
     val genreCounts: List<TagCount> = emptyList(),
+    /**
+     * Whether this response could have carried curated genres at all. False for a search hit, which
+     * has no `inc=` parameter to ask with — so an empty [genreCounts] there means "not asked", and
+     * marking its tags as uncurated would state something nobody checked.
+     */
+    val curationKnown: Boolean = false,
     val disambiguation: String?,
     val wikidataId: String?,
     val wikipediaTitle: String?,
@@ -101,6 +113,12 @@ internal data class MusicBrainzRecording(
     val tagCounts: List<TagCount> = emptyList(),
     /** The curated `genres` subset of [tagCounts], present on any response asking for `inc=genres`. */
     val genreCounts: List<TagCount> = emptyList(),
+    /**
+     * Whether this response could have carried curated genres at all. False for a search hit, which
+     * has no `inc=` parameter to ask with — so an empty [genreCounts] there means "not asked", and
+     * marking its tags as uncurated would state something nobody checked.
+     */
+    val curationKnown: Boolean = false,
     /** Community rating from `inc=ratings`; null unless someone has voted. See [MusicBrainzRating]. */
     val rating: MusicBrainzRating? = null,
     val score: Int,

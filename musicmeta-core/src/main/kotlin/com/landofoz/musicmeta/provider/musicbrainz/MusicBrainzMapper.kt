@@ -14,7 +14,7 @@ import com.landofoz.musicmeta.TrackInfo
 internal object MusicBrainzMapper {
 
     fun toAlbumMetadata(release: MusicBrainzRelease): EnrichmentData.Metadata {
-        val genreTags = buildGenreTags(release.tagCounts, release.genreCounts)
+        val genreTags = buildGenreTags(release.tagCounts, release.genreCounts, release.curationKnown)
         return EnrichmentData.Metadata(
             genres = genreTags?.map { it.name },
             genreTags = genreTags,
@@ -40,7 +40,7 @@ internal object MusicBrainzMapper {
         )
 
     fun toArtistMetadata(artist: MusicBrainzArtist): EnrichmentData.Metadata {
-        val genreTags = buildGenreTags(artist.tagCounts, artist.genreCounts)
+        val genreTags = buildGenreTags(artist.tagCounts, artist.genreCounts, artist.curationKnown)
         return EnrichmentData.Metadata(
             genres = genreTags?.map { it.name },
             genreTags = genreTags,
@@ -60,7 +60,7 @@ internal object MusicBrainzMapper {
         )
 
     fun toTrackMetadata(recording: MusicBrainzRecording): EnrichmentData.Metadata {
-        val genreTags = buildGenreTags(recording.tagCounts, recording.genreCounts)
+        val genreTags = buildGenreTags(recording.tagCounts, recording.genreCounts, recording.curationKnown)
         return EnrichmentData.Metadata(
             genres = genreTags?.map { it.name },
             genreTags = genreTags,
@@ -216,18 +216,25 @@ internal object MusicBrainzMapper {
      *
      * `genres` is a subset of `tags` carrying the same vote counts, so a curated name is dropped from
      * the community half rather than emitted twice.
+     *
+     * A tag is marked `curated = false` only where [curationKnown] says the response was one that
+     * would have carried the curated names. Where it was not — a search hit, or a lookup that
+     * degraded to one — the mark is `null`, meaning nobody asked: a `false` there is an answer the
+     * engine's cache would keep for the type's whole TTL, and it would be an answer we invented.
      */
     private fun buildGenreTags(
         tagCounts: List<TagCount>,
         genreCounts: List<TagCount> = emptyList(),
+        curationKnown: Boolean = false,
     ): List<GenreTag>? {
         val curatedNames = genreCounts.map { it.name.lowercase() }.toSet()
+        val uncurated = if (curationKnown) false else null
         val curated = genreCounts.map { genre ->
             GenreTag(genre.name, CURATED_CONFIDENCE, listOf(PROVIDER_SOURCE), curated = true)
         }
         val community = tagCounts
             .filterNot { it.name.lowercase() in curatedNames }
-            .map { tag -> GenreTag(tag.name, TAG_CONFIDENCE, listOf(PROVIDER_SOURCE), curated = false) }
+            .map { tag -> GenreTag(tag.name, TAG_CONFIDENCE, listOf(PROVIDER_SOURCE), curated = uncurated) }
         return (curated + community).takeIf { it.isNotEmpty() }
     }
 

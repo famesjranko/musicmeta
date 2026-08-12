@@ -35,13 +35,13 @@ internal object MusicBrainzParser {
     /** Parse a lookup response where the entity is at the top level. */
     fun parseLookupRelease(json: JSONObject): MusicBrainzRelease? {
         json.optString("id").takeIf { it.isNotBlank() } ?: return null
-        return parseReleaseObject(json, defaultScore = 100)
+        return parseReleaseObject(json, defaultScore = 100, fromLookup = true)
     }
 
     /** Parse a lookup response for an artist at the top level. */
     fun parseLookupArtist(json: JSONObject): MusicBrainzArtist? {
         json.optString("id").takeIf { it.isNotBlank() } ?: return null
-        return parseArtistObject(json, defaultScore = 100)
+        return parseArtistObject(json, defaultScore = 100, fromLookup = true)
     }
 
     /**
@@ -55,7 +55,7 @@ internal object MusicBrainzParser {
      */
     fun parseLookupRecording(json: JSONObject, albumHint: String? = null): MusicBrainzRecording? {
         json.optString("id").takeIf { it.isNotBlank() } ?: return null
-        return parseRecordingObject(json, albumHint, defaultScore = 100)
+        return parseRecordingObject(json, albumHint, defaultScore = 100, fromLookup = true)
     }
 
     /**
@@ -67,7 +67,11 @@ internal object MusicBrainzParser {
     fun parseReleaseGroupWikiLinks(json: JSONObject): Pair<String?, String?> =
         extractWikidataId(json) to extractWikipediaTitle(json)
 
-    private fun parseReleaseObject(obj: JSONObject, defaultScore: Int = 0): MusicBrainzRelease {
+    private fun parseReleaseObject(
+        obj: JSONObject,
+        defaultScore: Int = 0,
+        fromLookup: Boolean = false,
+    ): MusicBrainzRelease {
         val tagCounts = extractReleaseTagCounts(obj)
         val group = obj.optJSONObject("release-group")
         return MusicBrainzRelease(
@@ -81,6 +85,7 @@ internal object MusicBrainzParser {
             tags = tagCounts.map { it.name },
             tagCounts = tagCounts,
             genreCounts = extractReleaseGenreCounts(obj),
+            curationKnown = fromLookup,
             label = extractLabel(obj),
             releaseType = extractReleaseType(obj),
             releaseGroupId = extractReleaseGroupId(obj),
@@ -101,7 +106,11 @@ internal object MusicBrainzParser {
         return (0 until types.length()).mapNotNull { types.optString(it).takeIf { s -> s.isNotBlank() } }
     }
 
-    private fun parseArtistObject(obj: JSONObject, defaultScore: Int = 0): MusicBrainzArtist {
+    private fun parseArtistObject(
+        obj: JSONObject,
+        defaultScore: Int = 0,
+        fromLookup: Boolean = false,
+    ): MusicBrainzArtist {
         val lifeSpan = obj.optJSONObject("life-span")
         val tagCounts = extractTagsWithCounts(obj)
         return MusicBrainzArtist(
@@ -115,6 +124,7 @@ internal object MusicBrainzParser {
             tags = tagCounts.map { it.name },
             tagCounts = tagCounts,
             genreCounts = extractGenresWithCounts(obj),
+            curationKnown = fromLookup,
             aliases = extractAliases(obj),
             disambiguation = obj.optString("disambiguation").takeIf { it.isNotBlank() },
             wikidataId = extractWikidataId(obj),
@@ -130,6 +140,7 @@ internal object MusicBrainzParser {
         obj: JSONObject,
         albumHint: String? = null,
         defaultScore: Int = 0,
+        fromLookup: Boolean = false,
     ): MusicBrainzRecording {
         val tagCounts = extractTagsWithCounts(obj)
         val artReleaseGroup = findArtReleaseGroup(obj, albumHint)
@@ -140,6 +151,7 @@ internal object MusicBrainzParser {
             tags = tagCounts.map { it.name },
             tagCounts = tagCounts,
             genreCounts = extractGenresWithCounts(obj),
+            curationKnown = fromLookup,
             rating = extractRating(obj),
             score = obj.optInt("score", defaultScore),
             disambiguation = obj.optString("disambiguation").takeIf { it.isNotBlank() },
