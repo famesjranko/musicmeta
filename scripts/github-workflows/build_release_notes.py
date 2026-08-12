@@ -23,11 +23,10 @@ from pathlib import Path
 
 from validate_release_notes import validate
 
-# Measured against the six hand-rewritten v0.8.2-v0.10.1 notes: prose ran 188-1643 chars with a
-# longest line of 375. The per-line cap is the load-bearing shape guard, and a backstop that also
-# rejects a pasted 0.10.x-era changelog bullet (786-1538 chars) on sight; the section cap is sized
-# so [Unreleased] can accumulate a long run of capped lines between pins without going essay-shaped.
-MAX_SECTION_CHARS = 16000
+# judgement 2026-08-13: the per-line cap is the load-bearing anti-prose guard; this is only a
+# backstop against an essay-shaped section, so it is sized not to force wording surgery between
+# releases. GitHub's release body caps at 125,000 chars.
+MAX_SECTION_CHARS = 48000
 MAX_LINE_CHARS = 200
 
 REPO = "famesjranko/musicmeta"

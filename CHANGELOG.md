@@ -21,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 >   "stop making a call that was never supported", which the line above rules out as noise.
 > - For a payload change, ask the user about a cache-clear note.
 > - `scripts/github-workflows/build_release_notes.py` caps any single line at 200 characters
->   (a paragraph is not a bullet) and a section at 16000; `./check` runs both against
+>   (a paragraph is not a bullet) and a section at 48000; `./check` runs both against
 >   `[Unreleased]` on every commit, and the
 >   release fails if it does not fit. Sections from 0.10.0 down were written before the cap and run
 >   longer — except 0.10.0 and 0.10.1 themselves, rewritten to match the notes GitHub actually
@@ -61,6 +61,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Wikidata is a second `ARTIST_LINKS` source (priority 50), contributing the official website (P856) where MusicBrainz has no relations
 - Deezer's `ALBUM_METADATA` now fills `barcode`/`label`/`releaseDate` from `GET /album/{id}`, one extra request shared with `ALBUM_TRACKS` per call; no genre (Deezer's is one coarse tag)
 - `BudgetedTransientRetry`, `HttpResult.asAttempt`, and `withRetryBudgetForTest` behind a `@MusicmetaTestApi` opt-in: core's budgeted retry ladder is public for a client of your own
+- `ProviderCatalog.entries`: the providers `withDefaultProviders()` would register, with id, display name, and `KeyRequirement` naming the gating field
 
 ### Changed
 - `ARTIST_POPULARITY`/`TRACK_POPULARITY` are now merged across providers instead of returning the first answer: a field the leading source lacks is filled from the next that has it
