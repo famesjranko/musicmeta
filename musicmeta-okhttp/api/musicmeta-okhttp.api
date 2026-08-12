@@ -1,6 +1,6 @@
 public final class com/landofoz/musicmeta/okhttp/OkHttpEnrichmentClient : com/landofoz/musicmeta/http/HttpClient {
-	public fun <init> (Lokhttp3/OkHttpClient;Ljava/lang/String;)V
-	public synthetic fun <init> (Lokhttp3/OkHttpClient;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Lokhttp3/OkHttpClient;Ljava/lang/String;I)V
+	public synthetic fun <init> (Lokhttp3/OkHttpClient;Ljava/lang/String;IILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun fetchJsonArrayResult (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun fetchJsonResult (Ljava/lang/String;Ljava/util/Map;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun fetchJsonResult (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;

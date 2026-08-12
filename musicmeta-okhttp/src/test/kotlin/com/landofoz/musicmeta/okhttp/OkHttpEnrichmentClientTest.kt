@@ -22,6 +22,15 @@ class OkHttpEnrichmentClientTest {
 
     private fun url(path: String = "/test"): String = server.url(path).toString()
 
+    /**
+     * Answers every attempt the retry ladder makes with the same response, so a test that pins how a
+     * retryable status maps sees the mapping rather than a hang: `QueueDispatcher` blocks on an empty
+     * queue, so an under-filled queue fails as a timeout with no message worth reading.
+     */
+    private fun enqueueEveryAttempt(response: () -> MockResponse) {
+        repeat(LADDER_ATTEMPTS) { server.enqueue(response()) }
+    }
+
     // ---- fetchRedirectUrlResult ----
 
     @Test fun `fetchRedirectUrlResult returns Ok with Location header for 307 response`() = runTest {
@@ -65,14 +74,15 @@ class OkHttpEnrichmentClientTest {
     }
 
     @Test fun `fetchRedirectUrlResult returns RateLimited for 429 response`() = runTest {
-        // Given - server responds 429 with a Retry-After header
-        server.enqueue(MockResponse().setResponseCode(429).setHeader("Retry-After", "5"))
+        // Given - every attempt is throttled, with a Retry-After header
+        enqueueEveryAttempt { MockResponse().setResponseCode(429).setHeader("Retry-After", "5") }
 
         // When - the redirect URL is fetched
         val result = client.fetchRedirectUrlResult(url())
 
         // Then - a status, not the indistinguishable failure a nullable return collapsed it to
         assertEquals(5000L, (result as HttpResult.RateLimited).retryAfterMs)
+        assertEquals(LADDER_ATTEMPTS, server.requestCount)
     }
 
     @Test fun `fetchRedirectUrlResult returns ServerError for 500 response`() = runTest {
@@ -203,13 +213,13 @@ class OkHttpEnrichmentClientTest {
     }
 
     @Test fun `fetchJsonResult returns HttpResult RateLimited with retryAfterMs for 429 with Retry-After header`() = runTest {
-        // Given - server responds 429 with a Retry-After header
-        server.enqueue(
+        // Given - every attempt is throttled, with a Retry-After header
+        enqueueEveryAttempt {
             MockResponse()
                 .setResponseCode(429)
                 .setHeader("Retry-After", "5")
                 .setBody("rate limited")
-        )
+        }
 
         // When - the JSON result is fetched
         val result = client.fetchJsonResult(url())
@@ -217,11 +227,12 @@ class OkHttpEnrichmentClientTest {
         // Then - result is RateLimited with retryAfterMs converted from the header
         assertTrue(result is HttpResult.RateLimited)
         assertEquals(5000L, (result as HttpResult.RateLimited).retryAfterMs)
+        assertEquals(LADDER_ATTEMPTS, server.requestCount)
     }
 
     @Test fun `fetchJsonResult returns HttpResult RateLimited with null retryAfterMs for 429 without Retry-After header`() = runTest {
-        // Given - server responds 429 with no Retry-After header
-        server.enqueue(MockResponse().setResponseCode(429).setBody("rate limited"))
+        // Given - every attempt is throttled, with no Retry-After header
+        enqueueEveryAttempt { MockResponse().setResponseCode(429).setBody("rate limited") }
 
         // When - the JSON result is fetched
         val result = client.fetchJsonResult(url())
@@ -229,6 +240,7 @@ class OkHttpEnrichmentClientTest {
         // Then - result is RateLimited with a null retryAfterMs
         assertTrue(result is HttpResult.RateLimited)
         assertNull((result as HttpResult.RateLimited).retryAfterMs)
+        assertEquals(LADDER_ATTEMPTS, server.requestCount)
     }
 
     @Test fun `fetchJsonResult returns HttpResult ClientError for 404 response`() = runTest {
@@ -246,8 +258,8 @@ class OkHttpEnrichmentClientTest {
     }
 
     @Test fun `fetchJsonResult returns HttpResult ServerError for 503 response`() = runTest {
-        // Given - server responds 503
-        server.enqueue(MockResponse().setResponseCode(503).setBody("Service Unavailable"))
+        // Given - every attempt is shed with a 503
+        enqueueEveryAttempt { MockResponse().setResponseCode(503).setBody("Service Unavailable") }
 
         // When - the JSON result is fetched
         val result = client.fetchJsonResult(url())
@@ -257,6 +269,7 @@ class OkHttpEnrichmentClientTest {
         val err = result as HttpResult.ServerError
         assertEquals(503, err.statusCode)
         assertEquals("Service Unavailable", err.body)
+        assertEquals(LADDER_ATTEMPTS, server.requestCount)
     }
 
     @Test fun `fetchJsonResult returns HttpResult NetworkError for invalid JSON in 200 body`() = runTest {
@@ -310,19 +323,20 @@ class OkHttpEnrichmentClientTest {
     }
 
     @Test fun `fetchJsonArrayResult returns RateLimited with retryAfterMs for 429 response`() = runTest {
-        // Given - server responds 429 with a Retry-After header
-        server.enqueue(MockResponse().setResponseCode(429).setHeader("Retry-After", "7"))
+        // Given - every attempt is throttled, with a Retry-After header
+        enqueueEveryAttempt { MockResponse().setResponseCode(429).setHeader("Retry-After", "7") }
 
         // When - the JSON array result is fetched
         val result = client.fetchJsonArrayResult(url())
 
         // Then - the throttle is signalled with the header converted to milliseconds
         assertEquals(7000L, (result as HttpResult.RateLimited).retryAfterMs)
+        assertEquals(LADDER_ATTEMPTS, server.requestCount)
     }
 
     @Test fun `fetchJsonArrayResult returns ServerError for 503 response`() = runTest {
-        // Given - server responds 503
-        server.enqueue(MockResponse().setResponseCode(503).setBody("Service Unavailable"))
+        // Given - every attempt is shed with a 503
+        enqueueEveryAttempt { MockResponse().setResponseCode(503).setBody("Service Unavailable") }
 
         // When - the JSON array result is fetched
         val result = client.fetchJsonArrayResult(url())
@@ -331,6 +345,7 @@ class OkHttpEnrichmentClientTest {
         val err = result as HttpResult.ServerError
         assertEquals(503, err.statusCode)
         assertEquals("Service Unavailable", err.body)
+        assertEquals(LADDER_ATTEMPTS, server.requestCount)
     }
 
     @Test fun `fetchJsonArrayResult returns NetworkError when the server is unreachable`() = runTest {
@@ -449,13 +464,13 @@ class OkHttpEnrichmentClientTest {
     // ---- Edge case: 429 on POST methods (Retry-After parsing) ----
 
     @Test fun `postJsonResult returns RateLimited with Retry-After for 429`() = runTest {
-        // Given - POST returns 429 with Retry-After
-        server.enqueue(
+        // Given - every posted attempt is throttled, with a Retry-After header
+        enqueueEveryAttempt {
             MockResponse()
                 .setResponseCode(429)
                 .setHeader("Retry-After", "10")
                 .setBody("Too Many Requests")
-        )
+        }
 
         // When - the body is posted
         val result = client.postJsonResult(url(), """{"test":true}""")
@@ -463,16 +478,21 @@ class OkHttpEnrichmentClientTest {
         // Then - retryAfterMs = 10 * 1000 = 10000
         assertTrue(result is HttpResult.RateLimited)
         assertEquals(10000L, (result as HttpResult.RateLimited).retryAfterMs)
+        assertEquals(LADDER_ATTEMPTS, server.requestCount)
     }
 
     @Test fun `postJsonArrayResult returns HttpResult RateLimited for 429 response`() = runTest {
-        // Given - server responds 429
-        server.enqueue(MockResponse().setResponseCode(429).setBody("Too Many Requests"))
+        // Given - every posted attempt is throttled
+        enqueueEveryAttempt { MockResponse().setResponseCode(429).setBody("Too Many Requests") }
 
         // When - the body is posted
         val result = client.postJsonArrayResult(url(), """{}""")
 
         // Then - result is RateLimited
         assertTrue(result is HttpResult.RateLimited)
+        assertEquals(LADDER_ATTEMPTS, server.requestCount)
     }
 }
+
+/** `BudgetedTransientRetry`'s default: three attempts, not three retries. */
+private const val LADDER_ATTEMPTS = 3
