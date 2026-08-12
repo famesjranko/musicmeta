@@ -26,23 +26,11 @@ class WikipediaProviderTest {
     }
 
     @Test
-    fun `enrich returns biography from page summary`() = runTest {
-        // Given - Wikipedia returns a page summary with extract and thumbnail
-        val title = "Radiohead"
-        httpClient.givenJsonResponse(
-            "wikipedia.org",
-            """{
-                "title": "Radiohead",
-                "extract": "Radiohead are an English rock band formed in 1985.",
-                "description": "English rock band",
-                "thumbnail": {
-                    "source": "https://upload.wikimedia.org/thumb/radiohead.jpg/320px-radiohead.jpg"
-                }
-            }""",
-        )
-
+    fun `enrich returns biography from the article extract`() = runTest {
+        // Given - the Action API returns the lead extract, a thumbnail and the page properties
+        httpClient.givenJsonResponse("wikipedia.org", RADIOHEAD_EXTRACT_JSON)
         val request = EnrichmentRequest.ForArtist(
-            identifiers = EnrichmentIdentifiers(wikipediaTitle = title),
+            identifiers = EnrichmentIdentifiers(wikipediaTitle = "Radiohead"),
             name = "Radiohead",
         )
 
@@ -55,9 +43,44 @@ class WikipediaProviderTest {
         assertEquals("wikipedia", success.provider)
         assertEquals(0.95f, success.confidence, 0.01f)
         val bio = success.data as EnrichmentData.Biography
-        assertEquals("Radiohead are an English rock band formed in 1985.", bio.text)
+        assertEquals(RADIOHEAD_EXTRACT_TEXT, bio.text)
         assertEquals("Wikipedia", bio.source)
         assertTrue(bio.thumbnailUrl != null)
+    }
+
+    @Test
+    fun `enrich keeps the parentheticals the extract carries`() = runTest {
+        // Given - Portishead's lead opens with an IPA pronunciation the summary endpoint stripped
+        httpClient.givenJsonResponse("wikipedia.org", PORTISHEAD_EXTRACT_JSON)
+        val request = EnrichmentRequest.ForArtist(
+            identifiers = EnrichmentIdentifiers(wikipediaTitle = "Portishead (band)"),
+            name = "Portishead",
+        )
+
+        // When - enriching for artist bio
+        val result = provider.enrich(request, EnrichmentType.ARTIST_BIO)
+
+        // Then - the bio reads as the article does, parenthetical included
+        val bio = (result as EnrichmentResult.Success).data as EnrichmentData.Biography
+        assertTrue(bio.text.startsWith("Portishead ( PORT-iss-HED) are an English electronic band"))
+    }
+
+    @Test
+    fun `enrich requests the extract, thumbnail and page properties in one call`() = runTest {
+        // Given - a page whose bio is available
+        httpClient.givenJsonResponse("wikipedia.org", RADIOHEAD_EXTRACT_JSON)
+        val request = EnrichmentRequest.ForArtist(
+            identifiers = EnrichmentIdentifiers(wikipediaTitle = "Radiohead"),
+            name = "Radiohead",
+        )
+
+        // When - enriching for artist bio
+        provider.enrich(request, EnrichmentType.ARTIST_BIO)
+
+        // Then - exactly one Wikipedia request, carrying all three properties
+        val wikipediaUrls = httpClient.requestedUrls.filter { it.contains("en.wikipedia.org") }
+        assertEquals(1, wikipediaUrls.size)
+        assertTrue(wikipediaUrls.single().contains("prop=extracts%7Cpageimages%7Cpageprops"))
     }
 
     @Test
@@ -79,62 +102,75 @@ class WikipediaProviderTest {
 
     @Test
     fun `enrich returns NotFound for non-existent article`() = runTest {
-        // Given - no response configured, so fetchJsonResult is an unstubbed 404
+        // Given - the Action API answers 200 with the page flagged missing
+        httpClient.givenJsonResponse("wikipedia.org", MISSING_PAGE_JSON)
         val request = EnrichmentRequest.ForArtist(
-            identifiers = EnrichmentIdentifiers(wikipediaTitle = "NonExistentBandXYZ123"),
-            name = "NonExistentBandXYZ123",
+            identifiers = EnrichmentIdentifiers(wikipediaTitle = "NoSuchPageZZZQQ"),
+            name = "NoSuchPageZZZQQ",
         )
 
         // When - enriching for artist bio
         val result = provider.enrich(request, EnrichmentType.ARTIST_BIO)
 
-        // Then - NotFound because the unstubbed request resolves to an HTTP 404
+        // Then - NotFound, not an empty-extract Success
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `enrich returns NotFound for a disambiguation page`() = runTest {
+        // Given - "Genesis" resolves to a disambiguation page, marked by pageprops.disambiguation
+        httpClient.givenJsonResponse("wikipedia.org", DISAMBIGUATION_JSON)
+        val request = EnrichmentRequest.ForArtist(
+            identifiers = EnrichmentIdentifiers(wikipediaTitle = "Genesis"),
+            name = "Genesis",
+        )
+
+        // When - enriching for artist bio
+        val result = provider.enrich(request, EnrichmentType.ARTIST_BIO)
+
+        // Then - NotFound, because "Genesis may refer to:" is not a biography
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `enrich includes article thumbnail URL`() = runTest {
-        // Given - Wikipedia returns a page summary with a thumbnail source
-        val title = "Beck"
-        val thumbnailUrl = "https://upload.wikimedia.org/thumb/beck.jpg/320px-beck.jpg"
-        httpClient.givenJsonResponse(
-            "wikipedia.org",
-            """{
-                "title": "Beck",
-                "extract": "Beck Hansen is an American musician.",
-                "description": "American musician",
-                "thumbnail": {"source": "$thumbnailUrl"}
-            }""",
-        )
-
+        // Given - the Action API returns a pageimages thumbnail alongside the extract
+        httpClient.givenJsonResponse("wikipedia.org", RADIOHEAD_EXTRACT_JSON)
         val request = EnrichmentRequest.ForArtist(
-            identifiers = EnrichmentIdentifiers(wikipediaTitle = title),
-            name = "Beck",
+            identifiers = EnrichmentIdentifiers(wikipediaTitle = "Radiohead"),
+            name = "Radiohead",
         )
 
         // When - enriching for artist bio
         val result = provider.enrich(request, EnrichmentType.ARTIST_BIO)
 
-        // Then - success with the thumbnail URL carried through to the Biography
+        // Then - the thumbnail source is carried through to the Biography
+        val bio = (result as EnrichmentResult.Success).data as EnrichmentData.Biography
+        assertEquals(RADIOHEAD_THUMBNAIL_URL, bio.thumbnailUrl)
+    }
+
+    @Test
+    fun `enrich returns biography without thumbnail when the page has no page image`() = runTest {
+        // Given - The Books' article carries no pageimages thumbnail
+        httpClient.givenJsonResponse("wikipedia.org", NO_THUMBNAIL_JSON)
+        val request = EnrichmentRequest.ForArtist(
+            identifiers = EnrichmentIdentifiers(wikipediaTitle = "The Books"),
+            name = "The Books",
+        )
+
+        // When - enriching for artist bio
+        val result = provider.enrich(request, EnrichmentType.ARTIST_BIO)
+
+        // Then - Success with a null thumbnailUrl
         assertTrue(result is EnrichmentResult.Success)
         val bio = (result as EnrichmentResult.Success).data as EnrichmentData.Biography
-        assertEquals("Beck Hansen is an American musician.", bio.text)
-        assertEquals(thumbnailUrl, bio.thumbnailUrl)
+        assertEquals(null, bio.thumbnailUrl)
     }
 
     @Test
     fun `enrich returns NotFound when extract field is empty string`() = runTest {
-        // Given - Wikipedia returns page summary with an empty extract
-        httpClient.givenJsonResponse(
-            "wikipedia.org",
-            """{
-                "title": "Obscure Band",
-                "extract": "",
-                "description": "Musical group",
-                "thumbnail": {"source": "https://upload.wikimedia.org/thumb/img.jpg"}
-            }""",
-        )
-
+        // Given - a page that exists but whose lead extract is empty
+        httpClient.givenJsonResponse("wikipedia.org", EMPTY_EXTRACT_JSON)
         val request = EnrichmentRequest.ForArtist(
             identifiers = EnrichmentIdentifiers(wikipediaTitle = "Obscure Band"),
             name = "Obscure Band",
@@ -143,112 +179,42 @@ class WikipediaProviderTest {
         // When - enriching for artist bio
         val result = provider.enrich(request, EnrichmentType.ARTIST_BIO)
 
-        // Then - NotFound because WikipediaApi returns null when extract is blank
+        // Then - NotFound because WikipediaApi returns null when the extract is blank
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
-    fun `enrich returns artist photo from page media list`() = runTest {
-        // Given - Wikipedia page summary and media-list return data
-        httpClient.givenJsonResponse("page/summary", SUMMARY_JSON)
-        httpClient.givenJsonResponse("page/media-list", MEDIA_LIST_JSON)
+    fun `enrich returns Error when the Action API reports maxlag inside a 200`() = runTest {
+        // Given - the Action API answers 200 with an error body, its way of shedding load
+        httpClient.givenJsonResponse("wikipedia.org", MAXLAG_ERROR_JSON)
         val request = EnrichmentRequest.ForArtist(
             identifiers = EnrichmentIdentifiers(wikipediaTitle = "Radiohead"),
             name = "Radiohead",
-        )
-
-        // When - enriching for artist photo
-        val result = provider.enrich(request, EnrichmentType.ARTIST_PHOTO)
-
-        // Then - success with Artwork from media list
-        assertTrue(result is EnrichmentResult.Success)
-        val success = result as EnrichmentResult.Success
-        assertEquals("wikipedia", success.provider)
-        assertEquals(0.6f, success.confidence, 0.01f)
-        val artwork = success.data as EnrichmentData.Artwork
-        assertEquals("https://upload.wikimedia.org/wikipedia/commons/radiohead.jpg", artwork.url)
-        assertEquals(800, artwork.width)
-        assertEquals(600, artwork.height)
-    }
-
-    @Test
-    fun `enrich returns NotFound for artist photo when no suitable images`() = runTest {
-        // Given - media list has only SVG images
-        httpClient.givenJsonResponse("page/summary", SUMMARY_JSON)
-        httpClient.givenJsonResponse("page/media-list", MEDIA_LIST_SVG_ONLY_JSON)
-        val request = EnrichmentRequest.ForArtist(
-            identifiers = EnrichmentIdentifiers(wikipediaTitle = "Radiohead"),
-            name = "Radiohead",
-        )
-
-        // When - enriching for artist photo
-        val result = provider.enrich(request, EnrichmentType.ARTIST_PHOTO)
-
-        // Then - NotFound because SVGs are filtered out
-        assertTrue(result is EnrichmentResult.NotFound)
-    }
-
-    @Test
-    fun `enrich filters out SVG and icon images from media list`() = runTest {
-        // Given - media list has SVGs, icons, and one valid JPEG
-        httpClient.givenJsonResponse("page/summary", SUMMARY_JSON)
-        httpClient.givenJsonResponse("page/media-list", MEDIA_LIST_MIXED_JSON)
-        val request = EnrichmentRequest.ForArtist(
-            identifiers = EnrichmentIdentifiers(wikipediaTitle = "Radiohead"),
-            name = "Radiohead",
-        )
-
-        // When - enriching for artist photo
-        val result = provider.enrich(request, EnrichmentType.ARTIST_PHOTO)
-
-        // Then - returns the valid JPEG, not SVGs or icons
-        assertTrue(result is EnrichmentResult.Success)
-        val artwork = (result as EnrichmentResult.Success).data as EnrichmentData.Artwork
-        assertEquals("https://upload.wikimedia.org/wikipedia/commons/valid_photo.jpg", artwork.url)
-    }
-
-    @Test
-    fun `enrich returns NotFound for artist photo when media list is empty`() = runTest {
-        // Given - media list has no items
-        httpClient.givenJsonResponse("page/summary", SUMMARY_JSON)
-        httpClient.givenJsonResponse("page/media-list", """{"items":[]}""")
-        val request = EnrichmentRequest.ForArtist(
-            identifiers = EnrichmentIdentifiers(wikipediaTitle = "Radiohead"),
-            name = "Radiohead",
-        )
-
-        // When - enriching for artist photo
-        val result = provider.enrich(request, EnrichmentType.ARTIST_PHOTO)
-
-        // Then - NotFound
-        assertTrue(result is EnrichmentResult.NotFound)
-    }
-
-    @Test
-    fun `enrich returns biography without thumbnail when thumbnail object is missing`() = runTest {
-        // Given - Wikipedia returns page summary without a thumbnail object
-        httpClient.givenJsonResponse(
-            "wikipedia.org",
-            """{
-                "title": "Some Artist",
-                "extract": "Some Artist is a musician.",
-                "description": "Musical artist"
-            }""",
-        )
-
-        val request = EnrichmentRequest.ForArtist(
-            identifiers = EnrichmentIdentifiers(wikipediaTitle = "Some Artist"),
-            name = "Some Artist",
         )
 
         // When - enriching for artist bio
         val result = provider.enrich(request, EnrichmentType.ARTIST_BIO)
 
-        // Then - Success with null thumbnailUrl since thumbnail object is absent
-        assertTrue(result is EnrichmentResult.Success)
+        // Then - a retryable Error, never NotFound: the article exists and was not asked about
+        assertTrue(result is EnrichmentResult.Error)
+        assertEquals(ErrorKind.NETWORK, (result as EnrichmentResult.Error).errorKind)
+    }
+
+    @Test
+    fun `enrich strips the utm tracking parameters from the bio thumbnail`() = runTest {
+        // Given - pageimages thumbnails arrive with Wikimedia's utm_ attribution parameters
+        httpClient.givenJsonResponse("wikipedia.org", RADIOHEAD_EXTRACT_JSON)
+        val request = EnrichmentRequest.ForArtist(
+            identifiers = EnrichmentIdentifiers(wikipediaTitle = "Radiohead"),
+            name = "Radiohead",
+        )
+
+        // When - enriching for artist bio
+        val result = provider.enrich(request, EnrichmentType.ARTIST_BIO)
+
+        // Then - the URL handed to a consumer carries none of them
         val bio = (result as EnrichmentResult.Success).data as EnrichmentData.Biography
-        assertEquals("Some Artist is a musician.", bio.text)
-        assertEquals(null, bio.thumbnailUrl)
+        assertEquals(RADIOHEAD_THUMBNAIL_URL, bio.thumbnailUrl)
     }
 
     @Test
@@ -289,9 +255,9 @@ class WikipediaProviderTest {
 
     @Test
     fun `enrich resolves the title from Wikidata sitelinks when no wikipediaTitle is given`() = runTest {
-        // Given - Wikidata returns an enwiki sitelink and Wikipedia returns that page's summary
+        // Given - Wikidata returns an enwiki sitelink and Wikipedia returns that page's extract
         httpClient.givenJsonResponse("wikidata.org", SITELINKS_JSON)
-        httpClient.givenJsonResponse("wikipedia.org", SUMMARY_JSON)
+        httpClient.givenJsonResponse("wikipedia.org", RADIOHEAD_EXTRACT_JSON)
         val request = EnrichmentRequest.ForArtist(
             identifiers = EnrichmentIdentifiers(wikidataId = "Q123"),
             name = "Radiohead",
@@ -300,24 +266,17 @@ class WikipediaProviderTest {
         // When - enriching for artist bio
         val result = provider.enrich(request, EnrichmentType.ARTIST_BIO)
 
-        // Then - Success, and the resolved title was used for the summary request
+        // Then - Success, and the resolved title was used for the extract request
         assertTrue(result is EnrichmentResult.Success)
         val bio = (result as EnrichmentResult.Success).data as EnrichmentData.Biography
-        assertEquals("Radiohead are an English rock band.", bio.text)
+        assertEquals(RADIOHEAD_EXTRACT_TEXT, bio.text)
         assertTrue(httpClient.requestedUrls.any { it.contains("wikipedia.org") && it.contains("Radiohead") })
     }
 
     @Test
-    fun `enrich returns album description from page summary`() = runTest {
+    fun `enrich returns album description from the article extract`() = runTest {
         // Given - album requests reuse the same title-resolution and Biography mapping as ARTIST_BIO
-        httpClient.givenJsonResponse(
-            "wikipedia.org",
-            """{
-                "title": "OK Computer",
-                "extract": "OK Computer is the third studio album by English rock band Radiohead.",
-                "description": "1997 studio album by Radiohead"
-            }""",
-        )
+        httpClient.givenJsonResponse("wikipedia.org", OK_COMPUTER_EXTRACT_JSON)
         val request = EnrichmentRequest.ForAlbum(
             identifiers = EnrichmentIdentifiers(wikipediaTitle = "OK Computer"),
             title = "OK Computer",
@@ -330,10 +289,7 @@ class WikipediaProviderTest {
         // Then - success with the page extract mapped into a Biography
         assertTrue(result is EnrichmentResult.Success)
         val bio = (result as EnrichmentResult.Success).data as EnrichmentData.Biography
-        assertEquals(
-            "OK Computer is the third studio album by English rock band Radiohead.",
-            bio.text,
-        )
+        assertEquals(OK_COMPUTER_EXTRACT_TEXT, bio.text)
         assertEquals("Wikipedia", bio.source)
     }
 
@@ -341,7 +297,7 @@ class WikipediaProviderTest {
     fun `enrich resolves album description title from Wikidata sitelinks`() = runTest {
         // Given - album identifiers carry only a wikidataId, resolved from the release-group relation
         httpClient.givenJsonResponse("wikidata.org", SITELINKS_JSON)
-        httpClient.givenJsonResponse("wikipedia.org", SUMMARY_JSON)
+        httpClient.givenJsonResponse("wikipedia.org", RADIOHEAD_EXTRACT_JSON)
         val request = EnrichmentRequest.ForAlbum(
             identifiers = EnrichmentIdentifiers(wikidataId = "Q123"),
             title = "Radiohead",
@@ -354,7 +310,7 @@ class WikipediaProviderTest {
         // Then - success, the title resolved via the Wikidata sitelink lookup
         assertTrue(result is EnrichmentResult.Success)
         val bio = (result as EnrichmentResult.Success).data as EnrichmentData.Biography
-        assertEquals("Radiohead are an English rock band.", bio.text)
+        assertEquals(RADIOHEAD_EXTRACT_TEXT, bio.text)
     }
 
     @Test
@@ -377,7 +333,7 @@ class WikipediaProviderTest {
     fun `enrich picks the enwiki sitelink, not the first one, when the entity has many languages`() = runTest {
         // Given - Q191352's sitelinks with arwiki, frwiki and dewiki ahead of enwiki in map order
         httpClient.givenJsonResponse("wikidata.org", MULTI_LANGUAGE_SITELINKS_JSON)
-        httpClient.givenJsonResponse("wikipedia.org", PORTISHEAD_SUMMARY_JSON)
+        httpClient.givenJsonResponse("wikipedia.org", PORTISHEAD_EXTRACT_JSON)
         val request = EnrichmentRequest.ForArtist(
             identifiers = EnrichmentIdentifiers(wikidataId = "Q191352"),
             name = "Portishead",
@@ -388,14 +344,198 @@ class WikipediaProviderTest {
 
         // Then - the English article was requested, never the French or Arabic one
         assertTrue(result is EnrichmentResult.Success)
-        val bio = (result as EnrichmentResult.Success).data as EnrichmentData.Biography
-        assertEquals("Portishead are an English band formed in 1991.", bio.text)
         val wikipediaUrls = httpClient.requestedUrls.filter { it.contains("wikipedia.org") }
         assertTrue(wikipediaUrls.any { it.contains("Portishead%20%28band%29") })
         assertTrue(wikipediaUrls.none { it.contains("groupe") })
     }
 
     private companion object {
+        const val RADIOHEAD_EXTRACT_TEXT =
+            "Radiohead are an English rock band formed in Abingdon, Oxfordshire, in 1985. " +
+                "The band members are Thom Yorke (vocals, guitar, keyboards); the brothers " +
+                "Jonny Greenwood (guitar, keyboards, other instruments) and Colin Greenwood (bass)."
+
+        /** As captured, tracking parameters and all. */
+        const val RADIOHEAD_THUMBNAIL_RAW =
+            "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/RadioheadO2211125_composite.jpg" +
+                "/330px-RadioheadO2211125_composite.jpg" +
+                "?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+
+        /** The same URL as a consumer receives it. */
+        const val RADIOHEAD_THUMBNAIL_URL =
+            "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/RadioheadO2211125_composite.jpg" +
+                "/330px-RadioheadO2211125_composite.jpg"
+
+        const val OK_COMPUTER_EXTRACT_TEXT =
+            "OK Computer is the third studio album by the English rock band Radiohead, " +
+                "released on 21 May 1997."
+
+        // captured 2026-08-12: GET /w/api.php?action=query&prop=extracts|pageimages|pageprops
+        // &exintro&explaintext&titles=Radiohead, extract cut after its second sentence.
+        val RADIOHEAD_EXTRACT_JSON = """{
+            "batchcomplete": true,
+            "query": {
+                "pages": [
+                    {
+                        "pageid": 38252,
+                        "ns": 0,
+                        "title": "Radiohead",
+                        "extract": "$RADIOHEAD_EXTRACT_TEXT",
+                        "thumbnail": {
+                            "source": "$RADIOHEAD_THUMBNAIL_RAW",
+                            "width": 320,
+                            "height": 116
+                        },
+                        "pageprops": {
+                            "page_image_free": "RadioheadO2211125_composite.jpg",
+                            "wikibase-badge-Q17437796": "",
+                            "wikibase-shortdesc": "English rock band",
+                            "wikibase_item": "Q44190"
+                        }
+                    }
+                ]
+            }
+        }""".trimIndent()
+
+        // captured 2026-08-12: same query, titles=Portishead (band), extract cut after its first
+        // clause. The " ( PORT-iss-HED)" is the API's plain-text rendering of the IPA parenthetical.
+        val PORTISHEAD_EXTRACT_JSON = """{
+            "batchcomplete": true,
+            "query": {
+                "pages": [
+                    {
+                        "pageid": 87731,
+                        "ns": 0,
+                        "title": "Portishead (band)",
+                        "extract": "Portishead ( PORT-iss-HED) are an English electronic band formed in 1991 in Bristol.",
+                        "thumbnail": {
+                            "source": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/92/Portishead13b.jpg/330px-Portishead13b.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+                            "width": 320,
+                            "height": 148
+                        },
+                        "pageprops": {
+                            "page_image_free": "Portishead13b.jpg",
+                            "wikibase-shortdesc": "English band",
+                            "wikibase_item": "Q191352"
+                        }
+                    }
+                ]
+            }
+        }""".trimIndent()
+
+        // captured 2026-08-12: same query, titles=OK Computer, extract cut after its first sentence.
+        // This page carries no pageimages thumbnail, only a non-free page_image pageprop.
+        val OK_COMPUTER_EXTRACT_JSON = """{
+            "batchcomplete": true,
+            "query": {
+                "pages": [
+                    {
+                        "pageid": 84636,
+                        "ns": 0,
+                        "title": "OK Computer",
+                        "extract": "$OK_COMPUTER_EXTRACT_TEXT",
+                        "pageprops": {
+                            "displaytitle": "<i>OK Computer</i>",
+                            "page_image": "Radioheadokcomputer.png",
+                            "toc": "",
+                            "wikibase-shortdesc": "1997 studio album by Radiohead",
+                            "wikibase_item": "Q202996"
+                        }
+                    }
+                ]
+            }
+        }""".trimIndent()
+
+        // captured 2026-08-12: same query, titles=The Books, extract cut after its first clause.
+        val NO_THUMBNAIL_JSON = """{
+            "batchcomplete": true,
+            "query": {
+                "pages": [
+                    {
+                        "pageid": 1573283,
+                        "ns": 0,
+                        "title": "The Books",
+                        "extract": "The Books were an American-Dutch duo, formed in New York City in 1999.",
+                        "pageprops": {
+                            "defaultsort": "Books, The",
+                            "wikibase-shortdesc": "American-Dutch experimental-music duo",
+                            "wikibase_item": "Q2409957"
+                        }
+                    }
+                ]
+            }
+        }""".trimIndent()
+
+        // captured 2026-08-12: same query, titles=Genesis — a disambiguation page, marked by the
+        // empty-valued pageprops.disambiguation key.
+        val DISAMBIGUATION_JSON = """{
+            "batchcomplete": true,
+            "query": {
+                "pages": [
+                    {
+                        "pageid": 488971,
+                        "ns": 0,
+                        "title": "Genesis",
+                        "extract": "Genesis may refer to:",
+                        "pageprops": {
+                            "disambiguation": "",
+                            "toc": "",
+                            "wikibase-shortdesc": "Topics referred to by the same term",
+                            "wikibase_item": "Q29244"
+                        }
+                    }
+                ]
+            }
+        }""".trimIndent()
+
+        // captured 2026-08-12: GET /w/api.php?action=query&prop=extracts&titles=Radiohead&maxlag=-1
+        // — the Action API's own failure shape, served with HTTP 200. The `info` host and lag are
+        // as returned; `docref` dropped.
+        val MAXLAG_ERROR_JSON = """{
+            "error": {
+                "code": "maxlag",
+                "info": "Waiting for 10.64.48.169: 0.385659 seconds lagged.",
+                "host": "10.64.48.169",
+                "lag": 0.385659,
+                "type": "db"
+            },
+            "servedby": "mw-api-ext.eqiad.main-5ff7ffbb74-s5xdf"
+        }""".trimIndent()
+
+        // captured 2026-08-12: same query, titles=NoSuchPageZZZQQ.
+        val MISSING_PAGE_JSON = """{
+            "batchcomplete": true,
+            "query": {
+                "pages": [
+                    {
+                        "ns": 0,
+                        "title": "NoSuchPageZZZQQ",
+                        "missing": true
+                    }
+                ]
+            }
+        }""".trimIndent()
+
+        // synthetic - an existing page whose lead extract came back empty; no sampled title
+        // produced one, and the parser must not turn it into a blank biography.
+        val EMPTY_EXTRACT_JSON = """{
+            "batchcomplete": true,
+            "query": {
+                "pages": [
+                    {
+                        "pageid": 999999,
+                        "ns": 0,
+                        "title": "Obscure Band",
+                        "extract": "",
+                        "pageprops": {
+                            "wikibase-shortdesc": "Musical group",
+                            "wikibase_item": "Q999999"
+                        }
+                    }
+                ]
+            }
+        }""".trimIndent()
+
         /** enwiki is deliberately last: selection must be by key, not by map order. */
         val MULTI_LANGUAGE_SITELINKS_JSON = """{
             "entities": {
@@ -410,12 +550,6 @@ class WikipediaProviderTest {
             }
         }""".trimIndent()
 
-        val PORTISHEAD_SUMMARY_JSON = """{
-            "title": "Portishead (band)",
-            "extract": "Portishead are an English band formed in 1991.",
-            "description": "English band"
-        }""".trimIndent()
-
         val SITELINKS_JSON = """{
             "entities": {
                 "Q123": {
@@ -424,72 +558,6 @@ class WikipediaProviderTest {
                     }
                 }
             }
-        }""".trimIndent()
-
-        val SUMMARY_JSON = """{
-            "title": "Radiohead",
-            "extract": "Radiohead are an English rock band.",
-            "description": "English rock band"
-        }""".trimIndent()
-
-        val MEDIA_LIST_JSON = """{
-            "items": [
-                {
-                    "type": "image",
-                    "title": "File:Radiohead_live.jpg",
-                    "original": {
-                        "source": "https://upload.wikimedia.org/wikipedia/commons/radiohead.jpg",
-                        "width": 800,
-                        "height": 600
-                    }
-                }
-            ]
-        }""".trimIndent()
-
-        val MEDIA_LIST_SVG_ONLY_JSON = """{
-            "items": [
-                {
-                    "type": "image",
-                    "title": "File:Flag_of_England.svg",
-                    "original": {
-                        "source": "https://upload.wikimedia.org/wikipedia/commons/flag.svg",
-                        "width": 200,
-                        "height": 100
-                    }
-                }
-            ]
-        }""".trimIndent()
-
-        val MEDIA_LIST_MIXED_JSON = """{
-            "items": [
-                {
-                    "type": "image",
-                    "title": "File:Some_icon.svg",
-                    "original": {
-                        "source": "https://upload.wikimedia.org/wikipedia/commons/icon.svg",
-                        "width": 50,
-                        "height": 50
-                    }
-                },
-                {
-                    "type": "image",
-                    "title": "File:Logo_icon_band.png",
-                    "original": {
-                        "source": "https://upload.wikimedia.org/wikipedia/commons/logo_icon.png",
-                        "width": 200,
-                        "height": 200
-                    }
-                },
-                {
-                    "type": "image",
-                    "title": "File:Valid_photo.jpg",
-                    "original": {
-                        "source": "https://upload.wikimedia.org/wikipedia/commons/valid_photo.jpg",
-                        "width": 640,
-                        "height": 480
-                    }
-                }
-            ]
         }""".trimIndent()
     }
 }

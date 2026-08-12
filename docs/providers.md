@@ -23,7 +23,7 @@ Auth keys and how to supply them are in [README.md](../README.md).
 | iTunes | `itunes` | none | [docs](https://performance-partners.apple.com/search-api) | No-key album search with artwork at any size; the fallback when there is no MBID |
 | LRCLIB | `lrclib` | none | [docs](https://lrclib.net/docs) | Only lyrics source |
 | Wikidata | `wikidata` | none | [docs](https://www.wikidata.org/wiki/Wikidata:Data_access) | Structured claims keyed on a Q-id; our route to Commons imagery at any width |
-| Wikipedia | `wikipedia` | none | [docs](https://en.wikipedia.org/api/rest_v1/) | Highest-confidence bio; English only |
+| Wikipedia | `wikipedia` | none | [docs](https://www.mediawiki.org/wiki/API:Main_page) | Highest-confidence bio; English only |
 | ListenBrainz | `listenbrainz` | optional token | [docs](https://listenbrainz.readthedocs.io/en/latest/users/api/) | MBID-keyed listen counts that cannot mismatch the artist; only source of `ARTIST_RADIO_DISCOVERY`, which is what the token gates |
 | Last.fm | `lastfm` | API key | [docs](https://www.last.fm/api) | Widest capability set of any single provider; only source of tags-as-genre and artist similarity |
 | Fanart.tv | `fanarttv` | project key | [docs](https://fanarttv.docs.apiary.io/) | Only source of artist backgrounds, logos and banners |
@@ -344,14 +344,35 @@ batched call, and an audit of all 19 entries across both maps found 16 identical
 REST API at `/w/rest.php/wikibase/v1/`, and SPARQL. Note `provider/wikipedia/` *also* calls
 `wbgetentities` on this host, for sitelinks, on its own rate limiter.
 
-**Wikipedia.** From `/page/summary`, fetched for every `ARTIST_BIO`: `description` (the "English rock
-band" gloss — parsed, then dropped), `originalimage` (we take the ~320px thumbnail), `extract_html`,
-`wikibase_item` (the Q-id, which would skip a resolution step elsewhere), `type` (the only
-programmatic way to notice we landed on a disambiguation page), `revision`/`tid`, `content_urls`.
-From `/page/media-list`: every image after the first, and each item's `caption`, `srcset` and
-thumbnail sizes. Never called: `/page/html/{title}` and MediaWiki `action=parse`, where the infobox
-lives — origin, years active, labels, members, which we take from Wikidata instead. `BASE_URL`
-hardcodes `en.wikipedia.org`, so no other language is ever queried.
+**Wikipedia.** Two surfaces. The bio comes from the Action API
+(`action=query&prop=extracts|pageimages|pageprops&exintro&explaintext`), one request carrying the
+lead text, the ~320px thumbnail and the page properties. Parsed and dropped from it:
+`wikibase-shortdesc` (the "English rock band" gloss), `wikibase_item` (the Q-id, which would skip a
+resolution step elsewhere), `pageid`. `pageprops.disambiguation` is read and acted on — a
+disambiguation page yields `NotFound`, never a "Genesis may refer to:" biography. Images come from
+REST `/page/media-list`: every image after the lead one, and each item's `caption` and
+`showInGallery`. That response carries **no original-file URL and no
+height** — only rendered thumbnails — so `Artwork.url` is the largest scale the article offers,
+`Artwork.width` is that rendering's width read from the URL's `NNNpx-` segment, `Artwork.sizes`
+lists every scale, and `Artwork.height` is always null. Scales are chosen by each entry's own
+`scale` field, not by array position. Where no item is flagged `leadImage`, the first surviving
+image in article order wins. `utm_*` tracking parameters are stripped from every URL we ship.
+Never called: `/page/html/{title}` and
+`action=parse`, where the infobox lives — origin, years active, labels, members, which we take from
+Wikidata instead. Both hosts are hardcoded `en.wikipedia.org`, so no other language is ever queried.
+
+**`rest_v1` wind-down, read 2026-08-12.** A RESTBase sunset programme exists and is largely
+executed: [T314025 "[EPIC] Migrate PCS service away from restbase"](https://phabricator.wikimedia.org/T314025)
+and [T314764 "Branch out mobileapps for restbase deprecation"](https://phabricator.wikimedia.org/T314764)
+are both Resolved, and MediaWiki's [Page Content Service](https://www.mediawiki.org/wiki/Page_Content_Service)
+page describes PCS as deployed behind the REST API gateway "as part of RESTBase sunset". What that
+programme moved is the service behind the endpoints, not the endpoints themselves: **no sunset date
+for the third-party `/api/rest_v1/` paths was found**, and no `Deprecation`, `Sunset` or `Warning`
+header appeared on any live response (`scripts/probes/wikipedia-surface-probe.sh`, HEADERS
+section). `/page/media-list` stays on `rest_v1` because nothing else lists an article's images with
+a lead-image flag: `/w/rest.php/v1/…/links/media` carries neither ordering nor a lead marker
+(probed 2026-08-12). That one dependency is the watch item — the extract no longer rides `rest_v1`
+at all. Re-run the probe before treating this as current.
 
 **ListenBrainz.** On responses we already fetch: `artist_name` on a release group (parsed into
 `ListenBrainzTopReleaseGroup.artistName`, dropped by the mapper), `listen_count` on a release group
