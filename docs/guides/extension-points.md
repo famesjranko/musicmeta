@@ -139,9 +139,38 @@ val engine = EnrichmentEngine.Builder()
 Call `.httpClient()` **before** `.withDefaultProviders()` so all default providers use OkHttp.
 
 **Differences from `DefaultHttpClient`:**
-- No transient retry: the budget is spent against the engine's internal enrich deadline, which an OkHttp interceptor cannot see, so budgeted retry exists only on `DefaultHttpClient`. Retry you configure on the `OkHttpClient` is unbudgeted — keep it short and idempotent-only, or use `DefaultHttpClient`
 - Gzip decompression handled transparently (do not set `Accept-Encoding` manually)
-- Timeouts inherited from the `OkHttpClient` instance
+- Timeouts inherited from the `OkHttpClient` instance, which is also where the retry budget gets what it charges an attempt
+
+Both clients retry through the same ladder, `BudgetedTransientRetry` — see below. Do **not** add a retrying interceptor to your `OkHttpClient`: an interceptor cannot see the enrich deadline, so its retries are unbudgeted and stack on top of the budgeted ones.
+
+### Transient retry
+
+A 429, a shed 502/503/504 and a transport failure are retried — three attempts by default, honouring `Retry-After` — and every sleep is charged against the enclosing `enrich()` deadline, so a wait that would run past it is refused and the failure surfaces instead. Running past that deadline cancels the whole fan-out and loses every other provider's in-flight work, which is why the budget is not optional and why the deadline itself stays internal.
+
+`DefaultHttpClient` and `OkHttpEnrichmentClient` are already wired to it, with nothing to configure. A client of your own opts in by wrapping each attempt:
+
+```kotlin
+class MyHttpClient(private val http: MyLibrary) : HttpClient {
+    // connect + read: what one attempt against a hanging upstream may spend. Never your library's
+    // equivalent of OkHttp's callTimeout, which is 0 unless set — a 0 charge lets a hang retry into
+    // a deadline that had room for one attempt.
+    private val retry = BudgetedTransientRetry(attemptTimeoutMs = 20_000)
+
+    override suspend fun fetchJsonResult(url: String, headers: Map<String, String>) = retry.execute {
+        val response = http.get(url, headers)          // an IOException out of here is a transport
+        mapToResult(response)                          // failure: let it fly, do not catch it
+            .asAttempt(response.header("Retry-After")) // read for a 5xx, ignored otherwise
+    }
+}
+```
+
+Two things the ladder needs that `HttpResult` cannot carry:
+
+- **A transport failure is the `IOException` you let out of the block.** `execute` catches it. A `NetworkError` you *return* is treated as a response that arrived and will not parse — not retried, because a second identical request reproduces it, and it is the shape a provider changing its JSON arrives in.
+- **`asAttempt(retryAfterHeader)` reads the header for a `ServerError` and nothing else.** A 429's wait travels in `RateLimited.retryAfterMs`, which the ladder reads from the result itself. Pass the header unconditionally and let `asAttempt` decide; omitting it for a 5xx only falls back to exponential backoff.
+
+To test the refusal branch from outside this library, run the call inside `withRetryBudgetForTest(budgetMs = 50) { ... }`. Pair it with the same fixture under a generous budget and assert the request counts differ — a client with no retry at all also passes the refusal test on its own.
 
 ### Custom HTTP clients
 

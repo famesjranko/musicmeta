@@ -2183,8 +2183,25 @@ public final class com/landofoz/musicmeta/engine/ResultMerger$Companion {
 	public final fun mergeIdentifiers (Ljava/util/List;)Lcom/landofoz/musicmeta/EnrichmentIdentifiers;
 }
 
+public final class com/landofoz/musicmeta/http/BudgetedTransientRetry {
+	public static final field Companion Lcom/landofoz/musicmeta/http/BudgetedTransientRetry$Companion;
+	public static final field DEFAULT_ATTEMPT_TIMEOUT_MS I
+	public fun <init> ()V
+	public fun <init> (II)V
+	public synthetic fun <init> (IIILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun execute (Lkotlin/jvm/functions/Function1;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class com/landofoz/musicmeta/http/BudgetedTransientRetry$Companion {
+}
+
+public final class com/landofoz/musicmeta/http/BudgetedTransientRetryKt {
+	public static final fun asAttempt (Lcom/landofoz/musicmeta/http/HttpResult;Ljava/lang/String;)Lcom/landofoz/musicmeta/http/HttpAttempt;
+	public static synthetic fun asAttempt$default (Lcom/landofoz/musicmeta/http/HttpResult;Ljava/lang/String;ILjava/lang/Object;)Lcom/landofoz/musicmeta/http/HttpAttempt;
+	public static final fun withRetryBudgetForTest (JLkotlin/jvm/functions/Function2;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
 public final class com/landofoz/musicmeta/http/DefaultHttpClient : com/landofoz/musicmeta/http/HttpClient {
-	public static final field MAX_RETRY_AFTER_SEC J
 	public fun <init> (Ljava/lang/String;II)V
 	public synthetic fun <init> (Ljava/lang/String;IIILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun fetchJsonArrayResult (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
@@ -2193,6 +2210,10 @@ public final class com/landofoz/musicmeta/http/DefaultHttpClient : com/landofoz/
 	public fun fetchRedirectUrlResult (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun postJsonArrayResult (Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun postJsonResult (Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class com/landofoz/musicmeta/http/HttpAttempt {
+	public final fun getResult ()Lcom/landofoz/musicmeta/http/HttpResult;
 }
 
 public abstract interface class com/landofoz/musicmeta/http/HttpClient {

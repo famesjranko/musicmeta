@@ -1,8 +1,11 @@
 package com.landofoz.musicmeta.okhttp
 
 import com.landofoz.musicmeta.EnrichmentConfig
+import com.landofoz.musicmeta.http.BudgetedTransientRetry
+import com.landofoz.musicmeta.http.HttpAttempt
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.HttpResult
+import com.landofoz.musicmeta.http.asAttempt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -13,24 +16,30 @@ import okhttp3.Response
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
-import java.io.IOException
 
 /**
  * OkHttp adapter for [HttpClient].
  *
- * - No transient retry. Budgeted retry exists only on DefaultHttpClient, because the enrich
- *   deadline the budget is spent against is internal to the engine and an OkHttp interceptor
- *   cannot see it. Retry configured on the [OkHttpClient] instance is therefore unbudgeted: keep
- *   it short and idempotent-only, or use DefaultHttpClient.
+ * - Transient retry comes from core's [BudgetedTransientRetry], the same ladder `DefaultHttpClient`
+ *   runs on, so every sleep is charged against the enclosing `enrich()` deadline that only core can
+ *   see. Retry configured on the [OkHttpClient] itself is still unbudgeted and still invisible to
+ *   that deadline — leave `retryOnConnectionFailure` alone and add no retrying interceptor.
  * - Gzip decompression handled transparently by OkHttp. Do NOT add Accept-Encoding
  *   manually; setting it disables OkHttp's transparent decompression and delivers
  *   raw gzip bytes to the JSON parser.
- * - Timeouts inherited from the caller's [OkHttpClient] instance.
+ * - Timeouts inherited from the caller's [OkHttpClient] instance, which is also where the ladder
+ *   gets what it charges an attempt — see [retry].
  * - User-Agent set on every request via the [userAgent] constructor parameter.
+ *
+ * @param retry the ladder each method runs through. The default reads [client]'s own timeouts, so a
+ *   client configured for slow upstreams is charged for what its attempts actually cost. Pass
+ *   `BudgetedTransientRetry(maxAttempts = 1)` to opt out of retrying entirely.
  */
 class OkHttpEnrichmentClient(
     private val client: OkHttpClient,
     private val userAgent: String = EnrichmentConfig.DEFAULT_USER_AGENT,
+    private val retry: BudgetedTransientRetry =
+        BudgetedTransientRetry(attemptTimeoutMs = client.attemptCostMs()),
 ) : HttpClient {
 
     private val noRedirectClient = client.newBuilder().followRedirects(false).build()
@@ -41,8 +50,8 @@ class OkHttpEnrichmentClient(
     override suspend fun fetchJsonResult(
         url: String,
         headers: Map<String, String>,
-    ): HttpResult<JSONObject> = withContext(Dispatchers.IO) {
-        try {
+    ): HttpResult<JSONObject> = retry.execute {
+        withContext(Dispatchers.IO) {
             val requestBuilder = Request.Builder()
                 .url(url)
                 .header("User-Agent", userAgent)
@@ -51,64 +60,50 @@ class OkHttpEnrichmentClient(
             client.newCall(requestBuilder.build()).execute().use { response ->
                 parseJsonResult(response) { JSONObject(it) }
             }
-        } catch (e: IOException) {
-            HttpResult.NetworkError(e.message ?: "Network error", e)
         }
     }
 
-    override suspend fun fetchRedirectUrlResult(url: String): HttpResult<String> =
+    override suspend fun fetchRedirectUrlResult(url: String): HttpResult<String> = retry.execute {
         withContext(Dispatchers.IO) {
-            try {
-                noRedirectClient.newCall(buildGetRequest(url)).execute().use { response ->
-                    val code = response.code
-                    when {
-                        code == 429 -> {
-                            val retryAfterMs = response.header("Retry-After")?.toLongOrNull()?.let { it * 1000 }
-                            HttpResult.RateLimited(retryAfterMs)
-                        }
-                        code in 200..299 -> HttpResult.Ok(url, code)
-                        code in 300..399 -> response.header("Location")
-                            ?.let { HttpResult.Ok(it, code) }
-                            ?: HttpResult.ClientError(code, "redirect without a Location header")
-                        code in 500..599 -> HttpResult.ServerError(code, response.body?.string())
-                        else -> HttpResult.ClientError(code, response.body?.string())
-                    }
+            noRedirectClient.newCall(buildGetRequest(url)).execute().use { response ->
+                val code = response.code
+                when {
+                    code == 429 -> HttpResult.RateLimited(response.retryAfterMs())
+                    code in 200..299 -> HttpResult.Ok(url, code)
+                    code in 300..399 -> response.header("Location")
+                        ?.let { HttpResult.Ok(it, code) }
+                        ?: HttpResult.ClientError(code, "redirect without a Location header")
+                    code in 500..599 -> HttpResult.ServerError(code, response.body?.string())
+                    else -> HttpResult.ClientError(code, response.body?.string())
                 }
-            } catch (e: IOException) {
-                HttpResult.NetworkError(e.message ?: "Network error", e)
+                    .asAttempt(response.header(RETRY_AFTER))
             }
         }
+    }
 
-    override suspend fun fetchJsonArrayResult(url: String): HttpResult<JSONArray> =
+    override suspend fun fetchJsonArrayResult(url: String): HttpResult<JSONArray> = retry.execute {
         withContext(Dispatchers.IO) {
-            try {
-                client.newCall(buildGetRequest(url)).execute().use { response ->
-                    parseJsonResult(response) { JSONArray(it) }
-                }
-            } catch (e: IOException) {
-                HttpResult.NetworkError(e.message ?: "Network error", e)
+            client.newCall(buildGetRequest(url)).execute().use { response ->
+                parseJsonResult(response) { JSONArray(it) }
             }
         }
+    }
 
     override suspend fun postJsonResult(url: String, body: String): HttpResult<JSONObject> =
-        withContext(Dispatchers.IO) {
-            try {
+        retry.execute {
+            withContext(Dispatchers.IO) {
                 client.newCall(buildPostRequest(url, body)).execute().use { response ->
                     parseJsonResult(response) { JSONObject(it) }
                 }
-            } catch (e: IOException) {
-                HttpResult.NetworkError(e.message ?: "Network error", e)
             }
         }
 
     override suspend fun postJsonArrayResult(url: String, body: String): HttpResult<JSONArray> =
-        withContext(Dispatchers.IO) {
-            try {
+        retry.execute {
+            withContext(Dispatchers.IO) {
                 client.newCall(buildPostRequest(url, body)).execute().use { response ->
                     parseJsonResult(response) { JSONArray(it) }
                 }
-            } catch (e: IOException) {
-                HttpResult.NetworkError(e.message ?: "Network error", e)
             }
         }
 
@@ -128,14 +123,15 @@ class OkHttpEnrichmentClient(
     /**
      * Maps HTTP status code to [HttpResult] variants and parses the body using [parse].
      * 429 is checked before the 400–499 range (it falls in that range but has different semantics).
+     *
+     * A [java.io.IOException] out of the call this reads is not caught anywhere in this class: that
+     * is how [BudgetedTransientRetry] is told the transport failed, and catching it here would
+     * report a dropped connection as a response worth keeping.
      */
-    private fun <T : Any> parseJsonResult(response: Response, parse: (String) -> T): HttpResult<T> {
+    private fun <T : Any> parseJsonResult(response: Response, parse: (String) -> T): HttpAttempt<T> {
         val code = response.code
         return when {
-            code == 429 -> {
-                val retryAfterMs = response.header("Retry-After")?.toLongOrNull()?.let { it * 1000 }
-                HttpResult.RateLimited(retryAfterMs)
-            }
+            code == 429 -> HttpResult.RateLimited(response.retryAfterMs())
             code in 400..499 -> HttpResult.ClientError(code, response.body?.string())
             code in 500..599 -> HttpResult.ServerError(code, response.body?.string())
             code in 200..299 -> {
@@ -148,5 +144,25 @@ class OkHttpEnrichmentClient(
             }
             else -> HttpResult.ClientError(code)
         }
+            .asAttempt(response.header(RETRY_AFTER))
     }
+
+    private fun Response.retryAfterMs(): Long? = header(RETRY_AFTER)?.toLongOrNull()?.let { it * 1000 }
 }
+
+private const val RETRY_AFTER = "Retry-After"
+
+/**
+ * What one attempt through this client may spend, for the retry budget: the per-call ceiling where
+ * one is set, otherwise connect plus read.
+ *
+ * Never `callTimeoutMillis` alone — it is 0 (disabled) unless the caller sets it, and a 0 charge
+ * silently reduces the budget test to the sleep-only one, which hands a hanging upstream a second
+ * attempt inside a deadline that had room for one. A client with every timeout disabled has no
+ * honest figure at all, so it gets the ladder's default; such a client can hang past any deadline
+ * whatever the ladder does.
+ */
+internal fun OkHttpClient.attemptCostMs(): Int =
+    callTimeoutMillis.takeIf { it > 0 }
+        ?: (connectTimeoutMillis + readTimeoutMillis).takeIf { it > 0 }
+        ?: BudgetedTransientRetry.DEFAULT_ATTEMPT_TIMEOUT_MS
