@@ -9,6 +9,7 @@ import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentResults
 import com.landofoz.musicmeta.EnrichmentType
+import com.landofoz.musicmeta.GenreTag
 import com.landofoz.musicmeta.IdentifierNamespace
 import com.landofoz.musicmeta.IdentityMatch
 import com.landofoz.musicmeta.IdentityResolution
@@ -968,5 +969,81 @@ class ProfileMapperTest {
             listOf(SectionItem(primary = "87654 listeners", secondary = "1234567 listens", meta = "rank 42")),
             items,
         )
+    }
+
+    @Test
+    fun `artist summary carries genre chips and no longer joins genres into the subtitle`() {
+        // Given - an artist whose GENRE metadata carries a curated tag and a community tag
+        val results = resultsOf(
+            EnrichmentType.GENRE to EnrichmentData.Metadata(
+                genreTags = listOf(
+                    GenreTag("alternative rock", confidence = 0.94f, sources = listOf("musicbrainz"), curated = true),
+                    GenreTag("britpop", confidence = 0.42f, sources = listOf("lastfm"), curated = false),
+                ),
+            ),
+        )
+        val profile = ArtistProfile(name = "Radiohead", results = results)
+
+        // When - mapping to a demo response
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        // Then - the chips round-trip name, curated, confidence and sources in core's order
+        assertEquals(
+            listOf(
+                GenreChip("alternative rock", curated = true, confidence = 0.94f, sources = listOf("musicbrainz")),
+                GenreChip("britpop", curated = false, confidence = 0.42f, sources = listOf("lastfm")),
+            ),
+            response.summary.genres,
+        )
+
+        // Then - the subtitle no longer carries the joined genre names
+        assertNull(response.summary.subtitle)
+    }
+
+    @Test
+    fun `genre chip keeps a null curated flag so the frontend can render it unbadged`() {
+        // Given - an album tag persisted before providers reported the curated distinction
+        val results = resultsOf(
+            EnrichmentType.GENRE to EnrichmentData.Metadata(
+                genreTags = listOf(GenreTag("shoegaze", confidence = 0.5f)),
+            ),
+        )
+        val profile = AlbumProfile(title = "Loveless", artist = "My Bloody Valentine", results = results)
+
+        // When - mapping to a demo response
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        // Then - curated stays null rather than collapsing to false
+        assertNull(response.summary.genres.single().curated)
+    }
+
+    @Test
+    fun `details sections no longer carry a joined Genres row`() {
+        // Given - an album and a track that both resolved genres
+        val genreData = EnrichmentData.Metadata(
+            genres = listOf("shoegaze"),
+            genreTags = listOf(GenreTag("shoegaze", confidence = 0.5f, curated = true)),
+        )
+        val album = AlbumProfile(
+            title = "Loveless",
+            artist = "My Bloody Valentine",
+            results = resultsOf(EnrichmentType.GENRE to genreData),
+        )
+        val track = TrackProfile(
+            title = "Only Shallow",
+            artist = "My Bloody Valentine",
+            results = resultsOf(EnrichmentType.GENRE to genreData),
+        )
+
+        // When - mapping both to demo responses
+        val albumResponse = album.toDemoResponse(elapsedMs = 0)
+        val trackResponse = track.toDemoResponse(elapsedMs = 0)
+
+        // Then - neither details section renders a Genres row, and both carry chips instead
+        listOf(albumResponse, trackResponse).forEach { response ->
+            val details = response.sections.firstOrNull { it.key == "details" }
+            assertNull(details?.items?.firstOrNull { it.primary == "Genres" })
+            assertEquals(listOf("shoegaze"), response.summary.genres.map { it.name })
+        }
     }
 }

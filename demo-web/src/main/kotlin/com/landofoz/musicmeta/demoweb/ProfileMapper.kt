@@ -8,6 +8,7 @@ import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentResults
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.GenreAffinity
+import com.landofoz.musicmeta.GenreTag
 import com.landofoz.musicmeta.IdentifierNamespace
 import com.landofoz.musicmeta.IdentityMatch
 import com.landofoz.musicmeta.PopularitySignal
@@ -17,7 +18,6 @@ import com.landofoz.musicmeta.TrackProfile
 
 fun ArtistProfile.toDemoResponse(elapsedMs: Long): DemoResponse {
     val r = results
-    val genres = r.genres()
     val bio = r.biography()
     val stats = r.artistPopularity()
 
@@ -114,13 +114,13 @@ fun ArtistProfile.toDemoResponse(elapsedMs: Long): DemoResponse {
         name = name,
         summary = SummaryCard(
             title = name,
-            subtitle = genres.joinToString(", ").ifBlank { null },
             imageUrl = primaryImage,
             backgroundImageUrl = r.get<EnrichmentData.Artwork>(EnrichmentType.ARTIST_BACKGROUND)?.url,
             text = bio?.text,
             textSource = bio?.source,
             identityResolved = r.identityResolved,
             identityVerdict = r.identityVerdict,
+            genres = r.genreTags().map { it.toChip() },
         ),
         sections = sections,
         gallery = gallery,
@@ -137,7 +137,6 @@ fun AlbumProfile.toDemoResponse(elapsedMs: Long, artistRadio: Section? = null): 
         r.releaseDate()?.let { add(SectionItem("Release date", it)) }
         r.releaseType()?.let { add(SectionItem("Release type", it)) }
         r.country()?.let { add(SectionItem("Country", it)) }
-        r.genres().takeIf { it.isNotEmpty() }?.let { add(SectionItem("Genres", it.joinToString(", "))) }
     }
 
     val sections = buildList {
@@ -206,6 +205,7 @@ fun AlbumProfile.toDemoResponse(elapsedMs: Long, artistRadio: Section? = null): 
             textSource = description?.source,
             identityResolved = r.identityResolved,
             identityVerdict = r.identityVerdict,
+            genres = r.genreTags().map { it.toChip() },
         ),
         sections = sections,
         gallery = gallery,
@@ -231,7 +231,6 @@ fun TrackProfile.toDemoResponse(
     val trackMetadata = r.trackMetadata()
 
     val details = buildList {
-        r.genres().takeIf { it.isNotEmpty() }?.let { add(SectionItem("Genres", it.joinToString(", "))) }
         trackMetadata?.durationMs?.let { add(SectionItem("Duration", it.formatDuration())) }
         // Provider-confirmed album title wins over the caller's unconfirmed input; "as entered"
         // stays as the fallback when nothing resolved one (see the class doc above).
@@ -290,6 +289,7 @@ fun TrackProfile.toDemoResponse(
             previewArtist = artist.takeIf { r.identityResolved },
             identityResolved = r.identityResolved,
             identityVerdict = r.identityVerdict,
+            genres = r.genreTags().map { it.toChip() },
         ),
         sections = sections,
         meta = r.toMeta(elapsedMs),
@@ -500,3 +500,6 @@ private fun Long.formatDuration(): String {
     val totalSeconds = this / 1000
     return "%d:%02d".format(totalSeconds / 60, totalSeconds % 60)
 }
+
+private fun GenreTag.toChip(): GenreChip =
+    GenreChip(name = name, curated = curated, confidence = confidence, sources = sources)

@@ -856,6 +856,41 @@ footer a:hover { color: var(--text); border-color: var(--text); }
 
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* Genre chips under the summary title; teal outline + star marks a curated-vocabulary genre. */
+.genre-chips { display: flex; flex-wrap: wrap; gap: 0.38rem; margin: 0.35rem 0 0.55rem; }
+.genre-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+  border: 1px solid var(--panel-border-soft);
+  border-radius: 999px;
+  padding: 0.16rem 0.62rem;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-soft);
+  font-size: 0.74rem;
+  cursor: default;
+}
+.genre-chip.curated {
+  border-color: rgba(123, 217, 193, 0.45);
+  background: rgba(123, 217, 193, 0.09);
+  color: var(--accent-2);
+}
+.genre-chip.curated::before { content: '\2726'; font-size: 0.66rem; }
+.genre-legend { margin: 0.1rem 0 0.4rem; color: var(--muted); font-size: 0.68rem; }
+.genre-legend span[aria-hidden] { color: var(--accent-2); }
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 @media (max-width: 720px) {
   header { padding-top: 2.2rem; }
   form { align-items: stretch; }
