@@ -9,6 +9,7 @@ import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentResults
 import com.landofoz.musicmeta.EnrichmentType
+import com.landofoz.musicmeta.IdentifierNamespace
 import com.landofoz.musicmeta.IdentityMatch
 import com.landofoz.musicmeta.IdentityResolution
 import com.landofoz.musicmeta.SearchCandidate
@@ -794,5 +795,58 @@ class ProfileMapperTest {
 
         // Then - the artist_radio section is kept
         assertEquals("artist_radio", response.sections.first { it.key == "artist_radio" }.key)
+    }
+
+    @Test
+    fun `identifiers surface namespaced ids with the prescribed labels`() {
+        // Given - an artist whose identity resolution carries Discogs and Spotify ids alongside the resolved MBID
+        val identifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-1")
+            .with(IdentifierNamespace.DISCOGS_ARTIST, "discogs-1")
+            .with(IdentifierNamespace.SPOTIFY_ARTIST, "spotify-1")
+        val results = EnrichmentResults(
+            raw = emptyMap(),
+            requestedTypes = emptySet(),
+            identity = com.landofoz.musicmeta.IdentityResolution(
+                identifiers = identifiers,
+                match = IdentityMatch.RESOLVED,
+                matchScore = null,
+                suggestions = emptyList(),
+            ),
+        )
+        val profile = ArtistProfile(name = "Metallica", results = results)
+
+        // When - mapping to a demo response
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        // Then - the Discogs and Spotify ids appear labelled, alongside the struct-field MBID
+        val hits = response.meta.identifiers
+        assertTrue(hits.any { it.label == "MBID" && it.value == "mbid-1" })
+        assertTrue(hits.any { it.label == "Discogs" && it.value == "discogs-1" })
+        assertTrue(hits.any { it.label == "Spotify" && it.value == "spotify-1" })
+    }
+
+    @Test
+    fun `identifiers dedupe a namespaced id equal to an already-emitted struct field`() {
+        // Given - an artist whose resolved MBID is also present under the MUSICBRAINZ_ARTIST namespace with the same value
+        val identifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-1")
+            .with(IdentifierNamespace.MUSICBRAINZ_ARTIST, "mbid-1")
+        val results = EnrichmentResults(
+            raw = emptyMap(),
+            requestedTypes = emptySet(),
+            identity = com.landofoz.musicmeta.IdentityResolution(
+                identifiers = identifiers,
+                match = IdentityMatch.RESOLVED,
+                matchScore = null,
+                suggestions = emptyList(),
+            ),
+        )
+        val profile = ArtistProfile(name = "Metallica", results = results)
+
+        // When - mapping to a demo response
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        // Then - the duplicate value collapses to the single struct-field entry
+        val hits = response.meta.identifiers
+        assertEquals(1, hits.count { it.value == "mbid-1" })
     }
 }
