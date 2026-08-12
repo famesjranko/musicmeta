@@ -156,7 +156,7 @@ private fun handleEnrich(exchange: HttpExchange, engine: EnrichmentEngine) {
                     MusicBrainzEntityType.ARTIST -> {
                         val results = engine.enrich(
                             EnrichmentRequest.forArtistByMbid(name),
-                            EnrichmentRequest.DEFAULT_ARTIST_TYPES,
+                            EnrichmentRequest.DEFAULT_ARTIST_TYPES + EnrichmentType.COUNTRY,
                         )
                         // An artist's own name arrives as the title, as it does on a SearchCandidate.
                         ArtistProfile(
@@ -167,7 +167,11 @@ private fun handleEnrich(exchange: HttpExchange, engine: EnrichmentEngine) {
                     null -> null
                 }
                 "artist" -> {
-                    val profile = engine.artistProfile(name, mbid)
+                    val profile = engine.artistProfile(
+                        name,
+                        mbid,
+                        types = EnrichmentRequest.DEFAULT_ARTIST_TYPES + EnrichmentType.COUNTRY,
+                    )
                     val retried = profile.results.retryTransientFailures(
                         engine,
                         EnrichmentRequest.forArtist(name, mbid),

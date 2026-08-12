@@ -225,6 +225,36 @@ class ProfileMapperTest {
     }
 
     @Test
+    fun `artist details section renders country when resolved`() {
+        // Given - an artist result with COUNTRY resolved
+        val results = resultsOf(
+            EnrichmentType.COUNTRY to EnrichmentData.Metadata(country = "US"),
+        )
+        val profile = ArtistProfile(name = "Metallica", results = results)
+
+        // When - mapping to a demo response
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        // Then - a details section with the Country row appears
+        val section = response.sections.first { it.key == "details" }
+        assertEquals("Country", section.items[0].primary)
+        assertEquals("US", section.items[0].secondary)
+    }
+
+    @Test
+    fun `artist details section absent when country not resolved`() {
+        // Given - an artist result with no COUNTRY entry
+        val results = resultsOf()
+        val profile = ArtistProfile(name = "Metallica", results = results)
+
+        // When - mapping to a demo response
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        // Then - no details section is present
+        assertTrue(response.sections.none { it.key == "details" })
+    }
+
+    @Test
     fun `artist gallery dedupes an alternative that matches the primary photo`() {
         // Given - an artist photo whose fanarttv alternative shares the primary URL
         val results = resultsOf(

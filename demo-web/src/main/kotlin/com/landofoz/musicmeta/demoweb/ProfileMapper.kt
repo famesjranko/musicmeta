@@ -19,10 +19,15 @@ fun ArtistProfile.toDemoResponse(elapsedMs: Long): DemoResponse {
     val bio = r.biography()
     val stats = r.artistPopularity()
 
+    val details = buildList {
+        r.country()?.let { add(SectionItem("Country", it)) }
+    }
+
     val sections = buildList {
         r.identity?.suggestions?.let { s ->
             didYouMeanSection(s) { artistEnrich(it.title) }?.let { add(it) }
         }
+        if (details.isNotEmpty()) add(Section("details", "Details", details))
         section("similar_artists", "Similar Artists") {
             r.similarArtists()?.artists?.map {
                 SectionItem(
