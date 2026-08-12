@@ -10,6 +10,8 @@ import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.GenreAffinity
 import com.landofoz.musicmeta.IdentifierNamespace
 import com.landofoz.musicmeta.IdentityMatch
+import com.landofoz.musicmeta.PopularitySignal
+import com.landofoz.musicmeta.PopularitySignalKind
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.TrackProfile
 
@@ -94,15 +96,7 @@ fun ArtistProfile.toDemoResponse(elapsedMs: Long): DemoResponse {
             relatedGenresItems(discovery?.relatedGenres.orEmpty())
         }
         section("stats", "Popularity") {
-            stats?.let {
-                listOf(
-                    SectionItem(
-                        primary = it.listenerCount?.let { c -> "$c listeners" } ?: "Listener count unavailable",
-                        secondary = it.listenCount?.let { c -> "$c listens" },
-                        meta = it.rank?.let { rank -> "rank $rank" },
-                    ),
-                )
-            }
+            stats?.statsItems()
         }
     }
 
@@ -276,15 +270,7 @@ fun TrackProfile.toDemoResponse(
             relatedGenresItems(discovery?.relatedGenres.orEmpty())
         }
         section("stats", "Popularity") {
-            stats?.let {
-                listOf(
-                    SectionItem(
-                        primary = it.listenerCount?.let { c -> "$c listeners" } ?: "Listener count unavailable",
-                        secondary = it.listenCount?.let { c -> "$c listens" },
-                        meta = it.rank?.let { rank -> "rank $rank" },
-                    ),
-                )
-            }
+            stats?.statsItems()
         }
         artistRadio?.takeIf { r.identityResolved }?.let { add(it) }
     }
@@ -378,6 +364,40 @@ private fun MutableList<Section>.section(key: String, label: String, items: () -
     val list = items().orEmpty()
     if (list.isNotEmpty()) add(Section(key, label, list))
 }
+
+/**
+ * One [SectionItem] per [EnrichmentData.Popularity.signals] entry, in the order core returned
+ * them, or today's flat-field row when [EnrichmentData.Popularity.signals] is empty — a
+ * pre-migration cache entry that predates the field.
+ */
+private fun EnrichmentData.Popularity.statsItems(): List<SectionItem> {
+    if (signals.isEmpty()) {
+        return listOf(
+            SectionItem(
+                primary = listenerCount?.let { c -> "$c listeners" } ?: "Listener count unavailable",
+                secondary = listenCount?.let { c -> "$c listens" },
+                meta = rank?.let { rank -> "rank $rank" },
+            ),
+        )
+    }
+    return signals.map { signal ->
+        SectionItem(
+            primary = signal.primaryText(),
+            secondary = signal.source,
+            meta = signal.normalized?.let { "index %d/100".format((it * 100).toInt()) },
+        )
+    }
+}
+
+private fun PopularitySignal.primaryText(): String =
+    when (kind) {
+        PopularitySignalKind.LISTEN_COUNT -> "%,d listens".format(value.toLong())
+        PopularitySignalKind.LISTENER_COUNT -> "%,d listeners".format(value.toLong())
+        PopularitySignalKind.RANK -> "chart rank %,d".format(value.toLong())
+        PopularitySignalKind.RATING ->
+            "rated %.1f".format(value) + (sampleSize?.let { " by %,d".format(it) } ?: "")
+        else -> "%,.0f ${kind.name.lowercase()}".format(value)
+    }
 
 /** Appends [url] to the gallery, deduped by [seen] against the primary image and every prior entry. */
 private fun MutableList<GalleryImage>.addIfNew(seen: MutableSet<String>, url: String?, label: String) {

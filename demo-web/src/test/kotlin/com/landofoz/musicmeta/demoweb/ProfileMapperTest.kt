@@ -12,6 +12,8 @@ import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.IdentifierNamespace
 import com.landofoz.musicmeta.IdentityMatch
 import com.landofoz.musicmeta.IdentityResolution
+import com.landofoz.musicmeta.PopularitySignal
+import com.landofoz.musicmeta.PopularitySignalKind
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.TrackProfile
 import org.junit.Assert.assertEquals
@@ -888,5 +890,83 @@ class ProfileMapperTest {
         // Then - the duplicate value collapses to the single struct-field entry
         val hits = response.meta.identifiers
         assertEquals(1, hits.count { it.value == "mbid-1" })
+    }
+
+    @Test
+    fun `stats renders one row per popularity signal in core's order`() {
+        // Given - an artist popularity payload carrying one signal of each kind
+        val popularity = EnrichmentData.Popularity(
+            signals = listOf(
+                PopularitySignal(source = "listenbrainz", kind = PopularitySignalKind.LISTEN_COUNT, value = 1234567.0, normalized = 0.5f),
+                PopularitySignal(source = "lastfm", kind = PopularitySignalKind.LISTENER_COUNT, value = 87654.0),
+                PopularitySignal(source = "lastfm", kind = PopularitySignalKind.RANK, value = 42.0),
+                PopularitySignal(source = "musicbrainz", kind = PopularitySignalKind.RATING, value = 4.2, sampleSize = 310),
+            ),
+        )
+        val results = resultsOf(EnrichmentType.ARTIST_POPULARITY to popularity)
+        val profile = ArtistProfile(name = "Metallica", results = results)
+
+        // When - mapping to a demo response
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        // Then - the stats section has one row per signal, formatted and ordered as core returned them
+        val items = response.sections.first { it.key == "stats" }.items
+        assertEquals(4, items.size)
+        assertEquals(SectionItem(primary = "1,234,567 listens", secondary = "listenbrainz", meta = "index 50/100"), items[0])
+        assertEquals(SectionItem(primary = "87,654 listeners", secondary = "lastfm"), items[1])
+        assertEquals(SectionItem(primary = "chart rank 42", secondary = "lastfm"), items[2])
+        assertEquals(SectionItem(primary = "rated 4.2 by 310", secondary = "musicbrainz"), items[3])
+    }
+
+    @Test
+    fun `track stats render popularity signals through the shared helper`() {
+        // Given - a track popularity payload carrying a RANK signal
+        val popularity = EnrichmentData.Popularity(
+            signals = listOf(PopularitySignal(source = "musicbrainz", kind = PopularitySignalKind.RANK, value = 99.0)),
+        )
+        val results = resultsOf(EnrichmentType.TRACK_POPULARITY to popularity)
+        val profile = TrackProfile(title = "Enter Sandman", artist = "Metallica", results = results)
+
+        // When - mapping to a demo response
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        // Then - the RANK signal renders as a chart-rank row via the same helper artist stats use
+        val items = response.sections.first { it.key == "stats" }.items
+        assertEquals(SectionItem(primary = "chart rank 99", secondary = "musicbrainz"), items.single())
+    }
+
+    @Test
+    fun `stats renders a RATING signal with no sampleSize without a by suffix`() {
+        // Given - an artist popularity payload carrying a RATING signal with no sampleSize
+        val popularity = EnrichmentData.Popularity(
+            signals = listOf(PopularitySignal(source = "musicbrainz", kind = PopularitySignalKind.RATING, value = 3.8)),
+        )
+        val results = resultsOf(EnrichmentType.ARTIST_POPULARITY to popularity)
+        val profile = ArtistProfile(name = "Metallica", results = results)
+
+        // When - mapping to a demo response
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        // Then - the primary text omits the by-sampleSize suffix
+        val items = response.sections.first { it.key == "stats" }.items
+        assertEquals(SectionItem(primary = "rated 3.8", secondary = "musicbrainz"), items.single())
+    }
+
+    @Test
+    fun `stats falls back to the flat-field row when signals is empty`() {
+        // Given - a pre-migration artist popularity payload carrying only the derived flat fields
+        val popularity = EnrichmentData.Popularity(listenCount = 1234567, listenerCount = 87654, rank = 42)
+        val results = resultsOf(EnrichmentType.ARTIST_POPULARITY to popularity)
+        val profile = ArtistProfile(name = "Metallica", results = results)
+
+        // When - mapping to a demo response
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        // Then - the stats section renders exactly today's single flat-field row
+        val items = response.sections.first { it.key == "stats" }.items
+        assertEquals(
+            listOf(SectionItem(primary = "87654 listeners", secondary = "1234567 listens", meta = "rank 42")),
+            items,
+        )
     }
 }
