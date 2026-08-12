@@ -46,16 +46,12 @@ class LastFmProvider(
     /** One `artist.getinfo` answer per artist name for this call, a miss included. */
     private class ArtistInfoMemo {
         private val entries = mutableMapOf<String, LastFmArtistInfo?>()
-        private val fetched = mutableSetOf<String>()
         private val mutex = Mutex()
 
         suspend fun get(name: String, fetch: suspend () -> LastFmArtistInfo?): LastFmArtistInfo? =
             mutex.withLock {
-                if (name in fetched) return@withLock entries[name]
-                fetch().also {
-                    entries[name] = it
-                    fetched += name
-                }
+                if (name in entries) return@withLock entries[name]
+                fetch().also { entries[name] = it }
             }
     }
 
