@@ -44,6 +44,7 @@ KEY="${LASTFM_API_KEY:-}"
 LIMIT="${LIMIT:-500}"
 SOURCE="${SOURCE:-chart}"
 ARTISTS="${ARTISTS:-Metallica|Pink Floyd|Radiohead|The Beatles|Queen}"
+ARTIST_COUNT=$(printf '%s\n' "$ARTISTS" | tr '|' '\n' | grep -c .)
 UA="${UA:-musicmeta-probe/1.0 ( https://github.com/famesjranko/musicmeta )}"
 MB_SPACING="${MB_SPACING:-1.05}"
 
@@ -55,7 +56,8 @@ collect_ids() {
     # The population trackProfile() actually meets. A similar-track pick is where a caller has a
     # recording MBID and nothing else, and Last.fm draws these from further down its catalogue than
     # either chart does -- which is the whole question, since staleness tracks obscurity.
-    printf '%s' "$ARTISTS" | tr '|' '\n' | while IFS= read -r a; do
+    echo "ARTISTS holds $ARTIST_COUNT artist(s); probing all $ARTIST_COUNT" >&2
+    printf '%s\n' "$ARTISTS" | tr '|' '\n' | while IFS= read -r a; do
       [ -n "$a" ] || continue
       sleep 0.25
       seeds=$(curl -sS -A "$UA" -G "https://ws.audioscrobbler.com/2.0/" \
@@ -73,7 +75,8 @@ collect_ids() {
       done
     done
   elif [ "$SOURCE" = "artist" ]; then
-    printf '%s' "$ARTISTS" | tr '|' '\n' | while IFS= read -r a; do
+    echo "ARTISTS holds $ARTIST_COUNT artist(s); probing all $ARTIST_COUNT" >&2
+    printf '%s\n' "$ARTISTS" | tr '|' '\n' | while IFS= read -r a; do
       [ -n "$a" ] || continue
       sleep 0.25
       curl -sS -A "$UA" -G "https://ws.audioscrobbler.com/2.0/" \
