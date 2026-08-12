@@ -66,6 +66,9 @@ class CoverArtArchiveProvider(
             // front-cover art via findArtwork's existing release-group fallback. The three
             // release-only capabilities have no release-group equivalent, so a track request
             // reaches them with releaseId == null and returns NotFound before any HTTP call.
+            // `musicBrainzId` stays deliberately polymorphic — `IdentifierNamespace` added typed
+            // accessors beside it, not per-entity fields in place of it — so this guard is where
+            // recording-vs-release is encoded, and it stays.
             val isTrackRequest = request is EnrichmentRequest.ForTrack
             val releaseId = request.identifiers.musicBrainzId.takeUnless { isTrackRequest }
             val groupId = request.identifiers.musicBrainzReleaseGroupId
