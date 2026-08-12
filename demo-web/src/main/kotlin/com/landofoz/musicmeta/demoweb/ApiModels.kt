@@ -163,6 +163,26 @@ data class PolicyRow(
     val attributionNotice: String? = null,
 )
 
+/** Wire shape for `GET /api/search` — one page of `engine.search()` candidates, best first. */
+@Serializable
+data class SearchResponse(val candidates: List<CandidateHit>)
+
+/**
+ * One `SearchCandidate` on the wire. [mbid] is the candidate's `identifiers.musicBrainzId`: when
+ * it is present the page enriches by identifier instead of by name.
+ */
+@Serializable
+data class CandidateHit(
+    val title: String,
+    val artist: String? = null,
+    val year: String? = null,
+    val releaseType: String? = null,
+    val score: Int,
+    val thumbnailUrl: String? = null,
+    val disambiguation: String? = null,
+    val mbid: String? = null,
+)
+
 @Serializable
 data class ApiError(val error: String)
 

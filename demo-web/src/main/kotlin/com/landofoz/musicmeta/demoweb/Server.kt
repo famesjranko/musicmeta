@@ -87,6 +87,7 @@ fun startServer(
 
     server.createContext("/api/enrich") { exchange -> handleEnrich(exchange, engineRef.get()) }
     server.createContext("/api/invalidate") { exchange -> handleInvalidate(exchange, engineRef.get()) }
+    server.createContext("/api/search") { exchange -> handleSearch(exchange, engineRef.get()) }
     server.createContext("/api/preview") { exchange -> handlePreview(exchange, engineRef.get()) }
     server.createContext("/api/providers") { exchange -> handleProviders(exchange, engineRef.get()) }
     server.createContext("/api/config") { exchange -> handleConfig(exchange, engineRef, cacheModeRef, rebuildEngine) }
@@ -391,6 +392,57 @@ private suspend fun fetchArtistRadioSection(engine: EnrichmentEngine, artist: St
         currentCoroutineContext().ensureActive() // rethrows only if this job was cancelled
         null
     }
+
+/**
+ * Candidate lookup over `engine.search()`. Unlike [handleEnrich], an album or track query may
+ * arrive without an artist — finding the artist is what a caller uses this for; a supplied one
+ * only narrows the pool. `kind: "mbid"` is rejected: an identifier names its entity outright,
+ * so there is nothing to search for.
+ */
+private fun handleSearch(exchange: HttpExchange, engine: EnrichmentEngine) {
+    try {
+        val params = parseQuery(exchange.requestURI.rawQuery)
+        val kind = params["kind"]
+        val query = params["q"]?.trim().orEmpty()
+        val artist = params["artist"]?.trim().orEmpty()
+
+        if (kind !in setOf("artist", "album", "track") || query.isBlank()) {
+            exchange.respondJson(
+                400,
+                ApiError("kind must be artist|album|track; q required"),
+            )
+            return
+        }
+
+        val request = when (kind) {
+            "artist" -> EnrichmentRequest.forArtist(query)
+            "album" -> EnrichmentRequest.forAlbum(query, artist)
+            else -> EnrichmentRequest.forTrack(query, artist)
+        }
+
+        // Eight rows is what the dropdown shows without scrolling.
+        val candidates = runBlocking { engine.search(request, limit = 8) }
+        exchange.respondJson(
+            200,
+            SearchResponse(
+                candidates.map { candidate ->
+                    CandidateHit(
+                        title = candidate.title,
+                        artist = candidate.artist,
+                        year = candidate.year,
+                        releaseType = candidate.releaseType,
+                        score = candidate.score,
+                        thumbnailUrl = candidate.thumbnailUrl,
+                        disambiguation = candidate.disambiguation,
+                        mbid = candidate.identifiers.musicBrainzId,
+                    )
+                },
+            ),
+        )
+    } catch (e: Exception) {
+        exchange.respondJson(500, ApiError(e.message ?: e.javaClass.simpleName))
+    }
+}
 
 private fun handlePreview(exchange: HttpExchange, engine: EnrichmentEngine) {
     try {
