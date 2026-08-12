@@ -10,6 +10,7 @@ import com.landofoz.musicmeta.EnrichmentResults
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
 import com.landofoz.musicmeta.MusicBrainzEntityType
+import com.landofoz.musicmeta.ProviderPolicies
 import com.landofoz.musicmeta.TrackPreviewRequest
 import com.landofoz.musicmeta.TrackProfile
 import com.landofoz.musicmeta.albumProfile
@@ -72,6 +73,7 @@ fun startServer(engine: EnrichmentEngine, port: Int) {
 
     server.createContext("/api/enrich") { exchange -> handleEnrich(exchange, engine) }
     server.createContext("/api/preview") { exchange -> handlePreview(exchange, engine) }
+    server.createContext("/api/providers") { exchange -> handleProviders(exchange, engine) }
     server.createContext("/api/health") { exchange -> exchange.respondJson(200, HealthResponse(ready.get())) }
 
     server.start()
@@ -294,6 +296,35 @@ private fun handlePreview(exchange: HttpExchange, engine: EnrichmentEngine) {
         } else {
             exchange.respondJson(200, PreviewResponse(preview.url, preview.durationMs, preview.source))
         }
+    } catch (e: Exception) {
+        exchange.respondJson(500, ApiError(e.message ?: e.javaClass.simpleName))
+    }
+}
+
+/**
+ * The providers this instance was built with, each joined to the terms snapshot `ProviderPolicies`
+ * records under the same id. Reads state the engine already holds, so nothing here suspends.
+ */
+private fun handleProviders(exchange: HttpExchange, engine: EnrichmentEngine) {
+    try {
+        val rows = engine.getProviders().map { info ->
+            ProviderRow(
+                id = info.id,
+                displayName = info.displayName,
+                available = info.isAvailable,
+                requiresApiKey = info.requiresApiKey,
+                capabilities = info.capabilities.map { it.type.name },
+                policy = ProviderPolicies.all[info.id]?.let { policy ->
+                    PolicyRow(
+                        commercialUse = policy.commercialUse.name,
+                        dataLicence = policy.dataLicence,
+                        attribution = policy.attribution.name,
+                        attributionNotice = policy.attributionNotice,
+                    )
+                },
+            )
+        }
+        exchange.respondJson(200, ProvidersResponse(rows))
     } catch (e: Exception) {
         exchange.respondJson(500, ApiError(e.message ?: e.javaClass.simpleName))
     }

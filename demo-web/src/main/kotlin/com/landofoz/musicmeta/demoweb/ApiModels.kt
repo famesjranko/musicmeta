@@ -131,4 +131,37 @@ data class ProviderHit(
 )
 
 @Serializable
+data class ProvidersResponse(val providers: List<ProviderRow>)
+
+/**
+ * One provider this instance was built with, as `getProviders()` reports it, joined to the terms
+ * snapshot `ProviderPolicies` ships for it.
+ *
+ * [available] is the provider's own availability — false for a keyed provider with no key, which is
+ * why [requiresApiKey] is rendered beside it rather than inferred from it.
+ */
+@Serializable
+data class ProviderRow(
+    val id: String,
+    val displayName: String,
+    val available: Boolean,
+    val requiresApiKey: Boolean,
+    /** Bare `EnrichmentType` names, one per declared capability. */
+    val capabilities: List<String> = emptyList(),
+    /** null when musicmeta records no terms snapshot for this provider — not "no obligations". */
+    val policy: PolicyRow? = null,
+)
+
+/** The renderable subset of a `ProviderPolicy`: enum fields as bare enum names, notice text as-is. */
+@Serializable
+data class PolicyRow(
+    val commercialUse: String,
+    /** null means the licence could not be verified on the snapshot's date. */
+    val dataLicence: String? = null,
+    val attribution: String,
+    /** Ready-to-render text; null when no notice is owed or none could be read. */
+    val attributionNotice: String? = null,
+)
+
+@Serializable
 data class ApiError(val error: String)

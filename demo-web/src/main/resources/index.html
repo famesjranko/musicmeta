@@ -11,10 +11,13 @@
   <header>
     <div class="header-top">
       <span class="eyebrow">MUSICMETA-CORE &nbsp;•&nbsp; LIVE PROVIDER DEMO</span>
-      <span id="health-pill" data-state="checking" role="status" aria-live="polite">
-        <span class="health-dot" aria-hidden="true"></span>
-        <span id="health-label">Checking backend…</span>
-      </span>
+      <div class="header-actions">
+        <span id="health-pill" data-state="checking" role="status" aria-live="polite">
+          <span class="health-dot" aria-hidden="true"></span>
+          <span id="health-label">Checking backend…</span>
+        </span>
+        <button id="settings-open" type="button" class="gear-btn" title="Demo settings &amp; providers" aria-label="Demo settings and providers">⚙</button>
+      </div>
     </div>
     <h1>music<span>meta</span>-core demo</h1>
     <p>Live calls into the published library — enriches from up to 11 real music-metadata providers and merges the results.</p>
@@ -43,8 +46,26 @@
     <div id="result"><div id="empty">Enter a name above and hit Enrich.</div></div>
     <footer>
       Backed by a local instance of <code>musicmeta-core</code> — see <a href="https://github.com/famesjranko/musicmeta" target="_blank" rel="noopener">github.com/famesjranko/musicmeta</a>.
+      <div id="credits" class="credits-footer" aria-label="Data credits" hidden>
+        <b class="credits-title" title="Which provider answered any one item is not knowable before the request runs, so every notice this demo could owe is shown.">Data credits</b>
+        <span class="visually-hidden">Which provider answered any one item is not knowable before the request runs, so every notice this demo could owe is shown.</span>
+        <span id="credits-notices"></span>
+        <button type="button" id="credits-link" class="credits-link">All providers &amp; terms…</button>
+      </div>
     </footer>
   </main>
+  <dialog id="settings-dialog" aria-labelledby="settings-title">
+    <div class="dialog-head">
+      <h2 id="settings-title">Demo settings &amp; providers</h2>
+      <button type="button" id="settings-close" class="dialog-close" aria-label="Close demo settings">✕</button>
+    </div>
+    <div class="dialog-sections">
+      <section class="dialog-section">
+        <h3>Providers</h3>
+        <div id="provider-panel">Loading providers…</div>
+      </section>
+    </div>
+  </dialog>
   <div id="lightbox" class="lightbox" hidden>
     <img id="lightbox-img" src="" alt="" />
   </div>
