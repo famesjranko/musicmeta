@@ -132,6 +132,11 @@ Run these for every change:
 git diff --check -- ':!*/api/*.api'
 ```
 
+From a clean clone or a fresh worktree, none of this runs until `:musicmeta-android` can find an
+SDK: export `ANDROID_HOME` (typically `~/Android/Sdk`) or write a `local.properties` containing
+`sdk.dir=<that path>`. Without one, the build fails at "SDK location not found" before a single
+test executes — and `local.properties` is gitignored, so every new worktree needs it again.
+
 `./check` is the whole verification surface and is exactly what CI runs;
 [ARCHITECTURE.md](../../ARCHITECTURE.md) has the step table, and where a green run means less than
 it looks like.

@@ -27,7 +27,7 @@ may answer 403. Details in [providers.md](../providers.md#user-agent-and-contact
 ### With OkHttp (recommended for Android)
 
 ```kotlin
-// Add: implementation("io.github.famesjranko:musicmeta-okhttp:0.10.1")
+// Add: implementation("io.github.famesjranko:musicmeta-okhttp:0.11.0")
 val engine = EnrichmentEngine.Builder()
     .httpClient(OkHttpEnrichmentClient(myOkHttpClient, "MyApp/1.0"))
     .withDefaultProviders()
