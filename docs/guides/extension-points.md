@@ -126,7 +126,7 @@ The `musicmeta-okhttp` module ships a ready-to-use `OkHttpEnrichmentClient`. Add
 
 ```kotlin
 // build.gradle.kts
-implementation("io.github.famesjranko:musicmeta-okhttp:0.10.1")
+implementation("io.github.famesjranko:musicmeta-okhttp:0.11.0")
 ```
 
 ```kotlin
