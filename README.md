@@ -172,7 +172,7 @@ To consume a local checkout instead, see [docs/project/workflow.md](docs/project
 
 - **JVM**: Java 17+, Kotlin 2.1+
 - **Android**: Min SDK 21 (Android 5.0) for `musicmeta-android`
-- **User-Agent**: MusicBrainz and Wikimedia APIs require a descriptive User-Agent string. Set it via `EnrichmentConfig.userAgent` or the `DefaultHttpClient` constructor.
+- **User-Agent**: MusicBrainz and Wikimedia APIs require a User-Agent carrying contact information. Pass a URL or email to `EnrichmentEngine.Builder.contact()`, or write the whole string yourself via `EnrichmentConfig.userAgent` or the `DefaultHttpClient` constructor. The default carries no contact and is throttled or blocked accordingly — see [docs/providers.md](docs/providers.md#user-agent-and-contact-information).
 
 ## Documentation
 

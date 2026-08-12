@@ -391,6 +391,7 @@ public final class com/landofoz/musicmeta/EnrichmentConfig {
 }
 
 public final class com/landofoz/musicmeta/EnrichmentConfig$Companion {
+	public final fun userAgentWithContact (Ljava/lang/String;)Ljava/lang/String;
 }
 
 public abstract class com/landofoz/musicmeta/EnrichmentData {
@@ -1042,6 +1043,7 @@ public final class com/landofoz/musicmeta/EnrichmentEngine$Builder {
 	public final fun catalog (Lcom/landofoz/musicmeta/CatalogProvider;Lcom/landofoz/musicmeta/CatalogFilterMode;)Lcom/landofoz/musicmeta/EnrichmentEngine$Builder;
 	public static synthetic fun catalog$default (Lcom/landofoz/musicmeta/EnrichmentEngine$Builder;Lcom/landofoz/musicmeta/CatalogProvider;Lcom/landofoz/musicmeta/CatalogFilterMode;ILjava/lang/Object;)Lcom/landofoz/musicmeta/EnrichmentEngine$Builder;
 	public final fun config (Lcom/landofoz/musicmeta/EnrichmentConfig;)Lcom/landofoz/musicmeta/EnrichmentEngine$Builder;
+	public final fun contact (Ljava/lang/String;)Lcom/landofoz/musicmeta/EnrichmentEngine$Builder;
 	public final fun httpClient (Lcom/landofoz/musicmeta/http/HttpClient;)Lcom/landofoz/musicmeta/EnrichmentEngine$Builder;
 	public final fun logger (Lcom/landofoz/musicmeta/EnrichmentLogger;)Lcom/landofoz/musicmeta/EnrichmentEngine$Builder;
 	public final fun withDefaultProviders ()Lcom/landofoz/musicmeta/EnrichmentEngine$Builder;

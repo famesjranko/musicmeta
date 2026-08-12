@@ -41,7 +41,11 @@ fun main(args: Array<String>) {
 
 /** Mutable engine state — rebuilt when config, catalog, or verbose settings change. */
 class DemoState(
-    var config: EnrichmentConfig = EnrichmentConfig(),
+    // The demo hits the live APIs, so it carries the contact information MusicBrainz and Wikimedia
+    // require, rather than the contactless default.
+    var config: EnrichmentConfig = EnrichmentConfig(
+        userAgent = "musicmeta-cli-demo/1.0 (+https://github.com/famesjranko/musicmeta)",
+    ),
     val cache: TrackingCache = TrackingCache(),
     val logger: DemoLogger,
     val catalog: DemoCatalog = DemoCatalog(),

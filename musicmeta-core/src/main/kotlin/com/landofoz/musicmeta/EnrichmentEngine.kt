@@ -32,6 +32,14 @@ import com.landofoz.musicmeta.provider.wikipedia.WikipediaProvider
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
+private const val TAG = "EnrichmentEngine"
+
+/**
+ * Providers whose published policy requires contact information in the User-Agent —
+ * `ProviderPolicies["musicbrainz"]` and the two Wikimedia-hosted entries carry the clauses.
+ */
+private val CONTACT_REQUIRING_PROVIDERS = setOf("musicbrainz", "wikipedia", "wikidata")
+
 interface EnrichmentEngine {
 
     /**
@@ -104,6 +112,7 @@ interface EnrichmentEngine {
         private var cache: EnrichmentCache? = null
         private var httpClient: HttpClient? = null
         private var config: EnrichmentConfig = EnrichmentConfig()
+        private var contact: String? = null
         private var logger: EnrichmentLogger = EnrichmentLogger.NoOp
         private var apiKeyConfig: ApiKeyConfig? = null
         private val mergers = mutableListOf<com.landofoz.musicmeta.engine.ResultMerger>(
@@ -124,6 +133,26 @@ interface EnrichmentEngine {
         fun cache(cache: EnrichmentCache) = apply { this.cache = cache }
         fun httpClient(client: HttpClient) = apply { this.httpClient = client }
         fun config(config: EnrichmentConfig) = apply { this.config = config }
+
+        /**
+         * A URL or email address a provider's operators can reach you at, folded into the
+         * User-Agent as `MusicEnrichmentEngine/1.0 ( contact )`.
+         *
+         * MusicBrainz and Wikimedia both require the User-Agent to carry contact information;
+         * without it MusicBrainz throttles you against a shared anonymous pool and Wikimedia may
+         * answer 403. This is the short way to comply — see [EnrichmentConfig.DEFAULT_USER_AGENT].
+         *
+         * **Ignored when [config] carries a User-Agent of its own**, which is then used verbatim:
+         * a caller who writes the whole string owns all of it, contact included. Like
+         * [apiKeys] and [config], read by [withDefaultProviders] when you call it, so it must come
+         * first.
+         *
+         * @throws IllegalArgumentException if [contact] is blank.
+         */
+        fun contact(contact: String) = apply {
+            require(contact.isNotBlank()) { "contact must be a URL or email address, not blank" }
+            this.contact = contact
+        }
         fun logger(logger: EnrichmentLogger) = apply { this.logger = logger.guarded() }
         fun apiKeys(config: ApiKeyConfig) = apply { this.apiKeyConfig = config }
         fun catalog(provider: CatalogProvider, mode: CatalogFilterMode = CatalogFilterMode.UNFILTERED) = apply {
@@ -133,7 +162,8 @@ interface EnrichmentEngine {
         fun addSynthesizer(synthesizer: CompositeSynthesizer) = apply { synthesizers.add(synthesizer) }
 
         fun withDefaultProviders() = apply {
-            val client = httpClient ?: DefaultHttpClient(config.userAgent)
+            val cfg = effectiveConfig()
+            val client = httpClient ?: DefaultHttpClient(cfg.userAgent)
 
             // One limiter per host. RateLimiter holds its mutex across block(), so a shared
             // instance makes unrelated hosts' round-trips sequential; rate limits are per-host
@@ -159,7 +189,7 @@ interface EnrichmentEngine {
             addProvider(WikidataProvider(client, wikidataLimiter))
             addProvider(WikipediaProvider(client, wikipediaLimiter, wikidataLimiter))
             addProvider(DeezerProvider(client, deezerLimiter,
-                radioLimit = config.radioLimit))
+                radioLimit = cfg.radioLimit))
             val deezerApi = DeezerApi(client, deezerLimiter)
             addProvider(SimilarAlbumsProvider(deezerApi))
             addProvider(ITunesProvider(client)) // its own RateLimiter(3000) by constructor default
@@ -167,7 +197,7 @@ interface EnrichmentEngine {
                 httpClient = client,
                 rateLimiter = listenBrainzLimiter,
                 authToken = apiKeyConfig?.listenBrainzToken,
-                config = config,
+                config = cfg,
             ))
             addProvider(LrcLibProvider(client, lrcLibLimiter))
 
@@ -187,14 +217,41 @@ interface EnrichmentEngine {
         }
 
         fun build(): EnrichmentEngine {
-            val registry = ProviderRegistry(providers, config.priorityOverrides, logger)
+            val cfg = effectiveConfig()
+            warnIfContactlessUserAgent(cfg)
+            val registry = ProviderRegistry(providers, cfg.priorityOverrides, logger)
             return DefaultEnrichmentEngine(
                 registry = registry,
                 cache = cache ?: InMemoryEnrichmentCache(),
-                config = config,
+                config = cfg,
                 logger = logger,
                 mergers = mergers.toList(),
                 synthesizers = synthesizers.toList(),
+            )
+        }
+
+        /**
+         * The config as the engine and its providers see it: [contact] folded into the User-Agent,
+         * unless the caller supplied a User-Agent of their own.
+         */
+        private fun effectiveConfig(): EnrichmentConfig {
+            val contact = this.contact ?: return config
+            if (config.userAgent != EnrichmentConfig.DEFAULT_USER_AGENT) return config
+            return config.copy(userAgent = EnrichmentConfig.userAgentWithContact(contact))
+        }
+
+        /** Once per `build()`, so a consumer hears it at startup rather than once per request. */
+        private fun warnIfContactlessUserAgent(cfg: EnrichmentConfig) {
+            if (cfg.userAgent != EnrichmentConfig.DEFAULT_USER_AGENT) return
+            val affected = providers.map { it.id }.filter { it in CONTACT_REQUIRING_PROVIDERS }
+            if (affected.isEmpty()) return
+            logger.warn(
+                TAG,
+                "User-Agent \"${EnrichmentConfig.DEFAULT_USER_AGENT}\" carries no contact information, " +
+                    "which the policies of these registered providers require " +
+                    "(${affected.joinToString(", ")}): MusicBrainz throttles anonymous user agents " +
+                    "against one shared pool and Wikimedia may answer 403. Pass a contact URL or email " +
+                    "to EnrichmentEngine.Builder.contact(), or set EnrichmentConfig.userAgent.",
             )
         }
     }

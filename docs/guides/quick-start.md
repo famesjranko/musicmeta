@@ -6,18 +6,21 @@ Get up and running in 5 minutes. All enrichment calls are `suspend fun` — ever
 
 ```kotlin
 val engine = EnrichmentEngine.Builder()
-    .withDefaultProviders()
-    .config(EnrichmentConfig(
-        userAgent = "MyApp/1.0 (contact@example.com)",
-    ))
+    // Required by MusicBrainz and Wikimedia: a URL or email they can reach you at.
+    .contact("https://example.com/myapp")
     .apiKeys(ApiKeyConfig(
         lastFmKey = "...",              // optional — enables Last.fm
         fanartTvProjectKey = "...",     // optional — enables Fanart.tv
         discogsPersonalToken = "...",   // optional — enables Discogs
         listenBrainzToken = "...",      // optional — enables LB Radio discovery
     ))
+    .withDefaultProviders()  // last: reads the contact and keys set above
     .build()
 ```
+
+Omit `.contact()` and the engine logs one warning at `build()`: the default User-Agent carries no
+contact information, so MusicBrainz throttles you against its shared anonymous pool and Wikimedia
+may answer 403. Details in [providers.md](../providers.md#user-agent-and-contact-information).
 
 8 of 11 providers work without API keys. `withDefaultProviders()` registers all of them and conditionally adds key-requiring providers only when their key is present.
 

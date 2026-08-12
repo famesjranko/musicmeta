@@ -32,7 +32,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 internal class DefaultEnrichmentEngine(
     private val registry: ProviderRegistry,
     override val cache: EnrichmentCache,
-    private val config: EnrichmentConfig,
+    internal val config: EnrichmentConfig,
     private val logger: EnrichmentLogger = EnrichmentLogger.NoOp,
     mergers: List<ResultMerger> = listOf(GenreMerger),
     synthesizers: List<CompositeSynthesizer> = listOf(TimelineSynthesizer),

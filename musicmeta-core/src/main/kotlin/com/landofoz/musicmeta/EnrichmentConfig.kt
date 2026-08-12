@@ -18,8 +18,9 @@ enum class RadioDiscoveryMode(val apiValue: String) {
  * @param minConfidence Minimum confidence score (0.0–1.0) to accept a result.
  *   Results below this threshold are treated as NotFound. See [EnrichmentResult]
  *   for the confidence scoring guidelines.
- * @param userAgent User-Agent header sent with all HTTP requests.
- *   MusicBrainz and Wikimedia require a descriptive User-Agent.
+ * @param userAgent User-Agent header sent with all HTTP requests. MusicBrainz and Wikimedia both
+ *   require it to carry contact information — see [DEFAULT_USER_AGENT] for what the default costs
+ *   you, and [EnrichmentEngine.Builder.contact] for the shortest way to comply.
  * @param enableIdentityResolution Whether to auto-resolve MBIDs via MusicBrainz
  *   before fanning out to other providers.
  * @param confidenceOverrides Per-provider confidence overrides. Key = provider ID
@@ -56,9 +57,32 @@ data class EnrichmentConfig(
 ) {
     companion object {
         const val DEFAULT_MIN_CONFIDENCE = 0.5f
+
+        /**
+         * The User-Agent sent when a consumer supplies none. **It carries no contact information,
+         * which two of the shipped providers' policies require.** MusicBrainz asks for "enough
+         * information in the User-Agent string for us to contact the maintainers" and throttles
+         * user agents without it against one shared anonymous pool; Wikimedia's policy requires
+         * `<client name>/<version> (<contact information>)` and says generic user agents "may be
+         * blocked" with a 403.
+         *
+         * Supply contact information via [EnrichmentEngine.Builder.contact], or set [userAgent]
+         * outright. Building an engine on this default with MusicBrainz, Wikipedia or Wikidata
+         * registered logs one warning.
+         */
         const val DEFAULT_USER_AGENT = "MusicEnrichmentEngine/1.0"
         const val DEFAULT_ENRICH_TIMEOUT_MS = 30_000L
         const val DEFAULT_RADIO_LIMIT = 50
+
+        /**
+         * [DEFAULT_USER_AGENT] carrying [contact], in the form both policies ask for:
+         * `MusicEnrichmentEngine/1.0 ( contact )`.
+         *
+         * [contact] is a URL or email address a provider's operators can reach you at; it is
+         * trimmed and otherwise used as given. Callers who set [userAgent] themselves do not need
+         * this — put the contact inside their own string instead.
+         */
+        fun userAgentWithContact(contact: String): String = "$DEFAULT_USER_AGENT ( ${contact.trim()} )"
     }
 }
 
