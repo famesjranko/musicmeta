@@ -52,7 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `PopularitySignal`/`PopularitySignalKind`: each source's popularity claim in its own unit (scrobbles, listens, rank, a 1–5 rating), never summed — `Popularity.signals` is authoritative
 - MusicBrainz now answers `ARTIST_POPULARITY`/`TRACK_POPULARITY` with its community rating as a signal, riding the lookups it already makes, so neither type costs an extra request
 - `ProviderPolicies`: each provider's terms as data — commercial use, licence, notice to render
-- `Builder.contact(urlOrEmail)` composes the User-Agent MusicBrainz and Wikimedia require (`MusicEnrichmentEngine/1.0 ( contact )`); a `userAgent` set on the config still wins and is used verbatim
+- `Builder.contact(urlOrEmail)` composes the User-Agent MusicBrainz and Wikimedia require (`MusicEnrichmentEngine/1.0 ( contact )`); it rejects a line break or paren, and a config `userAgent` wins
 - `EnrichmentConfig.userAgentWithContact(contact)` exposes that composition for callers wiring `DefaultHttpClient` themselves
 - `IdentifierNamespace` enum plus `EnrichmentIdentifiers.get(ns)`/`.with(ns, value)`: typed accessors over the existing untyped `extra` map, additive, no key or wire-format change
 - MusicBrainz, Discogs, Spotify and Apple Music artist ids are now carried on Wikidata results' identifiers, parsed from claims already fetched; nothing consumes them for resolution yet
@@ -77,7 +77,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Wikipedia bios now come from the Action API extract, keeping parentheticals the old endpoint stripped (instrument credits, IPA, native script). `ARTIST_BIO` caches 30 days, so clear yours or wait
 - Wikipedia `ARTIST_PHOTO` now carries the largest rendered thumbnail and every scale in `sizes`, not the original file: `height` is null, since the media route states none
 - iTunes album resolution now does a `lookup?upc=` identity match when a barcode is known, replacing the fuzzy search — a barcode Apple doesn't carry is `NotFound`, not a search fallback
-- `build()` logs one warning when the contactless default User-Agent meets MusicBrainz, Wikipedia or Wikidata: those policies throttle or block it. Once per engine, not per request
+- `build()` warns from the User-Agent the wire will carry: the contactless default meeting MusicBrainz/Wikipedia/Wikidata, `contact()` after `withDefaultProviders()`, or `contact()` with your client
 
 ### Fixed
 - An artist named by one of its MusicBrainz aliases now resolves: the search asked `artist:"…"` only, which does not reach the alias index, so a localised or former name found nothing

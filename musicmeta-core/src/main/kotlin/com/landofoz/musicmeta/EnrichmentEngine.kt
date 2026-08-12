@@ -35,8 +35,11 @@ import kotlinx.coroutines.flow.flow
 private const val TAG = "EnrichmentEngine"
 
 /**
- * Providers whose published policy requires contact information in the User-Agent —
- * `ProviderPolicies["musicbrainz"]` and the two Wikimedia-hosted entries carry the clauses.
+ * Providers whose published policy requires contact information in the User-Agent.
+ * `ProviderPolicies["wikipedia"].commercialUseNote` carries the Wikimedia clause as data; the
+ * MusicBrainz requirement is quoted in `docs/providers.md`'s User-Agent section, not in its policy
+ * entry. Wikidata is here as a Wikimedia-hosted API under that same Wikimedia policy — an
+ * extension of the Wikipedia evidence rather than a clause cited for Wikidata itself.
  */
 private val CONTACT_REQUIRING_PROVIDERS = setOf("musicbrainz", "wikipedia", "wikidata")
 
@@ -113,6 +116,12 @@ interface EnrichmentEngine {
         private var httpClient: HttpClient? = null
         private var config: EnrichmentConfig = EnrichmentConfig()
         private var contact: String? = null
+
+        /**
+         * The User-Agent the client [withDefaultProviders] built carries, or null when it built
+         * none. What [build] warns from: the config it composes is not what the wire sends.
+         */
+        private var defaultProvidersUserAgent: String? = null
         private var logger: EnrichmentLogger = EnrichmentLogger.NoOp
         private var apiKeyConfig: ApiKeyConfig? = null
         private val mergers = mutableListOf<com.landofoz.musicmeta.engine.ResultMerger>(
@@ -145,12 +154,16 @@ interface EnrichmentEngine {
          * **Ignored when [config] carries a User-Agent of its own**, which is then used verbatim:
          * a caller who writes the whole string owns all of it, contact included. Like
          * [apiKeys] and [config], read by [withDefaultProviders] when you call it, so it must come
-         * first.
+         * first — call it after and the client is already built with the contactless default, which
+         * [build] warns about. It cannot reach a client passed to [httpClient] at all: set the
+         * User-Agent on that client instead, which [build] also warns about.
          *
-         * @throws IllegalArgumentException if [contact] is blank.
+         * @throws IllegalArgumentException if [contact] is blank, carries a line break (which the
+         *   connection rejects per request), or carries a parenthesis (which closes the User-Agent
+         *   comment the policies read).
          */
         fun contact(contact: String) = apply {
-            require(contact.isNotBlank()) { "contact must be a URL or email address, not blank" }
+            requireUsableContact(contact)
             this.contact = contact
         }
         fun logger(logger: EnrichmentLogger) = apply { this.logger = logger.guarded() }
@@ -163,7 +176,10 @@ interface EnrichmentEngine {
 
         fun withDefaultProviders() = apply {
             val cfg = effectiveConfig()
-            val client = httpClient ?: DefaultHttpClient(cfg.userAgent)
+            val client = httpClient ?: DefaultHttpClient(cfg.userAgent).also {
+                // What the wire will carry from here on, whatever a later contact() composes.
+                defaultProvidersUserAgent = cfg.userAgent
+            }
 
             // One limiter per host. RateLimiter holds its mutex across block(), so a shared
             // instance makes unrelated hosts' round-trips sequential; rate limits are per-host
@@ -218,7 +234,7 @@ interface EnrichmentEngine {
 
         fun build(): EnrichmentEngine {
             val cfg = effectiveConfig()
-            warnIfContactlessUserAgent(cfg)
+            warnAboutUserAgentOnTheWire(cfg)
             val registry = ProviderRegistry(providers, cfg.priorityOverrides, logger)
             return DefaultEnrichmentEngine(
                 registry = registry,
@@ -240,19 +256,45 @@ interface EnrichmentEngine {
             return config.copy(userAgent = EnrichmentConfig.userAgentWithContact(contact))
         }
 
-        /** Once per `build()`, so a consumer hears it at startup rather than once per request. */
-        private fun warnIfContactlessUserAgent(cfg: EnrichmentConfig) {
-            if (cfg.userAgent != EnrichmentConfig.DEFAULT_USER_AGENT) return
+        /**
+         * At most one warning per condition per `build()`, so a consumer hears it at startup rather
+         * than once per request. Read off what the wire will carry rather than off the composed
+         * config, because the two ways to reach a provider with a contactless User-Agent while
+         * believing otherwise — composing one after [withDefaultProviders] has already built the
+         * client, and composing one for a client [httpClient] supplied — are exactly the two a
+         * config-only check reads as compliant.
+         */
+        private fun warnAboutUserAgentOnTheWire(cfg: EnrichmentConfig) {
             val affected = providers.map { it.id }.filter { it in CONTACT_REQUIRING_PROVIDERS }
             if (affected.isEmpty()) return
-            logger.warn(
-                TAG,
-                "User-Agent \"${EnrichmentConfig.DEFAULT_USER_AGENT}\" carries no contact information, " +
-                    "which the policies of these registered providers require " +
-                    "(${affected.joinToString(", ")}): MusicBrainz throttles anonymous user agents " +
-                    "against one shared pool and Wikimedia may answer 403. Pass a contact URL or email " +
-                    "to EnrichmentEngine.Builder.contact(), or set EnrichmentConfig.userAgent.",
-            )
+            if (cfg.userAgent == EnrichmentConfig.DEFAULT_USER_AGENT) {
+                logger.warn(
+                    TAG,
+                    "User-Agent \"${EnrichmentConfig.DEFAULT_USER_AGENT}\" carries no contact information, " +
+                        "which the policies of these registered providers require " +
+                        "(${affected.joinToString(", ")}): MusicBrainz throttles anonymous user agents " +
+                        "against one shared pool and Wikimedia may answer 403. Pass a contact URL or email " +
+                        "to EnrichmentEngine.Builder.contact(), or set EnrichmentConfig.userAgent.",
+                )
+            } else if (defaultProvidersUserAgent == EnrichmentConfig.DEFAULT_USER_AGENT) {
+                logger.warn(
+                    TAG,
+                    "withDefaultProviders() built the HTTP client before the User-Agent was set, so the " +
+                        "wire still carries the contactless default " +
+                        "\"${EnrichmentConfig.DEFAULT_USER_AGENT}\" and \"${cfg.userAgent}\" reaches no " +
+                        "provider (${affected.joinToString(", ")} require contact information). Call " +
+                        "contact() before withDefaultProviders().",
+                )
+            }
+            if (httpClient != null && contact != null) {
+                logger.warn(
+                    TAG,
+                    "contact() cannot alter a caller-supplied client's User-Agent: the client passed to " +
+                        "httpClient() sends whatever it was built with, so \"$contact\" reaches no " +
+                        "provider (${affected.joinToString(", ")} require contact information). Set the " +
+                        "User-Agent on that client — DefaultHttpClient takes it as its first argument.",
+                )
+            }
         }
     }
 }

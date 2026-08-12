@@ -288,9 +288,15 @@ EnrichmentEngine.Builder().config(EnrichmentConfig(userAgent = "MyApp/1.0 (me@ex
 
 A `userAgent` set on the config wins and `contact()` is then ignored. Supplying neither logs one
 warning through the engine's `EnrichmentLogger` at `build()` time, when any of `musicbrainz`,
-`wikipedia` or `wikidata` is registered — once per engine, never per request. A consumer passing
-its own `HttpClient` sets the header there and should still set one of the two, since the
-warning reads the config, not the wire.
+`wikipedia` or `wikidata` is registered — once per engine, never per request.
+
+`build()` warns from what the wire will carry, so the two ways to compose a compliant string that
+never reaches a provider are warned about too, once each:
+
+- `contact()` called *after* `withDefaultProviders()`, which already built the client with the
+  contactless default. Call `contact()` first.
+- a client passed to `httpClient()`, which `contact()` cannot reach. Set the User-Agent on that
+  client — `DefaultHttpClient` takes it as its first constructor argument.
 
 `ProviderPolicies["wikipedia"].commercialUseNote` carries the Wikimedia clause as data.
 

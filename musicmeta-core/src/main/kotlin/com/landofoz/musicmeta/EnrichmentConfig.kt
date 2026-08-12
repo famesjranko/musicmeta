@@ -81,8 +81,35 @@ data class EnrichmentConfig(
          * [contact] is a URL or email address a provider's operators can reach you at; it is
          * trimmed and otherwise used as given. Callers who set [userAgent] themselves do not need
          * this — put the contact inside their own string instead.
+         *
+         * @throws IllegalArgumentException if [contact] is blank, carries a line break, or carries
+         *   a parenthesis — see [EnrichmentEngine.Builder.contact].
          */
-        fun userAgentWithContact(contact: String): String = "$DEFAULT_USER_AGENT ( ${contact.trim()} )"
+        fun userAgentWithContact(contact: String): String {
+            requireUsableContact(contact)
+            return "$DEFAULT_USER_AGENT ( ${contact.trim()} )"
+        }
+    }
+}
+
+/**
+ * Rejects a contact string that would break the User-Agent it goes into. Both callers validate at
+ * the point the string is supplied: a CR or LF reaches the wire as a per-request
+ * `IllegalArgumentException` thrown inside the connection open, which every provider reports as an
+ * ordinary failure, and a parenthesis closes the comment both policies grade the header on.
+ */
+internal fun requireUsableContact(contact: String) {
+    require(contact.isNotBlank()) { "contact must be a URL or email address, not blank" }
+    val lineBreak = contact.firstOrNull { it == '\r' || it == '\n' }
+    require(lineBreak == null) {
+        "contact must not contain ${if (lineBreak == '\r') "a carriage return" else "a line feed"}: " +
+            "a header value carrying one is rejected as the connection opens, failing every request"
+    }
+    val paren = contact.firstOrNull { it == '(' || it == ')' }
+    require(paren == null) {
+        "contact must not contain '$paren': it closes the User-Agent comment " +
+            "\"${EnrichmentConfig.DEFAULT_USER_AGENT} ( contact )\" that the MusicBrainz and " +
+            "Wikimedia policies read"
     }
 }
 
