@@ -207,6 +207,38 @@ class BuilderUserAgentContactTest {
         assertTrue(warning, "DefaultHttpClient" in warning)
     }
 
+    @Test fun `a caller-supplied client carrying its own User-Agent is not warned about`() {
+        // Given - a builder whose client sets a compliant User-Agent itself, so contact() is unused
+        val logger = RecordingLogger()
+        val builder = EnrichmentEngine.Builder()
+            .addProvider(provider("musicbrainz"))
+            .httpClient(FakeHttpClient())
+            .logger(logger)
+
+        // When - building the engine
+        builder.build()
+
+        // Then - the wire is the client's to describe, so the contactless default is not assumed
+        assertEquals(emptyList<String>(), logger.warnings)
+    }
+
+    @Test fun `a client swapped in after withDefaultProviders still warns about the one it built`() {
+        // Given - default providers built the contactless-default client, then a client replaced it
+        val logger = RecordingLogger()
+        val builder = EnrichmentEngine.Builder()
+            .logger(logger)
+            .withDefaultProviders()
+            .httpClient(FakeHttpClient())
+
+        // When - building the engine
+        builder.build()
+
+        // Then - the providers already carry the contactless-default client httpClient() cannot reach
+        assertEquals(1, logger.warnings.size)
+        val warning = logger.warnings.single()
+        assertTrue(warning, EnrichmentConfig.DEFAULT_USER_AGENT in warning)
+    }
+
     @Test fun `contact rejects a line break`() {
         // Given - a contact string carrying a header-splitting newline
         val builder = EnrichmentEngine.Builder()

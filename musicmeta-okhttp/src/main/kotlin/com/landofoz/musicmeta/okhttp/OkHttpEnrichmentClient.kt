@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.okhttp
 
+import com.landofoz.musicmeta.EnrichmentConfig
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.HttpResult
 import kotlinx.coroutines.Dispatchers
@@ -17,8 +18,10 @@ import java.io.IOException
 /**
  * OkHttp adapter for [HttpClient].
  *
- * - No built-in retry logic (unlike DefaultHttpClient). OkHttp users add retry
- *   via interceptors on the provided [OkHttpClient] instance.
+ * - No transient retry. Budgeted retry exists only on DefaultHttpClient, because the enrich
+ *   deadline the budget is spent against is internal to the engine and an OkHttp interceptor
+ *   cannot see it. Retry configured on the [OkHttpClient] instance is therefore unbudgeted: keep
+ *   it short and idempotent-only, or use DefaultHttpClient.
  * - Gzip decompression handled transparently by OkHttp. Do NOT add Accept-Encoding
  *   manually; setting it disables OkHttp's transparent decompression and delivers
  *   raw gzip bytes to the JSON parser.
@@ -27,7 +30,7 @@ import java.io.IOException
  */
 class OkHttpEnrichmentClient(
     private val client: OkHttpClient,
-    private val userAgent: String = "MusicEnrichmentEngine/1.0",
+    private val userAgent: String = EnrichmentConfig.DEFAULT_USER_AGENT,
 ) : HttpClient {
 
     private val noRedirectClient = client.newBuilder().followRedirects(false).build()

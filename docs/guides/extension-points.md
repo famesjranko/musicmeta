@@ -139,7 +139,7 @@ val engine = EnrichmentEngine.Builder()
 Call `.httpClient()` **before** `.withDefaultProviders()` so all default providers use OkHttp.
 
 **Differences from `DefaultHttpClient`:**
-- No built-in retry — add retries via OkHttp interceptors
+- No transient retry: the budget is spent against the engine's internal enrich deadline, which an OkHttp interceptor cannot see, so budgeted retry exists only on `DefaultHttpClient`. Retry you configure on the `OkHttpClient` is unbudgeted — keep it short and idempotent-only, or use `DefaultHttpClient`
 - Gzip decompression handled transparently (do not set `Accept-Encoding` manually)
 - Timeouts inherited from the `OkHttpClient` instance
 
