@@ -13,10 +13,12 @@ import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
 import com.landofoz.musicmeta.IdentityMatch
 import com.landofoz.musicmeta.IdentityResolution
+import com.landofoz.musicmeta.MusicBrainzEntityType
 import com.landofoz.musicmeta.ProviderInfo
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.cache.CacheMode
 import com.landofoz.musicmeta.http.EnrichDeadline
+import com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzProvider
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -253,6 +255,13 @@ internal class DefaultEnrichmentEngine(
     }
 
     override fun getProviders(): List<ProviderInfo> = registry.providerInfos()
+
+    /** The probe behind [com.landofoz.musicmeta.discoverMbidEntityType], which holds its contract. */
+    internal suspend fun discoverEntityType(mbid: String): MusicBrainzEntityType? {
+        val musicBrainz = registry.identityProvider() as? MusicBrainzProvider
+            ?: error("No MusicBrainz identity provider is registered; nothing can resolve an MBID's type")
+        return withContext(ProviderCallScope()) { musicBrainz.discoverEntityType(mbid) }
+    }
 
     /** The primary key, plus the name-alias key when the request carries an MBID. */
     private fun cacheKeysFor(request: EnrichmentRequest, type: EnrichmentType): List<String> =

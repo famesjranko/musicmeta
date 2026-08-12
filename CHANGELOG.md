@@ -37,7 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - `EnrichmentRequest.forTrackByMbid`/`forAlbumByMbid`/`forArtistByMbid`: request an entity by MBID alone; identity resolution fills the names the other providers search by
-- `MusicBrainzProvider.discoverEntityType(mbid)`: what a bare MBID names (`MusicBrainzEntityType.RECORDING`/`RELEASE`/`ARTIST`, or null), at 1–3 requests probing in that order
+- `EnrichmentEngine.discoverMbidEntityType(mbid)`: what a bare MBID names (`MusicBrainzEntityType.RECORDING`/`RELEASE`/`ARTIST`, or null), at 1–3 requests probing in that order
 - An MBID-only result is cached under MusicBrainz's canonical name as well as its id, so a later name-only lookup for that entity hits
 - `TRACK_METADATA`/`EnrichmentData.TrackMetadata` (duration, album title, disambiguation), already fetched but dropped by MusicBrainz, Deezer, LRCLIB; in `DEFAULT_TRACK_TYPES`
 - `PopularTrack` now carries `listenerCount`, `durationMs` and `album`, matching what `TopTrack` already exposes from the same ListenBrainz data

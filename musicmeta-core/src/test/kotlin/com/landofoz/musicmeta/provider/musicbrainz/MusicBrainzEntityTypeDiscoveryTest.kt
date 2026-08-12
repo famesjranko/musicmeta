@@ -1,8 +1,13 @@
 package com.landofoz.musicmeta.provider.musicbrainz
 
+import com.landofoz.musicmeta.EnrichmentConfig
 import com.landofoz.musicmeta.MusicBrainzEntityType
+import com.landofoz.musicmeta.discoverMbidEntityType
+import com.landofoz.musicmeta.engine.DefaultEnrichmentEngine
 import com.landofoz.musicmeta.engine.ProviderCallScope
+import com.landofoz.musicmeta.engine.ProviderRegistry
 import com.landofoz.musicmeta.http.RateLimiter
+import com.landofoz.musicmeta.testutil.FakeEnrichmentCache
 import com.landofoz.musicmeta.testutil.FakeHttpClient
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
@@ -86,6 +91,25 @@ class MusicBrainzEntityTypeDiscoveryTest {
         // Then - both answers are absence, and the second one cost nothing
         assertEquals(listOf(null, null), types)
         assertEquals(3, lookups())
+    }
+
+    @Test
+    fun `the engine answers from the MusicBrainz provider it was built with`() = runTest {
+        // Given - an engine whose identity provider is this MusicBrainz, sharing its limiter
+        httpClient.givenJsonResponse("recording/$RECORDING_MBID", BOHEMIAN_RECORDING)
+        val engine = DefaultEnrichmentEngine(
+            ProviderRegistry(listOf(provider)),
+            FakeEnrichmentCache(),
+            EnrichmentConfig(),
+            mergers = emptyList(),
+        )
+
+        // When - the identifier is handed to the public entry point
+        val type = engine.discoverMbidEntityType(RECORDING_MBID)
+
+        // Then - it is the same answer at the same cost, without a second limiter for MusicBrainz
+        assertEquals(MusicBrainzEntityType.RECORDING, type)
+        assertEquals(1, lookups())
     }
 
     private companion object {

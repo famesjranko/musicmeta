@@ -153,7 +153,7 @@ lookups return it rather than a bare null so the two cannot be confused at a cal
 and its siblings leave the names blank for identity resolution to fill from the entity it looked up
 (`docs/how-it-works.md`, Step 3); a blank one MusicBrainz could not fill is answered `NotFound`
 rather than searched for, because whatever ranks first for `recording:""` must never become the
-request's entity. `MusicBrainzProvider.discoverEntityType` is the same absence read the other way:
+request's entity. `EnrichmentEngine.discoverMbidEntityType` is the same absence read the other way:
 the three entity types probed in order until one answers, which is the only way to learn what a bare
 MBID names.
 

@@ -1062,6 +1062,7 @@ public final class com/landofoz/musicmeta/EnrichmentEngineExtensionsKt {
 	public static final fun artistProfile (Lcom/landofoz/musicmeta/EnrichmentEngine;Ljava/lang/String;Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentIdentifiers;Ljava/util/Set;ZLkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static synthetic fun artistProfile$default (Lcom/landofoz/musicmeta/EnrichmentEngine;Lcom/landofoz/musicmeta/SearchCandidate;Ljava/util/Set;ZLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun artistProfile$default (Lcom/landofoz/musicmeta/EnrichmentEngine;Ljava/lang/String;Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentIdentifiers;Ljava/util/Set;ZLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static final fun discoverMbidEntityType (Lcom/landofoz/musicmeta/EnrichmentEngine;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static final fun resolveTrackPreviews (Lcom/landofoz/musicmeta/EnrichmentEngine;Ljava/util/List;ZLkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static synthetic fun resolveTrackPreviews$default (Lcom/landofoz/musicmeta/EnrichmentEngine;Ljava/util/List;ZLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static final fun trackProfile (Lcom/landofoz/musicmeta/EnrichmentEngine;Lcom/landofoz/musicmeta/SearchCandidate;Ljava/lang/String;Ljava/util/Set;ZLkotlin/coroutines/Continuation;)Ljava/lang/Object;
@@ -2396,7 +2397,6 @@ public final class com/landofoz/musicmeta/provider/musicbrainz/MusicBrainzProvid
 	public static final field DEFAULT_THUMBNAIL_SIZE I
 	public fun <init> (Lcom/landofoz/musicmeta/http/HttpClient;Lcom/landofoz/musicmeta/http/RateLimiter;II)V
 	public synthetic fun <init> (Lcom/landofoz/musicmeta/http/HttpClient;Lcom/landofoz/musicmeta/http/RateLimiter;IIILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public final fun discoverEntityType (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun enrich (Lcom/landofoz/musicmeta/EnrichmentRequest;Lcom/landofoz/musicmeta/EnrichmentType;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun getCapabilities ()Ljava/util/List;
 	public fun getDisplayName ()Ljava/lang/String;

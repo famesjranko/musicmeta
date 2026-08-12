@@ -71,22 +71,8 @@ class MusicBrainzProvider(
     override suspend fun resolveIdentity(request: EnrichmentRequest): EnrichmentResult =
         enrich(request, EnrichmentType.GENRE)
 
-    /**
-     * What [mbid] names, or null when MusicBrainz holds it under no entity type — the answer a
-     * caller needs before it can build a request, since an MBID does not say what it identifies and
-     * MusicBrainz has no endpoint that takes one without its type.
-     *
-     * Costs 1 to 3 requests on a 1 req/s limiter: the types are probed **recording, then release,
-     * then artist**, and a dead identifier pays for all three. Recording leads because that is
-     * where third-party identifiers overwhelmingly come from, and a dead one is not a corner case —
-     * 51 of 103 Last.fm recording MBIDs were held under no entity type when measured 2026-08-11.
-     *
-     * ListenBrainz answers the recording case in one keyless request and was measured against this
-     * on 2026-08-12; `docs/how-it-works.md` records why it did not win.
-     *
-     * A transient failure throws rather than answering null: an outage is not an absence.
-     */
-    suspend fun discoverEntityType(mbid: String): MusicBrainzEntityType? =
+    /** The probe behind [com.landofoz.musicmeta.discoverMbidEntityType], which holds its contract. */
+    internal suspend fun discoverEntityType(mbid: String): MusicBrainzEntityType? =
         enricher().discoverEntityType(mbid)
 
     override suspend fun searchCandidates(
