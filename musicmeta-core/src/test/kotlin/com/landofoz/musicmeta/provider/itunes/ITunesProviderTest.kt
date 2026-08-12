@@ -6,9 +6,11 @@ import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
+import com.landofoz.musicmeta.engine.ProviderCallScope
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.testutil.FakeHttpClient
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -365,6 +367,136 @@ class ITunesProviderTest {
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
+    // ---- Barcode-present album resolution (UPC identity lookup) ----
+
+    @Test
+    fun `a barcode request skips search entirely`() = runTest {
+        // Given - a request carrying a barcode iTunes resolves to a matching-artist collection
+        httpClient.givenJsonResponse("upc=724384960650", UPC_LOOKUP_DISCOVERY)
+        val request = barcodeRequest("724384960650", "Daft Punk", "Discovery")
+
+        // When - enriching for album metadata
+        val result = provider.enrich(request, EnrichmentType.ALBUM_METADATA)
+
+        // Then - the lookup answered it and no /search request was ever made
+        assertTrue(result is EnrichmentResult.Success)
+        assertTrue(httpClient.requestedUrls.none { it.contains("/search") })
+    }
+
+    @Test
+    fun `a barcode hit scores as an exact identity match and carries the collection id forward`() = runTest {
+        // Given - the same matching-artist UPC lookup
+        httpClient.givenJsonResponse("upc=724384960650", UPC_LOOKUP_DISCOVERY)
+        val request = barcodeRequest("724384960650", "Daft Punk", "Discovery")
+
+        // When - enriching for album metadata
+        val result = provider.enrich(request, EnrichmentType.ALBUM_METADATA) as EnrichmentResult.Success
+
+        // Then - confidence is the identity-match ceiling, above fuzzyMatch(true), and the resolved
+        // collection id is carried so ALBUM_TRACKS can reuse it without a further UPC round trip
+        assertEquals(1.0f, result.confidence, 0.0f)
+        assertEquals("697194953", result.resolvedIdentifiers?.get("itunesCollectionId"))
+    }
+
+    @Test
+    fun `resultCount 0 on a barcode lookup is NotFound, not an outage`() = runTest {
+        // Given - a live-shaped resultCount 0 response for an absent barcode
+        httpClient.givenJsonResponse("upc=602547670342", """{"resultCount":0,"results":[]}""")
+        val request = barcodeRequest("602547670342", "The Beatles", "Abbey Road")
+
+        // When - enriching for album metadata
+        val result = provider.enrich(request, EnrichmentType.ALBUM_METADATA)
+
+        // Then - a genuine miss, not Error
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `a barcode collection under a different artist is passed over for one that matches`() = runTest {
+        // Given - the first collection under this barcode names an unrelated artist; the second
+        // is the album the caller actually asked about
+        httpClient.givenJsonResponse("upc=724384960650", UPC_LOOKUP_WRONG_ARTIST_FIRST)
+        val request = barcodeRequest("724384960650", "Daft Punk", "Discovery")
+
+        // When - enriching for album metadata
+        val result = provider.enrich(request, EnrichmentType.ALBUM_METADATA)
+
+        // Then - the matching-artist candidate wins, not the unrelated one iTunes listed first
+        assertTrue(result is EnrichmentResult.Success)
+        assertEquals(
+            "697194953",
+            (result as EnrichmentResult.Success).resolvedIdentifiers?.get("itunesCollectionId"),
+        )
+    }
+
+    @Test
+    fun `no candidate under a barcode names the requested artist is NotFound`() = runTest {
+        // Given - every collection under this barcode names a different artist
+        httpClient.givenJsonResponse("upc=724384960650", UPC_LOOKUP_NO_MATCH)
+        val request = barcodeRequest("724384960650", "Daft Punk", "Discovery")
+
+        // When - enriching for album metadata
+        val result = provider.enrich(request, EnrichmentType.ALBUM_METADATA)
+
+        // Then - a wrong-edition hit is refused, not accepted as a guess
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `a network failure on the barcode path is Error NETWORK, not NotFound`() = runTest {
+        // Given - the UPC lookup itself fails transiently
+        httpClient.givenIoException("upc=")
+        val request = barcodeRequest("724384960650", "Daft Punk", "Discovery")
+
+        // When - enriching for album metadata
+        val result = provider.enrich(request, EnrichmentType.ALBUM_METADATA)
+
+        // Then - a throttled/broken upstream reports as Error so the breaker sees it, never as a
+        // silent absence
+        assertTrue(result is EnrichmentResult.Error)
+        assertEquals(ErrorKind.NETWORK, (result as EnrichmentResult.Error).errorKind)
+    }
+
+    @Test
+    fun `a blank barcode falls through to search rather than killing every album result`() = runTest {
+        // Given - identifiers carrying an empty-string barcode (as an unset EnrichmentIdentifiers
+        // field can arrive) alongside a search that would otherwise answer normally
+        httpClient.givenJsonResponse("itunes.apple.com", ITUNES_RESPONSE)
+        val identifiers = EnrichmentIdentifiers(barcode = "")
+        val request = EnrichmentRequest.ForAlbum(identifiers, "OK Computer", "Radiohead")
+
+        // When - enriching for album art
+        val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
+
+        // Then - the search path still answers; a blank barcode is not treated as a real one
+        assertTrue(result is EnrichmentResult.Success)
+        assertTrue(httpClient.requestedUrls.any { it.contains("/search") })
+    }
+
+    @Test
+    fun `metadata and tracks share one UPC lookup within the same call`() = runTest {
+        // Given - the call scope one enrich() installs for its provider memos ([ProviderCallScope])
+        httpClient.givenJsonResponse("upc=724384960650", UPC_LOOKUP_DISCOVERY)
+        httpClient.givenJsonResponse("lookup?id=697194953", ITUNES_LOOKUP_TRACKS_RESPONSE)
+        val request = barcodeRequest("724384960650", "Daft Punk", "Discovery")
+
+        // When - both types are resolved inside one call scope, as the engine would
+        val results = withContext(ProviderCallScope()) {
+            listOf(
+                provider.enrich(request, EnrichmentType.ALBUM_METADATA),
+                provider.enrich(request, EnrichmentType.ALBUM_TRACKS),
+            )
+        }
+
+        // Then - both succeed from the one collection, and only one /lookup?upc= request was made
+        assertTrue(results.all { it is EnrichmentResult.Success })
+        assertEquals(1, httpClient.requestedUrls.count { it.contains("/lookup?upc=") })
+        assertTrue(httpClient.requestedUrls.none { it.contains("/search") })
+    }
+
+    private fun barcodeRequest(barcode: String, artist: String, title: String): EnrichmentRequest.ForAlbum =
+        EnrichmentRequest.ForAlbum(EnrichmentIdentifiers(barcode = barcode), title, artist)
+
     companion object {
         val ITUNES_METADATA_RESPONSE = """
             {"resultCount":1,"results":[{
@@ -427,6 +559,41 @@ class ITunesProviderTest {
 
         val ITUNES_SEARCH_ARTIST_RESPONSE = """
             {"resultCount":1,"results":[{"artistId":657515,"artistName":"Radiohead","wrapperType":"artist"}]}
+        """.trimIndent()
+
+        // captured 2026-08-12: GET /lookup?upc=724384960650, trimmed — Daft Punk "Discovery" as
+        // carried by Deezer album 302127 (api.deezer.com/album/302127)
+        val UPC_LOOKUP_DISCOVERY = """
+            {"resultCount":1,"results":[
+              {"wrapperType":"collection","collectionType":"Album","artistId":5468295,
+               "collectionId":697194953,"artistName":"Daft Punk","collectionName":"Discovery",
+               "artworkUrl100":"https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/fd/4a/77/fd4a77db-0ebc-d043-41a2-f32fa1bb0fb4/dj.qrikkdwj.jpg/100x100bb.jpg",
+               "trackCount":14,"country":"USA","releaseDate":"2001-03-12T08:00:00Z",
+               "primaryGenreName":"Dance"}
+            ]}
+        """.trimIndent()
+
+        // synthetic — constructed to pin the artist-match gate: a reused-barcode candidate under an
+        // unrelated artist, listed ahead of the real match
+        val UPC_LOOKUP_WRONG_ARTIST_FIRST = """
+            {"resultCount":2,"results":[
+              {"wrapperType":"collection","collectionId":111,"collectionName":"Unrelated Album",
+               "artistName":"Someone Else"},
+              {"wrapperType":"collection","collectionId":697194953,"collectionName":"Discovery",
+               "artistName":"Daft Punk",
+               "artworkUrl100":"https://is1-ssl.mzstatic.com/image/thumb/Music/100x100bb.jpg",
+               "trackCount":14,"country":"USA","releaseDate":"2001-03-12T08:00:00Z"}
+            ]}
+        """.trimIndent()
+
+        // synthetic — constructed to pin the no-match-among-candidates case
+        val UPC_LOOKUP_NO_MATCH = """
+            {"resultCount":2,"results":[
+              {"wrapperType":"collection","collectionId":111,"collectionName":"Unrelated Album",
+               "artistName":"Someone Else"},
+              {"wrapperType":"collection","collectionId":222,"collectionName":"Another Unrelated",
+               "artistName":"Also Not It"}
+            ]}
         """.trimIndent()
     }
 }
