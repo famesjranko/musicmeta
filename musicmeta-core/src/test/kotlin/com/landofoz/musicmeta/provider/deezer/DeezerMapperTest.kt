@@ -89,6 +89,62 @@ class DeezerMapperTest {
     }
 
     @Test
+    fun `toAlbumMetadata fills barcode, label and releaseDate from the album detail`() {
+        // Given - a search hit and its album detail, both carrying real values
+        val result = DeezerAlbumResult(
+            id = 302127L,
+            title = "Discovery",
+            artistName = "Daft Punk",
+            coverSmall = null,
+            coverMedium = null,
+            coverBig = null,
+            coverXl = null,
+            nbTracks = 14,
+            recordType = "album",
+            explicitLyrics = false,
+        )
+        val album = DeezerAlbum(
+            id = 302127L,
+            upc = "724384960650",
+            label = "Daft Life Ltd./ADA France",
+            releaseDate = "2001-03-07",
+        )
+
+        // When - mapping to Metadata
+        val metadata = DeezerMapper.toAlbumMetadata(result, album)
+
+        // Then - trackCount/releaseType/explicit come from the search hit, barcode/label/releaseDate from the detail
+        assertEquals(14, metadata.trackCount)
+        assertEquals("album", metadata.releaseType)
+        assertEquals(false, metadata.explicit)
+        assertEquals("724384960650", metadata.barcode)
+        assertEquals("Daft Life Ltd./ADA France", metadata.label)
+        assertEquals("2001-03-07", metadata.releaseDate)
+    }
+
+    @Test
+    fun `toAlbumMetadata leaves barcode, label and releaseDate null when album detail is absent`() {
+        // Given - a search hit with no album detail fetched
+        val result = DeezerAlbumResult(
+            id = 1L,
+            title = "T",
+            artistName = "A",
+            coverSmall = null,
+            coverMedium = null,
+            coverBig = null,
+            coverXl = null,
+        )
+
+        // When - mapping to Metadata with a null album
+        val metadata = DeezerMapper.toAlbumMetadata(result, album = null)
+
+        // Then - the three fields are absent, not empty strings
+        assertNull(metadata.barcode)
+        assertNull(metadata.label)
+        assertNull(metadata.releaseDate)
+    }
+
+    @Test
     fun `toRadioPlaylist stores track id as deezerId in identifiers`() {
         // Given - a track with a specific id
         val tracks = listOf(

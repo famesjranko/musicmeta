@@ -75,11 +75,14 @@ internal object DeezerMapper {
             },
         )
 
-    fun toAlbumMetadata(result: DeezerAlbumResult): EnrichmentData.Metadata =
+    fun toAlbumMetadata(result: DeezerAlbumResult, album: DeezerAlbum?): EnrichmentData.Metadata =
         EnrichmentData.Metadata(
             trackCount = result.nbTracks,
             releaseType = result.recordType,
             explicit = result.explicitLyrics,
+            barcode = album?.upc,
+            label = album?.label,
+            releaseDate = album?.releaseDate,
         )
 
     fun toSimilarArtists(artists: List<DeezerRelatedArtist>): EnrichmentData.SimilarArtists {

@@ -254,7 +254,10 @@ A limiter holds its mutex across the request itself, so a shared instance would 
 round-trips sequential; rate limits are per-host and no host here asks to be throttled against
 another's traffic. The two Deezer providers share one limiter because they share a host; Wikipedia
 takes the Wikidata limiter for the Wikidata host it reaches, alongside its own. iTunes takes its
-constructor default of `RateLimiter(3000)`.
+constructor default of `RateLimiter(3000)`. `ALBUM_METADATA` costs one extra Deezer request
+(`GET /album/{id}`, on top of the search) since 2026-08-12 — shared with `ALBUM_TRACKS` within one
+`enrich()` call via `ProviderCallScope`, but not across separate calls, so it still halves the
+album search-only throughput on the shared 10/s limiter when both types are requested.
 
 The intervals live in that one function, each with a dated comment naming its basis — **published**,
 **measured** from live rate-limit headers, or **judgement**. Exactly three rest on a number we read
@@ -294,12 +297,16 @@ either way), `.id` (addresses one image at `/release/{mbid}/{id}-{size}`), `.bac
 per type, so alternate pressings' art is discarded. `/release-group/{id}` JSON is never called — only
 its `front-{size}` redirect, which is why that path returns no `sizes`.
 
-**Deezer.** On results we already fetch: `album.release_date` (read only inside
-`ARTIST_DISCOGRAPHY`), `album.genre_id`/`genres` (Deezer declares no genre capability at all),
-`album.label`, `album.upc` (a barcode nothing else supplies),
-`track.rank`/`bpm`/`gain` (real popularity and audio features, in place of the
-positional scores the mapper synthesises), `track.duration` on radio and top-track results,
-`contributors` (`CREDITS`), `explicit_content_lyrics` (finer than the boolean).
+**Deezer.** `GET /album/{id}` now backs `ALBUM_METADATA`, filling `label`, `barcode` (from `upc`,
+a barcode nothing else supplies) and `releaseDate`; `album.genre_id`/`genres` is read live but
+deliberately not parsed — 12/12 probed albums (2026-08-11) returned exactly one coarse editorial
+tag, a strict parent of Last.fm's vote-weighted tags, so Deezer declares no `GENRE` capability.
+`album.release_date` from the *search* hit is still read only inside `ARTIST_DISCOGRAPHY`. On
+results we already fetch: `track.rank`/`bpm`/`gain` (real popularity and audio features, in place
+of the positional scores the mapper synthesises), `track.duration` on radio and top-track results,
+`contributors` (`CREDITS` — every clean probed result had one contributor, role "Main"; needs its
+own probe on credits-heavy albums before this becomes a capability),
+`explicit_content_lyrics` (finer than the boolean).
 `artist.nb_fan`/`nb_album` are read, but only as the artist search's tie-break — neither reaches
 `ARTIST_POPULARITY`. Never called:
 `/chart`, `/genre`, `/editorial`, `/playlist/{id}`, `/podcast`, every `/user/**`.
