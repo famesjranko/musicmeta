@@ -341,10 +341,15 @@ predicate is not simply "retry `NetworkError`":
 
 ## 12. A provider's own memo is a cache no consumer can flush
 
-`MusicBrainzEnricher` memoizes its artist, release, release-group-wiki, album-search and
-album-suggestion lookups because the engine asks for one type at a time and `EnrichmentCache` is
-keyed by type — nothing above the provider can tell that GENRE and ALBUM_TRACKS want the same
-release, and each repeat is a ~1.1s wait on the shared limiter.
+`MusicBrainzEnricher` memoizes its artist, release, release-group-wiki, album-search,
+album-suggestion, artist-search and track-resolution lookups because the engine asks for one type
+at a time and `EnrichmentCache` is keyed by type — nothing above the provider can tell that GENRE
+and ALBUM_TRACKS want the same release, and each repeat is a ~1.1s wait on the shared limiter.
+
+The track memo holds *the resolution*, not the raw search: `resolveTrackQualifierFallback` is
+called from inside it, not at each call site, or a per-type repeat of the fallback's own searches
+would survive a memo scoped to the raw search alone. Same reasoning as the album-search memo
+holding which release a title resolves to, one paragraph below.
 
 That much is right, and what deleting them costs depends entirely on whether the album resolves.
 Measured over the six album types MusicBrainz declares a capability for, on the shipped defaults —

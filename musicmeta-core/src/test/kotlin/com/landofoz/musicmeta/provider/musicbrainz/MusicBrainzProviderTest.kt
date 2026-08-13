@@ -228,6 +228,23 @@ class MusicBrainzProviderTest {
     }
 
     @Test
+    fun `empty artist search results return NotFound for BAND_MEMBERS, ARTIST_DISCOGRAPHY and ARTIST_LINKS`() = runTest {
+        // Given - MusicBrainz returns an empty artists array, requested without an MBID
+        httpClient.givenJsonResponse("artist?query", """{"artists":[]}""")
+        val request = EnrichmentRequest.forArtist("Nobody")
+
+        // When - enriching for each of the three types that resolve an artist by search
+        val bandMembers = provider.enrich(request, EnrichmentType.BAND_MEMBERS)
+        val discography = provider.enrich(request, EnrichmentType.ARTIST_DISCOGRAPHY)
+        val links = provider.enrich(request, EnrichmentType.ARTIST_LINKS)
+
+        // Then - NotFound for all three, not an Error from ranking an empty pool
+        assertTrue(bandMembers is EnrichmentResult.NotFound)
+        assertTrue(discography is EnrichmentResult.NotFound)
+        assertTrue(links is EnrichmentResult.NotFound)
+    }
+
+    @Test
     fun `empty recording search results return NotFound`() = runTest {
         // Given - MusicBrainz returns an empty recordings array
         httpClient.givenJsonResponse("recording?query", """{"recordings":[]}""")

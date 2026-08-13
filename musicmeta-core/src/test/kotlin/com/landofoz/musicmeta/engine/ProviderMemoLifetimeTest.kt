@@ -327,10 +327,65 @@ class ProviderMemoLifetimeTest {
         )
     }
 
+    @Test
+    fun `an absent artist's fanout searches by name once, not once per type`() = runTest {
+        // Given - a name MusicBrainz holds no artist under, whose fuzzy retry is also empty, so
+        // nothing suggests and identity resolution does not short-circuit the fan-out
+        httpClient.givenJsonResponse(ARTIST_SEARCH, NO_ARTISTS)
+
+        // When - four artist-only types are enriched in one call, none of them carrying an MBID
+        val results = engine().enrich(
+            ABSENT_ARTIST,
+            setOf(
+                EnrichmentType.GENRE, EnrichmentType.BAND_MEMBERS,
+                EnrichmentType.ARTIST_DISCOGRAPHY, EnrichmentType.ARTIST_LINKS,
+            ),
+        )
+
+        // Then - no type resolved, and the miss cost one strict search and one fuzzy retry for the
+        // whole call rather than one of each per type
+        assertTrue(results.raw[EnrichmentType.GENRE] is EnrichmentResult.NotFound)
+        assertTrue(results.raw[EnrichmentType.BAND_MEMBERS] is EnrichmentResult.NotFound)
+        assertTrue(results.raw[EnrichmentType.ARTIST_DISCOGRAPHY] is EnrichmentResult.NotFound)
+        assertTrue(results.raw[EnrichmentType.ARTIST_LINKS] is EnrichmentResult.NotFound)
+        assertEquals(ARTIST_SEARCHES_PER_ABSENT_ARTIST, httpClient.requestedUrls.count { it.contains(ARTIST_SEARCH) })
+    }
+
+    @Test
+    fun `a qualified track title that resolves nothing pays for the whole ladder once, not once per type`() = runTest {
+        // Given - a title carrying a "(Remastered)" qualifier group MusicBrainz holds no matching
+        // recording under, at any candidate the qualifier fallback tries, and whose fuzzy retry is
+        // also empty
+        httpClient.givenJsonResponse(RECORDING_SEARCH, NO_RECORDINGS)
+
+        // When - two track types are enriched in one call
+        val results = engine().enrich(QUALIFIED_TRACK, setOf(EnrichmentType.GENRE, EnrichmentType.TRACK_METADATA))
+
+        // Then - no type resolved, and the miss cost one run of the whole resolution ladder —
+        // including the qualifier fallback's own searches — for the call, not once per type. A memo
+        // over the raw search alone would leave the fallback repeating and this count higher.
+        assertTrue(results.raw[EnrichmentType.GENRE] is EnrichmentResult.NotFound)
+        assertTrue(results.raw[EnrichmentType.TRACK_METADATA] is EnrichmentResult.NotFound)
+        assertEquals(
+            RECORDING_SEARCHES_PER_ABSENT_QUALIFIED_TRACK,
+            httpClient.requestedUrls.count { it.contains(RECORDING_SEARCH) },
+        )
+    }
+
     private companion object {
         val ALBUM = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
 
         val TRACK = EnrichmentRequest.forTrack("Enter Sandman", "Metallica")
+
+        /** A name MusicBrainz holds no artist under, so every type of a fan-out has to search for it. */
+        val ABSENT_ARTIST = EnrichmentRequest.forArtist("Some Unknown Artist Xyzzy")
+
+        /**
+         * A title carrying a "(Remastered)" qualifier group, so an absent-track search also runs
+         * [com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzQualifierFallback]'s candidates —
+         * the searches that must land inside the same memo as the raw search, not outside it.
+         */
+        val QUALIFIED_TRACK = EnrichmentRequest.forTrack("Paranoid Android (Remastered)", "Radiohead")
 
         /** A title MusicBrainz stores only under symbols (`F♯ A♯ ∞`), so no spelling searches for it. */
         val SYMBOL_ALBUM = EnrichmentRequest.forAlbum("F# A# (Infinity)", "Godspeed You! Black Emperor")
@@ -341,6 +396,29 @@ class ProviderMemoLifetimeTest {
         const val ARTIST_SEARCH = "artist?query"
         const val BROWSE = "release-group?artist="
         const val RECORDING_SEARCH = "recording?query"
+
+        /** What MusicBrainz answers a search for an artist name it holds nothing under with. */
+        const val NO_ARTISTS = """{"count": 0, "offset": 0, "artists": []}"""
+
+        /**
+         * What one absent artist costs in `artist?query=` requests: the strict search, then the
+         * fuzzy search that answers the empty pool with suggestions. Spent once for the whole call;
+         * a per-type repeat of either is what this number catches.
+         */
+        const val ARTIST_SEARCHES_PER_ABSENT_ARTIST = 2
+
+        /**
+         * What one absent, qualified-title track costs in `recording?query=` requests: the filtered
+         * resolution search — unfiltered from the start, because [QUALIFIED_TRACK]'s trailing
+         * `(Remastered)` group routes it through the plain search rather than the canonical/shallow
+         * pair "Enter Sandman" takes, so there is no separate unfiltered retry to count — the
+         * qualifier fallback's one stripped-title candidate search, the unfiltered pool the miss
+         * suggests from, and the fuzzy near-miss search an empty suggestion pool asks for.
+         *
+         * Each is spent once for the call. A memo scoped to the raw search alone leaves the
+         * candidate search repeating once per type instead, which is what this number would rise to.
+         */
+        const val RECORDING_SEARCHES_PER_ABSENT_QUALIFIED_TRACK = 4
 
         /**
          * What one absent track costs in `recording?query=` requests: the filtered resolution
