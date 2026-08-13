@@ -134,11 +134,14 @@ data class ProviderHit(
 data class ProvidersResponse(val providers: List<ProviderRow>)
 
 /**
- * One provider this instance was built with, as `getProviders()` reports it, joined to the terms
- * snapshot `ProviderPolicies` ships for it.
+ * One provider row: either live, as `getProviders()` reports it, or a `ProviderCatalog` entry no
+ * running instance registered — joined either way to the terms snapshot `ProviderPolicies` ships
+ * for the same id.
  *
  * [available] is the provider's own availability — false for a keyed provider with no key, which is
- * why [requiresApiKey] is rendered beside it rather than inferred from it.
+ * why [requiresApiKey] is rendered beside it rather than inferred from it. A catalog-only row (never
+ * registered) reports [available] `false` and [capabilities] empty rather than guessing what a live
+ * instance would have declared.
  */
 @Serializable
 data class ProviderRow(
@@ -146,10 +149,16 @@ data class ProviderRow(
     val displayName: String,
     val available: Boolean,
     val requiresApiKey: Boolean,
-    /** Bare `EnrichmentType` names, one per declared capability. */
+    /** Bare `EnrichmentType` names, one per declared capability. Empty for a catalog-only row. */
     val capabilities: List<String> = emptyList(),
     /** null when musicmeta records no terms snapshot for this provider — not "no obligations". */
     val policy: PolicyRow? = null,
+    /**
+     * `"KEY_MISSING"` for a `Required` catalog entry no instance registered; `"TOKEN_MISSING"` for
+     * a live `Optional` entry (ListenBrainz) whose token selector reads null — the provider is
+     * registered and answers everything except `ARTIST_RADIO_DISCOVERY`. null otherwise.
+     */
+    val keyStatus: String? = null,
 )
 
 /** The renderable subset of a `ProviderPolicy`: enum fields as bare enum names, notice text as-is. */

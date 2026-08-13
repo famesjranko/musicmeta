@@ -814,19 +814,30 @@ function humanizeEnum(name) {
 // cannot know which item came from where before the request runs, so both states render.
 const ATTRIBUTION_OWED = ['REQUIRED', 'DEPENDS_ON_DATA'];
 
+// keyStatus arrives from the server merge of the live provider set with the default-provider
+// catalog: KEY_MISSING is a catalog entry no instance registered (row never went live), and
+// TOKEN_MISSING is a live-but-token-gated entry (ListenBrainz) whose surface is otherwise intact.
+function keyStateHtml(provider) {
+  if (provider.keyStatus === 'KEY_MISSING') return '<span class="keyreq">key missing</span>';
+  if (provider.keyStatus === 'TOKEN_MISSING') {
+    return '<span class="keyreq" title="Gates artist radio discovery only — everything else this provider answers still works.">token missing</span>';
+  }
+  if (!provider.requiresApiKey) return 'no key needed';
+  return provider.available ? 'key configured' : '<span class="keyreq">key missing</span>';
+}
+
 function providerRowHtml(provider) {
-  const availability = provider.available ? 'available' : 'unavailable';
-  const keyState = !provider.requiresApiKey
-    ? 'no key needed'
-    : provider.available
-      ? 'key configured'
-      : '<span class="keyreq">key missing</span>';
+  const skipped = provider.keyStatus === 'KEY_MISSING';
+  const availability = skipped ? 'skipped' : provider.available ? 'available' : 'unavailable';
   const policy = provider.policy;
+  // A catalog-only row's capabilities are always empty — this instance never registered it, so "0"
+  // would read as "offers nothing" rather than "not applicable, never asked".
+  const types = skipped ? '—' : provider.capabilities.length;
   return `<tr>
       <td><span class="pdot${provider.available ? '' : ' off'}" aria-hidden="true"></span>${esc(provider.displayName)}
         <span class="secondary">${availability}</span></td>
-      <td>${keyState}</td>
-      <td>${provider.capabilities.length}</td>
+      <td>${keyStateHtml(provider)}</td>
+      <td>${types}</td>
       <td>${policy ? esc(humanizeEnum(policy.commercialUse)) : 'Not recorded'}</td>
       <td>${policy && policy.dataLicence ? esc(policy.dataLicence) : 'Not recorded'}</td>
     </tr>`;
@@ -834,7 +845,7 @@ function providerRowHtml(provider) {
 
 function renderProviders(providers) {
   providerPanel.innerHTML = `<table class="provider-table">
-      <caption>Providers this instance was built with, and the terms musicmeta records for each.</caption>
+      <caption>Providers this instance was built with (plus any skipped for a missing key), and the terms musicmeta records for each.</caption>
       <thead><tr>
         <th scope="col">Provider</th><th scope="col">Key</th><th scope="col">Types</th>
         <th scope="col">Commercial use</th><th scope="col">Licence</th>
@@ -842,7 +853,10 @@ function renderProviders(providers) {
       <tbody>${providers.map(providerRowHtml).join('')}</tbody>
     </table>`;
 
+  // A KEY_MISSING row was never callable, so it never used anything to attribute — index.html's
+  // "every notice this demo could owe" only covers a provider a request could actually reach.
   const notices = providers
+    .filter((p) => p.keyStatus !== 'KEY_MISSING')
     .filter((p) => p.policy && ATTRIBUTION_OWED.includes(p.policy.attribution) && p.policy.attributionNotice)
     .map((p) => p.policy.attributionNotice);
   if (notices.length === 0) return;

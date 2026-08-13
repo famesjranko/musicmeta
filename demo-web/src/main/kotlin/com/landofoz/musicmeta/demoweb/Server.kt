@@ -1,6 +1,7 @@
 package com.landofoz.musicmeta.demoweb
 
 import com.landofoz.musicmeta.AlbumProfile
+import com.landofoz.musicmeta.ApiKeyConfig
 import com.landofoz.musicmeta.ArtistProfile
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentEngine
@@ -9,7 +10,10 @@ import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentResults
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
+import com.landofoz.musicmeta.KeyRequirement
 import com.landofoz.musicmeta.MusicBrainzEntityType
+import com.landofoz.musicmeta.ProviderCatalog
+import com.landofoz.musicmeta.ProviderInfo
 import com.landofoz.musicmeta.ProviderPolicies
 import com.landofoz.musicmeta.TrackPreviewRequest
 import com.landofoz.musicmeta.TrackProfile
@@ -64,6 +68,7 @@ fun startServer(
     engineRef: AtomicReference<EnrichmentEngine>,
     cacheModeRef: AtomicReference<CacheMode>,
     rebuildEngine: (CacheMode) -> EnrichmentEngine,
+    apiKeys: ApiKeyConfig,
     port: Int,
 ) {
     val indexHtml = ResourceAnchor::class.java.getResourceAsStream("/index.html")?.readBytes()
@@ -89,7 +94,7 @@ fun startServer(
     server.createContext("/api/invalidate") { exchange -> handleInvalidate(exchange, engineRef.get()) }
     server.createContext("/api/search") { exchange -> handleSearch(exchange, engineRef.get()) }
     server.createContext("/api/preview") { exchange -> handlePreview(exchange, engineRef.get()) }
-    server.createContext("/api/providers") { exchange -> handleProviders(exchange, engineRef.get()) }
+    server.createContext("/api/providers") { exchange -> handleProviders(exchange, engineRef.get(), apiKeys) }
     server.createContext("/api/config") { exchange -> handleConfig(exchange, engineRef, cacheModeRef, rebuildEngine) }
     server.createContext("/api/health") { exchange -> exchange.respondJson(200, HealthResponse(ready.get())) }
 
@@ -482,35 +487,83 @@ private fun handlePreview(exchange: HttpExchange, engine: EnrichmentEngine) {
 
 /**
  * The providers this instance was built with, each joined to the terms snapshot `ProviderPolicies`
- * records under the same id. Reads state the engine already holds, so nothing here suspends.
+ * records under the same id — plus one row per [ProviderCatalog] entry `withDefaultProviders()`
+ * never registered because its key was absent, so a keyless run still shows every provider it
+ * *could* have. Reads state the engine already holds, so nothing here suspends.
  */
-private fun handleProviders(exchange: HttpExchange, engine: EnrichmentEngine) {
+private fun handleProviders(exchange: HttpExchange, engine: EnrichmentEngine, apiKeys: ApiKeyConfig) {
     if (exchange.requestMethod != "GET") {
         exchange.respondJson(405, ApiError("GET required"))
         return
     }
     try {
-        val rows = engine.getProviders().map { info ->
-            ProviderRow(
-                id = info.id,
-                displayName = info.displayName,
-                available = info.isAvailable,
-                requiresApiKey = info.requiresApiKey,
-                capabilities = info.capabilities.map { it.type.name },
-                policy = ProviderPolicies.all[info.id]?.let { policy ->
-                    PolicyRow(
-                        commercialUse = policy.commercialUse.name,
-                        dataLicence = policy.dataLicence,
-                        attribution = policy.attribution.name,
-                        attributionNotice = policy.attributionNotice,
-                    )
-                },
-            )
-        }
-        exchange.respondJson(200, ProvidersResponse(rows))
+        exchange.respondJson(200, ProvidersResponse(buildProviderRows(engine.getProviders(), apiKeys)))
     } catch (e: Exception) {
         exchange.respondJson(500, ApiError(e.message ?: e.javaClass.simpleName))
     }
+}
+
+/**
+ * Merges live provider rows with [ProviderCatalog.entries]: a live [ProviderInfo] stays the
+ * authority for anything registered, and a `Required` catalog entry absent from [live] whose own
+ * selector reads null against [apiKeys] gets a catalog-only row (`keyStatus = "KEY_MISSING"`)
+ * instead of silently vanishing from the table. Absence alone is not read as "key missing" — an
+ * absent entry whose selector reads non-null (a future build that filters providers for some other
+ * reason, or a registration failure) gets no row rather than a wrong claim about why it is gone. A
+ * live `Optional` entry (ListenBrainz) is always present already; it gets `"TOKEN_MISSING"` when its
+ * token selector reads null. A `None` entry absent from [live] is not synthesised — it isn't
+ * key-gated, so its absence is a registration bug, not a key state this endpoint has an opinion on.
+ *
+ * The result is ordered by [ProviderCatalog.entries]'s own order, so the table reads the same
+ * regardless of which ids happened to register; any live id the catalog doesn't know keeps its
+ * original position relative to the other such ids, after every catalog id.
+ */
+internal fun buildProviderRows(live: List<ProviderInfo>, apiKeys: ApiKeyConfig): List<ProviderRow> {
+    val catalogById = ProviderCatalog.entries.associateBy { it.id }
+    val catalogOrder = ProviderCatalog.entries.withIndex().associate { (index, entry) -> entry.id to index }
+    val liveIds = live.mapTo(mutableSetOf()) { it.id }
+
+    val liveRows = live.map { info ->
+        val requirement = catalogById[info.id]?.keyRequirement
+        val keyStatus = (requirement as? KeyRequirement.Optional)
+            ?.takeIf { it.key(apiKeys) == null }
+            ?.let { "TOKEN_MISSING" }
+        ProviderRow(
+            id = info.id,
+            displayName = info.displayName,
+            available = info.isAvailable,
+            requiresApiKey = info.requiresApiKey,
+            capabilities = info.capabilities.map { it.type.name },
+            policy = policyRow(info.id),
+            keyStatus = keyStatus,
+        )
+    }
+
+    val missingRows = ProviderCatalog.entries
+        .filter { it.id !in liveIds }
+        .mapNotNull { entry ->
+            val requirement = entry.keyRequirement as? KeyRequirement.Required ?: return@mapNotNull null
+            if (requirement.key(apiKeys) != null) return@mapNotNull null
+            ProviderRow(
+                id = entry.id,
+                displayName = entry.displayName,
+                available = false,
+                requiresApiKey = true,
+                policy = policyRow(entry.id),
+                keyStatus = "KEY_MISSING",
+            )
+        }
+
+    return (liveRows + missingRows).sortedWith(compareBy(nullsLast<Int>()) { catalogOrder[it.id] })
+}
+
+private fun policyRow(id: String): PolicyRow? = ProviderPolicies.all[id]?.let { policy ->
+    PolicyRow(
+        commercialUse = policy.commercialUse.name,
+        dataLicence = policy.dataLicence,
+        attribution = policy.attribution.name,
+        attributionNotice = policy.attributionNotice,
+    )
 }
 
 private fun parseQuery(raw: String?): Map<String, String> {
