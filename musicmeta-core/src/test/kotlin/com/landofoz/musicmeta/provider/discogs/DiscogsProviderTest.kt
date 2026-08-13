@@ -6,9 +6,11 @@ import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
+import com.landofoz.musicmeta.engine.ProviderCallScope
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.testutil.FakeHttpClient
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -392,6 +394,176 @@ class DiscogsProviderTest {
         assertTrue(result is EnrichmentResult.Success)
         val success = result as EnrichmentResult.Success
         assertNull(success.resolvedIdentifiers)
+    }
+
+    // Album title-acceptance tests
+
+    @Test
+    fun `enrich rejects an exact-artist candidate whose title is unrelated, for every album type`() = runTest {
+        // Given - the only Discogs hit for "Song" by David Bowie is the live Alabama Song containment control
+        httpClient.givenJsonResponse(
+            "discogs.com",
+            """{
+                "results": [{
+                    "id": 28234792,
+                    "title": "David Bowie - Alabama Song",
+                    "label": ["RCA"],
+                    "year": "1980",
+                    "cover_image": "https://img.discogs.com/alabama.jpg"
+                }]
+            }""",
+        )
+        val request = EnrichmentRequest.forAlbum(title = "Song", artist = "David Bowie")
+
+        // When - every album type this scope shares resolves inside one ProviderCallScope
+        val results = withContext(ProviderCallScope()) {
+            listOf(
+                provider.enrich(request, EnrichmentType.ALBUM_ART),
+                provider.enrich(request, EnrichmentType.LABEL),
+                provider.enrich(request, EnrichmentType.RELEASE_TYPE),
+                provider.enrich(request, EnrichmentType.ALBUM_METADATA),
+            )
+        }
+
+        // Then - NotFound for every type, one shared search, and no side fetch for the rejected release
+        assertTrue(results.all { it is EnrichmentResult.NotFound })
+        assertEquals(1, httpClient.requestedUrls.count { it.contains("database/search") })
+        assertTrue(httpClient.requestedUrls.none { it.contains("releases/28234792") })
+    }
+
+    @Test
+    fun `enrich parses a dash-bearing album title without truncating it`() = runTest {
+        // Given - the requested album title itself contains " - ", which must survive the artist/title split intact
+        httpClient.givenJsonResponse(
+            "discogs.com",
+            """{
+                "results": [{
+                    "id": 1,
+                    "title": "Radiohead - Kid A - Special Edition",
+                    "label": ["Parlophone"],
+                    "year": "2000",
+                    "cover_image": "https://img.discogs.com/kid-a.jpg"
+                }]
+            }""",
+        )
+        val request = EnrichmentRequest.forAlbum(title = "Kid A - Special Edition", artist = "Radiohead")
+
+        // When - enriching for album art
+        val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
+
+        // Then - success, because the parser kept "Kid A - Special Edition" whole rather than splitting at the first dash only
+        assertTrue(result is EnrichmentResult.Success)
+    }
+
+    @Test
+    fun `enrich does not admit a candidate qualifier the bare request never asked for`() = runTest {
+        // Given - the only Discogs hit for a bare "Master Of Puppets" request is a live edition
+        httpClient.givenJsonResponse(
+            "discogs.com",
+            """{
+                "results": [{
+                    "id": 2,
+                    "title": "Metallica - Master Of Puppets (Live)",
+                    "label": ["Elektra"],
+                    "year": "1986",
+                    "cover_image": "https://img.discogs.com/live.jpg"
+                }]
+            }""",
+        )
+        val request = EnrichmentRequest.forAlbum(title = "Master Of Puppets", artist = "Metallica")
+
+        // When - enriching for album art
+        val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
+
+        // Then - NotFound, because Discogs has no measured provider-decoration tier for a bare request to tolerate
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `enrich strips a homonym disambiguator from the artist prefix before matching`() = runTest {
+        // Given - Discogs' catalogued artist carries a trailing " (2)" homonym counter
+        httpClient.givenJsonResponse(
+            "discogs.com",
+            """{
+                "results": [{
+                    "id": 3,
+                    "title": "Nirvana (2) - Nevermind",
+                    "label": ["DGC"],
+                    "year": "1991",
+                    "cover_image": "https://img.discogs.com/nevermind.jpg"
+                }]
+            }""",
+        )
+        val request = EnrichmentRequest.forAlbum(title = "Nevermind", artist = "Nirvana")
+
+        // When - enriching for album art
+        val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
+
+        // Then - success, because the disambiguator is stripped before the artist and title are compared
+        assertTrue(result is EnrichmentResult.Success)
+    }
+
+    @Test
+    fun `enrich ranks accepted candidates by artist quality instead of taking the first hit`() = runTest {
+        // Given - both candidates title-match exactly; the loose "Bad Bunny" match is listed before the exact "Bad Company" match
+        httpClient.givenJsonResponse(
+            "discogs.com",
+            """{
+                "results": [
+                    {"id": 111, "title": "Bad Bunny - Run With the Pack", "label": ["A"], "cover_image": "https://img.discogs.com/bunny.jpg"},
+                    {"id": 222, "title": "Bad Company - Run With the Pack", "label": ["Swan Song"], "cover_image": "https://img.discogs.com/company.jpg"}
+                ]
+            }""",
+        )
+        val request = EnrichmentRequest.forAlbum(title = "Run With the Pack", artist = "Bad Company")
+
+        // When - enriching for album art
+        val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
+
+        // Then - the exact-artist candidate (222) wins, not the first hit (111)
+        assertTrue(result is EnrichmentResult.Success)
+        val data = (result as EnrichmentResult.Success).data as EnrichmentData.Artwork
+        assertTrue(data.url.contains("company"))
+    }
+
+    @Test
+    fun `enrich shares one release search and selection across ALBUM_ART LABEL and ALBUM_METADATA`() = runTest {
+        // Given - one search hit that every shared album type resolves from
+        httpClient.givenJsonResponse("database/search", SEARCH_RESULTS_JSON)
+        val request = EnrichmentRequest.forAlbum(title = "OK Computer", artist = "Radiohead")
+
+        // When - three of the four shared album types resolve inside one ProviderCallScope
+        val results = withContext(ProviderCallScope()) {
+            listOf(
+                provider.enrich(request, EnrichmentType.ALBUM_ART),
+                provider.enrich(request, EnrichmentType.LABEL),
+                provider.enrich(request, EnrichmentType.ALBUM_METADATA),
+            )
+        }
+
+        // Then - all three succeed, and only one search request was made for the shared selection
+        assertTrue(results.all { it is EnrichmentResult.Success })
+        assertEquals(1, httpClient.requestedUrls.count { it.contains("database/search") })
+    }
+
+    @Test
+    fun `enrich resolves the release fresh in each new ProviderCallScope`() = runTest {
+        // Given - the same search hit stubbed once, and two independent ProviderCallScope instances standing in for two separate enrich() calls
+        httpClient.givenJsonResponse("database/search", SEARCH_RESULTS_JSON)
+        val request = EnrichmentRequest.forAlbum(title = "OK Computer", artist = "Radiohead")
+
+        // When - each scope resolves ALBUM_ART and LABEL independently, one scope after the other
+        withContext(ProviderCallScope()) {
+            provider.enrich(request, EnrichmentType.ALBUM_ART)
+            provider.enrich(request, EnrichmentType.LABEL)
+        }
+        withContext(ProviderCallScope()) {
+            provider.enrich(request, EnrichmentType.ALBUM_ART)
+            provider.enrich(request, EnrichmentType.LABEL)
+        }
+
+        // Then - the memo does not outlive its scope, so each of the two calls pays its own search
+        assertEquals(2, httpClient.requestedUrls.count { it.contains("database/search") })
     }
 
     // CREDITS capability tests

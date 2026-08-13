@@ -273,6 +273,22 @@ the code was written. `DiscogsApi` strips a trailing ` (n)` before matching so h
 Discogs' order settles them. Fact-check the payload before porting a selection rule between
 providers; the shape that makes it work is per API.
 
+**Album search has the same defect one level up, and the track-level fix is not the album fix.**
+`DeezerAlbumScope`, `ITunesAlbumScope`, and `DiscogsAlbumScope` used to accept the first hit whose
+*artist* matched and never looked at the album title at all — a Deezer request for `Song` by David
+Bowie returned `Hunky Dory (2015 Remaster)`. Copying LRCLIB's strict `TitleMatcher.equivalent`
+(§7's track policy) is not safe here: a bare `Hunky Dory` request live-returns only
+`Hunky Dory (2015 Remaster)`, so whole-title equality rejects the one edition a provider actually
+has. `TitleMatcher.titleTier` adds one narrow tolerance for this: a bare request (no qualifier at
+all) may accept a candidate whose only qualifier is provider-added edition decoration — a
+remaster suffix, nothing else. `Live`, `Remix`, `Deluxe`, `Anniversary`, and box-set qualifiers stay
+identity-bearing and are never admitted by a bare request, and a qualifier the caller *did* supply
+still must match exactly; `titleTier` only ever loosens the "no qualifier at all" case. Rank
+accepted candidates by tier first, then artist quality, then any edition evidence the payload
+actually carries (Deezer's `nbTracks` against the request's `trackCount`) — never by provider order
+until every other signal ties, or a materially different edition (an 8-track album versus a
+137-track deluxe box) can outrank the one the request actually asked for.
+
 ## 8. `confidence` scores identification, not the payload
 
 ```kotlin

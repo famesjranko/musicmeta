@@ -127,8 +127,8 @@ class ITunesProviderTest {
         // When - enriching for album art
         val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
 
-        // Then - still returns Success because collectionName doesn't gate artwork extraction
-        assertTrue(result is EnrichmentResult.Success)
+        // Then - NotFound, because a blank collectionName can never clear the title-acceptance gate
+        assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
@@ -492,6 +492,141 @@ class ITunesProviderTest {
         assertTrue(results.all { it is EnrichmentResult.Success })
         assertEquals(1, httpClient.requestedUrls.count { it.contains("/lookup?upc=") })
         assertTrue(httpClient.requestedUrls.none { it.contains("/search") })
+    }
+
+    // Album title-acceptance tests
+
+    @Test
+    fun `enrich rejects a right-artist candidate whose title is unrelated, for all three album types`() = runTest {
+        // Given - the only iTunes hit for "Song" by David Bowie is an unrelated Bowie collection
+        httpClient.givenJsonResponse(
+            "itunes.apple.com",
+            """{"resultCount":1,"results":[{
+                "collectionId":1039796877,
+                "collectionName":"The Rise and Fall of Ziggy Stardust",
+                "artistName":"David Bowie",
+                "artworkUrl100":"https://example.com/ziggy.jpg"
+            }]}""",
+        )
+        val request = EnrichmentRequest.forAlbum("Song", "David Bowie")
+
+        // When - all three album types resolve inside one ProviderCallScope
+        val results = withContext(ProviderCallScope()) {
+            listOf(
+                provider.enrich(request, EnrichmentType.ALBUM_ART),
+                provider.enrich(request, EnrichmentType.ALBUM_METADATA),
+                provider.enrich(request, EnrichmentType.ALBUM_TRACKS),
+            )
+        }
+
+        // Then - NotFound for every type, one shared search, and no lookup for the rejected collection
+        assertTrue(results.all { it is EnrichmentResult.NotFound })
+        assertEquals(1, httpClient.requestedUrls.count { it.contains("/search") })
+        assertTrue(httpClient.requestedUrls.none { it.contains("id=1039796877") })
+    }
+
+    @Test
+    fun `enrich accepts a bare album request against a provider remaster-only edition`() = runTest {
+        // Given - the only iTunes hit for a bare "Hunky Dory" request is the 2015 remaster
+        httpClient.givenJsonResponse(
+            "itunes.apple.com",
+            """{"resultCount":1,"results":[{
+                "collectionName":"Hunky Dory (2015 Remaster)",
+                "artistName":"David Bowie",
+                "artworkUrl100":"https://example.com/hunky-dory.jpg"
+            }]}""",
+        )
+        val request = EnrichmentRequest.forAlbum("Hunky Dory", "David Bowie")
+
+        // When - enriching for album art
+        val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
+
+        // Then - success, because a bare request tolerates a provider-added remaster suffix
+        assertTrue(result is EnrichmentResult.Success)
+    }
+
+    @Test
+    fun `enrich does not admit every base-equal suffix for a bare request`() = runTest {
+        // Given - the only iTunes hit for a bare "Delicate Sound of Thunder" request is a Live edition
+        httpClient.givenJsonResponse(
+            "itunes.apple.com",
+            """{"resultCount":1,"results":[{
+                "collectionName":"Delicate Sound of Thunder (Live)",
+                "artistName":"Pink Floyd",
+                "artworkUrl100":"https://example.com/dsot.jpg"
+            }]}""",
+        )
+        val request = EnrichmentRequest.forAlbum("Delicate Sound of Thunder", "Pink Floyd")
+
+        // When - enriching for album art
+        val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
+
+        // Then - NotFound, because Live names a different release than the request asked for
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `enrich ranks accepted candidates by artist quality instead of taking the first hit`() = runTest {
+        // Given - both candidates title-match exactly; the loose "Bad Bunny" match is listed before the exact "Bad Company" match
+        httpClient.givenJsonResponse(
+            "itunes.apple.com",
+            """{"resultCount":2,"results":[
+                {"collectionId":111,"collectionName":"Run With the Pack","artistName":"Bad Bunny","artworkUrl100":"https://example.com/bunny.jpg"},
+                {"collectionId":222,"collectionName":"Run With the Pack","artistName":"Bad Company","artworkUrl100":"https://example.com/company.jpg"}
+            ]}""",
+        )
+        val request = EnrichmentRequest.forAlbum("Run With the Pack", "Bad Company")
+
+        // When - enriching for album art
+        val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
+
+        // Then - the exact-artist candidate (222) wins, not the first hit (111)
+        assertTrue(result is EnrichmentResult.Success)
+        val data = (result as EnrichmentResult.Success).data as EnrichmentData.Artwork
+        assertTrue(data.url.contains("company"))
+    }
+
+    @Test
+    fun `enrich prefers the edition whose track count matches the request over a differently-sized edition`() = runTest {
+        // Given - two identically-titled, identically-qualified editions; the unrequested trackCount is listed first
+        httpClient.givenJsonResponse(
+            "itunes.apple.com",
+            """{"resultCount":2,"results":[
+                {"collectionId":55,"collectionName":"Master Of Puppets (Remastered)","artistName":"Metallica","artworkUrl100":"https://example.com/box.jpg","trackCount":137},
+                {"collectionId":56,"collectionName":"Master Of Puppets (Remastered)","artistName":"Metallica","artworkUrl100":"https://example.com/album.jpg","trackCount":8}
+            ]}""",
+        )
+        val identifiers = EnrichmentIdentifiers()
+        val request = EnrichmentRequest.ForAlbum(identifiers, "Master Of Puppets", "Metallica", trackCount = 8)
+
+        // When - enriching for album art
+        val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
+
+        // Then - the 8-track edition's artwork wins, not the first-listed 137-track box
+        assertTrue(result is EnrichmentResult.Success)
+        val data = (result as EnrichmentResult.Success).data as EnrichmentData.Artwork
+        assertTrue(data.url.contains("album.jpg"))
+    }
+
+    @Test
+    fun `enrich shares one name-search selection across ALBUM_ART ALBUM_METADATA and ALBUM_TRACKS`() = runTest {
+        // Given - one search hit whose collectionId the ALBUM_TRACKS lookup then reuses
+        httpClient.givenJsonResponse("search", ITUNES_SEARCH_WITH_ID_RESPONSE)
+        httpClient.givenJsonResponse("lookup", ITUNES_LOOKUP_TRACKS_RESPONSE)
+        val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+
+        // When - all three album types resolve inside one ProviderCallScope
+        val results = withContext(ProviderCallScope()) {
+            listOf(
+                provider.enrich(request, EnrichmentType.ALBUM_ART),
+                provider.enrich(request, EnrichmentType.ALBUM_METADATA),
+                provider.enrich(request, EnrichmentType.ALBUM_TRACKS),
+            )
+        }
+
+        // Then - all three succeed, and only one search request was made for the shared selection
+        assertTrue(results.all { it is EnrichmentResult.Success })
+        assertEquals(1, httpClient.requestedUrls.count { it.contains("/search") })
     }
 
     private fun barcodeRequest(barcode: String, artist: String, title: String): EnrichmentRequest.ForAlbum =

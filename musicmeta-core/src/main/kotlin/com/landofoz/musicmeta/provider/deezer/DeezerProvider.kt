@@ -377,7 +377,7 @@ class DeezerProvider(
         val albumRequest = request as? EnrichmentRequest.ForAlbum
             ?: return EnrichmentResult.NotFound(EnrichmentType.ALBUM_TRACKS, id)
 
-        val album = albumScope().resolveAlbum(albumRequest.artist, albumRequest.title)
+        val album = albumScope().resolveAlbum(albumRequest)
             ?: return EnrichmentResult.NotFound(EnrichmentType.ALBUM_TRACKS, id)
 
         val tracks = api.getAlbumTracks(album.id)
@@ -399,7 +399,7 @@ class DeezerProvider(
             return EnrichmentResult.NotFound(type, id)
         }
         val scope = albumScope()
-        val result = scope.resolveAlbum(request.artist, request.title)
+        val result = scope.resolveAlbum(request)
             ?: return EnrichmentResult.NotFound(type, id)
         val detail = scope.albumDetail(result.id)
 
@@ -419,7 +419,7 @@ class DeezerProvider(
             return EnrichmentResult.NotFound(type, id)
         }
 
-        val result = albumScope().resolveAlbum(request.artist, request.title)
+        val result = albumScope().resolveAlbum(request)
             ?: return EnrichmentResult.NotFound(type, id)
 
         val artwork = DeezerMapper.toArtwork(result)
@@ -464,15 +464,19 @@ private class DeezerAlbumScope(private val api: DeezerApi) {
     private val detailMutex = Mutex()
     private val details = mutableMapOf<Long, DeezerAlbum?>()
 
-    /** The artist-matched search hit for [artist]/[title], one search per distinct pair per call. */
-    suspend fun resolveAlbum(artist: String, title: String): DeezerAlbumResult? {
-        val key = "$artist|$title"
+    /**
+     * The accepted-and-ranked search hit for [request], one search per distinct artist/title pair
+     * per call. Selection is [selectAlbum]'s: artist floor, then title tier, then artist quality,
+     * then [EnrichmentRequest.ForAlbum.trackCount] evidence — never bare artist-match order.
+     */
+    suspend fun resolveAlbum(request: EnrichmentRequest.ForAlbum): DeezerAlbumResult? {
+        val key = "${request.artist}|${request.title}"
         return searchMutex.withLock {
             if (searchResults.containsKey(key)) {
                 searchResults.getValue(key)
             } else {
-                val results = api.searchAlbums("$artist $title", ALBUM_SEARCH_LIMIT)
-                val match = results.firstOrNull { ArtistMatcher.isMatch(artist, it.artistName) }
+                val results = api.searchAlbums("${request.artist} ${request.title}", ALBUM_SEARCH_LIMIT)
+                val match = results.selectAlbum(request)
                 searchResults[key] = match
                 match
             }

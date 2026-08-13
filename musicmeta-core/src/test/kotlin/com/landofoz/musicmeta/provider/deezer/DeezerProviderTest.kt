@@ -93,16 +93,16 @@ class DeezerProviderTest {
     }
 
     @Test
-    fun `enrich succeeds for album art even when album title is missing`() = runTest {
-        // Given - Deezer API returns album objects missing the title field
+    fun `enrich returns NotFound for album art when the candidate's title is missing`() = runTest {
+        // Given - Deezer API returns an album object missing the title field
         httpClient.givenJsonResponse("api.deezer.com", """{"data":[{"artist":{"name":"Radiohead"},"cover_xl":"https://example.com/cover.jpg"}]}""")
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
 
         // When - enriching for album art
         val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
 
-        // Then - still returns Success because cover URL is present (title is metadata, not required for artwork)
-        assertTrue(result is EnrichmentResult.Success)
+        // Then - NotFound because a blank title can never clear the title-acceptance gate all three album types share
+        assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
@@ -314,6 +314,145 @@ class DeezerProviderTest {
         assertTrue(result is EnrichmentResult.Error)
         val error = result as EnrichmentResult.Error
         assertEquals(ErrorKind.NETWORK, error.errorKind)
+    }
+
+    // Album title-acceptance tests
+
+    @Test
+    fun `enrich rejects a right-artist candidate whose title is unrelated, for all three album types`() = runTest {
+        // Given - the only Deezer hit for "OK Computer" by Radiohead is "Kid A" by the same artist
+        httpClient.givenJsonResponse(
+            "search/album",
+            """{"data":[{"id":1,"title":"Kid A","artist":{"name":"Radiohead"},"cover_xl":"https://example.com/kid-a.jpg","nb_tracks":10}]}""",
+        )
+        val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+
+        // When - all three album types resolve inside one ProviderCallScope
+        val results = withContext(ProviderCallScope()) {
+            listOf(
+                provider.enrich(request, EnrichmentType.ALBUM_ART),
+                provider.enrich(request, EnrichmentType.ALBUM_METADATA),
+                provider.enrich(request, EnrichmentType.ALBUM_TRACKS),
+            )
+        }
+
+        // Then - NotFound for every type, one shared search, and no detail or track fetch for the rejected id
+        assertTrue(results.all { it is EnrichmentResult.NotFound })
+        assertEquals(1, httpClient.requestedUrls.count { it.contains("search/album") })
+        assertTrue(httpClient.requestedUrls.none { it.contains("album/1") })
+    }
+
+    @Test
+    fun `enrich accepts a bare album request against a provider remaster-only edition`() = runTest {
+        // Given - the only Deezer hit for a bare "Hunky Dory" request is the 2015 remaster
+        httpClient.givenJsonResponse(
+            "search/album",
+            """{"data":[{"id":9,"title":"Hunky Dory (2015 Remaster)","artist":{"name":"David Bowie"},"cover_xl":"https://example.com/hunky-dory.jpg"}]}""",
+        )
+        val request = EnrichmentRequest.forAlbum("Hunky Dory", "David Bowie")
+
+        // When - enriching for album art
+        val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
+
+        // Then - success, because a bare request tolerates a provider-added remaster suffix
+        assertTrue(result is EnrichmentResult.Success)
+    }
+
+    @Test
+    fun `enrich does not let an unqualified request admit a candidate's Live qualifier`() = runTest {
+        // Given - the only Deezer hit for "Delicate Sound of Thunder" is a Live edition
+        httpClient.givenJsonResponse(
+            "search/album",
+            """{"data":[{"id":3,"title":"Delicate Sound of Thunder (Live)","artist":{"name":"Pink Floyd"},"cover_xl":"https://example.com/dsot.jpg"}]}""",
+        )
+        val request = EnrichmentRequest.forAlbum("Delicate Sound of Thunder", "Pink Floyd")
+
+        // When - enriching for album art
+        val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
+
+        // Then - NotFound, because Live stays identity-bearing rather than provider decoration
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `enrich keeps a caller-requested qualifier distinct from a candidate that lacks it`() = runTest {
+        // Given - the caller asked for the Live edition, but the only Deezer hit is the studio album
+        httpClient.givenJsonResponse(
+            "search/album",
+            """{"data":[{"id":4,"title":"Album","artist":{"name":"Artist"},"cover_xl":"https://example.com/album.jpg"}]}""",
+        )
+        val request = EnrichmentRequest.forAlbum("Album - Live", "Artist")
+
+        // When - enriching for album art
+        val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
+
+        // Then - NotFound, because the studio album is not the requested Live edition
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `enrich ranks accepted candidates by artist quality instead of taking the first hit`() = runTest {
+        // Given - both candidates title-match exactly; the loose "Bad Bunny" match is listed before the exact "Bad Company" match
+        httpClient.givenJsonResponse(
+            "search/album",
+            """{"data":[
+                {"id":111,"title":"Run With the Pack","artist":{"name":"Bad Bunny"}},
+                {"id":222,"title":"Run With the Pack","artist":{"name":"Bad Company"}}
+            ]}""",
+        )
+        httpClient.givenJsonResponse("album/222", """{"id":222,"label":"Swan Song"}""")
+        val request = EnrichmentRequest.forAlbum("Run With the Pack", "Bad Company")
+
+        // When - enriching for album metadata
+        val result = provider.enrich(request, EnrichmentType.ALBUM_METADATA)
+
+        // Then - the exact-artist candidate (222) is selected and detailed, not the first hit (111)
+        assertTrue(result is EnrichmentResult.Success)
+        assertTrue(httpClient.requestedUrls.any { it.contains("album/222") })
+        assertTrue(httpClient.requestedUrls.none { it.contains("album/111") })
+    }
+
+    @Test
+    fun `enrich prefers the edition whose track count matches the request over a larger box set`() = runTest {
+        // Given - two identically-titled, identically-qualified editions; the 137-track box is listed first
+        httpClient.givenJsonResponse(
+            "search/album",
+            """{"data":[
+                {"id":55,"title":"Master Of Puppets (Remastered)","artist":{"name":"Metallica"},"cover_xl":"https://example.com/box.jpg","nb_tracks":137},
+                {"id":56,"title":"Master Of Puppets (Remastered)","artist":{"name":"Metallica"},"cover_xl":"https://example.com/album.jpg","nb_tracks":8}
+            ]}""",
+        )
+        val identifiers = EnrichmentIdentifiers()
+        val request = EnrichmentRequest.ForAlbum(identifiers, "Master Of Puppets", "Metallica", trackCount = 8)
+
+        // When - enriching for album art
+        val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
+
+        // Then - the 8-track edition's artwork wins, not the first-listed 137-track box
+        assertTrue(result is EnrichmentResult.Success)
+        val data = (result as EnrichmentResult.Success).data as EnrichmentData.Artwork
+        assertEquals("https://example.com/album.jpg", data.url)
+    }
+
+    @Test
+    fun `enrich does not select a materially different edition when trackCount is unknown`() = runTest {
+        // Given - the request supplies no trackCount, and the pool has both a plain album and a 137-track box under the same title
+        httpClient.givenJsonResponse(
+            "search/album",
+            """{"data":[
+                {"id":56,"title":"Master Of Puppets (Remastered)","artist":{"name":"Metallica"},"cover_xl":"https://example.com/album.jpg","nb_tracks":8},
+                {"id":55,"title":"Master Of Puppets (Remastered)","artist":{"name":"Metallica"},"cover_xl":"https://example.com/box.jpg","nb_tracks":137}
+            ]}""",
+        )
+        val request = EnrichmentRequest.forAlbum("Master Of Puppets", "Metallica")
+
+        // When - enriching for album art
+        val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
+
+        // Then - missing trackCount is unknown evidence, so provider order settles the tie: the first-listed edition wins
+        assertTrue(result is EnrichmentResult.Success)
+        val data = (result as EnrichmentResult.Success).data as EnrichmentData.Artwork
+        assertEquals("https://example.com/album.jpg", data.url)
     }
 
     // SIMILAR_ARTISTS tests

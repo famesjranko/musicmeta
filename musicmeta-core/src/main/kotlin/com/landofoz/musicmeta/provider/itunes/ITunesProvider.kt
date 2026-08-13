@@ -45,6 +45,16 @@ class ITunesProvider(
         currentCoroutineContext()[ProviderCallScope]?.slot(this, ::UpcLookupMemo) ?: UpcLookupMemo()
 
     /**
+     * This call's [ITunesAlbumScope], shared by the name-search branches of `enrichAlbumTracks` and
+     * `enrichAlbumType` so a request answered by ALBUM_TRACKS together with ALBUM_ART/ALBUM_METADATA
+     * selects one collection, not one independently-ranked collection per type ([ProviderCallScope],
+     * `docs/pitfalls.md` §12). Composes with, and never replaces, [upcMemo] — an exact-id or barcode
+     * hit still bypasses this scope entirely.
+     */
+    private suspend fun albumScope(): ITunesAlbumScope =
+        currentCoroutineContext()[ProviderCallScope]?.slot(this) { ITunesAlbumScope(api) } ?: ITunesAlbumScope(api)
+
+    /**
      * Resolves [barcode] to the album a human would mean by [artist] — [ITunesApi.lookupByUpc]
      * proves only that iTunes indexes the barcode somewhere, so this applies the same name gate
      * the search paths use ([ArtistMatcher]) before accepting a candidate. No match among the
@@ -130,12 +140,10 @@ class ITunesProvider(
                 )
             }
 
-            // Fall back to search then lookup
-            val term = "${request.artist} ${request.title}"
-            val results = api.searchAlbums(term, 5)
-            val albumResult = results.firstOrNull {
-                ArtistMatcher.isMatch(request.artist, it.artistName)
-            } ?: return EnrichmentResult.NotFound(type, id)
+            // Fall back to the shared name-search selection, so a call also asking ALBUM_ART or
+            // ALBUM_METADATA resolves the same collection instead of ranking its own.
+            val albumResult = albumScope().resolveAlbum(request)
+                ?: return EnrichmentResult.NotFound(type, id)
 
             val searchedCollectionId = albumResult.collectionId.takeIf { it > 0 }
                 ?: return EnrichmentResult.NotFound(type, id)
@@ -218,15 +226,11 @@ class ITunesProvider(
             }
         }
 
-        val term = "${request.artist} ${request.title}"
-        val results = try {
-            api.searchAlbums(term, 5)
+        val result = try {
+            albumScope().resolveAlbum(request)
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             return mapError(type, e)
-        }
-
-        val result = results.firstOrNull {
-            ArtistMatcher.isMatch(request.artist, it.artistName)
         } ?: return EnrichmentResult.NotFound(type, id)
 
         val confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true)
@@ -293,5 +297,38 @@ class ITunesProvider(
     companion object {
         const val DEFAULT_ARTWORK_SIZE = 1200
         private const val SEARCH_SCORE = 70
+    }
+}
+
+/**
+ * One `enrich()` call's name-search selection, held only long enough to serve the search-fallback
+ * branches of `ALBUM_TRACKS`, `ALBUM_METADATA` and `ALBUM_ART` from one search and one accepted
+ * collection instead of one independently-ranked search per type — see [ITunesProvider.albumScope].
+ * Dies with the call ([ProviderCallScope]), so a mis-resolved artist/title never outlives a
+ * `forceRefresh`. Exact `itunesCollectionId` and barcode/UPC lookups never reach this scope.
+ */
+private class ITunesAlbumScope(private val api: ITunesApi) {
+
+    private val mutex = Mutex()
+    private val results = mutableMapOf<String, ITunesAlbumResult?>()
+
+    /** The accepted-and-ranked search hit for [request], one search per distinct pair per call. */
+    suspend fun resolveAlbum(request: EnrichmentRequest.ForAlbum): ITunesAlbumResult? {
+        val key = "${request.artist}|${request.title}"
+        return mutex.withLock {
+            if (results.containsKey(key)) {
+                results.getValue(key)
+            } else {
+                val term = "${request.artist} ${request.title}"
+                val match = api.searchAlbums(term, ALBUM_SEARCH_LIMIT).selectAlbum(request)
+                results[key] = match
+                match
+            }
+        }
+    }
+
+    private companion object {
+        /** Candidate pool size for the name-search selection — same bound as the prior first-match search. */
+        const val ALBUM_SEARCH_LIMIT = 5
     }
 }
