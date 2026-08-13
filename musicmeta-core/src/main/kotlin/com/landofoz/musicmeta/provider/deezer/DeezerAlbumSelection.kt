@@ -38,5 +38,5 @@ internal fun List<DeezerAlbumResult>.selectAlbum(request: EnrichmentRequest.ForA
         requestedArtist = request.artist,
         artistNameOf = { it.artistName },
         titleTierOf = { deezerAlbumTitleTier(request.title, it.title) },
-        { request.trackCount != null && it.nbTracks == request.trackCount },
+        "trackCount" to { request.trackCount != null && it.nbTracks == request.trackCount },
     )

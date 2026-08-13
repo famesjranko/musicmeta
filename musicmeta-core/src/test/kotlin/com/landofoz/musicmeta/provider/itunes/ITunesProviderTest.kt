@@ -9,12 +9,17 @@ import com.landofoz.musicmeta.ErrorKind
 import com.landofoz.musicmeta.engine.ProviderCallScope
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.testutil.FakeHttpClient
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 
 class ITunesProviderTest {
@@ -610,12 +615,12 @@ class ITunesProviderTest {
 
     @Test
     fun `enrich ranks title tier ahead of artist quality`() = runTest {
-        // Given - the exact-title candidate has only a loose artist match; the exact-artist candidate's title is a Live edition
+        // Given - both candidates clear the artist floor and the title floor: the accepted-remaster candidate has the exact artist, the exact-title candidate's artist is only a loose containment match
         val request = EnrichmentRequest.forAlbum("Album", "Real Band")
         httpClient.givenJsonResponse(
             "search",
             """{"resultCount":2,"results":[
-                {"collectionId":1,"collectionName":"Album (Live)","artistName":"Real Band","artworkUrl100":"https://example.com/live.jpg"},
+                {"collectionId":1,"collectionName":"Album (Remastered)","artistName":"Real Band","artworkUrl100":"https://example.com/edition.jpg"},
                 {"collectionId":2,"collectionName":"Album","artistName":"Real Band Tribute","artworkUrl100":"https://example.com/exact-title.jpg"}
             ]}""",
         )
@@ -623,7 +628,7 @@ class ITunesProviderTest {
         // When - enriching for album art
         val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
 
-        // Then - the exact-title candidate wins even though its artist match is only a loose containment
+        // Then - the exact-title candidate wins even though the accepted-remaster candidate has the exact artist
         assertTrue(result is EnrichmentResult.Success)
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.Artwork
         assertEquals("https://example.com/exact-title.jpg", data.url)
@@ -719,6 +724,119 @@ class ITunesProviderTest {
 
     private fun barcodeRequest(barcode: String, artist: String, title: String): EnrichmentRequest.ForAlbum =
         EnrichmentRequest.ForAlbum(EnrichmentIdentifiers(barcode = barcode), title, artist)
+
+    @Test
+    fun `enrich resolves two requests separately when their artist and title halves would collide under a delimiter-joined key`() = runTest {
+        // Given - "A|B" and "C" join to the same string as "A" and "B|C", so a delimiter-joined memo key would alias these two distinct requests
+        httpClient.givenJsonResponsesInTurn(
+            "search",
+            """{"resultCount":1,"results":[{"collectionId":100,"collectionName":"C","artistName":"A|B","artworkUrl100":"https://example.com/first.jpg"}]}""",
+            """{"resultCount":1,"results":[{"collectionId":200,"collectionName":"B|C","artistName":"A","artworkUrl100":"https://example.com/second.jpg"}]}""",
+        )
+        val firstRequest = EnrichmentRequest.forAlbum(title = "C", artist = "A|B")
+        val secondRequest = EnrichmentRequest.forAlbum(title = "B|C", artist = "A")
+
+        // When - both requests are resolved together in one ProviderCallScope
+        val (firstResult, secondResult) = withContext(ProviderCallScope()) {
+            provider.enrich(firstRequest, EnrichmentType.ALBUM_ART) to
+                provider.enrich(secondRequest, EnrichmentType.ALBUM_ART)
+        }
+
+        // Then - each request searches and selects its own candidate rather than reusing the other's memoized selection
+        val firstUrl = ((firstResult as EnrichmentResult.Success).data as EnrichmentData.Artwork).url
+        val secondUrl = ((secondResult as EnrichmentResult.Success).data as EnrichmentData.Artwork).url
+        assertEquals("https://example.com/first.jpg", firstUrl)
+        assertEquals("https://example.com/second.jpg", secondUrl)
+        assertEquals(2, httpClient.requestedUrls.count { it.contains("search") })
+    }
+
+    @Test
+    fun `enrich exposes named selection evidence rather than a positional list`() = runTest {
+        // Given - two accepted candidates, distinguished only by trackCount
+        val request = EnrichmentRequest.ForAlbum(EnrichmentIdentifiers(), "Album", "Artist", trackCount = 8)
+        val results = listOf(
+            ITunesAlbumResult(
+                collectionId = 55,
+                collectionName = "Album",
+                artistName = "Artist",
+                artworkUrl = "https://example.com/box.jpg",
+                trackCount = 137,
+            ),
+            ITunesAlbumResult(
+                collectionId = 56,
+                collectionName = "Album",
+                artistName = "Artist",
+                artworkUrl = "https://example.com/album.jpg",
+                trackCount = 8,
+            ),
+        )
+
+        // When - selecting directly against the search pool
+        val match = results.selectAlbum(request)
+
+        // Then - the trackCount evidence is named and true only for the winning candidate
+        assertNotNull(match)
+        assertEquals(56L, match!!.candidate.collectionId)
+        assertEquals(true, match.tieBreaks["trackCount"])
+    }
+
+    @Test
+    fun `a cancelled album search is not memoized as a miss`() = runTest {
+        // Given - the first album search is cancelled mid-flight; the underlying data would be found on a retry
+        val cancelling = CancellingOnceHttpClient(httpClient)
+        val cancellingProvider = ITunesProvider(cancelling, RateLimiter(0))
+        httpClient.givenJsonResponse("search", ITUNES_RESPONSE)
+        val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+
+        // When - the first lookup is cancelled, on a job separate from this test's own
+        val cancelled = CoroutineScope(Job()).async { cancellingProvider.enrich(request, EnrichmentType.ALBUM_ART) }
+        try {
+            cancelled.await()
+            fail("expected the cancellation to propagate")
+        } catch (_: CancellationException) {
+            // expected
+        }
+        val result = cancellingProvider.enrich(request, EnrichmentType.ALBUM_ART)
+
+        // Then - the retry performs a fresh search rather than reading a memoized miss
+        assertTrue(result is EnrichmentResult.Success)
+    }
+
+    @Test
+    fun `album selection is unaffected by identifiers a canonical identity resolution would attach`() = runTest {
+        // Given - the same artist and title, once with no resolved identifiers and once carrying identifiers a resolved canonical lookup would attach
+        httpClient.givenJsonResponse("search", ITUNES_RESPONSE)
+        val unresolved = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+        val resolved = EnrichmentRequest.forAlbum(
+            "OK Computer",
+            "Radiohead",
+            identifiers = EnrichmentIdentifiers(musicBrainzId = "b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d"),
+        )
+
+        // When - enriching for album art under each identifier state
+        val unresolvedResult = provider.enrich(unresolved, EnrichmentType.ALBUM_ART)
+        val resolvedResult = provider.enrich(resolved, EnrichmentType.ALBUM_ART)
+
+        // Then - the same album is selected regardless of what identity resolution attached
+        val unresolvedUrl = ((unresolvedResult as EnrichmentResult.Success).data as EnrichmentData.Artwork).url
+        val resolvedUrl = ((resolvedResult as EnrichmentResult.Success).data as EnrichmentData.Artwork).url
+        assertEquals(unresolvedUrl, resolvedUrl)
+    }
+
+    /** Cancels the caller and throws on its first `fetchJsonResult` call, then delegates normally. */
+    private class CancellingOnceHttpClient(private val delegate: com.landofoz.musicmeta.http.HttpClient) :
+        com.landofoz.musicmeta.http.HttpClient by delegate {
+        private var calls = 0
+
+        override suspend fun fetchJsonResult(url: String): com.landofoz.musicmeta.http.HttpResult<org.json.JSONObject> {
+            calls++
+            if (calls == 1) {
+                kotlinx.coroutines.currentCoroutineContext()[kotlinx.coroutines.Job]?.cancel()
+                throw CancellationException("simulated cancellation")
+            }
+            return delegate.fetchJsonResult(url)
+        }
+    }
 
     companion object {
         val ITUNES_METADATA_RESPONSE = """

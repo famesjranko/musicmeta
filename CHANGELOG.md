@@ -150,6 +150,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Discogs combined-title parsing now finds the real artist/title boundary when the requested artist itself contains ` - `, instead of stopping at the first artist-plausible prefix
 - `Success.provenance` is now observed from the winning provider's own route, not guessed from identifiers merely present on the request: an MBID no longer mislabels a name search `CANONICAL_ID`
 - An all-cache-hit `Success` now reports `provenance = CACHE` instead of `null` when the cache that served it did not preserve the original lookup's route
+- Deezer, iTunes and Discogs album memos now key on the request's own fields, not a joined string; two requests whose artist/title halves joined identically previously reused each other's selection
 
 ## [0.11.0] - 2026-07-28
 

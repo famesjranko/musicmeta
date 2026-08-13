@@ -38,6 +38,6 @@ internal fun List<ITunesAlbumResult>.selectAlbum(request: EnrichmentRequest.ForA
         requestedArtist = request.artist,
         artistNameOf = { it.artistName },
         titleTierOf = { itunesAlbumTitleTier(request.title, it.collectionName) },
-        { request.trackCount != null && it.trackCount == request.trackCount },
-        { request.year != null && it.releaseDate?.startsWith(request.year.toString()) == true },
+        "trackCount" to { request.trackCount != null && it.trackCount == request.trackCount },
+        "year" to { request.year != null && it.releaseDate?.startsWith(request.year.toString()) == true },
     )
