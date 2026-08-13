@@ -10,6 +10,7 @@ import com.landofoz.musicmeta.IdentifierNamespace
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.SimilarTrack
+import com.landofoz.musicmeta.engine.AlbumMatch
 import com.landofoz.musicmeta.engine.ArtistMatcher
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.engine.ProviderCallScope
@@ -377,7 +378,7 @@ class DeezerProvider(
         val albumRequest = request as? EnrichmentRequest.ForAlbum
             ?: return EnrichmentResult.NotFound(EnrichmentType.ALBUM_TRACKS, id)
 
-        val album = albumScope().resolveAlbum(albumRequest)
+        val album = albumScope().resolveAlbum(albumRequest)?.candidate
             ?: return EnrichmentResult.NotFound(EnrichmentType.ALBUM_TRACKS, id)
 
         val tracks = api.getAlbumTracks(album.id)
@@ -399,7 +400,7 @@ class DeezerProvider(
             return EnrichmentResult.NotFound(type, id)
         }
         val scope = albumScope()
-        val result = scope.resolveAlbum(request)
+        val result = scope.resolveAlbum(request)?.candidate
             ?: return EnrichmentResult.NotFound(type, id)
         val detail = scope.albumDetail(result.id)
 
@@ -419,7 +420,7 @@ class DeezerProvider(
             return EnrichmentResult.NotFound(type, id)
         }
 
-        val result = albumScope().resolveAlbum(request)
+        val result = albumScope().resolveAlbum(request)?.candidate
             ?: return EnrichmentResult.NotFound(type, id)
 
         val artwork = DeezerMapper.toArtwork(result)
@@ -459,18 +460,20 @@ class DeezerProvider(
 private class DeezerAlbumScope(private val api: DeezerApi) {
 
     private val searchMutex = Mutex()
-    private val searchResults = mutableMapOf<String, DeezerAlbumResult?>()
+    private val searchResults = mutableMapOf<String, AlbumMatch<DeezerAlbumResult>?>()
 
     private val detailMutex = Mutex()
     private val details = mutableMapOf<Long, DeezerAlbum?>()
 
     /**
-     * The accepted-and-ranked search hit for [request], one search per distinct artist/title pair
-     * per call. Selection is [selectAlbum]'s: artist floor, then title tier, then artist quality,
-     * then [EnrichmentRequest.ForAlbum.trackCount] evidence — never bare artist-match order.
+     * The accepted-and-ranked search hit for [request], with its selection evidence, one search per
+     * distinct complete selection input per call. Selection is [selectAlbum]'s: artist floor, then
+     * title tier, then artist quality, then [EnrichmentRequest.ForAlbum.trackCount] evidence — never
+     * bare artist-match order. Keyed on every field selection reads, not just artist/title: two
+     * requests differing only in `trackCount` must not reuse each other's selection.
      */
-    suspend fun resolveAlbum(request: EnrichmentRequest.ForAlbum): DeezerAlbumResult? {
-        val key = "${request.artist}|${request.title}"
+    suspend fun resolveAlbum(request: EnrichmentRequest.ForAlbum): AlbumMatch<DeezerAlbumResult>? {
+        val key = "${request.artist}|${request.title}|${request.trackCount}"
         return searchMutex.withLock {
             if (searchResults.containsKey(key)) {
                 searchResults.getValue(key)
@@ -493,7 +496,7 @@ private class DeezerAlbumScope(private val api: DeezerApi) {
     }
 
     private companion object {
-        /** Candidate pool size for the artist-matched album search — same as [DeezerProvider]'s prior ALBUM_METADATA pool. */
+        /** Candidate pool size for the artist-matched album search — enough hits for the requested edition to surface. */
         const val ALBUM_SEARCH_LIMIT = 5
     }
 }

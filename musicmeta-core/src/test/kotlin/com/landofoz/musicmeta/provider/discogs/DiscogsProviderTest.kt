@@ -415,7 +415,7 @@ class DiscogsProviderTest {
         )
         val request = EnrichmentRequest.forAlbum(title = "Song", artist = "David Bowie")
 
-        // When - every album type this scope shares resolves inside one ProviderCallScope
+        // When - every shared album type is requested together
         val results = withContext(ProviderCallScope()) {
             listOf(
                 provider.enrich(request, EnrichmentType.ALBUM_ART),
@@ -452,6 +452,31 @@ class DiscogsProviderTest {
         val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
 
         // Then - success, because the parser kept "Kid A - Special Edition" whole rather than splitting at the first dash only
+        assertTrue(result is EnrichmentResult.Success)
+    }
+
+    @Test
+    fun `enrich parses a dash-bearing artist without truncating it to the first plausible prefix`() = runTest {
+        // Given - the requested artist itself contains " - ", so the first boundary's short artist-side
+        // still passes the loose artist floor by partial match, well short of the real split
+        httpClient.givenJsonResponse(
+            "discogs.com",
+            """{
+                "results": [{
+                    "id": 4,
+                    "title": "Artist - Name - Album",
+                    "label": ["A"],
+                    "year": "1999",
+                    "cover_image": "https://img.discogs.com/artist-name.jpg"
+                }]
+            }""",
+        )
+        val request = EnrichmentRequest.forAlbum(title = "Album", artist = "Artist - Name")
+
+        // When - enriching for album art
+        val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
+
+        // Then - success, because the complete artist/title boundary wins over the first partial one
         assertTrue(result is EnrichmentResult.Success)
     }
 
@@ -527,12 +552,83 @@ class DiscogsProviderTest {
     }
 
     @Test
+    fun `enrich prefers the release whose year matches the request over an undated tie`() = runTest {
+        // Given - two identically-titled, identically-artist-matched releases; only one's year matches the request
+        httpClient.givenJsonResponse(
+            "discogs.com",
+            """{
+                "results": [
+                    {"id": 1, "title": "Artist - Album", "label": ["A"], "year": "2009", "cover_image": "https://img.discogs.com/2009.jpg"},
+                    {"id": 2, "title": "Artist - Album", "label": ["A"], "year": "2015", "cover_image": "https://img.discogs.com/2015.jpg"}
+                ]
+            }""",
+        )
+        val request = EnrichmentRequest.ForAlbum(EnrichmentIdentifiers(), "Album", "Artist", year = 2015)
+
+        // When - enriching for album art
+        val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
+
+        // Then - the release whose year matches the request wins over the first-listed one
+        assertTrue(result is EnrichmentResult.Success)
+        val data = (result as EnrichmentResult.Success).data as EnrichmentData.Artwork
+        assertTrue(data.url.contains("2015"))
+    }
+
+    @Test
+    fun `enrich searches again when only year differs between two requests in one ProviderCallScope`() = runTest {
+        // Given - two releases under the same title/artist, distinguished only by year
+        httpClient.givenJsonResponse(
+            "discogs.com",
+            """{
+                "results": [
+                    {"id": 1, "title": "Artist - Album", "label": ["A"], "year": "2009", "cover_image": "https://img.discogs.com/2009.jpg"},
+                    {"id": 2, "title": "Artist - Album", "label": ["A"], "year": "2015", "cover_image": "https://img.discogs.com/2015.jpg"}
+                ]
+            }""",
+        )
+        val identifiers = EnrichmentIdentifiers()
+        val request2009 = EnrichmentRequest.ForAlbum(identifiers, "Album", "Artist", year = 2009)
+        val request2015 = EnrichmentRequest.ForAlbum(identifiers, "Album", "Artist", year = 2015)
+
+        // When - both requests are made together
+        val (result2009, result2015) = withContext(ProviderCallScope()) {
+            provider.enrich(request2009, EnrichmentType.ALBUM_ART) to
+                provider.enrich(request2015, EnrichmentType.ALBUM_ART)
+        }
+
+        // Then - each request's own year picks its own release
+        val url2009 = ((result2009 as EnrichmentResult.Success).data as EnrichmentData.Artwork).url
+        val url2015 = ((result2015 as EnrichmentResult.Success).data as EnrichmentData.Artwork).url
+        assertTrue(url2009.contains("2009"))
+        assertTrue(url2015.contains("2015"))
+    }
+
+    @Test
+    fun `enrich retries the release search after a transient failure instead of memoizing it as NotFound`() = runTest {
+        // Given - the release search fails transiently on every attempt
+        httpClient.givenIoException("discogs.com")
+        val request = EnrichmentRequest.forAlbum(title = "Album", artist = "Artist")
+
+        // When - the same request is enriched twice in immediate succession
+        val (first, second) = withContext(ProviderCallScope()) {
+            provider.enrich(request, EnrichmentType.ALBUM_ART) to
+                provider.enrich(request, EnrichmentType.ALBUM_ART)
+        }
+
+        // Then - both calls surface the transient failure as Error, so the first failure was never
+        // memoized as a false NotFound that the second call could reuse without searching again
+        assertTrue(first is EnrichmentResult.Error)
+        assertTrue(second is EnrichmentResult.Error)
+        assertEquals(2, httpClient.requestedUrls.count { it.contains("database/search") })
+    }
+
+    @Test
     fun `enrich shares one release search and selection across ALBUM_ART LABEL and ALBUM_METADATA`() = runTest {
         // Given - one search hit that every shared album type resolves from
         httpClient.givenJsonResponse("database/search", SEARCH_RESULTS_JSON)
         val request = EnrichmentRequest.forAlbum(title = "OK Computer", artist = "Radiohead")
 
-        // When - three of the four shared album types resolve inside one ProviderCallScope
+        // When - three of the four shared album types are requested together
         val results = withContext(ProviderCallScope()) {
             listOf(
                 provider.enrich(request, EnrichmentType.ALBUM_ART),
@@ -548,11 +644,11 @@ class DiscogsProviderTest {
 
     @Test
     fun `enrich resolves the release fresh in each new ProviderCallScope`() = runTest {
-        // Given - the same search hit stubbed once, and two independent ProviderCallScope instances standing in for two separate enrich() calls
+        // Given - the same search hit stubbed once, for two separate requests to the same release
         httpClient.givenJsonResponse("database/search", SEARCH_RESULTS_JSON)
         val request = EnrichmentRequest.forAlbum(title = "OK Computer", artist = "Radiohead")
 
-        // When - each scope resolves ALBUM_ART and LABEL independently, one scope after the other
+        // When - ALBUM_ART and LABEL resolve as two separate requests, one after the other
         withContext(ProviderCallScope()) {
             provider.enrich(request, EnrichmentType.ALBUM_ART)
             provider.enrich(request, EnrichmentType.LABEL)
@@ -562,7 +658,7 @@ class DiscogsProviderTest {
             provider.enrich(request, EnrichmentType.LABEL)
         }
 
-        // Then - the memo does not outlive its scope, so each of the two calls pays its own search
+        // Then - each of the two requests pays its own search
         assertEquals(2, httpClient.requestedUrls.count { it.contains("database/search") })
     }
 

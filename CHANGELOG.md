@@ -158,6 +158,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Deezer album lookup now rejects a right-artist result whose title is unrelated and ranks accepted editions instead of trusting search order
 - iTunes album search now accepts and ranks a candidate's title, not just its artist, and shares one selection across ALBUM_ART, ALBUM_METADATA and ALBUM_TRACKS
 - Discogs album search now validates the returned album title as well as artist, parsing its combined `"Artist - Title"` field safely, before using release data
+- Discogs combined-title parsing now finds the real artist/title boundary when the requested artist itself contains ` - `, instead of stopping at the first artist-plausible prefix
 
 ## [0.11.0] - 2026-07-28
 

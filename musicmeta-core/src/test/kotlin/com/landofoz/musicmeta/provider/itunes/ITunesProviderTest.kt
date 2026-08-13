@@ -475,12 +475,12 @@ class ITunesProviderTest {
 
     @Test
     fun `metadata and tracks share one UPC lookup within the same call`() = runTest {
-        // Given - the call scope one enrich() installs for its provider memos ([ProviderCallScope])
+        // Given - one barcode request that will ask for both album metadata and tracks
         httpClient.givenJsonResponse("upc=724384960650", UPC_LOOKUP_DISCOVERY)
         httpClient.givenJsonResponse("lookup?id=697194953", ITUNES_LOOKUP_TRACKS_RESPONSE)
         val request = barcodeRequest("724384960650", "Daft Punk", "Discovery")
 
-        // When - both types are resolved inside one call scope, as the engine would
+        // When - both types are requested together, as the engine would
         val results = withContext(ProviderCallScope()) {
             listOf(
                 provider.enrich(request, EnrichmentType.ALBUM_METADATA),
@@ -510,7 +510,7 @@ class ITunesProviderTest {
         )
         val request = EnrichmentRequest.forAlbum("Song", "David Bowie")
 
-        // When - all three album types resolve inside one ProviderCallScope
+        // When - all three album types are requested together
         val results = withContext(ProviderCallScope()) {
             listOf(
                 provider.enrich(request, EnrichmentType.ALBUM_ART),
@@ -609,13 +609,101 @@ class ITunesProviderTest {
     }
 
     @Test
+    fun `enrich ranks title tier ahead of artist quality`() = runTest {
+        // Given - the exact-title candidate has only a loose artist match; the exact-artist candidate's title is a Live edition
+        val request = EnrichmentRequest.forAlbum("Album", "Real Band")
+        httpClient.givenJsonResponse(
+            "search",
+            """{"resultCount":2,"results":[
+                {"collectionId":1,"collectionName":"Album (Live)","artistName":"Real Band","artworkUrl100":"https://example.com/live.jpg"},
+                {"collectionId":2,"collectionName":"Album","artistName":"Real Band Tribute","artworkUrl100":"https://example.com/exact-title.jpg"}
+            ]}""",
+        )
+
+        // When - enriching for album art
+        val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
+
+        // Then - the exact-title candidate wins even though its artist match is only a loose containment
+        assertTrue(result is EnrichmentResult.Success)
+        val data = (result as EnrichmentResult.Success).data as EnrichmentData.Artwork
+        assertEquals("https://example.com/exact-title.jpg", data.url)
+    }
+
+    @Test
+    fun `enrich prefers the edition whose releaseDate matches the requested year over an undated tie`() = runTest {
+        // Given - two identically-titled, identically-qualified editions; only one's releaseDate matches the requested year
+        val request = EnrichmentRequest.ForAlbum(EnrichmentIdentifiers(), "Album", "Artist", year = 2015)
+        httpClient.givenJsonResponse(
+            "search",
+            """{"resultCount":2,"results":[
+                {"collectionId":1,"collectionName":"Album","artistName":"Artist","artworkUrl100":"https://example.com/2009.jpg","releaseDate":"2009-01-01T00:00:00Z"},
+                {"collectionId":2,"collectionName":"Album","artistName":"Artist","artworkUrl100":"https://example.com/2015.jpg","releaseDate":"2015-01-01T00:00:00Z"}
+            ]}""",
+        )
+
+        // When - enriching for album art
+        val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
+
+        // Then - the edition whose releaseDate starts with the requested year wins over the first-listed one
+        assertTrue(result is EnrichmentResult.Success)
+        val data = (result as EnrichmentResult.Success).data as EnrichmentData.Artwork
+        assertEquals("https://example.com/2015.jpg", data.url)
+    }
+
+    @Test
+    fun `enrich searches again when only year differs between two requests in one ProviderCallScope`() = runTest {
+        // Given - two editions under the same title/artist, distinguished only by releaseDate/year
+        httpClient.givenJsonResponse(
+            "search",
+            """{"resultCount":2,"results":[
+                {"collectionId":1,"collectionName":"Album","artistName":"Artist","artworkUrl100":"https://example.com/2009.jpg","releaseDate":"2009-01-01T00:00:00Z"},
+                {"collectionId":2,"collectionName":"Album","artistName":"Artist","artworkUrl100":"https://example.com/2015.jpg","releaseDate":"2015-01-01T00:00:00Z"}
+            ]}""",
+        )
+        val identifiers = EnrichmentIdentifiers()
+        val request2009 = EnrichmentRequest.ForAlbum(identifiers, "Album", "Artist", year = 2009)
+        val request2015 = EnrichmentRequest.ForAlbum(identifiers, "Album", "Artist", year = 2015)
+
+        // When - both requests are made together
+        val (result2009, result2015) = withContext(ProviderCallScope()) {
+            provider.enrich(request2009, EnrichmentType.ALBUM_ART) to
+                provider.enrich(request2015, EnrichmentType.ALBUM_ART)
+        }
+
+        // Then - each request's own year picks its own edition
+        val url2009 = ((result2009 as EnrichmentResult.Success).data as EnrichmentData.Artwork).url
+        val url2015 = ((result2015 as EnrichmentResult.Success).data as EnrichmentData.Artwork).url
+        assertEquals("https://example.com/2009.jpg", url2009)
+        assertEquals("https://example.com/2015.jpg", url2015)
+    }
+
+    @Test
+    fun `enrich retries the name search after a transient failure instead of memoizing it as NotFound`() = runTest {
+        // Given - the name search fails transiently on every attempt
+        httpClient.givenIoException("search")
+        val request = EnrichmentRequest.forAlbum("Album", "Artist")
+
+        // When - the same request is enriched twice in immediate succession
+        val (first, second) = withContext(ProviderCallScope()) {
+            provider.enrich(request, EnrichmentType.ALBUM_ART) to
+                provider.enrich(request, EnrichmentType.ALBUM_ART)
+        }
+
+        // Then - both calls surface the transient failure as Error, so the first failure was never
+        // memoized as a false NotFound that the second call could reuse without searching again
+        assertTrue(first is EnrichmentResult.Error)
+        assertTrue(second is EnrichmentResult.Error)
+        assertEquals(2, httpClient.requestedUrls.count { it.contains("search") })
+    }
+
+    @Test
     fun `enrich shares one name-search selection across ALBUM_ART ALBUM_METADATA and ALBUM_TRACKS`() = runTest {
         // Given - one search hit whose collectionId the ALBUM_TRACKS lookup then reuses
         httpClient.givenJsonResponse("search", ITUNES_SEARCH_WITH_ID_RESPONSE)
         httpClient.givenJsonResponse("lookup", ITUNES_LOOKUP_TRACKS_RESPONSE)
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
 
-        // When - all three album types resolve inside one ProviderCallScope
+        // When - all three album types are requested together
         val results = withContext(ProviderCallScope()) {
             listOf(
                 provider.enrich(request, EnrichmentType.ALBUM_ART),

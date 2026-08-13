@@ -8,6 +8,7 @@ import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.IdentifierNamespace
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.SearchCandidate
+import com.landofoz.musicmeta.engine.AlbumMatch
 import com.landofoz.musicmeta.engine.ArtistMatcher
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.engine.ProviderCallScope
@@ -142,7 +143,7 @@ class ITunesProvider(
 
             // Fall back to the shared name-search selection, so a call also asking ALBUM_ART or
             // ALBUM_METADATA resolves the same collection instead of ranking its own.
-            val albumResult = albumScope().resolveAlbum(request)
+            val albumResult = albumScope().resolveAlbum(request)?.candidate
                 ?: return EnrichmentResult.NotFound(type, id)
 
             val searchedCollectionId = albumResult.collectionId.takeIf { it > 0 }
@@ -227,7 +228,7 @@ class ITunesProvider(
         }
 
         val result = try {
-            albumScope().resolveAlbum(request)
+            albumScope().resolveAlbum(request)?.candidate
         } catch (e: Exception) {
             currentCoroutineContext().ensureActive()
             return mapError(type, e)
@@ -310,11 +311,15 @@ class ITunesProvider(
 private class ITunesAlbumScope(private val api: ITunesApi) {
 
     private val mutex = Mutex()
-    private val results = mutableMapOf<String, ITunesAlbumResult?>()
+    private val results = mutableMapOf<String, AlbumMatch<ITunesAlbumResult>?>()
 
-    /** The accepted-and-ranked search hit for [request], one search per distinct pair per call. */
-    suspend fun resolveAlbum(request: EnrichmentRequest.ForAlbum): ITunesAlbumResult? {
-        val key = "${request.artist}|${request.title}"
+    /**
+     * The accepted-and-ranked search hit for [request], with its selection evidence, one search per
+     * distinct complete selection input per call. Keyed on every field selection reads — including
+     * `trackCount` and `year` — so a request differing only in those cannot reuse a stale selection.
+     */
+    suspend fun resolveAlbum(request: EnrichmentRequest.ForAlbum): AlbumMatch<ITunesAlbumResult>? {
+        val key = "${request.artist}|${request.title}|${request.trackCount}|${request.year}"
         return mutex.withLock {
             if (results.containsKey(key)) {
                 results.getValue(key)
@@ -328,7 +333,7 @@ private class ITunesAlbumScope(private val api: ITunesApi) {
     }
 
     private companion object {
-        /** Candidate pool size for the name-search selection — same bound as the prior first-match search. */
+        /** Candidate pool size for the name-search selection — enough hits for the requested edition to surface. */
         const val ALBUM_SEARCH_LIMIT = 5
     }
 }

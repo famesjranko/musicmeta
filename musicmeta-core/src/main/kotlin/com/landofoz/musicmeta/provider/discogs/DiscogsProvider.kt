@@ -96,7 +96,7 @@ class DiscogsProvider(
         return try {
             // Discogs titles are "Artist - Title"; accept and rank on both halves, shared by every
             // type this call asks for so they select one release, not one search-ranked pick each.
-            val release = albumScope().resolveRelease(albumRequest)
+            val release = albumScope().resolveRelease(albumRequest)?.release
                 ?: return EnrichmentResult.NotFound(type, id)
             if (type == EnrichmentType.ALBUM_METADATA) {
                 enrichAlbumMetadataWithCommunity(release, albumRequest.identifiers)
@@ -274,11 +274,15 @@ class DiscogsProvider(
 private class DiscogsAlbumScope(private val api: DiscogsApi) {
 
     private val mutex = Mutex()
-    private val releases = mutableMapOf<String, DiscogsRelease?>()
+    private val releases = mutableMapOf<String, DiscogsAlbumChoice?>()
 
-    /** The accepted-and-ranked search hit for [request], one search per distinct pair per call. */
-    suspend fun resolveRelease(request: EnrichmentRequest.ForAlbum): DiscogsRelease? {
-        val key = "${request.artist}|${request.title}"
+    /**
+     * The accepted-and-ranked search hit for [request], with its selection evidence, one search per
+     * distinct complete selection input per call. Keyed on every field selection reads, including
+     * `year`, so a request differing only in `year` cannot reuse a stale selection.
+     */
+    suspend fun resolveRelease(request: EnrichmentRequest.ForAlbum): DiscogsAlbumChoice? {
+        val key = "${request.artist}|${request.title}|${request.year}"
         return mutex.withLock {
             if (releases.containsKey(key)) {
                 releases.getValue(key)
