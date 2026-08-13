@@ -20,22 +20,23 @@ private const val CONTACT = "https://github.com/famesjranko/musicmeta"
  */
 internal class KeySpec(val catalogId: String, val secretsKey: String, val envVar: String)
 
-internal val KEY_SPECS = listOf(
-    KeySpec("lastfm", "lastfm.apikey", "LASTFM_API_KEY"),
-    KeySpec("fanarttv", "fanarttv.apikey", "FANARTTV_API_KEY"),
-    KeySpec("discogs", "discogs.token", "DISCOGS_TOKEN"),
-    KeySpec("listenbrainz", "listenbrainz.token", "LISTENBRAINZ_TOKEN"),
-)
+private val LASTFM = KeySpec("lastfm", "lastfm.apikey", "LASTFM_API_KEY")
+private val FANARTTV = KeySpec("fanarttv", "fanarttv.apikey", "FANARTTV_API_KEY")
+private val DISCOGS = KeySpec("discogs", "discogs.token", "DISCOGS_TOKEN")
+private val LISTENBRAINZ = KeySpec("listenbrainz", "listenbrainz.token", "LISTENBRAINZ_TOKEN")
+
+internal val KEY_SPECS = listOf(LASTFM, FANARTTV, DISCOGS, LISTENBRAINZ)
+
+private fun KeySpec.resolve(secrets: Map<String, String>) = secrets[secretsKey] ?: env(envVar)
 
 fun main() {
     val port = env("PORT")?.toIntOrNull() ?: 8099
     val secrets = loadSecrets()
-    val resolved = KEY_SPECS.associate { it.catalogId to (secrets[it.secretsKey] ?: env(it.envVar)) }
     val keys = ApiKeyConfig(
-        lastFmKey = resolved["lastfm"],
-        fanartTvProjectKey = resolved["fanarttv"],
-        discogsPersonalToken = resolved["discogs"],
-        listenBrainzToken = resolved["listenbrainz"],
+        lastFmKey = LASTFM.resolve(secrets),
+        fanartTvProjectKey = FANARTTV.resolve(secrets),
+        discogsPersonalToken = DISCOGS.resolve(secrets),
+        listenBrainzToken = LISTENBRAINZ.resolve(secrets),
     )
     val cache = InMemoryEnrichmentCache()
 
