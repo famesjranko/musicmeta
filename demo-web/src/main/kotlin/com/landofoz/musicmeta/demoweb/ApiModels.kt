@@ -229,6 +229,12 @@ data class InvalidateRequest(
     val artist: String? = null,
     val album: String? = null,
     val mbid: String? = null,
+    /**
+     * The same [WireIdentifiers] envelope [EnrichTarget.identifiers] carries, so invalidation
+     * addresses the exact key family the reload that follows it will read — omitting this lets a
+     * provider-id-keyed entry survive "clear and reload" while only the bare-name key is cleared.
+     */
+    val identifiers: WireIdentifiers? = null,
 )
 
 @Serializable

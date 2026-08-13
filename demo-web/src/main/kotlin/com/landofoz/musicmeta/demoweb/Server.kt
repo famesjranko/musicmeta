@@ -68,9 +68,9 @@ internal class InvalidIdentifiers(message: String) : Exception(message)
 /**
  * Decodes a [SectionItem.identifiers]/[EnrichTarget.identifiers] `ids` query parameter into
  * [EnrichmentIdentifiers] for a track-scoped request, or null when [raw] is absent — the
- * pre-existing name-only lookup. Malformed JSON, an oversized parameter or value, a non-`"TRACK"`
- * [WireIdentifiers.entityKind], or an `extra` key outside [TRACK_EXTRA_NAMESPACE_ALLOWLIST] all
- * throw [InvalidIdentifiers] — the caller turns that into a 400, never a silent name-only downgrade.
+ * pre-existing name-only lookup. Malformed JSON or an oversized parameter throws
+ * [InvalidIdentifiers] before reaching [validateTrackIdentifiers], which owns every other
+ * rejection reason — the caller turns either into a 400, never a silent name-only downgrade.
  */
 internal fun decodeTrackIdentifiers(raw: String?): EnrichmentIdentifiers? {
     if (raw.isNullOrBlank()) return null
@@ -80,6 +80,17 @@ internal fun decodeTrackIdentifiers(raw: String?): EnrichmentIdentifiers? {
     } catch (e: Exception) {
         throw InvalidIdentifiers("ids is malformed: ${e.message}")
     }
+    return validateTrackIdentifiers(wire)
+}
+
+/**
+ * Validates an already-deserialized [WireIdentifiers] for a track-scoped request — the one place
+ * [InvalidateRequest.identifiers] and [decodeTrackIdentifiers]'s query-parameter path both convert
+ * to [EnrichmentIdentifiers], so a request body and an `ids` query parameter are held to the same
+ * scope, allowlist and size rules. A non-`"TRACK"` [WireIdentifiers.entityKind], an oversized
+ * value, or an `extra` key outside [TRACK_EXTRA_NAMESPACE_ALLOWLIST] all throw [InvalidIdentifiers].
+ */
+internal fun validateTrackIdentifiers(wire: WireIdentifiers): EnrichmentIdentifiers {
     if (wire.entityKind != "TRACK") {
         throw InvalidIdentifiers("ids entityKind ${wire.entityKind} does not match this track request")
     }
@@ -445,11 +456,24 @@ private fun handleInvalidate(exchange: HttpExchange, engine: EnrichmentEngine) {
             )
             return
         }
+        if (request.identifiers != null && kind != "track") {
+            exchange.respondJson(400, ApiError("identifiers is only valid for kind=track"))
+            return
+        }
+        // Threaded through so invalidation reaches the same provider-id-keyed entry the reload
+        // that follows it will read (`docs/pitfalls.md` §5) — omitting this on a track request
+        // would clear only the bare-name key and leave a provider-id-keyed preview cached.
+        val identifiers = try {
+            request.identifiers?.let { validateTrackIdentifiers(it) }
+        } catch (e: InvalidIdentifiers) {
+            exchange.respondJson(400, ApiError(e.message ?: "invalid identifiers"))
+            return
+        }
 
         val enrichmentRequest = when (kind) {
             "artist" -> EnrichmentRequest.forArtist(name, mbid)
             "album" -> EnrichmentRequest.forAlbum(name, artist, mbid)
-            else -> EnrichmentRequest.forTrack(name, artist, album, mbid = mbid)
+            else -> EnrichmentRequest.forTrack(name, artist, album, mbid = mbid, identifiers = identifiers)
         }
         runBlocking { engine.invalidate(enrichmentRequest, null) }
         exchange.respondJson(200, InvalidateResponse(true))

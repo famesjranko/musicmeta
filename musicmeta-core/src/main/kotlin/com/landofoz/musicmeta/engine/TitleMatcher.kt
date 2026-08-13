@@ -39,15 +39,16 @@ internal object TitleMatcher {
 
     internal fun parse(title: String): Parts {
         val normalized = normalize(title)
-        return bracketQualifier(normalized) ?: dashQualifier(normalized) ?: Parts(normalized, null)
+        return bracketQualifier(normalized) ?: dashQualifier(normalized)
+            ?: Parts(stripSurroundingQuotes(normalized), null)
     }
 
     private fun bracketQualifier(normalized: String): Parts? {
         val match = TERMINAL_BRACKET_REGEX.matchEntire(normalized) ?: return null
         val base = match.groupValues[1].trim()
-        val qualifier = match.groupValues[2].trim()
+        val qualifier = (match.groups[2] ?: match.groups[3])?.value.orEmpty().trim()
         if (base.isEmpty() || qualifier.isEmpty()) return null
-        return Parts(base, qualifier)
+        return Parts(stripSurroundingQuotes(base), qualifier)
     }
 
     private fun dashQualifier(normalized: String): Parts? {
@@ -56,23 +57,39 @@ internal object TitleMatcher {
         val base = normalized.substring(0, index).trim()
         val qualifier = normalized.substring(index + 3).trim()
         if (base.isEmpty() || qualifier.isEmpty()) return null
-        return Parts(base, qualifier)
+        return Parts(stripSurroundingQuotes(base), qualifier)
     }
 
     private fun normalize(title: String): String {
         var s = title.trim()
-        s = s.replace(QUOTE_REGEX, "")
         s = s.replace(DASH_REGEX, "-")
         s = s.lowercase()
         s = s.replace(WHITESPACE_REGEX, " ").trim()
         return s
     }
 
-    /** Terminal bracket group only — a group anywhere else in the title stays part of the base. */
-    private val TERMINAL_BRACKET_REGEX = Regex("""^(.+?)\s*[(\[]([^()\[\]]+)[)\]]$""")
+    /**
+     * Removes one balanced pair of straight/curly double quotes surrounding all of [s] —
+     * cosmetic decoration such as Deezer's `"Heroes" (2017 Remaster)`. A quote that wraps only
+     * part of [s], such as `Say "Hello"`, is identity-bearing and stays: only a pair covering the
+     * entire string is cosmetic.
+     */
+    private fun stripSurroundingQuotes(s: String): String =
+        if (s.length >= 2 && s.first() in QUOTE_CHARS && s.last() in QUOTE_CHARS) {
+            s.substring(1, s.length - 1).trim()
+        } else {
+            s
+        }
 
-    /** Straight and curly double quotes — Deezer's `"Heroes" (2017 Remaster)` decoration. */
-    private val QUOTE_REGEX = Regex("[\"“”]")
+    /**
+     * Terminal bracket group only, with the open/close pair matched — `(...)` or `[...]`, never
+     * mixed. A group anywhere else in the title, or one whose delimiters don't pair, stays part of
+     * the base rather than being read as a qualifier.
+     */
+    private val TERMINAL_BRACKET_REGEX = Regex("""^(.+?)\s*(?:\(([^()\[\]]+)\)|\[([^()\[\]]+)\])$""")
+
+    /** Straight and curly double quotes. */
+    private val QUOTE_CHARS = setOf('"', '“', '”')
 
     /** En dash and em dash, normalized to the ASCII hyphen the ` - ` split looks for. */
     private val DASH_REGEX = Regex("[–—]")

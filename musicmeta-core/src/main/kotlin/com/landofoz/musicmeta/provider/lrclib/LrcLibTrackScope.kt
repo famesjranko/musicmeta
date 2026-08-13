@@ -14,11 +14,18 @@ import kotlinx.coroutines.sync.withLock
  */
 internal class LrcLibTrackScope(private val api: LrcLibApi) {
 
+    /**
+     * The four fields a lookup's outcome depends on, held as distinct fields rather than one
+     * delimiter-joined string: a joined key aliases legally distinct requests whenever a field's
+     * own value contains the delimiter (`"A|B" / "C"` versus `"A" / "B|C"`).
+     */
+    private data class SelectionKey(val artist: String, val title: String, val album: String?, val durationMs: Long?)
+
     private val mutex = Mutex()
-    private val outcomes = mutableMapOf<String, LrcLibOutcome>()
+    private val outcomes = mutableMapOf<SelectionKey, LrcLibOutcome>()
 
     suspend fun resolve(request: EnrichmentRequest.ForTrack): LrcLibOutcome = mutex.withLock {
-        val key = "${request.artist}|${request.title}|${request.album}|${request.durationMs}"
+        val key = SelectionKey(request.artist, request.title, request.album, request.durationMs)
         outcomes[key] ?: lookup(request).also { outcomes[key] = it }
     }
 
@@ -34,7 +41,7 @@ internal class LrcLibTrackScope(private val api: LrcLibApi) {
 
         val accepted = api.searchLyrics(artist = request.artist, track = request.title)
             .filter { LrcLibAcceptance.accepts(request, it) }
-        val best = accepted.selectBest(request) ?: return LrcLibOutcome.Miss
-        return LrcLibOutcome.Found(best, exact = false)
+        val (best, evidence) = accepted.selectBest(request) ?: return LrcLibOutcome.Miss
+        return LrcLibOutcome.Found(best, exact = false, evidence = evidence)
     }
 }

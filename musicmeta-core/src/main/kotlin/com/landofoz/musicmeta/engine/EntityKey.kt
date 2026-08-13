@@ -86,6 +86,17 @@ internal fun entityKeyForName(request: EnrichmentRequest, type: EnrichmentType):
     "${entityPrefix(request)}:${entityNamePart(request)}:$type"
 
 /**
+ * True when [request] carries both a canonical MusicBrainz id and a provider id [entityKeyFor]
+ * would otherwise trust as this [type]'s own route, with nothing proving the two name the same
+ * entity — a provider that prefers its own id over the MBID (Deezer's exact-track lookup does)
+ * can answer for a different entity than the MBID names. Neither id is safe to read or write a
+ * cache entry under until the winning route is known, so callers bypass the cache entirely for
+ * this (request, type) rather than guess one of the two keys.
+ */
+internal fun hasUnvalidatedMixedIdentity(request: EnrichmentRequest, type: EnrichmentType): Boolean =
+    request.identifiers.musicBrainzId != null && providerIdPart(request, type) != null
+
+/**
  * [LookupProvenance] for a [type] result that did not report its own route, from what the winning
  * provider's chain walk actually required to run it — never from which identifiers merely happen to
  * be present on the request, which a provider that used none of them may still have satisfied by

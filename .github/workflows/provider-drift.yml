@@ -82,6 +82,12 @@ jobs:
         # `--tests` scopes this to the e2e package: unscoped, any ordinary unit-test regression on
         # the default branch would look like provider drift. Retried once — 11 live APIs from a
         # shared runner IP, so a lone 429/503 is noise, not drift.
+        #
+        # The package glob below already picks up ProviderDriftClosedLoopE2ETest — the bounded,
+        # deterministic Top Tracks -> TRACK_PREVIEW closed loop this job's own log now trends by
+        # source provider, title shape, route and canonical status, dated per run. It never fails
+        # this step: the hard suppression invariant lives in non-live unit coverage instead (see
+        # that test's own KDoc), so a trend shift here is a signal to read, not a gate.
         run: |
           set -eo pipefail
           if ./gradlew :musicmeta-core:test -Dinclude.e2e=true \

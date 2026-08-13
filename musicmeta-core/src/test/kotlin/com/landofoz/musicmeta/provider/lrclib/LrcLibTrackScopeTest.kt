@@ -87,6 +87,29 @@ class LrcLibTrackScopeTest {
         assertTrue(outcome is LrcLibOutcome.Found)
     }
 
+    @Test
+    fun `distinct delimiter-bearing requests do not share one memoized outcome`() = runTest {
+        // Given - two legally distinct requests that would alias under a "|"-joined string key
+        // ("A|B" / "C" versus "A" / "B|C"), each answered by a different search result
+        httpClient.givenHttpResult("/api/get", HttpResult.ClientError(404, "not found"))
+        httpClient.givenJsonResponsesInTurn(
+            "/api/search",
+            """[{"id":1,"trackName":"C","artistName":"A|B","albumName":null,"duration":1.0,""" +
+                """"instrumental":false,"plainLyrics":"first"}]""",
+            """[{"id":2,"trackName":"B|C","artistName":"A","albumName":null,"duration":1.0,""" +
+                """"instrumental":false,"plainLyrics":"second"}]""",
+        )
+        val scope = LrcLibTrackScope(LrcLibApi(httpClient, RateLimiter(intervalMs = 0)))
+
+        // When - resolving both requests through the same scope
+        val first = scope.resolve(EnrichmentRequest.forTrack(title = "C", artist = "A|B")) as LrcLibOutcome.Found
+        val second = scope.resolve(EnrichmentRequest.forTrack(title = "B|C", artist = "A")) as LrcLibOutcome.Found
+
+        // Then - each request resolved its own search result rather than sharing one memo entry
+        assertEquals(1L, first.result.id)
+        assertEquals(2L, second.result.id)
+    }
+
     /** Throws [IOException] on its first `fetchJsonResult` call, then delegates normally. */
     private class FlakyOnceHttpClient(private val delegate: HttpClient) : HttpClient by delegate {
         private var thrown = false
