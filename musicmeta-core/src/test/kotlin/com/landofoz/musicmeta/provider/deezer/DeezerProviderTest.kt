@@ -802,6 +802,24 @@ class DeezerProviderTest {
     }
 
     @Test
+    fun `enrich returns the deezerId track even when its display title has no relation to the request`() = runTest {
+        // Given - an exact provider-id lookup, where the caller's own display title is stale or
+        // wrong; the fetched track's title is wholly unrelated to what was requested
+        httpClient.givenJsonResponse("track/789", TRACK_BY_ID_RESPONSE)
+        val request = EnrichmentRequest.forTrack("Totally Different Title", "Someone Else",
+            identifiers = EnrichmentIdentifiers().withExtra("deezerId", "789"),
+        )
+
+        // When - enriching for track preview by id
+        val result = provider.enrich(request, EnrichmentType.TRACK_PREVIEW)
+
+        // Then - the id lookup succeeds; title acceptance never runs on an exact id fetch
+        assertTrue(result is EnrichmentResult.Success)
+        val preview = (result as EnrichmentResult.Success).data as EnrichmentData.TrackPreview
+        assertEquals("https://cdns-preview.dzcdn.net/stream/abc123.mp3", preview.url)
+    }
+
+    @Test
     fun `enrich returns NotFound for TRACK_PREVIEW fast path when track has no preview`() = runTest {
         // Given - track exists but has no preview URL
         httpClient.givenJsonResponse("track/789", TRACK_BY_ID_NO_PREVIEW_RESPONSE)

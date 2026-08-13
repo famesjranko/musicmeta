@@ -1,6 +1,7 @@
 package com.landofoz.musicmeta.provider.deezer
 
 import com.landofoz.musicmeta.engine.ArtistMatcher
+import com.landofoz.musicmeta.engine.TitleMatcher
 import com.landofoz.musicmeta.engine.bestArtistMatch
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
@@ -164,9 +165,13 @@ internal class DeezerApi(
      * expected) → field query without `album:` (a literal `"` in any field breaks the syntax and
      * returns zero, observed live) → plain keyword query as the last resort.
      *
-     * Whichever query produced the pool, it is then ranked — the original `for` loop here returned
-     * hit 0 unconditionally, so a five-candidate pool never mattered. [rankTracks] is this
-     * provider's version of [ArtistMatcher]-driven pool ranking; see its KDoc for the tier order.
+     * Whichever query produced the pool, an artist match alone is not an answer either
+     * (`docs/pitfalls.md` §7): [TitleMatcher] then keeps only the candidates whose title names
+     * the requested recording, and only that accepted pool is ranked — the original `for` loop
+     * here returned hit 0 unconditionally, so a five-candidate pool never mattered. [rankTracks]
+     * is this provider's version of [ArtistMatcher]-driven pool ranking; see its KDoc for the
+     * tier order. A tier with an artist match but no title-accepted candidate falls through like
+     * an empty one, same as the artist filter above it.
      */
     suspend fun searchTrack(title: String, artist: String, album: String? = null): DeezerTrackSearchResult? {
         val queries = buildList {
@@ -178,6 +183,7 @@ internal class DeezerApi(
             val candidates = fetchTrackPool(url)
                 .orEmpty()
                 .filter { ArtistMatcher.isMatch(artist, it.optJSONObject("artist")?.optString("name", "").orEmpty()) }
+                .filter { TitleMatcher.equivalent(title, it.optString("title", "")) }
             if (candidates.isNotEmpty()) {
                 return candidates.rankTracks(title, artist, album)?.toTrackSearchResult()
             }

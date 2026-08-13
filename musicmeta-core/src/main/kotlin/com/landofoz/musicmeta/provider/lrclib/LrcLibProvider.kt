@@ -6,8 +6,10 @@ import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
+import com.landofoz.musicmeta.engine.ProviderCallScope
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
+import kotlinx.coroutines.currentCoroutineContext
 
 /**
  * LRCLIB provider for synced and plain lyrics.
@@ -21,6 +23,16 @@ class LrcLibProvider(
 ) : EnrichmentProvider {
 
     private val api = LrcLibApi(httpClient, rateLimiter)
+
+    /**
+     * This call's [LrcLibTrackScope], shared by `LYRICS_SYNCED`, `LYRICS_PLAIN` and
+     * `TRACK_METADATA` so no two of them search or select twice in one `enrich()` fan-out
+     * ([ProviderCallScope], `docs/pitfalls.md` §12). Called directly (no engine context), each
+     * call gets its own.
+     */
+    private suspend fun trackScope(): LrcLibTrackScope =
+        currentCoroutineContext()[ProviderCallScope]?.slot(this) { LrcLibTrackScope(api) }
+            ?: LrcLibTrackScope(api)
 
     override val id: String = "lrclib"
     override val displayName: String = "LRCLIB"
@@ -59,26 +71,17 @@ class LrcLibProvider(
     private suspend fun enrichTrack(
         request: EnrichmentRequest.ForTrack,
         type: EnrichmentType,
-    ): EnrichmentResult {
-        val durationSec = request.durationMs?.let { it / 1000.0 }
-
-        // Try exact match first (with album + duration when available)
-        val exactResult = api.getLyrics(
-            artist = request.artist,
-            track = request.title,
-            album = request.album,
-            durationSec = durationSec,
+    ): EnrichmentResult = when (val outcome = trackScope().resolve(request)) {
+        is LrcLibOutcome.Found -> toEnrichmentResult(
+            outcome.result,
+            type,
+            if (outcome.exact) {
+                ConfidenceCalculator.authoritative()
+            } else {
+                ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true)
+            },
         )
-        if (exactResult != null) {
-            return toEnrichmentResult(exactResult, type, ConfidenceCalculator.authoritative())
-        }
-
-        // Fall back to search
-        val searchResults = api.searchLyrics(artist = request.artist, track = request.title)
-        val bestMatch = searchResults.firstOrNull()
-            ?: return EnrichmentResult.NotFound(type, id)
-
-        return toEnrichmentResult(bestMatch, type, ConfidenceCalculator.fuzzyMatch(hasArtistMatch = false))
+        LrcLibOutcome.Miss -> EnrichmentResult.NotFound(type, id)
     }
 
     private fun toEnrichmentResult(

@@ -86,6 +86,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `build()` warns from the User-Agent the wire will carry: the contactless default meeting MusicBrainz/Wikipedia/Wikidata, `contact()` after `withDefaultProviders()`, or `contact()` with your client
 
 ### Fixed
+- Deezer track search now accepts a candidate's title (exact or equivalent-qualifier match) before ranking it, rather than ranking any right-artist pool; a wholly unrelated title is no longer returned
+- LRCLIB's search fallback now rejects a candidate whose artist or title it cannot identify, rather than taking the first search hit unconditionally
 - Remove any retrying OkHttp interceptor: it cannot see the enrich deadline, so its retries are unbudgeted and now stack on the ladder
 - A caller-supplied `httpClient()` only silences the contactless-User-Agent warning when it built the wire's only client; one set after `withDefaultProviders()` still warns
 - An artist named by one of its MusicBrainz aliases now resolves: the search asked `artist:"…"` only, which does not reach the alias index, so a localised or former name found nothing
