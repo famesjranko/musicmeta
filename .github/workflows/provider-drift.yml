@@ -84,10 +84,12 @@ jobs:
         # shared runner IP, so a lone 429/503 is noise, not drift.
         #
         # The package glob below already picks up ProviderDriftClosedLoopE2ETest — the bounded,
-        # deterministic Top Tracks -> TRACK_PREVIEW closed loop this job's own log now trends by
-        # source provider, title shape, route and canonical status, dated per run. It never fails
-        # this step: the hard suppression invariant lives in non-live unit coverage instead (see
-        # that test's own KDoc), so a trend shift here is a signal to read, not a gate.
+        # deterministic Top Tracks/radio/similar-tracks/discography -> TRACK_PREVIEW closed loop
+        # this job's own log now trends by row source, source provider, title shape, route,
+        # canonical status and timeout rate, dated per run. It never fails this step: the hard
+        # suppression invariant lives in non-live unit coverage instead (see that test's own
+        # KDoc), so a trend shift here is a signal to read, not a gate. No separate trend
+        # artifact: the printed lines land in the same `e2e.log` the step below already uploads.
         run: |
           set -eo pipefail
           if ./gradlew :musicmeta-core:test -Dinclude.e2e=true \
