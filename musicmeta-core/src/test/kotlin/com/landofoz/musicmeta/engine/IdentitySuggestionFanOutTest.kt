@@ -261,10 +261,11 @@ class IdentitySuggestionFanOutTest {
         // When - enriching
         val results = e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
 
-        // Then - the provider ran and its Success is best-effort
+        // Then - the provider ran, and its lookup is reported as the exact id-keyed one it actually
+        // was, even though MusicBrainz's own canonical resolution stayed unconfirmed
         assertEquals(1, caa.enrichCalls.size)
         val success = results.raw[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success
-        assertEquals(LookupProvenance.FUZZY_NAME, success.provenance)
+        assertEquals(LookupProvenance.PROVIDER_NATIVE_ID, success.provenance)
     }
 
     @Test fun `suggestions never copy onto a per-type result`() = runTest {

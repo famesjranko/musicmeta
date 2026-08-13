@@ -212,6 +212,7 @@ Two independent facts describe an `enrich()` call, never one merged value:
 | `CANONICAL_ID` | Looked up directly by a MusicBrainz canonical id. |
 | `PROVIDER_NATIVE_ID` | Looked up directly by a provider-native id supplied on the request. |
 | `EXACT_NAME` | Selected by a name search MusicBrainz canonically confirmed this call. |
+
 | `QUALIFIER_FALLBACK_NAME` | Selected after normalization or qualifier-fallback stripping. |
 | `FUZZY_NAME` | Selected by an unverified fuzzy name search; MusicBrainz did not confirm this call. |
 | `CACHE` | Served from cache by an implementation that could not recover the original provenance. |
@@ -219,6 +220,20 @@ Two independent facts describe an `enrich()` call, never one merged value:
 A consumer deciding how much to trust results reads both: `status == RESOLVED` with a high
 `matchScore` is confident; any `AMBIGUOUS`/`UNRESOLVED`/`FAILED` status means every result this
 call produced is a fuzzy or ambiguous guess, whatever `provenance` an individual result carries.
+
+Migrating from the removed `IdentityMatch`:
+
+| Old | New |
+|---|---|
+| `IdentityMatch.RESOLVED` (call-level) | `CanonicalStatus.RESOLVED` |
+| `IdentityMatch.SUGGESTIONS` | `CanonicalStatus.AMBIGUOUS` |
+| `IdentityMatch.BEST_EFFORT` | `CanonicalStatus.UNRESOLVED` |
+| `IdentityMatch.UNVERIFIED` | `CanonicalStatus.FAILED` |
+| `identity == null` (disabled) | `CanonicalStatus.NOT_ATTEMPTED_DISABLED` |
+| `identity == null` (not required) | `CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED` |
+| `identity == null` (all cached) | `CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT` |
+| `identity == null` (no provider) | `CanonicalStatus.NOT_ATTEMPTED_NO_PROVIDER` |
+| `Success.identityMatch` (per-result) | `Success.provenance: LookupProvenance` |
 
 ### Step 8: Cache Store
 

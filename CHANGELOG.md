@@ -49,19 +49,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `EnrichmentResults.identity` is now non-null: it always carries a `CanonicalStatus`, including every reason resolution did not run, so `identity == null` no longer compiles
 - `EnrichmentCache.put`/`putNegative` gain a required `canonicalStatus: CanonicalStatus` parameter (no default): a custom cache implementation must recompile and pass the call's status
 - Android cache schema bumps to v4 (`MIGRATION_3_4`): `identity_match`/`_score` named a different fact and cannot be reinterpreted, so the migration clears both tables and the next call refetches
-- Old→new mapping — see `docs/how-it-works.md` "Identity model" for the full table:
-
-  | Old | New |
-  |---|---|
-  | `IdentityMatch.RESOLVED` (call-level) | `CanonicalStatus.RESOLVED` |
-  | `IdentityMatch.SUGGESTIONS` | `CanonicalStatus.AMBIGUOUS` |
-  | `IdentityMatch.BEST_EFFORT` | `CanonicalStatus.UNRESOLVED` |
-  | `IdentityMatch.UNVERIFIED` | `CanonicalStatus.FAILED` |
-  | `identity == null` (disabled) | `CanonicalStatus.NOT_ATTEMPTED_DISABLED` |
-  | `identity == null` (not required) | `CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED` |
-  | `identity == null` (all cached) | `CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT` |
-  | `identity == null` (no provider) | `CanonicalStatus.NOT_ATTEMPTED_NO_PROVIDER` |
-  | `Success.identityMatch` (per-result) | `Success.provenance: LookupProvenance` |
+- `EnrichmentCacheEntity`/`NegativeCacheEntity` gain `canonicalStatus`/`isStale` fields: binary-incompatible until recompile for a caller constructing or `copy()`-ing them directly
+- Old→new `IdentityMatch`/`identity == null` mapping — see `docs/how-it-works.md` "Step 7: Identity Model" for the full table
 
 ### Added
 - `EnrichmentRequest.forTrackByMbid`/`forAlbumByMbid`/`forArtistByMbid`: request an entity by MBID alone; identity resolution fills the names the other providers search by
@@ -159,6 +148,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - iTunes album search now accepts and ranks a candidate's title, not just its artist, and shares one selection across ALBUM_ART, ALBUM_METADATA and ALBUM_TRACKS
 - Discogs album search now validates the returned album title as well as artist, parsing its combined `"Artist - Title"` field safely, before using release data
 - Discogs combined-title parsing now finds the real artist/title boundary when the requested artist itself contains ` - `, instead of stopping at the first artist-plausible prefix
+- `Success.provenance` is now observed from the winning provider's own route, not guessed from identifiers merely present on the request: an MBID no longer mislabels a name search `CANONICAL_ID`
+- An all-cache-hit `Success` now reports `provenance = CACHE` instead of `null` when the cache that served it did not preserve the original lookup's route
 
 ## [0.11.0] - 2026-07-28
 

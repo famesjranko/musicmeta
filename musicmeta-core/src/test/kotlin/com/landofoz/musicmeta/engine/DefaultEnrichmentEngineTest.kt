@@ -469,8 +469,10 @@ class DefaultEnrichmentEngineTest {
                 return EnrichmentResult.Success(EnrichmentType.GENRE, EnrichmentData.Metadata(genres = listOf("rock")), "mb", 0.9f, resolvedIdentifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-123"))
             }
         }
-        val artProvider = FakeProvider(id = "deezer", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 50)))
-            .also { it.givenResult(EnrichmentType.ALBUM_ART, art("deezer")) }
+        val artProvider = FakeProvider(
+            id = "caa",
+            capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 50, identifierRequirement = IdentifierRequirement.MUSICBRAINZ_ID)),
+        ).also { it.givenResult(EnrichmentType.ALBUM_ART, art("caa")) }
         val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider, artProvider)), cache, EnrichmentConfig(enableIdentityResolution = true))
 
         // When - first run fails identity, second run (the user's retry) succeeds

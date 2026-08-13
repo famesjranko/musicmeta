@@ -6,6 +6,7 @@ import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
+import com.landofoz.musicmeta.LookupProvenance
 import com.landofoz.musicmeta.engine.ProviderCallScope
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.testutil.FakeHttpClient
@@ -1007,6 +1008,25 @@ class DeezerProviderTest {
         assertEquals(1, urls.size)
         assertTrue("Should call GET /track/789", urls.single().contains("track/789"))
         assertTrue("Should not call search endpoint", urls.none { it.contains("search/track") })
+    }
+
+    @Test
+    fun `enrich reports PROVIDER_NATIVE_ID for a deezerId lookup even when the request also carries an MBID`() = runTest {
+        // Given - a request naming both a recording MBID and a trusted Deezer track id
+        httpClient.givenJsonResponse("track/789", TRACK_BY_ID_RESPONSE)
+        val request = EnrichmentRequest.forTrack(
+            "Karma Police", "Radiohead",
+            identifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-does-not-belong-to-deezer")
+                .withExtra("deezerId", "789"),
+        )
+
+        // When - enriching for track preview
+        val result = provider.enrich(request, EnrichmentType.TRACK_PREVIEW)
+
+        // Then - Deezer's own /track/{id} route is reported, not the MBID it never touched
+        assertTrue(result is EnrichmentResult.Success)
+        val preview = result as EnrichmentResult.Success
+        assertEquals(LookupProvenance.PROVIDER_NATIVE_ID, preview.provenance)
     }
 
     @Test
