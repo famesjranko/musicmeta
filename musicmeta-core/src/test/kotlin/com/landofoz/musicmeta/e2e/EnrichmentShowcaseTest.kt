@@ -478,7 +478,7 @@ class EnrichmentShowcaseTest {
         println("  --- TIER 1: artistProfile() ---")
         val profile = engine.artistProfile("Radiohead")
         println("    Name: ${profile.name}")
-        println("    Identity: ${profile.identityMatch} (score=${profile.identityMatchScore})")
+        println("    Identity: ${profile.canonicalStatus} (score=${profile.identityMatchScore})")
         println("    MBID: ${profile.identifiers.musicBrainzId}")
         println("    Photo: ${profile.photo?.url?.take(60) ?: "none"}${if ((profile.photo?.url?.length ?: 0) > 60) "..." else ""}")
         println("    Bio: ${profile.bio?.text?.take(80) ?: "none"}...")
@@ -536,10 +536,10 @@ class EnrichmentShowcaseTest {
         // When - reading the identity resolution on the same results
         println("\n  --- IDENTITY RESOLUTION ---")
         val identity = results.identity
-        println("    match: ${identity?.match}")
-        println("    matchScore: ${identity?.matchScore}")
-        println("    MBID: ${identity?.identifiers?.musicBrainzId}")
-        println("    suggestions: ${identity?.suggestions?.size ?: 0}")
+        println("    status: ${identity.status}")
+        println("    matchScore: ${identity.matchScore}")
+        println("    MBID: ${identity.identifiers.musicBrainzId}")
+        println("    suggestions: ${identity.suggestions.size}")
 
         // When - reading the default type sets and defaultTypesFor()
         println("\n  --- DEFAULT TYPE SETS ---")

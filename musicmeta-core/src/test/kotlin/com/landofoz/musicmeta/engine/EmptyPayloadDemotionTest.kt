@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.engine
 
+import com.landofoz.musicmeta.CanonicalStatus
 import com.landofoz.musicmeta.EnrichmentConfig
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
@@ -191,6 +192,7 @@ class EmptyPayloadDemotionTest {
         cache.put(
             key, EnrichmentType.GENRE,
             EnrichmentResult.Success(EnrichmentType.GENRE, EnrichmentData.Metadata(), "stale-empty", 1.0f),
+            CanonicalStatus.RESOLVED,
         )
         val provider = FakeProvider(
             id = "p",

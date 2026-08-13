@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.engine
 
+import com.landofoz.musicmeta.CanonicalStatus
 import com.landofoz.musicmeta.EnrichmentConfig
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
@@ -7,7 +8,7 @@ import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.IdentifierRequirement
-import com.landofoz.musicmeta.IdentityMatch
+import com.landofoz.musicmeta.LookupProvenance
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.testutil.FakeEnrichmentCache
@@ -96,10 +97,10 @@ class IdentitySuggestionFanOutTest {
             }
         }
         // Only the top-level canonical metadata differs
-        assertEquals(IdentityMatch.BEST_EFFORT, bestEffort.identity?.match)
-        assertEquals(IdentityMatch.SUGGESTIONS, withSuggestions.identity?.match)
-        assertEquals(emptyList<SearchCandidate>(), bestEffort.identity?.suggestions)
-        assertEquals(suggestions, withSuggestions.identity?.suggestions)
+        assertEquals(CanonicalStatus.UNRESOLVED, bestEffort.identity.status)
+        assertEquals(CanonicalStatus.AMBIGUOUS, withSuggestions.identity.status)
+        assertEquals(emptyList<SearchCandidate>(), bestEffort.identity.suggestions)
+        assertEquals(suggestions, withSuggestions.identity.suggestions)
     }
 
     @Test fun `NONE-only chain has identical invocation and outcome parity`() = runTest {
@@ -229,9 +230,9 @@ class IdentitySuggestionFanOutTest {
         // Then - the provider ran, its Success is best-effort, and suggestions survive at the top
         assertEquals(1, art.enrichCalls.size)
         val success = results.raw[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success
-        assertEquals(IdentityMatch.BEST_EFFORT, success.identityMatch)
-        assertEquals(IdentityMatch.SUGGESTIONS, results.identity?.match)
-        assertEquals(suggestions, results.identity?.suggestions)
+        assertEquals(LookupProvenance.FUZZY_NAME, success.provenance)
+        assertEquals(CanonicalStatus.AMBIGUOUS, results.identity.status)
+        assertEquals(suggestions, results.identity.suggestions)
     }
 
     @Test fun `suggestions plus an ID-only provider with no identifier is not called`() = runTest {
@@ -263,7 +264,7 @@ class IdentitySuggestionFanOutTest {
         // Then - the provider ran and its Success is best-effort
         assertEquals(1, caa.enrichCalls.size)
         val success = results.raw[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success
-        assertEquals(IdentityMatch.BEST_EFFORT, success.identityMatch)
+        assertEquals(LookupProvenance.FUZZY_NAME, success.provenance)
     }
 
     @Test fun `suggestions never copy onto a per-type result`() = runTest {
@@ -278,7 +279,7 @@ class IdentitySuggestionFanOutTest {
         // Then - the per-type NotFound carries no suggestions; only the top level does
         val result = results.raw[EnrichmentType.ALBUM_ART] as EnrichmentResult.NotFound
         assertNull(result.suggestions)
-        assertEquals(suggestions, results.identity?.suggestions)
+        assertEquals(suggestions, results.identity.suggestions)
     }
 
     private fun art(p: String) = EnrichmentResult.Success(EnrichmentType.ALBUM_ART, EnrichmentData.Artwork("https://x.com/$p.jpg"), p, 0.95f)

@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.cache
 
+import com.landofoz.musicmeta.CanonicalStatus
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
@@ -24,7 +25,7 @@ class InMemoryEnrichmentCacheTest {
 
     @Test fun `put then get returns stored result`() = runTest {
         // Given - one entry stored in cache
-        cache.put("a:1", EnrichmentType.ALBUM_ART, art(), 60_000)
+        cache.put("a:1", EnrichmentType.ALBUM_ART, art(), CanonicalStatus.RESOLVED, 60_000)
 
         // When - retrieving the same key
         val result = cache.get("a:1", EnrichmentType.ALBUM_ART)
@@ -35,7 +36,7 @@ class InMemoryEnrichmentCacheTest {
 
     @Test fun `get returns null for expired entry`() = runTest {
         // Given - entry with 5s TTL, and clock advanced past expiry
-        cache.put("a:1", EnrichmentType.ALBUM_ART, art(), 5000)
+        cache.put("a:1", EnrichmentType.ALBUM_ART, art(), CanonicalStatus.RESOLVED, 5000)
         time += 6000
 
         // When - retrieving the expired entry
@@ -47,13 +48,13 @@ class InMemoryEnrichmentCacheTest {
 
     @Test fun `evicts LRU when capacity exceeded`() = runTest {
         // Given - cache filled to capacity (3), with a:1 touched most recently
-        cache.put("a:1", EnrichmentType.ALBUM_ART, art("1"), 60_000)
-        cache.put("a:2", EnrichmentType.ALBUM_ART, art("2"), 60_000)
-        cache.put("a:3", EnrichmentType.ALBUM_ART, art("3"), 60_000)
+        cache.put("a:1", EnrichmentType.ALBUM_ART, art("1"), CanonicalStatus.RESOLVED, 60_000)
+        cache.put("a:2", EnrichmentType.ALBUM_ART, art("2"), CanonicalStatus.RESOLVED, 60_000)
+        cache.put("a:3", EnrichmentType.ALBUM_ART, art("3"), CanonicalStatus.RESOLVED, 60_000)
         cache.get("a:1", EnrichmentType.ALBUM_ART) // Touch a:1
 
         // When - inserting a 4th entry beyond capacity
-        cache.put("a:4", EnrichmentType.ALBUM_ART, art("4"), 60_000)
+        cache.put("a:4", EnrichmentType.ALBUM_ART, art("4"), CanonicalStatus.RESOLVED, 60_000)
 
         // Then - least-recently-used (a:2) is evicted, a:1 survives
         assertNotNull(cache.get("a:1", EnrichmentType.ALBUM_ART))
@@ -62,8 +63,8 @@ class InMemoryEnrichmentCacheTest {
 
     @Test fun `invalidate specific type`() = runTest {
         // Given - same key stored with two different enrichment types
-        cache.put("a:1", EnrichmentType.ALBUM_ART, art(), 60_000)
-        cache.put("a:1", EnrichmentType.GENRE, EnrichmentResult.Success(EnrichmentType.GENRE, EnrichmentData.Metadata(genres = listOf("rock")), "test", 0.9f), 60_000)
+        cache.put("a:1", EnrichmentType.ALBUM_ART, art(), CanonicalStatus.RESOLVED, 60_000)
+        cache.put("a:1", EnrichmentType.GENRE, EnrichmentResult.Success(EnrichmentType.GENRE, EnrichmentData.Metadata(genres = listOf("rock")), "test", 0.9f), CanonicalStatus.RESOLVED, 60_000)
 
         // When - invalidating only the ALBUM_ART type
         cache.invalidate("a:1", EnrichmentType.ALBUM_ART)
@@ -75,7 +76,7 @@ class InMemoryEnrichmentCacheTest {
 
     @Test fun `invalidate all types`() = runTest {
         // Given - a cached entry
-        cache.put("a:1", EnrichmentType.ALBUM_ART, art(), 60_000)
+        cache.put("a:1", EnrichmentType.ALBUM_ART, art(), CanonicalStatus.RESOLVED, 60_000)
 
         // When - invalidating with null type (all types)
         cache.invalidate("a:1", null)
@@ -97,7 +98,7 @@ class InMemoryEnrichmentCacheTest {
 
     @Test fun `clear removes everything`() = runTest {
         // Given - cache with entries and manual selection flags
-        cache.put("a:1", EnrichmentType.ALBUM_ART, art(), 60_000)
+        cache.put("a:1", EnrichmentType.ALBUM_ART, art(), CanonicalStatus.RESOLVED, 60_000)
         cache.markManuallySelected("a:1", EnrichmentType.ALBUM_ART)
 
         // When - clearing the entire cache
@@ -110,7 +111,7 @@ class InMemoryEnrichmentCacheTest {
 
     @Test fun `get returns null for expired entry but does not remove it`() = runTest {
         // Given - entry with 5s TTL, clock advanced past expiry
-        cache.put("a:1", EnrichmentType.ALBUM_ART, art(), 5000)
+        cache.put("a:1", EnrichmentType.ALBUM_ART, art(), CanonicalStatus.RESOLVED, 5000)
         time += 6000
 
         // When - get() returns null for the expired entry
@@ -124,7 +125,7 @@ class InMemoryEnrichmentCacheTest {
     @Test fun `getIncludingExpired returns expired entry`() = runTest {
         // Given - entry stored with 5s TTL, clock advanced past expiry
         val stored = art("expired-url")
-        cache.put("a:1", EnrichmentType.ALBUM_ART, stored, 5000)
+        cache.put("a:1", EnrichmentType.ALBUM_ART, stored, CanonicalStatus.RESOLVED, 5000)
         time += 6000
 
         // When - retrieving via getIncludingExpired
@@ -159,7 +160,7 @@ class InMemoryEnrichmentCacheTest {
 
     @Test fun `putNegative then getNegative returns the stored NotFound`() = runTest {
         // Given - one negative entry stored in the cache
-        cache.putNegative("a:1", EnrichmentType.ALBUM_ART, notFound(), 60_000)
+        cache.putNegative("a:1", EnrichmentType.ALBUM_ART, notFound(), CanonicalStatus.RESOLVED, 60_000)
 
         // When - reading the same key back
         val result = cache.getNegative("a:1", EnrichmentType.ALBUM_ART)
@@ -170,7 +171,7 @@ class InMemoryEnrichmentCacheTest {
 
     @Test fun `getNegative returns null for an expired entry`() = runTest {
         // Given - a negative entry stored with a 5s TTL
-        cache.putNegative("a:1", EnrichmentType.ALBUM_ART, notFound(), 5000)
+        cache.putNegative("a:1", EnrichmentType.ALBUM_ART, notFound(), CanonicalStatus.RESOLVED, 5000)
 
         // When - the clock advances past expiry and the entry is read
         time += 6000
@@ -182,7 +183,7 @@ class InMemoryEnrichmentCacheTest {
 
     @Test fun `invalidate with a type removes the negative entry for that type`() = runTest {
         // Given - a negative entry stored for ALBUM_ART
-        cache.putNegative("a:1", EnrichmentType.ALBUM_ART, notFound(), 60_000)
+        cache.putNegative("a:1", EnrichmentType.ALBUM_ART, notFound(), CanonicalStatus.RESOLVED, 60_000)
 
         // When - invalidating that type
         cache.invalidate("a:1", EnrichmentType.ALBUM_ART)
@@ -193,8 +194,8 @@ class InMemoryEnrichmentCacheTest {
 
     @Test fun `invalidate with null type removes negative entries for every type`() = runTest {
         // Given - negative entries stored for two types under the same key
-        cache.putNegative("a:1", EnrichmentType.ALBUM_ART, notFound(), 60_000)
-        cache.putNegative("a:1", EnrichmentType.GENRE, EnrichmentResult.NotFound(EnrichmentType.GENRE, "test"), 60_000)
+        cache.putNegative("a:1", EnrichmentType.ALBUM_ART, notFound(), CanonicalStatus.RESOLVED, 60_000)
+        cache.putNegative("a:1", EnrichmentType.GENRE, EnrichmentResult.NotFound(EnrichmentType.GENRE, "test"), CanonicalStatus.RESOLVED, 60_000)
 
         // When - invalidating the key with no type given
         cache.invalidate("a:1")
@@ -206,8 +207,8 @@ class InMemoryEnrichmentCacheTest {
 
     @Test fun `clear removes negative entries alongside positive ones`() = runTest {
         // Given - a positive and a negative entry both stored
-        cache.put("a:1", EnrichmentType.ALBUM_ART, art(), 60_000)
-        cache.putNegative("a:2", EnrichmentType.GENRE, EnrichmentResult.NotFound(EnrichmentType.GENRE, "test"), 60_000)
+        cache.put("a:1", EnrichmentType.ALBUM_ART, art(), CanonicalStatus.RESOLVED, 60_000)
+        cache.putNegative("a:2", EnrichmentType.GENRE, EnrichmentResult.NotFound(EnrichmentType.GENRE, "test"), CanonicalStatus.RESOLVED, 60_000)
 
         // When - clearing the entire cache
         cache.clear()

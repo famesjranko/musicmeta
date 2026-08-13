@@ -15,8 +15,8 @@ data class EnrichmentResults(
     val raw: Map<EnrichmentType, EnrichmentResult>,
     /** Types that were requested in the enrich() call. */
     val requestedTypes: Set<EnrichmentType>,
-    /** Identity resolution outcome. `null` when identity resolution was not attempted. */
-    val identity: IdentityResolution?,
+    /** Identity resolution outcome. [IdentityResolution.status] carries why, if it was not attempted. */
+    val identity: IdentityResolution,
 ) {
 
     // --- Result-level access ---

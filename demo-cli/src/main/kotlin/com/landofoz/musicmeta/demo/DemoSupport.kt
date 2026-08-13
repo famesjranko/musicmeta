@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.demo
 
+import com.landofoz.musicmeta.CanonicalStatus
 import com.landofoz.musicmeta.CatalogMatch
 import com.landofoz.musicmeta.CatalogProvider
 import com.landofoz.musicmeta.CatalogQuery
@@ -59,8 +60,13 @@ class TrackingCache(
     override suspend fun get(entityKey: String, type: EnrichmentType): EnrichmentResult.Success? =
         delegate.get(entityKey, type).also { if (it != null) hits++ else misses++ }
 
-    override suspend fun put(entityKey: String, type: EnrichmentType, result: EnrichmentResult.Success, ttlMs: Long) =
-        delegate.put(entityKey, type, result, ttlMs)
+    override suspend fun put(
+        entityKey: String,
+        type: EnrichmentType,
+        result: EnrichmentResult.Success,
+        canonicalStatus: CanonicalStatus,
+        ttlMs: Long,
+    ) = delegate.put(entityKey, type, result, canonicalStatus, ttlMs)
 
     override suspend fun getIncludingExpired(entityKey: String, type: EnrichmentType): EnrichmentResult.Success? =
         delegate.getIncludingExpired(entityKey, type)
@@ -72,8 +78,9 @@ class TrackingCache(
         entityKey: String,
         type: EnrichmentType,
         result: EnrichmentResult.NotFound,
+        canonicalStatus: CanonicalStatus,
         ttlMs: Long,
-    ) = delegate.putNegative(entityKey, type, result, ttlMs)
+    ) = delegate.putNegative(entityKey, type, result, canonicalStatus, ttlMs)
 
     override suspend fun invalidate(entityKey: String, type: EnrichmentType?) = delegate.invalidate(entityKey, type)
     override suspend fun isManuallySelected(entityKey: String, type: EnrichmentType) =

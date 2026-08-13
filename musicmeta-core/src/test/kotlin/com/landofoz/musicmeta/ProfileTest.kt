@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta
 
+import com.landofoz.musicmeta.testutil.NOT_REQUIRED_IDENTITY
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -35,7 +36,7 @@ class ProfileTest {
             requestedTypes = EnrichmentRequest.DEFAULT_ARTIST_TYPES,
             identity = IdentityResolution(
                 identifiers = EnrichmentIdentifiers(musicBrainzId = "abc-123"),
-                match = IdentityMatch.RESOLVED,
+                status = CanonicalStatus.RESOLVED,
                 matchScore = 95,
             ),
         )
@@ -46,7 +47,7 @@ class ProfileTest {
         // Then - every profile field reflects the corresponding enrichment result
         assertEquals("Radiohead", profile.name)
         assertEquals("abc-123", profile.identifiers.musicBrainzId)
-        assertEquals(IdentityMatch.RESOLVED, profile.identityMatch)
+        assertEquals(CanonicalStatus.RESOLVED, profile.canonicalStatus)
         assertEquals(95, profile.identityMatchScore)
         assertNotNull(profile.photo)
         assertEquals("https://example.com/photo.jpg", profile.photo!!.url)
@@ -62,7 +63,7 @@ class ProfileTest {
 
     @Test fun `artist profile returns empty collections for missing types`() {
         // Given - an EnrichmentResults with no raw results and no identity
-        val results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = null)
+        val results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = NOT_REQUIRED_IDENTITY)
         // When - building an ArtistProfile from the results
         val profile = ArtistProfile("Unknown", results)
 
@@ -77,7 +78,7 @@ class ProfileTest {
         assertNull(profile.photo)
         assertNull(profile.bio)
         assertNull(profile.popularity)
-        assertNull(profile.identityMatch)
+        assertEquals(CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED, profile.canonicalStatus)
     }
 
     @Test fun `artist profile surfaces suggestions from identity resolution`() {
@@ -90,11 +91,11 @@ class ProfileTest {
         )
         val results = EnrichmentResults(
             raw = mapOf(EnrichmentType.GENRE to EnrichmentResult.NotFound(EnrichmentType.GENRE, "engine",
-                suggestions = candidates, identityMatch = IdentityMatch.SUGGESTIONS)),
+                suggestions = candidates)),
             requestedTypes = EnrichmentRequest.DEFAULT_ARTIST_TYPES,
             identity = IdentityResolution(
                 identifiers = EnrichmentIdentifiers(),
-                match = IdentityMatch.SUGGESTIONS,
+                status = CanonicalStatus.AMBIGUOUS,
                 matchScore = null,
                 suggestions = candidates,
             ),
@@ -104,7 +105,7 @@ class ProfileTest {
         val profile = ArtistProfile("Bush", results)
 
         // Then - the profile carries the SUGGESTIONS match and the candidate list
-        assertEquals(IdentityMatch.SUGGESTIONS, profile.identityMatch)
+        assertEquals(CanonicalStatus.AMBIGUOUS, profile.canonicalStatus)
         assertEquals(2, profile.suggestions.size)
         assertEquals("British rock band", profile.suggestions[0].disambiguation)
     }
@@ -128,7 +129,7 @@ class ProfileTest {
                     EnrichmentData.Metadata(releaseType = "Album")),
             ),
             requestedTypes = EnrichmentRequest.DEFAULT_ALBUM_TYPES,
-            identity = null,
+            identity = NOT_REQUIRED_IDENTITY,
         )
 
         // When - building an AlbumProfile from the results
@@ -158,7 +159,7 @@ class ProfileTest {
                     EnrichmentData.Popularity(listenCount = 500000)),
             ),
             requestedTypes = EnrichmentRequest.DEFAULT_TRACK_TYPES,
-            identity = null,
+            identity = NOT_REQUIRED_IDENTITY,
         )
 
         // When - building a TrackProfile from the results

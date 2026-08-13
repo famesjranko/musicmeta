@@ -1,12 +1,13 @@
 package com.landofoz.musicmeta.android.cache
 
+import com.landofoz.musicmeta.CanonicalStatus
 import com.landofoz.musicmeta.EnrichmentCache
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentLogger
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
-import com.landofoz.musicmeta.IdentityMatch
+import com.landofoz.musicmeta.LookupProvenance
 import kotlinx.serialization.json.Json
 
 /**
@@ -41,7 +42,17 @@ class RoomEnrichmentCache(
         return deserializeEntity(entity, type)
     }
 
+    /**
+     * A [entity.schemaVersion][EnrichmentCacheEntity.schemaVersion] that does not match
+     * [CACHE_SCHEMA_VERSION] is treated as a miss, never as a value to coerce or guess at — the
+     * envelope's field meanings are what changed, not merely its JSON shape, so a partial decode
+     * would silently misreport [LookupProvenance] or [CanonicalStatus] rather than fail loudly.
+     */
     private fun deserializeEntity(entity: EnrichmentCacheEntity, type: EnrichmentType): EnrichmentResult.Success? {
+        if (entity.schemaVersion != CACHE_SCHEMA_VERSION) {
+            logger.warn(TAG, "Cache schema mismatch for ${entity.entityKey}:$type; treating as a miss")
+            return null
+        }
         val data = try {
             json.decodeFromString<EnrichmentData>(entity.dataJson)
         } catch (e: Exception) {
@@ -51,14 +62,15 @@ class RoomEnrichmentCache(
         val resolvedIds = entity.resolvedIdsJson?.let {
             try { json.decodeFromString<EnrichmentIdentifiers>(it) } catch (_: Exception) { null }
         }
-        val identityMatch = entity.identityMatch?.let {
-            try { IdentityMatch.valueOf(it) } catch (_: Exception) { null }
-        }
+        // Replays the original live lookup's provenance verbatim — never CACHE, which is reserved
+        // for an implementation that cannot recover it at all.
+        val provenance = entity.lookupProvenance?.let {
+            try { LookupProvenance.valueOf(it) } catch (_: Exception) { null }
+        } ?: LookupProvenance.CACHE
         return EnrichmentResult.Success(
             type, data, entity.provider, entity.confidence,
             resolvedIdentifiers = resolvedIds,
-            identityMatchScore = entity.identityMatchScore,
-            identityMatch = identityMatch,
+            provenance = provenance,
         )
     }
 
@@ -66,6 +78,7 @@ class RoomEnrichmentCache(
         entityKey: String,
         type: EnrichmentType,
         result: EnrichmentResult.Success,
+        canonicalStatus: CanonicalStatus,
         ttlMs: Long,
     ) {
         val now = clock()
@@ -79,8 +92,8 @@ class RoomEnrichmentCache(
                 provider = result.provider,
                 dataJson = json.encodeToString(EnrichmentData.serializer(), result.data),
                 confidence = result.confidence,
-                identityMatch = result.identityMatch?.name,
-                identityMatchScore = result.identityMatchScore,
+                lookupProvenance = result.provenance?.name,
+                canonicalStatus = canonicalStatus.name,
                 resolvedIdsJson = resolvedIdsJson,
                 cachedAt = now,
                 expiresAt = now + ttlMs,
@@ -90,16 +103,18 @@ class RoomEnrichmentCache(
 
     override suspend fun getNegative(entityKey: String, type: EnrichmentType): EnrichmentResult.NotFound? {
         val entity = negativeDao.get(entityKey, type.name, clock()) ?: return null
-        val identityMatch = entity.identityMatch?.let {
-            try { IdentityMatch.valueOf(it) } catch (_: Exception) { null }
+        if (entity.schemaVersion != CACHE_SCHEMA_VERSION) {
+            logger.warn(TAG, "Cache schema mismatch for ${entity.entityKey}:$type; treating as a miss")
+            return null
         }
-        return EnrichmentResult.NotFound(type = type, provider = entity.provider, identityMatch = identityMatch)
+        return EnrichmentResult.NotFound(type = type, provider = entity.provider)
     }
 
     override suspend fun putNegative(
         entityKey: String,
         type: EnrichmentType,
         result: EnrichmentResult.NotFound,
+        canonicalStatus: CanonicalStatus,
         ttlMs: Long,
     ) {
         val now = clock()
@@ -108,7 +123,7 @@ class RoomEnrichmentCache(
                 entityKey = entityKey,
                 enrichmentType = type.name,
                 provider = result.provider,
-                identityMatch = result.identityMatch?.name,
+                canonicalStatus = canonicalStatus.name,
                 cachedAt = now,
                 expiresAt = now + ttlMs,
             ),

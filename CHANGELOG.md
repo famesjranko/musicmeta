@@ -45,6 +45,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `DefaultHttpClient` no longer publishes `MAX_RETRY_AFTER_SEC`; the 120s standalone retry ceiling moved into the shared ladder
 - `EnrichmentCache` gains defaulted `getNegative`/`putNegative`: callers are unaffected, but an implementer must recompile, or the engine's first cache miss throws `AbstractMethodError`
 - `RoomEnrichmentCache` now takes a required `negativeDao: NegativeCacheDao` (schema v3, additive migration): recompile and wire `negativeCacheDao()`, or take `EnrichmentCacheDatabase.create()`
+- Hard swap, no shim: `IdentityMatch` removed; `IdentityResolution.match` is now `.status: CanonicalStatus` (non-null); `Success`/`NotFound` drop `identityMatch(Score)`, `Success` gains `provenance`
+- `EnrichmentResults.identity` is now non-null: it always carries a `CanonicalStatus`, including every reason resolution did not run, so `identity == null` no longer compiles
+- `EnrichmentCache.put`/`putNegative` gain a required `canonicalStatus: CanonicalStatus` parameter (no default): a custom cache implementation must recompile and pass the call's status
+- Android cache schema bumps to v4 (`MIGRATION_3_4`): `identity_match`/`_score` named a different fact and cannot be reinterpreted, so the migration clears both tables and the next call refetches
+- Old→new mapping — see `docs/how-it-works.md` "Identity model" for the full table:
+
+  | Old | New |
+  |---|---|
+  | `IdentityMatch.RESOLVED` (call-level) | `CanonicalStatus.RESOLVED` |
+  | `IdentityMatch.SUGGESTIONS` | `CanonicalStatus.AMBIGUOUS` |
+  | `IdentityMatch.BEST_EFFORT` | `CanonicalStatus.UNRESOLVED` |
+  | `IdentityMatch.UNVERIFIED` | `CanonicalStatus.FAILED` |
+  | `identity == null` (disabled) | `CanonicalStatus.NOT_ATTEMPTED_DISABLED` |
+  | `identity == null` (not required) | `CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED` |
+  | `identity == null` (all cached) | `CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT` |
+  | `identity == null` (no provider) | `CanonicalStatus.NOT_ATTEMPTED_NO_PROVIDER` |
+  | `Success.identityMatch` (per-result) | `Success.provenance: LookupProvenance` |
 
 ### Added
 - `EnrichmentRequest.forTrackByMbid`/`forAlbumByMbid`/`forArtistByMbid`: request an entity by MBID alone; identity resolution fills the names the other providers search by

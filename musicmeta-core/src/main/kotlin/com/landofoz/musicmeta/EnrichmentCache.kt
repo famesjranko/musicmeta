@@ -17,10 +17,17 @@ interface EnrichmentCache {
      */
     suspend fun getIncludingExpired(entityKey: String, type: EnrichmentType): EnrichmentResult.Success? = null
 
+    /**
+     * [canonicalStatus] is the call's [IdentityResolution.status] that made [result] eligible to
+     * cache — [EnrichmentEngine.enrich] only calls this for a status the cache may serve back with
+     * no loss of confidence. A hit later replays it verbatim; it must never be reported as
+     * [CanonicalStatus.RESOLVED] merely because the entry is present.
+     */
     suspend fun put(
         entityKey: String,
         type: EnrichmentType,
         result: EnrichmentResult.Success,
+        canonicalStatus: CanonicalStatus,
         ttlMs: Long = DEFAULT_TTL_MS,
     )
 
@@ -45,7 +52,13 @@ interface EnrichmentCache {
      * reporting an absence a caller just asked to forget. A delegating cache must forward this
      * call and [getNegative], or negative caching silently disappears through it.
      */
-    suspend fun putNegative(entityKey: String, type: EnrichmentType, result: EnrichmentResult.NotFound, ttlMs: Long) {}
+    suspend fun putNegative(
+        entityKey: String,
+        type: EnrichmentType,
+        result: EnrichmentResult.NotFound,
+        canonicalStatus: CanonicalStatus,
+        ttlMs: Long,
+    ) {}
 
     suspend fun invalidate(entityKey: String, type: EnrichmentType? = null)
 

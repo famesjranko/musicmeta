@@ -1,8 +1,10 @@
 package com.landofoz.musicmeta.engine
 
+import com.landofoz.musicmeta.CanonicalStatus
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.IdentifierNamespace
+import com.landofoz.musicmeta.LookupProvenance
 
 /**
  * Provider ids trusted to name the request's own entity, keyed by the [EnrichmentType] each is
@@ -37,6 +39,22 @@ internal fun entityKeyFor(request: EnrichmentRequest, type: EnrichmentType): Str
 /** Cache key using name/title only (no MBID or provider id), for cache aliasing after disambiguation. */
 internal fun entityKeyForName(request: EnrichmentRequest, type: EnrichmentType): String =
     "${entityPrefix(request)}:${entityNamePart(request)}:$type"
+
+/**
+ * Which of [entityKeyFor]'s priority tiers a live [type] lookup for [request] used — the same
+ * priority order, so a result's [LookupProvenance] never disagrees with the key it was cached
+ * under. Name-tier results still need [canonicalStatus] to tell an exact hit from a fuzzy guess.
+ */
+internal fun keyedProvenance(
+    request: EnrichmentRequest,
+    type: EnrichmentType,
+    canonicalStatus: CanonicalStatus,
+): LookupProvenance = when {
+    request.identifiers.musicBrainzId != null -> LookupProvenance.CANONICAL_ID
+    providerIdPart(request, type) != null -> LookupProvenance.PROVIDER_NATIVE_ID
+    canonicalStatus == CanonicalStatus.RESOLVED -> LookupProvenance.EXACT_NAME
+    else -> LookupProvenance.FUZZY_NAME
+}
 
 /**
  * Whether [request] names no entity — an [EnrichmentRequest.Companion.forTrackByMbid]-style request

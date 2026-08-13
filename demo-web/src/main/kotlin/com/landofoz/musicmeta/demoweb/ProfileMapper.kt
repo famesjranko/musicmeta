@@ -2,6 +2,7 @@ package com.landofoz.musicmeta.demoweb
 
 import com.landofoz.musicmeta.AlbumProfile
 import com.landofoz.musicmeta.ArtistProfile
+import com.landofoz.musicmeta.CanonicalStatus
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentResult
@@ -10,7 +11,6 @@ import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.GenreAffinity
 import com.landofoz.musicmeta.GenreTag
 import com.landofoz.musicmeta.IdentifierNamespace
-import com.landofoz.musicmeta.IdentityMatch
 import com.landofoz.musicmeta.PopularitySignal
 import com.landofoz.musicmeta.PopularitySignalKind
 import com.landofoz.musicmeta.SearchCandidate
@@ -26,7 +26,7 @@ fun ArtistProfile.toDemoResponse(elapsedMs: Long): DemoResponse {
     }
 
     val sections = buildList {
-        r.identity?.suggestions?.let { s ->
+        r.identity.suggestions.let { s ->
             didYouMeanSection(s) { artistEnrich(it.title) }?.let { add(it) }
         }
         if (details.isNotEmpty()) add(Section("details", "Details", details))
@@ -142,7 +142,7 @@ fun AlbumProfile.toDemoResponse(elapsedMs: Long, artistRadio: Section? = null): 
     }
 
     val sections = buildList {
-        r.identity?.suggestions?.let { s ->
+        r.identity.suggestions.let { s ->
             didYouMeanSection(s) { c -> c.artist?.let { a -> albumEnrich(c.title, a) } }?.let { add(it) }
         }
         if (details.isNotEmpty()) add(Section("details", "Details", details))
@@ -245,7 +245,7 @@ fun TrackProfile.toDemoResponse(
     }
 
     val sections = buildList {
-        r.identity?.suggestions?.let { s ->
+        r.identity.suggestions.let { s ->
             didYouMeanSection(s) { c -> c.artist?.let { a -> trackEnrich(c.title, a) } }?.let { add(it) }
         }
         if (details.isNotEmpty()) add(Section("details", "Details", details))
@@ -299,16 +299,16 @@ fun TrackProfile.toDemoResponse(
 }
 
 /**
- * Whether the summary card may present its title/preview as a match. A `null` identity means
- * resolution wasn't needed and counts as confident; [IdentityMatch.BEST_EFFORT],
- * [IdentityMatch.SUGGESTIONS] and [IdentityMatch.UNVERIFIED] do not.
+ * Whether the summary card may present its title/preview as a match. Every `NOT_ATTEMPTED_*`
+ * status counts as confident — resolution had nothing to add — while [CanonicalStatus.AMBIGUOUS],
+ * [CanonicalStatus.UNRESOLVED], and [CanonicalStatus.FAILED] do not.
  */
 private val EnrichmentResults.identityResolved: Boolean
-    get() = identity == null || identity?.match == IdentityMatch.RESOLVED
+    get() = identity.status !in setOf(CanonicalStatus.AMBIGUOUS, CanonicalStatus.UNRESOLVED, CanonicalStatus.FAILED)
 
-/** The bare [IdentityMatch] enum name, or `null` when resolution was skipped. */
-private val EnrichmentResults.identityVerdict: String?
-    get() = identity?.match?.name
+/** The bare [CanonicalStatus] enum name. */
+private val EnrichmentResults.identityVerdict: String
+    get() = identity.status.name
 
 private fun EnrichmentResults.toMeta(elapsedMs: Long): Meta {
     val hits = raw.entries.sortedBy { it.key.name }.map { (type, result) ->
@@ -325,14 +325,14 @@ private fun EnrichmentResults.toMeta(elapsedMs: Long): Meta {
                 ProviderHit(type.name, result.provider, "error: ${result.message}")
         }
     }
-    val identitySummary = identity?.let { id ->
-        listOfNotNull(id.match?.name, id.matchScore?.let { "score $it" }).joinToString(" · ").ifBlank { null }
+    val identitySummary = identity.let { id ->
+        listOfNotNull(id.status.name, id.matchScore?.let { "score $it" }).joinToString(" · ").ifBlank { null }
     }
     return Meta(
         elapsedMs = elapsedMs,
         identityMatch = identitySummary,
         providers = hits,
-        identifiers = identity?.identifiers.toIdentifierHits(),
+        identifiers = identity.identifiers.toIdentifierHits(),
     )
 }
 
@@ -425,7 +425,7 @@ private fun relatedGenresItems(genreDiscovery: List<GenreAffinity>): List<Sectio
 
 /**
  * "Did you mean?" candidates from [EnrichmentResults.identity], populated only when identity
- * resolution landed on [com.landofoz.musicmeta.IdentityMatch.SUGGESTIONS]. Each candidate becomes
+ * resolution landed on [com.landofoz.musicmeta.CanonicalStatus.AMBIGUOUS]. Each candidate becomes
  * a clickable [SectionItem] via the same [EnrichTarget] flow as any other cross-nav row; a
  * candidate whose fields can't build a valid target (e.g. no artist for an album/track suggestion)
  * is dropped rather than rendered as a dead click. Upstream candidates that differ only by an

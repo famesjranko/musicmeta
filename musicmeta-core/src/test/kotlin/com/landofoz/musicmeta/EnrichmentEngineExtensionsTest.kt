@@ -16,7 +16,8 @@ class EnrichmentEngineExtensionsTest {
         var lastTypes: Set<EnrichmentType>? = null
         var lastForceRefresh: Boolean = false
         var resultsToReturn: Map<EnrichmentType, EnrichmentResult> = emptyMap()
-        var identityToReturn: IdentityResolution? = null
+        var identityToReturn: IdentityResolution =
+            IdentityResolution(EnrichmentIdentifiers(), CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED)
 
         override suspend fun enrich(request: EnrichmentRequest, types: Set<EnrichmentType>, forceRefresh: Boolean): EnrichmentResults {
             lastRequest = request
@@ -210,7 +211,7 @@ class EnrichmentEngineExtensionsTest {
         )
         engine.identityToReturn = IdentityResolution(
             identifiers = EnrichmentIdentifiers(musicBrainzId = "resolved-mbid"),
-            match = IdentityMatch.RESOLVED,
+            status = CanonicalStatus.RESOLVED,
             matchScore = 98,
         )
 
@@ -220,7 +221,7 @@ class EnrichmentEngineExtensionsTest {
         // Then - the profile's fields reflect the returned results and identity
         assertEquals("https://example.com/photo.jpg", profile.photo?.url)
         assertEquals("A band from Oxford", profile.bio?.text)
-        assertEquals(IdentityMatch.RESOLVED, profile.identityMatch)
+        assertEquals(CanonicalStatus.RESOLVED, profile.canonicalStatus)
         assertEquals(98, profile.identityMatchScore)
         assertEquals("resolved-mbid", profile.identifiers.musicBrainzId)
     }
@@ -237,7 +238,7 @@ class EnrichmentEngineExtensionsTest {
         assertNull(profile.bio)
         assertTrue(profile.genres.isEmpty())
         assertTrue(profile.members.isEmpty())
-        assertNull(profile.identityMatch)
+        assertEquals(CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED, profile.canonicalStatus)
     }
 
     // --- defaultTypesFor ---

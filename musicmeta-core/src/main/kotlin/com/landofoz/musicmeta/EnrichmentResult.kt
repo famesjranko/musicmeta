@@ -30,36 +30,6 @@ enum class ErrorKind {
 }
 
 /**
- * Describes how identity resolution (MusicBrainz lookup) went for this result.
- *
- * | Value | Meaning | Developer Action |
- * |-------|---------|-----------------|
- * | [RESOLVED] | Identity matched confidently | Show results normally |
- * | [BEST_EFFORT] | Identity failed, results from unverified fuzzy provider searches | Show with caution |
- * | [SUGGESTIONS] | Identity failed, near-miss candidates available | Show "did you mean?" prompt |
- *
- * `null` on [EnrichmentResult.Success.identityMatch] means identity resolution
- * was not needed (MBID was pre-provided) or the result was cached — treat as confident.
- */
-enum class IdentityMatch {
-    /** Identity resolution matched an entity. [EnrichmentResult.Success.identityMatchScore] has the score. */
-    RESOLVED,
-
-    /** Identity resolution failed. Results are from unverified fuzzy provider searches. */
-    BEST_EFFORT,
-
-    /** Identity resolution failed but found near-miss candidates. Check [EnrichmentResult.NotFound.suggestions]. */
-    SUGGESTIONS,
-
-    /**
-     * Identity resolution was attempted but the identity provider errored (threw, or returned
-     * [EnrichmentResult.Error]). Results are unverified fuzzy matches, as with [BEST_EFFORT] —
-     * but unlike [BEST_EFFORT] the failure is typically transient, so retrying may resolve.
-     */
-    UNVERIFIED,
-}
-
-/**
  * Outcome of an enrichment attempt for a single type.
  *
  * ## Confidence Scoring
@@ -92,12 +62,11 @@ sealed class EnrichmentResult {
         /** Identifiers resolved during enrichment (e.g., MBIDs from identity resolution). */
         val resolvedIdentifiers: EnrichmentIdentifiers? = null,
         /**
-         * Identity resolution match score (0-100), same scale as [SearchCandidate.score].
-         * Only set when [identityMatch] is [IdentityMatch.RESOLVED].
+         * How this provider selected the entity behind [data]. `null` only for a result a
+         * consumer built outside the engine (e.g. a test fixture) — every engine-produced
+         * `Success` sets it. See [EnrichmentResults.identity] for whether MusicBrainz agreed.
          */
-        val identityMatchScore: Int? = null,
-        /** How identity resolution went for this result. `null` when MBID was pre-provided or cached. */
-        val identityMatch: IdentityMatch? = null,
+        val provenance: LookupProvenance? = null,
         /**
          * True when this result was served from an expired cache entry because the provider
          * returned an error. Consumers can show a staleness indicator or schedule a retry.
@@ -108,16 +77,14 @@ sealed class EnrichmentResult {
     /**
      * Provider searched but found nothing.
      *
-     * [suggestions] and [identityMatch] describe this specific provider's own search, not the
-     * canonical identity attempt — check [EnrichmentResults.identity] for near-miss candidates
-     * to show as a "did you mean?" prompt.
+     * [suggestions] describes this specific provider's own search, not the canonical identity
+     * attempt — check [EnrichmentResults.identity] for near-miss candidates to show as a
+     * "did you mean?" prompt.
      */
     data class NotFound(
         val type: EnrichmentType,
         val provider: String,
         val suggestions: List<SearchCandidate>? = null,
-        /** How identity resolution went for this result. `null` when not applicable. */
-        val identityMatch: IdentityMatch? = null,
     ) : EnrichmentResult()
 
     /**

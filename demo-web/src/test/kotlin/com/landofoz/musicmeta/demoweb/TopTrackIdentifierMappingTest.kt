@@ -1,12 +1,14 @@
 package com.landofoz.musicmeta.demoweb
 
 import com.landofoz.musicmeta.ArtistProfile
+import com.landofoz.musicmeta.CanonicalStatus
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentResults
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.IdentifierNamespace
+import com.landofoz.musicmeta.IdentityResolution
 import com.landofoz.musicmeta.TopTrack
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -30,7 +32,7 @@ class TopTrackIdentifierMappingTest {
             ),
         ),
         requestedTypes = setOf(EnrichmentType.ARTIST_TOP_TRACKS),
-        identity = null,
+        identity = IdentityResolution(EnrichmentIdentifiers(), CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED),
     )
 
     @Test fun `a top track carrying a Deezer id survives into the section item and its enrich target`() {

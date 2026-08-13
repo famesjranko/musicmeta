@@ -13,18 +13,26 @@ Without identity resolution, providers fall back to name-matching against their 
 
 ---
 
-## IdentityMatch enum
+## CanonicalStatus and LookupProvenance
 
-Every enrichment result carries an `identityMatch` field describing how the resolution went:
+Two independent facts, never merged into one value:
 
-| Value | Meaning | What to do |
-|-------|---------|------------|
-| `RESOLVED` | MusicBrainz found a confident match | Show results normally |
-| `BEST_EFFORT` | Identity resolution failed, but providers returned results via fuzzy search | Show results with a caveat — they may be for the wrong entity |
-| `SUGGESTIONS` | Identity resolution found near-miss candidates but no confident match | Show a "did you mean?" prompt |
-| `UNVERIFIED` | The identity provider errored (threw or returned `Error`) — usually transient | Show results with a caveat; offer a retry, which may resolve |
+- `results.identity.status: CanonicalStatus` — how MusicBrainz's canonical resolution went for
+  this call, set exactly once. Never `null` — every reason resolution did not run has its own
+  explicit state.
+- `EnrichmentResult.Success.provenance: LookupProvenance` — how *that provider* selected the
+  entity behind its own result, not whether MusicBrainz agreed.
 
-A `null` identity match on `results.identity` means resolution was not attempted — either an MBID was provided upfront, results came from cache, or resolution is disabled. Treat as confident.
+| `CanonicalStatus` | Meaning | What to do |
+|---|---|---|
+| `RESOLVED` | MusicBrainz confirmed the entity | Show results normally |
+| `AMBIGUOUS` | Near-miss candidates but no confident match | Show a "did you mean?" prompt |
+| `UNRESOLVED` | Searched, found neither a match nor candidates | Show results with a caveat — they may be for the wrong entity |
+| `FAILED` | The identity provider errored — usually transient | Show a caveat; offer a retry, which may resolve |
+| `NOT_ATTEMPTED_DISABLED` | Identity resolution is turned off | Treat as confident |
+| `NOT_ATTEMPTED_NOT_REQUIRED` | The request already carried every identifier needed | Treat as confident |
+| `NOT_ATTEMPTED_CACHE_HIT` | Every requested type was served from cache | Treat as confident |
+| `NOT_ATTEMPTED_NO_PROVIDER` | Needed resolution, but no identity provider is registered | Treat as confident |
 
 ---
 
@@ -39,14 +47,14 @@ val results = engine.enrich(
 )
 
 val identity = results.identity
-identity?.identifiers?.musicBrainzId    // "a74b1b7f-..."
-identity?.identifiers?.wikidataId       // "Q44191"
-identity?.identifiers?.wikipediaTitle   // "Radiohead"
-identity?.match                         // IdentityMatch.RESOLVED
-identity?.matchScore                    // 100
-identity?.suggestions                   // List<SearchCandidate> (non-empty when SUGGESTIONS)
-identity?.title                         // canonical title of the entity, when one was looked up
-identity?.artist                        // canonical artist credit, joined as MusicBrainz joins it
+identity.identifiers.musicBrainzId    // "a74b1b7f-..."
+identity.identifiers.wikidataId       // "Q44191"
+identity.identifiers.wikipediaTitle   // "Radiohead"
+identity.status                       // CanonicalStatus.RESOLVED
+identity.matchScore                   // 100
+identity.suggestions                  // List<SearchCandidate> (non-empty when AMBIGUOUS)
+identity.title                        // canonical title of the entity, when one was looked up
+identity.artist                       // canonical artist credit, joined as MusicBrainz joins it
 ```
 
 `title` and `artist` are the names read off the entity an **identifier** named, which is the only
@@ -59,7 +67,7 @@ the same shape a `SearchCandidate` for an artist has.
 
 ## The "did you mean?" flow
 
-When the query is ambiguous ("Bush" matches both the British and Canadian bands), the engine returns `SUGGESTIONS` with near-miss candidates instead of guessing:
+When the query is ambiguous ("Bush" matches both the British and Canadian bands), the engine returns `AMBIGUOUS` with near-miss candidates instead of guessing:
 
 ```kotlin
 val results = engine.enrich(
@@ -67,12 +75,16 @@ val results = engine.enrich(
     setOf(EnrichmentType.GENRE, EnrichmentType.ARTIST_BIO),
 )
 
-when (results.identity?.match) {
-    IdentityMatch.RESOLVED -> {
+when (results.identity.status) {
+    CanonicalStatus.RESOLVED,
+    CanonicalStatus.NOT_ATTEMPTED_DISABLED,
+    CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED,
+    CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT,
+    CanonicalStatus.NOT_ATTEMPTED_NO_PROVIDER -> {
         println("Genres: ${results.genres()}")
     }
-    IdentityMatch.SUGGESTIONS -> {
-        val suggestions = results.identity?.suggestions ?: emptyList()
+    CanonicalStatus.AMBIGUOUS -> {
+        val suggestions = results.identity.suggestions
         suggestions.forEach { candidate ->
             println("${candidate.title} — ${candidate.disambiguation} (${candidate.score}%)")
             // "Bush — British rock band (95%)"
@@ -85,17 +97,13 @@ when (results.identity?.match) {
             setOf(EnrichmentType.GENRE, EnrichmentType.ARTIST_BIO),
         )
     }
-    IdentityMatch.BEST_EFFORT -> {
+    CanonicalStatus.UNRESOLVED -> {
         // Results came from fuzzy search — may be wrong
         println("Results may not be accurate: ${results.genres()}")
     }
-    IdentityMatch.UNVERIFIED -> {
+    CanonicalStatus.FAILED -> {
         // Identity provider errored (usually transient) — same fuzzy results, but retrying may fix
         println("Couldn't verify the match — try again: ${results.genres()}")
-    }
-    null -> {
-        // Resolution not attempted (MBID provided, cached, or disabled)
-        println("Genres: ${results.genres()}")
     }
 }
 ```
@@ -161,7 +169,7 @@ val results = engine.enrich(
     EnrichmentRequest.forArtist("Radiohead", mbid = "a74b1b7f-71a5-4011-9441-d0b5e4122711"),
     setOf(EnrichmentType.GENRE),
 )
-// results.identity will be null — resolution was not needed
+// results.identity.status == CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED — resolution was not needed
 ```
 
 You can also disable resolution globally:

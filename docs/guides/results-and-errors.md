@@ -85,17 +85,17 @@ when (val r = results.result(EnrichmentType.ALBUM_ART)) {
 ### Identity resolution on results
 
 ```kotlin
-results.identity?.identifiers       // EnrichmentIdentifiers (MBIDs, Wikidata, etc.)
-results.identity?.match             // IdentityMatch? (RESOLVED, BEST_EFFORT, SUGGESTIONS, UNVERIFIED)
-results.identity?.matchScore        // Int? (0-100)
-results.identity?.suggestions       // List<SearchCandidate>
+results.identity.identifiers        // EnrichmentIdentifiers (MBIDs, Wikidata, etc.)
+results.identity.status             // CanonicalStatus, never null (RESOLVED, AMBIGUOUS, UNRESOLVED, FAILED, NOT_ATTEMPTED_*)
+results.identity.matchScore         // Int? (0-100)
+results.identity.suggestions        // List<SearchCandidate>
 ```
 
 ---
 
 ## Tier 3: Raw map
 
-The raw map gives you full `EnrichmentResult` objects with provider name, confidence score, identity match info, and resolved identifiers.
+The raw map gives you full `EnrichmentResult` objects with provider name, confidence score, lookup provenance, and resolved identifiers.
 
 ```kotlin
 val results = engine.enrich(
@@ -107,7 +107,7 @@ for ((type, result) in results.raw) {
     when (result) {
         is EnrichmentResult.Success -> {
             println("$type: ${result.provider} (conf=${result.confidence})")
-            println("  identity: ${result.identityMatch} score=${result.identityMatchScore}")
+            println("  provenance: ${result.provenance}")
             println("  resolved IDs: ${result.resolvedIdentifiers}")
         }
         is EnrichmentResult.NotFound -> println("$type: not found by ${result.provider}")
@@ -137,15 +137,13 @@ sealed class EnrichmentResult {
         val provider: String,
         val confidence: Float,
         val resolvedIdentifiers: EnrichmentIdentifiers?,
-        val identityMatchScore: Int?,
-        val identityMatch: IdentityMatch?,
+        val provenance: LookupProvenance?,
     )
 
     data class NotFound(
         val type: EnrichmentType,
         val provider: String,
         val suggestions: List<SearchCandidate>?,
-        val identityMatch: IdentityMatch?,
     )
 
     data class RateLimited(

@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.testutil
 
+import com.landofoz.musicmeta.CanonicalStatus
 import com.landofoz.musicmeta.EnrichmentCache
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
@@ -36,7 +37,13 @@ open class FakeEnrichmentCache : EnrichmentCache {
         val key = "$entityKey:$type"
         return stored[key] ?: expiredStore[key]
     }
-    override suspend fun put(entityKey: String, type: EnrichmentType, result: EnrichmentResult.Success, ttlMs: Long) {
+    override suspend fun put(
+        entityKey: String,
+        type: EnrichmentType,
+        result: EnrichmentResult.Success,
+        canonicalStatus: CanonicalStatus,
+        ttlMs: Long,
+    ) {
         failIfRequested(CacheOp.PUT, entityKey)
         stored["$entityKey:$type"] = result; storedTtls["$entityKey:$type"] = ttlMs
     }

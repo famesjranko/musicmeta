@@ -163,7 +163,7 @@ class MusicBrainzTrackMbidLookupTest {
         // rank two differently-ordered pools, and a consumer would be handed an identity naming one
         // recording and metadata describing the other.
         val success = successOf(results.raw[EnrichmentType.TRACK_METADATA])
-        assertEquals(CANDIDATE_A, results.identity?.identifiers?.musicBrainzId)
+        assertEquals(CANDIDATE_A, results.identity.identifiers.musicBrainzId)
         assertEquals(CANDIDATE_A, success.resolvedIdentifiers?.musicBrainzId)
     }
 

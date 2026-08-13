@@ -43,7 +43,7 @@ class EnrichCacheFailureTest {
     @Test fun `enrich falls through to the provider when the cache read throws`() = runTest {
         // Given - a cache holding a result, but whose get() throws
         val p = provider(art("fresh"))
-        cache.put(DefaultEnrichmentEngine.entityKeyFor(req, artType), artType, art("cached"))
+        cache.put(DefaultEnrichmentEngine.entityKeyFor(req, artType), artType, art("cached"), CanonicalStatus.RESOLVED)
         cache.failing = setOf(CacheOp.GET)
 
         // When - enriching that type
@@ -69,7 +69,7 @@ class EnrichCacheFailureTest {
     @Test fun `forceRefresh returns fresh data rather than stale when invalidate throws`() = runTest {
         // Given - a stale cache entry, fresh provider data, and a cache whose invalidate() throws
         val p = provider(art("fresh"))
-        cache.put(DefaultEnrichmentEngine.entityKeyFor(req, artType), artType, art("stale"))
+        cache.put(DefaultEnrichmentEngine.entityKeyFor(req, artType), artType, art("stale"), CanonicalStatus.RESOLVED)
         cache.failing = setOf(CacheOp.INVALIDATE)
 
         // When - forcing a refresh
@@ -102,8 +102,8 @@ class EnrichCacheFailureTest {
         val p = provider(art("fresh"))
         val primaryKey = DefaultEnrichmentEngine.entityKeyFor(mbidReq, artType)
         val aliasKey = DefaultEnrichmentEngine.entityKeyForName(mbidReq, artType)
-        cache.put(primaryKey, artType, art("stale"))
-        cache.put(aliasKey, artType, art("stale-alias"))
+        cache.put(primaryKey, artType, art("stale"), CanonicalStatus.RESOLVED)
+        cache.put(aliasKey, artType, art("stale-alias"), CanonicalStatus.RESOLVED)
         cache.failing = setOf(CacheOp.INVALIDATE)
         cache.failingKey = primaryKey
 
