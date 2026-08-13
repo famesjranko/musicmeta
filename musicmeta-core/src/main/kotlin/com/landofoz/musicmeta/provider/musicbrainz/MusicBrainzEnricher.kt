@@ -75,6 +75,33 @@ internal class MusicBrainzEnricher(
         artistMemo.get(mbid) { api.lookupArtistWithRels(mbid) }
 
     /**
+     * The artist pool a name resolves out of. Keyed on the normalized name, as [albumSearchMemo]'s
+     * key is: [enrichArtist] and [enrichArtistNewType] (via [nameResolvedArtistId]) both search it
+     * for a request carrying no MBID, so GENRE, BAND_MEMBERS, ARTIST_DISCOGRAPHY and ARTIST_LINKS of
+     * one request otherwise repeat the same search once each.
+     *
+     * Holds *which* artist a name resolves to, not just a payload — safe for the reason
+     * [albumSearchMemo] is: nothing here outlives the call.
+     */
+    private val artistSearchMemo = CallMemo<String, List<MusicBrainzArtist>>()
+
+    private suspend fun memoizedArtistSearch(name: String): List<MusicBrainzArtist> =
+        artistSearchMemo.get(MusicBrainzQualifierFallback.normalize(name)) { api.searchArtists(name) }
+
+    /**
+     * Near-miss suggestions for an artist name nothing strict resolves, keyed as [artistSearchMemo]
+     * is and memoized for the reason [albumFuzzyMemo] is: the pool that decides they are needed is
+     * memoized, so an absent artist would otherwise pay a full `artist?query=` per type for the same
+     * three suggestions.
+     */
+    private val artistFuzzyMemo = CallMemo<String, List<MusicBrainzArtist>>()
+
+    private suspend fun memoizedFuzzyArtists(name: String): List<MusicBrainzArtist> =
+        artistFuzzyMemo.get(MusicBrainzQualifierFallback.normalize(name)) {
+            api.searchArtistsFuzzy(name, MAX_SUGGESTIONS)
+        }
+
+    /**
      * Release lookups by MBID, same shape as [artistMemo].
      * One album is looked up more than once per `enrich()`: GENRE resolves it as identity and again
      * in the fan-out the identity MBID enables, and ALBUM_TRACKS wants the same response a third
@@ -249,14 +276,14 @@ internal class MusicBrainzEnricher(
         }
 
         if (namesNoEntity(request)) return EnrichmentResult.NotFound(type, providerId)
-        val artists = api.searchArtists(request.name)
+        val artists = memoizedArtistSearch(request.name)
         // An empty pool and a pool whose best is below the bar are one answer, not two: neither
         // names an artist to describe, and both offer the pool (or a fuzzy retry) to choose from.
         val best = pickBestArtist(request.name, artists)
         if (best == null || best.score < minMatchScore) {
             return notFoundWithSuggestions(
                 type, artists,
-                fuzzy = { api.searchArtistsFuzzy(request.name, MAX_SUGGESTIONS) },
+                fuzzy = { memoizedFuzzyArtists(request.name) },
             ) { it.toCandidate() }
         }
 
@@ -379,7 +406,7 @@ internal class MusicBrainzEnricher(
     /** The artist id [request]'s name resolves to, above [minMatchScore]. Null if no name matches. */
     private suspend fun nameResolvedArtistId(request: EnrichmentRequest.ForArtist): String? =
         if (namesNoEntity(request)) null
-        else pickBestArtist(request.name, api.searchArtists(request.name))
+        else pickBestArtist(request.name, memoizedArtistSearch(request.name))
             ?.takeIf { it.score >= minMatchScore }
             ?.id
 
@@ -438,10 +465,7 @@ internal class MusicBrainzEnricher(
         // suggestions either: a caller who supplied no name cannot be asked which one they meant,
         // and suggestions cost the whole provider fan-out.
         if (namesNoEntity(request)) return EnrichmentResult.NotFound(type, providerId)
-        val recordings = memoizedTrackSearch(request)
-        val best = pickBestRecording(request.title, recordings, request.album)
-            ?: resolveTrackQualifierFallback(request.title, request.artist, request.album)
-            ?: return trackMiss(request, type)
+        val best = memoizedTrackSearch(request).recording ?: return trackMiss(request, type)
 
         rememberSearchResolved(best.id)
         return trackResult(best, type, ConfidenceCalculator.searchScore(best.score))
@@ -789,8 +813,13 @@ internal class MusicBrainzEnricher(
         MusicBrainzQualifierFallback.normalize(artist),
     )
 
+    /** [memoizedTrackSearch]'s answer: the recording a title/artist/album resolves to, or null on a miss. */
+    private data class TrackSearchResult(val recording: MusicBrainzRecording?)
+
     /**
-     * The recording pool a track request resolves out of. Keyed like [albumSearchMemo], and holding
+     * Track resolution by title/artist/album: [searchTrack]'s whole ladder, which every track type
+     * of one request otherwise re-runs — the search plus, on an empty pool,
+     * [resolveTrackQualifierFallback]'s own searches. Keyed like [albumSearchMemo], and holding
      * which recording a name resolves to under the same protection: nothing here outlives the call.
      *
      * A track repeats this search where an album does not. Identity resolution merges the recording
@@ -800,13 +829,23 @@ internal class MusicBrainzEnricher(
      * searches identically, and [pickBestRecording] keeps the first maximum among ties, so a second
      * search ranks a differently-ordered pool and can pick a different recording — leaving the
      * identity a consumer reads naming one recording while its payload describes another.
+     *
+     * A result that resolved nothing is held like any other, and matters more here than elsewhere:
+     * an empty result is what pays for the qualifier fallback in full, so it is the repeat worth
+     * collapsing most — the fallback runs from inside this memo rather than at each call site, or a
+     * per-type repeat of the raw search alone would still leave it re-run per type.
      */
-    private val trackSearchMemo = CallMemo<TrackQuery, List<MusicBrainzRecording>>()
+    private val trackSearchMemo = CallMemo<TrackQuery, TrackSearchResult>()
 
-    private suspend fun memoizedTrackSearch(request: EnrichmentRequest.ForTrack): List<MusicBrainzRecording> =
-        trackSearchMemo.get(trackQuery(request)) {
-            api.searchCanonicalRecordings(request.title, request.artist, request.album)
-        }
+    private suspend fun memoizedTrackSearch(request: EnrichmentRequest.ForTrack): TrackSearchResult =
+        trackSearchMemo.get(trackQuery(request)) { searchTrack(request) }
+
+    private suspend fun searchTrack(request: EnrichmentRequest.ForTrack): TrackSearchResult {
+        val recordings = api.searchCanonicalRecordings(request.title, request.artist, request.album)
+        val resolved = pickBestRecording(request.title, recordings, request.album)
+            ?: resolveTrackQualifierFallback(request.title, request.artist, request.album)
+        return TrackSearchResult(resolved)
+    }
 
     /**
      * The pool a track miss *suggests* from, keyed as [trackSearchMemo] is.

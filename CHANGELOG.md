@@ -131,6 +131,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A transient MusicBrainz side-lookup could leave a type's identifier (e.g. `ALBUM_DESCRIPTION`'s Wikipedia title) unresolved and masquerade as NotFound; now Error, eligible for `STALE_IF_ERROR`
 - A transient on MusicBrainz's full-artist lookup (URL relations for a search match) failed artist enrichment entirely; it now degrades to the search result without relations
 - A transient on Cover Art Archive's thumbnail/front-image or Discogs's community-rating fetch discarded an already-resolved artwork/metadata answer; both now degrade the optional field instead
+- MusicBrainz artist name search (GENRE/BAND_MEMBERS/ARTIST_DISCOGRAPHY/ARTIST_LINKS) is now memoized per `enrich()` call; an unknown artist cost 7 upstream searches, now 2
+- A track's qualifier-fallback search (`(Remastered)`, `(Deluxe)`, …) now shares the per-call memo the raw search already had, instead of re-running once per type on a miss
 
 ## [0.11.0] - 2026-07-28
 
