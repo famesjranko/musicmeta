@@ -20,9 +20,9 @@ import org.junit.Test
 
 /**
  * The cache-key priority [entityKeyFor] applies: canonical MusicBrainz id, then a provider id
- * trusted for the request's exact [EnrichmentType] (currently only Deezer track ids on
- * [EnrichmentType.TRACK_PREVIEW]), then the bare name — and that every read/write path in
- * [DefaultEnrichmentEngine] addresses the same key for a given request/type.
+ * trusted for the request's exact [EnrichmentType] (see the audited tuples in `EntityKey.kt`),
+ * then the bare name — and that every read/write path in [DefaultEnrichmentEngine] addresses the
+ * same key for a given request/type.
  */
 class ProviderIdCacheIdentityTest {
 
@@ -128,11 +128,13 @@ class ProviderIdCacheIdentityTest {
         // Given - a track request carrying a Deezer id, requested for a type not in the allowlist
         val request = trackRequest(deezerId = "777")
 
-        // When - the cache key is selected for TRACK_METADATA, which is not allowlisted
-        val key = entityKeyFor(request, EnrichmentType.TRACK_METADATA)
+        // When - the cache key is selected for SIMILAR_TRACKS, which never reads a request
+        // identifier at all (its Deezer artist id always comes from a fresh track search) and so
+        // stays unallowlisted
+        val key = entityKeyFor(request, EnrichmentType.SIMILAR_TRACKS)
 
         // Then - it falls back to the bare name key
-        assertEquals(entityKeyForName(request, EnrichmentType.TRACK_METADATA), key)
+        assertEquals(entityKeyForName(request, EnrichmentType.SIMILAR_TRACKS), key)
     }
 
     @Test fun `a provider-id result is not alias-written to the bare name key`() = runTest {

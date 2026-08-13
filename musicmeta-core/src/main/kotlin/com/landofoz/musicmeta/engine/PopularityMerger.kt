@@ -3,6 +3,7 @@ package com.landofoz.musicmeta.engine
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
+import com.landofoz.musicmeta.LookupProvenance
 
 /**
  * Keeps every popularity source instead of the first one that answers.
@@ -24,7 +25,8 @@ internal class PopularityMerger(override val type: EnrichmentType) : ResultMerge
     override fun merge(results: List<EnrichmentResult.Success>): EnrichmentResult {
         if (results.isEmpty()) return EnrichmentResult.NotFound(type, "all_providers")
 
-        val payloads = results.mapNotNull { it.data as? EnrichmentData.Popularity }
+        val popularityResults = results.filter { it.data is EnrichmentData.Popularity }
+        val payloads = popularityResults.map { it.data as EnrichmentData.Popularity }
         if (payloads.isEmpty()) return results.first()
 
         val merged = EnrichmentData.Popularity(
@@ -41,6 +43,11 @@ internal class PopularityMerger(override val type: EnrichmentType) : ResultMerge
             provider = "popularity_merger",
             confidence = results.maxOf { it.confidence },
             resolvedIdentifiers = results.firstNotNullOfOrNull { it.resolvedIdentifiers },
+            // No single provider's route speaks for a merged result; the weakest contributing
+            // route is the smallest truthful summary. A contributor built outside the engine's
+            // pre-merge stamp (e.g. a direct unit-test fixture) falls back to FUZZY_NAME, the same
+            // conservative default observedProvenance uses for a route it cannot otherwise place.
+            provenance = weakestProvenance(popularityResults.map { it.provenance ?: LookupProvenance.FUZZY_NAME }),
         )
     }
 }

@@ -6,6 +6,7 @@ import com.landofoz.musicmeta.EnrichmentProvider
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
+import com.landofoz.musicmeta.LookupProvenance
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.engine.ArtistMatcher
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
@@ -134,6 +135,9 @@ class DiscogsProvider(
             data = DiscogsMapper.toCredits(credits),
             provider = id,
             confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = false),
+            // No fallback route above: a missing or unparsable discogsReleaseId returns NotFound
+            // before this point, so every Success here came from that id.
+            provenance = LookupProvenance.PROVIDER_NATIVE_ID,
         )
     }
 
@@ -152,6 +156,9 @@ class DiscogsProvider(
             data = DiscogsMapper.toReleaseEditions(versions),
             provider = id,
             confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = false),
+            // No fallback route above: a missing or unparsable discogsMasterId returns NotFound
+            // before this point, so every Success here came from that id.
+            provenance = LookupProvenance.PROVIDER_NATIVE_ID,
         )
     }
 

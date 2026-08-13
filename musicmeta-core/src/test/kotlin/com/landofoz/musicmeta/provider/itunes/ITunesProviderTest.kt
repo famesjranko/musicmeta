@@ -6,6 +6,7 @@ import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
+import com.landofoz.musicmeta.LookupProvenance
 import com.landofoz.musicmeta.engine.ProviderCallScope
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.testutil.FakeHttpClient
@@ -230,6 +231,20 @@ class ITunesProviderTest {
     }
 
     @Test
+    fun `album tracks by collectionId self-reports a provider-native-id route`() = runTest {
+        // Given - the same stored-collectionId request the lookup-API test above uses
+        httpClient.givenJsonResponse("lookup", ITUNES_LOOKUP_TRACKS_RESPONSE)
+        val identifiers = EnrichmentIdentifiers().withExtra("itunesCollectionId", "203558498")
+        val request = EnrichmentRequest.ForAlbum(identifiers, "OK Computer", "Radiohead")
+
+        // When - enriching for album tracks
+        val result = provider.enrich(request, EnrichmentType.ALBUM_TRACKS)
+
+        // Then - this call never searched, so its route is observed, not inferred from canonical status
+        assertEquals(LookupProvenance.PROVIDER_NATIVE_ID, (result as EnrichmentResult.Success).provenance)
+    }
+
+    @Test
     fun `enrich returns album tracks by search when no collectionId`() = runTest {
         // Given - ForAlbum without itunesCollectionId; search returns result, then lookup returns tracks
         httpClient.givenJsonResponse("search", ITUNES_SEARCH_WITH_ID_RESPONSE)
@@ -243,6 +258,9 @@ class ITunesProviderTest {
         assertTrue(result is EnrichmentResult.Success)
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.Tracklist
         assertEquals(2, data.tracks.size)
+        // A name search leaves its own route unreported: the engine, not this provider, has the
+        // canonical-status evidence to tell an exact name match from an unverified guess.
+        assertEquals(null, (result as EnrichmentResult.Success).provenance)
     }
 
     @Test
@@ -261,6 +279,9 @@ class ITunesProviderTest {
         assertEquals(1, data.albums.size)
         assertEquals("OK Computer", data.albums[0].title)
         assertEquals("1997", data.albums[0].year)
+        // This call never searched: it went straight to the stored artist id, so its route is
+        // observed, not left for the engine to infer from canonical status.
+        assertEquals(LookupProvenance.PROVIDER_NATIVE_ID, (result as EnrichmentResult.Success).provenance)
     }
 
     @Test
@@ -277,6 +298,9 @@ class ITunesProviderTest {
         assertTrue(result is EnrichmentResult.Success)
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.Discography
         assertEquals(1, data.albums.size)
+        // A name search leaves its own route unreported: the engine has the canonical-status
+        // evidence to tell an exact name match from an unverified guess, not this provider.
+        assertEquals(null, (result as EnrichmentResult.Success).provenance)
     }
 
     @Test
@@ -401,6 +425,9 @@ class ITunesProviderTest {
         // collection id is carried so ALBUM_TRACKS can reuse it without a further UPC round trip
         assertEquals(1.0f, result.confidence, 0.0f)
         assertEquals("697194953", result.resolvedIdentifiers?.get("itunesCollectionId"))
+        // A barcode lookup is a direct identifier lookup, never a search — its route is observed,
+        // not left for the engine's canonical-status inference.
+        assertEquals(LookupProvenance.PROVIDER_NATIVE_ID, result.provenance)
     }
 
     @Test

@@ -128,17 +128,9 @@ class DeezerProvider(
         val artistRequest = request as? EnrichmentRequest.ForArtist
             ?: return EnrichmentResult.NotFound(EnrichmentType.ARTIST_TOP_TRACKS, id)
 
-        val deezerId = request.identifiers.get(IdentifierNamespace.DEEZER)?.toLongOrNull()
-        val artist = if (deezerId != null) {
-            DeezerArtistSearchResult(id = deezerId, name = artistRequest.name)
-        } else {
-            val searchResult = api.searchArtist(artistRequest.name)
-                ?: return EnrichmentResult.NotFound(EnrichmentType.ARTIST_TOP_TRACKS, id)
-            if (!ArtistMatcher.isMatch(artistRequest.name, searchResult.name)) {
-                return EnrichmentResult.NotFound(EnrichmentType.ARTIST_TOP_TRACKS, id)
-            }
-            searchResult
-        }
+        val resolution = resolveArtistByIdOrSearch(artistRequest, EnrichmentType.ARTIST_TOP_TRACKS)
+            ?: return EnrichmentResult.NotFound(EnrichmentType.ARTIST_TOP_TRACKS, id)
+        val artist = resolution.artist
 
         val tracks = api.getArtistTop(artist.id, limit = 100)
         if (tracks.isEmpty()) return EnrichmentResult.NotFound(EnrichmentType.ARTIST_TOP_TRACKS, id)
@@ -149,6 +141,7 @@ class DeezerProvider(
             provider = id,
             confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
             resolvedIdentifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DEEZER, artist.id.toString()),
+            provenance = resolution.provenance,
         )
     }
 
@@ -175,19 +168,9 @@ class DeezerProvider(
         val artistRequest = request as? EnrichmentRequest.ForArtist
             ?: return EnrichmentResult.NotFound(EnrichmentType.SIMILAR_ARTISTS, id)
 
-        // Check for cached Deezer artist ID first, fall back to search
-        val deezerId = request.identifiers.get(IdentifierNamespace.DEEZER)?.toLongOrNull()
-        val artist = if (deezerId != null) {
-            DeezerArtistSearchResult(id = deezerId, name = artistRequest.name)
-        } else {
-            val searchResult = api.searchArtist(artistRequest.name)
-                ?: return EnrichmentResult.NotFound(EnrichmentType.SIMILAR_ARTISTS, id)
-            // Verify the search result matches the requested artist
-            if (!ArtistMatcher.isMatch(artistRequest.name, searchResult.name)) {
-                return EnrichmentResult.NotFound(EnrichmentType.SIMILAR_ARTISTS, id)
-            }
-            searchResult
-        }
+        val resolution = resolveArtistByIdOrSearch(artistRequest, EnrichmentType.SIMILAR_ARTISTS)
+            ?: return EnrichmentResult.NotFound(EnrichmentType.SIMILAR_ARTISTS, id)
+        val artist = resolution.artist
 
         val related = api.getRelatedArtists(artist.id)
         if (related.isEmpty()) return EnrichmentResult.NotFound(EnrichmentType.SIMILAR_ARTISTS, id)
@@ -198,6 +181,7 @@ class DeezerProvider(
             provider = id,
             confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
             resolvedIdentifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DEEZER, artist.id.toString()),
+            provenance = resolution.provenance,
         )
     }
 
@@ -295,19 +279,9 @@ class DeezerProvider(
         val artistRequest = request as? EnrichmentRequest.ForArtist
             ?: return EnrichmentResult.NotFound(EnrichmentType.ARTIST_RADIO, id)
 
-        // Check for cached Deezer artist ID first, fall back to search
-        val deezerId = request.identifiers.get(IdentifierNamespace.DEEZER)?.toLongOrNull()
-        val artist = if (deezerId != null) {
-            DeezerArtistSearchResult(id = deezerId, name = artistRequest.name)
-        } else {
-            val searchResult = api.searchArtist(artistRequest.name)
-                ?: return EnrichmentResult.NotFound(EnrichmentType.ARTIST_RADIO, id)
-            // Verify the search result matches the requested artist
-            if (!ArtistMatcher.isMatch(artistRequest.name, searchResult.name)) {
-                return EnrichmentResult.NotFound(EnrichmentType.ARTIST_RADIO, id)
-            }
-            searchResult
-        }
+        val resolution = resolveArtistByIdOrSearch(artistRequest, EnrichmentType.ARTIST_RADIO)
+            ?: return EnrichmentResult.NotFound(EnrichmentType.ARTIST_RADIO, id)
+        val artist = resolution.artist
 
         val tracks = api.getArtistRadio(artist.id, limit = radioLimit)
         if (tracks.isEmpty()) return EnrichmentResult.NotFound(EnrichmentType.ARTIST_RADIO, id)
@@ -318,6 +292,7 @@ class DeezerProvider(
             provider = id,
             confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
             resolvedIdentifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DEEZER, artist.id.toString()),
+            provenance = resolution.provenance,
         )
     }
 
@@ -327,19 +302,11 @@ class DeezerProvider(
 
         // The same audited (request kind, type) tuple entityKeyFor trusts as this type's cache-key
         // identity, so a call that took this branch and the cache key it lands under never disagree.
-        val deezerId = trustedProviderIdentifier(request, EnrichmentType.TRACK_PREVIEW)?.value?.toLongOrNull()
-        val trackResult = if (deezerId != null) {
-            api.getTrack(deezerId)
-        } else {
-            val result = api.searchTrack(trackRequest.title, trackRequest.artist, trackRequest.album)
-                ?: return EnrichmentResult.NotFound(EnrichmentType.TRACK_PREVIEW, id)
-            if (!ArtistMatcher.isMatch(trackRequest.artist, result.artistName)) {
-                return EnrichmentResult.NotFound(EnrichmentType.TRACK_PREVIEW, id)
-            }
-            result
-        } ?: return EnrichmentResult.NotFound(EnrichmentType.TRACK_PREVIEW, id)
+        val trustedId = trustedProviderIdentifier(request, EnrichmentType.TRACK_PREVIEW)?.value?.toLongOrNull()
+        val resolution = resolveTrackByIdOrSearch(trackRequest, trustedId)
+            ?: return EnrichmentResult.NotFound(EnrichmentType.TRACK_PREVIEW, id)
 
-        val preview = DeezerMapper.toTrackPreview(trackResult)
+        val preview = DeezerMapper.toTrackPreview(resolution.track)
             ?: return EnrichmentResult.NotFound(EnrichmentType.TRACK_PREVIEW, id)
 
         return EnrichmentResult.Success(
@@ -348,11 +315,8 @@ class DeezerProvider(
             provider = id,
             confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
             resolvedIdentifiers = EnrichmentIdentifiers()
-                .with(IdentifierNamespace.DEEZER, trackResult.id.toString()),
-            // Observed, not inferred: this call took the id branch above (or didn't), regardless of
-            // what other identifiers the request happens to also carry — the engine cannot see that
-            // distinction from the request alone.
-            provenance = if (deezerId != null) LookupProvenance.PROVIDER_NATIVE_ID else null,
+                .with(IdentifierNamespace.DEEZER, resolution.track.id.toString()),
+            provenance = resolution.provenance,
         )
     }
 
@@ -360,26 +324,18 @@ class DeezerProvider(
         val trackRequest = request as? EnrichmentRequest.ForTrack
             ?: return EnrichmentResult.NotFound(EnrichmentType.TRACK_METADATA, id)
 
-        val deezerId = request.identifiers.get(IdentifierNamespace.DEEZER)?.toLongOrNull()
-        val trackResult = if (deezerId != null) {
-            api.getTrack(deezerId)
-        } else {
-            val result = api.searchTrack(trackRequest.title, trackRequest.artist, trackRequest.album)
-                ?: return EnrichmentResult.NotFound(EnrichmentType.TRACK_METADATA, id)
-            if (!ArtistMatcher.isMatch(trackRequest.artist, result.artistName)) {
-                return EnrichmentResult.NotFound(EnrichmentType.TRACK_METADATA, id)
-            }
-            result
-        } ?: return EnrichmentResult.NotFound(EnrichmentType.TRACK_METADATA, id)
+        val trustedId = trustedProviderIdentifier(request, EnrichmentType.TRACK_METADATA)?.value?.toLongOrNull()
+        val resolution = resolveTrackByIdOrSearch(trackRequest, trustedId)
+            ?: return EnrichmentResult.NotFound(EnrichmentType.TRACK_METADATA, id)
 
         return EnrichmentResult.Success(
             type = EnrichmentType.TRACK_METADATA,
-            data = DeezerMapper.toTrackMetadata(trackResult),
+            data = DeezerMapper.toTrackMetadata(resolution.track),
             provider = id,
             confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
             resolvedIdentifiers = EnrichmentIdentifiers()
-                .with(IdentifierNamespace.DEEZER, trackResult.id.toString()),
-            provenance = if (deezerId != null) LookupProvenance.PROVIDER_NATIVE_ID else null,
+                .with(IdentifierNamespace.DEEZER, resolution.track.id.toString()),
+            provenance = resolution.provenance,
         )
     }
 
@@ -441,6 +397,61 @@ class DeezerProvider(
             provider = id,
             confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
         )
+    }
+
+    /**
+     * An artist this call resolved and whether it came from a Deezer id already on the request
+     * (never a search) — the same fact [enrichTopTracks], [enrichSimilarArtists] and
+     * [enrichArtistRadio] each need to self-report [LookupProvenance] truthfully instead of
+     * leaving it for [com.landofoz.musicmeta.engine.stampProvenance] to infer from canonical
+     * status alone, which cannot see that this call never searched at all.
+     */
+    private data class ArtistResolution(val artist: DeezerArtistSearchResult, val provenance: LookupProvenance?)
+
+    /**
+     * Resolves [request]'s artist for [type] from the trusted Deezer id already on the request
+     * (see [trustedProviderIdentifier]), falling back to a name search validated by
+     * [ArtistMatcher] — the shared shape behind [enrichTopTracks], [enrichSimilarArtists] and
+     * [enrichArtistRadio]. Null on a validated search miss or an unmatched search hit; an id
+     * branch is trusted without re-validation, matching prior behavior.
+     */
+    private suspend fun resolveArtistByIdOrSearch(
+        request: EnrichmentRequest.ForArtist,
+        type: EnrichmentType,
+    ): ArtistResolution? {
+        val deezerId = trustedProviderIdentifier(request, type)?.value?.toLongOrNull()
+        if (deezerId != null) {
+            return ArtistResolution(
+                DeezerArtistSearchResult(id = deezerId, name = request.name),
+                LookupProvenance.PROVIDER_NATIVE_ID,
+            )
+        }
+        val searchResult = api.searchArtist(request.name)
+            ?.takeIf { ArtistMatcher.isMatch(request.name, it.name) }
+            ?: return null
+        return ArtistResolution(searchResult, provenance = null)
+    }
+
+    /**
+     * A track this call resolved and whether it came from [trustedId] (never a search) — the same
+     * fact [enrichTrackPreview] and [enrichTrackMetadata] each need to self-report
+     * [LookupProvenance] truthfully. Callers differ only in which identifier they trust as
+     * [trustedId] ([enrichTrackPreview] uses the scoped, cache-key-trusted tuple;
+     * [enrichTrackMetadata] reads the bare namespace) — everything past that point is identical.
+     */
+    private data class TrackResolution(val track: DeezerTrackSearchResult, val provenance: LookupProvenance?)
+
+    private suspend fun resolveTrackByIdOrSearch(
+        request: EnrichmentRequest.ForTrack,
+        trustedId: Long?,
+    ): TrackResolution? {
+        if (trustedId != null) {
+            val track = api.getTrack(trustedId) ?: return null
+            return TrackResolution(track, LookupProvenance.PROVIDER_NATIVE_ID)
+        }
+        val result = api.searchTrack(request.title, request.artist, request.album) ?: return null
+        if (!ArtistMatcher.isMatch(request.artist, result.artistName)) return null
+        return TrackResolution(result, provenance = null)
     }
 
     private fun DeezerAlbumResult.toCandidate() =

@@ -171,7 +171,7 @@ internal class DefaultEnrichmentEngine(
                 // admission decision — every provider still gets its independent eligibility check
                 // inside ProviderChain, including the missing-identifier skips [chainExecutions]
                 // below records for the cache write-back.
-                val resolvedTypes = resolveTypes(enrichedRequest, uncachedTypes, identityResult)
+                val resolvedTypes = resolveTypes(enrichedRequest, uncachedTypes, identityResult, resolution.status)
                 results.putAll(resolvedTypes.results)
                 chainExecutions.putAll(resolvedTypes.executions)
                 applyCatalogFiltering(results, config.catalogProvider, config.catalogFilterMode)
@@ -544,6 +544,7 @@ internal class DefaultEnrichmentEngine(
         request: EnrichmentRequest,
         types: Set<EnrichmentType>,
         identityResult: EnrichmentResult? = null,
+        canonicalStatus: CanonicalStatus,
     ): ResolvedTypes = coroutineScope {
         // A request identity resolution could not name — an identifier-only one whose identifier
         // MusicBrainz holds nothing under — reaches every provider with a blank title and artist.
@@ -575,7 +576,11 @@ internal class DefaultEnrichmentEngine(
         val resolvedResults = resolved.associate { (type, result, _) -> type to result }.toMutableMap()
         for ((type, _, execution) in resolved) { if (execution != null) executions[type] = execution }
 
-        val mergeableResults = resolveMergeableTypes(mergeableRequested, request, identifierOnly)
+        // Stamped here, before composite synthesis reads these as dependencies: a composite
+        // synthesizer sees each dependency's real observed provenance instead of null.
+        stampProvenance(resolvedResults, canonicalStatus, executions)
+
+        val mergeableResults = resolveMergeableTypes(mergeableRequested, request, identifierOnly, canonicalStatus)
         for ((type, result, execution) in mergeableResults) {
             resolvedResults[type] = result
             if (execution != null) executions[type] = execution
@@ -591,14 +596,19 @@ internal class DefaultEnrichmentEngine(
         mergeableRequested: Set<EnrichmentType>,
         request: EnrichmentRequest,
         identifierOnly: Boolean,
+        canonicalStatus: CanonicalStatus,
     ): List<Triple<EnrichmentType, EnrichmentResult, ChainExecution?>> = coroutineScope {
         mergeableRequested.map { mergeType ->
             async {
                 val chain = registry.chainFor(mergeType)
                 val (allResults, execution) = chain?.resolveAllWithExecution(request, identifierOnly)
                     ?: (null to null)
+                // Stamped per contributor before merging: a collect-all walk has no single winner
+                // for ChainExecution.winningRequirement to name, so each contributor's own provider
+                // is asked instead — the merger reads real observed provenance, never null.
                 val filtered = allResults?.successes.orEmpty()
                     .mapNotNull { gate(it) as? EnrichmentResult.Success }
+                    .map { stampContributorProvenance(it, chain, canonicalStatus) }
                 val merger = mergers[mergeType]
                 val merged = if (merger == null) {
                     EnrichmentResult.NotFound(mergeType, "no_merger")

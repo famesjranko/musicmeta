@@ -6,12 +6,14 @@ import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.IdentifierNamespace
+import com.landofoz.musicmeta.LookupProvenance
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.engine.AlbumMatch
 import com.landofoz.musicmeta.engine.ArtistMatcher
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.engine.ProviderCallScope
+import com.landofoz.musicmeta.engine.trustedProviderIdentifier
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 import kotlinx.coroutines.currentCoroutineContext
@@ -120,6 +122,7 @@ class ITunesProvider(
                     data = ITunesMapper.toTracklist(tracks),
                     provider = id,
                     confidence = ConfidenceCalculator.idBasedLookup(),
+                    provenance = LookupProvenance.PROVIDER_NATIVE_ID,
                 )
             }
 
@@ -138,6 +141,10 @@ class ITunesProvider(
                     provider = id,
                     confidence = ConfidenceCalculator.idBasedLookup(),
                     resolvedIdentifiers = buildResolvedIdentifiers(barcodeResult),
+                    // A barcode is neither a MusicBrainz id nor iTunes's own id space, but it is
+                    // still a direct identifier lookup, never a name search — the nearest truthful
+                    // value of the two direct-lookup provenances.
+                    provenance = LookupProvenance.PROVIDER_NATIVE_ID,
                 )
             }
 
@@ -174,8 +181,10 @@ class ITunesProvider(
         }
 
         return try {
-            // Try direct lookup if artistId is already stored
-            val artistId = request.identifiers.get(IdentifierNamespace.ITUNES_ARTIST)?.toLongOrNull()
+            // Try direct lookup if artistId is already stored, else search — kept as two branches
+            // (not one Elvis chain) so the id-versus-search distinction survives to provenance below.
+            val storedArtistId = trustedProviderIdentifier(request, type)?.value?.toLongOrNull()
+            val artistId = storedArtistId
                 ?: api.searchArtist(request.name)
                 ?: return EnrichmentResult.NotFound(type, id)
 
@@ -189,6 +198,7 @@ class ITunesProvider(
                 confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
                 resolvedIdentifiers = EnrichmentIdentifiers()
                     .with(IdentifierNamespace.ITUNES_ARTIST, artistId.toString()),
+                provenance = if (storedArtistId != null) LookupProvenance.PROVIDER_NATIVE_ID else null,
             )
         } catch (e: Exception) {
             mapError(type, e)
@@ -221,9 +231,13 @@ class ITunesProvider(
 
             val confidence = ConfidenceCalculator.idBasedLookup()
             val resolvedIdentifiers = buildResolvedIdentifiers(result)
+            // A barcode lookup, never a search — see the id-versus-name-search fork note on
+            // enrichAlbumTracks's own barcode branch for why this is PROVIDER_NATIVE_ID.
+            val idProvenance = LookupProvenance.PROVIDER_NATIVE_ID
             return when (type) {
-                EnrichmentType.ALBUM_METADATA -> enrichAlbumMetadata(result, type, confidence, resolvedIdentifiers)
-                else -> enrichAlbumArt(result, type, confidence, resolvedIdentifiers)
+                EnrichmentType.ALBUM_METADATA ->
+                    enrichAlbumMetadata(result, type, confidence, resolvedIdentifiers, idProvenance)
+                else -> enrichAlbumArt(result, type, confidence, resolvedIdentifiers, idProvenance)
             }
         }
 
@@ -236,8 +250,8 @@ class ITunesProvider(
 
         val confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true)
         return when (type) {
-            EnrichmentType.ALBUM_METADATA -> enrichAlbumMetadata(result, type, confidence, null)
-            else -> enrichAlbumArt(result, type, confidence, null)
+            EnrichmentType.ALBUM_METADATA -> enrichAlbumMetadata(result, type, confidence, null, provenance = null)
+            else -> enrichAlbumArt(result, type, confidence, null, provenance = null)
         }
     }
 
@@ -246,12 +260,14 @@ class ITunesProvider(
         type: EnrichmentType,
         confidence: Float,
         resolvedIdentifiers: EnrichmentIdentifiers?,
+        provenance: LookupProvenance?,
     ): EnrichmentResult = EnrichmentResult.Success(
         type = type,
         data = ITunesMapper.toAlbumMetadata(result),
         provider = id,
         confidence = confidence,
         resolvedIdentifiers = resolvedIdentifiers,
+        provenance = provenance,
     )
 
     private fun enrichAlbumArt(
@@ -259,6 +275,7 @@ class ITunesProvider(
         type: EnrichmentType,
         confidence: Float,
         resolvedIdentifiers: EnrichmentIdentifiers?,
+        provenance: LookupProvenance?,
     ): EnrichmentResult {
         val artwork = ITunesMapper.toArtwork(result, artworkSize)
             ?: return EnrichmentResult.NotFound(type, id)
@@ -269,6 +286,7 @@ class ITunesProvider(
             provider = id,
             confidence = confidence,
             resolvedIdentifiers = resolvedIdentifiers,
+            provenance = provenance,
         )
     }
 

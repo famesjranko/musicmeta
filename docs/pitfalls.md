@@ -327,6 +327,28 @@ all. Every other payload answers its type iff it carries anything. The `when` is
 served by `Metadata` inherits grab-bag semantics. That fails lenient, which is the right direction:
 the gate's job is to catch payloads answering *nothing*, not to adjudicate partial ones.
 
+## 14. An optional-id branch is invisible to anything reading `identifierRequirement`
+
+```kotlin
+// WRONG — capability declares NONE, so a result from this branch reads as a name search
+val id = request.identifiers.get(IdentifierNamespace.DEEZER)?.toLongOrNull()
+val artist = if (id != null) api.getArtist(id) else searchArtist(request.name)
+return Success(type, data, providerId, confidence)  // provenance stays unset either way
+
+// RIGHT — the branch taken is observed by the code that took it, nowhere else
+return Success(type, data, providerId, confidence,
+    provenance = if (id != null) LookupProvenance.PROVIDER_NATIVE_ID else null)
+```
+
+`IdentifierRequirement.NONE` means MusicBrainz canonical resolution is optional, not that the
+provider never has an exact-id route of its own. A capability, a chain walk, and the engine's own
+`stampProvenance` fallback can all see only what running *required* — never what a specific call
+*happened to use* when the requirement permitted either. Only the branch itself knows which one
+ran, so only the branch itself can report it truthfully; leaving `provenance` unset here is not
+neutral; it hands the engine's canonical-status fallback a case it cannot tell apart from a genuine
+search. The same applies to a merged or synthesized result with several contributors and no single
+winner: report the weakest contributing route, never infer one from canonical status alone.
+
 ## Area — Transport and provider state
 
 ## 11. A retry ladder's coverage is not its trigger

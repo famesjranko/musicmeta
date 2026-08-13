@@ -6,6 +6,7 @@ import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
+import com.landofoz.musicmeta.LookupProvenance
 import com.landofoz.musicmeta.engine.ProviderCallScope
 import com.landofoz.musicmeta.engine.TitleMatcher
 import com.landofoz.musicmeta.http.RateLimiter
@@ -63,6 +64,9 @@ class DiscogsProviderTest {
             (data as EnrichmentData.Artwork).url,
         )
         assertEquals(0.8f, success.confidence)
+        // A name search leaves its own route unreported: the engine has the canonical-status
+        // evidence to tell an exact name match from an unverified guess, not this provider.
+        assertEquals(null, success.provenance)
     }
 
     @Test
@@ -703,6 +707,8 @@ class DiscogsProviderTest {
         assertEquals("Jane Doe", data.credits[0].name)
         assertEquals("Vocals", data.credits[0].role)
         assertEquals("performance", data.credits[0].roleCategory)
+        // CREDITS has no name-search fallback at all: every Success came from discogsReleaseId.
+        assertEquals(LookupProvenance.PROVIDER_NATIVE_ID, (result as EnrichmentResult.Success).provenance)
     }
 
     @Test
@@ -814,6 +820,8 @@ class DiscogsProviderTest {
         assertEquals(1997, data.editions[0].year)
         assertEquals("Parlophone", data.editions[0].label)
         assertEquals("NODATA 01", data.editions[0].catalogNumber)
+        // RELEASE_EDITIONS has no name-search fallback at all: every Success came from discogsMasterId.
+        assertEquals(LookupProvenance.PROVIDER_NATIVE_ID, (result as EnrichmentResult.Success).provenance)
     }
 
     @Test

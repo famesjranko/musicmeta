@@ -4,6 +4,7 @@ import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.GenreTag
+import com.landofoz.musicmeta.LookupProvenance
 
 /** Pure function that normalizes, deduplicates, and merges genre tags from multiple providers. */
 internal object GenreMerger : ResultMerger {
@@ -18,9 +19,10 @@ internal object GenreMerger : ResultMerger {
     override fun merge(results: List<EnrichmentResult.Success>): EnrichmentResult {
         if (results.isEmpty()) return EnrichmentResult.NotFound(type, "all_providers")
 
-        val allTags = results.flatMap { result ->
-            (result.data as? EnrichmentData.Metadata)?.genreTags.orEmpty()
+        val contributingResults = results.filter {
+            (it.data as? EnrichmentData.Metadata)?.genreTags?.isNotEmpty() == true
         }
+        val allTags = contributingResults.flatMap { (it.data as EnrichmentData.Metadata).genreTags.orEmpty() }
         if (allTags.isEmpty()) return results.first()
 
         val merged = merge(allTags)
@@ -33,6 +35,11 @@ internal object GenreMerger : ResultMerger {
             provider = "genre_merger",
             confidence = results.maxOf { it.confidence },
             resolvedIdentifiers = results.firstNotNullOfOrNull { it.resolvedIdentifiers },
+            // No single provider's route speaks for a merged result; the weakest contributing
+            // route is the smallest truthful summary. A contributor built outside the engine's
+            // pre-merge stamp (e.g. a direct unit-test fixture) falls back to FUZZY_NAME, the same
+            // conservative default observedProvenance uses for a route it cannot otherwise place.
+            provenance = weakestProvenance(contributingResults.map { it.provenance ?: LookupProvenance.FUZZY_NAME }),
         )
     }
 

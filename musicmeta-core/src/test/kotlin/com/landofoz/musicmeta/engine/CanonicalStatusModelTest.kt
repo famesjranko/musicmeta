@@ -19,8 +19,8 @@ import org.junit.Test
 
 /**
  * [CanonicalStatus] (once per call) and [LookupProvenance] (once per successful result) are
- * independent facts: an orthogonality matrix over both, and every historically null-producing
- * status path pinned to a distinct, explicit [CanonicalStatus] value.
+ * independent facts: an orthogonality matrix over both, and every non-attempted status path pinned
+ * to a distinct, explicit [CanonicalStatus] value.
  */
 class CanonicalStatusModelTest {
 
@@ -258,6 +258,60 @@ class CanonicalStatusModelTest {
         assertEquals(CanonicalStatus.NOT_ATTEMPTED_DISABLED, results.identity.status)
         val preview = results.raw[EnrichmentType.TRACK_PREVIEW] as EnrichmentResult.Success
         assertEquals(LookupProvenance.FUZZY_NAME, preview.provenance)
+    }
+
+    @Test fun `a merged result reports the weakest contributing provenance, not canonical status alone`() = runTest {
+        // Given - identity resolves canonically, and two GENRE providers each self-report a
+        // different route: one used the canonical id resolution just handed it, the other only an
+        // unverified name search
+        val mb = idProvider(
+            EnrichmentResult.Success(
+                EnrichmentType.GENRE, com.landofoz.musicmeta.EnrichmentData.Metadata(genres = listOf("rock")),
+                "mb", 0.95f, resolvedIdentifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-1"),
+            ),
+        )
+        val canonicalContributor = FakeProvider(
+            id = "canonical",
+            capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)),
+        ).also {
+            it.givenResult(
+                EnrichmentType.GENRE,
+                EnrichmentResult.Success(
+                    EnrichmentType.GENRE,
+                    com.landofoz.musicmeta.EnrichmentData.Metadata(
+                        genreTags = listOf(com.landofoz.musicmeta.GenreTag("rock", 0.8f, listOf("canonical"))),
+                    ),
+                    "canonical", 0.8f, provenance = LookupProvenance.CANONICAL_ID,
+                ),
+            )
+        }
+        val nameContributor = FakeProvider(
+            id = "names",
+            capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 90)),
+        ).also {
+            it.givenResult(
+                EnrichmentType.GENRE,
+                EnrichmentResult.Success(
+                    EnrichmentType.GENRE,
+                    com.landofoz.musicmeta.EnrichmentData.Metadata(
+                        genreTags = listOf(com.landofoz.musicmeta.GenreTag("alternative", 0.7f, listOf("names"))),
+                    ),
+                    "names", 0.7f, provenance = LookupProvenance.FUZZY_NAME,
+                ),
+            )
+        }
+        val e = engine(FakeEnrichmentCache(), mb, canonicalContributor, nameContributor)
+        val req = EnrichmentRequest.forArtist("Artist")
+
+        // When - enriching GENRE, which GenreMerger combines from both contributors
+        val results = e.enrich(req, setOf(EnrichmentType.GENRE))
+
+        // Then - canonical status alone would say EXACT_NAME for every result this call produced;
+        // the merged result instead reports its weakest contributing route, since the name-search
+        // contributor's tag was never canonically confirmed
+        assertEquals(CanonicalStatus.RESOLVED, results.identity.status)
+        val merged = results.raw.getValue(EnrichmentType.GENRE) as EnrichmentResult.Success
+        assertEquals(LookupProvenance.FUZZY_NAME, merged.provenance)
     }
 
     // --- Cache round trips: RESOLVED and disabled results are cacheable and preserve provenance ---

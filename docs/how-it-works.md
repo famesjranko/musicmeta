@@ -212,10 +212,13 @@ Two independent facts describe an `enrich()` call, never one merged value:
 | `CANONICAL_ID` | Looked up directly by a MusicBrainz canonical id. |
 | `PROVIDER_NATIVE_ID` | Looked up directly by a provider-native id supplied on the request. |
 | `EXACT_NAME` | Selected by a name search MusicBrainz canonically confirmed this call. |
-
 | `QUALIFIER_FALLBACK_NAME` | Selected after normalization or qualifier-fallback stripping. |
 | `FUZZY_NAME` | Selected by an unverified fuzzy name search; MusicBrainz did not confirm this call. |
 | `CACHE` | Served from cache by an implementation that could not recover the original provenance. |
+
+A merged type (e.g. `GENRE`) or a synthesized composite type (e.g. `ARTIST_TIMELINE`) has no single
+provider's route of its own: its `provenance` is the weakest of its contributing results', so it
+never reads more confident than its least-confident contributor.
 
 A consumer deciding how much to trust results reads both: `status == RESOLVED` with a high
 `matchScore` is confident; any `AMBIGUOUS`/`UNRESOLVED`/`FAILED` status means every result this

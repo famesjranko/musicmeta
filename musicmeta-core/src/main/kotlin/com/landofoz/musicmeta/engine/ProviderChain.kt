@@ -307,6 +307,17 @@ internal class ProviderChain(
         provider.capabilities.firstOrNull { it.type == type }?.identifierRequirement
             ?: IdentifierRequirement.NONE
 
+    /**
+     * [requirementFor], looked up by provider id — the per-contributor counterpart to
+     * [ChainExecution.winningRequirement] for a mergeable type's collect-all walk, which has no
+     * single winner to record one for. [EnrichmentResult.Success.provider] names which provider
+     * produced a given contributor, so a caller merging several successes can classify each one's
+     * own observed route before combining them. [IdentifierRequirement.NONE] for an id this chain
+     * has no provider for.
+     */
+    internal fun requirementForProviderId(providerId: String): IdentifierRequirement =
+        providers.firstOrNull { it.id == providerId }?.let { requirementFor(it) } ?: IdentifierRequirement.NONE
+
     /** Whether [provider]'s breaker is open. A provider with no breaker is never skipped. */
     private fun isTripped(provider: EnrichmentProvider): Boolean =
         circuitBreakers[provider.id]?.allowRequest() == false

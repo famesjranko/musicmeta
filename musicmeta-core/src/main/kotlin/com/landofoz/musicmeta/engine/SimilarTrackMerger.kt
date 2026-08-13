@@ -3,6 +3,7 @@ package com.landofoz.musicmeta.engine
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
+import com.landofoz.musicmeta.LookupProvenance
 import com.landofoz.musicmeta.SimilarTrack
 
 /**
@@ -23,9 +24,10 @@ internal object SimilarTrackMerger : ResultMerger {
     override fun merge(results: List<EnrichmentResult.Success>): EnrichmentResult {
         if (results.isEmpty()) return EnrichmentResult.NotFound(type, "all_providers")
 
-        val allTracks = results.flatMap { result ->
-            (result.data as? EnrichmentData.SimilarTracks)?.tracks.orEmpty()
+        val contributingResults = results.filter {
+            (it.data as? EnrichmentData.SimilarTracks)?.tracks?.isNotEmpty() == true
         }
+        val allTracks = contributingResults.flatMap { (it.data as EnrichmentData.SimilarTracks).tracks }
         if (allTracks.isEmpty()) return results.first()
 
         val merged = mergeTracks(allTracks)
@@ -35,6 +37,11 @@ internal object SimilarTrackMerger : ResultMerger {
             provider = "similar_track_merger",
             confidence = results.maxOf { it.confidence },
             resolvedIdentifiers = results.firstNotNullOfOrNull { it.resolvedIdentifiers },
+            // No single provider's route speaks for a merged result; the weakest contributing
+            // route is the smallest truthful summary. A contributor built outside the engine's
+            // pre-merge stamp (e.g. a direct unit-test fixture) falls back to FUZZY_NAME, the same
+            // conservative default observedProvenance uses for a route it cannot otherwise place.
+            provenance = weakestProvenance(contributingResults.map { it.provenance ?: LookupProvenance.FUZZY_NAME }),
         )
     }
 

@@ -36,11 +36,18 @@ internal object TimelineSynthesizer : CompositeSynthesizer {
         val discography = resolved[EnrichmentType.ARTIST_DISCOGRAPHY]
         val bandMembers = resolved[EnrichmentType.BAND_MEMBERS]
         val timeline = synthesize(identityResult, discography, bandMembers)
+        // No single dependency's route speaks for a synthesized result; the weakest contributing
+        // route is the smallest truthful summary. Dependencies are stamped before this runs
+        // (DefaultEnrichmentEngine.resolveTypes), so this is never null when either contributed.
+        val contributorProvenance = listOfNotNull(discography, bandMembers)
+            .filterIsInstance<EnrichmentResult.Success>()
+            .mapNotNull { it.provenance }
         return EnrichmentResult.Success(
             type = type,
             data = timeline,
             provider = "timeline_synthesizer",
             confidence = ConfidenceCalculator.authoritative(),
+            provenance = contributorProvenance.takeIf { it.isNotEmpty() }?.let { weakestProvenance(it) },
         )
     }
 

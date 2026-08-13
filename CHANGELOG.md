@@ -151,6 +151,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Success.provenance` is now observed from the winning provider's own route, not guessed from identifiers merely present on the request: an MBID no longer mislabels a name search `CANONICAL_ID`
 - An all-cache-hit `Success` now reports `provenance = CACHE` instead of `null` when the cache that served it did not preserve the original lookup's route
 - Deezer, iTunes and Discogs album memos now key on the request's own fields, not a joined string; two requests whose artist/title halves joined identically previously reused each other's selection
+- Deezer's artist-id, iTunes's collection-id/UPC/artist-id, and Discogs's `CREDITS`/`RELEASE_EDITIONS` branches now self-report `provenance = PROVIDER_NATIVE_ID` instead of a name-search guess
+- A merged or synthesized `Success` (e.g. `GENRE`, `ARTIST_TIMELINE`) now reports its weakest contributor's `provenance` instead of one fabricated from canonical status alone
 
 ## [0.11.0] - 2026-07-28
 

@@ -29,7 +29,9 @@ internal object GenreAffinityMatcher : CompositeSynthesizer {
         if (genreResult == null || genreResult is EnrichmentResult.NotFound) {
             return EnrichmentResult.NotFound(EnrichmentType.GENRE_DISCOVERY, "no_genre_data")
         }
-        val metadata = (genreResult as? EnrichmentResult.Success)?.data as? EnrichmentData.Metadata
+        val genreSuccess = genreResult as? EnrichmentResult.Success
+            ?: return EnrichmentResult.NotFound(EnrichmentType.GENRE_DISCOVERY, "no_genre_data")
+        val metadata = genreSuccess.data as? EnrichmentData.Metadata
             ?: return EnrichmentResult.NotFound(EnrichmentType.GENRE_DISCOVERY, "no_genre_data")
         val genreTags = metadata.genreTags
         if (genreTags.isNullOrEmpty()) {
@@ -47,6 +49,9 @@ internal object GenreAffinityMatcher : CompositeSynthesizer {
             data = EnrichmentData.GenreDiscovery(deduplicated),
             provider = "genre_affinity_matcher",
             confidence = ConfidenceCalculator.authoritative(),
+            // This is derived entirely from GENRE's own tags, so its route is GENRE's route,
+            // already resolved (self-reported or merged) by the time this synthesizer runs.
+            provenance = genreSuccess.provenance,
         )
     }
 

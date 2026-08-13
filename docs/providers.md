@@ -34,6 +34,30 @@ Auth keys and how to supply them are in [README.md](../README.md).
 | Fanart.tv | `fanarttv` | project key | [docs](https://fanarttv.docs.apiary.io/) | Only source of artist backgrounds, logos and banners |
 | Discogs | `discogs` | token | [docs](https://www.discogs.com/developers) | Pressing-level detail: catalogue numbers, editions, per-track credits |
 
+## Provenance self-reporting
+
+Every capability below is declared with `identifierRequirement = NONE` — MusicBrainz canonical
+resolution is optional for all of them — but some still have an *exact-id* branch that runs instead
+of a name search whenever the request already carries that id. A capability's requirement alone
+cannot tell that branch apart from the search fallback, so each of these `enrich()` paths sets
+`EnrichmentResult.Success.provenance` itself (`LookupProvenance.PROVIDER_NATIVE_ID`) whenever it
+took the id branch, and leaves it unset on the name-search branch for the engine to classify from
+canonical status.
+
+| Provider | Type(s) | Id branch |
+|---|---|---|
+| Deezer | `TRACK_PREVIEW`, `TRACK_METADATA` | A Deezer track id already on the request |
+| Deezer | `ARTIST_TOP_TRACKS`, `SIMILAR_ARTISTS`, `ARTIST_RADIO` | A Deezer artist id already on the request |
+| iTunes | `ALBUM_TRACKS` | A stored `itunesCollectionId`, or a UPC/barcode lookup |
+| iTunes | `ALBUM_ART`, `ALBUM_METADATA` | A UPC/barcode lookup |
+| iTunes | `ARTIST_DISCOGRAPHY` | A stored iTunes artist id |
+| Discogs | `CREDITS` | A stored `discogsReleaseId` — the only route this type has; there is no name-search fallback |
+| Discogs | `RELEASE_EDITIONS` | A stored `discogsMasterId` — the only route this type has; there is no name-search fallback |
+
+A UPC/barcode is an external catalogue identifier, not a MusicBrainz id and not either provider's
+own id space; `PROVIDER_NATIVE_ID` is the closer of the two existing `LookupProvenance` values (a
+direct identifier lookup, never a search), not a literal claim that iTunes issued the barcode.
+
 ## Routes disabled upstream
 
 ListenBrainz disabled two of the five routes we call around **2026-06-30**; both answer `500` ahead
