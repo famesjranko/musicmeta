@@ -159,6 +159,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - iTunes album search now accepts and ranks a candidate's title, not just its artist, and shares one selection across ALBUM_ART, ALBUM_METADATA and ALBUM_TRACKS
 - Discogs album search now validates the returned album title as well as artist, parsing its combined `"Artist - Title"` field safely, before using release data
 - Discogs combined-title parsing now finds the real artist/title boundary when the requested artist itself contains ` - `, instead of stopping at the first artist-plausible prefix
+- Deezer, iTunes and Discogs album memos now key on the request's own fields, not a joined string; two requests whose artist/title halves joined identically previously reused each other's selection
 
 ## [0.11.0] - 2026-07-28
 

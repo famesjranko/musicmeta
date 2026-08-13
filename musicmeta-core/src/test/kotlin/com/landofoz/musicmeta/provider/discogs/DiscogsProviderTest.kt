@@ -7,14 +7,20 @@ import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
 import com.landofoz.musicmeta.engine.ProviderCallScope
+import com.landofoz.musicmeta.engine.TitleMatcher
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.testutil.FakeHttpClient
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 
@@ -623,21 +629,22 @@ class DiscogsProviderTest {
     }
 
     @Test
-    fun `enrich shares one release search and selection across ALBUM_ART LABEL and ALBUM_METADATA`() = runTest {
-        // Given - one search hit that every shared album type resolves from
-        httpClient.givenJsonResponse("database/search", SEARCH_RESULTS_JSON)
+    fun `enrich shares one release search and selection across ALBUM_ART LABEL RELEASE_TYPE and ALBUM_METADATA`() = runTest {
+        // Given - one search hit that every shared album type resolves from, including a "type" field for RELEASE_TYPE
+        httpClient.givenJsonResponse("database/search", METADATA_SEARCH_JSON)
         val request = EnrichmentRequest.forAlbum(title = "OK Computer", artist = "Radiohead")
 
-        // When - three of the four shared album types are requested together
+        // When - all four shared album types are requested together
         val results = withContext(ProviderCallScope()) {
             listOf(
                 provider.enrich(request, EnrichmentType.ALBUM_ART),
                 provider.enrich(request, EnrichmentType.LABEL),
+                provider.enrich(request, EnrichmentType.RELEASE_TYPE),
                 provider.enrich(request, EnrichmentType.ALBUM_METADATA),
             )
         }
 
-        // Then - all three succeed, and only one search request was made for the shared selection
+        // Then - all four succeed, and only one search request was made for the shared selection
         assertTrue(results.all { it is EnrichmentResult.Success })
         assertEquals(1, httpClient.requestedUrls.count { it.contains("database/search") })
     }
@@ -972,6 +979,156 @@ class DiscogsProviderTest {
         assertTrue(
             httpClient.requestedHeaders.all { it["Authorization"] == "Discogs token=test-token" },
         )
+    }
+
+    @Test
+    fun `enrich resolves two requests separately when their artist and title halves would collide under a delimiter-joined key`() = runTest {
+        // Given - "A|B" and "C" join to the same string as "A" and "B|C", so a delimiter-joined memo key would alias these two distinct requests
+        httpClient.givenJsonResponsesInTurn(
+            "database/search",
+            """{"results":[{"title":"A|B - C","label":["Label"],"year":"2000","cover_image":"https://example.com/first.jpg"}]}""",
+            """{"results":[{"title":"A - B|C","label":["Label"],"year":"2000","cover_image":"https://example.com/second.jpg"}]}""",
+        )
+        val firstRequest = EnrichmentRequest.forAlbum(title = "C", artist = "A|B")
+        val secondRequest = EnrichmentRequest.forAlbum(title = "B|C", artist = "A")
+
+        // When - both requests are resolved together in one ProviderCallScope
+        val (firstResult, secondResult) = withContext(ProviderCallScope()) {
+            provider.enrich(firstRequest, EnrichmentType.ALBUM_ART) to
+                provider.enrich(secondRequest, EnrichmentType.ALBUM_ART)
+        }
+
+        // Then - each request searches and selects its own release rather than reusing the other's memoized selection
+        val firstUrl = ((firstResult as EnrichmentResult.Success).data as EnrichmentData.Artwork).url
+        val secondUrl = ((secondResult as EnrichmentResult.Success).data as EnrichmentData.Artwork).url
+        assertEquals("https://example.com/first.jpg", firstUrl)
+        assertEquals("https://example.com/second.jpg", secondUrl)
+        assertEquals(2, httpClient.requestedUrls.count { it.contains("database/search") })
+    }
+
+    @Test
+    fun `enrich carries no title or year across two requests that differ only in year`() = runTest {
+        // Given - two releases under the same combined title, one per requested year
+        httpClient.givenJsonResponsesInTurn(
+            "database/search",
+            """{"results":[{"title":"Artist - Album","label":["Label"],"year":"2009","cover_image":"https://example.com/2009.jpg"}]}""",
+            """{"results":[{"title":"Artist - Album","label":["Label"],"year":"2015","cover_image":"https://example.com/2015.jpg"}]}""",
+        )
+        val request2009 = EnrichmentRequest.ForAlbum(EnrichmentIdentifiers(), "Album", "Artist", year = 2009)
+        val request2015 = EnrichmentRequest.ForAlbum(EnrichmentIdentifiers(), "Album", "Artist", year = 2015)
+
+        // When - both requests are resolved together in one ProviderCallScope
+        val (result2009, result2015) = withContext(ProviderCallScope()) {
+            provider.enrich(request2009, EnrichmentType.ALBUM_ART) to
+                provider.enrich(request2015, EnrichmentType.ALBUM_ART)
+        }
+
+        // Then - each request's own year searches afresh rather than reusing the other's selection
+        val url2009 = ((result2009 as EnrichmentResult.Success).data as EnrichmentData.Artwork).url
+        val url2015 = ((result2015 as EnrichmentResult.Success).data as EnrichmentData.Artwork).url
+        assertEquals("https://example.com/2009.jpg", url2009)
+        assertEquals("https://example.com/2015.jpg", url2015)
+        assertEquals(2, httpClient.requestedUrls.count { it.contains("database/search") })
+    }
+
+    @Test
+    fun `selectRelease carries the parsed title and its accepted tier as named evidence`() = runTest {
+        // Given - one release pool with a single accepted candidate
+        val releases = listOf(
+            DiscogsRelease(
+                title = "Radiohead - OK Computer",
+                label = "Parlophone",
+                year = "1997",
+                country = "UK",
+                coverImage = "https://example.com/cover.jpg",
+            ),
+        )
+        val request = EnrichmentRequest.forAlbum(title = "OK Computer", artist = "Radiohead")
+
+        // When - selecting directly against the release pool
+        val choice = releases.selectRelease(request)
+
+        // Then - the parsed title and its accepted tier are observable, not dropped
+        assertNotNull(choice)
+        assertEquals("OK Computer", choice!!.title)
+        assertEquals(TitleMatcher.TitleTier.EXACT, choice.tier)
+    }
+
+    @Test
+    fun `parseDiscogsRelease returns no boundary for a title with no dash at all`() = runTest {
+        // Given - a combined title carrying no " - " boundary anywhere
+        val combined = "SelfTitledAlbumWithNoSeparator"
+
+        // When - parsing against any requested artist and title
+        val parsed = parseDiscogsRelease(combined, requestedArtist = "Artist", requestedTitle = "Album")
+
+        // Then - no boundary exists, so parsing reports no match rather than guessing one
+        assertNull(parsed)
+    }
+
+    @Test
+    fun `a cancelled release search is not memoized as a miss`() = runTest {
+        // Given - the first release search is cancelled mid-flight; the underlying data would be found on a retry
+        val cancelling = CancellingOnceHttpClient(httpClient)
+        val cancellingProvider = DiscogsProvider(
+            personalToken = "test-token",
+            httpClient = cancelling,
+            rateLimiter = RateLimiter(0L),
+        )
+        httpClient.givenJsonResponse("database/search", SEARCH_RESULTS_JSON)
+        val request = EnrichmentRequest.forAlbum(title = "OK Computer", artist = "Radiohead")
+
+        // When - the first lookup is cancelled, on a job separate from this test's own
+        val cancelled = CoroutineScope(Job()).async { cancellingProvider.enrich(request, EnrichmentType.ALBUM_ART) }
+        try {
+            cancelled.await()
+            fail("expected the cancellation to propagate")
+        } catch (_: CancellationException) {
+            // expected
+        }
+        val result = cancellingProvider.enrich(request, EnrichmentType.ALBUM_ART)
+
+        // Then - the retry performs a fresh search rather than reading a memoized miss
+        assertTrue(result is EnrichmentResult.Success)
+    }
+
+    @Test
+    fun `release selection is unaffected by identifiers a canonical identity resolution would attach`() = runTest {
+        // Given - the same artist and title, once with no resolved identifiers and once carrying identifiers a resolved canonical lookup would attach
+        httpClient.givenJsonResponse("database/search", SEARCH_RESULTS_JSON)
+        val unresolved = EnrichmentRequest.forAlbum(title = "OK Computer", artist = "Radiohead")
+        val resolved = EnrichmentRequest.forAlbum(
+            title = "OK Computer",
+            artist = "Radiohead",
+            identifiers = EnrichmentIdentifiers(musicBrainzId = "b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d"),
+        )
+
+        // When - enriching for album art under each identifier state
+        val unresolvedResult = provider.enrich(unresolved, EnrichmentType.ALBUM_ART)
+        val resolvedResult = provider.enrich(resolved, EnrichmentType.ALBUM_ART)
+
+        // Then - the same release is selected regardless of what identity resolution attached
+        val unresolvedUrl = ((unresolvedResult as EnrichmentResult.Success).data as EnrichmentData.Artwork).url
+        val resolvedUrl = ((resolvedResult as EnrichmentResult.Success).data as EnrichmentData.Artwork).url
+        assertEquals(unresolvedUrl, resolvedUrl)
+    }
+
+    /** Cancels the caller and throws on its first authenticated `fetchJsonResult` call, then delegates normally. */
+    private class CancellingOnceHttpClient(private val delegate: com.landofoz.musicmeta.http.HttpClient) :
+        com.landofoz.musicmeta.http.HttpClient by delegate {
+        private var calls = 0
+
+        override suspend fun fetchJsonResult(
+            url: String,
+            headers: Map<String, String>,
+        ): com.landofoz.musicmeta.http.HttpResult<org.json.JSONObject> {
+            calls++
+            if (calls == 1) {
+                kotlinx.coroutines.currentCoroutineContext()[kotlinx.coroutines.Job]?.cancel()
+                throw CancellationException("simulated cancellation")
+            }
+            return delegate.fetchJsonResult(url, headers)
+        }
     }
 
     private companion object {

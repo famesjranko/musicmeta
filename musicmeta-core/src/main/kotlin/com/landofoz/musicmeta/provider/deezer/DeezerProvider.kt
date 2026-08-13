@@ -459,8 +459,11 @@ class DeezerProvider(
  */
 private class DeezerAlbumScope(private val api: DeezerApi) {
 
+    /** Every field [selectAlbum] reads, so two requests differing only in one still key distinctly. */
+    private data class SelectionKey(val artist: String, val title: String, val trackCount: Int?)
+
     private val searchMutex = Mutex()
-    private val searchResults = mutableMapOf<String, AlbumMatch<DeezerAlbumResult>?>()
+    private val searchResults = mutableMapOf<SelectionKey, AlbumMatch<DeezerAlbumResult>?>()
 
     private val detailMutex = Mutex()
     private val details = mutableMapOf<Long, DeezerAlbum?>()
@@ -473,7 +476,7 @@ private class DeezerAlbumScope(private val api: DeezerApi) {
      * requests differing only in `trackCount` must not reuse each other's selection.
      */
     suspend fun resolveAlbum(request: EnrichmentRequest.ForAlbum): AlbumMatch<DeezerAlbumResult>? {
-        val key = "${request.artist}|${request.title}|${request.trackCount}"
+        val key = SelectionKey(request.artist, request.title, request.trackCount)
         return searchMutex.withLock {
             if (searchResults.containsKey(key)) {
                 searchResults.getValue(key)

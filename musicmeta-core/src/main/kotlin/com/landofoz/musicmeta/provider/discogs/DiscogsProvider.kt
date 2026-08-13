@@ -273,8 +273,11 @@ class DiscogsProvider(
  */
 private class DiscogsAlbumScope(private val api: DiscogsApi) {
 
+    /** Every field [selectRelease] reads, so two requests differing only in one still key distinctly. */
+    private data class SelectionKey(val artist: String, val title: String, val year: Int?)
+
     private val mutex = Mutex()
-    private val releases = mutableMapOf<String, DiscogsAlbumChoice?>()
+    private val releases = mutableMapOf<SelectionKey, DiscogsAlbumChoice?>()
 
     /**
      * The accepted-and-ranked search hit for [request], with its selection evidence, one search per
@@ -282,7 +285,7 @@ private class DiscogsAlbumScope(private val api: DiscogsApi) {
      * `year`, so a request differing only in `year` cannot reuse a stale selection.
      */
     suspend fun resolveRelease(request: EnrichmentRequest.ForAlbum): DiscogsAlbumChoice? {
-        val key = "${request.artist}|${request.title}|${request.year}"
+        val key = SelectionKey(request.artist, request.title, request.year)
         return mutex.withLock {
             if (releases.containsKey(key)) {
                 releases.getValue(key)

@@ -310,8 +310,11 @@ class ITunesProvider(
  */
 private class ITunesAlbumScope(private val api: ITunesApi) {
 
+    /** Every field [selectAlbum] reads, so two requests differing only in one still key distinctly. */
+    private data class SelectionKey(val artist: String, val title: String, val trackCount: Int?, val year: Int?)
+
     private val mutex = Mutex()
-    private val results = mutableMapOf<String, AlbumMatch<ITunesAlbumResult>?>()
+    private val results = mutableMapOf<SelectionKey, AlbumMatch<ITunesAlbumResult>?>()
 
     /**
      * The accepted-and-ranked search hit for [request], with its selection evidence, one search per
@@ -319,7 +322,7 @@ private class ITunesAlbumScope(private val api: ITunesApi) {
      * `trackCount` and `year` — so a request differing only in those cannot reuse a stale selection.
      */
     suspend fun resolveAlbum(request: EnrichmentRequest.ForAlbum): AlbumMatch<ITunesAlbumResult>? {
-        val key = "${request.artist}|${request.title}|${request.trackCount}|${request.year}"
+        val key = SelectionKey(request.artist, request.title, request.trackCount, request.year)
         return mutex.withLock {
             if (results.containsKey(key)) {
                 results.getValue(key)

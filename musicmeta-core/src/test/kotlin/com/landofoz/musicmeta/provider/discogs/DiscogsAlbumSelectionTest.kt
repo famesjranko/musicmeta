@@ -6,9 +6,8 @@ import org.junit.Test
 
 /**
  * Unit coverage for [parseDiscogsRelease]'s boundary search, isolated from the HTTP fixtures in
- * [DiscogsProviderTest] because the defect this guards — stopping at the first artist-plausible
- * boundary instead of the real one — needs an artist that itself contains ` - `, which no
- * provider-level fixture pins directly.
+ * [DiscogsProviderTest] so a boundary-search regression fails here without needing an HTTP fake
+ * and a full `enrich()` round trip to reproduce it.
  */
 class DiscogsAlbumSelectionTest {
 

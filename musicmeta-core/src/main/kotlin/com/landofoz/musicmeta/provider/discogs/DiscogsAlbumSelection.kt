@@ -41,13 +41,17 @@ internal fun parseDiscogsRelease(
 }
 
 /**
- * A release [selectRelease] accepted, with the artist/artist-quality evidence that ranked it —
- * the parsed title is not carried, since nothing downstream of acceptance reads it.
+ * A release [selectRelease] accepted, with the evidence that ranked it: the parsed [artist] and
+ * [title] halves of the combined search field, [artistQuality] from [ArtistMatcher.matchQuality],
+ * and [tier] from [TitleMatcher] — always [TitleMatcher.TitleTier.EXACT], since Discogs acceptance
+ * stops at full-title equivalence and admits no lower tier.
  */
 internal data class DiscogsAlbumChoice(
     val release: DiscogsRelease,
     val artist: String,
+    val title: String,
     val artistQuality: Int,
+    val tier: TitleMatcher.TitleTier,
 )
 
 /**
@@ -66,7 +70,13 @@ internal fun List<DiscogsRelease>.selectRelease(request: EnrichmentRequest.ForAl
         val (artist, title) = parseDiscogsRelease(release.title, request.artist, request.title)
             ?: return@mapNotNull null
         if (!TitleMatcher.equivalent(request.title, title)) return@mapNotNull null
-        DiscogsAlbumChoice(release, artist, ArtistMatcher.matchQuality(request.artist, artist))
+        DiscogsAlbumChoice(
+            release = release,
+            artist = artist,
+            title = title,
+            artistQuality = ArtistMatcher.matchQuality(request.artist, artist),
+            tier = TitleMatcher.TitleTier.EXACT,
+        )
     }.maxWithOrNull(
         compareBy(
             { it.artistQuality },
