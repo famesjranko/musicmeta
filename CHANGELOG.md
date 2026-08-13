@@ -136,6 +136,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A transient on Cover Art Archive's thumbnail/front-image or Discogs's community-rating fetch discarded an already-resolved artwork/metadata answer; both now degrade the optional field instead
 - MusicBrainz artist name search (GENRE/BAND_MEMBERS/ARTIST_DISCOGRAPHY/ARTIST_LINKS) is now memoized per `enrich()` call; an unknown artist cost 7 upstream searches, now 2
 - A track's qualifier-fallback search (`(Remastered)`, `(Deluxe)`, …) now shares the per-call memo the raw search already had, instead of re-running once per type on a miss
+- A canonical identity `NotFound` carrying suggestions no longer vetoes every other provider: an eligible one still runs and can return `BEST_EFFORT` data alongside the top-level suggestions
+- MusicBrainz album/track lookup now recognizes a dash-form reissue suffix (`Starman - 2012 Remaster`) after an exact-title miss, matching the existing conservative bracketed-qualifier fallback
 
 ## [0.11.0] - 2026-07-28
 

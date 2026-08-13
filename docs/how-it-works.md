@@ -46,7 +46,7 @@ enrich(request, types, forceRefresh)
 └─────────────┬────────────────────────────┘
               │ outcomes:
               │   success → merge IDs into request, continue
-              │   suggestions → short-circuit: all types → NotFound
+              │   suggestions → kept at the top level; fan-out still runs (step 4)
               │   not needed → skip (MBID already provided)
               ▼
 ┌────────────────────────────────────────────────────┐
@@ -123,7 +123,7 @@ These identifiers are merged into the request via `request.withIdentifiers(merge
 
 **Cache alias:** a result the engine resolved from an identifier is also written under the name key, so a later name-only lookup finds it. For an identifier-only request that key carries MusicBrainz's canonical name — there is no caller name to alias under, and the canonical one is what a later name lookup would ask with.
 
-**Suggestions short-circuit:** If MusicBrainz can't find an exact match but has near-miss candidates, all uncached types are immediately set to `NotFound` with the suggestion list attached. The consumer can present these as "Did you mean?" choices and re-enrich with the selected candidate.
+**Suggestions do not veto the fan-out:** If MusicBrainz can't find an exact match but has near-miss candidates, that is a statement about MusicBrainz's own lookup, not a global "nothing can be fetched" decision. Every uncached type still resolves through step 4 exactly as it would under a plain unresolved identity — each provider's own `ProviderChain` eligibility (availability, identifier requirements, circuit breaker) decides whether it runs. A `NONE`-identifier provider like Deezer's track preview search still answers; an MBID-only provider without an MBID still doesn't. Surviving `Success` results are stamped `BEST_EFFORT` (step 8). The suggestion list itself is attached once, to `EnrichmentResults.identity`, never copied onto a per-type result — the consumer can present it as "Did you mean?" and re-enrich with the selected candidate.
 
 ### Step 4: Concurrent Type Resolution
 
@@ -192,7 +192,7 @@ Each Success result is stamped with identity resolution metadata:
 | `identityMatch` | Meaning |
 |-----------------|---------|
 | `RESOLVED` | MusicBrainz found a confident match. `identityMatchScore` (0–100) indicates match quality. |
-| `BEST_EFFORT` | Identity resolution searched and found no match. Results came from unverified fuzzy searches. |
+| `BEST_EFFORT` | Identity resolution searched and found no match, with or without suggestions. Results came from unverified fuzzy searches, and are not cached. |
 | `UNVERIFIED` | The identity provider errored (usually transient). Same fuzzy results, but a retry may resolve — and they are not cached. |
 | `null` | Identity resolution wasn't needed (MBID pre-provided, cached, or disabled). |
 
@@ -200,7 +200,12 @@ This lets consumers decide how much to trust results — a `RESOLVED` match with
 
 ### Step 8: Cache Store
 
-Successful results are cached with per-type TTLs:
+No fresh result — success or `NotFound` — is cached for a call whose canonical identity ended
+`BEST_EFFORT`, `SUGGESTIONS`, or `UNVERIFIED`: the entry would read back with `identity == null`,
+losing the ambiguity or outage. A `NotFound` is also never negative-cached when its own chain
+skipped a provider for a missing identifier, resolved identity or not — a provider that was never
+asked cannot speak for "nothing found". Successful results reached under a `RESOLVED` (or
+not-attempted) identity are cached with per-type TTLs:
 - Artwork: 30–90 days (photos 30d, album art 90d)
 - Genres/labels/metadata: 90–365 days
 - Popularity/stats: 7 days

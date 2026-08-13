@@ -351,4 +351,105 @@ class MusicBrainzQualifierFallbackIntegrationTest {
         // Then - NotFound because the candidate's title doesn't match the searched-for one
         assertTrue(result is EnrichmentResult.NotFound)
     }
+
+    // --- Dash-form suffixes ---
+
+    @Test
+    fun `album full dash title in the pool resolves with one query, the stripped title is never requested`() = runTest {
+        // Given - MusicBrainz's own catalogue literally holds the dash-decorated title
+        httpClient.givenJsonResponse(
+            "release%3A%22Starman+%5C-+2012+Remaster%22",
+            """{"releases": [{"id": "rel-literal", "score": 100, "title": "Starman - 2012 Remaster",
+                "artist-credit": [{"artist": {"id": "art1", "name": "David Bowie"}}],
+                "release-group": {"id": "rg-1", "tags": [{"name": "rock", "count": 5}]}}]}""",
+        )
+        val request = EnrichmentRequest.forAlbum("Starman - 2012 Remaster", "David Bowie")
+
+        // When - enriching for genre
+        val result = provider.enrich(request, EnrichmentType.GENRE)
+
+        // Then - resolved from the single exact query; the stripped "Starman" base was never asked
+        assertTrue(result is EnrichmentResult.Success)
+        val success = result as EnrichmentResult.Success
+        assertEquals("rel-literal", success.resolvedIdentifiers?.musicBrainzId)
+        assertEquals(1, httpClient.requestedUrls.count { it.contains("release%3A") })
+    }
+
+    @Test
+    fun `album dash-form miss falls back to the stripped base title match`() = runTest {
+        // Given - the full dash-decorated title search misses (left unstubbed), and the stripped
+        // base title matches an authoritative release
+        httpClient.givenJsonResponse(
+            "release%3A%22Starman%22",
+            """{"releases": [{"id": "rel-base", "score": 100, "title": "Starman",
+                "artist-credit": [{"artist": {"id": "art1", "name": "David Bowie"}}],
+                "release-group": {"id": "rg-1", "tags": [{"name": "rock", "count": 5}]}}]}""",
+        )
+        val request = EnrichmentRequest.forAlbum("Starman - 2012 Remaster", "David Bowie")
+
+        // When - enriching for genre
+        val result = provider.enrich(request, EnrichmentType.GENRE)
+
+        // Then - resolved via the stripped-title fallback
+        assertTrue(result is EnrichmentResult.Success)
+        val success = result as EnrichmentResult.Success
+        assertEquals("rel-base", success.resolvedIdentifiers?.musicBrainzId)
+    }
+
+    @Test
+    fun `album dash-form miss with a wrong-artist stripped-title match stays NotFound`() = runTest {
+        // Given - the stripped-title pool's only hit is credited to a different artist entirely
+        httpClient.givenJsonResponse(
+            "release%3A%22Starman%22",
+            """{"releases": [{"id": "rel-wrong", "score": 100, "title": "Starman",
+                "artist-credit": [{"artist": {"id": "someone-else", "name": "Some Tribute Band"}}],
+                "release-group": {"id": "rg-x", "tags": [{"name": "rock", "count": 5}]}}]}""",
+        )
+        val request = EnrichmentRequest.forAlbum("Starman - 2012 Remaster", "David Bowie")
+
+        // When - enriching for genre
+        val result = provider.enrich(request, EnrichmentType.GENRE)
+
+        // Then - not authoritative, falls through to NotFound rather than a confident wrong match
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `track dash-form qualifier fallback resolves via the stripped base title`() = runTest {
+        // Given - the original dash-decorated recording search comes up empty, and the stripped
+        // "Starman" fallback returns a candidate credited to the requested artist
+        httpClient.givenJsonResponse(
+            "recording%3A%22Starman%22",
+            """{"recordings": [{"id": "rec-studio", "score": 100, "title": "Starman", "length": 261000,
+                "artist-credit": [{"artist": {"id": "art1", "name": "David Bowie"}}]}]}""",
+        )
+        val request = EnrichmentRequest.forTrack("Starman - 2012 Remaster", "David Bowie")
+
+        // When - enriching for track metadata
+        val result = provider.enrich(request, EnrichmentType.TRACK_METADATA)
+
+        // Then - resolved via musicbrainz itself, through the dash-form fallback
+        assertTrue(result is EnrichmentResult.Success)
+        val success = result as EnrichmentResult.Success
+        assertEquals("musicbrainz", success.provider)
+        assertEquals("rec-studio", success.resolvedIdentifiers?.musicBrainzId)
+    }
+
+    @Test
+    fun `track dash-form fallback rejects a stripped-title match from the wrong artist`() = runTest {
+        // Given - a score-100, title-exact recording exists, but it's credited to a different
+        // artist than the request
+        httpClient.givenJsonResponse(
+            "recording%3A%22Starman%22",
+            """{"recordings": [{"id": "rec-cover", "score": 100, "title": "Starman",
+                "artist-credit": [{"artist": {"id": "art9", "name": "Cover Band"}}]}]}""",
+        )
+        val request = EnrichmentRequest.forTrack("Starman - 2012 Remaster", "David Bowie")
+
+        // When - enriching for genre
+        val result = provider.enrich(request, EnrichmentType.GENRE)
+
+        // Then - NotFound because the candidate's credited artist doesn't match
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
 }

@@ -5,6 +5,7 @@ import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
+import com.landofoz.musicmeta.IdentityMatch
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzProvider
@@ -20,15 +21,11 @@ import org.junit.Test
  * What a recording MBID MusicBrainz does not hold may cost a track request: at most the types the
  * identity provider itself answers, and never a provider that did not need the identifier.
  *
- * The engine skips the whole provider fan-out when identity resolution comes back with suggestions
- * ([DefaultEnrichmentEngine]), which is right for a *name* that resolves to nothing — the consumer
- * has to say which entity they meant before anything can be fetched. An identifier that resolves to
- * nothing is a different miss: the title and artist on the request are still perfectly good, and
- * providers with no interest in MusicBrainz ids can answer from them. Suggestions raised on the
- * identifier path would spend every one of those answers, so no identifier path raises them.
- *
- * Pinned at the engine, because neither half is wrong on its own: the short-circuit is correct, and
- * so is offering suggestions for a search that found nothing. Only the two together lose a track.
+ * Canonical identity resolution and provider eligibility are independent facts
+ * ([DefaultEnrichmentEngine]): a dead identifier or an unresolved name both leave the title and
+ * artist on the request perfectly good, and a provider with no interest in MusicBrainz ids answers
+ * from them regardless of which miss it was. Suggestions, when the identity provider offers any,
+ * surface once at the top level alongside whatever the still-eligible providers found.
  */
 class TrackIdentifierMissFanOutTest {
 
@@ -72,7 +69,7 @@ class TrackIdentifierMissFanOutTest {
     }
 
     @Test
-    fun `a title that resolves to nothing still short-circuits, suggestions and all`() = runTest {
+    fun `a title that resolves to nothing still fans out, suggestions reach the top level`() = runTest {
         // Given - a track MusicBrainz has no recording for under that name, so only the fuzzy search
         // (the one asking for three) has near-misses for identity resolution to offer
         httpClient.givenJsonResponse(FUZZY_SEARCH, FUZZY_POOL)
@@ -85,11 +82,13 @@ class TrackIdentifierMissFanOutTest {
             setOf(EnrichmentType.LYRICS_PLAIN),
         )
 
-        // Then - the fan-out is skipped and the suggestions reach the consumer instead. Which entity
-        // was meant is unanswered here, so fetching anything for it would be a guess.
-        val notFound = results.raw[EnrichmentType.LYRICS_PLAIN] as EnrichmentResult.NotFound
-        assertEquals(listOf("rec-live-1"), notFound.suggestions?.map { it.identifiers.musicBrainzId })
-        assertEquals(0, lyrics.enrichCalls.size)
+        // Then - lyrics declares no identifier requirement, so it is independently eligible and
+        // runs best-effort; the suggestions reach the consumer once, at the top level, never copied
+        // onto the per-type result
+        val success = results.raw[EnrichmentType.LYRICS_PLAIN] as EnrichmentResult.Success
+        assertEquals(IdentityMatch.BEST_EFFORT, success.identityMatch)
+        assertEquals(1, lyrics.enrichCalls.size)
+        assertEquals(listOf("rec-live-1"), results.identity?.suggestions?.map { it.identifiers.musicBrainzId })
     }
 
     private companion object {
