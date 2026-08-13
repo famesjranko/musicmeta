@@ -21,6 +21,9 @@ class ServerTest {
     private fun error(type: EnrichmentType) =
         EnrichmentResult.Error(type, "test", "boom", errorKind = ErrorKind.UNKNOWN)
 
+    private fun notFound(type: EnrichmentType) =
+        EnrichmentResult.NotFound(type, "test")
+
     private fun results(raw: Map<EnrichmentType, EnrichmentResult>) =
         EnrichmentResults(raw = raw, requestedTypes = raw.keys, identity = null)
 
@@ -84,6 +87,24 @@ class ServerTest {
         val state = classifyWarmUp(allSuccess, threw = false)
 
         // Then - the state is READY
+        assertEquals(HealthState.READY, state)
+    }
+
+    @Test
+    fun `a warm-up whose every requested type came back NotFound is classified READY`() {
+        // Given - GENRE and ARTIST_BIO both came back as NotFound rather than Success or Error
+        val allNotFound = results(
+            mapOf(
+                EnrichmentType.GENRE to notFound(EnrichmentType.GENRE),
+                EnrichmentType.ARTIST_BIO to notFound(EnrichmentType.ARTIST_BIO),
+            ),
+        )
+
+        // When - classifying with threw false
+        val state = classifyWarmUp(allNotFound, threw = false)
+
+        // Then - the state is READY: a provider was reached and answered, which is what the
+        // round-trip proves, regardless of whether the answer was data or "nothing here"
         assertEquals(HealthState.READY, state)
     }
 
@@ -237,5 +258,41 @@ class ServerTest {
             listOf("musicbrainz", "fanarttv", "custom-thing-2", "custom-thing-1"),
             rows.map { it.id },
         )
+    }
+
+    @Test
+    fun `WARMING maps to 503 with ready false`() {
+        // Given - the WARMING state
+        // When - mapping it to an HTTP response
+        val (status, body) = healthResponseFor(HealthState.WARMING)
+
+        // Then - 503, ready is false, and status echoes WARMING
+        assertEquals(503, status)
+        assertEquals(false, body.ready)
+        assertEquals("WARMING", body.status)
+    }
+
+    @Test
+    fun `READY maps to 200 with ready true`() {
+        // Given - the READY state
+        // When - mapping it to an HTTP response
+        val (status, body) = healthResponseFor(HealthState.READY)
+
+        // Then - 200, ready is true, and status echoes READY
+        assertEquals(200, status)
+        assertEquals(true, body.ready)
+        assertEquals("READY", body.status)
+    }
+
+    @Test
+    fun `DEGRADED maps to 200 with ready true`() {
+        // Given - the DEGRADED state
+        // When - mapping it to an HTTP response
+        val (status, body) = healthResponseFor(HealthState.DEGRADED)
+
+        // Then - 200, ready is true, and status echoes DEGRADED
+        assertEquals(200, status)
+        assertEquals(true, body.ready)
+        assertEquals("DEGRADED", body.status)
     }
 }

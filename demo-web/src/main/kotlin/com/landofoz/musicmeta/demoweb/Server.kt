@@ -62,21 +62,37 @@ internal enum class HealthState { WARMING, READY, DEGRADED }
 private val healthState = AtomicReference(HealthState.WARMING)
 
 @Serializable
-private data class HealthResponse(val ready: Boolean, val status: String)
+internal data class HealthResponse(val ready: Boolean, val status: String)
 
 /**
  * Pure classification of a completed (or failed) warm-up round-trip, kept apart from [warmUp] so
  * it is testable without a thread or a live engine.
  *
- * A `null` [result] with `threw == false` is not reachable through [warmUp] today — the probe
- * either returns a profile or throws — but is classified as [HealthState.DEGRADED] rather than
- * [HealthState.READY] on the same "unproven, don't claim it" grounds as the throwing case: nothing
- * here establishes that a provider actually answered.
+ * `READY` claims only that at least one provider answered — a `NotFound` or `RateLimited` counts,
+ * not just `Success`, because reachability is what the round-trip is for. It is not a claim that
+ * every configured provider works; a specific provider's misconfiguration is the providers panel's
+ * job (see the key-missing rows [buildProviderRows] adds), not health's.
+ *
+ * A `null` [result] with `threw == false` is reachable: [warmUp] only catches `Exception`, so a
+ * `Throwable` that isn't one (an `Error` such as `OutOfMemoryError`) leaves `threw = false` and
+ * `result` unset while still running the `finally` that calls this. Classifying that as
+ * [HealthState.DEGRADED] rather than [HealthState.READY] is what keeps the state from sticking at
+ * `WARMING` forever in that case, on the same "unproven, don't claim it" grounds as the throwing
+ * case: nothing here establishes that a provider actually answered.
  */
 internal fun classifyWarmUp(result: EnrichmentResults?, threw: Boolean): HealthState = when {
     threw || result == null -> HealthState.DEGRADED
     result.raw.values.any { it !is EnrichmentResult.Error } -> HealthState.READY
     else -> HealthState.DEGRADED
+}
+
+/**
+ * Pure HTTP mapping for a [HealthState], kept apart from the `/api/health` handler so the
+ * 503-only-while-`WARMING` contract is testable without standing up a server.
+ */
+internal fun healthResponseFor(state: HealthState): Pair<Int, HealthResponse> {
+    val httpStatus = if (state == HealthState.WARMING) 503 else 200
+    return httpStatus to HealthResponse(ready = state != HealthState.WARMING, status = state.name)
 }
 
 /**
@@ -118,13 +134,12 @@ fun startServer(
     server.createContext("/api/providers") { exchange -> handleProviders(exchange, engineRef.get(), apiKeys) }
     server.createContext("/api/config") { exchange -> handleConfig(exchange, engineRef, cacheModeRef, rebuildEngine) }
     server.createContext("/api/health") { exchange ->
-        val state = healthState.get()
         // WARMING is the one state a hosting platform must not see as up — HTTP 503 keeps it out
         // of rotation until the round-trip completes. READY and DEGRADED both report 200: the
         // process is accepting requests either way, so an uptime probe should not flap on a
-        // provider outage.
-        val httpStatus = if (state == HealthState.WARMING) 503 else 200
-        exchange.respondJson(httpStatus, HealthResponse(ready = state != HealthState.WARMING, status = state.name))
+        // provider outage. See [healthResponseFor].
+        val (httpStatus, body) = healthResponseFor(healthState.get())
+        exchange.respondJson(httpStatus, body)
     }
 
     server.start()

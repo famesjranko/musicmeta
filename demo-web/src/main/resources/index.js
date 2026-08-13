@@ -155,7 +155,7 @@ async function pollHealth() {
       signal: controller.signal,
     });
     // 503 is the still-warming status (see Server.kt's /api/health) and carries the same
-    // parseable JSON body as 200 — only a response the server never sent falls through to catch.
+    // parseable JSON body as 200, so it is handled inline below rather than thrown as a failure.
     if (!response.ok && response.status !== 503) throw new Error('HTTP ' + response.status);
     const data = await response.json();
     if (data.status === 'READY') {
