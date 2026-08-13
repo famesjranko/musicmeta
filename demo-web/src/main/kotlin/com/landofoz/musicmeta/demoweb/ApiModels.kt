@@ -79,6 +79,11 @@ data class SectionItem(
     val previewTitle: String? = null,
     val previewArtist: String? = null,
     val previewAlbum: String? = null,
+    /**
+     * Identifiers the play button echoes back to `/api/preview` alongside [previewTitle]/
+     * [previewArtist]/[previewAlbum]. Absent (the default) is the pre-existing name-only lookup.
+     */
+    val identifiers: WireIdentifiers? = null,
 )
 
 /** An in-app enrichment lookup a click can run — the internal counterpart to [SectionItem.link]. */
@@ -88,6 +93,28 @@ data class EnrichTarget(
     val name: String,
     val artist: String? = null,
     val album: String? = null,
+    /**
+     * Identifiers the row already knows, echoed back to `/api/enrich` on navigation. Absent (the
+     * default) is the pre-existing name-only lookup.
+     */
+    val identifiers: WireIdentifiers? = null,
+)
+
+/**
+ * A row's known identifiers, carried as one query parameter (`ids`, JSON-encoded) rather than one
+ * per namespace — the same shape `/api/preview` and `/api/enrich` both decode.
+ *
+ * [entityKind] is server-validated context, not a client hint: a namespaced id is not always the
+ * same kind of entity (Deezer's id names a track here, but a seed *artist* on an album similarity
+ * lookup), so the server rejects a value that does not match the request it arrived on rather than
+ * guessing. [extra] keys are `IdentifierNamespace.key` values; the server allowlists which ones it
+ * accepts for a given [entityKind] and drops the rest.
+ */
+@Serializable
+data class WireIdentifiers(
+    val entityKind: String,
+    val musicBrainzId: String? = null,
+    val extra: Map<String, String> = emptyMap(),
 )
 
 @Serializable

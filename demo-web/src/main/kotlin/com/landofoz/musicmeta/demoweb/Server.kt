@@ -5,11 +5,13 @@ import com.landofoz.musicmeta.ApiKeyConfig
 import com.landofoz.musicmeta.ArtistProfile
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentEngine
+import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentResults
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
+import com.landofoz.musicmeta.IdentifierNamespace
 import com.landofoz.musicmeta.KeyRequirement
 import com.landofoz.musicmeta.MusicBrainzEntityType
 import com.landofoz.musicmeta.ProviderCatalog
@@ -45,6 +47,57 @@ private val json = Json { encodeDefaults = true }
 
 /** Anchor class purely so [Class.getResourceAsStream] has a classloader to resolve against. */
 private class ResourceAnchor
+
+private const val MAX_IDS_PARAM_LENGTH = 512
+private const val MAX_IDENTIFIER_VALUE_LENGTH = 100
+
+/**
+ * `extra` namespace keys a track-scoped `ids` parameter may carry — `"deezerId"`
+ * ([IdentifierNamespace.DEEZER]'s wire key) only, since it is the one namespaced id this build
+ * threads for a track row. `IdentifierNamespace.key` is internal to musicmeta-core, so the literal
+ * is spelled out here rather than referenced; `EnrichmentIdentifiers.get(IdentifierNamespace.DEEZER)`
+ * is how a provider reads the same key back. Extending this list to a namespace this build does not
+ * otherwise trust for the track it arrived on would let a client pick the cache identity a
+ * `NONE`-identifier-requirement provider was never asked to earn.
+ */
+private val TRACK_EXTRA_NAMESPACE_ALLOWLIST = setOf("deezerId")
+
+/** Thrown by [decodeTrackIdentifiers] for anything that must reach the caller as an HTTP 400. */
+internal class InvalidIdentifiers(message: String) : Exception(message)
+
+/**
+ * Decodes a [SectionItem.identifiers]/[EnrichTarget.identifiers] `ids` query parameter into
+ * [EnrichmentIdentifiers] for a track-scoped request, or null when [raw] is absent — the
+ * pre-existing name-only lookup. Malformed JSON, an oversized parameter or value, a non-`"TRACK"`
+ * [WireIdentifiers.entityKind], or an `extra` key outside [TRACK_EXTRA_NAMESPACE_ALLOWLIST] all
+ * throw [InvalidIdentifiers] — the caller turns that into a 400, never a silent name-only downgrade.
+ */
+internal fun decodeTrackIdentifiers(raw: String?): EnrichmentIdentifiers? {
+    if (raw.isNullOrBlank()) return null
+    if (raw.length > MAX_IDS_PARAM_LENGTH) throw InvalidIdentifiers("ids exceeds the size limit")
+    val wire = try {
+        json.decodeFromString<WireIdentifiers>(raw)
+    } catch (e: Exception) {
+        throw InvalidIdentifiers("ids is malformed: ${e.message}")
+    }
+    if (wire.entityKind != "TRACK") {
+        throw InvalidIdentifiers("ids entityKind ${wire.entityKind} does not match this track request")
+    }
+    val mbid = wire.musicBrainzId?.also {
+        if (it.isBlank() || it.length > MAX_IDENTIFIER_VALUE_LENGTH) {
+            throw InvalidIdentifiers("musicBrainzId is invalid")
+        }
+    }
+    for ((namespaceKey, value) in wire.extra) {
+        if (namespaceKey !in TRACK_EXTRA_NAMESPACE_ALLOWLIST) {
+            throw InvalidIdentifiers("unknown identifier namespace: $namespaceKey")
+        }
+        if (value.isBlank() || value.length > MAX_IDENTIFIER_VALUE_LENGTH) {
+            throw InvalidIdentifiers("$namespaceKey value is invalid")
+        }
+    }
+    return EnrichmentIdentifiers(musicBrainzId = mbid, extra = wire.extra)
+}
 
 /**
  * `WARMING` until one real enrichment round-trip has completed — the JVM's JIT warmup plus each
@@ -200,6 +253,16 @@ private fun handleEnrich(exchange: HttpExchange, engine: EnrichmentEngine) {
             )
             return
         }
+        val identifiers = try {
+            decodeTrackIdentifiers(params["ids"])
+        } catch (e: InvalidIdentifiers) {
+            exchange.respondJson(400, ApiError(e.message ?: "invalid ids"))
+            return
+        }
+        if (identifiers != null && kind != "track") {
+            exchange.respondJson(400, ApiError("ids is only valid for kind=track"))
+            return
+        }
 
         val started = System.currentTimeMillis()
         val response = runBlocking {
@@ -276,13 +339,16 @@ private fun handleEnrich(exchange: HttpExchange, engine: EnrichmentEngine) {
                 else ->
                     coroutineScope {
                         val profileDeferred = async {
-                            engine.trackProfile(name, artist, album, mbid, forceRefresh = forceRefresh)
+                            engine.trackProfile(
+                                name, artist, album, mbid,
+                                identifiers = identifiers, forceRefresh = forceRefresh,
+                            )
                         }
                         val radioDeferred = async { fetchArtistRadioSection(engine, artist) }
                         val profile = profileDeferred.await()
                         val retried = profile.results.retryTransientFailures(
                             engine,
-                            EnrichmentRequest.forTrack(name, artist, album, mbid = mbid),
+                            EnrichmentRequest.forTrack(name, artist, album, mbid = mbid, identifiers = identifiers),
                         )
                         val radio = radioDeferred.await()
                         profile.copy(results = retried)
@@ -519,9 +585,20 @@ private fun handlePreview(exchange: HttpExchange, engine: EnrichmentEngine) {
             exchange.respondJson(400, ApiError("title and artist are required"))
             return
         }
+        val identifiers = try {
+            decodeTrackIdentifiers(params["ids"])
+        } catch (e: InvalidIdentifiers) {
+            exchange.respondJson(400, ApiError(e.message ?: "invalid ids"))
+            return
+        }
 
         val preview = runBlocking {
-            engine.resolveTrackPreviews(listOf(TrackPreviewRequest(title, artist, album))).first().preview
+            val request = if (identifiers != null) {
+                TrackPreviewRequest(title, artist, album, identifiers)
+            } else {
+                TrackPreviewRequest(title, artist, album)
+            }
+            engine.resolveTrackPreviews(listOf(request)).first().preview
         }
         if (preview == null) {
             exchange.respondJson(404, ApiError("No preview available for \"$title\" by $artist"))

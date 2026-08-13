@@ -2,15 +2,39 @@ package com.landofoz.musicmeta.engine
 
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentType
+import com.landofoz.musicmeta.IdentifierNamespace
 
-/** Cache key using MBID when available, falling back to name. */
+/**
+ * Provider ids trusted to name the request's own entity, keyed by the [EnrichmentType] each is
+ * trusted for. [IdentifierNamespace.DEEZER] is polymorphic — `SimilarAlbumsProvider` reads the same
+ * key as a seed *artist* id on an album request — so a (request kind, type) pair absent here falls
+ * back to the name key rather than guessing a scope. Extend per audited tuple, never by namespace
+ * alone.
+ */
+private val TRACK_PROVIDER_IDENTITY: Map<EnrichmentType, IdentifierNamespace> =
+    mapOf(EnrichmentType.TRACK_PREVIEW to IdentifierNamespace.DEEZER)
+
+/** The provider-id part of a cache key for [request]/[type], or null when none is trusted here. */
+private fun providerIdPart(request: EnrichmentRequest, type: EnrichmentType): String? {
+    if (request !is EnrichmentRequest.ForTrack) return null
+    val ns = TRACK_PROVIDER_IDENTITY[type] ?: return null
+    val id = request.identifiers.get(ns) ?: return null
+    return "${ns.name.lowercase()}:$id"
+}
+
+/**
+ * Cache key selected in priority order: the canonical MusicBrainz id, then a provider id trusted
+ * for this exact [type] (see [TRACK_PROVIDER_IDENTITY]), then the bare name.
+ */
 internal fun entityKeyFor(request: EnrichmentRequest, type: EnrichmentType): String {
     val prefix = entityPrefix(request)
-    val id = request.identifiers.musicBrainzId ?: entityNamePart(request)
+    val id = request.identifiers.musicBrainzId
+        ?: providerIdPart(request, type)
+        ?: entityNamePart(request)
     return "$prefix:$id:$type"
 }
 
-/** Cache key using name/title only (no MBID), for cache aliasing after disambiguation. */
+/** Cache key using name/title only (no MBID or provider id), for cache aliasing after disambiguation. */
 internal fun entityKeyForName(request: EnrichmentRequest, type: EnrichmentType): String =
     "${entityPrefix(request)}:${entityNamePart(request)}:$type"
 
