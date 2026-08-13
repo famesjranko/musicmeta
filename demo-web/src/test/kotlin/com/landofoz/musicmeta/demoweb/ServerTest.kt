@@ -128,4 +128,27 @@ class ServerTest {
         // Then - the merged order follows the catalog, not the live registration order
         assertEquals(listOf("musicbrainz", "listenbrainz"), rows.map { it.id })
     }
+
+    @Test
+    fun `a synthesised key-missing row sorts into its own catalog position, and unknown ids sort after in live order`() {
+        // Given - Fanart.tv (mid-catalog, not the tail-most Required entry) is absent with no key
+        // configured; Last.fm and Discogs are absent too but keyed, so neither synthesises a row;
+        // two ids the catalog doesn't know register in reverse order
+        val live = listOf(
+            liveInfo("custom-thing-2", "Custom Thing Two"),
+            liveInfo("musicbrainz", "MusicBrainz"),
+            liveInfo("custom-thing-1", "Custom Thing One"),
+        )
+        val keys = ApiKeyConfig(lastFmKey = "configured", discogsPersonalToken = "configured")
+
+        // When - the live rows are merged with the default-provider catalog
+        val rows = buildProviderRows(live, keys)
+
+        // Then - fanarttv sorts at its own catalog index rather than being appended to the tail, and
+        // the unknown ids sort after every catalog id, keeping their original live relative order
+        assertEquals(
+            listOf("musicbrainz", "fanarttv", "custom-thing-2", "custom-thing-1"),
+            rows.map { it.id },
+        )
+    }
 }

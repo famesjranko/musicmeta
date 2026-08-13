@@ -3,6 +3,8 @@ package com.landofoz.musicmeta.demoweb
 import com.landofoz.musicmeta.ApiKeyConfig
 import com.landofoz.musicmeta.EnrichmentConfig
 import com.landofoz.musicmeta.EnrichmentEngine
+import com.landofoz.musicmeta.KeyRequirement
+import com.landofoz.musicmeta.ProviderCatalog
 import com.landofoz.musicmeta.cache.CacheMode
 import com.landofoz.musicmeta.cache.InMemoryEnrichmentCache
 import java.io.File
@@ -10,14 +12,30 @@ import java.util.concurrent.atomic.AtomicReference
 
 private const val CONTACT = "https://github.com/famesjranko/musicmeta"
 
+/**
+ * Where [main] reads one [ApiKeyConfig] field from — the `secrets.properties` key, then the env var
+ * as fallback — joined to the [ProviderCatalog] id whose `KeyRequirement` selector reads that same
+ * field. The single place these names live: the startup missing-key message reads [envVar] off
+ * whichever entries the catalog's own selector calls missing, rather than re-deriving the list.
+ */
+internal class KeySpec(val catalogId: String, val secretsKey: String, val envVar: String)
+
+internal val KEY_SPECS = listOf(
+    KeySpec("lastfm", "lastfm.apikey", "LASTFM_API_KEY"),
+    KeySpec("fanarttv", "fanarttv.apikey", "FANARTTV_API_KEY"),
+    KeySpec("discogs", "discogs.token", "DISCOGS_TOKEN"),
+    KeySpec("listenbrainz", "listenbrainz.token", "LISTENBRAINZ_TOKEN"),
+)
+
 fun main() {
     val port = env("PORT")?.toIntOrNull() ?: 8099
     val secrets = loadSecrets()
+    val resolved = KEY_SPECS.associate { it.catalogId to (secrets[it.secretsKey] ?: env(it.envVar)) }
     val keys = ApiKeyConfig(
-        lastFmKey = secrets["lastfm.apikey"] ?: env("LASTFM_API_KEY"),
-        fanartTvProjectKey = secrets["fanarttv.apikey"] ?: env("FANARTTV_API_KEY"),
-        discogsPersonalToken = secrets["discogs.token"] ?: env("DISCOGS_TOKEN"),
-        listenBrainzToken = secrets["listenbrainz.token"] ?: env("LISTENBRAINZ_TOKEN"),
+        lastFmKey = resolved["lastfm"],
+        fanartTvProjectKey = resolved["fanarttv"],
+        discogsPersonalToken = resolved["discogs"],
+        listenBrainzToken = resolved["listenbrainz"],
     )
     val cache = InMemoryEnrichmentCache()
 
@@ -57,16 +75,29 @@ fun main() {
     val engineRef = AtomicReference(buildEngine(CacheMode.NETWORK_FIRST))
     val cacheModeRef = AtomicReference(CacheMode.NETWORK_FIRST)
 
-    val missingKeys = listOfNotNull(
-        "LASTFM_API_KEY".takeIf { keys.lastFmKey == null },
-        "FANARTTV_API_KEY".takeIf { keys.fanartTvProjectKey == null },
-        "DISCOGS_TOKEN".takeIf { keys.discogsPersonalToken == null },
-        "LISTENBRAINZ_TOKEN".takeIf { keys.listenBrainzToken == null },
-    )
-    if (missingKeys.isNotEmpty()) {
+    // Missingness reads the catalog's own selector against the built config, not the raw sources —
+    // Required and Optional are different failures. A missing Required key means the provider never
+    // registered at all; a missing Optional token (ListenBrainz) means it registered and answers
+    // everything except artist radio discovery, so lumping it in with "skipped" would be false.
+    val catalogById = ProviderCatalog.entries.associateBy { it.id }
+    val missingRequired = KEY_SPECS.filter { spec ->
+        val requirement = catalogById.getValue(spec.catalogId).keyRequirement
+        requirement is KeyRequirement.Required && requirement.key(keys) == null
+    }.map { it.envVar }
+    val missingOptional = KEY_SPECS.filter { spec ->
+        val requirement = catalogById.getValue(spec.catalogId).keyRequirement
+        requirement is KeyRequirement.Optional && requirement.key(keys) == null
+    }.map { it.envVar }
+    if (missingRequired.isNotEmpty()) {
         println(
-            "No key set for: ${missingKeys.joinToString(", ")} — those providers are skipped. " +
+            "No key set for: ${missingRequired.joinToString(", ")} — those providers are skipped. " +
                 "See secrets.properties / README.",
+        )
+    }
+    if (missingOptional.isNotEmpty()) {
+        println(
+            "No token set for: ${missingOptional.joinToString(", ")} — registered, but artist radio " +
+                "discovery is off. See secrets.properties / README.",
         )
     }
 
