@@ -39,11 +39,19 @@ internal data class ChainResults(
  *
  * [identifierIncomplete] is what a cache write-back checks before treating a chain's `NotFound` as
  * proof nobody had the data: a provider that was never asked cannot speak for the chain.
+ *
+ * [winningRequirement] is the [IdentifierRequirement] the provider that produced this walk's
+ * `Success` declared for the type — provider execution evidence for
+ * [com.landofoz.musicmeta.LookupProvenance]: a requirement is only satisfiable by actually consuming
+ * the identifier it names, so it tells apart a canonical-id lookup from a name search even when the
+ * request also carries identifiers that provider never touched. Null when no provider's `Success`
+ * was captured this way, e.g. [resolveAllWithExecution]'s merged multi-provider walk.
  */
 internal data class ChainExecution(
     val attemptedProviderIds: List<String>,
     val skippedForMissingIdentifier: Map<String, IdentifierRequirement>,
     val skippedForOpenBreaker: List<String>,
+    val winningRequirement: IdentifierRequirement? = null,
 ) {
     val identifierIncomplete: Boolean get() = skippedForMissingIdentifier.isNotEmpty()
 }
@@ -245,15 +253,21 @@ internal class ProviderChain(
         val ledger = WalkLedger()
         var lastFailure: EnrichmentResult? = null
         var success: EnrichmentResult.Success? = null
+        var winningProvider: EnrichmentProvider? = null
 
         for (provider in providers) {
             if (success != null) break
             val step = walkStep(provider, request, identifierOnly, ledger)
-            if (step.success != null) success = step.success
+            if (step.success != null) { success = step.success; winningProvider = provider }
             if (step.failure != null) lastFailure = step.failure
         }
 
-        val execution = ChainExecution(ledger.attempted, ledger.missing, ledger.tripped.map { it.id })
+        val execution = ChainExecution(
+            ledger.attempted,
+            ledger.missing,
+            ledger.tripped.map { it.id },
+            winningRequirement = winningProvider?.let { requirementFor(it) },
+        )
         val outcome = success
             ?: lastFailure
             ?: outageOrNull(ledger.attempted.isNotEmpty(), ledger.tripped)

@@ -7,12 +7,14 @@ import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.IdentifierNamespace
+import com.landofoz.musicmeta.LookupProvenance
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.SimilarTrack
 import com.landofoz.musicmeta.engine.ArtistMatcher
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.engine.ProviderCallScope
+import com.landofoz.musicmeta.engine.trustedProviderIdentifier
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 import kotlinx.coroutines.currentCoroutineContext
@@ -322,7 +324,9 @@ class DeezerProvider(
         val trackRequest = request as? EnrichmentRequest.ForTrack
             ?: return EnrichmentResult.NotFound(EnrichmentType.TRACK_PREVIEW, id)
 
-        val deezerId = request.identifiers.get(IdentifierNamespace.DEEZER)?.toLongOrNull()
+        // The same audited (request kind, type) tuple entityKeyFor trusts as this type's cache-key
+        // identity, so a call that took this branch and the cache key it lands under never disagree.
+        val deezerId = trustedProviderIdentifier(request, EnrichmentType.TRACK_PREVIEW)?.value?.toLongOrNull()
         val trackResult = if (deezerId != null) {
             api.getTrack(deezerId)
         } else {
@@ -344,6 +348,10 @@ class DeezerProvider(
             confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
             resolvedIdentifiers = EnrichmentIdentifiers()
                 .with(IdentifierNamespace.DEEZER, trackResult.id.toString()),
+            // Observed, not inferred: this call took the id branch above (or didn't), regardless of
+            // what other identifiers the request happens to also carry — the engine cannot see that
+            // distinction from the request alone.
+            provenance = if (deezerId != null) LookupProvenance.PROVIDER_NATIVE_ID else null,
         )
     }
 
@@ -370,6 +378,7 @@ class DeezerProvider(
             confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
             resolvedIdentifiers = EnrichmentIdentifiers()
                 .with(IdentifierNamespace.DEEZER, trackResult.id.toString()),
+            provenance = if (deezerId != null) LookupProvenance.PROVIDER_NATIVE_ID else null,
         )
     }
 

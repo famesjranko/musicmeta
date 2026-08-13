@@ -13,6 +13,7 @@ import com.landofoz.musicmeta.EnrichmentResults
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
 import com.landofoz.musicmeta.IdentityResolution
+import com.landofoz.musicmeta.LookupProvenance
 import com.landofoz.musicmeta.MusicBrainzEntityType
 import com.landofoz.musicmeta.ProviderInfo
 import com.landofoz.musicmeta.SearchCandidate
@@ -96,7 +97,7 @@ internal class DefaultEnrichmentEngine(
             // An entry whose genre tags never learned whether they were curated takes the same route
             // for the same reason: see hasUnknownGenreCuration.
             if (cached != null && cached.data.answers(type) && !cached.data.hasUnknownGenreCuration()) {
-                results[type] = cached
+                results[type] = withCacheProvenanceFallback(cached)
                 continue
             }
             // A fresh negative entry answers "providers had nothing" without a re-ask; the read is
@@ -174,7 +175,7 @@ internal class DefaultEnrichmentEngine(
                 results.putAll(resolvedTypes.results)
                 chainExecutions.putAll(resolvedTypes.executions)
                 applyCatalogFiltering(results, config.catalogProvider, config.catalogFilterMode)
-                stampProvenance(enrichedRequest, results, resolution.status)
+                stampProvenance(results, resolution.status, chainExecutions)
                 true
             }
         } ?: false
@@ -710,6 +711,15 @@ internal class DefaultEnrichmentEngine(
             result
         }
 
+    /**
+     * A cache hit reports [LookupProvenance.CACHE] instead of `null` when the [EnrichmentCache]
+     * implementation that served it did not preserve the original live lookup's route — never
+     * `null`, or a consumer reading absence as confident inherits the same hole [CanonicalStatus]
+     * closed for canonical resolution.
+     */
+    private fun withCacheProvenanceFallback(result: EnrichmentResult.Success): EnrichmentResult.Success =
+        if (result.provenance == null) result.copy(provenance = LookupProvenance.CACHE) else result
+
     private suspend fun applyStaleCache(
         request: EnrichmentRequest,
         results: MutableMap<EnrichmentType, EnrichmentResult>,
@@ -724,7 +734,7 @@ internal class DefaultEnrichmentEngine(
                 // A stale entry that answers nothing is worse than the Error it would replace:
                 // the Error at least tells the consumer to retry.
                 if (stale != null && stale.data.answers(type)) {
-                    results[type] = stale.copy(isStale = true)
+                    results[type] = withCacheProvenanceFallback(stale).copy(isStale = true)
                 }
             }
         }

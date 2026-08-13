@@ -20,8 +20,11 @@ interface EnrichmentCache {
     /**
      * [canonicalStatus] is the call's [IdentityResolution.status] that made [result] eligible to
      * cache — [EnrichmentEngine.enrich] only calls this for a status the cache may serve back with
-     * no loss of confidence. A hit later replays it verbatim; it must never be reported as
-     * [CanonicalStatus.RESOLVED] merely because the entry is present.
+     * no loss of confidence. [EnrichmentResult.Success.provenance] on [result] is what a hit later
+     * replays; [canonicalStatus] itself is accepted for an implementation to persist (for audit or
+     * a future read path) but is not returned by [get] today, so a hit's own top-level status is
+     * reported as [CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT] — never [CanonicalStatus.RESOLVED]
+     * merely because the entry is present.
      */
     suspend fun put(
         entityKey: String,

@@ -45,12 +45,11 @@ abstract class EnrichmentCacheDatabase : RoomDatabase() {
         }
 
         /**
-         * `identity_match`/`identity_match_score` named a different fact before this release —
-         * a stored value cannot be reinterpreted as [com.landofoz.musicmeta.LookupProvenance] or
-         * [com.landofoz.musicmeta.CanonicalStatus], so this migration drops and recreates both
-         * tables rather than attempting a column-level rewrite. Every pre-upgrade entry is a cache
-         * miss afterward, healed the same way any other miss is: the next `enrich()` call refetches
-         * it live.
+         * `identity_match`/`identity_match_score` name a fact no stored value can be reinterpreted
+         * as [com.landofoz.musicmeta.LookupProvenance] or [com.landofoz.musicmeta.CanonicalStatus],
+         * so this migration drops and recreates both tables rather than attempting a column-level
+         * rewrite. Every pre-upgrade entry is a cache miss afterward, healed the same way any other
+         * miss is: the next `enrich()` call refetches it live.
          */
         val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(db: SupportSQLiteDatabase) {

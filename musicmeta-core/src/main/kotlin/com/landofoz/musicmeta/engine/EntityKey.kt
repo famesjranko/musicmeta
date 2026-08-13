@@ -4,7 +4,24 @@ import com.landofoz.musicmeta.CanonicalStatus
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.IdentifierNamespace
+import com.landofoz.musicmeta.IdentifierRequirement
 import com.landofoz.musicmeta.LookupProvenance
+
+/** The kind of entity a [ScopedProviderIdentifier]'s value names. */
+internal enum class EntityScope { ARTIST, ALBUM, TRACK }
+
+/**
+ * A provider-native identifier paired with the entity kind it names. A bare
+ * [IdentifierNamespace]/value pair cannot say that on its own — [IdentifierNamespace.DEEZER] is
+ * polymorphic, and `SimilarAlbumsProvider` reads the same namespace as a seed *artist* id on an
+ * album request — so a reader that is about to trust a namespace value as naming one particular
+ * entity carries this instead.
+ */
+internal data class ScopedProviderIdentifier(
+    val namespace: IdentifierNamespace,
+    val scope: EntityScope,
+    val value: String,
+)
 
 /**
  * Provider ids trusted to name the request's own entity, keyed by the [EnrichmentType] each is
@@ -16,13 +33,22 @@ import com.landofoz.musicmeta.LookupProvenance
 private val TRACK_PROVIDER_IDENTITY: Map<EnrichmentType, IdentifierNamespace> =
     mapOf(EnrichmentType.TRACK_PREVIEW to IdentifierNamespace.DEEZER)
 
-/** The provider-id part of a cache key for [request]/[type], or null when none is trusted here. */
-private fun providerIdPart(request: EnrichmentRequest, type: EnrichmentType): String? {
+/**
+ * The provider-native identifier this exact [type] lookup for [request] is trusted to use, or null
+ * — the same audited tuple [entityKeyFor]'s provider-id tier keys on. Exposed so a provider
+ * reporting its own [LookupProvenance] evidence reads the same trusted scope instead of re-deriving
+ * one from a bare namespace lookup.
+ */
+internal fun trustedProviderIdentifier(request: EnrichmentRequest, type: EnrichmentType): ScopedProviderIdentifier? {
     if (request !is EnrichmentRequest.ForTrack) return null
     val ns = TRACK_PROVIDER_IDENTITY[type] ?: return null
     val id = request.identifiers.get(ns) ?: return null
-    return "${ns.name.lowercase()}:$id"
+    return ScopedProviderIdentifier(ns, EntityScope.TRACK, id)
 }
+
+/** The provider-id part of a cache key for [request]/[type], or null when none is trusted here. */
+private fun providerIdPart(request: EnrichmentRequest, type: EnrichmentType): String? =
+    trustedProviderIdentifier(request, type)?.let { "${it.namespace.name.lowercase()}:${it.value}" }
 
 /**
  * Cache key selected in priority order: the canonical MusicBrainz id, then a provider id trusted
@@ -41,19 +67,33 @@ internal fun entityKeyForName(request: EnrichmentRequest, type: EnrichmentType):
     "${entityPrefix(request)}:${entityNamePart(request)}:$type"
 
 /**
- * Which of [entityKeyFor]'s priority tiers a live [type] lookup for [request] used — the same
- * priority order, so a result's [LookupProvenance] never disagrees with the key it was cached
- * under. Name-tier results still need [canonicalStatus] to tell an exact hit from a fuzzy guess.
+ * [LookupProvenance] for a [type] result that did not report its own route, from what the winning
+ * provider's chain walk actually required to run it — never from which identifiers merely happen to
+ * be present on the request, which a provider that used none of them may still have satisfied by
+ * coincidence. [winningRequirement] is [ChainExecution.winningRequirement]: null when no single
+ * provider's `Success` was captured this way, e.g. a merged multi-provider result. [stampProvenance]
+ * only reaches this function for a `null` [EnrichmentResult.Success.provenance] — a provider that
+ * sets its own route on the `Success` it returns is trusted verbatim and never reaches here.
+ *
+ * A provider whose declared requirement demands *some* MusicBrainz-issued id ([IdentifierRequirement.MUSICBRAINZ_ID],
+ * [IdentifierRequirement.MUSICBRAINZ_RELEASE_GROUP_ID]) could only have run by consuming one, so that
+ * is [LookupProvenance.CANONICAL_ID] — observed, not inferred. A requirement naming a provider's own
+ * id space ([IdentifierRequirement.WIKIDATA_ID], [IdentifierRequirement.WIKIPEDIA_TITLE],
+ * [IdentifierRequirement.ANY_IDENTIFIER]) is [LookupProvenance.PROVIDER_NATIVE_ID] on the same basis.
+ * [IdentifierRequirement.NONE] and a missing [winningRequirement] both mean the route cannot be
+ * decided from what running required; only [canonicalStatus] — MusicBrainz's canonical confirmation
+ * of this call — is left to tell an exact name match from an unverified guess.
  */
-internal fun keyedProvenance(
-    request: EnrichmentRequest,
-    type: EnrichmentType,
+internal fun observedProvenance(
+    winningRequirement: IdentifierRequirement?,
     canonicalStatus: CanonicalStatus,
-): LookupProvenance = when {
-    request.identifiers.musicBrainzId != null -> LookupProvenance.CANONICAL_ID
-    providerIdPart(request, type) != null -> LookupProvenance.PROVIDER_NATIVE_ID
-    canonicalStatus == CanonicalStatus.RESOLVED -> LookupProvenance.EXACT_NAME
-    else -> LookupProvenance.FUZZY_NAME
+): LookupProvenance = when (winningRequirement) {
+    IdentifierRequirement.MUSICBRAINZ_ID, IdentifierRequirement.MUSICBRAINZ_RELEASE_GROUP_ID ->
+        LookupProvenance.CANONICAL_ID
+    IdentifierRequirement.WIKIDATA_ID, IdentifierRequirement.WIKIPEDIA_TITLE, IdentifierRequirement.ANY_IDENTIFIER ->
+        LookupProvenance.PROVIDER_NATIVE_ID
+    IdentifierRequirement.NONE, null ->
+        if (canonicalStatus == CanonicalStatus.RESOLVED) LookupProvenance.EXACT_NAME else LookupProvenance.FUZZY_NAME
 }
 
 /**
