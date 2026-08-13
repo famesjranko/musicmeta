@@ -505,14 +505,22 @@ private fun handleProviders(exchange: HttpExchange, engine: EnrichmentEngine, ap
 
 /**
  * Merges live provider rows with [ProviderCatalog.entries]: a live [ProviderInfo] stays the
- * authority for anything registered, and a `Required` catalog entry absent from [live] gets a
- * catalog-only row (`keyStatus = "KEY_MISSING"`) instead of silently vanishing from the table. A
- * live `Optional` entry (ListenBrainz) is always present already; it gets `"TOKEN_MISSING"` when
- * its token selector reads null. A `None` entry absent from [live] is not synthesised — it isn't
+ * authority for anything registered, and a `Required` catalog entry absent from [live] whose own
+ * selector reads null against [apiKeys] gets a catalog-only row (`keyStatus = "KEY_MISSING"`)
+ * instead of silently vanishing from the table. Absence alone is not read as "key missing" — an
+ * absent entry whose selector reads non-null (a future build that filters providers for some other
+ * reason, or a registration failure) gets no row rather than a wrong claim about why it is gone. A
+ * live `Optional` entry (ListenBrainz) is always present already; it gets `"TOKEN_MISSING"` when its
+ * token selector reads null. A `None` entry absent from [live] is not synthesised — it isn't
  * key-gated, so its absence is a registration bug, not a key state this endpoint has an opinion on.
+ *
+ * The result is ordered by [ProviderCatalog.entries]'s own order, so the table reads the same
+ * regardless of which ids happened to register; any live id the catalog doesn't know keeps its
+ * original position relative to the other such ids, after every catalog id.
  */
 internal fun buildProviderRows(live: List<ProviderInfo>, apiKeys: ApiKeyConfig): List<ProviderRow> {
     val catalogById = ProviderCatalog.entries.associateBy { it.id }
+    val catalogOrder = ProviderCatalog.entries.withIndex().associate { (index, entry) -> entry.id to index }
     val liveIds = live.mapTo(mutableSetOf()) { it.id }
 
     val liveRows = live.map { info ->
@@ -532,8 +540,10 @@ internal fun buildProviderRows(live: List<ProviderInfo>, apiKeys: ApiKeyConfig):
     }
 
     val missingRows = ProviderCatalog.entries
-        .filter { it.id !in liveIds && it.keyRequirement is KeyRequirement.Required }
-        .map { entry ->
+        .filter { it.id !in liveIds }
+        .mapNotNull { entry ->
+            val requirement = entry.keyRequirement as? KeyRequirement.Required ?: return@mapNotNull null
+            if (requirement.key(apiKeys) != null) return@mapNotNull null
             ProviderRow(
                 id = entry.id,
                 displayName = entry.displayName,
@@ -544,7 +554,7 @@ internal fun buildProviderRows(live: List<ProviderInfo>, apiKeys: ApiKeyConfig):
             )
         }
 
-    return liveRows + missingRows
+    return (liveRows + missingRows).sortedWith(compareBy(nullsLast<Int>()) { catalogOrder[it.id] })
 }
 
 private fun policyRow(id: String): PolicyRow? = ProviderPolicies.all[id]?.let { policy ->

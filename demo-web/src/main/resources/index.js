@@ -830,11 +830,14 @@ function providerRowHtml(provider) {
   const skipped = provider.keyStatus === 'KEY_MISSING';
   const availability = skipped ? 'skipped' : provider.available ? 'available' : 'unavailable';
   const policy = provider.policy;
+  // A catalog-only row's capabilities are always empty — this instance never registered it, so "0"
+  // would read as "offers nothing" rather than "not applicable, never asked".
+  const types = skipped ? '—' : provider.capabilities.length;
   return `<tr>
       <td><span class="pdot${provider.available ? '' : ' off'}" aria-hidden="true"></span>${esc(provider.displayName)}
         <span class="secondary">${availability}</span></td>
       <td>${keyStateHtml(provider)}</td>
-      <td>${provider.capabilities.length}</td>
+      <td>${types}</td>
       <td>${policy ? esc(humanizeEnum(policy.commercialUse)) : 'Not recorded'}</td>
       <td>${policy && policy.dataLicence ? esc(policy.dataLicence) : 'Not recorded'}</td>
     </tr>`;
@@ -850,7 +853,10 @@ function renderProviders(providers) {
       <tbody>${providers.map(providerRowHtml).join('')}</tbody>
     </table>`;
 
+  // A KEY_MISSING row was never callable, so it never used anything to attribute — index.html's
+  // "every notice this demo could owe" only covers a provider a request could actually reach.
   const notices = providers
+    .filter((p) => p.keyStatus !== 'KEY_MISSING')
     .filter((p) => p.policy && ATTRIBUTION_OWED.includes(p.policy.attribution) && p.policy.attributionNotice)
     .map((p) => p.policy.attributionNotice);
   if (notices.length === 0) return;
