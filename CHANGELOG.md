@@ -84,6 +84,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Wikipedia `ARTIST_PHOTO` now carries the largest rendered thumbnail and every scale in `sizes`, not the original file: `height` is null, since the media route states none
 - iTunes album resolution now does a `lookup?upc=` identity match when a barcode is known, replacing the fuzzy search — a barcode Apple doesn't carry is `NotFound`, not a search fallback
 - `build()` warns from the User-Agent the wire will carry: the contactless default meeting MusicBrainz/Wikipedia/Wikidata, `contact()` after `withDefaultProviders()`, or `contact()` with your client
+- `TRACK_PREVIEW` cache identity now uses a request's Deezer track id when present, isolated from the bare-name key, so it no longer shares an entry with an ambiguous name-only search
 
 ### Fixed
 - Remove any retrying OkHttp interceptor: it cannot see the enrich deadline, so its retries are unbudgeted and now stack on the ladder

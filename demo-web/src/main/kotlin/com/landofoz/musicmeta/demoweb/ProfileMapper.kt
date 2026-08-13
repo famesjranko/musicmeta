@@ -42,6 +42,7 @@ fun ArtistProfile.toDemoResponse(elapsedMs: Long): DemoResponse {
         }
         section("top_tracks", "Top Tracks") {
             r.topTracks()?.tracks?.sortedBy { it.rank }?.map {
+                val ids = it.identifiers.toWireIdentifiers()
                 SectionItem(
                     primary = it.title,
                     secondary = it.album,
@@ -49,7 +50,8 @@ fun ArtistProfile.toDemoResponse(elapsedMs: Long): DemoResponse {
                     previewTitle = it.title,
                     previewArtist = name,
                     previewAlbum = it.album,
-                    enrich = trackEnrich(it.title, name, it.album),
+                    identifiers = ids,
+                    enrich = trackEnrich(it.title, name, it.album, ids),
                 )
             }
         }
@@ -481,9 +483,26 @@ private fun artistEnrich(name: String): EnrichTarget? =
 private fun albumEnrich(title: String, artist: String): EnrichTarget? =
     if (title.isNotBlank() && artist.isNotBlank()) EnrichTarget("album", title, artist = artist) else null
 
-private fun trackEnrich(title: String, artist: String, album: String? = null): EnrichTarget? =
-    if (title.isNotBlank() &&
-        artist.isNotBlank()) EnrichTarget("track", title, artist = artist, album = album) else null
+private fun trackEnrich(
+    title: String,
+    artist: String,
+    album: String? = null,
+    identifiers: WireIdentifiers? = null,
+): EnrichTarget? =
+    if (title.isNotBlank() && artist.isNotBlank()) {
+        EnrichTarget("track", title, artist = artist, album = album, identifiers = identifiers)
+    } else {
+        null
+    }
+
+/**
+ * [EnrichmentIdentifiers] as the wire shape a track row echoes to `/api/preview` and `/api/enrich`
+ * — null when it carries nothing, so an identifier-less row serializes exactly as it did before this
+ * field existed.
+ */
+private fun EnrichmentIdentifiers.toWireIdentifiers(): WireIdentifiers? =
+    if (musicBrainzId == null && extra.isEmpty()) null
+    else WireIdentifiers(entityKind = "TRACK", musicBrainzId = musicBrainzId, extra = extra)
 
 /** One or more consecutive `[mm:ss.xx]`-style LRC timing tags anchored to the start of a line. */
 private val LRC_TIMESTAMP_PREFIX = Regex("""^(?:\[\d{1,2}:\d{2}(?:\.\d{1,3})?\]\s*)+""")

@@ -184,7 +184,10 @@ pollHealth();
 
 // Fills the form and runs a search — shared by the "Try:" buttons and by clicking an
 // internal-navigation target (SectionItem.enrich / SummaryCard.subtitleEnrich) elsewhere on the page.
-function fillAndRun(kind, name, artist, album) {
+// `ids` is the row's encoded WireIdentifiers, when it carried one — threading it means running
+// the exact lookup a precise row already knows rather than the ambiguous name/artist search the
+// form fields alone would produce, so it bypasses the form and goes straight to a `pick`-style run.
+function fillAndRun(kind, name, artist, album, ids) {
   currentKind = kind;
   nameEl.value = name || '';
   artistEl.value = artist || '';
@@ -192,7 +195,11 @@ function fillAndRun(kind, name, artist, album) {
   saveValues(currentKind);
   syncArtistField();
   clearCandidates();
-  runQuery();
+  if (ids) {
+    runQuery(false, false, { kind, name, artist: artist || '', album: album || '', ids });
+  } else {
+    runQuery();
+  }
 }
 
 document.getElementById('examples').addEventListener('click', (e) => {
@@ -231,12 +238,12 @@ async function runQuery(refresh, replay, pick) {
     return;
   }
 
-  let kind, name, artist, album;
+  let kind, name, artist, album, ids;
   if (refresh || replay) {
     if (!lastQuery) return;
-    ({ kind, name, artist, album } = lastQuery);
+    ({ kind, name, artist, album, ids } = lastQuery);
   } else if (pick) {
-    ({ kind, name, artist = '', album = '' } = pick);
+    ({ kind, name, artist = '', album = '', ids } = pick);
   } else {
     kind = currentKind;
     name = nameEl.value.trim();
@@ -258,12 +265,13 @@ async function runQuery(refresh, replay, pick) {
   resultEl.innerHTML = '<div class="loading-panel"><span class="spinner"></span>Calling providers — this can take a few seconds…</div>';
 
   const params = new URLSearchParams({ kind, name, artist, album });
+  if (ids) params.set('ids', ids);
   if (refresh) params.set('refresh', 'true');
   try {
     const res = await fetch('/api/enrich?' + params.toString());
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
-    lastQuery = { kind, name, artist, album };
+    lastQuery = { kind, name, artist, album, ids };
     render(data, !!refresh);
   } catch (err) {
     statusEl.className = 'err';
@@ -538,12 +546,13 @@ function setupTextToggle() {
   }
 }
 
-// Data-attributes carrying an EnrichTarget (kind/name/artist/album) for the click-delegation
-// handler below. Every value goes through esc() like any other interpolated field.
+// Data-attributes carrying an EnrichTarget (kind/name/artist/album/identifiers) for the
+// click-delegation handler below. Every value goes through esc() like any other interpolated field.
 function enrichAttrs(enrich) {
   if (!enrich) return '';
+  const idsAttr = enrich.identifiers ? ` data-enrich-ids="${esc(JSON.stringify(enrich.identifiers))}"` : '';
   return ` data-enrich-kind="${esc(enrich.kind)}" data-enrich-name="${esc(enrich.name)}"` +
-    ` data-enrich-artist="${esc(enrich.artist || '')}" data-enrich-album="${esc(enrich.album || '')}"`;
+    ` data-enrich-artist="${esc(enrich.artist || '')}" data-enrich-album="${esc(enrich.album || '')}"` + idsAttr;
 }
 
 function sectionHtml(section, unverified) {
@@ -554,7 +563,7 @@ function sectionHtml(section, unverified) {
       : it.enrich
         ? `<span class="enrich-link">${esc(it.primary)}</span>`
         : esc(it.primary);
-    const preview = previewButtonHtml(it.previewTitle, it.previewArtist, it.previewAlbum);
+    const preview = previewButtonHtml(it.previewTitle, it.previewArtist, it.previewAlbum, it.identifiers);
     return `
       <li class="${rowClass.trim()}"${enrichAttrs(it.enrich)}>
         ${it.imageUrl ? `<img src="${esc(it.imageUrl)}" alt="" onerror="this.remove()" />` : ''}
@@ -618,9 +627,10 @@ window.addEventListener('resize', () => {
   resizeTimer = setTimeout(setupSectionToggles, 150);
 });
 
-function previewButtonHtml(title, artist, album) {
+function previewButtonHtml(title, artist, album, identifiers) {
   if (!title || !artist) return '';
-  return `<button type="button" class="preview-btn" data-title="${esc(title)}" data-artist="${esc(artist)}" data-album="${esc(album || '')}" title="Play 30s preview">&#9654;</button>`;
+  const idsAttr = identifiers ? ` data-ids="${esc(JSON.stringify(identifiers))}"` : '';
+  return `<button type="button" class="preview-btn" data-title="${esc(title)}" data-artist="${esc(artist)}" data-album="${esc(album || '')}"${idsAttr} title="Play 30s preview">&#9654;</button>`;
 }
 
 // --- Unverified-identity retry (manual only — see the banner comment in render()) ---
@@ -645,10 +655,13 @@ resultEl.addEventListener('click', async (e) => {
   if (!btn || !lastQuery) return;
   btn.disabled = true;
   try {
+    // InvalidateRequest has no `ids` field, so only the fields it actually declares go in the
+    // body — not the rest of lastQuery, which now also carries `ids` on an identifier-bearing row.
+    const { kind, name, artist, album } = lastQuery;
     const res = await fetch('/api/invalidate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(lastQuery),
+      body: JSON.stringify({ kind, name, artist, album }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
@@ -704,7 +717,10 @@ resultEl.addEventListener('click', (e) => {
   if (e.target.closest('a, .preview-btn, .show-more')) return;
   const target = e.target.closest('[data-enrich-kind]');
   if (!target) return;
-  fillAndRun(target.dataset.enrichKind, target.dataset.enrichName, target.dataset.enrichArtist, target.dataset.enrichAlbum);
+  fillAndRun(
+    target.dataset.enrichKind, target.dataset.enrichName, target.dataset.enrichArtist,
+    target.dataset.enrichAlbum, target.dataset.enrichIds,
+  );
 });
 
 // --- Artwork lightbox ---
@@ -784,6 +800,7 @@ resultEl.addEventListener('click', async (e) => {
     artist: btn.dataset.artist,
     album: btn.dataset.album || '',
   });
+  if (btn.dataset.ids) params.set('ids', btn.dataset.ids);
   try {
     const res = await fetch('/api/preview?' + params.toString());
     const data = await res.json();

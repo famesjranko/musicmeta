@@ -793,11 +793,13 @@ class DeezerProviderTest {
         // When - enriching for track preview
         val result = provider.enrich(request, EnrichmentType.TRACK_PREVIEW)
 
-        // Then - success without a search/track call
+        // Then - success, fetched by direct GET /track/{id} with no search request made at all
         assertTrue(result is EnrichmentResult.Success)
         val preview = (result as EnrichmentResult.Success).data as EnrichmentData.TrackPreview
         assertEquals("https://cdns-preview.dzcdn.net/stream/abc123.mp3", preview.url)
         val urls = httpClient.requestedUrls
+        assertEquals(1, urls.size)
+        assertTrue("Should call GET /track/789", urls.single().contains("track/789"))
         assertTrue("Should not call search endpoint", urls.none { it.contains("search/track") })
     }
 

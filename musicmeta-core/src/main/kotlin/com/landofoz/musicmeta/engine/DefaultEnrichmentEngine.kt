@@ -206,6 +206,10 @@ internal class DefaultEnrichmentEngine(
      * under exactly the same keys a Success would, and `cacheKeysFor`/`invalidateKeys` clear it for
      * free. A request that named no entity has no caller name to alias under, so it takes
      * MusicBrainz's canonical one — the same name a later name-only lookup would ask with.
+     *
+     * Never fires when [entityKeyFor] already picked a provider id for [request]/[type]: that
+     * result is scoped to the entity the id proved, and the bare name is ambiguous by definition —
+     * aliasing it there would hand a different, same-named entity someone else's precise answer.
      */
     private fun aliasKeyFor(
         request: EnrichmentRequest,
@@ -214,7 +218,8 @@ internal class DefaultEnrichmentEngine(
         type: EnrichmentType,
     ): String? = when {
         namesNoEntity(request) && !namesNoEntity(resolvedRequest) -> entityKeyForName(resolvedRequest, type)
-        resolvedMbid != null && request.identifiers.musicBrainzId == null -> entityKeyForName(request, type)
+        resolvedMbid != null && request.identifiers.musicBrainzId == null &&
+            entityKeyFor(request, type) == entityKeyForName(request, type) -> entityKeyForName(request, type)
         else -> null
     }
 
@@ -347,13 +352,16 @@ internal class DefaultEnrichmentEngine(
         }
     }
 
-    /** The primary key, plus the name-alias key when the request carries an MBID. */
-    private fun cacheKeysFor(request: EnrichmentRequest, type: EnrichmentType): List<String> =
-        if (request.identifiers.musicBrainzId != null) {
-            listOf(entityKeyFor(request, type), entityKeyForName(request, type))
-        } else {
-            listOf(entityKeyFor(request, type))
-        }
+    /**
+     * The primary key, plus the name-alias key whenever [entityKeyFor] picked something other than
+     * the bare name (an MBID or a trusted provider id) — an entry may exist under either, written
+     * before that identity was known.
+     */
+    private fun cacheKeysFor(request: EnrichmentRequest, type: EnrichmentType): List<String> {
+        val primary = entityKeyFor(request, type)
+        val nameKey = entityKeyForName(request, type)
+        return if (primary != nameKey) listOf(primary, nameKey) else listOf(primary)
+    }
 
     /** Invalidates the primary key and both name-alias keys — the caller's and the canonical one. */
     private suspend fun invalidateKeys(
