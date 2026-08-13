@@ -503,7 +503,11 @@ private fun trackEnrich(
 private fun EnrichmentIdentifiers.toWireIdentifiers(): WireIdentifiers? {
     val deezerTrackId = get(IdentifierNamespace.DEEZER)
     if (musicBrainzId == null && deezerTrackId == null) return null
-    return WireIdentifiers(entityKind = WireEntityKind.TRACK, musicBrainzId = musicBrainzId, deezerTrackId = deezerTrackId)
+    return WireIdentifiers(
+        entityKind = WireEntityKind.TRACK,
+        musicBrainzId = musicBrainzId,
+        deezerTrackId = deezerTrackId,
+    )
 }
 
 /** One or more consecutive `[mm:ss.xx]`-style LRC timing tags anchored to the start of a line. */
