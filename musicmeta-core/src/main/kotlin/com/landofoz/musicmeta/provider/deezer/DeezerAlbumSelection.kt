@@ -2,6 +2,7 @@ package com.landofoz.musicmeta.provider.deezer
 
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.engine.AlbumMatch
+import com.landofoz.musicmeta.engine.AlbumTieBreak
 import com.landofoz.musicmeta.engine.TitleMatcher
 import com.landofoz.musicmeta.engine.acceptAndRankAlbum
 
@@ -38,5 +39,5 @@ internal fun List<DeezerAlbumResult>.selectAlbum(request: EnrichmentRequest.ForA
         requestedArtist = request.artist,
         artistNameOf = { it.artistName },
         titleTierOf = { deezerAlbumTitleTier(request.title, it.title) },
-        "trackCount" to { request.trackCount != null && it.nbTracks == request.trackCount },
+        AlbumTieBreak("trackCount") { request.trackCount != null && it.nbTracks == request.trackCount },
     )

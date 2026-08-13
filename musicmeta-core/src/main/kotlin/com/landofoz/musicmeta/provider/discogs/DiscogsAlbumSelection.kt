@@ -1,7 +1,9 @@
 package com.landofoz.musicmeta.provider.discogs
 
 import com.landofoz.musicmeta.EnrichmentRequest
+import com.landofoz.musicmeta.engine.AlbumEvidence
 import com.landofoz.musicmeta.engine.ArtistMatcher
+import com.landofoz.musicmeta.engine.TieBreakEvidence
 import com.landofoz.musicmeta.engine.TitleMatcher
 
 /**
@@ -52,6 +54,7 @@ internal data class DiscogsAlbumChoice(
     val title: String,
     val artistQuality: Int,
     val tier: TitleMatcher.TitleTier,
+    val tieBreaks: AlbumEvidence,
 )
 
 /**
@@ -76,10 +79,13 @@ internal fun List<DiscogsRelease>.selectRelease(request: EnrichmentRequest.ForAl
             title = title,
             artistQuality = ArtistMatcher.matchQuality(request.artist, artist),
             tier = TitleMatcher.TitleTier.EXACT,
+            tieBreaks = AlbumEvidence.of(
+                listOf(TieBreakEvidence("year", request.year != null && release.year == request.year.toString())),
+            ),
         )
     }.maxWithOrNull(
         compareBy(
             { it.artistQuality },
-            { request.year != null && it.release.year == request.year.toString() },
+            { it.tieBreaks["year"] },
         ),
     )

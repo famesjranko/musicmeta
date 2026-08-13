@@ -1,5 +1,7 @@
 package com.landofoz.musicmeta.provider.deezer
 
+import com.landofoz.musicmeta.CanonicalStatus
+import com.landofoz.musicmeta.EnrichmentConfig
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentRequest
@@ -7,9 +9,18 @@ import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
 import com.landofoz.musicmeta.LookupProvenance
+import com.landofoz.musicmeta.ProviderCapability
+import com.landofoz.musicmeta.SearchCandidate
+import com.landofoz.musicmeta.engine.ArtistMatcher
+import com.landofoz.musicmeta.engine.DefaultEnrichmentEngine
 import com.landofoz.musicmeta.engine.ProviderCallScope
+import com.landofoz.musicmeta.engine.ProviderRegistry
+import com.landofoz.musicmeta.engine.TitleMatcher
 import com.landofoz.musicmeta.http.RateLimiter
+import com.landofoz.musicmeta.testutil.CancellingOnceHttpClient
+import com.landofoz.musicmeta.testutil.FakeEnrichmentCache
 import com.landofoz.musicmeta.testutil.FakeHttpClient
+import com.landofoz.musicmeta.testutil.FakeProvider
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -1122,8 +1133,8 @@ class DeezerProviderTest {
     }
 
     @Test
-    fun `enrich resolves two requests separately when their artist and title halves would collide under a delimiter-joined key`() = runTest {
-        // Given - "A|B" and "C" join to the same string as "A" and "B|C", so a delimiter-joined memo key would alias these two distinct requests
+    fun `enrich gives two distinct requests in one call their own album selection`() = runTest {
+        // Given - two different album requests, each with its own single-candidate search result
         httpClient.givenJsonResponsesInTurn(
             "search/album",
             """{"data":[{"id":100,"title":"C","artist":{"name":"A|B"},"cover_xl":"https://example.com/first.jpg"}]}""",
@@ -1184,68 +1195,76 @@ class DeezerProviderTest {
         )
         val match = results.selectAlbum(request)
 
-        // Then - the trackCount evidence is named and true only for the winning candidate
+        // Then - the winning candidate's tier, artist quality, and named trackCount evidence are all observable
         assertNotNull(match)
         assertEquals(56L, match!!.candidate.id)
+        assertEquals(TitleMatcher.TitleTier.EDITION, match.tier)
+        assertEquals(ArtistMatcher.matchQuality(request.artist, "Metallica"), match.artistQuality)
         assertEquals(true, match.tieBreaks["trackCount"])
     }
 
     @Test
     fun `a cancelled album search is not memoized as a miss`() = runTest {
-        // Given - the first album search is cancelled mid-flight; the underlying data would be found on a retry
+        // Given - the first album search is cancelled mid-flight inside the same ProviderCallScope the retry reuses; the underlying data would be found on a retry
         val cancelling = CancellingOnceHttpClient(httpClient)
         val cancellingProvider = DeezerProvider(cancelling, RateLimiter(0))
         httpClient.givenJsonResponse("search/album", DEEZER_RESPONSE)
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+        val scope = ProviderCallScope()
 
-        // When - the first lookup is cancelled, on a job separate from this test's own
-        val cancelled = CoroutineScope(Job()).async { cancellingProvider.enrich(request, EnrichmentType.ALBUM_ART) }
+        // When - the first lookup is cancelled, on a job separate from this test's own but sharing this test's scope, then the retry runs in that same scope
+        val cancelled = CoroutineScope(Job() + scope).async { cancellingProvider.enrich(request, EnrichmentType.ALBUM_ART) }
         try {
             cancelled.await()
             fail("expected the cancellation to propagate")
         } catch (_: CancellationException) {
             // expected
         }
-        val result = cancellingProvider.enrich(request, EnrichmentType.ALBUM_ART)
+        val result = withContext(scope) { cancellingProvider.enrich(request, EnrichmentType.ALBUM_ART) }
 
-        // Then - the retry performs a fresh search rather than reading a memoized miss
+        // Then - the retry performs a fresh search rather than reading the cancelled attempt's memoized miss
         assertTrue(result is EnrichmentResult.Success)
     }
 
     @Test
-    fun `album selection is unaffected by identifiers a canonical identity resolution would attach`() = runTest {
-        // Given - the same artist and title, once with no resolved identifiers and once carrying identifiers a resolved canonical lookup would attach
-        httpClient.givenJsonResponse("search/album", DEEZER_RESPONSE)
-        val unresolved = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
-        val resolved = EnrichmentRequest.forAlbum(
-            "OK Computer",
-            "Radiohead",
-            identifiers = EnrichmentIdentifiers(musicBrainzId = "b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d"),
+    fun `album selection is unaffected by the engine's canonical status`() = runTest {
+        // Given - one album request, run through the engine under identity resolution disabled, enabled-but-unresolved, resolved, and ambiguous with suggestions
+        val suggestions = listOf(
+            SearchCandidate(
+                "OK Computer", "Radiohead", "1997", "GB", "Album", 80, null,
+                EnrichmentIdentifiers(musicBrainzId = "mbid-suggestion"), "mb",
+            ),
+        )
+        val configs = listOf(
+            CanonicalStatus.NOT_ATTEMPTED_DISABLED to EnrichmentConfig(enableIdentityResolution = false) to null,
+            CanonicalStatus.UNRESOLVED to EnrichmentConfig(enableIdentityResolution = true) to
+                EnrichmentResult.NotFound(EnrichmentType.GENRE, "mb"),
+            CanonicalStatus.RESOLVED to EnrichmentConfig(enableIdentityResolution = true) to
+                EnrichmentResult.Success(
+                    EnrichmentType.GENRE, EnrichmentData.Metadata(genres = listOf("rock")), "mb", 0.95f,
+                    resolvedIdentifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-resolved"),
+                ),
+            CanonicalStatus.AMBIGUOUS to EnrichmentConfig(enableIdentityResolution = true) to
+                EnrichmentResult.NotFound(EnrichmentType.GENRE, "mb", suggestions = suggestions),
         )
 
-        // When - enriching for album art under each identifier state
-        val unresolvedResult = provider.enrich(unresolved, EnrichmentType.ALBUM_ART)
-        val resolvedResult = provider.enrich(resolved, EnrichmentType.ALBUM_ART)
-
-        // Then - the same album is selected regardless of what identity resolution attached
-        val unresolvedUrl = ((unresolvedResult as EnrichmentResult.Success).data as EnrichmentData.Artwork).url
-        val resolvedUrl = ((resolvedResult as EnrichmentResult.Success).data as EnrichmentData.Artwork).url
-        assertEquals(unresolvedUrl, resolvedUrl)
-    }
-
-    /** Cancels the caller and throws on its first `fetchJsonResult` call, then delegates normally. */
-    private class CancellingOnceHttpClient(private val delegate: com.landofoz.musicmeta.http.HttpClient) :
-        com.landofoz.musicmeta.http.HttpClient by delegate {
-        private var calls = 0
-
-        override suspend fun fetchJsonResult(url: String): com.landofoz.musicmeta.http.HttpResult<org.json.JSONObject> {
-            calls++
-            if (calls == 1) {
-                kotlinx.coroutines.currentCoroutineContext()[kotlinx.coroutines.Job]?.cancel()
-                throw CancellationException("simulated cancellation")
-            }
-            return delegate.fetchJsonResult(url)
+        // When - each configuration enriches the same request through its own engine instance
+        val urls = configs.map { (statusAndConfig, identityResult) ->
+            val (expectedStatus, config) = statusAndConfig
+            val albumHttpClient = FakeHttpClient().apply { givenJsonResponse("search/album", DEEZER_RESPONSE) }
+            val deezer = DeezerProvider(albumHttpClient, RateLimiter(0))
+            val mb = FakeProvider(
+                id = "mb", isIdentityProvider = true,
+                capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)),
+            ).also { identityResult?.let(it::givenIdentityResult) }
+            val engine = DefaultEnrichmentEngine(ProviderRegistry(listOf(deezer, mb)), FakeEnrichmentCache(), config)
+            val results = engine.enrich(EnrichmentRequest.forAlbum("OK Computer", "Radiohead"), setOf(EnrichmentType.ALBUM_ART))
+            assertEquals(expectedStatus, results.identity.status)
+            ((results.raw.getValue(EnrichmentType.ALBUM_ART) as EnrichmentResult.Success).data as EnrichmentData.Artwork).url
         }
+
+        // Then - every canonical-status configuration selects the same album
+        assertEquals(1, urls.toSet().size)
     }
 
     companion object {

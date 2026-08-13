@@ -2,6 +2,7 @@ package com.landofoz.musicmeta.provider.itunes
 
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.engine.AlbumMatch
+import com.landofoz.musicmeta.engine.AlbumTieBreak
 import com.landofoz.musicmeta.engine.TitleMatcher
 import com.landofoz.musicmeta.engine.acceptAndRankAlbum
 
@@ -38,6 +39,6 @@ internal fun List<ITunesAlbumResult>.selectAlbum(request: EnrichmentRequest.ForA
         requestedArtist = request.artist,
         artistNameOf = { it.artistName },
         titleTierOf = { itunesAlbumTitleTier(request.title, it.collectionName) },
-        "trackCount" to { request.trackCount != null && it.trackCount == request.trackCount },
-        "year" to { request.year != null && it.releaseDate?.startsWith(request.year.toString()) == true },
+        AlbumTieBreak("trackCount") { request.trackCount != null && it.trackCount == request.trackCount },
+        AlbumTieBreak("year") { request.year != null && it.releaseDate?.startsWith(request.year.toString()) == true },
     )
