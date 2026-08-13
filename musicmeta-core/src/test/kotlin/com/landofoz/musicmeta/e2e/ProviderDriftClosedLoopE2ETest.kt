@@ -18,13 +18,25 @@ import org.junit.Test
 import java.time.LocalDate
 
 /**
- * Ticket 05's closed loop: a bounded, deterministic sample of provider-produced Top Tracks titles,
- * fed back through one representative name-search enrichment type (`TRACK_PREVIEW`), reported as a
- * dated trend by source provider, title shape, route, and canonical status. Trend-only — no
- * assertion here treats a `NotFound` or a shape shift as a failure; the hard suppression invariant
- * (a suggestions-carrying identity must not suppress an eligible provider) is covered directly by
+ * One provider-produced title sampled for the closed loop: [deezerId] is `null` when the source
+ * row carried no Deezer identifier, in which case only the [ClosedLoopRoute.NAME] route runs.
+ */
+private data class SampleTitle(val title: String, val artist: String, val deezerId: String?)
+
+/**
+ * Ticket 05's closed loop: a bounded, deterministic sample of provider-produced titles from Top
+ * Tracks, radio, similar tracks and discography, fed back through one representative name-search
+ * enrichment type (`TRACK_PREVIEW`), reported as a dated trend by row source, source provider,
+ * title shape, route, canonical status and outcome. Trend-only — no assertion here treats a
+ * `NotFound`, a shape shift, or a timeout as a failure; the hard suppression invariant (a
+ * suggestions-carrying identity must not suppress an eligible provider) is covered directly by
  * [com.landofoz.musicmeta.engine.IdentitySuggestionFanOutTest], which needs no live network and
  * therefore runs on every build rather than once daily.
+ *
+ * `sourceProvider` is read from each listing call's own [EnrichmentResult.Success.provider] rather
+ * than assumed, so the trend stays correct if a listing type ever gains a second capable provider.
+ * `timedOut` is read from the feedback call's own [com.landofoz.musicmeta.ErrorKind.TIMEOUT], not
+ * inferred from latency.
  *
  * Run manually: ./gradlew :musicmeta-core:test -Dinclude.e2e=true --tests "*ProviderDriftClosedLoop*"
  */
@@ -32,8 +44,8 @@ class ProviderDriftClosedLoopE2ETest {
 
     private lateinit var engine: EnrichmentEngine
 
-    /** Bounded: a fixed cap keeps the daily sample small and the trend comparable run to run. */
-    private val sampleSize = 8
+    /** Bounded per source: a fixed cap keeps the daily sample small and the trend comparable run to run. */
+    private val sampleSize = 4
 
     @Before
     fun setup() {
@@ -50,57 +62,63 @@ class ProviderDriftClosedLoopE2ETest {
     }
 
     @Test
-    fun `bounded deterministic Top Tracks sample feeds back through TRACK_PREVIEW and reports a dated trend`() =
+    fun `bounded deterministic multi-source sample feeds back through TRACK_PREVIEW and reports a dated trend`() =
         runBlocking {
-            // Given - a deterministic, rank-ordered, capped sample of one stable artist's provider-produced
-            // Top Tracks titles
+            // Given - a deterministic, capped sample of one stable artist's provider-produced titles
+            // from each of the four listings the ticket names
             val artistRequest = EnrichmentRequest.forArtist("Radiohead")
-            val topTracksResult = engine.enrich(artistRequest, setOf(EnrichmentType.ARTIST_TOP_TRACKS))
-                .raw[EnrichmentType.ARTIST_TOP_TRACKS]
-            val topTracks = (topTracksResult as? EnrichmentResult.Success)?.data as? EnrichmentData.TopTracks
-            Assume.assumeTrue("ARTIST_TOP_TRACKS unavailable this run", topTracks != null)
-            val sample = topTracks!!.tracks.sortedBy { it.rank }.take(sampleSize)
-            Assume.assumeTrue("no Top Tracks rows to sample this run", sample.isNotEmpty())
+            val sources = listOf(
+                RowSource.TOP_TRACKS to topTracksSample(artistRequest),
+                RowSource.RADIO to radioSample(artistRequest),
+                RowSource.SIMILAR_TRACKS to similarTracksSample(artistRequest),
+                RowSource.DISCOGRAPHY to discographySample(artistRequest),
+            )
+            Assume.assumeTrue(
+                "no sample rows from any source this run",
+                sources.any { (_, sampled) -> sampled != null && sampled.titles.isNotEmpty() },
+            )
 
             // When - each sampled title is fed back through TRACK_PREVIEW by name, and again by its
             // Deezer id when the row carries one, so both routes stay visible per the ticket
             val rows = mutableListOf<ClosedLoopRow>()
-            for (track in sample) {
-                val nameStarted = System.currentTimeMillis()
-                val nameRun = engine.enrich(EnrichmentRequest.forTrack(track.title, track.artist), setOf(EnrichmentType.TRACK_PREVIEW))
-                val nameResult = nameRun.raw[EnrichmentType.TRACK_PREVIEW]
-                if (nameResult != null) {
-                    rows += toClosedLoopRow(
-                        sourceProvider = "deezer",
-                        title = track.title,
-                        route = ClosedLoopRoute.NAME,
-                        canonicalStatus = nameRun.identity.status,
-                        result = nameResult,
-                        latencyMs = System.currentTimeMillis() - nameStarted,
-                        timedOut = false,
-                    )
-                }
-
-                val deezerId = track.identifiers.get(IdentifierNamespace.DEEZER)
-                if (deezerId != null) {
-                    val idStarted = System.currentTimeMillis()
-                    val idRequest = EnrichmentRequest.forTrack(
-                        track.title,
-                        track.artist,
-                        identifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DEEZER, deezerId),
-                    )
-                    val idRun = engine.enrich(idRequest, setOf(EnrichmentType.TRACK_PREVIEW))
-                    val idResult = idRun.raw[EnrichmentType.TRACK_PREVIEW]
-                    if (idResult != null) {
+            for ((source, sampled) in sources) {
+                if (sampled == null) continue
+                for (title in sampled.titles) {
+                    val nameStarted = System.currentTimeMillis()
+                    val nameRun = engine.enrich(EnrichmentRequest.forTrack(title.title, title.artist), setOf(EnrichmentType.TRACK_PREVIEW))
+                    val nameResult = nameRun.raw[EnrichmentType.TRACK_PREVIEW]
+                    if (nameResult != null) {
                         rows += toClosedLoopRow(
-                            sourceProvider = "deezer",
-                            title = track.title,
-                            route = ClosedLoopRoute.EXACT_ID,
-                            canonicalStatus = idRun.identity.status,
-                            result = idResult,
-                            latencyMs = System.currentTimeMillis() - idStarted,
-                            timedOut = false,
+                            source = source,
+                            sourceProvider = sampled.provider,
+                            title = title.title,
+                            route = ClosedLoopRoute.NAME,
+                            canonicalStatus = nameRun.identity.status,
+                            result = nameResult,
+                            latencyMs = System.currentTimeMillis() - nameStarted,
                         )
+                    }
+
+                    if (title.deezerId != null) {
+                        val idStarted = System.currentTimeMillis()
+                        val idRequest = EnrichmentRequest.forTrack(
+                            title.title,
+                            title.artist,
+                            identifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DEEZER, title.deezerId),
+                        )
+                        val idRun = engine.enrich(idRequest, setOf(EnrichmentType.TRACK_PREVIEW))
+                        val idResult = idRun.raw[EnrichmentType.TRACK_PREVIEW]
+                        if (idResult != null) {
+                            rows += toClosedLoopRow(
+                                source = source,
+                                sourceProvider = sampled.provider,
+                                title = title.title,
+                                route = ClosedLoopRoute.EXACT_ID,
+                                canonicalStatus = idRun.identity.status,
+                                result = idResult,
+                                latencyMs = System.currentTimeMillis() - idStarted,
+                            )
+                        }
                     }
                 }
             }
@@ -112,4 +130,48 @@ class ProviderDriftClosedLoopE2ETest {
             rows.forEach { println("  " + redactedLogLine(it)) }
             assertTrue("expected at least one sampled row to have been fed back through TRACK_PREVIEW", rows.isNotEmpty())
         }
+
+    /** One listing call's provider-attributed sample: [provider] is the listing's own answering provider. */
+    private data class SampledListing(val provider: String, val titles: List<SampleTitle>)
+
+    private suspend fun topTracksSample(artistRequest: EnrichmentRequest.ForArtist): SampledListing? {
+        val result = engine.enrich(artistRequest, setOf(EnrichmentType.ARTIST_TOP_TRACKS)).raw[EnrichmentType.ARTIST_TOP_TRACKS]
+        val success = result as? EnrichmentResult.Success ?: return null
+        val data = success.data as? EnrichmentData.TopTracks ?: return null
+        val titles = data.tracks.sortedBy { it.rank }.take(sampleSize)
+            .map { SampleTitle(it.title, it.artist, it.identifiers.get(IdentifierNamespace.DEEZER)) }
+        return SampledListing(success.provider, titles)
+    }
+
+    private suspend fun radioSample(artistRequest: EnrichmentRequest.ForArtist): SampledListing? {
+        val result = engine.enrich(artistRequest, setOf(EnrichmentType.ARTIST_RADIO)).raw[EnrichmentType.ARTIST_RADIO]
+        val success = result as? EnrichmentResult.Success ?: return null
+        val data = success.data as? EnrichmentData.RadioPlaylist ?: return null
+        val titles = data.tracks.take(sampleSize)
+            .map { SampleTitle(it.title, it.artist, it.identifiers.get(IdentifierNamespace.DEEZER)) }
+        return SampledListing(success.provider, titles)
+    }
+
+    private suspend fun similarTracksSample(artistRequest: EnrichmentRequest.ForArtist): SampledListing? {
+        val result = engine.enrich(artistRequest, setOf(EnrichmentType.SIMILAR_TRACKS)).raw[EnrichmentType.SIMILAR_TRACKS]
+        val success = result as? EnrichmentResult.Success ?: return null
+        val data = success.data as? EnrichmentData.SimilarTracks ?: return null
+        val titles = data.tracks.take(sampleSize)
+            .map { SampleTitle(it.title, it.artist, it.identifiers.get(IdentifierNamespace.DEEZER)) }
+        return SampledListing(success.provider, titles)
+    }
+
+    /**
+     * Discography rows are albums, not tracks, and carry no artist field of their own (a single
+     * artist's own discography) — the requested artist stands in for it. Feeding an album title
+     * through `TRACK_PREVIEW` widens the sampled decoration shapes; it is not expected to preview.
+     */
+    private suspend fun discographySample(artistRequest: EnrichmentRequest.ForArtist): SampledListing? {
+        val result = engine.enrich(artistRequest, setOf(EnrichmentType.ARTIST_DISCOGRAPHY)).raw[EnrichmentType.ARTIST_DISCOGRAPHY]
+        val success = result as? EnrichmentResult.Success ?: return null
+        val data = success.data as? EnrichmentData.Discography ?: return null
+        val titles = data.albums.take(sampleSize)
+            .map { SampleTitle(it.title, artistRequest.name, it.identifiers.get(IdentifierNamespace.DEEZER)) }
+        return SampledListing(success.provider, titles)
+    }
 }
