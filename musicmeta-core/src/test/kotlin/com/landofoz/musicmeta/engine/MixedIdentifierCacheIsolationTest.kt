@@ -133,7 +133,7 @@ class MixedIdentifierCacheIsolationTest {
         val stillForeign = cache.get(mbidKey, EnrichmentType.TRACK_PREVIEW)
         assertEquals(
             "https://example.com/foreign.mp3",
-            ((stillForeign!!.data) as EnrichmentData.TrackPreview).url,
+            ((stillForeign!!.result.data) as EnrichmentData.TrackPreview).url,
         )
     }
 

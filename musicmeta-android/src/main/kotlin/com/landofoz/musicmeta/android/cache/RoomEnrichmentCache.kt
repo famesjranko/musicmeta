@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.android.cache
 
+import com.landofoz.musicmeta.CacheEnvelope
 import com.landofoz.musicmeta.CanonicalStatus
 import com.landofoz.musicmeta.EnrichmentCache
 import com.landofoz.musicmeta.EnrichmentData
@@ -29,7 +30,7 @@ class RoomEnrichmentCache(
     override suspend fun get(
         entityKey: String,
         type: EnrichmentType,
-    ): EnrichmentResult.Success? {
+    ): CacheEnvelope<EnrichmentResult.Success>? {
         val entity = dao.get(entityKey, type.name, clock()) ?: return null
         return deserializeEntity(entity, type)
     }
@@ -37,7 +38,7 @@ class RoomEnrichmentCache(
     override suspend fun getIncludingExpired(
         entityKey: String,
         type: EnrichmentType,
-    ): EnrichmentResult.Success? {
+    ): CacheEnvelope<EnrichmentResult.Success>? {
         val entity = dao.getIncludingExpired(entityKey, type.name) ?: return null
         return deserializeEntity(entity, type)
     }
@@ -46,9 +47,14 @@ class RoomEnrichmentCache(
      * A [entity.schemaVersion][EnrichmentCacheEntity.schemaVersion] that does not match
      * [CACHE_SCHEMA_VERSION] is treated as a miss, never as a value to coerce or guess at — the
      * envelope's field meanings are what changed, not merely its JSON shape, so a partial decode
-     * would silently misreport [LookupProvenance] or [CanonicalStatus] rather than fail loudly.
+     * would silently misreport [LookupProvenance] or [CanonicalStatus] rather than fail loudly. An
+     * unparseable [CanonicalStatus] name degrades to [CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT]
+     * instead — never a status stronger than what this row was actually written under.
      */
-    private fun deserializeEntity(entity: EnrichmentCacheEntity, type: EnrichmentType): EnrichmentResult.Success? {
+    private fun deserializeEntity(
+        entity: EnrichmentCacheEntity,
+        type: EnrichmentType,
+    ): CacheEnvelope<EnrichmentResult.Success>? {
         if (entity.schemaVersion != CACHE_SCHEMA_VERSION) {
             logger.warn(TAG, "Cache schema mismatch for ${entity.entityKey}:$type; treating as a miss")
             return null
@@ -67,11 +73,17 @@ class RoomEnrichmentCache(
         val provenance = entity.lookupProvenance?.let {
             try { LookupProvenance.valueOf(it) } catch (_: Exception) { null }
         } ?: LookupProvenance.CACHE
-        return EnrichmentResult.Success(
+        val canonicalStatus = try {
+            CanonicalStatus.valueOf(entity.canonicalStatus)
+        } catch (_: Exception) {
+            CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT
+        }
+        val result = EnrichmentResult.Success(
             type, data, entity.provider, entity.confidence,
             resolvedIdentifiers = resolvedIds,
             provenance = provenance,
         )
+        return CacheEnvelope(result, canonicalStatus)
     }
 
     override suspend fun put(
@@ -101,13 +113,21 @@ class RoomEnrichmentCache(
         )
     }
 
-    override suspend fun getNegative(entityKey: String, type: EnrichmentType): EnrichmentResult.NotFound? {
+    override suspend fun getNegative(
+        entityKey: String,
+        type: EnrichmentType,
+    ): CacheEnvelope<EnrichmentResult.NotFound>? {
         val entity = negativeDao.get(entityKey, type.name, clock()) ?: return null
         if (entity.schemaVersion != CACHE_SCHEMA_VERSION) {
             logger.warn(TAG, "Cache schema mismatch for ${entity.entityKey}:$type; treating as a miss")
             return null
         }
-        return EnrichmentResult.NotFound(type = type, provider = entity.provider)
+        val canonicalStatus = try {
+            CanonicalStatus.valueOf(entity.canonicalStatus)
+        } catch (_: Exception) {
+            CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT
+        }
+        return CacheEnvelope(EnrichmentResult.NotFound(type = type, provider = entity.provider), canonicalStatus)
     }
 
     override suspend fun putNegative(

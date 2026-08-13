@@ -224,8 +224,8 @@ class EmptyPayloadDemotionTest {
         // ...and the cache entry healed, so the next call is a hit on real data
         val rewritten = cache.get(key, EnrichmentType.GENRE)
         assertTrue(
-            "cached entry should have been overwritten, still: ${rewritten?.data}",
-            rewritten != null && rewritten.data.answers(EnrichmentType.GENRE),
+            "cached entry should have been overwritten, still: ${rewritten?.result?.data}",
+            rewritten != null && rewritten.result.data.answers(EnrichmentType.GENRE),
         )
     }
 

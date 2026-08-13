@@ -193,7 +193,7 @@ class EnrichCacheFailureTest {
         // the caller, not just the unit test. This is the failure #61 describes end to end.
         val p = provider(art("fresh"))
         cache = object : FakeEnrichmentCache() {
-            override suspend fun get(entityKey: String, type: EnrichmentType): EnrichmentResult.Success? =
+            override suspend fun get(entityKey: String, type: EnrichmentType): CacheEnvelope<EnrichmentResult.Success>? =
                 withTimeout(1) {
                     delay(1_000)
                     null
