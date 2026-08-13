@@ -23,6 +23,12 @@
     <p>Live calls into the published library — enriches from up to 11 real music-metadata providers and merges the results.</p>
   </header>
   <main>
+    <div id="degraded-banner" class="identity-banner degraded-banner" role="status" hidden>
+      <span aria-hidden="true">&#9888;&#65039;</span>
+      <span class="identity-banner-text">The backend's startup check failed, so some requests may
+      not return results. You can still try &mdash; this isn&rsquo;t blocking search.</span>
+      <button type="button" id="degraded-banner-dismiss">Dismiss</button>
+    </div>
     <div id="kind-tabs" class="kind-tabs" aria-label="What to look up">
       <button type="button" data-kind="artist" aria-pressed="true" tabindex="0">Artist</button>
       <button type="button" data-kind="album" aria-pressed="false" tabindex="-1">Album</button>
