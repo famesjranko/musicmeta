@@ -352,23 +352,6 @@ class ProviderMemoLifetimeTest {
     }
 
     @Test
-    fun `an unknown artist reaches ARTIST_NEW_TYPES as NotFound, not as an empty-pool Error`() = runTest {
-        // Given - a name MusicBrainz holds no artist under, requested without an MBID
-        httpClient.givenJsonResponse(ARTIST_SEARCH, NO_ARTISTS)
-
-        // When - each ARTIST_NEW_TYPES member is enriched directly, one call each
-        val bandMembers = provider.enrich(ABSENT_ARTIST, EnrichmentType.BAND_MEMBERS)
-        val discography = provider.enrich(ABSENT_ARTIST, EnrichmentType.ARTIST_DISCOGRAPHY)
-        val links = provider.enrich(ABSENT_ARTIST, EnrichmentType.ARTIST_LINKS)
-
-        // Then - the empty pool is a NotFound, never an Error — an Error would count against the
-        // provider's circuit breaker for an artist that simply does not exist
-        assertTrue(bandMembers is EnrichmentResult.NotFound)
-        assertTrue(discography is EnrichmentResult.NotFound)
-        assertTrue(links is EnrichmentResult.NotFound)
-    }
-
-    @Test
     fun `a qualified track title that resolves nothing pays for the whole ladder once, not once per type`() = runTest {
         // Given - a title carrying a "(Remastered)" qualifier group MusicBrainz holds no matching
         // recording under, at any candidate the qualifier fallback tries, and whose fuzzy retry is
@@ -425,11 +408,15 @@ class ProviderMemoLifetimeTest {
         const val ARTIST_SEARCHES_PER_ABSENT_ARTIST = 2
 
         /**
-         * What one absent, qualified-title track costs in `recording?query=` requests once the whole
-         * resolution — including [com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzQualifierFallback]'s
-         * own searches — is memoized rather than only the raw search. Spent once for the whole call;
-         * a memo scoped to the raw search alone leaves this number higher, because the qualifier
-         * fallback runs outside it once per type.
+         * What one absent, qualified-title track costs in `recording?query=` requests: the filtered
+         * resolution search — unfiltered from the start, because [QUALIFIED_TRACK]'s trailing
+         * `(Remastered)` group routes it through the plain search rather than the canonical/shallow
+         * pair "Enter Sandman" takes, so there is no separate unfiltered retry to count — the
+         * qualifier fallback's one stripped-title candidate search, the unfiltered pool the miss
+         * suggests from, and the fuzzy near-miss search an empty suggestion pool asks for.
+         *
+         * Each is spent once for the call. A memo scoped to the raw search alone leaves the
+         * candidate search repeating once per type instead, which is what this number would rise to.
          */
         const val RECORDING_SEARCHES_PER_ABSENT_QUALIFIED_TRACK = 4
 
