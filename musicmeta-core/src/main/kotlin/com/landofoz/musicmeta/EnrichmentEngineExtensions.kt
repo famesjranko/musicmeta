@@ -156,8 +156,10 @@ data class TrackPreviewResult(
 /**
  * Resolves preview URLs for multiple tracks concurrently.
  *
- * Tracks with a `deezerId` in [EnrichmentIdentifiers.extra] skip identity resolution
- * and use Deezer's direct track lookup — typically 10x faster than searching by title/artist.
+ * A `deezerId` in [EnrichmentIdentifiers.extra] makes Deezer use its direct track lookup —
+ * typically 10x faster than searching by title/artist — but identity resolution still runs when
+ * the request needs it; other `TRACK_PREVIEW`-eligible providers and identifier-keyed types have
+ * no such shortcut.
  */
 suspend fun EnrichmentEngine.resolveTrackPreviews(
     tracks: List<TrackPreviewRequest>,

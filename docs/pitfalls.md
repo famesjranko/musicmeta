@@ -16,7 +16,11 @@ exhaustive. Paths are relative to `musicmeta-core/src/main/kotlin/com/landofoz/m
 
 - `CacheGuard.kt` degrades a throwing cache to a miss, but public `invalidate()`,
   `is`/`markManuallySelected()` and `getIncludingExpired()` are unguarded.
-- An identity `NotFound` carrying `suggestions` short-circuits the whole provider fan-out.
+- Canonical identity resolution, provider eligibility, and cache eligibility are three different
+  facts. An identity `NotFound` carrying `suggestions` does not veto the fan-out — every provider
+  still runs its own `ProviderChain` eligibility check — and a chain that skipped a provider for a
+  missing identifier (`ChainExecution.identifierIncomplete`) must not be negative-cached even under
+  a `RESOLVED` identity, since a provider that was never asked cannot speak for the chain.
 - One `http/CircuitBreaker.kt` per provider id, shared across every chain.
 - A `CompositeSynthesizer`'s `dependencies` are resolved even when the caller did not ask for them.
 - `withTimeoutOrNull(enrichTimeoutMs)` returns null for *that* deadline only; a nested one

@@ -30,6 +30,25 @@ internal data class ChainResults(
 )
 
 /**
+ * What actually happened while a chain walked its providers for one request: which providers were
+ * called ([attemptedProviderIds]), which were skipped because the request lacked an identifier
+ * their capability requires ([skippedForMissingIdentifier], keyed by provider id), and which were
+ * skipped because their breaker was open ([skippedForOpenBreaker]). A provider excluded for
+ * unavailability, or by [ProviderChain]'s identifier-only gate, is in none of these lists — it was
+ * never in this chain's eligible set to begin with.
+ *
+ * [identifierIncomplete] is what a cache write-back checks before treating a chain's `NotFound` as
+ * proof nobody had the data: a provider that was never asked cannot speak for the chain.
+ */
+internal data class ChainExecution(
+    val attemptedProviderIds: List<String>,
+    val skippedForMissingIdentifier: Map<String, IdentifierRequirement>,
+    val skippedForOpenBreaker: List<String>,
+) {
+    val identifierIncomplete: Boolean get() = skippedForMissingIdentifier.isNotEmpty()
+}
+
+/**
  * The `RateLimited` a 429 owes the consumer. Every provider's broad `catch` runs `mapError` before
  * the engine sees anything, so the throttle arrives as an `Error` already; this is the one place it
  * is widened back out, keeping `mapError`'s published `Error` return type untouched.
@@ -50,17 +69,36 @@ internal class ProviderChain(
 ) {
     /**
      * Collects ALL Success results from every eligible provider concurrently, and separately what
-     * the providers that produced none of them did — see [ChainResults].
-     * Used for mergeable types (e.g. GENRE, ARTIST_PHOTO) where multiple providers contribute data.
-     * Respects availability, identifier requirements, and circuit breaker checks.
+     * the providers that produced none of them did — see [ChainResults]. Discards the execution
+     * ledger; callers that need it use [resolveAllWithExecution].
      */
     suspend fun resolveAll(
         request: EnrichmentRequest,
         identifierOnly: Boolean = false,
-    ): ChainResults = coroutineScope {
-        val (tripped, eligible) = providers
-            .filter { couldAnswer(it, request.identifiers, identifierOnly) }
-            .partition { isTripped(it) }
+    ): ChainResults = resolveAllWithExecution(request, identifierOnly).first
+
+    /**
+     * [resolveAll], plus the [ChainExecution] the same walk produced — one ledger built alongside
+     * the results, not a second pass over the providers.
+     * Used for mergeable types (e.g. GENRE, ARTIST_PHOTO) where multiple providers contribute data.
+     * Respects availability, identifier requirements, and circuit breaker checks.
+     */
+    suspend fun resolveAllWithExecution(
+        request: EnrichmentRequest,
+        identifierOnly: Boolean = false,
+    ): Pair<ChainResults, ChainExecution> = coroutineScope {
+        val missing = mutableMapOf<String, IdentifierRequirement>()
+        val candidates = providers.filter { provider ->
+            when {
+                !provider.isAvailable -> false
+                !hasRequiredIdentifiers(provider, request.identifiers) -> {
+                    missing[provider.id] = requirementFor(provider)
+                    false
+                }
+                else -> !identifierOnly || requiresIdentifier(provider)
+            }
+        }
+        val (tripped, eligible) = candidates.partition { isTripped(it) }
 
         val outcomes = eligible.map { provider ->
             async {
@@ -99,27 +137,128 @@ internal class ProviderChain(
         val successes = outcomes.filterIsInstance<EnrichmentResult.Success>()
         // The last failure, matching what `resolve` keeps: both walk the chain in priority order.
         val failure = outcomes.lastOrNull { it !is EnrichmentResult.Success }
-        ChainResults(successes, failure ?: outageOrNull(eligible.isNotEmpty(), tripped))
+        val results = ChainResults(successes, failure ?: outageOrNull(eligible.isNotEmpty(), tripped))
+        val execution = ChainExecution(eligible.map { it.id }, missing, tripped.map { it.id })
+        results to execution
     }
 
+    /** [resolve], discarding the [ChainExecution] the same walk produced. */
     suspend fun resolve(
         request: EnrichmentRequest,
         identifierOnly: Boolean = false,
+    ): EnrichmentResult = resolveWithExecution(request, identifierOnly).first
+
+    /**
+     * Whether a provider is in this chain's eligible set at all, and if not, which of the three
+     * disjoint reasons: unavailable/identifier-only-filtered (never in the ledger — see
+     * [ChainExecution]), a missing identifier, or an open breaker.
+     */
+    private sealed class Gate {
+        object Ineligible : Gate()
+        data class MissingIdentifier(val requirement: IdentifierRequirement) : Gate()
+        object BreakerOpen : Gate()
+        object Attempt : Gate()
+    }
+
+    private fun gateFor(
+        provider: EnrichmentProvider,
+        identifiers: EnrichmentIdentifiers,
+        identifierOnly: Boolean,
+    ): Gate = when {
+        !provider.isAvailable -> Gate.Ineligible
+        !hasRequiredIdentifiers(provider, identifiers) -> Gate.MissingIdentifier(requirementFor(provider))
+        identifierOnly && !requiresIdentifier(provider) -> Gate.Ineligible
+        isTripped(provider) -> Gate.BreakerOpen
+        else -> Gate.Attempt
+    }
+
+    /**
+     * Calls [provider], records the outcome against its breaker, and marks it attempted — the part
+     * of [resolveWithExecution]'s walk that is the same regardless of what the caller does with the
+     * result.
+     */
+    private suspend fun recordAttempt(
+        provider: EnrichmentProvider,
+        request: EnrichmentRequest,
+        attempted: MutableList<String>,
     ): EnrichmentResult {
-        var lastFailure: EnrichmentResult? = null
-        var answered = false
-        val tripped = forEachEligible(request, identifierOnly) { _, breaker, result ->
-            answered = true
-            when (result) {
-                is EnrichmentResult.Success -> { breaker?.recordSuccess(); return result }
-                is EnrichmentResult.NotFound -> { breaker?.recordSuccess() }
-                is EnrichmentResult.RateLimited -> { breaker?.recordFailure(); lastFailure = result }
-                is EnrichmentResult.Error -> { breaker?.recordFailure(); lastFailure = result }
-            }
+        val breaker = circuitBreakers[provider.id]
+        val result = try {
+            provider.enrich(request, type)
+        } catch (e: Exception) {
+            EnrichmentResult.Error(type, provider.id, e.message ?: "Unknown error", e)
+        }.asRateLimitedIfThrottled()
+        currentCoroutineContext().ensureActive() // see resolveAllWithExecution — the same single guard
+        attempted.add(provider.id)
+        if (result is EnrichmentResult.Success || result is EnrichmentResult.NotFound) {
+            breaker?.recordSuccess()
+        } else {
+            breaker?.recordFailure()
         }
-        return lastFailure
-            ?: outageOrNull(answered, tripped)
+        return result
+    }
+
+    /** One provider's contribution to a [resolveWithExecution] walk: a `Success`, a failure, or neither. */
+    private data class WalkStep(val success: EnrichmentResult.Success?, val failure: EnrichmentResult?)
+
+    /** The three ledgers a [resolveWithExecution] walk accumulates, bundled to keep [walkStep] short. */
+    private class WalkLedger {
+        val attempted = mutableListOf<String>()
+        val missing = mutableMapOf<String, IdentifierRequirement>()
+        val tripped = mutableListOf<EnrichmentProvider>()
+    }
+
+    /**
+     * [gateFor] one [provider], updates [ledger] in place, and — only for [Gate.Attempt] — calls it
+     * via [recordAttempt]. Isolates [resolveWithExecution]'s own cyclomatic complexity to just its
+     * loop and outcome assembly.
+     */
+    private suspend fun walkStep(
+        provider: EnrichmentProvider,
+        request: EnrichmentRequest,
+        identifierOnly: Boolean,
+        ledger: WalkLedger,
+    ): WalkStep = when (val gate = gateFor(provider, request.identifiers, identifierOnly)) {
+        Gate.Ineligible -> WalkStep(null, null)
+        is Gate.MissingIdentifier -> { ledger.missing[provider.id] = gate.requirement; WalkStep(null, null) }
+        Gate.BreakerOpen -> { ledger.tripped.add(provider); WalkStep(null, null) }
+        Gate.Attempt -> when (val result = recordAttempt(provider, request, ledger.attempted)) {
+            is EnrichmentResult.Success -> WalkStep(result, null)
+            is EnrichmentResult.NotFound -> WalkStep(null, null)
+            is EnrichmentResult.RateLimited, is EnrichmentResult.Error -> WalkStep(null, result)
+        }
+    }
+
+    /**
+     * Walks providers in priority order, returning the first `Success` and, alongside it, the
+     * [ChainExecution] the walk built up to that point — the providers after a successful one were
+     * never asked, and are absent from the ledger for the same reason they are absent from a
+     * `NotFound` chain's result.
+     *
+     * Breaker state is read as the walk reaches each provider, not up front: a breaker these calls
+     * share with another type's chain can open mid-walk, and the fresher answer is the honest one.
+     */
+    suspend fun resolveWithExecution(
+        request: EnrichmentRequest,
+        identifierOnly: Boolean = false,
+    ): Pair<EnrichmentResult, ChainExecution> {
+        val ledger = WalkLedger()
+        var lastFailure: EnrichmentResult? = null
+        var success: EnrichmentResult.Success? = null
+
+        for (provider in providers) {
+            if (success != null) break
+            val step = walkStep(provider, request, identifierOnly, ledger)
+            if (step.success != null) success = step.success
+            if (step.failure != null) lastFailure = step.failure
+        }
+
+        val execution = ChainExecution(ledger.attempted, ledger.missing, ledger.tripped.map { it.id })
+        val outcome = success
+            ?: lastFailure
+            ?: outageOrNull(ledger.attempted.isNotEmpty(), ledger.tripped)
             ?: EnrichmentResult.NotFound(type, "all_providers")
+        return outcome to execution
     }
 
     /**
@@ -143,58 +282,16 @@ internal class ProviderChain(
         )
     }
 
-    /**
-     * Iterates eligible providers, calling each and passing the result to [onResult].
-     * Handles availability, identifier requirements, and circuit breaker checks.
-     * Returns the providers skipped for an open breaker.
-     */
-    private suspend inline fun forEachEligible(
-        request: EnrichmentRequest,
-        identifierOnly: Boolean,
-        onResult: (EnrichmentProvider, CircuitBreaker?, EnrichmentResult) -> Unit,
-    ): List<EnrichmentProvider> {
-        val tripped = mutableListOf<EnrichmentProvider>()
-        for (provider in providers) {
-            if (!couldAnswer(provider, request.identifiers, identifierOnly)) continue
-            // Read as the walk reaches each provider, not up front: a breaker these calls share with
-            // another type's chain can open mid-walk, and the fresher answer is the honest one.
-            if (isTripped(provider)) { tripped.add(provider); continue }
-
-            val breaker = circuitBreakers[provider.id]
-            val result = try {
-                provider.enrich(request, type)
-            } catch (e: Exception) {
-                EnrichmentResult.Error(type, provider.id, e.message ?: "Unknown error", e)
-            }.asRateLimitedIfThrottled()
-            currentCoroutineContext().ensureActive() // see resolveAll — the same single guard
-
-            onResult(provider, breaker, result)
-        }
-        return tripped
-    }
-
-    /**
-     * Whether [provider] is in a position to answer at all, leaving its breaker out of it.
-     *
-     * [identifierOnly] narrows that to the providers whose capability for [type] is keyed on an
-     * identifier — for a request that names no entity, where a name-search provider has nothing to
-     * search with. Asking one anyway spends a live request on the empty string and lets whatever
-     * ranks first for it answer as this request's entity.
-     */
-    private fun couldAnswer(
-        provider: EnrichmentProvider,
-        identifiers: EnrichmentIdentifiers,
-        identifierOnly: Boolean = false,
-    ): Boolean =
-        provider.isAvailable &&
-            hasRequiredIdentifiers(provider, identifiers) &&
-            (!identifierOnly || requiresIdentifier(provider))
-
     /** Whether [provider]'s capability for [type] is keyed on an identifier rather than a name. */
     private fun requiresIdentifier(provider: EnrichmentProvider): Boolean =
         provider.capabilities.firstOrNull { it.type == type }
             ?.identifierRequirement
             ?.let { it != IdentifierRequirement.NONE } ?: false
+
+    /** [provider]'s declared [IdentifierRequirement] for [type], or [IdentifierRequirement.NONE]. */
+    private fun requirementFor(provider: EnrichmentProvider): IdentifierRequirement =
+        provider.capabilities.firstOrNull { it.type == type }?.identifierRequirement
+            ?: IdentifierRequirement.NONE
 
     /** Whether [provider]'s breaker is open. A provider with no breaker is never skipped. */
     private fun isTripped(provider: EnrichmentProvider): Boolean =

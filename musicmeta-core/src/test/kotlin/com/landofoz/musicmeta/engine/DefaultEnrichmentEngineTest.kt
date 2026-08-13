@@ -365,8 +365,9 @@ class DefaultEnrichmentEngineTest {
         assertNull(artResult.identityMatchScore)
     }
 
-    @Test fun `enrich short-circuits with SUGGESTIONS when identity fails with candidates`() = runTest {
-        // Given - identity provider returns NotFound with suggestions
+    @Test fun `enrich fans out to an eligible provider when identity fails with candidates`() = runTest {
+        // Given - identity provider returns NotFound with suggestions, and a downstream provider
+        // whose capability names no identifier requirement
         val suggestions = listOf(
             SearchCandidate("Bush", null, "1992", "GB", "Group", 75, null, EnrichmentIdentifiers(musicBrainzId = "mbid-gb"), "mb", disambiguation = "British rock band"),
             SearchCandidate("Bush", null, "1994", "CA", "Group", 70, null, EnrichmentIdentifiers(musicBrainzId = "mbid-ca"), "mb", disambiguation = "Canadian band"),
@@ -380,12 +381,14 @@ class DefaultEnrichmentEngineTest {
         // When - enriching with identity resolution that fails with suggestions
         val results = e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
 
-        // Then - short-circuited: NotFound with SUGGESTIONS, downstream provider NOT called
-        val artResult = results.raw[EnrichmentType.ALBUM_ART] as EnrichmentResult.NotFound
-        assertEquals(IdentityMatch.SUGGESTIONS, artResult.identityMatch)
-        assertEquals(2, artResult.suggestions!!.size)
-        assertEquals("British rock band", artResult.suggestions!![0].disambiguation)
-        assertEquals(0, artProvider.enrichCalls.size) // short-circuited, never called
+        // Then - the eligible provider still ran and its Success is best-effort; the suggestions
+        // stay once at the top level instead of being copied onto the per-type result
+        assertEquals(1, artProvider.enrichCalls.size)
+        val artResult = results.raw[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success
+        assertEquals(IdentityMatch.BEST_EFFORT, artResult.identityMatch)
+        assertEquals(IdentityMatch.SUGGESTIONS, results.identity?.match)
+        assertEquals(2, results.identity?.suggestions?.size)
+        assertEquals("British rock band", results.identity?.suggestions?.get(0)?.disambiguation)
     }
 
     @Test fun `enrich stamps BEST_EFFORT when identity fails without suggestions`() = runTest {
@@ -1624,39 +1627,171 @@ class DefaultEnrichmentEngineTest {
         assertNull(negCache.getNegative(DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.ALBUM_ART), EnrichmentType.ALBUM_ART))
     }
 
-    @Test fun `a NotFound with suggestions and a RESOLVED identity is not negative-cached`() = runTest {
-        // Given - a NotFound pairing suggestions with a RESOLVED identity match, a combination
-        // enrich() itself never produces (the short-circuit that carries suggestions always
-        // stamps SUGGESTIONS), so isCacheableNegative is exercised directly on its own engine
+    @Test fun `a NotFound under a SUGGESTIONS canonical outcome is not negative-cached`() = runTest {
+        // Given - a plain fan-out NotFound and a call whose canonical resolution ended SUGGESTIONS
         val e = engine()
-        val suggestions = listOf(
-            SearchCandidate("Bush", null, "1992", "GB", "Group", 75, null, EnrichmentIdentifiers(musicBrainzId = "mbid-gb"), "mb", disambiguation = "British rock band"),
-        )
-        val result = EnrichmentResult.NotFound(
-            EnrichmentType.ALBUM_ART, "all_providers", suggestions = suggestions, identityMatch = IdentityMatch.RESOLVED,
-        )
+        val result = EnrichmentResult.NotFound(EnrichmentType.ALBUM_ART, "all_providers")
 
         // When - checking whether the result is cacheable as a negative
-        val cacheable = e.isCacheableNegative(result)
+        val cacheable = e.isCacheableNegative(result, IdentityMatch.SUGGESTIONS, identifierIncomplete = false)
 
-        // Then - suggestions alone block negative caching regardless of identity confidence
+        // Then - an unresolved canonical envelope blocks negative caching for every type of the call
         assertFalse(cacheable)
     }
 
-    @Test fun `a NotFound with no suggestions but an UNVERIFIED identity is not negative-cached`() = runTest {
-        // Given - a NotFound with no suggestions but an UNVERIFIED identity, a combination
-        // enrich() itself never produces (stampIdentityMatch only ever stamps UNVERIFIED onto a
-        // Success), so isCacheableNegative is exercised directly on its own engine
+    @Test fun `a NotFound under an UNVERIFIED canonical outcome is not negative-cached`() = runTest {
+        // Given - a plain fan-out NotFound and a call whose canonical resolution errored
         val e = engine()
-        val result = EnrichmentResult.NotFound(
-            EnrichmentType.ALBUM_ART, "all_providers", suggestions = null, identityMatch = IdentityMatch.UNVERIFIED,
-        )
+        val result = EnrichmentResult.NotFound(EnrichmentType.ALBUM_ART, "all_providers")
 
         // When - checking whether the result is cacheable as a negative
-        val cacheable = e.isCacheableNegative(result)
+        val cacheable = e.isCacheableNegative(result, IdentityMatch.UNVERIFIED, identifierIncomplete = false)
 
-        // Then - the UNVERIFIED identity alone blocks negative caching despite no suggestions
+        // Then - an identity outage blocks negative caching the same way an unresolved name does
         assertFalse(cacheable)
+    }
+
+    @Test fun `an identifier-incomplete NotFound under a RESOLVED identity is not negative-cached`() = runTest {
+        // Given - a chain that skipped a provider for a missing identifier, under a call whose
+        // canonical resolution otherwise succeeded
+        val e = engine()
+        val result = EnrichmentResult.NotFound(EnrichmentType.ALBUM_ART, "all_providers")
+
+        // When - checking whether the result is cacheable as a negative
+        val cacheable = e.isCacheableNegative(result, IdentityMatch.RESOLVED, identifierIncomplete = true)
+
+        // Then - a provider that was never asked cannot speak for the chain, resolved identity or not
+        assertFalse(cacheable)
+    }
+
+    @Test fun `a complete exhausted chain under a RESOLVED identity remains negative-cacheable`() = runTest {
+        // Given - every eligible provider ran and found nothing, under a resolved canonical identity
+        val e = engine()
+        val result = EnrichmentResult.NotFound(EnrichmentType.ALBUM_ART, "all_providers")
+
+        // When - checking whether the result is cacheable as a negative
+        val cacheable = e.isCacheableNegative(result, IdentityMatch.RESOLVED, identifierIncomplete = false)
+
+        // Then - today's confident-negative behavior is unchanged
+        assertTrue(cacheable)
+    }
+
+    @Test fun `a NotFound with no canonical resolution attempted remains negative-cacheable`() = runTest {
+        // Given - a type whose chain needed no identity resolution at all
+        val e = engine()
+        val result = EnrichmentResult.NotFound(EnrichmentType.ALBUM_ART, "all_providers")
+
+        // When - checking whether the result is cacheable as a negative
+        val cacheable = e.isCacheableNegative(result, null, identifierIncomplete = false)
+
+        // Then - "not attempted" is as confident as a resolved match
+        assertTrue(cacheable)
+    }
+
+    @Test fun `a BEST_EFFORT Success is re-fetched on the second call and never cached`() = runTest {
+        // Given - identity fails without suggestions and a NONE provider succeeds best-effort
+        val realCache = InMemoryEnrichmentCache()
+        val idProvider = FakeProvider(id = "mb", isIdentityProvider = true, capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)))
+            .also { it.givenIdentityResult(EnrichmentResult.NotFound(EnrichmentType.GENRE, "mb")) }
+        val artProvider = FakeProvider(id = "deezer", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 50)))
+            .also { it.givenResult(EnrichmentType.ALBUM_ART, art("deezer")) }
+        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider, artProvider)), realCache, EnrichmentConfig(enableIdentityResolution = true))
+
+        // When - enriching twice
+        e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
+        val second = e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
+
+        // Then - nothing was cached, so the second call re-asked the provider and stayed BEST_EFFORT
+        assertEquals(2, artProvider.enrichCalls.size)
+        val success = second.raw[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success
+        assertEquals(IdentityMatch.BEST_EFFORT, success.identityMatch)
+    }
+
+    @Test fun `a complete NotFound under SUGGESTIONS is re-fetched and preserves suggestions on the second call`() = runTest {
+        // Given - identity fails with suggestions and the only provider is a genuine, complete miss
+        val realCache = InMemoryEnrichmentCache()
+        val suggestions = listOf(
+            SearchCandidate("Bush", null, "1992", "GB", "Group", 75, null, EnrichmentIdentifiers(musicBrainzId = "mbid-gb"), "mb", disambiguation = "British rock band"),
+        )
+        val idProvider = FakeProvider(id = "mb", isIdentityProvider = true, capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)))
+            .also { it.givenIdentityResult(EnrichmentResult.NotFound(EnrichmentType.GENRE, "mb", suggestions = suggestions)) }
+        val artProvider = FakeProvider(id = "deezer", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 50)))
+            .also { it.givenResult(EnrichmentType.ALBUM_ART, EnrichmentResult.NotFound(EnrichmentType.ALBUM_ART, "deezer")) }
+        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider, artProvider)), realCache, EnrichmentConfig(enableIdentityResolution = true))
+
+        // When - enriching twice
+        e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
+        val second = e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
+
+        // Then - the second call re-asked the provider and the suggestions are still there
+        assertEquals(2, artProvider.enrichCalls.size)
+        assertEquals(suggestions, second.identity?.suggestions)
+    }
+
+    @Test fun `a complete NotFound under UNVERIFIED is re-fetched rather than cached as a confident absence`() = runTest {
+        // Given - identity resolution throws (UNVERIFIED) and the only provider is a genuine miss
+        val realCache = InMemoryEnrichmentCache()
+        val idProvider = ThrowingIdentityProvider("mb")
+        val artProvider = FakeProvider(id = "deezer", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 50)))
+            .also { it.givenResult(EnrichmentType.ALBUM_ART, EnrichmentResult.NotFound(EnrichmentType.ALBUM_ART, "deezer")) }
+        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider, artProvider)), realCache, EnrichmentConfig(enableIdentityResolution = true))
+
+        // When - enriching twice
+        e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
+        val second = e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
+
+        // Then - the outage never became a confident cached "no data" answer
+        assertEquals(2, artProvider.enrichCalls.size)
+        assertEquals(IdentityMatch.UNVERIFIED, second.identity?.match)
+    }
+
+    @Test fun `an identifier-incomplete NotFound is re-fetched and absent from the negative cache`() = runTest {
+        // Given - a RESOLVED identity, and a chain that skips one provider for a missing identifier
+        // while another eligible provider genuinely finds nothing
+        val realCache = InMemoryEnrichmentCache()
+        val idProvider = FakeProvider(id = "mb", isIdentityProvider = true, capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)))
+            .also {
+                it.givenIdentityResult(
+                    EnrichmentResult.Success(EnrichmentType.GENRE, EnrichmentData.Metadata(genres = emptyList()), "mb", 1f),
+                )
+            }
+        val deezer = FakeProvider(id = "deezer", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 50)))
+            .also { it.givenResult(EnrichmentType.ALBUM_ART, EnrichmentResult.NotFound(EnrichmentType.ALBUM_ART, "deezer")) }
+        val wikidataOnly = FakeProvider(
+            id = "wikidata",
+            capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 30, identifierRequirement = IdentifierRequirement.WIKIDATA_ID)),
+        )
+        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider, deezer, wikidataOnly)), realCache, EnrichmentConfig(enableIdentityResolution = true))
+
+        // When - enriching twice
+        e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
+        val second = e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
+
+        // Then - the second call re-asked deezer instead of serving a confident cached negative
+        assertEquals(2, deezer.enrichCalls.size)
+        assertTrue(second.raw[EnrichmentType.ALBUM_ART] is EnrichmentResult.NotFound)
+        assertNull(realCache.getNegative(DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.ALBUM_ART), EnrichmentType.ALBUM_ART))
+    }
+
+    @Test fun `a complete exhausted NotFound under RESOLVED identity is still negative-cached`() = runTest {
+        // Given - a RESOLVED identity and every eligible provider genuinely finding nothing
+        val realCache = InMemoryEnrichmentCache()
+        val idProvider = FakeProvider(id = "mb", isIdentityProvider = true, capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)))
+            .also {
+                it.givenIdentityResult(
+                    EnrichmentResult.Success(EnrichmentType.GENRE, EnrichmentData.Metadata(genres = emptyList()), "mb", 1f),
+                )
+            }
+        val deezer = FakeProvider(id = "deezer", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 50)))
+            .also { it.givenResult(EnrichmentType.ALBUM_ART, EnrichmentResult.NotFound(EnrichmentType.ALBUM_ART, "deezer")) }
+        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider, deezer)), realCache, EnrichmentConfig(enableIdentityResolution = true))
+
+        // When - enriching twice
+        e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
+        e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
+
+        // Then - today's confident negative-cache behavior is unchanged: only one live call
+        assertEquals(1, deezer.enrichCalls.size)
     }
 
     @Test fun `a transient-reclassified NotFound is not negative-cached`() = runTest {

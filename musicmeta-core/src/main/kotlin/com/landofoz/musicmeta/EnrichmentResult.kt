@@ -108,9 +108,9 @@ sealed class EnrichmentResult {
     /**
      * Provider searched but found nothing.
      *
-     * When [identityMatch] is [IdentityMatch.SUGGESTIONS], [suggestions] carries
-     * near-miss candidates. Developers can show a "did you mean?" prompt and
-     * re-enrich with the chosen MBID.
+     * [suggestions] and [identityMatch] describe this specific provider's own search, not the
+     * canonical identity attempt — check [EnrichmentResults.identity] for near-miss candidates
+     * to show as a "did you mean?" prompt.
      */
     data class NotFound(
         val type: EnrichmentType,
