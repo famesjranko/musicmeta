@@ -7,7 +7,7 @@ away, and a copy of them rots while it moves. §Rate limiting keeps the one-limi
 topology and where each interval's basis comes from.
 
 **Nothing here is checked.** No mechanism verifies a word of it. Hand-verified against the packages
-on **2026-08-13**; treat anything after that as a claim, not a fact. §What we don't extract is the
+on **2026-08-14**; treat anything after that as a claim, not a fact. §What we don't extract is the
 part that rots fastest — most of what it lists is a to-do, and a to-do that gets done reads as a
 still-open one until someone re-reads the code.
 
@@ -370,7 +370,9 @@ own probe on credits-heavy albums before this becomes a capability),
 `ARTIST_POPULARITY`. Cheaper to add than it was: that type is merged now, so a Deezer fan count
 would arrive as one more `PopularitySignal` beside the others rather than having to beat them.
 Never called:
-`/chart`, `/genre`, `/editorial`, `/playlist/{id}`, `/podcast`, every `/user/**`.
+`/chart`, `/genre`, `/editorial`, `/playlist/{id}`, `/podcast`, every `/user/**`. `search/album`'s
+pool is accepted on both artist and album title, not artist alone, before `ALBUM_ART`,
+`ALBUM_METADATA` and `ALBUM_TRACKS` share the ranked result (`docs/pitfalls.md` §7).
 
 **iTunes.** Never read on results
 we fetch: `collectionViewUrl`, `collectionPrice`, `copyright`, `contentAdvisoryRating`,
@@ -379,6 +381,9 @@ serves `TRACK_PREVIEW`), `discNumber`, `discCount`, `trackPrice`, `isStreamable`
 searched: `song`, `musicVideo`, `podcast`, `audiobook`. `lookup?isrc=` looks like the ISRC
 equivalent of `lookup?upc=` and is not: it returns `200 resultCount: 0` for an ISRC known to be in
 catalogue, so it is silently unsupported rather than broken (probed 2026-08-12) — never called.
+As with Deezer, the name-search pool behind `ALBUM_ART`, `ALBUM_METADATA` and `ALBUM_TRACKS` is
+accepted on `collectionName` as well as artist and shared as one ranked result; the exact
+`itunesCollectionId` and `lookup?upc=` paths bypass that acceptance entirely (`docs/pitfalls.md` §7).
 
 **LRCLIB.** Parsed into `LrcLibResult` and dropped: `id` (`GET /api/get/{id}` would re-fetch without
 a search), `trackName`/`artistName` — both would verify that the search fallback returned the right
@@ -481,4 +486,8 @@ to match the requested title), member active/inactive flag. From a search result
 `formats[].descriptions`, `resource_url`, `community`. Never called: `/artists/{id}/releases`
 (MusicBrainz and iTunes cover discography), `/labels/{id}` and its releases, marketplace, inventory,
 and every user collection endpoint. `ReleaseEdition.barcode` is explicitly null because
-`/masters/{id}/versions` does not carry it — `/releases/{id}` does.
+`/masters/{id}/versions` does not carry it — `/releases/{id}` does. `database/search`'s combined
+`"Artist - Title"` field is safely split on the boundary that matches both the requested artist and
+title, not the first artist-plausible one, then the result is accepted on the parsed album title as
+well as the artist before `ALBUM_ART`, `LABEL`, `RELEASE_TYPE` and `ALBUM_METADATA` share it
+(`docs/pitfalls.md` §7).

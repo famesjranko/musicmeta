@@ -6,28 +6,49 @@ import com.landofoz.musicmeta.engine.TitleMatcher
 
 /**
  * The artist/title Discogs's combined `"Artist - Title"` search field names, or null if no ` - `
- * boundary in [combined] has an artist-side [ArtistMatcher] accepts for [requestedArtist].
+ * boundary in [combined] has a disambiguator-stripped artist-side [ArtistMatcher] accepts for
+ * [requestedArtist].
  *
  * Discogs exposes the two halves as one display field, not separate structured ones, and neither
  * artist nor album names are dash-free in general, so a single fixed split (first or last ` - `)
- * can truncate either half. Trying each ` - ` boundary left to right and keeping the first whose
- * disambiguator-stripped artist-side matches [requestedArtist] finds the real boundary without
- * assuming one: a too-short artist-side is walked past, and everything after the accepted boundary
- * — including a title that itself contains ` - ` — stays intact as the album title.
+ * can truncate either half — and stopping at the *first* boundary whose artist-side merely passes
+ * [ArtistMatcher]'s deliberately loose floor is not enough either: for an artist that itself
+ * contains ` - ` (`"Artist - Name"`), the first boundary's short artist-side ("Artist") can still
+ * pass that floor by partial match, well short of the real split. Every boundary is tried; a
+ * boundary whose artist-side matches [requestedArtist] **and** whose title-side [TitleMatcher.equivalent]s
+ * [requestedTitle] wins outright as the real split. Only when no boundary clears both sides does the
+ * first artist-only match stand in, so a legitimate title-qualifier mismatch is still handed to the
+ * caller's own acceptance check downstream rather than silently dropped here.
  */
-internal fun parseDiscogsRelease(combined: String, requestedArtist: String): Pair<String, String>? {
+internal fun parseDiscogsRelease(
+    combined: String,
+    requestedArtist: String,
+    requestedTitle: String,
+): Pair<String, String>? {
     var from = 0
+    var artistOnlyMatch: Pair<String, String>? = null
     while (true) {
         val index = combined.indexOf(" - ", from)
-        if (index < 0) return null
+        if (index < 0) return artistOnlyMatch
         val artistPart = stripDiscogsDisambiguator(combined.substring(0, index).trim())
         val titlePart = combined.substring(index + 3).trim()
         if (artistPart.isNotEmpty() && titlePart.isNotEmpty() && ArtistMatcher.isMatch(requestedArtist, artistPart)) {
-            return artistPart to titlePart
+            if (TitleMatcher.equivalent(requestedTitle, titlePart)) return artistPart to titlePart
+            if (artistOnlyMatch == null) artistOnlyMatch = artistPart to titlePart
         }
         from = index + 3
     }
 }
+
+/**
+ * A release [selectRelease] accepted, with the artist/artist-quality evidence that ranked it —
+ * the parsed title is not carried, since nothing downstream of acceptance reads it.
+ */
+internal data class DiscogsAlbumChoice(
+    val release: DiscogsRelease,
+    val artist: String,
+    val artistQuality: Int,
+)
 
 /**
  * Ranks a `/database/search` pool for [request]: parse each candidate's combined title safely,
@@ -40,14 +61,15 @@ internal fun parseDiscogsRelease(combined: String, requestedArtist: String): Pai
  * provider-decoration tier the way Deezer/iTunes's remaster suffix does, so a bare request here
  * never admits a qualified candidate.
  */
-internal fun List<DiscogsRelease>.selectRelease(request: EnrichmentRequest.ForAlbum): DiscogsRelease? =
+internal fun List<DiscogsRelease>.selectRelease(request: EnrichmentRequest.ForAlbum): DiscogsAlbumChoice? =
     mapNotNull { release ->
-        val (artist, title) = parseDiscogsRelease(release.title, request.artist) ?: return@mapNotNull null
+        val (artist, title) = parseDiscogsRelease(release.title, request.artist, request.title)
+            ?: return@mapNotNull null
         if (!TitleMatcher.equivalent(request.title, title)) return@mapNotNull null
-        Triple(release, artist, title)
+        DiscogsAlbumChoice(release, artist, ArtistMatcher.matchQuality(request.artist, artist))
     }.maxWithOrNull(
         compareBy(
-            { ArtistMatcher.matchQuality(request.artist, it.second) },
-            { request.year != null && it.first.year == request.year.toString() },
+            { it.artistQuality },
+            { request.year != null && it.release.year == request.year.toString() },
         ),
-    )?.first
+    )

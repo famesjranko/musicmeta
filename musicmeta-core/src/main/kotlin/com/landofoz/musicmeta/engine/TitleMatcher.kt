@@ -17,42 +17,23 @@ internal object TitleMatcher {
     internal data class Parts(val base: String, val qualifier: String?)
 
     /**
-     * Album-selection tiers, ordered worst to best so [TitleTier.NONE] sorts lowest and a caller
-     * can rank a filtered pool by natural (enum) order. [EDITION] exists only for a request that
-     * supplied no qualifier at all: a bare album request must still be able to land the only
-     * edition a provider actually returns (`docs/pitfalls.md` §7's album-selection tier example),
-     * but it never lets a qualifier the caller *did* ask for collapse into a different one.
+     * Album-selection tiers, ordered worst to best so [TitleTier.NONE] sorts lowest and a
+     * provider's own acceptance policy can rank a filtered pool by natural (enum) order. Shared
+     * vocabulary only — which tiers a provider admits, and on what evidence, is that provider's
+     * own policy (`docs/pitfalls.md` §7).
      */
     internal enum class TitleTier { NONE, EDITION, EXACT }
 
     fun equivalent(a: String, b: String): Boolean = parse(a) == parse(b)
 
     /**
-     * Album-title acceptance tier for [candidate] against [requested]: [TitleTier.EXACT] when
-     * [equivalent] would already accept them, [TitleTier.EDITION] when [requested] is bare and
-     * [candidate]'s only qualifier is provider-added edition decoration ([isEditionDecoration]),
-     * [TitleTier.NONE] otherwise. Every other candidate qualifier — live, remix, deluxe, box,
-     * anniversary, soundtrack — stays identity-bearing and is never admitted by a bare request.
-     */
-    fun titleTier(requested: String, candidate: String): TitleTier {
-        val req = parse(requested)
-        val cand = parse(candidate)
-        if (req.base != cand.base) return TitleTier.NONE
-        if (req.qualifier == cand.qualifier) return TitleTier.EXACT
-        if (req.qualifier == null && cand.qualifier != null && isEditionDecoration(cand.qualifier)) {
-            return TitleTier.EDITION
-        }
-        return TitleTier.NONE
-    }
-
-    /**
      * A qualifier is edition decoration, not a distinct release, when it names nothing but a
-     * remaster — the one provider-added suffix a bare request must tolerate (`docs/pitfalls.md`
-     * §7): `"2015 Remaster"`, `"Remastered"`, `"2016 Remastered Version"`. Anything else — `"Live"`,
-     * `"Deluxe"`, `"Remix"`, `"Anniversary Edition"`, a box-set description — names a different
-     * release and stays outside this tier.
+     * remaster: `"2015 Remaster"`, `"Remastered"`, `"2016 Remastered Version"`. Anything else —
+     * `"Live"`, `"Deluxe"`, `"Remix"`, `"Anniversary Edition"`, a box-set description — names a
+     * different release and is never classified as edition decoration. Whether a provider's
+     * acceptance policy tolerates this tier at all is that provider's own decision.
      */
-    private fun isEditionDecoration(qualifier: String): Boolean = EDITION_DECORATION_REGEX.matches(qualifier)
+    internal fun isEditionDecoration(qualifier: String): Boolean = EDITION_DECORATION_REGEX.matches(qualifier)
 
     private val EDITION_DECORATION_REGEX = Regex("""^(\d{4}\s+)?remaster(ed)?(\s+version)?$""")
 

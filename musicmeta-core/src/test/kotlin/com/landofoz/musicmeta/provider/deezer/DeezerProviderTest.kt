@@ -231,13 +231,13 @@ class DeezerProviderTest {
 
     @Test
     fun `enrich shares one album search across ALBUM_TRACKS, ALBUM_METADATA and ALBUM_ART within one ProviderCallScope`() = runTest {
-        // Given - Deezer search and album detail stubbed once each, and a ProviderCallScope standing in for one enrich() fan-out
+        // Given - Deezer search and album detail stubbed once each, for one request asking three album types
         httpClient.givenJsonResponse("search/album", DEEZER_METADATA_RESPONSE)
         httpClient.givenJsonResponse("album/14879699/tracks", ALBUM_TRACKS_RESPONSE)
         httpClient.givenJsonResponse("album/14879699", DEEZER_ALBUM_DETAIL_RESPONSE)
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
 
-        // When - ALBUM_TRACKS, ALBUM_METADATA and ALBUM_ART all resolve inside the same ProviderCallScope, as sibling types of one enrich() call
+        // When - ALBUM_TRACKS, ALBUM_METADATA and ALBUM_ART are all requested together
         withContext(ProviderCallScope()) {
             provider.enrich(request, EnrichmentType.ALBUM_TRACKS)
             provider.enrich(request, EnrichmentType.ALBUM_METADATA)
@@ -251,13 +251,13 @@ class DeezerProviderTest {
 
     @Test
     fun `enrich resolves the album fresh in each new ProviderCallScope`() = runTest {
-        // Given - Deezer search and album detail stubbed once each, and two independent ProviderCallScope instances standing in for two separate enrich() calls
+        // Given - Deezer search and album detail stubbed once each, for two separate requests to the same album
         httpClient.givenJsonResponse("search/album", DEEZER_METADATA_RESPONSE)
         httpClient.givenJsonResponse("album/14879699/tracks", ALBUM_TRACKS_RESPONSE)
         httpClient.givenJsonResponse("album/14879699", DEEZER_ALBUM_DETAIL_RESPONSE)
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
 
-        // When - each scope resolves ALBUM_TRACKS and ALBUM_METADATA independently, one scope after the other
+        // When - ALBUM_TRACKS and ALBUM_METADATA resolve as two separate requests, one after the other
         withContext(ProviderCallScope()) {
             provider.enrich(request, EnrichmentType.ALBUM_TRACKS)
             provider.enrich(request, EnrichmentType.ALBUM_METADATA)
@@ -267,23 +267,23 @@ class DeezerProviderTest {
             provider.enrich(request, EnrichmentType.ALBUM_METADATA)
         }
 
-        // Then - the memo does not outlive its scope, so each of the two calls pays its own search and detail fetch
+        // Then - each of the two requests pays its own search and detail fetch
         assertEquals(2, httpClient.requestedUrls.count { it.contains("search/album") })
         assertEquals(2, httpClient.requestedUrls.count { it.contains("album/14879699") && !it.contains("tracks") })
     }
 
     @Test
     fun `enrich reaches upstream again on a forceRefresh-shaped second call outside any scope`() = runTest {
-        // Given - Deezer search and album detail stubbed once each, with no ProviderCallScope in context
+        // Given - Deezer search and album detail stubbed once each, with each call made independently
         httpClient.givenJsonResponse("search/album", DEEZER_METADATA_RESPONSE)
         httpClient.givenJsonResponse("album/14879699", DEEZER_ALBUM_DETAIL_RESPONSE)
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
 
-        // When - ALBUM_METADATA is enriched twice with no shared coroutine context, as forceRefresh calls the provider fresh each time
+        // When - ALBUM_METADATA is enriched twice, as forceRefresh calls the provider fresh each time
         provider.enrich(request, EnrichmentType.ALBUM_METADATA)
         provider.enrich(request, EnrichmentType.ALBUM_METADATA)
 
-        // Then - the memo dies with each call, so both reach upstream: two searches and two detail fetches, not one of each
+        // Then - both calls reach upstream: two searches and two detail fetches, not one of each
         assertEquals(2, httpClient.requestedUrls.count { it.contains("search/album") })
         assertEquals(2, httpClient.requestedUrls.count { it.contains("album/14879699") })
     }
@@ -327,7 +327,7 @@ class DeezerProviderTest {
         )
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
 
-        // When - all three album types resolve inside one ProviderCallScope
+        // When - all three album types are requested together
         val results = withContext(ProviderCallScope()) {
             listOf(
                 provider.enrich(request, EnrichmentType.ALBUM_ART),
@@ -453,6 +453,73 @@ class DeezerProviderTest {
         assertTrue(result is EnrichmentResult.Success)
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.Artwork
         assertEquals("https://example.com/album.jpg", data.url)
+    }
+
+    @Test
+    fun `enrich ranks title tier ahead of artist quality`() = runTest {
+        // Given - the exact-title candidate has only a loose artist match; the exact-artist candidate's title is a Live edition
+        val request = EnrichmentRequest.forAlbum(title = "Album", artist = "Real Band")
+        httpClient.givenJsonResponse(
+            "search/album",
+            """{"data":[
+                {"id":1,"title":"Album (Live)","artist":{"name":"Real Band"},"cover_xl":"https://example.com/live.jpg"},
+                {"id":2,"title":"Album","artist":{"name":"Real Band Tribute"},"cover_xl":"https://example.com/exact-title.jpg"}
+            ]}""",
+        )
+
+        // When - enriching for album art
+        val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
+
+        // Then - the exact-title candidate wins even though its artist match is only a loose containment
+        assertTrue(result is EnrichmentResult.Success)
+        val data = (result as EnrichmentResult.Success).data as EnrichmentData.Artwork
+        assertEquals("https://example.com/exact-title.jpg", data.url)
+    }
+
+    @Test
+    fun `enrich searches again when only trackCount differs between two requests in one ProviderCallScope`() = runTest {
+        // Given - two editions under the same title/artist, distinguished only by trackCount
+        httpClient.givenJsonResponse(
+            "search/album",
+            """{"data":[
+                {"id":55,"title":"Master Of Puppets (Remastered)","artist":{"name":"Metallica"},"cover_xl":"https://example.com/box.jpg","nb_tracks":137},
+                {"id":56,"title":"Master Of Puppets (Remastered)","artist":{"name":"Metallica"},"cover_xl":"https://example.com/album.jpg","nb_tracks":8}
+            ]}""",
+        )
+        val identifiers = EnrichmentIdentifiers()
+        val boxRequest = EnrichmentRequest.ForAlbum(identifiers, "Master Of Puppets", "Metallica", trackCount = 137)
+        val albumRequest = EnrichmentRequest.ForAlbum(identifiers, "Master Of Puppets", "Metallica", trackCount = 8)
+
+        // When - both requests are made together
+        val (boxResult, albumResult) = withContext(ProviderCallScope()) {
+            provider.enrich(boxRequest, EnrichmentType.ALBUM_ART) to
+                provider.enrich(albumRequest, EnrichmentType.ALBUM_ART)
+        }
+
+        // Then - each request's own trackCount picks its own edition
+        val boxUrl = ((boxResult as EnrichmentResult.Success).data as EnrichmentData.Artwork).url
+        val albumUrl = ((albumResult as EnrichmentResult.Success).data as EnrichmentData.Artwork).url
+        assertEquals("https://example.com/box.jpg", boxUrl)
+        assertEquals("https://example.com/album.jpg", albumUrl)
+    }
+
+    @Test
+    fun `enrich retries the album search after a transient failure instead of memoizing it as NotFound`() = runTest {
+        // Given - the album search fails transiently on every attempt
+        httpClient.givenIoException("search/album")
+        val request = EnrichmentRequest.forAlbum(title = "Album", artist = "Artist")
+
+        // When - the same request is enriched twice in immediate succession
+        val (first, second) = withContext(ProviderCallScope()) {
+            provider.enrich(request, EnrichmentType.ALBUM_ART) to
+                provider.enrich(request, EnrichmentType.ALBUM_ART)
+        }
+
+        // Then - both calls surface the transient failure as Error, so the first failure was never
+        // memoized as a false NotFound that the second call could reuse without searching again
+        assertTrue(first is EnrichmentResult.Error)
+        assertTrue(second is EnrichmentResult.Error)
+        assertEquals(2, httpClient.requestedUrls.count { it.contains("search/album") })
     }
 
     // SIMILAR_ARTISTS tests

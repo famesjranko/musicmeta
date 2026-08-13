@@ -274,20 +274,31 @@ Discogs' order settles them. Fact-check the payload before porting a selection r
 providers; the shape that makes it work is per API.
 
 **Album search has the same defect one level up, and the track-level fix is not the album fix.**
-`DeezerAlbumScope`, `ITunesAlbumScope`, and `DiscogsAlbumScope` used to accept the first hit whose
-*artist* matched and never looked at the album title at all — a Deezer request for `Song` by David
-Bowie returned `Hunky Dory (2015 Remaster)`. Copying LRCLIB's strict `TitleMatcher.equivalent`
-(§7's track policy) is not safe here: a bare `Hunky Dory` request live-returns only
-`Hunky Dory (2015 Remaster)`, so whole-title equality rejects the one edition a provider actually
-has. `TitleMatcher.titleTier` adds one narrow tolerance for this: a bare request (no qualifier at
-all) may accept a candidate whose only qualifier is provider-added edition decoration — a
-remaster suffix, nothing else. `Live`, `Remix`, `Deluxe`, `Anniversary`, and box-set qualifiers stay
-identity-bearing and are never admitted by a bare request, and a qualifier the caller *did* supply
-still must match exactly; `titleTier` only ever loosens the "no qualifier at all" case. Rank
-accepted candidates by tier first, then artist quality, then any edition evidence the payload
-actually carries (Deezer's `nbTracks` against the request's `trackCount`) — never by provider order
-until every other signal ties, or a materially different edition (an 8-track album versus a
-137-track deluxe box) can outrank the one the request actually asked for.
+`DeezerAlbumScope`, `ITunesAlbumScope`, and `DiscogsAlbumScope` must accept a candidate on the album
+title, not merely the artist. Copying LRCLIB's strict `TitleMatcher.equivalent` (§7's track policy)
+is not safe here: a bare `Hunky Dory` request live-returns only `Hunky Dory (2015 Remaster)`, so
+whole-title equality rejects the one edition a provider actually has. Deezer and iTunes each declare
+their own `titleTier` function beside their `selectAlbum` — `TitleMatcher` supplies only the
+comparison vocabulary (`parse`, `equivalent`, `isEditionDecoration`), never the acceptance decision,
+so one provider's tolerance can never leak into another's. Each provider's `titleTier` gives one
+narrow tolerance: a bare request (no qualifier at all) may accept a candidate whose only qualifier is
+provider-added edition decoration — a remaster suffix, nothing else. `Live`, `Remix`, `Deluxe`,
+`Anniversary`, and box-set qualifiers stay identity-bearing and are never admitted by a bare request,
+and a qualifier the caller *did* supply still must match exactly; `titleTier` only ever loosens the
+"no qualifier at all" case. Discogs's pressing search has no measured decoration convention, so it
+stays at full-title equivalence and declares no tier at all. Rank accepted candidates by tier first,
+then artist quality, then any edition evidence the payload actually carries (Deezer's `nbTracks`,
+iTunes's `trackCount`/`releaseDate`, Discogs's `year`, each against the matching request field) —
+never by provider order until every other signal ties, or a materially different edition (an 8-track
+album versus a 137-track deluxe box) can outrank the one the request actually asked for.
+
+Combined-field search results carry a second trap: a provider that names both artist and album in
+one display string (Discogs's `"Artist - Title"`) cannot be safely split at the first delimiter,
+because either half may itself contain that delimiter. Stopping at the first boundary whose
+artist-side merely passes the loose artist floor picks a false split when the real artist name
+itself contains the delimiter. The safe parse tries every boundary and prefers the one where *both*
+the artist and title sides match the request, falling back to an artist-only match only when no
+boundary clears both sides.
 
 ## 8. `confidence` scores identification, not the payload
 
