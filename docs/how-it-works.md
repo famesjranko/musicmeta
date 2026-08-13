@@ -207,6 +207,20 @@ Two independent facts describe an `enrich()` call, never one merged value:
 | `NOT_ATTEMPTED_CACHE_HIT` | Every requested type was served from cache; no live attempt ran this call. |
 | `NOT_ATTEMPTED_NO_PROVIDER` | Resolution was needed, but no identity provider is registered. |
 
+An all-cache-hit call (every requested type served from cache) reads back each hit's own
+`CacheEnvelope.canonicalStatus` — the status the live call that wrote it carried. When every hit
+this call served agrees on `NOT_ATTEMPTED_DISABLED`, `NOT_ATTEMPTED_NOT_REQUIRED`, or
+`NOT_ATTEMPTED_NO_PROVIDER`, the call replays that exact status: it tells a consumer *why* no live
+attempt ran, and needs no evidence beyond the status name itself. Two other cases fall back to
+`NOT_ATTEMPTED_CACHE_HIT` instead:
+- **Mixed statuses** — the requested types were written under different statuses (e.g. one type
+  cached while resolution was disabled, another while it was not required). There is no single
+  truthful call-level summary, so the call reports `NOT_ATTEMPTED_CACHE_HIT` and each result keeps
+  the provenance/status its own cache write recorded.
+- **A uniform `RESOLVED`** — `RESOLVED` also promises `identity.matchScore`, which the cache
+  envelope does not carry, so replaying `RESOLVED` here would assert a score this call never
+  measured. `AMBIGUOUS`/`UNRESOLVED`/`FAILED` never appear here at all: Step 8 never caches them.
+
 | `LookupProvenance` | Meaning |
 |---|---|
 | `CANONICAL_ID` | Looked up directly by a MusicBrainz canonical id. |
@@ -245,8 +259,11 @@ No fresh result — success or `NotFound` — is cached for a call whose canonic
 from a confident one, losing the ambiguity or outage. A `NotFound` is also never negative-cached
 when its own chain skipped a provider for a missing identifier, resolved identity or not — a
 provider that was never asked cannot speak for "nothing found". Successful results reached under
-`RESOLVED` (or any `NOT_ATTEMPTED_*` status) are cached with per-type TTLs, and a cache hit's
-`Success.provenance` always replays the original live lookup's value rather than a generic `CACHE`:
+`RESOLVED` (or any `NOT_ATTEMPTED_*` status) are cached with per-type TTLs, alongside the call's own
+`canonicalStatus`, as a `CacheEnvelope`. `EnrichmentCache.get`/`getNegative` return that whole
+envelope, not just the stored result, so a cache hit's `Success.provenance` always replays the
+original live lookup's value rather than a generic `CACHE`, and the call-level replay rule above has
+the stored status to read instead of the status staying write-only:
 - Artwork: 30–90 days (photos 30d, album art 90d)
 - Genres/labels/metadata: 90–365 days
 - Popularity/stats: 7 days

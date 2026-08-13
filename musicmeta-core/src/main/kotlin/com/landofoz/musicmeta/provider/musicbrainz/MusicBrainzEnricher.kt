@@ -5,6 +5,7 @@ import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.IdentifierRequirement
+import com.landofoz.musicmeta.LookupProvenance
 import com.landofoz.musicmeta.MusicBrainzEntityType
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.engine.AlternativeName
@@ -203,8 +204,17 @@ internal class MusicBrainzEnricher(
         } else {
             best
         }
-        return buildAlbumResult(resolved, type, ConfidenceCalculator.searchScore(best.score))
+        return buildAlbumResult(resolved, type, ConfidenceCalculator.searchScore(best.score), search.provenance())
     }
+
+    /** The truthful self-report [buildAlbumResult]/[trackResult] carry when a search hit did. */
+    private fun AlbumSearchResult.provenance(): LookupProvenance? = qualifierFallbackProvenance(viaQualifierFallback)
+
+    /** As [AlbumSearchResult.provenance], for [TrackSearchResult]. */
+    private fun TrackSearchResult.provenance(): LookupProvenance? = qualifierFallbackProvenance(viaQualifierFallback)
+
+    private fun qualifierFallbackProvenance(viaQualifierFallback: Boolean): LookupProvenance? =
+        if (viaQualifierFallback) LookupProvenance.QUALIFIER_FALLBACK_NAME else null
 
     internal suspend fun enrichAlbumTracks(
         request: EnrichmentRequest.ForAlbum,
@@ -215,13 +225,15 @@ internal class MusicBrainzEnricher(
         // in enrichAlbum; a release it holds whose body will not parse does not (see
         // [MusicBrainzLookup]), so the search is only reached when there is no release to be lost.
         val lookup = mbid?.let { memoizedRelease(it) }
+        var viaQualifierFallback = false
         val release = when (lookup) {
             is MusicBrainzLookup.Found -> lookup.value
             MusicBrainzLookup.Unreadable -> return EnrichmentResult.NotFound(type, providerId)
             MusicBrainzLookup.Absent, null -> {
                 if (namesNoEntity(request)) return EnrichmentResult.NotFound(type, providerId)
-                val searched = memoizedAlbumSearch(request.title, request.artist).release?.id
-                    ?: return EnrichmentResult.NotFound(type, providerId)
+                val search = memoizedAlbumSearch(request.title, request.artist)
+                val searched = search.release?.id ?: return EnrichmentResult.NotFound(type, providerId)
+                viaQualifierFallback = search.viaQualifierFallback
                 memoizedRelease(searched).valueOrNull()
                     ?: return EnrichmentResult.NotFound(type, providerId)
             }
@@ -231,6 +243,7 @@ internal class MusicBrainzEnricher(
             type = type, data = MusicBrainzMapper.toTracklist(release.tracks),
             provider = providerId, confidence = ConfidenceCalculator.idBasedLookup(),
             resolvedIdentifiers = MusicBrainzMapper.toAlbumIdentifiers(release),
+            provenance = qualifierFallbackProvenance(viaQualifierFallback),
         )
     }
 
@@ -465,10 +478,11 @@ internal class MusicBrainzEnricher(
         // suggestions either: a caller who supplied no name cannot be asked which one they meant,
         // and suggestions cost the whole provider fan-out.
         if (namesNoEntity(request)) return EnrichmentResult.NotFound(type, providerId)
-        val best = memoizedTrackSearch(request).recording ?: return trackMiss(request, type)
+        val search = memoizedTrackSearch(request)
+        val best = search.recording ?: return trackMiss(request, type)
 
         rememberSearchResolved(best.id)
-        return trackResult(best, type, ConfidenceCalculator.searchScore(best.score))
+        return trackResult(best, type, ConfidenceCalculator.searchScore(best.score), search.provenance())
     }
 
     /**
@@ -495,6 +509,7 @@ internal class MusicBrainzEnricher(
         recording: MusicBrainzRecording,
         type: EnrichmentType,
         confidence: Float,
+        provenance: LookupProvenance? = null,
     ): EnrichmentResult.Success = EnrichmentResult.Success(
         type = type,
         data = when (type) {
@@ -506,6 +521,7 @@ internal class MusicBrainzEnricher(
         provider = providerId,
         confidence = confidence,
         resolvedIdentifiers = MusicBrainzMapper.toTrackIdentifiers(recording),
+        provenance = provenance,
     )
 
     /**
@@ -542,6 +558,7 @@ internal class MusicBrainzEnricher(
         release: MusicBrainzRelease,
         type: EnrichmentType,
         confidence: Float,
+        provenance: LookupProvenance? = null,
     ): EnrichmentResult.Success {
         val (wikidataId, wikipediaTitle) = resolveReleaseGroupWikiLinks(release.releaseGroupId)
         return EnrichmentResult.Success(
@@ -550,6 +567,7 @@ internal class MusicBrainzEnricher(
             provider = providerId,
             confidence = confidence,
             resolvedIdentifiers = MusicBrainzMapper.toAlbumIdentifiers(release, wikidataId, wikipediaTitle),
+            provenance = provenance,
         )
     }
 
@@ -769,8 +787,18 @@ internal class MusicBrainzEnricher(
         val officialAlbum: Boolean,
     )
 
-    /** [release]: the resolved match, if any; [originalPool]: [request.title]'s own search results, for suggestions. */
-    private data class AlbumSearchResult(val release: MusicBrainzRelease?, val originalPool: List<MusicBrainzRelease>)
+    /**
+     * [searchAlbum]'s answer. [viaQualifierFallback] is true exactly when [release] was reached by
+     * searching a [MusicBrainzQualifierFallback] stripped candidate rather than the caller's literal
+     * title — the truthful signal [enrichAlbum] and [enrichAlbumTracks] self-report
+     * [com.landofoz.musicmeta.LookupProvenance.QUALIFIER_FALLBACK_NAME] from. Never true for the
+     * symbol-folding last resort, which is a different resolution route with its own evidence.
+     */
+    private data class AlbumSearchResult(
+        val release: MusicBrainzRelease?,
+        val originalPool: List<MusicBrainzRelease>,
+        val viaQualifierFallback: Boolean = false,
+    )
 
     /**
      * Album resolution by title/artist: the whole of [searchAlbum]'s ladder, which every album type
@@ -813,8 +841,16 @@ internal class MusicBrainzEnricher(
         MusicBrainzQualifierFallback.normalize(artist),
     )
 
-    /** [memoizedTrackSearch]'s answer: the recording a title/artist/album resolves to, or null on a miss. */
-    private data class TrackSearchResult(val recording: MusicBrainzRecording?)
+    /**
+     * [searchTrack]'s answer. [viaQualifierFallback] is true exactly when [recording] was reached by
+     * searching a [MusicBrainzQualifierFallback] stripped candidate rather than the caller's literal
+     * title — the truthful signal [enrichTrackBySearch] self-reports
+     * [com.landofoz.musicmeta.LookupProvenance.QUALIFIER_FALLBACK_NAME] from.
+     */
+    private data class TrackSearchResult(
+        val recording: MusicBrainzRecording?,
+        val viaQualifierFallback: Boolean = false,
+    )
 
     /**
      * Track resolution by title/artist/album: [searchTrack]'s whole ladder, which every track type
@@ -842,9 +878,9 @@ internal class MusicBrainzEnricher(
 
     private suspend fun searchTrack(request: EnrichmentRequest.ForTrack): TrackSearchResult {
         val recordings = api.searchCanonicalRecordings(request.title, request.artist, request.album)
-        val resolved = pickBestRecording(request.title, recordings, request.album)
-            ?: resolveTrackQualifierFallback(request.title, request.artist, request.album)
-        return TrackSearchResult(resolved)
+        val direct = pickBestRecording(request.title, recordings, request.album)
+        val resolved = direct ?: resolveTrackQualifierFallback(request.title, request.artist, request.album)
+        return TrackSearchResult(resolved, viaQualifierFallback = direct == null && resolved != null)
     }
 
     /**
@@ -896,10 +932,12 @@ internal class MusicBrainzEnricher(
     private suspend fun searchAlbum(title: String, artist: String): AlbumSearchResult {
         val releases = api.searchReleases(title, artist)
         val direct = MusicBrainzReleaseRanking.pickBestRelease(releases, minMatchScore)
+        val viaQualifier = direct == null
+        val qualifierFallback = if (viaQualifier) resolveAlbumQualifierFallback(title, artist) else null
         val resolved = direct
-            ?: resolveAlbumQualifierFallback(title, artist)
+            ?: qualifierFallback
             ?: if (releases.isEmpty()) resolveAlbumSymbolFallback(title, artist) else null
-        return AlbumSearchResult(resolved, releases)
+        return AlbumSearchResult(resolved, releases, viaQualifierFallback = viaQualifier && qualifierFallback != null)
     }
 
     /**

@@ -198,6 +198,19 @@ public final class com/landofoz/musicmeta/BandMember$Companion {
 	public final fun serializer ()Lkotlinx/serialization/KSerializer;
 }
 
+public final class com/landofoz/musicmeta/CacheEnvelope {
+	public fun <init> (Lcom/landofoz/musicmeta/EnrichmentResult;Lcom/landofoz/musicmeta/CanonicalStatus;)V
+	public final fun component1 ()Lcom/landofoz/musicmeta/EnrichmentResult;
+	public final fun component2 ()Lcom/landofoz/musicmeta/CanonicalStatus;
+	public final fun copy (Lcom/landofoz/musicmeta/EnrichmentResult;Lcom/landofoz/musicmeta/CanonicalStatus;)Lcom/landofoz/musicmeta/CacheEnvelope;
+	public static synthetic fun copy$default (Lcom/landofoz/musicmeta/CacheEnvelope;Lcom/landofoz/musicmeta/EnrichmentResult;Lcom/landofoz/musicmeta/CanonicalStatus;ILjava/lang/Object;)Lcom/landofoz/musicmeta/CacheEnvelope;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCanonicalStatus ()Lcom/landofoz/musicmeta/CanonicalStatus;
+	public final fun getResult ()Lcom/landofoz/musicmeta/EnrichmentResult;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class com/landofoz/musicmeta/CanonicalStatus : java/lang/Enum {
 	public static final field AMBIGUOUS Lcom/landofoz/musicmeta/CanonicalStatus;
 	public static final field FAILED Lcom/landofoz/musicmeta/CanonicalStatus;

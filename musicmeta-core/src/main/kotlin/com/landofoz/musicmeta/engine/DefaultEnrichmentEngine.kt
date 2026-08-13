@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.engine
 
+import com.landofoz.musicmeta.CacheEnvelope
 import com.landofoz.musicmeta.CanonicalStatus
 import com.landofoz.musicmeta.EnrichmentCache
 import com.landofoz.musicmeta.EnrichmentConfig
@@ -83,6 +84,9 @@ internal class DefaultEnrichmentEngine(
         // Per-type chain execution facts, gathered during resolveTypes and consulted only by
         // writeBack's cache-eligibility check — never by result classification.
         val chainExecutions = mutableMapOf<EnrichmentType, ChainExecution>()
+        // The canonicalStatus each cache hit this call served was written under — read back by
+        // cachedCallStatus once the loop below knows whether every requested type was a hit.
+        val cachedStatuses = mutableSetOf<CanonicalStatus>()
 
         for (type in types) {
             // A request whose MBID and this type's trusted provider id have not been proven to
@@ -101,8 +105,9 @@ internal class DefaultEnrichmentEngine(
             // the providers run and the write-back overwrite it, so the entry heals itself.
             // An entry whose genre tags never learned whether they were curated takes the same route
             // for the same reason: see hasUnknownGenreCuration.
-            if (cached != null && cached.data.answers(type) && !cached.data.hasUnknownGenreCuration()) {
-                results[type] = withCacheProvenanceFallback(cached)
+            if (cached != null && cached.result.data.answers(type) && !cached.result.data.hasUnknownGenreCuration()) {
+                results[type] = withCacheProvenanceFallback(cached.result)
+                cachedStatuses.add(cached.canonicalStatus)
                 continue
             }
             // A fresh negative entry answers "providers had nothing" without a re-ask; the read is
@@ -111,14 +116,15 @@ internal class DefaultEnrichmentEngine(
                 guardedCacheRead(logger, "getNegative") { cache.getNegative(entityKeyFor(request, type), type) }
             }
             if (negative != null) {
-                results[type] = negative
+                results[type] = negative.result
                 negativeCacheHits.add(type)
+                cachedStatuses.add(negative.canonicalStatus)
             } else {
                 uncachedTypes.add(type)
             }
         }
         if (uncachedTypes.isEmpty()) {
-            val identity = IdentityResolution(request.identifiers, CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT)
+            val identity = IdentityResolution(request.identifiers, cachedCallStatus(cachedStatuses))
             return EnrichmentResults(results, types, identity)
         }
 
@@ -273,6 +279,25 @@ internal class DefaultEnrichmentEngine(
      * [CanonicalStatus.FAILED], each of which means this call's fan-out ran on an unconfirmed identity.
      */
     private fun CanonicalStatus.isCacheable(): Boolean = this !in UNCACHEABLE_STATUSES
+
+    /**
+     * The call-level [CanonicalStatus] for an all-cache-hit call, from the [canonicalStatus] each
+     * hit's [CacheEnvelope] carried back.
+     *
+     * Replayed verbatim only for [CanonicalStatus.NOT_ATTEMPTED_DISABLED],
+     * [CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED], and [CanonicalStatus.NOT_ATTEMPTED_NO_PROVIDER]
+     * — every requested type agreeing on one of these tells a caller *why* no live attempt ran, and
+     * needs no evidence beyond the status name itself. [CanonicalStatus.RESOLVED] is never replayed
+     * this way even when every hit agrees: [IdentityResolution.matchScore] is part of what
+     * `RESOLVED` promises and the cache envelope does not carry it, so reporting `RESOLVED` here
+     * would be a status this call did not earn. Mixed statuses, and the `RESOLVED`-uniform case,
+     * both fall back to [CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT] — the same honest "no live
+     * attempt ran" a cache hit has always reported.
+     */
+    private fun cachedCallStatus(cachedStatuses: Set<CanonicalStatus>): CanonicalStatus {
+        val uniform = cachedStatuses.singleOrNull() ?: return CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT
+        return if (uniform in REPLAYABLE_CACHE_STATUSES) uniform else CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT
+    }
 
     /**
      * Only a real fan-out "providers had nothing" qualifies for negative caching: never a chain
@@ -759,8 +784,8 @@ internal class DefaultEnrichmentEngine(
                 }
                 // A stale entry that answers nothing is worse than the Error it would replace:
                 // the Error at least tells the consumer to retry.
-                if (stale != null && stale.data.answers(type)) {
-                    results[type] = withCacheProvenanceFallback(stale).copy(isStale = true)
+                if (stale != null && stale.result.data.answers(type)) {
+                    results[type] = withCacheProvenanceFallback(stale.result).copy(isStale = true)
                 }
             }
         }
@@ -771,6 +796,13 @@ internal class DefaultEnrichmentEngine(
 
         private val UNCACHEABLE_STATUSES = setOf(
             CanonicalStatus.AMBIGUOUS, CanonicalStatus.UNRESOLVED, CanonicalStatus.FAILED,
+        )
+
+        /** See [cachedCallStatus]. */
+        private val REPLAYABLE_CACHE_STATUSES = setOf(
+            CanonicalStatus.NOT_ATTEMPTED_DISABLED,
+            CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED,
+            CanonicalStatus.NOT_ATTEMPTED_NO_PROVIDER,
         )
 
         private val IDENTITY_TYPES = setOf(

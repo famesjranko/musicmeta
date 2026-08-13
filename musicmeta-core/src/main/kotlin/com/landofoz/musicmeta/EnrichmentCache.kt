@@ -1,12 +1,24 @@
 package com.landofoz.musicmeta
 
 /**
+ * A cached [result] paired with the [canonicalStatus] the live call reported when it was written.
+ * What a cache hit replays instead of reporting [CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT] with no
+ * evidence behind it — [EnrichmentResult.Success.provenance] and, where present,
+ * [EnrichmentResult.Success.isStale] already ride on [result] itself, so [canonicalStatus] is the
+ * one fact [get]/[getNegative] previously discarded.
+ */
+data class CacheEnvelope<out T : EnrichmentResult>(
+    val result: T,
+    val canonicalStatus: CanonicalStatus,
+)
+
+/**
  * Stores enrichment results for reuse across sessions.
  * Implementations may be in-memory (LRU), Room-backed, or custom.
  */
 interface EnrichmentCache {
 
-    suspend fun get(entityKey: String, type: EnrichmentType): EnrichmentResult.Success?
+    suspend fun get(entityKey: String, type: EnrichmentType): CacheEnvelope<EnrichmentResult.Success>?
 
     /**
      * Returns a cached result even if expired. Used by STALE_IF_ERROR mode
@@ -15,16 +27,16 @@ interface EnrichmentCache {
      * Default returns null — custom implementations that don't support
      * stale serving remain backward compatible.
      */
-    suspend fun getIncludingExpired(entityKey: String, type: EnrichmentType): EnrichmentResult.Success? = null
+    suspend fun getIncludingExpired(entityKey: String, type: EnrichmentType): CacheEnvelope<EnrichmentResult.Success>? =
+        null
 
     /**
      * [canonicalStatus] is the call's [IdentityResolution.status] that made [result] eligible to
      * cache — [EnrichmentEngine.enrich] only calls this for a status the cache may serve back with
      * no loss of confidence. [EnrichmentResult.Success.provenance] on [result] is what a hit later
-     * replays; [canonicalStatus] itself is accepted for an implementation to persist (for audit or
-     * a future read path) but is not returned by [get] today, so a hit's own top-level status is
-     * reported as [CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT] — never [CanonicalStatus.RESOLVED]
-     * merely because the entry is present.
+     * replays; [canonicalStatus] rides back on [get]'s [CacheEnvelope], which an all-cache-hit call
+     * uses to replay this exact status when every requested type agrees on it, and
+     * [CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT] otherwise.
      */
     suspend fun put(
         entityKey: String,
@@ -46,7 +58,7 @@ interface EnrichmentCache {
      * A cache that delegates to another [EnrichmentCache] must forward this call and
      * [putNegative], or negative caching silently disappears through it.
      */
-    suspend fun getNegative(entityKey: String, type: EnrichmentType): EnrichmentResult.NotFound? = null
+    suspend fun getNegative(entityKey: String, type: EnrichmentType): CacheEnvelope<EnrichmentResult.NotFound>? = null
 
     /**
      * Caches a "providers had nothing" answer for [ttlMs]. Default is a no-op, pairing with

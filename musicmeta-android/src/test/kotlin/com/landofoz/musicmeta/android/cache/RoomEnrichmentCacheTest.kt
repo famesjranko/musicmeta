@@ -67,9 +67,9 @@ class RoomEnrichmentCacheTest {
 
         // Then - the retrieved result matches what was stored
         assertNotNull(retrieved)
-        assertEquals("coverartarchive", retrieved!!.provider)
-        assertEquals(0.95f, retrieved.confidence)
-        val artworkData = retrieved.data as EnrichmentData.Artwork
+        assertEquals("coverartarchive", retrieved!!.result.provider)
+        assertEquals(0.95f, retrieved.result.confidence)
+        val artworkData = retrieved.result.data as EnrichmentData.Artwork
         assertEquals("https://example.com/art.jpg", artworkData.url)
         assertEquals("https://example.com/thumb.jpg", artworkData.thumbnailUrl)
         assertEquals(600, artworkData.width)
@@ -99,8 +99,8 @@ class RoomEnrichmentCacheTest {
 
         // Then - the retrieved result matches what was stored
         assertNotNull(retrieved)
-        assertEquals("musicbrainz", retrieved!!.provider)
-        val metaData = retrieved.data as EnrichmentData.Metadata
+        assertEquals("musicbrainz", retrieved!!.result.provider)
+        val metaData = retrieved.result.data as EnrichmentData.Metadata
         assertEquals(listOf("Rock", "Alternative"), metaData.genres)
         assertEquals("Island Records", metaData.label)
         assertEquals("1991-09-24", metaData.releaseDate)
@@ -129,8 +129,8 @@ class RoomEnrichmentCacheTest {
 
         // Then - the retrieved result matches what was stored
         assertNotNull(retrieved)
-        assertEquals("lrclib", retrieved!!.provider)
-        val lyricsData = retrieved.data as EnrichmentData.Lyrics
+        assertEquals("lrclib", retrieved!!.result.provider)
+        val lyricsData = retrieved.result.data as EnrichmentData.Lyrics
         assertEquals("[00:01.00]Hello world", lyricsData.syncedLyrics)
         assertEquals("Hello world", lyricsData.plainLyrics)
         assertFalse(lyricsData.isInstrumental)
@@ -158,8 +158,8 @@ class RoomEnrichmentCacheTest {
 
         // Then - the retrieved result matches what was stored
         assertNotNull(retrieved)
-        assertEquals("wikipedia", retrieved!!.provider)
-        val bioData = retrieved.data as EnrichmentData.Biography
+        assertEquals("wikipedia", retrieved!!.result.provider)
+        val bioData = retrieved.result.data as EnrichmentData.Biography
         assertEquals("A legendary band formed in 1976.", bioData.text)
         assertEquals("wikipedia", bioData.source)
         assertEquals("en", bioData.language)
@@ -270,7 +270,7 @@ class RoomEnrichmentCacheTest {
 
         // Then - the retrieved negative matches what was stored
         assertNotNull(retrieved)
-        assertEquals("all_providers", retrieved!!.provider)
+        assertEquals("all_providers", retrieved!!.result.provider)
     }
 
     @Test
@@ -396,13 +396,28 @@ class RoomEnrichmentCacheTest {
         cache.put("artist:radiohead", EnrichmentType.GENRE, result, CanonicalStatus.RESOLVED)
         val retrieved = cache.get("artist:radiohead", EnrichmentType.GENRE)
 
-        // Then - identity fields round-tripped
+        // Then - identity fields and the written canonicalStatus round-tripped
         assertNotNull(retrieved)
-        assertEquals(LookupProvenance.CANONICAL_ID, retrieved!!.provenance)
-        assertNotNull(retrieved.resolvedIdentifiers)
-        assertEquals("a74b1b7f-71a5-4011-9441-d0b5e4122711", retrieved.resolvedIdentifiers!!.musicBrainzId)
-        assertEquals("Q188451", retrieved.resolvedIdentifiers!!.wikidataId)
-        assertEquals("Radiohead", retrieved.resolvedIdentifiers!!.wikipediaTitle)
+        assertEquals(LookupProvenance.CANONICAL_ID, retrieved!!.result.provenance)
+        assertEquals(CanonicalStatus.RESOLVED, retrieved.canonicalStatus)
+        assertNotNull(retrieved.result.resolvedIdentifiers)
+        assertEquals("a74b1b7f-71a5-4011-9441-d0b5e4122711", retrieved.result.resolvedIdentifiers!!.musicBrainzId)
+        assertEquals("Q188451", retrieved.result.resolvedIdentifiers!!.wikidataId)
+        assertEquals("Radiohead", retrieved.result.resolvedIdentifiers!!.wikipediaTitle)
+    }
+
+    @Test
+    fun `getNegative reads back the canonicalStatus putNegative wrote, closing the write-only gap`() = runTest {
+        // Given - a negative entry stored under a specific canonical status
+        val notFound = EnrichmentResult.NotFound(type = EnrichmentType.ALBUM_ART, provider = "p")
+        cache.putNegative("album:neg-status", EnrichmentType.ALBUM_ART, notFound, CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED, ttlMs = 60_000L)
+
+        // When - reading the same key back
+        val retrieved = cache.getNegative("album:neg-status", EnrichmentType.ALBUM_ART)
+
+        // Then - the envelope carries the exact status it was written under
+        assertNotNull(retrieved)
+        assertEquals(CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED, retrieved!!.canonicalStatus)
     }
 
     @Test
@@ -422,8 +437,8 @@ class RoomEnrichmentCacheTest {
         // Then - no provenance was recorded at write time, so the reader reports CACHE rather than
         // guessing at what the original live lookup used
         assertNotNull(retrieved)
-        assertEquals(LookupProvenance.CACHE, retrieved!!.provenance)
-        assertNull(retrieved.resolvedIdentifiers)
+        assertEquals(LookupProvenance.CACHE, retrieved!!.result.provenance)
+        assertNull(retrieved.result.resolvedIdentifiers)
     }
 
     @Test
@@ -448,7 +463,7 @@ class RoomEnrichmentCacheTest {
         for (i in 1..50) {
             val retrieved = cache.get("album:concurrent:$i", EnrichmentType.ALBUM_ART)
             assertNotNull("Entry $i should exist", retrieved)
-            val artworkData = retrieved!!.data as EnrichmentData.Artwork
+            val artworkData = retrieved!!.result.data as EnrichmentData.Artwork
             assertEquals("https://example.com/$i.jpg", artworkData.url)
         }
     }

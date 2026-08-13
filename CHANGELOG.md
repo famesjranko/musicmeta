@@ -51,6 +51,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Android cache schema bumps to v4 (`MIGRATION_3_4`): `identity_match`/`_score` named a different fact and cannot be reinterpreted, so the migration clears both tables and the next call refetches
 - `EnrichmentCacheEntity`/`NegativeCacheEntity` gain `canonicalStatus`/`isStale` fields: binary-incompatible until recompile for a caller constructing or `copy()`-ing them directly
 - Old→new `IdentityMatch`/`identity == null` mapping — see `docs/how-it-works.md` "Step 7: Identity Model" for the full table
+- `EnrichmentCache.get`/`getIncludingExpired`/`getNegative` now return `CacheEnvelope<...>?` instead of a bare result: recompile, and read `.result` where you read the old return value directly
+- That return-type change is a suspend-fun descriptor erasure the `.api` diff cannot show; treat it as breaking regardless — `docs/pitfalls.md` "The published surface"
 
 ### Added
 - `EnrichmentRequest.forTrackByMbid`/`forAlbumByMbid`/`forArtistByMbid`: request an entity by MBID alone; identity resolution fills the names the other providers search by
@@ -93,6 +95,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `TRACK_PREVIEW` cache identity now uses a request's Deezer track id when present, isolated from the bare-name key, so it no longer shares an entry with an ambiguous name-only search
 
 ### Fixed
+- MusicBrainz now reports `QUALIFIER_FALLBACK_NAME` when a stripped candidate, not the literal title, resolved a track or album; an exact-title match still reports `EXACT_NAME`
+- An all-cache-hit call now replays its cached `NOT_ATTEMPTED_*` reason when every type agrees; a mixed or `RESOLVED`-uniform hit still reports `NOT_ATTEMPTED_CACHE_HIT`
+- `RoomEnrichmentCache` and `InMemoryEnrichmentCache` now read back the `canonicalStatus` they persist on write, closing the write-only gap the previous audit found
 - Deezer track search now accepts a candidate's title (exact or equivalent-qualifier match) before ranking it, rather than ranking any right-artist pool; a wholly unrelated title is no longer returned
 - LRCLIB's search fallback now rejects a candidate whose artist or title it cannot identify, rather than taking the first search hit unconditionally
 - Remove any retrying OkHttp interceptor: it cannot see the enrich deadline, so its retries are unbudgeted and now stack on the ladder

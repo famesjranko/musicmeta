@@ -34,6 +34,17 @@ class InMemoryEnrichmentCacheTest {
         assertNotNull(result)
     }
 
+    @Test fun `get reads back the canonicalStatus put wrote, closing the write-only gap`() = runTest {
+        // Given - an entry stored under a specific canonical status
+        cache.put("a:1", EnrichmentType.ALBUM_ART, art(), CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED, 60_000)
+
+        // When - retrieving the same key
+        val result = cache.get("a:1", EnrichmentType.ALBUM_ART)
+
+        // Then - the envelope carries the exact status it was written under, not just the result
+        assertEquals(CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED, result?.canonicalStatus)
+    }
+
     @Test fun `get returns null for expired entry`() = runTest {
         // Given - entry with 5s TTL, and clock advanced past expiry
         cache.put("a:1", EnrichmentType.ALBUM_ART, art(), CanonicalStatus.RESOLVED, 5000)
@@ -133,7 +144,7 @@ class InMemoryEnrichmentCacheTest {
 
         // Then - the stale entry is returned with correct data
         assertNotNull(result)
-        assertEquals(stored.data, result!!.data)
+        assertEquals(stored.data, result!!.result.data)
     }
 
     @Test fun `getIncludingExpired returns null for never-cached key`() = runTest {
@@ -165,8 +176,9 @@ class InMemoryEnrichmentCacheTest {
         // When - reading the same key back
         val result = cache.getNegative("a:1", EnrichmentType.ALBUM_ART)
 
-        // Then - the stored NotFound is returned
-        assertEquals(notFound(), result)
+        // Then - the stored NotFound and its written canonicalStatus are both returned
+        assertEquals(notFound(), result?.result)
+        assertEquals(CanonicalStatus.RESOLVED, result?.canonicalStatus)
     }
 
     @Test fun `getNegative returns null for an expired entry`() = runTest {

@@ -394,9 +394,10 @@ class CanonicalStatusModelTest {
         val first = e.enrich(req, setOf(EnrichmentType.TRACK_PREVIEW))
         val second = e.enrich(req, setOf(EnrichmentType.TRACK_PREVIEW))
 
-        // Then - both calls report the same provider-native provenance
+        // Then - both calls report the same provider-native provenance, and the second call replays
+        // the exact reason no live attempt ran, uniform across the one requested type
         assertEquals(CanonicalStatus.NOT_ATTEMPTED_DISABLED, first.identity.status)
-        assertEquals(CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT, second.identity.status)
+        assertEquals(CanonicalStatus.NOT_ATTEMPTED_DISABLED, second.identity.status)
         val firstSuccess = first.raw[EnrichmentType.TRACK_PREVIEW] as EnrichmentResult.Success
         val secondSuccess = second.raw[EnrichmentType.TRACK_PREVIEW] as EnrichmentResult.Success
         assertEquals(LookupProvenance.PROVIDER_NATIVE_ID, firstSuccess.provenance)
@@ -416,13 +417,80 @@ class CanonicalStatusModelTest {
         val first = e.enrich(req, setOf(EnrichmentType.TRACK_PREVIEW))
         val second = e.enrich(req, setOf(EnrichmentType.TRACK_PREVIEW))
 
-        // Then - both calls report the same unverified fuzzy-name provenance
+        // Then - both calls report the same unverified fuzzy-name provenance, and the second call
+        // replays the exact reason no live attempt ran rather than the less informative cache-hit
+        // status: every type this call served agreed on NOT_ATTEMPTED_DISABLED
         assertEquals(CanonicalStatus.NOT_ATTEMPTED_DISABLED, first.identity.status)
-        assertEquals(CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT, second.identity.status)
+        assertEquals(CanonicalStatus.NOT_ATTEMPTED_DISABLED, second.identity.status)
         val firstSuccess = first.raw[EnrichmentType.TRACK_PREVIEW] as EnrichmentResult.Success
         val secondSuccess = second.raw[EnrichmentType.TRACK_PREVIEW] as EnrichmentResult.Success
         assertEquals(LookupProvenance.FUZZY_NAME, firstSuccess.provenance)
         assertEquals(LookupProvenance.FUZZY_NAME, secondSuccess.provenance)
+    }
+
+    @Test fun `an all-cache-hit call whose types were written under a uniform RESOLVED status still reports NOT_ATTEMPTED_CACHE_HIT`() = runTest {
+        // Given - identity resolves, and the type's result is cached under CanonicalStatus.RESOLVED
+        val cache = InMemoryEnrichmentCache()
+        val deezer = artProvider()
+        val id = idProvider(
+            EnrichmentResult.Success(
+                EnrichmentType.GENRE, com.landofoz.musicmeta.EnrichmentData.Metadata(genres = listOf("rock")), "mb", 1.0f,
+            ),
+        )
+        val e = engine(cache, deezer, id)
+        val req = EnrichmentRequest.forTrack("Song", "Artist")
+
+        // When - enriching twice: the first is live and resolves, the second is an all-cache-hit
+        val first = e.enrich(req, setOf(EnrichmentType.TRACK_PREVIEW))
+        val second = e.enrich(req, setOf(EnrichmentType.TRACK_PREVIEW))
+
+        // Then - RESOLVED is never replayed from a cache hit: it promises a matchScore the cache
+        // envelope does not carry, so the second call reports the honest cache-hit status instead
+        assertEquals(CanonicalStatus.RESOLVED, first.identity.status)
+        assertEquals(CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT, second.identity.status)
+    }
+
+    @Test fun `an all-cache-hit call whose types were written under different statuses reports NOT_ATTEMPTED_CACHE_HIT`() = runTest {
+        // Given - a cache pre-seeded with two types for the same entity, one written while
+        // resolution was disabled and one written because the type needed no resolution at all
+        val cache = InMemoryEnrichmentCache()
+        val req = EnrichmentRequest.forTrack("Song", "Artist")
+        cache.put(
+            entityKeyFor(req, EnrichmentType.TRACK_PREVIEW), EnrichmentType.TRACK_PREVIEW,
+            EnrichmentResult.Success(
+                EnrichmentType.TRACK_PREVIEW,
+                com.landofoz.musicmeta.EnrichmentData.TrackPreview("https://x/preview.mp3", 30_000, "deezer"),
+                "deezer", 0.8f, provenance = LookupProvenance.FUZZY_NAME,
+            ),
+            CanonicalStatus.NOT_ATTEMPTED_DISABLED,
+        )
+        cache.put(
+            entityKeyFor(req, EnrichmentType.TRACK_METADATA), EnrichmentType.TRACK_METADATA,
+            EnrichmentResult.Success(
+                EnrichmentType.TRACK_METADATA,
+                com.landofoz.musicmeta.EnrichmentData.TrackMetadata(durationMs = 200_000),
+                "deezer", 0.8f, provenance = LookupProvenance.FUZZY_NAME,
+            ),
+            CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED,
+        )
+        val e = DefaultEnrichmentEngine(
+            ProviderRegistry(emptyList()), cache, EnrichmentConfig(enableIdentityResolution = false),
+        )
+
+        // When - enriching both types, entirely from cache
+        val result = e.enrich(req, setOf(EnrichmentType.TRACK_PREVIEW, EnrichmentType.TRACK_METADATA))
+
+        // Then - no single stored status speaks truthfully for the whole call, so it reports the
+        // honest cache-hit status; each result still carries its own stored provenance
+        assertEquals(CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT, result.identity.status)
+        assertEquals(
+            LookupProvenance.FUZZY_NAME,
+            (result.raw[EnrichmentType.TRACK_PREVIEW] as EnrichmentResult.Success).provenance,
+        )
+        assertEquals(
+            LookupProvenance.FUZZY_NAME,
+            (result.raw[EnrichmentType.TRACK_METADATA] as EnrichmentResult.Success).provenance,
+        )
     }
 
     @Test fun `an all-cache-hit call reports CACHE when the cache cannot recover the original provenance`() = runTest {
