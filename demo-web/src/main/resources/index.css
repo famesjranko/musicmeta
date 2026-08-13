@@ -122,6 +122,16 @@ header {
   box-shadow: 0 0 0 3px rgba(255, 127, 132, 0.08);
 }
 
+#health-pill[data-state="degraded"] {
+  border-color: rgba(239, 189, 93, 0.2);
+  color: var(--warn);
+}
+
+#health-pill[data-state="degraded"] .health-dot {
+  background: var(--warn);
+  box-shadow: 0 0 0 3px rgba(239, 189, 93, 0.08);
+}
+
 header h1 {
   margin: 0;
   max-width: 760px;

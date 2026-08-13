@@ -126,6 +126,11 @@ let backendReady = false;
 const healthPill = document.getElementById('health-pill');
 const healthLabel = document.getElementById('health-label');
 const exampleButtons = Array.from(document.querySelectorAll('#examples button[data-kind]'));
+const degradedBanner = document.getElementById('degraded-banner');
+
+document.getElementById('degraded-banner-dismiss').addEventListener('click', () => {
+  degradedBanner.hidden = true;
+});
 
 function setSearchReady(ready) {
   backendReady = ready;
@@ -149,10 +154,18 @@ async function pollHealth() {
       cache: 'no-store',
       signal: controller.signal,
     });
-    if (!response.ok) throw new Error('HTTP ' + response.status);
+    // 503 is the still-warming status (see Server.kt's /api/health) and carries the same
+    // parseable JSON body as 200 — only a response the server never sent falls through to catch.
+    if (!response.ok && response.status !== 503) throw new Error('HTTP ' + response.status);
     const data = await response.json();
-    if (data.ready) {
+    if (data.status === 'READY') {
       setHealthState('ready', 'Backend ready');
+      setSearchReady(true);
+      return;
+    }
+    if (data.status === 'DEGRADED') {
+      setHealthState('degraded', 'Backend degraded');
+      degradedBanner.hidden = false;
       setSearchReady(true);
       return;
     }

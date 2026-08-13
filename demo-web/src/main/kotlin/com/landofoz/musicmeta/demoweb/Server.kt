@@ -38,7 +38,6 @@ import java.net.InetSocketAddress
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.Executors
-import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.concurrent.thread
 
@@ -48,15 +47,37 @@ private val json = Json { encodeDefaults = true }
 private class ResourceAnchor
 
 /**
- * Flips true once one real enrichment round-trip has completed — the JVM's JIT warmup plus each
+ * `WARMING` until one real enrichment round-trip has completed — the JVM's JIT warmup plus each
  * provider's first-ever DNS resolution and TLS handshake, which is what pushes a genuinely cold
  * first request close to (or past) [com.landofoz.musicmeta.EnrichmentConfig.enrichTimeoutMs]. Every
  * request after that reuses warm connections and comfortably finishes inside the timeout.
+ *
+ * `READY` and `DEGRADED` both mean the round-trip happened; they differ in whether the probe came
+ * back with anything other than [EnrichmentResult.Error] for every requested type. `DEGRADED`
+ * still serves requests — the process itself is up — but an uptime probe should not flap on a
+ * provider outage the way it must not consider the app up before warm-up.
  */
-private val ready = AtomicBoolean(false)
+internal enum class HealthState { WARMING, READY, DEGRADED }
+
+private val healthState = AtomicReference(HealthState.WARMING)
 
 @Serializable
-private data class HealthResponse(val ready: Boolean)
+private data class HealthResponse(val ready: Boolean, val status: String)
+
+/**
+ * Pure classification of a completed (or failed) warm-up round-trip, kept apart from [warmUp] so
+ * it is testable without a thread or a live engine.
+ *
+ * A `null` [result] with `threw == false` is not reachable through [warmUp] today — the probe
+ * either returns a profile or throws — but is classified as [HealthState.DEGRADED] rather than
+ * [HealthState.READY] on the same "unproven, don't claim it" grounds as the throwing case: nothing
+ * here establishes that a provider actually answered.
+ */
+internal fun classifyWarmUp(result: EnrichmentResults?, threw: Boolean): HealthState = when {
+    threw || result == null -> HealthState.DEGRADED
+    result.raw.values.any { it !is EnrichmentResult.Error } -> HealthState.READY
+    else -> HealthState.DEGRADED
+}
 
 /**
  * [engineRef] is read fresh per request rather than captured once, so a cache-mode swap takes
@@ -96,7 +117,15 @@ fun startServer(
     server.createContext("/api/preview") { exchange -> handlePreview(exchange, engineRef.get()) }
     server.createContext("/api/providers") { exchange -> handleProviders(exchange, engineRef.get(), apiKeys) }
     server.createContext("/api/config") { exchange -> handleConfig(exchange, engineRef, cacheModeRef, rebuildEngine) }
-    server.createContext("/api/health") { exchange -> exchange.respondJson(200, HealthResponse(ready.get())) }
+    server.createContext("/api/health") { exchange ->
+        val state = healthState.get()
+        // WARMING is the one state a hosting platform must not see as up — HTTP 503 keeps it out
+        // of rotation until the round-trip completes. READY and DEGRADED both report 200: the
+        // process is accepting requests either way, so an uptime probe should not flap on a
+        // provider outage.
+        val httpStatus = if (state == HealthState.WARMING) 503 else 200
+        exchange.respondJson(httpStatus, HealthResponse(ready = state != HealthState.WARMING, status = state.name))
+    }
 
     server.start()
     warmUp(engineRef.get())
@@ -104,8 +133,10 @@ fun startServer(
 
 /**
  * Fires a single throwaway enrichment off its own thread at startup, outside any request's timeout
- * budget, purely to pay the cold-start cost up front. Success or failure doesn't matter — only that
- * the round-trip happened — so any exception is swallowed.
+ * budget, purely to pay the cold-start cost up front. The round-trip's outcome now feeds
+ * [classifyWarmUp] to pick [healthState] — [HealthState.READY] or [HealthState.DEGRADED] — so it is
+ * captured rather than discarded, but nothing here retries or escalates it: the JIT/DNS/TLS cost is
+ * paid either way, and a broken provider is reported, not fixed, by this thread.
  *
  * The blanket `catch (_: Exception)` here skips the `docs/pitfalls.md` §2 `ensureActive()` guard
  * safely: `runBlocking` on this daemon thread starts its own root job, so there is no caller
@@ -113,12 +144,14 @@ fun startServer(
  */
 private fun warmUp(engine: EnrichmentEngine) {
     thread(name = "warmup", isDaemon = true) {
+        var result: EnrichmentResults? = null
+        var threw = false
         try {
-            runBlocking { engine.artistProfile("Radiohead") }
+            result = runBlocking { engine.artistProfile("Radiohead") }.results
         } catch (_: Exception) {
-            // best-effort — the point is paying the JIT/DNS/TLS cost, not the result
+            threw = true
         } finally {
-            ready.set(true)
+            healthState.set(classifyWarmUp(result, threw))
         }
     }
 }
