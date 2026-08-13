@@ -1,9 +1,10 @@
 name: Provider API drift watch
 
 # Scheduled watch for third-party provider drift. Scheduled, not change-triggered, because the
-# trigger is external: a provider changes its JSON with zero commits here, and org.json's opt*
-# family turns that into a *successful* enrichment containing nothing. Never gating — see
-# CHANGELOG 0.10.0 (#16).
+# trigger is external: a provider changes its JSON with zero commits here. Runs the e2e suite
+# against live provider APIs and reports any red; a moved field surfaces indirectly if it breaks a
+# test, but this is not a field watcher, and today's failures are dominated by load shedding, not
+# provider changes. Never gating — see CHANGELOG 0.10.0 (#16).
 #
 # This used to be 476 lines, most of it building a summary and then creating, updating, reopening
 # and closing a public tracking issue with redacted bodies. A failed scheduled run already emails

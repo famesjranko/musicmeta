@@ -2,10 +2,11 @@
 
 Issues and specs (you may know a spec as a PRD) for this repo live as markdown files in `.scratch/`.
 
-> This repo also has a GitHub remote with live issues (`CHANGELOG.md` cites `(#n)`, and
-> `provider-drift.yml` files issues automatically). Those are **not** the skill tracker: skills read
-> and write `.scratch/`, and must not run `gh issue create`. A `(#n)` reference in `CHANGELOG.md`, a
-> commit, or a PR body still means the GitHub issue.
+> This repo also has a GitHub remote with live issues (`CHANGELOG.md` cites `(#n)`; `provider-drift.yml`
+> does not file them — a failed scheduled run emails the maintainer, and that email is the drift
+> signal). Those are **not** the skill tracker: skills read and write `.scratch/`, and must not run
+> `gh issue create`. A `(#n)` reference in `CHANGELOG.md`, a commit, or a PR body still means the
+> GitHub issue.
 
 ## Conventions
 
