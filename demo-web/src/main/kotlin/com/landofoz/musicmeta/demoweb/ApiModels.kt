@@ -31,11 +31,11 @@ data class SummaryCard(
     /** False unless identity resolved (or needed no resolution) — do not present [title] as a match. */
     val identityResolved: Boolean = true,
     /**
-     * The bare `IdentityMatch` enum name to branch on, or `null` when resolution was skipped —
-     * unlike [Meta.identityMatch], which is a display string. Section presence is not a substitute:
-     * a `SUGGESTIONS` verdict whose candidates all filtered out looks just like `BEST_EFFORT`.
+     * The bare `CanonicalStatus` enum name to branch on, unlike [Meta.identityMatch], which is a
+     * display string. Section presence is not a substitute: an `AMBIGUOUS` verdict whose candidates
+     * all filtered out looks just like `UNRESOLVED`.
      */
-    val identityVerdict: String? = null,
+    val identityVerdict: String = "",
     val genres: List<GenreChip> = emptyList(),
 )
 

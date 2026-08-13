@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta
 
+import com.landofoz.musicmeta.testutil.NOT_REQUIRED_IDENTITY
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -18,7 +19,7 @@ class EnrichmentResultsTest {
         val results = EnrichmentResults(
             raw = mapOf(EnrichmentType.ALBUM_ART to success(EnrichmentType.ALBUM_ART, artwork)),
             requestedTypes = setOf(EnrichmentType.ALBUM_ART),
-            identity = null,
+            identity = NOT_REQUIRED_IDENTITY,
         )
 
         // When - getting the typed data for ALBUM_ART
@@ -35,7 +36,7 @@ class EnrichmentResultsTest {
         val results = EnrichmentResults(
             raw = mapOf(EnrichmentType.GENRE to success(EnrichmentType.GENRE, metadata)),
             requestedTypes = setOf(EnrichmentType.GENRE),
-            identity = null,
+            identity = NOT_REQUIRED_IDENTITY,
         )
 
         // When - requesting it as Artwork instead of Metadata
@@ -50,7 +51,7 @@ class EnrichmentResultsTest {
         val results = EnrichmentResults(
             raw = mapOf(EnrichmentType.ALBUM_ART to EnrichmentResult.NotFound(EnrichmentType.ALBUM_ART, "test")),
             requestedTypes = setOf(EnrichmentType.ALBUM_ART),
-            identity = null,
+            identity = NOT_REQUIRED_IDENTITY,
         )
 
         // When - getting the typed data for ALBUM_ART
@@ -65,7 +66,7 @@ class EnrichmentResultsTest {
         val results = EnrichmentResults(
             raw = emptyMap(),
             requestedTypes = setOf(EnrichmentType.GENRE, EnrichmentType.ALBUM_ART),
-            identity = null,
+            identity = NOT_REQUIRED_IDENTITY,
         )
 
         // When - checking wasRequested for each of the three types
@@ -85,7 +86,7 @@ class EnrichmentResultsTest {
                 EnrichmentType.ARTIST_BIO to success(EnrichmentType.ARTIST_BIO, bio),
             ),
             requestedTypes = setOf(EnrichmentType.ARTIST_PHOTO, EnrichmentType.ARTIST_BIO),
-            identity = null,
+            identity = NOT_REQUIRED_IDENTITY,
         )
 
         // Then - the named accessors return the unwrapped data
@@ -103,7 +104,7 @@ class EnrichmentResultsTest {
                 EnrichmentType.LYRICS_PLAIN to success(EnrichmentType.LYRICS_PLAIN, plain),
             ),
             requestedTypes = setOf(EnrichmentType.LYRICS_SYNCED, EnrichmentType.LYRICS_PLAIN),
-            identity = null,
+            identity = NOT_REQUIRED_IDENTITY,
         )
 
         // Then - synced wins
@@ -119,7 +120,7 @@ class EnrichmentResultsTest {
                 EnrichmentType.LYRICS_PLAIN to success(EnrichmentType.LYRICS_PLAIN, plain),
             ),
             requestedTypes = setOf(EnrichmentType.LYRICS_SYNCED, EnrichmentType.LYRICS_PLAIN),
-            identity = null,
+            identity = NOT_REQUIRED_IDENTITY,
         )
 
         // Then - falls back to plain
@@ -137,7 +138,7 @@ class EnrichmentResultsTest {
                 EnrichmentType.ALBUM_METADATA to success(EnrichmentType.ALBUM_METADATA, metadata),
             ),
             requestedTypes = setOf(EnrichmentType.ALBUM_METADATA),
-            identity = null,
+            identity = NOT_REQUIRED_IDENTITY,
         )
 
         // Then - falls back to ALBUM_METADATA
@@ -159,7 +160,7 @@ class EnrichmentResultsTest {
                 EnrichmentType.ALBUM_METADATA to success(EnrichmentType.ALBUM_METADATA, albumMeta),
             ),
             requestedTypes = setOf(EnrichmentType.GENRE, EnrichmentType.ALBUM_METADATA),
-            identity = null,
+            identity = NOT_REQUIRED_IDENTITY,
         )
 
         // Then - dedicated GENRE wins
@@ -172,7 +173,7 @@ class EnrichmentResultsTest {
         val results = EnrichmentResults(
             raw = mapOf(EnrichmentType.ALBUM_METADATA to success(EnrichmentType.ALBUM_METADATA, metadata)),
             requestedTypes = setOf(EnrichmentType.ALBUM_METADATA),
-            identity = null,
+            identity = NOT_REQUIRED_IDENTITY,
         )
 
         // When - calling label()
@@ -182,7 +183,7 @@ class EnrichmentResultsTest {
 
     @Test fun `metadata accessors return null when no data`() {
         // Given - an EnrichmentResults with no raw results
-        val results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = null)
+        val results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = NOT_REQUIRED_IDENTITY)
 
         // When - calling each metadata accessor
         // Then - collection accessors return empty and scalar accessors return null
@@ -199,16 +200,16 @@ class EnrichmentResultsTest {
         val ids = EnrichmentIdentifiers(musicBrainzId = "abc-123", wikidataId = "Q123")
         val identity = IdentityResolution(
             identifiers = ids,
-            match = IdentityMatch.RESOLVED,
+            status = CanonicalStatus.RESOLVED,
             matchScore = 95,
         )
         val results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identity)
 
         // When - reading the identity field
-        // Then - the match, score, and identifiers are accessible
-        assertEquals(IdentityMatch.RESOLVED, results.identity?.match)
-        assertEquals(95, results.identity?.matchScore)
-        assertEquals("abc-123", results.identity?.identifiers?.musicBrainzId)
+        // Then - the status, score, and identifiers are accessible
+        assertEquals(CanonicalStatus.RESOLVED, results.identity.status)
+        assertEquals(95, results.identity.matchScore)
+        assertEquals("abc-123", results.identity.identifiers.musicBrainzId)
     }
 
     @Test fun `similarTracks accessor returns typed data`() {
@@ -220,7 +221,7 @@ class EnrichmentResultsTest {
         val results = EnrichmentResults(
             raw = mapOf(EnrichmentType.SIMILAR_TRACKS to success(EnrichmentType.SIMILAR_TRACKS, tracks)),
             requestedTypes = setOf(EnrichmentType.SIMILAR_TRACKS),
-            identity = null,
+            identity = NOT_REQUIRED_IDENTITY,
         )
 
         // When - accessing via the named accessor
@@ -237,7 +238,7 @@ class EnrichmentResultsTest {
         val results = EnrichmentResults(
             raw = mapOf(EnrichmentType.ARTIST_BIO to rateLimited),
             requestedTypes = setOf(EnrichmentType.ARTIST_BIO),
-            identity = null,
+            identity = NOT_REQUIRED_IDENTITY,
         )
 
         // Then - can check the raw result for error diagnostics

@@ -5,6 +5,9 @@ import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
+/** Bumped whenever a stored envelope's meaning changes; a row read under a different value is a schema mismatch. */
+internal const val CACHE_SCHEMA_VERSION = 1
+
 @Entity(
     tableName = "enrichment_cache",
     indices = [
@@ -19,10 +22,15 @@ data class EnrichmentCacheEntity(
     @ColumnInfo(name = "provider") val provider: String,
     @ColumnInfo(name = "data_json") val dataJson: String,
     @ColumnInfo(name = "confidence") val confidence: Float,
-    @ColumnInfo(name = "identity_match") val identityMatch: String? = null,
-    @ColumnInfo(name = "identity_match_score") val identityMatchScore: Int? = null,
+    /** [com.landofoz.musicmeta.LookupProvenance] name — how the live lookup selected this entity. */
+    @ColumnInfo(name = "lookup_provenance") val lookupProvenance: String? = null,
+    /** [com.landofoz.musicmeta.CanonicalStatus] name the live call carried when this row was written. */
+    @ColumnInfo(name = "canonical_status") val canonicalStatus: String,
     @ColumnInfo(name = "resolved_ids_json") val resolvedIdsJson: String? = null,
+    /** Always `false` on write — a stale result is never cached; kept so a decoded row states it explicitly. */
+    @ColumnInfo(name = "is_stale") val isStale: Boolean = false,
     @ColumnInfo(name = "is_manual") val isManual: Boolean = false,
     @ColumnInfo(name = "cached_at") val cachedAt: Long,
     @ColumnInfo(name = "expires_at") val expiresAt: Long,
+    @ColumnInfo(name = "schema_version") val schemaVersion: Int = CACHE_SCHEMA_VERSION,
 )

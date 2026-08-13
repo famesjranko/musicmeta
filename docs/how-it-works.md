@@ -74,7 +74,7 @@ enrich(request, types, forceRefresh)
               │
               ▼
 ┌────────────────────────────┐
-│ 8. Identity Stamp          │── mark RESOLVED/BEST_EFFORT/UNVERIFIED + score
+│ 8. Provenance Stamp        │── mark provider results with LookupProvenance
 └─────────────┬──────────────┘
               │
               ▼
@@ -123,7 +123,7 @@ These identifiers are merged into the request via `request.withIdentifiers(merge
 
 **Cache alias:** a result the engine resolved from an identifier is also written under the name key, so a later name-only lookup finds it. For an identifier-only request that key carries MusicBrainz's canonical name — there is no caller name to alias under, and the canonical one is what a later name lookup would ask with.
 
-**Suggestions do not veto the fan-out:** If MusicBrainz can't find an exact match but has near-miss candidates, that is a statement about MusicBrainz's own lookup, not a global "nothing can be fetched" decision. Every uncached type still resolves through step 4 exactly as it would under a plain unresolved identity — each provider's own `ProviderChain` eligibility (availability, identifier requirements, circuit breaker) decides whether it runs. A `NONE`-identifier provider like Deezer's track preview search still answers; an MBID-only provider without an MBID still doesn't. Surviving `Success` results are stamped `BEST_EFFORT` (step 8). The suggestion list itself is attached once, to `EnrichmentResults.identity`, never copied onto a per-type result — the consumer can present it as "Did you mean?" and re-enrich with the selected candidate.
+**Suggestions do not veto the fan-out:** If MusicBrainz can't find an exact match but has near-miss candidates, that is a statement about MusicBrainz's own lookup, not a global "nothing can be fetched" decision. Every uncached type still resolves through step 4 exactly as it would under a plain unresolved identity — each provider's own `ProviderChain` eligibility (availability, identifier requirements, circuit breaker) decides whether it runs. A `NONE`-identifier provider like Deezer's track preview search still answers; an MBID-only provider without an MBID still doesn't. Surviving `Success` results carry a `LookupProvenance` reflecting the fuzzy search that produced them (step 8), while the call's `CanonicalStatus` stays `AMBIGUOUS`. The suggestion list itself is attached once, to `EnrichmentResults.identity`, never copied onto a per-type result — the consumer can present it as "Did you mean?" and re-enrich with the selected candidate.
 
 ### Step 4: Concurrent Type Resolution
 
@@ -185,27 +185,50 @@ For recommendation types only (SIMILAR_ARTISTS, SIMILAR_ALBUMS, ARTIST_RADIO, AR
 
 This lets a music player show only recommendations the user can actually play.
 
-### Step 7: Identity Match Stamping
+### Step 7: Identity Model
 
-Each Success result is stamped with identity resolution metadata:
+Two independent facts describe an `enrich()` call, never one merged value:
 
-| `identityMatch` | Meaning |
-|-----------------|---------|
-| `RESOLVED` | MusicBrainz found a confident match. `identityMatchScore` (0–100) indicates match quality. |
-| `BEST_EFFORT` | Identity resolution searched and found no match, with or without suggestions. Results came from unverified fuzzy searches, and are not cached. |
-| `UNVERIFIED` | The identity provider errored (usually transient). Same fuzzy results, but a retry may resolve — and they are not cached. |
-| `null` | Identity resolution wasn't needed (MBID pre-provided, cached, or disabled). |
+- `EnrichmentResults.identity.status: CanonicalStatus` — the MusicBrainz canonical resolution
+  outcome for this call, set exactly once. Never `null`: every reason resolution did not run has
+  its own explicit state, so a consumer can never mistake "not attempted" for "confident".
+- `EnrichmentResult.Success.provenance: LookupProvenance` — how that specific provider selected
+  the entity behind its own result. This describes that provider's own lookup, not whether
+  MusicBrainz agreed.
 
-This lets consumers decide how much to trust results — a `RESOLVED` match with score 95 is much more reliable than `BEST_EFFORT`.
+| `CanonicalStatus` | Meaning |
+|---|---|
+| `RESOLVED` | MusicBrainz confirmed the entity. `identity.matchScore` (0–100) indicates match quality. |
+| `AMBIGUOUS` | MusicBrainz found no confident match, but offered candidates. See `identity.suggestions`. |
+| `UNRESOLVED` | MusicBrainz searched and found neither a match nor candidates. |
+| `FAILED` | The identity provider errored (usually transient); a retry may resolve. |
+| `NOT_ATTEMPTED_DISABLED` | `EnrichmentConfig.enableIdentityResolution` is `false`. |
+| `NOT_ATTEMPTED_NOT_REQUIRED` | The request already carried every identifier the requested types needed. |
+| `NOT_ATTEMPTED_CACHE_HIT` | Every requested type was served from cache; no live attempt ran this call. |
+| `NOT_ATTEMPTED_NO_PROVIDER` | Resolution was needed, but no identity provider is registered. |
+
+| `LookupProvenance` | Meaning |
+|---|---|
+| `CANONICAL_ID` | Looked up directly by a MusicBrainz canonical id. |
+| `PROVIDER_NATIVE_ID` | Looked up directly by a provider-native id supplied on the request. |
+| `EXACT_NAME` | Selected by a name search MusicBrainz canonically confirmed this call. |
+| `QUALIFIER_FALLBACK_NAME` | Selected after normalization or qualifier-fallback stripping. |
+| `FUZZY_NAME` | Selected by an unverified fuzzy name search; MusicBrainz did not confirm this call. |
+| `CACHE` | Served from cache by an implementation that could not recover the original provenance. |
+
+A consumer deciding how much to trust results reads both: `status == RESOLVED` with a high
+`matchScore` is confident; any `AMBIGUOUS`/`UNRESOLVED`/`FAILED` status means every result this
+call produced is a fuzzy or ambiguous guess, whatever `provenance` an individual result carries.
 
 ### Step 8: Cache Store
 
-No fresh result — success or `NotFound` — is cached for a call whose canonical identity ended
-`BEST_EFFORT`, `SUGGESTIONS`, or `UNVERIFIED`: the entry would read back with `identity == null`,
-losing the ambiguity or outage. A `NotFound` is also never negative-cached when its own chain
-skipped a provider for a missing identifier, resolved identity or not — a provider that was never
-asked cannot speak for "nothing found". Successful results reached under a `RESOLVED` (or
-not-attempted) identity are cached with per-type TTLs:
+No fresh result — success or `NotFound` — is cached for a call whose canonical status is
+`AMBIGUOUS`, `UNRESOLVED`, or `FAILED`: the entry would read back as a cache hit indistinguishable
+from a confident one, losing the ambiguity or outage. A `NotFound` is also never negative-cached
+when its own chain skipped a provider for a missing identifier, resolved identity or not — a
+provider that was never asked cannot speak for "nothing found". Successful results reached under
+`RESOLVED` (or any `NOT_ATTEMPTED_*` status) are cached with per-type TTLs, and a cache hit's
+`Success.provenance` always replays the original live lookup's value rather than a generic `CACHE`:
 - Artwork: 30–90 days (photos 30d, album art 90d)
 - Genres/labels/metadata: 90–365 days
 - Popularity/stats: 7 days
@@ -337,6 +360,6 @@ Prevents hammering a down provider and slowing the entire pipeline.
 - Provider failure → chain tries next provider at lower priority
 - Timeout → returns partial results (whatever finished within `enrichTimeoutMs`)
 - Individual type failure → other types still resolve
-- Identity resolution found no match → results continue with `BEST_EFFORT` match quality
-- Identity provider errored → results continue with `UNVERIFIED` match quality, uncached so a retry can heal
+- Identity resolution found no match → results continue under `CanonicalStatus.UNRESOLVED`/`AMBIGUOUS`
+- Identity provider errored → results continue under `CanonicalStatus.FAILED`, uncached so a retry can heal
 - Catalog provider unavailable → recommendations returned unfiltered

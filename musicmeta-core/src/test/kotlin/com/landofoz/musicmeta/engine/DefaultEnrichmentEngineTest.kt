@@ -27,7 +27,7 @@ class DefaultEnrichmentEngineTest {
     @Test fun `enrich returns cached result`() = runTest {
         // Given - cache pre-populated with an art result
         val p = FakeProvider(id = "p", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100)))
-        cache.put(DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.ALBUM_ART), EnrichmentType.ALBUM_ART, art("cached"))
+        cache.put(DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.ALBUM_ART), EnrichmentType.ALBUM_ART, art("cached"), CanonicalStatus.RESOLVED)
 
         // When - enriching with a provider that would return different data
         val results = engine(p).enrich(req, setOf(EnrichmentType.ALBUM_ART))
@@ -43,15 +43,15 @@ class DefaultEnrichmentEngineTest {
             .also { it.givenIdentityResult(EnrichmentResult.Success(EnrichmentType.GENRE, EnrichmentData.Metadata(genres = listOf("rock")), "mb", 0.95f, resolvedIdentifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-123"))) }
         val types = setOf(EnrichmentType.ALBUM_ART, EnrichmentType.GENRE)
         for (type in types) {
-            cache.put(DefaultEnrichmentEngine.entityKeyFor(req, type), type, art("cached"))
+            cache.put(DefaultEnrichmentEngine.entityKeyFor(req, type), type, art("cached"), CanonicalStatus.RESOLVED)
         }
         val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(idProvider)), cache, EnrichmentConfig(enableIdentityResolution = true))
 
         // When - enriching with everything already cached
         val results = e.enrich(req, types)
 
-        // Then - identity resolution skipped (no providers called), identity is null
-        assertNull("identity should be null when all types served from cache", results.identity)
+        // Then - identity resolution skipped (no providers called), reported honestly as a cache hit
+        assertEquals(CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT, results.identity.status)
         assertEquals(0, idProvider.enrichCalls.size)
     }
 
@@ -61,7 +61,7 @@ class DefaultEnrichmentEngineTest {
         // Given - cache has stale data, provider has fresh data
         val p = FakeProvider(id = "p", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100)))
             .also { it.givenResult(EnrichmentType.ALBUM_ART, art("fresh")) }
-        cache.put(DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.ALBUM_ART), EnrichmentType.ALBUM_ART, art("stale"))
+        cache.put(DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.ALBUM_ART), EnrichmentType.ALBUM_ART, art("stale"), CanonicalStatus.RESOLVED)
 
         // When - enriching with forceRefresh
         val results = engine(p).enrich(req, setOf(EnrichmentType.ALBUM_ART), forceRefresh = true)
@@ -76,8 +76,8 @@ class DefaultEnrichmentEngineTest {
         // Given - cache has art and genre results
         val p = FakeProvider(id = "p")
         val e = engine(p)
-        cache.put(DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.ALBUM_ART), EnrichmentType.ALBUM_ART, art("p"))
-        cache.put(DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.GENRE), EnrichmentType.GENRE, genre("p"))
+        cache.put(DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.ALBUM_ART), EnrichmentType.ALBUM_ART, art("p"), CanonicalStatus.RESOLVED)
+        cache.put(DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.GENRE), EnrichmentType.GENRE, genre("p"), CanonicalStatus.RESOLVED)
 
         // When - invalidating only art
         e.invalidate(req, EnrichmentType.ALBUM_ART)
@@ -91,8 +91,8 @@ class DefaultEnrichmentEngineTest {
         // Given - cache has art and genre results
         val p = FakeProvider(id = "p")
         val e = engine(p)
-        cache.put(DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.ALBUM_ART), EnrichmentType.ALBUM_ART, art("p"))
-        cache.put(DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.GENRE), EnrichmentType.GENRE, genre("p"))
+        cache.put(DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.ALBUM_ART), EnrichmentType.ALBUM_ART, art("p"), CanonicalStatus.RESOLVED)
+        cache.put(DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.GENRE), EnrichmentType.GENRE, genre("p"), CanonicalStatus.RESOLVED)
 
         // When - invalidating all types for the request
         e.invalidate(req)
@@ -107,8 +107,8 @@ class DefaultEnrichmentEngineTest {
         val mbidReq = EnrichmentRequest.ForAlbum(EnrichmentIdentifiers(musicBrainzId = "mbid-123"), "OK Computer", "Radiohead")
         val p = FakeProvider(id = "p")
         val e = engine(p)
-        cache.put(DefaultEnrichmentEngine.entityKeyFor(mbidReq, EnrichmentType.ALBUM_ART), EnrichmentType.ALBUM_ART, art("p"))
-        cache.put(DefaultEnrichmentEngine.entityKeyForName(mbidReq, EnrichmentType.ALBUM_ART), EnrichmentType.ALBUM_ART, art("p"))
+        cache.put(DefaultEnrichmentEngine.entityKeyFor(mbidReq, EnrichmentType.ALBUM_ART), EnrichmentType.ALBUM_ART, art("p"), CanonicalStatus.RESOLVED)
+        cache.put(DefaultEnrichmentEngine.entityKeyForName(mbidReq, EnrichmentType.ALBUM_ART), EnrichmentType.ALBUM_ART, art("p"), CanonicalStatus.RESOLVED)
 
         // When - invalidating the MBID request
         e.invalidate(mbidReq, EnrichmentType.ALBUM_ART)
@@ -124,7 +124,7 @@ class DefaultEnrichmentEngineTest {
         // Given - a result cached for the request
         val p = FakeProvider(id = "p")
         val e = engine(p)
-        cache.put(DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.ALBUM_ART), EnrichmentType.ALBUM_ART, art("p"))
+        cache.put(DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.ALBUM_ART), EnrichmentType.ALBUM_ART, art("p"), CanonicalStatus.RESOLVED)
 
         // When - marking as manually selected via the engine
         assertFalse(e.isManuallySelected(req, EnrichmentType.ALBUM_ART))
@@ -344,25 +344,38 @@ class DefaultEnrichmentEngineTest {
         // When - enriching with identity resolution
         val results = e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
 
-        // Then - RESOLVED with score
+        // Then - RESOLVED with score, and the downstream result keyed on the resolved canonical id
         val artResult = results.raw[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success
-        assertEquals(IdentityMatch.RESOLVED, artResult.identityMatch)
-        assertEquals(85, artResult.identityMatchScore)
+        assertEquals(CanonicalStatus.RESOLVED, results.identity.status)
+        assertEquals(85, results.identity.matchScore)
+        assertEquals(LookupProvenance.CANONICAL_ID, artResult.provenance)
     }
 
-    @Test fun `enrich leaves identityMatch null when no identity resolution needed`() = runTest {
-        // Given - request already has MBID, no identity resolution needed
+    @Test fun `enrich reports NOT_ATTEMPTED_NOT_REQUIRED when no identity resolution needed`() = runTest {
+        // Given - identity resolution enabled, but the request already has an MBID and needs none
         val p = FakeProvider(id = "p", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100)))
             .also { it.givenResult(EnrichmentType.ALBUM_ART, art("p")) }
         val reqWithMbid = EnrichmentRequest.forAlbum("OK Computer", "Radiohead", mbid = "mbid-123")
+        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(p)), cache, EnrichmentConfig(enableIdentityResolution = true))
 
         // When - enriching (identity resolution skipped)
-        val results = engine(p).enrich(reqWithMbid, setOf(EnrichmentType.ALBUM_ART))
+        val results = e.enrich(reqWithMbid, setOf(EnrichmentType.ALBUM_ART))
 
-        // Then - null identity match (pre-resolved, confident)
-        val artResult = results.raw[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success
-        assertNull(artResult.identityMatch)
-        assertNull(artResult.identityMatchScore)
+        // Then - not attempted because it was not required, never a bare absence
+        assertEquals(CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED, results.identity.status)
+        assertNull(results.identity.matchScore)
+    }
+
+    @Test fun `enrich reports NOT_ATTEMPTED_DISABLED when identity resolution is turned off`() = runTest {
+        // Given - a request that would need identity resolution, on an engine with it disabled
+        val p = FakeProvider(id = "p", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100)))
+            .also { it.givenResult(EnrichmentType.ALBUM_ART, art("p")) }
+
+        // When - enriching with the default (disabled) config
+        val results = engine(p).enrich(req, setOf(EnrichmentType.ALBUM_ART))
+
+        // Then - disabled is distinguishable from not-required
+        assertEquals(CanonicalStatus.NOT_ATTEMPTED_DISABLED, results.identity.status)
     }
 
     @Test fun `enrich fans out to an eligible provider when identity fails with candidates`() = runTest {
@@ -385,13 +398,13 @@ class DefaultEnrichmentEngineTest {
         // stay once at the top level instead of being copied onto the per-type result
         assertEquals(1, artProvider.enrichCalls.size)
         val artResult = results.raw[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success
-        assertEquals(IdentityMatch.BEST_EFFORT, artResult.identityMatch)
-        assertEquals(IdentityMatch.SUGGESTIONS, results.identity?.match)
-        assertEquals(2, results.identity?.suggestions?.size)
-        assertEquals("British rock band", results.identity?.suggestions?.get(0)?.disambiguation)
+        assertEquals(LookupProvenance.FUZZY_NAME, artResult.provenance)
+        assertEquals(CanonicalStatus.AMBIGUOUS, results.identity.status)
+        assertEquals(2, results.identity.suggestions.size)
+        assertEquals("British rock band", results.identity.suggestions[0].disambiguation)
     }
 
-    @Test fun `enrich stamps BEST_EFFORT when identity fails without suggestions`() = runTest {
+    @Test fun `enrich reports UNRESOLVED when identity fails without suggestions`() = runTest {
         // Given - identity provider returns NotFound without suggestions (truly nothing found)
         val idProvider = FakeProvider(id = "mb", isIdentityProvider = true, capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)))
             .also { it.givenIdentityResult(EnrichmentResult.NotFound(EnrichmentType.GENRE, "mb")) }
@@ -402,13 +415,14 @@ class DefaultEnrichmentEngineTest {
         // When - enriching (identity fails, providers try fuzzy search)
         val results = e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
 
-        // Then - Success but marked as BEST_EFFORT
+        // Then - Success from an unresolved canonical call, provenance reflecting the fuzzy search
         val artResult = results.raw[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success
-        assertEquals(IdentityMatch.BEST_EFFORT, artResult.identityMatch)
-        assertNull(artResult.identityMatchScore)
+        assertEquals(CanonicalStatus.UNRESOLVED, results.identity.status)
+        assertEquals(LookupProvenance.FUZZY_NAME, artResult.provenance)
+        assertNull(results.identity.matchScore)
     }
 
-    @Test fun `enrich stamps UNVERIFIED when identity provider throws`() = runTest {
+    @Test fun `enrich reports FAILED when identity provider throws`() = runTest {
         // Given - identity provider throws (transient network failure)
         val idProvider = object : FakeProvider(id = "mb", isIdentityProvider = true, capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100))) {
             override suspend fun resolveIdentity(request: EnrichmentRequest): EnrichmentResult =
@@ -421,14 +435,14 @@ class DefaultEnrichmentEngineTest {
         // When - enriching (identity throws, providers still try fuzzy search)
         val results = e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
 
-        // Then - identity is UNVERIFIED, never null (null reads as confident), and results are stamped
-        assertEquals(IdentityMatch.UNVERIFIED, results.identity?.match)
+        // Then - identity is FAILED, never a not-attempted status, and the fuzzy result is provenance-tagged
+        assertEquals(CanonicalStatus.FAILED, results.identity.status)
         val artResult = results.raw[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success
-        assertEquals(IdentityMatch.UNVERIFIED, artResult.identityMatch)
-        assertNull(artResult.identityMatchScore)
+        assertEquals(LookupProvenance.FUZZY_NAME, artResult.provenance)
+        assertNull(results.identity.matchScore)
     }
 
-    @Test fun `enrich stamps UNVERIFIED when identity provider returns Error`() = runTest {
+    @Test fun `enrich reports FAILED when identity provider returns Error`() = runTest {
         // Given - identity provider returns Error (e.g. mapped transport failure)
         val idProvider = FakeProvider(id = "mb", isIdentityProvider = true, capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)))
             .also { it.givenIdentityResult(EnrichmentResult.Error(EnrichmentType.GENRE, "mb", "timeout", errorKind = ErrorKind.NETWORK)) }
@@ -439,13 +453,13 @@ class DefaultEnrichmentEngineTest {
         // When - enriching for ALBUM_ART
         val results = e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
 
-        // Then - same UNVERIFIED treatment as the throwing path
-        assertEquals(IdentityMatch.UNVERIFIED, results.identity?.match)
+        // Then - same FAILED treatment as the throwing path
+        assertEquals(CanonicalStatus.FAILED, results.identity.status)
         val artResult = results.raw[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success
-        assertEquals(IdentityMatch.UNVERIFIED, artResult.identityMatch)
+        assertEquals(LookupProvenance.FUZZY_NAME, artResult.provenance)
     }
 
-    @Test fun `UNVERIFIED results are not cached so a retry re-resolves`() = runTest {
+    @Test fun `FAILED results are not cached so a retry re-resolves`() = runTest {
         // Given - identity provider that throws once, then resolves
         var identityCalls = 0
         val idProvider = object : FakeProvider(id = "mb", isIdentityProvider = true, capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100))) {
@@ -463,13 +477,13 @@ class DefaultEnrichmentEngineTest {
         val first = e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
         val second = e.enrich(req, setOf(EnrichmentType.ALBUM_ART))
 
-        // Then - the UNVERIFIED result was not cached: the retry re-ran identity resolution and
-        // came back RESOLVED, instead of a cache hit rendering identity == null (confident)
-        assertEquals(IdentityMatch.UNVERIFIED, first.identity?.match)
+        // Then - the FAILED result was not cached: the retry re-ran identity resolution and came
+        // back RESOLVED, instead of a cache hit reporting NOT_ATTEMPTED_CACHE_HIT with stale data
+        assertEquals(CanonicalStatus.FAILED, first.identity.status)
         assertEquals(2, identityCalls)
-        assertEquals(IdentityMatch.RESOLVED, second.identity?.match)
+        assertEquals(CanonicalStatus.RESOLVED, second.identity.status)
         val artResult = second.raw[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success
-        assertEquals(IdentityMatch.RESOLVED, artResult.identityMatch)
+        assertEquals(LookupProvenance.CANONICAL_ID, artResult.provenance)
     }
 
     @Test fun `identity provider failure is classified by mapError not collapsed to UNKNOWN`() = runTest {
@@ -514,7 +528,7 @@ class DefaultEnrichmentEngineTest {
         val p = FakeProvider(id = "p", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100)))
             .also { it.givenResult(EnrichmentType.ALBUM_ART, art("p-new")) }
         val key = DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.ALBUM_ART)
-        cache.put(key, EnrichmentType.ALBUM_ART, art("user-selected"))
+        cache.put(key, EnrichmentType.ALBUM_ART, art("user-selected"), CanonicalStatus.RESOLVED)
         cache.markManuallySelected(key, EnrichmentType.ALBUM_ART)
 
         // When - enriching (cache-first)
@@ -1152,7 +1166,7 @@ class DefaultEnrichmentEngineTest {
 
     @Test fun `timeout preserves cached results alongside TIMEOUT errors`() = runTest {
         // Given - one type is cached, another needs a slow provider
-        cache.put(DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.GENRE), EnrichmentType.GENRE, genre("cached"))
+        cache.put(DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.GENRE), EnrichmentType.GENRE, genre("cached"), CanonicalStatus.RESOLVED)
         val slow = SlowProvider(
             id = "slow",
             capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100)),
@@ -1508,7 +1522,7 @@ class DefaultEnrichmentEngineTest {
         var time = 0L
         val negCache = InMemoryEnrichmentCache(clock = { time })
         val keyA = DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.ALBUM_ART)
-        negCache.putNegative(keyA, EnrichmentType.ALBUM_ART, EnrichmentResult.NotFound(EnrichmentType.ALBUM_ART, "all_providers"), 1000)
+        negCache.putNegative(keyA, EnrichmentType.ALBUM_ART, EnrichmentResult.NotFound(EnrichmentType.ALBUM_ART, "all_providers"), CanonicalStatus.RESOLVED, 1000)
         val p = FakeProvider(
             id = "p",
             capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100), ProviderCapability(EnrichmentType.GENRE, 100)),
@@ -1633,7 +1647,7 @@ class DefaultEnrichmentEngineTest {
         val result = EnrichmentResult.NotFound(EnrichmentType.ALBUM_ART, "all_providers")
 
         // When - checking whether the result is cacheable as a negative
-        val cacheable = e.isCacheableNegative(result, IdentityMatch.SUGGESTIONS, identifierIncomplete = false)
+        val cacheable = e.isCacheableNegative(result, CanonicalStatus.AMBIGUOUS, identifierIncomplete = false)
 
         // Then - an unresolved canonical envelope blocks negative caching for every type of the call
         assertFalse(cacheable)
@@ -1645,7 +1659,7 @@ class DefaultEnrichmentEngineTest {
         val result = EnrichmentResult.NotFound(EnrichmentType.ALBUM_ART, "all_providers")
 
         // When - checking whether the result is cacheable as a negative
-        val cacheable = e.isCacheableNegative(result, IdentityMatch.UNVERIFIED, identifierIncomplete = false)
+        val cacheable = e.isCacheableNegative(result, CanonicalStatus.FAILED, identifierIncomplete = false)
 
         // Then - an identity outage blocks negative caching the same way an unresolved name does
         assertFalse(cacheable)
@@ -1658,7 +1672,7 @@ class DefaultEnrichmentEngineTest {
         val result = EnrichmentResult.NotFound(EnrichmentType.ALBUM_ART, "all_providers")
 
         // When - checking whether the result is cacheable as a negative
-        val cacheable = e.isCacheableNegative(result, IdentityMatch.RESOLVED, identifierIncomplete = true)
+        val cacheable = e.isCacheableNegative(result, CanonicalStatus.RESOLVED, identifierIncomplete = true)
 
         // Then - a provider that was never asked cannot speak for the chain, resolved identity or not
         assertFalse(cacheable)
@@ -1670,7 +1684,7 @@ class DefaultEnrichmentEngineTest {
         val result = EnrichmentResult.NotFound(EnrichmentType.ALBUM_ART, "all_providers")
 
         // When - checking whether the result is cacheable as a negative
-        val cacheable = e.isCacheableNegative(result, IdentityMatch.RESOLVED, identifierIncomplete = false)
+        val cacheable = e.isCacheableNegative(result, CanonicalStatus.RESOLVED, identifierIncomplete = false)
 
         // Then - today's confident-negative behavior is unchanged
         assertTrue(cacheable)
@@ -1682,7 +1696,7 @@ class DefaultEnrichmentEngineTest {
         val result = EnrichmentResult.NotFound(EnrichmentType.ALBUM_ART, "all_providers")
 
         // When - checking whether the result is cacheable as a negative
-        val cacheable = e.isCacheableNegative(result, null, identifierIncomplete = false)
+        val cacheable = e.isCacheableNegative(result, CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED, identifierIncomplete = false)
 
         // Then - "not attempted" is as confident as a resolved match
         assertTrue(cacheable)
@@ -1704,7 +1718,8 @@ class DefaultEnrichmentEngineTest {
         // Then - nothing was cached, so the second call re-asked the provider and stayed BEST_EFFORT
         assertEquals(2, artProvider.enrichCalls.size)
         val success = second.raw[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success
-        assertEquals(IdentityMatch.BEST_EFFORT, success.identityMatch)
+        assertEquals(CanonicalStatus.UNRESOLVED, second.identity.status)
+        assertEquals(LookupProvenance.FUZZY_NAME, success.provenance)
     }
 
     @Test fun `a complete NotFound under SUGGESTIONS is re-fetched and preserves suggestions on the second call`() = runTest {
@@ -1725,7 +1740,7 @@ class DefaultEnrichmentEngineTest {
 
         // Then - the second call re-asked the provider and the suggestions are still there
         assertEquals(2, artProvider.enrichCalls.size)
-        assertEquals(suggestions, second.identity?.suggestions)
+        assertEquals(suggestions, second.identity.suggestions)
     }
 
     @Test fun `a complete NotFound under UNVERIFIED is re-fetched rather than cached as a confident absence`() = runTest {
@@ -1742,7 +1757,7 @@ class DefaultEnrichmentEngineTest {
 
         // Then - the outage never became a confident cached "no data" answer
         assertEquals(2, artProvider.enrichCalls.size)
-        assertEquals(IdentityMatch.UNVERIFIED, second.identity?.match)
+        assertEquals(CanonicalStatus.FAILED, second.identity.status)
     }
 
     @Test fun `an identifier-incomplete NotFound is re-fetched and absent from the negative cache`() = runTest {
@@ -1832,7 +1847,7 @@ class DefaultEnrichmentEngineTest {
         // Given - a manually-selected Success cached for the type
         val negCache = InMemoryEnrichmentCache()
         val key = DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.ALBUM_ART)
-        negCache.put(key, EnrichmentType.ALBUM_ART, art("manual"))
+        negCache.put(key, EnrichmentType.ALBUM_ART, art("manual"), CanonicalStatus.RESOLVED)
         negCache.markManuallySelected(key, EnrichmentType.ALBUM_ART)
         val p = FakeProvider(id = "p", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100)))
         val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(p)), negCache, config)

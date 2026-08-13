@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.cache
 
+import com.landofoz.musicmeta.CanonicalStatus
 import com.landofoz.musicmeta.EnrichmentCache
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
@@ -32,7 +33,15 @@ class InMemoryEnrichmentCache(
         entries[cacheKey(entityKey, type)]?.result
     }
 
-    override suspend fun put(entityKey: String, type: EnrichmentType, result: EnrichmentResult.Success, ttlMs: Long) {
+    // canonicalStatus is not stored: this cache holds the live Success object by reference, which
+    // already carries its own provenance — nothing here needs the write-time call's status back.
+    override suspend fun put(
+        entityKey: String,
+        type: EnrichmentType,
+        result: EnrichmentResult.Success,
+        canonicalStatus: CanonicalStatus,
+        ttlMs: Long,
+    ) {
         mutex.withLock {
             entries[cacheKey(entityKey, type)] = CacheEntry(result, clock() + ttlMs)
             while (entries.size > maxEntries) entries.remove(entries.keys.first())
@@ -51,6 +60,7 @@ class InMemoryEnrichmentCache(
         entityKey: String,
         type: EnrichmentType,
         result: EnrichmentResult.NotFound,
+        canonicalStatus: CanonicalStatus,
         ttlMs: Long,
     ) {
         mutex.withLock {

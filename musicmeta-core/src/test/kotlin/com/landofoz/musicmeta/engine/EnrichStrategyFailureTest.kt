@@ -108,7 +108,7 @@ class EnrichStrategyFailureTest {
     @Test fun `a throwing merger does not discard a cache hit collected in the same call`() = runTest {
         // Given - a cached result for an unrelated type, and a merger that throws
         val p = providerFor(genre)
-        cache.put(DefaultEnrichmentEngine.entityKeyFor(req, bio), bio, success(bio, "cached"))
+        cache.put(DefaultEnrichmentEngine.entityKeyFor(req, bio), bio, success(bio, "cached"), CanonicalStatus.RESOLVED)
 
         // When - enriching the cached type alongside the failing merged type
         val results = engine(listOf(p), mergers = listOf(ThrowingMerger(genre)))

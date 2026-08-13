@@ -428,19 +428,19 @@ function render(data, wasForceRefresh) {
   const genres = genreChipsHtml(summary.genres);
 
   // An unresolved identity must not render the raw query as a confident title.
-  const unresolvedTitle = summary.identityVerdict === 'SUGGESTIONS'
+  const unresolvedTitle = summary.identityVerdict === 'AMBIGUOUS'
     ? `No exact match for &ldquo;${esc(data.name)}&rdquo;`
     : null;
-  const unverified = summary.identityVerdict === 'UNVERIFIED';
-  const bestEffortBadge = summary.identityVerdict === 'BEST_EFFORT'
+  const unverified = summary.identityVerdict === 'FAILED';
+  const bestEffortBadge = summary.identityVerdict === 'UNRESOLVED'
     ? '<span class="badge badge-warn">Best-effort match</span>'
     : unverified
       ? '<span class="badge badge-warn">Unverified — lookup failed</span>'
       : '';
   const titleHtml = unresolvedTitle || esc(summary.title);
 
-  // UNVERIFIED means the identity lookup errored (usually transiently) — distinct from
-  // BEST_EFFORT's "searched, no match". Retry is manual only: an automatic re-run under
+  // FAILED means the identity lookup errored (usually transiently) — distinct from
+  // UNRESOLVED's "searched, no match". Retry is manual only: an automatic re-run under
   // concurrent load compounds the very starvation that produced the failure.
   const unverifiedBanner = unverified
     ? `<div class="identity-banner">

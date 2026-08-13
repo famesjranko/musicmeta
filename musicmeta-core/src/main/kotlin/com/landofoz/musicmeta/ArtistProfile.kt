@@ -11,10 +11,10 @@ package com.landofoz.musicmeta
 data class ArtistProfile(val name: String, val results: EnrichmentResults) {
 
     // --- Identity ---
-    val identifiers: EnrichmentIdentifiers get() = results.identity?.identifiers ?: EnrichmentIdentifiers()
-    val identityMatch: IdentityMatch? get() = results.identity?.match
-    val identityMatchScore: Int? get() = results.identity?.matchScore
-    val suggestions: List<SearchCandidate> get() = results.identity?.suggestions.orEmpty()
+    val identifiers: EnrichmentIdentifiers get() = results.identity.identifiers
+    val canonicalStatus: CanonicalStatus get() = results.identity.status
+    val identityMatchScore: Int? get() = results.identity.matchScore
+    val suggestions: List<SearchCandidate> get() = results.identity.suggestions
 
     // --- Artwork ---
     val photo: EnrichmentData.Artwork? get() = results.artistPhoto()

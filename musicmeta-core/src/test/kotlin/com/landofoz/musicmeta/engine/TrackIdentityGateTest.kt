@@ -1,11 +1,11 @@
 package com.landofoz.musicmeta.engine
 
+import com.landofoz.musicmeta.CanonicalStatus
 import com.landofoz.musicmeta.EnrichmentConfig
 import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
-import com.landofoz.musicmeta.IdentityMatch
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.provider.coverartarchive.CoverArtArchiveProvider
 import com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzProvider
@@ -63,8 +63,8 @@ class TrackIdentityGateTest {
         // Then - resolution filled the release-group id nothing else fills, and CAA served the art.
         // It cost no upstream request either: resolution asks MusicBrainz for the same recording the
         // types want, and the enricher's per-call memo answers all of them from one lookup.
-        assertEquals(IdentityMatch.RESOLVED, results.identity?.match)
-        assertEquals(RELEASE_GROUP_MBID, results.identity?.identifiers?.musicBrainzReleaseGroupId)
+        assertEquals(CanonicalStatus.RESOLVED, results.identity.status)
+        assertEquals(RELEASE_GROUP_MBID, results.identity.identifiers.musicBrainzReleaseGroupId)
         assertTrue(
             "expected art, got ${results.raw[EnrichmentType.ALBUM_ART]}",
             results.raw[EnrichmentType.ALBUM_ART] is EnrichmentResult.Success,
@@ -108,7 +108,7 @@ class TrackIdentityGateTest {
 
         // Then - resolution was never attempted, and the art came back anyway. Supplying more must
         // never cost a call.
-        assertNull(results.identity)
+        assertEquals(CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED, results.identity.status)
         assertTrue(results.raw[EnrichmentType.ALBUM_ART] is EnrichmentResult.Success)
     }
 
@@ -123,7 +123,7 @@ class TrackIdentityGateTest {
         // Then - no resolution, because nothing in the request's chains wants an identifier it lacks.
         // The track rule qualifies what MUSICBRAINZ_ID means rather than short-circuiting the scan,
         // so it cannot bill a request that had no identifier gap to close.
-        assertNull(results.identity)
+        assertEquals(CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED, results.identity.status)
     }
 
     @Test
@@ -136,7 +136,7 @@ class TrackIdentityGateTest {
         val results = engine().enrich(request, setOf(EnrichmentType.ALBUM_ART))
 
         // Then - the gate is unmoved for album requests, which is where it was already right
-        assertNull(results.identity)
+        assertEquals(CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED, results.identity.status)
     }
 
     @Test
@@ -149,7 +149,7 @@ class TrackIdentityGateTest {
         val results = engine().enrich(request, setOf(EnrichmentType.BAND_MEMBERS))
 
         // Then - the gate is unmoved for artist requests too
-        assertNull(results.identity)
+        assertEquals(CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED, results.identity.status)
     }
 
     private companion object {

@@ -1,11 +1,12 @@
 package com.landofoz.musicmeta.engine
 
+import com.landofoz.musicmeta.CanonicalStatus
 import com.landofoz.musicmeta.EnrichmentConfig
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
-import com.landofoz.musicmeta.IdentityMatch
+import com.landofoz.musicmeta.LookupProvenance
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzProvider
@@ -86,9 +87,9 @@ class TrackIdentifierMissFanOutTest {
         // runs best-effort; the suggestions reach the consumer once, at the top level, never copied
         // onto the per-type result
         val success = results.raw[EnrichmentType.LYRICS_PLAIN] as EnrichmentResult.Success
-        assertEquals(IdentityMatch.BEST_EFFORT, success.identityMatch)
+        assertEquals(LookupProvenance.FUZZY_NAME, success.provenance)
         assertEquals(1, lyrics.enrichCalls.size)
-        assertEquals(listOf("rec-live-1"), results.identity?.suggestions?.map { it.identifiers.musicBrainzId })
+        assertEquals(listOf("rec-live-1"), results.identity.suggestions.map { it.identifiers.musicBrainzId })
     }
 
     private companion object {

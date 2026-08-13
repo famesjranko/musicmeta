@@ -3,11 +3,12 @@ package com.landofoz.musicmeta.android.cache
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import com.landofoz.musicmeta.CanonicalStatus
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
-import com.landofoz.musicmeta.IdentityMatch
+import com.landofoz.musicmeta.LookupProvenance
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.test.runTest
@@ -61,7 +62,7 @@ class RoomEnrichmentCacheTest {
         )
 
         // When - putting then getting it from the cache
-        cache.put("album:123", EnrichmentType.ALBUM_ART, result)
+        cache.put("album:123", EnrichmentType.ALBUM_ART, result, CanonicalStatus.RESOLVED)
         val retrieved = cache.get("album:123", EnrichmentType.ALBUM_ART)
 
         // Then - the retrieved result matches what was stored
@@ -93,7 +94,7 @@ class RoomEnrichmentCacheTest {
         )
 
         // When - putting then getting it from the cache
-        cache.put("album:456", EnrichmentType.GENRE, result)
+        cache.put("album:456", EnrichmentType.GENRE, result, CanonicalStatus.RESOLVED)
         val retrieved = cache.get("album:456", EnrichmentType.GENRE)
 
         // Then - the retrieved result matches what was stored
@@ -123,7 +124,7 @@ class RoomEnrichmentCacheTest {
         )
 
         // When - putting then getting it from the cache
-        cache.put("track:789", EnrichmentType.LYRICS_SYNCED, result)
+        cache.put("track:789", EnrichmentType.LYRICS_SYNCED, result, CanonicalStatus.RESOLVED)
         val retrieved = cache.get("track:789", EnrichmentType.LYRICS_SYNCED)
 
         // Then - the retrieved result matches what was stored
@@ -152,7 +153,7 @@ class RoomEnrichmentCacheTest {
         )
 
         // When - putting then getting it from the cache
-        cache.put("artist:abc", EnrichmentType.ARTIST_BIO, result)
+        cache.put("artist:abc", EnrichmentType.ARTIST_BIO, result, CanonicalStatus.RESOLVED)
         val retrieved = cache.get("artist:abc", EnrichmentType.ARTIST_BIO)
 
         // Then - the retrieved result matches what was stored
@@ -179,7 +180,7 @@ class RoomEnrichmentCacheTest {
         )
 
         // Put at time=1_000_000 with TTL=5000ms (expires at 1_005_000)
-        clockCache.put("album:exp", EnrichmentType.ALBUM_ART, result, ttlMs = 5_000L)
+        clockCache.put("album:exp", EnrichmentType.ALBUM_ART, result, CanonicalStatus.RESOLVED, ttlMs = 5_000L)
 
         // When - still valid
         val beforeExpiry = clockCache.get("album:exp", EnrichmentType.ALBUM_ART)
@@ -218,8 +219,8 @@ class RoomEnrichmentCacheTest {
             provider = "musicbrainz",
             confidence = 0.85f,
         )
-        cache.put("album:inv", EnrichmentType.ALBUM_ART, artResult)
-        cache.put("album:inv", EnrichmentType.GENRE, metaResult)
+        cache.put("album:inv", EnrichmentType.ALBUM_ART, artResult, CanonicalStatus.RESOLVED)
+        cache.put("album:inv", EnrichmentType.GENRE, metaResult, CanonicalStatus.RESOLVED)
 
         // When - invalidate only artwork
         cache.invalidate("album:inv", EnrichmentType.ALBUM_ART)
@@ -244,8 +245,8 @@ class RoomEnrichmentCacheTest {
             provider = "musicbrainz",
             confidence = 0.85f,
         )
-        cache.put("album:all", EnrichmentType.ALBUM_ART, artResult)
-        cache.put("album:all", EnrichmentType.GENRE, metaResult)
+        cache.put("album:all", EnrichmentType.ALBUM_ART, artResult, CanonicalStatus.RESOLVED)
+        cache.put("album:all", EnrichmentType.GENRE, metaResult, CanonicalStatus.RESOLVED)
 
         // When - invalidate all types
         cache.invalidate("album:all", type = null)
@@ -261,17 +262,15 @@ class RoomEnrichmentCacheTest {
         val notFound = EnrichmentResult.NotFound(
             type = EnrichmentType.ALBUM_ART,
             provider = "all_providers",
-            identityMatch = IdentityMatch.RESOLVED,
         )
 
         // When - putting then getting the negative from the cache
-        cache.putNegative("album:neg", EnrichmentType.ALBUM_ART, notFound, ttlMs = 5_000L)
+        cache.putNegative("album:neg", EnrichmentType.ALBUM_ART, notFound, CanonicalStatus.RESOLVED, ttlMs = 5_000L)
         val retrieved = cache.getNegative("album:neg", EnrichmentType.ALBUM_ART)
 
         // Then - the retrieved negative matches what was stored
         assertNotNull(retrieved)
         assertEquals("all_providers", retrieved!!.provider)
-        assertEquals(IdentityMatch.RESOLVED, retrieved.identityMatch)
     }
 
     @Test
@@ -280,7 +279,7 @@ class RoomEnrichmentCacheTest {
         var now = 1_000_000L
         val clockCache = RoomEnrichmentCache(database.enrichmentCacheDao(), database.negativeCacheDao(), clock = { now })
         val notFound = EnrichmentResult.NotFound(type = EnrichmentType.ALBUM_ART, provider = "p")
-        clockCache.putNegative("album:neg-exp", EnrichmentType.ALBUM_ART, notFound, ttlMs = 5_000L)
+        clockCache.putNegative("album:neg-exp", EnrichmentType.ALBUM_ART, notFound, CanonicalStatus.RESOLVED, ttlMs = 5_000L)
 
         // When - still valid, then after the clock advances past expiry
         val beforeExpiry = clockCache.getNegative("album:neg-exp", EnrichmentType.ALBUM_ART)
@@ -302,8 +301,8 @@ class RoomEnrichmentCacheTest {
             provider = "musicbrainz",
             confidence = 0.85f,
         )
-        cache.putNegative("album:neg-inv", EnrichmentType.ALBUM_ART, notFound, ttlMs = 5_000L)
-        cache.put("album:neg-inv", EnrichmentType.GENRE, genreResult)
+        cache.putNegative("album:neg-inv", EnrichmentType.ALBUM_ART, notFound, CanonicalStatus.RESOLVED, ttlMs = 5_000L)
+        cache.put("album:neg-inv", EnrichmentType.GENRE, genreResult, CanonicalStatus.RESOLVED)
 
         // When - invalidating only the negative's type
         cache.invalidate("album:neg-inv", EnrichmentType.ALBUM_ART)
@@ -317,7 +316,7 @@ class RoomEnrichmentCacheTest {
     fun `clear removes negative entries too`() = runTest {
         // Given - a negative cached for one entity
         val notFound = EnrichmentResult.NotFound(type = EnrichmentType.ALBUM_ART, provider = "p")
-        cache.putNegative("album:neg-clear", EnrichmentType.ALBUM_ART, notFound, ttlMs = 5_000L)
+        cache.putNegative("album:neg-clear", EnrichmentType.ALBUM_ART, notFound, CanonicalStatus.RESOLVED, ttlMs = 5_000L)
 
         // When - clearing the cache
         cache.clear()
@@ -335,7 +334,7 @@ class RoomEnrichmentCacheTest {
             provider = "coverartarchive",
             confidence = 0.9f,
         )
-        cache.put("album:manual", EnrichmentType.ALBUM_ART, result)
+        cache.put("album:manual", EnrichmentType.ALBUM_ART, result, CanonicalStatus.RESOLVED)
 
         // When - initially not manual
         val beforeMark = cache.isManuallySelected("album:manual", EnrichmentType.ALBUM_ART)
@@ -365,8 +364,8 @@ class RoomEnrichmentCacheTest {
             provider = "p2",
             confidence = 0.8f,
         )
-        cache.put("album:1", EnrichmentType.ALBUM_ART, result1)
-        cache.put("artist:1", EnrichmentType.ARTIST_BIO, result2)
+        cache.put("album:1", EnrichmentType.ALBUM_ART, result1, CanonicalStatus.RESOLVED)
+        cache.put("artist:1", EnrichmentType.ARTIST_BIO, result2, CanonicalStatus.RESOLVED)
 
         // When - clearing the cache
         cache.clear()
@@ -390,18 +389,16 @@ class RoomEnrichmentCacheTest {
             provider = "musicbrainz",
             confidence = 0.9f,
             resolvedIdentifiers = ids,
-            identityMatchScore = 95,
-            identityMatch = IdentityMatch.RESOLVED,
+            provenance = LookupProvenance.CANONICAL_ID,
         )
 
         // When - putting then getting it from the cache
-        cache.put("artist:radiohead", EnrichmentType.GENRE, result)
+        cache.put("artist:radiohead", EnrichmentType.GENRE, result, CanonicalStatus.RESOLVED)
         val retrieved = cache.get("artist:radiohead", EnrichmentType.GENRE)
 
         // Then - identity fields round-tripped
         assertNotNull(retrieved)
-        assertEquals(IdentityMatch.RESOLVED, retrieved!!.identityMatch)
-        assertEquals(95, retrieved.identityMatchScore)
+        assertEquals(LookupProvenance.CANONICAL_ID, retrieved!!.provenance)
         assertNotNull(retrieved.resolvedIdentifiers)
         assertEquals("a74b1b7f-71a5-4011-9441-d0b5e4122711", retrieved.resolvedIdentifiers!!.musicBrainzId)
         assertEquals("Q188451", retrieved.resolvedIdentifiers!!.wikidataId)
@@ -419,13 +416,13 @@ class RoomEnrichmentCacheTest {
         )
 
         // When - putting then getting it from the cache
-        cache.put("album:no-id", EnrichmentType.ALBUM_ART, result)
+        cache.put("album:no-id", EnrichmentType.ALBUM_ART, result, CanonicalStatus.RESOLVED)
         val retrieved = cache.get("album:no-id", EnrichmentType.ALBUM_ART)
 
-        // Then - nulls preserved
+        // Then - no provenance was recorded at write time, so the reader reports CACHE rather than
+        // guessing at what the original live lookup used
         assertNotNull(retrieved)
-        assertNull(retrieved!!.identityMatch)
-        assertNull(retrieved.identityMatchScore)
+        assertEquals(LookupProvenance.CACHE, retrieved!!.provenance)
         assertNull(retrieved.resolvedIdentifiers)
     }
 
@@ -440,7 +437,7 @@ class RoomEnrichmentCacheTest {
                     provider = "provider$i",
                     confidence = 0.9f,
                 )
-                cache.put("album:concurrent:$i", EnrichmentType.ALBUM_ART, result)
+                cache.put("album:concurrent:$i", EnrichmentType.ALBUM_ART, result, CanonicalStatus.RESOLVED)
             }
         }
 

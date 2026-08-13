@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.engine
 
+import com.landofoz.musicmeta.CanonicalStatus
 import com.landofoz.musicmeta.EnrichmentConfig
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentRequest
@@ -48,7 +49,7 @@ class CuratedGenreCacheHealingTest {
     ).also { it.givenResult(EnrichmentType.GENRE, genreResult("fresh", curated = true)) }
 
     private suspend fun FakeEnrichmentCache.seed(result: EnrichmentResult.Success) {
-        put(entityKeyFor(request, EnrichmentType.GENRE), EnrichmentType.GENRE, result, ttlMs = Long.MAX_VALUE)
+        put(entityKeyFor(request, EnrichmentType.GENRE), EnrichmentType.GENRE, result, CanonicalStatus.RESOLVED, ttlMs = Long.MAX_VALUE)
     }
 
     @Test
@@ -140,6 +141,7 @@ class CuratedGenreCacheHealingTest {
             entityKeyFor(albumRequest, EnrichmentType.ALBUM_METADATA),
             EnrichmentType.ALBUM_METADATA,
             genreResult("stale", curated = null).copy(type = EnrichmentType.ALBUM_METADATA),
+            CanonicalStatus.RESOLVED,
             ttlMs = Long.MAX_VALUE,
         )
         val provider = FakeProvider(
@@ -171,7 +173,7 @@ class CuratedGenreCacheHealingTest {
         )
         val cache = FakeEnrichmentCache()
         cache.put(
-            entityKeyFor(albumRequest, EnrichmentType.LABEL), EnrichmentType.LABEL, cached, Long.MAX_VALUE,
+            entityKeyFor(albumRequest, EnrichmentType.LABEL), EnrichmentType.LABEL, cached, CanonicalStatus.RESOLVED, Long.MAX_VALUE,
         )
         val provider = FakeProvider(
             id = "fresh",

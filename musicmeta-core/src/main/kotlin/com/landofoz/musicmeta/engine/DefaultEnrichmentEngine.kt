@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.engine
 
+import com.landofoz.musicmeta.CanonicalStatus
 import com.landofoz.musicmeta.EnrichmentCache
 import com.landofoz.musicmeta.EnrichmentConfig
 import com.landofoz.musicmeta.EnrichmentData
@@ -11,7 +12,6 @@ import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentResults
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
-import com.landofoz.musicmeta.IdentityMatch
 import com.landofoz.musicmeta.IdentityResolution
 import com.landofoz.musicmeta.MusicBrainzEntityType
 import com.landofoz.musicmeta.ProviderInfo
@@ -41,7 +41,7 @@ private data class ResolvedTypes(
 
 /** [DefaultEnrichmentEngine.writeBack]'s per-call facts, bundled to keep its parameter list short. */
 private data class WriteBackContext(
-    val identityResolution: IdentityResolution?,
+    val identityResolution: IdentityResolution,
     val negativeCacheHits: Set<EnrichmentType>,
     val chainExecutions: Map<EnrichmentType, ChainExecution>,
 )
@@ -112,7 +112,8 @@ internal class DefaultEnrichmentEngine(
             }
         }
         if (uncachedTypes.isEmpty()) {
-            return EnrichmentResults(results, types, identity = null)
+            val identity = IdentityResolution(request.identifiers, CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT)
+            return EnrichmentResults(results, types, identity)
         }
 
         var identityResolution: IdentityResolution? = null
@@ -135,8 +136,9 @@ internal class DefaultEnrichmentEngine(
                     ProviderCallScope() + ResolvedEntityNames(),
             ) {
                 var identityResult: EnrichmentResult? = null
-                val enrichedRequest = if (config.enableIdentityResolution &&
-                    needsIdentityResolution(request, uncachedTypes, registry)) {
+                val identityEnabled = config.enableIdentityResolution
+                val identityNeeded = identityEnabled && needsIdentityResolution(request, uncachedTypes, registry)
+                val enrichedRequest = if (identityNeeded) {
                     resolveIdentity(request, results, uncachedTypes).also { identityResult = it.second }.first
                 } else request
 
@@ -152,11 +154,17 @@ internal class DefaultEnrichmentEngine(
                 }
                 // The same channel the name backfill reads, so the canonical names a consumer is
                 // handed are the ones the fan-out was built from — no second resolution path.
-                identityResolution = buildIdentityResolution(
+                val resolution = buildIdentityResolution(
                     identityResult,
                     enrichedRequest,
                     currentCoroutineContext()[ResolvedEntityNames]?.resolved(),
+                    notAttemptedStatus = when {
+                        !identityEnabled -> CanonicalStatus.NOT_ATTEMPTED_DISABLED
+                        !identityNeeded -> CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED
+                        else -> CanonicalStatus.NOT_ATTEMPTED_NO_PROVIDER
+                    },
                 )
+                identityResolution = resolution
 
                 // Canonical suggestions describe only MusicBrainz's own lookup, not a global
                 // admission decision — every provider still gets its independent eligibility check
@@ -166,7 +174,7 @@ internal class DefaultEnrichmentEngine(
                 results.putAll(resolvedTypes.results)
                 chainExecutions.putAll(resolvedTypes.executions)
                 applyCatalogFiltering(results, config.catalogProvider, config.catalogFilterMode)
-                stampIdentityMatch(results, identityResult)
+                stampProvenance(enrichedRequest, results, resolution.status)
                 true
             }
         } ?: false
@@ -192,11 +200,19 @@ internal class DefaultEnrichmentEngine(
         // survives is a mix of finished and unfinished work. Returning it is the contract; caching
         // it would outlive the call that truncated it. (#56)
         if (completed) {
-            val context = WriteBackContext(identityResolution, negativeCacheHits, chainExecutions)
+            // Non-null whenever completed: buildIdentityResolution runs before resolveTypes inside
+            // the same timed block, so a completed run always assigned it first.
+            val resolution = requireNotNull(identityResolution) {
+                "identityResolution must be set once the timed block completes"
+            }
+            val context = WriteBackContext(resolution, negativeCacheHits, chainExecutions)
             writeBack(request, resolvedRequest, results, context)
         }
 
-        return EnrichmentResults(results, types, identityResolution)
+        // A timeout that fired before buildIdentityResolution ran is the one gap identityResolution
+        // never filled — FAILED is the honest status for a call that never learned otherwise.
+        val identity = identityResolution ?: IdentityResolution(request.identifiers, CanonicalStatus.FAILED)
+        return EnrichmentResults(results, types, identity)
     }
 
     private suspend fun writeBack(
@@ -205,19 +221,19 @@ internal class DefaultEnrichmentEngine(
         results: Map<EnrichmentType, EnrichmentResult>,
         context: WriteBackContext,
     ) {
-        val resolvedMbid = context.identityResolution?.identifiers?.musicBrainzId
-        val canonicalMatch = context.identityResolution?.match
+        val resolvedMbid = context.identityResolution.identifiers.musicBrainzId
+        val canonicalStatus = context.identityResolution.status
         for ((type, result) in results) {
             val aliasKey = aliasKeyFor(request, resolvedRequest, resolvedMbid, type)
             val identifierIncomplete = context.chainExecutions[type]?.identifierIncomplete == true
-            val cacheable = isCacheableNegative(result, canonicalMatch, identifierIncomplete)
+            val cacheable = isCacheableNegative(result, canonicalStatus, identifierIncomplete)
             when {
                 // A negative served from cache this call is not re-put: its short TTL is the entry's
                 // freshness contract, and a cache hit must not extend it.
                 cacheable && type !in context.negativeCacheHits ->
-                    writeNegative(request, aliasKey, type, result as EnrichmentResult.NotFound)
-                isCacheablePositive(result, canonicalMatch) ->
-                    writePositive(request, aliasKey, type, result as EnrichmentResult.Success)
+                    writeNegative(request, aliasKey, type, result as EnrichmentResult.NotFound, canonicalStatus)
+                isCacheablePositive(result, canonicalStatus) ->
+                    writePositive(request, aliasKey, type, result as EnrichmentResult.Success, canonicalStatus)
             }
         }
     }
@@ -246,42 +262,49 @@ internal class DefaultEnrichmentEngine(
     }
 
     /**
+     * Whether a result reached under this call's canonical status is safe to cache: [CanonicalStatus.RESOLVED]
+     * or any `NOT_ATTEMPTED_*` reason — never [CanonicalStatus.AMBIGUOUS], [CanonicalStatus.UNRESOLVED], or
+     * [CanonicalStatus.FAILED], each of which means this call's fan-out ran on an unconfirmed identity.
+     */
+    private fun CanonicalStatus.isCacheable(): Boolean = this !in UNCACHEABLE_STATUSES
+
+    /**
      * Only a real fan-out "providers had nothing" qualifies for negative caching: never a chain
      * that skipped a provider for an identifier this call never had ([identifierIncomplete]), and
      * never one reached under a canonical identity that did not resolve. Decided from the call's
-     * own [canonicalMatch] and the chain's [identifierIncomplete] fact, not from
-     * [EnrichmentResult.NotFound.identityMatch] — `stampIdentityMatch` stamps only `Success`, so an
-     * ordinary downstream `NotFound` always carries `null` there, even under `SUGGESTIONS`.
+     * own [canonicalStatus] and the chain's [identifierIncomplete] fact — a `NotFound` carries no
+     * per-result canonical fact of its own, so it is never consulted here.
      */
     internal fun isCacheableNegative(
         result: EnrichmentResult,
-        canonicalMatch: IdentityMatch?,
+        canonicalStatus: CanonicalStatus,
         identifierIncomplete: Boolean,
     ): Boolean =
-        result is EnrichmentResult.NotFound && !identifierIncomplete &&
-            (canonicalMatch == null || canonicalMatch == IdentityMatch.RESOLVED)
+        result is EnrichmentResult.NotFound && !identifierIncomplete && canonicalStatus.isCacheable()
 
     /**
      * A `Success` reached while canonical resolution was attempted and did not resolve
-     * (`BEST_EFFORT`/`SUGGESTIONS`/`UNVERIFIED`) is a fuzzy or ambiguous guess — caching it would
-     * serve it as a cache hit (identity == null, which reads as confident) for the type's whole
-     * TTL, and a retry could never heal or re-offer the suggestions that produced it.
+     * (`AMBIGUOUS`/`UNRESOLVED`/`FAILED`) is a fuzzy or ambiguous guess — caching it would serve it
+     * as a cache hit for the type's whole TTL with no way to tell it apart from a confident one,
+     * and a retry could never heal or re-offer the suggestions that produced it.
      */
-    private fun isCacheablePositive(result: EnrichmentResult, canonicalMatch: IdentityMatch?): Boolean =
-        result is EnrichmentResult.Success && !result.isStale &&
-            (canonicalMatch == null || canonicalMatch == IdentityMatch.RESOLVED)
+    private fun isCacheablePositive(result: EnrichmentResult, canonicalStatus: CanonicalStatus): Boolean =
+        result is EnrichmentResult.Success && !result.isStale && canonicalStatus.isCacheable()
 
     private suspend fun writeNegative(
         request: EnrichmentRequest,
         aliasKey: String?,
         type: EnrichmentType,
         result: EnrichmentResult.NotFound,
+        canonicalStatus: CanonicalStatus,
     ) {
         guardedCacheWrite(logger, "putNegative") {
-            cache.putNegative(entityKeyFor(request, type), type, result, config.negativeTtlMs)
+            cache.putNegative(entityKeyFor(request, type), type, result, canonicalStatus, config.negativeTtlMs)
         }
         if (aliasKey != null) {
-            guardedCacheWrite(logger, "putNegative") { cache.putNegative(aliasKey, type, result, config.negativeTtlMs) }
+            guardedCacheWrite(logger, "putNegative") {
+                cache.putNegative(aliasKey, type, result, canonicalStatus, config.negativeTtlMs)
+            }
         }
     }
 
@@ -290,11 +313,12 @@ internal class DefaultEnrichmentEngine(
         aliasKey: String?,
         type: EnrichmentType,
         result: EnrichmentResult.Success,
+        canonicalStatus: CanonicalStatus,
     ) {
         val ttl = config.ttlOverrides[type] ?: type.defaultTtlMs
-        guardedCacheWrite(logger, "put") { cache.put(entityKeyFor(request, type), type, result, ttl) }
+        guardedCacheWrite(logger, "put") { cache.put(entityKeyFor(request, type), type, result, canonicalStatus, ttl) }
         if (aliasKey != null) {
-            guardedCacheWrite(logger, "put") { cache.put(aliasKey, type, result, ttl) }
+            guardedCacheWrite(logger, "put") { cache.put(aliasKey, type, result, canonicalStatus, ttl) }
         }
     }
 
@@ -708,6 +732,10 @@ internal class DefaultEnrichmentEngine(
 
     companion object {
         private const val TAG = "EnrichmentEngine"
+
+        private val UNCACHEABLE_STATUSES = setOf(
+            CanonicalStatus.AMBIGUOUS, CanonicalStatus.UNRESOLVED, CanonicalStatus.FAILED,
+        )
 
         private val IDENTITY_TYPES = setOf(
             EnrichmentType.GENRE, EnrichmentType.LABEL, EnrichmentType.RELEASE_DATE,

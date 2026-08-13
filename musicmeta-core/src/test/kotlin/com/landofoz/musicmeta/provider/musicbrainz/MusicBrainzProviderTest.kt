@@ -372,7 +372,7 @@ class MusicBrainzProviderTest {
             // When - resolving identity (what DefaultEnrichmentEngine calls before fan-out)
             val result = provider.resolveIdentity(request)
 
-            // Then - NotFound carrying the strict pool as suggestions, so IdentityMatch.SUGGESTIONS
+            // Then - NotFound carrying the strict pool as suggestions, so CanonicalStatus.AMBIGUOUS
             // becomes reachable, and the fuzzy search was never queried
             assertTrue(result is EnrichmentResult.NotFound)
             val suggestions = (result as EnrichmentResult.NotFound).suggestions

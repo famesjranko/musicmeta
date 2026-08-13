@@ -50,7 +50,7 @@ val profile = engine.artistProfile("Radiohead")
 
 // Identity
 profile.identifiers.musicBrainzId   // "a74b1b7f-71a5-4011-9441-d0b5e4122711"
-profile.identityMatch                // IdentityMatch.RESOLVED
+profile.canonicalStatus              // CanonicalStatus.RESOLVED
 profile.identityMatchScore           // 100
 
 // Artwork
@@ -91,9 +91,9 @@ val profile = engine.albumProfile("OK Computer", "Radiohead")
 
 // Identity
 profile.identifiers.musicBrainzId
-profile.identityMatch
+profile.canonicalStatus
 profile.identityMatchScore
-profile.suggestions                  // List<SearchCandidate> when match is SUGGESTIONS
+profile.suggestions                  // List<SearchCandidate> when status is AMBIGUOUS
 
 // Artwork
 profile.artwork?.url                 // front cover
@@ -126,7 +126,7 @@ val profile = engine.trackProfile("Creep", "Radiohead")
 
 // Identity
 profile.identifiers
-profile.identityMatch
+profile.canonicalStatus
 profile.identityMatchScore
 profile.suggestions
 
@@ -179,12 +179,12 @@ Works on all three profile methods and on `engine.enrich()` directly. The forceR
 
 ## "Did you mean?" flow
 
-When identity resolution is ambiguous, profile methods return `SUGGESTIONS` instead of results. Re-enrich from the chosen candidate:
+When identity resolution is ambiguous, profile methods return `AMBIGUOUS` instead of results. Re-enrich from the chosen candidate:
 
 ```kotlin
 val profile = engine.artistProfile("Bush")
 
-if (profile.identityMatch == IdentityMatch.SUGGESTIONS) {
+if (profile.canonicalStatus == CanonicalStatus.AMBIGUOUS) {
     println("Did you mean?")
     profile.suggestions.forEach { candidate ->
         println("  ${candidate.title} — ${candidate.disambiguation} (${candidate.score}%)")
@@ -219,7 +219,7 @@ val profile = engine.artistProfile(
     name = "Radiohead",
     mbid = "a74b1b7f-71a5-4011-9441-d0b5e4122711",
 )
-// profile.identityMatch will be null (resolution not attempted)
+// profile.canonicalStatus == CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED
 ```
 
 ---

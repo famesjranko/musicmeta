@@ -1,6 +1,7 @@
 package com.landofoz.musicmeta.engine
 
 import app.cash.turbine.test
+import com.landofoz.musicmeta.CanonicalStatus
 import com.landofoz.musicmeta.EnrichmentConfig
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentRequest
@@ -107,7 +108,7 @@ class EnrichBatchTest {
         // Given - a request with a cached result and a provider that returns fresh data
         val req = EnrichmentRequest.forAlbum("Pablo Honey", "Radiohead")
         val cacheKey = DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.ALBUM_ART)
-        cache.put(cacheKey, EnrichmentType.ALBUM_ART, artSuccess("cached-provider"))
+        cache.put(cacheKey, EnrichmentType.ALBUM_ART, artSuccess("cached-provider"), CanonicalStatus.RESOLVED)
         val provider = FakeProvider(
             id = "fresh-provider",
             capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100)),
@@ -165,7 +166,7 @@ class EnrichBatchTest {
         val req1 = EnrichmentRequest.forAlbum("Amnesiac", "Radiohead")
         val req2 = EnrichmentRequest.forAlbum("Hail to the Thief", "Radiohead")
         val cacheKey = DefaultEnrichmentEngine.entityKeyFor(req1, EnrichmentType.ALBUM_ART)
-        cache.put(cacheKey, EnrichmentType.ALBUM_ART, artSuccess("cached-provider"))
+        cache.put(cacheKey, EnrichmentType.ALBUM_ART, artSuccess("cached-provider"), CanonicalStatus.RESOLVED)
         val provider = FakeProvider(
             id = "fresh-provider",
             capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100)),
