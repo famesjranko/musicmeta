@@ -121,4 +121,24 @@ class TitleMatcherTest {
         // Then - they are not equivalent
         assertFalse(result)
     }
+
+    @Test
+    fun `identity-bearing internal quotes are retained`() {
+        // Given - a title whose quotes wrap only part of it, not the whole title
+        // When - comparing it to the same words without quotes
+        val result = TitleMatcher.equivalent("Say \"Hello\"", "Say Hello")
+
+        // Then - the internal quotes are not cosmetic, so the titles are not equivalent
+        assertFalse(result)
+    }
+
+    @Test
+    fun `mixed qualifier brackets are rejected`() {
+        // Given - a terminal group opened with a parenthesis and closed with a square bracket
+        // When - comparing it to the correctly paired parenthetical form
+        val result = TitleMatcher.equivalent("Song (Live]", "Song (Live)")
+
+        // Then - the mismatched delimiters are not read as an equivalent qualifier
+        assertFalse(result)
+    }
 }

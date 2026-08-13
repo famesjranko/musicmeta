@@ -655,13 +655,16 @@ resultEl.addEventListener('click', async (e) => {
   if (!btn || !lastQuery) return;
   btn.disabled = true;
   try {
-    // InvalidateRequest has no `ids` field, so only the fields it actually declares go in the
-    // body — not the rest of lastQuery, which now also carries `ids` on an identifier-bearing row.
-    const { kind, name, artist, album } = lastQuery;
+    // `ids` on lastQuery is the same JSON-encoded WireIdentifiers string /api/enrich reads as a
+    // query parameter; InvalidateRequest.identifiers carries it decoded, so invalidation reaches
+    // the same provider-id-keyed entry the replayed query below will read — otherwise only the
+    // bare-name key clears and a provider-id-keyed preview survives "Clear cached result & reload".
+    const { kind, name, artist, album, ids } = lastQuery;
+    const identifiers = ids ? JSON.parse(ids) : undefined;
     const res = await fetch('/api/invalidate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ kind, name, artist, album }),
+      body: JSON.stringify({ kind, name, artist, album, identifiers }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));

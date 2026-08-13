@@ -85,9 +85,14 @@ internal class DefaultEnrichmentEngine(
         val chainExecutions = mutableMapOf<EnrichmentType, ChainExecution>()
 
         for (type in types) {
+            // A request whose MBID and this type's trusted provider id have not been proven to
+            // name the same entity has no safe key to read: either could be the winning provider's
+            // actual route, and reading the wrong one would serve a foreign entity. Read as though
+            // this call were forceRefresh — skip straight to uncached rather than guess a key.
+            val mixedIdentity = hasUnvalidatedMixedIdentity(request, type)
             // forceRefresh already invalidated these keys; skipping the read keeps a *failed*
             // invalidation from resurrecting the stale entry it was meant to drop.
-            val cached = if (forceRefresh) null else {
+            val cached = if (forceRefresh || mixedIdentity) null else {
                 guardedCacheRead(logger, "get") { cache.get(entityKeyFor(request, type), type) }
             }
             // A cached Success answering nothing is a *miss*, not a NotFound. An empty entry written
@@ -102,7 +107,7 @@ internal class DefaultEnrichmentEngine(
             }
             // A fresh negative entry answers "providers had nothing" without a re-ask; the read is
             // skipped under forceRefresh for the same reason as the positive read above.
-            val negative = if (forceRefresh) null else {
+            val negative = if (forceRefresh || mixedIdentity) null else {
                 guardedCacheRead(logger, "getNegative") { cache.getNegative(entityKeyFor(request, type), type) }
             }
             if (negative != null) {
@@ -299,8 +304,13 @@ internal class DefaultEnrichmentEngine(
         result: EnrichmentResult.NotFound,
         canonicalStatus: CanonicalStatus,
     ) {
-        guardedCacheWrite(logger, "putNegative") {
-            cache.putNegative(entityKeyFor(request, type), type, result, canonicalStatus, config.negativeTtlMs)
+        // See hasUnvalidatedMixedIdentity: the primary key is unsafe to pick between two unproven
+        // routes, so this call's result is never cached under it. The alias key (name-only) does
+        // not carry that ambiguity and still writes.
+        if (!hasUnvalidatedMixedIdentity(request, type)) {
+            guardedCacheWrite(logger, "putNegative") {
+                cache.putNegative(entityKeyFor(request, type), type, result, canonicalStatus, config.negativeTtlMs)
+            }
         }
         if (aliasKey != null) {
             guardedCacheWrite(logger, "putNegative") {
@@ -317,7 +327,13 @@ internal class DefaultEnrichmentEngine(
         canonicalStatus: CanonicalStatus,
     ) {
         val ttl = config.ttlOverrides[type] ?: type.defaultTtlMs
-        guardedCacheWrite(logger, "put") { cache.put(entityKeyFor(request, type), type, result, canonicalStatus, ttl) }
+        // See hasUnvalidatedMixedIdentity: the winning provider may have used either unproven id,
+        // so neither is safe to key this write under.
+        if (!hasUnvalidatedMixedIdentity(request, type)) {
+            guardedCacheWrite(logger, "put") {
+                cache.put(entityKeyFor(request, type), type, result, canonicalStatus, ttl)
+            }
+        }
         if (aliasKey != null) {
             guardedCacheWrite(logger, "put") { cache.put(aliasKey, type, result, canonicalStatus, ttl) }
         }

@@ -210,11 +210,11 @@ bulk-imported and never re-synced: measured 2026-08-12 over `track.getSimilar`
 MusicBrainz answered for were held under no entity type at all** — the rate tracks how obscure the
 track is, and the same probe over the chart head is far kinder.
 
-For a track the cost of treating such an identifier as authoritative was the *whole call*, not just
-the MusicBrainz types: identity resolution is where a track request meets its MBID, and a `NotFound`
-carrying suggestions tells the engine to skip the provider fan-out
-(`TrackIdentifierMissFanOutTest` pins both halves). Suggestions are for a name that resolves to
-nothing; no identifier path raises them.
+For a track the cost of treating such an identifier as authoritative was scoped to the MusicBrainz
+types alone: identity resolution is where a track request meets its MBID, and a `NotFound` carrying
+suggestions changes only the top-level canonical metadata — every other eligible provider still
+runs, best-effort (`TrackIdentifierMissFanOutTest`, `IdentitySuggestionFanOutTest`). Suggestions are
+for a name that resolves to nothing; no identifier path raises them.
 
 The lookup itself is spent once per call however many types ask — a miss included, so a dead
 identifier costs one request and not one per type — and that holds when the request carries a
@@ -380,7 +380,12 @@ either way), `.id` (addresses one image at `/release/{mbid}/{id}-{size}`), `.bac
 per type, so alternate pressings' art is discarded. `/release-group/{id}` JSON is never called — only
 its `front-{size}` redirect, which is why that path returns no `sizes`.
 
-**Deezer.** `GET /album/{id}` now backs `ALBUM_METADATA`, filling `label`, `barcode` (from `upc`,
+**Deezer.** `searchTrack`'s name-search pool for `TRACK_PREVIEW`/`TRACK_METADATA` is accepted before
+it is ranked: a candidate must equal the requested title, or share its normalized base with an
+equivalent whole qualifier (`Song - Live` accepted against `Song (Live)`, never against studio
+`Song`), before `rankTracks` orders the accepted pool by artist quality, album containment and
+unrequested markers (`TitleMatcher`, `docs/pitfalls.md` §7). An exact Deezer track id bypasses name
+acceptance entirely. `GET /album/{id}` now backs `ALBUM_METADATA`, filling `label`, `barcode` (from `upc`,
 a barcode nothing else supplies) and `releaseDate`; `album.genre_id`/`genres` is read live but
 deliberately not parsed — 12/12 probed albums (2026-08-12) returned exactly one coarse editorial
 tag, a strict parent of Last.fm's vote-weighted tags, so Deezer declares no `GENRE` capability.
@@ -409,12 +414,14 @@ As with Deezer, the name-search pool behind `ALBUM_ART`, `ALBUM_METADATA` and `A
 accepted on `collectionName` as well as artist and shared as one ranked result; the exact
 `itunesCollectionId` and `lookup?upc=` paths bypass that acceptance entirely (`docs/pitfalls.md` §7).
 
-**LRCLIB.** Parsed into `LrcLibResult` and dropped: `id` (`GET /api/get/{id}` would re-fetch without
-a search), `trackName`/`artistName` — both would verify that the search fallback returned the right
-track, which nothing currently does. `albumName` and `duration` *are* read, into
-`TRACK_METADATA`'s album title and `durationMs`. Never called:
-`GET /api/get/{id}`, and the write path (`POST /api/request-challenge`, `POST /api/publish`), which
-needs a proof-of-work solution and would make this a write client.
+**LRCLIB.** `id` is parsed and dropped (`GET /api/get/{id}` would re-fetch without a search).
+`trackName`/`artistName` are checked before a `/api/search` fallback candidate is selected —
+`LrcLibAcceptance.accepts` rejects a wrong title or wrong artist rather than trusting search-result
+order — and `albumName`/`duration` rank the accepted pool, read into `TRACK_METADATA`'s album title
+and `durationMs` when the winner carries them. `LYRICS_SYNCED`, `LYRICS_PLAIN` and `TRACK_METADATA`
+share one lookup-and-selection outcome per call (`LrcLibTrackScope`, `docs/pitfalls.md` §7). Never
+called: `GET /api/get/{id}` directly, and the write path (`POST /api/request-challenge`,
+`POST /api/publish`), which needs a proof-of-work solution and would make this a write client.
 
 **Wikidata.** One `wbgetentities&props=claims` call returns every claim on the entity, so what is
 left below costs code and no request. Read: P18, P569, P570, P495, P106, P856 (the sole
