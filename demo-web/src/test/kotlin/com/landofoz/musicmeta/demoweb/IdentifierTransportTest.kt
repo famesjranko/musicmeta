@@ -32,9 +32,9 @@ class IdentifierTransportTest {
     @Test fun `a Deezer track id round-trips through encode and decode exactly`() {
         // Given - a wire payload for a track row carrying a Deezer id and a recording MBID
         val wire = WireIdentifiers(
-            entityKind = "TRACK",
+            entityKind = WireEntityKind.TRACK,
             musicBrainzId = "mbid-starman",
-            extra = mapOf("deezerId" to "107471926"),
+            deezerTrackId = "107471926",
         )
 
         // When - decoding the encoded form, exactly as a query parameter would carry it
@@ -60,7 +60,7 @@ class IdentifierTransportTest {
 
     @Test fun `a mismatched entityKind is rejected`() {
         // Given - a payload scoped to an artist, arriving on a track-only decode path
-        val wire = WireIdentifiers(entityKind = "ARTIST", musicBrainzId = "mbid-x")
+        val wire = WireIdentifiers(entityKind = WireEntityKind.ARTIST, musicBrainzId = "mbid-x")
 
         // When - decoding
         try {
@@ -72,23 +72,23 @@ class IdentifierTransportTest {
         }
     }
 
-    @Test fun `an unknown extra namespace is rejected`() {
-        // Given - an extra identifier outside the track allowlist (a Spotify artist id)
-        val wire = WireIdentifiers(entityKind = "TRACK", extra = mapOf("spotifyArtistId" to "123"))
+    @Test fun `a field this transport does not trust is rejected rather than silently dropped`() {
+        // Given - raw JSON carrying an identifier field WireIdentifiers never declared (a Spotify
+        // artist id has no scoped field to arrive in)
 
         // When - decoding
         try {
-            decodeTrackIdentifiers(encode(wire))
+            decodeTrackIdentifiers("""{"entityKind":"TRACK","spotifyArtistId":"123"}""")
             fail("expected InvalidIdentifiers")
         } catch (e: InvalidIdentifiers) {
-            // Then - rejected rather than silently dropped or accepted
-            assertTrue(e.message!!.contains("spotifyArtistId"))
+            // Then - rejected as malformed rather than accepted or quietly ignored
+            assertTrue(e.message!!.contains("malformed"))
         }
     }
 
     @Test fun `an oversized ids parameter is rejected`() {
-        // Given - a deezerId value long enough to push the whole parameter past the size cap
-        val wire = WireIdentifiers(entityKind = "TRACK", extra = mapOf("deezerId" to "9".repeat(600)))
+        // Given - a deezerTrackId value long enough to push the whole parameter past the size cap
+        val wire = WireIdentifiers(entityKind = WireEntityKind.TRACK, deezerTrackId = "9".repeat(600))
 
         // When - decoding
         try {
@@ -102,7 +102,7 @@ class IdentifierTransportTest {
 
     @Test fun `an oversized individual identifier value is rejected`() {
         // Given - a parameter under the overall size cap, but a single value over the per-value cap
-        val wire = WireIdentifiers(entityKind = "TRACK", extra = mapOf("deezerId" to "1".repeat(200)))
+        val wire = WireIdentifiers(entityKind = WireEntityKind.TRACK, deezerTrackId = "1".repeat(200))
 
         // When - decoding
         try {
@@ -110,7 +110,7 @@ class IdentifierTransportTest {
             fail("expected InvalidIdentifiers")
         } catch (e: InvalidIdentifiers) {
             // Then - rejected for that value, not truncated or accepted
-            assertTrue(e.message!!.contains("deezerId"))
+            assertTrue(e.message!!.contains("deezerTrackId"))
         }
     }
 }

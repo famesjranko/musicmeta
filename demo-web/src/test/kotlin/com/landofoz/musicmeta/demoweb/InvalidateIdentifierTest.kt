@@ -77,14 +77,14 @@ class InvalidateIdentifierTest {
         )
 
     private fun deezerIdsParam(): String {
-        val wire = WireIdentifiers(entityKind = "TRACK", extra = mapOf("deezerId" to "107471926"))
+        val wire = WireIdentifiers(entityKind = WireEntityKind.TRACK, deezerTrackId = "107471926")
         return URLEncoder.encode(json.encodeToString(WireIdentifiers.serializer(), wire), "UTF-8")
     }
 
     private fun deezerIdsJson(): String =
         json.encodeToString(
             WireIdentifiers.serializer(),
-            WireIdentifiers(entityKind = "TRACK", extra = mapOf("deezerId" to "107471926")),
+            WireIdentifiers(entityKind = WireEntityKind.TRACK, deezerTrackId = "107471926"),
         )
 
     @Test fun `invalidating with identifiers clears the provider-id-keyed preview entry`() {

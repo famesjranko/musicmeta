@@ -51,26 +51,16 @@ private class ResourceAnchor
 private const val MAX_IDS_PARAM_LENGTH = 512
 private const val MAX_IDENTIFIER_VALUE_LENGTH = 100
 
-/**
- * `extra` namespace keys a track-scoped `ids` parameter may carry — `"deezerId"`
- * ([IdentifierNamespace.DEEZER]'s wire key) only, since it is the one namespaced id this build
- * threads for a track row. `IdentifierNamespace.key` is internal to musicmeta-core, so the literal
- * is spelled out here rather than referenced; `EnrichmentIdentifiers.get(IdentifierNamespace.DEEZER)`
- * is how a provider reads the same key back. Extending this list to a namespace this build does not
- * otherwise trust for the track it arrived on would let a client pick the cache identity a
- * `NONE`-identifier-requirement provider was never asked to earn.
- */
-private val TRACK_EXTRA_NAMESPACE_ALLOWLIST = setOf("deezerId")
-
 /** Thrown by [decodeTrackIdentifiers] for anything that must reach the caller as an HTTP 400. */
 internal class InvalidIdentifiers(message: String) : Exception(message)
 
 /**
  * Decodes a [SectionItem.identifiers]/[EnrichTarget.identifiers] `ids` query parameter into
  * [EnrichmentIdentifiers] for a track-scoped request, or null when [raw] is absent — the
- * pre-existing name-only lookup. Malformed JSON or an oversized parameter throws
- * [InvalidIdentifiers] before reaching [validateTrackIdentifiers], which owns every other
- * rejection reason — the caller turns either into a 400, never a silent name-only downgrade.
+ * pre-existing name-only lookup. Malformed JSON (including a field [WireIdentifiers] does not
+ * declare) or an oversized parameter throws [InvalidIdentifiers] before reaching
+ * [validateTrackIdentifiers], which owns every other rejection reason — the caller turns either
+ * into a 400, never a silent name-only downgrade.
  */
 internal fun decodeTrackIdentifiers(raw: String?): EnrichmentIdentifiers? {
     if (raw.isNullOrBlank()) return null
@@ -87,11 +77,14 @@ internal fun decodeTrackIdentifiers(raw: String?): EnrichmentIdentifiers? {
  * Validates an already-deserialized [WireIdentifiers] for a track-scoped request — the one place
  * [InvalidateRequest.identifiers] and [decodeTrackIdentifiers]'s query-parameter path both convert
  * to [EnrichmentIdentifiers], so a request body and an `ids` query parameter are held to the same
- * scope, allowlist and size rules. A non-`"TRACK"` [WireIdentifiers.entityKind], an oversized
- * value, or an `extra` key outside [TRACK_EXTRA_NAMESPACE_ALLOWLIST] all throw [InvalidIdentifiers].
+ * scope and size rules. A non-`TRACK` [WireIdentifiers.entityKind] or an oversized value throws
+ * [InvalidIdentifiers]; [WireIdentifiers.deezerTrackId] is the only trusted identifier besides
+ * [WireIdentifiers.musicBrainzId] this build threads for a track row, and its field only exists
+ * under this track-scoped envelope — a namespace this build does not otherwise trust for the
+ * track it arrived on has no field to carry it in, so there is no allowlist left to maintain here.
  */
 internal fun validateTrackIdentifiers(wire: WireIdentifiers): EnrichmentIdentifiers {
-    if (wire.entityKind != "TRACK") {
+    if (wire.entityKind != WireEntityKind.TRACK) {
         throw InvalidIdentifiers("ids entityKind ${wire.entityKind} does not match this track request")
     }
     val mbid = wire.musicBrainzId?.also {
@@ -99,15 +92,14 @@ internal fun validateTrackIdentifiers(wire: WireIdentifiers): EnrichmentIdentifi
             throw InvalidIdentifiers("musicBrainzId is invalid")
         }
     }
-    for ((namespaceKey, value) in wire.extra) {
-        if (namespaceKey !in TRACK_EXTRA_NAMESPACE_ALLOWLIST) {
-            throw InvalidIdentifiers("unknown identifier namespace: $namespaceKey")
-        }
-        if (value.isBlank() || value.length > MAX_IDENTIFIER_VALUE_LENGTH) {
-            throw InvalidIdentifiers("$namespaceKey value is invalid")
+    val deezerTrackId = wire.deezerTrackId?.also {
+        if (it.isBlank() || it.length > MAX_IDENTIFIER_VALUE_LENGTH) {
+            throw InvalidIdentifiers("deezerTrackId value is invalid")
         }
     }
-    return EnrichmentIdentifiers(musicBrainzId = mbid, extra = wire.extra)
+    var identifiers = EnrichmentIdentifiers(musicBrainzId = mbid)
+    if (deezerTrackId != null) identifiers = identifiers.with(IdentifierNamespace.DEEZER, deezerTrackId)
+    return identifiers
 }
 
 /**

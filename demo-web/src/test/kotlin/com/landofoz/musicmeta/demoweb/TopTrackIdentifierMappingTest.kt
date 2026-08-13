@@ -54,9 +54,9 @@ class TopTrackIdentifierMappingTest {
         // exact same identity the TopTrack came in with
         val item = response.sections.first { it.key == "top_tracks" }.items.single()
         val expected = WireIdentifiers(
-            entityKind = "TRACK",
+            entityKind = WireEntityKind.TRACK,
             musicBrainzId = "mbid-starman",
-            extra = mapOf("deezerId" to "107471926"),
+            deezerTrackId = "107471926",
         )
         assertEquals(expected, item.identifiers)
         assertEquals(expected, item.enrich?.identifiers)

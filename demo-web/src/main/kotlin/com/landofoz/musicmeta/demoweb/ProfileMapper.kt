@@ -500,9 +500,11 @@ private fun trackEnrich(
  * — null when it carries nothing, so an identifier-less row serializes exactly as it did before this
  * field existed.
  */
-private fun EnrichmentIdentifiers.toWireIdentifiers(): WireIdentifiers? =
-    if (musicBrainzId == null && extra.isEmpty()) null
-    else WireIdentifiers(entityKind = "TRACK", musicBrainzId = musicBrainzId, extra = extra)
+private fun EnrichmentIdentifiers.toWireIdentifiers(): WireIdentifiers? {
+    val deezerTrackId = get(IdentifierNamespace.DEEZER)
+    if (musicBrainzId == null && deezerTrackId == null) return null
+    return WireIdentifiers(entityKind = WireEntityKind.TRACK, musicBrainzId = musicBrainzId, deezerTrackId = deezerTrackId)
+}
 
 /** One or more consecutive `[mm:ss.xx]`-style LRC timing tags anchored to the start of a line. */
 private val LRC_TIMESTAMP_PREFIX = Regex("""^(?:\[\d{1,2}:\d{2}(?:\.\d{1,3})?\]\s*)+""")

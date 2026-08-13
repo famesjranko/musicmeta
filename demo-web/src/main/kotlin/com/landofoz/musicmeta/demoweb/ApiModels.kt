@@ -101,20 +101,30 @@ data class EnrichTarget(
 )
 
 /**
+ * Entity scope a [WireIdentifiers] envelope carries, server-validated against the request it
+ * arrived on rather than trusted from the client: a namespaced id is not always the same kind of
+ * entity (Deezer's id names a track here, but a seed *artist* on an album similarity lookup).
+ * Members may only be appended.
+ */
+@Serializable
+enum class WireEntityKind { ARTIST, ALBUM, TRACK }
+
+/**
  * A row's known identifiers, carried as one query parameter (`ids`, JSON-encoded) rather than one
- * per namespace — the same shape `/api/preview` and `/api/enrich` both decode.
+ * per namespace — the same shape `/api/preview`, `/api/enrich`, and `/api/invalidate` all decode.
  *
- * [entityKind] is server-validated context, not a client hint: a namespaced id is not always the
- * same kind of entity (Deezer's id names a track here, but a seed *artist* on an album similarity
- * lookup), so the server rejects a value that does not match the request it arrived on rather than
- * guessing. [extra] keys are `IdentifierNamespace.key` values; the server allowlists which ones it
- * accepts for a given [entityKind] and drops the rest.
+ * Every trusted identifier beyond [musicBrainzId] is its own field, named for both its namespace
+ * and the [entityKind] it is trusted under (for example [deezerTrackId] is only valid when
+ * [entityKind] is `TRACK`), rather than an open `namespace -> value` map — a field's name is the
+ * allowlist entry, so decoding an id this transport does not trust for the entity kind it arrived
+ * on is a deserialization failure, not a value to filter out after the fact. Adding a new trusted
+ * identifier is one field here plus one validation branch server-side.
  */
 @Serializable
 data class WireIdentifiers(
-    val entityKind: String,
+    val entityKind: WireEntityKind,
     val musicBrainzId: String? = null,
-    val extra: Map<String, String> = emptyMap(),
+    val deezerTrackId: String? = null,
 )
 
 @Serializable
