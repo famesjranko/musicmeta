@@ -54,6 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `EnrichmentCache.get`/`getIncludingExpired`/`getNegative` now return `CacheEnvelope<...>?` instead of a bare result: recompile, and read `.result` where you read the old return value directly
 - That return-type change is a suspend-fun descriptor erasure the `.api` diff cannot show; treat it as breaking regardless — `docs/pitfalls.md` "The published surface"
 - `LookupProvenance.EXTERNAL_CATALOG_ID` distinguishes direct catalogue lookups such as iTunes UPC from provider-native ids; exhaustive `when`s need a branch
+- `EnrichmentCacheDao` gains defaulted `insertPreservingManual`: Room callers are unaffected, but a custom implementation must recompile before it is called
 
 ### Added
 - `EnrichmentRequest.forTrackByMbid`/`forAlbumByMbid`/`forArtistByMbid`: request an entity by MBID alone; identity resolution fills the names the other providers search by
@@ -160,7 +161,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Cache keys now encode the complete request tuple: scope/type, names, selectors, all explicit identifiers, and sorted extras; only identical tuples replay
 - Exact-bearing calls never read name aliases; canonical aliases require names supplied by identity resolution. Custom caches must treat keys as opaque
 - The cache-key format change intentionally causes a one-time miss for existing entries; no cross-tuple entity equivalence is inferred
-- `InMemoryEnrichmentCache.invalidate` now removes manual-selection state with positive and negative entries, matching Room and the cache contract
+- Cache backends now agree on manual selections: invalidation removes them, while an ordinary positive-cache write preserves an existing selection
 - `TitleMatcher` no longer strips an identity-bearing internal quote, or accepts mismatched terminal brackets (`Song (Live]` no longer equals `Song (Live)`)
 - LRCLIB's album/duration ranking no longer scores a candidate missing that evidence as though it agreed with the request; only an explicit match may outrank one silent on the same field
 - demo-web's "Clear cached result & reload" now invalidates the identifier-bearing preview tuple, not only the name tuple, so the entry named by the following reload is actually cleared

@@ -67,10 +67,17 @@ open class FakeEnrichmentCache : EnrichmentCache {
         if (type != null) {
             val key = "$entityKey:$type"
             stored.remove(key)
+            expiredStore.remove(key)
+            storedTtls.remove(key)
+            storedStatuses.remove(key)
             manualSelections.remove(key)
         } else {
-            stored.keys.removeAll { it.startsWith("$entityKey:") }
-            manualSelections.removeAll { it.startsWith("$entityKey:") }
+            val prefix = "$entityKey:"
+            stored.keys.removeAll { it.startsWith(prefix) }
+            expiredStore.keys.removeAll { it.startsWith(prefix) }
+            storedTtls.keys.removeAll { it.startsWith(prefix) }
+            storedStatuses.keys.removeAll { it.startsWith(prefix) }
+            manualSelections.removeAll { it.startsWith(prefix) }
         }
     }
     override suspend fun isManuallySelected(entityKey: String, type: EnrichmentType) = "$entityKey:$type" in manualSelections

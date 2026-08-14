@@ -348,7 +348,13 @@ class RoomEnrichmentCacheTest {
         // Then - manual selection is now true
         assertTrue(cache.isManuallySelected("album:manual", EnrichmentType.ALBUM_ART))
 
-        // When - invalidating that entry
+        // When - refreshing that entry normally
+        cache.put("album:manual", EnrichmentType.ALBUM_ART, result, CanonicalStatus.RESOLVED)
+
+        // Then - an ordinary write preserves the user's selection
+        assertTrue(cache.isManuallySelected("album:manual", EnrichmentType.ALBUM_ART))
+
+        // When - explicitly invalidating that entry
         cache.invalidate("album:manual", EnrichmentType.ALBUM_ART)
 
         // Then - its manual-selection state is removed with it

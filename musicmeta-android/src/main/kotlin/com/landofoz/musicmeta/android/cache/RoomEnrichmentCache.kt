@@ -97,7 +97,7 @@ class RoomEnrichmentCache(
         val resolvedIdsJson = result.resolvedIdentifiers?.let {
             json.encodeToString(EnrichmentIdentifiers.serializer(), it)
         }
-        dao.insert(
+        dao.insertPreservingManual(
             EnrichmentCacheEntity(
                 entityKey = entityKey,
                 enrichmentType = type.name,

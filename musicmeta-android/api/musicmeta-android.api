@@ -6,8 +6,13 @@ public abstract interface class com/landofoz/musicmeta/android/cache/EnrichmentC
 	public abstract fun get (Ljava/lang/String;Ljava/lang/String;JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun getIncludingExpired (Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun insert (Lcom/landofoz/musicmeta/android/cache/EnrichmentCacheEntity;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun insertPreservingManual (Lcom/landofoz/musicmeta/android/cache/EnrichmentCacheEntity;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun isManual (Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun markManual (Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class com/landofoz/musicmeta/android/cache/EnrichmentCacheDao$DefaultImpls {
+	public static fun insertPreservingManual (Lcom/landofoz/musicmeta/android/cache/EnrichmentCacheDao;Lcom/landofoz/musicmeta/android/cache/EnrichmentCacheEntity;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 
 public abstract class com/landofoz/musicmeta/android/cache/EnrichmentCacheDatabase : androidx/room/RoomDatabase {

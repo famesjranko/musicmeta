@@ -113,16 +113,18 @@ class InMemoryEnrichmentCacheTest {
         cache.markManuallySelected("a:1", EnrichmentType.ARTIST_PHOTO)
         cache.markManuallySelected("b:1", EnrichmentType.ALBUM_ART)
 
-        // When - invalidating one type and then every remaining type for the first entity
+        // When - invalidating one type for the first entity
         cache.invalidate("a:1", EnrichmentType.ALBUM_ART)
 
+        // Then - only that type's flag is removed
         assertFalse(cache.isManuallySelected("a:1", EnrichmentType.ALBUM_ART))
         assertTrue(cache.isManuallySelected("a:1", EnrichmentType.ARTIST_PHOTO))
         assertTrue(cache.isManuallySelected("b:1", EnrichmentType.ALBUM_ART))
 
+        // When - invalidating every remaining type for the first entity
         cache.invalidate("a:1")
 
-        // Then - only the addressed entity's flags are removed
+        // Then - the other entity's flag remains
         assertFalse(cache.isManuallySelected("a:1", EnrichmentType.ARTIST_PHOTO))
         assertTrue(cache.isManuallySelected("b:1", EnrichmentType.ALBUM_ART))
     }

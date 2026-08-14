@@ -221,12 +221,15 @@ Implement `EnrichmentCache` for any storage backend:
 ```kotlin
 class RedisEnrichmentCache(private val redis: RedisClient) : EnrichmentCache {
 
+    private fun resultKey(entityKey: String, type: EnrichmentType) = "result:$entityKey:${type.name}"
+    private fun negativeKey(entityKey: String, type: EnrichmentType) = "negative:$entityKey:${type.name}"
+    private fun selectionKey(entityKey: String, type: EnrichmentType) = "$entityKey:${type.name}"
+
     override suspend fun get(
         entityKey: String,
         type: EnrichmentType,
     ): CacheEnvelope<EnrichmentResult.Success>? {
-        val key = "$entityKey:${type.name}"
-        val json = redis.get(key) ?: return null
+        val json = redis.get(resultKey(entityKey, type)) ?: return null
         return deserializeEnvelope(json)
     }
 
@@ -237,24 +240,42 @@ class RedisEnrichmentCache(private val redis: RedisClient) : EnrichmentCache {
         canonicalStatus: CanonicalStatus,
         ttlMs: Long,
     ) {
-        val key = "$entityKey:${type.name}"
-        redis.setex(key, ttlMs / 1000, serialize(CacheEnvelope(result, canonicalStatus)))
+        redis.setex(resultKey(entityKey, type), ttlMs / 1000, serialize(CacheEnvelope(result, canonicalStatus)))
+    }
+
+    override suspend fun getNegative(
+        entityKey: String,
+        type: EnrichmentType,
+    ): CacheEnvelope<EnrichmentResult.NotFound>? {
+        val json = redis.get(negativeKey(entityKey, type)) ?: return null
+        return deserializeEnvelope(json)
+    }
+
+    override suspend fun putNegative(
+        entityKey: String,
+        type: EnrichmentType,
+        result: EnrichmentResult.NotFound,
+        canonicalStatus: CanonicalStatus,
+        ttlMs: Long,
+    ) {
+        redis.setex(negativeKey(entityKey, type), ttlMs / 1000, serialize(CacheEnvelope(result, canonicalStatus)))
     }
 
     override suspend fun invalidate(entityKey: String, type: EnrichmentType?) {
-        val keys = if (type != null) listOf("$entityKey:${type.name}") else redis.keys("$entityKey:*")
-        keys.forEach {
-            redis.del(it)
-            redis.srem("manual_selections", it)
+        val types = type?.let(::listOf) ?: EnrichmentType.entries
+        types.forEach {
+            redis.del(resultKey(entityKey, it))
+            redis.del(negativeKey(entityKey, it))
+            redis.srem("manual_selections", selectionKey(entityKey, it))
         }
     }
 
     override suspend fun isManuallySelected(entityKey: String, type: EnrichmentType): Boolean {
-        return redis.sismember("manual_selections", "$entityKey:${type.name}")
+        return redis.sismember("manual_selections", selectionKey(entityKey, type))
     }
 
     override suspend fun markManuallySelected(entityKey: String, type: EnrichmentType) {
-        redis.sadd("manual_selections", "$entityKey:${type.name}")
+        redis.sadd("manual_selections", selectionKey(entityKey, type))
     }
 
     override suspend fun clear() {
