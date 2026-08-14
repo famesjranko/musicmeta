@@ -76,11 +76,14 @@ class InMemoryEnrichmentCache(
     override suspend fun invalidate(entityKey: String, type: EnrichmentType?) {
         mutex.withLock {
             if (type != null) {
-                entries.remove(cacheKey(entityKey, type))
-                negativeEntries.remove(cacheKey(entityKey, type))
+                val key = cacheKey(entityKey, type)
+                entries.remove(key)
+                negativeEntries.remove(key)
+                manualSelections.remove(key)
             } else {
                 entries.keys.removeAll { it.startsWith("$entityKey:") }
                 negativeEntries.keys.removeAll { it.startsWith("$entityKey:") }
+                manualSelections.removeAll { it.startsWith("$entityKey:") }
             }
         }
     }

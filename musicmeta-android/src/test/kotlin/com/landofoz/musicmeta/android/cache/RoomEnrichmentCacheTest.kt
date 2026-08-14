@@ -347,6 +347,12 @@ class RoomEnrichmentCacheTest {
 
         // Then - manual selection is now true
         assertTrue(cache.isManuallySelected("album:manual", EnrichmentType.ALBUM_ART))
+
+        // When - invalidating that entry
+        cache.invalidate("album:manual", EnrichmentType.ALBUM_ART)
+
+        // Then - its manual-selection state is removed with it
+        assertFalse(cache.isManuallySelected("album:manual", EnrichmentType.ALBUM_ART))
     }
 
     @Test

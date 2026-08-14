@@ -221,25 +221,32 @@ Implement `EnrichmentCache` for any storage backend:
 ```kotlin
 class RedisEnrichmentCache(private val redis: RedisClient) : EnrichmentCache {
 
-    override suspend fun get(entityKey: String, type: EnrichmentType): EnrichmentResult.Success? {
+    override suspend fun get(
+        entityKey: String,
+        type: EnrichmentType,
+    ): CacheEnvelope<EnrichmentResult.Success>? {
         val key = "$entityKey:${type.name}"
         val json = redis.get(key) ?: return null
-        // Deserialize and return
+        return deserializeEnvelope(json)
     }
 
     override suspend fun put(
         entityKey: String,
         type: EnrichmentType,
         result: EnrichmentResult.Success,
+        canonicalStatus: CanonicalStatus,
         ttlMs: Long,
     ) {
         val key = "$entityKey:${type.name}"
-        redis.setex(key, ttlMs / 1000, serialize(result))
+        redis.setex(key, ttlMs / 1000, serialize(CacheEnvelope(result, canonicalStatus)))
     }
 
     override suspend fun invalidate(entityKey: String, type: EnrichmentType?) {
-        if (type != null) redis.del("$entityKey:${type.name}")
-        else redis.keys("$entityKey:*").forEach { redis.del(it) }
+        val keys = if (type != null) listOf("$entityKey:${type.name}") else redis.keys("$entityKey:*")
+        keys.forEach {
+            redis.del(it)
+            redis.srem("manual_selections", it)
+        }
     }
 
     override suspend fun isManuallySelected(entityKey: String, type: EnrichmentType): Boolean {

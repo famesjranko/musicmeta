@@ -162,7 +162,7 @@ class ProviderIdCacheIdentityTest {
             ),
         )
         engine.invalidate(request, EnrichmentType.ARTIST_TOP_TRACKS)
-        assertTrue(engine.isManuallySelected(request, EnrichmentType.ARTIST_TOP_TRACKS))
+        assertFalse(engine.isManuallySelected(request, EnrichmentType.ARTIST_TOP_TRACKS))
 
         val fresh = FakeProvider(
             id = "fresh",
@@ -170,7 +170,7 @@ class ProviderIdCacheIdentityTest {
         ).also { it.givenResult(EnrichmentType.ARTIST_TOP_TRACKS, topTracksResult("fresh")) }
         engine(fresh, cache).enrich(request, setOf(EnrichmentType.ARTIST_TOP_TRACKS), forceRefresh = true)
         assertEquals(1, fresh.enrichCalls.size)
-        assertTrue(engine.isManuallySelected(request, EnrichmentType.ARTIST_TOP_TRACKS))
+        assertFalse(engine.isManuallySelected(request, EnrichmentType.ARTIST_TOP_TRACKS))
     }
 
     @Test

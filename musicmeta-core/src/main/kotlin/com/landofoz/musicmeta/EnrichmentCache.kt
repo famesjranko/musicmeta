@@ -73,6 +73,7 @@ interface EnrichmentCache {
         ttlMs: Long,
     ) {}
 
+    /** Clears positive, negative, and manual-selection state for the addressed key and type(s). */
     suspend fun invalidate(entityKey: String, type: EnrichmentType? = null)
 
     suspend fun isManuallySelected(entityKey: String, type: EnrichmentType): Boolean

@@ -148,7 +148,7 @@ tuple is used for direct requests and transitive composite dependencies.
 
 ## Manual selection
 
-The cache supports marking entries as "manually selected" — useful when a user explicitly picks artwork or corrects a result. Manually selected entries survive normal cache invalidation (they are not cleared unless explicitly overwritten or `forceRefresh` is used).
+The cache supports marking entries as "manually selected" — useful when a user explicitly picks artwork or corrects a result. Explicit invalidation, `forceRefresh`, and `clear()` remove the flag with the cached entry; an ordinary cache hit or background write does not clear it.
 
 ```kotlin
 val request = EnrichmentRequest.forArtist("Radiohead")

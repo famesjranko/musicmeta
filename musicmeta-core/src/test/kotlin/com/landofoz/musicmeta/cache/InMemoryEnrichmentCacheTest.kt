@@ -107,6 +107,23 @@ class InMemoryEnrichmentCacheTest {
         assertTrue(cache.isManuallySelected("a:1", EnrichmentType.ALBUM_ART))
     }
 
+    @Test fun `invalidate removes manual selection for the addressed types`() = runTest {
+        cache.markManuallySelected("a:1", EnrichmentType.ALBUM_ART)
+        cache.markManuallySelected("a:1", EnrichmentType.ARTIST_PHOTO)
+        cache.markManuallySelected("b:1", EnrichmentType.ALBUM_ART)
+
+        cache.invalidate("a:1", EnrichmentType.ALBUM_ART)
+
+        assertFalse(cache.isManuallySelected("a:1", EnrichmentType.ALBUM_ART))
+        assertTrue(cache.isManuallySelected("a:1", EnrichmentType.ARTIST_PHOTO))
+        assertTrue(cache.isManuallySelected("b:1", EnrichmentType.ALBUM_ART))
+
+        cache.invalidate("a:1")
+
+        assertFalse(cache.isManuallySelected("a:1", EnrichmentType.ARTIST_PHOTO))
+        assertTrue(cache.isManuallySelected("b:1", EnrichmentType.ALBUM_ART))
+    }
+
     @Test fun `clear removes everything`() = runTest {
         // Given - cache with entries and manual selection flags
         cache.put("a:1", EnrichmentType.ALBUM_ART, art(), CanonicalStatus.RESOLVED, 60_000)

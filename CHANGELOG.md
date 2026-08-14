@@ -160,6 +160,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Cache identity now uses a versioned, collision-free key over the complete request tuple: scope/type, names, album/track selector inputs, all explicit identifiers, and sorted extras; only identical tuples replay
 - Exact-bearing requests never read through bare-name aliases; canonical aliases remain available only when identity resolution supplies the names, and custom cache implementations must treat keys as opaque
 - The cache-key format change intentionally causes a one-time miss for existing entries; no cross-tuple entity equivalence is inferred
+- `InMemoryEnrichmentCache.invalidate` now removes manual-selection state with positive and negative entries, matching Room and the cache contract
 - `TitleMatcher` no longer strips an identity-bearing internal quote, or accepts mismatched terminal brackets (`Song (Live]` no longer equals `Song (Live)`)
 - LRCLIB's album/duration ranking no longer scores a candidate missing that evidence as though it agreed with the request; only an explicit match may outrank one silent on the same field
 - demo-web's "Clear cached result & reload" now invalidates the identifier-bearing preview tuple, not only the name tuple, so the entry named by the following reload is actually cleared

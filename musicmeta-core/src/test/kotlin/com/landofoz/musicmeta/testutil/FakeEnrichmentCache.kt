@@ -64,7 +64,14 @@ open class FakeEnrichmentCache : EnrichmentCache {
     }
     override suspend fun invalidate(entityKey: String, type: EnrichmentType?) {
         failIfRequested(CacheOp.INVALIDATE, entityKey)
-        if (type != null) stored.remove("$entityKey:$type") else stored.keys.removeAll { it.startsWith("$entityKey:") }
+        if (type != null) {
+            val key = "$entityKey:$type"
+            stored.remove(key)
+            manualSelections.remove(key)
+        } else {
+            stored.keys.removeAll { it.startsWith("$entityKey:") }
+            manualSelections.removeAll { it.startsWith("$entityKey:") }
+        }
     }
     override suspend fun isManuallySelected(entityKey: String, type: EnrichmentType) = "$entityKey:$type" in manualSelections
     override suspend fun markManuallySelected(entityKey: String, type: EnrichmentType) { manualSelections.add("$entityKey:$type") }
