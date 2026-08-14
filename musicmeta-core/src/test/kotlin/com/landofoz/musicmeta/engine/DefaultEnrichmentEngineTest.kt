@@ -102,8 +102,8 @@ class DefaultEnrichmentEngineTest {
         assertNull(cache.get(DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.GENRE), EnrichmentType.GENRE))
     }
 
-    @Test fun `invalidate clears name-alias key when request has MBID`() = runTest {
-        // Given - result cached under both MBID key and name-alias key
+    @Test fun `invalidate preserves a bare-name entry when request has MBID`() = runTest {
+        // Given - results cached under the exact tuple and a separately addressable bare-name key
         val mbidReq = EnrichmentRequest.ForAlbum(EnrichmentIdentifiers(musicBrainzId = "mbid-123"), "OK Computer", "Radiohead")
         val p = FakeProvider(id = "p")
         val e = engine(p)
@@ -113,9 +113,9 @@ class DefaultEnrichmentEngineTest {
         // When - invalidating the MBID request
         e.invalidate(mbidReq, EnrichmentType.ALBUM_ART)
 
-        // Then - both keys cleared
+        // Then - only the exact tuple is cleared; the caller's name is not an equivalence proof
         assertNull(cache.get(DefaultEnrichmentEngine.entityKeyFor(mbidReq, EnrichmentType.ALBUM_ART), EnrichmentType.ALBUM_ART))
-        assertNull(cache.get(DefaultEnrichmentEngine.entityKeyForName(mbidReq, EnrichmentType.ALBUM_ART), EnrichmentType.ALBUM_ART))
+        assertNotNull(cache.get(DefaultEnrichmentEngine.entityKeyForName(mbidReq, EnrichmentType.ALBUM_ART), EnrichmentType.ALBUM_ART))
     }
 
     // --- manual selection ---

@@ -20,9 +20,9 @@ import org.junit.Test
 
 /**
  * A request carrying both a canonical MusicBrainz id and a provider id trusted for the call's
- * [EnrichmentType] has no proven relationship between the two — Deezer's exact-track lookup
- * prefers its own id over the MBID, so the two can legitimately name different entities. Neither
- * id is a safe cache key until that is known: see [hasUnvalidatedMixedIdentity].
+ * [EnrichmentType] may use either route — Deezer's exact-track lookup prefers its own id over the
+ * MBID, so the two can legitimately name different entities. The complete request tuple keeps
+ * those routes isolated without disabling cache replay.
  */
 class MixedIdentifierCacheIsolationTest {
 
@@ -137,7 +137,7 @@ class MixedIdentifierCacheIsolationTest {
         )
     }
 
-    @Test fun `a mixed request writes under neither the MBID nor provider-id key`() = runTest {
+    @Test fun `a mixed request writes under its complete tuple rather than either single-id key`() = runTest {
         // Given - a mixed MBID/Deezer-id track request
         val cache = InMemoryEnrichmentCache()
         val mixed = EnrichmentRequest.forTrack(
@@ -168,7 +168,7 @@ class MixedIdentifierCacheIsolationTest {
             EnrichmentConfig(enableIdentityResolution = false),
         ).enrich(mixed, setOf(EnrichmentType.TRACK_PREVIEW))
 
-        // Then - neither the MBID key nor the Deezer-id key holds the result
+        // Then - neither single-id key holds the result; the complete tuple is the cache primary
         val mbidKey = DefaultEnrichmentEngine.entityKeyFor(
             EnrichmentRequest.forTrack(
                 title = "Starman",

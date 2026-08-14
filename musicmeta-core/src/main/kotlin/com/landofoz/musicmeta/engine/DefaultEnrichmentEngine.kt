@@ -64,19 +64,13 @@ internal class DefaultEnrichmentEngine(
     private val compositeDependencies: Map<EnrichmentType, Set<EnrichmentType>>
         get() = synthesizers.mapValues { it.value.dependencies }
 
-    /** One cache-policy seam for direct and transitive composite identity routes. */
-    private fun hasUnsafeCacheIdentity(request: EnrichmentRequest, type: EnrichmentType): Boolean =
-        hasUnvalidatedMixedIdentity(request, type, compositeDependencies)
-
     override suspend fun enrich(
         request: EnrichmentRequest,
         types: Set<EnrichmentType>,
         forceRefresh: Boolean,
     ): EnrichmentResults {
         if (forceRefresh) {
-            // Guarded per key, not per type: a failure on the primary key must not skip the alias.
             for (type in types) {
-                if (hasUnsafeCacheIdentity(request, type)) continue
                 for (key in cacheKeysFor(request, type)) {
                     guardedCacheWrite(logger, "invalidate") { cache.invalidate(key, type) }
                 }
@@ -91,14 +85,9 @@ internal class DefaultEnrichmentEngine(
         val chainExecutions = mutableMapOf<EnrichmentType, ChainExecution>()
 
         for (type in types) {
-            // A request whose MBID and this type's trusted provider id have not been proven to
-            // name the same entity has no safe key to read: either could be the winning provider's
-            // actual route, and reading the wrong one would serve a foreign entity. Read as though
-            // this call were forceRefresh — skip straight to uncached rather than guess a key.
-            val mixedIdentity = hasUnsafeCacheIdentity(request, type)
-            // forceRefresh already invalidated these keys; skipping the read keeps a *failed*
-            // invalidation from resurrecting the stale entry it was meant to drop.
-            val cached = if (forceRefresh || mixedIdentity) null else {
+            val cached = if (forceRefresh) {
+                null
+            } else {
                 guardedCacheRead(logger, "get") { cache.get(entityKeyFor(request, type), type) }
             }
             // A cached Success answering nothing is a *miss*, not a NotFound. An empty entry written
@@ -113,7 +102,9 @@ internal class DefaultEnrichmentEngine(
             }
             // A fresh negative entry answers "providers had nothing" without a re-ask; the read is
             // skipped under forceRefresh for the same reason as the positive read above.
-            val negative = if (forceRefresh || mixedIdentity) null else {
+            val negative = if (forceRefresh) {
+                null
+            } else {
                 guardedCacheRead(logger, "getNegative") { cache.getNegative(entityKeyFor(request, type), type) }
             }
             if (negative != null) {
@@ -253,13 +244,14 @@ internal class DefaultEnrichmentEngine(
     /**
      * The name-alias key when identity resolution added an MBID, so a future name-only lookup
      * finds MBID-resolved data — shared by both write branches below, so a negative write ends up
-     * under exactly the same keys a Success would, and `cacheKeysFor`/`invalidateKeys` clear it for
-     * free. A request that named no entity has no caller name to alias under, so it takes
+     * under exactly the same keys a Success would. Force refresh and [invalidateKeys] clear that
+     * alias once identity resolution has recovered its canonical names. A request that named no
+     * entity has no caller name to alias under, so it takes
      * MusicBrainz's canonical one — the same name a later name-only lookup would ask with.
      *
-     * Never fires when [entityKeyFor] already picked a provider id for [request]/[type]: that
-     * result is scoped to the entity the id proved, and the bare name is ambiguous by definition —
-     * aliasing it there would hand a different, same-named entity someone else's precise answer.
+     * Never fires for a request carrying caller-supplied identifiers: a caller name is not an
+     * equivalence proof for those identifiers. The only identifier-bearing alias is the canonical
+     * name learned during actual identity resolution.
      */
     private fun aliasKeyFor(
         request: EnrichmentRequest,
@@ -310,8 +302,6 @@ internal class DefaultEnrichmentEngine(
         result: EnrichmentResult.NotFound,
         canonicalStatus: CanonicalStatus,
     ) {
-        // See hasUnsafeCacheIdentity: no exact or alias key is safe until one route is proven.
-        if (hasUnsafeCacheIdentity(request, type)) return
         guardedCacheWrite(logger, "putNegative") {
             cache.putNegative(entityKeyFor(request, type), type, result, canonicalStatus, config.negativeTtlMs)
         }
@@ -330,8 +320,6 @@ internal class DefaultEnrichmentEngine(
         canonicalStatus: CanonicalStatus,
     ) {
         val ttl = config.ttlOverrides[type] ?: type.defaultTtlMs
-        // See hasUnsafeCacheIdentity: no exact or alias key is safe until one route is proven.
-        if (hasUnsafeCacheIdentity(request, type)) return
         guardedCacheWrite(logger, "put") {
             cache.put(entityKeyFor(request, type), type, result, canonicalStatus, ttl)
         }
@@ -359,14 +347,9 @@ internal class DefaultEnrichmentEngine(
     }
 
     override suspend fun isManuallySelected(request: EnrichmentRequest, type: EnrichmentType): Boolean =
-        if (hasUnsafeCacheIdentity(request, type)) {
-            false
-        } else {
-            cache.isManuallySelected(entityKeyFor(request, type), type)
-        }
+        cache.isManuallySelected(entityKeyFor(request, type), type)
 
     override suspend fun markManuallySelected(request: EnrichmentRequest, type: EnrichmentType) {
-        if (hasUnsafeCacheIdentity(request, type)) return
         cache.markManuallySelected(entityKeyFor(request, type), type)
     }
 
@@ -430,23 +413,21 @@ internal class DefaultEnrichmentEngine(
     }
 
     /**
-     * The primary key, plus the name-alias key whenever [entityKeyFor] picked something other than
-     * the bare name (an MBID or a trusted provider id) — an entry may exist under either, written
-     * before that identity was known.
+     * Exact-bearing requests invalidate only their complete primary tuple. A caller-supplied name
+     * is not an equivalence proof, so clearing its bare-name key could evict another entity's
+     * answer. Canonical aliases are added by [invalidateKeys] only after identity resolution has
+     * supplied the canonical names.
      */
     private fun cacheKeysFor(request: EnrichmentRequest, type: EnrichmentType): List<String> {
-        val primary = entityKeyFor(request, type)
-        val nameKey = entityKeyForName(request, type)
-        return if (primary != nameKey) listOf(primary, nameKey) else listOf(primary)
+        return listOf(entityKeyFor(request, type))
     }
 
-    /** Invalidates the primary key and both name-alias keys — the caller's and the canonical one. */
+    /** Invalidates the primary tuple and a canonical-name alias only when resolution supplied it. */
     private suspend fun invalidateKeys(
         request: EnrichmentRequest,
         named: EnrichmentRequest,
         type: EnrichmentType,
     ) {
-        if (hasUnsafeCacheIdentity(request, type)) return
         val keys = cacheKeysFor(request, type) +
             if (named !== request) listOf(entityKeyForName(named, type)) else emptyList()
         for (key in keys.distinct()) cache.invalidate(key, type)
@@ -760,9 +741,7 @@ internal class DefaultEnrichmentEngine(
     ) {
         for (type in types) {
             val result = results[type] ?: continue
-            if ((result is EnrichmentResult.Error || result is EnrichmentResult.RateLimited) &&
-                !hasUnsafeCacheIdentity(request, type)
-            ) {
+            if (result is EnrichmentResult.Error || result is EnrichmentResult.RateLimited) {
                 val stale = guardedCacheRead(logger, "getIncludingExpired") {
                     cache.getIncludingExpired(entityKeyFor(request, type), type)
                 }

@@ -101,7 +101,8 @@ class IdentityNameBackfillTest {
         engine(other).enrich(EnrichmentRequest.forAlbumByMbid(RUSH_MBID), setOf(EnrichmentType.GENRE))
 
         // Then - the request the fan-out carries names the release and its artist-credit
-        assertTrue(cache.stored.keys.any { it.startsWith("album:Coldplay:A Rush of Blood to the Head:GENRE") })
+        val canonical = EnrichmentRequest.forAlbum("A Rush of Blood to the Head", "Coldplay")
+        assertTrue(cache.stored.keys.any { it == entityKeyForName(canonical, EnrichmentType.GENRE) + ":${EnrichmentType.GENRE}" })
     }
 
     @Test
@@ -115,7 +116,8 @@ class IdentityNameBackfillTest {
 
         // Then - the result is aliased under the canonical artist name, which is the key a later
         // name-only lookup asks with
-        assertTrue(cache.stored.keys.any { it.startsWith("artist:Queen:GENRE") })
+        val canonical = EnrichmentRequest.forArtist("Queen")
+        assertTrue(cache.stored.keys.any { it == entityKeyForName(canonical, EnrichmentType.GENRE) + ":${EnrichmentType.GENRE}" })
     }
 
     @Test

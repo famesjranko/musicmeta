@@ -300,8 +300,8 @@ class DeezerProvider(
         val trackRequest = request as? EnrichmentRequest.ForTrack
             ?: return EnrichmentResult.NotFound(EnrichmentType.TRACK_PREVIEW, id)
 
-        // The same audited (request kind, type) tuple entityKeyFor trusts as this type's cache-key
-        // identity, so a call that took this branch and the cache key it lands under never disagree.
+        // Use the provider-native route helper; cache identity remains the complete request tuple
+        // and does not infer which provider branch will win.
         val trustedId = trustedProviderIdentifier(request, EnrichmentType.TRACK_PREVIEW)?.value?.toLongOrNull()
         val resolution = resolveTrackByIdOrSearch(trackRequest, trustedId)
             ?: return EnrichmentResult.NotFound(EnrichmentType.TRACK_PREVIEW, id)

@@ -30,7 +30,10 @@ class CompositeCacheIdentityTest {
                 .with(IdentifierNamespace.DEEZER, "foreign-deezer"),
             name = "Radiohead",
         )
-        val key = DefaultEnrichmentEngine.entityKeyFor(request, EnrichmentType.ARTIST_TIMELINE)
+        val key = DefaultEnrichmentEngine.entityKeyFor(
+            request.copy(identifiers = EnrichmentIdentifiers(musicBrainzId = "artist-mbid")),
+            EnrichmentType.ARTIST_TIMELINE,
+        )
         val poison = EnrichmentResult.Success(
             type = EnrichmentType.ARTIST_TIMELINE,
             data = EnrichmentData.ArtistTimeline(listOf(TimelineEvent("1900", "formed", "poison"))),
@@ -64,10 +67,11 @@ class CompositeCacheIdentityTest {
             EnrichmentConfig(enableIdentityResolution = false),
         ).enrich(request, setOf(EnrichmentType.ARTIST_TIMELINE))
 
-        // Then - the dependency was resolved and the mixed request did not write over the poison entry
+        // Then - the dependency was resolved and the mixed request did not read the single-id entry
         assertEquals(1, discography.enrichCalls.size)
         assertEquals("timeline_synthesizer", (result.raw.getValue(EnrichmentType.ARTIST_TIMELINE) as EnrichmentResult.Success).provider)
         assertEquals("poison", (cache.get(key, EnrichmentType.ARTIST_TIMELINE)!!.result as EnrichmentResult.Success).provider)
+        assertNotEquals(key, DefaultEnrichmentEngine.entityKeyFor(request, EnrichmentType.ARTIST_TIMELINE))
     }
 
     @Test
@@ -105,8 +109,8 @@ class CompositeCacheIdentityTest {
         // When - enriching the request
         assertMixedDiscographyIsolated(request)
 
-        // Then - the two applicable native routes were treated as mixed identity
-        assertEquals(true, hasUnvalidatedMixedIdentity(request, EnrichmentType.ARTIST_DISCOGRAPHY))
+        // Then - the complete request tuple remains a replayable cache identity
+        assertNotEquals(entityKeyForName(request, EnrichmentType.ARTIST_DISCOGRAPHY), entityKeyFor(request, EnrichmentType.ARTIST_DISCOGRAPHY))
     }
 
     @Test
@@ -118,7 +122,10 @@ class CompositeCacheIdentityTest {
             name = "Radiohead",
         )
         val cache = InMemoryEnrichmentCache()
-        val key = entityKeyFor(request, EnrichmentType.ARTIST_DISCOGRAPHY)
+        val key = entityKeyFor(
+            request.copy(identifiers = EnrichmentIdentifiers(musicBrainzId = "artist-mbid")),
+            EnrichmentType.ARTIST_DISCOGRAPHY,
+        )
         val poison = EnrichmentResult.NotFound(EnrichmentType.ARTIST_DISCOGRAPHY, "poison")
         cache.putNegative(key, EnrichmentType.ARTIST_DISCOGRAPHY, poison, CanonicalStatus.RESOLVED, 60_000)
         val provider = FakeProvider(
@@ -133,10 +140,17 @@ class CompositeCacheIdentityTest {
             EnrichmentConfig(enableIdentityResolution = false),
         ).enrich(request, setOf(EnrichmentType.ARTIST_DISCOGRAPHY))
 
-        // Then - the provider was asked rather than accepting the stale negative as proof
+        // Then - the provider was asked rather than accepting the single-id negative as proof
         assertEquals(1, provider.enrichCalls.size)
         assertEquals("poison", (cache.getNegative(key, EnrichmentType.ARTIST_DISCOGRAPHY)!!.result as EnrichmentResult.NotFound).provider)
         assertEquals("all_providers", (result.raw.getValue(EnrichmentType.ARTIST_DISCOGRAPHY) as EnrichmentResult.NotFound).provider)
+        val replay = DefaultEnrichmentEngine(
+            ProviderRegistry(listOf(provider)),
+            cache,
+            EnrichmentConfig(enableIdentityResolution = false),
+        ).enrich(request, setOf(EnrichmentType.ARTIST_DISCOGRAPHY))
+        assertEquals(1, provider.enrichCalls.size)
+        assertEquals("all_providers", (replay.raw.getValue(EnrichmentType.ARTIST_DISCOGRAPHY) as EnrichmentResult.NotFound).provider)
     }
 
     @Test
@@ -148,7 +162,10 @@ class CompositeCacheIdentityTest {
             name = "Radiohead",
         )
         val cache = InMemoryEnrichmentCache()
-        val key = entityKeyFor(request, EnrichmentType.ARTIST_DISCOGRAPHY)
+        val key = entityKeyFor(
+            request.copy(identifiers = EnrichmentIdentifiers(musicBrainzId = "artist-mbid")),
+            EnrichmentType.ARTIST_DISCOGRAPHY,
+        )
         val cached = EnrichmentResult.Success(
             EnrichmentType.ARTIST_DISCOGRAPHY,
             EnrichmentData.Discography(listOf(DiscographyAlbum("Cached", "1997"))),
@@ -167,14 +184,17 @@ class CompositeCacheIdentityTest {
         val selected = engine.isManuallySelected(request, EnrichmentType.ARTIST_DISCOGRAPHY)
         engine.invalidate(request, EnrichmentType.ARTIST_DISCOGRAPHY)
 
-        // Then - ambiguous identity has neither selection state nor destructive cache authority
-        assertEquals(false, selected)
+        // Then - selection and invalidation address the complete tuple, not the single-id entry
+        assertEquals(true, selected)
         assertEquals("cached", (cache.get(key, EnrichmentType.ARTIST_DISCOGRAPHY)!!.result as EnrichmentResult.Success).provider)
     }
 
     private suspend fun assertMixedDiscographyIsolated(request: EnrichmentRequest.ForArtist) {
         val cache = InMemoryEnrichmentCache()
-        val key = entityKeyFor(request, EnrichmentType.ARTIST_DISCOGRAPHY)
+        val key = entityKeyFor(
+            request.copy(identifiers = EnrichmentIdentifiers(musicBrainzId = "artist-mbid")),
+            EnrichmentType.ARTIST_DISCOGRAPHY,
+        )
         val poison = EnrichmentResult.Success(
             EnrichmentType.ARTIST_DISCOGRAPHY,
             EnrichmentData.Discography(listOf(DiscographyAlbum("Poison", "1900"))),
@@ -204,15 +224,22 @@ class CompositeCacheIdentityTest {
             EnrichmentConfig(enableIdentityResolution = false),
         ).enrich(request, setOf(EnrichmentType.ARTIST_DISCOGRAPHY))
 
-        // Then - the provider ran and the foreign cache entry was not overwritten
+        // Then - the provider ran and the foreign cache entry was not read
         assertEquals(1, provider.enrichCalls.size)
         assertEquals("fresh", (result.raw.getValue(EnrichmentType.ARTIST_DISCOGRAPHY) as EnrichmentResult.Success).provider)
         assertEquals("poison", (cache.get(key, EnrichmentType.ARTIST_DISCOGRAPHY)!!.result as EnrichmentResult.Success).provider)
+        val replay = DefaultEnrichmentEngine(
+            ProviderRegistry(listOf(provider)),
+            cache,
+            EnrichmentConfig(enableIdentityResolution = false),
+        ).enrich(request, setOf(EnrichmentType.ARTIST_DISCOGRAPHY))
+        assertEquals(1, provider.enrichCalls.size)
+        assertEquals("fresh", (replay.raw.getValue(EnrichmentType.ARTIST_DISCOGRAPHY) as EnrichmentResult.Success).provider)
     }
 
     @Test
     fun `name tuples containing a delimiter receive distinct cache keys`() {
-        // Given - two legal track name tuples whose old artist:title encoding collided
+        // Given - two legal track name tuples containing delimiter characters
         val first = EnrichmentRequest.ForTrack(
             identifiers = EnrichmentIdentifiers(),
             artist = "A:B",

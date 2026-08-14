@@ -93,9 +93,9 @@ class EnrichCacheFailureTest {
         assertTrue(results.raw[artType] is EnrichmentResult.Error)
     }
 
-    @Test fun `a failed primary invalidation still invalidates the name-alias key`() = runTest {
-        // Given - an MBID-carrying request, so forceRefresh invalidates a primary and an alias key,
-        // with both keys populated and only the primary key's invalidate() throwing
+    @Test fun `a failed primary invalidation preserves a conflicting bare-name key`() = runTest {
+        // Given - an MBID-carrying request with both exact and bare-name entries, and only the
+        // exact tuple's invalidate() throwing
         val mbidReq = EnrichmentRequest.ForAlbum(
             EnrichmentIdentifiers(musicBrainzId = "mbid-123"), "OK Computer", "Radiohead",
         )
@@ -110,9 +110,8 @@ class EnrichCacheFailureTest {
         // When - forcing a refresh
         engine(p).enrich(mbidReq, setOf(artType), forceRefresh = true)
 
-        // Then - the alias invalidation still ran, so a later name-only lookup cannot be
-        // served the stale alias entry that the failed primary key aborted early
-        assertFalse("alias key should have been invalidated", "$aliasKey:$artType" in cache.stored)
+        // Then - the bare-name entry remains isolated from the exact tuple's failed invalidation
+        assertTrue("bare-name entry should be preserved", "$aliasKey:$artType" in cache.stored)
     }
 
     // --- the guard itself ---

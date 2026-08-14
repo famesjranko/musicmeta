@@ -4,121 +4,116 @@ import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.IdentifierNamespace
 
-/** The request entity kind required to interpret a provider-native namespace safely. */
+/** Entity kind carried by a provider-native identifier route. */
 internal enum class EntityScope { ARTIST, ALBUM, TRACK }
 
 /**
- * The cache identity policy for an enrichment request. Provider route knowledge and composite
- * dependency expansion live here so the engine only asks one seam whether a key is safe.
+ * Builds the cache identity for a complete enrichment request.
+ *
+ * The cache key deliberately describes the request rather than guessing which provider route will
+ * win. Providers may use any of the identifiers on a request, and a later provider or composite
+ * can consume a field that was not part of an earlier route. Keeping the complete tuple makes a
+ * mixed request replayable without allowing a single-id or name entry to answer it accidentally.
  */
 internal object CacheIdentity {
+    private const val VERSION = "musicmeta-cache-key-v2"
 
-    /** A provider-native identifier paired with the entity kind it names. */
+    /** Provider route helper used by providers; cache identity itself never depends on it. */
     data class ScopedProviderIdentifier(
         val namespace: IdentifierNamespace,
         val scope: EntityScope,
         val value: String,
     )
 
-    private data class ProviderIdentity(val namespace: IdentifierNamespace, val scope: EntityScope)
+    /**
+     * Returns an id only for provider branches that demonstrably consume the request id. Deezer's
+     * discography branch searches by name, so its Deezer id is intentionally not trusted here.
+     */
+    fun trustedProviderIdentifier(request: EnrichmentRequest, type: EnrichmentType): ScopedProviderIdentifier? {
+        val namespace = when (type) {
+            EnrichmentType.TRACK_PREVIEW,
+            EnrichmentType.TRACK_METADATA ->
+                if (request is EnrichmentRequest.ForTrack) IdentifierNamespace.DEEZER else null
+            EnrichmentType.ARTIST_TOP_TRACKS,
+            EnrichmentType.SIMILAR_ARTISTS,
+            EnrichmentType.ARTIST_RADIO ->
+                if (request is EnrichmentRequest.ForArtist) IdentifierNamespace.DEEZER else null
+            EnrichmentType.ARTIST_DISCOGRAPHY ->
+                if (request is EnrichmentRequest.ForArtist) IdentifierNamespace.ITUNES_ARTIST else null
+            else -> null
+        } ?: return null
+        val scope = when (request) {
+            is EnrichmentRequest.ForArtist -> EntityScope.ARTIST
+            is EnrichmentRequest.ForAlbum -> EntityScope.ALBUM
+            is EnrichmentRequest.ForTrack -> EntityScope.TRACK
+        }
+        return request.identifiers.get(namespace)?.let { ScopedProviderIdentifier(namespace, scope, it) }
+    }
+
+    fun entityKeyFor(request: EnrichmentRequest, type: EnrichmentType): String =
+        key(request, type, includeIdentifiers = true)
 
     /**
-     * Audited request-kind/type/provider branches that consume a request identifier as the entity
-     * they enrich. Multiple entries for one type are intentional: ARTIST_DISCOGRAPHY has both
-     * iTunes and Deezer native artist routes. A namespace alone is never enough because Deezer is
-     * polymorphic across artist and track requests.
+     * The canonical name key has exactly the same shape as the primary key, with identifiers
+     * omitted. A name-only request therefore has one primary key, while an identity-resolved call
+     * can still write a truthful canonical-name alias using this function.
      */
-    private val providerIdentities: Map<EnrichmentType, List<ProviderIdentity>> = mapOf(
-        EnrichmentType.TRACK_PREVIEW to listOf(ProviderIdentity(IdentifierNamespace.DEEZER, EntityScope.TRACK)),
-        EnrichmentType.TRACK_METADATA to listOf(ProviderIdentity(IdentifierNamespace.DEEZER, EntityScope.TRACK)),
-        EnrichmentType.ARTIST_TOP_TRACKS to listOf(ProviderIdentity(IdentifierNamespace.DEEZER, EntityScope.ARTIST)),
-        EnrichmentType.SIMILAR_ARTISTS to listOf(ProviderIdentity(IdentifierNamespace.DEEZER, EntityScope.ARTIST)),
-        EnrichmentType.ARTIST_RADIO to listOf(ProviderIdentity(IdentifierNamespace.DEEZER, EntityScope.ARTIST)),
-        EnrichmentType.ARTIST_DISCOGRAPHY to listOf(
-            ProviderIdentity(IdentifierNamespace.ITUNES_ARTIST, EntityScope.ARTIST),
-            ProviderIdentity(IdentifierNamespace.DEEZER, EntityScope.ARTIST),
-        ),
-    )
+    fun entityKeyForName(request: EnrichmentRequest, type: EnrichmentType): String =
+        key(request, type, includeIdentifiers = false)
 
-    /** The first applicable route preserves one provider's existing direct lookup choice. */
-    fun trustedProviderIdentifier(request: EnrichmentRequest, type: EnrichmentType): ScopedProviderIdentifier? {
-        val scope = request.entityScope()
-        return providerIdentities[type].orEmpty()
-            .asSequence()
-            .filter { it.scope == scope }
-            .mapNotNull { identity ->
-                request.identifiers.get(identity.namespace)?.let {
-                    ScopedProviderIdentifier(identity.namespace, identity.scope, it)
+    private fun key(request: EnrichmentRequest, type: EnrichmentType, includeIdentifiers: Boolean): String {
+        val fields = buildList {
+            add("scope" to scopeOf(request))
+            add("type" to type.name)
+            val ids = request.identifiers
+            val hasIdentifiers = ids.musicBrainzId != null ||
+                ids.musicBrainzReleaseGroupId != null ||
+                ids.wikidataId != null || ids.isrc != null || ids.barcode != null ||
+                ids.wikipediaTitle != null || ids.extra.isNotEmpty()
+            if (includeIdentifiers && hasIdentifiers) {
+                add("id.musicBrainzId" to ids.musicBrainzId)
+                add("id.musicBrainzReleaseGroupId" to ids.musicBrainzReleaseGroupId)
+                add("id.wikidataId" to ids.wikidataId)
+                add("id.isrc" to ids.isrc)
+                add("id.barcode" to ids.barcode)
+                add("id.wikipediaTitle" to ids.wikipediaTitle)
+                ids.extra.toSortedMap().forEach { (name, value) ->
+                    add("id.extra.$name" to value)
                 }
             }
-            .firstOrNull()
-    }
-
-    /** Whether a type or dependency has more than one applicable exact identity token. */
-    fun hasUnvalidatedMixedIdentity(
-        request: EnrichmentRequest,
-        type: EnrichmentType,
-        compositeDependencies: Map<EnrichmentType, Set<EnrichmentType>> = emptyMap(),
-    ): Boolean {
-        val nativeTokens = expandedTypes(type, compositeDependencies)
-            .flatMap { candidate -> providerIdentities[candidate].orEmpty() }
-            .filter { it.scope == request.entityScope() }
-            .mapNotNull { identity ->
-                request.identifiers.get(identity.namespace)?.let { identity.namespace to it }
+            when (request) {
+                is EnrichmentRequest.ForAlbum -> {
+                    add("album.title" to request.title)
+                    add("album.artist" to request.artist)
+                    add("album.trackCount" to request.trackCount?.toString())
+                    add("album.year" to request.year?.toString())
+                }
+                is EnrichmentRequest.ForArtist -> add("artist.name" to request.name)
+                is EnrichmentRequest.ForTrack -> {
+                    add("track.title" to request.title)
+                    add("track.artist" to request.artist)
+                    add("track.album" to request.album)
+                    add("track.durationMs" to request.durationMs?.toString())
+                }
             }
-            .toSet()
-        val exactIdentityCount = nativeTokens.size + if (request.identifiers.musicBrainzId != null) 1 else 0
-        return exactIdentityCount > 1
-    }
-
-    fun entityKeyFor(request: EnrichmentRequest, type: EnrichmentType): String {
-        val prefix = entityPrefix(request)
-        val id = request.identifiers.musicBrainzId
-            ?: trustedProviderIdentifier(request, type)?.let { "${it.namespace.name.lowercase()}:${it.value}" }
-            ?: encodedNamePart(request)
-        return "$prefix:$id:$type"
-    }
-
-    fun entityKeyForName(request: EnrichmentRequest, type: EnrichmentType): String =
-        "${entityPrefix(request)}:${encodedNamePart(request)}:$type"
-
-    /**
-     * Expands all transitive synthesizer inputs. A key is unsafe when its type graph can route via
-     * more than one exact token, because no route has proved those tokens name one entity.
-     */
-    private fun expandedTypes(
-        type: EnrichmentType,
-        compositeDependencies: Map<EnrichmentType, Set<EnrichmentType>>,
-    ): Set<EnrichmentType> {
-        val seen = linkedSetOf<EnrichmentType>()
-        fun visit(candidate: EnrichmentType) {
-            if (!seen.add(candidate)) return
-            compositeDependencies[candidate].orEmpty().forEach(::visit)
         }
-        visit(type)
-        return seen
+        return VERSION + fields.joinToString(separator = "", transform = ::encodeField)
     }
 
-    private fun EnrichmentRequest.entityScope(): EntityScope = when (this) {
-        is EnrichmentRequest.ForArtist -> EntityScope.ARTIST
-        is EnrichmentRequest.ForAlbum -> EntityScope.ALBUM
-        is EnrichmentRequest.ForTrack -> EntityScope.TRACK
-    }
-
-    private fun entityPrefix(request: EnrichmentRequest): String = when (request) {
+    private fun scopeOf(request: EnrichmentRequest): String = when (request) {
         is EnrichmentRequest.ForAlbum -> "album"
         is EnrichmentRequest.ForArtist -> "artist"
         is EnrichmentRequest.ForTrack -> "track"
     }
 
-    private fun encodedNamePart(request: EnrichmentRequest): String = when (request) {
-        is EnrichmentRequest.ForAlbum -> "${encode(request.artist)}:${encode(request.title)}"
-        is EnrichmentRequest.ForArtist -> encode(request.name)
-        is EnrichmentRequest.ForTrack -> "${encode(request.artist)}:${encode(request.title)}"
+    /** Length prefixes make labels, nulls, empties, and arbitrary user values unambiguous. */
+    private fun encodeField(field: Pair<String, String?>): String {
+        val (label, value) = field
+        return encodePart(label) + encodePart(value)
     }
 
-    /** Escaping both '%' and ':' makes the existing delimiter format unambiguous and stable. */
-    private fun encode(value: String): String = value.replace("%", "%25").replace(":", "%3A")
+    private fun encodePart(value: String?): String =
+        if (value == null) "-1:" else "${value.length}:$value"
 }
 
 internal typealias ScopedProviderIdentifier = CacheIdentity.ScopedProviderIdentifier
@@ -131,12 +126,6 @@ internal fun entityKeyFor(request: EnrichmentRequest, type: EnrichmentType): Str
 
 internal fun entityKeyForName(request: EnrichmentRequest, type: EnrichmentType): String =
     CacheIdentity.entityKeyForName(request, type)
-
-internal fun hasUnvalidatedMixedIdentity(
-    request: EnrichmentRequest,
-    type: EnrichmentType,
-    compositeDependencies: Map<EnrichmentType, Set<EnrichmentType>> = emptyMap(),
-): Boolean = CacheIdentity.hasUnvalidatedMixedIdentity(request, type, compositeDependencies)
 
 internal fun namesNoEntity(request: EnrichmentRequest): Boolean = when (request) {
     is EnrichmentRequest.ForAlbum -> request.title.isBlank()

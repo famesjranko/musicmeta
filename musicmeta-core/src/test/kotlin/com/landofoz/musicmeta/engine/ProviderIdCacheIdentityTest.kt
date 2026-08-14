@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.engine
 
+import com.landofoz.musicmeta.CanonicalStatus
 import com.landofoz.musicmeta.EnrichmentConfig
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
@@ -12,33 +13,197 @@ import com.landofoz.musicmeta.cache.InMemoryEnrichmentCache
 import com.landofoz.musicmeta.testutil.FakeProvider
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * The cache-key priority [entityKeyFor] applies: canonical MusicBrainz id, then a provider id
- * trusted for the request's exact [EnrichmentType] (see the audited tuples in `EntityKey.kt`),
- * then the bare name — and that every read/write path in [DefaultEnrichmentEngine] addresses the
- * same key for a given request/type.
- */
 class ProviderIdCacheIdentityTest {
 
     private val config = EnrichmentConfig(enableIdentityResolution = false)
 
-    private fun trackRequest(deezerId: String? = null, title: String = "Starman", artist: String = "David Bowie") =
-        EnrichmentRequest.ForTrack(
-            identifiers = deezerId?.let { EnrichmentIdentifiers().with(IdentifierNamespace.DEEZER, it) }
-                ?: EnrichmentIdentifiers(),
-            title = title,
-            artist = artist,
+    @Test
+    fun `primary and name keys share shape while identifiers distinguish every supported field`() {
+        val base = EnrichmentRequest.ForAlbum(
+            identifiers = EnrichmentIdentifiers(),
+            title = "Release: A",
+            artist = "Artist|B",
+            trackCount = 10,
+            year = 2024,
         )
+        val ids = base.copy(
+            identifiers = EnrichmentIdentifiers(
+                musicBrainzId = "release-mbid",
+                musicBrainzReleaseGroupId = "rg-1",
+                wikidataId = "Q1",
+                isrc = "US-X1",
+                barcode = "012:345",
+                wikipediaTitle = "A|B",
+                extra = mapOf(
+                    "itunesCollectionId" to "collection-1",
+                    "discogsMasterId" to "master-1",
+                    "discogsReleaseId" to "release-1",
+                ),
+            ),
+        )
+        val primary = entityKeyFor(ids, EnrichmentType.ALBUM_METADATA)
+        val name = entityKeyForName(ids, EnrichmentType.ALBUM_METADATA)
+
+        assertNotEquals(primary, name)
+        assertEquals(name, entityKeyFor(base, EnrichmentType.ALBUM_METADATA))
+        assertTrue(primary.startsWith("musicmeta-cache-key-v2"))
+        assertTrue(primary.contains("id.musicBrainzReleaseGroupId"))
+        assertTrue(primary.contains("id.extra.discogsMasterId"))
+    }
+
+    @Test
+    fun `all exact album identifiers isolate releases and native provider scopes`() {
+        val requests = listOf(
+            EnrichmentRequest.forAlbum("A", "Artist", identifiers = EnrichmentIdentifiers(musicBrainzReleaseGroupId = "rg-1")),
+            EnrichmentRequest.forAlbum("A", "Artist", identifiers = EnrichmentIdentifiers(wikidataId = "Q1")),
+            EnrichmentRequest.forAlbum("A", "Artist", identifiers = EnrichmentIdentifiers(wikipediaTitle = "A")),
+            EnrichmentRequest.forAlbum("A", "Artist", identifiers = EnrichmentIdentifiers(barcode = "barcode-1")),
+            EnrichmentRequest.forAlbum("A", "Artist", identifiers = EnrichmentIdentifiers(extra = mapOf("itunesCollectionId" to "collection-1"))),
+            EnrichmentRequest.forAlbum("A", "Artist", identifiers = EnrichmentIdentifiers(extra = mapOf("discogsReleaseId" to "release-1"))),
+            EnrichmentRequest.forAlbum("A", "Artist", identifiers = EnrichmentIdentifiers(extra = mapOf("discogsMasterId" to "master-1"))),
+        )
+
+        requests.forEachIndexed { index, request ->
+            requests.drop(index + 1).forEach { other ->
+                assertNotEquals(entityKeyFor(request, EnrichmentType.ALBUM_METADATA), entityKeyFor(other, EnrichmentType.ALBUM_METADATA))
+            }
+        }
+    }
+
+    @Test
+    fun `album year and track count are part of identity`() {
+        val first = EnrichmentRequest.ForAlbum(EnrichmentIdentifiers(), "A", "Artist", trackCount = 10, year = 2020)
+        val differentCount = first.copy(trackCount = 11)
+        val differentYear = first.copy(year = 2021)
+        assertNotEquals(entityKeyFor(first, EnrichmentType.ALBUM_TRACKS), entityKeyFor(differentCount, EnrichmentType.ALBUM_TRACKS))
+        assertNotEquals(entityKeyFor(first, EnrichmentType.ALBUM_TRACKS), entityKeyFor(differentYear, EnrichmentType.ALBUM_TRACKS))
+    }
+
+    @Test
+    fun `track album and duration are part of identity`() {
+        val first = EnrichmentRequest.ForTrack(EnrichmentIdentifiers(), "Song", "Artist", "Album", 1000)
+        assertNotEquals(
+            entityKeyFor(first, EnrichmentType.TRACK_METADATA),
+            entityKeyFor(first.copy(album = "Other"), EnrichmentType.TRACK_METADATA),
+        )
+        assertNotEquals(
+            entityKeyFor(first, EnrichmentType.TRACK_METADATA),
+            entityKeyFor(first.copy(durationMs = 1001), EnrichmentType.TRACK_METADATA),
+        )
+    }
+
+    @Test
+    fun `extras use deterministic sorted order and delimiter-safe values`() {
+        val a = EnrichmentIdentifiers(extra = linkedMapOf("b" to "one", "a" to "two"))
+        val b = EnrichmentIdentifiers(extra = linkedMapOf("a" to "two", "b" to "one"))
+        assertEquals(
+            entityKeyFor(EnrichmentRequest.forArtist("Artist", identifiers = a), EnrichmentType.ARTIST_BIO),
+            entityKeyFor(EnrichmentRequest.forArtist("Artist", identifiers = b), EnrichmentType.ARTIST_BIO),
+        )
+
+        val first = EnrichmentRequest.forTrack("C", "A:B")
+        val second = EnrichmentRequest.forTrack("B:C", "A")
+        assertNotEquals(entityKeyForName(first, EnrichmentType.TRACK_METADATA), entityKeyForName(second, EnrichmentType.TRACK_METADATA))
+    }
+
+    @Test
+    fun `mixed request ignores pre-existing single-id and name poison then replays its tuple`() = runTest {
+        val cache = InMemoryEnrichmentCache()
+        val mixed = EnrichmentRequest.ForTrack(
+            identifiers = EnrichmentIdentifiers(musicBrainzId = "mbid").with(IdentifierNamespace.DEEZER, "deezer"),
+            title = "Song",
+            artist = "Artist",
+        )
+        val mbidOnly = mixed.copy(identifiers = EnrichmentIdentifiers(musicBrainzId = "mbid"))
+        val poison = previewResult("poison")
+        cache.put(entityKeyFor(mbidOnly, EnrichmentType.TRACK_PREVIEW), EnrichmentType.TRACK_PREVIEW, poison, CanonicalStatus.RESOLVED)
+        cache.put(entityKeyForName(mixed, EnrichmentType.TRACK_PREVIEW), EnrichmentType.TRACK_PREVIEW, poison, CanonicalStatus.RESOLVED)
+
+        val provider = previewProvider(previewResult("fresh"))
+        val engine = engine(provider, cache)
+        val first = engine.enrich(mixed, setOf(EnrichmentType.TRACK_PREVIEW))
+        val second = engine.enrich(mixed, setOf(EnrichmentType.TRACK_PREVIEW))
+
+        assertEquals(1, provider.enrichCalls.size)
+        assertEquals("fresh", (first.raw.getValue(EnrichmentType.TRACK_PREVIEW) as EnrichmentResult.Success).provider)
+        assertEquals("fresh", (second.raw.getValue(EnrichmentType.TRACK_PREVIEW) as EnrichmentResult.Success).provider)
+        assertNotNull(cache.get(entityKeyFor(mixed, EnrichmentType.TRACK_PREVIEW), EnrichmentType.TRACK_PREVIEW))
+    }
+
+    @Test
+    fun `mixed negative cache, manual selection, invalidate, and force refresh use tuple`() = runTest {
+        val cache = InMemoryEnrichmentCache()
+        val request = EnrichmentRequest.ForArtist(
+            identifiers = EnrichmentIdentifiers(musicBrainzId = "mbid").with(IdentifierNamespace.DEEZER, "deezer"),
+            name = "Artist",
+        )
+        val notFoundProvider = FakeProvider(
+            id = "empty",
+            capabilities = listOf(ProviderCapability(EnrichmentType.ARTIST_TOP_TRACKS, 100)),
+        )
+        val engine = engine(notFoundProvider, cache)
+        engine.enrich(request, setOf(EnrichmentType.ARTIST_TOP_TRACKS))
+        engine.enrich(request, setOf(EnrichmentType.ARTIST_TOP_TRACKS))
+        assertEquals(1, notFoundProvider.enrichCalls.size)
+
+        engine.markManuallySelected(request, EnrichmentType.ARTIST_TOP_TRACKS)
+        assertTrue(engine.isManuallySelected(request, EnrichmentType.ARTIST_TOP_TRACKS))
+        engine.invalidate(request, EnrichmentType.ARTIST_TOP_TRACKS)
+        assertTrue(engine.isManuallySelected(request, EnrichmentType.ARTIST_TOP_TRACKS))
+
+        val fresh = FakeProvider(
+            id = "fresh",
+            capabilities = listOf(ProviderCapability(EnrichmentType.ARTIST_TOP_TRACKS, 100)),
+        ).also { it.givenResult(EnrichmentType.ARTIST_TOP_TRACKS, topTracksResult("fresh")) }
+        engine(fresh, cache).enrich(request, setOf(EnrichmentType.ARTIST_TOP_TRACKS), forceRefresh = true)
+        assertEquals(1, fresh.enrichCalls.size)
+    }
+
+    @Test
+    fun `exact-bearing invalidation preserves a conflicting bare-name entry`() = runTest {
+        val cache = InMemoryEnrichmentCache()
+        val request = EnrichmentRequest.ForTrack(
+            identifiers = EnrichmentIdentifiers(musicBrainzId = "exact-a"),
+            title = "Song",
+            artist = "Artist",
+        )
+        val nameKey = entityKeyForName(request, EnrichmentType.TRACK_PREVIEW)
+        cache.put(nameKey, EnrichmentType.TRACK_PREVIEW, previewResult("other-entity"), CanonicalStatus.RESOLVED)
+        val engine = engine(
+            FakeProvider(capabilities = listOf(ProviderCapability(EnrichmentType.TRACK_PREVIEW, 100))),
+            cache,
+        )
+
+        engine.invalidate(request, EnrichmentType.TRACK_PREVIEW)
+        assertNotNull(cache.get(nameKey, EnrichmentType.TRACK_PREVIEW))
+        engine.enrich(request, setOf(EnrichmentType.TRACK_PREVIEW), forceRefresh = true)
+        assertNotNull(cache.get(nameKey, EnrichmentType.TRACK_PREVIEW))
+    }
+
+    @Test
+    fun `Deezer discography is not treated as a native-id route`() {
+        val request = EnrichmentRequest.forArtist(
+            "Artist",
+            identifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DEEZER, "deezer"),
+        )
+        val route = requireNotNull(trustedProviderIdentifier(request, EnrichmentType.ARTIST_TOP_TRACKS))
+        assertEquals(EntityScope.ARTIST, route.scope)
+        assertNull(trustedProviderIdentifier(request, EnrichmentType.ARTIST_DISCOGRAPHY))
+    }
+
+    private fun engine(provider: FakeProvider, cache: InMemoryEnrichmentCache) =
+        DefaultEnrichmentEngine(ProviderRegistry(listOf(provider)), cache, config)
 
     private fun previewResult(provider: String) = EnrichmentResult.Success(
         EnrichmentType.TRACK_PREVIEW,
-        EnrichmentData.TrackPreview(url = "https://example.com/preview.mp3", durationMs = 30_000, source = provider),
+        EnrichmentData.TrackPreview(url = "https://example.com/$provider.mp3", durationMs = 30_000, source = provider),
         provider,
         0.9f,
     )
@@ -48,170 +213,10 @@ class ProviderIdCacheIdentityTest {
         capabilities = listOf(ProviderCapability(EnrichmentType.TRACK_PREVIEW, 100)),
     ).also { it.givenResult(EnrichmentType.TRACK_PREVIEW, result) }
 
-    private fun engine(provider: FakeProvider, cache: InMemoryEnrichmentCache) =
-        DefaultEnrichmentEngine(ProviderRegistry(listOf(provider)), cache, config)
-
-    @Test fun `a Deezer track id request writes and reads track deezer id, not the name key`() = runTest {
-        // Given - a provider that answers TRACK_PREVIEW, and a request carrying only a Deezer track id
-        val cache = InMemoryEnrichmentCache()
-        val provider = previewProvider(previewResult("deezer"))
-        val request = trackRequest(deezerId = "107471926")
-
-        // When - enriching once to populate the cache
-        engine(provider, cache).enrich(request, setOf(EnrichmentType.TRACK_PREVIEW))
-
-        // Then - the result lives under the provider-scoped key, not the bare name key
-        val providerKey = DefaultEnrichmentEngine.entityKeyFor(request, EnrichmentType.TRACK_PREVIEW)
-        val nameKey = DefaultEnrichmentEngine.entityKeyForName(request, EnrichmentType.TRACK_PREVIEW)
-        assertEquals("track:deezer:107471926:TRACK_PREVIEW", providerKey)
-        assertNotEquals(providerKey, nameKey)
-        assertNotNull(cache.get(providerKey, EnrichmentType.TRACK_PREVIEW))
-        assertNull(cache.get(nameKey, EnrichmentType.TRACK_PREVIEW))
-    }
-
-    @Test fun `a bare-name request cannot read the Deezer-id-keyed result`() = runTest {
-        // Given - a Deezer-id request already cached
-        val cache = InMemoryEnrichmentCache()
-        val provider = previewProvider(previewResult("deezer"))
-        val idRequest = trackRequest(deezerId = "107471926")
-        engine(provider, cache).enrich(idRequest, setOf(EnrichmentType.TRACK_PREVIEW))
-
-        // When - the same title/artist is enriched again with no identifier at all
-        val nameOnlyProvider = previewProvider(previewResult("deezer-fresh"))
-        val nameOnlyRequest = trackRequest(deezerId = null)
-        val result = engine(nameOnlyProvider, cache).enrich(nameOnlyRequest, setOf(EnrichmentType.TRACK_PREVIEW))
-
-        // Then - the name-only call misses the id-keyed entry and asks its own provider
-        assertEquals(1, nameOnlyProvider.enrichCalls.size)
-        assertEquals(
-            "deezer-fresh",
-            (result.raw[EnrichmentType.TRACK_PREVIEW] as EnrichmentResult.Success).provider,
-        )
-    }
-
-    @Test fun `the same numeric Deezer id on two request kinds does not collide`() {
-        // Given - a track request and an album request each carrying Deezer id 555
-        val track = trackRequest(deezerId = "555")
-        val album = EnrichmentRequest.ForAlbum(
-            identifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DEEZER, "555"),
-            title = "The Rise and Fall of Ziggy Stardust",
-            artist = "David Bowie",
-        )
-
-        // When - each is keyed for its own request-shaped enrichment type
-        val trackKey = entityKeyFor(track, EnrichmentType.TRACK_PREVIEW)
-        val albumKey = entityKeyFor(album, EnrichmentType.SIMILAR_ALBUMS)
-
-        // Then - the keys are unrelated: the track one is provider-scoped, the album one is not
-        assertEquals("track:deezer:555:TRACK_PREVIEW", trackKey)
-        assertNotEquals(trackKey, albumKey)
-        assertEquals(entityKeyForName(album, EnrichmentType.SIMILAR_ALBUMS), albumKey)
-    }
-
-    @Test fun `a Deezer seed-artist id on album similarity is not selected as an album key`() {
-        // Given - an album request carrying a Deezer id (SimilarAlbumsProvider's seed-artist use)
-        val album = EnrichmentRequest.ForAlbum(
-            identifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DEEZER, "42"),
-            title = "OK Computer",
-            artist = "Radiohead",
-        )
-
-        // When - the cache key is selected for SIMILAR_ALBUMS
-        val key = entityKeyFor(album, EnrichmentType.SIMILAR_ALBUMS)
-
-        // Then - it falls back to the bare name key; the id is never read as an album identity
-        assertEquals(entityKeyForName(album, EnrichmentType.SIMILAR_ALBUMS), key)
-        assertTrue(key.startsWith("album:Radiohead:OK Computer:"))
-    }
-
-    @Test fun `an unscoped Deezer id falls back to the name key`() {
-        // Given - a track request carrying a Deezer id, requested for a type not in the allowlist
-        val request = trackRequest(deezerId = "777")
-
-        // When - the cache key is selected for SIMILAR_TRACKS, which never reads a request
-        // identifier at all (its Deezer artist id always comes from a fresh track search) and so
-        // stays unallowlisted
-        val key = entityKeyFor(request, EnrichmentType.SIMILAR_TRACKS)
-
-        // Then - it falls back to the bare name key
-        assertEquals(entityKeyForName(request, EnrichmentType.SIMILAR_TRACKS), key)
-    }
-
-    @Test fun `a provider-id result is not alias-written to the bare name key`() = runTest {
-        // Given - a Deezer-id-only track request (identity resolution disabled, so no MBID is ever
-        // added) and a provider that answers it
-        val cache = InMemoryEnrichmentCache()
-        val provider = previewProvider(previewResult("deezer"))
-        val request = trackRequest(deezerId = "9001")
-
-        // When - enriching once
-        engine(provider, cache).enrich(request, setOf(EnrichmentType.TRACK_PREVIEW))
-
-        // Then - only the provider-scoped key holds the result; the name key is untouched
-        val nameKey = DefaultEnrichmentEngine.entityKeyForName(request, EnrichmentType.TRACK_PREVIEW)
-        assertNull(cache.get(nameKey, EnrichmentType.TRACK_PREVIEW))
-    }
-
-    @Test fun `existing name aliasing after a fresh MBID resolution keeps working`() = runTest {
-        // Given - identity resolution enabled, an identity provider that resolves an MBID for a
-        // name-only album request with no identifier of any kind
-        val idConfig = EnrichmentConfig(enableIdentityResolution = true)
-        val cache = InMemoryEnrichmentCache()
-        val identity = FakeProvider(
-            id = "mb",
-            isIdentityProvider = true,
-            capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)),
-        ).also {
-            it.givenIdentityResult(
-                EnrichmentResult.Success(
-                    EnrichmentType.GENRE,
-                    EnrichmentData.Metadata(genres = listOf("rock")),
-                    "mb",
-                    0.95f,
-                    resolvedIdentifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-ok-computer"),
-                ),
-            )
-        }
-        val request = EnrichmentRequest.ForAlbum(
-            identifiers = EnrichmentIdentifiers(),
-            title = "OK Computer",
-            artist = "Radiohead",
-        )
-        val e = DefaultEnrichmentEngine(ProviderRegistry(listOf(identity)), cache, idConfig, mergers = emptyList())
-
-        // When - enriching a type the identity payload itself answers
-        e.enrich(request, setOf(EnrichmentType.GENRE))
-
-        // Then - the name key holds the canonically resolved result
-        val nameKey = DefaultEnrichmentEngine.entityKeyForName(request, EnrichmentType.GENRE)
-        assertNotNull(cache.get(nameKey, EnrichmentType.GENRE))
-    }
-
-    @Test fun `stale, negative, invalidate, forceRefresh and manual selection all address the provider-id key`() = runTest {
-        // Given - a Deezer-id track request already cached under its provider-scoped key
-        val cache = InMemoryEnrichmentCache()
-        val provider = previewProvider(previewResult("deezer"))
-        val request = trackRequest(deezerId = "31337")
-        val e = engine(provider, cache)
-        e.enrich(request, setOf(EnrichmentType.TRACK_PREVIEW))
-        val providerKey = DefaultEnrichmentEngine.entityKeyFor(request, EnrichmentType.TRACK_PREVIEW)
-
-        // When - manually selecting, then force-refreshing (which invalidates first)
-        e.markManuallySelected(request, EnrichmentType.TRACK_PREVIEW)
-        val wasSelected = e.isManuallySelected(request, EnrichmentType.TRACK_PREVIEW)
-        val freshProvider = previewProvider(previewResult("deezer-2"))
-        val freshEngine = engine(freshProvider, cache)
-        val refreshed = freshEngine.enrich(request, setOf(EnrichmentType.TRACK_PREVIEW), forceRefresh = true)
-
-        // Then - manual selection and force-refresh both reached the same provider-scoped key: the
-        // selection read back true, and the refresh actually re-asked the provider rather than
-        // serving the entry the first call wrote under that same key
-        assertTrue(wasSelected)
-        assertEquals(1, freshProvider.enrichCalls.size)
-        assertEquals(
-            "deezer-2",
-            (refreshed.raw[EnrichmentType.TRACK_PREVIEW] as EnrichmentResult.Success).provider,
-        )
-        assertNotNull(cache.get(providerKey, EnrichmentType.TRACK_PREVIEW))
-    }
+    private fun topTracksResult(provider: String) = EnrichmentResult.Success(
+        EnrichmentType.ARTIST_TOP_TRACKS,
+        EnrichmentData.TopTracks(emptyList()),
+        provider,
+        0.9f,
+    )
 }
