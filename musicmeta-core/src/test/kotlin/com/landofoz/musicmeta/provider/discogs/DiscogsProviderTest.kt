@@ -1076,6 +1076,51 @@ class DiscogsProviderTest {
     }
 
     @Test
+    fun `selectRelease picks one identified release from a competing pool with decoy dash boundaries`() = runTest {
+        // Given - a pool where one combined title carries a decoy " - " inside the album half, one is a wrong album by the right artist, and one is the requested album
+        val releases = listOf(
+            DiscogsRelease(
+                title = "Radiohead - OK - Not This Computer",
+                label = "Bootleg",
+                year = "1997",
+                country = "UK",
+                coverImage = "https://example.com/decoy.jpg",
+                releaseId = 101L,
+            ),
+            DiscogsRelease(
+                title = "Radiohead - The Bends",
+                label = "Parlophone",
+                year = "1995",
+                country = "UK",
+                coverImage = "https://example.com/bends.jpg",
+                releaseId = 102L,
+            ),
+            DiscogsRelease(
+                title = "Radiohead - OK Computer",
+                label = "Parlophone",
+                year = "1997",
+                country = "UK",
+                coverImage = "https://example.com/ok.jpg",
+                releaseId = 103L,
+            ),
+        )
+        val request = EnrichmentRequest.ForAlbum(EnrichmentIdentifiers(), "OK Computer", "Radiohead", year = 1997)
+
+        // When - selecting against the competing pool
+        val choice = releases.selectRelease(request)
+
+        // Then - the requested release wins by identity, and its parsed artist/title, artist quality, tier, and year evidence all describe that same release
+        assertNotNull(choice)
+        assertEquals(103L, choice!!.release.releaseId)
+        assertEquals("https://example.com/ok.jpg", choice.release.coverImage)
+        assertEquals("Radiohead", choice.artist)
+        assertEquals("OK Computer", choice.title)
+        assertEquals(ArtistMatcher.matchQuality(request.artist, "Radiohead"), choice.artistQuality)
+        assertEquals(TitleMatcher.TitleTier.EXACT, choice.tier)
+        assertEquals(true, choice.tieBreaks["year"])
+    }
+
+    @Test
     fun `parseDiscogsRelease returns no boundary for a title with no dash at all`() = runTest {
         // Given - a combined title carrying no " - " boundary anywhere
         val combined = "SelfTitledAlbumWithNoSeparator"
