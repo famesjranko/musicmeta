@@ -6,9 +6,9 @@ package com.landofoz.musicmeta
  * provider's own lookup, not whether MusicBrainz canonically agreed; see
  * [IdentityResolution.status] for the canonical fact.
  *
- * A cache hit replays the provenance the *original* live lookup recorded — it never becomes
- * [CACHE] merely because this call read it from cache. [CACHE] is only produced when the
- * originating [EnrichmentCache] implementation cannot recover what the live lookup used.
+ * A cache implementation may preserve this field with the stored result. When it cannot recover
+ * the original route, the engine marks the hit [CACHE]; a cache hit is never treated as a new
+ * provider lookup.
  */
 enum class LookupProvenance {
     /** Looked up directly by a MusicBrainz canonical id (MBID or release-group id). */
@@ -16,6 +16,12 @@ enum class LookupProvenance {
 
     /** Looked up directly by a provider-native id supplied on the request (e.g. a Deezer track id). */
     PROVIDER_NATIVE_ID,
+
+    /**
+     * Looked up directly by an external catalogue identifier supplied on the request (e.g. a UPC
+     * barcode) — a direct-lookup id, but neither a MusicBrainz id nor a provider's own id space.
+     */
+    EXTERNAL_CATALOG_ID,
 
     /** Selected by an exact name search that MusicBrainz canonically confirmed this call. */
     EXACT_NAME,

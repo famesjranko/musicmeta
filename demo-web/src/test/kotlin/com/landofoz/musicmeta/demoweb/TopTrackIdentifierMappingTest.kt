@@ -15,10 +15,10 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 /**
- * Whether a [TopTrack]'s own identifiers survive into the "Top Tracks" section's play button
- * ([SectionItem.identifiers]) and its internal-navigation target ([EnrichTarget.identifiers]) — the
- * precision fix this ticket exists for: without it, a row that already knows its Deezer track id
- * feeds `/api/preview`/`/api/enrich` an ambiguous name search instead.
+ * A [TopTrack]'s own identifiers must survive into the "Top Tracks" section's play button
+ * ([SectionItem.identifiers]) and its internal-navigation target ([EnrichTarget.identifiers]):
+ * without them, a row that already knows its Deezer track id would feed `/api/preview`/`/api/enrich`
+ * an ambiguous name search instead.
  */
 class TopTrackIdentifierMappingTest {
 
@@ -70,7 +70,7 @@ class TopTrackIdentifierMappingTest {
         // When - mapping to a demo response
         val response = profile.toDemoResponse(elapsedMs = 0)
 
-        // Then - identifiers are absent everywhere, exactly as before this field existed
+        // Then - identifiers are absent everywhere, so the row remains name-based
         val item = response.sections.first { it.key == "top_tracks" }.items.single()
         assertNull(item.identifiers)
         assertNull(item.enrich?.identifiers)

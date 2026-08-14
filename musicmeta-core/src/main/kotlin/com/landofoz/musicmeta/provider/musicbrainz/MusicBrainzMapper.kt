@@ -73,8 +73,8 @@ internal object MusicBrainzMapper {
     /**
      * Structured track fields dropped by [toTrackMetadata]: duration, the resolved album title
      * (from the same release-group [MusicBrainzRecording.artReleaseGroupId] is drawn from — same
-     * tiered fallback, no extra lookup), and disambiguation (already parsed for internal ranking,
-     * previously never exposed).
+     * tiered fallback, no extra lookup), and disambiguation (already parsed for internal ranking;
+     * this is the only shape that exposes it).
      */
     fun toTrackMetadataDetails(recording: MusicBrainzRecording): EnrichmentData.TrackMetadata =
         EnrichmentData.TrackMetadata(

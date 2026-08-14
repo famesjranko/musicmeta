@@ -93,7 +93,7 @@ class EnrichStrategyFailureTest {
 
     @Test fun `a throwing merger does not discard an unrelated type resolved in the same call`() = runTest {
         // Given - one provider serving both a mergeable type whose merger throws and an
-        // unrelated regular type; previously the throw unwound the whole call and both were lost
+        // unrelated regular type resolved in the same call
         val p = providerFor(genre, bio)
 
         // When - enriching both in one call

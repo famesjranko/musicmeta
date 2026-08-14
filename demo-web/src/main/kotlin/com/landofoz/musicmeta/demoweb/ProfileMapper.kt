@@ -496,9 +496,8 @@ private fun trackEnrich(
     }
 
 /**
- * [EnrichmentIdentifiers] as the wire shape a track row echoes to `/api/preview` and `/api/enrich`
- * — null when it carries nothing, so an identifier-less row serializes exactly as it did before this
- * field existed.
+ * [EnrichmentIdentifiers] as the wire shape a track row echoes to `/api/preview` and `/api/enrich`.
+ * Returns null when it carries no supported track identifier.
  */
 private fun EnrichmentIdentifiers.toWireIdentifiers(): WireIdentifiers? {
     val deezerTrackId = get(IdentifierNamespace.DEEZER)

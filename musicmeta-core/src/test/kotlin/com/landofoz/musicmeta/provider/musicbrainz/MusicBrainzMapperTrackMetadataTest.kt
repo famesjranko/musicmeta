@@ -57,7 +57,7 @@ class MusicBrainzMapperTrackMetadataTest {
 
     @Test
     fun `toTrackMetadata still drops duration, album title and disambiguation for GENRE`() {
-        // Given - the pre-existing mapper used by GENRE/CREDITS-adjacent lookups
+        // Given - the mapper used by GENRE/CREDITS-adjacent lookups
         val recording = makeRecording(
             lengthMs = 245_000L,
             artReleaseGroupTitle = "OK Computer",

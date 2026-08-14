@@ -676,8 +676,9 @@ internal class MusicBrainzEnricher(
     /**
      * MusicBrainz's own relevance score for [artist], scaled by how [query] reached it.
      *
-     * A search that matches aliases resolves artists it previously could not, and a caller has to be
-     * able to tell those apart from a canonical-name hit — `identityMatchScore` is that signal, and
+     * A search that matches aliases resolves artists a canonical-name-only search would miss, and a
+     * caller has to be able to tell those apart from a canonical-name hit — `identityMatchScore` is
+     * that signal, and
      * it would say nothing if an alias hit and a name hit both scored 100. Still identification and
      * not payload (`docs/pitfalls.md` §8): the tier says how sure we are this is the right entity,
      * never how much it carried.

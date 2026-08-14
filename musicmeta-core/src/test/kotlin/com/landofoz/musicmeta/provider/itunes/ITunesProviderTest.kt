@@ -438,7 +438,23 @@ class ITunesProviderTest {
         assertEquals("697194953", result.resolvedIdentifiers?.get("itunesCollectionId"))
         // A barcode lookup is a direct identifier lookup, never a search — its route is observed,
         // not left for the engine's canonical-status inference.
-        assertEquals(LookupProvenance.PROVIDER_NATIVE_ID, result.provenance)
+        assertEquals(LookupProvenance.EXTERNAL_CATALOG_ID, result.provenance)
+    }
+
+    @Test
+    fun `a barcode hit reports external-catalog provenance for album art`() = runTest {
+        // Given - a request carrying a barcode iTunes resolves to a matching-artist collection
+        httpClient.givenJsonResponse("upc=724384960650", UPC_LOOKUP_DISCOVERY)
+        val request = barcodeRequest("724384960650", "Daft Punk", "Discovery")
+
+        // When - enriching for album art
+        val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
+
+        // Then - the successful lookup identifies its external barcode route
+        assertEquals(
+            LookupProvenance.EXTERNAL_CATALOG_ID,
+            (result as EnrichmentResult.Success).provenance,
+        )
     }
 
     @Test
@@ -533,6 +549,9 @@ class ITunesProviderTest {
 
         // Then - both succeed from the one collection, and only one /lookup?upc= request was made
         assertTrue(results.all { it is EnrichmentResult.Success })
+        assertTrue(results.filterIsInstance<EnrichmentResult.Success>().all {
+            it.provenance == LookupProvenance.EXTERNAL_CATALOG_ID
+        })
         assertEquals(1, httpClient.requestedUrls.count { it.contains("/lookup?upc=") })
         assertTrue(httpClient.requestedUrls.none { it.contains("/search") })
     }
@@ -694,7 +713,7 @@ class ITunesProviderTest {
     }
 
     @Test
-    fun `enrich searches again when only year differs between two requests in one ProviderCallScope`() = runTest {
+    fun `enrich searches again when only year differs between two requests in one call`() = runTest {
         // Given - two editions under the same title/artist, distinguished only by releaseDate/year
         httpClient.givenJsonResponse(
             "search",
@@ -774,7 +793,7 @@ class ITunesProviderTest {
         val firstRequest = EnrichmentRequest.forAlbum(title = "C", artist = "A|B")
         val secondRequest = EnrichmentRequest.forAlbum(title = "B|C", artist = "A")
 
-        // When - both requests are resolved together in one ProviderCallScope
+        // When - both requests are resolved together in one enrichment call
         val (firstResult, secondResult) = withContext(ProviderCallScope()) {
             provider.enrich(firstRequest, EnrichmentType.ALBUM_ART) to
                 provider.enrich(secondRequest, EnrichmentType.ALBUM_ART)
@@ -825,7 +844,7 @@ class ITunesProviderTest {
 
     @Test
     fun `a cancelled album search is not memoized as a miss`() = runTest {
-        // Given - the first album search is cancelled mid-flight inside the same ProviderCallScope the retry reuses; the underlying data would be found on a retry
+        // Given - the first album search is cancelled mid-flight and the retry reuses that call's memo; the underlying data would be found on a retry
         val cancelling = CancellingOnceHttpClient(httpClient)
         val cancellingProvider = ITunesProvider(cancelling, RateLimiter(0))
         httpClient.givenJsonResponse("search", ITUNES_RESPONSE)

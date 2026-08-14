@@ -397,12 +397,12 @@ class LrcLibProviderTest {
     }
 
     @Test
-    fun `enrich shares one search across LYRICS_SYNCED, LYRICS_PLAIN and TRACK_METADATA within one ProviderCallScope`() = runTest {
+    fun `enrich shares one search across the lyric and metadata types in one call`() = runTest {
         // Given - no exact match, so all three types would otherwise fall back to search independently
         httpClient.givenJsonArrayResponse("/api/search", SEARCH_RESULTS_JSON)
         val request = EnrichmentRequest.forTrack(title = "Creep", artist = "Radiohead")
 
-        // When - all three types resolve inside the same ProviderCallScope, as sibling types of one enrich() call
+        // When - all three types resolve as siblings of one enrichment call
         val results = withContext(ProviderCallScope()) {
             listOf(
                 provider.enrich(request, EnrichmentType.LYRICS_SYNCED),

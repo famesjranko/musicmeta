@@ -218,6 +218,7 @@ replayed status false for the call actually reporting it.
 |---|---|
 | `CANONICAL_ID` | Looked up directly by a MusicBrainz canonical id. |
 | `PROVIDER_NATIVE_ID` | Looked up directly by a provider-native id supplied on the request. |
+| `EXTERNAL_CATALOG_ID` | Looked up directly by an external catalogue id (e.g. a UPC barcode) supplied on the request. |
 | `EXACT_NAME` | Selected by a name search MusicBrainz canonically confirmed this call. |
 | `QUALIFIER_FALLBACK_NAME` | Selected after normalization or qualifier-fallback stripping. |
 | `FUZZY_NAME` | Selected by an unverified fuzzy name search; MusicBrainz did not confirm this call. |

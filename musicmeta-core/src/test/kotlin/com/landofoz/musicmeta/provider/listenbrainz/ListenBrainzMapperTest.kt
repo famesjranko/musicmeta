@@ -24,7 +24,7 @@ class ListenBrainzMapperTest {
         // When - mapping the tracks to popularity
         val popularity = ListenBrainzMapper.toPopularity(tracks)
 
-        // Then - PopularTrack no longer drops the fields toTopTracks already keeps
+        // Then - PopularTrack keeps the same fields toTopTracks keeps
         val track = popularity.topTracks!!.first()
         assertEquals(500L, track.listenCount)
         assertEquals(120L, track.listenerCount)

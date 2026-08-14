@@ -141,10 +141,9 @@ class ITunesProvider(
                     provider = id,
                     confidence = ConfidenceCalculator.idBasedLookup(),
                     resolvedIdentifiers = buildResolvedIdentifiers(barcodeResult),
-                    // A barcode is neither a MusicBrainz id nor iTunes's own id space, but it is
-                    // still a direct identifier lookup, never a name search — the nearest truthful
-                    // value of the two direct-lookup provenances.
-                    provenance = LookupProvenance.PROVIDER_NATIVE_ID,
+                    // A barcode is an external catalogue identifier, not a MusicBrainz id or
+                    // iTunes's own id space.
+                    provenance = LookupProvenance.EXTERNAL_CATALOG_ID,
                 )
             }
 
@@ -231,9 +230,9 @@ class ITunesProvider(
 
             val confidence = ConfidenceCalculator.idBasedLookup()
             val resolvedIdentifiers = buildResolvedIdentifiers(result)
-            // A barcode lookup, never a search — see the id-versus-name-search fork note on
-            // enrichAlbumTracks's own barcode branch for why this is PROVIDER_NATIVE_ID.
-            val idProvenance = LookupProvenance.PROVIDER_NATIVE_ID
+            // A barcode is an external catalogue identifier, not a MusicBrainz id or iTunes's own
+            // id space.
+            val idProvenance = LookupProvenance.EXTERNAL_CATALOG_ID
             return when (type) {
                 EnrichmentType.ALBUM_METADATA ->
                     enrichAlbumMetadata(result, type, confidence, resolvedIdentifiers, idProvenance)

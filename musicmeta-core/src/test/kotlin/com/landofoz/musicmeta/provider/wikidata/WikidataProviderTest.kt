@@ -281,7 +281,7 @@ class WikidataProviderTest {
     @Test
     fun `getEntityProperties parses claims nested under entities id claims`() = runTest {
         // Given - the wbgetentities response shape: claims live at entities.<id>.claims, not
-        // top-level "claims" the way wbgetclaims used to return them.
+        // at a top-level "claims" key
         httpClient.givenJsonResponse(
             "wikidata.org",
             """{"entities":{"Q7259":{"type":"item","id":"Q7259","claims":{
