@@ -93,7 +93,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Wikipedia `ARTIST_PHOTO` now carries the largest rendered thumbnail and every scale in `sizes`, not the original file: `height` is null, since the media route states none
 - iTunes album resolution now does a `lookup?upc=` identity match when a barcode is known, replacing the fuzzy search — a barcode Apple doesn't carry is `NotFound`, not a search fallback
 - `build()` warns from the User-Agent the wire will carry: the contactless default meeting MusicBrainz/Wikipedia/Wikidata, `contact()` after `withDefaultProviders()`, or `contact()` with your client
-- `TRACK_PREVIEW` cache identity now uses a request's Deezer track id when present, isolated from the bare-name key, so it no longer shares an entry with an ambiguous name-only search
 
 ### Fixed
 - MusicBrainz now reports `QUALIFIER_FALLBACK_NAME` when a stripped candidate, not the literal title, resolved a track or album; an exact-title match still reports `EXACT_NAME`
@@ -163,7 +162,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The cache-key format change intentionally causes a one-time miss for existing entries; no cross-tuple entity equivalence is inferred
 - `TitleMatcher` no longer strips an identity-bearing internal quote, or accepts mismatched terminal brackets (`Song (Live]` no longer equals `Song (Live)`)
 - LRCLIB's album/duration ranking no longer scores a candidate missing that evidence as though it agreed with the request; only an explicit match may outrank one silent on the same field
-- demo-web's "Clear cached result & reload" now invalidates a Deezer-id-keyed preview, not just the bare-name key, so the entry it names for the following reload is the one actually cleared
+- demo-web's "Clear cached result & reload" now invalidates the identifier-bearing preview tuple, not only the name tuple, so the entry named by the following reload is actually cleared
 
 ## [0.11.0] - 2026-07-28
 

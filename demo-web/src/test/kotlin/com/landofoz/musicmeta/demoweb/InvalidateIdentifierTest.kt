@@ -88,7 +88,7 @@ class InvalidateIdentifierTest {
         )
 
     @Test fun `invalidating with identifiers clears the identifier-bearing preview tuple`() {
-        // Given - a track preview cached under its Deezer-id-keyed entry
+        // Given - a track preview cached under its identifier-bearing tuple
         val provider = CountingDeezerPreviewProvider()
         val port = startTestServer(provider)
         val idsParam = deezerIdsParam()
