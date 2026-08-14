@@ -5,17 +5,14 @@ import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
-import com.landofoz.musicmeta.engine.TitleMatcher
-import com.landofoz.musicmeta.provider.lrclib.LrcLibEvidence
-import com.landofoz.musicmeta.provider.lrclib.LrcLibSelectionEvidence
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Test
 
 /**
- * Pure-function coverage for the ticket-05 closed-loop trend: title-shape classification, row
- * reduction, aggregation, acceptance-tier diagnostics, and the redaction guarantee — none of this
- * needs a live provider call.
+ * Pure-function coverage for the closed-loop trend: title-shape classification, row reduction,
+ * source attribution, aggregation, availability reporting, and redaction — none needs a live
+ * provider call.
  */
 class ProviderDriftClosedLoopReportTest {
 
@@ -43,12 +40,48 @@ class ProviderDriftClosedLoopReportTest {
         assertEquals(TitleShape.ALLOWLISTED_DASH_REISSUE, shape)
     }
 
+    @Test fun `en and em dash remaster qualifiers classify as ALLOWLISTED_DASH_REISSUE`() {
+        // Given - the same terminal qualifier with each supported dash punctuation
+        val enDash = classifyTitleShape("Starman – 2012 Remaster")
+        val emDash = classifyTitleShape("Starman — 2012 Remaster")
+
+        // Then - both punctuation forms describe the same allowlisted decoration
+        assertEquals(TitleShape.ALLOWLISTED_DASH_REISSUE, enDash)
+        assertEquals(TitleShape.ALLOWLISTED_DASH_REISSUE, emDash)
+    }
+
     @Test fun `a terminal non-remaster dash qualifier classifies as OTHER_DASH`() {
         // Given - a title with a terminal dash-delimited live qualifier
         val shape = classifyTitleShape("Wish You Were Here - Live")
 
         // Then - it is OTHER_DASH
         assertEquals(TitleShape.OTHER_DASH, shape)
+    }
+
+    @Test fun `an unmatched terminal delimiter stays a dash shape rather than becoming a bracket`() {
+        // Given - a title with an unpaired opening bracket after a dash
+        val shape = classifyTitleShape("Song - [Live")
+
+        // Then - the unmatched delimiter is not treated as a complete bracketed qualifier
+        assertEquals(TitleShape.OTHER_DASH, shape)
+    }
+
+    @Test fun `sourceProviderFor uses sorted distinct row sources and falls back to listing provider`() {
+        // Given - merged row provenance and a row with no per-row provenance
+        val merged = sourceProviderFor(listOf("zeta", "alpha", "zeta"), "listing")
+        val fallback = sourceProviderFor(emptyList(), "listing")
+
+        // Then - attribution is stable and preserves the listing fallback
+        assertEquals("alpha,zeta", merged)
+        assertEquals("listing", fallback)
+    }
+
+    @Test fun `source availability remains explicit when a source has no sampled rows`() {
+        // Given - an empty sample for one listing
+        val line = sourceAvailabilityLine(RowSource.SIMILAR_TRACKS, 0)
+
+        // Then - the redacted report still exposes that zero
+        assertEquals("availability source=SIMILAR_TRACKS sampled=0", line)
     }
 
     @Test fun `toClosedLoopRow never carries the result's data payload`() {
@@ -204,39 +237,4 @@ class ProviderDriftClosedLoopReportTest {
         assertEquals(1, trend[differentKey])
     }
 
-    @Test fun `toAcceptanceDiagnostic reports the selected artist, title and tier without a raw candidate`() {
-        // Given - a selector's title-tier decision for one selected candidate
-        val exact = toAcceptanceDiagnostic("David Bowie", "Starman", TitleMatcher.TitleTier.EXACT)
-        val editionQualified = toAcceptanceDiagnostic("David Bowie", "Starman - 2012 Remaster", TitleMatcher.TitleTier.EDITION)
-        val rejected = toAcceptanceDiagnostic("David Bowie", "Starman (Live Bootleg)", TitleMatcher.TitleTier.NONE)
-
-        // When - classifying each tier
-        // Then - EXACT and EDITION map to their own accepted tiers and NONE maps to REJECTED
-        assertEquals(AcceptanceTier.EXACT, exact.tier)
-        assertEquals(AcceptanceTier.SYNTAX_EQUIVALENT, editionQualified.tier)
-        assertEquals(AcceptanceTier.REJECTED, rejected.tier)
-    }
-
-    @Test fun `redactedDiagnosticLine for an AcceptanceDiagnostic carries only artist, title and tier`() {
-        // Given - a diagnostic for a selected candidate
-        val diagnostic = toAcceptanceDiagnostic("David Bowie", "Starman", TitleMatcher.TitleTier.EXACT)
-
-        // When - printing it
-        val line = redactedDiagnosticLine(diagnostic)
-
-        // Then - the line names the artist, title and tier and nothing else
-        assertEquals("artist=David Bowie title=Starman tier=EXACT", line)
-    }
-
-    @Test fun `toLrcLibAcceptanceDiagnostic never carries a raw candidate payload`() {
-        // Given - LRCLIB's own album/duration ranking evidence for a selected candidate
-        val evidence = LrcLibSelectionEvidence(album = LrcLibEvidence.MATCH, duration = LrcLibEvidence.MISMATCH)
-
-        // When - reducing it to a diagnostic and printing it
-        val diagnostic = toLrcLibAcceptanceDiagnostic("David Bowie", "Starman", evidence)
-        val line = redactedDiagnosticLine(diagnostic)
-
-        // Then - the line carries only the artist, title and the two evidence classifications
-        assertEquals("artist=David Bowie title=Starman album=MATCH duration=MISMATCH", line)
-    }
 }
