@@ -159,6 +159,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Deezer's artist-id, iTunes's collection-id/artist-id, and Discogs's `CREDITS`/`RELEASE_EDITIONS` branches now self-report `provenance = PROVIDER_NATIVE_ID`; iTunes UPC uses `EXTERNAL_CATALOG_ID`
 - A merged or synthesized `Success` (e.g. `GENRE`, `ARTIST_TIMELINE`) now reports its weakest contributor's `provenance` instead of one fabricated from canonical status alone
 - A track request carrying both an MBID and a provider id that name different entities no longer caches under the MBID's key; the cache is bypassed until the two are proven to name the same entity
+- Mixed exact identities now bypass every cache operation across direct and composite dependency routes, including competing Deezer/iTunes artist ids
+- Name-derived cache keys now escape field delimiters; earlier name-keyed entries become one-time misses, and custom caches should continue treating `entityKey` as opaque
 - `TitleMatcher` no longer strips an identity-bearing internal quote, or accepts mismatched terminal brackets (`Song (Live]` no longer equals `Song (Live)`)
 - LRCLIB's album/duration ranking no longer scores a candidate missing that evidence as though it agreed with the request; only an explicit match may outrank one silent on the same field
 - demo-web's "Clear cached result & reload" now invalidates a Deezer-id-keyed preview, not just the bare-name key, so the entry it names for the following reload is the one actually cleared

@@ -4,8 +4,22 @@
 
 ```kotlin
 interface EnrichmentCache {
-    suspend fun get(entityKey: String, type: EnrichmentType): EnrichmentResult.Success?
-    suspend fun put(entityKey: String, type: EnrichmentType, result: EnrichmentResult.Success, ttlMs: Long)
+    suspend fun get(entityKey: String, type: EnrichmentType): CacheEnvelope<EnrichmentResult.Success>?
+    suspend fun put(
+        entityKey: String,
+        type: EnrichmentType,
+        result: EnrichmentResult.Success,
+        canonicalStatus: CanonicalStatus,
+        ttlMs: Long,
+    )
+    suspend fun getNegative(entityKey: String, type: EnrichmentType): CacheEnvelope<EnrichmentResult.NotFound>?
+    suspend fun putNegative(
+        entityKey: String,
+        type: EnrichmentType,
+        result: EnrichmentResult.NotFound,
+        canonicalStatus: CanonicalStatus,
+        ttlMs: Long,
+    )
     suspend fun invalidate(entityKey: String, type: EnrichmentType? = null)
     suspend fun isManuallySelected(entityKey: String, type: EnrichmentType): Boolean
     suspend fun markManuallySelected(entityKey: String, type: EnrichmentType)
@@ -40,17 +54,30 @@ For a persistent cache that survives process restarts, use `RoomEnrichmentCache`
 
 ## Cache key structure
 
-The engine generates cache keys from the normalized request:
+The engine chooses one entity identity per requested type: a MusicBrainz id, an audited
+entity-scoped provider id, or the request names. It then combines that identity with the entity
+kind and `EnrichmentType`. For example:
 
-- Artist: `"artist:radiohead"`
-- Album: `"album:radiohead:ok computer"`
-- Track: `"track:radiohead:creep"`
+- Artist name: `"artist:Radiohead:GENRE"`
+- Album name: `"album:Radiohead:OK Computer:ALBUM_METADATA"`
+- Track name: `"track:Radiohead:Creep:TRACK_PREVIEW"`
+- Deezer track id: `"track:deezer:3135556:TRACK_PREVIEW"`
 
-Each key is combined with the `EnrichmentType` to form the full entry key: `"artist:radiohead:GENRE"`.
+Name fields escape `%` and `:` so two legal artist/title tuples cannot collapse to one key. Treat
+`entityKey` as opaque in custom cache implementations; its encoding may change to preserve cache
+identity correctness.
+
+When more than one applicable exact identity is present and nothing proves they name the same
+entity, the engine bypasses cache reads, writes, stale fallback, manual-selection state, and
+invalidation for that request/type. The same rule expands through a composite type's dependencies.
+This prevents a provider route selected by one id from poisoning another id's entry.
 
 ### Key convergence after disambiguation
 
-When the user picks a disambiguation candidate, the re-enrichment request carries the resolved MBID. Subsequent lookups for the same entity converge to the same cache key regardless of the original query text. This means "bush" and "Bush (band)" that both resolve to the same MBID will share cached results. See [identity-resolution.md](identity-resolution.md) for the disambiguation flow.
+When canonical resolution adds an MBID to a name request, the engine may also write the result under
+the canonically resolved name alias. Subsequent lookups for that name can reuse the selected entity.
+An unvalidated provider-id result is never aliased to a bare name. See
+[identity-resolution.md](identity-resolution.md) for the disambiguation flow.
 
 ---
 
@@ -115,7 +142,10 @@ val results = engine.enrich(
 )
 ```
 
-`forceRefresh = true` clears existing cache entries for the requested types (including any manual selection flags) before fetching. The fresh results are written back to the cache normally.
+`forceRefresh = true` clears existing cache entries for the requested types (including any manual
+selection flags) before fetching. Fresh results are written back normally. An unvalidated
+mixed-identity request has no authoritative key to clear or refill, so it fetches fresh while
+continuing to bypass the cache.
 
 ---
 
@@ -140,15 +170,19 @@ Use manual selection for features like user artwork overrides, where the user's 
 
 ### Manual selection via the cache directly
 
-If you need to operate on raw cache keys (e.g., in a bulk migration):
+Custom cache implementations receive the engine's opaque key and may retain it for their own
+bookkeeping. Do not reconstruct it from request strings. Given an exact key previously supplied by
+the engine, the low-level operations are:
 
 ```kotlin
-engine.cache.markManuallySelected("artist:radiohead", EnrichmentType.ARTIST_PHOTO)
-engine.cache.isManuallySelected("artist:radiohead", EnrichmentType.ARTIST_PHOTO)
-engine.cache.invalidate("artist:radiohead")             // clears all types for this entity
-engine.cache.invalidate("artist:radiohead", EnrichmentType.GENRE)  // specific type only
-engine.cache.clear()                                    // wipes the entire cache
+engine.cache.markManuallySelected(opaqueEntityKey, EnrichmentType.ARTIST_PHOTO)
+engine.cache.isManuallySelected(opaqueEntityKey, EnrichmentType.ARTIST_PHOTO)
+engine.cache.invalidate(opaqueEntityKey, EnrichmentType.ARTIST_PHOTO)
+engine.cache.clear()
 ```
+
+Application code should prefer the request-based engine methods above. Only the engine knows which
+aliases and mixed-identity restrictions apply.
 
 ---
 

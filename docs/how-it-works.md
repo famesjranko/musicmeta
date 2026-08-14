@@ -88,11 +88,21 @@ enrich(request, types, forceRefresh)
 
 ### Step 1: Force Refresh Invalidation
 
-When `forceRefresh=true`, the engine invalidates cache entries for all requested types before proceeding. Both the primary key (MBID-based when available) and the name alias key (title+artist) are invalidated so stale data can't survive under either key.
+When `forceRefresh=true`, the engine invalidates cache entries for all requested types before
+proceeding. Both the primary key (MBID or an audited entity-scoped provider id when available) and
+the name alias key are invalidated so stale data cannot survive under either key. If a request
+carries several unvalidated exact identities, there is no authoritative key to invalidate; the
+call still fetches fresh and bypasses every cache operation for that type.
 
 ### Step 2: Cache Check
 
-For each requested type, the engine checks the cache using the primary entity key (MBID if available, otherwise title+artist). Cache hits go directly into the result map. Only cache misses proceed to resolution. If every type is a cache hit, the engine returns immediately — no identity resolution or API calls needed.
+For each requested type, the engine checks the cache using the primary entity key: MBID, then a
+provider id audited to name that request entity for the type, then an unambiguous encoded name
+tuple. Composite types inspect their transitive dependency routes too. More than one applicable,
+unvalidated exact identity bypasses positive, negative, stale, manual-selection, and invalidation
+paths rather than choosing an arbitrary key. Cache hits go directly into the result map; only
+misses proceed to resolution. If every type is a hit, the engine returns without identity
+resolution or provider calls.
 
 ### Step 3: Identity Resolution
 
@@ -121,7 +131,10 @@ These identifiers are merged into the request via `request.withIdentifiers(merge
 
 **ListenBrainz was measured against this and lost** (2026-08-12). `GET /1/metadata/recording/` is keyless, on a 2.5/s limiter, and answers a recording MBID with its name in one request — but a *non*-recording MBID and a dead one both come back `{}`, so it cannot tell "not a recording" from "not held". A miss therefore still pays the MusicBrainz release and artist lookups, making LB-first 1 request cheaper only when the id is a recording and 1 request dearer on every other outcome — including the dead case, which was seven in ten of a real third-party population (1212 of 1710, 2026-08-12). It would also add a failure mode this has none of: an LB 5xx is an outage and must never read as absence. Recorded so it is not re-proposed.
 
-**Cache alias:** a result the engine resolved from an identifier is also written under the name key, so a later name-only lookup finds it. For an identifier-only request that key carries MusicBrainz's canonical name — there is no caller name to alias under, and the canonical one is what a later name lookup would ask with.
+**Cache alias:** when canonical resolution adds an MBID to a name request, the result may also be
+written under the resolved name key so a later name-only lookup finds the selected entity. For an
+identifier-only request, that alias carries MusicBrainz's canonical name because the caller had no
+name. A provider-native exact-id result is not implicitly aliased to a bare name.
 
 **Suggestions do not veto the fan-out:** If MusicBrainz can't find an exact match but has near-miss candidates, that is a statement about MusicBrainz's own lookup, not a global "nothing can be fetched" decision. Every uncached type still resolves through step 4 exactly as it would under a plain unresolved identity — each provider's own `ProviderChain` eligibility (availability, identifier requirements, circuit breaker) decides whether it runs. A `NONE`-identifier provider like Deezer's track preview search still answers; an MBID-only provider without an MBID still doesn't. Surviving `Success` results carry a `LookupProvenance` reflecting the fuzzy search that produced them (step 8), while the call's `CanonicalStatus` stays `AMBIGUOUS`. The suggestion list itself is attached once, to `EnrichmentResults.identity`, never copied onto a per-type result — the consumer can present it as "Did you mean?" and re-enrich with the selected candidate.
 
