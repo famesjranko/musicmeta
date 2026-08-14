@@ -236,5 +236,4 @@ class ProviderDriftClosedLoopReportTest {
         assertEquals(2, trend[sharedKey])
         assertEquals(1, trend[differentKey])
     }
-
 }
