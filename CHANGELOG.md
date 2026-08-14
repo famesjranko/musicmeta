@@ -157,8 +157,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - An all-cache-hit `Success` now reports `provenance = CACHE` instead of `null` when the cache that served it did not preserve the original lookup's route
 - Deezer's artist-id, iTunes's collection-id/artist-id, and Discogs's `CREDITS`/`RELEASE_EDITIONS` branches now self-report `provenance = PROVIDER_NATIVE_ID`; iTunes UPC uses `EXTERNAL_CATALOG_ID`
 - A merged or synthesized `Success` (e.g. `GENRE`, `ARTIST_TIMELINE`) now reports its weakest contributor's `provenance` instead of one fabricated from canonical status alone
-- Cache identity now uses a versioned, collision-free key over the complete request tuple: scope/type, names, album/track selector inputs, all explicit identifiers, and sorted extras; only identical tuples replay
-- Exact-bearing requests never read through bare-name aliases; canonical aliases remain available only when identity resolution supplies the names, and custom cache implementations must treat keys as opaque
+- Cache keys now encode the complete request tuple: scope/type, names, selectors, all explicit identifiers, and sorted extras; only identical tuples replay
+- Exact-bearing calls never read name aliases; canonical aliases require names supplied by identity resolution. Custom caches must treat keys as opaque
 - The cache-key format change intentionally causes a one-time miss for existing entries; no cross-tuple entity equivalence is inferred
 - `InMemoryEnrichmentCache.invalidate` now removes manual-selection state with positive and negative entries, matching Room and the cache contract
 - `TitleMatcher` no longer strips an identity-bearing internal quote, or accepts mismatched terminal brackets (`Song (Live]` no longer equals `Song (Live)`)

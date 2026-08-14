@@ -418,9 +418,8 @@ internal class DefaultEnrichmentEngine(
      * answer. Canonical aliases are added by [invalidateKeys] only after identity resolution has
      * supplied the canonical names.
      */
-    private fun cacheKeysFor(request: EnrichmentRequest, type: EnrichmentType): List<String> {
-        return listOf(entityKeyFor(request, type))
-    }
+    private fun cacheKeysFor(request: EnrichmentRequest, type: EnrichmentType): List<String> =
+        listOf(entityKeyFor(request, type))
 
     /** Invalidates the primary tuple and a canonical-name alias only when resolution supplied it. */
     private suspend fun invalidateKeys(

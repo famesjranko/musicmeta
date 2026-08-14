@@ -108,10 +108,12 @@ class InMemoryEnrichmentCacheTest {
     }
 
     @Test fun `invalidate removes manual selection for the addressed types`() = runTest {
+        // Given - manual flags for two types on one entity and another entity's control
         cache.markManuallySelected("a:1", EnrichmentType.ALBUM_ART)
         cache.markManuallySelected("a:1", EnrichmentType.ARTIST_PHOTO)
         cache.markManuallySelected("b:1", EnrichmentType.ALBUM_ART)
 
+        // When - invalidating one type and then every remaining type for the first entity
         cache.invalidate("a:1", EnrichmentType.ALBUM_ART)
 
         assertFalse(cache.isManuallySelected("a:1", EnrichmentType.ALBUM_ART))
@@ -120,6 +122,7 @@ class InMemoryEnrichmentCacheTest {
 
         cache.invalidate("a:1")
 
+        // Then - only the addressed entity's flags are removed
         assertFalse(cache.isManuallySelected("a:1", EnrichmentType.ARTIST_PHOTO))
         assertTrue(cache.isManuallySelected("b:1", EnrichmentType.ALBUM_ART))
     }
