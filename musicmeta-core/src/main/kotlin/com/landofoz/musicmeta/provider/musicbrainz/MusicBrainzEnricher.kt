@@ -182,7 +182,10 @@ internal class MusicBrainzEnricher(
             when (val lookup = memoizedRelease(mbid)) {
                 is MusicBrainzLookup.Found -> {
                     offerNames(lookup.value.title, lookup.value.artistCredit)
-                    return buildAlbumResult(lookup.value, type, ConfidenceCalculator.idBasedLookup())
+                    return buildAlbumResult(
+                        lookup.value, type, ConfidenceCalculator.idBasedLookup(),
+                        LookupProvenance.CANONICAL_ID,
+                    )
                 }
                 MusicBrainzLookup.Unreadable -> return EnrichmentResult.NotFound(type, providerId)
                 // Absent: the identifier names no release, so the request resolves by name below,
@@ -279,7 +282,10 @@ internal class MusicBrainzEnricher(
             when (val lookup = memoizedArtist(mbid)) {
                 is MusicBrainzLookup.Found -> {
                     offerNames(lookup.value.name, null)
-                    return buildArtistResult(lookup.value, type, ConfidenceCalculator.idBasedLookup())
+                    return buildArtistResult(
+                        lookup.value, type, ConfidenceCalculator.idBasedLookup(),
+                        LookupProvenance.CANONICAL_ID,
+                    )
                 }
                 MusicBrainzLookup.Unreadable -> return EnrichmentResult.NotFound(type, providerId)
                 // Absent: the identifier names no artist, so the request resolves by name below,
@@ -464,7 +470,7 @@ internal class MusicBrainzEnricher(
         val recording = MusicBrainzParser.parseLookupRecording(json, request.album)
             ?: return EnrichmentResult.NotFound(type, providerId)
         offerNames(recording.title, recording.artistCredit)
-        return trackResult(recording, type, ConfidenceCalculator.idBasedLookup())
+        return trackResult(recording, type, ConfidenceCalculator.idBasedLookup(), LookupProvenance.CANONICAL_ID)
     }
 
     private suspend fun enrichTrackBySearch(
@@ -612,12 +618,14 @@ internal class MusicBrainzEnricher(
         artist: MusicBrainzArtist,
         type: EnrichmentType,
         confidence: Float,
+        provenance: LookupProvenance? = null,
     ): EnrichmentResult.Success = EnrichmentResult.Success(
         type = type,
         data = MusicBrainzMapper.toArtistMetadata(artist),
         provider = providerId,
         confidence = confidence,
         resolvedIdentifiers = MusicBrainzMapper.toArtistIdentifiers(artist),
+        provenance = provenance,
     )
 
     /**

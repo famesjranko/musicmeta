@@ -525,6 +525,7 @@ internal class DefaultEnrichmentEngine(
                 if (type in uncachedTypes && type !in mergeableTypes && result.data.answers(type)) {
                     results[type] = EnrichmentResult.Success(
                         type = type,
+                        provenance = result.provenance,
                         data = result.data,
                         provider = result.provider,
                         confidence = result.confidence,
