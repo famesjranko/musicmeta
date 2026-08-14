@@ -58,17 +58,17 @@ class IdentifierTransportTest {
         }
     }
 
-    @Test fun `a mismatched entityKind is rejected`() {
-        // Given - a payload scoped to an artist, arriving on a track-only decode path
-        val wire = WireIdentifiers(entityKind = WireEntityKind.ARTIST, musicBrainzId = "mbid-x")
+    @Test fun `an unsupported entityKind is rejected at the wire boundary`() {
+        // Given - a payload scoped to an unsupported entity kind, arriving on a track-only decode path
+        val wire = """{"entityKind":"ARTIST","musicBrainzId":"mbid-x"}"""
 
         // When - decoding
         try {
-            decodeTrackIdentifiers(encode(wire))
+            decodeTrackIdentifiers(wire)
             fail("expected InvalidIdentifiers")
         } catch (e: InvalidIdentifiers) {
-            // Then - rejected for scope, not accepted as a track identity
-            assertTrue(e.message!!.contains("entityKind"))
+            // Then - rejected as malformed, not accepted as a track identity
+            assertTrue(e.message!!.contains("malformed"))
         }
     }
 

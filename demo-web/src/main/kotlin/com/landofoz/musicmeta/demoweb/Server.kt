@@ -56,8 +56,8 @@ internal class InvalidIdentifiers(message: String) : Exception(message)
 
 /**
  * Decodes a [SectionItem.identifiers]/[EnrichTarget.identifiers] `ids` query parameter into
- * [EnrichmentIdentifiers] for a track-scoped request, or null when [raw] is absent — the
- * pre-existing name-only lookup. Malformed JSON (including a field [WireIdentifiers] does not
+ * [EnrichmentIdentifiers] for a track-scoped request, or null when [raw] is absent — a name-only
+ * lookup. Malformed JSON (including a field [WireIdentifiers] does not
  * declare) or an oversized parameter throws [InvalidIdentifiers] before reaching
  * [validateTrackIdentifiers], which owns every other rejection reason — the caller turns either
  * into a 400, never a silent name-only downgrade.

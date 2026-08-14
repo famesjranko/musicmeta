@@ -247,7 +247,7 @@ class DeezerProviderTest {
     }
 
     @Test
-    fun `enrich shares one album search across ALBUM_TRACKS, ALBUM_METADATA and ALBUM_ART within one ProviderCallScope`() = runTest {
+    fun `enrich shares one album search across the album types in one call`() = runTest {
         // Given - Deezer search and album detail stubbed once each, for one request asking three album types
         httpClient.givenJsonResponse("search/album", DEEZER_METADATA_RESPONSE)
         httpClient.givenJsonResponse("album/14879699/tracks", ALBUM_TRACKS_RESPONSE)
@@ -267,7 +267,7 @@ class DeezerProviderTest {
     }
 
     @Test
-    fun `enrich resolves the album fresh in each new ProviderCallScope`() = runTest {
+    fun `enrich resolves the album fresh in each new call`() = runTest {
         // Given - Deezer search and album detail stubbed once each, for two separate requests to the same album
         httpClient.givenJsonResponse("search/album", DEEZER_METADATA_RESPONSE)
         httpClient.givenJsonResponse("album/14879699/tracks", ALBUM_TRACKS_RESPONSE)
@@ -494,7 +494,7 @@ class DeezerProviderTest {
     }
 
     @Test
-    fun `enrich searches again when only trackCount differs between two requests in one ProviderCallScope`() = runTest {
+    fun `enrich searches again when only trackCount differs between two requests in one call`() = runTest {
         // Given - two editions under the same title/artist, distinguished only by trackCount
         httpClient.givenJsonResponse(
             "search/album",
@@ -669,10 +669,10 @@ class DeezerProviderTest {
         // When - enriching for similar tracks
         provider.enrich(request, EnrichmentType.SIMILAR_TRACKS)
 
-        // Then - pins the real replacement endpoints and their limits; a hand-rolled mock response
-        // for /track/{id}/radio (as this test suite used to have) cannot catch a route Deezer
-        // doesn't serve, only a URL assertion like this can. Also pins that the artist id comes off
-        // the track search result directly — no redundant search/artist round trip.
+        // Then - pins the real endpoints and their limits; a hand-rolled mock response for
+        // /track/{id}/radio cannot catch a route Deezer doesn't serve, only a URL assertion like
+        // this can. Also pins that the artist id comes off the track search result directly — no
+        // redundant search/artist round trip.
         assertTrue(httpClient.requestedUrls.any { it == "https://api.deezer.com/artist/399/related?limit=5" })
         assertTrue(httpClient.requestedUrls.any { it == "https://api.deezer.com/artist/1001/top?limit=3" })
         assertTrue(httpClient.requestedUrls.none { it.contains("/radio") })
@@ -1143,7 +1143,7 @@ class DeezerProviderTest {
         val firstRequest = EnrichmentRequest.forAlbum(title = "C", artist = "A|B")
         val secondRequest = EnrichmentRequest.forAlbum(title = "B|C", artist = "A")
 
-        // When - both requests are resolved together in one ProviderCallScope
+        // When - both requests are resolved together in one enrichment call
         val (firstResult, secondResult) = withContext(ProviderCallScope()) {
             provider.enrich(firstRequest, EnrichmentType.ALBUM_ART) to
                 provider.enrich(secondRequest, EnrichmentType.ALBUM_ART)
@@ -1205,7 +1205,7 @@ class DeezerProviderTest {
 
     @Test
     fun `a cancelled album search is not memoized as a miss`() = runTest {
-        // Given - the first album search is cancelled mid-flight inside the same ProviderCallScope the retry reuses; the underlying data would be found on a retry
+        // Given - the first album search is cancelled mid-flight and the retry reuses that call's memo; the underlying data would be found on a retry
         val cancelling = CancellingOnceHttpClient(httpClient)
         val cancellingProvider = DeezerProvider(cancelling, RateLimiter(0))
         httpClient.givenJsonResponse("search/album", DEEZER_RESPONSE)

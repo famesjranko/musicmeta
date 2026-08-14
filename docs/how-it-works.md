@@ -207,24 +207,18 @@ Two independent facts describe an `enrich()` call, never one merged value:
 | `NOT_ATTEMPTED_CACHE_HIT` | Every requested type was served from cache; no live attempt ran this call. |
 | `NOT_ATTEMPTED_NO_PROVIDER` | Resolution was needed, but no identity provider is registered. |
 
-An all-cache-hit call (every requested type served from cache) reads back each hit's own
-`CacheEnvelope.canonicalStatus` — the status the live call that wrote it carried. When every hit
-this call served agrees on `NOT_ATTEMPTED_DISABLED`, `NOT_ATTEMPTED_NOT_REQUIRED`, or
-`NOT_ATTEMPTED_NO_PROVIDER`, the call replays that exact status: it tells a consumer *why* no live
-attempt ran, and needs no evidence beyond the status name itself. Two other cases fall back to
-`NOT_ATTEMPTED_CACHE_HIT` instead:
-- **Mixed statuses** — the requested types were written under different statuses (e.g. one type
-  cached while resolution was disabled, another while it was not required). There is no single
-  truthful call-level summary, so the call reports `NOT_ATTEMPTED_CACHE_HIT` and each result keeps
-  the provenance/status its own cache write recorded.
-- **A uniform `RESOLVED`** — `RESOLVED` also promises `identity.matchScore`, which the cache
-  envelope does not carry, so replaying `RESOLVED` here would assert a score this call never
-  measured. `AMBIGUOUS`/`UNRESOLVED`/`FAILED` never appear here at all: Step 8 never caches them.
+An all-cache-hit call (every requested type served from cache) always reports
+`NOT_ATTEMPTED_CACHE_HIT`, regardless of what status any cached entry was written under. Each
+`CacheEnvelope.canonicalStatus` is retained as historical evidence for that entry alone — the
+status the live call that wrote it carried — but it is never surfaced as this call's status: a
+config change between the write and this read (e.g. identity resolution toggled) would make a
+replayed status false for the call actually reporting it.
 
 | `LookupProvenance` | Meaning |
 |---|---|
 | `CANONICAL_ID` | Looked up directly by a MusicBrainz canonical id. |
 | `PROVIDER_NATIVE_ID` | Looked up directly by a provider-native id supplied on the request. |
+| `EXTERNAL_CATALOG_ID` | Looked up directly by an external catalogue id (e.g. a UPC barcode) supplied on the request. |
 | `EXACT_NAME` | Selected by a name search MusicBrainz canonically confirmed this call. |
 | `QUALIFIER_FALLBACK_NAME` | Selected after normalization or qualifier-fallback stripping. |
 | `FUZZY_NAME` | Selected by an unverified fuzzy name search; MusicBrainz did not confirm this call. |

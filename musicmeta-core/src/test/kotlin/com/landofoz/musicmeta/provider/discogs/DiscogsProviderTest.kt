@@ -595,7 +595,7 @@ class DiscogsProviderTest {
     }
 
     @Test
-    fun `enrich searches again when only year differs between two requests in one ProviderCallScope`() = runTest {
+    fun `enrich searches again when only year differs between two requests in one call`() = runTest {
         // Given - two releases under the same title/artist, distinguished only by year
         httpClient.givenJsonResponse(
             "discogs.com",
@@ -664,7 +664,7 @@ class DiscogsProviderTest {
     }
 
     @Test
-    fun `enrich resolves the release fresh in each new ProviderCallScope`() = runTest {
+    fun `enrich resolves the release fresh in each new call`() = runTest {
         // Given - the same search hit stubbed once, for two separate requests to the same release
         httpClient.givenJsonResponse("database/search", SEARCH_RESULTS_JSON)
         val request = EnrichmentRequest.forAlbum(title = "OK Computer", artist = "Radiohead")
@@ -917,7 +917,7 @@ class DiscogsProviderTest {
     @Test
     fun `enrich ALBUM_METADATA degrades to null communityRating when release detail fetch is transient`() = runTest {
         // Given - search succeeds with a discogsReleaseId, but the community-rating side fetch
-        // (getReleaseDetails) hits a transient failure after baseMetadata is already built. Ticket 25:
+        // (getReleaseDetails) hits a transient failure after baseMetadata is already built:
         // this must degrade the optional field, not throw away the already-resolved ALBUM_METADATA.
         httpClient.givenJsonResponse("database/search", METADATA_SEARCH_WITH_ID_JSON)
         httpClient.givenError("releases/99001")
@@ -1010,7 +1010,7 @@ class DiscogsProviderTest {
         val firstRequest = EnrichmentRequest.forAlbum(title = "C", artist = "A|B")
         val secondRequest = EnrichmentRequest.forAlbum(title = "B|C", artist = "A")
 
-        // When - both requests are resolved together in one ProviderCallScope
+        // When - both requests are resolved together in one enrichment call
         val (firstResult, secondResult) = withContext(ProviderCallScope()) {
             provider.enrich(firstRequest, EnrichmentType.ALBUM_ART) to
                 provider.enrich(secondRequest, EnrichmentType.ALBUM_ART)
@@ -1035,7 +1035,7 @@ class DiscogsProviderTest {
         val request2009 = EnrichmentRequest.ForAlbum(EnrichmentIdentifiers(), "Album", "Artist", year = 2009)
         val request2015 = EnrichmentRequest.ForAlbum(EnrichmentIdentifiers(), "Album", "Artist", year = 2015)
 
-        // When - both requests are resolved together in one ProviderCallScope
+        // When - both requests are resolved together in one enrichment call
         val (result2009, result2015) = withContext(ProviderCallScope()) {
             provider.enrich(request2009, EnrichmentType.ALBUM_ART) to
                 provider.enrich(request2015, EnrichmentType.ALBUM_ART)
@@ -1089,7 +1089,7 @@ class DiscogsProviderTest {
 
     @Test
     fun `a cancelled release search is not memoized as a miss`() = runTest {
-        // Given - the first release search is cancelled mid-flight inside the same ProviderCallScope the retry reuses; the underlying data would be found on a retry
+        // Given - the first release search is cancelled mid-flight and the retry reuses that call's memo; the underlying data would be found on a retry
         val cancelling = CancellingOnceHttpClient(httpClient)
         val cancellingProvider = DiscogsProvider(
             personalToken = "test-token",

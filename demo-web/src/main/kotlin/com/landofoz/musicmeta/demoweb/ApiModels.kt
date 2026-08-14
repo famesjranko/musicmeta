@@ -81,7 +81,7 @@ data class SectionItem(
     val previewAlbum: String? = null,
     /**
      * Identifiers the play button echoes back to `/api/preview` alongside [previewTitle]/
-     * [previewArtist]/[previewAlbum]. Absent (the default) is the pre-existing name-only lookup.
+     * [previewArtist]/[previewAlbum]. Absent (the default) is a name-only lookup.
      */
     val identifiers: WireIdentifiers? = null,
 )
@@ -95,7 +95,7 @@ data class EnrichTarget(
     val album: String? = null,
     /**
      * Identifiers the row already knows, echoed back to `/api/enrich` on navigation. Absent (the
-     * default) is the pre-existing name-only lookup.
+     * default) is a name-only lookup.
      */
     val identifiers: WireIdentifiers? = null,
 )
@@ -104,10 +104,10 @@ data class EnrichTarget(
  * Entity scope a [WireIdentifiers] envelope carries, server-validated against the request it
  * arrived on rather than trusted from the client: a namespaced id is not always the same kind of
  * entity (Deezer's id names a track here, but a seed *artist* on an album similarity lookup).
- * Members may only be appended.
+ * New entity kinds may be appended when a corresponding request and validation path exists.
  */
 @Serializable
-enum class WireEntityKind { ARTIST, ALBUM, TRACK }
+enum class WireEntityKind { TRACK }
 
 /**
  * A row's known identifiers, carried as one query parameter (`ids`, JSON-encoded) rather than one

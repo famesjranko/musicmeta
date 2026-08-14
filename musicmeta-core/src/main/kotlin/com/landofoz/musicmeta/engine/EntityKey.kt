@@ -135,6 +135,7 @@ internal fun observedProvenance(
 private val PROVENANCE_STRENGTH: List<LookupProvenance> = listOf(
     LookupProvenance.CANONICAL_ID,
     LookupProvenance.PROVIDER_NATIVE_ID,
+    LookupProvenance.EXTERNAL_CATALOG_ID,
     LookupProvenance.EXACT_NAME,
     LookupProvenance.QUALIFIER_FALLBACK_NAME,
     LookupProvenance.FUZZY_NAME,

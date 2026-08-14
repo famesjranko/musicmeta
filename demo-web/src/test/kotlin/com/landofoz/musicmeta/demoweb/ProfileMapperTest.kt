@@ -972,7 +972,7 @@ class ProfileMapperTest {
     }
 
     @Test
-    fun `artist summary carries genre chips and no longer joins genres into the subtitle`() {
+    fun `artist summary carries genre chips and leaves the subtitle unset`() {
         // Given - an artist whose GENRE metadata carries a curated tag and a community tag
         val results = resultsOf(
             EnrichmentType.GENRE to EnrichmentData.Metadata(
@@ -996,7 +996,7 @@ class ProfileMapperTest {
             response.summary.genres,
         )
 
-        // Then - the subtitle no longer carries the joined genre names
+        // Then - the subtitle stays unset rather than carrying a joined genre list
         assertNull(response.summary.subtitle)
     }
 
@@ -1018,7 +1018,7 @@ class ProfileMapperTest {
     }
 
     @Test
-    fun `details sections no longer carry a joined Genres row`() {
+    fun `details sections carry genre chips instead of a joined Genres row`() {
         // Given - an album and a track that both resolved genres
         val genreData = EnrichmentData.Metadata(
             genres = listOf("shoegaze"),

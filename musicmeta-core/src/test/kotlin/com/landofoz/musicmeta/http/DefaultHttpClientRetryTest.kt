@@ -11,10 +11,9 @@ import java.io.IOException
 import java.net.InetSocketAddress
 
 /**
- * A 429 is retried on every method — it used to be handed straight back. A 502, 503 or 504 is
- * retried on the same ladder: they are how a fronting proxy sheds load, and MusicBrainz sheds with
- * 503 rather than 429. A 500 or 501 stays terminal, so the retryable set is a closed list of three
- * codes rather than a `500..599` range test.
+ * A 429 is retried on every method. A 502, 503 or 504 is retried on the same ladder: they are how a
+ * fronting proxy sheds load, and MusicBrainz sheds with 503 rather than 429. A 500 or 501 stays
+ * terminal, so the retryable set is a closed list of three codes rather than a `500..599` range test.
  *
  * The retry sleeps inside the provider's held `RateLimiter` mutex, which is why it waits for a
  * per-host limiter to exist: it stops further traffic to the host that just 429'd, and costs the

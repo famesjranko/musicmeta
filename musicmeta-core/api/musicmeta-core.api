@@ -1616,6 +1616,7 @@ public final class com/landofoz/musicmeta/LookupProvenance : java/lang/Enum {
 	public static final field CACHE Lcom/landofoz/musicmeta/LookupProvenance;
 	public static final field CANONICAL_ID Lcom/landofoz/musicmeta/LookupProvenance;
 	public static final field EXACT_NAME Lcom/landofoz/musicmeta/LookupProvenance;
+	public static final field EXTERNAL_CATALOG_ID Lcom/landofoz/musicmeta/LookupProvenance;
 	public static final field FUZZY_NAME Lcom/landofoz/musicmeta/LookupProvenance;
 	public static final field PROVIDER_NATIVE_ID Lcom/landofoz/musicmeta/LookupProvenance;
 	public static final field QUALIFIER_FALLBACK_NAME Lcom/landofoz/musicmeta/LookupProvenance;
