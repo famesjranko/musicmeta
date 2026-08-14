@@ -155,6 +155,12 @@ class ProviderIdCacheIdentityTest {
 
         engine.markManuallySelected(request, EnrichmentType.ARTIST_TOP_TRACKS)
         assertTrue(engine.isManuallySelected(request, EnrichmentType.ARTIST_TOP_TRACKS))
+        assertFalse(
+            engine.isManuallySelected(
+                request.copy(identifiers = EnrichmentIdentifiers(), name = request.name),
+                EnrichmentType.ARTIST_TOP_TRACKS,
+            ),
+        )
         engine.invalidate(request, EnrichmentType.ARTIST_TOP_TRACKS)
         assertTrue(engine.isManuallySelected(request, EnrichmentType.ARTIST_TOP_TRACKS))
 
@@ -164,6 +170,7 @@ class ProviderIdCacheIdentityTest {
         ).also { it.givenResult(EnrichmentType.ARTIST_TOP_TRACKS, topTracksResult("fresh")) }
         engine(fresh, cache).enrich(request, setOf(EnrichmentType.ARTIST_TOP_TRACKS), forceRefresh = true)
         assertEquals(1, fresh.enrichCalls.size)
+        assertTrue(engine.isManuallySelected(request, EnrichmentType.ARTIST_TOP_TRACKS))
     }
 
     @Test
