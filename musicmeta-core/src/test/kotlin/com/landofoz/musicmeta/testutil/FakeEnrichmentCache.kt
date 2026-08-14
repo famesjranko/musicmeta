@@ -82,5 +82,11 @@ open class FakeEnrichmentCache : EnrichmentCache {
     }
     override suspend fun isManuallySelected(entityKey: String, type: EnrichmentType) = "$entityKey:$type" in manualSelections
     override suspend fun markManuallySelected(entityKey: String, type: EnrichmentType) { manualSelections.add("$entityKey:$type") }
-    override suspend fun clear() { stored.clear(); expiredStore.clear(); manualSelections.clear() }
+    override suspend fun clear() {
+        stored.clear()
+        expiredStore.clear()
+        storedTtls.clear()
+        storedStatuses.clear()
+        manualSelections.clear()
+    }
 }

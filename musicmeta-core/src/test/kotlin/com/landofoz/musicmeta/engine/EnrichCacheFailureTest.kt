@@ -112,6 +112,25 @@ class EnrichCacheFailureTest {
         assertFalse(cache.isManuallySelected(entityKey, artType))
     }
 
+    @Test fun `fake cache clear removes every state channel`() = runTest {
+        // Given - the test cache carrying positive, stale, bookkeeping, and manual state
+        val entityKey = DefaultEnrichmentEngine.entityKeyFor(req, artType)
+        val key = "$entityKey:$artType"
+        cache.put(entityKey, artType, art("stored"), CanonicalStatus.RESOLVED, ttlMs = 60_000)
+        cache.expiredStore[key] = art("stale")
+        cache.markManuallySelected(entityKey, artType)
+
+        // When - clearing the entire cache
+        cache.clear()
+
+        // Then - no state channel retains the addressed tuple
+        assertFalse(key in cache.stored)
+        assertFalse(key in cache.expiredStore)
+        assertFalse(key in cache.storedTtls)
+        assertFalse(key in cache.storedStatuses)
+        assertFalse(cache.isManuallySelected(entityKey, artType))
+    }
+
     @Test fun `a failed primary invalidation preserves a conflicting bare-name key`() = runTest {
         // Given - an MBID-carrying request with both exact and bare-name entries, and only the
         // exact tuple's invalidate() throwing
