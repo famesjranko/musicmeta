@@ -116,8 +116,8 @@ class InvalidateIdentifierTest {
         get(port, "/api/preview?title=Starman&artist=David+Bowie&ids=$idsParam")
         assertEquals(1, provider.calls.get())
 
-        // When - invalidating with no identifiers (the pre-fix demo-web behaviour), then
-        // re-requesting the same identifier-bearing preview
+        // When - invalidating with no identifiers, then re-requesting the same
+        // identifier-bearing preview
         post(port, "/api/invalidate", """{"kind":"track","name":"Starman","artist":"David Bowie"}""")
         get(port, "/api/preview?title=Starman&artist=David+Bowie&ids=$idsParam")
 

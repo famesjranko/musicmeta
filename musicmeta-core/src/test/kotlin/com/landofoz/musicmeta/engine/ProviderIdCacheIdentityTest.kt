@@ -182,7 +182,7 @@ class ProviderIdCacheIdentityTest {
         // When - enriching a type the identity payload itself answers
         e.enrich(request, setOf(EnrichmentType.GENRE))
 
-        // Then - the name key still holds the resolved result, as before this change
+        // Then - the name key holds the canonically resolved result
         val nameKey = DefaultEnrichmentEngine.entityKeyForName(request, EnrichmentType.GENRE)
         assertNotNull(cache.get(nameKey, EnrichmentType.GENRE))
     }

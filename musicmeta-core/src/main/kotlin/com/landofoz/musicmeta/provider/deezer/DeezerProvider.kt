@@ -413,7 +413,7 @@ class DeezerProvider(
      * (see [trustedProviderIdentifier]), falling back to a name search validated by
      * [ArtistMatcher] — the shared shape behind [enrichTopTracks], [enrichSimilarArtists] and
      * [enrichArtistRadio]. Null on a validated search miss or an unmatched search hit; an id
-     * branch is trusted without re-validation, matching prior behavior.
+     * branch is trusted because the scoped identifier is exact provider-owned evidence.
      */
     private suspend fun resolveArtistByIdOrSearch(
         request: EnrichmentRequest.ForArtist,

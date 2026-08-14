@@ -95,18 +95,12 @@ internal class ProviderChain(
         request: EnrichmentRequest,
         identifierOnly: Boolean = false,
     ): Pair<ChainResults, ChainExecution> = coroutineScope {
-        val missing = mutableMapOf<String, IdentifierRequirement>()
-        val candidates = providers.filter { provider ->
-            when {
-                !provider.isAvailable -> false
-                !hasRequiredIdentifiers(provider, request.identifiers) -> {
-                    missing[provider.id] = requirementFor(provider)
-                    false
-                }
-                else -> !identifierOnly || requiresIdentifier(provider)
-            }
-        }
-        val (tripped, eligible) = candidates.partition { isTripped(it) }
+        val gated = providers.map { provider -> provider to gateFor(provider, request.identifiers, identifierOnly) }
+        val missing = gated.mapNotNull { (provider, gate) ->
+            (gate as? Gate.MissingIdentifier)?.let { provider.id to it.requirement }
+        }.toMap()
+        val tripped = gated.filter { (_, gate) -> gate == Gate.BreakerOpen }.map { (provider, _) -> provider }
+        val eligible = gated.filter { (_, gate) -> gate == Gate.Attempt }.map { (provider, _) -> provider }
 
         val outcomes = eligible.map { provider ->
             async {
