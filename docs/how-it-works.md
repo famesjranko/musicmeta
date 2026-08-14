@@ -269,9 +269,10 @@ when its own chain skipped a provider for a missing identifier, resolved identit
 provider that was never asked cannot speak for "nothing found". Successful results reached under
 `RESOLVED` (or any `NOT_ATTEMPTED_*` status) are cached with per-type TTLs, alongside the call's own
 `canonicalStatus`, as a `CacheEnvelope`. `EnrichmentCache.get`/`getNegative` return that whole
-envelope, not just the stored result, so a cache hit's `Success.provenance` always replays the
-original live lookup's value rather than a generic `CACHE`, and the call-level replay rule above has
-the stored status to read instead of the status staying write-only:
+envelope, not just the stored result, so a cache hit's `Success.provenance` replays the original
+live lookup's value rather than a generic `CACHE`. The stored status remains historical evidence
+for that entry; the current all-cache-hit call status is always
+`NOT_ATTEMPTED_CACHE_HIT`.
 - Artwork: 30–90 days (photos 30d, album art 90d)
 - Genres/labels/metadata: 90–365 days
 - Popularity/stats: 7 days

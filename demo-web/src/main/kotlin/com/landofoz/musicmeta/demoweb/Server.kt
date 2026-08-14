@@ -452,9 +452,9 @@ private fun handleInvalidate(exchange: HttpExchange, engine: EnrichmentEngine) {
             exchange.respondJson(400, ApiError("identifiers is only valid for kind=track"))
             return
         }
-        // Threaded through so invalidation reaches the same provider-id-keyed entry the reload
+        // Threaded through so invalidation reaches the same identifier-bearing tuple the reload
         // that follows it will read (`docs/pitfalls.md` §5) — omitting this on a track request
-        // would clear only the bare-name key and leave a provider-id-keyed preview cached.
+        // would clear only the bare-name tuple and leave the identifier-bearing preview cached.
         val identifiers = try {
             request.identifiers?.let { validateTrackIdentifiers(it) }
         } catch (e: InvalidIdentifiers) {

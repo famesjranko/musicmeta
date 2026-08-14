@@ -687,7 +687,7 @@ internal class DefaultEnrichmentEngine(
      * `enrich()` call's `coroutineScope`, launched as sibling `async` children — a type resolved
      * concurrently with, but *before*, the mark that would have covered it can miss the mark and
      * fall through to today's behaviour (a plain `NotFound`) instead of `Error`. That degrades to
-     * the pre-fix outcome, never invents a false `Error` for a genuinely-absent identifier.
+     * a plain `NotFound` instead of inventing a false `Error` for a genuinely-absent identifier.
      */
     private suspend fun reclassifyTransientGap(
         chain: ProviderChain?,

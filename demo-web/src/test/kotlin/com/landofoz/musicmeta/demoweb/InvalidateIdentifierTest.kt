@@ -23,9 +23,9 @@ import java.util.concurrent.atomic.AtomicReference
 
 /**
  * `/api/invalidate` must clear the same key family the reload that follows it will read. A track
- * request carrying a Deezer id caches under the provider-id key (`EntityKey.kt`); an invalidation
- * that omits [InvalidateRequest.identifiers] only clears the bare-name key, so the provider-id
- * entry survives "Clear cached result & reload" — the toolbar's own claim about what it does.
+ * request carrying identifiers caches under its complete request-tuple key; an invalidation that
+ * omits [InvalidateRequest.identifiers] only addresses the bare-name tuple, so the
+ * identifier-bearing entry survives "Clear cached result & reload" — the toolbar's own claim.
  */
 class InvalidateIdentifierTest {
 
@@ -87,7 +87,7 @@ class InvalidateIdentifierTest {
             WireIdentifiers(entityKind = WireEntityKind.TRACK, deezerTrackId = "107471926"),
         )
 
-    @Test fun `invalidating with identifiers clears the provider-id-keyed preview entry`() {
+    @Test fun `invalidating with identifiers clears the identifier-bearing preview tuple`() {
         // Given - a track preview cached under its Deezer-id-keyed entry
         val provider = CountingDeezerPreviewProvider()
         val port = startTestServer(provider)
@@ -109,7 +109,7 @@ class InvalidateIdentifierTest {
     }
 
     @Test fun `invalidating without identifiers on an identifier-bearing row leaves the entry cached`() {
-        // Given - the same provider-id-keyed preview entry
+        // Given - the same identifier-bearing preview tuple
         val provider = CountingDeezerPreviewProvider()
         val port = startTestServer(provider)
         val idsParam = deezerIdsParam()
@@ -121,7 +121,7 @@ class InvalidateIdentifierTest {
         post(port, "/api/invalidate", """{"kind":"track","name":"Starman","artist":"David Bowie"}""")
         get(port, "/api/preview?title=Starman&artist=David+Bowie&ids=$idsParam")
 
-        // Then - the provider-id-keyed entry was never touched, so the provider is not re-asked
+        // Then - the identifier-bearing entry was never touched, so the provider is not re-asked
         assertEquals(1, provider.calls.get())
     }
 }

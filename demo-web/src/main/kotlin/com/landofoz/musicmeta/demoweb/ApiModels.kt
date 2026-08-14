@@ -241,8 +241,8 @@ data class InvalidateRequest(
     val mbid: String? = null,
     /**
      * The same [WireIdentifiers] envelope [EnrichTarget.identifiers] carries, so invalidation
-     * addresses the exact key family the reload that follows it will read — omitting this lets a
-     * provider-id-keyed entry survive "clear and reload" while only the bare-name key is cleared.
+     * addresses the exact request-tuple family the reload that follows it will read — omitting this
+     * lets an identifier-bearing entry survive "clear and reload" while only the name tuple clears.
      */
     val identifiers: WireIdentifiers? = null,
 )

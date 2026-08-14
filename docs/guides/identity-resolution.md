@@ -187,6 +187,4 @@ With resolution disabled, all providers fall back to fuzzy text search. Use this
 
 ## Cache key convergence after disambiguation
 
-When the user picks a disambiguation candidate, the re-enrichment request carries the resolved MBID. The engine generates the cache key from the canonical (lowercase, normalized) form of the request plus MBID. Subsequent lookups for the same entity — even from different initial spellings — converge to the same cache key after resolution.
-
-This means a query for "bush" and a query for "Bush" that both resolve to the same MBID will share cached results. See [cache-management.md](cache-management.md) for more on cache key structure.
+When the user picks a disambiguation candidate, the re-enrichment request carries the resolved MBID. The engine keys that exact-bearing call from the complete request tuple, including its names, selectors, and identifiers. A canonical-name alias is also written only when this identity-resolution step supplied the canonical names; later name-only lookups can then reuse that explicitly resolved result. An exact-bearing lookup never reads through a bare-name alias, because a caller-supplied name is not proof that it names the same entity as the identifier. See [cache-management.md](cache-management.md) for the cache-key contract.
