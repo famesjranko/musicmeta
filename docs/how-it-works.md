@@ -32,7 +32,7 @@ enrich(request, types, forceRefresh)
 ┌────────────────────────────┐
 │ 1. Force Invalidate        │── forceRefresh=false ──→ skip
 └─────────────┬──────────────┘
-              │ forceRefresh=true → invalidate MBID key + name alias key
+              │ forceRefresh=true → invalidate request-tuple key + eligible canonical alias
               ▼
 ┌────────────────────────────┐
 │ 2. Cache Check             │── all hit ──→ return cached
@@ -79,7 +79,7 @@ enrich(request, types, forceRefresh)
               │
               ▼
 ┌────────────────────────────┐
-│ 9. Cache Store + Alias     │── save with TTL + name alias (skip stale results)
+│ 9. Cache Store + Alias     │── save with TTL + eligible canonical alias (skip stale results)
 └─────────────┬──────────────┘
               │
               ▼
@@ -88,21 +88,20 @@ enrich(request, types, forceRefresh)
 
 ### Step 1: Force Refresh Invalidation
 
-When `forceRefresh=true`, the engine invalidates cache entries for all requested types before
-proceeding. Both the primary key (MBID or an audited entity-scoped provider id when available) and
-the name alias key are invalidated so stale data cannot survive under either key. If a request
-carries several unvalidated exact identities, there is no authoritative key to invalidate; the
-call still fetches fresh and bypasses every cache operation for that type.
+When `forceRefresh=true`, the engine invalidates the complete request-tuple cache entry for every
+requested type before proceeding. Any eligible canonical alias established by identity resolution
+is invalidated as well, so stale data cannot survive under either key. The same tuple policy applies
+to direct requests and transitive composite dependencies.
 
 ### Step 2: Cache Check
 
-For each requested type, the engine checks the cache using the primary entity key: MBID, then a
-provider id audited to name that request entity for the type, then an unambiguous encoded name
-tuple. Composite types inspect their transitive dependency routes too. More than one applicable,
-unvalidated exact identity bypasses positive, negative, stale, manual-selection, and invalidation
-paths rather than choosing an arbitrary key. Cache hits go directly into the result map; only
-misses proceed to resolution. If every type is a hit, the engine returns without identity
-resolution or provider calls.
+For each requested type, the engine checks the cache using a versioned, collision-free encoding of
+the complete request tuple: scope and type, names, album/track selector inputs, every explicit
+identifier, and sorted extra fields. Composite types use the same complete tuple for their
+transitive dependency routes. An exact-bearing request never falls back to a bare-name key, and a
+different tuple is never treated as equivalent merely because it contains the same MBID or provider
+id. Cache hits go directly into the result map; only misses proceed to resolution. If every type is
+a hit, the engine returns without identity resolution or provider calls.
 
 ### Step 3: Identity Resolution
 
@@ -131,10 +130,12 @@ These identifiers are merged into the request via `request.withIdentifiers(merge
 
 **ListenBrainz was measured against this and lost** (2026-08-12). `GET /1/metadata/recording/` is keyless, on a 2.5/s limiter, and answers a recording MBID with its name in one request — but a *non*-recording MBID and a dead one both come back `{}`, so it cannot tell "not a recording" from "not held". A miss therefore still pays the MusicBrainz release and artist lookups, making LB-first 1 request cheaper only when the id is a recording and 1 request dearer on every other outcome — including the dead case, which was seven in ten of a real third-party population (1212 of 1710, 2026-08-12). It would also add a failure mode this has none of: an LB 5xx is an outage and must never read as absence. Recorded so it is not re-proposed.
 
-**Cache alias:** when canonical resolution adds an MBID to a name request, the result may also be
-written under the resolved name key so a later name-only lookup finds the selected entity. For an
-identifier-only request, that alias carries MusicBrainz's canonical name because the caller had no
-name. A provider-native exact-id result is not implicitly aliased to a bare name.
+**Cache alias:** when canonical resolution supplies names for the request, the result may also be
+written under the corresponding identifier-free name/selector key so a later name-only lookup can
+reuse the canonically selected entity. An exact-bearing request never reads through that alias, and
+a provider-native exact-id result is not implicitly aliased to a bare name. The tuple key itself is
+versioned; a format change intentionally causes a one-time miss. Custom cache implementations must
+treat keys as opaque.
 
 **Suggestions do not veto the fan-out:** If MusicBrainz can't find an exact match but has near-miss candidates, that is a statement about MusicBrainz's own lookup, not a global "nothing can be fetched" decision. Every uncached type still resolves through step 4 exactly as it would under a plain unresolved identity — each provider's own `ProviderChain` eligibility (availability, identifier requirements, circuit breaker) decides whether it runs. A `NONE`-identifier provider like Deezer's track preview search still answers; an MBID-only provider without an MBID still doesn't. Surviving `Success` results carry a `LookupProvenance` reflecting the fuzzy search that produced them (step 8), while the call's `CanonicalStatus` stays `AMBIGUOUS`. The suggestion list itself is attached once, to `EnrichmentResults.identity`, never copied onto a per-type result — the consumer can present it as "Did you mean?" and re-enrich with the selected candidate.
 

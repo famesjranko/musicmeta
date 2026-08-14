@@ -54,23 +54,21 @@ For a persistent cache that survives process restarts, use `RoomEnrichmentCache`
 
 ## Cache key structure
 
-The engine chooses one entity identity per requested type: a MusicBrainz id, an audited
-entity-scoped provider id, or the request names. It then combines that identity with the entity
-kind and `EnrichmentType`. For example:
+Each request/type uses a versioned, collision-free key over the complete request tuple. The tuple
+includes the request scope and `EnrichmentType`, all names, album/track selector inputs such as
+`trackCount`, `year`, and `durationMs`, every explicit identifier field, and sorted extra
+identifier fields. The encoding is length-delimited and implementation-private; it does not infer
+that two different tuples name the same entity. Identical tuples may replay the same cache entry.
 
-- Artist name: `"artist:Radiohead:GENRE"`
-- Album name: `"album:Radiohead:OK Computer:ALBUM_METADATA"`
-- Track name: `"track:Radiohead:Creep:TRACK_PREVIEW"`
-- Deezer track id: `"track:deezer:3135556:TRACK_PREVIEW"`
+This deliberately keeps exact-bearing requests isolated from name-only requests. An exact-bearing
+call never reads through a bare-name alias. A canonical alias may still be written when canonical
+identity resolution supplies the names, because that resolution is the explicit evidence for the
+alias. `entityKeyForName` contains names and selector inputs but excludes identifiers.
 
-Name fields escape `%` and `:` so two legal artist/title tuples cannot collapse to one key. Treat
-`entityKey` as opaque in custom cache implementations; its encoding may change to preserve cache
-identity correctness.
-
-When more than one applicable exact identity is present and nothing proves they name the same
-entity, the engine bypasses cache reads, writes, stale fallback, manual-selection state, and
-invalidation for that request/type. The same rule expands through a composite type's dependencies.
-This prevents a provider route selected by one id from poisoning another id's entry.
+The key format is versioned so changing its contract causes a one-time cache miss rather than
+reusing an incompatible entry. Treat `entityKey` as opaque in custom cache implementations; custom
+caches must not parse or reconstruct it from request strings, and must continue to accept future
+key versions as opaque values.
 
 ### Key convergence after disambiguation
 
@@ -142,10 +140,9 @@ val results = engine.enrich(
 )
 ```
 
-`forceRefresh = true` clears existing cache entries for the requested types (including any manual
-selection flags) before fetching. Fresh results are written back normally. An unvalidated
-mixed-identity request has no authoritative key to clear or refill, so it fetches fresh while
-continuing to bypass the cache.
+`forceRefresh = true` clears the request-tuple cache entries for the requested types (including any
+manual selection flags) before fetching. Fresh results are written back normally. The same complete
+tuple is used for direct requests and transitive composite dependencies.
 
 ---
 
@@ -182,7 +179,7 @@ engine.cache.clear()
 ```
 
 Application code should prefer the request-based engine methods above. Only the engine knows which
-aliases and mixed-identity restrictions apply.
+canonical aliases apply and how the versioned tuple key is encoded.
 
 ---
 
