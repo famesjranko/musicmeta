@@ -1,100 +1,9 @@
 package com.landofoz.musicmeta.engine
 
 import com.landofoz.musicmeta.CanonicalStatus
-import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
-import com.landofoz.musicmeta.EnrichmentType
-import com.landofoz.musicmeta.IdentifierNamespace
 import com.landofoz.musicmeta.IdentifierRequirement
 import com.landofoz.musicmeta.LookupProvenance
-
-/** The kind of entity a [ScopedProviderIdentifier]'s value names. */
-internal enum class EntityScope { ARTIST, ALBUM, TRACK }
-
-/**
- * A provider-native identifier paired with the entity kind it names. A bare
- * [IdentifierNamespace]/value pair cannot say that on its own — [IdentifierNamespace.DEEZER] is
- * polymorphic, and `SimilarAlbumsProvider` reads the same namespace as a seed *artist* id on an
- * album request — so a reader that is about to trust a namespace value as naming one particular
- * entity carries this instead.
- */
-internal data class ScopedProviderIdentifier(
-    val namespace: IdentifierNamespace,
-    val scope: EntityScope,
-    val value: String,
-)
-
-/** A [ScopedProviderIdentifier] namespace/scope pair, before the request supplies its value. */
-private data class ProviderIdentity(val namespace: IdentifierNamespace, val scope: EntityScope)
-
-/**
- * Provider ids trusted to name the request's own entity, keyed by the [EnrichmentType] each is
- * trusted for. A namespace being present on a request says nothing about which entity it names —
- * [IdentifierNamespace.DEEZER] is polymorphic, and `SimilarAlbumsProvider` reads that same namespace
- * as a seed *artist* id on an *album* request, which must never be trusted as that request's own
- * album identity — so a (request kind, type) pair absent here falls back to the name key rather than
- * guessing a scope. Extend per audited tuple, never by namespace alone: each entry below is a
- * provider branch that reads exactly this namespace as this exact type's own request entity, with no
- * other capability for the same type reading a different id space as that same entity.
- */
-private val PROVIDER_IDENTITY: Map<EnrichmentType, ProviderIdentity> = mapOf(
-    EnrichmentType.TRACK_PREVIEW to ProviderIdentity(IdentifierNamespace.DEEZER, EntityScope.TRACK),
-    EnrichmentType.TRACK_METADATA to ProviderIdentity(IdentifierNamespace.DEEZER, EntityScope.TRACK),
-    EnrichmentType.ARTIST_TOP_TRACKS to ProviderIdentity(IdentifierNamespace.DEEZER, EntityScope.ARTIST),
-    EnrichmentType.SIMILAR_ARTISTS to ProviderIdentity(IdentifierNamespace.DEEZER, EntityScope.ARTIST),
-    EnrichmentType.ARTIST_RADIO to ProviderIdentity(IdentifierNamespace.DEEZER, EntityScope.ARTIST),
-    EnrichmentType.ARTIST_DISCOGRAPHY to ProviderIdentity(IdentifierNamespace.ITUNES_ARTIST, EntityScope.ARTIST),
-)
-
-private fun EnrichmentRequest.entityScope(): EntityScope = when (this) {
-    is EnrichmentRequest.ForArtist -> EntityScope.ARTIST
-    is EnrichmentRequest.ForAlbum -> EntityScope.ALBUM
-    is EnrichmentRequest.ForTrack -> EntityScope.TRACK
-}
-
-/**
- * The provider-native identifier this exact [type] lookup for [request] is trusted to use, or null
- * — the same audited tuple [entityKeyFor]'s provider-id tier keys on. Exposed so a provider
- * reporting its own [LookupProvenance] evidence reads the same trusted scope instead of re-deriving
- * one from a bare namespace lookup.
- */
-internal fun trustedProviderIdentifier(request: EnrichmentRequest, type: EnrichmentType): ScopedProviderIdentifier? {
-    val identity = PROVIDER_IDENTITY[type] ?: return null
-    if (request.entityScope() != identity.scope) return null
-    val id = request.identifiers.get(identity.namespace) ?: return null
-    return ScopedProviderIdentifier(identity.namespace, identity.scope, id)
-}
-
-/** The provider-id part of a cache key for [request]/[type], or null when none is trusted here. */
-private fun providerIdPart(request: EnrichmentRequest, type: EnrichmentType): String? =
-    trustedProviderIdentifier(request, type)?.let { "${it.namespace.name.lowercase()}:${it.value}" }
-
-/**
- * Cache key selected in priority order: the canonical MusicBrainz id, then a provider id trusted
- * for this exact [type] (see [TRACK_PROVIDER_IDENTITY]), then the bare name.
- */
-internal fun entityKeyFor(request: EnrichmentRequest, type: EnrichmentType): String {
-    val prefix = entityPrefix(request)
-    val id = request.identifiers.musicBrainzId
-        ?: providerIdPart(request, type)
-        ?: entityNamePart(request)
-    return "$prefix:$id:$type"
-}
-
-/** Cache key using name/title only (no MBID or provider id), for cache aliasing after disambiguation. */
-internal fun entityKeyForName(request: EnrichmentRequest, type: EnrichmentType): String =
-    "${entityPrefix(request)}:${entityNamePart(request)}:$type"
-
-/**
- * True when [request] carries both a canonical MusicBrainz id and a provider id [entityKeyFor]
- * would otherwise trust as this [type]'s own route, with nothing proving the two name the same
- * entity — a provider that prefers its own id over the MBID (Deezer's exact-track lookup does)
- * can answer for a different entity than the MBID names. Neither id is safe to read or write a
- * cache entry under until the winning route is known, so callers bypass the cache entirely for
- * this (request, type) rather than guess one of the two keys.
- */
-internal fun hasUnvalidatedMixedIdentity(request: EnrichmentRequest, type: EnrichmentType): Boolean =
-    request.identifiers.musicBrainzId != null && providerIdPart(request, type) != null
 
 /**
  * [LookupProvenance] for a [type] result that did not report its own route, from what the winning
@@ -168,31 +77,4 @@ internal fun stampContributorProvenance(
     if (success.provenance != null) return success
     val requirement = chain?.requirementForProviderId(success.provider) ?: IdentifierRequirement.NONE
     return success.copy(provenance = observedProvenance(requirement, canonicalStatus))
-}
-
-/**
- * Whether [request] names no entity — an [EnrichmentRequest.Companion.forTrackByMbid]-style request
- * before identity resolution has filled it in. Its name key names nothing until then.
- *
- * The title (or artist name) alone decides it. A blank *artist* beside a real title is not this
- * case: MusicBrainz drops an empty `artistname:""` term and resolves on the title, verified live
- * 2026-08-12 (`recording:"Bohemian Rhapsody" AND artistname:""` → count 823, top hits at score 100),
- * so such a request still has a search worth making.
- */
-internal fun namesNoEntity(request: EnrichmentRequest): Boolean = when (request) {
-    is EnrichmentRequest.ForAlbum -> request.title.isBlank()
-    is EnrichmentRequest.ForArtist -> request.name.isBlank()
-    is EnrichmentRequest.ForTrack -> request.title.isBlank()
-}
-
-private fun entityPrefix(request: EnrichmentRequest): String = when (request) {
-    is EnrichmentRequest.ForAlbum -> "album"
-    is EnrichmentRequest.ForArtist -> "artist"
-    is EnrichmentRequest.ForTrack -> "track"
-}
-
-private fun entityNamePart(request: EnrichmentRequest): String = when (request) {
-    is EnrichmentRequest.ForAlbum -> "${request.artist}:${request.title}"
-    is EnrichmentRequest.ForArtist -> request.name
-    is EnrichmentRequest.ForTrack -> "${request.artist}:${request.title}"
 }

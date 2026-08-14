@@ -64,6 +64,10 @@ internal class DefaultEnrichmentEngine(
     private val compositeDependencies: Map<EnrichmentType, Set<EnrichmentType>>
         get() = synthesizers.mapValues { it.value.dependencies }
 
+    /** One cache-policy seam for direct and transitive composite identity routes. */
+    private fun hasUnsafeCacheIdentity(request: EnrichmentRequest, type: EnrichmentType): Boolean =
+        hasUnvalidatedMixedIdentity(request, type, compositeDependencies)
+
     override suspend fun enrich(
         request: EnrichmentRequest,
         types: Set<EnrichmentType>,
@@ -72,6 +76,7 @@ internal class DefaultEnrichmentEngine(
         if (forceRefresh) {
             // Guarded per key, not per type: a failure on the primary key must not skip the alias.
             for (type in types) {
+                if (hasUnsafeCacheIdentity(request, type)) continue
                 for (key in cacheKeysFor(request, type)) {
                     guardedCacheWrite(logger, "invalidate") { cache.invalidate(key, type) }
                 }
@@ -90,7 +95,7 @@ internal class DefaultEnrichmentEngine(
             // name the same entity has no safe key to read: either could be the winning provider's
             // actual route, and reading the wrong one would serve a foreign entity. Read as though
             // this call were forceRefresh — skip straight to uncached rather than guess a key.
-            val mixedIdentity = hasUnvalidatedMixedIdentity(request, type)
+            val mixedIdentity = hasUnsafeCacheIdentity(request, type)
             // forceRefresh already invalidated these keys; skipping the read keeps a *failed*
             // invalidation from resurrecting the stale entry it was meant to drop.
             val cached = if (forceRefresh || mixedIdentity) null else {
@@ -305,13 +310,10 @@ internal class DefaultEnrichmentEngine(
         result: EnrichmentResult.NotFound,
         canonicalStatus: CanonicalStatus,
     ) {
-        // See hasUnvalidatedMixedIdentity: the primary key is unsafe to pick between two unproven
-        // routes, so this call's result is never cached under it. The alias key (name-only) does
-        // not carry that ambiguity and still writes.
-        if (!hasUnvalidatedMixedIdentity(request, type)) {
-            guardedCacheWrite(logger, "putNegative") {
-                cache.putNegative(entityKeyFor(request, type), type, result, canonicalStatus, config.negativeTtlMs)
-            }
+        // See hasUnsafeCacheIdentity: no exact or alias key is safe until one route is proven.
+        if (hasUnsafeCacheIdentity(request, type)) return
+        guardedCacheWrite(logger, "putNegative") {
+            cache.putNegative(entityKeyFor(request, type), type, result, canonicalStatus, config.negativeTtlMs)
         }
         if (aliasKey != null) {
             guardedCacheWrite(logger, "putNegative") {
@@ -328,12 +330,10 @@ internal class DefaultEnrichmentEngine(
         canonicalStatus: CanonicalStatus,
     ) {
         val ttl = config.ttlOverrides[type] ?: type.defaultTtlMs
-        // See hasUnvalidatedMixedIdentity: the winning provider may have used either unproven id,
-        // so neither is safe to key this write under.
-        if (!hasUnvalidatedMixedIdentity(request, type)) {
-            guardedCacheWrite(logger, "put") {
-                cache.put(entityKeyFor(request, type), type, result, canonicalStatus, ttl)
-            }
+        // See hasUnsafeCacheIdentity: no exact or alias key is safe until one route is proven.
+        if (hasUnsafeCacheIdentity(request, type)) return
+        guardedCacheWrite(logger, "put") {
+            cache.put(entityKeyFor(request, type), type, result, canonicalStatus, ttl)
         }
         if (aliasKey != null) {
             guardedCacheWrite(logger, "put") { cache.put(aliasKey, type, result, canonicalStatus, ttl) }
@@ -359,9 +359,14 @@ internal class DefaultEnrichmentEngine(
     }
 
     override suspend fun isManuallySelected(request: EnrichmentRequest, type: EnrichmentType): Boolean =
-        cache.isManuallySelected(entityKeyFor(request, type), type)
+        if (hasUnsafeCacheIdentity(request, type)) {
+            false
+        } else {
+            cache.isManuallySelected(entityKeyFor(request, type), type)
+        }
 
     override suspend fun markManuallySelected(request: EnrichmentRequest, type: EnrichmentType) {
+        if (hasUnsafeCacheIdentity(request, type)) return
         cache.markManuallySelected(entityKeyFor(request, type), type)
     }
 
@@ -441,6 +446,7 @@ internal class DefaultEnrichmentEngine(
         named: EnrichmentRequest,
         type: EnrichmentType,
     ) {
+        if (hasUnsafeCacheIdentity(request, type)) return
         val keys = cacheKeysFor(request, type) +
             if (named !== request) listOf(entityKeyForName(named, type)) else emptyList()
         for (key in keys.distinct()) cache.invalidate(key, type)
@@ -754,7 +760,9 @@ internal class DefaultEnrichmentEngine(
     ) {
         for (type in types) {
             val result = results[type] ?: continue
-            if (result is EnrichmentResult.Error || result is EnrichmentResult.RateLimited) {
+            if ((result is EnrichmentResult.Error || result is EnrichmentResult.RateLimited) &&
+                !hasUnsafeCacheIdentity(request, type)
+            ) {
                 val stale = guardedCacheRead(logger, "getIncludingExpired") {
                     cache.getIncludingExpired(entityKeyFor(request, type), type)
                 }
