@@ -96,7 +96,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - MusicBrainz now reports `QUALIFIER_FALLBACK_NAME` when a stripped candidate, not the literal title, resolved a track or album; an exact-title match still reports `EXACT_NAME`
-- An all-cache-hit call now replays its cached `NOT_ATTEMPTED_*` reason when every type agrees; a mixed or `RESOLVED`-uniform hit still reports `NOT_ATTEMPTED_CACHE_HIT`
+- An all-cache-hit call now always reports `NOT_ATTEMPTED_CACHE_HIT`; it no longer replays a cached `NOT_ATTEMPTED_*` reason that a later config change could make false
 - `RoomEnrichmentCache` and `InMemoryEnrichmentCache` now read back the `canonicalStatus` they persist on write, closing the write-only gap the previous audit found
 - Deezer track search now accepts a candidate's title (exact or equivalent-qualifier match) before ranking it, rather than ranking any right-artist pool; a wholly unrelated title is no longer returned
 - LRCLIB's search fallback now rejects a candidate whose artist or title it cannot identify, rather than taking the first search hit unconditionally

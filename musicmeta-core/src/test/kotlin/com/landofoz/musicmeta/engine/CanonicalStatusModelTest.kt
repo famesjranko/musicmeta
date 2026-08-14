@@ -394,10 +394,10 @@ class CanonicalStatusModelTest {
         val first = e.enrich(req, setOf(EnrichmentType.TRACK_PREVIEW))
         val second = e.enrich(req, setOf(EnrichmentType.TRACK_PREVIEW))
 
-        // Then - both calls report the same provider-native provenance, and the second call replays
-        // the exact reason no live attempt ran, uniform across the one requested type
+        // Then - both calls report the same provider-native provenance, but the second call reports
+        // the honest cache-hit status rather than replaying the first call's live reason
         assertEquals(CanonicalStatus.NOT_ATTEMPTED_DISABLED, first.identity.status)
-        assertEquals(CanonicalStatus.NOT_ATTEMPTED_DISABLED, second.identity.status)
+        assertEquals(CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT, second.identity.status)
         val firstSuccess = first.raw[EnrichmentType.TRACK_PREVIEW] as EnrichmentResult.Success
         val secondSuccess = second.raw[EnrichmentType.TRACK_PREVIEW] as EnrichmentResult.Success
         assertEquals(LookupProvenance.PROVIDER_NATIVE_ID, firstSuccess.provenance)
@@ -417,11 +417,10 @@ class CanonicalStatusModelTest {
         val first = e.enrich(req, setOf(EnrichmentType.TRACK_PREVIEW))
         val second = e.enrich(req, setOf(EnrichmentType.TRACK_PREVIEW))
 
-        // Then - both calls report the same unverified fuzzy-name provenance, and the second call
-        // replays the exact reason no live attempt ran rather than the less informative cache-hit
-        // status: every type this call served agreed on NOT_ATTEMPTED_DISABLED
+        // Then - both calls report the same unverified fuzzy-name provenance, but the second call
+        // reports the honest cache-hit status rather than replaying the first call's live reason
         assertEquals(CanonicalStatus.NOT_ATTEMPTED_DISABLED, first.identity.status)
-        assertEquals(CanonicalStatus.NOT_ATTEMPTED_DISABLED, second.identity.status)
+        assertEquals(CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT, second.identity.status)
         val firstSuccess = first.raw[EnrichmentType.TRACK_PREVIEW] as EnrichmentResult.Success
         val secondSuccess = second.raw[EnrichmentType.TRACK_PREVIEW] as EnrichmentResult.Success
         assertEquals(LookupProvenance.FUZZY_NAME, firstSuccess.provenance)
@@ -480,8 +479,8 @@ class CanonicalStatusModelTest {
         // When - enriching both types, entirely from cache
         val result = e.enrich(req, setOf(EnrichmentType.TRACK_PREVIEW, EnrichmentType.TRACK_METADATA))
 
-        // Then - no single stored status speaks truthfully for the whole call, so it reports the
-        // honest cache-hit status; each result still carries its own stored provenance
+        // Then - the call reports the honest cache-hit status regardless of what either entry was
+        // written under; each result still carries its own stored provenance
         assertEquals(CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT, result.identity.status)
         assertEquals(
             LookupProvenance.FUZZY_NAME,
@@ -491,6 +490,30 @@ class CanonicalStatusModelTest {
             LookupProvenance.FUZZY_NAME,
             (result.raw[EnrichmentType.TRACK_METADATA] as EnrichmentResult.Success).provenance,
         )
+    }
+
+    @Test fun `an engine with identity resolution enabled does not report DISABLED from an entry a disabled engine wrote`() = runTest {
+        // Given - one engine with identity resolution disabled writes a cache entry, then a second
+        // engine sharing that cache has identity resolution enabled
+        val cache = InMemoryEnrichmentCache()
+        val preview = artProvider()
+        val writer = DefaultEnrichmentEngine(
+            ProviderRegistry(listOf(preview)), cache, EnrichmentConfig(enableIdentityResolution = false),
+        )
+        val req = EnrichmentRequest.forTrack("Song", "Artist")
+        writer.enrich(req, setOf(EnrichmentType.TRACK_PREVIEW))
+
+        val identity = idProvider(EnrichmentResult.NotFound(EnrichmentType.GENRE, "mb"))
+        val reader = DefaultEnrichmentEngine(
+            ProviderRegistry(listOf(identity, preview)), cache, EnrichmentConfig(enableIdentityResolution = true),
+        )
+
+        // When - the enabled engine serves the same request entirely from the disabled writer's cache
+        val replay = reader.enrich(req, setOf(EnrichmentType.TRACK_PREVIEW))
+
+        // Then - the call reports the honest cache-hit status, never the disabled reason a past
+        // engine configuration wrote and this call's own configuration does not share
+        assertEquals(CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT, replay.identity.status)
     }
 
     @Test fun `an all-cache-hit call reports CACHE when the cache cannot recover the original provenance`() = runTest {

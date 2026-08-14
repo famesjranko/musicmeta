@@ -2,10 +2,9 @@ package com.landofoz.musicmeta
 
 /**
  * A cached [result] paired with the [canonicalStatus] the live call reported when it was written.
- * What a cache hit replays instead of reporting [CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT] with no
- * evidence behind it — [EnrichmentResult.Success.provenance] and, where present,
- * [EnrichmentResult.Success.isStale] already ride on [result] itself, so [canonicalStatus] is the
- * one fact [get]/[getNegative] previously discarded.
+ * Historical evidence only: a cache hit never replays it as the current call's status — every
+ * cache-hit call reports [CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT] regardless of what is stored
+ * here, since a status earned under a past engine configuration cannot speak for this call's.
  */
 data class CacheEnvelope<out T : EnrichmentResult>(
     val result: T,
@@ -34,9 +33,8 @@ interface EnrichmentCache {
      * [canonicalStatus] is the call's [IdentityResolution.status] that made [result] eligible to
      * cache — [EnrichmentEngine.enrich] only calls this for a status the cache may serve back with
      * no loss of confidence. [EnrichmentResult.Success.provenance] on [result] is what a hit later
-     * replays; [canonicalStatus] rides back on [get]'s [CacheEnvelope], which an all-cache-hit call
-     * uses to replay this exact status when every requested type agrees on it, and
-     * [CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT] otherwise.
+     * replays; [canonicalStatus] rides back on [get]'s [CacheEnvelope] as historical evidence only
+     * — a cache-hit call always reports [CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT] regardless of it.
      */
     suspend fun put(
         entityKey: String,
