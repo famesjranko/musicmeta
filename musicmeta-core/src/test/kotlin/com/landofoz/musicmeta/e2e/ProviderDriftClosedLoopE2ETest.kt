@@ -80,7 +80,7 @@ class ProviderDriftClosedLoopE2ETest {
             val radio = radioSample(artistRequest)
             val discography = discographySample(artistRequest)
             val similarSeed = topTracks.firstOrNull() ?: radio.firstOrNull()
-            val similarTracks = similarSeed?.let { similarTracksSample(it) } ?: emptyList()
+            val similarTracks = similarSeed?.let { similarTracksSample(it) }.orEmpty()
             val sources = listOf(
                 RowSource.TOP_TRACKS to topTracks,
                 RowSource.RADIO to radio,
