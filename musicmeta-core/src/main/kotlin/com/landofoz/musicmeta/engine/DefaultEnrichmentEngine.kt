@@ -33,8 +33,10 @@ import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * [resolveTypes]'s output: the per-type results a caller wants, plus the [ChainExecution] each
- * chain-backed type's walk produced — a composite or identity-fast-pathed type carries none.
- * [writeBack] is the only reader; it never reaches [ChainExecution] for result classification.
+ * type's walk produced — a chain-backed type's own, a composite's synthesized from its
+ * dependencies' (see [ChainExecution.identifierIncomplete]), and an identity-fast-pathed type
+ * carries none. [writeBack] is the only reader; it never reaches [ChainExecution] for result
+ * classification.
  */
 private data class ResolvedTypes(
     val results: Map<EnrichmentType, EnrichmentResult>,
@@ -591,6 +593,21 @@ internal class DefaultEnrichmentEngine(
         }
 
         synthesizeComposites(compositeTypes, resolvedResults, identityResult, request)
+
+        // A composite type has no chain of its own, so it never earns a ChainExecution from the
+        // resolve loop above — leaving writeBack's identifierIncomplete check permanently false and
+        // able to negative-cache a synthesizer's NotFound even when a dependency's sub-chain was
+        // skipped for a missing identifier. Folding each dependency's skips into a synthetic
+        // ChainExecution is what makes that skip visible one layer up.
+        for (compositeType in compositeTypes) {
+            val depExecutions = compositeDependencies[compositeType].orEmpty().mapNotNull { executions[it] }
+            executions[compositeType] = ChainExecution(
+                attemptedProviderIds = depExecutions.flatMap { it.attemptedProviderIds },
+                skippedForMissingIdentifier = depExecutions
+                    .fold(emptyMap()) { acc, execution -> acc + execution.skippedForMissingIdentifier },
+                skippedForOpenBreaker = depExecutions.flatMap { it.skippedForOpenBreaker },
+            )
+        }
 
         ResolvedTypes(resolvedResults.filterKeys { it in types }, executions.filterKeys { it in types })
     }
