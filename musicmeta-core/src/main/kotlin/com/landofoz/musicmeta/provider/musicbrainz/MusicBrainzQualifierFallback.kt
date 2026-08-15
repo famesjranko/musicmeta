@@ -2,10 +2,12 @@ package com.landofoz.musicmeta.provider.musicbrainz
 
 /**
  * Candidate generation and release/recording selection when a provider-sourced title carries a
- * reissue/edition qualifier (`"Master Of Puppets (Remastered)"`) that MusicBrainz's own title does
- * not, which makes the exact-quoted-Lucene search come back empty. Order matters: some MusicBrainz
- * titles legitimately contain edition wording (`"2112 (deluxe edition)"`), so the caller's exact
- * title is always tried first and stripped candidates only follow when it comes up empty.
+ * reissue/edition qualifier — bracketed (`"Master Of Puppets (Remastered)"`) or dash-form
+ * (`"Starman - 2012 Remaster"`) — that MusicBrainz's own title does not, which makes the
+ * exact-quoted-Lucene search come back empty. Order matters: some MusicBrainz titles legitimately
+ * contain edition wording (`"2112 (deluxe edition)"`) or a dash of their own, so the caller's exact
+ * title is always tried first and stripped candidates only follow when it comes up empty. Both
+ * shapes share the same [QualifierTag] vocabulary; only how a candidate is peeled differs.
  *
  * A bare title routinely ties 25+ releases at MusicBrainz's maximum score, and the winner is
  * consumer-visible ([MusicBrainzMapper.toAlbumIdentifiers] propagates its date, label, country,
@@ -32,7 +34,10 @@ internal object MusicBrainzQualifierFallback {
      * release. Specific kinds come first, so `"deluxe box set"` doesn't classify as bare `deluxe`.
      */
     private val KIND_PATTERNS: List<KindPattern> = listOf(
-        KindPattern("remaster", Regex("""(\d{4}\s+)?remaster(ed)?(\s+\d{4})?""", RegexOption.IGNORE_CASE)),
+        KindPattern(
+            "remaster",
+            Regex("""(\d{4}\s+)?remaster(ed)?(\s+version)?(\s+\d{4})?""", RegexOption.IGNORE_CASE),
+        ),
         KindPattern("super_deluxe", Regex("""super\s+deluxe(\s+edition)?""", RegexOption.IGNORE_CASE)),
         KindPattern("deluxe_box_set", Regex("""deluxe\s+box\s*set""", RegexOption.IGNORE_CASE)),
         KindPattern("box_set", Regex("""box\s*set""", RegexOption.IGNORE_CASE)),
@@ -73,6 +78,9 @@ internal object MusicBrainzQualifierFallback {
     /** A trailing `(...)`/`[...]` group, delimiter types not mixed (`"(Deluxe]"` must not match). */
     private val TRAILING_GROUP = Regex("""\s*(?:\(([^()]*)\)|\[([^\[\]]*)])\s*$""")
 
+    /** A spaced ASCII hyphen, en dash, or em dash — never the unspaced `"Song-2012 Remaster"` form. */
+    private val DASH_SEPARATOR = Regex("""\s+(?:-|–|—)\s+""")
+
     private val YEAR_TOKEN = Regex("""\b(19|20)\d{2}\b""")
 
     /**
@@ -109,19 +117,24 @@ internal object MusicBrainzQualifierFallback {
     }
 
     /**
-     * [title] itself, followed by progressively-stripped candidates — one trailing qualifier group
-     * removed at a time, stopping as soon as a trailing group doesn't whole-group-conform. Each
+     * [title] itself, followed by progressively-stripped bracket candidates — one trailing
+     * qualifier group removed at a time, stopping as soon as a trailing group doesn't
+     * whole-group-conform — followed by at most one dash candidate (see [dashFallbackStep]). Each
      * candidate's [FallbackCandidate.removedTags] holds only the tags peeled off to reach it.
      */
     fun qualifierFallbackCandidates(title: String): List<FallbackCandidate> {
+        val trimmed = title.trimEnd()
         val candidates = mutableListOf(FallbackCandidate(title, emptyList()))
-        var cur = title.trimEnd()
+        var cur = trimmed
         var removed = emptyList<QualifierTag>()
         while (true) {
             val (stripped, tags) = nextFallbackStep(cur) ?: break
             cur = stripped
             removed = tags + removed
             if (cur.isNotEmpty()) candidates.add(FallbackCandidate(cur, removed))
+        }
+        dashFallbackStep(trimmed)?.let { (stripped, tags) ->
+            if (stripped.isNotEmpty()) candidates.add(FallbackCandidate(stripped, tags))
         }
         return candidates
     }
@@ -145,6 +158,20 @@ internal object MusicBrainzQualifierFallback {
         val content = match.groups[1]?.value ?: match.groups[2]?.value ?: return null
         val tags = parseQualifierGroup(content) ?: return null
         return cur.substring(0, match.range.first).trimEnd() to tags
+    }
+
+    /**
+     * [title] with its last [DASH_SEPARATOR] group removed, and that suffix's tags — or null if
+     * there is no spaced dash or the whole suffix doesn't conform. Peels at most one group and is
+     * never reapplied to its own output, unlike [nextFallbackStep]'s bracket loop: `"Song - Mix -
+     * 2012 Remaster"` may yield `"Song - Mix"`, never `"Song"`. The *last* dash is what makes that
+     * true — a preceding, identity-bearing suffix is left in the stripped base rather than eaten.
+     */
+    private fun dashFallbackStep(title: String): Pair<String, List<QualifierTag>>? {
+        val match = DASH_SEPARATOR.findAll(title).lastOrNull() ?: return null
+        val suffix = title.substring(match.range.last + 1).trim()
+        val tags = parseQualifierGroup(suffix) ?: return null
+        return title.substring(0, match.range.first).trimEnd() to tags
     }
 
     private val WHITESPACE = Regex("""\s+""")

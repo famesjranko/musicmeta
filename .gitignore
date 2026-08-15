@@ -3,6 +3,9 @@
 .kotlin
 /local.properties
 /.idea
+/.vscode
+# VS Code Code Counter's output — a regenerable LOC report over the tree, not a record of it.
+/.VSCodeCounter
 .DS_Store
 /build
 /*/build

@@ -21,7 +21,9 @@ data class NegativeCacheEntity(
     @ColumnInfo(name = "entity_key") val entityKey: String,
     @ColumnInfo(name = "enrichment_type") val enrichmentType: String,
     @ColumnInfo(name = "provider") val provider: String,
-    @ColumnInfo(name = "identity_match") val identityMatch: String? = null,
+    /** [com.landofoz.musicmeta.CanonicalStatus] name the live call carried when this row was written. */
+    @ColumnInfo(name = "canonical_status") val canonicalStatus: String,
     @ColumnInfo(name = "cached_at") val cachedAt: Long,
     @ColumnInfo(name = "expires_at") val expiresAt: Long,
+    @ColumnInfo(name = "schema_version") val schemaVersion: Int = CACHE_SCHEMA_VERSION,
 )

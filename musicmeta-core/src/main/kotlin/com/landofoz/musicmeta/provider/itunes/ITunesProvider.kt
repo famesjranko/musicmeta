@@ -6,11 +6,14 @@ import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.IdentifierNamespace
+import com.landofoz.musicmeta.LookupProvenance
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.SearchCandidate
+import com.landofoz.musicmeta.engine.AlbumMatch
 import com.landofoz.musicmeta.engine.ArtistMatcher
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.engine.ProviderCallScope
+import com.landofoz.musicmeta.engine.trustedProviderIdentifier
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 import kotlinx.coroutines.currentCoroutineContext
@@ -43,6 +46,16 @@ class ITunesProvider(
      */
     private suspend fun upcMemo(): UpcLookupMemo =
         currentCoroutineContext()[ProviderCallScope]?.slot(this, ::UpcLookupMemo) ?: UpcLookupMemo()
+
+    /**
+     * This call's [ITunesAlbumScope], shared by the name-search branches of `enrichAlbumTracks` and
+     * `enrichAlbumType` so a request answered by ALBUM_TRACKS together with ALBUM_ART/ALBUM_METADATA
+     * selects one collection, not one independently-ranked collection per type ([ProviderCallScope],
+     * `docs/pitfalls.md` §12). Composes with, and never replaces, [upcMemo] — an exact-id or barcode
+     * hit still bypasses this scope entirely.
+     */
+    private suspend fun albumScope(): ITunesAlbumScope =
+        currentCoroutineContext()[ProviderCallScope]?.slot(this) { ITunesAlbumScope(api) } ?: ITunesAlbumScope(api)
 
     /**
      * Resolves [barcode] to the album a human would mean by [artist] — [ITunesApi.lookupByUpc]
@@ -109,6 +122,7 @@ class ITunesProvider(
                     data = ITunesMapper.toTracklist(tracks),
                     provider = id,
                     confidence = ConfidenceCalculator.idBasedLookup(),
+                    provenance = LookupProvenance.PROVIDER_NATIVE_ID,
                 )
             }
 
@@ -127,15 +141,16 @@ class ITunesProvider(
                     provider = id,
                     confidence = ConfidenceCalculator.idBasedLookup(),
                     resolvedIdentifiers = buildResolvedIdentifiers(barcodeResult),
+                    // A barcode is an external catalogue identifier, not a MusicBrainz id or
+                    // iTunes's own id space.
+                    provenance = LookupProvenance.EXTERNAL_CATALOG_ID,
                 )
             }
 
-            // Fall back to search then lookup
-            val term = "${request.artist} ${request.title}"
-            val results = api.searchAlbums(term, 5)
-            val albumResult = results.firstOrNull {
-                ArtistMatcher.isMatch(request.artist, it.artistName)
-            } ?: return EnrichmentResult.NotFound(type, id)
+            // Fall back to the shared name-search selection, so a call also asking ALBUM_ART or
+            // ALBUM_METADATA resolves the same collection instead of ranking its own.
+            val albumResult = albumScope().resolveAlbum(request)?.candidate
+                ?: return EnrichmentResult.NotFound(type, id)
 
             val searchedCollectionId = albumResult.collectionId.takeIf { it > 0 }
                 ?: return EnrichmentResult.NotFound(type, id)
@@ -165,8 +180,10 @@ class ITunesProvider(
         }
 
         return try {
-            // Try direct lookup if artistId is already stored
-            val artistId = request.identifiers.get(IdentifierNamespace.ITUNES_ARTIST)?.toLongOrNull()
+            // Try direct lookup if artistId is already stored, else search — kept as two branches
+            // (not one Elvis chain) so the id-versus-search distinction survives to provenance below.
+            val storedArtistId = trustedProviderIdentifier(request, type)?.value?.toLongOrNull()
+            val artistId = storedArtistId
                 ?: api.searchArtist(request.name)
                 ?: return EnrichmentResult.NotFound(type, id)
 
@@ -180,6 +197,7 @@ class ITunesProvider(
                 confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
                 resolvedIdentifiers = EnrichmentIdentifiers()
                     .with(IdentifierNamespace.ITUNES_ARTIST, artistId.toString()),
+                provenance = if (storedArtistId != null) LookupProvenance.PROVIDER_NATIVE_ID else null,
             )
         } catch (e: Exception) {
             mapError(type, e)
@@ -212,27 +230,27 @@ class ITunesProvider(
 
             val confidence = ConfidenceCalculator.idBasedLookup()
             val resolvedIdentifiers = buildResolvedIdentifiers(result)
+            // A barcode is an external catalogue identifier, not a MusicBrainz id or iTunes's own
+            // id space.
+            val idProvenance = LookupProvenance.EXTERNAL_CATALOG_ID
             return when (type) {
-                EnrichmentType.ALBUM_METADATA -> enrichAlbumMetadata(result, type, confidence, resolvedIdentifiers)
-                else -> enrichAlbumArt(result, type, confidence, resolvedIdentifiers)
+                EnrichmentType.ALBUM_METADATA ->
+                    enrichAlbumMetadata(result, type, confidence, resolvedIdentifiers, idProvenance)
+                else -> enrichAlbumArt(result, type, confidence, resolvedIdentifiers, idProvenance)
             }
         }
 
-        val term = "${request.artist} ${request.title}"
-        val results = try {
-            api.searchAlbums(term, 5)
+        val result = try {
+            albumScope().resolveAlbum(request)?.candidate
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             return mapError(type, e)
-        }
-
-        val result = results.firstOrNull {
-            ArtistMatcher.isMatch(request.artist, it.artistName)
         } ?: return EnrichmentResult.NotFound(type, id)
 
         val confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true)
         return when (type) {
-            EnrichmentType.ALBUM_METADATA -> enrichAlbumMetadata(result, type, confidence, null)
-            else -> enrichAlbumArt(result, type, confidence, null)
+            EnrichmentType.ALBUM_METADATA -> enrichAlbumMetadata(result, type, confidence, null, provenance = null)
+            else -> enrichAlbumArt(result, type, confidence, null, provenance = null)
         }
     }
 
@@ -241,12 +259,14 @@ class ITunesProvider(
         type: EnrichmentType,
         confidence: Float,
         resolvedIdentifiers: EnrichmentIdentifiers?,
+        provenance: LookupProvenance?,
     ): EnrichmentResult = EnrichmentResult.Success(
         type = type,
         data = ITunesMapper.toAlbumMetadata(result),
         provider = id,
         confidence = confidence,
         resolvedIdentifiers = resolvedIdentifiers,
+        provenance = provenance,
     )
 
     private fun enrichAlbumArt(
@@ -254,6 +274,7 @@ class ITunesProvider(
         type: EnrichmentType,
         confidence: Float,
         resolvedIdentifiers: EnrichmentIdentifiers?,
+        provenance: LookupProvenance?,
     ): EnrichmentResult {
         val artwork = ITunesMapper.toArtwork(result, artworkSize)
             ?: return EnrichmentResult.NotFound(type, id)
@@ -264,6 +285,7 @@ class ITunesProvider(
             provider = id,
             confidence = confidence,
             resolvedIdentifiers = resolvedIdentifiers,
+            provenance = provenance,
         )
     }
 
@@ -293,5 +315,45 @@ class ITunesProvider(
     companion object {
         const val DEFAULT_ARTWORK_SIZE = 1200
         private const val SEARCH_SCORE = 70
+    }
+}
+
+/**
+ * One `enrich()` call's name-search selection, held only long enough to serve the search-fallback
+ * branches of `ALBUM_TRACKS`, `ALBUM_METADATA` and `ALBUM_ART` from one search and one accepted
+ * collection instead of one independently-ranked search per type — see [ITunesProvider.albumScope].
+ * Dies with the call ([ProviderCallScope]), so a mis-resolved artist/title never outlives a
+ * `forceRefresh`. Exact `itunesCollectionId` and barcode/UPC lookups never reach this scope.
+ */
+private class ITunesAlbumScope(private val api: ITunesApi) {
+
+    /** Every field [selectAlbum] reads, so two requests differing only in one still key distinctly. */
+    private data class SelectionKey(val artist: String, val title: String, val trackCount: Int?, val year: Int?)
+
+    private val mutex = Mutex()
+    private val results = mutableMapOf<SelectionKey, AlbumMatch<ITunesAlbumResult>?>()
+
+    /**
+     * The accepted-and-ranked search hit for [request], with its selection evidence, one search per
+     * distinct complete selection input per call. Keyed on every field selection reads — including
+     * `trackCount` and `year` — so a request differing only in those cannot reuse a stale selection.
+     */
+    suspend fun resolveAlbum(request: EnrichmentRequest.ForAlbum): AlbumMatch<ITunesAlbumResult>? {
+        val key = SelectionKey(request.artist, request.title, request.trackCount, request.year)
+        return mutex.withLock {
+            if (results.containsKey(key)) {
+                results.getValue(key)
+            } else {
+                val term = "${request.artist} ${request.title}"
+                val match = api.searchAlbums(term, ALBUM_SEARCH_LIMIT).selectAlbum(request)
+                results[key] = match
+                match
+            }
+        }
+    }
+
+    private companion object {
+        /** Candidate pool size for the name-search selection — enough hits for the requested edition to surface. */
+        const val ALBUM_SEARCH_LIMIT = 5
     }
 }

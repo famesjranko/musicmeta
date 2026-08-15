@@ -612,8 +612,8 @@ class ListenBrainzProviderTest {
     }
 
     @Test
-    fun `enrich returns NotFound for SIMILAR_ARTISTS since the capability was removed`() = runTest {
-        // Given - a request for the removed SIMILAR_ARTISTS capability
+    fun `enrich returns NotFound for SIMILAR_ARTISTS, a type ListenBrainz declares no capability for`() = runTest {
+        // Given - a request for SIMILAR_ARTISTS, a type ListenBrainz has no endpoint for
         val request = EnrichmentRequest.ForArtist(
             identifiers = EnrichmentIdentifiers(musicBrainzId = "a74b1b7f-71a5-4011-9441-d0b5e4122711"),
             name = "Radiohead",

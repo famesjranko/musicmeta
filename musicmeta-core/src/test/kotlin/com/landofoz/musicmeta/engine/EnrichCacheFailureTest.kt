@@ -43,7 +43,7 @@ class EnrichCacheFailureTest {
     @Test fun `enrich falls through to the provider when the cache read throws`() = runTest {
         // Given - a cache holding a result, but whose get() throws
         val p = provider(art("fresh"))
-        cache.put(DefaultEnrichmentEngine.entityKeyFor(req, artType), artType, art("cached"))
+        cache.put(DefaultEnrichmentEngine.entityKeyFor(req, artType), artType, art("cached"), CanonicalStatus.RESOLVED)
         cache.failing = setOf(CacheOp.GET)
 
         // When - enriching that type
@@ -69,7 +69,7 @@ class EnrichCacheFailureTest {
     @Test fun `forceRefresh returns fresh data rather than stale when invalidate throws`() = runTest {
         // Given - a stale cache entry, fresh provider data, and a cache whose invalidate() throws
         val p = provider(art("fresh"))
-        cache.put(DefaultEnrichmentEngine.entityKeyFor(req, artType), artType, art("stale"))
+        cache.put(DefaultEnrichmentEngine.entityKeyFor(req, artType), artType, art("stale"), CanonicalStatus.RESOLVED)
         cache.failing = setOf(CacheOp.INVALIDATE)
 
         // When - forcing a refresh
@@ -93,26 +93,63 @@ class EnrichCacheFailureTest {
         assertTrue(results.raw[artType] is EnrichmentResult.Error)
     }
 
-    @Test fun `a failed primary invalidation still invalidates the name-alias key`() = runTest {
-        // Given - an MBID-carrying request, so forceRefresh invalidates a primary and an alias key,
-        // with both keys populated and only the primary key's invalidate() throwing
+    @Test fun `fake cache invalidation removes every state channel for the addressed tuple`() = runTest {
+        // Given - the test cache carrying stale data, bookkeeping, and manual state for one tuple
+        val entityKey = DefaultEnrichmentEngine.entityKeyFor(req, artType)
+        val key = "$entityKey:$artType"
+        cache.expiredStore[key] = art("stale")
+        cache.storedTtls[key] = 60_000
+        cache.storedStatuses[key] = CanonicalStatus.RESOLVED
+        cache.markManuallySelected(entityKey, artType)
+
+        // When - invalidating that tuple
+        cache.invalidate(entityKey, artType)
+
+        // Then - stale reads, bookkeeping, and manual selection cannot reappear
+        assertNull(cache.getIncludingExpired(entityKey, artType))
+        assertFalse(key in cache.storedTtls)
+        assertFalse(key in cache.storedStatuses)
+        assertFalse(cache.isManuallySelected(entityKey, artType))
+    }
+
+    @Test fun `fake cache clear removes every state channel`() = runTest {
+        // Given - the test cache carrying positive, stale, bookkeeping, and manual state
+        val entityKey = DefaultEnrichmentEngine.entityKeyFor(req, artType)
+        val key = "$entityKey:$artType"
+        cache.put(entityKey, artType, art("stored"), CanonicalStatus.RESOLVED, ttlMs = 60_000)
+        cache.expiredStore[key] = art("stale")
+        cache.markManuallySelected(entityKey, artType)
+
+        // When - clearing the entire cache
+        cache.clear()
+
+        // Then - no state channel retains the addressed tuple
+        assertFalse(key in cache.stored)
+        assertFalse(key in cache.expiredStore)
+        assertFalse(key in cache.storedTtls)
+        assertFalse(key in cache.storedStatuses)
+        assertFalse(cache.isManuallySelected(entityKey, artType))
+    }
+
+    @Test fun `a failed primary invalidation preserves a conflicting bare-name key`() = runTest {
+        // Given - an MBID-carrying request with both exact and bare-name entries, and only the
+        // exact tuple's invalidate() throwing
         val mbidReq = EnrichmentRequest.ForAlbum(
             EnrichmentIdentifiers(musicBrainzId = "mbid-123"), "OK Computer", "Radiohead",
         )
         val p = provider(art("fresh"))
         val primaryKey = DefaultEnrichmentEngine.entityKeyFor(mbidReq, artType)
         val aliasKey = DefaultEnrichmentEngine.entityKeyForName(mbidReq, artType)
-        cache.put(primaryKey, artType, art("stale"))
-        cache.put(aliasKey, artType, art("stale-alias"))
+        cache.put(primaryKey, artType, art("stale"), CanonicalStatus.RESOLVED)
+        cache.put(aliasKey, artType, art("stale-alias"), CanonicalStatus.RESOLVED)
         cache.failing = setOf(CacheOp.INVALIDATE)
         cache.failingKey = primaryKey
 
         // When - forcing a refresh
         engine(p).enrich(mbidReq, setOf(artType), forceRefresh = true)
 
-        // Then - the alias invalidation still ran, so a later name-only lookup cannot be
-        // served the stale alias entry that the failed primary key aborted early
-        assertFalse("alias key should have been invalidated", "$aliasKey:$artType" in cache.stored)
+        // Then - the bare-name entry remains isolated from the exact tuple's failed invalidation
+        assertTrue("bare-name entry should be preserved", "$aliasKey:$artType" in cache.stored)
     }
 
     // --- the guard itself ---
@@ -193,7 +230,7 @@ class EnrichCacheFailureTest {
         // the caller, not just the unit test. This is the failure #61 describes end to end.
         val p = provider(art("fresh"))
         cache = object : FakeEnrichmentCache() {
-            override suspend fun get(entityKey: String, type: EnrichmentType): EnrichmentResult.Success? =
+            override suspend fun get(entityKey: String, type: EnrichmentType): CacheEnvelope<EnrichmentResult.Success>? =
                 withTimeout(1) {
                     delay(1_000)
                     null

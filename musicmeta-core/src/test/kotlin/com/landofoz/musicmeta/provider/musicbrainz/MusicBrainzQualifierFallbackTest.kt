@@ -351,4 +351,192 @@ class MusicBrainzQualifierFallbackTest {
         // Then - it matches text typed with a straight apostrophe
         assertEquals("collector's edition", result)
     }
+
+    // --- qualifierFallbackCandidates: dash-form suffixes ---
+
+    @Test
+    fun `a terminal dash-remaster suffix is peeled into a second candidate`() {
+        // Given - a spaced-hyphen suffix that is entirely qualifier vocabulary
+        val title = "Starman - 2012 Remaster"
+
+        // When - fallback candidates are generated
+        val candidates = MusicBrainzQualifierFallback.qualifierFallbackCandidates(title)
+
+        // Then - the bare title follows, carrying the remaster/2012 tag that was stripped
+        assertEquals(2, candidates.size)
+        assertEquals("Starman", candidates[1].title)
+        assertEquals(listOf("remaster"), candidates[1].removedTags.map { it.kind })
+        assertEquals(listOf("2012"), candidates[1].removedTags.map { it.year })
+    }
+
+    @Test
+    fun `Remastered Version is accepted vocabulary, dash form`() {
+        // Given - the full "Remastered Version" phrase, with a year in the supported prefix position
+        val title = "Starman - 2012 Remastered Version"
+
+        // When - fallback candidates are generated
+        val candidates = MusicBrainzQualifierFallback.qualifierFallbackCandidates(title)
+
+        // Then - it strips as a remaster tag, same as the bare "Remaster" phrasing
+        assertEquals("Starman", candidates[1].title)
+        assertEquals(listOf("remaster"), candidates[1].removedTags.map { it.kind })
+        assertEquals(listOf("2012"), candidates[1].removedTags.map { it.year })
+    }
+
+    @Test
+    fun `Remastered Version is accepted vocabulary, bracket form`() {
+        // Given - the same phrase in the existing bracket syntax, so the two shapes cannot drift
+        val title = "Starman (2012 Remastered Version)"
+
+        // When - fallback candidates are generated
+        val candidates = MusicBrainzQualifierFallback.qualifierFallbackCandidates(title)
+
+        // Then - it strips exactly as the dash form does
+        assertEquals("Starman", candidates[1].title)
+        assertEquals(listOf("remaster"), candidates[1].removedTags.map { it.kind })
+        assertEquals(listOf("2012"), candidates[1].removedTags.map { it.year })
+    }
+
+    @Test
+    fun `an en dash and an em dash terminal suffix both strip`() {
+        // Given - the same qualifier suffix written with an en dash and an em dash
+        val enDash = "Heroes – 2017 Remaster"
+        val emDash = "Album — Deluxe Edition"
+
+        // When - fallback candidates are generated for each
+        val enDashCandidates = MusicBrainzQualifierFallback.qualifierFallbackCandidates(enDash)
+        val emDashCandidates = MusicBrainzQualifierFallback.qualifierFallbackCandidates(emDash)
+
+        // Then - both peel into their bare titles
+        assertEquals("Heroes", enDashCandidates[1].title)
+        assertEquals("Album", emDashCandidates[1].title)
+        assertEquals(listOf("deluxe"), emDashCandidates[1].removedTags.map { it.kind })
+    }
+
+    @Test
+    fun `a preceding identity-bearing dash suffix survives one terminal peel`() {
+        // Given - two stacked dash groups, only the last of which is qualifier vocabulary
+        val title = "Song - Original Single Mix - 2012 Remaster"
+
+        // When - fallback candidates are generated
+        val candidates = MusicBrainzQualifierFallback.qualifierFallbackCandidates(title)
+
+        // Then - exactly one dash group is peeled; the preceding suffix is never touched
+        assertEquals(2, candidates.size)
+        assertEquals("Song - Original Single Mix", candidates[1].title)
+        assertEquals(listOf("remaster"), candidates[1].removedTags.map { it.kind })
+    }
+
+    @Test
+    fun `an unspaced dash never generates a candidate`() {
+        // Given - a hyphen with no surrounding whitespace, unlike the spaced form this fallback targets
+        val title = "Song-2012 Remaster"
+
+        // When - fallback candidates are generated
+        val candidates = MusicBrainzQualifierFallback.qualifierFallbackCandidates(title)
+
+        // Then - the title is left whole
+        assertEquals(1, candidates.size)
+    }
+
+    @Test
+    fun `a plain-word dash suffix never generates a candidate`() {
+        // Given - a dash-separated word that names a different recording, not vocabulary
+        val title = "Love - Hate"
+
+        // When - fallback candidates are generated
+        val candidates = MusicBrainzQualifierFallback.qualifierFallbackCandidates(title)
+
+        // Then - nothing is stripped
+        assertEquals(1, candidates.size)
+    }
+
+    @Test
+    fun `identity-bearing dash suffixes never generate a candidate`() {
+        // Given - suffixes that each name a different edition rather than a pressing/reissue
+        val titles = listOf(
+            "Song - Live",
+            "Song - Live at Wembley",
+            "Song - Radio Edit",
+            "Song - Mono Version",
+            "Song - Alternate Version",
+            "Song - Version",
+            "Song - Acoustic",
+            "Song - 2024 Remix",
+            "Song - Not Remastered",
+        )
+
+        // When - fallback candidates are generated for each
+        val results = titles.map { it to MusicBrainzQualifierFallback.qualifierFallbackCandidates(it) }
+
+        // Then - none of them strip
+        for ((title, candidates) in results) {
+            assertEquals("$title should have no fallback candidate", 1, candidates.size)
+        }
+    }
+
+    @Test
+    fun `a mixed dash suffix with one non-conforming phrase never generates a candidate`() {
+        // Given - a comma-separated suffix where one sub-phrase is not vocabulary
+        val title = "Song - Original Single Mix, 2012 Remastered Version"
+
+        // When - fallback candidates are generated
+        val candidates = MusicBrainzQualifierFallback.qualifierFallbackCandidates(title)
+
+        // Then - the whole suffix must conform, so a mixed one never strips
+        assertEquals(1, candidates.size)
+    }
+
+    @Test
+    fun `a slash-separated dash suffix with one non-conforming phrase never generates a candidate`() {
+        // Given - a slash-separated suffix where one sub-phrase is not vocabulary
+        val title = "Song - Live / 2012 Remaster"
+
+        // When - fallback candidates are generated
+        val candidates = MusicBrainzQualifierFallback.qualifierFallbackCandidates(title)
+
+        // Then - the whole suffix must conform, so a mixed one never strips
+        assertEquals(1, candidates.size)
+    }
+
+    @Test
+    fun `Version alone is not independently removable`() {
+        // Given - the bare word "Version" carries no qualifier meaning on its own
+        val titles = listOf("Song - Version", "Song (Version)", "Song - Alternate Version")
+
+        // When - fallback candidates are generated for each
+        val results = titles.map { it to MusicBrainzQualifierFallback.qualifierFallbackCandidates(it) }
+
+        // Then - none of them strip
+        for ((title, candidates) in results) {
+            assertEquals("$title should have no fallback candidate", 1, candidates.size)
+        }
+    }
+
+    @Test
+    fun `an arbitrary dash phrase never generates a candidate`() {
+        // Given - a suffix with no relationship to the qualifier vocabulary at all
+        val title = "Song - A Tribute To Nobody In Particular"
+
+        // When - fallback candidates are generated
+        val candidates = MusicBrainzQualifierFallback.qualifierFallbackCandidates(title)
+
+        // Then - nothing is stripped
+        assertEquals(1, candidates.size)
+    }
+
+    @Test
+    fun `a title that resolves in full never reaches the dash step`() {
+        // Given - the exact-first contract: this function only ever generates candidates, callers
+        // decide when to use them, but the dash-peeled candidate is still present even when the
+        // full title would itself resolve — the caller's exact-first search is what skips it
+        val title = "Starman - 2012 Remaster"
+
+        // When - fallback candidates are generated
+        val candidates = MusicBrainzQualifierFallback.qualifierFallbackCandidates(title)
+
+        // Then - the caller's own text is still the first candidate, unstripped
+        assertEquals(title, candidates.first().title)
+        assertTrue(candidates.first().removedTags.isEmpty())
+    }
 }

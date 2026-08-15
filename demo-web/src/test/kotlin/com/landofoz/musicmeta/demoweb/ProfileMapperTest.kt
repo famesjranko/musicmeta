@@ -3,6 +3,7 @@ package com.landofoz.musicmeta.demoweb
 import com.landofoz.musicmeta.AlbumProfile
 import com.landofoz.musicmeta.ArtistProfile
 import com.landofoz.musicmeta.ArtworkSource
+import com.landofoz.musicmeta.CanonicalStatus
 import com.landofoz.musicmeta.DiscographyAlbum
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
@@ -11,7 +12,6 @@ import com.landofoz.musicmeta.EnrichmentResults
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.GenreTag
 import com.landofoz.musicmeta.IdentifierNamespace
-import com.landofoz.musicmeta.IdentityMatch
 import com.landofoz.musicmeta.IdentityResolution
 import com.landofoz.musicmeta.PopularitySignal
 import com.landofoz.musicmeta.PopularitySignalKind
@@ -30,7 +30,7 @@ class ProfileMapperTest {
                 type to EnrichmentResult.Success(type, data, provider = "test", confidence = 1.0f)
             },
             requestedTypes = entries.map { it.first }.toSet(),
-            identity = null,
+            identity = identityOf(CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED),
         )
 
     @Test
@@ -77,7 +77,7 @@ class ProfileMapperTest {
             requestedTypes = emptySet(),
             identity = IdentityResolution(
                 identifiers = EnrichmentIdentifiers(),
-                match = IdentityMatch.SUGGESTIONS,
+                status = CanonicalStatus.AMBIGUOUS,
                 matchScore = null,
                 suggestions = suggestions,
             ),
@@ -97,7 +97,7 @@ class ProfileMapperTest {
     @Test
     fun `did-you-mean section absent when no suggestions`() {
         // Given - an album profile whose results carry no identity resolution at all
-        val results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = null)
+        val results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED))
         val profile = AlbumProfile(title = "OK Computer", artist = "Radiohead", results = results)
 
         // When - mapping to a demo response
@@ -604,10 +604,10 @@ class ProfileMapperTest {
         assertEquals(listOf("Ride", "Ride Live"), discography.items.map { it.primary })
     }
 
-    private fun identityOf(match: IdentityMatch): com.landofoz.musicmeta.IdentityResolution =
+    private fun identityOf(status: CanonicalStatus): com.landofoz.musicmeta.IdentityResolution =
         com.landofoz.musicmeta.IdentityResolution(
             identifiers = EnrichmentIdentifiers(),
-            match = match,
+            status = status,
             matchScore = null,
             suggestions = emptyList(),
         )
@@ -615,7 +615,7 @@ class ProfileMapperTest {
     @Test
     fun `artist summary identityResolved false on BEST_EFFORT`() {
         // Given - an artist profile whose identity resolution matched with BEST_EFFORT
-        val results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(IdentityMatch.BEST_EFFORT))
+        val results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(CanonicalStatus.UNRESOLVED))
         val profile = ArtistProfile(name = "Metallica", results = results)
 
         // When - mapping to a demo response
@@ -628,7 +628,7 @@ class ProfileMapperTest {
     @Test
     fun `artist summary identityResolved false on SUGGESTIONS`() {
         // Given - an artist profile whose identity resolution matched with SUGGESTIONS
-        val results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(IdentityMatch.SUGGESTIONS))
+        val results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(CanonicalStatus.AMBIGUOUS))
         val profile = ArtistProfile(name = "Metallica", results = results)
 
         // When - mapping to a demo response
@@ -641,7 +641,7 @@ class ProfileMapperTest {
     @Test
     fun `artist summary identityResolved false on UNVERIFIED and verdict passes through`() {
         // Given - an artist profile whose identity resolution matched with UNVERIFIED
-        val results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(IdentityMatch.UNVERIFIED))
+        val results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(CanonicalStatus.FAILED))
         val profile = ArtistProfile(name = "Metallica", results = results)
 
         // When - mapping to a demo response
@@ -649,7 +649,7 @@ class ProfileMapperTest {
 
         // Then - the summary reports identity as not resolved and passes the UNVERIFIED verdict through
         assertEquals(false, response.summary.identityResolved)
-        assertEquals("UNVERIFIED", response.summary.identityVerdict)
+        assertEquals("FAILED", response.summary.identityVerdict)
     }
 
     @Test
@@ -657,7 +657,7 @@ class ProfileMapperTest {
         // Given - identityOf() builds with empty suggestions, so no "did_you_mean" section gets built —
         // the frontend must not infer the verdict from section presence (it would land on
         // "Best-effort match" instead of "No exact match" if it did).
-        val results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(IdentityMatch.SUGGESTIONS))
+        val results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(CanonicalStatus.AMBIGUOUS))
         val profile = ArtistProfile(name = "Metallica", results = results)
 
         // When - mapping to a demo response
@@ -665,20 +665,20 @@ class ProfileMapperTest {
 
         // Then - the "did_you_mean" section is absent but the verdict and resolved flag are still carried
         assertNull(response.sections.firstOrNull { it.key == "did_you_mean" })
-        assertEquals("SUGGESTIONS", response.summary.identityVerdict)
+        assertEquals("AMBIGUOUS", response.summary.identityVerdict)
         assertEquals(false, response.summary.identityResolved)
     }
 
     @Test
     fun `artist summary identityResolved true on RESOLVED and on null identity`() {
-        // Given - one artist profile resolved with IdentityMatch.RESOLVED and one with no identity at all
+        // Given - one artist profile resolved with CanonicalStatus.RESOLVED and one with no identity at all
         val resolved = ArtistProfile(
             name = "Metallica",
-            results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(IdentityMatch.RESOLVED)),
+            results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(CanonicalStatus.RESOLVED)),
         ).toDemoResponse(elapsedMs = 0)
         val noIdentity = ArtistProfile(
             name = "Metallica",
-            results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = null),
+            results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED)),
         ).toDemoResponse(elapsedMs = 0)
 
         // When - mapping both to demo responses (done above as part of construction)
@@ -694,13 +694,13 @@ class ProfileMapperTest {
         val bestEffort = AlbumProfile(
             title = "Master of Puppets",
             artist = "Metallica",
-            results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(IdentityMatch.BEST_EFFORT)),
+            results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(CanonicalStatus.UNRESOLVED)),
         ).toDemoResponse(elapsedMs = 0)
         // When - mapping the BEST_EFFORT and SUGGESTIONS profiles to demo responses
         val suggestions = AlbumProfile(
             title = "Master of Puppets",
             artist = "Metallica",
-            results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(IdentityMatch.SUGGESTIONS)),
+            results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(CanonicalStatus.AMBIGUOUS)),
         ).toDemoResponse(elapsedMs = 0)
 
         // Then - both report identity as not resolved
@@ -714,13 +714,13 @@ class ProfileMapperTest {
         val resolved = AlbumProfile(
             title = "Master of Puppets",
             artist = "Metallica",
-            results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(IdentityMatch.RESOLVED)),
+            results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(CanonicalStatus.RESOLVED)),
         ).toDemoResponse(elapsedMs = 0)
         // When - mapping both profiles to demo responses
         val noIdentity = AlbumProfile(
             title = "Master of Puppets",
             artist = "Metallica",
-            results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = null),
+            results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED)),
         ).toDemoResponse(elapsedMs = 0)
 
         // Then - both report identity as resolved
@@ -734,13 +734,13 @@ class ProfileMapperTest {
         val bestEffort = TrackProfile(
             title = "Enter Sandman",
             artist = "Metallica",
-            results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(IdentityMatch.BEST_EFFORT)),
+            results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(CanonicalStatus.UNRESOLVED)),
         ).toDemoResponse(elapsedMs = 0)
         // When - mapping both profiles to demo responses
         val suggestions = TrackProfile(
             title = "Enter Sandman",
             artist = "Metallica",
-            results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(IdentityMatch.SUGGESTIONS)),
+            results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(CanonicalStatus.AMBIGUOUS)),
         ).toDemoResponse(elapsedMs = 0)
 
         // Then - both suppress the preview title and artist alongside a not-resolved identity
@@ -758,13 +758,13 @@ class ProfileMapperTest {
         val resolved = TrackProfile(
             title = "Enter Sandman",
             artist = "Metallica",
-            results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(IdentityMatch.RESOLVED)),
+            results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(CanonicalStatus.RESOLVED)),
         ).toDemoResponse(elapsedMs = 0)
         // When - mapping both profiles to demo responses
         val noIdentity = TrackProfile(
             title = "Enter Sandman",
             artist = "Metallica",
-            results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = null),
+            results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED)),
         ).toDemoResponse(elapsedMs = 0)
 
         // Then - both populate the preview title and artist alongside a resolved identity
@@ -782,7 +782,7 @@ class ProfileMapperTest {
     @Test
     fun `album drops artist_radio section when identity not resolved`() {
         // Given - an album profile whose identity resolution matched with SUGGESTIONS
-        val results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(IdentityMatch.SUGGESTIONS))
+        val results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(CanonicalStatus.AMBIGUOUS))
         val profile = AlbumProfile(title = "Master of Puppets", artist = "Metallica", results = results)
 
         // When - mapping to a demo response with an artist_radio section supplied
@@ -795,7 +795,7 @@ class ProfileMapperTest {
     @Test
     fun `album keeps artist_radio section when identity resolved`() {
         // Given - an album profile whose identity resolution matched with RESOLVED
-        val results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(IdentityMatch.RESOLVED))
+        val results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(CanonicalStatus.RESOLVED))
         val profile = AlbumProfile(title = "Master of Puppets", artist = "Metallica", results = results)
 
         // When - mapping to a demo response with an artist_radio section supplied
@@ -808,7 +808,7 @@ class ProfileMapperTest {
     @Test
     fun `track drops artist_radio section when identity not resolved`() {
         // Given - a track profile whose identity resolution matched with SUGGESTIONS
-        val results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(IdentityMatch.SUGGESTIONS))
+        val results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(CanonicalStatus.AMBIGUOUS))
         val profile = TrackProfile(title = "Enter Sandman", artist = "Metallica", results = results)
 
         // When - mapping to a demo response with an artist_radio section supplied
@@ -821,7 +821,7 @@ class ProfileMapperTest {
     @Test
     fun `track keeps artist_radio section when identity resolved`() {
         // Given - a track profile whose identity resolution matched with RESOLVED
-        val results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(IdentityMatch.RESOLVED))
+        val results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(CanonicalStatus.RESOLVED))
         val profile = TrackProfile(title = "Enter Sandman", artist = "Metallica", results = results)
 
         // When - mapping to a demo response with an artist_radio section supplied
@@ -846,7 +846,7 @@ class ProfileMapperTest {
             requestedTypes = emptySet(),
             identity = IdentityResolution(
                 identifiers = identifiers,
-                match = IdentityMatch.RESOLVED,
+                status = CanonicalStatus.RESOLVED,
                 matchScore = null,
                 suggestions = emptyList(),
             ),
@@ -878,7 +878,7 @@ class ProfileMapperTest {
             requestedTypes = emptySet(),
             identity = IdentityResolution(
                 identifiers = identifiers,
-                match = IdentityMatch.RESOLVED,
+                status = CanonicalStatus.RESOLVED,
                 matchScore = null,
                 suggestions = emptyList(),
             ),
@@ -972,7 +972,7 @@ class ProfileMapperTest {
     }
 
     @Test
-    fun `artist summary carries genre chips and no longer joins genres into the subtitle`() {
+    fun `artist summary carries genre chips and leaves the subtitle unset`() {
         // Given - an artist whose GENRE metadata carries a curated tag and a community tag
         val results = resultsOf(
             EnrichmentType.GENRE to EnrichmentData.Metadata(
@@ -996,7 +996,7 @@ class ProfileMapperTest {
             response.summary.genres,
         )
 
-        // Then - the subtitle no longer carries the joined genre names
+        // Then - the subtitle stays unset rather than carrying a joined genre list
         assertNull(response.summary.subtitle)
     }
 
@@ -1018,7 +1018,7 @@ class ProfileMapperTest {
     }
 
     @Test
-    fun `details sections no longer carry a joined Genres row`() {
+    fun `details sections carry genre chips instead of a joined Genres row`() {
         // Given - an album and a track that both resolved genres
         val genreData = EnrichmentData.Metadata(
             genres = listOf("shoegaze"),
@@ -1061,7 +1061,7 @@ class ProfileMapperTest {
                 ),
             ),
             requestedTypes = setOf(EnrichmentType.GENRE),
-            identity = null,
+            identity = identityOf(CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED),
         )
         val artist = ArtistProfile(name = "Metallica", results = results)
 

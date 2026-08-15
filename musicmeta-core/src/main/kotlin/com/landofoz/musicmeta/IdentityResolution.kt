@@ -1,24 +1,20 @@
 package com.landofoz.musicmeta
 
 /**
- * Top-level identity resolution outcome for an enrichment request.
+ * Top-level identity resolution outcome for an enrichment request, on [EnrichmentResults.identity].
  *
- * This is set by the engine after MusicBrainz identity resolution and captures
- * the result once, rather than requiring consumers to scan individual results.
- *
- * `null` on [EnrichmentResults.identity] means identity resolution was not
- * attempted (MBID was pre-provided, all types cached, or resolution disabled).
- * A resolution that was attempted but failed is never `null` — it carries
- * [IdentityMatch.UNVERIFIED].
+ * Set by the engine exactly once per call, so a consumer never has to scan individual results to
+ * learn whether MusicBrainz confirmed the entity. Always present — [status] carries every reason
+ * resolution did not run, so nothing here is ever read as "absent means confident".
  */
 data class IdentityResolution(
     /** Resolved identifiers (MBIDs, Wikidata, Wikipedia). */
     val identifiers: EnrichmentIdentifiers,
-    /** How the identity resolution went. */
-    val match: IdentityMatch?,
-    /** Match score (0-100), same scale as [SearchCandidate.score]. Only set when [match] is [IdentityMatch.RESOLVED]. */
-    val matchScore: Int?,
-    /** Near-miss candidates when [match] is [IdentityMatch.SUGGESTIONS]. */
+    /** Canonical resolution outcome for this call. */
+    val status: CanonicalStatus,
+    /** Match score (0-100), same scale as [SearchCandidate.score]. Only set when [status] is [CanonicalStatus.RESOLVED]. */
+    val matchScore: Int? = null,
+    /** Near-miss candidates when [status] is [CanonicalStatus.AMBIGUOUS]. */
     val suggestions: List<SearchCandidate> = emptyList(),
     /**
      * Canonical title of the resolved entity — an artist's name on an artist request, as on

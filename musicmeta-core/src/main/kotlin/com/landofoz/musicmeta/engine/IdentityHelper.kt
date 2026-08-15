@@ -1,11 +1,11 @@
 package com.landofoz.musicmeta.engine
 
+import com.landofoz.musicmeta.CanonicalStatus
 import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.IdentifierRequirement
-import com.landofoz.musicmeta.IdentityMatch
 import com.landofoz.musicmeta.IdentityResolution
 
 /**
@@ -18,68 +18,58 @@ import com.landofoz.musicmeta.IdentityResolution
  * search instead, and [names] stays null: a search hit is what a name matched, not what an
  * identifier named, so it never backfills these fields. A resolution that named nothing leaves
  * both null rather than echoing the request back as if it had been confirmed.
+ *
+ * [notAttemptedStatus] is only consulted when [identityResult] is `null` — the caller has already
+ * worked out *why* nothing ran (disabled, not required, or no provider registered) since that
+ * reason is not recoverable from a bare `null`.
  */
 internal fun buildIdentityResolution(
     identityResult: EnrichmentResult?,
     enrichedRequest: EnrichmentRequest,
     names: EntityNames?,
-): IdentityResolution? = when (identityResult) {
+    notAttemptedStatus: CanonicalStatus,
+): IdentityResolution = when (identityResult) {
     is EnrichmentResult.Success -> IdentityResolution(
         identifiers = identityResult.resolvedIdentifiers ?: enrichedRequest.identifiers,
-        match = IdentityMatch.RESOLVED,
+        status = CanonicalStatus.RESOLVED,
         matchScore = (identityResult.confidence * 100).toInt(),
         title = names?.title,
         artist = names?.artist,
     )
     is EnrichmentResult.NotFound -> IdentityResolution(
         identifiers = enrichedRequest.identifiers,
-        match = if (identityResult.suggestions != null) IdentityMatch.SUGGESTIONS else IdentityMatch.BEST_EFFORT,
-        matchScore = null,
+        status = if (identityResult.suggestions != null) CanonicalStatus.AMBIGUOUS else CanonicalStatus.UNRESOLVED,
         suggestions = identityResult.suggestions.orEmpty(),
         title = names?.title,
         artist = names?.artist,
     )
     // Error / RateLimited: the provider was asked and failed, which must stay distinguishable
-    // from null ("resolution was not attempted") — a transient failure is not a confident match.
+    // from a not-attempted status — a transient failure is not a confident match.
     is EnrichmentResult.Error, is EnrichmentResult.RateLimited -> IdentityResolution(
         identifiers = enrichedRequest.identifiers,
-        match = IdentityMatch.UNVERIFIED,
-        matchScore = null,
+        status = CanonicalStatus.FAILED,
         title = names?.title,
         artist = names?.artist,
     )
-    null -> null
+    null -> IdentityResolution(identifiers = enrichedRequest.identifiers, status = notAttemptedStatus)
 }
 
-/** Stamps [IdentityMatch] and score on all freshly resolved results. */
-internal fun stampIdentityMatch(
+/**
+ * Stamps [com.landofoz.musicmeta.LookupProvenance] on every freshly resolved [EnrichmentResult.Success]
+ * that did not already report its own route. [executions] carries the [ChainExecution] each type's
+ * chain walk produced — the provider execution evidence [observedProvenance] classifies from, rather
+ * than which identifiers merely happen to be present on [request].
+ */
+internal fun stampProvenance(
     results: MutableMap<EnrichmentType, EnrichmentResult>,
-    identityResult: EnrichmentResult?,
+    canonicalStatus: CanonicalStatus,
+    executions: Map<EnrichmentType, ChainExecution>,
 ) {
-    when (identityResult) {
-        is EnrichmentResult.Success -> {
-            val score = (identityResult.confidence * 100).toInt()
-            for ((type, result) in results) {
-                if (result is EnrichmentResult.Success && result.identityMatch == null) {
-                    results[type] = result.copy(identityMatch = IdentityMatch.RESOLVED, identityMatchScore = score)
-                }
-            }
+    for ((type, result) in results) {
+        if (result is EnrichmentResult.Success && result.provenance == null) {
+            val provenance = observedProvenance(executions[type]?.winningRequirement, canonicalStatus)
+            results[type] = result.copy(provenance = provenance)
         }
-        is EnrichmentResult.NotFound -> {
-            for ((type, result) in results) {
-                if (result is EnrichmentResult.Success && result.identityMatch == null) {
-                    results[type] = result.copy(identityMatch = IdentityMatch.BEST_EFFORT)
-                }
-            }
-        }
-        is EnrichmentResult.Error, is EnrichmentResult.RateLimited -> {
-            for ((type, result) in results) {
-                if (result is EnrichmentResult.Success && result.identityMatch == null) {
-                    results[type] = result.copy(identityMatch = IdentityMatch.UNVERIFIED)
-                }
-            }
-        }
-        null -> {}
     }
 }
 

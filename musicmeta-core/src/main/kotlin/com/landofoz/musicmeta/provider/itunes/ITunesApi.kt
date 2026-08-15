@@ -69,19 +69,18 @@ internal class ITunesApi(
      * with `resultCount: 0` means "no album carries this barcode", so an empty return is absence,
      * never an outage.
      *
-     * Returns every `collection` result, not one — a barcode can be reused across editions or, per
-     * the ticket that added this call, even land on entirely unrelated real entries (a probed
-     * placeholder barcode alone returned 24). **The caller must still filter by artist name before
-     * trusting a hit**, the same gate the search paths apply; this call only proves "iTunes indexes
-     * this barcode somewhere", not "this is the right album".
+     * Returns every `collection` result, not one — a barcode can be reused across editions or can
+     * identify entries for more than one artist. **The caller must still filter by artist name
+     * before trusting a hit**, the same gate the search paths apply; this call only proves
+     * "iTunes indexes this barcode somewhere", not "this is the right album".
      *
      * ISRC has no equivalent: `lookup?isrc=` returns `200 resultCount: 0` for an ISRC known to be
      * in catalogue, so it is silently unsupported rather than broken — do not add an `isrc`
      * parameter to this call assuming the same shape works.
      *
      * Apple answers some malformed parameters the same way it answers a genuine miss — `200` with
-     * an `errorMessage` body and no `results` key — so if `upc`'s shape ever changes upstream, every
-     * barcode album goes quietly `NotFound` while the circuit breaker stays healthy.
+     * an `errorMessage` body and no `results` key — so a response without `results` is treated as
+     * an ordinary miss while the circuit breaker stays healthy.
      */
     suspend fun lookupByUpc(upc: String): List<ITunesAlbumResult> {
         val encoded = URLEncoder.encode(upc, "UTF-8")

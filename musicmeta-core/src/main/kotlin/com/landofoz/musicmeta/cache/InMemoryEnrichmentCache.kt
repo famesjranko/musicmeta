@@ -1,5 +1,7 @@
 package com.landofoz.musicmeta.cache
 
+import com.landofoz.musicmeta.CacheEnvelope
+import com.landofoz.musicmeta.CanonicalStatus
 import com.landofoz.musicmeta.EnrichmentCache
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
@@ -18,43 +20,55 @@ class InMemoryEnrichmentCache(
     private val negativeEntries = LinkedHashMap<String, NegativeEntry>(maxEntries, 0.75f, true)
     private val manualSelections = mutableSetOf<String>()
 
-    override suspend fun get(entityKey: String, type: EnrichmentType): EnrichmentResult.Success? = mutex.withLock {
+    override suspend fun get(
+        entityKey: String,
+        type: EnrichmentType,
+    ): CacheEnvelope<EnrichmentResult.Success>? = mutex.withLock {
         val key = cacheKey(entityKey, type)
         val entry = entries[key] ?: return null
         if (clock() > entry.expiresAt) { return null }
-        entry.result
+        CacheEnvelope(entry.result, entry.canonicalStatus)
     }
 
     override suspend fun getIncludingExpired(
         entityKey: String,
         type: EnrichmentType,
-    ): EnrichmentResult.Success? = mutex.withLock {
-        entries[cacheKey(entityKey, type)]?.result
+    ): CacheEnvelope<EnrichmentResult.Success>? = mutex.withLock {
+        entries[cacheKey(entityKey, type)]?.let { CacheEnvelope(it.result, it.canonicalStatus) }
     }
 
-    override suspend fun put(entityKey: String, type: EnrichmentType, result: EnrichmentResult.Success, ttlMs: Long) {
+    override suspend fun put(
+        entityKey: String,
+        type: EnrichmentType,
+        result: EnrichmentResult.Success,
+        canonicalStatus: CanonicalStatus,
+        ttlMs: Long,
+    ) {
         mutex.withLock {
-            entries[cacheKey(entityKey, type)] = CacheEntry(result, clock() + ttlMs)
+            entries[cacheKey(entityKey, type)] = CacheEntry(result, canonicalStatus, clock() + ttlMs)
             while (entries.size > maxEntries) entries.remove(entries.keys.first())
         }
     }
 
-    override suspend fun getNegative(entityKey: String, type: EnrichmentType): EnrichmentResult.NotFound? =
-        mutex.withLock {
-            val key = cacheKey(entityKey, type)
-            val entry = negativeEntries[key] ?: return null
-            if (clock() > entry.expiresAt) { return null }
-            entry.result
-        }
+    override suspend fun getNegative(
+        entityKey: String,
+        type: EnrichmentType,
+    ): CacheEnvelope<EnrichmentResult.NotFound>? = mutex.withLock {
+        val key = cacheKey(entityKey, type)
+        val entry = negativeEntries[key] ?: return null
+        if (clock() > entry.expiresAt) { return null }
+        CacheEnvelope(entry.result, entry.canonicalStatus)
+    }
 
     override suspend fun putNegative(
         entityKey: String,
         type: EnrichmentType,
         result: EnrichmentResult.NotFound,
+        canonicalStatus: CanonicalStatus,
         ttlMs: Long,
     ) {
         mutex.withLock {
-            negativeEntries[cacheKey(entityKey, type)] = NegativeEntry(result, clock() + ttlMs)
+            negativeEntries[cacheKey(entityKey, type)] = NegativeEntry(result, canonicalStatus, clock() + ttlMs)
             while (negativeEntries.size > maxEntries) negativeEntries.remove(negativeEntries.keys.first())
         }
     }
@@ -62,11 +76,14 @@ class InMemoryEnrichmentCache(
     override suspend fun invalidate(entityKey: String, type: EnrichmentType?) {
         mutex.withLock {
             if (type != null) {
-                entries.remove(cacheKey(entityKey, type))
-                negativeEntries.remove(cacheKey(entityKey, type))
+                val key = cacheKey(entityKey, type)
+                entries.remove(key)
+                negativeEntries.remove(key)
+                manualSelections.remove(key)
             } else {
                 entries.keys.removeAll { it.startsWith("$entityKey:") }
                 negativeEntries.keys.removeAll { it.startsWith("$entityKey:") }
+                manualSelections.removeAll { it.startsWith("$entityKey:") }
             }
         }
     }
@@ -84,6 +101,16 @@ class InMemoryEnrichmentCache(
     }
 
     private fun cacheKey(entityKey: String, type: EnrichmentType) = "$entityKey:$type"
-    private data class CacheEntry(val result: EnrichmentResult.Success, val expiresAt: Long)
-    private data class NegativeEntry(val result: EnrichmentResult.NotFound, val expiresAt: Long)
+
+    private data class CacheEntry(
+        val result: EnrichmentResult.Success,
+        val canonicalStatus: CanonicalStatus,
+        val expiresAt: Long,
+    )
+
+    private data class NegativeEntry(
+        val result: EnrichmentResult.NotFound,
+        val canonicalStatus: CanonicalStatus,
+        val expiresAt: Long,
+    )
 }

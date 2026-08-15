@@ -32,7 +32,7 @@ enrich(request, types, forceRefresh)
 ┌────────────────────────────┐
 │ 1. Force Invalidate        │── forceRefresh=false ──→ skip
 └─────────────┬──────────────┘
-              │ forceRefresh=true → invalidate MBID key + name alias key
+              │ forceRefresh=true → invalidate request-tuple key + eligible canonical alias
               ▼
 ┌────────────────────────────┐
 │ 2. Cache Check             │── all hit ──→ return cached
@@ -46,7 +46,7 @@ enrich(request, types, forceRefresh)
 └─────────────┬────────────────────────────┘
               │ outcomes:
               │   success → merge IDs into request, continue
-              │   suggestions → short-circuit: all types → NotFound
+              │   suggestions → kept at the top level; fan-out still runs (step 4)
               │   not needed → skip (MBID already provided)
               ▼
 ┌────────────────────────────────────────────────────┐
@@ -74,12 +74,12 @@ enrich(request, types, forceRefresh)
               │
               ▼
 ┌────────────────────────────┐
-│ 8. Identity Stamp          │── mark RESOLVED/BEST_EFFORT/UNVERIFIED + score
+│ 8. Provenance Stamp        │── mark provider results with LookupProvenance
 └─────────────┬──────────────┘
               │
               ▼
 ┌────────────────────────────┐
-│ 9. Cache Store + Alias     │── save with TTL + name alias (skip stale results)
+│ 9. Cache Store + Alias     │── save with TTL + eligible canonical alias (skip stale results)
 └─────────────┬──────────────┘
               │
               ▼
@@ -88,11 +88,20 @@ enrich(request, types, forceRefresh)
 
 ### Step 1: Force Refresh Invalidation
 
-When `forceRefresh=true`, the engine invalidates cache entries for all requested types before proceeding. Both the primary key (MBID-based when available) and the name alias key (title+artist) are invalidated so stale data can't survive under either key.
+When `forceRefresh=true`, the engine invalidates the complete request-tuple cache entry for every
+requested type before proceeding. Any eligible canonical alias established by identity resolution
+is invalidated as well, so stale data cannot survive under either key. The same tuple policy applies
+to direct requests and transitive composite dependencies.
 
 ### Step 2: Cache Check
 
-For each requested type, the engine checks the cache using the primary entity key (MBID if available, otherwise title+artist). Cache hits go directly into the result map. Only cache misses proceed to resolution. If every type is a cache hit, the engine returns immediately — no identity resolution or API calls needed.
+For each requested type, the engine checks the cache using a versioned, collision-free encoding of
+the complete request tuple: scope and type, names, album/track selector inputs, every explicit
+identifier, and sorted extra fields. Composite types use the same complete tuple for their
+transitive dependency routes. An exact-bearing request never falls back to a bare-name key, and a
+different tuple is never treated as equivalent merely because it contains the same MBID or provider
+id. Cache hits go directly into the result map; only misses proceed to resolution. If every type is
+a hit, the engine returns without identity resolution or provider calls.
 
 ### Step 3: Identity Resolution
 
@@ -121,9 +130,14 @@ These identifiers are merged into the request via `request.withIdentifiers(merge
 
 **ListenBrainz was measured against this and lost** (2026-08-12). `GET /1/metadata/recording/` is keyless, on a 2.5/s limiter, and answers a recording MBID with its name in one request — but a *non*-recording MBID and a dead one both come back `{}`, so it cannot tell "not a recording" from "not held". A miss therefore still pays the MusicBrainz release and artist lookups, making LB-first 1 request cheaper only when the id is a recording and 1 request dearer on every other outcome — including the dead case, which was seven in ten of a real third-party population (1212 of 1710, 2026-08-12). It would also add a failure mode this has none of: an LB 5xx is an outage and must never read as absence. Recorded so it is not re-proposed.
 
-**Cache alias:** a result the engine resolved from an identifier is also written under the name key, so a later name-only lookup finds it. For an identifier-only request that key carries MusicBrainz's canonical name — there is no caller name to alias under, and the canonical one is what a later name lookup would ask with.
+**Cache alias:** when canonical resolution supplies names for the request, the result may also be
+written under the corresponding identifier-free name/selector key so a later name-only lookup can
+reuse the canonically selected entity. An exact-bearing request never reads through that alias, and
+a provider-native exact-id result is not implicitly aliased to a bare name. The tuple key itself is
+versioned; a format change intentionally causes a one-time miss. Custom cache implementations must
+treat keys as opaque.
 
-**Suggestions short-circuit:** If MusicBrainz can't find an exact match but has near-miss candidates, all uncached types are immediately set to `NotFound` with the suggestion list attached. The consumer can present these as "Did you mean?" choices and re-enrich with the selected candidate.
+**Suggestions do not veto the fan-out:** If MusicBrainz can't find an exact match but has near-miss candidates, that is a statement about MusicBrainz's own lookup, not a global "nothing can be fetched" decision. Every uncached type still resolves through step 4 exactly as it would under a plain unresolved identity — each provider's own `ProviderChain` eligibility (availability, identifier requirements, circuit breaker) decides whether it runs. A `NONE`-identifier provider like Deezer's track preview search still answers; an MBID-only provider without an MBID still doesn't. Surviving `Success` results carry a `LookupProvenance` reflecting the fuzzy search that produced them (step 8), while the call's `CanonicalStatus` stays `AMBIGUOUS`. The suggestion list itself is attached once, to `EnrichmentResults.identity`, never copied onto a per-type result — the consumer can present it as "Did you mean?" and re-enrich with the selected candidate.
 
 ### Step 4: Concurrent Type Resolution
 
@@ -185,22 +199,80 @@ For recommendation types only (SIMILAR_ARTISTS, SIMILAR_ALBUMS, ARTIST_RADIO, AR
 
 This lets a music player show only recommendations the user can actually play.
 
-### Step 7: Identity Match Stamping
+### Step 7: Identity Model
 
-Each Success result is stamped with identity resolution metadata:
+Two independent facts describe an `enrich()` call, never one merged value:
 
-| `identityMatch` | Meaning |
-|-----------------|---------|
-| `RESOLVED` | MusicBrainz found a confident match. `identityMatchScore` (0–100) indicates match quality. |
-| `BEST_EFFORT` | Identity resolution searched and found no match. Results came from unverified fuzzy searches. |
-| `UNVERIFIED` | The identity provider errored (usually transient). Same fuzzy results, but a retry may resolve — and they are not cached. |
-| `null` | Identity resolution wasn't needed (MBID pre-provided, cached, or disabled). |
+- `EnrichmentResults.identity.status: CanonicalStatus` — the MusicBrainz canonical resolution
+  outcome for this call, set exactly once. Never `null`: every reason resolution did not run has
+  its own explicit state, so a consumer can never mistake "not attempted" for "confident".
+- `EnrichmentResult.Success.provenance: LookupProvenance` — how that specific provider selected
+  the entity behind its own result. This describes that provider's own lookup, not whether
+  MusicBrainz agreed.
 
-This lets consumers decide how much to trust results — a `RESOLVED` match with score 95 is much more reliable than `BEST_EFFORT`.
+| `CanonicalStatus` | Meaning |
+|---|---|
+| `RESOLVED` | MusicBrainz confirmed the entity. `identity.matchScore` (0–100) indicates match quality. |
+| `AMBIGUOUS` | MusicBrainz found no confident match, but offered candidates. See `identity.suggestions`. |
+| `UNRESOLVED` | MusicBrainz searched and found neither a match nor candidates. |
+| `FAILED` | The identity provider errored (usually transient); a retry may resolve. |
+| `NOT_ATTEMPTED_DISABLED` | `EnrichmentConfig.enableIdentityResolution` is `false`. |
+| `NOT_ATTEMPTED_NOT_REQUIRED` | The request already carried every identifier the requested types needed. |
+| `NOT_ATTEMPTED_CACHE_HIT` | Every requested type was served from cache; no live attempt ran this call. |
+| `NOT_ATTEMPTED_NO_PROVIDER` | Resolution was needed, but no identity provider is registered. |
+
+An all-cache-hit call (every requested type served from cache) always reports
+`NOT_ATTEMPTED_CACHE_HIT`, regardless of what status any cached entry was written under. Each
+`CacheEnvelope.canonicalStatus` is retained as historical evidence for that entry alone — the
+status the live call that wrote it carried — but it is never surfaced as this call's status: a
+config change between the write and this read (e.g. identity resolution toggled) would make a
+replayed status false for the call actually reporting it.
+
+| `LookupProvenance` | Meaning |
+|---|---|
+| `CANONICAL_ID` | Looked up directly by a MusicBrainz canonical id. |
+| `PROVIDER_NATIVE_ID` | Looked up directly by a provider-native id supplied on the request. |
+| `EXTERNAL_CATALOG_ID` | Looked up directly by an external catalogue id (e.g. a UPC barcode) supplied on the request. |
+| `EXACT_NAME` | Selected by a name search MusicBrainz canonically confirmed this call. |
+| `QUALIFIER_FALLBACK_NAME` | Selected after normalization or qualifier-fallback stripping. |
+| `FUZZY_NAME` | Selected by an unverified fuzzy name search; MusicBrainz did not confirm this call. |
+| `CACHE` | Served from cache by an implementation that could not recover the original provenance. |
+
+A merged type (e.g. `GENRE`) or a synthesized composite type (e.g. `ARTIST_TIMELINE`) has no single
+provider's route of its own: its `provenance` is the weakest of its contributing results', so it
+never reads more confident than its least-confident contributor.
+
+A consumer deciding how much to trust results reads both: `status == RESOLVED` with a high
+`matchScore` is confident; any `AMBIGUOUS`/`UNRESOLVED`/`FAILED` status means every result this
+call produced is a fuzzy or ambiguous guess, whatever `provenance` an individual result carries.
+
+Migrating from the removed `IdentityMatch`:
+
+| Old | New |
+|---|---|
+| `IdentityMatch.RESOLVED` (call-level) | `CanonicalStatus.RESOLVED` |
+| `IdentityMatch.SUGGESTIONS` | `CanonicalStatus.AMBIGUOUS` |
+| `IdentityMatch.BEST_EFFORT` | `CanonicalStatus.UNRESOLVED` |
+| `IdentityMatch.UNVERIFIED` | `CanonicalStatus.FAILED` |
+| `identity == null` (disabled) | `CanonicalStatus.NOT_ATTEMPTED_DISABLED` |
+| `identity == null` (not required) | `CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED` |
+| `identity == null` (all cached) | `CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT` |
+| `identity == null` (no provider) | `CanonicalStatus.NOT_ATTEMPTED_NO_PROVIDER` |
+| `Success.identityMatch` (per-result) | `Success.provenance: LookupProvenance` |
 
 ### Step 8: Cache Store
 
-Successful results are cached with per-type TTLs:
+No fresh result — success or `NotFound` — is cached for a call whose canonical status is
+`AMBIGUOUS`, `UNRESOLVED`, or `FAILED`: the entry would read back as a cache hit indistinguishable
+from a confident one, losing the ambiguity or outage. A `NotFound` is also never negative-cached
+when its own chain skipped a provider for a missing identifier, resolved identity or not — a
+provider that was never asked cannot speak for "nothing found". Successful results reached under
+`RESOLVED` (or any `NOT_ATTEMPTED_*` status) are cached with per-type TTLs, alongside the call's own
+`canonicalStatus`, as a `CacheEnvelope`. `EnrichmentCache.get`/`getNegative` return that whole
+envelope, not just the stored result, so a cache hit's `Success.provenance` replays the original
+live lookup's value rather than a generic `CACHE`. The stored status remains historical evidence
+for that entry; the current all-cache-hit call status is always
+`NOT_ATTEMPTED_CACHE_HIT`.
 - Artwork: 30–90 days (photos 30d, album art 90d)
 - Genres/labels/metadata: 90–365 days
 - Popularity/stats: 7 days
@@ -332,6 +404,6 @@ Prevents hammering a down provider and slowing the entire pipeline.
 - Provider failure → chain tries next provider at lower priority
 - Timeout → returns partial results (whatever finished within `enrichTimeoutMs`)
 - Individual type failure → other types still resolve
-- Identity resolution found no match → results continue with `BEST_EFFORT` match quality
-- Identity provider errored → results continue with `UNVERIFIED` match quality, uncached so a retry can heal
+- Identity resolution found no match → results continue under `CanonicalStatus.UNRESOLVED`/`AMBIGUOUS`
+- Identity provider errored → results continue under `CanonicalStatus.FAILED`, uncached so a retry can heal
 - Catalog provider unavailable → recommendations returned unfiltered

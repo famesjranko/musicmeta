@@ -1,6 +1,7 @@
 package com.landofoz.musicmeta.provider.deezer
 
 import com.landofoz.musicmeta.engine.ArtistMatcher
+import com.landofoz.musicmeta.engine.TitleMatcher
 import com.landofoz.musicmeta.engine.bestArtistMatch
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
@@ -148,25 +149,16 @@ internal class DeezerApi(
     /**
      * Finds the track a human would mean by [title]/[artist], optionally narrowed by [album].
      *
-     * Same disease as [searchArtist] (`docs/pitfalls.md` §7), one hop further: Deezer's plain
-     * `q=<artist> <title>` query not only orders candidates untrustworthily, it can omit the
-     * studio original from the pool entirely when a live/remix take is more popular — measured
-     * live 2026-08-06: neither "Harvester of Sorrow"'s nor "Blackened"'s studio take appeared
-     * anywhere in the plain query's top 5. The advanced field query `artist:"…" track:"…"` does
-     * return the studio take (first, in both measurements), with or without an `album:"…"` field —
-     * so the field query is the primary query even when no [album] hint exists, not an
-     * album-only refinement. Ranking alone cannot compensate: a studio take absent from the pool
-     * cannot be ranked into first place.
+     * The advanced field query narrows the pool to the requested artist and title, with an optional
+     * album field when [album] is supplied. A plain keyword query is the final fallback.
      *
      * The queries run narrowest-first, and a tier falls through when it yields no candidate that
-     * survives the [ArtistMatcher] filter (a raw-but-all-wrong-artist pool is as useless as an
-     * empty one): field query with `album:` (titles drift across editions, so its misses are
-     * expected) → field query without `album:` (a literal `"` in any field breaks the syntax and
-     * returns zero, observed live) → plain keyword query as the last resort.
+     * survives the [ArtistMatcher] filter: field query with an album hint, field query without the
+     * hint, then the plain keyword query.
      *
-     * Whichever query produced the pool, it is then ranked — the original `for` loop here returned
-     * hit 0 unconditionally, so a five-candidate pool never mattered. [rankTracks] is this
-     * provider's version of [ArtistMatcher]-driven pool ranking; see its KDoc for the tier order.
+     * Whichever query produced the pool, [ArtistMatcher] and [TitleMatcher] must accept a candidate
+     * before it is ranked. [rankTracks] applies the provider's tier order to the accepted pool. A
+     * tier with no accepted candidate falls through like an empty one.
      */
     suspend fun searchTrack(title: String, artist: String, album: String? = null): DeezerTrackSearchResult? {
         val queries = buildList {
@@ -178,6 +170,7 @@ internal class DeezerApi(
             val candidates = fetchTrackPool(url)
                 .orEmpty()
                 .filter { ArtistMatcher.isMatch(artist, it.optJSONObject("artist")?.optString("name", "").orEmpty()) }
+                .filter { TitleMatcher.equivalent(title, it.optString("title", "")) }
             if (candidates.isNotEmpty()) {
                 return candidates.rankTracks(title, artist, album)?.toTrackSearchResult()
             }
@@ -270,7 +263,7 @@ internal class DeezerApi(
     /**
      * True when [candidateTitle] carries an edition marker that [requestedTitle] does not ask
      * for. A marker the request itself contains (a genuine request for the live take) is not
-     * penalised. Two shapes, both observed live:
+     * penalised. Two shapes are supported:
      *
      * - a parenthetical containing a live/remaster/demo/remix word — "(Live In Mexico City)"
      * - a bare suffix appended to the requested title — Deezer titles the "Blackened" remix
@@ -353,10 +346,8 @@ internal class DeezerApi(
      * classification ([bodyOrThrowTransient]), then Deezer's own application-level one.
      *
      * Deezer answers application errors with **HTTP 200** and an `error` object in place of the
-     * payload, so no HTTP-layer classification can see them — `{"error":{"type":"DataException",
-     * "message":"no data","code":800}}` was observed live for a missing artist. Left alone, every
-     * caller's `optJSONArray("data")` reads that as an empty result, and a throttled Deezer records
-     * a breaker *success* while answering "nothing" to everything (`docs/pitfalls.md` §4).
+     * payload, so no HTTP-layer classification can see them. Treating that body as an empty result
+     * would record a breaker *success* while answering "nothing" to everything (`docs/pitfalls.md` §4).
      *
      * The split: `code == 4` is the quota rejection, thrown as [IOException] so it travels the
      * provider's existing `catch { mapError(type, e) }` into `Error(ErrorKind.NETWORK)`. Any other

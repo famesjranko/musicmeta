@@ -1,12 +1,23 @@
 package com.landofoz.musicmeta
 
 /**
+ * A cached [result] paired with the [canonicalStatus] the live call reported when it was written.
+ * Historical evidence only: a cache hit never replays it as the current call's status — every
+ * cache-hit call reports [CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT] regardless of what is stored
+ * here, since a status earned under a past engine configuration cannot speak for this call's.
+ */
+data class CacheEnvelope<out T : EnrichmentResult>(
+    val result: T,
+    val canonicalStatus: CanonicalStatus,
+)
+
+/**
  * Stores enrichment results for reuse across sessions.
  * Implementations may be in-memory (LRU), Room-backed, or custom.
  */
 interface EnrichmentCache {
 
-    suspend fun get(entityKey: String, type: EnrichmentType): EnrichmentResult.Success?
+    suspend fun get(entityKey: String, type: EnrichmentType): CacheEnvelope<EnrichmentResult.Success>?
 
     /**
      * Returns a cached result even if expired. Used by STALE_IF_ERROR mode
@@ -15,12 +26,21 @@ interface EnrichmentCache {
      * Default returns null — custom implementations that don't support
      * stale serving remain backward compatible.
      */
-    suspend fun getIncludingExpired(entityKey: String, type: EnrichmentType): EnrichmentResult.Success? = null
+    suspend fun getIncludingExpired(entityKey: String, type: EnrichmentType): CacheEnvelope<EnrichmentResult.Success>? =
+        null
 
+    /**
+     * [canonicalStatus] is the call's [IdentityResolution.status] that made [result] eligible to
+     * cache — [EnrichmentEngine.enrich] only calls this for a status the cache may serve back with
+     * no loss of confidence. [EnrichmentResult.Success.provenance] on [result] is what a hit later
+     * replays; [canonicalStatus] rides back on [get]'s [CacheEnvelope] as historical evidence only
+     * — a cache-hit call always reports [CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT] regardless of it.
+     */
     suspend fun put(
         entityKey: String,
         type: EnrichmentType,
         result: EnrichmentResult.Success,
+        canonicalStatus: CanonicalStatus,
         ttlMs: Long = DEFAULT_TTL_MS,
     )
 
@@ -36,7 +56,7 @@ interface EnrichmentCache {
      * A cache that delegates to another [EnrichmentCache] must forward this call and
      * [putNegative], or negative caching silently disappears through it.
      */
-    suspend fun getNegative(entityKey: String, type: EnrichmentType): EnrichmentResult.NotFound? = null
+    suspend fun getNegative(entityKey: String, type: EnrichmentType): CacheEnvelope<EnrichmentResult.NotFound>? = null
 
     /**
      * Caches a "providers had nothing" answer for [ttlMs]. Default is a no-op, pairing with
@@ -45,8 +65,15 @@ interface EnrichmentCache {
      * reporting an absence a caller just asked to forget. A delegating cache must forward this
      * call and [getNegative], or negative caching silently disappears through it.
      */
-    suspend fun putNegative(entityKey: String, type: EnrichmentType, result: EnrichmentResult.NotFound, ttlMs: Long) {}
+    suspend fun putNegative(
+        entityKey: String,
+        type: EnrichmentType,
+        result: EnrichmentResult.NotFound,
+        canonicalStatus: CanonicalStatus,
+        ttlMs: Long,
+    ) {}
 
+    /** Clears positive, negative, and manual-selection state for the addressed key and type(s). */
     suspend fun invalidate(entityKey: String, type: EnrichmentType? = null)
 
     suspend fun isManuallySelected(entityKey: String, type: EnrichmentType): Boolean

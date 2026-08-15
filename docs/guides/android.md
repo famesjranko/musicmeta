@@ -31,10 +31,10 @@ val engine = EnrichmentEngine.Builder()
     .build()
 ```
 
-`EnrichmentCacheDatabase.create()` registers every migration for you, so it opens an on-device v1
-or v2 file in place instead of crashing with "migration required but not found". If you need your
-own `Room.databaseBuilder` — a different `SupportSQLiteOpenHelper.Factory`, callbacks, and so on —
-register every migration yourself, as shown in the two subsections below.
+`EnrichmentCacheDatabase.create()` registers every migration for you, so it opens an on-device v1,
+v2, or v3 file in place instead of crashing with "migration required but not found". If you need
+your own `Room.databaseBuilder` — a different `SupportSQLiteOpenHelper.Factory`, callbacks, and so
+on — register every migration yourself, as shown in the subsections below.
 
 ### MIGRATION_1_2
 
@@ -57,6 +57,24 @@ it touches nothing else, and existing `enrichment_cache` rows are untouched.
 ```kotlin
 Room.databaseBuilder(context, EnrichmentCacheDatabase::class.java, "enrichment_cache.db")
     .addMigrations(EnrichmentCacheDatabase.MIGRATION_1_2, EnrichmentCacheDatabase.MIGRATION_2_3)
+    .build()
+```
+
+### MIGRATION_3_4
+
+If you used a previous version (database version 3), this migration **clears both cache tables**.
+`identity_match`/`identity_match_score` named a call-level verdict before this release; the new
+columns (`canonical_status`, `lookup_provenance`, `schema_version`) name a different fact entirely,
+and a stored v3 row cannot be reinterpreted into them. Every pre-upgrade entry becomes a cache
+miss, healed the same way any other miss is — the next live `enrich()` call refetches it.
+
+```kotlin
+Room.databaseBuilder(context, EnrichmentCacheDatabase::class.java, "enrichment_cache.db")
+    .addMigrations(
+        EnrichmentCacheDatabase.MIGRATION_1_2,
+        EnrichmentCacheDatabase.MIGRATION_2_3,
+        EnrichmentCacheDatabase.MIGRATION_3_4,
+    )
     .build()
 ```
 
@@ -198,8 +216,8 @@ class ArtistDetailViewModel @Inject constructor(
 
             val profile = engine.artistProfile(name)
 
-            when (profile.identityMatch) {
-                IdentityMatch.SUGGESTIONS -> {
+            when (profile.canonicalStatus) {
+                CanonicalStatus.AMBIGUOUS -> {
                     _uiState.value = ArtistDetailState.Disambiguation(profile.suggestions)
                 }
                 else -> {

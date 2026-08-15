@@ -4,8 +4,22 @@
 
 ```kotlin
 interface EnrichmentCache {
-    suspend fun get(entityKey: String, type: EnrichmentType): EnrichmentResult.Success?
-    suspend fun put(entityKey: String, type: EnrichmentType, result: EnrichmentResult.Success, ttlMs: Long)
+    suspend fun get(entityKey: String, type: EnrichmentType): CacheEnvelope<EnrichmentResult.Success>?
+    suspend fun put(
+        entityKey: String,
+        type: EnrichmentType,
+        result: EnrichmentResult.Success,
+        canonicalStatus: CanonicalStatus,
+        ttlMs: Long,
+    )
+    suspend fun getNegative(entityKey: String, type: EnrichmentType): CacheEnvelope<EnrichmentResult.NotFound>?
+    suspend fun putNegative(
+        entityKey: String,
+        type: EnrichmentType,
+        result: EnrichmentResult.NotFound,
+        canonicalStatus: CanonicalStatus,
+        ttlMs: Long,
+    )
     suspend fun invalidate(entityKey: String, type: EnrichmentType? = null)
     suspend fun isManuallySelected(entityKey: String, type: EnrichmentType): Boolean
     suspend fun markManuallySelected(entityKey: String, type: EnrichmentType)
@@ -40,17 +54,28 @@ For a persistent cache that survives process restarts, use `RoomEnrichmentCache`
 
 ## Cache key structure
 
-The engine generates cache keys from the normalized request:
+Each request/type uses a versioned, collision-free key over the complete request tuple. The tuple
+includes the request scope and `EnrichmentType`, all names, album/track selector inputs such as
+`trackCount`, `year`, and `durationMs`, every explicit identifier field, and sorted extra
+identifier fields. The encoding is length-delimited and implementation-private; it does not infer
+that two different tuples name the same entity. Identical tuples may replay the same cache entry.
 
-- Artist: `"artist:radiohead"`
-- Album: `"album:radiohead:ok computer"`
-- Track: `"track:radiohead:creep"`
+This deliberately keeps exact-bearing requests isolated from name-only requests. An exact-bearing
+call never reads through a bare-name alias. A canonical alias may still be written when canonical
+identity resolution supplies the names, because that resolution is the explicit evidence for the
+alias. `entityKeyForName` contains names and selector inputs but excludes identifiers.
 
-Each key is combined with the `EnrichmentType` to form the full entry key: `"artist:radiohead:GENRE"`.
+The key format is versioned so changing its contract causes a one-time cache miss rather than
+reusing an incompatible entry. Treat `entityKey` as opaque in custom cache implementations; custom
+caches must not parse or reconstruct it from request strings, and must continue to accept future
+key versions as opaque values.
 
 ### Key convergence after disambiguation
 
-When the user picks a disambiguation candidate, the re-enrichment request carries the resolved MBID. Subsequent lookups for the same entity converge to the same cache key regardless of the original query text. This means "bush" and "Bush (band)" that both resolve to the same MBID will share cached results. See [identity-resolution.md](identity-resolution.md) for the disambiguation flow.
+When canonical resolution adds an MBID to a name request, the engine may also write the result under
+the canonically resolved name alias. Subsequent lookups for that name can reuse the selected entity.
+An unvalidated provider-id result is never aliased to a bare name. See
+[identity-resolution.md](identity-resolution.md) for the disambiguation flow.
 
 ---
 
@@ -115,13 +140,15 @@ val results = engine.enrich(
 )
 ```
 
-`forceRefresh = true` clears existing cache entries for the requested types (including any manual selection flags) before fetching. The fresh results are written back to the cache normally.
+`forceRefresh = true` clears the request-tuple cache entries for the requested types (including any
+manual selection flags) before fetching. Fresh results are written back normally. The same complete
+tuple is used for direct requests and transitive composite dependencies.
 
 ---
 
 ## Manual selection
 
-The cache supports marking entries as "manually selected" — useful when a user explicitly picks artwork or corrects a result. Manually selected entries survive normal cache invalidation (they are not cleared unless explicitly overwritten or `forceRefresh` is used).
+The cache supports marking entries as "manually selected" — useful when a user explicitly picks artwork or corrects a result. Explicit invalidation, `forceRefresh`, and `clear()` remove the flag with the cached entry; an ordinary cache hit or background write does not clear it.
 
 ```kotlin
 val request = EnrichmentRequest.forArtist("Radiohead")
@@ -140,15 +167,19 @@ Use manual selection for features like user artwork overrides, where the user's 
 
 ### Manual selection via the cache directly
 
-If you need to operate on raw cache keys (e.g., in a bulk migration):
+Custom cache implementations receive the engine's opaque key and may retain it for their own
+bookkeeping. Do not reconstruct it from request strings. Given an exact key previously supplied by
+the engine, the low-level operations are:
 
 ```kotlin
-engine.cache.markManuallySelected("artist:radiohead", EnrichmentType.ARTIST_PHOTO)
-engine.cache.isManuallySelected("artist:radiohead", EnrichmentType.ARTIST_PHOTO)
-engine.cache.invalidate("artist:radiohead")             // clears all types for this entity
-engine.cache.invalidate("artist:radiohead", EnrichmentType.GENRE)  // specific type only
-engine.cache.clear()                                    // wipes the entire cache
+engine.cache.markManuallySelected(opaqueEntityKey, EnrichmentType.ARTIST_PHOTO)
+engine.cache.isManuallySelected(opaqueEntityKey, EnrichmentType.ARTIST_PHOTO)
+engine.cache.invalidate(opaqueEntityKey, EnrichmentType.ARTIST_PHOTO)
+engine.cache.clear()
 ```
+
+Application code should prefer the request-based engine methods above. Only the engine knows which
+canonical aliases apply and how the versioned tuple key is encoded.
 
 ---
 

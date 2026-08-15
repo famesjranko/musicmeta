@@ -45,6 +45,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `DefaultHttpClient` no longer publishes `MAX_RETRY_AFTER_SEC`; the 120s standalone retry ceiling moved into the shared ladder
 - `EnrichmentCache` gains defaulted `getNegative`/`putNegative`: callers are unaffected, but an implementer must recompile, or the engine's first cache miss throws `AbstractMethodError`
 - `RoomEnrichmentCache` now takes a required `negativeDao: NegativeCacheDao` (schema v3, additive migration): recompile and wire `negativeCacheDao()`, or take `EnrichmentCacheDatabase.create()`
+- Hard swap, no shim: `IdentityMatch` removed; `IdentityResolution.match` is now `.status: CanonicalStatus` (non-null); `Success`/`NotFound` drop `identityMatch(Score)`, `Success` gains `provenance`
+- `EnrichmentResults.identity` is now non-null: it always carries a `CanonicalStatus`, including every reason resolution did not run, so `identity == null` no longer compiles
+- `EnrichmentCache.put`/`putNegative` gain a required `canonicalStatus: CanonicalStatus` parameter (no default): a custom cache implementation must recompile and pass the call's status
+- Android cache schema bumps to v4 (`MIGRATION_3_4`): `identity_match`/`_score` named a different fact and cannot be reinterpreted, so the migration clears both tables and the next call refetches
+- `EnrichmentCacheEntity`/`NegativeCacheEntity` gain `canonicalStatus`/`isStale` fields: binary-incompatible until recompile for a caller constructing or `copy()`-ing them directly
+- Old→new `IdentityMatch`/`identity == null` mapping — see `docs/how-it-works.md` "Step 7: Identity Model" for the full table
+- `EnrichmentCache.get`/`getIncludingExpired`/`getNegative` now return `CacheEnvelope<...>?` instead of a bare result: recompile, and read `.result` where you read the old return value directly
+- That return-type change is a suspend-fun descriptor erasure the `.api` diff cannot show; treat it as breaking regardless — `docs/pitfalls.md` "The published surface"
+- `LookupProvenance.EXTERNAL_CATALOG_ID` distinguishes direct catalogue lookups such as iTunes UPC from provider-native ids; exhaustive `when`s need a branch
+- `EnrichmentCacheDao` gains defaulted `insertPreservingManual`: Room callers are unaffected, but a custom implementation must recompile before it is called
 
 ### Added
 - `EnrichmentRequest.forTrackByMbid`/`forAlbumByMbid`/`forArtistByMbid`: request an entity by MBID alone; identity resolution fills the names the other providers search by
@@ -86,6 +96,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `build()` warns from the User-Agent the wire will carry: the contactless default meeting MusicBrainz/Wikipedia/Wikidata, `contact()` after `withDefaultProviders()`, or `contact()` with your client
 
 ### Fixed
+- MusicBrainz now reports `QUALIFIER_FALLBACK_NAME` when a stripped candidate, not the literal title, resolved a track or album; an exact-title match still reports `EXACT_NAME`
+- An all-cache-hit call now always reports `NOT_ATTEMPTED_CACHE_HIT`; it no longer replays a cached `NOT_ATTEMPTED_*` reason that a later config change could make false
+- `RoomEnrichmentCache` and `InMemoryEnrichmentCache` now read back the `canonicalStatus` they persist on write, closing the write-only gap the previous audit found
+- Deezer track search now accepts a candidate's title (exact or equivalent-qualifier match) before ranking it, rather than ranking any right-artist pool; a wholly unrelated title is no longer returned
+- LRCLIB's search fallback now rejects a candidate whose artist or title it cannot identify, rather than taking the first search hit unconditionally
 - Remove any retrying OkHttp interceptor: it cannot see the enrich deadline, so its retries are unbudgeted and now stack on the ladder
 - A caller-supplied `httpClient()` only silences the contactless-User-Agent warning when it built the wire's only client; one set after `withDefaultProviders()` still warns
 - An artist named by one of its MusicBrainz aliases now resolves: the search asked `artist:"…"` only, which does not reach the alias index, so a localised or former name found nothing
@@ -133,6 +148,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A transient on Cover Art Archive's thumbnail/front-image or Discogs's community-rating fetch discarded an already-resolved artwork/metadata answer; both now degrade the optional field instead
 - MusicBrainz artist name search (GENRE/BAND_MEMBERS/ARTIST_DISCOGRAPHY/ARTIST_LINKS) is now memoized per `enrich()` call; an unknown artist cost 7 upstream searches, now 2
 - A track's qualifier-fallback search (`(Remastered)`, `(Deluxe)`, …) now shares the per-call memo the raw search already had, instead of re-running once per type on a miss
+- A canonical identity `NotFound` carrying suggestions no longer vetoes every other provider: an eligible one still runs and can return `BEST_EFFORT` data alongside the top-level suggestions
+- MusicBrainz album/track lookup now recognizes a dash-form reissue suffix (`Starman - 2012 Remaster`) after an exact-title miss, matching the existing conservative bracketed-qualifier fallback
+- Deezer album lookup now rejects a right-artist result whose title is unrelated and ranks accepted editions instead of trusting search order
+- iTunes album search now accepts and ranks a candidate's title, not just its artist, and shares one selection across ALBUM_ART, ALBUM_METADATA and ALBUM_TRACKS
+- Discogs album search now validates the returned album title as well as artist, parsing its combined `"Artist - Title"` field safely, before using release data
+- Discogs combined-title parsing now finds the real artist/title boundary when the requested artist itself contains ` - `, instead of stopping at the first artist-plausible prefix
+- `Success.provenance` is now observed from the winning provider's own route, not guessed from identifiers merely present on the request: an MBID no longer mislabels a name search `CANONICAL_ID`
+- An all-cache-hit `Success` now reports `provenance = CACHE` instead of `null` when the cache that served it did not preserve the original lookup's route
+- Deezer's artist-id, iTunes's collection-id/artist-id, and Discogs's `CREDITS`/`RELEASE_EDITIONS` branches now self-report `provenance = PROVIDER_NATIVE_ID`; iTunes UPC uses `EXTERNAL_CATALOG_ID`
+- A merged or synthesized `Success` (e.g. `GENRE`, `ARTIST_TIMELINE`) now reports its weakest contributor's `provenance` instead of one fabricated from canonical status alone
+- Cache keys now encode the complete request tuple: scope/type, names, selectors, all explicit identifiers, and sorted extras; only identical tuples replay
+- Exact-bearing calls never read name aliases; canonical aliases require names supplied by identity resolution. Custom caches must treat keys as opaque
+- The cache-key format change intentionally causes a one-time miss for existing entries; no cross-tuple entity equivalence is inferred
+- Cache backends now agree on manual selections: invalidation removes them, while an ordinary positive-cache write preserves an existing selection
+- `TitleMatcher` no longer strips an identity-bearing internal quote, or accepts mismatched terminal brackets (`Song (Live]` no longer equals `Song (Live)`)
+- LRCLIB's album/duration ranking no longer scores a candidate missing that evidence as though it agreed with the request; only an explicit match may outrank one silent on the same field
+- demo-web's "Clear cached result & reload" now invalidates the identifier-bearing preview tuple, not only the name tuple, so the entry named by the following reload is actually cleared
 
 ## [0.11.0] - 2026-07-28
 

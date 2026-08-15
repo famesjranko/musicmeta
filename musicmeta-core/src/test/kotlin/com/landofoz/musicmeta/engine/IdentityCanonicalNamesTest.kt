@@ -1,10 +1,10 @@
 package com.landofoz.musicmeta.engine
 
+import com.landofoz.musicmeta.CanonicalStatus
 import com.landofoz.musicmeta.EnrichmentConfig
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.IdentifierRequirement
-import com.landofoz.musicmeta.IdentityMatch
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzProvider
@@ -66,9 +66,9 @@ class IdentityCanonicalNamesTest {
 
         // Then - the identity carries the canonical title and the joined artist-credit, so a caller
         // holding only the identifier can label what it named
-        assertEquals(IdentityMatch.RESOLVED, results.identity?.match)
-        assertEquals("Under Pressure", results.identity?.title)
-        assertEquals("Queen & David Bowie", results.identity?.artist)
+        assertEquals(CanonicalStatus.RESOLVED, results.identity.status)
+        assertEquals("Under Pressure", results.identity.title)
+        assertEquals("Queen & David Bowie", results.identity.artist)
     }
 
     @Test
@@ -84,8 +84,8 @@ class IdentityCanonicalNamesTest {
 
         // Then - the name arrives as the title, the vocabulary an artist SearchCandidate already
         // uses, and no artist credit is invented beside it
-        assertEquals("Queen", results.identity?.title)
-        assertNull(results.identity?.artist)
+        assertEquals("Queen", results.identity.title)
+        assertNull(results.identity.artist)
     }
 
     @Test
@@ -102,8 +102,8 @@ class IdentityCanonicalNamesTest {
 
         // Then - the identity reports what the identifier named, which is not what the caller asked
         // with; the request's own fields still hold the caller's variant
-        assertEquals("Under Pressure", results.identity?.title)
-        assertEquals("Queen & David Bowie", results.identity?.artist)
+        assertEquals("Under Pressure", results.identity.title)
+        assertEquals("Queen & David Bowie", results.identity.artist)
     }
 
     @Test
@@ -120,8 +120,8 @@ class IdentityCanonicalNamesTest {
 
         // Then - the identity carries the release's own title and artist credit, reached before the
         // type fan-out that follows resolution
-        assertEquals("My Generation - The Soundtrack of Our Lives, Part One", results.identity?.title)
-        assertEquals("Various Artists", results.identity?.artist)
+        assertEquals("My Generation - The Soundtrack of Our Lives, Part One", results.identity.title)
+        assertEquals("Various Artists", results.identity.artist)
     }
 
     @Test
@@ -135,8 +135,8 @@ class IdentityCanonicalNamesTest {
 
         // Then - both names stay null rather than being filled with a guess or with the blank
         // request the caller made
-        assertNull(results.identity?.title)
-        assertNull(results.identity?.artist)
+        assertNull(results.identity.title)
+        assertNull(results.identity.artist)
     }
 
     private companion object {

@@ -1,11 +1,14 @@
 package com.landofoz.musicmeta.demoweb
 
 import com.landofoz.musicmeta.ApiKeyConfig
+import com.landofoz.musicmeta.CanonicalStatus
 import com.landofoz.musicmeta.EnrichmentData
+import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentResults
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
+import com.landofoz.musicmeta.IdentityResolution
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.ProviderInfo
 import org.junit.Assert.assertEquals
@@ -25,7 +28,11 @@ class ServerTest {
         EnrichmentResult.NotFound(type, "test")
 
     private fun results(raw: Map<EnrichmentType, EnrichmentResult>) =
-        EnrichmentResults(raw = raw, requestedTypes = raw.keys, identity = null)
+        EnrichmentResults(
+            raw = raw,
+            requestedTypes = raw.keys,
+            identity = IdentityResolution(EnrichmentIdentifiers(), CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED),
+        )
 
     @Test
     fun `a warm-up that threw is classified DEGRADED regardless of any result`() {

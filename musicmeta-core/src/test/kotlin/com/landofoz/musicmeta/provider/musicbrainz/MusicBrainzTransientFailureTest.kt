@@ -152,7 +152,7 @@ class MusicBrainzTransientFailureTest {
         // When - resolving identity for the track
         val result = provider.resolveIdentity(EnrichmentRequest.forTrack("Enter Sandmanz Xyzqq", "Metallica"))
 
-        // Then - NotFound carrying the near miss, so IdentityMatch.SUGGESTIONS becomes reachable
+        // Then - NotFound carrying the near miss, so CanonicalStatus.AMBIGUOUS becomes reachable
         assertTrue(
             "Expected NotFound, got ${result::class.simpleName}",
             result is EnrichmentResult.NotFound,

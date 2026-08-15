@@ -184,7 +184,10 @@ pollHealth();
 
 // Fills the form and runs a search — shared by the "Try:" buttons and by clicking an
 // internal-navigation target (SectionItem.enrich / SummaryCard.subtitleEnrich) elsewhere on the page.
-function fillAndRun(kind, name, artist, album) {
+// `ids` is the row's encoded WireIdentifiers, when it carried one — threading it means running
+// the exact lookup a precise row already knows rather than the ambiguous name/artist search the
+// form fields alone would produce, so it bypasses the form and goes straight to a `pick`-style run.
+function fillAndRun(kind, name, artist, album, ids) {
   currentKind = kind;
   nameEl.value = name || '';
   artistEl.value = artist || '';
@@ -192,7 +195,11 @@ function fillAndRun(kind, name, artist, album) {
   saveValues(currentKind);
   syncArtistField();
   clearCandidates();
-  runQuery();
+  if (ids) {
+    runQuery(false, false, { kind, name, artist: artist || '', album: album || '', ids });
+  } else {
+    runQuery();
+  }
 }
 
 document.getElementById('examples').addEventListener('click', (e) => {
@@ -231,12 +238,12 @@ async function runQuery(refresh, replay, pick) {
     return;
   }
 
-  let kind, name, artist, album;
+  let kind, name, artist, album, ids;
   if (refresh || replay) {
     if (!lastQuery) return;
-    ({ kind, name, artist, album } = lastQuery);
+    ({ kind, name, artist, album, ids } = lastQuery);
   } else if (pick) {
-    ({ kind, name, artist = '', album = '' } = pick);
+    ({ kind, name, artist = '', album = '', ids } = pick);
   } else {
     kind = currentKind;
     name = nameEl.value.trim();
@@ -258,12 +265,13 @@ async function runQuery(refresh, replay, pick) {
   resultEl.innerHTML = '<div class="loading-panel"><span class="spinner"></span>Calling providers — this can take a few seconds…</div>';
 
   const params = new URLSearchParams({ kind, name, artist, album });
+  if (ids) params.set('ids', ids);
   if (refresh) params.set('refresh', 'true');
   try {
     const res = await fetch('/api/enrich?' + params.toString());
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
-    lastQuery = { kind, name, artist, album };
+    lastQuery = { kind, name, artist, album, ids };
     render(data, !!refresh);
   } catch (err) {
     statusEl.className = 'err';
@@ -420,19 +428,19 @@ function render(data, wasForceRefresh) {
   const genres = genreChipsHtml(summary.genres);
 
   // An unresolved identity must not render the raw query as a confident title.
-  const unresolvedTitle = summary.identityVerdict === 'SUGGESTIONS'
+  const unresolvedTitle = summary.identityVerdict === 'AMBIGUOUS'
     ? `No exact match for &ldquo;${esc(data.name)}&rdquo;`
     : null;
-  const unverified = summary.identityVerdict === 'UNVERIFIED';
-  const bestEffortBadge = summary.identityVerdict === 'BEST_EFFORT'
+  const unverified = summary.identityVerdict === 'FAILED';
+  const bestEffortBadge = summary.identityVerdict === 'UNRESOLVED'
     ? '<span class="badge badge-warn">Best-effort match</span>'
     : unverified
       ? '<span class="badge badge-warn">Unverified — lookup failed</span>'
       : '';
   const titleHtml = unresolvedTitle || esc(summary.title);
 
-  // UNVERIFIED means the identity lookup errored (usually transiently) — distinct from
-  // BEST_EFFORT's "searched, no match". Retry is manual only: an automatic re-run under
+  // FAILED means the identity lookup errored (usually transiently) — distinct from
+  // UNRESOLVED's "searched, no match". Retry is manual only: an automatic re-run under
   // concurrent load compounds the very starvation that produced the failure.
   const unverifiedBanner = unverified
     ? `<div class="identity-banner">
@@ -538,12 +546,13 @@ function setupTextToggle() {
   }
 }
 
-// Data-attributes carrying an EnrichTarget (kind/name/artist/album) for the click-delegation
-// handler below. Every value goes through esc() like any other interpolated field.
+// Data-attributes carrying an EnrichTarget (kind/name/artist/album/identifiers) for the
+// click-delegation handler below. Every value goes through esc() like any other interpolated field.
 function enrichAttrs(enrich) {
   if (!enrich) return '';
+  const idsAttr = enrich.identifiers ? ` data-enrich-ids="${esc(JSON.stringify(enrich.identifiers))}"` : '';
   return ` data-enrich-kind="${esc(enrich.kind)}" data-enrich-name="${esc(enrich.name)}"` +
-    ` data-enrich-artist="${esc(enrich.artist || '')}" data-enrich-album="${esc(enrich.album || '')}"`;
+    ` data-enrich-artist="${esc(enrich.artist || '')}" data-enrich-album="${esc(enrich.album || '')}"` + idsAttr;
 }
 
 function sectionHtml(section, unverified) {
@@ -554,7 +563,7 @@ function sectionHtml(section, unverified) {
       : it.enrich
         ? `<span class="enrich-link">${esc(it.primary)}</span>`
         : esc(it.primary);
-    const preview = previewButtonHtml(it.previewTitle, it.previewArtist, it.previewAlbum);
+    const preview = previewButtonHtml(it.previewTitle, it.previewArtist, it.previewAlbum, it.identifiers);
     return `
       <li class="${rowClass.trim()}"${enrichAttrs(it.enrich)}>
         ${it.imageUrl ? `<img src="${esc(it.imageUrl)}" alt="" onerror="this.remove()" />` : ''}
@@ -618,9 +627,10 @@ window.addEventListener('resize', () => {
   resizeTimer = setTimeout(setupSectionToggles, 150);
 });
 
-function previewButtonHtml(title, artist, album) {
+function previewButtonHtml(title, artist, album, identifiers) {
   if (!title || !artist) return '';
-  return `<button type="button" class="preview-btn" data-title="${esc(title)}" data-artist="${esc(artist)}" data-album="${esc(album || '')}" title="Play 30s preview">&#9654;</button>`;
+  const idsAttr = identifiers ? ` data-ids="${esc(JSON.stringify(identifiers))}"` : '';
+  return `<button type="button" class="preview-btn" data-title="${esc(title)}" data-artist="${esc(artist)}" data-album="${esc(album || '')}"${idsAttr} title="Play 30s preview">&#9654;</button>`;
 }
 
 // --- Unverified-identity retry (manual only — see the banner comment in render()) ---
@@ -645,10 +655,16 @@ resultEl.addEventListener('click', async (e) => {
   if (!btn || !lastQuery) return;
   btn.disabled = true;
   try {
+    // `ids` on lastQuery is the same JSON-encoded WireIdentifiers string /api/enrich reads as a
+    // query parameter; InvalidateRequest.identifiers carries it decoded, so invalidation reaches
+    // the same identifier-bearing tuple the replayed query below will read — otherwise only the
+    // bare-name tuple clears and an identifier-bearing preview survives "Clear cached result & reload".
+    const { kind, name, artist, album, ids } = lastQuery;
+    const identifiers = ids ? JSON.parse(ids) : undefined;
     const res = await fetch('/api/invalidate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(lastQuery),
+      body: JSON.stringify({ kind, name, artist, album, identifiers }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
@@ -704,7 +720,10 @@ resultEl.addEventListener('click', (e) => {
   if (e.target.closest('a, .preview-btn, .show-more')) return;
   const target = e.target.closest('[data-enrich-kind]');
   if (!target) return;
-  fillAndRun(target.dataset.enrichKind, target.dataset.enrichName, target.dataset.enrichArtist, target.dataset.enrichAlbum);
+  fillAndRun(
+    target.dataset.enrichKind, target.dataset.enrichName, target.dataset.enrichArtist,
+    target.dataset.enrichAlbum, target.dataset.enrichIds,
+  );
 });
 
 // --- Artwork lightbox ---
@@ -784,6 +803,7 @@ resultEl.addEventListener('click', async (e) => {
     artist: btn.dataset.artist,
     album: btn.dataset.album || '',
   });
+  if (btn.dataset.ids) params.set('ids', btn.dataset.ids);
   try {
     const res = await fetch('/api/preview?' + params.toString());
     const data = await res.json();

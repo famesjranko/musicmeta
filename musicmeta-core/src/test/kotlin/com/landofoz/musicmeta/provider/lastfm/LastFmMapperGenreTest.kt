@@ -62,11 +62,6 @@ class LastFmMapperGenreTest {
         val metadata = LastFmMapper.toGenre(tags)
 
         // Then - genres is an empty (non-null) list
-        // genres was previously `tags` directly, so empty list maps to empty genres
-        // The existing contract: toGenre(emptyList()) returns Metadata(genres = emptyList())
-        // but that's non-null empty list. Let's check what the original did:
-        // fun toGenre(tags: List<String>): EnrichmentData.Metadata = EnrichmentData.Metadata(genres = tags)
-        // So with emptyList(), genres = emptyList() (not null).
         assertEquals(emptyList<String>(), metadata.genres)
     }
 

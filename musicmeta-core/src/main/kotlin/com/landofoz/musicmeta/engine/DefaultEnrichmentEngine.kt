@@ -1,5 +1,7 @@
 package com.landofoz.musicmeta.engine
 
+import com.landofoz.musicmeta.CacheEnvelope
+import com.landofoz.musicmeta.CanonicalStatus
 import com.landofoz.musicmeta.EnrichmentCache
 import com.landofoz.musicmeta.EnrichmentConfig
 import com.landofoz.musicmeta.EnrichmentData
@@ -11,8 +13,8 @@ import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentResults
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
-import com.landofoz.musicmeta.IdentityMatch
 import com.landofoz.musicmeta.IdentityResolution
+import com.landofoz.musicmeta.LookupProvenance
 import com.landofoz.musicmeta.MusicBrainzEntityType
 import com.landofoz.musicmeta.ProviderInfo
 import com.landofoz.musicmeta.SearchCandidate
@@ -28,6 +30,25 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+
+/**
+ * [resolveTypes]'s output: the per-type results a caller wants, plus the [ChainExecution] each
+ * type's walk produced — a chain-backed type's own, a composite's synthesized from its
+ * dependencies' (see [ChainExecution.identifierIncomplete]), and an identity-fast-pathed type
+ * carries none. [writeBack] is the only reader; it never reaches [ChainExecution] for result
+ * classification.
+ */
+private data class ResolvedTypes(
+    val results: Map<EnrichmentType, EnrichmentResult>,
+    val executions: Map<EnrichmentType, ChainExecution>,
+)
+
+/** [DefaultEnrichmentEngine.writeBack]'s per-call facts, bundled to keep its parameter list short. */
+private data class WriteBackContext(
+    val identityResolution: IdentityResolution,
+    val negativeCacheHits: Set<EnrichmentType>,
+    val chainExecutions: Map<EnrichmentType, ChainExecution>,
+)
 
 internal class DefaultEnrichmentEngine(
     private val registry: ProviderRegistry,
@@ -51,7 +72,6 @@ internal class DefaultEnrichmentEngine(
         forceRefresh: Boolean,
     ): EnrichmentResults {
         if (forceRefresh) {
-            // Guarded per key, not per type: a failure on the primary key must not skip the alias.
             for (type in types) {
                 for (key in cacheKeysFor(request, type)) {
                     guardedCacheWrite(logger, "invalidate") { cache.invalidate(key, type) }
@@ -62,11 +82,14 @@ internal class DefaultEnrichmentEngine(
         val results = mutableMapOf<EnrichmentType, EnrichmentResult>()
         val uncachedTypes = mutableSetOf<EnrichmentType>()
         val negativeCacheHits = mutableSetOf<EnrichmentType>()
+        // Per-type chain execution facts, gathered during resolveTypes and consulted only by
+        // writeBack's cache-eligibility check — never by result classification.
+        val chainExecutions = mutableMapOf<EnrichmentType, ChainExecution>()
 
         for (type in types) {
-            // forceRefresh already invalidated these keys; skipping the read keeps a *failed*
-            // invalidation from resurrecting the stale entry it was meant to drop.
-            val cached = if (forceRefresh) null else {
+            val cached = if (forceRefresh) {
+                null
+            } else {
                 guardedCacheRead(logger, "get") { cache.get(entityKeyFor(request, type), type) }
             }
             // A cached Success answering nothing is a *miss*, not a NotFound. An empty entry written
@@ -75,24 +98,27 @@ internal class DefaultEnrichmentEngine(
             // the providers run and the write-back overwrite it, so the entry heals itself.
             // An entry whose genre tags never learned whether they were curated takes the same route
             // for the same reason: see hasUnknownGenreCuration.
-            if (cached != null && cached.data.answers(type) && !cached.data.hasUnknownGenreCuration()) {
-                results[type] = cached
+            if (cached != null && cached.result.data.answers(type) && !cached.result.data.hasUnknownGenreCuration()) {
+                results[type] = withCacheProvenanceFallback(cached.result)
                 continue
             }
             // A fresh negative entry answers "providers had nothing" without a re-ask; the read is
             // skipped under forceRefresh for the same reason as the positive read above.
-            val negative = if (forceRefresh) null else {
+            val negative = if (forceRefresh) {
+                null
+            } else {
                 guardedCacheRead(logger, "getNegative") { cache.getNegative(entityKeyFor(request, type), type) }
             }
             if (negative != null) {
-                results[type] = negative
+                results[type] = negative.result
                 negativeCacheHits.add(type)
             } else {
                 uncachedTypes.add(type)
             }
         }
         if (uncachedTypes.isEmpty()) {
-            return EnrichmentResults(results, types, identity = null)
+            val identity = IdentityResolution(request.identifiers, CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT)
+            return EnrichmentResults(results, types, identity)
         }
 
         var identityResolution: IdentityResolution? = null
@@ -115,8 +141,9 @@ internal class DefaultEnrichmentEngine(
                     ProviderCallScope() + ResolvedEntityNames(),
             ) {
                 var identityResult: EnrichmentResult? = null
-                val enrichedRequest = if (config.enableIdentityResolution &&
-                    needsIdentityResolution(request, uncachedTypes, registry)) {
+                val identityEnabled = config.enableIdentityResolution
+                val identityNeeded = identityEnabled && needsIdentityResolution(request, uncachedTypes, registry)
+                val enrichedRequest = if (identityNeeded) {
                     resolveIdentity(request, results, uncachedTypes).also { identityResult = it.second }.first
                 } else request
 
@@ -132,24 +159,27 @@ internal class DefaultEnrichmentEngine(
                 }
                 // The same channel the name backfill reads, so the canonical names a consumer is
                 // handed are the ones the fan-out was built from — no second resolution path.
-                identityResolution = buildIdentityResolution(
+                val resolution = buildIdentityResolution(
                     identityResult,
                     enrichedRequest,
                     currentCoroutineContext()[ResolvedEntityNames]?.resolved(),
+                    notAttemptedStatus = when {
+                        !identityEnabled -> CanonicalStatus.NOT_ATTEMPTED_DISABLED
+                        !identityNeeded -> CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED
+                        else -> CanonicalStatus.NOT_ATTEMPTED_NO_PROVIDER
+                    },
                 )
+                identityResolution = resolution
 
-                // Short-circuit: when identity failed with suggestions, skip provider fan-out
-                val identityNotFound = identityResult as? EnrichmentResult.NotFound
-                if (identityNotFound?.suggestions != null) {
-                    for (type in uncachedTypes) {
-                        results[type] = EnrichmentResult.NotFound(type, "engine",
-                            suggestions = identityNotFound.suggestions, identityMatch = IdentityMatch.SUGGESTIONS)
-                    }
-                } else {
-                    results.putAll(resolveTypes(enrichedRequest, uncachedTypes, identityResult))
-                    applyCatalogFiltering(results, config.catalogProvider, config.catalogFilterMode)
-                    stampIdentityMatch(results, identityResult)
-                }
+                // Canonical suggestions describe only MusicBrainz's own lookup, not a global
+                // admission decision — every provider still gets its independent eligibility check
+                // inside ProviderChain, including the missing-identifier skips [chainExecutions]
+                // below records for the cache write-back.
+                val resolvedTypes = resolveTypes(enrichedRequest, uncachedTypes, identityResult, resolution.status)
+                results.putAll(resolvedTypes.results)
+                chainExecutions.putAll(resolvedTypes.executions)
+                applyCatalogFiltering(results, config.catalogProvider, config.catalogFilterMode)
+                stampProvenance(results, resolution.status, chainExecutions)
                 true
             }
         } ?: false
@@ -174,28 +204,41 @@ internal class DefaultEnrichmentEngine(
         // rewrites entries in `results` — catalog filtering does exactly that, per type — so what
         // survives is a mix of finished and unfinished work. Returning it is the contract; caching
         // it would outlive the call that truncated it. (#56)
-        if (completed) writeBack(request, resolvedRequest, results, identityResolution, negativeCacheHits)
+        if (completed) {
+            // Non-null whenever completed: buildIdentityResolution runs before resolveTypes inside
+            // the same timed block, so a completed run always assigned it first.
+            val resolution = requireNotNull(identityResolution) {
+                "identityResolution must be set once the timed block completes"
+            }
+            val context = WriteBackContext(resolution, negativeCacheHits, chainExecutions)
+            writeBack(request, resolvedRequest, results, context)
+        }
 
-        return EnrichmentResults(results, types, identityResolution)
+        // A timeout that fired before buildIdentityResolution ran is the one gap identityResolution
+        // never filled — FAILED is the honest status for a call that never learned otherwise.
+        val identity = identityResolution ?: IdentityResolution(request.identifiers, CanonicalStatus.FAILED)
+        return EnrichmentResults(results, types, identity)
     }
 
     private suspend fun writeBack(
         request: EnrichmentRequest,
         resolvedRequest: EnrichmentRequest,
         results: Map<EnrichmentType, EnrichmentResult>,
-        identityResolution: IdentityResolution?,
-        negativeCacheHits: Set<EnrichmentType>,
+        context: WriteBackContext,
     ) {
-        val resolvedMbid = identityResolution?.identifiers?.musicBrainzId
+        val resolvedMbid = context.identityResolution.identifiers.musicBrainzId
+        val canonicalStatus = context.identityResolution.status
         for ((type, result) in results) {
             val aliasKey = aliasKeyFor(request, resolvedRequest, resolvedMbid, type)
+            val identifierIncomplete = context.chainExecutions[type]?.identifierIncomplete == true
+            val cacheable = isCacheableNegative(result, canonicalStatus, identifierIncomplete)
             when {
                 // A negative served from cache this call is not re-put: its short TTL is the entry's
                 // freshness contract, and a cache hit must not extend it.
-                isCacheableNegative(result) && type !in negativeCacheHits ->
-                    writeNegative(request, aliasKey, type, result as EnrichmentResult.NotFound)
-                isCacheablePositive(result) ->
-                    writePositive(request, aliasKey, type, result as EnrichmentResult.Success)
+                cacheable && type !in context.negativeCacheHits ->
+                    writeNegative(request, aliasKey, type, result as EnrichmentResult.NotFound, canonicalStatus)
+                isCacheablePositive(result, canonicalStatus) ->
+                    writePositive(request, aliasKey, type, result as EnrichmentResult.Success, canonicalStatus)
             }
         }
     }
@@ -203,9 +246,14 @@ internal class DefaultEnrichmentEngine(
     /**
      * The name-alias key when identity resolution added an MBID, so a future name-only lookup
      * finds MBID-resolved data — shared by both write branches below, so a negative write ends up
-     * under exactly the same keys a Success would, and `cacheKeysFor`/`invalidateKeys` clear it for
-     * free. A request that named no entity has no caller name to alias under, so it takes
+     * under exactly the same keys a Success would. Force refresh and [invalidateKeys] clear that
+     * alias once identity resolution has recovered its canonical names. A request that named no
+     * entity has no caller name to alias under, so it takes
      * MusicBrainz's canonical one — the same name a later name-only lookup would ask with.
+     *
+     * Never fires for a request carrying caller-supplied identifiers: a caller name is not an
+     * equivalence proof for those identifiers. The only identifier-bearing alias is the canonical
+     * name learned during actual identity resolution.
      */
     private fun aliasKeyFor(
         request: EnrichmentRequest,
@@ -214,39 +262,55 @@ internal class DefaultEnrichmentEngine(
         type: EnrichmentType,
     ): String? = when {
         namesNoEntity(request) && !namesNoEntity(resolvedRequest) -> entityKeyForName(resolvedRequest, type)
-        resolvedMbid != null && request.identifiers.musicBrainzId == null -> entityKeyForName(request, type)
+        resolvedMbid != null && request.identifiers.musicBrainzId == null &&
+            entityKeyFor(request, type) == entityKeyForName(request, type) -> entityKeyForName(request, type)
         else -> null
     }
 
     /**
-     * Only a real fan-out "providers had nothing" qualifies for negative caching — never the
-     * identity short-circuit's manufactured `NotFound` (`suggestions != null`) or one riding an
-     * unverified identity. Keyed on suggestions/identityMatch, not provider id, since a merger's
-     * fan-out `NotFound` arrives as provider `"all_providers"`.
+     * Whether a result reached under this call's canonical status is safe to cache: [CanonicalStatus.RESOLVED]
+     * or any `NOT_ATTEMPTED_*` reason — never [CanonicalStatus.AMBIGUOUS], [CanonicalStatus.UNRESOLVED], or
+     * [CanonicalStatus.FAILED], each of which means this call's fan-out ran on an unconfirmed identity.
      */
-    internal fun isCacheableNegative(result: EnrichmentResult): Boolean =
-        result is EnrichmentResult.NotFound && result.suggestions == null &&
-            (result.identityMatch == null || result.identityMatch == IdentityMatch.RESOLVED)
+    private fun CanonicalStatus.isCacheable(): Boolean = this !in UNCACHEABLE_STATUSES
 
     /**
-     * UNVERIFIED results are fuzzy guesses fetched while the identity provider was down — caching
-     * them would serve them as cache hits (identity == null, which reads as confident) for the
-     * type's whole TTL, and a retry could never heal them.
+     * Only a real fan-out "providers had nothing" qualifies for negative caching: never a chain
+     * that skipped a provider for an identifier this call never had ([identifierIncomplete]), and
+     * never one reached under a canonical identity that did not resolve. Decided from the call's
+     * own [canonicalStatus] and the chain's [identifierIncomplete] fact — a `NotFound` carries no
+     * per-result canonical fact of its own, so it is never consulted here.
      */
-    private fun isCacheablePositive(result: EnrichmentResult): Boolean =
-        result is EnrichmentResult.Success && !result.isStale && result.identityMatch != IdentityMatch.UNVERIFIED
+    internal fun isCacheableNegative(
+        result: EnrichmentResult,
+        canonicalStatus: CanonicalStatus,
+        identifierIncomplete: Boolean,
+    ): Boolean =
+        result is EnrichmentResult.NotFound && !identifierIncomplete && canonicalStatus.isCacheable()
+
+    /**
+     * A `Success` reached while canonical resolution was attempted and did not resolve
+     * (`AMBIGUOUS`/`UNRESOLVED`/`FAILED`) is a fuzzy or ambiguous guess — caching it would serve it
+     * as a cache hit for the type's whole TTL with no way to tell it apart from a confident one,
+     * and a retry could never heal or re-offer the suggestions that produced it.
+     */
+    private fun isCacheablePositive(result: EnrichmentResult, canonicalStatus: CanonicalStatus): Boolean =
+        result is EnrichmentResult.Success && !result.isStale && canonicalStatus.isCacheable()
 
     private suspend fun writeNegative(
         request: EnrichmentRequest,
         aliasKey: String?,
         type: EnrichmentType,
         result: EnrichmentResult.NotFound,
+        canonicalStatus: CanonicalStatus,
     ) {
         guardedCacheWrite(logger, "putNegative") {
-            cache.putNegative(entityKeyFor(request, type), type, result, config.negativeTtlMs)
+            cache.putNegative(entityKeyFor(request, type), type, result, canonicalStatus, config.negativeTtlMs)
         }
         if (aliasKey != null) {
-            guardedCacheWrite(logger, "putNegative") { cache.putNegative(aliasKey, type, result, config.negativeTtlMs) }
+            guardedCacheWrite(logger, "putNegative") {
+                cache.putNegative(aliasKey, type, result, canonicalStatus, config.negativeTtlMs)
+            }
         }
     }
 
@@ -255,11 +319,14 @@ internal class DefaultEnrichmentEngine(
         aliasKey: String?,
         type: EnrichmentType,
         result: EnrichmentResult.Success,
+        canonicalStatus: CanonicalStatus,
     ) {
         val ttl = config.ttlOverrides[type] ?: type.defaultTtlMs
-        guardedCacheWrite(logger, "put") { cache.put(entityKeyFor(request, type), type, result, ttl) }
+        guardedCacheWrite(logger, "put") {
+            cache.put(entityKeyFor(request, type), type, result, canonicalStatus, ttl)
+        }
         if (aliasKey != null) {
-            guardedCacheWrite(logger, "put") { cache.put(aliasKey, type, result, ttl) }
+            guardedCacheWrite(logger, "put") { cache.put(aliasKey, type, result, canonicalStatus, ttl) }
         }
     }
 
@@ -347,15 +414,16 @@ internal class DefaultEnrichmentEngine(
         }
     }
 
-    /** The primary key, plus the name-alias key when the request carries an MBID. */
+    /**
+     * Exact-bearing requests invalidate only their complete primary tuple. A caller-supplied name
+     * is not an equivalence proof, so clearing its bare-name key could evict another entity's
+     * answer. Canonical aliases are added by [invalidateKeys] only after identity resolution has
+     * supplied the canonical names.
+     */
     private fun cacheKeysFor(request: EnrichmentRequest, type: EnrichmentType): List<String> =
-        if (request.identifiers.musicBrainzId != null) {
-            listOf(entityKeyFor(request, type), entityKeyForName(request, type))
-        } else {
-            listOf(entityKeyFor(request, type))
-        }
+        listOf(entityKeyFor(request, type))
 
-    /** Invalidates the primary key and both name-alias keys — the caller's and the canonical one. */
+    /** Invalidates the primary tuple and a canonical-name alias only when resolution supplied it. */
     private suspend fun invalidateKeys(
         request: EnrichmentRequest,
         named: EnrichmentRequest,
@@ -459,6 +527,7 @@ internal class DefaultEnrichmentEngine(
                 if (type in uncachedTypes && type !in mergeableTypes && result.data.answers(type)) {
                     results[type] = EnrichmentResult.Success(
                         type = type,
+                        provenance = result.provenance,
                         data = result.data,
                         provider = result.provider,
                         confidence = result.confidence,
@@ -481,7 +550,8 @@ internal class DefaultEnrichmentEngine(
         request: EnrichmentRequest,
         types: Set<EnrichmentType>,
         identityResult: EnrichmentResult? = null,
-    ): Map<EnrichmentType, EnrichmentResult> = coroutineScope {
+        canonicalStatus: CanonicalStatus,
+    ): ResolvedTypes = coroutineScope {
         // A request identity resolution could not name — an identifier-only one whose identifier
         // MusicBrainz holds nothing under — reaches every provider with a blank title and artist.
         // The name-search providers are asked for nothing at all in that state, so they are not
@@ -498,22 +568,68 @@ internal class DefaultEnrichmentEngine(
             .flatMap { compositeDependencies[it].orEmpty() }
             .toSet() - regularTypes - mergeableRequested
 
+        val executions = mutableMapOf<EnrichmentType, ChainExecution>()
+
         val allRegularToResolve = regularTypes + compositeSubTypes
         val resolved = allRegularToResolve.map { type ->
             async {
                 val chain = registry.chainFor(type)
-                val result = chain?.resolve(request, identifierOnly)
-                    ?: EnrichmentResult.NotFound(type, "no_provider")
-                type to reclassifyTransientGap(chain, request.identifiers, type, gate(result))
+                val (result, execution) = chain?.resolveWithExecution(request, identifierOnly)
+                    ?: (EnrichmentResult.NotFound(type, "no_provider") to null)
+                Triple(type, reclassifyTransientGap(chain, request.identifiers, type, gate(result)), execution)
             }
-        }.awaitAll().toMap().toMutableMap()
+        }.awaitAll()
+        val resolvedResults = resolved.associate { (type, result, _) -> type to result }.toMutableMap()
+        for ((type, _, execution) in resolved) { if (execution != null) executions[type] = execution }
 
-        val mergeableResults = mergeableRequested.map { mergeType ->
+        // Stamped here, before composite synthesis reads these as dependencies: a composite
+        // synthesizer sees each dependency's real observed provenance instead of null.
+        stampProvenance(resolvedResults, canonicalStatus, executions)
+
+        val mergeableResults = resolveMergeableTypes(mergeableRequested, request, identifierOnly, canonicalStatus)
+        for ((type, result, execution) in mergeableResults) {
+            resolvedResults[type] = result
+            if (execution != null) executions[type] = execution
+        }
+
+        synthesizeComposites(compositeTypes, resolvedResults, identityResult, request)
+
+        // A composite type has no chain of its own, so it never earns a ChainExecution from the
+        // resolve loop above — leaving writeBack's identifierIncomplete check permanently false and
+        // able to negative-cache a synthesizer's NotFound even when a dependency's sub-chain was
+        // skipped for a missing identifier. Folding each dependency's skips into a synthetic
+        // ChainExecution is what makes that skip visible one layer up.
+        for (compositeType in compositeTypes) {
+            val depExecutions = compositeDependencies[compositeType].orEmpty().mapNotNull { executions[it] }
+            executions[compositeType] = ChainExecution(
+                attemptedProviderIds = depExecutions.flatMap { it.attemptedProviderIds },
+                skippedForMissingIdentifier = depExecutions
+                    .fold(emptyMap()) { acc, execution -> acc + execution.skippedForMissingIdentifier },
+                skippedForOpenBreaker = depExecutions.flatMap { it.skippedForOpenBreaker },
+            )
+        }
+
+        ResolvedTypes(resolvedResults.filterKeys { it in types }, executions.filterKeys { it in types })
+    }
+
+    /** The collect-all half of [resolveTypes]: every mergeable type's chain, merged concurrently. */
+    private suspend fun resolveMergeableTypes(
+        mergeableRequested: Set<EnrichmentType>,
+        request: EnrichmentRequest,
+        identifierOnly: Boolean,
+        canonicalStatus: CanonicalStatus,
+    ): List<Triple<EnrichmentType, EnrichmentResult, ChainExecution?>> = coroutineScope {
+        mergeableRequested.map { mergeType ->
             async {
                 val chain = registry.chainFor(mergeType)
-                val allResults = chain?.resolveAll(request, identifierOnly)
+                val (allResults, execution) = chain?.resolveAllWithExecution(request, identifierOnly)
+                    ?: (null to null)
+                // Stamped per contributor before merging: a collect-all walk has no single winner
+                // for ChainExecution.winningRequirement to name, so each contributor's own provider
+                // is asked instead — the merger reads real observed provenance, never null.
                 val filtered = allResults?.successes.orEmpty()
                     .mapNotNull { gate(it) as? EnrichmentResult.Success }
+                    .map { stampContributorProvenance(it, chain, canonicalStatus) }
                 val merger = mergers[mergeType]
                 val merged = if (merger == null) {
                     EnrichmentResult.NotFound(mergeType, "no_merger")
@@ -533,27 +649,32 @@ internal class DefaultEnrichmentEngine(
                 } else {
                     merged
                 }
-                mergeType to reclassifyTransientGap(chain, request.identifiers, mergeType, outcome)
+                Triple(mergeType, reclassifyTransientGap(chain, request.identifiers, mergeType, outcome), execution)
             }
         }.awaitAll()
-        for ((type, result) in mergeableResults) { resolved[type] = result }
+    }
 
+    /** The composite half of [resolveTypes]: each composite type synthesized from its resolved dependencies. */
+    private suspend fun synthesizeComposites(
+        compositeTypes: List<EnrichmentType>,
+        resolvedResults: MutableMap<EnrichmentType, EnrichmentResult>,
+        identityResult: EnrichmentResult?,
+        request: EnrichmentRequest,
+    ) {
         for (compositeType in compositeTypes) {
             val synthesizer = synthesizers[compositeType]
-            resolved[compositeType] = if (synthesizer == null) {
+            resolvedResults[compositeType] = if (synthesizer == null) {
                 EnrichmentResult.NotFound(compositeType, "no_composite_handler")
             } else {
                 // TimelineSynthesizer returns Success even with no events, and CompositeSynthesizer
                 // is a public extension point — a consumer's synthesizer has the same freedom.
                 demoteUnanswered(
                     guardedStrategy(logger, compositeType, "synthesizer") {
-                        synthesizer.synthesize(resolved, identityResult, request)
+                        synthesizer.synthesize(resolvedResults, identityResult, request)
                     },
                 )
             }
         }
-
-        resolved.filterKeys { it in types }
     }
 
     private fun filterByConfidence(result: EnrichmentResult): EnrichmentResult {
@@ -583,7 +704,7 @@ internal class DefaultEnrichmentEngine(
      * `enrich()` call's `coroutineScope`, launched as sibling `async` children — a type resolved
      * concurrently with, but *before*, the mark that would have covered it can miss the mark and
      * fall through to today's behaviour (a plain `NotFound`) instead of `Error`. That degrades to
-     * the pre-fix outcome, never invents a false `Error` for a genuinely-absent identifier.
+     * a plain `NotFound` instead of inventing a false `Error` for a genuinely-absent identifier.
      */
     private suspend fun reclassifyTransientGap(
         chain: ProviderChain?,
@@ -621,6 +742,15 @@ internal class DefaultEnrichmentEngine(
             result
         }
 
+    /**
+     * A cache hit reports [LookupProvenance.CACHE] instead of `null` when the [EnrichmentCache]
+     * implementation that served it did not preserve the original live lookup's route — never
+     * `null`, or a consumer reading absence as confident inherits the same hole [CanonicalStatus]
+     * closed for canonical resolution.
+     */
+    private fun withCacheProvenanceFallback(result: EnrichmentResult.Success): EnrichmentResult.Success =
+        if (result.provenance == null) result.copy(provenance = LookupProvenance.CACHE) else result
+
     private suspend fun applyStaleCache(
         request: EnrichmentRequest,
         results: MutableMap<EnrichmentType, EnrichmentResult>,
@@ -634,8 +764,8 @@ internal class DefaultEnrichmentEngine(
                 }
                 // A stale entry that answers nothing is worse than the Error it would replace:
                 // the Error at least tells the consumer to retry.
-                if (stale != null && stale.data.answers(type)) {
-                    results[type] = stale.copy(isStale = true)
+                if (stale != null && stale.result.data.answers(type)) {
+                    results[type] = withCacheProvenanceFallback(stale.result).copy(isStale = true)
                 }
             }
         }
@@ -643,6 +773,10 @@ internal class DefaultEnrichmentEngine(
 
     companion object {
         private const val TAG = "EnrichmentEngine"
+
+        private val UNCACHEABLE_STATUSES = setOf(
+            CanonicalStatus.AMBIGUOUS, CanonicalStatus.UNRESOLVED, CanonicalStatus.FAILED,
+        )
 
         private val IDENTITY_TYPES = setOf(
             EnrichmentType.GENRE, EnrichmentType.LABEL, EnrichmentType.RELEASE_DATE,

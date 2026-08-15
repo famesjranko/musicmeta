@@ -6,13 +6,17 @@ import com.landofoz.musicmeta.EnrichmentProvider
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
+import com.landofoz.musicmeta.LookupProvenance
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.engine.ArtistMatcher
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
+import com.landofoz.musicmeta.engine.ProviderCallScope
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * Discogs enrichment provider. Searches for album releases to supply
@@ -29,6 +33,15 @@ class DiscogsProvider(
         this({ personalToken }, httpClient, rateLimiter)
 
     private val api = DiscogsApi(tokenProvider, httpClient, rateLimiter)
+
+    /**
+     * This call's [DiscogsAlbumScope], shared by ALBUM_ART, LABEL, RELEASE_TYPE and ALBUM_METADATA
+     * so no two of them search or select an album independently in one `enrich()` fan-out
+     * ([ProviderCallScope], `docs/pitfalls.md` §12). Called directly (no engine context), each call
+     * gets its own.
+     */
+    private suspend fun albumScope(): DiscogsAlbumScope =
+        currentCoroutineContext()[ProviderCallScope]?.slot(this) { DiscogsAlbumScope(api) } ?: DiscogsAlbumScope(api)
 
     override val id = "discogs"
     override val displayName = "Discogs"
@@ -82,12 +95,10 @@ class DiscogsProvider(
             ?: return EnrichmentResult.NotFound(type, id)
 
         return try {
-            // Discogs titles are "Artist - Title"; verify artist matches
-            val releases = api.searchReleases(albumRequest.title, albumRequest.artist)
-            val release = releases.firstOrNull {
-                val discogsArtist = it.title.substringBefore(" - ").trim()
-                ArtistMatcher.isMatch(albumRequest.artist, discogsArtist)
-            } ?: return EnrichmentResult.NotFound(type, id)
+            // Discogs titles are "Artist - Title"; accept and rank on both halves, shared by every
+            // type this call asks for so they select one release, not one search-ranked pick each.
+            val release = albumScope().resolveRelease(albumRequest)?.release
+                ?: return EnrichmentResult.NotFound(type, id)
             if (type == EnrichmentType.ALBUM_METADATA) {
                 enrichAlbumMetadataWithCommunity(release, albumRequest.identifiers)
             } else {
@@ -124,6 +135,9 @@ class DiscogsProvider(
             data = DiscogsMapper.toCredits(credits),
             provider = id,
             confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = false),
+            // No fallback route above: a missing or unparsable discogsReleaseId returns NotFound
+            // before this point, so every Success here came from that id.
+            provenance = LookupProvenance.PROVIDER_NATIVE_ID,
         )
     }
 
@@ -142,6 +156,9 @@ class DiscogsProvider(
             data = DiscogsMapper.toReleaseEditions(versions),
             provider = id,
             confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = false),
+            // No fallback route above: a missing or unparsable discogsMasterId returns NotFound
+            // before this point, so every Success here came from that id.
+            provenance = LookupProvenance.PROVIDER_NATIVE_ID,
         )
     }
 
@@ -253,4 +270,38 @@ class DiscogsProvider(
         confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch),
         resolvedIdentifiers = release?.let { buildResolvedIdentifiers(it) },
     )
+}
+
+/**
+ * One `enrich()` call's release-search selection, held only long enough to serve ALBUM_ART, LABEL,
+ * RELEASE_TYPE and ALBUM_METADATA from one search and one accepted release instead of one
+ * independently-ranked search per type — see [DiscogsProvider.albumScope]. Dies with the call
+ * ([ProviderCallScope]), so a mis-resolved artist/title never outlives a `forceRefresh`.
+ */
+private class DiscogsAlbumScope(private val api: DiscogsApi) {
+
+    /** Every field [selectRelease] reads, so two requests differing only in one still key distinctly. */
+    private data class SelectionKey(val artist: String, val title: String, val year: Int?)
+
+    private val mutex = Mutex()
+    private val releases = mutableMapOf<SelectionKey, DiscogsAlbumChoice?>()
+
+    /**
+     * The accepted-and-ranked search hit for [request], with its selection evidence, one search per
+     * distinct complete selection input per call. Keyed on every field selection reads, including
+     * `year`, so a request differing only in `year` cannot reuse a stale selection.
+     */
+    suspend fun resolveRelease(request: EnrichmentRequest.ForAlbum): DiscogsAlbumChoice? {
+        val key = SelectionKey(request.artist, request.title, request.year)
+        return mutex.withLock {
+            if (releases.containsKey(key)) {
+                releases.getValue(key)
+            } else {
+                val pool = api.searchReleases(request.title, request.artist)
+                val match = pool.selectRelease(request)
+                releases[key] = match
+                match
+            }
+        }
+    }
 }

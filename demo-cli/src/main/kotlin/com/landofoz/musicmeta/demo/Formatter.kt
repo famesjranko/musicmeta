@@ -3,12 +3,12 @@ package com.landofoz.musicmeta.demo
 import com.landofoz.musicmeta.AlbumProfile
 import com.landofoz.musicmeta.ArtistProfile
 import com.landofoz.musicmeta.BandMember
+import com.landofoz.musicmeta.CanonicalStatus
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentResults
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
-import com.landofoz.musicmeta.IdentityMatch
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.TrackProfile
 import com.landofoz.musicmeta.demo.ui.Terminal
@@ -110,6 +110,11 @@ object Formatter {
         var found = 0; var notFound = 0; var errors = 0; var timedOut = 0
 
         val (successes, rest) = results.raw.entries.partition { it.value is EnrichmentResult.Success }
+        // A canonical status that never confirmed the entity means every Success this call
+        // produced is a fuzzy or ambiguous guess, whatever LookupProvenance the individual result
+        // carries.
+        val bestEffort = results.identity.status in
+            setOf(CanonicalStatus.AMBIGUOUS, CanonicalStatus.UNRESOLVED, CanonicalStatus.FAILED)
 
         term.heading("Results")
         for ((type, result) in successes) {
@@ -122,7 +127,7 @@ object Formatter {
                 snippet(type, result.data)
             }.ifBlank { term.styled("(no value for this field)", term.theme.muted) }
             val staleTag = if (result.isStale) " ${term.styled("[stale]", term.theme.warning)}" else ""
-            if (result.identityMatch == IdentityMatch.BEST_EFFORT) {
+            if (bestEffort) {
                 val unverified = term.styled("[unverified]", term.theme.warning)
                 term.warning(typeName(type), "$detail  $conf $unverified$staleTag")
             } else {
@@ -150,8 +155,8 @@ object Formatter {
 
         term.summary(found, notFound, errors, cached = cacheHits, timedOut = timedOut)
 
-        val suggestions = results.identity?.suggestions
-        if (!suggestions.isNullOrEmpty()) {
+        val suggestions = results.identity.suggestions
+        if (suggestions.isNotEmpty()) {
             term.println()
             term.warning("Did you mean?", "Identity match below threshold")
             suggestions.forEachIndexed { i, c ->
@@ -192,7 +197,7 @@ object Formatter {
     }
 
     private fun printIdentity(results: EnrichmentResults, term: Terminal) {
-        val resolution = results.identity ?: return
+        val resolution = results.identity
         val ids = resolution.identifiers
 
         val hasAny = ids.musicBrainzId != null || ids.wikidataId != null || ids.wikipediaTitle != null

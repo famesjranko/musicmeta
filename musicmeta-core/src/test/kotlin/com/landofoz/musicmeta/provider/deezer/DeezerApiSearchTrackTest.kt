@@ -30,11 +30,11 @@ class DeezerApiSearchTrackTest {
         httpClient.givenJsonResponse("search/track", SINGLE_MATCH_RESPONSE)
 
         // When - searching without an album hint
-        api.searchTrack("Blackened", "Metallica")
+        api.searchTrack("Harvester of Sorrow", "Metallica")
 
         // Then - the artist:/track: field query, not the plain "artist title" keyword query
         assertEquals(
-            "https://api.deezer.com/search/track?q=artist%3A%22Metallica%22+track%3A%22Blackened%22&limit=5",
+            "https://api.deezer.com/search/track?q=artist%3A%22Metallica%22+track%3A%22Harvester+of+Sorrow%22&limit=5",
             httpClient.requestedUrls.single(),
         )
     }
@@ -151,9 +151,10 @@ class DeezerApiSearchTrackTest {
     }
 
     @Test
-    fun `treats a bare trailing year as an unrequested edition marker`() = runTest {
-        // Given - nothing has the exact requested title; Deezer marks its remix with a bare
-        // year suffix ("Blackened 2020", live 2026-08-06), not a parenthetical
+    fun `rejects a bare trailing-word title that names a different edition`() = runTest {
+        // Given - nothing has the exact requested title or a delimiter-qualified equivalent;
+        // Deezer's remix carries a bare year suffix ("Blackened 2020", live 2026-08-06), not a
+        // recognised qualifier delimiter, and the other hit is a differently-named bonus track
         httpClient.givenJsonResponse(
             "search/track",
             """
@@ -167,8 +168,8 @@ class DeezerApiSearchTrackTest {
         // When - searching without an album hint
         val result = api.searchTrack("Blackened", "Metallica")
 
-        // Then - the year-suffixed remix loses to the suffix without a marker
-        assertEquals(41L, result?.id)
+        // Then - neither candidate is title-accepted, so the search finds nothing
+        assertNull(result)
     }
 
     @Test
@@ -192,9 +193,9 @@ class DeezerApiSearchTrackTest {
     }
 
     @Test
-    fun `prefers a marker-free approximate title over a live-tagged one when nothing is exact`() = runTest {
-        // Given - neither candidate has the exact requested title; only one carries an
-        // unrequested "(Live ...)" marker
+    fun `rejects every candidate when each carries a qualifier the plain request never asked for`() = runTest {
+        // Given - neither candidate has the exact requested title; both carry a qualifier
+        // ("Live In Mexico City", "Rehearsal") the plain request does not
         httpClient.givenJsonResponse(
             "search/track",
             """
@@ -208,13 +209,14 @@ class DeezerApiSearchTrackTest {
         // When - searching without an album hint
         val result = api.searchTrack("Harvester of Sorrow", "Metallica")
 
-        // Then - the marker-free candidate is preferred
-        assertEquals(11L, result?.id)
+        // Then - an unrequested qualifier is never equivalent to no qualifier, so no candidate is accepted
+        assertNull(result)
     }
 
     @Test
-    fun `penalises a dash-suffixed live marker with no parentheses`() = runTest {
-        // Given - the live take is marked by a bare " - Live at …" suffix, no parentheses
+    fun `rejects a dash-suffixed live marker like a parenthetical one`() = runTest {
+        // Given - both hits are dash-qualified editions ("Live at Wembley", "Rehearsal") the
+        // plain request never asked for
         httpClient.givenJsonResponse(
             "search/track",
             """
@@ -228,8 +230,8 @@ class DeezerApiSearchTrackTest {
         // When - searching without an album hint
         val result = api.searchTrack("Harvester of Sorrow", "Metallica")
 
-        // Then - the dash-suffixed live take loses like a parenthetical one would
-        assertEquals(61L, result?.id)
+        // Then - a dash-qualified edition is rejected exactly like a parenthetical one would be
+        assertNull(result)
     }
 
     @Test
@@ -266,6 +268,104 @@ class DeezerApiSearchTrackTest {
         // Then - both queries were exhausted; no wrong-artist candidate replaces a real miss
         assertEquals(2, httpClient.requestedUrls.size)
         assertNull(result)
+    }
+
+    @Test
+    fun `rejects a right-artist candidate whose title is a wholly unrelated recording`() = runTest {
+        // Given - the only right-artist hit is a different, unrelated song that happens to share
+        // a remaster qualifier
+        httpClient.givenJsonResponse(
+            "search/track",
+            """{"data":[{"id":1,"title":"Song for Bob Dylan (2015 Remaster)","artist":{"name":"David Bowie"}}]}""",
+        )
+
+        // When - searching for the plain, unrelated title
+        val result = api.searchTrack("Song", "David Bowie")
+
+        // Then - no candidate names the requested recording, so the search finds nothing
+        assertEquals(2, httpClient.requestedUrls.size)
+        assertNull(result)
+    }
+
+    @Test
+    fun `accepts a dash-qualified request against a bracket-qualified candidate naming the same edition`() = runTest {
+        // Given - the pool's title uses parenthetical reissue syntax
+        httpClient.givenJsonResponse(
+            "search/track",
+            """{"data":[{"id":7,"title":"Starman (2012 Remaster)","artist":{"name":"David Bowie"}}]}""",
+        )
+
+        // When - the request spells the same qualifier with a dash
+        val result = api.searchTrack("Starman - 2012 Remaster", "David Bowie")
+
+        // Then - the equivalent delimiter syntax is accepted
+        assertEquals(7L, result?.id)
+    }
+
+    @Test
+    fun `accepts a dash-qualified live request against a bracket-qualified live candidate`() = runTest {
+        // Given - the pool's title marks the live take with parentheses
+        httpClient.givenJsonResponse(
+            "search/track",
+            """{"data":[{"id":8,"title":"Wish You Were Here (Live)","artist":{"name":"Pink Floyd"}}]}""",
+        )
+
+        // When - the request spells the live qualifier with a dash
+        val result = api.searchTrack("Wish You Were Here - Live", "Pink Floyd")
+
+        // Then - the equivalent delimiter syntax is accepted, not collapsed into a studio match
+        assertEquals(8L, result?.id)
+    }
+
+    @Test
+    fun `rejects a dash-qualified live request against the plain studio candidate`() = runTest {
+        // Given - the pool has only the studio recording, with no qualifier at all
+        httpClient.givenJsonResponse(
+            "search/track",
+            """{"data":[{"id":9,"title":"Song","artist":{"name":"David Bowie"}}]}""",
+        )
+
+        // When - the request asks for the live take
+        val result = api.searchTrack("Song - Live", "David Bowie")
+
+        // Then - an absent qualifier never equals a present one; the studio take is not returned
+        assertNull(result)
+    }
+
+    @Test
+    fun `handles Deezer's cosmetic quoted-title punctuation`() = runTest {
+        // Given - Deezer decorates the title with straight quotes around the bare word
+        httpClient.givenJsonResponse(
+            "search/track",
+            """{"data":[{"id":12,"title":"\"Heroes\" (2017 Remaster)","artist":{"name":"David Bowie"}}]}""",
+        )
+
+        // When - the request carries the same quoting and qualifier
+        val result = api.searchTrack("\"Heroes\" - 2017 Remaster", "David Bowie")
+
+        // Then - the quotes are cosmetic and the dash/bracket qualifier syntax is equivalent
+        assertEquals(12L, result?.id)
+    }
+
+    @Test
+    fun `ranks the best among multiple title-accepted candidates`() = runTest {
+        // Given - both candidates are exact-title, right-artist matches for "Starman"; only one
+        // carries the hinted album
+        httpClient.givenJsonResponse(
+            "search/track",
+            """
+            {"data":[
+              {"id":13,"title":"Starman","artist":{"name":"David Bowie"},"album":{"title":"Ziggy Stardust"}},
+              {"id":14,"title":"Starman","artist":{"name":"David Bowie"},"album":{"title":"Best of Bowie"}}
+            ]}
+            """.trimIndent(),
+        )
+
+        // When - the request hints the album that only one accepted candidate has
+        val result = api.searchTrack("Starman", "David Bowie", "Best of Bowie")
+
+        // Then - both candidates are title-accepted; ranking picks the album-hinted edition
+        assertEquals(14L, result?.id)
     }
 
     private companion object {

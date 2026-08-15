@@ -5,10 +5,12 @@ import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
+import com.landofoz.musicmeta.engine.ProviderCallScope
 import com.landofoz.musicmeta.engine.answers
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.testutil.FakeHttpClient
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -96,10 +98,10 @@ class LrcLibProviderTest {
         // When - enriching for synced lyrics
         val result = provider.enrich(request, EnrichmentType.LYRICS_SYNCED)
 
-        // Then - a Success sourced from the search fallback, with lower confidence
+        // Then - a Success sourced from the search fallback, at the accepted-artist confidence
         assertTrue(result is EnrichmentResult.Success)
         val success = result as EnrichmentResult.Success
-        assertEquals(0.6f, success.confidence)
+        assertEquals(0.8f, success.confidence)
         val lyrics = success.data as EnrichmentData.Lyrics
         assertEquals("[00:00.00] When you were here before", lyrics.syncedLyrics)
     }
@@ -298,7 +300,130 @@ class LrcLibProviderTest {
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
+    @Test
+    fun `search fallback rejects a wholly unrelated title for every capable type`() = runTest {
+        // Given - no exact match, and the only search hit names a different song
+        httpClient.givenJsonArrayResponse("/api/search", ALABAMA_SONG_JSON)
+        val request = EnrichmentRequest.forTrack(title = "Song", artist = "David Bowie")
+
+        // When - enriching for all three types LrcLib declares
+        val synced = provider.enrich(request, EnrichmentType.LYRICS_SYNCED)
+        val plain = provider.enrich(request, EnrichmentType.LYRICS_PLAIN)
+        val metadata = provider.enrich(request, EnrichmentType.TRACK_METADATA)
+
+        // Then - none of them accept the unrelated candidate
+        assertTrue(synced is EnrichmentResult.NotFound)
+        assertTrue(plain is EnrichmentResult.NotFound)
+        assertTrue(metadata is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `search fallback rejects an exact title from the wrong artist`() = runTest {
+        // Given - the only search hit has the exact requested title but a different artist
+        httpClient.givenJsonArrayResponse(
+            "/api/search",
+            """[{"id":1,"trackName":"Creep","artistName":"Someone Else","albumName":null,
+                "duration":200.0,"instrumental":false,"syncedLyrics":"x","plainLyrics":"x"}]""",
+        )
+        val request = EnrichmentRequest.forTrack(title = "Creep", artist = "Radiohead")
+
+        // When - enriching for synced lyrics
+        val result = provider.enrich(request, EnrichmentType.LYRICS_SYNCED)
+
+        // Then - NotFound because the artist was never accepted
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `search fallback keeps studio and live takes distinct`() = runTest {
+        // Given - the only search hit is a live take the plain request never asked for
+        httpClient.givenJsonArrayResponse(
+            "/api/search",
+            """[{"id":1,"trackName":"Starman (Live)","artistName":"David Bowie","albumName":null,
+                "duration":200.0,"instrumental":false,"syncedLyrics":"x","plainLyrics":"x"}]""",
+        )
+        val request = EnrichmentRequest.forTrack(title = "Starman", artist = "David Bowie")
+
+        // When - enriching for synced lyrics
+        val result = provider.enrich(request, EnrichmentType.LYRICS_SYNCED)
+
+        // Then - an unrequested live qualifier is not the requested studio recording
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `search fallback accepts equivalent qualifier delimiter syntax`() = runTest {
+        // Given - the search hit spells the requested qualifier with parentheses
+        httpClient.givenJsonArrayResponse(
+            "/api/search",
+            """[{"id":1,"trackName":"Starman (2012 Remaster)","artistName":"David Bowie","albumName":null,
+                "duration":200.0,"instrumental":false,"syncedLyrics":"remastered lyrics","plainLyrics":"remastered lyrics"}]""",
+        )
+        val request = EnrichmentRequest.forTrack(title = "Starman - 2012 Remaster", artist = "David Bowie")
+
+        // When - enriching for synced lyrics
+        val result = provider.enrich(request, EnrichmentType.LYRICS_SYNCED)
+
+        // Then - the equivalent delimiter syntax is accepted
+        assertTrue(result is EnrichmentResult.Success)
+        val lyrics = (result as EnrichmentResult.Success).data as EnrichmentData.Lyrics
+        assertEquals("remastered lyrics", lyrics.plainLyrics)
+    }
+
+    @Test
+    fun `search fallback ranks by album evidence without admitting a wrong title`() = runTest {
+        // Given - one accepted candidate matches the hinted album; a second, better-ranked-looking
+        // hit is a wrong title entirely and must never be selected regardless of its album
+        httpClient.givenJsonArrayResponse(
+            "/api/search",
+            """[
+                {"id":1,"trackName":"Starman","artistName":"David Bowie","albumName":"Ziggy Stardust",
+                 "duration":200.0,"instrumental":false,"syncedLyrics":"a","plainLyrics":"a"},
+                {"id":2,"trackName":"Starman","artistName":"David Bowie","albumName":"Best of Bowie",
+                 "duration":200.0,"instrumental":false,"syncedLyrics":"b","plainLyrics":"b"},
+                {"id":3,"trackName":"Life on Mars","artistName":"David Bowie","albumName":"Best of Bowie",
+                 "duration":200.0,"instrumental":false,"syncedLyrics":"c","plainLyrics":"c"}
+            ]""",
+        )
+        val request = EnrichmentRequest.forTrack(title = "Starman", artist = "David Bowie", album = "Best of Bowie")
+
+        // When - enriching for synced lyrics
+        val result = provider.enrich(request, EnrichmentType.LYRICS_SYNCED)
+
+        // Then - the album-hinted, title-accepted candidate wins
+        assertTrue(result is EnrichmentResult.Success)
+        val lyrics = (result as EnrichmentResult.Success).data as EnrichmentData.Lyrics
+        assertEquals("b", lyrics.plainLyrics)
+    }
+
+    @Test
+    fun `enrich shares one search across the lyric and metadata types in one call`() = runTest {
+        // Given - no exact match, so all three types would otherwise fall back to search independently
+        httpClient.givenJsonArrayResponse("/api/search", SEARCH_RESULTS_JSON)
+        val request = EnrichmentRequest.forTrack(title = "Creep", artist = "Radiohead")
+
+        // When - all three types resolve as siblings of one enrichment call
+        val results = withContext(ProviderCallScope()) {
+            listOf(
+                provider.enrich(request, EnrichmentType.LYRICS_SYNCED),
+                provider.enrich(request, EnrichmentType.LYRICS_PLAIN),
+                provider.enrich(request, EnrichmentType.TRACK_METADATA),
+            )
+        }
+
+        // Then - one search served all three types, and each reads the same selected entity
+        assertEquals(1, httpClient.requestedUrls.count { it.contains("/api/search") })
+        assertTrue(results.all { it is EnrichmentResult.Success })
+        val metadata = results[2] as EnrichmentResult.Success
+        assertEquals("Pablo Honey", (metadata.data as EnrichmentData.TrackMetadata).albumTitle)
+    }
+
     companion object {
+        private val ALABAMA_SONG_JSON = """
+            [{"id":1,"trackName":"Alabama Song","artistName":"David Bowie","albumName":"Lodger",
+              "duration":250.0,"instrumental":false,"syncedLyrics":"x","plainLyrics":"x"}]
+        """.trimIndent()
+
         private val SYNCED_LYRICS_JSON = """
             {
                 "id": 123,

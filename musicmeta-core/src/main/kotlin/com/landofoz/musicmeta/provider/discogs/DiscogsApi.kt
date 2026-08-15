@@ -43,7 +43,7 @@ internal class DiscogsApi(
      *    That suffix is **arbitrary** — the bare name goes to whoever was catalogued first, not to
      *    the better-known artist. Searching "Bad Company" returns `Bad Company (3)` (the Paul
      *    Rodgers rock band) at rank 0 and `Bad Company` (a UK drum & bass group) at rank 1, so
-     *    ranking the bare name higher would pick the *wrong* artist. [stripDisambiguator] removes it
+     *    ranking the bare name higher would pick the *wrong* artist. [stripDiscogsDisambiguator] removes it
      *    before matching, which puts both at the same rank and lets Discogs's order settle it.
      * 2. **The payload carries no popularity signal** — an artist result is only `id`, `type`,
      *    `master_id`, `master_url`, `uri`, `title`, `thumb`, `cover_image`, `resource_url`. The
@@ -68,7 +68,7 @@ internal class DiscogsApi(
     }
 
     private fun JSONObject.candidateName(): String =
-        stripDisambiguator(optString("title", ""))
+        stripDiscogsDisambiguator(optString("title", ""))
 
     /** Fetch artist details including band members. */
     suspend fun getArtist(artistId: Long): DiscogsArtist? {
@@ -231,19 +231,22 @@ internal class DiscogsApi(
 
         /** Candidate pool size for artist search — enough hits for a wrong name to be passed over. */
         const val ARTIST_SEARCH_LIMIT = 10
-
-        /** Discogs's trailing homonym counter: "Nirvana (2)", "Bad Company (3)". */
-        private val DISAMBIGUATOR_REGEX = Regex("\\s*\\(\\d+\\)$")
-
-        /**
-         * Drops Discogs's `" (n)"` homonym counter so two artists sharing a name compare as equals.
-         * Only a trailing all-digit group goes — "Bad Company (3)" becomes "Bad Company", while a
-         * meaningful parenthetical like "Air (French Band)" is left alone.
-         */
-        fun stripDisambiguator(title: String): String =
-            title.replace(DISAMBIGUATOR_REGEX, "").trim()
         const val ARTISTS_URL = "https://api.discogs.com/artists"
         const val RELEASES_URL = "https://api.discogs.com/releases"
         const val MASTERS_URL = "https://api.discogs.com/masters"
     }
 }
+
+/** Discogs's trailing homonym counter: "Nirvana (2)", "Bad Company (3)". */
+private val DISAMBIGUATOR_REGEX = Regex("\\s*\\(\\d+\\)$")
+
+/**
+ * Drops Discogs's `" (n)"` homonym counter so two entries sharing a name compare as equals. Only a
+ * trailing all-digit group goes — "Bad Company (3)" becomes "Bad Company", while a meaningful
+ * parenthetical like "Air (French Band)" is left alone. Shared by artist search
+ * ([DiscogsApi.candidateName]) and album selection ([parseDiscogsRelease]) — the same disambiguator
+ * appears on both an artist search hit's `title` and a release search hit's `"Artist - Title"`
+ * artist prefix.
+ */
+internal fun stripDiscogsDisambiguator(title: String): String =
+    title.replace(DISAMBIGUATOR_REGEX, "").trim()

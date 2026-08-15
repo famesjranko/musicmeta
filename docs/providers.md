@@ -7,7 +7,7 @@ away, and a copy of them rots while it moves. §Rate limiting keeps the one-limi
 topology and where each interval's basis comes from.
 
 **Nothing here is checked.** No mechanism verifies a word of it. Hand-verified against the packages
-on **2026-08-13**; treat anything after that as a claim, not a fact. §What we don't extract is the
+on **2026-08-14**; treat anything after that as a claim, not a fact. §What we don't extract is the
 part that rots fastest — most of what it lists is a to-do, and a to-do that gets done reads as a
 still-open one until someone re-reads the code.
 
@@ -33,6 +33,30 @@ Auth keys and how to supply them are in [README.md](../README.md).
 | Last.fm | `lastfm` | API key | [docs](https://www.last.fm/api) | Widest capability set of any single provider; only source of tags-as-genre and artist similarity |
 | Fanart.tv | `fanarttv` | project key | [docs](https://fanarttv.docs.apiary.io/) | Only source of artist backgrounds, logos and banners |
 | Discogs | `discogs` | token | [docs](https://www.discogs.com/developers) | Pressing-level detail: catalogue numbers, editions, per-track credits |
+
+## Provenance self-reporting
+
+Every capability below is declared with `identifierRequirement = NONE` — MusicBrainz canonical
+resolution is optional for all of them — but some still have an *exact-id* branch that runs instead
+of a name search whenever the request already carries that id. A capability's requirement alone
+cannot tell that branch apart from the search fallback, so each of these `enrich()` paths sets
+`EnrichmentResult.Success.provenance` itself — `LookupProvenance.PROVIDER_NATIVE_ID` for a branch
+keyed on that provider's own id space, `LookupProvenance.EXTERNAL_CATALOG_ID` for a branch keyed on
+a UPC/barcode — whenever it took the id branch, and leaves it unset on the name-search branch for
+the engine to classify from canonical status.
+
+| Provider | Type(s) | Id branch |
+|---|---|---|
+| Deezer | `TRACK_PREVIEW`, `TRACK_METADATA` | A Deezer track id already on the request |
+| Deezer | `ARTIST_TOP_TRACKS`, `SIMILAR_ARTISTS`, `ARTIST_RADIO` | A Deezer artist id already on the request |
+| iTunes | `ALBUM_TRACKS` | A stored `itunesCollectionId`, or a UPC/barcode lookup |
+| iTunes | `ALBUM_ART`, `ALBUM_METADATA` | A UPC/barcode lookup |
+| iTunes | `ARTIST_DISCOGRAPHY` | A stored iTunes artist id |
+| Discogs | `CREDITS` | A stored `discogsReleaseId` — the only route this type has; there is no name-search fallback |
+| Discogs | `RELEASE_EDITIONS` | A stored `discogsMasterId` — the only route this type has; there is no name-search fallback |
+
+A UPC/barcode is an external catalogue identifier, not a MusicBrainz id and not either provider's
+own id space, so it carries `LookupProvenance.EXTERNAL_CATALOG_ID` rather than `PROVIDER_NATIVE_ID`.
 
 ## Routes disabled upstream
 
@@ -186,11 +210,11 @@ bulk-imported and never re-synced: measured 2026-08-12 over `track.getSimilar`
 MusicBrainz answered for were held under no entity type at all** — the rate tracks how obscure the
 track is, and the same probe over the chart head is far kinder.
 
-For a track the cost of treating such an identifier as authoritative was the *whole call*, not just
-the MusicBrainz types: identity resolution is where a track request meets its MBID, and a `NotFound`
-carrying suggestions tells the engine to skip the provider fan-out
-(`TrackIdentifierMissFanOutTest` pins both halves). Suggestions are for a name that resolves to
-nothing; no identifier path raises them.
+For a track the cost of treating such an identifier as authoritative was scoped to the MusicBrainz
+types alone: identity resolution is where a track request meets its MBID, and a `NotFound` carrying
+suggestions changes only the top-level canonical metadata — every other eligible provider still
+runs, best-effort (`TrackIdentifierMissFanOutTest`, `IdentitySuggestionFanOutTest`). Suggestions are
+for a name that resolves to nothing; no identifier path raises them.
 
 The lookup itself is spent once per call however many types ask — a miss included, so a dead
 identifier costs one request and not one per type — and that holds when the request carries a
@@ -356,7 +380,12 @@ either way), `.id` (addresses one image at `/release/{mbid}/{id}-{size}`), `.bac
 per type, so alternate pressings' art is discarded. `/release-group/{id}` JSON is never called — only
 its `front-{size}` redirect, which is why that path returns no `sizes`.
 
-**Deezer.** `GET /album/{id}` now backs `ALBUM_METADATA`, filling `label`, `barcode` (from `upc`,
+**Deezer.** `searchTrack`'s name-search pool for `TRACK_PREVIEW`/`TRACK_METADATA` is accepted before
+it is ranked: a candidate must equal the requested title, or share its normalized base with an
+equivalent whole qualifier (`Song - Live` accepted against `Song (Live)`, never against studio
+`Song`), before `rankTracks` orders the accepted pool by artist quality, album containment and
+unrequested markers (`TitleMatcher`, `docs/pitfalls.md` §7). An exact Deezer track id bypasses name
+acceptance entirely. `GET /album/{id}` now backs `ALBUM_METADATA`, filling `label`, `barcode` (from `upc`,
 a barcode nothing else supplies) and `releaseDate`; `album.genre_id`/`genres` is read live but
 deliberately not parsed — 12/12 probed albums (2026-08-12) returned exactly one coarse editorial
 tag, a strict parent of Last.fm's vote-weighted tags, so Deezer declares no `GENRE` capability.
@@ -370,7 +399,9 @@ own probe on credits-heavy albums before this becomes a capability),
 `ARTIST_POPULARITY`. Cheaper to add than it was: that type is merged now, so a Deezer fan count
 would arrive as one more `PopularitySignal` beside the others rather than having to beat them.
 Never called:
-`/chart`, `/genre`, `/editorial`, `/playlist/{id}`, `/podcast`, every `/user/**`.
+`/chart`, `/genre`, `/editorial`, `/playlist/{id}`, `/podcast`, every `/user/**`. `search/album`'s
+pool is accepted on both artist and album title, not artist alone, before `ALBUM_ART`,
+`ALBUM_METADATA` and `ALBUM_TRACKS` share the ranked result (`docs/pitfalls.md` §7).
 
 **iTunes.** Never read on results
 we fetch: `collectionViewUrl`, `collectionPrice`, `copyright`, `contentAdvisoryRating`,
@@ -379,13 +410,18 @@ serves `TRACK_PREVIEW`), `discNumber`, `discCount`, `trackPrice`, `isStreamable`
 searched: `song`, `musicVideo`, `podcast`, `audiobook`. `lookup?isrc=` looks like the ISRC
 equivalent of `lookup?upc=` and is not: it returns `200 resultCount: 0` for an ISRC known to be in
 catalogue, so it is silently unsupported rather than broken (probed 2026-08-12) — never called.
+As with Deezer, the name-search pool behind `ALBUM_ART`, `ALBUM_METADATA` and `ALBUM_TRACKS` is
+accepted on `collectionName` as well as artist and shared as one ranked result; the exact
+`itunesCollectionId` and `lookup?upc=` paths bypass that acceptance entirely (`docs/pitfalls.md` §7).
 
-**LRCLIB.** Parsed into `LrcLibResult` and dropped: `id` (`GET /api/get/{id}` would re-fetch without
-a search), `trackName`/`artistName` — both would verify that the search fallback returned the right
-track, which nothing currently does. `albumName` and `duration` *are* read, into
-`TRACK_METADATA`'s album title and `durationMs`. Never called:
-`GET /api/get/{id}`, and the write path (`POST /api/request-challenge`, `POST /api/publish`), which
-needs a proof-of-work solution and would make this a write client.
+**LRCLIB.** `id` is parsed and dropped (`GET /api/get/{id}` would re-fetch without a search).
+`trackName`/`artistName` are checked before a `/api/search` fallback candidate is selected —
+`LrcLibAcceptance.accepts` rejects a wrong title or wrong artist rather than trusting search-result
+order — and `albumName`/`duration` rank the accepted pool, read into `TRACK_METADATA`'s album title
+and `durationMs` when the winner carries them. `LYRICS_SYNCED`, `LYRICS_PLAIN` and `TRACK_METADATA`
+share one lookup-and-selection outcome per call (`LrcLibTrackScope`, `docs/pitfalls.md` §7). Never
+called: `GET /api/get/{id}` directly, and the write path (`POST /api/request-challenge`,
+`POST /api/publish`), which needs a proof-of-work solution and would make this a write client.
 
 **Wikidata.** One `wbgetentities&props=claims` call returns every claim on the entity, so what is
 left below costs code and no request. Read: P18, P569, P570, P495, P106, P856 (the sole
@@ -481,4 +517,8 @@ to match the requested title), member active/inactive flag. From a search result
 `formats[].descriptions`, `resource_url`, `community`. Never called: `/artists/{id}/releases`
 (MusicBrainz and iTunes cover discography), `/labels/{id}` and its releases, marketplace, inventory,
 and every user collection endpoint. `ReleaseEdition.barcode` is explicitly null because
-`/masters/{id}/versions` does not carry it — `/releases/{id}` does.
+`/masters/{id}/versions` does not carry it — `/releases/{id}` does. `database/search`'s combined
+`"Artist - Title"` field is safely split on the boundary that matches both the requested artist and
+title, not the first artist-plausible one, then the result is accepted on the parsed album title as
+well as the artist before `ALBUM_ART`, `LABEL`, `RELEASE_TYPE` and `ALBUM_METADATA` share it
+(`docs/pitfalls.md` §7).

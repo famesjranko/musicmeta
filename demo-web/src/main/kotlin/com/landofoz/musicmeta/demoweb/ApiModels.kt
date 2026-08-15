@@ -31,11 +31,11 @@ data class SummaryCard(
     /** False unless identity resolved (or needed no resolution) — do not present [title] as a match. */
     val identityResolved: Boolean = true,
     /**
-     * The bare `IdentityMatch` enum name to branch on, or `null` when resolution was skipped —
-     * unlike [Meta.identityMatch], which is a display string. Section presence is not a substitute:
-     * a `SUGGESTIONS` verdict whose candidates all filtered out looks just like `BEST_EFFORT`.
+     * The bare `CanonicalStatus` enum name to branch on, unlike [Meta.identityMatch], which is a
+     * display string. Section presence is not a substitute: an `AMBIGUOUS` verdict whose candidates
+     * all filtered out looks just like `UNRESOLVED`.
      */
-    val identityVerdict: String? = null,
+    val identityVerdict: String = "",
     val genres: List<GenreChip> = emptyList(),
 )
 
@@ -79,6 +79,11 @@ data class SectionItem(
     val previewTitle: String? = null,
     val previewArtist: String? = null,
     val previewAlbum: String? = null,
+    /**
+     * Identifiers the play button echoes back to `/api/preview` alongside [previewTitle]/
+     * [previewArtist]/[previewAlbum]. Absent (the default) is a name-only lookup.
+     */
+    val identifiers: WireIdentifiers? = null,
 )
 
 /** An in-app enrichment lookup a click can run — the internal counterpart to [SectionItem.link]. */
@@ -88,6 +93,38 @@ data class EnrichTarget(
     val name: String,
     val artist: String? = null,
     val album: String? = null,
+    /**
+     * Identifiers the row already knows, echoed back to `/api/enrich` on navigation. Absent (the
+     * default) is a name-only lookup.
+     */
+    val identifiers: WireIdentifiers? = null,
+)
+
+/**
+ * Entity scope a [WireIdentifiers] envelope carries, server-validated against the request it
+ * arrived on rather than trusted from the client: a namespaced id is not always the same kind of
+ * entity (Deezer's id names a track here, but a seed *artist* on an album similarity lookup).
+ * New entity kinds may be appended when a corresponding request and validation path exists.
+ */
+@Serializable
+enum class WireEntityKind { TRACK }
+
+/**
+ * A row's known identifiers, carried as one query parameter (`ids`, JSON-encoded) rather than one
+ * per namespace — the same shape `/api/preview`, `/api/enrich`, and `/api/invalidate` all decode.
+ *
+ * Every trusted identifier beyond [musicBrainzId] is its own field, named for both its namespace
+ * and the [entityKind] it is trusted under (for example [deezerTrackId] is only valid when
+ * [entityKind] is `TRACK`), rather than an open `namespace -> value` map — a field's name is the
+ * allowlist entry, so decoding an id this transport does not trust for the entity kind it arrived
+ * on is a deserialization failure, not a value to filter out after the fact. Adding a new trusted
+ * identifier is one field here plus one validation branch server-side.
+ */
+@Serializable
+data class WireIdentifiers(
+    val entityKind: WireEntityKind,
+    val musicBrainzId: String? = null,
+    val deezerTrackId: String? = null,
 )
 
 @Serializable
@@ -202,6 +239,12 @@ data class InvalidateRequest(
     val artist: String? = null,
     val album: String? = null,
     val mbid: String? = null,
+    /**
+     * The same [WireIdentifiers] envelope [EnrichTarget.identifiers] carries, so invalidation
+     * addresses the exact request-tuple family the reload that follows it will read — omitting this
+     * lets an identifier-bearing entry survive "clear and reload" while only the name tuple clears.
+     */
+    val identifiers: WireIdentifiers? = null,
 )
 
 @Serializable

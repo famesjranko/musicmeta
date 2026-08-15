@@ -1,42 +1,80 @@
 package com.landofoz.musicmeta.engine
 
-import com.landofoz.musicmeta.EnrichmentRequest
-import com.landofoz.musicmeta.EnrichmentType
-
-/** Cache key using MBID when available, falling back to name. */
-internal fun entityKeyFor(request: EnrichmentRequest, type: EnrichmentType): String {
-    val prefix = entityPrefix(request)
-    val id = request.identifiers.musicBrainzId ?: entityNamePart(request)
-    return "$prefix:$id:$type"
-}
-
-/** Cache key using name/title only (no MBID), for cache aliasing after disambiguation. */
-internal fun entityKeyForName(request: EnrichmentRequest, type: EnrichmentType): String =
-    "${entityPrefix(request)}:${entityNamePart(request)}:$type"
+import com.landofoz.musicmeta.CanonicalStatus
+import com.landofoz.musicmeta.EnrichmentResult
+import com.landofoz.musicmeta.IdentifierRequirement
+import com.landofoz.musicmeta.LookupProvenance
 
 /**
- * Whether [request] names no entity — an [EnrichmentRequest.Companion.forTrackByMbid]-style request
- * before identity resolution has filled it in. Its name key names nothing until then.
+ * [LookupProvenance] for a [type] result that did not report its own route, from what the winning
+ * provider's chain walk actually required to run it — never from which identifiers merely happen to
+ * be present on the request, which a provider that used none of them may still have satisfied by
+ * coincidence. [winningRequirement] is [ChainExecution.winningRequirement]: null when no single
+ * provider's `Success` was captured this way, e.g. a merged multi-provider result. [stampProvenance]
+ * only reaches this function for a `null` [EnrichmentResult.Success.provenance] — a provider that
+ * sets its own route on the `Success` it returns is trusted verbatim and never reaches here.
  *
- * The title (or artist name) alone decides it. A blank *artist* beside a real title is not this
- * case: MusicBrainz drops an empty `artistname:""` term and resolves on the title, verified live
- * 2026-08-12 (`recording:"Bohemian Rhapsody" AND artistname:""` → count 823, top hits at score 100),
- * so such a request still has a search worth making.
+ * A provider whose declared requirement demands *some* MusicBrainz-issued id ([IdentifierRequirement.MUSICBRAINZ_ID],
+ * [IdentifierRequirement.MUSICBRAINZ_RELEASE_GROUP_ID]) could only have run by consuming one, so that
+ * is [LookupProvenance.CANONICAL_ID] — observed, not inferred. A requirement naming exactly one
+ * provider-owned id space ([IdentifierRequirement.WIKIDATA_ID], [IdentifierRequirement.WIKIPEDIA_TITLE])
+ * is [LookupProvenance.PROVIDER_NATIVE_ID] on the same basis. [IdentifierRequirement.ANY_IDENTIFIER] is
+ * deliberately excluded from that bucket: it accepts a MusicBrainz id, a release-group id, a Wikidata
+ * id, or a Wikipedia title, so the requirement alone cannot say which id space actually ran — same as
+ * [IdentifierRequirement.NONE] and a missing [winningRequirement], only [canonicalStatus] — MusicBrainz's
+ * canonical confirmation of this call — is left to tell an exact name match from an unverified guess.
  */
-internal fun namesNoEntity(request: EnrichmentRequest): Boolean = when (request) {
-    is EnrichmentRequest.ForAlbum -> request.title.isBlank()
-    is EnrichmentRequest.ForArtist -> request.name.isBlank()
-    is EnrichmentRequest.ForTrack -> request.title.isBlank()
+internal fun observedProvenance(
+    winningRequirement: IdentifierRequirement?,
+    canonicalStatus: CanonicalStatus,
+): LookupProvenance = when (winningRequirement) {
+    IdentifierRequirement.MUSICBRAINZ_ID, IdentifierRequirement.MUSICBRAINZ_RELEASE_GROUP_ID ->
+        LookupProvenance.CANONICAL_ID
+    IdentifierRequirement.WIKIDATA_ID, IdentifierRequirement.WIKIPEDIA_TITLE ->
+        LookupProvenance.PROVIDER_NATIVE_ID
+    IdentifierRequirement.NONE, IdentifierRequirement.ANY_IDENTIFIER, null ->
+        if (canonicalStatus == CanonicalStatus.RESOLVED) LookupProvenance.EXACT_NAME else LookupProvenance.FUZZY_NAME
 }
 
-private fun entityPrefix(request: EnrichmentRequest): String = when (request) {
-    is EnrichmentRequest.ForAlbum -> "album"
-    is EnrichmentRequest.ForArtist -> "artist"
-    is EnrichmentRequest.ForTrack -> "track"
-}
+/**
+ * Explicit strength order for [LookupProvenance], strongest first — restated from the enum's own
+ * declaration order so a merged or composite result's summary provenance does not silently drift if
+ * that declaration order ever changes for an unrelated reason. See [weakestProvenance].
+ */
+private val PROVENANCE_STRENGTH: List<LookupProvenance> = listOf(
+    LookupProvenance.CANONICAL_ID,
+    LookupProvenance.PROVIDER_NATIVE_ID,
+    LookupProvenance.EXTERNAL_CATALOG_ID,
+    LookupProvenance.EXACT_NAME,
+    LookupProvenance.QUALIFIER_FALLBACK_NAME,
+    LookupProvenance.FUZZY_NAME,
+    LookupProvenance.CACHE,
+)
 
-private fun entityNamePart(request: EnrichmentRequest): String = when (request) {
-    is EnrichmentRequest.ForAlbum -> "${request.artist}:${request.title}"
-    is EnrichmentRequest.ForArtist -> request.name
-    is EnrichmentRequest.ForTrack -> "${request.artist}:${request.title}"
+/**
+ * The least-confident value among [provenances] under [PROVENANCE_STRENGTH] — the smallest truthful
+ * summary of several contributors' routes for a merged or composite result, none of which has a
+ * singular observed route of its own. Every contributor's own evidence is at least this strong, so a
+ * consumer reading the summary alone never overtrusts it. [provenances] is expected non-empty by
+ * every caller (a merge/synthesis with zero successful contributors returns `NotFound` before this is
+ * reached); [FUZZY_NAME] is the defensive fallback for the unreachable empty case, not a claim.
+ */
+internal fun weakestProvenance(provenances: List<LookupProvenance>): LookupProvenance =
+    provenances.maxByOrNull { PROVENANCE_STRENGTH.indexOf(it) } ?: LookupProvenance.FUZZY_NAME
+
+/**
+ * [observedProvenance] for one contributor to a mergeable type's collect-all walk, by that
+ * contributor's own provider — never [ChainExecution.winningRequirement], which a collect-all walk
+ * never sets because it has no single winner. Self-reported [success]es are trusted verbatim, same
+ * as [stampProvenance]. [chain] is null only when the type has no registered chain at all, in which
+ * case there is no provider to ask and [IdentifierRequirement.NONE] applies.
+ */
+internal fun stampContributorProvenance(
+    success: EnrichmentResult.Success,
+    chain: ProviderChain?,
+    canonicalStatus: CanonicalStatus,
+): EnrichmentResult.Success {
+    if (success.provenance != null) return success
+    val requirement = chain?.requirementForProviderId(success.provider) ?: IdentifierRequirement.NONE
+    return success.copy(provenance = observedProvenance(requirement, canonicalStatus))
 }

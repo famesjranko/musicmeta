@@ -10,6 +10,7 @@ public final class com/landofoz/musicmeta/AlbumProfile {
 	public final fun getArtwork ()Lcom/landofoz/musicmeta/EnrichmentData$Artwork;
 	public final fun getArtworkBack ()Lcom/landofoz/musicmeta/EnrichmentData$Artwork;
 	public final fun getBooklet ()Lcom/landofoz/musicmeta/EnrichmentData$Artwork;
+	public final fun getCanonicalStatus ()Lcom/landofoz/musicmeta/CanonicalStatus;
 	public final fun getCdArt ()Lcom/landofoz/musicmeta/EnrichmentData$Artwork;
 	public final fun getCountry ()Ljava/lang/String;
 	public final fun getDescription ()Lcom/landofoz/musicmeta/EnrichmentData$Biography;
@@ -17,7 +18,6 @@ public final class com/landofoz/musicmeta/AlbumProfile {
 	public final fun getGenreDiscovery ()Ljava/util/List;
 	public final fun getGenres ()Ljava/util/List;
 	public final fun getIdentifiers ()Lcom/landofoz/musicmeta/EnrichmentIdentifiers;
-	public final fun getIdentityMatch ()Lcom/landofoz/musicmeta/IdentityMatch;
 	public final fun getIdentityMatchScore ()Ljava/lang/Integer;
 	public final fun getLabel ()Ljava/lang/String;
 	public final fun getReleaseDate ()Ljava/lang/String;
@@ -60,12 +60,12 @@ public final class com/landofoz/musicmeta/ArtistProfile {
 	public final fun getBackground ()Lcom/landofoz/musicmeta/EnrichmentData$Artwork;
 	public final fun getBanner ()Lcom/landofoz/musicmeta/EnrichmentData$Artwork;
 	public final fun getBio ()Lcom/landofoz/musicmeta/EnrichmentData$Biography;
+	public final fun getCanonicalStatus ()Lcom/landofoz/musicmeta/CanonicalStatus;
 	public final fun getCountry ()Ljava/lang/String;
 	public final fun getDiscography ()Ljava/util/List;
 	public final fun getGenreDiscovery ()Ljava/util/List;
 	public final fun getGenres ()Ljava/util/List;
 	public final fun getIdentifiers ()Lcom/landofoz/musicmeta/EnrichmentIdentifiers;
-	public final fun getIdentityMatch ()Lcom/landofoz/musicmeta/IdentityMatch;
 	public final fun getIdentityMatchScore ()Ljava/lang/Integer;
 	public final fun getLinks ()Ljava/util/List;
 	public final fun getLogo ()Lcom/landofoz/musicmeta/EnrichmentData$Artwork;
@@ -196,6 +196,33 @@ public synthetic class com/landofoz/musicmeta/BandMember$$serializer : kotlinx/s
 
 public final class com/landofoz/musicmeta/BandMember$Companion {
 	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class com/landofoz/musicmeta/CacheEnvelope {
+	public fun <init> (Lcom/landofoz/musicmeta/EnrichmentResult;Lcom/landofoz/musicmeta/CanonicalStatus;)V
+	public final fun component1 ()Lcom/landofoz/musicmeta/EnrichmentResult;
+	public final fun component2 ()Lcom/landofoz/musicmeta/CanonicalStatus;
+	public final fun copy (Lcom/landofoz/musicmeta/EnrichmentResult;Lcom/landofoz/musicmeta/CanonicalStatus;)Lcom/landofoz/musicmeta/CacheEnvelope;
+	public static synthetic fun copy$default (Lcom/landofoz/musicmeta/CacheEnvelope;Lcom/landofoz/musicmeta/EnrichmentResult;Lcom/landofoz/musicmeta/CanonicalStatus;ILjava/lang/Object;)Lcom/landofoz/musicmeta/CacheEnvelope;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCanonicalStatus ()Lcom/landofoz/musicmeta/CanonicalStatus;
+	public final fun getResult ()Lcom/landofoz/musicmeta/EnrichmentResult;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/landofoz/musicmeta/CanonicalStatus : java/lang/Enum {
+	public static final field AMBIGUOUS Lcom/landofoz/musicmeta/CanonicalStatus;
+	public static final field FAILED Lcom/landofoz/musicmeta/CanonicalStatus;
+	public static final field NOT_ATTEMPTED_CACHE_HIT Lcom/landofoz/musicmeta/CanonicalStatus;
+	public static final field NOT_ATTEMPTED_DISABLED Lcom/landofoz/musicmeta/CanonicalStatus;
+	public static final field NOT_ATTEMPTED_NOT_REQUIRED Lcom/landofoz/musicmeta/CanonicalStatus;
+	public static final field NOT_ATTEMPTED_NO_PROVIDER Lcom/landofoz/musicmeta/CanonicalStatus;
+	public static final field RESOLVED Lcom/landofoz/musicmeta/CanonicalStatus;
+	public static final field UNRESOLVED Lcom/landofoz/musicmeta/CanonicalStatus;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lcom/landofoz/musicmeta/CanonicalStatus;
+	public static fun values ()[Lcom/landofoz/musicmeta/CanonicalStatus;
 }
 
 public final class com/landofoz/musicmeta/CatalogFilterMode : java/lang/Enum {
@@ -338,8 +365,8 @@ public abstract interface class com/landofoz/musicmeta/EnrichmentCache {
 	public abstract fun invalidate (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun isManuallySelected (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun markManuallySelected (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public abstract fun put (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lcom/landofoz/musicmeta/EnrichmentResult$Success;JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public abstract fun putNegative (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lcom/landofoz/musicmeta/EnrichmentResult$NotFound;JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun put (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lcom/landofoz/musicmeta/EnrichmentResult$Success;Lcom/landofoz/musicmeta/CanonicalStatus;JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun putNegative (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lcom/landofoz/musicmeta/EnrichmentResult$NotFound;Lcom/landofoz/musicmeta/CanonicalStatus;JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 
 public final class com/landofoz/musicmeta/EnrichmentCache$Companion {
@@ -350,8 +377,8 @@ public final class com/landofoz/musicmeta/EnrichmentCache$DefaultImpls {
 	public static fun getIncludingExpired (Lcom/landofoz/musicmeta/EnrichmentCache;Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static fun getNegative (Lcom/landofoz/musicmeta/EnrichmentCache;Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static synthetic fun invalidate$default (Lcom/landofoz/musicmeta/EnrichmentCache;Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
-	public static synthetic fun put$default (Lcom/landofoz/musicmeta/EnrichmentCache;Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lcom/landofoz/musicmeta/EnrichmentResult$Success;JLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
-	public static fun putNegative (Lcom/landofoz/musicmeta/EnrichmentCache;Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lcom/landofoz/musicmeta/EnrichmentResult$NotFound;JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun put$default (Lcom/landofoz/musicmeta/EnrichmentCache;Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lcom/landofoz/musicmeta/EnrichmentResult$Success;Lcom/landofoz/musicmeta/CanonicalStatus;JLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static fun putNegative (Lcom/landofoz/musicmeta/EnrichmentCache;Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lcom/landofoz/musicmeta/EnrichmentResult$NotFound;Lcom/landofoz/musicmeta/CanonicalStatus;JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 
 public final class com/landofoz/musicmeta/EnrichmentConfig {
@@ -1270,16 +1297,14 @@ public final class com/landofoz/musicmeta/EnrichmentResult$Error : com/landofoz/
 }
 
 public final class com/landofoz/musicmeta/EnrichmentResult$NotFound : com/landofoz/musicmeta/EnrichmentResult {
-	public fun <init> (Lcom/landofoz/musicmeta/EnrichmentType;Ljava/lang/String;Ljava/util/List;Lcom/landofoz/musicmeta/IdentityMatch;)V
-	public synthetic fun <init> (Lcom/landofoz/musicmeta/EnrichmentType;Ljava/lang/String;Ljava/util/List;Lcom/landofoz/musicmeta/IdentityMatch;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Lcom/landofoz/musicmeta/EnrichmentType;Ljava/lang/String;Ljava/util/List;)V
+	public synthetic fun <init> (Lcom/landofoz/musicmeta/EnrichmentType;Ljava/lang/String;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Lcom/landofoz/musicmeta/EnrichmentType;
 	public final fun component2 ()Ljava/lang/String;
 	public final fun component3 ()Ljava/util/List;
-	public final fun component4 ()Lcom/landofoz/musicmeta/IdentityMatch;
-	public final fun copy (Lcom/landofoz/musicmeta/EnrichmentType;Ljava/lang/String;Ljava/util/List;Lcom/landofoz/musicmeta/IdentityMatch;)Lcom/landofoz/musicmeta/EnrichmentResult$NotFound;
-	public static synthetic fun copy$default (Lcom/landofoz/musicmeta/EnrichmentResult$NotFound;Lcom/landofoz/musicmeta/EnrichmentType;Ljava/lang/String;Ljava/util/List;Lcom/landofoz/musicmeta/IdentityMatch;ILjava/lang/Object;)Lcom/landofoz/musicmeta/EnrichmentResult$NotFound;
+	public final fun copy (Lcom/landofoz/musicmeta/EnrichmentType;Ljava/lang/String;Ljava/util/List;)Lcom/landofoz/musicmeta/EnrichmentResult$NotFound;
+	public static synthetic fun copy$default (Lcom/landofoz/musicmeta/EnrichmentResult$NotFound;Lcom/landofoz/musicmeta/EnrichmentType;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Lcom/landofoz/musicmeta/EnrichmentResult$NotFound;
 	public fun equals (Ljava/lang/Object;)Z
-	public final fun getIdentityMatch ()Lcom/landofoz/musicmeta/IdentityMatch;
 	public final fun getProvider ()Ljava/lang/String;
 	public final fun getSuggestions ()Ljava/util/List;
 	public final fun getType ()Lcom/landofoz/musicmeta/EnrichmentType;
@@ -1304,23 +1329,21 @@ public final class com/landofoz/musicmeta/EnrichmentResult$RateLimited : com/lan
 }
 
 public final class com/landofoz/musicmeta/EnrichmentResult$Success : com/landofoz/musicmeta/EnrichmentResult {
-	public fun <init> (Lcom/landofoz/musicmeta/EnrichmentType;Lcom/landofoz/musicmeta/EnrichmentData;Ljava/lang/String;FLcom/landofoz/musicmeta/EnrichmentIdentifiers;Ljava/lang/Integer;Lcom/landofoz/musicmeta/IdentityMatch;Z)V
-	public synthetic fun <init> (Lcom/landofoz/musicmeta/EnrichmentType;Lcom/landofoz/musicmeta/EnrichmentData;Ljava/lang/String;FLcom/landofoz/musicmeta/EnrichmentIdentifiers;Ljava/lang/Integer;Lcom/landofoz/musicmeta/IdentityMatch;ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Lcom/landofoz/musicmeta/EnrichmentType;Lcom/landofoz/musicmeta/EnrichmentData;Ljava/lang/String;FLcom/landofoz/musicmeta/EnrichmentIdentifiers;Lcom/landofoz/musicmeta/LookupProvenance;Z)V
+	public synthetic fun <init> (Lcom/landofoz/musicmeta/EnrichmentType;Lcom/landofoz/musicmeta/EnrichmentData;Ljava/lang/String;FLcom/landofoz/musicmeta/EnrichmentIdentifiers;Lcom/landofoz/musicmeta/LookupProvenance;ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Lcom/landofoz/musicmeta/EnrichmentType;
 	public final fun component2 ()Lcom/landofoz/musicmeta/EnrichmentData;
 	public final fun component3 ()Ljava/lang/String;
 	public final fun component4 ()F
 	public final fun component5 ()Lcom/landofoz/musicmeta/EnrichmentIdentifiers;
-	public final fun component6 ()Ljava/lang/Integer;
-	public final fun component7 ()Lcom/landofoz/musicmeta/IdentityMatch;
-	public final fun component8 ()Z
-	public final fun copy (Lcom/landofoz/musicmeta/EnrichmentType;Lcom/landofoz/musicmeta/EnrichmentData;Ljava/lang/String;FLcom/landofoz/musicmeta/EnrichmentIdentifiers;Ljava/lang/Integer;Lcom/landofoz/musicmeta/IdentityMatch;Z)Lcom/landofoz/musicmeta/EnrichmentResult$Success;
-	public static synthetic fun copy$default (Lcom/landofoz/musicmeta/EnrichmentResult$Success;Lcom/landofoz/musicmeta/EnrichmentType;Lcom/landofoz/musicmeta/EnrichmentData;Ljava/lang/String;FLcom/landofoz/musicmeta/EnrichmentIdentifiers;Ljava/lang/Integer;Lcom/landofoz/musicmeta/IdentityMatch;ZILjava/lang/Object;)Lcom/landofoz/musicmeta/EnrichmentResult$Success;
+	public final fun component6 ()Lcom/landofoz/musicmeta/LookupProvenance;
+	public final fun component7 ()Z
+	public final fun copy (Lcom/landofoz/musicmeta/EnrichmentType;Lcom/landofoz/musicmeta/EnrichmentData;Ljava/lang/String;FLcom/landofoz/musicmeta/EnrichmentIdentifiers;Lcom/landofoz/musicmeta/LookupProvenance;Z)Lcom/landofoz/musicmeta/EnrichmentResult$Success;
+	public static synthetic fun copy$default (Lcom/landofoz/musicmeta/EnrichmentResult$Success;Lcom/landofoz/musicmeta/EnrichmentType;Lcom/landofoz/musicmeta/EnrichmentData;Ljava/lang/String;FLcom/landofoz/musicmeta/EnrichmentIdentifiers;Lcom/landofoz/musicmeta/LookupProvenance;ZILjava/lang/Object;)Lcom/landofoz/musicmeta/EnrichmentResult$Success;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getConfidence ()F
 	public final fun getData ()Lcom/landofoz/musicmeta/EnrichmentData;
-	public final fun getIdentityMatch ()Lcom/landofoz/musicmeta/IdentityMatch;
-	public final fun getIdentityMatchScore ()Ljava/lang/Integer;
+	public final fun getProvenance ()Lcom/landofoz/musicmeta/LookupProvenance;
 	public final fun getProvider ()Ljava/lang/String;
 	public final fun getResolvedIdentifiers ()Lcom/landofoz/musicmeta/EnrichmentIdentifiers;
 	public final fun getType ()Lcom/landofoz/musicmeta/EnrichmentType;
@@ -1548,32 +1571,22 @@ public final class com/landofoz/musicmeta/IdentifierRequirement : java/lang/Enum
 	public static fun values ()[Lcom/landofoz/musicmeta/IdentifierRequirement;
 }
 
-public final class com/landofoz/musicmeta/IdentityMatch : java/lang/Enum {
-	public static final field BEST_EFFORT Lcom/landofoz/musicmeta/IdentityMatch;
-	public static final field RESOLVED Lcom/landofoz/musicmeta/IdentityMatch;
-	public static final field SUGGESTIONS Lcom/landofoz/musicmeta/IdentityMatch;
-	public static final field UNVERIFIED Lcom/landofoz/musicmeta/IdentityMatch;
-	public static fun getEntries ()Lkotlin/enums/EnumEntries;
-	public static fun valueOf (Ljava/lang/String;)Lcom/landofoz/musicmeta/IdentityMatch;
-	public static fun values ()[Lcom/landofoz/musicmeta/IdentityMatch;
-}
-
 public final class com/landofoz/musicmeta/IdentityResolution {
-	public fun <init> (Lcom/landofoz/musicmeta/EnrichmentIdentifiers;Lcom/landofoz/musicmeta/IdentityMatch;Ljava/lang/Integer;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;)V
-	public synthetic fun <init> (Lcom/landofoz/musicmeta/EnrichmentIdentifiers;Lcom/landofoz/musicmeta/IdentityMatch;Ljava/lang/Integer;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Lcom/landofoz/musicmeta/EnrichmentIdentifiers;Lcom/landofoz/musicmeta/CanonicalStatus;Ljava/lang/Integer;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;)V
+	public synthetic fun <init> (Lcom/landofoz/musicmeta/EnrichmentIdentifiers;Lcom/landofoz/musicmeta/CanonicalStatus;Ljava/lang/Integer;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Lcom/landofoz/musicmeta/EnrichmentIdentifiers;
-	public final fun component2 ()Lcom/landofoz/musicmeta/IdentityMatch;
+	public final fun component2 ()Lcom/landofoz/musicmeta/CanonicalStatus;
 	public final fun component3 ()Ljava/lang/Integer;
 	public final fun component4 ()Ljava/util/List;
 	public final fun component5 ()Ljava/lang/String;
 	public final fun component6 ()Ljava/lang/String;
-	public final fun copy (Lcom/landofoz/musicmeta/EnrichmentIdentifiers;Lcom/landofoz/musicmeta/IdentityMatch;Ljava/lang/Integer;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;)Lcom/landofoz/musicmeta/IdentityResolution;
-	public static synthetic fun copy$default (Lcom/landofoz/musicmeta/IdentityResolution;Lcom/landofoz/musicmeta/EnrichmentIdentifiers;Lcom/landofoz/musicmeta/IdentityMatch;Ljava/lang/Integer;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lcom/landofoz/musicmeta/IdentityResolution;
+	public final fun copy (Lcom/landofoz/musicmeta/EnrichmentIdentifiers;Lcom/landofoz/musicmeta/CanonicalStatus;Ljava/lang/Integer;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;)Lcom/landofoz/musicmeta/IdentityResolution;
+	public static synthetic fun copy$default (Lcom/landofoz/musicmeta/IdentityResolution;Lcom/landofoz/musicmeta/EnrichmentIdentifiers;Lcom/landofoz/musicmeta/CanonicalStatus;Ljava/lang/Integer;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lcom/landofoz/musicmeta/IdentityResolution;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getArtist ()Ljava/lang/String;
 	public final fun getIdentifiers ()Lcom/landofoz/musicmeta/EnrichmentIdentifiers;
-	public final fun getMatch ()Lcom/landofoz/musicmeta/IdentityMatch;
 	public final fun getMatchScore ()Ljava/lang/Integer;
+	public final fun getStatus ()Lcom/landofoz/musicmeta/CanonicalStatus;
 	public final fun getSuggestions ()Ljava/util/List;
 	public final fun getTitle ()Ljava/lang/String;
 	public fun hashCode ()I
@@ -1597,6 +1610,19 @@ public final class com/landofoz/musicmeta/KeyRequirement$Required : com/landofoz
 	public fun <init> (Ljava/lang/String;Lkotlin/jvm/functions/Function1;)V
 	public final fun getFieldName ()Ljava/lang/String;
 	public final fun getKey ()Lkotlin/jvm/functions/Function1;
+}
+
+public final class com/landofoz/musicmeta/LookupProvenance : java/lang/Enum {
+	public static final field CACHE Lcom/landofoz/musicmeta/LookupProvenance;
+	public static final field CANONICAL_ID Lcom/landofoz/musicmeta/LookupProvenance;
+	public static final field EXACT_NAME Lcom/landofoz/musicmeta/LookupProvenance;
+	public static final field EXTERNAL_CATALOG_ID Lcom/landofoz/musicmeta/LookupProvenance;
+	public static final field FUZZY_NAME Lcom/landofoz/musicmeta/LookupProvenance;
+	public static final field PROVIDER_NATIVE_ID Lcom/landofoz/musicmeta/LookupProvenance;
+	public static final field QUALIFIER_FALLBACK_NAME Lcom/landofoz/musicmeta/LookupProvenance;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lcom/landofoz/musicmeta/LookupProvenance;
+	public static fun values ()[Lcom/landofoz/musicmeta/LookupProvenance;
 }
 
 public final class com/landofoz/musicmeta/MusicBrainzEntityType : java/lang/Enum {
@@ -2169,11 +2195,11 @@ public final class com/landofoz/musicmeta/TrackProfile {
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getArtist ()Ljava/lang/String;
 	public final fun getArtwork ()Lcom/landofoz/musicmeta/EnrichmentData$Artwork;
+	public final fun getCanonicalStatus ()Lcom/landofoz/musicmeta/CanonicalStatus;
 	public final fun getCredits ()Lcom/landofoz/musicmeta/EnrichmentData$Credits;
 	public final fun getGenreDiscovery ()Ljava/util/List;
 	public final fun getGenres ()Ljava/util/List;
 	public final fun getIdentifiers ()Lcom/landofoz/musicmeta/EnrichmentIdentifiers;
-	public final fun getIdentityMatch ()Lcom/landofoz/musicmeta/IdentityMatch;
 	public final fun getIdentityMatchScore ()Ljava/lang/Integer;
 	public final fun getLyrics ()Lcom/landofoz/musicmeta/EnrichmentData$Lyrics;
 	public final fun getPopularity ()Lcom/landofoz/musicmeta/EnrichmentData$Popularity;
@@ -2206,8 +2232,8 @@ public final class com/landofoz/musicmeta/cache/InMemoryEnrichmentCache : com/la
 	public fun invalidate (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun isManuallySelected (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun markManuallySelected (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public fun put (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lcom/landofoz/musicmeta/EnrichmentResult$Success;JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public fun putNegative (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lcom/landofoz/musicmeta/EnrichmentResult$NotFound;JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun put (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lcom/landofoz/musicmeta/EnrichmentResult$Success;Lcom/landofoz/musicmeta/CanonicalStatus;JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun putNegative (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentType;Lcom/landofoz/musicmeta/EnrichmentResult$NotFound;Lcom/landofoz/musicmeta/CanonicalStatus;JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 
 public abstract interface class com/landofoz/musicmeta/engine/CompositeSynthesizer {
