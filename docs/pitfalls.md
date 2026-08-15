@@ -567,3 +567,32 @@ in place with `sed -i` or a heredoc rather than a read-then-write; restore by `c
 `git checkout`, which takes uncommitted work with it. This applies to a probe against a lint config,
 a check script, or a test: a probe is instrumentation, and instrumentation that cannot fail is the
 same defect the thing being probed is meant to catch.
+
+
+## 17. `runTest`'s clock makes a timeout over real I/O fire unconditionally
+
+`runTest` runs on a virtual clock that jumps to the next scheduled time the moment every coroutine it
+owns is idle. A test coroutine that suspends on **real** blocking I/O — a socket, a loopback server, a
+file — is idle by that definition, so the clock leaps forward while the I/O is still in flight. Any
+`withTimeout` wrapping that call therefore fires on every run, whatever the I/O did, and however
+quickly it did it.
+
+A test written to prove that a timeout propagates cancellation rather than being swallowed into a
+classified result is then asserting nothing: its `catch (e: CancellationException)` runs
+unconditionally, and the assertion is true by construction. It passes against correct code, passes
+against a client that swallows cancellation, and passes against a server that answers instantly. It
+cannot fail, which is the defect it was written to prevent.
+
+**The recipe, and it attacks the premise rather than the implementation: remove the thing the test
+says causes the outcome, and check the outcome goes away.** For a timeout test, set the server's
+delay to zero so there is nothing to time out, assert the edit is present (§16), and run the suite.
+The test must go **red**. If it stays green the timeout is virtual, the assertion is a tautology, and
+no mutation of the code under test will ever reveal it — this failed to show up under a deliberately
+broadened `catch` in the retry ladder, because cancellation is sticky and the framework absorbs the
+mutation before it reaches the caller.
+
+The fix is to put the timed section on a real clock — `withContext(Dispatchers.Default) {
+withTimeout(...) { … } }` — not to switch the test to `runBlocking`, which reintroduces the real
+`RateLimiter` delays `runTest` exists here to keep virtual. **"I could not make this go red" is a
+finding, not a footnote**: a test verified only against unmutated code is proven to pass and unproven
+to fail, and only the second claim is worth anything.
