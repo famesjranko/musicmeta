@@ -12,6 +12,7 @@ class FakeHttpClient : HttpClient {
     private val errors = mutableSetOf<String>()
     private val ioExceptions = mutableSetOf<String>()
     private val httpResultResponses = mutableMapOf<String, HttpResult<JSONObject>>()
+    private val sequencedHttpResults = mutableMapOf<String, MutableList<HttpResult<JSONObject>>>()
     private val httpResultArrayResponses = mutableMapOf<String, HttpResult<JSONArray>>()
     private val redirectResults = mutableMapOf<String, HttpResult<String>>()
     val requestedUrls = mutableListOf<String>()
@@ -38,13 +39,31 @@ class FakeHttpClient : HttpClient {
      * Api classes propagate the exception rather than returning null.
      */
     fun givenIoException(urlContains: String) { ioExceptions.add(urlContains) }
+
+    /** One status for a URL, repeating for every call to it. */
     fun givenHttpResult(urlContains: String, result: HttpResult<JSONObject>) { httpResultResponses[urlContains] = result }
     fun givenHttpResultArray(urlContains: String, result: HttpResult<JSONArray>) { httpResultArrayResponses[urlContains] = result }
 
     /**
-     * The status channel for redirect fetches — the only way to say "429" or "no artwork (404)"
-     * to [fetchRedirectUrlResult]. [givenError] cannot: it means a dropped connection, which is a
+     * Successive statuses for the *same* URL, in order, the last one repeating — the shape
+     * [givenJsonResponsesInTurn] uses for bodies. A recovery is only expressible this way: a single
+     * [givenHttpResult] repeats, so *429 then 200* — the sequence that separates a ladder that
+     * retried from one that gave up — needs the list.
+     *
+     * The retry ladder lives in the [HttpClient] implementation, not in the provider, and this fake
+     * has none. Driving a provider through a recovery means wrapping this in a client that composes
+     * `BudgetedTransientRetry`; a provider handed this fake directly sees the first entry and stops.
+     */
+    fun givenHttpResultsInTurn(urlContains: String, vararg results: HttpResult<JSONObject>) {
+        sequencedHttpResults[urlContains] = results.toMutableList()
+    }
+
+    /**
+     * The status channel for [fetchRedirectUrlResult] — how that method is told "429" or "no
+     * artwork (404)". [givenError] cannot say either: it means a dropped connection, which is a
      * transient the provider reports as `Error`, not the empty result most tests mean.
+     *
+     * The JSON path has its own status channel in [givenHttpResult] and [givenHttpResultsInTurn].
      */
     fun givenRedirectResult(urlContains: String, result: HttpResult<String>) { redirectResults[urlContains] = result }
 
@@ -68,8 +87,7 @@ class FakeHttpClient : HttpClient {
         requestedHeaders.add(headers)
         if (ioExceptions.any { url.contains(it) }) throw IOException("Simulated network error: $url")
         if (errors.any { url.contains(it) }) return HttpResult.NetworkError("Simulated network error")
-        val configured = httpResultResponses.entries.firstOrNull { url.contains(it.key) }
-        if (configured != null) return configured.value
+        httpResultFor(url)?.let { return it }
         val json = bodyFor(url)
         return if (json != null) HttpResult.Ok(JSONObject(json)) else UNSTUBBED
     }
@@ -88,8 +106,7 @@ class FakeHttpClient : HttpClient {
         requestedUrls.add(url)
         if (ioExceptions.any { url.contains(it) }) throw IOException("Simulated network error: $url")
         if (errors.any { url.contains(it) }) return HttpResult.NetworkError("Simulated network error")
-        val configured = httpResultResponses.entries.firstOrNull { url.contains(it.key) }
-        if (configured != null) return configured.value
+        httpResultFor(url)?.let { return it }
         val json = bodyFor(url)
         return if (json != null) HttpResult.Ok(JSONObject(json)) else UNSTUBBED
     }
@@ -109,6 +126,18 @@ class FakeHttpClient : HttpClient {
         val queued = sequencedResponses.entries.firstOrNull { url.contains(it.key) }?.value
         if (queued != null) return if (queued.size > 1) queued.removeAt(0) else queued.first()
         return jsonResponses.entries.firstOrNull { url.contains(it.key) }?.value
+    }
+
+    /**
+     * The configured status for a JSON call, or `null` to fall through to the body map. Sequenced
+     * first, so a URL can be given an order of statuses as well as a single one — [bodyFor]'s
+     * arrangement, one channel over. The queue is shared by every JSON method, as the single-status
+     * map already is.
+     */
+    private fun httpResultFor(url: String): HttpResult<JSONObject>? {
+        val queued = sequencedHttpResults.entries.firstOrNull { url.contains(it.key) }?.value
+        if (queued != null) return if (queued.size > 1) queued.removeAt(0) else queued.first()
+        return httpResultResponses.entries.firstOrNull { url.contains(it.key) }?.value
     }
 
     companion object {
