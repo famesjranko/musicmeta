@@ -38,6 +38,7 @@ dependencies {
     // Testing
     testImplementation(libs.bundles.testing)
     testImplementation(libs.okhttp.mockwebserver)
+    testImplementation(testFixtures(project(":musicmeta-core")))
 }
 
 mavenPublishing {
