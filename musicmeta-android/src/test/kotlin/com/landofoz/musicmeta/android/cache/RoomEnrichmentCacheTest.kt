@@ -12,6 +12,7 @@ import com.landofoz.musicmeta.LookupProvenance
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -30,6 +31,12 @@ class RoomEnrichmentCacheTest {
 
     private lateinit var database: EnrichmentCacheDatabase
     private lateinit var cache: RoomEnrichmentCache
+
+    /** Matches [RoomEnrichmentCache]'s own config, so a row built here decodes the way one it wrote would. */
+    private val json = Json {
+        ignoreUnknownKeys = true
+        encodeDefaults = true
+    }
 
     @Before
     fun setup() {
@@ -451,6 +458,55 @@ class RoomEnrichmentCacheTest {
         assertNotNull(retrieved)
         assertEquals(LookupProvenance.CACHE, retrieved!!.result.provenance)
         assertNull(retrieved.result.resolvedIdentifiers)
+    }
+
+    @Test
+    fun `a stored canonical status this version cannot name degrades to NOT_ATTEMPTED_CACHE_HIT`() = runTest {
+        // Given - a row written by a version whose CanonicalStatus name this one does not have
+        database.enrichmentCacheDao().insert(
+            EnrichmentCacheEntity(
+                entityKey = "album:unknown-status",
+                enrichmentType = EnrichmentType.ALBUM_ART.name,
+                provider = "coverartarchive",
+                dataJson = json.encodeToString(
+                    EnrichmentData.serializer(),
+                    EnrichmentData.Artwork(url = "https://example.com/art.jpg"),
+                ),
+                confidence = 0.95f,
+                canonicalStatus = "RESOLVED_BY_A_LATER_VERSION",
+                cachedAt = 0L,
+                expiresAt = Long.MAX_VALUE,
+            ),
+        )
+
+        // When - reading it back
+        val retrieved = cache.get("album:unknown-status", EnrichmentType.ALBUM_ART)
+
+        // Then - the row still reads, under the weakest status a written row can carry
+        assertNotNull(retrieved)
+        assertEquals(CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT, retrieved!!.canonicalStatus)
+    }
+
+    @Test
+    fun `a negative row's unnameable canonical status degrades the same way`() = runTest {
+        // Given - a negative row carrying a CanonicalStatus name this version does not have
+        database.negativeCacheDao().insert(
+            NegativeCacheEntity(
+                entityKey = "album:unknown-negative-status",
+                enrichmentType = EnrichmentType.ALBUM_ART.name,
+                provider = "coverartarchive",
+                canonicalStatus = "RESOLVED_BY_A_LATER_VERSION",
+                cachedAt = 0L,
+                expiresAt = Long.MAX_VALUE,
+            ),
+        )
+
+        // When - reading it back
+        val retrieved = cache.getNegative("album:unknown-negative-status", EnrichmentType.ALBUM_ART)
+
+        // Then - the negative still reads, under the same degraded status as a positive row
+        assertNotNull(retrieved)
+        assertEquals(CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT, retrieved!!.canonicalStatus)
     }
 
     @Test
