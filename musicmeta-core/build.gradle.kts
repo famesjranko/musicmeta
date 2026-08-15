@@ -75,6 +75,8 @@ dependencies {
     // The contract bases hold `@Test` methods and `runTest` bodies, so they need the test
     // dependencies to compile in this source set as well as in `src/test`.
     testFixturesImplementation(libs.bundles.testing)
+    // HttpClientContract asserts against HttpClient's org.json return types directly.
+    testFixturesImplementation(libs.json)
 }
 
 mavenPublishing {
