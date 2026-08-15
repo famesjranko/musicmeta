@@ -59,6 +59,15 @@ naming:
     active: false
   VariableNaming:
     excludes: ['**/test/**']
+  # Backtick-named `@Test` functions. `**/testFixtures/**` is the addition — that source set holds
+  # the contract bases, and `detektTestFixtures` now runs in `./check`.
+  #
+  # `**/test/**` looks redundant, because detekt's own default config already exempts it and
+  # `buildUponDefaultConfig` is set. It is not: `excludes` REPLACES the default list rather than
+  # appending to it, so dropping it here turns the rule on across every test source. See
+  # docs/pitfalls.md §15, which carries the probe to re-run when detekt is upgraded.
+  FunctionNaming:
+    excludes: ['**/test/**', '**/testFixtures/**']
 
 coroutines:
   # 20 of the 57 findings the typed tasks add, and all 20 sit in the two HttpClient implementations.

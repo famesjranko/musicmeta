@@ -120,7 +120,7 @@ step "kotlin static analysis (detekt, type-resolved)"
 #
 # `./gradlew build` below runs these again through Gradle's `check`. They are up-to-date by then;
 # running them here buys a named failure before a full compile-and-test cycle.
-./gradlew detektMain detektTest --quiet
+./gradlew detektMain detektTest detektTestFixtures --quiet
 
 step "build (compile, test, apiCheck)"
 ./gradlew build

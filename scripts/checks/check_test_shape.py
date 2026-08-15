@@ -86,30 +86,39 @@ RAW_STRING_FIX = (
     "indent the declaration, so the scan and the compiler agree about what this line is."
 )
 
-TEST_SOURCE_GLOB = "*/src/test/**/*.kt"
+# Both source sets hold `@Test` bodies this rule governs. `testFixtures` carries the contract bases
+# — the abstract classes whose test methods every implementation inherits — so leaving it out
+# exempts the files with the widest reach.
+TEST_SOURCE_DIRS = ("test", "testFixtures")
+TEST_SOURCE_GLOBS = tuple(f"*/src/{name}/**/*.kt" for name in TEST_SOURCE_DIRS)
 
 
 def test_sources(root: Path) -> list[Path]:
-    return sorted(path for path in root.glob(TEST_SOURCE_GLOB) if "/build/" not in path.as_posix())
+    return sorted(path for glob in TEST_SOURCE_GLOBS for path in root.glob(glob) if "/build/" not in path.as_posix())
 
 
 def is_test_source(path: Path, root: Path) -> bool:
     """Whether `--file` should check this path, matching `test_sources()`'s scope exactly.
 
     The two entry points must agree: a file the gate ignores must not fail at write-time, and a
-    file the gate checks must not pass there. This spells `TEST_SOURCE_GLOB` out against the same
+    file the gate checks must not pass there. This spells `TEST_SOURCE_GLOBS` out against the same
     root rather than substring-testing for `/src/test/`: the two look equivalent but are not, since
-    the glob's leading `*` admits exactly one module directory below the root while a substring
+    each glob's leading `*` admits exactly one module directory below the root while a substring
     match admits any depth — an agent worktree under `.claude/`, say, which the gate never walks.
-    (`PurePath.match` is not the shortcut it appears to be either: it does not anchor `**` the way
-    `glob` does.)
+    A substring test would also confuse `src/test` with `src/testFixtures`, which are separate
+    source sets sharing a prefix. (`PurePath.match` is not the shortcut it appears to be either: it
+    does not anchor `**` the way `glob` does.)
     """
     try:
         parts = path.relative_to(root).parts
     except ValueError:
         return False
     return (
-        len(parts) >= 4 and parts[1:3] == ("src", "test") and path.suffix == ".kt" and "/build/" not in path.as_posix()
+        len(parts) >= 4
+        and parts[1] == "src"
+        and parts[2] in TEST_SOURCE_DIRS
+        and path.suffix == ".kt"
+        and "/build/" not in path.as_posix()
     )
 
 

@@ -524,3 +524,28 @@ The wider trap: any `?:` chain over a map is only as good as the map's willingne
 A parser that faithfully records `k=` as `k -> ""` is not being helpful — it is converting an
 absence into an answer, which is the same shape as §4 and as a `NotFound` standing in for a failure.
 
+## 15. A detekt `excludes:` list replaces the defaults, it does not extend them
+
+`config/detekt.yml` sets `buildUponDefaultConfig = true` (`build.gradle.kts`), so a rule the repo
+never mentions keeps detekt's own defaults. A rule the repo *does* mention keeps none of them: the
+`excludes:` list written here is the whole list, and every default path it does not restate is
+silently back in scope.
+
+`FunctionNaming` is where this bites. detekt's default config already exempts `**/test/**`, so
+writing `excludes: ['**/testFixtures/**']` to cover the contract bases reads as adding one path. It
+removes one. Measured 2026-08-16 by dropping `**/test/**` and running `:musicmeta-core:detektTest`:
+**1584 weighted `FunctionNaming` issues** across `src/test`, every backtick-named `@Test` function
+in the module. Restoring it: exit 0.
+
+**The failure direction is the reason this needs a note.** Both mistakes here are quiet. Restate a
+default that is still a default and the config is merely redundant — nothing fails, so nothing tells
+you. Drop one that is load-bearing and the rule fires 1584 times, which is loud but arrives as an
+unrelated wall of noise during an upgrade. Neither teaches you which of the two you are looking at.
+
+**On any detekt version bump, re-run the probe rather than reasoning about it:** drop `**/test/**`
+from `FunctionNaming`, run `:musicmeta-core:detektTest`, and confirm it *fails*. If it fails, the
+merge semantics are unchanged and the entry stays as it is. If it passes, detekt now appends rather
+than replaces, and the restated default can go. Nothing mechanises this; a bump that skips it leaves
+the repo carrying an exclusion broader than it needs, with `FunctionNaming` dead across every test
+source and no signal saying so.
+

@@ -460,6 +460,39 @@ class Embedded {
         # Then it passes — a file the gate ignores must not fail at write-time
         self.assertEqual(self.exit_code_for_file("m/src/main/kotlin/ATest.kt", body), 0)
 
+    # --- testFixtures is in scope for both entry points ---
+    #
+    # The contract bases live in `src/testFixtures/` so subclasses in other modules can see them.
+    # That is where the widest-reach `@Test` bodies are, so a scope stopping at `src/test/` would
+    # exempt exactly the files this rule matters most for.
+
+    def test_a_testfixtures_source_is_walked_by_the_gate(self):
+        # Given a `@Test` in `src/testFixtures/` with no `// Given -` line
+        body = """class AContract {
+    @Test
+    fun f() {
+        assertEquals(1, 1)
+    }
+}
+"""
+        # When the gate walks the tree
+        findings = self.findings_for("m/src/testFixtures/kotlin/AContract.kt", body)
+        # Then it is reported, exactly as it would be under src/test
+        self.assertEqual(len(findings), 1)
+
+    def test_a_testfixtures_source_is_checked_in_file_mode_too(self):
+        # Given the same file
+        body = """class AContract {
+    @Test
+    fun f() {
+        assertEquals(1, 1)
+    }
+}
+"""
+        # When it is checked through `--file`
+        # Then it fails there as well — the two entry points must agree on scope
+        self.assertEqual(self.exit_code_for_file("m/src/testFixtures/kotlin/AContract.kt", body), 2)
+
 
 if __name__ == "__main__":
     sys.exit(0 if unittest.main(exit=False).result.wasSuccessful() else 1)
