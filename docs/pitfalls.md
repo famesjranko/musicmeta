@@ -549,3 +549,21 @@ than replaces, and the restated default can go. Nothing mechanises this; a bump 
 the repo carrying an exclusion broader than it needs, with `FunctionNaming` dead across every test
 source and no signal saying so.
 
+
+## 16. A probe that measures nothing reports a plausible number
+
+A probe plants a deliberate break, runs a gate, and reads the result. Every step of that can succeed
+while the break was never planted, and the run then measures the unbroken file and reports a figure
+that looks like an answer. `open(p, 'w').write(open(p).read().replace(a, b))` is the shortest way to
+get there: `open(p, 'w')` truncates before the read on the right-hand side executes, so the file is
+emptied and the gate honestly reports what it found in an empty file. The number that comes back is
+wrong by a factor, not by an obvious margin, which is exactly why it survives review.
+
+**The recipe: assert the planted edit is present before trusting the run.** `diff` the file against
+the copy taken beforehand, or `grep` for the string the edit was supposed to introduce, and fail the
+probe if the edit is not there. Then read the gate's *unfiltered* output at least once — a filter
+narrowed to the rule under test hides the finding that says the file is empty or unparseable. Edit
+in place with `sed -i` or a heredoc rather than a read-then-write; restore by `cp` from the copy, not
+`git checkout`, which takes uncommitted work with it. This applies to a probe against a lint config,
+a check script, or a test: a probe is instrumentation, and instrumentation that cannot fail is the
+same defect the thing being probed is meant to catch.
