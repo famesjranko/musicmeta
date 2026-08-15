@@ -1,0 +1,4 @@
+{
+  "lrclib-search.json": "/api/search?",
+  "lastfm-track-info.json": "track.getInfo"
+}

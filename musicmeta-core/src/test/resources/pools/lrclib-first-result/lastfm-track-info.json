@@ -1,0 +1,9 @@
+{
+  "track": {
+    "name": "Karma Police",
+    "artist": {"name": "Radiohead"},
+    "playcount": "12345",
+    "listeners": "6789",
+    "mbid": "abc-123"
+  }
+}
