@@ -14,6 +14,9 @@ data class CacheEnvelope<out T : EnrichmentResult>(
 /**
  * Stores enrichment results for reuse across sessions.
  * Implementations may be in-memory (LRU), Room-backed, or custom.
+ *
+ * Every implementation's obligations here are asserted once, for every backend, by
+ * `com.landofoz.musicmeta.contract.EnrichmentCacheContract`.
  */
 interface EnrichmentCache {
 
@@ -76,8 +79,19 @@ interface EnrichmentCache {
     /** Clears positive, negative, and manual-selection state for the addressed key and type(s). */
     suspend fun invalidate(entityKey: String, type: EnrichmentType? = null)
 
+    /**
+     * Whether [markManuallySelected] has been called for this key and type and not since cleared.
+     * A selection is state about the key, not about a stored entry, so a key carrying no cached
+     * result may still answer `true`.
+     */
     suspend fun isManuallySelected(entityKey: String, type: EnrichmentType): Boolean
 
+    /**
+     * Records that a caller chose this key and type's data itself, so an implementation preserving
+     * selections does not overwrite it automatically. **A selection may be marked before anything
+     * is stored for the key** — a caller can choose from candidates it has not cached — so an
+     * implementation holding the marker on the cached row must still record one when no row exists.
+     */
     suspend fun markManuallySelected(entityKey: String, type: EnrichmentType)
 
     suspend fun clear()
