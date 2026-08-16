@@ -43,9 +43,7 @@ import org.junit.Test
  * (see the dedicated tests below for both), so a single shared assertion would either hide one
  * synthesizer's real behaviour or force it to match a rule it does not follow.
  */
-class MergerProvenanceContract : ContractSuite<List<ResultMerger>>() {
-
-    override fun subject(): List<ResultMerger> = DEFAULT_MERGERS
+abstract class MergerProvenanceContract : ContractSuite<List<ResultMerger>>() {
 
     /** One usable payload per [EnrichmentType] a registered merger handles. */
     private fun payloadFor(type: EnrichmentType, seed: String): EnrichmentData = when (type) {
