@@ -94,3 +94,13 @@ than it looks like, each learned the hard way.
   canary about us instead of about consumers. Formatting is the opposite case: it cannot affect that
   job, and `demo-cli/` is the worked example people read, so it applies the same ktlint against the same
   `.editorconfig` and `./check` gates it. `demo-cli/run.sh` is shellchecked — that was never about style.
+- **The composed-stack identity harness (`musicmeta-core/src/test/kotlin/…/harness/`) proves
+  composition, never a provider's live behaviour.** It drives the real default provider stack —
+  real matchers, real rankers, real mappers — against canned upstream pools, offline, so it is the
+  one place the #210 family of wrong-entity defects (MusicBrainz suggestions short-circuiting the
+  fan-out, a provider accepting on artist match alone) is observable at all; every other test layer
+  either drives a matcherless fake or wires one provider in isolation. It does not, and cannot,
+  prove a provider's real endpoint still returns what a pool says it does — a green run here means
+  "the pieces compose correctly," not "MusicBrainz/Deezer/iTunes/Discogs still answer this way
+  today." That is what the daily `provider-drift.yml` e2e job is for, and each pool's `scenario.md`
+  records whether the provider it covers has that live coverage.
