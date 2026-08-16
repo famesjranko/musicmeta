@@ -100,7 +100,9 @@ private fun EnrichmentData.Metadata.answersMetadata(type: EnrichmentType): Boole
     EnrichmentType.ALBUM_METADATA -> anyFieldFilled()
 
     // Every type no provider answers with Metadata. Listed rather than elided behind `else` so the
-    // compiler asks about a new EnrichmentType instead of dropping it into the grab bag silently.
+    // compiler names a new EnrichmentType instead of letting it fall through unenumerated — that buys
+    // exhaustiveness, not a rejection: every one of them still maps to anyFieldFilled() below, the
+    // same grab-bag reading as ALBUM_METADATA, which PayloadAnswersTypeCoverageTest pins as intended.
     EnrichmentType.ALBUM_ART,
     EnrichmentType.ARTIST_PHOTO,
     EnrichmentType.ARTIST_BACKGROUND,

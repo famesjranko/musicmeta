@@ -321,11 +321,12 @@ every call and never refetched. Treating it as a miss lets the providers run and
 the entry.
 
 Extending it: one `EnrichmentData.Metadata` serves six types, so **which field answers which type is
-per type** — `label` answers `LABEL` and nothing else, and only `ALBUM_METADATA` accepts any field at
-all. Every other payload answers its type iff it carries anything. The `when` is exhaustive over payload
-*classes*, so the compiler asks about a new one — it is **not** exhaustive over types, so a new type
-served by `Metadata` inherits grab-bag semantics. That fails lenient, which is the right direction:
-the gate's job is to catch payloads answering *nothing*, not to adjudicate partial ones.
+per type** for five of them — `label` answers `LABEL` and nothing else — but `ALBUM_METADATA` and the
+other thirty accept any field at all. `answers()`'s own `when` is exhaustive over payload classes, so
+the compiler asks about a new one, and `answersMetadata`'s `when` **is** exhaustive over `EnrichmentType`
+with no `else`, so a new type is a compile error until named, not a silent fall into the grab bag —
+exhaustiveness buys naming, not rejection. That fails lenient, which is the right direction: the
+gate's job is to catch payloads answering *nothing*, not to adjudicate partial ones.
 
 ## 14. An optional-id branch is invisible to anything reading `identifierRequirement`
 
