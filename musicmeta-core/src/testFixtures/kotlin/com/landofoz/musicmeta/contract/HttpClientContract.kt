@@ -9,6 +9,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -270,14 +271,27 @@ abstract class HttpClientContract : ContractSuite<HttpClient>() {
             // dispatcher so the timeout runs against the wall clock — under runTest's own virtual
             // dispatcher, withTimeout fires unconditionally the instant this coroutine's blocking
             // I/O crosses onto a real thread, regardless of how fast the server actually answers.
+            // The RESULT is the assertion, not the exception. withTimeout throws to its own caller
+            // once the deadline elapses whatever the block did, so catching CancellationException
+            // says only that a deadline passed — it is true even for a client that swallowed the
+            // cancellation and returned a classified result, which is the defect this test names.
+            // Only a value arriving here proves the swallow. EnrichCacheFailureTest:180-183 records
+            // the same trap reached through await() instead of withTimeout.
+            var classified: HttpResult<JSONObject>? = null
             var sawCancellation = false
             try {
                 withContext(Dispatchers.Default) {
-                    withTimeout(TIMEOUT_MS) { client.fetchJsonResult(url) }
+                    withTimeout(TIMEOUT_MS) { classified = client.fetchJsonResult(url) }
                 }
             } catch (e: CancellationException) {
                 sawCancellation = true
             }
+
+            assertNull(
+                "the client swallowed the timeout's cancellation and produced a classified " +
+                    "result instead of letting it propagate: $classified",
+                classified,
+            )
 
             // Then - the timeout's cancellation reached the caller; nothing along the way caught
             // it and returned a NetworkError (or any other) result in its place
