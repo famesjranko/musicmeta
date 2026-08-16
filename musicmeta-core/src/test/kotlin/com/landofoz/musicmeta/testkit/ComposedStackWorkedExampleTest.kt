@@ -78,22 +78,27 @@ class ComposedStackWorkedExampleTest {
         http.assertNoUrlRequestedTwice()
     }
 
-    @Ignore(
-        "Red now, and owned by the provenance-population ticket: eight of the twelve registered " +
-            "providers never set LookupProvenance on a Success, Last.fm among them. Remove this " +
-            "mark when every provider stamps provenance; the test must go red first if it does not.",
-    )
     @Test
     fun `every Success carries a provenance`() = runTest {
-        // Given - the same scenario and stack
-        val http = UpstreamPools.load(SCENARIO)
+        // Given - a pool whose LRCLIB hit is the requested track, so LYRICS_SYNCED answers instead
+        // of declining — a scenario whose only Success comes out of a merger cannot tell this rule
+        // from a constant, since PopularityMerger's own `?: FUZZY_NAME` fallback never leaves a
+        // merged result's provenance null regardless of whether a contributor was stamped
+        val http = UpstreamPools.load(QUALIFIER_MATCH_SCENARIO)
         val engine = TestStack.build(http)
-        val request = EnrichmentRequest.forTrack("Song", "David Bowie")
+        val request = EnrichmentRequest.forTrack(QUALIFIER_MATCH_TITLE, QUALIFIER_MATCH_ARTIST)
 
-        // When - enriching for a type a provider in this pool answers
-        val results = engine.enrich(request, LRCLIB_TYPES + EnrichmentType.TRACK_POPULARITY)
+        // When - enriching for the type LRCLIB answers directly, through the engine's non-merged
+        // chain path
+        val results = engine.enrich(request, setOf(EnrichmentType.LYRICS_SYNCED))
 
-        // Then - no Success reaches a consumer without saying how its entity was selected
+        // Then - the hit is a genuine Success, and no Success reaches a consumer without saying how
+        // its entity was selected
+        val lyricsResult = results.raw[EnrichmentType.LYRICS_SYNCED]
+        assertTrue(
+            "expected a Success from LRCLIB's exact hit, got $lyricsResult",
+            lyricsResult is EnrichmentResult.Success,
+        )
         val unstamped = results.raw.values
             .filterIsInstance<EnrichmentResult.Success>()
             .filter { it.provenance == null }
@@ -102,6 +107,9 @@ class ComposedStackWorkedExampleTest {
 
     private companion object {
         const val SCENARIO = "lrclib-first-result"
+        const val QUALIFIER_MATCH_SCENARIO = "lrclib-qualifier-match"
+        const val QUALIFIER_MATCH_TITLE = "Starman - 2012 Remaster"
+        const val QUALIFIER_MATCH_ARTIST = "David Bowie"
         val LRCLIB_TYPES = setOf(
             EnrichmentType.LYRICS_SYNCED,
             EnrichmentType.LYRICS_PLAIN,
