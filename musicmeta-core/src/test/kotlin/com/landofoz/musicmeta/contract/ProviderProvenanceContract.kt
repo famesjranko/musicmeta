@@ -123,12 +123,23 @@ abstract class ProviderProvenanceContract : ContractSuite<EnrichmentEngine>() {
         // request makes identity resolution unnecessary (never NOT_ATTEMPTED_NOT_REQUIRED's
         // uncacheable siblings AMBIGUOUS/UNRESOLVED/FAILED), so write-back actually populates the
         // cache instead of silently declining to cache an unconfirmed identity
-        val engine = subject()
+        val http = UpstreamPools.load(LYRICS_SCENARIO)
+        val engine = TestStack.build(http)
         val request = EnrichmentRequest.forTrack(LYRICS_TITLE, LYRICS_ARTIST, mbid = UNCONSULTED_MBID)
 
         // When - the same request is enriched twice: once live, once served from cache
         val live = engine.enrich(request, setOf(EnrichmentType.LYRICS_SYNCED))
+        val urlsAfterLive = http.requestedUrls.size
         val cached = engine.enrich(request, setOf(EnrichmentType.LYRICS_SYNCED))
+
+        // Then - the second call went to the cache rather than upstream. Without this the rule below
+        // holds just as well for two identical live lookups, so a write-back that silently stopped
+        // caching would leave it green while proving nothing about a cache at all
+        assertEquals(
+            "the second enrich must be served from cache, not refetched upstream",
+            urlsAfterLive,
+            http.requestedUrls.size,
+        )
 
         // Then - the cached call reports the exact route the live call observed, never CACHE — a
         // preserving cache has no reason to invoke the engine's own-recovery fallback
