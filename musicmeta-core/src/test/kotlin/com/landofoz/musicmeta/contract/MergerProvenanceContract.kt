@@ -17,6 +17,7 @@ import com.landofoz.musicmeta.engine.ResultMerger
 import com.landofoz.musicmeta.engine.weakestProvenance
 import com.landofoz.musicmeta.testkit.ContractSuite
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Test
 
@@ -86,6 +87,19 @@ class MergerProvenanceContract : ContractSuite<List<ResultMerger>>() {
             "${merger::class.simpleName}(${merger.type}) did not merge $results into a Success"
         }
         return merged.provenance
+    }
+
+    @Test
+    fun `the registered merger set this contract walks is not empty`() {
+        // Given - the registered set every enumerated rule below filters over
+        val registered = subject()
+
+        // When - that set is counted rather than inspected
+        val count = registered.size
+
+        // Then - it holds at least one merger, so an emptied list fails here instead of passing every
+        // enumerated rule vacuously; those rules assert "no offender", which an empty set satisfies
+        assertNotEquals("the registered merger set is empty, so every enumerated rule below is vacuous", 0, count)
     }
 
     @Test
