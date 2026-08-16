@@ -18,13 +18,15 @@ because the config is the thing that fails.
 |---|---|---|
 | Python format and lint | ruff | `scripts/**` |
 | Python types | mypy | `scripts/**` |
-| Shell | shellcheck | `scripts/**`, `check`, `demo-cli/run.sh` |
+| Shell | shellcheck | `scripts/**`, `check`, `demo-cli/run.sh`, `demo-web/run.sh` |
 | Conventions | `scripts/checks/check_conventions.py` | no `!!` and no `@Serializable` under `provider/`/`http/` in main sources; only `*Provider` public under `provider/` in the committed `api/*.api`; conflict markers anywhere |
+| Pitfall citations | `scripts/checks/check_pitfall_citations.py` | every `§N` reference to `docs/pitfalls.md` resolves to a `## N.` heading in it — catches a renumbered or deleted section orphaning its citers silently |
+| Provider call scope | `scripts/checks/check_provider_call_scope.py` | every `provider/<name>/` directory with a `*Provider.kt` mentions `ProviderCallScope` somewhere in the directory, or is named in the script's own allowlist with a reason; plain substring match, so it proves the mention exists, not that the memo is correct or reached — the per-provider request-count tests and `ProviderMemoLifetimeTest` cover that |
 | Test shape | `scripts/checks/check_test_shape.py` | every `@Test` body has `// Given -`/`// When -`/`// Then -`, each on its own line with a plain hyphen and a real clause — Kotlin test sources only, on both the `check` gate and the `format-on-write.sh` hook |
-| Release-note caps | `build_release_notes.py Unreleased` | `CHANGELOG.md`'s `[Unreleased]` stays under 3000 chars and 400 per line — the same `check_caps()` the release runs, so it fails here rather than at release prep. An empty section passes: `pin_release.py` opens one on every release branch |
-| Script self-tests | `scripts/**/test_*.py` | discovered, not listed — every script with a `test_*.py` beside it still behaves: release notes, conventions |
+| Release-note caps | `build_release_notes.py Unreleased` | `CHANGELOG.md`'s `[Unreleased]` stays under 48000 chars and 200 per line — the same `check_caps()` the release runs, so it fails here rather than at release prep. An empty section passes: `pin_release.py` opens one on every release branch |
+| Script self-tests | `scripts/**/test_*.py` | discovered, not listed |
 | Kotlin format | ktlint (version pinned in `libs.versions.toml`) | all modules, `demo-cli/`, and `demo-web/` |
-| Kotlin static analysis | detekt, **type-resolved** (`detektMain`/`detektTest`) | complexity, dead code, bug patterns |
+| Kotlin static analysis | detekt, **type-resolved** (`detektMain`/`detektTest`/`detektTestFixtures`) | complexity, dead code, bug patterns |
 | Build | `./gradlew build` | compile, all unit tests, `apiCheck` against `api/*.api` |
 | Consumer canary | `demo-cli/` and `demo-web/` composite builds | an external consumer still compiles, and their tests run (`demo-web/`'s 50 `ProfileMapperTest` cases; `demo-cli/` has none yet) |
 
