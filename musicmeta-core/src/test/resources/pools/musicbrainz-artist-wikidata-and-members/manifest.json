@@ -1,0 +1,4 @@
+{
+  "musicbrainz-artist-search.json": "artist?query",
+  "musicbrainz-artist-lookup.json": "artist/art1"
+}
