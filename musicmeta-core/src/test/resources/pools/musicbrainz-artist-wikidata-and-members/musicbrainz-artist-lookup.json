@@ -1,0 +1,24 @@
+{
+  "id": "art1",
+  "name": "Radiohead",
+  "type": "Group",
+  "tags": [{"name": "rock", "count": 5}],
+  "relations": [
+    {
+      "type": "member of band",
+      "direction": "backward",
+      "artist": {"id": "m1", "name": "Thom Yorke"},
+      "attributes": ["lead vocals"],
+      "begin": "1985",
+      "ended": false
+    },
+    {
+      "type": "member of band",
+      "direction": "backward",
+      "artist": {"id": "m2", "name": "Jonny Greenwood"},
+      "attributes": ["guitar"],
+      "begin": "1985",
+      "ended": false
+    }
+  ]
+}

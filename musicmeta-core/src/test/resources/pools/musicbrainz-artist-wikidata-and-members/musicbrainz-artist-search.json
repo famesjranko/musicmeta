@@ -1,0 +1,14 @@
+{
+  "artists": [{
+    "id": "art1",
+    "name": "Radiohead",
+    "score": 100,
+    "type": "Group",
+    "country": "GB",
+    "tags": [{"name": "alternative rock", "count": 10}],
+    "relations": [{
+      "type": "wikidata",
+      "url": {"resource": "https://www.wikidata.org/wiki/Q188451"}
+    }]
+  }]
+}
