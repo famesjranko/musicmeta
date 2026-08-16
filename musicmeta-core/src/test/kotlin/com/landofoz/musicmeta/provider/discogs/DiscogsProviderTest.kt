@@ -914,6 +914,18 @@ class DiscogsProviderTest {
         assertNull(data.communityRating)
     }
 
+    /**
+     * Pins `degradeSideFetch`'s contract: an optional side fetch degrades to `null` on any
+     * transient, so this stays `Success` with `communityRating` absent whichever transient the
+     * side fetch hits — which is why swapping the stubbed failure for a rate limit leaves it
+     * green. That collapse is `degradeSideFetch`'s own, not this fake's: the exception never
+     * reaches `EnrichmentProvider.mapError`, which is where Discogs separates
+     * `ErrorKind.RATE_LIMIT` from `NETWORK` on its primary paths — a distinction
+     * `ProviderTransientFailureTest` pins for Discogs directly. Separately, and invisible here
+     * either way, is how many attempts each kind gets before it surfaces: that's
+     * `BudgetedTransientRetry`'s, composed by `DefaultHttpClient`, not this test's bare
+     * `FakeHttpClient`.
+     */
     @Test
     fun `enrich ALBUM_METADATA degrades to null communityRating when release detail fetch is transient`() = runTest {
         // Given - search succeeds with a discogsReleaseId, but the community-rating side fetch
