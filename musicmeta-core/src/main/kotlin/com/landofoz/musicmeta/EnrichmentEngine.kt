@@ -1,17 +1,11 @@
 package com.landofoz.musicmeta
 
 import com.landofoz.musicmeta.cache.InMemoryEnrichmentCache
-import com.landofoz.musicmeta.engine.ArtworkMerger
 import com.landofoz.musicmeta.engine.CompositeSynthesizer
+import com.landofoz.musicmeta.engine.DEFAULT_MERGERS
+import com.landofoz.musicmeta.engine.DEFAULT_SYNTHESIZERS
 import com.landofoz.musicmeta.engine.DefaultEnrichmentEngine
-import com.landofoz.musicmeta.engine.GenreAffinityMatcher
-import com.landofoz.musicmeta.engine.GenreMerger
-import com.landofoz.musicmeta.engine.PopularityMerger
 import com.landofoz.musicmeta.engine.ProviderRegistry
-import com.landofoz.musicmeta.engine.SimilarArtistMerger
-import com.landofoz.musicmeta.engine.SimilarTrackMerger
-import com.landofoz.musicmeta.engine.TimelineSynthesizer
-import com.landofoz.musicmeta.engine.TopTrackMerger
 import com.landofoz.musicmeta.engine.requireRegistrableProviderId
 import com.landofoz.musicmeta.http.DefaultHttpClient
 import com.landofoz.musicmeta.http.HttpClient
@@ -124,15 +118,8 @@ interface EnrichmentEngine {
         private var defaultProvidersUserAgent: String? = null
         private var logger: EnrichmentLogger = EnrichmentLogger.NoOp
         private var apiKeyConfig: ApiKeyConfig? = null
-        private val mergers = mutableListOf<com.landofoz.musicmeta.engine.ResultMerger>(
-            GenreMerger, SimilarArtistMerger, SimilarTrackMerger,
-            ArtworkMerger(EnrichmentType.ARTIST_PHOTO),
-            ArtworkMerger(EnrichmentType.ALBUM_ART),
-            TopTrackMerger,
-            PopularityMerger(EnrichmentType.ARTIST_POPULARITY),
-            PopularityMerger(EnrichmentType.TRACK_POPULARITY),
-        )
-        private val synthesizers = mutableListOf<CompositeSynthesizer>(TimelineSynthesizer, GenreAffinityMatcher)
+        private val mergers = DEFAULT_MERGERS.toMutableList()
+        private val synthesizers = DEFAULT_SYNTHESIZERS.toMutableList()
 
         /** @throws IllegalArgumentException if the id is already registered, or reserved by the engine. */
         fun addProvider(provider: EnrichmentProvider) = apply {
