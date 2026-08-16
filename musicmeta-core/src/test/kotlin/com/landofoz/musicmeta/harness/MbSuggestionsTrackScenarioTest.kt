@@ -27,7 +27,7 @@ import org.junit.Test
 class MbSuggestionsTrackScenarioTest {
 
     @Test
-    fun `MusicBrainz offers suggestions once at the top level, and LRCLIB still answers on its own`() = runTest {
+    fun `MusicBrainz offers suggestions once at the top level, and LRCLIB still runs its own search`() = runTest {
         // Given - the real stack, offline, over a pool where MusicBrainz's canonical search comes
         // up empty and its miss-suggestion search offers two near-miss recordings, and LRCLIB has
         // no stub at all

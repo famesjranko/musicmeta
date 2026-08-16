@@ -30,6 +30,42 @@ class DiscogsCombinedFieldScenarioTest {
         EnrichmentType.RELEASE_TYPE, EnrichmentType.ALBUM_METADATA,
     )
 
+    /**
+     * The subset of [albumTypes] this pool can actually decide — the ones whose payload it fills.
+     * `RELEASE_TYPE` is absent because the pool carries no format/type field, so asserting
+     * selection over it would pin that an under-specified fixture yields nothing, which says
+     * nothing about the product.
+     *
+     * **Pinned by `the pool decides exactly the album types this scenario asserts over`**, so
+     * enriching the pool until `RELEASE_TYPE` answers fails that test rather than silently leaving
+     * this loop under-covering. A limitation recorded only in prose decays; one asserted cannot.
+     */
+    private val decidableTypes = setOf(
+        EnrichmentType.ALBUM_ART, EnrichmentType.LABEL, EnrichmentType.ALBUM_METADATA,
+    )
+
+    @Test
+    fun `the pool decides exactly the album types this scenario asserts over`() = runTest {
+        // Given - the same pool, asked for the release it actually names, so acceptance succeeds
+        // and each type answers iff this pool carries the fields that type reads
+        val http = UpstreamPools.load(SCENARIO)
+        val engine = TestStack.build(http)
+        val request = EnrichmentRequest.forAlbum(POOL_RELEASE_TITLE, ARTIST)
+
+        // When - every type Discogs shares its album scope across is requested against the entity
+        // the pool does name
+        val results = engine.enrich(request, albumTypes)
+
+        // Then - exactly the declared subset answers; widen decidableTypes when this widens
+        val answered = albumTypes.filter { results.raw[it] is EnrichmentResult.Success }.toSet()
+        assertEquals(
+            "the pool's decidable album types changed — widen or narrow decidableTypes to match, " +
+                "and widen the selection loop with it",
+            decidableTypes,
+            answered,
+        )
+    }
+
     @Test
     fun `no album type selects the combined-field release under the artist prefix`() = runTest {
         // Given - the real stack, offline, over a pool whose only Discogs hit combines the
@@ -41,8 +77,9 @@ class DiscogsCombinedFieldScenarioTest {
         // When - every type Discogs shares its album scope across is requested together
         val results = engine.enrich(request, albumTypes)
 
-        // Then - no type selects the release
-        for (type in albumTypes) {
+        // Then - no type this pool can decide selects the release
+        assertTrue("no decidable type to assert over", decidableTypes.isNotEmpty())
+        for (type in decidableTypes) {
             val result = results.raw[type]
             assertTrue("$type should decline the combined-field release, was $result", result !is EnrichmentResult.Success)
         }
@@ -95,6 +132,7 @@ class DiscogsCombinedFieldScenarioTest {
 
     private companion object {
         const val SCENARIO = "discogs-combined-field"
+        const val POOL_RELEASE_TITLE = "Alabama Song"
         const val TITLE = "Song"
         const val ARTIST = "David Bowie"
         const val RELEASE_SEARCH_FRAGMENT = "database/search"
