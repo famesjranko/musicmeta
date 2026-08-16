@@ -6,9 +6,12 @@ import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.IdentifierRequirement
 import com.landofoz.musicmeta.ProviderCapability
+import com.landofoz.musicmeta.engine.CallMemo
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
+import com.landofoz.musicmeta.engine.ProviderCallScope
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
+import kotlinx.coroutines.currentCoroutineContext
 
 /**
  * Provides artist photos, metadata and links from Wikidata properties.
@@ -59,7 +62,7 @@ class WikidataProvider(
         }
 
         val props = try {
-            api.getEntityProperties(wikidataId, imageSize)
+            getEntityProperties(wikidataId)
                 ?: return EnrichmentResult.NotFound(type, id)
         } catch (e: Exception) {
             return mapError(type, e)
@@ -109,6 +112,21 @@ class WikidataProvider(
             }
             else -> EnrichmentResult.NotFound(type, id)
         }
+    }
+
+    /**
+     * `getEntityProperties` for [wikidataId], memoized for the life of one [ProviderCallScope] —
+     * ARTIST_PHOTO, COUNTRY and ARTIST_LINKS all read this same response. Wikidata-id-keyed rather
+     * than one slot per call: a call resolving more than one entity must not share one entity's
+     * answer with another's. A miss is memoized too, so an entity with no claims costs one request
+     * instead of one per type; called outside an engine, there is no scope to memoize in and every
+     * call hits upstream.
+     */
+    private suspend fun getEntityProperties(wikidataId: String): WikidataEntityProperties? {
+        val memo = currentCoroutineContext()[ProviderCallScope]
+            ?.slot(this) { CallMemo<String, WikidataEntityProperties?>() }
+            ?: return api.getEntityProperties(wikidataId, imageSize)
+        return memo.get(wikidataId) { api.getEntityProperties(wikidataId, imageSize) }
     }
 
     companion object {

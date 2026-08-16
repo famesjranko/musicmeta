@@ -165,6 +165,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `TitleMatcher` no longer strips an identity-bearing internal quote, or accepts mismatched terminal brackets (`Song (Live]` no longer equals `Song (Live)`)
 - LRCLIB's album/duration ranking no longer scores a candidate missing that evidence as though it agreed with the request; only an explicit match may outrank one silent on the same field
 - demo-web's "Clear cached result & reload" now invalidates the identifier-bearing preview tuple, not only the name tuple, so the entry named by the following reload is actually cleared
+- CoverArtArchive, Fanart.tv, Wikipedia, ListenBrainz and Wikidata now memoize their per-release/per-artist upstream fetch for one `enrich()` call instead of once per type
 
 ## [0.11.0] - 2026-07-28
 

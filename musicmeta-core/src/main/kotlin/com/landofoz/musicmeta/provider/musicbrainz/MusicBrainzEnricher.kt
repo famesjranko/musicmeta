@@ -9,6 +9,7 @@ import com.landofoz.musicmeta.LookupProvenance
 import com.landofoz.musicmeta.MusicBrainzEntityType
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.engine.AlternativeName
+import com.landofoz.musicmeta.engine.CallMemo
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.engine.NameMatchTier
 import com.landofoz.musicmeta.engine.ResolvedEntityNames
@@ -36,32 +37,6 @@ internal class MusicBrainzEnricher(
     private val providerId: String,
     private val minMatchScore: Int,
 ) {
-
-    /**
-     * One upstream answer per key for as long as this enricher lives, which is one `enrich()` call.
-     *
-     * The mutex is held across [fetch], not merely around the map: the engine resolves a request's
-     * types as sibling `async` children, so two types asking the same question concurrently have to
-     * make one call between them rather than one each.
-     *
-     * A thrown transient is never held — the write is on the success path — so the next type that
-     * asks retries it. What an *absence* costs is the difference between the two entry points.
-     */
-    private class CallMemo<K : Any, V : Any> {
-
-        private val entries = mutableMapOf<K, V>()
-        private val mutex = Mutex()
-
-        /** [fetch]'s answer for [key], held for the call whatever it is — including a negative one. */
-        suspend fun get(key: K, fetch: suspend () -> V): V = mutex.withLock {
-            entries[key] ?: fetch().also { entries[key] = it }
-        }
-
-        /** As [get], except a `null` from [fetch] is a genuine absence and is not held. */
-        suspend fun getOrNull(key: K, fetch: suspend () -> V?): V? = mutex.withLock {
-            entries[key] ?: fetch()?.also { entries[key] = it }
-        }
-    }
 
     /**
      * Artist lookups by MBID: BAND_MEMBERS, ARTIST_LINKS and GENRE all want the same artist.

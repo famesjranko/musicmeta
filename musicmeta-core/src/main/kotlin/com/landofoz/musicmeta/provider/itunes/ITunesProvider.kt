@@ -301,7 +301,7 @@ class ITunesProvider(
      * One `lookup?upc=` answer per call, held whatever it is (including "no candidates") — the
      * mutex is across [fetch] itself, not just the cache, since the engine resolves a request's
      * types as sibling `async` children and two of them asking for the same barcode must make one
-     * call between them, matching `MusicBrainzEnricher.CallMemo`'s shape. A thrown transient is
+     * call between them, matching `com.landofoz.musicmeta.engine.CallMemo`'s shape. A thrown transient is
      * never held, so the next type that asks retries it.
      */
     private class UpcLookupMemo {
