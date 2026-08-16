@@ -1,0 +1,17 @@
+{
+  "count": 757,
+  "recordings": [
+    {
+      "id": "rec-live-1",
+      "score": 100,
+      "title": "Enter Sandman",
+      "disambiguation": "live, 1992-01-11: Arco Arena, Sacramento, CA, US"
+    },
+    {
+      "id": "rec-demo",
+      "score": 100,
+      "title": "Enter Sandman",
+      "disambiguation": "demo: 1990-08-13"
+    }
+  ]
+}

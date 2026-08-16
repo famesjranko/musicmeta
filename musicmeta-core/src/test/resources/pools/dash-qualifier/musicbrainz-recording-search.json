@@ -1,0 +1,19 @@
+{
+  "count": 2,
+  "recordings": [
+    {
+      "id": "rec-studio",
+      "score": 100,
+      "title": "Starman",
+      "length": 261000,
+      "artist-credit": [{"artist": {"id": "art-bowie", "name": "David Bowie"}}]
+    },
+    {
+      "id": "rec-live-1",
+      "score": 100,
+      "title": "Starman",
+      "disambiguation": "live, 1972-06-19: Santa Monica Civic Auditorium, Santa Monica, CA, US",
+      "artist-credit": [{"artist": {"id": "art-bowie", "name": "David Bowie"}}]
+    }
+  ]
+}
