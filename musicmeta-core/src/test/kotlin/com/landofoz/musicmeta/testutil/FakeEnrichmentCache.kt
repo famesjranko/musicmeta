@@ -23,6 +23,10 @@ open class FakeEnrichmentCache : EnrichmentCache {
      * claims nothing, matching a cache that never learned to preserve one either.
      */
     val storedStatuses = mutableMapOf<String, CanonicalStatus>()
+
+    /** Negative-cache counterpart to [stored]/[storedStatuses]. See [getNegative]/[putNegative]. */
+    val negativeStored = mutableMapOf<String, EnrichmentResult.NotFound>()
+    val negativeStatuses = mutableMapOf<String, CanonicalStatus>()
     private val manualSelections = mutableSetOf<String>()
 
     /** Operations that throw instead of running. Empty by default, so existing tests are unaffected. */
@@ -62,6 +66,22 @@ open class FakeEnrichmentCache : EnrichmentCache {
         val key = "$entityKey:$type"
         stored[key] = result; storedTtls[key] = ttlMs; storedStatuses[key] = canonicalStatus
     }
+    override suspend fun getNegative(entityKey: String, type: EnrichmentType): CacheEnvelope<EnrichmentResult.NotFound>? {
+        val key = "$entityKey:$type"
+        return negativeStored[key]?.let {
+            CacheEnvelope(it, negativeStatuses[key] ?: CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT)
+        }
+    }
+    override suspend fun putNegative(
+        entityKey: String,
+        type: EnrichmentType,
+        result: EnrichmentResult.NotFound,
+        canonicalStatus: CanonicalStatus,
+        ttlMs: Long,
+    ) {
+        val key = "$entityKey:$type"
+        negativeStored[key] = result; negativeStatuses[key] = canonicalStatus
+    }
     override suspend fun invalidate(entityKey: String, type: EnrichmentType?) {
         failIfRequested(CacheOp.INVALIDATE, entityKey)
         if (type != null) {
@@ -70,6 +90,8 @@ open class FakeEnrichmentCache : EnrichmentCache {
             expiredStore.remove(key)
             storedTtls.remove(key)
             storedStatuses.remove(key)
+            negativeStored.remove(key)
+            negativeStatuses.remove(key)
             manualSelections.remove(key)
         } else {
             val prefix = "$entityKey:"
@@ -77,6 +99,8 @@ open class FakeEnrichmentCache : EnrichmentCache {
             expiredStore.keys.removeAll { it.startsWith(prefix) }
             storedTtls.keys.removeAll { it.startsWith(prefix) }
             storedStatuses.keys.removeAll { it.startsWith(prefix) }
+            negativeStored.keys.removeAll { it.startsWith(prefix) }
+            negativeStatuses.keys.removeAll { it.startsWith(prefix) }
             manualSelections.removeAll { it.startsWith(prefix) }
         }
     }
@@ -87,6 +111,8 @@ open class FakeEnrichmentCache : EnrichmentCache {
         expiredStore.clear()
         storedTtls.clear()
         storedStatuses.clear()
+        negativeStored.clear()
+        negativeStatuses.clear()
         manualSelections.clear()
     }
 }
