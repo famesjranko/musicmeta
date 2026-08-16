@@ -1,0 +1,4 @@
+{
+  "a.json": "example.test/search",
+  "b.json": "example.test/search?page=2"
+}

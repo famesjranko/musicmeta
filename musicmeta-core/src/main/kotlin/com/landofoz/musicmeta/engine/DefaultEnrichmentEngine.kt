@@ -746,7 +746,8 @@ internal class DefaultEnrichmentEngine(
      * A cache hit reports [LookupProvenance.CACHE] instead of `null` when the [EnrichmentCache]
      * implementation that served it did not preserve the original live lookup's route — never
      * `null`, or a consumer reading absence as confident inherits the same hole [CanonicalStatus]
-     * closed for canonical resolution.
+     * closed for canonical resolution. A preserving cache (both shipped implementations) replays
+     * the original route verbatim and never reaches this branch; it exists for one that does not.
      */
     private fun withCacheProvenanceFallback(result: EnrichmentResult.Success): EnrichmentResult.Success =
         if (result.provenance == null) result.copy(provenance = LookupProvenance.CACHE) else result

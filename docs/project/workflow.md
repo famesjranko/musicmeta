@@ -163,13 +163,15 @@ Gradle may report `UP-TO-DATE` without executing tests. Verification evidence mu
 What an e2e test is and is not evidence for: `CLAUDE.md`. Record useful E2E coverage as a deferred
 maintainer-run proof surface rather than allowing rate limits or outages to block a PR.
 
-To run the showcase — a readable diagnostic report across diverse queries — keys passed as system
-properties activate the three key-requiring providers:
+To run the live suite, keys passed as system properties activate the key-requiring providers. Without
+them those providers report as unavailable and their types return `NotFound`, so a run with no keys
+exercises a narrower surface than the daily job does:
 
 ```bash
 ./gradlew :musicmeta-core:test -Dinclude.e2e=true \
   -Dlastfm.apikey=KEY -Dfanarttv.apikey=KEY -Ddiscogs.token=TOKEN \
-  --tests "*.EnrichmentShowcaseTest"
+  -Dlistenbrainz.token=TOKEN \
+  --tests "com.landofoz.musicmeta.e2e.*"
 ```
 
 ## High-risk surfaces

@@ -73,6 +73,9 @@ dependencies {
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.room.testing)
+    // The shared contract bases (EnrichmentCacheContract and friends) live in core's
+    // src/testFixtures — the only source set a consuming module can see across the boundary.
+    testImplementation(testFixtures(project(":musicmeta-core")))
 }
 
 mavenPublishing {

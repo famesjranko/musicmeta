@@ -524,3 +524,78 @@ The wider trap: any `?:` chain over a map is only as good as the map's willingne
 A parser that faithfully records `k=` as `k -> ""` is not being helpful — it is converting an
 absence into an answer, which is the same shape as §4 and as a `NotFound` standing in for a failure.
 
+## 15. A detekt `excludes:` list replaces the defaults, it does not extend them
+
+`config/detekt.yml` sets `buildUponDefaultConfig = true` (`build.gradle.kts`), so a rule the repo
+never mentions keeps detekt's own defaults. A rule the repo *does* mention keeps none of them: the
+`excludes:` list written here is the whole list, and every default path it does not restate is
+silently back in scope.
+
+`FunctionNaming` is where this bites. detekt's default config already exempts `**/test/**`, so
+writing `excludes: ['**/testFixtures/**']` to cover the contract bases reads as adding one path. It
+removes one. Drop `**/test/**` and run `:musicmeta-core:detektTest` and the build **fails with one
+`FunctionNaming` issue per backtick-named `@Test` function in the module**; restore it and the same
+run exits 0. **The count is not the evidence and is not quoted here** — it tracks the test population
+and was already 60 out of date within the change that first measured it. The failure, not the figure,
+is what the probe establishes.
+
+**The failure direction is the reason this needs a note.** Both mistakes here are quiet. Restate a
+default that is still a default and the config is merely redundant — nothing fails, so nothing tells
+you. Drop one that is load-bearing and the rule fires once per test function, which is loud but
+arrives as an unrelated wall of noise during an upgrade. Neither teaches you which of the two you
+are looking at.
+
+**On any detekt version bump, re-run the probe rather than reasoning about it:** drop `**/test/**`
+from `FunctionNaming`, run `:musicmeta-core:detektTest`, and confirm it *fails*. If it fails, the
+merge semantics are unchanged and the entry stays as it is. If it passes, detekt now appends rather
+than replaces, and the restated default can go. Nothing mechanises this; a bump that skips it leaves
+the repo carrying an exclusion broader than it needs, with `FunctionNaming` dead across every test
+source and no signal saying so.
+
+
+## 16. A probe that measures nothing reports a plausible number
+
+A probe plants a deliberate break, runs a gate, and reads the result. Every step of that can succeed
+while the break was never planted, and the run then measures the unbroken file and reports a figure
+that looks like an answer. `open(p, 'w').write(open(p).read().replace(a, b))` is the shortest way to
+get there: `open(p, 'w')` truncates before the read on the right-hand side executes, so the file is
+emptied and the gate honestly reports what it found in an empty file. The number that comes back is
+wrong by a factor, not by an obvious margin, which is exactly why it survives review.
+
+**The recipe: assert the planted edit is present before trusting the run.** `diff` the file against
+the copy taken beforehand, or `grep` for the string the edit was supposed to introduce, and fail the
+probe if the edit is not there. Then read the gate's *unfiltered* output at least once — a filter
+narrowed to the rule under test hides the finding that says the file is empty or unparseable. Edit
+in place with `sed -i` or a heredoc rather than a read-then-write; restore by `cp` from the copy, not
+`git checkout`, which takes uncommitted work with it. This applies to a probe against a lint config,
+a check script, or a test: a probe is instrumentation, and instrumentation that cannot fail is the
+same defect the thing being probed is meant to catch.
+
+
+## 17. `runTest`'s clock makes a timeout over real I/O fire unconditionally
+
+`runTest` runs on a virtual clock that jumps to the next scheduled time the moment every coroutine it
+owns is idle. A test coroutine that suspends on **real** blocking I/O — a socket, a loopback server, a
+file — is idle by that definition, so the clock leaps forward while the I/O is still in flight. Any
+`withTimeout` wrapping that call therefore fires on every run, whatever the I/O did, and however
+quickly it did it.
+
+A test written to prove that a timeout propagates cancellation rather than being swallowed into a
+classified result is then asserting nothing: its `catch (e: CancellationException)` runs
+unconditionally, and the assertion is true by construction. It passes against correct code, passes
+against a client that swallows cancellation, and passes against a server that answers instantly. It
+cannot fail, which is the defect it was written to prevent.
+
+**The recipe, and it attacks the premise rather than the implementation: remove the thing the test
+says causes the outcome, and check the outcome goes away.** For a timeout test, set the server's
+delay to zero so there is nothing to time out, assert the edit is present (§16), and run the suite.
+The test must go **red**. If it stays green the timeout is virtual, the assertion is a tautology, and
+no mutation of the code under test will ever reveal it — this failed to show up under a deliberately
+broadened `catch` in the retry ladder, because cancellation is sticky and the framework absorbs the
+mutation before it reaches the caller.
+
+The fix is to put the timed section on a real clock — `withContext(Dispatchers.Default) {
+withTimeout(...) { … } }` — not to switch the test to `runBlocking`, which reintroduces the real
+`RateLimiter` delays `runTest` exists here to keep virtual. **"I could not make this go red" is a
+finding, not a footnote**: a test verified only against unmutated code is proven to pass and unproven
+to fail, and only the second claim is worth anything.

@@ -8,6 +8,7 @@ import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.testutil.FakeHttpClient
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -215,6 +216,24 @@ class DeezerTrackPreviewTest {
         // Then - TRACK_PREVIEW capability exists with priority 100
         assertNotNull(capability)
         assertEquals(100, capability!!.priority)
+    }
+
+    /**
+     * `TRACK_PREVIEW` is on-demand: a caller asks for it by name and pays the extra Deezer search,
+     * and `README.md`, `docs/how-it-works.md` and the type's `CHANGELOG.md` entry all state that it
+     * is not a default. Adding it to the set is a silent per-track fetch for every consumer calling
+     * `enrichTrack` without an explicit type set.
+     */
+    @Test
+    fun `TRACK_PREVIEW is not in DEFAULT_TRACK_TYPES`() {
+        // Given - the published default type set for a track request
+        val defaults = EnrichmentRequest.DEFAULT_TRACK_TYPES
+
+        // When - looking for TRACK_PREVIEW in it
+        val present = EnrichmentType.TRACK_PREVIEW in defaults
+
+        // Then - it is absent, so a default enrichTrack does not fetch a preview
+        assertFalse("TRACK_PREVIEW must stay on-demand, but it is in DEFAULT_TRACK_TYPES", present)
     }
 
     companion object {

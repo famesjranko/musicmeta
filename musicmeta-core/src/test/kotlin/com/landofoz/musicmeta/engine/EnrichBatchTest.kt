@@ -4,16 +4,22 @@ import app.cash.turbine.test
 import com.landofoz.musicmeta.CanonicalStatus
 import com.landofoz.musicmeta.EnrichmentConfig
 import com.landofoz.musicmeta.EnrichmentData
+import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
+import com.landofoz.musicmeta.EnrichmentResults
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ProviderCapability
+import com.landofoz.musicmeta.SearchCandidate
+import com.landofoz.musicmeta.testkit.EntityIdentity
 import com.landofoz.musicmeta.testutil.FakeEnrichmentCache
 import com.landofoz.musicmeta.testutil.FakeProvider
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -185,5 +191,168 @@ class EnrichBatchTest {
 
         // Then - provider was only called for req2 (cache hit for req1 bypassed provider)
         assertEquals("provider should only be called for uncached request", 1, provider.enrichCalls.size)
+    }
+
+    @Test fun `enrichBatch gives each item its own ProviderCallScope, so a repeated request asks upstream again`() = runTest {
+        // Given - a provider that fetches upstream once per ProviderCallScope and echoes that
+        // answer to any further call within the same scope, mirroring how a real memoizing
+        // provider behaves (ProviderMemoLifetimeTest), and two identical requests in one batch
+        val req = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+        val upstreamCalls = mutableListOf<EnrichmentRequest>()
+        val provider = object : FakeProvider(
+            id = "art-provider",
+            capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100)),
+        ) {
+            override suspend fun enrich(request: EnrichmentRequest, type: EnrichmentType): EnrichmentResult {
+                val scope = currentCoroutineContext()[ProviderCallScope]
+                if (scope != null) {
+                    scope.slot(this) { upstreamCalls.add(request) }
+                } else {
+                    upstreamCalls.add(request)
+                }
+                return artSuccess(id)
+            }
+        }
+
+        // When - the identical request is enriched twice in one batch. forceRefresh bypasses
+        // EnrichmentCache so its own per-request memoization cannot explain a single upstream
+        // fetch — the only remaining channel a shared scope could leak through is the one under
+        // test
+        engine(provider).enrichBatch(listOf(req, req), types, forceRefresh = true).test {
+            awaitItem()
+            awaitItem()
+            awaitComplete()
+        }
+
+        // Then - upstream was asked once per item, not once for the whole batch: a scope shared
+        // across items would let the second item's identical request be answered by the first
+        // item's memo instead of asking upstream again
+        assertEquals("expected one upstream fetch per batch item, not a shared scope's memo", 2, upstreamCalls.size)
+    }
+
+    @Test fun `enrichBatch attributes one item's transient failure to that item alone`() = runTest {
+        // Given - one provider shared by two items in a batch: it fails transiently for the
+        // first request and answers its own upstream for the second
+        val req1 = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+        val req2 = EnrichmentRequest.forAlbum("Nevermind", "Nirvana")
+        val provider = object : FakeProvider(
+            id = "flaky-provider",
+            capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100)),
+        ) {
+            override suspend fun enrich(request: EnrichmentRequest, type: EnrichmentType): EnrichmentResult {
+                enrichCalls.add(request to type)
+                return if (request == req1) {
+                    EnrichmentResult.Error(type, id, "transient upstream failure")
+                } else {
+                    artSuccess(id)
+                }
+            }
+        }
+
+        // When - both requests are enriched in one batch
+        val items = mutableListOf<EnrichmentResults>()
+        engine(provider).enrichBatch(listOf(req1, req2), types).test {
+            items.add(awaitItem().second)
+            items.add(awaitItem().second)
+            awaitComplete()
+        }
+
+        // Then - item 1's transient failure stays item 1's
+        val result1 = items[0].raw[EnrichmentType.ALBUM_ART]
+        assertTrue("req1 should get Error, got $result1", result1 is EnrichmentResult.Error)
+
+        // And - item 2's result reflects item 2's own upstream, not item 1's failure. One
+        // failure never trips the shared breaker (CircuitBreaker.DEFAULT_FAILURE_THRESHOLD is 5),
+        // so item 2's own call must still answer for itself rather than being short-circuited or
+        // overwritten by item 1's outcome
+        val result2 = items[1].raw[EnrichmentType.ALBUM_ART]
+        assertTrue("req2 should get its own Success, got $result2", result2 is EnrichmentResult.Success)
+        assertEquals("flaky-provider", (result2 as EnrichmentResult.Success).provider)
+
+        // And - the failure was attributed to exactly one upstream call: no retry doubled it,
+        // and item 2 was actually asked rather than skipped
+        assertEquals("expected exactly one enrich() call per item", 2, provider.enrichCalls.size)
+    }
+
+    @Test fun `enrichBatch resolves each item's own identity, not the previous item's`() = runTest {
+        // Given - one provider that is both the identity provider and the ALBUM_ART provider,
+        // whose identity resolution differs by request: req1 resolves confidently to its own
+        // MBID, req2 stays ambiguous with a near-miss suggestion naming its own MBID
+        val req1 = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+        val req2 = EnrichmentRequest.forAlbum("Nevermind", "Nirvana")
+        val req2Suggestion = SearchCandidate(
+            title = "Nevermind",
+            artist = "Nirvana",
+            year = "1991",
+            country = null,
+            releaseType = "Album",
+            score = 70,
+            thumbnailUrl = null,
+            identifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-nirvana-near-miss"),
+            provider = "identity-provider",
+        )
+        val provider = object : FakeProvider(
+            id = "identity-provider",
+            isIdentityProvider = true,
+            capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100)),
+        ) {
+            override suspend fun resolveIdentity(request: EnrichmentRequest): EnrichmentResult = when (request) {
+                req1 -> EnrichmentResult.Success(
+                    type = EnrichmentType.GENRE,
+                    data = EnrichmentData.Biography(text = "resolved", source = id),
+                    provider = id,
+                    confidence = 0.95f,
+                    resolvedIdentifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-radiohead-ok-computer"),
+                )
+                else -> EnrichmentResult.NotFound(
+                    type = EnrichmentType.GENRE,
+                    provider = id,
+                    suggestions = listOf(req2Suggestion),
+                )
+            }
+
+            override suspend fun enrich(request: EnrichmentRequest, type: EnrichmentType): EnrichmentResult {
+                enrichCalls.add(request to type)
+                return artSuccess(id)
+            }
+        }
+        val identityEngine = DefaultEnrichmentEngine(
+            ProviderRegistry(listOf(provider)), cache, EnrichmentConfig(enableIdentityResolution = true),
+        )
+
+        // When - both requests are enriched in one batch
+        val items = mutableListOf<Pair<EnrichmentRequest, EnrichmentResults>>()
+        identityEngine.enrichBatch(listOf(req1, req2), types).test {
+            items.add(awaitItem())
+            items.add(awaitItem())
+            awaitComplete()
+        }
+        val (item1Request, item1Results) = items[0]
+        val (item2Request, item2Results) = items[1]
+
+        // Then - at least one item answered with a genuine Success, so this cannot pass on a
+        // batch that declines everything
+        assertTrue(
+            "expected item 1's ALBUM_ART to be a Success, got ${item1Results.raw[EnrichmentType.ALBUM_ART]}",
+            item1Results.raw[EnrichmentType.ALBUM_ART] is EnrichmentResult.Success,
+        )
+
+        // And - each item's own result answers the request it was asked, by the kit's rule.
+        // The weak entry point applies to both: neither request carries an identifier, so both
+        // resolve by name search, which never sets canonical names — a recorded gap `12` counts
+        EntityIdentity.assertAnswersTheRequestWithoutCanonicalIdentity(item1Request, item1Results)
+        EntityIdentity.assertAnswersTheRequestWithoutCanonicalIdentity(item2Request, item2Results)
+
+        // And - each item's identity is its own: item 1 resolved confidently under its own MBID,
+        // and item 2 stayed ambiguous under its own near-miss suggestion. The first item's
+        // resolved identity reused for the second would show up here as item 2 wrongly RESOLVED
+        // under item 1's MBID instead
+        assertEquals(CanonicalStatus.RESOLVED, item1Results.identity.status)
+        assertEquals("mbid-radiohead-ok-computer", item1Results.identity.identifiers.musicBrainzId)
+        assertEquals(CanonicalStatus.AMBIGUOUS, item2Results.identity.status)
+        assertEquals(
+            listOf("mbid-nirvana-near-miss"),
+            item2Results.identity.suggestions.map { it.identifiers.musicBrainzId },
+        )
     }
 }

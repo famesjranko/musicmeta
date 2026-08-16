@@ -6,6 +6,11 @@ plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.vanniktech.publish)
+    // Carries the contract base classes a test in another module subclasses. A class in this
+    // module's `src/test` is invisible to `musicmeta-android` and `musicmeta-okhttp`, which depend
+    // on the main artifact only; `src/testFixtures` is the source set they can consume.
+    // The variants it adds are kept out of the published artifact at the bottom of this file.
+    `java-test-fixtures`
 }
 
 group = "io.github.famesjranko"
@@ -66,6 +71,12 @@ dependencies {
 
     // Testing
     testImplementation(libs.bundles.testing)
+
+    // The contract bases hold `@Test` methods and `runTest` bodies, so they need the test
+    // dependencies to compile in this source set as well as in `src/test`.
+    testFixturesImplementation(libs.bundles.testing)
+    // HttpClientContract asserts against HttpClient's org.json return types directly.
+    testFixturesImplementation(libs.json)
 }
 
 mavenPublishing {
@@ -101,5 +112,26 @@ mavenPublishing {
             developerConnection.set("scm:git:ssh://github.com/famesjranko/musicmeta.git")
             url.set("https://github.com/famesjranko/musicmeta")
         }
+    }
+}
+
+// `java-test-fixtures` attaches its variants to the `java` component, which this plugin publishes
+// from in automatic mode. Left alone that ships a `musicmeta-core-test-fixtures` capability and its
+// jars — a new released surface under CLAUDE.md's compatibility rule, from a source set that exists
+// to serve this repo's own tests. Skipping the three variants keeps the published artifact set
+// exactly what it was.
+//
+// Deferred to `afterEvaluate` because `testFixturesSourcesElements` is registered lazily by the
+// `mavenPublishing {}` block's own `withSourcesJar()`; naming it any earlier — including here, in
+// script order — fails with "Configuration with name 'testFixturesSourcesElements' not found".
+//
+// The suppression depends on this plugin's automatic-mode behaviour. After any bump of
+// `vanniktech.publish` or the Gradle wrapper, re-run `publishToMavenLocal` and grep the generated
+// `.module` for `testfixtures`: a silent regression here publishes a new artifact.
+project.afterEvaluate {
+    components.named("java", AdhocComponentWithVariants::class) {
+        withVariantsFromConfiguration(configurations["testFixturesApiElements"]) { skip() }
+        withVariantsFromConfiguration(configurations["testFixturesRuntimeElements"]) { skip() }
+        withVariantsFromConfiguration(configurations["testFixturesSourcesElements"]) { skip() }
     }
 }
