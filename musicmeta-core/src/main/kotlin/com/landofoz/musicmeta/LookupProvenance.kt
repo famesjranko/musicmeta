@@ -9,6 +9,11 @@ package com.landofoz.musicmeta
  * A cache implementation may preserve this field with the stored result. When it cannot recover
  * the original route, the engine marks the hit [CACHE]; a cache hit is never treated as a new
  * provider lookup.
+ *
+ * A merged or synthesized result carries the weakest contributor's value, on the strength order
+ * declared alongside that rule rather than this enum's declaration order.
+ *
+ * @see com.landofoz.musicmeta.engine.weakestProvenance
  */
 enum class LookupProvenance {
     /** Looked up directly by a MusicBrainz canonical id (MBID or release-group id). */
