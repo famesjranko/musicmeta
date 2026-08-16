@@ -533,14 +533,17 @@ silently back in scope.
 
 `FunctionNaming` is where this bites. detekt's default config already exempts `**/test/**`, so
 writing `excludes: ['**/testFixtures/**']` to cover the contract bases reads as adding one path. It
-removes one. Measured 2026-08-16 by dropping `**/test/**` and running `:musicmeta-core:detektTest`:
-**1584 weighted `FunctionNaming` issues** across `src/test`, every backtick-named `@Test` function
-in the module. Restoring it: exit 0.
+removes one. Drop `**/test/**` and run `:musicmeta-core:detektTest` and the build **fails with one
+`FunctionNaming` issue per backtick-named `@Test` function in the module**; restore it and the same
+run exits 0. **The count is not the evidence and is not quoted here** — it tracks the test population
+and was already 60 out of date within the change that first measured it. The failure, not the figure,
+is what the probe establishes.
 
 **The failure direction is the reason this needs a note.** Both mistakes here are quiet. Restate a
 default that is still a default and the config is merely redundant — nothing fails, so nothing tells
-you. Drop one that is load-bearing and the rule fires 1584 times, which is loud but arrives as an
-unrelated wall of noise during an upgrade. Neither teaches you which of the two you are looking at.
+you. Drop one that is load-bearing and the rule fires once per test function, which is loud but
+arrives as an unrelated wall of noise during an upgrade. Neither teaches you which of the two you
+are looking at.
 
 **On any detekt version bump, re-run the probe rather than reasoning about it:** drop `**/test/**`
 from `FunctionNaming`, run `:musicmeta-core:detektTest`, and confirm it *fails*. If it fails, the

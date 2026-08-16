@@ -21,9 +21,18 @@ package com.landofoz.musicmeta.testkit
  * Naming, so a failure names the implementation: the base is `<Interface>Contract` — abstract, no
  * `Test` suffix, not runnable — and a subclass is `<Implementation>ContractTest`.
  *
- * **No implementation may override a contract test.** A legitimate inability to satisfy a rule is a
- * finding for that contract's ticket, never an `@Ignore` and never an override. Implementation-
- * specific tests stay in the existing per-implementation file.
+ * **No implementation may override a contract test to change what it asserts.** A legitimate
+ * inability to satisfy a rule is a finding for that contract's ticket. Implementation-specific tests
+ * stay in the existing per-implementation file.
+ *
+ * One narrow exception, and every condition is load-bearing: an implementation with a **ticketed,
+ * known defect** may override a single rule *solely* to carry an `@Ignore`, so the marked rule does
+ * not cost that implementation every other rule it does satisfy. The override delegates straight
+ * back to the inherited body and changes nothing about the assertion — deleting it is how the mark
+ * comes off — the base member is `open` for that reason alone and says so, and the `@Ignore` names
+ * the defect and the condition that removes it. When the fix lands the mark comes off and the test
+ * must go red first. A weakened override is the drift this pattern exists to stop; a delegating one
+ * is visible as such in review.
  */
 abstract class ContractSuite<T> {
 
