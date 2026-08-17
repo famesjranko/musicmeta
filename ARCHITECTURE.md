@@ -29,12 +29,12 @@ docs-samples[-android]  consumer does — the in-tree stand-ins for consumers we
 ```
 ```mermaid
 flowchart TD
-    subgraph core["musicmeta-core — pure JVM"]
+    subgraph core["musicmeta-core, pure JVM"]
         published["root package<br/>published surface"]
         engine["engine/"]
-        provider["provider/ · one dir per upstream"]
+        provider["provider/<br/>one dir per upstream"]
         cache["cache/"]
-        http["http/ — HttpClient seam"]
+        http["http/<br/>HttpClient seam"]
         published --> engine
         published --> provider
         published --> cache
@@ -45,8 +45,8 @@ flowchart TD
         provider --> http
     end
     okhttp["musicmeta-okhttp<br/>OkHttpEnrichmentClient"] -->|api| core
-    android["musicmeta-android<br/>Room cache, Hilt, WorkManager"] --> core
-    demos["demo-cli · demo-web<br/>docs-samples · docs-samples-android"] -.->|"consume as an outsider"| core
+    android["musicmeta-android<br/>Room cache, Hilt, Work"] --> core
+    demos["demo-cli, demo-web<br/>docs-samples (+android)"] -.->|"consume as an outsider"| core
     demos -.-> okhttp
     demos -.-> android
 ```
@@ -85,28 +85,28 @@ a build that consumes the library from outside (`docs/pitfalls.md` §1).
 ```mermaid
 flowchart TD
     req["EnrichmentRequest"] --> force{"forceRefresh?"}
-    force -->|"yes — both reads skipped"| ident
-    force -->|no| cacheread["cache.get, then cache.getNegative<br/>per requested type"]
+    force -->|"yes, skips both reads"| ident
+    force -->|no| cacheread["read cache:<br/>positive, then negative"]
     cacheread --> anyleft{"any type still<br/>uncached?"}
     anyleft -->|no| results
     anyleft -->|yes| ident{"identity resolution<br/>enabled and needed?"}
     ident -->|no| fanout
-    ident -->|yes| resolve["resolveIdentity — canonical ids and names,<br/>provenance stamped; its payload<br/>may answer some types outright"]
+    ident -->|yes| resolve["resolveIdentity:<br/>canonical ids + names,<br/>may answer types itself"]
     resolve --> fanout
 
-    subgraph fanout["fan-out over the uncached types, under one enrich deadline"]
+    subgraph fanout["fan-out, under one deadline"]
         direction TB
-        regular["regular + composite sub-types<br/>concurrently, one chain each"]
-        mergeable["mergeable types<br/>every provider, then merged"]
-        composite["composite types<br/>synthesized from the resolved map"]
+        regular["regular + composite subs<br/>concurrent, one chain each"]
+        mergeable["mergeable types<br/>all providers, merged"]
+        composite["composite types<br/>from the resolved map"]
         regular --> mergeable --> composite
     end
 
     fanout --> deadline{"deadline held?"}
-    deadline -->|"no"| timedout["every unresolved type becomes<br/>Error(TIMEOUT); nothing is cached"]
-    deadline -->|yes| writeback["writeBack — positive or negative per type,<br/>keyed with canonical-name aliasing"]
+    deadline -->|"no"| timedout["unresolved becomes<br/>Error TIMEOUT,<br/>nothing cached"]
+    deadline -->|yes| writeback["writeBack:<br/>positive or negative,<br/>canonical-name aliased"]
     timedout --> stale
-    writeback --> stale["STALE_IF_ERROR only: an expired entry<br/>may stand in for an Error, marked stale"]
+    writeback --> stale["STALE_IF_ERROR only:<br/>expired entry stands in,<br/>marked stale"]
     stale --> results["EnrichmentResults"]
 ```
 
