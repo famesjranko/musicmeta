@@ -213,9 +213,9 @@ track pages rendering everything the library exposes:
 make demo-web-run   # http://localhost:8099
 ```
 
-![The demo-web artist page for Radiohead, showing merged genres, biography, imagery, and per-field provider attribution](docs/demo-web.png)
+![The demo-web landing page: artist, album, track and MBID tabs above a search field, with the backend reporting ready](docs/demo-web.png)
 
-Every panel is one `EnrichmentType`, and the tags beside each row name the providers that answered
+Enrich a name and each panel below is one `EnrichmentType`, tagged with the providers that answered
 it. Both demos work keyless; the key-requiring providers stay dark until you supply keys. `make
 help` lists the rest of the targets.
 
