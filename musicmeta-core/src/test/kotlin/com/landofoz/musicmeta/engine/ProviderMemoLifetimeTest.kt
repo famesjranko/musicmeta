@@ -15,6 +15,7 @@ import com.landofoz.musicmeta.testutil.FakeEnrichmentCache
 import com.landofoz.musicmeta.testutil.FakeHttpClient
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -54,6 +55,21 @@ class ProviderMemoLifetimeTest {
         val result = results.raw[EnrichmentType.GENRE]
         assertTrue("expected Success, got $result", result is EnrichmentResult.Success)
         return ((result as EnrichmentResult.Success).data as EnrichmentData.Metadata).genres.orEmpty()
+    }
+
+    @Test
+    fun `slot rejects a String owner rather than silently sharing it with an unrelated caller`() {
+        // Given - a fresh call scope, and a String passed as the owner instead of a component
+        val scope = ProviderCallScope()
+
+        // When - a caller slots state under that String
+        val thrown = assertThrows(IllegalArgumentException::class.java) {
+            scope.slot("cache") { Any() }
+        }
+
+        // Then - refused rather than silently shared with whichever other caller uses the same
+        // interned literal
+        assertTrue(thrown.message!!.contains("slot owner must be the component holding the state"))
     }
 
     @Test
@@ -325,6 +341,19 @@ class ProviderMemoLifetimeTest {
             RECORDING_SEARCHES_PER_ABSENT_TRACK,
             httpClient.requestedUrls.count { it.contains(RECORDING_SEARCH) },
         )
+
+        // And - per-URL, not only the total: the canonical (`-comment:*` filtered) search and the
+        // plain search it falls back to are genuinely different queries and must stay that way. A
+        // total alone is satisfied by a wrong fix that collapses these two into the shared plain
+        // pool as readily as by the correct one, which only collapses the plain search's own two
+        // callers. Quoted-title only, so the third, unquoted fuzzy near-miss search (also part of
+        // the total above) is excluded from both buckets rather than inflating the plain one.
+        val recordingSearches = httpClient.requestedUrls.filter { it.contains(RECORDING_SEARCH) }
+        val quotedTitleSearches = recordingSearches.filter { it.contains(QUOTED_TITLE_TERM) }
+        val canonicalSearches = quotedTitleSearches.filter { it.contains(CANONICAL_FILTER_TERM) }
+        val plainSearches = quotedTitleSearches.filter { !it.contains(CANONICAL_FILTER_TERM) }
+        assertEquals("the canonical, `-comment:*`-filtered search", 1, canonicalSearches.size)
+        assertEquals("the plain, unfiltered search", 1, plainSearches.size)
     }
 
     @Test
@@ -372,6 +401,58 @@ class ProviderMemoLifetimeTest {
         )
     }
 
+    @Test
+    fun `a qualified track's original title and its stripped fallback candidate stay two distinct searches`() = runTest {
+        // Given - the same absent, qualified-title track as above, so both the plain pool memo
+        // (shared between the original title's own two callers) and the qualifier fallback's
+        // stripped-title candidate run in the same call
+        httpClient.givenJsonResponse(RECORDING_SEARCH, NO_RECORDINGS)
+
+        // When - the track is enriched, running the whole absent-qualified-track ladder once
+        engine().enrich(QUALIFIED_TRACK, setOf(EnrichmentType.GENRE, EnrichmentType.TRACK_METADATA))
+
+        // Then - a title genuinely changed by the fallback is a genuinely different search: the
+        // memo keyed on the original title must not also answer for the stripped candidate, or the
+        // fallback's own search never reaches MusicBrainz. Per-URL, not a total — a total is
+        // satisfied by a fix that collapses these into one as much as by the correct fix.
+        val recordingSearches = httpClient.requestedUrls.filter { it.contains(RECORDING_SEARCH) }
+        val originalTitleSearches = recordingSearches.filter {
+            it.contains("Paranoid+Android+%5C%28Remastered%5C%29%22")
+        }
+        val strippedTitleSearches = recordingSearches.filter { it.contains("recording%3A%22Paranoid+Android%22") }
+        assertEquals("the original qualified title", 1, originalTitleSearches.size)
+        assertEquals("the qualifier fallback's stripped candidate", 1, strippedTitleSearches.size)
+    }
+
+    @Test
+    fun `forceRefresh refetches the plain recording pool instead of serving the memo the first call filled`() = runTest {
+        // Given - a hint-less track whose canonical (filtered) pool is always empty, so resolution
+        // always falls to the plain pool MusicBrainzApi shares between searchCanonicalRecordings's
+        // shallow fallback and the enricher's own suggestion search — already enriched once, when
+        // MusicBrainz held nothing under either query
+        httpClient.givenJsonResponse("limit=${MusicBrainzApi.CANONICAL_SEARCH_LIMIT}", NO_RECORDINGS)
+        httpClient.givenJsonResponse("limit=${MusicBrainzApi.RECORDING_SEARCH_LIMIT}", NO_RECORDINGS)
+        val engine = engine()
+        val first = engine.enrich(TRACK, setOf(EnrichmentType.TRACK_METADATA))
+        assertTrue(
+            "expected the first call to miss, got ${first.raw[EnrichmentType.TRACK_METADATA]}",
+            first.raw[EnrichmentType.TRACK_METADATA] is EnrichmentResult.NotFound,
+        )
+
+        // When - MusicBrainz starts answering the plain query and the consumer asks for fresh data
+        httpClient.givenJsonResponse("limit=${MusicBrainzApi.RECORDING_SEARCH_LIMIT}", RECORDING_SEARCH_HIT)
+        val refreshed = engine.enrich(TRACK, setOf(EnrichmentType.TRACK_METADATA), forceRefresh = true)
+
+        // Then - the second call resolves from the new answer. A plain-pool memo living on
+        // MusicBrainzApi itself, rather than in ProviderCallScope, would still be holding the first
+        // call's empty answer and this would still be NotFound
+        assertTrue(
+            "expected forceRefresh to reach the corrected upstream answer, got " +
+                "${refreshed.raw[EnrichmentType.TRACK_METADATA]}",
+            refreshed.raw[EnrichmentType.TRACK_METADATA] is EnrichmentResult.Success,
+        )
+    }
+
     private companion object {
         val ALBUM = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
 
@@ -397,6 +478,20 @@ class ProviderMemoLifetimeTest {
         const val BROWSE = "release-group?artist="
         const val RECORDING_SEARCH = "recording?query"
 
+        /**
+         * The encoded ` AND -comment:*` Lucene term [MusicBrainzApi]'s canonical recording query
+         * carries and its plain one does not — the one substring that tells the two searches apart
+         * on the wire.
+         */
+        const val CANONICAL_FILTER_TERM = "-comment%3A"
+
+        /**
+         * The encoded `recording:"` term both the canonical and plain searches carry (a quoted,
+         * exact title) and [MusicBrainzApi.searchRecordingsFuzzy]'s unquoted `~` search does not —
+         * what excludes that third search from a canonical/plain split.
+         */
+        const val QUOTED_TITLE_TERM = "recording%3A%22"
+
         /** What MusicBrainz answers a search for an artist name it holds nothing under with. */
         const val NO_ARTISTS = """{"count": 0, "offset": 0, "artists": []}"""
 
@@ -408,27 +503,38 @@ class ProviderMemoLifetimeTest {
         const val ARTIST_SEARCHES_PER_ABSENT_ARTIST = 2
 
         /**
-         * What one absent, qualified-title track costs in `recording?query=` requests: the filtered
-         * resolution search — unfiltered from the start, because [QUALIFIED_TRACK]'s trailing
+         * What one absent, qualified-title track costs in `recording?query=` requests: the original
+         * title's plain search — unfiltered from the start, because [QUALIFIED_TRACK]'s trailing
          * `(Remastered)` group routes it through the plain search rather than the canonical/shallow
          * pair "Enter Sandman" takes, so there is no separate unfiltered retry to count — the
-         * qualifier fallback's one stripped-title candidate search, the unfiltered pool the miss
-         * suggests from, and the fuzzy near-miss search an empty suggestion pool asks for.
+         * qualifier fallback's one stripped-title candidate search, and the fuzzy near-miss search an
+         * empty suggestion pool asks for.
+         *
+         * Only **three**, not four: the original title's resolution search and the unfiltered pool
+         * the miss suggests from are the identical URL (same title, same hint-less query), so
+         * [com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzApi]'s plain-pool memo answers both
+         * from one upstream fetch. The stripped candidate's title differs, so it stays its own,
+         * uncollapsed search — see the per-URL test pinning that.
          *
          * Each is spent once for the call. A memo scoped to the raw search alone leaves the
          * candidate search repeating once per type instead, which is what this number would rise to.
          */
-        const val RECORDING_SEARCHES_PER_ABSENT_QUALIFIED_TRACK = 4
+        const val RECORDING_SEARCHES_PER_ABSENT_QUALIFIED_TRACK = 3
 
         /**
          * What one absent track costs in `recording?query=` requests: the filtered resolution
-         * search, the unfiltered retry an empty filtered pool falls back to, the unfiltered pool the
-         * miss suggests from, and the fuzzy near-miss search an empty suggestion pool asks for.
-         * "Enter Sandman" carries no qualifier group, so the qualifier fallback searches nothing.
+         * search, the unfiltered pool the empty filtered pool falls back to (also what the miss
+         * suggests from), and the fuzzy near-miss search an empty suggestion pool asks for. "Enter
+         * Sandman" carries no qualifier group, so the qualifier fallback searches nothing.
+         *
+         * Only **three**, not four: the unfiltered retry an empty filtered pool falls back to and the
+         * unfiltered pool the miss suggests from are the identical URL (same hint-less query, same
+         * title), so [com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzApi]'s plain-pool memo
+         * answers both from one upstream fetch instead of two.
          *
          * Each is spent once for the call. A per-type repeat of any of them is what this catches.
          */
-        const val RECORDING_SEARCHES_PER_ABSENT_TRACK = 4
+        const val RECORDING_SEARCHES_PER_ABSENT_TRACK = 3
 
         /** What MusicBrainz answers a search for a track it holds no recording of with. */
         const val NO_RECORDINGS = """{"count": 0, "offset": 0, "recordings": []}"""

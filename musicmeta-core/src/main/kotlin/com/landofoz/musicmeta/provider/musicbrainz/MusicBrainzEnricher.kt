@@ -873,8 +873,12 @@ internal class MusicBrainzEnricher(
      * Unfiltered, and never what a request resolves out of: a suggestion list is a choose-a-version
      * surface, built the way [MusicBrainzProvider.searchCandidates] builds its own, because a list
      * narrowed to canonical recordings cannot answer "I want the Moscow one" — and the resolution
-     * pool is narrowed to exactly that. A different query from [trackSearchMemo]'s, so it holds its
-     * own answer; one extra request, on the miss path only.
+     * pool is narrowed to exactly that. A different query from [trackSearchMemo]'s canonical one —
+     * but the plain recording search it fires can be byte-identical to what
+     * [MusicBrainzApi.searchCanonicalRecordings] itself sends for a hint-less request: its fallback
+     * when the canonical pool comes back empty, or the whole of the hint-less path when a trailing
+     * qualifier group routes it straight to the plain search instead. Either way, what keeps that
+     * pair to one upstream request is a memo inside [MusicBrainzApi], not this one.
      */
     private val trackSuggestionMemo = CallMemo<TrackQuery, List<MusicBrainzRecording>>()
 

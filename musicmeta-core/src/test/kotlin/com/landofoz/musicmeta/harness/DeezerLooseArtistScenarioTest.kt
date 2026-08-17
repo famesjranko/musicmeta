@@ -10,7 +10,6 @@ import com.landofoz.musicmeta.testkit.assertNoUrlRequestedTwice
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
-import org.junit.Ignore
 import org.junit.Test
 
 /**
@@ -72,14 +71,6 @@ class DeezerLooseArtistScenarioTest {
         )
     }
 
-    @Ignore(
-        "Red now: this request's MusicBrainz identity probe misses both its filtered and " +
-            "unfiltered recording-search pools, so the miss-suggestion step re-runs the same " +
-            "unfiltered query a second time — MusicBrainz's recording?query=...\"Song\"...&limit=25 " +
-            "(no -comment:* filter) is requested twice in one enrich() call, where a shared memo " +
-            "would cost one. Remove this mark only once that count is one; this assertion must go " +
-            "red first if it is not.",
-    )
     @Test
     fun `no upstream URL is requested twice in one enrich`() = runTest {
         // Given - the same scenario and stack
