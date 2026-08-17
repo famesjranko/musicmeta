@@ -86,6 +86,21 @@ class MusicBrainzAliasIdentityTest {
     }
 
     @Test
+    fun `a candidate matching no name at all reports the weakest confidence of any tier`() = runTest {
+        // Given - a request whose name matches neither the artist's name nor any alias, where the
+        // search response still ranks the artist above the relevance threshold on other signals
+        val name = "Radiohead"
+
+        // When - resolving the artist
+        val success = resolve(name)
+
+        // Then - the NONE tier scales below every real name match, so a consumer reading the score
+        // can tell a no-name-agreement pick from an exact or alias hit
+        assertEquals("cc197bad-dc9c-440d-a5b5-d52ba2e14234", success.resolvedIdentifiers?.musicBrainzId)
+        assertEquals(0.7f, success.confidence, 0.001f)
+    }
+
+    @Test
     fun `a locale-tagged search hint stays at the search-hint tier`() = runTest {
         // Given - the same alias carrying a locale, which alone would promote it to primary
         httpClient.givenJsonResponse("artist?query", ARTIST_SEARCH_LOCALE_TAGGED_HINT)
