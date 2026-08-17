@@ -45,7 +45,7 @@ flowchart TD
         provider --> http
     end
     okhttp["musicmeta-okhttp<br/>OkHttpEnrichmentClient"] -->|api| core
-    android["musicmeta-android<br/>Room cache, Hilt, WorkManager"] --> core
+    android["musicmeta-android<br/>Room cache, Hilt<br/>WorkManager"] --> core
     demos["demo-cli, demo-web<br/>docs-samples (+android)"] -.-> core
     demos -.-> okhttp
     demos -.-> android
