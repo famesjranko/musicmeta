@@ -600,3 +600,29 @@ withTimeout(...) { … } }` — not to switch the test to `runBlocking`, which r
 `RateLimiter` delays `runTest` exists here to keep virtual. **"I could not make this go red" is a
 finding, not a footnote**: a test verified only against unmutated code is proven to pass and unproven
 to fail, and only the second claim is worth anything.
+
+
+## 18. A test-results directory outlives the tree that produced it
+
+`build/test-results/` is not cleared when the sources that produced it are reverted, and Gradle
+serves it again untouched whenever `test` resolves to `UP-TO-DATE`. So a count read from that
+directory describes **whichever tree last actually ran the tests**, which is not necessarily the tree
+being certified. Apply a patch, run the suite, revert the patch, read the XML: the numbers still
+describe the patched tree, and nothing in the output says so.
+
+This is distinct from the two adjacent traps. It is not §16's — the edit really was planted, and the
+run really did happen. It is not a suite that silently failed to re-run either, because the figure is
+a genuine measurement; it is a genuine measurement **of the wrong thing**. The failure is legible
+only if the number happens to look wrong: a suite reported as six tests larger than the tree can
+account for is a lucky catch, and the same mistake in the failure count would read as a clean run.
+
+**The recipe: `--rerun-tasks` for any figure that certifies a state, and take the figure after the
+revert rather than around it.** `rm -rf` the module's `test-results` directory first if a previous
+run's tree differed at all — a stale file that is never overwritten is served forever, because
+`UP-TO-DATE` skips the writer, not just the tests.
+
+One related hazard in the same procedure: **`git apply --3way` writes to the index**, so a
+`git checkout -- <paths>` restore afterwards restores *from the staged patch* and reverts nothing.
+Unstage first (`git reset -q HEAD -- .`, which leaves the worktree alone), then check out the tracked
+paths, then require `git status --porcelain` to print nothing. **A restore that was not verified is a
+restore that did not happen**, and the next run inherits the leftovers.
