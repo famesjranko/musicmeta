@@ -169,6 +169,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - MusicBrainz's plain recording search is now memoized per `enrich()` call, so a track miss no longer requests the same unfiltered recording search twice
 - A timed-out enrich now stamps `provenance` on a `Success` identity resolution already wrote, instead of leaving it `null` against the published guarantee every `Success` sets it
 - MusicBrainz artist identity now reports `FUZZY_NAME`, not `EXACT_NAME`, for an alias match — a label fix only; the matched artist and `matchScore` are unchanged
+- `GenreMerger` now reads legacy `genres` too, so a genres-only contributor's names aren't dropped; a lone such contributor now reports `provider = "genre_merger"`
+- A mixed GENRE set can now report weaker `provenance` too: the legacy-only contributor's route now counts, since its names are genuinely merged in — evidence catching up, not weaker data
 
 ## [0.11.0] - 2026-07-28
 

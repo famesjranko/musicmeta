@@ -12,25 +12,47 @@ internal object GenreMerger : ResultMerger {
     override val type: EnrichmentType = EnrichmentType.GENRE
 
     /**
-     * Merges multiple successful provider results for GENRE into a single result.
-     * Collects all genreTags from Metadata results, then normalizes and merges them.
-     * Returns NotFound if results is empty; returns the first result as-is if no genreTags present.
+     * Reads both genre fields a [EnrichmentData.Metadata] can carry: weighted `genreTags` are
+     * folded through [merge], and a contributor that only filled the legacy `genres` field (no
+     * bundled provider does this, but a third-party [EnrichmentEngine.Builder]-registered one
+     * can) contributes its names alongside them rather than being dropped. A name-only
+     * contributor never synthesizes a `GenreTag` — that would invent a confidence and a curated
+     * flag nothing supplied — so `genreTags` on the result reflects only contributors that
+     * actually carried one. Returns NotFound if results is empty; returns the first result as-is
+     * if no contributor carries either field (e.g. a wrong-`EnrichmentData`-subtype payload).
      */
     override fun merge(results: List<EnrichmentResult.Success>): EnrichmentResult {
         if (results.isEmpty()) return EnrichmentResult.NotFound(type, "all_providers")
 
-        val contributingResults = results.filter {
+        val tagContributors = results.filter {
             (it.data as? EnrichmentData.Metadata)?.genreTags?.isNotEmpty() == true
         }
-        val allTags = contributingResults.flatMap { (it.data as EnrichmentData.Metadata).genreTags.orEmpty() }
-        if (allTags.isEmpty()) return results.first()
+        val nameOnlyContributors = results.filter {
+            val metadata = it.data as? EnrichmentData.Metadata
+            metadata?.genreTags.isNullOrEmpty() && metadata?.genres?.isNotEmpty() == true
+        }
+        val contributingResults = tagContributors + nameOnlyContributors
+        if (contributingResults.isEmpty()) return results.first()
 
-        val merged = merge(allTags)
+        val mergedTags = merge(tagContributors.flatMap { (it.data as EnrichmentData.Metadata).genreTags.orEmpty() })
+
+        // Names: the merged tags' display names first (already curated/confidence ordered), then
+        // any name-only contributor's names not already covered, in contributor order. Both feed
+        // the same normalize()-keyed dedupe so "Rock" from a tag and "rock" from a legacy list
+        // collapse to one entry instead of appearing twice.
+        val mergedNames = LinkedHashMap<String, String>()
+        for (tag in mergedTags) mergedNames.putIfAbsent(normalize(tag.name), tag.name)
+        for (result in nameOnlyContributors) {
+            for (name in (result.data as EnrichmentData.Metadata).genres.orEmpty()) {
+                mergedNames.putIfAbsent(normalize(name), name)
+            }
+        }
+
         return EnrichmentResult.Success(
             type = type,
             data = EnrichmentData.Metadata(
-                genres = merged.take(10).map { it.name }.takeIf { it.isNotEmpty() },
-                genreTags = merged.takeIf { it.isNotEmpty() },
+                genres = mergedNames.values.take(10).toList().takeIf { it.isNotEmpty() },
+                genreTags = mergedTags.takeIf { it.isNotEmpty() },
             ),
             provider = "genre_merger",
             confidence = results.maxOf { it.confidence },

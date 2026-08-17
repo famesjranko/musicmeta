@@ -1352,7 +1352,11 @@ class DefaultEnrichmentEngineTest {
 
         val genreResult = results.raw[EnrichmentType.GENRE] as EnrichmentResult.Success
         assertFalse("Genre should NOT be stale", genreResult.isStale)
-        assertEquals("fresh-genre", genreResult.provider)
+        // GenreMerger's populated path now reads legacy `genres` (this fixture's field) as well as
+        // `genreTags`, and stamps "genre_merger" unconditionally, same as a lone genreTags
+        // contributor already was. "fresh-genre" surviving encoded which field the payload used,
+        // not a real contract.
+        assertEquals("genre_merger", genreResult.provider)
     }
 
     @Test fun `ARTIST_TIMELINE is cached like standard types`() = runTest {

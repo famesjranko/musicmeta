@@ -5,6 +5,7 @@ import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.GenreTag
+import com.landofoz.musicmeta.LookupProvenance
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -59,7 +60,7 @@ class ResultMergerTest {
     }
 
     @Test
-    fun `GenreMerger merge with success without genreTags returns first success as fallback`() {
+    fun `GenreMerger merge with success without genreTags attributes to genre_merger like every other path`() {
         // Given - a single success with legacy genres but no genreTags
         val success = EnrichmentResult.Success(
             type = EnrichmentType.GENRE,
@@ -71,10 +72,73 @@ class ResultMergerTest {
         // When - merging the single-element list
         val result = GenreMerger.merge(listOf(success))
 
-        // Then - the first success is returned unchanged, no genreTags to merge
-        // Fallback: returns the first success as-is (no genreTags to merge)
+        // Then - the populated path now reads genres as well as genreTags, so a legacy-only
+        // And - contributor is merged rather than returned verbatim; every contributor reaching the
+        // And - populated path is attributed to the merger, so a contributor's own id here would be
+        // And - the exception, not the rule.
         assertTrue(result is EnrichmentResult.Success)
-        assertEquals("test_provider", (result as EnrichmentResult.Success).provider)
+        assertEquals("genre_merger", (result as EnrichmentResult.Success).provider)
+        assertEquals(listOf("Rock"), (result.data as EnrichmentData.Metadata).genres)
+    }
+
+    @Test
+    fun `GenreMerger merge with two legacy-only contributors unions both names instead of dropping the second`() {
+        // Given - two contributors that only ever filled the legacy genres field, no genreTags on either
+        val c1 = EnrichmentResult.Success(
+            type = EnrichmentType.GENRE,
+            data = EnrichmentData.Metadata(genres = listOf("rock")),
+            provider = "musicbrainz",
+            confidence = 0.9f,
+            provenance = LookupProvenance.CANONICAL_ID,
+        )
+        val c2 = EnrichmentResult.Success(
+            type = EnrichmentType.GENRE,
+            data = EnrichmentData.Metadata(genres = listOf("indie")),
+            provider = "lastfm",
+            confidence = 0.9f,
+            provenance = LookupProvenance.FUZZY_NAME,
+        )
+
+        // When - merging both legacy-only contributors
+        val result = GenreMerger.merge(listOf(c1, c2)) as EnrichmentResult.Success
+        val data = result.data as EnrichmentData.Metadata
+
+        // Then - both names survive, genreTags stays null since neither contributor supplied one
+        assertEquals("genre_merger", result.provider)
+        assertEquals(listOf("rock", "indie"), data.genres)
+        assertEquals(null, data.genreTags)
+        assertEquals(LookupProvenance.FUZZY_NAME, result.provenance)
+    }
+
+    @Test
+    fun `GenreMerger merge with one genreTags contributor and one legacy-only contributor keeps both names`() {
+        // Given - one contributor with genreTags and one legacy-only contributor
+        val t1 = EnrichmentResult.Success(
+            type = EnrichmentType.GENRE,
+            data = EnrichmentData.Metadata(genreTags = listOf(GenreTag("rock", 0.8f))),
+            provider = "musicbrainz",
+            confidence = 0.9f,
+            provenance = LookupProvenance.CANONICAL_ID,
+        )
+        val t2 = EnrichmentResult.Success(
+            type = EnrichmentType.GENRE,
+            data = EnrichmentData.Metadata(genres = listOf("indie")),
+            provider = "lastfm",
+            confidence = 0.9f,
+            provenance = LookupProvenance.FUZZY_NAME,
+        )
+
+        // When - merging the mixed pair
+        val result = GenreMerger.merge(listOf(t1, t2)) as EnrichmentResult.Success
+        val data = result.data as EnrichmentData.Metadata
+
+        // Then - the legacy-only contributor's name is not invisible to the populated path
+        assertEquals("genre_merger", result.provider)
+        assertEquals(listOf("rock", "indie"), data.genres)
+        assertNotNull(data.genreTags)
+        assertEquals(1, data.genreTags!!.size)
+        assertEquals("rock", data.genreTags!!.first().name)
+        assertEquals(LookupProvenance.FUZZY_NAME, result.provenance)
     }
 
     @Test
