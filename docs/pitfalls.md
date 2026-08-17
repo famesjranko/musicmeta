@@ -626,3 +626,18 @@ One related hazard in the same procedure: **`git apply --3way` writes to the ind
 Unstage first (`git reset -q HEAD -- .`, which leaves the worktree alone), then check out the tracked
 paths, then require `git status --porcelain` to print nothing. **A restore that was not verified is a
 restore that did not happen**, and the next run inherits the leftovers.
+
+The same failure has a second route, and this repo is unusually exposed to it: **a relative path
+resolves against whatever directory the shell is in**, and `.claude/worktrees/` can hold dozens of
+checkouts of this repo at once. A command written with relative paths, run when the working directory
+is a different worktree than intended, edits and measures that other tree — reporting a real,
+internally consistent result about the wrong commit. It is not detectable from the numbers: a probe
+aimed at a branch and run against `main` reports `main`'s test count, and looks exactly like a probe
+that found nothing to report.
+
+**Use absolute paths for anything that edits or measures a specific tree, and print the commit under
+test before trusting the run** — `git -C <path> log --oneline -1` costs nothing and names the tree the
+numbers came from. **Then assert the edit changed the number of lines you expected**, not merely that
+it changed something: a mutation that deletes the intended block and a neighbouring one is still
+"present" by any grep, and it will fail to compile rather than fail the test, which reads as a broken
+build rather than a broken probe.
