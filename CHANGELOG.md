@@ -96,6 +96,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `build()` warns from the User-Agent the wire will carry: the contactless default meeting MusicBrainz/Wikipedia/Wikidata, `contact()` after `withDefaultProviders()`, or `contact()` with your client
 
 ### Fixed
+- MusicBrainz track/album search now ranks by credited artist: a lookup that won on a wrong-artist hit and reported `RESOLVED`/`matchScore` 100 now returns the correctly-credited entity
 - MusicBrainz now reports `QUALIFIER_FALLBACK_NAME` when a stripped candidate, not the literal title, resolved a track or album; an exact-title match still reports `EXACT_NAME`
 - An all-cache-hit call now always reports `NOT_ATTEMPTED_CACHE_HIT`; it no longer replays a cached `NOT_ATTEMPTED_*` reason that a later config change could make false
 - `RoomEnrichmentCache` and `InMemoryEnrichmentCache` now read back the `canonicalStatus` they persist on write, closing the write-only gap the previous audit found
@@ -165,6 +166,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `TitleMatcher` no longer strips an identity-bearing internal quote, or accepts mismatched terminal brackets (`Song (Live]` no longer equals `Song (Live)`)
 - LRCLIB's album/duration ranking no longer scores a candidate missing that evidence as though it agreed with the request; only an explicit match may outrank one silent on the same field
 - demo-web's "Clear cached result & reload" now invalidates the identifier-bearing preview tuple, not only the name tuple, so the entry named by the following reload is actually cleared
+- CoverArtArchive, Fanart.tv, Wikipedia, ListenBrainz and Wikidata now memoize their per-release/per-artist upstream fetch for one `enrich()` call instead of once per type
+- MusicBrainz's plain recording search is now memoized per `enrich()` call, so a track miss no longer requests the same unfiltered recording search twice
+- A timed-out enrich now stamps `provenance` on a `Success` identity resolution already wrote, instead of leaving it `null` against the published guarantee every `Success` sets it
+- MusicBrainz artist identity now reports `FUZZY_NAME`, not `EXACT_NAME`, for an alias match — a label fix only; the matched artist and `matchScore` are unchanged
+- `GenreMerger` now reads legacy `genres` too, so a genres-only contributor's names aren't dropped; a lone such contributor now reports `provider = "genre_merger"`
+- A mixed GENRE set can now report weaker `provenance` too: the legacy-only contributor's route now counts, since its names are genuinely merged in — evidence catching up, not weaker data
 
 ## [0.11.0] - 2026-07-28
 

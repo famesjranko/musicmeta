@@ -8,9 +8,12 @@ import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.IdentifierRequirement.MUSICBRAINZ_ID
 import com.landofoz.musicmeta.IdentifierRequirement.MUSICBRAINZ_RELEASE_GROUP_ID
 import com.landofoz.musicmeta.ProviderCapability
+import com.landofoz.musicmeta.engine.CallMemo
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
+import com.landofoz.musicmeta.engine.ProviderCallScope
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
+import kotlinx.coroutines.currentCoroutineContext
 
 /**
  * Fanart.tv enrichment provider. Supplies high-quality artist images
@@ -27,6 +30,40 @@ class FanartTvProvider(
         this({ projectKey }, httpClient, rateLimiter)
 
     private val api = FanartTvApi(projectKeyProvider, httpClient, rateLimiter)
+
+    /**
+     * `getArtistImages` for [mbid], memoized for the life of one [ProviderCallScope] — all four
+     * artist-image types (photo/background/logo/banner) read this same response. MBID-keyed rather
+     * than one slot per call: a call resolving more than one artist must not share one artist's
+     * answer with another's. A miss is memoized too, so an unknown artist costs one request instead
+     * of one per type; called outside an engine, there is no scope to memoize in and every call
+     * hits upstream.
+     */
+    private suspend fun getArtistImages(mbid: String): FanartTvArtistImages? {
+        val memos = currentCoroutineContext()[ProviderCallScope]?.slot(this, ::FanartTvMemos)
+            ?: return api.getArtistImages(mbid)
+        return memos.artistImages.get(mbid) { api.getArtistImages(mbid) }
+    }
+
+    /**
+     * `getAlbumImages` for a release-group id, memoized for the life of one [ProviderCallScope] —
+     * ALBUM_ART and CD_ART both read this same response. Release-group-id-keyed rather than one
+     * slot per call, and memoized on a miss too, for the same reasons [getArtistImages] is.
+     */
+    private suspend fun getAlbumImages(releaseGroupMbid: String): FanartTvAlbumImages? {
+        val memos = currentCoroutineContext()[ProviderCallScope]?.slot(this, ::FanartTvMemos)
+            ?: return api.getAlbumImages(releaseGroupMbid)
+        return memos.albumImages.get(releaseGroupMbid) { api.getAlbumImages(releaseGroupMbid) }
+    }
+
+    /**
+     * This call's Fanart.tv memos — one [ProviderCallScope] slot holding both documents this
+     * provider fetches, since a slot belongs to one owner and this owner has two.
+     */
+    private class FanartTvMemos {
+        val artistImages = CallMemo<String, FanartTvArtistImages?>()
+        val albumImages = CallMemo<String, FanartTvAlbumImages?>()
+    }
 
     override val id = "fanarttv"
     override val displayName = "Fanart.tv"
@@ -70,7 +107,7 @@ class FanartTvProvider(
                 }
                 val mbid = request.identifiers.musicBrainzId
                     ?: return EnrichmentResult.NotFound(type, id)
-                val images = api.getArtistImages(mbid)
+                val images = getArtistImages(mbid)
                     ?: return EnrichmentResult.NotFound(type, id)
                 enrichFromImages(images, type)
             }
@@ -84,7 +121,7 @@ class FanartTvProvider(
         releaseGroupMbid: String,
         type: EnrichmentType,
     ): EnrichmentResult {
-        val albumImages = api.getAlbumImages(releaseGroupMbid)
+        val albumImages = getAlbumImages(releaseGroupMbid)
             ?: return EnrichmentResult.NotFound(type, id)
         val imageList = when (type) {
             EnrichmentType.CD_ART -> albumImages.cdArt

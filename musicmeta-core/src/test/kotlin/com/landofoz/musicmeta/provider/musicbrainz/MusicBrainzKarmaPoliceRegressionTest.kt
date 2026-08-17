@@ -78,10 +78,12 @@ class MusicBrainzKarmaPoliceRegressionTest {
               "recordings": [
                 {
                   "id": "video-id", "score": 100, "title": "Karma Police",
-                  "disambiguation": "music video", "video": true
+                  "disambiguation": "music video", "video": true,
+                  "artist-credit": [{"artist": {"id": "art-radiohead", "name": "Radiohead"}}]
                 },
                 {
-                  "id": "clean-id", "score": 100, "title": "Karma Police"
+                  "id": "clean-id", "score": 100, "title": "Karma Police",
+                  "artist-credit": [{"artist": {"id": "art-radiohead", "name": "Radiohead"}}]
                 }
               ]
             }
@@ -110,6 +112,7 @@ class MusicBrainzKarmaPoliceRegressionTest {
                   "length": 263000,
                   "disambiguation": "music video",
                   "video": true,
+                  "artist-credit": [{"artist": {"id": "art-radiohead", "name": "Radiohead"}}],
                   "releases": [
                     {"status": "Official", "release-group": {"id": "rg-best-of", "primary-type": "Album", "title": "The Best Of"}},
                     {"status": "Official", "release-group": {"id": "rg-jonathan-glazer", "primary-type": "Other", "title": "The Work of Director Jonathan Glazer"}},
@@ -120,6 +123,7 @@ class MusicBrainzKarmaPoliceRegressionTest {
                   "id": "telephone-recording-id",
                   "score": 88,
                   "title": "Karma Police voice through telephone",
+                  "artist-credit": [{"artist": {"id": "art-radiohead", "name": "Radiohead"}}],
                   "releases": [
                     {"status": "Bootleg", "release-group": {"id": "rg-oknotok", "primary-type": "Album", "title": "OKNOTOK: White Cassette Tape"}},
                     {"status": "Official", "release-group": {"id": "rg-ok-computer", "primary-type": "Album", "title": "OK Computer"}}
@@ -129,6 +133,7 @@ class MusicBrainzKarmaPoliceRegressionTest {
                   "id": "space-echo-recording-id",
                   "score": 88,
                   "title": "Karma Police in Space Echo",
+                  "artist-credit": [{"artist": {"id": "art-radiohead", "name": "Radiohead"}}],
                   "releases": [
                     {"status": "Bootleg", "release-group": {"id": "rg-oknotok", "primary-type": "Album", "title": "OKNOTOK: White Cassette Tape"}},
                     {"status": "Official", "release-group": {"id": "rg-ok-computer", "primary-type": "Album", "title": "OK Computer"}}
@@ -139,6 +144,7 @@ class MusicBrainzKarmaPoliceRegressionTest {
                   "score": 77,
                   "title": "Karma Police",
                   "length": 262426,
+                  "artist-credit": [{"artist": {"id": "art-radiohead", "name": "Radiohead"}}],
                   "releases": [
                     {"status": "Promotion", "release-group": {"id": "rg-promo-only", "primary-type": "Album", "title": "Promo Only: Modern Rock Radio, November 1997"}},
                     {"status": "Official", "release-group": {"id": "rg-festival-anthems", "primary-type": "Album", "title": "Festival Anthems: The Headliners"}},

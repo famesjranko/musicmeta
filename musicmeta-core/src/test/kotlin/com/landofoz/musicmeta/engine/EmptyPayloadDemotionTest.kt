@@ -411,7 +411,8 @@ class EmptyPayloadDemotionTest {
               "recordings": [{
                 "id": "rec1",
                 "score": 100,
-                "title": "Paranoid Android"
+                "title": "Paranoid Android",
+                "artist-credit": [{"artist": {"id": "art-radiohead", "name": "Radiohead"}}]
               }]
             }
         """.trimIndent()
@@ -422,7 +423,8 @@ class EmptyPayloadDemotionTest {
                 "id": "rec1",
                 "score": 100,
                 "title": "Paranoid Android",
-                "tags": [{"name": "alternative rock", "count": 3}]
+                "tags": [{"name": "alternative rock", "count": 3}],
+                "artist-credit": [{"artist": {"id": "art-radiohead", "name": "Radiohead"}}]
               }]
             }
         """.trimIndent()

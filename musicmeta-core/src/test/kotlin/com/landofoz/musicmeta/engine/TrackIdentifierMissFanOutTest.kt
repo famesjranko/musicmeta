@@ -103,6 +103,7 @@ class TrackIdentifierMissFanOutTest {
               "recordings": [
                 {
                   "id": "rec-live-1", "score": 92, "title": "Enter Sandman",
+                  "artist-credit": [{"artist": {"id": "art-metallica", "name": "Metallica"}}],
                   "releases": [
                     {
                       "status": "Official",
@@ -117,7 +118,10 @@ class TrackIdentifierMissFanOutTest {
         const val EMPTY_POOL = """{"recordings": []}"""
 
         val FUZZY_POOL = """
-            {"recordings": [{"id": "rec-live-1", "score": 80, "title": "Enter Sandman"}]}
+            {"recordings": [{
+              "id": "rec-live-1", "score": 80, "title": "Enter Sandman",
+              "artist-credit": [{"artist": {"id": "art-metallica", "name": "Metallica"}}]
+            }]}
         """.trimIndent()
     }
 }

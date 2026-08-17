@@ -292,6 +292,15 @@ iTunes's `trackCount`/`releaseDate`, Discogs's `year`, each against the matching
 never by provider order until every other signal ties, or a materially different edition (an 8-track
 album versus a 137-track deluxe box) can outrank the one the request actually asked for.
 
+**That ordering presumes a pool already filtered to artist matches, and MusicBrainz's direct search
+is the one place that presumption fails.** `DeezerApi.rankTracks` puts artist quality at tier 2
+because its pool was filtered by `ArtistMatcher.isMatch` before ranking ever started (§7's own fix);
+`MusicBrainzEnricher.pickBestRecording` and `MusicBrainzReleaseRanking.pickBestRelease` rank a pool
+their direct search never filtered by artist at all, so `ArtistMatcher.matchQuality` has to lead
+their comparators — title and edition tiers cannot be trusted to settle a pool that may hold a
+wrong-artist hit tied or ahead on every other signal. Follow "tier first, then artist" only where the
+pool is already artist-filtered; rank artist first wherever it is not.
+
 Combined-field search results carry a second trap: a provider that names both artist and album in
 one display string (Discogs's `"Artist - Title"`) cannot be safely split at the first delimiter,
 because either half may itself contain that delimiter. Stopping at the first boundary whose
@@ -321,11 +330,12 @@ every call and never refetched. Treating it as a miss lets the providers run and
 the entry.
 
 Extending it: one `EnrichmentData.Metadata` serves six types, so **which field answers which type is
-per type** — `label` answers `LABEL` and nothing else, and only `ALBUM_METADATA` accepts any field at
-all. Every other payload answers its type iff it carries anything. The `when` is exhaustive over payload
-*classes*, so the compiler asks about a new one — it is **not** exhaustive over types, so a new type
-served by `Metadata` inherits grab-bag semantics. That fails lenient, which is the right direction:
-the gate's job is to catch payloads answering *nothing*, not to adjudicate partial ones.
+per type** for five of them — `label` answers `LABEL` and nothing else — but `ALBUM_METADATA` and the
+other thirty accept any field at all. `answers()`'s own `when` is exhaustive over payload classes, so
+the compiler asks about a new one, and `answersMetadata`'s `when` **is** exhaustive over `EnrichmentType`
+with no `else`, so a new type is a compile error until named, not a silent fall into the grab bag —
+exhaustiveness buys naming, not rejection. That fails lenient, which is the right direction: the
+gate's job is to catch payloads answering *nothing*, not to adjudicate partial ones.
 
 ## 14. An optional-id branch is invisible to anything reading `identifierRequirement`
 
@@ -599,3 +609,76 @@ withTimeout(...) { … } }` — not to switch the test to `runBlocking`, which r
 `RateLimiter` delays `runTest` exists here to keep virtual. **"I could not make this go red" is a
 finding, not a footnote**: a test verified only against unmutated code is proven to pass and unproven
 to fail, and only the second claim is worth anything.
+
+
+## 18. A test-results directory outlives the tree that produced it
+
+`build/test-results/` is not cleared when the sources that produced it are reverted, and Gradle
+serves it again untouched whenever `test` resolves to `UP-TO-DATE`. So a count read from that
+directory describes **whichever tree last actually ran the tests**, which is not necessarily the tree
+being certified. Apply a patch, run the suite, revert the patch, read the XML: the numbers still
+describe the patched tree, and nothing in the output says so.
+
+This is distinct from the two adjacent traps. It is not §16's — the edit really was planted, and the
+run really did happen. It is not a suite that silently failed to re-run either, because the figure is
+a genuine measurement; it is a genuine measurement **of the wrong thing**. The failure is legible
+only if the number happens to look wrong: a suite reported as six tests larger than the tree can
+account for is a lucky catch, and the same mistake in the failure count would read as a clean run.
+
+**The recipe: `--rerun-tasks` for any figure that certifies a state, and take the figure after the
+revert rather than around it.** `rm -rf` the module's `test-results` directory first if a previous
+run's tree differed at all — a stale file that is never overwritten is served forever, because
+`UP-TO-DATE` skips the writer, not just the tests.
+
+One related hazard in the same procedure: **`git apply --3way` writes to the index**, so a
+`git checkout -- <paths>` restore afterwards restores *from the staged patch* and reverts nothing.
+Unstage first (`git reset -q HEAD -- .`, which leaves the worktree alone), then check out the tracked
+paths, then require `git status --porcelain` to print nothing. **A restore that was not verified is a
+restore that did not happen**, and the next run inherits the leftovers.
+
+The same failure has a second route, and this repo is unusually exposed to it: **a relative path
+resolves against whatever directory the shell is in**, and `.claude/worktrees/` can hold dozens of
+checkouts of this repo at once. A command written with relative paths, run when the working directory
+is a different worktree than intended, edits and measures that other tree — reporting a real,
+internally consistent result about the wrong commit. It is not detectable from the numbers: a probe
+aimed at a branch and run against `main` reports `main`'s test count, and looks exactly like a probe
+that found nothing to report.
+
+**Use absolute paths for anything that edits or measures a specific tree, and print the commit under
+test before trusting the run** — `git -C <path> log --oneline -1` costs nothing and names the tree the
+numbers came from. **Then assert the edit changed the number of lines you expected**, not merely that
+it changed something: a mutation that deletes the intended block and a neighbouring one is still
+"present" by any grep, and it will fail to compile rather than fail the test, which reads as a broken
+build rather than a broken probe.
+
+
+## 19. A suite can be fully covered by count and carry no test that discriminates
+
+Coverage is usually judged by what exists: a case per branch, a test per behaviour, a file per
+subject. That measure cannot see whether any of those tests would notice the behaviour going away.
+A test whose scenario puts the subject in a state where it is **inert by specification** — every
+candidate tied, the input null, the collection empty — passes identically whether the subject is
+present, broken, or deleted. It is a characterisation of the inert case, and it reads on the page
+exactly like a regression test for the live one.
+
+Two such tests can sit beside each other covering "no matching candidate" and "the input was null",
+and between them exercise every line of a ranking tier while proving nothing about it. Delete the
+tier and both stay green. The suite still reports a healthy count, the diff still shows tests added
+alongside the change, and review still sees a subject with tests next to it.
+
+**This is invisible to reading, including careful reading.** A review that examined both a release
+suite and a recording suite here found the asymmetry between them — five tests against two — and
+described it as a coverage gap in *count*. The two suites' shared blind spot was that neither of the
+two cases present in both could fail under the mutation its own subject implies, and no amount of
+reading the tests surfaced that; demanding the mutation did, immediately.
+
+**The recipe: pick the mutation the subject implies — remove the tier, drop the field, invert the
+condition — and require a named test to go red.** State the expected red set *before* running it, and
+report a deviation rather than reconciling it; a count that comes back different is the finding. When
+a test genuinely cannot fail that way and is still worth keeping, **say so in its title or KDoc**:
+inertness is a real property the callers may depend on, and an unlabelled test that cannot fail will
+be refiled as a gap by the next reader, or trusted as a guard by the one after that.
+
+Distinct from §16 (a probe whose planted edit was never present) and §18 (a real measurement of the
+wrong tree): here the test runs, the measurement is honest, and the subject is genuinely exercised —
+it simply cannot register the subject's absence.

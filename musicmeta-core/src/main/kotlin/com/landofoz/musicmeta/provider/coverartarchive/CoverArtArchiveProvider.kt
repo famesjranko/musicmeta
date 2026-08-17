@@ -6,7 +6,9 @@ import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.IdentifierRequirement
 import com.landofoz.musicmeta.ProviderCapability
+import com.landofoz.musicmeta.engine.CallMemo
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
+import com.landofoz.musicmeta.engine.ProviderCallScope
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 import kotlinx.coroutines.currentCoroutineContext
@@ -153,7 +155,7 @@ class CoverArtArchiveProvider(
         imageType: String,
     ): EnrichmentResult {
         if (releaseId == null) return EnrichmentResult.NotFound(type, id)
-        val images = api.getArtworkMetadata(releaseId)
+        val images = getArtworkMetadata(releaseId)
             ?: return EnrichmentResult.NotFound(type, id)
         val image = images.firstOrNull { imageType in it.types }
             ?: return EnrichmentResult.NotFound(type, id)
@@ -170,8 +172,23 @@ class CoverArtArchiveProvider(
 
     /** Fetch image metadata for sizes. Returns the first front image, or null. */
     private suspend fun fetchFrontImage(releaseId: String): CoverArtArchiveImage? {
-        val images = api.getArtworkMetadata(releaseId) ?: return null
+        val images = getArtworkMetadata(releaseId) ?: return null
         return images.firstOrNull { it.front }
+    }
+
+    /**
+     * `getArtworkMetadata` for [releaseId], memoized for the life of one [ProviderCallScope] —
+     * [findImageByType]'s three metadata branches and [fetchFrontImage]'s ALBUM_ART side-fetch all
+     * read this same response. Release-id-keyed rather than one slot per call: a call resolving
+     * more than one release must not share one release's answer with another's. A miss is memoized
+     * too, so a release with no artwork costs one request instead of one per type; called outside
+     * an engine, there is no scope to memoize in and every call hits upstream.
+     */
+    private suspend fun getArtworkMetadata(releaseId: String): List<CoverArtArchiveImage>? {
+        val memo = currentCoroutineContext()[ProviderCallScope]
+            ?.slot(this) { CallMemo<String, List<CoverArtArchiveImage>?>() }
+            ?: return api.getArtworkMetadata(releaseId)
+        return memo.get(releaseId) { api.getArtworkMetadata(releaseId) }
     }
 
     companion object {

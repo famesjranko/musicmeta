@@ -7,10 +7,13 @@ import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.IdentifierRequirement
 import com.landofoz.musicmeta.ProviderCapability
+import com.landofoz.musicmeta.engine.CallMemo
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
+import com.landofoz.musicmeta.engine.ProviderCallScope
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.http.bodyOrThrowTransient
+import kotlinx.coroutines.currentCoroutineContext
 
 /**
  * Provides artist biographies, album descriptions and photos from Wikipedia articles.
@@ -114,11 +117,24 @@ class WikipediaProvider(
     }
 
     /**
-     * Resolve Wikipedia article title from Wikidata entity sitelinks.
+     * Resolve Wikipedia article title from Wikidata entity sitelinks, memoized for the life of one
+     * [ProviderCallScope] — ARTIST_BIO and ARTIST_PHOTO both resolve through this when the request
+     * carries no `wikipediaTitle`. Wikidata-id-keyed rather than one slot per call: a call resolving
+     * more than one entity must not share one entity's answer with another's. A miss is memoized
+     * too, so an entity with no English sitelink costs one request instead of one per type; called
+     * outside an engine, there is no scope to memoize in and every call hits upstream.
+     *
      * Many artists have a Wikidata entry but no direct Wikipedia URL relation in MusicBrainz.
      */
     private suspend fun resolveFromWikidata(wikidataId: String?): String? {
         if (wikidataId.isNullOrBlank()) return null
+        val memo = currentCoroutineContext()[ProviderCallScope]
+            ?.slot(this) { CallMemo<String, String?>() }
+            ?: return fetchWikidataTitle(wikidataId)
+        return memo.get(wikidataId) { fetchWikidataTitle(wikidataId) }
+    }
+
+    private suspend fun fetchWikidataTitle(wikidataId: String): String? {
         val url = "$WIKIDATA_API?action=wbgetentities&ids=$wikidataId" +
             "&props=sitelinks&sitefilter=enwiki&format=json"
         val json = wikidataRateLimiter.execute {

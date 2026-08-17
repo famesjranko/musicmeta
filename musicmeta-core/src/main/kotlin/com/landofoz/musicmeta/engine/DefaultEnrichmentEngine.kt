@@ -192,6 +192,10 @@ internal class DefaultEnrichmentEngine(
                         EnrichmentResult.Error(type, "engine", "Enrichment timed out", errorKind = ErrorKind.TIMEOUT)
                 }
             }
+            // A truncated run never reaches the stamp inside the timed block, so a Success already
+            // written (e.g. by resolveIdentity) would otherwise keep provenance == null. FAILED
+            // matches the identity fallback below: the deadline beat identity resolution.
+            stampProvenance(results, identityResolution?.status ?: CanonicalStatus.FAILED, chainExecutions)
         }
 
         // Stale fallback and write-back are outside the timed block above on purpose: a timeout
@@ -728,12 +732,14 @@ internal class DefaultEnrichmentEngine(
 
     /**
      * The second per-result gate: a `Success` whose payload does not [answers] the type it claims to
-     * answer is a `NotFound` — whether the payload is empty or merely fills some *other* type's
-     * field. [filterByConfidence] cannot do this — confidence scores identification, and a perfect
-     * identity match on an entity carrying no data scores 1.0. Sited here rather than in each
-     * provider because every provider had the same hole. [answers] gates everything that can reach a
-     * consumer: chain results, merger and synthesizer output, the identity fan-out, and both cache
-     * paths — on the cache read as a *miss*, so the entry is refetched rather than pinned.
+     * answer is a `NotFound` — empty, or, within the five types [EnrichmentData.Metadata] answers
+     * field-by-field, one filling a different type's field. `PayloadAnswersTypeCoverageTest` pins
+     * that a `Metadata` filled across those five answers every `EnrichmentType`, the rest leniently.
+     * [filterByConfidence] cannot do this — confidence scores identification, and a perfect identity
+     * match on an entity carrying no data scores 1.0. Sited here rather than in each provider because
+     * every provider had the same hole. [answers] gates everything that can reach a consumer: chain
+     * results, merger and synthesizer output, the identity fan-out, and both cache paths — on the
+     * cache read as a *miss*, so the entry is refetched rather than pinned.
      */
     private fun demoteUnanswered(result: EnrichmentResult): EnrichmentResult =
         if (result is EnrichmentResult.Success && !result.data.answers(result.type)) {

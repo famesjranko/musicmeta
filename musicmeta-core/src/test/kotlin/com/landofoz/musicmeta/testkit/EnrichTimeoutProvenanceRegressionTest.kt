@@ -9,7 +9,6 @@ import com.landofoz.musicmeta.ErrorKind
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
-import org.junit.Ignore
 import org.junit.Test
 
 /**
@@ -50,14 +49,6 @@ import org.junit.Test
  */
 class EnrichTimeoutProvenanceRegressionTest {
 
-    @Ignore(
-        "Red now, and owned by the enrich-timeout-drops-provenance defect: an enrich that times out " +
-            "mid fan-out can return an identity-write-through Success whose provenance is null, " +
-            "against the published guarantee that every engine-produced Success sets it. Remove this " +
-            "mark once a truncated run either stamps provenance like a completed run would, or the " +
-            "guarantee is narrowed to say a truncated run's Success may carry none — the test must go " +
-            "red first if it does not.",
-    )
     @Test
     fun `identity write-through Success keeps its provenance even when the run times out`() = runTest {
         // Given - the real stack, offline, over a scenario whose identity resolution answers from a

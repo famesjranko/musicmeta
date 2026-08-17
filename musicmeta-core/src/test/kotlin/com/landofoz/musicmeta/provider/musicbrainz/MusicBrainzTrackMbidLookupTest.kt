@@ -362,6 +362,7 @@ class MusicBrainzTrackMbidLookupTest {
                   "id": "rec-live-1", "score": 92, "title": "Enter Sandman",
                   "disambiguation": "live, 1992-01-11: Arco Arena, Sacramento, CA, US",
                   "tags": [{"name": "thrash metal", "count": 3}],
+                  "artist-credit": [{"artist": {"id": "art-metallica", "name": "Metallica"}}],
                   "releases": [
                     {
                       "status": "Official",
@@ -371,7 +372,8 @@ class MusicBrainzTrackMbidLookupTest {
                 },
                 {
                   "id": "rec-live-2", "score": 92, "title": "Enter Sandman",
-                  "disambiguation": "live at Moscow"
+                  "disambiguation": "live at Moscow",
+                  "artist-credit": [{"artist": {"id": "art-metallica", "name": "Metallica"}}]
                 }
               ]
             }
@@ -438,6 +440,7 @@ class MusicBrainzTrackMbidLookupTest {
               "title": "Enter Sandman",
               "length": 331560,
               "tags": [{"name": "heavy metal", "count": 7}],
+              "artist-credit": [{"artist": {"id": "art-metallica", "name": "Metallica"}}],
               "releases": [
                 {
                   "status": "Promotion",

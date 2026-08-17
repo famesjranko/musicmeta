@@ -154,6 +154,7 @@ class MusicBrainzParserTest {
                 "id": "rec-studio",
                 "score": 100,
                 "title": "Enter Sandman",
+                "artist-credit": [{"artist": {"id": "art-metallica", "name": "Metallica"}}],
                 "releases": [
                   {"status": "Official", "release-group": {"id": "rg-studio", "primary-type": "Album"}}
                 ]
@@ -180,6 +181,7 @@ class MusicBrainzParserTest {
                 "id": "rec-studio",
                 "score": 100,
                 "title": "Enter Sandman",
+                "artist-credit": [{"artist": {"id": "art-metallica", "name": "Metallica"}}],
                 "releases": [
                   {"status": "Official", "release-group": {"id": "rg-studio", "primary-type": "Album", "title": "Metallica"}}
                 ]
@@ -205,7 +207,8 @@ class MusicBrainzParserTest {
                 "id": "rec1",
                 "score": 95,
                 "title": "Paranoid Android",
-                "length": 383000
+                "length": 383000,
+                "artist-credit": [{"artist": {"id": "art-radiohead", "name": "Radiohead"}}]
               }]
             }
             """.trimIndent(),
@@ -222,7 +225,8 @@ class MusicBrainzParserTest {
     fun `parseRecording fills isVideo from the recording's own video flag`() {
         // Given - a recording carrying video=true
         val json = JSONObject(
-            """{"recordings": [{"id": "rec1", "score": 100, "title": "Karma Police", "video": true}]}""",
+            """{"recordings": [{"id": "rec1", "score": 100, "title": "Karma Police", "video": true,""" +
+                """ "artist-credit": [{"artist": {"id": "art-radiohead", "name": "Radiohead"}}]}]}""",
         )
 
         // When - parsing recordings
@@ -236,7 +240,8 @@ class MusicBrainzParserTest {
     fun `parseRecording defaults isVideo to false when the field is absent`() {
         // Given - a recording with no video field at all
         val json = JSONObject(
-            """{"recordings": [{"id": "rec1", "score": 100, "title": "Karma Police"}]}""",
+            """{"recordings": [{"id": "rec1", "score": 100, "title": "Karma Police",""" +
+                """ "artist-credit": [{"artist": {"id": "art-radiohead", "name": "Radiohead"}}]}]}""",
         )
 
         // When - parsing recordings
@@ -258,6 +263,7 @@ class MusicBrainzParserTest {
                 "id": "video-id",
                 "score": 100,
                 "title": "Karma Police",
+                "artist-credit": [{"artist": {"id": "art-radiohead", "name": "Radiohead"}}],
                 "releases": [
                   {"status": "Official", "release-group": {"id": "rg-best-of", "primary-type": "Album", "title": "The Best Of"}},
                   {"status": "Official", "release-group": {"id": "rg-ok-computer", "primary-type": "Album", "title": "OK Computer"}}
@@ -287,6 +293,7 @@ class MusicBrainzParserTest {
                 "id": "rec1",
                 "score": 100,
                 "title": "Karma Police",
+                "artist-credit": [{"artist": {"id": "art-radiohead", "name": "Radiohead"}}],
                 "releases": [
                   {"status": "Bootleg", "release-group": {"id": "rg-ok-computer", "primary-type": "Album", "title": "ok computer"}}
                 ]
@@ -312,6 +319,7 @@ class MusicBrainzParserTest {
                 "id": "rec1",
                 "score": 100,
                 "title": "Karma Police",
+                "artist-credit": [{"artist": {"id": "art-radiohead", "name": "Radiohead"}}],
                 "releases": [
                   {"status": "Official", "release-group": {"id": "rg-a", "primary-type": "Album", "title": "Amnesiac"}}
                 ]
@@ -336,7 +344,8 @@ class MusicBrainzParserTest {
               "recordings": [{
                 "id": "rec1",
                 "score": 95,
-                "title": "Paranoid Android"
+                "title": "Paranoid Android",
+                "artist-credit": [{"artist": {"id": "art-radiohead", "name": "Radiohead"}}]
               }]
             }
             """.trimIndent(),
@@ -360,6 +369,7 @@ class MusicBrainzParserTest {
                 "id": "rec-studio",
                 "score": 100,
                 "title": "Enter Sandman",
+                "artist-credit": [{"artist": {"id": "art-metallica", "name": "Metallica"}}],
                 "releases": [
                   {"status": "Official", "release-group": {"id": "rg-boxset", "primary-type": "Other"}}
                 ]
@@ -387,6 +397,7 @@ class MusicBrainzParserTest {
                 "id": "rec-live",
                 "score": 100,
                 "title": "Enter Sandman",
+                "artist-credit": [{"artist": {"id": "art-metallica", "name": "Metallica"}}],
                 "releases": [
                   {"status": "Bootleg", "release-group": {"id": "rg-live", "primary-type": "Album"}}
                 ]
@@ -413,6 +424,7 @@ class MusicBrainzParserTest {
                 "id": "rec-no-group",
                 "score": 100,
                 "title": "Enter Sandman",
+                "artist-credit": [{"artist": {"id": "art-metallica", "name": "Metallica"}}],
                 "releases": [
                   {"status": "Bootleg"}
                 ]
@@ -439,6 +451,7 @@ class MusicBrainzParserTest {
                 "id": "rec-single",
                 "score": 100,
                 "title": "Enter Sandman",
+                "artist-credit": [{"artist": {"id": "art-metallica", "name": "Metallica"}}],
                 "releases": [
                   {"status": "Official", "release-group": {"id": "rg-single", "primary-type": "Single"}}
                 ]
@@ -465,6 +478,7 @@ class MusicBrainzParserTest {
                 "id": "rec-comp",
                 "score": 100,
                 "title": "Enter Sandman",
+                "artist-credit": [{"artist": {"id": "art-metallica", "name": "Metallica"}}],
                 "releases": [
                   {
                     "status": "Official",
@@ -495,6 +509,7 @@ class MusicBrainzParserTest {
                 "id": "rec-studio",
                 "score": 100,
                 "title": "Enter Sandman",
+                "artist-credit": [{"artist": {"id": "art-metallica", "name": "Metallica"}}],
                 "releases": [
                   {"status": "Pseudo-Release", "release-group": {"id": "rg-pseudo", "primary-type": "Album"}},
                   {"status": "Official", "release-group": {"id": "rg-real", "primary-type": "Album"}}
@@ -1326,6 +1341,7 @@ class MusicBrainzParserTest {
                 "id": "rg1",
                 "score": 90,
                 "title": "Selected Ambient Works",
+                "artist-credit": [{"artist": {"id": "art-aphex-twin", "name": "Aphex Twin"}}],
                 "release-group": {
                   "id": "grp1",
                   "primary-type": "Album",
@@ -1423,7 +1439,8 @@ class MusicBrainzParserTest {
                 "score": 95,
                 "title": "Paranoid Android",
                 "isrcs": ["GBAYE9700100"],
-                "tags": [{"name": "alternative rock", "count": 3}]
+                "tags": [{"name": "alternative rock", "count": 3}],
+                "artist-credit": [{"artist": {"id": "art-radiohead", "name": "Radiohead"}}]
               }]
             }
         """.trimIndent()

@@ -165,6 +165,7 @@ class TrackIdentityGateTest {
               "recordings": [{
                 "id": "rec-studio", "score": 100, "title": "Enter Sandman",
                 "tags": [{"name": "heavy metal", "count": 7}],
+                "artist-credit": [{"artist": {"id": "art-metallica", "name": "Metallica"}}],
                 "releases": [{
                   "id": "rel-1", "status": "Official",
                   "release-group": {"id": "rg-studio", "title": "Metallica", "primary-type": "Album"}
@@ -179,6 +180,7 @@ class TrackIdentityGateTest {
               "title": "Enter Sandman",
               "length": 331560,
               "tags": [{"name": "heavy metal", "count": 7}],
+              "artist-credit": [{"artist": {"id": "art-metallica", "name": "Metallica"}}],
               "releases": [{
                 "id": "rel-1", "status": "Official",
                 "release-group": {"id": "rg-studio", "title": "Metallica", "primary-type": "Album"}
@@ -190,6 +192,7 @@ class TrackIdentityGateTest {
             {
               "id": "rel-1",
               "title": "Metallica",
+              "artist-credit": [{"artist": {"id": "art-metallica", "name": "Metallica"}}],
               "release-group": {"id": "rg-studio", "primary-type": "Album"}
             }
         """.trimIndent()

@@ -28,7 +28,9 @@ with the `releases` sub-object removed, since [MusicBrainzEnricher.toCandidate] 
 `a miss suggests from the pool a consumer chooses out of, not the filtered one`, same file) —
 **that file's origin is unverified.** Its field names (`id`, `score`, `title`, `disambiguation`)
 match what `MusicBrainzParser.parseRecording` reads, but the parser is not evidence for the pool.
-No field name or value was changed from the source fixture.
+No field name or value was changed from the source fixture. `artist-credit` was later backfilled
+into both pools and into `WEAK_POOL`/`ALL_VARIANTS_POOL` together, in the same change, so the two
+stayed in lockstep rather than drifting apart — the origin remains unverified either way.
 
 MusicBrainz's actual field names are exercised against the live API by the daily
 `provider-drift.yml` job (non-gating) — `RealApiEndToEndTest.kt` drives real `forTrack` name-search

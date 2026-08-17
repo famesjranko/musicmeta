@@ -1,8 +1,11 @@
 package com.landofoz.musicmeta.provider.musicbrainz
 
+import com.landofoz.musicmeta.engine.CallMemo
+import com.landofoz.musicmeta.engine.ProviderCallScope
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.http.bodyOrThrowTransient
+import kotlinx.coroutines.currentCoroutineContext
 import org.json.JSONObject
 import java.net.URLEncoder
 
@@ -101,7 +104,7 @@ internal class MusicBrainzApi(
         val albumHint = album?.takeIf { it.isNotBlank() }
         val hinted = albumHint?.let { fetchRecordings(recordingQuery(title, artist, it), limit, it) }
         return hinted?.takeIf { it.isNotEmpty() }
-            ?: fetchRecordings(recordingQuery(title, artist, null), limit, albumHint)
+            ?: plainRecordingPool(title, artist, limit, albumHint)
     }
 
     /**
@@ -172,13 +175,51 @@ internal class MusicBrainzApi(
     ): List<MusicBrainzRecording> =
         fetchRecordings(recordingQuery(title, artist, null, canonicalOnly = true), CANONICAL_SEARCH_LIMIT, albumHint)
 
-    /** The hint-less unfiltered pool, at the shallow page — the shape that shipped before the filter. */
+    /**
+     * The hint-less unfiltered pool, at the shallow page — the shape that shipped before the filter.
+     * Byte-identical to [searchRecordings]'s own hint-less fallback query, so both go through
+     * [plainRecordingPool] rather than fetching it twice.
+     */
     private suspend fun shallowPool(
         title: String,
         artist: String,
         albumHint: String?,
     ): List<MusicBrainzRecording> =
-        fetchRecordings(recordingQuery(title, artist, null), RECORDING_SEARCH_LIMIT, albumHint)
+        plainRecordingPool(title, artist, RECORDING_SEARCH_LIMIT, albumHint)
+
+    /**
+     * The hint-less plain recording query, shared for the life of one call
+     * ([ProviderCallScope]) between [searchRecordings]'s hint-less fallback and [shallowPool] —
+     * both build the identical URL whenever [title]/[artist]/[limit] agree, so MusicBrainz should
+     * see it once per call, not once per caller.
+     *
+     * Memoized as the raw response, not [MusicBrainzParser]'s output: parsing takes [albumHint] and
+     * uses it to prefer a release group per hit, so two callers with different hints must parse
+     * their own copy from the one shared fetch rather than share a parse meant for the other's hint.
+     * [albumHint] is therefore no part of the memo key.
+     */
+    private suspend fun plainRecordingPool(
+        title: String,
+        artist: String,
+        limit: Int,
+        albumHint: String?,
+    ): List<MusicBrainzRecording> {
+        val json = plainRecordingPoolMemo().get(PlainRecordingQuery(title, artist, limit)) {
+            fetchRecordingsJson(recordingQuery(title, artist, null), limit)
+        } ?: return emptyList()
+        return MusicBrainzParser.parseRecordings(json, albumHint)
+    }
+
+    private data class PlainRecordingQuery(val title: String, val artist: String, val limit: Int)
+
+    /**
+     * This call's memo ([ProviderCallScope]), never this instance's — [MusicBrainzApi] is one
+     * instance per [MusicBrainzProvider], so a memo held here would outlive the call that filled it
+     * and could serve a `forceRefresh` the previous call's payload (`docs/pitfalls.md` §12). A
+     * caller with no scope (used outside an engine) gets a fresh memo per call, the same guarantee.
+     */
+    private suspend fun plainRecordingPoolMemo(): CallMemo<PlainRecordingQuery, JSONObject?> =
+        currentCoroutineContext()[ProviderCallScope]?.slot(this, ::CallMemo) ?: CallMemo()
 
     /**
      * [albumHint] is always the request's own album (independent of whether [query] itself carries
@@ -190,11 +231,15 @@ internal class MusicBrainzApi(
         limit: Int,
         albumHint: String? = null,
     ): List<MusicBrainzRecording> {
-        val json = rateLimiter.execute {
-            httpClient.fetchJsonResult("$BASE_URL/recording?query=$query&fmt=json&limit=$limit").bodyOrThrowTransient()
-        } ?: return emptyList()
+        val json = fetchRecordingsJson(query, limit) ?: return emptyList()
         return MusicBrainzParser.parseRecordings(json, albumHint)
     }
+
+    /** The raw upstream response for a recording search, before [MusicBrainzParser] sees it. */
+    private suspend fun fetchRecordingsJson(query: String, limit: Int): JSONObject? =
+        rateLimiter.execute {
+            httpClient.fetchJsonResult("$BASE_URL/recording?query=$query&fmt=json&limit=$limit").bodyOrThrowTransient()
+        }
 
     /**
      * Broader fuzzy search (unquoted + Lucene `~`) for near-miss suggestions — same shape as

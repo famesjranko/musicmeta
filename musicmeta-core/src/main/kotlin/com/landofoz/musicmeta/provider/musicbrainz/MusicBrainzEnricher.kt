@@ -9,6 +9,8 @@ import com.landofoz.musicmeta.LookupProvenance
 import com.landofoz.musicmeta.MusicBrainzEntityType
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.engine.AlternativeName
+import com.landofoz.musicmeta.engine.ArtistMatcher
+import com.landofoz.musicmeta.engine.CallMemo
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.engine.NameMatchTier
 import com.landofoz.musicmeta.engine.ResolvedEntityNames
@@ -36,32 +38,6 @@ internal class MusicBrainzEnricher(
     private val providerId: String,
     private val minMatchScore: Int,
 ) {
-
-    /**
-     * One upstream answer per key for as long as this enricher lives, which is one `enrich()` call.
-     *
-     * The mutex is held across [fetch], not merely around the map: the engine resolves a request's
-     * types as sibling `async` children, so two types asking the same question concurrently have to
-     * make one call between them rather than one each.
-     *
-     * A thrown transient is never held — the write is on the success path — so the next type that
-     * asks retries it. What an *absence* costs is the difference between the two entry points.
-     */
-    private class CallMemo<K : Any, V : Any> {
-
-        private val entries = mutableMapOf<K, V>()
-        private val mutex = Mutex()
-
-        /** [fetch]'s answer for [key], held for the call whatever it is — including a negative one. */
-        suspend fun get(key: K, fetch: suspend () -> V): V = mutex.withLock {
-            entries[key] ?: fetch().also { entries[key] = it }
-        }
-
-        /** As [get], except a `null` from [fetch] is a genuine absence and is not held. */
-        suspend fun getOrNull(key: K, fetch: suspend () -> V?): V? = mutex.withLock {
-            entries[key] ?: fetch()?.also { entries[key] = it }
-        }
-    }
 
     /**
      * Artist lookups by MBID: BAND_MEMBERS, ARTIST_LINKS and GENRE all want the same artist.
@@ -312,7 +288,14 @@ internal class MusicBrainzEnricher(
         val needsRelations = best.wikidataId == null && best.wikipediaTitle == null
         val resolved = if (needsRelations) resolveArtistRelations(best) else best
 
-        return buildArtistResult(resolved, type, artistMatchConfidence(request.name, best))
+        // EXACT_NAME requires the artist's own canonical name; pickBestArtist can still win on an
+        // alias or no-name-match tier, and that evidence must report FUZZY_NAME or it overstates.
+        val provenance = if (artistNameTier(request.name, best) == NameMatchTier.CANONICAL) {
+            LookupProvenance.EXACT_NAME
+        } else {
+            LookupProvenance.FUZZY_NAME
+        }
+        return buildArtistResult(resolved, type, artistMatchConfidence(request.name, best), provenance)
     }
 
     /**
@@ -718,10 +701,20 @@ internal class MusicBrainzEnricher(
      * (`maxWithOrNull` keeps the first maximum, same convention as [pickBestArtist]'s sibling in
      * `DeezerApi.rankTracks`):
      *
+     * 0. [ArtistMatcher.matchQuality] against [artist], the best of any credited name
+     *    ([MusicBrainzRecording.artistCredits], one entry per credit with no joinphrase to
+     *    misparse) — leads every other tier, same as [pickBestArtist]'s own name tier. This is the
+     *    opposite of `DeezerApi.rankTracks`, which puts artist quality at its tier 2, *below* exact
+     *    title — but that pool is filtered by `ArtistMatcher.isMatch` before ranking ever starts
+     *    (`docs/pitfalls.md` §7), and this one is not: this is the direct search path §7's own
+     *    convention doesn't cover, so a recording credited to someone else must lose before title or
+     *    edition signals get a vote, not after. Ranks rather than rejects: a pool with no
+     *    matching-artist candidate at all still resolves to its best title/edition match, tied at
+     *    [ArtistMatcher.QUALITY_NONE].
      * 1. exact (case-insensitive) title match against [title] — verified live: a per-member
      *    cover/karaoke recording titled e.g. "Enter Sandman (Ulrich)" carries no disambiguation at
      *    all and would still beat the studio original on tiers 2/3 alone, so title has to be
-     *    checked first, same tier order as `DeezerApi.rankTracks`'s tier 1
+     *    checked before them
      * 2. [albumTitle] present and matches (via [MusicBrainzRecording.artReleaseGroupTitle], already
      *    tier-0-preferring an exact album match — see `MusicBrainzParser.findArtReleaseGroup`) — an
      *    explicit album request is the strongest available signal, so it outranks both the
@@ -759,19 +752,20 @@ internal class MusicBrainzEnricher(
      * capture, so it is allowed to override the floor rather than leaving the correct candidate
      * filtered out before ranking ever sees it.
      */
-    private fun pickBestRecording(
+    internal fun pickBestRecording(
         title: String,
         recordings: List<MusicBrainzRecording>,
         albumTitle: String? = null,
+        artist: String? = null,
     ): MusicBrainzRecording? {
         val album = albumTitle?.trim()?.takeIf { it.isNotBlank() }
         return recordings
             .filter { it.score >= minMatchScore || (album != null && it.matchesAlbum(album)) }
-            .map { it to it.recordingRank(title, album) }
+            .map { it to it.recordingRank(title, album, artist) }
             .maxWithOrNull(
                 compareBy(
-                    { it.second.exactTitle }, { it.second.albumMatch }, { it.second.notVideo },
-                    { it.second.blankDisambiguation }, { it.second.officialAlbum },
+                    { it.second.artistQuality }, { it.second.exactTitle }, { it.second.albumMatch },
+                    { it.second.notVideo }, { it.second.blankDisambiguation }, { it.second.officialAlbum },
                 ),
             )
             ?.first
@@ -780,7 +774,21 @@ internal class MusicBrainzEnricher(
     private fun MusicBrainzRecording.matchesAlbum(album: String): Boolean =
         artReleaseGroupTitle?.trim()?.equals(album, ignoreCase = true) == true
 
-    private fun MusicBrainzRecording.recordingRank(title: String, album: String?) = RecordingRank(
+    /**
+     * Best [ArtistMatcher.matchQuality] of [artist] against any of this recording's individually
+     * credited names ([MusicBrainzRecording.artistCredits]) — a collaboration credited "Queen &
+     * David Bowie" must still rank as a match for a request naming only "Queen". Null or blank
+     * [artist] carries [ArtistMatcher.QUALITY_NONE], the same as no credit matching at all.
+     */
+    private fun MusicBrainzRecording.artistQuality(artist: String?): Int =
+        if (artist.isNullOrBlank()) {
+            ArtistMatcher.QUALITY_NONE
+        } else {
+            artistCredits.maxOfOrNull { ArtistMatcher.matchQuality(artist, it) } ?: ArtistMatcher.QUALITY_NONE
+        }
+
+    private fun MusicBrainzRecording.recordingRank(title: String, album: String?, artist: String?) = RecordingRank(
+        artistQuality = artistQuality(artist),
         exactTitle = this.title.trim().equals(title.trim(), ignoreCase = true),
         albumMatch = album != null && matchesAlbum(album),
         notVideo = !isVideo,
@@ -789,6 +797,7 @@ internal class MusicBrainzEnricher(
     )
 
     private data class RecordingRank(
+        val artistQuality: Int,
         val exactTitle: Boolean,
         val albumMatch: Boolean,
         val notVideo: Boolean,
@@ -887,7 +896,7 @@ internal class MusicBrainzEnricher(
 
     private suspend fun searchTrack(request: EnrichmentRequest.ForTrack): TrackSearchResult {
         val recordings = api.searchCanonicalRecordings(request.title, request.artist, request.album)
-        val direct = pickBestRecording(request.title, recordings, request.album)
+        val direct = pickBestRecording(request.title, recordings, request.album, request.artist)
         val resolved = direct ?: resolveTrackQualifierFallback(request.title, request.artist, request.album)
         return TrackSearchResult(resolved, viaQualifierFallback = direct == null && resolved != null)
     }
@@ -898,8 +907,12 @@ internal class MusicBrainzEnricher(
      * Unfiltered, and never what a request resolves out of: a suggestion list is a choose-a-version
      * surface, built the way [MusicBrainzProvider.searchCandidates] builds its own, because a list
      * narrowed to canonical recordings cannot answer "I want the Moscow one" — and the resolution
-     * pool is narrowed to exactly that. A different query from [trackSearchMemo]'s, so it holds its
-     * own answer; one extra request, on the miss path only.
+     * pool is narrowed to exactly that. A different query from [trackSearchMemo]'s canonical one —
+     * but the plain recording search it fires can be byte-identical to what
+     * [MusicBrainzApi.searchCanonicalRecordings] itself sends for a hint-less request: its fallback
+     * when the canonical pool comes back empty, or the whole of the hint-less path when a trailing
+     * qualifier group routes it straight to the plain search instead. Either way, what keeps that
+     * pair to one upstream request is a memo inside [MusicBrainzApi], not this one.
      */
     private val trackSuggestionMemo = CallMemo<TrackQuery, List<MusicBrainzRecording>>()
 
@@ -940,7 +953,7 @@ internal class MusicBrainzEnricher(
      */
     private suspend fun searchAlbum(title: String, artist: String): AlbumSearchResult {
         val releases = api.searchReleases(title, artist)
-        val direct = MusicBrainzReleaseRanking.pickBestRelease(releases, minMatchScore)
+        val direct = MusicBrainzReleaseRanking.pickBestRelease(releases, minMatchScore, artist = artist)
         val viaQualifier = direct == null
         val qualifierFallback = if (viaQualifier) resolveAlbumQualifierFallback(title, artist) else null
         val resolved = direct

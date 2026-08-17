@@ -153,7 +153,10 @@ class MusicBrainzSearchTest {
         private val RECORDING_SEARCH_FUZZY_MATCH = """
             {
               "recordings": [
-                {"id": "rec-fuzzy", "score": 82, "title": "Enter Sandman"}
+                {
+                  "id": "rec-fuzzy", "score": 82, "title": "Enter Sandman",
+                  "artist-credit": [{"artist": {"id": "art-metallica", "name": "Metallica"}}]
+                }
               ]
             }
         """.trimIndent()

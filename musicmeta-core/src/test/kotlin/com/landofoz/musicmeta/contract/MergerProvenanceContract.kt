@@ -171,7 +171,7 @@ abstract class MergerProvenanceContract : ContractSuite<List<ResultMerger>>() {
     }
 
     @Test
-    fun `a payload-free merge reports the strongest contributor, a known gap owned by a separate fix`() {
+    fun `a merge fed a wrong-EnrichmentData-subtype payload reports the strongest contributor`() {
         // Given - every registered merger except ArtworkMerger, which returns NotFound rather than taking this path, each fed two contributors whose payload carries nothing that merger's own filter treats as usable
         val strong = LookupProvenance.CANONICAL_ID
         val weak = LookupProvenance.FUZZY_NAME

@@ -70,4 +70,16 @@ class PayloadAnswersTypeCoverageTest {
         // Then - an empty list is absence, matching GENRE's own reading
         assertFalse(answered)
     }
+
+    @Test
+    fun `intended behaviour - a non-Metadata payload answers a type it has nothing to do with, as long as it carries anything`() {
+        // Given - an Artwork payload, which reads only url and has no GENRE field to speak of
+        val payload = EnrichmentData.Artwork(url = "https://example.test/cover.jpg")
+
+        // When - asking it about GENRE, a type only Metadata actually distinguishes
+        val answered = payload.answers(EnrichmentType.GENRE)
+
+        // Then - it answers true: every non-Metadata payload answers any type iff it carries anything
+        assertTrue(answered)
+    }
 }

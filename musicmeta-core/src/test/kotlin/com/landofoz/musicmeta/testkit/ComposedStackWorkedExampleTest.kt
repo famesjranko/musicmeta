@@ -5,7 +5,6 @@ import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertTrue
-import org.junit.Ignore
 import org.junit.Test
 
 /**
@@ -58,12 +57,6 @@ class ComposedStackWorkedExampleTest {
         EntityIdentity.assertAnswersTheRequestWithoutCanonicalIdentity(request, results)
     }
 
-    @Ignore(
-        "Red now, and owned by the duplicate-recording-search ticket: one enrich() issues the " +
-            "MusicBrainz recording search twice, because only one of its two call sites goes " +
-            "through the memo. Remove this mark when the second call site is memoized; the test " +
-            "must go red first if it does not.",
-    )
     @Test
     fun `no upstream URL is requested twice in one enrich`() = runTest {
         // Given - the same scenario and stack

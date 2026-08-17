@@ -14,12 +14,11 @@ import com.landofoz.musicmeta.testutil.FakeHttpClient
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 
 /**
- * [ListenBrainzProvider] holds no [com.landofoz.musicmeta.engine.ProviderCallScope] memo over
- * `popularity/top-recordings-for-artist/{mbid}`. ARTIST_TOP_TRACKS always calls it, and
+ * [ListenBrainzProvider] memoizes `popularity/top-recordings-for-artist/{mbid}` for the life of one
+ * [com.landofoz.musicmeta.engine.ProviderCallScope]. ARTIST_TOP_TRACKS always calls it, and
  * ARTIST_POPULARITY calls it only as a fallback when the batch `popularity/artist` call returns no
  * data for the artist -- the two collide only in that fallback case, which is what the second test
  * here characterises: a batch hit never reaches the fallback, so nothing collides.
@@ -47,13 +46,6 @@ class ListenBrainzMemoTest {
         name = "Radiohead",
     )
 
-    @Ignore(
-        "Red now: when the batch popularity/artist call returns no data for the artist, " +
-            "ARTIST_POPULARITY's fallback and ARTIST_TOP_TRACKS both call " +
-            "popularity/top-recordings-for-artist/{mbid}, costing two requests to that endpoint in " +
-            "one enrich() call where a memo would cost one. Remove this mark only once that count " +
-            "is one; this assertion must go red first if it is not.",
-    )
     @Test
     fun `one artist's fanout calls top-recordings once, not once per type, when the batch call is empty`() = runTest {
         // Given - the batch endpoint holds nothing for this artist, so ARTIST_POPULARITY falls
@@ -86,6 +78,39 @@ class ListenBrainzMemoTest {
         httpClient.assertNoUrlRequestedTwice()
         assertEquals(1, httpClient.countMatching("popularity/artist"))
         assertEquals(1, httpClient.countMatching("top-recordings-for-artist"))
+    }
+
+    @Test
+    fun `an artist with no top recordings is looked up once, not once per type`() = runTest {
+        // Given - the batch endpoint holds nothing, and the top-recordings endpoint has nothing
+        // for this artist either (unstubbed resolves to a 404, which the accessor reads as empty)
+        httpClient.givenJsonResponse("popularity/artist", "[]")
+
+        // When - both types are enriched in one call
+        engine().enrich(artistRequest(), setOf(EnrichmentType.ARTIST_POPULARITY, EnrichmentType.ARTIST_TOP_TRACKS))
+
+        // Then - the miss was looked up once, not once per type
+        assertEquals(1, httpClient.countMatching("top-recordings-for-artist"))
+    }
+
+    @Test
+    fun `forceRefresh re-fetches top recordings, not the previous call's memo`() = runTest {
+        // Given - the batch endpoint holds nothing, so ARTIST_POPULARITY's fallback and
+        // ARTIST_TOP_TRACKS already shared one top-recordings request
+        httpClient.givenJsonResponse("popularity/artist", "[]")
+        httpClient.givenJsonResponse("top-recordings-for-artist", TOP_RECORDINGS_JSON)
+        val eng = engine()
+        eng.enrich(artistRequest(), setOf(EnrichmentType.ARTIST_POPULARITY, EnrichmentType.ARTIST_TOP_TRACKS))
+
+        // When - the same engine is asked again with forceRefresh, bypassing its cache
+        eng.enrich(
+            artistRequest(),
+            setOf(EnrichmentType.ARTIST_POPULARITY, EnrichmentType.ARTIST_TOP_TRACKS),
+            forceRefresh = true,
+        )
+
+        // Then - the memo did not survive into the second call: one request per call, two total
+        assertEquals(2, httpClient.countMatching("top-recordings-for-artist"))
     }
 
     private companion object {

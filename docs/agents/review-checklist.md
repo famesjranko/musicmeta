@@ -51,6 +51,10 @@ a row here carries only what a reviewer looks *for*, so a rule change is never a
 - [ ] A change whose only test lives under `e2e/` — untested for merge purposes (`CLAUDE.md`).
 - [ ] A line the test-shape check reported as sitting inside a `"""` raw string. It reports rather
       than skips on purpose (`docs/pitfalls.md` §9) — a report is a line to read, not noise.
+- [ ] **Coverage judged by count rather than by what goes red.** Pick the mutation the subject
+      implies and ask which named test fails; a test whose scenario leaves the subject inert by
+      specification passes whether it is present or deleted (`docs/pitfalls.md` §19). Register the
+      expected red set before the run and treat a different count as the finding.
 
 ## Providers
 
