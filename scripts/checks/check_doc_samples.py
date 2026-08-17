@@ -591,7 +591,7 @@ def _write_target(
         for filename, content in files:
             (out_dir / filename).write_text(content, encoding="utf-8")
         # A narrative file holds several fences; count them via their marker comments so the totals
-        # printed here mean "fences", the unit the census in the report and ARCHITECTURE.md use.
+        # printed here mean "fences", the unit the census in the report and VERIFICATION.md use.
         compiled_here = sum(content.count(f"// {GUIDES_DIR}/{guide.name} snippet ") for _, content in files)
         total_compiled += compiled_here
         total_skipped += len(skipped)

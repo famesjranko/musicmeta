@@ -184,7 +184,8 @@ To consume a local checkout instead, see [docs/project/workflow.md](docs/project
 | [docs/project/workflow.md](docs/project/workflow.md) | Branch topology, issue lifecycle, worktrees, and verification selection |
 | [docs/project/release.md](docs/project/release.md) | Release preparation, tagging, and publication |
 | [CHANGELOG.md](CHANGELOG.md) | Release history |
-| [ARCHITECTURE.md](ARCHITECTURE.md) | What `./check` runs, and the gaps in it worth knowing about |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Module boundaries, the `enrich()` flow, and what a new provider costs |
+| [VERIFICATION.md](VERIFICATION.md) | What `./check` runs, and the gaps in it worth knowing about |
 
 ## Interactive demo
 

@@ -1,126 +1,150 @@
 # ARCHITECTURE
 
-What `./check` runs, and the gaps in it worth knowing about. **This is not a complete inventory of
-the project's invariants and does not try to be.** Most conventions are review's job, and that is
-fine.
+Why the modules are split where they are, what flows between them, and what a change costs. This is
+the map. The pipeline's step-by-step behaviour is `docs/how-it-works.md`, each provider's data
+semantics is `docs/providers.md`, and what a green check run proves is `VERIFICATION.md`.
 
-The check command is the authority. Where a document and a config disagree, the config wins,
-because the config is the thing that fails.
+## The bar designs are judged by
 
-```bash
-./scripts/bootstrap.sh   # once: installs the pinned tools ./check requires
-./check                  # everything — `check`'s header lists the flags and what each skips
+musicmeta delivers music metadata from independent upstreams that change without notice. Every
+structural choice below is judged by one question: **what does it cost the eleventh provider?** A
+seam that makes the next provider cheaper to add, test, and trust earns its complexity; one that
+only serves the providers already here does not.
+
+## Module map
+
+```
+musicmeta-core        pure JVM: the engine, the provider implementations, the contracts
+├── engine/           pipeline: identity, fan-out, gating, merging, synthesis  (internal)
+├── provider/<name>/  one dir per upstream: *Api, *Models, *Mapper (internal) + <Name>Provider (public)
+├── cache/            CacheMode and the in-memory EnrichmentCache
+├── http/             the HttpClient seam, rate limiter, budgeted retry, circuit breaker
+└── (root package)    the published surface: request/result/profile types, EnrichmentEngine.Builder
+
+musicmeta-okhttp      one class: OkHttpEnrichmentClient, adapting OkHttp to core's HttpClient
+musicmeta-android     Room-backed EnrichmentCache (schema + migrations), Hilt wiring, WorkManager
+demo-cli, demo-web,   separate composite builds consuming the published shape the way an external
+docs-samples[-android]  consumer does — the in-tree stand-ins for consumers we cannot see
 ```
 
-## What `./check` runs
+```mermaid
+flowchart TD
+    subgraph core["musicmeta-core (pure JVM)"]
+        published["root package<br/>published surface"]
+        engine["engine/"]
+        provider["provider/&lt;name&gt;/"]
+        cache["cache/"]
+        http["http/ — HttpClient seam"]
+        published --> engine
+        engine --> provider
+        engine --> cache
+        provider --> http
+    end
+    okhttp["musicmeta-okhttp<br/>OkHttpEnrichmentClient"] -->|api| core
+    android["musicmeta-android<br/>Room cache, Hilt, WorkManager"] --> core
+    demos["demo-cli · demo-web<br/>docs-samples · docs-samples-android"] -.->|composite builds,<br/>consume as an outsider| core
+    demos -.-> okhttp
+    demos -.-> android
+```
 
-| Step | Tool | Covers |
+The edges that matter are the ones that are absent: **core depends on neither adapter.** It names a
+wire library nowhere and an Android artifact nowhere, which is what lets a server or desktop
+consumer take the engine without either.
+
+## Why the boundaries sit where they do
+
+**core is dependency-minimal JVM** — coroutines, `org.json`, and kotlinx-serialization, nothing
+else. Serialization is declared `api(...)`, so it is on a consumer's compile classpath and its
+version is part of the published contract; the other two are `implementation`.
+
+**`http/`'s `HttpClient` interface is the seam that keeps it that way.** Core owns transport
+*semantics* — what is transient, how a retry budget composes with the enrich deadline, when a
+breaker opens — without owning a wire library. Those semantics are policy, not plumbing, and
+they are why the interface is core's rather than an adapter's (`docs/pitfalls.md` §11).
+
+**musicmeta-okhttp exists so core does not force a client.** It is deliberately one adapter class,
+and it delegates to core's `BudgetedTransientRetry` rather than installing a retrying interceptor —
+an interceptor cannot see the enrich deadline, and retry that happens where core cannot count it is
+retry no budget bounds. It declares core as `api`, so taking the adapter takes the library.
+
+**musicmeta-android is persistence, DI, and scheduling.** The Room cache implements the same
+`EnrichmentCache` contract the in-memory one does, and both are proven by one shared
+`EnrichmentCacheContract` in core's `testFixtures` rather than by parallel suites. `EnrichmentWorker`
+holds real orchestration — batching, cancellation, progress — but it drives the engine from outside;
+nothing here forks engine *behaviour* by platform, and anything that would is a defect.
+
+**Demos and doc-samples are consumer canaries, not examples.** They compile against the published
+shape in separate builds, so a break that `apiCheck`'s erased JVM descriptors cannot see still fails
+a build that consumes the library from outside (`docs/pitfalls.md` §1).
+
+## One `enrich()` call
+
+```mermaid
+flowchart TD
+    req["EnrichmentRequest"] --> cacheread["cache.get, then cache.getNegative<br/>per requested type"]
+    cacheread --> allhit{"any type left<br/>uncached?"}
+    allhit -->|no| results
+    allhit -->|yes| ident{"identity resolution<br/>enabled and needed?"}
+    ident -->|no| fanout
+    ident -->|yes| resolve["resolveIdentity — canonical ids and names,<br/>provenance stamped; its payload may<br/>answer some types outright"]
+    resolve --> fanout
+
+    subgraph fanout["fan-out over the uncached types"]
+        direction TB
+        regular["regular types + composite sub-types<br/>resolved concurrently, one chain each"]
+        mergeable["mergeable types<br/>collect every provider, then merge"]
+        composite["composite types<br/>synthesized from the resolved map"]
+        regular --> mergeable --> composite
+    end
+
+    fanout --> gate["gate: filterByConfidence, then demoteUnanswered"]
+    gate --> writeback["writeBack — positive or negative per type,<br/>keyed with canonical-name aliasing"]
+    writeback --> results["EnrichmentResults"]
+```
+
+Three things this ordering is load-bearing about. **The cache is read before identity resolution,
+not after**, so a fully cached call never touches an upstream. **Composites are last because they
+read a map the earlier stages fill** — a composite type depends on resolved types, so the stages are
+ordered, not merely parallel. And **the gate filters by confidence before it demotes unanswered
+results**, because confidence scores the identification, not the payload (`docs/pitfalls.md` §8): a
+perfect identity match can still carry a payload that answers nothing.
+
+Two engine-level invariants constrain every provider rather than any one of them, which is what
+makes them architectural: **confidence and provenance may understate the evidence, never overstate
+it**, and **an absence must never be reported where a failure occurred**. Both are one-directional
+on purpose, because consumers branch on the distinction. What each cost to learn is
+`docs/pitfalls.md` §4 and §8.
+
+## What the eleventh provider costs
+
+A new provider is `provider/<name>/` with three `internal` files (`*Api`, `*Models`, `*Mapper`) and
+one public `*Provider` — internal so they can be renamed without an `apiDump`. It inherits, rather
+than re-implements:
+
+- transport resilience — rate limiter, budgeted retry, circuit breaker — from `http/`, with one
+  breaker per provider id shared across every chain it appears in;
+- gating, merging, synthesis, caching, and provenance stamping from `engine/`;
+- the shared contract suites and the `scripts/checks/` gates, which apply to it by construction
+  rather than by anyone remembering;
+- registration through `Builder.addProvider`, which rejects a duplicate id and a reserved one —
+  including any id ending `_merger`, the suffix mergers stamp on their own output. Synthesizers
+  stamp `_synthesizer`, which is **not** reserved.
+
+What it must supply is the judgement the engine cannot: parsing that survives the upstream's actual
+payloads, search acceptance that checks artist and title rather than trusting hit 0
+(`docs/pitfalls.md` §7), and a `confidence` that reflects the evidence.
+
+The cost that is not abstracted away is fixtures. A provider test asserts against a fixture copied
+from a real response, because that is what pins a field name against upstream drift
+(`docs/pitfalls.md` §3). Nothing mechanises this — it is a convention review enforces, and a pool
+whose chain back to a live capture is unverified says so in its own `scenario.md`.
+
+## Where a change lands
+
+| Changing | Reaches | Watch for |
 |---|---|---|
-| Python format and lint | ruff | `scripts/**` |
-| Python types | mypy | `scripts/**` |
-| Shell | shellcheck | `scripts/**`, `check`, `demo-cli/run.sh`, `demo-web/run.sh` |
-| Conventions | `scripts/checks/check_conventions.py` | no `!!` and no `@Serializable` under `provider/`/`http/` in main sources; only `*Provider` public under `provider/` in the committed `api/*.api`; conflict markers anywhere |
-| Pitfall citations | `scripts/checks/check_pitfall_citations.py` | every `§N` reference to `docs/pitfalls.md` resolves to a `## N.` heading in it — catches a renumbered or deleted section orphaning its citers silently |
-| Provider call scope | `scripts/checks/check_provider_call_scope.py` | every `provider/<name>/` directory with a `*Provider.kt` mentions `ProviderCallScope` somewhere in the directory, or is named in the script's own allowlist with a reason; plain substring match, so it proves the mention exists, not that the memo is correct or reached — the per-provider request-count tests and `ProviderMemoLifetimeTest` cover that |
-| Test shape | `scripts/checks/check_test_shape.py` | every `@Test` body has `// Given -`/`// When -`/`// Then -`, each on its own line with a plain hyphen and a real clause — Kotlin test sources only, on both the `check` gate and the `format-on-write.sh` hook |
-| Release-note caps | `build_release_notes.py Unreleased` | `CHANGELOG.md`'s `[Unreleased]` stays under 48000 chars and 200 per line — the same `check_caps()` the release runs, so it fails here rather than at release prep. An empty section passes: `pin_release.py` opens one on every release branch |
-| Script self-tests | `scripts/**/test_*.py` | discovered, not listed |
-| Kotlin format | ktlint (version pinned in `libs.versions.toml`) | all modules, `demo-cli/`, and `demo-web/` |
-| Kotlin static analysis | detekt, **type-resolved** (`detektMain`/`detektTest`/`detektTestFixtures`) | complexity, dead code, bug patterns |
-| Build | `./gradlew build` | compile, all unit tests, `apiCheck` against `api/*.api` |
-| Consumer canary | `demo-cli/` and `demo-web/` composite builds | an external consumer still compiles, and their tests run (`demo-web/`'s 50 `ProfileMapperTest` cases; `demo-cli/` has none yet) |
-| Doc samples | `scripts/checks/check_doc_samples.py` + `docs-samples/`/`docs-samples-android/` composite builds | every ```` ```kotlin ```` fence in `docs/guides/*.md` compiles against the real API, or carries a `<!-- no-compile: <reason> -->` marker with a mandatory reason; compiled per guide, in reading order, as one narrative, not one fence at a time — see "Known gaps". One extractor, two targets: every guide but `android.md` compiles as a plain JVM module, `android.md` compiles against a real `com.android.library` build (Room/Hilt/WorkManager). 61 of 75 non-`android.md` fences and 11 of 12 `android.md` fences compile today |
-
-Gates exist beyond `./check` and this table does not list them: `main`'s branch protection lives in
-`docs/project/workflow.md`, the release workflow's own verification in `docs/project/release.md`.
-
-**A missing *or mismatched* tool fails the run — it never skips.** A gate that silently skips when
-its tool is absent reports green while checking nothing, which is worse than no gate. `./check`
-verifies the pinned version too: formatter output differs between releases, so an unpinned tool
-reintroduces exactly the local/CI disagreement one command is supposed to remove.
-
-Format-on-write (`scripts/format-on-write.sh`, wired in `.claude/settings.json`) is a convenience,
-not a gate. It runs ktlint on `.kt`/`.kts` and ruff on `.py`, and no-ops when either CLI is absent;
-`ktlintCheck` and the ruff check are what actually fail. It also no-ops when the `ktlint` on `PATH`
-is not the `ktlint-cli` version pinned in `libs.versions.toml` — a CLI running a different rule set
-writes formatting the gate never asked for, and nothing fails to say so. It does not skip
-`demo-cli/` or `demo-web/`: formatting is shared with the parent build even though house
-conventions are not.
-
-## Known gaps
-
-Not an audit of everything unenforced — these are the specific places where a green run means less
-than it looks like, each learned the hard way.
-
-- **`!!` on a Java platform type is invisible to detekt.** Measured with a three-cell probe: detekt
-  catches `!!` on a nullable receiver (`UnsafeCallOnNullableType`) and on a definitely-non-null one
-  (`UnnecessaryNotNullOperator`), and catches **neither** on `System.getProperty("x")!!`, because
-  the rule tests for `TypeNullability.NULLABLE` and a flexible type is not that. That is the whole
-  reason `check_conventions.py` still bans the operator textually.
-- **The `!!` and `@Serializable` bans do not skip comments or string literals.** Deliberate: making
-  them skip comments is what previously cost a 155-line hand-written Kotlin scanner, a 118-line
-  `KotlinLexer` oracle and a 337-line differential test. There are no such comments in the tree. If
-  one is ever needed, reword it.
-- **Nothing checks `docs/providers.md`.** Two mechanisms for it were built and both were deleted: a
-  Kotlin-parsing Python script, then a unit test comparing a per-capability table against each
-  package's runtime `capabilities`. The test worked — 8/8 mutations killed, including a Gradle
-  up-to-date hole it exposed — and was cut anyway, as too much standing machinery for one column of
-  prose. `git log -S ProviderFeatureDocsTest` has it if the judgement changes. The tables it checked
-  went with it; what the doc kept is what no compiler or test can see. It states its own scope and
-  the date it was last hand-verified — that date is the only warranty.
-- **detekt is not in `--fast`.** The typed tasks compile before they analyse and the Android
-  variants need `ANDROID_HOME`. The edit loop is ktlint plus the conventions check; detekt runs on
-  every push and in CI.
-- **Type resolution in detekt is EXPERIMENTAL**, and so is every alternative in 1.23.x — hand-wiring
-  `classpath`, the CLI flags, the compiler plugin. Accepted: the stable task does not run the rules
-  this exists for. detekt 1.23.8 is built against Kotlin 2.0.21 / AGP 8.8.1 while this repo runs
-  Kotlin 2.1.0 / AGP 8.7.3, so a detekt or AGP bump needs all three modules' tasks re-run, not just
-  core's.
-- **Serialization tests round-trip the same version.** They encode and decode with the code in the
-  tree, so they cannot detect a payload change breaking data a consumer already persisted — the
-  failure that broke every Room cache entry in v0.4.0. Goldens from the last published version are
-  the fix and are not written yet.
-- **Cancellation handling is enforced by behaviour, not by a rule.**
-  `ProviderChainCancellationTest` pins that a cancelled call records no circuit-breaker failure and
-  that a *foreign* `CancellationException` stays contained as one provider's error. A textual rule
-  was written for this and deleted: it could not see the fallback-returning catches that were the
-  actual bugs, and the remediation it printed (`catch (CancellationException) { throw e }`) was
-  itself the defect. `CacheGuard` and `StrategyGuard` carried that blanket form until #61 and now
-  match; `EnrichCacheFailureTest` and `EnrichStrategyFailureTest` pin both directions for them.
-- **14 of 75 non-`android.md` doc-sample fences, and 1 of 12 `android.md` fences, are opted out, not
-  compiled.** Down from 66 of 87 under this check's first version, which compiled each fence alone —
-  a guide reads as one running narrative, and a fence forty lines down routinely assumed a `val` an
-  earlier fence in the same guide declared. The second version compiles each guide as one
-  accumulating `narrative()` instead, with a small mechanism-owned prelude
-  (`docs-samples/src/main/kotlin/doc/samples/prelude/Prelude.kt`) supplying the handful of names
-  ("your existing `OkHttpClient`", a default `engine`) more than one guide assumes without ever
-  declaring. `android.md` gets its own Android-flavoured prelude
-  (`docs-samples-android/src/main/kotlin/doc/samples/android/prelude/AndroidPrelude.kt`) for the
-  same reason: a `Context`, an already-batched `albumIds`, a domain `AlbumRepository` the guide
-  never defines. What is left opted out is genuinely elided pseudo-code (`/* ... */`, an undefined
-  helper like `mapError`), a Gradle build-script fragment, another library's API neither target wires
-  in (JUnit, `android.util.Log`), or a fence that shows two alternative values under one name and is
-  not meant to compile as one program. A green run proves the 61 JVM-target fences and 11
-  Android-target fences match the API as the guide actually reads, start to finish; it says nothing
-  about the other 15 — still a human's job.
-- **Bash-written Kotlin is not formatted on write.** The hook only sees files an `Edit`/`Write`
-  payload names. Sweeping everything dirty at end of turn was built and deleted: it reformats
-  uncommitted work the agent never touched. `ktlintCheck` catches it, one `./check` later.
-
-- **`demo-cli/` is exempt from house conventions, not from formatting.** It is a separate composite
-  build, never compiled by `./gradlew build`, so a green build says nothing about it — that is what
-  the canary is for. The convention rules govern how we build internals, and `demo-cli/`'s job is to
-  compile against the published surface like an external consumer; holding it to them would make the
-  canary about us instead of about consumers. Formatting is the opposite case: it cannot affect that
-  job, and `demo-cli/` is the worked example people read, so it applies the same ktlint against the same
-  `.editorconfig` and `./check` gates it. `demo-cli/run.sh` is shellchecked — that was never about style.
-- **The composed-stack identity harness (`musicmeta-core/src/test/kotlin/…/harness/`) proves
-  composition, never a provider's live behaviour.** It drives the real default provider stack —
-  real matchers, real rankers, real mappers — against canned upstream pools, offline, so it is the
-  one place the #210 family of wrong-entity defects (MusicBrainz suggestions short-circuiting the
-  fan-out, a provider accepting on artist match alone) is observable at all; every other test layer
-  either drives a matcherless fake or wires one provider in isolation. It does not, and cannot,
-  prove a provider's real endpoint still returns what a pool says it does — a green run here means
-  "the pieces compose correctly," not "MusicBrainz/Deezer/iTunes/Discogs still answer this way
-  today." That is what the daily `provider-drift.yml` e2e job is for, and each pool's `scenario.md`
-  records whether the provider it covers has that live coverage.
+| The published surface (root-package types, `Builder`) | every consumer, `api/*.api`, `CHANGELOG.md` | erased descriptors hide suspend and nullability breaks — read the `.kt`, not the dump (§1) |
+| Engine behaviour (`engine/`) | every provider at once | the two one-directional invariants above |
+| One provider (`provider/<name>/`) | its own directory | its fixtures must predate the change, or they prove only that the code agrees with itself |
+| Transport policy (`http/`) | every call every provider makes | budgets compose with the enrich deadline; breaker state is shared per provider id (§11, §12) |
+| Android persistence | devices that already installed a schema | a migration cannot be undone by reverting the code that shipped it |

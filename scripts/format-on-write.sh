@@ -49,7 +49,7 @@ esac || true
 #
 # Exits 2 on a violation rather than swallowing it: a PostToolUse hook's stderr reaches the writer
 # only at exit 2, so `|| true` here would leave the write-time half printing into a void while
-# `CLAUDE.md` and `ARCHITECTURE.md` both claim it gates. Unlike the formatters above, this reports
+# `CLAUDE.md` and `VERIFICATION.md` both claim it gates. Unlike the formatters above, this reports
 # rather than rewrites, so failing loudly costs nothing mid-edit.
 case "$FILE" in
     */src/test/*.kt) python3 "$(dirname "${BASH_SOURCE[0]}")/checks/check_test_shape.py" --file "$FILE" >&2 || exit 2 ;;

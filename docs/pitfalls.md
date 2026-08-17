@@ -57,7 +57,7 @@ new parameters and fields, which go last with a default.
   breaks what consumers already stored: v0.4.0 swapped `SimilarArtist.musicBrainzId` for
   `identifiers` and broke every Room cache entry in the field. Any payload change asks whether
   `CHANGELOG.md` needs a cache-clear note. Round-trip tests cannot catch this — they encode and
-  decode with the same code (`ARCHITECTURE.md`; goldens unwritten).
+  decode with the same code (`VERIFICATION.md`; goldens unwritten).
 - **Source callers** — positional arguments rebind silently. The demo canary proves consumers still
   *compile*, not that argument order held; v0.9.2 was caught only by a type mismatch, and a `String?`
   inserted between two `String?`s would have compiled green and wrong.
@@ -130,7 +130,7 @@ interface guarded *without* `ensureActive()` — its two methods are not `suspen
 cannot be delivered into them and a `CancellationException` there can only be one the consumer's
 logger built itself. `EnrichmentLogger.guarded()` holds the reasoning; the wrapper is applied at
 `EnrichmentEngine.Builder.logger` so no call site repeats it (#71). Enforced by behaviour, not a rule — a textual rule was
-written and deleted because the remediation it printed was itself the defect (`ARCHITECTURE.md`). Read `EnrichCacheFailureTest`, `EnrichStrategyFailureTest` and
+written and deleted because the remediation it printed was itself the defect (`VERIFICATION.md`). Read `EnrichCacheFailureTest`, `EnrichStrategyFailureTest` and
 `ProviderChainCancellationTest` before writing a cancellation test of your own. A provider's own
 `catch` calls `mapError(type, e)` and deliberately does not special-case `CancellationException`.
 
