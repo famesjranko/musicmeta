@@ -90,9 +90,9 @@ flowchart TD
     cacheread --> anyleft{"any type still<br/>uncached?"}
     anyleft -->|no| results
     anyleft -->|yes| ident{"identity resolution<br/>enabled and needed?"}
-    ident -->|no| fanout
+    ident -->|no| regular
     ident -->|yes| resolve["resolveIdentity:<br/>canonical ids + names,<br/>may answer types itself"]
-    resolve --> fanout
+    resolve --> regular
 
     subgraph fanout["fan-out, under one deadline"]
         direction TB
@@ -102,7 +102,7 @@ flowchart TD
         regular --> mergeable --> composite
     end
 
-    fanout --> deadline{"deadline held?"}
+    composite --> deadline{"deadline held?"}
     deadline -->|"no"| timedout["unresolved becomes<br/>Error TIMEOUT,<br/>nothing cached"]
     deadline -->|yes| writeback["writeBack:<br/>positive or negative,<br/>canonical-name aliased"]
     timedout --> stale
