@@ -278,6 +278,24 @@ abstract class ProviderProvenanceContract : ContractSuite<EnrichmentEngine>() {
             entries[key(entityKey, type)] = result.copy(provenance = null)
         }
 
+        // Not under test here: this double exercises provenance handling only, so it declines
+        // stale reads and the negative channel.
+        override suspend fun getIncludingExpired(entityKey: String, type: EnrichmentType): CacheEnvelope<EnrichmentResult.Success>? =
+            null
+
+        override suspend fun getNegative(entityKey: String, type: EnrichmentType): CacheEnvelope<EnrichmentResult.NotFound>? =
+            null
+
+        override suspend fun putNegative(
+            entityKey: String,
+            type: EnrichmentType,
+            result: EnrichmentResult.NotFound,
+            canonicalStatus: CanonicalStatus,
+            ttlMs: Long,
+        ) {
+            // Explicit no-op: this double declines negative caching.
+        }
+
         override suspend fun invalidate(entityKey: String, type: EnrichmentType?) {
             if (type != null) {
                 entries.remove(key(entityKey, type))
