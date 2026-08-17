@@ -5,6 +5,7 @@ import com.landofoz.musicmeta.android.cache.EnrichmentCacheDao
 import com.landofoz.musicmeta.android.cache.EnrichmentCacheDatabase
 import com.landofoz.musicmeta.android.cache.NegativeCacheDao
 import com.landofoz.musicmeta.android.cache.RoomEnrichmentCache
+import com.landofoz.musicmeta.android.cache.SelectionDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -40,6 +41,14 @@ object HiltEnrichmentModule {
 
     @Provides
     @Singleton
-    fun provideRoomEnrichmentCache(dao: EnrichmentCacheDao, negativeDao: NegativeCacheDao): RoomEnrichmentCache =
-        RoomEnrichmentCache(dao, negativeDao)
+    fun provideSelectionDao(database: EnrichmentCacheDatabase): SelectionDao =
+        database.selectionDao()
+
+    @Provides
+    @Singleton
+    fun provideRoomEnrichmentCache(
+        dao: EnrichmentCacheDao,
+        negativeDao: NegativeCacheDao,
+        selectionDao: SelectionDao,
+    ): RoomEnrichmentCache = RoomEnrichmentCache(dao, negativeDao, selectionDao)
 }

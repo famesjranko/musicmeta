@@ -5,7 +5,6 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.landofoz.musicmeta.EnrichmentCache
 import com.landofoz.musicmeta.contract.EnrichmentCacheContract
-import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -28,7 +27,7 @@ class RoomEnrichmentCacheContractTest : EnrichmentCacheContract() {
             .allowMainThreadQueries()
             .build()
         database = db
-        return RoomEnrichmentCache(db.enrichmentCacheDao(), db.negativeCacheDao())
+        return RoomEnrichmentCache(db.enrichmentCacheDao(), db.negativeCacheDao(), db.selectionDao())
     }
 
     override fun release(subject: EnrichmentCache) {
@@ -40,13 +39,6 @@ class RoomEnrichmentCacheContractTest : EnrichmentCacheContract() {
      * The one override this contract sanctions, and it changes nothing about what is asserted — it
      * calls straight back to the inherited body. Deleting these six lines is how the mark comes off.
      */
-    @Ignore(
-        "Red now, and owned by the ticket for a Room manual selection marked before the first " +
-            "write: markManual is an UPDATE against the cached row, so on a key with no row yet it " +
-            "matches nothing and is silently lost, while both in-memory backends hold the marker " +
-            "beside the data and keep it. Remove this mark when a selection survives with no row " +
-            "present; the test must go red first if it does not.",
-    )
     @Test
     override fun `manual selection survives an ordinary write`() {
         // Given - a key marked manually selected before anything has been stored against it

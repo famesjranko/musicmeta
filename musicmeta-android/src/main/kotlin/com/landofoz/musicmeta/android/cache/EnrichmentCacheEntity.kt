@@ -29,7 +29,6 @@ data class EnrichmentCacheEntity(
     @ColumnInfo(name = "resolved_ids_json") val resolvedIdsJson: String? = null,
     /** Always `false` on write — a stale result is never cached; kept so a decoded row states it explicitly. */
     @ColumnInfo(name = "is_stale") val isStale: Boolean = false,
-    @ColumnInfo(name = "is_manual") val isManual: Boolean = false,
     @ColumnInfo(name = "cached_at") val cachedAt: Long,
     @ColumnInfo(name = "expires_at") val expiresAt: Long,
     @ColumnInfo(name = "schema_version") val schemaVersion: Int = CACHE_SCHEMA_VERSION,

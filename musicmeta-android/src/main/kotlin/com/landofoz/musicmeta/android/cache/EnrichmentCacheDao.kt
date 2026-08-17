@@ -4,7 +4,6 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import androidx.room.Transaction
 
 @Dao
 interface EnrichmentCacheDao {
@@ -22,28 +21,11 @@ interface EnrichmentCacheDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(entity: EnrichmentCacheEntity)
 
-    /** Replaces cached provider data without discarding a user's selection marker. */
-    @Transaction
-    suspend fun insertPreservingManual(entity: EnrichmentCacheEntity) {
-        val selected = isManual(entity.entityKey, entity.enrichmentType) ?: entity.isManual
-        insert(entity.copy(isManual = selected))
-    }
-
     @Query("DELETE FROM enrichment_cache WHERE entity_key = :entityKey AND enrichment_type = :type")
     suspend fun delete(entityKey: String, type: String)
 
     @Query("DELETE FROM enrichment_cache WHERE entity_key = :entityKey")
     suspend fun deleteAll(entityKey: String)
-
-    @Query(
-        "SELECT is_manual FROM enrichment_cache WHERE entity_key = :entityKey AND enrichment_type = :type LIMIT 1",
-    )
-    suspend fun isManual(entityKey: String, type: String): Boolean?
-
-    @Query(
-        "UPDATE enrichment_cache SET is_manual = 1 WHERE entity_key = :entityKey AND enrichment_type = :type",
-    )
-    suspend fun markManual(entityKey: String, type: String)
 
     @Query("DELETE FROM enrichment_cache")
     suspend fun clearAll()

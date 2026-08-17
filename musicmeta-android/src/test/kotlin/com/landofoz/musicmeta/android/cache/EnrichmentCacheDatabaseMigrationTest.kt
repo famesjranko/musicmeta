@@ -122,9 +122,77 @@ class EnrichmentCacheDatabaseMigrationTest {
         fresh.close()
     }
 
+    @Test
+    fun `migration 4 to 5 carries only manual selections into the selections table`() {
+        // Given - a v4 database with a selected live row, an unselected live row, a selected but
+        // expired row, and a negative_cache row that this migration must leave untouched
+        var db = helper.createDatabase(TEST_DB_4, 4)
+        db.execSQL(
+            "INSERT INTO enrichment_cache " +
+                "(entity_key, enrichment_type, provider, data_json, confidence, canonical_status, " +
+                "is_stale, is_manual, cached_at, expires_at, schema_version) " +
+                "VALUES ('album:sel-live', 'ALBUM_ART', 'p', '{}', 0.9, 'RESOLVED', 0, 1, 1000, 9999999999, 1)",
+        )
+        db.execSQL(
+            "INSERT INTO enrichment_cache " +
+                "(entity_key, enrichment_type, provider, data_json, confidence, canonical_status, " +
+                "is_stale, is_manual, cached_at, expires_at, schema_version) " +
+                "VALUES ('album:unsel-live', 'GENRE', 'p', '{}', 0.9, 'RESOLVED', 0, 0, 1000, 9999999999, 1)",
+        )
+        db.execSQL(
+            "INSERT INTO enrichment_cache " +
+                "(entity_key, enrichment_type, provider, data_json, confidence, canonical_status, " +
+                "is_stale, is_manual, cached_at, expires_at, schema_version) " +
+                "VALUES ('album:sel-expired', 'ALBUM_ART', 'p', '{}', 0.9, 'RESOLVED', 0, 1, 1000, 1500, 1)",
+        )
+        db.execSQL(
+            "INSERT INTO negative_cache " +
+                "(entity_key, enrichment_type, provider, canonical_status, cached_at, expires_at, schema_version) " +
+                "VALUES ('album:neg', 'GENRE', 'p', 'RESOLVED', 1000, 9999999999, 1)",
+        )
+        db.close()
+
+        // When - migrating to v5 with the real migration
+        db = helper.runMigrationsAndValidate(TEST_DB_4, 5, true, EnrichmentCacheDatabase.MIGRATION_4_5)
+
+        // Then - the selected live row's pair survived into selections
+        val selLive = db.query(
+            "SELECT 1 FROM selections WHERE entity_key = 'album:sel-live' AND enrichment_type = 'ALBUM_ART'",
+        )
+        assertTrue(selLive.moveToFirst())
+        selLive.close()
+        // And - the unselected row's pair did not resurrect as selected
+        val unselLive = db.query(
+            "SELECT 1 FROM selections WHERE entity_key = 'album:unsel-live' AND enrichment_type = 'GENRE'",
+        )
+        assertEquals(0, unselLive.count)
+        unselLive.close()
+        // And - the selected but expired row's pair also survived, and nothing else did: expiry
+        // must not filter a selection, which is state about the key, not the row
+        val selExpired = db.query(
+            "SELECT 1 FROM selections WHERE entity_key = 'album:sel-expired' AND enrichment_type = 'ALBUM_ART'",
+        )
+        assertTrue(selExpired.moveToFirst())
+        selExpired.close()
+        val allSelections = db.query("SELECT entity_key FROM selections")
+        assertEquals(2, allSelections.count)
+        allSelections.close()
+        // And - enrichment_cache itself was dropped and recreated empty, per MIGRATION_3_4's precedent
+        val cacheRows = db.query("SELECT entity_key FROM enrichment_cache")
+        assertEquals(0, cacheRows.count)
+        cacheRows.close()
+        // And - negative_cache is untouched: it did not change shape between v4 and v5, so dropping
+        // it would discard healable data for no schema reason
+        val negativeRow = db.query("SELECT canonical_status FROM negative_cache WHERE entity_key = 'album:neg'")
+        assertTrue(negativeRow.moveToFirst())
+        assertEquals("RESOLVED", negativeRow.getString(0))
+        negativeRow.close()
+    }
+
     private companion object {
         const val TEST_DB = "migration-test"
         const val TEST_DB_3 = "migration-test-3"
+        const val TEST_DB_4 = "migration-test-4"
         const val MODULE_DB = "module-migration-test"
     }
 }
