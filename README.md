@@ -9,39 +9,26 @@
 
 </div>
 
-A Kotlin library that gives Android and JVM music apps access to rich metadata, artwork, and discovery features -- 8 of 11 providers work without API keys. Ask for as much or as little as you need: all 36 enrichment types at once, a single artist photo, just lyrics, or anything in between. Providers set their own terms on commercial use, licensing and attribution -- see [docs/providers.md](docs/providers.md#terms-licences-attribution) before shipping.
-
-11 public music APIs behind one engine. You choose what to request, how to use it, and what to show your users. The library handles the plumbing -- identity resolution, multi-provider merging, confidence scoring, rate limiting, caching -- so you can focus on building your app.
+A Kotlin library for Android and JVM music apps: 11 public music APIs behind one engine, 8 of them usable without API keys. Ask for as much or as little as you need -- all 36 enrichment types, a single artist photo, just lyrics -- and the engine handles identity resolution, multi-provider merging, confidence scoring, rate limiting and caching. Providers set their own terms on commercial use, licensing and attribution -- see [docs/providers.md](docs/providers.md#terms-licences-attribution) before shipping.
 
 ## What it does
 
-```
-"OK Computer" by Radiohead
-         |
-         v
-+-----------------------------------------------+
-|  EnrichmentEngine                             |
-|  11 providers -> 36 enrichment types          |
-|                                               |
-|  MusicBrainz    Cover Art Archive  Wikidata   |
-|  Wikipedia      LRCLIB             Deezer     |
-|  iTunes         Last.fm            Fanart.tv  |
-|  ListenBrainz   Discogs                       |
-+-----------------------------------------------+
-         |
-         v
-  ArtistProfile / AlbumProfile / TrackProfile
-    profile.photo?.url           -> artist photo from Wikidata
-    profile.bio?.text            -> biography from Wikipedia
-    profile.genres               -> [GenreTag("alternative rock", 0.70)]
-    profile.discography          -> 9 studio albums
-    profile.similarArtists       -> merged from Last.fm + Deezer
-    ...
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/what-it-does-dark.svg">
+  <img alt="A request for Radiohead enters the EnrichmentEngine, passes through identity, fan-out, merge and cache, and comes out as an ArtistProfile carrying photo, bio, genres, discography and similar artists with a confidence for each" src="docs/what-it-does.svg" width="100%">
+</picture>
 
-The engine handles the hard parts: MusicBrainz resolves identifiers first, then downstream providers use those IDs for precise lookups. Rate limiting, circuit breaking, confidence scoring, and caching are all built in. 8 of 11 providers work without API keys.
+MusicBrainz resolves the MBID first, so every lookup after it is an identifier lookup rather than a
+name search. Rate limiting, circuit breaking, confidence scoring and caching are built in. Every type
+resolves on its own, so a provider that fails costs you that type and nothing else.
+
+The values above come from one real call with all four optional keys set. Keyless it answers 12 of
+those 15 types, with fewer image alternates, 20 similar artists rather than 31, and genre confidence
+at 0.70.
 
 ## Quick start
+
+Coordinates are in [Installation](#installation).
 
 ```kotlin
 val engine = EnrichmentEngine.Builder()
@@ -123,7 +110,7 @@ val engine = EnrichmentEngine.Builder()
 | **Top Tracks** | ARTIST_TOP_TRACKS | Merged from 3 (Last.fm, ListenBrainz, Deezer), 2 answering -- ListenBrainz's route is disabled upstream |
 | **Statistics** | ARTIST_POPULARITY, TRACK_POPULARITY | Both merged from 3, each source's claim kept in its own unit |
 | **Composite** | ARTIST_TIMELINE, GENRE_DISCOVERY | ARTIST_TIMELINE: discography + members + life-span; GENRE_DISCOVERY: static affinity taxonomy |
-| **Radio** | ARTIST_RADIO, ARTIST_RADIO_DISCOVERY | ARTIST_RADIO: Deezer curated playlist; ARTIST_RADIO_DISCOVERY: ListenBrainz LB Radio (easy/medium/hard modes, optional token) -- its route is disabled upstream, see [docs/providers.md](docs/providers.md) |
+| **Radio** | ARTIST_RADIO, ARTIST_RADIO_DISCOVERY | ARTIST_RADIO: Deezer curated playlist; ARTIST_RADIO_DISCOVERY: ListenBrainz LB Radio (easy/medium/hard modes, optional token) -- its route is disabled upstream, see [docs/providers.md](docs/providers.md#routes-disabled-upstream) |
 | **Preview** | TRACK_PREVIEW | Deezer 30-second MP3 preview URL (on-demand, not in default types) |
 | **Discovery** | SIMILAR_ALBUMS | Deezer related artists + era scoring |
 
@@ -180,18 +167,20 @@ To consume a local checkout instead, see [docs/project/workflow.md](docs/project
 |----------|---------|
 | [docs/guides/](docs/guides/README.md) | Developer guides — quick start, identity resolution, results & errors, cache management, configuration, extension points, Android |
 | [docs/how-it-works.md](docs/how-it-works.md) | Complete pipeline trace -- from `enrich()` call to results |
-| [docs/providers.md](docs/providers.md) | Upstream API links, the two packages that depart from the house pattern, and what each provider returns that we drop |
+| [docs/providers.md](docs/providers.md) | Per-provider upstream docs, terms and attribution, User-Agent requirements and rate limits -- plus contributor notes on what each provider returns that we drop |
 | [docs/project/workflow.md](docs/project/workflow.md) | Branch topology, issue lifecycle, worktrees, and verification selection |
 | [docs/project/release.md](docs/project/release.md) | Release preparation, tagging, and publication |
 | [CHANGELOG.md](CHANGELOG.md) | Release history |
-| [ARCHITECTURE.md](ARCHITECTURE.md) | What `./check` runs, and the gaps in it worth knowing about |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Module boundaries, the `enrich()` flow, and what a new provider costs |
+| [VERIFICATION.md](VERIFICATION.md) | What `./check` runs, and the gaps in it worth knowing about |
 
 ## Interactive demo
 
 The `demo-cli/` module is a standalone CLI that showcases all three API tiers (profiles, named accessors, raw results), cache management, and the disambiguation flow. To enable the key-requiring providers, copy `secrets.properties.example` to `secrets.properties` and fill in the keys, or set environment variables (`LASTFM_API_KEY`, `FANARTTV_API_KEY`, `DISCOGS_TOKEN`, `LISTENBRAINZ_TOKEN`).
 
 ```bash
-cd demo-cli && ../gradlew run -q --console=plain
+make demo-cli-run                          # interactive
+make demo-cli-run ARGS="artist Radiohead"  # one command, then exit
 ```
 
 ```
@@ -208,8 +197,14 @@ The [`demo-web/`](demo-web/README.md) module is the same idea as a web app — a
 track pages rendering everything the library exposes:
 
 ```bash
-cd demo-web && ./run.sh   # http://localhost:8099
+make demo-web-run   # http://localhost:8099
 ```
+
+![The demo-web landing page: artist, album, track and MBID tabs above a search field, with the backend reporting ready](docs/demo-web.png)
+
+Enrich a name and each panel below is one `EnrichmentType`, tagged with the providers that answered
+it. Both demos work keyless; the key-requiring providers stay dark until you supply keys. `make
+help` lists the rest of the targets.
 
 ## License
 

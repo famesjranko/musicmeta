@@ -18,7 +18,8 @@ rest; `ls docs/` lists the docs.
 | A provider's parsing, search/ranking, `confidence`, or a `ProviderCapability` | `docs/pitfalls.md` — "Provider data and matching" |
 | Retry or status mapping, state held by a provider, or `forceRefresh`/invalidation | `docs/pitfalls.md` — "Transport and provider state" |
 | `scripts/checks/`, the comment rule, or demo config | `docs/pitfalls.md` — "Checks, comments, and config" |
-| Treating a green run as proof | `ARCHITECTURE.md` — what each check skips |
+| Treating a green run as proof | `VERIFICATION.md` — what each check skips |
+| Designing across module boundaries, or adding a provider | `ARCHITECTURE.md` — the seams and what they cost |
 | Deciding whether a thing is in scope, or what `1.0.0` waits on | `ROADMAP.md` |
 | Looking for the issue list | `.scratch/`, **not** GitHub Issues — `docs/agents/issue-tracker.md` |
 | Reviewing a diff, a branch, or a PR | `docs/agents/review-checklist.md` — the unmechanised rules only |
