@@ -20,14 +20,13 @@ A Kotlin library that gives Android and JVM music apps access to rich metadata, 
   <img alt="A request for Radiohead enters the EnrichmentEngine, passes through identity, fan-out, merge and cache, and comes out as an ArtistProfile carrying photo, bio, genres, discography and similar artists with a confidence for each" src="docs/what-it-does.svg" width="100%">
 </picture>
 
-MusicBrainz resolves identifiers first, so every downstream lookup is exact rather than a name
-search. Rate limiting, circuit breaking, confidence scoring and caching are built in, and each type
-resolves independently -- a provider that fails costs you that one type, not the profile.
+MusicBrainz resolves the MBID first, so every lookup after it is an identifier lookup rather than a
+name search. Rate limiting, circuit breaking, confidence scoring and caching are built in. Every type
+resolves on its own, so a provider that fails costs you that type and nothing else.
 
-The values are one real `artistProfile("Radiohead")` call with all four optional keys configured.
-Keyless, the same call answers 12 of those 15 types, with fewer image alternates, 20 similar artists
-instead of 31, and genre confidence at 0.70 rather than 1.00. What each provider is asked for, and
-what it gives back, is in [docs/providers.md](docs/providers.md).
+The values above come from one real call with all four optional keys set. Keyless it answers 12 of
+those 15 types, with fewer image alternates, 20 similar artists rather than 31, and genre confidence
+at 0.70.
 
 ## Quick start
 
