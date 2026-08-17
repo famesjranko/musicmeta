@@ -31,14 +31,14 @@ docs-samples[-android]  consumer does — the in-tree stand-ins for consumers we
 
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{
-  "fontFamily":"ui-sans-serif, -apple-system, Segoe UI, Helvetica, sans-serif",
-  "fontSize":"14px","lineColor":"#8b95a5","primaryTextColor":"#10141a",
-  "clusterBkg":"#eef2f8","clusterBorder":"#b9c4d4"}}}%%
+  "lineColor":"#8b95a5","primaryTextColor":"#10141a",
+  "clusterBkg":"#eef2f8","clusterBorder":"#b9c4d4",
+  "edgeLabelBackground":"#ffffff","tertiaryTextColor":"#10141a"}}}%%
 flowchart TD
     subgraph core["musicmeta-core &nbsp;·&nbsp; pure JVM"]
         published["root package<br/><i>the published surface</i>"]
         engine["engine/"]
-        provider["provider/&lt;name&gt;/"]
+        provider["provider/ · one dir per upstream"]
         cache["cache/"]
         http["http/<br/><i>HttpClient seam</i>"]
         published --> engine
@@ -102,9 +102,9 @@ a build that consumes the library from outside (`docs/pitfalls.md` §1).
 
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{
-  "fontFamily":"ui-sans-serif, -apple-system, Segoe UI, Helvetica, sans-serif",
-  "fontSize":"14px","lineColor":"#8b95a5","primaryTextColor":"#10141a",
-  "clusterBkg":"#eef2f8","clusterBorder":"#b9c4d4"}}}%%
+  "lineColor":"#8b95a5","primaryTextColor":"#10141a",
+  "clusterBkg":"#eef2f8","clusterBorder":"#b9c4d4",
+  "edgeLabelBackground":"#ffffff","tertiaryTextColor":"#10141a"}}}%%
 flowchart TD
     req["EnrichmentRequest"] --> force{"forceRefresh?"}
     force -->|"yes — both reads skipped"| ident
