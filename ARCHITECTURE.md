@@ -30,13 +30,17 @@ docs-samples[-android]  consumer does — the in-tree stand-ins for consumers we
 ```
 
 ```mermaid
+%%{init: {"theme":"base","themeVariables":{
+  "fontFamily":"ui-sans-serif, -apple-system, Segoe UI, Helvetica, sans-serif",
+  "fontSize":"14px","lineColor":"#8b95a5","primaryTextColor":"#10141a",
+  "clusterBkg":"#eef2f8","clusterBorder":"#b9c4d4"}}}%%
 flowchart TD
-    subgraph core["musicmeta-core (pure JVM)"]
-        published["root package<br/>published surface"]
+    subgraph core["musicmeta-core &nbsp;·&nbsp; pure JVM"]
+        published["root package<br/><i>the published surface</i>"]
         engine["engine/"]
         provider["provider/&lt;name&gt;/"]
         cache["cache/"]
-        http["http/ — HttpClient seam"]
+        http["http/<br/><i>HttpClient seam</i>"]
         published --> engine
         published --> provider
         published --> cache
@@ -46,11 +50,22 @@ flowchart TD
         engine --> http
         provider --> http
     end
-    okhttp["musicmeta-okhttp<br/>OkHttpEnrichmentClient"] -->|api| core
-    android["musicmeta-android<br/>Room cache, Hilt, WorkManager"] --> core
-    demos["demo-cli · demo-web<br/>docs-samples · docs-samples-android"] -.->|composite builds,<br/>consume as an outsider| core
+    okhttp["musicmeta-okhttp<br/><i>OkHttpEnrichmentClient</i>"] -->|api| core
+    android["musicmeta-android<br/><i>Room cache · Hilt · WorkManager</i>"] --> core
+    demos["demo-cli · demo-web<br/>docs-samples · docs-samples-android"] -.->|"consume as an outsider"| core
     demos -.-> okhttp
     demos -.-> android
+
+    classDef surface fill:#dbe7fb,stroke:#5b87d6,stroke-width:1.5px,color:#10141a
+    classDef inner fill:#f3f6fb,stroke:#aab7cb,color:#10141a
+    classDef seam fill:#d8f0e6,stroke:#4aa886,stroke-width:1.5px,color:#10141a
+    classDef adapter fill:#fdeed6,stroke:#d9a441,color:#10141a
+    classDef outside fill:#f1eefb,stroke:#9d8ed4,stroke-dasharray:4 3,color:#10141a
+    class published surface
+    class engine,provider,cache inner
+    class http seam
+    class okhttp,android adapter
+    class demos outside
 ```
 
 The edges that matter are the ones that are absent: **core depends on neither adapter.** It names a
@@ -86,6 +101,10 @@ a build that consumes the library from outside (`docs/pitfalls.md` §1).
 ## One `enrich()` call
 
 ```mermaid
+%%{init: {"theme":"base","themeVariables":{
+  "fontFamily":"ui-sans-serif, -apple-system, Segoe UI, Helvetica, sans-serif",
+  "fontSize":"14px","lineColor":"#8b95a5","primaryTextColor":"#10141a",
+  "clusterBkg":"#eef2f8","clusterBorder":"#b9c4d4"}}}%%
 flowchart TD
     req["EnrichmentRequest"] --> force{"forceRefresh?"}
     force -->|"yes — both reads skipped"| ident
@@ -111,6 +130,17 @@ flowchart TD
     timedout --> stale
     writeback --> stale["STALE_IF_ERROR only: an expired entry<br/>may stand in for an Error, marked stale"]
     stale --> results["EnrichmentResults"]
+
+    classDef entry fill:#dbe7fb,stroke:#5b87d6,stroke-width:1.5px,color:#10141a
+    classDef decision fill:#fdeed6,stroke:#d9a441,color:#10141a
+    classDef work fill:#f3f6fb,stroke:#aab7cb,color:#10141a
+    classDef store fill:#d8f0e6,stroke:#4aa886,color:#10141a
+    classDef failure fill:#fbe0e0,stroke:#cf7b7b,color:#10141a
+    class req,results entry
+    class force,anyleft,ident,deadline decision
+    class resolve,regular,mergeable,composite work
+    class cacheread,writeback,stale store
+    class timedout failure
 ```
 
 Every result is gated as it is produced — `filterByConfidence`, then `demoteUnanswered` — inside
