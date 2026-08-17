@@ -44,7 +44,7 @@ class RoomEnrichmentCacheTest {
         database = Room.inMemoryDatabaseBuilder(context, EnrichmentCacheDatabase::class.java)
             .allowMainThreadQueries()
             .build()
-        cache = RoomEnrichmentCache(database.enrichmentCacheDao(), database.negativeCacheDao())
+        cache = RoomEnrichmentCache(database.enrichmentCacheDao(), database.negativeCacheDao(), database.selectionDao())
     }
 
     @After
@@ -177,7 +177,9 @@ class RoomEnrichmentCacheTest {
     fun `returns null for expired entry`() = runTest {
         // Given - cache with a controllable clock
         var now = 1_000_000L
-        val clockCache = RoomEnrichmentCache(database.enrichmentCacheDao(), database.negativeCacheDao(), clock = { now })
+        val clockCache = RoomEnrichmentCache(
+            database.enrichmentCacheDao(), database.negativeCacheDao(), database.selectionDao(), clock = { now },
+        )
 
         val result = EnrichmentResult.Success(
             type = EnrichmentType.ALBUM_ART,
@@ -284,7 +286,9 @@ class RoomEnrichmentCacheTest {
     fun `returns null for an expired negative entry`() = runTest {
         // Given - a cache with a controllable clock, and a negative put with a short TTL
         var now = 1_000_000L
-        val clockCache = RoomEnrichmentCache(database.enrichmentCacheDao(), database.negativeCacheDao(), clock = { now })
+        val clockCache = RoomEnrichmentCache(
+            database.enrichmentCacheDao(), database.negativeCacheDao(), database.selectionDao(), clock = { now },
+        )
         val notFound = EnrichmentResult.NotFound(type = EnrichmentType.ALBUM_ART, provider = "p")
         clockCache.putNegative("album:neg-exp", EnrichmentType.ALBUM_ART, notFound, CanonicalStatus.RESOLVED, ttlMs = 5_000L)
 

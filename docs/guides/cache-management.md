@@ -5,6 +5,7 @@
 ```kotlin
 interface EnrichmentCache {
     suspend fun get(entityKey: String, type: EnrichmentType): CacheEnvelope<EnrichmentResult.Success>?
+    suspend fun getIncludingExpired(entityKey: String, type: EnrichmentType): CacheEnvelope<EnrichmentResult.Success>?
     suspend fun put(
         entityKey: String,
         type: EnrichmentType,
@@ -228,15 +229,16 @@ Stale results are **not** re-written to cache. The `!isStale` guard prevents exp
 
 ### Custom cache implementations
 
-If you implement `EnrichmentCache`, add `getIncludingExpired()` to support stale serving:
+`EnrichmentCache` declares `getIncludingExpired()` with no body, so every implementation must
+define it explicitly — there is no default:
 
 ```kotlin
 override suspend fun getIncludingExpired(
     entityKey: String,
     type: EnrichmentType,
-): EnrichmentResult.Success? {
-    // Return the entry regardless of expiry
-    // Default implementation returns null (stale serving disabled)
+): CacheEnvelope<EnrichmentResult.Success>? {
+    // Return the entry regardless of expiry, or null if this implementation
+    // does not support stale serving
 }
 ```
 

@@ -233,6 +233,14 @@ class RedisEnrichmentCache(private val redis: RedisClient) : EnrichmentCache {
         return deserializeEnvelope(json)
     }
 
+    override suspend fun getIncludingExpired(
+        entityKey: String,
+        type: EnrichmentType,
+    ): CacheEnvelope<EnrichmentResult.Success>? {
+        // This client evicts on TTL, so there is nothing expired left to serve stale.
+        return null
+    }
+
     override suspend fun put(
         entityKey: String,
         type: EnrichmentType,

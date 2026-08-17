@@ -43,7 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A non-Latin artist request (e.g. 東京事変) against a romanizing provider (Deezer/iTunes/Discogs) now returns no match instead of the provider's unverified top hit; recovery is tracked separately
 - `OkHttpEnrichmentClient` now retries a 429, a shed 502/503/504 and a transport failure on core's budgeted ladder; its constructor gains a defaulted `maxAttempts`, so recompile
 - `DefaultHttpClient` no longer publishes `MAX_RETRY_AFTER_SEC`; the 120s standalone retry ceiling moved into the shared ladder
-- `EnrichmentCache` gains defaulted `getNegative`/`putNegative`: callers are unaffected, but an implementer must recompile, or the engine's first cache miss throws `AbstractMethodError`
+- `EnrichmentCache`'s `getIncludingExpired`/`getNegative`/`putNegative` are now abstract: a six-method cache fails to compile, and a pre-compiled one throws `NoSuchMethodError` at runtime
 - `RoomEnrichmentCache` now takes a required `negativeDao: NegativeCacheDao` (schema v3, additive migration): recompile and wire `negativeCacheDao()`, or take `EnrichmentCacheDatabase.create()`
 - Hard swap, no shim: `IdentityMatch` removed; `IdentityResolution.match` is now `.status: CanonicalStatus` (non-null); `Success`/`NotFound` drop `identityMatch(Score)`, `Success` gains `provenance`
 - `EnrichmentResults.identity` is now non-null: it always carries a `CanonicalStatus`, including every reason resolution did not run, so `identity == null` no longer compiles
@@ -54,7 +54,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `EnrichmentCache.get`/`getIncludingExpired`/`getNegative` now return `CacheEnvelope<...>?` instead of a bare result: recompile, and read `.result` where you read the old return value directly
 - That return-type change is a suspend-fun descriptor erasure the `.api` diff cannot show; treat it as breaking regardless — `docs/pitfalls.md` "The published surface"
 - `LookupProvenance.EXTERNAL_CATALOG_ID` distinguishes direct catalogue lookups such as iTunes UPC from provider-native ids; exhaustive `when`s need a branch
-- `EnrichmentCacheDao` gains defaulted `insertPreservingManual`: Room callers are unaffected, but a custom implementation must recompile before it is called
+- `RoomEnrichmentCache`'s constructor now requires a third `SelectionDao` param (schema v5, `MIGRATION_4_5`): recompile and wire `selectionDao()`, or take `EnrichmentCacheDatabase.create()`
+- `EnrichmentCacheDao` drops `isManual` (`Boolean?`)/`markManual`/`insertPreservingManual`; `SelectionDao.isSelected` replaces it, always non-null `Boolean` — invisible in the `.api` diff (erasure)
+- `EnrichmentCacheEntity` drops `isManual`: recompile — direct construction/`copy()` breaks, and `component11`+ renumber, so destructuring silently rebinds
 
 ### Added
 - `EnrichmentRequest.forTrackByMbid`/`forAlbumByMbid`/`forArtistByMbid`: request an entity by MBID alone; identity resolution fills the names the other providers search by
@@ -94,6 +96,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Wikipedia `ARTIST_PHOTO` now carries the largest rendered thumbnail and every scale in `sizes`, not the original file: `height` is null, since the media route states none
 - iTunes album resolution now does a `lookup?upc=` identity match when a barcode is known, replacing the fuzzy search — a barcode Apple doesn't carry is `NotFound`, not a search fallback
 - `build()` warns from the User-Agent the wire will carry: the contactless default meeting MusicBrainz/Wikipedia/Wikidata, `contact()` after `withDefaultProviders()`, or `contact()` with your client
+- Room writes are now a single unconditional insert (no read-then-write): dropping `insertPreservingManual` removes the only lock window an ordinary cache write held
 
 ### Fixed
 - MusicBrainz track/album search now ranks by credited artist: a lookup that won on a wrong-artist hit and reported `RESOLVED`/`matchScore` 100 now returns the correctly-credited entity
@@ -162,7 +165,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Cache keys now encode the complete request tuple: scope/type, names, selectors, all explicit identifiers, and sorted extras; only identical tuples replay
 - Exact-bearing calls never read name aliases; canonical aliases require names supplied by identity resolution. Custom caches must treat keys as opaque
 - The cache-key format change intentionally causes a one-time miss for existing entries; no cross-tuple entity equivalence is inferred
-- Cache backends now agree on manual selections: invalidation removes them, while an ordinary positive-cache write preserves an existing selection
+- Cache backends now agree on manual selections: invalidation removes them, an ordinary write preserves one, and marking a key before anything is cached still survives (Room schema v5)
 - `TitleMatcher` no longer strips an identity-bearing internal quote, or accepts mismatched terminal brackets (`Song (Live]` no longer equals `Song (Live)`)
 - LRCLIB's album/duration ranking no longer scores a candidate missing that evidence as though it agreed with the request; only an explicit match may outrank one silent on the same field
 - demo-web's "Clear cached result & reload" now invalidates the identifier-bearing preview tuple, not only the name tuple, so the entry named by the following reload is actually cleared

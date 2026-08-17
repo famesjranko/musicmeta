@@ -78,6 +78,26 @@ Room.databaseBuilder(context, EnrichmentCacheDatabase::class.java, "enrichment_c
     .build()
 ```
 
+### MIGRATION_4_5
+
+If you used a previous version (database version 4), this migration moves manual selections off
+`enrichment_cache` and into their own `selections` table. Only rows carrying `is_manual = 1` are
+copied — a selection is user intent, not cached data, so it is preserved rather than discarded.
+`enrichment_cache` itself is then dropped and recreated without the `is_manual` column, per
+`MIGRATION_3_4`'s precedent; every pre-upgrade cache entry becomes a miss the next `enrich()` call
+heals. `negative_cache` is untouched — its shape did not change.
+
+```kotlin
+Room.databaseBuilder(context, EnrichmentCacheDatabase::class.java, "enrichment_cache.db")
+    .addMigrations(
+        EnrichmentCacheDatabase.MIGRATION_1_2,
+        EnrichmentCacheDatabase.MIGRATION_2_3,
+        EnrichmentCacheDatabase.MIGRATION_3_4,
+        EnrichmentCacheDatabase.MIGRATION_4_5,
+    )
+    .build()
+```
+
 ### Cleaning up expired entries
 
 `RoomEnrichmentCache` provides a `deleteExpired()` method. Call it periodically to keep the database size manageable:
@@ -100,6 +120,7 @@ If your app uses Hilt, the library provides a ready-made module that wires up Ro
 //   - EnrichmentCacheDatabase (singleton)
 //   - EnrichmentCacheDao (singleton)
 //   - NegativeCacheDao (singleton)
+//   - SelectionDao (singleton)
 //   - RoomEnrichmentCache (singleton)
 //
 // Database name: "enrichment_cache.db"

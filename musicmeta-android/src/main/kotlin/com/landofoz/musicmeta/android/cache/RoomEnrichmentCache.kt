@@ -18,6 +18,7 @@ import kotlinx.serialization.json.Json
 class RoomEnrichmentCache(
     private val dao: EnrichmentCacheDao,
     private val negativeDao: NegativeCacheDao,
+    private val selectionDao: SelectionDao,
     private val clock: () -> Long = System::currentTimeMillis,
     private val logger: EnrichmentLogger = EnrichmentLogger.NoOp,
 ) : EnrichmentCache {
@@ -97,7 +98,7 @@ class RoomEnrichmentCache(
         val resolvedIdsJson = result.resolvedIdentifiers?.let {
             json.encodeToString(EnrichmentIdentifiers.serializer(), it)
         }
-        dao.insertPreservingManual(
+        dao.insert(
             EnrichmentCacheEntity(
                 entityKey = entityKey,
                 enrichmentType = type.name,
@@ -154,24 +155,27 @@ class RoomEnrichmentCache(
         if (type != null) {
             dao.delete(entityKey, type.name)
             negativeDao.delete(entityKey, type.name)
+            selectionDao.delete(entityKey, type.name)
         } else {
             dao.deleteAll(entityKey)
             negativeDao.deleteAll(entityKey)
+            selectionDao.deleteAll(entityKey)
         }
     }
 
     override suspend fun isManuallySelected(
         entityKey: String,
         type: EnrichmentType,
-    ): Boolean = dao.isManual(entityKey, type.name) ?: false
+    ): Boolean = selectionDao.isSelected(entityKey, type.name)
 
     override suspend fun markManuallySelected(entityKey: String, type: EnrichmentType) {
-        dao.markManual(entityKey, type.name)
+        selectionDao.insert(SelectionEntity(entityKey = entityKey, enrichmentType = type.name))
     }
 
     override suspend fun clear() {
         dao.clearAll()
         negativeDao.clearAll()
+        selectionDao.clearAll()
     }
 
     /** Cleanup expired entries. Call periodically (e.g., from WorkManager). */

@@ -24,13 +24,10 @@ interface EnrichmentCache {
 
     /**
      * Returns a cached result even if expired. Used by STALE_IF_ERROR mode
-     * to serve stale data when providers fail.
-     *
-     * Default returns null — custom implementations that don't support
-     * stale serving remain backward compatible.
+     * to serve stale data when providers fail. Return null if this implementation
+     * has no notion of expiry, or does not support stale serving.
      */
-    suspend fun getIncludingExpired(entityKey: String, type: EnrichmentType): CacheEnvelope<EnrichmentResult.Success>? =
-        null
+    suspend fun getIncludingExpired(entityKey: String, type: EnrichmentType): CacheEnvelope<EnrichmentResult.Success>?
 
     /**
      * [canonicalStatus] is the call's [IdentityResolution.status] that made [result] eligible to
@@ -51,22 +48,22 @@ interface EnrichmentCache {
      * Returns a cached "providers had nothing" answer, or null on a miss or expiry.
      *
      * Stored apart from [get]/[put] on purpose: a [EnrichmentResult.NotFound] must never flow
-     * through the `Success`-typed positive path. Default returns null, so an implementation that
-     * does not override this pair simply never negative-caches — existing implementations compile
-     * and behave unchanged. There is deliberately no expired-read counterpart to
-     * [getIncludingExpired]: an expired negative must never be served, stale or otherwise, so
-     * STALE_IF_ERROR cannot resurrect an absence a provider might since have started answering.
-     * A cache that delegates to another [EnrichmentCache] must forward this call and
-     * [putNegative], or negative caching silently disappears through it.
+     * through the `Success`-typed positive path. Return null if this implementation does not
+     * negative-cache. There is deliberately no expired-read counterpart to [getIncludingExpired]:
+     * an expired negative must never be served, stale or otherwise, so STALE_IF_ERROR cannot
+     * resurrect an absence a provider might since have started answering. A cache that delegates
+     * to another [EnrichmentCache] must forward this call and [putNegative], or negative caching
+     * silently disappears through it.
      */
-    suspend fun getNegative(entityKey: String, type: EnrichmentType): CacheEnvelope<EnrichmentResult.NotFound>? = null
+    suspend fun getNegative(entityKey: String, type: EnrichmentType): CacheEnvelope<EnrichmentResult.NotFound>?
 
     /**
-     * Caches a "providers had nothing" answer for [ttlMs]. Default is a no-op, pairing with
-     * [getNegative]'s default of null. An override must also clear negative entries from
-     * [invalidate] and [clear] — a negative entry that outlives an invalidation would keep
-     * reporting an absence a caller just asked to forget. A delegating cache must forward this
-     * call and [getNegative], or negative caching silently disappears through it.
+     * Caches a "providers had nothing" answer for [ttlMs]. A no-op body is legal if this
+     * implementation does not negative-cache, pairing with [getNegative]'s null in that case. An
+     * override that does store must also clear negative entries from [invalidate] and [clear] — a
+     * negative entry that outlives an invalidation would keep reporting an absence a caller just
+     * asked to forget. A delegating cache must forward this call and [getNegative], or negative
+     * caching silently disappears through it.
      */
     suspend fun putNegative(
         entityKey: String,
@@ -74,7 +71,7 @@ interface EnrichmentCache {
         result: EnrichmentResult.NotFound,
         canonicalStatus: CanonicalStatus,
         ttlMs: Long,
-    ) {}
+    )
 
     /** Clears positive, negative, and manual-selection state for the addressed key and type(s). */
     suspend fun invalidate(entityKey: String, type: EnrichmentType? = null)
