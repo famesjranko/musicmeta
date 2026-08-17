@@ -292,6 +292,15 @@ iTunes's `trackCount`/`releaseDate`, Discogs's `year`, each against the matching
 never by provider order until every other signal ties, or a materially different edition (an 8-track
 album versus a 137-track deluxe box) can outrank the one the request actually asked for.
 
+**That ordering presumes a pool already filtered to artist matches, and MusicBrainz's direct search
+is the one place that presumption fails.** `DeezerApi.rankTracks` puts artist quality at tier 2
+because its pool was filtered by `ArtistMatcher.isMatch` before ranking ever started (§7's own fix);
+`MusicBrainzEnricher.pickBestRecording` and `MusicBrainzReleaseRanking.pickBestRelease` rank a pool
+their direct search never filtered by artist at all, so `ArtistMatcher.matchQuality` has to lead
+their comparators — title and edition tiers cannot be trusted to settle a pool that may hold a
+wrong-artist hit tied or ahead on every other signal. Follow "tier first, then artist" only where the
+pool is already artist-filtered; rank artist first wherever it is not.
+
 Combined-field search results carry a second trap: a provider that names both artist and album in
 one display string (Discogs's `"Artist - Title"`) cannot be safely split at the first delimiter,
 because either half may itself contain that delimiter. Stopping at the first boundary whose

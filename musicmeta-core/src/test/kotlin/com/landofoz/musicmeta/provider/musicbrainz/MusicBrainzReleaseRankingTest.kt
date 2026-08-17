@@ -26,6 +26,7 @@ class MusicBrainzReleaseRankingTest {
         score: Int = 100,
         trackCount: Int? = null,
         releaseGroupDisambiguation: String? = null,
+        artistCredits: List<String> = emptyList(),
     ): MusicBrainzRelease = MusicBrainzRelease(
         id = id,
         title = title,
@@ -43,13 +44,15 @@ class MusicBrainzReleaseRankingTest {
         secondaryTypes = secondaryTypes,
         trackCount = trackCount,
         releaseGroupDisambiguation = releaseGroupDisambiguation,
+        artistCredits = artistCredits,
     )
 
     private fun pick(
         candidates: List<MusicBrainzRelease>,
         minMatchScore: Int = 80,
         removedTags: List<MusicBrainzQualifierFallback.QualifierTag> = emptyList(),
-    ): MusicBrainzRelease? = MusicBrainzReleaseRanking.pickBestRelease(candidates, minMatchScore, removedTags)
+        artist: String? = null,
+    ): MusicBrainzRelease? = MusicBrainzReleaseRanking.pickBestRelease(candidates, minMatchScore, removedTags, artist)
 
     /** The qualifier tags "… (Remastered)" strips, as the fallback path derives them. */
     private fun remasteredTags() =
@@ -569,6 +572,82 @@ class MusicBrainzReleaseRankingTest {
 
         // Then - tag text is free-form, so identity still decides first
         assertEquals(album, result)
+    }
+
+    // --- artist outranks everything below it (tier 0, ranks rather than rejects) ---
+
+    @Test
+    fun `wrong-artist release tied on every other tier does not beat the matching-artist release`() {
+        // Given - two plain Official Albums of the same year, tied on every tier the ladder already
+        // had, differing only in artist-credit — the wrong-artist release listed first
+        val wrongArtist = release(id = "a", date = "1997", artistCredits = listOf("Radiohead Tribute Band"))
+        val correctArtist = release(id = "b", date = "1997", artistCredits = listOf("Radiohead"))
+
+        // When - the ladder ranks the pool for a request naming "Radiohead"
+        val result = pick(listOf(wrongArtist, correctArtist), artist = "Radiohead")
+
+        // Then - the matching-artist release wins, not the tied wrong-artist release a position-only
+        // or id-only tiebreak would have picked
+        assertEquals(correctArtist, result)
+    }
+
+    @Test
+    fun `wrong-artist release with a clean tier does not beat a matching-artist release with a worse tier`() {
+        // Given - the wrong-artist release is a plain Official Album with no secondary types; the
+        // matching-artist release is the same title and score but carries the Live secondary type,
+        // so it legitimately loses tier 2 for a reason unrelated to artist identity
+        val wrongArtist = release(id = "a", date = "1997", artistCredits = listOf("Radiohead Tribute Band"))
+        val correctArtist = release(
+            id = "b", date = "1997", secondaryTypes = listOf("Live"), artistCredits = listOf("Radiohead"),
+        )
+
+        // When - the ladder ranks the pool for a request naming "Radiohead"
+        val result = pick(listOf(wrongArtist, correctArtist), artist = "Radiohead")
+
+        // Then - the artist tier outranks the secondary-type tier, not list position
+        assertEquals(correctArtist, result)
+    }
+
+    @Test
+    fun `a request naming one credited artist still matches a release credited to a collaboration`() {
+        // Given - the matching release is credited to a collaboration, not the requested artist alone
+        val wrongArtist = release(id = "a", date = "1981", artistCredits = listOf("Joss Stone"))
+        val collaboration = release(id = "b", date = "1981", artistCredits = listOf("Queen", "David Bowie"))
+
+        // When - the request names only "Queen", the falsifier a graded tier must survive
+        val result = pick(listOf(wrongArtist, collaboration), artist = "Queen")
+
+        // Then - the collaboration credit still matches, because matchQuality is taken against each
+        // individually credited name, not a joined string
+        assertEquals(collaboration, result)
+    }
+
+    @Test
+    fun `a pool with no matching-artist candidate still resolves rather than returning null`() {
+        // Given - neither release is credited to, nor contains, nor token-overlaps the requested artist
+        val laterYear = release(id = "a", date = "1997", artistCredits = listOf("Coldplay Tribute Band"))
+        val earlierYear = release(id = "b", date = "1996", artistCredits = listOf("Muse Tribute Band"))
+
+        // When - the ladder ranks the pool for a request naming "Radiohead"
+        val result = pick(listOf(laterYear, earlierYear), artist = "Radiohead")
+
+        // Then - the tier ties every candidate at QUALITY_NONE and the pre-existing tiers decide (the
+        // earlier year), rather than the pool being rejected to null
+        assertEquals(earlierYear, result)
+    }
+
+    @Test
+    fun `a null artist leaves the tier inert, as the already artist-filtered fallback callers rely on`() {
+        // Given - two releases differing only in artist-credit
+        val a = release(id = "a", date = "1997", artistCredits = listOf("Radiohead Tribute Band"))
+        val b = release(id = "b", date = "1996", artistCredits = listOf("Radiohead"))
+
+        // When - the ladder ranks the pool with no artist supplied, as the qualifier-fallback and
+        // symbol-fallback callers do because they already filtered the pool with anyArtistMatches
+        val result = pick(listOf(a, b))
+
+        // Then - the artist tier is inert and the pre-existing tiers decide on their own terms
+        assertEquals(b, result)
     }
 
     private fun masterOfPuppetsPool() = listOf(

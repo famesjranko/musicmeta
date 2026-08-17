@@ -96,6 +96,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `build()` warns from the User-Agent the wire will carry: the contactless default meeting MusicBrainz/Wikipedia/Wikidata, `contact()` after `withDefaultProviders()`, or `contact()` with your client
 
 ### Fixed
+- MusicBrainz track/album search now ranks by credited artist: a lookup that won on a wrong-artist hit and reported `RESOLVED`/`matchScore` 100 now returns the correctly-credited entity
 - MusicBrainz now reports `QUALIFIER_FALLBACK_NAME` when a stripped candidate, not the literal title, resolved a track or album; an exact-title match still reports `EXACT_NAME`
 - An all-cache-hit call now always reports `NOT_ATTEMPTED_CACHE_HIT`; it no longer replays a cached `NOT_ATTEMPTED_*` reason that a later config change could make false
 - `RoomEnrichmentCache` and `InMemoryEnrichmentCache` now read back the `canonicalStatus` they persist on write, closing the write-only gap the previous audit found

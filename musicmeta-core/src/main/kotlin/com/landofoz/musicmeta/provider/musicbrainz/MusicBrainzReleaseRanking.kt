@@ -1,5 +1,7 @@
 package com.landofoz.musicmeta.provider.musicbrainz
 
+import com.landofoz.musicmeta.engine.ArtistMatcher
+
 /**
  * Tie-break policy for a MusicBrainz release search pool, where a bare album title routinely ties
  * dozens of releases at the maximum score. Identity ranks above MusicBrainz's own score, since
@@ -10,6 +12,13 @@ internal object MusicBrainzReleaseRanking {
     /**
      * The best release at or above [minMatchScore], or null if none qualifies. Ranks tied candidates
      * by, earlier tiers dominating:
+     * 0. [ArtistMatcher.matchQuality] against [artist], the best of any of
+     *    [MusicBrainzRelease.artistCredits]' individually credited names — leads every other tier,
+     *    so a release credited to someone else never outranks one credited to the requested artist
+     *    on edition signals alone. Ranks rather than rejects: a pool with no matching-artist
+     *    candidate at all still resolves to its best edition match, tied at
+     *    [ArtistMatcher.QUALITY_NONE]. A null or blank [artist] (the two callers that already
+     *    filter their pool with `anyArtistMatches` before ranking pass none) leaves this tier inert.
      * 1. is an Album
      * 2. carries no secondary types (not Live/Compilation/Remix/Soundtrack/…)
      * 3. status is Official (not Bootleg/Promotion/Pseudo-Release/…)
@@ -27,11 +36,13 @@ internal object MusicBrainzReleaseRanking {
         candidates: List<MusicBrainzRelease>,
         minMatchScore: Int,
         removedTags: List<MusicBrainzQualifierFallback.QualifierTag> = emptyList(),
+        artist: String? = null,
     ): MusicBrainzRelease? {
         val eligible = candidates.filter { it.score >= minMatchScore }
         if (eligible.isEmpty()) return null
         val modal = modalTrackCount(eligible)
-        val comparator = compareBy<MusicBrainzRelease> { it.releaseType == "Album" }
+        val comparator = compareBy<MusicBrainzRelease> { artistQuality(it, artist) }
+            .thenBy { it.releaseType == "Album" }
             .thenBy { it.secondaryTypes.isEmpty() }
             .thenBy { it.status == "Official" }
             .thenBy { it.score }
@@ -44,6 +55,13 @@ internal object MusicBrainzReleaseRanking {
             .thenByDescending { it.id }
         return eligible.maxWithOrNull(comparator)
     }
+
+    private fun artistQuality(release: MusicBrainzRelease, artist: String?): Int =
+        if (artist.isNullOrBlank()) {
+            ArtistMatcher.QUALITY_NONE
+        } else {
+            release.artistCredits.maxOfOrNull { ArtistMatcher.matchQuality(artist, it) } ?: ArtistMatcher.QUALITY_NONE
+        }
 
     /**
      * The text a stripped qualifier is matched against. Deliberately the raw
