@@ -188,9 +188,9 @@ class DeezerProvider(
     /**
      * `SIMILAR_TRACKS` is artist-derived, the same approximation [SimilarAlbumsProvider] uses for
      * `SIMILAR_ALBUMS`: Deezer has no track-similarity endpoint (`/track/{id}/radio` doesn't
-     * exist), so this takes the seed track's artist id
-     * straight off the `/search/track` result (`DeezerTrackSearchResult.artistId`), walks
-     * `/artist/{id}/related`, and samples each related artist's `/artist/{id}/top`. Results rank by
+     * exist), so this takes the seed track's artist id straight off the `/search/track` result
+     * (`DeezerTrackSearchResult.artistId`), walks `/artist/{id}/related`, and samples each related
+     * artist's `/artist/{id}/top`. Results rank by
      * *artist* similarity applied uniformly to that artist's top tracks, not genuine track-level
      * similarity — see [SimilarTrack.matchScore] KDoc for the consequence.
      *

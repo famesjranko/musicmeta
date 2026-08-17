@@ -243,8 +243,8 @@ Shipped milestones are in `CHANGELOG.md`, one section per release.
 ### v1.0.0 — API Stability
 Freeze the public API surface. Semantic versioning guarantees from this point forward. Migration guide from pre-1.0. All deprecated APIs removed. Published to Maven Central with stable coordinates.
 
-**What it still waits on:** a per-class pass on the `(root)` package — 55 top-level types, 171
-declarations in the dump counting nested (`musicmeta-core/api/musicmeta-core.api`, 2026-08-12) —
+**What it still waits on:** a per-class pass on the `(root)` package — 55 top-level types, 180
+declarations in the dump counting nested (`musicmeta-core/api/musicmeta-core.api`, 2026-08-17) —
 which has never been audited, and `1.0.0` makes every one of them permanent. Then the freeze.
 Enforcement itself is already in place (`api/*.api` baselines and `apiCheck`), and `provider/`,
 `http/` and `engine/` have had their pass.

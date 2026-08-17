@@ -60,17 +60,11 @@ class CoverArtArchiveProvider(
         type: EnrichmentType,
     ): EnrichmentResult {
         return try {
-            // A ForTrack request's musicBrainzId is always a recording MBID, never a release MBID
-            // — MusicBrainzMapper.toTrackIdentifiers is the only place that fills it for a track,
-            // and its contract (documented there) is recording-only. CAA's release endpoints 404 on
-            // a recording MBID, so it must never be sent as releaseId for a track request; only the
-            // release-group id (also filled by toTrackIdentifiers, when available) can serve
-            // front-cover art via findArtwork's existing release-group fallback. The three
-            // release-only capabilities have no release-group equivalent, so a track request
-            // reaches them with releaseId == null and returns NotFound before any HTTP call.
-            // `musicBrainzId` stays deliberately polymorphic — `IdentifierNamespace` added typed
-            // accessors beside it, not per-entity fields in place of it — so this guard is where
-            // recording-vs-release is encoded, and it stays.
+            // A ForTrack request's musicBrainzId names a recording, which 404s on CAA's release
+            // endpoints, so it is never sent as releaseId for a track request — only the
+            // release-group id can serve a track's art, via findArtwork's release-group fallback;
+            // the three release-only capabilities have no such fallback, so a track request reaches
+            // them with releaseId == null and returns NotFound before any HTTP call.
             val isTrackRequest = request is EnrichmentRequest.ForTrack
             val releaseId = request.identifiers.musicBrainzId.takeUnless { isTrackRequest }
             val groupId = request.identifiers.musicBrainzReleaseGroupId

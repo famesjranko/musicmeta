@@ -29,7 +29,7 @@ package com.landofoz.musicmeta.testkit
  * known defect** may override a single rule *solely* to carry an `@Ignore`, so the marked rule does
  * not cost that implementation every other rule it does satisfy. The override delegates straight
  * back to the inherited body and changes nothing about the assertion — deleting it is how the mark
- * comes off — the base member is `open` for that reason alone and says so, and the `@Ignore` names
+ * comes off. The base member is `open` for that reason alone, and the `@Ignore` names
  * the defect and the condition that removes it. When the fix lands the mark comes off and the test
  * must go red first. A weakened override is the drift this pattern exists to stop; a delegating one
  * is visible as such in review.

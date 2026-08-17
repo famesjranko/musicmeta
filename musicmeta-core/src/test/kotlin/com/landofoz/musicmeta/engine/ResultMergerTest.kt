@@ -72,10 +72,9 @@ class ResultMergerTest {
         // When - merging the single-element list
         val result = GenreMerger.merge(listOf(success))
 
-        // Then - the populated path now reads genres as well as genreTags, so a legacy-only
-        // And - contributor is merged rather than returned verbatim; every contributor reaching the
-        // And - populated path is attributed to the merger, so a contributor's own id here would be
-        // And - the exception, not the rule.
+        // Then - the populated path now reads genres as well as genreTags, so a legacy-only contributor
+        // is merged rather than returned verbatim; every contributor reaching this path is attributed
+        // to the merger, so a contributor's own id here would be the exception, not the rule
         assertTrue(result is EnrichmentResult.Success)
         assertEquals("genre_merger", (result as EnrichmentResult.Success).provider)
         assertEquals(listOf("Rock"), (result.data as EnrichmentData.Metadata).genres)

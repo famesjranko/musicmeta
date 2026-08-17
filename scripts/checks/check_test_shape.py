@@ -5,7 +5,7 @@
 must hold>`, each on its own line, a hyphen and a clause on every one. No built-in ktlint or detekt
 rule expresses this — it is house test-writing convention, not general Kotlin advice or a bug
 pattern — so it stayed a convention nobody checked until two MusicBrainz test files landed with no
-given/when/then at all and passed every gate (03).
+given/when/then at all and passed every gate.
 
 A custom detekt rule *could* express it exactly, over PSI and with no type resolution, and detekt is
 already in the build. It was rejected on cost, not capability: the write-time hook wants sub-second
@@ -16,7 +16,7 @@ A `@Test`-annotated function's body is the text window from its `@Test` line to 
 line or the next top-level `class`/`object` declaration, whichever comes first. `@Test`-annotated
 functions cannot nest in Kotlin, so a window never starts inside another one; the declaration bound
 is what stops the last `@Test` in a multi-class file from swallowing the next class's helpers.
-Neither bound needs brace-matching or any other structural parsing (05).
+Neither bound needs brace-matching or any other structural parsing.
 
 Kotlin test sources only (`*/src/test/**/*.kt`), on both entry points — this has no opinion on main
 sources, and does not fire on a helper function that happens to mention "given" in prose.

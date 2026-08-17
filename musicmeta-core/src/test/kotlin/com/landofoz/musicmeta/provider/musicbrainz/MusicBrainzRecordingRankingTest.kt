@@ -13,7 +13,7 @@ import org.junit.Test
  * `MusicBrainzWrongArtistTrackRankingTest`, where a real search response can be exercised; the
  * properties below need only [MusicBrainzRecording] values, so they are pinned directly here.
  *
- * The first two tests below are regression: the tier fires and deciding the winner, so removing
+ * The first two tests below are regression: the tier fires and decides the winner, so removing
  * `{ it.second.artistQuality }` from [MusicBrainzEnricher.pickBestRecording]'s comparator turns
  * them red. The last two are characterisation, not regression, and cannot fail under that same
  * removal — see each one's own KDoc for why.

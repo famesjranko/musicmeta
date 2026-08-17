@@ -30,6 +30,9 @@ after pinning locally, or run gate 1 as a dry run.
 Choose the version under the `0.x` compatibility policy in `CLAUDE.md` — a patch release cannot
 contain a breaking public API change. That choice is the one judgement call in the release.
 
+Bump the version strings in `docs/guides/` (`quick-start.md`, `extension-points.md`, `android.md`)
+by hand — Gate 1's mechanical edits do not reach them.
+
 ## Gate 1 — Prepare release
 
 Actions → **Prepare release** → Run workflow, from `main`. Enter the version. Leave `dry_run` ticked

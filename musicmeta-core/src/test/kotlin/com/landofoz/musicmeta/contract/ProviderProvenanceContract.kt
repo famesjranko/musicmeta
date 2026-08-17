@@ -27,10 +27,10 @@ import org.junit.Test
  * The contract every [EnrichmentResult.Success] reaching a consumer owes its caller: a non-null
  * [EnrichmentResult.Success.provenance] naming the route that selected it, asserted once here and
  * inherited by the concrete engine subclass. The subject is the **engine**
- * ([TestStack.build]), not a provider — a per-provider subject would need eleven subclasses to say
+ * ([TestStack.build]), not a provider — a per-provider subject would need twelve subclasses to say
  * one thing (`architecture.md` § 2 P3).
  *
- * Three call sites fill the field when a result arrives without one:
+ * Two call sites fill the field when a result arrives without one:
  * [com.landofoz.musicmeta.engine.stampProvenance] (the single-winner chain path) and
  * [com.landofoz.musicmeta.engine.stampContributorProvenance] (each contributor to a merged type),
  * both classifying through [com.landofoz.musicmeta.engine.observedProvenance]. A provider that sets
@@ -326,8 +326,9 @@ abstract class ProviderProvenanceContract : ContractSuite<EnrichmentEngine>() {
          * An mbid LRCLIB never consults (it takes no [IdentifierRequirement], searching by name
          * regardless), present only so [needsIdentityResolution] sees a request with nothing left
          * to resolve for a LYRICS_SYNCED-only call and skips MusicBrainz — landing
-         * [CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED], the write-back-eligible status a request
-         * with no identifier at all would instead resolve to AMBIGUOUS/UNRESOLVED/FAILED under.
+         * [CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED], which is write-back-eligible. A request with
+         * no identifier at all would instead resolve to AMBIGUOUS/UNRESOLVED/FAILED, none of which
+         * are.
          */
         const val UNCONSULTED_MBID = "00000000-0000-0000-0000-000000000000"
         const val BARCODE_SCENARIO = "itunes-barcode-lookup"

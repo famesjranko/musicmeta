@@ -3,8 +3,8 @@ package com.landofoz.musicmeta.provider.wikipedia
 /**
  * Lead text and page properties from the Wikipedia Action API.
  *
- * [wikibaseItem] is the article's Wikidata Q-id (`pageprops.wikibase_item`); nothing surfaces it
- * yet, but it is the identifier a caller would otherwise resolve in a second request.
+ * [wikibaseItem] is the article's Wikidata Q-id (`pageprops.wikibase_item`), the identifier a
+ * caller would otherwise resolve in a second request.
  */
 internal data class WikipediaSummary(
     val title: String,

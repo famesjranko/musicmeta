@@ -17,8 +17,8 @@ import kotlin.random.Random
  * `withTimeoutOrNull`. [BudgetedTransientRetry] reads it to refuse a sleep that would run past the
  * deadline, since a cancelled fan-out loses every provider's in-flight work.
  *
- * Absent when a consumer drives an [HttpClient] directly; the retry then falls back to a fixed
- * two-minute budget. Deliberately not public: a caller outside this module cannot usefully install
+ * Absent when a consumer drives an [HttpClient] directly; the retry then falls back to a two-minute
+ * ceiling per wait. Deliberately not public: a caller outside this module cannot usefully install
  * a deadline the engine will overwrite, and [withRetryBudgetForTest] covers the one case that needs
  * to.
  */

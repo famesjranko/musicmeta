@@ -234,8 +234,6 @@ fun TrackProfile.toDemoResponse(
 
     val details = buildList {
         trackMetadata?.durationMs?.let { add(SectionItem("Duration", it.formatDuration())) }
-        // Provider-confirmed album title wins over the caller's unconfirmed input; "as entered"
-        // stays as the fallback when nothing resolved one (see the class doc above).
         val confirmedAlbum = trackMetadata?.albumTitle
         when {
             confirmedAlbum != null -> add(SectionItem("Album", confirmedAlbum))

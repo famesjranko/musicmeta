@@ -111,7 +111,7 @@ class FakeHttpClientTest {
         // When - fetching it
         val result = client.fetchJsonResult("https://example.test/search")
 
-        // Then - a NetworkError, unchanged: 4 consumer files read this as the transport failure
+        // Then - a NetworkError, unchanged: three consumer files read this as the transport failure
         assertTrue("expected NetworkError, was $result", result is HttpResult.NetworkError)
     }
 

@@ -41,20 +41,11 @@ fun main() {
     val cache = InMemoryEnrichmentCache()
 
     fun buildEngine(cacheMode: CacheMode): EnrichmentEngine {
-        // The library's 30s default suits a consumer that would rather answer fast and partially —
-        // a mobile app with a screen to fill. This demo wants the opposite: it exists to show what
-        // every provider returns, so a type dropped to meet a deadline is the failure, not the slow
-        // answer.
-        //
-        // 30s cannot hold that here, and the reason is structural rather than a matter of tuning.
-        // MusicBrainz allows one request a second and the library holds one limiter per host, so
-        // concurrent cold enrichments do not run side by side — they interleave into one queue. Wall
-        // clock therefore scales with the number of people clicking at once while the deadline does
-        // not, and the types that lose are whichever were still queued: a browser open in two tabs
-        // is enough.
-        //
-        // 120s is headroom for that, not a measured figure — nothing here derives it, and a busy
-        // enough demo would exhaust it too.
+        // This demo exists to show what every provider returns, so a type dropped to meet the
+        // library's 30s default deadline is the failure, not a slow answer — and 30s can't hold
+        // that once MusicBrainz's one-request-a-second limiter serialises concurrent cold
+        // enrichments into a single queue, so wall clock scales with simultaneous visitors while
+        // the deadline doesn't. 120s is headroom for that, not a measured figure.
         val config = EnrichmentConfig(
             enrichTimeoutMs = 120_000L,
             cacheMode = cacheMode,

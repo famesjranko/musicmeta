@@ -20,7 +20,7 @@ the placeholder `"x"` in the source, satisfying the legal constraint (no real ly
 2026-08-16: whitespace only, already minimal (one candidate).
 
 LRCLIB's actual field names are exercised against the live API by the daily `provider-drift.yml`
-job, which runs the `com.landofoz.musicmeta.e2e.*` glob (LRCLIB is referenced by 8 files there) —
+job, which runs the `com.landofoz.musicmeta.e2e.*` glob (LRCLIB is referenced by 6 files there) —
 non-gating by design (`spec.md` § Standing constraints 2). That live coverage, not this trim, is
 what would surface a drifted field name; a provider with no live e2e coverage would need this same
 note to say its derived pool's field names rest on nothing.

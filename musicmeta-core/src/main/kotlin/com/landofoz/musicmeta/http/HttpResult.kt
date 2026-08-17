@@ -63,9 +63,9 @@ internal fun <T> HttpResult<T>.bodyOrThrowAuthOrTransient(): T? = when {
  * Throwing is the same trick [AuthException] uses, for the same reason (`docs/pitfalls.md` §4): it
  * travels the provider's existing `catch (e: Exception) { mapError(type, e) }` into an
  * `Error(ErrorKind.NETWORK)` — or `ErrorKind.RATE_LIMIT` for the 429, which the chain widens back to
- * `EnrichmentResult.RateLimited` — which the chain records as a breaker *failure*. Collapsed to `null` it
- * would be a `NotFound` — a breaker *success* — and the provider would look healthy while a rate
- * limit made it answer "no results" to everything.
+ * `EnrichmentResult.RateLimited` — and either way the chain records a breaker *failure*. Collapsed
+ * to `null` it would be a `NotFound` — a breaker *success* — and the provider would look healthy
+ * while a rate limit made it answer "no results" to everything.
  */
 internal fun <T> HttpResult<T>.bodyOrThrowTransient(): T? = when (this) {
     is HttpResult.Ok -> body
