@@ -46,6 +46,12 @@ android {
     sourceSets.getByName("test") {
         assets.srcDirs("$projectDir/schemas")
     }
+
+    // The same schemas as instrumented-test assets, so the migration also runs against framework
+    // SQLite on a device — Robolectric proves the SQL, not the platform it ships on.
+    sourceSets.getByName("androidTest") {
+        assets.srcDirs("$projectDir/schemas")
+    }
 }
 
 dependencies {
@@ -76,6 +82,11 @@ dependencies {
     // The shared contract bases (EnrichmentCacheContract and friends) live in core's
     // src/testFixtures — the only source set a consuming module can see across the boundary.
     testImplementation(testFixtures(project(":musicmeta-core")))
+
+    androidTestImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.room.testing)
 }
 
 mavenPublishing {
