@@ -16,6 +16,7 @@ See [quick-start.md](quick-start.md) for Tier 1 profile examples. This guide cov
 
 `EnrichmentResults` wraps the raw result map with type-safe accessors. Use it when you want named access but need more control than profiles provide.
 
+<!-- no-compile: assumes `engine` from quick-start.md's engine-setup example -->
 ```kotlin
 val results = engine.enrich(
     EnrichmentRequest.forAlbum("OK Computer", "Radiohead"),
@@ -25,6 +26,7 @@ val results = engine.enrich(
 
 ### Typed accessors
 
+<!-- no-compile: assumes `results` from the `engine.enrich(...)` call above -->
 ```kotlin
 results.albumArt()          // EnrichmentData.Artwork?
 results.artistPhoto()       // EnrichmentData.Artwork?
@@ -47,6 +49,7 @@ results.trackPopularity()   // EnrichmentData.Popularity?
 
 These unwrap `EnrichmentData.Metadata` fields and automatically fall back to `ALBUM_METADATA` when the specific type has no result:
 
+<!-- no-compile: assumes `results` from the `engine.enrich(...)` call above -->
 ```kotlin
 results.genres()            // List<String> — tries GENRE, falls back to ALBUM_METADATA
 results.genreTags()         // List<GenreTag> — same fallback
@@ -60,6 +63,7 @@ results.country()           // String? — tries COUNTRY, falls back to ALBUM_ME
 
 For types without a named accessor, use the generic `get<T>()`:
 
+<!-- no-compile: assumes `results` from the `engine.enrich(...)` call above -->
 ```kotlin
 val background = results.get<EnrichmentData.Artwork>(EnrichmentType.ARTIST_BACKGROUND)
 val timeline = results.get<EnrichmentData.ArtistTimeline>(EnrichmentType.ARTIST_TIMELINE)
@@ -68,6 +72,7 @@ val members = results.get<EnrichmentData.BandMembers>(EnrichmentType.BAND_MEMBER
 
 ### Diagnostics
 
+<!-- no-compile: assumes `results` from the `engine.enrich(...)` call above -->
 ```kotlin
 // Was this type part of the request?
 results.wasRequested(EnrichmentType.LYRICS_SYNCED)  // true/false
@@ -84,6 +89,7 @@ when (val r = results.result(EnrichmentType.ALBUM_ART)) {
 
 ### Identity resolution on results
 
+<!-- no-compile: assumes `results` from the `engine.enrich(...)` call above -->
 ```kotlin
 results.identity.identifiers        // EnrichmentIdentifiers (MBIDs, Wikidata, etc.)
 results.identity.status             // CanonicalStatus, never null (RESOLVED, AMBIGUOUS, UNRESOLVED, FAILED, NOT_ATTEMPTED_*)
@@ -97,6 +103,7 @@ results.identity.suggestions        // List<SearchCandidate>
 
 The raw map gives you full `EnrichmentResult` objects with provider name, confidence score, lookup provenance, and resolved identifiers.
 
+<!-- no-compile: assumes `engine` from quick-start.md's engine-setup example -->
 ```kotlin
 val results = engine.enrich(
     EnrichmentRequest.forArtist("Radiohead"),
@@ -196,6 +203,7 @@ the rotation for the cooldown rather than being retried indefinitely.
 
 ## Per-type error checking
 
+<!-- no-compile: assumes `r`/`results` from context this fragment does not declare -->
 ```kotlin
 val results = engine.enrich(
     EnrichmentRequest.forAlbum("OK Computer", "Radiohead"),
@@ -226,6 +234,7 @@ for (type in results.requestedTypes) {
 
 The provider chain tries providers in priority order. If all providers return `NotFound`, the final result is `NotFound` — the data genuinely does not exist. But if a provider returns `RateLimited` or `Error`, the chain preserves that result so you can tell the difference:
 
+<!-- no-compile: assumes `results` from context this fragment does not declare -->
 ```kotlin
 when (val r = results.result(EnrichmentType.ALBUM_ART)) {
     is EnrichmentResult.NotFound -> {
@@ -288,6 +297,7 @@ limit, timeout — is a typed result on that one type, and every other type retu
 `enrich()` throws only for the two cases below, both of which mean something outside the engine
 went wrong. Profile accessors are independently nullable for the same reason:
 
+<!-- no-compile: assumes `profile` from context this fragment does not declare -->
 ```kotlin
 val profile = engine.artistProfile("Radiohead")
 

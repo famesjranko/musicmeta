@@ -40,6 +40,7 @@ Two independent facts, never merged into one value:
 
 Every `EnrichmentResults` object carries top-level identity resolution info:
 
+<!-- no-compile: assumes `engine` from quick-start.md's engine-setup example -->
 ```kotlin
 val results = engine.enrich(
     EnrichmentRequest.forArtist("Radiohead"),
@@ -69,6 +70,7 @@ the same shape a `SearchCandidate` for an artist has.
 
 When the query is ambiguous ("Bush" matches both the British and Canadian bands), the engine returns `AMBIGUOUS` with near-miss candidates instead of guessing:
 
+<!-- no-compile: assumes `engine` from quick-start.md's engine-setup example -->
 ```kotlin
 val results = engine.enrich(
     EnrichmentRequest.forArtist("Bush"),
@@ -135,6 +137,7 @@ With profile methods, the same flow is available via `profile.suggestions` and t
 
 The `search()` method returns candidates without running enrichment. Use it for search-ahead UIs where the user picks an entity before the app fetches metadata:
 
+<!-- no-compile: assumes `engine` from quick-start.md's engine-setup example -->
 ```kotlin
 val candidates = engine.search(
     EnrichmentRequest.forAlbum("Dark Side", "Pink Floyd"),
@@ -164,6 +167,7 @@ val results = engine.enrich(
 
 Provide an MBID upfront to skip the MusicBrainz search entirely. Downstream providers receive the identifier directly:
 
+<!-- no-compile: assumes `engine` from quick-start.md's engine-setup example -->
 ```kotlin
 val results = engine.enrich(
     EnrichmentRequest.forArtist("Radiohead", mbid = "a74b1b7f-71a5-4011-9441-d0b5e4122711"),
