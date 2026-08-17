@@ -151,7 +151,7 @@ profile.genreDiscovery               // List<GenreAffinity>
 
 ## Custom type sets
 
-By default, profile methods request all types relevant to the entity (16 for artists, 14 for albums, 8 for tracks). Override to request fewer types for faster responses:
+By default, profile methods request all types relevant to the entity (16 for artists, 15 for albums, 9 for tracks). Override to request fewer types for faster responses:
 
 ```kotlin
 // Only fetch photo and genres — skips bio, discography, timeline, etc.

@@ -7,7 +7,7 @@
 # fails in a second rather than after a full Gradle build.
 #
 #   ./check              everything
-#   ./check --fast       skip detekt, the build and the demo canary — edit loop, not a push
+#   ./check --fast       skip detekt, the build, the demo canary and doc samples — edit loop, not a push
 #   ./check --skip-demo  CI only: the demo canary is a separate required check there
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -110,7 +110,7 @@ step "kotlin format (ktlint)"
 ./gradlew ktlintCheck --quiet
 
 if [ "$FAST" = 1 ]; then
-    printf '\n\033[1m--fast: skipped detekt, the build and the demo canary\033[0m\n'
+    printf '\n\033[1m--fast: skipped detekt, the build, the demo canary and doc samples\033[0m\n'
     exit 0
 fi
 
@@ -149,5 +149,11 @@ else
     # consuming the library like an external app. Without this line nothing gates its tests either.
     (cd demo-web && ../gradlew compileKotlin ktlintCheck test --quiet)
 fi
+
+# docs-samples/ is the same composite-build shape as demo-cli/demo-web, not a consumer canary: it
+# compiles scripts/checks/check_doc_samples.py's extraction of every docs/guides/*.md Kotlin fence,
+# so a sample that drifts from the real API fails here instead of only in a reader's own build.
+step "doc samples"
+(cd docs-samples && ../gradlew compileKotlin --quiet)
 
 printf '\n\033[1;32mAll checks passed.\033[0m\n'

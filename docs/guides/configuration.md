@@ -176,6 +176,7 @@ val engine = EnrichmentEngine.Builder()
 
 On Android, bridge to Logcat:
 
+<!-- no-compile: shows only the changed `.logger(...)` link of the chain above, bridging to Android's `Log.d`/`Log.w` -->
 ```kotlin
 .logger(object : EnrichmentLogger {
     override fun debug(tag: String, message: String) = Log.d(tag, message)
@@ -222,23 +223,23 @@ EnrichmentRequest.DEFAULT_ARTIST_TYPES
 // GENRE_DISCOVERY
 ```
 
-### DEFAULT_ALBUM_TYPES (14 types)
+### DEFAULT_ALBUM_TYPES (15 types)
 
 ```kotlin
 EnrichmentRequest.DEFAULT_ALBUM_TYPES
 // ALBUM_ART, ALBUM_ART_BACK, ALBUM_BOOKLET, CD_ART,
 // GENRE, LABEL, RELEASE_DATE, RELEASE_TYPE, COUNTRY, ALBUM_METADATA,
 // ALBUM_TRACKS, RELEASE_EDITIONS,
-// SIMILAR_ALBUMS, GENRE_DISCOVERY
+// SIMILAR_ALBUMS, GENRE_DISCOVERY, ALBUM_DESCRIPTION
 ```
 
-### DEFAULT_TRACK_TYPES (8 types)
+### DEFAULT_TRACK_TYPES (9 types)
 
 ```kotlin
 EnrichmentRequest.DEFAULT_TRACK_TYPES
 // GENRE, LYRICS_SYNCED, LYRICS_PLAIN,
 // TRACK_POPULARITY, SIMILAR_TRACKS, CREDITS,
-// ALBUM_ART, GENRE_DISCOVERY
+// ALBUM_ART, GENRE_DISCOVERY, TRACK_METADATA
 ```
 
 ### defaultTypesFor()
@@ -348,6 +349,7 @@ results.radioDiscovery()?.tracks?.forEach { track ->
 
 Configure discovery depth via `radioDiscoveryMode`:
 
+<!-- no-compile: shows two alternative values under the same name; not meant to compile as one program -->
 ```kotlin
 // Easy: familiar-adjacent (default)
 val config = EnrichmentConfig(radioDiscoveryMode = RadioDiscoveryMode.EASY)

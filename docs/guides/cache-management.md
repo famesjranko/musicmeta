@@ -36,6 +36,7 @@ The engine handles all `get`/`put` calls transparently. You interact with the ca
 
 LRU cache that lives in process memory. Used automatically when no cache is provided to the builder.
 
+<!-- no-compile: shows two alternative capacities under the same `val engine`; not meant to compile as one program -->
 ```kotlin
 // Default: 500 entries
 val engine = EnrichmentEngine.Builder()
@@ -127,6 +128,7 @@ This is preferred over calling `engine.cache.invalidate(entityKey, ...)` directl
 
 Bypass the cache entirely and fetch fresh data from providers:
 
+<!-- no-compile: shows three alternative forceRefresh calls reusing `val profile`; not meant to compile as one program -->
 ```kotlin
 // Via profile methods
 val profile = engine.artistProfile("Radiohead", forceRefresh = true)
@@ -232,6 +234,7 @@ Stale results are **not** re-written to cache. The `!isStale` guard prevents exp
 `EnrichmentCache` declares `getIncludingExpired()` with no body, so every implementation must
 define it explicitly — there is no default:
 
+<!-- no-compile: pseudo-code sketch of the method to implement inside a custom `EnrichmentCache`; not a complete declaration -->
 ```kotlin
 override suspend fun getIncludingExpired(
     entityKey: String,
@@ -250,6 +253,7 @@ override suspend fun getIncludingExpired(
 
 `RoomEnrichmentCache` provides a `deleteExpired()` method for housekeeping. Call it periodically — a good pattern is a periodic WorkManager task:
 
+<!-- no-compile: `deleteExpired()` is `RoomEnrichmentCache` API (musicmeta-android) — out of scope for this JVM-only module -->
 ```kotlin
 cache.deleteExpired() // removes all rows where expiresAt < now
 ```

@@ -4,6 +4,7 @@
 
 Implement `EnrichmentProvider` to add a new data source. The engine discovers capabilities from the `capabilities` list and automatically wires the provider into the correct chains.
 
+<!-- no-compile: elides other `enrich` methods and an undefined `mapError` helper; illustrative, not a complete provider -->
 ```kotlin
 class SpotifyProvider(
     private val httpClient: HttpClient,
@@ -78,6 +79,7 @@ class SpotifyProvider(
 
 Register the provider with the builder:
 
+<!-- no-compile: depends on `SpotifyProvider` from the example above, which is itself opted out -->
 ```kotlin
 val engine = EnrichmentEngine.Builder()
     .withDefaultProviders()
@@ -124,6 +126,7 @@ Providers with unsatisfied requirements are automatically skipped.
 
 The `musicmeta-okhttp` module ships a ready-to-use `OkHttpEnrichmentClient`. Add the dependency and pass your existing `OkHttpClient`:
 
+<!-- no-compile: build.gradle.kts fragment, not application Kotlin -->
 ```kotlin
 // build.gradle.kts
 implementation("io.github.famesjranko:musicmeta-okhttp:0.11.0")
@@ -150,6 +153,7 @@ A 429, a shed 502/503/504 and a transport failure are retried — three attempts
 
 `DefaultHttpClient` and `OkHttpEnrichmentClient` are already wired to it, with nothing to configure. A client of your own opts in by wrapping each attempt:
 
+<!-- no-compile: illustrative pattern: `MyLibrary`, `mapToResult` and `asAttempt` are undefined placeholders -->
 ```kotlin
 class MyHttpClient(private val http: MyLibrary) : HttpClient {
     // connect + read: what one attempt against a hanging upstream may spend. Never your library's
@@ -174,6 +178,7 @@ Two things the ladder needs that `HttpResult` cannot carry:
 
 To test the refusal branch from outside this library, run the call inside `withRetryBudgetForTest`. It is marked `@MusicmetaTestApi`, so the compiler refuses a call that has not opted in — a test says so once, and a production call site has to say something it would not want to write:
 
+<!-- no-compile: JUnit/coroutines-test fragment with undeclared fixtures (`client`, `server`); illustrative, not compiled here -->
 ```kotlin
 @OptIn(MusicmetaTestApi::class)
 class MyHttpClientTest {
@@ -190,6 +195,7 @@ Pair it with the same fixture under a generous budget and assert the request cou
 
 For other HTTP libraries (Ktor, Fuel, etc.), implement the `HttpClient` interface — six methods, none defaulted, every one returning an `HttpResult`:
 
+<!-- no-compile: elided method bodies (`/* ... */`); shows the methods to implement, not a compiling implementation -->
 ```kotlin
 class MyHttpClient : HttpClient {
     override suspend fun fetchJsonResult(url: String): HttpResult<JSONObject> = fetchJsonResult(url, emptyMap())
@@ -218,6 +224,7 @@ is silent, and shows up only as missing enrichment.
 
 Implement `EnrichmentCache` for any storage backend:
 
+<!-- no-compile: illustrative custom-cache example; `RedisClient` is an undefined placeholder type, and `serialize`/`deserializeEnvelope` are undefined helpers -->
 ```kotlin
 class RedisEnrichmentCache(private val redis: RedisClient) : EnrichmentCache {
 
@@ -344,6 +351,7 @@ val engine = EnrichmentEngine.Builder()
 
 Implement `CompositeSynthesizer` for types that are computed from other resolved types. The engine resolves all `dependencies` first, then calls `synthesize()` with the resolved results map.
 
+<!-- no-compile: assumes `buildTimeline`, an undefined helper this example does not define -->
 ```kotlin
 import com.landofoz.musicmeta.engine.CompositeSynthesizer
 
