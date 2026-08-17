@@ -29,7 +29,7 @@ because the config is the thing that fails.
 | Kotlin static analysis | detekt, **type-resolved** (`detektMain`/`detektTest`/`detektTestFixtures`) | complexity, dead code, bug patterns |
 | Build | `./gradlew build` | compile, all unit tests, `apiCheck` against `api/*.api` |
 | Consumer canary | `demo-cli/` and `demo-web/` composite builds | an external consumer still compiles, and their tests run (`demo-web/`'s 50 `ProfileMapperTest` cases; `demo-cli/` has none yet) |
-| Doc samples | `scripts/checks/check_doc_samples.py` + `docs-samples/` composite build | every ```` ```kotlin ```` fence in `docs/guides/*.md` compiles against the real API, or carries a `<!-- no-compile: <reason> -->` marker with a mandatory reason; 21 of 87 fences compile today, the rest opted out — see "Known gaps" |
+| Doc samples | `scripts/checks/check_doc_samples.py` + `docs-samples/` composite build | every ```` ```kotlin ```` fence in `docs/guides/*.md` compiles against the real API, or carries a `<!-- no-compile: <reason> -->` marker with a mandatory reason; compiled per guide, in reading order, as one narrative, not one fence at a time — see "Known gaps". 61 of the 75 fences outside `android.md` (excluded, out of scope) compile today |
 
 Gates exist beyond `./check` and this table does not list them: `main`'s branch protection lives in
 `docs/project/workflow.md`, the release workflow's own verification in `docs/project/release.md`.
@@ -86,12 +86,18 @@ than it looks like, each learned the hard way.
   actual bugs, and the remediation it printed (`catch (CancellationException) { throw e }`) was
   itself the defect. `CacheGuard` and `StrategyGuard` carried that blanket form until #61 and now
   match; `EnrichCacheFailureTest` and `EnrichStrategyFailureTest` pin both directions for them.
-- **Most doc-sample fences are opted out, not compiled.** 66 of 87 — most guides read as a running
-  narrative ("you already have `engine`" from an earlier fence in the same file, sometimes a
-  different guide), and each fence compiles alone, so a continuation fence has nothing to resolve
-  `engine` against. A green run here proves the 21 self-contained fences match the API; it says
-  nothing about whether the other 66 still do — that is still a human reading the guide by hand.
-  `android.md` is entirely out of scope: a plain JVM module cannot compile Room/Hilt/WorkManager.
+- **14 of 75 non-`android.md` doc-sample fences are opted out, not compiled** (`android.md` itself is
+  entirely out of scope: a plain JVM module cannot compile Room/Hilt/WorkManager). Down from 66 of
+  87 under this check's first version, which compiled each fence alone — a guide reads as one running
+  narrative, and a fence forty lines down routinely assumed a `val` an earlier fence in the same guide
+  declared. The second version compiles each guide as one accumulating `narrative()` instead, with a
+  small mechanism-owned prelude (`docs-samples/src/main/kotlin/doc/samples/prelude/Prelude.kt`)
+  supplying the handful of names ("your existing `OkHttpClient`", a default `engine`) more than one
+  guide assumes without ever declaring. What is left opted out is genuinely elided pseudo-code
+  (`/* ... */`, an undefined helper like `mapError`), another library's API (Room, JUnit,
+  `android.util.Log`), or a fence that shows two alternative values under one name and is not meant
+  to compile as one program. A green run proves the 61 compiled fences match the API as the guide
+  actually reads, start to finish; it says nothing about the other 14 — still a human's job.
 - **Bash-written Kotlin is not formatted on write.** The hook only sees files an `Edit`/`Write`
   payload names. Sweeping everything dirty at end of turn was built and deleted: it reformats
   uncommitted work the agent never touched. `ktlintCheck` catches it, one `./check` later.

@@ -79,7 +79,7 @@ class SpotifyProvider(
 
 Register the provider with the builder:
 
-<!-- no-compile: assumes `httpClient` and depends on `SpotifyProvider` from the example above -->
+<!-- no-compile: depends on `SpotifyProvider` from the example above, which is itself opted out -->
 ```kotlin
 val engine = EnrichmentEngine.Builder()
     .withDefaultProviders()
@@ -132,7 +132,6 @@ The `musicmeta-okhttp` module ships a ready-to-use `OkHttpEnrichmentClient`. Add
 implementation("io.github.famesjranko:musicmeta-okhttp:0.11.0")
 ```
 
-<!-- no-compile: `myOkHttpClient` is a placeholder for the reader's own instance -->
 ```kotlin
 val engine = EnrichmentEngine.Builder()
     .httpClient(OkHttpEnrichmentClient(myOkHttpClient, "MyApp/1.0"))
@@ -225,7 +224,7 @@ is silent, and shows up only as missing enrichment.
 
 Implement `EnrichmentCache` for any storage backend:
 
-<!-- no-compile: illustrative custom-cache example; `RedisClient` is an undefined placeholder type -->
+<!-- no-compile: illustrative custom-cache example; `RedisClient` is an undefined placeholder type, and `serialize`/`deserializeEnvelope` are undefined helpers -->
 ```kotlin
 class RedisEnrichmentCache(private val redis: RedisClient) : EnrichmentCache {
 

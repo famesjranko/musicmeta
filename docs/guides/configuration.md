@@ -73,7 +73,6 @@ val keys = ApiKeyConfig(
 
 Pass keys to the builder. `withDefaultProviders()` conditionally registers key-requiring providers only when their key is present:
 
-<!-- no-compile: assumes `keys` and `config` from the two examples above -->
 ```kotlin
 val engine = EnrichmentEngine.Builder()
     .withDefaultProviders()
@@ -282,7 +281,6 @@ The library includes several discovery types that go beyond basic metadata.
 
 Last.fm and Deezer each return similar artists. The engine deduplicates them, combines scores, and tracks which providers contributed each match:
 
-<!-- no-compile: assumes `engine` from the engine-setup example above -->
 ```kotlin
 val results = engine.enrich(
     EnrichmentRequest.forArtist("Radiohead"),
@@ -299,7 +297,6 @@ results.similarArtists()?.artists?.forEach { artist ->
 
 ### Similar tracks
 
-<!-- no-compile: assumes `engine` from the engine-setup example above -->
 ```kotlin
 val results = engine.enrich(
     EnrichmentRequest.forTrack("Creep", "Radiohead"),
@@ -315,7 +312,6 @@ results.similarTracks()?.tracks?.forEach { track ->
 
 Synthesized from Deezer similar artists and their top albums. Albums from the same era as the queried album get a score multiplier:
 
-<!-- no-compile: assumes `engine` from the engine-setup example above -->
 ```kotlin
 val results = engine.enrich(
     EnrichmentRequest.forAlbum("OK Computer", "Radiohead"),
@@ -368,7 +364,6 @@ Without `listenBrainzToken`, `ARTIST_RADIO_DISCOVERY` is silently absent — `No
 
 A 30-second MP3 preview URL from Deezer. On-demand type — not in `DEFAULT_TRACK_TYPES`. Request explicitly when you need it:
 
-<!-- no-compile: assumes `engine` from the engine-setup example above -->
 ```kotlin
 val results = engine.enrich(
     EnrichmentRequest.forTrack("Creep", "Radiohead"),
@@ -387,7 +382,6 @@ Typical use: resolve a preview URL for a track the user discovered via radio or 
 
 An ordered playlist from Deezer's `/artist/{id}/radio` endpoint. Good for "radio station" features:
 
-<!-- no-compile: assumes `engine` from the engine-setup example above -->
 ```kotlin
 val results = engine.enrich(
     EnrichmentRequest.forArtist("Daft Punk"),
@@ -405,7 +399,6 @@ The default radio limit is 50 tracks. Configure it via `EnrichmentConfig.radioLi
 
 Last.fm, ListenBrainz, and Deezer each provide top tracks. The engine deduplicates, combines listen counts, and tracks sources:
 
-<!-- no-compile: assumes `engine` from the engine-setup example above -->
 ```kotlin
 val results = engine.enrich(
     EnrichmentRequest.forArtist("Radiohead"),
@@ -421,7 +414,6 @@ results.topTracks()?.tracks?.forEach { track ->
 
 Uses a static genre affinity taxonomy covering 189 genre relationships. Include `GENRE` in the same request or ensure it is cached:
 
-<!-- no-compile: assumes `engine` from the engine-setup example above -->
 ```kotlin
 val results = engine.enrich(
     EnrichmentRequest.forArtist("Radiohead"),
@@ -446,7 +438,6 @@ Each `GenreAffinity` includes: `name`, `affinity` (0.0–1.0), `relationship` ("
 
 Plug in your music library to filter recommendation results by what the user can actually play:
 
-<!-- no-compile: `myLibrary` is a placeholder for the reader's own catalog source -->
 ```kotlin
 val catalog = CatalogProvider { queries ->
     queries.map { q ->

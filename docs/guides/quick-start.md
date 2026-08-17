@@ -26,7 +26,6 @@ may answer 403. Details in [providers.md](../providers.md#user-agent-and-contact
 
 ### With OkHttp (recommended for Android)
 
-<!-- no-compile: `myOkHttpClient` is a placeholder for the reader's own instance -->
 ```kotlin
 // Add: implementation("io.github.famesjranko:musicmeta-okhttp:0.11.0")
 val engine = EnrichmentEngine.Builder()
@@ -45,7 +44,6 @@ Profile methods return structured data classes with named properties. No casting
 
 ### Artist profile
 
-<!-- no-compile: assumes `engine` from the engine-setup example above -->
 ```kotlin
 // Inside a coroutine or runBlocking { }
 val profile = engine.artistProfile("Radiohead")
@@ -88,7 +86,6 @@ profile.genreDiscovery               // List<GenreAffinity> — related genres t
 
 ### Album profile
 
-<!-- no-compile: assumes `engine` from the engine-setup example above -->
 ```kotlin
 val profile = engine.albumProfile("OK Computer", "Radiohead")
 
@@ -124,7 +121,6 @@ profile.genreDiscovery               // List<GenreAffinity>
 
 ### Track profile
 
-<!-- no-compile: assumes `engine` from the engine-setup example above -->
 ```kotlin
 val profile = engine.trackProfile("Creep", "Radiohead")
 
@@ -157,7 +153,6 @@ profile.genreDiscovery               // List<GenreAffinity>
 
 By default, profile methods request all types relevant to the entity (16 for artists, 15 for albums, 9 for tracks). Override to request fewer types for faster responses:
 
-<!-- no-compile: assumes `engine` from the engine-setup example above -->
 ```kotlin
 // Only fetch photo and genres — skips bio, discography, timeline, etc.
 val profile = engine.artistProfile(
@@ -174,7 +169,6 @@ See [configuration.md](configuration.md) for the full default type sets and set 
 
 Bypass the cache and fetch fresh data from providers:
 
-<!-- no-compile: assumes `engine` from the engine-setup example above -->
 ```kotlin
 val profile = engine.artistProfile("Radiohead", forceRefresh = true)
 ```
@@ -187,7 +181,6 @@ Works on all three profile methods and on `engine.enrich()` directly. The forceR
 
 When identity resolution is ambiguous, profile methods return `AMBIGUOUS` instead of results. Re-enrich from the chosen candidate:
 
-<!-- no-compile: assumes `engine` from the engine-setup example above -->
 ```kotlin
 val profile = engine.artistProfile("Bush")
 
@@ -207,7 +200,6 @@ if (profile.canonicalStatus == CanonicalStatus.AMBIGUOUS) {
 
 The `SearchCandidate` overloads exist for all three profile methods:
 
-<!-- no-compile: illustrative overload listing; `candidate` is a placeholder `SearchCandidate`, not locally declared -->
 ```kotlin
 engine.artistProfile(candidate)
 engine.albumProfile(candidate)
@@ -222,7 +214,6 @@ See [identity-resolution.md](identity-resolution.md) for the full disambiguation
 
 If you already know the MusicBrainz ID, pass it to skip identity resolution entirely:
 
-<!-- no-compile: assumes `engine` from the engine-setup example above -->
 ```kotlin
 val profile = engine.artistProfile(
     name = "Radiohead",
@@ -240,7 +231,6 @@ Enrichment results carry the identifiers they were resolved with, and top tracks
 back in skips identity resolution entirely, so the call goes straight to the provider that can
 answer it:
 
-<!-- no-compile: assumes `engine` and `topTrack` from context this fragment does not declare -->
 ```kotlin
 // Skips MusicBrainz, goes straight to Deezer
 val preview = engine.trackProfile(
@@ -253,7 +243,6 @@ val preview = engine.trackProfile(
 
 `resolveTrackPreviews` does the same for a list, resolving concurrently:
 
-<!-- no-compile: assumes `engine` and `topTracks` from context this fragment does not declare -->
 ```kotlin
 val previews = engine.resolveTrackPreviews(
     topTracks.map { TrackPreviewRequest(it.title, it.artist, identifiers = it.identifiers) }
@@ -267,7 +256,6 @@ previews.forEach { println("${it.title}: ${it.preview?.url}") }
 
 Enrich a list of requests as a `Flow` — results emit one at a time as each completes:
 
-<!-- no-compile: assumes `engine`, and elides `import kotlinx.coroutines.flow.collect` -->
 ```kotlin
 engine.enrichBatch(
     listOf(

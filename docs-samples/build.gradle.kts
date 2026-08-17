@@ -59,4 +59,7 @@ dependencies {
     // musicmeta-core depends on this as `implementation`, not `api` — a consumer whose sample calls
     // `Flow`-returning API (`enrichBatch`) needs its own copy, the same reason demo-cli has one.
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
+    // Prelude.kt's stand-in for "your existing OkHttpClient" — the actual dependency an
+    // OkHttpEnrichmentClient sample needs, not musicmeta-okhttp's wrapper around one.
+    implementation(libs.okhttp)
 }

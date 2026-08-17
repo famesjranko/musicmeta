@@ -110,7 +110,6 @@ EnrichmentConfig(
 
 Use `engine.invalidate()` to clear cached data by request — the engine resolves the cache key for you:
 
-<!-- no-compile: assumes `engine` from the InMemoryEnrichmentCache example above -->
 ```kotlin
 val request = EnrichmentRequest.forArtist("Radiohead")
 
@@ -129,7 +128,7 @@ This is preferred over calling `engine.cache.invalidate(entityKey, ...)` directl
 
 Bypass the cache entirely and fetch fresh data from providers:
 
-<!-- no-compile: assumes `engine`, and reuses `val profile` across three alternative calls; not meant to compile as one program -->
+<!-- no-compile: shows three alternative forceRefresh calls reusing `val profile`; not meant to compile as one program -->
 ```kotlin
 // Via profile methods
 val profile = engine.artistProfile("Radiohead", forceRefresh = true)
@@ -154,7 +153,6 @@ tuple is used for direct requests and transitive composite dependencies.
 
 The cache supports marking entries as "manually selected" — useful when a user explicitly picks artwork or corrects a result. Explicit invalidation, `forceRefresh`, and `clear()` remove the flag with the cached entry; an ordinary cache hit or background write does not clear it.
 
-<!-- no-compile: assumes `engine` from the InMemoryEnrichmentCache example above -->
 ```kotlin
 val request = EnrichmentRequest.forArtist("Radiohead")
 
@@ -176,7 +174,6 @@ Custom cache implementations receive the engine's opaque key and may retain it f
 bookkeeping. Do not reconstruct it from request strings. Given an exact key previously supplied by
 the engine, the low-level operations are:
 
-<!-- no-compile: assumes `engine`; `opaqueEntityKey` is a placeholder for a real cache key -->
 ```kotlin
 engine.cache.markManuallySelected(opaqueEntityKey, EnrichmentType.ARTIST_PHOTO)
 engine.cache.isManuallySelected(opaqueEntityKey, EnrichmentType.ARTIST_PHOTO)
@@ -204,7 +201,6 @@ val engine = EnrichmentEngine.Builder()
 
 When a provider returns `Error` or `RateLimited` and an expired cache entry exists for that type, the engine serves the expired entry as `Success` with `isStale = true`. The consumer can show a staleness indicator:
 
-<!-- no-compile: assumes `results` from an `engine.enrich(...)` call shown earlier in this guide -->
 ```kotlin
 val result = results.result(EnrichmentType.GENRE) as? EnrichmentResult.Success
 if (result?.isStale == true) {
