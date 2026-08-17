@@ -641,3 +641,35 @@ numbers came from. **Then assert the edit changed the number of lines you expect
 it changed something: a mutation that deletes the intended block and a neighbouring one is still
 "present" by any grep, and it will fail to compile rather than fail the test, which reads as a broken
 build rather than a broken probe.
+
+
+## 19. A suite can be fully covered by count and carry no test that discriminates
+
+Coverage is usually judged by what exists: a case per branch, a test per behaviour, a file per
+subject. That measure cannot see whether any of those tests would notice the behaviour going away.
+A test whose scenario puts the subject in a state where it is **inert by specification** — every
+candidate tied, the input null, the collection empty — passes identically whether the subject is
+present, broken, or deleted. It is a characterisation of the inert case, and it reads on the page
+exactly like a regression test for the live one.
+
+Two such tests can sit beside each other covering "no matching candidate" and "the input was null",
+and between them exercise every line of a ranking tier while proving nothing about it. Delete the
+tier and both stay green. The suite still reports a healthy count, the diff still shows tests added
+alongside the change, and review still sees a subject with tests next to it.
+
+**This is invisible to reading, including careful reading.** A review that examined both a release
+suite and a recording suite here found the asymmetry between them — five tests against two — and
+described it as a coverage gap in *count*. The two suites' shared blind spot was that neither of the
+two cases present in both could fail under the mutation its own subject implies, and no amount of
+reading the tests surfaced that; demanding the mutation did, immediately.
+
+**The recipe: pick the mutation the subject implies — remove the tier, drop the field, invert the
+condition — and require a named test to go red.** State the expected red set *before* running it, and
+report a deviation rather than reconciling it; a count that comes back different is the finding. When
+a test genuinely cannot fail that way and is still worth keeping, **say so in its title or KDoc**:
+inertness is a real property the callers may depend on, and an unlabelled test that cannot fail will
+be refiled as a gap by the next reader, or trusted as a guard by the one after that.
+
+Distinct from §16 (a probe whose planted edit was never present) and §18 (a real measurement of the
+wrong tree): here the test runs, the measurement is honest, and the subject is genuinely exercised —
+it simply cannot register the subject's absence.
