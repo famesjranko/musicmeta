@@ -15,8 +15,10 @@ only serves the providers already here does not.
 
 ```
 musicmeta-core        pure JVM: the engine, the provider implementations, the contracts
-├── engine/           pipeline: identity, fan-out, gating, merging, synthesis  (internal)
-├── provider/<name>/  one dir per upstream: *Api, *Models, *Mapper (internal) + <Name>Provider (public)
+├── engine/           pipeline: identity, fan-out, gating, merging, synthesis — internal but for
+│                     ResultMerger and CompositeSynthesizer, the two extension-point interfaces
+├── provider/<name>/  one dir per upstream: *Api, *Models, *Mapper (internal) + at least one
+│                     public *Provider — deezer ships a second for similar albums
 ├── cache/            CacheMode and the in-memory EnrichmentCache
 ├── http/             the HttpClient seam, rate limiter, budgeted retry, circuit breaker
 └── (root package)    the published surface: request/result/profile types, EnrichmentEngine.Builder
@@ -36,8 +38,12 @@ flowchart TD
         cache["cache/"]
         http["http/ — HttpClient seam"]
         published --> engine
+        published --> provider
+        published --> cache
+        published --> http
         engine --> provider
         engine --> cache
+        engine --> http
         provider --> http
     end
     okhttp["musicmeta-okhttp<br/>OkHttpEnrichmentClient"] -->|api| core
@@ -81,33 +87,43 @@ a build that consumes the library from outside (`docs/pitfalls.md` §1).
 
 ```mermaid
 flowchart TD
-    req["EnrichmentRequest"] --> cacheread["cache.get, then cache.getNegative<br/>per requested type"]
-    cacheread --> allhit{"any type left<br/>uncached?"}
-    allhit -->|no| results
-    allhit -->|yes| ident{"identity resolution<br/>enabled and needed?"}
+    req["EnrichmentRequest"] --> force{"forceRefresh?"}
+    force -->|"yes — both reads skipped"| ident
+    force -->|no| cacheread["cache.get, then cache.getNegative<br/>per requested type"]
+    cacheread --> anyleft{"any type still<br/>uncached?"}
+    anyleft -->|no| results
+    anyleft -->|yes| ident{"identity resolution<br/>enabled and needed?"}
     ident -->|no| fanout
-    ident -->|yes| resolve["resolveIdentity — canonical ids and names,<br/>provenance stamped; its payload may<br/>answer some types outright"]
+    ident -->|yes| resolve["resolveIdentity — canonical ids and names,<br/>provenance stamped; its payload<br/>may answer some types outright"]
     resolve --> fanout
 
-    subgraph fanout["fan-out over the uncached types"]
+    subgraph fanout["fan-out over the uncached types, under one enrich deadline"]
         direction TB
-        regular["regular types + composite sub-types<br/>resolved concurrently, one chain each"]
-        mergeable["mergeable types<br/>collect every provider, then merge"]
+        regular["regular + composite sub-types<br/>concurrently, one chain each"]
+        mergeable["mergeable types<br/>every provider, then merged"]
         composite["composite types<br/>synthesized from the resolved map"]
         regular --> mergeable --> composite
     end
 
-    fanout --> gate["gate: filterByConfidence, then demoteUnanswered"]
-    gate --> writeback["writeBack — positive or negative per type,<br/>keyed with canonical-name aliasing"]
-    writeback --> results["EnrichmentResults"]
+    fanout --> deadline{"deadline held?"}
+    deadline -->|"no"| timedout["every unresolved type becomes<br/>Error(TIMEOUT); nothing is cached"]
+    deadline -->|yes| writeback["writeBack — positive or negative per type,<br/>keyed with canonical-name aliasing"]
+    timedout --> stale
+    writeback --> stale["STALE_IF_ERROR only: an expired entry<br/>may stand in for an Error, marked stale"]
+    stale --> results["EnrichmentResults"]
 ```
 
-Three things this ordering is load-bearing about. **The cache is read before identity resolution,
-not after**, so a fully cached call never touches an upstream. **Composites are last because they
-read a map the earlier stages fill** — a composite type depends on resolved types, so the stages are
-ordered, not merely parallel. And **the gate filters by confidence before it demotes unanswered
-results**, because confidence scores the identification, not the payload (`docs/pitfalls.md` §8): a
-perfect identity match can still carry a payload that answers nothing.
+Every result is gated as it is produced — `filterByConfidence`, then `demoteUnanswered` — inside
+whichever stage produced it, rather than in one pass over the finished set. Confidence runs first
+because it scores the identification, not the payload (`docs/pitfalls.md` §8): a perfect identity
+match can still carry a payload that answers nothing.
+
+Three things this ordering is load-bearing about. **The cache is read before identity resolution**,
+so a fully cached call never touches an upstream — unless `forceRefresh` skips both reads, which is
+the only way to make one. **Composites are last because they read a map the earlier stages fill** —
+they depend on resolved types, so the stages are ordered, not merely parallel. And **a timed-out run
+returns what it has but persists none of it**, because the deadline can fire part-way through a step
+that rewrites entries, so what survives is a mix of finished and unfinished work.
 
 Two engine-level invariants constrain every provider rather than any one of them, which is what
 makes them architectural: **confidence and provenance may understate the evidence, never overstate
@@ -117,9 +133,8 @@ on purpose, because consumers branch on the distinction. What each cost to learn
 
 ## What the eleventh provider costs
 
-A new provider is `provider/<name>/` with three `internal` files (`*Api`, `*Models`, `*Mapper`) and
-one public `*Provider` — internal so they can be renamed without an `apiDump`. It inherits, rather
-than re-implements:
+A new provider is a directory under `provider/`, laid out as `CLAUDE.md` prescribes. What that buys
+is the point here: it inherits, rather than re-implements,
 
 - transport resilience — rate limiter, budgeted retry, circuit breaker — from `http/`, with one
   breaker per provider id shared across every chain it appears in;
@@ -146,5 +161,5 @@ whose chain back to a live capture is unverified says so in its own `scenario.md
 | The published surface (root-package types, `Builder`) | every consumer, `api/*.api`, `CHANGELOG.md` | erased descriptors hide suspend and nullability breaks — read the `.kt`, not the dump (§1) |
 | Engine behaviour (`engine/`) | every provider at once | the two one-directional invariants above |
 | One provider (`provider/<name>/`) | its own directory | its fixtures must predate the change, or they prove only that the code agrees with itself |
-| Transport policy (`http/`) | every call every provider makes | budgets compose with the enrich deadline; breaker state is shared per provider id (§11, §12) |
+| Transport policy (`http/`) | every call every provider makes | budgets compose with the enrich deadline (§11); breaker state is shared per provider id, and a provider's own memo is state no consumer can flush (§12) |
 | Android persistence | devices that already installed a schema | a migration cannot be undone by reverting the code that shipped it |

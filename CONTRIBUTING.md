@@ -1,7 +1,7 @@
 # Contributing
 
-Run `./check` before claiming anything works; CI runs the same script. `./scripts/bootstrap.sh`
-installs the pinned tools it needs, once.
+Run `make check` before claiming anything works; CI runs the same script. `make bootstrap` installs
+the pinned tools it needs, once.
 
 - Branch topology, issue lifecycle, and how work gets shipped: [docs/project/workflow.md](docs/project/workflow.md)
 - Rules no mechanism catches, and where a finding goes: [CLAUDE.md](CLAUDE.md)
