@@ -287,7 +287,14 @@ internal class MusicBrainzEnricher(
         val needsRelations = best.wikidataId == null && best.wikipediaTitle == null
         val resolved = if (needsRelations) resolveArtistRelations(best) else best
 
-        return buildArtistResult(resolved, type, artistMatchConfidence(request.name, best))
+        // EXACT_NAME requires the artist's own canonical name; pickBestArtist can still win on an
+        // alias or no-name-match tier, and that evidence must report FUZZY_NAME or it overstates.
+        val provenance = if (artistNameTier(request.name, best) == NameMatchTier.CANONICAL) {
+            LookupProvenance.EXACT_NAME
+        } else {
+            LookupProvenance.FUZZY_NAME
+        }
+        return buildArtistResult(resolved, type, artistMatchConfidence(request.name, best), provenance)
     }
 
     /**

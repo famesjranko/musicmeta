@@ -3,6 +3,7 @@ package com.landofoz.musicmeta.provider.musicbrainz
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
+import com.landofoz.musicmeta.LookupProvenance
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.testutil.FakeHttpClient
 import kotlinx.coroutines.test.runTest
@@ -12,9 +13,9 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * An artist named by one of its aliases has to resolve, and the confidence has to say that is what
- * happened. Both halves are read off the same real search response, because all three names below
- * genuinely reach this artist upstream.
+ * An artist named by one of its aliases has to resolve, and the confidence and provenance both have
+ * to say that is what happened. All three halves are read off the same real search response, because
+ * all three names below genuinely reach this artist upstream.
  */
 class MusicBrainzAliasIdentityTest {
 
@@ -94,6 +95,45 @@ class MusicBrainzAliasIdentityTest {
 
         // Then - the alias type decides: a hint MusicBrainz keeps for its indexer is not a name
         assertEquals(0.85f, success.confidence, 0.001f)
+    }
+
+    // --- Provenance: the control that separates "the alias case is honest" from "everything
+    // reports FUZZY_NAME" ---
+
+    @Test
+    fun `the artist's own name reports EXACT_NAME provenance`() = runTest {
+        // Given - a request naming the artist itself, matched by MusicBrainz at score 100
+        val name = "Coldplay"
+
+        // When - resolving the artist
+        val success = resolve(name)
+
+        // Then - a canonical-name hit is confirmed, not merely selected
+        assertEquals(LookupProvenance.EXACT_NAME, success.provenance)
+    }
+
+    @Test
+    fun `a localised alias reports FUZZY_NAME provenance, not EXACT_NAME`() = runTest {
+        // Given - a request naming the artist's Japanese alias, which carries a locale
+        val name = "コールドプレイ"
+
+        // When - resolving the artist
+        val success = resolve(name)
+
+        // Then - the primary-alias tier is not a canonical-name confirmation
+        assertEquals(LookupProvenance.FUZZY_NAME, success.provenance)
+    }
+
+    @Test
+    fun `a search-hint alias reports FUZZY_NAME provenance, not EXACT_NAME`() = runTest {
+        // Given - "Coolplay", a misspelling MusicBrainz keeps as a "Search hint" alias
+        val name = "Coolplay"
+
+        // When - resolving the artist
+        val success = resolve(name)
+
+        // Then - the weakest tier is not a canonical-name confirmation either
+        assertEquals(LookupProvenance.FUZZY_NAME, success.provenance)
     }
 
     @Test

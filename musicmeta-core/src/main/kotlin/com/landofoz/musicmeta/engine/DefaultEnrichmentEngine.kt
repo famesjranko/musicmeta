@@ -192,6 +192,10 @@ internal class DefaultEnrichmentEngine(
                         EnrichmentResult.Error(type, "engine", "Enrichment timed out", errorKind = ErrorKind.TIMEOUT)
                 }
             }
+            // A truncated run never reaches the stamp inside the timed block, so a Success already
+            // written (e.g. by resolveIdentity) would otherwise keep provenance == null. FAILED
+            // matches the identity fallback below: the deadline beat identity resolution.
+            stampProvenance(results, identityResolution?.status ?: CanonicalStatus.FAILED, chainExecutions)
         }
 
         // Stale fallback and write-back are outside the timed block above on purpose: a timeout

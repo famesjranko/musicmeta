@@ -167,6 +167,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - demo-web's "Clear cached result & reload" now invalidates the identifier-bearing preview tuple, not only the name tuple, so the entry named by the following reload is actually cleared
 - CoverArtArchive, Fanart.tv, Wikipedia, ListenBrainz and Wikidata now memoize their per-release/per-artist upstream fetch for one `enrich()` call instead of once per type
 - MusicBrainz's plain recording search is now memoized per `enrich()` call, so a track miss no longer requests the same unfiltered recording search twice
+- A timed-out enrich now stamps `provenance` on a `Success` identity resolution already wrote, instead of leaving it `null` against the published guarantee every `Success` sets it
+- MusicBrainz artist identity now reports `FUZZY_NAME`, not `EXACT_NAME`, for an alias match — a label fix only; the matched artist and `matchScore` are unchanged
 
 ## [0.11.0] - 2026-07-28
 
