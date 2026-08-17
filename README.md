@@ -192,7 +192,8 @@ To consume a local checkout instead, see [docs/project/workflow.md](docs/project
 The `demo-cli/` module is a standalone CLI that showcases all three API tiers (profiles, named accessors, raw results), cache management, and the disambiguation flow. To enable the key-requiring providers, copy `secrets.properties.example` to `secrets.properties` and fill in the keys, or set environment variables (`LASTFM_API_KEY`, `FANARTTV_API_KEY`, `DISCOGS_TOKEN`, `LISTENBRAINZ_TOKEN`).
 
 ```bash
-cd demo-cli && ../gradlew run -q --console=plain
+make demo-cli-run                          # interactive
+make demo-cli-run ARGS="artist Radiohead"  # one command, then exit
 ```
 
 ```
@@ -209,8 +210,14 @@ The [`demo-web/`](demo-web/README.md) module is the same idea as a web app — a
 track pages rendering everything the library exposes:
 
 ```bash
-cd demo-web && ./run.sh   # http://localhost:8099
+make demo-web-run   # http://localhost:8099
 ```
+
+![The demo-web artist page for Radiohead, showing merged genres, biography, imagery, and per-field provider attribution](docs/demo-web.png)
+
+Every panel is one `EnrichmentType`, and the tags beside each row name the providers that answered
+it. Both demos work keyless; the key-requiring providers stay dark until you supply keys. `make
+help` lists the rest of the targets.
 
 ## License
 
