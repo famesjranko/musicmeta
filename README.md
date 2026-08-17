@@ -15,34 +15,19 @@ A Kotlin library that gives Android and JVM music apps access to rich metadata, 
 
 ## What it does
 
-```
-"OK Computer" by Radiohead
-         |
-         v
-+-----------------------------------------------+
-|  EnrichmentEngine                             |
-|  11 providers -> 36 enrichment types          |
-|                                               |
-|  MusicBrainz    Cover Art Archive  Wikidata   |
-|  Wikipedia      LRCLIB             Deezer     |
-|  iTunes         Last.fm            Fanart.tv  |
-|  ListenBrainz   Discogs                       |
-+-----------------------------------------------+
-         |
-         v
-  ArtistProfile / AlbumProfile / TrackProfile
-    profile.photo?.url           -> best of 5 image sources, Wikidata first
-    profile.bio?.text            -> biography from Wikipedia
-    profile.genres               -> [GenreTag("alternative rock", 1.00), ...]
-    profile.discography          -> 45 releases
-    profile.similarArtists       -> 31 artists, Last.fm + Deezer merged
-    ...
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/what-it-does-dark.svg">
+  <img alt="A request for Radiohead enters the EnrichmentEngine, passes through identity, fan-out, merge and cache, and comes out as an ArtistProfile carrying photo, bio, genres, discography and similar artists with a confidence for each" src="docs/what-it-does.svg" width="100%">
+</picture>
 
-Those counts are one real `artistProfile("Radiohead")` call, keyless — what a provider returns
-today is what you get, not a fixed shape.
+MusicBrainz resolves identifiers first, so every downstream lookup is exact rather than a name
+search. Rate limiting, circuit breaking, confidence scoring and caching are built in, and each type
+resolves independently -- a provider that fails costs you that one type, not the profile.
 
-The engine handles the hard parts: MusicBrainz resolves identifiers first, then downstream providers use those IDs for precise lookups. Rate limiting, circuit breaking, confidence scoring, and caching are all built in. 8 of 11 providers work without API keys, and every type resolves independently -- one provider failing costs you that type, not the profile.
+The figure is one real `artistProfile("Radiohead")` call with all four optional keys configured:
+15 of 16 types answered. The same call keyless answers 12 of 16, with fewer image alternates,
+20 similar artists instead of 31, and genre confidence at 0.70 rather than 1.00 -- what each
+provider is asked for, and what it gives back, is in [docs/providers.md](docs/providers.md).
 
 ## Quick start
 
