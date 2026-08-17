@@ -519,6 +519,7 @@ class ProviderMemoLifetimeTest {
             {
               "id": "thin1",
               "title": "OK Computer",
+              "artist-credit": [{"artist": {"id": "art1", "name": "Radiohead"}}],
               "date": "1997-06-16",
               "country": "GB",
               "label-info": [{"label": {"name": "Parlophone"}}],

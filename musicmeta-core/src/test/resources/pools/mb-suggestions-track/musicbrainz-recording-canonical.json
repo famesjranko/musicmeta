@@ -1,7 +1,13 @@
 {
   "count": 2,
   "recordings": [
-    {"id": "rec-b-side", "score": 50, "title": "Enter Sandman (early version)"},
-    {"id": "rec-remix", "score": 45, "title": "Sandman"}
+    {
+      "id": "rec-b-side", "score": 50, "title": "Enter Sandman (early version)",
+      "artist-credit": [{"artist": {"id": "art-metallica", "name": "Metallica"}}]
+    },
+    {
+      "id": "rec-remix", "score": 45, "title": "Sandman",
+      "artist-credit": [{"artist": {"id": "art-metallica", "name": "Metallica"}}]
+    }
   ]
 }

@@ -338,7 +338,8 @@ class MusicBrainzProviderTest {
         // Given - every candidate scores below the default minimum match score (80)
         httpClient.givenJsonResponse(
             "recording?query",
-            """{"recordings":[{"id":"rec-low","score":50,"title":"Enter Sandman"}]}""",
+            """{"recordings":[{"id":"rec-low","score":50,"title":"Enter Sandman",""" +
+                """"artist-credit":[{"artist":{"id":"art-metallica","name":"Metallica"}}]}]}""",
         )
         val request = EnrichmentRequest.forTrack("Enter Sandman", "Metallica")
 
@@ -361,7 +362,8 @@ class MusicBrainzProviderTest {
             // must not run. MusicBrainzTransientFailureTest covers the empty-pool → fuzzy branch.
             httpClient.givenJsonResponse(
                 "recording%3A%22Zzxxqwerty12345%22",
-                """{"recordings":[{"id":"rec-near","score":60,"title":"Metallica Anthology"}]}""",
+                """{"recordings":[{"id":"rec-near","score":60,"title":"Metallica Anthology",""" +
+                    """"artist-credit":[{"artist":{"id":"art-metallica","name":"Metallica"}}]}]}""",
             )
             httpClient.givenJsonResponse(
                 "recording%3AZzxxqwerty12345%7E",
@@ -407,6 +409,7 @@ class MusicBrainzProviderTest {
                 "title": "Enter Sandman",
                 "length": 331000,
                 "disambiguation": "",
+                "artist-credit": [{"artist": {"id": "art-metallica", "name": "Metallica"}}],
                 "releases": [
                   {"status": "Official", "release-group": {"id": "rg-studio", "primary-type": "Album", "title": "Metallica"}}
                 ]
@@ -434,7 +437,8 @@ class MusicBrainzProviderTest {
         // Given - the only candidate scores below the default minimum match score (80)
         httpClient.givenJsonResponse(
             "recording?query",
-            """{"recordings":[{"id":"rec-low","score":50,"title":"Enter Sandman"}]}""",
+            """{"recordings":[{"id":"rec-low","score":50,"title":"Enter Sandman",""" +
+                """"artist-credit":[{"artist":{"id":"art-metallica","name":"Metallica"}}]}]}""",
         )
         val request = EnrichmentRequest.forTrack("Enter Sandman", "Metallica")
 
@@ -909,6 +913,7 @@ class MusicBrainzProviderTest {
             {
               "id": "thin1",
               "title": "OK Computer",
+              "artist-credit": [{"artist": {"id": "def456", "name": "Radiohead"}}],
               "date": "1997-06-16",
               "country": "GB",
               "label-info": [{"label": {"name": "Parlophone"}}],
@@ -1131,7 +1136,8 @@ class MusicBrainzProviderTest {
                 "score": 95,
                 "title": "Paranoid Android",
                 "isrcs": ["GBAYE9700100"],
-                "tags": [{"name": "alternative rock", "count": 3}]
+                "tags": [{"name": "alternative rock", "count": 3}],
+                "artist-credit": [{"artist": {"id": "art-radiohead", "name": "Radiohead"}}]
               }]
             }
         """.trimIndent()
@@ -1153,43 +1159,52 @@ class MusicBrainzProviderTest {
               "recordings": [
                 {
                   "id": "rec-live-1", "score": 100, "title": "Enter Sandman",
-                  "disambiguation": "live"
+                  "disambiguation": "live",
+                  "artist-credit": [{"artist": {"id": "art-metallica", "name": "Metallica"}}]
                 },
                 {
                   "id": "rec-live-2", "score": 100, "title": "Enter Sandman",
-                  "disambiguation": "live at Moscow"
+                  "disambiguation": "live at Moscow",
+                  "artist-credit": [{"artist": {"id": "art-metallica", "name": "Metallica"}}]
                 },
                 {
                   "id": "rec-live-3", "score": 100, "title": "Enter Sandman",
-                  "disambiguation": "live at Seattle"
+                  "disambiguation": "live at Seattle",
+                  "artist-credit": [{"artist": {"id": "art-metallica", "name": "Metallica"}}]
                 },
                 {
                   "id": "rec-bootleg-1", "score": 100, "title": "Enter Sandman",
-                  "disambiguation": "live bootleg"
+                  "disambiguation": "live bootleg",
+                  "artist-credit": [{"artist": {"id": "art-metallica", "name": "Metallica"}}]
                 },
                 {
                   "id": "rec-bootleg-2", "score": 100, "title": "Enter Sandman",
-                  "disambiguation": "live bootleg 1991"
+                  "disambiguation": "live bootleg 1991",
+                  "artist-credit": [{"artist": {"id": "art-metallica", "name": "Metallica"}}]
                 },
                 {
                   "id": "rec-demo", "score": 100, "title": "Enter Sandman",
-                  "disambiguation": "demo: 1990-08-13"
+                  "disambiguation": "demo: 1990-08-13",
+                  "artist-credit": [{"artist": {"id": "art-metallica", "name": "Metallica"}}]
                 },
                 {
                   "id": "rec-bootleg-edited", "score": 100, "title": "Enter Sandman",
                   "disambiguation": "bootleg edited version",
+                  "artist-credit": [{"artist": {"id": "art-metallica", "name": "Metallica"}}],
                   "releases": [
                     {"status": "Bootleg", "release-group": {"primary-type": "Album"}}
                   ]
                 },
                 {
                   "id": "rec-studio", "score": 100, "title": "Enter Sandman",
+                  "artist-credit": [{"artist": {"id": "art-metallica", "name": "Metallica"}}],
                   "releases": [
                     {"status": "Official", "release-group": {"primary-type": "Other"}}
                   ]
                 },
                 {
-                  "id": "rec-cover-ulrich", "score": 100, "title": "Enter Sandman (Ulrich)"
+                  "id": "rec-cover-ulrich", "score": 100, "title": "Enter Sandman (Ulrich)",
+                  "artist-credit": [{"artist": {"id": "art-metallica", "name": "Metallica"}}]
                 }
               ]
             }
@@ -1205,6 +1220,7 @@ class MusicBrainzProviderTest {
               "recordings": [
                 {
                   "id": "rec-studio", "score": 100, "title": "Enter Sandman",
+                  "artist-credit": [{"artist": {"id": "art-metallica", "name": "Metallica"}}],
                   "releases": [
                     {
                       "status": "Official",
@@ -1243,6 +1259,7 @@ class MusicBrainzProviderTest {
             {
               "id": "rec1",
               "title": "Paranoid Android",
+              "artist-credit": [{"artist": {"id": "art-radiohead", "name": "Radiohead"}}],
               "relations": [
                 {
                   "type": "vocal",

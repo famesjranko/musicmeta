@@ -180,7 +180,10 @@ class MusicBrainzApiSearchRecordingsTest {
         const val SINGLE_MATCH = """
             {
               "recordings": [
-                {"id": "rec-studio", "score": 100, "title": "Enter Sandman"}
+                {
+                  "id": "rec-studio", "score": 100, "title": "Enter Sandman",
+                  "artist-credit": [{"artist": {"id": "art-metallica", "name": "Metallica"}}]
+                }
               ]
             }
         """
@@ -190,8 +193,14 @@ class MusicBrainzApiSearchRecordingsTest {
         const val FILTERED_POOL = """
             {
               "recordings": [
-                {"id": "rec-studio", "score": 100, "title": "Enter Sandman"},
-                {"id": "rec-shared", "score": 100, "title": "Enter Sandman"}
+                {
+                  "id": "rec-studio", "score": 100, "title": "Enter Sandman",
+                  "artist-credit": [{"artist": {"id": "art-metallica", "name": "Metallica"}}]
+                },
+                {
+                  "id": "rec-shared", "score": 100, "title": "Enter Sandman",
+                  "artist-credit": [{"artist": {"id": "art-metallica", "name": "Metallica"}}]
+                }
               ]
             }
         """
@@ -199,8 +208,14 @@ class MusicBrainzApiSearchRecordingsTest {
         const val UNFILTERED_POOL = """
             {
               "recordings": [
-                {"id": "rec-shared", "score": 100, "title": "Enter Sandman"},
-                {"id": "rec-live", "score": 100, "title": "Enter Sandman"}
+                {
+                  "id": "rec-shared", "score": 100, "title": "Enter Sandman",
+                  "artist-credit": [{"artist": {"id": "art-metallica", "name": "Metallica"}}]
+                },
+                {
+                  "id": "rec-live", "score": 100, "title": "Enter Sandman",
+                  "artist-credit": [{"artist": {"id": "art-metallica", "name": "Metallica"}}]
+                }
               ]
             }
         """

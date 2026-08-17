@@ -203,8 +203,14 @@ class MusicBrainzCanonicalRecordingSearchTest {
             {
               "count": 2,
               "recordings": [
-                {"id": "rec-b-side", "score": 50, "title": "Enter Sandman (early version)"},
-                {"id": "rec-remix", "score": 45, "title": "Sandman"}
+                {
+                  "id": "rec-b-side", "score": 50, "title": "Enter Sandman (early version)",
+                  "artist-credit": [{"artist": {"id": "art-metallica", "name": "Metallica"}}]
+                },
+                {
+                  "id": "rec-remix", "score": 45, "title": "Sandman",
+                  "artist-credit": [{"artist": {"id": "art-metallica", "name": "Metallica"}}]
+                }
               ]
             }
         """.trimIndent()
@@ -220,6 +226,7 @@ class MusicBrainzCanonicalRecordingSearchTest {
                 {
                   "id": "rec-live-1", "score": 100, "title": "Enter Sandman",
                   "disambiguation": "live, 1992-01-11: Arco Arena, Sacramento, CA, US",
+                  "artist-credit": [{"artist": {"id": "art-metallica", "name": "Metallica"}}],
                   "releases": [{
                     "status": "Official",
                     "release-group": {"id": "rg-live", "title": "Live Shit", "primary-type": "Album"}
@@ -228,6 +235,7 @@ class MusicBrainzCanonicalRecordingSearchTest {
                 {
                   "id": "rec-demo", "score": 100, "title": "Enter Sandman",
                   "disambiguation": "demo: 1990-08-13",
+                  "artist-credit": [{"artist": {"id": "art-metallica", "name": "Metallica"}}],
                   "releases": [{
                     "status": "Official",
                     "release-group": {"id": "rg-studio", "title": "Metallica", "primary-type": "Album"}
@@ -248,6 +256,7 @@ class MusicBrainzCanonicalRecordingSearchTest {
               "recordings": [
                 {
                   "id": "rec-studio", "score": 100, "title": "Enter Sandman",
+                  "artist-credit": [{"artist": {"id": "art-metallica", "name": "Metallica"}}],
                   "releases": [{
                     "status": "Official",
                     "release-group": {"id": "rg-studio", "title": "Metallica", "primary-type": "Album"}
@@ -256,6 +265,7 @@ class MusicBrainzCanonicalRecordingSearchTest {
                 {
                   "id": "rec-wembley", "score": 100, "title": "Enter Sandman (live at Wembley)",
                   "disambiguation": "live, 1992-04-20: Wembley Stadium, London, UK",
+                  "artist-credit": [{"artist": {"id": "art-metallica", "name": "Metallica"}}],
                   "releases": [{
                     "status": "Official",
                     "release-group": {"id": "rg-live", "title": "Live Shit", "primary-type": "Album"}
@@ -272,6 +282,7 @@ class MusicBrainzCanonicalRecordingSearchTest {
               "recordings": [
                 {
                   "id": "rec-sampler", "score": 100, "title": "Enter Sandman",
+                  "artist-credit": [{"artist": {"id": "art-metallica", "name": "Metallica"}}],
                   "releases": [{
                     "status": "Official",
                     "release-group": {"id": "rg-sampler", "title": "Metal Sampler", "primary-type": "Other"}
@@ -280,6 +291,7 @@ class MusicBrainzCanonicalRecordingSearchTest {
                 {
                   "id": "rec-studio", "score": 100, "title": "Enter Sandman", "length": 331560,
                   "tags": [{"name": "heavy metal", "count": 7}],
+                  "artist-credit": [{"artist": {"id": "art-metallica", "name": "Metallica"}}],
                   "releases": [{
                     "status": "Official",
                     "release-group": {"id": "rg-studio", "title": "Metallica", "primary-type": "Album"}

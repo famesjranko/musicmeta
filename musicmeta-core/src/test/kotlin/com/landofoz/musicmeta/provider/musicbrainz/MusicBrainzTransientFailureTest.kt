@@ -207,7 +207,10 @@ class MusicBrainzTransientFailureTest {
 
         private val FUZZY_RECORDINGS_NEAR_MISS = """
             {"recordings":[
-              {"id":"33333333-3333-3333-3333-333333333333","title":"Enter Sandman","score":68}
+              {
+                "id":"33333333-3333-3333-3333-333333333333","title":"Enter Sandman","score":68,
+                "artist-credit":[{"artist":{"id":"art-metallica","name":"Metallica"}}]
+              }
             ]}
         """.trimIndent()
     }
