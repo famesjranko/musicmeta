@@ -108,8 +108,8 @@ internal object EntityIdentity {
      *   `suggestions` are near-misses carried only by [CanonicalStatus.AMBIGUOUS]
      *   (`IdentityResolution.kt:17-18`). Neither was asserted anywhere before this kit.
      *
-     * **What it deliberately does not assert, and why**, correcting a suggestion made while this was
-     * designed: a `Success` alongside an `UNRESOLVED` or `AMBIGUOUS` status is *not* a contradiction.
+     * **What it deliberately does not assert, and why:** a `Success` alongside an `UNRESOLVED` or
+     * `AMBIGUOUS` status is *not* a contradiction.
      * A provider whose capability declares `IdentifierRequirement.NONE` — LRCLIB, Deezer, iTunes and
      * Last.fm among them — answers from its own name search without any MusicBrainz identity at all,
      * so that pairing is the normal case for most of the stack rather than a fault.

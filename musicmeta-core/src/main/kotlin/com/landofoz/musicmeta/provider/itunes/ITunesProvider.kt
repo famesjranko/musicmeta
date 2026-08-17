@@ -141,8 +141,7 @@ class ITunesProvider(
                     provider = id,
                     confidence = ConfidenceCalculator.idBasedLookup(),
                     resolvedIdentifiers = buildResolvedIdentifiers(barcodeResult),
-                    // A barcode is an external catalogue identifier, not a MusicBrainz id or
-                    // iTunes's own id space.
+                    // See enrichAlbumType's own EXTERNAL_CATALOG_ID comment for why.
                     provenance = LookupProvenance.EXTERNAL_CATALOG_ID,
                 )
             }

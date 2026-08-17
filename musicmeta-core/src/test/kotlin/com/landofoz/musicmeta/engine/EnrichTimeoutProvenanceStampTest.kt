@@ -104,8 +104,8 @@ class EnrichTimeoutProvenanceStampTest {
         val results = engine.enrich(req, types)
 
         // Then - both calls complete, so SIMILAR_ARTISTS is a genuine Success rather than a timeout,
-        // and COUNTRY keeps its provenance — isolating the test above's null to the truncation
-        // itself, not to a fixture or wiring defect
+        // and COUNTRY keeps its provenance — proving the same fixtures and request work cleanly
+        // when nothing truncates, so a timeout run's own truncation is what the other test exercises
         val similarArtists = results.raw[EnrichmentType.SIMILAR_ARTISTS]
         assertTrue(
             "expected SIMILAR_ARTISTS to complete at a generous timeout, got $similarArtists",

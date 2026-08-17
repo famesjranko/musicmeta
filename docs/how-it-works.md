@@ -253,7 +253,7 @@ Migrating from the removed `IdentityMatch`:
 | `IdentityMatch.RESOLVED` (call-level) | `CanonicalStatus.RESOLVED` |
 | `IdentityMatch.SUGGESTIONS` | `CanonicalStatus.AMBIGUOUS` |
 | `IdentityMatch.BEST_EFFORT` | `CanonicalStatus.UNRESOLVED` |
-| `IdentityMatch.UNVERIFIED` | `CanonicalStatus.FAILED` |
+| `IdentityMatch.UNVERIFIED` (never released) | `CanonicalStatus.FAILED` |
 | `identity == null` (disabled) | `CanonicalStatus.NOT_ATTEMPTED_DISABLED` |
 | `identity == null` (not required) | `CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED` |
 | `identity == null` (all cached) | `CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT` |

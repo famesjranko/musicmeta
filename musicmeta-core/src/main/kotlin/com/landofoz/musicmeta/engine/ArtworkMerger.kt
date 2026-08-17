@@ -52,10 +52,7 @@ internal class ArtworkMerger(override val type: EnrichmentType) : ResultMerger {
             resolvedIdentifiers = ResultMerger.mergeIdentifiers(
                 artworkResults.mapNotNull { it.resolvedIdentifiers },
             ),
-            // No single provider's route speaks for a merged result; the weakest contributing
-            // route is the smallest truthful summary. A contributor built outside the engine's
-            // pre-merge stamp (e.g. a direct unit-test fixture) falls back to FUZZY_NAME, the same
-            // conservative default observedProvenance uses for a route it cannot otherwise place.
+            // See weakestProvenance's KDoc for why the merge takes the least-confident contributor.
             provenance = weakestProvenance(artworkResults.map { it.provenance ?: LookupProvenance.FUZZY_NAME }),
         )
     }

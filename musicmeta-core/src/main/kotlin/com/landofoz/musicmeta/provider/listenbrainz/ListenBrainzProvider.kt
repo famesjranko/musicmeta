@@ -31,14 +31,9 @@ class ListenBrainzProvider(
     private val api = ListenBrainzApi(httpClient, rateLimiter, authToken)
 
     /**
-     * `getTopRecordingsForArtist` for [artistMbid], memoized for the life of one
-     * [ProviderCallScope] — ARTIST_TOP_TRACKS calls this directly, and ARTIST_POPULARITY calls it
-     * as a fallback when the batch `popularity/artist` call has nothing for the artist; both read
-     * this same response when they collide. MBID-keyed rather than one slot per call: a call
-     * resolving more than one artist must not share one artist's answer with another's. A miss
-     * (the endpoint's empty-list answer) is memoized too, so an artist with no top recordings costs
-     * one request instead of one per type; called outside an engine, there is no scope to memoize
-     * in and every call hits upstream.
+     * `getTopRecordingsForArtist` for [artistMbid], memoized per [ProviderCallScope]/[CallMemo]
+     * (see their KDocs) — ARTIST_TOP_TRACKS calls this directly, and ARTIST_POPULARITY calls it as
+     * a fallback when the batch `popularity/artist` call has nothing for the artist.
      */
     private suspend fun getTopRecordingsForArtist(artistMbid: String): List<ListenBrainzPopularTrack> {
         val memo = currentCoroutineContext()[ProviderCallScope]

@@ -208,7 +208,8 @@ class BuilderUserAgentContactTest {
     }
 
     @Test fun `a caller-supplied client carrying its own User-Agent is not warned about`() {
-        // Given - a builder whose client sets a compliant User-Agent itself, so contact() is unused
+        // Given - a builder using a caller-supplied FakeHttpClient, a test double the builder never
+        // inspects for User-Agent compliance, with no contact() call
         val logger = RecordingLogger()
         val builder = EnrichmentEngine.Builder()
             .addProvider(provider("musicbrainz"))

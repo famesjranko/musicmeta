@@ -9,9 +9,9 @@ the next reader. It does not run the samples — only proves they still type-che
 
 **Per-guide accumulating narrative.** A guide is not a bag of independent fences: it reads as one
 narrative, and a fence forty lines down routinely assumes a `val` an earlier fence in the same guide
-declared. Compiling each fence alone (this script's first version) made that assumption a compile
-error unrelated to API drift, and opted out 76% of all fences to avoid reporting it — the wrong fix,
-since it meant nothing checked the guide as its reader experiences it. Per guide instead of per fence:
+declared. Compiling each fence alone makes that assumption a compile error unrelated to API drift,
+and the wrong fix is opting affected fences out of checking — that means nothing checked the guide as
+its reader experiences it. Per guide instead of per fence:
 
 - A fence whose depth-0 lines are all declarations (`classify`'s "top-level" path) is written as its
   own top-level declaration in the guide's shared package, so a later fence sees it without an import.

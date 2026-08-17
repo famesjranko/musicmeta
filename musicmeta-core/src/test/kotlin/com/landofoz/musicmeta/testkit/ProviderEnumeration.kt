@@ -9,7 +9,7 @@ import com.landofoz.musicmeta.ProviderInfo
  * [EnrichmentEngine.getProviders], so a provider added tomorrow is covered without editing a test.
  *
  * **The return type here is `ProviderInfo`, correcting `architecture.md` § 2 P6's earlier claim.**
- * That claim said `engine.providers` was public and typed `List<EnrichmentProvider>`, citing an
+ * That claim said `engine.providers` was public and typed `List<EnrichmentProvider>`, citing a
  * committed api-dump line — which is `getProviders ()Ljava/util/List;`, an erased JVM descriptor naming no
  * element type, read as though it were a declaration. The declaration is
  * `fun getProviders(): List<ProviderInfo>` at `EnrichmentEngine.kt:94`, and [ProviderInfo]

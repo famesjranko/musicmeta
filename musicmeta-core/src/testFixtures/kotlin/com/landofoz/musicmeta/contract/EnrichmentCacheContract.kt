@@ -43,9 +43,9 @@ abstract class EnrichmentCacheContract : ContractSuite<EnrichmentCache>() {
 
             // Then - the stored payload comes back unchanged
             // Compared on `data` rather than the whole `Success`: `LookupProvenance.CACHE`'s own
-            // KDoc allows an implementation that did not preserve the original provenance to
-            // relabel it on every read, which the Room backing does and the in-memory ones do not.
-            // That is a per-implementation difference the contract permits, not a violation.
+            // KDoc allows an implementation to relabel provenance to CACHE on every read instead of
+            // preserving what was stored. That is a per-implementation difference the contract
+            // permits, not a violation.
             assertEquals(art().data, envelope?.result?.data)
         } finally {
             release(cache)

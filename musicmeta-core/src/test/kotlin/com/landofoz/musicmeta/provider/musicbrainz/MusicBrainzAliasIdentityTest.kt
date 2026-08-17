@@ -14,7 +14,7 @@ import org.junit.Test
 
 /**
  * An artist named by one of its aliases has to resolve, and the confidence and provenance both have
- * to say that is what happened. All three halves are read off the same real search response, because
+ * to say that is what happened. All three facts are read off the same real search response, because
  * all three names below genuinely reach this artist upstream.
  */
 class MusicBrainzAliasIdentityTest {

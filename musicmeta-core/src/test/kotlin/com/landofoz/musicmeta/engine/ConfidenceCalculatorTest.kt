@@ -41,7 +41,7 @@ class ConfidenceCalculatorTest {
     fun `searchScore clamps to 0`() {
         // Given - a score of 0 out of a max of 100
         // When - computing the search score
-        // Then - the result is clamped to 0.0
+        // Then - the result is 0.0
         assertEquals(0.0f, ConfidenceCalculator.searchScore(0, 100), 0.001f)
     }
 

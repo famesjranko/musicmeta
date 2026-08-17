@@ -500,7 +500,7 @@ below are that measurement, not a live figure:
   exactly where the caller contract matters most. Excluding bodyless members removes only 16 of the
   72 declarations at ratio ≥ 1.0.
 - `MusicBrainzEnricher.pickBestRecording` — 42 comment lines, 17 code, the worst body-bearing case
-  in the repo. Its five ranking tiers each record a live-verified failure mode (§7). So does
+  in the repo. Its ranking tiers record live-verified failure modes (§7). So does
   `DiscogsApi.searchArtist` at 25/11. Shortening either deletes evidence, not prose.
 
 **No cutoff separates the incident from the best documentation in the repo, because on every

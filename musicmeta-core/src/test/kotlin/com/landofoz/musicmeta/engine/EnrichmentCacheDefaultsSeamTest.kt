@@ -33,8 +33,8 @@ class EnrichmentCacheDefaultsSeamTest {
         val second = engine.enrich(request, setOf(EnrichmentType.LYRICS_PLAIN)).raw[EnrichmentType.LYRICS_PLAIN]
 
         // Then - both calls decline cleanly; neither the no-op putNegative nor the always-null
-        // getNegative raises, and the second call is answered by a fresh live lookup rather than a
-        // stale or corrupted read
+        // getNegative raises, and the second call is answered again rather than a stale or
+        // corrupted read
         for (result in listOf(first, second)) {
             assertTrue(
                 "expected a decline, not a Success answering the wrong track: $result",

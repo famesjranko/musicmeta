@@ -126,7 +126,7 @@ fun handleInvalidate(input: String, state: DemoState, term: Terminal) {
     term.info("Cache invalidated for ${entityKind(request)}.")
 }
 
-/** Calls the appropriate profile extension with forceRefresh support. Returns (results, suggestions). */
+/** Calls the appropriate profile extension with forceRefresh support. Returns an [EnrichedProfile]. */
 internal suspend fun enrichProfile(
     state: DemoState,
     request: EnrichmentRequest,

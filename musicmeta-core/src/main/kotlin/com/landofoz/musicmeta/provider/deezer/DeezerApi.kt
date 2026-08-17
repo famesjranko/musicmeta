@@ -149,16 +149,10 @@ internal class DeezerApi(
     /**
      * Finds the track a human would mean by [title]/[artist], optionally narrowed by [album].
      *
-     * The advanced field query narrows the pool to the requested artist and title, with an optional
-     * album field when [album] is supplied. A plain keyword query is the final fallback.
-     *
-     * The queries run narrowest-first, and a tier falls through when it yields no candidate that
-     * survives the [ArtistMatcher] filter: field query with an album hint, field query without the
-     * hint, then the plain keyword query.
-     *
-     * Whichever query produced the pool, [ArtistMatcher] and [TitleMatcher] must accept a candidate
-     * before it is ranked. [rankTracks] applies the provider's tier order to the accepted pool. A
-     * tier with no accepted candidate falls through like an empty one.
+     * Three queries run narrowest-first — field query with an album hint (when [album] is
+     * supplied), field query without it, then a plain keyword query — falling through whenever a
+     * tier yields no candidate that survives the [ArtistMatcher]/[TitleMatcher] filters. Whichever
+     * tier produced an accepted pool, [rankTracks] applies the provider's tier order to it.
      */
     suspend fun searchTrack(title: String, artist: String, album: String? = null): DeezerTrackSearchResult? {
         val queries = buildList {
@@ -385,7 +379,7 @@ internal class DeezerApi(
         /** Edition markers that make a title a worse match unless the request itself asked for one. */
         val UNREQUESTED_TITLE_MARKERS = listOf("live", "remaster", "demo", "remix")
 
-        /** A bare year in a title suffix marks a reissue/remix edition — "Blackened 2020", live. */
+        /** A bare year in a title suffix marks a reissue/remix edition, e.g. "Blackened 2020". */
         val YEAR_REGEX = Regex("""\b(19|20)\d{2}\b""")
     }
 }

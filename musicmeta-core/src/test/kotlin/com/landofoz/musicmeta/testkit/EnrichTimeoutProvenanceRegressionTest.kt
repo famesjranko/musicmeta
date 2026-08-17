@@ -85,7 +85,7 @@ class EnrichTimeoutProvenanceRegressionTest {
     @Test
     fun `control - the same fixtures and request complete and keep provenance at a generous timeout`() =
         runTest {
-            // Given - the identical scenario and request as the ignored test above, differing only
+            // Given - the identical scenario and request as the test above, differing only
             // in enrichTimeoutMs
             val http = UpstreamPools.load(SCENARIO)
             val engine = EnrichmentEngine.Builder()
@@ -100,7 +100,7 @@ class EnrichTimeoutProvenanceRegressionTest {
             val results = engine.enrich(request, setOf(EnrichmentType.COUNTRY, EnrichmentType.BAND_MEMBERS))
 
             // Then - both calls complete, so BAND_MEMBERS is a genuine Success rather than a
-            // timeout, and COUNTRY keeps its provenance — isolating the ignored test's null to the
+            // timeout, and COUNTRY keeps its provenance — isolating the test above's null to the
             // truncation itself, not to a fixture or wiring defect
             val bandMembers = results.raw[EnrichmentType.BAND_MEMBERS]
             assertTrue(
@@ -110,7 +110,7 @@ class EnrichTimeoutProvenanceRegressionTest {
             val country = results.raw[EnrichmentType.COUNTRY]
             assertTrue("expected a Success for COUNTRY, got $country", country is EnrichmentResult.Success)
             assertNotNull(
-                "control run: provenance must be non-null here, or the ignored test above proves nothing",
+                "control run: provenance must be non-null here, or the test above proves nothing",
                 (country as EnrichmentResult.Success).provenance,
             )
         }

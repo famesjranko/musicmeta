@@ -117,12 +117,9 @@ class WikipediaProvider(
     }
 
     /**
-     * Resolve Wikipedia article title from Wikidata entity sitelinks, memoized for the life of one
-     * [ProviderCallScope] — ARTIST_BIO and ARTIST_PHOTO both resolve through this when the request
-     * carries no `wikipediaTitle`. Wikidata-id-keyed rather than one slot per call: a call resolving
-     * more than one entity must not share one entity's answer with another's. A miss is memoized
-     * too, so an entity with no English sitelink costs one request instead of one per type; called
-     * outside an engine, there is no scope to memoize in and every call hits upstream.
+     * Resolve Wikipedia article title from Wikidata entity sitelinks, memoized per
+     * [ProviderCallScope]/[CallMemo] (see their KDocs) — ARTIST_BIO and ARTIST_PHOTO both resolve
+     * through this when the request carries no `wikipediaTitle`.
      *
      * Many artists have a Wikidata entry but no direct Wikipedia URL relation in MusicBrainz.
      */

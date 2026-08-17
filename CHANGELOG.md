@@ -36,8 +36,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `EnrichmentData.Popularity` gains `signals` (appended last, defaulted): source-compatible, binary-incompatible until recompile (`copy`/constructor descriptors changed), as with `GenreTag.curated`
 - `IdentityResolution` gains `title`/`artist`, the canonical names it resolved (appended last, defaulted): recompile; older jars calling the constructor/`copy` throw `NoSuchMethodError`
 - `GenreTag` gains `curated`, marking MusicBrainz's controlled vocabulary and ranking it first: source-compatible, binary-incompatible until recompile (`copy`/constructor descriptors changed)
-- New `IdentityMatch.UNVERIFIED`: an identity provider throwing or returning `Error`/`RateLimited` now reports as that, not `null`/unstamped confident values; `when`s need a branch
-- `UNVERIFIED` results are excluded from the cache write-back, so a retry after a transient identity failure re-resolves rather than serving the unverified guess for the TTL
+- An identity provider throwing or returning `Error`/`RateLimited` now resolves to `CanonicalStatus.FAILED`, not `null`/unstamped confident values; `when`s need a branch
+- A `CanonicalStatus.FAILED` result is excluded from the cache write-back, so a retry after a transient identity failure re-resolves rather than serving the failed guess for the TTL
 - `CompositeSynthesizer.synthesize` now receives the identity provider's `Error` when identity resolution failed, where it previously received `null` (the "not attempted" value)
 - Two distinct all-non-Latin artist names (e.g. two different CJK names) no longer match each other; both used to normalize to an empty string and compare equal
 - A non-Latin artist request (e.g. 東京事変) against a romanizing provider (Deezer/iTunes/Discogs) now returns no match instead of the provider's unverified top hit; recovery is tracked separately
@@ -131,7 +131,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A read timeout or dropped connection now retries, once the deadline left covers another whole attempt and not just the wait; it was the most common MusicBrainz failure and was never retried
 - A 502, 503 or 504 now retries on the same ladder as a 429 (bounded, `Retry-After`-honouring, deadline-aware); MusicBrainz sheds with 503, so a lookup one retry would answer no longer fails
 - MusicBrainz album search took the first score-100 tie, so an album could resolve to a single, bootleg, promo or box set; identity, edition size and earliest date now pick the release
-- MusicBrainz `searchCandidates` returned an empty list for tracks; tracks now get candidates and "did you mean?" suggestions (`IdentityMatch.SUGGESTIONS`), matching album/artist behaviour
+- MusicBrainz `searchCandidates` returned an empty list for tracks; tracks now get candidates and "did you mean?" suggestions (`CanonicalStatus.AMBIGUOUS`), matching album/artist behaviour
 - Wikidata reported an artist from Latvia (Q211) as Czech Republic; Q211 is now Latvia, Czech Republic is keyed on Q213. `COUNTRY` caches 365 days, so clear yours or affected artists stay wrong
 - Wikidata's artist lookup used a call Wikidata always rejected; birth/death date, country and occupation are now returned instead of nothing, every time
 - ListenBrainz's SIMILAR_ARTISTS called a route that never existed and always returned nothing; capability dropped, Last.fm and Deezer already serve it (#18)

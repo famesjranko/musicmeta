@@ -30,12 +30,9 @@ class LastFmProvider(
     private val api = LastFmApi(apiKeyProvider, httpClient, rateLimiter)
 
     /**
-     * `artist.getinfo` for [name], memoized for the life of one [ProviderCallScope] — GENRE,
-     * ARTIST_BIO and ARTIST_POPULARITY all read this same response. Name-keyed rather than one
-     * slot per call: a call resolving more than one artist (a future SIMILAR_ARTISTS use) must not
-     * share one artist's answer with another's. A miss is memoized too, so an unknown artist costs
-     * one request instead of one per type; called outside an engine, there is no scope to memoize
-     * in and every call hits upstream.
+     * `artist.getinfo` for [name], memoized per [ProviderCallScope] (see its KDoc) — GENRE,
+     * ARTIST_BIO and ARTIST_POPULARITY all read this same response. Name-keyed, not one slot per
+     * call, so a future multi-artist use (e.g. SIMILAR_ARTISTS) doesn't cross-share answers.
      */
     private suspend fun getArtistInfo(name: String): LastFmArtistInfo? {
         val memo = currentCoroutineContext()[ProviderCallScope]?.slot(this, ::ArtistInfoMemo)
