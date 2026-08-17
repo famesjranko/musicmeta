@@ -280,13 +280,37 @@ class RunTest(unittest.TestCase):
             out = root / "out"
             out.mkdir()
             (out / "stale.kt").write_text("// old\n", encoding="utf-8")
+            android_out = root / "android-out"
             # When run() runs
-            compiled, skipped = run(root, out)
+            jvm_compiled, jvm_skipped, android_compiled, android_skipped = run(root, out, android_out)
             # Then the stale file is gone and only the current fence's output remains
-            self.assertEqual(compiled, 1)
-            self.assertEqual(skipped, 0)
+            self.assertEqual(jvm_compiled, 1)
+            self.assertEqual(jvm_skipped, 0)
             self.assertFalse((out / "stale.kt").exists())
             self.assertTrue((out / "g_snippet1.kt").exists())
+            # And android.md's absence leaves the Android target empty, not errored
+            self.assertEqual(android_compiled, 0)
+            self.assertEqual(android_skipped, 0)
+
+    def test_run_routes_android_md_to_the_android_out_dir_only(self):
+        # Given a guide set with both a plain guide and android.md
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            guides = root / "docs" / "guides"
+            guides.mkdir(parents=True)
+            (guides / "g.md").write_text("```kotlin\nimport a.B\n```\n", encoding="utf-8")
+            (guides / "android.md").write_text("```kotlin\nimport a.C\n```\n", encoding="utf-8")
+            out = root / "out"
+            android_out = root / "android-out"
+            # When run() runs
+            jvm_compiled, _, android_compiled, _ = run(root, out, android_out)
+            # Then android.md's fence lands only under android_out, g.md's only under out
+            self.assertEqual(jvm_compiled, 1)
+            self.assertEqual(android_compiled, 1)
+            self.assertTrue((out / "g_snippet1.kt").exists())
+            self.assertFalse((out / "android_snippet1.kt").exists())
+            self.assertTrue((android_out / "android_snippet1.kt").exists())
+            self.assertFalse((android_out / "g_snippet1.kt").exists())
 
 
 class PublicApiTest(unittest.TestCase):
@@ -317,6 +341,26 @@ class PublicApiTest(unittest.TestCase):
             names = public_simple_names(root)
         # Then it reports the class name, not the package
         self.assertEqual(names, {"EnrichmentEngine"})
+
+    def test_an_explicit_api_files_list_is_additive_not_a_default_override(self):
+        # Given the default api file plus an android one the caller names explicitly
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.write_api(root)
+            android_dir = root / "musicmeta-android" / "api"
+            android_dir.mkdir(parents=True)
+            (android_dir / "musicmeta-android.api").write_text(
+                "public final class com/landofoz/musicmeta/android/cache/RoomEnrichmentCache {\n}\n",
+                encoding="utf-8",
+            )
+            # When public_packages runs with both files named
+            packages = public_packages(
+                root, ("musicmeta-core/api/musicmeta-core.api", "musicmeta-android/api/musicmeta-android.api")
+            )
+            default_packages = public_packages(root)
+        # Then both packages are reported, and the JVM default (unparameterized) call sees only core
+        self.assertEqual(packages, ["com.landofoz.musicmeta", "com.landofoz.musicmeta.android.cache"])
+        self.assertEqual(default_packages, ["com.landofoz.musicmeta"])
 
 
 if __name__ == "__main__":

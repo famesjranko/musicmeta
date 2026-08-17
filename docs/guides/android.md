@@ -4,7 +4,7 @@ The `musicmeta-android` module adds Android-specific integrations on top of `mus
 
 ## Dependencies
 
-<!-- no-compile: Android/Room/Hilt/WorkManager sample — out of scope for the JVM-only docs-samples module (see check_doc_samples.py) -->
+<!-- no-compile: build.gradle.kts fragment, not application Kotlin -->
 ```kotlin
 // build.gradle.kts
 dependencies {
@@ -21,10 +21,9 @@ Room-backed persistent cache that survives app restarts. Uses `kotlinx.serializa
 
 ### Manual setup (without Hilt)
 
-<!-- no-compile: Android/Room/Hilt/WorkManager sample — out of scope for the JVM-only docs-samples module (see check_doc_samples.py) -->
 ```kotlin
 val db = EnrichmentCacheDatabase.create(context, "enrichment_cache.db")
-val cache = RoomEnrichmentCache(db.enrichmentCacheDao(), db.negativeCacheDao())
+val cache = RoomEnrichmentCache(db.enrichmentCacheDao(), db.negativeCacheDao(), db.selectionDao())
 
 val engine = EnrichmentEngine.Builder()
     .withDefaultProviders()
@@ -42,7 +41,6 @@ on — register every migration yourself, as shown in the subsections below.
 
 If you used a previous version (database version 1), this migration adds identity resolution columns:
 
-<!-- no-compile: Android/Room/Hilt/WorkManager sample — out of scope for the JVM-only docs-samples module (see check_doc_samples.py) -->
 ```kotlin
 Room.databaseBuilder(context, EnrichmentCacheDatabase::class.java, "enrichment_cache.db")
     .addMigrations(EnrichmentCacheDatabase.MIGRATION_1_2, EnrichmentCacheDatabase.MIGRATION_2_3)
@@ -57,7 +55,6 @@ If you used a previous version (database version 2), this migration adds the `ne
 table `RoomEnrichmentCache` uses to cache a confident "providers had nothing" answer. Additive —
 it touches nothing else, and existing `enrichment_cache` rows are untouched.
 
-<!-- no-compile: Android/Room/Hilt/WorkManager sample — out of scope for the JVM-only docs-samples module (see check_doc_samples.py) -->
 ```kotlin
 Room.databaseBuilder(context, EnrichmentCacheDatabase::class.java, "enrichment_cache.db")
     .addMigrations(EnrichmentCacheDatabase.MIGRATION_1_2, EnrichmentCacheDatabase.MIGRATION_2_3)
@@ -72,7 +69,6 @@ columns (`canonical_status`, `lookup_provenance`, `schema_version`) name a diffe
 and a stored v3 row cannot be reinterpreted into them. Every pre-upgrade entry becomes a cache
 miss, healed the same way any other miss is — the next live `enrich()` call refetches it.
 
-<!-- no-compile: Android/Room/Hilt/WorkManager sample — out of scope for the JVM-only docs-samples module (see check_doc_samples.py) -->
 ```kotlin
 Room.databaseBuilder(context, EnrichmentCacheDatabase::class.java, "enrichment_cache.db")
     .addMigrations(
@@ -92,7 +88,6 @@ copied — a selection is user intent, not cached data, so it is preserved rathe
 `MIGRATION_3_4`'s precedent; every pre-upgrade cache entry becomes a miss the next `enrich()` call
 heals. `negative_cache` is untouched — its shape did not change.
 
-<!-- no-compile: Android/Room/Hilt/WorkManager sample — out of scope for the JVM-only docs-samples module (see check_doc_samples.py) -->
 ```kotlin
 Room.databaseBuilder(context, EnrichmentCacheDatabase::class.java, "enrichment_cache.db")
     .addMigrations(
@@ -108,7 +103,6 @@ Room.databaseBuilder(context, EnrichmentCacheDatabase::class.java, "enrichment_c
 
 `RoomEnrichmentCache` provides a `deleteExpired()` method. Call it periodically to keep the database size manageable:
 
-<!-- no-compile: Android/Room/Hilt/WorkManager sample — out of scope for the JVM-only docs-samples module (see check_doc_samples.py) -->
 ```kotlin
 cache.deleteExpired() // removes all rows where expiresAt < now
 ```
@@ -121,7 +115,6 @@ A good pattern is a periodic WorkManager task — weekly is usually sufficient g
 
 If your app uses Hilt, the library provides a ready-made module that wires up Room and the cache DAO automatically:
 
-<!-- no-compile: Android/Room/Hilt/WorkManager sample — out of scope for the JVM-only docs-samples module (see check_doc_samples.py) -->
 ```kotlin
 // The module is auto-installed via @InstallIn(SingletonComponent::class).
 // It provides:
@@ -136,7 +129,6 @@ If your app uses Hilt, the library provides a ready-made module that wires up Ro
 
 Build the engine in your own Hilt module, injecting the cache:
 
-<!-- no-compile: Android/Room/Hilt/WorkManager sample — out of scope for the JVM-only docs-samples module (see check_doc_samples.py) -->
 ```kotlin
 @Module
 @InstallIn(SingletonComponent::class)
@@ -169,7 +161,6 @@ object MyEnrichmentModule {
 
 **Breaking change in v0.7.0:** `onItemEnriched` now receives `EnrichmentResults` instead of `Map<EnrichmentType, EnrichmentResult>`. Update any existing subclasses.
 
-<!-- no-compile: Android/Room/Hilt/WorkManager sample — out of scope for the JVM-only docs-samples module (see check_doc_samples.py) -->
 ```kotlin
 class AlbumEnrichmentWorker(
     context: Context,
@@ -215,7 +206,6 @@ The worker:
 
 Enqueue it:
 
-<!-- no-compile: Android/Room/Hilt/WorkManager sample — out of scope for the JVM-only docs-samples module (see check_doc_samples.py) -->
 ```kotlin
 val request = OneTimeWorkRequestBuilder<AlbumEnrichmentWorker>()
     .setInputData(workDataOf("album_ids" to albumIds.toTypedArray()))
@@ -233,7 +223,6 @@ WorkManager.getInstance(context).enqueue(request)
 
 A typical pattern for using musicmeta in an Android ViewModel with the Hilt-provided engine:
 
-<!-- no-compile: Android/Room/Hilt/WorkManager sample — out of scope for the JVM-only docs-samples module (see check_doc_samples.py) -->
 ```kotlin
 @HiltViewModel
 class ArtistDetailViewModel @Inject constructor(

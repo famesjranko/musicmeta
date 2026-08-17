@@ -156,4 +156,12 @@ fi
 step "doc samples"
 (cd docs-samples && ../gradlew compileKotlin --quiet)
 
+# docs-samples-android/ is the same extractor's Android-toolchain target: android.md's fences use
+# Room/Hilt/WorkManager types a plain JVM module cannot see, so they compile here instead, against
+# a real com.android.library build. No separate ANDROID_HOME gate: this needs the same SDK the
+# android variants above already do, and fails the same way — loudly, not a silent skip — if it is
+# absent.
+step "doc samples (android)"
+(cd docs-samples-android && ../gradlew compileDebugKotlin --quiet)
+
 printf '\n\033[1;32mAll checks passed.\033[0m\n'

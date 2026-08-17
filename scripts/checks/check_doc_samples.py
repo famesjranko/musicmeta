@@ -39,14 +39,18 @@ since it meant nothing checked the guide as its reader experiences it. Per guide
 remains a legitimate reason after accumulation and the prelude: pseudo-code, an elided fragment
 (`/* ... */`, `// ... more here`), a placeholder the prelude does not define because a real fake would
 be nontrivial (`RedisClient`, a full custom `HttpClient`), a fence that depends on an *earlier fence
-that is itself opted out*, or another library's API (Room, Hilt, WorkManager, `android.util.Log`,
-JUnit).
+that is itself opted out*, a Gradle build-script fragment (not code either toolchain compiles), or
+another library's API neither target wires in (`android.util.Log`, JUnit).
 
-**`android.md` is out of scope**, entirely opted out and excluded from every ratio this script or its
-callers report: every fence in it is Room/Hilt/WorkManager/Android-framework code a plain JVM module
-cannot compile without the Android SDK.
+**`android.md` compiles against the real Android toolchain, not the JVM one.** Every other guide's
+fences land in `docs-samples/`, a plain JVM module; `android.md`'s land in `docs-samples-android/`,
+a `com.android.library` composite build that actually depends on `musicmeta-android` and Room/Hilt/
+WorkManager, the same extraction and narrative rules applied to a second output directory and a
+second, Android-flavoured prelude (`docs-samples-android/.../prelude/AndroidPrelude.kt`). One
+extractor, two compiled targets — `run()` writes every other guide to `--out` and `android.md` to
+`--android-out` on the same pass.
 
-    python3 check_doc_samples.py [--root PATH] [--out PATH]
+    python3 check_doc_samples.py [--root PATH] [--out PATH] [--android-out PATH]
 """
 
 from __future__ import annotations
@@ -58,6 +62,10 @@ from pathlib import Path
 
 GUIDES_DIR = "docs/guides"
 OUT_DIR = "docs-samples/build/generated-samples/src/main/kotlin"
+ANDROID_OUT_DIR = "docs-samples-android/build/generated-samples/src/main/kotlin"
+# The one guide whose fences use Room/Hilt/WorkManager/Android-framework types a plain JVM module
+# cannot see — routed to `ANDROID_OUT_DIR`, compiled by docs-samples-android/ instead of docs-samples/.
+ANDROID_GUIDE_NAME = "android.md"
 FENCE_RE = re.compile(r"^\s*```kotlin\s*$")
 FENCE_END_RE = re.compile(r"^\s*```\s*$")
 NO_COMPILE_RE = re.compile(r"^\s*<!--\s*no-compile:\s*(.*?)\s*-->\s*$")
@@ -69,12 +77,37 @@ API_FILES = (
     "musicmeta-core/api/musicmeta-core.api",
     "musicmeta-okhttp/api/musicmeta-okhttp.api",
 )
+# android.md's own API surface: musicmeta-core plus musicmeta-android's own published types
+# (RoomEnrichmentCache, EnrichmentCacheDatabase, HiltEnrichmentModule, EnrichmentWorker) — not
+# `API_FILES`, since android.md never uses musicmeta-okhttp and docs-samples-android does not
+# depend on it.
+ANDROID_API_FILES = (
+    "musicmeta-core/api/musicmeta-core.api",
+    "musicmeta-android/api/musicmeta-android.api",
+)
 PACKAGE_LINE_RE = re.compile(r"^public\s+(?:final\s+)?(?:class|interface|object|abstract class|enum class)\s+(\S+)")
 
 # Not part of musicmeta's own public surface, but needed to compile the one real, public-API fence
 # that uses it (quick-start.md's `Flow.collect { }` over `enrichBatch`) — a stdlib-adjacent extension
 # every real consumer of that call needs too, not a placeholder hiding anything.
 EXTRA_WILDCARD_IMPORTS = ("kotlinx.coroutines.flow",)
+
+# android.md's fences never write their own `import` lines (a doc convention this script does not
+# police), so they need every third-party package they use wildcard-imported rather than declared
+# per fence — the Room/Hilt/WorkManager/AndroidX surface musicmeta-android itself is built on.
+ANDROID_EXTRA_WILDCARD_IMPORTS = (
+    "android.content",
+    "androidx.lifecycle",
+    "androidx.room",
+    "androidx.work",
+    "dagger",
+    "dagger.hilt",
+    "dagger.hilt.components",
+    "dagger.hilt.android.lifecycle",
+    "javax.inject",
+    "kotlinx.coroutines",
+    "kotlinx.coroutines.flow",
+)
 
 # "the context every guide's narrative may assume" — see Prelude.kt's own KDoc for what each name is
 # and why it is safe to fake. Order matters: `preludeResults` takes the just-bound `engine`.
@@ -101,6 +134,16 @@ PRELUDE_BINDINGS = (
 # name" case `render_narrative` already isolates in `run { }` — the fence still compiles and is still
 # verified, it just does not additionally become the guide's `engine` for later fences the way it did
 # before the prelude existed. Uniform beats a guide-shaped exception with only one member.
+
+# android.md's own context, not the JVM prelude's: it never calls `enrich()` against a generic
+# `results`, so binding one here would only be a name nothing reads. `engine`/`cache`/`db` are left
+# unbound — the guide's own manual-setup fence declares all three and every later fence in the
+# narrative sees them, the same forward visibility any other guide's own first fence gets.
+ANDROID_PRELUDE_PACKAGE = "doc.samples.android.prelude"
+ANDROID_PRELUDE_BINDINGS = (
+    ("context", f"{ANDROID_PRELUDE_PACKAGE}.preludeContext"),
+    ("albumIds", f"{ANDROID_PRELUDE_PACKAGE}.preludeAlbumIds"),
+)
 
 DECLARATION_KEYWORDS = {
     "import",
@@ -153,10 +196,10 @@ class ExtractionError(Exception):
     nothing to compile", which is not an error."""
 
 
-def _public_api_type_paths(root: Path) -> list[str]:
-    """Every `some/package/SomeType` path a published `.api` file declares public, unsorted."""
+def _public_api_type_paths(root: Path, api_files: tuple[str, ...] = API_FILES) -> list[str]:
+    """Every `some/package/SomeType` path `api_files` declares public, unsorted."""
     paths: list[str] = []
-    for rel in API_FILES:
+    for rel in api_files:
         path = root / rel
         if not path.is_file():
             continue
@@ -167,18 +210,18 @@ def _public_api_type_paths(root: Path) -> list[str]:
     return paths
 
 
-def public_packages(root: Path) -> list[str]:
-    """Every package the published `.api` files declare a public top-level type in, sorted."""
-    return sorted({path.rsplit("/", 1)[0].replace("/", ".") for path in _public_api_type_paths(root)})
+def public_packages(root: Path, api_files: tuple[str, ...] = API_FILES) -> list[str]:
+    """Every package `api_files` declares a public top-level type in, sorted."""
+    return sorted({path.rsplit("/", 1)[0].replace("/", ".") for path in _public_api_type_paths(root, api_files)})
 
 
-def public_simple_names(root: Path) -> set[str]:
-    """Every public top-level type's bare name (`EnrichmentResult`, not its package) the `.api`
-    files declare — a doc fence restating one of these under a wildcard-imported guide package would
+def public_simple_names(root: Path, api_files: tuple[str, ...] = API_FILES) -> set[str]:
+    """Every public top-level type's bare name (`EnrichmentResult`, not its package) `api_files`
+    declares — a doc fence restating one of these under a wildcard-imported guide package would
     shadow the real type for every other fence in the guide (Kotlin resolves a same-package
     declaration over a star import); see `build_guide`'s use of this for why that fence gets isolated.
     """
-    return {path.rsplit("/", 1)[-1].split("$", 1)[0] for path in _public_api_type_paths(root)}
+    return {path.rsplit("/", 1)[-1].split("$", 1)[0] for path in _public_api_type_paths(root, api_files)}
 
 
 def strip_noise(line: str) -> str:
@@ -333,19 +376,45 @@ def _split_own_imports(body_lines: list[str]) -> tuple[list[str], list[str]]:
 
 
 def _file_header(
-    guide_rel: str, snippet_label: str, package: str, packages: list[str], extra_imports: list[str]
+    guide_rel: str,
+    snippet_label: str,
+    package: str,
+    packages: list[str],
+    extra_imports: list[str],
+    extra_wildcard_imports: tuple[str, ...] = EXTRA_WILDCARD_IMPORTS,
 ) -> str:
     header = f"// {guide_rel} {snippet_label}\n"
     package_decl = f"package {package}\n\n"
     wildcard_imports = "".join(f"import {pkg}.*\n" for pkg in packages)
-    wildcard_imports += "".join(f"import {pkg}.*\n" for pkg in EXTRA_WILDCARD_IMPORTS)
+    wildcard_imports += "".join(f"import {pkg}.*\n" for pkg in extra_wildcard_imports)
     own = "".join(f"{line}\n" for line in dict.fromkeys(extra_imports))  # de-duplicated, order kept
     return header + package_decl + wildcard_imports + own + "\n"
 
 
-def render_top_level_fence(guide_rel: str, index: int, package: str, body_lines: list[str], packages: list[str]) -> str:
+def render_top_level_fence(
+    guide_rel: str,
+    index: int,
+    package: str,
+    body_lines: list[str],
+    packages: list[str],
+    extra_wildcard_imports: tuple[str, ...] = EXTRA_WILDCARD_IMPORTS,
+    prelude_packages: tuple[str, ...] = (),
+) -> str:
+    """`prelude_packages` is wildcard-imported alongside `packages` — a top-level fence sees no
+    `narrative()` locals, so a fence that names a prelude-defined domain type directly (android.md's
+    `AlbumEnrichmentWorker` taking an `AlbumRepository` the guide never defines) needs the type
+    itself in scope, not a `val` binding narrative-only fences get.
+    """
     own_imports, rest = _split_own_imports(body_lines)
-    return _file_header(guide_rel, f"snippet {index}", package, packages, own_imports) + "\n".join(rest) + "\n"
+    header = _file_header(
+        guide_rel,
+        f"snippet {index}",
+        package,
+        list(packages) + list(prelude_packages),
+        own_imports,
+        extra_wildcard_imports,
+    )
+    return header + "\n".join(rest) + "\n"
 
 
 def render_narrative(
@@ -353,6 +422,8 @@ def render_narrative(
     package: str,
     wrap_fences: list[tuple[int, list[str]]],
     packages: list[str],
+    extra_wildcard_imports: tuple[str, ...] = EXTRA_WILDCARD_IMPORTS,
+    prelude_bindings: tuple[tuple[str, str], ...] = PRELUDE_BINDINGS,
 ) -> str:
     """The guide's `wrap`-classified fences, concatenated in order into one `narrative()`.
 
@@ -363,8 +434,8 @@ def render_narrative(
     body: list[str] = []
     visible: set[str] = set()
 
-    body.append("    // prelude: the context every guide's narrative may assume, see Prelude.kt")
-    for name, expr in PRELUDE_BINDINGS:
+    body.append("    // prelude: the context every guide's narrative may assume")
+    for name, expr in prelude_bindings:
         body.append(f"    val {name} = {expr}")
         visible.add(name)
     body.append("")
@@ -392,11 +463,18 @@ def render_narrative(
             visible |= set(own_names)
         body.append("")
 
-    header = _file_header(guide_rel, "narrative", package, packages, own_imports_all)
+    header = _file_header(guide_rel, "narrative", package, packages, own_imports_all, extra_wildcard_imports)
     return header + "private suspend fun narrative() {\n" + "\n".join(body) + "\n}\n"
 
 
-def build_guide(path: Path, packages: list[str], reserved_names: set[str]) -> tuple[list[tuple[str, str]], list[str]]:
+def build_guide(
+    path: Path,
+    packages: list[str],
+    reserved_names: set[str],
+    extra_wildcard_imports: tuple[str, ...] = EXTRA_WILDCARD_IMPORTS,
+    prelude_bindings: tuple[tuple[str, str], ...] = PRELUDE_BINDINGS,
+    prelude_packages: tuple[str, ...] = (),
+) -> tuple[list[tuple[str, str]], list[str]]:
     """Returns (list of (filename, content) to write, list of skip descriptions) for one guide.
 
     `reserved_names` (from `public_simple_names`): a top-level fence declaring one of these — a
@@ -459,26 +537,46 @@ def build_guide(path: Path, packages: list[str], reserved_names: set[str]) -> tu
                 fence_package = package
                 top_level_seen |= own_names
             files.append(
-                (filename, render_top_level_fence(guide_rel, snippet_index, fence_package, body_lines, packages))
+                (
+                    filename,
+                    render_top_level_fence(
+                        guide_rel,
+                        snippet_index,
+                        fence_package,
+                        body_lines,
+                        packages,
+                        extra_wildcard_imports,
+                        prelude_packages,
+                    ),
+                )
             )
         else:
             wrap_fences.append((snippet_index, body_lines))
 
     if wrap_fences:
         filename = f"{guide_stem.replace('-', '_')}_narrative.kt"
-        files.append((filename, render_narrative(guide_rel, package, wrap_fences, packages)))
+        files.append(
+            (
+                filename,
+                render_narrative(guide_rel, package, wrap_fences, packages, extra_wildcard_imports, prelude_bindings),
+            )
+        )
 
     return files, skipped
 
 
-def run(root: Path, out_dir: Path) -> tuple[int, int]:
-    """Writes every compiled sample under `out_dir`, clearing it first. Returns (compiled fences,
-    skipped fences) — a fence count, not a file count: a narrative file holds several."""
-    guides_dir = root / GUIDES_DIR
-    guides = sorted(guides_dir.glob("*.md")) if guides_dir.is_dir() else []
-    packages = public_packages(root)
-    reserved_names = public_simple_names(root)
-
+def _write_target(
+    out_dir: Path,
+    guides: list[Path],
+    packages: list[str],
+    reserved_names: set[str],
+    extra_wildcard_imports: tuple[str, ...],
+    prelude_bindings: tuple[tuple[str, str], ...],
+    prelude_packages: tuple[str, ...],
+) -> tuple[int, int]:
+    """Writes every compiled sample from `guides` under `out_dir`, clearing it first. Returns
+    (compiled fences, skipped fences) — a fence count, not a file count: a narrative file holds
+    several. One target (JVM or Android); `run` calls this once per target."""
     if out_dir.is_dir():
         for stale in out_dir.rglob("*.kt"):
             stale.unlink()
@@ -487,7 +585,9 @@ def run(root: Path, out_dir: Path) -> tuple[int, int]:
     total_compiled = 0
     total_skipped = 0
     for guide in guides:
-        files, skipped = build_guide(guide, packages, reserved_names)
+        files, skipped = build_guide(
+            guide, packages, reserved_names, extra_wildcard_imports, prelude_bindings, prelude_packages
+        )
         for filename, content in files:
             (out_dir / filename).write_text(content, encoding="utf-8")
         # A narrative file holds several fences; count them via their marker comments so the totals
@@ -498,24 +598,59 @@ def run(root: Path, out_dir: Path) -> tuple[int, int]:
     return total_compiled, total_skipped
 
 
+def run(root: Path, out_dir: Path, android_out_dir: Path) -> tuple[int, int, int, int]:
+    """Writes every guide except `android.md` under `out_dir` (the JVM target) and `android.md`
+    under `android_out_dir` (the Android target) — one extraction pass, two compiled targets; see
+    the module docstring. Returns (jvm compiled, jvm skipped, android compiled, android skipped)."""
+    guides_dir = root / GUIDES_DIR
+    all_guides = sorted(guides_dir.glob("*.md")) if guides_dir.is_dir() else []
+    jvm_guides = [g for g in all_guides if g.name != ANDROID_GUIDE_NAME]
+    android_guides = [g for g in all_guides if g.name == ANDROID_GUIDE_NAME]
+
+    jvm_compiled, jvm_skipped = _write_target(
+        out_dir,
+        jvm_guides,
+        public_packages(root),
+        public_simple_names(root),
+        EXTRA_WILDCARD_IMPORTS,
+        PRELUDE_BINDINGS,
+        (),
+    )
+    android_compiled, android_skipped = _write_target(
+        android_out_dir,
+        android_guides,
+        public_packages(root, ANDROID_API_FILES),
+        public_simple_names(root, ANDROID_API_FILES),
+        ANDROID_EXTRA_WILDCARD_IMPORTS,
+        ANDROID_PRELUDE_BINDINGS,
+        (ANDROID_PRELUDE_PACKAGE,),
+    )
+    return jvm_compiled, jvm_skipped, android_compiled, android_skipped
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Compile docs/guides/*.md Kotlin fences, per guide, into docs-samples/."
+        description="Compile docs/guides/*.md Kotlin fences, per guide, into docs-samples/ and docs-samples-android/."
     )
     parser.add_argument("--root", help="repository root (default: inferred from this file)")
-    parser.add_argument("--out", help="output directory (default: docs-samples/build/generated-samples/...)")
+    parser.add_argument("--out", help="JVM output directory (default: docs-samples/build/generated-samples/...)")
+    parser.add_argument(
+        "--android-out", help="Android output directory (default: docs-samples-android/build/generated-samples/...)"
+    )
     args = parser.parse_args(argv)
 
     root = Path(args.root).resolve() if args.root else Path(__file__).resolve().parent.parent.parent
     out_dir = Path(args.out).resolve() if args.out else root / OUT_DIR
+    android_out_dir = Path(args.android_out).resolve() if args.android_out else root / ANDROID_OUT_DIR
 
     try:
-        compiled, skipped = run(root, out_dir)
+        jvm_compiled, jvm_skipped, android_compiled, android_skipped = run(root, out_dir, android_out_dir)
     except ExtractionError as exc:
         print(f"::error::{exc}", file=sys.stderr)
         return 2
 
-    print(f"{compiled} doc sample(s) extracted to {out_dir}, {skipped} opted out.")
+    print(f"{jvm_compiled} doc sample(s) extracted to {out_dir}, {jvm_skipped} opted out.")
+    print(f"{android_compiled} doc sample(s) extracted to {android_out_dir}, {android_skipped} opted out.")
     return 0
 
 

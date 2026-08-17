@@ -19,6 +19,10 @@ room = "2.6.1"
 # WorkManager
 work = "2.10.0"
 
+# Lifecycle (viewModelScope) — the docs-samples-android ViewModel snippet only, musicmeta-android
+# itself has no lifecycle dependency
+lifecycle = "2.8.7"
+
 # Serialization
 kotlinx-serialization = "1.7.3"
 
@@ -72,6 +76,9 @@ work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "w
 work-testing = { module = "androidx.work:work-testing", version.ref = "work" }
 hilt-work = { module = "androidx.hilt:hilt-work", version.ref = "hilt-navigation-compose" }
 hilt-work-compiler = { module = "androidx.hilt:hilt-compiler", version.ref = "hilt-navigation-compose" }
+
+# Lifecycle
+lifecycle-viewmodel-ktx = { module = "androidx.lifecycle:lifecycle-viewmodel-ktx", version.ref = "lifecycle" }
 
 # Serialization
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
