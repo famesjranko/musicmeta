@@ -9,9 +9,9 @@
 
 </div>
 
-A Kotlin library that gives Android and JVM music apps access to rich metadata, artwork, and discovery features -- 8 of 11 providers work without API keys. Ask for as much or as little as you need: all 36 enrichment types at once, a single artist photo, just lyrics, or anything in between. Providers set their own terms on commercial use, licensing and attribution -- see [docs/providers.md](docs/providers.md#terms-licences-attribution) before shipping.
+A Kotlin library that gives Android and JVM music apps metadata, artwork, and discovery from 11 public music APIs behind one engine -- 8 of them work without API keys.
 
-11 public music APIs behind one engine. You choose what to request, how to use it, and what to show your users. The library handles the plumbing -- identity resolution, multi-provider merging, confidence scoring, rate limiting, caching -- so you can focus on building your app.
+Ask for as much or as little as you need: all 36 enrichment types, a single artist photo, just lyrics. The engine handles identity resolution, multi-provider merging, confidence scoring, rate limiting and caching. Providers set their own terms on commercial use, licensing and attribution -- see [docs/providers.md](docs/providers.md#terms-licences-attribution) before shipping.
 
 ## What it does
 
@@ -29,6 +29,8 @@ those 15 types, with fewer image alternates, 20 similar artists rather than 31, 
 at 0.70.
 
 ## Quick start
+
+Coordinates are in [Installation](#installation).
 
 ```kotlin
 val engine = EnrichmentEngine.Builder()
@@ -110,7 +112,7 @@ val engine = EnrichmentEngine.Builder()
 | **Top Tracks** | ARTIST_TOP_TRACKS | Merged from 3 (Last.fm, ListenBrainz, Deezer), 2 answering -- ListenBrainz's route is disabled upstream |
 | **Statistics** | ARTIST_POPULARITY, TRACK_POPULARITY | Both merged from 3, each source's claim kept in its own unit |
 | **Composite** | ARTIST_TIMELINE, GENRE_DISCOVERY | ARTIST_TIMELINE: discography + members + life-span; GENRE_DISCOVERY: static affinity taxonomy |
-| **Radio** | ARTIST_RADIO, ARTIST_RADIO_DISCOVERY | ARTIST_RADIO: Deezer curated playlist; ARTIST_RADIO_DISCOVERY: ListenBrainz LB Radio (easy/medium/hard modes, optional token) -- its route is disabled upstream, see [docs/providers.md](docs/providers.md) |
+| **Radio** | ARTIST_RADIO, ARTIST_RADIO_DISCOVERY | ARTIST_RADIO: Deezer curated playlist; ARTIST_RADIO_DISCOVERY: ListenBrainz LB Radio (easy/medium/hard modes, optional token) -- its route is disabled upstream, see [docs/providers.md](docs/providers.md#routes-disabled-upstream) |
 | **Preview** | TRACK_PREVIEW | Deezer 30-second MP3 preview URL (on-demand, not in default types) |
 | **Discovery** | SIMILAR_ALBUMS | Deezer related artists + era scoring |
 
@@ -167,7 +169,7 @@ To consume a local checkout instead, see [docs/project/workflow.md](docs/project
 |----------|---------|
 | [docs/guides/](docs/guides/README.md) | Developer guides — quick start, identity resolution, results & errors, cache management, configuration, extension points, Android |
 | [docs/how-it-works.md](docs/how-it-works.md) | Complete pipeline trace -- from `enrich()` call to results |
-| [docs/providers.md](docs/providers.md) | Upstream API links, the two packages that depart from the house pattern, and what each provider returns that we drop |
+| [docs/providers.md](docs/providers.md) | Per-provider upstream docs, terms and attribution, User-Agent requirements and rate limits -- plus contributor notes on what each provider returns that we drop |
 | [docs/project/workflow.md](docs/project/workflow.md) | Branch topology, issue lifecycle, worktrees, and verification selection |
 | [docs/project/release.md](docs/project/release.md) | Release preparation, tagging, and publication |
 | [CHANGELOG.md](CHANGELOG.md) | Release history |
