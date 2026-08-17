@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 330" width="940" height="330" font-family="ui-sans-serif, -apple-system, Segoe UI, Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 356" width="940" height="356" font-family="ui-sans-serif, -apple-system, Segoe UI, Helvetica, Arial, sans-serif">
   <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
     <path d="M0 0 L10 5 L0 10 z" fill="#9198a1"/></marker></defs>
 
@@ -23,25 +23,41 @@
 
   <line x1="470" y1="92" x2="470" y2="122" stroke="#9198a1" stroke-width="1.5" marker-end="url(#ar)"/>
 
-  <rect x="1" y="128" width="937" height="196" rx="9" fill="none" stroke="#56d4a0" stroke-width="1.75"/>
+  <rect x="1" y="128" width="937" height="222" rx="9" fill="none" stroke="#56d4a0" stroke-width="1.75"/>
   <text x="20" y="154" font-size="13" font-weight="600" fill="#56d4a0">ArtistProfile</text>
-  <text x="122" y="154" font-size="11.5" fill="#9198a1">&#183; AlbumProfile and TrackProfile share the shape</text>
+  <text x="122" y="154" font-size="11.5" fill="#9198a1">&#8212; 15 types on one object, each with its own source, confidence and outcome</text>
   <line x1="20" y1="164" x2="918" y2="164" stroke="#3d444d"/>
-  <g font-size="13" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="#e6edf3">
-    <text x="20" y="188">photo</text><text x="20" y="212">bio</text><text x="20" y="236">genres</text>
-    <text x="20" y="260">discography</text><text x="20" y="284">similarArtists</text>
-    <text x="20" y="310" font-size="11.5" fill="#9198a1">results[type]</text>
-  </g>
-  <g font-size="12.5" fill="#9198a1">
-    <text x="210" y="188">wikidata, +4 alternates</text>
-    <text x="210" y="212">wikipedia</text>
-    <text x="210" y="236">alternative rock (1.00), rock (1.00)</text>
-    <text x="210" y="260">45 releases</text>
-    <text x="210" y="284">31 artists, last.fm + deezer merged</text>
-    <text x="210" y="310" font-size="11.5">every type's own outcome &#8212; tells "no data" from "could not fetch"</text>
-  </g>
-  <g font-size="12" fill="#9198a1" text-anchor="end">
-    <text x="918" y="188">95%</text><text x="918" y="212">95%</text><text x="918" y="236">100%</text>
-    <text x="918" y="260">60%</text><text x="918" y="284">80%</text>
-  </g>
+  <text x="20" y="190" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="#e6edf3">photo</text>
+  <text x="142" y="190" font-size="12" fill="#9198a1">wikidata, +4 alts</text>
+  <text x="330" y="190" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="#e6edf3">bio</text>
+  <text x="452" y="190" font-size="12" fill="#9198a1">wikipedia</text>
+  <text x="640" y="190" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="#e6edf3">discography</text>
+  <text x="762" y="190" font-size="12" fill="#9198a1">45 releases</text>
+  <text x="20" y="215" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="#e6edf3">background</text>
+  <text x="142" y="215" font-size="12" fill="#9198a1">fanart.tv</text>
+  <text x="330" y="215" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="#e6edf3">genres</text>
+  <text x="452" y="215" font-size="12" fill="#9198a1">alt rock (1.00)</text>
+  <text x="640" y="215" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="#e6edf3">topTracks</text>
+  <text x="762" y="215" font-size="12" fill="#9198a1">1001 tracks</text>
+  <text x="20" y="240" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="#e6edf3">logo</text>
+  <text x="142" y="240" font-size="12" fill="#9198a1">fanart.tv</text>
+  <text x="330" y="240" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="#e6edf3">members</text>
+  <text x="452" y="240" font-size="12" fill="#9198a1">5, with roles</text>
+  <text x="640" y="240" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="#e6edf3">similarArtists</text>
+  <text x="762" y="240" font-size="12" fill="#9198a1">31, 2 sources</text>
+  <text x="20" y="265" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="#e6edf3">banner</text>
+  <text x="142" y="265" font-size="12" fill="#9198a1">fanart.tv</text>
+  <text x="330" y="265" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="#e6edf3">links</text>
+  <text x="452" y="265" font-size="12" fill="#9198a1">allmusic, bandcamp</text>
+  <text x="640" y="265" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="#e6edf3">radio</text>
+  <text x="762" y="265" font-size="12" fill="#9198a1">50 tracks</text>
+  <text x="20" y="290" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="#e6edf3">popularity</text>
+  <text x="142" y="290" font-size="12" fill="#9198a1">455k listeners</text>
+  <text x="330" y="290" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="#e6edf3">timeline</text>
+  <text x="452" y="290" font-size="12" fill="#9198a1">21 events</text>
+  <text x="640" y="290" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="#e6edf3">genreDiscovery</text>
+  <text x="762" y="290" font-size="12" fill="#9198a1">17 genres</text>
+  <line x1="20" y1="300" x2="918" y2="300" stroke="#3d444d"/>
+  <text x="20" y="322" font-size="12" fill="#9198a1">AlbumProfile adds art, back and booklet scans, tracklists, credits, editions, label and release data.</text>
+  <text x="20" y="340" font-size="12" fill="#9198a1">TrackProfile adds synced and plain lyrics, previews, similar tracks. 36 types in all &#8212; ask for one, or every one.</text>
 </svg>

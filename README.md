@@ -24,10 +24,10 @@ MusicBrainz resolves identifiers first, so every downstream lookup is exact rath
 search. Rate limiting, circuit breaking, confidence scoring and caching are built in, and each type
 resolves independently -- a provider that fails costs you that one type, not the profile.
 
-The figure is one real `artistProfile("Radiohead")` call with all four optional keys configured:
-15 of 16 types answered. The same call keyless answers 12 of 16, with fewer image alternates,
-20 similar artists instead of 31, and genre confidence at 0.70 rather than 1.00 -- what each
-provider is asked for, and what it gives back, is in [docs/providers.md](docs/providers.md).
+The values are one real `artistProfile("Radiohead")` call with all four optional keys configured.
+Keyless, the same call answers 12 of those 15 types, with fewer image alternates, 20 similar artists
+instead of 31, and genre confidence at 0.70 rather than 1.00. What each provider is asked for, and
+what it gives back, is in [docs/providers.md](docs/providers.md).
 
 ## Quick start
 
