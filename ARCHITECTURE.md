@@ -94,13 +94,9 @@ flowchart TD
     ident -->|yes| resolve["resolveIdentity:<br/>canonical ids + names,<br/>may answer types itself"]
     resolve --> regular
 
-    subgraph fanout["fan-out, under one deadline"]
-        direction TB
-        regular["regular + composite subs<br/>concurrent, one chain each"]
-        mergeable["mergeable types<br/>all providers, merged"]
-        composite["composite types<br/>from the resolved map"]
-        regular --> mergeable --> composite
-    end
+    regular["fan-out, under one deadline:<br/>regular + composite subs<br/>concurrent, one chain each"]
+    regular --> mergeable["then mergeable types<br/>all providers, merged"]
+    mergeable --> composite["then composite types<br/>from the resolved map"]
 
     composite --> deadline{"deadline held?"}
     deadline -->|"no"| timedout["unresolved becomes<br/>Error TIMEOUT,<br/>nothing cached"]
