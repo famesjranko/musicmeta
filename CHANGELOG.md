@@ -79,6 +79,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A confident `NotFound` is now cached for `EnrichmentConfig.negativeTtlMs` (default 1h), skipping the round-trip on a repeat
 
 ### Changed
+- An artist identity pick whose name matched neither the entity's name nor any alias now reports `identityMatchScore` scaled by 0.7, not full strength — the pick itself is unchanged
 - `ARTIST_POPULARITY`/`TRACK_POPULARITY` are now merged across providers instead of returning the first answer: a field the leading source lacks is filled from the next that has it
 - Every popularity source is now queried rather than stopping at the first success
 - Both types cache for 7 days, so a popularity entry written before this carries no `signals` until it is refetched: call `invalidate()` or enrich with `forceRefresh` to see them sooner

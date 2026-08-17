@@ -34,11 +34,13 @@ internal enum class NameMatchTier(val confidenceFactor: Float) {
     ALIAS(0.85f),
 
     /**
-     * Neither the name nor any alias matched; the candidate was picked on some other signal. Its
-     * factor is 1.0 rather than a penalty: such a candidate is ranked and scored exactly as it was
-     * before aliases were read, and only the two alias tiers are a decided change to confidence.
+     * Neither the name nor any alias matched; the candidate was picked on some other signal
+     * (the upstream's own relevance ranking — tags, disambiguation text). The weakest factor of
+     * any tier, below [ALIAS]: no name agreement is the weakest identification claim this ranker
+     * can make, and its reported confidence must not exceed a genuine alias match's. Still above
+     * the engine's 0.5 `minConfidence` floor, so a full-score upstream hit is reported, not dropped.
      */
-    NONE(1.0f),
+    NONE(0.7f),
 }
 
 /**
