@@ -33,8 +33,8 @@ interface EnrichmentCache {
      * [canonicalStatus] is the call's [IdentityResolution.status] that made [result] eligible to
      * cache — [EnrichmentEngine.enrich] only calls this for a status the cache may serve back with
      * no loss of confidence. [EnrichmentResult.Success.provenance] on [result] is what a hit later
-     * replays; [canonicalStatus] rides back on [get]'s [CacheEnvelope] as historical evidence only
-     * — a cache-hit call always reports [CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT] regardless of it.
+     * replays; see [CacheEnvelope.canonicalStatus] for what a later [get] does with the value
+     * stored here.
      */
     suspend fun put(
         entityKey: String,
@@ -62,8 +62,7 @@ interface EnrichmentCache {
      * implementation does not negative-cache, pairing with [getNegative]'s null in that case. An
      * override that does store must also clear negative entries from [invalidate] and [clear] — a
      * negative entry that outlives an invalidation would keep reporting an absence a caller just
-     * asked to forget. A delegating cache must forward this call and [getNegative], or negative
-     * caching silently disappears through it.
+     * asked to forget. See [getNegative] for the same forwarding obligation on a delegating cache.
      */
     suspend fun putNegative(
         entityKey: String,

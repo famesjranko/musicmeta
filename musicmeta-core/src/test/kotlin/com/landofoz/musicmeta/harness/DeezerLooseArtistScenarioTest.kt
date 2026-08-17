@@ -46,11 +46,10 @@ class DeezerLooseArtistScenarioTest {
         val engine = TestStack.build(http)
         val request = EnrichmentRequest.forTrack(TITLE, ARTIST)
 
-        // When - enriching for the Deezer-exclusive type
+        // When - enriching for TRACK_METADATA, the type Deezer, MusicBrainz and LRCLIB all declare
         val results = engine.enrich(request, setOf(EnrichmentType.TRACK_METADATA))
 
-        // Then - the identity rule holds in its name-search form: this request carries no
-        // identifier, so it resolves by name search, which never sets canonical names
+        // Then - every result is filed under the type it actually answers about
         EntityIdentity.assertAnswersTheRequestWithoutCanonicalIdentity(request, results)
     }
 
@@ -61,7 +60,7 @@ class DeezerLooseArtistScenarioTest {
         val engine = TestStack.build(http)
         val request = EnrichmentRequest.forTrack(TITLE, ARTIST)
 
-        // When - enriching for the Deezer-exclusive type
+        // When - enriching for TRACK_METADATA, the type Deezer, MusicBrainz and LRCLIB all declare
         engine.enrich(request, setOf(EnrichmentType.TRACK_METADATA))
 
         // Then - Deezer's track-search endpoint was actually hit
@@ -78,7 +77,7 @@ class DeezerLooseArtistScenarioTest {
         val engine = TestStack.build(http)
         val request = EnrichmentRequest.forTrack(TITLE, ARTIST)
 
-        // When - enriching for the Deezer-exclusive type
+        // When - enriching for TRACK_METADATA, the type Deezer, MusicBrainz and LRCLIB all declare
         engine.enrich(request, setOf(EnrichmentType.TRACK_METADATA))
 
         // Then - every upstream URL was fetched at most once

@@ -5,14 +5,12 @@ ktlint owns formatting, type-resolved detekt owns bug patterns, `apiCheck` owns 
 What is left is two bans that are project decisions rather than general Kotlin advice, and both are
 plain substring searches.
 
-**They deliberately do not skip comments or string literals.** An earlier version carried a
-hand-written Kotlin scanner — 155 lines classifying every character as code or text, plus a
-118-line KotlinLexer oracle and a 337-line differential test to keep it honest — so that a `!!`
-inside a comment would not be reported. That machinery existed to make the rules *weaker*. Both
-bans are absolute: there are no literal `!!` and no `@Serializable` anywhere in the relevant
-sources, comments and strings included, so the substring form passes today and forbids strictly
-more. If a comment ever legitimately needs to write one, reword the comment; that is cheaper than
-owning a Kotlin front end. (#60)
+**They deliberately do not skip comments or string literals.** A hand-written Kotlin front end that
+told code from comment would exist only to make the rules *weaker*, by letting a `!!` inside a
+comment go unreported. Both bans are absolute: there are no literal `!!` and no `@Serializable`
+anywhere in the relevant sources, comments and strings included, so the substring form passes
+today and forbids strictly more. If a comment ever legitimately needs to write one, reword the
+comment; that is cheaper than owning a Kotlin front end.
 
 Main sources only, `demo-cli/` excluded.
 

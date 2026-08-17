@@ -414,7 +414,7 @@ class ProfileMapperTest {
 
     @Test
     fun `discography picks the earliest year across editions`() {
-        // Given - three editions of the same album released in different years
+        // Given - three editions of the same album spanning two years, 2025 and 1996
         val results = resultsOf(
             EnrichmentType.ARTIST_DISCOGRAPHY to EnrichmentData.Discography(
                 albums = listOf(

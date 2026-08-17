@@ -63,8 +63,8 @@ class MusicBrainzTitleFoldingTest {
 
     @Test
     fun `two different albums by the same artist do not fold together`() {
-        // Given - the symbol album and a second release group whose title also starts with the
-        // infinity sign, both real groups in the same catalogue
+        // Given - the symbol album, whose title ends with the infinity sign, and a second release
+        // group whose title starts with it, both real groups in the same catalogue
         val symbolAlbum = MusicBrainzTitleFolding.fold("F♯ A♯ ∞")
         val otherAlbum = MusicBrainzTitleFolding.fold("∞ Forever")
 

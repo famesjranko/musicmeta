@@ -69,7 +69,8 @@ class ITunesProviderTest {
 
     @Test
     fun `enrich returns NotFound for artist requests`() = runTest {
-        // Given - an artist-level request (iTunes only supports ALBUM_ART/ALBUM_METADATA for albums)
+        // Given - an artist-level request (ALBUM_ART is one of iTunes's album-scoped capabilities,
+        // alongside ALBUM_METADATA and ALBUM_TRACKS; ARTIST_DISCOGRAPHY is its only artist one)
         val request = EnrichmentRequest.forArtist("Radiohead")
 
         // When - enriching for album art

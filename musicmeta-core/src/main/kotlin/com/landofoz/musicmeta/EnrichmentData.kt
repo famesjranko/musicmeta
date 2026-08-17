@@ -211,12 +211,7 @@ data class PopularTrack(
     val identifiers: EnrichmentIdentifiers = EnrichmentIdentifiers(),
     val listenCount: Long,
     val rank: Int,
-    /**
-     * Fields the sibling [TopTrack] already carries from the same upstream DTO
-     * ([com.landofoz.musicmeta.provider.listenbrainz.ListenBrainzPopularTrack]); appended here so
-     * [EnrichmentData.Popularity.topTracks] doesn't drop them purely because this type predates
-     * `TopTrack`. `null` when the source didn't carry it.
-     */
+    /** `null` when the source didn't carry it. */
     val listenerCount: Long? = null,
     val durationMs: Long? = null,
     val album: String? = null,

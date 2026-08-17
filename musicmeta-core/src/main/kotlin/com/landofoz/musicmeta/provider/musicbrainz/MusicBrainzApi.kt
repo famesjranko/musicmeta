@@ -111,44 +111,18 @@ internal class MusicBrainzApi(
      * The pool a track request is *resolved* out of, as opposed to the one
      * [MusicBrainzProvider.searchCandidates] offers a consumer to choose from.
      *
-     * `-comment:*` is tier 4 of [MusicBrainzEnricher.pickBestRecording] — prefer a blank
-     * disambiguation — expressed in MusicBrainz's own query language, which is what moves it
-     * *upstream* of the limit instead of downstream of it. Downstream the tier can only rank what
-     * the page already let through, and for a heavily-covered track that is nothing at all.
-     *
-     * The filter only ever removes candidates, so the whole ladder here is about the requests where
-     * the one it removes is the answer:
-     *
-     * - **[title] itself ends in a bracketed group** — the request names the variant it wants, and
-     *   the filter deletes precisely that recording while leaving the pool full, so no fallback
-     *   fires and the unmarked studio take wins instead. Verified live 2026-08-10: U2's "Where the
-     *   Streets Have No Name (live at Rotterdam)" carries the variant in its title *and* in its
-     *   disambiguation, and that title queried with `-comment:*` returns count 0 — MusicBrainz
-     *   keeping variant text out of the title is the common case, not a rule. Such a request takes
-     *   the unfiltered [searchRecordings] ladder whole. The test is structural rather than a
-     *   vocabulary of variant words (`docs/pitfalls.md` §7), so a canonical title that merely ends
-     *   in brackets ("Sgt. Pepper's Lonely Hearts Club Band (Reprise)") takes that ladder too. That
-     *   is the safe direction: it degrades to the pool that shipped before the filter existed,
-     *   never to a different recording.
-     * - **an album hint that finds nothing** — [recordingQuery]'s `release:"…"` term matches release
-     *   (edition) titles, while [MusicBrainzEnricher.pickBestRecording] matches on
-     *   [MusicBrainzRecording.artReleaseGroupTitle], the release *group* title. The two genuinely
-     *   diverge, so an empty hinted pool is not evidence the album is absent, and the hint-less
-     *   retry has to serve both readings: the filtered pool at [CANONICAL_SEARCH_LIMIT] for the
-     *   depth this function exists for, and the unfiltered one at [RECORDING_SEARCH_LIMIT] to keep
-     *   a recording that is marked *and* sits on the requested album reachable — the album-match
-     *   tier outranks the disambiguation tier, so the filter would delete a candidate the ranking
-     *   would have preferred. Their union, deduplicated by recording id, is that pool. One extra
-     *   request, on the miss path only.
-     * - **an empty filtered pool** on a hint-less request — a track whose every recording is marked
-     *   must still resolve, so the unfiltered query follows. Also one extra request, on that path
-     *   only. It does not rescue a track whose canonical recording is marked while other takes are
-     *   not: the right answer is removed, the pool is not empty, and nothing fires. That case is no
-     *   worse than before rather than newly broken, and is not fixed here.
-     *
-     * A hinted query that does find recordings answers alone and unfiltered. The two do not compose
-     * — the filter would delete the marked album take the hint was asking for — and an album is the
-     * better narrowing term on its own.
+     * `-comment:*` moves [MusicBrainzEnricher.pickBestRecording]'s tier-4 "prefer a blank
+     * disambiguation" rule upstream of the result limit, in MusicBrainz's own query language, so a
+     * heavily-covered track's studio take is not paged out before that tier can rank it
+     * (`docs/pitfalls.md` §7). Three cases fall back to the unfiltered ladder because the filter
+     * would otherwise remove the correct answer: [title] itself names a bracketed variant, so the
+     * filter deletes exactly that recording; an album hint finds nothing, since
+     * [recordingQuery]'s `release:"…"` (edition title) and
+     * [MusicBrainzRecording.artReleaseGroupTitle] (release-*group* title) can genuinely diverge, so
+     * the hint-less retry unions the filtered and unfiltered pools instead of trusting the empty
+     * hinted one; and a hint-less filtered pool comes back empty because every candidate recording
+     * is marked. A hinted query that does find recordings answers alone and unfiltered, since the
+     * filter would delete the marked album take the hint was asking for.
      *
      * `scripts/probes/recording-pool-filter-probe.sh` measures the pools; the figures that bound the
      * design live on [CANONICAL_SEARCH_LIMIT], and nowhere else.

@@ -944,8 +944,8 @@ internal class MusicBrainzEnricher(
     )
 
     /**
-     * Resolves an album search, trying [title]/[artist] as-is first — unchanged from today's
-     * behavior — and only falling back to [MusicBrainzQualifierFallback]'s progressively-stripped
+     * Resolves an album search, trying [title]/[artist] as-is first, and only falling back to
+     * [MusicBrainzQualifierFallback]'s progressively-stripped
      * candidates when the direct search finds nothing at or above [minMatchScore], then to
      * [resolveAlbumSymbolFallback] — but only on an *empty* pool: a populated pool that merely
      * missed the score floor means the title is searchable and the album is not there, so that

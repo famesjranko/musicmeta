@@ -275,8 +275,9 @@ abstract class HttpClientContract : ContractSuite<HttpClient>() {
             // once the deadline elapses whatever the block did, so catching CancellationException
             // says only that a deadline passed — it is true even for a client that swallowed the
             // cancellation and returned a classified result, which is the defect this test names.
-            // Only a value arriving here proves the swallow. EnrichCacheFailureTest:180-183 records
-            // the same trap reached through await() instead of withTimeout.
+            // Only a value arriving here proves the swallow. EnrichCacheFailureTest's `guarded
+            // cache read propagates a cancellation of our own job` records the same trap reached
+            // through await() instead of withTimeout.
             var classified: HttpResult<JSONObject>? = null
             var sawCancellation = false
             try {

@@ -115,12 +115,8 @@ class WikidataProvider(
     }
 
     /**
-     * `getEntityProperties` for [wikidataId], memoized for the life of one [ProviderCallScope] —
-     * ARTIST_PHOTO, COUNTRY and ARTIST_LINKS all read this same response. Wikidata-id-keyed rather
-     * than one slot per call: a call resolving more than one entity must not share one entity's
-     * answer with another's. A miss is memoized too, so an entity with no claims costs one request
-     * instead of one per type; called outside an engine, there is no scope to memoize in and every
-     * call hits upstream.
+     * `getEntityProperties` for [wikidataId], memoized per [ProviderCallScope]/[CallMemo] (see
+     * their KDocs) — ARTIST_PHOTO, COUNTRY and ARTIST_LINKS all read this same response.
      */
     private suspend fun getEntityProperties(wikidataId: String): WikidataEntityProperties? {
         val memo = currentCoroutineContext()[ProviderCallScope]

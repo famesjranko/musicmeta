@@ -44,7 +44,8 @@ not a gate. It runs ktlint on `.kt`/`.kts` and ruff on `.py`, and no-ops when ei
 `ktlintCheck` and the ruff check are what actually fail. It also no-ops when the `ktlint` on `PATH`
 is not the `ktlint-cli` version pinned in `libs.versions.toml` — a CLI running a different rule set
 writes formatting the gate never asked for, and nothing fails to say so. It does not skip
-`demo-cli/`: formatting is shared with the parent build even though house conventions are not.
+`demo-cli/` or `demo-web/`: formatting is shared with the parent build even though house
+conventions are not.
 
 ## Known gaps
 

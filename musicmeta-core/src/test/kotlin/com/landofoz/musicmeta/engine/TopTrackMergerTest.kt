@@ -256,7 +256,7 @@ class TopTrackMergerTest {
         assertEquals(8000L, data.tracks[0].listenCount)
     }
 
-    @Test fun `different tracks with same title but no MBID stay separate when different artist`() {
+    @Test fun `same title and same artist with no MBID merges into one track`() {
         // Given - two providers reporting the same title and artist, no MBID
         // When - merging both results
         val result = TopTrackMerger.merge(listOf(

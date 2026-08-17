@@ -96,7 +96,8 @@ class AuthErrorTest {
     }
 
     @Test fun `a 403 from a public ListenBrainz endpoint is not an auth failure`() = runTest {
-        // Given - popularity sends no token, so a 403 there is nothing the consumer can fix
+        // Given - popularity and similar-artists both send no token, so neither a 403 nor a 401
+        // from ListenBrainz on them is something the consumer can fix
         assertNotFound(listenBrainz(403), EnrichmentType.ARTIST_POPULARITY)
         assertNotFound(listenBrainz(401), EnrichmentType.SIMILAR_ARTISTS)
     }

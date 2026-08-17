@@ -16,7 +16,7 @@ import org.junit.Test
 import java.util.concurrent.TimeUnit
 
 /**
- * The five behaviours core's ladder has to give the OkHttp adapter, which had no retry at all: a
+ * The seven behaviours core's ladder has to give the OkHttp adapter, which had no retry at all: a
  * routine shed 503 used to surface as an error on the first shed and repeated sheds took the provider
  * out of rotation.
  *
