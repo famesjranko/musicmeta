@@ -31,15 +31,18 @@ A Kotlin library that gives Android and JVM music apps access to rich metadata, 
          |
          v
   ArtistProfile / AlbumProfile / TrackProfile
-    profile.photo?.url           -> artist photo from Wikidata
+    profile.photo?.url           -> best of 5 image sources, Wikidata first
     profile.bio?.text            -> biography from Wikipedia
-    profile.genres               -> [GenreTag("alternative rock", 0.70)]
-    profile.discography          -> 9 studio albums
-    profile.similarArtists       -> merged from Last.fm + Deezer
+    profile.genres               -> [GenreTag("alternative rock", 1.00), ...]
+    profile.discography          -> 45 releases
+    profile.similarArtists       -> 31 artists, Last.fm + Deezer merged
     ...
 ```
 
-The engine handles the hard parts: MusicBrainz resolves identifiers first, then downstream providers use those IDs for precise lookups. Rate limiting, circuit breaking, confidence scoring, and caching are all built in. 8 of 11 providers work without API keys.
+Those counts are one real `artistProfile("Radiohead")` call, keyless — what a provider returns
+today is what you get, not a fixed shape.
+
+The engine handles the hard parts: MusicBrainz resolves identifiers first, then downstream providers use those IDs for precise lookups. Rate limiting, circuit breaking, confidence scoring, and caching are all built in. 8 of 11 providers work without API keys, and every type resolves independently -- one provider failing costs you that type, not the profile.
 
 ## Quick start
 
