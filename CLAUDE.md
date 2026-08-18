@@ -65,7 +65,20 @@ Where a rule below names its gate, what is written here is the part that gate ca
   too. The adapters exist to bring OkHttp and Room and are not held to this. Nothing enforces it
   (`VERIFICATION.md` — "Known gaps").
 - `e2e/` tests hit live APIs behind `-Dinclude.e2e=true` and never gate a merge, so an e2e test is
-  not coverage for a change.
+  not coverage for a change. `musicmeta-android/src/androidTest/` is the same: nothing runs it —
+  not `check`, not CI — so a Room migration reaches a release having been proved only against
+  Robolectric's SQLite. Changing `EnrichmentCacheDatabase`'s schema means writing the device test
+  *and* saying that it was run on a device, at the commit, not at tagging. It is the one change
+  this repo makes that a revert cannot undo: the schema is already on the user's phone.
+- A `@Serializable` cache type is a compatibility surface that no gate reads. It moves no
+  `api/*.api` line, and the round-trip tests encode and decode with the same tree, so they cannot
+  see a payload a consumer already persisted becoming unreadable — that is v0.4.0, which broke
+  every Room cache entry (`VERIFICATION.md` — "Known gaps"). Treat a change to one as a break under
+  the rule above, and ask the user about a cache-clear note.
+- A provider test asserts against a fixture copied from a real upstream response, and a fixture
+  must predate the change it is evidence for — one written to match new code proves only that the
+  code agrees with itself. A pool whose chain back to a live capture is unverified says so in its
+  own `scenario.md`.
 - Comments carry the contract, not the history. KDoc states what a caller must know; a rationale
   that isn't a caller's problem gets one sentence, not a paragraph. No PR/issue numbers, `.scratch/`
   paths, or "previously we…" in code — git and the PR hold those. A comment that restates the code

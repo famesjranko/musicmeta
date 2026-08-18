@@ -77,6 +77,13 @@ than it looks like, each learned the hard way.
   dependency, `kotlin-stdlib`, that no build script declares, so a parse can report "three, all
   allowed" while the artifact a consumer resolves disagrees. A baseline of that POM, diffed the way
   `api/*.api` is, would enforce it exactly — `.scratch/core-dependency-pom-baseline/`.
+- **No connected Android test runs anywhere.** `musicmeta-android/src/androidTest/` is absent from
+  `check`, from the `Makefile` and from all five workflows in `.github/workflows/`, so
+  `EnrichmentCacheDatabaseMigrationDeviceTest` — the only thing that exercises a Room migration
+  against framework SQLite — has never gated a merge and is not meant to. The Robolectric suite in
+  `src/test/` proves the SQL and runs on every `./check`; what it cannot prove is the platform an
+  installed app actually upgrades on. That evidence is produced by hand and recorded at the commit
+  (`CLAUDE.md`), because a migration is the one change here that reverting the code does not undo.
 - **detekt is not in `--fast`.** The typed tasks compile before they analyse and the Android
   variants need `ANDROID_HOME`. The edit loop is ktlint plus the conventions check; detekt runs on
   every push and in CI.

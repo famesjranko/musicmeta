@@ -201,8 +201,7 @@ payloads, search acceptance that checks artist and title rather than trusting hi
 
 The cost that is not abstracted away is fixtures. A provider test asserts against a fixture copied
 from a real response, because that is what pins a field name against upstream drift
-(`docs/pitfalls.md` §3). Nothing mechanises this — it is a convention review enforces, and a pool
-whose chain back to a live capture is unverified says so in its own `scenario.md`.
+(`docs/pitfalls.md` §3) — the one part of a new provider that no seam above makes cheaper.
 
 ## Where a change lands
 
