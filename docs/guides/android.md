@@ -8,10 +8,18 @@ The `musicmeta-android` module adds Android-specific integrations on top of `mus
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("com.github.famesjranko.musicmeta:musicmeta-core:v0.11.0")
-    implementation("com.github.famesjranko.musicmeta:musicmeta-android:v0.11.0")
+    implementation("io.github.famesjranko:musicmeta-core:0.11.0")
+    implementation("io.github.famesjranko:musicmeta-android:0.11.0")
 }
 ```
+
+JitPack coordinates, and the repository declaration they need, are in the
+[README](../../README.md#installation).
+
+`musicmeta-android` declares no consumer ProGuard/R8 rules of its own. The reflective dependencies
+carry theirs — `room-runtime` bundles `proguard.txt`, `kotlinx-serialization-core-jvm` bundles
+`META-INF/com.android.tools/r8/` — and a minified consumer build applies both automatically. No
+`musicmeta`-specific keep rule is known to be needed.
 
 ---
 
@@ -32,8 +40,21 @@ val engine = EnrichmentEngine.Builder()
     .build()
 ```
 
+`RoomEnrichmentCache` takes two more optional parameters:
+
+```kotlin
+val cache = RoomEnrichmentCache(
+    db.enrichmentCacheDao(), db.negativeCacheDao(), db.selectionDao(),
+    clock = { 1_700_000_000_000 },  // defaults to System::currentTimeMillis
+    logger = EnrichmentLogger.NoOp, // the default; pass your own instead
+)
+```
+
+`clock` lets a test control cache expiry deterministically. `logger` surfaces schema-mismatch and
+deserialization failures, which otherwise degrade silently to a cache miss.
+
 `EnrichmentCacheDatabase.create()` registers every migration for you, so it opens an on-device v1,
-v2, or v3 file in place instead of crashing with "migration required but not found". If you need
+v2, v3, or v4 file in place instead of crashing with "migration required but not found". If you need
 your own `Room.databaseBuilder` — a different `SupportSQLiteOpenHelper.Factory`, callbacks, and so
 on — register every migration yourself, as shown in the subsections below.
 
@@ -203,6 +224,13 @@ The worker:
 - Reports progress via `setProgress()` with keys `KEY_PROCESSED` and `KEY_TOTAL`
 - Handles individual item failures gracefully — one failed enrichment does not stop the batch
 - Returns `Result.retry()` if the system stops the worker mid-batch
+
+`EnrichmentEngine` has its own `enrichBatch()`, a cold `Flow<Pair<EnrichmentRequest,
+EnrichmentResults>>` that walks a list of requests and emits each result as it lands. Collect it
+directly when a plain batch is all you need. `EnrichmentWorker` runs its own loop instead because
+it does two things between items that a bare collect does not: it calls `setProgress()`, and it
+hands the result to your `onItemEnriched()` — which is code that can throw, and whose throw it has
+to tell apart from the worker being stopped.
 
 Enqueue it:
 
