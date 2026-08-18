@@ -86,7 +86,7 @@ a build that consumes the library from outside (`docs/pitfalls.md` §1).
 `EnrichmentEngine` has one call that resolves metadata and one that resolves *candidates*:
 `enrich()` below, and `search()`, which a "did you mean?" prompt or a search-ahead UI calls
 directly — its usage is `docs/guides/identity-resolution.md`. The two share providers but nothing
-else; `search()`'s absent edges are the point of its own section, immediately after this one.
+else; `search()`'s absent edges are the point of its own section, after `enrich()`'s.
 
 ## One `enrich()` call
 ```mermaid
@@ -145,20 +145,23 @@ flowchart TD
 ```
 
 `search()` installs the same `EnrichDeadline` as `enrich()`, sized from the same
-`enrichTimeoutMs`, because its providers make the same typed HTTP calls and an unbudgeted 429
-there would retry against the transport's own 120s ceiling instead of a bound the caller already
-chose. That is the only machinery the two calls share — and it is a budget a retry consults, not
-a deadline. `enrich()` also wraps itself in `withTimeoutOrNull` and returns partial results when
-that fires; `search()` does not, so it never truncates and can outlast `enrichTimeoutMs` against
-an upstream that is merely slow. A caller who needs search bounded imposes the bound itself.
+`enrichTimeoutMs` — despite the name, a budget a retry consults rather than a hard cut-off. It is
+there because its providers make the same typed HTTP calls, and an unbudgeted 429 there would
+retry against the transport's own 120s ceiling instead of a bound the caller already chose. That
+is the only machinery the two calls share. `enrich()` also wraps itself in `withTimeoutOrNull`
+and returns partial results when that fires; `search()` does not, so it never truncates and can
+outlast `enrichTimeoutMs` against an upstream that is merely slow. A caller who needs search
+bounded imposes the bound itself.
 
 Everything `enrich()` does between a request and a result, `search()` skips: no cache read or
 write, no identity resolution as `enrich()` runs it (the identity provider is asked directly, as
 one candidate source among others, not to backfill the request), no merging, no gating. The
 identity provider goes first and the rest fill in only what it left short of `limit`, so a
 well-known entity costs one call, not one per provider. A provider that throws is logged and
-treated as an empty contribution — `ensureActive()` distinguishes that from our own deadline
-firing — because one upstream's outage should shrink the candidate list, not fail the search.
+treated as an empty contribution, because one upstream's outage should shrink the candidate list,
+not fail the search. `ensureActive()` is what stops that from swallowing a cancellation: the
+caller cancelling, or our own deadline firing, must still fail the call rather than read as a
+provider that returned nothing.
 
 The missing edges are why this call exists as a separate path rather than a thin `enrich()`
 wrapper. Skipping the cache is what lets a search-ahead UI call this per keystroke without

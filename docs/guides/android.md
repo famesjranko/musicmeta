@@ -16,9 +16,10 @@ dependencies {
 JitPack coordinates, and the repository declaration they need, are in the
 [README](../../README.md#installation).
 
-A minified release build needs no extra rules: `kotlinx-serialization-core-jvm` and `room-runtime`
-each bundle their own consumer ProGuard/R8 rules, and `musicmeta-android` declares none because it
-needs none.
+`musicmeta-android` declares no consumer ProGuard/R8 rules of its own. The reflective dependencies
+carry theirs — `room-runtime` bundles `proguard.txt`, `kotlinx-serialization-core-jvm` bundles
+`META-INF/com.android.tools/r8/` — and a minified consumer build applies both automatically. No
+`musicmeta`-specific keep rule is known to be needed.
 
 ---
 
@@ -39,10 +40,18 @@ val engine = EnrichmentEngine.Builder()
     .build()
 ```
 
-`RoomEnrichmentCache` also takes two optional constructor parameters not shown above: `clock: () ->
-Long` (defaults to `System::currentTimeMillis`) lets a test control cache expiry deterministically,
-and `logger: EnrichmentLogger` (defaults to `EnrichmentLogger.NoOp`) surfaces schema-mismatch and
-deserialization failures that otherwise degrade silently to a cache miss.
+`RoomEnrichmentCache` takes two more optional parameters:
+
+```kotlin
+val cache = RoomEnrichmentCache(
+    db.enrichmentCacheDao(), db.negativeCacheDao(), db.selectionDao(),
+    clock = { 1_700_000_000_000 },  // defaults to System::currentTimeMillis
+    logger = EnrichmentLogger.NoOp, // the default; pass your own instead
+)
+```
+
+`clock` lets a test control cache expiry deterministically. `logger` surfaces schema-mismatch and
+deserialization failures, which otherwise degrade silently to a cache miss.
 
 `EnrichmentCacheDatabase.create()` registers every migration for you, so it opens an on-device v1,
 v2, v3, or v4 file in place instead of crashing with "migration required but not found". If you need

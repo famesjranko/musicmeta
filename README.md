@@ -63,21 +63,25 @@ failure-isolation guarantees are in the [developer guides](docs/guides/README.md
 ## Search and disambiguation
 
 `engine.search()` returns `SearchCandidate` matches without running the enrichment pipeline or
-touching the cache -- use it for a search-ahead UI where the user picks an entity before you fetch
+touching the cache — use it for a search-ahead UI where the user picks an entity before you fetch
 its metadata.
 
 ```kotlin
 val candidates = engine.search(EnrichmentRequest.forArtist("pink floyd"), limit = 5)
+val chosen = candidates.first() // whichever one the user picked
 
-// Show them, let the user pick, then enrich from the pick -- it carries the
-// identifiers the search already resolved, so no second name lookup happens.
-val profile = engine.artistProfile(candidates[chosenIndex])
+// Enriching from the pick carries the identifiers the search already
+// resolved, so no second name lookup happens.
+val profile = engine.artistProfile(chosen)
 ```
 
-The same candidates surface unprompted when a name is ambiguous: `profile.suggestions` (or
-`results.identity.suggestions` via `enrich()`) carries the near-miss matches -- pick one and
-re-enrich with it, same as above. See [identity resolution](docs/guides/identity-resolution.md)
-for the full "did you mean?" flow.
+Show the list in the order it arrives, and **do not sort it by `score`** — that number is each
+provider's own, not comparable across them, so sorting on it ranks unlike scales.
+
+The same candidates surface unprompted when a name is ambiguous: an enriched profile carries
+them, so `engine.artistProfile("pink floid").suggestions` — or `results.identity.suggestions` via
+`enrich()` — holds the near-miss matches. Pick one and re-enrich with it, same as above. See
+[identity resolution](docs/guides/identity-resolution.md) for the full "did you mean?" flow.
 
 ## Providers
 
