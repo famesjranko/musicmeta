@@ -57,8 +57,27 @@ The engine resolves every type independently — a provider that fails, rate lim
 yields a typed result on that one type, and the rest of the profile is unaffected. `profile.results` carries the per-type outcome when you need to tell "no data" from
 "could not fetch".
 
-For the full API — pre-resolved identifiers, named accessors, the raw result map, disambiguation,
-and the failure-isolation guarantees — see the [developer guides](docs/guides/README.md).
+**Going further.** Pre-resolved identifiers, named accessors, the raw result map, and the
+failure-isolation guarantees are in the [developer guides](docs/guides/README.md).
+
+## Search and disambiguation
+
+`engine.search()` returns `SearchCandidate` matches without running the enrichment pipeline or
+touching the cache -- use it for a search-ahead UI where the user picks an entity before you fetch
+its metadata.
+
+```kotlin
+val candidates = engine.search(EnrichmentRequest.forArtist("pink floyd"), limit = 5)
+
+// Show them, let the user pick, then enrich from the pick -- it carries the
+// identifiers the search already resolved, so no second name lookup happens.
+val profile = engine.artistProfile(candidates[chosenIndex])
+```
+
+The same candidates surface unprompted when a name is ambiguous: `profile.suggestions` (or
+`results.identity.suggestions` via `enrich()`) carries the near-miss matches -- pick one and
+re-enrich with it, same as above. See [identity resolution](docs/guides/identity-resolution.md)
+for the full "did you mean?" flow.
 
 ## Providers
 
@@ -176,7 +195,7 @@ To consume a local checkout instead, see [docs/project/workflow.md](docs/project
 
 ## Interactive demo
 
-The `demo-cli/` module is a standalone CLI that showcases all three API tiers (profiles, named accessors, raw results), cache management, and the disambiguation flow. To enable the key-requiring providers, copy `secrets.properties.example` to `secrets.properties` and fill in the keys, or set environment variables (`LASTFM_API_KEY`, `FANARTTV_API_KEY`, `DISCOGS_TOKEN`, `LISTENBRAINZ_TOKEN`).
+The `demo-cli/` module is a standalone CLI that showcases all three API tiers (profiles, named accessors, raw results), cache management, search, and the disambiguation flow. To enable the key-requiring providers, copy `secrets.properties.example` to `secrets.properties` and fill in the keys, or set environment variables (`LASTFM_API_KEY`, `FANARTTV_API_KEY`, `DISCOGS_TOKEN`, `LISTENBRAINZ_TOKEN`).
 
 ```bash
 make demo-cli-run                          # interactive
@@ -194,7 +213,7 @@ musicmeta> invalidate artist radiohead
 ```
 
 The [`demo-web/`](demo-web/README.md) module is the same idea as a web app — artist, album, and
-track pages rendering everything the library exposes:
+track pages, plus search, rendering everything the library exposes:
 
 ```bash
 make demo-web-run   # http://localhost:8099

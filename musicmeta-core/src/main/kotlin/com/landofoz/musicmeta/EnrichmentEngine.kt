@@ -80,11 +80,40 @@ interface EnrichmentEngine {
         }
     }
 
+    /**
+     * Searches for entities matching [request], for a manual-search UI where the caller lets a
+     * user pick the right match from a list.
+     *
+     * **Not [enrich]:** it bypasses the cache, identity resolution, confidence gating, and result
+     * merging entirely. Every call re-asks providers over the network; nothing here reads or
+     * writes [cache].
+     *
+     * Asks the provider whose [EnrichmentProvider.isIdentityProvider] is true first, for up to
+     * [limit] candidates. Only if that returns fewer does it also ask every other provider whose
+     * [EnrichmentProvider.isAvailable] is true for the remainder, dropping any whose lowercased
+     * `title:artist` duplicates one the identity provider already returned — duplicates between
+     * two non-identity providers are not deduped against each other. A provider that throws is
+     * logged and contributes no candidates rather than failing the call.
+     *
+     * The returned list is the identity provider's candidates followed by whatever the others
+     * uniquely added, never re-sorted. [SearchCandidate.score] is each provider's own number and
+     * is not comparable across them, so ranking the list by it ranks unlike scales.
+     *
+     * [EnrichmentConfig.enrichTimeoutMs] bounds only how long a rate-limit retry sleeps here:
+     * unlike [enrich], search runs under no hard deadline of its own and never truncates.
+     */
     suspend fun search(
         request: EnrichmentRequest,
         limit: Int = 10,
     ): List<SearchCandidate>
 
+    /**
+     * Every provider the engine was built with, whether or not it can currently run.
+     *
+     * Each [ProviderInfo] is a snapshot: [ProviderInfo.isAvailable] reads the provider's state at
+     * the moment of the call, so a provider that resolves its key lazily reports differently on a
+     * later call. [ProviderInfo.isEnabled] carries nothing — this engine never sets it.
+     */
     fun getProviders(): List<ProviderInfo>
 
     val cache: EnrichmentCache
@@ -308,11 +337,24 @@ data class SearchCandidate(
     val disambiguation: String? = null,
 )
 
+/** One provider's identity and current capability, as [EnrichmentEngine.getProviders] reports it. */
 data class ProviderInfo(
+    /**
+     * Matches [EnrichmentProvider.id]. An [EnrichmentResult] names this id too, except where a
+     * merger or synthesizer produced it and stamped its own `_merger`/`_synthesizer` suffix.
+     */
     val id: String,
+    /** Name for a settings screen or provider picker; never used to look the provider up. */
     val displayName: String,
+    /** What this provider can supply, and the [IdentifierRequirement] each capability needs. */
     val capabilities: List<ProviderCapability>,
+    /** Whether the provider needs a caller-supplied API key at all, regardless of whether one was given. */
     val requiresApiKey: Boolean,
+    /**
+     * Whether the provider can run right now — the provider's own answer, not a derived one. Every
+     * built-in gates it on a key: false exactly when [requiresApiKey] is true and none was given.
+     */
     val isAvailable: Boolean,
+    /** Always true from [EnrichmentEngine.getProviders] — nothing in the engine ever sets it false. */
     val isEnabled: Boolean = true,
 )

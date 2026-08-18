@@ -81,6 +81,13 @@ nothing here forks engine *behaviour* by platform, and anything that would is a 
 shape in separate builds, so a break that `apiCheck`'s erased JVM descriptors cannot see still fails
 a build that consumes the library from outside (`docs/pitfalls.md` §1).
 
+## Two entry points, two paths
+
+`EnrichmentEngine` has one call that resolves metadata and one that resolves *candidates*:
+`enrich()` below, and `search()`, which a "did you mean?" prompt or a search-ahead UI calls
+directly — its usage is `docs/guides/identity-resolution.md`. The two share providers but nothing
+else; `search()`'s absent edges are the point of its own section, immediately after this one.
+
 ## One `enrich()` call
 ```mermaid
 flowchart TD
@@ -123,6 +130,50 @@ makes them architectural: **confidence and provenance may understate the evidenc
 it**, and **an absence must never be reported where a failure occurred**. Both are one-directional
 on purpose, because consumers branch on the distinction. What each cost to learn is
 `docs/pitfalls.md` §4 and §8.
+
+## One `search()` call
+```mermaid
+flowchart TD
+    req["EnrichmentRequest,<br/>limit"] --> identity{"identity provider<br/>registered?"}
+    identity -->|yes| primary["identity.searchCandidates"]
+    identity -->|no| supplement
+    primary --> enough{"limit already<br/>met?"}
+    enough -->|yes| results
+    enough -->|no| supplement["registry.searchProviders():<br/>every other provider,<br/>remaining slots each"]
+    supplement --> dedupe["drop what duplicates<br/>the identity provider,<br/>on lowercased title:artist"]
+    dedupe --> results["List&lt;SearchCandidate&gt;"]
+```
+
+`search()` installs the same `EnrichDeadline` as `enrich()`, sized from the same
+`enrichTimeoutMs`, because its providers make the same typed HTTP calls and an unbudgeted 429
+there would retry against the transport's own 120s ceiling instead of a bound the caller already
+chose. That is the only machinery the two calls share — and it is a budget a retry consults, not
+a deadline. `enrich()` also wraps itself in `withTimeoutOrNull` and returns partial results when
+that fires; `search()` does not, so it never truncates and can outlast `enrichTimeoutMs` against
+an upstream that is merely slow. A caller who needs search bounded imposes the bound itself.
+
+Everything `enrich()` does between a request and a result, `search()` skips: no cache read or
+write, no identity resolution as `enrich()` runs it (the identity provider is asked directly, as
+one candidate source among others, not to backfill the request), no merging, no gating. The
+identity provider goes first and the rest fill in only what it left short of `limit`, so a
+well-known entity costs one call, not one per provider. A provider that throws is logged and
+treated as an empty contribution — `ensureActive()` distinguishes that from our own deadline
+firing — because one upstream's outage should shrink the candidate list, not fail the search.
+
+The missing edges are why this call exists as a separate path rather than a thin `enrich()`
+wrapper. Skipping the cache is what lets a search-ahead UI call this per keystroke without
+writing an entry, and later expiring, for every character the user typed. Skipping gating is the
+corresponding cost: a `SearchCandidate` carries a `score`, not the confidence and provenance
+`enrich()` stamps on a `Success`, so it is a pick-list entry, not an enriched result — a caller
+that treats one as the other is treating an unvetted guess as gated data.
+
+**`score` is a provider's own number, and the list is not sorted by it.** The identity provider
+returns an upstream relevance score; a supplemental provider that has no such number returns a
+flat constant standing in for one. Nothing normalises the two, and the returned list is the
+identity provider's candidates followed by whatever the others uniquely added — provenance
+order, not merit order. A UI that re-sorts on `score` is ranking a relevance score against a
+constant. This is the shape of every unmerged, ungated result the engine hands back: comparable
+within a provider, not across them.
 
 ## What the eleventh provider costs
 

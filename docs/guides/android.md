@@ -16,6 +16,10 @@ dependencies {
 JitPack coordinates, and the repository declaration they need, are in the
 [README](../../README.md#installation).
 
+A minified release build needs no extra rules: `kotlinx-serialization-core-jvm` and `room-runtime`
+each bundle their own consumer ProGuard/R8 rules, and `musicmeta-android` declares none because it
+needs none.
+
 ---
 
 ## RoomEnrichmentCache
@@ -34,6 +38,11 @@ val engine = EnrichmentEngine.Builder()
     .config(EnrichmentConfig(userAgent = "MyApp/1.0 (contact@example.com)"))
     .build()
 ```
+
+`RoomEnrichmentCache` also takes two optional constructor parameters not shown above: `clock: () ->
+Long` (defaults to `System::currentTimeMillis`) lets a test control cache expiry deterministically,
+and `logger: EnrichmentLogger` (defaults to `EnrichmentLogger.NoOp`) surfaces schema-mismatch and
+deserialization failures that otherwise degrade silently to a cache miss.
 
 `EnrichmentCacheDatabase.create()` registers every migration for you, so it opens an on-device v1,
 v2, v3, or v4 file in place instead of crashing with "migration required but not found". If you need
@@ -206,6 +215,13 @@ The worker:
 - Reports progress via `setProgress()` with keys `KEY_PROCESSED` and `KEY_TOTAL`
 - Handles individual item failures gracefully — one failed enrichment does not stop the batch
 - Returns `Result.retry()` if the system stops the worker mid-batch
+
+`EnrichmentEngine` has its own `enrichBatch()`, a cold `Flow<Pair<EnrichmentRequest,
+EnrichmentResults>>` that walks a list of requests and emits each result as it lands. Collect it
+directly when a plain batch is all you need. `EnrichmentWorker` runs its own loop instead because
+it does two things between items that a bare collect does not: it calls `setProgress()`, and it
+hands the result to your `onItemEnriched()` — which is code that can throw, and whose throw it has
+to tell apart from the worker being stopped.
 
 Enqueue it:
 
