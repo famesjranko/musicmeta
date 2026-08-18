@@ -1,4 +1,4 @@
-![Musicmeta banner](docs/musicmeta-banner.png)
+![Musicmeta banner](docs/assets/musicmeta-banner.png)
 
 <div align="center">
          
@@ -14,8 +14,8 @@ A Kotlin library for Android and JVM music apps: 11 public music APIs behind one
 ## What it does
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/what-it-does-dark.svg">
-  <img alt="A request for Radiohead enters the EnrichmentEngine, passes through identity, fan-out, merge and cache, and comes out as an ArtistProfile carrying photo, bio, genres, discography and similar artists with a confidence for each" src="docs/what-it-does.svg" width="100%">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/what-it-does-dark.svg">
+  <img alt="A request for Radiohead enters the EnrichmentEngine, passes through identity, fan-out, merge and cache, and comes out as an ArtistProfile carrying photo, bio, genres, discography and similar artists with a confidence for each" src="docs/assets/what-it-does.svg" width="100%">
 </picture>
 
 MusicBrainz resolves the MBID first, so every lookup after it is an identifier lookup rather than a
@@ -190,6 +190,7 @@ To consume a local checkout instead, see [docs/project/workflow.md](docs/project
 |----------|---------|
 | [docs/guides/](docs/guides/README.md) | Developer guides — quick start, identity resolution, results & errors, cache management, configuration, extension points, Android |
 | [docs/how-it-works.md](docs/how-it-works.md) | Complete pipeline trace -- from `enrich()` call to results |
+| [docs/glossary.md](docs/glossary.md) | One word per concept, and each upstream's word for the same thing -- plus what `musicBrainzId` means on each request kind |
 | [docs/providers.md](docs/providers.md) | Per-provider upstream docs, terms and attribution, User-Agent requirements and rate limits -- plus contributor notes on what each provider returns that we drop |
 | [docs/project/workflow.md](docs/project/workflow.md) | Branch topology, issue lifecycle, worktrees, and verification selection |
 | [docs/project/release.md](docs/project/release.md) | Release preparation, tagging, and publication |
@@ -223,7 +224,7 @@ track pages, plus search, rendering everything the library exposes:
 make demo-web-run   # http://localhost:8099
 ```
 
-![The demo-web landing page: artist, album, track and MBID tabs above a search field, with the backend reporting ready](docs/demo-web.png)
+![The demo-web landing page: artist, album, track and MBID tabs above a search field, with the backend reporting ready](docs/assets/demo-web.png)
 
 Enrich a name and each panel below is one `EnrichmentType`, tagged with the providers that answered
 it. Both demos work keyless; the key-requiring providers stay dark until you supply keys. `make

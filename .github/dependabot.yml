@@ -6,3 +6,22 @@ updates:
     directory: /
     schedule:
       interval: weekly
+
+  # Every dependency here reaches a consumer: core's three are transitive on the published POM,
+  # and the adapters exist to bring OkHttp and Room. A stale one is imposed on everyone who takes
+  # the library, and nothing else in the repo notices — `apiCheck` does not read the POM, and no
+  # gate reads versions at all.
+  #
+  # Grouped so a quiet week is one PR rather than a dozen. Two bumps need more than a green run
+  # before merging, and both are documented where they live rather than pinned here:
+  # `detekt` (VERIFICATION.md — 1.23.8 is built against a different Kotlin/AGP than this repo runs,
+  # so all three modules' typed tasks have to be re-run) and `ktlint-gradle` (libs.versions.toml —
+  # the CLI version is set explicitly, so a plugin bump must not be read as a rule-set bump).
+  - package-ecosystem: gradle
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      gradle:
+        patterns:
+          - "*"

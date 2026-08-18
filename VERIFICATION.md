@@ -22,6 +22,7 @@ because the config is the thing that fails.
 | Conventions | `scripts/checks/check_conventions.py` | no `!!` and no `@Serializable` under `provider/`/`http/` in main sources; only `*Provider` public under `provider/` in the committed `api/*.api`; conflict markers anywhere |
 | Pitfall citations | `scripts/checks/check_pitfall_citations.py` | every `§N` reference to `docs/pitfalls.md` resolves to a `## N.` heading in it — catches a renumbered or deleted section orphaning its citers silently |
 | Provider call scope | `scripts/checks/check_provider_call_scope.py` | every `provider/<name>/` directory with a `*Provider.kt` mentions `ProviderCallScope` somewhere in the directory, or is named in the script's own allowlist with a reason; plain substring match, so it proves the mention exists, not that the memo is correct or reached — the per-provider request-count tests and `ProviderMemoLifetimeTest` cover that |
+| Public vocabulary | `scripts/checks/check_public_vocabulary.py` | no upstream's word for a concept this library already names — `recording`, `release-group`, `master` — appears in a public identifier in the committed `api/*.api` unless a provider's name is attached to it or to its enclosing type. `docs/glossary.md` holds the mapping and the rule. It reads names, never meaning: a public `albumId` holding a release id passes, and so does a name that is simply wrong rather than borrowed. `collection` is not banned — erased JVM descriptors put `Ljava/util/Collection;` on a large share of lines |
 | Test shape | `scripts/checks/check_test_shape.py` | every `@Test` body has `// Given -`/`// When -`/`// Then -`, each on its own line with a plain hyphen and a real clause — Kotlin test sources only, on both the `check` gate and the `format-on-write.sh` hook |
 | Release-note caps | `build_release_notes.py Unreleased` | `CHANGELOG.md`'s `[Unreleased]` stays under 48000 chars and 200 per line — the same `check_caps()` the release runs, so it fails here rather than at release prep. An empty section passes: `pin_release.py` opens one on every release branch |
 | Script self-tests | `scripts/**/test_*.py` | discovered, not listed |
@@ -68,6 +69,21 @@ than it looks like, each learned the hard way.
   prose. `git log -S ProviderFeatureDocsTest` has it if the judgement changes. The tables it checked
   went with it; what the doc kept is what no compiler or test can see. It states its own scope and
   the date it was last hand-verified — that date is the only warranty.
+- **Nothing checks core's dependency list.** `ARCHITECTURE.md`'s "core is dependency-minimal JVM"
+  is held by review alone: adding one compiles, passes every test, and moves no `api/*.api` line,
+  because a transitive is not part of the ABI. A check that parsed `musicmeta-core/build.gradle.kts`
+  was built and deleted — the build script is not where the invariant lives. The published POM is,
+  and `./gradlew :musicmeta-core:generatePomFileForMavenPublication` already writes a fourth
+  dependency, `kotlin-stdlib`, that no build script declares, so a parse can report "three, all
+  allowed" while the artifact a consumer resolves disagrees. A baseline of that POM, diffed the way
+  `api/*.api` is, would enforce it exactly — `.scratch/core-dependency-pom-baseline/`.
+- **No connected Android test runs anywhere.** `musicmeta-android/src/androidTest/` is absent from
+  `check`, from the `Makefile` and from all five workflows in `.github/workflows/`, so
+  `EnrichmentCacheDatabaseMigrationDeviceTest` — the only thing that exercises a Room migration
+  against framework SQLite — has never gated a merge and is not meant to. The Robolectric suite in
+  `src/test/` proves the SQL and runs on every `./check`; what it cannot prove is the platform an
+  installed app actually upgrades on. That evidence is produced by hand and recorded at the commit
+  (`CLAUDE.md`), because a migration is the one change here that reverting the code does not undo.
 - **detekt is not in `--fast`.** The typed tasks compile before they analyse and the Android
   variants need `ANDROID_HOME`. The edit loop is ktlint plus the conventions check; detekt runs on
   every push and in CI.

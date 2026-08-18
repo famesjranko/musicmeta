@@ -60,6 +60,9 @@ consumer take the engine without either.
 **core is dependency-minimal JVM** — coroutines, `org.json`, and kotlinx-serialization, nothing
 else. Serialization is declared `api(...)`, so it is on a consumer's compile classpath and its
 version is part of the published contract; the other two are `implementation`.
+A fourth entry reaches every consumer transitively and cannot be withdrawn without a break, so the
+argument for each one is written beside it in `musicmeta-core/build.gradle.kts`. Nothing enforces
+the list (`VERIFICATION.md` — "Known gaps").
 
 **`http/`'s `HttpClient` interface is the seam that keeps it that way.** Core owns transport
 *semantics* — what is transient, how a retry budget composes with the enrich deadline, when a
@@ -198,8 +201,7 @@ payloads, search acceptance that checks artist and title rather than trusting hi
 
 The cost that is not abstracted away is fixtures. A provider test asserts against a fixture copied
 from a real response, because that is what pins a field name against upstream drift
-(`docs/pitfalls.md` §3). Nothing mechanises this — it is a convention review enforces, and a pool
-whose chain back to a live capture is unverified says so in its own `scenario.md`.
+(`docs/pitfalls.md` §3) — the one part of a new provider that no seam above makes cheaper.
 
 ## Where a change lands
 

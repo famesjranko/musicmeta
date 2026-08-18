@@ -56,6 +56,19 @@ a row here carries only what a reviewer looks *for*, so a rule change is never a
       specification passes whether it is present or deleted (`docs/pitfalls.md` §19). Register the
       expected red set before the run and treat a different count as the finding.
 
+## Dependencies
+
+- [ ] **A new `api`/`implementation`/`compileOnly`/`runtimeOnly` line in
+      `musicmeta-core/build.gradle.kts`** (`CLAUDE.md`). Nothing fails on one, so it arrives in a
+      green diff: it compiles, the tests pass, and `apiCheck` sees nothing. Ask whether it belongs
+      in an adapter instead, and hold the argument beside the declaration to the same bar as the
+      three already there — "we needed it" is not one.
+- [ ] **A dependency added anywhere other than that block.** A convention plugin, a
+      `configurations.all`, or an `afterEvaluate` reaches core's classpath without touching the
+      block a reviewer is looking at. `./gradlew :musicmeta-core:generatePomFileForMavenPublication`
+      writes what a consumer actually resolves, and it already lists a `kotlin-stdlib` that appears
+      in no build script.
+
 ## Providers
 
 - [ ] A new provider off the `CLAUDE.md` layout. The visibility half is gated — only `*Provider`

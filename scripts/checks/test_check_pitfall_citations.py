@@ -82,6 +82,40 @@ class PitfallCitationsTest(unittest.TestCase):
         self.assertEqual(len(findings), 1)
         self.assertIn("no `## N.` headings", findings[0])
 
+    def test_citation_in_an_agent_worktree_is_not_reported(self):
+        # Given an orphaned citation inside `.claude/worktrees/`, a full checkout of this repo on
+        # another branch — where the pitfalls file may legitimately be numbered differently
+        body = "// see " + DOC + " " + SECTION + "9\n"
+        # When the check runs
+        findings = self.findings_for({".claude/worktrees/agent-a1/src/A.kt": body})
+        # Then it is not reported — that branch's citations resolve against that branch's doc
+        self.assertEqual(findings, [])
+
+    def test_citation_in_a_tracked_dot_claude_file_is_reported(self):
+        # Given the same orphan in `.claude/commands/`, which is committed wiring. The exclusion
+        # was `/.claude/` wholesale, so this file's citations were never checked at all.
+        body = "See " + DOC + " " + SECTION + "9\n"
+        # When the check runs
+        findings = self.findings_for({".claude/commands/review-checklist.md": body})
+        # Then it is reported, because that file ships with the repo
+        self.assertEqual(len(findings), 1)
+        self.assertIn(".claude/commands/review-checklist.md", findings[0])
+
+    def test_a_symlink_to_a_scanned_file_is_not_read_twice(self):
+        # Given `AGENTS.md` symlinked to a file carrying an orphaned citation
+        body = "See " + DOC + " " + SECTION + "9\n"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.write(root, DOC, HEADINGS)
+            self.write(root, "CLAUDE.md", body)
+            (root / "AGENTS.md").symlink_to("CLAUDE.md")
+            # When the check runs
+            findings = run(root)
+        # Then the orphan is reported once, under the real file's name
+        self.assertEqual(len(findings), 1)
+        self.assertIn("CLAUDE.md", findings[0])
+        self.assertNotIn("AGENTS.md", findings[0])
+
 
 if __name__ == "__main__":
     unittest.main()
