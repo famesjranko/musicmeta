@@ -68,8 +68,7 @@ a row here carries only what a reviewer looks *for*, so a rule change is never a
       `configurations.all`, or an `afterEvaluate` reaches core's classpath without touching the
       block a reviewer is looking at. `./gradlew :musicmeta-core:generatePomFileForMavenPublication`
       writes what a consumer actually resolves, and it already lists a `kotlin-stdlib` that appears
-      in no build script — that gap is why the parse-the-build-script check for this was deleted
-      rather than kept.
+      in no build script.
 
 ## Providers
 

@@ -30,12 +30,22 @@ rest; `ls docs/` lists the docs.
 Every finding has exactly one home, and lands in the same commit as the change that taught it —
 nothing can catch a trap nobody wrote down. This file is the home only for the last row.
 
+**Two audiences, and the boundary is `README.md`'s documentation table.** Everything in it ships to
+someone who took the library and will never see this repo: `README.md`, `docs/guides/`,
+`docs/how-it-works.md`, `docs/glossary.md`, `docs/providers.md`, `docs/project/`, `CHANGELOG.md`,
+`ARCHITECTURE.md`, `VERIFICATION.md`. Everything outside it is ours: this file, `docs/pitfalls.md`,
+`docs/agents/`, `.scratch/`. Write for the reader the file has — a consumer reading `ARCHITECTURE.md`
+wants the invariant and what it costs them, not which check we wrote, kept or deleted. The two
+shipped files that are *about* the repo, `ARCHITECTURE.md` and `VERIFICATION.md`, are where this
+goes wrong: the split between them is the system versus what verifies it.
+
 | A new | Goes in |
 |---|---|
 | Trap that cost something | `docs/pitfalls.md` |
 | Consumer-visible change | a `CHANGELOG.md` line — that file's header defines consumer-visible and the shape |
 | Work item, or a finding to triage later | a `.scratch/` ticket — `docs/agents/issue-tracker.md` |
 | Rule no mechanism catches | here, and nowhere else — `docs/agents/review-checklist.md` may add how review *applies* a rule, never the rule itself |
+| Fact about our own tooling — a gate that does not exist, a mechanism tried and dropped | `VERIFICATION.md` — "Known gaps". Never a design doc: `ARCHITECTURE.md` says what the system is, not what we check |
 
 ## Rules with no mechanism
 

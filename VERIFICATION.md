@@ -69,6 +69,14 @@ than it looks like, each learned the hard way.
   prose. `git log -S ProviderFeatureDocsTest` has it if the judgement changes. The tables it checked
   went with it; what the doc kept is what no compiler or test can see. It states its own scope and
   the date it was last hand-verified — that date is the only warranty.
+- **Nothing checks core's dependency list.** `ARCHITECTURE.md`'s "core is dependency-minimal JVM"
+  is held by review alone: adding one compiles, passes every test, and moves no `api/*.api` line,
+  because a transitive is not part of the ABI. A check that parsed `musicmeta-core/build.gradle.kts`
+  was built and deleted — the build script is not where the invariant lives. The published POM is,
+  and `./gradlew :musicmeta-core:generatePomFileForMavenPublication` already writes a fourth
+  dependency, `kotlin-stdlib`, that no build script declares, so a parse can report "three, all
+  allowed" while the artifact a consumer resolves disagrees. A baseline of that POM, diffed the way
+  `api/*.api` is, would enforce it exactly — `.scratch/core-dependency-pom-baseline/`.
 - **detekt is not in `--fast`.** The typed tasks compile before they analyse and the Android
   variants need `ANDROID_HOME`. The edit loop is ktlint plus the conventions check; detekt runs on
   every push and in CI.
