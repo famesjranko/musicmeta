@@ -88,9 +88,6 @@ python3 scripts/checks/check_provider_call_scope.py
 step "public vocabulary"
 python3 scripts/checks/check_public_vocabulary.py
 
-step "core dependencies"
-python3 scripts/checks/check_core_dependencies.py
-
 step "script self-tests"
 # Unguarded, a regression in a release script surfaces only as a release check that silently passes.
 for t in scripts/checks/test_*.py scripts/github-workflows/test_*.py; do

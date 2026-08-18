@@ -60,9 +60,18 @@ consumer take the engine without either.
 **core is dependency-minimal JVM** — coroutines, `org.json`, and kotlinx-serialization, nothing
 else. Serialization is declared `api(...)`, so it is on a consumer's compile classpath and its
 version is part of the published contract; the other two are `implementation`.
-`scripts/checks/check_core_dependencies.py` gates the list, because adding to it is otherwise
-silent: it compiles, the tests pass, and `apiCheck` sees nothing — a transitive is not part of the
-ABI, and the cost lands on every consumer's classpath at the next release.
+Nothing gates the list, and a check that parsed this build script was written and deleted rather
+than kept. The build script is not where the invariant lives: the published POM is, and it already
+carries a fourth dependency — `kotlin-stdlib`, contributed by the Kotlin plugin and declared
+nowhere below. A parse of the declarations can report "three, all allowed" while the artifact a
+consumer resolves says otherwise, which is a gate that reads clean for a reason unrelated to the
+thing it claims. Adding a dependency here is also the most visible line a diff can carry, in a
+nine-line block, three times in this repo's history.
+
+What would enforce it exactly is a committed baseline of
+`./gradlew :musicmeta-core:generatePomFileForMavenPublication`, diffed the way `api/*.api` is —
+no parse, and transitives and version bumps included. Until then this is review's, and the reason
+each dependency is here is written beside it in `musicmeta-core/build.gradle.kts`.
 
 **`http/`'s `HttpClient` interface is the seam that keeps it that way.** Core owns transport
 *semantics* — what is transient, how a retry budget composes with the enrich deadline, when a

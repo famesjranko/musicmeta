@@ -56,6 +56,21 @@ a row here carries only what a reviewer looks *for*, so a rule change is never a
       specification passes whether it is present or deleted (`docs/pitfalls.md` §19). Register the
       expected red set before the run and treat a different count as the finding.
 
+## Dependencies
+
+- [ ] **A new `api`/`implementation`/`compileOnly`/`runtimeOnly` line in
+      `musicmeta-core/build.gradle.kts`.** Nothing fails on one: it compiles, the tests pass, and
+      `apiCheck` sees nothing, because a transitive is not part of the ABI. It reaches every
+      consumer at the next release and cannot be taken back without a break. Ask whether it belongs
+      in an adapter — `musicmeta-okhttp` and `musicmeta-android` exist to bring OkHttp and Room —
+      and require the reason to be written beside the declaration. Adapters are not held to this.
+- [ ] **A dependency added anywhere other than that block.** A convention plugin, a
+      `configurations.all`, or an `afterEvaluate` reaches core's classpath without touching the
+      block a reviewer is looking at. `./gradlew :musicmeta-core:generatePomFileForMavenPublication`
+      writes what a consumer actually resolves, and it already lists a `kotlin-stdlib` that appears
+      in no build script — that gap is why the parse-the-build-script check for this was deleted
+      rather than kept.
+
 ## Providers
 
 - [ ] A new provider off the `CLAUDE.md` layout. The visibility half is gated — only `*Provider`
