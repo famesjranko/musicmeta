@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Breaking Changes
+- `ProviderInfo.isEnabled` is removed: `getProviders()` only reported `true`, so filtering on it was a no-op — use `isAvailable`; `copy`/constructor descriptors changed, `component6` gone: recompile
 - `ARTIST_POPULARITY`/`TRACK_POPULARITY` results now report `provider = "popularity_merger"`, so a per-provider `confidenceOverrides` entry no longer affects those two types
 - `Builder.addProvider` now throws on a duplicate provider id, or one the engine reserves (`engine`, `all_providers`, `no_provider`, `no_merger`, `no_composite_handler`, any `*_merger`): rename yours
 - Duplicate ids previously shared one circuit breaker, so a healthy provider kept a failing twin in rotation; that configuration is now refused at registration rather than silently degrading
