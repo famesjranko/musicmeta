@@ -12,10 +12,12 @@ from __future__ import annotations
 import sys
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import check_public_vocabulary  # noqa: E402
 from check_public_vocabulary import run  # noqa: E402
 
 DUMP = "musicmeta-core/api/musicmeta-core.api"
@@ -156,6 +158,61 @@ class PublicVocabularyTest(unittest.TestCase):
         # When the vocabulary check runs
         # Then nothing is reported
         self.assertEqual(self.findings_for(body), [])
+
+    # --- the fix names the right upstream ---
+
+    def test_the_fix_credits_the_upstream_that_owns_the_word(self):
+        # Given Discogs' word for an album. A fix that suggests attaching *any* provider's name
+        # hands back a name that is false and that this check would then accept.
+        body = "public final class com/landofoz/musicmeta/MasterRef {\n}\n"
+        # When the vocabulary check runs
+        findings = self.findings_for(body)
+        # Then the suggested qualified name is Discogs', not MusicBrainz's
+        self.assertEqual(len(findings), 1)
+        self.assertIn("discogsMasterId", findings[0])
+        self.assertNotIn("musicBrainz", findings[0])
+
+    def test_the_fix_camel_cases_a_two_word_stem(self):
+        # Given a stem this library flattens to one token. `stem.capitalize()` would suggest
+        # `musicBrainzReleasegroupId`, which is not a name anyone would write.
+        body = "public final class com/landofoz/musicmeta/ReleaseGroupRef {\n}\n"
+        # When the vocabulary check runs
+        findings = self.findings_for(body)
+        # Then the suggestion is the name as it would actually be written
+        self.assertEqual(len(findings), 1)
+        self.assertIn("musicBrainzReleaseGroupId", findings[0])
+
+    # --- the allowlist is an escape hatch that has to work ---
+
+    def test_an_allowlisted_identifier_is_not_reported(self):
+        # Given a borrowed word that is on the allowlist — the hatch for a name that is neither
+        # qualifiable nor renameable. Empty in the repo, so nothing else exercises this branch.
+        body = (
+            "public final class com/landofoz/musicmeta/TrackProfile {\n"
+            "\tpublic final fun getRecordingId ()Ljava/lang/String;\n"
+            "}\n"
+        )
+        # When the vocabulary check runs with that name allowlisted
+        with unittest.mock.patch.dict(check_public_vocabulary.ALLOWLIST, {"getRecordingId": "pinned by a consumer"}):
+            findings = self.findings_for(body)
+        # Then it is not reported
+        self.assertEqual(findings, [])
+
+    def test_the_allowlist_exempts_only_the_name_it_lists(self):
+        # Given one allowlisted borrowed name and one that is not, so an allowlist that is read as
+        # "any entry disables the rule" cannot pass.
+        body = (
+            "public final class com/landofoz/musicmeta/TrackProfile {\n"
+            "\tpublic final fun getRecordingId ()Ljava/lang/String;\n"
+            "\tpublic final fun getMasterId ()Ljava/lang/String;\n"
+            "}\n"
+        )
+        # When the vocabulary check runs with only the first allowlisted
+        with unittest.mock.patch.dict(check_public_vocabulary.ALLOWLIST, {"getRecordingId": "pinned by a consumer"}):
+            findings = self.findings_for(body)
+        # Then the other is still reported
+        self.assertEqual(len(findings), 1)
+        self.assertIn("getMasterId", findings[0])
 
     # --- the scan cannot go quiet ---
 

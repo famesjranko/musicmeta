@@ -80,14 +80,14 @@ format: ## Rewrite Kotlin and Python to house style
 	$(GRADLE) ktlintFormat
 	ruff format .
 
+# Delegated rather than re-listed. The hand-written list this replaced named three of the five
+# python checks and none of the shell or self-test steps, because every new step in ./check had to
+# be remembered here too and twice was not. `./check --fast` is that whole layer, and detekt is the
+# one thing it stops short of.
 .PHONY: lint
-lint: ## All four layers, no tests — detekt compiles Kotlin, since its rules need resolved types
-	$(GRADLE) ktlintCheck detektMain detektTest
-	ruff check .
-	mypy
-	python3 scripts/checks/check_conventions.py
-	python3 scripts/checks/check_pitfall_citations.py
-	python3 scripts/checks/check_provider_call_scope.py
+lint: ## All four layers, no tests — ./check --fast, plus detekt, which compiles Kotlin for types
+	./check --fast
+	$(GRADLE) detektMain detektTest
 
 # --- public API ---
 

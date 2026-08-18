@@ -34,18 +34,32 @@ import argparse
 import re
 import sys
 from pathlib import Path
+from typing import NamedTuple
 
 # Kept in step with `check_conventions.py`, which excludes the same tree for the same reason: a
 # worktree is another branch's checkout, and its surface is that branch's PR to answer for.
 AGENT_WORKTREES = "/.claude/worktrees/"
 
+
+class Borrowed(NamedTuple):
+    """A word borrowed from one upstream, and what this library calls the same thing."""
+
+    ours: str
+    """This library's word for the concept — what a rename should land on."""
+    qualified: str
+    """The name to use when the thing really is that upstream's entity. Carries the owning
+    provider, because suggesting a qualifier from the wrong upstream hands back a name that is
+    false and that this check would then accept, and carries the stem's camel case, because a
+    flattened stem capitalised gives `Releasegroup`."""
+
+
 # The upstream words for concepts this library already names. `docs/glossary.md` holds the mapping
 # and is the file to change first — adding a stem here without a row there leaves the fix message
 # pointing at nothing.
 BANNED_STEMS = {
-    "recording": "track",
-    "releasegroup": "album",
-    "master": "album",
+    "recording": Borrowed(ours="track", qualified="musicBrainzRecordingId"),
+    "releasegroup": Borrowed(ours="album", qualified="musicBrainzReleaseGroupId"),
+    "master": Borrowed(ours="album", qualified="discogsMasterId"),
 }
 
 # The providers whose name qualifies a borrowed word. Lowercased, matched as a substring of the
@@ -134,9 +148,10 @@ def scan(text: str) -> list[tuple[int, str, str]]:
 
 def fix(name: str, stem: str) -> str:
     return (
-        f"`{name}` borrows `{stem}` — this library's word is `{BANNED_STEMS[stem]}` "
-        f"(`docs/glossary.md`). Rename it, or attach the provider's name if it really is that "
-        f"upstream's entity (`musicBrainz{stem.capitalize()}Id`). Re-run `./gradlew apiDump` after."
+        f"`{name}` borrows `{stem}` — this library's word is `{BANNED_STEMS[stem].ours}` "
+        f"(`docs/glossary.md`). Rename it, or attach the owning provider's name if it really is "
+        f"that upstream's entity (`{BANNED_STEMS[stem].qualified}`). Re-run `./gradlew apiDump` "
+        "after."
     )
 
 

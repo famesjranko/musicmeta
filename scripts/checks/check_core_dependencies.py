@@ -13,6 +13,10 @@ classpath at the next release, where removing it is a break.
 accessor listed in `ALLOWED` below, with the reason a reviewer reads. Adding a dependency means
 adding the row and defending it, which is the whole mechanism.
 
+Anything the parse does not recognise as a catalog accessor is reported, not skipped. A raw
+`"group:name:version"` coordinate is the form a paste from a README takes, and skipping it would
+leave the one route this gate exists to close wide open while still printing a clean count.
+
 **Scope is core only**, and that is deliberate rather than unfinished: `musicmeta-okhttp` exists to
 bring OkHttp and `musicmeta-android` to bring Room, Hilt and WorkManager, so the same rule there
 would fail the modules for doing their job. `MODULE` is the one place to change if that judgement
@@ -50,7 +54,13 @@ ALLOWED = {
     ),
 }
 
-DEPENDENCY = re.compile(r"^\s*(\w+)\s*\(\s*([\w.]+)\s*\)")
+# A configuration name followed by its opening paren. Deliberately not a pattern for `libs.x`: a
+# declaration this script cannot recognise has to reach `run()` as an argument that fails the
+# allowlist, because a line skipped for failing to parse is a dependency added in silence.
+CALL = re.compile(r"^\s*(\w+)\s*\(")
+
+# The one argument shape the allowlist can name. Anything else is reported and sent to the catalog.
+ACCESSOR = re.compile(r"^[\w.]+$")
 
 NO_BLOCK_FINDING = (
     f"::error file={MODULE}::no `dependencies {{ }}` block found, so this check read nothing. "
@@ -78,21 +88,60 @@ def dependencies_block(text: str) -> str | None:
     return None
 
 
+def argument(line: str, open_index: int) -> str:
+    """The text between this opening paren and its match, or the rest of the line if unbalanced.
+
+    Paren-counted for the same reason the block is brace-counted: reading to the first `)` would
+    cut `platform(libs.some.bom)` down to `platform(libs.some.bom`, and a truncated argument is a
+    finding quoting something the build script does not say.
+    """
+    depth = 0
+    for index in range(open_index, len(line)):
+        if line[index] == "(":
+            depth += 1
+        elif line[index] == ")":
+            depth -= 1
+            if depth == 0:
+                return line[open_index + 1 : index].strip()
+    return line[open_index + 1 :].strip()
+
+
 def declared(block: str) -> list[tuple[int, str, str]]:
-    """Every (line offset, configuration, accessor) the block declares."""
+    """Every (line offset, configuration, argument) the block declares.
+
+    The argument is captured as written rather than parsed into a coordinate. `implementation(
+    "group:name:version")` and a named-argument call are both legitimate Gradle and neither is a
+    catalog accessor, so both have to arrive here and fail the allowlist rather than be skipped.
+    """
     found = []
     for offset, line in enumerate(block.split("\n")):
-        match = DEPENDENCY.match(line)
+        match = CALL.match(line)
         if match is not None:
-            found.append((offset, match.group(1), match.group(2)))
+            found.append((offset, match.group(1), argument(line, match.end() - 1)))
     return found
 
 
-def fix(configuration: str, accessor: str) -> str:
+def fix(configuration: str, declaration: str) -> str:
+    """The finding text, which differs by whether the allowlist can even name this declaration."""
+    core_is_minimal = (
+        "Core is dependency-minimal JVM (`ARCHITECTURE.md`) — a dependency here reaches every "
+        "consumer transitively and cannot be removed without a break. Move it to an adapter module"
+    )
+    if declaration.startswith("project("):
+        return (
+            f"`{configuration}({declaration})` depends on another module of this repo. Core is the "
+            "bottom of the stack (`ARCHITECTURE.md`) — the adapters depend on core, never the "
+            "reverse. Move the code that needs this into the adapter."
+        )
+    if ACCESSOR.match(declaration):
+        return (
+            f"`{configuration}({declaration})` is not on core's allowlist. {core_is_minimal}, or "
+            "add it to `ALLOWED` in `scripts/checks/check_core_dependencies.py` with the reason."
+        )
     return (
-        f"`{configuration}({accessor})` is not on core's allowlist. Core is dependency-minimal JVM "
-        "(`ARCHITECTURE.md`) — a dependency here reaches every consumer transitively and cannot be "
-        "removed without a break. Move it to an adapter module, or add it to `ALLOWED` in "
+        f"`{configuration}({declaration})` does not name a version-catalog accessor, so core's "
+        f"allowlist cannot name it either. {core_is_minimal}, or declare it in "
+        "`gradle/libs.versions.toml` and add the `libs.` accessor to `ALLOWED` in "
         "`scripts/checks/check_core_dependencies.py` with the reason."
     )
 
@@ -111,10 +160,12 @@ def run(root: Path) -> list[str]:
     block_start = text[: text.index(block)].count("\n") + 1
 
     findings = []
-    for offset, configuration, accessor in declared(block):
-        if configuration not in PUBLISHED_CONFIGURATIONS or accessor in ALLOWED:
+    for offset, configuration, declaration in declared(block):
+        if configuration not in PUBLISHED_CONFIGURATIONS:
             continue
-        findings.append(f"::error file={MODULE},line={block_start + offset}::{fix(configuration, accessor)}")
+        if ACCESSOR.match(declaration) and declaration in ALLOWED:
+            continue
+        findings.append(f"::error file={MODULE},line={block_start + offset}::{fix(configuration, declaration)}")
     return findings
 
 

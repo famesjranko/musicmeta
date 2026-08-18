@@ -104,6 +104,72 @@ class CoreDependenciesTest(unittest.TestCase):
         self.assertEqual(len(findings), 1)
         self.assertIn("libs.okhttp", findings[0])
 
+    def test_a_raw_coordinate_is_reported(self):
+        # Given a dependency written as a coordinate string rather than a catalog accessor — the
+        # form a paste from a README takes, and the one a parse that only understands `libs.x`
+        # skips rather than reports.
+        body = REAL.replace(
+            "    // Testing",
+            '    implementation("com.squareup.okhttp3:okhttp:4.12.0")\n\n    // Testing',
+        )
+        # When the check runs
+        findings = self.findings_for(body)
+        # Then it is reported, and the fix names the catalog rather than the allowlist
+        self.assertEqual(len(findings), 1)
+        self.assertIn("okhttp", findings[0])
+        self.assertIn("libs.versions.toml", findings[0])
+
+    def test_a_named_argument_declaration_is_reported(self):
+        # Given the other unparseable shape: group/name/version as named arguments
+        body = REAL.replace(
+            "    // Testing",
+            '    implementation(group = "org.x", name = "y", version = "1.0")\n\n    // Testing',
+        )
+        # When the check runs
+        findings = self.findings_for(body)
+        # Then it is reported rather than skipped for being unrecognised
+        self.assertEqual(len(findings), 1)
+        self.assertIn("libs.versions.toml", findings[0])
+
+    def test_a_nested_call_argument_is_read_whole(self):
+        # Given a nested call, which a scan to the first `)` would truncate mid-argument
+        body = REAL.replace(
+            "    // Testing",
+            "    implementation(platform(libs.some.bom))\n\n    // Testing",
+        )
+        # When the check runs
+        findings = self.findings_for(body)
+        # Then the whole declaration is quoted back, not the fragment before the inner `)`.
+        # Asserted on the full `configuration(argument)` form: a truncated argument still reads as
+        # a substring of the message, because the f-string supplies the closing paren itself.
+        self.assertEqual(len(findings), 1)
+        self.assertIn("`implementation(platform(libs.some.bom))`", findings[0])
+
+    def test_a_project_dependency_is_reported_without_catalog_advice(self):
+        # Given core depending on an adapter, which inverts the layering rather than adding a
+        # library. It is still a finding, but "declare it in the version catalog" would be wrong.
+        body = REAL.replace(
+            "    // Testing",
+            '    implementation(project(":musicmeta-okhttp"))\n\n    // Testing',
+        )
+        # When the check runs
+        findings = self.findings_for(body)
+        # Then it is reported, and the fix talks about layering rather than the catalog
+        self.assertEqual(len(findings), 1)
+        self.assertIn("depends on another module", findings[0])
+        self.assertNotIn("libs.versions.toml", findings[0])
+
+    def test_a_raw_coordinate_on_a_test_configuration_is_not_reported(self):
+        # Given the same unparseable form on a configuration that reaches no consumer. Reporting
+        # it would make the rule about our own convenience rather than the published surface.
+        body = REAL.replace(
+            "    // Testing",
+            '    testImplementation("io.mockk:mockk:1.13.9")\n\n    // Testing',
+        )
+        # When the check runs
+        # Then nothing is reported
+        self.assertEqual(self.findings_for(body), [])
+
     def test_a_missing_dependencies_block_is_reported(self):
         # Given a build script this check cannot parse — a refactor, or a move to a convention
         # plugin. Reporting clean here is the silence the rule is supposed to break.
