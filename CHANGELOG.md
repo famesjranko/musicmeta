@@ -29,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-08-18
+
 ### Breaking Changes
 - `ProviderInfo.isEnabled` is removed: `getProviders()` only reported `true`, so filtering on it was a no-op — use `isAvailable`; `copy`/constructor descriptors changed, `component6` gone: recompile
 - `ARTIST_POPULARITY`/`TRACK_POPULARITY` results now report `provider = "popularity_merger"`, so a per-provider `confidenceOverrides` entry no longer affects those two types
