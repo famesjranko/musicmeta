@@ -11,8 +11,7 @@ import com.landofoz.musicmeta.ProviderInfo
  * The pair carries [ProviderInfo], not the provider: [ProviderInfo] is a flattened snapshot holding
  * no reference back to the `EnrichmentProvider`, which lives behind a `private val` on the
  * `internal` engine implementation and is reachable from no test. Filter a subject list on
- * [ProviderInfo.isAvailable] to skip a provider that is registered but has no key — and only on
- * that: [ProviderInfo.isEnabled] is always true, so it separates nothing.
+ * [ProviderInfo.isAvailable] to skip a provider that is registered but has no key.
  *
  * **Not `ProviderCatalog.entries`** — its own KDoc calls itself "a static description, not a live
  * one" and names `getProviders` as "the authority for what *is* registered". A hand-written provider

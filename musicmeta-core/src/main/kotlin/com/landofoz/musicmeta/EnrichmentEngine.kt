@@ -117,8 +117,7 @@ interface EnrichmentEngine {
      *
      * Each [ProviderInfo] is a snapshot: [ProviderInfo.isAvailable] reads the provider's state at
      * the moment of the call, so a provider that resolves its key lazily reports differently on a
-     * later call. [ProviderInfo.isEnabled] carries nothing — this engine never sets it, so filter
-     * on [ProviderInfo.isAvailable] instead.
+     * later call.
      */
     fun getProviders(): List<ProviderInfo>
 
@@ -361,9 +360,4 @@ data class ProviderInfo(
      * built-in gates it on a key: false exactly when [requiresApiKey] is true and none was given.
      */
     val isAvailable: Boolean,
-    /**
-     * Always true from [EnrichmentEngine.getProviders] — nothing in the engine ever sets it false,
-     * so it separates nothing. Filter on [isAvailable] instead.
-     */
-    val isEnabled: Boolean = true,
 )

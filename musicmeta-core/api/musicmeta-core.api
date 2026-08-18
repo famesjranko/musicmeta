@@ -1754,16 +1754,14 @@ public final class com/landofoz/musicmeta/ProviderCatalogEntry {
 }
 
 public final class com/landofoz/musicmeta/ProviderInfo {
-	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/util/List;ZZZ)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/util/List;ZZZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/util/List;ZZ)V
 	public final fun component1 ()Ljava/lang/String;
 	public final fun component2 ()Ljava/lang/String;
 	public final fun component3 ()Ljava/util/List;
 	public final fun component4 ()Z
 	public final fun component5 ()Z
-	public final fun component6 ()Z
-	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/util/List;ZZZ)Lcom/landofoz/musicmeta/ProviderInfo;
-	public static synthetic fun copy$default (Lcom/landofoz/musicmeta/ProviderInfo;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;ZZZILjava/lang/Object;)Lcom/landofoz/musicmeta/ProviderInfo;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/util/List;ZZ)Lcom/landofoz/musicmeta/ProviderInfo;
+	public static synthetic fun copy$default (Lcom/landofoz/musicmeta/ProviderInfo;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;ZZILjava/lang/Object;)Lcom/landofoz/musicmeta/ProviderInfo;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getCapabilities ()Ljava/util/List;
 	public final fun getDisplayName ()Ljava/lang/String;
@@ -1771,7 +1769,6 @@ public final class com/landofoz/musicmeta/ProviderInfo {
 	public final fun getRequiresApiKey ()Z
 	public fun hashCode ()I
 	public final fun isAvailable ()Z
-	public final fun isEnabled ()Z
 	public fun toString ()Ljava/lang/String;
 }
 
