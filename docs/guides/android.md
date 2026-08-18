@@ -8,10 +8,13 @@ The `musicmeta-android` module adds Android-specific integrations on top of `mus
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("com.github.famesjranko.musicmeta:musicmeta-core:v0.11.0")
-    implementation("com.github.famesjranko.musicmeta:musicmeta-android:v0.11.0")
+    implementation("io.github.famesjranko:musicmeta-core:0.11.0")
+    implementation("io.github.famesjranko:musicmeta-android:0.11.0")
 }
 ```
+
+JitPack coordinates, and the repository declaration they need, are in the
+[README](../../README.md#installation).
 
 ---
 
@@ -33,7 +36,7 @@ val engine = EnrichmentEngine.Builder()
 ```
 
 `EnrichmentCacheDatabase.create()` registers every migration for you, so it opens an on-device v1,
-v2, or v3 file in place instead of crashing with "migration required but not found". If you need
+v2, v3, or v4 file in place instead of crashing with "migration required but not found". If you need
 your own `Room.databaseBuilder` — a different `SupportSQLiteOpenHelper.Factory`, callbacks, and so
 on — register every migration yourself, as shown in the subsections below.
 
