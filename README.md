@@ -1,4 +1,4 @@
-![Musicmeta banner](docs/musicmeta-banner.png)
+![Musicmeta banner](docs/assets/musicmeta-banner.png)
 
 <div align="center">
          
@@ -14,8 +14,8 @@ A Kotlin library for Android and JVM music apps: 11 public music APIs behind one
 ## What it does
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/what-it-does-dark.svg">
-  <img alt="A request for Radiohead enters the EnrichmentEngine, passes through identity, fan-out, merge and cache, and comes out as an ArtistProfile carrying photo, bio, genres, discography and similar artists with a confidence for each" src="docs/what-it-does.svg" width="100%">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/what-it-does-dark.svg">
+  <img alt="A request for Radiohead enters the EnrichmentEngine, passes through identity, fan-out, merge and cache, and comes out as an ArtistProfile carrying photo, bio, genres, discography and similar artists with a confidence for each" src="docs/assets/what-it-does.svg" width="100%">
 </picture>
 
 MusicBrainz resolves the MBID first, so every lookup after it is an identifier lookup rather than a
@@ -224,7 +224,7 @@ track pages, plus search, rendering everything the library exposes:
 make demo-web-run   # http://localhost:8099
 ```
 
-![The demo-web landing page: artist, album, track and MBID tabs above a search field, with the backend reporting ready](docs/demo-web.png)
+![The demo-web landing page: artist, album, track and MBID tabs above a search field, with the backend reporting ready](docs/assets/demo-web.png)
 
 Enrich a name and each panel below is one `EnrichmentType`, tagged with the providers that answered
 it. Both demos work keyless; the key-requiring providers stay dark until you supply keys. `make
