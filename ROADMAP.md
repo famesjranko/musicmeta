@@ -45,15 +45,15 @@ The library is a tool for developers to wield for their needs, not a framework t
 
 ---
 
-## Where We Are (v0.11.0)
+## Where We Are (v0.12.0)
 
-v0.10.1 is published to Maven Central and JitPack. Everything below the *Unreleased* block has
+v0.12.0 is published to Maven Central and JitPack. Everything below the *Unreleased* block has
 shipped; the version is declared once, in root `gradle.properties`.
 
 ### Unreleased — lands in the next release
 
 Library code, including breaking changes: see the `[Unreleased]` block in `CHANGELOG.md`, which is
-the list. The published 0.10.1 artifact carries none of it.
+the list. The published 0.12.0 artifact carries none of it.
 
 ### Current Coverage (36 enrichment types)
 
