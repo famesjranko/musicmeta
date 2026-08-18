@@ -16,6 +16,52 @@ A release is three human actions. Everything between them is CI.
 tip at dispatch time, so a PR landing in that window would release the wrong tree. Note the squash
 SHA at gate 2 and confirm the Release run is on it.
 
+## The run, end to end
+
+The sections below explain each gate. This is the order, and the exact invocations.
+
+**Read the published version off the release, not off the repo.** `gradle.properties` and the nine
+README coordinates carry the version that was *last released*, so they read as though the next one is
+already pinned. They are not, and gate 1 will reject that version as already tagged:
+
+```bash
+gh release list --limit 1
+curl -s https://repo1.maven.org/maven2/io/github/famesjranko/musicmeta-core/maven-metadata.xml | grep "<release>"
+```
+
+- [ ] `[Unreleased]` holds every consumer-visible change that is merged, and nothing that is not
+- [ ] The next version follows from that section: an entry under `### Breaking Changes` rules out a
+      patch under the `0.x` policy in `CLAUDE.md`
+- [ ] `make check` is green on `main`
+- [ ] Anything no check can run has its evidence written down — a Room migration needs a
+      connected-device run, and connected tests never gate a merge
+- [ ] Gate 1, dry first. It refuses an already-tagged version, a second pin, and an existing
+      `release/<version>` branch, so a mistaken run stops rather than half-preparing:
+
+      gh workflow run prepare-release.yml --ref main -f target_version=X.Y.Z -f dry_run=true
+      gh workflow run prepare-release.yml --ref main -f target_version=X.Y.Z -f dry_run=false
+
+- [ ] On `release/X.Y.Z`, make the edits gate 1 does not reach — see [gate 2](#gate-2--the-release-pr)
+- [ ] `make check` on the release branch, then push
+- [ ] Gate 2: open the PR, wait for `build` and `demo-canary`, **squash**-merge, record the squash SHA
+- [ ] Gate 3, one mode at a time, confirming each run's head SHA is that squash SHA:
+
+      gh workflow run release.yml --ref main -f mode=verify
+      gh workflow run release.yml --ref main -f mode=stage
+      gh workflow run release.yml --ref main -f mode=release
+
+- [ ] Drop the `X.Y.Z-rc.<run number>` deployment `stage` left behind
+- [ ] Confirm what shipped: the tag, the GitHub Release, and all three modules resolving:
+
+      gh release view vX.Y.Z
+      for m in core okhttp android; do
+        curl -s -o /dev/null -w "$m %{http_code}\n" \
+          "https://repo1.maven.org/maven2/io/github/famesjranko/musicmeta-$m/X.Y.Z/musicmeta-$m-X.Y.Z.pom"
+      done
+
+`verify` and `stage` are both recoverable and neither consumes the version. `release` is not: a
+Maven Central release is immutable.
+
 ## Before gate 1
 
 **Write the `[Unreleased]` section of `CHANGELOG.md` as you go.** That is the whole preparation, and
@@ -29,9 +75,6 @@ after pinning locally, or run gate 1 as a dry run.
 
 Choose the version under the `0.x` compatibility policy in `CLAUDE.md` — a patch release cannot
 contain a breaking public API change. That choice is the one judgement call in the release.
-
-Bump the version strings in `docs/guides/` (`quick-start.md`, `extension-points.md`, `android.md`)
-by hand — Gate 1's mechanical edits do not reach them.
 
 ## Gate 1 — Prepare release
 
@@ -66,6 +109,25 @@ no `pull-requests: write`. A PR opened with `GITHUB_TOKEN` also creates approval
 runs, so bot-opening it would save one click and cost an approval.
 
 This PR is the review point for the accumulated public API diff.
+
+### The edits gate 1 does not reach
+
+Make these on `release/<version>` before opening the PR. That branch is already the review point, so
+they cost nothing extra here, where a separate PR into `main` costs a round trip.
+
+- `docs/guides/quick-start.md`, `extension-points.md` and `android.md` — the coordinate lines. Gate
+  1 rewrites README's nine and stops there.
+- `ROADMAP.md` — the two sentences under the "Where We Are" heading name the published version. The
+  heading is pinned for you; they are not. Name the version being released: it is correct from the
+  moment gate 3 finishes, where the previous version is correct only in the minutes before it.
+
+Then prove nothing else still names the old one:
+
+```bash
+grep -rn "<previous-version>" --include="*.md" . | grep -v CHANGELOG.md
+```
+
+`CHANGELOG.md` is the exception — its historical sections name every version and must keep doing so.
 
 ## Gate 3 — Release
 
