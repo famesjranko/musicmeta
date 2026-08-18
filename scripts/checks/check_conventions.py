@@ -47,6 +47,18 @@ SERIALIZABLE_FIX = (
 CONFLICT_MARKERS = ("<<<<<<< ", ">>>>>>> ")
 CONFLICT_FIX = "unresolved merge-conflict marker. Finish the merge before committing."
 
+# Agent worktrees are full checkouts of this repo on other branches, so every scan below reaches
+# them and judges another change's content: measured at 111 `api/*.api` against 3, and 15889 text
+# files against 800. A violation found there fails this run with a path outside the diff under
+# test. Narrower than `check_pitfall_citations.py`'s blanket `/.claude/`, deliberately — the two
+# tracked files under `.claude/` (`settings.json` and `commands/`) ship with the repo and are the
+# scan's business.
+AGENT_WORKTREES = "/.claude/worktrees/"
+
+# `AGENTS.md` is a symlink to `CLAUDE.md` — the same bytes under two names. Following it double-
+# reports every finding in that file. Skipping symlinks costs nothing: the target is either inside
+# the tree, and already scanned under its own name, or outside it, and not this repo's content.
+
 # A provider is `provider/<name>/` as internal `*Api`, `*Models`, `*Mapper` plus a public
 # `*Provider`. Keeping the first three internal is what lets them be renamed without an `apiDump`,
 # so a missing `internal` costs the freedom the layout exists to buy.
@@ -99,8 +111,10 @@ def tracked_text_files(root: Path) -> list[Path]:
         for path in root.rglob("*")
         if path.suffix in suffixes
         and path.is_file()
+        and not path.is_symlink()
         and "/build/" not in path.as_posix()
         and "/.git/" not in path.as_posix()
+        and AGENT_WORKTREES not in path.as_posix()
     )
 
 
@@ -109,9 +123,14 @@ def api_dumps(root: Path) -> list[Path]:
 
     `rglob`, not a fixed `*/api/*.api` depth: a module moved under a parent directory would
     otherwise stop being scanned, and the scan going quiet is invisible — see `run()`, which
-    refuses to report clean on an empty result for exactly that reason.
+    refuses to report clean on an empty result for exactly that reason. That guard is also what
+    keeps the worktree exclusion honest: reducing this to nothing reports rather than passes.
     """
-    return sorted(path for path in root.rglob("api/*.api") if "/build/" not in path.as_posix())
+    return sorted(
+        path
+        for path in root.rglob("api/*.api")
+        if "/build/" not in path.as_posix() and AGENT_WORKTREES not in path.as_posix()
+    )
 
 
 def public_provider_type(line: str) -> str | None:

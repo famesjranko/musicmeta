@@ -44,6 +44,18 @@ class ConventionsTest(unittest.TestCase):
             self.write(root, rel, body)
             return run(root)
 
+    def findings_for_tree(self, files: dict[str, str]) -> list[str]:
+        """Findings for a tree built from repo-relative path -> body, exactly as given.
+
+        No baseline is added: these cases are about which files the scans reach, so the fixture
+        has to say precisely what exists.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for rel, body in files.items():
+                self.write(root, rel, body)
+            return run(root)
+
     # --- no `!!` ---
 
     def test_double_bang_in_main_source_is_reported(self):
@@ -274,6 +286,78 @@ class ConventionsTest(unittest.TestCase):
         # When the conventions check runs
         # Then the member is not a finding
         self.assertEqual(self.findings_for("musicmeta-core/api/musicmeta-core.api", body), [])
+
+    # --- agent worktrees are not part of the tree under test ---
+
+    def test_conflict_marker_in_an_agent_worktree_is_not_reported(self):
+        # Given a conflict marker inside `.claude/worktrees/`, where each directory is a full
+        # checkout of this repo on someone else's branch
+        conflicted = "# doc\n<<<<<<< HEAD\na\n>>>>>>> other\n"
+        files = {
+            "musicmeta-core/api/musicmeta-core.api": "",
+            ".claude/worktrees/agent-a1/ARCHITECTURE.md": conflicted,
+        }
+        # When the conventions check runs
+        findings = self.findings_for_tree(files)
+        # Then it is not reported — an unfinished merge on another branch is not this change's
+        self.assertEqual(findings, [])
+
+    def test_conflict_marker_in_a_tracked_dot_claude_file_is_still_reported(self):
+        # Given the same marker in `.claude/commands/`, which is committed wiring rather than a
+        # worktree. Excluding all of `.claude/` would take this with it.
+        conflicted = "# command\n<<<<<<< HEAD\na\n>>>>>>> other\n"
+        files = {
+            "musicmeta-core/api/musicmeta-core.api": "",
+            ".claude/commands/review-checklist.md": conflicted,
+        }
+        # When the conventions check runs
+        findings = self.findings_for_tree(files)
+        # Then it is reported, because that file ships with the repo
+        self.assertEqual(len(findings), 2)
+        self.assertIn(".claude/commands/review-checklist.md", findings[0])
+
+    def test_api_dump_in_an_agent_worktree_is_not_scanned(self):
+        # Given a worktree whose baseline carries a violation, alongside a clean real one. That
+        # branch's surface is its own PR's business, and judging it here fails the wrong change.
+        files = {
+            "musicmeta-core/api/musicmeta-core.api": "",
+            ".claude/worktrees/agent-a1/musicmeta-core/api/musicmeta-core.api": (
+                "public final class com/landofoz/musicmeta/provider/deezer/DeezerModels {\n"
+            ),
+        }
+        # When the conventions check runs
+        findings = self.findings_for_tree(files)
+        # Then the worktree's violation is not reported
+        self.assertEqual(findings, [])
+
+    def test_a_symlink_to_a_scanned_file_is_not_read_twice(self):
+        # Given `AGENTS.md` symlinked to a scanned file that carries a conflict marker — the repo
+        # ships that link so non-Claude agents read the same instructions
+        conflicted = "# doc\n<<<<<<< HEAD\na\n"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.write(root, "musicmeta-core/api/musicmeta-core.api", "")
+            self.write(root, "CLAUDE.md", conflicted)
+            (root / "AGENTS.md").symlink_to("CLAUDE.md")
+            # When the conventions check runs
+            findings = run(root)
+        # Then the marker is reported once, under the real file's name
+        self.assertEqual(len(findings), 1)
+        self.assertIn("CLAUDE.md", findings[0])
+        self.assertNotIn("AGENTS.md", findings[0])
+
+    def test_worktree_dumps_alone_do_not_satisfy_the_baseline_guard(self):
+        # Given a tree whose only `api/*.api` sits in a worktree. The exclusion must reduce the
+        # scan to the repo's own baselines, never to nothing — a drop to zero is the silence
+        # `NO_API_DUMPS_FINDING` exists to break, and it has to survive this change.
+        files = {
+            ".claude/worktrees/agent-a1/musicmeta-core/api/musicmeta-core.api": "",
+        }
+        # When the conventions check runs
+        findings = self.findings_for_tree(files)
+        # Then the missing real baseline is reported
+        self.assertEqual(len(findings), 1)
+        self.assertIn("checked nothing", findings[0])
 
 
 if __name__ == "__main__":

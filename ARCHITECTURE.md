@@ -60,6 +60,9 @@ consumer take the engine without either.
 **core is dependency-minimal JVM** — coroutines, `org.json`, and kotlinx-serialization, nothing
 else. Serialization is declared `api(...)`, so it is on a consumer's compile classpath and its
 version is part of the published contract; the other two are `implementation`.
+`scripts/checks/check_core_dependencies.py` gates the list, because adding to it is otherwise
+silent: it compiles, the tests pass, and `apiCheck` sees nothing — a transitive is not part of the
+ABI, and the cost lands on every consumer's classpath at the next release.
 
 **`http/`'s `HttpClient` interface is the seam that keeps it that way.** Core owns transport
 *semantics* — what is transient, how a retry budget composes with the enrich deadline, when a

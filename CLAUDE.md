@@ -14,6 +14,7 @@ rest; `ls docs/` lists the docs.
 |---|---|
 | Touching `enrich()` or anything it calls | `docs/pitfalls.md` — "Traps in the pipeline" |
 | Changing a public signature, an `api/*.api` file, or a public data class | `docs/pitfalls.md` — "The published surface" |
+| Naming a public type or member, or reading a provider's mapper | `docs/glossary.md` — one word per concept, and each upstream's word for it |
 | Writing a `catch`, a timeout, breaker or fallback behaviour, or classifying a result as `Error`/`NotFound` | `docs/pitfalls.md` — "Errors, cancellation, and timeouts" |
 | A provider's parsing, search/ranking, `confidence`, or a `ProviderCapability` | `docs/pitfalls.md` — "Provider data and matching" |
 | Retry or status mapping, state held by a provider, or `forceRefresh`/invalidation | `docs/pitfalls.md` — "Transport and provider state" |
@@ -26,7 +27,8 @@ rest; `ls docs/` lists the docs.
 
 ## Where it goes
 
-Every finding has exactly one home; this file is the home only for the last row.
+Every finding has exactly one home, and lands in the same commit as the change that taught it —
+nothing can catch a trap nobody wrote down. This file is the home only for the last row.
 
 | A new | Goes in |
 |---|---|
@@ -36,6 +38,8 @@ Every finding has exactly one home; this file is the home only for the last row.
 | Rule no mechanism catches | here, and nowhere else — `docs/agents/review-checklist.md` may add how review *applies* a rule, never the rule itself |
 
 ## Rules with no mechanism
+
+Where a rule below names its gate, what is written here is the part that gate cannot see.
 
 - Compatibility: **flag any break to the user before proceeding.** Published to Maven Central and
   JitPack, so assume external consumers exist. Minor (`0.x.0`) may break, if the break is under a

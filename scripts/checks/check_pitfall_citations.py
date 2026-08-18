@@ -28,6 +28,16 @@ SECTION_REF = re.compile("§(\\d+)")
 
 SUFFIXES = (".md", ".yml", ".yaml", ".kt", ".kts", ".py", ".sh", ".toml", ".json")
 
+# Agent worktrees are full checkouts on other branches, where `docs/pitfalls.md` may legitimately
+# be numbered differently — a citation there resolves against that branch's doc, not this one's.
+# Scoped to `worktrees/` rather than all of `.claude/`: `commands/` and `settings.json` are
+# committed wiring, and a citation in them orphans exactly like one anywhere else.
+AGENT_WORKTREES = "/.claude/worktrees/"
+
+# `AGENTS.md` is a symlink to `CLAUDE.md`, so following it reads the same bytes twice and reports
+# any orphan in that file twice. Skipping symlinks costs nothing: the target is either inside the
+# tree, and already scanned under its own name, or outside it, and not this repo's content.
+
 
 def valid_ids(root: Path) -> set[str]:
     """The section numbers that exist as `## N.` headings in the pitfalls file."""
@@ -44,9 +54,10 @@ def citing_files(root: Path) -> list[Path]:
         for path in root.rglob("*")
         if path.suffix in SUFFIXES
         and path.is_file()
+        and not path.is_symlink()
         and "/build/" not in path.as_posix()
         and "/.git/" not in path.as_posix()
-        and "/.claude/" not in path.as_posix()
+        and AGENT_WORKTREES not in path.as_posix()
     )
 
 
