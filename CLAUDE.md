@@ -56,6 +56,14 @@ Where a rule below names its gate, what is written here is the part that gate ca
   `### Breaking Changes` heading in `CHANGELOG.md` *and* visible in the reviewed `api/*.api` diff — a
   break in neither is a defect. Patch (`0.x.y`) may not break. Full semver at `1.0.0`.
   What counts as breaking, and the JVM descriptor caveat: `docs/pitfalls.md` — "The published surface".
+- A test is written before the code it pins and watched fail for the stated reason. A test first
+  seen green proves that its assertions run, not that they could catch anything. Nothing mechanises
+  this, so the claim carries the evidence: name the mutation and the test that went red. Never
+  weaken, skip or `@Ignore` a test to reach green — if a test is wrong, say why before changing it.
+- A dependency in `musicmeta-core` reaches every consumer transitively and cannot be withdrawn
+  without a break, so each one carries its argument beside the declaration and a fourth needs one
+  too. The adapters exist to bring OkHttp and Room and are not held to this. Nothing enforces it
+  (`VERIFICATION.md` — "Known gaps").
 - `e2e/` tests hit live APIs behind `-Dinclude.e2e=true` and never gate a merge, so an e2e test is
   not coverage for a change.
 - Comments carry the contract, not the history. KDoc states what a caller must know; a rationale
