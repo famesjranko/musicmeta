@@ -51,6 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - A full cache hit now reports `CanonicalStatus.NOT_ATTEMPTED_DISABLED` when `enableIdentityResolution` is false, matching the live path instead of always claiming `NOT_ATTEMPTED_CACHE_HIT`
+- `STALE_IF_ERROR` plus `AVAILABLE_ONLY` no longer negative-caches a type whose stale substitute filtered to empty — that emptiness came from stale data, not a live provider answer
 
 ## [0.12.0] - 2026-08-18
 

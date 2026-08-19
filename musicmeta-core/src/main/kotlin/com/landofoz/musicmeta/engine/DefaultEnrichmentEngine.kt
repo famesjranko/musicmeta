@@ -50,6 +50,7 @@ internal data class WriteBackContext(
     val identityResolution: IdentityResolution,
     val negativeCacheHits: Set<EnrichmentType>,
     val chainExecutions: Map<EnrichmentType, ChainExecution>,
+    val staleSubstituteEmptied: Set<EnrichmentType>,
 )
 
 /** The cache layer's own outcome for a call — split off [DefaultEnrichmentEngine.readCacheLayer]'s three collections. */
@@ -73,6 +74,16 @@ internal class RunSession(
     var identityResolution: IdentityResolution? = null
     var resolvedRequest: EnrichmentRequest? = null
     var chainExecutions: Map<EnrichmentType, ChainExecution> = emptyMap()
+
+    /**
+     * Types whose [DefaultEnrichmentEngine.finalizeResult] re-filtered a stale-cache substitute
+     * down to nothing this call — read by [DefaultEnrichmentEngine.writeBack] so that emptiness is
+     * never mistaken for a live "providers had nothing" answer. Concurrent: different types settle
+     * from different coroutines, and each writes only its own type, but the set itself must survive
+     * that without tearing.
+     */
+    val staleSubstituteEmptied: MutableSet<EnrichmentType> =
+        java.util.concurrent.ConcurrentHashMap.newKeySet()
 }
 
 /** [DefaultEnrichmentEngine.streamResolveTypes]'s per-call facts, bundled to keep its parameter list short. */
@@ -460,17 +471,21 @@ internal class DefaultEnrichmentEngine(
         type: EnrichmentType,
         raw: EnrichmentResult,
         execution: ChainExecution?,
-        identityHolder: IdentityHolder,
+        session: RunSession,
     ): EnrichmentResult {
-        val status = identityHolder.current.status
+        val status = session.identityHolder.current.status
         val filtered = applyCatalogFilteringToType(type, raw, config.catalogProvider, config.catalogFilterMode, logger)
         val stamped = stampProvenanceOne(filtered, execution, status)
         val stale = applyStaleCacheToType(request, type, stamped)
-        return if (stale === stamped) {
-            stale
-        } else {
+        if (stale === stamped) return stale
+        // stale !== stamped: the stale-cache substitution fired, so this is a *different* Success
+        // read from a past call, not this call's live answer — re-filtering it below can turn it
+        // into a NotFound that describes only that stale snapshot, never proof this call's own
+        // fan-out found nothing. writeBack must not treat that NotFound as negative-cache eligible.
+        val refiltered =
             applyCatalogFilteringToType(type, stale, config.catalogProvider, config.catalogFilterMode, logger)
-        }
+        if (refiltered is EnrichmentResult.NotFound) session.staleSubstituteEmptied.add(type)
+        return refiltered
     }
 
     internal suspend fun writeBack(
@@ -484,7 +499,8 @@ internal class DefaultEnrichmentEngine(
         for ((type, result) in results) {
             val aliasKey = aliasKeyFor(request, resolvedRequest, resolvedMbid, type)
             val identifierIncomplete = context.chainExecutions[type]?.identifierIncomplete == true
-            val cacheable = isCacheableNegative(result, canonicalStatus, identifierIncomplete)
+            val staleSubstituteEmptied = type in context.staleSubstituteEmptied
+            val cacheable = isCacheableNegative(result, canonicalStatus, identifierIncomplete, staleSubstituteEmptied)
             when {
                 // A negative served from cache this call is not re-put: its short TTL is the entry's
                 // freshness contract, and a cache hit must not extend it.
@@ -530,17 +546,24 @@ internal class DefaultEnrichmentEngine(
 
     /**
      * Only a real fan-out "providers had nothing" qualifies for negative caching: never a chain
-     * that skipped a provider for an identifier this call never had ([identifierIncomplete]), and
-     * never one reached under a canonical identity that did not resolve. Decided from the call's
-     * own [canonicalStatus] and the chain's [identifierIncomplete] fact — a `NotFound` carries no
-     * per-result canonical fact of its own, so it is never consulted here.
+     * that skipped a provider for an identifier this call never had ([identifierIncomplete]), never
+     * one reached under a canonical identity that did not resolve, and never one produced by
+     * re-filtering a [DefaultEnrichmentEngine.applyStaleCacheToType] substitute down to nothing
+     * ([staleSubstituteEmptied]) — that emptiness describes a past call's stale snapshot, not this
+     * call's live providers. Decided from the call's own [canonicalStatus] and those two per-type
+     * facts — a `NotFound` carries no per-result canonical fact of its own, so it is never consulted
+     * here.
      */
     internal fun isCacheableNegative(
         result: EnrichmentResult,
         canonicalStatus: CanonicalStatus,
         identifierIncomplete: Boolean,
+        staleSubstituteEmptied: Boolean,
     ): Boolean =
-        result is EnrichmentResult.NotFound && !identifierIncomplete && canonicalStatus.isCacheable()
+        result is EnrichmentResult.NotFound &&
+            !identifierIncomplete &&
+            !staleSubstituteEmptied &&
+            canonicalStatus.isCacheable()
 
     /**
      * A `Success` reached while canonical resolution was attempted and did not resolve
