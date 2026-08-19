@@ -140,3 +140,9 @@ than it looks like, each learned the hard way.
   "the pieces compose correctly," not "MusicBrainz/Deezer/iTunes/Discogs still answer this way
   today." That is what the daily `provider-drift.yml` e2e job is for, and each pool's `scenario.md`
   records whether the provider it covers has that live coverage.
+- **`DefaultEnrichmentEngine`'s `detachedScope` `CoroutineExceptionHandler` is untested.** It is the
+  backstop for a detached `enrichProgressive` run's failure reaching neither a collector (none left
+  attached) nor anything deeper in the pipeline (which already catches and logs via the
+  `catch (Exception) { ensureActive(); ... }` convention) — a rare path, not a primary one the
+  ordinary run of the code exercises. Forcing it would mean bypassing every one of those catches on
+  purpose, which tests the harness rather than the handler.

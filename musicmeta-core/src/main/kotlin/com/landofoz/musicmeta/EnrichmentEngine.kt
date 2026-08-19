@@ -56,6 +56,13 @@ interface EnrichmentEngine {
      *   data from providers. Existing cache entries (including manual selections) are cleared first
      *   on a best-effort basis: if the cache throws while clearing, the failure is logged and fresh
      *   data is still fetched, rather than being surfaced to the caller.
+     *
+     * **Cancelling the calling coroutine is complete-and-cache, not abort-and-forfeit.** This is
+     * `enrichProgressive(...).last()` against one shared resolution path (see that method's own
+     * KDoc), so cancelling the coroutine that called [enrich] detaches from the fan-out already
+     * under way rather than aborting it: that fan-out keeps running, unattended, until it settles or
+     * [EnrichmentConfig.enrichTimeoutMs] expires, and its cache write-back still happens. See [close]
+     * for how to bound that work at engine shutdown.
      */
     suspend fun enrich(
         request: EnrichmentRequest,

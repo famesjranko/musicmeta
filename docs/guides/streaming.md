@@ -118,6 +118,10 @@ complete-and-cache contract described above apply per request, unchanged.
 
 ## Cancellation is complete-and-cache, not abort-and-forfeit
 
+This applies to `enrich()` too, not only to a streamed collection: `enrich()` is
+`enrichProgressive(...).last()` over the same resolution path, so cancelling the coroutine that
+called `enrich()` detaches from the fan-out exactly as cancelling a collector below does.
+
 Cancelling collection — `take(1)`, leaving composition, a coroutine scope closing — detaches your
 collector from the fan-out already under way. That fan-out is not aborted: it keeps running,
 unattended, until it settles or `EnrichmentConfig.enrichTimeoutMs` expires, bounded to the one run for

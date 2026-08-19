@@ -176,12 +176,6 @@ The `SearchCandidate` fields this flow relies on are documented in
 - **A second ARTIST_RADIO_DISCOVERY source** — the type has one provider and that provider's route is
   disabled upstream. `/1/lb-radio/artist/{mbid}` answers, but it is a candidate pool rather than a
   playlist ([docs/providers.md](docs/providers.md) has why serving the type from it is not free)
-- **Flow-based progressive API** — shipped as `enrichProgressive`/`enrichBatchProgressive` (see
-  [docs/guides/streaming.md](docs/guides/streaming.md)). First useful paint measures well ahead of a
-  complete answer at no measured throughput cost; splitting `enrich()` calls by hand — the
-  alternative this gap once suggested — measures worse than a single call, because it loses the
-  fan-out concurrency one call has. What the earlier deferral actually needed was a seam shared
-  between `enrich()` and a streamed variant so the two could not diverge; that seam is what shipped.
 
 ### Catalog Awareness — Interface Shipped, Implementations Remaining
 
