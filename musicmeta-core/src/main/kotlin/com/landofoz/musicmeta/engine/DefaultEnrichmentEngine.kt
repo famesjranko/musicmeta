@@ -133,13 +133,18 @@ internal class DefaultEnrichmentEngine(
     )
     internal val progressiveRuns = ProgressiveRunRegistry(detachedScope)
 
-    /** The detached-run dedupe map's current size — read by tests for eviction. */
+    /**
+     * The detached-run dedupe map's current size — read by tests for eviction. Test-only internal
+     * accessor, not a public API: eviction is a memory-boundedness invariant, and a subsequent
+     * call's own correctness doesn't prove the map stayed bounded, so there is no externally
+     * observable proxy for what this reads directly.
+     */
     internal suspend fun inFlightDetachedRunCount(): Int = progressiveRuns.inFlightCount()
 
     /**
      * Releases the scope backing [enrichProgressive]'s complete-and-cache detachment. Any detached
      * run still in flight is abandoned: it stops at its next suspension point, and — like a timed-
-     * out run (#56) — writes nothing back. A collector still attached to that run (via
+     * out run — writes nothing back. A collector still attached to that run (via
      * [enrichProgressive]'s relay) receives one final snapshot of whatever had settled and then
      * completes, rather than hanging on a fan-out that will never reach its own terminal.
      *
@@ -359,46 +364,24 @@ internal class DefaultEnrichmentEngine(
         }
     }
 
-    /** [runProgressiveFanOut]'s deadline-fired backfill: every type [board] never settled becomes an honest Error(TIMEOUT). */
-    internal suspend fun stampTimeoutStragglers(
-        types: Set<EnrichmentType>,
-        board: SettlementBoard,
-        settle: suspend (EnrichmentType, EnrichmentResult, ChainExecution?) -> Unit,
-    ) {
-        logger.warn(TAG, "Enrich timed out after ${config.enrichTimeoutMs}ms")
-        val settledSoFar = board.snapshotResults()
-        for (type in types) {
-            if (type !in settledSoFar) {
-                val timeoutError =
-                    EnrichmentResult.Error(type, "engine", "Enrichment timed out", errorKind = ErrorKind.TIMEOUT)
-                settle(type, timeoutError, null)
-            }
-        }
-    }
+    /** Logs the [EnrichmentConfig.enrichTimeoutMs] deadline firing, keeping [logger] private from a cross-file caller. */
+    internal fun logEnrichTimeout() = logger.warn(TAG, "Enrich timed out after ${config.enrichTimeoutMs}ms")
 
     /**
-     * [runProgressiveFanOut]'s abandonment backfill (both the finally-block case, when a real run
-     * was cancelled mid-flight, and [ProgressiveRunRegistry.attachOrStart]'s immediately-abandoned
-     * case, when a call arrives after [close]): every type [board] never settled becomes an honest
-     * Error(ENGINE_CLOSED) — distinct from [stampTimeoutStragglers]'s TIMEOUT, since no deadline
-     * fired here.
+     * [runProgressiveFanOut]'s backfill for a run that stopped before every requested type settled
+     * — a timed-out deadline or an abandonment (the engine `close()`d, or
+     * [ProgressiveRunRegistry.attachOrStart]'s immediately-abandoned case for a call arriving after
+     * `close()`). Every type [board] never settled becomes the [errorFor] result for its type.
      */
-    internal suspend fun stampAbandonedStragglers(
+    internal suspend fun stampStragglers(
         types: Set<EnrichmentType>,
         board: SettlementBoard,
         settle: suspend (EnrichmentType, EnrichmentResult, ChainExecution?) -> Unit,
+        errorFor: (EnrichmentType) -> EnrichmentResult.Error,
     ) {
         val settledSoFar = board.snapshotResults()
         for (type in types) {
-            if (type !in settledSoFar) {
-                val abandonedError = EnrichmentResult.Error(
-                    type,
-                    "engine",
-                    "Engine closed before this type settled",
-                    errorKind = ErrorKind.ENGINE_CLOSED,
-                )
-                settle(type, abandonedError, null)
-            }
+            if (type !in settledSoFar) settle(type, errorFor(type), null)
         }
     }
 
