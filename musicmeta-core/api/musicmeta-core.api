@@ -1330,8 +1330,8 @@ public final class com/landofoz/musicmeta/EnrichmentResult$RateLimited : com/lan
 }
 
 public final class com/landofoz/musicmeta/EnrichmentResult$Success : com/landofoz/musicmeta/EnrichmentResult {
-	public fun <init> (Lcom/landofoz/musicmeta/EnrichmentType;Lcom/landofoz/musicmeta/EnrichmentData;Ljava/lang/String;FLcom/landofoz/musicmeta/EnrichmentIdentifiers;Lcom/landofoz/musicmeta/LookupProvenance;Z)V
-	public synthetic fun <init> (Lcom/landofoz/musicmeta/EnrichmentType;Lcom/landofoz/musicmeta/EnrichmentData;Ljava/lang/String;FLcom/landofoz/musicmeta/EnrichmentIdentifiers;Lcom/landofoz/musicmeta/LookupProvenance;ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Lcom/landofoz/musicmeta/EnrichmentType;Lcom/landofoz/musicmeta/EnrichmentData;Ljava/lang/String;FLcom/landofoz/musicmeta/EnrichmentIdentifiers;Lcom/landofoz/musicmeta/LookupProvenance;ZZ)V
+	public synthetic fun <init> (Lcom/landofoz/musicmeta/EnrichmentType;Lcom/landofoz/musicmeta/EnrichmentData;Ljava/lang/String;FLcom/landofoz/musicmeta/EnrichmentIdentifiers;Lcom/landofoz/musicmeta/LookupProvenance;ZZILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Lcom/landofoz/musicmeta/EnrichmentType;
 	public final fun component2 ()Lcom/landofoz/musicmeta/EnrichmentData;
 	public final fun component3 ()Ljava/lang/String;
@@ -1339,9 +1339,11 @@ public final class com/landofoz/musicmeta/EnrichmentResult$Success : com/landofo
 	public final fun component5 ()Lcom/landofoz/musicmeta/EnrichmentIdentifiers;
 	public final fun component6 ()Lcom/landofoz/musicmeta/LookupProvenance;
 	public final fun component7 ()Z
-	public final fun copy (Lcom/landofoz/musicmeta/EnrichmentType;Lcom/landofoz/musicmeta/EnrichmentData;Ljava/lang/String;FLcom/landofoz/musicmeta/EnrichmentIdentifiers;Lcom/landofoz/musicmeta/LookupProvenance;Z)Lcom/landofoz/musicmeta/EnrichmentResult$Success;
-	public static synthetic fun copy$default (Lcom/landofoz/musicmeta/EnrichmentResult$Success;Lcom/landofoz/musicmeta/EnrichmentType;Lcom/landofoz/musicmeta/EnrichmentData;Ljava/lang/String;FLcom/landofoz/musicmeta/EnrichmentIdentifiers;Lcom/landofoz/musicmeta/LookupProvenance;ZILjava/lang/Object;)Lcom/landofoz/musicmeta/EnrichmentResult$Success;
+	public final fun component8 ()Z
+	public final fun copy (Lcom/landofoz/musicmeta/EnrichmentType;Lcom/landofoz/musicmeta/EnrichmentData;Ljava/lang/String;FLcom/landofoz/musicmeta/EnrichmentIdentifiers;Lcom/landofoz/musicmeta/LookupProvenance;ZZ)Lcom/landofoz/musicmeta/EnrichmentResult$Success;
+	public static synthetic fun copy$default (Lcom/landofoz/musicmeta/EnrichmentResult$Success;Lcom/landofoz/musicmeta/EnrichmentType;Lcom/landofoz/musicmeta/EnrichmentData;Ljava/lang/String;FLcom/landofoz/musicmeta/EnrichmentIdentifiers;Lcom/landofoz/musicmeta/LookupProvenance;ZZILjava/lang/Object;)Lcom/landofoz/musicmeta/EnrichmentResult$Success;
 	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCatalogFilterDegraded ()Z
 	public final fun getConfidence ()F
 	public final fun getData ()Lcom/landofoz/musicmeta/EnrichmentData;
 	public final fun getProvenance ()Lcom/landofoz/musicmeta/LookupProvenance;

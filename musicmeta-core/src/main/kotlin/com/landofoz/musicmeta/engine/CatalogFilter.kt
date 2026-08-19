@@ -141,7 +141,7 @@ internal suspend fun applyCatalogFilteringToType(
     } catch (e: Exception) {
         currentCoroutineContext().ensureActive()
         logger.warn(TAG, "${type.name}: CatalogProvider threw, leaving results unfiltered: ${e.message}", e)
-        return result
+        return success.copy(catalogFilterDegraded = true)
     }
     return applyMode(success, matches, catalogFilterMode)
 }

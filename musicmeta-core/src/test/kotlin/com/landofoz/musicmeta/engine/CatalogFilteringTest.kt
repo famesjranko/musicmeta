@@ -317,9 +317,41 @@ class CatalogFilteringTest {
         val artists = (success.data as EnrichmentData.SimilarArtists).artists
         assertEquals(listOf("Artist A", "Artist B", "Artist C"), artists.map { it.name })
 
-        // And - the degrade is announced, since nothing on the result says it went unfiltered
+        // And - the degrade is logged
         val warning = logger.warnings.single { it.startsWith("SIMILAR_ARTISTS: ") }
         assertTrue(warning, warning.contains("catalog unavailable"))
+    }
+
+    @Test fun `a degraded-unfiltered result self-reports via catalogFilterDegraded`() = runTest {
+        // Given - a catalog provider that throws instead of answering
+        val fakeCatalog = CatalogProvider { error("catalog unavailable") }
+        val provider = FakeProvider(
+            id = "fake",
+            capabilities = listOf(ProviderCapability(EnrichmentType.SIMILAR_ARTISTS, 100)),
+        ).also { it.givenResult(EnrichmentType.SIMILAR_ARTISTS, similarArtists("Artist A", "Artist B")) }
+
+        // When - enriching with AVAILABLE_ONLY filtering
+        val results = engine(provider, fakeCatalog).enrich(req, setOf(EnrichmentType.SIMILAR_ARTISTS))
+
+        // Then - the result names its own degradation, without the caller having to watch logs for it
+        val success = results.raw[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
+        assertTrue("expected catalogFilterDegraded to be true", success.catalogFilterDegraded)
+    }
+
+    @Test fun `UNFILTERED mode never reports catalogFilterDegraded, even when the CatalogProvider would have thrown`() = runTest {
+        // Given - a catalog provider that throws, but the mode is UNFILTERED so it is never called
+        val fakeCatalog = CatalogProvider { error("catalog unavailable") }
+        val provider = FakeProvider(
+            id = "fake",
+            capabilities = listOf(ProviderCapability(EnrichmentType.SIMILAR_ARTISTS, 100)),
+        ).also { it.givenResult(EnrichmentType.SIMILAR_ARTISTS, similarArtists("Artist A", "Artist B")) }
+
+        // When - enriching with UNFILTERED
+        val results = engine(provider, fakeCatalog, CatalogFilterMode.UNFILTERED).enrich(req, setOf(EnrichmentType.SIMILAR_ARTISTS))
+
+        // Then - UNFILTERED is a deliberate configuration, not a degradation
+        val success = results.raw[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
+        assertFalse("UNFILTERED must never self-report as degraded", success.catalogFilterDegraded)
     }
 
     @Test fun `AVAILABLE_FIRST degrades to the original order when the CatalogProvider throws`() = runTest {

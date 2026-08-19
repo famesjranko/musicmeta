@@ -72,6 +72,14 @@ sealed class EnrichmentResult {
          * returned an error. Consumers can show a staleness indicator or schedule a retry.
          */
         val isStale: Boolean = false,
+        /**
+         * True when this is a recommendation type whose [CatalogProvider] threw during availability
+         * checking, so the data reached here as the fetched providers returned it rather than as
+         * [EnrichmentConfig.catalogFilterMode] ranked or trimmed it. Never true when the mode is
+         * [CatalogFilterMode.UNFILTERED] — that is a deliberate configuration, not a degradation.
+         * Consumers can show an "unranked" indicator or omit availability-dependent UI for this result.
+         */
+        val catalogFilterDegraded: Boolean = false,
     ) : EnrichmentResult()
 
     /**
