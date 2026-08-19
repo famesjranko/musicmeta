@@ -324,11 +324,11 @@ handle; it means the caller went away.
 The `enrichTimeoutMs` deadline is *not* this case: its expiry is handled internally and returned as
 `Error` results with `ErrorKind.TIMEOUT`, as above.
 
-### A `CatalogProvider`'s own deadline propagates
+### A throwing `CatalogProvider` costs filtering, not the result
 
-`CatalogProvider` is the one consumer-implementable interface the engine calls unguarded, so if your
-`checkAvailability` throws — including the `TimeoutCancellationException` from a `withTimeout` of
-your own — it escapes `enrich()` rather than becoming a result. The engine only reports
-`ErrorKind.TIMEOUT` for `enrichTimeoutMs`; attributing your deadline to ours would send you tuning
-the wrong number. Catch inside your `checkAvailability` if you want a partial catalog answer instead
-of a failed call.
+If your `checkAvailability` throws — including the `TimeoutCancellationException` from a
+`withTimeout` of your own — the engine logs it and leaves that type's results unfiltered, then
+carries on with the remaining types. You get a `Success` in the provider's own order, not an
+exception and not an `Error`: filtering only ranks and trims what the providers already returned, so
+losing it is cheaper than losing the run. Nothing marks the result as unfiltered, so catch inside
+your `checkAvailability` if you want a partial catalog answer rather than none.

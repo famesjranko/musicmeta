@@ -123,7 +123,8 @@ rethrow fails the other way: a `CancellationException` can come from inside a pr
 `withTimeout` while our job is healthy, and rethrowing cancels its siblings.
 
 Every consumer-implementable interface needs the RIGHT form verbatim. It is live in `ProviderChain`,
-`CacheGuard`, `StrategyGuard`, `DefaultEnrichmentEngine`, `ITunesProvider` and `DeezerProvider`.
+`CacheGuard`, `StrategyGuard`, `CatalogFilter`, `DefaultEnrichmentEngine`, `ITunesProvider` and
+`DeezerProvider`.
 `guardedStrategy` is `suspend` purely to reach the job, since `ResultMerger.merge` and
 `CompositeSynthesizer.synthesize` are not. `EnrichmentLogger` is the one consumer-implementable
 interface guarded *without* `ensureActive()` — its two methods are not `suspend`, so cancellation
@@ -169,9 +170,9 @@ val completed = withTimeoutOrNull(config.enrichTimeoutMs) { …; true } ?: false
 The type carries no identity, so a consumer's `CatalogProvider` running its own `withTimeout` was
 reported as `enrichTimeoutMs` expiring, from provider `"engine"` — sending them to tune a number
 that was never the problem. `withTimeoutOrNull` discriminates because it compares the exception's
-coroutine with its own. `CatalogProvider` is the live case only because it is the one
-consumer-implementable call the engine makes unguarded; the cache, merge strategies and providers
-reach it through `ensureActive()` guards instead (§2).
+coroutine with its own. `CatalogProvider` was the live case because its call was the one
+consumer-implementable one the engine made unguarded; it now reaches `ensureActive()` like the
+cache, merge strategies and providers (§2), degrading that type to unfiltered results.
 
 **A timed-out `results` map is a mix, not a prefix.** `applyCatalogFiltering()` rewrites entries one
 type at a time inside the deadline, so an expiry mid-loop leaves some types filtered and some raw,

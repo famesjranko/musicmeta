@@ -29,6 +29,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Breaking Changes
+- A throwing `CatalogProvider.checkAvailability` no longer escapes `enrich()`, reversing (#55): that type degrades to unfiltered results and the run caches, so catch your own timeout inside it
+
 ## [0.12.0] - 2026-08-18
 
 ### Breaking Changes
