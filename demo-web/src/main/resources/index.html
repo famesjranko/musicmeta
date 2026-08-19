@@ -72,6 +72,19 @@
     </div>
     <div class="dialog-sections">
       <section class="dialog-section">
+        <fieldset id="streaming-fieldset" class="cache-fieldset">
+          <legend>Result delivery</legend>
+          <label>
+            <input type="checkbox" id="streaming-toggle" checked />
+            Progressive streaming
+            <code>enrichProgressive</code>
+          </label>
+          <p class="fieldset-note">Sections fill in as each provider answers. Turn it off to wait for
+          the complete result, as <code>enrich</code> does &mdash; the two report the same elapsed
+          time, so they compare directly on the same lookup.</p>
+        </fieldset>
+      </section>
+      <section class="dialog-section">
         <fieldset id="cache-mode-fieldset" class="cache-fieldset">
           <legend>Cache mode</legend>
           <label>

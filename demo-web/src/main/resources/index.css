@@ -1251,7 +1251,8 @@ footer a:hover { color: var(--text); border-color: var(--text); }
   .kind-tabs button { flex: 1 1 auto; }
   #submit { margin-top: 0.05rem; }
   .summary { flex-direction: column; }
-  .summary img { width: 112px; height: 112px; }
+  .summary img,
+  .summary .skeleton-img { width: 112px; height: 112px; }
   table.providers { min-width: 660px; }
   details.meta-panel { overflow-x: auto; }
 }
@@ -1273,3 +1274,47 @@ footer a:hover { color: var(--text); border-color: var(--text); }
     transition-duration: 0.01ms !important;
   }
 }
+
+/* --- Progressive streaming: placeholders for data that has not settled yet ---
+   Every rule here is reachable only while a stream is open. A finished page — streamed or not —
+   carries no pending card, no pending slot and no waiting row, so none of this can be left on
+   screen claiming something is still coming. */
+
+.skeleton {
+  display: block;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(100deg, var(--panel-border-soft) 30%, rgba(149, 165, 194, 0.3) 50%, var(--panel-border-soft) 70%);
+  background-size: 220% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+@keyframes shimmer { to { background-position: -220% 0; } }
+
+/* The exact box `.summary img` occupies, so the artwork landing does not resize the card. */
+.summary .skeleton-img {
+  width: clamp(104px, 16vw, 148px);
+  height: clamp(104px, 16vw, 148px);
+  flex: none;
+  border-radius: 13px;
+}
+.skeleton-lines { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.55rem; }
+.skeleton-lines .skeleton { height: 0.72rem; }
+.skeleton-lines .skeleton:last-child { width: 62%; }
+.skeleton-chip { display: inline-block; width: 5.5rem; height: 1.35rem; border-radius: 999px; }
+
+.card.section.pending h3 { color: var(--muted); }
+.card.section.pending ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.6rem; }
+.card.section.pending li { padding: 0; border: none; }
+.card.section.pending .skeleton { height: 1.1rem; }
+.card.section.pending li:nth-child(2) .skeleton { width: 84%; }
+.card.section.pending li:nth-child(3) .skeleton { width: 66%; }
+
+.badge-pending { background: var(--accent-soft); color: var(--accent); }
+.badge-pending .spinner { width: 11px; height: 11px; margin-right: 0.35rem; }
+.freshness .spinner { width: 11px; height: 11px; margin-right: 0.4rem; vertical-align: -1px; }
+
+.dot.waiting { background: transparent; border: 1px solid var(--muted); }
+table.providers tr.waiting td { color: var(--muted); font-style: italic; }
+
+.fieldset-note { margin: 0.1rem 0 0; color: var(--muted); font-size: 0.72rem; line-height: 1.5; }
+.cache-fieldset input[type="checkbox"] { appearance: auto; }

@@ -14,6 +14,31 @@ data class DemoResponse(
     val meta: Meta,
 )
 
+/**
+ * One `snapshot` or `complete` event on `/api/enrich-stream`. The [response] is the same
+ * [DemoResponse] `/api/enrich` returns, cumulative as of this snapshot; the fields around it are
+ * what a page needs to tell "not here yet" from "settled with nothing", which the response alone
+ * cannot say.
+ */
+@Serializable
+data class StreamSnapshot(
+    /** 1-based position in the events actually sent. Gaps are impossible; the writer conflates before numbering. */
+    val sequence: Int,
+    /**
+     * Bare `EnrichmentType` names still to settle, derived as `requestedTypes - raw.keys`. Empty on
+     * the `complete` event, which is the only event whose absence of a type means "found nothing".
+     */
+    val pending: List<String>,
+    /**
+     * True while identity resolution has not produced a verdict, so [DemoResponse.summary]'s title
+     * is provisional. Derived from the resolution outcome, never from a status standing in for one.
+     */
+    val identityPending: Boolean,
+    /** Milliseconds from the request reaching the server to the first event carrying any settled type. */
+    val firstPaintMs: Long? = null,
+    val response: DemoResponse,
+)
+
 @Serializable
 data class SummaryCard(
     val title: String,
@@ -37,6 +62,11 @@ data class SummaryCard(
      */
     val identityVerdict: String = "",
     val genres: List<GenreChip> = emptyList(),
+    /**
+     * Slots on this card whose data has not settled yet — `"image"`, `"text"`, `"genres"`. Only a
+     * streaming snapshot sets it; on a completed response an empty slot means nothing was found.
+     */
+    val pendingSlots: List<String> = emptyList(),
 )
 
 @Serializable
@@ -59,6 +89,12 @@ data class Section(
     val key: String,
     val label: String,
     val items: List<SectionItem>,
+    /**
+     * True when this card is a placeholder for a type that has not settled: it holds the card's
+     * position so the section cannot appear later and reflow the page under the reader. Only a
+     * streaming snapshot sets it, and a card is never both pending and populated.
+     */
+    val pending: Boolean = false,
 )
 
 @Serializable
@@ -165,6 +201,12 @@ data class ProviderHit(
     val provider: String,
     val status: String,
     val confidence: Float? = null,
+    /**
+     * The bare `ErrorKind` name when [status] is an error, so a reader can tell a deadline from a
+     * broken response. null for every non-error status; [status] alone cannot carry it, because the
+     * frontend derives its status dot from `status.split(':')[0]`.
+     */
+    val errorKind: String? = null,
 )
 
 @Serializable
