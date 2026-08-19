@@ -76,6 +76,15 @@ interface EnrichmentEngine {
      * unrelated call would have served it). Emission order between types carries no contract: two
      * runs of the same request may settle types in a different sequence.
      *
+     * Two values exist specifically for a pre-terminal read: [EnrichmentResults.identity]`.status`
+     * can be [CanonicalStatus.RESOLVING] on an intermediate emission — identity resolution runs
+     * concurrently with everything else and is never backdated once it lands — and a settled
+     * recommendation-type [EnrichmentResult.Success] can carry
+     * [EnrichmentResult.Success.isCatalogDegraded] set, meaning this call's own [CatalogProvider]
+     * threw and that type reached you unranked. Neither is ever seen on [enrich]'s return or on
+     * this stream's terminal emission for [CanonicalStatus.RESOLVING]'s case — it always resolves
+     * to a real status by then — but `isCatalogDegraded` can be `true` on the terminal emission too.
+     *
      * [enrich] is `enrichProgressive(...).last()` against one shared resolution path, so the
      * terminal emission here and [enrich]'s return are always identical, including on a timeout.
      * The default implementation below runs [enrich] once and emits its result as the sole,
