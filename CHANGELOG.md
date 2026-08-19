@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Breaking Changes
 - A throwing `CatalogProvider.checkAvailability` no longer escapes `enrich()`, reversing (#55): that type degrades to unfiltered results and the run caches, so catch your own timeout inside it
+- `EnrichmentEngine` gains `enrichProgressive`, a defaulted method: a custom implementation built against an older `.jar` throws `AbstractMethodError` on first call until recompiled
 
 ## [0.12.0] - 2026-08-18
 

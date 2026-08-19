@@ -1055,6 +1055,7 @@ public final class com/landofoz/musicmeta/EnrichmentData$Tracklist$Companion {
 public abstract interface class com/landofoz/musicmeta/EnrichmentEngine {
 	public abstract fun enrich (Lcom/landofoz/musicmeta/EnrichmentRequest;Ljava/util/Set;ZLkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun enrichBatch (Ljava/util/List;Ljava/util/Set;Z)Lkotlinx/coroutines/flow/Flow;
+	public abstract fun enrichProgressive (Lcom/landofoz/musicmeta/EnrichmentRequest;Ljava/util/Set;Z)Lkotlinx/coroutines/flow/Flow;
 	public abstract fun getCache ()Lcom/landofoz/musicmeta/EnrichmentCache;
 	public abstract fun getProviders ()Ljava/util/List;
 	public abstract fun invalidate (Lcom/landofoz/musicmeta/EnrichmentRequest;Lcom/landofoz/musicmeta/EnrichmentType;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
@@ -1084,6 +1085,8 @@ public final class com/landofoz/musicmeta/EnrichmentEngine$DefaultImpls {
 	public static synthetic fun enrich$default (Lcom/landofoz/musicmeta/EnrichmentEngine;Lcom/landofoz/musicmeta/EnrichmentRequest;Ljava/util/Set;ZLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static fun enrichBatch (Lcom/landofoz/musicmeta/EnrichmentEngine;Ljava/util/List;Ljava/util/Set;Z)Lkotlinx/coroutines/flow/Flow;
 	public static synthetic fun enrichBatch$default (Lcom/landofoz/musicmeta/EnrichmentEngine;Ljava/util/List;Ljava/util/Set;ZILjava/lang/Object;)Lkotlinx/coroutines/flow/Flow;
+	public static fun enrichProgressive (Lcom/landofoz/musicmeta/EnrichmentEngine;Lcom/landofoz/musicmeta/EnrichmentRequest;Ljava/util/Set;Z)Lkotlinx/coroutines/flow/Flow;
+	public static synthetic fun enrichProgressive$default (Lcom/landofoz/musicmeta/EnrichmentEngine;Lcom/landofoz/musicmeta/EnrichmentRequest;Ljava/util/Set;ZILjava/lang/Object;)Lkotlinx/coroutines/flow/Flow;
 	public static synthetic fun invalidate$default (Lcom/landofoz/musicmeta/EnrichmentEngine;Lcom/landofoz/musicmeta/EnrichmentRequest;Lcom/landofoz/musicmeta/EnrichmentType;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun search$default (Lcom/landofoz/musicmeta/EnrichmentEngine;Lcom/landofoz/musicmeta/EnrichmentRequest;ILkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 }

@@ -62,6 +62,33 @@ interface EnrichmentEngine {
     ): EnrichmentResults
 
     /**
+     * [enrich], as a cumulative stream: each emission is a complete, valid [EnrichmentResults]
+     * snapshot of everything settled so far, filtered to [types] — never a per-result diff. A
+     * caller derives what is still pending as `types - results.raw.keys`; a type in neither set
+     * settled with no answer. Only the last emission has an empty derived-pending set, so a
+     * collector that stops early never mistakes an intermediate snapshot for the finished one.
+     *
+     * A settled type is catalog-filtered, provenance-stamped, and stale-cache-resolved before the
+     * emission that first carries it, so an intermediate is safe to render — but a type's value can
+     * still change before the terminal emission (e.g. cache write-back may alter what a later,
+     * unrelated call would have served it). Emission order between types carries no contract: two
+     * runs of the same request may settle types in a different sequence.
+     *
+     * [enrich] is `enrichProgressive(...).last()` against one shared resolution path, so the
+     * terminal emission here and [enrich]'s return are always identical, including on a timeout.
+     * The default implementation below runs [enrich] once and emits its result as the sole,
+     * terminal snapshot — the cadence a third-party [EnrichmentEngine] gets for free without
+     * overriding this method.
+     */
+    fun enrichProgressive(
+        request: EnrichmentRequest,
+        types: Set<EnrichmentType>,
+        forceRefresh: Boolean = false,
+    ): Flow<EnrichmentResults> = flow {
+        emit(enrich(request, types, forceRefresh))
+    }
+
+    /**
      * Enriches multiple requests sequentially, emitting each result as it completes.
      *
      * Results are emitted as a cold [Flow]. Cancelling collection (e.g., via [take])
