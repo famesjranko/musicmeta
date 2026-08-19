@@ -168,8 +168,8 @@ class ProgressiveCancellationTest {
             job.cancelAndJoin()
             delay(250) // past the detached run's own deadline, with nobody watching
 
-            // Then - the timed-out detached run wrote nothing back (#56, reachable via detachment),
-            // and its dedupe entry evicted like any other completed run
+            // Then - the timed-out detached run wrote nothing back, reachable via detachment same as
+            // any timed-out call, and its dedupe entry evicted like any other completed run
             assertTrue("a timed-out detached run must cache nothing", cache.stored.isEmpty())
             assertEquals(0, engine.inFlightDetachedRunCount())
         }

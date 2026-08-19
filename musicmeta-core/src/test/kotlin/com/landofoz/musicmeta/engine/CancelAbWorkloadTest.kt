@@ -21,12 +21,14 @@ import org.junit.Test
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
- * Reproduces the cancel-ab-complete.md workload against the shipped code: 10 early-cancelled
- * `enrichProgressive` collections of one request (cancelled at the first non-empty snapshot), then
- * one full collection, real wall-clock delays under a real dispatcher — never `runTest`, whose
- * virtual time cannot see the class of bug complete-and-cache targets. Reproduced stable at 3
- * total provider calls across several manual runs (see the report); asserted here rather than left
- * as a print-only script.
+ * Pins complete-and-cache's dedupe under repeated early cancellation: 10 collections of
+ * `enrichProgressive` for the same request, each cancelled at the first non-empty snapshot, then
+ * one full collection. If cancellation tore down the underlying run instead of detaching it, each
+ * of the 11 collections would restart provider work from scratch — 33 calls for 3 types. Detaching
+ * on cancel and deduping by request/types/forceRefresh key instead means the 10 early cancels
+ * attach to (or start, then leave running) the one in-flight run per type, so only 3 calls happen
+ * in total. Runs under a real dispatcher with real wall-clock delays — never `runTest`, whose
+ * virtual time cannot observe cancellation racing an in-flight suspension the way this bug does.
  */
 // InjectDispatcher: a real dispatcher, not runTest virtual time, is the point — see the class KDoc.
 @Suppress("InjectDispatcher")

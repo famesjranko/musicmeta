@@ -24,11 +24,10 @@ import org.junit.Test
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
- * Staff-final-review probes: cross-stage seam intersections no single stage owned. Each test
- * asserts a promise the shipped KDoc/glossary makes; a red run here is a defect demonstration,
- * not a mutation replay. The last test is not from that review — it pins the coalescing
- * [progressiveDedupeKey] must still do (two identical calls attach to one run) alongside the four
- * defect probes above, so a fix for the others cannot regress it to zero-coalescing.
+ * Pins the promises the shipped KDoc and glossary make about progressive enrichment where they
+ * intersect: cache/identity/timeout/close interactions no single stage's own tests cover in
+ * combination, plus [progressiveDedupeKey] coalescing (two identical calls attach to one run) so a
+ * fix to one of these cannot regress the others to zero-coalescing.
  */
 class StaffFinalProbesTest {
     private lateinit var cache: FakeEnrichmentCache
