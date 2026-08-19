@@ -178,7 +178,7 @@ internal class DefaultEnrichmentEngine(
                 val resolvedTypes = resolveTypes(enrichedRequest, uncachedTypes, identityResult, resolution.status)
                 results.putAll(resolvedTypes.results)
                 chainExecutions.putAll(resolvedTypes.executions)
-                applyCatalogFiltering(results, config.catalogProvider, config.catalogFilterMode)
+                applyCatalogFiltering(results, config.catalogProvider, config.catalogFilterMode, logger)
                 stampProvenance(results, resolution.status, chainExecutions)
                 true
             }

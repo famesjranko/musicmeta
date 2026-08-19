@@ -4,7 +4,6 @@ import com.landofoz.musicmeta.*
 import com.landofoz.musicmeta.http.EnrichDeadline
 import com.landofoz.musicmeta.testutil.FakeEnrichmentCache
 import com.landofoz.musicmeta.testutil.FakeProvider
-import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
@@ -17,8 +16,8 @@ import org.junit.Test
  * deadline `ErrorKind.TIMEOUT` is allowed to mean (#55).
  *
  * Catalog filtering is the shape both hang on — it rewrites `results` one type at a time inside the
- * timed block, so an expiry mid-loop leaves a mix of filtered and unfiltered entries, and it is the
- * one consumer-implementable call site with no guard between it and `enrich()`'s own timeout catch.
+ * timed block, so an expiry mid-loop leaves a mix of filtered and unfiltered entries, and its guard
+ * has to separate the consumer's own deadline from `enrich()`'s.
  */
 class EnrichTimeoutBoundaryTest {
 
@@ -156,18 +155,18 @@ class EnrichTimeoutBoundaryTest {
         }
 
         // When - enriching
-        val thrown = try {
-            val results = engine(catalog).enrich(req, types)
-            fail("expected the catalog's own timeout to surface, got $results")
-            null
-        } catch (e: TimeoutCancellationException) {
-            e
-        }
+        val results = engine(catalog).enrich(req, types)
 
-        // Then - it surfaces as the catalog's failure. What must not happen is the old behaviour:
-        // every unfinished type stamped Error(TIMEOUT) by "engine", telling the consumer their
-        // enrichTimeoutMs is too low when the deadline was their own.
-        assertNotNull(thrown)
-        assertTrue("nothing may be cached from a run that failed this way", cache.stored.isEmpty())
+        // Then - it costs the catalog's filtering and nothing else: both types come back as the
+        // provider returned them. What must not happen is the old behaviour: every unfinished type
+        // stamped Error(TIMEOUT) by "engine", telling the consumer their enrichTimeoutMs is too low
+        // when the deadline was their own.
+        val artists = results.raw[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
+        assertEquals(2, (artists.data as EnrichmentData.SimilarArtists).artists.size)
+        val tracks = results.raw[EnrichmentType.SIMILAR_TRACKS] as EnrichmentResult.Success
+        assertEquals(2, (tracks.data as EnrichmentData.SimilarTracks).tracks.size)
+
+        // And - the run completed, so what the providers fetched is cached rather than discarded.
+        assertTrue("a completed run caches its results", cache.stored.isNotEmpty())
     }
 }

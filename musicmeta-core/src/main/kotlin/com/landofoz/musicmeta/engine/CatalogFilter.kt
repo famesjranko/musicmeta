@@ -5,8 +5,13 @@ import com.landofoz.musicmeta.CatalogMatch
 import com.landofoz.musicmeta.CatalogProvider
 import com.landofoz.musicmeta.CatalogQuery
 import com.landofoz.musicmeta.EnrichmentData
+import com.landofoz.musicmeta.EnrichmentLogger
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+
+private const val TAG = "CatalogFilter"
 
 /**
  * Recommendation types that support catalog availability filtering.
@@ -90,11 +95,21 @@ internal fun reorderData(data: EnrichmentData, indices: List<Int>): EnrichmentDa
     else -> null
 }
 
-/** Applies catalog availability filtering to recommendation results in-place. No-op when null or UNFILTERED. */
+/**
+ * Applies catalog availability filtering to recommendation results in-place. No-op when null or UNFILTERED.
+ *
+ * A throwing [CatalogProvider] costs that type its filtering, not the whole enrichment: filtering
+ * ranks and trims results the providers already produced, so degrading to the unfiltered result
+ * keeps the fetched data — and the cache write that follows — rather than losing both. Cancellation
+ * is settled as `CacheGuard` and `StrategyGuard` settle it: `ensureActive()` asks whether *our* job
+ * was cancelled, so a consumer's own `withTimeout` around their catalog lookup stops their lookup
+ * and not `enrich()`.
+ */
 internal suspend fun applyCatalogFiltering(
     results: MutableMap<EnrichmentType, EnrichmentResult>,
     catalogProvider: CatalogProvider?,
     catalogFilterMode: CatalogFilterMode,
+    logger: EnrichmentLogger,
 ) {
     val provider = catalogProvider ?: return
     if (catalogFilterMode == CatalogFilterMode.UNFILTERED) return
@@ -104,7 +119,13 @@ internal suspend fun applyCatalogFiltering(
         val queries = toQueries(result.data) ?: continue
         if (queries.isEmpty()) continue
 
-        val matches = provider.checkAvailability(queries)
+        val matches = try {
+            provider.checkAvailability(queries)
+        } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
+            logger.warn(TAG, "${type.name}: CatalogProvider threw, leaving results unfiltered: ${e.message}", e)
+            continue
+        }
         results[type] = applyMode(result, matches, catalogFilterMode)
     }
 }

@@ -286,4 +286,72 @@ class CatalogFilteringTest {
         // Then - NotFound returned because all items filtered out
         assertTrue(results.raw[EnrichmentType.SIMILAR_ARTISTS] is EnrichmentResult.NotFound)
     }
+
+    // --- Test 10: a throwing CatalogProvider degrades to unfiltered results ---
+
+    @Test fun `AVAILABLE_ONLY degrades to unfiltered results when the CatalogProvider throws`() = runTest {
+        // Given - a catalog provider that throws instead of answering
+        val fakeCatalog = CatalogProvider { error("catalog unavailable") }
+        val provider = FakeProvider(
+            id = "fake",
+            capabilities = listOf(ProviderCapability(EnrichmentType.SIMILAR_ARTISTS, 100)),
+        ).also { it.givenResult(EnrichmentType.SIMILAR_ARTISTS, similarArtists("Artist A", "Artist B", "Artist C")) }
+
+        // When - enriching with AVAILABLE_ONLY filtering
+        val results = engine(provider, fakeCatalog).enrich(req, setOf(EnrichmentType.SIMILAR_ARTISTS))
+
+        // Then - the unfiltered result survives instead of the throw reaching the caller
+        val success = results.raw[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
+        val artists = (success.data as EnrichmentData.SimilarArtists).artists
+        assertEquals(listOf("Artist A", "Artist B", "Artist C"), artists.map { it.name })
+    }
+
+    @Test fun `AVAILABLE_FIRST degrades to the original order when the CatalogProvider throws`() = runTest {
+        // Given - a catalog provider that throws, and AVAILABLE_FIRST reordering requested
+        val fakeCatalog = CatalogProvider { error("catalog unavailable") }
+        val provider = FakeProvider(
+            id = "fake",
+            capabilities = listOf(ProviderCapability(EnrichmentType.SIMILAR_ARTISTS, 100)),
+        ).also { it.givenResult(EnrichmentType.SIMILAR_ARTISTS, similarArtists("Artist A", "Artist B", "Artist C")) }
+
+        // When - enriching with AVAILABLE_FIRST filtering
+        val results = engine(provider, fakeCatalog, CatalogFilterMode.AVAILABLE_FIRST)
+            .enrich(req, setOf(EnrichmentType.SIMILAR_ARTISTS))
+
+        // Then - the items keep the provider's order rather than the caller seeing an exception
+        val success = results.raw[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
+        val artists = (success.data as EnrichmentData.SimilarArtists).artists
+        assertEquals(listOf("Artist A", "Artist B", "Artist C"), artists.map { it.name })
+    }
+
+    @Test fun `a throw for one type still filters the type checked after it`() = runTest {
+        // Given - a catalog that throws for the similar artists but answers for the radio tracks
+        val fakeCatalog = CatalogProvider { queries ->
+            if (queries.any { it.title.startsWith("Artist") }) error("catalog unavailable")
+            queries.mapIndexed { i, _ -> CatalogMatch(available = i != 1, source = "test") }
+        }
+        val provider = FakeProvider(
+            id = "fake",
+            capabilities = listOf(
+                ProviderCapability(EnrichmentType.SIMILAR_ARTISTS, 100),
+                ProviderCapability(EnrichmentType.ARTIST_RADIO, 100),
+            ),
+        ).also {
+            it.givenResult(EnrichmentType.SIMILAR_ARTISTS, similarArtists("Artist A", "Artist B", "Artist C"))
+            it.givenResult(EnrichmentType.ARTIST_RADIO, radioTracks("Track 1", "Track 2"))
+        }
+
+        // When - enriching both types with AVAILABLE_ONLY filtering
+        val results = engine(provider, fakeCatalog)
+            .enrich(req, setOf(EnrichmentType.SIMILAR_ARTISTS, EnrichmentType.ARTIST_RADIO))
+
+        // Then - the throwing type degrades to unfiltered and the type checked after it is filtered
+        val artists = results.raw[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
+        assertEquals(
+            listOf("Artist A", "Artist B", "Artist C"),
+            (artists.data as EnrichmentData.SimilarArtists).artists.map { it.name },
+        )
+        val radio = results.raw[EnrichmentType.ARTIST_RADIO] as EnrichmentResult.Success
+        assertEquals(listOf("Track 1"), (radio.data as EnrichmentData.RadioPlaylist).tracks.map { it.title })
+    }
 }

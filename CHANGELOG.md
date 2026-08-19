@@ -29,6 +29,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- A `CatalogProvider.checkAvailability` that throws no longer takes `enrich()` down with it: that type degrades to unfiltered results and the run completes and caches as usual
+
 ## [0.12.0] - 2026-08-18
 
 ### Breaking Changes
