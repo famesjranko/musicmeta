@@ -72,7 +72,7 @@ class CancelAbWorkloadTest {
             val phase2Wall = System.currentTimeMillis() - t1
             val totalCalls = fast.calls.get() + slow1.calls.get() + slow2.calls.get()
 
-            println("=== cancel-ab-complete workload (musicmeta-core, stage 3) ===")
+            println("=== early-cancel coalescing workload ===")
             println("phase1 wall (10 cancels only): ${phase1Wall}ms")
             println("phase1 wall (incl. wait for write-back): ${phase1WithWait}ms")
             println("provider calls: fast=${fast.calls.get()} slow1=${slow1.calls.get()} slow2=${slow2.calls.get()}")
