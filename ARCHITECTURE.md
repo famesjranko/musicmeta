@@ -144,6 +144,14 @@ substitution) also emits an intermediate `EnrichmentResults` snapshot the moment
 carrying every type settled so far. `enrich()`'s callers get only the terminal snapshot; a caller of
 `enrichProgressive()` sees every one.
 
+**One path, not two, is the load-bearing constraint here** — the reason a streaming API was not
+cheap to add. A streamed second implementation of the same pipeline was built and measured against
+the suite: it diverged from `enrich()` on error classification, silently, in composite synthesis and
+identity failure. What a caller would have got is a composite type absent from the results
+altogether where `enrich()` returns a typed `Error`. Nothing about a streaming surface forces that
+divergence — but nothing catches it either, so the cost of the feature is the shared seam
+underneath it, not the method on the interface.
+
 This makes the engine stateful in a way it was not before: `DefaultEnrichmentEngine` owns a
 `CoroutineScope` (`detachedScope`, on `Dispatchers.Default`) that a fan-out runs as a child of, not
 as a child of the caller's own coroutine. Cancelling the caller — a collector leaving composition,
@@ -154,10 +162,12 @@ gained `close()`: releasing `detachedScope` (and abandoning, never waiting for, 
 running on it) is the one thing nothing else does for you. A consumer that never calls `close()`
 costs at most one shared dispatcher and whatever distinct request/types/`forceRefresh` runs are
 genuinely in flight — bounded, but real, and owned by the consumer holding the engine, not by this
-library. The dedupe key is built per type from the resolved entity, not the raw request, so two
-textually different requests that resolve to the same entity still coalesce onto one in-flight run;
-only a difference in requested types or `forceRefresh` ever starts a second one, even when the
-*uncached* type sets happen to coincide.
+library. Two calls coalesce onto one in-flight run only when their request, their requested types
+and their `forceRefresh` all match; differing in any of the three starts a second run, even when the
+*uncached* type sets happen to coincide. The key describes the request, not a resolved entity, so
+two spellings of one artist — an MBID-bearing request and a name-only one — start two runs. That
+under-coalesces rather than over-coalesces, which is the safe direction: it never merges two
+genuinely different entities.
 
 ## One `search()` call
 ```mermaid

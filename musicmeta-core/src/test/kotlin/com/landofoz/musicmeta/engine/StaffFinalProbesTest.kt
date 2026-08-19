@@ -3,6 +3,7 @@ package com.landofoz.musicmeta.engine
 import com.landofoz.musicmeta.CanonicalStatus
 import com.landofoz.musicmeta.EnrichmentConfig
 import com.landofoz.musicmeta.EnrichmentData
+import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
@@ -222,5 +223,51 @@ class StaffFinalProbesTest {
                 1, calls.get(),
             )
             assertEquals(setOf(EnrichmentType.ARTIST_BIO), secondResult.requestedTypes)
+        }
+
+    @Test
+    fun `two requests naming the same entity different ways never coalesce onto one run`() =
+        runTest {
+            // Given - a name-only request and an MBID-bearing request for the same artist, and a
+            // provider that counts how many times it is asked
+            val nameOnly = EnrichmentRequest.forArtist("Radiohead")
+            val withMbid = EnrichmentRequest.forArtist(
+                name = "Radiohead",
+                identifiers = EnrichmentIdentifiers(musicBrainzId = "a74b1b7f-71a5-4011-9441-d0b5e4122711"),
+            )
+            val calls = AtomicInteger(0)
+            val started = CompletableDeferred<Unit>()
+            val gate = CompletableDeferred<Unit>()
+            val provider = object : FakeProvider(
+                id = "p",
+                capabilities = listOf(ProviderCapability(EnrichmentType.ARTIST_BIO, 100)),
+            ) {
+                override suspend fun enrich(request: EnrichmentRequest, type: EnrichmentType): EnrichmentResult {
+                    calls.incrementAndGet()
+                    started.complete(Unit)
+                    gate.await()
+                    return artSuccess(type, id)
+                }
+            }
+            val engine = DefaultEnrichmentEngine(
+                ProviderRegistry(listOf(provider)), cache, EnrichmentConfig(enableIdentityResolution = false),
+            )
+            val first = launch { engine.enrichProgressive(nameOnly, setOf(EnrichmentType.ARTIST_BIO)).toList() }
+            started.await()
+
+            // When - the MBID-bearing request arrives for the identical type set while the first is
+            // still in flight
+            val second = async { engine.enrich(withMbid, setOf(EnrichmentType.ARTIST_BIO)) }
+            testScheduler.advanceUntilIdle()
+            gate.complete(Unit)
+            second.await()
+            first.join()
+
+            // Then - the provider was asked twice: the dedupe key describes the request, so two
+            // spellings of one entity start two runs rather than coalescing
+            assertEquals(
+                "a name-only and an MBID-bearing request for one entity must start two runs",
+                2, calls.get(),
+            )
         }
 }
