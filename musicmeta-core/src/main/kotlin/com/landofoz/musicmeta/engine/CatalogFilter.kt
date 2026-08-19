@@ -129,12 +129,20 @@ internal suspend fun applyCatalogFilteringToType(
     catalogFilterMode: CatalogFilterMode,
     logger: EnrichmentLogger,
 ): EnrichmentResult {
-    val provider = catalogProvider ?: return result
-    if (catalogFilterMode == CatalogFilterMode.UNFILTERED) return result
-    if (type !in RECOMMENDATION_TYPES) return result
-    val success = result as? EnrichmentResult.Success ?: return result
-    val queries = toQueries(success.data) ?: return result
-    if (queries.isEmpty()) return result
+    // isCatalogDegraded is call-scoped: every serve normalizes it to false right here, before any
+    // branch below — including an early return (no CatalogProvider configured, UNFILTERED mode, a
+    // non-recommendation type, no queries) — gets a chance to hand back a stale true this call
+    // never earned, e.g. from a cache hit a differently-configured or since-recovered engine wrote.
+    // Only the guarded catch below, when *this* call's own checkAvailability throws, may set it
+    // back to true.
+    val normalized = if (result is EnrichmentResult.Success) result.copy(isCatalogDegraded = false) else result
+
+    val provider = catalogProvider ?: return normalized
+    if (catalogFilterMode == CatalogFilterMode.UNFILTERED) return normalized
+    if (type !in RECOMMENDATION_TYPES) return normalized
+    val success = normalized as? EnrichmentResult.Success ?: return normalized
+    val queries = toQueries(success.data) ?: return normalized
+    if (queries.isEmpty()) return normalized
 
     val matches = try {
         provider.checkAvailability(queries)
@@ -143,9 +151,5 @@ internal suspend fun applyCatalogFilteringToType(
         logger.warn(TAG, "${type.name}: CatalogProvider threw, leaving results unfiltered: ${e.message}", e)
         return success.copy(isCatalogDegraded = true)
     }
-    // checkAvailability just succeeded, so this call's own filtering is not degraded — even if
-    // success arrived already carrying isCatalogDegraded = true from a cache hit whose stored
-    // value predates a since-recovered CatalogProvider. applyMode's own "unchanged data" shortcut
-    // returns success verbatim, so the flag has to be cleared before it, not after.
-    return applyMode(success.copy(isCatalogDegraded = false), matches, catalogFilterMode)
+    return applyMode(success, matches, catalogFilterMode)
 }
