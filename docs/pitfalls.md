@@ -123,7 +123,8 @@ rethrow fails the other way: a `CancellationException` can come from inside a pr
 `withTimeout` while our job is healthy, and rethrowing cancels its siblings.
 
 Every consumer-implementable interface needs the RIGHT form verbatim. It is live in `ProviderChain`,
-`CacheGuard`, `StrategyGuard`, `DefaultEnrichmentEngine`, `ITunesProvider` and `DeezerProvider`.
+`CacheGuard`, `StrategyGuard`, `CatalogFilter`, `DefaultEnrichmentEngine`, `ITunesProvider` and
+`DeezerProvider`.
 `guardedStrategy` is `suspend` purely to reach the job, since `ResultMerger.merge` and
 `CompositeSynthesizer.synthesize` are not. `EnrichmentLogger` is the one consumer-implementable
 interface guarded *without* `ensureActive()` — its two methods are not `suspend`, so cancellation

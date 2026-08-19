@@ -13,6 +13,15 @@ class CatalogFilteringTest {
 
     // --- Test helpers ---
 
+    /** Records warnings so a test can assert on the ones the catalog guard emits. */
+    private class RecordingLogger : EnrichmentLogger {
+        val warnings = mutableListOf<String>()
+        override fun debug(tag: String, message: String) = Unit
+        override fun warn(tag: String, message: String, throwable: Throwable?) {
+            warnings.add(message)
+        }
+    }
+
     private fun similarArtists(vararg names: String): EnrichmentResult.Success =
         EnrichmentResult.Success(
             type = EnrichmentType.SIMILAR_ARTISTS,
@@ -73,13 +82,14 @@ class CatalogFilteringTest {
         provider: FakeProvider,
         catalogProvider: CatalogProvider?,
         mode: CatalogFilterMode = CatalogFilterMode.AVAILABLE_ONLY,
+        logger: EnrichmentLogger = EnrichmentLogger.NoOp,
     ): DefaultEnrichmentEngine {
         val config = EnrichmentConfig(
             enableIdentityResolution = false,
             catalogProvider = catalogProvider,
             catalogFilterMode = mode,
         )
-        return DefaultEnrichmentEngine(ProviderRegistry(listOf(provider)), FakeEnrichmentCache(), config)
+        return DefaultEnrichmentEngine(ProviderRegistry(listOf(provider)), FakeEnrichmentCache(), config, logger)
     }
 
     // --- Test 1: AVAILABLE_ONLY removes unavailable SimilarArtist items ---
@@ -290,20 +300,26 @@ class CatalogFilteringTest {
     // --- Test 10: a throwing CatalogProvider degrades to unfiltered results ---
 
     @Test fun `AVAILABLE_ONLY degrades to unfiltered results when the CatalogProvider throws`() = runTest {
-        // Given - a catalog provider that throws instead of answering
+        // Given - a catalog provider that throws instead of answering, and a logger recording warnings
         val fakeCatalog = CatalogProvider { error("catalog unavailable") }
+        val logger = RecordingLogger()
         val provider = FakeProvider(
             id = "fake",
             capabilities = listOf(ProviderCapability(EnrichmentType.SIMILAR_ARTISTS, 100)),
         ).also { it.givenResult(EnrichmentType.SIMILAR_ARTISTS, similarArtists("Artist A", "Artist B", "Artist C")) }
 
         // When - enriching with AVAILABLE_ONLY filtering
-        val results = engine(provider, fakeCatalog).enrich(req, setOf(EnrichmentType.SIMILAR_ARTISTS))
+        val results = engine(provider, fakeCatalog, logger = logger)
+            .enrich(req, setOf(EnrichmentType.SIMILAR_ARTISTS))
 
         // Then - the unfiltered result survives instead of the throw reaching the caller
         val success = results.raw[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
         val artists = (success.data as EnrichmentData.SimilarArtists).artists
         assertEquals(listOf("Artist A", "Artist B", "Artist C"), artists.map { it.name })
+
+        // And - the degrade is announced, since nothing on the result says it went unfiltered
+        val warning = logger.warnings.single { it.startsWith("SIMILAR_ARTISTS: ") }
+        assertTrue(warning, warning.contains("catalog unavailable"))
     }
 
     @Test fun `AVAILABLE_FIRST degrades to the original order when the CatalogProvider throws`() = runTest {
