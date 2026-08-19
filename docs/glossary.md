@@ -62,11 +62,13 @@ can settle and be sent before the same call's canonical identity lookup returns.
 return and every stream's terminal emission always carry a settled status instead; a consumer that
 only calls `enrich()` never sees it.
 
-**`EnrichmentResult.Success.catalogFilterDegraded` means catalog filtering was attempted and could
+**`EnrichmentResult.Success.isCatalogDegraded` means catalog filtering was attempted and could
 not run, not that filtering was turned off.** A recommendation type still reaches the caller when
 its `CatalogProvider` throws — the fetched data survives unranked rather than being lost — and this
 flag is how that result says so. It is always `false` under `CatalogFilterMode.UNFILTERED`, which is
-a deliberate configuration and not a degradation.
+a deliberate configuration and not a degradation. It is call-scoped: a cache hit re-checks the
+*current* `CatalogProvider` before it reaches you, so this reports whether this call could rank
+the result, never whether the value was ranked when it was written — no shipped cache persists it.
 
 **Discogs `master_id` is optional.** A Discogs release may have no master, so the album-level
 identifier is absent rather than derivable — treat it as a miss, not as a release id to reuse.

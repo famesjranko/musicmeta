@@ -141,7 +141,11 @@ internal suspend fun applyCatalogFilteringToType(
     } catch (e: Exception) {
         currentCoroutineContext().ensureActive()
         logger.warn(TAG, "${type.name}: CatalogProvider threw, leaving results unfiltered: ${e.message}", e)
-        return success.copy(catalogFilterDegraded = true)
+        return success.copy(isCatalogDegraded = true)
     }
-    return applyMode(success, matches, catalogFilterMode)
+    // checkAvailability just succeeded, so this call's own filtering is not degraded — even if
+    // success arrived already carrying isCatalogDegraded = true from a cache hit whose stored
+    // value predates a since-recovered CatalogProvider. applyMode's own "unchanged data" shortcut
+    // returns success verbatim, so the flag has to be cleared before it, not after.
+    return applyMode(success.copy(isCatalogDegraded = false), matches, catalogFilterMode)
 }

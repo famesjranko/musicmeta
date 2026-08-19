@@ -133,7 +133,15 @@ internal class DefaultEnrichmentEngine(
         val cacheLayer = readCacheLayer(request, types, forceRefresh)
         if (cacheLayer.uncachedTypes.isEmpty()) {
             val identity = IdentityResolution(request.identifiers, CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT)
-            emit(EnrichmentResults(cacheLayer.results, types, identity))
+            // A partial cache hit re-runs catalog filtering per type via settle()/finalizeResult
+            // below; a full cache hit must do the same rather than replay whatever
+            // EnrichmentResult.Success.isCatalogDegraded happened to be true at write time — that
+            // value is call-scoped, not a stored fact (see its KDoc), so a since-recovered or
+            // since-failed CatalogProvider must be reflected on every read, not just a partial one.
+            val filtered = cacheLayer.results.mapValues { (type, result) ->
+                applyCatalogFilteringToType(type, result, config.catalogProvider, config.catalogFilterMode, logger)
+            }
+            emit(EnrichmentResults(filtered, types, identity))
             return
         }
 

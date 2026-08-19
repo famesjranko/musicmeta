@@ -78,8 +78,15 @@ sealed class EnrichmentResult {
          * [EnrichmentConfig.catalogFilterMode] ranked or trimmed it. Never true when the mode is
          * [CatalogFilterMode.UNFILTERED] — that is a deliberate configuration, not a degradation.
          * Consumers can show an "unranked" indicator or omit availability-dependent UI for this result.
+         *
+         * Call-scoped, not a stored fact: every cache hit re-runs catalog filtering against the
+         * *current* [CatalogProvider] before it reaches a caller, so this reflects whether *this*
+         * call could rank the result, not whether the value it was written under could. No shipped
+         * [EnrichmentCache] implementation persists it — a stored [CatalogProvider] failure that has
+         * since recovered would otherwise haunt every later cache hit, and a healthy write would mask
+         * a [CatalogProvider] that started failing after it was cached.
          */
-        val catalogFilterDegraded: Boolean = false,
+        val isCatalogDegraded: Boolean = false,
     ) : EnrichmentResult()
 
     /**
