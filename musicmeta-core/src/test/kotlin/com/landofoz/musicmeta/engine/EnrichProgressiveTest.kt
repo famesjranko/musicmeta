@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.engine
 
+import com.landofoz.musicmeta.CanonicalStatus
 import com.landofoz.musicmeta.CatalogFilterMode
 import com.landofoz.musicmeta.CatalogMatch
 import com.landofoz.musicmeta.CatalogProvider
@@ -255,6 +256,46 @@ class EnrichProgressiveTest {
         val first = withArtists.first().raw[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
         assertEquals(1, (first.data as EnrichmentData.SimilarArtists).artists.size)
     }
+
+    // --- Identity resolution in progress: a pre-terminal emission says so honestly ---
+
+    @Test fun `a cache-hit type settling while identity resolution is still running carries RESOLVING, and the terminal emission never does`() =
+        runTest {
+            // Given - ARTIST_BIO is already cached, GENRE is not and needs a slow-resolving identity
+            // lookup; both are requested together so the cache-hit settles immediately, before
+            // identity resolution completes
+            val cachedType = EnrichmentType.ARTIST_BIO
+            val liveType = EnrichmentType.GENRE
+            cache.put(entityKeyFor(req, cachedType), cachedType, success(cachedType), CanonicalStatus.RESOLVED)
+            val idProvider = object : FakeProvider(
+                id = "mb", isIdentityProvider = true,
+                capabilities = listOf(ProviderCapability(liveType, 100)),
+            ) {
+                override suspend fun resolveIdentity(request: EnrichmentRequest): EnrichmentResult {
+                    kotlinx.coroutines.delay(100)
+                    return EnrichmentResult.Success(liveType, EnrichmentData.Metadata(genres = listOf("rock")), "mb", 0.95f)
+                }
+            }
+            val engine = DefaultEnrichmentEngine(
+                ProviderRegistry(listOf(idProvider, providerFor(liveType))), cache,
+                EnrichmentConfig(enableIdentityResolution = true),
+            )
+
+            // When - collecting the whole stream
+            val emissions = engine.enrichProgressive(req, setOf(cachedType, liveType)).toList()
+
+            // Then - some pre-terminal emission (the cache-hit settling first) carries RESOLVING,
+            // and the terminal emission carries the real, settled status instead
+            val intermediates = emissions.dropLast(1)
+            assertTrue(
+                "an intermediate emission must carry RESOLVING while identity resolution is still running: $intermediates",
+                intermediates.any { it.identity.status == CanonicalStatus.RESOLVING },
+            )
+            assertTrue(
+                "the terminal emission must never carry RESOLVING: ${emissions.last()}",
+                emissions.last().identity.status != CanonicalStatus.RESOLVING,
+            )
+        }
 
     // --- Review probe (stage1-review): what form does a composite's dependency arrive in? ---
 

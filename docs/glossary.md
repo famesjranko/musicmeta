@@ -56,6 +56,12 @@ name"; `how-it-works.md` has the worked path.
 The release-group is the album; a release is one pressing of it. `ReleaseEditions` is the only
 public type about the second, and every other public use of the word means the first.
 
+**`CanonicalStatus.RESOLVING` means identity resolution is still running, not that it failed.**
+It appears only on a pre-terminal `enrichProgressive` emission — a type already served from cache
+can settle and be sent before the same call's canonical identity lookup returns. `enrich()`'s
+return and every stream's terminal emission always carry a settled status instead; a consumer that
+only calls `enrich()` never sees it.
+
 **Discogs `master_id` is optional.** A Discogs release may have no master, so the album-level
 identifier is absent rather than derivable — treat it as a miss, not as a release id to reuse.
 

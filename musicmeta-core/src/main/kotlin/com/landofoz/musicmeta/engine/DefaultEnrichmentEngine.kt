@@ -137,12 +137,9 @@ internal class DefaultEnrichmentEngine(
             return
         }
 
-        // stage-2: FAILED is the "identity resolution in progress" placeholder until the vocabulary
-        // adds a real status for it. Every emission before resolution finishes carries this value;
-        // it is never read where it would matter (a cache-hit's provenance is already stamped).
         val session = RunSession(
             board = SettlementBoard(types + compositeSubTypesOf(types)),
-            identityHolder = IdentityHolder(IdentityResolution(request.identifiers, CanonicalStatus.FAILED)),
+            identityHolder = IdentityHolder(IdentityResolution(request.identifiers, CanonicalStatus.RESOLVING)),
         )
         val settle: suspend (EnrichmentType, EnrichmentResult, ChainExecution?) -> Unit = { type, raw, execution ->
             val snapshot = session.board.settle(type, raw, execution) {
@@ -411,8 +408,9 @@ internal class DefaultEnrichmentEngine(
 
     /**
      * Whether a result reached under this call's canonical status is safe to cache: [CanonicalStatus.RESOLVED]
-     * or any `NOT_ATTEMPTED_*` reason — never [CanonicalStatus.AMBIGUOUS], [CanonicalStatus.UNRESOLVED], or
-     * [CanonicalStatus.FAILED], each of which means this call's fan-out ran on an unconfirmed identity.
+     * or any `NOT_ATTEMPTED_*` reason — never [CanonicalStatus.AMBIGUOUS], [CanonicalStatus.UNRESOLVED],
+     * [CanonicalStatus.FAILED], or [CanonicalStatus.RESOLVING], each of which means this call's fan-out
+     * ran (or is still running) on an unconfirmed identity.
      */
     private fun CanonicalStatus.isCacheable(): Boolean = this !in UNCACHEABLE_STATUSES
 
@@ -936,8 +934,13 @@ internal class DefaultEnrichmentEngine(
     companion object {
         private const val TAG = "EnrichmentEngine"
 
+        // RESOLVING never actually reaches isCacheable(): writeBack only runs with the real,
+        // settled session.identityResolution. Listed anyway so a future caller of isCacheable()
+        // against a live IdentityHolder.current can't accidentally treat an in-progress
+        // resolution as safe to cache.
         private val UNCACHEABLE_STATUSES = setOf(
             CanonicalStatus.AMBIGUOUS, CanonicalStatus.UNRESOLVED, CanonicalStatus.FAILED,
+            CanonicalStatus.RESOLVING,
         )
 
         private val IDENTITY_TYPES = setOf(

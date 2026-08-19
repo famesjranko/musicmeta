@@ -25,6 +25,14 @@ enum class CanonicalStatus {
      */
     FAILED,
 
+    /**
+     * Identity resolution is running for this call and has not settled yet. Only ever seen on a
+     * pre-terminal [EnrichmentEngine.enrichProgressive] emission — never on [EnrichmentEngine.enrich]'s
+     * return or on the terminal emission of the same stream, both of which wait for resolution to
+     * finish before reporting a real status.
+     */
+    RESOLVING,
+
     /** Identity resolution is turned off for this engine ([EnrichmentConfig.enableIdentityResolution]). */
     NOT_ATTEMPTED_DISABLED,
 
