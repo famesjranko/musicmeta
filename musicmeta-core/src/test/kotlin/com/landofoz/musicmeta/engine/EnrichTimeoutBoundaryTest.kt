@@ -15,9 +15,10 @@ import org.junit.Test
  * The two halves of `enrich()`'s deadline: what a timed-out run may persist (#56), and whose
  * deadline `ErrorKind.TIMEOUT` is allowed to mean (#55).
  *
- * Catalog filtering is the shape both hang on — it rewrites `results` one type at a time inside the
- * timed block, so an expiry mid-loop leaves a mix of filtered and unfiltered entries, and its guard
- * has to separate the consumer's own deadline from `enrich()`'s.
+ * Catalog filtering is the shape both hang on — it runs per type inside one settle-and-finalize
+ * region, so a deadline that fires mid-filter for one type never leaks that type's unfiltered raw
+ * result; it settles as a clean `Error(TIMEOUT)` instead, and its guard has to separate the
+ * consumer's own deadline from `enrich()`'s.
  */
 class EnrichTimeoutBoundaryTest {
 
@@ -75,9 +76,11 @@ class EnrichTimeoutBoundaryTest {
 
     private val types = setOf(EnrichmentType.SIMILAR_ARTISTS, EnrichmentType.SIMILAR_TRACKS)
 
-    @Test fun `a timeout mid-filter persists nothing, under either key`() = runTest {
-        // Given - a catalog that filters the first type and then blocks past the deadline. The
-        // second type is left in `results` unfiltered, so caching the map would poison the entry.
+    @Test fun `a timeout mid-filter persists nothing, and never leaks an unfiltered type`() = runTest {
+        // Given - a catalog that filters one type normally and blocks past the deadline on the
+        // other. Each type's whole settle-and-filter step is one atomic region, so the one caught
+        // mid-filter never reaches the terminal result unfiltered — it settles as Error(TIMEOUT),
+        // same as a type whose chain walk never returned at all.
         var calls = 0
         val catalog = CatalogProvider { queries ->
             if (calls++ > 0) delay(5_000)
@@ -92,17 +95,30 @@ class EnrichTimeoutBoundaryTest {
         // could pass for the wrong reason.
         assertEquals("mbid-123", results.identity.identifiers.musicBrainzId)
 
-        // And — nothing written back at all: not the filtered type, not the unfiltered one, and
+        // And — nothing written back at all: not the filtered type, not the timed-out one, and
         // neither under the primary key nor under the MBID-resolved name alias.
         assertEquals("a timed-out run caches nothing", emptyMap<String, EnrichmentResult>(), cache.stored)
 
-        // And — results already fetched are still returned, mix and all. That is the contract; only
-        // the cache fill is lost. The mix is precisely why it may not be persisted: the first type
-        // is filtered down to its available item, the second is the raw provider result.
-        val filtered = results.raw[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
-        assertEquals(1, (filtered.data as EnrichmentData.SimilarArtists).artists.size)
-        val unfiltered = results.raw[EnrichmentType.SIMILAR_TRACKS] as EnrichmentResult.Success
-        assertEquals(2, (unfiltered.data as EnrichmentData.SimilarTracks).tracks.size)
+        // And — real concurrency does not promise which of the two types wins the race against the
+        // deadline, so this asserts the shape rather than which type lands on which side: exactly
+        // one settled and filtered down to its available item, and the other never leaks the raw,
+        // unfiltered provider result — it is a clean Error(TIMEOUT) instead.
+        val filteredCount = types.count { type ->
+            val result = results.raw[type]
+            result is EnrichmentResult.Success && itemCount(result) == 1
+        }
+        val timedOutCount = types.count { type ->
+            val result = results.raw[type]
+            result is EnrichmentResult.Error && result.errorKind == ErrorKind.TIMEOUT
+        }
+        assertEquals("exactly one type should have settled and been filtered", 1, filteredCount)
+        assertEquals("exactly one type should have timed out mid-filter", 1, timedOutCount)
+    }
+
+    private fun itemCount(result: EnrichmentResult.Success): Int = when (val data = result.data) {
+        is EnrichmentData.SimilarArtists -> data.artists.size
+        is EnrichmentData.SimilarTracks -> data.tracks.size
+        else -> error("unexpected data type in this test: $data")
     }
 
     @Test fun `the deadline is readable inside the timed block, so a 429 retry can respect it`() = runTest {
