@@ -130,6 +130,10 @@ repeatedly does not multiply upstream traffic — every occurrence coalesces ont
 The run's cache write-back still happens, so a subsequent equivalent call is typically a cache hit,
 not a re-fetch.
 
+There is no per-call abort — cancelling only detaches you, so a detached run still spends
+rate-limiter and circuit-breaker budget while nobody is watching it, and `close()` is the only way
+to actually stop in-flight work, engine-wide, never for one call or request.
+
 This trades a small amount of work continuing after you stop watching it for cheap, correct
 re-collection. The cost is bounded to whatever is genuinely still in flight when you cancel — never
 unbounded — but it is real work, and it needs an owner at shutdown:

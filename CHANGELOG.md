@@ -38,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ErrorKind` gains `ENGINE_CLOSED`: an exhaustive `when` needs a branch; only reachable when the engine was `close()`d before a requested type settled
 - `EnrichmentResult.Success` gains `isCatalogDegraded` (appended last, defaulted): recompile; `true` when a recommendation type's `CatalogProvider` threw and the data reached you unranked instead
 - `CompositeSynthesizer.synthesize`'s `resolved` deps now arrive finalized: `STALE_IF_ERROR` hands a failed-but-stale dependency as `Success`, not `Error` — can't tell genuine failure from stale
+- `CatalogProvider.checkAvailability` is now called concurrently, from multiple coroutines at once, instead of once per call in sequence: a stateful implementation must be thread-safe
 - Cancelling `enrich()`'s calling coroutine is now complete-and-cache, not abort-and-forfeit: the fan-out keeps running and still writes back, since it now shares `enrichProgressive`'s resolution path
 
 ### Added

@@ -61,8 +61,9 @@ interface EnrichmentEngine {
      * `enrichProgressive(...).last()` against one shared resolution path (see that method's own
      * KDoc), so cancelling the coroutine that called [enrich] detaches from the fan-out already
      * under way rather than aborting it: that fan-out keeps running, unattended, until it settles or
-     * [EnrichmentConfig.enrichTimeoutMs] expires, and its cache write-back still happens. See [close]
-     * for how to bound that work at engine shutdown.
+     * [EnrichmentConfig.enrichTimeoutMs] expires, and its cache write-back still happens. There is no
+     * per-call abort: a detached run keeps spending rate-limiter and circuit-breaker budget unwatched,
+     * and [close] can only stop it by shutting the whole engine down, never one call or request.
      */
     suspend fun enrich(
         request: EnrichmentRequest,
@@ -108,6 +109,10 @@ interface EnrichmentEngine {
      * [close] for how to bound that at engine shutdown, not per call. A third-party implementor
      * relying on the default single-emission body above has nothing to detach from: there is no
      * cancellation cost to document for it.
+     *
+     * There is no per-call abort: a detached run keeps spending rate-limiter and circuit-breaker
+     * budget unwatched, and [close] can only stop it by shutting the whole engine down, never one
+     * call or request.
      */
     fun enrichProgressive(
         request: EnrichmentRequest,
