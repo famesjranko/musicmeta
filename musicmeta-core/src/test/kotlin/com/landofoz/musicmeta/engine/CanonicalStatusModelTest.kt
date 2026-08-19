@@ -394,10 +394,10 @@ class CanonicalStatusModelTest {
         val first = e.enrich(req, setOf(EnrichmentType.TRACK_PREVIEW))
         val second = e.enrich(req, setOf(EnrichmentType.TRACK_PREVIEW))
 
-        // Then - both calls report the same provider-native provenance, but the second call reports
-        // the honest cache-hit status rather than replaying the first call's live reason
+        // Then - both calls report the same provider-native provenance; disabled identity
+        // resolution outranks the cache-hit reason on both the live and the cached call
         assertEquals(CanonicalStatus.NOT_ATTEMPTED_DISABLED, first.identity.status)
-        assertEquals(CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT, second.identity.status)
+        assertEquals(CanonicalStatus.NOT_ATTEMPTED_DISABLED, second.identity.status)
         val firstSuccess = first.raw[EnrichmentType.TRACK_PREVIEW] as EnrichmentResult.Success
         val secondSuccess = second.raw[EnrichmentType.TRACK_PREVIEW] as EnrichmentResult.Success
         assertEquals(LookupProvenance.PROVIDER_NATIVE_ID, firstSuccess.provenance)
@@ -417,10 +417,10 @@ class CanonicalStatusModelTest {
         val first = e.enrich(req, setOf(EnrichmentType.TRACK_PREVIEW))
         val second = e.enrich(req, setOf(EnrichmentType.TRACK_PREVIEW))
 
-        // Then - both calls report the same unverified fuzzy-name provenance, but the second call
-        // reports the honest cache-hit status rather than replaying the first call's live reason
+        // Then - both calls report the same unverified fuzzy-name provenance; disabled identity
+        // resolution outranks the cache-hit reason on both the live and the cached call
         assertEquals(CanonicalStatus.NOT_ATTEMPTED_DISABLED, first.identity.status)
-        assertEquals(CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT, second.identity.status)
+        assertEquals(CanonicalStatus.NOT_ATTEMPTED_DISABLED, second.identity.status)
         val firstSuccess = first.raw[EnrichmentType.TRACK_PREVIEW] as EnrichmentResult.Success
         val secondSuccess = second.raw[EnrichmentType.TRACK_PREVIEW] as EnrichmentResult.Success
         assertEquals(LookupProvenance.FUZZY_NAME, firstSuccess.provenance)
@@ -473,7 +473,7 @@ class CanonicalStatusModelTest {
             CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED,
         )
         val e = DefaultEnrichmentEngine(
-            ProviderRegistry(emptyList()), cache, EnrichmentConfig(enableIdentityResolution = false),
+            ProviderRegistry(emptyList()), cache, EnrichmentConfig(enableIdentityResolution = true),
         )
 
         // When - enriching both types, entirely from cache

@@ -200,7 +200,15 @@ internal class DefaultEnrichmentEngine(
     ): Flow<EnrichmentResults> = channelFlow {
         val cacheLayer = readCacheLayer(request, types, forceRefresh)
         if (cacheLayer.uncachedTypes.isEmpty()) {
-            val identity = IdentityResolution(request.identifiers, CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT)
+            // Disabled identity resolution outranks a cache hit as the reason nothing was
+            // attempted, matching resolveUncachedTypes's own precedence for the live path — the
+            // same engine config must answer identically whether the cache was warm or cold.
+            val cacheHitStatus = if (config.enableIdentityResolution) {
+                CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT
+            } else {
+                CanonicalStatus.NOT_ATTEMPTED_DISABLED
+            }
+            val identity = IdentityResolution(request.identifiers, cacheHitStatus)
             // A partial cache hit re-runs catalog filtering per type via settle()/finalizeResult
             // below; a full cache hit must do the same rather than replay whatever
             // EnrichmentResult.Success.isCatalogDegraded happened to be true at write time — that

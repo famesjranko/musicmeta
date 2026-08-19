@@ -49,6 +49,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `EnrichmentEngine.enrichBatchProgressive`: `enrichBatch`'s cumulative-snapshot counterpart, composed from `enrichProgressive` per request in the same sequential order
 - demo-web's enrich page now streams over `enrichProgressive` via server-sent events: the page paints each card as its type settles instead of waiting for the slowest provider
 
+### Fixed
+- A full cache hit now reports `CanonicalStatus.NOT_ATTEMPTED_DISABLED` when `enableIdentityResolution` is false, matching the live path instead of always claiming `NOT_ATTEMPTED_CACHE_HIT`
+
 ## [0.12.0] - 2026-08-18
 
 ### Breaking Changes

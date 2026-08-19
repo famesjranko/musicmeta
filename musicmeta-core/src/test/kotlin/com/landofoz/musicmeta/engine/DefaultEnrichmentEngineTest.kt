@@ -55,6 +55,18 @@ class DefaultEnrichmentEngineTest {
         assertEquals(0, idProvider.enrichCalls.size)
     }
 
+    @Test fun `enrich reports identity disabled, not cache hit, on a full cache hit when enableIdentityResolution is false`() = runTest {
+        // Given - identity resolution disabled at the engine, and the only requested type already cached
+        val p = FakeProvider(id = "p", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100)))
+        cache.put(DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.ALBUM_ART), EnrichmentType.ALBUM_ART, art("cached"), CanonicalStatus.RESOLVED)
+
+        // When - enriching with everything already cached
+        val results = engine(p).enrich(req, setOf(EnrichmentType.ALBUM_ART))
+
+        // Then - disabled wins over cache-hit as the reason identity was never attempted
+        assertEquals(CanonicalStatus.NOT_ATTEMPTED_DISABLED, results.identity.status)
+    }
+
     // --- forceRefresh ---
 
     @Test fun `enrich with forceRefresh bypasses cache and fetches fresh data`() = runTest {
