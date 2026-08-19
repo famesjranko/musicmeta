@@ -302,7 +302,13 @@ private fun handleEnrich(exchange: HttpExchange, engine: EnrichmentEngine) {
         return
     }
     try {
-        val (kind, name, artist, album, mbid, identifiers, forceRefresh) = query
+        val kind = query.kind
+        val name = query.name
+        val artist = query.artist
+        val album = query.album
+        val mbid = query.mbid
+        val identifiers = query.identifiers
+        val forceRefresh = query.forceRefresh
 
         val started = System.currentTimeMillis()
         val response = runBlocking {
@@ -409,17 +415,13 @@ private fun handleEnrich(exchange: HttpExchange, engine: EnrichmentEngine) {
 }
 
 /**
- * Identity statuses a mid-stream snapshot cannot read as a verdict. The `NOT_ATTEMPTED_*` family
- * says resolution did not run, which before the terminal snapshot is indistinguishable from
- * "has not run yet" — so a snapshot carrying one presents its header as provisional rather than
- * treating the status as an answer.
+ * The identity status a mid-stream snapshot cannot yet read as a verdict. [CanonicalStatus.RESOLVING]
+ * is the only status resolution can still revise before the terminal snapshot; the `NOT_ATTEMPTED_*`
+ * family means resolution was never going to run, which is already the final word, not a
+ * placeholder — so a snapshot carrying `RESOLVING` presents its header as provisional and one
+ * carrying `NOT_ATTEMPTED_*` treats it as an answer, same as the terminal snapshot does.
  */
-private val UNSETTLED_IDENTITY_STATUSES = setOf(
-    CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT,
-    CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED,
-    CanonicalStatus.NOT_ATTEMPTED_NO_PROVIDER,
-    CanonicalStatus.NOT_ATTEMPTED_DISABLED,
-)
+private val UNSETTLED_IDENTITY_STATUSES = setOf(CanonicalStatus.RESOLVING)
 
 /**
  * The SSE sibling of [handleEnrich], over [EnrichmentEngine.enrichProgressive]: the page paints

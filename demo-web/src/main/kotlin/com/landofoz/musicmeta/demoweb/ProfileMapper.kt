@@ -337,11 +337,17 @@ fun TrackProfile.toDemoResponse(
 
 /**
  * Whether the summary card may present its title/preview as a match. Every `NOT_ATTEMPTED_*`
- * status counts as confident — resolution had nothing to add — while [CanonicalStatus.AMBIGUOUS],
- * [CanonicalStatus.UNRESOLVED], and [CanonicalStatus.FAILED] do not.
+ * status counts as confident — resolution had nothing to add — while [CanonicalStatus.RESOLVING]
+ * (resolution has not settled yet), [CanonicalStatus.AMBIGUOUS], [CanonicalStatus.UNRESOLVED], and
+ * [CanonicalStatus.FAILED] do not.
  */
 private val EnrichmentResults.identityResolved: Boolean
-    get() = identity.status !in setOf(CanonicalStatus.AMBIGUOUS, CanonicalStatus.UNRESOLVED, CanonicalStatus.FAILED)
+    get() = identity.status !in setOf(
+        CanonicalStatus.RESOLVING,
+        CanonicalStatus.AMBIGUOUS,
+        CanonicalStatus.UNRESOLVED,
+        CanonicalStatus.FAILED,
+    )
 
 /** The bare [CanonicalStatus] enum name. */
 private val EnrichmentResults.identityVerdict: String

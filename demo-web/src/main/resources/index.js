@@ -274,6 +274,10 @@ async function runQuery(refresh, replay, pick) {
   lastQuery = { kind, name, artist, album, ids };
   // Whichever path this run takes, any stream still open belongs to a page the user has left.
   streamGeneration += 1;
+  // A superseded run's own await can still settle after this — closeLiveStream() below resolves
+  // the old stream's promise quietly rather than cancelling it outright — so its catch/finally
+  // must not touch UI state a newer run already owns. Captured now, compared once each block runs.
+  const myGeneration = streamGeneration;
   closeLiveStream();
   try {
     if (streamingEnabled()) {
@@ -282,12 +286,15 @@ async function runQuery(refresh, replay, pick) {
       await runQueryWhole(params, !!refresh);
     }
   } catch (err) {
+    if (myGeneration !== streamGeneration) return;
     statusEl.className = 'err';
     statusEl.textContent = 'Failed: ' + err.message;
     resultEl.innerHTML = '<div id="empty">No result.</div>';
   } finally {
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'Enrich';
+    if (myGeneration === streamGeneration) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Enrich';
+    }
   }
 }
 

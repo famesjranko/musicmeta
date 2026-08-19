@@ -30,6 +30,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.OutputStream
 import java.net.ServerSocket
@@ -218,6 +219,30 @@ class EnrichStreamEndpointTest {
         assertEquals("complete", events.last().name)
     }
 
+    @Test fun `snapshot sequence numbers increase and each snapshot carries firstPaintMs`() {
+        // Given - an engine that settles two types before settling the rest
+        val engine = ScriptedEngine(
+            listOf(
+                artistResults(mapOf(EnrichmentType.ARTIST_BIO to bio("Bristol."))),
+                artistResults(mapOf(EnrichmentType.ARTIST_BIO to bio("Bristol."), EnrichmentType.SIMILAR_ARTISTS to similar())),
+                artistResults(everyArtistType),
+            ),
+            gapMs = 60,
+        )
+        val port = startWith(engine)
+
+        // When - streaming an artist through the endpoint
+        val events = stream(port, "/api/enrich-stream?kind=artist&name=Portishead")
+
+        // Then - the snapshots reaching the page carry strictly increasing sequence numbers
+        val snapshots = events.filter { it.name == "snapshot" }.map { snapshotOf(it) }
+        assertTrue(snapshots.size >= 2)
+        snapshots.zipWithNext().forEach { (earlier, later) -> assertTrue(later.sequence > earlier.sequence) }
+
+        // Then - every snapshot reports when the first paint landed, not only the one that made it
+        assertTrue(snapshots.all { it.firstPaintMs != null })
+    }
+
     @Test fun `the complete event settles every requested type even when snapshots were conflated away`() {
         // Given - an engine that emits its whole script back to back, so the writer conflates
         val engine = ScriptedEngine(
@@ -315,12 +340,12 @@ class EnrichStreamEndpointTest {
     }
 
     @Test fun `identity is pending on an intermediate snapshot that has not resolved it`() {
-        // Given - an engine whose first snapshot predates identity resolution
+        // Given - an engine whose first snapshot is emitted while identity resolution is still running
         val engine = ScriptedEngine(
             listOf(
                 artistResults(
                     mapOf(EnrichmentType.ARTIST_BIO to bio("Bristol.")),
-                    status = CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT,
+                    status = CanonicalStatus.RESOLVING,
                 ),
                 artistResults(everyArtistType),
             ),
@@ -430,7 +455,7 @@ class EnrichStreamEndpointTest {
         assertNotNull(json.decodeFromString(ApiError.serializer(), response.body()).error)
     }
 
-/** Refuses every write, the way a socket whose reader has gone does, and counts the attempts. */
+    /** Refuses every write, the way a socket whose reader has gone does, and counts the attempts. */
     private class DeadOutputStream : OutputStream() {
         var attempts = 0
             private set
@@ -466,7 +491,21 @@ class EnrichStreamEndpointTest {
         assertEquals(1, out.attempts)
     }
 
-    @Test fun `a client that leaves mid-stream ends the enrichment and leaves the server serving`() {
+    @Test fun `a payload containing a newline is framed as one data line per line, not one broken event`() {
+        // Given - a writer over a plain byte sink, and a payload holding an embedded newline
+        val out = ByteArrayOutputStream()
+        val writer = SseWriter(out)
+
+        // When - writing that payload as one event
+        writer.write("snapshot", "line one\nline two")
+
+        // Then - every line of the payload becomes its own "data: " line, so a reader cannot mistake
+        // the second line for the blank line that ends the event
+        val frame = out.toString(StandardCharsets.UTF_8.name())
+        assertEquals("event: snapshot\ndata: line one\ndata: line two\n\n", frame)
+    }
+
+    @Test fun `a client that leaves mid-stream stops the handler and leaves the server serving`() {
         // Given - a long scripted stream, so several writes land after the reader goes
         val engine =
             ScriptedEngine(
@@ -487,8 +526,11 @@ class EnrichStreamEndpointTest {
             while (reader.readLine()?.startsWith("data: ") == false) Unit
         }
 
-        // Then - the run stops rather than streaming on to a reader that has gone, and the handler
-        // returns cleanly enough that the server keeps answering
+        // Then - this handler's own stream collection stops rather than writing on to a reader
+        // that has gone, and it returns cleanly enough that the server keeps answering other
+        // requests. That is all a dropped client buys here: the real engine's cancellation
+        // contract is complete-and-cache (see EnrichmentEngine.enrichProgressive), so a live
+        // fan-out is never proven cancelled by this — only that this handler stopped watching it.
         assertNotNull(engine.termination.get(20, TimeUnit.SECONDS))
         assertEquals(200, raw(port, "/api/health").statusCode())
     }

@@ -10,6 +10,7 @@ import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentResults
 import com.landofoz.musicmeta.EnrichmentType
+import com.landofoz.musicmeta.ErrorKind
 import com.landofoz.musicmeta.GenreTag
 import com.landofoz.musicmeta.IdentifierNamespace
 import com.landofoz.musicmeta.IdentityResolution
@@ -1083,5 +1084,81 @@ class ProfileMapperTest {
 
         // Then - the provider hit's status stays "ok"
         assertEquals("ok", response.meta.providers.single().status)
+    }
+
+    @Test
+    fun `artist summary identityResolved false on RESOLVING`() {
+        // Given - an artist profile whose identity resolution is still running
+        val results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(CanonicalStatus.RESOLVING))
+        val profile = ArtistProfile(name = "Metallica", results = results)
+
+        // When - mapping to a demo response
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        // Then - the summary does not present the header as a confirmed match yet
+        assertEquals(false, response.summary.identityResolved)
+    }
+
+    @Test
+    fun `an error result carries its errorKind into the provider hit`() {
+        // Given - a GENRE result that failed with a PARSE error
+        val results = EnrichmentResults(
+            raw = mapOf(
+                EnrichmentType.GENRE to EnrichmentResult.Error(EnrichmentType.GENRE, "test", "bad json", errorKind = ErrorKind.PARSE),
+            ),
+            requestedTypes = setOf(EnrichmentType.GENRE),
+            identity = identityOf(CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED),
+        )
+        val profile = ArtistProfile(name = "Metallica", results = results)
+
+        // When - mapping to a demo response
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        // Then - the provider hit reports the PARSE errorKind, not a generic error
+        assertEquals("PARSE", response.meta.providers.single().errorKind)
+    }
+
+    @Test
+    fun `summary pendingSlots lists image, text and genres only while each is unsettled and empty`() {
+        // Given - an artist profile with nothing settled yet, and every summary-backing type pending
+        val results = resultsOf()
+        val profile = ArtistProfile(name = "Metallica", results = results)
+
+        // When - mapping to a demo response with photo, bio and genre all still in flight
+        val response = profile.toDemoResponse(
+            elapsedMs = 0,
+            pending = setOf(EnrichmentType.ARTIST_PHOTO, EnrichmentType.ARTIST_BIO, EnrichmentType.GENRE),
+        )
+
+        // Then - all three summary slots report as pending
+        assertEquals(setOf("image", "text", "genres"), response.summary.pendingSlots.toSet())
+    }
+
+    @Test
+    fun `a summary slot already filled by settled data is never listed as pending`() {
+        // Given - an artist profile whose bio has already settled, though ARTIST_BIO is still named pending
+        val results = resultsOf(
+            EnrichmentType.ARTIST_BIO to EnrichmentData.Biography(text = "Formed in 1981.", source = "test"),
+        )
+        val profile = ArtistProfile(name = "Metallica", results = results)
+
+        // When - mapping to a demo response that still lists ARTIST_BIO among the pending types
+        val response = profile.toDemoResponse(elapsedMs = 0, pending = setOf(EnrichmentType.ARTIST_BIO))
+
+        // Then - the text slot is not pending, because the reader can already see it
+        assertTrue("text" !in response.summary.pendingSlots)
+    }
+
+    @Test
+    fun `summary pendingSlots is empty when no summary-backing type is pending`() {
+        // Given - an artist profile with nothing settled and nothing named pending either
+        val results = resultsOf()
+        val profile = ArtistProfile(name = "Metallica", results = results)
+
+        // When - mapping to a demo response with an unrelated type pending
+        val response = profile.toDemoResponse(elapsedMs = 0, pending = setOf(EnrichmentType.SIMILAR_ARTISTS))
+
+        // Then - none of the summary slots claim to be loading
+        assertTrue(response.summary.pendingSlots.isEmpty())
     }
 }
