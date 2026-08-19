@@ -111,21 +111,37 @@ internal suspend fun applyCatalogFiltering(
     catalogFilterMode: CatalogFilterMode,
     logger: EnrichmentLogger,
 ) {
-    val provider = catalogProvider ?: return
-    if (catalogFilterMode == CatalogFilterMode.UNFILTERED) return
-
     for (type in RECOMMENDATION_TYPES) {
-        val result = results[type] as? EnrichmentResult.Success ?: continue
-        val queries = toQueries(result.data) ?: continue
-        if (queries.isEmpty()) continue
-
-        val matches = try {
-            provider.checkAvailability(queries)
-        } catch (e: Exception) {
-            currentCoroutineContext().ensureActive()
-            logger.warn(TAG, "${type.name}: CatalogProvider threw, leaving results unfiltered: ${e.message}", e)
-            continue
-        }
-        results[type] = applyMode(result, matches, catalogFilterMode)
+        val result = results[type] ?: continue
+        results[type] = applyCatalogFilteringToType(type, result, catalogProvider, catalogFilterMode, logger)
     }
+}
+
+/**
+ * [applyCatalogFiltering]'s per-type body, so a per-type settlement pipeline can run it without a
+ * shared map: not a [RECOMMENDATION_TYPES] member, not a [EnrichmentResult.Success], nothing to
+ * filter, or [catalogFilterMode] is [CatalogFilterMode.UNFILTERED] all return [result] unchanged.
+ */
+internal suspend fun applyCatalogFilteringToType(
+    type: EnrichmentType,
+    result: EnrichmentResult,
+    catalogProvider: CatalogProvider?,
+    catalogFilterMode: CatalogFilterMode,
+    logger: EnrichmentLogger,
+): EnrichmentResult {
+    val provider = catalogProvider ?: return result
+    if (catalogFilterMode == CatalogFilterMode.UNFILTERED) return result
+    if (type !in RECOMMENDATION_TYPES) return result
+    val success = result as? EnrichmentResult.Success ?: return result
+    val queries = toQueries(success.data) ?: return result
+    if (queries.isEmpty()) return result
+
+    val matches = try {
+        provider.checkAvailability(queries)
+    } catch (e: Exception) {
+        currentCoroutineContext().ensureActive()
+        logger.warn(TAG, "${type.name}: CatalogProvider threw, leaving results unfiltered: ${e.message}", e)
+        return result
+    }
+    return applyMode(success, matches, catalogFilterMode)
 }

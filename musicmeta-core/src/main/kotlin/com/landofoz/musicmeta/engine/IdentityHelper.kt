@@ -66,11 +66,18 @@ internal fun stampProvenance(
     executions: Map<EnrichmentType, ChainExecution>,
 ) {
     for ((type, result) in results) {
-        if (result is EnrichmentResult.Success && result.provenance == null) {
-            val provenance = observedProvenance(executions[type]?.winningRequirement, canonicalStatus)
-            results[type] = result.copy(provenance = provenance)
-        }
+        results[type] = stampProvenanceOne(result, executions[type], canonicalStatus)
     }
+}
+
+/** [stampProvenance]'s per-type body, for a settlement pipeline with no shared map to loop over. */
+internal fun stampProvenanceOne(
+    result: EnrichmentResult,
+    execution: ChainExecution?,
+    canonicalStatus: CanonicalStatus,
+): EnrichmentResult {
+    if (result !is EnrichmentResult.Success || result.provenance != null) return result
+    return result.copy(provenance = observedProvenance(execution?.winningRequirement, canonicalStatus))
 }
 
 /**
