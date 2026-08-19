@@ -33,6 +33,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A throwing `CatalogProvider.checkAvailability` no longer escapes `enrich()`, reversing (#55): that type degrades to unfiltered results and the run caches, so catch your own timeout inside it
 - `EnrichmentEngine` gains `enrichProgressive`, a defaulted method: a custom implementation built against an older `.jar` throws `AbstractMethodError` on first call until recompiled
 
+### Changed
+- `CompositeSynthesizer.synthesize`'s `resolved` deps now arrive finalized: `STALE_IF_ERROR` hands a failed-but-stale dependency as `Success`, not `Error`
+
 ## [0.12.0] - 2026-08-18
 
 ### Breaking Changes

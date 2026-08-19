@@ -18,6 +18,14 @@ interface CompositeSynthesizer {
 
     /**
      * Synthesizes a composite result from resolved sub-type results.
+     *
+     * Each dependency in [resolved] arrives finalized — catalog-filtered, provenance-stamped, and,
+     * under [com.landofoz.musicmeta.cache.CacheMode.STALE_IF_ERROR], stale-cache-substituted — the
+     * same form a caller's own [EnrichmentResults][com.landofoz.musicmeta.EnrichmentResults] would
+     * show for that type, never the raw provider-chain result. A synthesizer that wants to react to
+     * "this dependency genuinely failed" cannot distinguish that from "this dependency is stale":
+     * both arrive as the substituted `Success`.
+     *
      * @param resolved Map of resolved sub-type results (includes dependencies).
      * @param identityResult The identity resolution result, if available.
      * @param request The original enrichment request.
