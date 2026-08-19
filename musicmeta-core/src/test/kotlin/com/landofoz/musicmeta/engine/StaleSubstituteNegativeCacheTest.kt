@@ -12,7 +12,7 @@ import org.junit.Test
 /**
  * [DefaultEnrichmentEngine.applyStaleCacheToType]'s substitute is read straight from a past call,
  * not this one's live providers — re-filtering it to nothing is a fact about that stale snapshot,
- * never evidence the type is genuinely absent. See `docs/pitfalls.md`, "Provider data and matching".
+ * never evidence the type is genuinely absent. See `docs/pitfalls.md`, "Traps in the pipeline".
  */
 class StaleSubstituteNegativeCacheTest {
 
