@@ -106,9 +106,13 @@ interface EnrichmentEngine {
      *
      * [DefaultEnrichmentEngine][com.landofoz.musicmeta.engine.DefaultEnrichmentEngine] overrides
      * this as a hard shutdown, not a drain: any detached run still in flight is abandoned rather
-     * than waited for, and writes nothing back — the same rule a timed-out run already follows.
-     * Never called automatically; skipping it costs at most one shared dispatcher and whatever
-     * detached runs are genuinely in flight, never an unbounded amount.
+     * than waited for, and writes nothing back — the same rule a timed-out run already follows. A
+     * still-attached collector, or a later call this engine had never seen before shutdown, is
+     * released with every requested type present: settled types keep their real result, and every
+     * unsettled one becomes an [EnrichmentResult.Error] with [ErrorKind.ENGINE_CLOSED] — the same
+     * per-type completeness [enrich] documents for a timeout. Never called automatically; skipping
+     * it costs at most one shared dispatcher and whatever detached runs are genuinely in flight,
+     * never an unbounded amount.
      */
     fun close() {}
 

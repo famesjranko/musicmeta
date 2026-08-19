@@ -1442,6 +1442,7 @@ public final class com/landofoz/musicmeta/EnrichmentType : java/lang/Enum {
 
 public final class com/landofoz/musicmeta/ErrorKind : java/lang/Enum {
 	public static final field AUTH Lcom/landofoz/musicmeta/ErrorKind;
+	public static final field ENGINE_CLOSED Lcom/landofoz/musicmeta/ErrorKind;
 	public static final field NETWORK Lcom/landofoz/musicmeta/ErrorKind;
 	public static final field PARSE Lcom/landofoz/musicmeta/ErrorKind;
 	public static final field RATE_LIMIT Lcom/landofoz/musicmeta/ErrorKind;

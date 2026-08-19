@@ -22,6 +22,7 @@ import com.landofoz.musicmeta.cache.CacheMode
 import com.landofoz.musicmeta.http.EnrichDeadline
 import com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzProvider
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -40,6 +41,7 @@ import kotlinx.coroutines.flow.last
 import kotlinx.coroutines.flow.transformWhile
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -118,7 +120,17 @@ internal class DefaultEnrichmentEngine(
     // in-flight run's key attaches to it instead of starting a second fan-out; forceRefresh is part
     // of that key, not a filter on top of it, so a forced call never attaches to an unforced run's
     // data and vice versa — see progressiveDedupeKey.
-    private val detachedScope = CoroutineScope(SupervisorJob() + detachedDispatcher)
+    // SupervisorJob isolates one detached run's failure from a sibling; the handler is the
+    // backstop for the rare case that failure is genuinely uncaught (nothing deeper in the chain
+    // already caught and logged it) and no collector is left attached to relay it anywhere —
+    // without this it would otherwise reach the platform's default uncaught-exception handler
+    // instead of this engine's own logger.
+    private val detachedScope = CoroutineScope(
+        SupervisorJob() + detachedDispatcher +
+            CoroutineExceptionHandler { _, throwable ->
+                logger.warn(TAG, "Uncaught exception in a detached enrichProgressive run", throwable)
+            },
+    )
     internal val progressiveRuns = ProgressiveRunRegistry(detachedScope)
 
     /** The detached-run dedupe map's current size — read by tests for eviction. */
@@ -137,8 +149,20 @@ internal class DefaultEnrichmentEngine(
      * yet coalesced away — bounded by how many distinct request/types/forceRefresh keys are
      * genuinely in flight at once, never by how many times a collector cancelled and re-called for
      * the *same* key.
+     *
+     * A call for a request/types/forceRefresh key not already in flight when this runs never starts
+     * a fan-out at all: [ProgressiveRunRegistry.attachOrStart] answers it directly with every
+     * requested type stamped `Error(ErrorKind.ENGINE_CLOSED)`, the same per-type completeness
+     * `enrich()` documents for a timeout.
      */
     override fun close() {
+        // markClosed is suspend only because it shares attachOrStart's mutex; close() itself must
+        // stay a plain fun to satisfy EnrichmentEngine's interface. runBlocking here blocks only on
+        // that mutex, which attachOrStart also never holds across a suspension point of its own —
+        // so this returns as soon as any in-progress attachOrStart call finishes, and is what makes
+        // "mark closed" and "check closed, then register" unable to interleave: either fully
+        // completes before this call returns, or fully starts after.
+        runBlocking { progressiveRuns.markClosed() }
         detachedScope.cancel()
     }
 
@@ -229,7 +253,10 @@ internal class DefaultEnrichmentEngine(
         cacheLayer: CacheLayer,
     ): ProgressiveRunRegistry.ProgressiveRun {
         val dedupeKey = progressiveDedupeKey(request, cacheLayer.uncachedTypes, forceRefresh)
-        return progressiveRuns.attachOrStart(dedupeKey) { newRun ->
+        return progressiveRuns.attachOrStart(
+            dedupeKey,
+            onClosed = { newRun -> abandonedSnapshot(request, types, newRun) },
+        ) { newRun ->
             if (forceRefresh) invalidateForRefresh(request, types)
             runProgressiveFanOut(request, types, forceRefresh, cacheLayer, newRun)
         }
@@ -330,6 +357,32 @@ internal class DefaultEnrichmentEngine(
                 val timeoutError =
                     EnrichmentResult.Error(type, "engine", "Enrichment timed out", errorKind = ErrorKind.TIMEOUT)
                 settle(type, timeoutError, null)
+            }
+        }
+    }
+
+    /**
+     * [runProgressiveFanOut]'s abandonment backfill (both the finally-block case, when a real run
+     * was cancelled mid-flight, and [ProgressiveRunRegistry.attachOrStart]'s immediately-abandoned
+     * case, when a call arrives after [close]): every type [board] never settled becomes an honest
+     * Error(ENGINE_CLOSED) — distinct from [stampTimeoutStragglers]'s TIMEOUT, since no deadline
+     * fired here.
+     */
+    internal suspend fun stampAbandonedStragglers(
+        types: Set<EnrichmentType>,
+        board: SettlementBoard,
+        settle: suspend (EnrichmentType, EnrichmentResult, ChainExecution?) -> Unit,
+    ) {
+        val settledSoFar = board.snapshotResults()
+        for (type in types) {
+            if (type !in settledSoFar) {
+                val abandonedError = EnrichmentResult.Error(
+                    type,
+                    "engine",
+                    "Engine closed before this type settled",
+                    errorKind = ErrorKind.ENGINE_CLOSED,
+                )
+                settle(type, abandonedError, null)
             }
         }
     }

@@ -5,6 +5,7 @@ import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
+import com.landofoz.musicmeta.ErrorKind
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.testutil.FakeEnrichmentCache
 import com.landofoz.musicmeta.testutil.FakeProvider
@@ -245,12 +246,11 @@ class ProgressiveCancellationTest {
             val result = resultDeferred.await()
 
             // Then - the attached collector was released with an abandoned snapshot (not the
-            // 10-second answer, and not a hang), and nothing was written back
+            // 10-second answer, and not a hang), with an honest Error stamp — not just missing —
+            // for the type that never settled, and nothing was written back
             val albumArt = result.raw[EnrichmentType.ALBUM_ART]
-            assertTrue(
-                "an abandoned run must not leak the answer it never actually settled",
-                albumArt !is EnrichmentResult.Success,
-            )
+            assertTrue("an abandoned run must stamp every unsettled type as Error, not omit it", albumArt is EnrichmentResult.Error)
+            assertEquals(ErrorKind.ENGINE_CLOSED, (albumArt as EnrichmentResult.Error).errorKind)
             assertTrue("close() must abandon without writing back", cache.stored.isEmpty())
         }
 
@@ -269,10 +269,33 @@ class ProgressiveCancellationTest {
             val resultDeferred = async { withTimeout(3_000) { engine.enrich(req, setOf(EnrichmentType.ALBUM_ART)) } }
             delay(30)
             engine.close()
-            resultDeferred.await()
+            val result = resultDeferred.await()
 
             // Then - released rather than hung (withTimeout above would have thrown otherwise),
+            // every requested type is present as an honest Error(ENGINE_CLOSED) rather than
+            // silently missing (this is enrich()'s own documented per-type completeness contract),
             // and consistent with the same abandon-on-close rule enrichProgressive follows
+            val albumArt = result.raw[EnrichmentType.ALBUM_ART]
+            assertTrue("enrich() must stamp every unsettled type as Error, not omit it", albumArt is EnrichmentResult.Error)
+            assertEquals(ErrorKind.ENGINE_CLOSED, (albumArt as EnrichmentResult.Error).errorKind)
             assertTrue("close() must abandon without writing back, even through enrich()", cache.stored.isEmpty())
         }
+
+    @Test fun `enrichProgressive on a brand-new key after close() must not hang`() = runBlocking(Dispatchers.Default) {
+        // Given - an engine closed before any run for this request/types key was ever registered
+        val provider = DelayingProvider(EnrichmentType.ALBUM_ART, delayMs = 5_000)
+        val engine = engineFor(provider)
+        engine.close()
+
+        // When - a call for that never-seen key is made after close()
+        // Then - it must be released with an abandoned/error snapshot, not hang forever; 8s is well
+        // past the provider's own 5s delay, which never actually runs because a scope already
+        // cancelled at launch time never starts the fan-out's body at all
+        val result = withTimeout(8_000) {
+            engine.enrichProgressive(req, setOf(EnrichmentType.ALBUM_ART)).last()
+        }
+        val albumArt = result.raw[EnrichmentType.ALBUM_ART]
+        assertTrue("a call arriving after close() must stamp every type as Error, not omit it", albumArt is EnrichmentResult.Error)
+        assertEquals(ErrorKind.ENGINE_CLOSED, (albumArt as EnrichmentResult.Error).errorKind)
+    }
 }

@@ -27,6 +27,9 @@ enum class ErrorKind {
 
     /** Uncategorized error. */
     UNKNOWN,
+
+    /** The engine was `close()`d before this type settled — not a timeout, not a provider failure. */
+    ENGINE_CLOSED,
 }
 
 /**

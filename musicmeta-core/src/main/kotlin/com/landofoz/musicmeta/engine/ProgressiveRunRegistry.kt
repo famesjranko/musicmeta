@@ -25,6 +25,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 internal class ProgressiveRunRegistry(private val scope: CoroutineScope) {
     private val mutex = Mutex()
     private val runs = mutableMapOf<String, ProgressiveRun>()
+    private var closed = false
 
     /**
      * One detached [DefaultEnrichmentEngine.enrichProgressive] fan-out, shared by every collector
@@ -44,18 +45,46 @@ internal class ProgressiveRunRegistry(private val scope: CoroutineScope) {
     suspend fun inFlightCount(): Int = mutex.withLock { runs.size }
 
     /**
+     * Marks this registry closed under [mutex] — the same lock [attachOrStart] takes to check the
+     * flag before registering a new key, so a call for a key not yet seen either completes fully
+     * before this returns (and starts normally on [scope]) or observes [closed] and never starts at
+     * all; the two can never interleave partway. Idempotent.
+     */
+    suspend fun markClosed() {
+        mutex.withLock { closed = true }
+    }
+
+    /**
      * Attaches to an in-flight run for [dedupeKey], or starts one: [body] runs as a child of
      * [scope] exactly once per key, regardless of how many concurrent callers ask for it — a call
      * that finds an existing entry never invokes [body] at all. Callers relying on [body] running
      * only for the call that actually starts the run (e.g. a `forceRefresh` invalidate pass) depend
      * on that guarantee.
+     *
+     * Once this registry is [markClosed], a call for a key it has not already seen never reaches
+     * [scope] at all — `scope.launch` with an already-cancelled parent `Job` never runs its block,
+     * which would otherwise leave a fresh run's [ProgressiveRun.terminal] incomplete forever. Instead
+     * [onClosed] builds that run's terminal snapshot synchronously, and it is completed here before
+     * this call returns, exactly as if it had run and immediately been abandoned. A key already
+     * in flight when [markClosed] fires is unaffected here — its abandonment goes through
+     * [runProgressiveFanOut]'s own `finally` block, run as normal on [scope].
      */
     suspend fun attachOrStart(
         dedupeKey: String,
+        onClosed: suspend (ProgressiveRun) -> EnrichmentResults,
         body: suspend (ProgressiveRun) -> Unit,
     ): ProgressiveRun = mutex.withLock {
-        runs.getOrPut(dedupeKey) {
-            ProgressiveRun(dedupeKey).also { newRun -> scope.launch { body(newRun) } }
+        runs[dedupeKey]?.let { return@withLock it }
+        if (closed) {
+            val run = ProgressiveRun(dedupeKey)
+            val snapshot = onClosed(run)
+            run.terminal.complete(snapshot)
+            run.shared.emit(snapshot)
+            return@withLock run
+        }
+        ProgressiveRun(dedupeKey).also { newRun ->
+            runs[dedupeKey] = newRun
+            scope.launch { body(newRun) }
         }
     }
 
@@ -84,11 +113,13 @@ internal class ProgressiveRunRegistry(private val scope: CoroutineScope) {
  *
  * The `finally` block covers every way this can stop short of its own terminal snapshot — the
  * engine's `close()` cancelling its detached scope, or a genuinely uncaught failure — with one
- * path: complete [ProgressiveRunRegistry.ProgressiveRun.terminal] with whatever had settled so far
- * (write-back skipped, exactly like a timed-out run) so a relayed collector is released rather than
- * left waiting on a [shared][ProgressiveRunRegistry.ProgressiveRun.shared] that will never emit
- * again. [NonCancellable] because a cancelled job's own suspension points (the emit itself) would
- * otherwise throw before that release could reach the collector.
+ * path: stamp every type still unsettled as an honest `ErrorKind.ENGINE_CLOSED` Error (mirroring
+ * the timeout path's own straggler stamp, see [DefaultEnrichmentEngine.stampTimeoutStragglers]),
+ * then complete [ProgressiveRunRegistry.ProgressiveRun.terminal] with the result (write-back
+ * skipped, exactly like a timed-out run) so a relayed collector is released, every requested type
+ * present, rather than left waiting on a [shared][ProgressiveRunRegistry.ProgressiveRun.shared]
+ * that will never emit again. [NonCancellable] because a cancelled job's own suspension points (the
+ * emit itself) would otherwise throw before that release could reach the collector.
  */
 internal suspend fun DefaultEnrichmentEngine.runProgressiveFanOut(
     request: EnrichmentRequest,
@@ -101,15 +132,7 @@ internal suspend fun DefaultEnrichmentEngine.runProgressiveFanOut(
         board = SettlementBoard(types + compositeSubTypesOf(types)),
         identityHolder = IdentityHolder(IdentityResolution(request.identifiers, CanonicalStatus.RESOLVING)),
     )
-    val settle: suspend (EnrichmentType, EnrichmentResult, ChainExecution?) -> Unit = { type, raw, execution ->
-        val snapshot = session.board.settle(type, raw, execution) {
-            finalizeResult(request, type, it, execution, session.identityHolder)
-        }
-        val filtered = snapshot.filterKeys { it in types }
-        if ((types - filtered.keys).isNotEmpty()) {
-            run.shared.emit(EnrichmentResults(filtered, types, session.identityHolder.current))
-        }
-    }
+    val settle = settleInto(request, types, session, run)
 
     try {
         // Cache hits settle immediately: catalog filtering is the only finalize step that touches
@@ -154,6 +177,7 @@ internal suspend fun DefaultEnrichmentEngine.runProgressiveFanOut(
     } finally {
         if (!run.terminal.isCompleted) {
             withContext(NonCancellable) {
+                stampAbandonedStragglers(types, session.board, settle)
                 val results = session.board.snapshotResults()
                 val identity =
                     session.identityResolution ?: IdentityResolution(request.identifiers, CanonicalStatus.FAILED)
@@ -162,4 +186,46 @@ internal suspend fun DefaultEnrichmentEngine.runProgressiveFanOut(
             }
         }
     }
+}
+
+/**
+ * The per-type settle callback [runProgressiveFanOut] and an immediately-abandoned run (a call for
+ * a never-seen key arriving after [DefaultEnrichmentEngine.close]) both use: finalizes [raw],
+ * records it on [session]'s board, and emits an interim snapshot to [run]'s
+ * [ProgressiveRunRegistry.ProgressiveRun.shared] unless this settlement is the one that completes
+ * every requested type — the real terminal snapshot takes that emission's place instead.
+ */
+internal fun DefaultEnrichmentEngine.settleInto(
+    request: EnrichmentRequest,
+    types: Set<EnrichmentType>,
+    session: RunSession,
+    run: ProgressiveRunRegistry.ProgressiveRun,
+): suspend (EnrichmentType, EnrichmentResult, ChainExecution?) -> Unit = { type, raw, execution ->
+    val snapshot = session.board.settle(type, raw, execution) {
+        finalizeResult(request, type, it, execution, session.identityHolder)
+    }
+    val filtered = snapshot.filterKeys { it in types }
+    if ((types - filtered.keys).isNotEmpty()) {
+        run.shared.emit(EnrichmentResults(filtered, types, session.identityHolder.current))
+    }
+}
+
+/**
+ * Builds the terminal snapshot for a call whose dedupe key was never seen before the engine
+ * [DefaultEnrichmentEngine.close]d — every requested type is unsettled, so this stamps all of them
+ * via [stampAbandonedStragglers] rather than starting a fan-out on a scope that will never run it.
+ */
+internal suspend fun DefaultEnrichmentEngine.abandonedSnapshot(
+    request: EnrichmentRequest,
+    types: Set<EnrichmentType>,
+    run: ProgressiveRunRegistry.ProgressiveRun,
+): EnrichmentResults {
+    val session = RunSession(
+        board = SettlementBoard(types + compositeSubTypesOf(types)),
+        identityHolder = IdentityHolder(IdentityResolution(request.identifiers, CanonicalStatus.FAILED)),
+    )
+    val settle = settleInto(request, types, session, run)
+    stampAbandonedStragglers(types, session.board, settle)
+    val results = session.board.snapshotResults()
+    return EnrichmentResults(results.filterKeys { it in types }, types, session.identityHolder.current)
 }
