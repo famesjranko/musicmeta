@@ -24,7 +24,9 @@ import com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzProvider
 import com.landofoz.musicmeta.provider.wikidata.WikidataProvider
 import com.landofoz.musicmeta.provider.wikipedia.WikipediaProvider
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 
 private const val TAG = "EnrichmentEngine"
 
@@ -132,6 +134,41 @@ interface EnrichmentEngine {
     ): Flow<Pair<EnrichmentRequest, EnrichmentResults>> = flow {
         for (request in requests) {
             emit(request to enrich(request, types, forceRefresh))
+        }
+    }
+
+    /**
+     * [enrichBatch], as a cumulative per-request stream: composed from [enrichProgressive] rather
+     * than [enrich], so each emission is one request's own cumulative snapshot of everything
+     * settled so far for it — the same derivation (`types - results.raw.keys`), cadence (only a
+     * request's last emission has an empty derived-pending set) and complete-and-cache contract
+     * [enrichProgressive] documents, carried through unmodified per request.
+     *
+     * Requests are still processed one at a time, in [requests] order — [enrichBatch]'s existing
+     * sequential bound, reused rather than replaced: this method's payoff is a row that fills in
+     * progressively as its own entity's types settle, not every row filling in at once, and
+     * concurrent fan-out across [requests] would multiply upstream traffic the way
+     * [enrichProgressive]'s own KDoc already flags for one entity's repeated collection. Cancelling
+     * collection (e.g. [take]) stops processing remaining requests cooperatively, exactly as
+     * [enrichBatch] does; a request already mid-stream when cancellation reaches it detaches under
+     * [enrichProgressive]'s own complete-and-cache rule and keeps running regardless.
+     *
+     * The same request appearing twice in [requests], or in a concurrently-running
+     * [enrichBatchProgressive]/[enrichProgressive] call for the same request/[types]/[forceRefresh],
+     * does not double-fetch: every occurrence coalesces through the one run registry
+     * [enrichProgressive] itself uses.
+     *
+     * The default implementation below calls [enrichProgressive] once per request; a third-party
+     * [EnrichmentEngine] that only overrides [enrich] gets exactly one (terminal) snapshot per
+     * request for free, matching [enrichProgressive]'s own default cadence.
+     */
+    fun enrichBatchProgressive(
+        requests: List<EnrichmentRequest>,
+        types: Set<EnrichmentType>,
+        forceRefresh: Boolean = false,
+    ): Flow<Pair<EnrichmentRequest, EnrichmentResults>> = flow {
+        for (request in requests) {
+            emitAll(enrichProgressive(request, types, forceRefresh).map { request to it })
         }
     }
 

@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A throwing `CatalogProvider.checkAvailability` no longer escapes `enrich()`, reversing (#55): that type degrades to unfiltered results and the run caches, so catch your own timeout inside it
 - `EnrichmentEngine` gains `enrichProgressive`, a defaulted method: a custom implementation built against an older `.jar` throws `AbstractMethodError` on first call until recompiled
 - `EnrichmentEngine` gains `close()`, a defaulted method: a custom implementation built against an older `.jar` throws `AbstractMethodError` on first call until recompiled
+- `EnrichmentEngine` gains `enrichBatchProgressive`, a defaulted method: a custom implementation built against an older `.jar` throws `AbstractMethodError` on first call until recompiled
 - `CanonicalStatus` gains `RESOLVING`: an exhaustive `when` needs a branch; only a pre-terminal `enrichProgressive` emission can carry it, never `enrich()`'s return or a stream's terminal emission
 - `ErrorKind` gains `ENGINE_CLOSED`: an exhaustive `when` needs a branch; only reachable when the engine was `close()`d before a requested type settled
 - `EnrichmentResult.Success` gains `isCatalogDegraded` (appended last, defaulted): recompile; `true` when a recommendation type's `CatalogProvider` threw and the data reached you unranked instead
@@ -44,6 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - `EnrichmentEngine.close()` (defaulted no-op): releases the scope backing `enrichProgressive`'s detachment; call it once done with an engine to abandon a still-running detached fan-out
+- `EnrichmentEngine.enrichBatchProgressive`: `enrichBatch`'s cumulative-snapshot counterpart, composed from `enrichProgressive` per request in the same sequential order
 
 ## [0.12.0] - 2026-08-18
 
