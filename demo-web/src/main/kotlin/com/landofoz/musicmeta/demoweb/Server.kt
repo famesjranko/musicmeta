@@ -462,13 +462,33 @@ private fun handleEnrichStream(exchange: HttpExchange, engine: EnrichmentEngine)
     try {
         runBlocking { streamEnrichment(engine, query, started, writer) }
     } catch (e: Exception) {
-        // A snapshot may already be on the wire, so this cannot become an error status the way
-        // handleEnrich's catch does — the status line is long gone. `runBlocking` surfaces a
-        // cancellation from inside it as a plain throw on this thread, so there is no ambient job
-        // here for `ensureActive()` to consult.
-        writer.write("error", json.encodeToString(ApiError(e.message ?: e.javaClass.simpleName)))
+        // `runBlocking` surfaces a cancellation from inside it as a plain throw on this thread, so
+        // there is no ambient job here for `ensureActive()` to consult.
+        reportStreamFailure(writer, e)
     } finally {
         writer.close()
+    }
+}
+
+/**
+ * Reports a failed run as the stream's terminal `error` event.
+ *
+ * A status code is not available - the status line went out with the headers - so the event is the
+ * only way left to say anything. But it is only worth saying to a client that is still there, and
+ * the commonest way a stream ends is the reader leaving: then the failure being reported *is* the
+ * transport, and writing the report onto the socket that just refused a write throws a second time.
+ * A dropped client is recorded once and dropped. The remaining attempt is guarded too, because a
+ * client can leave between the last successful write and this one.
+ */
+internal fun reportStreamFailure(writer: SseWriter, cause: Exception) {
+    if (writer.isBroken) {
+        println("enrich stream: client left mid-stream (${cause.javaClass.simpleName}: ${cause.message})")
+        return
+    }
+    try {
+        writer.write("error", json.encodeToString(ApiError(cause.message ?: cause.javaClass.simpleName)))
+    } catch (e: IOException) {
+        println("enrich stream: client left before the failure could be reported (${e.message})")
     }
 }
 
@@ -477,15 +497,27 @@ private fun handleEnrichStream(exchange: HttpExchange, engine: EnrichmentEngine)
  * filling. Every write happens on the request thread — the collector below runs on `runBlocking`'s
  * own event loop — so this holds no lock.
  */
-private class SseWriter(private val out: OutputStream) {
+internal class SseWriter(private val out: OutputStream) {
 
-    /** A write to a socket the client has already dropped throws; the caller treats that as the end. */
+    /**
+     * True once a write has been refused. The reader is gone, so nothing written after this can
+     * reach anyone — which is what stops a failure report being aimed at a dead socket.
+     */
+    var isBroken: Boolean = false
+        private set
+
+    /** Throws [IOException] when the client has left; the caller treats that as the end of the stream. */
     fun write(event: String, data: String) {
         // A newline inside the payload would otherwise be read as a second data line, or worse as
         // the blank line that ends the event. JSON emits none, but framing must not rest on that.
         val body = data.lineSequence().joinToString("\n") { "data: $it" }
-        out.write("event: $event\n$body\n\n".toByteArray(StandardCharsets.UTF_8))
-        out.flush()
+        try {
+            out.write("event: $event\n$body\n\n".toByteArray(StandardCharsets.UTF_8))
+            out.flush()
+        } catch (e: IOException) {
+            isBroken = true
+            throw e
+        }
     }
 
     fun close() {

@@ -23,17 +23,25 @@ import com.landofoz.musicmeta.cache.InMemoryEnrichmentCache
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.onCompletion
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.IOException
+import java.io.OutputStream
+import java.net.ServerSocket
+import java.net.Socket
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.nio.charset.StandardCharsets
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 
 /**
@@ -57,8 +65,13 @@ class EnrichStreamEndpointTest {
     private class ScriptedEngine(
         private val script: List<EnrichmentResults>,
         private val gapMs: Long = 0,
+        /** When set, the stream throws instead of emitting this many snapshots in — a failed run, not a failed socket. */
+        private val throwAfter: Int? = null,
     ) : EnrichmentEngine {
         val progressiveCalls = ConcurrentLinkedQueue<ProgressiveCall>()
+
+        /** Completed when the stream terminates, carrying why — null for an ordinary end. */
+        val termination = CompletableFuture<Throwable?>()
 
         data class ProgressiveCall(
             val request: EnrichmentRequest,
@@ -82,9 +95,10 @@ class EnrichStreamEndpointTest {
             progressiveCalls.add(ProgressiveCall(request, types, forceRefresh))
             script.forEachIndexed { index, snapshot ->
                 if (index > 0 && gapMs > 0) delay(gapMs)
+                if (index == throwAfter) throw IllegalStateException("provider chain gave up")
                 emit(snapshot)
             }
-        }
+        }.onCompletion { cause -> termination.complete(cause) }
 
         override suspend fun search(request: EnrichmentRequest, limit: Int): List<SearchCandidate> = emptyList()
         override fun getProviders(): List<ProviderInfo> = emptyList()
@@ -116,8 +130,14 @@ class EnrichStreamEndpointTest {
     private val http: HttpClient = HttpClient.newHttpClient()
     private val json = Json { encodeDefaults = true; ignoreUnknownKeys = true }
 
+    /**
+     * A port the OS has just confirmed free, rather than a guess from a range: this class stands up
+     * a server per test, and a guess collides often enough to fail a run for no reason.
+     */
+    private fun freePort(): Int = ServerSocket(0).use { it.localPort }
+
     private fun startWith(engine: EnrichmentEngine): Int {
-        val port = (20000..40000).random()
+        val port = freePort()
         startServer(AtomicReference(engine), AtomicReference(CacheMode.NETWORK_FIRST), { engine }, ApiKeyConfig(), port)
         return port
     }
@@ -408,5 +428,88 @@ class EnrichStreamEndpointTest {
         // Then - the caller gets a JSON error it can read, not a stream that says nothing
         assertEquals(400, response.statusCode())
         assertNotNull(json.decodeFromString(ApiError.serializer(), response.body()).error)
+    }
+
+/** Refuses every write, the way a socket whose reader has gone does, and counts the attempts. */
+    private class DeadOutputStream : OutputStream() {
+        var attempts = 0
+            private set
+
+        override fun write(b: Int) {
+            attempts += 1
+            throw IOException("broken pipe")
+        }
+
+        override fun write(
+            b: ByteArray,
+            off: Int,
+            len: Int,
+        ) {
+            attempts += 1
+            throw IOException("broken pipe")
+        }
+    }
+
+    @Test fun `reporting a failure to a client that has left neither throws nor writes again`() {
+        // Given - a writer whose one write has already been refused, which is what a reader leaving
+        // mid-stream looks like from the server's side
+        val out = DeadOutputStream()
+        val writer = SseWriter(out)
+        val dropped = runCatching { writer.write("snapshot", "{}") }.exceptionOrNull()
+        assertTrue(dropped is IOException)
+        assertEquals(1, out.attempts)
+
+        // When - the handler reports the run's failure through the same writer
+        reportStreamFailure(writer, dropped as Exception)
+
+        // Then - it neither escaped nor retried the report onto a socket that is already gone
+        assertEquals(1, out.attempts)
+    }
+
+    @Test fun `a client that leaves mid-stream ends the enrichment and leaves the server serving`() {
+        // Given - a long scripted stream, so several writes land after the reader goes
+        val engine =
+            ScriptedEngine(
+                List(30) { artistResults(mapOf(EnrichmentType.ARTIST_BIO to bio("Bristol."))) } +
+                    artistResults(everyArtistType),
+                gapMs = 60,
+            )
+        val port = startWith(engine)
+
+        // When - the client reads one event and then drops the connection
+        Socket("localhost", port).use { socket ->
+            socket.getOutputStream().write(
+                "GET /api/enrich-stream?kind=artist&name=Portishead HTTP/1.1\r\nHost: localhost\r\n\r\n"
+                    .toByteArray(StandardCharsets.UTF_8),
+            )
+            socket.getOutputStream().flush()
+            val reader = socket.getInputStream().bufferedReader()
+            while (reader.readLine()?.startsWith("data: ") == false) Unit
+        }
+
+        // Then - the run stops rather than streaming on to a reader that has gone, and the handler
+        // returns cleanly enough that the server keeps answering
+        assertNotNull(engine.termination.get(20, TimeUnit.SECONDS))
+        assertEquals(200, raw(port, "/api/health").statusCode())
+    }
+
+    @Test fun `a run that fails while the client is still there reports an error event`() {
+        // Given - an engine whose stream throws part way through, with nothing wrong with the socket
+        val engine =
+            ScriptedEngine(
+                List(4) { artistResults(mapOf(EnrichmentType.ARTIST_BIO to bio("Bristol."))) },
+                gapMs = 30,
+                throwAfter = 2,
+            )
+        val port = startWith(engine)
+
+        // When - streaming an artist through the endpoint
+        val events = stream(port, "/api/enrich-stream?kind=artist&name=Portishead")
+
+        // Then - the failure reaches the page as the stream's terminal event, and no complete claims
+        // an answer the run never produced
+        assertEquals(0, events.count { it.name == "complete" })
+        assertEquals("error", events.last().name)
+        assertTrue(json.decodeFromString(ApiError.serializer(), events.last().data).error.isNotBlank())
     }
 }
