@@ -3,10 +3,11 @@
 `enrich()` waits for every requested type to settle before returning one `EnrichmentResults`.
 `enrichProgressive()` runs the same resolution pipeline but emits a snapshot each time a type
 settles, so a UI can paint fast types — a cache hit, a single-provider lookup — while slow ones are
-still in flight. First useful paint typically arrives well ahead of the complete answer — on one
-demo artist, the first snapshot painted at ~2.31s against ~6.37s for every requested type to
-settle — though the actual gap depends on which types you request and how the providers behind
-them respond.
+still in flight. First useful paint arrives well ahead of the complete answer: measured against the
+demo over live providers on a cold cache in August 2026, two artists, one run each, the first
+snapshot painted at 2.3s and 5.6s against 6.4s and 13.3s for every requested type to settle. Those
+are single runs over third-party APIs, not a distribution — treat the ratio as the signal and expect
+your own gap to depend on which types you request and how the providers behind them respond.
 
 ## Basic usage
 

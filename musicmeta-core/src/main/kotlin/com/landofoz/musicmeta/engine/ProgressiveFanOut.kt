@@ -115,8 +115,8 @@ internal suspend fun DefaultEnrichmentEngine.runProgressiveFanOut(
 
 /**
  * The per-type settle callback [runProgressiveFanOut] and an immediately-abandoned run (a call for
- * a never-seen key arriving after [DefaultEnrichmentEngine.close]) both use: finalizes [raw],
- * records it on [session]'s board, and emits an interim snapshot to [run]'s
+ * a never-seen key arriving after [DefaultEnrichmentEngine.close]) both use: finalizes the raw
+ * result it is handed, records it on [session]'s board, and emits an interim snapshot to [run]'s
  * [ProgressiveRunRegistry.ProgressiveRun.shared] unless this settlement is the one that completes
  * every requested type — the real terminal snapshot takes that emission's place instead.
  */

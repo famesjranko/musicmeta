@@ -120,7 +120,8 @@ internal suspend fun applyCatalogFiltering(
 /**
  * [applyCatalogFiltering]'s per-type body, so a per-type settlement pipeline can run it without a
  * shared map: not a [RECOMMENDATION_TYPES] member, not a [EnrichmentResult.Success], nothing to
- * filter, or [catalogFilterMode] is [CatalogFilterMode.UNFILTERED] all return [result] unchanged.
+ * filter, or [catalogFilterMode] is [CatalogFilterMode.UNFILTERED] all return [result] with
+ * [EnrichmentResult.Success.isCatalogDegraded] normalized to false and nothing else changed.
  */
 internal suspend fun applyCatalogFilteringToType(
     type: EnrichmentType,

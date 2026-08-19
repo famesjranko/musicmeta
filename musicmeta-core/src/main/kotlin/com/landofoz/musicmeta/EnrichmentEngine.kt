@@ -106,14 +106,11 @@ interface EnrichmentEngine {
      * expires — bounded to the one run for this exact request/[types]/[forceRefresh] combination, so
      * a caller who cancels and re-calls the same thing N times in a row never multiplies upstream
      * traffic by N. Its cache write-back still happens, so a subsequent equivalent call is typically
-     * a cache hit, not a re-fetch. This costs real work continuing after you stop watching it — see
-     * [close] for how to bound that at engine shutdown, not per call. A third-party implementor
-     * relying on the default single-emission body above has nothing to detach from: there is no
-     * cancellation cost to document for it.
-     *
-     * There is no per-call abort: a detached run keeps spending rate-limiter and circuit-breaker
-     * budget unwatched, and [close] can only stop it by shutting the whole engine down, never one
-     * call or request.
+     * a cache hit, not a re-fetch. This costs real work continuing after you stop watching it: there
+     * is no per-call abort, a detached run keeps spending rate-limiter and circuit-breaker budget
+     * unwatched, and [close] can only stop it by shutting the whole engine down, never one call.
+     * A third-party implementor relying on the default single-emission body above has nothing to
+     * detach from: there is no cancellation cost to document for it.
      */
     fun enrichProgressive(
         request: EnrichmentRequest,
