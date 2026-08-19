@@ -62,12 +62,14 @@ can settle and be sent before the same call's canonical identity lookup returns.
 return and every stream's terminal emission always carry a settled status instead; a consumer that
 only calls `enrich()` never sees it.
 
-**`ErrorKind.ENGINE_CLOSED` means the engine was `close()`d before this type settled, not that the
-type failed or timed out.** It appears on any type still unsettled in the snapshot a `close()`d
-engine hands back — a still-attached `enrichProgressive` collector, `enrich()`'s own return, or a
-call for a request/types combination the engine had never seen before `close()` — never on a run
-that reached its own deadline (that is `ErrorKind.TIMEOUT`) or on one still running against an
-open engine.
+**`ErrorKind.ENGINE_CLOSED` means the engine was `close()`d before an uncached, in-flight type
+settled, not that the type failed or timed out.** A fully-cached call never reaches this: it
+returns its cache hit and succeeds normally even after `close()`, without ever registering a
+detached run. `ENGINE_CLOSED` appears only on a type that was genuinely uncached and in flight (or
+would have been, for a request/types combination the engine had never seen before `close()`) — a
+still-attached `enrichProgressive` collector or `enrich()`'s own return sees it there, and only
+there — never on a run that reached its own deadline (that is `ErrorKind.TIMEOUT`) or on one still
+running against an open engine.
 
 **`EnrichmentResult.Success.isCatalogDegraded` means catalog filtering was attempted and could
 not run, not that filtering was turned off.** A recommendation type still reaches the caller when
