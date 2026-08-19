@@ -124,7 +124,10 @@ internal class DefaultEnrichmentEngine(
     // backstop for the rare case that failure is genuinely uncaught (nothing deeper in the chain
     // already caught and logged it) and no collector is left attached to relay it anywhere —
     // without this it would otherwise reach the platform's default uncaught-exception handler
-    // instead of this engine's own logger.
+    // instead of this engine's own logger. Untested deliberately, not by omission: everything
+    // deeper in the pipeline already goes through the `catch (Exception) { ensureActive(); ... }`
+    // convention, so a non-cancellation exception genuinely reaching this handler is a rare
+    // backstop path, not a primary one a test would exercise in the ordinary run of the code.
     private val detachedScope = CoroutineScope(
         SupervisorJob() + detachedDispatcher +
             CoroutineExceptionHandler { _, throwable ->
@@ -158,10 +161,12 @@ internal class DefaultEnrichmentEngine(
     override fun close() {
         // markClosed is suspend only because it shares attachOrStart's mutex; close() itself must
         // stay a plain fun to satisfy EnrichmentEngine's interface. runBlocking here blocks only on
-        // that mutex, which attachOrStart also never holds across a suspension point of its own —
-        // so this returns as soon as any in-progress attachOrStart call finishes, and is what makes
-        // "mark closed" and "check closed, then register" unable to interleave: either fully
-        // completes before this call returns, or fully starts after.
+        // that mutex, and attachOrStart's own critical section is the registration decision alone —
+        // never the onClosed abandonment work that decision leads to, which can suspend on consumer
+        // code (see attachOrStart's KDoc) — so this returns as soon as any in-progress attachOrStart
+        // call finishes deciding, never blocked on that call's own suspending work. That bound is
+        // what makes "mark closed" and "check closed, then register" unable to interleave: either
+        // fully completes before this call returns, or fully starts after.
         runBlocking { progressiveRuns.markClosed() }
         detachedScope.cancel()
     }

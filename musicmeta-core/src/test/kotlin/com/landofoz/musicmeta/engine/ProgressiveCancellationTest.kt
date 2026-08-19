@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.engine
 
+import com.landofoz.musicmeta.CacheEnvelope
 import com.landofoz.musicmeta.EnrichmentConfig
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentRequest
@@ -7,9 +8,11 @@ import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
 import com.landofoz.musicmeta.ProviderCapability
+import com.landofoz.musicmeta.cache.CacheMode
 import com.landofoz.musicmeta.testutil.FakeEnrichmentCache
 import com.landofoz.musicmeta.testutil.FakeProvider
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
@@ -18,10 +21,12 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.last
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -297,5 +302,101 @@ class ProgressiveCancellationTest {
         val albumArt = result.raw[EnrichmentType.ALBUM_ART]
         assertTrue("a call arriving after close() must stamp every type as Error, not omit it", albumArt is EnrichmentResult.Error)
         assertEquals(ErrorKind.ENGINE_CLOSED, (albumArt as EnrichmentResult.Error).errorKind)
+    }
+
+    // --- close()'s runBlocking bridge must never deadlock a limited-parallelism dispatcher ---
+
+    /** Suspends via `delay`, so a caller of it is a real mutex-adjacent suspension. */
+    private class SlowStaleCache : FakeEnrichmentCache() {
+        override suspend fun getIncludingExpired(
+            entityKey: String,
+            type: EnrichmentType,
+        ): CacheEnvelope<EnrichmentResult.Success>? {
+            delay(2_000)
+            return super.getIncludingExpired(entityKey, type)
+        }
+    }
+
+    @Test fun `a second close() on a single-thread dispatcher must not deadlock against a slow STALE_IF_ERROR cache read`() {
+        val executor = Executors.newSingleThreadExecutor()
+        val singleThread = executor.asCoroutineDispatcher()
+        try {
+            runBlocking {
+                withTimeout(10_000) {
+                    // Given - STALE_IF_ERROR (so an ENGINE_CLOSED Error triggers a stale-cache
+                    // read), a cache whose getIncludingExpired suspends for 2s, and everything
+                    // pinned to one single-thread dispatcher
+                    val provider = FakeProvider(
+                        id = "p",
+                        capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100)),
+                    )
+                    val engine = DefaultEnrichmentEngine(
+                        ProviderRegistry(listOf(provider)),
+                        SlowStaleCache(),
+                        EnrichmentConfig(enableIdentityResolution = false, cacheMode = CacheMode.STALE_IF_ERROR),
+                        detachedDispatcher = singleThread,
+                    )
+
+                    withContext(singleThread) {
+                        // When - engine closed once, then a call for a never-seen key enters the
+                        // closed branch and suspends on the slow stale-cache read, and a second
+                        // close() call on the same single-thread dispatcher follows
+                        engine.close()
+                        val stuckInClosedBranch = launch {
+                            engine.enrichProgressive(req, setOf(EnrichmentType.ALBUM_ART)).last()
+                        }
+                        delay(200) // let it start the slow cache read
+                        val secondClose = async { engine.close() }
+
+                        // Then - both finish; a hang here means close()'s runBlocking deadlocked
+                        // the single thread against work its own mutex critical section triggered
+                        secondClose.await()
+                        stuckInClosedBranch.join()
+                    }
+                }
+            }
+        } finally {
+            executor.shutdownNow()
+        }
+    }
+
+    @Test fun `the same single-thread close() race never hangs under NETWORK_FIRST, where the closed branch never suspends`() {
+        val executor = Executors.newSingleThreadExecutor()
+        val singleThread = executor.asCoroutineDispatcher()
+        try {
+            runBlocking {
+                withTimeout(10_000) {
+                    // Given - the same setup as the STALE_IF_ERROR probe, but NETWORK_FIRST, whose
+                    // closed-branch abandonment never reaches a suspending cache call
+                    val provider = FakeProvider(
+                        id = "p",
+                        capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100)),
+                    )
+                    val engine = DefaultEnrichmentEngine(
+                        ProviderRegistry(listOf(provider)),
+                        SlowStaleCache(),
+                        EnrichmentConfig(enableIdentityResolution = false, cacheMode = CacheMode.NETWORK_FIRST),
+                        detachedDispatcher = singleThread,
+                    )
+
+                    withContext(singleThread) {
+                        // When - the identical close(), in-flight call, second-close() sequence
+                        engine.close()
+                        val stuckInClosedBranch = launch {
+                            engine.enrichProgressive(req, setOf(EnrichmentType.ALBUM_ART)).last()
+                        }
+                        delay(200)
+                        val secondClose = async { engine.close() }
+
+                        // Then - this configuration was never the trigger, only the isolating
+                        // control for it, so it must pass regardless of the fix above
+                        secondClose.await()
+                        stuckInClosedBranch.join()
+                    }
+                }
+            }
+        } finally {
+            executor.shutdownNow()
+        }
     }
 }
