@@ -11,7 +11,7 @@ carries a `member of band` relation for `BAND_MEMBERS` to resolve.
 the search hit's `country` field feeds an identity-resolution `Success` that identity write-through
 copies straight into `COUNTRY` (`DefaultEnrichmentEngine.kt`'s `resolveIdentity`, gated
 `type !in mergeableTypes`), and the second, delayed call is what lets a tight `enrichTimeoutMs` expire
-mid-fan-out — after `COUNTRY` is already written, before `stampProvenance` runs. Two calls, one
+mid-fan-out — after `COUNTRY` is already written, before `stampProvenanceOne` runs. Two calls, one
 undelayed and one paying `RateLimiter`'s ~1100ms interval, is exactly the shape the regression needs;
 a single-call scenario has nothing left in flight for a timeout to interrupt.
 

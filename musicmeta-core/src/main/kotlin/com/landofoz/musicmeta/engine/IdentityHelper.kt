@@ -55,22 +55,11 @@ internal fun buildIdentityResolution(
 }
 
 /**
- * Stamps [com.landofoz.musicmeta.LookupProvenance] on every freshly resolved [EnrichmentResult.Success]
- * that did not already report its own route. [executions] carries the [ChainExecution] each type's
+ * Stamps [com.landofoz.musicmeta.LookupProvenance] on a freshly resolved [EnrichmentResult.Success]
+ * that did not already report its own route. [execution] carries the [ChainExecution] this type's
  * chain walk produced — the provider execution evidence [observedProvenance] classifies from, rather
- * than which identifiers merely happen to be present on [request].
+ * than which identifiers merely happen to be present on the request.
  */
-internal fun stampProvenance(
-    results: MutableMap<EnrichmentType, EnrichmentResult>,
-    canonicalStatus: CanonicalStatus,
-    executions: Map<EnrichmentType, ChainExecution>,
-) {
-    for ((type, result) in results) {
-        results[type] = stampProvenanceOne(result, executions[type], canonicalStatus)
-    }
-}
-
-/** [stampProvenance]'s per-type body, for a settlement pipeline with no shared map to loop over. */
 internal fun stampProvenanceOne(
     result: EnrichmentResult,
     execution: ChainExecution?,

@@ -10,7 +10,7 @@ import com.landofoz.musicmeta.LookupProvenance
  * provider's chain walk actually required to run it — never from which identifiers merely happen to
  * be present on the request, which a provider that used none of them may still have satisfied by
  * coincidence. [winningRequirement] is [ChainExecution.winningRequirement]: null when no single
- * provider's `Success` was captured this way, e.g. a merged multi-provider result. [stampProvenance]
+ * provider's `Success` was captured this way, e.g. a merged multi-provider result. [stampProvenanceOne]
  * only reaches this function for a `null` [EnrichmentResult.Success.provenance] — a provider that
  * sets its own route on the `Success` it returns is trusted verbatim and never reaches here.
  *
@@ -66,7 +66,7 @@ internal fun weakestProvenance(provenances: List<LookupProvenance>): LookupProve
  * [observedProvenance] for one contributor to a mergeable type's collect-all walk, by that
  * contributor's own provider — never [ChainExecution.winningRequirement], which a collect-all walk
  * never sets because it has no single winner. Self-reported [success]es are trusted verbatim, same
- * as [stampProvenance]. [chain] is null only when the type has no registered chain at all, in which
+ * as [stampProvenanceOne]. [chain] is null only when the type has no registered chain at all, in which
  * case there is no provider to ask and [IdentifierRequirement.NONE] applies.
  */
 internal fun stampContributorProvenance(
