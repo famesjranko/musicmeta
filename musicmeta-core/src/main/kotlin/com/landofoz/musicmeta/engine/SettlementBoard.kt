@@ -15,11 +15,14 @@ internal data class Settled(
 /**
  * Where every type of one `enrich`/`enrichProgressive` call lands as it finishes.
  *
- * [settle] is the whole record-post-process-snapshot step for one type, run under one lock, so a
- * concurrent settle for a different type can never interleave with it — the fix for a plain
- * `mutableMapOf()` mutated from many `launch {}` children, which raced under a real thread pool:
- * `ConcurrentModificationException` in a sixth to a quarter of runs, and, worse, a short terminal
- * map with no exception at all in some of the rest.
+ * [settle] runs [finalize] — consumer-supplied suspend I/O (`CatalogProvider.checkAvailability`, a
+ * stale-cache read) — *before* taking the lock, so one type's slow finalize can never serialize
+ * another's; the lock covers only the map write, the deferred completion, and the snapshot, which
+ * do no I/O and cannot suspend indefinitely. Narrowing this any further would reopen the original
+ * bug: a plain `mutableMapOf()` mutated from many `launch {}` children raced under a real thread
+ * pool — `ConcurrentModificationException` in a sixth to a quarter of runs, and, worse, a short
+ * terminal map with no exception at all in some of the rest — so the map write, deferred
+ * completion, and snapshot must still be one atomic region.
  *
  * [await] lets a composite synthesizer suspend for its own dependencies without ever reading the
  * shared map directly. Each composite type is driven by exactly one coroutine that awaits its own
@@ -38,21 +41,25 @@ internal class SettlementBoard(types: Set<EnrichmentType>) {
     suspend fun await(type: EnrichmentType): Settled = deferreds.getValue(type).await()
 
     /**
-     * Runs [finalize] on [raw], records the result and [execution] for [type], and returns a
-     * defensive-copy snapshot of every type settled so far — all inside one lock, so a caller
-     * sending this snapshot as a stream emission never sends a torn or later-mutated map.
+     * Runs [finalize] on [raw] outside the lock, then records the result and [execution] for
+     * [type] and returns a defensive-copy snapshot of every type settled so far — all inside one
+     * lock, so a caller sending this snapshot as a stream emission never sends a torn or
+     * later-mutated map, and so the deferred [type] dependents [await] always observes the
+     * finalized value, never the raw one.
      */
     suspend fun settle(
         type: EnrichmentType,
         raw: EnrichmentResult,
         execution: ChainExecution?,
         finalize: suspend (EnrichmentResult) -> EnrichmentResult,
-    ): Map<EnrichmentType, EnrichmentResult> = mutex.withLock {
+    ): Map<EnrichmentType, EnrichmentResult> {
         val processed = finalize(raw)
-        results[type] = processed
-        if (execution != null) executions[type] = execution
-        deferreds.getValue(type).complete(Settled(processed, execution))
-        results.toMap()
+        return mutex.withLock {
+            results[type] = processed
+            if (execution != null) executions[type] = execution
+            deferreds.getValue(type).complete(Settled(processed, execution))
+            results.toMap()
+        }
     }
 
     /** Every type settled so far, once no [settle] call for this board can still be in flight. */

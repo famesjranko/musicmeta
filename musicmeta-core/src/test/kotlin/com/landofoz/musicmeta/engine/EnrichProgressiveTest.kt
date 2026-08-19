@@ -14,6 +14,7 @@ import com.landofoz.musicmeta.SimilarArtist
 import com.landofoz.musicmeta.http.AuthException
 import com.landofoz.musicmeta.testutil.FakeEnrichmentCache
 import com.landofoz.musicmeta.testutil.FakeProvider
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.last
 import kotlinx.coroutines.flow.toList
@@ -23,6 +24,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * `enrich()` is `enrichProgressive(...).last()` against one shared resolution path — every test
@@ -293,28 +295,55 @@ class EnrichProgressiveTest {
         assertTrue("need 30+ types for a meaningful race window", types.size >= 30)
 
         var shortMapCount = 0
+        var wrongContentCount = 0
         var exceptionCount = 0
         val iterations = 200
 
-        // When - running real Dispatchers.Default concurrency, N=200 iterations, fresh state each time
+        // When - running real Dispatchers.Default concurrency, N=200 iterations, fresh state each
+        // time. BarrierProvider gates every type's chain call on one release: all 30+ launches
+        // reach settle() together, the maximal race window, rather than however a back-to-back
+        // launch loop happens to schedule them.
         repeat(iterations) {
             val iterCache = FakeEnrichmentCache()
-            val provider = FakeProvider(id = "p", capabilities = types.map { t -> ProviderCapability(t, 100) })
-                .also { p -> types.forEach { t -> p.givenResult(t, EnrichmentData.Artwork("https://x/${t.name}").let { d -> EnrichmentResult.Success(t, d, "p", 0.9f) }) } }
+            val provider = BarrierProvider(types)
             val engine = DefaultEnrichmentEngine(
                 ProviderRegistry(listOf(provider)), iterCache, EnrichmentConfig(enableIdentityResolution = false),
             )
             try {
                 val results = runBlocking(Dispatchers.Default) { engine.enrich(req, types) }
                 if (results.raw.keys != types) shortMapCount++
+                // Content, not just key presence: each type's own value must carry its own name —
+                // a value written under the wrong key would pass a keys-only check.
+                val wrongContent = types.any { t ->
+                    val data = (results.raw[t] as? EnrichmentResult.Success)?.data as? EnrichmentData.Artwork
+                    data?.url != "https://x/${t.name}"
+                }
+                if (wrongContent) wrongContentCount++
             } catch (e: Exception) {
                 exceptionCount++
             }
         }
 
-        // Then - no exception, and no silently short terminal map, across every iteration
+        // Then - no exception, no silently short terminal map, and no cross-type content
+        // corruption, across every iteration
         assertEquals("iterations that threw: $exceptionCount of $iterations", 0, exceptionCount)
         assertEquals("iterations with a short terminal map: $shortMapCount of $iterations", 0, shortMapCount)
+        assertEquals(
+            "iterations with wrong per-type content: $wrongContentCount of $iterations", 0, wrongContentCount,
+        )
+    }
+
+    /** Gates every requested type's chain call on one release, for true simultaneity rather than a scheduling guess. */
+    private class BarrierProvider(types: Set<EnrichmentType>) :
+        FakeProvider(id = "p", capabilities = types.map { ProviderCapability(it, 100) }) {
+        private val remaining = AtomicInteger(types.size)
+        private val gate = CompletableDeferred<Unit>()
+
+        override suspend fun enrich(request: EnrichmentRequest, type: EnrichmentType): EnrichmentResult {
+            if (remaining.decrementAndGet() == 0) gate.complete(Unit)
+            gate.await()
+            return EnrichmentResult.Success(type, EnrichmentData.Artwork("https://x/${type.name}"), "p", 0.9f)
+        }
     }
 
     private class SlowStreamProvider(
