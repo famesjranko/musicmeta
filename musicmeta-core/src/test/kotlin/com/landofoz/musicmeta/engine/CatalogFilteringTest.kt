@@ -404,6 +404,37 @@ class CatalogFilteringTest {
             )
         }
 
+    @Test fun `a cache hit under a reading engine configured UNFILTERED still replays a stale isCatalogDegraded from the writing engine`() =
+        runTest {
+            // Given - a shared cache, first written by a call whose CatalogProvider threw
+            val cache = FakeEnrichmentCache()
+            val provider = FakeProvider(
+                id = "fake",
+                capabilities = listOf(ProviderCapability(EnrichmentType.SIMILAR_ARTISTS, 100)),
+            ).also { it.givenResult(EnrichmentType.SIMILAR_ARTISTS, similarArtists("Artist A", "Artist B")) }
+            val throwingCatalog = CatalogProvider { error("catalog unavailable") }
+            val written = engine(provider, throwingCatalog, cache = cache).enrich(req, setOf(EnrichmentType.SIMILAR_ARTISTS))
+            val writtenSuccess = written.raw[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
+            assertTrue("sanity: the original write must be degraded", writtenSuccess.isCatalogDegraded)
+
+            // When - a second, differently-configured engine reads the same cache entry: UNFILTERED,
+            // so applyCatalogFilteringToType returns before ever reaching checkAvailability
+            val second = engine(provider, throwingCatalog, CatalogFilterMode.UNFILTERED, cache = cache)
+                .enrich(req, setOf(EnrichmentType.SIMILAR_ARTISTS))
+
+            // Then - the KDoc promises isCatalogDegraded is "Never true when the mode is UNFILTERED —
+            // that is a deliberate configuration, not a degradation." The early return in
+            // applyCatalogFilteringToType (mode == UNFILTERED -> return result) never clears the flag
+            // it inherited from the cached object, so a reading engine configured UNFILTERED against
+            // a cache a differently-configured engine wrote to sees isCatalogDegraded = true here.
+            val cachedSuccess = second.raw[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
+            assertFalse(
+                "UNFILTERED must never self-report as degraded, even reading a cache entry a " +
+                    "differently-configured engine wrote as degraded",
+                cachedSuccess.isCatalogDegraded,
+            )
+        }
+
     @Test fun `AVAILABLE_FIRST degrades to the original order when the CatalogProvider throws`() = runTest {
         // Given - a catalog provider that throws, and AVAILABLE_FIRST reordering requested
         val fakeCatalog = CatalogProvider { error("catalog unavailable") }
