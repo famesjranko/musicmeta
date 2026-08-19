@@ -237,6 +237,27 @@ class PublicVocabularyTest(unittest.TestCase):
         self.assertEqual(len(findings), 1)
         self.assertIn("checked nothing", findings[0])
 
+    def test_a_worktree_shaped_root_still_scans_its_own_tree(self):
+        # Given `root` itself sitting at `.claude/worktrees/agent-a1/` — an agent's own checkout,
+        # which is what `run()` is actually invoked against from inside one. Its absolute path
+        # carries the exclusion substring too, so a naive absolute-path test excludes everything.
+        body = (
+            "public final class com/landofoz/musicmeta/TrackProfile {\n"
+            "\tpublic final fun getRecordingId ()Ljava/lang/String;\n"
+            "}\n"
+        )
+        nested = "public final class com/landofoz/musicmeta/RecordingKind {\n}\n"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / ".claude" / "worktrees" / "agent-a1"
+            self.write(root, DUMP, body)
+            self.write(root, f".claude/worktrees/agent-nested/{DUMP}", nested)
+            # When the vocabulary check runs
+            findings = run(root)
+        # Then the baseline at the scanned root is still reported, and only the doubly-nested
+        # worktree — another agent's checkout inside this one — is excluded
+        self.assertEqual(len(findings), 1)
+        self.assertIn("getRecordingId", findings[0])
+
 
 if __name__ == "__main__":
     sys.exit(0 if unittest.main(exit=False).result.wasSuccessful() else 1)

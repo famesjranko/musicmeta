@@ -50,10 +50,19 @@ CONFLICT_FIX = "unresolved merge-conflict marker. Finish the merge before commit
 # Agent worktrees are full checkouts of this repo on other branches, so every scan below reaches
 # them and judges another change's content: measured at 111 `api/*.api` against 3, and 15889 text
 # files against 800. A violation found there fails this run with a path outside the diff under
-# test. Narrower than `check_pitfall_citations.py`'s blanket `/.claude/`, deliberately — the two
-# tracked files under `.claude/` (`settings.json` and `commands/`) ship with the repo and are the
-# scan's business.
-AGENT_WORKTREES = "/.claude/worktrees/"
+# test. The two tracked files under `.claude/` (`settings.json` and `commands/`) ship with the
+# repo and are the scan's business.
+#
+# Tested against the path *relative to `root`*, not the absolute path: `root` itself can be a
+# worktree (`<repo>/.claude/worktrees/agent-*/`), and its absolute path then contains this
+# substring too, excluding every file the scan was asked to read instead of only the nested ones.
+AGENT_WORKTREES = ".claude/worktrees/"
+
+
+def is_agent_worktree(path: Path, root: Path) -> bool:
+    """Whether `path` sits under an agent worktree nested inside `root`."""
+    return AGENT_WORKTREES in path.relative_to(root).as_posix()
+
 
 # `AGENTS.md` is a symlink to `CLAUDE.md` — the same bytes under two names. Following it double-
 # reports every finding in that file. Skipping symlinks costs nothing: the target is either inside
@@ -114,7 +123,7 @@ def tracked_text_files(root: Path) -> list[Path]:
         and not path.is_symlink()
         and "/build/" not in path.as_posix()
         and "/.git/" not in path.as_posix()
-        and AGENT_WORKTREES not in path.as_posix()
+        and not is_agent_worktree(path, root)
     )
 
 
@@ -129,7 +138,7 @@ def api_dumps(root: Path) -> list[Path]:
     return sorted(
         path
         for path in root.rglob("api/*.api")
-        if "/build/" not in path.as_posix() and AGENT_WORKTREES not in path.as_posix()
+        if "/build/" not in path.as_posix() and not is_agent_worktree(path, root)
     )
 
 
