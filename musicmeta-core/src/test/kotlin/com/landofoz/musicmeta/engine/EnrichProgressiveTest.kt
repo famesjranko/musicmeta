@@ -297,6 +297,37 @@ class EnrichProgressiveTest {
             )
         }
 
+    @Test fun `a timeout that fires before identity resolution ever settles reports FAILED, never RESOLVING`() =
+        runTest {
+            // Given - identity resolution never finishes inside the deadline, and no cache hit exists
+            // to settle first, so the deadline fires while session.identityHolder.current is still
+            // its initial RESOLVING value
+            val liveType = EnrichmentType.GENRE
+            val idProvider = object : FakeProvider(
+                id = "mb", isIdentityProvider = true,
+                capabilities = listOf(ProviderCapability(liveType, 100)),
+            ) {
+                override suspend fun resolveIdentity(request: EnrichmentRequest): EnrichmentResult {
+                    kotlinx.coroutines.delay(10_000)
+                    return EnrichmentResult.Success(liveType, EnrichmentData.Metadata(genres = listOf("rock")), "mb", 0.95f)
+                }
+            }
+            val engine = DefaultEnrichmentEngine(
+                ProviderRegistry(listOf(idProvider, providerFor(liveType))), cache,
+                EnrichmentConfig(enableIdentityResolution = true, enrichTimeoutMs = 50),
+            )
+
+            // When - collecting the whole stream, and calling enrich() itself the same way
+            val emissions = engine.enrichProgressive(req, setOf(liveType)).toList()
+            val enrichResult = engine.enrich(req, setOf(liveType))
+
+            // Then - the terminal emission and enrich()'s own return both report FAILED, the
+            // documented gap-filler for "a timeout that fired before identity resolution ran" —
+            // never RESOLVING, which would otherwise leak the placeholder past the deadline
+            assertEquals(CanonicalStatus.FAILED, emissions.last().identity.status)
+            assertEquals(CanonicalStatus.FAILED, enrichResult.identity.status)
+        }
+
     // --- Review probe (stage1-review): what form does a composite's dependency arrive in? ---
 
     @Test fun `a composite's failed dependency arrives at the synthesizer stale-substituted, not raw Error`() =
