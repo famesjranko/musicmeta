@@ -75,10 +75,8 @@ running against an open engine.
 not run, not that filtering was turned off.** A recommendation type still reaches the caller when
 its `CatalogProvider` throws — the fetched data survives unranked rather than being lost — and this
 flag is how that result says so. It is always `false` under `CatalogFilterMode.UNFILTERED`, which is
-a deliberate configuration and not a degradation. It is call-scoped: every serve, live or a cache
-hit, normalizes it to `false` before this call's own catalog check runs or is skipped, so it
-reports whether *this* call could rank the result, never whether the value was ranked when it
-was written — no shipped cache persists it.
+a deliberate configuration and not a degradation. See `EnrichmentResult.Success.isCatalogDegraded`'s
+KDoc for why this is call-scoped, not a stored fact.
 
 **Discogs `master_id` is optional.** A Discogs release may have no master, so the album-level
 identifier is absent rather than derivable — treat it as a miss, not as a release id to reuse.

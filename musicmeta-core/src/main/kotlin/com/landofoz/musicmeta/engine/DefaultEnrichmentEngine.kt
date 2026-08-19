@@ -120,11 +120,11 @@ internal class DefaultEnrichmentEngine(
     // in-flight run's key attaches to it instead of starting a second fan-out; forceRefresh is part
     // of that key, not a filter on top of it, so a forced call never attaches to an unforced run's
     // data and vice versa — see progressiveDedupeKey.
-    // SupervisorJob isolates one detached run's failure from a sibling; the handler is the
-    // backstop for the rare case that failure is genuinely uncaught (nothing deeper in the chain
-    // already caught and logged it) and no collector is left attached to relay it anywhere —
-    // without this it would otherwise reach the platform's default uncaught-exception handler
-    // instead of this engine's own logger. Untested: see VERIFICATION.md "Known gaps".
+    // The handler is the backstop for the rare case a detached run's failure is genuinely uncaught
+    // (nothing deeper in the chain already caught and logged it) and no collector is left attached
+    // to relay it anywhere — without this it would otherwise reach the platform's default
+    // uncaught-exception handler instead of this engine's own logger. Untested: see
+    // VERIFICATION.md "Known gaps".
     private val detachedScope = CoroutineScope(
         SupervisorJob() + detachedDispatcher +
             CoroutineExceptionHandler { _, throwable ->
@@ -262,9 +262,9 @@ internal class DefaultEnrichmentEngine(
      * Attaches to an in-flight detached run for this key, or starts one, via [progressiveRuns].
      * Only the call that actually starts a new run performs [forceRefresh]'s invalidate pass — a
      * call that is about to attach to an existing run must not invalidate, or its invalidation can
-     * race that run's own write-back and wipe data it just fetched (the forced arm of the
-     * cancellation A/B's known gap) — [ProgressiveRunRegistry.attachOrStart]'s own contract is what
-     * guarantees only the starting call's body runs.
+     * race that run's own write-back and wipe data it just fetched —
+     * [ProgressiveRunRegistry.attachOrStart]'s own contract is what guarantees only the starting
+     * call's body runs.
      */
     private suspend fun attachOrStartDetachedRun(
         request: EnrichmentRequest,

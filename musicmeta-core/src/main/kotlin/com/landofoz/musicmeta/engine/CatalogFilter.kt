@@ -129,12 +129,11 @@ internal suspend fun applyCatalogFilteringToType(
     catalogFilterMode: CatalogFilterMode,
     logger: EnrichmentLogger,
 ): EnrichmentResult {
-    // isCatalogDegraded is call-scoped: every serve normalizes it to false right here, before any
-    // branch below — including an early return (no CatalogProvider configured, UNFILTERED mode, a
-    // non-recommendation type, no queries) — gets a chance to hand back a stale true this call
-    // never earned, e.g. from a cache hit a differently-configured or since-recovered engine wrote.
+    // Normalized to false right here, before any branch below (no CatalogProvider configured,
+    // UNFILTERED mode, a non-recommendation type, no queries) can return early with a stale true.
     // Only the guarded catch below, when *this* call's own checkAvailability throws, may set it
-    // back to true.
+    // back to true. See EnrichmentResult.Success.isCatalogDegraded's KDoc for why this is
+    // call-scoped, not a stored fact.
     val normalized = if (result is EnrichmentResult.Success) result.copy(isCatalogDegraded = false) else result
 
     val provider = catalogProvider ?: return normalized

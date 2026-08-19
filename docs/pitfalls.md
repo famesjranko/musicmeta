@@ -215,27 +215,11 @@ a suspending call into consumer code with no bound on what it does. The fix is a
 bigger pool: `mutex` now guards only the non-suspending registration decision (read `closed`, check
 `runs`, insert, launch) — everything that can suspend into consumer code, including `onClosed`, runs
 after `withLock` returns. A shared mutex must never wrap a call whose suspension point you do not
-control.
-
-## 22. `runBlocking` in a lifecycle method can wedge a limited-parallelism dispatcher's only free thread
-
-```kotlin
-// WRONG — if the mutex this blocks on is held by a suspended coroutine on the same bounded
-// dispatcher, and that dispatcher has no free thread left, this never returns
-override fun close() {
-    runBlocking { progressiveRuns.markClosed() }
-}
-```
-
-`close()` is not a suspend function — `EnrichmentEngine`'s interface fixes that — so blocking is the
-only way to wait on `markClosed`'s mutex from it. That is safe only because `markClosed`'s own
-critical section is non-suspending (§21): `runBlocking` here waits, at most, for whichever coroutine
-currently holds the lock to finish a few non-suspending lines and release it, never for a suspending
-call to complete. Before §21's fix, the same mutex's critical section could suspend into consumer
-code; had `close()`'s `runBlocking` landed on the same bounded dispatcher as that suspended holder,
-with no thread left free to resume it, the two would wait on each other forever. `runBlocking` inside
-a lifecycle method is only as safe as the shortest possible bound on whatever it blocks on — never
-add a suspending call to that critical section without re-checking this holds.
+control. This is also why `close()` — not a suspend function, so it can only wait on `markClosed`'s
+mutex via `runBlocking` — is safe today: with the critical section non-suspending, `runBlocking`
+waits, at most, for a few non-suspending lines to finish, never for a suspending call to complete.
+Re-check that holds before ever adding a suspending call back to that critical section, or a
+same-dispatcher `runBlocking` caller can wedge forever with no thread left to resume the holder.
 
 ## Area — Provider data and matching
 
@@ -408,7 +392,7 @@ return Success(type, data, providerId, confidence,
 
 `IdentifierRequirement.NONE` means MusicBrainz canonical resolution is optional, not that the
 provider never has an exact-id route of its own. A capability, a chain walk, and the engine's own
-`stampProvenance` fallback can all see only what running *required* — never what a specific call
+`stampProvenanceOne` fallback can all see only what running *required* — never what a specific call
 *happened to use* when the requirement permitted either. Only the branch itself knows which one
 ran, so only the branch itself can report it truthfully; leaving `provenance` unset here is not
 neutral; it hands the engine's canonical-status fallback a case it cannot tell apart from a genuine

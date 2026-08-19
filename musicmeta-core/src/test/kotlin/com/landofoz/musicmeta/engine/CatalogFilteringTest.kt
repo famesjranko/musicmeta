@@ -404,7 +404,7 @@ class CatalogFilteringTest {
             )
         }
 
-    @Test fun `a cache hit under a reading engine configured UNFILTERED still replays a stale isCatalogDegraded from the writing engine`() =
+    @Test fun `a cache hit under a reading engine configured UNFILTERED normalizes isCatalogDegraded to false`() =
         runTest {
             // Given - a shared cache, first written by a call whose CatalogProvider threw
             val cache = FakeEnrichmentCache()
@@ -422,11 +422,9 @@ class CatalogFilteringTest {
             val second = engine(provider, throwingCatalog, CatalogFilterMode.UNFILTERED, cache = cache)
                 .enrich(req, setOf(EnrichmentType.SIMILAR_ARTISTS))
 
-            // Then - the KDoc promises isCatalogDegraded is "Never true when the mode is UNFILTERED —
-            // that is a deliberate configuration, not a degradation." The early return in
-            // applyCatalogFilteringToType (mode == UNFILTERED -> return result) never clears the flag
-            // it inherited from the cached object, so a reading engine configured UNFILTERED against
-            // a cache a differently-configured engine wrote to sees isCatalogDegraded = true here.
+            // Then - applyCatalogFilteringToType normalizes isCatalogDegraded to false at entry, before
+            // its UNFILTERED early return, so a reading engine configured UNFILTERED never replays a
+            // stale true from a cache entry a differently-configured engine wrote as degraded.
             val cachedSuccess = second.raw[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
             assertFalse(
                 "UNFILTERED must never self-report as degraded, even reading a cache entry a " +

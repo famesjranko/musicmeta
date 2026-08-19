@@ -55,10 +55,11 @@ in neither `raw` nor that difference does not exist (only possible if it was nev
 present in `raw` has settled, whether as `Success`, `NotFound`, `Error` or `RateLimited`.
 
 **Only the last emission ever derives as empty.** An intermediate emission where every requested type
-already has a `raw` entry does not happen — the engine holds back a type's own emission until after
-post-processing (catalog filtering, provenance stamping, stale-cache resolution) has run for it, so a
-collector that stops early on the first "nothing pending" read is reading the real terminal snapshot,
-not a look-alike.
+already has a `raw` entry does not happen — the settlement that would complete the requested-types
+set is suppressed entirely, and the terminal snapshot, built after post-processing (catalog
+filtering, provenance stamping, stale-cache resolution) has run for every type, takes that
+emission's place instead. So a collector that stops early on the first "nothing pending" read is
+reading the real terminal snapshot, not a look-alike.
 
 ## What can still change mid-stream
 
@@ -78,7 +79,8 @@ Two values exist specifically to be read mid-stream:
   `CatalogProvider` threw and that type reached you unranked rather than filtered. This can be true
   on the terminal emission too, not just an intermediate one — it is not a "still settling" signal,
   it is a "settled, but filtering failed" signal. See [configuration.md](configuration.md) for
-  `CatalogProvider`.
+  `CatalogProvider`, and `EnrichmentResult.Success.isCatalogDegraded`'s KDoc for why this is
+  call-scoped, not a stored fact.
 
 ```kotlin
 engine.enrichProgressive(
@@ -151,7 +153,10 @@ flight is abandoned rather than waited for, and — like a timed-out run — wri
 still-attached collector, or a call issued after `close()` that this engine had never seen before, is
 released with every requested type present: types that had already settled keep their real result,
 and every type that had not becomes `EnrichmentResult.Error` with `ErrorKind.ENGINE_CLOSED` — the same
-per-type completeness `enrich()` already gives you on a timeout, just a different `ErrorKind`.
+per-type completeness `enrich()` already gives you on a timeout, just a different `ErrorKind`. A fully
+cached call never reaches this at all: it returns its cache hit and succeeds normally even after
+`close()`, without ever registering a detached run — so the check below assumes `ARTIST_BIO` for
+this artist was not already cached.
 
 ```kotlin
 val afterClose = engine.enrich(EnrichmentRequest.forArtist("Portishead"), setOf(EnrichmentType.ARTIST_BIO))

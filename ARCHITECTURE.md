@@ -154,9 +154,10 @@ gained `close()`: releasing `detachedScope` (and abandoning, never waiting for, 
 running on it) is the one thing nothing else does for you. A consumer that never calls `close()`
 costs at most one shared dispatcher and whatever distinct request/types/`forceRefresh` runs are
 genuinely in flight — bounded, but real, and owned by the consumer holding the engine, not by this
-library. Two calls with the same request, requested types and `forceRefresh` coalesce onto one
-in-flight run rather than fanning out twice; two calls that differ in any of those three never share
-one, even if their *uncached* type sets happen to coincide.
+library. The dedupe key is built per type from the resolved entity, not the raw request, so two
+textually different requests that resolve to the same entity still coalesce onto one in-flight run;
+only a difference in requested types or `forceRefresh` ever starts a second one, even when the
+*uncached* type sets happen to coincide.
 
 ## One `search()` call
 ```mermaid

@@ -89,9 +89,10 @@ interface EnrichmentEngine {
      * concurrently with everything else and is never backdated once it lands — and a settled
      * recommendation-type [EnrichmentResult.Success] can carry
      * [EnrichmentResult.Success.isCatalogDegraded] set, meaning this call's own [CatalogProvider]
-     * threw and that type reached you unranked. Neither is ever seen on [enrich]'s return or on
-     * this stream's terminal emission for [CanonicalStatus.RESOLVING]'s case — it always resolves
-     * to a real status by then — but `isCatalogDegraded` can be `true` on the terminal emission too.
+     * threw and that type reached you unranked. [CanonicalStatus.RESOLVING] is never seen on
+     * [enrich]'s return or on this stream's terminal emission — it always resolves to a real status
+     * by then. `isCatalogDegraded`, in contrast, can be `true` on the terminal emission too: it is
+     * not a "still settling" signal, it is a "settled, but filtering failed" signal.
      *
      * [enrich] is `enrichProgressive(...).last()` against one shared resolution path, so the
      * terminal emission here and [enrich]'s return are always identical, including on a timeout.

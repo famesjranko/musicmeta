@@ -358,7 +358,7 @@ class EnrichProgressiveTest {
             assertEquals(CanonicalStatus.FAILED, enrichResult.identity.status)
         }
 
-    // --- Review probe (stage1-review): what form does a composite's dependency arrive in? ---
+    // --- What form does a composite's dependency arrive in under STALE_IF_ERROR? ---
 
     @Test fun `a composite's failed dependency arrives at the synthesizer stale-substituted, not raw Error`() =
         runTest {

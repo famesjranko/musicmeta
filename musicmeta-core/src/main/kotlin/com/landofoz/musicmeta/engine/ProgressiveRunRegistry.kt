@@ -73,7 +73,8 @@ internal class ProgressiveRunRegistry(private val scope: CoroutineScope) {
      * reaches consumer code ([DefaultEnrichmentEngine.applyStaleCacheToType] calls
      * [com.landofoz.musicmeta.cache.EnrichmentCache.getIncludingExpired] under `STALE_IF_ERROR`),
      * a genuine, unbounded suspension point that must never run while a thread-bound caller of
-     * [markClosed] might be waiting on this same mutex to become free — see [close]'s KDoc for why
+     * [markClosed] might be waiting on this same mutex to become free — see
+     * [DefaultEnrichmentEngine.close]'s KDoc for why
      * that matters. Mirrors [complete], which evicts from [runs] under the lock and completes/emits
      * outside it for the same reason.
      */
