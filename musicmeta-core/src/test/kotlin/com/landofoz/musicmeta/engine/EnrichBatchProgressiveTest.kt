@@ -7,6 +7,7 @@ import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
+import com.landofoz.musicmeta.LookupProvenance
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.testutil.FakeEnrichmentCache
 import com.landofoz.musicmeta.testutil.FakeProvider
@@ -52,6 +53,15 @@ class EnrichBatchProgressiveTest {
         provider = provider,
         confidence = 0.9f,
     )
+
+    /**
+     * [artSuccess] as the engine actually settles it for every live (non-cache-hit) fetch in this
+     * file: `config.enableIdentityResolution == false` and a [FakeProvider] declares no identifier
+     * requirement, so [com.landofoz.musicmeta.engine.observedProvenance] always lands on
+     * [LookupProvenance.FUZZY_NAME] here. [artSuccess] itself stays provenance-`null` — it is also
+     * used as a raw [FakeProvider.givenResult] value and a raw cache-`put` literal, both pre-stamp.
+     */
+    private fun settledArtSuccess(provider: String) = artSuccess(provider).copy(provenance = LookupProvenance.FUZZY_NAME)
 
     private fun engine(vararg providers: FakeProvider) =
         DefaultEnrichmentEngine(ProviderRegistry(providers.toList()), cache, config)
@@ -104,26 +114,43 @@ class EnrichBatchProgressiveTest {
         val last2 = emissions.last { (request, _) -> request == req2 }.second
         assertTrue("req1's terminal emission must derive complete", (types - last1.raw.keys).isEmpty())
         assertTrue("req2's terminal emission must derive complete", (types - last2.raw.keys).isEmpty())
-        assertEquals("art-provider", (last1.raw[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success).provider)
-        assertEquals("art-provider", (last2.raw[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success).provider)
+        assertEquals(settledArtSuccess("art-provider"), last1.raw[EnrichmentType.ALBUM_ART])
+        assertEquals(settledArtSuccess("art-provider"), last2.raw[EnrichmentType.ALBUM_ART])
     }
 
     @Test fun `enrichBatchProgressive's terminal emission for a request equals enrichBatch's entry for it`() =
         runTest {
-            // Given - one request, a provider answering it, and two freshly-built identical engines
-            // so enrichBatch's own cache write-back cannot leak into the second call
+            // Given - one request, a provider answering it, and two freshly-built engines with
+            // their own independent caches. engine(...) closes over this class's single `cache`
+            // field (shared on purpose by the other tests here), so it cannot be reused for this
+            // one: it would turn the second call into a full cache hit off the first call's
+            // write-back rather than a genuine second live fetch, which is what this test claims
+            // to compare.
             val req = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
-            fun freshProvider() = FakeProvider(
-                id = "art-provider", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100)),
-            ).also { it.givenResult(EnrichmentType.ALBUM_ART, artSuccess("art-provider")) }
+            fun freshEngine() = DefaultEnrichmentEngine(
+                ProviderRegistry(
+                    listOf(
+                        FakeProvider(
+                            id = "art-provider",
+                            capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100)),
+                        ).also { it.givenResult(EnrichmentType.ALBUM_ART, artSuccess("art-provider")) },
+                    ),
+                ),
+                FakeEnrichmentCache(),
+                config,
+            )
 
             // When - enriching through enrichBatch and through enrichBatchProgressive's terminal
-            val viaBatch = engine(freshProvider()).enrichBatch(listOf(req), types).toList().single().second
-            val viaBatchProgressive =
-                engine(freshProvider()).enrichBatchProgressive(listOf(req), types).toList().last().second
+            val viaBatch = freshEngine().enrichBatch(listOf(req), types).toList().single().second
+            val viaBatchProgressive = freshEngine().enrichBatchProgressive(listOf(req), types).toList().last().second
 
-            // Then - both report the identical settled value for this request
-            assertEquals(viaBatch.raw[EnrichmentType.ALBUM_ART], viaBatchProgressive.raw[EnrichmentType.ALBUM_ART])
+            // Then - both are genuine live fetches (independent caches, so neither can be served
+            // by the other's write-back) and report the identical settled snapshot for this
+            // request, full object equality: enrich() is enrichProgressive(...).last() against one
+            // shared resolution path, so enrichBatch's per-item enrich() call and
+            // enrichBatchProgressive's per-item terminal snapshot never had a reason to diverge
+            // once the fixture actually isolates them
+            assertEquals(viaBatch, viaBatchProgressive)
         }
 
     @Test fun `enrichBatchProgressive processes requests one at a time, like enrichBatch`() =
@@ -180,8 +207,9 @@ class EnrichBatchProgressiveTest {
         val last = engine(provider).enrichBatchProgressive(listOf(req), types, forceRefresh = true)
             .toList().last().second
 
-        // Then - the cache was bypassed: the provider was asked and its fresh data won
-        assertEquals("fresh-provider", (last.raw[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success).provider)
+        // Then - the cache was bypassed: the provider was asked and its fresh data won, full
+        // equality including the pipeline's own provenance stamp
+        assertEquals(settledArtSuccess("fresh-provider"), last.raw[EnrichmentType.ALBUM_ART])
         assertTrue(provider.enrichCalls.isNotEmpty())
     }
 
