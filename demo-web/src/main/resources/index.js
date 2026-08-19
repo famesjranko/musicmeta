@@ -304,13 +304,16 @@ async function runQueryWhole(params, wasForceRefresh) {
 // (or a toggle back to the single-shot path) bumps the generation and every older stream's events
 // are dropped on arrival, not merely after they render.
 let streamGeneration = 0;
+// { source, abandon } rather than the bare EventSource: `.close()` fires no event, so closing a
+// superseded stream directly would strand its runQueryStreaming promise — and the closure holding
+// its EventSource and handlers — unsettled until the page unloads. `abandon` is that stream's own
+// terminal path, so every stream settles exactly once however it ends.
 let liveStream = null;
 
 function closeLiveStream() {
-  if (liveStream) {
-    liveStream.close();
-    liveStream = null;
-  }
+  const stream = liveStream;
+  liveStream = null;
+  if (stream) stream.abandon();
 }
 
 /**
@@ -329,7 +332,6 @@ function runQueryStreaming(params, wasForceRefresh) {
 
   return new Promise((resolve, reject) => {
     const source = new EventSource('/api/enrich-stream?' + params.toString());
-    liveStream = source;
     let painted = 0;
     let lastSequence = 0;
 
@@ -338,13 +340,15 @@ function runQueryStreaming(params, wasForceRefresh) {
     // is actually waiting on.
     const finish = (fn) => {
       source.close();
-      if (liveStream === source) liveStream = null;
+      if (liveStream && liveStream.source === source) liveStream = null;
       if (generation !== streamGeneration) {
         resolve(); // a newer run owns the page — end quietly rather than paint or report over it
         return;
       }
       fn();
     };
+
+    liveStream = { source, abandon: () => finish(resolve) };
 
     const paint = (event) => {
       if (generation !== streamGeneration) return;
