@@ -38,7 +38,16 @@ from typing import NamedTuple
 
 # Kept in step with `check_conventions.py`, which excludes the same tree for the same reason: a
 # worktree is another branch's checkout, and its surface is that branch's PR to answer for.
-AGENT_WORKTREES = "/.claude/worktrees/"
+#
+# Tested against the path *relative to `root`*, not the absolute path: `root` itself can be a
+# worktree (`<repo>/.claude/worktrees/agent-*/`), and its absolute path then contains this
+# substring too, excluding every file the scan was asked to read instead of only the nested ones.
+AGENT_WORKTREES = ".claude/worktrees/"
+
+
+def is_agent_worktree(path: Path, root: Path) -> bool:
+    """Whether `path` sits under an agent worktree nested inside `root`."""
+    return AGENT_WORKTREES in path.relative_to(root).as_posix()
 
 
 class Borrowed(NamedTuple):
@@ -101,7 +110,7 @@ def api_dumps(root: Path) -> list[Path]:
     return sorted(
         path
         for path in root.rglob("api/*.api")
-        if "/build/" not in path.as_posix() and AGENT_WORKTREES not in path.as_posix()
+        if "/build/" not in path.as_posix() and not is_agent_worktree(path, root)
     )
 
 
