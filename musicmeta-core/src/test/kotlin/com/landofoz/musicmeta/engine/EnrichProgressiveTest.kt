@@ -11,6 +11,7 @@ import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.SimilarArtist
+import com.landofoz.musicmeta.cache.CacheMode
 import com.landofoz.musicmeta.http.AuthException
 import com.landofoz.musicmeta.testutil.FakeEnrichmentCache
 import com.landofoz.musicmeta.testutil.FakeProvider
@@ -254,6 +255,52 @@ class EnrichProgressiveTest {
         val first = withArtists.first().raw[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
         assertEquals(1, (first.data as EnrichmentData.SimilarArtists).artists.size)
     }
+
+    // --- Review probe (stage1-review): what form does a composite's dependency arrive in? ---
+
+    @Test fun `a composite's failed dependency arrives at the synthesizer stale-substituted, not raw Error`() =
+        runTest {
+            // Given - STALE_IF_ERROR, a dependency whose provider fails but has a stale cache entry,
+            // and a synthesizer that captures exactly what it was handed for that dependency
+            val bio = EnrichmentType.ARTIST_BIO
+            val timeline = EnrichmentType.ARTIST_TIMELINE
+            val p = FakeProvider(id = "p", capabilities = listOf(ProviderCapability(bio, 100)))
+                .also { it.givenResult(bio, EnrichmentResult.Error(bio, "p", "API down")) }
+            val key = DefaultEnrichmentEngine.entityKeyFor(req, bio)
+            val stale = EnrichmentResult.Success(bio, EnrichmentData.Metadata(genres = listOf("rock")), "stale", 0.9f)
+            cache.expiredStore["$key:$bio"] = stale
+            var handedToSynthesizer: EnrichmentResult? = null
+            val capturing = object : CompositeSynthesizer {
+                override val type = timeline
+                override val dependencies = setOf(bio)
+                override fun synthesize(
+                    resolved: Map<EnrichmentType, EnrichmentResult>,
+                    identityResult: EnrichmentResult?,
+                    request: EnrichmentRequest,
+                ): EnrichmentResult {
+                    handedToSynthesizer = resolved[bio]
+                    return EnrichmentResult.NotFound(timeline, "test")
+                }
+            }
+            val engine = DefaultEnrichmentEngine(
+                ProviderRegistry(listOf(p)), cache,
+                EnrichmentConfig(enableIdentityResolution = false, cacheMode = CacheMode.STALE_IF_ERROR),
+                synthesizers = listOf(capturing),
+            )
+
+            // When - enriching for the composite; its dependency is not itself requested
+            engine.enrichProgressive(req, setOf(timeline)).last()
+
+            // Then - the synthesizer sees the finalized (stale-substituted) Success, not the raw
+            // Error the provider returned. This is the per-type finalize-before-await ordering this
+            // PR introduces (main ran stale-cache substitution only after composite synthesis, so a
+            // composite there saw the raw Error) — CompositeSynthesizer's KDoc does not say which
+            // form "resolved" carries, so this pins current behaviour rather than a documented
+            // contract.
+            val handed = handedToSynthesizer
+            assertTrue("expected the stale Success, got $handed", handed is EnrichmentResult.Success)
+            assertEquals(stale.data, (handed as EnrichmentResult.Success).data)
+        }
 
     // --- Timeout mid-stream, through the streamed path ---
 
