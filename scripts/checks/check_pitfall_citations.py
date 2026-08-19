@@ -32,7 +32,17 @@ SUFFIXES = (".md", ".yml", ".yaml", ".kt", ".kts", ".py", ".sh", ".toml", ".json
 # be numbered differently — a citation there resolves against that branch's doc, not this one's.
 # Scoped to `worktrees/` rather than all of `.claude/`: `commands/` and `settings.json` are
 # committed wiring, and a citation in them orphans exactly like one anywhere else.
-AGENT_WORKTREES = "/.claude/worktrees/"
+#
+# Tested against the path *relative to `root`*, not the absolute path: `root` itself can be a
+# worktree (`<repo>/.claude/worktrees/agent-*/`), and its absolute path then contains this
+# substring too, excluding every file the scan was asked to read instead of only the nested ones.
+AGENT_WORKTREES = ".claude/worktrees/"
+
+
+def is_agent_worktree(path: Path, root: Path) -> bool:
+    """Whether `path` sits under an agent worktree nested inside `root`."""
+    return AGENT_WORKTREES in path.relative_to(root).as_posix()
+
 
 # `AGENTS.md` is a symlink to `CLAUDE.md`, so following it reads the same bytes twice and reports
 # any orphan in that file twice. Skipping symlinks costs nothing: the target is either inside the
@@ -57,7 +67,7 @@ def citing_files(root: Path) -> list[Path]:
         and not path.is_symlink()
         and "/build/" not in path.as_posix()
         and "/.git/" not in path.as_posix()
-        and AGENT_WORKTREES not in path.as_posix()
+        and not is_agent_worktree(path, root)
     )
 
 

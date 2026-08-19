@@ -116,6 +116,27 @@ class PitfallCitationsTest(unittest.TestCase):
         self.assertIn("CLAUDE.md", findings[0])
         self.assertNotIn("AGENTS.md", findings[0])
 
+    def test_a_worktree_shaped_root_still_scans_its_own_tree(self):
+        # Given `root` itself sitting at `.claude/worktrees/agent-a1/` — an agent's own checkout,
+        # which is what `run()` is actually invoked against from inside one. Its absolute path
+        # carries the exclusion substring too, so a naive absolute-path test excludes everything.
+        orphan = "// see " + DOC + " " + SECTION + "9\n"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / ".claude" / "worktrees" / "agent-a1"
+            self.write(root, DOC, HEADINGS)
+            self.write(root, "musicmeta-core/src/main/kotlin/A.kt", orphan)
+            self.write(
+                root,
+                ".claude/worktrees/agent-nested/musicmeta-core/src/main/kotlin/B.kt",
+                orphan,
+            )
+            # When the check runs
+            findings = run(root)
+        # Then the orphan at the scanned root is still reported, and only the doubly-nested
+        # worktree — another agent's checkout inside this one — is excluded
+        self.assertEqual(len(findings), 1)
+        self.assertIn("A.kt", findings[0])
+
 
 if __name__ == "__main__":
     unittest.main()
