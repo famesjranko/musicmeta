@@ -55,22 +55,18 @@ internal fun buildIdentityResolution(
 }
 
 /**
- * Stamps [com.landofoz.musicmeta.LookupProvenance] on every freshly resolved [EnrichmentResult.Success]
- * that did not already report its own route. [executions] carries the [ChainExecution] each type's
+ * Stamps [com.landofoz.musicmeta.LookupProvenance] on a freshly resolved [EnrichmentResult.Success]
+ * that did not already report its own route. [execution] carries the [ChainExecution] this type's
  * chain walk produced — the provider execution evidence [observedProvenance] classifies from, rather
- * than which identifiers merely happen to be present on [request].
+ * than which identifiers merely happen to be present on the request.
  */
-internal fun stampProvenance(
-    results: MutableMap<EnrichmentType, EnrichmentResult>,
+internal fun stampProvenanceOne(
+    result: EnrichmentResult,
+    execution: ChainExecution?,
     canonicalStatus: CanonicalStatus,
-    executions: Map<EnrichmentType, ChainExecution>,
-) {
-    for ((type, result) in results) {
-        if (result is EnrichmentResult.Success && result.provenance == null) {
-            val provenance = observedProvenance(executions[type]?.winningRequirement, canonicalStatus)
-            results[type] = result.copy(provenance = provenance)
-        }
-    }
+): EnrichmentResult {
+    if (result !is EnrichmentResult.Success || result.provenance != null) return result
+    return result.copy(provenance = observedProvenance(execution?.winningRequirement, canonicalStatus))
 }
 
 /**

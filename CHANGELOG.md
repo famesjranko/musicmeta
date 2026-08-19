@@ -30,7 +30,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Breaking Changes
-- A throwing `CatalogProvider.checkAvailability` no longer escapes `enrich()`, reversing (#55): that type degrades to unfiltered results and the run caches, so catch your own timeout inside it
+- A throwing `CatalogProvider.checkAvailability` no longer escapes `enrich()`: that type degrades to unfiltered results and the run caches, so catch your own timeout inside it
+- `EnrichmentEngine` gains `enrichProgressive`, a defaulted method: a custom implementation built against an older `.jar` throws `AbstractMethodError` on first call until recompiled
+- `EnrichmentEngine` gains `close()`, a defaulted method: a custom implementation built against an older `.jar` throws `AbstractMethodError` on first call until recompiled
+- `EnrichmentEngine` gains `enrichBatchProgressive`, a defaulted method: a custom implementation built against an older `.jar` throws `AbstractMethodError` on first call until recompiled
+- `CanonicalStatus` gains `RESOLVING`: an exhaustive `when` needs a branch; only a pre-terminal `enrichProgressive` emission can carry it, never `enrich()`'s return or a stream's terminal emission
+- `ErrorKind` gains `ENGINE_CLOSED`: an exhaustive `when` needs a branch; only reachable when the engine was `close()`d before a requested type settled
+- `EnrichmentResult.Success` gains `isCatalogDegraded` (appended last, defaulted): recompile; `true` when a recommendation type's `CatalogProvider` threw and the data reached you unranked instead
+- `CompositeSynthesizer.synthesize`'s `resolved` deps now arrive finalized: `STALE_IF_ERROR` hands a failed-but-stale dependency as `Success`, not `Error` — can't tell genuine failure from stale
+- `CatalogProvider.checkAvailability` is now called concurrently, from multiple coroutines at once, instead of once per call in sequence: a stateful implementation must be thread-safe
+- Cancelling `enrich()`'s calling coroutine is now complete-and-cache, not abort-and-forfeit: the fan-out keeps running and still writes back, since it now shares `enrichProgressive`'s resolution path
+
+### Added
+- `EnrichmentEngine.enrichProgressive`: `enrich()`'s cumulative-snapshot streaming counterpart — each emission is everything settled so far; derive what's pending as `requestedTypes - raw.keys`
+- `enrichProgressive`'s cancellation is complete-and-cache: a cancelled collector detaches, the fan-out keeps running to completion and still writes back, bounded to one run per distinct request key
+- `EnrichmentEngine.close()` (defaulted no-op): releases the scope backing `enrichProgressive`'s detachment; call it once done with an engine to abandon a still-running detached fan-out
+- A `close()`d engine stamps every unsettled requested type `Error(ErrorKind.ENGINE_CLOSED)`, including for a request key it had never seen before `close()`
+- `EnrichmentEngine.enrichBatchProgressive`: `enrichBatch`'s cumulative-snapshot counterpart, composed from `enrichProgressive` per request in the same sequential order
 
 ## [0.12.0] - 2026-08-18
 

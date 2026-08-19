@@ -16,7 +16,7 @@ import org.junit.Test
 /**
  * A type identity resolution answers directly from its own payload ([EnrichmentType.GENRE] and its
  * [IDENTITY_TYPES] siblings) skips the provider chain entirely, so it earns no [ChainExecution] for
- * [stampProvenance] to read [ChainExecution.winningRequirement] from. Its provenance must still be
+ * [stampProvenanceOne] to read [ChainExecution.winningRequirement] from. Its provenance must still be
  * the route identity resolution actually observed — never a blanket `EXACT_NAME`/`FUZZY_NAME` guess
  * from [CanonicalStatus] alone.
  */

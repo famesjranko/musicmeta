@@ -83,6 +83,9 @@ when (results.identity.status) {
     CanonicalStatus.NOT_ATTEMPTED_NO_PROVIDER -> {
         println("Genres: ${results.genres()}")
     }
+    // enrich()'s return never carries RESOLVING — only a pre-terminal enrichProgressive
+    // emission can. Listed to keep the when exhaustive.
+    CanonicalStatus.RESOLVING -> Unit
     CanonicalStatus.AMBIGUOUS -> {
         val suggestions = results.identity.suggestions
         suggestions.forEach { candidate ->

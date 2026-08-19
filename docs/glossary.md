@@ -56,6 +56,28 @@ name"; `how-it-works.md` has the worked path.
 The release-group is the album; a release is one pressing of it. `ReleaseEditions` is the only
 public type about the second, and every other public use of the word means the first.
 
+**`CanonicalStatus.RESOLVING` means identity resolution is still running, not that it failed.**
+It appears only on a pre-terminal `enrichProgressive` emission — a type already served from cache
+can settle and be sent before the same call's canonical identity lookup returns. `enrich()`'s
+return and every stream's terminal emission always carry a settled status instead; a consumer that
+only calls `enrich()` never sees it.
+
+**`ErrorKind.ENGINE_CLOSED` means the engine was `close()`d before an uncached, in-flight type
+settled, not that the type failed or timed out.** A fully-cached call never reaches this: it
+returns its cache hit and succeeds normally even after `close()`, without ever registering a
+detached run. `ENGINE_CLOSED` appears only on a type that was genuinely uncached and in flight (or
+would have been, for a request/types combination the engine had never seen before `close()`) — a
+still-attached `enrichProgressive` collector or `enrich()`'s own return sees it there, and only
+there — never on a run that reached its own deadline (that is `ErrorKind.TIMEOUT`) or on one still
+running against an open engine.
+
+**`EnrichmentResult.Success.isCatalogDegraded` means catalog filtering was attempted and could
+not run, not that filtering was turned off.** A recommendation type still reaches the caller when
+its `CatalogProvider` throws — the fetched data survives unranked rather than being lost — and this
+flag is how that result says so. It is always `false` under `CatalogFilterMode.UNFILTERED`, which is
+a deliberate configuration and not a degradation. See `EnrichmentResult.Success.isCatalogDegraded`'s
+KDoc for why this is call-scoped, not a stored fact.
+
 **Discogs `master_id` is optional.** A Discogs release may have no master, so the album-level
 identifier is absent rather than derivable — treat it as a miss, not as a release id to reuse.
 

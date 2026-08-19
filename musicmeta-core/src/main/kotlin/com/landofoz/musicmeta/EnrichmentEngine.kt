@@ -24,7 +24,9 @@ import com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzProvider
 import com.landofoz.musicmeta.provider.wikidata.WikidataProvider
 import com.landofoz.musicmeta.provider.wikipedia.WikipediaProvider
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 
 private const val TAG = "EnrichmentEngine"
 
@@ -54,12 +56,86 @@ interface EnrichmentEngine {
      *   data from providers. Existing cache entries (including manual selections) are cleared first
      *   on a best-effort basis: if the cache throws while clearing, the failure is logged and fresh
      *   data is still fetched, rather than being surfaced to the caller.
+     *
+     * **Cancelling the calling coroutine is complete-and-cache, not abort-and-forfeit.** This is
+     * `enrichProgressive(...).last()` against one shared resolution path (see that method's own
+     * KDoc), so cancelling the coroutine that called [enrich] detaches from the fan-out already
+     * under way rather than aborting it: that fan-out keeps running, unattended, until it settles or
+     * [EnrichmentConfig.enrichTimeoutMs] expires, and its cache write-back still happens. There is no
+     * per-call abort: a detached run keeps spending rate-limiter and circuit-breaker budget unwatched,
+     * and [close] can only stop it by shutting the whole engine down, never one call or request.
      */
     suspend fun enrich(
         request: EnrichmentRequest,
         types: Set<EnrichmentType>,
         forceRefresh: Boolean = false,
     ): EnrichmentResults
+
+    /**
+     * [enrich], as a cumulative stream: each emission is a complete, valid [EnrichmentResults]
+     * snapshot of everything settled so far, filtered to [types] — never a per-result diff. A
+     * caller derives what is still pending as `types - results.raw.keys`; a type in neither set
+     * settled with no answer. Only the last emission has an empty derived-pending set, so a
+     * collector that stops early never mistakes an intermediate snapshot for the finished one.
+     *
+     * A settled type is catalog-filtered, provenance-stamped, and stale-cache-resolved before the
+     * emission that first carries it, so an intermediate is safe to render — but a type's value can
+     * still change before the terminal emission (e.g. cache write-back may alter what a later,
+     * unrelated call would have served it). Emission order between types carries no contract: two
+     * runs of the same request may settle types in a different sequence.
+     *
+     * Two values exist specifically for a pre-terminal read: [EnrichmentResults.identity]`.status`
+     * can be [CanonicalStatus.RESOLVING] on an intermediate emission — identity resolution runs
+     * concurrently with everything else and is never backdated once it lands — and a settled
+     * recommendation-type [EnrichmentResult.Success] can carry
+     * [EnrichmentResult.Success.isCatalogDegraded] set, meaning this call's own [CatalogProvider]
+     * threw and that type reached you unranked. [CanonicalStatus.RESOLVING] is never seen on
+     * [enrich]'s return or on this stream's terminal emission — it always resolves to a real status
+     * by then. `isCatalogDegraded`, in contrast, can be `true` on the terminal emission too: it is
+     * not a "still settling" signal, it is a "settled, but filtering failed" signal.
+     *
+     * [enrich] is `enrichProgressive(...).last()` against one shared resolution path, so the
+     * terminal emission here and [enrich]'s return are always identical, including on a timeout.
+     * The default implementation below runs [enrich] once and emits its result as the sole,
+     * terminal snapshot — the cadence a third-party [EnrichmentEngine] gets for free without
+     * overriding this method.
+     *
+     * **Cancellation is complete-and-cache, not abort-and-forfeit.** Cancelling collection (e.g.
+     * `take(1)`, or leaving composition) detaches the collector from the fan-out already under way;
+     * that fan-out keeps running, unattended, until it settles or [EnrichmentConfig.enrichTimeoutMs]
+     * expires — bounded to the one run for this exact request/[types]/[forceRefresh] combination, so
+     * a caller who cancels and re-calls the same thing N times in a row never multiplies upstream
+     * traffic by N. Its cache write-back still happens, so a subsequent equivalent call is typically
+     * a cache hit, not a re-fetch. This costs real work continuing after you stop watching it: there
+     * is no per-call abort, a detached run keeps spending rate-limiter and circuit-breaker budget
+     * unwatched, and [close] can only stop it by shutting the whole engine down, never one call.
+     * A third-party implementor relying on the default single-emission body above has nothing to
+     * detach from: there is no cancellation cost to document for it.
+     */
+    fun enrichProgressive(
+        request: EnrichmentRequest,
+        types: Set<EnrichmentType>,
+        forceRefresh: Boolean = false,
+    ): Flow<EnrichmentResults> = flow {
+        emit(enrich(request, types, forceRefresh))
+    }
+
+    /**
+     * Releases resources an implementation may hold for [enrichProgressive]'s complete-and-cache
+     * detachment (a scope that fan-out already in flight when a collector cancels keeps running
+     * on). The default here is a no-op: nothing above needs releasing without that mechanism.
+     *
+     * [DefaultEnrichmentEngine][com.landofoz.musicmeta.engine.DefaultEnrichmentEngine] overrides
+     * this as a hard shutdown, not a drain: any detached run still in flight is abandoned rather
+     * than waited for, and writes nothing back — the same rule a timed-out run already follows. A
+     * still-attached collector, or a later call this engine had never seen before shutdown, is
+     * released with every requested type present: settled types keep their real result, and every
+     * unsettled one becomes an [EnrichmentResult.Error] with [ErrorKind.ENGINE_CLOSED] — the same
+     * per-type completeness [enrich] documents for a timeout. Never called automatically; skipping
+     * it costs at most one shared dispatcher and whatever detached runs are genuinely in flight,
+     * never an unbounded amount.
+     */
+    fun close() {}
 
     /**
      * Enriches multiple requests sequentially, emitting each result as it completes.
@@ -77,6 +153,41 @@ interface EnrichmentEngine {
     ): Flow<Pair<EnrichmentRequest, EnrichmentResults>> = flow {
         for (request in requests) {
             emit(request to enrich(request, types, forceRefresh))
+        }
+    }
+
+    /**
+     * [enrichBatch], as a cumulative per-request stream: composed from [enrichProgressive] rather
+     * than [enrich], so each emission is one request's own cumulative snapshot of everything
+     * settled so far for it — the same derivation (`types - results.raw.keys`), cadence (only a
+     * request's last emission has an empty derived-pending set) and complete-and-cache contract
+     * [enrichProgressive] documents, carried through unmodified per request.
+     *
+     * Requests are still processed one at a time, in [requests] order — [enrichBatch]'s existing
+     * sequential bound, reused rather than replaced: this method's payoff is a row that fills in
+     * progressively as its own entity's types settle, not every row filling in at once, and
+     * concurrent fan-out across [requests] would multiply upstream traffic the way
+     * [enrichProgressive]'s own KDoc already flags for one entity's repeated collection. Cancelling
+     * collection (e.g. [take]) stops processing remaining requests cooperatively, exactly as
+     * [enrichBatch] does; a request already mid-stream when cancellation reaches it detaches under
+     * [enrichProgressive]'s own complete-and-cache rule and keeps running regardless.
+     *
+     * The same request appearing twice in [requests], or in a concurrently-running
+     * [enrichBatchProgressive]/[enrichProgressive] call for the same request/[types]/[forceRefresh],
+     * does not double-fetch: every occurrence coalesces through the one run registry
+     * [enrichProgressive] itself uses.
+     *
+     * The default implementation below calls [enrichProgressive] once per request; a third-party
+     * [EnrichmentEngine] that only overrides [enrich] gets exactly one (terminal) snapshot per
+     * request for free, matching [enrichProgressive]'s own default cadence.
+     */
+    fun enrichBatchProgressive(
+        requests: List<EnrichmentRequest>,
+        types: Set<EnrichmentType>,
+        forceRefresh: Boolean = false,
+    ): Flow<Pair<EnrichmentRequest, EnrichmentResults>> = flow {
+        for (request in requests) {
+            emitAll(enrichProgressive(request, types, forceRefresh).map { request to it })
         }
     }
 

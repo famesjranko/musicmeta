@@ -175,6 +175,14 @@ Types that are synthesized from other resolved types rather than fetched from a 
 
 The engine resolves dependencies first (standard rules), then passes results + identity metadata to the synthesizer. Sub-types are excluded from returned results unless the caller explicitly requested them.
 
+### Progressive delivery
+
+`enrich()` waits for every type in this fan-out to settle before returning one `EnrichmentResults`.
+`enrichProgressive()` runs the identical fan-out and pipeline (Steps 4–8 below apply per type, not
+once at the end) but emits a cumulative snapshot each time a type settles, so a caller sees fast
+types — a cache hit, a single-provider lookup — before slow ones finish. See
+[guides/streaming.md](guides/streaming.md) for the API and its contract.
+
 ### Step 5: Confidence Filtering
 
 Each provider returns a confidence score (0.0–1.0):

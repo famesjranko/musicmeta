@@ -29,6 +29,12 @@ data class EnrichmentCacheEntity(
     @ColumnInfo(name = "resolved_ids_json") val resolvedIdsJson: String? = null,
     /** Always `false` on write — a stale result is never cached; kept so a decoded row states it explicitly. */
     @ColumnInfo(name = "is_stale") val isStale: Boolean = false,
+    // No column for com.landofoz.musicmeta.EnrichmentResult.Success.isCatalogDegraded, deliberately:
+    // RoomEnrichmentCache.get/getIncludingExpired hand the decoded Success back with the field at
+    // its default false, and the engine's own finalizeResult step recomputes it against the live
+    // CatalogProvider before a caller ever sees it — including a STALE_IF_ERROR substitution. See
+    // EnrichmentResult.Success.isCatalogDegraded's KDoc for why this is call-scoped, not a stored
+    // fact.
     @ColumnInfo(name = "cached_at") val cachedAt: Long,
     @ColumnInfo(name = "expires_at") val expiresAt: Long,
     @ColumnInfo(name = "schema_version") val schemaVersion: Int = CACHE_SCHEMA_VERSION,

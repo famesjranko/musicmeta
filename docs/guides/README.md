@@ -7,6 +7,7 @@ Focused guides for each area of the library. Start with [quick-start.md](quick-s
 | [quick-start.md](quick-start.md) | Engine setup and Tier 1 profile methods — the fastest path to working code |
 | [identity-resolution.md](identity-resolution.md) | How MusicBrainz identity resolution works, the "did you mean?" flow, and manual disambiguation |
 | [results-and-errors.md](results-and-errors.md) | All three API tiers, error handling, result inspection, and timeout behavior |
+| [streaming.md](streaming.md) | Progressive results with `enrichProgressive`/`enrichBatchProgressive`, the pending-type derivation rule, cancellation and `close()` |
 | [cache-management.md](cache-management.md) | Cache configuration, TTLs, invalidation, forceRefresh, and manual selection |
 | [configuration.md](configuration.md) | EnrichmentConfig, ApiKeyConfig, confidence scoring, provider wiring, and recommendations |
 | [extension-points.md](extension-points.md) | Custom providers, HTTP clients, caches, mergers, and synthesizers |

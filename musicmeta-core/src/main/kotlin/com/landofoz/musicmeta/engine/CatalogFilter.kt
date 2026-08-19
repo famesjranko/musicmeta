@@ -111,21 +111,45 @@ internal suspend fun applyCatalogFiltering(
     catalogFilterMode: CatalogFilterMode,
     logger: EnrichmentLogger,
 ) {
-    val provider = catalogProvider ?: return
-    if (catalogFilterMode == CatalogFilterMode.UNFILTERED) return
-
     for (type in RECOMMENDATION_TYPES) {
-        val result = results[type] as? EnrichmentResult.Success ?: continue
-        val queries = toQueries(result.data) ?: continue
-        if (queries.isEmpty()) continue
-
-        val matches = try {
-            provider.checkAvailability(queries)
-        } catch (e: Exception) {
-            currentCoroutineContext().ensureActive()
-            logger.warn(TAG, "${type.name}: CatalogProvider threw, leaving results unfiltered: ${e.message}", e)
-            continue
-        }
-        results[type] = applyMode(result, matches, catalogFilterMode)
+        val result = results[type] ?: continue
+        results[type] = applyCatalogFilteringToType(type, result, catalogProvider, catalogFilterMode, logger)
     }
+}
+
+/**
+ * [applyCatalogFiltering]'s per-type body, so a per-type settlement pipeline can run it without a
+ * shared map: not a [RECOMMENDATION_TYPES] member, not a [EnrichmentResult.Success], nothing to
+ * filter, or [catalogFilterMode] is [CatalogFilterMode.UNFILTERED] all return [result] with
+ * [EnrichmentResult.Success.isCatalogDegraded] normalized to false and nothing else changed.
+ */
+internal suspend fun applyCatalogFilteringToType(
+    type: EnrichmentType,
+    result: EnrichmentResult,
+    catalogProvider: CatalogProvider?,
+    catalogFilterMode: CatalogFilterMode,
+    logger: EnrichmentLogger,
+): EnrichmentResult {
+    // Normalized to false right here, before any branch below (no CatalogProvider configured,
+    // UNFILTERED mode, a non-recommendation type, no queries) can return early with a stale true.
+    // Only the guarded catch below, when *this* call's own checkAvailability throws, may set it
+    // back to true. See EnrichmentResult.Success.isCatalogDegraded's KDoc for why this is
+    // call-scoped, not a stored fact.
+    val normalized = if (result is EnrichmentResult.Success) result.copy(isCatalogDegraded = false) else result
+
+    val provider = catalogProvider ?: return normalized
+    if (catalogFilterMode == CatalogFilterMode.UNFILTERED) return normalized
+    if (type !in RECOMMENDATION_TYPES) return normalized
+    val success = normalized as? EnrichmentResult.Success ?: return normalized
+    val queries = toQueries(success.data) ?: return normalized
+    if (queries.isEmpty()) return normalized
+
+    val matches = try {
+        provider.checkAvailability(queries)
+    } catch (e: Exception) {
+        currentCoroutineContext().ensureActive()
+        logger.warn(TAG, "${type.name}: CatalogProvider threw, leaving results unfiltered: ${e.message}", e)
+        return success.copy(isCatalogDegraded = true)
+    }
+    return applyMode(success, matches, catalogFilterMode)
 }

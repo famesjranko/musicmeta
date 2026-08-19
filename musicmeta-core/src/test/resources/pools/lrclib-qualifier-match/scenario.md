@@ -7,8 +7,8 @@ the equivalent delimiter syntax, so `LYRICS_SYNCED` is a genuine `Success`, not 
 **Why this pool exists.** Unlike `lrclib-first-result` (a deliberately *wrong*-entity hit, so every
 LRCLIB type declines), this pool's hit is the *right* entity. That makes `LYRICS_SYNCED` a real,
 single-provider `Success` resolved through the engine's non-merged chain path
-(`DefaultEnrichmentEngine.kt`'s `stampProvenance`, not a merger's `weakestProvenance`), which is the
-only way to observe `stampProvenance` actually running: a merger's own `?: LookupProvenance.FUZZY_NAME`
+(`IdentityHelper.kt`'s `stampProvenanceOne`, not a merger's `weakestProvenance`), which is the
+only way to observe `stampProvenanceOne` actually running: a merger's own `?: LookupProvenance.FUZZY_NAME`
 fallback makes a merged result's provenance non-null regardless of whether the stamp ran.
 
 ## Provenance

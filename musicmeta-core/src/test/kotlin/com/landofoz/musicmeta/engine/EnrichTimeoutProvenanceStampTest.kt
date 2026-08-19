@@ -21,13 +21,13 @@ import org.junit.Test
  * The enrich-timeout-drops-provenance regression, isolated from MusicBrainz: a non-MusicBrainz
  * identity provider's `Success` (`provenance == null`, as any provider that never sets its own may
  * legally return) is write-through-copied into `results` by `resolveIdentity`, and a deadline that
- * expires before `stampProvenance` runs at the end of the timed block must still stamp it in the
+ * expires before `stampProvenanceOne` runs at the end of the timed block must still stamp it in the
  * `if (!completed)` fallback — the fix `EnrichTimeoutProvenanceRegressionTest` also pins.
  *
  * **Why a second pin for the same fix.** `EnrichTimeoutProvenanceRegressionTest` drives this through
  * MusicBrainz, whose `enrichArtist` name-search branch was separately hardened to set its own
  * provenance directly. That hardening independently satisfies MusicBrainz's own scenario, so it can
- * no longer tell the engine's `stampProvenance` fallback apart from its absence: reverting the
+ * no longer tell the engine's `stampProvenanceOne` fallback apart from its absence: reverting the
  * fallback alone leaves that pin green. A fake identity provider has no such hardening, so only the
  * fallback can save it.
  */

@@ -127,11 +127,13 @@ object Formatter {
                 snippet(type, result.data)
             }.ifBlank { term.styled("(no value for this field)", term.theme.muted) }
             val staleTag = if (result.isStale) " ${term.styled("[stale]", term.theme.warning)}" else ""
+            val unfilteredTag =
+                if (result.isCatalogDegraded) " ${term.styled("[unranked]", term.theme.warning)}" else ""
             if (bestEffort) {
                 val unverified = term.styled("[unverified]", term.theme.warning)
-                term.warning(typeName(type), "$detail  $conf $unverified$staleTag")
+                term.warning(typeName(type), "$detail  $conf $unverified$staleTag$unfilteredTag")
             } else {
-                term.success(typeName(type), "$detail  $conf$staleTag")
+                term.success(typeName(type), "$detail  $conf$staleTag$unfilteredTag")
             }
         }
 

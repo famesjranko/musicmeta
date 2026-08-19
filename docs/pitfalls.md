@@ -182,6 +182,45 @@ the deadline and persisted it under the primary *and* name-alias keys, so every 
 hit that skipped filtering (#56). Anything added inside that block inherits the same shape, which is
 why the guard is on the write-back rather than on catalog filtering.
 
+## 20. `scope.launch` on an already-cancelled `Job` silently never runs its block
+
+```kotlin
+// WRONG — if scope's Job is already cancelled, this CompletableDeferred never completes
+scope.launch { deferred.complete(buildResult()) }
+
+// RIGHT — decide before launching whether the block will ever run
+if (scope.isActive) scope.launch { deferred.complete(buildResult()) } else deferred.complete(fallback())
+```
+
+`launch`'s default `CoroutineStart.DEFAULT` schedules the block for later; on an already-cancelled
+parent it is scheduled and immediately cancelled without ever starting, so no line inside it runs —
+not even a `finally`. `ProgressiveRunRegistry.attachOrStart` hit this for real: a call arriving after
+`close()` cancelled `detachedScope` raced `scope.launch { body(run) }`, and when it lost, the fresh
+run's `terminal` `CompletableDeferred` was never completed — the collector attached to it hung
+forever, the opposite of what `close()` promises. The fix is `attachOrStart` deciding under its own
+lock whether `scope` is already closed *before* choosing to launch at all, and building the
+abandoned-run snapshot itself when it is, rather than trusting the launch to run.
+
+## 21. Consumer-reachable suspending work under a shared mutex can deadlock a limited-parallelism dispatcher against itself
+
+A `Mutex` held across a suspension point is fine in general — coroutines, unlike threads, don't
+deadlock on a mutex just by suspending while holding it. The trap is specific to a dispatcher with
+bounded parallelism (`Dispatchers.Default`'s thread pool is finite): if the suspending call under the
+lock can itself schedule work back onto that same dispatcher and wait for it, every thread in the
+pool can end up parked waiting for the lock while the one coroutine that could release it is starved
+of a thread to run on. `ProgressiveRunRegistry`'s `mutex` reached exactly this shape once, when the
+lock's critical section briefly included `onClosed`'s abandonment work — which calls
+`DefaultEnrichmentEngine.applyStaleCacheToType`, and through it `EnrichmentCache.getIncludingExpired`,
+a suspending call into consumer code with no bound on what it does. The fix is architectural, not a
+bigger pool: `mutex` now guards only the non-suspending registration decision (read `closed`, check
+`runs`, insert, launch) — everything that can suspend into consumer code, including `onClosed`, runs
+after `withLock` returns. A shared mutex must never wrap a call whose suspension point you do not
+control. This is also why `close()` — not a suspend function, so it can only wait on `markClosed`'s
+mutex via `runBlocking` — is safe today: with the critical section non-suspending, `runBlocking`
+waits, at most, for a few non-suspending lines to finish, never for a suspending call to complete.
+Re-check that holds before ever adding a suspending call back to that critical section, or a
+same-dispatcher `runBlocking` caller can wedge forever with no thread left to resume the holder.
+
 ## Area — Provider data and matching
 
 ## 3. `org.json` returns a default for a missing key — it does not fail
@@ -353,7 +392,7 @@ return Success(type, data, providerId, confidence,
 
 `IdentifierRequirement.NONE` means MusicBrainz canonical resolution is optional, not that the
 provider never has an exact-id route of its own. A capability, a chain walk, and the engine's own
-`stampProvenance` fallback can all see only what running *required* — never what a specific call
+`stampProvenanceOne` fallback can all see only what running *required* — never what a specific call
 *happened to use* when the requirement permitted either. Only the branch itself knows which one
 ran, so only the branch itself can report it truthfully; leaving `provenance` unset here is not
 neutral; it hands the engine's canonical-status fallback a case it cannot tell apart from a genuine

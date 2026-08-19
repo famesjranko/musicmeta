@@ -106,33 +106,68 @@ flowchart TD
 
     regular["fan-out, under one deadline:<br/>regular + composite subs<br/>concurrent, one chain each"]
     regular --> mergeable["then mergeable types<br/>all providers, merged"]
-    mergeable --> composite["then composite types<br/>from the resolved map"]
+    mergeable --> composite["then composite types<br/>from the settlement board"]
 
-    composite --> deadline{"deadline held?"}
-    deadline -->|"no"| timedout["unresolved becomes<br/>Error TIMEOUT,<br/>nothing cached"]
+    composite --> settle["settle, per type as it lands:<br/>catalog filter, provenance,<br/>STALE_IF_ERROR substitution"]
+    settle --> deadline{"deadline held?"}
+    deadline -->|"no"| timedout["unresolved becomes<br/>Error TIMEOUT,<br/>same per-type settle,<br/>nothing cached"]
     deadline -->|yes| writeback["writeBack:<br/>positive or negative,<br/>canonical-name aliased"]
-    timedout --> stale
-    writeback --> stale["STALE_IF_ERROR only:<br/>expired entry stands in,<br/>marked stale"]
-    stale --> results["EnrichmentResults"]
+    timedout --> results
+    writeback --> results["EnrichmentResults"]
 ```
 
-Every result is gated as it is produced — `filterByConfidence`, then `demoteUnanswered` — inside
-whichever stage produced it, rather than in one pass over the finished set. Confidence runs first
-because it scores the identification, not the payload (`docs/pitfalls.md` §8): a perfect identity
-match can still carry a payload that answers nothing.
+Every result is gated as it is produced — `filterByConfidence`, then `demoteUnanswered`, then catalog
+filtering, provenance stamping and `STALE_IF_ERROR` substitution — inside whichever stage produced
+it, rather than in one pass over the finished set. Confidence runs first because it scores the
+identification, not the payload (`docs/pitfalls.md` §8): a perfect identity match can still carry a
+payload that answers nothing.
 
 Three things this ordering is load-bearing about. **The cache is read before identity resolution**,
 so a fully cached call never touches an upstream — unless `forceRefresh` skips both reads, which is
-the only way to make one. **Composites are last because they read a map the earlier stages fill** —
-they depend on resolved types, so the stages are ordered, not merely parallel. And **a timed-out run
-returns what it has but persists none of it**, because the deadline can fire part-way through a step
-that rewrites entries, so what survives is a mix of finished and unfinished work.
+the only way to make one. **Composites are last because they read the settlement board the earlier
+stages have already written into** — they depend on resolved types, so the stages are ordered, not
+merely parallel. And **a timed-out run returns what it has but persists none of it**, because the
+deadline can fire part-way through a step that rewrites entries, so what survives is a mix of
+finished and unfinished work.
 
 Two engine-level invariants constrain every provider rather than any one of them, which is what
 makes them architectural: **confidence and provenance may understate the evidence, never overstate
 it**, and **an absence must never be reported where a failure occurred**. Both are one-directional
 on purpose, because consumers branch on the distinction. What each cost to learn is
 `docs/pitfalls.md` §4 and §8.
+
+## `enrichProgressive()` and the engine's own lifecycle
+
+`enrich()` above is `enrichProgressive(...).last()` over one shared resolution path — nothing in the
+diagram above changes, but each type's settle step (catalog filter, provenance, stale-cache
+substitution) also emits an intermediate `EnrichmentResults` snapshot the moment that type lands,
+carrying every type settled so far. `enrich()`'s callers get only the terminal snapshot; a caller of
+`enrichProgressive()` sees every one.
+
+**One path, not two, is the load-bearing constraint here** — the reason a streaming API was not
+cheap to add. A streamed second implementation of the same pipeline was built and measured against
+the suite: it diverged from `enrich()` on error classification, silently, in composite synthesis and
+identity failure. What a caller would have got is a composite type absent from the results
+altogether where `enrich()` returns a typed `Error`. Nothing about a streaming surface forces that
+divergence — but nothing catches it either, so the cost of the feature is the shared seam
+underneath it, not the method on the interface.
+
+This makes the engine stateful in a way it was not before: `DefaultEnrichmentEngine` owns a
+`CoroutineScope` (`detachedScope`, on `Dispatchers.Default`) that a fan-out runs as a child of, not
+as a child of the caller's own coroutine. Cancelling the caller — a collector leaving composition,
+`take(1)`, the calling coroutine itself being cancelled — detaches from that fan-out rather than
+aborting it: the run keeps going, unattended, until it settles or times out, and its cache write-back
+still happens. This is complete-and-cache, not abort-and-forfeit, and it is the reason the interface
+gained `close()`: releasing `detachedScope` (and abandoning, never waiting for, whatever is still
+running on it) is the one thing nothing else does for you. A consumer that never calls `close()`
+costs at most one shared dispatcher and whatever distinct request/types/`forceRefresh` runs are
+genuinely in flight — bounded, but real, and owned by the consumer holding the engine, not by this
+library. Two calls coalesce onto one in-flight run only when their request, their requested types
+and their `forceRefresh` all match; differing in any of the three starts a second run, even when the
+*uncached* type sets happen to coincide. The key describes the request, not a resolved entity, so
+two spellings of one artist — an MBID-bearing request and a name-only one — start two runs. That
+under-coalesces rather than over-coalesces, which is the safe direction: it never merges two
+genuinely different entities.
 
 ## One `search()` call
 ```mermaid

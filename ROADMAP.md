@@ -176,7 +176,6 @@ The `SearchCandidate` fields this flow relies on are documented in
 - **A second ARTIST_RADIO_DISCOVERY source** — the type has one provider and that provider's route is
   disabled upstream. `/1/lb-radio/artist/{mbid}` answers, but it is a candidate pool rather than a
   playlist ([docs/providers.md](docs/providers.md) has why serving the type from it is not free)
-- **Flow-based progressive API** — assessed and deferred: marginal benefit against the complexity, and a caller who wants results in stages can split their `enrich()` calls
 
 ### Catalog Awareness — Interface Shipped, Implementations Remaining
 

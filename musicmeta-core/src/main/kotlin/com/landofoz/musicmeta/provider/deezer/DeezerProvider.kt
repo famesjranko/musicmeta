@@ -403,7 +403,7 @@ class DeezerProvider(
      * An artist this call resolved and whether it came from a Deezer id already on the request
      * (never a search) — the same fact [enrichTopTracks], [enrichSimilarArtists] and
      * [enrichArtistRadio] each need to self-report [LookupProvenance] truthfully instead of
-     * leaving it for [com.landofoz.musicmeta.engine.stampProvenance] to infer from canonical
+     * leaving it for [com.landofoz.musicmeta.engine.stampProvenanceOne] to infer from canonical
      * status alone, which cannot see that this call never searched at all.
      */
     private data class ArtistResolution(val artist: DeezerArtistSearchResult, val provenance: LookupProvenance?)

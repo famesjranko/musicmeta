@@ -272,11 +272,15 @@ engine.enrichBatch(
 
 Cache hits return immediately. Cancel the Flow via `take(N)` to stop early. See [cache-management.md](cache-management.md) for offline fallback with `CacheMode.STALE_IF_ERROR`.
 
+Both `enrich()` and `enrichBatch()` wait for a complete answer. `enrichProgressive()` and
+`enrichBatchProgressive()` emit as each type settles instead — see [streaming.md](streaming.md).
+
 ---
 
 ## Next steps
 
 - [identity-resolution.md](identity-resolution.md) — how identity resolution works under the hood
 - [results-and-errors.md](results-and-errors.md) — Tier 2 named accessors and error handling
+- [streaming.md](streaming.md) — progressive results, one type at a time, as they settle
 - [configuration.md](configuration.md) — tuning confidence, TTLs, providers, and recommendations
 - [android.md](android.md) — Room cache, Hilt, and WorkManager integration

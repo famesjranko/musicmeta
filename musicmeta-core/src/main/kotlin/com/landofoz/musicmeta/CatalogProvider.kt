@@ -55,6 +55,10 @@ data class CatalogMatch(
  * passing a batch of [CatalogQuery] objects. The returned [CatalogMatch] list
  * must be the same size as the input list and in the same order.
  *
+ * Called concurrently, from multiple coroutines at once, whenever one `enrich()`/`enrichProgressive()`
+ * call resolves more than one recommendation type — an implementation holding mutable state must be
+ * thread-safe.
+ *
  * Example implementation skeleton:
  * ```kotlin
  * class MyLibraryCatalog : CatalogProvider {

@@ -17,8 +17,8 @@ import org.junit.Test
  * `null` means only "built outside the engine". `COUNTRY` comes from identity resolution's
  * write-through (`DefaultEnrichmentEngine.kt`'s `resolveIdentity`), which runs — and can write a
  * null-provenance `Success` into `results` — inside the same `withTimeoutOrNull` block whose *end*
- * runs `stampProvenance`, the only thing that fills that null in. A deadline that expires before
- * `stampProvenance` runs leaves the write-through entry exactly as it was.
+ * runs `stampProvenanceOne`, the only thing that fills that null in. A deadline that expires before
+ * `stampProvenanceOne` runs leaves the write-through entry exactly as it was.
  *
  * **Built via [EnrichmentEngine.Builder] directly, not [TestStack.build]**: the latter does not
  * expose `enrichTimeoutMs`. Call order still follows [TestStack]'s KDoc — `httpClient` and
@@ -38,7 +38,7 @@ import org.junit.Test
  * **The `BAND_MEMBERS` timeout assertion is load-bearing, not decoration.** The reproduction depends
  * on the MusicBrainz rate-limiter's interval sitting *above* `TIGHT_TIMEOUT_MS`. If that constant
  * ever drops to or below the timeout, the second call stops being delayed, the run completes inside
- * the deadline, `stampProvenance` runs, and the `COUNTRY` provenance assertion below would pass for
+ * the deadline, `stampProvenanceOne` runs, and the `COUNTRY` provenance assertion below would pass for
  * a reason that has nothing to do with this defect — asserting nothing while looking green. Asserting
  * that `BAND_MEMBERS` actually came back `Error(TIMEOUT)` is what makes a constant change fail this
  * test loudly instead of leaving it silently vacuous.

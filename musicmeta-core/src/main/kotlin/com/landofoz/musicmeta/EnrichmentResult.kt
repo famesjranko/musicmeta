@@ -27,6 +27,9 @@ enum class ErrorKind {
 
     /** Uncategorized error. */
     UNKNOWN,
+
+    /** The engine was `close()`d before this type settled — not a timeout, not a provider failure. */
+    ENGINE_CLOSED,
 }
 
 /**
@@ -72,6 +75,23 @@ sealed class EnrichmentResult {
          * returned an error. Consumers can show a staleness indicator or schedule a retry.
          */
         val isStale: Boolean = false,
+        /**
+         * True when this is a recommendation type whose [CatalogProvider] threw during availability
+         * checking, so the data reached here as the fetched providers returned it rather than as
+         * [EnrichmentConfig.catalogFilterMode] ranked or trimmed it. Never true when the mode is
+         * [CatalogFilterMode.UNFILTERED] — that is a deliberate configuration, not a degradation.
+         * Consumers can show an "unranked" indicator or omit availability-dependent UI for this result.
+         *
+         * Call-scoped, not a stored fact: every serve — live or a cache hit — is normalized to
+         * `false` before this call's own [CatalogProvider] check runs (or is skipped, e.g. under
+         * [CatalogFilterMode.UNFILTERED]), and only *this* call's own throw can set it back to
+         * `true`. A value carried on a `Success` handed in from a cache read never survives that
+         * normalization. No shipped [EnrichmentCache] implementation persists it — a stored
+         * [CatalogProvider] failure that has since recovered would otherwise haunt every later
+         * cache hit, and a healthy write would mask a [CatalogProvider] that started failing after
+         * it was cached.
+         */
+        val isCatalogDegraded: Boolean = false,
     ) : EnrichmentResult()
 
     /**

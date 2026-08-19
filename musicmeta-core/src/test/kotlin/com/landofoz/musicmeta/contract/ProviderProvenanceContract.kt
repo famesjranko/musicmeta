@@ -13,7 +13,7 @@ import com.landofoz.musicmeta.IdentifierRequirement
 import com.landofoz.musicmeta.LookupProvenance
 import com.landofoz.musicmeta.engine.observedProvenance
 import com.landofoz.musicmeta.engine.stampContributorProvenance
-import com.landofoz.musicmeta.engine.stampProvenance
+import com.landofoz.musicmeta.engine.stampProvenanceOne
 import com.landofoz.musicmeta.testkit.ContractSuite
 import com.landofoz.musicmeta.testkit.TestStack
 import com.landofoz.musicmeta.testkit.UpstreamPools
@@ -31,7 +31,7 @@ import org.junit.Test
  * one thing (`architecture.md` § 2 P3).
  *
  * Two call sites fill the field when a result arrives without one:
- * [com.landofoz.musicmeta.engine.stampProvenance] (the single-winner chain path) and
+ * [com.landofoz.musicmeta.engine.stampProvenanceOne] (the single-winner chain path) and
  * [com.landofoz.musicmeta.engine.stampContributorProvenance] (each contributor to a merged type),
  * both classifying through [com.landofoz.musicmeta.engine.observedProvenance]. A provider that sets
  * its own route on the `Success` it returns is trusted verbatim and never reaches either.
@@ -76,25 +76,24 @@ abstract class ProviderProvenanceContract : ContractSuite<EnrichmentEngine>() {
     // ---- C: both stamp functions fill only a null provenance, verbatim otherwise ----
 
     @Test
-    fun `stampProvenance fills only a null provenance and leaves a self-reported one untouched`() {
+    fun `stampProvenanceOne fills only a null provenance and leaves a self-reported one untouched`() {
         // Given - one Success that already reports its own route and one with none, no chain
         // evidence for either type
-        val results = mutableMapOf<EnrichmentType, EnrichmentResult>(
-            EnrichmentType.TRACK_METADATA to success(EnrichmentType.TRACK_METADATA, LookupProvenance.EXTERNAL_CATALOG_ID),
-            EnrichmentType.LYRICS_PLAIN to success(EnrichmentType.LYRICS_PLAIN, provenance = null),
-        )
+        val selfReported = success(EnrichmentType.TRACK_METADATA, LookupProvenance.EXTERNAL_CATALOG_ID)
+        val unstamped = success(EnrichmentType.LYRICS_PLAIN, provenance = null)
 
-        // When - the engine's post-resolution stamp runs
-        stampProvenance(results, CanonicalStatus.UNRESOLVED, emptyMap())
+        // When - the engine's per-type post-resolution stamp runs on each independently
+        val stampedSelfReported = stampProvenanceOne(selfReported, execution = null, CanonicalStatus.UNRESOLVED)
+        val stampedUnstamped = stampProvenanceOne(unstamped, execution = null, CanonicalStatus.UNRESOLVED)
 
         // Then - the self-reported route survives verbatim and the null one is filled, never CACHE
         assertEquals(
             LookupProvenance.EXTERNAL_CATALOG_ID,
-            (results.getValue(EnrichmentType.TRACK_METADATA) as EnrichmentResult.Success).provenance,
+            (stampedSelfReported as EnrichmentResult.Success).provenance,
         )
         assertEquals(
             LookupProvenance.FUZZY_NAME,
-            (results.getValue(EnrichmentType.LYRICS_PLAIN) as EnrichmentResult.Success).provenance,
+            (stampedUnstamped as EnrichmentResult.Success).provenance,
         )
     }
 

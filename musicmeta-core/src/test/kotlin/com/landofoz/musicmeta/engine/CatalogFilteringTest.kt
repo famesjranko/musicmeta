@@ -83,13 +83,14 @@ class CatalogFilteringTest {
         catalogProvider: CatalogProvider?,
         mode: CatalogFilterMode = CatalogFilterMode.AVAILABLE_ONLY,
         logger: EnrichmentLogger = EnrichmentLogger.NoOp,
+        cache: FakeEnrichmentCache = FakeEnrichmentCache(),
     ): DefaultEnrichmentEngine {
         val config = EnrichmentConfig(
             enableIdentityResolution = false,
             catalogProvider = catalogProvider,
             catalogFilterMode = mode,
         )
-        return DefaultEnrichmentEngine(ProviderRegistry(listOf(provider)), FakeEnrichmentCache(), config, logger)
+        return DefaultEnrichmentEngine(ProviderRegistry(listOf(provider)), cache, config, logger)
     }
 
     // --- Test 1: AVAILABLE_ONLY removes unavailable SimilarArtist items ---
@@ -317,10 +318,120 @@ class CatalogFilteringTest {
         val artists = (success.data as EnrichmentData.SimilarArtists).artists
         assertEquals(listOf("Artist A", "Artist B", "Artist C"), artists.map { it.name })
 
-        // And - the degrade is announced, since nothing on the result says it went unfiltered
+        // And - the degrade is logged
         val warning = logger.warnings.single { it.startsWith("SIMILAR_ARTISTS: ") }
         assertTrue(warning, warning.contains("catalog unavailable"))
     }
+
+    @Test fun `a degraded-unfiltered result self-reports via isCatalogDegraded`() = runTest {
+        // Given - a catalog provider that throws instead of answering
+        val fakeCatalog = CatalogProvider { error("catalog unavailable") }
+        val provider = FakeProvider(
+            id = "fake",
+            capabilities = listOf(ProviderCapability(EnrichmentType.SIMILAR_ARTISTS, 100)),
+        ).also { it.givenResult(EnrichmentType.SIMILAR_ARTISTS, similarArtists("Artist A", "Artist B")) }
+
+        // When - enriching with AVAILABLE_ONLY filtering
+        val results = engine(provider, fakeCatalog).enrich(req, setOf(EnrichmentType.SIMILAR_ARTISTS))
+
+        // Then - the result names its own degradation, without the caller having to watch logs for it
+        val success = results.raw[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
+        assertTrue("expected isCatalogDegraded to be true", success.isCatalogDegraded)
+    }
+
+    @Test fun `UNFILTERED mode never reports isCatalogDegraded, even when the CatalogProvider would have thrown`() = runTest {
+        // Given - a catalog provider that throws, but the mode is UNFILTERED so it is never called
+        val fakeCatalog = CatalogProvider { error("catalog unavailable") }
+        val provider = FakeProvider(
+            id = "fake",
+            capabilities = listOf(ProviderCapability(EnrichmentType.SIMILAR_ARTISTS, 100)),
+        ).also { it.givenResult(EnrichmentType.SIMILAR_ARTISTS, similarArtists("Artist A", "Artist B")) }
+
+        // When - enriching with UNFILTERED
+        val results = engine(provider, fakeCatalog, CatalogFilterMode.UNFILTERED).enrich(req, setOf(EnrichmentType.SIMILAR_ARTISTS))
+
+        // Then - UNFILTERED is a deliberate configuration, not a degradation
+        val success = results.raw[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
+        assertFalse("UNFILTERED must never self-report as degraded", success.isCatalogDegraded)
+    }
+
+    // --- isCatalogDegraded is call-scoped: recomputed live on every cache hit, never replayed ---
+
+    @Test fun `a cache hit recomputes isCatalogDegraded true against a currently-throwing CatalogProvider, even though it was written healthy`() =
+        runTest {
+            // Given - a shared cache, first written by a call with a healthy catalog
+            val cache = FakeEnrichmentCache()
+            val provider = FakeProvider(
+                id = "fake",
+                capabilities = listOf(ProviderCapability(EnrichmentType.SIMILAR_ARTISTS, 100)),
+            ).also { it.givenResult(EnrichmentType.SIMILAR_ARTISTS, similarArtists("Artist A", "Artist B")) }
+            val healthyCatalog = CatalogProvider { queries -> queries.map { CatalogMatch(available = true, source = "test") } }
+            val written = engine(provider, healthyCatalog, cache = cache).enrich(req, setOf(EnrichmentType.SIMILAR_ARTISTS))
+            val writtenSuccess = written.raw[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
+            assertFalse("sanity: the original write must be healthy", writtenSuccess.isCatalogDegraded)
+
+            // When - a second call against the same cache, now with a throwing CatalogProvider, serves the cache hit
+            val throwingCatalog = CatalogProvider { error("catalog unavailable") }
+            val second = engine(provider, throwingCatalog, cache = cache).enrich(req, setOf(EnrichmentType.SIMILAR_ARTISTS))
+
+            // Then - the cache-hit serve reports the *current* catalog's health, not the stored one
+            val cachedSuccess = second.raw[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
+            assertTrue("a cache hit must recompute isCatalogDegraded against the live CatalogProvider", cachedSuccess.isCatalogDegraded)
+        }
+
+    @Test fun `a cache hit recomputes isCatalogDegraded false against a healthy CatalogProvider, even though it was written degraded`() =
+        runTest {
+            // Given - a shared cache, first written by a call whose CatalogProvider threw
+            val cache = FakeEnrichmentCache()
+            val provider = FakeProvider(
+                id = "fake",
+                capabilities = listOf(ProviderCapability(EnrichmentType.SIMILAR_ARTISTS, 100)),
+            ).also { it.givenResult(EnrichmentType.SIMILAR_ARTISTS, similarArtists("Artist A", "Artist B")) }
+            val throwingCatalog = CatalogProvider { error("catalog unavailable") }
+            val written = engine(provider, throwingCatalog, cache = cache).enrich(req, setOf(EnrichmentType.SIMILAR_ARTISTS))
+            val writtenSuccess = written.raw[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
+            assertTrue("sanity: the original write must be degraded", writtenSuccess.isCatalogDegraded)
+
+            // When - a second call against the same cache, now with a healthy CatalogProvider, serves the cache hit
+            val healthyCatalog = CatalogProvider { queries -> queries.map { CatalogMatch(available = true, source = "test") } }
+            val second = engine(provider, healthyCatalog, cache = cache).enrich(req, setOf(EnrichmentType.SIMILAR_ARTISTS))
+
+            // Then - the cache-hit serve reports the *current* catalog's health, not the stored one
+            val cachedSuccess = second.raw[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
+            assertFalse(
+                "a cache hit must not replay a stale degrade once the CatalogProvider recovers",
+                cachedSuccess.isCatalogDegraded,
+            )
+        }
+
+    @Test fun `a cache hit under a reading engine configured UNFILTERED normalizes isCatalogDegraded to false`() =
+        runTest {
+            // Given - a shared cache, first written by a call whose CatalogProvider threw
+            val cache = FakeEnrichmentCache()
+            val provider = FakeProvider(
+                id = "fake",
+                capabilities = listOf(ProviderCapability(EnrichmentType.SIMILAR_ARTISTS, 100)),
+            ).also { it.givenResult(EnrichmentType.SIMILAR_ARTISTS, similarArtists("Artist A", "Artist B")) }
+            val throwingCatalog = CatalogProvider { error("catalog unavailable") }
+            val written = engine(provider, throwingCatalog, cache = cache).enrich(req, setOf(EnrichmentType.SIMILAR_ARTISTS))
+            val writtenSuccess = written.raw[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
+            assertTrue("sanity: the original write must be degraded", writtenSuccess.isCatalogDegraded)
+
+            // When - a second, differently-configured engine reads the same cache entry: UNFILTERED,
+            // so applyCatalogFilteringToType returns before ever reaching checkAvailability
+            val second = engine(provider, throwingCatalog, CatalogFilterMode.UNFILTERED, cache = cache)
+                .enrich(req, setOf(EnrichmentType.SIMILAR_ARTISTS))
+
+            // Then - applyCatalogFilteringToType normalizes isCatalogDegraded to false at entry, before
+            // its UNFILTERED early return, so a reading engine configured UNFILTERED never replays a
+            // stale true from a cache entry a differently-configured engine wrote as degraded.
+            val cachedSuccess = second.raw[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
+            assertFalse(
+                "UNFILTERED must never self-report as degraded, even reading a cache entry a " +
+                    "differently-configured engine wrote as degraded",
+                cachedSuccess.isCatalogDegraded,
+            )
+        }
 
     @Test fun `AVAILABLE_FIRST degrades to the original order when the CatalogProvider throws`() = runTest {
         // Given - a catalog provider that throws, and AVAILABLE_FIRST reordering requested

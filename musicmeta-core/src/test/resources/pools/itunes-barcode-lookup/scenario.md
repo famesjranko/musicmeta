@@ -9,7 +9,7 @@ reporting `LookupProvenance.EXTERNAL_CATALOG_ID`.
 `PROVIDER_NATIVE_ID`, `EXTERNAL_CATALOG_ID`) must imply an identifier endpoint was requested, and
 `lrclib-qualifier-match` only exercises the name-route half. `EXTERNAL_CATALOG_ID` is self-reported
 by `ITunesProvider` on the barcode branch (`ITunesProvider.kt`), not derived by the engine, so this
-is also a case `stampProvenance`/`stampContributorProvenance` must leave untouched.
+is also a case `stampProvenanceOne`/`stampContributorProvenance` must leave untouched.
 
 ## Provenance
 
