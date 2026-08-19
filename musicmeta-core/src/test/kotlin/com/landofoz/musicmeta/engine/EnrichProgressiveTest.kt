@@ -18,6 +18,7 @@ import com.landofoz.musicmeta.testutil.FakeEnrichmentCache
 import com.landofoz.musicmeta.testutil.FakeProvider
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.last
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
@@ -206,6 +207,35 @@ class EnrichProgressiveTest {
         assertTrue("the last emission must derive as complete", (types - emissions.last().raw.keys).isEmpty())
     }
 
+    // --- Settled-with-no-answer vs not-yet-settled ---
+
+    @Test fun `a settled NotFound type is in raw, a still-pending type is only in the derived-pending set`() =
+        runTest {
+            // Given - a fast type with no answer (settles NotFound with no delay) and a slow type
+            // still resolving (settles Success after a delay), requested together
+            val fastType = EnrichmentType.ALBUM_ART
+            val slowType = EnrichmentType.ARTIST_BIO
+            val fastProvider = FakeProvider(id = "fast", capabilities = listOf(ProviderCapability(fastType, 100)))
+            val slowProvider = SlowStreamProvider(slowType, delayMs = 100)
+            val types = setOf(fastType, slowType)
+            val engine = DefaultEnrichmentEngine(
+                ProviderRegistry(listOf(fastProvider, slowProvider)), cache,
+                EnrichmentConfig(enableIdentityResolution = false),
+            )
+
+            // When - collecting the stream and capturing the first emission where the fast type has
+            // settled but the slow one has not yet
+            val midStream = engine.enrichProgressive(req, types).first { snapshot -> fastType in snapshot.raw }
+
+            // Then - the settled-with-no-answer type is present in raw as NotFound, and the derived-
+            // pending set (requestedTypes - raw.keys) contains only the type that has not settled yet
+            assertTrue(
+                "fast type must be a settled NotFound, not absent",
+                midStream.raw[fastType] is EnrichmentResult.NotFound,
+            )
+            assertEquals(setOf(slowType), types - midStream.raw.keys)
+        }
+
     // --- No snapshot aliasing: a captured intermediate never mutates ---
 
     @Test fun `a captured intermediate snapshot's raw map never mutates as later types settle`() = runTest {
@@ -364,11 +394,8 @@ class EnrichProgressiveTest {
             engine.enrichProgressive(req, setOf(timeline)).last()
 
             // Then - the synthesizer sees the finalized (stale-substituted) Success, not the raw
-            // Error the provider returned. This is the per-type finalize-before-await ordering this
-            // PR introduces (main ran stale-cache substitution only after composite synthesis, so a
-            // composite there saw the raw Error) — CompositeSynthesizer's KDoc does not say which
-            // form "resolved" carries, so this pins current behaviour rather than a documented
-            // contract.
+            // Error the provider returned, per CompositeSynthesizer.synthesize's documented
+            // contract that a dependency in `resolved` always arrives finalized.
             val handed = handedToSynthesizer
             assertTrue("expected the stale Success, got $handed", handed is EnrichmentResult.Success)
             assertEquals(stale.data, (handed as EnrichmentResult.Success).data)
