@@ -21,6 +21,13 @@ import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.cache.CacheMode
 import com.landofoz.musicmeta.http.EnrichDeadline
 import com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzProvider
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
@@ -30,33 +37,34 @@ import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.last
+import kotlinx.coroutines.flow.transformWhile
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
 /** [DefaultEnrichmentEngine.writeBack]'s per-call facts, bundled to keep its parameter list short. */
-private data class WriteBackContext(
+internal data class WriteBackContext(
     val identityResolution: IdentityResolution,
     val negativeCacheHits: Set<EnrichmentType>,
     val chainExecutions: Map<EnrichmentType, ChainExecution>,
 )
 
 /** The cache layer's own outcome for a call — split off [DefaultEnrichmentEngine.readCacheLayer]'s three collections. */
-private data class CacheLayer(
+internal data class CacheLayer(
     val results: Map<EnrichmentType, EnrichmentResult>,
     val uncachedTypes: Set<EnrichmentType>,
     val negativeCacheHits: Set<EnrichmentType>,
 )
 
 /**
- * The mutable state one [DefaultEnrichmentEngine.runProgressive] call threads through
+ * The mutable state one [runProgressiveFanOut] call threads through
  * [DefaultEnrichmentEngine.resolveUncachedTypes] — [board] and [identityHolder] are written from
  * the moment a call starts; [identityResolution]/[resolvedRequest]/[chainExecutions] stay unset
  * (`null`/empty) unless [resolveUncachedTypes] returns normally, which is exactly
- * [DefaultEnrichmentEngine.runProgressive]'s own completed/not-completed distinction.
+ * [runProgressiveFanOut]'s own completed/not-completed distinction.
  */
-private class RunSession(
+internal class RunSession(
     val board: SettlementBoard,
     val identityHolder: IdentityHolder,
 ) {
@@ -66,7 +74,7 @@ private class RunSession(
 }
 
 /** [DefaultEnrichmentEngine.streamResolveTypes]'s per-call facts, bundled to keep its parameter list short. */
-private data class ResolveContext(
+internal data class ResolveContext(
     val board: SettlementBoard,
     val request: EnrichmentRequest,
     val identityResult: EnrichmentResult?,
@@ -80,7 +88,7 @@ private data class ResolveContext(
  * depends on it can start — [Volatile] is the visibility guarantee for the concurrent per-type
  * settlements that read it afterward without taking [SettlementBoard]'s lock.
  */
-private class IdentityHolder(@Volatile var current: IdentityResolution)
+internal class IdentityHolder(@Volatile var current: IdentityResolution)
 
 internal class DefaultEnrichmentEngine(
     private val registry: ProviderRegistry,
@@ -89,6 +97,8 @@ internal class DefaultEnrichmentEngine(
     private val logger: EnrichmentLogger = EnrichmentLogger.NoOp,
     mergers: List<ResultMerger> = listOf(GenreMerger),
     synthesizers: List<CompositeSynthesizer> = listOf(TimelineSynthesizer),
+    /** The dispatcher [detachedScope] runs on — injectable so a test can swap it; never used elsewhere. */
+    detachedDispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) : EnrichmentEngine {
 
     private val mergers: Map<EnrichmentType, ResultMerger> = mergers.associateBy { it.type }
@@ -97,6 +107,40 @@ internal class DefaultEnrichmentEngine(
     private val mergeableTypes: Set<EnrichmentType> get() = mergers.keys
     private val compositeDependencies: Map<EnrichmentType, Set<EnrichmentType>>
         get() = synthesizers.mapValues { it.value.dependencies }
+
+    // Complete-and-cache: a collector cancelling enrichProgressive() detaches from the fan-out
+    // already in flight, which keeps running here to completion (and still writes back) instead of
+    // being cancelled with the collector. SupervisorJob so one detached run's own failure never
+    // cancels a sibling sharing this scope. Owned by, and scoped to, this engine instance — never
+    // GlobalScope — so close() has something concrete to cancel; see close()'s KDoc for what
+    // never calling it costs. progressiveRuns is the dedupe/lifecycle bookkeeping for what runs on
+    // it — a second enrichProgressive() call whose uncached types and forceRefresh match an
+    // in-flight run's key attaches to it instead of starting a second fan-out; forceRefresh is part
+    // of that key, not a filter on top of it, so a forced call never attaches to an unforced run's
+    // data and vice versa — see progressiveDedupeKey.
+    private val detachedScope = CoroutineScope(SupervisorJob() + detachedDispatcher)
+    internal val progressiveRuns = ProgressiveRunRegistry(detachedScope)
+
+    /** The detached-run dedupe map's current size — read by tests for eviction. */
+    internal suspend fun inFlightDetachedRunCount(): Int = progressiveRuns.inFlightCount()
+
+    /**
+     * Releases the scope backing [enrichProgressive]'s complete-and-cache detachment. Any detached
+     * run still in flight is abandoned: it stops at its next suspension point, and — like a timed-
+     * out run (#56) — writes nothing back. A collector still attached to that run (via
+     * [enrichProgressive]'s relay) receives one final snapshot of whatever had settled and then
+     * completes, rather than hanging on a fan-out that will never reach its own terminal.
+     *
+     * This is a hard shutdown, not a drain: it does not wait for in-flight work to finish. Never
+     * called automatically. Skipping it costs at most one shared dispatcher (`Dispatchers.Default`,
+     * not a dedicated thread pool) plus whatever detached runs [enrichProgressive]'s dedupe has not
+     * yet coalesced away — bounded by how many distinct request/types/forceRefresh keys are
+     * genuinely in flight at once, never by how many times a collector cancelled and re-called for
+     * the *same* key.
+     */
+    override fun close() {
+        detachedScope.cancel()
+    }
 
     override suspend fun enrich(
         request: EnrichmentRequest,
@@ -108,28 +152,21 @@ internal class DefaultEnrichmentEngine(
     // never makes the producer wait to send the next settlement — a naive channelFlow default here
     // reaches back into provider fan-out and slows every call down, streamed or not, since enrich()
     // now runs through this same path.
+    //
+    // Complete-and-cache: cancelling collection of the returned Flow detaches the collector from
+    // the fan-out already in flight — that fan-out is a child of [detachedScope], not of this
+    // channelFlow producer, so cancelling here never reaches it. Bounded work may continue briefly
+    // after a cancelled collection: until the in-flight run for this request/types/forceRefresh key
+    // completes or times out, whichever comes first; a later, distinct call never joins more than
+    // one such run. The write-back still happens, so a subsequent equivalent call is typically a
+    // cache hit — see [close] for what happens to a run still in flight when the engine itself is
+    // shut down.
+    @OptIn(ExperimentalCoroutinesApi::class) // transformWhile, used only to relay a detached run
     override fun enrichProgressive(
         request: EnrichmentRequest,
         types: Set<EnrichmentType>,
         forceRefresh: Boolean,
     ): Flow<EnrichmentResults> = channelFlow {
-        runProgressive(request, types, forceRefresh) { snapshot -> send(snapshot) }
-    }.buffer(Channel.CONFLATED)
-
-    /**
-     * The one resolution path [enrich] and [enrichProgressive] share. Every settled type reaches
-     * [emit] as its own catalog-filtered, provenance-stamped, stale-cache-resolved snapshot — except
-     * the type whose settlement first makes every requested type present, which is suppressed: the
-     * real terminal snapshot, built after write-back below, takes that emission's place.
-     */
-    private suspend fun runProgressive(
-        request: EnrichmentRequest,
-        types: Set<EnrichmentType>,
-        forceRefresh: Boolean,
-        emit: suspend (EnrichmentResults) -> Unit,
-    ) {
-        if (forceRefresh) invalidateForRefresh(request, types)
-
         val cacheLayer = readCacheLayer(request, types, forceRefresh)
         if (cacheLayer.uncachedTypes.isEmpty()) {
             val identity = IdentityResolution(request.identifiers, CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT)
@@ -141,72 +178,70 @@ internal class DefaultEnrichmentEngine(
             val filtered = cacheLayer.results.mapValues { (type, result) ->
                 applyCatalogFilteringToType(type, result, config.catalogProvider, config.catalogFilterMode, logger)
             }
-            emit(EnrichmentResults(filtered, types, identity))
-            return
+            send(EnrichmentResults(filtered, types, identity))
+            return@channelFlow
         }
 
-        val session = RunSession(
-            board = SettlementBoard(types + compositeSubTypesOf(types)),
-            identityHolder = IdentityHolder(IdentityResolution(request.identifiers, CanonicalStatus.RESOLVING)),
-        )
-        val settle: suspend (EnrichmentType, EnrichmentResult, ChainExecution?) -> Unit = { type, raw, execution ->
-            val snapshot = session.board.settle(type, raw, execution) {
-                finalizeResult(request, type, it, execution, session.identityHolder)
-            }
-            val filtered = snapshot.filterKeys { it in types }
-            if ((types - filtered.keys).isNotEmpty()) {
-                emit(EnrichmentResults(filtered, types, session.identityHolder.current))
-            }
+        val run = attachOrStartDetachedRun(request, types, forceRefresh, cacheLayer)
+
+        // Relay every snapshot the detached run produces, stopping once the terminal one has been
+        // forwarded. Cancelling this collector cancels only this collect() — the detached run keeps
+        // producing into run.shared regardless, so a later caller who re-issues the same call still
+        // finds it (or its cache write-back) there.
+        run.shared.transformWhile { snapshot ->
+            emit(snapshot)
+            !(run.terminal.isCompleted && snapshot === run.terminal.getCompleted())
+        }.collect { snapshot -> send(snapshot) }
+    }.buffer(Channel.CONFLATED)
+
+    /**
+     * The dedupe key for [enrichProgressive]'s detached-run coalescing: two calls whose uncached
+     * types resolve to the same [entityKeyFor] set under the same [forceRefresh] attach to the same
+     * run rather than starting a second fan-out. forceRefresh is baked into the key itself, not
+     * checked separately, so a forced call can never attach to an unforced run's in-flight data (it
+     * would get data it asked to bypass) — it only ever attaches to another forced call for the
+     * same types, or starts its own new run.
+     *
+     * Keyed on [uncachedTypes], not the full [request] — a shortcut: two requests naming the same
+     * entity two different ways (an MBID-bearing request and a name-only request that resolves to
+     * it) get separate runs even though their fan-out would answer the same cache keys either way.
+     * Safe (never under-coalesces two genuinely different entities), just sometimes misses a
+     * coalescing opportunity a full-identity key would catch.
+     */
+    private fun progressiveDedupeKey(
+        request: EnrichmentRequest,
+        uncachedTypes: Set<EnrichmentType>,
+        forceRefresh: Boolean,
+    ): String = uncachedTypes.map { entityKeyFor(request, it) }.sorted().joinToString("|") + "#force=$forceRefresh"
+
+    /**
+     * Attaches to an in-flight detached run for this key, or starts one, via [progressiveRuns].
+     * Only the call that actually starts a new run performs [forceRefresh]'s invalidate pass — a
+     * call that is about to attach to an existing run must not invalidate, or its invalidation can
+     * race that run's own write-back and wipe data it just fetched (the forced arm of the
+     * cancellation A/B's known gap) — [ProgressiveRunRegistry.attachOrStart]'s own contract is what
+     * guarantees only the starting call's body runs.
+     */
+    private suspend fun attachOrStartDetachedRun(
+        request: EnrichmentRequest,
+        types: Set<EnrichmentType>,
+        forceRefresh: Boolean,
+        cacheLayer: CacheLayer,
+    ): ProgressiveRunRegistry.ProgressiveRun {
+        val dedupeKey = progressiveDedupeKey(request, cacheLayer.uncachedTypes, forceRefresh)
+        return progressiveRuns.attachOrStart(dedupeKey) { newRun ->
+            if (forceRefresh) invalidateForRefresh(request, types)
+            runProgressiveFanOut(request, types, forceRefresh, cacheLayer, newRun)
         }
-
-        // Cache hits settle immediately: catalog filtering is the only finalize step that touches
-        // them, and it does not depend on canonicalStatus, so there is nothing to wait on identity
-        // resolution for. That is also what lets the first emission go out before identity resolves.
-        for ((type, result) in cacheLayer.results) settle(type, result, null)
-
-        // withTimeoutOrNull returns null only when *this* deadline expired. A nested withTimeout's
-        // expiry — a consumer's CatalogProvider, say — propagates instead of being caught by type
-        // and mislabelled as enrichTimeoutMs. (#55)
-        val completed = withTimeoutOrNull(config.enrichTimeoutMs) {
-            resolveUncachedTypes(request, forceRefresh, cacheLayer, session, settle)
-            true
-        } ?: false
-
-        if (!completed) stampTimeoutStragglers(types, session.board, settle)
-
-        // A timed-out run persists nothing. The deadline can fire part-way through finalizing a
-        // type — catalog filtering does exactly that, per type — so what survives is a mix of
-        // finished and unfinished work. Returning it is the contract; caching it would outlive the
-        // call that truncated it. (#56)
-        val results = session.board.snapshotResults()
-        if (completed) {
-            // Both non-null whenever completed: resolveUncachedTypes assigns them before
-            // streamResolveTypes runs, inside the same timed block, so a completed run always set
-            // them first.
-            val resolution = requireNotNull(session.identityResolution) {
-                "identityResolution must be set once the timed block completes"
-            }
-            val resolvedRequest = requireNotNull(session.resolvedRequest) {
-                "resolvedRequest must be set once the timed block completes"
-            }
-            val context = WriteBackContext(resolution, cacheLayer.negativeCacheHits, session.chainExecutions)
-            writeBack(request, resolvedRequest, results, context)
-        }
-
-        // A timeout that fired before identity resolution ran is the one gap identityResolution
-        // never filled — FAILED is the honest status for a call that never learned otherwise.
-        val identity =
-            session.identityResolution ?: IdentityResolution(request.identifiers, CanonicalStatus.FAILED)
-        emit(EnrichmentResults(results.filterKeys { it in types }, types, identity))
     }
 
     /**
      * Identity resolution, the identity fast-path settle, and [streamResolveTypes]'s fan-out — the
-     * whole body [runProgressive]'s deadline wraps. [session] carries what survives the deadline
+     * whole body [runProgressiveFanOut]'s deadline wraps. [session] carries what survives the deadline
      * back to the caller; its `identityResolution`/`resolvedRequest`/`chainExecutions` stay unset
      * until this returns normally.
      */
-    private suspend fun resolveUncachedTypes(
+    internal suspend fun resolveUncachedTypes(
         request: EnrichmentRequest,
         forceRefresh: Boolean,
         cacheLayer: CacheLayer,
@@ -274,7 +309,7 @@ internal class DefaultEnrichmentEngine(
         }
     }
 
-    private suspend fun invalidateForRefresh(request: EnrichmentRequest, types: Set<EnrichmentType>) {
+    internal suspend fun invalidateForRefresh(request: EnrichmentRequest, types: Set<EnrichmentType>) {
         for (type in types) {
             for (key in cacheKeysFor(request, type)) {
                 guardedCacheWrite(logger, "invalidate") { cache.invalidate(key, type) }
@@ -282,8 +317,8 @@ internal class DefaultEnrichmentEngine(
         }
     }
 
-    /** [runProgressive]'s deadline-fired backfill: every type [board] never settled becomes an honest Error(TIMEOUT). */
-    private suspend fun stampTimeoutStragglers(
+    /** [runProgressiveFanOut]'s deadline-fired backfill: every type [board] never settled becomes an honest Error(TIMEOUT). */
+    internal suspend fun stampTimeoutStragglers(
         types: Set<EnrichmentType>,
         board: SettlementBoard,
         settle: suspend (EnrichmentType, EnrichmentResult, ChainExecution?) -> Unit,
@@ -299,7 +334,7 @@ internal class DefaultEnrichmentEngine(
         }
     }
 
-    /** [runProgressive]'s cache-read pass: cache hits, negative-cache hits, and what remains uncached. */
+    /** [runProgressiveFanOut]'s cache-read pass: cache hits, negative-cache hits, and what remains uncached. */
     private suspend fun readCacheLayer(
         request: EnrichmentRequest,
         types: Set<EnrichmentType>,
@@ -342,7 +377,7 @@ internal class DefaultEnrichmentEngine(
     }
 
     /** Every type a composite among [types] would resolve as a dependency, whether or not [types] asked for it. */
-    private fun compositeSubTypesOf(types: Set<EnrichmentType>): Set<EnrichmentType> =
+    internal fun compositeSubTypesOf(types: Set<EnrichmentType>): Set<EnrichmentType> =
         types.filter { it in compositeDependencies }
             .flatMap { compositeDependencies[it].orEmpty() }
             .toSet()
@@ -354,7 +389,7 @@ internal class DefaultEnrichmentEngine(
      * reads `Success`) and into stale-cache resolution (which only reads `Error`/`RateLimited`), so
      * the three never contend over the same result.
      */
-    private suspend fun finalizeResult(
+    internal suspend fun finalizeResult(
         request: EnrichmentRequest,
         type: EnrichmentType,
         raw: EnrichmentResult,
@@ -367,7 +402,7 @@ internal class DefaultEnrichmentEngine(
         return applyStaleCacheToType(request, type, stamped)
     }
 
-    private suspend fun writeBack(
+    internal suspend fun writeBack(
         request: EnrichmentRequest,
         resolvedRequest: EnrichmentRequest,
         results: Map<EnrichmentType, EnrichmentResult>,

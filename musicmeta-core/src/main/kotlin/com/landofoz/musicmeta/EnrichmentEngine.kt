@@ -79,6 +79,17 @@ interface EnrichmentEngine {
      * The default implementation below runs [enrich] once and emits its result as the sole,
      * terminal snapshot — the cadence a third-party [EnrichmentEngine] gets for free without
      * overriding this method.
+     *
+     * **Cancellation is complete-and-cache, not abort-and-forfeit.** Cancelling collection (e.g.
+     * `take(1)`, or leaving composition) detaches the collector from the fan-out already under way;
+     * that fan-out keeps running, unattended, until it settles or [EnrichmentConfig.enrichTimeoutMs]
+     * expires — bounded to the one run for this exact request/[types]/[forceRefresh] combination, so
+     * a caller who cancels and re-calls the same thing N times in a row never multiplies upstream
+     * traffic by N. Its cache write-back still happens, so a subsequent equivalent call is typically
+     * a cache hit, not a re-fetch. This costs real work continuing after you stop watching it — see
+     * [close] for how to bound that at engine shutdown, not per call. A third-party implementor
+     * relying on the default single-emission body above has nothing to detach from: there is no
+     * cancellation cost to document for it.
      */
     fun enrichProgressive(
         request: EnrichmentRequest,
@@ -87,6 +98,19 @@ interface EnrichmentEngine {
     ): Flow<EnrichmentResults> = flow {
         emit(enrich(request, types, forceRefresh))
     }
+
+    /**
+     * Releases resources an implementation may hold for [enrichProgressive]'s complete-and-cache
+     * detachment (a scope that fan-out already in flight when a collector cancels keeps running
+     * on). The default here is a no-op: nothing above needs releasing without that mechanism.
+     *
+     * [DefaultEnrichmentEngine][com.landofoz.musicmeta.engine.DefaultEnrichmentEngine] overrides
+     * this as a hard shutdown, not a drain: any detached run still in flight is abandoned rather
+     * than waited for, and writes nothing back — the same rule a timed-out run already follows.
+     * Never called automatically; skipping it costs at most one shared dispatcher and whatever
+     * detached runs are genuinely in flight, never an unbounded amount.
+     */
+    fun close() {}
 
     /**
      * Enriches multiple requests sequentially, emitting each result as it completes.

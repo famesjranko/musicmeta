@@ -10,6 +10,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.*
 import org.junit.Test
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * The two halves of `enrich()`'s deadline: what a timed-out run may persist (#56), and whose
@@ -81,9 +82,13 @@ class EnrichTimeoutBoundaryTest {
         // other. Each type's whole settle-and-filter step is one atomic region, so the one caught
         // mid-filter never reaches the terminal result unfiltered — it settles as Error(TIMEOUT),
         // same as a type whose chain walk never returned at all.
-        var calls = 0
+        // AtomicInteger, not a plain var: complete-and-cache's fan-out runs on a real dispatcher
+        // (DefaultEnrichmentEngine's detached scope), so the two types' catalog calls genuinely
+        // race each other now, not just interleave cooperatively the way runTest's own dispatcher
+        // would have serialized them.
+        val calls = AtomicInteger(0)
         val catalog = CatalogProvider { queries ->
-            if (calls++ > 0) delay(5_000)
+            if (calls.getAndIncrement() > 0) delay(5_000)
             queries.mapIndexed { i, _ -> CatalogMatch(available = i == 0, source = "test") }
         }
 

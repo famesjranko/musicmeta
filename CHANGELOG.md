@@ -37,6 +37,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - `CompositeSynthesizer.synthesize`'s `resolved` deps now arrive finalized: `STALE_IF_ERROR` hands a failed-but-stale dependency as `Success`, not `Error`
+- `enrichProgressive`'s cancellation is complete-and-cache, not abort-and-forfeit: a cancelled collector detaches, the fan-out keeps running and still writes back
+
+### Added
+- `EnrichmentEngine.close()` (defaulted no-op): releases the scope backing `enrichProgressive`'s detachment; call it once done with an engine to abandon a still-running detached fan-out
 
 ## [0.12.0] - 2026-08-18
 
