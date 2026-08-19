@@ -116,7 +116,7 @@ internal class DefaultEnrichmentEngine(
     // cancels a sibling sharing this scope. Owned by, and scoped to, this engine instance — never
     // GlobalScope — so close() has something concrete to cancel; see close()'s KDoc for what
     // never calling it costs. progressiveRuns is the dedupe/lifecycle bookkeeping for what runs on
-    // it — a second enrichProgressive() call whose uncached types and forceRefresh match an
+    // it — a second enrichProgressive() call whose requested types and forceRefresh match an
     // in-flight run's key attaches to it instead of starting a second fan-out; forceRefresh is part
     // of that key, not a filter on top of it, so a forced call never attaches to an unforced run's
     // data and vice versa — see progressiveDedupeKey.
@@ -124,10 +124,7 @@ internal class DefaultEnrichmentEngine(
     // backstop for the rare case that failure is genuinely uncaught (nothing deeper in the chain
     // already caught and logged it) and no collector is left attached to relay it anywhere —
     // without this it would otherwise reach the platform's default uncaught-exception handler
-    // instead of this engine's own logger. Untested deliberately, not by omission: everything
-    // deeper in the pipeline already goes through the `catch (Exception) { ensureActive(); ... }`
-    // convention, so a non-cancellation exception genuinely reaching this handler is a rare
-    // backstop path, not a primary one a test would exercise in the ordinary run of the code.
+    // instead of this engine's own logger. Untested: see VERIFICATION.md "Known gaps".
     private val detachedScope = CoroutineScope(
         SupervisorJob() + detachedDispatcher +
             CoroutineExceptionHandler { _, throwable ->
@@ -224,24 +221,37 @@ internal class DefaultEnrichmentEngine(
     }.buffer(Channel.CONFLATED)
 
     /**
-     * The dedupe key for [enrichProgressive]'s detached-run coalescing: two calls whose uncached
-     * types resolve to the same [entityKeyFor] set under the same [forceRefresh] attach to the same
-     * run rather than starting a second fan-out. forceRefresh is baked into the key itself, not
-     * checked separately, so a forced call can never attach to an unforced run's in-flight data (it
-     * would get data it asked to bypass) — it only ever attaches to another forced call for the
+     * The dedupe key for [enrichProgressive]'s detached-run coalescing: two calls whose *requested*
+     * ([types]) types resolve to the same [entityKeyFor] set under the same [forceRefresh] attach to
+     * the same run rather than starting a second fan-out. forceRefresh is baked into the key itself,
+     * not checked separately, so a forced call can never attach to an unforced run's in-flight data
+     * (it would get data it asked to bypass) — it only ever attaches to another forced call for the
      * same types, or starts its own new run.
      *
-     * Keyed on [uncachedTypes], not the full [request] — a shortcut: two requests naming the same
-     * entity two different ways (an MBID-bearing request and a name-only request that resolves to
-     * it) get separate runs even though their fan-out would answer the same cache keys either way.
-     * Safe (never under-coalesces two genuinely different entities), just sometimes misses a
-     * coalescing opportunity a full-identity key would catch.
+     * Keyed on the full [types], not [CacheLayer.uncachedTypes]: a run's terminal snapshot is shaped
+     * by the requested types the call that *started* it passed in (see [runProgressiveFanOut]), and
+     * every attached collector — [enrichProgressive]'s relay does no per-caller reshaping — gets that
+     * same snapshot verbatim. Keying on the uncached set let two calls with genuinely different
+     * `types` collide whenever cache state happened to make their *uncached* sets coincide (e.g. one
+     * type already cached for a narrower call, still uncached for a wider one asking for it too) —
+     * the narrower call would silently inherit types it never asked for, and the wider call could
+     * come back missing a requested-but-cached type. Keying on `types` itself means two calls only
+     * ever share a run when their requested sets are identical, so cache-state drift between two
+     * differently-shaped calls now naturally starts two runs instead of colliding into one — that
+     * was never a real coalescing win, only ever a bug waiting on the right cache state. Two calls
+     * with identical `types` over the same cache state still coalesce exactly as before.
+     *
+     * Keyed on [types], not the full [request] — a shortcut: two requests naming the same entity two
+     * different ways (an MBID-bearing request and a name-only request that resolves to it) get
+     * separate runs even though their fan-out would answer the same cache keys either way. Safe
+     * (never under-coalesces two genuinely different entities), just sometimes misses a coalescing
+     * opportunity a full-identity key would catch.
      */
     private fun progressiveDedupeKey(
         request: EnrichmentRequest,
-        uncachedTypes: Set<EnrichmentType>,
+        types: Set<EnrichmentType>,
         forceRefresh: Boolean,
-    ): String = uncachedTypes.map { entityKeyFor(request, it) }.sorted().joinToString("|") + "#force=$forceRefresh"
+    ): String = types.map { entityKeyFor(request, it) }.sorted().joinToString("|") + "#force=$forceRefresh"
 
     /**
      * Attaches to an in-flight detached run for this key, or starts one, via [progressiveRuns].
@@ -257,7 +267,7 @@ internal class DefaultEnrichmentEngine(
         forceRefresh: Boolean,
         cacheLayer: CacheLayer,
     ): ProgressiveRunRegistry.ProgressiveRun {
-        val dedupeKey = progressiveDedupeKey(request, cacheLayer.uncachedTypes, forceRefresh)
+        val dedupeKey = progressiveDedupeKey(request, types, forceRefresh)
         return progressiveRuns.attachOrStart(
             dedupeKey,
             onClosed = { newRun -> abandonedSnapshot(request, types, newRun) },
@@ -446,6 +456,13 @@ internal class DefaultEnrichmentEngine(
      * `Success` demoted to `NotFound` by filtering flow untouched through stamping (which only
      * reads `Success`) and into stale-cache resolution (which only reads `Error`/`RateLimited`), so
      * the three never contend over the same result.
+     *
+     * A stale-cache substitution hands back a *different* `Success` object, read straight from the
+     * cache rather than produced by this call's own filtering pass above — so it is run back through
+     * [applyCatalogFilteringToType] before returning, the same normalize-at-entry every other serve
+     * gets. Without this, a persisted `isCatalogDegraded = true` (written by a call whose
+     * `CatalogProvider` threw) would replay verbatim on a call with no `CatalogProvider` configured
+     * at all, which that field's own KDoc says should be structurally impossible.
      */
     internal suspend fun finalizeResult(
         request: EnrichmentRequest,
@@ -457,7 +474,12 @@ internal class DefaultEnrichmentEngine(
         val status = identityHolder.current.status
         val filtered = applyCatalogFilteringToType(type, raw, config.catalogProvider, config.catalogFilterMode, logger)
         val stamped = stampProvenanceOne(filtered, execution, status)
-        return applyStaleCacheToType(request, type, stamped)
+        val stale = applyStaleCacheToType(request, type, stamped)
+        return if (stale === stamped) {
+            stale
+        } else {
+            applyCatalogFilteringToType(type, stale, config.catalogProvider, config.catalogFilterMode, logger)
+        }
     }
 
     internal suspend fun writeBack(
@@ -1012,6 +1034,12 @@ internal class DefaultEnrichmentEngine(
      * [config.cacheMode]'s `STALE_IF_ERROR` clause for one type: a fresh `Error`/`RateLimited` is
      * replaced by an expired cache entry that still answers the type, marked [EnrichmentResult.Success.isStale].
      * Any other result — including a fresh `Success` or `NotFound` — passes through unchanged.
+     *
+     * [ErrorKind.ENGINE_CLOSED] is never substituted, even under `STALE_IF_ERROR`: it is the one
+     * `Error` this engine stamps itself, after [close] — [close]'s own KDoc promises every unsettled
+     * requested type becomes that Error, unconditionally, and a stale cache hit silently standing in
+     * for it would break that promise for exactly the caller relying on it to notice a shutdown.
+     * [ErrorKind.TIMEOUT], stamped the same way for a different reason, keeps the normal substitution.
      */
     private suspend fun applyStaleCacheToType(
         request: EnrichmentRequest,
@@ -1020,6 +1048,7 @@ internal class DefaultEnrichmentEngine(
     ): EnrichmentResult {
         if (config.cacheMode != CacheMode.STALE_IF_ERROR) return result
         if (result !is EnrichmentResult.Error && result !is EnrichmentResult.RateLimited) return result
+        if (result is EnrichmentResult.Error && result.errorKind == ErrorKind.ENGINE_CLOSED) return result
         val stale = guardedCacheRead(logger, "getIncludingExpired") {
             cache.getIncludingExpired(entityKeyFor(request, type), type)
         }

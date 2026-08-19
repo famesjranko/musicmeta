@@ -33,7 +33,9 @@ data class EnrichmentCacheEntity(
     // it is call-scoped, recomputed by re-running catalog filtering against the *live*
     // CatalogProvider on every cache hit (RoomEnrichmentCache.get/getIncludingExpired hand the
     // decoded Success back with the field at its default false; the engine's own finalizeResult
-    // step overwrites it before a caller ever sees it). Persisting it would be wrong in both
+    // step overwrites it before a caller ever sees it — including a STALE_IF_ERROR substitution,
+    // which finalizeResult routes back through the same filtering step rather than trusting
+    // whatever was true when the stale row was written). Persisting it would be wrong in both
     // directions — a stored degrade would haunt a since-recovered CatalogProvider, and a
     // healthy-at-write row would mask one that started failing after it was cached.
     @ColumnInfo(name = "cached_at") val cachedAt: Long,
