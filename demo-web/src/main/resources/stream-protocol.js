@@ -83,3 +83,27 @@ export function classifyStreamOutcome({ status, painted = 0, retryAfter = null, 
   }
   return { kind: 'retry-whole', fallback: true };
 }
+
+/**
+ * Reads a response that was supposed to carry JSON, and says what happened when it did not.
+ *
+ * The demo answers every endpoint in JSON, but the demo is not the only thing that can answer:
+ * a proxy, a gateway or the platform itself replies in HTML, and `response.json()` then throws a
+ * complaint about an unexpected `<` that tells a reader nothing about what went wrong. That
+ * complaint is the parser's, not the server's, and it must never reach the page.
+ *
+ * Returns `{ data, error }` — exactly one of them is set, and `error` is always something worth
+ * showing a reader.
+ */
+export function readJsonResponse({ status, ok, contentType = '', body = '' }) {
+  let parsed;
+  try {
+    parsed = JSON.parse(body);
+  } catch (_) {
+    // The status is the only reliable fact left, so it carries the message.
+    const kind = contentType.includes('html') ? 'a page instead of data' : 'an unreadable response';
+    return { data: null, error: `The server returned ${kind} (HTTP ${status}).` };
+  }
+  if (ok) return { data: parsed, error: null };
+  return { data: parsed, error: parsed?.error || `HTTP ${status}` };
+}

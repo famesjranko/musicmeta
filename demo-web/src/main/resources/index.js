@@ -1,4 +1,4 @@
-import { createSseParser, classifyStreamOutcome } from '/stream-protocol.js';
+import { createSseParser, classifyStreamOutcome, readJsonResponse } from '/stream-protocol.js';
 
 const tabsEl = document.getElementById('kind-tabs');
 const kindTabs = Array.from(tabsEl.querySelectorAll('button[data-kind]'));
@@ -159,7 +159,13 @@ async function pollHealth() {
     // 503 is the still-warming status (see Server.kt's /api/health) and carries the same
     // parseable JSON body as 200, so it is handled inline below rather than thrown as a failure.
     if (!response.ok && response.status !== 503) throw new Error('HTTP ' + response.status);
-    const data = await response.json();
+    const data = readJsonResponse({
+      status: response.status,
+      ok: true, // 503 included: a warming body is the answer here, not a failure
+      contentType: response.headers.get('Content-Type') || '',
+      body: await response.text(),
+    }).data;
+    if (!data) throw new Error('HTTP ' + response.status);
     if (data.status === 'READY') {
       setHealthState('ready', 'Backend ready');
       setSearchReady(true);
@@ -300,16 +306,49 @@ async function runQuery(refresh, replay, pick) {
   }
 }
 
+
+/**
+ * Fetches an endpoint that answers in JSON, and reads the body without assuming it got any.
+ *
+ * Returns `{ res, data, error }`, never throwing on the body: callers that branch on a status
+ * (429, or health's 503) need the response before they need the payload. `error` is set whenever
+ * there is nothing usable to render, and is always a sentence rather than a parser's complaint.
+ */
+async function fetchJson(input, init) {
+  const res = await fetch(input, init);
+  const read = readJsonResponse({
+    status: res.status,
+    ok: res.ok,
+    contentType: res.headers.get('Content-Type') || '',
+    body: await res.text(),
+  });
+  return { res, data: read.data, error: read.error };
+}
+
+/**
+ * The `.then` shape of [fetchJson] for the settings panels, which have no status to branch on and
+ * only need the payload or a reason there is none.
+ */
+async function readPanel(res) {
+  const read = readJsonResponse({
+    status: res.status,
+    ok: res.ok,
+    contentType: res.headers.get('Content-Type') || '',
+    body: await res.text(),
+  });
+  if (read.error) throw new Error(read.error);
+  return read.data;
+}
+
 // The single-shot path: one response, one paint. Kept as the comparison baseline behind the
 // "Progressive streaming" setting, and as the fallback when a stream drops before it paints.
 async function runQueryWhole(params, wasForceRefresh) {
-  const res = await fetch('/api/enrich?' + params.toString());
+  const { res, data, error } = await fetchJson('/api/enrich?' + params.toString());
   if (res.status === 429) {
     showBusy(classifyStreamOutcome({ status: 429, retryAfter: res.headers.get('Retry-After') }));
     return;
   }
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+  if (error) throw new Error(error);
   render(data, wasForceRefresh);
 }
 
@@ -407,11 +446,14 @@ async function runQueryStreaming(params, wasForceRefresh) {
   if (!response.ok) {
     release();
     if (!mine()) return;
-    let message = 'HTTP ' + response.status;
-    try {
-      message = (await response.json()).error || message;
-    } catch (_) { /* a non-JSON error body leaves the status as the whole story */ }
-    throw new Error(message);
+    throw new Error(
+      readJsonResponse({
+        status: response.status,
+        ok: false,
+        contentType: response.headers.get('Content-Type') || '',
+        body: await response.text(),
+      }).error,
+    );
   }
 
   const parser = createSseParser();
@@ -529,9 +571,8 @@ async function runSearch() {
   searchResultsEl.innerHTML = '<h4>Searching\u2026</h4>';
   searchResultsEl.hidden = false;
   try {
-    const res = await fetch('/api/search?' + params.toString());
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+    const { data, error } = await fetchJson('/api/search?' + params.toString());
+    if (error) throw new Error(error);
     candidates = data.candidates || [];
     renderCandidates(query);
   } catch (err) {
@@ -902,13 +943,12 @@ resultEl.addEventListener('click', async (e) => {
     // bare-name tuple clears and an identifier-bearing preview survives "Clear cached result & reload".
     const { kind, name, artist, album, ids } = lastQuery;
     const identifiers = ids ? JSON.parse(ids) : undefined;
-    const res = await fetch('/api/invalidate', {
+    const { error } = await fetchJson('/api/invalidate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ kind, name, artist, album, identifiers }),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+    if (error) throw new Error(error);
     runQuery(false, true);
   } catch (err) {
     statusEl.className = 'err';
@@ -1046,9 +1086,8 @@ resultEl.addEventListener('click', async (e) => {
   });
   if (btn.dataset.ids) params.set('ids', btn.dataset.ids);
   try {
-    const res = await fetch('/api/preview?' + params.toString());
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'No preview');
+    const { data, error } = await fetchJson('/api/preview?' + params.toString());
+    if (error) throw new Error(error);
     if (btn !== activeBtn) return; // superseded by another click while loading
     audio.src = data.url;
     await audio.play();
@@ -1139,10 +1178,7 @@ function renderProviders(providers) {
 }
 
 fetch('/api/providers', { cache: 'no-store' })
-  .then((res) => {
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    return res.json();
-  })
+  .then(readPanel)
   .then((data) => renderProviders(data.providers || []))
   .catch(() => { providerPanel.textContent = 'The provider list could not be loaded.'; });
 
@@ -1184,10 +1220,7 @@ function setCacheModeRadio(cacheMode) {
 }
 
 fetch('/api/config', { cache: 'no-store' })
-  .then((res) => {
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    return res.json();
-  })
+  .then(readPanel)
   .then((data) => setCacheModeRadio(data.cacheMode))
   .catch(() => {});
 
@@ -1200,10 +1233,7 @@ cacheModeInputs.forEach((input) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ cacheMode: requested }),
     })
-      .then((res) => {
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        return res.json();
-      })
+      .then(readPanel)
       .then((data) => setCacheModeRadio(data.cacheMode))
       .catch(() => setCacheModeRadio(lastConfirmed));
   });

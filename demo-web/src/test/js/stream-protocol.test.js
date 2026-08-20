@@ -5,6 +5,7 @@ import {
   createSseParser,
   parseRetryAfter,
   classifyStreamOutcome,
+  readJsonResponse,
 } from '../../main/resources/stream-protocol.js';
 
 // --- SSE framing ---------------------------------------------------------------------------
@@ -121,4 +122,48 @@ test('a 404 is a failure the page reports rather than retries', () => {
   const outcome = classifyStreamOutcome({ status: 404, painted: 0 });
   assert.equal(outcome.kind, 'failed');
   assert.equal(outcome.fallback, false);
+});
+
+// --- Reading a response that promised JSON -----------------------------------------------------
+// Anything between the browser and the demo can answer instead of the demo: a proxy, a gateway, a
+// platform error page. Those answer in HTML, and a page that assumes JSON reports the parser's
+// complaint about a '<' rather than what actually happened.
+
+test('a successful JSON body is returned as data with no error', () => {
+  const read = readJsonResponse({ status: 200, ok: true, body: '{"name":"Radiohead"}' });
+  assert.deepEqual(read.data, { name: 'Radiohead' });
+  assert.equal(read.error, null);
+});
+
+test("a failed JSON body reports the server's own error text", () => {
+  const read = readJsonResponse({ status: 429, ok: false, body: '{"error":"The demo is busy."}' });
+  assert.equal(read.error, 'The demo is busy.');
+});
+
+test('a failed JSON body with no error field falls back to the status', () => {
+  const read = readJsonResponse({ status: 500, ok: false, body: '{}' });
+  assert.equal(read.error, 'HTTP 500');
+});
+
+test('an HTML body is reported as an unexpected response, never as a parser complaint', () => {
+  const read = readJsonResponse({
+    status: 501, ok: false, contentType: 'text/html', body: '<!DOCTYPE html><html>nope</html>',
+  });
+  assert.equal(read.data, null);
+  assert.match(read.error, /HTTP 501/);
+  assert.doesNotMatch(read.error, /token|JSON|</);
+});
+
+test('an HTML body on a 200 is still not data', () => {
+  const read = readJsonResponse({
+    status: 200, ok: true, contentType: 'text/html', body: '<!DOCTYPE html>',
+  });
+  assert.equal(read.data, null);
+  assert.match(read.error, /HTTP 200/);
+});
+
+test('an empty body reports the status rather than an empty message', () => {
+  const read = readJsonResponse({ status: 502, ok: false, body: '' });
+  assert.equal(read.data, null);
+  assert.match(read.error, /HTTP 502/);
 });
