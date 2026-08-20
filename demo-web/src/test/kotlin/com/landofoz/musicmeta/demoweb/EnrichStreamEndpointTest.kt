@@ -535,6 +535,36 @@ class EnrichStreamEndpointTest {
         assertEquals(200, raw(port, "/api/health").statusCode())
     }
 
+    @Test fun `a client that leaves between snapshots is noticed by the heartbeat, not the next snapshot`() {
+        // Given - a script whose next snapshot is half a minute away, so nothing but a heartbeat
+        // can notice the reader leaving before then, and the admission permit is held meanwhile
+        val engine =
+            ScriptedEngine(
+                listOf(
+                    artistResults(mapOf(EnrichmentType.ARTIST_BIO to bio("Bristol."))),
+                    artistResults(everyArtistType),
+                ),
+                gapMs = 30_000,
+            )
+        val port = startWith(engine)
+
+        // When - the client reads the first snapshot and drops the connection
+        Socket("localhost", port).use { socket ->
+            socket.getOutputStream().write(
+                "GET /api/enrich-stream?kind=artist&name=Portishead HTTP/1.1\r\nHost: localhost\r\n\r\n"
+                    .toByteArray(StandardCharsets.UTF_8),
+            )
+            socket.getOutputStream().flush()
+            val reader = socket.getInputStream().bufferedReader()
+            while (reader.readLine()?.startsWith("data: ") == false) Unit
+        }
+
+        // Then - the collection stops within the heartbeat's notice, well inside the 30s gap the
+        // next snapshot write would have waited out holding a permit
+        assertNotNull(engine.termination.get(10, TimeUnit.SECONDS))
+        assertEquals(200, raw(port, "/api/health").statusCode())
+    }
+
     @Test fun `a run that fails while the client is still there reports an error event`() {
         // Given - an engine whose stream throws part way through, with nothing wrong with the socket
         val engine =

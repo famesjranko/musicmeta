@@ -79,6 +79,11 @@ Where a rule below names its gate, what is written here is the part that gate ca
   must predate the change it is evidence for — one written to match new code proves only that the
   code agrees with itself. A pool whose chain back to a live capture is unverified says so in its
   own `scenario.md`.
+- A design choice between plausible options is settled by measurement when a cheap probe exists:
+  one throwaway arm per option, identical workload and metrics, decided from the arms' own numbers.
+  Each arm's report states what it did not measure, lands in `.scratch/<effort>/prototypes/`, and
+  its worktree is committed to a branch — an uncommitted worktree is the only copy of its evidence.
+  A prose comparison is the fallback for when no cheap probe exists, and says so.
 - Comments carry the contract, not the history. KDoc states what a caller must know; a rationale
   that isn't a caller's problem gets one sentence, not a paragraph. No PR/issue numbers, `.scratch/`
   paths, or "previously we…" in code — git and the PR hold those. A comment that restates the code
