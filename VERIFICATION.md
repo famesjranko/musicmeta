@@ -148,6 +148,16 @@ than it looks like, each learned the hard way.
   logic that needs proving belongs on the tested side of it. Verified once by hand at the commit
   that introduced the `fetch` reader: a real lookup streamed and painted, and a refused one issued
   exactly one request rather than falling back to a second.
+- **The demo's admission gate is a bound on one process, and nothing checks it is the only one.**
+  `demo-web` admits a fixed number of enrichments at a time through a semaphore held in the server
+  process, and refuses the rest with a 429. That cap is therefore per instance: run the service at
+  two and the real bound is twice what the code says, with every test still green. Nothing in the
+  process can read the instance limit it depends on, so the invariant lives in a comment beside the
+  gate and in the deploy command, and in neither case does anything fail when they disagree. What
+  `AdmissionGateTest` does prove is the part that is checkable inside one JVM: that the bound admits
+  its whole width at once rather than serialising, that the endpoint over it refuses as a status
+  rather than as an event on an already-committed 200, and that a permit survives a failure the
+  handler does not catch.
 - **`DefaultEnrichmentEngine`'s `detachedScope` `CoroutineExceptionHandler` is untested.** It is the
   backstop for a detached `enrichProgressive` run's failure reaching neither a collector (none left
   attached) nor anything deeper in the pipeline (which already catches and logs via the
