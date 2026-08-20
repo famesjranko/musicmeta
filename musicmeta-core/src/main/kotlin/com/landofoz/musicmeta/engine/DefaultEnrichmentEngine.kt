@@ -50,7 +50,8 @@ internal data class WriteBackContext(
     val identityResolution: IdentityResolution,
     val negativeCacheHits: Set<EnrichmentType>,
     val chainExecutions: Map<EnrichmentType, ChainExecution>,
-    val staleSubstituteEmptied: Set<EnrichmentType>,
+    val filterEmptied: Set<EnrichmentType>,
+    val staleDerived: Set<EnrichmentType>,
 )
 
 /** The cache layer's own outcome for a call — split off [DefaultEnrichmentEngine.readCacheLayer]'s three collections. */
@@ -76,13 +77,28 @@ internal class RunSession(
     var chainExecutions: Map<EnrichmentType, ChainExecution> = emptyMap()
 
     /**
-     * Types whose [DefaultEnrichmentEngine.finalizeResult] re-filtered a stale-cache substitute
-     * down to nothing this call — read by [DefaultEnrichmentEngine.writeBack] so that emptiness is
-     * never mistaken for a live "providers had nothing" answer. Concurrent: different types settle
-     * from different coroutines, and each writes only its own type, but the set itself must survive
-     * that without tearing.
+     * Types whose [DefaultEnrichmentEngine.finalizeResult] turned a `Success` into `NotFound` by
+     * catalog filtering this call — whether that `Success` was this call's own live answer or a
+     * stale-cache substitute re-filtered on the way out. Read by [DefaultEnrichmentEngine.writeBack]
+     * so that emptiness, which describes the local catalog rather than a provider, is never mistaken
+     * for a live "providers had nothing" answer. Concurrent: different types settle from different
+     * coroutines, and each writes only its own type, but the set itself must survive that without
+     * tearing.
      */
-    val staleSubstituteEmptied: MutableSet<EnrichmentType> =
+    val filterEmptied: MutableSet<EnrichmentType> =
+        java.util.concurrent.ConcurrentHashMap.newKeySet()
+
+    /**
+     * Types whose finalized result this call is a [DefaultEnrichmentEngine.applyStaleCacheToType]
+     * substitute (set in [DefaultEnrichmentEngine.finalizeResult]), or a
+     * [DefaultEnrichmentEngine.synthesizeComposite] output derived from a dependency in this same
+     * set (propagated there, since [SettlementBoard.await] hands a composite its dependency's
+     * finalized value with no marker of its own for where that value came from). A stale substitute
+     * is a past call's snapshot, not this call's own answer — [DefaultEnrichmentEngine.writeBack]
+     * must not negative-cache a `NotFound` that descends from one. Concurrent for the same reason
+     * as [filterEmptied].
+     */
+    val staleDerived: MutableSet<EnrichmentType> =
         java.util.concurrent.ConcurrentHashMap.newKeySet()
 }
 
@@ -92,6 +108,7 @@ internal data class ResolveContext(
     val request: EnrichmentRequest,
     val identityResult: EnrichmentResult?,
     val canonicalStatus: CanonicalStatus,
+    val session: RunSession,
 )
 
 /**
@@ -367,7 +384,7 @@ internal class DefaultEnrichmentEngine(
             // ProviderChain, including the missing-identifier skips session.chainExecutions below
             // records for the cache write-back.
             streamResolveTypes(
-                ResolveContext(session.board, enrichedRequest, identityResult, resolution.status),
+                ResolveContext(session.board, enrichedRequest, identityResult, resolution.status, session),
                 fastPathRemaining,
                 settle,
             )
@@ -465,6 +482,12 @@ internal class DefaultEnrichmentEngine(
      * gets. Without this, a persisted `isCatalogDegraded = true` (written by a call whose
      * `CatalogProvider` threw) would replay verbatim on a call with no `CatalogProvider` configured
      * at all, which that field's own KDoc says should be structurally impossible.
+     *
+     * [raw] is not always this call's own live answer — [runProgressiveFanOut] also replays a cache
+     * hit through this same function, so filtering can empty a `Success` this call never asked a
+     * provider about at all. Either way, catalog filtering is never evidence a provider said
+     * nothing: any time it turns a `Success` into `NotFound`, [session]'s [RunSession.filterEmptied]
+     * records that so [DefaultEnrichmentEngine.writeBack] never negative-caches it.
      */
     internal suspend fun finalizeResult(
         request: EnrichmentRequest,
@@ -475,17 +498,20 @@ internal class DefaultEnrichmentEngine(
     ): EnrichmentResult {
         val status = session.identityHolder.current.status
         val filtered = applyCatalogFilteringToType(type, raw, config.catalogProvider, config.catalogFilterMode, logger)
+        if (raw is EnrichmentResult.Success && filtered is EnrichmentResult.NotFound) {
+            session.filterEmptied.add(type)
+        }
         val stamped = stampProvenanceOne(filtered, execution, status)
         val stale = applyStaleCacheToType(request, type, stamped)
         if (stale === stamped) return stale
         // stale !== stamped: the stale-cache substitution fired, so this is a *different* Success
-        // read from a past call, not this call's live answer — re-filtering it below can turn it
-        // into a NotFound that describes only that stale snapshot, never proof this call's own
-        // fan-out found nothing. writeBack must not treat that NotFound as negative-cache eligible.
-        val refiltered =
-            applyCatalogFilteringToType(type, stale, config.catalogProvider, config.catalogFilterMode, logger)
-        if (refiltered is EnrichmentResult.NotFound) session.staleSubstituteEmptied.add(type)
-        return refiltered
+        // read from a past call, not this call's live answer. Recorded unconditionally (not just
+        // when re-filtering below empties it) so a composite synthesized from this dependency can
+        // inherit the fact even when this type's own substitute stays a non-empty Success — and
+        // this membership alone is what bars writeBack from negative-caching a NotFound the
+        // re-filter produces.
+        session.staleDerived.add(type)
+        return applyCatalogFilteringToType(type, stale, config.catalogProvider, config.catalogFilterMode, logger)
     }
 
     internal suspend fun writeBack(
@@ -499,8 +525,10 @@ internal class DefaultEnrichmentEngine(
         for ((type, result) in results) {
             val aliasKey = aliasKeyFor(request, resolvedRequest, resolvedMbid, type)
             val identifierIncomplete = context.chainExecutions[type]?.identifierIncomplete == true
-            val staleSubstituteEmptied = type in context.staleSubstituteEmptied
-            val cacheable = isCacheableNegative(result, canonicalStatus, identifierIncomplete, staleSubstituteEmptied)
+            val filterEmptied = type in context.filterEmptied
+            val staleDerived = type in context.staleDerived
+            val cacheable =
+                isCacheableNegative(result, canonicalStatus, identifierIncomplete, filterEmptied, staleDerived)
             when {
                 // A negative served from cache this call is not re-put: its short TTL is the entry's
                 // freshness contract, and a cache hit must not extend it.
@@ -547,10 +575,13 @@ internal class DefaultEnrichmentEngine(
     /**
      * Only a real fan-out "providers had nothing" qualifies for negative caching: never a chain
      * that skipped a provider for an identifier this call never had ([identifierIncomplete]), never
-     * one reached under a canonical identity that did not resolve, and never one produced by
-     * re-filtering a [DefaultEnrichmentEngine.applyStaleCacheToType] substitute down to nothing
-     * ([staleSubstituteEmptied]) — that emptiness describes a past call's stale snapshot, not this
-     * call's live providers. Decided from the call's own [canonicalStatus] and those two per-type
+     * one [DefaultEnrichmentEngine.finalizeResult] produced by catalog-filtering a `Success` down
+     * to nothing ([filterEmptied]) — that emptiness describes the local catalog, not an upstream
+     * provider, whether the `Success` it emptied was this call's own live answer or a stale-cache
+     * substitute — never one whose finalized value is itself a stale-cache substitute, or a
+     * composite synthesized from one ([staleDerived]), since a stale substitute is a past call's
+     * snapshot rather than this call's own answer, and never one reached under a canonical identity
+     * that did not resolve. Decided from the call's own [canonicalStatus] and those three per-type
      * facts — a `NotFound` carries no per-result canonical fact of its own, so it is never consulted
      * here.
      */
@@ -558,11 +589,13 @@ internal class DefaultEnrichmentEngine(
         result: EnrichmentResult,
         canonicalStatus: CanonicalStatus,
         identifierIncomplete: Boolean,
-        staleSubstituteEmptied: Boolean,
+        filterEmptied: Boolean,
+        staleDerived: Boolean,
     ): Boolean =
         result is EnrichmentResult.NotFound &&
             !identifierIncomplete &&
-            !staleSubstituteEmptied &&
+            !filterEmptied &&
+            !staleDerived &&
             canonicalStatus.isCacheable()
 
     /**
@@ -840,6 +873,7 @@ internal class DefaultEnrichmentEngine(
         val request = context.request
         val identityResult = context.identityResult
         val canonicalStatus = context.canonicalStatus
+        val session = context.session
         // A request identity resolution could not name — an identifier-only one whose identifier
         // MusicBrainz holds nothing under — reaches every provider with a blank title and artist.
         // The name-search providers are asked for nothing at all in that state, so they are not
@@ -874,7 +908,8 @@ internal class DefaultEnrichmentEngine(
 
         compositeTypes.map { compositeType ->
             launch {
-                val (result, execution) = synthesizeComposite(board, compositeType, identityResult, request)
+                val (result, execution) =
+                    synthesizeComposite(board, compositeType, identityResult, request, session)
                 settle(compositeType, result, execution)
             }
         }.joinAll()
@@ -938,10 +973,19 @@ internal class DefaultEnrichmentEngine(
         compositeType: EnrichmentType,
         identityResult: EnrichmentResult?,
         request: EnrichmentRequest,
+        session: RunSession,
     ): Pair<EnrichmentResult, ChainExecution?> {
         val dependencies = compositeDependencies[compositeType].orEmpty()
         val depSettled = dependencies.associateWith { board.await(it) }
         val depExecutions = depSettled.values.mapNotNull { it.execution }
+        // A dependency's taint is set inside finalizeResult as it settles, before board.await
+        // above can return it — but board.await hands back only the finalized EnrichmentResult,
+        // with no record of where it came from, so the taint must be copied onto compositeType
+        // here for writeBack to see it. `any`, not `all`, deliberately: one stale or
+        // filter-emptied dependency among fresh ones still means the composite's answer rests on
+        // a value that is not this call's own, so its NotFound proves no absence.
+        if (dependencies.any { it in session.staleDerived }) session.staleDerived.add(compositeType)
+        if (dependencies.any { it in session.filterEmptied }) session.filterEmptied.add(compositeType)
         // A composite type has no chain of its own, so this is the only ChainExecution it ever
         // earns — folding each dependency's skips in is what makes a skip-for-missing-identifier
         // visible to writeBack's identifierIncomplete check one layer up.

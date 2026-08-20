@@ -11,9 +11,18 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
-/** The honest "never learned otherwise" identity for a call whose fan-out never resolved one. */
-private fun failedIdentityResolution(request: EnrichmentRequest) =
-    IdentityResolution(request.identifiers, CanonicalStatus.FAILED)
+/**
+ * The honest "never learned otherwise" identity for a call whose fan-out never resolved one —
+ * abandoned before it started, or stopped by its own deadline before identity resolution ran. A
+ * disabled [EnrichmentConfig.enableIdentityResolution] outranks either reason, same precedence as
+ * [DefaultEnrichmentEngine.resolveUncachedTypes]'s live path and [DefaultEnrichmentEngine.enrichProgressive]'s
+ * cache-hit fast path: nothing here was ever going to attempt identity resolution, so `FAILED`
+ * would misreport a config choice as a run that tried and lost.
+ */
+private fun DefaultEnrichmentEngine.failedIdentityResolution(request: EnrichmentRequest): IdentityResolution {
+    val status = if (config.enableIdentityResolution) CanonicalStatus.FAILED else CanonicalStatus.NOT_ATTEMPTED_DISABLED
+    return IdentityResolution(request.identifiers, status)
+}
 
 /**
  * The one resolution path [DefaultEnrichmentEngine.enrich] and
@@ -88,13 +97,14 @@ internal suspend fun DefaultEnrichmentEngine.runProgressiveFanOut(
                 resolution,
                 cacheLayer.negativeCacheHits,
                 session.chainExecutions,
-                session.staleSubstituteEmptied,
+                session.filterEmptied,
+                session.staleDerived,
             )
             writeBack(request, resolvedRequest, results, context)
         }
 
         // A timeout that fired before identity resolution ran is the one gap identityResolution
-        // never filled — FAILED is the honest status for a call that never learned otherwise.
+        // never filled; failedIdentityResolution decides what that gap reports.
         val identity = session.identityResolution ?: failedIdentityResolution(request)
         val terminalSnapshot = EnrichmentResults(results.filterKeys { it in types }, types, identity)
         progressiveRuns.complete(run, terminalSnapshot)
