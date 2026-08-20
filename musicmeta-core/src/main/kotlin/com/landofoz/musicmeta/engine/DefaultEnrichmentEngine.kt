@@ -50,7 +50,7 @@ internal data class WriteBackContext(
     val identityResolution: IdentityResolution,
     val negativeCacheHits: Set<EnrichmentType>,
     val chainExecutions: Map<EnrichmentType, ChainExecution>,
-    val staleSubstituteEmptied: Set<EnrichmentType>,
+    val filterEmptied: Set<EnrichmentType>,
 )
 
 /** The cache layer's own outcome for a call — split off [DefaultEnrichmentEngine.readCacheLayer]'s three collections. */
@@ -76,13 +76,15 @@ internal class RunSession(
     var chainExecutions: Map<EnrichmentType, ChainExecution> = emptyMap()
 
     /**
-     * Types whose [DefaultEnrichmentEngine.finalizeResult] re-filtered a stale-cache substitute
-     * down to nothing this call — read by [DefaultEnrichmentEngine.writeBack] so that emptiness is
-     * never mistaken for a live "providers had nothing" answer. Concurrent: different types settle
-     * from different coroutines, and each writes only its own type, but the set itself must survive
-     * that without tearing.
+     * Types whose [DefaultEnrichmentEngine.finalizeResult] turned a `Success` into `NotFound` by
+     * catalog filtering this call — whether that `Success` was this call's own live answer or a
+     * stale-cache substitute re-filtered on the way out. Read by [DefaultEnrichmentEngine.writeBack]
+     * so that emptiness, which describes the local catalog rather than a provider, is never mistaken
+     * for a live "providers had nothing" answer. Concurrent: different types settle from different
+     * coroutines, and each writes only its own type, but the set itself must survive that without
+     * tearing.
      */
-    val staleSubstituteEmptied: MutableSet<EnrichmentType> =
+    val filterEmptied: MutableSet<EnrichmentType> =
         java.util.concurrent.ConcurrentHashMap.newKeySet()
 }
 
@@ -465,6 +467,12 @@ internal class DefaultEnrichmentEngine(
      * gets. Without this, a persisted `isCatalogDegraded = true` (written by a call whose
      * `CatalogProvider` threw) would replay verbatim on a call with no `CatalogProvider` configured
      * at all, which that field's own KDoc says should be structurally impossible.
+     *
+     * [raw] is not always this call's own live answer — [runProgressiveFanOut] also replays a cache
+     * hit through this same function, so filtering can empty a `Success` this call never asked a
+     * provider about at all. Either way, catalog filtering is never evidence a provider said
+     * nothing: any time it turns a `Success` into `NotFound`, [session]'s [RunSession.filterEmptied]
+     * records that so [DefaultEnrichmentEngine.writeBack] never negative-caches it.
      */
     internal suspend fun finalizeResult(
         request: EnrichmentRequest,
@@ -475,6 +483,9 @@ internal class DefaultEnrichmentEngine(
     ): EnrichmentResult {
         val status = session.identityHolder.current.status
         val filtered = applyCatalogFilteringToType(type, raw, config.catalogProvider, config.catalogFilterMode, logger)
+        if (raw is EnrichmentResult.Success && filtered is EnrichmentResult.NotFound) {
+            session.filterEmptied.add(type)
+        }
         val stamped = stampProvenanceOne(filtered, execution, status)
         val stale = applyStaleCacheToType(request, type, stamped)
         if (stale === stamped) return stale
@@ -484,7 +495,7 @@ internal class DefaultEnrichmentEngine(
         // fan-out found nothing. writeBack must not treat that NotFound as negative-cache eligible.
         val refiltered =
             applyCatalogFilteringToType(type, stale, config.catalogProvider, config.catalogFilterMode, logger)
-        if (refiltered is EnrichmentResult.NotFound) session.staleSubstituteEmptied.add(type)
+        if (refiltered is EnrichmentResult.NotFound) session.filterEmptied.add(type)
         return refiltered
     }
 
@@ -499,8 +510,8 @@ internal class DefaultEnrichmentEngine(
         for ((type, result) in results) {
             val aliasKey = aliasKeyFor(request, resolvedRequest, resolvedMbid, type)
             val identifierIncomplete = context.chainExecutions[type]?.identifierIncomplete == true
-            val staleSubstituteEmptied = type in context.staleSubstituteEmptied
-            val cacheable = isCacheableNegative(result, canonicalStatus, identifierIncomplete, staleSubstituteEmptied)
+            val filterEmptied = type in context.filterEmptied
+            val cacheable = isCacheableNegative(result, canonicalStatus, identifierIncomplete, filterEmptied)
             when {
                 // A negative served from cache this call is not re-put: its short TTL is the entry's
                 // freshness contract, and a cache hit must not extend it.
@@ -547,22 +558,23 @@ internal class DefaultEnrichmentEngine(
     /**
      * Only a real fan-out "providers had nothing" qualifies for negative caching: never a chain
      * that skipped a provider for an identifier this call never had ([identifierIncomplete]), never
-     * one reached under a canonical identity that did not resolve, and never one produced by
-     * re-filtering a [DefaultEnrichmentEngine.applyStaleCacheToType] substitute down to nothing
-     * ([staleSubstituteEmptied]) — that emptiness describes a past call's stale snapshot, not this
-     * call's live providers. Decided from the call's own [canonicalStatus] and those two per-type
-     * facts — a `NotFound` carries no per-result canonical fact of its own, so it is never consulted
-     * here.
+     * one reached under a canonical identity that did not resolve, and never one
+     * [DefaultEnrichmentEngine.finalizeResult] produced by catalog-filtering a `Success` down to
+     * nothing ([filterEmptied]) — that emptiness describes the local catalog, not an upstream
+     * provider, whether the `Success` it emptied was this call's own live answer, a stale-cache
+     * substitute, or a fresh cache hit re-filtered on the way out. Decided from the call's own
+     * [canonicalStatus] and those two per-type facts — a `NotFound` carries no per-result canonical
+     * fact of its own, so it is never consulted here.
      */
     internal fun isCacheableNegative(
         result: EnrichmentResult,
         canonicalStatus: CanonicalStatus,
         identifierIncomplete: Boolean,
-        staleSubstituteEmptied: Boolean,
+        filterEmptied: Boolean,
     ): Boolean =
         result is EnrichmentResult.NotFound &&
             !identifierIncomplete &&
-            !staleSubstituteEmptied &&
+            !filterEmptied &&
             canonicalStatus.isCacheable()
 
     /**

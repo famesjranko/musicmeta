@@ -10,11 +10,13 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 /**
- * [DefaultEnrichmentEngine.applyStaleCacheToType]'s substitute is read straight from a past call,
- * not this one's live providers — re-filtering it to nothing is a fact about that stale snapshot,
- * never evidence the type is genuinely absent. See `docs/pitfalls.md`, "Traps in the pipeline".
+ * Emptiness a `CatalogFilterMode` produces is a fact about the local catalog, never a provider's
+ * own answer — no path that reaches `NotFound` by filtering a `Success` down to nothing is
+ * negative-cache eligible, whether that `Success` came from a live call this run, a stale
+ * substitute, or a fresh cache hit re-filtered on a later call. See `docs/pitfalls.md`,
+ * "Traps in the pipeline".
  */
-class StaleSubstituteNegativeCacheTest {
+class FilterEmptiedNegativeCacheTest {
 
     private val req = EnrichmentRequest.forArtist("Radiohead")
 
@@ -26,6 +28,8 @@ class StaleSubstituteNegativeCacheTest {
             confidence = 0.9f,
         )
 
+    private val allUnavailable = CatalogProvider { queries -> queries.map { CatalogMatch(available = false, source = "test") } }
+
     @Test
     fun `a NotFound produced by re-filtering a stale substitute is not negative-cached`() = runTest {
         // Given - STALE_IF_ERROR with an AVAILABLE_ONLY catalog filter that empties every item,
@@ -33,7 +37,6 @@ class StaleSubstituteNegativeCacheTest {
         val cache = FakeEnrichmentCache()
         val key = DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.SIMILAR_ARTISTS)
         cache.expiredStore["$key:${EnrichmentType.SIMILAR_ARTISTS}"] = similarArtists("Thom Yorke")
-        val allUnavailable = CatalogProvider { queries -> queries.map { CatalogMatch(available = false, source = "test") } }
         val failingProvider = FakeProvider(
             id = "failing",
             capabilities = listOf(ProviderCapability(EnrichmentType.SIMILAR_ARTISTS, 100)),
@@ -65,7 +68,6 @@ class StaleSubstituteNegativeCacheTest {
         // answers NotFound live rather than erroring, so there is no stale substitute at all
         val cache = FakeEnrichmentCache()
         val key = DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.SIMILAR_ARTISTS)
-        val allUnavailable = CatalogProvider { queries -> queries.map { CatalogMatch(available = false, source = "test") } }
         val provider = FakeProvider(
             id = "provider",
             capabilities = listOf(ProviderCapability(EnrichmentType.SIMILAR_ARTISTS, 100)),
@@ -84,5 +86,64 @@ class StaleSubstituteNegativeCacheTest {
 
         // Then - a real "providers had nothing" answer is still negative-cache eligible
         assertNotNull(cache.negativeStored["$key:${EnrichmentType.SIMILAR_ARTISTS}"])
+    }
+
+    @Test
+    fun `a live Success emptied by AVAILABLE_ONLY is not negative-cached`() = runTest {
+        // Given - a plain live call (no STALE_IF_ERROR involved) whose provider answers Success,
+        // but every item the catalog reports unavailable, so filtering empties it to NotFound
+        val cache = FakeEnrichmentCache()
+        val key = DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.SIMILAR_ARTISTS)
+        val provider = FakeProvider(
+            id = "provider",
+            capabilities = listOf(ProviderCapability(EnrichmentType.SIMILAR_ARTISTS, 100)),
+        ).also { it.givenResult(EnrichmentType.SIMILAR_ARTISTS, similarArtists("Thom Yorke")) }
+        val config = EnrichmentConfig(
+            enableIdentityResolution = false,
+            catalogProvider = allUnavailable,
+            catalogFilterMode = CatalogFilterMode.AVAILABLE_ONLY,
+        )
+        val engine = DefaultEnrichmentEngine(ProviderRegistry(listOf(provider)), cache, config)
+
+        // When - enriching the type whose live Success the catalog filter empties
+        val results = engine.enrich(req, setOf(EnrichmentType.SIMILAR_ARTISTS))
+
+        // Then - the caller sees NotFound, but the emptiness is the catalog's, not the provider's
+        assertNotNull(
+            "catalog filtering to empty should still surface as NotFound",
+            results.raw[EnrichmentType.SIMILAR_ARTISTS] as? EnrichmentResult.NotFound,
+        )
+        assertNull(cache.negativeStored["$key:${EnrichmentType.SIMILAR_ARTISTS}"])
+    }
+
+    @Test
+    fun `a fresh cache hit emptied by AVAILABLE_ONLY on re-filter is not negative-cached`() = runTest {
+        // Given - SIMILAR_ARTISTS already sits fresh in the positive cache, and this call also
+        // asks for an uncached type, so the run is a partial cache hit that re-filters the cached
+        // type through settle()/finalizeResult rather than taking enrichProgressive's full-cache-hit
+        // fast path
+        val cache = FakeEnrichmentCache()
+        val key = DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.SIMILAR_ARTISTS)
+        cache.stored["$key:${EnrichmentType.SIMILAR_ARTISTS}"] = similarArtists("Thom Yorke")
+        val provider = FakeProvider(
+            id = "provider",
+            capabilities = listOf(ProviderCapability(EnrichmentType.ARTIST_BIO, 100)),
+        )
+        val config = EnrichmentConfig(
+            enableIdentityResolution = false,
+            catalogProvider = allUnavailable,
+            catalogFilterMode = CatalogFilterMode.AVAILABLE_ONLY,
+        )
+        val engine = DefaultEnrichmentEngine(ProviderRegistry(listOf(provider)), cache, config)
+
+        // When - enriching both the cached type and an uncached one in the same call
+        val results = engine.enrich(req, setOf(EnrichmentType.SIMILAR_ARTISTS, EnrichmentType.ARTIST_BIO))
+
+        // Then - the cached type's re-filtered emptiness must not be written as a negative entry
+        assertNotNull(
+            "the cache-hit type's re-filtered emptiness should still surface as NotFound",
+            results.raw[EnrichmentType.SIMILAR_ARTISTS] as? EnrichmentResult.NotFound,
+        )
+        assertNull(cache.negativeStored["$key:${EnrichmentType.SIMILAR_ARTISTS}"])
     }
 }

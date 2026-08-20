@@ -21,9 +21,10 @@ exhaustive. Paths are relative to `musicmeta-core/src/main/kotlin/com/landofoz/m
   still runs its own `ProviderChain` eligibility check — and a chain that skipped a provider for a
   missing identifier (`ChainExecution.identifierIncomplete`) must not be negative-cached even under
   a `RESOLVED` identity, since a provider that was never asked cannot speak for the chain. The
-  same reasoning bars a `NotFound` made by re-filtering a `STALE_IF_ERROR` substitute to empty
-  (`RunSession.staleSubstituteEmptied`): that emptiness describes a past call's snapshot, not this
-  call's providers.
+  same reasoning bars any `NotFound` a `CatalogFilterMode` produces by emptying a `Success`
+  (`RunSession.filterEmptied`): that emptiness is a fact about the local catalog, never a
+  provider's own answer, whether the `Success` it emptied was this call's own live fan-out, a
+  `STALE_IF_ERROR` substitute, or a fresh cache hit re-filtered on a later call.
 - One `http/CircuitBreaker.kt` per provider id, shared across every chain.
 - A `CompositeSynthesizer`'s `dependencies` are resolved even when the caller did not ask for them.
 - `withTimeoutOrNull(enrichTimeoutMs)` returns null for *that* deadline only; a nested one
