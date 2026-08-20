@@ -196,6 +196,22 @@ class AdmissionGateTest {
         assertEquals("requests admitted together", target, engine.inFlight.get())
     }
 
+    /**
+     * Blocks until [target] requests have been inside the engine together at some point.
+     *
+     * Polls the peak rather than reading it once, because the arrival count and the peak are
+     * published a line apart: a watcher that sees the last arrival's increment can read the peak
+     * before that arrival has recorded itself in it. That window is a race in the observation, not
+     * in the bound, and reading once turns it into a test that fails on a slow machine and passes
+     * on a fast one. Polling still fails when the gate serialises — the peak then sits at one until
+     * the deadline.
+     */
+    private fun awaitPeak(engine: HeldEngine, target: Int) {
+        val deadline = System.nanoTime() + WAIT
+        while (engine.peakInFlight.get() < target && System.nanoTime() < deadline) Thread.sleep(5)
+        assertEquals("most requests ever inside together", target, engine.peakInFlight.get())
+    }
+
     /** Blocks until nothing is inside the engine, so a request's departure cannot race the next step. */
     private fun awaitDrained(engine: HeldEngine) {
         val deadline = System.nanoTime() + WAIT
@@ -217,7 +233,7 @@ class AdmissionGateTest {
         // Then - all of them are inside the engine at the same moment, which is what leaves the run
         // registry able to collapse concurrent lookups of one entity into a single fan-out
         awaitInFlight(engine, MAX_IN_GATE)
-        assertEquals(MAX_IN_GATE, engine.peakInFlight.get())
+        awaitPeak(engine, MAX_IN_GATE)
     }
 
     @Test fun `a streaming request over the bound is refused with a status the page can read`() {
