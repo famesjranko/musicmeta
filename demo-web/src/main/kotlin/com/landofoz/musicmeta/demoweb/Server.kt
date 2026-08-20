@@ -175,6 +175,8 @@ fun startServer(
         ?: error("index.css missing from demo-web resources")
     val indexJs = ResourceAnchor::class.java.getResourceAsStream("/index.js")?.readBytes()
         ?: error("index.js missing from demo-web resources")
+    val streamProtocolJs = ResourceAnchor::class.java.getResourceAsStream("/stream-protocol.js")?.readBytes()
+        ?: error("stream-protocol.js missing from demo-web resources")
 
     val server = HttpServer.create(InetSocketAddress(port), 0)
     // A streaming request holds its thread for the whole enrichment, not for one round trip, so the
@@ -187,6 +189,10 @@ fun startServer(
             "/" -> exchange.respond(200, "text/html; charset=utf-8", indexHtml)
             "/index.css" -> exchange.respond(200, "text/css; charset=utf-8", indexCss)
             "/index.js" -> exchange.respond(200, "text/javascript; charset=utf-8", indexJs)
+            // index.js imports this by URL, so it is fetched as a second request rather than
+            // bundled — the page is a module graph, not one script.
+            "/stream-protocol.js" ->
+                exchange.respond(200, "text/javascript; charset=utf-8", streamProtocolJs)
             else -> exchange.respond(404, "text/plain", "not found".toByteArray())
         }
     }

@@ -1,0 +1,9 @@
+{
+  "name": "musicmeta-demo-web-frontend",
+  "private": true,
+  "type": "module",
+  "description": "Test harness for the demo's browser code. No dependencies and no build step: the resources are ES modules the browser loads directly, and node's own test runner imports the same files.",
+  "scripts": {
+    "test": "node --test 'src/test/js/**/*.test.js'"
+  }
+}
