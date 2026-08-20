@@ -31,7 +31,7 @@ Two independent facts, never merged into one value:
 | `FAILED` | The identity provider errored — usually transient | Show a caveat; offer a retry, which may resolve |
 | `NOT_ATTEMPTED_DISABLED` | Identity resolution is turned off | Treat as confident |
 | `NOT_ATTEMPTED_NOT_REQUIRED` | The request already carried every identifier needed | Treat as confident |
-| `NOT_ATTEMPTED_CACHE_HIT` | Every requested type was served from cache | Treat as confident |
+| `NOT_ATTEMPTED_CACHE_HIT` | Every requested type was served from cache, on an engine with resolution enabled | Treat as confident |
 | `NOT_ATTEMPTED_NO_PROVIDER` | Needed resolution, but no identity provider is registered | Treat as confident |
 
 ---

@@ -451,7 +451,10 @@ class CanonicalStatusModelTest {
 
     @Test fun `an all-cache-hit call whose types were written under different statuses reports NOT_ATTEMPTED_CACHE_HIT`() = runTest {
         // Given - a cache pre-seeded with two types for the same entity, one written while
-        // resolution was disabled and one written because the type needed no resolution at all
+        // resolution was disabled and one written because the type needed no resolution at all,
+        // read back by an engine with resolution enabled: a disabled engine would report
+        // NOT_ATTEMPTED_DISABLED by precedence, which would answer a different question than the
+        // one under test here — whether a cache hit replays whatever status its entries carry
         val cache = InMemoryEnrichmentCache()
         val req = EnrichmentRequest.forTrack("Song", "Artist")
         cache.put(
