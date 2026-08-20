@@ -84,7 +84,12 @@ internal suspend fun DefaultEnrichmentEngine.runProgressiveFanOut(
             val resolvedRequest = requireNotNull(session.resolvedRequest) {
                 "resolvedRequest must be set once the timed block completes"
             }
-            val context = WriteBackContext(resolution, cacheLayer.negativeCacheHits, session.chainExecutions)
+            val context = WriteBackContext(
+                resolution,
+                cacheLayer.negativeCacheHits,
+                session.chainExecutions,
+                session.staleSubstituteEmptied,
+            )
             writeBack(request, resolvedRequest, results, context)
         }
 
@@ -127,7 +132,7 @@ internal fun DefaultEnrichmentEngine.settleInto(
     run: ProgressiveRunRegistry.ProgressiveRun,
 ): suspend (EnrichmentType, EnrichmentResult, ChainExecution?) -> Unit = { type, raw, execution ->
     val snapshot = session.board.settle(type, raw, execution) {
-        finalizeResult(request, type, it, execution, session.identityHolder)
+        finalizeResult(request, type, it, execution, session)
     }
     val filtered = snapshot.filterKeys { it in types }
     if ((types - filtered.keys).isNotEmpty()) {

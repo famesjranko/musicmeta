@@ -2,9 +2,11 @@ package com.landofoz.musicmeta
 
 /**
  * A cached [result] paired with the [canonicalStatus] the live call reported when it was written.
- * Historical evidence only: a cache hit never replays it as the current call's status — every
- * cache-hit call reports [CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT] regardless of what is stored
- * here, since a status earned under a past engine configuration cannot speak for this call's.
+ * Historical evidence only: a cache hit never replays it as the current call's status, since a
+ * status earned under a past engine configuration cannot speak for this call's. An all-cache-hit
+ * call reports [CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT], or
+ * [CanonicalStatus.NOT_ATTEMPTED_DISABLED] if the engine has identity resolution turned off —
+ * either way from this call's own configuration, never from what is stored here.
  */
 data class CacheEnvelope<out T : EnrichmentResult>(
     val result: T,

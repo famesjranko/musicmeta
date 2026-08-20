@@ -226,11 +226,15 @@ Two independent facts describe an `enrich()` call, never one merged value:
 | `FAILED` | The identity provider errored (usually transient); a retry may resolve. |
 | `NOT_ATTEMPTED_DISABLED` | `EnrichmentConfig.enableIdentityResolution` is `false`. |
 | `NOT_ATTEMPTED_NOT_REQUIRED` | The request already carried every identifier the requested types needed. |
-| `NOT_ATTEMPTED_CACHE_HIT` | Every requested type was served from cache; no live attempt ran this call. |
+| `NOT_ATTEMPTED_CACHE_HIT` | Every requested type was served from cache; no live attempt ran this call. Reported only when identity resolution is enabled — `NOT_ATTEMPTED_DISABLED` outranks it. |
 | `NOT_ATTEMPTED_NO_PROVIDER` | Resolution was needed, but no identity provider is registered. |
 
-An all-cache-hit call (every requested type served from cache) always reports
-`NOT_ATTEMPTED_CACHE_HIT`, regardless of what status any cached entry was written under. Each
+An all-cache-hit call (every requested type served from cache) reports
+`NOT_ATTEMPTED_CACHE_HIT` — or `NOT_ATTEMPTED_DISABLED`, if `enableIdentityResolution` is `false`,
+since a config that was never going to attempt resolution outranks the cache as the reason it did
+not happen. That is the same precedence a live call applies, so a warm cache and a cold one answer
+"why wasn't identity attempted" identically. Either way the status comes from this call's own
+config, not from what any cached entry was written under. Each
 `CacheEnvelope.canonicalStatus` is retained as historical evidence for that entry alone — the
 status the live call that wrote it carried — but it is never surfaced as this call's status: a
 config change between the write and this read (e.g. identity resolution toggled) would make a
@@ -264,7 +268,7 @@ Migrating from the removed `IdentityMatch`:
 | `IdentityMatch.UNVERIFIED` (never released) | `CanonicalStatus.FAILED` |
 | `identity == null` (disabled) | `CanonicalStatus.NOT_ATTEMPTED_DISABLED` |
 | `identity == null` (not required) | `CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED` |
-| `identity == null` (all cached) | `CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT` |
+| `identity == null` (all cached, resolution enabled) | `CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT` |
 | `identity == null` (no provider) | `CanonicalStatus.NOT_ATTEMPTED_NO_PROVIDER` |
 | `Success.identityMatch` (per-result) | `Success.provenance: LookupProvenance` |
 
@@ -279,8 +283,8 @@ provider that was never asked cannot speak for "nothing found". Successful resul
 `canonicalStatus`, as a `CacheEnvelope`. `EnrichmentCache.get`/`getNegative` return that whole
 envelope, not just the stored result, so a cache hit's `Success.provenance` replays the original
 live lookup's value rather than a generic `CACHE`. The stored status remains historical evidence
-for that entry; the current all-cache-hit call status is always
-`NOT_ATTEMPTED_CACHE_HIT`.
+for that entry; the current all-cache-hit call status comes from this call's config instead
+(`NOT_ATTEMPTED_CACHE_HIT`, or `NOT_ATTEMPTED_DISABLED` when resolution is off).
 - Artwork: 30–90 days (photos 30d, album art 90d)
 - Genres/labels/metadata: 90–365 days
 - Popularity/stats: 7 days
