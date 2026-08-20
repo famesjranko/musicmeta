@@ -37,7 +37,10 @@ exhaustive. Paths are relative to `musicmeta-core/src/main/kotlin/com/landofoz/m
   MusicBrainz's degraded mapping writes `curated = null` on every fetch it cannot ask on, so
   `LABEL`/`RELEASE_DATE`/`RELEASE_TYPE`/`COUNTRY` re-missed on every call for their whole TTL —
   ~4 live MusicBrainz round trips per warm album read. Scope a heal to the entries whose readers
-  actually consume the missing fact, and check what the healing fetch will really write.
+  actually consume the missing fact, and check what the healing fetch will really write. One
+  non-converging case is kept deliberately: an `ALBUM_METADATA` entry whose winning provider is a
+  MusicBrainz search hit re-misses until a lookup-path fetch wins — the healing there is worth its
+  narrow residual.
 - One `http/CircuitBreaker.kt` per provider id, shared across every chain.
 - A `CompositeSynthesizer`'s `dependencies` are resolved even when the caller did not ask for them.
 - `withTimeoutOrNull(enrichTimeoutMs)` returns null for *that* deadline only; a nested one

@@ -75,8 +75,7 @@ internal fun EnrichmentData.answers(type: EnrichmentType): Boolean = when (this)
  * but no reader ever takes genre tags from those entries, so an unknown marking there is not a
  * poorer answer to anything. Healing them is worse than pointless: MusicBrainz's degraded mapping
  * writes `curated = null` again on every fetch it cannot ask on, so the "heal" re-misses on every
- * call for the entry's whole TTL — a warm album was measured paying four live MusicBrainz round
- * trips per read this way.
+ * call for the entry's whole TTL.
  *
  * Read on the cache path only, as a *miss*: the providers run and the write-back replaces the entry,
  * exactly as an unanswered entry heals ([answers]). On the two types it applies to, convergence is
