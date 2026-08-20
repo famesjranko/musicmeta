@@ -45,6 +45,7 @@ import java.net.InetSocketAddress
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.Executors
+import java.util.concurrent.Semaphore
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.concurrent.thread
 
@@ -296,6 +297,52 @@ private fun parseEnrichQuery(rawQuery: String?): EnrichQuery {
     )
 }
 
+/**
+ * How many enrichments this instance runs at once.
+ *
+ * A bound, deliberately not a serialiser. `ProgressiveRunRegistry` collapses concurrent lookups of
+ * one entity into a single fan-out, and it can only do that while they overlap in time — admitting
+ * one at a time would guarantee they never do, turning the cheapest case, a crowd on one album,
+ * into the slowest. Five is the figure the measurement used and was never swept.
+ *
+ * Only correct while the service runs at one instance: the bound below is per-process, so a second
+ * instance is a second gate and this is the cap per instance rather than the cap. Nothing in this
+ * process can read that deployment setting, so nothing here can check it.
+ */
+internal const val MAX_IN_GATE = 5
+
+/** What a refused caller is told to wait, in seconds. The page reads it to say how long. */
+private const val RETRY_AFTER_SECONDS = "15"
+
+private val enrichmentGate = Semaphore(MAX_IN_GATE)
+
+/**
+ * Runs [enriching] holding one of [MAX_IN_GATE] permits, or refuses outright without running it.
+ *
+ * Nothing queues. A caller that cannot get in is told so at once, in a body the page can render —
+ * which is the point of refusing here rather than leaving the load for the platform to shed.
+ *
+ * Call this after the cheap refusals and before any status is committed. A request that could never
+ * have enriched anything must not spend a permit to find that out; and [handleEnrichStream] sends
+ * its 200 before it enriches, after which the only way left to say "busy" is an event inside a
+ * successful response, where no status code and no proxy can see it.
+ */
+private inline fun HttpExchange.withEnrichmentPermit(enriching: () -> Unit) {
+    if (!enrichmentGate.tryAcquire()) {
+        responseHeaders.add("Retry-After", RETRY_AFTER_SECONDS)
+        respondJson(
+            429,
+            ApiError("The demo runs $MAX_IN_GATE lookups at a time and is at capacity. Try again shortly."),
+        )
+        return
+    }
+    try {
+        enriching()
+    } finally {
+        enrichmentGate.release()
+    }
+}
+
 private fun handleEnrich(exchange: HttpExchange, engine: EnrichmentEngine) {
     if (exchange.requestMethod != "GET") {
         exchange.respondJson(405, ApiError("GET required"))
@@ -307,116 +354,118 @@ private fun handleEnrich(exchange: HttpExchange, engine: EnrichmentEngine) {
         exchange.respondJson(400, ApiError(e.message ?: "invalid request"))
         return
     }
-    try {
-        val kind = query.kind
-        val name = query.name
-        val artist = query.artist
-        val album = query.album
-        val mbid = query.mbid
-        val identifiers = query.identifiers
-        val forceRefresh = query.forceRefresh
+    exchange.withEnrichmentPermit {
+        try {
+            val kind = query.kind
+            val name = query.name
+            val artist = query.artist
+            val album = query.album
+            val mbid = query.mbid
+            val identifiers = query.identifiers
+            val forceRefresh = query.forceRefresh
 
-        val started = System.currentTimeMillis()
-        val response = runBlocking {
-            when (kind) {
-                // The type is an answer, not a question the user should have to answer first: one
-                // identifier goes in, and whichever page it turns out to name comes back. A blank
-                // name is what tells identity resolution to fill it from the entity it resolves.
-                "mbid" -> when (val entity = engine.discoverMbidEntityType(name)) {
-                    MusicBrainzEntityType.RECORDING -> {
-                        val results = engine.enrich(
-                            EnrichmentRequest.forTrackByMbid(name),
-                            EnrichmentRequest.DEFAULT_TRACK_TYPES,
-                            forceRefresh,
-                        )
-                        TrackProfile(
-                            results.identity?.title ?: headerFor(entity, name),
-                            results.identity?.artist.orEmpty(),
-                            results,
-                        ).toDemoResponse(System.currentTimeMillis() - started)
-                    }
-                    MusicBrainzEntityType.RELEASE -> {
-                        val results = engine.enrich(
-                            EnrichmentRequest.forAlbumByMbid(name),
-                            EnrichmentRequest.DEFAULT_ALBUM_TYPES,
-                            forceRefresh,
-                        )
-                        AlbumProfile(
-                            results.identity?.title ?: headerFor(entity, name),
-                            results.identity?.artist.orEmpty(),
-                            results,
-                        ).toDemoResponse(System.currentTimeMillis() - started)
-                    }
-                    MusicBrainzEntityType.ARTIST -> {
-                        val results = engine.enrich(
-                            EnrichmentRequest.forArtistByMbid(name),
-                            EnrichmentRequest.DEFAULT_ARTIST_TYPES + EnrichmentType.COUNTRY,
-                            forceRefresh,
-                        )
-                        // An artist's own name arrives as the title, as it does on a SearchCandidate.
-                        ArtistProfile(
-                            results.identity?.title ?: headerFor(entity, name),
-                            results,
-                        ).toDemoResponse(System.currentTimeMillis() - started)
-                    }
-                    null -> null
-                }
-                "artist" -> {
-                    val profile = engine.artistProfile(
-                        name,
-                        mbid,
-                        types = EnrichmentRequest.DEFAULT_ARTIST_TYPES + EnrichmentType.COUNTRY,
-                        forceRefresh = forceRefresh,
-                    )
-                    val retried = profile.results.retryTransientFailures(
-                        engine,
-                        EnrichmentRequest.forArtist(name, mbid),
-                    )
-                    profile.copy(results = retried).toDemoResponse(System.currentTimeMillis() - started)
-                }
-                "album" ->
-                    coroutineScope {
-                        val profileDeferred = async {
-                            engine.albumProfile(name, artist, mbid, forceRefresh = forceRefresh)
-                        }
-                        val radioDeferred = async { fetchArtistRadioSection(engine, artist) }
-                        val profile = profileDeferred.await()
-                        val retried = profile.results.retryTransientFailures(
-                            engine,
-                            EnrichmentRequest.forAlbum(name, artist, mbid),
-                        )
-                        val radio = radioDeferred.await()
-                        profile.copy(results = retried).toDemoResponse(System.currentTimeMillis() - started, radio)
-                    }
-                else ->
-                    coroutineScope {
-                        val profileDeferred = async {
-                            engine.trackProfile(
-                                name, artist, album, mbid,
-                                identifiers = identifiers, forceRefresh = forceRefresh,
+            val started = System.currentTimeMillis()
+            val response = runBlocking {
+                when (kind) {
+                    // The type is an answer, not a question the user should have to answer first: one
+                    // identifier goes in, and whichever page it turns out to name comes back. A blank
+                    // name is what tells identity resolution to fill it from the entity it resolves.
+                    "mbid" -> when (val entity = engine.discoverMbidEntityType(name)) {
+                        MusicBrainzEntityType.RECORDING -> {
+                            val results = engine.enrich(
+                                EnrichmentRequest.forTrackByMbid(name),
+                                EnrichmentRequest.DEFAULT_TRACK_TYPES,
+                                forceRefresh,
                             )
+                            TrackProfile(
+                                results.identity?.title ?: headerFor(entity, name),
+                                results.identity?.artist.orEmpty(),
+                                results,
+                            ).toDemoResponse(System.currentTimeMillis() - started)
                         }
-                        val radioDeferred = async { fetchArtistRadioSection(engine, artist) }
-                        val profile = profileDeferred.await()
+                        MusicBrainzEntityType.RELEASE -> {
+                            val results = engine.enrich(
+                                EnrichmentRequest.forAlbumByMbid(name),
+                                EnrichmentRequest.DEFAULT_ALBUM_TYPES,
+                                forceRefresh,
+                            )
+                            AlbumProfile(
+                                results.identity?.title ?: headerFor(entity, name),
+                                results.identity?.artist.orEmpty(),
+                                results,
+                            ).toDemoResponse(System.currentTimeMillis() - started)
+                        }
+                        MusicBrainzEntityType.ARTIST -> {
+                            val results = engine.enrich(
+                                EnrichmentRequest.forArtistByMbid(name),
+                                EnrichmentRequest.DEFAULT_ARTIST_TYPES + EnrichmentType.COUNTRY,
+                                forceRefresh,
+                            )
+                            // An artist's own name arrives as the title, as it does on a SearchCandidate.
+                            ArtistProfile(
+                                results.identity?.title ?: headerFor(entity, name),
+                                results,
+                            ).toDemoResponse(System.currentTimeMillis() - started)
+                        }
+                        null -> null
+                    }
+                    "artist" -> {
+                        val profile = engine.artistProfile(
+                            name,
+                            mbid,
+                            types = EnrichmentRequest.DEFAULT_ARTIST_TYPES + EnrichmentType.COUNTRY,
+                            forceRefresh = forceRefresh,
+                        )
                         val retried = profile.results.retryTransientFailures(
                             engine,
-                            EnrichmentRequest.forTrack(name, artist, album, mbid = mbid, identifiers = identifiers),
+                            EnrichmentRequest.forArtist(name, mbid),
                         )
-                        val radio = radioDeferred.await()
-                        profile.copy(results = retried)
-                            .toDemoResponse(System.currentTimeMillis() - started, radio, album)
+                        profile.copy(results = retried).toDemoResponse(System.currentTimeMillis() - started)
                     }
+                    "album" ->
+                        coroutineScope {
+                            val profileDeferred = async {
+                                engine.albumProfile(name, artist, mbid, forceRefresh = forceRefresh)
+                            }
+                            val radioDeferred = async { fetchArtistRadioSection(engine, artist) }
+                            val profile = profileDeferred.await()
+                            val retried = profile.results.retryTransientFailures(
+                                engine,
+                                EnrichmentRequest.forAlbum(name, artist, mbid),
+                            )
+                            val radio = radioDeferred.await()
+                            profile.copy(results = retried).toDemoResponse(System.currentTimeMillis() - started, radio)
+                        }
+                    else ->
+                        coroutineScope {
+                            val profileDeferred = async {
+                                engine.trackProfile(
+                                    name, artist, album, mbid,
+                                    identifiers = identifiers, forceRefresh = forceRefresh,
+                                )
+                            }
+                            val radioDeferred = async { fetchArtistRadioSection(engine, artist) }
+                            val profile = profileDeferred.await()
+                            val retried = profile.results.retryTransientFailures(
+                                engine,
+                                EnrichmentRequest.forTrack(name, artist, album, mbid = mbid, identifiers = identifiers),
+                            )
+                            val radio = radioDeferred.await()
+                            profile.copy(results = retried)
+                                .toDemoResponse(System.currentTimeMillis() - started, radio, album)
+                        }
+                }
             }
+            if (response == null) {
+                // An identifier MusicBrainz holds under no entity type. Not an error, and not an
+                // enrichment either — there is no page to render.
+                exchange.respondJson(404, ApiError("MusicBrainz holds no recording, release or artist under that MBID"))
+                return
+            }
+            exchange.respondJson(200, response)
+        } catch (e: Exception) {
+            exchange.respondJson(500, ApiError(e.message ?: e.javaClass.simpleName))
         }
-        if (response == null) {
-            // An identifier MusicBrainz holds under no entity type. Not an error, and not an
-            // enrichment either — there is no page to render.
-            exchange.respondJson(404, ApiError("MusicBrainz holds no recording, release or artist under that MBID"))
-            return
-        }
-        exchange.respondJson(200, response)
-    } catch (e: Exception) {
-        exchange.respondJson(500, ApiError(e.message ?: e.javaClass.simpleName))
     }
 }
 
@@ -456,25 +505,27 @@ private fun handleEnrichStream(exchange: HttpExchange, engine: EnrichmentEngine)
         return
     }
 
-    val started = System.currentTimeMillis()
-    exchange.responseHeaders.add("Content-Type", "text/event-stream; charset=utf-8")
-    exchange.responseHeaders.add("Cache-Control", "no-cache")
-    // A proxy that buffers the response holds every snapshot until the last one, which is the whole
-    // benefit gone; this is the header nginx and its imitators read to stop.
-    exchange.responseHeaders.add("X-Accel-Buffering", "no")
-    // Length 0 selects chunked transfer encoding — there is no total length to declare for a stream
-    // whose event count is not known up front.
-    exchange.sendResponseHeaders(200, 0)
-    val writer = SseWriter(exchange.responseBody)
+    exchange.withEnrichmentPermit {
+        val started = System.currentTimeMillis()
+        exchange.responseHeaders.add("Content-Type", "text/event-stream; charset=utf-8")
+        exchange.responseHeaders.add("Cache-Control", "no-cache")
+        // A proxy that buffers the response holds every snapshot until the last one, which is the whole
+        // benefit gone; this is the header nginx and its imitators read to stop.
+        exchange.responseHeaders.add("X-Accel-Buffering", "no")
+        // Length 0 selects chunked transfer encoding — there is no total length to declare for a stream
+        // whose event count is not known up front.
+        exchange.sendResponseHeaders(200, 0)
+        val writer = SseWriter(exchange.responseBody)
 
-    try {
-        runBlocking { streamEnrichment(engine, query, started, writer) }
-    } catch (e: Exception) {
-        // `runBlocking` surfaces a cancellation from inside it as a plain throw on this thread, so
-        // there is no ambient job here for `ensureActive()` to consult.
-        reportStreamFailure(writer, e)
-    } finally {
-        writer.close()
+        try {
+            runBlocking { streamEnrichment(engine, query, started, writer) }
+        } catch (e: Exception) {
+            // `runBlocking` surfaces a cancellation from inside it as a plain throw on this thread, so
+            // there is no ambient job here for `ensureActive()` to consult.
+            reportStreamFailure(writer, e)
+        } finally {
+            writer.close()
+        }
     }
 }
 
