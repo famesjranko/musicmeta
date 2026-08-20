@@ -381,11 +381,9 @@ class DeezerProvider(
         request: EnrichmentRequest,
         type: EnrichmentType,
     ): EnrichmentResult {
-        if (request !is EnrichmentRequest.ForAlbum) {
-            return EnrichmentResult.NotFound(type, id)
-        }
+        val albumRequest = request.toAlbumArtRequest() ?: return EnrichmentResult.NotFound(type, id)
 
-        val result = albumScope().resolveAlbum(request)?.candidate
+        val result = albumScope().resolveAlbum(albumRequest)?.candidate
             ?: return EnrichmentResult.NotFound(type, id)
 
         val artwork = DeezerMapper.toArtwork(result)
@@ -456,6 +454,21 @@ class DeezerProvider(
 
     private fun DeezerAlbumResult.toCandidate() =
         DeezerMapper.toSearchCandidate(this, this@DeezerProvider.id, SEARCH_SCORE)
+
+    /**
+     * ALBUM_ART's own request shape: a [EnrichmentRequest.ForAlbum] as-is, or a
+     * [EnrichmentRequest.ForTrack] carrying a non-blank [EnrichmentRequest.ForTrack.album] treated
+     * as one — same artist, and the track's album standing in for the title — since a track-scoped
+     * request that already names its album has everything [DeezerAlbumScope.resolveAlbum] needs. A
+     * `ForTrack` with no album stays a genuine miss; nothing else in this provider widens past
+     * `ForAlbum`.
+     */
+    private fun EnrichmentRequest.toAlbumArtRequest(): EnrichmentRequest.ForAlbum? = when {
+        this is EnrichmentRequest.ForAlbum -> this
+        this is EnrichmentRequest.ForTrack && !album.isNullOrBlank() ->
+            EnrichmentRequest.ForAlbum(identifiers = identifiers, title = album, artist = artist)
+        else -> null
+    }
 
     private companion object {
         const val SEARCH_SCORE = 75
