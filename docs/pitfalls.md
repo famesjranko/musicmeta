@@ -31,6 +31,13 @@ exhaustive. Paths are relative to `musicmeta-core/src/main/kotlin/com/landofoz/m
   substitute or a filter-emptied `NotFound` — with no marker of where that value came from, so
   both facts are propagated onto the composite type in `synthesizeComposite` (one tainted
   dependency among fresh ones is enough) or its own `NotFound` negative-caches too.
+- A cache read that reports a live entry as a *miss* so the write-back can heal it
+  (`engine/PayloadAnswers.kt`) must be able to converge: the re-fetch has to write the fact whose
+  absence caused the miss. `hasUnknownGenreCuration` once keyed on any `Metadata` payload, but
+  MusicBrainz's degraded mapping writes `curated = null` on every fetch it cannot ask on, so
+  `LABEL`/`RELEASE_DATE`/`RELEASE_TYPE`/`COUNTRY` re-missed on every call for their whole TTL —
+  ~4 live MusicBrainz round trips per warm album read. Scope a heal to the entries whose readers
+  actually consume the missing fact, and check what the healing fetch will really write.
 - One `http/CircuitBreaker.kt` per provider id, shared across every chain.
 - A `CompositeSynthesizer`'s `dependencies` are resolved even when the caller did not ask for them.
 - `withTimeoutOrNull(enrichTimeoutMs)` returns null for *that* deadline only; a nested one

@@ -162,6 +162,40 @@ class CuratedGenreCacheHealingTest {
     }
 
     @Test
+    fun `an unmarked genre payload under a type whose tags no reader consults is served from cache`() = runTest {
+        // Given - a LABEL entry whose Metadata happens to carry unmarked genre tags, as every entry
+        // MusicBrainz's mapper writes for an album does
+        val albumRequest = EnrichmentRequest.forAlbum("Parachutes", "Coldplay")
+        val cache = FakeEnrichmentCache()
+        cache.put(
+            entityKeyFor(albumRequest, EnrichmentType.LABEL),
+            EnrichmentType.LABEL,
+            genreResult("cached", curated = null).copy(
+                type = EnrichmentType.LABEL,
+                data = EnrichmentData.Metadata(
+                    label = "Parlophone",
+                    genreTags = listOf(GenreTag("alternative rock", 0.4f, listOf("cached"), curated = null)),
+                ),
+            ),
+            CanonicalStatus.RESOLVED,
+            ttlMs = Long.MAX_VALUE,
+        )
+        val provider = FakeProvider(
+            id = "fresh",
+            capabilities = listOf(ProviderCapability(EnrichmentType.LABEL, 100)),
+        )
+
+        // When - asking for LABEL
+        val results = engine(cache, provider).enrich(albumRequest, setOf(EnrichmentType.LABEL))
+
+        // Then - served from cache: genreTags are read off GENRE and ALBUM_METADATA only, and a
+        // refetch cannot heal this entry anyway - the degraded mapping writes null again, so the
+        // miss repeats on every call for the entry's whole TTL
+        assertEquals(emptyList<Pair<EnrichmentRequest, EnrichmentType>>(), provider.enrichCalls)
+        assertEquals("cached", (results.raw[EnrichmentType.LABEL] as EnrichmentResult.Success).provider)
+    }
+
+    @Test
     fun `a cached payload carrying no genre tags is left alone`() = runTest {
         // Given - a LABEL entry, whose Metadata has no genreTags to be unmarked
         val albumRequest = EnrichmentRequest.forAlbum("Parachutes", "Coldplay")

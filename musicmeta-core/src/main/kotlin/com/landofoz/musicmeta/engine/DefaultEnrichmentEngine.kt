@@ -442,7 +442,10 @@ internal class DefaultEnrichmentEngine(
             // the providers run and the write-back overwrite it, so the entry heals itself.
             // An entry whose genre tags never learned whether they were curated takes the same route
             // for the same reason: see hasUnknownGenreCuration.
-            if (cached != null && cached.result.data.answers(type) && !cached.result.data.hasUnknownGenreCuration()) {
+            if (cached != null &&
+                cached.result.data.answers(type) &&
+                !cached.result.data.hasUnknownGenreCuration(type)
+            ) {
                 results[type] = withCacheProvenanceFallback(cached.result)
                 continue
             }
