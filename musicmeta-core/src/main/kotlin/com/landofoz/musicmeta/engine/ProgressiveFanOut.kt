@@ -104,7 +104,7 @@ internal suspend fun DefaultEnrichmentEngine.runProgressiveFanOut(
         }
 
         // A timeout that fired before identity resolution ran is the one gap identityResolution
-        // never filled — FAILED is the honest status for a call that never learned otherwise.
+        // never filled; failedIdentityResolution decides what that gap reports.
         val identity = session.identityResolution ?: failedIdentityResolution(request)
         val terminalSnapshot = EnrichmentResults(results.filterKeys { it in types }, types, identity)
         progressiveRuns.complete(run, terminalSnapshot)

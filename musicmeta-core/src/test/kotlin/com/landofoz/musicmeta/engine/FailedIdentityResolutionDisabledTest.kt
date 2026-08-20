@@ -10,7 +10,8 @@ import com.landofoz.musicmeta.testutil.FakeProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.last
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -23,14 +24,15 @@ import org.junit.Test
  * going to attempt identity resolution regardless of why the fan-out itself never got there. See
  * `docs/pitfalls.md`, "Traps in the pipeline".
  */
-// InjectDispatcher: a real dispatcher, not runTest virtual time, is the point — DelayingProvider's
-// delay must be real suspension so the timeout/close() races below are genuine.
+// InjectDispatcher: DelayingProvider's delay must be real suspension for the timeout/close()
+// races below to be genuine, so each timed section runs on a real clock inside withContext —
+// runTest still bounds the test itself and keeps every other delay virtual.
 @Suppress("InjectDispatcher")
 class FailedIdentityResolutionDisabledTest {
 
     private val req = EnrichmentRequest.forArtist("Radiohead")
 
-    /** One type, answered after [delayMs] of real suspension — never runTest virtual time. */
+    /** One type, answered after [delayMs] of suspension — real, on the caller's own dispatcher. */
     private class DelayingProvider(
         type: EnrichmentType,
         private val delayMs: Long,
@@ -50,7 +52,7 @@ class FailedIdentityResolutionDisabledTest {
     }
 
     @Test
-    fun `a call arriving after close() on a disabled engine reports NOT_ATTEMPTED_DISABLED, not FAILED`() = runBlocking(Dispatchers.Default) {
+    fun `a call arriving after close() on a disabled engine reports NOT_ATTEMPTED_DISABLED, not FAILED`() = runTest {
         // Given - identity resolution disabled, and an engine closed before this request/types key
         // was ever registered, so the abandoned snapshot is built with no fan-out ever having run
         val provider = DelayingProvider(EnrichmentType.ALBUM_ART, delayMs = 5_000)
@@ -62,8 +64,10 @@ class FailedIdentityResolutionDisabledTest {
         engine.close()
 
         // When - a call for that never-seen key is made after close()
-        val result = withTimeout(8_000) {
-            engine.enrichProgressive(req, setOf(EnrichmentType.ALBUM_ART)).last()
+        val result = withContext(Dispatchers.Default) {
+            withTimeout(8_000) {
+                engine.enrichProgressive(req, setOf(EnrichmentType.ALBUM_ART)).last()
+            }
         }
 
         // Then - the config, not the abandonment, decides why identity was never resolved
@@ -71,7 +75,7 @@ class FailedIdentityResolutionDisabledTest {
     }
 
     @Test
-    fun `a run whose deadline fires before identity resolution starts reports NOT_ATTEMPTED_DISABLED on a disabled engine`() = runBlocking(Dispatchers.Default) {
+    fun `a run whose deadline fires before identity resolution starts reports NOT_ATTEMPTED_DISABLED on a disabled engine`() = runTest {
         // Given - identity resolution disabled and a deadline of 0ms, so the fan-out's own timeout
         // fires before resolveUncachedTypes ever assigns session.identityResolution
         val provider = DelayingProvider(EnrichmentType.ALBUM_ART, delayMs = 5_000)
@@ -82,8 +86,10 @@ class FailedIdentityResolutionDisabledTest {
         )
 
         // When - enriching under a deadline that expires before the fan-out's body can run
-        val result = withTimeout(8_000) {
-            engine.enrichProgressive(req, setOf(EnrichmentType.ALBUM_ART)).last()
+        val result = withContext(Dispatchers.Default) {
+            withTimeout(8_000) {
+                engine.enrichProgressive(req, setOf(EnrichmentType.ALBUM_ART)).last()
+            }
         }
 
         // Then - the config, not the timeout, decides why identity was never resolved

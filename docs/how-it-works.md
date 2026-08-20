@@ -276,9 +276,22 @@ Migrating from the removed `IdentityMatch`:
 
 No fresh result — success or `NotFound` — is cached for a call whose canonical status is
 `AMBIGUOUS`, `UNRESOLVED`, or `FAILED`: the entry would read back as a cache hit indistinguishable
-from a confident one, losing the ambiguity or outage. A `NotFound` is also never negative-cached
-when its own chain skipped a provider for a missing identifier, resolved identity or not — a
-provider that was never asked cannot speak for "nothing found". Successful results reached under
+from a confident one, losing the ambiguity or outage.
+
+A `NotFound` is negative-cached only when it is a provider's own answer, because only then is it
+evidence the entity is absent upstream. It is never negative-cached when:
+
+- its own chain skipped a provider for a missing identifier, resolved identity or not — a provider
+  that was never asked cannot speak for "nothing found";
+- catalog filtering (`catalogFilterMode`) emptied a `Success` down to nothing — that emptiness
+  describes your local catalog, not the upstream;
+- the value it was derived from is a `STALE_IF_ERROR` substitute — a past call's snapshot standing
+  in for a failed live call is not this call's own answer;
+- it is a composite synthesized over a dependency in either of the last two states. One such
+  dependency among fresh ones is enough: the composite's answer still rests on it.
+
+Without these exclusions a transient upstream error or a local catalog outage would persist as
+"known absent" for `negativeTtlMs`. Successful results reached under
 `RESOLVED` (or any `NOT_ATTEMPTED_*` status) are cached with per-type TTLs, alongside the call's own
 `canonicalStatus`, as a `CacheEnvelope`. `EnrichmentCache.get`/`getNegative` return that whole
 envelope, not just the stored result, so a cache hit's `Success.provenance` replays the original

@@ -130,4 +130,88 @@ class CompositeDependencyNegativeCacheTest {
         // must not be written as a negative-cache entry
         assertNull(cache.negativeStored["$compositeKey:${EnrichmentType.ARTIST_TIMELINE}"])
     }
+
+    @Test
+    fun `a composite synthesized NotFound over an untainted live dependency is still negative-cached`() = runTest {
+        // Given - one dependency that answers a real live Success, no catalog filter and no stale
+        // cache, so nothing taints it, and a synthesizer that answers NotFound over it anyway
+        val cache = FakeEnrichmentCache()
+        val provider = FakeProvider(
+            id = "live",
+            capabilities = listOf(ProviderCapability(EnrichmentType.ARTIST_DISCOGRAPHY, 100)),
+        ).also { it.givenResult(EnrichmentType.ARTIST_DISCOGRAPHY, discography().copy(provider = "live")) }
+        val synthesizer = AlwaysEmptySynthesizer(
+            type = EnrichmentType.ARTIST_TIMELINE,
+            dependencies = setOf(EnrichmentType.ARTIST_DISCOGRAPHY),
+        )
+        val engine = DefaultEnrichmentEngine(
+            registry = ProviderRegistry(listOf(provider)),
+            cache = cache,
+            config = EnrichmentConfig(enableIdentityResolution = false),
+            synthesizers = listOf(synthesizer),
+        )
+        val compositeKey = DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.ARTIST_TIMELINE)
+
+        // When - enriching only the composite type, whose one dependency resolves live and clean
+        engine.enrich(req, setOf(EnrichmentType.ARTIST_TIMELINE))
+
+        // Then - nothing about this NotFound is derived, so the taint rule must leave it eligible
+        assertNotNull(
+            "an untainted composite NotFound must still reach the negative cache",
+            cache.negativeStored["$compositeKey:${EnrichmentType.ARTIST_TIMELINE}"],
+        )
+    }
+
+    @Test
+    fun `one tainted dependency among untainted ones is enough to bar the composite from the negative cache`() = runTest {
+        // Given - a composite over two dependencies, one stale-substituted and one answering a
+        // clean live Success, so only some of the synthesizer's inputs are this call's own answer
+        val cache = FakeEnrichmentCache()
+        val staleKey = DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.ARTIST_DISCOGRAPHY)
+        cache.expiredStore["$staleKey:${EnrichmentType.ARTIST_DISCOGRAPHY}"] = discography()
+        val failingProvider = FakeProvider(
+            id = "failing",
+            capabilities = listOf(ProviderCapability(EnrichmentType.ARTIST_DISCOGRAPHY, 100)),
+        ).also {
+            it.givenResult(
+                EnrichmentType.ARTIST_DISCOGRAPHY,
+                EnrichmentResult.Error(EnrichmentType.ARTIST_DISCOGRAPHY, "failing", "API down"),
+            )
+        }
+        val liveProvider = FakeProvider(
+            id = "live",
+            capabilities = listOf(ProviderCapability(EnrichmentType.SIMILAR_ARTISTS, 100)),
+        ).also {
+            it.givenResult(
+                EnrichmentType.SIMILAR_ARTISTS,
+                EnrichmentResult.Success(
+                    type = EnrichmentType.SIMILAR_ARTISTS,
+                    data = EnrichmentData.SimilarArtists(listOf(SimilarArtist(name = "Thom Yorke", matchScore = 0.9f))),
+                    provider = "live",
+                    confidence = 0.9f,
+                ),
+            )
+        }
+        val synthesizer = AlwaysEmptySynthesizer(
+            type = EnrichmentType.ARTIST_TIMELINE,
+            dependencies = setOf(EnrichmentType.ARTIST_DISCOGRAPHY, EnrichmentType.SIMILAR_ARTISTS),
+        )
+        val engine = DefaultEnrichmentEngine(
+            registry = ProviderRegistry(listOf(failingProvider, liveProvider)),
+            cache = cache,
+            config = EnrichmentConfig(
+                enableIdentityResolution = false,
+                cacheMode = CacheMode.STALE_IF_ERROR,
+            ),
+            synthesizers = listOf(synthesizer),
+        )
+        val compositeKey = DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.ARTIST_TIMELINE)
+
+        // When - enriching the composite, whose dependencies settle one stale and one live
+        engine.enrich(req, setOf(EnrichmentType.ARTIST_TIMELINE))
+
+        // Then - the untainted dependency does not launder the stale one: the composite's answer
+        // still rests on a value that is not this call's own, so it proves no absence
+        assertNull(cache.negativeStored["$compositeKey:${EnrichmentType.ARTIST_TIMELINE}"])
+    }
 }
