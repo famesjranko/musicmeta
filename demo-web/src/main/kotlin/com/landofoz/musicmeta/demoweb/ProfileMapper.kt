@@ -122,8 +122,10 @@ fun ArtistProfile.toDemoResponse(elapsedMs: Long, pending: Set<EnrichmentType> =
         name = name,
         summary = SummaryCard(
             title = name,
-            imageUrl = primaryImage,
-            backgroundImageUrl = r.get<EnrichmentData.Artwork>(EnrichmentType.ARTIST_BACKGROUND)?.url,
+            imageUrl = primaryImage?.fanartTvPreviewUrl(),
+            backgroundImageUrl = r.get<EnrichmentData.Artwork>(EnrichmentType.ARTIST_BACKGROUND)
+                ?.url
+                ?.fanartTvPreviewUrl(),
             text = bio?.text,
             textSource = bio?.source,
             identityResolved = r.identityResolved,
@@ -525,6 +527,19 @@ private fun EnrichmentData.Artwork?.cardImageUrl(): String? {
     if (this == null) return null
     if (url.hasFastCdnHost()) return url
     return alternatives?.firstOrNull { it.url.hasFastCdnHost() }?.url ?: url
+}
+
+private const val FANART_TV_HOST = "assets.fanart.tv"
+
+/**
+ * A fanart.tv URL rewritten from its full-size `/fanart/` path to the smaller `/preview/` path
+ * fanart.tv serves at the same location, for summary-card use where the full-size original is
+ * unnecessary. Only rewrites [FANART_TV_HOST] URLs; anything else is returned unchanged.
+ */
+private fun String.fanartTvPreviewUrl(): String {
+    val host = runCatching { java.net.URI(this).host }.getOrNull()
+    if (host != FANART_TV_HOST) return this
+    return replaceFirst("/fanart/", "/preview/")
 }
 
 private fun relatedGenresItems(genreDiscovery: List<GenreAffinity>): List<SectionItem>? =

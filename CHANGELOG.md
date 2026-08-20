@@ -51,6 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - demo-web's card image now prefers a Deezer/iTunes CDN URL over Cover Art Archive's when both are available, cutting card paint latency from seconds to well under a second
+- demo-web's artist summary card now uses fanart.tv's smaller preview image for its photo and background instead of the full-size original; the gallery still shows full-size
 - A full cache hit now reports `CanonicalStatus.NOT_ATTEMPTED_DISABLED` when `enableIdentityResolution` is false, matching the live path instead of always claiming `NOT_ATTEMPTED_CACHE_HIT`
 - No `NotFound` a `CatalogFilterMode` produces by emptying a `Success` is negative-cached any more — covers a live answer, a `STALE_IF_ERROR` substitute, and a fresh cache hit re-filtered later
 - A `CompositeSynthesizer`'s `NotFound` no longer negative-caches when synthesized over a `STALE_IF_ERROR`-substituted dependency — it describes a past call's stale snapshot, not this one

@@ -440,6 +440,65 @@ class ProfileMapperTest {
     }
 
     @Test
+    fun `artist summary uses fanart-tv preview variants for image and background`() {
+        // Given - an artist whose photo and background are both hosted on assets.fanart.tv
+        val results = resultsOf(
+            EnrichmentType.ARTIST_PHOTO to EnrichmentData.Artwork(
+                url = "https://assets.fanart.tv/fanart/radiohead-4e68f40838818.jpg",
+            ),
+            EnrichmentType.ARTIST_BACKGROUND to EnrichmentData.Artwork(
+                url = "https://assets.fanart.tv/fanart/radiohead-503beb86c3395.jpg",
+            ),
+        )
+        val profile = ArtistProfile(name = "Radiohead", results = results)
+
+        // When - mapping to a demo response
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        // Then - both summary card slots use the smaller "/preview/" path, not the full-size original
+        assertEquals("https://assets.fanart.tv/preview/radiohead-4e68f40838818.jpg", response.summary.imageUrl)
+        assertEquals(
+            "https://assets.fanart.tv/preview/radiohead-503beb86c3395.jpg",
+            response.summary.backgroundImageUrl,
+        )
+    }
+
+    @Test
+    fun `artist gallery keeps full-size fanart-tv images`() {
+        // Given - an artist whose logo is hosted on assets.fanart.tv
+        val results = resultsOf(
+            EnrichmentType.ARTIST_LOGO to EnrichmentData.Artwork(
+                url = "https://assets.fanart.tv/fanart/radiohead-503bea2d9cbc8.png",
+            ),
+        )
+        val profile = ArtistProfile(name = "Radiohead", results = results)
+
+        // When - mapping to a demo response
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        // Then - the gallery entry keeps the full-size "/fanart/" path
+        val logo = response.gallery.first { it.label == "Logo" }
+        assertEquals("https://assets.fanart.tv/fanart/radiohead-503bea2d9cbc8.png", logo.url)
+    }
+
+    @Test
+    fun `artist summary image ignores a fanart-tv-lookalike host`() {
+        // Given - an artist photo whose host merely contains "assets.fanart.tv" as a substring
+        val results = resultsOf(
+            EnrichmentType.ARTIST_PHOTO to EnrichmentData.Artwork(
+                url = "https://notassets.fanart.tv.evil.example/fanart/radiohead.jpg",
+            ),
+        )
+        val profile = ArtistProfile(name = "Radiohead", results = results)
+
+        // When - mapping to a demo response
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        // Then - the spoofed host is not rewritten to the preview path
+        assertEquals("https://notassets.fanart.tv.evil.example/fanart/radiohead.jpg", response.summary.imageUrl)
+    }
+
+    @Test
     fun `discography groups qualifier-suffixed editions of the same album into one row`() {
         // Given - three discography entries for the same album that differ only by a qualifier suffix
         val results = resultsOf(
