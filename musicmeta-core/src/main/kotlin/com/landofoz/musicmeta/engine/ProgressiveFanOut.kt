@@ -11,9 +11,18 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
-/** The honest "never learned otherwise" identity for a call whose fan-out never resolved one. */
-private fun failedIdentityResolution(request: EnrichmentRequest) =
-    IdentityResolution(request.identifiers, CanonicalStatus.FAILED)
+/**
+ * The honest "never learned otherwise" identity for a call whose fan-out never resolved one —
+ * abandoned before it started, or stopped by its own deadline before identity resolution ran. A
+ * disabled [EnrichmentConfig.enableIdentityResolution] outranks either reason, same precedence as
+ * [DefaultEnrichmentEngine.resolveUncachedTypes]'s live path and [DefaultEnrichmentEngine.enrichProgressive]'s
+ * cache-hit fast path: nothing here was ever going to attempt identity resolution, so `FAILED`
+ * would misreport a config choice as a run that tried and lost.
+ */
+private fun DefaultEnrichmentEngine.failedIdentityResolution(request: EnrichmentRequest): IdentityResolution {
+    val status = if (config.enableIdentityResolution) CanonicalStatus.FAILED else CanonicalStatus.NOT_ATTEMPTED_DISABLED
+    return IdentityResolution(request.identifiers, status)
+}
 
 /**
  * The one resolution path [DefaultEnrichmentEngine.enrich] and
