@@ -13,7 +13,9 @@ import org.junit.Test
  * Emptiness a `CatalogFilterMode` produces is a fact about the local catalog, never a provider's
  * own answer — no path that reaches `NotFound` by filtering a `Success` down to nothing is
  * negative-cache eligible, whether that `Success` came from a live call this run, a stale
- * substitute, or a fresh cache hit re-filtered on a later call. See `docs/pitfalls.md`,
+ * substitute, or a fresh cache hit re-filtered on a later call. The stale-substitute case is
+ * vetoed by `RunSession.staleDerived` (set when the substitution itself fires) rather than
+ * `filterEmptied`; the behaviour pinned here is the same either way. See `docs/pitfalls.md`,
  * "Traps in the pipeline".
  */
 class FilterEmptiedNegativeCacheTest {

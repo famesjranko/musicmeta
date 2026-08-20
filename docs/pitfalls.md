@@ -22,15 +22,15 @@ exhaustive. Paths are relative to `musicmeta-core/src/main/kotlin/com/landofoz/m
   missing identifier (`ChainExecution.identifierIncomplete`) must not be negative-cached even under
   a `RESOLVED` identity, since a provider that was never asked cannot speak for the chain. The
   same reasoning bars any `NotFound` a `CatalogFilterMode` produces by emptying a `Success`
-  (`RunSession.filterEmptied`): that emptiness is a fact about the local catalog, never a
+  (`RunSession.filterEmptied`; the stale-substitute case rides on `RunSession.staleDerived`, set
+  when the substitution itself fires): that emptiness is a fact about the local catalog, never a
   provider's own answer, whether the `Success` it emptied was this call's own live fan-out, a
   `STALE_IF_ERROR` substitute, or a fresh cache hit re-filtered on a later call. A
   `CompositeSynthesizer` inherits the same problem one layer removed: it reads its dependencies
-  through `SettlementBoard.await`, which hands back a dependency's finalized value — including a
-  stale substitute — with no marker of where that value came from, so a synthesis over a
-  stale-only dependency that answers `NotFound` needs the staleness propagated explicitly
-  (`RunSession.staleDerived`, set in `finalizeResult` and inherited onto the composite type in
-  `synthesizeComposite`) or it negative-caches too.
+  through `SettlementBoard.await`, which hands back a dependency's finalized value — a stale
+  substitute or a filter-emptied `NotFound` — with no marker of where that value came from, so
+  both facts are propagated onto the composite type in `synthesizeComposite` (one tainted
+  dependency among fresh ones is enough) or its own `NotFound` negative-caches too.
 - One `http/CircuitBreaker.kt` per provider id, shared across every chain.
 - A `CompositeSynthesizer`'s `dependencies` are resolved even when the caller did not ask for them.
 - `withTimeoutOrNull(enrichTimeoutMs)` returns null for *that* deadline only; a nested one

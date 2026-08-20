@@ -95,8 +95,8 @@ internal class RunSession(
      * set (propagated there, since [SettlementBoard.await] hands a composite its dependency's
      * finalized value with no marker of its own for where that value came from). A stale substitute
      * is a past call's snapshot, not this call's own answer — [DefaultEnrichmentEngine.writeBack]
-     * must not negative-cache a `NotFound` that descends from one, however many composite layers
-     * removed. Concurrent for the same reason as [filterEmptied].
+     * must not negative-cache a `NotFound` that descends from one. Concurrent for the same reason
+     * as [filterEmptied].
      */
     val staleDerived: MutableSet<EnrichmentType> =
         java.util.concurrent.ConcurrentHashMap.newKeySet()
@@ -505,17 +505,13 @@ internal class DefaultEnrichmentEngine(
         val stale = applyStaleCacheToType(request, type, stamped)
         if (stale === stamped) return stale
         // stale !== stamped: the stale-cache substitution fired, so this is a *different* Success
-        // read from a past call, not this call's live answer — recorded unconditionally (not just
-        // when it ends up empty) so a composite synthesized from this dependency can inherit the
-        // fact even when this type's own substitute stays a non-empty Success. Re-filtering it
-        // below can turn it into a NotFound that describes only that stale snapshot, never proof
-        // this call's own fan-out found nothing. writeBack must not treat that NotFound as
-        // negative-cache eligible.
+        // read from a past call, not this call's live answer. Recorded unconditionally (not just
+        // when re-filtering below empties it) so a composite synthesized from this dependency can
+        // inherit the fact even when this type's own substitute stays a non-empty Success — and
+        // this membership alone is what bars writeBack from negative-caching a NotFound the
+        // re-filter produces.
         session.staleDerived.add(type)
-        val refiltered =
-            applyCatalogFilteringToType(type, stale, config.catalogProvider, config.catalogFilterMode, logger)
-        if (refiltered is EnrichmentResult.NotFound) session.filterEmptied.add(type)
-        return refiltered
+        return applyCatalogFilteringToType(type, stale, config.catalogProvider, config.catalogFilterMode, logger)
     }
 
     internal suspend fun writeBack(
@@ -982,13 +978,14 @@ internal class DefaultEnrichmentEngine(
         val dependencies = compositeDependencies[compositeType].orEmpty()
         val depSettled = dependencies.associateWith { board.await(it) }
         val depExecutions = depSettled.values.mapNotNull { it.execution }
-        // A dependency's own RunSession.staleDerived membership is set inside
-        // DefaultEnrichmentEngine.finalizeResult as it settles, before board.await above can return
-        // it — so this dependency's own staleness is already visible here. Propagating it onto
-        // compositeType is what lets a *second*-layer composite (one that depends on this one) see
-        // it too, since board.await hands a dependent only the finalized EnrichmentResult, with no
-        // record of where it came from.
+        // A dependency's taint is set inside finalizeResult as it settles, before board.await
+        // above can return it — but board.await hands back only the finalized EnrichmentResult,
+        // with no record of where it came from, so the taint must be copied onto compositeType
+        // here for writeBack to see it. `any`, not `all`, deliberately: one stale or
+        // filter-emptied dependency among fresh ones still means the composite's answer rests on
+        // a value that is not this call's own, so its NotFound proves no absence.
         if (dependencies.any { it in session.staleDerived }) session.staleDerived.add(compositeType)
+        if (dependencies.any { it in session.filterEmptied }) session.filterEmptied.add(compositeType)
         // A composite type has no chain of its own, so this is the only ChainExecution it ever
         // earns — folding each dependency's skips in is what makes a skip-for-missing-identifier
         // visible to writeBack's identifierIncomplete check one layer up.
