@@ -222,7 +222,7 @@ fun AlbumProfile.toDemoResponse(
             title = title,
             subtitle = artist,
             subtitleEnrich = artistEnrich(artist),
-            imageUrl = albumArt?.url,
+            imageUrl = albumArt.cardImageUrl(),
             text = description?.text,
             textSource = description?.source,
             identityResolved = r.identityResolved,
@@ -313,7 +313,7 @@ fun TrackProfile.toDemoResponse(
             title = title,
             subtitle = artist,
             subtitleEnrich = artistEnrich(artist),
-            imageUrl = r.albumArt()?.url,
+            imageUrl = r.albumArt().cardImageUrl(),
             text = lyrics.readingText(),
             textSource = lyrics?.let { "lyrics" },
             previewTitle = title.takeIf { r.identityResolved },
@@ -505,6 +505,26 @@ private fun MutableList<GalleryImage>.addAlternatives(seen: MutableSet<String>, 
     artwork?.alternatives?.forEach { alt ->
         if (alt.url.isNotBlank() && seen.add(alt.url)) add(GalleryImage(alt.url, alt.provider))
     }
+}
+
+/** Suffix-matched hosts of CDNs fast enough to paint a card image without a visible delay. */
+private val FAST_ART_CDN_HOSTS = listOf("dzcdn.net", "mzstatic.com")
+
+private fun String.hasFastCdnHost(): Boolean {
+    val host = runCatching { java.net.URI(this).host }.getOrNull() ?: return false
+    return FAST_ART_CDN_HOSTS.any { host == it || host.endsWith(".$it") }
+}
+
+/**
+ * The URL to paint the summary card with: a [EnrichmentData.Artwork.alternatives] entry hosted on
+ * a fast CDN (Deezer, iTunes/Apple) when one exists, since Cover Art Archive's own redirect-then-serve
+ * path is tens of times slower. Falls back to the ranked primary [EnrichmentData.Artwork.url]
+ * otherwise, including when this artwork is `null`.
+ */
+private fun EnrichmentData.Artwork?.cardImageUrl(): String? {
+    if (this == null) return null
+    if (url.hasFastCdnHost()) return url
+    return alternatives?.firstOrNull { it.url.hasFastCdnHost() }?.url ?: url
 }
 
 private fun relatedGenresItems(genreDiscovery: List<GenreAffinity>): List<SectionItem>? =
