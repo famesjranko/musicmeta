@@ -31,6 +31,7 @@ import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.launch
@@ -408,6 +409,14 @@ private const val RETRY_AFTER_SECONDS = "15"
 private val enrichmentGate = Semaphore(MAX_IN_GATE)
 
 /**
+ * How often a stream writes a comment purely to learn whether the reader is still there. The bound
+ * on how long an abandoned stream can keep its admission permit, so it stays well under
+ * [RETRY_AFTER_SECONDS] — a refusal caused by permits the leavers still hold would outlive its own
+ * advice.
+ */
+private const val HEARTBEAT_MS = 1_000L
+
+/**
  * Runs [enriching] holding one of [MAX_IN_GATE] permits, or refuses outright without running it.
  *
  * Nothing queues. A caller that cannot get in is told so at once, in a body the page can render —
@@ -609,7 +618,24 @@ private fun handleEnrichStream(exchange: HttpExchange, engine: EnrichmentEngine)
         val writer = SseWriter(exchange.responseBody)
 
         try {
-            runBlocking { streamEnrichment(engine, query, started, writer) }
+            runBlocking {
+                // The next snapshot can be tens of seconds away behind provider rate limiters, and a
+                // reader who left is only ever noticed by a failed write — so without one, this
+                // handler holds its admission permit for the whole abandoned run, and a single
+                // visitor clicking through lookups can refuse themselves. The heartbeat is that
+                // write: its failure cancels this scope, collection and all.
+                val heartbeat = launch {
+                    while (true) {
+                        delay(HEARTBEAT_MS)
+                        writer.comment()
+                    }
+                }
+                try {
+                    streamEnrichment(engine, query, started, writer)
+                } finally {
+                    heartbeat.cancel()
+                }
+            }
         } catch (e: Exception) {
             // `runBlocking` surfaces a cancellation from inside it as a plain throw on this thread, so
             // there is no ambient job here for `ensureActive()` to consult.
@@ -655,6 +681,20 @@ internal class SseWriter(private val out: OutputStream) {
      */
     var isBroken: Boolean = false
         private set
+
+    /**
+     * Writes a comment line no client renders; its only observable effect is throwing [IOException]
+     * when the reader has left. SSE defines the `:` line as ignorable, and the page's parser skips it.
+     */
+    fun comment() {
+        try {
+            out.write(": hb\n\n".toByteArray(StandardCharsets.UTF_8))
+            out.flush()
+        } catch (e: IOException) {
+            isBroken = true
+            throw e
+        }
+    }
 
     /** Throws [IOException] when the client has left; the caller treats that as the end of the stream. */
     fun write(event: String, data: String) {
