@@ -127,15 +127,16 @@ private val healthState = AtomicReference(HealthState.WARMING)
 internal data class HealthResponse(val ready: Boolean, val status: String)
 
 /**
- * Pure classification of a completed (or failed) warm-up round-trip, kept apart from [warmUp] so
- * it is testable without a thread or a live engine.
+ * Pure classification of a completed (or failed) warm-up round-trip, kept apart from [warmShowcase]
+ * so it is testable without a thread or a live engine.
  *
  * `READY` claims only that at least one provider answered — a `NotFound` or `RateLimited` counts,
  * not just `Success`, because reachability is what the round-trip is for. It is not a claim that
  * every configured provider works; a specific provider's misconfiguration is the providers panel's
  * job (see the key-missing rows [buildProviderRows] adds), not health's.
  *
- * A `null` [result] with `threw == false` is reachable: [warmUp] only catches `Exception`, so a
+ * A `null` [result] with `threw == false` is reachable two ways: an identifier that names no
+ * MusicBrainz entity has nothing to warm, and [warmShowcase] only catches `Exception`, so a
  * `Throwable` that isn't one (an `Error` such as `OutOfMemoryError`) leaves `threw = false` and
  * `result` unset while still running the `finally` that calls this. Classifying that as
  * [HealthState.DEGRADED] rather than [HealthState.READY] is what keeps the state from sticking at
@@ -217,31 +218,121 @@ fun startServer(
     }
 
     server.start()
-    warmUp(engineRef.get())
+    warmUp(engineRef.get(), parseShowcase(indexHtml.decodeToString()))
 }
 
 /**
- * Fires a single throwaway enrichment off its own thread at startup, outside any request's timeout
- * budget, purely to pay the cold-start cost up front. The round-trip's outcome now feeds
- * [classifyWarmUp] to pick [healthState] — [HealthState.READY] or [HealthState.DEGRADED] — so it is
- * captured rather than discarded, but nothing here retries or escalates it: the JIT/DNS/TLS cost is
- * paid either way, and a broken provider is reported, not fixed, by this thread.
- *
- * The blanket `catch (_: Exception)` here skips the `docs/pitfalls.md` §2 `ensureActive()` guard
- * safely: `runBlocking` on this daemon thread starts its own root job, so there is no caller
- * cancellation to honor and nothing this swallow can defeat.
+ * One suggested query from the landing page, in the terms the enrichment endpoints take. A kind
+ * carries only the fields it uses: an artist suggestion has no [artist] of its own and only a track
+ * has an [album]. For `mbid`, [name] is the identifier itself, exactly as it travels on the wire.
  */
-private fun warmUp(engine: EnrichmentEngine) {
-    thread(name = "warmup", isDaemon = true) {
-        var result: EnrichmentResults? = null
+internal data class ShowcaseQuery(
+    val kind: String,
+    val name: String,
+    val artist: String,
+    val album: String?,
+)
+
+private val SHOWCASE_KINDS = setOf("artist", "album", "track", "mbid")
+
+/** Matches the suggestions block only; it holds buttons and text, so the first `</div>` closes it. */
+private val SHOWCASE_BLOCK = Regex("""<div id="examples">(.*?)</div>""", RegexOption.DOT_MATCHES_ALL)
+
+private val SHOWCASE_BUTTON = Regex("""<button\b[^>]*>""")
+
+private val DATA_ATTRIBUTE = Regex("""\bdata-([a-z]+)="([^"]*)"""")
+
+/**
+ * Reads the suggested queries out of the page the server is about to serve, which is what makes
+ * the warm set and the offered set one list rather than two that drift: a suggestion added to
+ * `index.html` is warmed, and one removed stops being warmed, with no second edit here.
+ *
+ * A button the enrichment endpoints could not accept anyway — an unknown kind, or no name — is not
+ * a suggestion worth a warm-up's round trip, so it is skipped rather than sent.
+ */
+internal fun parseShowcase(html: String): List<ShowcaseQuery> {
+    val block = SHOWCASE_BLOCK.find(html)?.groupValues?.get(1) ?: return emptyList()
+    return SHOWCASE_BUTTON.findAll(block).mapNotNull { button ->
+        val data = DATA_ATTRIBUTE.findAll(button.value).associate { it.groupValues[1] to it.groupValues[2] }
+        val kind = data["kind"]?.takeIf { it in SHOWCASE_KINDS } ?: return@mapNotNull null
+        val name = data["name"]?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+        ShowcaseQuery(kind, name, data["artist"].orEmpty(), data["album"])
+    }.toList()
+}
+
+/**
+ * Warms one suggestion along the exact path a visitor's click takes — the same request, the same
+ * types, the same radio section — so the click finds a cache hit rather than a near miss under a
+ * neighbouring key.
+ *
+ * Null for an identifier MusicBrainz holds under no entity type: there is no page to warm.
+ */
+private suspend fun warmOne(engine: EnrichmentEngine, entry: ShowcaseQuery): EnrichmentResults? =
+    coroutineScope {
+        val plan = planFor(engine, entry.toEnrichQuery()) ?: return@coroutineScope null
+        val radio = plan.radioArtist?.let { artist -> async { fetchArtistRadioSection(engine, artist) } }
+        val results = engine.enrich(plan.request, plan.types)
+        radio?.await()
+        results
+    }
+
+private fun ShowcaseQuery.toEnrichQuery() = EnrichQuery(
+    kind = kind,
+    name = name,
+    artist = artist,
+    album = album,
+    mbid = null,
+    identifiers = null,
+    forceRefresh = false,
+)
+
+/**
+ * Warms every suggestion in turn, and publishes the readiness verdict from the **first** of them
+ * alone. Readiness cannot wait for the whole set: a hosting platform takes a `503 WARMING` instance
+ * out of rotation, so multiplying the wait by the number of suggestions is how a startup probe
+ * fails. The rest warm behind an instance already serving.
+ *
+ * One suggestion's failure is therefore contained twice over — it neither stops the suggestions
+ * after it nor revisits a verdict already published — which is why each entity is caught on its
+ * own rather than the loop being wrapped once.
+ *
+ * An empty showcase publishes [HealthState.DEGRADED] rather than leaving the state at
+ * [HealthState.WARMING] forever, on the same "nothing was proved, so claim nothing" grounds as
+ * [classifyWarmUp]'s throwing case.
+ */
+internal suspend fun warmShowcase(
+    engine: EnrichmentEngine,
+    showcase: List<ShowcaseQuery>,
+    publishVerdict: (HealthState) -> Unit,
+) {
+    if (showcase.isEmpty()) {
+        publishVerdict(classifyWarmUp(null, threw = false))
+        return
+    }
+    showcase.forEachIndexed { index, entry ->
+        var results: EnrichmentResults? = null
         var threw = false
         try {
-            result = runBlocking { engine.artistProfile("Radiohead") }.results
-        } catch (_: Exception) {
+            results = warmOne(engine, entry)
+        } catch (e: Exception) {
+            currentCoroutineContext().ensureActive() // rethrows only if this job was cancelled
             threw = true
         } finally {
-            healthState.set(classifyWarmUp(result, threw))
+            if (index == 0) publishVerdict(classifyWarmUp(results, threw))
         }
+    }
+}
+
+/**
+ * Fires the showcase warm-up off its own thread at startup, outside any request's timeout budget,
+ * purely to pay the cold-start cost up front. The first round-trip's outcome feeds [classifyWarmUp]
+ * to pick [healthState] — [HealthState.READY] or [HealthState.DEGRADED] — so it is captured rather
+ * than discarded, but nothing here retries or escalates it: the JIT/DNS/TLS cost is paid either
+ * way, and a broken provider is reported, not fixed, by this thread.
+ */
+private fun warmUp(engine: EnrichmentEngine, showcase: List<ShowcaseQuery>) {
+    thread(name = "warmup", isDaemon = true) {
+        runBlocking { warmShowcase(engine, showcase) { healthState.set(it) } }
     }
 }
 
