@@ -16,7 +16,12 @@ import com.landofoz.musicmeta.PopularitySignalKind
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.TrackProfile
 
-fun ArtistProfile.toDemoResponse(elapsedMs: Long): DemoResponse {
+/**
+ * @param pending the enrichment types that have not settled yet, `requestedTypes - raw.keys` on a
+ *   streaming snapshot and empty on a completed result. Empty is what makes a completed response
+ *   the same shape it has always been: no card and no summary slot can claim to be loading.
+ */
+fun ArtistProfile.toDemoResponse(elapsedMs: Long, pending: Set<EnrichmentType> = emptySet()): DemoResponse {
     val r = results
     val bio = r.biography()
     val stats = r.artistPopularity()
@@ -25,12 +30,12 @@ fun ArtistProfile.toDemoResponse(elapsedMs: Long): DemoResponse {
         r.country()?.let { add(SectionItem("Country", it)) }
     }
 
-    val sections = buildList {
+    val sections = buildSections(pending) {
         r.identity.suggestions.let { s ->
             didYouMeanSection(s) { artistEnrich(it.title) }?.let { add(it) }
         }
         if (details.isNotEmpty()) add(Section("details", "Details", details))
-        section("similar_artists", "Similar Artists") {
+        section("similar_artists", "Similar Artists", EnrichmentType.SIMILAR_ARTISTS) {
             r.similarArtists()?.artists?.map {
                 SectionItem(
                     primary = it.name,
@@ -40,7 +45,7 @@ fun ArtistProfile.toDemoResponse(elapsedMs: Long): DemoResponse {
                 )
             }
         }
-        section("top_tracks", "Top Tracks") {
+        section("top_tracks", "Top Tracks", EnrichmentType.ARTIST_TOP_TRACKS) {
             r.topTracks()?.tracks?.sortedBy { it.rank }?.map {
                 val ids = it.identifiers.toWireIdentifiers()
                 SectionItem(
@@ -55,11 +60,11 @@ fun ArtistProfile.toDemoResponse(elapsedMs: Long): DemoResponse {
                 )
             }
         }
-        section("radio", "Radio") { radioItems(r.radio()) }
-        section("radio_discovery", "Radio Discovery") {
+        section("radio", "Radio", EnrichmentType.ARTIST_RADIO) { radioItems(r.radio()) }
+        section("radio_discovery", "Radio Discovery", EnrichmentType.ARTIST_RADIO_DISCOVERY) {
             radioItems(r.get<EnrichmentData.RadioPlaylist>(EnrichmentType.ARTIST_RADIO_DISCOVERY))
         }
-        section("discography", "Discography") {
+        section("discography", "Discography", EnrichmentType.ARTIST_DISCOGRAPHY) {
             r.discography()?.albums?.let { DiscographyGrouping.group(it) }?.map {
                 SectionItem(
                     primary = it.displayTitle,
@@ -72,7 +77,7 @@ fun ArtistProfile.toDemoResponse(elapsedMs: Long): DemoResponse {
                 )
             }
         }
-        section("band_members", "Band Members") {
+        section("band_members", "Band Members", EnrichmentType.BAND_MEMBERS) {
             r.get<EnrichmentData.BandMembers>(EnrichmentType.BAND_MEMBERS)?.members?.map {
                 SectionItem(
                     primary = it.name,
@@ -82,22 +87,22 @@ fun ArtistProfile.toDemoResponse(elapsedMs: Long): DemoResponse {
                 )
             }
         }
-        section("links", "Links") {
+        section("links", "Links", EnrichmentType.ARTIST_LINKS) {
             r.get<EnrichmentData.ArtistLinks>(EnrichmentType.ARTIST_LINKS)?.links?.map {
                 val redundant = it.label == null || it.label.equals(it.type, ignoreCase = true)
                 SectionItem(primary = it.label ?: it.type, secondary = it.type.takeIf { !redundant }, link = it.url)
             }
         }
-        section("timeline", "Timeline") {
+        section("timeline", "Timeline", EnrichmentType.ARTIST_TIMELINE) {
             r.get<EnrichmentData.ArtistTimeline>(EnrichmentType.ARTIST_TIMELINE)?.events?.map {
                 SectionItem(primary = it.description, secondary = it.date, meta = it.type)
             }
         }
-        section("related_genres", "Related Genres") {
+        section("related_genres", "Related Genres", EnrichmentType.GENRE_DISCOVERY) {
             val discovery = r.get<EnrichmentData.GenreDiscovery>(EnrichmentType.GENRE_DISCOVERY)
             relatedGenresItems(discovery?.relatedGenres.orEmpty())
         }
-        section("stats", "Popularity") {
+        section("stats", "Popularity", EnrichmentType.ARTIST_POPULARITY) {
             stats?.statsItems()
         }
     }
@@ -111,6 +116,7 @@ fun ArtistProfile.toDemoResponse(elapsedMs: Long): DemoResponse {
         addAlternatives(seen, photo)
     }
 
+    val genreChips = r.genreTags().map { it.toChip() }
     return DemoResponse(
         kind = "artist",
         name = name,
@@ -122,7 +128,15 @@ fun ArtistProfile.toDemoResponse(elapsedMs: Long): DemoResponse {
             textSource = bio?.source,
             identityResolved = r.identityResolved,
             identityVerdict = r.identityVerdict,
-            genres = r.genreTags().map { it.toChip() },
+            genres = genreChips,
+            pendingSlots = summaryPendingSlots(
+                pending,
+                imageTypes = setOf(EnrichmentType.ARTIST_PHOTO, EnrichmentType.ARTIST_BIO),
+                textType = EnrichmentType.ARTIST_BIO,
+                hasImage = primaryImage != null,
+                hasText = bio?.text != null,
+                hasGenres = genreChips.isNotEmpty(),
+            ),
         ),
         sections = sections,
         gallery = gallery,
@@ -130,7 +144,12 @@ fun ArtistProfile.toDemoResponse(elapsedMs: Long): DemoResponse {
     )
 }
 
-fun AlbumProfile.toDemoResponse(elapsedMs: Long, artistRadio: Section? = null): DemoResponse {
+/** @param pending see [ArtistProfile.toDemoResponse]. */
+fun AlbumProfile.toDemoResponse(
+    elapsedMs: Long,
+    artistRadio: Section? = null,
+    pending: Set<EnrichmentType> = emptySet(),
+): DemoResponse {
     val r = results
     val description = r.albumDescription()
 
@@ -141,12 +160,12 @@ fun AlbumProfile.toDemoResponse(elapsedMs: Long, artistRadio: Section? = null): 
         r.country()?.let { add(SectionItem("Country", it)) }
     }
 
-    val sections = buildList {
+    val sections = buildSections(pending) {
         r.identity.suggestions.let { s ->
             didYouMeanSection(s) { c -> c.artist?.let { a -> albumEnrich(c.title, a) } }?.let { add(it) }
         }
         if (details.isNotEmpty()) add(Section("details", "Details", details))
-        section("tracklist", "Tracklist") {
+        section("tracklist", "Tracklist", EnrichmentType.ALBUM_TRACKS) {
             r.get<EnrichmentData.Tracklist>(EnrichmentType.ALBUM_TRACKS)?.tracks?.sortedBy { it.position }?.map {
                 SectionItem(
                     primary = "#${it.position} ${it.title}",
@@ -158,7 +177,7 @@ fun AlbumProfile.toDemoResponse(elapsedMs: Long, artistRadio: Section? = null): 
                 )
             }
         }
-        section("similar_albums", "Similar Albums") {
+        section("similar_albums", "Similar Albums", EnrichmentType.SIMILAR_ALBUMS) {
             r.get<EnrichmentData.SimilarAlbums>(EnrichmentType.SIMILAR_ALBUMS)?.albums?.map {
                 SectionItem(
                     primary = it.title,
@@ -169,7 +188,7 @@ fun AlbumProfile.toDemoResponse(elapsedMs: Long, artistRadio: Section? = null): 
                 )
             }
         }
-        section("editions", "Editions") {
+        section("editions", "Editions", EnrichmentType.RELEASE_EDITIONS) {
             r.get<EnrichmentData.ReleaseEditions>(EnrichmentType.RELEASE_EDITIONS)?.editions?.map {
                 SectionItem(
                     primary = it.title,
@@ -178,7 +197,7 @@ fun AlbumProfile.toDemoResponse(elapsedMs: Long, artistRadio: Section? = null): 
                 )
             }
         }
-        section("related_genres", "Related Genres") {
+        section("related_genres", "Related Genres", EnrichmentType.GENRE_DISCOVERY) {
             val discovery = r.get<EnrichmentData.GenreDiscovery>(EnrichmentType.GENRE_DISCOVERY)
             relatedGenresItems(discovery?.relatedGenres.orEmpty())
         }
@@ -194,6 +213,7 @@ fun AlbumProfile.toDemoResponse(elapsedMs: Long, artistRadio: Section? = null): 
         addAlternatives(seen, albumArt)
     }
 
+    val genreChips = r.genreTags().map { it.toChip() }
     return DemoResponse(
         kind = "album",
         name = title,
@@ -207,7 +227,15 @@ fun AlbumProfile.toDemoResponse(elapsedMs: Long, artistRadio: Section? = null): 
             textSource = description?.source,
             identityResolved = r.identityResolved,
             identityVerdict = r.identityVerdict,
-            genres = r.genreTags().map { it.toChip() },
+            genres = genreChips,
+            pendingSlots = summaryPendingSlots(
+                pending,
+                imageTypes = setOf(EnrichmentType.ALBUM_ART),
+                textType = EnrichmentType.ALBUM_DESCRIPTION,
+                hasImage = albumArt?.url != null,
+                hasText = description?.text != null,
+                hasGenres = genreChips.isNotEmpty(),
+            ),
         ),
         sections = sections,
         gallery = gallery,
@@ -220,11 +248,13 @@ fun AlbumProfile.toDemoResponse(elapsedMs: Long, artistRadio: Section? = null): 
  *   carry a provider-confirmed album title (from the same release-group MusicBrainz's art
  *   resolution already found), which the Details row prefers when present; [requestedAlbum] is
  *   shown, labelled "as entered", only as a fallback when nothing confirmed one.
+ * @param pending see [ArtistProfile.toDemoResponse].
  */
 fun TrackProfile.toDemoResponse(
     elapsedMs: Long,
     artistRadio: Section? = null,
     requestedAlbum: String? = null,
+    pending: Set<EnrichmentType> = emptySet(),
 ): DemoResponse {
     val r = results
     val lyrics = r.lyrics()
@@ -242,17 +272,17 @@ fun TrackProfile.toDemoResponse(
         trackMetadata?.disambiguation?.let { add(SectionItem("Variant", it)) }
     }
 
-    val sections = buildList {
+    val sections = buildSections(pending) {
         r.identity.suggestions.let { s ->
             didYouMeanSection(s) { c -> c.artist?.let { a -> trackEnrich(c.title, a) } }?.let { add(it) }
         }
         if (details.isNotEmpty()) add(Section("details", "Details", details))
-        section("credits", "Credits") {
+        section("credits", "Credits", EnrichmentType.CREDITS) {
             r.credits()?.credits?.map {
                 SectionItem(primary = it.name, secondary = it.role, meta = it.roleCategory)
             }
         }
-        section("similar_tracks", "Similar Tracks") {
+        section("similar_tracks", "Similar Tracks", EnrichmentType.SIMILAR_TRACKS) {
             r.similarTracks()?.tracks?.map {
                 SectionItem(
                     primary = it.title,
@@ -264,16 +294,17 @@ fun TrackProfile.toDemoResponse(
                 )
             }
         }
-        section("related_genres", "Related Genres") {
+        section("related_genres", "Related Genres", EnrichmentType.GENRE_DISCOVERY) {
             val discovery = r.get<EnrichmentData.GenreDiscovery>(EnrichmentType.GENRE_DISCOVERY)
             relatedGenresItems(discovery?.relatedGenres.orEmpty())
         }
-        section("stats", "Popularity") {
+        section("stats", "Popularity", EnrichmentType.TRACK_POPULARITY) {
             stats?.statsItems()
         }
         artistRadio?.takeIf { r.identityResolved }?.let { add(it) }
     }
 
+    val genreChips = r.genreTags().map { it.toChip() }
     return DemoResponse(
         kind = "track",
         name = title,
@@ -289,7 +320,15 @@ fun TrackProfile.toDemoResponse(
             previewArtist = artist.takeIf { r.identityResolved },
             identityResolved = r.identityResolved,
             identityVerdict = r.identityVerdict,
-            genres = r.genreTags().map { it.toChip() },
+            genres = genreChips,
+            pendingSlots = summaryPendingSlots(
+                pending,
+                imageTypes = setOf(EnrichmentType.ALBUM_ART),
+                textType = EnrichmentType.LYRICS_PLAIN,
+                hasImage = r.albumArt()?.url != null,
+                hasText = lyrics.readingText() != null,
+                hasGenres = genreChips.isNotEmpty(),
+            ),
         ),
         sections = sections,
         meta = r.toMeta(elapsedMs),
@@ -298,11 +337,17 @@ fun TrackProfile.toDemoResponse(
 
 /**
  * Whether the summary card may present its title/preview as a match. Every `NOT_ATTEMPTED_*`
- * status counts as confident — resolution had nothing to add — while [CanonicalStatus.AMBIGUOUS],
- * [CanonicalStatus.UNRESOLVED], and [CanonicalStatus.FAILED] do not.
+ * status counts as confident — resolution had nothing to add — while [CanonicalStatus.RESOLVING]
+ * (resolution has not settled yet), [CanonicalStatus.AMBIGUOUS], [CanonicalStatus.UNRESOLVED], and
+ * [CanonicalStatus.FAILED] do not.
  */
 private val EnrichmentResults.identityResolved: Boolean
-    get() = identity.status !in setOf(CanonicalStatus.AMBIGUOUS, CanonicalStatus.UNRESOLVED, CanonicalStatus.FAILED)
+    get() = identity.status !in setOf(
+        CanonicalStatus.RESOLVING,
+        CanonicalStatus.AMBIGUOUS,
+        CanonicalStatus.UNRESOLVED,
+        CanonicalStatus.FAILED,
+    )
 
 /** The bare [CanonicalStatus] enum name. */
 private val EnrichmentResults.identityVerdict: String
@@ -320,7 +365,7 @@ private fun EnrichmentResults.toMeta(elapsedMs: Long): Meta {
             is EnrichmentResult.RateLimited ->
                 ProviderHit(type.name, result.provider, "rate_limited")
             is EnrichmentResult.Error ->
-                ProviderHit(type.name, result.provider, "error: ${result.message}")
+                ProviderHit(type.name, result.provider, "error: ${result.message}", errorKind = result.errorKind.name)
         }
     }
     val identitySummary = identity.let { id ->
@@ -362,9 +407,55 @@ private fun EnrichmentIdentifiers?.toIdentifierHits(): List<IdentifierHit> {
     return structHits + namespacedHits
 }
 
-private fun MutableList<Section>.section(key: String, label: String, items: () -> List<SectionItem>?) {
-    val list = items().orEmpty()
-    if (list.isNotEmpty()) add(Section(key, label, list))
+/**
+ * Collects the cards of one profile against the set of enrichment types that have not settled yet.
+ * [pending] is empty for a completed result, which is what makes the non-streaming response
+ * identical to what it was before streaming existed: with nothing pending, no placeholder can be
+ * produced.
+ */
+private fun buildSections(pending: Set<EnrichmentType>, build: SectionBuilder.() -> Unit): List<Section> =
+    SectionBuilder(pending).apply(build).sections
+
+/** @see buildSections */
+private class SectionBuilder(private val pending: Set<EnrichmentType>) {
+    val sections = mutableListOf<Section>()
+
+    /** Adds an already-built card — one assembled from several types, or from identity rather than a type. */
+    fun add(section: Section) {
+        sections += section
+    }
+
+    /**
+     * One card, or a placeholder holding its position. [types] are the enrichment types this card
+     * renders: while any of them is still to settle and nothing has filled the card yet, it goes
+     * out empty and `pending`, so the card cannot appear later and reflow the page under a reader.
+     * With nothing pending an empty card is omitted, exactly as before.
+     */
+    fun section(key: String, label: String, vararg types: EnrichmentType, items: () -> List<SectionItem>?) {
+        val list = items().orEmpty()
+        when {
+            list.isNotEmpty() -> sections += Section(key, label, list)
+            types.any { it in pending } -> sections += Section(key, label, emptyList(), pending = true)
+        }
+    }
+}
+
+/**
+ * The summary card's slots whose data has not settled — see [SummaryCard.pendingSlots]. A slot a
+ * settled type already filled is never listed, so a snapshot never shows a loading state over
+ * something the reader can already see.
+ */
+private fun summaryPendingSlots(
+    pending: Set<EnrichmentType>,
+    imageTypes: Set<EnrichmentType>,
+    textType: EnrichmentType,
+    hasImage: Boolean,
+    hasText: Boolean,
+    hasGenres: Boolean,
+): List<String> = buildList {
+    if (!hasImage && imageTypes.any { it in pending }) add("image")
+    if (!hasText && textType in pending) add("text")
+    if (!hasGenres && EnrichmentType.GENRE in pending) add("genres")
 }
 
 /**

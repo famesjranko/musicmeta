@@ -3,6 +3,7 @@ package com.landofoz.musicmeta.demoweb
 import com.landofoz.musicmeta.AlbumProfile
 import com.landofoz.musicmeta.ApiKeyConfig
 import com.landofoz.musicmeta.ArtistProfile
+import com.landofoz.musicmeta.CanonicalStatus
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentEngine
 import com.landofoz.musicmeta.EnrichmentIdentifiers
@@ -31,11 +32,15 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.io.IOException
+import java.io.OutputStream
 import java.net.InetSocketAddress
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
@@ -172,7 +177,10 @@ fun startServer(
         ?: error("index.js missing from demo-web resources")
 
     val server = HttpServer.create(InetSocketAddress(port), 0)
-    server.executor = Executors.newFixedThreadPool(4)
+    // A streaming request holds its thread for the whole enrichment, not for one round trip, so the
+    // pool has to cover concurrent readers *and* leave room for the health probe and the provider
+    // panel. 16 is headroom for a demo, not a measured capacity.
+    server.executor = Executors.newFixedThreadPool(16)
 
     server.createContext("/") { exchange ->
         when (exchange.requestURI.path) {
@@ -184,6 +192,9 @@ fun startServer(
     }
 
     server.createContext("/api/enrich") { exchange -> handleEnrich(exchange, engineRef.get()) }
+    // Longest matching prefix wins in this server, so this context takes the path despite
+    // `/api/enrich` also matching it.
+    server.createContext("/api/enrich-stream") { exchange -> handleEnrichStream(exchange, engineRef.get()) }
     server.createContext("/api/invalidate") { exchange -> handleInvalidate(exchange, engineRef.get()) }
     server.createContext("/api/search") { exchange -> handleSearch(exchange, engineRef.get()) }
     server.createContext("/api/preview") { exchange -> handlePreview(exchange, engineRef.get()) }
@@ -227,45 +238,77 @@ private fun warmUp(engine: EnrichmentEngine) {
     }
 }
 
+/**
+ * The lookup behind either enrichment endpoint, validated in one place so the streaming and the
+ * single-shot path cannot drift on what they accept or on what they say when they refuse.
+ */
+private data class EnrichQuery(
+    val kind: String,
+    val name: String,
+    val artist: String,
+    val album: String?,
+    /**
+     * An artist, release or recording MBID depending on [kind] — `EnrichmentIdentifiers.musicBrainzId`
+     * is polymorphic that way. No form control sends this; it is reachable over the API only,
+     * because a name-only request cannot exercise what a caller's identifier does in either
+     * direction: an MBID MusicBrainz holds pins the exact entity, while one it does not hold
+     * resolves by name regardless.
+     */
+    val mbid: String?,
+    val identifiers: EnrichmentIdentifiers?,
+    val forceRefresh: Boolean,
+)
+
+/** Thrown by [parseEnrichQuery] for anything that must reach the caller as an HTTP 400. */
+private class InvalidEnrichQuery(message: String) : Exception(message)
+
+private fun parseEnrichQuery(rawQuery: String?): EnrichQuery {
+    val params = parseQuery(rawQuery)
+    val kind = params["kind"]
+    val name = params["name"]?.trim().orEmpty()
+    val artist = params["artist"]?.trim().orEmpty()
+    val valid = kind in setOf("artist", "album", "track", "mbid") &&
+        name.isNotBlank() &&
+        (kind == "artist" || kind == "mbid" || artist.isNotBlank())
+    if (kind == null || !valid) {
+        throw InvalidEnrichQuery("kind must be artist|album|track|mbid; name (and artist, for album/track) required")
+    }
+    val identifiers = try {
+        decodeTrackIdentifiers(params["ids"])
+    } catch (e: InvalidIdentifiers) {
+        throw InvalidEnrichQuery(e.message ?: "invalid ids")
+    }
+    if (identifiers != null && kind != "track") throw InvalidEnrichQuery("ids is only valid for kind=track")
+    return EnrichQuery(
+        kind = kind,
+        name = name,
+        artist = artist,
+        album = params["album"]?.trim()?.ifBlank { null },
+        mbid = params["mbid"]?.trim()?.ifBlank { null },
+        identifiers = identifiers,
+        forceRefresh = params["refresh"] == "true",
+    )
+}
+
 private fun handleEnrich(exchange: HttpExchange, engine: EnrichmentEngine) {
     if (exchange.requestMethod != "GET") {
         exchange.respondJson(405, ApiError("GET required"))
         return
     }
+    val query = try {
+        parseEnrichQuery(exchange.requestURI.rawQuery)
+    } catch (e: InvalidEnrichQuery) {
+        exchange.respondJson(400, ApiError(e.message ?: "invalid request"))
+        return
+    }
     try {
-        val params = parseQuery(exchange.requestURI.rawQuery)
-        val kind = params["kind"]
-        val name = params["name"]?.trim().orEmpty()
-        val artist = params["artist"]?.trim().orEmpty()
-        val album = params["album"]?.trim()?.ifBlank { null }
-        // An artist, release or recording MBID depending on `kind` — EnrichmentIdentifiers.musicBrainzId
-        // is polymorphic that way. No form control sends this; it is reachable over the API only,
-        // because a name-only request cannot exercise what a caller's identifier does in either
-        // direction: an MBID MusicBrainz holds pins the exact entity, while one it does not hold
-        // resolves by name regardless.
-        val mbid = params["mbid"]?.trim()?.ifBlank { null }
-        val forceRefresh = params["refresh"] == "true"
-
-        val valid = kind in setOf("artist", "album", "track", "mbid") &&
-            name.isNotBlank() &&
-            (kind == "artist" || kind == "mbid" || artist.isNotBlank())
-        if (!valid) {
-            exchange.respondJson(
-                400,
-                ApiError("kind must be artist|album|track|mbid; name (and artist, for album/track) required"),
-            )
-            return
-        }
-        val identifiers = try {
-            decodeTrackIdentifiers(params["ids"])
-        } catch (e: InvalidIdentifiers) {
-            exchange.respondJson(400, ApiError(e.message ?: "invalid ids"))
-            return
-        }
-        if (identifiers != null && kind != "track") {
-            exchange.respondJson(400, ApiError("ids is only valid for kind=track"))
-            return
-        }
+        val kind = query.kind
+        val name = query.name
+        val artist = query.artist
+        val album = query.album
+        val mbid = query.mbid
+        val identifiers = query.identifiers
+        val forceRefresh = query.forceRefresh
 
         val started = System.currentTimeMillis()
         val response = runBlocking {
@@ -369,6 +412,275 @@ private fun handleEnrich(exchange: HttpExchange, engine: EnrichmentEngine) {
     } catch (e: Exception) {
         exchange.respondJson(500, ApiError(e.message ?: e.javaClass.simpleName))
     }
+}
+
+/**
+ * The identity status a mid-stream snapshot cannot yet read as a verdict. [CanonicalStatus.RESOLVING]
+ * is the only status resolution can still revise before the terminal snapshot; the `NOT_ATTEMPTED_*`
+ * family means resolution was never going to run, which is already the final word, not a
+ * placeholder — so a snapshot carrying `RESOLVING` presents its header as provisional and one
+ * carrying `NOT_ATTEMPTED_*` treats it as an answer, same as the terminal snapshot does.
+ */
+private val UNSETTLED_IDENTITY_STATUSES = setOf(CanonicalStatus.RESOLVING)
+
+/**
+ * The SSE sibling of [handleEnrich], over [EnrichmentEngine.enrichProgressive]: the page paints
+ * each type as it settles instead of waiting for the slowest provider. Both endpoints share
+ * [parseEnrichQuery] and the same profile mappers, so they can differ in *when* a result arrives
+ * and never in what it says.
+ *
+ * The event name is the contract. `snapshot` is cumulative and provisional; `complete` is sent
+ * exactly once and carries the whole answer; `error` replaces `complete` when the run could not
+ * finish. A client closes the stream on either terminal event — `EventSource` would otherwise
+ * reconnect on the close and re-run the entire enrichment.
+ *
+ * The writer conflates: a snapshot the client is too slow to receive is dropped rather than
+ * queued, because serialising and flushing must never reach back into provider fan-out, and a
+ * consumer of cumulative snapshots only ever needs the newest.
+ */
+private fun handleEnrichStream(exchange: HttpExchange, engine: EnrichmentEngine) {
+    if (exchange.requestMethod != "GET") {
+        exchange.respondJson(405, ApiError("GET required"))
+        return
+    }
+    val query = try {
+        parseEnrichQuery(exchange.requestURI.rawQuery)
+    } catch (e: InvalidEnrichQuery) {
+        exchange.respondJson(400, ApiError(e.message ?: "invalid request"))
+        return
+    }
+
+    val started = System.currentTimeMillis()
+    exchange.responseHeaders.add("Content-Type", "text/event-stream; charset=utf-8")
+    exchange.responseHeaders.add("Cache-Control", "no-cache")
+    // A proxy that buffers the response holds every snapshot until the last one, which is the whole
+    // benefit gone; this is the header nginx and its imitators read to stop.
+    exchange.responseHeaders.add("X-Accel-Buffering", "no")
+    // Length 0 selects chunked transfer encoding — there is no total length to declare for a stream
+    // whose event count is not known up front.
+    exchange.sendResponseHeaders(200, 0)
+    val writer = SseWriter(exchange.responseBody)
+
+    try {
+        runBlocking { streamEnrichment(engine, query, started, writer) }
+    } catch (e: Exception) {
+        // `runBlocking` surfaces a cancellation from inside it as a plain throw on this thread, so
+        // there is no ambient job here for `ensureActive()` to consult.
+        reportStreamFailure(writer, e)
+    } finally {
+        writer.close()
+    }
+}
+
+/**
+ * Reports a failed run as the stream's terminal `error` event.
+ *
+ * A status code is not available - the status line went out with the headers - so the event is the
+ * only way left to say anything. But it is only worth saying to a client that is still there, and
+ * the commonest way a stream ends is the reader leaving: then the failure being reported *is* the
+ * transport, and writing the report onto the socket that just refused a write throws a second time.
+ * A dropped client is recorded once and dropped. The remaining attempt is guarded too, because a
+ * client can leave between the last successful write and this one.
+ */
+internal fun reportStreamFailure(writer: SseWriter, cause: Exception) {
+    if (writer.isBroken) {
+        println("enrich stream: client left mid-stream (${cause.javaClass.simpleName}: ${cause.message})")
+        return
+    }
+    try {
+        writer.write("error", json.encodeToString(ApiError(cause.message ?: cause.javaClass.simpleName)))
+    } catch (e: IOException) {
+        println("enrich stream: client left before the failure could be reported (${e.message})")
+    }
+}
+
+/**
+ * Frames server-sent events onto one response body, flushing each so nothing waits on a buffer
+ * filling. Every write happens on the request thread — the collector below runs on `runBlocking`'s
+ * own event loop — so this holds no lock.
+ */
+internal class SseWriter(private val out: OutputStream) {
+
+    /**
+     * True once a write has been refused. The reader is gone, so nothing written after this can
+     * reach anyone — which is what stops a failure report being aimed at a dead socket.
+     */
+    var isBroken: Boolean = false
+        private set
+
+    /** Throws [IOException] when the client has left; the caller treats that as the end of the stream. */
+    fun write(event: String, data: String) {
+        // A newline inside the payload would otherwise be read as a second data line, or worse as
+        // the blank line that ends the event. JSON emits none, but framing must not rest on that.
+        val body = data.lineSequence().joinToString("\n") { "data: $it" }
+        try {
+            out.write("event: $event\n$body\n\n".toByteArray(StandardCharsets.UTF_8))
+            out.flush()
+        } catch (e: IOException) {
+            isBroken = true
+            throw e
+        }
+    }
+
+    fun close() {
+        try {
+            out.close()
+        } catch (_: IOException) {
+            // The client dropped first; there is nothing left to close cleanly.
+        }
+    }
+}
+
+/**
+ * What one streamed lookup needs. [render] runs per snapshot rather than once at the end, which is
+ * what lets a header built from [EnrichmentResults.identity] refine on the next event as soon as
+ * resolution lands.
+ */
+private class StreamPlan(
+    val request: EnrichmentRequest,
+    val types: Set<EnrichmentType>,
+    /** The artist whose radio section is fetched alongside the stream, or null for a kind that has none. */
+    val radioArtist: String?,
+    val render: (EnrichmentResults, Set<EnrichmentType>, Long, Section?) -> DemoResponse,
+)
+
+/** null only for an identifier MusicBrainz holds under no entity type — there is no page to stream. */
+private suspend fun planFor(engine: EnrichmentEngine, query: EnrichQuery): StreamPlan? = when (query.kind) {
+    "artist" -> artistPlan(EnrichmentRequest.forArtist(query.name, query.mbid)) { query.name }
+    "album" -> StreamPlan(
+        EnrichmentRequest.forAlbum(query.name, query.artist, query.mbid),
+        EnrichmentRequest.DEFAULT_ALBUM_TYPES,
+        radioArtist = query.artist,
+    ) { results, pending, elapsed, radio ->
+        AlbumProfile(query.name, query.artist, results).toDemoResponse(elapsed, radio, pending)
+    }
+    "track" -> StreamPlan(
+        EnrichmentRequest.forTrack(
+            query.name, query.artist, query.album,
+            mbid = query.mbid, identifiers = query.identifiers,
+        ),
+        EnrichmentRequest.DEFAULT_TRACK_TYPES,
+        radioArtist = query.artist,
+    ) { results, pending, elapsed, radio ->
+        TrackProfile(query.name, query.artist, results).toDemoResponse(elapsed, radio, query.album, pending)
+    }
+    // The type is an answer, not a question the user should have to answer first — as in
+    // [handleEnrich], one identifier goes in and whichever page it names comes back.
+    else -> when (val entity = engine.discoverMbidEntityType(query.name)) {
+        MusicBrainzEntityType.ARTIST ->
+            artistPlan(EnrichmentRequest.forArtistByMbid(query.name)) { results ->
+                // An artist's own name arrives as the title, as it does on a SearchCandidate.
+                results.identity.title ?: headerFor(entity, query.name)
+            }
+        MusicBrainzEntityType.RELEASE -> StreamPlan(
+            EnrichmentRequest.forAlbumByMbid(query.name),
+            EnrichmentRequest.DEFAULT_ALBUM_TYPES,
+            radioArtist = null,
+        ) { results, pending, elapsed, radio ->
+            AlbumProfile(
+                results.identity.title ?: headerFor(entity, query.name),
+                results.identity.artist.orEmpty(),
+                results,
+            ).toDemoResponse(elapsed, radio, pending)
+        }
+        MusicBrainzEntityType.RECORDING -> StreamPlan(
+            EnrichmentRequest.forTrackByMbid(query.name),
+            EnrichmentRequest.DEFAULT_TRACK_TYPES,
+            radioArtist = null,
+        ) { results, pending, elapsed, radio ->
+            TrackProfile(
+                results.identity.title ?: headerFor(entity, query.name),
+                results.identity.artist.orEmpty(),
+                results,
+            ).toDemoResponse(elapsed, radio, query.album, pending)
+        }
+        null -> null
+    }
+}
+
+private fun artistPlan(request: EnrichmentRequest, title: (EnrichmentResults) -> String) = StreamPlan(
+    request,
+    EnrichmentRequest.DEFAULT_ARTIST_TYPES + EnrichmentType.COUNTRY,
+    radioArtist = null,
+) { results, pending, elapsed, _ ->
+    ArtistProfile(title(results), results).toDemoResponse(elapsed, pending)
+}
+
+/**
+ * Writes the event sequence for one lookup: a `snapshot` per surviving intermediate, then exactly
+ * one `complete`.
+ *
+ * A snapshot that already derives as complete is *not* sent as one. The engine settles its last
+ * type before catalog filtering, provenance stamping and the cache write-back have run, so an
+ * emission can read as finished while carrying values the finished result does not have. Only the
+ * write after collection — past the retry [handleEnrich] also does — is the answer.
+ */
+private suspend fun streamEnrichment(
+    engine: EnrichmentEngine,
+    query: EnrichQuery,
+    started: Long,
+    writer: SseWriter,
+) = coroutineScope {
+    val plan = planFor(engine, query) ?: run {
+        writer.write(
+            "error",
+            json.encodeToString(ApiError("MusicBrainz holds no recording, release or artist under that MBID")),
+        )
+        return@coroutineScope
+    }
+
+    // The artist-radio section is fetched outside EnrichmentType, so it is not in the stream. It
+    // runs alongside and folds into whichever snapshot is being written when it lands.
+    val radio = AtomicReference<Section?>(null)
+    val radioJob = plan.radioArtist
+        ?.takeIf { it.isNotBlank() }
+        ?.let { artist -> launch { radio.set(fetchArtistRadioSection(engine, artist)) } }
+
+    var sequence = 0
+    var firstPaintMs: Long? = null
+    var latest: EnrichmentResults? = null
+
+    engine.enrichProgressive(plan.request, plan.types, query.forceRefresh)
+        .conflate()
+        .collect { snapshot ->
+            latest = snapshot
+            val pending = plan.types - snapshot.raw.keys
+            if (pending.isEmpty()) return@collect
+            if (firstPaintMs == null && snapshot.raw.isNotEmpty()) firstPaintMs = System.currentTimeMillis() - started
+            sequence += 1
+            writer.write(
+                "snapshot",
+                json.encodeToString(
+                    StreamSnapshot(
+                        sequence = sequence,
+                        pending = pending.map { it.name }.sorted(),
+                        identityPending = snapshot.identity.status in UNSETTLED_IDENTITY_STATUSES,
+                        firstPaintMs = firstPaintMs,
+                        response = plan.render(snapshot, pending, System.currentTimeMillis() - started, radio.get()),
+                    ),
+                ),
+            )
+        }
+
+    val terminal = latest ?: error("the enrichment stream ended without emitting anything")
+    radioJob?.join()
+    val settled = terminal.retryTransientFailures(engine, plan.request)
+    val elapsed = System.currentTimeMillis() - started
+    writer.write(
+        "complete",
+        json.encodeToString(
+            StreamSnapshot(
+                sequence = sequence + 1,
+                pending = (plan.types - settled.raw.keys).map { it.name }.sorted(),
+                // Not derived: on the terminal snapshot resolution has run, so whatever status it
+                // carries is the verdict — including a NOT_ATTEMPTED_* one, which is an answer here
+                // and only ambiguous mid-stream.
+                identityPending = false,
+                firstPaintMs = firstPaintMs ?: elapsed,
+                response = plan.render(settled, emptySet(), elapsed, radio.get()),
+            ),
+        ),
+    )
 }
 
 /**

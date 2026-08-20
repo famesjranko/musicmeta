@@ -267,20 +267,145 @@ async function runQuery(refresh, replay, pick) {
   const params = new URLSearchParams({ kind, name, artist, album });
   if (ids) params.set('ids', ids);
   if (refresh) params.set('refresh', 'true');
+  // Recorded before the request rather than after it: the streamed page paints while the lookup is
+  // still running, and render() reads this to decide whether the toolbar may offer cache
+  // invalidation. A failed run leaves it pointing at the attempt, which nothing can act on — a
+  // failure renders no toolbar.
+  lastQuery = { kind, name, artist, album, ids };
+  // Whichever path this run takes, any stream still open belongs to a page the user has left.
+  streamGeneration += 1;
+  // A superseded run's own await can still settle after this — closeLiveStream() below resolves
+  // the old stream's promise quietly rather than cancelling it outright — so its catch/finally
+  // must not touch UI state a newer run already owns. Captured now, compared once each block runs.
+  const myGeneration = streamGeneration;
+  closeLiveStream();
   try {
-    const res = await fetch('/api/enrich?' + params.toString());
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
-    lastQuery = { kind, name, artist, album, ids };
-    render(data, !!refresh);
+    if (streamingEnabled()) {
+      await runQueryStreaming(params, !!refresh);
+    } else {
+      await runQueryWhole(params, !!refresh);
+    }
   } catch (err) {
+    if (myGeneration !== streamGeneration) return;
     statusEl.className = 'err';
     statusEl.textContent = 'Failed: ' + err.message;
     resultEl.innerHTML = '<div id="empty">No result.</div>';
   } finally {
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'Enrich';
+    if (myGeneration === streamGeneration) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Enrich';
+    }
   }
+}
+
+// The single-shot path: one response, one paint. Kept as the comparison baseline behind the
+// "Progressive streaming" setting, and as the fallback when a stream drops before it paints.
+async function runQueryWhole(params, wasForceRefresh) {
+  const res = await fetch('/api/enrich?' + params.toString());
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+  render(data, wasForceRefresh);
+}
+
+// Streams are numbered so a late event from a superseded run cannot repaint the page: a new query
+// (or a toggle back to the single-shot path) bumps the generation and every older stream's events
+// are dropped on arrival, not merely after they render.
+let streamGeneration = 0;
+// { source, abandon } rather than the bare EventSource: `.close()` fires no event, so closing a
+// superseded stream directly would strand its runQueryStreaming promise — and the closure holding
+// its EventSource and handlers — unsettled until the page unloads. `abandon` is that stream's own
+// terminal path, so every stream settles exactly once however it ends.
+let liveStream = null;
+
+function closeLiveStream() {
+  const stream = liveStream;
+  liveStream = null;
+  if (stream) stream.abandon();
+}
+
+/**
+ * The progressive path, over /api/enrich-stream's server-sent events. `snapshot` events are
+ * cumulative and provisional; exactly one `complete` event carries the whole answer, and either it
+ * or an `error` ends the stream.
+ *
+ * EventSource reconnects on *any* close, including the ordinary one after `complete` — which would
+ * silently re-run the entire enrichment against live providers. So this closes the stream itself on
+ * every terminal path, and ignores any event whose sequence it has already rendered, which is what
+ * a reconnect would replay.
+ */
+function runQueryStreaming(params, wasForceRefresh) {
+  const generation = streamGeneration;
+  const startedAt = performance.now();
+
+  return new Promise((resolve, reject) => {
+    const source = new EventSource('/api/enrich-stream?' + params.toString());
+    let painted = 0;
+    let lastSequence = 0;
+
+    // Closes this stream by identity rather than through closeLiveStream(): once a newer run has
+    // started, `liveStream` is the newer stream, and closing that would cancel the page the user
+    // is actually waiting on.
+    const finish = (fn) => {
+      source.close();
+      if (liveStream && liveStream.source === source) liveStream = null;
+      if (generation !== streamGeneration) {
+        resolve(); // a newer run owns the page — end quietly rather than paint or report over it
+        return;
+      }
+      fn();
+    };
+
+    liveStream = { source, abandon: () => finish(resolve) };
+
+    const paint = (event) => {
+      if (generation !== streamGeneration) return;
+      const snapshot = JSON.parse(event.data);
+      if (snapshot.sequence <= lastSequence) return; // a reconnect replaying what is already on screen
+      lastSequence = snapshot.sequence;
+      painted += 1;
+      render(snapshot.response, wasForceRefresh, snapshot);
+      statusEl.className = '';
+      statusEl.textContent = snapshot.pending.length
+        ? `${snapshot.pending.length} of ${snapshot.pending.length + settledCount(snapshot)} still loading…`
+        : '';
+    };
+
+    source.addEventListener('snapshot', paint);
+
+    source.addEventListener('complete', (event) => finish(() => {
+      paint(event);
+      resolve();
+    }));
+
+    source.addEventListener('error', (event) => finish(() => {
+      // A server-sent `error` event carries a body; a transport failure fires the same handler with
+      // none. Both end the stream here, because neither is worth a silent re-run.
+      let message = 'the stream ended early';
+      try {
+        message = JSON.parse(event.data).error || message;
+      } catch (_) { /* transport failure — there is no body to read */ }
+      if (painted > 0) {
+        statusEl.className = 'err';
+        statusEl.textContent = 'Stopped: ' + message + ' — showing what had arrived.';
+        resolve();
+      } else if (event.data === undefined) {
+        // Nothing painted and no body: the connection failed before the first snapshot, so the
+        // single-shot endpoint is a genuine second chance rather than a repeat of the same failure.
+        const elapsed = Math.round(performance.now() - startedAt);
+        statusEl.className = '';
+        statusEl.textContent = `Stream unavailable after ${elapsed} ms — falling back to a single request.`;
+        runQueryWhole(params, wasForceRefresh).then(resolve, reject);
+      } else {
+        reject(new Error(message));
+      }
+    }));
+  });
+}
+
+// How many requested types have settled on this snapshot — every provider row it carries. Pending
+// types have no row by construction, so the two counts partition the request.
+function settledCount(snapshot) {
+  return snapshot.response.meta.providers.length;
 }
 
 // --- Candidate search ---
@@ -410,33 +535,55 @@ function genreChipsHtml(genres) {
   return `<div class="genre-chips">${chips}</div>${legend}`;
 }
 
-function render(data, wasForceRefresh) {
+// `stream`, when given, is the StreamSnapshot this paint came from — what has not settled yet, and
+// whether the header is still provisional. Absent for the single-shot path, where every absence is
+// a finished answer rather than a wait.
+function render(data, wasForceRefresh, stream) {
   const summary = data.summary;
+  const pendingTypes = (stream && stream.pending) || [];
+  const stillLoading = pendingTypes.length > 0;
+  const identityPending = !!(stream && stream.identityPending);
+  const pendingSlots = summary.pendingSlots || [];
   const backdrop = summary.backgroundImageUrl
     ? `<div class="backdrop" style="background-image:url('${esc(summary.backgroundImageUrl)}')"></div>`
     : '';
   const img = summary.imageUrl
     ? `<img src="${esc(summary.imageUrl)}" alt="" onerror="this.remove()" />`
-    : '';
+    : pendingSlots.includes('image')
+      ? '<div class="skeleton skeleton-img" aria-hidden="true"></div>'
+      : '';
   const text = summary.text
     ? `<div class="text">${esc(summary.text)}</div><button type="button" class="show-more text-toggle" style="display:none">Show all</button>${summary.textSource ? `<div class="source">source: ${esc(summary.textSource)}</div>` : ''}`
-    : '';
+    : pendingSlots.includes('text')
+      ? '<div class="skeleton-lines" aria-hidden="true"><span class="skeleton"></span><span class="skeleton"></span><span class="skeleton"></span></div>'
+      : '';
   const summaryPreview = previewButtonHtml(summary.previewTitle, summary.previewArtist, summary.previewAlbum);
   const subtitle = summary.subtitle
     ? `<div class="subtitle${summary.subtitleEnrich ? ' enrich-row' : ''}"${enrichAttrs(summary.subtitleEnrich)}>${esc(summary.subtitle)}</div>`
     : '';
-  const genres = genreChipsHtml(summary.genres);
+  const genres = summary.genres.length
+    ? genreChipsHtml(summary.genres)
+    : pendingSlots.includes('genres')
+      ? '<div class="genres" aria-hidden="true"><span class="skeleton skeleton-chip"></span><span class="skeleton skeleton-chip"></span></div>'
+      : '';
+
+  // While identity is still resolving there is no verdict to report, so none of the verdict-driven
+  // states below may fire: an unverified badge before the lookup has answered would be a claim
+  // about a lookup that has not happened.
+  const verdict = identityPending ? '' : summary.identityVerdict;
 
   // An unresolved identity must not render the raw query as a confident title.
-  const unresolvedTitle = summary.identityVerdict === 'AMBIGUOUS'
+  const unresolvedTitle = verdict === 'AMBIGUOUS'
     ? `No exact match for &ldquo;${esc(data.name)}&rdquo;`
     : null;
-  const unverified = summary.identityVerdict === 'FAILED';
-  const bestEffortBadge = summary.identityVerdict === 'UNRESOLVED'
+  const unverified = verdict === 'FAILED';
+  const bestEffortBadge = verdict === 'UNRESOLVED'
     ? '<span class="badge badge-warn">Best-effort match</span>'
     : unverified
       ? '<span class="badge badge-warn">Unverified — lookup failed</span>'
-      : '';
+      : identityPending
+        ? '<span class="badge badge-pending"><span class="spinner"></span>Confirming match…</span>'
+        : '';
   const titleHtml = unresolvedTitle || esc(summary.title);
 
   // FAILED means the identity lookup errored (usually transiently) — distinct from
@@ -471,22 +618,46 @@ function render(data, wasForceRefresh) {
     : '';
 
   const staleCount = data.meta.providers.filter((p) => p.status === 'ok_stale').length;
+  const timeoutCount = data.meta.providers.filter((p) => p.errorKind === 'TIMEOUT').length;
+
+  // A timeout is the one failure the demo's own deadline can produce, so it is named rather than
+  // folded into the provider's error text — a reader deciding whether to retry needs the difference.
+  const statusCell = (p) => {
+    if (p.status === 'ok_stale') return 'ok <span class="stale-badge">stale fallback</span>';
+    if (p.errorKind === 'TIMEOUT') return `<span class="stale-badge">timed out</span> ${esc(p.status)}`;
+    return esc(p.status);
+  };
 
   const providers = data.meta.providers.map((p) => `
     <tr>
       <td><span class="dot ${esc(p.status.split(':')[0])}"></span>${esc(p.type)}</td>
       <td>${esc(p.provider)}</td>
-      <td>${p.status === 'ok_stale' ? 'ok <span class="stale-badge">stale fallback</span>' : esc(p.status)}</td>
+      <td>${statusCell(p)}</td>
       <td>${p.confidence != null ? p.confidence.toFixed(2) : '—'}</td>
+    </tr>`).join('') + pendingTypes.map((type) => `
+    <tr class="waiting">
+      <td><span class="dot waiting"></span>${esc(type)}</td>
+      <td>—</td>
+      <td>waiting…</td>
+      <td>—</td>
     </tr>`).join('');
 
   // The wire carries elapsed time only, never cache-hit provenance — Meta has no such field, and
   // the engine doesn't expose one. "Completed in" stays honest either way; a refresh the user just
   // triggered is the one case this page can honestly call out, because it *knows* that fetch was
   // forced fresh.
-  const freshnessText = wasForceRefresh
+  // elapsedMs means the same thing on both paths — time since the request reached the server — so a
+  // streamed page and a single-shot page of the same lookup compare directly. First paint is the
+  // number only streaming has, and it is what the mode is for.
+  const elapsedText = wasForceRefresh
     ? `Fresh fetch in <b>${data.meta.elapsedMs} ms</b>`
     : `Completed in <b>${data.meta.elapsedMs} ms</b>`;
+  const firstPaint = stream && stream.firstPaintMs != null
+    ? ` &middot; first paint <b>${stream.firstPaintMs} ms</b>`
+    : '';
+  const freshnessText = stillLoading
+    ? `<span class="spinner"></span>Streaming &mdash; <b>${data.meta.elapsedMs} ms</b> so far${firstPaint}`
+    : elapsedText + firstPaint;
 
   resultEl.innerHTML = `
     <div class="result-toolbar">
@@ -510,7 +681,7 @@ function render(data, wasForceRefresh) {
     <div class="sections${unverified ? ' unverified' : ''}">${sections}</div>
     <div class="card">
       <details class="meta-panel">
-        <summary>${totalItems} items across ${data.sections.length} sections${data.meta.identityMatch ? ' · identity: ' + esc(data.meta.identityMatch) : ''}${staleCount > 0 ? ' · <b class="stale-count">' + staleCount + ' stale provider response' + (staleCount === 1 ? '' : 's') + '</b>' : ''} — how we got this</summary>
+        <summary>${totalItems} items across ${data.sections.length} sections${data.meta.identityMatch ? ' · identity: ' + esc(data.meta.identityMatch) : ''}${staleCount > 0 ? ' · <b class="stale-count">' + staleCount + ' stale provider response' + (staleCount === 1 ? '' : 's') + '</b>' : ''}${timeoutCount > 0 ? ' · <b class="stale-count">' + timeoutCount + ' timed out</b>' : ''}${stillLoading ? ' · <b>' + pendingTypes.length + ' still loading</b>' : ''} — how we got this</summary>
         ${identifiers}
         <table class="providers">
           <thead><tr><th>Type</th><th>Provider</th><th>Status</th><th>Confidence</th></tr></thead>
@@ -556,6 +727,14 @@ function enrichAttrs(enrich) {
 }
 
 function sectionHtml(section, unverified) {
+  // A pending card holds the position its data will land in, so a section arriving late cannot
+  // reflow everything under a reader mid-read. It carries no toggle and no count: there is nothing
+  // yet to count or to show more of.
+  if (section.pending) {
+    return `<div class="card section pending"><h3>${esc(section.label)} <span class="spinner"></span></h3>` +
+      '<ul aria-hidden="true"><li><span class="skeleton"></span></li><li><span class="skeleton"></span></li>' +
+      '<li><span class="skeleton"></span></li></ul></div>';
+  }
   const items = section.items.map((it) => {
     const rowClass = it.enrich ? ' enrich-row' : '';
     const primaryHtml = it.link
@@ -908,6 +1087,28 @@ fetch('/api/providers', { cache: 'no-store' })
 document.getElementById('settings-open').addEventListener('click', () => settingsDialog.showModal());
 document.getElementById('credits-link').addEventListener('click', () => settingsDialog.showModal());
 document.getElementById('settings-close').addEventListener('click', () => settingsDialog.close());
+
+// Result delivery. Unlike cache mode this is the page's own choice, not engine state, so it lives
+// in localStorage rather than behind /api/config — the server serves both endpoints either way.
+// Default on: the streamed page is what the demo is showing off.
+const STREAMING_KEY = 'musicmeta.demo.streaming';
+const streamingToggle = document.getElementById('streaming-toggle');
+
+function streamingEnabled() {
+  return streamingToggle.checked;
+}
+
+try {
+  streamingToggle.checked = localStorage.getItem(STREAMING_KEY) !== 'off';
+} catch (_) {
+  // Storage can be unavailable (private mode, a blocked origin). The default stands.
+}
+
+streamingToggle.addEventListener('change', () => {
+  try {
+    localStorage.setItem(STREAMING_KEY, streamingToggle.checked ? 'on' : 'off');
+  } catch (_) { /* the choice still applies to this session */ }
+});
 
 // Cache mode. One GET at load to reflect what's actually running; each change POSTs and reflects
 // the confirmed value back rather than the value clicked, so a rejected/failed change doesn't
