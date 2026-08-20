@@ -26,6 +26,7 @@ because the config is the thing that fails.
 | Test shape | `scripts/checks/check_test_shape.py` | every `@Test` body has `// Given -`/`// When -`/`// Then -`, each on its own line with a plain hyphen and a real clause — Kotlin test sources only, on both the `check` gate and the `format-on-write.sh` hook |
 | Release-note caps | `build_release_notes.py Unreleased` | `CHANGELOG.md`'s `[Unreleased]` stays under 48000 chars and 200 per line — the same `check_caps()` the release runs, so it fails here rather than at release prep. An empty section passes: `pin_release.py` opens one on every release branch |
 | Script self-tests | `scripts/**/test_*.py` | discovered, not listed |
+| Demo frontend | `node --test` via `demo-web/package.json` | the demo browser code's wire-protocol reading and its "is this worth retrying" decision, as the pure functions in `demo-web/src/main/resources/stream-protocol.js`. Runs on every `./check`, including `--fast`. node is a **minimum major** (`NODE_MIN_MAJOR` in `scripts/bootstrap.sh`) rather than an exact pin, and bootstrap reports it rather than installing it — it is the machine's runtime, not an executable the script can fetch and verify by digest |
 | Kotlin format | ktlint (version pinned in `libs.versions.toml`) | all modules, `demo-cli/`, and `demo-web/` |
 | Kotlin static analysis | detekt, **type-resolved** (`detektMain`/`detektTest`/`detektTestFixtures`) | complexity, dead code, bug patterns |
 | Build | `./gradlew build` | compile, all unit tests, `apiCheck` against `api/*.api` |
@@ -140,6 +141,23 @@ than it looks like, each learned the hard way.
   "the pieces compose correctly," not "MusicBrainz/Deezer/iTunes/Discogs still answer this way
   today." That is what the daily `provider-drift.yml` e2e job is for, and each pool's `scenario.md`
   records whether the provider it covers has that live coverage.
+- **The demo's browser code is untested above `stream-protocol.js`.** That module — SSE framing,
+  `Retry-After`, and what an ended stream means — is covered because it is deliberately free of the
+  DOM. Everything in `index.js` that renders, binds an event, or drives the page is not: there is no
+  DOM harness in this repo and nothing loads the page in CI. The split is the coverage boundary, so
+  logic that needs proving belongs on the tested side of it. Verified once by hand at the commit
+  that introduced the `fetch` reader: a real lookup streamed and painted, and a refused one issued
+  exactly one request rather than falling back to a second.
+- **The demo's admission gate is a bound on one process, and nothing checks it is the only one.**
+  `demo-web` admits a fixed number of enrichments at a time through a semaphore held in the server
+  process, and refuses the rest with a 429. That cap is therefore per instance: run the service at
+  two and the real bound is twice what the code says, with every test still green. Nothing in the
+  process can read the instance limit it depends on, so the invariant lives in a comment beside the
+  gate, and nothing fails when a deployment disagrees with it. What
+  `AdmissionGateTest` does prove is the part that is checkable inside one JVM: that the bound admits
+  its whole width at once rather than serialising, that the endpoint over it refuses as a status
+  rather than as an event on an already-committed 200, and that a permit survives a failure the
+  handler does not catch.
 - **`DefaultEnrichmentEngine`'s `detachedScope` `CoroutineExceptionHandler` is untested.** It is the
   backstop for a detached `enrichProgressive` run's failure reaching neither a collector (none left
   attached) nor anything deeper in the pipeline (which already catches and logs via the
