@@ -381,7 +381,7 @@ class DeezerProvider(
         request: EnrichmentRequest,
         type: EnrichmentType,
     ): EnrichmentResult {
-        val albumRequest = request.toAlbumArtRequest() ?: return EnrichmentResult.NotFound(type, id)
+        val albumRequest = request.toAlbumArtRequest(type) ?: return EnrichmentResult.NotFound(type, id)
 
         val result = albumScope().resolveAlbum(albumRequest)?.candidate
             ?: return EnrichmentResult.NotFound(type, id)
@@ -460,12 +460,11 @@ class DeezerProvider(
      * [EnrichmentRequest.ForTrack] carrying a non-blank [EnrichmentRequest.ForTrack.album] treated
      * as one — same artist, and the track's album standing in for the title — since a track-scoped
      * request that already names its album has everything [DeezerAlbumScope.resolveAlbum] needs. A
-     * `ForTrack` with no album stays a genuine miss; nothing else in this provider widens past
-     * `ForAlbum`.
+     * `ForTrack` with no album stays a genuine miss; no other type widens past `ForAlbum`.
      */
-    private fun EnrichmentRequest.toAlbumArtRequest(): EnrichmentRequest.ForAlbum? = when {
+    private fun EnrichmentRequest.toAlbumArtRequest(type: EnrichmentType): EnrichmentRequest.ForAlbum? = when {
         this is EnrichmentRequest.ForAlbum -> this
-        this is EnrichmentRequest.ForTrack && !album.isNullOrBlank() ->
+        this is EnrichmentRequest.ForTrack && type == EnrichmentType.ALBUM_ART && !album.isNullOrBlank() ->
             EnrichmentRequest.ForAlbum(identifiers = identifiers, title = album, artist = artist)
         else -> null
     }
