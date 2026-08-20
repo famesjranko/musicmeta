@@ -89,6 +89,7 @@ internal suspend fun DefaultEnrichmentEngine.runProgressiveFanOut(
                 cacheLayer.negativeCacheHits,
                 session.chainExecutions,
                 session.filterEmptied,
+                session.staleDerived,
             )
             writeBack(request, resolvedRequest, results, context)
         }
