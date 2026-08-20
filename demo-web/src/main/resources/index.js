@@ -1,3 +1,5 @@
+import { createSseParser, classifyStreamOutcome, readJsonResponse } from '/stream-protocol.js';
+
 const tabsEl = document.getElementById('kind-tabs');
 const kindTabs = Array.from(tabsEl.querySelectorAll('button[data-kind]'));
 const nameEl = document.getElementById('name');
@@ -157,7 +159,13 @@ async function pollHealth() {
     // 503 is the still-warming status (see Server.kt's /api/health) and carries the same
     // parseable JSON body as 200, so it is handled inline below rather than thrown as a failure.
     if (!response.ok && response.status !== 503) throw new Error('HTTP ' + response.status);
-    const data = await response.json();
+    const data = readJsonResponse({
+      status: response.status,
+      ok: true, // 503 included: a warming body is the answer here, not a failure
+      contentType: response.headers.get('Content-Type') || '',
+      body: await response.text(),
+    }).data;
+    if (!data) throw new Error('HTTP ' + response.status);
     if (data.status === 'READY') {
       setHealthState('ready', 'Backend ready');
       setSearchReady(true);
@@ -298,23 +306,75 @@ async function runQuery(refresh, replay, pick) {
   }
 }
 
+
+/**
+ * Fetches an endpoint that answers in JSON, and reads the body without assuming it got any.
+ *
+ * Returns `{ res, data, error }`, never throwing on the body: callers that branch on a status
+ * (429, or health's 503) need the response before they need the payload. `error` is set whenever
+ * there is nothing usable to render, and is always a sentence rather than a parser's complaint.
+ */
+async function fetchJson(input, init) {
+  const res = await fetch(input, init);
+  const read = readJsonResponse({
+    status: res.status,
+    ok: res.ok,
+    contentType: res.headers.get('Content-Type') || '',
+    body: await res.text(),
+  });
+  return { res, data: read.data, error: read.error };
+}
+
+/**
+ * The `.then` shape of [fetchJson] for the settings panels, which have no status to branch on and
+ * only need the payload or a reason there is none.
+ */
+async function readPanel(res) {
+  const read = readJsonResponse({
+    status: res.status,
+    ok: res.ok,
+    contentType: res.headers.get('Content-Type') || '',
+    body: await res.text(),
+  });
+  if (read.error) throw new Error(read.error);
+  return read.data;
+}
+
 // The single-shot path: one response, one paint. Kept as the comparison baseline behind the
 // "Progressive streaming" setting, and as the fallback when a stream drops before it paints.
 async function runQueryWhole(params, wasForceRefresh) {
-  const res = await fetch('/api/enrich?' + params.toString());
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+  const { res, data, error } = await fetchJson('/api/enrich?' + params.toString());
+  if (res.status === 429) {
+    showBusy(classifyStreamOutcome({ status: 429, retryAfter: res.headers.get('Retry-After') }));
+    return;
+  }
+  if (error) throw new Error(error);
   render(data, wasForceRefresh);
+}
+
+/**
+ * Reports a refusal, and deliberately does not retry.
+ *
+ * An automatic retry is what turns one turned-away visitor into two requests, and clients that
+ * retry on a shared clock synchronise into a burst; the second request is refused as surely as the
+ * first. The visitor is told how long to wait and asks again themselves.
+ */
+function showBusy(outcome) {
+  const wait = outcome.retryAfterSeconds;
+  statusEl.className = 'err';
+  statusEl.textContent = wait
+    ? `The demo is busy — it runs a few lookups at a time. Try again in about ${wait} seconds.`
+    : 'The demo is busy — it runs a few lookups at a time. Try again shortly.';
+  resultEl.innerHTML = '<div id="empty">Nothing looked up.</div>';
 }
 
 // Streams are numbered so a late event from a superseded run cannot repaint the page: a new query
 // (or a toggle back to the single-shot path) bumps the generation and every older stream's events
 // are dropped on arrival, not merely after they render.
 let streamGeneration = 0;
-// { source, abandon } rather than the bare EventSource: `.close()` fires no event, so closing a
-// superseded stream directly would strand its runQueryStreaming promise — and the closure holding
-// its EventSource and handlers — unsettled until the page unloads. `abandon` is that stream's own
-// terminal path, so every stream settles exactly once however it ends.
+// { controller, abandon }: aborting the fetch is what ends a superseded stream, and the controller
+// is carried so a run can only ever abandon its own — `liveStream` is the newer run by the time an
+// older one gets here.
 let liveStream = null;
 
 function closeLiveStream() {
@@ -324,82 +384,126 @@ function closeLiveStream() {
 }
 
 /**
- * The progressive path, over /api/enrich-stream's server-sent events. `snapshot` events are
- * cumulative and provisional; exactly one `complete` event carries the whole answer, and either it
- * or an `error` ends the stream.
+ * The progressive path, over `/api/enrich-stream`'s server-sent events.
  *
- * EventSource reconnects on *any* close, including the ordinary one after `complete` — which would
- * silently re-run the entire enrichment against live providers. So this closes the stream itself on
- * every terminal path, and ignores any event whose sequence it has already rendered, which is what
- * a reconnect would replay.
+ * Read with `fetch` rather than `EventSource` for one reason that decides the behaviour: an
+ * `EventSource` cannot see the response status, so a refusal arrives indistinguishable from a
+ * dropped connection and the page cannot tell which it is worth retrying. `fetch` exposes the 429
+ * directly. It also removes `EventSource`'s automatic reconnect, which would otherwise re-run a
+ * whole enrichment on the ordinary close after `complete`.
+ *
+ * `snapshot` events are cumulative and provisional; exactly one `complete` carries the whole
+ * answer, and either it or an `error` ends the stream.
  */
-function runQueryStreaming(params, wasForceRefresh) {
+async function runQueryStreaming(params, wasForceRefresh) {
   const generation = streamGeneration;
-  const startedAt = performance.now();
+  const controller = new AbortController();
+  let painted = 0;
+  let lastSequence = 0;
 
-  return new Promise((resolve, reject) => {
-    const source = new EventSource('/api/enrich-stream?' + params.toString());
-    let painted = 0;
-    let lastSequence = 0;
+  // Identity is the controller, so abandoning a superseded run cannot cancel the newer one the
+  // reader is actually waiting on.
+  liveStream = { controller, abandon: () => controller.abort() };
+  const release = () => {
+    if (liveStream && liveStream.controller === controller) liveStream = null;
+  };
+  const mine = () => generation === streamGeneration;
 
-    // Closes this stream by identity rather than through closeLiveStream(): once a newer run has
-    // started, `liveStream` is the newer stream, and closing that would cancel the page the user
-    // is actually waiting on.
-    const finish = (fn) => {
-      source.close();
-      if (liveStream && liveStream.source === source) liveStream = null;
-      if (generation !== streamGeneration) {
-        resolve(); // a newer run owns the page — end quietly rather than paint or report over it
-        return;
+  const paint = (snapshot) => {
+    if (!mine()) return;
+    if (snapshot.sequence <= lastSequence) return;
+    lastSequence = snapshot.sequence;
+    painted += 1;
+    render(snapshot.response, wasForceRefresh, snapshot);
+    statusEl.className = '';
+    statusEl.textContent = snapshot.pending.length
+      ? `${snapshot.pending.length} of ${snapshot.pending.length + settledCount(snapshot)} still loading…`
+      : '';
+  };
+
+  let response;
+  try {
+    response = await fetch('/api/enrich-stream?' + params.toString(), { signal: controller.signal });
+  } catch (err) {
+    release();
+    if (!mine()) return;
+    // No response at all: the single-shot endpoint is a genuine second chance rather than a repeat
+    // of the same failure.
+    const outcome = classifyStreamOutcome({ status: null, painted: 0, dropped: true });
+    if (!outcome.fallback) throw err;
+    statusEl.className = '';
+    statusEl.textContent = 'Stream unavailable — trying a single request.';
+    await runQueryWhole(params, wasForceRefresh);
+    return;
+  }
+
+  if (response.status === 429) {
+    release();
+    if (!mine()) return;
+    showBusy(classifyStreamOutcome({ status: 429, painted, retryAfter: response.headers.get('Retry-After') }));
+    return;
+  }
+  if (!response.ok) {
+    release();
+    if (!mine()) return;
+    throw new Error(
+      readJsonResponse({
+        status: response.status,
+        ok: false,
+        contentType: response.headers.get('Content-Type') || '',
+        body: await response.text(),
+      }).error,
+    );
+  }
+
+  const parser = createSseParser();
+  const decoder = new TextDecoder();
+  const reader = response.body.getReader();
+  let streamError = null;
+  let completed = false;
+
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      for (const frame of parser.push(decoder.decode(value, { stream: true }))) {
+        if (frame.event === 'snapshot') {
+          paint(JSON.parse(frame.data));
+        } else if (frame.event === 'complete') {
+          paint(JSON.parse(frame.data));
+          completed = true;
+        } else if (frame.event === 'error') {
+          try {
+            streamError = JSON.parse(frame.data).error || 'the stream ended early';
+          } catch (_) {
+            streamError = 'the stream ended early';
+          }
+        }
       }
-      fn();
-    };
+      if (completed || streamError) break;
+    }
+  } catch (err) {
+    // An abort is this stream being abandoned by a newer run, not a failure to report.
+    if (err.name !== 'AbortError') streamError = err.message;
+  } finally {
+    controller.abort();
+    release();
+  }
 
-    liveStream = { source, abandon: () => finish(resolve) };
+  if (!mine()) return;
+  if (completed) return;
 
-    const paint = (event) => {
-      if (generation !== streamGeneration) return;
-      const snapshot = JSON.parse(event.data);
-      if (snapshot.sequence <= lastSequence) return; // a reconnect replaying what is already on screen
-      lastSequence = snapshot.sequence;
-      painted += 1;
-      render(snapshot.response, wasForceRefresh, snapshot);
-      statusEl.className = '';
-      statusEl.textContent = snapshot.pending.length
-        ? `${snapshot.pending.length} of ${snapshot.pending.length + settledCount(snapshot)} still loading…`
-        : '';
-    };
-
-    source.addEventListener('snapshot', paint);
-
-    source.addEventListener('complete', (event) => finish(() => {
-      paint(event);
-      resolve();
-    }));
-
-    source.addEventListener('error', (event) => finish(() => {
-      // A server-sent `error` event carries a body; a transport failure fires the same handler with
-      // none. Both end the stream here, because neither is worth a silent re-run.
-      let message = 'the stream ended early';
-      try {
-        message = JSON.parse(event.data).error || message;
-      } catch (_) { /* transport failure — there is no body to read */ }
-      if (painted > 0) {
-        statusEl.className = 'err';
-        statusEl.textContent = 'Stopped: ' + message + ' — showing what had arrived.';
-        resolve();
-      } else if (event.data === undefined) {
-        // Nothing painted and no body: the connection failed before the first snapshot, so the
-        // single-shot endpoint is a genuine second chance rather than a repeat of the same failure.
-        const elapsed = Math.round(performance.now() - startedAt);
-        statusEl.className = '';
-        statusEl.textContent = `Stream unavailable after ${elapsed} ms — falling back to a single request.`;
-        runQueryWhole(params, wasForceRefresh).then(resolve, reject);
-      } else {
-        reject(new Error(message));
-      }
-    }));
-  });
+  const outcome = classifyStreamOutcome({ status: 200, painted, dropped: true });
+  const message = streamError || 'the stream ended early';
+  if (outcome.kind === 'partial') {
+    statusEl.className = 'err';
+    statusEl.textContent = 'Stopped: ' + message + ' — showing what had arrived.';
+    return;
+  }
+  if (streamError) throw new Error(message);
+  statusEl.className = '';
+  statusEl.textContent = 'Stream unavailable — trying a single request.';
+  await runQueryWhole(params, wasForceRefresh);
 }
 
 // How many requested types have settled on this snapshot — every provider row it carries. Pending
@@ -467,9 +571,8 @@ async function runSearch() {
   searchResultsEl.innerHTML = '<h4>Searching\u2026</h4>';
   searchResultsEl.hidden = false;
   try {
-    const res = await fetch('/api/search?' + params.toString());
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+    const { data, error } = await fetchJson('/api/search?' + params.toString());
+    if (error) throw new Error(error);
     candidates = data.candidates || [];
     renderCandidates(query);
   } catch (err) {
@@ -840,13 +943,12 @@ resultEl.addEventListener('click', async (e) => {
     // bare-name tuple clears and an identifier-bearing preview survives "Clear cached result & reload".
     const { kind, name, artist, album, ids } = lastQuery;
     const identifiers = ids ? JSON.parse(ids) : undefined;
-    const res = await fetch('/api/invalidate', {
+    const { error } = await fetchJson('/api/invalidate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ kind, name, artist, album, identifiers }),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+    if (error) throw new Error(error);
     runQuery(false, true);
   } catch (err) {
     statusEl.className = 'err';
@@ -984,9 +1086,8 @@ resultEl.addEventListener('click', async (e) => {
   });
   if (btn.dataset.ids) params.set('ids', btn.dataset.ids);
   try {
-    const res = await fetch('/api/preview?' + params.toString());
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'No preview');
+    const { data, error } = await fetchJson('/api/preview?' + params.toString());
+    if (error) throw new Error(error);
     if (btn !== activeBtn) return; // superseded by another click while loading
     audio.src = data.url;
     await audio.play();
@@ -1077,10 +1178,7 @@ function renderProviders(providers) {
 }
 
 fetch('/api/providers', { cache: 'no-store' })
-  .then((res) => {
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    return res.json();
-  })
+  .then(readPanel)
   .then((data) => renderProviders(data.providers || []))
   .catch(() => { providerPanel.textContent = 'The provider list could not be loaded.'; });
 
@@ -1122,10 +1220,7 @@ function setCacheModeRadio(cacheMode) {
 }
 
 fetch('/api/config', { cache: 'no-store' })
-  .then((res) => {
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    return res.json();
-  })
+  .then(readPanel)
   .then((data) => setCacheModeRadio(data.cacheMode))
   .catch(() => {});
 
@@ -1138,10 +1233,7 @@ cacheModeInputs.forEach((input) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ cacheMode: requested }),
     })
-      .then((res) => {
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        return res.json();
-      })
+      .then(readPanel)
       .then((data) => setCacheModeRadio(data.cacheMode))
       .catch(() => setCacheModeRadio(lastConfirmed));
   });

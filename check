@@ -47,6 +47,18 @@ require() { # require <command> <pinned-version>
 require ruff "$(pin RUFF_VERSION)"
 require mypy "$(pin MYPY_VERSION)"
 require shellcheck "$(pin SHELLCHECK_VERSION)"
+
+# node is a minimum major rather than an exact pin, so `require` cannot express it: it is the
+# machine's runtime, not an executable bootstrap.sh fetches. Absent or too old fails here, because
+# the alternative is the demo's browser tests silently not running.
+node_min="$(pin NODE_MIN_MAJOR)"
+if [ -z "$node_min" ]; then
+    bad="$bad node(no pin in scripts/bootstrap.sh)"
+elif ! command -v node >/dev/null 2>&1; then
+    bad="$bad node(absent, want >=$node_min — install it; bootstrap.sh does not)"
+elif [ "$(node --version | sed 's/^v\([0-9]*\).*/\1/')" -lt "$node_min" ]; then
+    bad="$bad node($(node --version), want >=$node_min)"
+fi
 if [ -n "$bad" ]; then
     echo "tooling mismatch:$bad" >&2
     echo "run ./scripts/bootstrap.sh to install the pinned versions" >&2
@@ -94,6 +106,11 @@ for t in scripts/checks/test_*.py scripts/github-workflows/test_*.py; do
     python3 "$t" >/dev/null 2>&1 || { python3 "$t"; exit 1; }
 done
 echo "all script self-tests pass"
+
+step "demo frontend tests (node)"
+# The demo's browser code was the one surface with no gate at all. Its wire-protocol reading and its
+# "is this worth retrying" decision are pure functions precisely so this can run without a browser.
+(cd demo-web && npm test --silent)
 
 step "changelog release-note caps"
 # The caps already existed in build_release_notes.py, but only ran at release prep — an over-long

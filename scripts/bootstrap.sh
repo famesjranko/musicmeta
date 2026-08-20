@@ -8,12 +8,17 @@
 # nothing here; ktlint's CLI is optional and only powers the format-on-write hook.
 set -euo pipefail
 
-# `./check` reads these three back out of this file rather than pinning them again, so a bump here
-# is the whole change.
+# `./check` reads these back out of this file rather than pinning them again, so a bump here is the
+# whole change.
 UV_VERSION="0.11.31"
 RUFF_VERSION="0.15.22"
 MYPY_VERSION="2.3.0"
 SHELLCHECK_VERSION="0.11.0"
+# A minimum rather than an exact pin, and not installed here: node is a runtime the machine
+# provides, not a single executable this script can fetch and verify by digest. ./check reads this
+# back and fails when node is absent or older, because the demo's browser tests run on node's own
+# test runner and a skipped gate reports green while checking nothing.
+NODE_MIN_MAJOR="22"
 # Read from the catalogue rather than pinned again here: this script and the gate disagreeing is
 # what made format-on-write silently no-op on every .kt edit. A bump there now makes the download
 # below fail its digest check until KTLINT_SHA256 is updated in the same commit — which is what the
@@ -120,6 +125,15 @@ else
         "https://github.com/pinterest/ktlint/releases/download/${KTLINT_VERSION}/ktlint"
     verify "$tmp/ktlint" "$KTLINT_SHA256"
     install -m 755 "$tmp/ktlint" "$BIN_DIR/ktlint"
+fi
+
+# --- node: reported, not installed. It is the machine's runtime and ./check requires it. ---
+if ! command -v node >/dev/null 2>&1; then
+    echo "node absent — ./check needs >= $NODE_MIN_MAJOR for the demo's frontend tests; install it from your platform"
+elif [ "$(node --version | sed 's/^v\([0-9]*\).*/\1/')" -lt "$NODE_MIN_MAJOR" ]; then
+    echo "node $(node --version) is older than the required $NODE_MIN_MAJOR — ./check will fail until it is upgraded"
+else
+    echo "node $(node --version) satisfies the required major $NODE_MIN_MAJOR"
 fi
 
 echo
