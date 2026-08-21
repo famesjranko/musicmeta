@@ -561,6 +561,7 @@ button:disabled { opacity: 0.56; cursor: wait; }
   transition: border-color 160ms ease, box-shadow 160ms ease;
 }
 
+
 .section:hover {
   border-color: rgba(146, 169, 255, 0.25);
   box-shadow: 0 15px 42px rgba(0, 0, 0, 0.22);
@@ -598,6 +599,10 @@ button:disabled { opacity: 0.56; cursor: wait; }
 .section ul {
   list-style: none;
   margin: 0;
+  /* The clamp trims each card's list to whole items, so lists in one row cap at different
+     heights; the auto margin absorbs that remainder above the footer, and every card's
+     "Show all" and credit line sit on one baseline whatever its list came to. */
+  margin-bottom: auto;
   padding: 0;
   flex: 1;
   overflow: hidden;
