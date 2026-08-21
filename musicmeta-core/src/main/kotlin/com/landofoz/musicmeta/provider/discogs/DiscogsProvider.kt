@@ -91,7 +91,7 @@ class DiscogsProvider(
             }
         }
 
-        val albumRequest = request as? EnrichmentRequest.ForAlbum
+        val albumRequest = request.toAlbumArtRequest(type)
             ?: return EnrichmentResult.NotFound(type, id)
 
         return try {
@@ -255,6 +255,19 @@ class DiscogsProvider(
             ids = ids.withExtra("discogsMasterId", release.masterId.toString())
         }
         return if (ids.extra.isEmpty()) null else ids
+    }
+
+    /**
+     * [enrich]'s shared album-lookup request shape: a [EnrichmentRequest.ForAlbum] as-is for any
+     * of LABEL/RELEASE_TYPE/ALBUM_METADATA/ALBUM_ART, or — for [EnrichmentType.ALBUM_ART] only — a
+     * [EnrichmentRequest.ForTrack] carrying a non-blank [EnrichmentRequest.ForTrack.album] treated
+     * as one, its album standing in for the title. A `ForTrack` never widens the other three types.
+     */
+    private fun EnrichmentRequest.toAlbumArtRequest(type: EnrichmentType): EnrichmentRequest.ForAlbum? = when {
+        this is EnrichmentRequest.ForAlbum -> this
+        this is EnrichmentRequest.ForTrack && type == EnrichmentType.ALBUM_ART && !album.isNullOrBlank() ->
+            EnrichmentRequest.ForAlbum(identifiers = identifiers, title = album, artist = artist)
+        else -> null
     }
 
     private fun success(

@@ -207,9 +207,7 @@ class ITunesProvider(
         request: EnrichmentRequest,
         type: EnrichmentType,
     ): EnrichmentResult {
-        if (request !is EnrichmentRequest.ForAlbum) {
-            return EnrichmentResult.NotFound(type, id)
-        }
+        val albumRequest = request.toAlbumArtRequest(type) ?: return EnrichmentResult.NotFound(type, id)
 
         // A barcode is an identity lookup, not a search — it replaces the search outright rather
         // than running before it, since the lookup is free on this call path but running it ahead
@@ -218,10 +216,10 @@ class ITunesProvider(
         // edition Apple never carries, or a candidate none of which name this artist, is a genuine
         // NotFound, not a reason to re-introduce the ranking risk the lookup exists to remove.
         // ISRC has no equivalent lookup — see ITunesApi.lookupByUpc KDoc.
-        val barcode = request.identifiers.barcode
+        val barcode = albumRequest.identifiers.barcode
         if (!barcode.isNullOrBlank()) {
             val result = try {
-                lookupByBarcode(barcode, request.artist)
+                lookupByBarcode(barcode, albumRequest.artist)
             } catch (e: Exception) {
                 currentCoroutineContext().ensureActive()
                 return mapError(type, e)
@@ -240,7 +238,7 @@ class ITunesProvider(
         }
 
         val result = try {
-            albumScope().resolveAlbum(request)?.candidate
+            albumScope().resolveAlbum(albumRequest)?.candidate
         } catch (e: Exception) {
             currentCoroutineContext().ensureActive()
             return mapError(type, e)
@@ -286,6 +284,19 @@ class ITunesProvider(
             resolvedIdentifiers = resolvedIdentifiers,
             provenance = provenance,
         )
+    }
+
+    /**
+     * [enrichAlbumType]'s own request shape: a [EnrichmentRequest.ForAlbum] as-is for any type, or
+     * — for [EnrichmentType.ALBUM_ART] only — a [EnrichmentRequest.ForTrack] carrying a non-blank
+     * [EnrichmentRequest.ForTrack.album] treated as one, its album standing in for the title. A
+     * `ForTrack` never widens `ALBUM_METADATA`: that type keeps requiring a genuine `ForAlbum`.
+     */
+    private fun EnrichmentRequest.toAlbumArtRequest(type: EnrichmentType): EnrichmentRequest.ForAlbum? = when {
+        this is EnrichmentRequest.ForAlbum -> this
+        this is EnrichmentRequest.ForTrack && type == EnrichmentType.ALBUM_ART && !album.isNullOrBlank() ->
+            EnrichmentRequest.ForAlbum(identifiers = identifiers, title = album, artist = artist)
+        else -> null
     }
 
     private fun buildResolvedIdentifiers(result: ITunesAlbumResult): EnrichmentIdentifiers? {
