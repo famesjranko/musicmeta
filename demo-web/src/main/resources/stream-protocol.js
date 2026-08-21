@@ -63,6 +63,22 @@ export function parseRetryAfter(header) {
 }
 
 /**
+ * What a visitor is told when a `429` turns them away, whoever refused.
+ *
+ * There is one sentence because there is one thing to do about it. The demo's own admission gate
+ * refuses in JSON and the platform in front of it refuses in plain text; which of them answered is
+ * the operator's concern, never the visitor's.
+ *
+ * `seconds` is folded in only when the refusal named a wait — a guessed number would be worse than
+ * none, because it is the number the visitor waits on.
+ */
+export function busyMessage(seconds) {
+  return seconds
+    ? `The demo is busy with another visitor — it runs a few lookups at a time. Try again in about ${seconds} seconds.`
+    : 'The demo is busy with another visitor — it runs a few lookups at a time. Try again in a moment.';
+}
+
+/**
  * What an ended stream means, and in particular whether it is worth a second request.
  *
  * The distinction this exists for: a refusal and a dropped connection both end a stream, and only
@@ -92,18 +108,28 @@ export function classifyStreamOutcome({ status, painted = 0, retryAfter = null, 
  * complaint about an unexpected `<` that tells a reader nothing about what went wrong. That
  * complaint is the parser's, not the server's, and it must never reach the page.
  *
- * Returns `{ data, error }` — exactly one of them is set, and `error` is always something worth
- * showing a reader.
+ * Returns `{ data, error, busy }` — exactly one of `data` and `error` is set, `error` is always
+ * something worth showing a reader, and `busy` marks the one failure the page answers with an
+ * offer to try again rather than with a report.
  */
 export function readJsonResponse({ status, ok, contentType = '', body = '' }) {
-  let parsed;
+  let parsed = null;
+  let parseable = true;
   try {
     parsed = JSON.parse(body);
   } catch (_) {
+    parseable = false;
+  }
+  if (status === 429) {
+    // Read before the body is judged, because a refusal need not have come from the demo: the
+    // platform in front of it refuses in plain text, which is unparseable but not unexplained.
+    return { data: null, error: parsed?.error || busyMessage(null), busy: true };
+  }
+  if (!parseable) {
     // The status is the only reliable fact left, so it carries the message.
     const kind = contentType.includes('html') ? 'a page instead of data' : 'an unreadable response';
-    return { data: null, error: `The server returned ${kind} (HTTP ${status}).` };
+    return { data: null, error: `The server returned ${kind} (HTTP ${status}).`, busy: false };
   }
-  if (ok) return { data: parsed, error: null };
-  return { data: parsed, error: parsed?.error || `HTTP ${status}` };
+  if (ok) return { data: parsed, error: null, busy: false };
+  return { data: parsed, error: parsed?.error || `HTTP ${status}`, busy: false };
 }

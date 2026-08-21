@@ -1,4 +1,10 @@
-import { createSseParser, classifyStreamOutcome, readJsonResponse } from '/stream-protocol.js';
+import {
+  busyMessage,
+  createSseParser,
+  classifyStreamOutcome,
+  parseRetryAfter,
+  readJsonResponse,
+} from '/stream-protocol.js';
 import {
   escapeHtml as esc,
   creditLineHtml,
@@ -163,6 +169,14 @@ async function pollHealth() {
       cache: 'no-store',
       signal: controller.signal,
     });
+    // A 429 says nothing about the backend's health — it says this visitor is being turned away,
+    // by the gate or by the platform. Reporting it as "unavailable" would be wrong, and polling
+    // through it at the warming interval is the auto-retry the refusal asked us not to make.
+    if (response.status === 429) {
+      setHealthState('degraded', 'Demo busy');
+      setTimeout(pollHealth, (parseRetryAfter(response.headers.get('Retry-After')) || 15) * 1000);
+      return;
+    }
     // 503 is the still-warming status (see Server.kt's /api/health) and carries the same
     // parseable JSON body as 200, so it is handled inline below rather than thrown as a failure.
     if (!response.ok && response.status !== 503) throw new Error('HTTP ' + response.status);
@@ -323,7 +337,7 @@ async function fetchJson(input, init) {
     contentType: res.headers.get('Content-Type') || '',
     body: await res.text(),
   });
-  return { res, data: read.data, error: read.error };
+  return { res, data: read.data, error: read.error, busy: read.busy };
 }
 
 /**
@@ -344,9 +358,9 @@ async function readPanel(res) {
 // The single-shot path: one response, one paint. Kept as the comparison baseline behind the
 // "Progressive streaming" setting, and as the fallback when a stream drops before it paints.
 async function runQueryWhole(params, wasForceRefresh) {
-  const { res, data, error } = await fetchJson('/api/enrich?' + params.toString());
-  if (res.status === 429) {
-    showBusy(classifyStreamOutcome({ status: 429, retryAfter: res.headers.get('Retry-After') }));
+  const { res, data, error, busy } = await fetchJson('/api/enrich?' + params.toString());
+  if (busy) {
+    showBusy(busyFrom(res));
     return;
   }
   if (error) throw new Error(error);
@@ -360,13 +374,24 @@ async function runQueryWhole(params, wasForceRefresh) {
  * retry on a shared clock synchronise into a burst; the second request is refused as surely as the
  * first. The visitor is told how long to wait and asks again themselves.
  */
-function showBusy(outcome) {
-  const wait = outcome.retryAfterSeconds;
+function showBusy(outcome, { keepResult = false } = {}) {
   statusEl.className = 'err';
-  statusEl.textContent = wait
-    ? `The demo is busy — it runs a few lookups at a time. Try again in about ${wait} seconds.`
-    : 'The demo is busy — it runs a few lookups at a time. Try again shortly.';
-  resultEl.innerHTML = '<div id="empty">Nothing looked up.</div>';
+  statusEl.textContent = busyMessage(outcome.retryAfterSeconds);
+  // `keepResult` is for a refusal that left the page on screen still true — a preview or a cache
+  // clear. Replacing it with "nothing looked up" would be a second, false statement.
+  if (keepResult) return;
+  resultEl.innerHTML =
+    '<div id="empty">Nothing looked up. <button type="button" id="busy-retry">Try again</button></div>';
+}
+
+/**
+ * The busy state for a refusal read off a response rather than off a stream's end.
+ *
+ * Every `/api/*` endpoint can be refused by the demo's admission gate or by the platform in front
+ * of it, and `Retry-After` is the only part of a refusal worth reading either way.
+ */
+function busyFrom(res) {
+  return classifyStreamOutcome({ status: 429, retryAfter: res.headers.get('Retry-After') });
 }
 
 // Streams are numbered so a late event from a superseded run cannot repaint the page: a new query
@@ -441,7 +466,7 @@ async function runQueryStreaming(params, wasForceRefresh) {
   if (response.status === 429) {
     release();
     if (!mine()) return;
-    showBusy(classifyStreamOutcome({ status: 429, painted, retryAfter: response.headers.get('Retry-After') }));
+    showBusy(busyFrom(response));
     return;
   }
   if (!response.ok) {
@@ -572,7 +597,12 @@ async function runSearch() {
   searchResultsEl.innerHTML = '<h4>Searching\u2026</h4>';
   searchResultsEl.hidden = false;
   try {
-    const { data, error } = await fetchJson('/api/search?' + params.toString());
+    const { res, data, error, busy } = await fetchJson('/api/search?' + params.toString());
+    if (busy) {
+      clearCandidates();
+      showBusy(busyFrom(res));
+      return;
+    }
     if (error) throw new Error(error);
     candidates = data.candidates || [];
     renderCandidates(query);
@@ -938,6 +968,12 @@ resultEl.addEventListener('click', (e) => {
   if (e.target.closest('#identity-retry')) runQuery();
 });
 
+// --- Busy retry (manual only — see showBusy) ---
+
+resultEl.addEventListener('click', (e) => {
+  if (e.target.closest('#busy-retry')) runQuery();
+});
+
 // --- Result toolbar: force-refresh, and clear-cache-then-reload ---
 
 resultEl.addEventListener('click', (e) => {
@@ -960,11 +996,17 @@ resultEl.addEventListener('click', async (e) => {
     // bare-name tuple clears and an identifier-bearing preview survives "Clear cached result & reload".
     const { kind, name, artist, album, ids } = lastQuery;
     const identifiers = ids ? JSON.parse(ids) : undefined;
-    const { error } = await fetchJson('/api/invalidate', {
+    const { res, error, busy } = await fetchJson('/api/invalidate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ kind, name, artist, album, identifiers }),
     });
+    if (busy) {
+      // Nothing was cleared, so the page on screen still holds; the button is the way to ask again.
+      showBusy(busyFrom(res), { keepResult: true });
+      btn.disabled = false;
+      return;
+    }
     if (error) throw new Error(error);
     runQuery(false, true);
   } catch (err) {
@@ -1122,7 +1164,17 @@ resultEl.addEventListener('click', async (e) => {
   });
   if (btn.dataset.ids) params.set('ids', btn.dataset.ids);
   try {
-    const { data, error } = await fetchJson('/api/preview?' + params.toString());
+    const { res, data, error, busy } = await fetchJson('/api/preview?' + params.toString());
+    if (busy) {
+      if (btn !== activeBtn) return; // superseded by another click while loading
+      activeBtn = null;
+      btn.classList.remove('loading');
+      btn.innerHTML = PLAY_GLYPH;
+      btn.title = PLAY_TITLE;
+      // The play button is its own retry affordance, so it is handed back rather than marked failed.
+      showBusy(busyFrom(res), { keepResult: true });
+      return;
+    }
     if (error) throw new Error(error);
     if (btn !== activeBtn) return; // superseded by another click while loading
     audio.src = data.url;
