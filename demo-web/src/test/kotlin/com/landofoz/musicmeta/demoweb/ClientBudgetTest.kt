@@ -107,7 +107,7 @@ class ClientBudgetTest {
         // Given - a client with a whole burst to spend
         val port = startTestServer()
 
-        // When - it polls health far past that burst, as the page does while the backend warms
+        // When - it polls health far past that burst, as the page does for as long as it is open
         val statuses = (1..CLIENT_BUDGET_BURST * 2).map { get(port, "/api/health", "203.0.113.11").statusCode() }
 
         // Then - none of it is refused: the budget exists to protect upstreams, and this endpoint

@@ -90,9 +90,7 @@ class EnrichEndpointTest {
         // When - requesting /api/enrich for a track carrying a resolved Deezer id
         val response = get(port, "/api/enrich?kind=track&name=Starman&artist=David+Bowie&ids=${deezerIdsParam()}")
 
-        // Then - the identifier reached the engine intact, not dropped on the way in. Filtered to
-        // the track request by name: startServer's own warm-up thread also calls this provider
-        // (GENRE is in DEFAULT_ARTIST_TYPES too) for an unrelated artist request concurrently.
+        // Then - the identifier reached the engine intact, not dropped on the way in
         assertEquals(200, response.statusCode())
         val recorded = provider.recordedRequests
             .filterIsInstance<EnrichmentRequest.ForTrack>()

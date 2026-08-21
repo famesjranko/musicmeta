@@ -450,10 +450,6 @@ button:disabled { opacity: 0.56; cursor: wait; }
   cursor: pointer;
 }
 
-/* .identity-banner's own `display: flex` outranks the UA stylesheet's `[hidden]`, so the
-   degraded banner needs this override to actually disappear when not shown. */
-.degraded-banner[hidden] { display: none; }
-
 .sections.unverified .card.section {
   opacity: 0.6;
 }

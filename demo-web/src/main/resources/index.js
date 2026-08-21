@@ -133,28 +133,11 @@ tabsEl.addEventListener('keydown', (e) => {
 
 syncArtistField();
 
-// --- Cold-start readiness ---
-// The health endpoint reports when the server's startup warm-up has completed. Keep search
-// available for typing, but prevent provider calls until ready so the first user request does not
-// spend its timeout budget paying the backend's JIT/DNS/TLS setup cost.
-let backendReady = false;
+// --- Backend reachability ---
+// Search never waits on this: the page is usable the moment it loads, and the pill only reports
+// whether the backend is answering at all, or is turning this visitor away.
 const healthPill = document.getElementById('health-pill');
 const healthLabel = document.getElementById('health-label');
-const exampleButtons = Array.from(document.querySelectorAll('#examples button[data-kind]'));
-const degradedBanner = document.getElementById('degraded-banner');
-
-document.getElementById('degraded-banner-dismiss').addEventListener('click', () => {
-  degradedBanner.hidden = true;
-});
-
-function setSearchReady(ready) {
-  backendReady = ready;
-  submitBtn.disabled = !ready;
-  submitBtn.setAttribute('aria-disabled', String(!ready));
-  findBtn.disabled = !ready;
-  findBtn.setAttribute('aria-disabled', String(!ready));
-  exampleButtons.forEach((button) => { button.disabled = !ready; });
-}
 
 function setHealthState(state, label) {
   healthPill.dataset.state = state;
@@ -171,35 +154,21 @@ async function pollHealth() {
     });
     // A 429 says nothing about the backend's health — it says this visitor is being turned away,
     // by the gate or by the platform. Reporting it as "unavailable" would be wrong, and polling
-    // through it at the warming interval is the auto-retry the refusal asked us not to make.
+    // through it sooner than it asked is the auto-retry the refusal told us not to make.
     if (response.status === 429) {
       setHealthState('degraded', 'Demo busy');
       setTimeout(pollHealth, (parseRetryAfter(response.headers.get('Retry-After')) || 15) * 1000);
       return;
     }
-    // 503 is the still-warming status (see Server.kt's /api/health) and carries the same
-    // parseable JSON body as 200, so it is handled inline below rather than thrown as a failure.
-    if (!response.ok && response.status !== 503) throw new Error('HTTP ' + response.status);
+    if (!response.ok) throw new Error('HTTP ' + response.status);
     const data = readJsonResponse({
       status: response.status,
-      ok: true, // 503 included: a warming body is the answer here, not a failure
+      ok: true,
       contentType: response.headers.get('Content-Type') || '',
       body: await response.text(),
     }).data;
-    if (!data) throw new Error('HTTP ' + response.status);
-    if (data.status === 'READY') {
-      setHealthState('ready', 'Backend ready');
-      setSearchReady(true);
-      return;
-    }
-    if (data.status === 'DEGRADED') {
-      setHealthState('degraded', 'Backend degraded');
-      degradedBanner.hidden = false;
-      setSearchReady(true);
-      return;
-    }
-    setHealthState('warming', 'Warming backend…');
-    setTimeout(pollHealth, 1000);
+    if (!data || !data.ready) throw new Error('HTTP ' + response.status);
+    setHealthState('ready', 'Backend ready');
   } catch (_) {
     setHealthState('error', 'Backend unavailable');
     setTimeout(pollHealth, 1500);
@@ -208,7 +177,6 @@ async function pollHealth() {
   }
 }
 
-setSearchReady(false);
 pollHealth();
 
 // Fills the form and runs a search — shared by the "Try:" buttons and by clicking an
@@ -255,12 +223,6 @@ let lastQuery = null;
 // candidate rather than from the boxes — it enriches what the user pointed at even where the form
 // still holds the words they searched with. The search form's submit passes none of the three.
 async function runQuery(refresh, replay, pick) {
-  if (!backendReady) {
-    statusEl.className = '';
-    statusEl.textContent = 'The backend is still warming up. Search will unlock automatically when it is ready.';
-    return;
-  }
-
   let kind, name, artist, album, ids;
   if (refresh || replay) {
     if (!lastQuery) return;
@@ -573,11 +535,6 @@ function renderCandidates(query) {
 }
 
 async function runSearch() {
-  if (!backendReady) {
-    statusEl.className = '';
-    statusEl.textContent = 'The backend is still warming up. Search will unlock automatically when it is ready.';
-    return;
-  }
   const query = nameEl.value.trim();
   if (!query) {
     statusEl.className = 'err';
@@ -611,7 +568,7 @@ async function runSearch() {
     statusEl.className = 'err';
     statusEl.textContent = 'Search failed: ' + err.message;
   } finally {
-    findBtn.disabled = !backendReady;
+    findBtn.disabled = false;
   }
 }
 
