@@ -1108,8 +1108,8 @@ internal class MusicBrainzEnricher(
     /**
      * [year]/[country]/[releaseType] are null because a recording search hit carries none of its
      * own — those live on its releases, and picking "the" release needs a lookup this class never
-     * does. [thumbnailUrl] is null because a recording has no [MusicBrainzRelease.hasFrontCover]
-     * equivalent to tell a real cover from a CAA 404.
+     * does. [thumbnailUrl] is null because no search response can tell a real cover from a CAA 404,
+     * and a recording has not even a [MusicBrainzRelease.hasFrontCover] to ask.
      */
     private fun MusicBrainzRecording.toCandidate() = SearchCandidate(
         title = title, artist = artistCredit, year = null,

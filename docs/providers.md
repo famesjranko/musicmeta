@@ -369,8 +369,10 @@ several), `label-info[]` beyond the first (co-releases and reissues), `release.p
 from a tracklist and to label a `RELEASE_EDITIONS` entry — never surfaced per disc; `sort-name` is
 read too, to reorder a Person's "Last, First". Never requested: `works`, `series`, `events`,
 `places`, `instruments`, `collections`. No cover-art call — that is the Cover Art Archive provider, keyed on
-the identifiers this one resolves; the `cover-art-archive.front` flag embedded in a release is read,
-and is what puts a thumbnail URL on a search candidate.
+the identifiers this one resolves. The `cover-art-archive.front` flag embedded in a release *is*
+read, but only a release lookup carries that object: a `/release?query=` hit has none (checked live
+2026-08-22), so a search candidate never carries a thumbnail URL. Reading one per candidate would
+cost a rate-limited lookup each.
 
 **Cover Art Archive.** `/release/{mbid}` is fetched for every capability, so these cost only code:
 `images[].comment` (which of several front covers this is), `.approved` (we take the first match
