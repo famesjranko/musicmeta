@@ -451,9 +451,13 @@ private fun HttpExchange.refuseAsBusy(message: String) {
     respondJson(429, ApiError(message))
 }
 
-/** This request's client, as [clientKeyFrom] reads it off the exchange. */
+/**
+ * This request's client, as [clientKeyFrom] reads it off the exchange. All header lines are
+ * joined before the parse: the platform appends its entry to the header as a whole, so reading
+ * only the first line would hand the charge to a line the caller wrote for itself.
+ */
 private fun HttpExchange.clientKey(): String =
-    clientKeyFrom(requestHeaders.getFirst("X-Forwarded-For"), remoteAddress.address.hostAddress)
+    clientKeyFrom(requestHeaders["X-Forwarded-For"]?.joinToString(","), remoteAddress.address.hostAddress)
 
 private val enrichmentGate = Semaphore(MAX_IN_GATE)
 

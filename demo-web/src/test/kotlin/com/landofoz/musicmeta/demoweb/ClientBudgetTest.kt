@@ -115,6 +115,29 @@ class ClientBudgetTest {
         assertFalse(statuses.contains(429))
     }
 
+    @Test fun `a second forged header line cannot mint a fresh budget`() {
+        // Given - a client that splits its forgery across two header lines, varying the first while
+        // the platform-appended entry stays what it is
+        val port = startTestServer()
+        fun ask(forged: String): Int {
+            val request = HttpRequest.newBuilder(URI.create("http://localhost:$port$SEARCH_PATH"))
+                .GET()
+                .header("X-Forwarded-For", forged)
+                .header("X-Forwarded-For", "203.0.113.42")
+                .build()
+            return http.send(request, HttpResponse.BodyHandlers.ofString()).statusCode()
+        }
+        val spent = (1..CLIENT_BUDGET_BURST).map { ask("9.9.9.$it") }
+        assertEquals(List(CLIENT_BUDGET_BURST) { 200 }, spent)
+
+        // When - it asks once more under yet another first line
+        val refused = ask("9.9.99.99")
+
+        // Then - every line was one conversation: the charge followed the platform's entry, which
+        // is the one entry no arrangement of the caller's own lines can move
+        assertEquals(429, refused)
+    }
+
     @Test fun `the platform's own entry is read, not the caller's claim`() {
         // Given - a header a client wrote for itself, with the address the platform saw appended
         val forwarded = "9.9.9.9, 203.0.113.7"
