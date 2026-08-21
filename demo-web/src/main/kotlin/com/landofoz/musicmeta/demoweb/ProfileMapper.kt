@@ -25,16 +25,19 @@ fun ArtistProfile.toDemoResponse(elapsedMs: Long, pending: Set<EnrichmentType> =
     val r = results
     val bio = r.biography()
     val stats = r.artistPopularity()
+    val linker = CreditLinker("artist", name, artist = null, identifiers = r.identity.identifiers)
 
     val details = buildList {
         r.country()?.let { add(SectionItem("Country", it)) }
     }
 
-    val sections = buildSections(pending) {
+    val sections = buildSections(r, linker, pending) {
         r.identity.suggestions.let { s ->
             didYouMeanSection(s) { artistEnrich(it.title) }?.let { add(it) }
         }
-        if (details.isNotEmpty()) add(Section("details", "Details", details))
+        if (details.isNotEmpty()) {
+            add(Section("details", "Details", details, creditsFor(EnrichmentType.COUNTRY)))
+        }
         section("similar_artists", "Similar Artists", EnrichmentType.SIMILAR_ARTISTS) {
             r.similarArtists()?.artists?.map {
                 SectionItem(
@@ -111,23 +114,31 @@ fun ArtistProfile.toDemoResponse(elapsedMs: Long, pending: Set<EnrichmentType> =
     val primaryImage = photo?.url ?: bio?.thumbnailUrl
     val gallery = buildList {
         val seen = mutableSetOf<String>().apply { primaryImage?.let { add(it) } }
-        addIfNew(seen, r.get<EnrichmentData.Artwork>(EnrichmentType.ARTIST_LOGO)?.url, "Logo")
-        addIfNew(seen, r.get<EnrichmentData.Artwork>(EnrichmentType.ARTIST_BANNER)?.url, "Banner")
-        addAlternatives(seen, photo)
+        addArtwork(seen, r, EnrichmentType.ARTIST_LOGO, "Logo", linker)
+        addArtwork(seen, r, EnrichmentType.ARTIST_BANNER, "Banner", linker)
+        addAlternatives(seen, photo, linker)
     }
 
     val genreChips = r.genreTags().map { it.toChip() }
+    val imageCredit = when {
+        photo != null -> r.artworkCredit(EnrichmentType.ARTIST_PHOTO, photo, primaryImage, linker)
+        bio?.thumbnailUrl != null -> r.credit(EnrichmentType.ARTIST_BIO, linker)
+        else -> null
+    }
     return DemoResponse(
         kind = "artist",
         name = name,
         summary = SummaryCard(
             title = name,
             imageUrl = primaryImage?.fanartTvPreviewUrl(),
+            imageCredit = imageCredit,
             backgroundImageUrl = r.get<EnrichmentData.Artwork>(EnrichmentType.ARTIST_BACKGROUND)
                 ?.url
                 ?.fanartTvPreviewUrl(),
             text = bio?.text,
             textSource = bio?.source,
+            textCredit = bio?.let { r.credit(EnrichmentType.ARTIST_BIO, linker) },
+            genreCredits = linker.genreCredits(genreChips, r),
             identityResolved = r.identityResolved,
             identityVerdict = r.identityVerdict,
             genres = genreChips,
@@ -154,6 +165,7 @@ fun AlbumProfile.toDemoResponse(
 ): DemoResponse {
     val r = results
     val description = r.albumDescription()
+    val linker = CreditLinker("album", title, artist, r.identity.identifiers)
 
     val details = buildList {
         r.label()?.let { add(SectionItem("Label", it)) }
@@ -162,11 +174,26 @@ fun AlbumProfile.toDemoResponse(
         r.country()?.let { add(SectionItem("Country", it)) }
     }
 
-    val sections = buildSections(pending) {
+    val sections = buildSections(r, linker, pending) {
         r.identity.suggestions.let { s ->
             didYouMeanSection(s) { c -> c.artist?.let { a -> albumEnrich(c.title, a) } }?.let { add(it) }
         }
-        if (details.isNotEmpty()) add(Section("details", "Details", details))
+        if (details.isNotEmpty()) {
+            add(
+                Section(
+                    "details",
+                    "Details",
+                    details,
+                    creditsFor(
+                        EnrichmentType.LABEL,
+                        EnrichmentType.RELEASE_DATE,
+                        EnrichmentType.RELEASE_TYPE,
+                        EnrichmentType.COUNTRY,
+                        EnrichmentType.ALBUM_METADATA,
+                    ),
+                ),
+            )
+        }
         section("tracklist", "Tracklist", EnrichmentType.ALBUM_TRACKS) {
             r.get<EnrichmentData.Tracklist>(EnrichmentType.ALBUM_TRACKS)?.tracks?.sortedBy { it.position }?.map {
                 SectionItem(
@@ -207,12 +234,13 @@ fun AlbumProfile.toDemoResponse(
     }
 
     val albumArt = r.albumArt()
+    val cardImage = albumArt.cardImageUrl()
     val gallery = buildList {
         val seen = mutableSetOf<String>().apply { albumArt?.url?.let { add(it) } }
-        addIfNew(seen, r.get<EnrichmentData.Artwork>(EnrichmentType.ALBUM_ART_BACK)?.url, "Back")
-        addIfNew(seen, r.get<EnrichmentData.Artwork>(EnrichmentType.ALBUM_BOOKLET)?.url, "Booklet")
-        addIfNew(seen, r.get<EnrichmentData.Artwork>(EnrichmentType.CD_ART)?.url, "CD Art")
-        addAlternatives(seen, albumArt)
+        addArtwork(seen, r, EnrichmentType.ALBUM_ART_BACK, "Back", linker)
+        addArtwork(seen, r, EnrichmentType.ALBUM_BOOKLET, "Booklet", linker)
+        addArtwork(seen, r, EnrichmentType.CD_ART, "CD Art", linker)
+        addAlternatives(seen, albumArt, linker)
     }
 
     val genreChips = r.genreTags().map { it.toChip() }
@@ -224,9 +252,12 @@ fun AlbumProfile.toDemoResponse(
             title = title,
             subtitle = artist,
             subtitleEnrich = artistEnrich(artist),
-            imageUrl = albumArt.cardImageUrl(),
+            imageUrl = cardImage,
+            imageCredit = r.artworkCredit(EnrichmentType.ALBUM_ART, albumArt, cardImage, linker),
             text = description?.text,
             textSource = description?.source,
+            textCredit = description?.let { r.credit(EnrichmentType.ALBUM_DESCRIPTION, linker) },
+            genreCredits = linker.genreCredits(genreChips, r),
             identityResolved = r.identityResolved,
             identityVerdict = r.identityVerdict,
             genres = genreChips,
@@ -261,6 +292,7 @@ fun TrackProfile.toDemoResponse(
     val r = results
     val lyrics = r.lyrics()
     val stats = r.trackPopularity()
+    val linker = CreditLinker("track", title, artist, r.identity.identifiers)
 
     val trackMetadata = r.trackMetadata()
 
@@ -274,11 +306,13 @@ fun TrackProfile.toDemoResponse(
         trackMetadata?.disambiguation?.let { add(SectionItem("Variant", it)) }
     }
 
-    val sections = buildSections(pending) {
+    val sections = buildSections(r, linker, pending) {
         r.identity.suggestions.let { s ->
             didYouMeanSection(s) { c -> c.artist?.let { a -> trackEnrich(c.title, a) } }?.let { add(it) }
         }
-        if (details.isNotEmpty()) add(Section("details", "Details", details))
+        if (details.isNotEmpty()) {
+            add(Section("details", "Details", details, creditsFor(EnrichmentType.TRACK_METADATA)))
+        }
         section("credits", "Credits", EnrichmentType.CREDITS) {
             r.credits()?.credits?.map {
                 SectionItem(primary = it.name, secondary = it.role, meta = it.roleCategory)
@@ -316,8 +350,11 @@ fun TrackProfile.toDemoResponse(
             subtitle = artist,
             subtitleEnrich = artistEnrich(artist),
             imageUrl = r.albumArt().cardImageUrl(),
+            imageCredit = r.artworkCredit(EnrichmentType.ALBUM_ART, r.albumArt(), r.albumArt().cardImageUrl(), linker),
             text = lyrics.readingText(),
             textSource = lyrics?.let { "lyrics" },
+            textCredit = lyrics?.let { r.lyricsCredit(linker) },
+            genreCredits = linker.genreCredits(genreChips, r),
             previewTitle = title.takeIf { r.identityResolved },
             previewArtist = artist.takeIf { r.identityResolved },
             identityResolved = r.identityResolved,
@@ -415,12 +452,24 @@ private fun EnrichmentIdentifiers?.toIdentifierHits(): List<IdentifierHit> {
  * identical to what it was before streaming existed: with nothing pending, no placeholder can be
  * produced.
  */
-private fun buildSections(pending: Set<EnrichmentType>, build: SectionBuilder.() -> Unit): List<Section> =
-    SectionBuilder(pending).apply(build).sections
+private fun buildSections(
+    results: EnrichmentResults,
+    linker: CreditLinker,
+    pending: Set<EnrichmentType>,
+    build: SectionBuilder.() -> Unit,
+): List<Section> = SectionBuilder(results, linker, pending).apply(build).sections
 
 /** @see buildSections */
-private class SectionBuilder(private val pending: Set<EnrichmentType>) {
+private class SectionBuilder(
+    private val results: EnrichmentResults,
+    private val linker: CreditLinker,
+    private val pending: Set<EnrichmentType>,
+) {
     val sections = mutableListOf<Section>()
+
+    /** Who a card drawing on [types] must credit — see [EnrichmentResults.creditProviders]. */
+    fun creditsFor(vararg types: EnrichmentType): List<SourceCredit> =
+        results.creditProviders(*types).map { linker.credit(it) }
 
     /** Adds an already-built card — one assembled from several types, or from identity rather than a type. */
     fun add(section: Section) {
@@ -436,10 +485,121 @@ private class SectionBuilder(private val pending: Set<EnrichmentType>) {
     fun section(key: String, label: String, vararg types: EnrichmentType, items: () -> List<SectionItem>?) {
         val list = items().orEmpty()
         when {
-            list.isNotEmpty() -> sections += Section(key, label, list)
+            list.isNotEmpty() -> sections += Section(key, label, list, creditsFor(*types))
             types.any { it in pending } -> sections += Section(key, label, emptyList(), pending = true)
         }
     }
+}
+
+/** The engine reserves this suffix for a result it merged; such a result names no upstream. */
+private const val MERGER_SUFFIX = "_merger"
+
+/**
+ * The upstreams behind [types], in first-seen order and one entry each. A merged result attributes
+ * per item rather than per result, so its items' own `sources` are read instead of the merger's id.
+ */
+private fun EnrichmentResults.creditProviders(vararg types: EnrichmentType): List<String> =
+    types.flatMap { creditProvidersOf(it) }.distinct()
+
+private fun EnrichmentResults.creditProvidersOf(type: EnrichmentType): List<String> {
+    DERIVED_FROM[type]?.let { sources -> return sources.flatMap { creditProvidersOf(it) } }
+    val success = raw[type] as? EnrichmentResult.Success ?: return emptyList()
+    return if (success.provider.endsWith(MERGER_SUFFIX)) success.data.itemSources() else listOf(success.provider)
+}
+
+/**
+ * Types the engine synthesizes from other types rather than fetching. Such a result names the
+ * synthesizer, which no reader can be sent to and no terms cover — the upstreams to credit are
+ * whoever answered the types it was derived from.
+ */
+private val DERIVED_FROM: Map<EnrichmentType, Set<EnrichmentType>> = mapOf(
+    EnrichmentType.ARTIST_TIMELINE to setOf(EnrichmentType.ARTIST_DISCOGRAPHY, EnrichmentType.BAND_MEMBERS),
+    EnrichmentType.GENRE_DISCOVERY to setOf(EnrichmentType.GENRE),
+)
+
+/** Every upstream the items of a merged payload name. Empty for a payload that carries none. */
+private fun EnrichmentData.itemSources(): List<String> = when (this) {
+    is EnrichmentData.SimilarArtists -> artists.flatMap { it.sources }
+    is EnrichmentData.SimilarTracks -> tracks.flatMap { it.sources }
+    is EnrichmentData.TopTracks -> tracks.flatMap { it.sources }
+    is EnrichmentData.Popularity -> signals.map { it.source }
+    is EnrichmentData.Metadata -> genreTags.orEmpty().flatMap { it.sources }
+    else -> emptyList()
+}
+
+/**
+ * Builds one entity's link-backs. What a namespaced identifier names depends on what was asked
+ * for — the same MusicBrainz id is an artist, a release or a recording — so a linker belongs to
+ * one response and is never shared across kinds.
+ */
+private class CreditLinker(
+    private val kind: String,
+    private val name: String,
+    private val artist: String?,
+    private val identifiers: EnrichmentIdentifiers?,
+) {
+    fun credit(provider: String): SourceCredit = SourceCredit(provider, linkFor(provider))
+
+    fun credits(providers: List<String>): List<SourceCredit> = providers.distinct().map { credit(it) }
+
+    /**
+     * Who the genre chips must credit. The tags carry their own sources, which is the merged
+     * result's per-item attribution; the type's own provider answers only for a payload whose tags
+     * predate that field.
+     */
+    fun genreCredits(chips: List<GenreChip>, results: EnrichmentResults): List<SourceCredit> {
+        if (chips.isEmpty()) return emptyList()
+        val sources = chips.flatMap { it.sources }
+            .ifEmpty { results.creditProviders(EnrichmentType.GENRE, EnrichmentType.ALBUM_METADATA) }
+        return credits(sources)
+    }
+
+    private fun linkFor(provider: String): String? = when (provider) {
+        "musicbrainz" -> identifiers?.musicBrainzId?.let { "https://musicbrainz.org/${musicBrainzEntity()}/$it" }
+        // The Cover Art Archive's own URLs are the API's; MusicBrainz's cover-art tab is the page a
+        // reader can look at, and only an album request's id names the release it hangs off.
+        "coverartarchive" -> identifiers?.musicBrainzId
+            ?.takeIf { kind == "album" }
+            ?.let { "https://musicbrainz.org/release/$it/cover-art" }
+        "wikipedia" -> identifiers?.wikipediaTitle
+            ?.let { "https://en.wikipedia.org/wiki/${encode(it.replace(' ', '_'))}" }
+        "wikidata" -> identifiers?.wikidataId?.let { "https://www.wikidata.org/wiki/$it" }
+        "discogs" -> discogsLink()
+        "itunes" -> identifiers?.get(IdentifierNamespace.ITUNES_ARTIST)?.let { "https://music.apple.com/artist/$it" }
+        "deezer", "deezer-similar-albums" ->
+            identifiers?.get(IdentifierNamespace.DEEZER)?.let { "https://www.deezer.com/$kind/$it" }
+        "lastfm" -> lastFmLink()
+        else -> null
+    }
+
+    private fun musicBrainzEntity(): String = when (kind) {
+        "album" -> "release"
+        "track" -> "recording"
+        else -> "artist"
+    }
+
+    /**
+     * The Discogs page for this entity: its own page when resolution settled on a Discogs id, and
+     * otherwise a Discogs search for the name — the response carries no release-level Discogs id to
+     * address, and their terms want the link next to the data either way.
+     */
+    private fun discogsLink(): String {
+        val artistId = identifiers?.get(IdentifierNamespace.DISCOGS_ARTIST)
+        if (kind == "artist" && artistId != null) return "https://www.discogs.com/artist/$artistId"
+        val query = listOfNotNull(artist, name).joinToString(" ")
+        val type = if (kind == "artist") "artist" else "release"
+        return "https://www.discogs.com/search/?q=${encode(query)}&type=$type"
+    }
+
+    /** Last.fm's catalogue page for this entity, which their terms require a link back to. */
+    private fun lastFmLink(): String? = when (kind) {
+        "artist" -> "https://www.last.fm/music/${encode(name)}"
+        "album" -> artist?.let { "https://www.last.fm/music/${encode(it)}/${encode(name)}" }
+        "track" -> artist?.let { "https://www.last.fm/music/${encode(it)}/_/${encode(name)}" }
+        else -> null
+    }
+
+    private fun encode(value: String): String = java.net.URLEncoder.encode(value, Charsets.UTF_8)
 }
 
 /**
@@ -494,18 +654,58 @@ private fun PopularitySignal.primaryText(): String =
         else -> "%,.0f ${kind.name.lowercase()}".format(value)
     }
 
-/** Appends [url] to the gallery, deduped by [seen] against the primary image and every prior entry. */
-private fun MutableList<GalleryImage>.addIfNew(seen: MutableSet<String>, url: String?, label: String) {
-    if (url != null && seen.add(url)) add(GalleryImage(url, label))
+/**
+ * Appends the artwork [type] resolved to, credited to whoever answered it and deduped by [seen]
+ * against the primary image and every prior entry.
+ */
+private fun MutableList<GalleryImage>.addArtwork(
+    seen: MutableSet<String>,
+    results: EnrichmentResults,
+    type: EnrichmentType,
+    label: String,
+    linker: CreditLinker,
+) {
+    val url = results.get<EnrichmentData.Artwork>(type)?.url ?: return
+    if (seen.add(url)) add(GalleryImage(url, label, results.credit(type, linker)))
+}
+
+/** The credit for whichever provider answered [type], or null when nothing did. */
+private fun EnrichmentResults.credit(type: EnrichmentType, linker: CreditLinker): SourceCredit? =
+    (raw[type] as? EnrichmentResult.Success)?.provider?.let { linker.credit(it) }
+
+/** Lyrics come from either lyrics type, so the credit follows whichever one answered. */
+private fun EnrichmentResults.lyricsCredit(linker: CreditLinker): SourceCredit? =
+    credit(EnrichmentType.LYRICS_SYNCED, linker) ?: credit(EnrichmentType.LYRICS_PLAIN, linker)
+
+/**
+ * The credit for the artwork actually painted. [url] is the URL the card renders, which is not
+ * always the ranked primary — a faster alternative wins the card (see [cardImageUrl]) and is a
+ * different provider's image, so crediting the result's own provider would credit the wrong one.
+ */
+private fun EnrichmentResults.artworkCredit(
+    type: EnrichmentType,
+    artwork: EnrichmentData.Artwork?,
+    url: String?,
+    linker: CreditLinker,
+): SourceCredit? {
+    if (url == null) return null
+    val alternative = artwork?.alternatives?.firstOrNull { it.url == url }
+    return alternative?.let { linker.credit(it.provider) } ?: credit(type, linker)
 }
 
 /**
  * Appends [EnrichmentData.Artwork.alternatives] — other providers' images that lost the merge —
  * one per provider, deduped by [seen] the same way as any other gallery entry.
  */
-private fun MutableList<GalleryImage>.addAlternatives(seen: MutableSet<String>, artwork: EnrichmentData.Artwork?) {
+private fun MutableList<GalleryImage>.addAlternatives(
+    seen: MutableSet<String>,
+    artwork: EnrichmentData.Artwork?,
+    linker: CreditLinker,
+) {
     artwork?.alternatives?.forEach { alt ->
-        if (alt.url.isNotBlank() && seen.add(alt.url)) add(GalleryImage(alt.url, alt.provider))
+        if (alt.url.isNotBlank() && seen.add(alt.url)) {
+            add(GalleryImage(alt.url, alt.provider, linker.credit(alt.provider)))
+        }
     }
 }
 
@@ -590,9 +790,12 @@ private fun radioItems(radio: EnrichmentData.RadioPlaylist?): List<SectionItem>?
  * artist page's own "Radio" section, since it's the same [EnrichmentType.ARTIST_RADIO] data, just
  * fetched for the track/album's resolved artist rather than an artist lookup itself.
  */
-fun artistRadioSection(radio: EnrichmentData.RadioPlaylist?): Section? {
-    val items = radioItems(radio).orEmpty()
-    return items.takeIf { it.isNotEmpty() }?.let { Section("artist_radio", "Radio (from artist)", it) }
+fun artistRadioSection(artist: String, results: EnrichmentResults): Section? {
+    val items = radioItems(results.radio()).orEmpty()
+    if (items.isEmpty()) return null
+    val linker = CreditLinker("artist", artist, artist = null, identifiers = results.identity.identifiers)
+    val credits = linker.credits(results.creditProviders(EnrichmentType.ARTIST_RADIO))
+    return Section("artist_radio", "Radio (from artist)", items, credits)
 }
 
 /**

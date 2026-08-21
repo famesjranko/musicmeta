@@ -35,6 +35,24 @@ class ServerTest {
         )
 
     @Test
+    fun `every module the page imports is a file the server serves`() {
+        // Given - the index.js the server actually ships, and the modules it imports by URL
+        val indexJs = checkNotNull(ServerTest::class.java.getResourceAsStream("/index.js")) { "index.js missing" }
+            .readBytes()
+            .decodeToString()
+        val imported = Regex("""from\s+'(/[^']+)'""").findAll(indexJs).map { it.groupValues[1] }.toList()
+
+        // When - checking each against the static routes and the packaged resources
+        val unserved = imported.filter { it !in STATIC_PATHS }
+        val absent = imported.filter { ServerTest::class.java.getResourceAsStream(it) == null }
+
+        // Then - every import both routes and exists, or the page 404s a module and never runs
+        assertTrue("index.js imports at least one module", imported.isNotEmpty())
+        assertEquals(emptyList<String>(), unserved)
+        assertEquals(emptyList<String>(), absent)
+    }
+
+    @Test
     fun `a warm-up that threw is classified DEGRADED regardless of any result`() {
         // Given - the warm-up probe threw, whatever a partial result happened to hold
         val partial = results(mapOf(EnrichmentType.GENRE to success(EnrichmentType.GENRE)))

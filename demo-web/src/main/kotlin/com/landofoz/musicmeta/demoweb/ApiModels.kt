@@ -39,6 +39,20 @@ data class StreamSnapshot(
     val response: DemoResponse,
 )
 
+/**
+ * Which upstream supplied one rendered datum, and where a reader can see it there.
+ *
+ * [provider] is the id the engine reported for the result — never a merger, which names no
+ * upstream. [url] is that upstream's own page for this entity, and is null when the response
+ * carried no identifier to address one: the page then links the provider's site rather than
+ * inventing a deep link.
+ */
+@Serializable
+data class SourceCredit(
+    val provider: String,
+    val url: String? = null,
+)
+
 @Serializable
 data class SummaryCard(
     val title: String,
@@ -46,10 +60,16 @@ data class SummaryCard(
     /** When set, the frontend makes [subtitle] (the artist name on track/album pages) clickable. */
     val subtitleEnrich: EnrichTarget? = null,
     val imageUrl: String? = null,
+    /** Who supplied [imageUrl] — the provider of the image actually painted, not of the ranked set. */
+    val imageCredit: SourceCredit? = null,
     /** Artist background artwork, rendered as a dimmed backdrop behind the summary card. */
     val backgroundImageUrl: String? = null,
     val text: String? = null,
     val textSource: String? = null,
+    /** Who supplied [text], with the link-back its licence needs where the response identified one. */
+    val textCredit: SourceCredit? = null,
+    /** Who supplied [genres] — one per upstream named by the merged tags, in first-seen order. */
+    val genreCredits: List<SourceCredit> = emptyList(),
     val previewTitle: String? = null,
     val previewArtist: String? = null,
     val previewAlbum: String? = null,
@@ -82,6 +102,7 @@ data class GenreChip(
 data class GalleryImage(
     val url: String,
     val label: String? = null,
+    val credit: SourceCredit? = null,
 )
 
 @Serializable
@@ -89,6 +110,8 @@ data class Section(
     val key: String,
     val label: String,
     val items: List<SectionItem>,
+    /** Who supplied this card's items, one per upstream — every provider a reader sees data from. */
+    val credits: List<SourceCredit> = emptyList(),
     /**
      * True when this card is a placeholder for a type that has not settled: it holds the card's
      * position so the section cannot appear later and reflow the page under the reader. Only a

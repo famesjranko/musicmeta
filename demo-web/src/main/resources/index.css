@@ -1043,6 +1043,37 @@ footer a {
 
 footer a:hover { color: var(--text); border-color: var(--text); }
 
+/* Per-card credits: owed beside the data, so quiet enough to sit under any card without competing
+   with it — muted, one line, wrapping rather than clipping. */
+.credit-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.36rem;
+  margin: 0.5rem 0 0;
+  color: var(--muted);
+  font-size: 0.66rem;
+  line-height: 1.5;
+}
+
+.credit-line a {
+  color: var(--muted);
+  text-decoration: none;
+  border-bottom: 1px dotted rgba(146, 169, 255, 0.4);
+}
+
+.credit-line a:hover { color: var(--text-soft); border-color: var(--text-soft); }
+
+/* The caption itself clips to one line; a credit is owed in full, so it wraps instead. */
+.gallery figcaption .credit-line {
+  justify-content: center;
+  margin-top: 0.1rem;
+  font-size: 0.62rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.summary .source .credit-line { margin: 0; font-size: 0.7rem; }
+
 /* Attribution credits: owed content, so no card chrome — a hairline separates it from the footer. */
 .credits-footer {
   margin-top: 1.5rem;

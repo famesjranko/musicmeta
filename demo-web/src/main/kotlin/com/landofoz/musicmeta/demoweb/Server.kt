@@ -55,6 +55,25 @@ private val json = Json { encodeDefaults = true }
 /** Anchor class purely so [Class.getResourceAsStream] has a classloader to resolve against. */
 private class ResourceAnchor
 
+/**
+ * Every file the page fetches by URL. `/` serves `/index.html`; the rest are fetched as they are
+ * named, including each module `index.js` imports — the page is a module graph, not one script, so
+ * a module missing from this list is a module the browser 404s on and a page that does not run.
+ */
+internal val STATIC_PATHS = listOf(
+    "/index.html",
+    "/index.css",
+    "/index.js",
+    "/stream-protocol.js",
+    "/attribution.js",
+)
+
+private fun contentTypeOf(path: String): String = when {
+    path.endsWith(".html") -> "text/html; charset=utf-8"
+    path.endsWith(".css") -> "text/css; charset=utf-8"
+    else -> "text/javascript; charset=utf-8"
+}
+
 private const val MAX_IDS_PARAM_LENGTH = 512
 private const val MAX_IDENTIFIER_VALUE_LENGTH = 100
 
@@ -177,14 +196,10 @@ fun startServer(
     port: Int,
     unregisteredProviderIds: Set<String> = emptySet(),
 ) {
-    val indexHtml = ResourceAnchor::class.java.getResourceAsStream("/index.html")?.readBytes()
-        ?: error("index.html missing from demo-web resources")
-    val indexCss = ResourceAnchor::class.java.getResourceAsStream("/index.css")?.readBytes()
-        ?: error("index.css missing from demo-web resources")
-    val indexJs = ResourceAnchor::class.java.getResourceAsStream("/index.js")?.readBytes()
-        ?: error("index.js missing from demo-web resources")
-    val streamProtocolJs = ResourceAnchor::class.java.getResourceAsStream("/stream-protocol.js")?.readBytes()
-        ?: error("stream-protocol.js missing from demo-web resources")
+    val staticFiles = STATIC_PATHS.associateWith { path ->
+        ResourceAnchor::class.java.getResourceAsStream(path)?.readBytes()
+            ?: error("$path missing from demo-web resources")
+    }
 
     val server = HttpServer.create(InetSocketAddress(port), 0)
     // A streaming request holds its thread for the whole enrichment, not for one round trip, so the
@@ -193,15 +208,12 @@ fun startServer(
     server.executor = Executors.newFixedThreadPool(16)
 
     server.createContext("/") { exchange ->
-        when (exchange.requestURI.path) {
-            "/" -> exchange.respond(200, "text/html; charset=utf-8", indexHtml)
-            "/index.css" -> exchange.respond(200, "text/css; charset=utf-8", indexCss)
-            "/index.js" -> exchange.respond(200, "text/javascript; charset=utf-8", indexJs)
-            // index.js imports this by URL, so it is fetched as a second request rather than
-            // bundled — the page is a module graph, not one script.
-            "/stream-protocol.js" ->
-                exchange.respond(200, "text/javascript; charset=utf-8", streamProtocolJs)
-            else -> exchange.respond(404, "text/plain", "not found".toByteArray())
+        val path = exchange.requestURI.path.let { if (it == "/") "/index.html" else it }
+        val body = staticFiles[path]
+        if (body == null) {
+            exchange.respond(404, "text/plain", "not found".toByteArray())
+        } else {
+            exchange.respond(200, contentTypeOf(path), body)
         }
     }
 
@@ -226,7 +238,7 @@ fun startServer(
     }
 
     server.start()
-    warmUp(engineRef.get(), parseShowcase(indexHtml.decodeToString()))
+    warmUp(engineRef.get(), parseShowcase(staticFiles.getValue("/index.html").decodeToString()))
 }
 
 /**
@@ -1033,7 +1045,7 @@ private suspend fun EnrichmentResults.retryTransientFailures(
 private suspend fun fetchArtistRadioSection(engine: EnrichmentEngine, artist: String): Section? =
     try {
         val results = engine.enrich(EnrichmentRequest.forArtist(artist), setOf(EnrichmentType.ARTIST_RADIO))
-        artistRadioSection(results.get<EnrichmentData.RadioPlaylist>(EnrichmentType.ARTIST_RADIO))
+        artistRadioSection(artist, results)
     } catch (e: Exception) {
         currentCoroutineContext().ensureActive() // rethrows only if this job was cancelled
         null

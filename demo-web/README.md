@@ -17,6 +17,13 @@ Works keyless. To enable the key-requiring providers, copy `secrets.properties.e
 to `secrets.properties` here or in the repo root and fill in the keys, or set environment variables
 (`LASTFM_API_KEY`, `FANARTTV_API_KEY`, `DISCOGS_TOKEN`, `LISTENBRAINZ_TOKEN`).
 
+Every card credits the upstreams that filled it, built from the provenance each response carries —
+never from a guess about which provider serves what — and links back to the upstream's own page for
+that entity where the response resolved an identifier for one. Credits are ungated: they cost a
+local run nothing and crediting providers is the point. No third-party logo is bundled: Apple's
+badge needs its Web Badge licence agreement and Deezer's logo its unpublished Trademark Guidelines,
+so each provider is credited in text until those are accepted and an asset can be added.
+
 `DEMO_PUBLIC=1` puts the process in the posture a publicly reachable instance owes its providers,
 whatever keys the environment carries: Last.fm is not registered, the ListenBrainz personal token
 is withheld, Discogs images never leave the process, and Discogs-sourced data is refetched every

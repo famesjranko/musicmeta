@@ -1,4 +1,5 @@
 import { createSseParser, classifyStreamOutcome, readJsonResponse } from '/stream-protocol.js';
+import { escapeHtml as esc, creditLineHtml } from '/attribution.js';
 
 const tabsEl = document.getElementById('kind-tabs');
 const kindTabs = Array.from(tabsEl.querySelectorAll('button[data-kind]'));
@@ -221,12 +222,6 @@ document.getElementById('query-form').addEventListener('submit', (e) => {
   clearCandidates();
   runQuery();
 });
-
-function esc(s) {
-  return String(s ?? '').replace(/[&<>"']/g, (c) => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-  }[c]));
-}
 
 // The exact request behind the page currently on screen, so the toolbar's "Fetch fresh data"
 // button can re-run precisely that lookup rather than whatever the form fields hold by then.
@@ -655,8 +650,13 @@ function render(data, wasForceRefresh, stream) {
     : pendingSlots.includes('image')
       ? '<div class="skeleton skeleton-img" aria-hidden="true"></div>'
       : '';
+  // The text's own credit replaces the bare source line when the response said who supplied it:
+  // Wikipedia's licence is owed beside the text it licenses, not in a page footer.
+  const textSource = summary.textCredit
+    ? `<div class="source">${creditLineHtml([summary.textCredit])}</div>`
+    : summary.textSource ? `<div class="source">source: ${esc(summary.textSource)}</div>` : '';
   const text = summary.text
-    ? `<div class="text">${esc(summary.text)}</div><button type="button" class="show-more text-toggle" style="display:none">Show all</button>${summary.textSource ? `<div class="source">source: ${esc(summary.textSource)}</div>` : ''}`
+    ? `<div class="text">${esc(summary.text)}</div><button type="button" class="show-more text-toggle" style="display:none">Show all</button>${textSource}`
     : pendingSlots.includes('text')
       ? '<div class="skeleton-lines" aria-hidden="true"><span class="skeleton"></span><span class="skeleton"></span><span class="skeleton"></span></div>'
       : '';
@@ -705,11 +705,18 @@ function render(data, wasForceRefresh, stream) {
   const sections = data.sections.map((s) => sectionHtml(s, unverified)).join('');
   const totalItems = data.sections.reduce((n, s) => n + s.items.length, 0);
 
+  // A gallery entry's label is often the provider's own id (an artwork alternative is labelled by
+  // whoever supplied it), so the credit replaces the caption there rather than repeating it.
+  const galleryCaption = (g) => {
+    const credit = g.credit ? creditLineHtml([g.credit]) : '';
+    const label = g.label && !(g.credit && g.credit.provider === g.label) ? esc(g.label) : '';
+    return label || credit ? `<figcaption>${label}${credit}</figcaption>` : '';
+  };
   const gallery = (data.gallery && data.gallery.length)
     ? `<div class="card gallery${unverified ? ' unverified' : ''}">${data.gallery.map((g) => `
       <figure>
         <img src="${esc(g.url)}" alt="${esc(g.label || '')}" onerror="this.closest('figure').remove()" />
-        ${g.label ? `<figcaption>${esc(g.label)}</figcaption>` : ''}
+        ${galleryCaption(g)}
       </figure>`).join('')}</div>`
     : '';
 
@@ -777,6 +784,7 @@ function render(data, wasForceRefresh, stream) {
         ${subtitle}
         ${genres}
         ${text}
+        ${creditLineHtml([summary.imageCredit, ...(summary.genreCredits || [])])}
       </div>
     </div>
     ${unverifiedBanner}
@@ -859,7 +867,10 @@ function sectionHtml(section, unverified) {
   // hidden so a section that never clips never shows a flash of a button.
   const toggle = `<button type="button" class="show-more" style="display:none">Show all ${section.items.length}</button>`;
   const chip = unverified ? ' <span class="badge badge-warn section-chip">unverified</span>' : '';
-  return `<div class="card section"><h3>${esc(section.label)} <span class="count">${section.items.length}</span>${chip}</h3><ul>${items}</ul>${toggle}</div>`;
+  // Under the card's own list, which is what "beside the data" means for a card: whoever supplied
+  // these rows is credited on the card that shows them, not in a footer a reader has to hunt in.
+  const credits = creditLineHtml(section.credits);
+  return `<div class="card section"><h3>${esc(section.label)} <span class="count">${section.items.length}</span>${chip}</h3><ul>${items}</ul>${toggle}${credits}</div>`;
 }
 
 // Per-card measure-after-render, mirroring setupTextToggle: a card's list is only "genuinely
