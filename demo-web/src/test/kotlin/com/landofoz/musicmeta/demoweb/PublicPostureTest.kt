@@ -71,12 +71,13 @@ class PublicPostureTest {
         ArtProvider("coverartarchive", caaArt, confidence = 0.5f),
     )
 
-    private fun startTestServer(providers: List<EnrichmentProvider>, publicPosture: Boolean): Int {
+    /** Wires an engine and a server exactly as `main` wires them for [posture]. */
+    private fun startTestServer(providers: List<EnrichmentProvider>, posture: PublicPosture): Int {
         val built = EnrichmentEngine.Builder()
             .apply { providers.forEach { addProvider(it) } }
             .cache(InMemoryEnrichmentCache())
             .build()
-        val engine = if (publicPosture) PublicPostureEngine(built) else built
+        val engine = if (posture.withholdsDiscogsImages) PublicPostureEngine(built) else built
         val port = (20000..40000).random()
         startServer(
             AtomicReference(engine),
@@ -86,7 +87,7 @@ class PublicPostureTest {
             // arms below is the posture's own row filter, not a key one arm happens to hold.
             ApiKeyConfig(),
             port,
-            unregisteredProviderIds = if (publicPosture) PUBLIC_UNREGISTERED_PROVIDER_IDS else emptySet(),
+            unregisteredProviderIds = posture.unregisteredProviderIds,
         )
         return port
     }
@@ -115,7 +116,7 @@ class PublicPostureTest {
         val keys = fullKeys
 
         // When - the posture is off
-        val effective = keys.underPublicPosture(enabled = false)
+        val effective = keys.underPublicPosture(PublicPosture(enabled = false))
 
         // Then - the configuration is handed back untouched
         assertEquals(keys, effective)
@@ -126,7 +127,7 @@ class PublicPostureTest {
         val keys = fullKeys
 
         // When - the posture is on
-        val effective = keys.underPublicPosture(enabled = true)
+        val effective = keys.underPublicPosture(PublicPosture(enabled = true))
 
         // Then - Last.fm and the ListenBrainz token are gone and the other two are untouched
         assertEquals(null, effective.lastFmKey)
@@ -149,10 +150,10 @@ class PublicPostureTest {
 
     @Test fun `a credential the posture withheld is never reported as missing`() {
         // Given - a configuration the posture has already emptied of Last.fm and ListenBrainz
-        val keys = fullKeys.underPublicPosture(enabled = true)
+        val keys = fullKeys.underPublicPosture(PublicPosture(enabled = true))
 
         // When - the startup report is built against what the posture withholds
-        val missing = missingCredentials(keys, withheldIds = PUBLIC_WITHHELD_CREDENTIAL_IDS)
+        val missing = missingCredentials(keys, withheldIds = PublicPosture(enabled = true).withheldCredentialIds)
 
         // Then - neither withheld credential is named, and nothing else is missing either
         assertEquals(emptyList<String>(), missing.required)
@@ -161,7 +162,7 @@ class PublicPostureTest {
 
     @Test fun `the providers table omits Last fm entirely under the posture`() {
         // Given - a public-posture instance with no Last.fm provider registered
-        val port = startTestServer(artProviders(), publicPosture = true)
+        val port = startTestServer(artProviders(), PublicPosture(enabled = true))
 
         // When - the providers table is fetched
         val response = get(port, "/api/providers")
@@ -175,7 +176,7 @@ class PublicPostureTest {
 
     @Test fun `the providers table keeps Last fm without the posture`() {
         // Given - the same instance with the posture off
-        val port = startTestServer(artProviders(), publicPosture = false)
+        val port = startTestServer(artProviders(), PublicPosture(enabled = false))
 
         // When - the providers table is fetched
         val response = get(port, "/api/providers")
@@ -190,7 +191,7 @@ class PublicPostureTest {
 
     @Test fun `an album enrichment carries no Discogs image under the posture`() {
         // Given - a public-posture instance whose Discogs provider answers ALBUM_ART with its own image
-        val port = startTestServer(artProviders(), publicPosture = true)
+        val port = startTestServer(artProviders(), PublicPosture(enabled = true))
 
         // When - an album is enriched
         val response = get(port, "/api/enrich?kind=album&name=Hunky+Dory&artist=David+Bowie")
@@ -204,12 +205,190 @@ class PublicPostureTest {
 
     @Test fun `an album enrichment carries the Discogs image without the posture`() {
         // Given - the same provider and request with the posture off
-        val port = startTestServer(artProviders(), publicPosture = false)
+        val port = startTestServer(artProviders(), PublicPosture(enabled = false))
 
         // When - an album is enriched
         val response = get(port, "/api/enrich?kind=album&name=Hunky+Dory&artist=David+Bowie")
 
         // Then - the Discogs image is served as it is today
+        assertEquals(200, response.statusCode())
+        assertTrue(response.body().contains(discogsArt))
+    }
+
+    @Test fun `an unset allow list relaxes nothing and finds no unknown token`() {
+        // Given - DEMO_PUBLIC_ALLOW never exported, and exported blank
+        val values = listOf(null, "", "  ", ",")
+
+        // When - each is parsed
+        val parsed = values.map { parsePublicRelaxations(it) }
+
+        // Then - none asks for a relaxation and none is treated as a typo
+        assertEquals(List(values.size) { ParsedRelaxations(emptySet(), emptyList()) }, parsed)
+    }
+
+    @Test fun `every relaxation token is recognised through whitespace and case`() {
+        // Given - the four tokens written as an operator plausibly types them
+        val value = " LastFM , listenbrainz,  Discogs-Images ,discogs-cache,"
+
+        // When - the list is parsed
+        val parsed = parsePublicRelaxations(value)
+
+        // Then - all four are recognised and nothing is left over
+        assertEquals(PublicRelaxation.entries.toSet(), parsed.recognised)
+        assertEquals(emptyList<String>(), parsed.unknown)
+    }
+
+    @Test fun `the all token lifts every restriction at once`() {
+        // Given - the shorthand an operator uses to run a public instance unrestricted
+        val value = RELAX_ALL_TOKEN
+
+        // When - the list is parsed into a posture
+        val posture = PublicPosture(enabled = true, relaxations = parsePublicRelaxations(value).recognised)
+
+        // Then - no restriction remains in force
+        assertFalse(posture.withholdsLastFm)
+        assertFalse(posture.withholdsListenBrainzToken)
+        assertFalse(posture.withholdsDiscogsImages)
+        assertFalse(posture.capsDiscogsFreshness)
+    }
+
+    @Test fun `a token naming no restriction is collected rather than dropped`() {
+        // Given - one good token beside a plausible misspelling of another
+        val value = "lastfm,discogs_images"
+
+        // When - the list is parsed
+        val parsed = parsePublicRelaxations(value)
+
+        // Then - the good token stands and the typo is surfaced, not silently absorbed
+        assertEquals(setOf(PublicRelaxation.LASTFM), parsed.recognised)
+        assertEquals(listOf("discogs_images"), parsed.unknown)
+    }
+
+    @Test fun `the refusal message names the offending tokens and every valid one`() {
+        // Given - two tokens that name nothing
+        val unknown = listOf("discogs_images", "lastFM!")
+
+        // When - the message a caller prints before refusing to start is built
+        val message = unknownRelaxationMessage(unknown)
+
+        // Then - it names both, and the full set an operator can choose from
+        assertTrue(message.contains("discogs_images"))
+        assertTrue(message.contains("lastFM!"))
+        PublicRelaxation.entries.forEach { assertTrue(it.token, message.contains(it.token)) }
+        assertTrue(message.contains(RELAX_ALL_TOKEN))
+    }
+
+    @Test fun `a relaxation is inert while the posture is off`() {
+        // Given - every relaxation asked for on an instance that is not public
+        val posture = PublicPosture(enabled = false, relaxations = PublicRelaxation.entries.toSet())
+
+        // When - the credential and provider decisions are read off it
+        val effective = fullKeys.underPublicPosture(posture)
+
+        // Then - nothing is restricted and nothing is withheld, exactly as with no relaxations
+        assertEquals(fullKeys, effective)
+        assertEquals(emptySet<String>(), posture.unregisteredProviderIds)
+        assertEquals(emptySet<String>(), posture.withheldCredentialIds)
+        assertFalse(posture.withholdsDiscogsImages)
+        assertFalse(posture.capsDiscogsFreshness)
+    }
+
+    @Test fun `relaxing lastfm passes the key through and restores its provider row`() {
+        // Given - a public posture with the Last.fm restriction lifted
+        val posture = PublicPosture(enabled = true, relaxations = setOf(PublicRelaxation.LASTFM))
+
+        // When - the credentials and the provider-table filter are read off it
+        val effective = fullKeys.underPublicPosture(posture)
+
+        // Then - the key reaches the engine and no id is held out of the table, while the
+        // ListenBrainz token stays withheld
+        assertEquals("lastfm-key", effective.lastFmKey)
+        assertEquals(null, effective.listenBrainzToken)
+        assertEquals(emptySet<String>(), posture.unregisteredProviderIds)
+        assertEquals(setOf("listenbrainz"), posture.withheldCredentialIds)
+    }
+
+    @Test fun `relaxing listenbrainz passes the personal token through`() {
+        // Given - a public posture with only the ListenBrainz restriction lifted
+        val posture = PublicPosture(enabled = true, relaxations = setOf(PublicRelaxation.LISTENBRAINZ))
+
+        // When - the credentials are read off it
+        val effective = fullKeys.underPublicPosture(posture)
+
+        // Then - the token reaches the engine and Last.fm stays off
+        assertEquals("listenbrainz-token", effective.listenBrainzToken)
+        assertEquals(null, effective.lastFmKey)
+        assertEquals(setOf("lastfm"), posture.withheldCredentialIds)
+    }
+
+    @Test fun `relaxing discogs-cache leaves the freshness ceiling unwired`() {
+        // Given - a public posture with only the Discogs cache restriction lifted
+        val posture = PublicPosture(enabled = true, relaxations = setOf(PublicRelaxation.DISCOGS_CACHE))
+
+        // When - the two Discogs decisions are read off it
+        val caps = posture.capsDiscogsFreshness
+        val images = posture.withholdsDiscogsImages
+
+        // Then - the ceiling is off and the image rule is untouched, so one token lifts one thing
+        assertFalse(caps)
+        assertTrue(images)
+    }
+
+    @Test fun `the startup line names what is restricted and what was relaxed`() {
+        // Given - a public posture with two of the four restrictions lifted
+        val posture = PublicPosture(
+            enabled = true,
+            relaxations = setOf(PublicRelaxation.LASTFM, PublicRelaxation.DISCOGS_CACHE),
+        )
+
+        // When - the startup line is built
+        val notice = posture.notice
+
+        // Then - it names both halves: what still binds, and what the operator chose to lift
+        assertTrue(notice.contains(PublicRelaxation.LISTENBRAINZ.restriction))
+        assertTrue(notice.contains(PublicRelaxation.DISCOGS_IMAGES.restriction))
+        assertFalse(notice.contains(PublicRelaxation.LASTFM.restriction))
+        assertTrue(notice.contains("Relaxed by DEMO_PUBLIC_ALLOW: lastfm, discogs-cache."))
+    }
+
+    @Test fun `the startup line says so when nothing is restricted or nothing is relaxed`() {
+        // Given - a fully restricted posture and a fully relaxed one
+        val restricted = PublicPosture(enabled = true)
+        val relaxed = PublicPosture(enabled = true, relaxations = PublicRelaxation.entries.toSet())
+
+        // When - both startup lines are built
+        val restrictedNotice = restricted.notice
+        val relaxedNotice = relaxed.notice
+
+        // Then - each half says "nothing" rather than trailing off, so neither reads as truncated
+        assertTrue(restrictedNotice.contains("Relaxed by DEMO_PUBLIC_ALLOW: nothing."))
+        assertTrue(relaxedNotice.contains("restricted: nothing."))
+    }
+
+    @Test fun `relaxing lastfm gives it a providers row back on a public instance`() {
+        // Given - a public instance with the Last.fm restriction lifted
+        val posture = PublicPosture(enabled = true, relaxations = setOf(PublicRelaxation.LASTFM))
+        val port = startTestServer(artProviders(), posture)
+
+        // When - the providers table is fetched
+        val response = get(port, "/api/providers")
+
+        // Then - Last.fm is back in the table, reporting its key state like any other provider
+        assertEquals(200, response.statusCode())
+        val rows = Json.parseToJsonElement(response.body()).jsonObject["providers"]!!.jsonArray
+            .associate { it.jsonObject["id"]!!.jsonPrimitive.content to it.jsonObject["keyStatus"] }
+        assertEquals("KEY_MISSING", rows["lastfm"]?.jsonPrimitive?.content)
+    }
+
+    @Test fun `relaxing discogs-images serves the Discogs image on a public instance`() {
+        // Given - a public instance with only the Discogs image restriction lifted
+        val posture = PublicPosture(enabled = true, relaxations = setOf(PublicRelaxation.DISCOGS_IMAGES))
+        val port = startTestServer(artProviders(), posture)
+
+        // When - an album is enriched
+        val response = get(port, "/api/enrich?kind=album&name=Hunky+Dory&artist=David+Bowie")
+
+        // Then - the Discogs image is served, so the relaxation reaches the engine wiring itself
         assertEquals(200, response.statusCode())
         assertTrue(response.body().contains(discogsArt))
     }

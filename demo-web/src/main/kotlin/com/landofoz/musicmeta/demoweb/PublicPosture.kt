@@ -26,32 +26,118 @@ internal const val DISCOGS_ID = "discogs"
 internal fun publicPostureEnabled(value: String?): Boolean = value == "1"
 
 /**
- * Provider ids a public instance never registers, whatever credentials the environment carries.
- * Last.fm's API terms require prior written approval for a public page (2.7).
+ * One restriction a public instance applies, the `DEMO_PUBLIC_ALLOW` token that lifts it, and how
+ * the startup line words it while it is in force. Declaration order is the order both lists in
+ * that line are printed in.
  */
-internal val PUBLIC_UNREGISTERED_PROVIDER_IDS = setOf("lastfm")
+internal enum class PublicRelaxation(val token: String, val restriction: String) {
+    LASTFM("lastfm", "Last.fm not registered (API ToS 2.7 — public use needs prior written approval)"),
+    LISTENBRAINZ("listenbrainz", "ListenBrainz personal token withheld (account-scoped)"),
+    DISCOGS_IMAGES("discogs-images", "Discogs images withheld (Restricted Data)"),
+    DISCOGS_CACHE("discogs-cache", "Discogs-sourced data expires after 6h (API ToU)"),
+}
+
+/** The `DEMO_PUBLIC_ALLOW` token that lifts every restriction at once. */
+internal const val RELAX_ALL_TOKEN = "all"
+
+/** What one `DEMO_PUBLIC_ALLOW` value asked for, and which of its tokens named nothing. */
+internal data class ParsedRelaxations(
+    val recognised: Set<PublicRelaxation>,
+    val unknown: List<String>,
+)
 
 /**
- * Provider ids whose credential a public instance drops on purpose. Superset of
- * [PUBLIC_UNREGISTERED_PROVIDER_IDS]: ListenBrainz still registers keyless, only its
- * account-scoped personal token is withheld. The startup report reads this so a deliberate
- * withholding is never printed as a missing key.
+ * `DEMO_PUBLIC_ALLOW` read as a comma-separated token list. Surrounding whitespace and case are
+ * normalised — neither can be a typo — and an empty element is skipped, so a trailing comma is
+ * not an error. Anything else lands in [ParsedRelaxations.unknown] for the caller to refuse.
  */
-internal val PUBLIC_WITHHELD_CREDENTIAL_IDS = PUBLIC_UNREGISTERED_PROVIDER_IDS + "listenbrainz"
+internal fun parsePublicRelaxations(value: String?): ParsedRelaxations {
+    val byToken = PublicRelaxation.entries.associateBy { it.token }
+    val recognised = linkedSetOf<PublicRelaxation>()
+    val unknown = mutableListOf<String>()
+    value.orEmpty().split(',')
+        .map { it.trim().lowercase() }
+        .filter { it.isNotEmpty() }
+        .forEach { token ->
+            when {
+                token == RELAX_ALL_TOKEN -> recognised.addAll(PublicRelaxation.entries)
+                byToken.containsKey(token) -> recognised.add(byToken.getValue(token))
+                else -> unknown.add(token)
+            }
+        }
+    return ParsedRelaxations(recognised, unknown)
+}
 
-/** One line, printed at startup, naming every provider a public instance limits and why. */
-internal const val PUBLIC_POSTURE_NOTICE =
-    "DEMO_PUBLIC=1: Last.fm not registered (API ToS 2.7 — public use needs prior written approval); " +
-        "ListenBrainz personal token withheld (account-scoped); Discogs images withheld " +
-        "(Restricted Data) and Discogs-sourced data expires after 6h (API ToU)."
+/** What a caller prints before refusing to start over [unknown]. */
+internal fun unknownRelaxationMessage(unknown: List<String>): String {
+    val valid = (PublicRelaxation.entries.map { it.token } + RELAX_ALL_TOKEN).joinToString(", ")
+    return "DEMO_PUBLIC_ALLOW: unrecognised ${if (unknown.size == 1) "token" else "tokens"} " +
+        "${unknown.joinToString(", ")} — expected any of: $valid."
+}
 
 /**
- * [keys] with every credential a public instance withholds removed, so the engine cannot register
- * a provider or authenticate a call the posture forbids. Returns [keys] unchanged when [enabled]
- * is false.
+ * Which restrictions this instance is under: whether it serves the public at all, and which
+ * restrictions an operator lifted with `DEMO_PUBLIC_ALLOW`. Every question below answers "not
+ * restricted" while [enabled] is false, so an unset `DEMO_PUBLIC` takes the same branches it
+ * always did whatever `DEMO_PUBLIC_ALLOW` holds.
  */
-internal fun ApiKeyConfig.underPublicPosture(enabled: Boolean): ApiKeyConfig =
-    if (!enabled) this else copy(lastFmKey = null, listenBrainzToken = null)
+internal data class PublicPosture(
+    val enabled: Boolean,
+    val relaxations: Set<PublicRelaxation> = emptySet(),
+) {
+
+    private fun restricts(relaxation: PublicRelaxation) = enabled && relaxation !in relaxations
+
+    /** Last.fm's API terms require prior written approval for a public page (2.7). */
+    val withholdsLastFm: Boolean get() = restricts(PublicRelaxation.LASTFM)
+
+    val withholdsListenBrainzToken: Boolean get() = restricts(PublicRelaxation.LISTENBRAINZ)
+
+    val withholdsDiscogsImages: Boolean get() = restricts(PublicRelaxation.DISCOGS_IMAGES)
+
+    val capsDiscogsFreshness: Boolean get() = restricts(PublicRelaxation.DISCOGS_CACHE)
+
+    /** Provider ids this instance declines to register whatever credentials the environment carries. */
+    val unregisteredProviderIds: Set<String>
+        get() = if (withholdsLastFm) setOf("lastfm") else emptySet()
+
+    /**
+     * Provider ids whose credential this instance drops on purpose. Superset of
+     * [unregisteredProviderIds]: ListenBrainz still registers keyless, only its account-scoped
+     * personal token is withheld. The startup report reads this so a deliberate withholding is
+     * never printed as a missing key.
+     */
+    val withheldCredentialIds: Set<String>
+        get() = unregisteredProviderIds + if (withholdsListenBrainzToken) setOf("listenbrainz") else emptySet()
+
+    /**
+     * One line for the startup log, naming what is still restricted and what an operator relaxed.
+     * Both halves are always present: a posture that says only what it forbids cannot be read as
+     * evidence of what it permits.
+     */
+    val notice: String
+        get() {
+            val restricted = PublicRelaxation.entries.filter { restricts(it) }.joinToString("; ") { it.restriction }
+            val relaxed = PublicRelaxation.entries.filter { it in relaxations }.joinToString(", ") { it.token }
+            return "DEMO_PUBLIC=1 — restricted: ${restricted.ifEmpty { "nothing" }}. " +
+                "Relaxed by DEMO_PUBLIC_ALLOW: ${relaxed.ifEmpty { "nothing" }}."
+        }
+}
+
+/**
+ * [keys] with every credential [posture] withholds removed, so the engine cannot register a
+ * provider or authenticate a call the posture forbids. Returns [keys] unchanged for a posture
+ * that is not enabled.
+ */
+internal fun ApiKeyConfig.underPublicPosture(posture: PublicPosture): ApiKeyConfig =
+    if (!posture.enabled) {
+        this
+    } else {
+        copy(
+            lastFmKey = lastFmKey.takeUnless { posture.withholdsLastFm },
+            listenBrainzToken = listenBrainzToken.takeUnless { posture.withholdsListenBrainzToken },
+        )
+    }
 
 /**
  * An [EnrichmentEngine] that never lets a Discogs image reach a caller: Discogs images are

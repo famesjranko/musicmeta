@@ -9,6 +9,7 @@ import com.landofoz.musicmeta.cache.CacheMode
 import com.landofoz.musicmeta.cache.InMemoryEnrichmentCache
 import java.io.File
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.system.exitProcess
 
 private const val CONTACT = "https://github.com/famesjranko/musicmeta"
 
@@ -32,14 +33,23 @@ private fun KeySpec.resolve(secrets: Map<String, String>) = secrets[secretsKey] 
 fun main() {
     val port = env("PORT")?.toIntOrNull() ?: 8099
     val secrets = loadSecrets()
-    val publicPosture = publicPostureEnabled(env("DEMO_PUBLIC"))
+    val requested = parsePublicRelaxations(env("DEMO_PUBLIC_ALLOW"))
+    val posture = PublicPosture(publicPostureEnabled(env("DEMO_PUBLIC")), requested.recognised)
+    // Refused rather than ignored, and only where the variable does anything: a relaxation is an
+    // operator's explicit choice, so a token that names nothing is a choice this process cannot
+    // carry out. Failing here leaves the previous deployment serving; accepting the typo would
+    // leave a posture nobody chose, which is what DEMO_PUBLIC exists to rule out.
+    if (posture.enabled && requested.unknown.isNotEmpty()) {
+        System.err.println(unknownRelaxationMessage(requested.unknown))
+        exitProcess(64)
+    }
     val keys = ApiKeyConfig(
         lastFmKey = LASTFM.resolve(secrets),
         fanartTvProjectKey = FANARTTV.resolve(secrets),
         discogsPersonalToken = DISCOGS.resolve(secrets),
         listenBrainzToken = LISTENBRAINZ.resolve(secrets),
-    ).underPublicPosture(publicPosture)
-    val cache = InMemoryEnrichmentCache().let { if (publicPosture) DiscogsFreshnessCache(it) else it }
+    ).underPublicPosture(posture)
+    val cache = InMemoryEnrichmentCache().let { if (posture.capsDiscogsFreshness) DiscogsFreshnessCache(it) else it }
 
     fun buildEngine(cacheMode: CacheMode): EnrichmentEngine {
         // This demo exists to show what every provider returns, so a type dropped to meet the
@@ -58,7 +68,7 @@ fun main() {
             .contact(CONTACT)
             .withDefaultProviders()
             .build()
-        return if (publicPosture) PublicPostureEngine(engine) else engine
+        return if (posture.withholdsDiscogsImages) PublicPostureEngine(engine) else engine
     }
 
     // The same shared `cache` above every rebuild passes to `buildEngine` is what makes the
@@ -69,9 +79,8 @@ fun main() {
     val engineRef = AtomicReference(buildEngine(CacheMode.NETWORK_FIRST))
     val cacheModeRef = AtomicReference(CacheMode.NETWORK_FIRST)
 
-    val withheld = if (publicPosture) PUBLIC_WITHHELD_CREDENTIAL_IDS else emptySet()
-    val missing = missingCredentials(keys, withheld)
-    if (publicPosture) println(PUBLIC_POSTURE_NOTICE)
+    val missing = missingCredentials(keys, posture.withheldCredentialIds)
+    if (posture.enabled) println(posture.notice)
     if (missing.required.isNotEmpty()) {
         println(
             "No key set for: ${missing.required.joinToString(", ")} — those providers are skipped. " +
@@ -91,7 +100,7 @@ fun main() {
         ::buildEngine,
         keys,
         port,
-        unregisteredProviderIds = if (publicPosture) PUBLIC_UNREGISTERED_PROVIDER_IDS else emptySet(),
+        unregisteredProviderIds = posture.unregisteredProviderIds,
     )
     println("musicmeta web demo running at http://localhost:$port")
 }

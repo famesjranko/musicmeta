@@ -54,6 +54,10 @@ fi
 # DEMO_PUBLIC=1 belongs to the deploy, not to whoever runs it: the provider posture a hosted
 # instance owes its upstreams cannot depend on an operator remembering an export. `--update-env-vars`
 # rather than `--set-env-vars` so it adds to whatever else the service already carries.
+#
+# DEMO_PUBLIC_ALLOW lifts individual restrictions (see demo-web/README.md) and is deliberately not
+# set here: taking a provider's terms on yourself is a decision per deployment, not a default this
+# script makes for you. Set it on the service by hand if you mean it.
 CLOUDSDK_CORE_PROJECT="$PROJECT" gcloud run deploy "$SERVICE" \
     --region "$REGION" \
     --image "$IMAGE" \

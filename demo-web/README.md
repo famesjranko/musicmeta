@@ -28,3 +28,11 @@ so each provider is credited in text until those are accepted and an asset can b
 whatever keys the environment carries: Last.fm is not registered, the ListenBrainz personal token
 is withheld, Discogs images never leave the process, and Discogs-sourced data is refetched every
 six hours. Unset — every local run — nothing above applies. The startup log states the posture.
+
+`DEMO_PUBLIC_ALLOW` lifts individual restrictions on a public instance, comma separated:
+`lastfm` (register Last.fm and pass its key), `listenbrainz` (pass the personal token),
+`discogs-images` (serve Discogs images), `discogs-cache` (drop the six-hour ceiling), or `all`.
+Each one is a deliberate choice to take on that provider's terms yourself, and the startup log
+names what was lifted alongside what still binds. A token that names no restriction refuses the
+start rather than being ignored, so a typo cannot quietly leave a posture nobody chose. With
+`DEMO_PUBLIC` unset the variable does nothing at all, typos included.
