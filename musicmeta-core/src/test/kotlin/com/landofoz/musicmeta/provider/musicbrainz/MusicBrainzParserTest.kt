@@ -579,6 +579,18 @@ class MusicBrainzParserTest {
     }
 
     @Test
+    fun `parseLookupRelease reads a cover-art-archive object with no front key as unknown`() {
+        // Given - a release lookup response whose cover-art-archive object carries no front key
+        val json = JSONObject(LOOKUP_RELEASE_NO_FRONT_KEY)
+
+        // When - parsing as a lookup release
+        val release = MusicBrainzParser.parseLookupRelease(json)
+
+        // Then - the absent key reads as unknown, not as the false org.json would hand back
+        assertNull(release?.hasFrontCover)
+    }
+
+    @Test
     fun `parseLookupArtist parses top-level entity with relations`() {
         // Given - a direct artist lookup response with Wikidata and Wikipedia relations
         val json = JSONObject(LOOKUP_ARTIST)
@@ -1468,6 +1480,17 @@ class MusicBrainzParserTest {
               "country": "GB",
               "release-group": {"id": "rg1", "primary-type": "Album"},
               "cover-art-archive": {"back": true, "artwork": true, "darkened": false, "count": 6, "front": true}
+            }
+        """.trimIndent()
+
+        // Shaped by hand, not captured: a live lookup always sends `front`. It pins what the parser
+        // does with an object that cannot answer, which is what `optBoolean`'s default would hide.
+        private val LOOKUP_RELEASE_NO_FRONT_KEY = """
+            {
+              "id": "look2",
+              "title": "The Bends",
+              "artist-credit": [{"artist": {"name": "Radiohead"}}],
+              "cover-art-archive": {"artwork": true, "darkened": false, "count": 6}
             }
         """.trimIndent()
 
