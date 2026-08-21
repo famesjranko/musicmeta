@@ -360,6 +360,145 @@ class ProfileMapperTest {
     }
 
     @Test
+    fun `album summary image prefers a CDN-hosted alternative over the Cover Art Archive primary`() {
+        // Given - an album whose primary art is Cover Art Archive but an alternative is Deezer-hosted
+        val results = resultsOf(
+            EnrichmentType.ALBUM_ART to EnrichmentData.Artwork(
+                url = "https://coverartarchive.org/release/1/primary.jpg",
+                alternatives = listOf(
+                    ArtworkSource(provider = "deezer", url = "https://e-cdns-images.dzcdn.net/images/cover.jpg"),
+                ),
+            ),
+        )
+        val profile = AlbumProfile(title = "Master of Puppets", artist = "Metallica", results = results)
+
+        // When - mapping to a demo response
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        // Then - the summary card image is the fast CDN alternative, not the archive.org primary
+        assertEquals("https://e-cdns-images.dzcdn.net/images/cover.jpg", response.summary.imageUrl)
+    }
+
+    @Test
+    fun `album summary image keeps the primary art when no alternative is CDN-hosted`() {
+        // Given - an album whose only alternative is also Cover Art Archive
+        val results = resultsOf(
+            EnrichmentType.ALBUM_ART to EnrichmentData.Artwork(
+                url = "https://coverartarchive.org/release/1/primary.jpg",
+                alternatives = listOf(
+                    ArtworkSource(provider = "coverartarchive", url = "https://coverartarchive.org/release/1/back.jpg"),
+                ),
+            ),
+        )
+        val profile = AlbumProfile(title = "Master of Puppets", artist = "Metallica", results = results)
+
+        // When - mapping to a demo response
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        // Then - the summary card keeps the ranked primary art URL
+        assertEquals("https://coverartarchive.org/release/1/primary.jpg", response.summary.imageUrl)
+    }
+
+    @Test
+    fun `album summary image is not fooled by a host that merely contains a CDN suffix as a substring`() {
+        // Given - an alternative whose URL contains "mzstatic.com" only as part of an unrelated host
+        val results = resultsOf(
+            EnrichmentType.ALBUM_ART to EnrichmentData.Artwork(
+                url = "https://coverartarchive.org/release/1/primary.jpg",
+                alternatives = listOf(
+                    ArtworkSource(provider = "spoof", url = "https://notmzstatic.com.evil.example/cover.jpg"),
+                ),
+            ),
+        )
+        val profile = AlbumProfile(title = "Master of Puppets", artist = "Metallica", results = results)
+
+        // When - mapping to a demo response
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        // Then - the spoofed host is rejected and the primary art is kept
+        assertEquals("https://coverartarchive.org/release/1/primary.jpg", response.summary.imageUrl)
+    }
+
+    @Test
+    fun `track summary image prefers a CDN-hosted alternative over the Cover Art Archive primary`() {
+        // Given - a track whose album art alternative is iTunes-hosted
+        val results = resultsOf(
+            EnrichmentType.ALBUM_ART to EnrichmentData.Artwork(
+                url = "https://coverartarchive.org/release/1/primary.jpg",
+                alternatives = listOf(
+                    ArtworkSource(provider = "itunes", url = "https://a1.mzstatic.com/us/r1000/cover.jpg"),
+                ),
+            ),
+        )
+        val profile = TrackProfile(title = "Master of Puppets", artist = "Metallica", results = results)
+
+        // When - mapping to a demo response
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        // Then - the summary card image is the fast CDN alternative
+        assertEquals("https://a1.mzstatic.com/us/r1000/cover.jpg", response.summary.imageUrl)
+    }
+
+    @Test
+    fun `artist summary uses fanart-tv preview variants for image and background`() {
+        // Given - an artist whose photo and background are both hosted on assets.fanart.tv
+        val results = resultsOf(
+            EnrichmentType.ARTIST_PHOTO to EnrichmentData.Artwork(
+                url = "https://assets.fanart.tv/fanart/radiohead-4e68f40838818.jpg",
+            ),
+            EnrichmentType.ARTIST_BACKGROUND to EnrichmentData.Artwork(
+                url = "https://assets.fanart.tv/fanart/radiohead-503beb86c3395.jpg",
+            ),
+        )
+        val profile = ArtistProfile(name = "Radiohead", results = results)
+
+        // When - mapping to a demo response
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        // Then - both summary card slots use the smaller "/preview/" path, not the full-size original
+        assertEquals("https://assets.fanart.tv/preview/radiohead-4e68f40838818.jpg", response.summary.imageUrl)
+        assertEquals(
+            "https://assets.fanart.tv/preview/radiohead-503beb86c3395.jpg",
+            response.summary.backgroundImageUrl,
+        )
+    }
+
+    @Test
+    fun `artist gallery keeps full-size fanart-tv images`() {
+        // Given - an artist whose logo is hosted on assets.fanart.tv
+        val results = resultsOf(
+            EnrichmentType.ARTIST_LOGO to EnrichmentData.Artwork(
+                url = "https://assets.fanart.tv/fanart/radiohead-503bea2d9cbc8.png",
+            ),
+        )
+        val profile = ArtistProfile(name = "Radiohead", results = results)
+
+        // When - mapping to a demo response
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        // Then - the gallery entry keeps the full-size "/fanart/" path
+        val logo = response.gallery.first { it.label == "Logo" }
+        assertEquals("https://assets.fanart.tv/fanart/radiohead-503bea2d9cbc8.png", logo.url)
+    }
+
+    @Test
+    fun `artist summary image ignores a fanart-tv-lookalike host`() {
+        // Given - an artist photo whose host merely contains "assets.fanart.tv" as a substring
+        val results = resultsOf(
+            EnrichmentType.ARTIST_PHOTO to EnrichmentData.Artwork(
+                url = "https://notassets.fanart.tv.evil.example/fanart/radiohead.jpg",
+            ),
+        )
+        val profile = ArtistProfile(name = "Radiohead", results = results)
+
+        // When - mapping to a demo response
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        // Then - the spoofed host is not rewritten to the preview path
+        assertEquals("https://notassets.fanart.tv.evil.example/fanart/radiohead.jpg", response.summary.imageUrl)
+    }
+
+    @Test
     fun `discography groups qualifier-suffixed editions of the same album into one row`() {
         // Given - three discography entries for the same album that differ only by a qualifier suffix
         val results = resultsOf(
