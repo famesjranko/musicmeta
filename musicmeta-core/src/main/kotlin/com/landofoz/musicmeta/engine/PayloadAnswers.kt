@@ -60,7 +60,8 @@ internal fun EnrichmentData.answers(type: EnrichmentType): Boolean = when (this)
 }
 
 /**
- * Does this cached payload carry genre tags that never learned whether they were curated?
+ * Does this cached entry carry genre tags, under a type a reader takes them from, that never
+ * learned whether they were curated?
  *
  * [com.landofoz.musicmeta.GenreTag.curated] is `null` on an entry persisted before the field
  * existed, and on one whose provider could not tell — so the payload answers a strictly poorer
@@ -68,18 +69,23 @@ internal fun EnrichmentData.answers(type: EnrichmentType): Boolean = when (this)
  * vocabulary. GENRE's TTL is 90 days, so waiting it out would hide the curated ranking for a quarter
  * of a year on every entity a consumer had already looked up.
  *
- * **Not keyed on `GENRE`.** `EnrichmentResults.genres`/`genreTags` fall back to `ALBUM_METADATA`,
- * which carries the same [EnrichmentData.Metadata] and the same `genreTags`, so a consumer asking
- * only for `ALBUM_METADATA` reads the tags off that entry instead. Any payload holding the field is
- * therefore the unit that heals — and only that: a payload with no `genreTags` at all is untouched,
- * so nothing about this reopens `LABEL`, `COUNTRY`, artwork or any other cached type.
+ * Keyed on `GENRE` *and* `ALBUM_METADATA` — the two entries `EnrichmentResults.genres`/`genreTags`
+ * read, in that fallback order — and on no other type. The same [EnrichmentData.Metadata] payload
+ * is cached per-type under `LABEL`, `RELEASE_DATE`, `RELEASE_TYPE` and `COUNTRY` too, tags and all,
+ * but no reader ever takes genre tags from those entries, so an unknown marking there is not a
+ * poorer answer to anything. Healing them is worse than pointless: MusicBrainz's degraded mapping
+ * writes `curated = null` again on every fetch it cannot ask on, so the "heal" re-misses on every
+ * call for the entry's whole TTL.
  *
  * Read on the cache path only, as a *miss*: the providers run and the write-back replaces the entry,
- * exactly as an unanswered entry heals ([answers]). It cannot loop, because a provider that *did*
- * look writes `false` — an entity with no curated genres is an answer, not an unknown.
+ * exactly as an unanswered entry heals ([answers]). On the two types it applies to, convergence is
+ * the merger's doing: `GENRE` is written from [GenreMerger], whose output tags always carry a
+ * concrete `curated`, and an `ALBUM_METADATA` winner writes `false` where it looked — only a
+ * fetch-path that can never ask keeps re-missing, which is the trade the healing accepts there.
  */
-internal fun EnrichmentData.hasUnknownGenreCuration(): Boolean =
-    this is EnrichmentData.Metadata && genreTags?.any { it.curated == null } == true
+internal fun EnrichmentData.hasUnknownGenreCuration(type: EnrichmentType): Boolean =
+    (type == EnrichmentType.GENRE || type == EnrichmentType.ALBUM_METADATA) &&
+        this is EnrichmentData.Metadata && genreTags?.any { it.curated == null } == true
 
 /**
  * One [EnrichmentData.Metadata] serves six types, and a provider fills only the fields its upstream
