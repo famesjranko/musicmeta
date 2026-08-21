@@ -921,7 +921,8 @@ class MusicBrainzProviderTest {
                 "id": "group123",
                 "primary-type": "Album",
                 "tags": [{"name": "alternative rock", "count": 5}]
-              }
+              },
+              "cover-art-archive": {"back": true, "artwork": true, "darkened": false, "count": 6, "front": true}
             }
         """.trimIndent()
 
