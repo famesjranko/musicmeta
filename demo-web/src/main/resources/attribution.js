@@ -42,6 +42,9 @@ const PROVIDER_CREDITS = {
   itunes: {
     name: 'iTunes',
     site: 'https://music.apple.com/',
+    // Apple's identity guidelines: only the badge artwork Apple provides, unmodified, linked to
+    // the store page — so the credit is the official badge, not a text label.
+    badge: { src: '/apple-music-badge.svg', alt: 'Listen on Apple Music' },
     previewNotice: 'preview provided courtesy of iTunes.',
   },
   deezer: {
@@ -63,7 +66,10 @@ function creditHtml(credit) {
   const entry = PROVIDER_CREDITS[credit.provider];
   if (!entry) return `<span class="credit-item">${escapeHtml(credit.provider)}</span>`;
   const href = credit.url || entry.site;
-  const body = linkHtml(href, entry.label || entry.name);
+  const body = entry.badge
+    ? `<a href="${escapeHtml(href)}" target="_blank" rel="noopener">` +
+      `<img class="credit-badge" src="${escapeHtml(entry.badge.src)}" alt="${escapeHtml(entry.badge.alt)}"></a>`
+    : linkHtml(href, entry.label || entry.name);
   return `<span class="credit-item">${escapeHtml(entry.prefix || '')}${body}` +
     `${escapeHtml(entry.suffix || '')}${entry.extraHtml || ''}</span>`;
 }

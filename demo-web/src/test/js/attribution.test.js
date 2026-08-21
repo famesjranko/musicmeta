@@ -52,9 +52,24 @@ test('Last.fm carries the AudioScrobbler badge and a link back to its catalogue 
 test('each shipped provider is credited by name rather than by its bare id', () => {
   const ids = ['musicbrainz', 'coverartarchive', 'wikidata', 'fanarttv', 'listenbrainz', 'lrclib', 'itunes', 'deezer'];
   const html = creditLineHtml(ids.map((provider) => ({ provider })));
-  for (const named of ['MusicBrainz', 'Cover Art Archive', 'Wikidata', 'Fanart.tv', 'ListenBrainz', 'LRCLIB', 'iTunes', 'Deezer']) {
+  for (const named of ['MusicBrainz', 'Cover Art Archive', 'Wikidata', 'Fanart.tv', 'ListenBrainz', 'LRCLIB', 'Deezer']) {
     assert.match(html, new RegExp(named.replace('.', '\\.')));
   }
+  // iTunes is named by its badge's alt text — the artwork is the credit, per Apple's guidelines.
+  assert.match(html, /alt="Listen on Apple Music"/);
+});
+
+test('an iTunes credit renders the official badge, linked to the store page it was given', () => {
+  const html = creditLineHtml([{ provider: 'itunes', url: 'https://music.apple.com/us/album/ok-computer/1097861387' }]);
+  assert.match(html, /<img[^>]*src="\/apple-music-badge\.svg"/);
+  assert.match(html, /alt="Listen on Apple Music"/);
+  assert.match(html, /href="https:\/\/music\.apple\.com\/us\/album\/ok-computer\/1097861387"/);
+});
+
+test('an iTunes credit with no store link still shows the badge, linking the storefront', () => {
+  const html = creditLineHtml([{ provider: 'itunes' }]);
+  assert.match(html, /<img[^>]*src="\/apple-music-badge\.svg"/);
+  assert.match(html, /href="https:\/\/music\.apple\.com\/"/);
 });
 
 test('the same provider credited twice is credited once', () => {

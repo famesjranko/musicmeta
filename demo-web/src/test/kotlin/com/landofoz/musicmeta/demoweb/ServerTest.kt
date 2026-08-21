@@ -29,6 +29,22 @@ class ServerTest {
         assertEquals(emptyList<String>(), absent)
     }
 
+    @Test
+    fun `the Apple badge ships as a routed static asset with an image content type`() {
+        // Given - the badge artwork attribution.js references by URL
+        val path = "/apple-music-badge.svg"
+
+        // When - checking the static routes, the packaged resources, and the type it serves as
+        val routed = path in STATIC_PATHS
+        val packaged = ServerTest::class.java.getResourceAsStream(path) != null
+        val contentType = staticContentTypeOf(path)
+
+        // Then - the page can fetch it, and a browser renders it as an image rather than a script
+        assertTrue(routed)
+        assertTrue(packaged)
+        assertEquals("image/svg+xml", contentType)
+    }
+
     private fun liveInfo(id: String, displayName: String, requiresApiKey: Boolean = false) = ProviderInfo(
         id = id,
         displayName = displayName,

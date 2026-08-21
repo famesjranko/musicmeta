@@ -1064,6 +1064,11 @@ footer a:hover { color: var(--text); border-color: var(--text); }
 
 .credit-line a:hover { color: var(--text-soft); border-color: var(--text-soft); }
 
+/* Apple's badge artwork ships as-is; sizing keeps it legible without dwarfing the credit line,
+   and the link around it gets no underline hardware of its own. */
+.credit-badge { height: 26px; display: inline-block; vertical-align: middle; }
+.credit-line a:has(.credit-badge) { border-bottom: none; }
+
 /* The caption itself clips to one line; a credit is owed in full, so it wraps instead. */
 .gallery figcaption .credit-line {
   justify-content: center;
