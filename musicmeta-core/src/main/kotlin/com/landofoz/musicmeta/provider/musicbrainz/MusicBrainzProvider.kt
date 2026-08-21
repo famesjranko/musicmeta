@@ -89,13 +89,19 @@ class MusicBrainzProvider(
             is EnrichmentRequest.ForTrack -> searchTrackCandidates(request, limit)
         }
 
+    /**
+     * [SearchCandidate.thumbnailUrl] is null for every hit a release search returns: only a
+     * known-true [MusicBrainzRelease.hasFrontCover] can tell a Cover Art Archive url from a 404,
+     * and a search response carries nothing to answer it with. Asking per candidate would cost one
+     * rate-limited lookup each.
+     */
     private suspend fun searchAlbumCandidates(
         request: EnrichmentRequest.ForAlbum, limit: Int,
     ): List<SearchCandidate> {
         val releases = api.searchReleases(request.title, request.artist, limit)
             .ifEmpty { api.searchReleasesFuzzy(request.title, request.artist, limit) }
         return releases.map { release ->
-            val thumb = if (release.hasFrontCover) {
+            val thumb = if (release.hasFrontCover == true) {
                 "https://coverartarchive.org/release/${release.id}/front-$thumbnailSize"
             } else null
             SearchCandidate(
