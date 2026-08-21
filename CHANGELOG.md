@@ -55,6 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - No `NotFound` a `CatalogFilterMode` produces by emptying a `Success` is negative-cached any more — covers a live answer, a `STALE_IF_ERROR` substitute, and a fresh cache hit re-filtered later
 - A `CompositeSynthesizer`'s `NotFound` no longer negative-caches when synthesized over a `STALE_IF_ERROR`-substituted dependency — it describes a past call's stale snapshot, not this one
 - An abandoned run (after `close()`, or a deadline firing before identity resolution starts) now reports `NOT_ATTEMPTED_DISABLED` when `enableIdentityResolution` is false, instead of always `FAILED`
+- Track-scoped album art now reaches Deezer/iTunes/Discogs when the album title is known
 
 ## [0.12.0] - 2026-08-18
 

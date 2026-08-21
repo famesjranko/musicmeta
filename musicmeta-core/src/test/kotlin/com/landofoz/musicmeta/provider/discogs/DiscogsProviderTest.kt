@@ -80,6 +80,50 @@ class DiscogsProviderTest {
     }
 
     @Test
+    fun `enrich returns album art for a track request naming its album`() = runTest {
+        // Given - the same search results, but the request is track-scoped with an album name
+        httpClient.givenJsonResponse("discogs.com", SEARCH_RESULTS_JSON)
+        val forTrack = EnrichmentRequest.forTrack("Karma Police", "Radiohead", album = "OK Computer")
+        val forAlbum = EnrichmentRequest.forAlbum(title = "OK Computer", artist = "Radiohead")
+
+        // When - enriching for album art from each request shape
+        val trackResult = provider.enrich(forTrack, EnrichmentType.ALBUM_ART) as EnrichmentResult.Success
+        val albumResult = provider.enrich(forAlbum, EnrichmentType.ALBUM_ART) as EnrichmentResult.Success
+
+        // Then - same art and the same confidence semantics as the ForAlbum path
+        val trackData = trackResult.data as EnrichmentData.Artwork
+        val albumData = albumResult.data as EnrichmentData.Artwork
+        assertEquals(albumData.url, trackData.url)
+        assertEquals(albumResult.confidence, trackResult.confidence)
+    }
+
+    @Test
+    fun `enrich returns NotFound for a track request with no album`() = runTest {
+        // Given - a track request naming no album at all
+        httpClient.givenJsonResponse("discogs.com", SEARCH_RESULTS_JSON)
+        val request = EnrichmentRequest.forTrack("Karma Police", "Radiohead", album = null)
+
+        // When - enriching for album art
+        val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
+
+        // Then - NotFound because there is no album title to search with
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `enrich returns NotFound for label from a track request naming its album`() = runTest {
+        // Given - the same search results, but the request is track-scoped with an album name
+        httpClient.givenJsonResponse("discogs.com", SEARCH_RESULTS_JSON)
+        val request = EnrichmentRequest.forTrack("Karma Police", "Radiohead", album = "OK Computer")
+
+        // When - enriching for label, which stays ForAlbum-only
+        val result = provider.enrich(request, EnrichmentType.LABEL)
+
+        // Then - NotFound because only ALBUM_ART widens to accept a track request
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
     fun `enrich returns label from search`() = runTest {
         // Given - search results containing a label
         httpClient.givenJsonResponse("discogs.com", SEARCH_RESULTS_JSON)

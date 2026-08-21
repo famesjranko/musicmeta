@@ -55,6 +55,50 @@ class ITunesProviderTest {
     }
 
     @Test
+    fun `enrich returns album art for a track request naming its album`() = runTest {
+        // Given - the same iTunes response, but the request is track-scoped with an album name
+        httpClient.givenJsonResponse("itunes.apple.com", ITUNES_RESPONSE)
+        val forTrack = EnrichmentRequest.forTrack("Karma Police", "Radiohead", album = "OK Computer")
+        val forAlbum = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+
+        // When - enriching for album art from each request shape
+        val trackResult = provider.enrich(forTrack, EnrichmentType.ALBUM_ART) as EnrichmentResult.Success
+        val albumResult = provider.enrich(forAlbum, EnrichmentType.ALBUM_ART) as EnrichmentResult.Success
+
+        // Then - same art and the same confidence semantics as the ForAlbum path
+        val trackData = trackResult.data as EnrichmentData.Artwork
+        val albumData = albumResult.data as EnrichmentData.Artwork
+        assertEquals(albumData.url, trackData.url)
+        assertEquals(albumResult.confidence, trackResult.confidence)
+    }
+
+    @Test
+    fun `enrich returns NotFound for a track request with no album`() = runTest {
+        // Given - a track request naming no album at all
+        httpClient.givenJsonResponse("itunes.apple.com", ITUNES_RESPONSE)
+        val request = EnrichmentRequest.forTrack("Karma Police", "Radiohead", album = null)
+
+        // When - enriching for album art
+        val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
+
+        // Then - NotFound because there is no album title to search with
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `enrich returns NotFound for album metadata from a track request naming its album`() = runTest {
+        // Given - the same iTunes response, but the request is track-scoped with an album name
+        httpClient.givenJsonResponse("itunes.apple.com", ITUNES_RESPONSE)
+        val request = EnrichmentRequest.forTrack("Karma Police", "Radiohead", album = "OK Computer")
+
+        // When - enriching for album metadata, which stays ForAlbum-only
+        val result = provider.enrich(request, EnrichmentType.ALBUM_METADATA)
+
+        // Then - NotFound because only ALBUM_ART widens to accept a track request
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
     fun `enrich returns NotFound when search returns no results`() = runTest {
         // Given - iTunes API returns empty results
         httpClient.givenJsonResponse("itunes.apple.com", """{"resultCount":0,"results":[]}""")
