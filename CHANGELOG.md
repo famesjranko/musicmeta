@@ -50,6 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - demo-web's enrich page now streams over `enrichProgressive` via server-sent events: the page paints each card as its type settles instead of waiting for the slowest provider
 
 ### Fixed
+- Cached `LABEL`/`RELEASE_DATE`/`RELEASE_TYPE`/`COUNTRY` entries with unknown-curation genre tags re-fetched on every call; now served from cache — tags are only read off `GENRE` and `ALBUM_METADATA`
 - A full cache hit now reports `CanonicalStatus.NOT_ATTEMPTED_DISABLED` when `enableIdentityResolution` is false, matching the live path instead of always claiming `NOT_ATTEMPTED_CACHE_HIT`
 - No `NotFound` a `CatalogFilterMode` produces by emptying a `Success` is negative-cached any more — covers a live answer, a `STALE_IF_ERROR` substitute, and a fresh cache hit re-filtered later
 - A `CompositeSynthesizer`'s `NotFound` no longer negative-caches when synthesized over a `STALE_IF_ERROR`-substituted dependency — it describes a past call's stale snapshot, not this one
