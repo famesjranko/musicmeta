@@ -153,7 +153,7 @@ than it looks like, each learned the hard way.
   process, and refuses the rest with a 429. That cap is therefore per instance: run the service at
   two and the real bound is twice what the code says, with every test still green. Nothing in the
   process can read the instance limit it depends on, so the invariant lives in a comment beside the
-  gate, and nothing fails when a deployment disagrees with it. What
+  gate and in the deploy command, and in neither case does anything fail when they disagree. What
   `AdmissionGateTest` does prove is the part that is checkable inside one JVM: that the bound admits
   its whole width at once rather than serialising, that the endpoint over it refuses as a status
   rather than as an event on an already-committed 200, and that a permit survives a failure the
