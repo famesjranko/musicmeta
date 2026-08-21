@@ -50,6 +50,10 @@ fi
 
 # CLOUDSDK_CORE_PROJECT rather than `gcloud config set project`: this leaves the caller's ambient
 # configuration exactly as it found it.
+#
+# DEMO_PUBLIC=1 belongs to the deploy, not to whoever runs it: the provider posture a hosted
+# instance owes its upstreams cannot depend on an operator remembering an export. `--update-env-vars`
+# rather than `--set-env-vars` so it adds to whatever else the service already carries.
 CLOUDSDK_CORE_PROJECT="$PROJECT" gcloud run deploy "$SERVICE" \
     --region "$REGION" \
     --image "$IMAGE" \
@@ -60,6 +64,7 @@ CLOUDSDK_CORE_PROJECT="$PROJECT" gcloud run deploy "$SERVICE" \
     --memory=512Mi \
     --timeout=180 \
     --no-allow-unauthenticated \
+    --update-env-vars DEMO_PUBLIC=1 \
     --quiet
 
 # A deploy that returns zero and serves 503 is a failed deploy; only the readback tells them apart.

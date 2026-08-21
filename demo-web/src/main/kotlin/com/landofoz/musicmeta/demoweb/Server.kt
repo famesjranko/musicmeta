@@ -164,6 +164,10 @@ internal fun healthResponseFor(state: HealthState): Pair<Int, HealthResponse> {
  * effect on the very next call. [rebuildEngine] must build every engine over the same shared
  * cache instance — that's what lets STALE_IF_ERROR serve entries a NETWORK_FIRST run warmed
  * before the swap; see [handleConfig].
+ *
+ * [unregisteredProviderIds] names providers this instance declines to register whatever
+ * [apiKeys] holds; `/api/providers` leaves them out entirely rather than reporting a key state
+ * for a provider whose absence is a policy, not a configuration.
  */
 fun startServer(
     engineRef: AtomicReference<EnrichmentEngine>,
@@ -171,6 +175,7 @@ fun startServer(
     rebuildEngine: (CacheMode) -> EnrichmentEngine,
     apiKeys: ApiKeyConfig,
     port: Int,
+    unregisteredProviderIds: Set<String> = emptySet(),
 ) {
     val indexHtml = ResourceAnchor::class.java.getResourceAsStream("/index.html")?.readBytes()
         ?: error("index.html missing from demo-web resources")
@@ -207,7 +212,9 @@ fun startServer(
     server.createContext("/api/invalidate") { exchange -> handleInvalidate(exchange, engineRef.get()) }
     server.createContext("/api/search") { exchange -> handleSearch(exchange, engineRef.get()) }
     server.createContext("/api/preview") { exchange -> handlePreview(exchange, engineRef.get()) }
-    server.createContext("/api/providers") { exchange -> handleProviders(exchange, engineRef.get(), apiKeys) }
+    server.createContext("/api/providers") { exchange ->
+        handleProviders(exchange, engineRef.get(), apiKeys, unregisteredProviderIds)
+    }
     server.createContext("/api/config") { exchange -> handleConfig(exchange, engineRef, cacheModeRef, rebuildEngine) }
     server.createContext("/api/health") { exchange ->
         // WARMING is the one state a hosting platform must not see as up — HTTP 503 keeps it out
@@ -1132,13 +1139,19 @@ private fun handlePreview(exchange: HttpExchange, engine: EnrichmentEngine) {
  * never registered because its key was absent, so a keyless run still shows every provider it
  * *could* have. Reads state the engine already holds, so nothing here suspends.
  */
-private fun handleProviders(exchange: HttpExchange, engine: EnrichmentEngine, apiKeys: ApiKeyConfig) {
+private fun handleProviders(
+    exchange: HttpExchange,
+    engine: EnrichmentEngine,
+    apiKeys: ApiKeyConfig,
+    unregisteredProviderIds: Set<String>,
+) {
     if (exchange.requestMethod != "GET") {
         exchange.respondJson(405, ApiError("GET required"))
         return
     }
     try {
-        exchange.respondJson(200, ProvidersResponse(buildProviderRows(engine.getProviders(), apiKeys)))
+        val rows = buildProviderRows(engine.getProviders(), apiKeys, unregisteredProviderIds)
+        exchange.respondJson(200, ProvidersResponse(rows))
     } catch (e: Exception) {
         exchange.respondJson(500, ApiError(e.message ?: e.javaClass.simpleName))
     }
@@ -1155,16 +1168,24 @@ private fun handleProviders(exchange: HttpExchange, engine: EnrichmentEngine, ap
  * token selector reads null. A `None` entry absent from [live] is not synthesised — it isn't
  * key-gated, so its absence is a registration bug, not a key state this endpoint has an opinion on.
  *
+ * An id in [unregisteredProviderIds] gets no row at all, live or synthesised: this instance
+ * declines to register it whatever [apiKeys] holds, so any key state shown against it would be
+ * an answer to a question the table isn't asking.
+ *
  * The result is ordered by [ProviderCatalog.entries]'s own order, so the table reads the same
  * regardless of which ids happened to register; any live id the catalog doesn't know keeps its
  * original position relative to the other such ids, after every catalog id.
  */
-internal fun buildProviderRows(live: List<ProviderInfo>, apiKeys: ApiKeyConfig): List<ProviderRow> {
+internal fun buildProviderRows(
+    live: List<ProviderInfo>,
+    apiKeys: ApiKeyConfig,
+    unregisteredProviderIds: Set<String> = emptySet(),
+): List<ProviderRow> {
     val catalogById = ProviderCatalog.entries.associateBy { it.id }
     val catalogOrder = ProviderCatalog.entries.withIndex().associate { (index, entry) -> entry.id to index }
     val liveIds = live.mapTo(mutableSetOf()) { it.id }
 
-    val liveRows = live.map { info ->
+    val liveRows = live.filterNot { it.id in unregisteredProviderIds }.map { info ->
         val requirement = catalogById[info.id]?.keyRequirement
         val keyStatus = (requirement as? KeyRequirement.Optional)
             ?.takeIf { it.key(apiKeys) == null }
@@ -1181,7 +1202,7 @@ internal fun buildProviderRows(live: List<ProviderInfo>, apiKeys: ApiKeyConfig):
     }
 
     val missingRows = ProviderCatalog.entries
-        .filter { it.id !in liveIds }
+        .filter { it.id !in liveIds && it.id !in unregisteredProviderIds }
         .mapNotNull { entry ->
             val requirement = entry.keyRequirement as? KeyRequirement.Required ?: return@mapNotNull null
             if (requirement.key(apiKeys) != null) return@mapNotNull null

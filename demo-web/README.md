@@ -16,3 +16,8 @@ PORT=9000 ./run.sh      # different port
 Works keyless. To enable the key-requiring providers, copy `secrets.properties.example` (repo root)
 to `secrets.properties` here or in the repo root and fill in the keys, or set environment variables
 (`LASTFM_API_KEY`, `FANARTTV_API_KEY`, `DISCOGS_TOKEN`, `LISTENBRAINZ_TOKEN`).
+
+`DEMO_PUBLIC=1` puts the process in the posture a publicly reachable instance owes its providers,
+whatever keys the environment carries: Last.fm is not registered, the ListenBrainz personal token
+is withheld, Discogs images never leave the process, and Discogs-sourced data is refetched every
+six hours. Unset — every local run — nothing above applies. The startup log states the posture.
