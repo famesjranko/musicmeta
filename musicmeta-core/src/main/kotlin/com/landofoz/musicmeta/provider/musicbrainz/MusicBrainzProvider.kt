@@ -90,10 +90,10 @@ class MusicBrainzProvider(
         }
 
     /**
-     * [SearchCandidate.thumbnailUrl] is null for every hit a release search returns: only a
-     * known-true [MusicBrainzRelease.hasFrontCover] can tell a Cover Art Archive url from a 404,
-     * and a search response carries nothing to answer it with. Asking per candidate would cost one
-     * rate-limited lookup each.
+     * A Cover Art Archive url is offered only for a known-true [MusicBrainzRelease.hasFrontCover],
+     * which is the one thing that tells real art from a 404. A release search response carries
+     * nothing to answer that with, so every candidate built here has a null
+     * [SearchCandidate.thumbnailUrl]; asking per candidate would cost one rate-limited lookup each.
      */
     private suspend fun searchAlbumCandidates(
         request: EnrichmentRequest.ForAlbum, limit: Int,
