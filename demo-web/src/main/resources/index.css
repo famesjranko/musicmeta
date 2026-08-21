@@ -1074,6 +1074,25 @@ footer a:hover { color: var(--text); border-color: var(--text); }
 
 .summary .source .credit-line { margin: 0; font-size: 0.7rem; }
 
+/* Sits inline with the play button it belongs to: the notice is about the recording that button
+   is streaming, and goes when playback does. */
+.preview-notice {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  align-items: center;
+  margin-left: 0.4rem;
+  color: var(--muted);
+  font-size: 0.64rem;
+  line-height: 1.4;
+}
+
+.preview-notice a {
+  color: var(--muted);
+  text-decoration: none;
+  border-bottom: 1px dotted rgba(146, 169, 255, 0.4);
+}
+
 /* Attribution credits: owed content, so no card chrome — a hairline separates it from the footer. */
 .credits-footer {
   margin-top: 1.5rem;

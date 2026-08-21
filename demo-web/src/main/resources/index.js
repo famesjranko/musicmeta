@@ -1,5 +1,11 @@
 import { createSseParser, classifyStreamOutcome, readJsonResponse } from '/stream-protocol.js';
-import { escapeHtml as esc, creditLineHtml } from '/attribution.js';
+import {
+  escapeHtml as esc,
+  creditLineHtml,
+  previewNoticeHtml,
+  previewNoticeText,
+  standingNotices,
+} from '/attribution.js';
 
 const tabsEl = document.getElementById('kind-tabs');
 const kindTabs = Array.from(tabsEl.querySelectorAll('button[data-kind]'));
@@ -1065,6 +1071,7 @@ audio.addEventListener('ended', stopPreview);
 function resetBtn(btn) {
   clearTimeout(btn._errorTimer);
   btn._errorTimer = null;
+  clearPreviewNotice(btn);
   btn.classList.remove('playing', 'loading', 'error');
   btn.innerHTML = PLAY_GLYPH;
   btn.title = PLAY_TITLE;
@@ -1074,6 +1081,24 @@ function stopPreview() {
   audio.pause();
   if (activeBtn) resetBtn(activeBtn);
   activeBtn = null;
+}
+
+// The notice a provider's terms owe anyone the recording is playable to — Deezer's private-use
+// notice, Apple's courtesy attribution — shown at the button that is playing it and removed with
+// it. Driven by the source the preview actually resolved from, so a provider that owes nothing
+// grows nothing.
+function showPreviewNotice(btn, source) {
+  clearPreviewNotice(btn);
+  const html = previewNoticeHtml(source);
+  if (!html) return;
+  btn.insertAdjacentHTML('afterend', html);
+  btn._notice = btn.nextElementSibling;
+  btn.title = previewNoticeText(source);
+}
+
+function clearPreviewNotice(btn) {
+  if (btn._notice) btn._notice.remove();
+  btn._notice = null;
 }
 
 resultEl.addEventListener('click', async (e) => {
@@ -1105,6 +1130,7 @@ resultEl.addEventListener('click', async (e) => {
     btn.classList.remove('loading');
     btn.innerHTML = PLAY_GLYPH;
     btn.classList.add('playing');
+    showPreviewNotice(btn, data.source);
   } catch (err) {
     if (btn !== activeBtn) return; // superseded before the failure arrived; already reset
     activeBtn = null;
@@ -1179,10 +1205,13 @@ function renderProviders(providers) {
 
   // A KEY_MISSING row was never callable, so it never used anything to attribute — index.html's
   // "every notice this demo could owe" only covers a provider a request could actually reach.
-  const notices = providers
-    .filter((p) => p.keyStatus !== 'KEY_MISSING')
+  const reachable = providers.filter((p) => p.keyStatus !== 'KEY_MISSING');
+  const notices = reachable
     .filter((p) => p.policy && ATTRIBUTION_OWED.includes(p.policy.attribution) && p.policy.attributionNotice)
-    .map((p) => p.policy.attributionNotice);
+    .map((p) => p.policy.attributionNotice)
+    // Notices a provider's terms owe the page as a whole, which musicmeta's policy snapshot does
+    // not carry — the same Deezer notice the player states where a recording is actually playable.
+    .concat(standingNotices(reachable.map((p) => p.id)));
   if (notices.length === 0) return;
   creditsNotices.innerHTML = notices.map((n) => `<span class="credit">${esc(n)}</span>`).join('');
   creditsEl.hidden = false;

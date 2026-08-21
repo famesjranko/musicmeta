@@ -1,7 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { escapeHtml, creditLineHtml } from '../../main/resources/attribution.js';
+import {
+  escapeHtml,
+  creditLineHtml,
+  previewNoticeHtml,
+  previewNoticeText,
+  standingNotices,
+} from '../../main/resources/attribution.js';
 
 // --- Credit lines --------------------------------------------------------------------------
 // Every chip is built from the provenance the response carried, so a provider that answered
@@ -76,4 +82,45 @@ test('a hostile provider id and url cannot inject markup', () => {
 
 test('escapeHtml escapes every character that can break out of markup', () => {
   assert.equal(escapeHtml(`<&">'`), '&lt;&amp;&quot;&gt;&#39;');
+});
+
+// --- Preview notices -----------------------------------------------------------------------
+// Deezer's terms of use IV obliges the developer to inform anyone reaching the content through
+// the page that streaming is private-family-scope. It is owed at the player, where the recording
+// is actually playable, and is driven by the source the preview resolved from.
+
+test('a Deezer preview carries the private-use notice in its own words', () => {
+  const html = previewNoticeHtml('deezer');
+  assert.match(html, /strictly private use within a family scope/);
+});
+
+test("the Deezer notice names Deezer as the preview's source", () => {
+  assert.match(previewNoticeHtml('deezer'), /Deezer/);
+});
+
+test('the notice is also available as plain text, for the player button tooltip', () => {
+  assert.match(previewNoticeText('deezer'), /strictly private use within a family scope/);
+  assert.doesNotMatch(previewNoticeText('deezer'), /</);
+});
+
+test('an Apple-sourced preview carries the courtesy attribution Apple requires', () => {
+  assert.match(previewNoticeHtml('itunes'), /provided courtesy of iTunes/);
+});
+
+test('a preview from a provider owing no notice renders none', () => {
+  assert.equal(previewNoticeHtml('somebodys-own-provider'), '');
+  assert.equal(previewNoticeHtml(null), '');
+  assert.equal(previewNoticeText(null), '');
+});
+
+// --- Standing notices ----------------------------------------------------------------------
+// Some notices are owed by the page as a whole rather than by one rendered item, and musicmeta's
+// own policy snapshot does not carry them.
+
+test('a page that can reach Deezer states the private-use notice standing, not only at the player', () => {
+  assert.ok(standingNotices(['deezer', 'musicbrainz']).some((n) => /strictly private use within a family scope/.test(n)));
+});
+
+test('a page with no Deezer provider owes no Deezer notice', () => {
+  assert.deepEqual(standingNotices(['musicbrainz', 'wikipedia']), []);
 });
