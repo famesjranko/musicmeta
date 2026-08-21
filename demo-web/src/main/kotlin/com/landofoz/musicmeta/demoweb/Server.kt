@@ -217,13 +217,27 @@ fun startServer(
         }
     }
 
-    server.createContext("/api/enrich") { exchange -> handleEnrich(exchange, engineRef.get()) }
+    // Every endpoint that can reach a provider goes through one client's budget first. The three
+    // that cannot — health, providers, config — are registered plainly below: charging for them
+    // would buy no upstream any protection and would refuse the page's own warming poll.
+    val budget = ClientBudget()
+    fun upstreamContext(path: String, handle: (HttpExchange) -> Unit) {
+        server.createContext(path) { exchange ->
+            if (budget.admit(exchange.clientKey())) {
+                handle(exchange)
+            } else {
+                exchange.refuseAsBusy("This client has asked for a lot at once. Try again shortly.")
+            }
+        }
+    }
+
+    upstreamContext("/api/enrich") { exchange -> handleEnrich(exchange, engineRef.get()) }
     // Longest matching prefix wins in this server, so this context takes the path despite
     // `/api/enrich` also matching it.
-    server.createContext("/api/enrich-stream") { exchange -> handleEnrichStream(exchange, engineRef.get()) }
-    server.createContext("/api/invalidate") { exchange -> handleInvalidate(exchange, engineRef.get()) }
-    server.createContext("/api/search") { exchange -> handleSearch(exchange, engineRef.get()) }
-    server.createContext("/api/preview") { exchange -> handlePreview(exchange, engineRef.get()) }
+    upstreamContext("/api/enrich-stream") { exchange -> handleEnrichStream(exchange, engineRef.get()) }
+    upstreamContext("/api/invalidate") { exchange -> handleInvalidate(exchange, engineRef.get()) }
+    upstreamContext("/api/search") { exchange -> handleSearch(exchange, engineRef.get()) }
+    upstreamContext("/api/preview") { exchange -> handlePreview(exchange, engineRef.get()) }
     server.createContext("/api/providers") { exchange ->
         handleProviders(exchange, engineRef.get(), apiKeys, unregisteredProviderIds)
     }
@@ -425,7 +439,34 @@ internal const val MAX_IN_GATE = 5
 /** What a refused caller is told to wait, in seconds. The page reads it to say how long. */
 private const val RETRY_AFTER_SECONDS = "15"
 
+/**
+ * Turns a caller away in the one shape the page renders as its busy state.
+ *
+ * Two things refuse for two reasons — a full gate and a spent client budget — and a visitor has the
+ * same thing to do about either, so they answer identically rather than each inventing a status and
+ * a body. [message] is the operator's account of which it was.
+ */
+private fun HttpExchange.refuseAsBusy(message: String) {
+    responseHeaders.add("Retry-After", RETRY_AFTER_SECONDS)
+    respondJson(429, ApiError(message))
+}
+
+/** This request's client, as [clientKeyFrom] reads it off the exchange. */
+private fun HttpExchange.clientKey(): String =
+    clientKeyFrom(requestHeaders.getFirst("X-Forwarded-For"), remoteAddress.address.hostAddress)
+
 private val enrichmentGate = Semaphore(MAX_IN_GATE)
+
+/**
+ * Whether the gate has nothing left to hand out — the instance's own definition of being under
+ * pressure, read from the one piece of state that already knows.
+ *
+ * Asked by a request that is itself holding a permit, so "none free" means every other permit is
+ * spent too and the next arrival is refused. That is the point at which a `NETWORK` or `TIMEOUT`
+ * error stops being good evidence of a blip on the wire: this instance is contended, and the work
+ * that would recover one type is the work that is starving the rest.
+ */
+private fun enrichmentGateIsFull(): Boolean = enrichmentGate.availablePermits() == 0
 
 /**
  * How often a stream writes a comment purely to learn whether the reader is still there. The bound
@@ -448,11 +489,7 @@ private const val HEARTBEAT_MS = 1_000L
  */
 private inline fun HttpExchange.withEnrichmentPermit(enriching: () -> Unit) {
     if (!enrichmentGate.tryAcquire()) {
-        responseHeaders.add("Retry-After", RETRY_AFTER_SECONDS)
-        respondJson(
-            429,
-            ApiError("The demo runs $MAX_IN_GATE lookups at a time and is at capacity. Try again shortly."),
-        )
+        refuseAsBusy("The demo runs $MAX_IN_GATE lookups at a time and is at capacity. Try again shortly.")
         return
     }
     try {
@@ -1023,6 +1060,9 @@ private val RETRYABLE_ERROR_KINDS = setOf(ErrorKind.NETWORK, ErrorKind.TIMEOUT)
  * Reuses this pass's resolved identity ([EnrichmentResults.identity]) so the retry doesn't
  * re-run identity resolution for a request that already resolved fine and only hit a transient
  * error on one provider type.
+ *
+ * Skipped outright while the gate is full ([enrichmentGateIsFull]): the caller keeps the `Error`,
+ * which already tells a consumer to retry, and does not spend a second fan-out to learn it again.
  */
 private suspend fun EnrichmentResults.retryTransientFailures(
     engine: EnrichmentEngine,
@@ -1030,6 +1070,7 @@ private suspend fun EnrichmentResults.retryTransientFailures(
 ): EnrichmentResults {
     val retryTypes = raw.filterValues { it is EnrichmentResult.Error && it.errorKind in RETRYABLE_ERROR_KINDS }.keys
     if (retryTypes.isEmpty()) return this
+    if (enrichmentGateIsFull()) return this
     val retryRequest = identity?.identifiers?.let(request::withIdentifiers) ?: request
     val retried = engine.enrich(retryRequest, retryTypes)
     return copy(raw = raw + retried.raw)
