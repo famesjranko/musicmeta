@@ -176,8 +176,7 @@ class MusicBrainzSearchTest {
                     "id": "group123",
                     "primary-type": "Album",
                     "tags": [{"name": "alternative rock", "count": 5}]
-                  },
-                  "cover-art-archive": {"front": true}
+                  }
                 },
                 {
                   "id": "xyz789",
