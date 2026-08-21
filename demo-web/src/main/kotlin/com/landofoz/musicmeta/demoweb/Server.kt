@@ -65,13 +65,11 @@ internal val STATIC_PATHS = listOf(
     "/index.js",
     "/stream-protocol.js",
     "/attribution.js",
-    "/apple-music-badge.svg",
 )
 
 internal fun staticContentTypeOf(path: String): String = when {
     path.endsWith(".html") -> "text/html; charset=utf-8"
     path.endsWith(".css") -> "text/css; charset=utf-8"
-    path.endsWith(".svg") -> "image/svg+xml"
     else -> "text/javascript; charset=utf-8"
 }
 
