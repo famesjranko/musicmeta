@@ -127,7 +127,7 @@ With profile methods, the same flow is available via `profile.suggestions` and t
 | `country` | `String?` | Release country code (e.g., "GB") |
 | `releaseType` | `String?` | "Album", "Single", "EP", etc. |
 | `score` | `Int` | MusicBrainz relevance score (0–100) |
-| `thumbnailUrl` | `String?` | Cover art or artist image thumbnail |
+| `thumbnailUrl` | `String?` | Cover art or artist image thumbnail. Always null on a MusicBrainz candidate — a release search response carries no cover-art flag — so it is populated only for the Deezer and iTunes candidates `search()` adds |
 | `identifiers` | `EnrichmentIdentifiers` | MBIDs and linked IDs — use `identifiers.musicBrainzId` when re-enriching |
 | `provider` | `String` | Source provider (typically "musicbrainz") |
 | `disambiguation` | `String?` | MusicBrainz disambiguation comment (e.g., "British rock band" vs "Canadian band") |

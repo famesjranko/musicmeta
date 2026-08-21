@@ -260,6 +260,32 @@ response; that is what pins the field name. `provider-drift.yml` runs the `e2e` 
 APIs on a schedule, so a moved field surfaces indirectly — it is not a field watcher and never gates
 a merge.
 
+## 22. Two endpoints of one API do not carry the same fields
+
+```kotlin
+// WRONG — shipped until 0.13.0; a /release?query= hit has no cover-art-archive object at all
+private fun extractHasFrontCover(release: JSONObject): Boolean {
+    val coverArt = release.optJSONObject("cover-art-archive") ?: return false   // states "no art"
+}
+
+// RIGHT — absent means the response could not say, which is not the same as "no"
+private fun extractHasFrontCover(release: JSONObject): Boolean? {
+    val coverArt = release.optJSONObject("cover-art-archive") ?: return null
+}
+```
+
+MusicBrainz sends `cover-art-archive` on `/release/{mbid}` and never on `/release?query=`, so every
+search-derived release reported `false`: measured false on 853 of 853 pooled candidates and wrong on
+156 of 200 checked against the Cover Art Archive. `MusicBrainzProvider` gated a search candidate's
+thumbnail on it, so that thumbnail was never produced and `docs/providers.md` documented a promise
+the code could not keep.
+
+§3 is the same defaulting mistake on a field the endpoint does send; this is the harder version,
+because the field is right and the *endpoint* cannot answer. Nothing catches it: the code and the
+fixtures agreed with each other, three of them carrying a hand-written `cover-art-archive` inside a
+search payload upstream never sends. A fixture copied from a real response of **the endpoint the
+caller actually uses** is what pins this — a lookup capture proves nothing about a search path.
+
 ## 5. A capability's `identifierRequirement` defaults to `NONE`
 
 ```kotlin

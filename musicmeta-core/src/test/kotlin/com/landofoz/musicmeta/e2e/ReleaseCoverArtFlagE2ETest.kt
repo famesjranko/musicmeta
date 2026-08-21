@@ -15,10 +15,9 @@ import org.junit.Test
  *
  * `MusicBrainzRelease.hasFrontCover` is null where the response carried no `cover-art-archive`
  * object, and the whole of that distinction rests on one upstream fact: a `/release?query=` search
- * omits the object and a `/release/{mbid}` lookup carries it. Nothing in this repo can verify that,
- * because a hand-written fixture says whatever it was written to say — three of them asserted a
- * search response carrying the object, which MusicBrainz never sends, and that is what hid the flag
- * reading `false` for every search hit. This test is the thing that would have caught them.
+ * omits the object and a `/release/{mbid}` lookup carries it. No fixture can establish that — a
+ * hand-written one says whatever it was written to say — so only a live call answers it
+ * (`docs/pitfalls.md` §22).
  *
  * It is not coverage for the flag's parsing: `MusicBrainzParserTest` pins that, gates a merge, and
  * stays the evidence. Under `-Dinclude.e2e=true` only, so a MusicBrainz outage never fails a build.
