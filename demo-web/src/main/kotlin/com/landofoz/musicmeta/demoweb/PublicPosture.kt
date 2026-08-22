@@ -40,6 +40,13 @@ internal enum class PublicRelaxation(val token: String, val restriction: String)
 /** The `DEMO_PUBLIC_ALLOW` token that lifts every restriction at once. */
 internal const val RELAX_ALL_TOKEN = "all"
 
+/**
+ * The `DEMO_PUBLIC_ALLOW` token that lifts nothing — the safe posture, named. It exists so an
+ * operator can express "no relaxations" as a value a secret store will hold (an empty payload is
+ * rejected) rather than the one thing the unknown-token guard would refuse: a typo.
+ */
+internal const val RELAX_NONE_TOKEN = "none"
+
 /** What one `DEMO_PUBLIC_ALLOW` value asked for, and which of its tokens named nothing. */
 internal data class ParsedRelaxations(
     val recognised: Set<PublicRelaxation>,
@@ -61,6 +68,7 @@ internal fun parsePublicRelaxations(value: String?): ParsedRelaxations {
         .forEach { token ->
             when {
                 token == RELAX_ALL_TOKEN -> recognised.addAll(PublicRelaxation.entries)
+                token == RELAX_NONE_TOKEN -> Unit
                 byToken.containsKey(token) -> recognised.add(byToken.getValue(token))
                 else -> unknown.add(token)
             }
@@ -70,7 +78,7 @@ internal fun parsePublicRelaxations(value: String?): ParsedRelaxations {
 
 /** What a caller prints before refusing to start over [unknown]. */
 internal fun unknownRelaxationMessage(unknown: List<String>): String {
-    val valid = (PublicRelaxation.entries.map { it.token } + RELAX_ALL_TOKEN).joinToString(", ")
+    val valid = (PublicRelaxation.entries.map { it.token } + RELAX_ALL_TOKEN + RELAX_NONE_TOKEN).joinToString(", ")
     return "DEMO_PUBLIC_ALLOW: unrecognised ${if (unknown.size == 1) "token" else "tokens"} " +
         "${unknown.joinToString(", ")} — expected any of: $valid."
 }

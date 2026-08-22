@@ -61,7 +61,20 @@
 #     --member="serviceAccount:musicmeta-demo-run@musicmeta-demo-4821.iam.gserviceaccount.com" \
 #     --role="roles/secretmanager.secretAccessor"
 #
-# 4. After the SA exists and holds exactly those five bindings, confirm it has NO project-level
+# 4. Create the provider-posture secret and grant the same SA access. Its value is the
+#    DEMO_PUBLIC_ALLOW token list, not a credential (`all` / `none` / a subset — see the deploy
+#    step's comment). Seed it `none` (safe); add an `all` version when you want full providers:
+#
+#   printf '%s' none | gcloud secrets create demo-public-allow \
+#     --project=musicmeta-demo-4821 \
+#     --replication-policy=automatic \
+#     --data-file=-
+#   gcloud secrets add-iam-policy-binding demo-public-allow \
+#     --project=musicmeta-demo-4821 \
+#     --member="serviceAccount:musicmeta-demo-run@musicmeta-demo-4821.iam.gserviceaccount.com" \
+#     --role="roles/secretmanager.secretAccessor"
+#
+# 5. After the SA exists and holds exactly those six bindings, confirm it has NO project-level
 #    role (in particular, it must never inherit the default compute SA's `roles/editor`):
 #
 #   gcloud projects get-iam-policy musicmeta-demo-4821 \
@@ -75,7 +88,7 @@
 #   independently of this script, since other Cloud Run services or workloads on the project may
 #   still depend on it.
 #
-# 5. One-time cleanup for the orphan sidecar (see the note above the container-count assertion
+# 6. One-time cleanup for the orphan sidecar (see the note above the container-count assertion
 #    below): if the assertion below ever fails, the live revision has an extra container the
 #    Dockerfile does not define. `gcloud run deploy --image` cannot remove it — export, edit out
 #    the extra container block, and replace:
@@ -95,10 +108,10 @@ SERVICE="${SERVICE:-musicmeta-demo}"
 TAG="${TAG:-latest}"
 IMAGE="${REGION}-docker.pkg.dev/${PROJECT}/demo/musicmeta-demo-web:${TAG}"
 
-# The dedicated runtime SA created by the USER RUNS THESE block above. It holds secretAccessor
-# on exactly the four provider-key secrets plus the maintainer secret, and no project role — the
-# default compute SA this replaces carries project-wide `roles/editor`, which a demo that only
-# reads five secrets has no business holding.
+# The dedicated runtime SA created by the USER RUNS THESE block above. It holds secretAccessor on
+# exactly the four provider-key secrets, the maintainer secret and the posture secret, and no
+# project role — the default compute SA this replaces carries project-wide `roles/editor`, which a
+# demo that only reads six secrets has no business holding.
 SERVICE_ACCOUNT="${SERVICE_ACCOUNT:-musicmeta-demo-run@${PROJECT}.iam.gserviceaccount.com}"
 
 BUILD=1
@@ -123,24 +136,22 @@ fi
 # instance owes its upstreams cannot depend on an operator remembering an export. `--update-env-vars`
 # rather than `--set-env-vars` so it adds to whatever else the service already carries.
 #
-# DEMO_PUBLIC_ALLOW=all is a deliberate maintainer choice, not a default: it lifts every
-# PublicRelaxation (Last.fm without prior written approval — API ToS 2.7 — plus exposing the
-# maintainer's personal ListenBrainz token, Discogs images, and Discogs's 6h freshness cap) on a
-# URL that is, or may become, publicly reachable. The maintainer has accepted that ToS and
-# credential-exposure risk knowingly for this instance. To narrow it later WITHOUT a rebuild:
-# either unset DEMO_PUBLIC_ALLOW entirely (all restrictions back in force) or set it to a
-# comma-separated subset of the relaxation ids (see PublicRelaxation in PublicPosture.kt, and
-# demo-web/README.md) via `gcloud run services update musicmeta-demo --update-env-vars
-# DEMO_PUBLIC_ALLOW=<subset>` — no new image, no redeploy through this script required.
+# DEMO_PUBLIC_ALLOW is bound from Secret Manager, not committed here: which restrictions a public
+# instance lifts is a provider-ToS choice this script must not carry a value for, since a value in
+# git is reproduced by every operator who runs it. The `demo-public-allow` secret holds the token
+# list (see PublicRelaxation in PublicPosture.kt): `all` lifts every restriction, `none` lifts
+# nothing (the safe posture — a token rather than an empty value, which Secret Manager rejects), or
+# a comma-separated subset. Flip it WITHOUT a rebuild by adding a secret version and redeploying:
+# `printf '%s' none | gcloud secrets versions add demo-public-allow --data-file=- && ./deploy.sh --no-build`.
 #
 # --service-account pins the runtime identity to the least-privilege SA above; without it Cloud
 # Run defaults to the project's compute SA, which holds `roles/editor` — far more than a
 # secret-reading demo should ever run as.
 #
-# DEMO_MAINTAINER_SECRET is bound from Secret Manager, never a literal: WP1's `/api/config` POST
-# gate compares this value against the `X-Maintainer-Secret` request header. `--update-secrets`
+# DEMO_MAINTAINER_SECRET (the `/api/config` POST gate's expected `X-Maintainer-Secret`) and
+# DEMO_PUBLIC_ALLOW are both bound from Secret Manager, never literals. `--update-secrets`
 # (additive, like `--update-env-vars`) rather than `--set-secrets` so a prior manual binding for
-# the four provider-key secrets is left untouched by this script.
+# the provider-key secrets is left untouched by this script.
 CLOUDSDK_CORE_PROJECT="$PROJECT" gcloud run deploy "$SERVICE" \
     --region "$REGION" \
     --image "$IMAGE" \
@@ -152,25 +163,25 @@ CLOUDSDK_CORE_PROJECT="$PROJECT" gcloud run deploy "$SERVICE" \
     --timeout=180 \
     --no-allow-unauthenticated \
     --service-account="$SERVICE_ACCOUNT" \
-    --update-env-vars DEMO_PUBLIC=1,DEMO_PUBLIC_ALLOW=all \
-    --update-secrets=DEMO_MAINTAINER_SECRET=demo-maintainer-secret:latest \
+    --update-env-vars DEMO_PUBLIC=1 \
+    --update-secrets=DEMO_MAINTAINER_SECRET=demo-maintainer-secret:latest,DEMO_PUBLIC_ALLOW=demo-public-allow:latest \
     --quiet
 
-# A deploy that returns zero and serves 503 is a failed deploy; only the readback tells them apart.
+# Print the served revision's key facts for the operator to eyeball; `gcloud run deploy --quiet`
+# above already fails the script on a deploy that does not go ready.
 CLOUDSDK_CORE_PROJECT="$PROJECT" gcloud run services describe "$SERVICE" \
     --region "$REGION" \
     --format='value[separator="  "](status.latestReadyRevisionName,spec.template.spec.containerConcurrency,spec.template.metadata.annotations["autoscaling.knative.dev/maxScale"])'
 
-# The Dockerfile defines exactly one container (one CMD). A stale `gcloud run services replace`
-# with a multi-container spec, at some point in this service's history, added a second, portless
-# 'app' container to the revision template — `gcloud run deploy --image` updates the ingress
-# container in place but does not delete a sidecar already sitting in the template, so the orphan
-# rides forward on every deploy since. This assertion catches that recurring instead of trusting
-# a human to notice a doubled Cloud Run bill: fail loud, here, rather than silently serving a
-# revision nobody asked for.
+# The Dockerfile defines exactly one container. `gcloud run deploy --image` updates the ingress
+# container in place but cannot delete a sidecar already sitting in the revision template, so a
+# multi-container template survives every image-only deploy — a second container is a doubled bill
+# nothing else flags. Assert one container so that fails loud here; the USER RUNS THESE block has
+# the one-time `services replace` cleanup. Count `.image` (every container has one) rather than
+# `.name`, which a single unnamed ingress container leaves empty.
 CONTAINERS="$(CLOUDSDK_CORE_PROJECT="$PROJECT" gcloud run services describe "$SERVICE" \
     --region "$REGION" \
-    --format='value(spec.template.spec.containers[].name)')"
+    --format='value(spec.template.spec.containers[].image)')"
 CONTAINER_COUNT="$(printf '%s' "$CONTAINERS" | tr ';' '\n' | grep -c '.')"
 if [ "$CONTAINER_COUNT" -ne 1 ]; then
     echo "deploy.sh: served revision has $CONTAINER_COUNT containers, expected exactly 1: $CONTAINERS" >&2

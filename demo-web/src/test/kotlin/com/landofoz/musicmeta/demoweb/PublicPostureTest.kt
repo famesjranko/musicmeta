@@ -264,6 +264,18 @@ class PublicPostureTest {
         assertEquals(listOf("discogs_images"), parsed.unknown)
     }
 
+    @Test fun `the none token is an explicit safe posture, recognised and lifting nothing`() {
+        // Given - an operator asking for the safe posture by name rather than an empty value
+        val value = "none"
+
+        // When - the list is parsed
+        val parsed = parsePublicRelaxations(value)
+
+        // Then - it is recognised (not an unknown token that would refuse startup) and lifts nothing
+        assertTrue(parsed.recognised.isEmpty())
+        assertTrue(parsed.unknown.isEmpty())
+    }
+
     @Test fun `the refusal message names the offending tokens and every valid one`() {
         // Given - two tokens that name nothing
         val unknown = listOf("discogs_images", "lastFM!")

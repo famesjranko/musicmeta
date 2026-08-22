@@ -31,11 +31,12 @@ six hours. Unset — every local run — nothing above applies. The startup log 
 
 `DEMO_PUBLIC_ALLOW` lifts individual restrictions on a public instance, comma separated:
 `lastfm` (register Last.fm and pass its key), `listenbrainz` (pass the personal token),
-`discogs-images` (serve Discogs images), `discogs-cache` (drop the six-hour ceiling), or `all`.
-Each one is a deliberate choice to take on that provider's terms yourself, and the startup log
-names what was lifted alongside what still binds. A token that names no restriction refuses the
-start rather than being ignored, so a typo cannot quietly leave a posture nobody chose. With
-`DEMO_PUBLIC` unset the variable does nothing at all, typos included.
+`discogs-images` (serve Discogs images), `discogs-cache` (drop the six-hour ceiling), `all` (lift
+every restriction), or `none` (lift nothing — the safe posture named, for when an empty value is
+awkward to supply). Each lift is a deliberate choice to take on that provider's terms yourself, and
+the startup log names what was lifted alongside what still binds. A token that names no restriction
+refuses the start rather than being ignored, so a typo cannot quietly leave a posture nobody chose.
+With `DEMO_PUBLIC` unset the variable does nothing at all, typos included.
 
 Under `DEMO_PUBLIC`, changing the running cache mode (the settings-panel radios, `POST
 /api/config`) needs `DEMO_MAINTAINER_SECRET` set, and the request must carry it back as the
