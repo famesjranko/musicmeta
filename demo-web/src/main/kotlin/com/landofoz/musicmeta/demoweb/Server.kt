@@ -59,6 +59,7 @@ private class ResourceAnchor
  * Every file the page fetches by URL. `/` serves `/index.html`; the rest are fetched as they are
  * named, including each module `index.js` imports — the page is a module graph, not one script, so
  * a module missing from this list is a module the browser 404s on and a page that does not run.
+ * `/robots.txt` rides here too: not a page module, but a crawler-facing file the server must serve.
  */
 internal val STATIC_PATHS = listOf(
     "/index.html",
@@ -66,11 +67,13 @@ internal val STATIC_PATHS = listOf(
     "/index.js",
     "/stream-protocol.js",
     "/attribution.js",
+    "/robots.txt",
 )
 
 internal fun staticContentTypeOf(path: String): String = when {
     path.endsWith(".html") -> "text/html; charset=utf-8"
     path.endsWith(".css") -> "text/css; charset=utf-8"
+    path.endsWith(".txt") -> "text/plain; charset=utf-8"
     else -> "text/javascript; charset=utf-8"
 }
 
