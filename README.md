@@ -6,10 +6,13 @@
 [![JitPack](https://jitpack.io/v/famesjranko/musicmeta.svg)](https://jitpack.io/#famesjranko/musicmeta)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.1.0-%237F52FF?logo=kotlin)](https://kotlinlang.org)
+[![Live demo](https://img.shields.io/badge/Live_demo-try_it-brightgreen)](https://musicmeta-demo-354377080055.us-central1.run.app)
 
 </div>
 
 A Kotlin library for Android and JVM music apps: 11 public music APIs behind one engine, 8 of them usable without API keys. Ask for as much or as little as you need -- all 36 enrichment types, a single artist photo, just lyrics -- and the engine handles identity resolution, multi-provider merging, confidence scoring, rate limiting and caching. Providers set their own terms on commercial use, licensing and attribution -- see [docs/providers.md](docs/providers.md#terms-licences-attribution) before shipping.
+
+**[Try the live demo](https://musicmeta-demo-354377080055.us-central1.run.app)** to see the engine enrich a real search across every provider, or run it yourself -- see [demo-web](demo-web/README.md).
 
 ## What it does
 

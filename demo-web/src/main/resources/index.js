@@ -1,4 +1,19 @@
-import { createSseParser, classifyStreamOutcome, readJsonResponse } from '/stream-protocol.js';
+import {
+  busyMessage,
+  createSseParser,
+  classifyStreamOutcome,
+  parseRetryAfter,
+  readJsonResponse,
+  maintainerSecretFromSearch,
+  cacheModeControlsLocked,
+} from '/stream-protocol.js';
+import {
+  escapeHtml as esc,
+  creditLineHtml,
+  previewNoticeHtml,
+  previewNoticeText,
+  standingNotices,
+} from '/attribution.js';
 
 const tabsEl = document.getElementById('kind-tabs');
 const kindTabs = Array.from(tabsEl.querySelectorAll('button[data-kind]'));
@@ -120,28 +135,11 @@ tabsEl.addEventListener('keydown', (e) => {
 
 syncArtistField();
 
-// --- Cold-start readiness ---
-// The health endpoint reports when the server's startup warm-up has completed. Keep search
-// available for typing, but prevent provider calls until ready so the first user request does not
-// spend its timeout budget paying the backend's JIT/DNS/TLS setup cost.
-let backendReady = false;
+// --- Backend reachability ---
+// Search never waits on this: the page is usable the moment it loads, and the pill only reports
+// whether the backend is answering at all, or is turning this visitor away.
 const healthPill = document.getElementById('health-pill');
 const healthLabel = document.getElementById('health-label');
-const exampleButtons = Array.from(document.querySelectorAll('#examples button[data-kind]'));
-const degradedBanner = document.getElementById('degraded-banner');
-
-document.getElementById('degraded-banner-dismiss').addEventListener('click', () => {
-  degradedBanner.hidden = true;
-});
-
-function setSearchReady(ready) {
-  backendReady = ready;
-  submitBtn.disabled = !ready;
-  submitBtn.setAttribute('aria-disabled', String(!ready));
-  findBtn.disabled = !ready;
-  findBtn.setAttribute('aria-disabled', String(!ready));
-  exampleButtons.forEach((button) => { button.disabled = !ready; });
-}
 
 function setHealthState(state, label) {
   healthPill.dataset.state = state;
@@ -156,29 +154,23 @@ async function pollHealth() {
       cache: 'no-store',
       signal: controller.signal,
     });
-    // 503 is the still-warming status (see Server.kt's /api/health) and carries the same
-    // parseable JSON body as 200, so it is handled inline below rather than thrown as a failure.
-    if (!response.ok && response.status !== 503) throw new Error('HTTP ' + response.status);
+    // A 429 says nothing about the backend's health — it says this visitor is being turned away,
+    // by the gate or by the platform. Reporting it as "unavailable" would be wrong, and polling
+    // through it sooner than it asked is the auto-retry the refusal told us not to make.
+    if (response.status === 429) {
+      setHealthState('degraded', 'Demo busy');
+      setTimeout(pollHealth, (parseRetryAfter(response.headers.get('Retry-After')) || 15) * 1000);
+      return;
+    }
+    if (!response.ok) throw new Error('HTTP ' + response.status);
     const data = readJsonResponse({
       status: response.status,
-      ok: true, // 503 included: a warming body is the answer here, not a failure
+      ok: true,
       contentType: response.headers.get('Content-Type') || '',
       body: await response.text(),
     }).data;
-    if (!data) throw new Error('HTTP ' + response.status);
-    if (data.status === 'READY') {
-      setHealthState('ready', 'Backend ready');
-      setSearchReady(true);
-      return;
-    }
-    if (data.status === 'DEGRADED') {
-      setHealthState('degraded', 'Backend degraded');
-      degradedBanner.hidden = false;
-      setSearchReady(true);
-      return;
-    }
-    setHealthState('warming', 'Warming backend…');
-    setTimeout(pollHealth, 1000);
+    if (!data || !data.ready) throw new Error('HTTP ' + response.status);
+    setHealthState('ready', 'Backend ready');
   } catch (_) {
     setHealthState('error', 'Backend unavailable');
     setTimeout(pollHealth, 1500);
@@ -187,7 +179,6 @@ async function pollHealth() {
   }
 }
 
-setSearchReady(false);
 pollHealth();
 
 // Fills the form and runs a search — shared by the "Try:" buttons and by clicking an
@@ -222,12 +213,6 @@ document.getElementById('query-form').addEventListener('submit', (e) => {
   runQuery();
 });
 
-function esc(s) {
-  return String(s ?? '').replace(/[&<>"']/g, (c) => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-  }[c]));
-}
-
 // The exact request behind the page currently on screen, so the toolbar's "Fetch fresh data"
 // button can re-run precisely that lookup rather than whatever the form fields hold by then.
 let lastQuery = null;
@@ -240,12 +225,6 @@ let lastQuery = null;
 // candidate rather than from the boxes — it enriches what the user pointed at even where the form
 // still holds the words they searched with. The search form's submit passes none of the three.
 async function runQuery(refresh, replay, pick) {
-  if (!backendReady) {
-    statusEl.className = '';
-    statusEl.textContent = 'The backend is still warming up. Search will unlock automatically when it is ready.';
-    return;
-  }
-
   let kind, name, artist, album, ids;
   if (refresh || replay) {
     if (!lastQuery) return;
@@ -322,7 +301,7 @@ async function fetchJson(input, init) {
     contentType: res.headers.get('Content-Type') || '',
     body: await res.text(),
   });
-  return { res, data: read.data, error: read.error };
+  return { res, data: read.data, error: read.error, busy: read.busy };
 }
 
 /**
@@ -343,9 +322,9 @@ async function readPanel(res) {
 // The single-shot path: one response, one paint. Kept as the comparison baseline behind the
 // "Progressive streaming" setting, and as the fallback when a stream drops before it paints.
 async function runQueryWhole(params, wasForceRefresh) {
-  const { res, data, error } = await fetchJson('/api/enrich?' + params.toString());
-  if (res.status === 429) {
-    showBusy(classifyStreamOutcome({ status: 429, retryAfter: res.headers.get('Retry-After') }));
+  const { res, data, error, busy } = await fetchJson('/api/enrich?' + params.toString());
+  if (busy) {
+    showBusy(busyFrom(res));
     return;
   }
   if (error) throw new Error(error);
@@ -359,13 +338,24 @@ async function runQueryWhole(params, wasForceRefresh) {
  * retry on a shared clock synchronise into a burst; the second request is refused as surely as the
  * first. The visitor is told how long to wait and asks again themselves.
  */
-function showBusy(outcome) {
-  const wait = outcome.retryAfterSeconds;
+function showBusy(outcome, { keepResult = false } = {}) {
   statusEl.className = 'err';
-  statusEl.textContent = wait
-    ? `The demo is busy — it runs a few lookups at a time. Try again in about ${wait} seconds.`
-    : 'The demo is busy — it runs a few lookups at a time. Try again shortly.';
-  resultEl.innerHTML = '<div id="empty">Nothing looked up.</div>';
+  statusEl.textContent = busyMessage(outcome.retryAfterSeconds);
+  // `keepResult` is for a refusal that left the page on screen still true — a preview or a cache
+  // clear. Replacing it with "nothing looked up" would be a second, false statement.
+  if (keepResult) return;
+  resultEl.innerHTML =
+    '<div id="empty">Nothing looked up. <button type="button" id="busy-retry">Try again</button></div>';
+}
+
+/**
+ * The busy state for a refusal read off a response rather than off a stream's end.
+ *
+ * Every `/api/*` endpoint can be refused by the demo's admission gate or by the platform in front
+ * of it, and `Retry-After` is the only part of a refusal worth reading either way.
+ */
+function busyFrom(res) {
+  return classifyStreamOutcome({ status: 429, retryAfter: res.headers.get('Retry-After') });
 }
 
 // Streams are numbered so a late event from a superseded run cannot repaint the page: a new query
@@ -440,7 +430,7 @@ async function runQueryStreaming(params, wasForceRefresh) {
   if (response.status === 429) {
     release();
     if (!mine()) return;
-    showBusy(classifyStreamOutcome({ status: 429, painted, retryAfter: response.headers.get('Retry-After') }));
+    showBusy(busyFrom(response));
     return;
   }
   if (!response.ok) {
@@ -547,11 +537,6 @@ function renderCandidates(query) {
 }
 
 async function runSearch() {
-  if (!backendReady) {
-    statusEl.className = '';
-    statusEl.textContent = 'The backend is still warming up. Search will unlock automatically when it is ready.';
-    return;
-  }
   const query = nameEl.value.trim();
   if (!query) {
     statusEl.className = 'err';
@@ -571,7 +556,12 @@ async function runSearch() {
   searchResultsEl.innerHTML = '<h4>Searching\u2026</h4>';
   searchResultsEl.hidden = false;
   try {
-    const { data, error } = await fetchJson('/api/search?' + params.toString());
+    const { res, data, error, busy } = await fetchJson('/api/search?' + params.toString());
+    if (busy) {
+      clearCandidates();
+      showBusy(busyFrom(res));
+      return;
+    }
     if (error) throw new Error(error);
     candidates = data.candidates || [];
     renderCandidates(query);
@@ -580,7 +570,7 @@ async function runSearch() {
     statusEl.className = 'err';
     statusEl.textContent = 'Search failed: ' + err.message;
   } finally {
-    findBtn.disabled = !backendReady;
+    findBtn.disabled = false;
   }
 }
 
@@ -655,8 +645,13 @@ function render(data, wasForceRefresh, stream) {
     : pendingSlots.includes('image')
       ? '<div class="skeleton skeleton-img" aria-hidden="true"></div>'
       : '';
+  // The text's own credit replaces the bare source line when the response said who supplied it:
+  // Wikipedia's licence is owed beside the text it licenses, not in a page footer.
+  const textSource = summary.textCredit
+    ? `<div class="source">${creditLineHtml([summary.textCredit])}</div>`
+    : summary.textSource ? `<div class="source">source: ${esc(summary.textSource)}</div>` : '';
   const text = summary.text
-    ? `<div class="text">${esc(summary.text)}</div><button type="button" class="show-more text-toggle" style="display:none">Show all</button>${summary.textSource ? `<div class="source">source: ${esc(summary.textSource)}</div>` : ''}`
+    ? `<div class="text">${esc(summary.text)}</div><button type="button" class="show-more text-toggle" style="display:none">Show all</button>${textSource}`
     : pendingSlots.includes('text')
       ? '<div class="skeleton-lines" aria-hidden="true"><span class="skeleton"></span><span class="skeleton"></span><span class="skeleton"></span></div>'
       : '';
@@ -705,11 +700,18 @@ function render(data, wasForceRefresh, stream) {
   const sections = data.sections.map((s) => sectionHtml(s, unverified)).join('');
   const totalItems = data.sections.reduce((n, s) => n + s.items.length, 0);
 
+  // A gallery entry's label is often the provider's own id (an artwork alternative is labelled by
+  // whoever supplied it), so the credit replaces the caption there rather than repeating it.
+  const galleryCaption = (g) => {
+    const credit = g.credit ? creditLineHtml([g.credit]) : '';
+    const label = g.label && !(g.credit && g.credit.provider === g.label) ? esc(g.label) : '';
+    return label || credit ? `<figcaption>${label}${credit}</figcaption>` : '';
+  };
   const gallery = (data.gallery && data.gallery.length)
     ? `<div class="card gallery${unverified ? ' unverified' : ''}">${data.gallery.map((g) => `
       <figure>
         <img src="${esc(g.url)}" alt="${esc(g.label || '')}" onerror="this.closest('figure').remove()" />
-        ${g.label ? `<figcaption>${esc(g.label)}</figcaption>` : ''}
+        ${galleryCaption(g)}
       </figure>`).join('')}</div>`
     : '';
 
@@ -777,6 +779,7 @@ function render(data, wasForceRefresh, stream) {
         ${subtitle}
         ${genres}
         ${text}
+        ${creditLineHtml([summary.imageCredit, ...(summary.genreCredits || [])])}
       </div>
     </div>
     ${unverifiedBanner}
@@ -859,7 +862,10 @@ function sectionHtml(section, unverified) {
   // hidden so a section that never clips never shows a flash of a button.
   const toggle = `<button type="button" class="show-more" style="display:none">Show all ${section.items.length}</button>`;
   const chip = unverified ? ' <span class="badge badge-warn section-chip">unverified</span>' : '';
-  return `<div class="card section"><h3>${esc(section.label)} <span class="count">${section.items.length}</span>${chip}</h3><ul>${items}</ul>${toggle}</div>`;
+  // Under the card's own list, which is what "beside the data" means for a card: whoever supplied
+  // these rows is credited on the card that shows them, not in a footer a reader has to hunt in.
+  const credits = creditLineHtml(section.credits);
+  return `<div class="card section"><h3>${esc(section.label)} <span class="count">${section.items.length}</span>${chip}</h3><ul>${items}</ul>${toggle}${credits}</div>`;
 }
 
 // Per-card measure-after-render, mirroring setupTextToggle: a card's list is only "genuinely
@@ -921,6 +927,12 @@ resultEl.addEventListener('click', (e) => {
   if (e.target.closest('#identity-retry')) runQuery();
 });
 
+// --- Busy retry (manual only — see showBusy) ---
+
+resultEl.addEventListener('click', (e) => {
+  if (e.target.closest('#busy-retry')) runQuery();
+});
+
 // --- Result toolbar: force-refresh, and clear-cache-then-reload ---
 
 resultEl.addEventListener('click', (e) => {
@@ -943,11 +955,17 @@ resultEl.addEventListener('click', async (e) => {
     // bare-name tuple clears and an identifier-bearing preview survives "Clear cached result & reload".
     const { kind, name, artist, album, ids } = lastQuery;
     const identifiers = ids ? JSON.parse(ids) : undefined;
-    const { error } = await fetchJson('/api/invalidate', {
+    const { res, error, busy } = await fetchJson('/api/invalidate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ kind, name, artist, album, identifiers }),
     });
+    if (busy) {
+      // Nothing was cleared, so the page on screen still holds; the button is the way to ask again.
+      showBusy(busyFrom(res), { keepResult: true });
+      btn.disabled = false;
+      return;
+    }
     if (error) throw new Error(error);
     runQuery(false, true);
   } catch (err) {
@@ -1054,6 +1072,7 @@ audio.addEventListener('ended', stopPreview);
 function resetBtn(btn) {
   clearTimeout(btn._errorTimer);
   btn._errorTimer = null;
+  clearPreviewNotice(btn);
   btn.classList.remove('playing', 'loading', 'error');
   btn.innerHTML = PLAY_GLYPH;
   btn.title = PLAY_TITLE;
@@ -1063,6 +1082,24 @@ function stopPreview() {
   audio.pause();
   if (activeBtn) resetBtn(activeBtn);
   activeBtn = null;
+}
+
+// The notice a provider's terms owe anyone the recording is playable to — Deezer's private-use
+// notice, Apple's courtesy attribution — shown at the button that is playing it and removed with
+// it. Driven by the source the preview actually resolved from, so a provider that owes nothing
+// grows nothing.
+function showPreviewNotice(btn, source) {
+  clearPreviewNotice(btn);
+  const html = previewNoticeHtml(source);
+  if (!html) return;
+  btn.insertAdjacentHTML('afterend', html);
+  btn._notice = btn.nextElementSibling;
+  btn.title = previewNoticeText(source);
+}
+
+function clearPreviewNotice(btn) {
+  if (btn._notice) btn._notice.remove();
+  btn._notice = null;
 }
 
 resultEl.addEventListener('click', async (e) => {
@@ -1086,7 +1123,17 @@ resultEl.addEventListener('click', async (e) => {
   });
   if (btn.dataset.ids) params.set('ids', btn.dataset.ids);
   try {
-    const { data, error } = await fetchJson('/api/preview?' + params.toString());
+    const { res, data, error, busy } = await fetchJson('/api/preview?' + params.toString());
+    if (busy) {
+      if (btn !== activeBtn) return; // superseded by another click while loading
+      activeBtn = null;
+      btn.classList.remove('loading');
+      btn.innerHTML = PLAY_GLYPH;
+      btn.title = PLAY_TITLE;
+      // The play button is its own retry affordance, so it is handed back rather than marked failed.
+      showBusy(busyFrom(res), { keepResult: true });
+      return;
+    }
     if (error) throw new Error(error);
     if (btn !== activeBtn) return; // superseded by another click while loading
     audio.src = data.url;
@@ -1094,6 +1141,7 @@ resultEl.addEventListener('click', async (e) => {
     btn.classList.remove('loading');
     btn.innerHTML = PLAY_GLYPH;
     btn.classList.add('playing');
+    showPreviewNotice(btn, data.source);
   } catch (err) {
     if (btn !== activeBtn) return; // superseded before the failure arrived; already reset
     activeBtn = null;
@@ -1168,10 +1216,13 @@ function renderProviders(providers) {
 
   // A KEY_MISSING row was never callable, so it never used anything to attribute — index.html's
   // "every notice this demo could owe" only covers a provider a request could actually reach.
-  const notices = providers
-    .filter((p) => p.keyStatus !== 'KEY_MISSING')
+  const reachable = providers.filter((p) => p.keyStatus !== 'KEY_MISSING');
+  const notices = reachable
     .filter((p) => p.policy && ATTRIBUTION_OWED.includes(p.policy.attribution) && p.policy.attributionNotice)
-    .map((p) => p.policy.attributionNotice);
+    .map((p) => p.policy.attributionNotice)
+    // Notices a provider's terms owe the page as a whole, which musicmeta's policy snapshot does
+    // not carry — the same Deezer notice the player states where a recording is actually playable.
+    .concat(standingNotices(reachable.map((p) => p.id)));
   if (notices.length === 0) return;
   creditsNotices.innerHTML = notices.map((n) => `<span class="credit">${esc(n)}</span>`).join('');
   creditsEl.hidden = false;
@@ -1211,7 +1262,15 @@ streamingToggle.addEventListener('change', () => {
 // Cache mode. One GET at load to reflect what's actually running; each change POSTs and reflects
 // the confirmed value back rather than the value clicked, so a rejected/failed change doesn't
 // leave the radio lying about which mode is live.
+//
+// Under a public posture the server gates the POST behind a maintainer secret (Server.kt
+// handleConfig), so this fieldset is disabled until the page's own URL carries one
+// (?maintainer=<secret> — a maintainer's own bookmark, never solicited from a visitor). A local
+// run reports requiresMaintainerSecret: false and this never locks anything, so the fieldset
+// behaves exactly as it did before this gate existed.
+const cacheModeFieldset = document.getElementById('cache-mode-fieldset');
 const cacheModeInputs = document.querySelectorAll('#cache-mode-fieldset input[type="radio"]');
+const maintainerSecret = maintainerSecretFromSearch(window.location.search);
 let confirmedCacheMode = null;
 
 function setCacheModeRadio(cacheMode) {
@@ -1221,16 +1280,21 @@ function setCacheModeRadio(cacheMode) {
 
 fetch('/api/config', { cache: 'no-store' })
   .then(readPanel)
-  .then((data) => setCacheModeRadio(data.cacheMode))
+  .then((data) => {
+    setCacheModeRadio(data.cacheMode);
+    cacheModeFieldset.disabled = cacheModeControlsLocked(data.requiresMaintainerSecret, maintainerSecret);
+  })
   .catch(() => {});
 
 cacheModeInputs.forEach((input) => {
   input.addEventListener('change', () => {
     const requested = input.value;
     const lastConfirmed = confirmedCacheMode;
+    const headers = { 'Content-Type': 'application/json' };
+    if (maintainerSecret) headers['X-Maintainer-Secret'] = maintainerSecret;
     fetch('/api/config', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ cacheMode: requested }),
     })
       .then(readPanel)

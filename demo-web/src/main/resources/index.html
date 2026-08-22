@@ -23,12 +23,6 @@
     <p>Live calls into the published library — enriches from up to 11 real music-metadata providers and merges the results.</p>
   </header>
   <main>
-    <div id="degraded-banner" class="identity-banner degraded-banner" role="status" hidden>
-      <span aria-hidden="true">&#9888;&#65039;</span>
-      <span class="identity-banner-text">The backend's startup check failed, so some requests may
-      not return results. You can still try &mdash; this isn&rsquo;t blocking search.</span>
-      <button type="button" id="degraded-banner-dismiss">Dismiss</button>
-    </div>
     <div id="kind-tabs" class="kind-tabs" aria-label="What to look up">
       <button type="button" data-kind="artist" aria-pressed="true" tabindex="0">Artist</button>
       <button type="button" data-kind="album" aria-pressed="false" tabindex="-1">Album</button>
@@ -38,20 +32,20 @@
     <form id="query-form">
       <div class="smartbox">
         <input id="name" type="text" placeholder="Artist name (e.g. Radiohead)" autocomplete="off" aria-label="Artist name" />
-        <button id="find" type="button" class="inline-find" disabled aria-disabled="true" aria-label="Find matching artists">⌕ Find</button>
+        <button id="find" type="button" class="inline-find" aria-label="Find matching artists">⌕ Find</button>
       </div>
       <input id="artist" type="text" placeholder="Artist (for album / track)" autocomplete="off" style="display:none" />
       <input id="album" type="text" placeholder="Album (optional, helps track matching)" autocomplete="off" style="display:none" />
-      <button id="submit" type="submit" disabled aria-disabled="true">Enrich</button>
+      <button id="submit" type="submit">Enrich</button>
     </form>
     <!-- Sibling of the form on purpose: the form clips its overflow, which would cut this card off. -->
     <div id="search-results" class="search-results" role="region" aria-live="polite" hidden></div>
     <div id="examples">
       Try:
-      <button type="button" data-kind="artist" data-name="Radiohead" disabled>Radiohead</button>
-      <button type="button" data-kind="album" data-name="OK Computer" data-artist="Radiohead" disabled>OK Computer</button>
-      <button type="button" data-kind="track" data-name="Karma Police" data-artist="Radiohead" data-album="OK Computer" disabled>Karma Police</button>
-      <button type="button" data-kind="mbid" data-name="0383dadf-2a4e-4d10-a46a-e9e041da8eb3" disabled>An MBID</button>
+      <button type="button" data-kind="artist" data-name="Radiohead">Radiohead</button>
+      <button type="button" data-kind="album" data-name="OK Computer" data-artist="Radiohead">OK Computer</button>
+      <button type="button" data-kind="track" data-name="Karma Police" data-artist="Radiohead" data-album="OK Computer">Karma Police</button>
+      <button type="button" data-kind="mbid" data-name="0383dadf-2a4e-4d10-a46a-e9e041da8eb3">An MBID</button>
     </div>
     <div id="status"></div>
     <div id="result"><div id="empty">Enter a name above and hit Enrich.</div></div>

@@ -6,6 +6,7 @@ import {
   parseRetryAfter,
   classifyStreamOutcome,
   readJsonResponse,
+  busyMessage,
 } from '../../main/resources/stream-protocol.js';
 
 // --- SSE framing ---------------------------------------------------------------------------
@@ -166,4 +167,44 @@ test('an empty body reports the status rather than an empty message', () => {
   const read = readJsonResponse({ status: 502, ok: false, body: '' });
   assert.equal(read.data, null);
   assert.match(read.error, /HTTP 502/);
+});
+
+// --- One busy state, whoever refused ----------------------------------------------------------
+// Two things can answer 429 on `/api/*` and they answer differently: the demo's own admission gate
+// replies in JSON, and the platform in front of it (Cloud Run at one instance) replies with the
+// plain text `Rate exceeded.`. A visitor has the same thing to do about either, so both must reach
+// the page as the busy state and neither as a parser's complaint about the body.
+
+test('a plain-text 429 from the platform reads as busy, not as an unreadable response', () => {
+  const read = readJsonResponse({
+    status: 429, ok: false, contentType: 'text/plain', body: 'Rate exceeded.',
+  });
+  assert.equal(read.busy, true);
+  assert.equal(read.error, busyMessage(null));
+  assert.doesNotMatch(read.error, /unreadable|token|JSON/);
+});
+
+test("a JSON 429 from the demo's own gate reads as busy and keeps the server's wording", () => {
+  const read = readJsonResponse({
+    status: 429, ok: false, contentType: 'application/json', body: '{"error":"at capacity"}',
+  });
+  assert.equal(read.busy, true);
+  assert.equal(read.error, 'at capacity');
+});
+
+test('an empty 429 body is busy rather than a bare status', () => {
+  const read = readJsonResponse({ status: 429, ok: false, body: '' });
+  assert.equal(read.busy, true);
+  assert.equal(read.error, busyMessage(null));
+});
+
+test('nothing but a 429 is busy, so an ordinary failure still reports itself', () => {
+  const read = readJsonResponse({ status: 503, ok: false, contentType: 'text/plain', body: 'nope' });
+  assert.equal(read.busy, false);
+  assert.match(read.error, /HTTP 503/);
+});
+
+test('the busy message names the wait when the refusal named one', () => {
+  assert.match(busyMessage(15), /15 seconds/);
+  assert.doesNotMatch(busyMessage(null), /\d/);
 });
