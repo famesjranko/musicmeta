@@ -15,7 +15,7 @@ import com.landofoz.musicmeta.PopularitySignal
 import com.landofoz.musicmeta.PopularitySignalKind
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.TrackProfile
-import com.landofoz.musicmeta.engine.DEFAULT_SYNTHESIZERS
+import com.landofoz.musicmeta.engine.DEFAULT_SYNTHESIZER_DEPENDENCIES
 
 /**
  * @param pending the enrichment types that have not settled yet, `requestedTypes - raw.keys` on a
@@ -503,20 +503,13 @@ private fun EnrichmentResults.creditProviders(vararg types: EnrichmentType): Lis
     types.flatMap { creditProvidersOf(it) }.distinct()
 
 private fun EnrichmentResults.creditProvidersOf(type: EnrichmentType): List<String> {
-    DERIVED_FROM[type]?.let { sources -> return sources.flatMap { creditProvidersOf(it) } }
+    // A synthesized type names its synthesizer, which no reader can be sent to and no upstream's
+    // terms cover; credit whoever answered the types it derives from. The graph is core's, read
+    // off DEFAULT_SYNTHESIZER_DEPENDENCIES so a synthesizer added or re-wired there stays correct.
+    DEFAULT_SYNTHESIZER_DEPENDENCIES[type]?.let { sources -> return sources.flatMap { creditProvidersOf(it) } }
     val success = raw[type] as? EnrichmentResult.Success ?: return emptyList()
     return if (success.provider.endsWith(MERGER_SUFFIX)) success.data.itemSources() else listOf(success.provider)
 }
-
-/**
- * Types the engine synthesizes from other types rather than fetching. Such a result names the
- * synthesizer, which no reader can be sent to and no terms cover — the upstreams to credit are
- * whoever answered the types it was derived from. Read straight off core's default synthesizer
- * registry so a synthesizer added or re-wired there is credited correctly with nothing to keep in
- * sync by hand.
- */
-private val DERIVED_FROM: Map<EnrichmentType, Set<EnrichmentType>> =
-    DEFAULT_SYNTHESIZERS.associate { it.type to it.dependencies }
 
 /** Every upstream the items of a merged payload name. Empty for a payload that carries none. */
 private fun EnrichmentData.itemSources(): List<String> = when (this) {
