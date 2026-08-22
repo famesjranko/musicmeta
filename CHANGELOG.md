@@ -47,7 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `EnrichmentEngine.close()` (defaulted no-op): releases the scope backing `enrichProgressive`'s detachment; call it once done with an engine to abandon a still-running detached fan-out
 - A `close()`d engine stamps every unsettled requested type `Error(ErrorKind.ENGINE_CLOSED)`, including for a request key it had never seen before `close()`
 - `EnrichmentEngine.enrichBatchProgressive`: `enrichBatch`'s cumulative-snapshot counterpart, composed from `enrichProgressive` per request in the same sequential order
-- `engine.DEFAULT_SYNTHESIZER_DEPENDENCIES`: each composite type the default engine synthesizes mapped to its source sub-types, for a caller crediting a synthesized result without hand-copying the graph
+- `engine.DEFAULT_SYNTHESIZER_DEPENDENCIES`: each composite type the engine synthesizes mapped to its source sub-types, for crediting a synthesized result without hand-copying the graph
 - demo-web's enrich page now streams over `enrichProgressive` via server-sent events: the page paints each card as its type settles instead of waiting for the slowest provider
 - demo-web credits every card with the upstream that supplied it, from response provenance, with each provider's required wording, link-back and licence notice rendered beside its data
 - demo-web shows Deezer's private-use notice at the preview player, and states each provider's standing notices in the footer
@@ -61,7 +61,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - demo-web's card image now prefers a Deezer/iTunes CDN URL over Cover Art Archive's when both are available, cutting card paint latency from seconds to well under a second
 - demo-web's artist summary card now uses fanart.tv's smaller preview image for its photo and background instead of the full-size original; the gallery still shows full-size
-- Cached `LABEL`/`RELEASE_DATE`/`RELEASE_TYPE`/`COUNTRY` entries with unknown-curation genre tags re-fetched on every call; now served from cache — tags are only read off `GENRE` and `ALBUM_METADATA`
+- Cached `LABEL`/`RELEASE_DATE`/`RELEASE_TYPE`/`COUNTRY` entries with unknown-curation genre tags re-fetched every call; now served from cache — tags are read only off `GENRE` and `ALBUM_METADATA`
 - A full cache hit now reports `CanonicalStatus.NOT_ATTEMPTED_DISABLED` when `enableIdentityResolution` is false, matching the live path instead of always claiming `NOT_ATTEMPTED_CACHE_HIT`
 - No `NotFound` a `CatalogFilterMode` produces by emptying a `Success` is negative-cached any more — covers a live answer, a `STALE_IF_ERROR` substitute, and a fresh cache hit re-filtered later
 - A `CompositeSynthesizer`'s `NotFound` no longer negative-caches when synthesized over a `STALE_IF_ERROR`-substituted dependency — it describes a past call's stale snapshot, not this one
