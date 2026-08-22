@@ -30,7 +30,7 @@ const NAME_PLACEHOLDERS = {
   artist: 'Artist name (e.g. Radiohead)',
   album: 'Album title (e.g. OK Computer)',
   track: 'Track title (e.g. Karma Police)',
-  mbid: 'MusicBrainz id — artist, release or recording',
+  mbid: 'MusicBrainz id for an artist, release or recording',
 };
 
 // The #name box is reused for three different semantic roles across kinds (artist name / album
@@ -249,7 +249,7 @@ async function runQuery(refresh, replay, pick) {
   submitBtn.innerHTML = '<span class="spinner"></span>Enriching…';
   statusEl.className = '';
   statusEl.textContent = '';
-  resultEl.innerHTML = '<div class="loading-panel"><span class="spinner"></span>Calling providers — this can take a few seconds…</div>';
+  resultEl.innerHTML = '<div class="loading-panel"><span class="spinner"></span>Calling providers. This can take a few seconds…</div>';
 
   const params = new URLSearchParams({ kind, name, artist, album });
   if (ids) params.set('ids', ids);
@@ -422,7 +422,7 @@ async function runQueryStreaming(params, wasForceRefresh) {
     const outcome = classifyStreamOutcome({ status: null, painted: 0, dropped: true });
     if (!outcome.fallback) throw err;
     statusEl.className = '';
-    statusEl.textContent = 'Stream unavailable — trying a single request.';
+    statusEl.textContent = 'Stream unavailable, trying a single request.';
     await runQueryWhole(params, wasForceRefresh);
     return;
   }
@@ -487,12 +487,12 @@ async function runQueryStreaming(params, wasForceRefresh) {
   const message = streamError || 'the stream ended early';
   if (outcome.kind === 'partial') {
     statusEl.className = 'err';
-    statusEl.textContent = 'Stopped: ' + message + ' — showing what had arrived.';
+    statusEl.textContent = 'Stopped: ' + message + '. Showing what had arrived.';
     return;
   }
   if (streamError) throw new Error(message);
   statusEl.className = '';
-  statusEl.textContent = 'Stream unavailable — trying a single request.';
+  statusEl.textContent = 'Stream unavailable, trying a single request.';
   await runQueryWhole(params, wasForceRefresh);
 }
 
@@ -589,7 +589,7 @@ function pickCandidate(hit) {
   // No identifier and no artist leaves an album or track request with nothing to match against.
   if (currentKind !== 'artist' && !artistEl.value.trim()) {
     statusEl.className = 'err';
-    statusEl.textContent = 'That match carries no artist — type one, then hit Enrich.';
+    statusEl.textContent = 'That match carries no artist. Type one, then hit Enrich.';
     return;
   }
   clearCandidates();
@@ -678,7 +678,7 @@ function render(data, wasForceRefresh, stream) {
   const bestEffortBadge = verdict === 'UNRESOLVED'
     ? '<span class="badge badge-warn">Best-effort match</span>'
     : unverified
-      ? '<span class="badge badge-warn">Unverified — lookup failed</span>'
+      ? '<span class="badge badge-warn">Unverified: lookup failed</span>'
       : identityPending
         ? '<span class="badge badge-pending"><span class="spinner"></span>Confirming match…</span>'
         : '';
@@ -787,7 +787,7 @@ function render(data, wasForceRefresh, stream) {
     <div class="sections${unverified ? ' unverified' : ''}">${sections}</div>
     <div class="card">
       <details class="meta-panel">
-        <summary>${totalItems} items across ${data.sections.length} sections${data.meta.identityMatch ? ' · identity: ' + esc(data.meta.identityMatch) : ''}${staleCount > 0 ? ' · <b class="stale-count">' + staleCount + ' stale provider response' + (staleCount === 1 ? '' : 's') + '</b>' : ''}${timeoutCount > 0 ? ' · <b class="stale-count">' + timeoutCount + ' timed out</b>' : ''}${stillLoading ? ' · <b>' + pendingTypes.length + ' still loading</b>' : ''} — how we got this</summary>
+        <summary>${totalItems} items across ${data.sections.length} sections${data.meta.identityMatch ? ' · identity: ' + esc(data.meta.identityMatch) : ''}${staleCount > 0 ? ' · <b class="stale-count">' + staleCount + ' stale provider response' + (staleCount === 1 ? '' : 's') + '</b>' : ''}${timeoutCount > 0 ? ' · <b class="stale-count">' + timeoutCount + ' timed out</b>' : ''}${stillLoading ? ' · <b>' + pendingTypes.length + ' still loading</b>' : ''} · how we got this</summary>
         ${identifiers}
         <table class="providers">
           <thead><tr><th>Type</th><th>Provider</th><th>Status</th><th>Confidence</th></tr></thead>
@@ -1181,7 +1181,7 @@ const ATTRIBUTION_OWED = ['REQUIRED', 'DEPENDS_ON_DATA'];
 function keyStateHtml(provider) {
   if (provider.keyStatus === 'KEY_MISSING') return '<span class="keyreq">key missing</span>';
   if (provider.keyStatus === 'TOKEN_MISSING') {
-    return '<span class="keyreq" title="Gates artist radio discovery only — everything else this provider answers still works.">token missing</span>';
+    return '<span class="keyreq" title="Gates artist radio discovery only. Everything else this provider answers still works.">token missing</span>';
   }
   if (!provider.requiresApiKey) return 'no key needed';
   return provider.available ? 'key configured' : '<span class="keyreq">key missing</span>';

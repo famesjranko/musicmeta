@@ -74,8 +74,8 @@ export function parseRetryAfter(header) {
  */
 export function busyMessage(seconds) {
   return seconds
-    ? `The demo is busy with another visitor — it runs a few lookups at a time. Try again in about ${seconds} seconds.`
-    : 'The demo is busy with another visitor — it runs a few lookups at a time. Try again in a moment.';
+    ? `The demo is busy with another visitor and runs a few lookups at a time. Try again in about ${seconds} seconds.`
+    : 'The demo is busy with another visitor and runs a few lookups at a time. Try again in a moment.';
 }
 
 /**
