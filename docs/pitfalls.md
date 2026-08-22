@@ -542,6 +542,27 @@ Before adding provider-internal state of any kind:
 - Per-call state rides the coroutine context, as `EnrichDeadline` and `TransientIdentifierMarker`
   already do. A new `EnrichmentProvider` method would be a documented break instead (§1).
 
+## 23. A memo that holds only successes multiplies a failing endpoint's retry cost by its readers
+
+`CallMemo` writes on the success path, so a `fetch()` that throws leaves nothing behind and the next
+type asking the same question runs the whole retry ladder again. That is the right default for a
+memo whose readers are independent — but where *N* types read one upstream document, a sustained
+failure costs *N* ladders instead of one, and none of them can succeed where the first could not.
+
+`CoverArtArchiveProvider.getArtworkMetadata` is the worked case: four types read one release document
+(ALBUM_ART's side-fetch, ALBUM_ART_BACK, ALBUM_BOOKLET, CD_ART), so a failing CAA release endpoint
+was attempted 4 × the 3-attempt ladder = 12 times per call. Against a CAA sampled at ~10s per failed
+attempt, an album enrich took 167-184s where sharing one budget takes 42-58s (offline replay over
+captured samples, 2026-08-22 — treat the seconds as a scale, re-measure before building on them; the
+attempt counts are arithmetic and `CoverArtArchiveMemoTest` pins the 4-to-1 collapse).
+
+Wrap the outcome in a `Result` so the memo can hold a failure, and **rethrow `CancellationException`
+before it reaches `Result.failure`** — a cancelled attempt memoized as an error is §2's swallow one
+layer removed, handed to a sibling type whose own job is healthy. Two facts make sharing the failure
+safe here and are what to check before copying it: the memo is call-scoped, so nothing outlives one
+`enrich()`; and every reader reports the same `Error` it would have earned running the ladder itself,
+so no result changes — only the attempt count does.
+
 ## Area — Checks, comments, and config
 
 ## 9. A line-based check that skips lines can stop reading a file entirely

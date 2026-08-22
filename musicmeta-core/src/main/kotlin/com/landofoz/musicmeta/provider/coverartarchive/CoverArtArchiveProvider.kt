@@ -11,6 +11,7 @@ import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.engine.ProviderCallScope
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 
@@ -177,12 +178,28 @@ class CoverArtArchiveProvider(
      * more than one release must not share one release's answer with another's. A miss is memoized
      * too, so a release with no artwork costs one request instead of one per type; called outside
      * an engine, there is no scope to memoize in and every call hits upstream.
+     *
+     * A *failure* is shared on the same terms: the first reader's exhausted attempt is rethrown to
+     * the other three rather than each running its own attempts against an endpoint already known
+     * to be failing, so one call costs one attempt budget for this release and not one per type.
+     * Each type still reports the error it would have earned alone. Wrapping the outcome in a
+     * [Result] is what lets [CallMemo] — which holds only what [CallMemo.get]'s fetch *returns* —
+     * hold a failure at all; [CancellationException] is rethrown before it can become one, so a
+     * caller cancelled mid-fetch leaves nothing behind for a sibling type to inherit.
      */
     private suspend fun getArtworkMetadata(releaseId: String): List<CoverArtArchiveImage>? {
         val memo = currentCoroutineContext()[ProviderCallScope]
-            ?.slot(this) { CallMemo<String, List<CoverArtArchiveImage>?>() }
+            ?.slot(this) { CallMemo<String, Result<List<CoverArtArchiveImage>?>>() }
             ?: return api.getArtworkMetadata(releaseId)
-        return memo.get(releaseId) { api.getArtworkMetadata(releaseId) }
+        return memo.get(releaseId) {
+            try {
+                Result.success(api.getArtworkMetadata(releaseId))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }.getOrThrow()
     }
 
     companion object {
