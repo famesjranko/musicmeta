@@ -1,0 +1,75 @@
+name: Deploy demo-web
+
+# Manual deploy of demo-web to Cloud Run. Keyless auth via Workload Identity Federation — no stored
+# service-account key. All GCP identifiers come from repo variables (Settings > Variables), so this
+# file carries none. App secrets stay in Secret Manager and are bound by name at deploy, never here.
+on:
+  workflow_dispatch:
+    inputs:
+      core_version:
+        description: "musicmeta-core version to build against (blank = build from local source)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  id-token: write # required for the WIF OIDC token exchange
+
+concurrency:
+  group: deploy-demo
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      IMAGE: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/demo/musicmeta-demo-web:latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          project_id: ${{ vars.GCP_PROJECT }}
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker "${{ vars.GCP_REGION }}-docker.pkg.dev" --quiet
+
+      - name: Build and push image
+        env:
+          DEMO_CORE_VERSION: ${{ github.event.inputs.core_version }}
+        run: |
+          docker build -f demo-web/Dockerfile \
+            --build-arg DEMO_CORE_VERSION="$DEMO_CORE_VERSION" \
+            -t "$IMAGE" .
+          docker push "$IMAGE"
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy "${{ vars.GCP_SERVICE }}" \
+            --project="${{ vars.GCP_PROJECT }}" \
+            --region="${{ vars.GCP_REGION }}" \
+            --image="$IMAGE" \
+            --concurrency=8 --max-instances=1 --max=1 --min-instances=0 \
+            --cpu=1 --memory=512Mi --timeout=180 \
+            --no-allow-unauthenticated \
+            --service-account="${{ vars.GCP_RUNTIME_SA }}" \
+            --update-env-vars=DEMO_PUBLIC=1 \
+            --update-secrets=DEMO_MAINTAINER_SECRET=demo-maintainer-secret:latest,DEMO_PUBLIC_ALLOW=demo-public-allow:latest \
+            --quiet
+
+      - name: Verify served revision
+        run: |
+          read -r REV CONC MAXR MAXS < <(gcloud run services describe "${{ vars.GCP_SERVICE }}" \
+            --project="${{ vars.GCP_PROJECT }}" --region="${{ vars.GCP_REGION }}" \
+            --format='value[separator=" "](status.latestReadyRevisionName,spec.template.spec.containerConcurrency,spec.template.metadata.annotations["autoscaling.knative.dev/maxScale"],metadata.annotations["run.googleapis.com/maxScale"])')
+          echo "revision=$REV concurrency=$CONC maxScale(revision)=$MAXR maxScale(service)=$MAXS"
+          if [ "$MAXR" != "1" ] || [ "$MAXS" != "1" ]; then
+            echo "::error::maxScale is not 1/1 — service could scale beyond one instance" >&2
+            exit 1
+          fi
