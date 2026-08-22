@@ -86,21 +86,21 @@ fun main() {
         println(posture.notice)
         println(
             if (maintainerSecret != null) {
-                "DEMO_MAINTAINER_SECRET set — maintainer mutations (cache-mode changes) enabled."
+                "DEMO_MAINTAINER_SECRET set: maintainer mutations (cache-mode changes) enabled."
             } else {
-                "DEMO_MAINTAINER_SECRET unset — maintainer mutations (cache-mode changes) disabled."
+                "DEMO_MAINTAINER_SECRET unset: maintainer mutations (cache-mode changes) disabled."
             },
         )
     }
     if (missing.required.isNotEmpty()) {
         println(
-            "No key set for: ${missing.required.joinToString(", ")} — those providers are skipped. " +
+            "No key set for: ${missing.required.joinToString(", ")}. Those providers are skipped. " +
                 "See secrets.properties / README.",
         )
     }
     if (missing.optional.isNotEmpty()) {
         println(
-            "No token set for: ${missing.optional.joinToString(", ")} — registered, but artist radio " +
+            "No token set for: ${missing.optional.joinToString(", ")}. Registered, but artist radio " +
                 "discovery is off. See secrets.properties / README.",
         )
     }

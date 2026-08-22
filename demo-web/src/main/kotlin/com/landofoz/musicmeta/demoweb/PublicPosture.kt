@@ -31,7 +31,7 @@ internal fun publicPostureEnabled(value: String?): Boolean = value == "1"
  * that line are printed in.
  */
 internal enum class PublicRelaxation(val token: String, val restriction: String) {
-    LASTFM("lastfm", "Last.fm not registered (API ToS 2.7 — public use needs prior written approval)"),
+    LASTFM("lastfm", "Last.fm not registered (API ToS 2.7: public use needs prior written approval)"),
     LISTENBRAINZ("listenbrainz", "ListenBrainz personal token withheld (account-scoped)"),
     DISCOGS_IMAGES("discogs-images", "Discogs images withheld (Restricted Data)"),
     DISCOGS_CACHE("discogs-cache", "Discogs-sourced data expires after 6h (API ToU)"),
@@ -80,7 +80,7 @@ internal fun parsePublicRelaxations(value: String?): ParsedRelaxations {
 internal fun unknownRelaxationMessage(unknown: List<String>): String {
     val valid = (PublicRelaxation.entries.map { it.token } + RELAX_ALL_TOKEN + RELAX_NONE_TOKEN).joinToString(", ")
     return "DEMO_PUBLIC_ALLOW: unrecognised ${if (unknown.size == 1) "token" else "tokens"} " +
-        "${unknown.joinToString(", ")} — expected any of: $valid."
+        "${unknown.joinToString(", ")}. Expected any of: $valid."
 }
 
 /**
@@ -127,7 +127,7 @@ internal data class PublicPosture(
         get() {
             val restricted = PublicRelaxation.entries.filter { restricts(it) }.joinToString("; ") { it.restriction }
             val relaxed = PublicRelaxation.entries.filter { it in relaxations }.joinToString(", ") { it.token }
-            return "DEMO_PUBLIC=1 — restricted: ${restricted.ifEmpty { "nothing" }}. " +
+            return "DEMO_PUBLIC=1, restricted: ${restricted.ifEmpty { "nothing" }}. " +
                 "Relaxed by DEMO_PUBLIC_ALLOW: ${relaxed.ifEmpty { "nothing" }}."
         }
 }

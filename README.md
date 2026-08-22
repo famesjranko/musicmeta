@@ -10,9 +10,9 @@
 
 </div>
 
-A Kotlin library for Android and JVM music apps: 11 public music APIs behind one engine, 8 of them usable without API keys. Ask for as much or as little as you need -- all 36 enrichment types, a single artist photo, just lyrics -- and the engine handles identity resolution, multi-provider merging, confidence scoring, rate limiting and caching. Providers set their own terms on commercial use, licensing and attribution -- see [docs/providers.md](docs/providers.md#terms-licences-attribution) before shipping.
+A Kotlin library for Android and JVM music apps: 11 public music APIs behind one engine, 8 of them usable without API keys. Ask for as much or as little as you need: all 36 enrichment types, a single artist photo, or just lyrics. The engine handles identity resolution, multi-provider merging, confidence scoring, rate limiting and caching. Providers set their own terms on commercial use, licensing and attribution, so see [docs/providers.md](docs/providers.md#terms-licences-attribution) before shipping.
 
-**[Try the live demo](https://musicmeta-demo-354377080055.us-central1.run.app)** to see the engine enrich a real search across every provider, or run it yourself -- see [demo-web](demo-web/README.md).
+**[Try the live demo](https://musicmeta-demo-354377080055.us-central1.run.app)** to see the engine enrich a real search across every provider, or run it yourself; see [demo-web](demo-web/README.md).
 
 ## What it does
 
@@ -38,7 +38,7 @@ val engine = EnrichmentEngine.Builder()
     .withDefaultProviders()
     .build()
 
-// Artist profile -- photo, bio, genres, members, discography, similar artists, ...
+// Artist profile: photo, bio, genres, members, discography, similar artists, ...
 val profile = engine.artistProfile("Radiohead")
 
 println(profile.photo?.url)
@@ -56,7 +56,7 @@ val minimal = engine.artistProfile("Radiohead", types = setOf(
 ))
 ```
 
-The engine resolves every type independently — a provider that fails, rate limits or times out
+The engine resolves every type independently: a provider that fails, rate limits or times out
 yields a typed result on that one type, and the rest of the profile is unaffected. `profile.results` carries the per-type outcome when you need to tell "no data" from
 "could not fetch".
 
@@ -66,7 +66,7 @@ failure-isolation guarantees are in the [developer guides](docs/guides/README.md
 ## Search and disambiguation
 
 `engine.search()` returns `SearchCandidate` matches without running the enrichment pipeline or
-touching the cache — use it for a search-ahead UI where the user picks an entity before you fetch
+touching the cache. Use it for a search-ahead UI where the user picks an entity before you fetch
 its metadata.
 
 ```kotlin
@@ -78,12 +78,12 @@ val chosen = candidates.first() // whichever one the user picked
 val profile = engine.artistProfile(chosen)
 ```
 
-Show the list in the order it arrives, and **do not sort it by `score`** — that number is each
+Show the list in the order it arrives, and **do not sort it by `score`**, because that number is each
 provider's own, not comparable across them, so sorting on it ranks unlike scales.
 
 The same candidates surface unprompted when a name is ambiguous: an enriched profile carries
-them, so `engine.artistProfile("pink floid").suggestions` — or `results.identity.suggestions` via
-`enrich()` — holds the near-miss matches. Pick one and re-enrich with it, same as above. See
+them, so `engine.artistProfile("pink floid").suggestions`, or `results.identity.suggestions` via
+`enrich()`, holds the near-miss matches. Pick one and re-enrich with it, same as above. See
 [identity resolution](docs/guides/identity-resolution.md) for the full "did you mean?" flow.
 
 ## Providers
@@ -117,7 +117,7 @@ Pass keys via `ApiKeyConfig`:
 val engine = EnrichmentEngine.Builder()
     .apiKeys(ApiKeyConfig(
         lastFmKey = "...", fanartTvProjectKey = "...", discogsPersonalToken = "...",
-        listenBrainzToken = "...",  // Optional — unlocks ARTIST_RADIO_DISCOVERY
+        listenBrainzToken = "...",  // Optional, unlocks ARTIST_RADIO_DISCOVERY
     ))
     .withDefaultProviders()
     .build()
@@ -128,19 +128,19 @@ val engine = EnrichmentEngine.Builder()
 | Category | Types | Multi-provider |
 |----------|-------|----------------|
 | **Artwork** | ALBUM_ART, ALBUM_ART_BACK, ALBUM_BOOKLET, ARTIST_PHOTO, ARTIST_BACKGROUND, ARTIST_LOGO, ARTIST_BANNER, CD_ART | ALBUM_ART merged (5), ARTIST_PHOTO merged (5: Wikidata, Fanart.tv, Deezer, Discogs, Wikipedia), CD_ART (2) |
-| **Metadata** | GENRE, LABEL, RELEASE_DATE, RELEASE_TYPE, COUNTRY, BAND_MEMBERS, ARTIST_DISCOGRAPHY, ALBUM_TRACKS, ALBUM_METADATA, TRACK_METADATA | DISCOGRAPHY (4, 3 answering -- ListenBrainz's route is disabled upstream), METADATA (4), TRACKS (3), TRACK_METADATA (3), GENRE (2), LABEL (2), RELEASE_TYPE (2), COUNTRY (2), BAND_MEMBERS (2) |
+| **Metadata** | GENRE, LABEL, RELEASE_DATE, RELEASE_TYPE, COUNTRY, BAND_MEMBERS, ARTIST_DISCOGRAPHY, ALBUM_TRACKS, ALBUM_METADATA, TRACK_METADATA | DISCOGRAPHY (4, 3 answering; ListenBrainz's route is disabled upstream), METADATA (4), TRACKS (3), TRACK_METADATA (3), GENRE (2), LABEL (2), RELEASE_TYPE (2), COUNTRY (2), BAND_MEMBERS (2) |
 | **Credits** | CREDITS | MusicBrainz (recording rels) + Discogs (extraartists) |
 | **Editions** | RELEASE_EDITIONS | MusicBrainz (release-group) + Discogs (master versions) |
 | **Text** | ARTIST_BIO, ALBUM_DESCRIPTION, LYRICS_SYNCED, LYRICS_PLAIN | BIO (2), ALBUM_DESCRIPTION (2) |
 | **Relationships** | SIMILAR_ARTISTS, SIMILAR_TRACKS, ARTIST_LINKS | SIMILAR_ARTISTS (2: Last.fm, Deezer), SIMILAR_TRACKS (2), ARTIST_LINKS (2: MusicBrainz, Wikidata) |
-| **Top Tracks** | ARTIST_TOP_TRACKS | Merged from 3 (Last.fm, ListenBrainz, Deezer), 2 answering -- ListenBrainz's route is disabled upstream |
+| **Top Tracks** | ARTIST_TOP_TRACKS | Merged from 3 (Last.fm, ListenBrainz, Deezer), 2 answering; ListenBrainz's route is disabled upstream |
 | **Statistics** | ARTIST_POPULARITY, TRACK_POPULARITY | Both merged from 3, each source's claim kept in its own unit |
 | **Composite** | ARTIST_TIMELINE, GENRE_DISCOVERY | ARTIST_TIMELINE: discography + members + life-span; GENRE_DISCOVERY: static affinity taxonomy |
-| **Radio** | ARTIST_RADIO, ARTIST_RADIO_DISCOVERY | ARTIST_RADIO: Deezer curated playlist; ARTIST_RADIO_DISCOVERY: ListenBrainz LB Radio (easy/medium/hard modes, optional token) -- its route is disabled upstream, see [docs/providers.md](docs/providers.md#routes-disabled-upstream) |
+| **Radio** | ARTIST_RADIO, ARTIST_RADIO_DISCOVERY | ARTIST_RADIO: Deezer curated playlist; ARTIST_RADIO_DISCOVERY: ListenBrainz LB Radio (easy/medium/hard modes, optional token), and its route is disabled upstream, see [docs/providers.md](docs/providers.md#routes-disabled-upstream) |
 | **Preview** | TRACK_PREVIEW | Deezer 30-second MP3 preview URL (on-demand, not in default types) |
 | **Discovery** | SIMILAR_ALBUMS | Deezer related artists + era scoring |
 
-22 of 36 types have multi-provider coverage with automatic fallback. Artwork types (ALBUM_ART, ARTIST_PHOTO) are merged rather than first-wins -- the best image is primary, alternatives are available via `Artwork.alternatives`.
+22 of 36 types have multi-provider coverage with automatic fallback. Artwork types (ALBUM_ART, ARTIST_PHOTO) are merged rather than first-wins: the best image is primary, alternatives are available via `Artwork.alternatives`.
 
 ## Installation
 
@@ -157,7 +157,7 @@ dependencies {
 
 ### JitPack
 
-For projects already using JitPack — existing coordinates remain unchanged.
+For projects already using JitPack, existing coordinates remain unchanged.
 
 ```kotlin
 // settings.gradle.kts
@@ -185,16 +185,16 @@ To consume a local checkout instead, see [docs/project/workflow.md](docs/project
 
 - **JVM**: Java 17+, Kotlin 2.1+
 - **Android**: Min SDK 21 (Android 5.0) for `musicmeta-android`
-- **User-Agent**: MusicBrainz and Wikimedia APIs require a User-Agent carrying contact information. Pass a URL or email to `EnrichmentEngine.Builder.contact()`, or write the whole string yourself via `EnrichmentConfig.userAgent` or the `DefaultHttpClient` constructor. The default carries no contact and is throttled or blocked accordingly — see [docs/providers.md](docs/providers.md#user-agent-and-contact-information).
+- **User-Agent**: MusicBrainz and Wikimedia APIs require a User-Agent carrying contact information. Pass a URL or email to `EnrichmentEngine.Builder.contact()`, or write the whole string yourself via `EnrichmentConfig.userAgent` or the `DefaultHttpClient` constructor. The default carries no contact and is throttled or blocked accordingly. See [docs/providers.md](docs/providers.md#user-agent-and-contact-information).
 
 ## Documentation
 
 | Document | Purpose |
 |----------|---------|
-| [docs/guides/](docs/guides/README.md) | Developer guides — quick start, identity resolution, results & errors, streaming, cache management, configuration, extension points, Android |
-| [docs/how-it-works.md](docs/how-it-works.md) | Complete pipeline trace -- from `enrich()` call to results |
-| [docs/glossary.md](docs/glossary.md) | One word per concept, and each upstream's word for the same thing -- plus what `musicBrainzId` means on each request kind |
-| [docs/providers.md](docs/providers.md) | Per-provider upstream docs, terms and attribution, User-Agent requirements and rate limits -- plus contributor notes on what each provider returns that we drop |
+| [docs/guides/](docs/guides/README.md) | Developer guides: quick start, identity resolution, results & errors, streaming, cache management, configuration, extension points, Android |
+| [docs/how-it-works.md](docs/how-it-works.md) | Complete pipeline trace, from `enrich()` call to results |
+| [docs/glossary.md](docs/glossary.md) | One word per concept, and each upstream's word for the same thing, plus what `musicBrainzId` means on each request kind |
+| [docs/providers.md](docs/providers.md) | Per-provider upstream docs, terms and attribution, User-Agent requirements and rate limits, plus contributor notes on what each provider returns that we drop |
 | [docs/project/workflow.md](docs/project/workflow.md) | Branch topology, issue lifecycle, worktrees, and verification selection |
 | [docs/project/release.md](docs/project/release.md) | Release preparation, tagging, and publication |
 | [CHANGELOG.md](CHANGELOG.md) | Release history |
@@ -220,7 +220,7 @@ musicmeta> refresh artist radiohead
 musicmeta> invalidate artist radiohead
 ```
 
-The [`demo-web/`](demo-web/README.md) module is the same idea as a web app — artist, album, and
+The [`demo-web/`](demo-web/README.md) module is the same idea as a web app: artist, album, and
 track pages, plus search, rendering everything the library exposes:
 
 ```bash
