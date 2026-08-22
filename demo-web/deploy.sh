@@ -25,94 +25,11 @@
 # allUsers and cannot be quietly undone once the URL is known — and provider terms of service have
 # not been cleared for a public instance.
 #
-# --- USER RUNS THESE (one-time setup; this script does not, and must not, run gcloud commands
-# --- that create or grant IAM — those are the operator's to execute knowingly) ---
-#
-# 1. Create the dedicated runtime service account (least-privilege: no project role, only
-#    secretAccessor on the secrets this demo actually reads).
-#
-#   gcloud iam service-accounts create musicmeta-demo-run \
-#     --project=musicmeta-demo-4821 \
-#     --display-name="musicmeta demo Cloud Run runtime"
-#
-# 2. Grant that SA secretAccessor on ONLY the four provider-key secrets — one binding per
-#    secret, never a project-wide role. Replace each <..._SECRET> with the actual Secret
-#    Manager resource name for that key in this project (confirm with
-#    `gcloud secrets list --project=musicmeta-demo-4821` — names below are the conventional
-#    ones, not verified against the live project).
-#
-#   for S in lastfm-api-key fanarttv-api-key discogs-token listenbrainz-token; do
-#     gcloud secrets add-iam-policy-binding "$S" \
-#       --project=musicmeta-demo-4821 \
-#       --member="serviceAccount:musicmeta-demo-run@musicmeta-demo-4821.iam.gserviceaccount.com" \
-#       --role="roles/secretmanager.secretAccessor"
-#   done
-#
-# 3. Create the maintainer secret (the value gated by WP1's `X-Maintainer-Secret` check) and
-#    grant the same runtime SA access to it. Generate the value yourself — never hand this
-#    script or an agent a literal secret:
-#
-#   printf '%s' "$(openssl rand -base64 32)" | gcloud secrets create demo-maintainer-secret \
-#     --project=musicmeta-demo-4821 \
-#     --replication-policy=automatic \
-#     --data-file=-
-#   gcloud secrets add-iam-policy-binding demo-maintainer-secret \
-#     --project=musicmeta-demo-4821 \
-#     --member="serviceAccount:musicmeta-demo-run@musicmeta-demo-4821.iam.gserviceaccount.com" \
-#     --role="roles/secretmanager.secretAccessor"
-#
-# 4. Create the provider-posture secret and grant the same SA access. Its value is the
-#    DEMO_PUBLIC_ALLOW token list, not a credential (`all` / `none` / a subset — see the deploy
-#    step's comment). Seed it `none` (safe); add an `all` version when you want full providers:
-#
-#   printf '%s' none | gcloud secrets create demo-public-allow \
-#     --project=musicmeta-demo-4821 \
-#     --replication-policy=automatic \
-#     --data-file=-
-#   gcloud secrets add-iam-policy-binding demo-public-allow \
-#     --project=musicmeta-demo-4821 \
-#     --member="serviceAccount:musicmeta-demo-run@musicmeta-demo-4821.iam.gserviceaccount.com" \
-#     --role="roles/secretmanager.secretAccessor"
-#
-# 5. After the SA exists and holds exactly those six bindings, confirm it has NO project-level
-#    role (in particular, it must never inherit the default compute SA's `roles/editor`):
-#
-#   gcloud projects get-iam-policy musicmeta-demo-4821 \
-#     --flatten="bindings[].members" \
-#     --filter="bindings.members:musicmeta-demo-run@musicmeta-demo-4821.iam.gserviceaccount.com" \
-#     --format='table(bindings.role)'
-#   # expect: no output (no project-level bindings for this SA).
-#
-#   The default compute SA's `roles/editor` is a separate, project-wide concern (it isn't this
-#   SA's problem to fix): removing it is a broader project decision the maintainer should make
-#   independently of this script, since other Cloud Run services or workloads on the project may
-#   still depend on it.
-#
-# 6. One-time cleanup for the orphan sidecar (see the note above the container-count assertion
-#    below): if the assertion below ever fails, the live revision has an extra container the
-#    Dockerfile does not define. `gcloud run deploy --image` cannot remove it — export, edit out
-#    the extra container block, and replace:
-#
-#   gcloud run services describe musicmeta-demo --region us-central1 --format=export > /tmp/svc.yaml
-#   # edit /tmp/svc.yaml: under spec.template.spec.containers, keep ONLY the ingress container
-#   # (the one with the port / the musicmeta image) and delete any other container block.
-#   gcloud run services replace /tmp/svc.yaml --region us-central1
-#
-# --- end USER RUNS THESE ---
+# One-time account setup (runtime service account, secret creation + IAM grants, orphan-sidecar
+# cleanup) is the operator's to run knowingly — this script does not create SAs, secrets, or IAM
+# bindings. The steps are in demo-web/DEPLOYMENT.md ("One-time account setup").
 set -euo pipefail
 cd "$(dirname "$0")/.." || exit 1
-
-PROJECT="${PROJECT:-musicmeta-demo-4821}"
-REGION="${REGION:-us-central1}"
-SERVICE="${SERVICE:-musicmeta-demo}"
-TAG="${TAG:-latest}"
-IMAGE="${REGION}-docker.pkg.dev/${PROJECT}/demo/musicmeta-demo-web:${TAG}"
-
-# The dedicated runtime SA created by the USER RUNS THESE block above. It holds secretAccessor on
-# exactly the four provider-key secrets, the maintainer secret and the posture secret, and no
-# project role — the default compute SA this replaces carries project-wide `roles/editor`, which a
-# demo that only reads six secrets has no business holding.
-SERVICE_ACCOUNT="${SERVICE_ACCOUNT:-musicmeta-demo-run@${PROJECT}.iam.gserviceaccount.com}"
 
 # Read one key out of the gitignored secrets.properties (repo root first, then demo-web/ — the
 # nearer file wins, matching how the app itself resolves them). Comment lines and surrounding
@@ -126,6 +43,28 @@ secret_prop() {
     done
     printf '%s' "$val" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//'
 }
+
+# Deployment target. The project, region and service name are identifiers this public repo does not
+# carry: set them in the gitignored secrets.properties (demo.gcp.project / .region / .service), or
+# pass them as env vars, which win. All three are required for a real deploy.
+PROJECT="${PROJECT:-$(secret_prop demo.gcp.project)}"
+REGION="${REGION:-$(secret_prop demo.gcp.region)}"
+SERVICE="${SERVICE:-$(secret_prop demo.gcp.service)}"
+for v in PROJECT REGION SERVICE; do
+    if [ -z "${!v}" ]; then
+        echo "deploy.sh: $v is unset — add demo.gcp.$(printf '%s' "$v" | tr '[:upper:]' '[:lower:]') to secrets.properties, or export $v." >&2
+        exit 64
+    fi
+done
+TAG="${TAG:-latest}"
+IMAGE="${REGION}-docker.pkg.dev/${PROJECT}/demo/musicmeta-demo-web:${TAG}"
+
+# The dedicated least-privilege runtime SA (created out-of-band — see demo-web/DEPLOYMENT.md). It
+# holds secretAccessor on only the demo's secrets and no project role, unlike the default compute SA
+# that Cloud Run would otherwise use, which carries project-wide `roles/editor`. Override via env or
+# secrets.properties (demo.gcp.service_account); otherwise derived from the project.
+SERVICE_ACCOUNT="${SERVICE_ACCOUNT:-$(secret_prop demo.gcp.service_account)}"
+SERVICE_ACCOUNT="${SERVICE_ACCOUNT:-musicmeta-demo-run@${PROJECT}.iam.gserviceaccount.com}"
 
 # Which musicmeta-core the image is built against. Empty (or unset) builds core from the local
 # checkout — the dev/test image, and the only one that compiles while demo-web uses `[Unreleased]`
@@ -202,8 +141,8 @@ CLOUDSDK_CORE_PROJECT="$PROJECT" gcloud run services describe "$SERVICE" \
 # The Dockerfile defines exactly one container. `gcloud run deploy --image` updates the ingress
 # container in place but cannot delete a sidecar already sitting in the revision template, so a
 # multi-container template survives every image-only deploy — a second container is a doubled bill
-# nothing else flags. Assert one container so that fails loud here; the USER RUNS THESE block has
-# the one-time `services replace` cleanup. Count `.image` (every container has one) rather than
+# nothing else flags. Assert one container so that fails loud here; demo-web/DEPLOYMENT.md has the
+# one-time `services replace` cleanup. Count `.image` (every container has one) rather than
 # `.name`, which a single unnamed ingress container leaves empty.
 CONTAINERS="$(CLOUDSDK_CORE_PROJECT="$PROJECT" gcloud run services describe "$SERVICE" \
     --region "$REGION" \
@@ -212,7 +151,7 @@ CONTAINER_COUNT="$(printf '%s' "$CONTAINERS" | tr ';' '\n' | grep -c '.')"
 if [ "$CONTAINER_COUNT" -ne 1 ]; then
     echo "deploy.sh: served revision has $CONTAINER_COUNT containers, expected exactly 1: $CONTAINERS" >&2
     echo "deploy.sh: this is the orphan-sidecar defect — 'gcloud run deploy --image' cannot remove it;" >&2
-    echo "deploy.sh: see the one-time cleanup ('services replace' with a single-container YAML) in the" >&2
-    echo "deploy.sh: USER RUNS THESE block at the top of this script." >&2
+    echo "deploy.sh: see the one-time cleanup ('services replace' with a single-container YAML) in" >&2
+    echo "deploy.sh: demo-web/DEPLOYMENT.md ('One-time account setup')." >&2
     exit 1
 fi

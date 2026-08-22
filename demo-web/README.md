@@ -6,7 +6,8 @@ invalidation, the cache-mode toggle, search, and the provider/attribution panel.
 audited, not asserted: the 2026-08-13 render-parity audit (verified per `EnrichmentType` and per
 profile field, gaps fixed in PRs #192–#201) is its evidence.
 Like `demo-cli/`, it is a composite build that consumes `musicmeta-core` the way an external app
-would.
+would. For how the public instance is built, deployed, and kept cheap (Cloud Run, build-source
+selection, provider posture, and the layered cost controls), see [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ```bash
 ./run.sh                # http://localhost:8099
