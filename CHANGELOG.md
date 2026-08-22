@@ -48,6 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A `close()`d engine stamps every unsettled requested type `Error(ErrorKind.ENGINE_CLOSED)`, including for a request key it had never seen before `close()`
 - `EnrichmentEngine.enrichBatchProgressive`: `enrichBatch`'s cumulative-snapshot counterpart, composed from `enrichProgressive` per request in the same sequential order
 - demo-web's enrich page now streams over `enrichProgressive` via server-sent events: the page paints each card as its type settles instead of waiting for the slowest provider
+- `engine.DEFAULT_SYNTHESIZER_DEPENDENCIES`: each composite type the default engine synthesizes mapped to its source sub-types, for a caller crediting a synthesized result without hand-copying the graph
 
 ### Fixed
 - demo-web's card image now prefers a Deezer/iTunes CDN URL over Cover Art Archive's when both are available, cutting card paint latency from seconds to well under a second

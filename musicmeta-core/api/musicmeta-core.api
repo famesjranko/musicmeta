@@ -2248,6 +2248,10 @@ public abstract interface class com/landofoz/musicmeta/engine/CompositeSynthesiz
 	public abstract fun synthesize (Ljava/util/Map;Lcom/landofoz/musicmeta/EnrichmentResult;Lcom/landofoz/musicmeta/EnrichmentRequest;)Lcom/landofoz/musicmeta/EnrichmentResult;
 }
 
+public final class com/landofoz/musicmeta/engine/DefaultRegistries {
+	public static final fun getDEFAULT_SYNTHESIZER_DEPENDENCIES ()Ljava/util/Map;
+}
+
 public abstract interface class com/landofoz/musicmeta/engine/ResultMerger {
 	public static final field Companion Lcom/landofoz/musicmeta/engine/ResultMerger$Companion;
 	public abstract fun getType ()Lcom/landofoz/musicmeta/EnrichmentType;
