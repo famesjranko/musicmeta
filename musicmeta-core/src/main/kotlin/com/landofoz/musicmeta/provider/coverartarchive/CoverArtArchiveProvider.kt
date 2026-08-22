@@ -11,7 +11,6 @@ import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.engine.ProviderCallScope
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 
@@ -182,10 +181,17 @@ class CoverArtArchiveProvider(
      * A *failure* is shared on the same terms: the first reader's exhausted attempt is rethrown to
      * the other three rather than each running its own attempts against an endpoint already known
      * to be failing, so one call costs one attempt budget for this release and not one per type.
-     * Each type still reports the error it would have earned alone. Wrapping the outcome in a
-     * [Result] is what lets [CallMemo] — which holds only what [CallMemo.get]'s fetch *returns* —
-     * hold a failure at all; [CancellationException] is rethrown before it can become one, so a
-     * caller cancelled mid-fetch leaves nothing behind for a sibling type to inherit.
+     * Under a sustained failure every type reports the error it would have earned alone; the cost of
+     * sharing is that a transient recovering *between* two types no longer reaches the second, which
+     * now inherits the first's error instead of finding its own success.
+     *
+     * Wrapping the outcome in a [Result] is what lets [CallMemo] — which holds only what
+     * [CallMemo.get]'s fetch *returns* — hold a failure at all. `ensureActive()` decides which
+     * failures are eligible (`docs/pitfalls.md` §2): only *this* job's own cancellation escapes the
+     * memo, leaving nothing behind for a sibling type to inherit. A cancellation raised by the
+     * upstream call itself — a consumer [HttpClient] reporting a hung endpoint through its own
+     * `withTimeout` — is that endpoint failing, and is held like any other failure; it is also the
+     * shape the amplification this memo exists to stop takes in practice.
      */
     private suspend fun getArtworkMetadata(releaseId: String): List<CoverArtArchiveImage>? {
         val memo = currentCoroutineContext()[ProviderCallScope]
@@ -194,9 +200,8 @@ class CoverArtArchiveProvider(
         return memo.get(releaseId) {
             try {
                 Result.success(api.getArtworkMetadata(releaseId))
-            } catch (e: CancellationException) {
-                throw e
             } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
                 Result.failure(e)
             }
         }.getOrThrow()

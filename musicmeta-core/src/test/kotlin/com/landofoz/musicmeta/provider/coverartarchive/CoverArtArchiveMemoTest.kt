@@ -15,6 +15,7 @@ import com.landofoz.musicmeta.testkit.assertNoUrlRequestedTwice
 import com.landofoz.musicmeta.testkit.countMatching
 import com.landofoz.musicmeta.testutil.FakeEnrichmentCache
 import com.landofoz.musicmeta.testutil.FakeHttpClient
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancelAndJoin
@@ -44,8 +45,8 @@ class CoverArtArchiveMemoTest {
         provider = CoverArtArchiveProvider(httpClient, RateLimiter(0))
     }
 
-    private fun engine() = DefaultEnrichmentEngine(
-        ProviderRegistry(listOf(provider)),
+    private fun engine(under: CoverArtArchiveProvider = provider) = DefaultEnrichmentEngine(
+        ProviderRegistry(listOf(under)),
         FakeEnrichmentCache(),
         EnrichmentConfig(enableIdentityResolution = false),
         mergers = emptyList(),
@@ -166,6 +167,34 @@ class CoverArtArchiveMemoTest {
             it.contains("release/memo4") && !it.contains("front-")
         }
         assertEquals(1, metadataRequests)
+    }
+
+    @Test
+    fun `a timing-out upstream's cancellation is held for the call, not re-attempted per type`() = runTest {
+        // Given - a metadata endpoint that reports a hung upstream the way a consumer's own
+        // withTimeout does: a CancellationException raised while this caller's job is healthy
+        var fetches = 0
+        val timingOutClient = object : HttpClient by httpClient {
+            override suspend fun fetchJsonResult(url: String): HttpResult<JSONObject> {
+                if (!url.contains("release/memo6")) return httpClient.fetchJsonResult(url)
+                fetches++
+                throw CancellationException("upstream deadline, not ours")
+            }
+        }
+        val request = EnrichmentRequest.ForAlbum(
+            identifiers = EnrichmentIdentifiers(musicBrainzId = "memo6"),
+            title = "OK Computer",
+            artist = "Radiohead",
+        )
+
+        // When - the three metadata-backed types are enriched in one call
+        engine(CoverArtArchiveProvider(timingOutClient, RateLimiter(0))).enrich(
+            request,
+            setOf(EnrichmentType.ALBUM_ART_BACK, EnrichmentType.ALBUM_BOOKLET, EnrichmentType.CD_ART),
+        )
+
+        // Then - the hung endpoint was attempted once for the call, not once per type
+        assertEquals(1, fetches)
     }
 
     @Test
