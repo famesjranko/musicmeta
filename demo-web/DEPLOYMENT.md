@@ -31,6 +31,12 @@ secret bound as `DEMO_PUBLIC_ALLOW`, not committed here — so the repo never ca
 would reproduce a permissive instance. Flip it by adding a secret version (`all` / `none` / a
 subset) and redeploying; no rebuild.
 
+> Migration note: Cloud Run refuses to change an existing key from a plain env var to a secret (or
+> back) in a single update — `Cannot update environment variable [X] ... already set with a
+> different type`. A service that once set `DEMO_PUBLIC_ALLOW` as an env var needs a one-time
+> `gcloud run services update <SERVICE> --region <REGION> --remove-env-vars DEMO_PUBLIC_ALLOW`
+> before the first secret-bound deploy.
+
 ## Keeping it cheap
 
 The demo is built to cost ~$0 and to bound its own worst case. The parts visible in this repo:
