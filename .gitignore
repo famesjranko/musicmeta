@@ -36,3 +36,6 @@ __pycache__/
 
 # graphify knowledge graph — regenerable from the tree, and the cache/ is large
 graphify-out/
+
+# Maintainer-private demo deployment notes (concrete GCP identifiers, cost-control internals)
+demo-web/DEPLOYMENT.md

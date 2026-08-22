@@ -10,10 +10,14 @@
 # the reasons are measured rather than assumed:
 #
 #   --max-instances=1  The admission gate in Server.kt is a per-instance semaphore. A second
-#                      instance is a second gate, so the bound it advertises becomes a lie, and
+#   --max=1            instance is a second gate, so the bound it advertises becomes a lie, and
 #                      nothing in the process can read this setting to notice. It is also the only
 #                      real spend ceiling: Google offers no hard cap, and a budget is an alert, not
-#                      a brake.
+#                      a brake. BOTH are required: --max-instances is the per-revision cap
+#                      (autoscaling.knative.dev/maxScale), --max is the service-level cap
+#                      (run.googleapis.com/maxScale, what the console "Scaling" shows). The
+#                      service-level one defaults to 20 and governs, so setting only the revision
+#                      cap silently leaves the service able to scale to 20.
 #   --concurrency=8    Measured, not guessed. At concurrency 1 the platform queues a second visitor
 #                      for eleven seconds and then refuses them in plain text, which no page can
 #                      render. At 8 the request reaches the application, where the gate refuses it
@@ -25,9 +29,10 @@
 # allUsers and cannot be quietly undone once the URL is known — and provider terms of service have
 # not been cleared for a public instance.
 #
-# One-time account setup (runtime service account, secret creation + IAM grants, orphan-sidecar
-# cleanup) is the operator's to run knowingly — this script does not create SAs, secrets, or IAM
-# bindings. The steps are in demo-web/DEPLOYMENT.md ("One-time account setup").
+# One-time account setup (runtime service account, secret creation + IAM grants) is the operator's
+# to run knowingly — this script does not create SAs, secrets, or IAM bindings. The demo needs a
+# dedicated least-privilege runtime SA (no project role) holding secretAccessor on the demo's
+# Secret Manager secrets: the provider keys, the maintainer secret, and the posture secret.
 set -euo pipefail
 cd "$(dirname "$0")/.." || exit 1
 
@@ -59,7 +64,7 @@ done
 TAG="${TAG:-latest}"
 IMAGE="${REGION}-docker.pkg.dev/${PROJECT}/demo/musicmeta-demo-web:${TAG}"
 
-# The dedicated least-privilege runtime SA (created out-of-band — see demo-web/DEPLOYMENT.md). It
+# The dedicated least-privilege runtime SA (created out-of-band by the operator). It
 # holds secretAccessor on only the demo's secrets and no project role, unlike the default compute SA
 # that Cloud Run would otherwise use, which carries project-wide `roles/editor`. Override via env or
 # secrets.properties (demo.gcp.service_account); otherwise derived from the project.
@@ -122,6 +127,7 @@ CLOUDSDK_CORE_PROJECT="$PROJECT" gcloud run deploy "$SERVICE" \
     --image "$IMAGE" \
     --concurrency=8 \
     --max-instances=1 \
+    --max=1 \
     --min-instances=0 \
     --cpu=1 \
     --memory=512Mi \
@@ -141,17 +147,17 @@ CLOUDSDK_CORE_PROJECT="$PROJECT" gcloud run services describe "$SERVICE" \
 # The Dockerfile defines exactly one container. `gcloud run deploy --image` updates the ingress
 # container in place but cannot delete a sidecar already sitting in the revision template, so a
 # multi-container template survives every image-only deploy — a second container is a doubled bill
-# nothing else flags. Assert one container so that fails loud here; demo-web/DEPLOYMENT.md has the
-# one-time `services replace` cleanup. Count `.image` (every container has one) rather than
-# `.name`, which a single unnamed ingress container leaves empty.
+# nothing else flags. Assert one container so that fails loud here; the fix is a one-time `gcloud run
+# services replace` with the extra container edited out. Count `.image` (every container has one)
+# rather than `.name`, which a single unnamed ingress container leaves empty.
 CONTAINERS="$(CLOUDSDK_CORE_PROJECT="$PROJECT" gcloud run services describe "$SERVICE" \
     --region "$REGION" \
     --format='value(spec.template.spec.containers[].image)')"
 CONTAINER_COUNT="$(printf '%s' "$CONTAINERS" | tr ';' '\n' | grep -c '.')"
 if [ "$CONTAINER_COUNT" -ne 1 ]; then
     echo "deploy.sh: served revision has $CONTAINER_COUNT containers, expected exactly 1: $CONTAINERS" >&2
-    echo "deploy.sh: this is the orphan-sidecar defect — 'gcloud run deploy --image' cannot remove it;" >&2
-    echo "deploy.sh: see the one-time cleanup ('services replace' with a single-container YAML) in" >&2
-    echo "deploy.sh: demo-web/DEPLOYMENT.md ('One-time account setup')." >&2
+    echo "deploy.sh: this is the orphan-sidecar defect — 'gcloud run deploy --image' cannot remove it." >&2
+    echo "deploy.sh: fix once: 'gcloud run services describe $SERVICE --region $REGION --format=export'," >&2
+    echo "deploy.sh: keep only the ingress container, then 'gcloud run services replace' the edited YAML." >&2
     exit 1
 fi
