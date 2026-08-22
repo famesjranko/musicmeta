@@ -10,6 +10,12 @@ on:
         description: "musicmeta-core version to build against (blank = build from local source)"
         required: false
         default: ""
+      public:
+        description: "Public access: 'yes' grants allUsers, 'no' revokes it, 'keep' leaves it unchanged"
+        required: false
+        type: choice
+        default: "keep"
+        options: ["keep", "yes", "no"]
 
 permissions:
   contents: read
@@ -57,11 +63,25 @@ jobs:
             --image="$IMAGE" \
             --concurrency=8 --max-instances=1 --max=1 --min-instances=0 \
             --cpu=1 --memory=512Mi --timeout=180 \
-            --no-allow-unauthenticated \
             --service-account="${{ vars.GCP_RUNTIME_SA }}" \
             --update-env-vars=DEMO_PUBLIC=1 \
             --update-secrets=DEMO_MAINTAINER_SECRET=demo-maintainer-secret:latest,DEMO_PUBLIC_ALLOW=demo-public-allow:latest \
             --quiet
+
+      - name: Apply public-access toggle
+        if: ${{ github.event.inputs.public != 'keep' }}
+        run: |
+          if [ "${{ github.event.inputs.public }}" = "yes" ]; then
+            gcloud run services add-iam-policy-binding "${{ vars.GCP_SERVICE }}" \
+              --project="${{ vars.GCP_PROJECT }}" --region="${{ vars.GCP_REGION }}" \
+              --member=allUsers --role=roles/run.invoker --quiet
+            echo "Service is PUBLIC — allUsers can invoke."
+          else
+            gcloud run services remove-iam-policy-binding "${{ vars.GCP_SERVICE }}" \
+              --project="${{ vars.GCP_PROJECT }}" --region="${{ vars.GCP_REGION }}" \
+              --member=allUsers --role=roles/run.invoker --quiet || true
+            echo "Service is PRIVATE — allUsers binding removed (or was already absent)."
+          fi
 
       - name: Verify served revision
         run: |

@@ -25,9 +25,12 @@
 #                      cost result quality: ten simultaneous distinct lookups returned complete
 #                      results with zero timeouts.
 #
-# The service is private. Making it public is a separate, deliberate act — it grants run.invoker to
-# allUsers and cannot be quietly undone once the URL is known — and provider terms of service have
-# not been cleared for a public instance.
+# Public vs private is a separate, deliberate act, NOT this script's: it is a run.invoker binding for
+# allUsers, granted once and cannot be quietly undone once the URL is known. This deploy passes
+# neither --allow-unauthenticated nor --no-allow-unauthenticated, so it leaves that binding exactly
+# as it found it — a redeploy never flips a public demo private (or vice versa) behind your back.
+# Go public:  gcloud run services add-iam-policy-binding <service> --region <r> --member=allUsers --role=roles/run.invoker
+# Go private: the same with remove-iam-policy-binding.
 #
 # One-time account setup (runtime service account, secret creation + IAM grants) is the operator's
 # to run knowingly — this script does not create SAs, secrets, or IAM bindings. The demo needs a
@@ -132,7 +135,6 @@ CLOUDSDK_CORE_PROJECT="$PROJECT" gcloud run deploy "$SERVICE" \
     --cpu=1 \
     --memory=512Mi \
     --timeout=180 \
-    --no-allow-unauthenticated \
     --service-account="$SERVICE_ACCOUNT" \
     --update-env-vars DEMO_PUBLIC=1 \
     --update-secrets=DEMO_MAINTAINER_SECRET=demo-maintainer-secret:latest,DEMO_PUBLIC_ALLOW=demo-public-allow:latest \
