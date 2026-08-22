@@ -114,6 +114,26 @@ IMAGE="${REGION}-docker.pkg.dev/${PROJECT}/demo/musicmeta-demo-web:${TAG}"
 # demo that only reads six secrets has no business holding.
 SERVICE_ACCOUNT="${SERVICE_ACCOUNT:-musicmeta-demo-run@${PROJECT}.iam.gserviceaccount.com}"
 
+# Read one key out of the gitignored secrets.properties (repo root first, then demo-web/ — the
+# nearer file wins, matching how the app itself resolves them). Comment lines and surrounding
+# whitespace are ignored; a missing key yields empty.
+secret_prop() {
+    local key="$1" val="" line
+    for f in secrets.properties demo-web/secrets.properties; do
+        [ -f "$f" ] || continue
+        line="$(grep -E "^[[:space:]]*${key}[[:space:]]*=" "$f" | grep -vE '^[[:space:]]*#' | tail -n1 || true)"
+        [ -n "$line" ] && val="${line#*=}"
+    done
+    printf '%s' "$val" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//'
+}
+
+# Which musicmeta-core the image is built against. Empty (or unset) builds core from the local
+# checkout — the dev/test image, and the only one that compiles while demo-web uses `[Unreleased]`
+# core API. A version string (e.g. 0.13.0) pins that published Maven Central release instead, for a
+# reproducible image once a release carries every symbol demo-web needs. Set it in secrets.properties
+# as `demo.core.version=` (empty = source, a version = Maven); an env var of the same name wins.
+: "${DEMO_CORE_VERSION:=$(secret_prop demo.core.version)}"
+
 BUILD=1
 for arg in "$@"; do
     case "$arg" in
@@ -123,9 +143,15 @@ for arg in "$@"; do
 done
 
 if [ "$BUILD" = 1 ]; then
-    # From the repository root: demo-web is a composite build that resolves musicmeta-core from
-    # local source, so the build context has to contain both.
-    docker build -f demo-web/Dockerfile -t "$IMAGE" .
+    # From the repository root: the build context has to contain both demo-web and musicmeta-core
+    # so a source build can resolve core from the checkout. DEMO_CORE_VERSION is passed explicitly
+    # (empty = local source) rather than relying on the Dockerfile's default.
+    if [ -n "$DEMO_CORE_VERSION" ]; then
+        echo "deploy.sh: building demo-web core from Maven Central $DEMO_CORE_VERSION"
+    else
+        echo "deploy.sh: building demo-web core from local source"
+    fi
+    docker build -f demo-web/Dockerfile --build-arg DEMO_CORE_VERSION="$DEMO_CORE_VERSION" -t "$IMAGE" .
     docker push "$IMAGE"
 fi
 
