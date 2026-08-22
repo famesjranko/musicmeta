@@ -133,3 +133,27 @@ export function readJsonResponse({ status, ok, contentType = '', body = '' }) {
   if (ok) return { data: parsed, error: null, busy: false };
   return { data: parsed, error: parsed?.error || `HTTP ${status}`, busy: false };
 }
+
+/**
+ * The maintainer secret riding this page's own URL, or `null` if the visitor's URL carries none.
+ * A maintainer's own bookmark (`?maintainer=<secret>`) is the only way this page ever learns one —
+ * never solicited from a visitor, never stored. An empty `?maintainer=` reads the same as absent,
+ * not as an empty-string secret a public instance's header check would never accept anyway.
+ */
+export function maintainerSecretFromSearch(search) {
+  const value = new URLSearchParams(search).get('maintainer');
+  return value && value.trim() !== '' ? value : null;
+}
+
+/**
+ * Whether the cache-mode controls must render locked (disabled, no `POST` attempted) instead of
+ * usable. True exactly when the server requires the maintainer secret for the mutating request
+ * and this visitor's URL carries none — the server-side half of this contract is `handleConfig`'s
+ * `POST` gate (`Server.kt`), which is `requiresMaintainerSecret` on the `GET /api/config` this
+ * reads. A visitor without the secret never sees a control that would 401 the moment they touch
+ * it; a server that does not require the secret (`DEMO_PUBLIC` unset) never locks anything, so a
+ * local run's controls behave exactly as they did before this gate existed.
+ */
+export function cacheModeControlsLocked(requiresMaintainerSecret, maintainerSecret) {
+  return Boolean(requiresMaintainerSecret) && !maintainerSecret;
+}

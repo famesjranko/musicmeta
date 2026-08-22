@@ -4,6 +4,8 @@ import {
   classifyStreamOutcome,
   parseRetryAfter,
   readJsonResponse,
+  maintainerSecretFromSearch,
+  cacheModeControlsLocked,
 } from '/stream-protocol.js';
 import {
   escapeHtml as esc,
@@ -1260,7 +1262,15 @@ streamingToggle.addEventListener('change', () => {
 // Cache mode. One GET at load to reflect what's actually running; each change POSTs and reflects
 // the confirmed value back rather than the value clicked, so a rejected/failed change doesn't
 // leave the radio lying about which mode is live.
+//
+// Under a public posture the server gates the POST behind a maintainer secret (Server.kt
+// handleConfig), so this fieldset is disabled until the page's own URL carries one
+// (?maintainer=<secret> — a maintainer's own bookmark, never solicited from a visitor). A local
+// run reports requiresMaintainerSecret: false and this never locks anything, so the fieldset
+// behaves exactly as it did before this gate existed.
+const cacheModeFieldset = document.getElementById('cache-mode-fieldset');
 const cacheModeInputs = document.querySelectorAll('#cache-mode-fieldset input[type="radio"]');
+const maintainerSecret = maintainerSecretFromSearch(window.location.search);
 let confirmedCacheMode = null;
 
 function setCacheModeRadio(cacheMode) {
@@ -1270,16 +1280,21 @@ function setCacheModeRadio(cacheMode) {
 
 fetch('/api/config', { cache: 'no-store' })
   .then(readPanel)
-  .then((data) => setCacheModeRadio(data.cacheMode))
+  .then((data) => {
+    setCacheModeRadio(data.cacheMode);
+    cacheModeFieldset.disabled = cacheModeControlsLocked(data.requiresMaintainerSecret, maintainerSecret);
+  })
   .catch(() => {});
 
 cacheModeInputs.forEach((input) => {
   input.addEventListener('change', () => {
     const requested = input.value;
     const lastConfirmed = confirmedCacheMode;
+    const headers = { 'Content-Type': 'application/json' };
+    if (maintainerSecret) headers['X-Maintainer-Secret'] = maintainerSecret;
     fetch('/api/config', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ cacheMode: requested }),
     })
       .then(readPanel)

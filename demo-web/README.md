@@ -36,3 +36,15 @@ Each one is a deliberate choice to take on that provider's terms yourself, and t
 names what was lifted alongside what still binds. A token that names no restriction refuses the
 start rather than being ignored, so a typo cannot quietly leave a posture nobody chose. With
 `DEMO_PUBLIC` unset the variable does nothing at all, typos included.
+
+Under `DEMO_PUBLIC`, changing the running cache mode (the settings-panel radios, `POST
+/api/config`) needs `DEMO_MAINTAINER_SECRET` set, and the request must carry it back as the
+`X-Maintainer-Secret` header — append `?maintainer=<the secret>` to the page URL and the panel
+sends it for you. With no `DEMO_MAINTAINER_SECRET` set, every such change is refused: a public
+instance has no unauthenticated control over its own running configuration. `GET /api/config`
+(what the page reads on load) stays open under every posture. With `DEMO_PUBLIC` unset the panel
+works with no secret at all, exactly as before this existed.
+
+`/api/health` is a **liveness** probe, not a readiness one: it reports that the process is
+accepting requests, nothing about whether any upstream provider is reachable. Do not wire an
+uptime alert to it and expect it to flap on a provider outage — it won't, by design.

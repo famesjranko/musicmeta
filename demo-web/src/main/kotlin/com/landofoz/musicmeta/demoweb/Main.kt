@@ -79,8 +79,19 @@ fun main() {
     val engineRef = AtomicReference(buildEngine(CacheMode.NETWORK_FIRST))
     val cacheModeRef = AtomicReference(CacheMode.NETWORK_FIRST)
 
+    val maintainerSecret = env("DEMO_MAINTAINER_SECRET")
+
     val missing = missingCredentials(keys, posture.withheldCredentialIds)
-    if (posture.enabled) println(posture.notice)
+    if (posture.enabled) {
+        println(posture.notice)
+        println(
+            if (maintainerSecret != null) {
+                "DEMO_MAINTAINER_SECRET set — maintainer mutations (cache-mode changes) enabled."
+            } else {
+                "DEMO_MAINTAINER_SECRET unset — maintainer mutations (cache-mode changes) disabled."
+            },
+        )
+    }
     if (missing.required.isNotEmpty()) {
         println(
             "No key set for: ${missing.required.joinToString(", ")} — those providers are skipped. " +
@@ -101,6 +112,9 @@ fun main() {
         keys,
         port,
         unregisteredProviderIds = posture.unregisteredProviderIds,
+        requireMaintainerSecret = posture.enabled,
+        maintainerSecret = maintainerSecret,
+        securityHeaders = posture.enabled,
     )
     println("musicmeta web demo running at http://localhost:$port")
 }

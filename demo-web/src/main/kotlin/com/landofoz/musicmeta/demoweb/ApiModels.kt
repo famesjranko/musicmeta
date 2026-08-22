@@ -315,9 +315,13 @@ data class InvalidateRequest(
 @Serializable
 data class InvalidateResponse(val invalidated: Boolean)
 
-/** Wire shape for both `GET /api/config` and its `POST` echo — the bare `CacheMode` enum name. */
+/**
+ * Wire shape for both `GET /api/config` and its `POST` echo. [requiresMaintainerSecret] tells the
+ * page whether a `POST` needs the maintainer-secret header (`X-Maintainer-Secret`) to succeed, so
+ * a non-maintainer visitor can be shown a disabled control instead of a silent 401 on toggle.
+ */
 @Serializable
-data class ConfigResponse(val cacheMode: String)
+data class ConfigResponse(val cacheMode: String, val requiresMaintainerSecret: Boolean = false)
 
 /** Wire shape for `POST /api/config` — the requested `CacheMode` enum name. */
 @Serializable

@@ -45,6 +45,7 @@ import java.io.OutputStream
 import java.net.InetSocketAddress
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
 import java.util.concurrent.Executors
 import java.util.concurrent.Semaphore
 import java.util.concurrent.atomic.AtomicReference
@@ -75,6 +76,23 @@ internal fun staticContentTypeOf(path: String): String = when {
 
 private const val MAX_IDS_PARAM_LENGTH = 512
 private const val MAX_IDENTIFIER_VALUE_LENGTH = 100
+
+/**
+ * Free-text query params (`name`, `artist`, `album`, `q`, `title`) that ride into a provider
+ * search rather than address one identifier — mirroring [MAX_IDS_PARAM_LENGTH]. Always-on, not
+ * posture-gated: 256 is longer than any real track/artist/album title and far below the junk an
+ * abusive request could otherwise carry into a provider fan-out, so no legitimate local request is
+ * affected — same reasoning as [MAX_IDS_PARAM_LENGTH]'s existing unconditional cap.
+ */
+private const val MAX_QUERY_PARAM_LENGTH = 256
+
+/**
+ * Ceiling on a `POST` body this server will buffer, for `/api/config` and `/api/invalidate` alike.
+ * Both bodies are small fixed-shape JSON objects; 64 KiB is generous headroom over either, so no
+ * legitimate request is affected. Always-on for the same reason [MAX_QUERY_PARAM_LENGTH] is: it
+ * sits far above any real body, so gating it on posture would buy nothing.
+ */
+private const val MAX_POST_BODY_BYTES = 64 * 1024
 
 /** Thrown by [decodeTrackIdentifiers] for anything that must reach the caller as an HTTP 400. */
 internal class InvalidIdentifiers(message: String) : Exception(message)
@@ -131,13 +149,14 @@ internal fun validateTrackIdentifiers(wire: WireIdentifiers): EnrichmentIdentifi
 internal data class HealthResponse(val ready: Boolean, val status: String)
 
 /**
- * The one answer `/api/health` gives. The engine is built before [startServer] is called and the
- * listening socket is bound only after every context is registered, so a request that reaches this
- * endpoint has reached a server able to serve every other one: there is no state to report.
+ * The one answer `/api/health` gives — a **liveness** probe, not a readiness one. The engine is
+ * built before [startServer] is called and the listening socket is bound only after every context
+ * is registered, so a request that reaches this endpoint has reached a server able to serve every
+ * other one: there is no state left to report readiness over.
  *
  * It says nothing about the providers. A provider's own misconfiguration is the providers panel's
- * job (see the key-missing rows [buildProviderRows] adds), and an uptime probe should not flap on
- * an upstream outage the process itself survives.
+ * job (see the key-missing rows [buildProviderRows] adds), and an uptime probe wired to this
+ * endpoint should not flap on an upstream outage the process itself survives.
  */
 private val HEALTH_READY = HealthResponse(ready = true, status = "READY")
 
@@ -150,6 +169,11 @@ private val HEALTH_READY = HealthResponse(ready = true, status = "READY")
  * [unregisteredProviderIds] names providers this instance declines to register whatever
  * [apiKeys] holds; `/api/providers` leaves them out entirely rather than reporting a key state
  * for a provider whose absence is a policy, not a configuration.
+ *
+ * [requireMaintainerSecret] and [maintainerSecret] gate the mutating half of `/api/config` — see
+ * [handleConfig]. [securityHeaders] adds the static response-header set every context here sends
+ * before dispatch, covering the SSE path (which sets its own headers directly) the same as every
+ * other. Both default off, which is what keeps a `DEMO_PUBLIC`-unset process's answers unchanged.
  */
 fun startServer(
     engineRef: AtomicReference<EnrichmentEngine>,
@@ -158,6 +182,9 @@ fun startServer(
     apiKeys: ApiKeyConfig,
     port: Int,
     unregisteredProviderIds: Set<String> = emptySet(),
+    requireMaintainerSecret: Boolean = false,
+    maintainerSecret: String? = null,
+    securityHeaders: Boolean = false,
 ) {
     val staticFiles = STATIC_PATHS.associateWith { path ->
         ResourceAnchor::class.java.getResourceAsStream(path)?.readBytes()
@@ -170,7 +197,17 @@ fun startServer(
     // panel. 16 is headroom for a demo, not a measured capacity.
     server.executor = Executors.newFixedThreadPool(16)
 
-    server.createContext("/") { exchange ->
+    // One place every context routes through before its own handler runs, so a header every
+    // response should carry needs adding once rather than at each handler — including the SSE
+    // path, which writes its own headers block but shares this same dispatch.
+    fun registerContext(path: String, handle: (HttpExchange) -> Unit) {
+        server.createContext(path) { exchange ->
+            exchange.addSecurityHeaders(securityHeaders)
+            handle(exchange)
+        }
+    }
+
+    registerContext("/") { exchange ->
         val path = exchange.requestURI.path.let { if (it == "/") "/index.html" else it }
         val body = staticFiles[path]
         if (body == null) {
@@ -185,7 +222,7 @@ fun startServer(
     // would buy no upstream any protection and would refuse the page's own health poll.
     val budget = ClientBudget()
     fun upstreamContext(path: String, handle: (HttpExchange) -> Unit) {
-        server.createContext(path) { exchange ->
+        registerContext(path) { exchange ->
             if (budget.admit(exchange.clientKey())) {
                 handle(exchange)
             } else {
@@ -201,11 +238,13 @@ fun startServer(
     upstreamContext("/api/invalidate") { exchange -> handleInvalidate(exchange, engineRef.get()) }
     upstreamContext("/api/search") { exchange -> handleSearch(exchange, engineRef.get()) }
     upstreamContext("/api/preview") { exchange -> handlePreview(exchange, engineRef.get()) }
-    server.createContext("/api/providers") { exchange ->
+    registerContext("/api/providers") { exchange ->
         handleProviders(exchange, engineRef.get(), apiKeys, unregisteredProviderIds)
     }
-    server.createContext("/api/config") { exchange -> handleConfig(exchange, engineRef, cacheModeRef, rebuildEngine) }
-    server.createContext("/api/health") { exchange -> exchange.respondJson(200, HEALTH_READY) }
+    registerContext("/api/config") { exchange ->
+        handleConfig(exchange, engineRef, cacheModeRef, rebuildEngine, requireMaintainerSecret, maintainerSecret)
+    }
+    registerContext("/api/health") { exchange -> exchange.respondJson(200, HEALTH_READY) }
 
     server.start()
 }
@@ -234,11 +273,27 @@ private data class EnrichQuery(
 /** Thrown by [parseEnrichQuery] for anything that must reach the caller as an HTTP 400. */
 private class InvalidEnrichQuery(message: String) : Exception(message)
 
+/**
+ * Throws [InvalidEnrichQuery] when [value] exceeds [MAX_QUERY_PARAM_LENGTH] — the shared check
+ * behind every free-text query param this server accepts (`parseEnrichQuery`'s `name`/`artist`/
+ * `album`, `handleSearch`'s `q`/`artist`, `handlePreview`'s `title`/`artist`/`album`), so the three
+ * sites can't drift on the limit or the message.
+ */
+private fun capQueryParam(label: String, value: String) {
+    if (value.length > MAX_QUERY_PARAM_LENGTH) {
+        throw InvalidEnrichQuery("$label exceeds the size limit ($MAX_QUERY_PARAM_LENGTH)")
+    }
+}
+
 private fun parseEnrichQuery(rawQuery: String?): EnrichQuery {
     val params = parseQuery(rawQuery)
     val kind = params["kind"]
     val name = params["name"]?.trim().orEmpty()
     val artist = params["artist"]?.trim().orEmpty()
+    val album = params["album"]?.trim()?.ifBlank { null }
+    capQueryParam("name", name)
+    capQueryParam("artist", artist)
+    album?.let { capQueryParam("album", it) }
     val valid = kind in setOf("artist", "album", "track", "mbid") &&
         name.isNotBlank() &&
         (kind == "artist" || kind == "mbid" || artist.isNotBlank())
@@ -255,7 +310,7 @@ private fun parseEnrichQuery(rawQuery: String?): EnrichQuery {
         kind = kind,
         name = name,
         artist = artist,
-        album = params["album"]?.trim()?.ifBlank { null },
+        album = album,
         mbid = params["mbid"]?.trim()?.ifBlank { null },
         identifiers = identifiers,
         forceRefresh = params["refresh"] == "true",
@@ -772,20 +827,66 @@ private suspend fun streamEnrichment(
 }
 
 /**
+ * Constant-time check of the `X-Maintainer-Secret` header against [expected]. False whenever
+ * [expected] is null/blank — a public instance with no secret configured has nothing to compare
+ * against and must fail closed, never treat "nothing to check" as "check passed".
+ * [MessageDigest.isEqual] rather than [String.equals]: a short-circuiting compare leaks the
+ * secret's prefix length through response timing to anyone who can send repeated guesses.
+ */
+private fun HttpExchange.hasValidSecret(expected: String?): Boolean {
+    if (expected.isNullOrBlank()) return false
+    val provided = requestHeaders.getFirst("X-Maintainer-Secret") ?: return false
+    return MessageDigest.isEqual(
+        expected.toByteArray(StandardCharsets.UTF_8),
+        provided.toByteArray(StandardCharsets.UTF_8),
+    )
+}
+
+/**
+ * Reads at most [max] bytes of this exchange's request body, refusing before buffering when a
+ * declared `Content-Length` already exceeds [max], and refusing after reading at most `max + 1`
+ * bytes when it does not — a chunked request carries no `Content-Length` at all, so the declared
+ * check alone would let an unbounded chunked body reach [InputStream.readBytes] unguarded. Returns
+ * null for either refusal; the caller answers 413 before attempting to decode anything.
+ */
+private fun HttpExchange.readBodyCapped(max: Int): ByteArray? {
+    val declared = requestHeaders.getFirst("Content-Length")?.toLongOrNull()
+    if (declared != null && declared > max) return null
+    val body = requestBody.readNBytes(max + 1)
+    if (body.size > max) return null
+    return body
+}
+
+/**
  * `GET` reports the running [CacheMode]; `POST` rebuilds the engine over it. The rebuilt engine is
  * handed the same shared cache every other build used — see [startServer] — so cached entries
  * survive the swap and a STALE_IF_ERROR toggle has something to serve as a fallback.
+ *
+ * `POST` is gated behind [hasValidSecret] whenever [requireMaintainerSecret] is set — a public
+ * instance's own control, not a visitor's — checked before any body read so a rejected caller
+ * never spends the body cap either. `GET` stays open under every posture: it is read-only and the
+ * page polls it on load.
  */
 private fun handleConfig(
     exchange: HttpExchange,
     engineRef: AtomicReference<EnrichmentEngine>,
     cacheModeRef: AtomicReference<CacheMode>,
     rebuildEngine: (CacheMode) -> EnrichmentEngine,
+    requireMaintainerSecret: Boolean,
+    maintainerSecret: String?,
 ) {
     when (exchange.requestMethod) {
-        "GET" -> exchange.respondJson(200, ConfigResponse(cacheModeRef.get().name))
+        "GET" -> exchange.respondJson(200, ConfigResponse(cacheModeRef.get().name, requireMaintainerSecret))
         "POST" -> try {
-            val body = exchange.requestBody.readBytes().toString(StandardCharsets.UTF_8)
+            if (requireMaintainerSecret && !exchange.hasValidSecret(maintainerSecret)) {
+                exchange.respondJson(403, ApiError("maintainer secret required"))
+                return
+            }
+            val bytes = exchange.readBodyCapped(MAX_POST_BODY_BYTES) ?: run {
+                exchange.respondJson(413, ApiError("request body too large"))
+                return
+            }
+            val body = bytes.toString(StandardCharsets.UTF_8)
             val request = try {
                 json.decodeFromString<ConfigRequest>(body)
             } catch (_: Exception) {
@@ -798,7 +899,7 @@ private fun handleConfig(
                 return
             }
             if (mode == cacheModeRef.get()) {
-                exchange.respondJson(200, ConfigResponse(mode.name))
+                exchange.respondJson(200, ConfigResponse(mode.name, requireMaintainerSecret))
                 return
             }
             // cacheModeRef first: the window this leaves is a GET briefly reporting the new mode
@@ -806,7 +907,7 @@ private fun handleConfig(
             // a mode the running engine has already left behind.
             cacheModeRef.set(mode)
             engineRef.set(rebuildEngine(mode))
-            exchange.respondJson(200, ConfigResponse(mode.name))
+            exchange.respondJson(200, ConfigResponse(mode.name, requireMaintainerSecret))
         } catch (e: Exception) {
             exchange.respondJson(500, ApiError(e.message ?: e.javaClass.simpleName))
         }
@@ -825,7 +926,11 @@ private fun handleInvalidate(exchange: HttpExchange, engine: EnrichmentEngine) {
         return
     }
     try {
-        val body = exchange.requestBody.readBytes().toString(StandardCharsets.UTF_8)
+        val bytes = exchange.readBodyCapped(MAX_POST_BODY_BYTES) ?: run {
+            exchange.respondJson(413, ApiError("request body too large"))
+            return
+        }
+        val body = bytes.toString(StandardCharsets.UTF_8)
         val request = try {
             json.decodeFromString<InvalidateRequest>(body)
         } catch (_: Exception) {
@@ -952,6 +1057,8 @@ private fun handleSearch(exchange: HttpExchange, engine: EnrichmentEngine) {
         val kind = params["kind"]
         val query = params["q"]?.trim().orEmpty()
         val artist = params["artist"]?.trim().orEmpty()
+        capQueryParam("q", query)
+        capQueryParam("artist", artist)
 
         if (kind !in setOf("artist", "album", "track") || query.isBlank()) {
             exchange.respondJson(
@@ -986,6 +1093,8 @@ private fun handleSearch(exchange: HttpExchange, engine: EnrichmentEngine) {
                 },
             ),
         )
+    } catch (e: InvalidEnrichQuery) {
+        exchange.respondJson(400, ApiError(e.message ?: "invalid request"))
     } catch (e: Exception) {
         exchange.respondJson(500, ApiError(e.message ?: e.javaClass.simpleName))
     }
@@ -1001,6 +1110,9 @@ private fun handlePreview(exchange: HttpExchange, engine: EnrichmentEngine) {
         val title = params["title"]?.trim().orEmpty()
         val artist = params["artist"]?.trim().orEmpty()
         val album = params["album"]?.trim()?.ifBlank { null }
+        capQueryParam("title", title)
+        capQueryParam("artist", artist)
+        album?.let { capQueryParam("album", it) }
         if (title.isBlank() || artist.isBlank()) {
             exchange.respondJson(400, ApiError("title and artist are required"))
             return
@@ -1025,6 +1137,8 @@ private fun handlePreview(exchange: HttpExchange, engine: EnrichmentEngine) {
         } else {
             exchange.respondJson(200, PreviewResponse(preview.url, preview.durationMs, preview.source))
         }
+    } catch (e: InvalidEnrichQuery) {
+        exchange.respondJson(400, ApiError(e.message ?: "invalid request"))
     } catch (e: Exception) {
         exchange.respondJson(500, ApiError(e.message ?: e.javaClass.simpleName))
     }
@@ -1134,6 +1248,32 @@ private fun parseQuery(raw: String?): Map<String, String> {
         val value = URLDecoder.decode(pair.substring(idx + 1), StandardCharsets.UTF_8)
         key to value
     }.toMap()
+}
+
+/**
+ * The minimal static header set a public instance adds to every response, including the SSE path
+ * — which sets its own headers directly and does not go through [respond]. A no-op when [enabled]
+ * is false, which is what keeps a `DEMO_PUBLIC`-unset process's response bytes unchanged: these
+ * headers are observable on every response, unlike the always-on size caps above, so gating them
+ * on posture is what the forbidden-state rule needs here.
+ *
+ * `default-src 'self'` covers this page's script loading (`index.js` and its module graph are all
+ * same-origin). `img-src` widens to any origin because every provider's own image URL is embedded
+ * as-is — the whole point of the demo — never proxied same-origin. `style-src` allows
+ * `'unsafe-inline'`: `index.html` carries two `style="display:none"` attributes, and index.js's
+ * `element.style.<property> = …` assignments (not `cssText`, which CSP does gate) render fine
+ * either way, so the widening is for the static attributes, not the script.
+ */
+private fun HttpExchange.addSecurityHeaders(enabled: Boolean) {
+    if (!enabled) return
+    responseHeaders.add("X-Content-Type-Options", "nosniff")
+    responseHeaders.add("X-Frame-Options", "DENY")
+    responseHeaders.add("Referrer-Policy", "no-referrer")
+    responseHeaders.add(
+        "Content-Security-Policy",
+        "default-src 'self'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline'",
+    )
+    responseHeaders.add("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
 }
 
 private fun HttpExchange.respond(status: Int, contentType: String, body: ByteArray) {
