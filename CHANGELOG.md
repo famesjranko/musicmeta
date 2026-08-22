@@ -47,6 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `EnrichmentEngine.close()` (defaulted no-op): releases the scope backing `enrichProgressive`'s detachment; call it once done with an engine to abandon a still-running detached fan-out
 - A `close()`d engine stamps every unsettled requested type `Error(ErrorKind.ENGINE_CLOSED)`, including for a request key it had never seen before `close()`
 - `EnrichmentEngine.enrichBatchProgressive`: `enrichBatch`'s cumulative-snapshot counterpart, composed from `enrichProgressive` per request in the same sequential order
+- `engine.DEFAULT_SYNTHESIZERS`: the default engine's `CompositeSynthesizer`s, for a caller building attribution from `type`/`dependencies` instead of hand-copying the graph
 - demo-web's enrich page now streams over `enrichProgressive` via server-sent events: the page paints each card as its type settles instead of waiting for the slowest provider
 - demo-web credits every card with the upstream that supplied it, from response provenance, with each provider's required wording, link-back and licence notice rendered beside its data
 - demo-web shows Deezer's private-use notice at the preview player, and states each provider's standing notices in the footer
