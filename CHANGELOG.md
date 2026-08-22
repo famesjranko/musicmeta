@@ -67,6 +67,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - An abandoned run (after `close()`, or a deadline firing before identity resolution starts) now reports `NOT_ATTEMPTED_DISABLED` when `enableIdentityResolution` is false, instead of always `FAILED`
 - Track-scoped album art now reaches Deezer/iTunes/Discogs when the album title is known
 - demo-web renders any 429 on `/api/*` — its own admission gate's JSON or a platform's plain-text refusal — as one "demo busy" state with a retry button, instead of a raw parse error
+- A failing Cover Art Archive release lookup is attempted once per call, not once per artwork type: the four share one attempt budget, so an upstream recovering mid-call now reaches none of them
+- The docs no longer promise a MusicBrainz `SearchCandidate` a `thumbnailUrl`: a release search response carries no cover-art flag, so that field was always null on a MusicBrainz candidate
 
 ## [0.12.0] - 2026-08-18
 

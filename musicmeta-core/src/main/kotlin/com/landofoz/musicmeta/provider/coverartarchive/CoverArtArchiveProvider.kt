@@ -177,12 +177,34 @@ class CoverArtArchiveProvider(
      * more than one release must not share one release's answer with another's. A miss is memoized
      * too, so a release with no artwork costs one request instead of one per type; called outside
      * an engine, there is no scope to memoize in and every call hits upstream.
+     *
+     * A *failure* is shared on the same terms: the first reader's exhausted attempt is rethrown to
+     * the other three rather than each running its own attempts against an endpoint already known
+     * to be failing, so one call costs one attempt budget for this release and not one per type.
+     * Under a sustained failure every type reports the error it would have earned alone; the cost of
+     * sharing is that a transient recovering *between* two types no longer reaches the second, which
+     * now inherits the first's error instead of finding its own success.
+     *
+     * Wrapping the outcome in a [Result] is what lets [CallMemo] — which holds only what
+     * [CallMemo.get]'s fetch *returns* — hold a failure at all. `ensureActive()` decides which
+     * failures are eligible (`docs/pitfalls.md` §2): only *this* job's own cancellation escapes the
+     * memo, leaving nothing behind for a sibling type to inherit. A cancellation raised by the
+     * upstream call itself — a consumer [HttpClient] reporting a hung endpoint through its own
+     * `withTimeout` — is that endpoint failing, and is held like any other failure; it is also the
+     * shape the amplification this memo exists to stop takes in practice.
      */
     private suspend fun getArtworkMetadata(releaseId: String): List<CoverArtArchiveImage>? {
         val memo = currentCoroutineContext()[ProviderCallScope]
-            ?.slot(this) { CallMemo<String, List<CoverArtArchiveImage>?>() }
+            ?.slot(this) { CallMemo<String, Result<List<CoverArtArchiveImage>?>>() }
             ?: return api.getArtworkMetadata(releaseId)
-        return memo.get(releaseId) { api.getArtworkMetadata(releaseId) }
+        return memo.get(releaseId) {
+            try {
+                Result.success(api.getArtworkMetadata(releaseId))
+            } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
+                Result.failure(e)
+            }
+        }.getOrThrow()
     }
 
     companion object {

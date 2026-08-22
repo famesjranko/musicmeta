@@ -5,7 +5,6 @@ import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.testutil.FakeHttpClient
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
@@ -123,24 +122,18 @@ class MusicBrainzSearchTest {
         }
 
     @Test
-    fun `searchCandidates includes thumbnail URL when front cover exists`() = runTest {
-        // Given - first release has front cover, second does not
+    fun `searchCandidates offers no thumbnail because a release search cannot report cover art`() = runTest {
+        // Given - a release search response, which carries no cover-art-archive object for any hit
         httpClient.givenJsonResponse("release?query", RELEASE_SEARCH_MULTIPLE)
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
 
         // When - searching for candidates
         val candidates = provider.searchCandidates(request, 10)
 
-        // Then - thumbnail URL derived from CAA for release with cover art
-        val withCover = candidates[0]
-        assertNotNull(withCover.thumbnailUrl)
-        assertEquals(
-            "https://coverartarchive.org/release/abc123/front-250",
-            withCover.thumbnailUrl,
-        )
-
-        val withoutCover = candidates[1]
-        assertNull(withoutCover.thumbnailUrl)
+        // Then - no candidate carries a Cover Art Archive URL that nothing in the response supports
+        assertEquals(2, candidates.size)
+        assertNull(candidates[0].thumbnailUrl)
+        assertNull(candidates[1].thumbnailUrl)
     }
 
     companion object {
@@ -176,8 +169,7 @@ class MusicBrainzSearchTest {
                     "id": "group123",
                     "primary-type": "Album",
                     "tags": [{"name": "alternative rock", "count": 5}]
-                  },
-                  "cover-art-archive": {"front": true}
+                  }
                 },
                 {
                   "id": "xyz789",

@@ -550,8 +550,10 @@ internal object MusicBrainzParser {
         return null
     }
 
-    private fun extractHasFrontCover(release: JSONObject): Boolean {
-        val coverArt = release.optJSONObject("cover-art-archive") ?: return false
+    /** Null where nothing in the response answers the question — see [MusicBrainzRelease.hasFrontCover]. */
+    private fun extractHasFrontCover(release: JSONObject): Boolean? {
+        val coverArt = release.optJSONObject("cover-art-archive") ?: return null
+        if (!coverArt.has("front")) return null
         return coverArt.optBoolean("front", false)
     }
 

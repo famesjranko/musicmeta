@@ -260,6 +260,32 @@ response; that is what pins the field name. `provider-drift.yml` runs the `e2e` 
 APIs on a schedule, so a moved field surfaces indirectly — it is not a field watcher and never gates
 a merge.
 
+## 22. Two endpoints of one API do not carry the same fields
+
+```kotlin
+// WRONG — shipped until 0.13.0; a /release?query= hit has no cover-art-archive object at all
+private fun extractHasFrontCover(release: JSONObject): Boolean {
+    val coverArt = release.optJSONObject("cover-art-archive") ?: return false   // states "no art"
+}
+
+// RIGHT — absent means the response could not say, which is not the same as "no"
+private fun extractHasFrontCover(release: JSONObject): Boolean? {
+    val coverArt = release.optJSONObject("cover-art-archive") ?: return null
+}
+```
+
+MusicBrainz sends `cover-art-archive` on `/release/{mbid}` and never on `/release?query=`, so every
+search-derived release reported `false`: measured false on 853 of 853 pooled candidates and wrong on
+156 of 200 checked against the Cover Art Archive. `MusicBrainzProvider` gated a search candidate's
+thumbnail on it, so that thumbnail was never produced and `docs/providers.md` documented a promise
+the code could not keep.
+
+§3 is the same defaulting mistake on a field the endpoint does send; this is the harder version,
+because the field is right and the *endpoint* cannot answer. Nothing catches it: the code and the
+fixtures agreed with each other, three of them carrying a hand-written `cover-art-archive` inside a
+search payload upstream never sends. A fixture copied from a real response of **the endpoint the
+caller actually uses** is what pins this — a lookup capture proves nothing about a search path.
+
 ## 5. A capability's `identifierRequirement` defaults to `NONE`
 
 ```kotlin
@@ -515,6 +541,39 @@ Before adding provider-internal state of any kind:
   because it dies with the call. Held any longer, no refresh could ever correct a mis-resolution.
 - Per-call state rides the coroutine context, as `EnrichDeadline` and `TransientIdentifierMarker`
   already do. A new `EnrichmentProvider` method would be a documented break instead (§1).
+
+## 23. A memo that holds only successes multiplies a failing endpoint's retry cost by its readers
+
+`CallMemo` writes on the success path, so a `fetch()` that throws leaves nothing behind and the next
+type asking the same question runs the whole retry ladder again. That is the right default for a
+memo whose readers are independent — but where *N* types read one upstream document, a sustained
+failure costs *N* ladders instead of one, and none of them can succeed where the first could not.
+
+`CoverArtArchiveProvider.getArtworkMetadata` is the worked case: four types read one release document
+(ALBUM_ART's side-fetch, ALBUM_ART_BACK, ALBUM_BOOKLET, CD_ART), so a failing CAA release endpoint
+was attempted 4 × the 3-attempt ladder = 12 times per call — and a *hung* one, which never reaches
+the ladder at all, still cost one full timeout per type. Against a CAA sampled at ~10s per failed
+attempt, an album enrich took 167-184s where sharing one budget takes 42-58s (offline replay over
+captured samples, 2026-08-22 — treat the seconds as a scale, re-measure before building on them; the
+attempt counts are arithmetic and `CoverArtArchiveMemoTest` pins the 4-to-1 collapse).
+
+Wrap the outcome in a `Result` so the memo can hold a failure, and gate what may become one on
+`ensureActive()` — §2's form, verbatim, for the same reason. **The blanket
+`catch (e: CancellationException) { throw e }` is the trap inside the trap**: it was written here
+first and it makes the whole fix a no-op against the failure shape that motivated it. A hung endpoint
+does not usually arrive as an exhausted ladder — it arrives as a `CancellationException` from a
+consumer `HttpClient`'s own `withTimeout`, raised while our job is perfectly healthy. Rethrown, that
+memoizes nothing and every type re-attempts, which is the defect unchanged. `ensureActive()` makes
+the right cut: our own cancellation escapes, a foreign one is the endpoint failing and is held.
+`CoverArtArchiveMemoTest` pins both halves, and each half goes red under the other's implementation.
+
+Before copying this, check what sharing costs. The memo is call-scoped, so nothing outlives one
+`enrich()`. Under a sustained failure no result changes — every reader reports the `Error` it would
+have earned running the ladder itself, and only the attempt count moves. But **a transient that
+recovers between two readers is no longer visible to the second**: it inherits the first's error
+where it would once have found its own `Success`. That trade is the fix, not an oversight in it —
+it is what buys the collapse — but it is a real behaviour change and a memo whose readers can
+genuinely disagree about a flapping endpoint should not take it.
 
 ## Area — Checks, comments, and config
 
