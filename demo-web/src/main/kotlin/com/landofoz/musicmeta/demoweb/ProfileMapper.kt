@@ -15,6 +15,7 @@ import com.landofoz.musicmeta.PopularitySignal
 import com.landofoz.musicmeta.PopularitySignalKind
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.TrackProfile
+import com.landofoz.musicmeta.engine.DEFAULT_SYNTHESIZERS
 
 /**
  * @param pending the enrichment types that have not settled yet, `requestedTypes - raw.keys` on a
@@ -510,12 +511,12 @@ private fun EnrichmentResults.creditProvidersOf(type: EnrichmentType): List<Stri
 /**
  * Types the engine synthesizes from other types rather than fetching. Such a result names the
  * synthesizer, which no reader can be sent to and no terms cover — the upstreams to credit are
- * whoever answered the types it was derived from.
+ * whoever answered the types it was derived from. Read straight off core's default synthesizer
+ * registry so a synthesizer added or re-wired there is credited correctly with nothing to keep in
+ * sync by hand.
  */
-internal val DERIVED_FROM: Map<EnrichmentType, Set<EnrichmentType>> = mapOf(
-    EnrichmentType.ARTIST_TIMELINE to setOf(EnrichmentType.ARTIST_DISCOGRAPHY, EnrichmentType.BAND_MEMBERS),
-    EnrichmentType.GENRE_DISCOVERY to setOf(EnrichmentType.GENRE),
-)
+private val DERIVED_FROM: Map<EnrichmentType, Set<EnrichmentType>> =
+    DEFAULT_SYNTHESIZERS.associate { it.type to it.dependencies }
 
 /** Every upstream the items of a merged payload name. Empty for a payload that carries none. */
 private fun EnrichmentData.itemSources(): List<String> = when (this) {
