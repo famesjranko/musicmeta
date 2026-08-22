@@ -512,7 +512,7 @@ private fun EnrichmentResults.creditProvidersOf(type: EnrichmentType): List<Stri
  * synthesizer, which no reader can be sent to and no terms cover — the upstreams to credit are
  * whoever answered the types it was derived from.
  */
-private val DERIVED_FROM: Map<EnrichmentType, Set<EnrichmentType>> = mapOf(
+internal val DERIVED_FROM: Map<EnrichmentType, Set<EnrichmentType>> = mapOf(
     EnrichmentType.ARTIST_TIMELINE to setOf(EnrichmentType.ARTIST_DISCOGRAPHY, EnrichmentType.BAND_MEMBERS),
     EnrichmentType.GENRE_DISCOVERY to setOf(EnrichmentType.GENRE),
 )
