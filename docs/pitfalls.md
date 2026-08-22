@@ -542,6 +542,39 @@ Before adding provider-internal state of any kind:
 - Per-call state rides the coroutine context, as `EnrichDeadline` and `TransientIdentifierMarker`
   already do. A new `EnrichmentProvider` method would be a documented break instead (§1).
 
+## 23. A memo that holds only successes multiplies a failing endpoint's retry cost by its readers
+
+`CallMemo` writes on the success path, so a `fetch()` that throws leaves nothing behind and the next
+type asking the same question runs the whole retry ladder again. That is the right default for a
+memo whose readers are independent — but where *N* types read one upstream document, a sustained
+failure costs *N* ladders instead of one, and none of them can succeed where the first could not.
+
+`CoverArtArchiveProvider.getArtworkMetadata` is the worked case: four types read one release document
+(ALBUM_ART's side-fetch, ALBUM_ART_BACK, ALBUM_BOOKLET, CD_ART), so a failing CAA release endpoint
+was attempted 4 × the 3-attempt ladder = 12 times per call — and a *hung* one, which never reaches
+the ladder at all, still cost one full timeout per type. Against a CAA sampled at ~10s per failed
+attempt, an album enrich took 167-184s where sharing one budget takes 42-58s (offline replay over
+captured samples, 2026-08-22 — treat the seconds as a scale, re-measure before building on them; the
+attempt counts are arithmetic and `CoverArtArchiveMemoTest` pins the 4-to-1 collapse).
+
+Wrap the outcome in a `Result` so the memo can hold a failure, and gate what may become one on
+`ensureActive()` — §2's form, verbatim, for the same reason. **The blanket
+`catch (e: CancellationException) { throw e }` is the trap inside the trap**: it was written here
+first and it makes the whole fix a no-op against the failure shape that motivated it. A hung endpoint
+does not usually arrive as an exhausted ladder — it arrives as a `CancellationException` from a
+consumer `HttpClient`'s own `withTimeout`, raised while our job is perfectly healthy. Rethrown, that
+memoizes nothing and every type re-attempts, which is the defect unchanged. `ensureActive()` makes
+the right cut: our own cancellation escapes, a foreign one is the endpoint failing and is held.
+`CoverArtArchiveMemoTest` pins both halves, and each half goes red under the other's implementation.
+
+Before copying this, check what sharing costs. The memo is call-scoped, so nothing outlives one
+`enrich()`. Under a sustained failure no result changes — every reader reports the `Error` it would
+have earned running the ladder itself, and only the attempt count moves. But **a transient that
+recovers between two readers is no longer visible to the second**: it inherits the first's error
+where it would once have found its own `Success`. That trade is the fix, not an oversight in it —
+it is what buys the collapse — but it is a real behaviour change and a memo whose readers can
+genuinely disagree about a flapping endpoint should not take it.
+
 ## Area — Checks, comments, and config
 
 ## 9. A line-based check that skips lines can stop reading a file entirely

@@ -374,7 +374,8 @@ read, but only a release lookup carries that object: a `/release?query=` hit has
 2026-08-22), so a search candidate never carries a thumbnail URL. Reading one per candidate would
 cost a rate-limited lookup each.
 
-**Cover Art Archive.** `/release/{mbid}` is fetched for every capability, so these cost only code:
+**Cover Art Archive.** `/release/{mbid}` is read by every capability and fetched once per call — a
+failure included, so a dead endpoint costs one attempt budget, not four. These cost only code:
 `images[].comment` (which of several front covers this is), `.approved` (we take the first match
 either way), `.id` (addresses one image at `/release/{mbid}/{id}-{size}`), `.back` (redundant with
 `types`, but cheaper). Unmapped `types`: `Obi`, `Spine`, `Track`, `Tray`, `Sticker`, `Poster`,
