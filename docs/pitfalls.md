@@ -118,6 +118,14 @@ The surface was narrowed to the four-role boundary in v0.10.0 (#5). `CircuitBrea
 them leaves `apiCheck` green. `RateLimiter` is public only because it is a parameter of nearly every
 provider constructor.
 
+One synthesizer fact escapes that boundary: `DEFAULT_SYNTHESIZER_DEPENDENCIES` publishes the
+built-in synthesizers' `type`→`dependencies` graph as a `Map`, so a consumer can credit a
+synthesized result. The synthesizer *objects* stay `internal` (renaming them is still green), but
+the graph's contents are now an observable contract — removing a built-in synthesizer, or changing
+a `dependencies` set, is a behaviour break `apiCheck` cannot see (the getter descriptor is
+unchanged), the same class of trap as the `@Serializable` cache types. Such a change needs a
+`### Breaking Changes` judgement, not a silent `### Changed`.
+
 ## Area — Errors, cancellation, and timeouts
 
 ## 2. `catch (e: Exception)` in a suspend function eats cancellation

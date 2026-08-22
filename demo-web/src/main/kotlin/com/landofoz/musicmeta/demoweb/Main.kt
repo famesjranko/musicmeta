@@ -9,6 +9,7 @@ import com.landofoz.musicmeta.cache.CacheMode
 import com.landofoz.musicmeta.cache.InMemoryEnrichmentCache
 import java.io.File
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.system.exitProcess
 
 private const val CONTACT = "https://github.com/famesjranko/musicmeta"
 
@@ -32,13 +33,23 @@ private fun KeySpec.resolve(secrets: Map<String, String>) = secrets[secretsKey] 
 fun main() {
     val port = env("PORT")?.toIntOrNull() ?: 8099
     val secrets = loadSecrets()
+    val requested = parsePublicRelaxations(env("DEMO_PUBLIC_ALLOW"))
+    val posture = PublicPosture(publicPostureEnabled(env("DEMO_PUBLIC")), requested.recognised)
+    // Refused rather than ignored, and only where the variable does anything: a relaxation is an
+    // operator's explicit choice, so a token that names nothing is a choice this process cannot
+    // carry out. Failing here leaves the previous deployment serving; accepting the typo would
+    // leave a posture nobody chose, which is what DEMO_PUBLIC exists to rule out.
+    if (posture.enabled && requested.unknown.isNotEmpty()) {
+        System.err.println(unknownRelaxationMessage(requested.unknown))
+        exitProcess(64)
+    }
     val keys = ApiKeyConfig(
         lastFmKey = LASTFM.resolve(secrets),
         fanartTvProjectKey = FANARTTV.resolve(secrets),
         discogsPersonalToken = DISCOGS.resolve(secrets),
         listenBrainzToken = LISTENBRAINZ.resolve(secrets),
-    )
-    val cache = InMemoryEnrichmentCache()
+    ).underPublicPosture(posture)
+    val cache = InMemoryEnrichmentCache().let { if (posture.capsDiscogsFreshness) DiscogsFreshnessCache(it) else it }
 
     fun buildEngine(cacheMode: CacheMode): EnrichmentEngine {
         // This demo exists to show what every provider returns, so a type dropped to meet the
@@ -50,13 +61,14 @@ fun main() {
             enrichTimeoutMs = 120_000L,
             cacheMode = cacheMode,
         )
-        return EnrichmentEngine.Builder()
+        val engine = EnrichmentEngine.Builder()
             .apiKeys(keys)
             .config(config)
             .cache(cache)
             .contact(CONTACT)
             .withDefaultProviders()
             .build()
+        return if (posture.withholdsDiscogsImages) PublicPostureEngine(engine) else engine
     }
 
     // The same shared `cache` above every rebuild passes to `buildEngine` is what makes the
@@ -67,34 +79,72 @@ fun main() {
     val engineRef = AtomicReference(buildEngine(CacheMode.NETWORK_FIRST))
     val cacheModeRef = AtomicReference(CacheMode.NETWORK_FIRST)
 
-    // Missingness reads the catalog's own selector against the built config, not the raw sources —
-    // Required and Optional are different failures. A missing Required key means the provider never
-    // registered at all; a missing Optional token (ListenBrainz) means it registered and answers
-    // everything except artist radio discovery, so lumping it in with "skipped" would be false.
-    val catalogById = ProviderCatalog.entries.associateBy { it.id }
-    val missingRequired = KEY_SPECS.filter { spec ->
-        val requirement = catalogById.getValue(spec.catalogId).keyRequirement
-        requirement is KeyRequirement.Required && requirement.key(keys) == null
-    }.map { it.envVar }
-    val missingOptional = KEY_SPECS.filter { spec ->
-        val requirement = catalogById.getValue(spec.catalogId).keyRequirement
-        requirement is KeyRequirement.Optional && requirement.key(keys) == null
-    }.map { it.envVar }
-    if (missingRequired.isNotEmpty()) {
+    val maintainerSecret = env("DEMO_MAINTAINER_SECRET")
+
+    val missing = missingCredentials(keys, posture.withheldCredentialIds)
+    if (posture.enabled) {
+        println(posture.notice)
         println(
-            "No key set for: ${missingRequired.joinToString(", ")} — those providers are skipped. " +
+            if (maintainerSecret != null) {
+                "DEMO_MAINTAINER_SECRET set — maintainer mutations (cache-mode changes) enabled."
+            } else {
+                "DEMO_MAINTAINER_SECRET unset — maintainer mutations (cache-mode changes) disabled."
+            },
+        )
+    }
+    if (missing.required.isNotEmpty()) {
+        println(
+            "No key set for: ${missing.required.joinToString(", ")} — those providers are skipped. " +
                 "See secrets.properties / README.",
         )
     }
-    if (missingOptional.isNotEmpty()) {
+    if (missing.optional.isNotEmpty()) {
         println(
-            "No token set for: ${missingOptional.joinToString(", ")} — registered, but artist radio " +
+            "No token set for: ${missing.optional.joinToString(", ")} — registered, but artist radio " +
                 "discovery is off. See secrets.properties / README.",
         )
     }
 
-    startServer(engineRef, cacheModeRef, ::buildEngine, keys, port)
+    startServer(
+        engineRef,
+        cacheModeRef,
+        ::buildEngine,
+        keys,
+        port,
+        unregisteredProviderIds = posture.unregisteredProviderIds,
+        requireMaintainerSecret = posture.enabled,
+        maintainerSecret = maintainerSecret,
+        securityHeaders = posture.enabled,
+    )
     println("musicmeta web demo running at http://localhost:$port")
+}
+
+/** The env vars a startup message names, split by what their absence actually costs. */
+internal data class MissingCredentials(val required: List<String>, val optional: List<String>)
+
+/**
+ * Which [KEY_SPECS] env vars the built [keys] leaves unset, ignoring [withheldIds] — a credential
+ * dropped on purpose is not one an operator forgot, and printing it as missing invites them to
+ * "fix" it.
+ *
+ * Missingness reads the catalog's own selector against the built config, not the raw sources —
+ * Required and Optional are different failures. A missing Required key means the provider never
+ * registered at all; a missing Optional token (ListenBrainz) means it registered and answers
+ * everything except artist radio discovery, so lumping it in with "skipped" would be false.
+ */
+internal fun missingCredentials(keys: ApiKeyConfig, withheldIds: Set<String>): MissingCredentials {
+    val catalogById = ProviderCatalog.entries.associateBy { it.id }
+    val considered = KEY_SPECS
+        .filterNot { it.catalogId in withheldIds }
+        .map { spec -> spec.envVar to catalogById.getValue(spec.catalogId).keyRequirement }
+    return MissingCredentials(
+        required = considered.mapNotNull { (envVar, requirement) ->
+            envVar.takeIf { requirement is KeyRequirement.Required && requirement.key(keys) == null }
+        },
+        optional = considered.mapNotNull { (envVar, requirement) ->
+            envVar.takeIf { requirement is KeyRequirement.Optional && requirement.key(keys) == null }
+        },
+    )
 }
 
 private fun env(key: String): String? = System.getenv(key)?.takeIf { it.isNotBlank() }

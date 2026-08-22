@@ -48,7 +48,7 @@ import java.util.concurrent.atomic.AtomicReference
 class AdmissionGateTest {
 
     private companion object {
-        /** The one entity these tests look up, so [HeldEngine] can tell a test's request from the warm-up's. */
+        /** The one entity these tests look up, so [HeldEngine] holds only what a test asked for. */
         const val HELD_ARTIST = "Portishead"
         const val STREAM_PATH = "/api/enrich-stream?kind=artist&name=$HELD_ARTIST"
         const val ENRICH_PATH = "/api/enrich?kind=artist&name=$HELD_ARTIST"
@@ -59,9 +59,8 @@ class AdmissionGateTest {
 
     /**
      * Holds every enrichment of [HELD_ARTIST] until the test hands out a release, so a chosen
-     * number of requests can be kept inside the gate at once. Anything else — the warm-up
-     * round-trip the server fires at startup, which goes nowhere near a permit — returns at once
-     * and is not counted.
+     * number of requests can be kept inside the gate at once. Anything else returns at once and is
+     * not counted.
      */
     private class HeldEngine(failWith: Throwable? = null) : EnrichmentEngine {
 

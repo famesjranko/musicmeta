@@ -450,10 +450,6 @@ button:disabled { opacity: 0.56; cursor: wait; }
   cursor: pointer;
 }
 
-/* .identity-banner's own `display: flex` outranks the UA stylesheet's `[hidden]`, so the
-   degraded banner needs this override to actually disappear when not shown. */
-.degraded-banner[hidden] { display: none; }
-
 .sections.unverified .card.section {
   opacity: 0.6;
 }
@@ -565,6 +561,7 @@ button:disabled { opacity: 0.56; cursor: wait; }
   transition: border-color 160ms ease, box-shadow 160ms ease;
 }
 
+
 .section:hover {
   border-color: rgba(146, 169, 255, 0.25);
   box-shadow: 0 15px 42px rgba(0, 0, 0, 0.22);
@@ -602,6 +599,10 @@ button:disabled { opacity: 0.56; cursor: wait; }
 .section ul {
   list-style: none;
   margin: 0;
+  /* The clamp trims each card's list to whole items, so lists in one row cap at different
+     heights; the auto margin absorbs that remainder above the footer, and every card's
+     "Show all" and credit line sit on one baseline whatever its list came to. */
+  margin-bottom: auto;
   padding: 0;
   flex: 1;
   overflow: hidden;
@@ -1042,6 +1043,56 @@ footer a {
 }
 
 footer a:hover { color: var(--text); border-color: var(--text); }
+
+/* Per-card credits: owed beside the data, so quiet enough to sit under any card without competing
+   with it — muted, one line, wrapping rather than clipping. */
+.credit-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.36rem;
+  margin: 0.5rem 0 0;
+  color: var(--muted);
+  font-size: 0.66rem;
+  line-height: 1.5;
+}
+
+.credit-line a {
+  color: var(--muted);
+  text-decoration: none;
+  border-bottom: 1px dotted rgba(146, 169, 255, 0.4);
+}
+
+.credit-line a:hover { color: var(--text-soft); border-color: var(--text-soft); }
+
+/* The caption itself clips to one line; a credit is owed in full, so it wraps instead. */
+.gallery figcaption .credit-line {
+  justify-content: center;
+  margin-top: 0.1rem;
+  font-size: 0.62rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.summary .source .credit-line { margin: 0; font-size: 0.7rem; }
+
+/* Sits inline with the play button it belongs to: the notice is about the recording that button
+   is streaming, and goes when playback does. */
+.preview-notice {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  align-items: center;
+  margin-left: 0.4rem;
+  color: var(--muted);
+  font-size: 0.64rem;
+  line-height: 1.4;
+}
+
+.preview-notice a {
+  color: var(--muted);
+  text-decoration: none;
+  border-bottom: 1px dotted rgba(146, 169, 255, 0.4);
+}
 
 /* Attribution credits: owed content, so no card chrome — a hairline separates it from the footer. */
 .credits-footer {

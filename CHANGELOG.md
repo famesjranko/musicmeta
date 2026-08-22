@@ -47,17 +47,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `EnrichmentEngine.close()` (defaulted no-op): releases the scope backing `enrichProgressive`'s detachment; call it once done with an engine to abandon a still-running detached fan-out
 - A `close()`d engine stamps every unsettled requested type `Error(ErrorKind.ENGINE_CLOSED)`, including for a request key it had never seen before `close()`
 - `EnrichmentEngine.enrichBatchProgressive`: `enrichBatch`'s cumulative-snapshot counterpart, composed from `enrichProgressive` per request in the same sequential order
+- `engine.DEFAULT_SYNTHESIZER_DEPENDENCIES`: each composite type the engine synthesizes mapped to its source sub-types, for crediting a synthesized result without hand-copying the graph
 - demo-web's enrich page now streams over `enrichProgressive` via server-sent events: the page paints each card as its type settles instead of waiting for the slowest provider
+- demo-web credits every card with the upstream that supplied it, from response provenance, with each provider's required wording, link-back and licence notice rendered beside its data
+- demo-web shows Deezer's private-use notice at the preview player, and states each provider's standing notices in the footer
+- demo-web's Cloud Run artifacts are back (`Dockerfile`, `deploy.sh`); `-PdemoCoreVersion` builds the image against the released Maven Central core, unset builds from source as before
+- demo-web reads `DEMO_PUBLIC=1` for a ToS-safe public posture (Last.fm off, personal tokens withheld, Discogs images off and 6h freshness ceiling); `DEMO_PUBLIC_ALLOW` lifts named restrictions
+- demo-web bounds one client's share of upstream-bearing endpoints (20-burst, 30/min per client), and skips its transient-failure retry pass while the admission gate is saturated
+
+### Changed
+- demo-web no longer enriches its suggested queries at startup: the page is usable the moment it loads, `/api/health` reports ready as soon as the server binds, and the cache fills from real searches
 
 ### Fixed
 - demo-web's card image now prefers a Deezer/iTunes CDN URL over Cover Art Archive's when both are available, cutting card paint latency from seconds to well under a second
 - demo-web's artist summary card now uses fanart.tv's smaller preview image for its photo and background instead of the full-size original; the gallery still shows full-size
-- Cached `LABEL`/`RELEASE_DATE`/`RELEASE_TYPE`/`COUNTRY` entries with unknown-curation genre tags re-fetched on every call; now served from cache — tags are only read off `GENRE` and `ALBUM_METADATA`
+- Cached `LABEL`/`RELEASE_DATE`/`RELEASE_TYPE`/`COUNTRY` entries with unknown-curation genre tags re-fetched every call; now served from cache — tags are read only off `GENRE` and `ALBUM_METADATA`
 - A full cache hit now reports `CanonicalStatus.NOT_ATTEMPTED_DISABLED` when `enableIdentityResolution` is false, matching the live path instead of always claiming `NOT_ATTEMPTED_CACHE_HIT`
 - No `NotFound` a `CatalogFilterMode` produces by emptying a `Success` is negative-cached any more — covers a live answer, a `STALE_IF_ERROR` substitute, and a fresh cache hit re-filtered later
 - A `CompositeSynthesizer`'s `NotFound` no longer negative-caches when synthesized over a `STALE_IF_ERROR`-substituted dependency — it describes a past call's stale snapshot, not this one
 - An abandoned run (after `close()`, or a deadline firing before identity resolution starts) now reports `NOT_ATTEMPTED_DISABLED` when `enableIdentityResolution` is false, instead of always `FAILED`
 - Track-scoped album art now reaches Deezer/iTunes/Discogs when the album title is known
+- demo-web renders any 429 on `/api/*` — its own admission gate's JSON or a platform's plain-text refusal — as one "demo busy" state with a retry button, instead of a raw parse error
 - A failing Cover Art Archive release lookup is attempted once per call, not once per artwork type: the four share one attempt budget, so an upstream recovering mid-call now reaches none of them
 - The docs no longer promise a MusicBrainz `SearchCandidate` a `thumbnailUrl`: a release search response carries no cover-art flag, so that field was always null on a MusicBrainz candidate
 
