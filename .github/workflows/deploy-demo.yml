@@ -57,7 +57,6 @@ jobs:
             --image="$IMAGE" \
             --concurrency=8 --max-instances=1 --max=1 --min-instances=0 \
             --cpu=1 --memory=512Mi --timeout=180 \
-            --no-allow-unauthenticated \
             --service-account="${{ vars.GCP_RUNTIME_SA }}" \
             --update-env-vars=DEMO_PUBLIC=1 \
             --update-secrets=DEMO_MAINTAINER_SECRET=demo-maintainer-secret:latest,DEMO_PUBLIC_ALLOW=demo-public-allow:latest \
