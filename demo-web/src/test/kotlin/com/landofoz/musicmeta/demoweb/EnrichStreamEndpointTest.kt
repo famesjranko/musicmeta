@@ -130,7 +130,6 @@ class EnrichStreamEndpointTest {
     private val http: HttpClient = HttpClient.newHttpClient()
     private val json = Json { encodeDefaults = true; ignoreUnknownKeys = true }
 
-    /** Binds on port 0, so the OS picks a free port and hands it back. This class starts a server per test. */
     private fun startWith(engine: EnrichmentEngine): Int =
         startServer(AtomicReference(engine), AtomicReference(CacheMode.NETWORK_FIRST), { engine }, ApiKeyConfig(), 0)
 
