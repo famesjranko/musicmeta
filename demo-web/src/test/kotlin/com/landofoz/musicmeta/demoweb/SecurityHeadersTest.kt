@@ -61,6 +61,18 @@ class SecurityHeadersTest {
         assertTrue(headers.firstValue("Permissions-Policy").isPresent)
     }
 
+    @Test fun `the CSP permits a cross-origin preview stream`() {
+        // Given - a server started with securityHeaders enabled, as a public posture sets it
+        val port = startTestServer(securityHeaders = true)
+
+        // When - fetching the static page and reading its policy
+        val csp = get(port, "/").headers().firstValue("Content-Security-Policy").orElse("")
+
+        // Then - media-src is stated, so a preview URL on a provider's CDN is not blocked by the
+        // default-src 'self' fallback that every unstated directive inherits
+        assertTrue("CSP states no media-src: $csp", csp.contains("media-src https:"))
+    }
+
     @Test fun `a public server sends the security headers on an SSE response`() {
         // Given - a server started with securityHeaders enabled
         val port = startTestServer(securityHeaders = true)

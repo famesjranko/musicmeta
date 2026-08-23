@@ -1265,7 +1265,9 @@ private fun parseQuery(raw: String?): Map<String, String> {
  * as-is — the whole point of the demo — never proxied same-origin. `style-src` allows
  * `'unsafe-inline'`: `index.html` carries two `style="display:none"` attributes, and index.js's
  * `element.style.<property> = …` assignments (not `cssText`, which CSP does gate) render fine
- * either way, so the widening is for the static attributes, not the script.
+ * either way, so the widening is for the static attributes, not the script. `media-src` widens for
+ * the same reason `img-src` does: a 30s preview is streamed from the provider's own CDN, whose
+ * hostnames the provider rotates, so pinning them would break playback silently.
  */
 private fun HttpExchange.addSecurityHeaders(enabled: Boolean) {
     if (!enabled) return
@@ -1274,7 +1276,8 @@ private fun HttpExchange.addSecurityHeaders(enabled: Boolean) {
     responseHeaders.add("Referrer-Policy", "no-referrer")
     responseHeaders.add(
         "Content-Security-Policy",
-        "default-src 'self'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline'",
+        "default-src 'self'; img-src 'self' https: data:; media-src https:; " +
+            "style-src 'self' 'unsafe-inline'",
     )
     responseHeaders.add("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
 }
