@@ -23,7 +23,6 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.net.ServerSocket
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -168,8 +167,7 @@ class AdmissionGateTest {
     }
 
     private fun startWith(engine: HeldEngine): Int {
-        val port = ServerSocket(0).use { it.localPort }
-        startServer(AtomicReference(engine), AtomicReference(CacheMode.NETWORK_FIRST), { engine }, ApiKeyConfig(), port)
+        val port = startServer(AtomicReference(engine), AtomicReference(CacheMode.NETWORK_FIRST), { engine }, ApiKeyConfig(), 0)
         started += engine
         return port
     }

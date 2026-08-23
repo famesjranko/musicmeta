@@ -33,7 +33,6 @@ import org.junit.Test
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.OutputStream
-import java.net.ServerSocket
 import java.net.Socket
 import java.net.URI
 import java.net.http.HttpClient
@@ -131,17 +130,9 @@ class EnrichStreamEndpointTest {
     private val http: HttpClient = HttpClient.newHttpClient()
     private val json = Json { encodeDefaults = true; ignoreUnknownKeys = true }
 
-    /**
-     * A port the OS has just confirmed free, rather than a guess from a range: this class stands up
-     * a server per test, and a guess collides often enough to fail a run for no reason.
-     */
-    private fun freePort(): Int = ServerSocket(0).use { it.localPort }
-
-    private fun startWith(engine: EnrichmentEngine): Int {
-        val port = freePort()
-        startServer(AtomicReference(engine), AtomicReference(CacheMode.NETWORK_FIRST), { engine }, ApiKeyConfig(), port)
-        return port
-    }
+    /** Binds on port 0, so the OS picks a free port and hands it back. This class starts a server per test. */
+    private fun startWith(engine: EnrichmentEngine): Int =
+        startServer(AtomicReference(engine), AtomicReference(CacheMode.NETWORK_FIRST), { engine }, ApiKeyConfig(), 0)
 
     private fun raw(port: Int, path: String): HttpResponse<String> =
         http.send(

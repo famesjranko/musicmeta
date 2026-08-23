@@ -105,7 +105,7 @@ fun main() {
         )
     }
 
-    startServer(
+    val bound = startServer(
         engineRef,
         cacheModeRef,
         ::buildEngine,
@@ -116,7 +116,7 @@ fun main() {
         maintainerSecret = maintainerSecret,
         securityHeaders = posture.enabled,
     )
-    println("musicmeta web demo running at http://localhost:$port")
+    println("musicmeta web demo running at http://localhost:$bound")
 }
 
 /** The env vars a startup message names, split by what their absence actually costs. */
