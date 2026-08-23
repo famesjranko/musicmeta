@@ -19,8 +19,8 @@ const MERGER_SUFFIX = '_merger';
 const CC_BY_SA = 'https://creativecommons.org/licenses/by-sa/4.0/';
 
 // `label` is the anchor text (defaults to `name`), `prefix`/`suffix` the plain text around it, and
-// `extraHtml` whatever the terms require beyond a credit. `previewNotice` is owed at a player
-// streaming that provider's recording; `standingNotice` is owed by the page as a whole.
+// `extraHtml` whatever the terms require beyond a credit. `standingNotice` is owed by the page as
+// a whole rather than by any one item it rendered.
 const PROVIDER_CREDITS = {
   musicbrainz: { name: 'MusicBrainz', site: 'https://musicbrainz.org/' },
   coverartarchive: { name: 'Cover Art Archive', site: 'https://coverartarchive.org/' },
@@ -39,15 +39,10 @@ const PROVIDER_CREDITS = {
   discogs: { name: 'Discogs', site: 'https://www.discogs.com/', label: 'Data provided by Discogs' },
   // Last.fm 2.7 requires the badge beside the data and a link back to the catalogue page.
   lastfm: { name: 'Last.fm', site: 'https://www.last.fm/', suffix: ' — powered by AudioScrobbler' },
-  itunes: {
-    name: 'iTunes',
-    site: 'https://music.apple.com/',
-    previewNotice: 'preview provided courtesy of iTunes.',
-  },
+  itunes: { name: 'iTunes', site: 'https://music.apple.com/' },
   deezer: {
     name: 'Deezer',
     site: 'https://www.deezer.com/',
-    previewNotice: 'streaming of the recordings is limited to a strictly private use within a family scope.',
     standingNotice: 'Deezer previews: streaming of the recordings is limited to a strictly private use within a family scope.',
   },
 };
@@ -80,25 +75,6 @@ export function creditLineHtml(credits) {
     .map(creditHtml);
   if (items.length === 0) return '';
   return `<p class="credit-line">${items.join('<span class="credit-sep"> · </span>')}</p>`;
-}
-
-function previewEntry(source) {
-  const entry = source ? PROVIDER_CREDITS[source] : null;
-  return entry && entry.previewNotice ? entry : null;
-}
-
-/** The notice owed at a player streaming [source]'s recording, as plain text. Empty when none is. */
-export function previewNoticeText(source) {
-  const entry = previewEntry(source);
-  return entry ? `${entry.name}: ${entry.previewNotice}` : '';
-}
-
-/** [previewNoticeText] as the caption rendered at the player, the provider naming its own site. */
-export function previewNoticeHtml(source) {
-  const entry = previewEntry(source);
-  if (!entry) return '';
-  return `<span class="preview-notice">${linkHtml(entry.site, entry.name)}: ` +
-    `${escapeHtml(entry.previewNotice)}</span>`;
 }
 
 /**
