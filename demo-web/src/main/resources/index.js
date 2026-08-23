@@ -10,8 +10,6 @@ import {
 import {
   escapeHtml as esc,
   creditLineHtml,
-  previewNoticeHtml,
-  previewNoticeText,
   standingNotices,
 } from '/attribution.js';
 
@@ -1072,7 +1070,6 @@ audio.addEventListener('ended', stopPreview);
 function resetBtn(btn) {
   clearTimeout(btn._errorTimer);
   btn._errorTimer = null;
-  clearPreviewNotice(btn);
   btn.classList.remove('playing', 'loading', 'error');
   btn.innerHTML = PLAY_GLYPH;
   btn.title = PLAY_TITLE;
@@ -1082,24 +1079,6 @@ function stopPreview() {
   audio.pause();
   if (activeBtn) resetBtn(activeBtn);
   activeBtn = null;
-}
-
-// The notice a provider's terms owe anyone the recording is playable to — Deezer's private-use
-// notice, Apple's courtesy attribution — shown at the button that is playing it and removed with
-// it. Driven by the source the preview actually resolved from, so a provider that owes nothing
-// grows nothing.
-function showPreviewNotice(btn, source) {
-  clearPreviewNotice(btn);
-  const html = previewNoticeHtml(source);
-  if (!html) return;
-  btn.insertAdjacentHTML('afterend', html);
-  btn._notice = btn.nextElementSibling;
-  btn.title = previewNoticeText(source);
-}
-
-function clearPreviewNotice(btn) {
-  if (btn._notice) btn._notice.remove();
-  btn._notice = null;
 }
 
 resultEl.addEventListener('click', async (e) => {
@@ -1141,7 +1120,6 @@ resultEl.addEventListener('click', async (e) => {
     btn.classList.remove('loading');
     btn.innerHTML = PLAY_GLYPH;
     btn.classList.add('playing');
-    showPreviewNotice(btn, data.source);
   } catch (err) {
     if (btn !== activeBtn) return; // superseded before the failure arrived; already reset
     activeBtn = null;
