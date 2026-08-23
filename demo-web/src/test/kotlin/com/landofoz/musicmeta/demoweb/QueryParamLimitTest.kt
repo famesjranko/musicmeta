@@ -58,9 +58,7 @@ class QueryParamLimitTest {
             .addProvider(provider)
             .cache(InMemoryEnrichmentCache())
             .build()
-        val port = (20000..40000).random()
-        startServer(AtomicReference(engine), AtomicReference(CacheMode.NETWORK_FIRST), { engine }, ApiKeyConfig(), port)
-        return port
+        return startServer(AtomicReference(engine), AtomicReference(CacheMode.NETWORK_FIRST), { engine }, ApiKeyConfig(), 0)
     }
 
     private val http = HttpClient.newHttpClient()

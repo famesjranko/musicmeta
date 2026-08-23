@@ -78,18 +78,16 @@ class PublicPostureTest {
             .cache(InMemoryEnrichmentCache())
             .build()
         val engine = if (posture.withholdsDiscogsImages) PublicPostureEngine(built) else built
-        val port = (20000..40000).random()
-        startServer(
+        return startServer(
             AtomicReference(engine),
             AtomicReference(CacheMode.NETWORK_FIRST),
             { engine },
             // As a public deployment runs: nothing exported, so the only thing separating the two
             // arms below is the posture's own row filter, not a key one arm happens to hold.
             ApiKeyConfig(),
-            port,
+            0,
             unregisteredProviderIds = posture.unregisteredProviderIds,
         )
-        return port
     }
 
     private val http = HttpClient.newHttpClient()

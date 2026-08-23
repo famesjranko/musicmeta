@@ -15,7 +15,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.net.ServerSocket
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -62,9 +61,7 @@ class ClientBudgetTest {
             .addProvider(SilentProvider())
             .cache(InMemoryEnrichmentCache())
             .build()
-        val port = ServerSocket(0).use { it.localPort }
-        startServer(AtomicReference(engine), AtomicReference(CacheMode.NETWORK_FIRST), { engine }, ApiKeyConfig(), port)
-        return port
+        return startServer(AtomicReference(engine), AtomicReference(CacheMode.NETWORK_FIRST), { engine }, ApiKeyConfig(), 0)
     }
 
     private fun get(port: Int, path: String, client: String?): HttpResponse<String> {

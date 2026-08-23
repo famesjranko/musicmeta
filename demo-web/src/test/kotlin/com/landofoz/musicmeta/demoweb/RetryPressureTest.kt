@@ -22,7 +22,6 @@ import kotlinx.coroutines.flow.flow
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import java.net.ServerSocket
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -167,8 +166,7 @@ class RetryPressureTest {
     }
 
     private fun startWith(engine: ProbeEngine): Int {
-        val port = ServerSocket(0).use { it.localPort }
-        startServer(AtomicReference(engine), AtomicReference(CacheMode.NETWORK_FIRST), { engine }, ApiKeyConfig(), port)
+        val port = startServer(AtomicReference(engine), AtomicReference(CacheMode.NETWORK_FIRST), { engine }, ApiKeyConfig(), 0)
         started += engine
         return port
     }

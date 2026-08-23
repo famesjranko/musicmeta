@@ -177,6 +177,10 @@ private val HEALTH_READY = HealthResponse(ready = true, status = "READY")
  * [handleConfig]. [securityHeaders] adds the static response-header set every context here sends
  * before dispatch, covering the SSE path (which sets its own headers directly) the same as every
  * other. Both default off, which is what keeps a `DEMO_PUBLIC`-unset process's answers unchanged.
+ *
+ * Returns the bound port, which is [port] unless [port] is 0 — the request for whichever port the
+ * OS has free. A caller that needs to reach the server has to read it back from here, because a
+ * port picked before the bind is a port some other process may already hold.
  */
 fun startServer(
     engineRef: AtomicReference<EnrichmentEngine>,
@@ -188,7 +192,7 @@ fun startServer(
     requireMaintainerSecret: Boolean = false,
     maintainerSecret: String? = null,
     securityHeaders: Boolean = false,
-) {
+): Int {
     val staticFiles = STATIC_PATHS.associateWith { path ->
         ResourceAnchor::class.java.getResourceAsStream(path)?.readBytes()
             ?: error("$path missing from demo-web resources")
@@ -250,6 +254,7 @@ fun startServer(
     registerContext("/api/health") { exchange -> exchange.respondJson(200, HEALTH_READY) }
 
     server.start()
+    return server.address.port
 }
 
 /**
