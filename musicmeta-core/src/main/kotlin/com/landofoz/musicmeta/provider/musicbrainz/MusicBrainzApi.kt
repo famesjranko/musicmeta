@@ -279,11 +279,17 @@ internal class MusicBrainzApi(
         return MusicBrainzLookup.Found(artist)
     }
 
-    /** Lookup a release-group by MBID with releases (needed for editions). */
+    /**
+     * Lookup a release-group by MBID with releases (needed for editions).
+     *
+     * `artist-credits` rides along so the caller's own artist can be checked against what came
+     * back: a release-group id is a caller assertion like any other, and without a credit in the
+     * response there is nothing to check it against. It costs no extra request.
+     */
     suspend fun lookupReleaseGroup(releaseGroupMbid: String): JSONObject? {
         val json = rateLimiter.execute {
             httpClient.fetchJsonResult(
-                "$BASE_URL/release-group/$releaseGroupMbid?fmt=json&inc=releases",
+                "$BASE_URL/release-group/$releaseGroupMbid?fmt=json&inc=releases+artist-credits",
             ).bodyOrThrowTransient()
         }
         return json

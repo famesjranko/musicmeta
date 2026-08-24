@@ -2,6 +2,7 @@ package com.landofoz.musicmeta.engine
 
 import com.landofoz.musicmeta.CanonicalStatus
 import com.landofoz.musicmeta.EnrichmentConfig
+import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
@@ -97,16 +98,91 @@ class ContradictedIdentifierTest {
         assertEquals(LookupProvenance.CANONICAL_ID, success.provenance)
     }
 
+    @Test
+    fun `every artist type answered from the identifier reports the contradiction`() = runTest {
+        // Given - the same wrong identifier, and the three types that reach the artist entity by a
+        // different route than GENRE does
+        val types = setOf(
+            EnrichmentType.BAND_MEMBERS,
+            EnrichmentType.ARTIST_LINKS,
+            EnrichmentType.ARTIST_POPULARITY,
+        )
+        val request = EnrichmentRequest.forArtist("Radiohead", mbid = "art-coldplay")
+
+        // When - each is enriched on its own, so no other type's guard can stand in for its own
+        val statuses = types.map { it to engine(http()).enrich(request, setOf(it)).identity.status }
+
+        // Then - each reports it. These three go through lookedUpOrNameResolvedArtist rather than
+        // enrichArtist's own lookup, so guarding one route says nothing about the other.
+        assertEquals(types.map { it to CanonicalStatus.CONTRADICTED }, statuses)
+    }
+
+    @Test
+    fun `a contradicted band-members request answers with the caller's own band`() = runTest {
+        // Given - the wrong identifier, whose artist has members of its own to hand back
+        val request = EnrichmentRequest.forArtist("Radiohead", mbid = "art-coldplay")
+
+        // When - band members are enriched
+        val results = engine(http()).enrich(request, setOf(EnrichmentType.BAND_MEMBERS))
+
+        // Then - the name's band, never the identifier's. Without this the identifier's own members
+        // would come back looking like a clean answer.
+        val success = results.raw[EnrichmentType.BAND_MEMBERS] as EnrichmentResult.Success
+        val members = (success.data as EnrichmentData.BandMembers).members.map { it.name }
+        assertEquals(listOf("Thom Yorke"), members)
+    }
+
+    @Test
+    fun `a discography browsed under another artist's identifier is reported, not handed back`() = runTest {
+        // Given - the wrong identifier, and a browse response waiting under each artist
+        val http = http().apply {
+            givenJsonResponse("release-group?artist=art-coldplay", COLDPLAY_DISCOGRAPHY)
+            givenJsonResponse("release-group?artist=art-radiohead", RADIOHEAD_DISCOGRAPHY)
+        }
+        val request = EnrichmentRequest.forArtist("Radiohead", mbid = "art-coldplay")
+
+        // When - the discography is enriched
+        val results = engine(http).enrich(request, setOf(EnrichmentType.ARTIST_DISCOGRAPHY))
+
+        // Then - the caller's own discography, and the identifier reported wrong. A browse learns
+        // nothing about who it browsed, so without the lookup this hands back the other artist's
+        // entire catalogue as the caller's.
+        assertEquals(CanonicalStatus.CONTRADICTED, results.identity.status)
+        val success = results.raw[EnrichmentType.ARTIST_DISCOGRAPHY] as EnrichmentResult.Success
+        val albums = (success.data as EnrichmentData.Discography).albums.map { it.title }
+        assertEquals(listOf("OK Computer"), albums)
+    }
+
     private companion object {
-        val COLDPLAY = """
-            {"id":"art-coldplay","name":"Coldplay","type":"Group",
-             "tags":[{"name":"britpop","count":9}],
-             "aliases":[{"name":"Coolplay","type":"Search hint","primary":false}]}
+        /**
+         * Deliberately able to answer every artist type on its own: a fixture that could only
+         * answer `NotFound` would let a test pass with no guard in place at all.
+         */
+        private fun artist(id: String, name: String, genre: String, member: String, site: String) = """
+            {"id":"$id","name":"$name","type":"Group",
+             "tags":[{"name":"$genre","count":9}],
+             "rating":{"value":4.5,"votes-count":12},
+             "relations":[
+               {"type":"member of band","direction":"backward","attributes":["vocals"],
+                "artist":{"id":"m-$id","name":"$member"}},
+               {"type":"official homepage","target-type":"url","url":{"resource":"$site"}}],
+             ALIASES}
         """.trimIndent()
 
-        val RADIOHEAD = """
-            {"id":"art-radiohead","name":"Radiohead","type":"Group",
-             "tags":[{"name":"alternative rock","count":9}]}
+        val COLDPLAY = artist("art-coldplay", "Coldplay", "britpop", "Chris Martin", "https://coldplay.com")
+            .replace("ALIASES", """"aliases":[{"name":"Coolplay","type":"Search hint","primary":false}]""")
+
+        val RADIOHEAD = artist("art-radiohead", "Radiohead", "alternative rock", "Thom Yorke", "https://radiohead.com")
+            .replace("ALIASES", """"aliases":[]""")
+
+        val COLDPLAY_DISCOGRAPHY = """
+            {"release-groups":[{"id":"rg-parachutes","title":"Parachutes","primary-type":"Album",
+              "first-release-date":"2000-07-10"}]}
+        """.trimIndent()
+
+        val RADIOHEAD_DISCOGRAPHY = """
+            {"release-groups":[{"id":"rg-ok","title":"OK Computer","primary-type":"Album",
+              "first-release-date":"1997-05-21"}]}
         """.trimIndent()
 
         val SEARCH = """

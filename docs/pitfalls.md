@@ -654,6 +654,20 @@ only when the request carried an id (`needsIdentityResolution`'s early return), 
 of it means "you brought an identifier and we did not check it". Read it as the caller's assertion
 carried through, never as MusicBrainz agreeing.
 
+**One guarded route is not a guarded surface.** The first fix checked the identifier on the route
+`GENRE` takes and looked complete. Seven other types reach the same entity by their own route and
+were all still unguarded: `BAND_MEMBERS`, `ARTIST_LINKS` and `ARTIST_POPULARITY` through a shared
+artist helper, `ARTIST_DISCOGRAPHY` through a browse that looks nothing up, `ALBUM_TRACKS` through
+its own release lookup, `CREDITS` through its own recording lookup, and `RELEASE_EDITIONS` through
+the release-*group* id, whose response did not even carry an artist credit to check until
+`inc=artist-credits` was added to it. Every one returned another entity's data at full confidence.
+
+The shape of the mistake is worth more than the list: a guard placed in a *caller* protects that
+caller, and the number of callers is not visible from the one being edited. The guards now sit on
+the lookups themselves (`unlessDifferentArtist`), and `SuppliedIdentifierGuardMatrixTest` holds the
+whole surface to the property rather than naming routes — it enrols a type by that type answering
+the control request, so a new one joins by existing, not by being remembered.
+
 **Contradiction and agreement need separate evidence.** `contradictsSuppliedName` reports only
 *confident disagreement*; `nameMatchTier` reports only *confident agreement*; neither is the other's
 negation, and the gap between them is unknown. Absence of contradiction is not corroboration, and a

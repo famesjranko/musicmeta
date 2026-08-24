@@ -3,6 +3,7 @@ package com.landofoz.musicmeta.engine
 import com.landofoz.musicmeta.CanonicalStatus
 import com.landofoz.musicmeta.EnrichmentConfig
 import com.landofoz.musicmeta.EnrichmentData
+import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
@@ -42,6 +43,9 @@ class ContradictedAlbumTrackIdentifierTest {
     private fun genresOf(result: EnrichmentResult?): List<String> =
         ((result as EnrichmentResult.Success).data as EnrichmentData.Metadata).genres.orEmpty()
 
+    private fun trackTitlesOf(result: EnrichmentResult?): List<String> =
+        ((result as EnrichmentResult.Success).data as EnrichmentData.Tracklist).tracks.map { it.title }
+
     @Test
     fun `an album identifier for another artist's release is reported, and the name still answers`() = runTest {
         // Given - the caller's own album and artist beside a healthy MBID for a different artist
@@ -53,6 +57,21 @@ class ContradictedAlbumTrackIdentifierTest {
         // Then - the identifier is reported wrong and the requested album came back regardless
         assertEquals(CanonicalStatus.CONTRADICTED, results.identity.status)
         assertEquals(listOf("alternative rock"), genresOf(results.raw[EnrichmentType.GENRE]))
+    }
+
+    @Test
+    fun `an album tracklist under another artist's identifier is reported, and the name still answers`() = runTest {
+        // Given - the same wrong identifier, and a type that looks the release up on its own path
+        val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead", mbid = "rel-parachutes")
+
+        // When - the tracklist is enriched
+        val results = engine(http()).enrich(request, setOf(EnrichmentType.ALBUM_TRACKS))
+
+        // Then - the contradiction is reported and the caller's own tracklist answered, not the
+        // identifier's. ALBUM_TRACKS reaches its release through enrichAlbumTracks rather than
+        // enrichAlbumByMbid, so guarding one says nothing about the other.
+        assertEquals(CanonicalStatus.CONTRADICTED, results.identity.status)
+        assertEquals(listOf("Airbag"), trackTitlesOf(results.raw[EnrichmentType.ALBUM_TRACKS]))
     }
 
     @Test
@@ -130,24 +149,50 @@ class ContradictedAlbumTrackIdentifierTest {
         assertEquals(listOf("indie pop"), genresOf(results.raw[EnrichmentType.GENRE]))
     }
 
+    @Test
+    fun `credits under another artist's recording identifier are reported, not handed back`() = runTest {
+        // Given - a caller's own track beside a healthy recording MBID for a different artist, and
+        // a release-group id beside it. That second id is what makes this reachable: with only a
+        // recording id, needsIdentityResolution runs the resolver, whose own guard fires first.
+        val request = EnrichmentRequest.forTrack("Creep", "Radiohead", mbid = "rec-yellow")
+            .withIdentifiers(
+                EnrichmentIdentifiers(musicBrainzId = "rec-yellow", musicBrainzReleaseGroupId = "rg-parachutes"),
+            )
+
+        // When - CREDITS is enriched, the one type with no name route to fall back to
+        val results = engine(http()).enrich(request, setOf(EnrichmentType.CREDITS))
+
+        // Then - the contradiction is reported and nothing is answered. CREDITS reaches the
+        // recording through enrichTrackCredits, not enrichTrackByMbid, so it went unguarded; the
+        // producer on that recording would otherwise be handed back as the caller's own.
+        assertEquals(CanonicalStatus.CONTRADICTED, results.identity.status)
+        assertTrue(results.raw[EnrichmentType.CREDITS] is EnrichmentResult.NotFound)
+    }
+
     private companion object {
-        private fun release(id: String, title: String, credit: String?, genre: String) = """
+        private fun release(id: String, title: String, credit: String?, genre: String, track: String = title) = """
             {"id":"$id","title":"$title","date":"2000-01-01","country":"GB",
              ${credit?.let { """"artist-credit":[{"artist":{"id":"a-$id","name":"$it"}}],""" }.orEmpty()}
+             "media":[{"format":"CD","tracks":[
+               {"title":"$track","position":1,"length":200000,"recording":{"id":"rec-$id"}}]}],
              "release-group":{"id":"rg-$id","primary-type":"Album",
                "tags":[{"name":"$genre","count":9}]}}
         """.trimIndent()
 
-        val PARACHUTES = release("rel-parachutes", "Parachutes", "Coldplay", "britpop")
-        val OK_COMPUTER = release("rel-ok", "OK Computer", "Radiohead", "alternative rock")
+        val PARACHUTES = release("rel-parachutes", "Parachutes", "Coldplay", "britpop", track = "Yellow")
+        val OK_COMPUTER = release("rel-ok", "OK Computer", "Radiohead", "alternative rock", track = "Airbag")
         val KID_A = release("rel-kid-a", "Kid A", "Radiohead", "art rock")
         val UNCREDITED = release("rel-uncredited", "Untitled", null, "ambient")
         val COLLAB = release("rel-collab", "Split", "Madison Acid and TV Girl", "indie pop")
 
+        // Carries credits of its own on purpose: a recording nobody is credited on would let the
+        // CREDITS test below pass with no guard in place at all.
         val YELLOW = """
             {"id":"rec-yellow","title":"Yellow","length":266000,
              "tags":[{"name":"britpop","count":9}],
              "artist-credit":[{"artist":{"id":"art-coldplay","name":"Coldplay"}}],
+             "relations":[{"target-type":"artist","type":"producer","attributes":[],
+               "artist":{"id":"art-ken","name":"Ken Nelson"}}],
              "releases":[{"id":"rel-parachutes","status":"Official",
                "release-group":{"id":"rg-parachutes","title":"Parachutes","primary-type":"Album"}}]}
         """.trimIndent()
