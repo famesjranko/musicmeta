@@ -4,7 +4,7 @@
 from pathlib import Path
 
 from build_release_notes import extract_section, released_versions
-from pin_release import PinError, pin_changelog, pin_roadmap
+from pin_release import PinError, pin_changelog, pin_guides, pin_roadmap
 
 BEFORE = """# Changelog
 
@@ -84,6 +84,36 @@ assert "## [0.10.2]" in pin_changelog(OLD_BREAK, "0.10.2", "2026-07-23")
 assert pin_roadmap("## Where We Are (v0.10.1)\n\ntext\n", "0.11.0") == "## Where We Are (v0.11.0)\n\ntext\n"
 # Only the first, and a missing heading is not an error.
 assert pin_roadmap("no heading here\n", "0.11.0") == "no heading here\n"
+
+# The prose under the heading names the version too, and moving only the heading is what let the
+# ROADMAP tell readers 0.10.1 was current for three weeks after 0.11.0 shipped.
+BLOCK = (
+    "## Where We Are (v0.10.1)\n\n"
+    "v0.10.1 is published to Maven Central and JitPack. Everything below the *Unreleased* block\n"
+    "has shipped.\n\n"
+    "### Unreleased — lands in the next release\n\n"
+    "The published 0.10.1 artifact carries none of it.\n\n"
+    "### Current Coverage\n\n"
+    "| GENRE_DISCOVERY | **v0.6.0** — static taxonomy |\n"
+)
+pinned_block = pin_roadmap(BLOCK, "0.11.0")
+assert "## Where We Are (v0.11.0)" in pinned_block
+assert "v0.11.0 is published to Maven Central" in pinned_block, "the prose moves with the heading"
+assert "The published 0.11.0 artifact" in pinned_block, "so does the Unreleased subsection"
+assert "0.10.1" not in pinned_block, "no sentence in the block may name the previous version"
+# Outside the two guarded regions a version names the release a capability landed in — permanently
+# older, and rewriting it would falsify history rather than pin it.
+assert "**v0.6.0**" in pinned_block, "Current Coverage's versions are history, not coordinates"
+
+# The three guides were a by-hand step in release.md; gate 1 now makes the same edit README got.
+GUIDE = (
+    'implementation("io.github.famesjranko:musicmeta-core:0.10.1")\n'
+    'implementation("com.github.famesjranko.musicmeta:musicmeta-okhttp:v0.10.1")\n'
+)
+pinned_guide = pin_guides(GUIDE, "0.11.0")
+assert "musicmeta-core:0.11.0" in pinned_guide
+assert "musicmeta-okhttp:v0.11.0" in pinned_guide, "the JitPack form keeps its v prefix"
+assert "0.10.1" not in pinned_guide
 
 # --- against the real files ---------------------------------------------------------------------
 # State-agnostic on purpose: this runs on every commit, including the release branch (target
