@@ -15,6 +15,7 @@ import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.engine.NameMatchTier
 import com.landofoz.musicmeta.engine.ResolvedEntityNames
 import com.landofoz.musicmeta.engine.TransientIdentifierMarker
+import com.landofoz.musicmeta.engine.artistBlanksNameSearch
 import com.landofoz.musicmeta.engine.nameMatchTier
 import com.landofoz.musicmeta.engine.namesNoEntity
 import kotlinx.coroutines.currentCoroutineContext
@@ -466,7 +467,15 @@ internal class MusicBrainzEnricher(
         // whatever ranks first for a query naming nothing become this request's recording. No
         // suggestions either: a caller who supplied no name cannot be asked which one they meant,
         // and suggestions cost the whole provider fan-out.
-        if (namesNoEntity(request)) return EnrichmentResult.NotFound(type, providerId)
+        //
+        // A blank artist is refused here too, and — unlike the album path — without searching for
+        // suggestions. A recording title alone is a far weaker key than an album title: the pool a
+        // blank artist opens runs to tens of thousands of takes, covers and live versions of the
+        // same words, and the recording the caller meant is usually not among the ones returned.
+        // Spending a request on candidates that do not contain the answer buys nothing.
+        if (namesNoEntity(request) || artistBlanksNameSearch(request)) {
+            return EnrichmentResult.NotFound(type, providerId)
+        }
         val search = memoizedTrackSearch(request)
         val best = search.recording ?: return trackMiss(request, type)
 
@@ -950,9 +959,18 @@ internal class MusicBrainzEnricher(
      * [resolveAlbumSymbolFallback] — but only on an *empty* pool: a populated pool that merely
      * missed the score floor means the title is searchable and the album is not there, so that
      * fallback's extra calls would buy nothing.
+     *
+     * A blank [artist] never reaches [MusicBrainzReleaseRanking.pickBestRelease]. Its artist tier
+     * has nothing to compare against and goes inert, leaving score, edition and year to crown a
+     * winner no candidate is known to be — a guess carrying a resolved album's confidence. This
+     * returns the pool unranked instead, which [enrichAlbum] hands to `notFoundWithSuggestions` as
+     * candidates the caller can choose between. The qualifier and symbol fallbacks are skipped for
+     * the same reason: they search on the same blank artist, so they would buy another guess at
+     * the price of more requests.
      */
     private suspend fun searchAlbum(title: String, artist: String): AlbumSearchResult {
         val releases = api.searchReleases(title, artist)
+        if (artist.isBlank()) return AlbumSearchResult(release = null, originalPool = releases)
         val direct = MusicBrainzReleaseRanking.pickBestRelease(releases, minMatchScore, artist = artist)
         val viaQualifier = direct == null
         val qualifierFallback = if (viaQualifier) resolveAlbumQualifierFallback(title, artist) else null

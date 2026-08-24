@@ -14,7 +14,14 @@ data class IdentityResolution(
     val status: CanonicalStatus,
     /** Match score (0-100), same scale as [SearchCandidate.score]. Only set when [status] is [CanonicalStatus.RESOLVED]. */
     val matchScore: Int? = null,
-    /** Near-miss candidates when [status] is [CanonicalStatus.AMBIGUOUS]. */
+    /**
+     * Near-miss candidates when [status] is [CanonicalStatus.AMBIGUOUS].
+     *
+     * These are guesses offered for a caller to choose between, and they carry no claim that any
+     * one of them is the requested entity — a candidate is never promoted to a resolution merely
+     * because it ranked first. Ranking within a pool says which guess is best, never that a guess
+     * is right, and the two are not the same when the pool was searched on an incomplete request.
+     */
     val suggestions: List<SearchCandidate> = emptyList(),
     /**
      * Canonical title of the resolved entity — an artist's name on an artist request, as on

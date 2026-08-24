@@ -445,6 +445,44 @@ itself contains the delimiter. The safe parse tries every boundary and prefers t
 the artist and title sides match the request, falling back to an artist-only match only when no
 boundary clears both sides.
 
+## 24. Ranking a pool the request could not narrow produces a confident wrong answer
+
+```kotlin
+// WRONG — an empty artist term does not narrow the search, it widens it
+val releases = api.searchReleases(title, artist)          // artist = "" -> 13,987 candidates
+MusicBrainzReleaseRanking.pickBestRelease(releases, minMatchScore, artist = artist)
+
+// RIGHT — a pool nothing in the request can narrow is candidates, not an answer
+if (artist.isBlank()) return AlbumSearchResult(release = null, originalPool = releases)
+```
+
+MusicBrainz ignores an empty `artistname:` term rather than rejecting it, so a blank artist does not
+fail the search — it removes the only constraint that made the title identifying. Measured live,
+`release:"Greatest Hits"` alone returns 13,987 candidates against 37 with the artist, and the top 25
+are routinely all tied at score 100.
+
+Every tier that then decides is one that cannot see the caller. The artist tier has nothing to
+compare against and scores every candidate alike; release type, status, score, edition band and year
+pick a winner out of an arbitrary slice. **A ranking says which candidate is best in the pool. It
+never says the pool holds the right one.**
+
+The measurement that matters is not how the ranking behaves but whether the answer is present at
+all: over two 20-album samples the correct release was **absent from the 25-candidate window in 13
+and 7 rows**. No re-ranking rule can reach an answer that was never returned, which is why
+`ArtistMatcher`-based gates, pool-ambiguity thresholds and confidence downgrades all fail here in
+different ways.
+
+So the guard belongs where the evidence is missing, not where the ranking runs: `artistBlanksNameSearch`
+refuses the *identity claim* and the pool is handed back as `suggestions`. Suggestions are guesses a
+caller chooses between — **never promote one to a resolution because it ranked first.** Pitfall 7 is
+the same trap one level down: there, hit 0 of a pool is a ranking rather than an answer; here, the
+whole pool is.
+
+The track path is refused without even searching. A recording title alone opens a pool of tens of
+thousands of takes, covers and live versions, and the recording the caller meant was in the returned
+window for 4 of 10 distinctive titles and **0 of 9 ambiguous ones** — so the request buys candidates
+that do not contain the answer.
+
 ## 8. `confidence` scores identification, not the payload
 
 ```kotlin

@@ -41,17 +41,27 @@ sealed class EnrichmentRequest {
     }
 
     companion object {
+        /**
+         * [trackCount] and [year] are what the caller already knows about the album — a scanned
+         * folder's file count, a tag's year. Providers use them to choose between editions that
+         * the title and artist alone cannot separate. Leave them null when they are unknown or
+         * uncertain: a wrong value is worse than none, because it is trusted as evidence.
+         */
         fun forAlbum(
             title: String,
             artist: String,
             mbid: String? = null,
             identifiers: EnrichmentIdentifiers? = null,
+            trackCount: Int? = null,
+            year: Int? = null,
         ) = ForAlbum(
             identifiers = (identifiers ?: EnrichmentIdentifiers()).let {
                 if (mbid != null) it.copy(musicBrainzId = mbid) else it
             },
             title = title,
             artist = artist,
+            trackCount = trackCount,
+            year = year,
         )
 
         fun forArtist(

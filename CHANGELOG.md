@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Breaking Changes
+- `EnrichmentRequest.forAlbum` gains `trackCount` and `year`: source-compatible, but its JVM descriptor changes, so recompile — an old `.jar` calling it throws `NoSuchMethodError`
 - A throwing `CatalogProvider.checkAvailability` no longer escapes `enrich()`: that type degrades to unfiltered results and the run caches, so catch your own timeout inside it
 - `EnrichmentEngine` gains `enrichProgressive`, a defaulted method: a custom implementation built against an older `.jar` throws `AbstractMethodError` on first call until recompiled
 - `EnrichmentEngine` gains `close()`, a defaulted method: a custom implementation built against an older `.jar` throws `AbstractMethodError` on first call until recompiled
@@ -58,6 +59,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - demo-web bounds one client's share of upstream-bearing endpoints (20-burst, 30/min per client), and skips its transient-failure retry pass while the admission gate is saturated
 
 ### Changed
+- An album or track request with a blank artist no longer resolves an entity: MusicBrainz widens rather than refuses such a search, so the old answer was an arbitrary same-titled release
+- A blank-artist album request now returns its candidates as `suggestions` with `CanonicalStatus.AMBIGUOUS`; a blank-artist track request returns `NotFound` without searching at all
 - demo-web no longer enriches its suggested queries at startup: the page is usable the moment it loads, `/api/health` reports ready as soon as the server binds, and the cache fills from real searches
 
 ### Fixed
