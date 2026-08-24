@@ -1203,7 +1203,9 @@ public abstract class com/landofoz/musicmeta/EnrichmentRequest {
 
 public final class com/landofoz/musicmeta/EnrichmentRequest$Companion {
 	public final fun defaultTypesFor (Lcom/landofoz/musicmeta/EnrichmentRequest;)Ljava/util/Set;
+	public final synthetic fun forAlbum (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentIdentifiers;)Lcom/landofoz/musicmeta/EnrichmentRequest$ForAlbum;
 	public final fun forAlbum (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentIdentifiers;Ljava/lang/Integer;Ljava/lang/Integer;)Lcom/landofoz/musicmeta/EnrichmentRequest$ForAlbum;
+	public static synthetic fun forAlbum$default (Lcom/landofoz/musicmeta/EnrichmentRequest$Companion;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentIdentifiers;ILjava/lang/Object;)Lcom/landofoz/musicmeta/EnrichmentRequest$ForAlbum;
 	public static synthetic fun forAlbum$default (Lcom/landofoz/musicmeta/EnrichmentRequest$Companion;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentIdentifiers;Ljava/lang/Integer;Ljava/lang/Integer;ILjava/lang/Object;)Lcom/landofoz/musicmeta/EnrichmentRequest$ForAlbum;
 	public final fun forAlbumByMbid (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentIdentifiers;)Lcom/landofoz/musicmeta/EnrichmentRequest$ForAlbum;
 	public static synthetic fun forAlbumByMbid$default (Lcom/landofoz/musicmeta/EnrichmentRequest$Companion;Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentIdentifiers;ILjava/lang/Object;)Lcom/landofoz/musicmeta/EnrichmentRequest$ForAlbum;

@@ -42,6 +42,19 @@ sealed class EnrichmentRequest {
 
     companion object {
         /**
+         * Binary-compatibility shim for callers compiled against the pre-`trackCount`/`year`
+         * signature. `HIDDEN` keeps the old JVM method on the class without offering it to source,
+         * so an existing `.jar` keeps linking and no new call can pick it by accident.
+         */
+        @Deprecated("Superseded by the overload taking trackCount and year", level = DeprecationLevel.HIDDEN)
+        fun forAlbum(
+            title: String,
+            artist: String,
+            mbid: String? = null,
+            identifiers: EnrichmentIdentifiers? = null,
+        ) = forAlbum(title, artist, mbid, identifiers, trackCount = null, year = null)
+
+        /**
          * [trackCount] and [year] are what the caller already knows about the album — a scanned
          * folder's file count, a tag's year. Providers use them to choose between editions that
          * the title and artist alone cannot separate. Leave them null when they are unknown or
