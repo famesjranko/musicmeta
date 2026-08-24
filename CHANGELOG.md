@@ -36,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `EnrichmentEngine` gains `enrichBatchProgressive`, a defaulted method: a custom implementation built against an older `.jar` throws `AbstractMethodError` on first call until recompiled
 - `CanonicalStatus` gains `RESOLVING`: an exhaustive `when` needs a branch; only a pre-terminal `enrichProgressive` emission can carry it, never `enrich()`'s return or a stream's terminal emission
 - `CanonicalStatus` gains `CONTRADICTED`: source-breaking for an exhaustive `when` over it, so add a branch when upgrading; it reports a supplied MBID naming a different entity than the request
+- `CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED` is renamed `NOT_ATTEMPTED_IDENTIFIER_TRUSTED`: binary and source breaking, so rename at call sites; it only ever meant an identifier nobody checked
 - `ErrorKind` gains `ENGINE_CLOSED`: an exhaustive `when` needs a branch; only reachable when the engine was `close()`d before a requested type settled
 - `EnrichmentResult.Success` gains `isCatalogDegraded` (appended last, defaulted): recompile; `true` when a recommendation type's `CatalogProvider` threw and the data reached you unranked instead
 - `CompositeSynthesizer.synthesize`'s `resolved` deps now arrive finalized: `STALE_IF_ERROR` hands a failed-but-stale dependency as `Success`, not `Error` — can't tell genuine failure from stale
@@ -64,7 +65,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A blank-artist album request now returns its candidates as `suggestions` with `CanonicalStatus.AMBIGUOUS`; a blank-artist track request returns `NotFound` without searching at all
 - A supplied MusicBrainz id naming a different artist than the request no longer answers as that artist: the request falls back to its name, and `identity.status` reports `CONTRADICTED`
 - `CONTRADICTED` outranks every other status including `RESOLVED`, so a fallback that answered everything still tells you the identifier was wrong — the one fact nothing else in the response carries
-- `NOT_ATTEMPTED_NOT_REQUIRED` now documented as trusted-not-verified, not confident: nothing checks that a supplied identifier names the entity described, so it is your assertion carried through
 - A name-searching provider is no longer stamped `EXACT_NAME` just because identity resolved by identifier: provenance now reports what resolution established about that name, not that it ran
 - `IdentityResolution.matchScore` and `Success.confidence` documented as confidence in the lookup, not that the entity matches the request: a wrong-but-live MBID resolves at full score
 - demo-web no longer enriches its suggested queries at startup: the page is usable the moment it loads, `/api/health` reports ready as soon as the server binds, and the cache fills from real searches

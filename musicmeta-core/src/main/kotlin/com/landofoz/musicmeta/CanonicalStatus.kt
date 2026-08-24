@@ -61,7 +61,7 @@ enum class CanonicalStatus {
      * describes; that check is [CONTRADICTED]'s, and it only reports the cases it can prove wrong.
      * Treat this as the caller's own assertion carried through, not as MusicBrainz agreeing with it.
      */
-    NOT_ATTEMPTED_NOT_REQUIRED,
+    NOT_ATTEMPTED_IDENTIFIER_TRUSTED,
 
     /** Every requested type was served from cache; no live identity attempt ran this call. */
     NOT_ATTEMPTED_CACHE_HIT,

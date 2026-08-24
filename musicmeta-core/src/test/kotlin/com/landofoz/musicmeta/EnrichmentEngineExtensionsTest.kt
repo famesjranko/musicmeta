@@ -17,7 +17,7 @@ class EnrichmentEngineExtensionsTest {
         var lastForceRefresh: Boolean = false
         var resultsToReturn: Map<EnrichmentType, EnrichmentResult> = emptyMap()
         var identityToReturn: IdentityResolution =
-            IdentityResolution(EnrichmentIdentifiers(), CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED)
+            IdentityResolution(EnrichmentIdentifiers(), CanonicalStatus.NOT_ATTEMPTED_IDENTIFIER_TRUSTED)
 
         override suspend fun enrich(request: EnrichmentRequest, types: Set<EnrichmentType>, forceRefresh: Boolean): EnrichmentResults {
             lastRequest = request
@@ -238,7 +238,7 @@ class EnrichmentEngineExtensionsTest {
         assertNull(profile.bio)
         assertTrue(profile.genres.isEmpty())
         assertTrue(profile.members.isEmpty())
-        assertEquals(CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED, profile.canonicalStatus)
+        assertEquals(CanonicalStatus.NOT_ATTEMPTED_IDENTIFIER_TRUSTED, profile.canonicalStatus)
     }
 
     // --- defaultTypesFor ---

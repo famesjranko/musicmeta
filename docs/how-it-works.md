@@ -226,7 +226,7 @@ Two independent facts describe an `enrich()` call, never one merged value:
 | `FAILED` | The identity provider errored (usually transient); a retry may resolve. |
 | `NOT_ATTEMPTED_DISABLED` | `EnrichmentConfig.enableIdentityResolution` is `false`. |
 | `CONTRADICTED` | An identifier on the request named a confidently different entity than the request described. Outranks every other status, including `RESOLVED`: a request carrying a usable name recovers by searching it, and reporting that success would hide the bad identifier. |
-| `NOT_ATTEMPTED_NOT_REQUIRED` | The request carried a MusicBrainz identifier and every requested type was content with it. Trusted, not verified — nothing checked that it names the entity described. |
+| `NOT_ATTEMPTED_IDENTIFIER_TRUSTED` | The request carried a MusicBrainz identifier and every requested type was content with it. Trusted, not verified — nothing checked that it names the entity described. |
 | `NOT_ATTEMPTED_CACHE_HIT` | Every requested type was served from cache; no live attempt ran this call. Reported only when identity resolution is enabled — `NOT_ATTEMPTED_DISABLED` outranks it. |
 | `NOT_ATTEMPTED_NO_PROVIDER` | Resolution was needed, but no identity provider is registered. |
 
@@ -268,7 +268,7 @@ Migrating from the removed `IdentityMatch`:
 | `IdentityMatch.BEST_EFFORT` | `CanonicalStatus.UNRESOLVED` |
 | `IdentityMatch.UNVERIFIED` (never released) | `CanonicalStatus.FAILED` |
 | `identity == null` (disabled) | `CanonicalStatus.NOT_ATTEMPTED_DISABLED` |
-| `identity == null` (not required) | `CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED` |
+| `identity == null` (identifier supplied, unchecked) | `CanonicalStatus.NOT_ATTEMPTED_IDENTIFIER_TRUSTED` |
 | supplied identifier names a different entity | `CanonicalStatus.CONTRADICTED` |
 | `identity == null` (all cached, resolution enabled) | `CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT` |
 | `identity == null` (no provider) | `CanonicalStatus.NOT_ATTEMPTED_NO_PROVIDER` |

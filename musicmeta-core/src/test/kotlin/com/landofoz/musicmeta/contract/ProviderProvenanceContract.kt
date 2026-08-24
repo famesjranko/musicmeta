@@ -139,7 +139,7 @@ abstract class ProviderProvenanceContract : ContractSuite<EnrichmentEngine>() {
     fun `a preserving cache replays the live provenance verbatim`() = runTest {
         // Given - the composed engine over a pool whose LRCLIB hit is the requested track, backed
         // by the default preserving cache. A caller-supplied mbid on a NONE-requirement-only
-        // request makes identity resolution unnecessary (never NOT_ATTEMPTED_NOT_REQUIRED's
+        // request makes identity resolution unnecessary (never NOT_ATTEMPTED_IDENTIFIER_TRUSTED's
         // uncacheable siblings AMBIGUOUS/UNRESOLVED/FAILED), so write-back actually populates the
         // cache instead of silently declining to cache an unconfirmed identity
         val http = UpstreamPools.load(LYRICS_SCENARIO)
@@ -345,7 +345,7 @@ abstract class ProviderProvenanceContract : ContractSuite<EnrichmentEngine>() {
          * An mbid LRCLIB never consults (it takes no [IdentifierRequirement], searching by name
          * regardless), present only so [needsIdentityResolution] sees a request with nothing left
          * to resolve for a LYRICS_SYNCED-only call and skips MusicBrainz — landing
-         * [CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED], which is write-back-eligible. A request with
+         * [CanonicalStatus.NOT_ATTEMPTED_IDENTIFIER_TRUSTED], which is write-back-eligible. A request with
          * no identifier at all would instead resolve to AMBIGUOUS/UNRESOLVED/FAILED, none of which
          * are.
          */

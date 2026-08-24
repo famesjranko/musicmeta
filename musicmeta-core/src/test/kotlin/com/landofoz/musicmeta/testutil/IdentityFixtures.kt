@@ -6,4 +6,4 @@ import com.landofoz.musicmeta.IdentityResolution
 
 /** An [IdentityResolution] for tests that do not exercise identity resolution itself. */
 val NOT_REQUIRED_IDENTITY: IdentityResolution =
-    IdentityResolution(EnrichmentIdentifiers(), CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED)
+    IdentityResolution(EnrichmentIdentifiers(), CanonicalStatus.NOT_ATTEMPTED_IDENTIFIER_TRUSTED)

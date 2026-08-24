@@ -473,7 +473,7 @@ class CanonicalStatusModelTest {
                 com.landofoz.musicmeta.EnrichmentData.TrackMetadata(durationMs = 200_000),
                 "deezer", 0.8f, provenance = LookupProvenance.FUZZY_NAME,
             ),
-            CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED,
+            CanonicalStatus.NOT_ATTEMPTED_IDENTIFIER_TRUSTED,
         )
         val e = DefaultEnrichmentEngine(
             ProviderRegistry(emptyList()), cache, EnrichmentConfig(enableIdentityResolution = true),

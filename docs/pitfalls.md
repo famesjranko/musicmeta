@@ -638,7 +638,7 @@ that entity is the one the request described, because no name is compared on tha
 
 Measured at `06d664aa`: `forArtist("Radiohead", mbid = <Coldplay's live MBID>)` returned Coldplay's
 genres, in one request, at `confidence = 1.0`, stamped `LookupProvenance.CANONICAL_ID` — the
-strongest value the enum has — under `CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED`, which the
+strongest value the enum has — under `CanonicalStatus.NOT_ATTEMPTED_IDENTIFIER_TRUSTED`, which the
 identity guide told consumers to treat as confident. `forAlbum("OK Computer", "Radiohead", mbid =
 <Parachutes' MBID>)` and the track equivalent did the same. The caller's own correct name sat on the
 request throughout.
@@ -649,7 +649,7 @@ Three things follow, and each is a separate trap.
 ticket prescribed — returns the same wrong artist and upgrades the status to `RESOLVED`. A resolver
 that validates an id resolves to *something* is not validating identity. Measured, not argued.
 
-**Trust is not verification, and a status can say so.** `NOT_ATTEMPTED_NOT_REQUIRED` is reachable
+**Trust is not verification, and a status can say so.** `NOT_ATTEMPTED_IDENTIFIER_TRUSTED` is reachable
 only when the request carried an id (`needsIdentityResolution`'s early return), so every occurrence
 of it means "you brought an identifier and we did not check it". Read it as the caller's assertion
 carried through, never as MusicBrainz agreeing.

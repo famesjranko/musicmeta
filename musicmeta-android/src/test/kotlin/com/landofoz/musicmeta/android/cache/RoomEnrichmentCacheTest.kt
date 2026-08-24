@@ -433,14 +433,14 @@ class RoomEnrichmentCacheTest {
     fun `getNegative reads back the canonicalStatus putNegative wrote, closing the write-only gap`() = runTest {
         // Given - a negative entry stored under a specific canonical status
         val notFound = EnrichmentResult.NotFound(type = EnrichmentType.ALBUM_ART, provider = "p")
-        cache.putNegative("album:neg-status", EnrichmentType.ALBUM_ART, notFound, CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED, ttlMs = 60_000L)
+        cache.putNegative("album:neg-status", EnrichmentType.ALBUM_ART, notFound, CanonicalStatus.NOT_ATTEMPTED_IDENTIFIER_TRUSTED, ttlMs = 60_000L)
 
         // When - reading the same key back
         val retrieved = cache.getNegative("album:neg-status", EnrichmentType.ALBUM_ART)
 
         // Then - the envelope carries the exact status it was written under
         assertNotNull(retrieved)
-        assertEquals(CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED, retrieved!!.canonicalStatus)
+        assertEquals(CanonicalStatus.NOT_ATTEMPTED_IDENTIFIER_TRUSTED, retrieved!!.canonicalStatus)
     }
 
     @Test

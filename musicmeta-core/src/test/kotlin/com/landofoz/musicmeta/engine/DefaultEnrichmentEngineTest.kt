@@ -363,7 +363,7 @@ class DefaultEnrichmentEngineTest {
         assertEquals(LookupProvenance.CANONICAL_ID, artResult.provenance)
     }
 
-    @Test fun `enrich reports NOT_ATTEMPTED_NOT_REQUIRED when no identity resolution needed`() = runTest {
+    @Test fun `enrich reports NOT_ATTEMPTED_IDENTIFIER_TRUSTED when a supplied identifier satisfies every type`() = runTest {
         // Given - identity resolution enabled, but the request already has an MBID and needs none
         val p = FakeProvider(id = "p", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100)))
             .also { it.givenResult(EnrichmentType.ALBUM_ART, art("p")) }
@@ -374,7 +374,7 @@ class DefaultEnrichmentEngineTest {
         val results = e.enrich(reqWithMbid, setOf(EnrichmentType.ALBUM_ART))
 
         // Then - not attempted because it was not required, never a bare absence
-        assertEquals(CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED, results.identity.status)
+        assertEquals(CanonicalStatus.NOT_ATTEMPTED_IDENTIFIER_TRUSTED, results.identity.status)
         assertNull(results.identity.matchScore)
     }
 
@@ -1714,7 +1714,7 @@ class DefaultEnrichmentEngineTest {
         val result = EnrichmentResult.NotFound(EnrichmentType.ALBUM_ART, "all_providers")
 
         // When - checking whether the result is cacheable as a negative
-        val cacheable = e.cachePersistence.isCacheableNegative(result, CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED, identifierIncomplete = false, filterEmptied = false, staleDerived = false)
+        val cacheable = e.cachePersistence.isCacheableNegative(result, CanonicalStatus.NOT_ATTEMPTED_IDENTIFIER_TRUSTED, identifierIncomplete = false, filterEmptied = false, staleDerived = false)
 
         // Then - "not attempted" is as confident as a resolved match
         assertTrue(cacheable)

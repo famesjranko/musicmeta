@@ -32,7 +32,7 @@ class TopTrackIdentifierMappingTest {
             ),
         ),
         requestedTypes = setOf(EnrichmentType.ARTIST_TOP_TRACKS),
-        identity = IdentityResolution(EnrichmentIdentifiers(), CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED),
+        identity = IdentityResolution(EnrichmentIdentifiers(), CanonicalStatus.NOT_ATTEMPTED_IDENTIFIER_TRUSTED),
     )
 
     @Test fun `a top track carrying a Deezer id survives into the section item and its enrich target`() {

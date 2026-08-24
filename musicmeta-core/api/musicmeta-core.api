@@ -217,7 +217,7 @@ public final class com/landofoz/musicmeta/CanonicalStatus : java/lang/Enum {
 	public static final field FAILED Lcom/landofoz/musicmeta/CanonicalStatus;
 	public static final field NOT_ATTEMPTED_CACHE_HIT Lcom/landofoz/musicmeta/CanonicalStatus;
 	public static final field NOT_ATTEMPTED_DISABLED Lcom/landofoz/musicmeta/CanonicalStatus;
-	public static final field NOT_ATTEMPTED_NOT_REQUIRED Lcom/landofoz/musicmeta/CanonicalStatus;
+	public static final field NOT_ATTEMPTED_IDENTIFIER_TRUSTED Lcom/landofoz/musicmeta/CanonicalStatus;
 	public static final field NOT_ATTEMPTED_NO_PROVIDER Lcom/landofoz/musicmeta/CanonicalStatus;
 	public static final field RESOLVED Lcom/landofoz/musicmeta/CanonicalStatus;
 	public static final field RESOLVING Lcom/landofoz/musicmeta/CanonicalStatus;

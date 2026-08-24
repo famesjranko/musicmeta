@@ -78,7 +78,7 @@ class ProfileTest {
         assertNull(profile.photo)
         assertNull(profile.bio)
         assertNull(profile.popularity)
-        assertEquals(CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED, profile.canonicalStatus)
+        assertEquals(CanonicalStatus.NOT_ATTEMPTED_IDENTIFIER_TRUSTED, profile.canonicalStatus)
     }
 
     @Test fun `artist profile surfaces suggestions from identity resolution`() {
