@@ -71,8 +71,29 @@ internal class RunSession(
     val board: SettlementBoard,
     val identityHolder: IdentityHolder,
 ) {
-    var identityResolution: IdentityResolution? = null
+    /**
+     * Set once identity resolution has settled; until then [identityResolution] is null and a
+     * caller reading it knows resolution never ran (a timeout before it started).
+     */
+    var identityResolved: Boolean = false
+
+    /**
+     * This call's resolution, or null before it settles. Reads [identityHolder] rather than holding
+     * a second copy: the holder is where a contradiction found later in the fan-out is applied, and
+     * a snapshot taken from a private copy would report the status the resolver concluded instead
+     * of what the call went on to learn.
+     */
+    val identityResolution: IdentityResolution?
+        get() = if (identityResolved) identityHolder.current else null
     var resolvedRequest: EnrichmentRequest? = null
+
+    /**
+     * What identity resolution established about the name this call's fan-out searches, or `null`
+     * when it established nothing about it. Read by [DefaultEnrichmentEngine.finalizeResult] and the
+     * mergeable walk to stamp a name-searched result's [LookupProvenance]; see [observedProvenance]
+     * for why this is not the call's [CanonicalStatus].
+     */
+    var nameEvidence: LookupProvenance? = null
     var chainExecutions: Map<EnrichmentType, ChainExecution> = emptyMap()
 
     /**
@@ -117,7 +138,27 @@ internal data class ResolveContext(
  * depends on it can start — [Volatile] is the visibility guarantee for the concurrent per-type
  * settlements that read it afterward without taking [SettlementBoard]'s lock.
  */
-internal class IdentityHolder(@Volatile var current: IdentityResolution)
+internal class IdentityHolder(@Volatile private var resolution: IdentityResolution) {
+
+    /**
+     * Set once a provider reports that a supplied identifier named a different entity
+     * ([SuppliedIdentifierContradiction]). Latching: a later provider recovering by name does not
+     * make the identifier good again.
+     */
+    @Volatile
+    var contradicted: Boolean = false
+
+    /**
+     * The resolution as reported, with [CanonicalStatus.CONTRADICTED] outranking whatever the
+     * resolver concluded. A request carrying a usable name recovers by searching it, so the status
+     * would otherwise read `RESOLVED` and hide the bad identifier — the one fact on this call the
+     * caller cannot learn any other way. Applied here rather than at each emission so every
+     * snapshot, progressive and terminal, agrees without a second copy of the rule.
+     */
+    var current: IdentityResolution
+        get() = if (contradicted) resolution.copy(status = CanonicalStatus.CONTRADICTED) else resolution
+        set(value) { resolution = value }
+}
 
 internal class DefaultEnrichmentEngine(
     private val registry: ProviderRegistry,
@@ -356,7 +397,7 @@ internal class DefaultEnrichmentEngine(
         // sleep past this deadline — an expiry mid-fan-out loses every provider's in-flight work.
         withContext(
             EnrichDeadline(config.enrichTimeoutMs) + TransientIdentifierMarker() +
-                ProviderCallScope() + ResolvedEntityNames(),
+                ProviderCallScope() + ResolvedEntityNames() + SuppliedIdentifierContradiction(),
         ) {
             var identityResult: EnrichmentResult? = null
             val identityEnabled = config.enableIdentityResolution
@@ -391,8 +432,9 @@ internal class DefaultEnrichmentEngine(
                     else -> CanonicalStatus.NOT_ATTEMPTED_NO_PROVIDER
                 },
             )
-            session.identityResolution = resolution
             session.identityHolder.current = resolution
+            session.identityResolved = true
+            session.nameEvidence = identityNameEvidence(identityResult, request, enrichedRequest)
 
             for ((type, raw) in fastPathResults) settle(type, raw, null)
 
@@ -537,12 +579,14 @@ internal class DefaultEnrichmentEngine(
         execution: ChainExecution?,
         session: RunSession,
     ): EnrichmentResult {
-        val status = session.identityHolder.current.status
+        if (currentCoroutineContext()[SuppliedIdentifierContradiction]?.seen() == true) {
+            session.identityHolder.contradicted = true
+        }
         val filtered = applyCatalogFilteringToType(type, raw, config.catalogProvider, config.catalogFilterMode, logger)
         if (raw is EnrichmentResult.Success && filtered is EnrichmentResult.NotFound) {
             session.filterEmptied.add(type)
         }
-        val stamped = stampProvenanceOne(filtered, execution, status)
+        val stamped = stampProvenanceOne(filtered, execution, session.nameEvidence)
         val stale = applyStaleCacheToType(request, type, stamped)
         if (stale === stamped) return stale
         // stale !== stamped: the stale-cache substitution fired, so this is a *different* Success
@@ -954,7 +998,8 @@ internal class DefaultEnrichmentEngine(
         }
         for (mergeType in mergeableTypesInScope) {
             launch {
-                val (result, execution) = resolveMergeableType(mergeType, request, identifierOnly, canonicalStatus)
+                val (result, execution) =
+                    resolveMergeableType(mergeType, request, identifierOnly, session.nameEvidence)
                 settle(mergeType, result, execution)
             }
         }
@@ -984,7 +1029,7 @@ internal class DefaultEnrichmentEngine(
         mergeType: EnrichmentType,
         request: EnrichmentRequest,
         identifierOnly: Boolean,
-        canonicalStatus: CanonicalStatus,
+        nameEvidence: LookupProvenance?,
     ): Pair<EnrichmentResult, ChainExecution?> {
         val chain = registry.chainFor(mergeType)
         val (allResults, execution) = chain?.resolveAllWithExecution(request, identifierOnly) ?: (null to null)
@@ -993,7 +1038,7 @@ internal class DefaultEnrichmentEngine(
         // instead — the merger reads real observed provenance, never null.
         val filtered = allResults?.successes.orEmpty()
             .mapNotNull { gate(it) as? EnrichmentResult.Success }
-            .map { stampContributorProvenance(it, chain, canonicalStatus) }
+            .map { stampContributorProvenance(it, chain, nameEvidence) }
         val merger = mergers[mergeType]
         val merged = if (merger == null) {
             EnrichmentResult.NotFound(mergeType, "no_merger")

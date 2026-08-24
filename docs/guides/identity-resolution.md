@@ -28,9 +28,10 @@ Two independent facts, never merged into one value:
 | `RESOLVED` | MusicBrainz confirmed the entity | Show results normally |
 | `AMBIGUOUS` | Near-miss candidates but no confident match | Show a "did you mean?" prompt |
 | `UNRESOLVED` | Searched, found neither a match nor candidates | Show results with a caveat — they may be for the wrong entity |
+| `CONTRADICTED` | An identifier on the request named a confidently different entity | Tell the user their identifier is wrong; the results beside it are the entity they *named*, and may be complete |
 | `FAILED` | The identity provider errored — usually transient | Show a caveat; offer a retry, which may resolve |
 | `NOT_ATTEMPTED_DISABLED` | Identity resolution is turned off | Treat as confident |
-| `NOT_ATTEMPTED_NOT_REQUIRED` | The request already carried every identifier needed | Treat as confident |
+| `NOT_ATTEMPTED_NOT_REQUIRED` | The request carried an identifier, so nothing was resolved | Treat as your own assertion carried through — trusted, not verified |
 | `NOT_ATTEMPTED_CACHE_HIT` | Every requested type was served from cache, on an engine with resolution enabled | Treat as confident |
 | `NOT_ATTEMPTED_NO_PROVIDER` | Needed resolution, but no identity provider is registered | Treat as confident |
 
@@ -82,6 +83,12 @@ when (results.identity.status) {
     CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT,
     CanonicalStatus.NOT_ATTEMPTED_NO_PROVIDER -> {
         println("Genres: ${results.genres()}")
+    }
+    // The identifier you passed names a different entity. The results are still worth showing —
+    // they describe the name you passed, which the engine fell back to — but the identifier is
+    // wrong and nothing else in the response will tell you so.
+    CanonicalStatus.CONTRADICTED -> {
+        println("That MBID is not this entity. Genres, by name: ${results.genres()}")
     }
     // enrich()'s return never carries RESOLVING — only a pre-terminal enrichProgressive
     // emission can. Listed to keep the when exhaustive.
@@ -172,7 +179,8 @@ val results = engine.enrich(
     EnrichmentRequest.forArtist("Radiohead", mbid = "a74b1b7f-71a5-4011-9441-d0b5e4122711"),
     setOf(EnrichmentType.GENRE),
 )
-// results.identity.status == CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED — resolution was not needed
+// results.identity.status == CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED — the identifier was
+// trusted, not checked
 ```
 
 You can also disable resolution globally:

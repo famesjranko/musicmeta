@@ -630,6 +630,46 @@ Before adding provider-internal state of any kind:
 - Per-call state rides the coroutine context, as `EnrichDeadline` and `TransientIdentifierMarker`
   already do. A new `EnrichmentProvider` method would be a documented break instead (§1).
 
+## 25. A caller's identifier is an assertion, and nothing in a successful lookup checks it
+
+A lookup by a supplied MusicBrainz id proves the id names an entity. It proves nothing about whether
+that entity is the one the request described, because no name is compared on that path — and until
+0.13.0 nothing anywhere made the comparison.
+
+Measured at `06d664aa`: `forArtist("Radiohead", mbid = <Coldplay's live MBID>)` returned Coldplay's
+genres, in one request, at `confidence = 1.0`, stamped `LookupProvenance.CANONICAL_ID` — the
+strongest value the enum has — under `CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED`, which the
+identity guide told consumers to treat as confident. `forAlbum("OK Computer", "Radiohead", mbid =
+<Parachutes' MBID>)` and the track equivalent did the same. The caller's own correct name sat on the
+request throughout.
+
+Three things follow, and each is a separate trap.
+
+**Resolving harder does not help.** Forcing identity resolution on every artist request — the fix the
+ticket prescribed — returns the same wrong artist and upgrades the status to `RESOLVED`. A resolver
+that validates an id resolves to *something* is not validating identity. Measured, not argued.
+
+**Trust is not verification, and a status can say so.** `NOT_ATTEMPTED_NOT_REQUIRED` is reachable
+only when the request carried an id (`needsIdentityResolution`'s early return), so every occurrence
+of it means "you brought an identifier and we did not check it". Read it as the caller's assertion
+carried through, never as MusicBrainz agreeing.
+
+**Contradiction and agreement need separate evidence.** `contradictsSuppliedName` reports only
+*confident disagreement*; `nameMatchTier` reports only *confident agreement*; neither is the other's
+negation, and the gap between them is unknown. Absence of contradiction is not corroboration, and a
+future change that derives one from the other's failure reintroduces exactly the confusion above.
+
+The comparison is deliberately on the **artist**, never the title — a remaster, an edition or a
+localised title differs from what a caller typed while still being the album they meant. So a
+different album *by the same artist* is not caught; that is a stated boundary with a test on it, not
+an oversight.
+
+Costs measured 2026-08-25 and recorded with their populations in
+`.scratch/artist-mbid-provenance/spec.md`; the corpora ship as test fixtures under
+`musicmeta-core/src/test/resources/corpora/artist-name-contradiction/`. Of 99 artist MBIDs Last.fm
+hands out for its own chart, **0 were dead** — so a rule spent on detecting dead identifiers buys
+nothing in that population, and wrong-but-live is the case worth paying for.
+
 ## 23. A memo that holds only successes multiplies a failing endpoint's retry cost by its readers
 
 `CallMemo` writes on the success path, so a `fetch()` that throws leaves nothing behind and the next

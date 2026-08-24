@@ -44,6 +44,12 @@ enum class ErrorKind {
  * on a 0.0–1.0 scale. The engine's [EnrichmentConfig.minConfidence] (default 0.5)
  * filters out low-confidence results, treating them as [NotFound].
  *
+ * It scores **how the result was obtained, not whether it is the entity the caller described.** A
+ * lookup by a caller-supplied identifier is deterministic and scores 1.0 whether or not that
+ * identifier names what the request named — a wrong-but-live MBID resolves perfectly. Whether the
+ * request's own evidence agreed is [IdentityResolution.status]'s question, and
+ * [CanonicalStatus.CONTRADICTED] is the only field that reports it disagreeing.
+ *
  * **Scoring guidelines for provider implementors:**
  *
  * | Score Range | Match Type | Examples |

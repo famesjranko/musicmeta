@@ -1,0 +1,167 @@
+[
+ {
+  "supplied": "Tokyo Jihen",
+  "mbid": "b3d0f168-cb34-47c6-8529-fc05d1fce3ee",
+  "name": "東京事変",
+  "sort_name": "Tokyo Jihen",
+  "disambiguation": "",
+  "aliases": [
+   "Tokyo Incidents",
+   "Tokyo Jihen",
+   "东京事变",
+   "東京事變"
+  ],
+  "alias_sorts": [
+   "Tokyo Incidents",
+   "Tokyo Jihen",
+   "东京事变",
+   "東京事變"
+  ]
+ },
+ {
+  "supplied": "Bjork",
+  "mbid": "87c5dedd-371d-4a53-9f7f-80522fb7f3cb",
+  "name": "Björk",
+  "sort_name": "Björk",
+  "disambiguation": "",
+  "aliases": [
+   "Biork",
+   "Bj rk",
+   "Bjork",
+   "BjÃ¶rk",
+   "Bjõrk",
+   "Björk Gudmudsdóttir",
+   "Björk Gudmundsdottir",
+   "Björk Guðmundsdóttir",
+   "Bjørk",
+   "Bjцrk",
+   "B󠀱j󠀱ör󠀱k",
+   "Βjörk",
+   "ビョーク"
+  ],
+  "alias_sorts": [
+   "Biork",
+   "Bj rk",
+   "Bjork",
+   "BjÃ¶rk",
+   "Bjõrk",
+   "Björk Gudmudsdóttir",
+   "Björk Gudmundsdottir",
+   "Guðmundsdóttir, Björk",
+   "Bjørk",
+   "Bjцrk",
+   "B󠀱j󠀱ör󠀱k",
+   "Βjörk",
+   "Björk"
+  ]
+ },
+ {
+  "supplied": "Sigur Ros",
+  "mbid": "f6f2326f-6b25-4170-b89d-e235b25508e8",
+  "name": "Sigur Rós",
+  "sort_name": "Sigur Rós",
+  "disambiguation": "Icelandic post‐rock band",
+  "aliases": [
+   "Sigur Ros",
+   "Sìgur Ros",
+   "Sìgur Rós",
+   "シガー・ロス"
+  ],
+  "alias_sorts": [
+   "Sigur Ros",
+   "Sìgur Ros",
+   "Sìgur Rós",
+   "シガー・ロス"
+  ]
+ },
+ {
+  "supplied": "Beyonce",
+  "mbid": "859d0860-d480-4efd-970c-c05d5f1776b8",
+  "name": "Beyoncé",
+  "sort_name": "Beyoncé",
+  "disambiguation": "",
+  "aliases": [
+   "B1C",
+   "Beyonce",
+   "Beyonce'",
+   "Beyoncé",
+   "Beyoncé Giselle Knowles",
+   "Beyoncé Giselle Knowles-Carter",
+   "Beyoncé Knowles",
+   "Beyoncé Knowles-Carter",
+   "Queen Bey",
+   "ビヨンセ",
+   "碧昂絲"
+  ],
+  "alias_sorts": [
+   "B1C",
+   "Beyonce",
+   "Beyonce'",
+   "Beyoncé",
+   "Knowles, Beyoncé Giselle",
+   "Knowles-Carter, Beyoncé Giselle",
+   "Knowles, Beyoncé",
+   "Knowles-Carter, Beyoncé",
+   "Queen Bey",
+   "ビヨンセ",
+   "碧昂絲"
+  ]
+ },
+ {
+  "supplied": "Motley Crue",
+  "mbid": "26f07661-e115-471d-a930-206f5c89d17c",
+  "name": "Mötley Crüe",
+  "sort_name": "Mötley Crüe",
+  "disambiguation": "",
+  "aliases": [
+   "Motley Crue",
+   "Mötley Crue",
+   "モトリー・クルー"
+  ],
+  "alias_sorts": [
+   "Motley Crue",
+   "Mötley Crue",
+   "モトリー・クルー"
+  ]
+ },
+ {
+  "supplied": "Sunn O)))",
+  "mbid": "1d3da898-4fb4-4445-b704-cd7315e01789",
+  "name": "Sunn O)))",
+  "sort_name": "Sunn O)))",
+  "disambiguation": "US drone metal band",
+  "aliases": [
+   "Sunn 0)))",
+   "Sunn O)",
+   "Sunn0)))",
+   "sunn o))))"
+  ],
+  "alias_sorts": [
+   "Sunn 0)))",
+   "Sunn O)",
+   "Sunn0)))",
+   "sunn o))))"
+  ]
+ },
+ {
+  "supplied": "ASAP Rocky",
+  "mbid": "25b7b584-d952-4662-a8b9-dd8cdfbfeb64",
+  "name": "A$AP Rocky",
+  "sort_name": "ASAP Rocky",
+  "disambiguation": "US rapper",
+  "aliases": [
+   "A$AP Rocky",
+   "ASAP Rocky",
+   "LORD FLACKO",
+   "Lord Flacko",
+   "Rakim Mayers"
+  ],
+  "alias_sorts": [
+   "A$AP Rocky",
+   "ASAP Rocky",
+   "LORD FLACKO",
+   "Lord Flacko",
+   "Mayers, Rakim"
+  ]
+ }
+]
