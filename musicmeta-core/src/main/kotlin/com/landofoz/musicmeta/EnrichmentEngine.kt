@@ -364,6 +364,11 @@ interface EnrichmentEngine {
             }
         }
 
+        /**
+         * @throws IllegalArgumentException if the registered [CompositeSynthesizer]s form a
+         *   dependency cycle, a synthesizer depending on its own type included. The message names
+         *   every type on the cycle.
+         */
         fun build(): EnrichmentEngine {
             val cfg = effectiveConfig()
             warnAboutUserAgentOnTheWire(cfg)
