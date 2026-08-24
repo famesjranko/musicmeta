@@ -7,6 +7,7 @@ import com.landofoz.musicmeta.EnrichmentResults
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
 import com.landofoz.musicmeta.IdentityResolution
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -57,6 +58,11 @@ internal suspend fun DefaultEnrichmentEngine.runProgressiveFanOut(
     )
     val settle = settleInto(request, types, session, run)
 
+    // Recorded, never handled: rethrown untouched below so cancellation still propagates and a real
+    // failure still reaches the caller. All it decides is what the stragglers below are stamped
+    // with — see the `finally`.
+    var failure: Throwable? = null
+
     try {
         // Cache hits settle immediately: catalog filtering is the only finalize step that touches
         // them, and it does not depend on canonicalStatus, so there is nothing to wait on identity
@@ -72,7 +78,7 @@ internal suspend fun DefaultEnrichmentEngine.runProgressiveFanOut(
         } ?: false
 
         if (!completed) {
-            logEnrichTimeout()
+            logRunStoppedEarly("Enrich timed out after ${config.enrichTimeoutMs}ms")
             stampStragglers(types, session.board, settle) { type ->
                 EnrichmentResult.Error(type, "engine", "Enrichment timed out", errorKind = ErrorKind.TIMEOUT)
             }
@@ -108,23 +114,52 @@ internal suspend fun DefaultEnrichmentEngine.runProgressiveFanOut(
         val identity = session.identityResolution ?: failedIdentityResolution(request)
         val terminalSnapshot = EnrichmentResults(results.filterKeys { it in types }, types, identity)
         progressiveRuns.complete(run, terminalSnapshot)
+    } catch (t: Throwable) {
+        failure = t
+        throw t
     } finally {
         if (!run.terminal.isCompleted) {
+            val fault = failure?.takeIf { it !is CancellationException }
+            if (fault != null) {
+                logRunStoppedEarly("Enrichment fan-out failed before every requested type settled", fault)
+            }
             withContext(NonCancellable) {
-                stampStragglers(types, session.board, settle) { type ->
-                    EnrichmentResult.Error(
-                        type,
-                        "engine",
-                        "Engine closed before this type settled",
-                        errorKind = ErrorKind.ENGINE_CLOSED,
-                    )
-                }
+                stampStragglers(types, session.board, settle, stragglerError(fault))
                 val results = session.board.snapshotResults()
                 val identity = session.identityResolution ?: failedIdentityResolution(request)
                 val abandoned = EnrichmentResults(results.filterKeys { it in types }, types, identity)
                 progressiveRuns.complete(run, abandoned)
             }
         }
+    }
+}
+
+/**
+ * What a type still unsettled when the run stopped is stamped with, decided by [fault] — why it
+ * stopped, or null for a clean cancellation.
+ *
+ * `ENGINE_CLOSED` means what its KDoc says: the engine was `close()`d, which arrives here as a
+ * cancellation. Anything else is a fault inside the fan-out, and reporting that as a closed engine
+ * sends the consumer looking for a lifecycle bug they do not have. The guards do not separate the
+ * two — `StrategyGuard`, `ProviderChain` and `CacheGuard` all `catch (e: Exception)`, so a
+ * `Throwable` that is not an `Exception`, such as a `NoClassDefFoundError` from an optional
+ * dependency a consumer's build omitted, passes every one of them and reaches here.
+ */
+private fun stragglerError(fault: Throwable?): (EnrichmentType) -> EnrichmentResult.Error = { type ->
+    if (fault == null) {
+        EnrichmentResult.Error(
+            type,
+            "engine",
+            "Engine closed before this type settled",
+            errorKind = ErrorKind.ENGINE_CLOSED,
+        )
+    } else {
+        EnrichmentResult.Error(
+            type,
+            "engine",
+            "Enrichment failed before this type settled: ${fault::class.simpleName}: ${fault.message}",
+            errorKind = ErrorKind.UNKNOWN,
+        )
     }
 }
 

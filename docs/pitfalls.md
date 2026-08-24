@@ -56,10 +56,17 @@ exhaustive. Paths are relative to `musicmeta-core/src/main/kotlin/com/landofoz/m
   the board's keys are what `SettlementBoard.await` can be called for, and `await` is
   `deferreds.getValue(type)`, which throws `NoSuchElementException` on a key the board does not
   carry — not a `NotFound`. That exception escapes a `launch {}` child of the fan-out's
-  `coroutineScope`, cancels every sibling type, and lands in the `ENGINE_CLOSED` straggler stamp,
-  so the consumer is told the engine was closed. `CompositeSynthesizer.dependencies` is a consumer
-  property that nothing stops answering differently on two reads, which is why the engine snapshots
-  the graph once at construction rather than recomputing it per access.
+  `coroutineScope`, cancels every sibling type, and lands in the straggler stamp.
+  `CompositeSynthesizer.dependencies` is a consumer property that nothing stops answering
+  differently on two reads, which is why the engine snapshots the graph once at construction rather
+  than recomputing it per access.
+- Every consumer callback the engine invokes is guarded, but the guards `catch (e: Exception)` —
+  `StrategyGuard`, `ProviderChain`, `CacheGuard`. A `Throwable` that is not an `Exception` passes
+  all of them: a `NoClassDefFoundError` from an optional dependency the consumer's build omitted is
+  the realistic one. It reaches `runProgressiveFanOut`'s `finally`, which is shared with
+  `close()`, so the unsettled types must be stamped from *why* the run stopped and not from the
+  fact that it stopped — `ENGINE_CLOSED` for a cancellation, `UNKNOWN` carrying the cause otherwise.
+  "Every callback is guarded" is not "nothing can throw".
 - A cyclic `CompositeSynthesizer.dependencies` graph has no resolution order, so
   `DefaultEnrichmentEngine`'s `init` refuses it and `Builder.build()` throws. Under an await-driven
   fan-out the alternative is types that never settle and a run that only ends at its deadline.

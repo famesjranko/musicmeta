@@ -218,4 +218,43 @@ class NestedCompositeScenarioTest {
             // Then - the graph was read once, at construction, and never again
             assertEquals(1, drifting.readCount)
         }
+
+    // --- S6: one type cannot be both a composite and a mergeable ---
+
+    @Test fun `S6 - a type with both a synthesizer and a merger is refused at build`() {
+        // Given - a merger and a synthesizer registered for the same type
+        val builder = EnrichmentEngine.Builder()
+            .addMerger(NoOpMerger(EnrichmentType.ARTIST_LOGO))
+            .addSynthesizer(NoOpSynthesizer(EnrichmentType.ARTIST_LOGO, setOf(EnrichmentType.LABEL)))
+
+        // When - build() is called
+        val thrown = assertThrows(IllegalArgumentException::class.java) { builder.build() }
+
+        // Then - the message names the type carrying both registrations
+        assertTrue(
+            "expected ARTIST_LOGO in the message, was: ${thrown.message}",
+            thrown.message?.contains("ARTIST_LOGO") == true,
+        )
+    }
+
+    @Test fun `S6 - a synthesizer for a type with a built-in merger is refused too`() {
+        // Given - a synthesizer for GENRE, which DEFAULT_MERGERS already registers GenreMerger for
+        val builder = EnrichmentEngine.Builder()
+            .addSynthesizer(NoOpSynthesizer(EnrichmentType.GENRE, setOf(EnrichmentType.LABEL)))
+
+        // When - build() is called
+        val thrown = assertThrows(IllegalArgumentException::class.java) { builder.build() }
+
+        // Then - a default registration counts the same as a caller's own
+        assertTrue(
+            "expected GENRE in the message, was: ${thrown.message}",
+            thrown.message?.contains("GENRE") == true,
+        )
+    }
+
+    /** A merger that is never expected to run — S6 is about the registration, not the merge. */
+    private class NoOpMerger(override val type: EnrichmentType) : ResultMerger {
+        override fun merge(results: List<EnrichmentResult.Success>): EnrichmentResult =
+            EnrichmentResult.NotFound(type, "unreachable")
+    }
 }

@@ -182,9 +182,16 @@ class EnrichTimeoutBoundaryTest {
         // provider returned them. What must not happen is the old behaviour: every unfinished type
         // stamped Error(TIMEOUT) by "engine", telling the consumer their enrichTimeoutMs is too low
         // when the deadline was their own.
-        val artists = results.raw[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
+        // Named before the cast, not cast blind: this pair failed once as a bare ClassCastException
+        // that named neither the type nor what it actually settled, which is the whole diagnosis
+        // gone. Same strictness, one line of evidence when it recurs.
+        val artistsRaw = results.raw[EnrichmentType.SIMILAR_ARTISTS]
+        assertTrue("SIMILAR_ARTISTS must settle Success, was $artistsRaw", artistsRaw is EnrichmentResult.Success)
+        val artists = artistsRaw as EnrichmentResult.Success
         assertEquals(2, (artists.data as EnrichmentData.SimilarArtists).artists.size)
-        val tracks = results.raw[EnrichmentType.SIMILAR_TRACKS] as EnrichmentResult.Success
+        val tracksRaw = results.raw[EnrichmentType.SIMILAR_TRACKS]
+        assertTrue("SIMILAR_TRACKS must settle Success, was $tracksRaw", tracksRaw is EnrichmentResult.Success)
+        val tracks = tracksRaw as EnrichmentResult.Success
         assertEquals(2, (tracks.data as EnrichmentData.SimilarTracks).tracks.size)
 
         // And - the run completed, so what the providers fetched is cached rather than discarded.

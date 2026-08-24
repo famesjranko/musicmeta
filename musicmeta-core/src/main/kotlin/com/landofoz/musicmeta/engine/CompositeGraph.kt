@@ -40,3 +40,30 @@ internal fun requireAcyclic(dependencies: Map<EnrichmentType, Set<EnrichmentType
 
     for (type in dependencies.keys) visit(type, emptyList())
 }
+
+/**
+ * Refuses a type that carries both a [CompositeSynthesizer] and a [ResultMerger].
+ *
+ * A composite has no provider chain to collect from, so the merger can never run: the type is
+ * synthesized and the registration is dead. Nothing about that is visible to the caller who wrote
+ * it — the merged answer they configured simply never appears — so it is refused where it can still
+ * be fixed. Registration order does not rescue it either; before this, composite won because the
+ * classification happened to test for it first.
+ *
+ * A default registration counts: `DEFAULT_MERGERS` and `DEFAULT_SYNTHESIZERS` share no key today,
+ * so adding a synthesizer for `GENRE` collides with `GenreMerger` exactly as a caller's own merger
+ * would, and is exactly as dead.
+ *
+ * @throws IllegalArgumentException naming every type that carries both.
+ */
+internal fun requireDisjointRoles(
+    compositeTypes: Set<EnrichmentType>,
+    mergeableTypes: Set<EnrichmentType>,
+) {
+    val both = compositeTypes intersect mergeableTypes
+    require(both.isEmpty()) {
+        "Registered as both a composite and a mergeable: ${both.joinToString(", ") { it.name }}. " +
+            "A composite type is synthesized from its dependencies and never collected from a " +
+            "provider chain, so its ResultMerger could never run. Register one or the other."
+    }
+}

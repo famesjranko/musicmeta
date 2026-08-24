@@ -152,6 +152,7 @@ internal class DefaultEnrichmentEngine(
         // Checked against the snapshot above, not against a fresh read of the synthesizers: a graph
         // validated in one read and used from another is not the graph that was validated.
         requireAcyclic(compositeDependencies)
+        requireDisjointRoles(compositeDependencies.keys, this.mergers.keys)
     }
 
     // Complete-and-cache: a collector cancelling enrichProgressive() detaches from the fan-out
@@ -416,8 +417,16 @@ internal class DefaultEnrichmentEngine(
         }
     }
 
-    /** Logs the [EnrichmentConfig.enrichTimeoutMs] deadline firing, keeping [logger] private from a cross-file caller. */
-    internal fun logEnrichTimeout() = logger.warn(TAG, "Enrich timed out after ${config.enrichTimeoutMs}ms")
+    /**
+     * Logs a run that stopped before every requested type settled, keeping [logger] private from a
+     * cross-file caller. Both reasons — the [EnrichmentConfig.enrichTimeoutMs] deadline and a fault
+     * that escaped the fan-out — are the same fact to a reader of the log.
+     *
+     * `warn`, not a new `error` level: [EnrichmentLogger] carries only `debug` and `warn`, and
+     * adding a third method to a public interface is a break this is not worth.
+     */
+    internal fun logRunStoppedEarly(reason: String, cause: Throwable? = null) =
+        logger.warn(TAG, reason, cause)
 
     /**
      * [runProgressiveFanOut]'s backfill for a run that stopped before every requested type settled
