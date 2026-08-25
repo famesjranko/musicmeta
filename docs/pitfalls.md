@@ -437,6 +437,17 @@ their comparators — title and edition tiers cannot be trusted to settle a pool
 wrong-artist hit tied or ahead on every other signal. Follow "tier first, then artist" only where the
 pool is already artist-filtered; rank artist first wherever it is not.
 
+**A Lucene score measures relevance, so an accepted hit is not a name match and cannot stamp
+`LookupProvenance.EXACT_NAME` on its own.** MusicBrainz answers a truncated title as a full phrase
+match: 25 of 25 live album requests with the title's last word removed (`release:"Hail to the"`)
+returned the full album at score 99-100, all of them accepted by the `minMatchScore` floor and none
+title-equivalent. `MusicBrainzEnricher` compares the requested title against the hit's own with
+`TitleMatcher.equivalent` and reports `FUZZY_NAME` when they differ — the same shape the artist route
+already had via `NameMatchTier.CANONICAL`. The engine cost was one layer further out: a search route
+that reported *nothing* was read by `identityNameEvidence` as "matched", so the whole fan-out
+inherited `EXACT_NAME` from a title nobody had compared. A route now reports itself, and an
+unreported one vouches for nothing.
+
 Combined-field search results carry a second trap: a provider that names both artist and album in
 one display string (Discogs's `"Artist - Title"`) cannot be safely split at the first delimiter,
 because either half may itself contain that delimiter. Stopping at the first boundary whose

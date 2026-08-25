@@ -3,6 +3,7 @@ package com.landofoz.musicmeta.provider.musicbrainz
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
+import com.landofoz.musicmeta.LookupProvenance
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.testutil.FakeHttpClient
 import kotlinx.coroutines.test.runTest
@@ -98,6 +99,27 @@ class MusicBrainzSymbolTitleFallbackTest {
         val success = result as EnrichmentResult.Success
         assertEquals(RELEASE_MBID, success.resolvedIdentifiers?.musicBrainzId)
         assertEquals(RELEASE_GROUP_MBID, success.resolvedIdentifiers?.musicBrainzReleaseGroupId)
+    }
+
+    @Test
+    fun `a release reached by folding the caller's spelling reports FUZZY_NAME`() = runTest {
+        // Given - the same fallback route, which matches on a fold rather than on the title itself
+        givenCallerTitleSearchFindsNothing()
+        givenArtistResolves()
+        httpClient.givenJsonResponse(
+            BROWSE_PAGE_0_URL,
+            """{"release-groups": [{"id": "$RELEASE_GROUP_MBID", "title": "F♯ A♯ ∞", "primary-type": "Album"}]}""",
+        )
+        givenSymbolTitleReleaseSearchHits()
+        val request = EnrichmentRequest.forAlbum("F# A# (Infinity)", "Godspeed You! Black Emperor")
+
+        // When - enriching for genre
+        val result = provider.enrich(request, EnrichmentType.GENRE)
+
+        // Then - MusicBrainz never saw the caller's spelling, so the name it returned is not the
+        // name that was asked for and the route says so
+        val success = result as EnrichmentResult.Success
+        assertEquals(LookupProvenance.FUZZY_NAME, success.provenance)
     }
 
     @Test

@@ -2,6 +2,7 @@ package com.landofoz.musicmeta.engine
 
 import com.landofoz.musicmeta.CanonicalStatus
 import com.landofoz.musicmeta.EnrichmentConfig
+import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
@@ -14,6 +15,7 @@ import com.landofoz.musicmeta.testutil.FakeEnrichmentCache
 import com.landofoz.musicmeta.testutil.FakeHttpClient
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 /**
@@ -87,6 +89,38 @@ class IdentityNameEvidenceTest {
         val success = results.raw[EnrichmentType.TRACK_POPULARITY] as EnrichmentResult.Success
         assertEquals(LookupProvenance.EXACT_NAME, success.provenance)
     }
+
+    @Test
+    fun `a resolution that reported no route at all vouches for nothing`() = runTest {
+        // Given - a named request whose identity result reports no route of its own
+        val request = EnrichmentRequest.forTrack(TITLE, ARTIST)
+
+        // When - the fan-out asks what MusicBrainz established about that name
+        val evidence = identityNameEvidence(success(provenance = null), request, request)
+
+        // Then - a provider that said nothing about the name is not evidence that it matched
+        assertNull(evidence)
+    }
+
+    @Test
+    fun `a fuzzy resolution is reported as fuzzy rather than dropped`() = runTest {
+        // Given - a named request whose identity result matched something else by name
+        val request = EnrichmentRequest.forTrack(TITLE, ARTIST)
+
+        // When - the fan-out asks what MusicBrainz established about that name
+        val evidence = identityNameEvidence(success(LookupProvenance.FUZZY_NAME), request, request)
+
+        // Then - the fuzziness reaches the fan-out instead of being flattened to "unknown"
+        assertEquals(LookupProvenance.FUZZY_NAME, evidence)
+    }
+
+    private fun success(provenance: LookupProvenance?) = EnrichmentResult.Success(
+        type = EnrichmentType.TRACK_METADATA,
+        data = EnrichmentData.TrackMetadata(durationMs = 331560),
+        provider = "musicbrainz",
+        confidence = 1.0f,
+        provenance = provenance,
+    )
 
     private companion object {
         const val TITLE = "Enter Sandman"

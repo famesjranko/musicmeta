@@ -56,12 +56,13 @@ internal fun buildIdentityResolution(
 }
 
 /**
- * What MusicBrainz vouched for about the name the fan-out will search, or `null` for nothing.
+ * What MusicBrainz established about the name the fan-out will search, or `null` for nothing.
  *
- * Two things earn it, and both are positive evidence rather than the absence of a doubt. Identity
- * resolution matched the caller's own name, in which case it reports that name provenance itself;
- * or the request named no entity and resolution supplied the name from the caller's identifier, so
- * the name every other provider searches is MusicBrainz's own.
+ * It is only ever positive evidence, never the absence of a doubt. Identity resolution reports the
+ * name route it took and that route is passed through at its own strength, down to
+ * [LookupProvenance.FUZZY_NAME] for a hit whose name is not the one asked for; or the request named
+ * no entity and resolution supplied the name from the caller's identifier, so the name every other
+ * provider searches is MusicBrainz's own.
  *
  * Resolving by identifier alone earns nothing. It confirms that the identifier names an entity and
  * compares no name to anything — a request naming `Radiohead` beside another artist's live MBID
@@ -76,14 +77,14 @@ internal fun identityNameEvidence(
     // MusicBrainz supplied the name itself, off the entity the caller's identifier named, and
     // every other provider searches that name. It is MusicBrainz's own name by construction.
     if (namesNoEntity(request) && !namesNoEntity(enriched)) return LookupProvenance.EXACT_NAME
-    // Resolution has exactly two routes, and each reports itself. CANONICAL_ID is an identifier
-    // lookup, which compared no name to anything and so vouches for nothing. The name search
-    // reports QUALIFIER_FALLBACK_NAME when it had to strip a qualifier to match, and leaves the
-    // field null when the caller's name matched as given - a null that means "matched", not
-    // "unknown", which is why this cannot be read off the field alone.
+    // Every route reports itself, so the field is read verbatim: a name route is passed through at
+    // its own strength, and anything else vouches for nothing. CANONICAL_ID is an identifier
+    // lookup, which compared no name to anything; a null is a route that went unreported, which is
+    // no evidence rather than a silent success.
     return when (success.provenance) {
-        null, LookupProvenance.EXACT_NAME -> LookupProvenance.EXACT_NAME
+        LookupProvenance.EXACT_NAME -> LookupProvenance.EXACT_NAME
         LookupProvenance.QUALIFIER_FALLBACK_NAME -> LookupProvenance.QUALIFIER_FALLBACK_NAME
+        LookupProvenance.FUZZY_NAME -> LookupProvenance.FUZZY_NAME
         else -> null
     }
 }
