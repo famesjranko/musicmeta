@@ -1313,6 +1313,18 @@ class MusicBrainzParserTest {
             }
         """.trimIndent()
 
+        /**
+         * Hand-written, and for the whole life of the `CREDITS` defect it described a response
+         * MusicBrainz never sent: a recording asked for with `work-rels` alone returns the work as
+         * a stub, with no nested `relations` at all. This fixture carried them anyway, so the
+         * writer branch below was covered, green, and dead — the feature returned nothing for every
+         * recording while this test passed.
+         *
+         * It is accurate now only because the request asks for `work-level-rels`
+         * (`MusicBrainzApi.RECORDING_LOOKUP_INC`). The fixture with a verified chain to the wire is
+         * the `musicbrainz-work-credits` pool, read by `MusicBrainzWorkCreditsTest`; this one stays
+         * as a parser-level unit case, not as evidence that the shape is real.
+         */
         private val RECORDING_WITH_WORK_REL = """
             {
               "id": "rec1",

@@ -87,7 +87,11 @@ deliberate:
   `*Api`; fourteen capabilities across three entity types is more than an API client should carry.
   `MusicBrainzCreditParser.kt` serves `CREDITS` and `RELEASE_EDITIONS` only — those two read raw
   `JSONObject` rather than DTOs, since `lookupRecording` and `lookupReleaseGroup` return the response
-  unparsed, and it owns the relation-type → role mapping. `MusicBrainzQualifierFallback.kt` strips a
+  unparsed, and it owns the relation-type → role mapping. Writer credits live on the *work*, not the
+recording, so the recording lookup asks for `work-level-rels` — without it the work arrives as an
+id-and-title stub and every songwriter is silently absent. The bytes are paid on every recording
+lookup whether or not `CREDITS` was asked for, because varying `inc=` per requested type would put
+two response shapes under one cache key. `MusicBrainzQualifierFallback.kt` strips a
   title's trailing qualifier group, and is the only one of the last three that album *and* track
   search share; `MusicBrainzReleaseRanking.kt` (ranking a search pool into one release) and
   `MusicBrainzTitleFolding.kt` (folding a title MusicBrainz stores under symbols no caller can type)

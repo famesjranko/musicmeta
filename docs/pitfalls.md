@@ -278,6 +278,21 @@ same-dispatcher `runBlocking` caller can wedge forever with no thread left to re
 
 ## Area — Provider data and matching
 
+- A MusicBrainz `inc=` that names a relationship gets you the **link**, not the linked entity's own
+  relations. `inc=work-rels` returns each work as a stub — id and title, no `relations` array — and
+  the sub-entity's relations need `work-level-rels` (or `recording-level-rels`,
+  `release-group-level-rels`) named as well. `CREDITS` asked for `work-rels`, read
+  `work.relations`, and `?: continue`d past a field that was never going to be there, so every
+  songwriter, composer and lyricist was dropped for every recording on every call from the day it
+  shipped. The two-line reading — "we ask for work-rels, so we have the work's rels" — is wrong and
+  looks right. Verify an `inc=` against a live response before trusting what it returns; the probe
+  in `.scratch/musicbrainz-work-credits/prototypes/` is the shape of that check.
+- The fix cost no extra request, but the ticket had been open for a fortnight costed at one extra
+  `/work/{mbid}` lookup per recording — a rate-limit budget nobody wanted to spend. **The cheaper
+  option was not found by thinking harder about the trade-off, it was found by reading the API's
+  own include list.** Price the options against the upstream's documented surface before treating a
+  cost as fixed.
+
 ## 3. `org.json` returns a default for a missing key — it does not fail
 
 ```kotlin

@@ -397,8 +397,19 @@ internal class MusicBrainzApi(
         const val BROWSE_PAGE_SIZE = 100
 
         /** [lookupRecording]'s `inc=`; see its KDoc for why each half is there. */
+        // `work-level-rels` is not optional alongside `work-rels`, and its absence is what made
+        // CREDITS lose every songwriter: `work-rels` returns the work as a stub — id and title, no
+        // `relations` — so the writers MusicBrainz models on the work were never in the response at
+        // all. It inlines them into this same request rather than costing a second one; a
+        // /work/{mbid} lookup per recording buys the identical answer for one more round trip
+        // (measured 2026-08-24, docs/pitfalls.md covers the trap).
+        //
+        // The cost is bytes, on every recording lookup whether or not CREDITS was asked for: 7,672
+        // to 10,600 for the recording that was measured. Deliberately unconditional — varying
+        // `inc=` per requested type would make two response shapes share one cache key, and serving
+        // a credits-free entry to a caller who asked for credits is the more expensive bug.
         private const val RECORDING_LOOKUP_INC =
-            "artist-rels+work-rels+artists+releases+release-groups+isrcs+tags+genres+ratings"
+            "artist-rels+work-rels+work-level-rels+artists+releases+release-groups+isrcs+tags+genres+ratings"
 
         /** [lookupArtistWithRels]'s `inc=`; see its KDoc. */
         private const val ARTIST_LOOKUP_INC = "tags+genres+aliases+ratings+url-rels+artist-rels"

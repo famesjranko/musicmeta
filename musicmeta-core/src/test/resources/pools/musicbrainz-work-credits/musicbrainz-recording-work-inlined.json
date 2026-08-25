@@ -1,0 +1,185 @@
+{
+  "id": "cab6f522-4fdf-41bb-b3af-5b93b899d062",
+  "title": "Karma Police",
+  "relations": [
+    {
+      "source-credit": "",
+      "work": {
+        "relations": [
+          {
+            "attributes": [],
+            "target-type": "artist",
+            "source-credit": "",
+            "artist": {
+              "id": "f23074f4-2c06-477a-bf1d-12fa66e087ee",
+              "country": "GB",
+              "sort-name": "Greenwood, Colin",
+              "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+              "disambiguation": "English bassist in Radiohead",
+              "type": "Person",
+              "name": "Colin Greenwood"
+            },
+            "end": null,
+            "ended": false,
+            "begin": null,
+            "type-id": "a255bca1-b157-4518-9108-7b147dc3fc68",
+            "attribute-ids": {},
+            "direction": "backward",
+            "attribute-values": {},
+            "target-credit": "",
+            "type": "writer"
+          },
+          {
+            "source-credit": "",
+            "target-type": "artist",
+            "attributes": [],
+            "target-credit": "",
+            "attribute-values": {},
+            "type": "writer",
+            "direction": "backward",
+            "type-id": "a255bca1-b157-4518-9108-7b147dc3fc68",
+            "begin": null,
+            "attribute-ids": {},
+            "artist": {
+              "type": "Person",
+              "name": "Jonny Greenwood",
+              "disambiguation": "English musician and score composer",
+              "country": "GB",
+              "sort-name": "Greenwood, Jonny",
+              "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+              "id": "e9fcfbbf-1743-4f73-8744-ada8da7394ea"
+            },
+            "end": null,
+            "ended": false
+          },
+          {
+            "attributes": [],
+            "target-type": "artist",
+            "source-credit": "",
+            "begin": null,
+            "type-id": "a255bca1-b157-4518-9108-7b147dc3fc68",
+            "attribute-ids": {},
+            "artist": {
+              "type": "Person",
+              "name": "Ed O’Brien",
+              "disambiguation": "guitarist & songwriter in Radiohead",
+              "country": "GB",
+              "sort-name": "O’Brien, Ed",
+              "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+              "id": "309d9809-cf74-493a-b56b-1378258f20fd"
+            },
+            "end": null,
+            "ended": false,
+            "attribute-values": {},
+            "target-credit": "",
+            "type": "writer",
+            "direction": "backward"
+          },
+          {
+            "attribute-ids": {},
+            "type-id": "a255bca1-b157-4518-9108-7b147dc3fc68",
+            "begin": null,
+            "ended": false,
+            "artist": {
+              "disambiguation": "drummer in Radiohead",
+              "name": "Philip Selway",
+              "type": "Person",
+              "id": "4ab74d13-d1eb-4895-b874-6da5d8b1aac3",
+              "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+              "sort-name": "Selway, Philip",
+              "country": "GB"
+            },
+            "end": null,
+            "type": "writer",
+            "target-credit": "",
+            "attribute-values": {},
+            "direction": "backward",
+            "target-type": "artist",
+            "attributes": [],
+            "source-credit": ""
+          },
+          {
+            "type": "writer",
+            "target-credit": "",
+            "attribute-values": {},
+            "direction": "backward",
+            "attribute-ids": {},
+            "type-id": "a255bca1-b157-4518-9108-7b147dc3fc68",
+            "begin": null,
+            "ended": false,
+            "end": null,
+            "artist": {
+              "country": "GB",
+              "sort-name": "Yorke, Thom",
+              "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+              "id": "8ed2e0b3-aa4c-4e13-bec3-dc7393ed4d6b",
+              "type": "Person",
+              "name": "Thom Yorke",
+              "disambiguation": ""
+            },
+            "source-credit": "",
+            "target-type": "artist",
+            "attributes": []
+          },
+          {
+            "type": "other version",
+            "attribute-values": {},
+            "target-credit": "",
+            "direction": "forward",
+            "attribute-ids": {
+              "translated": "ed11fcb1-5a18-4e1d-b12c-633ed19c8ee1"
+            },
+            "begin": null,
+            "type-id": "7440b539-19ab-4243-8c03-4f5942ca2218",
+            "ended": false,
+            "end": null,
+            "source-credit": "",
+            "work": {
+              "language": null,
+              "type": "Song",
+              "iswcs": [],
+              "languages": [],
+              "title": "Karma Kiwarei",
+              "disambiguation": "",
+              "type-id": "f061270a-2fd6-32f1-a641-f0f8676d14e6",
+              "attributes": [],
+              "id": "ee17d5e5-76b0-419f-b7c9-d5d133ad4084"
+            },
+            "attributes": [
+              "translated"
+            ],
+            "target-type": "work"
+          }
+        ],
+        "type-id": "f061270a-2fd6-32f1-a641-f0f8676d14e6",
+        "id": "babefb9d-3d87-3378-bfac-e13f89ae7a48",
+        "attributes": [],
+        "type": "Song",
+        "language": "eng",
+        "disambiguation": "",
+        "iswcs": [
+          "T-010.257.774-1"
+        ],
+        "languages": [
+          "eng"
+        ],
+        "title": "Karma Police"
+      },
+      "attributes": [
+        "live"
+      ],
+      "target-type": "work",
+      "attribute-values": {},
+      "target-credit": "",
+      "type": "performance",
+      "direction": "forward",
+      "begin": null,
+      "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+      "attribute-ids": {
+        "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
+      },
+      "end": null,
+      "ended": false
+    }
+  ]
+}
