@@ -122,6 +122,16 @@ engine.invalidate(request, EnrichmentType.GENRE)
 
 This is preferred over calling `engine.cache.invalidate(entityKey, ...)` directly because it handles key generation consistently.
 
+### Clearing after a library upgrade
+
+Release notes sometimes note that a fix only applies to freshly-fetched data — "clear your cache
+or wait for the existing entries to expire." Three ways to do that, in order of how much they
+throw away:
+
+- `engine.cache.clear()` — every cached entry, app-wide.
+- `engine.invalidate(request, type)` — one entity/type at a time; see above.
+- Do nothing, and let the type's TTL (see "TTLs per type" above) expire it naturally.
+
 ---
 
 ## forceRefresh
@@ -217,6 +227,16 @@ if (result?.isStale == true) {
 | `Error` | No | Return `Error` as-is |
 | `NotFound` | Yes | Return `NotFound` — provider found nothing, stale would be misleading |
 | `Success` | — | Return fresh `Success` normally |
+
+A composite type synthesized from a stale-substituted dependency inherits that dependency's
+staleness. If the synthesis itself comes out `NotFound`, that `NotFound` is not negative-cached —
+it describes the stale snapshot standing in for this call, not a live "providers had nothing"
+answer for it.
+
+The same holds when `CatalogFilterMode` empties a provider's `Success` down to `NotFound`: that
+`NotFound` describes the local catalog filter, not the provider, so it is never negative-cached
+either — the catalog verdict is re-checked on the next call instead of being remembered as an
+absence.
 
 ### Cache write guard
 

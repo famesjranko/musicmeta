@@ -25,7 +25,8 @@ MusicBrainz resolves the MBID first, so every lookup after it is an identifier l
 name search. Rate limiting, circuit breaking, confidence scoring and caching are built in. Every type
 resolves on its own, so a provider that fails costs you that type and nothing else.
 
-The values above come from one real call with all four optional keys set. Keyless it answers 12 of
+The values above come from one real call with all four optional keys set, captured 2026-08-18;
+upstream data moves, so treat them as a shape rather than a guarantee. Keyless it answers 12 of
 those 15 types, with fewer image alternates, 20 similar artists rather than 31, and genre confidence
 at 0.70.
 
@@ -39,6 +40,7 @@ val engine = EnrichmentEngine.Builder()
     .build()
 
 // Artist profile: photo, bio, genres, members, discography, similar artists, ...
+// artistProfile() is a suspend fun — call it from a coroutine or runBlocking { }
 val profile = engine.artistProfile("Radiohead")
 
 println(profile.photo?.url)
@@ -60,21 +62,24 @@ The engine resolves every type independently: a provider that fails, rate limits
 yields a typed result on that one type, and the rest of the profile is unaffected. `profile.results` carries the per-type outcome when you need to tell "no data" from
 "could not fetch".
 
-**Going further.** Pre-resolved identifiers, named accessors, the raw result map, and the
-failure-isolation guarantees are in the [developer guides](docs/guides/README.md).
+**Going further.** Progressive streaming with `enrichProgressive()`, pre-resolved identifiers, named
+accessors, the raw result map, and the failure-isolation guarantees are in the
+[developer guides](docs/guides/README.md).
 
 ## Search and disambiguation
 
 `engine.search()` returns `SearchCandidate` matches without running the enrichment pipeline or
 touching the cache. Use it for a search-ahead UI where the user picks an entity before you fetch
-its metadata.
+its metadata. It carries no deadline of its own, so wrap it in `withTimeout` where a slow upstream
+must not hang the UI.
 
 ```kotlin
 val candidates = engine.search(EnrichmentRequest.forArtist("pink floyd"), limit = 5)
 val chosen = candidates.first() // whichever one the user picked
 
-// Enriching from the pick carries the identifiers the search already
-// resolved, so no second name lookup happens.
+// Enriching from the pick carries the identifiers the search already resolved.
+// A candidate with a MusicBrainz id pins the entity outright; candidates from
+// the other providers carry none, so those still resolve by name.
 val profile = engine.artistProfile(chosen)
 ```
 
@@ -92,9 +97,9 @@ them, so `engine.artistProfile("pink floid").suggestions`, or `results.identity.
 |----------|------|---------|
 | MusicBrainz | Identity (MBID), genre, label, dates, members, discography, tracks, links, credits, editions | No |
 | Cover Art Archive | Album art front/back/booklet (multi-size), CD art | No |
-| Wikidata | Artist photo, country of origin | No |
-| Wikipedia | Artist biography, supplemental photos | No |
-| LRCLIB | Synced + plain lyrics | No |
+| Wikidata | Artist photo, country of origin, artist links | No |
+| Wikipedia | Artist biography, album descriptions, supplemental photos | No |
+| LRCLIB | Synced + plain lyrics, track metadata | No |
 | Deezer | Artist photos, album art, discography, tracklists, album metadata, similar artists/tracks, artist radio, top tracks, similar albums, track previews | No |
 | iTunes | Album art, tracklists, discography, album metadata | No |
 | ListenBrainz | Popularity, listen counts, discography, top tracks, radio discovery (optional token) | Optional |

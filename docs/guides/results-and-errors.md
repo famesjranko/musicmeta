@@ -9,6 +9,9 @@
 | Tier 3: Raw map | `Map<EnrichmentType, EnrichmentResult>` | Diagnostics, retry logic, custom aggregation |
 
 See [quick-start.md](quick-start.md) for Tier 1 profile examples. This guide covers Tier 2 and Tier 3.
+[streaming.md](streaming.md) covers the results a progressive collection hands you before every type
+has settled, and [identity-resolution.md](identity-resolution.md) has the full `CanonicalStatus`
+table — both matter to anyone branching exhaustively on a result.
 
 ---
 
@@ -29,6 +32,7 @@ val results = engine.enrich(
 results.albumArt()          // EnrichmentData.Artwork?
 results.artistPhoto()       // EnrichmentData.Artwork?
 results.biography()         // EnrichmentData.Biography?
+results.albumDescription()  // EnrichmentData.Biography?
 results.lyrics()            // EnrichmentData.Lyrics? (prefers synced, falls back to plain)
 results.credits()           // EnrichmentData.Credits?
 results.similarArtists()    // EnrichmentData.SimilarArtists?
@@ -41,6 +45,7 @@ results.radioDiscovery()    // EnrichmentData.RadioPlaylist? (LB Radio)
 results.trackPreview()      // EnrichmentData.TrackPreview?
 results.artistPopularity()  // EnrichmentData.Popularity?
 results.trackPopularity()   // EnrichmentData.Popularity?
+results.trackMetadata()     // EnrichmentData.TrackMetadata?
 ```
 
 ### Metadata field accessors (with fallback)
@@ -86,10 +91,22 @@ when (val r = results.result(EnrichmentType.ALBUM_ART)) {
 
 ```kotlin
 results.identity.identifiers        // EnrichmentIdentifiers (MBIDs, Wikidata, etc.)
-results.identity.status             // CanonicalStatus, never null (RESOLVED, AMBIGUOUS, UNRESOLVED, FAILED, NOT_ATTEMPTED_*)
+results.identity.status             // CanonicalStatus, never null (RESOLVED, AMBIGUOUS, UNRESOLVED, CONTRADICTED, FAILED, RESOLVING, NOT_ATTEMPTED_*)
 results.identity.matchScore         // Int? (0-100)
 results.identity.suggestions        // List<SearchCandidate>
 ```
+
+`CanonicalStatus` has ten constants, and [identity-resolution.md](identity-resolution.md) is where
+each one and its UI consequence lives. Two are easy to miss when branching:
+`CONTRADICTED`, which outranks every other status including `RESOLVED` and means an identifier on
+your request named a confidently different entity; and `RESOLVING`, which only ever appears on a
+pre-terminal [`enrichProgressive`](streaming.md) emission, never on `enrich()`'s return.
+
+**`matchScore` says how well the lookup went, not that it found the entity you asked for.** A request
+carrying an identifier resolves by looking that identifier up, so it scores 100 whether or not the
+identifier names what you described — a wrong-but-live MBID resolves perfectly. `CONTRADICTED` is the
+only thing that reports the identifier naming something else, and
+`NOT_ATTEMPTED_IDENTIFIER_TRUSTED` means nobody checked.
 
 ---
 
@@ -138,6 +155,8 @@ sealed class EnrichmentResult {
         val confidence: Float,
         val resolvedIdentifiers: EnrichmentIdentifiers?,
         val provenance: LookupProvenance?,
+        val isStale: Boolean,          // served from an expired cache entry because the provider errored
+        val isCatalogDegraded: Boolean, // a recommendation type your CatalogProvider threw on — unranked
     )
 
     data class NotFound(
@@ -162,6 +181,12 @@ sealed class EnrichmentResult {
 }
 ```
 
+`confidence` scores **how the result was obtained, not whether it is the entity you asked for** — the
+same caveat `matchScore` carries. A lookup by an identifier you supplied is deterministic and scores
+1.0 whether or not that identifier names what you described. `results.identity.status` is what
+answers the other question, and `CanonicalStatus.CONTRADICTED` is the only value that reports it
+disagreeing.
+
 ---
 
 ## ErrorKind enum
@@ -173,6 +198,7 @@ sealed class EnrichmentResult {
 | `PARSE` | Malformed JSON or unexpected schema |
 | `RATE_LIMIT` | Upstream throttled the request (429) — normally widened to `RateLimited` (see below) |
 | `TIMEOUT` | Engine-level enrichment timeout expired |
+| `ENGINE_CLOSED` | `close()` was called before this type settled — not a failure and not a timeout |
 | `UNKNOWN` | Uncategorized error |
 
 Within `enrich()`, a 5xx and a dropped connection reach you as `Error` with `NETWORK` from every one
@@ -285,8 +311,10 @@ Types that complete before the timeout are not affected, even if other types are
 
 The engine resolves each enrichment type independently: a provider failure — network error, rate
 limit, timeout — is a typed result on that one type, and every other type returns as normal.
-`enrich()` throws only for the two cases below, both of which mean something outside the engine
-went wrong. Profile accessors are independently nullable for the same reason:
+`enrich()` throws for exactly one reason: the calling coroutine was cancelled, which means the caller
+went away rather than that the engine failed. Nothing a component of yours does to the run reaches
+you as an exception — the four subsections below say what each one comes back as instead. Profile
+accessors are independently nullable for the same reason:
 
 ```kotlin
 val profile = engine.artistProfile("Radiohead")
@@ -330,5 +358,23 @@ If your `checkAvailability` throws — including the `TimeoutCancellationExcepti
 `withTimeout` of your own — the engine logs it and leaves that type's results unfiltered, then
 carries on with the remaining types. You get a `Success` in the provider's own order, not an
 exception and not an `Error`: filtering only ranks and trims what the providers already returned, so
-losing it is cheaper than losing the run. Nothing marks the result as unfiltered, so catch inside
-your `checkAvailability` if you want a partial catalog answer rather than none.
+losing it is cheaper than losing the run.
+
+The result says so. That type's `Success` comes back with `isCatalogDegraded = true`, so you can tell
+an unranked list from a filtered one and show it as such rather than presenting a raw provider order
+as if your catalog had vetted it:
+
+```kotlin
+val similar = results.result(EnrichmentType.SIMILAR_ARTISTS)
+if (similar is EnrichmentResult.Success && similar.isCatalogDegraded) {
+    println("Showing unranked recommendations — the catalog check failed")
+}
+```
+
+The flag is call-scoped: every serve, live or from cache, is normalized to `false` before this call's
+own `checkAvailability` runs, so only *this* call's own throw sets it. It is never `true` under
+`CatalogFilterMode.UNFILTERED` — that is your configuration, not a degradation.
+
+Catching inside your own `checkAvailability` is still worth doing if a partial catalog answer beats
+none: the engine's fallback is no filtering at all, and only you know whether the queries that did
+succeed are worth keeping.

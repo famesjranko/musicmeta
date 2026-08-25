@@ -87,6 +87,8 @@ val engine = EnrichmentEngine.Builder()
     .build()
 ```
 
+`addProvider` throws `IllegalArgumentException` for a duplicate provider id or a reserved one — `engine`, `all_providers`, `no_provider`, `no_merger`, `no_composite_handler`, or any id ending `_merger`.
+
 ### Provider capability priorities
 
 - 100 = primary source (tried first)
@@ -217,6 +219,26 @@ provider report `Error` — retryable, breaker-visible, `STALE_IF_ERROR`-eligibl
 Collapsing failures into a 404 (or dropping the `headers` map, which is where `Authorization` arrives)
 is silent, and shows up only as missing enrichment.
 
+### Respecting the enrich deadline
+
+Coroutine cancellation cannot interrupt a thread blocked in a socket connect or read, so the enclosing
+`enrich()` deadline only binds if your transport is told about it before each blocking call. Call the
+top-level `enrichDeadlineRemainingMs()` immediately before every blocking leg — a retry, or a followed
+redirect, spends the budget between one leg and the next — and clamp your transport's own timeout down
+to it:
+
+<!-- no-compile: elided method body (`/* ... */`) and undefined `defaultTimeoutMs`; illustrative fragment inside an `HttpClient` implementation, not a complete override -->
+```kotlin
+override suspend fun fetchJsonResult(url: String, headers: Map<String, String>): HttpResult<JSONObject> {
+    val timeoutMs = enrichDeadlineRemainingMs() ?: defaultTimeoutMs
+    /* apply timeoutMs to this attempt's connect/read before the blocking call */
+}
+```
+
+It returns `null` when no `enrich()` call encloses the coroutine — a consumer driving your `HttpClient`
+directly. **The value can be zero or negative once the deadline has passed: treat that as "no time
+left", never as "no timeout"** — every JDK and OkHttp timeout reads `0` as unbounded, so passing a
+lapsed budget straight through turns a deadline into an infinite wait.
 
 ---
 
@@ -345,11 +367,15 @@ val engine = EnrichmentEngine.Builder()
     .build()
 ```
 
+`build()` throws `IllegalArgumentException` if `type` is also registered as a `CompositeSynthesizer` — a type cannot be both a merger target and a synthesized composite, since the merger could then never run.
+
 ---
 
 ## Custom synthesizers
 
 Implement `CompositeSynthesizer` for types that are computed from other resolved types. The engine resolves all `dependencies` first, then calls `synthesize()` with the resolved results map.
+
+Each dependency in `resolved` arrives finalized — catalog-filtered, provenance-stamped, and, under `CacheMode.STALE_IF_ERROR`, stale-cache-substituted — the same shape a caller's own `EnrichmentResults` would show for that type, never the raw provider-chain result. A synthesizer cannot tell "this dependency genuinely failed" apart from "this dependency is stale": both arrive as the substituted `Success`. `identityResult` can also be the identity provider's `Error` when resolution failed, not just `null` or a `Success` — check its runtime type before reading it.
 
 <!-- no-compile: assumes `buildTimeline`, an undefined helper this example does not define -->
 ```kotlin
@@ -394,3 +420,7 @@ val engine = EnrichmentEngine.Builder()
     .addSynthesizer(MyArtistSummarySynthesizer)
     .build()
 ```
+
+`build()` throws `IllegalArgumentException` if the registered synthesizers' `dependencies` form a cycle — a synthesizer depending on its own type included — naming every type on the cycle; there is no resolution order for a cycle, so the alternative is types that silently never settle.
+
+If your synthesizer credits the providers behind a *built-in* composite type (`ARTIST_TIMELINE`, `GENRE_DISCOVERY`), read `com.landofoz.musicmeta.engine.DEFAULT_SYNTHESIZER_DEPENDENCIES` rather than hand-copying the graph. It maps each of the engine's own composite types to its source sub-types; it covers only the two built-in synthesizers, never a synthesizer registered through `addSynthesizer`.

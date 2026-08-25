@@ -5,13 +5,14 @@
 settles, so a UI can paint fast types — a cache hit, a single-provider lookup — while slow ones are
 still in flight. One further snapshot can arrive ahead of all of them: when identity resolution was
 attempted and reaches its verdict before any type has settled, that verdict is emitted on its own,
-with `raw` empty and every requested type still pending. A run that never attempts resolution — a
-trusted identifier, identity disabled, no identity provider — emits no such snapshot. First useful
-paint arrives well ahead of the complete answer: measured against the
-demo over live providers on a cold cache in August 2026, two artists, one run each, the first
-snapshot painted at 2.3s and 5.6s against 6.4s and 13.3s for every requested type to settle. Those
-are single runs over third-party APIs, not a distribution — treat the ratio as the signal and expect
-your own gap to depend on which types you request and how the providers behind them respond.
+with `raw` empty and every requested type still pending (see "Not every emission carries a new
+result" below). A run that never attempts resolution — a trusted identifier, identity disabled, no
+identity provider — emits no such snapshot. First useful paint arrives well ahead of the complete
+answer: measured against the demo over live providers on a cold cache in August 2026, two artists,
+one run each, the first snapshot painted at 2.3s and 5.6s against 6.4s and 13.3s for every requested
+type to settle. Those are single runs over third-party APIs, not a distribution — treat the ratio as
+the signal and expect your own gap to depend on which types you request and how the providers behind
+them respond.
 
 ## Basic usage
 
@@ -48,7 +49,7 @@ engine.enrichProgressive(
     for (type in snapshot.requestedTypes) {
         when {
             type in stillLoading -> showSpinner(type)
-            snapshot.raw[type] == null -> showEmpty(type) // settled with no answer
+            snapshot.raw.getValue(type) is EnrichmentResult.NotFound -> showEmpty(type)
             else -> showResult(type, snapshot.raw.getValue(type))
         }
     }
@@ -68,6 +69,21 @@ filtering, provenance stamping, stale-cache resolution) has run for every type, 
 emission's place instead. So a collector that stops early on the first "nothing pending" read is
 reading the real terminal snapshot, not a look-alike.
 
+## Not every emission carries a new result
+
+One emission is not a type settling: when identity resolution actually runs for a call, a snapshot
+goes out the moment it settles, so `snapshot.identity.status` and `snapshot.identity.suggestions`
+reach you at the earliest moment they exist rather than riding whichever type happens to settle next.
+Its `raw` map is whatever had already settled, unchanged — a collector diffing `raw` against the
+previous snapshot sees nothing new, and one that renders `identity` sees the verdict, a "did you
+mean?" list, or a `FAILED` early enough to act on it.
+
+Only a live resolution emits: a call whose identity was trusted from a supplied identifier, served
+entirely from cache, or disabled resolved nothing and announces nothing. Like an intermediate
+settlement that would complete the requested-types set, it is suppressed when every requested type
+has already settled — the terminal snapshot carries the verdict in that case — so it never
+masquerades as terminal.
+
 ## What can still change mid-stream
 
 A settled type's value is stable enough to render, but not frozen: cache write-back and other
@@ -76,12 +92,18 @@ different value than what an early snapshot showed for it. There is also no orde
 types — two runs of the same request can settle types in a different sequence, so do not build UI
 that assumes, say, `ARTIST_BIO` always arrives before `SIMILAR_ARTISTS`.
 
-Two values exist specifically to be read mid-stream:
+Three values exist specifically to be read mid-stream:
 
 - **`snapshot.identity.status` can be `CanonicalStatus.RESOLVING`** on an intermediate emission —
   identity resolution runs concurrently with everything else and has not necessarily finished when a
   fast type's own snapshot goes out. It is never `RESOLVING` on `enrich()`'s return or on this
   stream's terminal emission; by then resolution has always finished.
+- **`snapshot.identity.status` can be `CanonicalStatus.CONTRADICTED` before resolution has
+  finished.** `CONTRADICTED` outranks `RESOLVING`, so a pre-terminal emission can carry it while the
+  resolver is still running: a provider that reached its entity straight from the identifier on your
+  request can settle first and report that the identifier names something else. It never reverts — a
+  later recovery by name does not clear it — so a UI that warns on it mid-stream will not have to
+  take the warning back. See [identity-resolution.md](identity-resolution.md).
 - **A recommendation-type `Success` can carry `isCatalogDegraded = true`**, meaning this call's own
   `CatalogProvider` threw and that type reached you unranked rather than filtered. This can be true
   on the terminal emission too, not just an intermediate one — it is not a "still settling" signal,
@@ -95,7 +117,7 @@ engine.enrichProgressive(
     setOf(EnrichmentType.SIMILAR_ARTISTS),
 ).collect { snapshot ->
     if (snapshot.identity.status == CanonicalStatus.RESOLVING) {
-        showSpinner(EnrichmentType.ARTIST_BIO) // identity hasn't settled yet, keep waiting
+        showSpinner(EnrichmentType.SIMILAR_ARTISTS) // identity hasn't settled yet, keep waiting
     }
     val similar = snapshot.result(EnrichmentType.SIMILAR_ARTISTS)
     if (similar is EnrichmentResult.Success && similar.isCatalogDegraded) {
@@ -154,8 +176,14 @@ unbounded — but it is real work, and it needs an owner at shutdown:
 engine.close()
 ```
 
-Call `close()` when you are done with the engine entirely (app shutdown, a `ViewModel`'s
-`onCleared()`), not per collection. It is a hard shutdown, not a drain: any detached run still in
+Call `close()` where the scope that owns the engine dies, not per collection. `close()` is
+engine-wide: it stamps every in-flight call anywhere in your app, not just the ones this screen
+started. For the usual arrangement — one engine shared across the app, injected as a singleton — that
+scope is the application or process, so `close()` belongs at app shutdown. Closing in a `ViewModel`'s
+`onCleared()` is correct only when that `ViewModel` genuinely owns a private engine nobody else uses;
+on a shared one it shuts the engine down for every other screen the moment this one is destroyed.
+
+`close()` is a hard shutdown and not a drain, which means any detached run that is still in
 flight is abandoned rather than waited for, and — like a timed-out run — writes nothing back. A
 still-attached collector, or a call issued after `close()` that this engine had never seen before, is
 released with every requested type present: types that had already settled keep their real result,

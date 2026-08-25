@@ -313,3 +313,21 @@ sealed class ArtistDetailState {
     data class Disambiguation(val candidates: List<SearchCandidate>) : ArtistDetailState()
 }
 ```
+
+### Lifecycle
+
+`viewModelScope.launch { engine.artistProfile(name) }` above looks like a normal cancellable
+suspend call, but leaving the screen mid-fetch does not cancel the fetch. `artistProfile()` and
+`enrich()` both run through the engine's complete-and-cache fan-out: cancelling the collecting
+coroutine only detaches it — the fan-out keeps running on the engine's own scope to completion (or
+its own timeout), keeps spending whatever network and rate-limit budget it already started, and
+still writes its result back to the shared cache. Rapid navigation is safe to leave alone: the
+abandoned fetch keeps working in the background, and a return visit to the same screen typically
+finds the result already cached instead of triggering a second fetch.
+
+Never call `engine.close()` from a screen's `onCleared()`. The `EnrichmentEngine` this guide (and
+`HiltEnrichmentModule`) wires as `@Singleton` is shared by the whole app, and `close()` is
+engine-wide, not per-caller: it shuts down the scope backing *every* in-flight detached run, and
+every currently-requested type across every screen comes back stamped `Error(ErrorKind.ENGINE_CLOSED)`.
+One screen's `onCleared()` closing it breaks every other screen's in-flight call. Call `close()`,
+if at all, only at `Application` or process teardown.

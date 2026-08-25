@@ -1,6 +1,6 @@
 # Quick Start
 
-Get up and running in 5 minutes. All enrichment calls are `suspend fun` — every example below must run inside a coroutine.
+Get up and running in 5 minutes. The profile methods, `enrich()` and `search()` are `suspend fun`, so most examples below must run inside a coroutine; `enrichProgressive()`, `enrichBatch()`, `enrichBatchProgressive()` and `close()` are ordinary functions.
 
 ## Engine setup
 
@@ -24,17 +24,21 @@ may answer 403. Details in [providers.md](../providers.md#user-agent-and-contact
 
 8 of 11 providers work without API keys. `withDefaultProviders()` registers all of them and conditionally adds key-requiring providers only when their key is present.
 
+Call `engine.close()` when you are done with the engine. It releases the scope that fan-outs you stopped collecting keep running on — see [streaming.md](streaming.md).
+
 ### With OkHttp (recommended for Android)
 
 ```kotlin
 // Add: implementation("io.github.famesjranko:musicmeta-okhttp:0.12.0")
 val engine = EnrichmentEngine.Builder()
-    .httpClient(OkHttpEnrichmentClient(myOkHttpClient, "MyApp/1.0"))
+    .httpClient(OkHttpEnrichmentClient(myOkHttpClient, "MyApp/1.0 ( https://example.com/myapp )"))
     .withDefaultProviders()
     .build()
 ```
 
 This replaces the default `HttpURLConnection` transport with your existing `OkHttpClient` — interceptors, certificate pinning, and connection pooling all apply.
+
+Write the contact into that User-Agent string yourself: `.contact()` cannot reach a client you pass to `.httpClient()`, so the requirement above is yours to satisfy here.
 
 ---
 
@@ -75,7 +79,7 @@ profile.discography                  // List<DiscographyAlbum> with title, year,
 // Stats & recommendations
 profile.popularity?.listenCount      // total listens (ListenBrainz)
 profile.popularity?.listenerCount    // unique listeners
-profile.topTracks?.tracks            // List<TopTrack> merged from up to 3 providers
+profile.topTracks?.tracks            // List<TopTrack> from Last.fm + Deezer (ListenBrainz's route is disabled upstream)
 profile.similarArtists?.artists      // List<SimilarArtist> with matchScore and sources
 profile.similarAlbums?.albums        // List<SimilarAlbum>
 profile.radio?.tracks                // List<RadioTrack> — Deezer artist radio playlist
@@ -139,6 +143,7 @@ profile.artwork?.url                 // album art for the track
 
 // Metadata
 profile.genres                       // List<GenreTag>
+profile.trackMetadata?.durationMs    // track length in milliseconds
 
 // Stats & recommendations
 profile.popularity?.listenCount
@@ -179,7 +184,7 @@ Works on all three profile methods and on `engine.enrich()` directly. The forceR
 
 ## "Did you mean?" flow
 
-When identity resolution is ambiguous, profile methods return `AMBIGUOUS` instead of results. Re-enrich from the chosen candidate:
+When identity resolution is ambiguous, profile methods report `AMBIGUOUS` and offer the near misses. Results still arrive — every provider that searches by name answers regardless — but they may describe the wrong entity, so check the status before trusting them and re-enrich from the chosen candidate:
 
 ```kotlin
 val profile = engine.artistProfile("Bush")
@@ -192,7 +197,8 @@ if (profile.canonicalStatus == CanonicalStatus.AMBIGUOUS) {
 
     val chosen = profile.suggestions.first()
 
-    // Re-enrich using the candidate — its MBID skips identity resolution
+    // Re-enrich using the candidate — its MBID pins the entity, so nothing
+    // is left for a name search to get wrong
     val resolved = engine.artistProfile(chosen)
     println(resolved.bio?.text)
 }
@@ -212,15 +218,32 @@ See [identity-resolution.md](identity-resolution.md) for the full disambiguation
 
 ## Providing an MBID directly
 
-If you already know the MusicBrainz ID, pass it to skip identity resolution entirely:
+If you already know the MusicBrainz ID, pass it and MusicBrainz looks the entity up under that id
+instead of searching for the name:
 
 ```kotlin
 val profile = engine.artistProfile(
     name = "Radiohead",
     mbid = "a74b1b7f-71a5-4011-9441-d0b5e4122711",
 )
-// profile.canonicalStatus == CanonicalStatus.NOT_ATTEMPTED_IDENTIFIER_TRUSTED
+// profile.canonicalStatus == CanonicalStatus.RESOLVED
 ```
+
+Identity resolution still runs here, because the default artist type set asks for a photo and a bio
+— types keyed on a Wikidata id and a Wikipedia title, which only resolution can supply. Ask for
+types the MusicBrainz id alone satisfies and nothing is looked up at all:
+
+```kotlin
+val genresOnly = engine.artistProfile(
+    name = "Radiohead",
+    mbid = "a74b1b7f-71a5-4011-9441-d0b5e4122711",
+    types = setOf(EnrichmentType.GENRE),
+)
+// genresOnly.canonicalStatus == CanonicalStatus.NOT_ATTEMPTED_IDENTIFIER_TRUSTED
+```
+
+`NOT_ATTEMPTED_IDENTIFIER_TRUSTED` means nobody checked that the id names the entity you described
+— it is your assertion carried through, not MusicBrainz agreeing with it.
 
 ---
 
@@ -228,11 +251,10 @@ val profile = engine.artistProfile(
 
 Enrichment results carry the identifiers they were resolved with, and top tracks carry their own
 (a Deezer id, readable via `identifiers.get(IdentifierNamespace.DEEZER)`, for one). Passing them
-back in skips identity resolution entirely, so the call goes straight to the provider that can
-answer it:
+back lets the provider that recognises one skip its own search and go straight to a direct lookup:
 
 ```kotlin
-// Skips MusicBrainz, goes straight to Deezer
+// Deezer looks the track up by id instead of searching for it
 val preview = engine.trackProfile(
     title = topTrack.title,
     artist = topTrack.artist,
@@ -240,6 +262,10 @@ val preview = engine.trackProfile(
     types = setOf(EnrichmentType.TRACK_PREVIEW),
 )
 ```
+
+What this saves is that provider's own search, not the MusicBrainz round trip: identity resolution
+runs unless the request carries a MusicBrainz id every requested type is content with, and a Deezer
+id never suppresses it.
 
 `resolveTrackPreviews` does the same for a list, resolving concurrently:
 
@@ -270,7 +296,12 @@ engine.enrichBatch(
 }
 ```
 
-Cache hits return immediately. Cancel the Flow via `take(N)` to stop early. See [cache-management.md](cache-management.md) for offline fallback with `CacheMode.STALE_IF_ERROR`.
+Cache hits return immediately. Cancelling collection — `take(N)`, or leaving the screen — stops the
+remaining requests from starting, but does not abort the one already in flight: that fan-out keeps
+running until it settles or hits the enrich timeout, still writes its results to the cache, and
+still spends rate-limit budget while nobody is watching. See [streaming.md](streaming.md) for that
+contract in full, and [cache-management.md](cache-management.md) for offline fallback with
+`CacheMode.STALE_IF_ERROR`.
 
 Both `enrich()` and `enrichBatch()` wait for a complete answer. `enrichProgressive()` and
 `enrichBatchProgressive()` emit as each type settles instead — see [streaming.md](streaming.md).

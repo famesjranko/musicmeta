@@ -102,6 +102,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - demo-web renders any 429 on `/api/*` — its own admission gate's JSON or a platform's plain-text refusal — as one "demo busy" state with a retry button, instead of a raw parse error
 - A failing Cover Art Archive release lookup is attempted once per call, not once per artwork type: the four share one attempt budget, so an upstream recovering mid-call now reaches none of them
 - The docs no longer promise a MusicBrainz `SearchCandidate` a `thumbnailUrl`: a release search response carries no cover-art flag, so that field was always null on a MusicBrainz candidate
+- The docs no longer claim a pre-resolved provider id skips identity resolution: it spares that provider's own search; only a MusicBrainz id every requested type trusts skips resolution
+- The docs now name `isCatalogDegraded` as the mark a throwing `CatalogProvider` leaves, replacing "nothing marks the result", and state `checkAvailability` runs concurrently: make yours thread-safe
+- `matchScore`/`confidence` documented as scoring the lookup, not the entity match — a wrong-but-live MBID resolves at full score, and only `CONTRADICTED` reports the mismatch
+- `close()` documented as engine-wide: with a shared or Hilt-singleton engine it belongs at app teardown, never a screen's `onCleared()`; cancellation documented as complete-and-cache in every guide
+- The results reference now lists the published shape — `ENGINE_CLOSED`, `isStale`, `isCatalogDegraded`, `CONTRADICTED`, `RESOLVING` — and documents `enrich()` as throwing only for cancellation
 
 ## [0.12.0] - 2026-08-18
 
