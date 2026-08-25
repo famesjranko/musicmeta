@@ -15,8 +15,9 @@ package com.landofoz.musicmeta.provider.musicbrainz
  * stored title for all eight classes, and a plain query still found the stored title carrying it
  * for `()`, `[]`, `{}`, `'`, `’` and `“”`. The straight double quote, the left single quote and
  * the guillemets have no stored-side row — MusicBrainz's title style normalises quotes to the
- * curly pair and no stored example was found — so those three rest on the query side alone. Recipe
- * and seeds: `scripts/probes/mb-dropped-char-analyzer-probe.sh`.
+ * curly pair and no stored example was found — so those three rest on the query side alone. The
+ * probe escapes Lucene metacharacters exactly as [MusicBrainzApi.escapeLucene] does; re-verify
+ * both directions before adding or removing a character.
  *
  * [WORD_SYMBOLS] is a transliteration table, not a rule: only symbols with one unambiguous English
  * reading belong in it.
