@@ -46,9 +46,9 @@ import org.junit.Assert.fail
  * It was not; this is what is left after two things were proved impossible.
  *
  * **What catches a name-search provider's own wrong selection, since this cannot:** the scenario's
- * own stated verdict — `shapes.md` § 4's "must produce" column, which reads as an outcome
- * ("`NotFound`, not the wrong track") rather than a value, precisely so it survives a legitimate
- * re-ranking.
+ * own stated verdict — the correct answer each pool's `scenario.md` names in its opening lines,
+ * which reads as an outcome ("`NotFound`, not the wrong track") rather than a value, precisely so
+ * it survives a legitimate re-ranking.
  */
 internal object EntityIdentity {
 

@@ -25,7 +25,10 @@ import org.json.JSONObject
  * pick a winner that varies between runs. [loadOnto] rejects that pair outright: an ambiguous
  * manifest is the author's to resolve, not the loader's to guess at.
  *
- * `shapes.md` § 3 owns what may go in a pool file; that constraint is legal, not stylistic.
+ * What may go in a pool file is a legal constraint, not a stylistic one: several upstreams' terms
+ * forbid reproducing their catalogue data and this repo publishes to Maven Central, so a pool is a
+ * hand-trimmed excerpt of a real response — only the fields a test reads, no preview URLs, artwork
+ * binaries, lyrics text, or tokens — with its origin and date recorded in the pool's `scenario.md`.
  */
 internal object UpstreamPools {
 
