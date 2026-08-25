@@ -49,6 +49,12 @@ internal data class MusicBrainzRelease(
      * [MusicBrainzReleaseRanking.pressingDisambiguation] subtracts it back out.
      */
     val releaseGroupDisambiguation: String? = null,
+    /**
+     * The release group's `first-release-date` — the earliest release MusicBrainz holds in it, so
+     * the floor under every pressing of this album. Unlike [date], which is this pressing's own and
+     * moves with every remaster. Present on a release lookup, which asks `inc=release-groups`.
+     */
+    val releaseGroupFirstReleaseDate: String? = null,
 )
 
 internal data class MusicBrainzArtist(

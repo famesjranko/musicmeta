@@ -67,6 +67,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `CONTRADICTED` outranks every other status including `RESOLVED`, so a fallback that answered everything still tells you the identifier was wrong — the one fact nothing else in the response carries
 - Every type answered from a supplied identifier now checks it, not just the first: band members, links, popularity, discography, tracks, credits and editions each reach their entity by its own route
 - `CREDITS` and `RELEASE_EDITIONS` answer `NotFound` under a contradicting identifier instead of falling back: both are answerable only from an identifier, so there is no name route to recover by
+- An album request whose `year` predates the release group its supplied MBID names by two or more years now reports `CONTRADICTED` and resolves by name: an album cannot predate its own first release
 - A name-searching provider is no longer stamped `EXACT_NAME` just because identity resolved by identifier: provenance now reports what resolution established about that name, not that it ran
 - `IdentityResolution.matchScore` and `Success.confidence` documented as confidence in the lookup, not that the entity matches the request: a wrong-but-live MBID resolves at full score
 - demo-web no longer enriches its suggested queries at startup: the page is usable the moment it loads, `/api/health` reports ready as soon as the server binds, and the cache fills from real searches

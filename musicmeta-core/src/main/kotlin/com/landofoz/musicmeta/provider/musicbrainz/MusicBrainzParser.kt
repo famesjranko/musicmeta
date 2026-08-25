@@ -97,6 +97,7 @@ internal object MusicBrainzParser {
             secondaryTypes = extractSecondaryTypes(group),
             trackCount = obj.optInt("track-count", -1).takeIf { it >= 0 },
             releaseGroupDisambiguation = group?.optString("disambiguation")?.takeIf { it.isNotBlank() },
+            releaseGroupFirstReleaseDate = group?.optString("first-release-date")?.takeIf { it.isNotBlank() },
         )
     }
 

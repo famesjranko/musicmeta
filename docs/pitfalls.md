@@ -673,6 +673,20 @@ the control request, so a new one joins by existing, not by being remembered.
 negation, and the gap between them is unknown. Absence of contradiction is not corroboration, and a
 future change that derives one from the other's failure reintroduces exactly the confusion above.
 
+**Structured evidence beats the title, and only one piece of it survived contact with real data.**
+A caller's own `year` and `trackCount` are the two things `EnrichmentRequest.ForAlbum` carries that
+could catch a different album by the *same* artist, which the artist check provably cannot see. Both
+rules were frozen before any data was captured, then scored on 181 studio release groups and 3139
+releases (`corpora/album-year-contradiction/`). Track count fired on **29% of correct albums** —
+deluxe editions, bonus discs, region variants — and was dropped. The year rule fired on **none**, and
+ships as `unlessPredatingFirstRelease`.
+
+What made the year rule survivable is that it is one-sided by construction, not by tuning: an album
+cannot predate its own first release, so an *earlier* caller year is positive evidence, while a
+later one is any reissue and reports nothing. That costs about half the catch rate up front. The
+population that decides such a rule is not a random wrong year — it is a caller whose identifier is
+**right** and whose local tags came from a different pressing, which is the ordinary case.
+
 The comparison is deliberately on the **artist**, never the title — a remaster, an edition or a
 localised title differs from what a caller typed while still being the album they meant. So a
 different album *by the same artist* is not caught; that is a stated boundary with a test on it, not

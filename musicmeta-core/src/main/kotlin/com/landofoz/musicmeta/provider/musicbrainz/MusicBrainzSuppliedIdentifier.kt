@@ -70,3 +70,50 @@ internal fun MusicBrainzArtist.alternativeNames(): List<AlternativeName> =
         val isSearchHint = it.type.equals(SEARCH_HINT_ALIAS_TYPE, ignoreCase = true)
         AlternativeName(name = it.name, official = !isSearchHint && (it.primary || it.locale != null))
     }
+
+/**
+ * This lookup unless the caller dates their album *before* the release group's own first release,
+ * in which case [MusicBrainzLookup.Absent] on the same terms as [unlessDifferentArtist].
+ *
+ * The artist check cannot see a different album by the *same* artist, and a title comparison is the
+ * mess it was written to avoid (`docs/pitfalls.md` §7). This is the structured evidence instead: an
+ * album cannot predate its own first release, so a caller's earlier year is positive evidence of a
+ * different album. It costs no request — `inc=release-groups` already carries the date.
+ *
+ * **One-sided on purpose.** A caller's *later* year is any reissue, remaster or region pressing and
+ * is not judgeable, so nothing is reported there. That gives up roughly half the catch rate before
+ * a line is written, which is the trade the measurement asked for: a false contradiction tells a
+ * caller their correct identifier is wrong and nothing else in the response disagrees.
+ *
+ * [YEAR_SLACK] absorbs region and calendar-boundary sloppiness in the caller's tag and in
+ * MusicBrainz's own partial dates (`"1997"`, `"1997-05"`) alike.
+ *
+ * Measured over 99 chart artists, 181 release groups and 3237 releases captured live on
+ * 2026-08-25 (`.scratch/album-mbid-contradiction/`): no false positives across 6179 correct pairs -
+ * 3237 where the caller's metadata is the release its own identifier names, and 2942 where it comes
+ * from a *different pressing of the same album*, which is the ordinary real case and the one that
+ * killed the track-count rule measured beside it (592 false positives out of the same 2942).
+ * It reported 63 of 176 synthetic wrong-album pairings; that is a floor on a synthetic pairing, not
+ * a detection rate.
+ *
+ * The corpus cannot see one failure mode: a caller whose own tag is two or more years earlier than
+ * MusicBrainz's first release, because the corpus takes every year from MusicBrainz. What it costs
+ * when it happens is bounded - the identifier is dropped and the request resolves by its name,
+ * which for a correct album and artist finds the same album again.
+ */
+internal suspend fun MusicBrainzLookup<MusicBrainzRelease>.unlessPredatingFirstRelease(
+    callerYear: Int?,
+): MusicBrainzLookup<MusicBrainzRelease> {
+    val found = this as? MusicBrainzLookup.Found ?: return this
+    val year = callerYear ?: return this
+    val firstReleased = yearOf(found.value.releaseGroupFirstReleaseDate) ?: return this
+    if (year >= firstReleased - YEAR_SLACK) return this
+    currentCoroutineContext()[SuppliedIdentifierContradiction]?.mark()
+    return MusicBrainzLookup.Absent
+}
+
+/** Years of leeway before a caller's earlier year counts as disagreement rather than sloppiness. */
+private const val YEAR_SLACK = 1
+
+/** The year in a MusicBrainz date, which may be `"1997"`, `"1997-05"` or `"1997-05-21"`. */
+private fun yearOf(date: String?): Int? = date?.take(4)?.toIntOrNull()

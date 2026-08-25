@@ -402,12 +402,14 @@ internal class MusicBrainzEnricher(
     ): MusicBrainzLookup<MusicBrainzArtist> =
         memoizedArtist(mbid).unlessDifferentArtist(request.name, { it.name }) { it.alternativeNames() }
 
-    /** [memoizedRelease], with the caller's own artist checked against it — see [unlessDifferentArtist]. */
+    /** [memoizedRelease], with the evidence the caller supplied beside the identifier checked against it. */
     private suspend fun suppliedRelease(
         request: EnrichmentRequest.ForAlbum,
         mbid: String,
     ): MusicBrainzLookup<MusicBrainzRelease> =
-        memoizedRelease(mbid).unlessDifferentArtist(request.artist, creditOf = { it.artistCredit.orEmpty() })
+        memoizedRelease(mbid)
+            .unlessDifferentArtist(request.artist, creditOf = { it.artistCredit.orEmpty() })
+            .unlessPredatingFirstRelease(request.year)
 
     /** [memoizedRecording], with the caller's own artist checked against it — see [unlessDifferentArtist]. */
     private suspend fun suppliedRecording(

@@ -102,7 +102,7 @@ class ContradictedAlbumTrackIdentifierTest {
     }
 
     @Test
-    fun `a different album by the same artist is deliberately not caught`() = runTest {
+    fun `a different album by the same artist, with no evidence beside it, is not caught`() = runTest {
         // Given - the caller's title beside another release *by that same artist*. The guard tests
         // the artist and never the title, so this is outside what it can see.
         val http = http()
@@ -112,9 +112,10 @@ class ContradictedAlbumTrackIdentifierTest {
         // When - the same type is enriched
         val results = engine(http).enrich(request, setOf(EnrichmentType.GENRE))
 
-        // Then - no contradiction, and the identifier's own album answers. Pinned so the limit is
-        // a stated boundary rather than an untested assumption: closing it needs title evidence
-        // (edition, year, track count), which is a separate question from this one.
+        // Then - no contradiction, and the identifier's own album answers. The year check closes
+        // part of this gap, but only for a caller who supplied a year and got it wrong in the one
+        // direction that proves something; a request carrying no evidence beside the identifier is
+        // still outside what anything here can see, and this is what pins that.
         assertTrue(results.identity.status != CanonicalStatus.CONTRADICTED)
         assertEquals(listOf("art rock"), genresOf(results.raw[EnrichmentType.GENRE]))
     }
@@ -169,19 +170,83 @@ class ContradictedAlbumTrackIdentifierTest {
         assertTrue(results.raw[EnrichmentType.CREDITS] is EnrichmentResult.NotFound)
     }
 
+    @Test
+    fun `an album the caller dates before its own first release is reported`() = runTest {
+        // Given - the caller's year against a release group MusicBrainz first released in 2000. An
+        // album cannot predate its own first release, so this is positive evidence of a different
+        // album by the same artist - the case the artist check provably cannot see.
+        val http = http()
+        http.givenJsonResponse("release/rel-kid-a", KID_A)
+        val request = EnrichmentRequest.ForAlbum(
+            EnrichmentIdentifiers(musicBrainzId = "rel-kid-a"),
+            title = "OK Computer", artist = "Radiohead", year = 1997,
+        )
+
+        // When - the album is enriched
+        val results = engine(http).enrich(request, setOf(EnrichmentType.GENRE))
+
+        // Then - reported, and the caller's own album answered from its name
+        assertEquals(CanonicalStatus.CONTRADICTED, results.identity.status)
+        assertEquals(listOf("alternative rock"), genresOf(results.raw[EnrichmentType.GENRE]))
+    }
+
+    @Test
+    fun `a caller's later year is not evidence of anything`() = runTest {
+        // Given - the same release group, and a caller whose year is *after* its first release
+        val http = http()
+        http.givenJsonResponse("release/rel-kid-a", KID_A)
+        val request = EnrichmentRequest.ForAlbum(
+            EnrichmentIdentifiers(musicBrainzId = "rel-kid-a"),
+            title = "Kid A", artist = "Radiohead", year = 2009,
+        )
+
+        // When - the album is enriched
+        val results = engine(http).enrich(request, setOf(EnrichmentType.GENRE))
+
+        // Then - silent. A later year is any reissue, remaster or region pressing, and the rule is
+        // one-sided on purpose: it gives up roughly half its catch rate rather than guess here.
+        assertTrue(results.identity.status != CanonicalStatus.CONTRADICTED)
+        assertEquals(listOf("art rock"), genresOf(results.raw[EnrichmentType.GENRE]))
+    }
+
+    @Test
+    fun `a year out by one is slack, not disagreement`() = runTest {
+        // Given - a caller one year before a 2000 first release, which is region and calendar-
+        // boundary sloppiness in the caller's tag and in MusicBrainz's own partial dates alike
+        val http = http()
+        http.givenJsonResponse("release/rel-kid-a", KID_A)
+        val request = EnrichmentRequest.ForAlbum(
+            EnrichmentIdentifiers(musicBrainzId = "rel-kid-a"),
+            title = "Kid A", artist = "Radiohead", year = 1999,
+        )
+
+        // When - the album is enriched
+        val results = engine(http).enrich(request, setOf(EnrichmentType.GENRE))
+
+        // Then - not reported: the rule needs two clear years, not one
+        assertTrue(results.identity.status != CanonicalStatus.CONTRADICTED)
+    }
+
     private companion object {
-        private fun release(id: String, title: String, credit: String?, genre: String, track: String = title) = """
+        private fun release(
+            id: String,
+            title: String,
+            credit: String?,
+            genre: String,
+            track: String = title,
+            firstReleased: String = "2000-01-01",
+        ) = """
             {"id":"$id","title":"$title","date":"2000-01-01","country":"GB",
              ${credit?.let { """"artist-credit":[{"artist":{"id":"a-$id","name":"$it"}}],""" }.orEmpty()}
              "media":[{"format":"CD","tracks":[
                {"title":"$track","position":1,"length":200000,"recording":{"id":"rec-$id"}}]}],
-             "release-group":{"id":"rg-$id","primary-type":"Album",
+             "release-group":{"id":"rg-$id","primary-type":"Album","first-release-date":"$firstReleased",
                "tags":[{"name":"$genre","count":9}]}}
         """.trimIndent()
 
         val PARACHUTES = release("rel-parachutes", "Parachutes", "Coldplay", "britpop", track = "Yellow")
         val OK_COMPUTER = release("rel-ok", "OK Computer", "Radiohead", "alternative rock", track = "Airbag")
-        val KID_A = release("rel-kid-a", "Kid A", "Radiohead", "art rock")
+        val KID_A = release("rel-kid-a", "Kid A", "Radiohead", "art rock", firstReleased = "2000-10-02")
         val UNCREDITED = release("rel-uncredited", "Untitled", null, "ambient")
         val COLLAB = release("rel-collab", "Split", "Madison Acid and TV Girl", "indie pop")
 

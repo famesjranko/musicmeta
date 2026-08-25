@@ -28,7 +28,7 @@ Two independent facts, never merged into one value:
 | `RESOLVED` | MusicBrainz confirmed the entity | Show results normally |
 | `AMBIGUOUS` | Near-miss candidates but no confident match | Show a "did you mean?" prompt |
 | `UNRESOLVED` | Searched, found neither a match nor candidates | Show results with a caveat — they may be for the wrong entity |
-| `CONTRADICTED` | An identifier on the request named a confidently different entity | Tell the user their identifier is wrong; the results beside it are the entity they *named*, and may be complete |
+| `CONTRADICTED` | An identifier on the request disagreed with the name or year beside it | Tell the user their identifier is wrong; the results beside it are the entity they *named*, and may be complete |
 | `FAILED` | The identity provider errored — usually transient | Show a caveat; offer a retry, which may resolve |
 | `NOT_ATTEMPTED_DISABLED` | Identity resolution is turned off | Treat as confident |
 | `NOT_ATTEMPTED_IDENTIFIER_TRUSTED` | The request carried an identifier, so nothing was resolved | Treat as your own assertion carried through — trusted, not verified |
