@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.provider.musicbrainz
 
+import kotlinx.coroutines.test.runTest
 import org.json.JSONArray
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -8,10 +9,13 @@ import org.junit.Test
 /**
  * [unlessPredatingFirstRelease]'s rule, scored against real MusicBrainz release groups.
  *
- * The rule was frozen before this corpus was captured — `.scratch/album-mbid-contradiction/spec.md`,
+ * The rule was frozen before this corpus was captured — `corpora/album-year-contradiction/spec.md`,
  * written first, holds it and the decision rule it was judged by. What the corpus is for is the
  * false-positive count: a rule that tells a caller their *correct* identifier is wrong is worse than
  * one that misses, because nothing else in the response disagrees with it.
+ *
+ * The shipped function itself is what runs here, never a copy of its arithmetic: a rule the corpus
+ * scored and a rule the engine applies must not be able to drift apart.
  *
  * A track-count rule was frozen and scored beside it, on this same corpus, and is not shipped. The
  * last test keeps that measurement executable, so the reason it was rejected stays a number rather
@@ -44,16 +48,38 @@ class AlbumYearContradictionCorpusTest {
         }
     }
 
-    /** The shipped rule, as [unlessPredatingFirstRelease] applies it once both years are known. */
-    private fun yearContradicts(callerYear: Int, firstReleaseYear: Int): Boolean =
-        callerYear < firstReleaseYear - 1
+    /**
+     * The shipped rule, asked directly: [unlessPredatingFirstRelease] drops a lookup it contradicts.
+     *
+     * The release carries nothing but the group's first-release year, because that year and the
+     * caller's are the only two things the rule reads.
+     */
+    private suspend fun yearContradicts(callerYear: Int, firstReleaseYear: Int): Boolean {
+        val release = MusicBrainzRelease(
+            id = "rel",
+            title = "",
+            artistCredit = null,
+            date = null,
+            country = null,
+            barcode = null,
+            tags = emptyList(),
+            label = null,
+            releaseType = null,
+            releaseGroupId = null,
+            disambiguation = null,
+            score = 0,
+            releaseGroupFirstReleaseDate = firstReleaseYear.toString(),
+        )
+        val lookup: MusicBrainzLookup<MusicBrainzRelease> = MusicBrainzLookup.Found(release)
+        return lookup.unlessPredatingFirstRelease(callerYear) is MusicBrainzLookup.Absent
+    }
 
     /** The rule frozen beside it and rejected: the caller's count against the named release's. */
     private fun trackCountContradicts(callerTracks: Int, releaseTracks: Int): Boolean =
         Math.abs(callerTracks - releaseTracks) > maxOf(2, releaseTracks / 5)
 
     @Test
-    fun `no year a caller could legitimately hold contradicts its own album`() {
+    fun `no year a caller could legitimately hold contradicts its own album`() = runTest {
         // Given - every year MusicBrainz holds for a release in each group. A caller owning any of
         // those pressings has the right album, whichever release their identifier happens to name.
         val groups = corpus()
@@ -71,19 +97,21 @@ class AlbumYearContradictionCorpusTest {
     }
 
     @Test
-    fun `the rule reports a caller whose year predates the album`() {
-        // Given - the same groups, each paired with a year two before its own first release
+    fun `two years before an album's first release is past the slack the rule allows`() = runTest {
+        // Given - the same groups, each paired with a year two before its own first release. This
+        // pins the slack constant rather than any catch rate: the rule must still fire two years
+        // out, for every real first-release year in the corpus, so the leeway is under two years.
         val groups = corpus()
 
-        // When - the rule is applied
+        // When - the shipped rule is applied
         val reported = groups.count { yearContradicts(it.firstYear - 2, it.firstYear) }
 
-        // Then - all of them. The catch side is not the side the corpus is uncertain about.
+        // Then - all of them
         assertEquals(groups.size, reported)
     }
 
     @Test
-    fun `the rejected track-count rule fires on a fifth of correct albums`() {
+    fun `the rejected track-count rule fires on well over a quarter of correct albums`() {
         // Given - every ordered pair of releases within a group: a caller who identified their album
         // correctly, whose local tags came from a different pressing of it
         val groups = corpus()
@@ -101,11 +129,10 @@ class AlbumYearContradictionCorpusTest {
             }
         }
 
-        // Then - it accuses a correct album on well over a fifth of them, from deluxe editions,
-        // bonus discs and region variants. This is why the album check reads years and not counts,
-        // and why closing this gap on the title was never attempted.
+        // Then - it accuses a correct album on 29% of them, from deluxe editions, bonus discs and
+        // region variants. This is why the album check reads years and not counts, and why closing
+        // this gap on the title was never attempted.
         assertEquals(109_604, pairs)
-        assertTrue("expected the rejected rule to stay demonstrably unsafe, got $falsePositives", falsePositives > 20_000)
-        assertEquals(0, groups.sumOf { g -> g.releases.count { yearContradicts(it.year, g.firstYear) } })
+        assertTrue("expected the rejected rule to stay demonstrably unsafe, got $falsePositives", falsePositives > 30_000)
     }
 }
