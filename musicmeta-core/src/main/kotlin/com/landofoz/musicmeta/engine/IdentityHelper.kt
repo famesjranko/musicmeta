@@ -7,6 +7,7 @@ import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.IdentifierRequirement
 import com.landofoz.musicmeta.IdentityResolution
+import com.landofoz.musicmeta.LookupProvenance
 
 /**
  * Builds the top-level [IdentityResolution] from the raw identity provider result.
@@ -55,6 +56,39 @@ internal fun buildIdentityResolution(
 }
 
 /**
+ * What MusicBrainz vouched for about the name the fan-out will search, or `null` for nothing.
+ *
+ * Two things earn it, and both are positive evidence rather than the absence of a doubt. Identity
+ * resolution matched the caller's own name, in which case it reports that name provenance itself;
+ * or the request named no entity and resolution supplied the name from the caller's identifier, so
+ * the name every other provider searches is MusicBrainz's own.
+ *
+ * Resolving by identifier alone earns nothing. It confirms that the identifier names an entity and
+ * compares no name to anything — a request naming `Radiohead` beside another artist's live MBID
+ * resolves at full confidence and is not, on that evidence, Radiohead.
+ */
+internal fun identityNameEvidence(
+    identityResult: EnrichmentResult?,
+    request: EnrichmentRequest,
+    enriched: EnrichmentRequest,
+): LookupProvenance? {
+    val success = identityResult as? EnrichmentResult.Success ?: return null
+    // MusicBrainz supplied the name itself, off the entity the caller's identifier named, and
+    // every other provider searches that name. It is MusicBrainz's own name by construction.
+    if (namesNoEntity(request) && !namesNoEntity(enriched)) return LookupProvenance.EXACT_NAME
+    // Resolution has exactly two routes, and each reports itself. CANONICAL_ID is an identifier
+    // lookup, which compared no name to anything and so vouches for nothing. The name search
+    // reports QUALIFIER_FALLBACK_NAME when it had to strip a qualifier to match, and leaves the
+    // field null when the caller's name matched as given - a null that means "matched", not
+    // "unknown", which is why this cannot be read off the field alone.
+    return when (success.provenance) {
+        null, LookupProvenance.EXACT_NAME -> LookupProvenance.EXACT_NAME
+        LookupProvenance.QUALIFIER_FALLBACK_NAME -> LookupProvenance.QUALIFIER_FALLBACK_NAME
+        else -> null
+    }
+}
+
+/**
  * Stamps [com.landofoz.musicmeta.LookupProvenance] on a freshly resolved [EnrichmentResult.Success]
  * that did not already report its own route. [execution] carries the [ChainExecution] this type's
  * chain walk produced — the provider execution evidence [observedProvenance] classifies from, rather
@@ -63,10 +97,10 @@ internal fun buildIdentityResolution(
 internal fun stampProvenanceOne(
     result: EnrichmentResult,
     execution: ChainExecution?,
-    canonicalStatus: CanonicalStatus,
+    nameEvidence: LookupProvenance?,
 ): EnrichmentResult {
     if (result !is EnrichmentResult.Success || result.provenance != null) return result
-    return result.copy(provenance = observedProvenance(execution?.winningRequirement, canonicalStatus))
+    return result.copy(provenance = observedProvenance(execution?.winningRequirement, nameEvidence))
 }
 
 /**

@@ -12,7 +12,17 @@ data class IdentityResolution(
     val identifiers: EnrichmentIdentifiers,
     /** Canonical resolution outcome for this call. */
     val status: CanonicalStatus,
-    /** Match score (0-100), same scale as [SearchCandidate.score]. Only set when [status] is [CanonicalStatus.RESOLVED]. */
+    /**
+     * Match score (0-100), same scale as [SearchCandidate.score]. Only set when [status] is
+     * [CanonicalStatus.RESOLVED].
+     *
+     * **How well resolution went, not how sure we are it is the right entity.** A request carrying
+     * an identifier resolves by looking it up, and that lookup succeeds or fails — so it scores 100
+     * whether or not the identifier names what the caller described. Read [status] for that
+     * question: [CanonicalStatus.CONTRADICTED] is the only field that reports a supplied identifier
+     * naming something else, and [CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED] means nobody looked.
+     * The same caveat applies to [EnrichmentResult.Success.confidence].
+     */
     val matchScore: Int? = null,
     /**
      * Near-miss candidates when [status] is [CanonicalStatus.AMBIGUOUS].

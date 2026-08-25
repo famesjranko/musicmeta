@@ -1665,7 +1665,7 @@ class DefaultEnrichmentEngineTest {
         val result = EnrichmentResult.NotFound(EnrichmentType.ALBUM_ART, "all_providers")
 
         // When - checking whether the result is cacheable as a negative
-        val cacheable = e.isCacheableNegative(result, CanonicalStatus.AMBIGUOUS, identifierIncomplete = false, filterEmptied = false, staleDerived = false)
+        val cacheable = e.cachePersistence.isCacheableNegative(result, CanonicalStatus.AMBIGUOUS, identifierIncomplete = false, filterEmptied = false, staleDerived = false)
 
         // Then - an unresolved canonical envelope blocks negative caching for every type of the call
         assertFalse(cacheable)
@@ -1677,7 +1677,7 @@ class DefaultEnrichmentEngineTest {
         val result = EnrichmentResult.NotFound(EnrichmentType.ALBUM_ART, "all_providers")
 
         // When - checking whether the result is cacheable as a negative
-        val cacheable = e.isCacheableNegative(result, CanonicalStatus.FAILED, identifierIncomplete = false, filterEmptied = false, staleDerived = false)
+        val cacheable = e.cachePersistence.isCacheableNegative(result, CanonicalStatus.FAILED, identifierIncomplete = false, filterEmptied = false, staleDerived = false)
 
         // Then - an identity outage blocks negative caching the same way an unresolved name does
         assertFalse(cacheable)
@@ -1690,7 +1690,7 @@ class DefaultEnrichmentEngineTest {
         val result = EnrichmentResult.NotFound(EnrichmentType.ALBUM_ART, "all_providers")
 
         // When - checking whether the result is cacheable as a negative
-        val cacheable = e.isCacheableNegative(result, CanonicalStatus.RESOLVED, identifierIncomplete = true, filterEmptied = false, staleDerived = false)
+        val cacheable = e.cachePersistence.isCacheableNegative(result, CanonicalStatus.RESOLVED, identifierIncomplete = true, filterEmptied = false, staleDerived = false)
 
         // Then - a provider that was never asked cannot speak for the chain, resolved identity or not
         assertFalse(cacheable)
@@ -1702,7 +1702,7 @@ class DefaultEnrichmentEngineTest {
         val result = EnrichmentResult.NotFound(EnrichmentType.ALBUM_ART, "all_providers")
 
         // When - checking whether the result is cacheable as a negative
-        val cacheable = e.isCacheableNegative(result, CanonicalStatus.RESOLVED, identifierIncomplete = false, filterEmptied = false, staleDerived = false)
+        val cacheable = e.cachePersistence.isCacheableNegative(result, CanonicalStatus.RESOLVED, identifierIncomplete = false, filterEmptied = false, staleDerived = false)
 
         // Then - today's confident-negative behavior is unchanged
         assertTrue(cacheable)
@@ -1714,7 +1714,7 @@ class DefaultEnrichmentEngineTest {
         val result = EnrichmentResult.NotFound(EnrichmentType.ALBUM_ART, "all_providers")
 
         // When - checking whether the result is cacheable as a negative
-        val cacheable = e.isCacheableNegative(result, CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED, identifierIncomplete = false, filterEmptied = false, staleDerived = false)
+        val cacheable = e.cachePersistence.isCacheableNegative(result, CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED, identifierIncomplete = false, filterEmptied = false, staleDerived = false)
 
         // Then - "not attempted" is as confident as a resolved match
         assertTrue(cacheable)

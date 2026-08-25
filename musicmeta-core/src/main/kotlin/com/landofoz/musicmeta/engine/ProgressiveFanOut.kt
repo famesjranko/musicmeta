@@ -106,7 +106,7 @@ internal suspend fun DefaultEnrichmentEngine.runProgressiveFanOut(
                 session.filterEmptied,
                 session.staleDerived,
             )
-            writeBack(request, resolvedRequest, results, context)
+            cachePersistence.writeBack(request, resolvedRequest, results, context)
         }
 
         // A timeout that fired before identity resolution ran is the one gap identityResolution

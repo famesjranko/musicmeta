@@ -38,39 +38,59 @@ import org.junit.Test
  */
 abstract class ProviderProvenanceContract : ContractSuite<EnrichmentEngine>() {
 
-    // ---- B: observedProvenance is exhaustive over every IdentifierRequirement × CanonicalStatus ----
+    // ---- B: observedProvenance is exhaustive over every IdentifierRequirement × name evidence ----
 
     @Test
-    fun `observedProvenance covers every IdentifierRequirement crossed with every CanonicalStatus`() {
+    fun `observedProvenance covers every IdentifierRequirement crossed with every name evidence`() {
         // Given - every declared IdentifierRequirement plus the null "no winning chain" case
         // (a merge contributor, or a composite dependency with no chain of its own), enumerated from
-        // the entries themselves so a requirement added tomorrow is covered without editing this test
+        // the entries themselves so a requirement added tomorrow is covered without editing this
+        // test, crossed with every value identity resolution can report about the searched name
         val requirements: List<IdentifierRequirement?> = IdentifierRequirement.entries + listOf(null)
+        val evidence: List<LookupProvenance?> = LookupProvenance.entries + listOf(null)
 
         for (requirement in requirements) {
-            for (status in CanonicalStatus.entries) {
+            for (nameEvidence in evidence) {
                 // When - the route is derived for this one combination
-                val provenance = observedProvenance(requirement, status)
+                val provenance = observedProvenance(requirement, nameEvidence)
 
                 // Then - the mapped route matches EntityKey.kt's declared rule: a requirement naming
                 // a MusicBrainz id space is CANONICAL_ID; one naming exactly one other provider-owned
                 // id space is PROVIDER_NATIVE_ID; NONE, ANY_IDENTIFIER and no winning chain at all
-                // fall back to MusicBrainz's own canonical confirmation of this call
+                // report what MusicBrainz vouched for about the name, and FUZZY_NAME when it
+                // vouched for nothing
                 val expected = when (requirement) {
                     IdentifierRequirement.MUSICBRAINZ_ID, IdentifierRequirement.MUSICBRAINZ_RELEASE_GROUP_ID ->
                         LookupProvenance.CANONICAL_ID
                     IdentifierRequirement.WIKIDATA_ID, IdentifierRequirement.WIKIPEDIA_TITLE ->
                         LookupProvenance.PROVIDER_NATIVE_ID
                     IdentifierRequirement.NONE, IdentifierRequirement.ANY_IDENTIFIER, null ->
-                        if (status == CanonicalStatus.RESOLVED) LookupProvenance.EXACT_NAME else LookupProvenance.FUZZY_NAME
+                        when (nameEvidence) {
+                            LookupProvenance.EXACT_NAME, LookupProvenance.QUALIFIER_FALLBACK_NAME -> nameEvidence
+                            else -> LookupProvenance.FUZZY_NAME
+                        }
                 }
                 assertEquals(
-                    "requirement=$requirement status=$status",
+                    "requirement=$requirement nameEvidence=$nameEvidence",
                     expected,
                     provenance,
                 )
             }
         }
+    }
+
+    @Test
+    fun `a name search confirms nothing when identity resolved by identifier alone`() {
+        // Given - identity resolution that reported CANONICAL_ID: it looked an identifier up and
+        // never compared the caller's name to anything
+        val byIdentifierOnly = LookupProvenance.CANONICAL_ID
+
+        // When - a provider that searched by name leaves its route for the engine to classify
+        val provenance = observedProvenance(IdentifierRequirement.NONE, byIdentifierOnly)
+
+        // Then - the name is unverified. Reading a resolved identifier as proof of a name match is
+        // what stamped EXACT_NAME on a request naming one artist beside another artist's live MBID.
+        assertEquals(LookupProvenance.FUZZY_NAME, provenance)
     }
 
     // ---- C: both stamp functions fill only a null provenance, verbatim otherwise ----
@@ -83,8 +103,8 @@ abstract class ProviderProvenanceContract : ContractSuite<EnrichmentEngine>() {
         val unstamped = success(EnrichmentType.LYRICS_PLAIN, provenance = null)
 
         // When - the engine's per-type post-resolution stamp runs on each independently
-        val stampedSelfReported = stampProvenanceOne(selfReported, execution = null, CanonicalStatus.UNRESOLVED)
-        val stampedUnstamped = stampProvenanceOne(unstamped, execution = null, CanonicalStatus.UNRESOLVED)
+        val stampedSelfReported = stampProvenanceOne(selfReported, execution = null, nameEvidence = null)
+        val stampedUnstamped = stampProvenanceOne(unstamped, execution = null, nameEvidence = null)
 
         // Then - the self-reported route survives verbatim and the null one is filled, never CACHE
         assertEquals(
@@ -105,8 +125,8 @@ abstract class ProviderProvenanceContract : ContractSuite<EnrichmentEngine>() {
         val unstamped = success(EnrichmentType.GENRE, provenance = null)
 
         // When - each contributor is stamped independently, the way a collect-all merge walk does it
-        val stampedSelfReported = stampContributorProvenance(selfReported, chain = null, CanonicalStatus.UNRESOLVED)
-        val stampedUnstamped = stampContributorProvenance(unstamped, chain = null, CanonicalStatus.UNRESOLVED)
+        val stampedSelfReported = stampContributorProvenance(selfReported, chain = null, nameEvidence = null)
+        val stampedUnstamped = stampContributorProvenance(unstamped, chain = null, nameEvidence = null)
 
         // Then - the self-reported route survives verbatim and the null one is filled, never left null
         assertEquals(LookupProvenance.EXACT_NAME, stampedSelfReported.provenance)

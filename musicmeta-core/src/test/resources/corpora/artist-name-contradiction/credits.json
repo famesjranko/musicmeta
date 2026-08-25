@@ -1,0 +1,578 @@
+[
+ {
+  "supplied": "Ariana Grande",
+  "mbid": "f4fdbb4c-e4b7-47a0-b83b-d91bbfcfa387",
+  "release": "Yours Truly",
+  "credit": "Ariana Grande"
+ },
+ {
+  "supplied": "Radiohead",
+  "mbid": "a74b1b7f-71a5-4011-9441-d0b5e4122711",
+  "release": "Go to Sleep",
+  "credit": "Radiohead"
+ },
+ {
+  "supplied": "Olivia Rodrigo",
+  "mbid": "6925db17-f35e-42f3-a4eb-84ee6bf5d4b0",
+  "release": "deja vu",
+  "credit": "Olivia Rodrigo"
+ },
+ {
+  "supplied": "The Weeknd",
+  "mbid": "c8b03190-306c-4120-bb0b-6f2ebfc06ea9",
+  "release": "Echoes of Silence",
+  "credit": "The Weeknd"
+ },
+ {
+  "supplied": "Charli xcx",
+  "mbid": "260b6184-8828-48eb-945c-bc4cb6fc34ca",
+  "release": "Music, Fashion, Film",
+  "credit": "Charli xcx"
+ },
+ {
+  "supplied": "Tame Impala",
+  "mbid": "63aa26c3-d59b-4da4-84ac-716b54f1ef4d",
+  "release": "Currents",
+  "credit": "Tame Impala"
+ },
+ {
+  "supplied": "Lady Gaga",
+  "mbid": "650e7db6-b795-4eb5-a702-5ea2fc46c848",
+  "release": "The Fame",
+  "credit": "Lady Gaga"
+ },
+ {
+  "supplied": "PinkPantheress",
+  "mbid": "7441014f-f8f5-494f-81db-ff166fbc078d",
+  "release": "Boy's a Liar Pt.2 (Never Dull remix)",
+  "credit": "PinkPantheress x Ice Spice remixed by Never Dull"
+ },
+ {
+  "supplied": "Kendrick Lamar",
+  "mbid": "381086ea-f511-4aba-bdf9-71c753dc5077",
+  "release": "good kid, m.A.A.d city",
+  "credit": "Kendrick Lamar"
+ },
+ {
+  "supplied": "Tyler, The Creator",
+  "mbid": "f6beac20-5dfe-4d1f-ae02-0b0a740aafd6",
+  "release": "Igor",
+  "credit": "Tyler, The Creator"
+ },
+ {
+  "supplied": "Rihanna",
+  "mbid": "73e5e69d-3554-40d8-8516-00cb38737a1c",
+  "release": "Rated R",
+  "credit": "Rihanna"
+ },
+ {
+  "supplied": "Taylor Swift",
+  "mbid": "20244d07-534f-4eff-b4d4-930878889970",
+  "release": "Wildest Dreams (Taylor’s version)",
+  "credit": "Taylor Swift"
+ },
+ {
+  "supplied": "Lana Del Rey",
+  "mbid": "b7539c32-53e7-4908-bda3-81449c367da6",
+  "release": "Love",
+  "credit": "Lana Del Rey"
+ },
+ {
+  "supplied": "Drake",
+  "mbid": "9fff2f8a-21e6-47de-a2b8-7f449929d43f",
+  "release": "Back to Back",
+  "credit": "Drake"
+ },
+ {
+  "supplied": "Arctic Monkeys",
+  "mbid": "ada7a83c-e3e1-40f1-93f9-3e73dbc9298a",
+  "release": "Whatever People Say I Am, That’s What I’m Not",
+  "credit": "Arctic Monkeys"
+ },
+ {
+  "supplied": "Paramore",
+  "mbid": "44cf61b8-5197-448a-b82b-cef6ee89fac5",
+  "release": "Misery Business",
+  "credit": "Paramore"
+ },
+ {
+  "supplied": "Michael Jackson",
+  "mbid": "f27ec8db-af05-4f36-916e-3d57f91ecf5e",
+  "release": "Thriller",
+  "credit": "Michael Jackson"
+ },
+ {
+  "supplied": "Steve Lacy",
+  "mbid": "ca9766a0-1c30-43e6-a213-bac1334efc4a",
+  "release": "Clinkers",
+  "credit": "Steve Lacy"
+ },
+ {
+  "supplied": "Deftones",
+  "mbid": "7527f6c2-d762-4b88-b5e2-9244f1e34c46",
+  "release": "Mein",
+  "credit": "Deftones"
+ },
+ {
+  "supplied": "Frank Ocean",
+  "mbid": "e520459c-dff4-491d-a6e4-c97be35e0044",
+  "release": "channel ORANGE",
+  "credit": "Frank Ocean"
+ },
+ {
+  "supplied": "Sabrina Carpenter",
+  "mbid": "1882fe91-cdd9-49c9-9956-8e06a3810bd4",
+  "release": "Thumbs (acoustic)",
+  "credit": "Sabrina Carpenter"
+ },
+ {
+  "supplied": "Linkin Park",
+  "mbid": "f59c5520-5f46-4d2c-b2c4-822eabf53419",
+  "release": "Meteora",
+  "credit": "Linkin Park"
+ },
+ {
+  "supplied": "Billie Eilish",
+  "mbid": "f4abc0b5-3f7a-4eff-8f78-ac078dbce533",
+  "release": "ocean eyes (Astronomyy edit)",
+  "credit": "Billie Eilish"
+ },
+ {
+  "supplied": "The Smiths",
+  "mbid": "40f5d9e4-2de7-4f2d-ad41-e31a9a9fea27",
+  "release": "The Very Best of The Smiths",
+  "credit": "The Smiths"
+ },
+ {
+  "supplied": "Katy Perry",
+  "mbid": "122d63fc-8671-43e4-9752-34e846d62a9c",
+  "release": "One of the Boys",
+  "credit": "Katy Perry"
+ },
+ {
+  "supplied": "Doja Cat",
+  "mbid": "5df62a88-cac9-490a-b62c-c7c88f4020f4",
+  "release": "Right Side",
+  "credit": "L8loomer feat. Doja Cat"
+ },
+ {
+  "supplied": "Mitski",
+  "mbid": "fa58cf24-0e44-421d-8519-8bf461dcfaa5",
+  "release": "Where’s My Phone?",
+  "credit": "Mitski"
+ },
+ {
+  "supplied": "Malcolm Todd",
+  "mbid": "6c2a79b8-2b5c-4c2d-b495-6a446811bf9d",
+  "release": "Roommates",
+  "credit": "Malcolm Todd"
+ },
+ {
+  "supplied": "Gorillaz",
+  "mbid": "e21857d5-3256-4547-afb3-4b6ded592596",
+  "release": "Tomorrow Comes Today EP",
+  "credit": "Gorillaz"
+ },
+ {
+  "supplied": "Clairo",
+  "mbid": "d786f59b-1836-4ddb-8393-ab753edbe984",
+  "release": "never have i ever",
+  "credit": "Clairo"
+ },
+ {
+  "supplied": "beabadoobee",
+  "mbid": "88d17133-abbc-42db-9526-4e2c1db60336",
+  "release": "Loveworm",
+  "credit": "beabadoobee"
+ },
+ {
+  "supplied": "TV Girl",
+  "mbid": "38f0c7ac-46eb-49ca-b3ab-c785ccd05a60",
+  "release": "Maddie Acid's Purple Hearts Club Band",
+  "credit": "Madison Acid and TV Girl"
+ },
+ {
+  "supplied": "Justin Bieber",
+  "mbid": "e0140a67-e4d1-4f13-8a01-364355bee46e",
+  "release": "My Worlds Acoustic",
+  "credit": "Justin Bieber"
+ },
+ {
+  "supplied": "Phoebe Bridgers",
+  "mbid": "96855c21-b832-4366-ba12-0d2330c36a86",
+  "release": "Stranger in the Alps",
+  "credit": "Phoebe Bridgers"
+ },
+ {
+  "supplied": "The Neighbourhood",
+  "mbid": "53b06622-ec51-4924-a554-58b0affde6b5",
+  "release": "Missing Out",
+  "credit": "The Neighbourhood"
+ },
+ {
+  "supplied": "KATSEYE",
+  "mbid": "abbf7d85-9a7f-4a6c-80bd-bf71f2c7d520",
+  "release": "Touch",
+  "credit": "KATSEYE"
+ },
+ {
+  "supplied": "The Marías",
+  "mbid": "7a3970c9-ecd8-4eee-a267-4d8c77d97ff3",
+  "release": "I Don’t Know You",
+  "credit": "The Marías"
+ },
+ {
+  "supplied": "Nirvana",
+  "mbid": "5b11f4ce-a62d-471e-81fc-a69a8278c7da",
+  "release": "Nirvana",
+  "credit": "Nirvana"
+ },
+ {
+  "supplied": "Madonna",
+  "mbid": "79239441-bfd5-4981-a70c-55c3f15c1287",
+  "release": "Total Satisfaction",
+  "credit": "Madonna"
+ },
+ {
+  "supplied": "Beyoncé",
+  "mbid": "859d0860-d480-4efd-970c-c05d5f1776b8",
+  "release": "I Am… Sasha Fierce",
+  "credit": "Beyoncé"
+ },
+ {
+  "supplied": "Bruno Mars",
+  "mbid": "afb680f2-b6eb-4cd7-a70b-a63b25c763d5",
+  "release": "Versace on the Floor",
+  "credit": "Bruno Mars"
+ },
+ {
+  "supplied": "The Beatles",
+  "mbid": "b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d",
+  "release": "The Beatles - 20 Enregistrements Originaux",
+  "credit": "The Beatles"
+ },
+ {
+  "supplied": "Britney Spears",
+  "mbid": "45a663b5-b1cb-4a91-bff6-2bef7bbfdd76",
+  "release": "Oops!…I Did It Again",
+  "credit": "Britney Spears"
+ },
+ {
+  "supplied": "Childish Gambino",
+  "mbid": "7fb57fba-a6ef-44c2-abab-2fa3bdee607e",
+  "release": "Mystery Team EP",
+  "credit": "Childish Gambino"
+ },
+ {
+  "supplied": "Coldplay",
+  "mbid": "cc197bad-dc9c-440d-a5b5-d52ba2e14234",
+  "release": "Fix You",
+  "credit": "Coldplay"
+ },
+ {
+  "supplied": "Travis Scott",
+  "mbid": "e4a51f17-a57b-47b1-b37b-f552d0f8e9e6",
+  "release": "Birds in the Trap Sing McKnight",
+  "credit": "Travis Scott"
+ },
+ {
+  "supplied": "Chappell Roan",
+  "mbid": "56a55378-f155-48de-80a5-d80104221267",
+  "release": "School Nights",
+  "credit": "Chappell Roan"
+ },
+ {
+  "supplied": "The Cure",
+  "mbid": "69ee3720-a7cb-4402-b48d-a02c366f2bcf",
+  "release": "Boys Don’t Cry",
+  "credit": "The Cure"
+ },
+ {
+  "supplied": "My Chemical Romance",
+  "mbid": "c07f0676-9143-4217-8a9f-4c26bd636f13",
+  "release": "The Black Parade",
+  "credit": "My Chemical Romance"
+ },
+ {
+  "supplied": "Weezer",
+  "mbid": "6fe07aa5-fec0-4eca-a456-f29bff451b04",
+  "release": "Weezer",
+  "credit": "Weezer"
+ },
+ {
+  "supplied": "The Strokes",
+  "mbid": "f181961b-20f7-459e-89de-920ef03c7ed0",
+  "release": "Is This It",
+  "credit": "The Strokes"
+ },
+ {
+  "supplied": "A$AP Rocky",
+  "mbid": "25b7b584-d952-4662-a8b9-dd8cdfbfeb64",
+  "release": "Everyday",
+  "credit": "A$AP Rocky"
+ },
+ {
+  "supplied": "SZA",
+  "mbid": "272989c8-5535-492d-a25c-9f58803e027f",
+  "release": "Ctrl",
+  "credit": "SZA"
+ },
+ {
+  "supplied": "Fleetwood Mac",
+  "mbid": "bd13909f-1c29-4c27-a874-d4aaf27c5b1a",
+  "release": "Penguin",
+  "credit": "Fleetwood Mac"
+ },
+ {
+  "supplied": "Mac DeMarco",
+  "mbid": "f2492c31-54a8-4347-a1fc-f81f72873bbf",
+  "release": "Another (Demo) One",
+  "credit": "Mac DeMarco"
+ },
+ {
+  "supplied": "Playboi Carti",
+  "mbid": "2baf3276-ed6a-4349-8d2e-f4601e7b2167",
+  "release": "Playboi Carti",
+  "credit": "Playboi Carti"
+ },
+ {
+  "supplied": "Slayyyter",
+  "mbid": "9058d01e-8afc-47a4-8664-621fb5f159c0",
+  "release": "Cha Ching",
+  "credit": "Slayyyter"
+ },
+ {
+  "supplied": "LE SSERAFIM",
+  "mbid": "1ee37742-1e3d-4e61-84d2-bc85f4c1459a",
+  "release": "ANTIFRAGILE",
+  "credit": "LE SSERAFIM"
+ },
+ {
+  "supplied": "Lil Uzi Vert",
+  "mbid": "8837b875-3689-4646-b3fd-d8b53815c7a8",
+  "release": "Big Money (C4 remix)",
+  "credit": "Don Cannon feat. Rich Homie Quan, Lil Uzi Vert & Skeme"
+ },
+ {
+  "supplied": "Harry Styles",
+  "mbid": "7eb1ce54-a355-41f9-8d68-e018b096d427",
+  "release": "Kiwi",
+  "credit": "Harry Styles"
+ },
+ {
+  "supplied": "Twenty One Pilots",
+  "mbid": "a6c6897a-7415-4f8d-b5a5-3a5e05f3be67",
+  "release": "Vessel",
+  "credit": "twenty one pilots"
+ },
+ {
+  "supplied": "Future",
+  "mbid": "48262e82-db9f-4a92-b650-dfef979b73ec",
+  "release": "DS2",
+  "credit": "Future"
+ },
+ {
+  "supplied": "Mac Miller",
+  "mbid": "a0e8a1b1-5f8f-475a-a253-17415c17d0ff",
+  "release": "K.I.D.S.",
+  "credit": "Mac Miller"
+ },
+ {
+  "supplied": "Don Toliver",
+  "mbid": "a0723a3c-4135-438e-85c5-012712144ede",
+  "release": "Donny Womack",
+  "credit": "Don Toliver"
+ },
+ {
+  "supplied": "Laufey",
+  "mbid": "21a89505-10a9-4ac0-8388-833bc07b9f86",
+  "release": "Someone New",
+  "credit": "Laufey"
+ },
+ {
+  "supplied": "Green Day",
+  "mbid": "084308bd-1654-436f-ba03-df6697104e19",
+  "release": "Slappy EP",
+  "credit": "Green Day"
+ },
+ {
+  "supplied": "System of a Down",
+  "mbid": "cc0b7089-c08d-4c10-b6b0-873582c17fd6",
+  "release": "1999‐12‐20: Astoria, London, England, UK",
+  "credit": "System of a Down"
+ },
+ {
+  "supplied": "Bad Bunny",
+  "mbid": "89aa5ecb-59ad-46f5-b3eb-2d424e941f19",
+  "release": "Intro to ‘Die With a Smile’ (live)",
+  "credit": "Bad Bunny"
+ },
+ {
+  "supplied": "BTS",
+  "mbid": "0d79fe8e-ba27-4859-bb8c-2f255f346853",
+  "release": "2 COOL 4 SKOOL",
+  "credit": "BTS"
+ },
+ {
+  "supplied": "Maroon 5",
+  "mbid": "0ab49580-c84f-44d4-875f-d83760ea2cfe",
+  "release": "Love Is Like",
+  "credit": "Maroon 5"
+ },
+ {
+  "supplied": "aespa",
+  "mbid": "b51c672b-85e0-48fe-8648-470a2422229f",
+  "release": "Keychain",
+  "credit": "aespa & Anderson .Paak"
+ },
+ {
+  "supplied": "Lorde",
+  "mbid": "8e494408-8620-4c6a-82c2-c2ca4a1e4f12",
+  "release": "The Love Club EP",
+  "credit": "Lorde"
+ },
+ {
+  "supplied": "Panic! at the Disco",
+  "mbid": "b9472588-93f3-4922-a1a2-74082cdf9ce8",
+  "release": "That Green Gentleman (Things Have Changed)",
+  "credit": "Panic! at the Disco"
+ },
+ {
+  "supplied": "Cigarettes After Sex",
+  "mbid": "34557d8f-ee4a-44ab-ae6e-49bb8ac604d0",
+  "release": "Apocalypse",
+  "credit": "Cigarettes After Sex"
+ },
+ {
+  "supplied": "Kali Uchis",
+  "mbid": "d0c7656d-8169-4f77-9dbe-b8f24e40105d",
+  "release": "Tirano",
+  "credit": "Kali Uchis feat. Fuego"
+ },
+ {
+  "supplied": "Daniel Caesar",
+  "mbid": "b46e298d-d3a5-4695-a03e-63e8c523b23e",
+  "release": "Freudian",
+  "credit": "Daniel Caesar"
+ },
+ {
+  "supplied": "Addison Rae",
+  "mbid": "610b71d9-fa78-47d6-9073-083922e73840",
+  "release": "Obsessed",
+  "credit": "Addison Rae"
+ },
+ {
+  "supplied": "Red Hot Chili Peppers",
+  "mbid": "8bfac288-ccc5-448d-9573-c33ea2aa5c30",
+  "release": "Greatest Hits",
+  "credit": "Red Hot Chili Peppers"
+ },
+ {
+  "supplied": "Cocteau Twins",
+  "mbid": "000fc734-b7e1-4a01-92d1-f544261b43f5",
+  "release": "Collector Disc: 104 KRBE",
+  "credit": "Cocteau Twins"
+ },
+ {
+  "supplied": "Calvin Harris",
+  "mbid": "8dd98bdc-80ec-4e93-8509-2f46bafc09a7",
+  "release": "The Girls",
+  "credit": "Calvin Harris"
+ },
+ {
+  "supplied": "Pierce the Veil",
+  "mbid": "8ed919fb-eaee-45a1-ba99-b3ede9ca5f1d",
+  "release": "A Flair for the Dramatic",
+  "credit": "Pierce the Veil"
+ },
+ {
+  "supplied": "Muse",
+  "mbid": "9c9f1380-2516-4fc9-a3e6-f9f61941d090",
+  "release": "Absolution",
+  "credit": "Muse"
+ },
+ {
+  "supplied": "Sade",
+  "mbid": "67930b3e-e00b-469f-8c74-fd69f20522ec",
+  "release": "Kiss of Live",
+  "credit": "Sade"
+ },
+ {
+  "supplied": "Queen",
+  "mbid": "0383dadf-2a4e-4d10-a46a-e9e041da8eb3",
+  "release": "Queen",
+  "credit": "Queen"
+ },
+ {
+  "supplied": "NewJeans",
+  "mbid": "49204a7a-ed85-407a-828f-6fd46f1d8126",
+  "release": "New Jeans",
+  "credit": "NewJeans"
+ },
+ {
+  "supplied": "Dua Lipa",
+  "mbid": "6f1a58bf-9b1b-49cf-a44a-6cefad7ae04f",
+  "release": "Dua Lipa",
+  "credit": "Dua Lipa"
+ },
+ {
+  "supplied": "Eminem",
+  "mbid": "b95ce3ff-3d05-4e87-9e01-c97b66af13d4",
+  "release": "Recovery (Deluxe Edition)",
+  "credit": "Eminem"
+ },
+ {
+  "supplied": "Post Malone",
+  "mbid": "b1e26560-60e5-4236-bbdb-9aa5a8d5ee19",
+  "release": "August 26th",
+  "credit": "Post Malone"
+ },
+ {
+  "supplied": "Daft Punk",
+  "mbid": "056e4f3e-d505-4dad-8ec1-d04f521cbb56",
+  "release": "Chord Memory",
+  "credit": "Ian Pooley, Mark Bell, Daft Punk, Richard Benson"
+ },
+ {
+  "supplied": "Oasis",
+  "mbid": "39ab1aed-75e0-4140-bd47-540276886b60",
+  "release": "(What’s the Story) Morning Glory?",
+  "credit": "Oasis"
+ },
+ {
+  "supplied": "Pink Floyd",
+  "mbid": "83d91898-7763-47d7-b03b-b92132375c47",
+  "release": "Obscured by Clouds: Music From the Film the “Valley”",
+  "credit": "Pink Floyd"
+ },
+ {
+  "supplied": "David Bowie",
+  "mbid": "5441c29d-3602-4898-b1a1-b77fa23b8e50",
+  "release": "David Live",
+  "credit": "David Bowie"
+ },
+ {
+  "supplied": "sombr",
+  "mbid": "502cf908-9921-48bc-bf0e-265c881c0156",
+  "release": "my house is warm",
+  "credit": "sombr"
+ },
+ {
+  "supplied": "The Smashing Pumpkins",
+  "mbid": "ba0d6274-db14-4ef5-b28d-657ebde1a396",
+  "release": "Today",
+  "credit": "The Smashing Pumpkins"
+ },
+ {
+  "supplied": "Dominic Fike",
+  "mbid": "e337c918-098f-418e-97a2-81dc224b1bf9",
+  "release": "Politics & Violence",
+  "credit": "Dominic Fike"
+ },
+ {
+  "supplied": "ILLIT",
+  "mbid": "6b128dd7-e998-4edb-a4f5-400fef190445",
+  "release": "Almond Chocolate (Korean ver.)",
+  "credit": "ILLIT"
+ }
+]
