@@ -682,8 +682,8 @@ class CoverArtArchiveProviderTest {
         assertEquals(ErrorKind.NETWORK, (result as EnrichmentResult.Error).errorKind)
     }
 
-    // Older CAA index entries bake `http://` into their stored JSON (the scheme is fixed at upload
-    // time); URL shapes below are from a live release-group capture, 2026-08-25.
+    // Older CAA index entries bake `http://` into their stored JSON (the scheme is fixed at
+    // upload time).
     @Test
     fun `enrich upgrades plain-http gallery URLs from a stored index to https`() = runTest {
         // Given - CAA metadata whose image and thumbnail URLs all carry the http scheme
@@ -741,6 +741,31 @@ class CoverArtArchiveProviderTest {
         val artwork = (result as EnrichmentResult.Success).data as EnrichmentData.Artwork
         assertEquals("https://archive.org/image/abc123-1200.jpg", artwork.url)
         assertEquals("https://archive.org/image/abc123-250.jpg", artwork.thumbnailUrl)
+    }
+
+    @Test
+    fun `enrich upgrades an http URL whose scheme and host are not lowercase`() = runTest {
+        // Given - CAA metadata whose URL carries scheme and host casing RFC 3986 says to ignore
+        httpClient.givenJsonResponse(
+            "release/abc123",
+            """{"images": [
+                {"front": false, "types": ["Back"], "image": "HTTP://CoverArtArchive.org/release/abc123/back.jpg", "thumbnails": {"250": "http://u:p@Archive.org/release/abc123/back-250.jpg"}}
+            ]}""",
+        )
+        val request = EnrichmentRequest.ForAlbum(
+            identifiers = EnrichmentIdentifiers(musicBrainzId = "abc123"),
+            title = "Nevermind",
+            artist = "Nirvana",
+        )
+
+        // When - enriching for back cover art
+        val result = provider.enrich(request, EnrichmentType.ALBUM_ART_BACK)
+
+        // Then - both URLs come back https, casing and userinfo preserved after the scheme
+        assertTrue("Expected Success but got $result", result is EnrichmentResult.Success)
+        val artwork = (result as EnrichmentResult.Success).data as EnrichmentData.Artwork
+        assertEquals("https://CoverArtArchive.org/release/abc123/back.jpg", artwork.url)
+        assertEquals("https://u:p@Archive.org/release/abc123/back-250.jpg", artwork.thumbnailUrl)
     }
 
     @Test
