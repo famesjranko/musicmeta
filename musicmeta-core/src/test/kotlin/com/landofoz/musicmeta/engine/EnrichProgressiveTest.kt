@@ -327,6 +327,47 @@ class EnrichProgressiveTest {
             )
         }
 
+    @Test fun `identity settling emits its own snapshot before any type settles`() =
+        runTest {
+            // Given - identity resolution settles promptly while the only requested type is slow,
+            // so nothing else could emit until that type settles
+            val liveType = EnrichmentType.GENRE
+            val idProvider = object : FakeProvider(
+                id = "mb", isIdentityProvider = true,
+                capabilities = listOf(ProviderCapability(liveType, 100)),
+            ) {
+                override suspend fun resolveIdentity(request: EnrichmentRequest): EnrichmentResult =
+                    EnrichmentResult.Success(liveType, EnrichmentData.Metadata(genres = listOf("rock")), "mb", 0.95f)
+
+                override suspend fun enrich(request: EnrichmentRequest, type: EnrichmentType): EnrichmentResult {
+                    kotlinx.coroutines.delay(100)
+                    return EnrichmentResult.Success(
+                        liveType, EnrichmentData.Metadata(genres = listOf("rock")), "mb", 0.95f,
+                    )
+                }
+            }
+            val engine = DefaultEnrichmentEngine(
+                ProviderRegistry(listOf(idProvider)), cache,
+                EnrichmentConfig(enableIdentityResolution = true),
+            )
+
+            // When - collecting the whole stream
+            val emissions = engine.enrichProgressive(req, setOf(liveType)).toList()
+
+            // Then - the first emission carries the settled identity verdict with the type still
+            // pending, so a collector can act on the verdict without waiting for enrichment
+            val first = emissions.first()
+            assertTrue(
+                "the first emission must carry a settled identity, got ${first.identity.status}",
+                first.identity.status != CanonicalStatus.RESOLVING,
+            )
+            assertTrue(
+                "no type may have settled in the identity emission: ${first.raw.keys}",
+                first.raw.isEmpty(),
+            )
+            assertTrue("the terminal emission still settles the type", liveType in emissions.last().raw)
+        }
+
     @Test fun `a timeout that fires before identity resolution ever settles reports FAILED, never RESOLVING`() =
         runTest {
             // Given - identity resolution never finishes inside the deadline, and no cache hit exists

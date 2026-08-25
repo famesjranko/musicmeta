@@ -180,7 +180,9 @@ The engine resolves dependencies first (standard rules), then passes results + i
 `enrich()` waits for every type in this fan-out to settle before returning one `EnrichmentResults`.
 `enrichProgressive()` runs the identical fan-out and pipeline (Steps 4–8 below apply per type, not
 once at the end) but emits a cumulative snapshot each time a type settles, so a caller sees fast
-types — a cache hit, a single-provider lookup — before slow ones finish. See
+types — a cache hit, a single-provider lookup — before slow ones finish. When identity resolution
+was attempted and settles before any type does, its verdict is emitted on its own as well: one
+snapshot with `raw` empty and every requested type still pending. See
 [guides/streaming.md](guides/streaming.md) for the API and its contract.
 
 ### Step 5: Confidence Filtering

@@ -17,6 +17,7 @@ import com.landofoz.musicmeta.okhttp.OkHttpEnrichmentClient
 import com.landofoz.musicmeta.trackProfile
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
+import java.io.File
 
 fun main(args: Array<String>) {
     val theme = Theme.detect()
@@ -281,19 +282,52 @@ private fun enrichLabel(request: EnrichmentRequest): String = when (request) {
 private fun env(key: String): String? = System.getenv(key)?.takeIf { it.isNotBlank() }
 
 /**
- * Every `secrets.properties` on the search path merged, the nearer file winning per key — not the
- * first that exists, which cannot tell a template from a configuration (`docs/pitfalls.md` §13).
+ * Where a demo run out of [demoDir] looks for `secrets.properties`, outermost first: the main
+ * checkout's file when [demoDir] sits in a git worktree, then the repo root's, then the demo's own.
+ * [loadSecrets] merges in this order, so the nearer file wins per key.
+ */
+internal fun secretsSearchPath(demoDir: File): List<File> {
+    val repoRoot = File(demoDir, "..")
+    return listOfNotNull(mainCheckoutSecrets(repoRoot)) +
+        listOf(File(repoRoot, "secrets.properties"), File(demoDir, "secrets.properties"))
+}
+
+/**
+ * Every `secrets.properties` on [secretsSearchPath] merged, the nearer file winning per key — not
+ * the first that exists, which cannot tell a template from a configuration (`docs/pitfalls.md` §13).
  *
  * A key present but blank is dropped rather than returned as `""`: every caller reads
  * `secrets[k] ?: env(k)`, and an empty string is non-null, so it would beat the environment variable
  * it is meant to defer to.
  */
-private fun loadSecrets(): Map<String, String> =
-    listOf(java.io.File("../secrets.properties"), java.io.File("secrets.properties"))
+internal fun loadSecrets(demoDir: File = File(".")): Map<String, String> =
+    secretsSearchPath(demoDir)
         .filter { it.exists() }
         .fold(mutableMapOf<String, String>()) { merged, file -> merged.apply { putAll(file.readKeys()) } }
 
-private fun java.io.File.readKeys(): Map<String, String> = readLines()
+/**
+ * The main checkout's `secrets.properties`, when [repoRoot] is a git worktree — a worktree
+ * materialises only tracked files, so a gitignored secrets file exists solely in the main
+ * checkout and a worktree run is silently keyless without this (`docs/pitfalls.md` §13). A
+ * worktree's `.git` is a *file* naming its real git dir (`gitdir: <main>/.git/worktrees/<name>`);
+ * anything else — a `.git` directory, or a file this cannot parse — contributes nothing. Joins
+ * the search path outermost, so both nearer files still win per key.
+ */
+internal fun mainCheckoutSecrets(repoRoot: File): File? {
+    val gitMarker = File(repoRoot, ".git")
+    if (!gitMarker.isFile) return null
+    val gitdir = gitMarker.readLines().firstOrNull { it.startsWith("gitdir:") }
+        ?.removePrefix("gitdir:")?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+    val resolved = File(gitdir).let { if (it.isAbsolute) it else File(repoRoot, gitdir) }
+    // A worktree's git dir is <main>/.git/worktrees/<name>; any other shape (a submodule's
+    // .git/modules/<name>, say) is not a worktree and names no main checkout.
+    val worktrees = resolved.parentFile?.takeIf { it.name == "worktrees" } ?: return null
+    val dotGit = worktrees.parentFile?.takeIf { it.name == ".git" } ?: return null
+    val main = dotGit.parentFile ?: return null
+    return File(main, "secrets.properties")
+}
+
+private fun File.readKeys(): Map<String, String> = readLines()
     .filter { it.contains('=') && !it.trimStart().startsWith('#') }
     .associate { line -> val (k, v) = line.split('=', limit = 2); k.trim() to v.trim() }
     .filterValues { it.isNotEmpty() }

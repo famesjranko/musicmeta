@@ -62,6 +62,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - demo-web bounds one client's share of upstream-bearing endpoints (20-burst, 30/min per client), and skips its transient-failure retry pass while the admission gate is saturated
 
 ### Changed
+- `enrichProgressive` emits one extra snapshot the moment live identity resolution settles, before any type does: collectors see the verdict and its suggestions without waiting on enrichment
+- An album title no folding could match (a plain typo, say) no longer runs the symbol-title browse on an empty pool: the same `AMBIGUOUS` verdict arrives without those MusicBrainz calls
 - An album or track search hit is stamped `EXACT_NAME` only when the returned title matches the requested one; a loose hit now reports `FUZZY_NAME`, so provenance branching sees downgrades
 - An album or track request with a blank artist no longer resolves an entity: MusicBrainz widens rather than refuses such a search, so the old answer was an arbitrary same-titled release
 - A blank-artist album request now returns its candidates as `suggestions` with `CanonicalStatus.AMBIGUOUS`; a blank-artist track request returns `NotFound` without searching at all

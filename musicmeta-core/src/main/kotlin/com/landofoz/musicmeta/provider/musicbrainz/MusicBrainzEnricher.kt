@@ -1002,9 +1002,11 @@ internal class MusicBrainzEnricher(
      * Resolves an album search, trying [title]/[artist] as-is first, and only falling back to
      * [MusicBrainzQualifierFallback]'s progressively-stripped
      * candidates when the direct search finds nothing at or above [minMatchScore], then to
-     * [resolveAlbumSymbolFallback] — but only on an *empty* pool: a populated pool that merely
-     * missed the score floor means the title is searchable and the album is not there, so that
-     * fallback's extra calls would buy nothing.
+     * [resolveAlbumSymbolFallback] — but only on an *empty* pool, and only when
+     * [MusicBrainzTitleFolding.foldMatchPossible] holds: a populated pool that merely missed the
+     * score floor means the title is searchable and the album is not there, and a title no folding
+     * can rescue (a plain typo, say) makes the fallback's browse a certain miss either way, so in
+     * both cases its extra calls would buy nothing.
      *
      * A blank [artist] never reaches [MusicBrainzReleaseRanking.pickBestRelease]. Its artist tier
      * has nothing to compare against and goes inert, leaving score, edition and year to crown a
@@ -1020,9 +1022,10 @@ internal class MusicBrainzEnricher(
         val direct = MusicBrainzReleaseRanking.pickBestRelease(releases, minMatchScore, artist = artist)
         val viaQualifier = direct == null
         val qualifierFallback = if (viaQualifier) resolveAlbumQualifierFallback(title, artist) else null
+        val symbolWorthTrying = releases.isEmpty() && MusicBrainzTitleFolding.foldMatchPossible(title)
         val resolved = direct
             ?: qualifierFallback
-            ?: if (releases.isEmpty()) resolveAlbumSymbolFallback(title, artist) else null
+            ?: if (symbolWorthTrying) resolveAlbumSymbolFallback(title, artist) else null
         return AlbumSearchResult(resolved, releases, viaQualifierFallback = viaQualifier && qualifierFallback != null)
     }
 

@@ -542,6 +542,20 @@ private fun handleEnrich(exchange: HttpExchange, engine: EnrichmentEngine) {
 private val UNSETTLED_IDENTITY_STATUSES = setOf(CanonicalStatus.RESOLVING)
 
 /**
+ * The identity statuses a snapshot can paint from with nothing enriched yet: resolution was
+ * attempted and reached a verdict, so the header and any suggestions are already drawable. The
+ * `NOT_ATTEMPTED_*` family is deliberately absent — it reports that resolution never ran, which
+ * leaves an otherwise-empty snapshot with nothing on it for a visitor to see.
+ */
+private val ATTEMPTED_IDENTITY_VERDICTS = setOf(
+    CanonicalStatus.RESOLVED,
+    CanonicalStatus.AMBIGUOUS,
+    CanonicalStatus.UNRESOLVED,
+    CanonicalStatus.CONTRADICTED,
+    CanonicalStatus.FAILED,
+)
+
+/**
  * The SSE sibling of [handleEnrich], over [EnrichmentEngine.enrichProgressive]: the page paints
  * each type as it settles instead of waiting for the slowest provider. Both endpoints share
  * [parseEnrichQuery] and the same profile mappers, so they can differ in *when* a result arrives
@@ -797,7 +811,10 @@ private suspend fun streamEnrichment(
             latest = snapshot
             val pending = plan.types - snapshot.raw.keys
             if (pending.isEmpty()) return@collect
-            if (firstPaintMs == null && snapshot.raw.isNotEmpty()) firstPaintMs = System.currentTimeMillis() - started
+            // A settled identity verdict is a paint even with nothing enriched yet: the page can
+            // show the verdict and its suggestions from that snapshot alone.
+            val paints = snapshot.raw.isNotEmpty() || snapshot.identity.status in ATTEMPTED_IDENTITY_VERDICTS
+            if (firstPaintMs == null && paints) firstPaintMs = System.currentTimeMillis() - started
             sequence += 1
             writer.write(
                 "snapshot",
