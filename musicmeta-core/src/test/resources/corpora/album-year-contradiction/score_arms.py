@@ -12,6 +12,7 @@ Reports, for each arm, firings on four populations:
   cross_group    R's MBID against a different album BY THE SAME ARTIST. The case the ticket exists
                  to catch, and the case contradictsSuppliedName provably cannot see.
 """
+
 import json, pathlib, random
 
 HERE = pathlib.Path(__file__).parent
@@ -41,30 +42,50 @@ def build(rows):
         groups = [g for g in row["groups"] if g["releases"]]
         for g in groups:
             for r in g["releases"]:
-                identical.append((r["year"], r["tracks"], g["rg_first_year"], r["tracks"], row["artist"], g["rg_title"]))
+                identical.append(
+                    (r["year"], r["tracks"], g["rg_first_year"], r["tracks"], row["artist"], g["rg_title"])
+                )
                 if r["year"] is not None and r["year"] < g["rg_first_year"] - 1:
                     drift.append((row["artist"], g["rg_title"], g["rg_first_year"], r["year"], r["title"]))
             pairs = [(a, b) for a in g["releases"] for b in g["releases"] if a["id"] != b["id"]]
             rnd.shuffle(pairs)
             for supplied, tagged in pairs[:PAIRS_PER_GROUP]:
-                same_group.append((tagged["year"], tagged["tracks"], g["rg_first_year"], supplied["tracks"],
-                                   row["artist"], g["rg_title"]))
+                same_group.append(
+                    (
+                        tagged["year"],
+                        tagged["tracks"],
+                        g["rg_first_year"],
+                        supplied["tracks"],
+                        row["artist"],
+                        g["rg_title"],
+                    )
+                )
         for i, g in enumerate(groups):
             for j, other in enumerate(groups):
                 if i == j:
                     continue
                 supplied = g["releases"][0]
                 tagged = other["releases"][0]
-                cross_group.append((tagged["year"], tagged["tracks"], g["rg_first_year"], supplied["tracks"],
-                                    row["artist"], f"{g['rg_title']} <- tags of {other['rg_title']}"))
+                cross_group.append(
+                    (
+                        tagged["year"],
+                        tagged["tracks"],
+                        g["rg_first_year"],
+                        supplied["tracks"],
+                        row["artist"],
+                        f"{g['rg_title']} <- tags of {other['rg_title']}",
+                    )
+                )
     return identical, same_group, cross_group, drift
 
 
 def main():
     rows = json.load(open(HERE / "albums.json"))
     identical, same_group, cross_group, drift = build(rows)
-    print(f"artists={len(rows)} identical={len(identical)} same_group={len(same_group)} "
-          f"cross_group={len(cross_group)} drift={len(drift)}\n")
+    print(
+        f"artists={len(rows)} identical={len(identical)} same_group={len(same_group)} "
+        f"cross_group={len(cross_group)} drift={len(drift)}\n"
+    )
 
     for name, rule in ARMS.items():
         fp_i = [p for p in identical if rule(*p[:4])]
@@ -72,13 +93,16 @@ def main():
         catch = [p for p in cross_group if rule(*p[:4])]
         fp = len(fp_i) + len(fp_s)
         print(f"{name}")
-        print(f"  false positives : {fp}  (identical {len(fp_i)}/{len(identical)}, "
-              f"same_group {len(fp_s)}/{len(same_group)})")
-        print(f"  caught          : {len(catch)}/{len(cross_group)} "
-              f"({100.0 * len(catch) / max(1, len(cross_group)):.0f}%)")
+        print(
+            f"  false positives : {fp}  (identical {len(fp_i)}/{len(identical)}, "
+            f"same_group {len(fp_s)}/{len(same_group)})"
+        )
+        print(
+            f"  caught          : {len(catch)}/{len(cross_group)} "
+            f"({100.0 * len(catch) / max(1, len(cross_group)):.0f}%)"
+        )
         for p in (fp_i + fp_s)[:8]:
-            print(f"    FP: {p[4]} / {p[5]}: caller year={p[0]} tracks={p[1]} vs "
-                  f"rg_first={p[2]} release_tracks={p[3]}")
+            print(f"    FP: {p[4]} / {p[5]}: caller year={p[0]} tracks={p[1]} vs rg_first={p[2]} release_tracks={p[3]}")
         print(f"  SHIP: {'yes' if fp == 0 else 'NO - fires on a correct pair'}\n")
 
     print(f"drift (release dated before its own group's first-release-date - 1): {len(drift)}")

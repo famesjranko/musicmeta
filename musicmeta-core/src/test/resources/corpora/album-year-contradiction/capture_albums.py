@@ -11,6 +11,7 @@ video media dropped by exact format name, tracks summed across the remaining med
 
 Re-run before trusting any number: this is a live capture with a date.
 """
+
 import json, time, urllib.request, urllib.error, pathlib, sys
 
 UA = "musicmeta-research/0.1 (https://github.com/andrewmcdonald42/musicmeta)"
@@ -22,9 +23,20 @@ ALBUMS_PER_ARTIST = 2
 # Mirrors MusicBrainzParser.VIDEO_MEDIA_FORMATS exactly. A corpus that counted video tracks the
 # production code drops would be measuring a rule nobody ships.
 VIDEO_FORMATS = {
-    "dvd", "dvd-video", "blu-ray", "hd-dvd", "vhs", "vcd", "svcd", "betamax", "umd",
-    "laserdisc", '8" laserdisc', '12" laserdisc',
-    "dualdisc (dvd-video side)", "dvdplus (dvd-video side)",
+    "dvd",
+    "dvd-video",
+    "blu-ray",
+    "hd-dvd",
+    "vhs",
+    "vcd",
+    "svcd",
+    "betamax",
+    "umd",
+    "laserdisc",
+    '8" laserdisc',
+    '12" laserdisc',
+    "dualdisc (dvd-video side)",
+    "dvdplus (dvd-video side)",
 }
 
 
@@ -38,11 +50,13 @@ def get(url):
                 return r.status, json.load(r)
         except urllib.error.HTTPError as e:
             if e.code in (503, 429):
-                time.sleep(2 * (attempt + 1)); continue
+                time.sleep(2 * (attempt + 1))
+                continue
             return e.code, None
         except (urllib.error.URLError, TimeoutError, OSError) as e:
             print(f"  .. transport failure, retrying: {e}", flush=True)
-            time.sleep(2 * (attempt + 1)); continue
+            time.sleep(2 * (attempt + 1))
+            continue
     return 0, None
 
 
@@ -50,7 +64,7 @@ def audio_track_count(media):
     """Total audio tracks across every non-video medium, as parseMedia counts them."""
     total = 0
     audio = [m for m in media if (m.get("format") or "").strip().lower() not in VIDEO_FORMATS]
-    for m in (audio or media):
+    for m in audio or media:
         total += m.get("track-count") or 0
     return total
 
@@ -72,10 +86,13 @@ def studio_groups(artist_mbid):
             continue
         if not year_of(g.get("first-release-date")):
             continue
-        out.append({
-            "rg_id": g["id"], "rg_title": g["title"],
-            "rg_first_year": year_of(g.get("first-release-date")),
-        })
+        out.append(
+            {
+                "rg_id": g["id"],
+                "rg_title": g["title"],
+                "rg_first_year": year_of(g.get("first-release-date")),
+            }
+        )
     return out
 
 
@@ -89,11 +106,17 @@ def releases_in(rg):
         tracks = audio_track_count(r.get("media") or [])
         if tracks <= 0:
             continue
-        out.append({
-            "id": r["id"], "title": r["title"], "date": r.get("date"),
-            "year": year_of(r.get("date")), "tracks": tracks,
-            "status": r.get("status"), "country": r.get("country"),
-        })
+        out.append(
+            {
+                "id": r["id"],
+                "title": r["title"],
+                "date": r.get("date"),
+                "year": year_of(r.get("date")),
+                "tracks": tracks,
+                "status": r.get("status"),
+                "country": r.get("country"),
+            }
+        )
     return out
 
 
@@ -107,7 +130,8 @@ def main():
     for a in artists:
         mbid, name = a["mbid"], a.get("name") or a.get("supplied")
         if mbid in done:
-            rows.append(done[mbid]); continue
+            rows.append(done[mbid])
+            continue
         groups = studio_groups(mbid)[:ALBUMS_PER_ARTIST]
         for g in groups:
             g["releases"] = releases_in(g)
