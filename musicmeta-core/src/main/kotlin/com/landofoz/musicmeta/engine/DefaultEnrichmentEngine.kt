@@ -127,6 +127,13 @@ internal data class ResolveContext(
     val identityResult: EnrichmentResult?,
     val canonicalStatus: CanonicalStatus,
     val session: RunSession,
+    /**
+     * Types already settled on [board] before the fan-out — cache hits and identity fast-path
+     * payloads. The dependency closure must not relaunch one: a composite consumes it through
+     * [SettlementBoard.await] regardless, so a relaunch is only a second upstream spend whose
+     * write-back overwrites the settled entry.
+     */
+    val preSettled: Set<EnrichmentType>,
 )
 
 /**
@@ -440,7 +447,14 @@ internal class DefaultEnrichmentEngine(
             // ProviderChain, including the missing-identifier skips session.chainExecutions below
             // records for the cache write-back.
             streamResolveTypes(
-                ResolveContext(session.board, enrichedRequest, identityResult, resolution.status, session),
+                ResolveContext(
+                    session.board,
+                    enrichedRequest,
+                    identityResult,
+                    resolution.status,
+                    session,
+                    preSettled = cacheLayer.results.keys + fastPathResults.keys,
+                ),
                 fastPathRemaining,
                 settle,
             )
@@ -783,7 +797,12 @@ internal class DefaultEnrichmentEngine(
         // registered for it, never from whether types (the caller's own request) named it, so a
         // composite dependency reached only transitively is classified exactly as it would be if
         // requested directly.
-        val allTypes = types + compositeSubTypesOf(types)
+        // The closure re-adds a dependency that is also a requested type — and such a type may have
+        // settled from cache or the identity fast path already, in which case its board deferred is
+        // complete and a composite reads that settlement; launching it again would only spend
+        // upstream and overwrite the settled value. The subtraction never touches the board's key
+        // set, which was built from the full closure before anything settled.
+        val allTypes = types + compositeSubTypesOf(types) - context.preSettled
         val compositeTypes = allTypes.filter { it in compositeDependencies }.toSet()
         val mergeableTypesInScope = (allTypes - compositeTypes).filter { it in mergeableTypes }.toSet()
         val regularTypes = allTypes - compositeTypes - mergeableTypesInScope
