@@ -7,6 +7,12 @@ Issues and specs (you may know a spec as a PRD) for this repo live as markdown f
 > signal). Those are **not** the skill tracker: skills read and write `.scratch/`, and must not run
 > `gh issue create`. A `(#n)` reference in `CHANGELOG.md`, a commit, or a PR body still means the
 > GitHub issue.
+>
+> **A dependency bump is the one exception**, and `gh issue create` is allowed for it: its
+> counterpart is a Dependabot PR, so the ticket belongs where that conversation already is. The
+> boundary is mechanical — a ticket qualifies only while its whole subject is a version literal in
+> `gradle/libs.versions.toml` or `gradle/wrapper/`. The moment it needs a source change it is a
+> migration, not a bump, and that goes to `.scratch/` like everything else.
 
 ## Conventions
 

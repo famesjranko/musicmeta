@@ -22,7 +22,7 @@ rest; `ls docs/` lists the docs.
 | Treating a green run as proof | `VERIFICATION.md` — what each check skips |
 | Designing across module boundaries, or adding a provider | `ARCHITECTURE.md` — the seams and what they cost |
 | Deciding whether a thing is in scope, or what `1.0.0` waits on | `ROADMAP.md` |
-| Looking for the issue list | `.scratch/`, **not** GitHub Issues — `docs/agents/issue-tracker.md` |
+| Looking for the issue list | `.scratch/`, **not** GitHub Issues — a dependency bump is the one exception; `docs/agents/issue-tracker.md` |
 | Reviewing a diff, a branch, or a PR | `docs/agents/review-checklist.md` — the unmechanised rules only |
 
 ## Where it goes
@@ -43,7 +43,7 @@ goes wrong: the split between them is the system versus what verifies it.
 |---|---|
 | Trap that cost something | `docs/pitfalls.md` |
 | Consumer-visible change | a `CHANGELOG.md` line — that file's header defines consumer-visible and the shape |
-| Work item, or a finding to triage later | a `.scratch/` ticket — `docs/agents/issue-tracker.md` |
+| Work item, or a finding to triage later | a `.scratch/` ticket — `docs/agents/issue-tracker.md`. A dependency bump goes to GitHub Issues instead |
 | Rule no mechanism catches | here, and nowhere else — `docs/agents/review-checklist.md` may add how review *applies* a rule, never the rule itself |
 | Fact about our own tooling — a gate that does not exist, a mechanism tried and dropped | `VERIFICATION.md` — "Known gaps". Never a design doc: `ARCHITECTURE.md` says what the system is, not what we check |
 
@@ -63,7 +63,10 @@ Where a rule below names its gate, what is written here is the part that gate ca
 - A dependency in `musicmeta-core` reaches every consumer transitively and cannot be withdrawn
   without a break, so each one carries its argument beside the declaration and a fourth needs one
   too. The adapters exist to bring OkHttp and Room and are not held to this. Nothing enforces it
-  (`VERIFICATION.md` — "Known gaps").
+  (`VERIFICATION.md` — "Known gaps"). Raising the version of one moves a floor every consumer
+  inherits, because Gradle takes the highest version in the graph: bump for a security advisory or
+  an API we need, and say which in the PR. Kotlin counts — its version publishes `kotlin-stdlib`
+  into every POM at compile scope.
 - `e2e/` tests hit live APIs behind `-Dinclude.e2e=true` and never gate a merge, so an e2e test is
   not coverage for a change. `musicmeta-android/src/androidTest/` is the same: nothing runs it —
   not `check`, not CI — so a Room migration reaches a release having been proved only against

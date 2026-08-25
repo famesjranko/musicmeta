@@ -7,28 +7,92 @@ updates:
     schedule:
       interval: weekly
 
-  # Every dependency here reaches a consumer: core's three are transitive on the published POM,
-  # and the adapters exist to bring OkHttp and Room. A stale one is imposed on everyone who takes
-  # the library, and nothing else in the repo notices — `apiCheck` does not read the POM, and no
-  # gate reads versions at all.
+  # Gradle resolves a version conflict by taking the highest version in the graph, so what we
+  # declare is a floor rather than a pin. Raising a floor is imposed on every consumer below it —
+  # an app on OkHttp 4 that takes musicmeta-okhttp is dragged up, and `okhttp` is `api`, so that
+  # lands on their compile classpath. So the dependencies a consumer inherits move for a reason —
+  # a security advisory, or an API we need — never because a version number went up. What that
+  # costs, and the rule a human editing libs.versions.toml is still bound by: CLAUDE.md.
   #
-  # Grouped so a quiet week is one PR rather than a dozen. Two bumps need more than a green run
-  # before merging, and both are documented where they live rather than pinned here:
-  # `detekt` (VERIFICATION.md — 1.23.8 is built against a different Kotlin/AGP than this repo runs,
-  # so all three modules' typed tasks have to be re-run) and `ktlint-gradle` (libs.versions.toml —
-  # the CLI version is set explicitly, so a plugin bump must not be read as a rule-set bump).
+  # Two limits on the paragraph above, both of which cut against being relaxed about a stale floor:
+  # highest-wins is Gradle's rule, and a Maven consumer resolves nearest-wins instead, so a stale
+  # floor can be what they get; and a consumer who resolves above our floor runs our bytecode
+  # against a version nothing here ever compiled or tested against.
+  #
+  # Everything below that is not ignored is build and test tooling, with one exception that matters:
+  # the Kotlin version publishes `kotlin-stdlib` into every POM at compile scope (VERIFICATION.md —
+  # "Known gaps"), so a Kotlin bump is a consumer-facing floor move wearing a toolchain label.
+  # `detekt` and `ktlint-gradle` each need more than a green run and say so where they live
+  # (VERIFICATION.md and libs.versions.toml respectively).
   - package-ecosystem: gradle
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
     groups:
       # Only minors and patches share a PR. A major falls outside the group and arrives alone,
       # because a grouped major is reviewed as whichever of its siblings breaks first, and a
       # Gradle, AGP or Room major each needs its own migration argument before a green run
-      # means anything.
+      # means anything. A toolchain major cannot pass alone — AGP, Gradle, Kotlin and KSP are
+      # version-locked — and that failure is the argument arriving, not a defect to configure away.
       gradle-minor-patch:
         patterns:
           - "*"
         update-types:
           - minor
           - patch
+
+    # Every dependency a published POM carries, at any scope. `implementation` is runtime scope on
+    # the POM, so it reaches a consumer just as surely as `api` does. All three modules publish.
+    #
+    # Each entry is a wildcard over the whole family rather than the single artifact that reaches a
+    # consumer, because libs.versions.toml shares one version ref across each: `okhttp` covers
+    # mockwebserver, `room` covers room-testing, `coroutines` covers kotlinx-coroutines-test, `hilt`
+    # covers the Dagger plugin, and `androidx.hilt:hilt-work` hangs off a ref named
+    # `hilt-navigation-compose` for a library this repo does not use. Ignoring only the published
+    # artifact would let a build-only sibling drag the shared ref up and publish the bump anyway.
+    #
+    # `version-update:*` suppresses version updates only — Dependabot's ignore_condition short-
+    # circuits past update_types when the update is a security one, so a security advisory still
+    # opens a PR. GitHub's own reference documents the opposite, so nothing here should be read as
+    # guaranteed: VERIFICATION.md — "Known gaps" carries what is unverified about it.
+    ignore:
+      - dependency-name: "com.squareup.okhttp3:*"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
+          - "version-update:semver-patch"
+      - dependency-name: "androidx.room:*"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
+          - "version-update:semver-patch"
+      - dependency-name: "androidx.work:*"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
+          - "version-update:semver-patch"
+      - dependency-name: "androidx.hilt:*"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
+          - "version-update:semver-patch"
+      - dependency-name: "com.google.dagger*"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
+          - "version-update:semver-patch"
+      - dependency-name: "org.jetbrains.kotlinx:kotlinx-serialization-*"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
+          - "version-update:semver-patch"
+      - dependency-name: "org.jetbrains.kotlinx:kotlinx-coroutines-*"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
+          - "version-update:semver-patch"
+      - dependency-name: "org.json:json"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
+          - "version-update:semver-patch"

@@ -78,7 +78,17 @@ than it looks like, each learned the hard way.
   and `./gradlew :musicmeta-core:generatePomFileForMavenPublication` already writes a fourth
   dependency, `kotlin-stdlib`, that no build script declares, so a parse can report "three, all
   allowed" while the artifact a consumer resolves disagrees. A baseline of that POM, diffed the way
-  `api/*.api` is, would enforce it exactly — `.scratch/core-dependency-pom-baseline/`.
+  `api/*.api` is, would enforce it exactly — `.scratch/core-dependency-pom-baseline/`. Nothing reads
+  a dependency's *version* either, in any module: moving one compiles, passes every test and moves
+  no `api/*.api` line, and `.github/dependabot.yml` now deliberately does not offer those bumps, so
+  review is the only reader left.
+- **Nothing verifies that a security PR still arrives.** `.github/dependabot.yml` ignores the
+  consumer-facing dependencies for version updates only. Upstream asserts that a security update
+  ignores those conditions — `dependabot-core`'s `silent/tests/testdata/su-err-all-versions-ignored`
+  expects a PR to be raised with every version ignored — but GitHub's published reference states the
+  opposite, that `ignore` suppresses security updates too. So the behaviour is what the tool tests
+  today, not what its documentation promises, and nothing here would notice if it changed: the
+  failure is silent and looks exactly like having no vulnerabilities.
 - **No connected Android test runs anywhere.** `musicmeta-android/src/androidTest/` is absent from
   `check`, from the `Makefile` and from all five workflows in `.github/workflows/`, so
   `EnrichmentCacheDatabaseMigrationDeviceTest` — the only thing that exercises a Room migration
