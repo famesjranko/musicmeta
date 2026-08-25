@@ -687,6 +687,18 @@ later one is any reissue and reports nothing. That costs about half the catch ra
 population that decides such a rule is not a random wrong year — it is a caller whose identifier is
 **right** and whose local tags came from a different pressing, which is the ordinary case.
 
+**The evidence, ranked — and where it stops.** Each rank below is settled; reopening one needs new
+data, not a new argument.
+
+- **Cross-artist mismatch** — strong contradiction evidence. Reject the supplied identifier and
+  recover by name.
+- **Caller year predates the release group's first-release year** — conservative contradiction
+  signal, in the measured legitimate-pressing population.
+- **Track-count mismatch** — unsafe as contradiction evidence. Rejected after 29% false positives
+  across legitimate pressings.
+- **Title mismatch** — unvalidated and intentionally unused: edition, remaster and localisation
+  variation make it a separate problem.
+
 The comparison is deliberately on the **artist**, never the title — a remaster, an edition or a
 localised title differs from what a caller typed while still being the album they meant. So a
 different album *by the same artist* is not caught; that is a stated boundary with a test on it, not
