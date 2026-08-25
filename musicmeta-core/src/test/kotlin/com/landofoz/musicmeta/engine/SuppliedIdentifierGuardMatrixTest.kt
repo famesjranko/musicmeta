@@ -81,6 +81,8 @@ class SuppliedIdentifierGuardMatrixTest {
         givenJsonResponse("release/rel-parachutes", PARACHUTES)
         givenJsonResponse("release-group/rg-ok", OK_COMPUTER_GROUP)
         givenJsonResponse("release-group/rg-parachutes", PARACHUTES_GROUP)
+        givenJsonResponse("release?release-group=rg-ok", OK_COMPUTER_BROWSE)
+        givenJsonResponse("release?release-group=rg-parachutes", PARACHUTES_BROWSE)
         givenJsonResponse("release?query", RELEASE_SEARCH)
     }
 
@@ -180,18 +182,27 @@ class SuppliedIdentifierGuardMatrixTest {
                "tags":[{"name":"$genre","count":9}]}}
         """.trimIndent()
 
-        private fun group(id: String, title: String, credit: String, releaseId: String) = """
+        private fun group(id: String, title: String, credit: String) = """
             {"id":"$id","title":"$title",
-             "artist-credit":[{"artist":{"id":"a-$id","name":"$credit"}}],
-             "releases":[{"id":"$releaseId","title":"$title","date":"2000-01-01","country":"GB",
+             "artist-credit":[{"artist":{"id":"a-$id","name":"$credit"}}]}
+        """.trimIndent()
+
+        /** A release browse carries the group only inside each release, which is where its guards read it. */
+        private fun browse(id: String, title: String, credit: String, releaseId: String) = """
+            {"release-count":1,"releases":[
+              {"id":"$releaseId","title":"$title","date":"2000-01-01","country":"GB",
                "media":[{"format":"CD"}],
-               "label-info":[{"catalog-number":"CAT1","label":{"name":"Parlophone"}}]}]}
+               "label-info":[{"catalog-number":"CAT1","label":{"name":"Parlophone"}}],
+               "release-group":{"id":"$id","title":"$title",
+                 "artist-credit":[{"artist":{"id":"a-$id","name":"$credit"}}]}}]}
         """.trimIndent()
 
         val OK_COMPUTER = release("rel-ok", "OK Computer", "Radiohead", "alternative rock", "Airbag")
         val PARACHUTES = release("rel-parachutes", "Parachutes", "Coldplay", "britpop", "Yellow")
-        val OK_COMPUTER_GROUP = group("rg-ok", "OK Computer", "Radiohead", "rel-ok")
-        val PARACHUTES_GROUP = group("rg-parachutes", "Parachutes", "Coldplay", "rel-parachutes")
+        val OK_COMPUTER_GROUP = group("rg-ok", "OK Computer", "Radiohead")
+        val PARACHUTES_GROUP = group("rg-parachutes", "Parachutes", "Coldplay")
+        val OK_COMPUTER_BROWSE = browse("rg-ok", "OK Computer", "Radiohead", "rel-ok")
+        val PARACHUTES_BROWSE = browse("rg-parachutes", "Parachutes", "Coldplay", "rel-parachutes")
 
         val RELEASE_SEARCH = """
             {"releases":[{"id":"rel-ok","score":100,"title":"OK Computer","date":"1997-06-16",

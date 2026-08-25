@@ -86,7 +86,7 @@ deliberate:
   `MusicBrainzParser.kt` holds every JSON → DTO conversion, which the other packages do inline in
   `*Api`; fourteen capabilities across three entity types is more than an API client should carry.
   `MusicBrainzCreditParser.kt` serves `CREDITS` and `RELEASE_EDITIONS` only — those two read raw
-  `JSONObject` rather than DTOs, since `lookupRecording` and `lookupReleaseGroup` return the response
+  `JSONObject` rather than DTOs, since `lookupRecording` and `browseReleaseGroupReleases` return the response
   unparsed, and it owns the relation-type → role mapping. Writer credits live on the *work*, not the
 recording, so the recording lookup asks for `work-level-rels` — without it the work arrives as an
 id-and-title stub and every songwriter is silently absent. The bytes are paid on every recording

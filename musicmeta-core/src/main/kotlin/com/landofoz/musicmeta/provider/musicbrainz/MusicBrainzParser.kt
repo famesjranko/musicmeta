@@ -400,8 +400,9 @@ internal object MusicBrainzParser {
 
     /**
      * A release group's own `first-release-date` — the floor under every pressing of the album,
-     * carried by a release-group lookup without any `inc=` asking for it. May be partial (`"1997"`,
-     * `"1997-05"`), so read a year off it rather than parsing it as a date.
+     * carried by any release-group object, whether looked up directly or embedded by
+     * `inc=release-groups`. May be partial (`"1997"`, `"1997-05"`), so read a year off it rather
+     * than parsing it as a date.
      */
     internal fun extractFirstReleaseDate(obj: JSONObject): String? =
         obj.optString("first-release-date").takeIf { it.isNotBlank() }

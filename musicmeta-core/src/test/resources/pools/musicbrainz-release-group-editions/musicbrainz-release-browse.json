@@ -1,0 +1,81 @@
+{
+  "releases": [
+    {
+      "id": "01e3fec0-8c75-4800-9c31-7cd42e93f3bf",
+      "title": "Hail to the Thief",
+      "date": "2003-06-09",
+      "country": "US",
+      "barcode": "724358454345",
+      "status": "Official",
+      "media": [
+        {
+          "format": "Cassette"
+        }
+      ],
+      "label-info": [
+        {
+          "catalog-number": "C4 7243 5",
+          "label": {
+            "name": "Capitol Records"
+          }
+        }
+      ],
+      "artist-credit": [
+        {
+          "name": "Radiohead",
+          "joinphrase": "",
+          "artist": {
+            "id": "a74b1b7f-71a5-4011-9441-d0b5e4122711",
+            "name": "Radiohead"
+          }
+        }
+      ],
+      "release-group": {
+        "id": "5c14fd50-a2f1-3672-9537-b0dad91bea2f",
+        "title": "Hail to the Thief",
+        "first-release-date": "2003-05-26",
+        "artist-credit": [
+          {
+            "name": "Radiohead",
+            "joinphrase": "",
+            "artist": {
+              "id": "a74b1b7f-71a5-4011-9441-d0b5e4122711",
+              "name": "Radiohead"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "03b0ae09-65cc-4d2f-8537-56340bc6e3c6",
+      "title": "Hail to the Thief",
+      "date": "2016-04-15",
+      "country": "XE",
+      "barcode": "634904078515",
+      "status": "Official",
+      "media": [
+        {
+          "format": "12\" Vinyl"
+        }
+      ],
+      "label-info": [
+        {
+          "catalog-number": "XLLP785",
+          "label": {
+            "name": "XL Recordings"
+          }
+        }
+      ],
+      "artist-credit": [
+        {
+          "name": "Radiohead",
+          "joinphrase": "",
+          "artist": {
+            "id": "a74b1b7f-71a5-4011-9441-d0b5e4122711",
+            "name": "Radiohead"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -280,16 +280,26 @@ internal class MusicBrainzApi(
     }
 
     /**
-     * Lookup a release-group by MBID with releases (needed for editions).
+     * Browse every release in a release group by its MBID — what `RELEASE_EDITIONS` answers with.
      *
-     * `artist-credits` rides along so the caller's own artist can be checked against what came
-     * back: a release-group id is a caller assertion like any other, and without a credit in the
-     * response there is nothing to check it against. It costs no extra request.
+     * A browse rather than a release-group lookup because `labels` is not a valid `inc` on the
+     * release-group resource, so a lookup can never carry an edition's label or catalogue number,
+     * and its inline `releases` array carries no `media` either. `labels`+`media` are the three
+     * fields `ReleaseEdition` promises; `artist-credits` is each release's own credit; and
+     * `release-groups` is what carries the guard data — the group's `first-release-date` and its
+     * own artist credit, repeated on every release, which is the only place a browse holds them.
+     *
+     * The cost is bytes: 21,932 for the old lookup against 54,556 for this browse, over a
+     * 27-release group (measured 2026-08-25).
+     *
+     * `limit=100` is MusicBrainz's browse maximum and the documented bound on the answer — a group
+     * with more than 100 releases is truncated, deliberately, rather than paged over.
      */
-    suspend fun lookupReleaseGroup(releaseGroupMbid: String): JSONObject? {
+    suspend fun browseReleaseGroupReleases(releaseGroupMbid: String): JSONObject? {
         val json = rateLimiter.execute {
             httpClient.fetchJsonResult(
-                "$BASE_URL/release-group/$releaseGroupMbid?fmt=json&inc=releases+artist-credits",
+                "$BASE_URL/release?release-group=$releaseGroupMbid&fmt=json" +
+                    "&inc=$RELEASE_BROWSE_INC&limit=$RELEASE_BROWSE_LIMIT",
             ).bodyOrThrowTransient()
         }
         return json
@@ -416,6 +426,10 @@ internal class MusicBrainzApi(
         // a credits-free entry to a caller who asked for credits is the more expensive bug.
         private const val RECORDING_LOOKUP_INC =
             "artist-rels+work-rels+work-level-rels+artists+releases+release-groups+isrcs+tags+genres+ratings"
+
+        /** [browseReleaseGroupReleases]'s `inc=` and its bound; see its KDoc for why each is there. */
+        private const val RELEASE_BROWSE_INC = "release-groups+artist-credits+labels+media"
+        private const val RELEASE_BROWSE_LIMIT = 100
 
         /** [lookupArtistWithRels]'s `inc=`; see its KDoc. */
         private const val ARTIST_LOOKUP_INC = "tags+genres+aliases+ratings+url-rels+artist-rels"

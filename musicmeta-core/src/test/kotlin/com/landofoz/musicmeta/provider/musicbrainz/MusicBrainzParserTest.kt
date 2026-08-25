@@ -2,6 +2,7 @@ package com.landofoz.musicmeta.provider.musicbrainz
 
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
+import com.landofoz.musicmeta.testkit.UpstreamPools
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.json.JSONObject
@@ -999,50 +1000,70 @@ class MusicBrainzParserTest {
     }
 
     @Test
-    fun `parseReleaseGroupDetail parses releases array into MusicBrainzReleaseGroupDetail`() {
-        // Given - release-group lookup response with releases array
-        val json = JSONObject(RELEASE_GROUP_WITH_RELEASES)
+    fun `parseReleaseBrowse reads the group off the first release`() {
+        // Given - a captured release browse, which carries no release group at the top level
+        val json = JSONObject(UpstreamPools.body(EDITIONS_POOL, EDITIONS_BROWSE_FILE))
 
-        // When - parsing release group detail
-        val detail = MusicBrainzCreditParser.parseReleaseGroupDetail(json)
+        // When - parsing the browse
+        val detail = MusicBrainzCreditParser.parseReleaseBrowse(json)
 
-        // Then - detail has correct id, title, and list of releases
-        assertEquals("rg1", detail.id)
-        assertEquals("OK Computer", detail.title)
-        assertEquals(2, detail.releases.size)
+        // Then - the group's own id and title come back, with one entry per release
+        assertEquals("5c14fd50-a2f1-3672-9537-b0dad91bea2f", detail?.id)
+        assertEquals("Hail to the Thief", detail?.title)
+        assertEquals(2, detail?.releases?.size)
     }
 
     @Test
-    fun `parseReleaseGroupDetail extracts all fields from release object`() {
-        // Given - release-group lookup response with fully populated release
-        val json = JSONObject(RELEASE_GROUP_WITH_RELEASES)
+    fun `parseReleaseBrowse extracts all fields from a release object`() {
+        // Given - a captured release browse whose first release is fully populated
+        val json = JSONObject(UpstreamPools.body(EDITIONS_POOL, EDITIONS_BROWSE_FILE))
 
-        // When - parsing release group detail
-        val detail = MusicBrainzCreditParser.parseReleaseGroupDetail(json)
+        // When - parsing the browse
+        val detail = MusicBrainzCreditParser.parseReleaseBrowse(json)
 
-        // Then - first release has all fields extracted
-        val release = detail.releases[0]
-        assertEquals("rel1", release.id)
-        assertEquals("OK Computer", release.title)
-        assertEquals("1997-06-16", release.date)
-        assertEquals("GB", release.country)
-        assertEquals("BARCODE123", release.barcode)
-        assertEquals("CD", release.format)
-        assertEquals("Parlophone", release.label)
-        assertEquals("PCS 8088", release.catalogNumber)
+        // Then - the first release has every field extracted, format and label among them
+        val release = detail?.releases?.get(0)
+        assertEquals("01e3fec0-8c75-4800-9c31-7cd42e93f3bf", release?.id)
+        assertEquals("Hail to the Thief", release?.title)
+        assertEquals("2003-06-09", release?.date)
+        assertEquals("US", release?.country)
+        assertEquals("724358454345", release?.barcode)
+        assertEquals("Cassette", release?.format)
+        assertEquals("Capitol Records", release?.label)
+        assertEquals("C4 7243 5", release?.catalogNumber)
     }
 
     @Test
-    fun `parseReleaseGroupDetail returns empty releases list when releases array absent`() {
-        // Given - release-group JSON with no releases key
-        val json = JSONObject("""{"id":"rg1","title":"No Releases"}""")
+    fun `parseReleaseBrowse reads the group off a later release when the first carries none`() {
+        // Given - a browse whose first release lacks the release-group object and whose second
+        // carries it, the ordering MusicBrainz never promises away
+        val json = JSONObject(
+            """
+            {"release-count":2,"releases":[
+              {"id":"r1","title":"Bare"},
+              {"id":"r2","title":"Carried","release-group":{"id":"rg9","title":"Carried"}}
+            ]}
+            """.trimIndent(),
+        )
 
-        // When - parsing release group detail
-        val detail = MusicBrainzCreditParser.parseReleaseGroupDetail(json)
+        // When - parsing the browse
+        val detail = MusicBrainzCreditParser.parseReleaseBrowse(json)
 
-        // Then - releases list is empty
-        assertEquals("rg1", detail.id)
-        assertTrue(detail.releases.isEmpty())
+        // Then - the group is found on the second release rather than the whole answer emptying
+        assertEquals("rg9", detail?.id)
+        assertEquals(2, detail?.releases?.size)
+    }
+
+    @Test
+    fun `parseReleaseBrowse returns null when the browse holds no releases`() {
+        // Given - a browse answering with an empty releases array, which carries no group at all
+        val json = JSONObject("""{"release-count":0,"releases":[]}""")
+
+        // When - parsing the browse
+        val detail = MusicBrainzCreditParser.parseReleaseBrowse(json)
+
+        // Then - null, because there is no release to read the group off
+        assertNull(detail)
     }
 
     @Test
@@ -1103,6 +1124,9 @@ class MusicBrainzParserTest {
     }
 
     companion object {
+        private const val EDITIONS_POOL = "musicbrainz-release-group-editions"
+        private const val EDITIONS_BROWSE_FILE = "musicbrainz-release-browse.json"
+
         private fun cdTrack(title: String, position: Int, recordingId: String) = """
             {
               "title": "$title",
@@ -1602,35 +1626,6 @@ class MusicBrainzParserTest {
                   "type": "wikipedia",
                   "target-type": "url",
                   "url": {"resource": "https://en.wikipedia.org/wiki/Radiohead"}
-                }
-              ]
-            }
-        """.trimIndent()
-
-        private val RELEASE_GROUP_WITH_RELEASES = """
-            {
-              "id": "rg1",
-              "title": "OK Computer",
-              "releases": [
-                {
-                  "id": "rel1",
-                  "title": "OK Computer",
-                  "date": "1997-06-16",
-                  "country": "GB",
-                  "barcode": "BARCODE123",
-                  "media": [{"format": "CD", "tracks": []}],
-                  "label-info": [
-                    {
-                      "catalog-number": "PCS 8088",
-                      "label": {"name": "Parlophone"}
-                    }
-                  ]
-                },
-                {
-                  "id": "rel2",
-                  "title": "OK Computer",
-                  "date": "1997-07-01",
-                  "country": "US"
                 }
               ]
             }
