@@ -284,6 +284,31 @@ class MusicBrainzSymbolTitleFallbackTest {
         assertNull((result as EnrichmentResult.NotFound).suggestions)
     }
 
+    @Test
+    fun `an empty pool for a title no folding can rescue never starts the fallback`() = runTest {
+        // Given - a plainly-typo'd title whose search returns an empty pool, and which contains no
+        // character or fold image the symbol fallback could ever match on
+        httpClient.givenJsonResponse(
+            "release%3A%22OK+Computr",
+            """{"count": 0, "offset": 0, "releases": []}""",
+        )
+        val request = EnrichmentRequest.forAlbum("OK Computr", "Godspeed You! Black Emperor")
+
+        // When - enriching for genre
+        val result = provider.enrich(request, EnrichmentType.GENRE)
+
+        // Then - NotFound without the fallback's artist search or release-group browse ever running
+        assertTrue("expected NotFound, got $result", result is EnrichmentResult.NotFound)
+        assertTrue(
+            "the fallback's artist search must not run: ${httpClient.requestedUrls}",
+            httpClient.requestedUrls.none { it.contains("artist?query") },
+        )
+        assertTrue(
+            "the fallback's release-group browse must not run: ${httpClient.requestedUrls}",
+            httpClient.requestedUrls.none { it.contains("release-group?artist") },
+        )
+    }
+
     private companion object {
         const val ARTIST_MBID = "3648db01-b29d-4ab9-835c-83f6a5068fe4"
         const val RELEASE_GROUP_MBID = "01d06c6e-a4e6-3d8b-8a45-42a598fe87d7"

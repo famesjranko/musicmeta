@@ -73,7 +73,8 @@ internal suspend fun DefaultEnrichmentEngine.runProgressiveFanOut(
         // expiry — a consumer's CatalogProvider, say — propagates instead of being caught by type
         // and mislabelled as enrichTimeoutMs.
         val completed = withTimeoutOrNull(config.enrichTimeoutMs) {
-            resolveUncachedTypes(request, forceRefresh, cacheLayer, session, settle)
+            val onIdentitySettled = identityEmission(session, types, run)
+            resolveUncachedTypes(request, forceRefresh, cacheLayer, session, settle, onIdentitySettled)
             true
         } ?: false
 
@@ -160,6 +161,24 @@ private fun stragglerError(fault: Throwable?): (EnrichmentType) -> EnrichmentRes
             "Enrichment failed before this type settled: ${fault::class.simpleName}: ${fault.message}",
             errorKind = ErrorKind.UNKNOWN,
         )
+    }
+}
+
+/**
+ * The identity-settled callback [runProgressiveFanOut] hands to
+ * [DefaultEnrichmentEngine.resolveUncachedTypes]: emits the run's state the moment a live identity
+ * resolution settles, so a collector sees the verdict and its suggestions before any type does.
+ * Mirrors [settleInto]'s emission guard — an emission with nothing pending would read as terminal,
+ * so a run whose every type already settled stays silent here.
+ */
+private fun identityEmission(
+    session: RunSession,
+    types: Set<EnrichmentType>,
+    run: ProgressiveRunRegistry.ProgressiveRun,
+): suspend () -> Unit = {
+    val snapshot = session.board.snapshotResults().filterKeys { it in types }
+    if ((types - snapshot.keys).isNotEmpty()) {
+        run.shared.emit(EnrichmentResults(snapshot, types, session.identityHolder.current))
     }
 }
 

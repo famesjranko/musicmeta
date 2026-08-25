@@ -38,6 +38,25 @@ internal object MusicBrainzTitleFolding {
 
     private val WHITESPACE = Regex("""\s+""")
 
+    /**
+     * Whether any differently-spelled title could [fold] to the same string as [title] — the
+     * admission test for a fold-comparison fallback: when this is false, browsing a catalogue for
+     * a folded match cannot succeed, because folding never edits a letter. True when [title] itself
+     * folds (spellings converge on it) or when its folded form contains the image of any folded
+     * symbol — deliberately over-inclusive, since a single-letter image like `b` cannot be told
+     * from an ordinary letter. Dropped characters are invisible in the image (judgement: a match
+     * differing only by dropped brackets or quotes is one the search analyzer already finds, so an
+     * empty pool rules it out).
+     */
+    fun foldMatchPossible(title: String): Boolean {
+        val folded = fold(title)
+        if (folded != title.lowercase().trim().replace(WHITESPACE, " ")) return true
+        return FOLD_IMAGES.any { folded.contains(it) }
+    }
+
+    /** What a folded symbol looks like from the plain side — derived from the tables, not listed. */
+    private val FOLD_IMAGES: List<String> = (WORD_SYMBOLS.values + CHARACTER_SYMBOLS.values).distinct()
+
     /** [title] lowercased, folded, and whitespace-collapsed. Equality on this is the whole point. */
     fun fold(title: String): String {
         val folded = StringBuilder()

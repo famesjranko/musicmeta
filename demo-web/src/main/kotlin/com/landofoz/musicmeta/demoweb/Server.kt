@@ -797,7 +797,10 @@ private suspend fun streamEnrichment(
             latest = snapshot
             val pending = plan.types - snapshot.raw.keys
             if (pending.isEmpty()) return@collect
-            if (firstPaintMs == null && snapshot.raw.isNotEmpty()) firstPaintMs = System.currentTimeMillis() - started
+            // A settled identity verdict is a paint even with nothing enriched yet: the page can
+            // show the verdict and its suggestions from that snapshot alone.
+            val paints = snapshot.raw.isNotEmpty() || snapshot.identity.status !in UNSETTLED_IDENTITY_STATUSES
+            if (firstPaintMs == null && paints) firstPaintMs = System.currentTimeMillis() - started
             sequence += 1
             writer.write(
                 "snapshot",
