@@ -7,6 +7,10 @@ Issues and specs (you may know a spec as a PRD) for this repo live as markdown f
 > signal). Those are **not** the skill tracker: skills read and write `.scratch/`, and must not run
 > `gh issue create`. A `(#n)` reference in `CHANGELOG.md`, a commit, or a PR body still means the
 > GitHub issue.
+>
+> **A dependency bump is the one exception.** Its counterpart is a Dependabot PR, and a PR cannot
+> cite a gitignored path, so the ticket lives on GitHub and `gh issue create` is allowed for it.
+> Nothing else is.
 
 ## Conventions
 
