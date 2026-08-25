@@ -95,9 +95,9 @@ internal fun MusicBrainzArtist.alternativeNames(): List<AlternativeName> =
  * That zero supports one population — a **correct** identifier beside caller metadata from another
  * legitimate pressing of the same album — and is not evidence that comparing years is universally
  * safe. The caller whose own tag predates MusicBrainz's first release is outside the corpus, since
- * every year in it comes from MusicBrainz. `corpora/album-year-contradiction/provenance.md` and
- * `.scratch/album-mbid-contradiction/spec.md` hold the rest, including one probe that turned out
- * vacuous.
+ * every year in it comes from MusicBrainz. `corpora/album-year-contradiction/` holds the rest: its
+ * `provenance.md`, and the `spec.md` beside it that froze this rule and the rejected one before the
+ * capture ran, including one probe that turned out vacuous.
  */
 internal suspend fun MusicBrainzLookup<MusicBrainzRelease>.unlessPredatingFirstRelease(
     callerYear: Int?,

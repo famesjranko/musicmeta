@@ -1,8 +1,17 @@
 # album-year-contradiction
 
-Captured live from MusicBrainz on **2026-08-25** by
-`.scratch/album-mbid-contradiction/capture_albums.py`, committed beside the raw `albums.json` it
-wrote. Re-run it before trusting these numbers again: a live capture decays.
+Captured live from MusicBrainz on **2026-08-25** by `capture_albums.py`, tracked here beside the
+corpus it produced. Re-run it before trusting these numbers again: a live capture decays.
+
+`spec.md` is the frozen rule set and the decision rule, written before the capture ran, with the
+results appended under it. `score_arms.py` is what scored the two arms on the raw capture.
+
+Both scripts were written and run outside this directory, and their paths reflect that: the raw
+`albums.json` they read and write is not tracked (`groups.json` is the reduction of it the test
+needs), and `capture_albums.py` reads its artist list from a sibling capture directory rather than
+from `corpora/artist-name-contradiction/names_correct.json`, which holds the same 99 artists. The
+prose in `spec.md` cites the working directory in the same way. Repoint both before a re-run rather
+than reading the paths as a claim about this repository's layout.
 
 ## Population
 
@@ -36,8 +45,8 @@ The track-count rule was frozen before the capture, on the same terms, and lost 
 ## What it cannot show
 
 Every year here comes from MusicBrainz, so a caller whose own tag is two or more years earlier than
-MusicBrainz's first release is outside it. `.scratch/album-mbid-contradiction/spec.md` records that
-limit, and why the rule's one-sidedness and its year of slack answer it rather than a tuned
+MusicBrainz's first release is outside it. `spec.md` records that limit under "One measurement is
+vacuous", and why the rule's one-sidedness and its year of slack answer it rather than a tuned
 threshold.
 
 The catch rate is not measured here and is not a property of this corpus. Scored on synthetic
