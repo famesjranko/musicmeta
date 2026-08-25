@@ -216,13 +216,20 @@ internal fun DefaultEnrichmentEngine.settleInto(
 
 /**
  * Builds the terminal snapshot for a call whose dedupe key was never seen before the engine
- * [DefaultEnrichmentEngine.close]d — every requested type is unsettled, so this stamps all of them
- * via [DefaultEnrichmentEngine.stampStragglers] rather than starting a fan-out on a scope that will
- * never run it.
+ * [DefaultEnrichmentEngine.close]d, without starting a fan-out on a scope that will never run it.
+ * A type [cacheLayer] already holds settles with its real result — the cache outlives `close()`,
+ * and [ErrorKind.ENGINE_CLOSED] is reserved for a type that was genuinely uncached — via the same
+ * [DefaultEnrichmentEngine.settleInto] route as a live run, so catalog filtering applies
+ * identically. Only the genuinely uncached remainder is stamped
+ * `Error(ErrorKind.ENGINE_CLOSED)` by [DefaultEnrichmentEngine.stampStragglers]. Identity stays
+ * [failedIdentityResolution]: with uncached types unserved, resolution would have run and did not —
+ * a cache hit here does not make it [CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT], unlike the
+ * fully-cached fast path, which never reaches this function.
  */
 internal suspend fun DefaultEnrichmentEngine.abandonedSnapshot(
     request: EnrichmentRequest,
     types: Set<EnrichmentType>,
+    cacheLayer: CacheLayer,
     run: ProgressiveRunRegistry.ProgressiveRun,
 ): EnrichmentResults {
     val session = RunSession(
@@ -230,6 +237,7 @@ internal suspend fun DefaultEnrichmentEngine.abandonedSnapshot(
         identityHolder = IdentityHolder(failedIdentityResolution(request)),
     )
     val settle = settleInto(request, types, session, run)
+    for ((type, result) in cacheLayer.results) settle(type, result, null)
     stampStragglers(types, session.board, settle) { type ->
         EnrichmentResult.Error(
             type, "engine", "Engine closed before this type settled", errorKind = ErrorKind.ENGINE_CLOSED,
