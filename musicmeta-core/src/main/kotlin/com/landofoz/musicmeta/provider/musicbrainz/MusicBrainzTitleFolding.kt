@@ -9,6 +9,15 @@ package com.landofoz.musicmeta.provider.musicbrainz
  * `release:"F# A# (Infinity)"` returns zero, `release:"F♯ A♯ ∞"` twelve (live, 2026-08-10). Nothing
  * folds the caller's text into `∞`, so this folds the other way and needs a candidate title in hand.
  *
+ * That same analyzer does ignore every character in [DROPPED_CHARS], which is what lets
+ * [foldMatchPossible] treat them as invisible. Verified live 2026-08-25 over both directions a
+ * caller and a stored title can differ in: a query carrying the character still found the plain
+ * stored title for all eight classes, and a plain query still found the stored title carrying it
+ * for `()`, `[]`, `{}`, `'`, `’` and `“”`. The straight double quote, the left single quote and
+ * the guillemets have no stored-side row — MusicBrainz's title style normalises quotes to the
+ * curly pair and no stored example was found — so those three rest on the query side alone. Recipe
+ * and seeds: `scripts/probes/mb-dropped-char-analyzer-probe.sh`.
+ *
  * [WORD_SYMBOLS] is a transliteration table, not a rule: only symbols with one unambiguous English
  * reading belong in it.
  */
@@ -44,13 +53,13 @@ internal object MusicBrainzTitleFolding {
      * a folded match cannot succeed, because folding never edits a letter. True when [title] itself
      * folds (spellings converge on it) or when its folded form contains the image of any folded
      * symbol — deliberately over-inclusive, since a single-letter image like `b` cannot be told
-     * from an ordinary letter. Dropped characters are invisible in the image (judgement: a match
-     * differing only by dropped brackets or quotes is one the search analyzer already finds, so an
-     * empty pool rules it out).
+     * from an ordinary letter. Dropped characters are invisible in the image: MusicBrainz's own
+     * search analyzer ignores them too, so a match differing only by a bracket or a quote is one
+     * the pool already held and an empty pool rules it out.
      */
     fun foldMatchPossible(title: String): Boolean {
         val folded = fold(title)
-        if (folded != title.lowercase().trim().replace(WHITESPACE, " ")) return true
+        if (folded != normalize(title)) return true
         return FOLD_IMAGES.any { folded.contains(it) }
     }
 
@@ -68,6 +77,12 @@ internal object MusicBrainzTitleFolding {
                 else -> folded.append(char)
             }
         }
-        return folded.toString().trim().replace(WHITESPACE, " ")
+        return normalize(folded.toString())
     }
+
+    /**
+     * What [fold] does apart from the substitution tables. Comparing a fold against this is how
+     * [foldMatchPossible] asks whether any table touched the title at all.
+     */
+    private fun normalize(title: String): String = title.lowercase().trim().replace(WHITESPACE, " ")
 }
