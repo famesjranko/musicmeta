@@ -28,6 +28,7 @@ import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.ByteArrayOutputStream
@@ -233,6 +234,31 @@ class EnrichStreamEndpointTest {
         assertTrue(snapshots.all { it.firstPaintMs != null })
     }
 
+    @Test fun `an identity-only snapshot counts as the first paint`() {
+        // Given - the engine's first emission carries a settled identity verdict and no settled types
+        val engine = ScriptedEngine(
+            listOf(
+                artistResults(emptyMap(), status = CanonicalStatus.FAILED),
+                artistResults(mapOf(EnrichmentType.ARTIST_BIO to bio("Bristol.")), status = CanonicalStatus.FAILED),
+                artistResults(everyArtistType, status = CanonicalStatus.FAILED),
+            ),
+            gapMs = 60,
+        )
+        val port = startWith(engine)
+
+        // When - streaming an artist through the endpoint
+        val events = stream(port, "/api/enrich-stream?kind=artist&name=Portishead")
+
+        // Then - the identity-only snapshot reaches the page and stamps the first paint, because
+        // the verdict is what a visitor can act on before any enrichment settles
+        val snapshots = events.filter { it.name == "snapshot" }.map { snapshotOf(it) }
+        assertTrue("expected at least two snapshots, got ${snapshots.size}", snapshots.size >= 2)
+        assertTrue(
+            "the identity-only snapshot must stamp firstPaintMs: ${snapshots.first()}",
+            snapshots.first().firstPaintMs != null,
+        )
+    }
+
     @Test fun `the complete event settles every requested type even when snapshots were conflated away`() {
         // Given - an engine that emits its whole script back to back, so the writer conflates
         val engine = ScriptedEngine(
@@ -248,6 +274,39 @@ class EnrichStreamEndpointTest {
         val complete = snapshotOf(events.single { it.name == "complete" })
         assertTrue(complete.pending.isEmpty())
         assertFalse(complete.identityPending)
+    }
+
+    @Test fun `a never-attempted identity with nothing enriched is not a first paint`() {
+        // Given - a run whose identity was never attempted, so the first emission carries a
+        // NOT_ATTEMPTED verdict and no settled type at all
+        val engine = ScriptedEngine(
+            listOf(
+                artistResults(emptyMap(), status = CanonicalStatus.NOT_ATTEMPTED_IDENTIFIER_TRUSTED),
+                artistResults(
+                    mapOf(EnrichmentType.ARTIST_BIO to bio("Bristol.")),
+                    status = CanonicalStatus.NOT_ATTEMPTED_IDENTIFIER_TRUSTED,
+                ),
+                artistResults(everyArtistType, status = CanonicalStatus.NOT_ATTEMPTED_IDENTIFIER_TRUSTED),
+            ),
+            gapMs = 60,
+        )
+        val port = startWith(engine)
+
+        // When - streaming an artist through the endpoint
+        val events = stream(port, "/api/enrich-stream?kind=artist&name=Portishead")
+
+        // Then - nothing was painted until a type settled, because a resolution that never ran
+        // gives the page nothing to draw
+        val snapshots = events.filter { it.name == "snapshot" }.map { snapshotOf(it) }
+        assertTrue("expected at least two snapshots, got ${snapshots.size}", snapshots.size >= 2)
+        assertNull(
+            "an empty snapshot with an unattempted identity must not stamp firstPaintMs: ${snapshots.first()}",
+            snapshots.first().firstPaintMs,
+        )
+        assertNotNull(
+            "the first settled type must stamp firstPaintMs: ${snapshots[1]}",
+            snapshots[1].firstPaintMs,
+        )
     }
 
     @Test fun `a cache-warm stream that emits once sends no snapshot events, only complete`() {

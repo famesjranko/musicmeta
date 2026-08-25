@@ -396,6 +396,7 @@ internal class DefaultEnrichmentEngine(
         cacheLayer: CacheLayer,
         session: RunSession,
         settle: suspend (EnrichmentType, EnrichmentResult, ChainExecution?) -> Unit,
+        onIdentitySettled: suspend () -> Unit = {},
     ) {
         // TransientIdentifierMarker: this call's record of which IdentifierRequirements a transient
         // left unresolved this run, read back by reclassifyTransientGap.
@@ -439,6 +440,12 @@ internal class DefaultEnrichmentEngine(
             session.identityHolder.current = resolution
             session.identityResolved = true
             session.nameEvidence = identityNameEvidence(identityResult, request, enrichedRequest)
+
+            // The verdict is news a collector can act on — suggestions render, a failed identity
+            // shows itself — so a live resolution announces itself before any type settles rather
+            // than riding whichever settlement happens to come first. A trusted or disabled
+            // identity resolved nothing and announces nothing.
+            if (identityNeeded) onIdentitySettled()
 
             for ((type, raw) in fastPathResults) settle(type, raw, null)
 

@@ -73,7 +73,8 @@ internal suspend fun DefaultEnrichmentEngine.runProgressiveFanOut(
         // expiry — a consumer's CatalogProvider, say — propagates instead of being caught by type
         // and mislabelled as enrichTimeoutMs.
         val completed = withTimeoutOrNull(config.enrichTimeoutMs) {
-            resolveUncachedTypes(request, forceRefresh, cacheLayer, session, settle)
+            val onIdentitySettled = identityEmission(session, types, run)
+            resolveUncachedTypes(request, forceRefresh, cacheLayer, session, settle, onIdentitySettled)
             true
         } ?: false
 
@@ -164,11 +165,42 @@ private fun stragglerError(fault: Throwable?): (EnrichmentType) -> EnrichmentRes
 }
 
 /**
+ * The identity-settled callback [runProgressiveFanOut] hands to
+ * [DefaultEnrichmentEngine.resolveUncachedTypes]: emits the run's state the moment a live identity
+ * resolution settles, so a collector sees the verdict and its suggestions before any type does.
+ */
+private fun identityEmission(
+    session: RunSession,
+    types: Set<EnrichmentType>,
+    run: ProgressiveRunRegistry.ProgressiveRun,
+): suspend () -> Unit = {
+    emitInterim(session, types, run, session.board.snapshotResults())
+}
+
+/**
+ * Emits [settled], narrowed to [types], as an interim snapshot on [run]'s
+ * [ProgressiveRunRegistry.ProgressiveRun.shared] — unless every requested type is already present.
+ * A snapshot with nothing pending reads as terminal, and the real terminal snapshot, built after
+ * write-back, takes that emission's place.
+ */
+private suspend fun emitInterim(
+    session: RunSession,
+    types: Set<EnrichmentType>,
+    run: ProgressiveRunRegistry.ProgressiveRun,
+    settled: Map<EnrichmentType, EnrichmentResult>,
+) {
+    val filtered = settled.filterKeys { it in types }
+    if ((types - filtered.keys).isNotEmpty()) {
+        run.shared.emit(EnrichmentResults(filtered, types, session.identityHolder.current))
+    }
+}
+
+/**
  * The per-type settle callback [runProgressiveFanOut] and an immediately-abandoned run (a call for
  * a never-seen key arriving after [DefaultEnrichmentEngine.close]) both use: finalizes the raw
  * result it is handed, records it on [session]'s board, and emits an interim snapshot to [run]'s
- * [ProgressiveRunRegistry.ProgressiveRun.shared] unless this settlement is the one that completes
- * every requested type — the real terminal snapshot takes that emission's place instead.
+ * [ProgressiveRunRegistry.ProgressiveRun.shared] through [emitInterim], which is what suppresses
+ * the settlement that completes every requested type.
  */
 internal fun DefaultEnrichmentEngine.settleInto(
     request: EnrichmentRequest,
@@ -179,10 +211,7 @@ internal fun DefaultEnrichmentEngine.settleInto(
     val snapshot = session.board.settle(type, raw, execution) {
         finalizeResult(request, type, it, execution, session)
     }
-    val filtered = snapshot.filterKeys { it in types }
-    if ((types - filtered.keys).isNotEmpty()) {
-        run.shared.emit(EnrichmentResults(filtered, types, session.identityHolder.current))
-    }
+    emitInterim(session, types, run, snapshot)
 }
 
 /**

@@ -3,7 +3,11 @@
 `enrich()` waits for every requested type to settle before returning one `EnrichmentResults`.
 `enrichProgressive()` runs the same resolution pipeline but emits a snapshot each time a type
 settles, so a UI can paint fast types — a cache hit, a single-provider lookup — while slow ones are
-still in flight. First useful paint arrives well ahead of the complete answer: measured against the
+still in flight. One further snapshot can arrive ahead of all of them: when identity resolution was
+attempted and reaches its verdict before any type has settled, that verdict is emitted on its own,
+with `raw` empty and every requested type still pending. A run that never attempts resolution — a
+trusted identifier, identity disabled, no identity provider — emits no such snapshot. First useful
+paint arrives well ahead of the complete answer: measured against the
 demo over live providers on a cold cache in August 2026, two artists, one run each, the first
 snapshot painted at 2.3s and 5.6s against 6.4s and 13.3s for every requested type to settle. Those
 are single runs over third-party APIs, not a distribution — treat the ratio as the signal and expect
@@ -55,7 +59,9 @@ engine.enrichProgressive(
 in neither `raw` nor that difference does not exist (only possible if it was never requested); a type
 present in `raw` has settled, whether as `Success`, `NotFound`, `Error` or `RateLimited`.
 
-**Only the last emission ever derives as empty.** An intermediate emission where every requested type
+**Only the last emission ever derives `requestedTypes - raw.keys` as empty.** (An identity-verdict
+emission is the opposite case: `raw` itself is empty and the difference is everything requested.)
+An intermediate emission where every requested type
 already has a `raw` entry does not happen — the settlement that would complete the requested-types
 set is suppressed entirely, and the terminal snapshot, built after post-processing (catalog
 filtering, provenance stamping, stale-cache resolution) has run for every type, takes that
