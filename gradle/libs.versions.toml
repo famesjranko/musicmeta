@@ -6,15 +6,15 @@ minSdk = "21"
 
 # Core
 agp = "8.7.3"
-kotlin = "2.1.0"
-ksp = "2.1.0-1.0.29"
+kotlin = "2.4.10"
+ksp = "2.3.11"
 
 # Hilt
-hilt = "2.54"
-hilt-navigation-compose = "1.2.0"
+hilt = "2.60.1"
+hilt-navigation-compose = "1.4.0"
 
 # Room
-room = "2.6.1"
+room = "2.8.4"
 
 # WorkManager
 work = "2.10.0"
@@ -24,16 +24,16 @@ work = "2.10.0"
 lifecycle = "2.8.7"
 
 # Serialization
-kotlinx-serialization = "1.7.3"
+kotlinx-serialization = "1.11.0"
 
 # Coroutines
-coroutines = "1.9.0"
+coroutines = "1.11.0"
 
 # OkHttp
 okhttp = "4.12.0"
 
 # Maven Central Publishing
-vanniktech-publish = "0.30.0"
+vanniktech-publish = "0.37.0"
 
 # Public API compatibility (ABI baselines under each module's api/ directory)
 binary-compatibility-validator = "0.18.1"
@@ -54,11 +54,11 @@ detekt = "1.23.8"
 
 # Testing
 junit = "4.13.2"
-turbine = "1.2.0"
-robolectric = "4.13"
-androidx-test-core = "1.6.1"
-androidx-test-runner = "1.6.2"
-androidx-test-ext-junit = "1.2.1"
+turbine = "1.2.1"
+robolectric = "4.16.1"
+androidx-test-core = "1.7.0"
+androidx-test-runner = "1.7.0"
+androidx-test-ext-junit = "1.3.0"
 
 [libraries]
 # Room
