@@ -42,7 +42,34 @@ exhaustive. Paths are relative to `musicmeta-core/src/main/kotlin/com/landofoz/m
   MusicBrainz search hit re-misses until a lookup-path fetch wins — the healing there is worth its
   narrow residual.
 - One `http/CircuitBreaker.kt` per provider id, shared across every chain.
-- A `CompositeSynthesizer`'s `dependencies` are resolved even when the caller did not ask for them.
+- A `CompositeSynthesizer`'s `dependencies` are resolved even when the caller did not ask for them,
+  and **how** they are resolved follows from their own registration, never from the request. A
+  dependency with a `ResultMerger` is merged across every provider that answers; a dependency that
+  is itself a composite is synthesized. Deriving either from the requested set is the defect this
+  once had in both directions: `GENRE_DISCOVERY` requested alone took `GENRE` from the highest-
+  priority provider rather than the merger (6 related genres against the merged 14), and a
+  composite dependency of a composite settled `NotFound("no_provider")` because it fell through
+  `resolveRegularType`, which finds no chain for a type no provider serves. The same request
+  returning a different answer depending on what else was in it is the smell.
+- `compositeSubTypesOf` walks the dependency graph transitively, and both `SettlementBoard`
+  construction and `streamResolveTypes`' scheduling read that one walk. They must agree exactly:
+  the board's keys are what `SettlementBoard.await` can be called for, and `await` is
+  `deferreds.getValue(type)`, which throws `NoSuchElementException` on a key the board does not
+  carry — not a `NotFound`. That exception escapes a `launch {}` child of the fan-out's
+  `coroutineScope`, cancels every sibling type, and lands in the straggler stamp.
+  `CompositeSynthesizer.dependencies` is a consumer property that nothing stops answering
+  differently on two reads, which is why the engine snapshots the graph once at construction rather
+  than recomputing it per access.
+- Every consumer callback the engine invokes is guarded, but the guards `catch (e: Exception)` —
+  `StrategyGuard`, `ProviderChain`, `CacheGuard`. A `Throwable` that is not an `Exception` passes
+  all of them: a `NoClassDefFoundError` from an optional dependency the consumer's build omitted is
+  the realistic one. It reaches `runProgressiveFanOut`'s `finally`, which is shared with
+  `close()`, so the unsettled types must be stamped from *why* the run stopped and not from the
+  fact that it stopped — `ENGINE_CLOSED` for a cancellation, `UNKNOWN` carrying the cause otherwise.
+  "Every callback is guarded" is not "nothing can throw".
+- A cyclic `CompositeSynthesizer.dependencies` graph has no resolution order, so
+  `DefaultEnrichmentEngine`'s `init` refuses it and `Builder.build()` throws. Under an await-driven
+  fan-out the alternative is types that never settle and a run that only ends at its deadline.
 - `withTimeoutOrNull(enrichTimeoutMs)` returns null for *that* deadline only; a nested one
   propagates. An expiry does not discard results already fetched, but the write-back is skipped, so
   a timed-out run caches nothing. The stale fallback and write-back sit outside the timed block.

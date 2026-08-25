@@ -39,7 +39,6 @@ import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.last
 import kotlinx.coroutines.flow.transformWhile
-import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -135,8 +134,26 @@ internal class DefaultEnrichmentEngine(
     private val synthesizers: Map<EnrichmentType, CompositeSynthesizer> = synthesizers.associateBy { it.type }
 
     private val mergeableTypes: Set<EnrichmentType> get() = mergers.keys
-    private val compositeDependencies: Map<EnrichmentType, Set<EnrichmentType>>
-        get() = synthesizers.mapValues { it.value.dependencies }
+
+    /**
+     * The composite dependency graph, read from each synthesizer exactly once and never again.
+     *
+     * A `val`, not a `get()`: [CompositeSynthesizer.dependencies] is a property a consumer
+     * implements, so nothing stops it answering differently on two reads. [compositeSubTypesOf]
+     * builds the [SettlementBoard]'s key set from this graph and [streamResolveTypes] schedules
+     * against it, and a board built from one answer while the scheduler works from another is a
+     * `board.await()` on a key that does not exist. Snapshotting here is what makes "one graph"
+     * true of a run rather than only of the source line that computes it.
+     */
+    private val compositeDependencies: Map<EnrichmentType, Set<EnrichmentType>> =
+        this.synthesizers.mapValues { it.value.dependencies.toSet() }
+
+    init {
+        // Checked against the snapshot above, not against a fresh read of the synthesizers: a graph
+        // validated in one read and used from another is not the graph that was validated.
+        requireAcyclic(compositeDependencies)
+        requireDisjointRoles(compositeDependencies.keys, this.mergers.keys)
+    }
 
     // Complete-and-cache: a collector cancelling enrichProgressive() detaches from the fan-out
     // already in flight, which keeps running here to completion (and still writes back) instead of
@@ -400,8 +417,16 @@ internal class DefaultEnrichmentEngine(
         }
     }
 
-    /** Logs the [EnrichmentConfig.enrichTimeoutMs] deadline firing, keeping [logger] private from a cross-file caller. */
-    internal fun logEnrichTimeout() = logger.warn(TAG, "Enrich timed out after ${config.enrichTimeoutMs}ms")
+    /**
+     * Logs a run that stopped before every requested type settled, keeping [logger] private from a
+     * cross-file caller. Both reasons — the [EnrichmentConfig.enrichTimeoutMs] deadline and a fault
+     * that escaped the fan-out — are the same fact to a reader of the log.
+     *
+     * `warn`, not a new `error` level: [EnrichmentLogger] carries only `debug` and `warn`, and
+     * adding a third method to a public interface is a break this is not worth.
+     */
+    internal fun logRunStoppedEarly(reason: String, cause: Throwable? = null) =
+        logger.warn(TAG, reason, cause)
 
     /**
      * [runProgressiveFanOut]'s backfill for a run that stopped before every requested type settled
@@ -466,11 +491,24 @@ internal class DefaultEnrichmentEngine(
         return CacheLayer(results, uncachedTypes, negativeCacheHits)
     }
 
-    /** Every type a composite among [types] would resolve as a dependency, whether or not [types] asked for it. */
-    internal fun compositeSubTypesOf(types: Set<EnrichmentType>): Set<EnrichmentType> =
-        types.filter { it in compositeDependencies }
-            .flatMap { compositeDependencies[it].orEmpty() }
-            .toSet()
+    /**
+     * Every type a composite among [types] would resolve as a dependency, transitively — a
+     * composite dependency that is itself a composite pulls in its own dependencies too, and so on.
+     * The one place this graph is walked: both [SettlementBoard] construction
+     * ([runProgressiveFanOut], [abandonedSnapshot]) and [streamResolveTypes]'s own scheduling call
+     * this, so the two never see a different notion of "everything this call touches". Cycle-free
+     * by construction — [EnrichmentEngine.Builder.build] refuses a cyclic [compositeDependencies]
+     * graph before an engine carrying it can exist.
+     */
+    internal fun compositeSubTypesOf(types: Set<EnrichmentType>): Set<EnrichmentType> {
+        val closure = mutableSetOf<EnrichmentType>()
+        val frontier = ArrayDeque(types)
+        while (frontier.isNotEmpty()) {
+            val next = compositeDependencies[frontier.removeFirst()].orEmpty()
+            for (dep in next) if (closure.add(dep)) frontier.add(dep)
+        }
+        return closure
+    }
 
     /**
      * One type's whole post-processing pass, run inside [SettlementBoard.settle]'s lock: catalog
@@ -860,12 +898,18 @@ internal class DefaultEnrichmentEngine(
     }
 
     /**
-     * The incremental seam [enrich] and [enrichProgressive] share: every regular and mergeable type
-     * settles [settle] as its own `launch {}` completes, and every composite settles once its own
-     * dependencies are in — never behind one `awaitAll()` for a whole group. A composite type is
-     * driven by exactly one coroutine that [SettlementBoard.await]s its own dependencies and calls
-     * [settle] for its own type once, so it cannot be double-synthesized by two dependents racing to
-     * check whether every dependency is in; nothing but that one coroutine can settle that type.
+     * The incremental seam [enrich] and [enrichProgressive] share: every type in [types] plus its
+     * transitive composite dependencies ([compositeSubTypesOf]) is launched in one fan-out, with no
+     * barrier between a composite and the types it depends on. A regular or mergeable type settles
+     * [settle] as its own `launch {}` completes; a composite type is driven by exactly one coroutine
+     * that [SettlementBoard.await]s its own dependencies — however many launches deep — and calls
+     * [settle] for its own type once it has them, so it cannot be double-synthesized by two
+     * dependents racing to check whether every dependency is in, and a composite whose own
+     * dependencies are already fast settles as soon as they land rather than waiting on an unrelated
+     * slow type. `coroutineScope` itself is the completion guarantee this replaces `joinAll()` with:
+     * it does not return until every child launched below — regular, mergeable, and composite alike
+     * — has completed, composites included, since a composite's `board.await()` keeps its coroutine
+     * a live child of this scope until its own dependencies settle.
      */
     private suspend fun streamResolveTypes(
         context: ResolveContext,
@@ -883,39 +927,37 @@ internal class DefaultEnrichmentEngine(
         // asked: a type no identifier-keyed provider can serve is an honest NotFound, never a live
         // search for the empty string and never an Error.
         val identifierOnly = namesNoEntity(request)
-        val compositeTypes = types.filter { it in compositeDependencies }
-        val standardTypes = types - compositeTypes.toSet()
 
-        val mergeableRequested = standardTypes.filter { it in mergeableTypes }.toSet()
-        val regularTypes = standardTypes - mergeableRequested
+        // The one closure, matching SettlementBoard's own construction (runProgressiveFanOut,
+        // abandonedSnapshot): everything this call's board can be awaited for. A type's role —
+        // composite, mergeable, or regular — is decided from whether a synthesizer or merger is
+        // registered for it, never from whether types (the caller's own request) named it, so a
+        // composite dependency reached only transitively is classified exactly as it would be if
+        // requested directly.
+        val allTypes = types + compositeSubTypesOf(types)
+        val compositeTypes = allTypes.filter { it in compositeDependencies }.toSet()
+        val mergeableTypesInScope = (allTypes - compositeTypes).filter { it in mergeableTypes }.toSet()
+        val regularTypes = allTypes - compositeTypes - mergeableTypesInScope
 
-        val compositeSubTypes = compositeTypes
-            .flatMap { compositeDependencies[it].orEmpty() }
-            .toSet() - regularTypes - mergeableRequested
-
-        // Composites read their dependencies through the board (see synthesizeComposite), never
-        // through this tier's own results, so they must all be settled before any composite is
-        // launched below — same completeness guarantee resolveTypes' old awaitAll() gave them.
-        val firstTierJobs = (regularTypes + compositeSubTypes).map { type ->
+        for (type in regularTypes) {
             launch {
                 val (result, execution) = resolveRegularType(request, type, identifierOnly)
                 settle(type, result, execution)
             }
-        } + mergeableRequested.map { mergeType ->
+        }
+        for (mergeType in mergeableTypesInScope) {
             launch {
                 val (result, execution) = resolveMergeableType(mergeType, request, identifierOnly, canonicalStatus)
                 settle(mergeType, result, execution)
             }
         }
-        firstTierJobs.joinAll()
-
-        compositeTypes.map { compositeType ->
+        for (compositeType in compositeTypes) {
             launch {
                 val (result, execution) =
                     synthesizeComposite(board, compositeType, identityResult, request, session)
                 settle(compositeType, result, execution)
             }
-        }.joinAll()
+        }
     }
 
     /** One regular (non-merge, non-composite) type's chain walk — [streamResolveTypes]'s first-tier fan-out. */

@@ -39,6 +39,10 @@ internal val DEFAULT_SYNTHESIZERS: List<CompositeSynthesizer> = listOf(
  * credit whoever answered the types it was derived from instead of hand-copying the graph. Covers
  * only the engine's built-in synthesizers; a synthesizer a caller adds through
  * [EnrichmentEngine.Builder.addSynthesizer] is not reflected here.
+ *
+ * Reads the graph outside the per-call snapshot on purpose: attribution, never scheduling, and
+ * only the two built-in objects above — a consumer synthesizer's dependencies must be read through
+ * the snapshot instead.
  */
 val DEFAULT_SYNTHESIZER_DEPENDENCIES: Map<EnrichmentType, Set<EnrichmentType>> =
     DEFAULT_SYNTHESIZERS.associate { it.type to it.dependencies }

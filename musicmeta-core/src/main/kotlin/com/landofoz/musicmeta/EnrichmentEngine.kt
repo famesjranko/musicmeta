@@ -364,6 +364,12 @@ interface EnrichmentEngine {
             }
         }
 
+        /**
+         * @throws IllegalArgumentException if the registered [CompositeSynthesizer]s form a
+         *   dependency cycle, a synthesizer depending on its own type included — the message names
+         *   every type on the cycle — or if a type is registered as both a composite and a
+         *   mergeable, whose [ResultMerger] could then never run.
+         */
         fun build(): EnrichmentEngine {
             val cfg = effectiveConfig()
             warnAboutUserAgentOnTheWire(cfg)

@@ -40,6 +40,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `CompositeSynthesizer.synthesize`'s `resolved` deps now arrive finalized: `STALE_IF_ERROR` hands a failed-but-stale dependency as `Success`, not `Error` — can't tell genuine failure from stale
 - `CatalogProvider.checkAvailability` is now called concurrently, from multiple coroutines at once, instead of once per call in sequence: a stateful implementation must be thread-safe
 - Cancelling `enrich()`'s calling coroutine is now complete-and-cache, not abort-and-forfeit: the fan-out keeps running and still writes back, since it now shares `enrichProgressive`'s resolution path
+- `EnrichmentEngine.Builder.build()` now throws `IllegalArgumentException` when registered `CompositeSynthesizer`s form a dependency cycle: the message names every type on the loop
+- `Builder.build()` also throws when one type has both a `CompositeSynthesizer` and a `ResultMerger`: the merger could never run, so the registration was silently dead
 
 ### Added
 - `EnrichmentEngine.enrichProgressive`: `enrich()`'s cumulative-snapshot streaming counterpart — each emission is everything settled so far; derive what's pending as `requestedTypes - raw.keys`
@@ -59,6 +61,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - demo-web no longer enriches its suggested queries at startup: the page is usable the moment it loads, `/api/health` reports ready as soon as the server binds, and the cache fills from real searches
 
 ### Fixed
+- A fault that escapes the fan-out is no longer reported as `ErrorKind.ENGINE_CLOSED`: unsettled types carry `UNKNOWN` and the real cause, so a missing class no longer reads as a closed engine
+- A `CompositeSynthesizer` dependency that is itself a composite is now synthesized instead of settling `NotFound("no_provider")`: nested composite graphs resolve to any depth
+- A composite's dependency is resolved by its own registration, not the request: one with a `ResultMerger` is merged across every provider even when only the composite was asked for
 - demo-web's card image now prefers a Deezer/iTunes CDN URL over Cover Art Archive's when both are available, cutting card paint latency from seconds to well under a second
 - demo-web's artist summary card now uses fanart.tv's smaller preview image for its photo and background instead of the full-size original; the gallery still shows full-size
 - Cached `LABEL`/`RELEASE_DATE`/`RELEASE_TYPE`/`COUNTRY` entries with unknown-curation genre tags re-fetched every call; now served from cache — tags are read only off `GENRE` and `ALBUM_METADATA`
