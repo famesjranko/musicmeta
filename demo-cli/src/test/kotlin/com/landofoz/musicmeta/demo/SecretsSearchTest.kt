@@ -1,4 +1,4 @@
-package com.landofoz.musicmeta.demoweb
+package com.landofoz.musicmeta.demo
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

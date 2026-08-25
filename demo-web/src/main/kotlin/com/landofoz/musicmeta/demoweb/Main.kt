@@ -150,15 +150,26 @@ internal fun missingCredentials(keys: ApiKeyConfig, withheldIds: Set<String>): M
 private fun env(key: String): String? = System.getenv(key)?.takeIf { it.isNotBlank() }
 
 /**
- * Every `secrets.properties` on the search path merged, the nearer file winning per key — not the
- * first that exists, which cannot tell a template from a configuration (`docs/pitfalls.md` §13).
+ * Where a demo run out of [demoDir] looks for `secrets.properties`, outermost first: the main
+ * checkout's file when [demoDir] sits in a git worktree, then the repo root's, then the demo's own.
+ * [loadSecrets] merges in this order, so the nearer file wins per key.
+ */
+internal fun secretsSearchPath(demoDir: File): List<File> {
+    val repoRoot = File(demoDir, "..")
+    return listOfNotNull(mainCheckoutSecrets(repoRoot)) +
+        listOf(File(repoRoot, "secrets.properties"), File(demoDir, "secrets.properties"))
+}
+
+/**
+ * Every `secrets.properties` on [secretsSearchPath] merged, the nearer file winning per key — not
+ * the first that exists, which cannot tell a template from a configuration (`docs/pitfalls.md` §13).
  *
  * A key present but blank is dropped rather than returned as `""`: every caller reads
  * `secrets[k] ?: env(k)`, and an empty string is non-null, so it would beat the environment variable
  * it is meant to defer to.
  */
-private fun loadSecrets(): Map<String, String> =
-    (listOfNotNull(mainCheckoutSecrets(File(".."))) + listOf(File("../secrets.properties"), File("secrets.properties")))
+internal fun loadSecrets(demoDir: File = File(".")): Map<String, String> =
+    secretsSearchPath(demoDir)
         .filter { it.exists() }
         .fold(mutableMapOf<String, String>()) { merged, file -> merged.apply { putAll(file.readKeys()) } }
 

@@ -43,4 +43,6 @@ dependencies {
     implementation("io.github.famesjranko:musicmeta-core")
     implementation("io.github.famesjranko:musicmeta-okhttp")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
+
+    testImplementation(libs.junit)
 }
