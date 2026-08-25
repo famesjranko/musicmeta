@@ -55,6 +55,12 @@ conventions are not.
 Not an audit of everything unenforced — these are the specific places where a green run means less
 than it looks like, each learned the hard way.
 
+- **CI's `demo-canary` job compiles and tests the demos; it does not lint them.** It runs
+  `../gradlew compileKotlin test` in each demo, while `make check` also runs the demos' ktlint.
+  A demo style violation therefore merges green and breaks `make check` on `main` for whoever
+  pulls next — PR #285 did exactly that, fixed by #290. A green `demo-canary` is not evidence the
+  demo tree passes `make check`.
+
 - **`!!` on a Java platform type is invisible to detekt.** Measured with a three-cell probe: detekt
   catches `!!` on a nullable receiver (`UnsafeCallOnNullableType`) and on a definitely-non-null one
   (`UnnecessaryNotNullOperator`), and catches **neither** on `System.getProperty("x")!!`, because
