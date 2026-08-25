@@ -74,9 +74,11 @@ interface EnrichmentEngine {
     /**
      * [enrich], as a cumulative stream: each emission is a complete, valid [EnrichmentResults]
      * snapshot of everything settled so far, filtered to [types] — never a per-result diff. A
-     * caller derives what is still pending as `types - results.raw.keys`; a type in neither set
-     * settled with no answer. Only the last emission has an empty derived-pending set, so a
-     * collector that stops early never mistakes an intermediate snapshot for the finished one.
+     * caller derives what is still pending as `types - results.raw.keys`; a type present in
+     * [EnrichmentResults.raw] has settled, and a settlement with no answer is a
+     * [EnrichmentResult.NotFound] entry there rather than a missing key. Only the last emission has
+     * an empty derived-pending set, so a collector that stops early never mistakes an intermediate
+     * snapshot for the finished one.
      *
      * A settled type is catalog-filtered, provenance-stamped, and stale-cache-resolved before the
      * emission that first carries it, so an intermediate is safe to render — but a type's value can
