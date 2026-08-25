@@ -1034,6 +1034,27 @@ class MusicBrainzParserTest {
     }
 
     @Test
+    fun `parseReleaseBrowse reads the group off a later release when the first carries none`() {
+        // Given - a browse whose first release lacks the release-group object and whose second
+        // carries it, the ordering MusicBrainz never promises away
+        val json = JSONObject(
+            """
+            {"release-count":2,"releases":[
+              {"id":"r1","title":"Bare"},
+              {"id":"r2","title":"Carried","release-group":{"id":"rg9","title":"Carried"}}
+            ]}
+            """.trimIndent(),
+        )
+
+        // When - parsing the browse
+        val detail = MusicBrainzCreditParser.parseReleaseBrowse(json)
+
+        // Then - the group is found on the second release rather than the whole answer emptying
+        assertEquals("rg9", detail?.id)
+        assertEquals(2, detail?.releases?.size)
+    }
+
+    @Test
     fun `parseReleaseBrowse returns null when the browse holds no releases`() {
         // Given - a browse answering with an empty releases array, which carries no group at all
         val json = JSONObject("""{"release-count":0,"releases":[]}""")

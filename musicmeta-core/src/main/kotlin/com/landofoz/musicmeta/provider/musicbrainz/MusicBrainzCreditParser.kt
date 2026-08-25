@@ -62,15 +62,18 @@ internal object MusicBrainzCreditParser {
     }
 
     /**
-     * The release group a release browse was keyed on, as the first release carries it.
+     * The release group a release browse was keyed on, as its releases carry it.
      *
      * A browse answers with releases, never with the group at top level, so every fact about the
      * group itself — its id, title, `first-release-date` and artist credit — is read from here.
+     * The first release that carries the object wins: MusicBrainz documents no ordering for a
+     * browse, so no single index may be trusted to hold it.
      */
     fun extractBrowseReleaseGroup(json: JSONObject): JSONObject? {
         val releases = json.optJSONArray("releases") ?: return null
-        if (releases.length() == 0) return null
-        return releases.getJSONObject(0).optJSONObject("release-group")
+        return (0 until releases.length()).firstNotNullOfOrNull {
+            releases.getJSONObject(it).optJSONObject("release-group")
+        }
     }
 
     /** Parse a release browse response with labels and media into the group's editions. */
