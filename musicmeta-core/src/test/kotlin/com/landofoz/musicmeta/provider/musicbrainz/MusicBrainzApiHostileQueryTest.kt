@@ -16,7 +16,6 @@ import org.junit.Test
  * phrase cannot be broken out of, the unquoted fuzzy term stays a single Lucene token even when
  * hostile, and the whole expression is URL-encoded — so nothing a title/artist can carry reaches
  * MusicBrainz as unescaped Lucene syntax or an unterminated phrase, in either shape.
- * `.scratch/mb-4xx-as-empty-pool/spec.md` question 1, answered: outcome (a), provably unreachable.
  *
  * Covers the release shapes ([MusicBrainzApi.searchReleases]/[MusicBrainzApi.searchReleasesFuzzy])
  * and the artist search, whose two-field `artist:"…" OR alias:"…"` expression is the one shape here
