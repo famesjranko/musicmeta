@@ -12,7 +12,12 @@ video media dropped by exact format name, tracks summed across the remaining med
 Re-run before trusting any number: this is a live capture with a date.
 """
 
-import json, time, urllib.request, urllib.error, pathlib, sys
+import json
+import pathlib
+import sys
+import time
+import urllib.error
+import urllib.request
 
 UA = "musicmeta-research/0.1 (https://github.com/andrewmcdonald42/musicmeta)"
 BASE = "https://musicbrainz.org/ws/2"
@@ -124,8 +129,10 @@ def main():
     out = HERE / "albums.json"
     done = {}
     if out.exists():
-        done = {row["artist_mbid"]: row for row in json.load(open(out))}
-    artists = json.load(open(ARTISTS))
+        with open(out) as f:
+            done = {row["artist_mbid"]: row for row in json.load(f)}
+    with open(ARTISTS) as f:
+        artists = json.load(f)
     rows = []
     for a in artists:
         mbid, name = a["mbid"], a.get("name") or a.get("supplied")
@@ -139,8 +146,10 @@ def main():
         rows.append(row)
         n = sum(len(g["releases"]) for g in groups)
         print(f"  {name}: {len(groups)} groups, {n} releases", flush=True)
-        json.dump(rows, open(out, "w"), indent=1, ensure_ascii=False)
-    json.dump(rows, open(out, "w"), indent=1, ensure_ascii=False)
+        with open(out, "w") as f:
+            json.dump(rows, f, indent=1, ensure_ascii=False)
+    with open(out, "w") as f:
+        json.dump(rows, f, indent=1, ensure_ascii=False)
     groups = sum(len(r["groups"]) for r in rows)
     releases = sum(len(g["releases"]) for r in rows for g in r["groups"])
     print(f"wrote albums.json: {len(rows)} artists, {groups} groups, {releases} releases")

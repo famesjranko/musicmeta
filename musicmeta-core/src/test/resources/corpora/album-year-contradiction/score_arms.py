@@ -13,7 +13,9 @@ Reports, for each arm, firings on four populations:
                  to catch, and the case contradictsSuppliedName provably cannot see.
 """
 
-import json, pathlib, random
+import json
+import pathlib
+import random
 
 HERE = pathlib.Path(__file__).parent
 PAIRS_PER_GROUP = 20
@@ -80,7 +82,8 @@ def build(rows):
 
 
 def main():
-    rows = json.load(open(HERE / "albums.json"))
+    with open(HERE / "albums.json") as f:
+        rows = json.load(f)
     identical, same_group, cross_group, drift = build(rows)
     print(
         f"artists={len(rows)} identical={len(identical)} same_group={len(same_group)} "
