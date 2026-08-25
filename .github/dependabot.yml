@@ -27,13 +27,17 @@ updates:
   # on the reasoning that Kotlin should stay patched: that was tried, and the PR it produced could
   # only ever be red.
   #
+  # Membership in that set is decided by whether a bump carries a floor on another member, not by
+  # what the plugin is for. `vanniktech.maven.publish` is the case that proves it: 0.37.0 refuses to
+  # apply under AGP below 8.13.0, so a bump that reads as routine publishing maintenance is an AGP
+  # major in disguise. Anything that fails with a "requires <other toolchain member> X or newer"
+  # message belongs on the list below, whatever its own version number did.
+  #
   # Everything left is test tooling, with one exception that matters: the Kotlin version publishes
   # `kotlin-stdlib` into every POM at compile scope (VERIFICATION.md — "Known gaps"), so a Kotlin
   # move is a consumer-facing floor move wearing a toolchain label — a second reason it is hand work.
-  # Three members still need more than a green run: `detekt` and `ktlint-gradle` say so where they
-  # live (VERIFICATION.md and libs.versions.toml respectively), and `vanniktech.maven.publish` owns
-  # publication, where a change is invisible until a release goes out wrong — check the generated
-  # POM's coordinates, packaging and dependency scopes before merging one of those.
+  # `detekt` and `ktlint-gradle` stay offered but need more than a green run, and say so where they
+  # live (VERIFICATION.md and libs.versions.toml respectively).
   - package-ecosystem: gradle
     directory: /
     schedule:
@@ -90,6 +94,11 @@ updates:
           - "version-update:semver-minor"
           - "version-update:semver-patch"
       - dependency-name: "gradle-wrapper"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
+          - "version-update:semver-patch"
+      - dependency-name: "com.vanniktech.maven.publish*"
         update-types:
           - "version-update:semver-major"
           - "version-update:semver-minor"
