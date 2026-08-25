@@ -5,6 +5,7 @@ import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ProviderCapability
+import java.util.concurrent.CopyOnWriteArrayList
 
 open class FakeProvider(
     override val id: String = "fake",
@@ -16,7 +17,10 @@ open class FakeProvider(
 ) : EnrichmentProvider {
     private val results = mutableMapOf<EnrichmentType, EnrichmentResult>()
     private var identityResult: EnrichmentResult? = null
-    val enrichCalls = mutableListOf<Pair<EnrichmentRequest, EnrichmentType>>()
+
+    // CopyOnWriteArrayList: the engine's fan-out calls enrich once per type on real threads, and
+    // tests iterate this log lockless — a synchronizedList would leave those reads racy.
+    val enrichCalls: MutableList<Pair<EnrichmentRequest, EnrichmentType>> = CopyOnWriteArrayList()
 
     fun givenResult(type: EnrichmentType, result: EnrichmentResult) { results[type] = result }
     fun givenIdentityResult(result: EnrichmentResult) { identityResult = result }
