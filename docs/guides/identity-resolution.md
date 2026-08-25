@@ -21,19 +21,44 @@ Two independent facts, never merged into one value:
   this call, set exactly once. Never `null` — every reason resolution did not run has its own
   explicit state.
 - `EnrichmentResult.Success.provenance: LookupProvenance` — how *that provider* selected the
-  entity behind its own result, not whether MusicBrainz agreed.
+  entity behind its own result, not whether MusicBrainz agreed. `EXACT_NAME` requires that
+  provider's own hit to come back under the requested title, compared and not merely scored;
+  resolving by identifier compares no name to anything, so an identifier that resolved does not by
+  itself earn a downstream name-searching provider `EXACT_NAME` — except when the request named no
+  entity at all, where MusicBrainz's own resolved name stands in as `EXACT_NAME` by construction.
+  Full route table: [how-it-works.md](../how-it-works.md).
 
 | `CanonicalStatus` | Meaning | What to do |
 |---|---|---|
 | `RESOLVED` | MusicBrainz confirmed the entity | Show results normally |
 | `AMBIGUOUS` | Near-miss candidates but no confident match | Show a "did you mean?" prompt |
 | `UNRESOLVED` | Searched, found neither a match nor candidates | Show results with a caveat — they may be for the wrong entity |
-| `CONTRADICTED` | An identifier on the request disagreed with the name or year beside it | Tell the user their identifier is wrong; the results beside it are the entity they *named*, and may be complete |
+| `CONTRADICTED` | An identifier on the request disagreed with the name or year beside it | Tell the user their identifier is wrong; the results beside it are the entity they *named*, and may be complete — see the exception below |
 | `FAILED` | The identity provider errored — usually transient | Show a caveat; offer a retry, which may resolve |
+| `RESOLVING` | Identity resolution is still running for this call | Only seen on a pre-terminal `enrichProgressive` emission — never `enrich()`'s return or a terminal emission |
 | `NOT_ATTEMPTED_DISABLED` | Identity resolution is turned off | Treat as confident |
 | `NOT_ATTEMPTED_IDENTIFIER_TRUSTED` | The request carried an identifier, so nothing was resolved | Treat as your own assertion carried through — trusted, not verified |
 | `NOT_ATTEMPTED_CACHE_HIT` | Every requested type was served from cache, on an engine with resolution enabled | Treat as confident |
 | `NOT_ATTEMPTED_NO_PROVIDER` | Needed resolution, but no identity provider is registered | Treat as confident |
+
+`CONTRADICTED` fires two ways: an identifier naming a confidently different artist, or a supplied
+album `year` landing two or more years before the release group's own first release (a *later* year
+is never judged — it could be any reissue or regional pressing). `RELEASE_EDITIONS` applies the same
+year check to a supplied release-group id.
+
+Not every type can fall back to the name that recovered it. `CREDITS` and `RELEASE_EDITIONS` are
+identifier-only — there is no title to search on — so a contradicting identifier leaves them
+`NotFound` rather than "complete, but by name". Every other requested type still answers under the
+name.
+
+`identity.identifiers` is not cleared by a `CONTRADICTED` verdict: when nothing else on the call
+supplies fresh identifiers, the request's own come back unchanged — including the one just reported
+wrong. Never re-supply identifiers read off a `CONTRADICTED` response on a later call.
+
+An album request with a blank artist and a real title is a related but separate case: MusicBrainz
+widens the search instead of refusing it, so the candidate pool comes back as `AMBIGUOUS` rather
+than resolving. The equivalent track request answers `NotFound` without spending a search at all —
+see [providers.md](../providers.md) for the underlying rule.
 
 ---
 
@@ -64,6 +89,13 @@ resolved to. They stay `null` when resolution matched by name search: a search h
 matched, not what an identifier named. An artist's own name arrives as `title` with `artist` null,
 the same shape a `SearchCandidate` for an artist has.
 
+`matchScore` measures how well the lookup went, not whether the entity is the one the caller meant.
+A request carrying an identifier resolves by looking it up, and that lookup scores 100 whether or
+not the identifier names what the caller described — a wrong-but-live MBID resolves at full score.
+Read `status` for that question instead: `CONTRADICTED` is the only status that reports a supplied
+identifier naming something else, and `NOT_ATTEMPTED_IDENTIFIER_TRUSTED` means nobody checked at
+all. The same caveat applies to `EnrichmentResult.Success.confidence`.
+
 ---
 
 ## The "did you mean?" flow
@@ -86,7 +118,8 @@ when (results.identity.status) {
     }
     // The identifier you passed names a different entity. The results are still worth showing —
     // they describe the name you passed, which the engine fell back to — but the identifier is
-    // wrong and nothing else in the response will tell you so.
+    // wrong and nothing else in the response will tell you so. identity.identifiers may still
+    // carry the identifier this verdict just disowned, so never read it back for a later call.
     CanonicalStatus.CONTRADICTED -> {
         println("That MBID is not this entity. Genres, by name: ${results.genres()}")
     }
