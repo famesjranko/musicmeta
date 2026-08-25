@@ -116,11 +116,12 @@ class CanonicalStatusModelTest {
     }
 
     @Test fun `canonical resolved plus an exact-name provider lookup yields EXACT_NAME provenance`() = runTest {
-        // Given - identity resolves by name search (no MBID on the request itself)
+        // Given - identity resolves by name search (no MBID on the request itself), reporting the
+        // name route it took
         val mb = idProvider(
             EnrichmentResult.Success(
                 EnrichmentType.GENRE, com.landofoz.musicmeta.EnrichmentData.Metadata(genres = listOf("rock")),
-                "mb", 0.9f, resolvedIdentifiers = null,
+                "mb", 0.9f, resolvedIdentifiers = null, provenance = LookupProvenance.EXACT_NAME,
             ),
         )
         val lyrics = FakeProvider(id = "lrclib", capabilities = listOf(ProviderCapability(EnrichmentType.LYRICS_PLAIN, 100)))
@@ -143,12 +144,14 @@ class CanonicalStatusModelTest {
     }
 
     @Test fun `an MBID resolution filled onto the request does not relabel a name-only provider's search as canonical`() = runTest {
-        // Given - identity resolves an MBID, but the only provider serving this type never accepts
-        // one — it can only have searched by name, whatever the request now carries
+        // Given - identity matches the caller's name and resolves an MBID from it, but the only
+        // provider serving this type never accepts one — it can only have searched by name,
+        // whatever the request now carries
         val mb = idProvider(
             EnrichmentResult.Success(
                 EnrichmentType.GENRE, com.landofoz.musicmeta.EnrichmentData.Metadata(genres = listOf("rock")),
                 "mb", 0.9f, resolvedIdentifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-1"),
+                provenance = LookupProvenance.EXACT_NAME,
             ),
         )
         val lyrics = FakeProvider(id = "lrclib", capabilities = listOf(ProviderCapability(EnrichmentType.LYRICS_PLAIN, 100)))
@@ -345,13 +348,13 @@ class CanonicalStatusModelTest {
     }
 
     @Test fun `a RESOLVED exact-name result round-trips through cache with the same provenance and no confidence gain`() = runTest {
-        // Given - a real cache, an identity provider that resolves by name (no MBID), and a
-        // name-only provider serving the type
+        // Given - a real cache, an identity provider that resolves by name (no MBID) and reports
+        // that route, and a name-only provider serving the type
         val cache = InMemoryEnrichmentCache()
         val mb = idProvider(
             EnrichmentResult.Success(
                 EnrichmentType.GENRE, com.landofoz.musicmeta.EnrichmentData.Metadata(genres = listOf("rock")),
-                "mb", 0.9f, resolvedIdentifiers = null,
+                "mb", 0.9f, resolvedIdentifiers = null, provenance = LookupProvenance.EXACT_NAME,
             ),
         )
         val lyrics = FakeProvider(id = "lrclib", capabilities = listOf(ProviderCapability(EnrichmentType.LYRICS_PLAIN, 100)))

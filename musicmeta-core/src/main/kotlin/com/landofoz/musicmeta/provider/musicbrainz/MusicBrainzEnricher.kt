@@ -15,6 +15,7 @@ import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.engine.NameMatchTier
 import com.landofoz.musicmeta.engine.ResolvedEntityNames
 import com.landofoz.musicmeta.engine.SuppliedIdentifierContradiction
+import com.landofoz.musicmeta.engine.TitleMatcher
 import com.landofoz.musicmeta.engine.TransientIdentifierMarker
 import com.landofoz.musicmeta.engine.artistBlanksNameSearch
 import com.landofoz.musicmeta.engine.contradictsSuppliedName
@@ -174,17 +175,35 @@ internal class MusicBrainzEnricher(
         } else {
             best
         }
-        return buildAlbumResult(resolved, type, ConfidenceCalculator.searchScore(best.score), search.provenance())
+        return buildAlbumResult(
+            resolved, type, ConfidenceCalculator.searchScore(best.score), search.provenance(request.title),
+        )
     }
 
-    /** The truthful self-report [buildAlbumResult]/[trackResult] carry when a search hit did. */
-    private fun AlbumSearchResult.provenance(): LookupProvenance? = qualifierFallbackProvenance(viaQualifierFallback)
+    /** The truthful self-report [buildAlbumResult] carries, against the title the caller asked for. */
+    private fun AlbumSearchResult.provenance(requestedTitle: String): LookupProvenance? =
+        searchProvenance(viaQualifierFallback, requestedTitle, release?.title)
 
     /** As [AlbumSearchResult.provenance], for [TrackSearchResult]. */
-    private fun TrackSearchResult.provenance(): LookupProvenance? = qualifierFallbackProvenance(viaQualifierFallback)
+    private fun TrackSearchResult.provenance(requestedTitle: String): LookupProvenance? =
+        searchProvenance(viaQualifierFallback, requestedTitle, recording?.title)
 
-    private fun qualifierFallbackProvenance(viaQualifierFallback: Boolean): LookupProvenance? =
-        if (viaQualifierFallback) LookupProvenance.QUALIFIER_FALLBACK_NAME else null
+    /**
+     * Which name route a search hit reached. A Lucene score measures relevance, not identity — a
+     * truncated title comes back as a full-phrase match at 100 — so only [TitleMatcher.equivalent]
+     * can say the returned title is the requested one. A qualifier fallback already knows it
+     * searched something other than the caller's literal title and keeps its own route.
+     */
+    private fun searchProvenance(
+        viaQualifierFallback: Boolean,
+        requestedTitle: String,
+        hitTitle: String?,
+    ): LookupProvenance? = when {
+        viaQualifierFallback -> LookupProvenance.QUALIFIER_FALLBACK_NAME
+        hitTitle == null -> null
+        TitleMatcher.equivalent(requestedTitle, hitTitle) -> LookupProvenance.EXACT_NAME
+        else -> LookupProvenance.FUZZY_NAME
+    }
 
     /** The result the caller's identifier answers with, or null to resolve by name — see [suppliedRelease]. */
     private suspend fun enrichAlbumByMbid(
@@ -212,7 +231,9 @@ internal class MusicBrainzEnricher(
         // in enrichAlbum; a release it holds whose body will not parse does not (see
         // [MusicBrainzLookup]), so the search is only reached when there is no release to be lost.
         val lookup = mbid?.let { suppliedRelease(request, it) }
-        var viaQualifierFallback = false
+        // Null for the identifier route, which reports no name route of its own and leaves the
+        // engine to classify what the chain actually required.
+        var searchRoute: LookupProvenance? = null
         val release = when (lookup) {
             is MusicBrainzLookup.Found -> lookup.value
             MusicBrainzLookup.Unreadable -> return EnrichmentResult.NotFound(type, providerId)
@@ -220,7 +241,7 @@ internal class MusicBrainzEnricher(
                 if (namesNoEntity(request)) return EnrichmentResult.NotFound(type, providerId)
                 val search = memoizedAlbumSearch(request.title, request.artist)
                 val searched = search.release?.id ?: return EnrichmentResult.NotFound(type, providerId)
-                viaQualifierFallback = search.viaQualifierFallback
+                searchRoute = search.provenance(request.title)
                 memoizedRelease(searched).valueOrNull()
                     ?: return EnrichmentResult.NotFound(type, providerId)
             }
@@ -230,7 +251,7 @@ internal class MusicBrainzEnricher(
             type = type, data = MusicBrainzMapper.toTracklist(release.tracks),
             provider = providerId, confidence = ConfidenceCalculator.idBasedLookup(),
             resolvedIdentifiers = MusicBrainzMapper.toAlbumIdentifiers(release),
-            provenance = qualifierFallbackProvenance(viaQualifierFallback),
+            provenance = searchRoute,
         )
     }
 
@@ -511,7 +532,7 @@ internal class MusicBrainzEnricher(
         val best = search.recording ?: return trackMiss(request, type)
 
         rememberSearchResolved(best.id)
-        return trackResult(best, type, ConfidenceCalculator.searchScore(best.score), search.provenance())
+        return trackResult(best, type, ConfidenceCalculator.searchScore(best.score), search.provenance(request.title))
     }
 
     /**
@@ -843,7 +864,8 @@ internal class MusicBrainzEnricher(
      * searching a [MusicBrainzQualifierFallback] stripped candidate rather than the caller's literal
      * title — the truthful signal [enrichAlbum] and [enrichAlbumTracks] self-report
      * [com.landofoz.musicmeta.LookupProvenance.QUALIFIER_FALLBACK_NAME] from. Never true for the
-     * symbol-folding last resort, which is a different resolution route with its own evidence.
+     * symbol-folding last resort, whose hit is classified by the same title comparison as the
+     * direct path rather than by the route that found it.
      */
     private data class AlbumSearchResult(
         val release: MusicBrainzRelease?,

@@ -28,13 +28,19 @@ enum class LookupProvenance {
      */
     EXTERNAL_CATALOG_ID,
 
-    /** Selected by an exact name search that MusicBrainz canonically confirmed this call. */
+    /**
+     * Selected by a name search whose hit came back under the name that was asked for — the two
+     * were compared, not merely scored against each other.
+     */
     EXACT_NAME,
 
     /** Selected by a name search after normalization or qualifier-fallback stripping. */
     QUALIFIER_FALLBACK_NAME,
 
-    /** Selected by an unverified fuzzy name search; MusicBrainz did not confirm this call. */
+    /**
+     * Selected by an unverified name search: nothing confirmed the name, or the hit came back
+     * under a different name from the one that was asked for.
+     */
     FUZZY_NAME,
 
     /** Served from cache by an implementation that did not preserve the original provenance. */
