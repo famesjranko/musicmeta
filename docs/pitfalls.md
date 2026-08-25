@@ -276,6 +276,32 @@ waits, at most, for a few non-suspending lines to finish, never for a suspending
 Re-check that holds before ever adding a suspending call back to that critical section, or a
 same-dispatcher `runBlocking` caller can wedge forever with no thread left to resume the holder.
 
+## 26. Cancellation cannot reach a thread blocked in socket I/O — the deadline must ride the socket
+
+`withTimeoutOrNull(enrichTimeoutMs)` cancels the coroutine; the thread under it stays blocked in
+`HttpURLConnection`'s connect/read or OkHttp's `execute()` until the *transport's own* timeout
+fires. Measured (2026-08-25, `.scratch/enrich-deadline-not-a-bound/prototypes/`, committed on the
+two `prototype/enrich-deadline-arm-*` branches): a 2 s deadline returned at the transport's 10 s,
+and `runInterruptible` is inert — the interrupt is delivered and *ignored* by
+`sun.nio.ch.NioSocketImpl`, proven with a control that interrupted a `Thread.sleep` fine. Do not
+reach for interruption again; it measures dead.
+
+What holds the deadline is arithmetic: read `enrichDeadlineRemainingMs()` immediately before every
+blocking leg and clamp the transport's connect/read (JDK) or per-call `callTimeout` (OkHttp) down
+to it. Two traps inside that:
+
+- **A JDK-followed redirect chain re-spends the first leg's timeouts per hop** — three
+  individually-fast hops walked a 3 s deadline to 7.5 s, unmoved by the clamp. `DefaultHttpClient`
+  therefore follows redirects itself, reclamping per hop (and keeping JDK semantics: 301/302/303
+  re-issue as GET, a POST's 307/308 surfaces, cross-protocol surfaces, 20-hop cap).
+- **Zero means "no timeout" to every JDK and OkHttp knob**, so an exhausted budget expressed as
+  `0` disables the very bound it should impose. Clamp to at least 1 ms.
+
+`EnrichDeadlineBoundTest` (core) and `OkHttpEnrichDeadlineBoundTest` pin the end-to-end invariant;
+`DeadlineBlackholeProbeTest` behind `-Dinclude.probe=true` is the field reproduction (SYN
+blackhole), kept off CI because a network that answers TEST-NET-1 with an RST turns it vacuous.
+
+
 ## Area — Provider data and matching
 
 - A MusicBrainz `inc=` that names a relationship gets you the **link**, not the linked entity's own

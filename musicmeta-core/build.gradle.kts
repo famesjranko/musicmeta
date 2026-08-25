@@ -42,6 +42,7 @@ val secrets = Properties().apply {
 tasks.withType<Test> {
     // Forward system properties to test JVM (for E2E test gating)
     systemProperty("include.e2e", System.getProperty("include.e2e") ?: "false")
+    systemProperty("include.probe", System.getProperty("include.probe") ?: "false")
 
     // Forward API keys. Precedence is the one secrets.properties itself documents — the file wins
     // over the environment — with an explicit -D above both, so one run can override without edits.

@@ -6,6 +6,7 @@ import com.landofoz.musicmeta.http.HttpAttempt
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.HttpResult
 import com.landofoz.musicmeta.http.asAttempt
+import com.landofoz.musicmeta.http.enrichDeadlineRemainingMs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -16,6 +17,7 @@ import okhttp3.Response
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
+import java.util.concurrent.TimeUnit
 
 /**
  * OkHttp adapter for [HttpClient].
@@ -44,6 +46,19 @@ class OkHttpEnrichmentClient(
 
     private val noRedirectClient = client.newBuilder().followRedirects(false).build()
 
+    /**
+     * [base], with its call ceiling clamped to what is left of the enclosing enrich() deadline:
+     * cancellation cannot interrupt a thread blocked in `execute()`, so the deadline only binds if
+     * the call is told about it up front. `callTimeout`, not `connectTimeout` — OkHttp applies
+     * connect/read per redirect hop, and only the call ceiling covers the whole chain. A consumer's
+     * own tighter `callTimeout` stands; with no deadline installed, [base] is returned untouched.
+     */
+    private suspend fun budgeted(base: OkHttpClient): OkHttpClient {
+        val ceilingMs = (enrichDeadlineRemainingMs() ?: return base).coerceAtLeast(1L)
+        if (base.callTimeoutMillis in 1..ceilingMs.toInt()) return base
+        return base.newBuilder().callTimeout(ceilingMs, TimeUnit.MILLISECONDS).build()
+    }
+
     private val retry = BudgetedTransientRetry(client.attemptCostMs(), maxAttempts)
 
     override suspend fun fetchJsonResult(url: String): HttpResult<JSONObject> =
@@ -59,7 +74,7 @@ class OkHttpEnrichmentClient(
                 .header("User-Agent", userAgent)
                 .header("Accept", "application/json")
             headers.forEach { (k, v) -> requestBuilder.header(k, v) }
-            client.newCall(requestBuilder.build()).execute().use { response ->
+            budgeted(client).newCall(requestBuilder.build()).execute().use { response ->
                 parseJsonResult(response) { JSONObject(it) }
             }
         }
@@ -67,7 +82,7 @@ class OkHttpEnrichmentClient(
 
     override suspend fun fetchRedirectUrlResult(url: String): HttpResult<String> = retry.execute {
         withContext(Dispatchers.IO) {
-            noRedirectClient.newCall(buildGetRequest(url)).execute().use { response ->
+            budgeted(noRedirectClient).newCall(buildGetRequest(url)).execute().use { response ->
                 val code = response.code
                 when {
                     code == 429 -> HttpResult.RateLimited(response.retryAfterMs())
@@ -85,7 +100,7 @@ class OkHttpEnrichmentClient(
 
     override suspend fun fetchJsonArrayResult(url: String): HttpResult<JSONArray> = retry.execute {
         withContext(Dispatchers.IO) {
-            client.newCall(buildGetRequest(url)).execute().use { response ->
+            budgeted(client).newCall(buildGetRequest(url)).execute().use { response ->
                 parseJsonResult(response) { JSONArray(it) }
             }
         }
@@ -94,7 +109,7 @@ class OkHttpEnrichmentClient(
     override suspend fun postJsonResult(url: String, body: String): HttpResult<JSONObject> =
         retry.execute {
             withContext(Dispatchers.IO) {
-                client.newCall(buildPostRequest(url, body)).execute().use { response ->
+                budgeted(client).newCall(buildPostRequest(url, body)).execute().use { response ->
                     parseJsonResult(response) { JSONObject(it) }
                 }
             }
@@ -103,7 +118,7 @@ class OkHttpEnrichmentClient(
     override suspend fun postJsonArrayResult(url: String, body: String): HttpResult<JSONArray> =
         retry.execute {
             withContext(Dispatchers.IO) {
-                client.newCall(buildPostRequest(url, body)).execute().use { response ->
+                budgeted(client).newCall(buildPostRequest(url, body)).execute().use { response ->
                     parseJsonResult(response) { JSONArray(it) }
                 }
             }
