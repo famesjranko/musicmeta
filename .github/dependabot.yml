@@ -22,6 +22,13 @@ updates:
     schedule:
       interval: weekly
     groups:
-      gradle:
+      # Only minors and patches share a PR. A major falls outside the group and arrives alone,
+      # because a grouped major is reviewed as whichever of its siblings breaks first, and a
+      # Gradle, AGP or Room major each needs its own migration argument before a green run
+      # means anything.
+      gradle-minor-patch:
         patterns:
           - "*"
+        update-types:
+          - minor
+          - patch
