@@ -19,7 +19,7 @@ import org.junit.Test
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
- * What nested composite resolution has to get right, one scenario per defect it used to have.
+ * What nested composite resolution has to get right, one scenario per defect.
  *
  * S1 and S2 pin the transitive graph: a composite dependency that is itself a composite is
  * synthesized, however many levels deep. S3 pins that a dependency is resolved through the path its
