@@ -88,18 +88,16 @@ internal fun MusicBrainzArtist.alternativeNames(): List<AlternativeName> =
  * [YEAR_SLACK] absorbs region and calendar-boundary sloppiness in the caller's tag and in
  * MusicBrainz's own partial dates (`"1997"`, `"1997-05"`) alike.
  *
- * Measured over 99 chart artists, 181 release groups and 3237 releases captured live on
- * 2026-08-25 (`.scratch/album-mbid-contradiction/`): no false positives across 6179 correct pairs -
- * 3237 where the caller's metadata is the release its own identifier names, and 2942 where it comes
- * from a *different pressing of the same album*, which is the ordinary real case and the one that
- * killed the track-count rule measured beside it (592 false positives out of the same 2942).
- * It reported 63 of 176 synthetic wrong-album pairings; that is a floor on a synthetic pairing, not
- * a detection rate.
+ * Measured 2026-08-25 on 181 studio release groups and 3139 live releases: **0 false positives**,
+ * against a track-count rule frozen beside it that scored 31729 out of 109604 (29%) and was
+ * rejected on its own numbers. `AlbumYearContradictionCorpusTest` re-runs both every build.
  *
- * The corpus cannot see one failure mode: a caller whose own tag is two or more years earlier than
- * MusicBrainz's first release, because the corpus takes every year from MusicBrainz. What it costs
- * when it happens is bounded - the identifier is dropped and the request resolves by its name,
- * which for a correct album and artist finds the same album again.
+ * That zero supports one population — a **correct** identifier beside caller metadata from another
+ * legitimate pressing of the same album — and is not evidence that comparing years is universally
+ * safe. The caller whose own tag predates MusicBrainz's first release is outside the corpus, since
+ * every year in it comes from MusicBrainz. `corpora/album-year-contradiction/provenance.md` and
+ * `.scratch/album-mbid-contradiction/spec.md` hold the rest, including one probe that turned out
+ * vacuous.
  */
 internal suspend fun MusicBrainzLookup<MusicBrainzRelease>.unlessPredatingFirstRelease(
     callerYear: Int?,
