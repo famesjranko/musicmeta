@@ -21,7 +21,8 @@ the placeholder `"x"` in the source, satisfying the legal constraint (no real ly
 
 LRCLIB's actual field names are exercised against the live API by the daily `provider-drift.yml`
 job, which runs the `com.landofoz.musicmeta.e2e.*` glob (LRCLIB is referenced by 6 files there) —
-non-gating by design (`spec.md` § Standing constraints 2). That live coverage, not this trim, is
+non-gating by design (a failed scheduled run emails the maintainer; it gates no merge). That live
+coverage, not this trim, is
 what would surface a drifted field name; a provider with no live e2e coverage would need this same
 note to say its derived pool's field names rest on nothing.
 
@@ -38,7 +39,7 @@ against the live API by the same daily `provider-drift.yml` job (3 files under
 scenario's `TRACK_POPULARITY` rider does not depend on matching "Karma Police"/"Radiohead" to the
 scenario's own "Song"/"David Bowie" request; `FakeHttpClient` matches by URL substring only, and
 `EnrichmentData.Popularity` carries no title/artist for the identity rule to check). Its purpose on
-this fixture is the provenance rider (P4's KDoc / `shapes.md` § 4): Last.fm is one of the 8 (of 12
+this fixture is the provenance rider: Last.fm is one of the 8 (of 12
 registered) providers that never set `LookupProvenance` on a `Success`, so requesting
 `TRACK_POPULARITY` alongside the LRCLIB types gives the composed scenario one genuine `Success`
 with `provenance == null` to exercise `every Success has provenance != null` against.
