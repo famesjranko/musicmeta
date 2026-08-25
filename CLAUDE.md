@@ -63,7 +63,10 @@ Where a rule below names its gate, what is written here is the part that gate ca
 - A dependency in `musicmeta-core` reaches every consumer transitively and cannot be withdrawn
   without a break, so each one carries its argument beside the declaration and a fourth needs one
   too. The adapters exist to bring OkHttp and Room and are not held to this. Nothing enforces it
-  (`VERIFICATION.md` — "Known gaps").
+  (`VERIFICATION.md` — "Known gaps"). Raising the version of one moves a floor every consumer
+  inherits, because Gradle takes the highest version in the graph: bump for a security advisory or
+  an API we need, and say which in the PR. Kotlin counts — its version publishes `kotlin-stdlib`
+  into every POM at compile scope.
 - `e2e/` tests hit live APIs behind `-Dinclude.e2e=true` and never gate a merge, so an e2e test is
   not coverage for a change. `musicmeta-android/src/androidTest/` is the same: nothing runs it —
   not `check`, not CI — so a Room migration reaches a release having been proved only against
