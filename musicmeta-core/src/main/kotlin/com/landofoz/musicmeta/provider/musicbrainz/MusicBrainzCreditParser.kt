@@ -62,14 +62,23 @@ internal object MusicBrainzCreditParser {
     }
 
     /**
-     * Parse a release-group lookup response with releases, labels, and media.
-     * Extracts each release as a MusicBrainzEdition with format, label, catalog number, etc.
+     * The release group a release browse was keyed on, as the first release carries it.
+     *
+     * A browse answers with releases, never with the group at top level, so every fact about the
+     * group itself — its id, title, `first-release-date` and artist credit — is read from here.
      */
-    fun parseReleaseGroupDetail(json: JSONObject): MusicBrainzReleaseGroupDetail {
-        val id = json.getString("id")
-        val title = json.getString("title")
-        val releasesArray = json.optJSONArray("releases")
-            ?: return MusicBrainzReleaseGroupDetail(id, title, emptyList())
+    fun extractBrowseReleaseGroup(json: JSONObject): JSONObject? {
+        val releases = json.optJSONArray("releases") ?: return null
+        if (releases.length() == 0) return null
+        return releases.getJSONObject(0).optJSONObject("release-group")
+    }
+
+    /** Parse a release browse response with labels and media into the group's editions. */
+    fun parseReleaseBrowse(json: JSONObject): MusicBrainzReleaseGroupDetail? {
+        val group = extractBrowseReleaseGroup(json) ?: return null
+        val releasesArray = json.getJSONArray("releases")
+        val id = group.getString("id")
+        val title = group.getString("title")
         val editions = (0 until releasesArray.length()).map { i ->
             val obj = releasesArray.getJSONObject(i)
             val media = obj.optJSONArray("media")

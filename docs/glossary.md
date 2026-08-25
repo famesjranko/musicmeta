@@ -31,7 +31,7 @@ Where to see each claim in the code:
 
 | Row | Evidence |
 |---|---|
-| album ↔ release-group | `EnrichmentIdentifiers.musicBrainzReleaseGroupId`; `MusicBrainzApi.lookupReleaseGroup` |
+| album ↔ release-group | `EnrichmentIdentifiers.musicBrainzReleaseGroupId`; `MusicBrainzApi.browseReleaseGroupReleases` |
 | album ↔ master | `DiscogsApi.getMasterVersions`, `MASTERS_URL` |
 | album ↔ collection | `ITunesModels.ITunesAlbumResult.collectionId`/`collectionName`; a lookup filters `wrapperType == "collection"` |
 | track ↔ recording | `MusicBrainzEntityType`'s KDoc states it outright: *"a recording is a track, a release an album"* |

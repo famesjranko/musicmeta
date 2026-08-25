@@ -9,6 +9,7 @@ import com.landofoz.musicmeta.ErrorKind
 import com.landofoz.musicmeta.IdentifierRequirement
 import com.landofoz.musicmeta.http.HttpResult
 import com.landofoz.musicmeta.http.RateLimiter
+import com.landofoz.musicmeta.testkit.UpstreamPools
 import com.landofoz.musicmeta.testutil.FakeHttpClient
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -643,20 +644,50 @@ class MusicBrainzProviderTest {
     }
 
     @Test
-    fun `enrichAlbumEditions returns Success with ReleaseEditions when release-group has releases`() = runTest {
-        // Given - release-group lookup returns JSON with releases
-        httpClient.givenJsonResponse("release-group/rg1", RELEASE_GROUP_WITH_RELEASES_JSON)
+    fun `enrichAlbumEditions browses releases by group, asking for the fields an edition promises`() = runTest {
+        // Given - a request whose only route to the editions is the release-group identifier
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
             .withIdentifiers(EnrichmentIdentifiers(musicBrainzReleaseGroupId = "rg1"))
 
         // When - enriching for RELEASE_EDITIONS
+        provider.enrich(request, EnrichmentType.RELEASE_EDITIONS)
+
+        // Then - one release browse keyed on the group, carrying the inc every read field needs
+        val url = httpClient.requestedUrls.single()
+        assertTrue("Expected a release browse, got $url", url.contains("release?release-group=rg1"))
+        assertTrue(
+            "Expected the editions inc, got $url",
+            url.contains("inc=release-groups+artist-credits+labels+media"),
+        )
+    }
+
+    @Test
+    fun `enrichAlbumEditions fills format, label and catalogue number from a captured browse`() = runTest {
+        // Given - the captured release browse for a group whose two kept releases differ in both
+        UpstreamPools.loadOnto(httpClient, "musicbrainz-release-group-editions")
+        val request = EnrichmentRequest.forAlbum(
+            title = "Hail to the Thief",
+            artist = "Radiohead",
+            identifiers = EnrichmentIdentifiers(
+                musicBrainzReleaseGroupId = "5c14fd50-a2f1-3672-9537-b0dad91bea2f",
+            ),
+            year = 2003,
+        )
+
+        // When - enriching for RELEASE_EDITIONS
         val result = provider.enrich(request, EnrichmentType.RELEASE_EDITIONS)
 
-        // Then - Success with ReleaseEditions data containing editions
+        // Then - all three fields come back populated, at the values the capture carries
         assertTrue("Expected Success but got $result", result is EnrichmentResult.Success)
         val success = result as EnrichmentResult.Success
         val data = success.data as EnrichmentData.ReleaseEditions
-        assertTrue("Expected non-empty editions, got ${data.editions.size}", data.editions.isNotEmpty())
+        assertEquals(2, data.editions.size)
+        val cassette = data.editions.single { it.format == "Cassette" }
+        assertEquals("Capitol Records", cassette.label)
+        assertEquals("C4 7243 5", cassette.catalogNumber)
+        val vinyl = data.editions.single { it.format == "12\" Vinyl" }
+        assertEquals("XL Recordings", vinyl.label)
+        assertEquals("XLLP785", vinyl.catalogNumber)
         assertEquals(1.0f, success.confidence, 0.001f)
     }
 
@@ -673,22 +704,22 @@ class MusicBrainzProviderTest {
     }
 
     @Test
-    fun `enrichAlbumEditions returns NotFound when lookupReleaseGroup returns null`() = runTest {
-        // Given - no canned response for release-group lookup (returns null)
+    fun `enrichAlbumEditions returns NotFound when the release browse returns null`() = runTest {
+        // Given - no canned response for the release browse (returns null)
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
             .withIdentifiers(EnrichmentIdentifiers(musicBrainzReleaseGroupId = "rg1"))
 
         // When - enriching for RELEASE_EDITIONS (no HTTP response configured)
         val result = provider.enrich(request, EnrichmentType.RELEASE_EDITIONS)
 
-        // Then - NotFound because lookupReleaseGroup returned null
+        // Then - NotFound because the release browse returned null
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
     fun `enrichAlbumEditions returns Error with NETWORK ErrorKind on IOException`() = runTest {
-        // Given - release-group lookup throws IOException
-        httpClient.givenIoException("release-group/")
+        // Given - the release browse throws IOException
+        httpClient.givenIoException("release?release-group=")
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
             .withIdentifiers(EnrichmentIdentifiers(musicBrainzReleaseGroupId = "rg1"))
 
@@ -1225,29 +1256,6 @@ class MusicBrainzProviderTest {
                     {
                       "status": "Official",
                       "release-group": {"id": "rg-studio", "primary-type": "Album"}
-                    }
-                  ]
-                }
-              ]
-            }
-        """.trimIndent()
-
-        private val RELEASE_GROUP_WITH_RELEASES_JSON = """
-            {
-              "id": "rg1",
-              "title": "OK Computer",
-              "releases": [
-                {
-                  "id": "rel1",
-                  "title": "OK Computer",
-                  "date": "1997-06-16",
-                  "country": "GB",
-                  "barcode": "BARCODE123",
-                  "media": [{"format": "CD", "tracks": []}],
-                  "label-info": [
-                    {
-                      "catalog-number": "PCS 8088",
-                      "label": {"name": "Parlophone"}
                     }
                   ]
                 }

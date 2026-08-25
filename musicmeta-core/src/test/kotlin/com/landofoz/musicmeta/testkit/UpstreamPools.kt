@@ -55,6 +55,9 @@ internal object UpstreamPools {
         }
     }
 
+    /** One pool file's body, for a test that parses a captured response without an HTTP round trip. */
+    fun body(scenario: String, file: String): String = resource(scenario, file)
+
     private fun resource(scenario: String, file: String): String =
         checkNotNull(object {}.javaClass.getResourceAsStream("/pools/$scenario/$file")) {
             "missing pool resource: /pools/$scenario/$file"

@@ -80,6 +80,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A `CompositeSynthesizer` dependency that is itself a composite is now synthesized instead of settling `NotFound("no_provider")`: nested composite graphs resolve to any depth
 - A composite's dependency is resolved by its own registration, not the request: one with a `ResultMerger` is merged across every provider even when only the composite was asked for
 - `CREDITS` now returns the songwriters, composers and lyricists MusicBrainz models on the work, silently dropped until now; caches 30 days, so clear yours or wait
+- `RELEASE_EDITIONS` from MusicBrainz now fills each edition's `format`, `label` and `catalogNumber`, always null until now because the request it used could not carry them
+- `RELEASE_EDITIONS` from MusicBrainz now returns up to 100 editions per album, the browse maximum, in place of a silent cap at 25
 - demo-web's card image now prefers a Deezer/iTunes CDN URL over Cover Art Archive's when both are available, cutting card paint latency from seconds to well under a second
 - demo-web's artist summary card now uses fanart.tv's smaller preview image for its photo and background instead of the full-size original; the gallery still shows full-size
 - Cached `LABEL`/`RELEASE_DATE`/`RELEASE_TYPE`/`COUNTRY` entries with unknown-curation genre tags re-fetched every call; now served from cache — tags are read only off `GENRE` and `ALBUM_METADATA`
