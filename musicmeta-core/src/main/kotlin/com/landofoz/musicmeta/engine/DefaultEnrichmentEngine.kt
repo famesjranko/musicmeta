@@ -926,7 +926,14 @@ internal class DefaultEnrichmentEngine(
         // The name-search providers are asked for nothing at all in that state, so they are not
         // asked: a type no identifier-keyed provider can serve is an honest NotFound, never a live
         // search for the empty string and never an Error.
-        val identifierOnly = namesNoEntity(request)
+        //
+        // An album or track request with a blank artist is gated the same way. A name search
+        // carrying no artist cannot identify an entity, so a provider that only searches by name
+        // is asked nothing. This is the one place `identifierOnly` feeds every regular and
+        // mergeable chain, so gating here covers every name-searching provider at once;
+        // MusicBrainz is guarded in `MusicBrainzEnricher` instead, because its identity-resolution
+        // call does not come through this chain.
+        val identifierOnly = namesNoEntity(request) || artistBlanksNameSearch(request)
 
         // The one closure, matching SettlementBoard's own construction (runProgressiveFanOut,
         // abandonedSnapshot): everything this call's board can be awaited for. A type's role —

@@ -140,24 +140,24 @@ class IdentityNameBackfillTest {
     }
 
     @Test
-    fun `a title with no artist beside it keeps the blank the caller left`() = runTest {
+    fun `a title with no artist beside it reaches no name-search provider either`() = runTest {
         // Given - a recording pool for the title, and a caller who supplied no artist
         httpClient.givenJsonResponse("recording?query", RECORDING_POOL)
         val lyrics = namedProvider()
 
         // When - the request names the title alone
-        engine(lyrics).enrich(
+        val results = engine(lyrics).enrich(
             EnrichmentRequest.forTrack("Under Pressure", ""),
             setOf(EnrichmentType.LYRICS_PLAIN),
         )
 
-        // Then - MusicBrainz was still asked, because it drops an empty artistname term and
-        // resolves on the title; only a blank *title* names nothing to search for
-        assertTrue(httpClient.requestedUrls.any { it.contains("recording?query") })
-        // Then - the artist stays blank downstream: backfill reads a caller's identifier, never a
-        // search hit, so an under-specified query's top result cannot rewrite the request
-        val asked = lyrics.enrichCalls.first().first as EnrichmentRequest.ForTrack
-        assertEquals("", asked.artist)
+        // Then - the search is not run: MusicBrainz drops an empty artistname term rather than
+        // refusing it, so the title alone would rank a pool nothing in the request can narrow
+        assertTrue(httpClient.requestedUrls.none { it.contains("recording?query") })
+        // Then - the name-search provider is not asked, exactly as for a request naming nothing
+        assertEquals(0, lyrics.enrichCalls.count { it.second == EnrichmentType.LYRICS_PLAIN })
+        // Then - the type is an honest NotFound rather than a guess wearing a hit's confidence
+        assertTrue(results.raw[EnrichmentType.LYRICS_PLAIN] is EnrichmentResult.NotFound)
     }
 
     @Test

@@ -132,3 +132,21 @@ internal fun namesNoEntity(request: EnrichmentRequest): Boolean = when (request)
     is EnrichmentRequest.ForArtist -> request.name.isBlank()
     is EnrichmentRequest.ForTrack -> request.title.isBlank()
 }
+
+/**
+ * True when an album or track request carries no artist, which leaves its name search unable to
+ * identify an entity even though its title is present.
+ *
+ * Deliberately separate from [namesNoEntity] rather than folded into it: that predicate also
+ * selects cache keys and routes identifier-only requests, so widening it would change which key a
+ * request reads and writes. This one is read only by the guards that decide whether a name search
+ * may claim an identity.
+ *
+ * An artist request is never blanked by this — its name *is* the artist, and [namesNoEntity]
+ * already covers a blank one.
+ */
+internal fun artistBlanksNameSearch(request: EnrichmentRequest): Boolean = when (request) {
+    is EnrichmentRequest.ForAlbum -> request.artist.isBlank()
+    is EnrichmentRequest.ForTrack -> request.artist.isBlank()
+    is EnrichmentRequest.ForArtist -> false
+}

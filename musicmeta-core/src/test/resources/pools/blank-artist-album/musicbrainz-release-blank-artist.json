@@ -1,0 +1,414 @@
+{
+  "created": "2026-08-24T18:32:33.243Z",
+  "count": 13987,
+  "offset": 0,
+  "releases": [
+    {
+      "id": "f8039f12-627e-3b6c-99c9-a16f4cf770f8",
+      "score": 100,
+      "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+      "packaging-id": "ec27701a-4a22-37f4-bfac-6616e0f9750a",
+      "artist-credit-id": "91997d53-9c82-3585-ac23-ce763b49389f",
+      "count": 1,
+      "title": "Greatest Hits",
+      "status": "Official",
+      "packaging": "Jewel Case",
+      "text-representation": {
+        "language": "eng",
+        "script": "Latn"
+      },
+      "artist-credit": [
+        {
+          "name": "Red Hot Chili Peppers",
+          "artist": {
+            "id": "8bfac288-ccc5-448d-9573-c33ea2aa5c30",
+            "name": "Red Hot Chili Peppers",
+            "sort-name": "Red Hot Chili Peppers"
+          }
+        }
+      ],
+      "release-group": {
+        "id": "e30a440f-8505-4f15-b000-7308dd2c03f9",
+        "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+        "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+        "title": "Greatest Hits",
+        "primary-type": "Album",
+        "secondary-types": [
+          "Compilation"
+        ],
+        "secondary-type-ids": [
+          "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+        ]
+      },
+      "date": "2003-11-18",
+      "country": "US",
+      "release-events": [
+        {
+          "date": "2003-11-18",
+          "area": {
+            "id": "489ce91b-6658-3307-9877-795b68554c98",
+            "name": "United States",
+            "sort-name": "United States",
+            "iso-3166-1-codes": [
+              "US"
+            ]
+          }
+        }
+      ],
+      "barcode": "093624854524",
+      "asin": "B0000C1733",
+      "label-info": [
+        {
+          "catalog-number": "2-48545",
+          "label": {
+            "id": "c595c289-47ce-4fba-b999-b87503e8cb71",
+            "name": "Warner Bros. Records"
+          }
+        },
+        {
+          "catalog-number": "48545-2",
+          "label": {
+            "id": "c595c289-47ce-4fba-b999-b87503e8cb71",
+            "name": "Warner Bros. Records"
+          }
+        }
+      ],
+      "track-count": 16,
+      "media": [
+        {
+          "id": "f7e1a07f-b6ec-3675-99d8-999a91383601",
+          "format": "CD",
+          "disc-count": 10,
+          "track-count": 16
+        }
+      ],
+      "tags": [
+        {
+          "count": 1,
+          "name": "rock"
+        },
+        {
+          "count": 1,
+          "name": "pop"
+        },
+        {
+          "count": 1,
+          "name": "alternative rock"
+        },
+        {
+          "count": 1,
+          "name": "punk"
+        },
+        {
+          "count": 1,
+          "name": "funk"
+        },
+        {
+          "count": 1,
+          "name": "funk rock"
+        },
+        {
+          "count": 1,
+          "name": "alternative"
+        }
+      ]
+    },
+    {
+      "id": "8cf132ec-abca-4723-bc19-49e986c0be54",
+      "score": 100,
+      "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+      "packaging-id": "ec27701a-4a22-37f4-bfac-6616e0f9750a",
+      "artist-credit-id": "56496f26-bc2b-3e51-8e42-ebf2ba9b2555",
+      "count": 1,
+      "title": "Greatest Hits",
+      "status": "Official",
+      "packaging": "Jewel Case",
+      "text-representation": {
+        "language": "eng",
+        "script": "Latn"
+      },
+      "artist-credit": [
+        {
+          "name": "The Offspring",
+          "artist": {
+            "id": "23a03e33-a603-404e-bcbf-2c00159d7067",
+            "name": "The Offspring",
+            "sort-name": "Offspring, The",
+            "disambiguation": "American punk"
+          }
+        }
+      ],
+      "release-group": {
+        "id": "cf6f334a-1c00-3a56-a973-46a4aa802849",
+        "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+        "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+        "title": "Greatest Hits",
+        "primary-type": "Album",
+        "secondary-types": [
+          "Compilation"
+        ],
+        "secondary-type-ids": [
+          "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+        ]
+      },
+      "date": "2005-06-21",
+      "country": "US",
+      "release-events": [
+        {
+          "date": "2005-06-21",
+          "area": {
+            "id": "489ce91b-6658-3307-9877-795b68554c98",
+            "name": "United States",
+            "sort-name": "United States",
+            "iso-3166-1-codes": [
+              "US"
+            ]
+          }
+        }
+      ],
+      "barcode": "827969345924",
+      "asin": "B00097A5IQ",
+      "label-info": [
+        {
+          "catalog-number": "CK 93459",
+          "label": {
+            "id": "011d1192-6f65-45bd-85c4-0400dd45693e",
+            "name": "Columbia"
+          }
+        }
+      ],
+      "track-count": 14,
+      "media": [
+        {
+          "id": "560319f7-1227-351a-ab5e-16131c92a113",
+          "format": "CD",
+          "disc-count": 1,
+          "track-count": 14
+        }
+      ],
+      "tags": [
+        {
+          "count": 1,
+          "name": "rock"
+        },
+        {
+          "count": 1,
+          "name": "punk"
+        },
+        {
+          "count": 1,
+          "name": "alternative"
+        }
+      ]
+    },
+    {
+      "id": "30ba47a1-ee49-3997-90f7-263fa9fb8af2",
+      "score": 100,
+      "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+      "artist-credit-id": "56496f26-bc2b-3e51-8e42-ebf2ba9b2555",
+      "count": 2,
+      "title": "Greatest Hits",
+      "status": "Official",
+      "text-representation": {
+        "language": "eng",
+        "script": "Latn"
+      },
+      "artist-credit": [
+        {
+          "name": "The Offspring",
+          "artist": {
+            "id": "23a03e33-a603-404e-bcbf-2c00159d7067",
+            "name": "The Offspring",
+            "sort-name": "Offspring, The",
+            "disambiguation": "American punk"
+          }
+        }
+      ],
+      "release-group": {
+        "id": "cf6f334a-1c00-3a56-a973-46a4aa802849",
+        "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+        "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+        "title": "Greatest Hits",
+        "primary-type": "Album",
+        "secondary-types": [
+          "Compilation"
+        ],
+        "secondary-type-ids": [
+          "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+        ]
+      },
+      "date": "2005-06-20",
+      "country": "DE",
+      "release-events": [
+        {
+          "date": "2005-06-20",
+          "area": {
+            "id": "85752fda-13c4-31a3-bee5-0e5cb1f51dad",
+            "name": "Germany",
+            "sort-name": "Germany",
+            "iso-3166-1-codes": [
+              "DE"
+            ]
+          }
+        }
+      ],
+      "barcode": "5099751874638",
+      "asin": "B0009PLOW4",
+      "label-info": [
+        {
+          "catalog-number": "COL 518746 3",
+          "label": {
+            "id": "011d1192-6f65-45bd-85c4-0400dd45693e",
+            "name": "Columbia"
+          }
+        }
+      ],
+      "track-count": 32,
+      "media": [
+        {
+          "id": "f88c8ddd-616a-33e9-8b53-f47d4a2a569d",
+          "format": "DualDisc (CD side)",
+          "disc-count": 1,
+          "track-count": 15
+        },
+        {
+          "id": "4d97b4ec-6a2c-336a-a7f0-d705217d35c7",
+          "format": "DualDisc (DVD-Video side)",
+          "disc-count": 0,
+          "track-count": 17
+        }
+      ]
+    },
+    {
+      "id": "08993b13-7d52-4948-a756-af38ee2ab10c",
+      "score": 100,
+      "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+      "artist-credit-id": "6d3f7315-7c0c-3f3b-a957-2031ea41ed10",
+      "count": 1,
+      "title": "Greatest Hits",
+      "status": "Official",
+      "text-representation": {
+        "language": "ita",
+        "script": "Latn"
+      },
+      "artist-credit": [
+        {
+          "name": "Paola & Chiara",
+          "artist": {
+            "id": "34a3daac-6bd7-4b77-88f3-648ada48957f",
+            "name": "Paola & Chiara",
+            "sort-name": "Paola & Chiara"
+          }
+        }
+      ],
+      "release-group": {
+        "id": "f90924bd-7fae-3b72-a139-df30898cb204",
+        "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+        "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+        "title": "Greatest Hits",
+        "primary-type": "Album",
+        "secondary-types": [
+          "Compilation"
+        ],
+        "secondary-type-ids": [
+          "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+        ]
+      },
+      "date": "2005-03-04",
+      "country": "IT",
+      "release-events": [
+        {
+          "date": "2005-03-04",
+          "area": {
+            "id": "c6500277-9a3d-349b-bf30-41afdbf42add",
+            "name": "Italy",
+            "sort-name": "Italy",
+            "iso-3166-1-codes": [
+              "IT"
+            ]
+          }
+        }
+      ],
+      "barcode": "5099751972426",
+      "asin": "B0007V6W68",
+      "label-info": [
+        {
+          "label": {
+            "id": "011d1192-6f65-45bd-85c4-0400dd45693e",
+            "name": "Columbia"
+          }
+        }
+      ],
+      "track-count": 17,
+      "media": [
+        {
+          "id": "954922d2-ef12-3a34-aab2-2c88d9799244",
+          "format": "CD",
+          "disc-count": 0,
+          "track-count": 17
+        }
+      ]
+    },
+    {
+      "id": "d5608f6f-99a7-4f1d-a4ac-a6915edf3801",
+      "score": 100,
+      "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+      "artist-credit-id": "82b6fe2d-0078-31d1-9bcd-2291ae0d22f2",
+      "count": 1,
+      "title": "Greatest Hits",
+      "status": "Official",
+      "text-representation": {
+        "language": "eng",
+        "script": "Latn"
+      },
+      "artist-credit": [
+        {
+          "name": "Tom T. Hall",
+          "artist": {
+            "id": "8d8e3514-06fc-4801-bd4b-8c6ccae223b3",
+            "name": "Tom T. Hall",
+            "sort-name": "Hall, Tom T."
+          }
+        }
+      ],
+      "release-group": {
+        "id": "7f0c1212-4974-3132-ba88-3ee977ea1491",
+        "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+        "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+        "title": "Tom T. Hall's Greatest Hits",
+        "primary-type": "Album",
+        "secondary-types": [
+          "Compilation"
+        ],
+        "secondary-type-ids": [
+          "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+        ]
+      },
+      "date": "1987-10-19",
+      "country": "US",
+      "release-events": [
+        {
+          "date": "1987-10-19",
+          "area": {
+            "id": "489ce91b-6658-3307-9877-795b68554c98",
+            "name": "United States",
+            "sort-name": "United States",
+            "iso-3166-1-codes": [
+              "US"
+            ]
+          }
+        }
+      ],
+      "asin": "B000001FBC",
+      "track-count": 11,
+      "media": [
+        {
+          "id": "618d819a-6ab3-377c-9a77-a64bd76d7139",
+          "format": "CD",
+          "disc-count": 1,
+          "track-count": 11
+        }
+      ]
+    }
+  ]
+}

@@ -204,7 +204,11 @@ and its siblings leave the names blank for identity resolution to fill from the 
 rather than searched for, because whatever ranks first for `recording:""` must never become the
 request's entity. The engine holds the same line for every *other* provider, skipping the
 name-search ones entirely for a request that names no entity — MusicBrainz's own guard covers only
-MusicBrainz. `EnrichmentEngine.discoverMbidEntityType` is the same absence read the other way:
+MusicBrainz. **A blank artist with a real title** is the same refusal one step earlier: MusicBrainz
+widens rather than refuses `artist:""`, so whatever ranks first for a bare title is an arbitrary
+same-titled release. An album request holding one returns its candidate pool as `suggestions` under
+`CanonicalStatus.AMBIGUOUS` instead of resolving; a track request answers `NotFound` without
+spending a search at all. Whitespace counts as blank. `EnrichmentEngine.discoverMbidEntityType` is the same absence read the other way:
 the three entity types probed in order until one answers, which is the only way to learn what a bare
 MBID names.
 
