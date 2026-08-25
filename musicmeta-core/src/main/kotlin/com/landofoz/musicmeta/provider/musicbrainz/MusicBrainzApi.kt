@@ -360,8 +360,10 @@ internal class MusicBrainzApi(
     ): List<MusicBrainzReleaseGroup> {
         val json = rateLimiter.execute {
             httpClient.fetchJsonResult(
+                // The pipes reach MusicBrainz as %7C: java.net.URI rejects a raw | in a query, so
+                // DefaultHttpClient threw on this URL for as long as it carried one.
                 "$BASE_URL/release-group?artist=$artistMbid" +
-                    "&type=album|ep|single&fmt=json&limit=$limit&offset=$offset",
+                    "&type=album%7Cep%7Csingle&fmt=json&limit=$limit&offset=$offset",
             ).bodyOrThrowTransient()
         } ?: return emptyList()
         return MusicBrainzParser.parseReleaseGroups(json)

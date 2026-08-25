@@ -5,6 +5,8 @@ import com.landofoz.musicmeta.http.HttpResult
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
+import java.net.URI
+import java.net.URISyntaxException
 
 class FakeHttpClient : HttpClient {
     private val jsonResponses = mutableMapOf<String, String>()
@@ -16,6 +18,21 @@ class FakeHttpClient : HttpClient {
     private val httpResultArrayResponses = mutableMapOf<String, HttpResult<JSONArray>>()
     private val redirectResults = mutableMapOf<String, HttpResult<String>>()
     val requestedUrls = mutableListOf<String>()
+
+    /**
+     * Every recorded URL must be one `java.net.URI` accepts, because that is what
+     * `DefaultHttpClient` parses with in production: a URL this fake accepted and the real client
+     * rejects is a test that passes on a request that can never be made. An unencoded `|` in the
+     * release-group browse shipped exactly that way.
+     */
+    private fun record(url: String): String {
+        try {
+            URI(url)
+        } catch (e: URISyntaxException) {
+            throw AssertionError("request URL is not a valid URI, DefaultHttpClient would throw: $url", e)
+        }
+        return url
+    }
     val requestedHeaders = mutableListOf<Map<String, String>>()
 
     fun givenJsonResponse(urlContains: String, json: String) { jsonResponses[urlContains] = json }
@@ -68,7 +85,7 @@ class FakeHttpClient : HttpClient {
     fun givenRedirectResult(urlContains: String, result: HttpResult<String>) { redirectResults[urlContains] = result }
 
     override suspend fun fetchRedirectUrlResult(url: String): HttpResult<String> {
-        requestedUrls.add(url)
+        requestedUrls.add(record(url))
         if (ioExceptions.any { url.contains(it) }) throw IOException("Simulated network error: $url")
         if (errors.any { url.contains(it) }) return HttpResult.NetworkError("Simulated network error")
         redirectResults.entries.firstOrNull { url.contains(it.key) }?.let { return it.value }
@@ -83,7 +100,7 @@ class FakeHttpClient : HttpClient {
         url: String,
         headers: Map<String, String>,
     ): HttpResult<JSONObject> {
-        requestedUrls.add(url)
+        requestedUrls.add(record(url))
         requestedHeaders.add(headers)
         if (ioExceptions.any { url.contains(it) }) throw IOException("Simulated network error: $url")
         if (errors.any { url.contains(it) }) return HttpResult.NetworkError("Simulated network error")
@@ -93,7 +110,7 @@ class FakeHttpClient : HttpClient {
     }
 
     override suspend fun fetchJsonArrayResult(url: String): HttpResult<JSONArray> {
-        requestedUrls.add(url)
+        requestedUrls.add(record(url))
         if (ioExceptions.any { url.contains(it) }) throw IOException("Simulated network error: $url")
         if (errors.any { url.contains(it) }) return HttpResult.NetworkError("Simulated network error")
         val configured = httpResultArrayResponses.entries.firstOrNull { url.contains(it.key) }
@@ -103,7 +120,7 @@ class FakeHttpClient : HttpClient {
     }
 
     override suspend fun postJsonResult(url: String, body: String): HttpResult<JSONObject> {
-        requestedUrls.add(url)
+        requestedUrls.add(record(url))
         if (ioExceptions.any { url.contains(it) }) throw IOException("Simulated network error: $url")
         if (errors.any { url.contains(it) }) return HttpResult.NetworkError("Simulated network error")
         httpResultFor(url)?.let { return it }
@@ -112,7 +129,7 @@ class FakeHttpClient : HttpClient {
     }
 
     override suspend fun postJsonArrayResult(url: String, body: String): HttpResult<JSONArray> {
-        requestedUrls.add(url)
+        requestedUrls.add(record(url))
         if (ioExceptions.any { url.contains(it) }) throw IOException("Simulated network error: $url")
         if (errors.any { url.contains(it) }) return HttpResult.NetworkError("Simulated network error")
         val configured = httpResultArrayResponses.entries.firstOrNull { url.contains(it.key) }

@@ -86,6 +86,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - demo-web's album "Did You Mean?" rows now name their release type and list albums before singles, so a suggestion list no longer reads as a track list
 - `enrich()` now returns within `enrichTimeoutMs` plus slack even when an upstream accepts no connection or stalls mid-redirect: the remaining budget rides the socket's own timeouts, in both clients
 - A track title merely ending in brackets ("(Reprise)", "(feat. X)") no longer forfeits the deep canonical recording pool: both pools union, keeping the studio take in reach
+- MusicBrainz's release-group browse works again: its URL carried a raw `|` that the transport rejects, so every discography browse and album did-you-mean fallback failed since the browse shipped
 - `RELEASE_EDITIONS` from MusicBrainz now returns up to 100 editions per album, the browse maximum, in place of a silent cap at 25
 - demo-web's card image now prefers a Deezer/iTunes CDN URL over Cover Art Archive's when both are available, cutting card paint latency from seconds to well under a second
 - demo-web's artist summary card now uses fanart.tv's smaller preview image for its photo and background instead of the full-size original; the gallery still shows full-size
