@@ -157,17 +157,26 @@ class MusicBrainzApiSearchRecordingsTest {
     }
 
     @Test
-    fun `a title that names its own variant takes the unfiltered ladder`() = runTest {
-        // Given - a single matching recording for whichever query is sent
-        httpClient.givenJsonResponse("recording?query", SINGLE_MATCH)
+    fun `a title with a trailing group unions the deep filtered and shallow unfiltered pools`() = runTest {
+        // Given - a deep filtered pool and a shallow unfiltered pool sharing one recording
+        httpClient.givenJsonResponse(CANONICAL_FILTER, FILTERED_POOL)
+        httpClient.givenJsonResponse("recording?query", UNFILTERED_POOL)
 
         // When - the request's own title carries a trailing qualifier group
-        api.searchCanonicalRecordings("Comfortably Numb (Live at Earls Court)", "Pink Floyd")
+        val result = api.searchCanonicalRecordings("Comfortably Numb (Live at Earls Court)", "Pink Floyd")
 
-        // Then - one unfiltered request: the filter would delete the very recording the title names
-        val url = httpClient.requestedUrls.single()
-        assertTrue("expected no filter for a title naming a variant, got $url", !url.contains(CANONICAL_FILTER))
-        assertTrue("expected the unfiltered page size, got $url", url.endsWith("&limit=25"))
+        // Then - both hint-less pools are fetched: the unfiltered arm keeps a variant the filter
+        // would delete reachable, and the filtered arm keeps the deep page a bracketed-but-canonical
+        // title ("(Reprise)", "(feat. X)") was losing to the blanket skip
+        val urls = httpClient.requestedUrls
+        assertEquals(2, urls.size)
+        assertTrue("expected the filter on the deep pool, got ${urls[0]}", urls[0].contains(CANONICAL_FILTER))
+        assertTrue("expected the deep pool at limit=100, got ${urls[0]}", urls[0].endsWith("&limit=100"))
+        assertTrue("expected no filter on the shallow pool, got ${urls[1]}", !urls[1].contains(CANONICAL_FILTER))
+        assertTrue("expected the shallow pool at limit=25, got ${urls[1]}", urls[1].endsWith("&limit=25"))
+
+        // Then - both pools reach the caller, deduplicated by recording id, deep pool first
+        assertEquals(listOf("rec-studio", "rec-shared", "rec-live"), result.map { it.id })
     }
 
     private companion object {

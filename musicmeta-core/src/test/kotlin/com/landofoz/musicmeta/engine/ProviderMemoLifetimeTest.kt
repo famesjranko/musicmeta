@@ -420,7 +420,9 @@ class ProviderMemoLifetimeTest {
             it.contains("Paranoid+Android+%5C%28Remastered%5C%29%22")
         }
         val strippedTitleSearches = recordingSearches.filter { it.contains("recording%3A%22Paranoid+Android%22") }
-        assertEquals("the original qualified title", 1, originalTitleSearches.size)
+        // The qualified title costs two: its canonical (filtered) and shallow (unfiltered) arms,
+        // which differ by the filter term, not the title
+        assertEquals("the original qualified title", 2, originalTitleSearches.size)
         assertEquals("the qualifier fallback's stripped candidate", 1, strippedTitleSearches.size)
     }
 
@@ -504,14 +506,13 @@ class ProviderMemoLifetimeTest {
 
         /**
          * What one absent, qualified-title track costs in `recording?query=` requests: the original
-         * title's plain search — unfiltered from the start, because [QUALIFIED_TRACK]'s trailing
-         * `(Remastered)` group routes it through the plain search rather than the canonical/shallow
-         * pair "Enter Sandman" takes, so there is no separate unfiltered retry to count — the
-         * qualifier fallback's one stripped-title candidate search, and the fuzzy near-miss search an
-         * empty suggestion pool asks for.
+         * title's canonical (filtered, deep) and shallow (unfiltered) pools — [QUALIFIED_TRACK]'s
+         * trailing `(Remastered)` group makes `searchCanonicalRecordings` union both arms rather
+         * than trust either alone — the qualifier fallback's one stripped-title candidate search,
+         * and the fuzzy near-miss search an empty suggestion pool asks for.
          *
-         * Only **three**, not four: the original title's resolution search and the unfiltered pool
-         * the miss suggests from are the identical URL (same title, same hint-less query), so
+         * Only **four**, not five: the original title's shallow arm and the unfiltered pool the
+         * miss suggests from are the identical URL (same title, same hint-less query), so
          * [com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzApi]'s plain-pool memo answers both
          * from one upstream fetch. The stripped candidate's title differs, so it stays its own,
          * uncollapsed search — see the per-URL test pinning that.
@@ -519,7 +520,7 @@ class ProviderMemoLifetimeTest {
          * Each is spent once for the call. A memo scoped to the raw search alone leaves the
          * candidate search repeating once per type instead, which is what this number would rise to.
          */
-        const val RECORDING_SEARCHES_PER_ABSENT_QUALIFIED_TRACK = 3
+        const val RECORDING_SEARCHES_PER_ABSENT_QUALIFIED_TRACK = 4
 
         /**
          * What one absent track costs in `recording?query=` requests: the filtered resolution
