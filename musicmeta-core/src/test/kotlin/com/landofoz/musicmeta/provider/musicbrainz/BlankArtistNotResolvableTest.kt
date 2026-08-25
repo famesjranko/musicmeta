@@ -67,6 +67,23 @@ class BlankArtistNotResolvableTest {
     }
 
     @Test
+    fun `a track whose artist is only whitespace asks MusicBrainz nothing at all`() = runTest {
+        // Given - a recording title whose artist is whitespace, and every upstream route stubbed
+        val http = UpstreamPools.load("blank-artist-album")
+        val provider = MusicBrainzProvider(http, RateLimiter(0))
+
+        // When - enriching the track
+        val result = provider.enrich(
+            EnrichmentRequest.forTrack("Yesterday", "   "),
+            EnrichmentType.TRACK_METADATA,
+        )
+
+        // Then - whitespace is as blank as empty: no request is spent
+        assertTrue(result is EnrichmentResult.NotFound)
+        assertEquals("requested: ${http.requestedUrls}", emptyList<String>(), http.requestedUrls)
+    }
+
+    @Test
     fun `an album naming its artist still resolves`() = runTest {
         // Given - the same pool, reached by a request that does name an artist
         val http = UpstreamPools.load("blank-artist-album")
