@@ -519,7 +519,9 @@ internal class DefaultEnrichmentEngine(
     }
 
     /**
-     * One type's whole post-processing pass, run inside [SettlementBoard.settle]'s lock: catalog
+     * One type's whole post-processing pass, run by [SettlementBoard.settle] *before* it takes
+     * its lock — concurrently across types, which is why [CatalogProvider.checkAvailability]
+     * must be thread-safe: catalog
      * filtering, then provenance stamping, then stale-cache resolution — the order that lets a
      * `Success` demoted to `NotFound` by filtering flow untouched through stamping (which only
      * reads `Success`) and into stale-cache resolution (which only reads `Error`/`RateLimited`), so
