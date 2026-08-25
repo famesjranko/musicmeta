@@ -679,7 +679,9 @@ could catch a different album by the *same* artist, which the artist check prova
 rules were frozen before any data was captured, then scored on 181 studio release groups and 3139
 releases (`corpora/album-year-contradiction/`). Track count fired on **29% of correct albums** —
 deluxe editions, bonus discs, region variants — and was dropped. The year rule fired on **none**, and
-ships as `unlessPredatingFirstRelease`.
+ships as `unlessPredatingFirstRelease` on the release route and `markIfPredatingFirstRelease` on the
+release-group one — two callers of one function, because the same mistake as above is available here:
+a rule the release lookup applies is not a rule `RELEASE_EDITIONS` applies.
 
 What made the year rule survivable is that it is one-sided by construction, not by tuning: an album
 cannot predate its own first release, so an *earlier* caller year is positive evidence, while a

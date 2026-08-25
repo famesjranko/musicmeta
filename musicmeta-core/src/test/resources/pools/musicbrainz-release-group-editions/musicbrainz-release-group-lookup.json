@@ -1,0 +1,34 @@
+{
+  "id": "5c14fd50-a2f1-3672-9537-b0dad91bea2f",
+  "title": "Hail to the Thief",
+  "first-release-date": "2003-05-26",
+  "primary-type": "Album",
+  "artist-credit": [
+    {
+      "name": "Radiohead",
+      "joinphrase": "",
+      "artist": {
+        "id": "a74b1b7f-71a5-4011-9441-d0b5e4122711",
+        "name": "Radiohead"
+      }
+    }
+  ],
+  "releases": [
+    {
+      "id": "0900aa86-9bbd-4424-b0dd-bfd2942ea02f",
+      "title": "Hail to the Thief",
+      "date": "2003-05-26",
+      "country": "JP",
+      "barcode": "4988006812840",
+      "status": "Official"
+    },
+    {
+      "id": "f470c26b-0beb-44d0-b49e-4caa02379b76",
+      "title": "Hail to the Thief",
+      "date": "2003-06-02",
+      "country": "JP",
+      "barcode": "4988006811188",
+      "status": "Official"
+    }
+  ]
+}

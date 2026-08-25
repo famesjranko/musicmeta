@@ -10,6 +10,7 @@ import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.LookupProvenance
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzProvider
+import com.landofoz.musicmeta.testkit.UpstreamPools
 import com.landofoz.musicmeta.testutil.FakeEnrichmentCache
 import com.landofoz.musicmeta.testutil.FakeHttpClient
 import kotlinx.coroutines.test.runTest
@@ -227,7 +228,48 @@ class ContradictedAlbumTrackIdentifierTest {
         assertTrue(results.identity.status != CanonicalStatus.CONTRADICTED)
     }
 
+    @Test
+    fun `a release-group id the caller dates before its own first release is reported`() = runTest {
+        // Given - RELEASE_EDITIONS, which reaches its album by the release-group id and so shares
+        // neither the release lookup nor the year check chained onto it. The group's own
+        // first-release-date is 2003, three years after the year the caller supplies with it.
+        val http = UpstreamPools.load(EDITIONS_POOL)
+        val request = EnrichmentRequest.ForAlbum(
+            EnrichmentIdentifiers(musicBrainzReleaseGroupId = HAIL_TO_THE_THIEF_GROUP),
+            title = "Hail to the Thief", artist = "Radiohead", year = 2000,
+        )
+
+        // When - the editions are enriched
+        val results = engine(http).enrich(request, setOf(EnrichmentType.RELEASE_EDITIONS))
+
+        // Then - reported, and nothing answered: editions are the whole answer here and there is no
+        // name route to recover them by, so the contradicting identifier returns nothing.
+        assertEquals(CanonicalStatus.CONTRADICTED, results.identity.status)
+        assertTrue(results.raw[EnrichmentType.RELEASE_EDITIONS] !is EnrichmentResult.Success)
+    }
+
+    @Test
+    fun `a release-group id the caller dates correctly still answers`() = runTest {
+        // Given - the same group and the same request, with the caller's year matching its own
+        // first release. Without this the test above would pass against a route that never answers.
+        val http = UpstreamPools.load(EDITIONS_POOL)
+        val request = EnrichmentRequest.ForAlbum(
+            EnrichmentIdentifiers(musicBrainzReleaseGroupId = HAIL_TO_THE_THIEF_GROUP),
+            title = "Hail to the Thief", artist = "Radiohead", year = 2003,
+        )
+
+        // When - the editions are enriched
+        val results = engine(http).enrich(request, setOf(EnrichmentType.RELEASE_EDITIONS))
+
+        // Then - silent, and the editions come back
+        assertTrue(results.identity.status != CanonicalStatus.CONTRADICTED)
+        assertTrue(results.raw[EnrichmentType.RELEASE_EDITIONS] is EnrichmentResult.Success)
+    }
+
     private companion object {
+        const val EDITIONS_POOL = "musicbrainz-release-group-editions"
+        const val HAIL_TO_THE_THIEF_GROUP = "5c14fd50-a2f1-3672-9537-b0dad91bea2f"
+
         private fun release(
             id: String,
             title: String,

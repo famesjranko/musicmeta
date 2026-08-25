@@ -103,11 +103,25 @@ internal suspend fun MusicBrainzLookup<MusicBrainzRelease>.unlessPredatingFirstR
     callerYear: Int?,
 ): MusicBrainzLookup<MusicBrainzRelease> {
     val found = this as? MusicBrainzLookup.Found ?: return this
-    val year = callerYear ?: return this
-    val firstReleased = yearOf(found.value.releaseGroupFirstReleaseDate) ?: return this
-    if (year >= firstReleased - YEAR_SLACK) return this
-    currentCoroutineContext()[SuppliedIdentifierContradiction]?.mark()
+    if (!markIfPredatingFirstRelease(callerYear, found.value.releaseGroupFirstReleaseDate)) return this
     return MusicBrainzLookup.Absent
+}
+
+/**
+ * The same rule for a route that holds no [MusicBrainzLookup] to drop: the release-*group* lookup
+ * `RELEASE_EDITIONS` makes, whose response carries `first-release-date` at the top level without any
+ * `inc=` asking for it.
+ *
+ * Both callers share this function rather than the arithmetic, so the year of slack cannot come to
+ * mean one thing on the release route and another on the release-group route. What the rule is and
+ * is not evidence for is on [unlessPredatingFirstRelease].
+ */
+internal suspend fun markIfPredatingFirstRelease(callerYear: Int?, firstReleaseDate: String?): Boolean {
+    val year = callerYear ?: return false
+    val firstReleased = yearOf(firstReleaseDate) ?: return false
+    if (year >= firstReleased - YEAR_SLACK) return false
+    currentCoroutineContext()[SuppliedIdentifierContradiction]?.mark()
+    return true
 }
 
 /** Years of leeway before a caller's earlier year counts as disagreement rather than sloppiness. */

@@ -10,7 +10,8 @@ import com.landofoz.musicmeta.engine.ConfidenceCalculator
  *
  * Apart from the rest of [MusicBrainzEnricher] because it is the one album type keyed on the
  * release-*group* identifier rather than the release identifier, so it shares neither the release
- * memo nor [unlessDifferentArtist]'s route into it, and needs its own guard for exactly that reason.
+ * memo nor the chain of guards on its lookup, and needs its own copy of both for that reason: the
+ * artist check ([markIfDifferentArtist]) and the year check ([markIfPredatingFirstRelease]).
  */
 internal suspend fun enrichAlbumEditions(
     api: MusicBrainzApi,
@@ -26,6 +27,9 @@ internal suspend fun enrichAlbumEditions(
     // contradicting identifier reports and returns nothing rather than falling back.
     val credit = MusicBrainzParser.extractArtistCredit(json).orEmpty()
     if (markIfDifferentArtist(request.artist, credit)) {
+        return EnrichmentResult.NotFound(type, providerId)
+    }
+    if (markIfPredatingFirstRelease(request.year, MusicBrainzParser.extractFirstReleaseDate(json))) {
         return EnrichmentResult.NotFound(type, providerId)
     }
     val detail = MusicBrainzCreditParser.parseReleaseGroupDetail(json)

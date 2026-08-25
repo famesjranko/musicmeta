@@ -399,6 +399,14 @@ internal object MusicBrainzParser {
     }
 
     /**
+     * A release group's own `first-release-date` — the floor under every pressing of the album,
+     * carried by a release-group lookup without any `inc=` asking for it. May be partial (`"1997"`,
+     * `"1997-05"`), so read a year off it rather than parsing it as a date.
+     */
+    internal fun extractFirstReleaseDate(obj: JSONObject): String? =
+        obj.optString("first-release-date").takeIf { it.isNotBlank() }
+
+    /**
      * Each credited artist's name individually, unlike [extractArtistCredit]'s single join-phrase
      * string — a multi-artist credit ("Artist A & Artist B") should still match a caller-requested
      * artist that is only one of them, which a joined-string equality check cannot do.
