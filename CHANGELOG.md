@@ -46,6 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Builder.build()` also throws when one type has both a `CompositeSynthesizer` and a `ResultMerger`: the merger could never run, so the registration was silently dead
 
 ### Added
+- `enrichDeadlineRemainingMs()`: what is left of the enclosing `enrich()` deadline, for a custom `HttpClient` to clamp its transport timeouts down to; null outside an enrich call
 - `EnrichmentRequest.forAlbum` gains `trackCount` and `year`, the fields `ForAlbum` always had: providers pick between editions with them; the old signature is kept, so no recompile
 - `EnrichmentEngine.enrichProgressive`: `enrich()`'s cumulative-snapshot streaming counterpart — each emission is everything settled so far; derive what's pending as `requestedTypes - raw.keys`
 - `enrichProgressive`'s cancellation is complete-and-cache: a cancelled collector detaches, the fan-out keeps running to completion and still writes back, bounded to one run per distinct request key
@@ -83,6 +84,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `CREDITS` now returns the songwriters, composers and lyricists MusicBrainz models on the work, silently dropped until now; caches 30 days, so clear yours or wait
 - `RELEASE_EDITIONS` from MusicBrainz now fills each edition's `format`, `label` and `catalogNumber`, always null until now because the request it used could not carry them
 - demo-web's album "Did You Mean?" rows now name their release type and list albums before singles, so a suggestion list no longer reads as a track list
+- `enrich()` now returns within `enrichTimeoutMs` plus slack even when an upstream accepts no connection or stalls mid-redirect: the remaining budget rides the socket's own timeouts, in both clients
 - A track title merely ending in brackets ("(Reprise)", "(feat. X)") no longer forfeits the deep canonical recording pool: both pools union, keeping the studio take in reach
 - `RELEASE_EDITIONS` from MusicBrainz now returns up to 100 editions per album, the browse maximum, in place of a silent cap at 25
 - demo-web's card image now prefers a Deezer/iTunes CDN URL over Cover Art Archive's when both are available, cutting card paint latency from seconds to well under a second

@@ -30,6 +30,28 @@ internal class EnrichDeadline(budgetMs: Long) : AbstractCoroutineContextElement(
 }
 
 /**
+ * What is left of the enclosing `enrich()` deadline, in milliseconds, or `null` when no `enrich()`
+ * call encloses this coroutine — a consumer driving an [HttpClient] directly.
+ *
+ * For [HttpClient] implementations: coroutine cancellation cannot interrupt a thread blocked in a
+ * socket connect or read, so the deadline binds only if the transport is told about it before the
+ * blocking call starts. Read this immediately before each blocking leg — a retry, or a followed
+ * redirect, spends the budget between one leg and the next — and clamp the transport's own timeout
+ * down to it. The value can be zero or negative once the deadline has passed: treat that as "no
+ * time left", never as "no timeout" — every JDK and OkHttp timeout reads `0` as unbounded.
+ */
+suspend fun enrichDeadlineRemainingMs(): Long? = currentCoroutineContext()[EnrichDeadline]?.remainingMs
+
+/**
+ * What one transport leg may spend: [ceilingMs], clamped to what is left of the enclosing
+ * [EnrichDeadline]. Never zero, per [enrichDeadlineRemainingMs]'s warning.
+ */
+internal suspend fun legBudgetMs(ceilingMs: Int): Int {
+    val remaining = enrichDeadlineRemainingMs() ?: return ceilingMs
+    return remaining.coerceIn(1L, ceilingMs.toLong()).toInt()
+}
+
+/**
  * One attempt's outcome, as [BudgetedTransientRetry] needs to read it: the mapped [HttpResult] plus
  * the `Retry-After` a shed 5xx carried. [HttpResult.ServerError] has no field for that header and
  * gaining one would break every consumer that constructs or `copy()`s it.
@@ -132,7 +154,10 @@ class BudgetedTransientRetry(
                     if (transportFailure) null else return result
                 else -> return result
             }
-            val nextAttemptMs = if (transportFailure) attemptTimeoutMs.toLong() else 0L
+            // Charged at the clamped figure: the retry's own legs will be clamped to the same
+            // remaining budget, so charging the unclamped ceiling would refuse retries the
+            // deadline actually has room for.
+            val nextAttemptMs = if (transportFailure) legBudgetMs(attemptTimeoutMs).toLong() else 0L
             delay(waitMs(retryAfterMs, priorWaits, nextAttemptMs) ?: return attempted.result)
         }
         return try {
