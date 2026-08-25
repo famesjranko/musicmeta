@@ -155,11 +155,11 @@ class MusicBrainzCanonicalRecordingSearchTest {
         // When - the track's metadata is enriched
         val result = provider.enrich(request, EnrichmentType.TRACK_METADATA)
 
-        // Then - the exact-title tier reaches the marked take, which the filter would have deleted
-        // upstream while leaving a pool too full for the empty-pool fallback to fire
+        // Then - both hint-less arms are fetched and the exact-title tier still reaches the marked
+        // take through the unfiltered arm, outranking every studio cut the filtered arm added
         assertEquals(WEMBLEY_MBID, resolvedIdOf(result))
-        assertTrue("expected no filter for a title naming a variant", urlsMatching(CANONICAL_QUERY).isEmpty())
-        assertEquals(1, urlsMatching(RECORDING_SEARCH).size)
+        assertEquals(1, urlsMatching(CANONICAL_QUERY).size)
+        assertEquals(2, urlsMatching(RECORDING_SEARCH).size)
     }
 
     @Test

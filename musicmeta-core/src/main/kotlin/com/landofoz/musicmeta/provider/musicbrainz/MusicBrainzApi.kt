@@ -114,12 +114,15 @@ internal class MusicBrainzApi(
      * `-comment:*` moves [MusicBrainzEnricher.pickBestRecording]'s tier-4 "prefer a blank
      * disambiguation" rule upstream of the result limit, in MusicBrainz's own query language, so a
      * heavily-covered track's studio take is not paged out before that tier can rank it
-     * (`docs/pitfalls.md` §7). Three cases fall back to the unfiltered ladder because the filter
-     * would otherwise remove the correct answer: [title] itself names a bracketed variant, so the
-     * filter deletes exactly that recording; an album hint finds nothing, since
-     * [recordingQuery]'s `release:"…"` (edition title) and
-     * [MusicBrainzRecording.artReleaseGroupTitle] (release-*group* title) can genuinely diverge, so
-     * the hint-less retry unions the filtered and unfiltered pools instead of trusting the empty
+     * (`docs/pitfalls.md` §7). Three cases keep the unfiltered pool in reach because the filter
+     * would otherwise remove the correct answer: [title] itself ends in a bracketed group
+     * ([MusicBrainzQualifierFallback.hasTrailingGroup] — the shape, not a vocabulary), where the
+     * named recording may carry the disambiguation the filter deletes, so both hint-less pools are
+     * unioned rather than trusting either alone — a bracketed-but-canonical title ("(Reprise)",
+     * "(feat. X)") keeps the deep page, and a genuinely-variant one stays reachable through the
+     * unfiltered arm; an album hint finds nothing, since [recordingQuery]'s `release:"…"` (edition
+     * title) and [MusicBrainzRecording.artReleaseGroupTitle] (release-*group* title) can genuinely
+     * diverge, so the hint-less retry unions the same two pools instead of trusting the empty
      * hinted one; and a hint-less filtered pool comes back empty because every candidate recording
      * is marked. A hinted query that does find recordings answers alone and unfiltered, since the
      * filter would delete the marked album take the hint was asking for.
@@ -132,9 +135,14 @@ internal class MusicBrainzApi(
         artist: String,
         album: String? = null,
     ): List<MusicBrainzRecording> {
-        if (MusicBrainzQualifierFallback.hasTrailingGroup(title)) return searchRecordings(title, artist, album)
         val albumHint = album?.takeIf { it.isNotBlank() }
-        if (albumHint == null) return canonicalPool(title, artist).ifEmpty { shallowPool(title, artist, null) }
+        if (albumHint == null) {
+            return if (MusicBrainzQualifierFallback.hasTrailingGroup(title)) {
+                (canonicalPool(title, artist) + shallowPool(title, artist, null)).distinctBy { it.id }
+            } else {
+                canonicalPool(title, artist).ifEmpty { shallowPool(title, artist, null) }
+            }
+        }
         val hinted = fetchRecordings(recordingQuery(title, artist, albumHint), RECORDING_SEARCH_LIMIT, albumHint)
         return hinted.ifEmpty {
             (canonicalPool(title, artist, albumHint) + shallowPool(title, artist, albumHint)).distinctBy { it.id }

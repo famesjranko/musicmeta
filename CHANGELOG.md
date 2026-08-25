@@ -83,6 +83,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `CREDITS` now returns the songwriters, composers and lyricists MusicBrainz models on the work, silently dropped until now; caches 30 days, so clear yours or wait
 - `RELEASE_EDITIONS` from MusicBrainz now fills each edition's `format`, `label` and `catalogNumber`, always null until now because the request it used could not carry them
 - demo-web's album "Did You Mean?" rows now name their release type and list albums before singles, so a suggestion list no longer reads as a track list
+- A track title merely ending in brackets ("(Reprise)", "(feat. X)") no longer forfeits MusicBrainz's deep canonical recording pool: both pools are fetched and unioned, so a heavily-covered title's studio take stays in reach
 - `RELEASE_EDITIONS` from MusicBrainz now returns up to 100 editions per album, the browse maximum, in place of a silent cap at 25
 - demo-web's card image now prefers a Deezer/iTunes CDN URL over Cover Art Archive's when both are available, cutting card paint latency from seconds to well under a second
 - demo-web's artist summary card now uses fanart.tv's smaller preview image for its photo and background instead of the full-size original; the gallery still shows full-size
