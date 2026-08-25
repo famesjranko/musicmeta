@@ -441,7 +441,9 @@ pool is already artist-filtered; rank artist first wherever it is not.
 `LookupProvenance.EXACT_NAME` on its own.** MusicBrainz answers a truncated title as a full phrase
 match: 25 of 25 live album requests with the title's last word removed (`release:"Hail to the"`)
 returned the full album at score 99-100, all of them accepted by the `minMatchScore` floor and none
-title-equivalent. `MusicBrainzEnricher` compares the requested title against the hit's own with
+title-equivalent (probe recipe and full pair list: `.scratch/exact-name-provenance/`, 2026-08-25 —
+re-run before building on the number; the pinned regression is
+`MusicBrainzSearchTitleProvenanceTest`). `MusicBrainzEnricher` compares the requested title against the hit's own with
 `TitleMatcher.equivalent` and reports `FUZZY_NAME` when they differ — the same shape the artist route
 already had via `NameMatchTier.CANONICAL`. The engine cost was one layer further out: a search route
 that reported *nothing* was read by `identityNameEvidence` as "matched", so the whole fan-out
