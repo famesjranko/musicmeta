@@ -124,6 +124,25 @@ These identifiers are merged into the request via `request.withIdentifiers(merge
 
 **Name backfill, into a blank field only.** A request from `EnrichmentRequest.forTrackByMbid` (or its album/artist siblings) names an identifier and nothing else, and every provider but MusicBrainz searches by name. After the merge, the engine fills each blank name field from the entity identity resolution settled on — the recording or release title, and the `artist-credit` joined with MusicBrainz's own join phrases ("Queen & David Bowie"). A name the caller supplied is never overwritten: MusicBrainz keeps a variant like "Comfortably Numb (Live at Earls Court)" in the disambiguation rather than the title, so replacing the caller's string would send Deezer and LRCLIB after the studio take. An identifier MusicBrainz holds nothing under leaves the names blank — roughly seven in ten real third-party recording MBIDs, so this is the common path and not a corner. A request still naming no entity after the backfill is not fanned out to the providers that search by name: for each type, only providers whose capability is keyed on an identifier are asked, and a type none of them can serve is an honest `NotFound` from the chain. Nothing is asked to search for the empty string, on any provider — the engine enforces that, not MusicBrainz alone (`NamelessRequestFanOutTest`).
 
+**An identifier the caller supplied is checked wherever it is used.** Every type that can answer
+from one reaches its entity by its own route — genres, band members, artist links, popularity,
+discography, album tracks, credits and release editions each look something different up — and each
+route compares what came back against what the request described. The comparison is on the
+*artist*, never the title, because a remaster, an edition or a localised title differs from what a
+caller typed while still being the entity they meant. It reports only confident disagreement: a
+supplied name matching any name MusicBrainz holds for that entity is no contradiction, and neither
+is a pair of names written in scripts that cannot be compared. For an album there is a second,
+structured check on the same terms — an album cannot predate its own first release, so a request
+`year` two or more years earlier than the release group's is evidence of a different album.
+
+When a check fires, the request falls back to the name it carries and `identity.status` reports
+`CONTRADICTED`, which outranks every other status: the results beside it may be complete and
+correct, and the bad identifier is the one thing this call can tell the caller that nothing else
+will. `identity.identifiers` may still carry the identifier just disowned — resolving by name
+supplies an entity, not an identifier — so read the status before trusting that field, and never
+pass it to the next call. `CREDITS` and `RELEASE_EDITIONS` have no name route to recover by, so they
+answer `NotFound` instead of falling back.
+
 ### Type discovery: what a bare MBID names
 
 `EnrichmentEngine.discoverMbidEntityType(mbid)` answers `RECORDING`, `RELEASE`, `ARTIST` or nothing, so a consumer holding an identifier can build the right request. MusicBrainz has no endpoint that takes an id without its type — a wrong-type lookup answers 404, exactly as the right type does for an id it no longer holds — so the answer is a probe of the three types in order: **recording, then release, then artist**. That costs 1 request for a recording, 2 for a release, 3 for an artist and 3 for a dead id, on a 1 req/s limiter; the counts are asserted in `MusicBrainzEntityTypeDiscoveryTest`. Recording leads because that is where third-party identifiers come from. Each probe shares the enricher's per-call memo, so discovery inside an `enrich()` that already looked the entity up is free, and a miss is paid for once per call.
@@ -175,15 +194,51 @@ Types that are synthesized from other resolved types rather than fetched from a 
 
 The engine resolves dependencies first (standard rules), then passes results + identity metadata to the synthesizer. Sub-types are excluded from returned results unless the caller explicitly requested them.
 
+Dependencies are part of the same fan-out, with no barrier in front of it: each composite is driven
+by one coroutine that waits on its own dependencies and settles as soon as they land, so a composite
+whose dependencies are fast never queues behind an unrelated slow type. A dependency that is itself
+a composite pulls in its own dependencies, to any depth.
+
+**A dependency is resolved by its own registration, not by the request.** A type's role — composite,
+mergeable or standard — comes from whether a synthesizer or a merger is registered for it, never
+from whether the caller named it. A dependency with a `ResultMerger` is therefore collected from
+every eligible provider and merged exactly as it would be had it been requested directly, even when
+only the composite was asked for.
+
+`DEFAULT_SYNTHESIZER_DEPENDENCIES` maps each built-in composite type to the sub-types it is derived
+from, for a caller building its own attribution: a synthesized result names a synthesizer, which is
+nobody a reader can be sent to and nothing an upstream's terms cover, so credit the providers that
+answered its sources instead. It covers the built-ins only — a synthesizer registered through
+`Builder.addSynthesizer` is not in it.
+
+`Builder.build()` refuses two graphs outright, with `IllegalArgumentException`: synthesizers whose
+dependencies form a cycle (one depending on its own type included — the message names every type on
+the cycle), and a type registered with both a `CompositeSynthesizer` and a `ResultMerger`, whose
+merger could then never run.
+
 ### Progressive delivery
 
-`enrich()` waits for every type in this fan-out to settle before returning one `EnrichmentResults`.
-`enrichProgressive()` runs the identical fan-out and pipeline (Steps 4–8 below apply per type, not
-once at the end) but emits a cumulative snapshot each time a type settles, so a caller sees fast
-types — a cache hit, a single-provider lookup — before slow ones finish. When identity resolution
-was attempted and settles before any type does, its verdict is emitted on its own as well: one
-snapshot with `raw` empty and every requested type still pending. See
-[guides/streaming.md](guides/streaming.md) for the API and its contract.
+`enrichProgressive()` is not a parallel counterpart to `enrich()` — it is the path `enrich()` runs
+through. `enrich()` is `enrichProgressive(...).last()`, so both drive the identical fan-out and
+pipeline (Steps 4–8 below apply per type, not once at the end), and the stream's terminal emission
+and `enrich()`'s return are always the same value, timeout included.
+
+What the stream adds is cadence. It emits a cumulative snapshot each time a type settles, so a
+caller sees fast types — a cache hit, a single-provider lookup — before slow ones finish, plus one
+extra snapshot the moment live identity resolution settles, before any type has. That emission
+carries the verdict and, where MusicBrainz offered candidates, `identity.suggestions`, so a
+"did you mean?" prompt need not wait for the first provider to answer. Until it arrives, a
+pre-terminal snapshot's `identity.status` reads `RESOLVING`.
+
+**Cancellation is complete-and-cache, not abort-and-forfeit.** Cancelling the collecting coroutine —
+`take(1)`, leaving composition, or cancelling whoever called `enrich()` — detaches that collector
+from the fan-out already under way. The fan-out is not cancelled with it: it keeps running until it
+settles or `enrichTimeoutMs` expires, and its cache write-back still happens, so a subsequent
+equivalent call is typically a cache hit rather than a re-fetch. The continuing work is bounded to
+the one run for this exact request/types/`forceRefresh` combination, so cancelling and re-calling
+the same thing N times never multiplies upstream traffic by N. See
+[guides/streaming.md](guides/streaming.md) for the API and its contract, and §Engine lifecycle for
+what `close()` does to a run still in flight.
 
 ### Step 5: Confidence Filtering
 
@@ -209,23 +264,45 @@ For recommendation types only (SIMILAR_ARTISTS, SIMILAR_ALBUMS, ARTIST_RADIO, AR
 
 This lets a music player show only recommendations the user can actually play.
 
+Filtering runs per type, as that type settles, and settlements do not queue behind one another — so
+`CatalogProvider.checkAvailability` is called concurrently by as many coroutines as there are
+recommendation types settling in one call. **A stateful implementation must be thread-safe.**
+
+A `checkAvailability` that throws costs that type its filtering, never the call. The type degrades
+to its unfiltered results and the `EnrichmentResult.Success` comes back with
+`isCatalogDegraded = true`, rather than the exception escaping `enrich()`: filtering ranks and trims
+data the providers already fetched, so keeping that data — and the cache write that follows — beats
+losing both. Consumers can read the flag to show an "unranked" indicator, or to hide
+availability-dependent UI for that result.
+
+`isCatalogDegraded` is call-scoped, not a stored fact. Every serve, live or from cache, is
+normalized to `false` before this call's own check runs, and only this call's own throw sets it —
+so a `CatalogProvider` that has since recovered cannot haunt a later cache hit, and one that started
+failing after a healthy write is not masked by it. It is also not a "still settling" signal: it can
+be `true` on the terminal emission, meaning settled but unranked. `UNFILTERED` mode and a
+`CatalogProvider` that simply is not configured are deliberate configuration rather than
+degradation, and never set it.
+
 ### Step 7: Identity Model
 
 Two independent facts describe an `enrich()` call, never one merged value:
 
 - `EnrichmentResults.identity.status: CanonicalStatus` — the MusicBrainz canonical resolution
-  outcome for this call, set exactly once. Never `null`: every reason resolution did not run has
-  its own explicit state, so a consumer can never mistake "not attempted" for "confident".
+  outcome for this call, settled exactly once and never backdated. Never `null`: every reason
+  resolution did not run has its own explicit state, so a consumer can never mistake "not attempted"
+  for "confident". A pre-terminal `enrichProgressive()` emission can read `RESOLVING` until it
+  settles.
 - `EnrichmentResult.Success.provenance: LookupProvenance` — how that specific provider selected
   the entity behind its own result. This describes that provider's own lookup, not whether
   MusicBrainz agreed.
 
 | `CanonicalStatus` | Meaning |
 |---|---|
-| `RESOLVED` | MusicBrainz confirmed the entity. `identity.matchScore` (0–100) indicates match quality. |
+| `RESOLVED` | MusicBrainz resolution completed. `identity.matchScore` (0–100) scores *how the lookup went*, never that the entity is the one described — see below. |
 | `AMBIGUOUS` | MusicBrainz found no confident match, but offered candidates. See `identity.suggestions`. |
 | `UNRESOLVED` | MusicBrainz searched and found neither a match nor candidates. |
 | `FAILED` | The identity provider errored (usually transient); a retry may resolve. |
+| `RESOLVING` | Identity resolution is still running for this call. Only ever on a pre-terminal `enrichProgressive()` emission — never on `enrich()`'s return, and never on the stream's terminal emission, both of which wait for a real status. `CONTRADICTED` outranks it, so a provider that reached its entity from a supplied identifier can report a bad one while resolution is still in flight. |
 | `NOT_ATTEMPTED_DISABLED` | `EnrichmentConfig.enableIdentityResolution` is `false`. |
 | `CONTRADICTED` | An identifier on the request disagreed with what the caller supplied beside it: it named a confidently different artist, or an album a `year` two or more years earlier cannot belong to. Outranks every other status, including `RESOLVED`: a request carrying a usable name recovers by searching it, and reporting that success would hide the bad identifier. |
 | `NOT_ATTEMPTED_IDENTIFIER_TRUSTED` | The request carried a MusicBrainz identifier and every requested type was content with it. Trusted, not verified — nothing checked that it names the entity described. |
@@ -248,18 +325,24 @@ replayed status false for the call actually reporting it.
 | `CANONICAL_ID` | Looked up directly by a MusicBrainz canonical id. |
 | `PROVIDER_NATIVE_ID` | Looked up directly by a provider-native id supplied on the request. |
 | `EXTERNAL_CATALOG_ID` | Looked up directly by an external catalogue id (e.g. a UPC barcode) supplied on the request. |
-| `EXACT_NAME` | Selected by a name search MusicBrainz canonically confirmed this call. |
+| `EXACT_NAME` | Selected by a name search MusicBrainz confirmed this call: its own identity search returned the title that was asked for, or the request named no entity at all and MusicBrainz supplied the name every other provider then searched. |
 | `QUALIFIER_FALLBACK_NAME` | Selected after normalization or qualifier-fallback stripping. |
-| `FUZZY_NAME` | Selected by an unverified fuzzy name search; MusicBrainz did not confirm this call. |
+| `FUZZY_NAME` | Selected by a name search nothing confirmed. This is also where a call whose identity resolved *by identifier* lands: looking an id up compares no name to anything, so it vouches for no provider's own name search. |
 | `CACHE` | Served from cache by an implementation that could not recover the original provenance. |
 
 A merged type (e.g. `GENRE`) or a synthesized composite type (e.g. `ARTIST_TIMELINE`) has no single
 provider's route of its own: its `provenance` is the weakest of its contributing results', so it
 never reads more confident than its least-confident contributor.
 
-A consumer deciding how much to trust results reads both: `status == RESOLVED` with a high
-`matchScore` is confident; any `AMBIGUOUS`/`UNRESOLVED`/`FAILED` status means every result this
-call produced is a fuzzy or ambiguous guess, whatever `provenance` an individual result carries.
+A consumer deciding how much to trust results reads both — and reads `matchScore` for neither. That
+score says how well the lookup went, not that the entity found is the entity described: a request
+carrying an identifier resolves by looking it up, and a live but wrong MBID scores 100. `RESOLVED`
+beside a `provenance` of `CANONICAL_ID` therefore means "the identifier you supplied named
+something", never "it named your entity". `CONTRADICTED` is the status that reports a supplied
+identifier proved wrong, and it outranks `RESOLVED` for exactly that reason — but it reports only
+what it can prove, so its absence is not agreement. Any `AMBIGUOUS`/`UNRESOLVED`/`FAILED` status
+means every result this call produced is a fuzzy or ambiguous guess, whatever `provenance` an
+individual result carries.
 
 Migrating from the removed `IdentityMatch`:
 
@@ -428,11 +511,30 @@ Per-provider. Tracks consecutive failures:
 
 Prevents hammering a down provider and slowing the entire pipeline.
 
+### Engine lifecycle
+
+`close()` releases the scope behind the complete-and-cache detachment described under §Progressive
+delivery. It is a hard shutdown, not a drain: every detached run still in flight is abandoned at its
+next suspension point and writes nothing back, and a collector still attached receives one final
+snapshot rather than hanging on a fan-out that will never reach its terminal.
+
+Every requested type still unsettled is stamped an `EnrichmentResult.Error` with
+`ErrorKind.ENGINE_CLOSED` — the same per-type completeness a timeout gets, so a consumer never has
+to tell "absent from the map" from "never answered". A call arriving *after* `close()` under a
+request/types/`forceRefresh` key that was not already in flight never starts a fan-out at all: it is
+answered directly, with every requested type stamped the same way. `ENGINE_CLOSED` is never
+substituted from expired cache under `STALE_IF_ERROR`, since it describes this engine rather than
+the upstream.
+
+`close()` is never called for you. Skipping it costs at most a shared dispatcher plus whatever
+detached runs the dedupe has not yet coalesced away.
+
 ### Graceful Degradation
 - Missing API key → provider returns `isAvailable = false` → skipped in chain
 - Provider failure → chain tries next provider at lower priority
-- Timeout → returns partial results (whatever finished within `enrichTimeoutMs`)
+- Timeout → returns partial results (whatever settled within `enrichTimeoutMs`, plus slack: cancelling a coroutine cannot interrupt a thread already blocked in a socket read, so a transport leg in flight rides out the deadline's remaining budget before the call returns)
 - Individual type failure → other types still resolve
 - Identity resolution found no match → results continue under `CanonicalStatus.UNRESOLVED`/`AMBIGUOUS`
 - Identity provider errored → results continue under `CanonicalStatus.FAILED`, uncached so a retry can heal
-- Catalog provider unavailable → recommendations returned unfiltered
+- Catalog provider threw → that type's recommendations returned unfiltered, marked `Success.isCatalogDegraded = true`; nothing else in the call is affected
+- Engine `close()`d mid-flight → every unsettled type stamped `Error(ErrorKind.ENGINE_CLOSED)`, see §Engine lifecycle

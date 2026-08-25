@@ -96,7 +96,11 @@ two response shapes under one cache key. `MusicBrainzQualifierFallback.kt` strip
   search share; `MusicBrainzReleaseRanking.kt` (ranking a search pool into one release) and
   `MusicBrainzTitleFolding.kt` (folding a title MusicBrainz stores under symbols no caller can type)
   serve the album path alone — track ranking deliberately reuses `pickBestRecording` rather than
-  growing a second tie-break primitive.
+  growing a second tie-break primitive. Folding also gates its own fallback: an album search whose
+  pool comes back empty runs the symbol-title browse only when some differently-spelled title could
+  fold to the one asked for — the title itself folds, or its folded form contains the image of a
+  folded symbol. Folding never edits a letter, so nothing a plain typo could reach is in that browse;
+  such a title skips it and returns the same `AMBIGUOUS` verdict without spending the calls.
 - **`deezer` has a second public provider class.** `SimilarAlbumsProvider` registers under its own id
   `deezer-similar-albums`, so it gets its own `CircuitBreaker` and can be disabled without touching
   `deezer`. It exists because `SIMILAR_ALBUMS` is *derived* — Deezer has no such endpoint, so it
@@ -184,6 +188,21 @@ the engine refetches rather than caching a claim nobody checked.
 list — but must never fold one genre onto a *different* one, because the curated vocabulary
 distinguishes them.
 
+## Editions of an album
+
+`RELEASE_EDITIONS` browses `/release?release-group=…` rather than looking the release group up. The
+lookup cannot answer it: `labels` is not a valid `inc` on the release-group resource, so no lookup
+can carry an edition's label or catalogue number, and the `releases` array it embeds carries no
+`media` either — those are three of the fields a `ReleaseEdition` promises. The browse asks for
+`release-groups`, `artist-credits`, `labels` and `media` instead, which is what fills `format` (the
+first medium's), `label` and `catalogNumber` (the first `label-info` entry's) beside `title`,
+`country`, `year` and `barcode`. It costs bytes rather than requests: 54,556 against the old
+lookup's 21,932 over a 27-release group (measured 2026-08-25).
+
+`limit=100` is MusicBrainz's browse maximum and the documented bound on the answer. A release group
+holding more than 100 releases is truncated, deliberately, rather than paged over — a consumer
+counting editions is counting at most a hundred of them.
+
 ## Identifiers a caller supplies
 
 MusicBrainz treats an MBID on the request as the entity to describe rather than a hint, for tracks as
@@ -197,6 +216,27 @@ all three entity types. It names nothing, so there is no entity an answer could 
 the request resolves the way one carrying no identifier at all resolves: by name. `MusicBrainzLookup`
 is where that line lives — `Absent` may fall back, `Unreadable` may not — and `MusicBrainzApi`'s
 lookups return it rather than a bare null so the two cannot be confused at a call site.
+
+**An MBID MusicBrainz holds that names something else** is the third case, and the only one the
+caller is told about. Every route that reaches an entity from a caller's identifier compares the
+artist it came back credited to against the artist the request named, and reports only confident
+disagreement: a supplied name matching any name MusicBrainz holds for that entity — aliases and
+search hints included, since matching one can only ever prevent a report — is no contradiction, and
+neither is a pair of names in scripts that cannot be compared at all. An album carries a second,
+structured check on the same terms. An album cannot predate its own first release, so a request
+`year` two or more years earlier than the release group's `first-release-date` is positive evidence
+of a different album; it is one-sided on purpose, since a *later* year is any reissue, remaster or
+region pressing and is not judgeable, and it costs no request because `inc=release-groups` already
+carries the date.
+
+Either check drops the identifier as `Absent`, on exactly the terms of one MusicBrainz holds nothing
+under: the request falls back to the name it carries, and the contradiction is marked on the call
+*before* that fallback runs, so recovering by name never hides the bad identifier. The call then
+reports `CanonicalStatus.CONTRADICTED`, which outranks the `RESOLVED` the fallback would otherwise
+have earned. The disowned identifier stays on `IdentityResolution.identifiers` — a name fallback
+resolves an entity, not an identifier — so read the status before trusting that field, and never
+pass it on to the next call. `RELEASE_EDITIONS` runs both checks against a supplied release-*group*
+id and holds no name route to recover by, so when one fires it reports and answers nothing.
 
 **An identifier and no name at all** is the same rule taken to its end. `EnrichmentRequest.forTrackByMbid`
 and its siblings leave the names blank for identity resolution to fill from the entity it looked up
