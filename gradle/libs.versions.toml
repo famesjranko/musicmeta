@@ -93,7 +93,7 @@ okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 okhttp-mockwebserver = { module = "com.squareup.okhttp3:mockwebserver", version.ref = "okhttp" }
 
 # JSON parsing
-json = { module = "org.json:json", version = "20231013" }
+json = { module = "org.json:json", version = "20260814" }
 
 # Testing
 junit = { module = "junit:junit", version.ref = "junit" }
