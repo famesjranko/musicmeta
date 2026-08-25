@@ -102,6 +102,31 @@ class MusicBrainzSymbolTitleFallbackTest {
     }
 
     @Test
+    fun `a bracketless ASCII spelling still reaches the fallback`() = runTest {
+        // Given - the same rescue, asked for with a title the fold itself leaves untouched: no
+        // bracket to drop, so the gate admits it on the fold image alone
+        givenCallerTitleSearchFindsNothing()
+        givenArtistResolves()
+        httpClient.givenJsonResponse(
+            BROWSE_PAGE_0_URL,
+            """{"release-groups": [{"id": "$RELEASE_GROUP_MBID", "title": "F♯ A♯ ∞", "primary-type": "Album"}]}""",
+        )
+        givenSymbolTitleReleaseSearchHits()
+        val request = EnrichmentRequest.forAlbum("F# A# Infinity", "Godspeed You! Black Emperor")
+
+        // When - enriching for genre
+        val result = provider.enrich(request, EnrichmentType.GENRE)
+
+        // Then - the browse ran and the release behind the symbol title is resolved
+        assertTrue(
+            "the fallback's release-group browse must run: ${httpClient.requestedUrls}",
+            httpClient.requestedUrls.any { it.contains(BROWSE_PAGE_0_URL) },
+        )
+        assertTrue("expected Success, got $result", result is EnrichmentResult.Success)
+        assertEquals(RELEASE_MBID, (result as EnrichmentResult.Success).resolvedIdentifiers?.musicBrainzId)
+    }
+
+    @Test
     fun `a release reached by folding the caller's spelling reports FUZZY_NAME`() = runTest {
         // Given - the same fallback route, which matches on a fold rather than on the title itself
         givenCallerTitleSearchFindsNothing()
@@ -284,12 +309,53 @@ class MusicBrainzSymbolTitleFallbackTest {
         assertNull((result as EnrichmentResult.NotFound).suggestions)
     }
 
+    @Test
+    fun `an empty pool for a title no folding can rescue never starts the fallback`() = runTest {
+        // Given - a plainly-typo'd title whose search returns an empty pool, and which contains no
+        // character or fold image the symbol fallback could ever match on
+        httpClient.givenJsonResponse(
+            "release%3A%22OK+Computr",
+            """{"count": 0, "offset": 0, "releases": []}""",
+        )
+        httpClient.givenJsonResponse(TYPO_FUZZY_QUERY, FUZZY_RELEASES_TOP_SCORE_100)
+        val request = EnrichmentRequest.forAlbum("OK Computr", "Godspeed You! Black Emperor")
+
+        // When - enriching for genre
+        val result = provider.enrich(request, EnrichmentType.GENRE)
+
+        // Then - the same NotFound-with-suggestions verdict a run through the fallback reaches,
+        // without the fallback's artist search or release-group browse ever running
+        assertTrue("expected NotFound, got $result", result is EnrichmentResult.NotFound)
+        val suggestions = (result as EnrichmentResult.NotFound).suggestions
+        assertEquals(listOf("Dummy", "Dummy Runs"), suggestions?.map { it.title })
+        assertTrue(
+            "the fallback's artist search must not run: ${httpClient.requestedUrls}",
+            httpClient.requestedUrls.none { it.contains("artist?query") },
+        )
+        assertTrue(
+            "the fallback's release-group browse must not run: ${httpClient.requestedUrls}",
+            httpClient.requestedUrls.none { it.contains("release-group?artist") },
+        )
+    }
+
     private companion object {
         const val ARTIST_MBID = "3648db01-b29d-4ab9-835c-83f6a5068fe4"
         const val RELEASE_GROUP_MBID = "01d06c6e-a4e6-3d8b-8a45-42a598fe87d7"
         const val RELEASE_MBID = "release-fa-infinity"
         const val CALLER_TITLE_SEARCH_URL = "release%3A%22F%23+A%23"
         const val ARTIST_SEARCH_URL = "artist?query=artist%3A%22Godspeed"
+
+        /** `release:OK Computr~ AND artistname:Godspeed You\!…~` URL-encoded — the suggestions search. */
+        const val TYPO_FUZZY_QUERY = "release%3AOK+Computr%7E"
+
+        /** A real-shaped fuzzy release pool, as `MusicBrainzTransientFailureTest` already stubs one. */
+        val FUZZY_RELEASES_TOP_SCORE_100 = """
+            {"releases":[
+              {"id":"$RELEASE_MBID","title":"Dummy","score":100},
+              {"id":"55555555-5555-5555-5555-555555555555","title":"Dummy Runs","score":71}
+            ]}
+        """.trimIndent()
+
         const val BROWSE_PAGE_0_URL = "limit=100&offset=0"
         const val BROWSE_PAGE_1_URL = "limit=100&offset=100"
 

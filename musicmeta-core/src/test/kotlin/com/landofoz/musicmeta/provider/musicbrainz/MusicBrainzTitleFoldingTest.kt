@@ -1,7 +1,9 @@
 package com.landofoz.musicmeta.provider.musicbrainz
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -83,5 +85,53 @@ class MusicBrainzTitleFoldingTest {
 
         // Then - only case and whitespace moved
         assertEquals("yanqui u.x.o.", folded)
+    }
+
+    @Test
+    fun `a plain-letter title no folding can rescue reports no fold match possible`() {
+        // Given - a typo'd title containing no foldable character and no fold image
+        val title = "OK Computr"
+
+        // When - asked whether any differently-spelled title could fold onto it
+        val possible = MusicBrainzTitleFolding.foldMatchPossible(title)
+
+        // Then - impossible: folding never edits a letter, so no symbol spelling folds to this
+        assertFalse(possible)
+    }
+
+    @Test
+    fun `an ASCII spelling of a symbol title reports a fold match possible`() {
+        // Given - the plain spelling a caller types for an album MusicBrainz stores as symbols
+        val title = "F# A# Infinity"
+
+        // When - asked whether any differently-spelled title could fold onto it
+        val possible = MusicBrainzTitleFolding.foldMatchPossible(title)
+
+        // Then - possible: both the sharp sign's image and the spelled-out infinity appear in it
+        assertTrue(possible)
+    }
+
+    @Test
+    fun `a title that itself folds reports a fold match possible`() {
+        // Given - a title carrying symbol characters the fold rewrites
+        val title = "F♯ A♯ ∞"
+
+        // When - asked whether any differently-spelled title could fold onto it
+        val possible = MusicBrainzTitleFolding.foldMatchPossible(title)
+
+        // Then - possible: the fold itself changes this title, so spellings converge on it
+        assertTrue(possible)
+    }
+
+    @Test
+    fun `a title containing a single-letter fold image still reports a fold match possible`() {
+        // Given - a plain title whose letters include the flat sign's image
+        val title = "Concerto in Bb"
+
+        // When - asked whether any differently-spelled title could fold onto it
+        val possible = MusicBrainzTitleFolding.foldMatchPossible(title)
+
+        // Then - possible, deliberately over-inclusive: a flat sign folds to this exact letter
+        assertTrue(possible)
     }
 }

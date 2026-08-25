@@ -858,6 +858,15 @@ Two rules came out of it, and both generalise past this file:
   key present-but-blank returned `""`, which is non-null and therefore *won* against the environment
   variable it was supposed to defer to. Blank values are dropped per file, before the merge.
 
+The same quiet keyless run has a second cause: **a git worktree has no `secrets.properties` at
+all**, because the file is gitignored and worktrees materialise only tracked files, and the only
+signal is the same startup line that scrolls past. Both demos now close this themselves: when the
+repo root's `.git` is a worktree pointer *file*, `mainCheckoutSecrets` follows it and merges the
+main checkout's `secrets.properties` as the outermost search-path layer, nearer files still winning
+per key. Anything that reads keys by another route — an e2e run, a probe script — still starts
+keyless in a worktree; a keyless measurement is not wrong, but it undercounts providers, so say
+which mode a recorded number ran in.
+
 The wider trap: any `?:` chain over a map is only as good as the map's willingness to say "absent".
 A parser that faithfully records `k=` as `k -> ""` is not being helpful — it is converting an
 absence into an answer, which is the same shape as §4 and as a `NotFound` standing in for a failure.
