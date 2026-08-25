@@ -177,7 +177,10 @@ fun AlbumProfile.toDemoResponse(
 
     val sections = buildSections(r, linker, pending) {
         r.identity.suggestions.let { s ->
-            didYouMeanSection(s) { c -> c.artist?.let { a -> albumEnrich(c.title, a) } }?.let { add(it) }
+            // An album lookup's candidates legitimately include singles (MusicBrainz calls both
+            // releases); surface the entity kind the user searched for first, stably.
+            val albumsFirst = s.sortedByDescending { it.releaseType == "Album" }
+            didYouMeanSection(albumsFirst) { c -> c.artist?.let { a -> albumEnrich(c.title, a) } }?.let { add(it) }
         }
         if (details.isNotEmpty()) {
             add(
@@ -760,7 +763,7 @@ private fun didYouMeanSection(
                 primary = candidate.title,
                 secondary = candidate.artist,
                 imageUrl = candidate.thumbnailUrl,
-                meta = listOfNotNull(candidate.year, candidate.disambiguation).joinToString(" · ").ifBlank { null },
+                meta = listOfNotNull(candidate.releaseType, candidate.year, candidate.disambiguation).joinToString(" · ").ifBlank { null },
                 enrich = et,
             )
         }
