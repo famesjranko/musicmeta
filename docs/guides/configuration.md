@@ -324,6 +324,8 @@ results.similarAlbums()?.albums?.forEach { album ->
 }
 ```
 
+`forAlbum` also takes optional `trackCount` and `year` parameters — what you already know about the album (a scanned folder's file count, a tag's year). Providers use them to choose between editions that title and artist alone cannot separate. Leave them null when unknown or uncertain: a wrong value is worse than none, because it is trusted as evidence.
+
 ### Artist radio discovery (ListenBrainz LB Radio)
 
 Community-driven discovery radio via ListenBrainz. Requires `listenBrainzToken` in `ApiKeyConfig`.
@@ -436,7 +438,7 @@ Each `GenreAffinity` includes: `name`, `affinity` (0.0–1.0), `relationship` ("
 
 ## Catalog filtering
 
-Plug in your music library to filter recommendation results by what the user can actually play:
+Plug in your music library to filter recommendation results by what the user can actually play. The engine calls `checkAvailability` concurrently, from multiple coroutines at once, whenever one `enrich()`/`enrichProgressive()` call resolves more than one recommendation type — an implementation holding mutable state must be thread-safe.
 
 ```kotlin
 val catalog = CatalogProvider { queries ->
@@ -467,3 +469,5 @@ val engine = EnrichmentEngine.Builder()
 Catalog filtering applies to: `SIMILAR_ARTISTS`, `SIMILAR_TRACKS`, `SIMILAR_ALBUMS`, `ARTIST_RADIO`, `ARTIST_RADIO_DISCOVERY`, `ARTIST_TOP_TRACKS`.
 
 Note: `TRACK_PREVIEW` is intentionally excluded — previews are for tracks the user does not have.
+
+If `checkAvailability` throws for a given recommendation type, that type degrades to its unfiltered results rather than failing the call, and the returned `EnrichmentResult.Success.isCatalogDegraded` is `true`. See [results-and-errors.md](results-and-errors.md#a-throwing-catalogprovider-costs-filtering-not-the-result) for the full failure-isolation contract.
