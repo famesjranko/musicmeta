@@ -158,9 +158,31 @@ private fun env(key: String): String? = System.getenv(key)?.takeIf { it.isNotBla
  * it is meant to defer to.
  */
 private fun loadSecrets(): Map<String, String> =
-    listOf(File("../secrets.properties"), File("secrets.properties"))
+    (listOfNotNull(mainCheckoutSecrets(File(".."))) + listOf(File("../secrets.properties"), File("secrets.properties")))
         .filter { it.exists() }
         .fold(mutableMapOf<String, String>()) { merged, file -> merged.apply { putAll(file.readKeys()) } }
+
+/**
+ * The main checkout's `secrets.properties`, when [repoRoot] is a git worktree — a worktree
+ * materialises only tracked files, so a gitignored secrets file exists solely in the main
+ * checkout and a worktree run is silently keyless without this (`docs/pitfalls.md` §13). A
+ * worktree's `.git` is a *file* naming its real git dir (`gitdir: <main>/.git/worktrees/<name>`);
+ * anything else — a `.git` directory, or a file this cannot parse — contributes nothing. Joins
+ * the search path outermost, so both nearer files still win per key.
+ */
+internal fun mainCheckoutSecrets(repoRoot: File): File? {
+    val gitMarker = File(repoRoot, ".git")
+    if (!gitMarker.isFile) return null
+    val gitdir = gitMarker.readLines().firstOrNull { it.startsWith("gitdir:") }
+        ?.removePrefix("gitdir:")?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+    val resolved = File(gitdir).let { if (it.isAbsolute) it else File(repoRoot, gitdir) }
+    // A worktree's git dir is <main>/.git/worktrees/<name>; any other shape (a submodule's
+    // .git/modules/<name>, say) is not a worktree and names no main checkout.
+    val worktrees = resolved.parentFile?.takeIf { it.name == "worktrees" } ?: return null
+    val dotGit = worktrees.parentFile?.takeIf { it.name == ".git" } ?: return null
+    val main = dotGit.parentFile ?: return null
+    return File(main, "secrets.properties")
+}
 
 private fun File.readKeys(): Map<String, String> = readLines()
     .filter { it.contains('=') && !it.trimStart().startsWith('#') }
