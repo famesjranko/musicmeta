@@ -681,4 +681,90 @@ class CoverArtArchiveProviderTest {
         assertTrue("Expected Error but got $result", result is EnrichmentResult.Error)
         assertEquals(ErrorKind.NETWORK, (result as EnrichmentResult.Error).errorKind)
     }
+
+    // Older CAA index entries bake `http://` into their stored JSON (the scheme is fixed at upload
+    // time); URL shapes below are from a live release-group capture, 2026-08-25.
+    @Test
+    fun `enrich upgrades plain-http gallery URLs from a stored index to https`() = runTest {
+        // Given - CAA metadata whose image and thumbnail URLs all carry the http scheme
+        httpClient.givenJsonResponse(
+            "release/abc123",
+            """{"images": [
+                {"front": false, "types": ["Back"], "image": "http://coverartarchive.org/release/abc123/back.jpg", "thumbnails": {"250": "http://coverartarchive.org/release/abc123/back-250.jpg", "500": "http://coverartarchive.org/release/abc123/back-500.jpg"}}
+            ]}""",
+        )
+        val request = EnrichmentRequest.ForAlbum(
+            identifiers = EnrichmentIdentifiers(musicBrainzId = "abc123"),
+            title = "Nevermind",
+            artist = "Nirvana",
+        )
+
+        // When - enriching for back cover art
+        val result = provider.enrich(request, EnrichmentType.ALBUM_ART_BACK)
+
+        // Then - url, thumbnailUrl, and every size come back https
+        assertTrue("Expected Success but got $result", result is EnrichmentResult.Success)
+        val artwork = (result as EnrichmentResult.Success).data as EnrichmentData.Artwork
+        assertEquals("https://coverartarchive.org/release/abc123/back.jpg", artwork.url)
+        assertEquals("https://coverartarchive.org/release/abc123/back-250.jpg", artwork.thumbnailUrl)
+        assertEquals(
+            listOf(
+                "https://coverartarchive.org/release/abc123/back-250.jpg",
+                "https://coverartarchive.org/release/abc123/back-500.jpg",
+            ),
+            artwork.sizes.orEmpty().map { it.url }.sorted(),
+        )
+    }
+
+    @Test
+    fun `enrich upgrades a plain-http redirect URL to https`() = runTest {
+        // Given - the front-image redirect resolves to an archive-dot-org URL with the http scheme
+        httpClient.givenJsonResponse(
+            "release/abc123/front-1200",
+            "http://archive.org/image/abc123-1200.jpg",
+        )
+        httpClient.givenJsonResponse(
+            "release/abc123/front-250",
+            "http://archive.org/image/abc123-250.jpg",
+        )
+        val request = EnrichmentRequest.ForAlbum(
+            identifiers = EnrichmentIdentifiers(musicBrainzId = "abc123"),
+            title = "Nevermind",
+            artist = "Nirvana",
+        )
+
+        // When - enriching for album art
+        val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
+
+        // Then - both the full-size and thumbnail URLs come back https
+        assertTrue("Expected Success but got $result", result is EnrichmentResult.Success)
+        val artwork = (result as EnrichmentResult.Success).data as EnrichmentData.Artwork
+        assertEquals("https://archive.org/image/abc123-1200.jpg", artwork.url)
+        assertEquals("https://archive.org/image/abc123-250.jpg", artwork.thumbnailUrl)
+    }
+
+    @Test
+    fun `enrich leaves a plain-http URL on a foreign host alone`() = runTest {
+        // Given - CAA metadata naming a host whose https equivalence is not established
+        httpClient.givenJsonResponse(
+            "release/abc123",
+            """{"images": [
+                {"front": false, "types": ["Back"], "image": "http://example.com/back.jpg", "thumbnails": {"250": "http://example.com/back-250.jpg"}}
+            ]}""",
+        )
+        val request = EnrichmentRequest.ForAlbum(
+            identifiers = EnrichmentIdentifiers(musicBrainzId = "abc123"),
+            title = "Nevermind",
+            artist = "Nirvana",
+        )
+
+        // When - enriching for back cover art
+        val result = provider.enrich(request, EnrichmentType.ALBUM_ART_BACK)
+
+        // Then - the foreign-host URLs keep their scheme
+        assertTrue("Expected Success but got $result", result is EnrichmentResult.Success)
+        val artwork = (result as EnrichmentResult.Success).data as EnrichmentData.Artwork
+        assertEquals("http://example.com/back.jpg", artwork.url)
+        assertEquals("http://example.com/back-250.jpg", artwork.thumbnailUrl)
+    }
 }

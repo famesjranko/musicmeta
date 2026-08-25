@@ -77,6 +77,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - demo-web no longer enriches its suggested queries at startup: the page is usable the moment it loads, `/api/health` reports ready as soon as the server binds, and the cache fills from real searches
 
 ### Fixed
+- Cover Art Archive artwork URLs are always https: older CAA index entries serve `http://` URLs, which browsers block as mixed content on an https page, so embed them without rewriting
 - A cache-hit type requested beside an uncached composite that depends on it is no longer re-fetched upstream: the cached value is served and its cache entry survives instead of being overwritten
 - A fault that escapes the fan-out is no longer reported as `ErrorKind.ENGINE_CLOSED`: unsettled types carry `UNKNOWN` and the real cause, so a missing class no longer reads as a closed engine
 - A `CompositeSynthesizer` dependency that is itself a composite is now synthesized instead of settling `NotFound("no_provider")`: nested composite graphs resolve to any depth
