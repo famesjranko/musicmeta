@@ -96,6 +96,35 @@ abstract class HttpClientContract : ContractSuite<HttpClient>() {
     }
 
     @Test
+    fun `a query with percent-encoded reserved characters is sent as-is`() = runTest {
+        // Given - a server capturing the raw query it receives, behind a URL whose query carries
+        // percent-encoded reserved characters — the shape a multivalue upstream parameter must
+        // take, since a raw one is not a URL both clients can send
+        val client = subject()
+        try {
+            var rawQuery: String? = null
+            val path = "/${pathCounter.incrementAndGet()}"
+            server.createContext(path) { exchange ->
+                rawQuery = exchange.requestURI.rawQuery
+                val bytes = "{}".toByteArray()
+                exchange.sendResponseHeaders(200, bytes.size.toLong())
+                exchange.responseBody.use { it.write(bytes) }
+            }
+            val url = "http://127.0.0.1:${server.address.port}$path?type=album%7Cep%7Csingle&q=a%20b"
+
+            // When - the JSON result is fetched
+            val result = client.fetchJsonResult(url)
+
+            // Then - the request succeeded and the encodings reached the wire untouched, neither
+            // decoded to the raw character nor double-encoded to %25
+            assertTrue("expected Ok, got $result", result is HttpResult.Ok)
+            assertEquals("type=album%7Cep%7Csingle&q=a%20b", rawQuery)
+        } finally {
+            release(client)
+        }
+    }
+
+    @Test
     fun `a 200 with a valid body is Ok`() = runTest {
         // Given - a server answering 200 with a parseable JSON object
         val client = subject()

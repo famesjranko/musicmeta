@@ -22,8 +22,7 @@ class FakeHttpClient : HttpClient {
     /**
      * Every recorded URL must be one `java.net.URI` accepts, because that is what
      * `DefaultHttpClient` parses with in production: a URL this fake accepted and the real client
-     * rejects is a test that passes on a request that can never be made. An unencoded `|` in the
-     * release-group browse shipped exactly that way.
+     * rejects is a test that passes on a request that can never be made.
      */
     private fun record(url: String): String {
         try {
