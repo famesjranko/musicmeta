@@ -41,7 +41,7 @@ curl -s https://repo1.maven.org/maven2/io/github/famesjranko/musicmeta-core/mave
       gh workflow run prepare-release.yml --ref main -f target_version=X.Y.Z -f dry_run=true
       gh workflow run prepare-release.yml --ref main -f target_version=X.Y.Z -f dry_run=false
 
-- [ ] On `release/X.Y.Z`, make the edits gate 1 does not reach — see [gate 2](#gate-2--the-release-pr)
+- [ ] On `release/X.Y.Z`, check nothing outside the pinned files still names the old version — see [gate 2](#gate-2--the-release-pr)
 - [ ] `make check` on the release branch, then push
 - [ ] Gate 2: open the PR, wait for `build` and `demo-canary`, **squash**-merge, record the squash SHA
 - [ ] Gate 3, one mode at a time, confirming each run's head SHA is that squash SHA:
@@ -110,18 +110,13 @@ runs, so bot-opening it would save one click and cost an approval.
 
 This PR is the review point for the accumulated public API diff.
 
-### The edits gate 1 does not reach
+### What gate 1 writes, and what to check by hand
 
-Make these on `release/<version>` before opening the PR. That branch is already the review point, so
-they cost nothing extra here, where a separate PR into `main` costs a round trip.
+Gate 1 now writes every version-bearing line: the CHANGELOG section, the ROADMAP heading *and* the
+prose under it, README's coordinates, and the three guides'. `./check` reads them back on every
+commit via `check_release_coordinates.py`, so a stale one fails long before a release.
 
-- `docs/guides/quick-start.md`, `extension-points.md` and `android.md` — the coordinate lines. Gate
-  1 rewrites README's nine and stops there.
-- `ROADMAP.md` — the two sentences under the "Where We Are" heading name the published version. The
-  heading is pinned for you; they are not. Name the version being released: it is correct from the
-  moment gate 3 finishes, where the previous version is correct only in the minutes before it.
-
-Then prove nothing else still names the old one:
+Nothing here is by hand any more. What is left is the check on everything outside those files:
 
 ```bash
 grep -rn "<previous-version>" --include="*.md" . | grep -v CHANGELOG.md

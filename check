@@ -100,6 +100,12 @@ python3 scripts/checks/check_provider_call_scope.py
 step "public vocabulary"
 python3 scripts/checks/check_public_vocabulary.py
 
+step "release coordinates"
+# The version is declared once in gradle.properties and repeated in four docs. Read on every commit
+# rather than at release time: the ROADMAP prose went a full release stale and sat unnoticed for
+# three weeks, because the only thing that could have caught it ran after the release.
+python3 scripts/checks/check_release_coordinates.py
+
 step "script self-tests"
 # Unguarded, a regression in a release script surfaces only as a release check that silently passes.
 for t in scripts/checks/test_*.py scripts/github-workflows/test_*.py; do

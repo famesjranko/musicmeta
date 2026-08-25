@@ -64,13 +64,14 @@ jobs:
           echo "new=${new}" >> "$GITHUB_OUTPUT"
           echo "Preparing ${old} -> ${new}"
 
-      - name: Pin the CHANGELOG section and the ROADMAP heading
-        # One deterministic line each. Done by hand they are three chances to typo the value every
+      - name: Pin the CHANGELOG, the ROADMAP block, and every doc coordinate
+        # Deterministic edits, all of them. Done by hand they are a chance to typo the value every
         # later check reads, and forgetting the fresh [Unreleased] silently appends the next
-        # release's notes to this one.
+        # release's notes to this one. The ROADMAP prose and the three guides were by-hand steps
+        # until they were not done: 0.11.0 shipped with the ROADMAP still naming 0.10.1.
         run: python3 scripts/github-workflows/pin_release.py "${{ steps.versions.outputs.new }}"
 
-      - name: Write the version into gradle.properties and README
+      - name: Write the version into gradle.properties
         shell: bash
         env:
           OLD: ${{ steps.versions.outputs.old }}
@@ -78,16 +79,15 @@ jobs:
         run: |
           set -eo pipefail
           sed -i -E "s/^version=.*/version=${NEW}/" gradle.properties
-          # Both coordinate forms, unscoped: the 9 version-bearing lines sit in four places,
-          # including one in prose outside any code block.
-          sed -i -E "s/(io\.github\.famesjranko:musicmeta-[a-z]+):[0-9]+\.[0-9]+\.[0-9]+/\1:${NEW}/g" README.md
-          sed -i -E "s/(com\.github\.famesjranko\.musicmeta:musicmeta-[a-z]+):v[0-9]+\.[0-9]+\.[0-9]+/\1:v${NEW}/g" README.md
 
-          if [ "${OLD}" != "${NEW}" ] && grep -nE ":v?${OLD}([^0-9]|$)" README.md gradle.properties; then
+          # gradle.properties is the source of truth check_release_coordinates.py compares against,
+          # so it moves last and the check runs after it, here and on every later commit.
+          if [ "${OLD}" != "${NEW}" ] && grep -nE ":v?${OLD}([^0-9]|$)" README.md gradle.properties \
+              docs/guides/quick-start.md docs/guides/extension-points.md docs/guides/android.md; then
             echo "::error::${OLD} still present above — a coordinate form was missed"
             exit 1
           fi
-          grep -c "${NEW}" README.md
+          python3 scripts/checks/check_release_coordinates.py
 
       - name: Assemble and check the release notes
         run: python3 scripts/github-workflows/build_release_notes.py "${{ steps.versions.outputs.new }}"
@@ -112,7 +112,8 @@ jobs:
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add gradle.properties README.md CHANGELOG.md ROADMAP.md
+          git add gradle.properties README.md CHANGELOG.md ROADMAP.md \
+            docs/guides/quick-start.md docs/guides/extension-points.md docs/guides/android.md
           git commit -m "release: prepare v${NEW}"
           # Non-force, explicit refspec — this creates the branch and can never move main.
           git push origin "HEAD:refs/heads/${branch}"

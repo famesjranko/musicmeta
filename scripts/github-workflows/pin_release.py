@@ -23,6 +23,21 @@ PINNED = re.compile(r"^## \[([0-9]+\.[0-9]+\.[0-9]+)\]", re.MULTILINE)
 BREAKING = re.compile(r"^### Breaking Changes[ \t]*$", re.MULTILINE)
 ROADMAP_HEADING = re.compile(r"^## Where We Are \(v[0-9]+\.[0-9]+\.[0-9]+\)[ \t]*$", re.MULTILINE)
 
+# The regions the ROADMAP names the version in, and the coordinate shape, are imported from the
+# check that reads them rather than restated here. Two copies of this rule is the defect one
+# directory over: the pin moved the heading, the check read nothing, and the prose between them
+# went stale.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "checks"))
+
+from check_release_coordinates import (  # noqa: E402
+    ANY_VERSION,
+    COORDINATE_FILES,
+    REGIONS,
+    region_lines,
+)
+
+COORDINATE_SUB = re.compile(r"(musicmeta-[a-z]+):(v?)[0-9]+\.[0-9]+\.[0-9]+")
+
 
 class PinError(Exception):
     """Raised when there is nothing to pin, or nothing worth pinning."""
@@ -65,8 +80,36 @@ def pin_changelog(text: str, version: str, date: str) -> str:
 
 
 def pin_roadmap(text: str, version: str) -> str:
-    """Point the 'Where We Are' heading at this version. Absent heading is not an error."""
-    return ROADMAP_HEADING.sub(f"## Where We Are (v{version})", text, count=1)
+    """Point the 'Where We Are' block at this version. Absent heading is not an error.
+
+    The heading and the prose under it both name the version, and until 0.12.0 only the heading
+    moved — the sentences below it went a full release stale, unnoticed for three weeks.
+
+    "vX is published to Maven Central" is true of the *previous* version until gate 3 finishes and
+    of the new one after, so which to write is a real choice: this writes the version being
+    prepared, correct for the whole life of the doc except the minutes between gate 2 and gate 3.
+    `check_release_coordinates.py` reads the same regions and enforces the same choice.
+    """
+    text = ROADMAP_HEADING.sub(f"## Where We Are (v{version})", text, count=1)
+    for heading in REGIONS:
+        lines = region_lines(text, heading)
+        if lines is None:
+            continue
+        body = text.splitlines(keepends=True)
+        for number, _ in lines:
+            line = body[number - 1]
+            body[number - 1] = ANY_VERSION.sub(lambda m: f"{'v' if m.group(0).startswith('v') else ''}{version}", line)
+        text = "".join(body)
+    return text
+
+
+def pin_guides(text: str, version: str) -> str:
+    """Rewrite every musicmeta dependency coordinate in a guide or README to this version.
+
+    Gate 1 already did this for README with two `sed` lines; the three guides were a by-hand step in
+    `docs/project/release.md`. Same rewrite, same rule, one place.
+    """
+    return COORDINATE_SUB.sub(lambda m: f"{m.group(1)}:{m.group(2)}{version}", text)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -94,9 +137,20 @@ def main(argv: list[str] | None = None) -> int:
     changelog.write_text(pinned, encoding="utf-8")
     if roadmap_text and roadmap_pinned != roadmap_text:
         roadmap.write_text(roadmap_pinned, encoding="utf-8")
-        print(f"Pinned [Unreleased] -> [{version}] - {date}, and moved the ROADMAP heading.")
+        print(f"Pinned [Unreleased] -> [{version}] - {date}, and moved the ROADMAP block.")
     else:
-        print(f"Pinned [Unreleased] -> [{version}] - {date}. ROADMAP heading unchanged.")
+        print(f"Pinned [Unreleased] -> [{version}] - {date}. ROADMAP block unchanged.")
+
+    root = Path(args.roadmap).resolve().parent
+    for rel in COORDINATE_FILES:
+        path = root / rel
+        if not path.exists():
+            continue
+        before = path.read_text(encoding="utf-8")
+        after = pin_guides(before, version)
+        if after != before:
+            path.write_text(after, encoding="utf-8")
+            print(f"Rewrote coordinates in {rel}.")
     return 0
 
 
