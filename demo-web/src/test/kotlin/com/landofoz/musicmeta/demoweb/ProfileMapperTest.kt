@@ -96,6 +96,57 @@ class ProfileMapperTest {
     }
 
     @Test
+    fun `album did-you-mean labels each row with its release type and ranks albums above singles`() {
+        // Given - an ambiguous album lookup whose top-ranked suggestions are singles, with the
+        // real album below them
+        val suggestions = listOf(
+            SearchCandidate(
+                title = "Fade to Black",
+                artist = "Metallica",
+                year = "1985",
+                country = "US",
+                releaseType = "Single",
+                score = 90,
+                thumbnailUrl = null,
+                identifiers = EnrichmentIdentifiers(musicBrainzId = "single-1"),
+                provider = "musicbrainz",
+            ),
+            SearchCandidate(
+                title = "Ride the Lightning",
+                artist = "Metallica",
+                year = "1984",
+                country = "US",
+                releaseType = "Album",
+                score = 85,
+                thumbnailUrl = null,
+                identifiers = EnrichmentIdentifiers(musicBrainzId = "album-1"),
+                provider = "musicbrainz",
+            ),
+        )
+        val results = EnrichmentResults(
+            raw = emptyMap(),
+            requestedTypes = emptySet(),
+            identity = IdentityResolution(
+                identifiers = EnrichmentIdentifiers(),
+                status = CanonicalStatus.AMBIGUOUS,
+                matchScore = null,
+                suggestions = suggestions,
+            ),
+        )
+        val profile = AlbumProfile(title = "Fade to Blak", artist = "Metallica", results = results)
+
+        // When - mapping to a demo response
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        // Then - the Album-type candidate outranks the single, and every row names its type
+        val section = response.sections.first { it.key == "did_you_mean" }
+        assertEquals("Ride the Lightning", section.items[0].primary)
+        assertEquals(true, section.items[0].meta?.contains("Album"))
+        assertEquals("Fade to Black", section.items[1].primary)
+        assertEquals(true, section.items[1].meta?.contains("Single"))
+    }
+
+    @Test
     fun `did-you-mean section absent when no suggestions`() {
         // Given - an album profile whose results carry no identity resolution at all
         val results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(CanonicalStatus.NOT_ATTEMPTED_IDENTIFIER_TRUSTED))
