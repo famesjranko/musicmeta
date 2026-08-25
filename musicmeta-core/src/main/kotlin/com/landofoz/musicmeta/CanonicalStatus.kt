@@ -30,6 +30,16 @@ enum class CanonicalStatus {
      * entity anyway". Reporting the fallback's success instead would hide the bad identifier, which
      * is the one thing here the caller cannot find out any other way.
      *
+     * **[IdentityResolution.identifiers] may still carry the identifier this disowns.** The name
+     * fallback resolves an entity, not an identifier, so when it supplies none the request's own
+     * identifiers are what comes back — including the one just reported wrong. Read this status
+     * before trusting anything on that field, and never pass it to the next call.
+     *
+     * Also outranks [RESOLVING], so a pre-terminal [EnrichmentEngine.enrichProgressive] emission
+     * can carry `CONTRADICTED` while identity resolution is still running — a provider that reached
+     * its entity from the identifier settles before the resolver does. It never reverts: a later
+     * recovery by name does not clear it.
+     *
      * Contradiction requires positive evidence of disagreement. Names that merely could not be
      * equated — a script this cannot compare, an unfamiliar spelling — are not contradictions.
      */
@@ -61,7 +71,7 @@ enum class CanonicalStatus {
      * describes; that check is [CONTRADICTED]'s, and it only reports the cases it can prove wrong.
      * Treat this as the caller's own assertion carried through, not as MusicBrainz agreeing with it.
      */
-    NOT_ATTEMPTED_NOT_REQUIRED,
+    NOT_ATTEMPTED_IDENTIFIER_TRUSTED,
 
     /** Every requested type was served from cache; no live identity attempt ran this call. */
     NOT_ATTEMPTED_CACHE_HIT,

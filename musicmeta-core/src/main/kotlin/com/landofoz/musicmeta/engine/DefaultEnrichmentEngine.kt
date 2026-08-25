@@ -425,7 +425,7 @@ internal class DefaultEnrichmentEngine(
                 currentCoroutineContext()[ResolvedEntityNames]?.resolved(),
                 notAttemptedStatus = when {
                     !identityEnabled -> CanonicalStatus.NOT_ATTEMPTED_DISABLED
-                    !identityNeeded -> CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED
+                    !identityNeeded -> CanonicalStatus.NOT_ATTEMPTED_IDENTIFIER_TRUSTED
                     else -> CanonicalStatus.NOT_ATTEMPTED_NO_PROVIDER
                 },
             )

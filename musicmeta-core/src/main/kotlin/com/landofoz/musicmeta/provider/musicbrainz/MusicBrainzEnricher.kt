@@ -155,7 +155,7 @@ internal class MusicBrainzEnricher(
             return EnrichmentResult.NotFound(type, providerId)
         }
         if (type == EnrichmentType.ALBUM_TRACKS) return enrichAlbumTracks(request)
-        if (type == EnrichmentType.RELEASE_EDITIONS) return enrichAlbumEditions(request)
+        if (type == EnrichmentType.RELEASE_EDITIONS) return enrichAlbumEditions(api, providerId, request)
         val mbid = request.identifiers.musicBrainzId
         if (mbid != null) {
             enrichAlbumByMbid(request, mbid, type)?.let { return it }
@@ -186,38 +186,20 @@ internal class MusicBrainzEnricher(
     private fun qualifierFallbackProvenance(viaQualifierFallback: Boolean): LookupProvenance? =
         if (viaQualifierFallback) LookupProvenance.QUALIFIER_FALLBACK_NAME else null
 
-    /**
-     * The release the caller's identifier names, or null to resolve the request by name instead.
-     *
-     * Null for the two cases that are not a miss: MusicBrainz holds no such release, and the release
-     * it does hold is credited to a confidently different artist ([contradictsSuppliedName]). Both
-     * mean this identifier cannot answer for the entity described, and a request carrying a name can
-     * still be answered from it — the contradiction is reported on the call's status, so recovering
-     * here never hides a bad identifier.
-     *
-     * Tested on the artist and never the title: a remaster, an edition or a localised title differs
-     * from what a caller typed while still being the album they meant. A different album by the
-     * *same* artist is therefore outside what this can see, deliberately.
-     */
+    /** The result the caller's identifier answers with, or null to resolve by name — see [suppliedRelease]. */
     private suspend fun enrichAlbumByMbid(
         request: EnrichmentRequest.ForAlbum,
         mbid: String,
         type: EnrichmentType,
-    ): EnrichmentResult? = when (val lookup = memoizedRelease(mbid)) {
-        is MusicBrainzLookup.Found ->
-            if (contradictsSuppliedName(request.artist, lookup.value.artistCredit.orEmpty(), emptyList())) {
-                currentCoroutineContext()[SuppliedIdentifierContradiction]?.mark()
-                null
-            } else {
-                offerNames(lookup.value.title, lookup.value.artistCredit)
-                buildAlbumResult(
-                    lookup.value, type, ConfidenceCalculator.idBasedLookup(),
-                    LookupProvenance.CANONICAL_ID,
-                )
-            }
+    ): EnrichmentResult? = when (val lookup = suppliedRelease(request, mbid)) {
+        is MusicBrainzLookup.Found -> {
+            offerNames(lookup.value.title, lookup.value.artistCredit)
+            buildAlbumResult(
+                lookup.value, type, ConfidenceCalculator.idBasedLookup(),
+                LookupProvenance.CANONICAL_ID,
+            )
+        }
         MusicBrainzLookup.Unreadable -> EnrichmentResult.NotFound(type, providerId)
-        // Absent: the identifier names no release, so the request resolves by name, exactly as one
-        // carrying no identifier does. See [MusicBrainzLookup].
         MusicBrainzLookup.Absent -> null
     }
 
@@ -229,7 +211,7 @@ internal class MusicBrainzEnricher(
         // An identifier MusicBrainz holds nothing under falls through to the name search, as it does
         // in enrichAlbum; a release it holds whose body will not parse does not (see
         // [MusicBrainzLookup]), so the search is only reached when there is no release to be lost.
-        val lookup = mbid?.let { memoizedRelease(it) }
+        val lookup = mbid?.let { suppliedRelease(request, it) }
         var viaQualifierFallback = false
         val release = when (lookup) {
             is MusicBrainzLookup.Found -> lookup.value
@@ -252,24 +234,6 @@ internal class MusicBrainzEnricher(
         )
     }
 
-    internal suspend fun enrichAlbumEditions(
-        request: EnrichmentRequest.ForAlbum,
-    ): EnrichmentResult {
-        val type = EnrichmentType.RELEASE_EDITIONS
-        val releaseGroupMbid = request.identifiers.musicBrainzReleaseGroupId
-            ?: return EnrichmentResult.NotFound(type, providerId)
-        val json = api.lookupReleaseGroup(releaseGroupMbid)
-            ?: return EnrichmentResult.NotFound(type, providerId)
-        val detail = MusicBrainzCreditParser.parseReleaseGroupDetail(json)
-        if (detail.releases.isEmpty()) return EnrichmentResult.NotFound(type, providerId)
-        return EnrichmentResult.Success(
-            type = type,
-            data = MusicBrainzMapper.toReleaseEditions(detail),
-            provider = providerId,
-            confidence = ConfidenceCalculator.idBasedLookup(),
-        )
-    }
-
     internal suspend fun enrichArtist(
         request: EnrichmentRequest.ForArtist,
         type: EnrichmentType,
@@ -281,25 +245,15 @@ internal class MusicBrainzEnricher(
 
         val mbid = request.identifiers.musicBrainzId
         if (mbid != null) {
-            when (val lookup = memoizedArtist(mbid)) {
-                is MusicBrainzLookup.Found ->
-                    // An identifier that resolves is not thereby the caller's artist. When the
-                    // entity it names is confidently a different one, its payload is discarded and
-                    // the request resolves by name below, exactly as an unheld identifier does —
-                    // returning the requested artist beats returning nothing. The contradiction is
-                    // reported on the call's status, so recovering here never hides the bad id.
-                    if (contradictsSuppliedName(request.name, lookup.value.name, lookup.value.alternativeNames())) {
-                        currentCoroutineContext()[SuppliedIdentifierContradiction]?.mark()
-                    } else {
-                        offerNames(lookup.value.name, null)
-                        return buildArtistResult(
-                            lookup.value, type, ConfidenceCalculator.idBasedLookup(),
-                            LookupProvenance.CANONICAL_ID,
-                        )
-                    }
+            when (val lookup = suppliedArtist(request, mbid)) {
+                is MusicBrainzLookup.Found -> {
+                    offerNames(lookup.value.name, null)
+                    return buildArtistResult(
+                        lookup.value, type, ConfidenceCalculator.idBasedLookup(),
+                        LookupProvenance.CANONICAL_ID,
+                    )
+                }
                 MusicBrainzLookup.Unreadable -> return EnrichmentResult.NotFound(type, providerId)
-                // Absent: the identifier names no artist, so the request resolves by name below,
-                // exactly as one carrying no identifier does. See [MusicBrainzLookup].
                 MusicBrainzLookup.Absent -> Unit
             }
         }
@@ -380,7 +334,9 @@ internal class MusicBrainzEnricher(
                 )
             }
             EnrichmentType.ARTIST_DISCOGRAPHY -> {
-                val groups = api.browseReleaseGroups(mbid)
+                val browseId = discographyArtistId(request, mbid)
+                    ?: return EnrichmentResult.NotFound(type, providerId)
+                val groups = api.browseReleaseGroups(browseId)
                 if (groups.isEmpty()) return EnrichmentResult.NotFound(type, providerId)
                 EnrichmentResult.Success(
                     type = type,
@@ -432,11 +388,53 @@ internal class MusicBrainzEnricher(
     private suspend fun lookedUpOrNameResolvedArtist(
         request: EnrichmentRequest.ForArtist,
         mbid: String,
-    ): MusicBrainzArtist? = when (val lookup = memoizedArtist(mbid)) {
+    ): MusicBrainzArtist? = when (val lookup = suppliedArtist(request, mbid)) {
         is MusicBrainzLookup.Found -> lookup.value
         MusicBrainzLookup.Unreadable -> null
         MusicBrainzLookup.Absent ->
             nameResolvedArtistId(request)?.let { memoizedArtist(it).valueOrNull() }
+    }
+
+    /** [memoizedArtist], with the caller's own name checked against it — see [unlessDifferentArtist]. */
+    private suspend fun suppliedArtist(
+        request: EnrichmentRequest.ForArtist,
+        mbid: String,
+    ): MusicBrainzLookup<MusicBrainzArtist> =
+        memoizedArtist(mbid).unlessDifferentArtist(request.name, { it.name }) { it.alternativeNames() }
+
+    /** [memoizedRelease], with the evidence the caller supplied beside the identifier checked against it. */
+    private suspend fun suppliedRelease(
+        request: EnrichmentRequest.ForAlbum,
+        mbid: String,
+    ): MusicBrainzLookup<MusicBrainzRelease> =
+        memoizedRelease(mbid)
+            .unlessDifferentArtist(request.artist, creditOf = { it.artistCredit.orEmpty() })
+            .unlessPredatingFirstRelease(request.year)
+
+    /** [memoizedRecording], with the caller's own artist checked against it — see [unlessDifferentArtist]. */
+    private suspend fun suppliedRecording(
+        request: EnrichmentRequest.ForTrack,
+        mbid: String,
+    ): JSONObject? = memoizedRecording(mbid).valueOrNull()?.let { json ->
+        val credit = MusicBrainzParser.parseLookupRecording(json, request.album)?.artistCredit
+        if (credit == null || !markIfDifferentArtist(request.artist, credit)) json else null
+    }
+
+    /**
+     * The artist id to browse a discography under, or null where none can be trusted.
+     *
+     * A browse learns nothing about who it browsed, so this is the one artist type that would
+     * otherwise hand back another artist's entire catalogue as the caller's without ever noticing.
+     * The check costs an artist lookup, and only on a request that supplied its own identifier — it
+     * is memoized, so any other artist type in the same call has already paid for it.
+     */
+    private suspend fun discographyArtistId(
+        request: EnrichmentRequest.ForArtist,
+        mbid: String,
+    ): String? = when {
+        request.identifiers.musicBrainzId != mbid -> mbid
+        suppliedArtist(request, mbid) !is MusicBrainzLookup.Absent -> mbid
+        else -> nameResolvedArtistId(request)
     }
 
     /** The artist id [request]'s name resolves to, above [minMatchScore]. Null if no name matches. */
@@ -483,16 +481,9 @@ internal class MusicBrainzEnricher(
         mbid: String,
         type: EnrichmentType,
     ): EnrichmentResult? {
-        val json = memoizedRecording(mbid).valueOrNull() ?: return null
+        val json = suppliedRecording(request, mbid) ?: return null
         val recording = MusicBrainzParser.parseLookupRecording(json, request.album)
             ?: return EnrichmentResult.NotFound(type, providerId)
-        // On the artist, never the title, for the reason [enrichAlbum]'s own guard gives - and more
-        // so here, where a recording title carries mix, live and remaster qualifiers a caller's tag
-        // will not. Returning null resolves the request by name, exactly as an unheld id does.
-        if (contradictsSuppliedName(request.artist, recording.artistCredit.orEmpty(), emptyList())) {
-            currentCoroutineContext()[SuppliedIdentifierContradiction]?.mark()
-            return null
-        }
         offerNames(recording.title, recording.artistCredit)
         return trackResult(recording, type, ConfidenceCalculator.idBasedLookup(), LookupProvenance.CANONICAL_ID)
     }
@@ -580,7 +571,7 @@ internal class MusicBrainzEnricher(
         val type = EnrichmentType.CREDITS
         val mbid = request.identifiers.musicBrainzId
             ?: return EnrichmentResult.NotFound(type, providerId)
-        val json = memoizedRecording(mbid).valueOrNull()
+        val json = suppliedRecording(request, mbid)
             ?: return EnrichmentResult.NotFound(type, providerId)
         val credits = MusicBrainzCreditParser.parseRecordingCredits(json)
         if (credits.isEmpty()) return EnrichmentResult.NotFound(type, providerId)
@@ -735,13 +726,6 @@ internal class MusicBrainzEnricher(
      */
     private fun artistNameTier(query: String, artist: MusicBrainzArtist): NameMatchTier =
         nameMatchTier(requested = query, canonical = artist.name, aliases = artist.alternativeNames())
-
-    /** This artist's aliases as [AlternativeName]s; see [artistNameTier] for what `official` means here. */
-    private fun MusicBrainzArtist.alternativeNames(): List<AlternativeName> =
-        aliases.map {
-            val isSearchHint = it.type.equals(SEARCH_HINT_ALIAS_TYPE, ignoreCase = true)
-            AlternativeName(name = it.name, official = !isSearchHint && (it.primary || it.locale != null))
-        }
 
     /**
      * Rank the recording pool above [minMatchScore] instead of taking `firstOrNull` — MB search
@@ -1196,9 +1180,6 @@ internal class MusicBrainzEnricher(
 
     companion object {
         private const val MAX_SUGGESTIONS = 3
-
-        /** MusicBrainz's alias type for a name it stores for its own indexer, not for the artist. */
-        private const val SEARCH_HINT_ALIAS_TYPE = "Search hint"
 
         /**
          * Browse pages [findReleaseGroupByFoldedTitle] reads before giving up. One is not enough:

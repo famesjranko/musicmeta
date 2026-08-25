@@ -219,7 +219,7 @@ val profile = engine.artistProfile(
     name = "Radiohead",
     mbid = "a74b1b7f-71a5-4011-9441-d0b5e4122711",
 )
-// profile.canonicalStatus == CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED
+// profile.canonicalStatus == CanonicalStatus.NOT_ATTEMPTED_IDENTIFIER_TRUSTED
 ```
 
 ---

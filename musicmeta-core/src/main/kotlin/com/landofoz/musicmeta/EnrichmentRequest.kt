@@ -18,6 +18,12 @@ sealed class EnrichmentRequest {
         val title: String,
         val artist: String,
         val trackCount: Int? = null,
+        /**
+         * The album's release year, which is also read as evidence against a MusicBrainz id
+         * supplied beside it: a year two or more before the release group's own first release
+         * reports [CanonicalStatus.CONTRADICTED], so a junk or sentinel year (`0`, `1900`) makes a
+         * correct identifier fall back to name resolution. Leave it null rather than guessing.
+         */
         val year: Int? = null,
     ) : EnrichmentRequest() {
         override fun withIdentifiers(identifiers: EnrichmentIdentifiers) = copy(identifiers = identifiers)

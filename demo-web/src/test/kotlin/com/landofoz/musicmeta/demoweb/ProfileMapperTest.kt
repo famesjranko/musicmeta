@@ -31,7 +31,7 @@ class ProfileMapperTest {
                 type to EnrichmentResult.Success(type, data, provider = "test", confidence = 1.0f)
             },
             requestedTypes = entries.map { it.first }.toSet(),
-            identity = identityOf(CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED),
+            identity = identityOf(CanonicalStatus.NOT_ATTEMPTED_IDENTIFIER_TRUSTED),
         )
 
     @Test
@@ -98,7 +98,7 @@ class ProfileMapperTest {
     @Test
     fun `did-you-mean section absent when no suggestions`() {
         // Given - an album profile whose results carry no identity resolution at all
-        val results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED))
+        val results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(CanonicalStatus.NOT_ATTEMPTED_IDENTIFIER_TRUSTED))
         val profile = AlbumProfile(title = "OK Computer", artist = "Radiohead", results = results)
 
         // When - mapping to a demo response
@@ -818,7 +818,7 @@ class ProfileMapperTest {
         ).toDemoResponse(elapsedMs = 0)
         val noIdentity = ArtistProfile(
             name = "Metallica",
-            results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED)),
+            results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(CanonicalStatus.NOT_ATTEMPTED_IDENTIFIER_TRUSTED)),
         ).toDemoResponse(elapsedMs = 0)
 
         // When - mapping both to demo responses (done above as part of construction)
@@ -860,7 +860,7 @@ class ProfileMapperTest {
         val noIdentity = AlbumProfile(
             title = "Master of Puppets",
             artist = "Metallica",
-            results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED)),
+            results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(CanonicalStatus.NOT_ATTEMPTED_IDENTIFIER_TRUSTED)),
         ).toDemoResponse(elapsedMs = 0)
 
         // Then - both report identity as resolved
@@ -904,7 +904,7 @@ class ProfileMapperTest {
         val noIdentity = TrackProfile(
             title = "Enter Sandman",
             artist = "Metallica",
-            results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED)),
+            results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identityOf(CanonicalStatus.NOT_ATTEMPTED_IDENTIFIER_TRUSTED)),
         ).toDemoResponse(elapsedMs = 0)
 
         // Then - both populate the preview title and artist alongside a resolved identity
@@ -1201,7 +1201,7 @@ class ProfileMapperTest {
                 ),
             ),
             requestedTypes = setOf(EnrichmentType.GENRE),
-            identity = identityOf(CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED),
+            identity = identityOf(CanonicalStatus.NOT_ATTEMPTED_IDENTIFIER_TRUSTED),
         )
         val artist = ArtistProfile(name = "Metallica", results = results)
 
@@ -1246,7 +1246,7 @@ class ProfileMapperTest {
                 EnrichmentType.GENRE to EnrichmentResult.Error(EnrichmentType.GENRE, "test", "bad json", errorKind = ErrorKind.PARSE),
             ),
             requestedTypes = setOf(EnrichmentType.GENRE),
-            identity = identityOf(CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED),
+            identity = identityOf(CanonicalStatus.NOT_ATTEMPTED_IDENTIFIER_TRUSTED),
         )
         val profile = ArtistProfile(name = "Metallica", results = results)
 

@@ -97,6 +97,7 @@ internal object MusicBrainzParser {
             secondaryTypes = extractSecondaryTypes(group),
             trackCount = obj.optInt("track-count", -1).takeIf { it >= 0 },
             releaseGroupDisambiguation = group?.optString("disambiguation")?.takeIf { it.isNotBlank() },
+            releaseGroupFirstReleaseDate = group?.optString("first-release-date")?.takeIf { it.isNotBlank() },
         )
     }
 
@@ -396,6 +397,14 @@ internal object MusicBrainzParser {
             }
         }.takeIf { it.isNotBlank() }
     }
+
+    /**
+     * A release group's own `first-release-date` — the floor under every pressing of the album,
+     * carried by a release-group lookup without any `inc=` asking for it. May be partial (`"1997"`,
+     * `"1997-05"`), so read a year off it rather than parsing it as a date.
+     */
+    internal fun extractFirstReleaseDate(obj: JSONObject): String? =
+        obj.optString("first-release-date").takeIf { it.isNotBlank() }
 
     /**
      * Each credited artist's name individually, unlike [extractArtistCredit]'s single join-phrase

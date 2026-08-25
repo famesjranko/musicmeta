@@ -638,7 +638,7 @@ that entity is the one the request described, because no name is compared on tha
 
 Measured at `06d664aa`: `forArtist("Radiohead", mbid = <Coldplay's live MBID>)` returned Coldplay's
 genres, in one request, at `confidence = 1.0`, stamped `LookupProvenance.CANONICAL_ID` — the
-strongest value the enum has — under `CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED`, which the
+strongest value the enum has — under `CanonicalStatus.NOT_ATTEMPTED_IDENTIFIER_TRUSTED`, which the
 identity guide told consumers to treat as confident. `forAlbum("OK Computer", "Radiohead", mbid =
 <Parachutes' MBID>)` and the track equivalent did the same. The caller's own correct name sat on the
 request throughout.
@@ -649,15 +649,57 @@ Three things follow, and each is a separate trap.
 ticket prescribed — returns the same wrong artist and upgrades the status to `RESOLVED`. A resolver
 that validates an id resolves to *something* is not validating identity. Measured, not argued.
 
-**Trust is not verification, and a status can say so.** `NOT_ATTEMPTED_NOT_REQUIRED` is reachable
+**Trust is not verification, and a status can say so.** `NOT_ATTEMPTED_IDENTIFIER_TRUSTED` is reachable
 only when the request carried an id (`needsIdentityResolution`'s early return), so every occurrence
 of it means "you brought an identifier and we did not check it". Read it as the caller's assertion
 carried through, never as MusicBrainz agreeing.
+
+**One guarded route is not a guarded surface.** The first fix checked the identifier on the route
+`GENRE` takes and looked complete. Seven other types reach the same entity by their own route and
+were all still unguarded: `BAND_MEMBERS`, `ARTIST_LINKS` and `ARTIST_POPULARITY` through a shared
+artist helper, `ARTIST_DISCOGRAPHY` through a browse that looks nothing up, `ALBUM_TRACKS` through
+its own release lookup, `CREDITS` through its own recording lookup, and `RELEASE_EDITIONS` through
+the release-*group* id, whose response did not even carry an artist credit to check until
+`inc=artist-credits` was added to it. Every one returned another entity's data at full confidence.
+
+The shape of the mistake is worth more than the list: a guard placed in a *caller* protects that
+caller, and the number of callers is not visible from the one being edited. The guards now sit on
+the lookups themselves (`unlessDifferentArtist`), and `SuppliedIdentifierGuardMatrixTest` holds the
+whole surface to the property rather than naming routes — it enrols a type by that type answering
+the control request, so a new one joins by existing, not by being remembered.
 
 **Contradiction and agreement need separate evidence.** `contradictsSuppliedName` reports only
 *confident disagreement*; `nameMatchTier` reports only *confident agreement*; neither is the other's
 negation, and the gap between them is unknown. Absence of contradiction is not corroboration, and a
 future change that derives one from the other's failure reintroduces exactly the confusion above.
+
+**Structured evidence beats the title, and only one piece of it survived contact with real data.**
+A caller's own `year` and `trackCount` are the two things `EnrichmentRequest.ForAlbum` carries that
+could catch a different album by the *same* artist, which the artist check provably cannot see. Both
+rules were frozen before any data was captured, then scored on 181 studio release groups and 3139
+releases (`corpora/album-year-contradiction/`). Track count fired on **29% of correct albums** —
+deluxe editions, bonus discs, region variants — and was dropped. The year rule fired on **none**, and
+ships as `unlessPredatingFirstRelease` on the release route and `markIfPredatingFirstRelease` on the
+release-group one — two callers of one function, because the same mistake as above is available here:
+a rule the release lookup applies is not a rule `RELEASE_EDITIONS` applies.
+
+What made the year rule survivable is that it is one-sided by construction, not by tuning: an album
+cannot predate its own first release, so an *earlier* caller year is positive evidence, while a
+later one is any reissue and reports nothing. That costs about half the catch rate up front. The
+population that decides such a rule is not a random wrong year — it is a caller whose identifier is
+**right** and whose local tags came from a different pressing, which is the ordinary case.
+
+**The evidence, ranked — and where it stops.** Each rank below is settled; reopening one needs new
+data, not a new argument.
+
+- **Cross-artist mismatch** — strong contradiction evidence. Reject the supplied identifier and
+  recover by name.
+- **Caller year predates the release group's first-release year** — conservative contradiction
+  signal, in the measured legitimate-pressing population.
+- **Track-count mismatch** — unsafe as contradiction evidence. Rejected after 29% false positives
+  across legitimate pressings.
+- **Title mismatch** — unvalidated and intentionally unused: edition, remaster and localisation
+  variation make it a separate problem.
 
 The comparison is deliberately on the **artist**, never the title — a remaster, an edition or a
 localised title differs from what a caller typed while still being the album they meant. So a

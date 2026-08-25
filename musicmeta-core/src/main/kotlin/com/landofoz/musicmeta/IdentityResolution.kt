@@ -20,7 +20,7 @@ data class IdentityResolution(
      * an identifier resolves by looking it up, and that lookup succeeds or fails — so it scores 100
      * whether or not the identifier names what the caller described. Read [status] for that
      * question: [CanonicalStatus.CONTRADICTED] is the only field that reports a supplied identifier
-     * naming something else, and [CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED] means nobody looked.
+     * naming something else, and [CanonicalStatus.NOT_ATTEMPTED_IDENTIFIER_TRUSTED] means nobody looked.
      * The same caveat applies to [EnrichmentResult.Success.confidence].
      */
     val matchScore: Int? = null,

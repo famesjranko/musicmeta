@@ -36,13 +36,13 @@ class InMemoryEnrichmentCacheTest {
 
     @Test fun `get reads back the canonicalStatus put wrote, closing the write-only gap`() = runTest {
         // Given - an entry stored under a specific canonical status
-        cache.put("a:1", EnrichmentType.ALBUM_ART, art(), CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED, 60_000)
+        cache.put("a:1", EnrichmentType.ALBUM_ART, art(), CanonicalStatus.NOT_ATTEMPTED_IDENTIFIER_TRUSTED, 60_000)
 
         // When - retrieving the same key
         val result = cache.get("a:1", EnrichmentType.ALBUM_ART)
 
         // Then - the envelope carries the exact status it was written under, not just the result
-        assertEquals(CanonicalStatus.NOT_ATTEMPTED_NOT_REQUIRED, result?.canonicalStatus)
+        assertEquals(CanonicalStatus.NOT_ATTEMPTED_IDENTIFIER_TRUSTED, result?.canonicalStatus)
     }
 
     @Test fun `get returns null for expired entry`() = runTest {
