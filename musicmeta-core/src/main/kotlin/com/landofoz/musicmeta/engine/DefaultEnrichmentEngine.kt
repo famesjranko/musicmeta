@@ -1,6 +1,5 @@
 package com.landofoz.musicmeta.engine
 
-import com.landofoz.musicmeta.CacheEnvelope
 import com.landofoz.musicmeta.CanonicalStatus
 import com.landofoz.musicmeta.EnrichmentCache
 import com.landofoz.musicmeta.EnrichmentConfig
@@ -18,7 +17,6 @@ import com.landofoz.musicmeta.LookupProvenance
 import com.landofoz.musicmeta.MusicBrainzEntityType
 import com.landofoz.musicmeta.ProviderInfo
 import com.landofoz.musicmeta.SearchCandidate
-import com.landofoz.musicmeta.cache.CacheMode
 import com.landofoz.musicmeta.http.EnrichDeadline
 import com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzProvider
 import kotlinx.coroutines.CoroutineDispatcher
@@ -44,7 +42,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
-/** [DefaultEnrichmentEngine.writeBack]'s per-call facts, bundled to keep its parameter list short. */
+/** [CachePersistence.writeBack]'s per-call facts, bundled to keep its parameter list short. */
 internal data class WriteBackContext(
     val identityResolution: IdentityResolution,
     val negativeCacheHits: Set<EnrichmentType>,
@@ -53,7 +51,7 @@ internal data class WriteBackContext(
     val staleDerived: Set<EnrichmentType>,
 )
 
-/** The cache layer's own outcome for a call — split off [DefaultEnrichmentEngine.readCacheLayer]'s three collections. */
+/** The cache layer's own outcome for a call — split off [CachePersistence.readCacheLayer]'s three collections. */
 internal data class CacheLayer(
     val results: Map<EnrichmentType, EnrichmentResult>,
     val uncachedTypes: Set<EnrichmentType>,
@@ -99,7 +97,7 @@ internal class RunSession(
     /**
      * Types whose [DefaultEnrichmentEngine.finalizeResult] turned a `Success` into `NotFound` by
      * catalog filtering this call — whether that `Success` was this call's own live answer or a
-     * stale-cache substitute re-filtered on the way out. Read by [DefaultEnrichmentEngine.writeBack]
+     * stale-cache substitute re-filtered on the way out. Read by [CachePersistence.writeBack]
      * so that emptiness, which describes the local catalog rather than a provider, is never mistaken
      * for a live "providers had nothing" answer. Concurrent: different types settle from different
      * coroutines, and each writes only its own type, but the set itself must survive that without
@@ -109,12 +107,12 @@ internal class RunSession(
         java.util.concurrent.ConcurrentHashMap.newKeySet()
 
     /**
-     * Types whose finalized result this call is a [DefaultEnrichmentEngine.applyStaleCacheToType]
+     * Types whose finalized result this call is a [CachePersistence.applyStaleCacheToType]
      * substitute (set in [DefaultEnrichmentEngine.finalizeResult]), or a
      * [DefaultEnrichmentEngine.synthesizeComposite] output derived from a dependency in this same
      * set (propagated there, since [SettlementBoard.await] hands a composite its dependency's
      * finalized value with no marker of its own for where that value came from). A stale substitute
-     * is a past call's snapshot, not this call's own answer — [DefaultEnrichmentEngine.writeBack]
+     * is a past call's snapshot, not this call's own answer — [CachePersistence.writeBack]
      * must not negative-cache a `NotFound` that descends from one. Concurrent for the same reason
      * as [filterEmptied].
      */
@@ -175,6 +173,9 @@ internal class DefaultEnrichmentEngine(
     private val synthesizers: Map<EnrichmentType, CompositeSynthesizer> = synthesizers.associateBy { it.type }
 
     private val mergeableTypes: Set<EnrichmentType> get() = mergers.keys
+
+    /** Every cache read and write this engine makes, and the rules deciding which of them happen. */
+    internal val cachePersistence = CachePersistence(cache, config, logger)
 
     /**
      * The composite dependency graph, read from each synthesizer exactly once and never again.
@@ -284,7 +285,7 @@ internal class DefaultEnrichmentEngine(
         types: Set<EnrichmentType>,
         forceRefresh: Boolean,
     ): Flow<EnrichmentResults> = channelFlow {
-        val cacheLayer = readCacheLayer(request, types, forceRefresh)
+        val cacheLayer = cachePersistence.readCacheLayer(request, types, forceRefresh)
         if (cacheLayer.uncachedTypes.isEmpty()) {
             // Disabled identity resolution outranks a cache hit as the reason nothing was
             // attempted, matching resolveUncachedTypes's own precedence for the live path — the
@@ -371,7 +372,7 @@ internal class DefaultEnrichmentEngine(
             dedupeKey,
             onClosed = { newRun -> abandonedSnapshot(request, types, newRun) },
         ) { newRun ->
-            if (forceRefresh) invalidateForRefresh(request, types)
+            if (forceRefresh) cachePersistence.invalidateForRefresh(request, types)
             runProgressiveFanOut(request, types, forceRefresh, cacheLayer, newRun)
         }
     }
@@ -414,11 +415,7 @@ internal class DefaultEnrichmentEngine(
             // The canonical-name alias could not be invalidated above: the request named no entity
             // then, and the name it is aliased under is the one resolution just learned.
             if (forceRefresh && namesNoEntity(request) && !namesNoEntity(enrichedRequest)) {
-                for (type in cacheLayer.uncachedTypes) {
-                    guardedCacheWrite(logger, "invalidate") {
-                        cache.invalidate(entityKeyForName(enrichedRequest, type), type)
-                    }
-                }
+                cachePersistence.invalidateResolvedNameAlias(enrichedRequest, cacheLayer.uncachedTypes)
             }
             // The same channel the name backfill reads, so the canonical names a consumer is handed
             // are the ones the fan-out was built from — no second resolution path.
@@ -451,14 +448,6 @@ internal class DefaultEnrichmentEngine(
         }
     }
 
-    internal suspend fun invalidateForRefresh(request: EnrichmentRequest, types: Set<EnrichmentType>) {
-        for (type in types) {
-            for (key in cacheKeysFor(request, type)) {
-                guardedCacheWrite(logger, "invalidate") { cache.invalidate(key, type) }
-            }
-        }
-    }
-
     /**
      * Logs a run that stopped before every requested type settled, keeping [logger] private from a
      * cross-file caller. Both reasons — the [EnrichmentConfig.enrichTimeoutMs] deadline and a fault
@@ -486,51 +475,6 @@ internal class DefaultEnrichmentEngine(
         for (type in types) {
             if (type !in settledSoFar) settle(type, errorFor(type), null)
         }
-    }
-
-    /** [runProgressiveFanOut]'s cache-read pass: cache hits, negative-cache hits, and what remains uncached. */
-    private suspend fun readCacheLayer(
-        request: EnrichmentRequest,
-        types: Set<EnrichmentType>,
-        forceRefresh: Boolean,
-    ): CacheLayer {
-        val results = mutableMapOf<EnrichmentType, EnrichmentResult>()
-        val uncachedTypes = mutableSetOf<EnrichmentType>()
-        val negativeCacheHits = mutableSetOf<EnrichmentType>()
-        for (type in types) {
-            val cached = if (forceRefresh) {
-                null
-            } else {
-                guardedCacheRead(logger, "get") { cache.get(entityKeyFor(request, type), type) }
-            }
-            // A cached Success answering nothing is a *miss*, not a NotFound. An empty entry written
-            // by an older build would otherwise outlive this fix by the type's TTL — 90 days for
-            // GENRE — re-demoted on every call and never refetched. Leaving the type uncached lets
-            // the providers run and the write-back overwrite it, so the entry heals itself.
-            // An entry whose genre tags never learned whether they were curated takes the same route
-            // for the same reason: see hasUnknownGenreCuration.
-            if (cached != null &&
-                cached.result.data.answers(type) &&
-                !cached.result.data.hasUnknownGenreCuration(type)
-            ) {
-                results[type] = withCacheProvenanceFallback(cached.result)
-                continue
-            }
-            // A fresh negative entry answers "providers had nothing" without a re-ask; the read is
-            // skipped under forceRefresh for the same reason as the positive read above.
-            val negative = if (forceRefresh) {
-                null
-            } else {
-                guardedCacheRead(logger, "getNegative") { cache.getNegative(entityKeyFor(request, type), type) }
-            }
-            if (negative != null) {
-                results[type] = negative.result
-                negativeCacheHits.add(type)
-            } else {
-                uncachedTypes.add(type)
-            }
-        }
-        return CacheLayer(results, uncachedTypes, negativeCacheHits)
     }
 
     /**
@@ -570,7 +514,7 @@ internal class DefaultEnrichmentEngine(
      * hit through this same function, so filtering can empty a `Success` this call never asked a
      * provider about at all. Either way, catalog filtering is never evidence a provider said
      * nothing: any time it turns a `Success` into `NotFound`, [session]'s [RunSession.filterEmptied]
-     * records that so [DefaultEnrichmentEngine.writeBack] never negative-caches it.
+     * records that so [CachePersistence.writeBack] never negative-caches it.
      */
     internal suspend fun finalizeResult(
         request: EnrichmentRequest,
@@ -587,7 +531,7 @@ internal class DefaultEnrichmentEngine(
             session.filterEmptied.add(type)
         }
         val stamped = stampProvenanceOne(filtered, execution, session.nameEvidence)
-        val stale = applyStaleCacheToType(request, type, stamped)
+        val stale = cachePersistence.applyStaleCacheToType(request, type, stamped)
         if (stale === stamped) return stale
         // stale !== stamped: the stale-cache substitution fired, so this is a *different* Success
         // read from a past call, not this call's live answer. Recorded unconditionally (not just
@@ -597,132 +541,6 @@ internal class DefaultEnrichmentEngine(
         // re-filter produces.
         session.staleDerived.add(type)
         return applyCatalogFilteringToType(type, stale, config.catalogProvider, config.catalogFilterMode, logger)
-    }
-
-    internal suspend fun writeBack(
-        request: EnrichmentRequest,
-        resolvedRequest: EnrichmentRequest,
-        results: Map<EnrichmentType, EnrichmentResult>,
-        context: WriteBackContext,
-    ) {
-        val resolvedMbid = context.identityResolution.identifiers.musicBrainzId
-        val canonicalStatus = context.identityResolution.status
-        for ((type, result) in results) {
-            val aliasKey = aliasKeyFor(request, resolvedRequest, resolvedMbid, type)
-            val identifierIncomplete = context.chainExecutions[type]?.identifierIncomplete == true
-            val filterEmptied = type in context.filterEmptied
-            val staleDerived = type in context.staleDerived
-            val cacheable =
-                isCacheableNegative(result, canonicalStatus, identifierIncomplete, filterEmptied, staleDerived)
-            when {
-                // A negative served from cache this call is not re-put: its short TTL is the entry's
-                // freshness contract, and a cache hit must not extend it.
-                cacheable && type !in context.negativeCacheHits ->
-                    writeNegative(request, aliasKey, type, result as EnrichmentResult.NotFound, canonicalStatus)
-                isCacheablePositive(result, canonicalStatus) ->
-                    writePositive(request, aliasKey, type, result as EnrichmentResult.Success, canonicalStatus)
-            }
-        }
-    }
-
-    /**
-     * The name-alias key when identity resolution added an MBID, so a future name-only lookup
-     * finds MBID-resolved data — shared by both write branches below, so a negative write ends up
-     * under exactly the same keys a Success would. Force refresh and [invalidateKeys] clear that
-     * alias once identity resolution has recovered its canonical names. A request that named no
-     * entity has no caller name to alias under, so it takes
-     * MusicBrainz's canonical one — the same name a later name-only lookup would ask with.
-     *
-     * Never fires for a request carrying caller-supplied identifiers: a caller name is not an
-     * equivalence proof for those identifiers. The only identifier-bearing alias is the canonical
-     * name learned during actual identity resolution.
-     */
-    private fun aliasKeyFor(
-        request: EnrichmentRequest,
-        resolvedRequest: EnrichmentRequest,
-        resolvedMbid: String?,
-        type: EnrichmentType,
-    ): String? = when {
-        namesNoEntity(request) && !namesNoEntity(resolvedRequest) -> entityKeyForName(resolvedRequest, type)
-        resolvedMbid != null && request.identifiers.musicBrainzId == null &&
-            entityKeyFor(request, type) == entityKeyForName(request, type) -> entityKeyForName(request, type)
-        else -> null
-    }
-
-    /**
-     * Whether a result reached under this call's canonical status is safe to cache: [CanonicalStatus.RESOLVED]
-     * or any `NOT_ATTEMPTED_*` reason — never [CanonicalStatus.AMBIGUOUS], [CanonicalStatus.UNRESOLVED],
-     * [CanonicalStatus.FAILED], or [CanonicalStatus.RESOLVING], each of which means this call's fan-out
-     * ran (or is still running) on an unconfirmed identity.
-     */
-    private fun CanonicalStatus.isCacheable(): Boolean = this !in UNCACHEABLE_STATUSES
-
-    /**
-     * Only a real fan-out "providers had nothing" qualifies for negative caching: never a chain
-     * that skipped a provider for an identifier this call never had ([identifierIncomplete]), never
-     * one [DefaultEnrichmentEngine.finalizeResult] produced by catalog-filtering a `Success` down
-     * to nothing ([filterEmptied]) — that emptiness describes the local catalog, not an upstream
-     * provider, whether the `Success` it emptied was this call's own live answer or a stale-cache
-     * substitute — never one whose finalized value is itself a stale-cache substitute, or a
-     * composite synthesized from one ([staleDerived]), since a stale substitute is a past call's
-     * snapshot rather than this call's own answer, and never one reached under a canonical identity
-     * that did not resolve. Decided from the call's own [canonicalStatus] and those three per-type
-     * facts — a `NotFound` carries no per-result canonical fact of its own, so it is never consulted
-     * here.
-     */
-    internal fun isCacheableNegative(
-        result: EnrichmentResult,
-        canonicalStatus: CanonicalStatus,
-        identifierIncomplete: Boolean,
-        filterEmptied: Boolean,
-        staleDerived: Boolean,
-    ): Boolean =
-        result is EnrichmentResult.NotFound &&
-            !identifierIncomplete &&
-            !filterEmptied &&
-            !staleDerived &&
-            canonicalStatus.isCacheable()
-
-    /**
-     * A `Success` reached while canonical resolution was attempted and did not resolve
-     * (`AMBIGUOUS`/`UNRESOLVED`/`FAILED`) is a fuzzy or ambiguous guess — caching it would serve it
-     * as a cache hit for the type's whole TTL with no way to tell it apart from a confident one,
-     * and a retry could never heal or re-offer the suggestions that produced it.
-     */
-    private fun isCacheablePositive(result: EnrichmentResult, canonicalStatus: CanonicalStatus): Boolean =
-        result is EnrichmentResult.Success && !result.isStale && canonicalStatus.isCacheable()
-
-    private suspend fun writeNegative(
-        request: EnrichmentRequest,
-        aliasKey: String?,
-        type: EnrichmentType,
-        result: EnrichmentResult.NotFound,
-        canonicalStatus: CanonicalStatus,
-    ) {
-        guardedCacheWrite(logger, "putNegative") {
-            cache.putNegative(entityKeyFor(request, type), type, result, canonicalStatus, config.negativeTtlMs)
-        }
-        if (aliasKey != null) {
-            guardedCacheWrite(logger, "putNegative") {
-                cache.putNegative(aliasKey, type, result, canonicalStatus, config.negativeTtlMs)
-            }
-        }
-    }
-
-    private suspend fun writePositive(
-        request: EnrichmentRequest,
-        aliasKey: String?,
-        type: EnrichmentType,
-        result: EnrichmentResult.Success,
-        canonicalStatus: CanonicalStatus,
-    ) {
-        val ttl = config.ttlOverrides[type] ?: type.defaultTtlMs
-        guardedCacheWrite(logger, "put") {
-            cache.put(entityKeyFor(request, type), type, result, canonicalStatus, ttl)
-        }
-        if (aliasKey != null) {
-            guardedCacheWrite(logger, "put") { cache.put(aliasKey, type, result, canonicalStatus, ttl) }
-        }
     }
 
     override fun enrichBatch(
@@ -740,7 +558,7 @@ internal class DefaultEnrichmentEngine(
         // Resolved once for every type: an identifier-only request's alias key is the *canonical*
         // name, which nothing on the request carries, so it has to be asked for.
         val named = canonicallyNamed(request)
-        for (t in types) invalidateKeys(request, named, t)
+        for (t in types) cachePersistence.invalidateKeys(request, named, t)
     }
 
     override suspend fun isManuallySelected(request: EnrichmentRequest, type: EnrichmentType): Boolean =
@@ -810,28 +628,8 @@ internal class DefaultEnrichmentEngine(
     }
 
     /**
-     * Exact-bearing requests invalidate only their complete primary tuple. A caller-supplied name
-     * is not an equivalence proof, so clearing its bare-name key could evict another entity's
-     * answer. Canonical aliases are added by [invalidateKeys] only after identity resolution has
-     * supplied the canonical names.
-     */
-    private fun cacheKeysFor(request: EnrichmentRequest, type: EnrichmentType): List<String> =
-        listOf(entityKeyFor(request, type))
-
-    /** Invalidates the primary tuple and a canonical-name alias only when resolution supplied it. */
-    private suspend fun invalidateKeys(
-        request: EnrichmentRequest,
-        named: EnrichmentRequest,
-        type: EnrichmentType,
-    ) {
-        val keys = cacheKeysFor(request, type) +
-            if (named !== request) listOf(entityKeyForName(named, type)) else emptyList()
-        for (key in keys.distinct()) cache.invalidate(key, type)
-    }
-
-    /**
      * [request] with the names identity resolution would fill in, for a request that names none —
-     * the only way to reach the canonical-name alias [writeBack] left behind, since the caller's
+     * the only way to reach the canonical-name alias [CachePersistence.writeBack] left behind, since the caller's
      * own request carries no name to derive it from.
      *
      * Costs the identity lookup, and only for an identifier-only request. A failure degrades to the
@@ -1175,58 +973,8 @@ internal class DefaultEnrichmentEngine(
             result
         }
 
-    /**
-     * A cache hit reports [LookupProvenance.CACHE] instead of `null` when the [EnrichmentCache]
-     * implementation that served it did not preserve the original live lookup's route — never
-     * `null`, or a consumer reading absence as confident inherits the same hole [CanonicalStatus]
-     * closed for canonical resolution. A preserving cache (both shipped implementations) replays
-     * the original route verbatim and never reaches this branch; it exists for one that does not.
-     */
-    private fun withCacheProvenanceFallback(result: EnrichmentResult.Success): EnrichmentResult.Success =
-        if (result.provenance == null) result.copy(provenance = LookupProvenance.CACHE) else result
-
-    /**
-     * [config.cacheMode]'s `STALE_IF_ERROR` clause for one type: a fresh `Error`/`RateLimited` is
-     * replaced by an expired cache entry that still answers the type, marked [EnrichmentResult.Success.isStale].
-     * Any other result — including a fresh `Success` or `NotFound` — passes through unchanged.
-     *
-     * [ErrorKind.ENGINE_CLOSED] is never substituted, even under `STALE_IF_ERROR`: it is the one
-     * `Error` this engine stamps itself, after [close] — [close]'s own KDoc promises every unsettled
-     * requested type becomes that Error, unconditionally, and a stale cache hit silently standing in
-     * for it would break that promise for exactly the caller relying on it to notice a shutdown.
-     * [ErrorKind.TIMEOUT], stamped the same way for a different reason, keeps the normal substitution.
-     */
-    private suspend fun applyStaleCacheToType(
-        request: EnrichmentRequest,
-        type: EnrichmentType,
-        result: EnrichmentResult,
-    ): EnrichmentResult {
-        if (config.cacheMode != CacheMode.STALE_IF_ERROR) return result
-        if (result !is EnrichmentResult.Error && result !is EnrichmentResult.RateLimited) return result
-        if (result is EnrichmentResult.Error && result.errorKind == ErrorKind.ENGINE_CLOSED) return result
-        val stale = guardedCacheRead(logger, "getIncludingExpired") {
-            cache.getIncludingExpired(entityKeyFor(request, type), type)
-        }
-        // A stale entry that answers nothing is worse than the Error it would replace: the Error at
-        // least tells the consumer to retry.
-        return if (stale != null && stale.result.data.answers(type)) {
-            withCacheProvenanceFallback(stale.result).copy(isStale = true)
-        } else {
-            result
-        }
-    }
-
     companion object {
         private const val TAG = "EnrichmentEngine"
-
-        // RESOLVING never actually reaches isCacheable(): writeBack only runs with the real,
-        // settled session.identityResolution. Listed anyway so a future caller of isCacheable()
-        // against a live IdentityHolder.current can't accidentally treat an in-progress
-        // resolution as safe to cache.
-        private val UNCACHEABLE_STATUSES = setOf(
-            CanonicalStatus.AMBIGUOUS, CanonicalStatus.UNRESOLVED, CanonicalStatus.FAILED,
-            CanonicalStatus.RESOLVING,
-        )
 
         private val IDENTITY_TYPES = setOf(
             EnrichmentType.GENRE, EnrichmentType.LABEL, EnrichmentType.RELEASE_DATE,

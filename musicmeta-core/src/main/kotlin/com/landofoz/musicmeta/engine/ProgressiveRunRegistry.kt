@@ -70,7 +70,7 @@ internal class ProgressiveRunRegistry(private val scope: CoroutineScope) {
      * [mutex] only ever guards the registration decision — reading [closed], checking [runs] for an
      * existing entry, and (for a fresh key) inserting into [runs] and launching [body]. [onClosed]
      * itself, and completing/emitting to the new run, both run *after* [withLock] returns: [onClosed]
-     * reaches consumer code ([DefaultEnrichmentEngine.applyStaleCacheToType] calls
+     * reaches consumer code ([CachePersistence.applyStaleCacheToType] calls
      * [com.landofoz.musicmeta.cache.EnrichmentCache.getIncludingExpired] under `STALE_IF_ERROR`),
      * a genuine, unbounded suspension point that must never run while a thread-bound caller of
      * [markClosed] might be waiting on this same mutex to become free — see
