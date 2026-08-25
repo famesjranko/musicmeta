@@ -17,10 +17,10 @@ import org.junit.Test
 
 /**
  * Every type that can answer from a caller-supplied identifier must report it when that identifier
- * names a different entity. Each type reaches its entity by its own route, and four of them went
- * unguarded after the first route was fixed — so this asserts the property across the whole surface
- * rather than naming the routes, and a new type joins the matrix by being answerable, not by being
- * added to a list here.
+ * names a different entity. Each type reaches its entity by its own route, and seven of them across
+ * five routes went unguarded after the first route was fixed — so this asserts the property across
+ * the whole surface rather than naming the routes, and a new type joins the matrix by being
+ * answerable, not by being added to a list here.
  *
  * The control is what makes it self-maintaining: a type is only held to the rule once the same
  * request answers `Success` under the *correct* identifier. A type that cannot answer these

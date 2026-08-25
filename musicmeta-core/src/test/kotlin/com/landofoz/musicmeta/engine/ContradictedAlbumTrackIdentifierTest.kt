@@ -61,6 +61,21 @@ class ContradictedAlbumTrackIdentifierTest {
     }
 
     @Test
+    fun `the contradicted identifier is still on the resolution's identifiers`() = runTest {
+        // Given - the same wrong identifier, on a request whose name recovers the album by search
+        val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead", mbid = "rel-parachutes")
+
+        // When - a type MusicBrainz answers from the release is enriched
+        val results = engine(http()).enrich(request, setOf(EnrichmentType.GENRE))
+
+        // Then - the id the status just disowned is still the one on identifiers, because the name
+        // route resolved nothing to replace it with. A caller reading identifiers alone would carry
+        // the bad id onward, which is what the status is there to stop.
+        assertEquals(CanonicalStatus.CONTRADICTED, results.identity.status)
+        assertEquals("rel-parachutes", results.identity.identifiers.musicBrainzId)
+    }
+
+    @Test
     fun `an album tracklist under another artist's identifier is reported, and the name still answers`() = runTest {
         // Given - the same wrong identifier, and a type that looks the release up on its own path
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead", mbid = "rel-parachutes")

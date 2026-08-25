@@ -30,6 +30,16 @@ enum class CanonicalStatus {
      * entity anyway". Reporting the fallback's success instead would hide the bad identifier, which
      * is the one thing here the caller cannot find out any other way.
      *
+     * **[IdentityResolution.identifiers] may still carry the identifier this disowns.** The name
+     * fallback resolves an entity, not an identifier, so when it supplies none the request's own
+     * identifiers are what comes back — including the one just reported wrong. Read this status
+     * before trusting anything on that field, and never pass it to the next call.
+     *
+     * Also outranks [RESOLVING], so a pre-terminal [EnrichmentEngine.enrichProgressive] emission
+     * can carry `CONTRADICTED` while identity resolution is still running — a provider that reached
+     * its entity from the identifier settles before the resolver does. It never reverts: a later
+     * recovery by name does not clear it.
+     *
      * Contradiction requires positive evidence of disagreement. Names that merely could not be
      * equated — a script this cannot compare, an unfamiliar spelling — are not contradictions.
      */
