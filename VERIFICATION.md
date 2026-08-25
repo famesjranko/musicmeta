@@ -89,6 +89,19 @@ than it looks like, each learned the hard way.
   opposite, that `ignore` suppresses security updates too. So the behaviour is what the tool tests
   today, not what its documentation promises, and nothing here would notice if it changed: the
   failure is silent and looks exactly like having no vulnerabilities.
+- **`minSdk = 21` is untestable.** Robolectric 4.16 removed SDK 21 and 22 — `L` and `LMR1` are gone
+  from its `DefaultSdkProvider`, present at 4.13 — so no Robolectric test can pin the floor the
+  library declares. The three cache tests pin `sdk = [34]`, and `androidTest/` runs nowhere, so
+  nothing exercises API 21 and nothing reports that it does not.
+- **A Robolectric bump moves the SQL engine under the cache tests.** `sqliteMode` defaults to
+  `NATIVE`, so `MigrationTestHelper`, Room's schema validator and every DAO query run against
+  Robolectric's bundled `nativeruntime-dist-compat` — 1.0.12 at 4.13, 1.0.18 at 4.16.1. With no
+  connected test, that engine is the whole evidence base for the cache schema: a green suite after a
+  bump proves the migrations pass on the new engine, not that it still agrees with a device's.
+- **No test or skip count is recoverable from CI.** Gradle's `Test` task prints nothing on success
+  and `build.yml` uploads reports `if: failure()` only, so no run on any branch can show that a suite
+  ran rather than passed by producing no runnable methods. It is inferable — the task is neither
+  `UP-TO-DATE` nor `NO-SOURCE` — never stated.
 - **No connected Android test runs anywhere.** `musicmeta-android/src/androidTest/` is absent from
   `check`, from the `Makefile` and from all five workflows in `.github/workflows/`, so
   `EnrichmentCacheDatabaseMigrationDeviceTest` — the only thing that exercises a Room migration
