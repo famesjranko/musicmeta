@@ -251,8 +251,9 @@ internal class DefaultEnrichmentEngine(
      *
      * A call for a request/types/forceRefresh key not already in flight when this runs never starts
      * a fan-out at all: [ProgressiveRunRegistry.attachOrStart] answers it directly with every
-     * requested type stamped `Error(ErrorKind.ENGINE_CLOSED)`, the same per-type completeness
-     * `enrich()` documents for a timeout.
+     * requested type present — a type the cache already holds keeps its real result, and only the
+     * genuinely uncached remainder is stamped `Error(ErrorKind.ENGINE_CLOSED)` — the same per-type
+     * completeness `enrich()` documents for a timeout.
      */
     override fun close() {
         // markClosed is suspend only because it shares attachOrStart's mutex; close() itself must
@@ -377,7 +378,7 @@ internal class DefaultEnrichmentEngine(
         val dedupeKey = progressiveDedupeKey(request, types, forceRefresh)
         return progressiveRuns.attachOrStart(
             dedupeKey,
-            onClosed = { newRun -> abandonedSnapshot(request, types, newRun) },
+            onClosed = { newRun -> abandonedSnapshot(request, types, cacheLayer, newRun) },
         ) { newRun ->
             if (forceRefresh) cachePersistence.invalidateForRefresh(request, types)
             runProgressiveFanOut(request, types, forceRefresh, cacheLayer, newRun)
