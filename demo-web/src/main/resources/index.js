@@ -777,7 +777,8 @@ function render(data, wasForceRefresh, stream) {
         ${subtitle}
         ${genres}
         ${text}
-        ${creditLineHtml([summary.imageCredit, ...(summary.genreCredits || [])])}
+        ${creditLineHtml([summary.imageCredit], 'Photo')}
+        ${creditLineHtml(summary.genreCredits, 'Genres')}
       </div>
     </div>
     ${unverifiedBanner}
