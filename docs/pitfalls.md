@@ -302,7 +302,7 @@ to it. Two traps inside that:
 blackhole), kept off CI because a network that answers TEST-NET-1 with an RST turns it vacuous.
 
 
-## 27. `enrichTimeoutMs` is spent on the fan-out's dispatcher, which `runTest` does not own
+## 29. `enrichTimeoutMs` is spent on the fan-out's dispatcher, which `runTest` does not own
 
 `enrich()` is `enrichProgressive().last()`, and that fan-out — the `withTimeoutOrNull` enforcing
 `enrichTimeoutMs` included — is launched on the engine's detached scope, `Dispatchers.Default` by
@@ -319,7 +319,8 @@ Two ways that reaches a test as a flake, both invisible to the class run alone:
   test that started it by design, so a neighbour's fan-out is still holding `Dispatchers.Default`
   when the next class starts. Saturating that pool made `EnrichDeadlineBoundTest` return in
   13154 ms against a 1200 ms deadline; on a dispatcher of its own, under the same saturation, the
-  same call read 1620 ms.
+  same call read 1620 ms. (Recipe: six busy-loop shells pinned to `Dispatchers.Default`'s worker
+  count, then the class alone; the numbers decay, the shape does not.)
 
 So a test whose subject is a deadline hands the engine a `detachedDispatcher` it owns:
 `StandardTestDispatcher(testScheduler)` when the budget should be virtual, a dedicated pool when the
