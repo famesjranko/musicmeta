@@ -6,14 +6,14 @@ import org.junit.Test
 
 /**
  * The alpha-2 normalisation behind `EnrichmentData.Metadata.country`. Inputs are the shapes the
- * upstreams actually send: iTunes alpha-3 (`USA`, probed 2026-09-03) and Discogs' free text
- * (`UK`, `Europe`).
+ * upstreams actually send, plus the alpha-3 form (`USA`) the table is kept for: Discogs' free text
+ * (`UK`, `Europe`) and MusicBrainz's alpha-2.
  */
 class IsoCountryTest {
 
     @Test
     fun `alpha2OrNull converts an ISO alpha-3 code to alpha-2`() {
-        // Given - the alpha-3 code iTunes sends for the United States
+        // Given - an alpha-3 code for the United States
         val raw = "USA"
 
         // When - normalising it

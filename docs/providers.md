@@ -421,6 +421,11 @@ the identifiers this one resolves. The `cover-art-archive.front` flag embedded i
 read, but only a release lookup carries that object: a `/release?query=` hit has none (checked live
 2026-08-22), so a search candidate never carries a thumbnail URL. Reading one per candidate would
 cost a rate-limited lookup each.
+Reading `area`/`begin-area` and their `iso-3166-1-codes` as a fallback for a missing `country` was
+considered and declined on 2026-09-03: a lookup response already fills `country` from the area
+hierarchy, and a `/release?query=`/`/artist?query=` hit's `area` carries no `iso-3166-1-codes` at
+all (probed 2026-09-03), so the fallback would be redundant on the one endpoint and unusable on the
+other.
 
 **Cover Art Archive.** `/release/{mbid}` is read by every capability and fetched once per call — a
 failure included, so a dead endpoint costs one attempt budget, not four. These cost only code:

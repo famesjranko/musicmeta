@@ -6,10 +6,10 @@ import java.util.Locale
  * Normalises an upstream's country wording to the ISO 3166-1 alpha-2 code
  * [EnrichmentData.Metadata.country] reports.
  *
- * Providers disagree about the shape: MusicBrainz sends alpha-2, iTunes alpha-3, Discogs an
- * English country name. The codes, their alpha-3 equivalents and the English names all come from
- * [Locale], so no country table is maintained here; [ALIASES] covers only wording the JDK does not
- * recognise.
+ * Providers disagree about the shape: MusicBrainz sends alpha-2 and Discogs an English country
+ * name, and the alpha-3 branch is kept for an upstream that sends alpha-3. The codes, their
+ * alpha-3 equivalents and the English names all come from [Locale], so no country table is
+ * maintained here; [ALIASES] covers only wording the JDK does not recognise.
  */
 internal object IsoCountry {
 
@@ -56,9 +56,11 @@ internal object IsoCountry {
         }.toMap()
 
     /**
-     * Display names are not guaranteed distinct, and `associateBy` keeps the last of a collision,
-     * so a name shared by two regions resolves to whichever the JDK enumerated later. No current
-     * pair collides; a lookup that must not drift belongs in [ALIASES].
+     * Display names are not guaranteed distinct, and `toMap` keeps the last of a collision, so a
+     * name shared by two regions resolves to whichever the JDK enumerated later. No current pair
+     * collides; a lookup that must not drift belongs in [ALIASES]. The names come from the runtime
+     * JDK's CLDR data, so a spelling only newer releases know ("Türkiye") resolves there and passes
+     * through unchanged elsewhere.
      */
     private val NAME_TO_ALPHA2: Map<String, String> =
         ALPHA2_CODES.mapNotNull { code ->
