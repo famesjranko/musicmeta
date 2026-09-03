@@ -79,7 +79,7 @@ profile.discography                  // List<DiscographyAlbum> with title, year,
 // Stats & recommendations
 profile.popularity?.listenCount      // total listens (ListenBrainz)
 profile.popularity?.listenerCount    // unique listeners
-profile.topTracks?.tracks            // List<TopTrack> from Last.fm + Deezer (ListenBrainz's route is disabled upstream)
+profile.topTracks?.tracks            // List<TopTrack> merged from Last.fm, ListenBrainz and Deezer
 profile.similarArtists?.artists      // List<SimilarArtist> with matchScore and sources
 profile.similarAlbums?.albums        // List<SimilarAlbum>
 profile.radio?.tracks                // List<RadioTrack> — Deezer artist radio playlist

@@ -102,7 +102,7 @@ them, so `engine.artistProfile("pink floid").suggestions`, or `results.identity.
 | LRCLIB | Synced + plain lyrics, track metadata | No |
 | Deezer | Artist photos, album art, discography, tracklists, album metadata, similar artists/tracks, artist radio, top tracks, similar albums, track previews | No |
 | iTunes | Album art, tracklists, discography, album metadata | No |
-| ListenBrainz | Popularity, listen counts, discography, top tracks, radio discovery (optional token) | Optional |
+| ListenBrainz | Popularity, listen counts, discography, top tracks, radio discovery (requires a token) | Optional |
 | Last.fm | Genres, similar artists/tracks, bios, popularity, album metadata | Yes |
 | Fanart.tv | Artist photos/backgrounds/logos/banners, CD art, album art | Yes |
 | Discogs | Labels, members, credits, editions, artwork, album metadata, community ratings | Yes |
@@ -133,15 +133,15 @@ val engine = EnrichmentEngine.Builder()
 | Category | Types | Multi-provider |
 |----------|-------|----------------|
 | **Artwork** | ALBUM_ART, ALBUM_ART_BACK, ALBUM_BOOKLET, ARTIST_PHOTO, ARTIST_BACKGROUND, ARTIST_LOGO, ARTIST_BANNER, CD_ART | ALBUM_ART merged (5), ARTIST_PHOTO merged (5: Wikidata, Fanart.tv, Deezer, Discogs, Wikipedia), CD_ART (2) |
-| **Metadata** | GENRE, LABEL, RELEASE_DATE, RELEASE_TYPE, COUNTRY, BAND_MEMBERS, ARTIST_DISCOGRAPHY, ALBUM_TRACKS, ALBUM_METADATA, TRACK_METADATA | DISCOGRAPHY (4, 3 answering; ListenBrainz's route is disabled upstream), METADATA (4), TRACKS (3), TRACK_METADATA (3), GENRE (2), LABEL (2), RELEASE_TYPE (2), COUNTRY (2), BAND_MEMBERS (2) |
+| **Metadata** | GENRE, LABEL, RELEASE_DATE, RELEASE_TYPE, COUNTRY, BAND_MEMBERS, ARTIST_DISCOGRAPHY, ALBUM_TRACKS, ALBUM_METADATA, TRACK_METADATA | DISCOGRAPHY (4), METADATA (4), TRACKS (3), TRACK_METADATA (3), GENRE (2), LABEL (2), RELEASE_TYPE (2), COUNTRY (2), BAND_MEMBERS (2) |
 | **Credits** | CREDITS | MusicBrainz (recording rels) + Discogs (extraartists) |
 | **Editions** | RELEASE_EDITIONS | MusicBrainz (release-group) + Discogs (master versions) |
 | **Text** | ARTIST_BIO, ALBUM_DESCRIPTION, LYRICS_SYNCED, LYRICS_PLAIN | BIO (2), ALBUM_DESCRIPTION (2) |
 | **Relationships** | SIMILAR_ARTISTS, SIMILAR_TRACKS, ARTIST_LINKS | SIMILAR_ARTISTS (2: Last.fm, Deezer), SIMILAR_TRACKS (2), ARTIST_LINKS (2: MusicBrainz, Wikidata) |
-| **Top Tracks** | ARTIST_TOP_TRACKS | Merged from 3 (Last.fm, ListenBrainz, Deezer), 2 answering; ListenBrainz's route is disabled upstream |
+| **Top Tracks** | ARTIST_TOP_TRACKS | Merged from 3 (Last.fm, ListenBrainz, Deezer) |
 | **Statistics** | ARTIST_POPULARITY, TRACK_POPULARITY | Both merged from 3, each source's claim kept in its own unit |
 | **Composite** | ARTIST_TIMELINE, GENRE_DISCOVERY | ARTIST_TIMELINE: discography + members + life-span; GENRE_DISCOVERY: static affinity taxonomy |
-| **Radio** | ARTIST_RADIO, ARTIST_RADIO_DISCOVERY | ARTIST_RADIO: Deezer curated playlist; ARTIST_RADIO_DISCOVERY: ListenBrainz LB Radio (easy/medium/hard modes, optional token), and its route is disabled upstream, see [docs/providers.md](docs/providers.md#routes-disabled-upstream) |
+| **Radio** | ARTIST_RADIO, ARTIST_RADIO_DISCOVERY | ARTIST_RADIO: Deezer curated playlist; ARTIST_RADIO_DISCOVERY: ListenBrainz LB Radio (easy/medium/hard modes), which requires `listenBrainzToken` |
 | **Preview** | TRACK_PREVIEW | Deezer 30-second MP3 preview URL (on-demand, not in default types) |
 | **Discovery** | SIMILAR_ALBUMS | Deezer related artists + era scoring |
 

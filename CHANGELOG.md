@@ -83,6 +83,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Last.fm biographies and album descriptions carry no anchor tags, and a wiki-less artist settles `NotFound` not a link-only bio; cached entries keep it until refresh, so clear yours or wait
 - `country` is now ISO 3166-1 alpha-2 (`UK` is `GB`): Wikidata returns null outside its code map, iTunes null as it sent the storefront; cached entries keep the old value until cleared or expired
+- ListenBrainz's `ARTIST_DISCOGRAPHY` albums carry their titles again: the name moved under `release_group`, and a nameless album is skipped, not shipped blank; caches 30 days, so clear yours or wait
 - Cover Art Archive artwork URLs now leave the provider https: older CAA entries serve `http://`, which browsers block as mixed content; cached entries keep it until refresh, so clear yours or wait
 - A cache-hit type requested beside an uncached composite that depends on it is no longer re-fetched upstream: the cached value is served and its cache entry survives instead of being overwritten
 - A fault that escapes the fan-out is no longer reported as `ErrorKind.ENGINE_CLOSED`: unsettled types carry `UNKNOWN` and the real cause, so a missing class no longer reads as a closed engine

@@ -58,21 +58,21 @@ the engine to classify from canonical status.
 A UPC/barcode is an external catalogue identifier, not a MusicBrainz id and not either provider's
 own id space, so it carries `LookupProvenance.EXTERNAL_CATALOG_ID` rather than `PROVIDER_NATIVE_ID`.
 
-## Routes disabled upstream
+## Routes ListenBrainz has withdrawn before
 
-ListenBrainz disabled two of the five routes we call around **2026-06-30**; both answer `500` ahead
-of auth and parameter validation, so no request distinguishes itself, and neither carries a
-re-enable date (observed 2026-08-11).
+All five ListenBrainz routes we call answered on **2026-09-03**, verified through the library rather
+than by status code. Three of them had not: ListenBrainz disabled `/1/explore/lb-radio` and both
+`/1/popularity/top-*-for-artist/` routes around **2026-06-30**, and every request to them returned
+`500` ahead of auth and parameter validation, so nothing about a request distinguished itself.
 
-| Route | What it costs |
-|---|---|
-| `/1/explore/lb-radio` | `ARTIST_RADIO_DISCOVERY` is dark — ListenBrainz is its only provider |
-| `/1/popularity/top-*-for-artist/` | ListenBrainz's share of `ARTIST_DISCOGRAPHY` and `ARTIST_TOP_TRACKS`; Deezer and Last.fm still answer |
+What that cost while it lasted is what a repeat would cost: `ARTIST_RADIO_DISCOVERY` has
+ListenBrainz as its only provider and goes dark with `/1/explore/lb-radio`, while
+`ARTIST_DISCOGRAPHY` and `ARTIST_TOP_TRACKS` lose one source of several and still answer from
+Deezer and Last.fm. `ARTIST_POPULARITY` and `TRACK_POPULARITY` were unaffected throughout — they
+ride the batch `POST /1/popularity/artist` and `POST /1/popularity/recording`, which stayed up.
 
-`ARTIST_POPULARITY` is unaffected: it tries the batch `POST /1/popularity/artist` first, which
-works. `TRACK_POPULARITY` likewise rides `POST /1/popularity/recording`, which is not disabled
-either.
-Nothing re-probes these — treat the dates as the last time anyone looked.
+Nothing re-probes these on a schedule, so the date above is the last time anyone looked, not a
+guarantee about today.
 
 ## Deviations from the house pattern
 
@@ -537,18 +537,21 @@ a lead-image flag: `/w/rest.php/v1/…/links/media` carries neither ordering nor
 (probed 2026-08-12). That one dependency is the watch item — the extract no longer rides `rest_v1`
 at all. Re-run the probe before treating this as current.
 
-**ListenBrainz.** On responses we already fetch: `artist_name` on a release group (parsed into
-`ListenBrainzTopReleaseGroup.artistName`, dropped by the mapper), `listen_count` on a release group
-(ranking for `ARTIST_DISCOGRAPHY`, which currently returns response order with no counts),
-`caa_id`/`caa_release_mbid` (cover art for a discography entry without a second provider),
-`release_mbid` on a top recording (its album's identity, as opposed to the `release_name` a top
+**ListenBrainz.** On responses we already fetch, as captured **2026-09-03**: a release group's
+`artist.artists[0].name` (parsed into `ListenBrainzTopReleaseGroup.artistName`, dropped by the
+mapper), its `total_listen_count` (parsed, also dropped — ranking for `ARTIST_DISCOGRAPHY`, which
+currently returns response order with no counts), and its `release_group.date` and
+`release_group.type`, which would fill the `year` and `type` a `DiscographyAlbum` from this provider
+leaves null. `caa_id`/`caa_release_mbid` are there too — cover art for a discography entry without a
+second provider — but nested inside `release_group` and `release` rather than beside the mbid.
+Also `release_mbid` on a top recording (its album's identity, as opposed to the `release_name` a top
 track now carries). Never called:
 `/1/stats/**`, `/1/user/**`, `/1/similar-users`, and every submit endpoint. Two of the unused are
 worth knowing before reaching for a third-party call. `/1/metadata/recording/` is a keyless batch
 lookup — up to 1000 recording MBIDs to titles, artists, lengths and release info in one request —
 so any source that yields MBIDs without titles costs two requests, not one per track.
-`/1/lb-radio/artist/{mbid}` is deliberately left, not overlooked: it answers where
-`/1/explore/lb-radio` is disabled, but it is LB Radio's candidate *pool* rather than its playlist.
+`/1/lb-radio/artist/{mbid}` is deliberately left, not overlooked: it answers when
+`/1/explore/lb-radio` does not, but it is LB Radio's candidate *pool* rather than its playlist.
 It is unordered (a JSON object keyed by artist MBID), non-deterministic (`ORDER BY RANDOM()`, so two
 identical requests differ), and curated only by the popularity band the caller picks. Serving
 `RadioPlaylist` from it would mean owning the assembly troi does upstream, and caching one random
