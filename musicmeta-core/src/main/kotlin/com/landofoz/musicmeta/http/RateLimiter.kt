@@ -13,7 +13,7 @@ import kotlinx.coroutines.sync.withLock
  * @param intervalMs Minimum milliseconds between requests
  * @param clock Time source (injectable for testing)
  */
-class RateLimiter(
+public class RateLimiter(
     private val intervalMs: Long,
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
@@ -23,7 +23,7 @@ class RateLimiter(
     private var lastRequestTime = 0L
 
     /** Execute a block, waiting if necessary to respect the rate limit. */
-    suspend fun <T> execute(block: suspend () -> T): T = mutex.withLock {
+    public suspend fun <T> execute(block: suspend () -> T): T = mutex.withLock {
         val elapsed = clock() - lastRequestTime
         if (elapsed < intervalMs) {
             delay(intervalMs - elapsed)

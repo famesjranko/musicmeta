@@ -40,7 +40,7 @@ internal class EnrichDeadline(budgetMs: Long) : AbstractCoroutineContextElement(
  * down to it. The value can be zero or negative once the deadline has passed: treat that as "no
  * time left", never as "no timeout" — every JDK and OkHttp timeout reads `0` as unbounded.
  */
-suspend fun enrichDeadlineRemainingMs(): Long? = currentCoroutineContext()[EnrichDeadline]?.remainingMs
+public suspend fun enrichDeadlineRemainingMs(): Long? = currentCoroutineContext()[EnrichDeadline]?.remainingMs
 
 /**
  * What one transport leg may spend: [ceilingMs], clamped to what is left of the enclosing
@@ -67,7 +67,7 @@ internal suspend fun legBudgetMs(ceilingMs: Int): Int {
  * module it is a token with nothing to read, which is why neither its constructor nor its contents
  * are public.
  */
-class HttpAttempt<out T> internal constructor(
+public class HttpAttempt<out T> internal constructor(
     internal val result: HttpResult<T>,
     internal val shedRetryAfterMs: Long?,
 )
@@ -81,7 +81,7 @@ class HttpAttempt<out T> internal constructor(
  * the ladder reads from the result itself, and no other result has a wait to honour. Omitting it for
  * a 5xx costs only the fall back to exponential backoff.
  */
-fun <T> HttpResult<T>.asAttempt(retryAfterHeader: String? = null): HttpAttempt<T> = HttpAttempt(
+public fun <T> HttpResult<T>.asAttempt(retryAfterHeader: String? = null): HttpAttempt<T> = HttpAttempt(
     this,
     if (this is HttpResult.ServerError) retryAfterHeader?.toLongOrNull()?.times(1000) else null,
 )
@@ -119,7 +119,7 @@ fun <T> HttpResult<T>.asAttempt(retryAfterHeader: String? = null): HttpAttempt<T
  *   defect with green tests.
  * @param maxAttempts total attempts, not retries: 1 disables the ladder.
  */
-class BudgetedTransientRetry(
+public class BudgetedTransientRetry(
     private val attemptTimeoutMs: Int = DEFAULT_ATTEMPT_TIMEOUT_MS,
     private val maxAttempts: Int = 3,
 ) {
@@ -137,7 +137,7 @@ class BudgetedTransientRetry(
      * [HttpResult.NetworkError] to report a response that arrived and would not parse. The last
      * attempt's result is what surfaces, exhausted or refused.
      */
-    suspend fun <T> execute(attempt: suspend () -> HttpAttempt<T>): HttpResult<T> {
+    public suspend fun <T> execute(attempt: suspend () -> HttpAttempt<T>): HttpResult<T> {
         repeat(maxAttempts - 1) { priorWaits ->
             var transportFailure = false
             val attempted = try {
@@ -182,9 +182,9 @@ class BudgetedTransientRetry(
         return (base + (base * 0.25 * (Random.nextDouble() * 2 - 1)).toLong()).coerceAtLeast(1000L)
     }
 
-    companion object {
+    public companion object {
         /** What one attempt may spend when the caller does not say: the default client's timeout. */
-        const val DEFAULT_ATTEMPT_TIMEOUT_MS: Int = 10_000
+        public const val DEFAULT_ATTEMPT_TIMEOUT_MS: Int = 10_000
     }
 }
 
@@ -201,7 +201,7 @@ class BudgetedTransientRetry(
  * The budget is real elapsed time, not the virtual clock: `runTest` will not advance it.
  */
 @MusicmetaTestApi
-suspend fun <T> withRetryBudgetForTest(budgetMs: Long, block: suspend CoroutineScope.() -> T): T =
+public suspend fun <T> withRetryBudgetForTest(budgetMs: Long, block: suspend CoroutineScope.() -> T): T =
     withContext(EnrichDeadline(budgetMs)) { block() }
 
 /** Standalone, with no [EnrichDeadline] installed, the ceiling on a wait and everything after it. */

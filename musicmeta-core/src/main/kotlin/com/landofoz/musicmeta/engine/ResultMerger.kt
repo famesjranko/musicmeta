@@ -10,19 +10,19 @@ import com.landofoz.musicmeta.EnrichmentType
  * their results are combined. GENRE is the first mergeable type; Phase 13
  * will add SIMILAR_ARTISTS.
  */
-interface ResultMerger {
+public interface ResultMerger {
     /** The EnrichmentType this merger handles. */
-    val type: EnrichmentType
+    public val type: EnrichmentType
 
     /**
      * Merges multiple successful results into a single result.
      * Returns NotFound if the input list is empty.
      */
-    fun merge(results: List<EnrichmentResult.Success>): EnrichmentResult
+    public fun merge(results: List<EnrichmentResult.Success>): EnrichmentResult
 
-    companion object {
+    public companion object {
         /** Merges identifiers from multiple providers, preserving all typed fields. */
-        fun mergeIdentifiers(ids: List<EnrichmentIdentifiers>): EnrichmentIdentifiers = EnrichmentIdentifiers(
+        public fun mergeIdentifiers(ids: List<EnrichmentIdentifiers>): EnrichmentIdentifiers = EnrichmentIdentifiers(
             musicBrainzId = ids.firstNotNullOfOrNull { it.musicBrainzId },
             musicBrainzReleaseGroupId = ids.firstNotNullOfOrNull { it.musicBrainzReleaseGroupId },
             wikidataId = ids.firstNotNullOfOrNull { it.wikidataId },

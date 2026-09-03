@@ -29,7 +29,7 @@ import kotlinx.coroutines.sync.withLock
  * Artwork URL trick: iTunes returns 100x100 thumbnails, but replacing
  * "100x100bb" with "1200x1200bb" gives high-resolution images.
  */
-class ITunesProvider(
+public class ITunesProvider(
     httpClient: HttpClient,
     rateLimiter: RateLimiter = RateLimiter(3000),
     private val artworkSize: Int = DEFAULT_ARTWORK_SIZE,
@@ -66,12 +66,12 @@ class ITunesProvider(
     private suspend fun lookupByBarcode(barcode: String, artist: String): ITunesAlbumResult? =
         upcMemo().get { api.lookupByUpc(barcode) }.firstOrNull { ArtistMatcher.isMatch(artist, it.artistName) }
 
-    override val id = "itunes"
-    override val displayName = "iTunes"
-    override val requiresApiKey = false
-    override val isAvailable = true
+    override val id: String = "itunes"
+    override val displayName: String = "iTunes"
+    override val requiresApiKey: Boolean = false
+    override val isAvailable: Boolean = true
 
-    override val capabilities = listOf(
+    override val capabilities: List<ProviderCapability> = listOf(
         ProviderCapability(EnrichmentType.ALBUM_ART, priority = 40),
         ProviderCapability(EnrichmentType.ALBUM_METADATA, priority = 30),
         ProviderCapability(EnrichmentType.ALBUM_TRACKS, priority = 30),
@@ -322,8 +322,8 @@ class ITunesProvider(
             mutex.withLock { candidates ?: fetch().also { candidates = it } }
     }
 
-    companion object {
-        const val DEFAULT_ARTWORK_SIZE = 1200
+    public companion object {
+        public const val DEFAULT_ARTWORK_SIZE: Int = 1200
         private const val SEARCH_SCORE = 70
     }
 }

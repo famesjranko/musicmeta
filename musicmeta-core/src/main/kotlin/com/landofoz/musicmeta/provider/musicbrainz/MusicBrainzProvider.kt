@@ -18,7 +18,7 @@ import kotlinx.coroutines.currentCoroutineContext
  * Enrichment provider backed by the MusicBrainz API.
  * Resolves identifiers and metadata for albums, artists, and tracks.
  */
-class MusicBrainzProvider(
+public class MusicBrainzProvider(
     httpClient: HttpClient,
     rateLimiter: RateLimiter,
     private val minMatchScore: Int = DEFAULT_MIN_MATCH_SCORE,
@@ -172,8 +172,8 @@ class MusicBrainzProvider(
             mapError(type, e)
         }
 
-    companion object {
-        const val DEFAULT_MIN_MATCH_SCORE = 80
-        const val DEFAULT_THUMBNAIL_SIZE = 250
+    public companion object {
+        public const val DEFAULT_MIN_MATCH_SCORE: Int = 80
+        public const val DEFAULT_THUMBNAIL_SIZE: Int = 250
     }
 }

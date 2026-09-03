@@ -17,7 +17,7 @@ import kotlinx.coroutines.currentCoroutineContext
  *
  * Lyrics are track-level only; album/artist requests return NotFound.
  */
-class LrcLibProvider(
+public class LrcLibProvider(
     httpClient: HttpClient,
     rateLimiter: RateLimiter,
 ) : EnrichmentProvider {

@@ -1,6 +1,6 @@
 package com.landofoz.musicmeta.http
 
-data class HttpResponse(
+public data class HttpResponse(
     val statusCode: Int,
     val body: String?,
     val headers: Map<String, String> = emptyMap(),

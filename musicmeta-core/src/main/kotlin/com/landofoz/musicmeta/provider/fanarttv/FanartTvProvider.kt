@@ -20,13 +20,13 @@ import kotlinx.coroutines.currentCoroutineContext
  * (photos, backgrounds, logos). Requires a MusicBrainz ID in the request
  * identifiers and a Fanart.tv project API key.
  */
-class FanartTvProvider(
+public class FanartTvProvider(
     private val projectKeyProvider: () -> String,
     httpClient: HttpClient,
     rateLimiter: RateLimiter,
 ) : EnrichmentProvider {
 
-    constructor(projectKey: String, httpClient: HttpClient, rateLimiter: RateLimiter) :
+    public constructor(projectKey: String, httpClient: HttpClient, rateLimiter: RateLimiter) :
         this({ projectKey }, httpClient, rateLimiter)
 
     private val api = FanartTvApi(projectKeyProvider, httpClient, rateLimiter)
@@ -65,12 +65,12 @@ class FanartTvProvider(
         val albumImages = CallMemo<String, FanartTvAlbumImages?>()
     }
 
-    override val id = "fanarttv"
-    override val displayName = "Fanart.tv"
-    override val requiresApiKey = true
+    override val id: String = "fanarttv"
+    override val displayName: String = "Fanart.tv"
+    override val requiresApiKey: Boolean = true
     override val isAvailable: Boolean get() = projectKeyProvider().isNotBlank()
 
-    override val capabilities = listOf(
+    override val capabilities: List<ProviderCapability> = listOf(
         ProviderCapability(EnrichmentType.ARTIST_PHOTO, priority = 80, identifierRequirement = MUSICBRAINZ_ID),
         ProviderCapability(EnrichmentType.ARTIST_BACKGROUND, priority = 100, identifierRequirement = MUSICBRAINZ_ID),
         ProviderCapability(EnrichmentType.ARTIST_LOGO, priority = 100, identifierRequirement = MUSICBRAINZ_ID),

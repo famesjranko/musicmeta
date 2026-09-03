@@ -6,7 +6,7 @@ import com.landofoz.musicmeta.cache.CacheMode
  * Discovery depth for LB Radio requests.
  * Controls how adventurous/experimental the generated playlist is.
  */
-enum class RadioDiscoveryMode(val apiValue: String) {
+public enum class RadioDiscoveryMode(public val apiValue: String) {
     EASY("easy"),
     MEDIUM("medium"),
     HARD("hard"),
@@ -43,7 +43,7 @@ enum class RadioDiscoveryMode(val apiValue: String) {
  *   newly-published entity is picked up soon after a miss, while a repeat lookup inside the
  *   window skips the round-trip. Default is one hour.
  */
-data class EnrichmentConfig(
+public data class EnrichmentConfig(
     val minConfidence: Float = DEFAULT_MIN_CONFIDENCE,
     val userAgent: String = DEFAULT_USER_AGENT,
     val enableIdentityResolution: Boolean = true,
@@ -60,8 +60,8 @@ data class EnrichmentConfig(
     val cacheMode: CacheMode = CacheMode.NETWORK_FIRST,
     val negativeTtlMs: Long = DEFAULT_NEGATIVE_TTL_MS,
 ) {
-    companion object {
-        const val DEFAULT_MIN_CONFIDENCE = 0.5f
+    public companion object {
+        public const val DEFAULT_MIN_CONFIDENCE: Float = 0.5f
 
         /**
          * The User-Agent sent when a consumer supplies none. **It carries no contact information,
@@ -75,10 +75,10 @@ data class EnrichmentConfig(
          * outright. Building an engine on this default with MusicBrainz, Wikipedia or Wikidata
          * registered logs one warning.
          */
-        const val DEFAULT_USER_AGENT = "MusicEnrichmentEngine/1.0"
-        const val DEFAULT_ENRICH_TIMEOUT_MS = 30_000L
-        const val DEFAULT_RADIO_LIMIT = 50
-        const val DEFAULT_NEGATIVE_TTL_MS = 60 * 60 * 1000L
+        public const val DEFAULT_USER_AGENT: String = "MusicEnrichmentEngine/1.0"
+        public const val DEFAULT_ENRICH_TIMEOUT_MS: Long = 30_000L
+        public const val DEFAULT_RADIO_LIMIT: Int = 50
+        public const val DEFAULT_NEGATIVE_TTL_MS: Long = 60 * 60 * 1000L
 
         /**
          * [DEFAULT_USER_AGENT] carrying [contact], in the form both policies ask for:
@@ -91,7 +91,7 @@ data class EnrichmentConfig(
          * @throws IllegalArgumentException if [contact] is blank, carries a line break, or carries
          *   a parenthesis — see [EnrichmentEngine.Builder.contact].
          */
-        fun userAgentWithContact(contact: String): String {
+        public fun userAgentWithContact(contact: String): String {
             requireUsableContact(contact)
             return "$DEFAULT_USER_AGENT ( ${contact.trim()} )"
         }
@@ -124,7 +124,7 @@ internal fun requireUsableContact(contact: String) {
  * Pass to [EnrichmentEngine.Builder.apiKeys] to enable key-requiring providers
  * when using [EnrichmentEngine.Builder.withDefaultProviders].
  */
-data class ApiKeyConfig(
+public data class ApiKeyConfig(
     val lastFmKey: String? = null,
     val fanartTvProjectKey: String? = null,
     val discogsPersonalToken: String? = null,
