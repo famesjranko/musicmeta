@@ -1479,6 +1479,9 @@ class MusicBrainzParserTest {
             }
         """.trimIndent()
 
+        // The `cover-art-archive` object is the shape a live release lookup returned on 2026-08-22;
+        // a release *search* hit carries no such object. Nothing reads the key — it is here because
+        // this is what the endpoint sends, and a capture is not edited to agree with the parser.
         private val LOOKUP_RELEASE = """
             {
               "id": "look1",
@@ -1486,7 +1489,8 @@ class MusicBrainzParserTest {
               "artist-credit": [{"artist": {"name": "Radiohead"}}],
               "date": "1995-03-13",
               "country": "GB",
-              "release-group": {"id": "rg1", "primary-type": "Album"}
+              "release-group": {"id": "rg1", "primary-type": "Album"},
+              "cover-art-archive": {"back": true, "artwork": true, "darkened": false, "count": 6, "front": true}
             }
         """.trimIndent()
 
