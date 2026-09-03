@@ -62,10 +62,12 @@ internal object DiscographyGrouping {
  * `(...)`/`[...]` group that fully classifies against [KIND_PATTERNS] is stripped, so
  * `"Welcome Home (Sanitarium)"` is untouched; stripping repeats until a group doesn't conform.
  *
- * Duplicates the vocabulary in core's `MusicBrainzQualifierFallback` (`internal` to that module) —
- * keep them in sync by hand. Looser than core's in one respect: a sub-phrase may be a *sequence* of
- * kinds (see [isQualifierPhrase]), so `"Remastered Deluxe Box Set"` classifies. Safe only because a
- * wrong result here misgroups a display row, where core's guards a live search.
+ * [KIND_PATTERNS] duplicates the vocabulary in core's `MusicBrainzQualifierFallback` (`internal` to
+ * that module, so it cannot be called from here); `scripts/checks/check_edition_vocabulary.py`
+ * fails when the two lists diverge. How the patterns are *applied* is deliberately looser than
+ * core's and is not compared: a sub-phrase may be a whitespace-separated *sequence* of kinds (see
+ * [isQualifierPhrase]), so `"Remastered Deluxe Box Set"` classifies. Safe only because a wrong
+ * result here misgroups a display row, where core's guards a live search.
  */
 internal object EditionQualifier {
 
@@ -73,7 +75,10 @@ internal object EditionQualifier {
 
     // Order matters: specific kinds first, so "deluxe box set" doesn't classify as bare "deluxe".
     private val KIND_PATTERNS: List<KindPattern> = listOf(
-        KindPattern("remaster", Regex("""(\d{4}\s+)?remaster(ed)?(\s+\d{4})?""", RegexOption.IGNORE_CASE)),
+        KindPattern(
+            "remaster",
+            Regex("""(\d{4}\s+)?remaster(ed)?(\s+version)?(\s+\d{4})?""", RegexOption.IGNORE_CASE),
+        ),
         KindPattern("super_deluxe", Regex("""super\s+deluxe(\s+edition)?""", RegexOption.IGNORE_CASE)),
         KindPattern("deluxe_box_set", Regex("""deluxe\s+box\s*set""", RegexOption.IGNORE_CASE)),
         KindPattern("box_set", Regex("""box\s*set""", RegexOption.IGNORE_CASE)),

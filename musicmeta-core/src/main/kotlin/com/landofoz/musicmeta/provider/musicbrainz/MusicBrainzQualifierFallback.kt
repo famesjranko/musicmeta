@@ -32,6 +32,10 @@ internal object MusicBrainzQualifierFallback {
      * Deliberately excludes `live`/`mono`/`stereo`/`edit`/`version`/`explicit` — those name a
      * different edition, not a different pressing, so stripping them risks matching the wrong
      * release. Specific kinds come first, so `"deluxe box set"` doesn't classify as bare `deluxe`.
+     *
+     * demo-web's `EditionQualifier` holds a copy of this list, because `internal` does not cross a
+     * module boundary; `scripts/checks/check_edition_vocabulary.py` fails when the two diverge, so
+     * a kind added or reordered here must be added or reordered there in the same change.
      */
     private val KIND_PATTERNS: List<KindPattern> = listOf(
         KindPattern(
