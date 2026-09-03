@@ -80,6 +80,21 @@ test('a merger id is not a credit — it names no upstream', () => {
   assert.equal(creditLineHtml([{ provider: 'genre_merger' }]), '');
 });
 
+test('a labelled line says what it credits, ahead of the providers', () => {
+  const html = creditLineHtml([{ provider: 'deezer' }], 'Photo');
+  assert.match(html, /<span class="credit-label">Photo<\/span>/);
+  assert.ok(html.indexOf('Photo') < html.indexOf('Deezer'));
+});
+
+test('a label on nothing renders nothing — no orphan label', () => {
+  assert.equal(creditLineHtml([], 'Genres'), '');
+});
+
+test('a label is escaped like any other untrusted text', () => {
+  const html = creditLineHtml([{ provider: 'deezer' }], '<img src=x onerror=alert(1)>');
+  assert.doesNotMatch(html, /<img/);
+});
+
 test('a hostile provider id and url cannot inject markup', () => {
   const html = creditLineHtml([{ provider: '<img src=x onerror=alert(1)>', url: '"><script>alert(1)</script>' }]);
   assert.doesNotMatch(html, /<img|<script/);

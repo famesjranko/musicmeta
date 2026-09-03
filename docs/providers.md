@@ -421,6 +421,11 @@ the identifiers this one resolves. The `cover-art-archive.front` flag embedded i
 read, but only a release lookup carries that object: a `/release?query=` hit has none (checked live
 2026-08-22), so a search candidate never carries a thumbnail URL. Reading one per candidate would
 cost a rate-limited lookup each.
+Reading `area`/`begin-area` and their `iso-3166-1-codes` as a fallback for a missing `country` was
+considered and declined on 2026-09-03: a lookup response already fills `country` from the area
+hierarchy, and a `/release?query=`/`/artist?query=` hit's `area` carries no `iso-3166-1-codes` at
+all (probed 2026-09-03), so the fallback would be redundant on the one endpoint and unusable on the
+other.
 
 **Cover Art Archive.** `/release/{mbid}` is read by every capability and fetched once per call — a
 failure included, so a dead endpoint costs one attempt budget, not four. These cost only code:
@@ -464,6 +469,10 @@ catalogue, so it is silently unsupported rather than broken (probed 2026-08-12) 
 As with Deezer, the name-search pool behind `ALBUM_ART`, `ALBUM_METADATA` and `ALBUM_TRACKS` is
 accepted on `collectionName` as well as artist and shared as one ranked result; the exact
 `itunesCollectionId` and `lookup?upc=` paths bypass that acceptance entirely (`docs/pitfalls.md` §7).
+`country` is parsed and dropped: it names the storefront the request was served from, not the
+release, so it is the same value on every result (`USA` for a German act's albums, probed
+2026-09-03) and `Metadata.country`/`SearchCandidate.country` are left null rather than filled with
+it.
 
 **LRCLIB.** `id` is parsed and dropped (`GET /api/get/{id}` would re-fetch without a search).
 `trackName`/`artistName` are checked before a `/api/search` fallback candidate is selected —
@@ -489,7 +498,12 @@ considered and declined on 2026-08-12: a label lives on the referenced Q-id, so 
 batched call, and an audit of the then-19 entries across both maps found 16 identical to the live
 label, 2 deliberate abbreviations (Q30 "US", Q145 "UK") a swap would change for every US or UK
 artist, and 1 wrong (Q211, rekeyed to Latvia with Czech Republic moved to its own Q213 entry,
-adding a 20th). Never called: the
+adding a 20th). `COUNTRY_MAP` holds ISO 3166-1 alpha-2 codes, which is what
+`EnrichmentData.Metadata.country` promises, so the "US"/"UK" abbreviations that argument preserved
+are now `US` and `GB` and the name entries are codes; a label lookup would be the wrong shape for
+it either way, since a label is a name. A Q-id the map does not hold yields **null** — the country
+entity's own P297 alpha-2 claim sits on that entity, not on the artist's, so deriving the code
+instead of hardcoding it costs the second call the 2026-08-12 argument declined. Never called: the
 REST API at `/w/rest.php/wikibase/v1/`, and SPARQL. Note `provider/wikipedia/` *also* calls
 `wbgetentities` on this host, for sitelinks, on its own rate limiter.
 
@@ -576,4 +590,7 @@ and every user collection endpoint. `ReleaseEdition.barcode` is explicitly null 
 `"Artist - Title"` field is safely split on the boundary that matches both the requested artist and
 title, not the first artist-plausible one, then the result is accepted on the parsed album title as
 well as the artist before `ALBUM_ART`, `LABEL`, `RELEASE_TYPE` and `ALBUM_METADATA` share it
-(`docs/pitfalls.md` §7).
+(`docs/pitfalls.md` §7). `country` is free text: a country name is normalised to the ISO 3166-1
+alpha-2 code `Metadata.country` reports (`UK` included, which is not an ISO code), while a
+multi-country region — `Europe`, `Scandinavia` — has no code and is passed through as Discogs wrote
+it rather than dropped.

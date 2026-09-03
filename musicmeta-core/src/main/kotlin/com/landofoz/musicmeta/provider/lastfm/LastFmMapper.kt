@@ -60,13 +60,26 @@ internal object LastFmMapper {
             }.takeIf { it.isNotEmpty() },
         )
 
-    fun toBiography(bio: String): EnrichmentData.Biography =
-        EnrichmentData.Biography(text = bio, source = "Last.fm")
+    /** Null when the summary was nothing but Last.fm's link back, which is not a biography. */
+    fun toBiography(bio: String): EnrichmentData.Biography? =
+        prose(bio)?.let { EnrichmentData.Biography(text = it, source = "Last.fm") }
 
     /** [LastFmAlbumInfo.wiki] is the album.getInfo `wiki` block's summary — same shape as the
-     * artist bio, just off the album payload instead. */
-    fun toAlbumDescription(wiki: String): EnrichmentData.Biography =
-        EnrichmentData.Biography(text = wiki, source = "Last.fm")
+     * artist bio, just off the album payload instead, and null on the same terms. */
+    fun toAlbumDescription(wiki: String): EnrichmentData.Biography? =
+        prose(wiki)?.let { EnrichmentData.Biography(text = it, source = "Last.fm") }
+
+    /**
+     * Last.fm welds a "Read more on Last.fm" anchor onto every `summary` it sends, and for an
+     * entity with no wiki that anchor is the whole value — so the trailing anchor goes with its
+     * text, while any anchor inside the prose loses only its tags. Anchors are all that is
+     * removed: any other markup is passed through, and entities are left encoded.
+     */
+    private fun prose(summary: String): String? =
+        summary.replace(TRAILING_ANCHOR, "")
+            .replace(ANCHOR_TAG, "")
+            .trim()
+            .takeIf { it.isNotEmpty() }
 
     fun toPopularity(info: LastFmArtistInfo): EnrichmentData.Popularity =
         EnrichmentData.Popularity(
@@ -113,4 +126,11 @@ internal object LastFmMapper {
         )
 
     private const val SOURCE = "lastfm"
+
+    // The last anchor in the value: no `</a>` may fall between its opening tag and its own close,
+    // which is what stops an earlier inline anchor from swallowing the prose between the two.
+    private val TRAILING_ANCHOR =
+        Regex("""<a\s(?:(?!</a>)[\s\S])*?</a>\s*$""", RegexOption.IGNORE_CASE)
+
+    private val ANCHOR_TAG = Regex("""</?a(?:\s[\s\S]*?)?>""", RegexOption.IGNORE_CASE)
 }

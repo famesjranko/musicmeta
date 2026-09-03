@@ -35,7 +35,7 @@ import com.landofoz.musicmeta.http.RateLimiter
  * Standalone provider (not composite): all Deezer API calls happen here,
  * not inside a synthesizer.
  */
-class SimilarAlbumsProvider internal constructor(
+public class SimilarAlbumsProvider internal constructor(
     private val api: DeezerApi,
 ) : EnrichmentProvider {
 
@@ -44,22 +44,22 @@ class SimilarAlbumsProvider internal constructor(
      * implementation detail, so this is the public entry point consumers use to
      * register the provider with the engine.
      */
-    constructor(
+    public constructor(
         httpClient: HttpClient,
         rateLimiter: RateLimiter = RateLimiter(100),
     ) : this(DeezerApi(httpClient, rateLimiter))
 
-    override val id = "deezer-similar-albums"
-    override val displayName = "Deezer Similar Albums"
-    override val requiresApiKey = false
-    override val isAvailable = true
+    override val id: String = "deezer-similar-albums"
+    override val displayName: String = "Deezer Similar Albums"
+    override val requiresApiKey: Boolean = false
+    override val isAvailable: Boolean = true
 
     /**
      * `SIMILAR_ALBUMS` is derived from `/artist/{id}/related`, not from any album-similarity
      * endpoint — see the class KDoc for what that costs a consumer. No
      * `identifierRequirement`: the artist is resolved by name search when `deezerId` is absent.
      */
-    override val capabilities = listOf(
+    override val capabilities: List<ProviderCapability> = listOf(
         ProviderCapability(EnrichmentType.SIMILAR_ALBUMS, priority = 100),
     )
 

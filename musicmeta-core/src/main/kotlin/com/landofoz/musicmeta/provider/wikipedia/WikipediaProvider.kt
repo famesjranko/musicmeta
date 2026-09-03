@@ -32,7 +32,7 @@ import kotlinx.coroutines.currentCoroutineContext
  * There is no other-language fallback: if neither yields an English title the result is `NotFound`.
  * A non-English article is never used, because its text would not be a usable English bio.
  */
-class WikipediaProvider(
+public class WikipediaProvider(
     private val httpClient: HttpClient,
     rateLimiter: RateLimiter,
     private val wikidataRateLimiter: RateLimiter = RateLimiter(100),

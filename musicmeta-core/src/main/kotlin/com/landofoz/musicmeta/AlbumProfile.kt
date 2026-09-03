@@ -5,7 +5,7 @@ package com.landofoz.musicmeta
  *
  * All fields are computed properties that delegate to [results].
  */
-data class AlbumProfile(val title: String, val artist: String, val results: EnrichmentResults) {
+public data class AlbumProfile(val title: String, val artist: String, val results: EnrichmentResults) {
 
     // --- Identity ---
     val identifiers: EnrichmentIdentifiers get() = results.identity.identifiers
@@ -27,6 +27,13 @@ data class AlbumProfile(val title: String, val artist: String, val results: Enri
     val label: String? get() = results.label()
     val releaseDate: String? get() = results.releaseDate()
     val releaseType: String? get() = results.releaseType()
+
+    /**
+     * ISO 3166-1 alpha-2 where the upstream supplies a country (`GB`). Where it names no current
+     * ISO country the upstream's own wording passes through — Discogs' region labels (`Europe`)
+     * and historical states (`Yugoslavia`), MusicBrainz's `XE`/`XW`; null when no country-level
+     * area exists.
+     */
     val country: String? get() = results.country()
 
     // --- Tracklist & Editions ---

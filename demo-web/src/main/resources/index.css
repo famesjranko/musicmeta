@@ -1056,6 +1056,12 @@ footer a:hover { color: var(--text); border-color: var(--text); }
   line-height: 1.5;
 }
 
+/* The card's own credits sit under the bio and its credit, so each names what it covers. */
+.credit-label {
+  color: var(--text-soft);
+  opacity: 0.7;
+}
+
 .credit-line a {
   color: var(--muted);
   text-decoration: none;

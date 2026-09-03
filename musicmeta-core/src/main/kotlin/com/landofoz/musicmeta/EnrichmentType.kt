@@ -6,7 +6,7 @@ package com.landofoz.musicmeta
  * @param defaultTtlMs Default cache time-to-live in milliseconds for this type.
  *   Can be overridden per-type via [EnrichmentConfig.ttlOverrides].
  */
-enum class EnrichmentType(val defaultTtlMs: Long) {
+public enum class EnrichmentType(public val defaultTtlMs: Long) {
     // Artwork — 90 days
     ALBUM_ART(90L * 24 * 60 * 60 * 1000),
     ARTIST_PHOTO(30L * 24 * 60 * 60 * 1000),

@@ -220,7 +220,22 @@ class ITunesProviderTest {
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.Metadata
         assertEquals(12, data.trackCount)
         assertEquals(listOf("Alternative"), data.genres)
-        assertEquals("USA", data.country)
+        // iTunes' country is the storefront the search ran against, not the release's
+        assertNull(data.country)
+    }
+
+    @Test
+    fun `a search candidate reports no country, because iTunes sends the storefront`() = runTest {
+        // Given - iTunes returns a result whose country is USA, as every result is on this storefront
+        httpClient.givenJsonResponse("itunes.apple.com", ITUNES_METADATA_RESPONSE)
+        val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+
+        // When - asking for search candidates
+        val candidates = provider.searchCandidates(request)
+
+        // Then - no country, rather than a storefront passed off as the release's country
+        assertTrue(candidates.isNotEmpty())
+        assertNull(candidates.first().country)
     }
 
     @Test

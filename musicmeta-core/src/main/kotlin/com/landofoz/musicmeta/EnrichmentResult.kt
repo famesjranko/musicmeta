@@ -1,7 +1,7 @@
 package com.landofoz.musicmeta
 
 /** Categorizes the type of error for programmatic handling. */
-enum class ErrorKind {
+public enum class ErrorKind {
     /** Network connectivity or timeout failure. */
     NETWORK,
 
@@ -63,10 +63,10 @@ enum class ErrorKind {
  * When the upstream API provides its own match score (e.g., MusicBrainz returns
  * 0–100), map it to 0.0–1.0 directly rather than using a hardcoded value.
  */
-sealed class EnrichmentResult {
+public sealed class EnrichmentResult {
 
     /** Provider found data successfully. */
-    data class Success(
+    public data class Success(
         val type: EnrichmentType,
         val data: EnrichmentData,
         val provider: String,
@@ -110,7 +110,7 @@ sealed class EnrichmentResult {
      * attempt — check [EnrichmentResults.identity] for near-miss candidates to show as a
      * "did you mean?" prompt.
      */
-    data class NotFound(
+    public data class NotFound(
         val type: EnrichmentType,
         val provider: String,
         val suggestions: List<SearchCandidate>? = null,
@@ -125,14 +125,14 @@ sealed class EnrichmentResult {
      * A throttled provider counts against its circuit breaker, so a sustained 429 opens it. See
      * `docs/guides/results-and-errors.md`.
      */
-    data class RateLimited(
+    public data class RateLimited(
         val type: EnrichmentType,
         val provider: String,
         val retryAfterMs: Long? = null,
     ) : EnrichmentResult()
 
     /** Provider encountered an error. */
-    data class Error(
+    public data class Error(
         val type: EnrichmentType,
         val provider: String,
         val message: String,

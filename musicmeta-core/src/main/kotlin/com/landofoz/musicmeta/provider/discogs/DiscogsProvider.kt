@@ -23,13 +23,13 @@ import kotlinx.coroutines.sync.withLock
  * cover art and label metadata, and artist endpoints for band members.
  * Requires a Discogs personal access token.
  */
-class DiscogsProvider(
+public class DiscogsProvider(
     private val tokenProvider: () -> String,
     httpClient: HttpClient,
     rateLimiter: RateLimiter,
 ) : EnrichmentProvider {
 
-    constructor(personalToken: String, httpClient: HttpClient, rateLimiter: RateLimiter) :
+    public constructor(personalToken: String, httpClient: HttpClient, rateLimiter: RateLimiter) :
         this({ personalToken }, httpClient, rateLimiter)
 
     private val api = DiscogsApi(tokenProvider, httpClient, rateLimiter)
@@ -43,12 +43,12 @@ class DiscogsProvider(
     private suspend fun albumScope(): DiscogsAlbumScope =
         currentCoroutineContext()[ProviderCallScope]?.slot(this) { DiscogsAlbumScope(api) } ?: DiscogsAlbumScope(api)
 
-    override val id = "discogs"
-    override val displayName = "Discogs"
-    override val requiresApiKey = true
+    override val id: String = "discogs"
+    override val displayName: String = "Discogs"
+    override val requiresApiKey: Boolean = true
     override val isAvailable: Boolean get() = tokenProvider().isNotBlank()
 
-    override val capabilities = listOf(
+    override val capabilities: List<ProviderCapability> = listOf(
         ProviderCapability(EnrichmentType.ARTIST_PHOTO, priority = 40),
         ProviderCapability(EnrichmentType.ALBUM_ART, priority = 20),
         ProviderCapability(EnrichmentType.LABEL, priority = 50),

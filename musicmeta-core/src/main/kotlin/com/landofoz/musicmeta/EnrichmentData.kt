@@ -4,10 +4,14 @@ import kotlinx.serialization.Serializable
 
 /** Typed payload returned by a successful enrichment. */
 @Serializable
-sealed class EnrichmentData {
+public sealed class EnrichmentData {
 
     @Serializable
-    data class Artwork(
+    public data class Artwork(
+        /**
+         * An `http://` URL on a Cover Art Archive host is upgraded to `https`; every other
+         * artwork host's URL is the upstream's, verbatim.
+         */
         val url: String,
         val width: Int? = null,
         val height: Int? = null,
@@ -18,12 +22,18 @@ sealed class EnrichmentData {
     ) : EnrichmentData()
 
     @Serializable
-    data class Metadata(
+    public data class Metadata(
         val genres: List<String>? = null,
         val genreTags: List<GenreTag>? = null,
         val label: String? = null,
         val releaseDate: String? = null,
         val releaseType: String? = null,
+        /**
+         * ISO 3166-1 alpha-2 where the upstream supplies a country (`GB`). Where it names no current
+         * ISO country the upstream's own wording passes through — Discogs' region labels
+         * (`Europe`) and historical states (`Yugoslavia`), MusicBrainz's `XE`/`XW`; null when no
+         * country-level area exists.
+         */
         val country: String? = null,
         val barcode: String? = null,
         val disambiguation: String? = null,
@@ -46,14 +56,21 @@ sealed class EnrichmentData {
     ) : EnrichmentData()
 
     @Serializable
-    data class Lyrics(
+    public data class Lyrics(
         val syncedLyrics: String? = null,
         val plainLyrics: String? = null,
         val isInstrumental: Boolean = false,
     ) : EnrichmentData()
 
+    /** Carries both `ARTIST_BIO` and `ALBUM_DESCRIPTION`; [source] names the upstream prose came from. */
     @Serializable
-    data class Biography(
+    public data class Biography(
+        /**
+         * HTML anchors are removed, including a trailing "read more" link an upstream appended,
+         * which goes with its text. Any other markup an upstream sends is passed through
+         * unchanged. Paragraph breaks may be present as newlines. HTML entities are not decoded,
+         * so escape this before placing it in markup as you would any other untrusted text.
+         */
         val text: String,
         val source: String,
         val language: String = "en",
@@ -61,7 +78,7 @@ sealed class EnrichmentData {
     ) : EnrichmentData()
 
     @Serializable
-    data class SimilarArtists(
+    public data class SimilarArtists(
         val artists: List<SimilarArtist>,
     ) : EnrichmentData()
 
@@ -72,7 +89,7 @@ sealed class EnrichmentData {
      * two disagree, [signals] is what the providers actually said.
      */
     @Serializable
-    data class Popularity(
+    public data class Popularity(
         val listenCount: Long? = null,
         val listenerCount: Long? = null,
         val rank: Int? = null,
@@ -86,43 +103,43 @@ sealed class EnrichmentData {
     ) : EnrichmentData()
 
     @Serializable
-    data class BandMembers(val members: List<BandMember>) : EnrichmentData()
+    public data class BandMembers(val members: List<BandMember>) : EnrichmentData()
 
     @Serializable
-    data class Discography(val albums: List<DiscographyAlbum>) : EnrichmentData()
+    public data class Discography(val albums: List<DiscographyAlbum>) : EnrichmentData()
 
     @Serializable
-    data class Tracklist(val tracks: List<TrackInfo>) : EnrichmentData()
+    public data class Tracklist(val tracks: List<TrackInfo>) : EnrichmentData()
 
     @Serializable
-    data class SimilarTracks(val tracks: List<SimilarTrack>) : EnrichmentData()
+    public data class SimilarTracks(val tracks: List<SimilarTrack>) : EnrichmentData()
 
     @Serializable
-    data class ArtistLinks(val links: List<ExternalLink>) : EnrichmentData()
+    public data class ArtistLinks(val links: List<ExternalLink>) : EnrichmentData()
 
     @Serializable
-    data class Credits(val credits: List<Credit>) : EnrichmentData()
+    public data class Credits(val credits: List<Credit>) : EnrichmentData()
 
     @Serializable
-    data class ReleaseEditions(val editions: List<ReleaseEdition>) : EnrichmentData()
+    public data class ReleaseEditions(val editions: List<ReleaseEdition>) : EnrichmentData()
 
     @Serializable
-    data class ArtistTimeline(val events: List<TimelineEvent>) : EnrichmentData()
+    public data class ArtistTimeline(val events: List<TimelineEvent>) : EnrichmentData()
 
     @Serializable
-    data class RadioPlaylist(val tracks: List<RadioTrack>) : EnrichmentData()
+    public data class RadioPlaylist(val tracks: List<RadioTrack>) : EnrichmentData()
 
     @Serializable
-    data class SimilarAlbums(val albums: List<SimilarAlbum>) : EnrichmentData()
+    public data class SimilarAlbums(val albums: List<SimilarAlbum>) : EnrichmentData()
 
     @Serializable
-    data class GenreDiscovery(val relatedGenres: List<GenreAffinity>) : EnrichmentData()
+    public data class GenreDiscovery(val relatedGenres: List<GenreAffinity>) : EnrichmentData()
 
     @Serializable
-    data class TopTracks(val tracks: List<TopTrack>) : EnrichmentData()
+    public data class TopTracks(val tracks: List<TopTrack>) : EnrichmentData()
 
     @Serializable
-    data class TrackPreview(
+    public data class TrackPreview(
         val url: String,
         val durationMs: Long = 30000,
         val source: String,
@@ -134,7 +151,7 @@ sealed class EnrichmentData {
      * [albumTitle] is provider-confirmed, unlike an "as entered" caller-supplied string.
      */
     @Serializable
-    data class TrackMetadata(
+    public data class TrackMetadata(
         val durationMs: Long? = null,
         val albumTitle: String? = null,
         val disambiguation: String? = null,
@@ -142,7 +159,7 @@ sealed class EnrichmentData {
 }
 
 @Serializable
-data class ArtworkSize(
+public data class ArtworkSize(
     val url: String,
     val width: Int? = null,
     val height: Int? = null,
@@ -151,7 +168,7 @@ data class ArtworkSize(
 
 /** An image from an alternative provider, used when artwork is merged from multiple sources. */
 @Serializable
-data class ArtworkSource(
+public data class ArtworkSource(
     val provider: String,
     val url: String,
     val thumbnailUrl: String? = null,
@@ -159,7 +176,7 @@ data class ArtworkSource(
 )
 
 @Serializable
-data class SimilarArtist(
+public data class SimilarArtist(
     val name: String,
     val identifiers: EnrichmentIdentifiers = EnrichmentIdentifiers(),
     val matchScore: Float,
@@ -179,7 +196,7 @@ data class SimilarArtist(
  * The flat fields on [EnrichmentData.Popularity] are derived from these, not the other way round.
  */
 @Serializable
-data class PopularitySignal(
+public data class PopularitySignal(
     /** The provider id that reported it, e.g. `lastfm`, `listenbrainz`, `musicbrainz`. */
     val source: String,
     val kind: PopularitySignalKind,
@@ -191,7 +208,7 @@ data class PopularitySignal(
 
 /** What a [PopularitySignal.value] counts. Appended to only: a consumer's `when` may stay open. */
 @Serializable
-enum class PopularitySignalKind {
+public enum class PopularitySignalKind {
     /** Total plays reported by the source (Last.fm scrobbles, ListenBrainz listens). */
     LISTEN_COUNT,
 
@@ -206,7 +223,7 @@ enum class PopularitySignalKind {
 }
 
 @Serializable
-data class PopularTrack(
+public data class PopularTrack(
     val title: String,
     val identifiers: EnrichmentIdentifiers = EnrichmentIdentifiers(),
     val listenCount: Long,
@@ -218,7 +235,7 @@ data class PopularTrack(
 )
 
 @Serializable
-data class BandMember(
+public data class BandMember(
     val name: String,
     val role: String? = null,
     val activePeriod: String? = null,
@@ -226,7 +243,7 @@ data class BandMember(
 )
 
 @Serializable
-data class DiscographyAlbum(
+public data class DiscographyAlbum(
     val title: String,
     val year: String? = null,
     val type: String? = null,
@@ -235,7 +252,7 @@ data class DiscographyAlbum(
 )
 
 @Serializable
-data class TrackInfo(
+public data class TrackInfo(
     val title: String,
     val position: Int,
     val durationMs: Long? = null,
@@ -243,7 +260,7 @@ data class TrackInfo(
 )
 
 @Serializable
-data class SimilarTrack(
+public data class SimilarTrack(
     val title: String,
     val artist: String,
     /**
@@ -262,14 +279,20 @@ data class SimilarTrack(
 )
 
 @Serializable
-data class ExternalLink(
+public data class ExternalLink(
     val type: String,
+    /**
+     * The upstream's URL, verbatim: it may be `http://`, and the library never rewrites an
+     * external link's scheme. An external link is a third-party site rather than a provider CDN,
+     * so the `https` form of one is not guaranteed to resolve and an automatic upgrade could kill
+     * a working link. A consumer enforcing an https-only policy handles that here.
+     */
     val url: String,
     val label: String? = null,
 )
 
 @Serializable
-data class Credit(
+public data class Credit(
     val name: String,
     val role: String,
     val roleCategory: String? = null,
@@ -277,7 +300,7 @@ data class Credit(
 )
 
 @Serializable
-data class ReleaseEdition(
+public data class ReleaseEdition(
     val title: String,
     val format: String? = null,
     val country: String? = null,
@@ -289,7 +312,7 @@ data class ReleaseEdition(
 )
 
 @Serializable
-data class TimelineEvent(
+public data class TimelineEvent(
     val date: String,
     val type: String,
     val description: String,
@@ -306,7 +329,7 @@ data class TimelineEvent(
  *   so read `null` as "unknown", never as "community".
  */
 @Serializable
-data class GenreTag(
+public data class GenreTag(
     val name: String,
     val confidence: Float,
     val sources: List<String> = emptyList(),
@@ -314,7 +337,7 @@ data class GenreTag(
 )
 
 @Serializable
-data class RadioTrack(
+public data class RadioTrack(
     val title: String,
     val artist: String,
     val album: String? = null,
@@ -336,7 +359,7 @@ data class RadioTrack(
  *   result list; do not read it as a probability or compare it across providers.
  */
 @Serializable
-data class SimilarAlbum(
+public data class SimilarAlbum(
     val title: String,
     val artist: String,
     val year: Int? = null,
@@ -346,7 +369,7 @@ data class SimilarAlbum(
 )
 
 @Serializable
-data class GenreAffinity(
+public data class GenreAffinity(
     val name: String,
     val affinity: Float,
     val relationship: String,
@@ -354,7 +377,7 @@ data class GenreAffinity(
 )
 
 @Serializable
-data class TopTrack(
+public data class TopTrack(
     val title: String,
     val artist: String,
     val album: String? = null,

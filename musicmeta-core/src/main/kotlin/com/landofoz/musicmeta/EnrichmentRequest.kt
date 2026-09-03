@@ -7,13 +7,13 @@ import kotlinx.serialization.Serializable
  * Identifiers are progressively filled during enrichment (e.g., MusicBrainz
  * resolves MBIDs that downstream providers then use).
  */
-sealed class EnrichmentRequest {
-    abstract val identifiers: EnrichmentIdentifiers
+public sealed class EnrichmentRequest {
+    public abstract val identifiers: EnrichmentIdentifiers
 
     /** Returns a copy with updated identifiers. */
-    abstract fun withIdentifiers(identifiers: EnrichmentIdentifiers): EnrichmentRequest
+    public abstract fun withIdentifiers(identifiers: EnrichmentIdentifiers): EnrichmentRequest
 
-    data class ForAlbum(
+    public data class ForAlbum(
         override val identifiers: EnrichmentIdentifiers,
         val title: String,
         val artist: String,
@@ -26,39 +26,39 @@ sealed class EnrichmentRequest {
          */
         val year: Int? = null,
     ) : EnrichmentRequest() {
-        override fun withIdentifiers(identifiers: EnrichmentIdentifiers) = copy(identifiers = identifiers)
+        override fun withIdentifiers(identifiers: EnrichmentIdentifiers): ForAlbum = copy(identifiers = identifiers)
     }
 
-    data class ForArtist(
+    public data class ForArtist(
         override val identifiers: EnrichmentIdentifiers,
         val name: String,
     ) : EnrichmentRequest() {
-        override fun withIdentifiers(identifiers: EnrichmentIdentifiers) = copy(identifiers = identifiers)
+        override fun withIdentifiers(identifiers: EnrichmentIdentifiers): ForArtist = copy(identifiers = identifiers)
     }
 
-    data class ForTrack(
+    public data class ForTrack(
         override val identifiers: EnrichmentIdentifiers,
         val title: String,
         val artist: String,
         val album: String? = null,
         val durationMs: Long? = null,
     ) : EnrichmentRequest() {
-        override fun withIdentifiers(identifiers: EnrichmentIdentifiers) = copy(identifiers = identifiers)
+        override fun withIdentifiers(identifiers: EnrichmentIdentifiers): ForTrack = copy(identifiers = identifiers)
     }
 
-    companion object {
+    public companion object {
         /**
          * Binary-compatibility shim for callers compiled against the pre-`trackCount`/`year`
          * signature. `HIDDEN` keeps the old JVM method on the class without offering it to source,
          * so an existing `.jar` keeps linking and no new call can pick it by accident.
          */
         @Deprecated("Superseded by the overload taking trackCount and year", level = DeprecationLevel.HIDDEN)
-        fun forAlbum(
+        public fun forAlbum(
             title: String,
             artist: String,
             mbid: String? = null,
             identifiers: EnrichmentIdentifiers? = null,
-        ) = forAlbum(title, artist, mbid, identifiers, trackCount = null, year = null)
+        ): ForAlbum = forAlbum(title, artist, mbid, identifiers, trackCount = null, year = null)
 
         /**
          * [trackCount] and [year] are what the caller already knows about the album — a scanned
@@ -66,14 +66,14 @@ sealed class EnrichmentRequest {
          * the title and artist alone cannot separate. Leave them null when they are unknown or
          * uncertain: a wrong value is worse than none, because it is trusted as evidence.
          */
-        fun forAlbum(
+        public fun forAlbum(
             title: String,
             artist: String,
             mbid: String? = null,
             identifiers: EnrichmentIdentifiers? = null,
             trackCount: Int? = null,
             year: Int? = null,
-        ) = ForAlbum(
+        ): ForAlbum = ForAlbum(
             identifiers = (identifiers ?: EnrichmentIdentifiers()).let {
                 if (mbid != null) it.copy(musicBrainzId = mbid) else it
             },
@@ -83,25 +83,25 @@ sealed class EnrichmentRequest {
             year = year,
         )
 
-        fun forArtist(
+        public fun forArtist(
             name: String,
             mbid: String? = null,
             identifiers: EnrichmentIdentifiers? = null,
-        ) = ForArtist(
+        ): ForArtist = ForArtist(
             identifiers = (identifiers ?: EnrichmentIdentifiers()).let {
                 if (mbid != null) it.copy(musicBrainzId = mbid) else it
             },
             name = name,
         )
 
-        fun forTrack(
+        public fun forTrack(
             title: String,
             artist: String,
             album: String? = null,
             durationMs: Long? = null,
             mbid: String? = null,
             identifiers: EnrichmentIdentifiers? = null,
-        ) = ForTrack(
+        ): ForTrack = ForTrack(
             identifiers = (identifiers ?: EnrichmentIdentifiers()).let {
                 if (mbid != null) it.copy(musicBrainzId = mbid) else it
             },
@@ -127,36 +127,36 @@ sealed class EnrichmentRequest {
          * - The result is cached under MusicBrainz's **canonical** name, not one you supplied,
          *   because there is none to alias to.
          */
-        fun forAlbumByMbid(
+        public fun forAlbumByMbid(
             mbid: String,
             identifiers: EnrichmentIdentifiers? = null,
-        ) = ForAlbum(
+        ): ForAlbum = ForAlbum(
             identifiers = (identifiers ?: EnrichmentIdentifiers()).copy(musicBrainzId = mbid),
             title = "",
             artist = "",
         )
 
         /** An artist request naming nothing but [mbid]; see [forAlbumByMbid] for what that costs. */
-        fun forArtistByMbid(
+        public fun forArtistByMbid(
             mbid: String,
             identifiers: EnrichmentIdentifiers? = null,
-        ) = ForArtist(
+        ): ForArtist = ForArtist(
             identifiers = (identifiers ?: EnrichmentIdentifiers()).copy(musicBrainzId = mbid),
             name = "",
         )
 
         /** A track request naming nothing but [mbid]; see [forAlbumByMbid] for what that costs. */
-        fun forTrackByMbid(
+        public fun forTrackByMbid(
             mbid: String,
             identifiers: EnrichmentIdentifiers? = null,
-        ) = ForTrack(
+        ): ForTrack = ForTrack(
             identifiers = (identifiers ?: EnrichmentIdentifiers()).copy(musicBrainzId = mbid),
             title = "",
             artist = "",
         )
 
         /** Types meaningful for [ForArtist] requests. */
-        val DEFAULT_ARTIST_TYPES: Set<EnrichmentType> = setOf(
+        public val DEFAULT_ARTIST_TYPES: Set<EnrichmentType> = setOf(
             EnrichmentType.GENRE, EnrichmentType.ARTIST_BIO,
             EnrichmentType.ARTIST_PHOTO, EnrichmentType.ARTIST_BACKGROUND,
             EnrichmentType.ARTIST_LOGO, EnrichmentType.ARTIST_BANNER,
@@ -175,7 +175,7 @@ sealed class EnrichmentRequest {
          * and [EnrichmentType.GENRE_DISCOVERY] here. A consumer who doesn't want the extra fetch
          * passes an explicit type set instead of this default.
          */
-        val DEFAULT_ALBUM_TYPES: Set<EnrichmentType> = setOf(
+        public val DEFAULT_ALBUM_TYPES: Set<EnrichmentType> = setOf(
             EnrichmentType.ALBUM_ART, EnrichmentType.ALBUM_ART_BACK,
             EnrichmentType.ALBUM_BOOKLET, EnrichmentType.CD_ART,
             EnrichmentType.GENRE, EnrichmentType.LABEL,
@@ -187,7 +187,7 @@ sealed class EnrichmentRequest {
         )
 
         /** Types meaningful for [ForTrack] requests. */
-        val DEFAULT_TRACK_TYPES: Set<EnrichmentType> = setOf(
+        public val DEFAULT_TRACK_TYPES: Set<EnrichmentType> = setOf(
             EnrichmentType.GENRE, EnrichmentType.LYRICS_SYNCED,
             EnrichmentType.LYRICS_PLAIN, EnrichmentType.TRACK_POPULARITY,
             EnrichmentType.SIMILAR_TRACKS, EnrichmentType.CREDITS,
@@ -196,7 +196,7 @@ sealed class EnrichmentRequest {
         )
 
         /** Returns the default type set for a given request kind. */
-        fun defaultTypesFor(request: EnrichmentRequest): Set<EnrichmentType> = when (request) {
+        public fun defaultTypesFor(request: EnrichmentRequest): Set<EnrichmentType> = when (request) {
             is ForArtist -> DEFAULT_ARTIST_TYPES
             is ForAlbum -> DEFAULT_ALBUM_TYPES
             is ForTrack -> DEFAULT_TRACK_TYPES
@@ -208,7 +208,7 @@ sealed class EnrichmentRequest {
  * Namespaces a `String`-keyed external id. Members may only be appended; keep a consumer
  * `when` over this non-exhaustive.
  */
-enum class IdentifierNamespace(internal val key: String) {
+public enum class IdentifierNamespace(internal val key: String) {
     MUSICBRAINZ_ARTIST("artistMbid"),
     MUSICBRAINZ_RELEASE("releaseMbid"),
     MUSICBRAINZ_RECORDING("recordingMbid"),
@@ -225,7 +225,7 @@ enum class IdentifierNamespace(internal val key: String) {
  * MusicBrainz identity resolution populates most of these.
  */
 @Serializable
-data class EnrichmentIdentifiers(
+public data class EnrichmentIdentifiers(
     val musicBrainzId: String? = null,
     val musicBrainzReleaseGroupId: String? = null,
     val wikidataId: String? = null,
@@ -235,16 +235,16 @@ data class EnrichmentIdentifiers(
     val extra: Map<String, String> = emptyMap(),
 ) {
     /** Retrieves an extra identifier by key, or null if not present. */
-    fun get(key: String): String? = extra[key]
+    public fun get(key: String): String? = extra[key]
 
     /** Returns a copy with the given extra identifier added (immutable). */
-    fun withExtra(key: String, value: String): EnrichmentIdentifiers =
+    public fun withExtra(key: String, value: String): EnrichmentIdentifiers =
         copy(extra = extra + (key to value))
 
     /** Retrieves an extra identifier by namespace, or null if not present. */
-    fun get(ns: IdentifierNamespace): String? = extra[ns.key]
+    public fun get(ns: IdentifierNamespace): String? = extra[ns.key]
 
     /** Returns a copy with the given namespaced identifier added (immutable). */
-    fun with(ns: IdentifierNamespace, value: String): EnrichmentIdentifiers =
+    public fun with(ns: IdentifierNamespace, value: String): EnrichmentIdentifiers =
         copy(extra = extra + (ns.key to value))
 }

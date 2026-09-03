@@ -8,7 +8,7 @@ package com.landofoz.musicmeta
  * This describes only whether MusicBrainz confirmed the entity the request named. It says nothing
  * about whether any individual provider's result is trustworthy — see [LookupProvenance] for that.
  */
-enum class CanonicalStatus {
+public enum class CanonicalStatus {
     /** MusicBrainz confirmed the entity. [IdentityResolution.matchScore] has the score. */
     RESOLVED,
 

@@ -15,7 +15,7 @@ internal const val CACHE_SCHEMA_VERSION = 1
         Index(value = ["expires_at"]),
     ],
 )
-data class EnrichmentCacheEntity(
+public data class EnrichmentCacheEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     @ColumnInfo(name = "entity_key") val entityKey: String,
     @ColumnInfo(name = "enrichment_type") val enrichmentType: String,

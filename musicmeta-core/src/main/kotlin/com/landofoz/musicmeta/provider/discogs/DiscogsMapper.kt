@@ -7,6 +7,7 @@ import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.GenreTag
 import com.landofoz.musicmeta.IdentifierNamespace
+import com.landofoz.musicmeta.IsoCountry
 import com.landofoz.musicmeta.ReleaseEdition
 
 /** Maps Discogs DTOs to EnrichmentData subclasses. */
@@ -56,7 +57,7 @@ internal object DiscogsMapper {
             label = release.label,
             releaseDate = release.year,
             releaseType = release.releaseType,
-            country = release.country,
+            country = IsoCountry.alpha2OrKeep(release.country),
             catalogNumber = release.catno,
             genres = (release.genres.orEmpty() + release.styles.orEmpty())
                 .takeIf { it.isNotEmpty() },
