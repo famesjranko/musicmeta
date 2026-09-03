@@ -10,6 +10,13 @@ import org.json.JSONObject
  * distinguishable from an empty result all the way to the provider — which is what decides between
  * `Error` (retryable, opens the breaker, engages `STALE_IF_ERROR`) and `NotFound`. Nothing here is
  * defaulted: an implementor writes six methods, and the library calls all six.
+ *
+ * Every `url` these methods take is already a valid URI: the caller percent-encodes anything that
+ * is not acting as a delimiter, so a pipe, a space or a bracket arrives as `%7C`, `%20`, `%5B`,
+ * `%5D`. An implementation sends the string it is handed — it neither decodes an escape nor encodes
+ * a raw character. A client that repairs a URL hides the provider bug that built it, and no two
+ * transports repair the same set: `java.net.URI` refuses a raw `|`, OkHttp's `HttpUrl` forwards it.
+ * Behaviour on a string that is not a valid URI is unspecified; an implementation may throw.
  */
 interface HttpClient {
 

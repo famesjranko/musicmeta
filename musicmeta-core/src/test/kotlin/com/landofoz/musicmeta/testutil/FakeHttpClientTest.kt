@@ -165,6 +165,45 @@ class FakeHttpClientTest {
         )
     }
 
+    @Test
+    fun `a raw reserved character in a request URL fails the test that sent it`() = runTest {
+        // Given - a stubbed response behind a URL whose query carries a raw pipe
+        client.givenJsonResponse("/release", """{"ok":true}""")
+        val url = "https://example.test/release?type=album|ep"
+
+        // When - that URL is fetched
+        val thrown = runCatching { client.fetchJsonResult(url) }.exceptionOrNull()
+
+        // Then - the fake refuses it, naming the client that would throw on the same string
+        assertTrue("expected an AssertionError, was $thrown", thrown is AssertionError)
+        assertTrue(
+            "expected the message to name DefaultHttpClient, was ${thrown?.message}",
+            thrown?.message?.contains("DefaultHttpClient") == true,
+        )
+    }
+
+    @Test
+    fun `every request method runs the URL guard`() = runTest {
+        // Given - the same raw-pipe URL and every method a provider can reach the fake by
+        val url = "https://example.test/release?type=album|ep"
+        val methods: List<Pair<String, suspend () -> Any>> = listOf(
+            "fetchJsonResult" to { client.fetchJsonResult(url) },
+            "fetchJsonResult with headers" to { client.fetchJsonResult(url, mapOf("A" to "b")) },
+            "fetchJsonArrayResult" to { client.fetchJsonArrayResult(url) },
+            "fetchRedirectUrlResult" to { client.fetchRedirectUrlResult(url) },
+            "postJsonResult" to { client.postJsonResult(url, "{}") },
+            "postJsonArrayResult" to { client.postJsonArrayResult(url, "{}") },
+        )
+
+        // When - each one is called with it
+        val outcomes = methods.map { (name, call) -> name to runCatching { call() }.exceptionOrNull() }
+
+        // Then - every one of them is guarded, so a method added later cannot be the unguarded one
+        outcomes.forEach { (name, thrown) ->
+            assertTrue("$name did not run the guard, it gave $thrown", thrown is AssertionError)
+        }
+    }
+
     /**
      * A [FakeHttpClient] with the shipped retry ladder in front of it, which is where retry lives —
      * both real clients compose [BudgetedTransientRetry] and a provider has none of its own. Private
