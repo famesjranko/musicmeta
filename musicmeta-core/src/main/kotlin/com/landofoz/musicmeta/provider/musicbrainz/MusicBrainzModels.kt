@@ -24,12 +24,6 @@ internal data class MusicBrainzRelease(
     val releaseGroupId: String?,
     val disambiguation: String?,
     val score: Int,
-    /**
-     * Whether the Cover Art Archive holds a front cover for this release, or null where the
-     * response could not say. A search hit carries no `cover-art-archive` object at all — only a
-     * release lookup does — so a false there would state something nobody checked.
-     */
-    val hasFrontCover: Boolean? = null,
     val tracks: List<MusicBrainzTrack> = emptyList(),
     /**
      * Each credited artist's name individually (not joined with join phrases like [artistCredit]).

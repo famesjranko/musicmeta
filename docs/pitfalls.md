@@ -403,7 +403,9 @@ MusicBrainz sends `cover-art-archive` on `/release/{mbid}` and never on `/releas
 search-derived release reported `false`: measured false on 853 of 853 pooled candidates and wrong on
 156 of 200 checked against the Cover Art Archive. `MusicBrainzProvider` gated a search candidate's
 thumbnail on it, so that thumbnail was never produced and `docs/providers.md` documented a promise
-the code could not keep.
+the code could not keep. Making the flag honest left it with no reader that could ever see a value:
+a field only one endpoint can populate is dead the moment the caller reads it on the other one, so
+the field, the guard and the `thumbnailSize` parameter feeding it are gone.
 
 §3 is the same defaulting mistake on a field the endpoint does send; this is the harder version,
 because the field is right and the *endpoint* cannot answer. Nothing catches it: the code and the

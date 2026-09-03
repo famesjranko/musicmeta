@@ -175,6 +175,11 @@ than it looks like, each learned the hard way.
   "the pieces compose correctly," not "MusicBrainz/Deezer/iTunes/Discogs still answer this way
   today." That is what the daily `provider-drift.yml` e2e job is for, and each pool's `scenario.md`
   records whether the provider it covers has that live coverage.
+- **No live check remains behind the `cover-art-archive` endpoint claim.** `docs/pitfalls.md` §22
+  and `docs/providers.md` state that a `/release?query=` hit carries no `cover-art-archive` object
+  while a `/release/{mbid}` lookup does. The e2e test that re-checked that against the live API went
+  with the field it asserted, so the claim is dated (2026-08-22) rather than watched — and no
+  fixture can re-establish it, because a hand-written one says whatever it was written to say.
 - **The demo's browser code is untested above `stream-protocol.js`.** That module — SSE framing,
   `Retry-After`, and what an ended stream means — is covered because it is deliberately free of the
   DOM. Everything in `index.js` that renders, binds an event, or drives the page is not: there is no

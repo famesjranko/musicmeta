@@ -2556,9 +2556,8 @@ public final class com/landofoz/musicmeta/provider/lrclib/LrcLibProvider : com/l
 public final class com/landofoz/musicmeta/provider/musicbrainz/MusicBrainzProvider : com/landofoz/musicmeta/EnrichmentProvider {
 	public static final field Companion Lcom/landofoz/musicmeta/provider/musicbrainz/MusicBrainzProvider$Companion;
 	public static final field DEFAULT_MIN_MATCH_SCORE I
-	public static final field DEFAULT_THUMBNAIL_SIZE I
-	public fun <init> (Lcom/landofoz/musicmeta/http/HttpClient;Lcom/landofoz/musicmeta/http/RateLimiter;II)V
-	public synthetic fun <init> (Lcom/landofoz/musicmeta/http/HttpClient;Lcom/landofoz/musicmeta/http/RateLimiter;IIILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Lcom/landofoz/musicmeta/http/HttpClient;Lcom/landofoz/musicmeta/http/RateLimiter;I)V
+	public synthetic fun <init> (Lcom/landofoz/musicmeta/http/HttpClient;Lcom/landofoz/musicmeta/http/RateLimiter;IILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun enrich (Lcom/landofoz/musicmeta/EnrichmentRequest;Lcom/landofoz/musicmeta/EnrichmentType;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun getCapabilities ()Ljava/util/List;
 	public fun getDisplayName ()Ljava/lang/String;
