@@ -8,6 +8,10 @@ public sealed class EnrichmentData {
 
     @Serializable
     public data class Artwork(
+        /**
+         * An `http://` URL on a Cover Art Archive host is upgraded to `https`; every other
+         * artwork host's URL is the upstream's, verbatim.
+         */
         val url: String,
         val width: Int? = null,
         val height: Int? = null,
@@ -264,6 +268,12 @@ public data class SimilarTrack(
 @Serializable
 public data class ExternalLink(
     val type: String,
+    /**
+     * The upstream's URL, verbatim: it may be `http://`, and the library never rewrites an
+     * external link's scheme. An external link is a third-party site rather than a provider CDN,
+     * so the `https` form of one is not guaranteed to resolve and an automatic upgrade could kill
+     * a working link. A consumer enforcing an https-only policy handles that here.
+     */
     val url: String,
     val label: String? = null,
 )
