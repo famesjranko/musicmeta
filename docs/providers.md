@@ -523,11 +523,14 @@ a lead-image flag: `/w/rest.php/v1/…/links/media` carries neither ordering nor
 (probed 2026-08-12). That one dependency is the watch item — the extract no longer rides `rest_v1`
 at all. Re-run the probe before treating this as current.
 
-**ListenBrainz.** On responses we already fetch: `artist_name` on a release group (parsed into
-`ListenBrainzTopReleaseGroup.artistName`, dropped by the mapper), `listen_count` on a release group
-(ranking for `ARTIST_DISCOGRAPHY`, which currently returns response order with no counts),
-`caa_id`/`caa_release_mbid` (cover art for a discography entry without a second provider),
-`release_mbid` on a top recording (its album's identity, as opposed to the `release_name` a top
+**ListenBrainz.** On responses we already fetch, as captured **2026-09-03**: a release group's
+`artist.artists[0].name` (parsed into `ListenBrainzTopReleaseGroup.artistName`, dropped by the
+mapper), its `total_listen_count` (parsed, also dropped — ranking for `ARTIST_DISCOGRAPHY`, which
+currently returns response order with no counts), and its `release_group.date` and
+`release_group.type`, which would fill the `year` and `type` a `DiscographyAlbum` from this provider
+leaves null. `caa_id`/`caa_release_mbid` are there too — cover art for a discography entry without a
+second provider — but nested inside `release_group` and `release` rather than beside the mbid.
+Also `release_mbid` on a top recording (its album's identity, as opposed to the `release_name` a top
 track now carries). Never called:
 `/1/stats/**`, `/1/user/**`, `/1/similar-users`, and every submit endpoint. Two of the unused are
 worth knowing before reaching for a third-party call. `/1/metadata/recording/` is a keyless batch

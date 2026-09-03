@@ -102,7 +102,7 @@ them, so `engine.artistProfile("pink floid").suggestions`, or `results.identity.
 | LRCLIB | Synced + plain lyrics, track metadata | No |
 | Deezer | Artist photos, album art, discography, tracklists, album metadata, similar artists/tracks, artist radio, top tracks, similar albums, track previews | No |
 | iTunes | Album art, tracklists, discography, album metadata | No |
-| ListenBrainz | Popularity, listen counts, discography, top tracks, radio discovery (optional token) | Optional |
+| ListenBrainz | Popularity, listen counts, discography, top tracks, radio discovery (requires a token) | Optional |
 | Last.fm | Genres, similar artists/tracks, bios, popularity, album metadata | Yes |
 | Fanart.tv | Artist photos/backgrounds/logos/banners, CD art, album art | Yes |
 | Discogs | Labels, members, credits, editions, artwork, album metadata, community ratings | Yes |
@@ -141,7 +141,7 @@ val engine = EnrichmentEngine.Builder()
 | **Top Tracks** | ARTIST_TOP_TRACKS | Merged from 3 (Last.fm, ListenBrainz, Deezer) |
 | **Statistics** | ARTIST_POPULARITY, TRACK_POPULARITY | Both merged from 3, each source's claim kept in its own unit |
 | **Composite** | ARTIST_TIMELINE, GENRE_DISCOVERY | ARTIST_TIMELINE: discography + members + life-span; GENRE_DISCOVERY: static affinity taxonomy |
-| **Radio** | ARTIST_RADIO, ARTIST_RADIO_DISCOVERY | ARTIST_RADIO: Deezer curated playlist; ARTIST_RADIO_DISCOVERY: ListenBrainz LB Radio (easy/medium/hard modes, optional token) |
+| **Radio** | ARTIST_RADIO, ARTIST_RADIO_DISCOVERY | ARTIST_RADIO: Deezer curated playlist; ARTIST_RADIO_DISCOVERY: ListenBrainz LB Radio (easy/medium/hard modes), which requires `listenBrainzToken` |
 | **Preview** | TRACK_PREVIEW | Deezer 30-second MP3 preview URL (on-demand, not in default types) |
 | **Discovery** | SIMILAR_ALBUMS | Deezer related artists + era scoring |
 
