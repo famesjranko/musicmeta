@@ -72,7 +72,8 @@ internal object LastFmMapper {
     /**
      * Last.fm welds a "Read more on Last.fm" anchor onto every `summary` it sends, and for an
      * entity with no wiki that anchor is the whole value — so the trailing anchor goes with its
-     * text, while any anchor inside the prose loses only its tags. Entities are left encoded.
+     * text, while any anchor inside the prose loses only its tags. Anchors are all that is
+     * removed: any other markup is passed through, and entities are left encoded.
      */
     private fun prose(summary: String): String? =
         summary.replace(TRAILING_ANCHOR, "")

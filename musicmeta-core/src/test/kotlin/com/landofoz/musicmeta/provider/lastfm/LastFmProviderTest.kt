@@ -689,7 +689,7 @@ class LastFmProviderTest {
             }
         """.trimIndent()
 
-        /** `artist.getInfo?artist=Changg`, captured 2026-09-03 — a wiki-less artist. */
+        /** `artist.getInfo?artist=Changg`, captured 2026-09-03, `bio.links` elided — a wiki-less artist. */
         val LINK_ONLY_ARTIST_INFO_JSON = """
             {
               "artist": {

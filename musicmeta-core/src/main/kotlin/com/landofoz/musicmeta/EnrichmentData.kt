@@ -56,9 +56,10 @@ sealed class EnrichmentData {
     @Serializable
     data class Biography(
         /**
-         * Plain prose: no HTML tags, and no trailing "read more" link an upstream appended.
-         * Paragraph breaks may be present as newlines. HTML entities are not decoded, so escape
-         * this before placing it in markup as you would any other untrusted text.
+         * HTML anchors are removed, including a trailing "read more" link an upstream appended,
+         * which goes with its text. Any other markup an upstream sends is passed through
+         * unchanged. Paragraph breaks may be present as newlines. HTML entities are not decoded,
+         * so escape this before placing it in markup as you would any other untrusted text.
          */
         val text: String,
         val source: String,
