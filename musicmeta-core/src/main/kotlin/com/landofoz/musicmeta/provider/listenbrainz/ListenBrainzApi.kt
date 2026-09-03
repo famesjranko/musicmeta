@@ -177,23 +177,21 @@ internal class ListenBrainzApi(
 
     private fun parseTopReleaseGroups(
         jsonArray: JSONArray,
-    ): List<ListenBrainzTopReleaseGroup> {
-        val results = mutableListOf<ListenBrainzTopReleaseGroup>()
-        for (i in 0 until jsonArray.length()) {
-            val item = jsonArray.getJSONObject(i)
-            val mbid = item.optString("release_group_mbid").takeIf { it.isNotBlank() }
-                ?: continue
-            val name = nestedName(item, "release_group")
-                ?: item.optString("release_group_name").takeIf { it.isNotBlank() }
-                ?: continue
-            results += ListenBrainzTopReleaseGroup(
-                releaseGroupMbid = mbid,
-                releaseGroupName = name,
-                artistName = nestedArtistName(item) ?: item.optString("artist_name", ""),
-                listenCount = item.optLong("total_listen_count", 0L),
-            )
-        }
-        return results
+    ): List<ListenBrainzTopReleaseGroup> =
+        (0 until jsonArray.length()).mapNotNull { i -> toTopReleaseGroup(jsonArray.getJSONObject(i)) }
+
+    /** Null for an item with no release-group MBID or no name in either shape: neither can be shown. */
+    private fun toTopReleaseGroup(item: JSONObject): ListenBrainzTopReleaseGroup? {
+        val mbid = item.optString("release_group_mbid").takeIf { it.isNotBlank() } ?: return null
+        val name = nestedName(item, "release_group")
+            ?: item.optString("release_group_name").takeIf { it.isNotBlank() }
+            ?: return null
+        return ListenBrainzTopReleaseGroup(
+            releaseGroupMbid = mbid,
+            releaseGroupName = name,
+            artistName = nestedArtistName(item) ?: item.optString("artist_name", ""),
+            listenCount = item.optLong("total_listen_count", 0L),
+        )
     }
 
     /**
