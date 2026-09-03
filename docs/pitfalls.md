@@ -793,10 +793,13 @@ cannot tell from its own tests. It has shipped twice — Wikidata's multi-proper
 release-group browse, both live for months on the OkHttp path.
 
 `HttpClient` puts the obligation on the caller: **the URL arrives already percent-encoded, and no
-client rewrites it.** A `*Api` percent-encodes every interpolated value, and a reserved character
-that is part of the *static* URL is written encoded at the call site — `%7C` for a pipe separating
-multivalue parameters, not a literal `|`. Encoding at the client instead cannot work: only the code
-that built the string knows whether a given `|` is a delimiter it meant or data a user typed.
+client decodes an escape or reinterprets a delimiter.** A `*Api` percent-encodes every interpolated
+value, and a reserved character that is part of the *static* URL is written encoded at the call
+site — `%7C` for a pipe separating multivalue parameters, not a literal `|`. Encoding at the client
+instead cannot work: only the code that built the string knows whether a given `|` is a delimiter it
+meant or data a user typed. What a client *may* do is canonicalize — OkHttp's `HttpUrl` removes dot
+segments and encodes a raw space — so the contract is that the URL's meaning survives, not its
+bytes, and nothing may depend on byte-identical transmission.
 
 What catches it is `FakeHttpClient.record()`, which parses every requested URL with `java.net.URI`
 and fails the test that sent it. That fires only on a URL a provider test actually exercises — the

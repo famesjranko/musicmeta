@@ -76,7 +76,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `CONTRADICTED` documented as leaving the disowned identifier on `identity.identifiers`, and as reachable on a pre-terminal `enrichProgressive` emission before resolution has settled
 - A name-searching provider is no longer stamped `EXACT_NAME` just because identity resolved by identifier: provenance now reports what resolution established about that name, not that it ran
 - `IdentityResolution.matchScore` and `Success.confidence` documented as confidence in the lookup, not that the entity matches the request: a wrong-but-live MBID resolves at full score
-- The `HttpClient` contract now states that URLs arrive already percent-encoded and an implementation must send the string as given: a custom client must neither decode nor encode a character
+- The `HttpClient` contract now states that URLs arrive already percent-encoded: a custom client must never decode an escape or reinterpret a delimiter, though it may canonicalize as OkHttp does
 - demo-web no longer enriches its suggested queries at startup: the page is usable the moment it loads, `/api/health` reports ready as soon as the server binds, and the cache fills from real searches
 
 ### Fixed

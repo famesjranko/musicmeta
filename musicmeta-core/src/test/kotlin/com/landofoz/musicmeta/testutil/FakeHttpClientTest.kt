@@ -180,11 +180,16 @@ class FakeHttpClientTest {
             "expected the message to name DefaultHttpClient, was ${thrown?.message}",
             thrown?.message?.contains("DefaultHttpClient") == true,
         )
+
+        // Then - the encoded form of the same URL is accepted, so it is the raw character that trips
+        val encoded = client.fetchJsonResult("https://example.test/release?type=album%7Cep")
+        assertTrue("expected the stub, was $encoded", encoded is HttpResult.Ok)
     }
 
     @Test
     fun `every request method runs the URL guard`() = runTest {
-        // Given - the same raw-pipe URL and every method a provider can reach the fake by
+        // Given - the same raw-pipe URL and every method a provider can reach the fake by, which is
+        // five guarded call sites: fetchJsonResult(url) delegates to the headers overload
         val url = "https://example.test/release?type=album|ep"
         val methods: List<Pair<String, suspend () -> Any>> = listOf(
             "fetchJsonResult" to { client.fetchJsonResult(url) },
@@ -198,10 +203,18 @@ class FakeHttpClientTest {
         // When - each one is called with it
         val outcomes = methods.map { (name, call) -> name to runCatching { call() }.exceptionOrNull() }
 
-        // Then - every one of them is guarded, so a method added later cannot be the unguarded one
+        // Then - every one of them is guarded
         outcomes.forEach { (name, thrown) ->
             assertTrue("$name did not run the guard, it gave $thrown", thrown is AssertionError)
         }
+
+        // Then - the list above is still the whole interface, so a method added later cannot be the
+        // unguarded one this test never called
+        assertEquals(
+            "HttpClient's method count moved: add the new method to the list in this test",
+            6,
+            HttpClient::class.java.declaredMethods.size,
+        )
     }
 
     /**

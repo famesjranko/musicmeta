@@ -13,10 +13,12 @@ import org.json.JSONObject
  *
  * Every `url` these methods take is already a valid URI: the caller percent-encodes anything that
  * is not acting as a delimiter, so a pipe, a space or a bracket arrives as `%7C`, `%20`, `%5B`,
- * `%5D`. An implementation sends the string it is handed — it neither decodes an escape nor encodes
- * a raw character. A client that repairs a URL hides the provider bug that built it, and no two
- * transports repair the same set: `java.net.URI` refuses a raw `|`, OkHttp's `HttpUrl` forwards it.
- * Behaviour on a string that is not a valid URI is unspecified; an implementation may throw.
+ * `%5D`. An implementation must not decode a percent-escape or reinterpret a delimiter — decoding
+ * `%7C` back to `|` turns one parameter into two, which is the whole reason the caller encoded it.
+ * A transport that canonicalizes is permitted: OkHttp's `HttpUrl` removes dot segments and encodes
+ * characters `java.net.URI` refuses outright, so a caller must not rely on the bytes arriving
+ * unchanged, only on their meaning. Behaviour on a string that is not a valid URI is unspecified;
+ * an implementation may throw.
  */
 interface HttpClient {
 
