@@ -54,6 +54,11 @@ android {
     }
 }
 
+// See musicmeta-core: the published surface is stated, not inferred.
+kotlin {
+    explicitApi()
+}
+
 dependencies {
     // Enrichment core
     implementation(project(":musicmeta-core"))

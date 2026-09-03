@@ -5,7 +5,7 @@ package com.landofoz.musicmeta
  *
  * All fields are computed properties that delegate to [results].
  */
-data class TrackProfile(val title: String, val artist: String, val results: EnrichmentResults) {
+public data class TrackProfile(val title: String, val artist: String, val results: EnrichmentResults) {
 
     // --- Identity ---
     val identifiers: EnrichmentIdentifiers get() = results.identity.identifiers

@@ -8,31 +8,31 @@ package com.landofoz.musicmeta
  * Adding a new data source means implementing this interface; no changes
  * to the engine or other providers.
  */
-interface EnrichmentProvider {
+public interface EnrichmentProvider {
 
     /** Unique identifier: "musicbrainz", "lrclib", etc. */
-    val id: String
+    public val id: String
 
     /** Human-readable name for settings UI. */
-    val displayName: String
+    public val displayName: String
 
     /** What types of data this provider can supply, with priorities. */
-    val capabilities: List<ProviderCapability>
+    public val capabilities: List<ProviderCapability>
 
     /** Whether this provider needs a user-supplied API key. */
-    val requiresApiKey: Boolean
+    public val requiresApiKey: Boolean
 
     /** Whether this provider is currently usable (has key if needed, etc.). */
-    val isAvailable: Boolean
+    public val isAvailable: Boolean
 
     /** Whether this provider resolves identifiers (MBIDs, Wikidata IDs, etc.) for downstream providers. */
-    val isIdentityProvider: Boolean get() = false
+    public val isIdentityProvider: Boolean get() = false
 
     /**
      * Resolve identifiers for the given request. Only meaningful when [isIdentityProvider] is true.
      * Returns a Success with Metadata data and resolvedIdentifiers, or NotFound/Error.
      */
-    suspend fun resolveIdentity(request: EnrichmentRequest): EnrichmentResult =
+    public suspend fun resolveIdentity(request: EnrichmentRequest): EnrichmentResult =
         EnrichmentResult.NotFound(EnrichmentType.GENRE, id)
 
     /**
@@ -44,7 +44,7 @@ interface EnrichmentProvider {
      *   `Error(ErrorKind.RATE_LIMIT)` via [mapError] and the engine widens that to `RateLimited`
      *   before a consumer sees it; returning `RateLimited` directly is equally accepted.
      */
-    suspend fun enrich(
+    public suspend fun enrich(
         request: EnrichmentRequest,
         type: EnrichmentType,
     ): EnrichmentResult
@@ -57,7 +57,7 @@ interface EnrichmentProvider {
      * @param limit Maximum number of candidates to return
      * @return List of candidates, empty if search not supported
      */
-    suspend fun searchCandidates(
+    public suspend fun searchCandidates(
         request: EnrichmentRequest,
         limit: Int = 10,
     ): List<SearchCandidate> = emptyList()
@@ -71,7 +71,7 @@ interface EnrichmentProvider {
      * genuine failure of that provider. `ensureActive()` in the engine's provider chain makes that
      * distinction, before any circuit breaker is touched. (#53)
      */
-    fun mapError(type: EnrichmentType, e: Exception): EnrichmentResult.Error {
+    public fun mapError(type: EnrichmentType, e: Exception): EnrichmentResult.Error {
         val kind = when (e) {
             is com.landofoz.musicmeta.http.AuthException -> ErrorKind.AUTH
             // Before the IOException branch it subtypes, or a 429 reads as a plain NETWORK failure.
@@ -90,7 +90,7 @@ interface EnrichmentProvider {
  * NONE — provider can search by title/artist (e.g., MusicBrainz, Deezer).
  * Typed values — provider requires a specific identifier from identity resolution.
  */
-enum class IdentifierRequirement {
+public enum class IdentifierRequirement {
     NONE,
     MUSICBRAINZ_ID,
     MUSICBRAINZ_RELEASE_GROUP_ID,
@@ -106,7 +106,7 @@ enum class IdentifierRequirement {
  * @param priority Higher = tried first. 100 = primary source, 50 = fallback.
  * @param identifierRequirement What resolved identifier this capability needs
  */
-data class ProviderCapability(
+public data class ProviderCapability(
     val type: EnrichmentType,
     val priority: Int,
     val identifierRequirement: IdentifierRequirement = IdentifierRequirement.NONE,

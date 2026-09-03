@@ -18,7 +18,7 @@ import kotlinx.coroutines.ensureActive
  * Enrichment provider for album cover art from the Cover Art Archive.
  * Requires a MusicBrainz release or release-group ID.
  */
-class CoverArtArchiveProvider(
+public class CoverArtArchiveProvider(
     httpClient: HttpClient,
     rateLimiter: RateLimiter,
     private val artworkSize: Int = DEFAULT_ARTWORK_SIZE,
@@ -207,8 +207,8 @@ class CoverArtArchiveProvider(
         }.getOrThrow()
     }
 
-    companion object {
-        const val DEFAULT_ARTWORK_SIZE = 1200
-        const val DEFAULT_THUMBNAIL_SIZE = 250
+    public companion object {
+        public const val DEFAULT_ARTWORK_SIZE: Int = 1200
+        public const val DEFAULT_THUMBNAIL_SIZE: Int = 250
     }
 }

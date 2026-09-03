@@ -21,7 +21,7 @@ import kotlinx.coroutines.currentCoroutineContext
  * P1902 Spotify, P2850 Apple Music) as resolved identifiers, from the same single request.
  * Requires a wikidataId in the request identifiers.
  */
-class WikidataProvider(
+public class WikidataProvider(
     httpClient: HttpClient,
     rateLimiter: RateLimiter,
     private val imageSize: Int = DEFAULT_IMAGE_SIZE,
@@ -125,8 +125,8 @@ class WikidataProvider(
         return memo.get(wikidataId) { api.getEntityProperties(wikidataId, imageSize) }
     }
 
-    companion object {
-        const val DEFAULT_IMAGE_SIZE = 1200
+    public companion object {
+        public const val DEFAULT_IMAGE_SIZE: Int = 1200
         private const val PRIORITY = 100
     }
 }

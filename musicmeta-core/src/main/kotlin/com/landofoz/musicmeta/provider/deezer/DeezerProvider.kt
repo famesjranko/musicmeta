@@ -27,7 +27,7 @@ import kotlinx.coroutines.sync.withLock
  * Enrichment provider using Deezer's public search API.
  * Provides album art, artist discography, and album tracks (no API key needed).
  */
-class DeezerProvider(
+public class DeezerProvider(
     httpClient: HttpClient,
     rateLimiter: RateLimiter = RateLimiter(100),
     private val radioLimit: Int = 50,
@@ -45,12 +45,12 @@ class DeezerProvider(
         currentCoroutineContext()[ProviderCallScope]?.slot(this) { DeezerAlbumScope(api) }
             ?: DeezerAlbumScope(api)
 
-    override val id = "deezer"
-    override val displayName = "Deezer"
-    override val requiresApiKey = false
-    override val isAvailable = true
+    override val id: String = "deezer"
+    override val displayName: String = "Deezer"
+    override val requiresApiKey: Boolean = false
+    override val isAvailable: Boolean = true
 
-    override val capabilities = listOf(
+    override val capabilities: List<ProviderCapability> = listOf(
         ProviderCapability(EnrichmentType.ARTIST_PHOTO, priority = 60),
         ProviderCapability(EnrichmentType.ALBUM_ART, priority = 50),
         ProviderCapability(EnrichmentType.ARTIST_DISCOGRAPHY, priority = 50),

@@ -25,21 +25,21 @@ import kotlinx.coroutines.ensureActive
  * Apps provide their own subclass or factory to bridge their domain models
  * into EnrichmentRequest objects.
  */
-abstract class EnrichmentWorker(
+public abstract class EnrichmentWorker(
     context: Context,
     params: WorkerParameters,
 ) : CoroutineWorker(context, params) {
 
-    abstract val engine: EnrichmentEngine
+    public abstract val engine: EnrichmentEngine
 
     /** Subclass returns the enrichment types to use for batch processing. */
-    abstract fun batchTypes(): Set<EnrichmentType>
+    public abstract fun batchTypes(): Set<EnrichmentType>
 
     /** Subclass builds EnrichmentRequests from input data. */
-    abstract suspend fun buildRequests(inputData: Data): List<EnrichmentRequest>
+    public abstract suspend fun buildRequests(inputData: Data): List<EnrichmentRequest>
 
     /** Called after each item is enriched. Subclass persists results to its domain. */
-    abstract suspend fun onItemEnriched(
+    public abstract suspend fun onItemEnriched(
         request: EnrichmentRequest,
         results: EnrichmentResults,
     )
@@ -80,8 +80,8 @@ abstract class EnrichmentWorker(
         )
     }
 
-    companion object {
-        const val KEY_PROCESSED = "processed"
-        const val KEY_TOTAL = "total"
+    public companion object {
+        public const val KEY_PROCESSED: String = "processed"
+        public const val KEY_TOTAL: String = "total"
     }
 }

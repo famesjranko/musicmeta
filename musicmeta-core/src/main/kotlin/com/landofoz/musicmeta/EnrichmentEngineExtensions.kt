@@ -24,7 +24,7 @@ import kotlinx.coroutines.coroutineScope
  * (a third-party implementation has no provider registry to probe). Neither is an answer about
  * [mbid], and returning null for them would read as one.
  */
-suspend fun EnrichmentEngine.discoverMbidEntityType(mbid: String): MusicBrainzEntityType? {
+public suspend fun EnrichmentEngine.discoverMbidEntityType(mbid: String): MusicBrainzEntityType? {
     val engine = this as? DefaultEnrichmentEngine
         ?: error("Only the built-in engine can resolve an MBID's type")
     return engine.discoverEntityType(mbid)
@@ -38,7 +38,7 @@ suspend fun EnrichmentEngine.discoverMbidEntityType(mbid: String): MusicBrainzEn
  * @param types Override the default type set to request fewer (or more) types.
  * @param forceRefresh When true, bypasses the cache and fetches fresh data from providers.
  */
-suspend fun EnrichmentEngine.artistProfile(
+public suspend fun EnrichmentEngine.artistProfile(
     name: String,
     mbid: String? = null,
     identifiers: EnrichmentIdentifiers? = null,
@@ -54,7 +54,7 @@ suspend fun EnrichmentEngine.artistProfile(
 }
 
 /** Re-enrich from a [SearchCandidate] (e.g., after a "did you mean?" pick). */
-suspend fun EnrichmentEngine.artistProfile(
+public suspend fun EnrichmentEngine.artistProfile(
     candidate: SearchCandidate,
     types: Set<EnrichmentType> = EnrichmentRequest.DEFAULT_ARTIST_TYPES,
     forceRefresh: Boolean = false,
@@ -69,7 +69,7 @@ suspend fun EnrichmentEngine.artistProfile(
 /**
  * Convenience extension: enriches an album and returns a structured [AlbumProfile].
  */
-suspend fun EnrichmentEngine.albumProfile(
+public suspend fun EnrichmentEngine.albumProfile(
     title: String,
     artist: String,
     mbid: String? = null,
@@ -86,7 +86,7 @@ suspend fun EnrichmentEngine.albumProfile(
 }
 
 /** Re-enrich from a [SearchCandidate]. */
-suspend fun EnrichmentEngine.albumProfile(
+public suspend fun EnrichmentEngine.albumProfile(
     candidate: SearchCandidate,
     types: Set<EnrichmentType> = EnrichmentRequest.DEFAULT_ALBUM_TYPES,
     forceRefresh: Boolean = false,
@@ -105,7 +105,7 @@ suspend fun EnrichmentEngine.albumProfile(
  * @param identifiers Pre-resolved identifiers (e.g., with deezerId from a top track).
  *   When deezerId is present, the Deezer provider skips search and fetches directly by ID.
  */
-suspend fun EnrichmentEngine.trackProfile(
+public suspend fun EnrichmentEngine.trackProfile(
     title: String,
     artist: String,
     album: String? = null,
@@ -123,7 +123,7 @@ suspend fun EnrichmentEngine.trackProfile(
 }
 
 /** Re-enrich from a [SearchCandidate]. */
-suspend fun EnrichmentEngine.trackProfile(
+public suspend fun EnrichmentEngine.trackProfile(
     candidate: SearchCandidate,
     album: String? = null,
     types: Set<EnrichmentType> = EnrichmentRequest.DEFAULT_TRACK_TYPES,
@@ -139,7 +139,7 @@ suspend fun EnrichmentEngine.trackProfile(
 )
 
 /** Input for [resolveTrackPreviews]. */
-data class TrackPreviewRequest(
+public data class TrackPreviewRequest(
     val title: String,
     val artist: String,
     val album: String? = null,
@@ -147,7 +147,7 @@ data class TrackPreviewRequest(
 )
 
 /** Output from [resolveTrackPreviews]. */
-data class TrackPreviewResult(
+public data class TrackPreviewResult(
     val title: String,
     val artist: String,
     val preview: EnrichmentData.TrackPreview?,
@@ -161,7 +161,7 @@ data class TrackPreviewResult(
  * the request needs it; other `TRACK_PREVIEW`-eligible providers and identifier-keyed types have
  * no such shortcut.
  */
-suspend fun EnrichmentEngine.resolveTrackPreviews(
+public suspend fun EnrichmentEngine.resolveTrackPreviews(
     tracks: List<TrackPreviewRequest>,
     forceRefresh: Boolean = false,
 ): List<TrackPreviewResult> = coroutineScope {

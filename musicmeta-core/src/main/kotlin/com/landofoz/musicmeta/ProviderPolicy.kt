@@ -6,7 +6,7 @@ package com.landofoz.musicmeta
  * [UNVERIFIED] is a state, not a default: the terms could not be read at all, and no position may
  * be inferred from it.
  */
-enum class CommercialUse {
+public enum class CommercialUse {
     /** The terms permit commercial use. */
     ALLOWED,
 
@@ -28,7 +28,7 @@ enum class CommercialUse {
  *
  * [UNVERIFIED] is a state, not a default: the terms could not be read at all.
  */
-enum class AttributionRequirement {
+public enum class AttributionRequirement {
     /** The terms require a notice. */
     REQUIRED,
 
@@ -77,7 +77,7 @@ enum class AttributionRequirement {
  * @param sourceUrls The pages read, in the order they were read.
  * @param asReadOn ISO-8601 date the pages were read.
  */
-data class ProviderPolicy(
+public data class ProviderPolicy(
     val providerId: String,
     val commercialUse: CommercialUse,
     val commercialUseNote: String,
@@ -95,10 +95,10 @@ data class ProviderPolicy(
  * A provider a consumer wrote is absent — musicmeta cannot know its terms. Read the caveats on
  * [ProviderPolicy] before rendering anything from here.
  */
-object ProviderPolicies {
+public object ProviderPolicies {
 
     /** The date every entry's sources were read. */
-    const val AS_READ_ON: String = "2026-08-12"
+    public const val AS_READ_ON: String = "2026-08-12"
 
     private val musicBrainz = ProviderPolicy(
         providerId = "musicbrainz",
@@ -291,8 +291,8 @@ object ProviderPolicies {
     )
 
     /** Every shipped provider's policy, keyed by provider id. */
-    val all: Map<String, ProviderPolicy> = entries.associateBy { it.providerId }
+    public val all: Map<String, ProviderPolicy> = entries.associateBy { it.providerId }
 
     /** The policy for [providerId], or `null` if musicmeta ships no snapshot for it. */
-    operator fun get(providerId: String): ProviderPolicy? = all[providerId]
+    public operator fun get(providerId: String): ProviderPolicy? = all[providerId]
 }

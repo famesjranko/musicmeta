@@ -3,7 +3,7 @@ package com.landofoz.musicmeta
 /**
  * How the enrichment engine applies catalog filtering to recommendation results.
  */
-enum class CatalogFilterMode {
+public enum class CatalogFilterMode {
     /** Return all recommendation items unchanged. Default behavior. */
     UNFILTERED,
 
@@ -22,7 +22,7 @@ enum class CatalogFilterMode {
  * @param album Album name, if known (null for artist-level queries).
  * @param identifiers Known enrichment identifiers (MBIDs, Deezer IDs, etc.) for the item.
  */
-data class CatalogQuery(
+public data class CatalogQuery(
     val title: String,
     val artist: String,
     val album: String? = null,
@@ -37,7 +37,7 @@ data class CatalogQuery(
  * @param uri Optional deep-link URI for the item within the catalog.
  * @param confidence How confident the catalog is that this match is correct (0.0–1.0).
  */
-data class CatalogMatch(
+public data class CatalogMatch(
     val available: Boolean,
     val source: String,
     val uri: String? = null,
@@ -69,6 +69,6 @@ data class CatalogMatch(
  * }
  * ```
  */
-fun interface CatalogProvider {
-    suspend fun checkAvailability(items: List<CatalogQuery>): List<CatalogMatch>
+public fun interface CatalogProvider {
+    public suspend fun checkAvailability(items: List<CatalogQuery>): List<CatalogMatch>
 }
