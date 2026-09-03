@@ -8,11 +8,11 @@ Get up and running in 5 minutes. The profile methods, `enrich()` and `search()` 
 val engine = EnrichmentEngine.Builder()
     // Required by MusicBrainz and Wikimedia: a URL or email they can reach you at.
     .contact("https://example.com/myapp")
-    .apiKeys(ApiKeyConfig(
-        lastFmKey = "...",              // optional — enables Last.fm
-        fanartTvProjectKey = "...",     // optional — enables Fanart.tv
-        discogsPersonalToken = "...",   // optional — enables Discogs
-        listenBrainzToken = "...",      // optional — enables LB Radio discovery
+    .apiKeys(ApiKeyConfig.of(
+        ApiKey.LASTFM_API_KEY to "...",           // optional — enables Last.fm
+        ApiKey.FANARTTV_PROJECT_KEY to "...",     // optional — enables Fanart.tv
+        ApiKey.DISCOGS_PERSONAL_TOKEN to "...",   // optional — enables Discogs
+        ApiKey.LISTENBRAINZ_USER_TOKEN to "...",  // optional — enables LB Radio discovery
     ))
     .withDefaultProviders()  // last: reads the contact and keys set above
     .build()

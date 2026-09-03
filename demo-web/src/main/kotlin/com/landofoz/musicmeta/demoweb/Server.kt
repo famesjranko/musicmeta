@@ -1196,12 +1196,12 @@ private fun handleProviders(
 /**
  * Merges live provider rows with [ProviderCatalog.entries]: a live [ProviderInfo] stays the
  * authority for anything registered, and a `Required` catalog entry absent from [live] whose own
- * selector reads null against [apiKeys] gets a catalog-only row (`keyStatus = "KEY_MISSING"`)
+ * key is unset in [apiKeys] gets a catalog-only row (`keyStatus = "KEY_MISSING"`)
  * instead of silently vanishing from the table. Absence alone is not read as "key missing" — an
- * absent entry whose selector reads non-null (a future build that filters providers for some other
+ * absent entry whose key is set (a future build that filters providers for some other
  * reason, or a registration failure) gets no row rather than a wrong claim about why it is gone. A
  * live `Optional` entry (ListenBrainz) is always present already; it gets `"TOKEN_MISSING"` when its
- * token selector reads null. A `None` entry absent from [live] is not synthesised — it isn't
+ * token is unset. A `None` entry absent from [live] is not synthesised — it isn't
  * key-gated, so its absence is a registration bug, not a key state this endpoint has an opinion on.
  *
  * An id in [unregisteredProviderIds] gets no row at all, live or synthesised: this instance
@@ -1224,7 +1224,7 @@ internal fun buildProviderRows(
     val liveRows = live.filterNot { it.id in unregisteredProviderIds }.map { info ->
         val requirement = catalogById[info.id]?.keyRequirement
         val keyStatus = (requirement as? KeyRequirement.Optional)
-            ?.takeIf { it.key(apiKeys) == null }
+            ?.takeIf { apiKeys[it.key] == null }
             ?.let { "TOKEN_MISSING" }
         ProviderRow(
             id = info.id,
@@ -1241,7 +1241,7 @@ internal fun buildProviderRows(
         .filter { it.id !in liveIds && it.id !in unregisteredProviderIds }
         .mapNotNull { entry ->
             val requirement = entry.keyRequirement as? KeyRequirement.Required ?: return@mapNotNull null
-            if (requirement.key(apiKeys) != null) return@mapNotNull null
+            if (apiKeys[requirement.key] != null) return@mapNotNull null
             ProviderRow(
                 id = entry.id,
                 displayName = entry.displayName,

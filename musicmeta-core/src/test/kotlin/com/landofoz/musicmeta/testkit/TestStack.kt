@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.testkit
 
+import com.landofoz.musicmeta.ApiKey
 import com.landofoz.musicmeta.ApiKeyConfig
 import com.landofoz.musicmeta.EnrichmentCache
 import com.landofoz.musicmeta.EnrichmentEngine
@@ -50,10 +51,5 @@ internal object TestStack {
      * Every key populated, so no key-gated provider is silently absent from a composed test. The
      * values are not credentials and reach no network: [build] hands every provider [FakeHttpClient].
      */
-    val ALL_KEYS = ApiKeyConfig(
-        lastFmKey = "test",
-        fanartTvProjectKey = "test",
-        discogsPersonalToken = "test",
-        listenBrainzToken = "test",
-    )
+    val ALL_KEYS = ApiKeyConfig(ApiKey.entries.associateWith { "test" })
 }

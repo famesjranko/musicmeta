@@ -350,7 +350,7 @@ public interface EnrichmentEngine {
             addProvider(ListenBrainzProvider(
                 httpClient = client,
                 rateLimiter = listenBrainzLimiter,
-                authToken = apiKeyConfig?.listenBrainzToken,
+                authToken = apiKeyConfig?.get(ApiKey.LISTENBRAINZ_USER_TOKEN),
                 config = cfg,
             ))
             addProvider(LrcLibProvider(client, lrcLibLimiter))
@@ -358,13 +358,13 @@ public interface EnrichmentEngine {
             // Key-requiring providers (only added if key is provided)
             val keys = apiKeyConfig
             if (keys != null) {
-                keys.lastFmKey?.let {
+                keys[ApiKey.LASTFM_API_KEY]?.let {
                     addProvider(LastFmProvider(it, client, lastFmLimiter))
                 }
-                keys.fanartTvProjectKey?.let {
+                keys[ApiKey.FANARTTV_PROJECT_KEY]?.let {
                     addProvider(FanartTvProvider(it, client, fanartTvLimiter))
                 }
-                keys.discogsPersonalToken?.let {
+                keys[ApiKey.DISCOGS_PERSONAL_TOKEN]?.let {
                     addProvider(DiscogsProvider(it, client, discogsLimiter))
                 }
             }

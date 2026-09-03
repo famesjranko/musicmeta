@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.demoweb
 
+import com.landofoz.musicmeta.ApiKey
 import com.landofoz.musicmeta.ApiKeyConfig
 import com.landofoz.musicmeta.EnrichmentCache
 import com.landofoz.musicmeta.EnrichmentData
@@ -141,10 +142,9 @@ internal fun ApiKeyConfig.underPublicPosture(posture: PublicPosture): ApiKeyConf
     if (!posture.enabled) {
         this
     } else {
-        copy(
-            lastFmKey = lastFmKey.takeUnless { posture.withholdsLastFm },
-            listenBrainzToken = listenBrainzToken.takeUnless { posture.withholdsListenBrainzToken },
-        )
+        this
+            .let { if (posture.withholdsLastFm) it.without(ApiKey.LASTFM_API_KEY) else it }
+            .let { if (posture.withholdsListenBrainzToken) it.without(ApiKey.LISTENBRAINZ_USER_TOKEN) else it }
     }
 
 /**

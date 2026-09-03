@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.demoweb
 
+import com.landofoz.musicmeta.ApiKey
 import com.landofoz.musicmeta.ApiKeyConfig
 import com.landofoz.musicmeta.EnrichmentConfig
 import com.landofoz.musicmeta.EnrichmentEngine
@@ -14,17 +15,18 @@ import kotlin.system.exitProcess
 private const val CONTACT = "https://github.com/famesjranko/musicmeta"
 
 /**
- * Where [main] reads one [ApiKeyConfig] field from — the `secrets.properties` key, then the env var
- * as fallback — joined to the [ProviderCatalog] id whose `KeyRequirement` selector reads that same
- * field. The single place these names live: the startup missing-key message reads [envVar] off
- * whichever entries the catalog's own selector calls missing, rather than re-deriving the list.
+ * Where [main] reads one [ApiKey] from — the `secrets.properties` key, then the env var as
+ * fallback — joined to the [ProviderCatalog] id whose `KeyRequirement` names that same [ApiKey].
+ * The single place these names live: the startup missing-key message reads [envVar] off whichever
+ * entries the catalog itself calls missing, rather than re-deriving the list.
  */
-internal class KeySpec(val catalogId: String, val secretsKey: String, val envVar: String)
+internal class KeySpec(val catalogId: String, val key: ApiKey, val secretsKey: String, val envVar: String)
 
-private val LASTFM = KeySpec("lastfm", "lastfm.apikey", "LASTFM_API_KEY")
-private val FANARTTV = KeySpec("fanarttv", "fanarttv.apikey", "FANARTTV_API_KEY")
-private val DISCOGS = KeySpec("discogs", "discogs.token", "DISCOGS_TOKEN")
-private val LISTENBRAINZ = KeySpec("listenbrainz", "listenbrainz.token", "LISTENBRAINZ_TOKEN")
+private val LASTFM = KeySpec("lastfm", ApiKey.LASTFM_API_KEY, "lastfm.apikey", "LASTFM_API_KEY")
+private val FANARTTV = KeySpec("fanarttv", ApiKey.FANARTTV_PROJECT_KEY, "fanarttv.apikey", "FANARTTV_API_KEY")
+private val DISCOGS = KeySpec("discogs", ApiKey.DISCOGS_PERSONAL_TOKEN, "discogs.token", "DISCOGS_TOKEN")
+private val LISTENBRAINZ =
+    KeySpec("listenbrainz", ApiKey.LISTENBRAINZ_USER_TOKEN, "listenbrainz.token", "LISTENBRAINZ_TOKEN")
 
 internal val KEY_SPECS = listOf(LASTFM, FANARTTV, DISCOGS, LISTENBRAINZ)
 
@@ -43,12 +45,11 @@ fun main() {
         System.err.println(unknownRelaxationMessage(requested.unknown))
         exitProcess(64)
     }
-    val keys = ApiKeyConfig(
-        lastFmKey = LASTFM.resolve(secrets),
-        fanartTvProjectKey = FANARTTV.resolve(secrets),
-        discogsPersonalToken = DISCOGS.resolve(secrets),
-        listenBrainzToken = LISTENBRAINZ.resolve(secrets),
-    ).underPublicPosture(posture)
+    val keys = KEY_SPECS
+        .fold(ApiKeyConfig()) { config, spec ->
+            spec.resolve(secrets)?.let { config.with(spec.key, it) } ?: config
+        }
+        .underPublicPosture(posture)
     val cache = InMemoryEnrichmentCache().let { if (posture.capsDiscogsFreshness) DiscogsFreshnessCache(it) else it }
 
     fun buildEngine(cacheMode: CacheMode): EnrichmentEngine {
@@ -127,7 +128,7 @@ internal data class MissingCredentials(val required: List<String>, val optional:
  * dropped on purpose is not one an operator forgot, and printing it as missing invites them to
  * "fix" it.
  *
- * Missingness reads the catalog's own selector against the built config, not the raw sources —
+ * Missingness reads the catalog's own requirement against the built config, not the raw sources —
  * Required and Optional are different failures. A missing Required key means the provider never
  * registered at all; a missing Optional token (ListenBrainz) means it registered and answers
  * everything except artist radio discovery, so lumping it in with "skipped" would be false.
@@ -139,10 +140,10 @@ internal fun missingCredentials(keys: ApiKeyConfig, withheldIds: Set<String>): M
         .map { spec -> spec.envVar to catalogById.getValue(spec.catalogId).keyRequirement }
     return MissingCredentials(
         required = considered.mapNotNull { (envVar, requirement) ->
-            envVar.takeIf { requirement is KeyRequirement.Required && requirement.key(keys) == null }
+            envVar.takeIf { requirement is KeyRequirement.Required && keys[requirement.key] == null }
         },
         optional = considered.mapNotNull { (envVar, requirement) ->
-            envVar.takeIf { requirement is KeyRequirement.Optional && requirement.key(keys) == null }
+            envVar.takeIf { requirement is KeyRequirement.Optional && keys[requirement.key] == null }
         },
     )
 }

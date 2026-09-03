@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.engine
 
+import com.landofoz.musicmeta.ApiKey
 import com.landofoz.musicmeta.ApiKeyConfig
 import com.landofoz.musicmeta.EnrichmentEngine
 import com.landofoz.musicmeta.EnrichmentRequest
@@ -49,10 +50,10 @@ class BuilderDefaultProvidersTest {
         val engine = EnrichmentEngine.Builder()
             .httpClient(httpClient)
             .apiKeys(
-                ApiKeyConfig(
-                    lastFmKey = "test-lastfm-key",
-                    fanartTvProjectKey = "test-fanarttv-key",
-                    discogsPersonalToken = "test-discogs-token",
+                ApiKeyConfig.of(
+                    ApiKey.LASTFM_API_KEY to "test-lastfm-key",
+                    ApiKey.FANARTTV_PROJECT_KEY to "test-fanarttv-key",
+                    ApiKey.DISCOGS_PERSONAL_TOKEN to "test-discogs-token",
                 ),
             )
             .withDefaultProviders()
@@ -73,7 +74,7 @@ class BuilderDefaultProvidersTest {
         // Given - only Last.fm key provided
         val engine = EnrichmentEngine.Builder()
             .httpClient(httpClient)
-            .apiKeys(ApiKeyConfig(lastFmKey = "test-key"))
+            .apiKeys(ApiKeyConfig.of(ApiKey.LASTFM_API_KEY to "test-key"))
             .withDefaultProviders()
             .build()
 

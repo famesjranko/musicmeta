@@ -120,9 +120,11 @@ Pass keys via `ApiKeyConfig`:
 
 ```kotlin
 val engine = EnrichmentEngine.Builder()
-    .apiKeys(ApiKeyConfig(
-        lastFmKey = "...", fanartTvProjectKey = "...", discogsPersonalToken = "...",
-        listenBrainzToken = "...",  // Optional, unlocks ARTIST_RADIO_DISCOVERY
+    .apiKeys(ApiKeyConfig.of(
+        ApiKey.LASTFM_API_KEY to "...",
+        ApiKey.FANARTTV_PROJECT_KEY to "...",
+        ApiKey.DISCOGS_PERSONAL_TOKEN to "...",
+        ApiKey.LISTENBRAINZ_USER_TOKEN to "...",  // Optional, unlocks ARTIST_RADIO_DISCOVERY
     ))
     .withDefaultProviders()
     .build()

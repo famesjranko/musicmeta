@@ -61,15 +61,15 @@ val config = EnrichmentConfig(
 Four providers require API keys. All are free to obtain:
 
 ```kotlin
-val keys = ApiKeyConfig(
-    lastFmKey = "...",             // https://www.last.fm/api/account/create
-    fanartTvProjectKey = "...",    // https://fanart.tv/get-an-api-key/
-    discogsPersonalToken = "...",  // https://www.discogs.com/settings/developers
-    listenBrainzToken = "...",     // https://listenbrainz.org/profile/  (free account)
+val keys = ApiKeyConfig.of(
+    ApiKey.LASTFM_API_KEY to "...",           // https://www.last.fm/api/account/create
+    ApiKey.FANARTTV_PROJECT_KEY to "...",     // https://fanart.tv/get-an-api-key/
+    ApiKey.DISCOGS_PERSONAL_TOKEN to "...",   // https://www.discogs.com/settings/developers
+    ApiKey.LISTENBRAINZ_USER_TOKEN to "...",  // https://listenbrainz.org/profile/  (free account)
 )
 ```
 
-`listenBrainzToken` unlocks `ARTIST_RADIO_DISCOVERY` (LB Radio). All other ListenBrainz endpoints — popularity, discography — remain keyless and continue working without a token.
+`ApiKey.LISTENBRAINZ_USER_TOKEN` unlocks `ARTIST_RADIO_DISCOVERY` (LB Radio). All other ListenBrainz endpoints — popularity, discography — remain keyless and continue working without a token.
 
 Pass keys to the builder. `withDefaultProviders()` conditionally registers key-requiring providers only when their key is present:
 
@@ -110,7 +110,7 @@ Wikimedia throttle for.
 
 ```kotlin
 val engine = EnrichmentEngine.Builder()
-    .apiKeys(ApiKeyConfig(lastFmKey = "..."))
+    .apiKeys(ApiKeyConfig.of(ApiKey.LASTFM_API_KEY to "..."))
     .contact("https://example.com/myapp")
     .withDefaultProviders()  // last: consumes the keys, contact and config set above
     .build()
@@ -193,7 +193,7 @@ The default logger is `EnrichmentLogger.NoOp` (silent).
 ```kotlin
 val engine = EnrichmentEngine.Builder()
     .withDefaultProviders()
-    .apiKeys(ApiKeyConfig(lastFmKey = "my-key"))
+    .apiKeys(ApiKeyConfig.of(ApiKey.LASTFM_API_KEY to "my-key"))
     .build()
 
 engine.getProviders().forEach { info ->
@@ -328,10 +328,10 @@ results.similarAlbums()?.albums?.forEach { album ->
 
 ### Artist radio discovery (ListenBrainz LB Radio)
 
-Community-driven discovery radio via ListenBrainz. Requires `listenBrainzToken` in `ApiKeyConfig`.
+Community-driven discovery radio via ListenBrainz. Requires `ApiKey.LISTENBRAINZ_USER_TOKEN` in `ApiKeyConfig`.
 
 ```kotlin
-val keys = ApiKeyConfig(listenBrainzToken = "your-token")
+val keys = ApiKeyConfig.of(ApiKey.LISTENBRAINZ_USER_TOKEN to "your-token")
 
 val engine = EnrichmentEngine.Builder()
     .withDefaultProviders()

@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.demo
 
+import com.landofoz.musicmeta.ApiKey
 import com.landofoz.musicmeta.ApiKeyConfig
 import com.landofoz.musicmeta.CatalogFilterMode
 import com.landofoz.musicmeta.EnrichmentConfig
@@ -62,11 +63,14 @@ class DemoState(
     private val secrets = loadSecrets()
 
     fun rebuild() {
-        val keys = ApiKeyConfig(
-            lastFmKey = secrets["lastfm.apikey"] ?: env("LASTFM_API_KEY"),
-            fanartTvProjectKey = secrets["fanarttv.apikey"] ?: env("FANARTTV_API_KEY"),
-            discogsPersonalToken = secrets["discogs.token"] ?: env("DISCOGS_TOKEN"),
-            listenBrainzToken = secrets["listenbrainz.token"] ?: env("LISTENBRAINZ_TOKEN"),
+        val keys = ApiKeyConfig.of(
+            *listOfNotNull(
+                (secrets["lastfm.apikey"] ?: env("LASTFM_API_KEY"))?.let { ApiKey.LASTFM_API_KEY to it },
+                (secrets["fanarttv.apikey"] ?: env("FANARTTV_API_KEY"))?.let { ApiKey.FANARTTV_PROJECT_KEY to it },
+                (secrets["discogs.token"] ?: env("DISCOGS_TOKEN"))?.let { ApiKey.DISCOGS_PERSONAL_TOKEN to it },
+                (secrets["listenbrainz.token"] ?: env("LISTENBRAINZ_TOKEN"))
+                    ?.let { ApiKey.LISTENBRAINZ_USER_TOKEN to it },
+            ).toTypedArray(),
         )
         val baseConfig = config.copy(radioDiscoveryMode = radioMode)
         val effectiveConfig = if (catalogMode != CatalogFilterMode.UNFILTERED) {

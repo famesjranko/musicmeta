@@ -22,4 +22,22 @@ class MainTest {
         // silently missed and a stale spec can't linger
         assertEquals(keyedCatalogIds, specIds)
     }
+
+    @Test
+    fun `every KeySpec names the ApiKey its own catalog entry requires`() {
+        // Given - the ApiKey each keyed catalog entry names, by catalog id
+        val catalogKeyById = ProviderCatalog.entries.mapNotNull { entry ->
+            when (val requirement = entry.keyRequirement) {
+                is KeyRequirement.Required -> entry.id to requirement.key
+                is KeyRequirement.Optional -> entry.id to requirement.key
+                KeyRequirement.None -> null
+            }
+        }.toMap()
+
+        // When - the same mapping is read off KEY_SPECS
+        val specKeyById = KEY_SPECS.associate { it.catalogId to it.key }
+
+        // Then - the demo resolves each provider's credential into the key that provider is gated on
+        assertEquals(catalogKeyById, specKeyById)
+    }
 }

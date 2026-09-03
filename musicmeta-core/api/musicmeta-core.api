@@ -31,23 +31,35 @@ public final class com/landofoz/musicmeta/AlbumProfile {
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class com/landofoz/musicmeta/ApiKey : java/lang/Enum {
+	public static final field DISCOGS_PERSONAL_TOKEN Lcom/landofoz/musicmeta/ApiKey;
+	public static final field FANARTTV_PROJECT_KEY Lcom/landofoz/musicmeta/ApiKey;
+	public static final field LASTFM_API_KEY Lcom/landofoz/musicmeta/ApiKey;
+	public static final field LISTENBRAINZ_USER_TOKEN Lcom/landofoz/musicmeta/ApiKey;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lcom/landofoz/musicmeta/ApiKey;
+	public static fun values ()[Lcom/landofoz/musicmeta/ApiKey;
+}
+
 public final class com/landofoz/musicmeta/ApiKeyConfig {
+	public static final field Companion Lcom/landofoz/musicmeta/ApiKeyConfig$Companion;
 	public fun <init> ()V
-	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public final fun component1 ()Ljava/lang/String;
-	public final fun component2 ()Ljava/lang/String;
-	public final fun component3 ()Ljava/lang/String;
-	public final fun component4 ()Ljava/lang/String;
-	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lcom/landofoz/musicmeta/ApiKeyConfig;
-	public static synthetic fun copy$default (Lcom/landofoz/musicmeta/ApiKeyConfig;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lcom/landofoz/musicmeta/ApiKeyConfig;
+	public fun <init> (Ljava/util/Map;)V
+	public synthetic fun <init> (Ljava/util/Map;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/util/Map;
+	public final fun copy (Ljava/util/Map;)Lcom/landofoz/musicmeta/ApiKeyConfig;
+	public static synthetic fun copy$default (Lcom/landofoz/musicmeta/ApiKeyConfig;Ljava/util/Map;ILjava/lang/Object;)Lcom/landofoz/musicmeta/ApiKeyConfig;
 	public fun equals (Ljava/lang/Object;)Z
-	public final fun getDiscogsPersonalToken ()Ljava/lang/String;
-	public final fun getFanartTvProjectKey ()Ljava/lang/String;
-	public final fun getLastFmKey ()Ljava/lang/String;
-	public final fun getListenBrainzToken ()Ljava/lang/String;
+	public final fun get (Lcom/landofoz/musicmeta/ApiKey;)Ljava/lang/String;
+	public final fun getKeys ()Ljava/util/Map;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+	public final fun with (Lcom/landofoz/musicmeta/ApiKey;Ljava/lang/String;)Lcom/landofoz/musicmeta/ApiKeyConfig;
+	public final fun without (Lcom/landofoz/musicmeta/ApiKey;)Lcom/landofoz/musicmeta/ApiKeyConfig;
+}
+
+public final class com/landofoz/musicmeta/ApiKeyConfig$Companion {
+	public final fun of ([Lkotlin/Pair;)Lcom/landofoz/musicmeta/ApiKeyConfig;
 }
 
 public final class com/landofoz/musicmeta/ArtistProfile {
@@ -1613,15 +1625,25 @@ public final class com/landofoz/musicmeta/KeyRequirement$None : com/landofoz/mus
 }
 
 public final class com/landofoz/musicmeta/KeyRequirement$Optional : com/landofoz/musicmeta/KeyRequirement {
-	public fun <init> (Ljava/lang/String;Lkotlin/jvm/functions/Function1;)V
-	public final fun getFieldName ()Ljava/lang/String;
-	public final fun getKey ()Lkotlin/jvm/functions/Function1;
+	public fun <init> (Lcom/landofoz/musicmeta/ApiKey;)V
+	public final fun component1 ()Lcom/landofoz/musicmeta/ApiKey;
+	public final fun copy (Lcom/landofoz/musicmeta/ApiKey;)Lcom/landofoz/musicmeta/KeyRequirement$Optional;
+	public static synthetic fun copy$default (Lcom/landofoz/musicmeta/KeyRequirement$Optional;Lcom/landofoz/musicmeta/ApiKey;ILjava/lang/Object;)Lcom/landofoz/musicmeta/KeyRequirement$Optional;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getKey ()Lcom/landofoz/musicmeta/ApiKey;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
 }
 
 public final class com/landofoz/musicmeta/KeyRequirement$Required : com/landofoz/musicmeta/KeyRequirement {
-	public fun <init> (Ljava/lang/String;Lkotlin/jvm/functions/Function1;)V
-	public final fun getFieldName ()Ljava/lang/String;
-	public final fun getKey ()Lkotlin/jvm/functions/Function1;
+	public fun <init> (Lcom/landofoz/musicmeta/ApiKey;)V
+	public final fun component1 ()Lcom/landofoz/musicmeta/ApiKey;
+	public final fun copy (Lcom/landofoz/musicmeta/ApiKey;)Lcom/landofoz/musicmeta/KeyRequirement$Required;
+	public static synthetic fun copy$default (Lcom/landofoz/musicmeta/KeyRequirement$Required;Lcom/landofoz/musicmeta/ApiKey;ILjava/lang/Object;)Lcom/landofoz/musicmeta/KeyRequirement$Required;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getKey ()Lcom/landofoz/musicmeta/ApiKey;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
 }
 
 public final class com/landofoz/musicmeta/LookupProvenance : java/lang/Enum {
@@ -1763,9 +1785,17 @@ public final class com/landofoz/musicmeta/ProviderCatalog {
 
 public final class com/landofoz/musicmeta/ProviderCatalogEntry {
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;Lcom/landofoz/musicmeta/KeyRequirement;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Lcom/landofoz/musicmeta/KeyRequirement;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Lcom/landofoz/musicmeta/KeyRequirement;)Lcom/landofoz/musicmeta/ProviderCatalogEntry;
+	public static synthetic fun copy$default (Lcom/landofoz/musicmeta/ProviderCatalogEntry;Ljava/lang/String;Ljava/lang/String;Lcom/landofoz/musicmeta/KeyRequirement;ILjava/lang/Object;)Lcom/landofoz/musicmeta/ProviderCatalogEntry;
+	public fun equals (Ljava/lang/Object;)Z
 	public final fun getDisplayName ()Ljava/lang/String;
 	public final fun getId ()Ljava/lang/String;
 	public final fun getKeyRequirement ()Lcom/landofoz/musicmeta/KeyRequirement;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
 }
 
 public final class com/landofoz/musicmeta/ProviderInfo {
