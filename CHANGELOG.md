@@ -136,6 +136,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `EnrichmentResults.identity` is now non-null: it always carries a `CanonicalStatus`, including every reason resolution did not run, so `identity == null` no longer compiles
 - `EnrichmentCache.put`/`putNegative` gain a required `canonicalStatus: CanonicalStatus` parameter (no default): a custom cache implementation must recompile and pass the call's status
 - Android cache schema bumps to v4 (`MIGRATION_3_4`): `identity_match`/`_score` named a different fact and cannot be reinterpreted, so the migration clears both tables and the next call refetches
+- That clear also drops every manual selection made before schema v4, and nothing heals a lost selection: re-select after upgrading an install that predates v4
 - `EnrichmentCacheEntity`/`NegativeCacheEntity` gain `canonicalStatus`/`isStale` fields: binary-incompatible until recompile for a caller constructing or `copy()`-ing them directly
 - Old→new `IdentityMatch`/`identity == null` mapping — see `docs/how-it-works.md` "Step 7: Identity Model" for the full table
 - `EnrichmentCache.get`/`getIncludingExpired`/`getNegative` now return `CacheEnvelope<...>?` instead of a bare result: recompile, and read `.result` where you read the old return value directly

@@ -110,11 +110,14 @@ than it looks like, each learned the hard way.
   ran rather than passed by producing no runnable methods. It is inferable — the task is neither
   `UP-TO-DATE` nor `NO-SOURCE` — never stated.
 - **No connected Android test runs anywhere.** `musicmeta-android/src/androidTest/` is absent from
-  `check`, from the `Makefile` and from all five workflows in `.github/workflows/`, so
-  `EnrichmentCacheDatabaseMigrationDeviceTest` — the only thing that exercises a Room migration
-  against framework SQLite — has never gated a merge and is not meant to. The Robolectric suite in
-  `src/test/` proves the SQL and runs on every `./check`; what it cannot prove is the platform an
-  installed app actually upgrades on. That evidence is produced by hand and recorded at the commit
+  `check`, from the `Makefile` and from every workflow in `.github/workflows/`, so the two
+  device suites — the only thing that exercises a Room migration against framework SQLite — have
+  never gated a merge and are not meant to. Between them they exercise every registered migration —
+  `MIGRATION_1_2`, `2_3`, `3_4` and `4_5` each on its own, and `1` to `5` as one walk — and each
+  suite has one case that opens its migrated file through `EnrichmentCacheDatabase.create`. The
+  Robolectric suite in `src/test/` has a case per migration too and runs on every `./check`, so it
+  proves the SQL; what it cannot prove is the platform an installed app actually upgrades on. That
+  evidence is a hand run on a named device, and is only ever evidence for a commit that states it
   (`CLAUDE.md`), because a migration is the one change here that reverting the code does not undo.
 - **detekt is not in `--fast`.** The typed tasks compile before they analyse and the Android
   variants need `ANDROID_HOME`. The edit loop is ktlint plus the conventions check; detekt runs on
