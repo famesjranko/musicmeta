@@ -77,6 +77,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A name-searching provider is no longer stamped `EXACT_NAME` just because identity resolved by identifier: provenance now reports what resolution established about that name, not that it ran
 - `IdentityResolution.matchScore` and `Success.confidence` documented as confidence in the lookup, not that the entity matches the request: a wrong-but-live MBID resolves at full score
 - demo-web no longer enriches its suggested queries at startup: the page is usable the moment it loads, `/api/health` reports ready as soon as the server binds, and the cache fills from real searches
+- `ExternalLink.url` documented as the upstream's URL verbatim, which may be `http://`, so an https-only policy is the consumer's to enforce; `Artwork.url` documents its Cover Art Archive upgrade
 
 ### Fixed
 - Cover Art Archive artwork URLs now leave the provider https: older CAA entries serve `http://`, which browsers block as mixed content; cached entries keep it until refresh, so clear yours or wait
