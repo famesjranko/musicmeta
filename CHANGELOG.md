@@ -81,6 +81,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ExternalLink.url` documented as the upstream's URL verbatim, which may be `http://`, so an https-only policy is the consumer's to enforce; `Artwork.url` documents its Cover Art Archive upgrade
 
 ### Fixed
+- Last.fm biographies and album descriptions carry no anchor tags, and a wiki-less artist settles `NotFound` not a link-only bio; cached entries keep it until refresh, so clear yours or wait
 - Cover Art Archive artwork URLs now leave the provider https: older CAA entries serve `http://`, which browsers block as mixed content; cached entries keep it until refresh, so clear yours or wait
 - A cache-hit type requested beside an uncached composite that depends on it is no longer re-fetched upstream: the cached value is served and its cache entry survives instead of being overwritten
 - A fault that escapes the fan-out is no longer reported as `ErrorKind.ENGINE_CLOSED`: unsettled types carry `UNKNOWN` and the real cause, so a missing class no longer reads as a closed engine

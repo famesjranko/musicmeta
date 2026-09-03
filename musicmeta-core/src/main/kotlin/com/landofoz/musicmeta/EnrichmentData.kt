@@ -56,8 +56,15 @@ public sealed class EnrichmentData {
         val isInstrumental: Boolean = false,
     ) : EnrichmentData()
 
+    /** Carries both `ARTIST_BIO` and `ALBUM_DESCRIPTION`; [source] names the upstream prose came from. */
     @Serializable
     public data class Biography(
+        /**
+         * HTML anchors are removed, including a trailing "read more" link an upstream appended,
+         * which goes with its text. Any other markup an upstream sends is passed through
+         * unchanged. Paragraph breaks may be present as newlines. HTML entities are not decoded,
+         * so escape this before placing it in markup as you would any other untrusted text.
+         */
         val text: String,
         val source: String,
         val language: String = "en",
