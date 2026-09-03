@@ -1,8 +1,7 @@
 package com.landofoz.musicmeta.provider.lrclib
 
 import com.landofoz.musicmeta.EnrichmentRequest
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
+import com.landofoz.musicmeta.engine.CallMemo
 
 /**
  * One `enrich()` call's LRCLIB track lookup, held only long enough to serve `LYRICS_SYNCED`,
@@ -21,12 +20,11 @@ internal class LrcLibTrackScope(private val api: LrcLibApi) {
      */
     private data class SelectionKey(val artist: String, val title: String, val album: String?, val durationMs: Long?)
 
-    private val mutex = Mutex()
-    private val outcomes = mutableMapOf<SelectionKey, LrcLibOutcome>()
+    private val outcomes = CallMemo<SelectionKey, LrcLibOutcome>()
 
-    suspend fun resolve(request: EnrichmentRequest.ForTrack): LrcLibOutcome = mutex.withLock {
+    suspend fun resolve(request: EnrichmentRequest.ForTrack): LrcLibOutcome {
         val key = SelectionKey(request.artist, request.title, request.album, request.durationMs)
-        outcomes[key] ?: lookup(request).also { outcomes[key] = it }
+        return outcomes.get(key) { lookup(request) }
     }
 
     private suspend fun lookup(request: EnrichmentRequest.ForTrack): LrcLibOutcome {

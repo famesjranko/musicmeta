@@ -21,10 +21,12 @@ import com.landofoz.musicmeta.testutil.CancellingOnceHttpClient
 import com.landofoz.musicmeta.testutil.FakeEnrichmentCache
 import com.landofoz.musicmeta.testutil.FakeHttpClient
 import com.landofoz.musicmeta.testutil.FakeProvider
+import com.landofoz.musicmeta.testutil.GatedHttpClient
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import org.junit.Assert.assertEquals
@@ -704,6 +706,37 @@ class DiscogsProviderTest {
         }
 
         // Then - all four succeed, and only one search request was made for the shared selection
+        assertTrue(results.all { it is EnrichmentResult.Success })
+        assertEquals(1, httpClient.requestedUrls.count { it.contains("database/search") })
+    }
+
+    @Test
+    fun `concurrent album types make one release search between them`() = runTest {
+        // Given - a release search held open inside the fetch, so all four types are in flight at once
+        httpClient.givenJsonResponse("database/search", METADATA_SEARCH_JSON)
+        val gated = GatedHttpClient(httpClient, "database/search")
+        val gatedProvider = DiscogsProvider(
+            personalToken = "test-token",
+            httpClient = gated,
+            rateLimiter = RateLimiter(0L),
+        )
+        val request = EnrichmentRequest.forAlbum(title = "OK Computer", artist = "Radiohead")
+        val callScope = ProviderCallScope()
+
+        // When - the four shared album types run as concurrent siblings of one call
+        val deferreds = listOf(
+            EnrichmentType.ALBUM_ART,
+            EnrichmentType.LABEL,
+            EnrichmentType.RELEASE_TYPE,
+            EnrichmentType.ALBUM_METADATA,
+        ).map { type -> async(callScope) { gatedProvider.enrich(request, type) } }
+        runCurrent()
+        val inFlight = gated.arrivals
+        gated.release()
+        val results = deferreds.map { it.await() }
+
+        // Then - three of the four waited on the first's search instead of starting their own
+        assertEquals(1, inFlight)
         assertTrue(results.all { it is EnrichmentResult.Success })
         assertEquals(1, httpClient.requestedUrls.count { it.contains("database/search") })
     }

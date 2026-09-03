@@ -9,14 +9,13 @@ import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.LookupProvenance
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.engine.ArtistMatcher
+import com.landofoz.musicmeta.engine.CallMemo
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.engine.ProviderCallScope
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 
 /**
  * Discogs enrichment provider. Searches for album releases to supply
@@ -296,8 +295,7 @@ private class DiscogsAlbumScope(private val api: DiscogsApi) {
     /** Every field [selectRelease] reads, so two requests differing only in one still key distinctly. */
     private data class SelectionKey(val artist: String, val title: String, val year: Int?)
 
-    private val mutex = Mutex()
-    private val releases = mutableMapOf<SelectionKey, DiscogsAlbumChoice?>()
+    private val releases = CallMemo<SelectionKey, DiscogsAlbumChoice?>()
 
     /**
      * The accepted-and-ranked search hit for [request], with its selection evidence, one search per
@@ -306,15 +304,8 @@ private class DiscogsAlbumScope(private val api: DiscogsApi) {
      */
     suspend fun resolveRelease(request: EnrichmentRequest.ForAlbum): DiscogsAlbumChoice? {
         val key = SelectionKey(request.artist, request.title, request.year)
-        return mutex.withLock {
-            if (releases.containsKey(key)) {
-                releases.getValue(key)
-            } else {
-                val pool = api.searchReleases(request.title, request.artist)
-                val match = pool.selectRelease(request)
-                releases[key] = match
-                match
-            }
+        return releases.get(key) {
+            api.searchReleases(request.title, request.artist).selectRelease(request)
         }
     }
 }
