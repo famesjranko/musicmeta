@@ -187,6 +187,30 @@ class FakeHttpClientTest {
     }
 
     @Test
+    fun `a raw delimiter that java net URI accepts still fails the test that sent it`() = runTest {
+        // Given - the four delimiters URI parses without complaint, each reaching a value unencoded
+        client.givenJsonResponse("/release", """{"ok":true}""")
+        val urls = mapOf(
+            "fragment" to "https://example.test/release?api_key=abc#def",
+            "second question mark" to "https://example.test/release?api_key=abc?def",
+            "extra equals" to "https://example.test/release?api_key=abc=def",
+            "extra ampersand" to "https://example.test/release?api_key=abc&def",
+        )
+
+        // When - each one is fetched
+        val outcomes = urls.mapValues { (_, url) -> runCatching { client.fetchJsonResult(url) }.exceptionOrNull() }
+
+        // Then - every one is refused, because no template this repo has produces that shape
+        outcomes.forEach { (name, thrown) ->
+            assertTrue("$name was accepted, the guard gave $thrown", thrown is AssertionError)
+        }
+
+        // Then - the encoded form of the same key is accepted, so it is the raw delimiter that trips
+        val encoded = client.fetchJsonResult("https://example.test/release?api_key=abc%23def")
+        assertTrue("expected the stub, was $encoded", encoded is HttpResult.Ok)
+    }
+
+    @Test
     fun `every request method runs the URL guard`() = runTest {
         // Given - the same raw-pipe URL and every method a provider can reach the fake by, which is
         // five guarded call sites: fetchJsonResult(url) delegates to the headers overload

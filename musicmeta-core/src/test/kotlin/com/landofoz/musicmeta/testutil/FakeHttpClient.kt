@@ -23,14 +23,47 @@ class FakeHttpClient : HttpClient {
      * Every recorded URL must be one `java.net.URI` accepts, because that is what
      * `DefaultHttpClient` parses with in production: a URL this fake accepted and the real client
      * rejects is a test that passes on a request that can never be made.
+     *
+     * `java.net.URI` accepts `#`, `?`, `=` and `&`, so it cannot see a value that was spliced in
+     * unencoded and silently became structure — a `#` truncates the request at a fragment, the
+     * others move or invent a parameter. [assertTemplateShape] rejects a URL whose shape no `*Api`
+     * template in this module produces.
      */
     private fun record(url: String): String {
-        try {
+        val uri = try {
             URI(url)
         } catch (e: URISyntaxException) {
             throw AssertionError("request URL is not a valid URI, DefaultHttpClient would throw: $url", e)
         }
+        assertTemplateShape(uri, url)
         return url
+    }
+
+    /**
+     * Fails when the URL carries a fragment, or a query pair that is not one `name=value` with a
+     * bare-word name. A raw delimiter reaching the URL from an interpolated value lands in one of
+     * those two, so the value goes out percent-encoded or the test that sent it goes red.
+     *
+     * The one raw `&` this cannot see is a value that is itself a whole `&name=value` pair: it is
+     * indistinguishable from the template's own without knowing the template. Encoding at the call
+     * site is what rules that out; this guard is the backstop for forgetting to.
+     */
+    private fun assertTemplateShape(uri: URI, url: String) {
+        if (uri.rawFragment != null) {
+            throw AssertionError("request URL carries a fragment, so both clients would truncate it there: $url")
+        }
+        val query = uri.rawQuery ?: return
+        for (pair in query.split("&")) {
+            val name = pair.substringBefore("=")
+            if (pair.count { it == '=' } != 1 || '?' in pair || !name.matches(QUERY_NAME)) {
+                throw AssertionError(
+                    "request URL query pair \"$pair\" is not one name=value under a bare-word " +
+                        "name: either a raw delimiter reached it from an unencoded interpolated " +
+                        "value, or the template writes a parameter shape this fake does not " +
+                        "model, in which case widen the guard: $url",
+                )
+            }
+        }
     }
     val requestedHeaders = mutableListOf<Map<String, String>>()
 
@@ -157,6 +190,9 @@ class FakeHttpClient : HttpClient {
     }
 
     companion object {
+        /** A query parameter's name, as every `*Api` template in this module writes one. */
+        private val QUERY_NAME = Regex("[A-Za-z0-9_.-]+")
+
         /**
          * An unstubbed URL: the fake has nothing at that address, which is a 404, not a dropped
          * connection. It must not be a transient variant — providers treat 429/5xx/network as a

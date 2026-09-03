@@ -860,20 +860,24 @@ cannot tell from its own tests. It has shipped twice — Wikidata's multi-proper
 release-group browse, both live for months on the OkHttp path.
 
 `HttpClient` puts the obligation on the caller: **the URL arrives already percent-encoded, and no
-client decodes an escape or reinterprets a delimiter.** A `*Api` percent-encodes every interpolated
-name, title or query — the consumer-supplied API key that `FanartTvApi` and `LastFmApi` interpolate
-is the standing exception, unencoded on the assumption that a key is hex — and a reserved character
-that is part of the *static* URL is written encoded at the call site — `%7C` for a pipe separating
-multivalue parameters, not a literal `|`. Encoding at the client instead cannot work: only the code
-that built the string knows whether a given `|` is a delimiter it meant or data a user typed. What
-a client *may* do is canonicalize — OkHttp's `HttpUrl` removes dot segments and encodes a raw
-space — so the contract is that the URL's meaning survives, not its bytes, and nothing may depend
-on byte-identical transmission.
+client decodes an escape or reinterprets a delimiter.** A `*Api` percent-encodes **every** value it
+interpolates — a name, a title, a query, an identifier, the API key a consumer supplied — through
+`encodeQueryValue` or `encodePathSegment`, whose difference is the one form encoding gets wrong for
+a path: a space is `%20` there, not `+`. A numeric parameter needs no encoding, and its type is what
+says so. A reserved character that is part of the *static* URL is written encoded at the call site —
+`%7C` for a pipe separating multivalue parameters, not a literal `|`. Encoding at the client instead
+cannot work: only the code that built the string knows whether a given `|` is a delimiter it meant or
+data a user typed. What a client *may* do is canonicalize — OkHttp's `HttpUrl` removes dot segments
+and encodes a raw space — so the contract is that the URL's meaning survives, not its bytes, and
+nothing may depend on byte-identical transmission.
 
-What catches it is `FakeHttpClient.record()`, which parses every requested URL with `java.net.URI`
-and fails the test that sent it. It catches only the characters `java.net.URI` itself refuses: a raw
-`#` or `&` reaching the URL from an unencoded value parses cleanly and silently truncates or splits
-the request, and no guard sees it. And it fires only on a URL a provider test actually exercises —
+What catches a missed one is `FakeHttpClient.record()`, which fails the test that sent the URL.
+`java.net.URI` refuses the characters neither client can carry; the shape check beside it refuses a
+URL no template here produces — one with a fragment, or with a query pair that is not a single
+`name=value` under a bare-word name. Between them a raw `#`, `?`, `=` or `&` arriving from an
+unencoded value is a red test. The residue is a value that is itself a whole `&name=value` pair,
+which no guard can tell from the template's own without reading the template; encoding at the call
+site is what rules that one out. The guard also fires only on a URL some provider test exercises —
 the release-group browse escaped because that call had no test at all, not because the guard was too
 permissive.
 

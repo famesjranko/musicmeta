@@ -36,6 +36,26 @@ class LastFmProviderTest {
     }
 
     @Test
+    fun `an api key holding a reserved character reaches the URL percent-encoded`() = runTest {
+        // Given - a provider whose key carries a pipe, which DefaultHttpClient cannot send raw
+        val keyed = LastFmProvider(
+            apiKey = "abc|def",
+            httpClient = httpClient,
+            rateLimiter = RateLimiter(0L),
+        )
+        httpClient.givenJsonResponse("artist.getsimilar", SIMILAR_ARTISTS_JSON)
+
+        // When - enriching for SIMILAR_ARTISTS
+        keyed.enrich(EnrichmentRequest.forArtist(name = "Radiohead"), EnrichmentType.SIMILAR_ARTISTS)
+
+        // Then - the key went out encoded, so either shipped client can send it
+        assertTrue(
+            "key was not encoded: ${httpClient.requestedUrls}",
+            httpClient.requestedUrls.single().contains("api_key=abc%7Cdef"),
+        )
+    }
+
+    @Test
     fun `enrich returns similar artists`() = runTest {
         // Given - Last.fm returns similar artists for Radiohead
         httpClient.givenJsonResponse("artist.getsimilar", SIMILAR_ARTISTS_JSON)

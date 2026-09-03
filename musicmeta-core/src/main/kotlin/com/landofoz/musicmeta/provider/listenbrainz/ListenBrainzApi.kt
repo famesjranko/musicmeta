@@ -4,6 +4,8 @@ import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.http.bodyOrThrowAuthOrTransient
 import com.landofoz.musicmeta.http.bodyOrThrowTransient
+import com.landofoz.musicmeta.provider.encodePathSegment
+import com.landofoz.musicmeta.provider.encodeQueryValue
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -20,7 +22,7 @@ internal class ListenBrainzApi(
     suspend fun getTopRecordingsForArtist(
         artistMbid: String,
     ): List<ListenBrainzPopularTrack> = rateLimiter.execute {
-        val url = "$BASE_URL/popularity/top-recordings-for-artist/$artistMbid"
+        val url = "$BASE_URL/popularity/top-recordings-for-artist/${encodePathSegment(artistMbid)}"
         val jsonArray = httpClient.fetchJsonArrayResult(url).bodyOrThrowTransient()
             ?: return@execute emptyList()
         parseRecordings(jsonArray)
@@ -50,7 +52,7 @@ internal class ListenBrainzApi(
     suspend fun getTopReleaseGroupsForArtist(
         artistMbid: String,
     ): List<ListenBrainzTopReleaseGroup> = rateLimiter.execute {
-        val url = "$BASE_URL/popularity/top-release-groups-for-artist/$artistMbid"
+        val url = "$BASE_URL/popularity/top-release-groups-for-artist/${encodePathSegment(artistMbid)}"
         val jsonArray = httpClient.fetchJsonArrayResult(url).bodyOrThrowTransient()
             ?: return@execute emptyList()
         parseTopReleaseGroups(jsonArray)
@@ -128,8 +130,8 @@ internal class ListenBrainzApi(
     ): List<ListenBrainzRadioTrack> {
         val token = authToken ?: return emptyList()
         return rateLimiter.execute {
-            val encoded = java.net.URLEncoder.encode("artist:($artistPrompt)", "UTF-8")
-            val url = "$BASE_URL/explore/lb-radio?prompt=$encoded&mode=$mode"
+            val encoded = encodeQueryValue("artist:($artistPrompt)")
+            val url = "$BASE_URL/explore/lb-radio?prompt=$encoded&mode=${encodeQueryValue(mode)}"
             val headers = mapOf("Authorization" to "Token $token")
             val json = httpClient.fetchJsonResult(url, headers).bodyOrThrowAuthOrTransient()
                 ?: return@execute emptyList()

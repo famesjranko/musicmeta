@@ -148,6 +148,26 @@ class FanartTvProviderTest {
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
+    @Test
+    fun `a project key holding a reserved character reaches the URL percent-encoded`() = runTest {
+        // Given - a provider whose key carries a pipe, which DefaultHttpClient cannot send raw
+        val keyed = FanartTvProvider(
+            projectKey = "abc|def",
+            httpClient = httpClient,
+            rateLimiter = RateLimiter(0L),
+        )
+        httpClient.givenJsonResponse("fanart.tv", ARTIST_IMAGES_JSON)
+
+        // When - enriching for artist photo
+        keyed.enrich(artistRequest(), EnrichmentType.ARTIST_PHOTO)
+
+        // Then - the key went out encoded, so either shipped client can send it
+        assertTrue(
+            "key was not encoded: ${httpClient.requestedUrls}",
+            httpClient.requestedUrls.single().contains("api_key=abc%7Cdef"),
+        )
+    }
+
     private fun artistRequest() = EnrichmentRequest.ForArtist(
         identifiers = EnrichmentIdentifiers(
             musicBrainzId = "a74b1b7f-71a5-4011-9441-d0b5e4122711",
