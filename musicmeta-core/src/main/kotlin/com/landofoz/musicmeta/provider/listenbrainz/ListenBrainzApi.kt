@@ -183,10 +183,12 @@ internal class ListenBrainzApi(
             val item = jsonArray.getJSONObject(i)
             val mbid = item.optString("release_group_mbid").takeIf { it.isNotBlank() }
                 ?: continue
+            val name = nestedName(item, "release_group")
+                ?: item.optString("release_group_name").takeIf { it.isNotBlank() }
+                ?: continue
             results += ListenBrainzTopReleaseGroup(
                 releaseGroupMbid = mbid,
-                releaseGroupName = nestedName(item, "release_group")
-                    ?: item.optString("release_group_name", ""),
+                releaseGroupName = name,
                 artistName = nestedArtistName(item) ?: item.optString("artist_name", ""),
                 listenCount = item.optLong("total_listen_count", 0L),
             )
@@ -196,8 +198,7 @@ internal class ListenBrainzApi(
 
     /**
      * The name inside [item]'s [key] object, or `null` where the object or its name is absent.
-     * ListenBrainz serves both this nested shape and a flat `{key}_name` sibling, so each caller
-     * keeps the flat key as its fallback.
+     * The flat `{key}_name` sibling this route used to send stays the fallback at the call site.
      */
     private fun nestedName(item: JSONObject, key: String): String? =
         item.optJSONObject(key)?.optString("name")?.takeIf { it.isNotBlank() }

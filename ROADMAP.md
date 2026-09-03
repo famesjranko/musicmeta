@@ -97,7 +97,7 @@ measurement — of how well each type is covered.
 | | GENRE_DISCOVERY | **v0.6.0** — static taxonomy, 189 genre relationships |
 | **Top Tracks** | ARTIST_TOP_TRACKS | Good — 3 providers merged via TopTrackMerger, fetches API max, no artificial cap |
 | **Recommendations** | ARTIST_RADIO | **v0.6.0** — ordered playlist (default 50 tracks, configurable), 7-day TTL. For community-driven discovery, see ARTIST_RADIO_DISCOVERY |
-| | ARTIST_RADIO_DISCOVERY | Good — community-driven discovery radio (configurable depth, free user token, catalog-filtered). Its only provider's route `/1/explore/lb-radio` was disabled upstream between **2026-06-30** and **2026-09-03**, when it answered again; ListenBrainz has withdrawn it once, so treat a live route as a fact with a date on it |
+| | ARTIST_RADIO_DISCOVERY | OK — one provider, requires a token; community-driven discovery radio (configurable depth, catalog-filtered). Verified live **2026-09-03**; `docs/providers.md` carries the withdrawal risk |
 | | SIMILAR_ALBUMS | **v0.6.0** — era-proximity scored, 30-day TTL |
 | **Preview** | TRACK_PREVIEW | **v0.9.0** — 30-second MP3 preview URL, on-demand (not in DEFAULT_TRACK_TYPES), 24-hour TTL |
 
