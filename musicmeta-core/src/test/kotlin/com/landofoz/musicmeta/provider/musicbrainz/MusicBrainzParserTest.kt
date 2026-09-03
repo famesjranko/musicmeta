@@ -23,7 +23,7 @@ class MusicBrainzParserTest {
         // When - parsing releases
         val releases = MusicBrainzParser.parseReleases(json)
 
-        // Then - every field the hit carries is extracted, and cover art reads as unknown rather than absent
+        // Then - every field the hit carries is extracted
         assertEquals(1, releases.size)
         val release = releases[0]
         assertEquals("abc123", release.id)
@@ -35,7 +35,6 @@ class MusicBrainzParserTest {
         assertEquals("group123", release.releaseGroupId)
         assertEquals("Album", release.releaseType)
         assertEquals(98, release.score)
-        assertNull(release.hasFrontCover)
         assertEquals(listOf("alternative rock"), release.tags)
     }
 
@@ -61,7 +60,6 @@ class MusicBrainzParserTest {
         assertNull(release.label)
         assertNull(release.releaseGroupId)
         assertNull(release.releaseType)
-        assertNull(release.hasFrontCover)
         assertTrue(release.tags.isEmpty())
     }
 
@@ -565,30 +563,6 @@ class MusicBrainzParserTest {
         assertEquals("look1", release?.id)
         assertEquals("The Bends", release?.title)
         assertEquals(100, release?.score)
-    }
-
-    @Test
-    fun `parseLookupRelease reads the front-cover flag its response carries`() {
-        // Given - a release lookup response carrying a cover-art-archive object with front true
-        val json = JSONObject(LOOKUP_RELEASE)
-
-        // When - parsing as a lookup release
-        val release = MusicBrainzParser.parseLookupRelease(json)
-
-        // Then - the front cover is reported as known-present, not as unknown
-        assertEquals(true, release?.hasFrontCover)
-    }
-
-    @Test
-    fun `parseLookupRelease reads a cover-art-archive object with no front key as unknown`() {
-        // Given - a release lookup response whose cover-art-archive object carries no front key
-        val json = JSONObject(LOOKUP_RELEASE_NO_FRONT_KEY)
-
-        // When - parsing as a lookup release
-        val release = MusicBrainzParser.parseLookupRelease(json)
-
-        // Then - the absent key reads as unknown, not as the false org.json would hand back
-        assertNull(release?.hasFrontCover)
     }
 
     @Test
@@ -1505,8 +1479,6 @@ class MusicBrainzParserTest {
             }
         """.trimIndent()
 
-        // The `cover-art-archive` object is the shape a live release lookup returned on 2026-08-22;
-        // a release *search* hit carries no such object, which is why no search fixture here has one.
         private val LOOKUP_RELEASE = """
             {
               "id": "look1",
@@ -1514,19 +1486,7 @@ class MusicBrainzParserTest {
               "artist-credit": [{"artist": {"name": "Radiohead"}}],
               "date": "1995-03-13",
               "country": "GB",
-              "release-group": {"id": "rg1", "primary-type": "Album"},
-              "cover-art-archive": {"back": true, "artwork": true, "darkened": false, "count": 6, "front": true}
-            }
-        """.trimIndent()
-
-        // Shaped by hand, not captured: a live lookup always sends `front`. It pins what the parser
-        // does with an object that cannot answer, which is what `optBoolean`'s default would hide.
-        private val LOOKUP_RELEASE_NO_FRONT_KEY = """
-            {
-              "id": "look2",
-              "title": "The Bends",
-              "artist-credit": [{"artist": {"name": "Radiohead"}}],
-              "cover-art-archive": {"artwork": true, "darkened": false, "count": 6}
+              "release-group": {"id": "rg1", "primary-type": "Album"}
             }
         """.trimIndent()
 

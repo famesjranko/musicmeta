@@ -91,7 +91,6 @@ internal object MusicBrainzParser {
             releaseGroupId = extractReleaseGroupId(obj),
             disambiguation = obj.optString("disambiguation").takeIf { it.isNotBlank() },
             score = obj.optInt("score", defaultScore),
-            hasFrontCover = extractHasFrontCover(obj),
             tracks = parseMedia(obj),
             status = obj.optString("status").takeIf { it.isNotBlank() },
             secondaryTypes = extractSecondaryTypes(group),
@@ -558,13 +557,6 @@ internal object MusicBrainzParser {
             }
         }
         return null
-    }
-
-    /** Null where nothing in the response answers the question — see [MusicBrainzRelease.hasFrontCover]. */
-    private fun extractHasFrontCover(release: JSONObject): Boolean? {
-        val coverArt = release.optJSONObject("cover-art-archive") ?: return null
-        if (!coverArt.has("front")) return null
-        return coverArt.optBoolean("front", false)
     }
 
     private fun extractIsrcs(recording: JSONObject): List<String> {

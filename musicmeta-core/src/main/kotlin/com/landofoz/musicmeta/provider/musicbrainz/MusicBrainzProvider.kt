@@ -22,7 +22,6 @@ public class MusicBrainzProvider(
     httpClient: HttpClient,
     rateLimiter: RateLimiter,
     private val minMatchScore: Int = DEFAULT_MIN_MATCH_SCORE,
-    private val thumbnailSize: Int = DEFAULT_THUMBNAIL_SIZE,
 ) : EnrichmentProvider {
 
     override val id: String = "musicbrainz"
@@ -90,10 +89,9 @@ public class MusicBrainzProvider(
         }
 
     /**
-     * A Cover Art Archive url is offered only for a known-true [MusicBrainzRelease.hasFrontCover],
-     * which is the one thing that tells real art from a 404. A release search response carries
-     * nothing to answer that with, so every candidate built here has a null
-     * [SearchCandidate.thumbnailUrl]; asking per candidate would cost one rate-limited lookup each.
+     * Every candidate built here has a null [SearchCandidate.thumbnailUrl]: a release search
+     * response carries nothing that tells real cover art from a Cover Art Archive 404, and asking
+     * per candidate would cost one rate-limited lookup each.
      */
     private suspend fun searchAlbumCandidates(
         request: EnrichmentRequest.ForAlbum, limit: Int,
@@ -101,14 +99,11 @@ public class MusicBrainzProvider(
         val releases = api.searchReleases(request.title, request.artist, limit)
             .ifEmpty { api.searchReleasesFuzzy(request.title, request.artist, limit) }
         return releases.map { release ->
-            val thumb = if (release.hasFrontCover == true) {
-                "https://coverartarchive.org/release/${release.id}/front-$thumbnailSize"
-            } else null
             SearchCandidate(
                 title = release.title, artist = release.artistCredit,
                 year = release.date, country = release.country,
                 releaseType = release.releaseType, score = release.score,
-                thumbnailUrl = thumb, provider = id,
+                thumbnailUrl = null, provider = id,
                 identifiers = EnrichmentIdentifiers(
                     musicBrainzId = release.id,
                     musicBrainzReleaseGroupId = release.releaseGroupId,
@@ -174,6 +169,5 @@ public class MusicBrainzProvider(
 
     public companion object {
         public const val DEFAULT_MIN_MATCH_SCORE: Int = 80
-        public const val DEFAULT_THUMBNAIL_SIZE: Int = 250
     }
 }
