@@ -62,7 +62,8 @@ class EnrichmentCacheDatabaseMigrationChainDeviceTest {
             "SELECT is_manual, identity_match, identity_match_score, resolved_ids_json " +
                 "FROM enrichment_cache WHERE entity_key = 'album:1'",
         )
-        assertTrue(row.moveToFirst())
+        assertEquals(1, row.count)
+        row.moveToFirst()
         assertEquals(1, row.getInt(0))
         assertTrue(row.isNull(1))
         assertTrue(row.isNull(2))
@@ -78,17 +79,25 @@ class EnrichmentCacheDatabaseMigrationChainDeviceTest {
             "INSERT INTO enrichment_cache " +
                 "(entity_key, enrichment_type, provider, data_json, confidence, is_manual, " +
                 "cached_at, expires_at) " +
-                "VALUES ('album:1', 'ALBUM_ART', 'p', '{}', 0.9, 0, 1000, 9999999999)",
+                "VALUES ('album:1', 'ALBUM_ART', 'p', '{\"a\":1}', 0.9, 1, 1000, 9999999999)",
         )
         db.close()
 
         // When - migrating to v3 with the real, additive migration
         db = helper.runMigrationsAndValidate(STEP_DB, 3, true, EnrichmentCacheDatabase.MIGRATION_2_3)
 
-        // Then - the pre-existing positive row survived, and negative_cache exists and takes a row
-        val existing = db.query("SELECT entity_key FROM enrichment_cache WHERE entity_key = 'album:1'")
+        // Then - the positive row survived whole, payload and manual flag included, not just its key
+        val existing = db.query(
+            "SELECT data_json, is_manual FROM enrichment_cache WHERE entity_key = 'album:1'",
+        )
         assertEquals(1, existing.count)
+        existing.moveToFirst()
+        assertEquals("{\"a\":1}", existing.getString(0))
+        assertEquals(1, existing.getInt(1))
         existing.close()
+
+        // And - negative_cache exists and takes a row
+
         db.execSQL(
             "INSERT INTO negative_cache " +
                 "(entity_key, enrichment_type, provider, identity_match, cached_at, expires_at) " +
@@ -119,7 +128,8 @@ class EnrichmentCacheDatabaseMigrationChainDeviceTest {
         // When - migrating to v4, which cannot reinterpret a stored value and so rebuilds instead
         db = helper.runMigrationsAndValidate(STEP_DB, 4, true, EnrichmentCacheDatabase.MIGRATION_3_4)
 
-        // Then - both caches are empty and take a row in the v4 shape, the manual flag gone with it
+        // Then - both caches are empty, the seeded row gone with its manual flag, and both take a
+        // row in the v4 shape
         val cacheRows = db.query("SELECT entity_key FROM enrichment_cache")
         assertEquals(0, cacheRows.count)
         cacheRows.close()
@@ -141,6 +151,23 @@ class EnrichmentCacheDatabaseMigrationChainDeviceTest {
         val rebuilt = db.query("SELECT entity_key FROM enrichment_cache WHERE entity_key = 'album:3'")
         assertEquals(1, rebuilt.count)
         rebuilt.close()
+
+        // And - a row that omits the defaulted columns gets the defaults the entities declare, which
+        // the exported schema does not carry and so nothing else pins
+        db.execSQL(
+            "INSERT INTO enrichment_cache " +
+                "(entity_key, enrichment_type, provider, data_json, confidence, canonical_status, " +
+                "cached_at, expires_at) " +
+                "VALUES ('album:5', 'ALBUM_ART', 'p', '{}', 0.9, 'RESOLVED', 1000, 9999999999)",
+        )
+        val defaulted = db.query(
+            "SELECT is_stale, is_manual, schema_version FROM enrichment_cache WHERE entity_key = 'album:5'",
+        )
+        assertTrue(defaulted.moveToFirst())
+        assertEquals(0, defaulted.getInt(0))
+        assertEquals(0, defaulted.getInt(1))
+        assertEquals(CACHE_SCHEMA_VERSION, defaulted.getInt(2))
+        defaulted.close()
     }
 
     @Test

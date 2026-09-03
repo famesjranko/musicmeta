@@ -24,6 +24,35 @@ class EnrichmentCacheDatabaseMigrationTest {
     )
 
     @Test
+    fun `migration 1 to 2 adds the identity columns as null and keeps existing rows`() {
+        // Given - a v1 database holding one positive entry the user marked manually
+        var db = helper.createDatabase(TEST_DB_1, 1)
+        db.execSQL(
+            "INSERT INTO enrichment_cache " +
+                "(entity_key, enrichment_type, provider, data_json, confidence, is_manual, cached_at, expires_at) " +
+                "VALUES ('album:1', 'ALBUM_ART', 'p', '{\"a\":1}', 0.9, 1, 1000, 9999999999)",
+        )
+        db.close()
+
+        // When - migrating to v2 with the real, additive migration
+        db = helper.runMigrationsAndValidate(TEST_DB_1, 2, true, EnrichmentCacheDatabase.MIGRATION_1_2)
+
+        // Then - the row survived with its payload and manual flag, and the three added columns are null
+        val row = db.query(
+            "SELECT data_json, is_manual, identity_match, identity_match_score, resolved_ids_json " +
+                "FROM enrichment_cache WHERE entity_key = 'album:1'",
+        )
+        assertEquals(1, row.count)
+        row.moveToFirst()
+        assertEquals("{\"a\":1}", row.getString(0))
+        assertEquals(1, row.getInt(1))
+        assertTrue(row.isNull(2))
+        assertTrue(row.isNull(3))
+        assertTrue(row.isNull(4))
+        row.close()
+    }
+
+    @Test
     fun `migration 2 to 3 creates negative_cache and keeps existing enrichment_cache rows`() {
         // Given - a v2 database holding one positive entry
         var db = helper.createDatabase(TEST_DB, 2)
@@ -191,6 +220,7 @@ class EnrichmentCacheDatabaseMigrationTest {
 
     private companion object {
         const val TEST_DB = "migration-test"
+        const val TEST_DB_1 = "migration-test-1"
         const val TEST_DB_3 = "migration-test-3"
         const val TEST_DB_4 = "migration-test-4"
         const val MODULE_DB = "module-migration-test"
