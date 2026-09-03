@@ -97,7 +97,6 @@ class EnrichmentCacheDatabaseMigrationChainDeviceTest {
         existing.close()
 
         // And - negative_cache exists and takes a row
-
         db.execSQL(
             "INSERT INTO negative_cache " +
                 "(entity_key, enrichment_type, provider, identity_match, cached_at, expires_at) " +

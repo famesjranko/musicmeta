@@ -109,7 +109,7 @@ than it looks like, each learned the hard way.
   ran rather than passed by producing no runnable methods. It is inferable — the task is neither
   `UP-TO-DATE` nor `NO-SOURCE` — never stated.
 - **No connected Android test runs anywhere.** `musicmeta-android/src/androidTest/` is absent from
-  `check`, from the `Makefile` and from all five workflows in `.github/workflows/`, so the two
+  `check`, from the `Makefile` and from every workflow in `.github/workflows/`, so the two
   device suites — the only thing that exercises a Room migration against framework SQLite — have
   never gated a merge and are not meant to. Between them they exercise every registered migration —
   `MIGRATION_1_2`, `2_3`, `3_4` and `4_5` each on its own, and `1` to `5` as one walk — and each
