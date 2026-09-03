@@ -302,6 +302,33 @@ to it. Two traps inside that:
 blackhole), kept off CI because a network that answers TEST-NET-1 with an RST turns it vacuous.
 
 
+## 29. `enrichTimeoutMs` is spent on the fan-out's dispatcher, which `runTest` does not own
+
+`enrich()` is `enrichProgressive().last()`, and that fan-out — the `withTimeoutOrNull` enforcing
+`enrichTimeoutMs` included — is launched on the engine's detached scope, `Dispatchers.Default` by
+default. A `runTest` body therefore never virtualizes the budget: it is wall-clock time, and so is
+every `delay` inside the fan-out, a `RateLimiter`'s waits included.
+
+Two ways that reaches a test as a flake, both invisible to the class run alone:
+
+- **A small budget is a wall-clock assertion.** With `enrichTimeoutMs = 100`, a 150 ms real stall
+  anywhere in the fan-out expires the engine's own deadline and every unsettled type is stamped
+  `Error(TIMEOUT, "engine")` — which is exactly what a test asserting whose deadline fired is
+  written to forbid.
+- **The pool is shared with the rest of the suite.** Complete-and-cache means a run outlives the
+  test that started it by design, so a neighbour's fan-out is still holding `Dispatchers.Default`
+  when the next class starts. Saturating that pool made `EnrichDeadlineBoundTest` return in
+  13154 ms against a 1200 ms deadline; on a dispatcher of its own, under the same saturation, the
+  same call read 1620 ms. (Recipe: six busy-loop shells pinned to `Dispatchers.Default`'s worker
+  count, then the class alone; the numbers decay, the shape does not.)
+
+So a test whose subject is a deadline hands the engine a `detachedDispatcher` it owns:
+`StandardTestDispatcher(testScheduler)` when the budget should be virtual, a dedicated pool when the
+measurement must stay real. Distinct from §17, which is the mirror image — there a timeout is
+virtual when the work it bounds is real, so it fires unconditionally; here it is real when the test
+was written as if it were virtual.
+
+
 ## Area — Provider data and matching
 
 - A MusicBrainz `inc=` that names a relationship gets you the **link**, not the linked entity's own

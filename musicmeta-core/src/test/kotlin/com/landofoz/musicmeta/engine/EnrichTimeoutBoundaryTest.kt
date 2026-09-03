@@ -4,12 +4,17 @@ import com.landofoz.musicmeta.*
 import com.landofoz.musicmeta.http.EnrichDeadline
 import com.landofoz.musicmeta.testutil.FakeEnrichmentCache
 import com.landofoz.musicmeta.testutil.FakeProvider
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
+import org.junit.After
 import org.junit.Assert.*
 import org.junit.Test
+import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -25,6 +30,14 @@ class EnrichTimeoutBoundaryTest {
 
     private val req = EnrichmentRequest.forArtist("Radiohead")
     private val cache = FakeEnrichmentCache()
+
+    /** Two threads of this class's own for the fan-out; [engine] says why they are not shared. */
+    private val fanOut = Executors.newFixedThreadPool(2) { r -> Thread(r).apply { isDaemon = true } }
+        .asCoroutineDispatcher()
+
+    @After fun closeFanOut() {
+        fanOut.close()
+    }
 
     private fun similarArtists(vararg names: String) = EnrichmentResult.Success(
         type = EnrichmentType.SIMILAR_ARTISTS,
@@ -64,16 +77,34 @@ class EnrichTimeoutBoundaryTest {
         it.givenResult(EnrichmentType.SIMILAR_TRACKS, similarTracks("Track 1", "Track 2"))
     }
 
-    private fun engine(catalog: CatalogProvider) = DefaultEnrichmentEngine(
-        ProviderRegistry(listOf(identityProvider(), recommendationProvider())),
-        cache,
-        EnrichmentConfig(
-            enableIdentityResolution = true,
-            enrichTimeoutMs = 100,
-            catalogProvider = catalog,
-            catalogFilterMode = CatalogFilterMode.AVAILABLE_ONLY,
-        ),
-    )
+    /**
+     * [detachedDispatcher] settles two separate questions about the fan-out: which clock
+     * `enrichTimeoutMs` is spent against, and whose threads it is spent on.
+     *
+     * *Virtual or real.* `enrich()` runs its fan-out on the engine's detached scope, so on any real
+     * dispatcher the 100 ms budget is wall-clock time even inside `runTest`. A test whose subject is
+     * the *provenance* of a timeout hands in the scheduler's own dispatcher, where the budget is
+     * virtual and only the catalog's own deadline can fire; a test whose subject is two catalog
+     * calls genuinely racing needs the real clock and keeps the default.
+     *
+     * *Owned or shared.* That real default is [fanOut], not `Dispatchers.Default`. On the shared
+     * pool a neighbour's complete-and-cache run — which by design outlives the test that started it
+     * — can starve this fan-out of a thread for longer than the 100 ms budget, expiring the deadline
+     * and stamping every type `Error(TIMEOUT)`. Threads of this class's own keep the race genuine
+     * and the suite's contention out of the result.
+     */
+    private fun engine(catalog: CatalogProvider, detachedDispatcher: CoroutineDispatcher = fanOut) =
+        DefaultEnrichmentEngine(
+            ProviderRegistry(listOf(identityProvider(), recommendationProvider())),
+            cache,
+            EnrichmentConfig(
+                enableIdentityResolution = true,
+                enrichTimeoutMs = 100,
+                catalogProvider = catalog,
+                catalogFilterMode = CatalogFilterMode.AVAILABLE_ONLY,
+            ),
+            detachedDispatcher = detachedDispatcher,
+        )
 
     private val types = setOf(EnrichmentType.SIMILAR_ARTISTS, EnrichmentType.SIMILAR_TRACKS)
 
@@ -175,8 +206,10 @@ class EnrichTimeoutBoundaryTest {
             }
         }
 
-        // When - enriching
-        val results = engine(catalog).enrich(req, types)
+        // When - enriching with the fan-out on the scheduler's own clock, so the only deadline that
+        // can fire is the catalog's 1 ms one; the engine's 100 ms budget is virtual here and no
+        // real-time stall in the fan-out can spend it (see engine()).
+        val results = engine(catalog, StandardTestDispatcher(testScheduler)).enrich(req, types)
 
         // Then - it costs the catalog's filtering and nothing else: both types come back as the
         // provider returned them. What must not happen is the old behaviour: every unfinished type

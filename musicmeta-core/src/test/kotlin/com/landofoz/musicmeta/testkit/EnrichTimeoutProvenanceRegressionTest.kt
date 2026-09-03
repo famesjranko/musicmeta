@@ -30,10 +30,12 @@ import org.junit.Test
  * that both answers `COUNTRY` and leaves `BAND_MEMBERS` unresolved. `BAND_MEMBERS` needs the full
  * artist lookup, memoized under a different key from the search, so it costs a second MusicBrainz
  * call — and `RateLimiter` (`EnrichmentEngine.kt`'s 1100ms MusicBrainz instance) makes that second
- * call wait. Under `runTest` the limiter's `delay` runs on the same virtual clock `withTimeoutOrNull`
- * measures against, so at a `enrichTimeoutMs` below 1100ms the deadline expiring mid-wait is not a
- * race the scheduler happens to win — it is the only outcome the virtual clock can produce, every
- * run, because nothing in this path performs real I/O ([UpstreamPools] loads a [FakeHttpClient]).
+ * call wait. That wait and the `withTimeoutOrNull` enforcing `enrichTimeoutMs` are both spent on the
+ * engine's detached dispatcher, in wall-clock time: `runTest` virtualizes neither, because the
+ * fan-out never runs on its scheduler (`docs/pitfalls.md` §29). So what makes this deterministic is
+ * the size of the real-clock margin, not an ordering the scheduler is obliged to produce — a
+ * ~1100ms limiter wait against a 500ms deadline leaves ~600ms of slack, and nothing in this path
+ * performs real I/O that could vary it ([UpstreamPools] loads a [FakeHttpClient]).
  *
  * **The `BAND_MEMBERS` timeout assertion is load-bearing, not decoration.** The reproduction depends
  * on the MusicBrainz rate-limiter's interval sitting *above* `TIGHT_TIMEOUT_MS`. If that constant
@@ -63,7 +65,7 @@ class EnrichTimeoutProvenanceRegressionTest {
         val request = EnrichmentRequest.forArtist(ARTIST)
 
         // When - enriching for the identity-write-through type and the type whose chain pays the
-        // rate limiter's interval, which under runTest's virtual clock lands past the tight deadline
+        // rate limiter's ~1100ms interval in real time, landing well past the tight deadline
         val results = engine.enrich(request, setOf(EnrichmentType.COUNTRY, EnrichmentType.BAND_MEMBERS))
 
         // Then - BAND_MEMBERS timing out is the proof the run actually truncated, and COUNTRY is
@@ -96,7 +98,8 @@ class EnrichTimeoutProvenanceRegressionTest {
                 .build()
             val request = EnrichmentRequest.forArtist(ARTIST)
 
-            // When - enriching for the same two types with room for both MusicBrainz calls to land
+            // When - enriching for the same two types with real-clock room for both MusicBrainz
+            // calls, limiter waits included, to land
             val results = engine.enrich(request, setOf(EnrichmentType.COUNTRY, EnrichmentType.BAND_MEMBERS))
 
             // Then - both calls complete, so BAND_MEMBERS is a genuine Success rather than a
@@ -119,10 +122,13 @@ class EnrichTimeoutProvenanceRegressionTest {
         private const val SCENARIO = "musicbrainz-artist-wikidata-and-members"
         private const val ARTIST = "Radiohead"
 
-        /** Below the MusicBrainz RateLimiter's 1100ms interval, so the second call outlives it. */
+        /** Below the MusicBrainz RateLimiter's 1100ms interval in real time, so the second call outlives it. */
         private const val TIGHT_TIMEOUT_MS = 500L
 
-        /** Well above both MusicBrainz calls' combined cost, so the run completes. */
+        /**
+         * A real-clock margin: several times the ~1.1s of limiter waits the two MusicBrainz calls
+         * pay on the detached dispatcher, so the run completes rather than truncating.
+         */
         private const val GENEROUS_TIMEOUT_MS = 5_000L
     }
 }
