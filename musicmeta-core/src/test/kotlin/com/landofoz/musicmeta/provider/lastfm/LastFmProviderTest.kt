@@ -14,6 +14,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -104,6 +105,34 @@ class LastFmProviderTest {
         val bio = data as EnrichmentData.Biography
         assertEquals("Radiohead are an English rock band...", bio.text)
         assertEquals("Last.fm", bio.source)
+    }
+
+    @Test
+    fun `enrich strips the trailing Read more anchor from an artist bio`() = runTest {
+        // Given - artist.getInfo carries Last.fm's Read more anchor welded onto real prose
+        httpClient.givenJsonResponse("artist.getinfo", ANCHORED_ARTIST_INFO_JSON)
+        val request = EnrichmentRequest.forArtist(name = "Radiohead")
+
+        // When - enriching for ARTIST_BIO
+        val result = provider.enrich(request, EnrichmentType.ARTIST_BIO)
+
+        // Then - the prose ends where the anchor began and no markup survives
+        val bio = (result as EnrichmentResult.Success).data as EnrichmentData.Biography
+        assertTrue(bio.text.endsWith("alternative rock."))
+        assertFalse(bio.text.contains("<a"))
+    }
+
+    @Test
+    fun `enrich returns NotFound for ARTIST_BIO when the summary is only the Read more anchor`() = runTest {
+        // Given - a wiki-less artist whose whole bio summary is the Read more anchor
+        httpClient.givenJsonResponse("artist.getinfo", LINK_ONLY_ARTIST_INFO_JSON)
+        val request = EnrichmentRequest.forArtist(name = "Changg")
+
+        // When - enriching for ARTIST_BIO
+        val result = provider.enrich(request, EnrichmentType.ARTIST_BIO)
+
+        // Then - NotFound, because nothing but the anchor was ever there
+        assertTrue(result is EnrichmentResult.NotFound)
     }
 
     @Test
@@ -519,6 +548,34 @@ class LastFmProviderTest {
     }
 
     @Test
+    fun `enrich strips the trailing Read more anchor from an album description`() = runTest {
+        // Given - album.getInfo carries the same Read more anchor on its wiki summary
+        httpClient.givenJsonResponse("album.getinfo", ANCHORED_ALBUM_INFO_JSON)
+        val request = EnrichmentRequest.forAlbum(title = "OK Computer", artist = "Radiohead")
+
+        // When - enriching for ALBUM_DESCRIPTION
+        val result = provider.enrich(request, EnrichmentType.ALBUM_DESCRIPTION)
+
+        // Then - the prose ends where the anchor began and no markup survives
+        val data = (result as EnrichmentResult.Success).data as EnrichmentData.Biography
+        assertEquals("OK Computer is the third studio album by Radiohead.", data.text)
+        assertFalse(data.text.contains("<a"))
+    }
+
+    @Test
+    fun `enrich returns NotFound for ALBUM_DESCRIPTION when the wiki summary is only the anchor`() = runTest {
+        // Given - album.getInfo whose wiki summary is nothing but the Read more anchor
+        httpClient.givenJsonResponse("album.getinfo", LINK_ONLY_ALBUM_INFO_JSON)
+        val request = EnrichmentRequest.forAlbum(title = "Obscure Album", artist = "Nobody")
+
+        // When - enriching for ALBUM_DESCRIPTION
+        val result = provider.enrich(request, EnrichmentType.ALBUM_DESCRIPTION)
+
+        // Then - NotFound, because nothing but the anchor was ever there
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
     fun `enrich returns NotFound for ALBUM_DESCRIPTION when wiki block is absent`() = runTest {
         // Given - Last.fm returns album.getinfo JSON without a wiki block
         httpClient.givenJsonResponse(
@@ -547,6 +604,71 @@ class LastFmProviderTest {
     }
 
     private companion object {
+
+        /** `artist.getInfo?artist=Radiohead`, captured 2026-09-03, prose elided mid-sentence. */
+        val ANCHORED_ARTIST_INFO_JSON = """
+            {
+              "artist": {
+                "name": "Radiohead",
+                "mbid": "a74b1b7f-71a5-4011-9441-d0b5e4122711",
+                "url": "https://www.last.fm/music/Radiohead",
+                "stats": {"listeners": "5900000", "playcount": "900000000"},
+                "bio": {
+                  "published": "12 Mar 2004, 00:00",
+                  "summary": "Radiohead are an English rock band formed in Abingdon, Oxfordshire, in 1985, which has influenced the development of alternative rock. <a href=\"https://www.last.fm/music/Radiohead\">Read more on Last.fm</a>",
+                  "content": "Radiohead are an English rock band formed in Abingdon."
+                }
+              }
+            }
+        """.trimIndent()
+
+        /** `artist.getInfo?artist=Changg`, captured 2026-09-03 — a wiki-less artist. */
+        val LINK_ONLY_ARTIST_INFO_JSON = """
+            {
+              "artist": {
+                "name": "Changg",
+                "mbid": "8b3a264b-aafc-46b9-84cc-6ede9ca17349",
+                "url": "https://www.last.fm/music/Changg",
+                "stats": {"listeners": "19685", "playcount": "299489"},
+                "bio": {
+                  "published": "01 Jan 1970, 00:00",
+                  "summary": " <a href=\"https://www.last.fm/music/Changg\">Read more on Last.fm</a>",
+                  "content": ""
+                }
+              }
+            }
+        """.trimIndent()
+
+        /** The `album.getInfo` `wiki` block carries the anchor in the shape captured 2026-09-03. */
+        val ANCHORED_ALBUM_INFO_JSON = """
+            {
+              "album": {
+                "name": "OK Computer",
+                "artist": "Radiohead",
+                "tags": {"tag": []},
+                "wiki": {
+                  "published": "18 Jul 2008, 00:00",
+                  "summary": "OK Computer is the third studio album by Radiohead. <a href=\"https://www.last.fm/music/Radiohead/OK+Computer\">Read more on Last.fm</a>",
+                  "content": "OK Computer is the third studio album by Radiohead."
+                }
+              }
+            }
+        """.trimIndent()
+
+        val LINK_ONLY_ALBUM_INFO_JSON = """
+            {
+              "album": {
+                "name": "Obscure Album",
+                "artist": "Nobody",
+                "tags": {"tag": []},
+                "wiki": {
+                  "published": "01 Jan 1970, 00:00",
+                  "summary": " <a href=\"https://www.last.fm/music/Nobody/Obscure+Album\">Read more on Last.fm</a>",
+                  "content": ""
+                }
+              }
+            }
+        """.trimIndent()
         val ALBUM_INFO_JSON = """
             {
               "album": {

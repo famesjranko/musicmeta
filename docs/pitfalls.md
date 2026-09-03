@@ -572,6 +572,22 @@ neutral; it hands the engine's canonical-status fallback a case it cannot tell a
 search. The same applies to a merged or synthesized result with several contributors and no single
 winner: report the weakest contributing route, never infer one from canonical status alone.
 
+## 27. A prose field from an upstream can arrive as markup, and a hand-written fixture never shows it
+
+Last.fm welds `<a href="…">Read more on Last.fm</a>` onto every `bio.summary` and every album
+`wiki.summary`. For an artist with no wiki that anchor *is* the whole value, so `isNotBlank()` passed
+it, the mapper wrapped it, and `ARTIST_BIO` settled `Success` on a link — the chain never fell
+through to the artist having no biography, and a demo escaping correctly rendered the tag as text.
+Every well-known artist was affected too; the anchor just trailed real prose, where nobody read to
+the end.
+
+Nothing caught it because every Last.fm fixture in the suite was hand-written from what the field
+*should* contain: `"Radiohead are an English rock band..."`, no anchor, for four years. A fixture
+written from the shape you expect can only ever prove the code agrees with you. Copy the bytes from
+a live response — including the ugly trailing part — and keep an emptiness-after-normalisation case
+beside the happy path, because a payload that is non-blank and still carries no content is the one
+the engine's blank check cannot demote.
+
 ## Area — Transport and provider state
 
 ## 11. A retry ladder's coverage is not its trigger

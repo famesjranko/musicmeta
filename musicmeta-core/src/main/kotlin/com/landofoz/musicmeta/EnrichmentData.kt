@@ -52,8 +52,13 @@ sealed class EnrichmentData {
         val isInstrumental: Boolean = false,
     ) : EnrichmentData()
 
+    /** Carries both `ARTIST_BIO` and `ALBUM_DESCRIPTION`; [source] names the upstream prose came from. */
     @Serializable
     data class Biography(
+        /**
+         * Plain prose, safe to render as text: no HTML, Markdown or wiki markup, and no trailing
+         * "read more" link an upstream appended. Paragraph breaks may be present as newlines.
+         */
         val text: String,
         val source: String,
         val language: String = "en",

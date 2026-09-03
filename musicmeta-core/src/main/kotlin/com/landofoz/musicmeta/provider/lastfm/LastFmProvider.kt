@@ -149,7 +149,8 @@ class LastFmProvider(
         val info = getArtistInfo(request.name)
             ?: return EnrichmentResult.NotFound(type, id)
         val bio = info.bio ?: return EnrichmentResult.NotFound(type, id)
-        return success(LastFmMapper.toBiography(bio), type)
+        val biography = LastFmMapper.toBiography(bio) ?: return EnrichmentResult.NotFound(type, id)
+        return success(biography, type)
     }
 
     private suspend fun enrichSimilarTracks(
@@ -208,7 +209,9 @@ class LastFmProvider(
         val info = api.getAlbumInfo(request.title, request.artist)
             ?: return EnrichmentResult.NotFound(type, id)
         val wiki = info.wiki ?: return EnrichmentResult.NotFound(type, id)
-        return success(LastFmMapper.toAlbumDescription(wiki), type)
+        val description = LastFmMapper.toAlbumDescription(wiki)
+            ?: return EnrichmentResult.NotFound(type, id)
+        return success(description, type)
     }
 
     private fun success(data: EnrichmentData, type: EnrichmentType) = EnrichmentResult.Success(

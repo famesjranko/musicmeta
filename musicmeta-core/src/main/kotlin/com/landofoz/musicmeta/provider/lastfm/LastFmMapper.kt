@@ -60,13 +60,22 @@ internal object LastFmMapper {
             }.takeIf { it.isNotEmpty() },
         )
 
-    fun toBiography(bio: String): EnrichmentData.Biography =
-        EnrichmentData.Biography(text = bio, source = "Last.fm")
+    /** Null when the summary was nothing but Last.fm's link back, which is not a biography. */
+    fun toBiography(bio: String): EnrichmentData.Biography? =
+        prose(bio)?.let { EnrichmentData.Biography(text = it, source = "Last.fm") }
 
     /** [LastFmAlbumInfo.wiki] is the album.getInfo `wiki` block's summary — same shape as the
-     * artist bio, just off the album payload instead. */
-    fun toAlbumDescription(wiki: String): EnrichmentData.Biography =
-        EnrichmentData.Biography(text = wiki, source = "Last.fm")
+     * artist bio, just off the album payload instead, and null on the same terms. */
+    fun toAlbumDescription(wiki: String): EnrichmentData.Biography? =
+        prose(wiki)?.let { EnrichmentData.Biography(text = it, source = "Last.fm") }
+
+    /**
+     * Last.fm welds a "Read more on Last.fm" anchor onto every `summary` it sends, and for an
+     * entity with no wiki that anchor is the whole value. Only that trailing anchor is removed;
+     * any other markup is left as it arrived rather than half-decoded.
+     */
+    private fun prose(summary: String): String? =
+        summary.replace(TRAILING_ANCHOR, "").trim().takeIf { it.isNotEmpty() }
 
     fun toPopularity(info: LastFmArtistInfo): EnrichmentData.Popularity =
         EnrichmentData.Popularity(
@@ -113,4 +122,6 @@ internal object LastFmMapper {
         )
 
     private const val SOURCE = "lastfm"
+
+    private val TRAILING_ANCHOR = Regex("""<a\s[^>]*>.*?</a>\s*$""", RegexOption.IGNORE_CASE)
 }
