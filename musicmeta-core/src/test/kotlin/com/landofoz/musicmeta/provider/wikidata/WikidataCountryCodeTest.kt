@@ -30,11 +30,11 @@ class WikidataCountryCodeTest {
 
     @Test
     fun `enrich COUNTRY yields no country when the P495 Q-id has no mapped code`() = runTest {
-        // Given - Okean Elzy's P495 names Q212, which the code map does not hold
-        httpClient.givenJsonResponse("wikidata.org", countryClaimResponse("Q1008489", "Q212", 212))
+        // Given - Sepultura's P495 names Q155, Brazil, which the code map does not hold
+        httpClient.givenJsonResponse("wikidata.org", countryClaimResponse("Q239074", "Q155", 155))
         val request = EnrichmentRequest.ForArtist(
-            identifiers = EnrichmentIdentifiers(wikidataId = "Q1008489"),
-            name = "Okean Elzy",
+            identifiers = EnrichmentIdentifiers(wikidataId = "Q239074"),
+            name = "Sepultura",
         )
 
         // When - enriching for country
@@ -58,6 +58,22 @@ class WikidataCountryCodeTest {
 
         // Then - the ISO 3166-1 alpha-2 code, which is GB and never UK
         assertEquals("GB", successCountry(result))
+    }
+
+    @Test
+    fun `enrich COUNTRY reports Ukraine as UA`() = runTest {
+        // Given - Okean Elzy's P495 names Q212, the Q-id that used to reach consumers verbatim
+        httpClient.givenJsonResponse("wikidata.org", countryClaimResponse("Q1008489", "Q212", 212))
+        val request = EnrichmentRequest.ForArtist(
+            identifiers = EnrichmentIdentifiers(wikidataId = "Q1008489"),
+            name = "Okean Elzy",
+        )
+
+        // When - enriching for country
+        val result = provider.enrich(request, EnrichmentType.COUNTRY)
+
+        // Then - Ukraine's alpha-2 code
+        assertEquals("UA", successCountry(result))
     }
 
     @Test

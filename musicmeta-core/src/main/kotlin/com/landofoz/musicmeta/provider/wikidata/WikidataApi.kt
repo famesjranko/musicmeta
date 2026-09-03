@@ -148,7 +148,7 @@ internal class WikidataApi(
             "Q17" to "JP", "Q38" to "IT", "Q29" to "ES", "Q16" to "CA",
             "Q408" to "AU", "Q36" to "PL", "Q159" to "RU",
             "Q213" to "CZ", "Q211" to "LV",
-            "Q31" to "BE", "Q55" to "NL",
+            "Q31" to "BE", "Q55" to "NL", "Q212" to "UA",
         )
 
         val OCCUPATION_MAP = mapOf(

@@ -5,7 +5,6 @@ import com.landofoz.musicmeta.DiscographyAlbum
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.GenreTag
-import com.landofoz.musicmeta.IsoCountry
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.TrackInfo
 
@@ -33,7 +32,9 @@ internal object ITunesMapper {
             genreTags = result.primaryGenreName?.let {
                 listOf(GenreTag(it, 0.2f, listOf("itunes"), curated = false))
             },
-            country = IsoCountry.alpha2OrNull(result.country),
+            // iTunes' `country` is the storefront the search ran against, the same for every
+            // result, so it says nothing about where the release is from.
+            country = null,
             releaseDate = result.releaseDate,
         )
 
@@ -74,7 +75,7 @@ internal object ITunesMapper {
             title = result.collectionName,
             artist = result.artistName,
             year = year,
-            country = IsoCountry.alpha2OrNull(result.country),
+            country = null,
             releaseType = null,
             score = score,
             thumbnailUrl = result.artworkUrl,

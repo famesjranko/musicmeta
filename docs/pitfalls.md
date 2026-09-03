@@ -328,11 +328,18 @@ blackhole), kept off CI because a network that answers TEST-NET-1 with an RST tu
   where both the provider writing it and the consumer reading it can be held to the same sentence.
 - Before promising a representation, count the writers, because one `Metadata` field is filled by
   every provider that can answer for it. `country` reads as a MusicBrainz-and-Wikidata question and
-  is not: iTunes writes alpha-3 into the same field, Discogs writes English names and region labels
+  is not: iTunes and Discogs both wrote the same field, Discogs in English names and region labels
   like "Europe", and a multi-country MusicBrainz release writes `XE`/`XW`. `EnrichmentResults`
   falls back from the dedicated type to `ALBUM_METADATA`, so all of them surface through one
   accessor. `grep -n 'country = ' provider/` is the check, and the equivalent grep is worth running
   for any field whose KDoc is about to state a format.
+- A field that parses cleanly and validates cleanly can still be the wrong quantity. iTunes' album
+  `country` is a well-formed ISO alpha-3 code, and it is the **storefront** the request was served
+  from — the same value on every result, `USA` for a German act's albums, because the client sends
+  no `country=`. Converting it to alpha-2 would have made a constant wrong answer look like a
+  release fact and let it win a merge. Before mapping an upstream field onto one of ours, check a
+  record whose correct value you already know and confirm the field *moves*; a value that never
+  varies is describing the request, not the entity.
 
 ## 3. `org.json` returns a default for a missing key — it does not fail
 

@@ -60,6 +60,18 @@ class IsoCountryTest {
     }
 
     @Test
+    fun `alpha2OrNull resolves a name CLDR has since renamed`() {
+        // Given - the older spelling upstreams still write, which the JDK now lists as Türkiye
+        val raw = "Turkey"
+
+        // When - normalising it
+        val code = IsoCountry.alpha2OrNull(raw)
+
+        // Then - the alpha-2 code, so a JDK display-name move cannot silently drop it
+        assertEquals("TR", code)
+    }
+
+    @Test
     fun `alpha2OrNull yields null for a region that is not a country`() {
         // Given - Discogs' multi-country region labels
         val region = "Europe"

@@ -464,6 +464,10 @@ catalogue, so it is silently unsupported rather than broken (probed 2026-08-12) 
 As with Deezer, the name-search pool behind `ALBUM_ART`, `ALBUM_METADATA` and `ALBUM_TRACKS` is
 accepted on `collectionName` as well as artist and shared as one ranked result; the exact
 `itunesCollectionId` and `lookup?upc=` paths bypass that acceptance entirely (`docs/pitfalls.md` §7).
+`country` is parsed and dropped: it names the storefront the request was served from, not the
+release, so it is the same value on every result (`USA` for a German act's albums, probed
+2026-09-03) and `Metadata.country`/`SearchCandidate.country` are left null rather than filled with
+it.
 
 **LRCLIB.** `id` is parsed and dropped (`GET /api/get/{id}` would re-fetch without a search).
 `trackName`/`artistName` are checked before a `/api/search` fallback candidate is selected —
@@ -578,4 +582,7 @@ and every user collection endpoint. `ReleaseEdition.barcode` is explicitly null 
 `"Artist - Title"` field is safely split on the boundary that matches both the requested artist and
 title, not the first artist-plausible one, then the result is accepted on the parsed album title as
 well as the artist before `ALBUM_ART`, `LABEL`, `RELEASE_TYPE` and `ALBUM_METADATA` share it
-(`docs/pitfalls.md` §7).
+(`docs/pitfalls.md` §7). `country` is free text: a country name is normalised to the ISO 3166-1
+alpha-2 code `Metadata.country` reports (`UK` included, which is not an ISO code), while a
+multi-country region — `Europe`, `Scandinavia` — has no code and is passed through as Discogs wrote
+it rather than dropped.

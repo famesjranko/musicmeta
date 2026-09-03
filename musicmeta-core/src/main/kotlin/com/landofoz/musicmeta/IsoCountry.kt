@@ -31,25 +31,41 @@ internal object IsoCountry {
     fun alpha2OrKeep(raw: String?): String? = alpha2OrNull(raw) ?: raw
 
     /**
-     * Wording no [Locale] lookup resolves. "UK" is not an ISO code (the code is "GB") but is what
-     * Discogs writes, and the JDK's display name for CZ moved to "Czechia".
+     * Wording no [Locale] lookup resolves: "UK" is not an ISO code (the code is "GB"), and CLDR has
+     * since renamed the rest, which upstreams still write in the older form.
      */
     private val ALIASES = mapOf(
         "UK" to "GB",
         "CZECH REPUBLIC" to "CZ",
+        "TURKEY" to "TR",
+        "MACEDONIA" to "MK",
+        "SWAZILAND" to "SZ",
+        "CAPE VERDE" to "CV",
+        "IVORY COAST" to "CI",
     )
 
     private val ALPHA2_CODES: Set<String> = Locale.getISOCountries().toSet()
 
     private val ALPHA3_TO_ALPHA2: Map<String, String> =
         ALPHA2_CODES.mapNotNull { code ->
-            localeFor(code).isO3Country
-                .takeIf { it.isNotBlank() }
+            // A code the JVM's locale data has no alpha-3 for throws rather than returning empty,
+            // and this runs in an object initialiser: one failure would disable every lookup here.
+            runCatching { localeFor(code).isO3Country }.getOrNull()
+                ?.takeIf { it.isNotBlank() }
                 ?.let { it.uppercase(Locale.ROOT) to code }
         }.toMap()
 
+    /**
+     * Display names are not guaranteed distinct, and `associateBy` keeps the last of a collision,
+     * so a name shared by two regions resolves to whichever the JDK enumerated later. No current
+     * pair collides; a lookup that must not drift belongs in [ALIASES].
+     */
     private val NAME_TO_ALPHA2: Map<String, String> =
-        ALPHA2_CODES.associateBy { localeFor(it).getDisplayCountry(Locale.ENGLISH).uppercase(Locale.ROOT) }
+        ALPHA2_CODES.mapNotNull { code ->
+            runCatching { localeFor(code).getDisplayCountry(Locale.ENGLISH) }.getOrNull()
+                ?.takeIf { it.isNotBlank() }
+                ?.let { it.uppercase(Locale.ROOT) to code }
+        }.toMap()
 
     private fun localeFor(code: String): Locale = Locale.Builder().setRegion(code).build()
 }
