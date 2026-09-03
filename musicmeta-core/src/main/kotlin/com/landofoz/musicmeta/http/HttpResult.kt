@@ -8,12 +8,12 @@ import java.io.IOException
  * 404 (not found) vs 429 (rate limited) vs 500 (server error) instead of seeing
  * one indistinguishable failure.
  */
-sealed class HttpResult<out T> {
-    data class Ok<T>(val body: T, val statusCode: Int = 200) : HttpResult<T>()
-    data class ClientError(val statusCode: Int, val body: String? = null) : HttpResult<Nothing>()
-    data class ServerError(val statusCode: Int, val body: String? = null) : HttpResult<Nothing>()
-    data class RateLimited(val retryAfterMs: Long? = null) : HttpResult<Nothing>()
-    data class NetworkError(val message: String, val cause: Throwable? = null) : HttpResult<Nothing>()
+public sealed class HttpResult<out T> {
+    public data class Ok<T>(val body: T, val statusCode: Int = 200) : HttpResult<T>()
+    public data class ClientError(val statusCode: Int, val body: String? = null) : HttpResult<Nothing>()
+    public data class ServerError(val statusCode: Int, val body: String? = null) : HttpResult<Nothing>()
+    public data class RateLimited(val retryAfterMs: Long? = null) : HttpResult<Nothing>()
+    public data class NetworkError(val message: String, val cause: Throwable? = null) : HttpResult<Nothing>()
 }
 
 /**

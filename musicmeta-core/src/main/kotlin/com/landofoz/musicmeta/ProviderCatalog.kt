@@ -4,15 +4,15 @@ package com.landofoz.musicmeta
  * How an [ApiKeyConfig] field relates to a catalog entry's registration under
  * [EnrichmentEngine.Builder.withDefaultProviders].
  */
-sealed class KeyRequirement {
+public sealed class KeyRequirement {
     /** The provider registers with no key. */
-    object None : KeyRequirement()
+    public object None : KeyRequirement()
 
     /** The provider registers only when [key] returns non-null; otherwise it is absent. */
-    class Required(val fieldName: String, val key: (ApiKeyConfig) -> String?) : KeyRequirement()
+    public class Required(public val fieldName: String, public val key: (ApiKeyConfig) -> String?) : KeyRequirement()
 
     /** The provider registers regardless; a null [key] only disables part of its surface. */
-    class Optional(val fieldName: String, val key: (ApiKeyConfig) -> String?) : KeyRequirement()
+    public class Optional(public val fieldName: String, public val key: (ApiKeyConfig) -> String?) : KeyRequirement()
 }
 
 /**
@@ -23,10 +23,10 @@ sealed class KeyRequirement {
  *   and a key of [ProviderPolicies.all].
  * @property displayName matches [EnrichmentProvider.displayName] for the same provider.
  */
-class ProviderCatalogEntry(
-    val id: String,
-    val displayName: String,
-    val keyRequirement: KeyRequirement,
+public class ProviderCatalogEntry(
+    public val id: String,
+    public val displayName: String,
+    public val keyRequirement: KeyRequirement,
 )
 
 /**
@@ -37,8 +37,8 @@ class ProviderCatalogEntry(
  * instance actually registered, enabled or could reach each provider. [EnrichmentEngine.getProviders]
  * on a built engine stays the authority for what *is* registered.
  */
-object ProviderCatalog {
-    val entries: List<ProviderCatalogEntry> = listOf(
+public object ProviderCatalog {
+    public val entries: List<ProviderCatalogEntry> = listOf(
         ProviderCatalogEntry("musicbrainz", "MusicBrainz", KeyRequirement.None),
         ProviderCatalogEntry("coverartarchive", "Cover Art Archive", KeyRequirement.None),
         ProviderCatalogEntry("wikidata", "Wikidata", KeyRequirement.None),

@@ -345,6 +345,28 @@ was written as if it were virtual.
   option was not found by thinking harder about the trade-off, it was found by reading the API's
   own include list.** Price the options against the upstream's documented surface before treating a
   cost as fixed.
+- A lookup table whose miss falls through as `?: rawUpstreamId` ships the upstream's own identifier
+  as data. Wikidata's `COUNTRY_MAP` did exactly that, so any artist whose P495 country was not one
+  of its 15 entries — most countries — reached consumers as `country == "Q212"`. A miss means the
+  value is unknown, so the fallback is **null**; an identifier is never a plausible default for the
+  thing it identifies. The same table also held `US` and `UK` beside `France` and `Germany`, mixing
+  two representations of one field, and nothing could catch it because the field promised none:
+  a representation promise (code versus name, and which standard) belongs in the model's KDoc,
+  where both the provider writing it and the consumer reading it can be held to the same sentence.
+- Before promising a representation, count the writers, because one `Metadata` field is filled by
+  every provider that can answer for it. `country` reads as a MusicBrainz-and-Wikidata question and
+  is not: iTunes and Discogs both wrote the same field, Discogs in English names and region labels
+  like "Europe", and a multi-country MusicBrainz release writes `XE`/`XW`. `EnrichmentResults`
+  falls back from the dedicated type to `ALBUM_METADATA`, so all of them surface through one
+  accessor. `grep -n 'country = ' provider/` is the check, and the equivalent grep is worth running
+  for any field whose KDoc is about to state a format.
+- A field that parses cleanly and validates cleanly can still be the wrong quantity. iTunes' album
+  `country` is a well-formed ISO alpha-3 code, and it is the **storefront** the request was served
+  from — the same value on every result, `USA` for a German act's albums, because the client sends
+  no `country=`. Converting it to alpha-2 would have made a constant wrong answer look like a
+  release fact and let it win a merge. Before mapping an upstream field onto one of ours, check a
+  record whose correct value you already know and confirm the field *moves*; a value that never
+  varies is describing the request, not the entity.
 
 ## 3. `org.json` returns a default for a missing key — it does not fail
 
@@ -599,6 +621,22 @@ neutral; it hands the engine's canonical-status fallback a case it cannot tell a
 search. The same applies to a merged or synthesized result with several contributors and no single
 winner: report the weakest contributing route, never infer one from canonical status alone.
 
+## 28. A prose field from an upstream can arrive as markup, and a hand-written fixture never shows it
+
+Last.fm welds `<a href="…">Read more on Last.fm</a>` onto every `bio.summary` and every album
+`wiki.summary`. For an artist with no wiki that anchor *is* the whole value, so `isNotBlank()` passed
+it, the mapper wrapped it, and `ARTIST_BIO` settled `Success` on a link — the chain never fell
+through to the artist having no biography, and a demo escaping correctly rendered the tag as text.
+Every well-known artist was affected too; the anchor just trailed real prose, where nobody read to
+the end.
+
+Nothing caught it because every Last.fm fixture in the suite was hand-written from what the field
+*should* contain: `"Radiohead are an English rock band..."`, no anchor, for four years. A fixture
+written from the shape you expect can only ever prove the code agrees with you. Copy the bytes from
+a live response — including the ugly trailing part — and keep an emptiness-after-normalisation case
+beside the happy path, because a payload that is non-blank and still carries no content is the one
+the engine's blank check cannot demote.
+
 ## Area — Transport and provider state
 
 ## 11. A retry ladder's coverage is not its trigger
@@ -810,6 +848,32 @@ recovers between two readers is no longer visible to the second**: it inherits t
 where it would once have found its own `Success`. That trade is the fix, not an oversight in it —
 it is what buys the collapse — but it is a real behaviour change and a memo whose readers can
 genuinely disagree about a flapping endpoint should not take it.
+
+## 27. A raw reserved character in a URL works on one client and cannot be sent on the other
+
+`DefaultHttpClient` parses with `java.net.URI`, which refuses a raw `|`; `OkHttpEnrichmentClient`
+hands the string to OkHttp's `HttpUrl`, which forwards it. So a provider URL carrying one is sendable
+or unsendable depending on which transport the consumer injected, and the provider that built it
+cannot tell from its own tests. It has shipped twice — Wikidata's multi-property query, and the
+release-group browse, both live for months on the OkHttp path.
+
+`HttpClient` puts the obligation on the caller: **the URL arrives already percent-encoded, and no
+client decodes an escape or reinterprets a delimiter.** A `*Api` percent-encodes every interpolated
+name, title or query — the consumer-supplied API key that `FanartTvApi` and `LastFmApi` interpolate
+is the standing exception, unencoded on the assumption that a key is hex — and a reserved character
+that is part of the *static* URL is written encoded at the call site — `%7C` for a pipe separating
+multivalue parameters, not a literal `|`. Encoding at the client instead cannot work: only the code
+that built the string knows whether a given `|` is a delimiter it meant or data a user typed. What
+a client *may* do is canonicalize — OkHttp's `HttpUrl` removes dot segments and encodes a raw
+space — so the contract is that the URL's meaning survives, not its bytes, and nothing may depend
+on byte-identical transmission.
+
+What catches it is `FakeHttpClient.record()`, which parses every requested URL with `java.net.URI`
+and fails the test that sent it. It catches only the characters `java.net.URI` itself refuses: a raw
+`#` or `&` reaching the URL from an unencoded value parses cleanly and silently truncates or splits
+the request, and no guard sees it. And it fires only on a URL a provider test actually exercises —
+the release-group browse escaped because that call had no test at all, not because the guard was too
+permissive.
 
 ## Area — Checks, comments, and config
 

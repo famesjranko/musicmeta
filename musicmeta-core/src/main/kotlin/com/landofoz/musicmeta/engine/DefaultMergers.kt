@@ -44,5 +44,5 @@ internal val DEFAULT_SYNTHESIZERS: List<CompositeSynthesizer> = listOf(
  * only the two built-in objects above — a consumer synthesizer's dependencies must be read through
  * the snapshot instead.
  */
-val DEFAULT_SYNTHESIZER_DEPENDENCIES: Map<EnrichmentType, Set<EnrichmentType>> =
+public val DEFAULT_SYNTHESIZER_DEPENDENCIES: Map<EnrichmentType, Set<EnrichmentType>> =
     DEFAULT_SYNTHESIZERS.associate { it.type to it.dependencies }

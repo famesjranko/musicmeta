@@ -352,7 +352,8 @@ class DiscogsProviderTest {
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.Metadata
         assertEquals("NODATA 02", data.catalogNumber)
         assertEquals("Parlophone", data.label)
-        assertEquals("UK", data.country)
+        // Discogs writes "UK", which is not an ISO code
+        assertEquals("GB", data.country)
         assertEquals("1997", data.releaseDate)
         assertTrue(data.genres!!.contains("Electronic"))
         assertTrue(data.genres!!.contains("Rock"))

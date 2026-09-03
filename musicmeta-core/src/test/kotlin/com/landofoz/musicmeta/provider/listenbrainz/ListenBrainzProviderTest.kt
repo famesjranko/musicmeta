@@ -564,6 +564,59 @@ class ListenBrainzProviderTest {
     }
 
     @Test
+    fun `enrich names an album whose title arrives nested under release_group`() = runTest {
+        // Given - the shape the live route returns, captured 2026-09-03: no flat name keys
+        httpClient.givenJsonResponse(
+            "top-release-groups-for-artist",
+            """[
+                {
+                    "release_group_mbid":"6e335887-60ba-38f0-95af-fae7774336bf",
+                    "release_group":{"name":"In Rainbows","date":"2007-10-10","type":"Album"},
+                    "artist":{"artists":[{"name":"Radiohead"}]},
+                    "total_listen_count":26894695,
+                    "total_user_count":274994
+                }
+            ]""",
+        )
+        val request = EnrichmentRequest.ForArtist(
+            identifiers = EnrichmentIdentifiers(musicBrainzId = "artist-mbid"),
+            name = "Radiohead",
+        )
+
+        // When - enriching for artist discography
+        val result = provider.enrich(request, EnrichmentType.ARTIST_DISCOGRAPHY)
+
+        // Then - the album carries its title rather than the blank a missing flat key leaves
+        assertTrue(result is EnrichmentResult.Success)
+        val discography = (result as EnrichmentResult.Success).data as EnrichmentData.Discography
+        assertEquals("In Rainbows", discography.albums.single().title)
+    }
+
+    @Test
+    fun `enrich skips a release group that carries no name in either shape`() = runTest {
+        // Given - a constructed item with neither the nested nor the flat name key
+        httpClient.givenJsonResponse(
+            "top-release-groups-for-artist",
+            """[
+                {
+                    "release_group_mbid":"6e335887-60ba-38f0-95af-fae7774336bf",
+                    "total_listen_count":26894695
+                }
+            ]""",
+        )
+        val request = EnrichmentRequest.ForArtist(
+            identifiers = EnrichmentIdentifiers(musicBrainzId = "artist-mbid"),
+            name = "Radiohead",
+        )
+
+        // When - enriching for artist discography
+        val result = provider.enrich(request, EnrichmentType.ARTIST_DISCOGRAPHY)
+
+        // Then - NotFound rather than a Success carrying a blank-titled album
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
     fun `enrich returns NotFound for ARTIST_DISCOGRAPHY when no release groups`() = runTest {
         // Given - the API returns an empty array of release groups
         httpClient.givenJsonResponse("top-release-groups-for-artist", "[]")

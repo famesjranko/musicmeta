@@ -19,34 +19,34 @@ import javax.inject.Singleton
  */
 @Module
 @InstallIn(SingletonComponent::class)
-object HiltEnrichmentModule {
+public object HiltEnrichmentModule {
 
-    const val DEFAULT_DATABASE_NAME = "enrichment_cache.db"
+    public const val DEFAULT_DATABASE_NAME: String = "enrichment_cache.db"
 
     @Provides
     @Singleton
-    fun provideEnrichmentCacheDatabase(
+    public fun provideEnrichmentCacheDatabase(
         @ApplicationContext context: Context,
     ): EnrichmentCacheDatabase = EnrichmentCacheDatabase.create(context, DEFAULT_DATABASE_NAME)
 
     @Provides
     @Singleton
-    fun provideEnrichmentCacheDao(database: EnrichmentCacheDatabase): EnrichmentCacheDao =
+    public fun provideEnrichmentCacheDao(database: EnrichmentCacheDatabase): EnrichmentCacheDao =
         database.enrichmentCacheDao()
 
     @Provides
     @Singleton
-    fun provideNegativeCacheDao(database: EnrichmentCacheDatabase): NegativeCacheDao =
+    public fun provideNegativeCacheDao(database: EnrichmentCacheDatabase): NegativeCacheDao =
         database.negativeCacheDao()
 
     @Provides
     @Singleton
-    fun provideSelectionDao(database: EnrichmentCacheDatabase): SelectionDao =
+    public fun provideSelectionDao(database: EnrichmentCacheDatabase): SelectionDao =
         database.selectionDao()
 
     @Provides
     @Singleton
-    fun provideRoomEnrichmentCache(
+    public fun provideRoomEnrichmentCache(
         dao: EnrichmentCacheDao,
         negativeDao: NegativeCacheDao,
         selectionDao: SelectionDao,

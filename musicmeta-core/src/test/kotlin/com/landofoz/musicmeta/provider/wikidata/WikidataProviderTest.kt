@@ -556,9 +556,9 @@ class WikidataProviderTest {
         // When - enriching for COUNTRY type
         val result = provider.enrich(request, EnrichmentType.COUNTRY)
 
-        // Then - Latvia, which is what Q211 is
+        // Then - Latvia's alpha-2 code, which is what Q211 is
         val metadata = (result as EnrichmentResult.Success).data as EnrichmentData.Metadata
-        assertEquals("Latvia", metadata.country)
+        assertEquals("LV", metadata.country)
     }
 
     @Test
@@ -579,9 +579,9 @@ class WikidataProviderTest {
         // When - enriching for COUNTRY type
         val result = provider.enrich(request, EnrichmentType.COUNTRY)
 
-        // Then - Czech Republic, now keyed on the QID that means it
+        // Then - the Czech Republic's alpha-2 code, keyed on the QID that means it
         val metadata = (result as EnrichmentResult.Success).data as EnrichmentData.Metadata
-        assertEquals("Czech Republic", metadata.country)
+        assertEquals("CZ", metadata.country)
     }
 
     @Test

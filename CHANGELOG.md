@@ -76,9 +76,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `CONTRADICTED` documented as leaving the disowned identifier on `identity.identifiers`, and as reachable on a pre-terminal `enrichProgressive` emission before resolution has settled
 - A name-searching provider is no longer stamped `EXACT_NAME` just because identity resolved by identifier: provenance now reports what resolution established about that name, not that it ran
 - `IdentityResolution.matchScore` and `Success.confidence` documented as confidence in the lookup, not that the entity matches the request: a wrong-but-live MBID resolves at full score
+- The `HttpClient` contract now states that URLs arrive already percent-encoded: a custom client must never decode an escape or reinterpret a delimiter, though it may canonicalize as OkHttp does
 - demo-web no longer enriches its suggested queries at startup: the page is usable the moment it loads, `/api/health` reports ready as soon as the server binds, and the cache fills from real searches
+- `ExternalLink.url` documented as the upstream's URL verbatim, which may be `http://`, so an https-only policy is the consumer's to enforce; `Artwork.url` documents its Cover Art Archive upgrade
 
 ### Fixed
+- Last.fm biographies and album descriptions carry no anchor tags, and a wiki-less artist settles `NotFound` not a link-only bio; cached entries keep it until refresh, so clear yours or wait
+- `country` is now ISO 3166-1 alpha-2 (`UK` is `GB`): Wikidata returns null outside its code map, iTunes null as it sent the storefront; cached entries keep the old value until cleared or expired
+- ListenBrainz's `ARTIST_DISCOGRAPHY` albums carry their titles again: the name moved under `release_group`, and a nameless album is skipped, not shipped blank; caches 30 days, so clear yours or wait
 - Cover Art Archive artwork URLs now leave the provider https: older CAA entries serve `http://`, which browsers block as mixed content; cached entries keep it until refresh, so clear yours or wait
 - A cache-hit type requested beside an uncached composite that depends on it is no longer re-fetched upstream: the cached value is served and its cache entry survives instead of being overwritten
 - A fault that escapes the fan-out is no longer reported as `ErrorKind.ENGINE_CLOSED`: unsettled types carry `UNKNOWN` and the real cause, so a missing class no longer reads as a closed engine

@@ -8,7 +8,7 @@ package com.landofoz.musicmeta
  * directly for error diagnostics (e.g., checking if a type was [EnrichmentResult.Error] and what
  * its [ErrorKind] was).
  */
-data class ArtistProfile(val name: String, val results: EnrichmentResults) {
+public data class ArtistProfile(val name: String, val results: EnrichmentResults) {
 
     // --- Identity ---
     val identifiers: EnrichmentIdentifiers get() = results.identity.identifiers
@@ -25,6 +25,8 @@ data class ArtistProfile(val name: String, val results: EnrichmentResults) {
     // --- Text & Metadata ---
     val bio: EnrichmentData.Biography? get() = results.biography()
     val genres: List<GenreTag> get() = results.genreTags()
+
+    /** ISO 3166-1 alpha-2 (`GB`); null when no provider had a country-level area for the artist. */
     val country: String? get() = results.country()
 
     // --- Members & Relationships ---

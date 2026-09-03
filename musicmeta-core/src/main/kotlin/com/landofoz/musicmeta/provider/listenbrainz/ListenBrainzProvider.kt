@@ -21,7 +21,7 @@ import kotlinx.coroutines.currentCoroutineContext
  * Requires a musicBrainzId in request identifiers for most capabilities.
  * When [authToken] is provided, also registers ARTIST_RADIO_DISCOVERY capability.
  */
-class ListenBrainzProvider(
+public class ListenBrainzProvider(
     httpClient: HttpClient,
     rateLimiter: RateLimiter,
     private val authToken: String? = null,
