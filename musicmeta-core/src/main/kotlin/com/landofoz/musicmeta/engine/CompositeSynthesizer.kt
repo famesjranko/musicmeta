@@ -9,9 +9,9 @@ import com.landofoz.musicmeta.EnrichmentType
  * Used for types that depend on other types being resolved first.
  * ARTIST_TIMELINE is the first composite type; Phase 16 will add GENRE_DISCOVERY.
  */
-interface CompositeSynthesizer {
+public interface CompositeSynthesizer {
     /** The composite EnrichmentType this synthesizer produces. */
-    val type: EnrichmentType
+    public val type: EnrichmentType
 
     /**
      * The sub-types that must be resolved before this synthesizer can run.
@@ -31,7 +31,7 @@ interface CompositeSynthesizer {
      * naming every type on the cycle. There is no resolution order for a cycle, so the alternative
      * is types that silently never settle.
      */
-    val dependencies: Set<EnrichmentType>
+    public val dependencies: Set<EnrichmentType>
 
     /**
      * Synthesizes a composite result from resolved sub-type results.
@@ -47,7 +47,7 @@ interface CompositeSynthesizer {
      * @param identityResult The identity resolution result, if available.
      * @param request The original enrichment request.
      */
-    fun synthesize(
+    public fun synthesize(
         resolved: Map<EnrichmentType, EnrichmentResult>,
         identityResult: EnrichmentResult?,
         request: EnrichmentRequest,

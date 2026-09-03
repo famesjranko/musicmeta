@@ -7,7 +7,7 @@ package com.landofoz.musicmeta
  * learn whether MusicBrainz confirmed the entity. Always present — [status] carries every reason
  * resolution did not run, so nothing here is ever read as "absent means confident".
  */
-data class IdentityResolution(
+public data class IdentityResolution(
     /** Resolved identifiers (MBIDs, Wikidata, Wikipedia). */
     val identifiers: EnrichmentIdentifiers,
     /** Canonical resolution outcome for this call. */

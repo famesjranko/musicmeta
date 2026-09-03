@@ -18,13 +18,13 @@ import kotlinx.coroutines.sync.withLock
  * Last.fm enrichment provider. Supplies similar artists, genre tags,
  * artist bios, album descriptions, and popularity data. Requires a Last.fm API key.
  */
-class LastFmProvider(
+public class LastFmProvider(
     private val apiKeyProvider: () -> String,
     httpClient: HttpClient,
     rateLimiter: RateLimiter,
 ) : EnrichmentProvider {
 
-    constructor(apiKey: String, httpClient: HttpClient, rateLimiter: RateLimiter) :
+    public constructor(apiKey: String, httpClient: HttpClient, rateLimiter: RateLimiter) :
         this({ apiKey }, httpClient, rateLimiter)
 
     private val api = LastFmApi(apiKeyProvider, httpClient, rateLimiter)
@@ -52,12 +52,12 @@ class LastFmProvider(
             }
     }
 
-    override val id = "lastfm"
-    override val displayName = "Last.fm"
-    override val requiresApiKey = true
+    override val id: String = "lastfm"
+    override val displayName: String = "Last.fm"
+    override val requiresApiKey: Boolean = true
     override val isAvailable: Boolean get() = apiKeyProvider().isNotBlank()
 
-    override val capabilities = listOf(
+    override val capabilities: List<ProviderCapability> = listOf(
         ProviderCapability(EnrichmentType.SIMILAR_ARTISTS, priority = 100),
         ProviderCapability(EnrichmentType.GENRE, priority = 100),
         ProviderCapability(EnrichmentType.ARTIST_BIO, priority = 50),

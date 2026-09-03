@@ -16,6 +16,9 @@ java {
 // See musicmeta-core: Kotlin otherwise targets the JDK running Gradle, not 17.
 kotlin {
     compilerOptions { jvmTarget = JvmTarget.JVM_17 }
+
+    // See musicmeta-core: the published surface is stated, not inferred.
+    explicitApi()
 }
 
 tasks.withType<Test> {

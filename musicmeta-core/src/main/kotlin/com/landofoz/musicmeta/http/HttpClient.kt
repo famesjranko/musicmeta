@@ -10,11 +10,20 @@ import org.json.JSONObject
  * distinguishable from an empty result all the way to the provider — which is what decides between
  * `Error` (retryable, opens the breaker, engages `STALE_IF_ERROR`) and `NotFound`. Nothing here is
  * defaulted: an implementor writes six methods, and the library calls all six.
+ *
+ * Every `url` these methods take is already a valid URI: the caller percent-encodes anything that
+ * is not acting as a delimiter, so a pipe, a space or a bracket arrives as `%7C`, `%20`, `%5B`,
+ * `%5D`. An implementation must not decode a percent-escape or reinterpret a delimiter — decoding
+ * `%7C` back to `|` turns one parameter into two, which is the whole reason the caller encoded it.
+ * A transport that canonicalizes is permitted: OkHttp's `HttpUrl` removes dot segments and encodes
+ * a raw space, which `java.net.URI` refuses outright, so a caller must not rely on the bytes
+ * arriving unchanged, only on their meaning. Behaviour on a string that is not a valid URI is
+ * unspecified; an implementation may throw.
  */
-interface HttpClient {
+public interface HttpClient {
 
     /** GET request, response parsed as a JSON object. */
-    suspend fun fetchJsonResult(url: String): HttpResult<JSONObject>
+    public suspend fun fetchJsonResult(url: String): HttpResult<JSONObject>
 
     /**
      * GET request carrying per-request headers, response parsed as a JSON object.
@@ -23,10 +32,10 @@ interface HttpClient {
      * headers are where `Authorization` arrives, so an implementation that drops them authenticates
      * nothing and every keyed provider reads as unauthorised.
      */
-    suspend fun fetchJsonResult(url: String, headers: Map<String, String>): HttpResult<JSONObject>
+    public suspend fun fetchJsonResult(url: String, headers: Map<String, String>): HttpResult<JSONObject>
 
     /** GET request, response parsed as a JSON array. */
-    suspend fun fetchJsonArrayResult(url: String): HttpResult<JSONArray>
+    public suspend fun fetchJsonArrayResult(url: String): HttpResult<JSONArray>
 
     /**
      * GET request that resolves a redirect instead of following it — Cover Art Archive answers 307.
@@ -38,7 +47,7 @@ interface HttpClient {
      * every transient failure on the artwork path into "no artwork", which the providers hand back
      * as `NotFound` and the breaker never sees.
      */
-    suspend fun fetchRedirectUrlResult(url: String): HttpResult<String>
+    public suspend fun fetchRedirectUrlResult(url: String): HttpResult<String>
 
     /**
      * POST request with a JSON body, response parsed as a JSON object.
@@ -51,7 +60,7 @@ interface HttpClient {
      * this method with something that mutates state needs its own idempotency key, or its own
      * client.
      */
-    suspend fun postJsonResult(url: String, body: String): HttpResult<JSONObject>
+    public suspend fun postJsonResult(url: String, body: String): HttpResult<JSONObject>
 
     /**
      * POST request with a JSON body, response parsed as a JSON array.
@@ -59,5 +68,5 @@ interface HttpClient {
      * Retried on a dropped connection, same as [postJsonResult] — send only what is safe to send
      * twice.
      */
-    suspend fun postJsonArrayResult(url: String, body: String): HttpResult<JSONArray>
+    public suspend fun postJsonArrayResult(url: String, body: String): HttpResult<JSONArray>
 }

@@ -800,6 +800,32 @@ where it would once have found its own `Success`. That trade is the fix, not an 
 it is what buys the collapse — but it is a real behaviour change and a memo whose readers can
 genuinely disagree about a flapping endpoint should not take it.
 
+## 27. A raw reserved character in a URL works on one client and cannot be sent on the other
+
+`DefaultHttpClient` parses with `java.net.URI`, which refuses a raw `|`; `OkHttpEnrichmentClient`
+hands the string to OkHttp's `HttpUrl`, which forwards it. So a provider URL carrying one is sendable
+or unsendable depending on which transport the consumer injected, and the provider that built it
+cannot tell from its own tests. It has shipped twice — Wikidata's multi-property query, and the
+release-group browse, both live for months on the OkHttp path.
+
+`HttpClient` puts the obligation on the caller: **the URL arrives already percent-encoded, and no
+client decodes an escape or reinterprets a delimiter.** A `*Api` percent-encodes every interpolated
+name, title or query — the consumer-supplied API key that `FanartTvApi` and `LastFmApi` interpolate
+is the standing exception, unencoded on the assumption that a key is hex — and a reserved character
+that is part of the *static* URL is written encoded at the call site — `%7C` for a pipe separating
+multivalue parameters, not a literal `|`. Encoding at the client instead cannot work: only the code
+that built the string knows whether a given `|` is a delimiter it meant or data a user typed. What
+a client *may* do is canonicalize — OkHttp's `HttpUrl` removes dot segments and encodes a raw
+space — so the contract is that the URL's meaning survives, not its bytes, and nothing may depend
+on byte-identical transmission.
+
+What catches it is `FakeHttpClient.record()`, which parses every requested URL with `java.net.URI`
+and fails the test that sent it. It catches only the characters `java.net.URI` itself refuses: a raw
+`#` or `&` reaching the URL from an unencoded value parses cleanly and silently truncates or splits
+the request, and no guard sees it. And it fires only on a URL a provider test actually exercises —
+the release-group browse escaped because that call had no test at all, not because the guard was too
+permissive.
+
 ## Area — Checks, comments, and config
 
 ## 9. A line-based check that skips lines can stop reading a file entirely

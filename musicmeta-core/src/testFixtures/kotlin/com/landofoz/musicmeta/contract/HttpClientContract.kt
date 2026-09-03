@@ -29,6 +29,9 @@ import java.util.concurrent.atomic.AtomicInteger
  * retry ladder itself is `BudgetedTransientRetry`, shared by construction (`DefaultHttpClient.kt`,
  * `OkHttpEnrichmentClient.kt`) and covered by each client's own retry test file.
  *
+ * A raw reserved character in a URL is deliberately unpinned here: [HttpClient] puts the encoding on
+ * the caller, so what an implementation does with a string that is not a valid URI is unspecified.
+ *
  * The loopback server lives entirely here, not in the subclass: every case below is driven off a
  * raw socket or `com.sun.net.httpserver.HttpServer`, neither of which either implementation's own
  * test dependencies are needed for, so a subclass supplies nothing but [subject].
