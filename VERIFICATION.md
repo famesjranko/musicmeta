@@ -31,6 +31,7 @@ because the config is the thing that fails.
 | Kotlin format | ktlint (version pinned in `libs.versions.toml`) | all modules, `demo-cli/`, and `demo-web/` |
 | Kotlin static analysis | detekt, **type-resolved** (`detektMain`/`detektTest`/`detektTestFixtures`) | complexity, dead code, bug patterns |
 | Build | `./gradlew build` | compile, all unit tests, `apiCheck` against `api/*.api` |
+| Core dependency floor | `:musicmeta-core:generatePomFileForMavenPublication` + `scripts/checks/check_pom_dependencies.py` | every `<dependency>` in `musicmeta-core`'s published POM matches `musicmeta-core/api/musicmeta-core.pom-dependencies`, coordinate, version and scope alike. It reads the published artifact, not `build.gradle.kts`, so it sees a dependency a plugin, a `subprojects { }` block or a `configurations.all` contributed — `kotlin-stdlib` is in the baseline and in no build script. Versions are in it because Gradle resolves the highest in the graph, so raising one raises a floor every consumer inherits. Only `<dependencies>` is baselined; the rest of the POM moves on every version bump. An absent, unparseable or dependency-less POM, and a baseline with no dependency lines, are findings rather than passes. `musicmeta-core` only — the adapters exist to bring OkHttp and Room, so a baseline for them would document rather than gate. Regenerate with `make pom-dump`. It reads coordinates, never licences or provenance: nothing here says a dependency is one core should have |
 | Explicit API | Kotlin's `explicitApi()` on `musicmeta-core`, `musicmeta-okhttp`, `musicmeta-android` | every declaration reaching the published surface states its visibility and its return type, or the compile fails. It is part of the compile, so it runs wherever the modules are compiled — the Build step above, CI, and anything that depends on those compile tasks, including detekt's type-resolved tasks — but **not under `./check --fast`, which exits before any of them**. What it buys a consumer: a public signature's types are readable in the `.kt` rather than reconstructed from the dump's erased descriptors. Main source sets only, and only in these three modules: `src/test` (including its `e2e` package), `src/testFixtures` and `src/androidTest` are exempt by the compiler — the last confirmed by a green `./gradlew :musicmeta-android:compileDebugAndroidTestKotlin`, since no gate compiles that source set — while the `demo-cli/`, `demo-web/`, `docs-samples/` and `docs-samples-android/` builds are unaffected because they are separate Gradle builds that never set the flag. `internal` and `private` declarations are exempt anywhere. Kotlin exempts four kinds of declaration even in main sources — primary constructors, **properties of a `data class`** (constructor and body alike), property getters and setters, and `override` members — so a `data class`'s properties carry no modifier and are checked by nothing here. It reads declarations, never intent: it forces a visibility to be written, it cannot tell that the one written is the right one |
 | Consumer canary | `demo-cli/` and `demo-web/` composite builds | an external consumer still compiles, and their tests run (`demo-web/`'s 50 `ProfileMapperTest` cases; `demo-cli/` has none yet) |
 | Doc samples | `scripts/checks/check_doc_samples.py` + `docs-samples/`/`docs-samples-android/` composite builds | every ```` ```kotlin ```` fence in `docs/guides/*.md` compiles against the real API, or carries a `<!-- no-compile: <reason> -->` marker with a mandatory reason; compiled per guide, in reading order, as one narrative, not one fence at a time — see "Known gaps". One extractor, two targets: every guide but `android.md` compiles as a plain JVM module, `android.md` compiles against a real `com.android.library` build (Room/Hilt/WorkManager). 61 of 75 non-`android.md` fences and 11 of 12 `android.md` fences compile today |
@@ -78,17 +79,15 @@ than it looks like, each learned the hard way.
   prose. `git log -S ProviderFeatureDocsTest` has it if the judgement changes. The tables it checked
   went with it; what the doc kept is what no compiler or test can see. It states its own scope and
   the date it was last hand-verified — that date is the only warranty.
-- **Nothing checks core's dependency list.** `ARCHITECTURE.md`'s "core is dependency-minimal JVM"
-  is held by review alone: adding one compiles, passes every test, and moves no `api/*.api` line,
-  because a transitive is not part of the ABI. A check that parsed `musicmeta-core/build.gradle.kts`
-  was built and deleted — the build script is not where the invariant lives. The published POM is,
-  and `./gradlew :musicmeta-core:generatePomFileForMavenPublication` already writes a fourth
-  dependency, `kotlin-stdlib`, that no build script declares, so a parse can report "three, all
-  allowed" while the artifact a consumer resolves disagrees. A baseline of that POM, diffed the way
-  `api/*.api` is, would enforce it exactly — `.scratch/core-dependency-pom-baseline/`. Nothing reads
-  a dependency's *version* either, in any module: moving one compiles, passes every test and moves
-  no `api/*.api` line, and `.github/dependabot.yml` now deliberately does not offer those bumps, so
-  review is the only reader left.
+- **Only core's dependency list is checked; the adapters' is not.** The Core dependency floor gate
+  above reads `musicmeta-core`'s published POM. `musicmeta-okhttp` and `musicmeta-android` have no
+  baseline, so a dependency added to either — or a version moved in either — compiles, passes every
+  test, moves no `api/*.api` line, and reaches a consumer with review as its only reader. That is
+  deliberate rather than an oversight: those modules exist to bring OkHttp and Room, so a baseline
+  would record their contents rather than hold a line. It still means "dependency-minimal" is
+  mechanised for exactly one of the three published modules. `.github/dependabot.yml` deliberately
+  does not offer version updates for the consumer-facing dependencies, so for the adapters nothing
+  raises a version bump for review at all. Core's are raised by the baseline diff.
 - **Nothing verifies that a security PR still arrives.** `.github/dependabot.yml` ignores the
   consumer-facing dependencies for version updates only. Upstream asserts that a security update
   ignores those conditions — `dependabot-core`'s `silent/tests/testdata/su-err-all-versions-ignored`

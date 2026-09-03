@@ -62,8 +62,9 @@ Where a rule below names its gate, what is written here is the part that gate ca
   weaken, skip or `@Ignore` a test to reach green — if a test is wrong, say why before changing it.
 - A dependency in `musicmeta-core` reaches every consumer transitively and cannot be withdrawn
   without a break, so each one carries its argument beside the declaration and a fourth needs one
-  too. The adapters exist to bring OkHttp and Room and are not held to this. Nothing enforces it
-  (`VERIFICATION.md` — "Known gaps"). Raising the version of one moves a floor every consumer
+  too. The adapters exist to bring OkHttp and Room and are not held to this. The POM baseline in
+  `musicmeta-core/api/` makes adding or moving one fail `check`; whether the argument beside it is
+  a good one is the part no gate reads. Raising the version of one moves a floor every consumer
   inherits, because Gradle takes the highest version in the graph: bump for a security advisory or
   an API we need, and say which in the PR. Kotlin counts — its version publishes `kotlin-stdlib`
   into every POM at compile scope.

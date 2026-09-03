@@ -66,10 +66,10 @@ tasks.withType<Test> {
 
 // Core is dependency-minimal JVM (ARCHITECTURE.md), which is what lets a server or desktop
 // consumer take the engine without an Android artifact or a wire library. A fourth entry below is
-// imposed on every consumer's classpath at the next release and cannot be removed without a break,
-// and nothing fails when one is added: it compiles, the tests pass, and `apiCheck` sees nothing,
-// because a transitive is not part of the ABI. So each one carries the argument for its being here,
-// and a fourth needs one too.
+// imposed on every consumer's classpath at the next release and cannot be removed without a break.
+// `apiCheck` sees nothing, because a transitive is not part of the ABI; the published POM is
+// baselined instead, so adding one fails `check` until `make pom-dump` records it. The baseline
+// reads coordinates, not reasons, so each entry still carries the argument for its being here.
 dependencies {
     // The concurrency primitive the whole engine is built on.
     implementation(libs.kotlinx.coroutines.core)

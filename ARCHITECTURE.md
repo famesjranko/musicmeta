@@ -61,8 +61,10 @@ consumer take the engine without either.
 else. Serialization is declared `api(...)`, so it is on a consumer's compile classpath and its
 version is part of the published contract; the other two are `implementation`.
 A fourth entry reaches every consumer transitively and cannot be withdrawn without a break, so the
-argument for each one is written beside it in `musicmeta-core/build.gradle.kts`. Nothing enforces
-the list (`VERIFICATION.md` — "Known gaps").
+argument for each one is written beside it in `musicmeta-core/build.gradle.kts`. The list itself is
+gated: the published POM's dependencies are baselined in `musicmeta-core/api/` and diffed on every
+run, so an addition or a version move fails rather than merging quietly. Whether an entry's argument
+is a good one is not gated, and stays with review.
 
 **`http/`'s `HttpClient` interface is the seam that keeps it that way.** Core owns transport
 *semantics* — what is transient, how a retry budget composes with the enrich deadline, when a
