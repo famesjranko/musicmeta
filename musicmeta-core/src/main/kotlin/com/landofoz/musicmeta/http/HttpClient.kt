@@ -17,8 +17,8 @@ import org.json.JSONObject
  * `%7C` back to `|` turns one parameter into two, which is the whole reason the caller encoded it.
  * A transport that canonicalizes is permitted: OkHttp's `HttpUrl` removes dot segments and encodes
  * a raw space, which `java.net.URI` refuses outright, so a caller must not rely on the bytes
- * arriving unchanged, only on their meaning. Behaviour on a string that is not a valid URI is unspecified;
- * an implementation may throw.
+ * arriving unchanged, only on their meaning. Behaviour on a string that is not a valid URI is
+ * unspecified; an implementation may throw.
  */
 interface HttpClient {
 

@@ -798,9 +798,10 @@ name, title or query — the consumer-supplied API key that `FanartTvApi` and `L
 is the standing exception, unencoded on the assumption that a key is hex — and a reserved character
 that is part of the *static* URL is written encoded at the call site — `%7C` for a pipe separating
 multivalue parameters, not a literal `|`. Encoding at the client instead cannot work: only the code
-that built the string knows whether a given `|` is a delimiter it meant or data a user typed. What a client *may* do is canonicalize — OkHttp's `HttpUrl` removes dot
-segments and encodes a raw space — so the contract is that the URL's meaning survives, not its
-bytes, and nothing may depend on byte-identical transmission.
+that built the string knows whether a given `|` is a delimiter it meant or data a user typed. What
+a client *may* do is canonicalize — OkHttp's `HttpUrl` removes dot segments and encodes a raw
+space — so the contract is that the URL's meaning survives, not its bytes, and nothing may depend
+on byte-identical transmission.
 
 What catches it is `FakeHttpClient.record()`, which parses every requested URL with `java.net.URI`
 and fails the test that sent it. It catches only the characters `java.net.URI` itself refuses: a raw
