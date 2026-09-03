@@ -47,8 +47,8 @@ class EnrichDeadlineBoundTest {
      * pool of this test's own measures the deadline against the transport, which is its subject,
      * instead of against whatever else the suite left running.
      */
-    private val fanOutExecutor = Executors.newFixedThreadPool(2) { r -> Thread(r).apply { isDaemon = true } }
-    private val fanOut = fanOutExecutor.asCoroutineDispatcher()
+    private val fanOut = Executors.newFixedThreadPool(2) { r -> Thread(r).apply { isDaemon = true } }
+        .asCoroutineDispatcher()
 
     @Before fun startServer() {
         server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)

@@ -5,14 +5,16 @@ import com.landofoz.musicmeta.http.EnrichDeadline
 import com.landofoz.musicmeta.testutil.FakeEnrichmentCache
 import com.landofoz.musicmeta.testutil.FakeProvider
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
+import org.junit.After
 import org.junit.Assert.*
 import org.junit.Test
+import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -28,6 +30,14 @@ class EnrichTimeoutBoundaryTest {
 
     private val req = EnrichmentRequest.forArtist("Radiohead")
     private val cache = FakeEnrichmentCache()
+
+    /** Two threads of this class's own for the fan-out; [engine] says why they are not shared. */
+    private val fanOut = Executors.newFixedThreadPool(2) { r -> Thread(r).apply { isDaemon = true } }
+        .asCoroutineDispatcher()
+
+    @After fun closeFanOut() {
+        fanOut.close()
+    }
 
     private fun similarArtists(vararg names: String) = EnrichmentResult.Success(
         type = EnrichmentType.SIMILAR_ARTISTS,
@@ -68,14 +78,22 @@ class EnrichTimeoutBoundaryTest {
     }
 
     /**
-     * [detachedDispatcher] decides which clock `enrichTimeoutMs` is spent against, and the two
-     * tests below want opposite answers. `enrich()` runs its fan-out on the engine's detached
-     * scope, so with the default `Dispatchers.Default` the 100 ms budget is wall-clock time even
-     * inside `runTest` — a real-time stall in the fan-out expires it. A test whose subject is the
-     * *provenance* of a timeout must therefore hand in the scheduler's own dispatcher; one whose
-     * subject is two catalog calls genuinely racing keeps the real one.
+     * [detachedDispatcher] settles two separate questions about the fan-out: which clock
+     * `enrichTimeoutMs` is spent against, and whose threads it is spent on.
+     *
+     * *Virtual or real.* `enrich()` runs its fan-out on the engine's detached scope, so on any real
+     * dispatcher the 100 ms budget is wall-clock time even inside `runTest`. A test whose subject is
+     * the *provenance* of a timeout hands in the scheduler's own dispatcher, where the budget is
+     * virtual and only the catalog's own deadline can fire; a test whose subject is two catalog
+     * calls genuinely racing needs the real clock and keeps the default.
+     *
+     * *Owned or shared.* That real default is [fanOut], not `Dispatchers.Default`. On the shared
+     * pool a neighbour's complete-and-cache run — which by design outlives the test that started it
+     * — can starve this fan-out of a thread for longer than the 100 ms budget, expiring the deadline
+     * and stamping every type `Error(TIMEOUT)`. Threads of this class's own keep the race genuine
+     * and the suite's contention out of the result.
      */
-    private fun engine(catalog: CatalogProvider, detachedDispatcher: CoroutineDispatcher = Dispatchers.Default) =
+    private fun engine(catalog: CatalogProvider, detachedDispatcher: CoroutineDispatcher = fanOut) =
         DefaultEnrichmentEngine(
             ProviderRegistry(listOf(identityProvider(), recommendationProvider())),
             cache,
