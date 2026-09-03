@@ -51,8 +51,8 @@ android {
     }
 }
 
-// See musicmeta-core: Kotlin otherwise targets the JDK running Gradle, not 17. Both settings live
-// on the one Kotlin extension rather than half here and half in `android { kotlinOptions }`.
+// See musicmeta-core: Kotlin otherwise targets the JDK running Gradle, not 17. Both Kotlin settings
+// live on the Kotlin extension, so one site configures every variant.
 kotlin {
     compilerOptions { jvmTarget = JvmTarget.JVM_17 }
 
