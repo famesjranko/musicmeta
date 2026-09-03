@@ -161,6 +161,27 @@ class DiscogsMapperTest {
         assertEquals(0, result.credits.size)
     }
 
+    @Test
+    fun `toAlbumMetadata reports a country name as its alpha-2 code and keeps a region label`() {
+        // Given - two Discogs releases, one from a country and one from Discogs' Europe region
+        val german = DiscogsRelease(
+            title = "Trans-Europe Express",
+            label = "Kling Klang",
+            year = "1977",
+            country = "Germany",
+            coverImage = null,
+        )
+        val european = german.copy(country = "Europe")
+
+        // When - mapping each to album metadata
+        val germanMetadata = DiscogsMapper.toAlbumMetadata(german)
+        val europeanMetadata = DiscogsMapper.toAlbumMetadata(european)
+
+        // Then - the country becomes a code, while the region survives as Discogs wrote it
+        assertEquals("DE", germanMetadata.country)
+        assertEquals("Europe", europeanMetadata.country)
+    }
+
     // toReleaseEditions tests
 
     @Test

@@ -27,6 +27,12 @@ data class AlbumProfile(val title: String, val artist: String, val results: Enri
     val label: String? get() = results.label()
     val releaseDate: String? get() = results.releaseDate()
     val releaseType: String? get() = results.releaseType()
+
+    /**
+     * ISO 3166-1 alpha-2 where the upstream supplies a country (`GB`). Album metadata from Discogs
+     * may carry a region label instead (`Europe`), and a multi-country MusicBrainz release may
+     * carry MusicBrainz's `XE`/`XW`; null when no country-level area exists.
+     */
     val country: String? get() = results.country()
 
     // --- Tracklist & Editions ---

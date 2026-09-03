@@ -318,6 +318,21 @@ blackhole), kept off CI because a network that answers TEST-NET-1 with an RST tu
   option was not found by thinking harder about the trade-off, it was found by reading the API's
   own include list.** Price the options against the upstream's documented surface before treating a
   cost as fixed.
+- A lookup table whose miss falls through as `?: rawUpstreamId` ships the upstream's own identifier
+  as data. Wikidata's `COUNTRY_MAP` did exactly that, so any artist whose P495 country was not one
+  of its 15 entries — most countries — reached consumers as `country == "Q212"`. A miss means the
+  value is unknown, so the fallback is **null**; an identifier is never a plausible default for the
+  thing it identifies. The same table also held `US` and `UK` beside `France` and `Germany`, mixing
+  two representations of one field, and nothing could catch it because the field promised none:
+  a representation promise (code versus name, and which standard) belongs in the model's KDoc,
+  where both the provider writing it and the consumer reading it can be held to the same sentence.
+- Before promising a representation, count the writers, because one `Metadata` field is filled by
+  every provider that can answer for it. `country` reads as a MusicBrainz-and-Wikidata question and
+  is not: iTunes writes alpha-3 into the same field, Discogs writes English names and region labels
+  like "Europe", and a multi-country MusicBrainz release writes `XE`/`XW`. `EnrichmentResults`
+  falls back from the dedicated type to `ALBUM_METADATA`, so all of them surface through one
+  accessor. `grep -n 'country = ' provider/` is the check, and the equivalent grep is worth running
+  for any field whose KDoc is about to state a format.
 
 ## 3. `org.json` returns a default for a missing key — it does not fail
 

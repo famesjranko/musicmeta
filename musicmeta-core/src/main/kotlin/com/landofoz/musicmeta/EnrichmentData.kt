@@ -24,6 +24,11 @@ sealed class EnrichmentData {
         val label: String? = null,
         val releaseDate: String? = null,
         val releaseType: String? = null,
+        /**
+         * ISO 3166-1 alpha-2 where the upstream supplies a country (`GB`). Album metadata from
+         * Discogs may carry a region label instead (`Europe`), and a multi-country MusicBrainz
+         * release may carry MusicBrainz's `XE`/`XW`; null when no country-level area exists.
+         */
         val country: String? = null,
         val barcode: String? = null,
         val disambiguation: String? = null,

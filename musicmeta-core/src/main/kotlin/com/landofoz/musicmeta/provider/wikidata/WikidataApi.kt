@@ -58,7 +58,7 @@ internal class WikidataApi(
             imageUrl = imageUrl,
             birthDate = birthDate,
             deathDate = deathDate,
-            countryOfOrigin = countryQid?.let { COUNTRY_MAP[it] ?: it },
+            countryOfOrigin = countryQid?.let { COUNTRY_MAP[it] },
             occupation = occupationQid?.let { OCCUPATION_MAP[it] ?: it },
             musicBrainzArtistId = extractStringValue(claims, "P434"),
             discogsArtistId = extractStringValue(claims, "P1953"),
@@ -138,12 +138,17 @@ internal class WikidataApi(
         const val DEFAULT_IMAGE_SIZE = 1200
         val NON_RASTER_FORMATS = setOf("svg", "tif", "tiff")
 
+        /**
+         * P495 country Q-id to the ISO 3166-1 alpha-2 code `Metadata.country` promises. A Q-id
+         * absent here has no code to report, so it maps to null rather than to itself — a Q-id is
+         * an identifier, never a country.
+         */
         val COUNTRY_MAP = mapOf(
-            "Q30" to "US", "Q145" to "UK", "Q142" to "France", "Q183" to "Germany",
-            "Q17" to "Japan", "Q38" to "Italy", "Q29" to "Spain", "Q16" to "Canada",
-            "Q408" to "Australia", "Q36" to "Poland", "Q159" to "Russia",
-            "Q213" to "Czech Republic", "Q211" to "Latvia",
-            "Q31" to "Belgium", "Q55" to "Netherlands",
+            "Q30" to "US", "Q145" to "GB", "Q142" to "FR", "Q183" to "DE",
+            "Q17" to "JP", "Q38" to "IT", "Q29" to "ES", "Q16" to "CA",
+            "Q408" to "AU", "Q36" to "PL", "Q159" to "RU",
+            "Q213" to "CZ", "Q211" to "LV",
+            "Q31" to "BE", "Q55" to "NL",
         )
 
         val OCCUPATION_MAP = mapOf(

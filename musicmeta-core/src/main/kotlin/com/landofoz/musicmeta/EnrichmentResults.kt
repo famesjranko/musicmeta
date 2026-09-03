@@ -90,6 +90,11 @@ data class EnrichmentResults(
         metadata(EnrichmentType.RELEASE_TYPE)?.releaseType
             ?: metadata(EnrichmentType.ALBUM_METADATA)?.releaseType
 
+    /**
+     * ISO 3166-1 alpha-2 where the upstream supplies a country (`GB`). Album metadata from Discogs
+     * may carry a region label instead (`Europe`), and a multi-country MusicBrainz release may
+     * carry MusicBrainz's `XE`/`XW`; null when no country-level area exists.
+     */
     fun country(): String? =
         metadata(EnrichmentType.COUNTRY)?.country
             ?: metadata(EnrichmentType.ALBUM_METADATA)?.country

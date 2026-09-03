@@ -489,7 +489,12 @@ considered and declined on 2026-08-12: a label lives on the referenced Q-id, so 
 batched call, and an audit of the then-19 entries across both maps found 16 identical to the live
 label, 2 deliberate abbreviations (Q30 "US", Q145 "UK") a swap would change for every US or UK
 artist, and 1 wrong (Q211, rekeyed to Latvia with Czech Republic moved to its own Q213 entry,
-adding a 20th). Never called: the
+adding a 20th). `COUNTRY_MAP` holds ISO 3166-1 alpha-2 codes, which is what
+`EnrichmentData.Metadata.country` promises, so the "US"/"UK" abbreviations that argument preserved
+are now `US` and `GB` and the name entries are codes; a label lookup would be the wrong shape for
+it either way, since a label is a name. A Q-id the map does not hold yields **null** — the country
+entity's own P297 alpha-2 claim sits on that entity, not on the artist's, so deriving the code
+instead of hardcoding it costs the second call the 2026-08-12 argument declined. Never called: the
 REST API at `/w/rest.php/wikibase/v1/`, and SPARQL. Note `provider/wikipedia/` *also* calls
 `wbgetentities` on this host, for sitelinks, on its own rate limiter.
 

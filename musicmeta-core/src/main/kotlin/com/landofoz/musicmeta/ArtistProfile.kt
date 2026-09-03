@@ -25,6 +25,12 @@ data class ArtistProfile(val name: String, val results: EnrichmentResults) {
     // --- Text & Metadata ---
     val bio: EnrichmentData.Biography? get() = results.biography()
     val genres: List<GenreTag> get() = results.genreTags()
+
+    /**
+     * ISO 3166-1 alpha-2 where the upstream supplies a country (`GB`). Album metadata from Discogs
+     * may carry a region label instead (`Europe`), and a multi-country MusicBrainz release may
+     * carry MusicBrainz's `XE`/`XW`; null when no country-level area exists.
+     */
     val country: String? get() = results.country()
 
     // --- Members & Relationships ---

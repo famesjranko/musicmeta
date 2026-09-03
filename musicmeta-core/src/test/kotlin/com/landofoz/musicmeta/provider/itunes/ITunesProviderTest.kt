@@ -220,7 +220,8 @@ class ITunesProviderTest {
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.Metadata
         assertEquals(12, data.trackCount)
         assertEquals(listOf("Alternative"), data.genres)
-        assertEquals("USA", data.country)
+        // iTunes sends alpha-3; the field is alpha-2
+        assertEquals("US", data.country)
     }
 
     @Test
