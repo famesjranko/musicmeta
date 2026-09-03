@@ -185,13 +185,30 @@ internal class ListenBrainzApi(
                 ?: continue
             results += ListenBrainzTopReleaseGroup(
                 releaseGroupMbid = mbid,
-                releaseGroupName = item.optString("release_group_name", ""),
-                artistName = item.optString("artist_name", ""),
+                releaseGroupName = nestedName(item, "release_group")
+                    ?: item.optString("release_group_name", ""),
+                artistName = nestedArtistName(item) ?: item.optString("artist_name", ""),
                 listenCount = item.optLong("total_listen_count", 0L),
             )
         }
         return results
     }
+
+    /**
+     * The name inside [item]'s [key] object, or `null` where the object or its name is absent.
+     * ListenBrainz serves both this nested shape and a flat `{key}_name` sibling, so each caller
+     * keeps the flat key as its fallback.
+     */
+    private fun nestedName(item: JSONObject, key: String): String? =
+        item.optJSONObject(key)?.optString("name")?.takeIf { it.isNotBlank() }
+
+    /** The credited artist's name, which arrives as the first entry of `artist.artists`. */
+    private fun nestedArtistName(item: JSONObject): String? =
+        item.optJSONObject("artist")
+            ?.optJSONArray("artists")
+            ?.optJSONObject(0)
+            ?.optString("name")
+            ?.takeIf { it.isNotBlank() }
 
     companion object {
         const val BASE_URL = "https://api.listenbrainz.org/1"
