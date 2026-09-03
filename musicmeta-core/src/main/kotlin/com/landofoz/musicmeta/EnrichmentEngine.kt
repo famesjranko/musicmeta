@@ -39,7 +39,7 @@ private const val TAG = "EnrichmentEngine"
  */
 private val CONTACT_REQUIRING_PROVIDERS = setOf("musicbrainz", "wikipedia", "wikidata")
 
-interface EnrichmentEngine {
+public interface EnrichmentEngine {
 
     /**
      * Enriches a music entity with the requested data types.
@@ -65,7 +65,7 @@ interface EnrichmentEngine {
      * per-call abort: a detached run keeps spending rate-limiter and circuit-breaker budget unwatched,
      * and [close] can only stop it by shutting the whole engine down, never one call or request.
      */
-    suspend fun enrich(
+    public suspend fun enrich(
         request: EnrichmentRequest,
         types: Set<EnrichmentType>,
         forceRefresh: Boolean = false,
@@ -114,7 +114,7 @@ interface EnrichmentEngine {
      * A third-party implementor relying on the default single-emission body above has nothing to
      * detach from: there is no cancellation cost to document for it.
      */
-    fun enrichProgressive(
+    public fun enrichProgressive(
         request: EnrichmentRequest,
         types: Set<EnrichmentType>,
         forceRefresh: Boolean = false,
@@ -137,7 +137,7 @@ interface EnrichmentEngine {
      * it costs at most one shared dispatcher and whatever detached runs are genuinely in flight,
      * never an unbounded amount.
      */
-    fun close() {}
+    public fun close() {}
 
     /**
      * Enriches multiple requests sequentially, emitting each result as it completes.
@@ -148,7 +148,7 @@ interface EnrichmentEngine {
      * Cache hits return immediately without rate-limiter delay because the
      * underlying [enrich] call short-circuits on cached data.
      */
-    fun enrichBatch(
+    public fun enrichBatch(
         requests: List<EnrichmentRequest>,
         types: Set<EnrichmentType>,
         forceRefresh: Boolean = false,
@@ -183,7 +183,7 @@ interface EnrichmentEngine {
      * [EnrichmentEngine] that only overrides [enrich] gets exactly one (terminal) snapshot per
      * request for free, matching [enrichProgressive]'s own default cadence.
      */
-    fun enrichBatchProgressive(
+    public fun enrichBatchProgressive(
         requests: List<EnrichmentRequest>,
         types: Set<EnrichmentType>,
         forceRefresh: Boolean = false,
@@ -220,7 +220,7 @@ interface EnrichmentEngine {
      * same entity — dedupe in the UI if that matters. A provider that throws is logged and
      * contributes no candidates rather than failing the call.
      */
-    suspend fun search(
+    public suspend fun search(
         request: EnrichmentRequest,
         limit: Int = 10,
     ): List<SearchCandidate>
@@ -232,9 +232,9 @@ interface EnrichmentEngine {
      * the moment of the call, so a provider that resolves its key lazily reports differently on a
      * later call.
      */
-    fun getProviders(): List<ProviderInfo>
+    public fun getProviders(): List<ProviderInfo>
 
-    val cache: EnrichmentCache
+    public val cache: EnrichmentCache
 
     /**
      * Invalidates cached data for a request. Pass a specific [type] or null to clear all types.
@@ -243,15 +243,15 @@ interface EnrichmentEngine {
      * the canonical-name alias the result was also cached under. If that lookup fails transiently,
      * the alias may survive the invalidation — retry, or enrich with `forceRefresh` instead.
      */
-    suspend fun invalidate(request: EnrichmentRequest, type: EnrichmentType? = null)
+    public suspend fun invalidate(request: EnrichmentRequest, type: EnrichmentType? = null)
 
     /** Whether the user has manually selected data for this request/type (e.g., picked artwork). */
-    suspend fun isManuallySelected(request: EnrichmentRequest, type: EnrichmentType): Boolean
+    public suspend fun isManuallySelected(request: EnrichmentRequest, type: EnrichmentType): Boolean
 
     /** Marks data as manually selected by the user, protecting it from automatic overwrites. */
-    suspend fun markManuallySelected(request: EnrichmentRequest, type: EnrichmentType)
+    public suspend fun markManuallySelected(request: EnrichmentRequest, type: EnrichmentType)
 
-    class Builder {
+    public class Builder {
         private val providers = mutableListOf<EnrichmentProvider>()
         private var cache: EnrichmentCache? = null
         private var httpClient: HttpClient? = null
@@ -269,13 +269,13 @@ interface EnrichmentEngine {
         private val synthesizers = DEFAULT_SYNTHESIZERS.toMutableList()
 
         /** @throws IllegalArgumentException if the id is already registered, or reserved by the engine. */
-        fun addProvider(provider: EnrichmentProvider) = apply {
+        public fun addProvider(provider: EnrichmentProvider): Builder = apply {
             requireRegistrableProviderId(provider.id, providers.map { it.id })
             providers.add(provider)
         }
-        fun cache(cache: EnrichmentCache) = apply { this.cache = cache }
-        fun httpClient(client: HttpClient) = apply { this.httpClient = client }
-        fun config(config: EnrichmentConfig) = apply { this.config = config }
+        public fun cache(cache: EnrichmentCache): Builder = apply { this.cache = cache }
+        public fun httpClient(client: HttpClient): Builder = apply { this.httpClient = client }
+        public fun config(config: EnrichmentConfig): Builder = apply { this.config = config }
 
         /**
          * A URL or email address a provider's operators can reach you at, folded into the
@@ -296,19 +296,23 @@ interface EnrichmentEngine {
          *   connection rejects per request), or carries a parenthesis (which closes the User-Agent
          *   comment the policies read).
          */
-        fun contact(contact: String) = apply {
+        public fun contact(contact: String): Builder = apply {
             requireUsableContact(contact)
             this.contact = contact
         }
-        fun logger(logger: EnrichmentLogger) = apply { this.logger = logger.guarded() }
-        fun apiKeys(config: ApiKeyConfig) = apply { this.apiKeyConfig = config }
-        fun catalog(provider: CatalogProvider, mode: CatalogFilterMode = CatalogFilterMode.UNFILTERED) = apply {
+        public fun logger(logger: EnrichmentLogger): Builder = apply { this.logger = logger.guarded() }
+        public fun apiKeys(config: ApiKeyConfig): Builder = apply { this.apiKeyConfig = config }
+        public fun catalog(
+            provider: CatalogProvider,
+            mode: CatalogFilterMode = CatalogFilterMode.UNFILTERED,
+        ): Builder = apply {
             this.config = this.config.copy(catalogProvider = provider, catalogFilterMode = mode)
         }
-        fun addMerger(merger: com.landofoz.musicmeta.engine.ResultMerger) = apply { mergers.add(merger) }
-        fun addSynthesizer(synthesizer: CompositeSynthesizer) = apply { synthesizers.add(synthesizer) }
+        public fun addMerger(merger: com.landofoz.musicmeta.engine.ResultMerger): Builder =
+            apply { mergers.add(merger) }
+        public fun addSynthesizer(synthesizer: CompositeSynthesizer): Builder = apply { synthesizers.add(synthesizer) }
 
-        fun withDefaultProviders() = apply {
+        public fun withDefaultProviders(): Builder = apply {
             val cfg = effectiveConfig()
             val client = httpClient ?: DefaultHttpClient(cfg.userAgent).also {
                 // What the wire will carry from here on, whatever a later contact() composes.
@@ -372,7 +376,7 @@ interface EnrichmentEngine {
          *   every type on the cycle — or if a type is registered as both a composite and a
          *   mergeable, whose [ResultMerger] could then never run.
          */
-        fun build(): EnrichmentEngine {
+        public fun build(): EnrichmentEngine {
             val cfg = effectiveConfig()
             warnAboutUserAgentOnTheWire(cfg)
             val registry = ProviderRegistry(providers, cfg.priorityOverrides, logger)
@@ -447,7 +451,7 @@ interface EnrichmentEngine {
     }
 }
 
-data class SearchCandidate(
+public data class SearchCandidate(
     val title: String,
     val artist: String?,
     val year: String?,
@@ -462,7 +466,7 @@ data class SearchCandidate(
 )
 
 /** One provider's identity and current capability, as [EnrichmentEngine.getProviders] reports it. */
-data class ProviderInfo(
+public data class ProviderInfo(
     /**
      * Matches [EnrichmentProvider.id]. An [EnrichmentResult] names this id too, except where a
      * merger or synthesizer produced it and stamped its own `_merger`/`_synthesizer` suffix.

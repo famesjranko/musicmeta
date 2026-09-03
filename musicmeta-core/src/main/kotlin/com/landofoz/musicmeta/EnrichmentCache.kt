@@ -8,7 +8,7 @@ package com.landofoz.musicmeta
  * [CanonicalStatus.NOT_ATTEMPTED_DISABLED] if the engine has identity resolution turned off —
  * either way from this call's own configuration, never from what is stored here.
  */
-data class CacheEnvelope<out T : EnrichmentResult>(
+public data class CacheEnvelope<out T : EnrichmentResult>(
     val result: T,
     val canonicalStatus: CanonicalStatus,
 )
@@ -20,16 +20,19 @@ data class CacheEnvelope<out T : EnrichmentResult>(
  * Every implementation's obligations here are asserted once, for every backend, by
  * `com.landofoz.musicmeta.contract.EnrichmentCacheContract`.
  */
-interface EnrichmentCache {
+public interface EnrichmentCache {
 
-    suspend fun get(entityKey: String, type: EnrichmentType): CacheEnvelope<EnrichmentResult.Success>?
+    public suspend fun get(entityKey: String, type: EnrichmentType): CacheEnvelope<EnrichmentResult.Success>?
 
     /**
      * Returns a cached result even if expired. Used by STALE_IF_ERROR mode
      * to serve stale data when providers fail. Return null if this implementation
      * has no notion of expiry, or does not support stale serving.
      */
-    suspend fun getIncludingExpired(entityKey: String, type: EnrichmentType): CacheEnvelope<EnrichmentResult.Success>?
+    public suspend fun getIncludingExpired(
+        entityKey: String,
+        type: EnrichmentType,
+    ): CacheEnvelope<EnrichmentResult.Success>?
 
     /**
      * [canonicalStatus] is the call's [IdentityResolution.status] that made [result] eligible to
@@ -38,7 +41,7 @@ interface EnrichmentCache {
      * replays; see [CacheEnvelope.canonicalStatus] for what a later [get] does with the value
      * stored here.
      */
-    suspend fun put(
+    public suspend fun put(
         entityKey: String,
         type: EnrichmentType,
         result: EnrichmentResult.Success,
@@ -57,7 +60,7 @@ interface EnrichmentCache {
      * to another [EnrichmentCache] must forward this call and [putNegative], or negative caching
      * silently disappears through it.
      */
-    suspend fun getNegative(entityKey: String, type: EnrichmentType): CacheEnvelope<EnrichmentResult.NotFound>?
+    public suspend fun getNegative(entityKey: String, type: EnrichmentType): CacheEnvelope<EnrichmentResult.NotFound>?
 
     /**
      * Caches a "providers had nothing" answer for [ttlMs]. A no-op body is legal if this
@@ -66,7 +69,7 @@ interface EnrichmentCache {
      * negative entry that outlives an invalidation would keep reporting an absence a caller just
      * asked to forget. See [getNegative] for the same forwarding obligation on a delegating cache.
      */
-    suspend fun putNegative(
+    public suspend fun putNegative(
         entityKey: String,
         type: EnrichmentType,
         result: EnrichmentResult.NotFound,
@@ -75,14 +78,14 @@ interface EnrichmentCache {
     )
 
     /** Clears positive, negative, and manual-selection state for the addressed key and type(s). */
-    suspend fun invalidate(entityKey: String, type: EnrichmentType? = null)
+    public suspend fun invalidate(entityKey: String, type: EnrichmentType? = null)
 
     /**
      * Whether [markManuallySelected] has been called for this key and type and not since cleared.
      * A selection is state about the key, not about a stored entry, so a key carrying no cached
      * result may still answer `true`.
      */
-    suspend fun isManuallySelected(entityKey: String, type: EnrichmentType): Boolean
+    public suspend fun isManuallySelected(entityKey: String, type: EnrichmentType): Boolean
 
     /**
      * Records that a caller chose this key and type's data itself, so an implementation preserving
@@ -90,11 +93,11 @@ interface EnrichmentCache {
      * is stored for the key** — a caller can choose from candidates it has not cached — so an
      * implementation holding the marker on the cached row must still record one when no row exists.
      */
-    suspend fun markManuallySelected(entityKey: String, type: EnrichmentType)
+    public suspend fun markManuallySelected(entityKey: String, type: EnrichmentType)
 
-    suspend fun clear()
+    public suspend fun clear()
 
-    companion object {
-        const val DEFAULT_TTL_MS = 30L * 24 * 60 * 60 * 1000
+    public companion object {
+        public const val DEFAULT_TTL_MS: Long = 30L * 24 * 60 * 60 * 1000
     }
 }

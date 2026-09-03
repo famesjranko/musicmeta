@@ -78,7 +78,7 @@ measurement — of how well each type is covered.
 | | RELEASE_TYPE | OK |
 | | COUNTRY | Good |
 | | BAND_MEMBERS | Good — deduplicated by MBID with roles merged; a solo (Person) artist returns themselves |
-| | ARTIST_DISCOGRAPHY | Good — 4 providers, 3 of them live: ListenBrainz's route is disabled upstream ([docs/providers.md](docs/providers.md)) |
+| | ARTIST_DISCOGRAPHY | Good — 4 providers |
 | | ALBUM_TRACKS | Good — 3 providers |
 | | ALBUM_METADATA | **Excellent** — 4 providers |
 | | CREDITS | Good — recording rels + extraartists with roleCategory |
@@ -95,9 +95,9 @@ measurement — of how well each type is covered.
 | | TRACK_POPULARITY | Good — merged the same way |
 | **Composite** | ARTIST_TIMELINE | Good — auto-resolves sub-types, synthesizes chronological events |
 | | GENRE_DISCOVERY | **v0.6.0** — static taxonomy, 189 genre relationships |
-| **Top Tracks** | ARTIST_TOP_TRACKS | Good — 3 providers merged via TopTrackMerger, 2 of them live (ListenBrainz's route is disabled upstream), fetches API max, no artificial cap |
+| **Top Tracks** | ARTIST_TOP_TRACKS | Good — 3 providers merged via TopTrackMerger, fetches API max, no artificial cap |
 | **Recommendations** | ARTIST_RADIO | **v0.6.0** — ordered playlist (default 50 tracks, configurable), 7-day TTL. For community-driven discovery, see ARTIST_RADIO_DISCOVERY |
-| | ARTIST_RADIO_DISCOVERY | **Dark** — community-driven discovery radio (configurable depth, free user token, catalog-filtered), but its only provider's route `/1/explore/lb-radio` has returned 500 since ListenBrainz disabled it around 2026-06-30, with no re-enable date |
+| | ARTIST_RADIO_DISCOVERY | OK — one provider, requires a token; community-driven discovery radio (configurable depth, catalog-filtered). Verified live **2026-09-03**; `docs/providers.md` carries the withdrawal risk |
 | | SIMILAR_ALBUMS | **v0.6.0** — era-proximity scored, 30-day TTL |
 | **Preview** | TRACK_PREVIEW | **v0.9.0** — 30-second MP3 preview URL, on-demand (not in DEFAULT_TRACK_TYPES), 24-hour TTL |
 
@@ -111,7 +111,7 @@ Parameter variants fold into one path: Last.fm's six `method=` calls are one pat
 |----------|--------------|
 | **MusicBrainz** | 8 — search + lookup for artist, recording and release; browse + lookup for release-group |
 | **Deezer** | 10 |
-| **ListenBrainz** | 5 — 2 of them 500 upstream, see [docs/providers.md](docs/providers.md) |
+| **ListenBrainz** | 5 |
 | **Discogs** | 4 |
 | **Cover Art Archive** | 3 |
 | **Fanart.tv** | 2 |
@@ -173,9 +173,10 @@ The `SearchCandidate` fields this flow relies on are documented in
 - **ForAlbum credits aggregation** — CREDITS only supports ForTrack; aggregating per-track credits for an album deferred
 - **Credit-Based Discovery** — "more from this producer/composer" via CREDITS data; a cross-entity query pattern the engine has no shape for
 - **ListenBrainz collaborative filtering** — user-scoped recommendations; needs a user identity concept in `EnrichmentRequest`
-- **A second ARTIST_RADIO_DISCOVERY source** — the type has one provider and that provider's route is
-  disabled upstream. `/1/lb-radio/artist/{mbid}` answers, but it is a candidate pool rather than a
-  playlist ([docs/providers.md](docs/providers.md) has why serving the type from it is not free)
+- **A second ARTIST_RADIO_DISCOVERY source** — the type has one provider, and that provider withdrew
+  its route once already, which took the whole type down with it. `/1/lb-radio/artist/{mbid}` is the
+  nearest fallback, but it is a candidate pool rather than a playlist
+  ([docs/providers.md](docs/providers.md) has why serving the type from it is not free)
 
 ### Catalog Awareness — Interface Shipped, Implementations Remaining
 
@@ -224,10 +225,10 @@ milestone:
 | Metadata | 12 types including credits + editions | ✅ **Complete** |
 | Text content | Artist bios, album descriptions, synced/plain lyrics | ✅ **Complete** |
 | Relationships | Similar artists (2 merged), similar tracks (2 merged), links (2 sources) | ✅ **Complete** |
-| Statistics | Artist + track popularity merged from 3 sources as per-source signals, top tracks (3 merged, 2 live) | ✅ **Complete** |
+| Statistics | Artist + track popularity merged from 3 sources as per-source signals, top tracks (3 merged) | ✅ **Complete** |
 | Links | All MusicBrainz URL relation types, plus Wikidata P856 | ✅ **Complete** |
 | Credits | Performers, producers, composers, engineers | ✅ **Complete** |
-| Recommendations | 6 modules shipped, one dark on a disabled upstream route; credit discovery + CF deferred | 🟡 **Mostly complete** |
+| Recommendations | 6 modules shipped; credit discovery + CF deferred | 🟡 **Mostly complete** |
 | Developer Experience | EnrichmentResults wrapper, profiles, default type sets, identity resolution, cache management | ✅ **Complete** |
 | Catalog Awareness | Interface shipped; implementations deferred | 🟡 **Interface only** |
 

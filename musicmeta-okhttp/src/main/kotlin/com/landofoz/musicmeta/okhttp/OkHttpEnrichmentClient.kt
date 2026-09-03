@@ -38,7 +38,7 @@ import java.util.concurrent.TimeUnit
  *   timeouts, because a figure a caller supplies is a figure that can be wrong in the one direction
  *   that silently disables the budget test.
  */
-class OkHttpEnrichmentClient(
+public class OkHttpEnrichmentClient(
     private val client: OkHttpClient,
     private val userAgent: String = EnrichmentConfig.DEFAULT_USER_AGENT,
     maxAttempts: Int = 3,

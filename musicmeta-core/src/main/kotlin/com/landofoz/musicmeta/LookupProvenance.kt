@@ -15,7 +15,7 @@ package com.landofoz.musicmeta
  *
  * @see com.landofoz.musicmeta.engine.weakestProvenance
  */
-enum class LookupProvenance {
+public enum class LookupProvenance {
     /** Looked up directly by a MusicBrainz canonical id (MBID or release-group id). */
     CANONICAL_ID,
 

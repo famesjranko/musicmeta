@@ -11,6 +11,7 @@ import com.landofoz.musicmeta.http.DefaultHttpClient
 import com.landofoz.musicmeta.testutil.FakeEnrichmentCache
 import com.landofoz.musicmeta.testutil.FakeProvider
 import com.sun.net.httpserver.HttpServer
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -37,6 +38,18 @@ class EnrichDeadlineBoundTest {
     private lateinit var server: HttpServer
     private val released = CountDownLatch(1)
 
+    /**
+     * The fan-out's dispatcher, owned by this test rather than shared. `enrich()` runs its fan-out
+     * — the `withTimeoutOrNull` enforcing `enrichTimeoutMs` included — on the engine's detached
+     * scope, so on the default `Dispatchers.Default` the bound below is only as good as that shared
+     * pool's availability: a neighbour's complete-and-cache run, which by design outlives the test
+     * that started it, can starve the deadline of a thread and push this call minutes past it. A
+     * pool of this test's own measures the deadline against the transport, which is its subject,
+     * instead of against whatever else the suite left running.
+     */
+    private val fanOut = Executors.newFixedThreadPool(2) { r -> Thread(r).apply { isDaemon = true } }
+        .asCoroutineDispatcher()
+
     @Before fun startServer() {
         server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
         server.executor = Executors.newCachedThreadPool { r -> Thread(r).apply { isDaemon = true } }
@@ -56,6 +69,7 @@ class EnrichDeadlineBoundTest {
     @After fun stopServer() {
         released.countDown()
         server.stop(0)
+        fanOut.close()
     }
 
     @Test fun `one stuck upstream cannot push enrich past its deadline, and settled fields survive`() {
@@ -91,6 +105,7 @@ class EnrichDeadlineBoundTest {
             FakeEnrichmentCache(),
             EnrichmentConfig(enrichTimeoutMs = 1_200, enableIdentityResolution = false),
             mergers = emptyList(),
+            detachedDispatcher = fanOut,
         )
 
         // When - both types are enriched, against real elapsed time

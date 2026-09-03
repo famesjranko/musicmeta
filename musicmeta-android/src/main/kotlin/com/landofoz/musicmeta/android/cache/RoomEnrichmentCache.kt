@@ -15,7 +15,7 @@ import kotlinx.serialization.json.Json
  * Room-backed persistent enrichment cache.
  * Survives app restarts. Uses kotlinx-serialization for EnrichmentData.
  */
-class RoomEnrichmentCache(
+public class RoomEnrichmentCache(
     private val dao: EnrichmentCacheDao,
     private val negativeDao: NegativeCacheDao,
     private val selectionDao: SelectionDao,
@@ -179,7 +179,7 @@ class RoomEnrichmentCache(
     }
 
     /** Cleanup expired entries. Call periodically (e.g., from WorkManager). */
-    suspend fun deleteExpired() {
+    public suspend fun deleteExpired() {
         dao.deleteExpired(clock())
         negativeDao.deleteExpired(clock())
     }

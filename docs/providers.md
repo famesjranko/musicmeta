@@ -58,21 +58,21 @@ the engine to classify from canonical status.
 A UPC/barcode is an external catalogue identifier, not a MusicBrainz id and not either provider's
 own id space, so it carries `LookupProvenance.EXTERNAL_CATALOG_ID` rather than `PROVIDER_NATIVE_ID`.
 
-## Routes disabled upstream
+## Routes ListenBrainz has withdrawn before
 
-ListenBrainz disabled two of the five routes we call around **2026-06-30**; both answer `500` ahead
-of auth and parameter validation, so no request distinguishes itself, and neither carries a
-re-enable date (observed 2026-08-11).
+All five ListenBrainz routes we call answered on **2026-09-03**, verified through the library rather
+than by status code. Three of them had not: ListenBrainz disabled `/1/explore/lb-radio` and both
+`/1/popularity/top-*-for-artist/` routes around **2026-06-30**, and every request to them returned
+`500` ahead of auth and parameter validation, so nothing about a request distinguished itself.
 
-| Route | What it costs |
-|---|---|
-| `/1/explore/lb-radio` | `ARTIST_RADIO_DISCOVERY` is dark — ListenBrainz is its only provider |
-| `/1/popularity/top-*-for-artist/` | ListenBrainz's share of `ARTIST_DISCOGRAPHY` and `ARTIST_TOP_TRACKS`; Deezer and Last.fm still answer |
+What that cost while it lasted is what a repeat would cost: `ARTIST_RADIO_DISCOVERY` has
+ListenBrainz as its only provider and goes dark with `/1/explore/lb-radio`, while
+`ARTIST_DISCOGRAPHY` and `ARTIST_TOP_TRACKS` lose one source of several and still answer from
+Deezer and Last.fm. `ARTIST_POPULARITY` and `TRACK_POPULARITY` were unaffected throughout — they
+ride the batch `POST /1/popularity/artist` and `POST /1/popularity/recording`, which stayed up.
 
-`ARTIST_POPULARITY` is unaffected: it tries the batch `POST /1/popularity/artist` first, which
-works. `TRACK_POPULARITY` likewise rides `POST /1/popularity/recording`, which is not disabled
-either.
-Nothing re-probes these — treat the dates as the last time anyone looked.
+Nothing re-probes these on a schedule, so the date above is the last time anyone looked, not a
+guarantee about today.
 
 ## Deviations from the house pattern
 
@@ -421,6 +421,11 @@ the identifiers this one resolves. The `cover-art-archive.front` flag embedded i
 read, but only a release lookup carries that object: a `/release?query=` hit has none (checked live
 2026-08-22), so a search candidate never carries a thumbnail URL. Reading one per candidate would
 cost a rate-limited lookup each.
+Reading `area`/`begin-area` and their `iso-3166-1-codes` as a fallback for a missing `country` was
+considered and declined on 2026-09-03: a lookup response already fills `country` from the area
+hierarchy, and a `/release?query=`/`/artist?query=` hit's `area` carries no `iso-3166-1-codes` at
+all (probed 2026-09-03), so the fallback would be redundant on the one endpoint and unusable on the
+other.
 
 **Cover Art Archive.** `/release/{mbid}` is read by every capability and fetched once per call — a
 failure included, so a dead endpoint costs one attempt budget, not four. These cost only code:
@@ -464,6 +469,10 @@ catalogue, so it is silently unsupported rather than broken (probed 2026-08-12) 
 As with Deezer, the name-search pool behind `ALBUM_ART`, `ALBUM_METADATA` and `ALBUM_TRACKS` is
 accepted on `collectionName` as well as artist and shared as one ranked result; the exact
 `itunesCollectionId` and `lookup?upc=` paths bypass that acceptance entirely (`docs/pitfalls.md` §7).
+`country` is parsed and dropped: it names the storefront the request was served from, not the
+release, so it is the same value on every result (`USA` for a German act's albums, probed
+2026-09-03) and `Metadata.country`/`SearchCandidate.country` are left null rather than filled with
+it.
 
 **LRCLIB.** `id` is parsed and dropped (`GET /api/get/{id}` would re-fetch without a search).
 `trackName`/`artistName` are checked before a `/api/search` fallback candidate is selected —
@@ -489,7 +498,12 @@ considered and declined on 2026-08-12: a label lives on the referenced Q-id, so 
 batched call, and an audit of the then-19 entries across both maps found 16 identical to the live
 label, 2 deliberate abbreviations (Q30 "US", Q145 "UK") a swap would change for every US or UK
 artist, and 1 wrong (Q211, rekeyed to Latvia with Czech Republic moved to its own Q213 entry,
-adding a 20th). Never called: the
+adding a 20th). `COUNTRY_MAP` holds ISO 3166-1 alpha-2 codes, which is what
+`EnrichmentData.Metadata.country` promises, so the "US"/"UK" abbreviations that argument preserved
+are now `US` and `GB` and the name entries are codes; a label lookup would be the wrong shape for
+it either way, since a label is a name. A Q-id the map does not hold yields **null** — the country
+entity's own P297 alpha-2 claim sits on that entity, not on the artist's, so deriving the code
+instead of hardcoding it costs the second call the 2026-08-12 argument declined. Never called: the
 REST API at `/w/rest.php/wikibase/v1/`, and SPARQL. Note `provider/wikipedia/` *also* calls
 `wbgetentities` on this host, for sitelinks, on its own rate limiter.
 
@@ -523,18 +537,21 @@ a lead-image flag: `/w/rest.php/v1/…/links/media` carries neither ordering nor
 (probed 2026-08-12). That one dependency is the watch item — the extract no longer rides `rest_v1`
 at all. Re-run the probe before treating this as current.
 
-**ListenBrainz.** On responses we already fetch: `artist_name` on a release group (parsed into
-`ListenBrainzTopReleaseGroup.artistName`, dropped by the mapper), `listen_count` on a release group
-(ranking for `ARTIST_DISCOGRAPHY`, which currently returns response order with no counts),
-`caa_id`/`caa_release_mbid` (cover art for a discography entry without a second provider),
-`release_mbid` on a top recording (its album's identity, as opposed to the `release_name` a top
+**ListenBrainz.** On responses we already fetch, as captured **2026-09-03**: a release group's
+`artist.artists[0].name` (parsed into `ListenBrainzTopReleaseGroup.artistName`, dropped by the
+mapper), its `total_listen_count` (parsed, also dropped — ranking for `ARTIST_DISCOGRAPHY`, which
+currently returns response order with no counts), and its `release_group.date` and
+`release_group.type`, which would fill the `year` and `type` a `DiscographyAlbum` from this provider
+leaves null. `caa_id`/`caa_release_mbid` are there too — cover art for a discography entry without a
+second provider — but nested inside `release_group` and `release` rather than beside the mbid.
+Also `release_mbid` on a top recording (its album's identity, as opposed to the `release_name` a top
 track now carries). Never called:
 `/1/stats/**`, `/1/user/**`, `/1/similar-users`, and every submit endpoint. Two of the unused are
 worth knowing before reaching for a third-party call. `/1/metadata/recording/` is a keyless batch
 lookup — up to 1000 recording MBIDs to titles, artists, lengths and release info in one request —
 so any source that yields MBIDs without titles costs two requests, not one per track.
-`/1/lb-radio/artist/{mbid}` is deliberately left, not overlooked: it answers where
-`/1/explore/lb-radio` is disabled, but it is LB Radio's candidate *pool* rather than its playlist.
+`/1/lb-radio/artist/{mbid}` is deliberately left, not overlooked: it answers when
+`/1/explore/lb-radio` does not, but it is LB Radio's candidate *pool* rather than its playlist.
 It is unordered (a JSON object keyed by artist MBID), non-deterministic (`ORDER BY RANDOM()`, so two
 identical requests differ), and curated only by the popularity band the caller picks. Serving
 `RadioPlaylist` from it would mean owning the assembly troi does upstream, and caching one random
@@ -573,4 +590,7 @@ and every user collection endpoint. `ReleaseEdition.barcode` is explicitly null 
 `"Artist - Title"` field is safely split on the boundary that matches both the requested artist and
 title, not the first artist-plausible one, then the result is accepted on the parsed album title as
 well as the artist before `ALBUM_ART`, `LABEL`, `RELEASE_TYPE` and `ALBUM_METADATA` share it
-(`docs/pitfalls.md` §7).
+(`docs/pitfalls.md` §7). `country` is free text: a country name is normalised to the ISO 3166-1
+alpha-2 code `Metadata.country` reports (`UK` included, which is not an ISO code), while a
+multi-country region — `Europe`, `Scandinavia` — has no code and is passed through as Discogs wrote
+it rather than dropped.

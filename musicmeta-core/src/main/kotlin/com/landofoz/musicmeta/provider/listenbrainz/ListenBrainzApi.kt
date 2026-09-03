@@ -177,21 +177,37 @@ internal class ListenBrainzApi(
 
     private fun parseTopReleaseGroups(
         jsonArray: JSONArray,
-    ): List<ListenBrainzTopReleaseGroup> {
-        val results = mutableListOf<ListenBrainzTopReleaseGroup>()
-        for (i in 0 until jsonArray.length()) {
-            val item = jsonArray.getJSONObject(i)
-            val mbid = item.optString("release_group_mbid").takeIf { it.isNotBlank() }
-                ?: continue
-            results += ListenBrainzTopReleaseGroup(
-                releaseGroupMbid = mbid,
-                releaseGroupName = item.optString("release_group_name", ""),
-                artistName = item.optString("artist_name", ""),
-                listenCount = item.optLong("total_listen_count", 0L),
-            )
-        }
-        return results
+    ): List<ListenBrainzTopReleaseGroup> =
+        (0 until jsonArray.length()).mapNotNull { i -> toTopReleaseGroup(jsonArray.getJSONObject(i)) }
+
+    /** Null for an item with no release-group MBID or no name in either shape: neither can be shown. */
+    private fun toTopReleaseGroup(item: JSONObject): ListenBrainzTopReleaseGroup? {
+        val mbid = item.optString("release_group_mbid").takeIf { it.isNotBlank() } ?: return null
+        val name = nestedName(item, "release_group")
+            ?: item.optString("release_group_name").takeIf { it.isNotBlank() }
+            ?: return null
+        return ListenBrainzTopReleaseGroup(
+            releaseGroupMbid = mbid,
+            releaseGroupName = name,
+            artistName = nestedArtistName(item) ?: item.optString("artist_name", ""),
+            listenCount = item.optLong("total_listen_count", 0L),
+        )
     }
+
+    /**
+     * The name inside [item]'s [key] object, or `null` where the object or its name is absent.
+     * The flat `{key}_name` sibling this route used to send stays the fallback at the call site.
+     */
+    private fun nestedName(item: JSONObject, key: String): String? =
+        item.optJSONObject(key)?.optString("name")?.takeIf { it.isNotBlank() }
+
+    /** The credited artist's name, which arrives as the first entry of `artist.artists`. */
+    private fun nestedArtistName(item: JSONObject): String? =
+        item.optJSONObject("artist")
+            ?.optJSONArray("artists")
+            ?.optJSONObject(0)
+            ?.optString("name")
+            ?.takeIf { it.isNotBlank() }
 
     companion object {
         const val BASE_URL = "https://api.listenbrainz.org/1"
