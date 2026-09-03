@@ -572,7 +572,7 @@ neutral; it hands the engine's canonical-status fallback a case it cannot tell a
 search. The same applies to a merged or synthesized result with several contributors and no single
 winner: report the weakest contributing route, never infer one from canonical status alone.
 
-## 27. A prose field from an upstream can arrive as markup, and a hand-written fixture never shows it
+## 28. A prose field from an upstream can arrive as markup, and a hand-written fixture never shows it
 
 Last.fm welds `<a href="…">Read more on Last.fm</a>` onto every `bio.summary` and every album
 `wiki.summary`. For an artist with no wiki that anchor *is* the whole value, so `isNotBlank()` passed

@@ -71,11 +71,14 @@ internal object LastFmMapper {
 
     /**
      * Last.fm welds a "Read more on Last.fm" anchor onto every `summary` it sends, and for an
-     * entity with no wiki that anchor is the whole value. Only that trailing anchor is removed;
-     * any other markup is left as it arrived rather than half-decoded.
+     * entity with no wiki that anchor is the whole value — so the trailing anchor goes with its
+     * text, while any anchor inside the prose loses only its tags. Entities are left encoded.
      */
     private fun prose(summary: String): String? =
-        summary.replace(TRAILING_ANCHOR, "").trim().takeIf { it.isNotEmpty() }
+        summary.replace(TRAILING_ANCHOR, "")
+            .replace(ANCHOR_TAG, "")
+            .trim()
+            .takeIf { it.isNotEmpty() }
 
     fun toPopularity(info: LastFmArtistInfo): EnrichmentData.Popularity =
         EnrichmentData.Popularity(
@@ -123,5 +126,10 @@ internal object LastFmMapper {
 
     private const val SOURCE = "lastfm"
 
-    private val TRAILING_ANCHOR = Regex("""<a\s[^>]*>.*?</a>\s*$""", RegexOption.IGNORE_CASE)
+    // The last anchor in the value: no `</a>` may fall between its opening tag and its own close,
+    // which is what stops an earlier inline anchor from swallowing the prose between the two.
+    private val TRAILING_ANCHOR =
+        Regex("""<a\s(?:(?!</a>)[\s\S])*?</a>\s*$""", RegexOption.IGNORE_CASE)
+
+    private val ANCHOR_TAG = Regex("""</?a(?:\s[\s\S]*?)?>""", RegexOption.IGNORE_CASE)
 }

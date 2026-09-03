@@ -123,6 +123,36 @@ class LastFmProviderTest {
     }
 
     @Test
+    fun `enrich keeps an inline anchor's text and drops every anchor tag`() = runTest {
+        // Given - a bio whose prose links a name before the trailing Read more anchor
+        httpClient.givenJsonResponse("artist.getinfo", TWO_ANCHOR_ARTIST_INFO_JSON)
+        val request = EnrichmentRequest.forArtist(name = "Radiohead")
+
+        // When - enriching for ARTIST_BIO
+        val result = provider.enrich(request, EnrichmentType.ARTIST_BIO)
+
+        // Then - the linked name survives as prose and no anchor tag does
+        val bio = (result as EnrichmentResult.Success).data as EnrichmentData.Biography
+        assertEquals("Radiohead formed with Thom Yorke in 1985, and influenced alternative rock.", bio.text)
+        assertFalse(bio.text.contains("<a"))
+        assertFalse(bio.text.contains("</a>"))
+    }
+
+    @Test
+    fun `enrich strips a Read more anchor whose text runs across a line break`() = runTest {
+        // Given - a trailing anchor whose label wraps onto a second line
+        httpClient.givenJsonResponse("artist.getinfo", WRAPPED_ANCHOR_ARTIST_INFO_JSON)
+        val request = EnrichmentRequest.forArtist(name = "Radiohead")
+
+        // When - enriching for ARTIST_BIO
+        val result = provider.enrich(request, EnrichmentType.ARTIST_BIO)
+
+        // Then - the wrapped anchor goes the way a single-line one does
+        val bio = (result as EnrichmentResult.Success).data as EnrichmentData.Biography
+        assertEquals("Radiohead influenced alternative rock.", bio.text)
+    }
+
+    @Test
     fun `enrich returns NotFound for ARTIST_BIO when the summary is only the Read more anchor`() = runTest {
         // Given - a wiki-less artist whose whole bio summary is the Read more anchor
         httpClient.givenJsonResponse("artist.getinfo", LINK_ONLY_ARTIST_INFO_JSON)
@@ -622,6 +652,43 @@ class LastFmProviderTest {
             }
         """.trimIndent()
 
+        /**
+         * A constructed shape, not a capture: 12 `artist.getInfo` bios probed on 2026-09-03 each
+         * carried exactly one anchor, so no live summary was available with a link inside the
+         * prose. It pins what the mapper must survive, not what it has been seen to send.
+         */
+        val TWO_ANCHOR_ARTIST_INFO_JSON = """
+            {
+              "artist": {
+                "name": "Radiohead",
+                "stats": {"listeners": "5900000", "playcount": "900000000"},
+                "bio": {
+                  "published": "12 Mar 2004, 00:00",
+                  "summary": "Radiohead formed with <a href=\"https://www.last.fm/music/Thom+Yorke\">Thom Yorke</a> in 1985, and influenced alternative rock. <a href=\"https://www.last.fm/music/Radiohead\">Read more on Last.fm</a>",
+                  "content": "Radiohead formed with Thom Yorke in 1985."
+                }
+              }
+            }
+        """.trimIndent()
+
+        /**
+         * Constructed, like [TWO_ANCHOR_ARTIST_INFO_JSON]: no probed bio wrapped an anchor across
+         * lines. A newline inside the anchor is what a `.`-based pattern cannot cross.
+         */
+        val WRAPPED_ANCHOR_ARTIST_INFO_JSON = """
+            {
+              "artist": {
+                "name": "Radiohead",
+                "stats": {"listeners": "5900000", "playcount": "900000000"},
+                "bio": {
+                  "published": "12 Mar 2004, 00:00",
+                  "summary": "Radiohead influenced alternative rock. <a href=\"https://www.last.fm/music/Radiohead\">Read more\non Last.fm</a>",
+                  "content": "Radiohead influenced alternative rock."
+                }
+              }
+            }
+        """.trimIndent()
+
         /** `artist.getInfo?artist=Changg`, captured 2026-09-03 — a wiki-less artist. */
         val LINK_ONLY_ARTIST_INFO_JSON = """
             {
@@ -639,7 +706,10 @@ class LastFmProviderTest {
             }
         """.trimIndent()
 
-        /** The `album.getInfo` `wiki` block carries the anchor in the shape captured 2026-09-03. */
+        /**
+         * Constructed from the 2026-09-03 `artist.getInfo` capture: the `album.getInfo` `wiki`
+         * block carries the same trailing anchor off the album payload instead.
+         */
         val ANCHORED_ALBUM_INFO_JSON = """
             {
               "album": {
@@ -655,6 +725,10 @@ class LastFmProviderTest {
             }
         """.trimIndent()
 
+        /**
+         * The album equivalent of the wiki-less artist, constructed rather than captured: the
+         * 2026-09-03 capture covers `artist.getInfo`, and `album.getInfo` shares the summary shape.
+         */
         val LINK_ONLY_ALBUM_INFO_JSON = """
             {
               "album": {
