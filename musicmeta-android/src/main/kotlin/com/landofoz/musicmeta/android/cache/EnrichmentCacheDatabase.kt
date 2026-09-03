@@ -12,13 +12,13 @@ import androidx.sqlite.db.SupportSQLiteDatabase
     version = 5,
     exportSchema = true,
 )
-abstract class EnrichmentCacheDatabase : RoomDatabase() {
-    abstract fun enrichmentCacheDao(): EnrichmentCacheDao
-    abstract fun negativeCacheDao(): NegativeCacheDao
-    abstract fun selectionDao(): SelectionDao
+public abstract class EnrichmentCacheDatabase : RoomDatabase() {
+    public abstract fun enrichmentCacheDao(): EnrichmentCacheDao
+    public abstract fun negativeCacheDao(): NegativeCacheDao
+    public abstract fun selectionDao(): SelectionDao
 
-    companion object {
-        val MIGRATION_1_2 = object : Migration(1, 2) {
+    public companion object {
+        public val MIGRATION_1_2: Migration = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE enrichment_cache ADD COLUMN identity_match TEXT DEFAULT NULL")
                 db.execSQL("ALTER TABLE enrichment_cache ADD COLUMN identity_match_score INTEGER DEFAULT NULL")
@@ -28,7 +28,7 @@ abstract class EnrichmentCacheDatabase : RoomDatabase() {
 
         // Additive: creates the negative_cache table only, leaving enrichment_cache untouched, so
         // on-device positive entries survive the upgrade.
-        val MIGRATION_2_3 = object : Migration(2, 3) {
+        public val MIGRATION_2_3: Migration = object : Migration(2, 3) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(
                     "CREATE TABLE IF NOT EXISTS `negative_cache` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
@@ -52,7 +52,7 @@ abstract class EnrichmentCacheDatabase : RoomDatabase() {
          * rewrite. Every pre-upgrade entry is a cache miss afterward, healed the same way any other
          * miss is: the next `enrich()` call refetches it live.
          */
-        val MIGRATION_3_4 = object : Migration(3, 4) {
+        public val MIGRATION_3_4: Migration = object : Migration(3, 4) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("DROP TABLE IF EXISTS `enrichment_cache`")
                 db.execSQL("DROP TABLE IF EXISTS `negative_cache`")
@@ -96,7 +96,7 @@ abstract class EnrichmentCacheDatabase : RoomDatabase() {
          * still carries. `negative_cache` is untouched: its shape did not change, so dropping it
          * would discard healable data for no schema reason.
          */
-        val MIGRATION_4_5 = object : Migration(4, 5) {
+        public val MIGRATION_4_5: Migration = object : Migration(4, 5) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(
                     "CREATE TABLE IF NOT EXISTS `selections` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
@@ -137,7 +137,7 @@ abstract class EnrichmentCacheDatabase : RoomDatabase() {
          * `DEFAULT_DATABASE_NAME`. Building with your own `Room.databaseBuilder` instead means
          * registering [MIGRATION_1_2], [MIGRATION_2_3], [MIGRATION_3_4], and [MIGRATION_4_5] by hand.
          */
-        fun create(context: Context, name: String): EnrichmentCacheDatabase =
+        public fun create(context: Context, name: String): EnrichmentCacheDatabase =
             Room.databaseBuilder(context, EnrichmentCacheDatabase::class.java, name)
                 .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                 .build()

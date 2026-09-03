@@ -66,15 +66,19 @@ function creditHtml(credit) {
 /**
  * One line of credits for the data rendered beside it, in the order the response listed them and
  * one per provider. Empty when nothing was credited, so a card with no provenance grows no line.
+ *
+ * `label` names what the line credits. Pass one wherever the line does not sit against the thing
+ * it is crediting — a bare provider name under a paragraph reads as that paragraph's source.
  */
-export function creditLineHtml(credits) {
+export function creditLineHtml(credits, label) {
   const seen = new Set();
   const items = (credits || [])
     .filter((c) => c && c.provider && !c.provider.endsWith(MERGER_SUFFIX))
     .filter((c) => !seen.has(c.provider) && seen.add(c.provider))
     .map(creditHtml);
   if (items.length === 0) return '';
-  return `<p class="credit-line">${items.join('<span class="credit-sep"> · </span>')}</p>`;
+  const lead = label ? `<span class="credit-label">${escapeHtml(label)}</span>` : '';
+  return `<p class="credit-line">${lead}${items.join('<span class="credit-sep"> · </span>')}</p>`;
 }
 
 /**

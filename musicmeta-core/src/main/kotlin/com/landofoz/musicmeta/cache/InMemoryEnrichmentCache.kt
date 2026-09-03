@@ -8,7 +8,7 @@ import com.landofoz.musicmeta.EnrichmentType
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
-class InMemoryEnrichmentCache(
+public class InMemoryEnrichmentCache(
     private val maxEntries: Int = 500,
     private val clock: () -> Long = System::currentTimeMillis,
 ) : EnrichmentCache {

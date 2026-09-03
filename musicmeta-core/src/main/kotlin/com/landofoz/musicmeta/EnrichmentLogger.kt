@@ -5,12 +5,12 @@ package com.landofoz.musicmeta
  * Defaults to no-op. Android consumers can bridge to Logcat,
  * JVM consumers to SLF4J, etc.
  */
-interface EnrichmentLogger {
-    fun debug(tag: String, message: String)
-    fun warn(tag: String, message: String, throwable: Throwable? = null)
+public interface EnrichmentLogger {
+    public fun debug(tag: String, message: String)
+    public fun warn(tag: String, message: String, throwable: Throwable? = null)
 
-    companion object {
-        val NoOp: EnrichmentLogger = object : EnrichmentLogger {
+    public companion object {
+        public val NoOp: EnrichmentLogger = object : EnrichmentLogger {
             override fun debug(tag: String, message: String) {}
             override fun warn(tag: String, message: String, throwable: Throwable?) {}
         }

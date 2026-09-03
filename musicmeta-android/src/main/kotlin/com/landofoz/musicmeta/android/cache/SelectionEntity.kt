@@ -15,7 +15,7 @@ import androidx.room.PrimaryKey
     tableName = "selections",
     indices = [Index(value = ["entity_key", "enrichment_type"], unique = true)],
 )
-data class SelectionEntity(
+public data class SelectionEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     @ColumnInfo(name = "entity_key") val entityKey: String,
     @ColumnInfo(name = "enrichment_type") val enrichmentType: String,

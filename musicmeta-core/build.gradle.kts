@@ -30,6 +30,10 @@ java {
 // catches it.
 kotlin {
     compilerOptions { jvmTarget = JvmTarget.JVM_17 }
+
+    // Every published declaration states its visibility and its return type, at the compiler
+    // rather than at review of the `api/*.api` diff. Main sources only — tests are unaffected.
+    explicitApi()
 }
 
 // secrets.properties is where the keys actually live on a developer machine — it is what

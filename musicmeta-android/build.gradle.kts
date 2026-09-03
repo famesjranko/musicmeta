@@ -1,5 +1,6 @@
 import com.vanniktech.maven.publish.AndroidSingleVariantLibrary
 import com.vanniktech.maven.publish.SonatypeHost
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.android.library)
@@ -31,10 +32,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-    }
-
     testOptions {
         unitTests {
             isIncludeAndroidResources = true
@@ -52,6 +49,16 @@ android {
     sourceSets.getByName("androidTest") {
         assets.srcDirs("$projectDir/schemas")
     }
+}
+
+// See musicmeta-core: Kotlin otherwise targets the JDK running Gradle, not 17. Both Kotlin settings
+// live on the Kotlin extension, so one site configures every variant.
+kotlin {
+    compilerOptions { jvmTarget = JvmTarget.JVM_17 }
+
+    // The published surface is stated, not inferred. Set on the extension, so it reaches every
+    // variant's compilation, not one of them.
+    explicitApi()
 }
 
 dependencies {

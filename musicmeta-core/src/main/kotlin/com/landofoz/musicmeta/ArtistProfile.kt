@@ -8,7 +8,7 @@ package com.landofoz.musicmeta
  * directly for error diagnostics (e.g., checking if a type was [EnrichmentResult.Error] and what
  * its [ErrorKind] was).
  */
-data class ArtistProfile(val name: String, val results: EnrichmentResults) {
+public data class ArtistProfile(val name: String, val results: EnrichmentResults) {
 
     // --- Identity ---
     val identifiers: EnrichmentIdentifiers get() = results.identity.identifiers

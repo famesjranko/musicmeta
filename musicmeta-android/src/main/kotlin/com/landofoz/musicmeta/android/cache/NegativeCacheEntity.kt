@@ -16,7 +16,7 @@ import androidx.room.PrimaryKey
         Index(value = ["expires_at"]),
     ],
 )
-data class NegativeCacheEntity(
+public data class NegativeCacheEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     @ColumnInfo(name = "entity_key") val entityKey: String,
     @ColumnInfo(name = "enrichment_type") val enrichmentType: String,

@@ -17,7 +17,7 @@ import java.util.zip.GZIPInputStream
  * Each `…Once` function maps one response and lets an [IOException] fly, which is how the ladder
  * hears a transport failure; nothing here decides what retries.
  */
-class DefaultHttpClient(
+public class DefaultHttpClient(
     private val userAgent: String,
     private val timeoutMs: Int = 10_000,
     private val maxRetries: Int = 3,

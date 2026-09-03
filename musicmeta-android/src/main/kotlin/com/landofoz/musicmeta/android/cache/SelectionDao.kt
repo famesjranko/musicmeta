@@ -6,22 +6,22 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 
 @Dao
-interface SelectionDao {
+public interface SelectionDao {
 
     @Query(
         "SELECT EXISTS(SELECT 1 FROM selections WHERE entity_key = :entityKey AND enrichment_type = :type)",
     )
-    suspend fun isSelected(entityKey: String, type: String): Boolean
+    public suspend fun isSelected(entityKey: String, type: String): Boolean
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(entity: SelectionEntity)
+    public suspend fun insert(entity: SelectionEntity)
 
     @Query("DELETE FROM selections WHERE entity_key = :entityKey AND enrichment_type = :type")
-    suspend fun delete(entityKey: String, type: String)
+    public suspend fun delete(entityKey: String, type: String)
 
     @Query("DELETE FROM selections WHERE entity_key = :entityKey")
-    suspend fun deleteAll(entityKey: String)
+    public suspend fun deleteAll(entityKey: String)
 
     @Query("DELETE FROM selections")
-    suspend fun clearAll()
+    public suspend fun clearAll()
 }
