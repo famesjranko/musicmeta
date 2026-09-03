@@ -11,22 +11,26 @@ import com.landofoz.musicmeta.testutil.FakeHttpClient
  * default provider set, offline, fed by [http].
  *
  * **Call order is load-bearing and lives only here.** [EnrichmentEngine.Builder.withDefaultProviders]
- * reads the client at `EnrichmentEngine.kt:179` and the keys at `:215` and `:221`, so every setter
- * has to precede it. Call [EnrichmentEngine.Builder.httpClient] after and the providers hold a real
+ * reads the client and the api keys as it registers each provider, so every setter has to precede
+ * it. Call [EnrichmentEngine.Builder.httpClient] after and the providers hold a real
  * `DefaultHttpClient` — the "offline" test hits the network with no error to say so. Call
  * [EnrichmentEngine.Builder.apiKeys] after and the key-gated providers are silently missing.
  *
- * **Three providers are key-gated, not four** (`EnrichmentEngine.kt:222-232`): Last.fm, fanart.tv and
- * Discogs. `ListenBrainzProvider` registers unconditionally at `:212` and takes the token as an
- * optional `authToken`, which gates one capability rather than the provider. So [ALL_KEYS] yields
- * **12** registered providers and a keyless build yields 9 — assert that off [eachProviderCapability]
+ * **Three providers are key-gated, not four:** Last.fm, fanart.tv and Discogs.
+ * `ListenBrainzProvider` registers unconditionally and takes the token as an optional `authToken`,
+ * which gates one capability rather than the provider. So [ALL_KEYS] yields **12** registered
+ * providers and a keyless build yields 9 — assert that off [eachProviderCapability]
  * rather than a literal, because the number is a fact about the engine, not about this file.
  *
- * **Use `runTest`, not `runBlocking`.** [EnrichmentEngine.Builder.withDefaultProviders] builds real
- * `RateLimiter`s (MusicBrainz 1100ms at `:189`, Discogs 1100ms at `:200`, iTunes 3000ms by
- * constructor default at `:211`), and `RateLimiter.execute` calls `kotlinx.coroutines.delay`. Under
- * `runTest` that delay is virtual and free; under `runBlocking` one multi-type scenario costs tens of
- * real seconds on every build.
+ * **A scenario's rate-limiter waits are wall-clock time, not virtual.**
+ * [EnrichmentEngine.Builder.withDefaultProviders] builds real `RateLimiter`s (MusicBrainz and
+ * Discogs 1100ms, iTunes 3000ms by constructor default) and `RateLimiter.execute` calls
+ * `kotlinx.coroutines.delay` — but `enrich()` runs its fan-out on the engine's detached scope, on
+ * `Dispatchers.Default`, so `runTest`'s scheduler never sees those delays. One MusicBrainz round
+ * trip costs a scenario about 1.1s of real time, and `enrichTimeoutMs` is spent against the same
+ * clock: a fan-out denied that shared pool spends the budget waiting and stamps `Error(TIMEOUT)`
+ * on types it never got to ask about. `runTest` is still the harness convention — its 60s cap turns such a run into a failure rather
+ * than a hung build.
  */
 internal object TestStack {
 
