@@ -82,6 +82,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The `HttpClient` contract now states that URLs arrive already percent-encoded: a custom client must never decode an escape or reinterpret a delimiter, though it may canonicalize as OkHttp does
 - demo-web no longer enriches its suggested queries at startup: the page is usable the moment it loads, `/api/health` reports ready as soon as the server binds, and the cache fills from real searches
 - `ExternalLink.url` documented as the upstream's URL verbatim, which may be `http://`, so an https-only policy is the consumer's to enforce; `Artwork.url` documents its Cover Art Archive upgrade
+- `ReleaseEdition.country` is now alpha-2 where Discogs names a country (`UK` is `GB`), matching `Metadata.country`; cached editions keep the old wording until cleared or expired
+- Every `country` field now documents one rule: alpha-2 where the upstream names a *current* ISO country, else the upstream's own label — `Europe`, `Yugoslavia`, `XE`/`XW` reach you
 
 ### Fixed
 - demo-web's discography now collapses a `(Remastered Version)` edition into its base album's row, matching the qualifier vocabulary core already strips before searching

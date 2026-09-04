@@ -455,6 +455,12 @@ public data class SearchCandidate(
     val title: String,
     val artist: String?,
     val year: String?,
+    /**
+     * ISO 3166-1 alpha-2 where the upstream names a current ISO country (`GB`), otherwise the
+     * upstream's own label — MusicBrainz's `XE`/`XW` reach a consumer here. Null on an iTunes or
+     * Deezer candidate and on any recording search hit, none of which carries a release country.
+     * The same rule as [EnrichmentData.Metadata.country].
+     */
     val country: String?,
     val releaseType: String?,
     val score: Int,

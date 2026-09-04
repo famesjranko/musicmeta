@@ -25,7 +25,7 @@ internal object IsoCountry {
 
     /**
      * As [alpha2OrNull], but returns [raw] untouched when it names no single country. For a field
-     * where the upstream's own wording — Discogs' "Europe", MusicBrainz's "XW" — is worth more to
+     * where the upstream's own label — Discogs' "Europe", MusicBrainz's "XW" — is worth more to
      * a consumer than nothing.
      */
     fun alpha2OrKeep(raw: String?): String? = alpha2OrNull(raw) ?: raw

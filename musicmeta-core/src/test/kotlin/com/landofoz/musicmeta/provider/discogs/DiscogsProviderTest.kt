@@ -871,7 +871,7 @@ class DiscogsProviderTest {
         assertEquals(2, data.editions.size)
         assertEquals("OK Computer", data.editions[0].title)
         assertEquals("Vinyl, LP", data.editions[0].format)
-        assertEquals("UK", data.editions[0].country)
+        assertEquals("GB", data.editions[0].country)
         assertEquals(1997, data.editions[0].year)
         assertEquals("Parlophone", data.editions[0].label)
         assertEquals("NODATA 01", data.editions[0].catalogNumber)

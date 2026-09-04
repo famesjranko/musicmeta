@@ -426,7 +426,13 @@ Reading `area`/`begin-area` and their `iso-3166-1-codes` as a fallback for a mis
 considered and declined on 2026-09-03: a lookup response already fills `country` from the area
 hierarchy, and a `/release?query=`/`/artist?query=` hit's `area` carries no `iso-3166-1-codes` at
 all (probed 2026-09-03), so the fallback would be redundant on the one endpoint and unusable on the
-other.
+other. `country` is passed through untouched rather than run through the Discogs conversion, because
+MusicBrainz already writes codes: an alpha-2 where the release names one country, and its own
+pseudo-codes otherwise — `XE` (Europe), `XW` (Worldwide), `XC` (Czechoslovakia), and the withdrawn
+`YU`. Those reach a consumer as written, on `Metadata.country`, `ReleaseEdition.country` and
+`SearchCandidate.country` alike. `XE` and `XW` alone are 36% of every release MusicBrainz holds
+(2.07M of 5.75M, counted 2026-09-04), so a consumer that renders `country` as a flag or a code needs
+a branch for them.
 
 **Cover Art Archive.** `/release/{mbid}` is read by every capability and fetched once per call — a
 failure included, so a dead endpoint costs one attempt budget, not four. These cost only code:
@@ -592,6 +598,11 @@ and every user collection endpoint. `ReleaseEdition.barcode` is explicitly null 
 title, not the first artist-plausible one, then the result is accepted on the parsed album title as
 well as the artist before `ALBUM_ART`, `LABEL`, `RELEASE_TYPE` and `ALBUM_METADATA` share it
 (`docs/pitfalls.md` §7). `country` is free text: a country name is normalised to the ISO 3166-1
-alpha-2 code `Metadata.country` reports (`UK` included, which is not an ISO code), while a
-multi-country region — `Europe`, `Scandinavia` — has no code and is passed through as Discogs wrote
-it rather than dropped.
+alpha-2 code `Metadata.country` reports (`UK` included, which is not an ISO code), while a value
+naming no *current* ISO country — a multi-country region (`Europe`, `Scandinavia`, `UK & Europe`), a
+historical state (`Yugoslavia`, `Czechoslovakia`) or Discogs' literal `Unknown` — has no code and is
+passed through as Discogs wrote it rather than dropped. `ReleaseEdition.country` follows the same
+rule from the same conversion, so a master's versions and its album metadata cannot disagree about
+the wording of one country. Passing the residue through rather than nulling it was measured, not
+assumed, on 2026-09-04: over a 188-album spread of decades and regions, 25.9% of the Discogs
+`country` values a lookup resolved named no current ISO country, and 11.6% of MusicBrainz's did.

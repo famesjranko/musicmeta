@@ -91,10 +91,9 @@ public data class EnrichmentResults(
             ?: metadata(EnrichmentType.ALBUM_METADATA)?.releaseType
 
     /**
-     * ISO 3166-1 alpha-2 where the upstream supplies a country (`GB`). Where it names no current
-     * ISO country the upstream's own wording passes through — Discogs' region labels (`Europe`)
-     * and historical states (`Yugoslavia`), MusicBrainz's `XE`/`XW`; null when no country-level
-     * area exists.
+     * ISO 3166-1 alpha-2 where the upstream names a current ISO country (`GB`), otherwise the
+     * upstream's own label — Discogs' region labels (`Europe`) and historical states
+     * (`Yugoslavia`), MusicBrainz's `XE`/`XW`; null when no country-level area exists.
      */
     public fun country(): String? =
         metadata(EnrichmentType.COUNTRY)?.country
