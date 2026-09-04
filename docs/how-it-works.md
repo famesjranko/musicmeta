@@ -378,7 +378,13 @@ evidence the entity is absent upstream. It is never negative-cached when:
   dependency among fresh ones is enough: the composite's answer still rests on it.
 
 Without these exclusions a transient upstream error or a local catalog outage would persist as
-"known absent" for `negativeTtlMs`. Successful results reached under
+"known absent" for `negativeTtlMs`.
+
+An `Error` or `RateLimited` result is cached neither way, positive or negative: it is not a
+provider's answer to remember, only a call that did not get one. The next request for that type
+pays the full lookup again — a transient failure can never harden into a sticky negative.
+
+Successful results reached under
 `RESOLVED` (or any `NOT_ATTEMPTED_*` status) are cached with per-type TTLs, alongside the call's own
 `canonicalStatus`, as a `CacheEnvelope`. `EnrichmentCache.get`/`getNegative` return that whole
 envelope, not just the stored result, so a cache hit's `Success.provenance` replays the original

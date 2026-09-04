@@ -228,6 +228,10 @@ if (result?.isStale == true) {
 | `NotFound` | Yes | Return `NotFound` — provider found nothing, stale would be misleading |
 | `Success` | — | Return fresh `Success` normally |
 
+An `Error` or `RateLimited` returned as-is (no expired entry to fall back on) is cached neither
+way, positive or negative — the next call for that type pays the full lookup again rather than
+risk a transient failure hardening into a stored absence.
+
 A composite type synthesized from a stale-substituted dependency inherits that dependency's
 staleness. If the synthesis itself comes out `NotFound`, that `NotFound` is not negative-cached —
 it describes the stale snapshot standing in for this call, not a live "providers had nothing"
