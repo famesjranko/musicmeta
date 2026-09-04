@@ -36,6 +36,12 @@ import org.json.JSONObject
  * it. They fold the lookups a request's types repeat into one call each, a repeat being a ~1.1s
  * wait on the shared limiter, and none needs a cap: one request's types resolve one album and a
  * handful of MBIDs.
+ *
+ * A memo keyed by name is keyed on the query it sends upstream, never a folded form of it: the key
+ * is what claims two callers asked the same question, so a key that folds two spellings together
+ * answers the second from a pool searched for the first's, and one that splits a query the search
+ * sends identically pays for it twice. `trackFuzzyMemo` is the one deliberate over-split: it keys
+ * on an album its fuzzy search never sends, which costs nothing while one request has one album.
  */
 internal class MusicBrainzEnricher(
     private val api: MusicBrainzApi,
@@ -56,7 +62,7 @@ internal class MusicBrainzEnricher(
         artistMemo.get(mbid) { api.lookupArtistWithRels(mbid) }
 
     /**
-     * The artist pool a name resolves out of. Keyed on the normalized name, as [albumSearchMemo]'s
+     * The artist pool a name resolves out of. Keyed on the name searched for, as [albumSearchMemo]'s
      * key is: [enrichArtist] and [enrichArtistNewType] (via [nameResolvedArtistId]) both search it
      * for a request carrying no MBID, so GENRE, BAND_MEMBERS, ARTIST_DISCOGRAPHY and ARTIST_LINKS of
      * one request otherwise repeat the same search once each.
@@ -67,7 +73,7 @@ internal class MusicBrainzEnricher(
     private val artistSearchMemo = CallMemo<String, List<MusicBrainzArtist>>()
 
     private suspend fun memoizedArtistSearch(name: String): List<MusicBrainzArtist> =
-        artistSearchMemo.get(MusicBrainzQualifierFallback.normalize(name)) { api.searchArtists(name) }
+        artistSearchMemo.get(name) { api.searchArtists(name) }
 
     /**
      * Near-miss suggestions for an artist name nothing strict resolves, keyed as [artistSearchMemo]
@@ -78,7 +84,7 @@ internal class MusicBrainzEnricher(
     private val artistFuzzyMemo = CallMemo<String, List<MusicBrainzArtist>>()
 
     private suspend fun memoizedFuzzyArtists(name: String): List<MusicBrainzArtist> =
-        artistFuzzyMemo.get(MusicBrainzQualifierFallback.normalize(name)) {
+        artistFuzzyMemo.get(name) {
             api.searchArtistsFuzzy(name, MAX_SUGGESTIONS)
         }
 
@@ -886,7 +892,7 @@ internal class MusicBrainzEnricher(
     private val albumSearchMemo = CallMemo<AlbumQuery, AlbumSearchResult>()
 
     private suspend fun memoizedAlbumSearch(title: String, artist: String): AlbumSearchResult =
-        albumSearchMemo.get(albumQuery(title, artist)) { searchAlbum(title, artist) }
+        albumSearchMemo.get(AlbumQuery(title, artist)) { searchAlbum(title, artist) }
 
     /**
      * Near-miss suggestions for an album title nothing strict resolves, keyed as [albumSearchMemo]
@@ -898,21 +904,16 @@ internal class MusicBrainzEnricher(
     private val albumFuzzyMemo = CallMemo<AlbumQuery, List<MusicBrainzRelease>>()
 
     private suspend fun memoizedFuzzyReleases(title: String, artist: String): List<MusicBrainzRelease> =
-        albumFuzzyMemo.get(albumQuery(title, artist)) {
+        albumFuzzyMemo.get(AlbumQuery(title, artist)) {
             api.searchReleasesFuzzy(title, artist, MAX_SUGGESTIONS)
         }
 
     /**
-     * [albumSearchMemo] and [albumFuzzyMemo]'s key. Two fields rather than one joined string:
-     * [MusicBrainzQualifierFallback.normalize] collapses whitespace, so a joined key would need a
-     * separator no title can contain.
+     * [albumSearchMemo] and [albumFuzzyMemo]'s key: the title and artist searched for. Two fields
+     * rather than one joined string, because a joined key would need a separator no title can
+     * contain.
      */
     private data class AlbumQuery(val title: String, val artist: String)
-
-    private fun albumQuery(title: String, artist: String) = AlbumQuery(
-        MusicBrainzQualifierFallback.normalize(title),
-        MusicBrainzQualifierFallback.normalize(artist),
-    )
 
     /**
      * [searchTrack]'s answer. [viaQualifierFallback] is true exactly when [recording] was reached by
@@ -989,14 +990,16 @@ internal class MusicBrainzEnricher(
             api.searchRecordingsFuzzy(request.title, request.artist, MAX_SUGGESTIONS)
         }
 
-    /** [trackSearchMemo]'s key, in fields for the reason [AlbumQuery] is. A blank album is no album. */
-    private data class TrackQuery(val title: String, val artist: String, val album: String)
+    /**
+     * [trackSearchMemo]'s key, in fields for the reason [AlbumQuery] is. The album hint is held as
+     * the search sends it, and a blank album is no album: [MusicBrainzApi] narrows on the hint only
+     * when it is non-blank, so a request carrying `null`, `""` or `" "` sends one query and must
+     * reach one key.
+     */
+    private data class TrackQuery(val title: String, val artist: String, val album: String?)
 
-    private fun trackQuery(request: EnrichmentRequest.ForTrack) = TrackQuery(
-        MusicBrainzQualifierFallback.normalize(request.title),
-        MusicBrainzQualifierFallback.normalize(request.artist),
-        MusicBrainzQualifierFallback.normalize(request.album),
-    )
+    private fun trackQuery(request: EnrichmentRequest.ForTrack) =
+        TrackQuery(request.title, request.artist, request.album?.takeIf { it.isNotBlank() })
 
     /**
      * Resolves an album search, trying [title]/[artist] as-is first, and only falling back to
