@@ -3,8 +3,9 @@ package com.landofoz.musicmeta.provider.wikidata
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.http.bodyOrThrowTransient
+import com.landofoz.musicmeta.provider.encodePathSegment
+import com.landofoz.musicmeta.provider.encodeQueryValue
 import org.json.JSONObject
-import java.net.URLEncoder
 
 /**
  * Fetches artist properties from Wikidata: P18 (image), P569 (birth date),
@@ -35,7 +36,7 @@ internal class WikidataApi(
         wikidataId: String,
         imageSize: Int = DEFAULT_IMAGE_SIZE,
     ): WikidataEntityProperties? = rateLimiter.execute {
-        val url = "$BASE_URL?action=wbgetentities&ids=$wikidataId&props=claims&format=json"
+        val url = "$BASE_URL?action=wbgetentities&ids=${encodeQueryValue(wikidataId)}&props=claims&format=json"
         val json = httpClient.fetchJsonResult(url).bodyOrThrowTransient() ?: return@execute null
         val claims = json.optJSONObject("entities")
             ?.optJSONObject(wikidataId)
@@ -126,7 +127,7 @@ internal class WikidataApi(
     }
 
     private fun buildCommonsUrl(filename: String, size: Int): String {
-        val encoded = URLEncoder.encode(filename.replace(' ', '_'), "UTF-8")
+        val encoded = encodePathSegment(filename.replace(' ', '_'))
         val ext = filename.substringAfterLast('.', "").lowercase()
         val suffix = if (ext in NON_RASTER_FORMATS) ".png" else ""
         return "$COMMONS_BASE_URL/$encoded$suffix?width=$size"

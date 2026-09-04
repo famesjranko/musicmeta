@@ -6,10 +6,10 @@ import com.landofoz.musicmeta.engine.bestArtistMatch
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.http.bodyOrThrowTransient
+import com.landofoz.musicmeta.provider.encodeQueryValue
 import com.landofoz.musicmeta.takeIfNotEmpty
 import org.json.JSONObject
 import java.io.IOException
-import java.net.URLEncoder
 
 /**
  * Deezer public search API. No authentication required.
@@ -21,7 +21,7 @@ internal class DeezerApi(
 ) {
 
     suspend fun searchAlbums(query: String, limit: Int): List<DeezerAlbumResult> {
-        val encoded = URLEncoder.encode(query, "UTF-8")
+        val encoded = encodeQueryValue(query)
         val url = "$BASE_URL/search/album?q=$encoded&limit=$limit"
         val json = fetchJson(url) ?: return emptyList()
 
@@ -58,7 +58,7 @@ internal class DeezerApi(
      * ghost case, two entries both named exactly "Radiohead".
      */
     suspend fun searchArtist(name: String): DeezerArtistSearchResult? {
-        val encoded = URLEncoder.encode(name, "UTF-8")
+        val encoded = encodeQueryValue(name)
         val url = "$BASE_URL/search/artist?q=$encoded&limit=$ARTIST_SEARCH_LIMIT"
         val json = fetchJson(url) ?: return null
 
@@ -179,7 +179,7 @@ internal class DeezerApi(
     }
 
     private fun plainTrackUrl(artist: String, title: String): String {
-        val encoded = URLEncoder.encode("$artist $title", "UTF-8")
+        val encoded = encodeQueryValue("$artist $title")
         return "$BASE_URL/search/track?q=$encoded&limit=$TRACK_SEARCH_LIMIT"
     }
 
@@ -188,7 +188,7 @@ internal class DeezerApi(
             append("""artist:"$artist" track:"$title"""")
             if (album != null) append(""" album:"$album"""")
         }
-        val encoded = URLEncoder.encode(query, "UTF-8")
+        val encoded = encodeQueryValue(query)
         return "$BASE_URL/search/track?q=$encoded&limit=$TRACK_SEARCH_LIMIT"
     }
 

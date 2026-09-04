@@ -3,6 +3,7 @@ package com.landofoz.musicmeta.provider.coverartarchive
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.http.bodyOrThrowTransient
+import com.landofoz.musicmeta.provider.encodePathSegment
 import org.json.JSONObject
 
 /**
@@ -22,7 +23,7 @@ internal class CoverArtArchiveApi(
      * Returns null if no artwork is available (404); throws on a transient (429/5xx/transport).
      */
     suspend fun getArtworkUrl(releaseId: String, size: Int = 1200): String? {
-        val url = "$BASE_URL/release/$releaseId/front-$size"
+        val url = "$BASE_URL/release/${encodePathSegment(releaseId)}/front-$size"
         return rateLimiter.execute { httpClient.fetchRedirectUrlResult(url).bodyOrThrowTransient() }
     }
 
@@ -31,7 +32,7 @@ internal class CoverArtArchiveApi(
      * Returns null if no artwork is available; throws on a transient (429/5xx/transport).
      */
     suspend fun getGroupArtworkUrl(releaseGroupId: String, size: Int = 1200): String? {
-        val url = "$BASE_URL/release-group/$releaseGroupId/front-$size"
+        val url = "$BASE_URL/release-group/${encodePathSegment(releaseGroupId)}/front-$size"
         return rateLimiter.execute { httpClient.fetchRedirectUrlResult(url).bodyOrThrowTransient() }
     }
 
@@ -40,7 +41,7 @@ internal class CoverArtArchiveApi(
      * Returns null if no metadata is available (404); throws on a transient (429/5xx/transport).
      */
     suspend fun getArtworkMetadata(releaseId: String): List<CoverArtArchiveImage>? {
-        val url = "$BASE_URL/release/$releaseId"
+        val url = "$BASE_URL/release/${encodePathSegment(releaseId)}"
         val json = rateLimiter.execute {
             httpClient.fetchJsonResult(url).bodyOrThrowTransient()
         } ?: return null

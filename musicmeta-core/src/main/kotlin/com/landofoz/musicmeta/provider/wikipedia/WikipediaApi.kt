@@ -3,8 +3,8 @@ package com.landofoz.musicmeta.provider.wikipedia
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.http.bodyOrThrowTransient
+import com.landofoz.musicmeta.provider.encodePathSegment
 import java.io.IOException
-import java.net.URLEncoder
 
 /**
  * Fetches artist biographies and page images from Wikipedia.
@@ -28,7 +28,7 @@ internal class WikipediaApi(
     suspend fun getPageExtract(title: String): WikipediaSummary? = rateLimiter.execute {
         val url = "$ACTION_API?action=query&format=json&formatversion=2&redirects=1" +
             "&prop=extracts%7Cpageimages%7Cpageprops&exintro=1&explaintext=1" +
-            "&piprop=thumbnail&pithumbsize=$THUMBNAIL_SIZE&titles=${encodeTitle(title)}"
+            "&piprop=thumbnail&pithumbsize=$THUMBNAIL_SIZE&titles=${encodePathSegment(title)}"
         val json = httpClient.fetchJsonResult(url).bodyOrThrowTransient() ?: return@execute null
 
         // The Action API reports its own failures inside a 200 (`maxlag` is the one this call can
@@ -61,7 +61,7 @@ internal class WikipediaApi(
     }
 
     suspend fun getPageMediaList(title: String): List<WikipediaMediaItem> = rateLimiter.execute {
-        val url = "$MEDIA_LIST_BASE_URL/${encodeTitle(title)}"
+        val url = "$MEDIA_LIST_BASE_URL/${encodePathSegment(title)}"
         val json = httpClient.fetchJsonResult(url).bodyOrThrowTransient() ?: return@execute emptyList()
         parseMediaList(json)
     }
@@ -151,9 +151,6 @@ internal class WikipediaApi(
      */
     private fun renderedWidthOf(url: String): Int? =
         THUMBNAIL_WIDTH_PATTERN.find(url)?.groupValues?.get(1)?.toIntOrNull()
-
-    private fun encodeTitle(title: String): String =
-        URLEncoder.encode(title, "UTF-8").replace("+", "%20")
 
     private companion object {
         const val ACTION_API = "https://en.wikipedia.org/w/api.php"

@@ -5,8 +5,8 @@ import com.landofoz.musicmeta.engine.bestArtistMatch
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.http.bodyOrThrowAuthOrTransient
+import com.landofoz.musicmeta.provider.encodeQueryValue
 import org.json.JSONObject
-import java.net.URLEncoder
 
 /**
  * Discogs API client. Requires a personal access token.
@@ -22,8 +22,8 @@ internal class DiscogsApi(
         this({ personalToken }, httpClient, rateLimiter)
 
     suspend fun searchReleases(title: String, artist: String, limit: Int = 5): List<DiscogsRelease> {
-        val encodedTitle = URLEncoder.encode(title, "UTF-8")
-        val encodedArtist = URLEncoder.encode(artist, "UTF-8")
+        val encodedTitle = encodeQueryValue(title)
+        val encodedArtist = encodeQueryValue(artist)
         val url = "$SEARCH_URL?type=release&title=$encodedTitle" +
             "&artist=$encodedArtist&per_page=$limit"
         val json = rateLimiter.execute { fetch(url) } ?: return emptyList()
@@ -54,7 +54,7 @@ internal class DiscogsApi(
      * Name quality is therefore the only ranking, never overridden by anything.
      */
     suspend fun searchArtist(name: String): Long? {
-        val encoded = URLEncoder.encode(name, "UTF-8")
+        val encoded = encodeQueryValue(name)
         val url = "$SEARCH_URL?type=artist&q=$encoded&per_page=$ARTIST_SEARCH_LIMIT"
         val json = rateLimiter.execute { fetch(url) } ?: return null
         val results = json.optJSONArray("results") ?: return null

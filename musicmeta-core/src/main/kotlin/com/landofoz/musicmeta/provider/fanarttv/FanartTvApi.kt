@@ -3,6 +3,8 @@ package com.landofoz.musicmeta.provider.fanarttv
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.http.bodyOrThrowAuthOrTransient
+import com.landofoz.musicmeta.provider.encodePathSegment
+import com.landofoz.musicmeta.provider.encodeQueryValue
 import org.json.JSONObject
 
 /**
@@ -25,7 +27,8 @@ internal class FanartTvApi(
      * Returns null if the release group is not found or has no images.
      */
     suspend fun getAlbumImages(releaseGroupMbid: String): FanartTvAlbumImages? {
-        val url = "$BASE_URL/albums/$releaseGroupMbid?api_key=${projectKeyProvider()}"
+        val url = "$BASE_URL/albums/${encodePathSegment(releaseGroupMbid)}" +
+            "?api_key=${encodeQueryValue(projectKeyProvider())}"
         val json = rateLimiter.execute { httpClient.fetchJsonResult(url).bodyOrThrowAuthOrTransient() } ?: return null
         val albumObj = json.optJSONObject(releaseGroupMbid) ?: return null
         return FanartTvAlbumImages(
@@ -35,7 +38,7 @@ internal class FanartTvApi(
     }
 
     suspend fun getArtistImages(mbid: String): FanartTvArtistImages? {
-        val url = "$BASE_URL/$mbid?api_key=${projectKeyProvider()}"
+        val url = "$BASE_URL/${encodePathSegment(mbid)}?api_key=${encodeQueryValue(projectKeyProvider())}"
         val json = rateLimiter.execute { httpClient.fetchJsonResult(url).bodyOrThrowAuthOrTransient() } ?: return null
         return parseArtistImages(json)
     }

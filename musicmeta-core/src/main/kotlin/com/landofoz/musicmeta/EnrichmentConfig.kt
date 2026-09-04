@@ -123,6 +123,10 @@ internal fun requireUsableContact(contact: String) {
  * Centralized API key configuration for all providers that need keys.
  * Pass to [EnrichmentEngine.Builder.apiKeys] to enable key-requiring providers
  * when using [EnrichmentEngine.Builder.withDefaultProviders].
+ *
+ * Every key and token here is given exactly as the upstream issued it. A key that reaches a URL is
+ * percent-encoded on the way, so a pre-encoded one is encoded twice and authenticates as the wrong
+ * string.
  */
 public data class ApiKeyConfig(
     val lastFmKey: String? = null,

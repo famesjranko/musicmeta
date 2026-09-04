@@ -6,10 +6,10 @@ import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.HttpResult
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.http.bodyOrThrowTransient
+import com.landofoz.musicmeta.provider.encodeQueryValue
 import com.landofoz.musicmeta.takeIfNotEmpty
 import org.json.JSONObject
 import java.io.IOException
-import java.net.URLEncoder
 
 /**
  * iTunes Search API. Free, no authentication required.
@@ -21,7 +21,7 @@ internal class ITunesApi(
 ) {
 
     suspend fun searchAlbums(term: String, limit: Int): List<ITunesAlbumResult> {
-        val encoded = URLEncoder.encode(term, "UTF-8")
+        val encoded = encodeQueryValue(term)
         val url = "$BASE_URL/search?media=music&entity=album&term=$encoded&limit=$limit"
         val json = fetchJson(url) ?: return emptyList()
 
@@ -83,7 +83,7 @@ internal class ITunesApi(
      * an ordinary miss while the circuit breaker stays healthy.
      */
     suspend fun lookupByUpc(upc: String): List<ITunesAlbumResult> {
-        val encoded = URLEncoder.encode(upc, "UTF-8")
+        val encoded = encodeQueryValue(upc)
         val url = "$BASE_URL/lookup?upc=$encoded"
         val json = fetchJson(url) ?: return emptyList()
         val results = json.optJSONArray("results") ?: return emptyList()
@@ -109,7 +109,7 @@ internal class ITunesApi(
      * strict narrowing of the old behaviour rather than a re-ranking of it.
      */
     suspend fun searchArtist(artistName: String): Long? {
-        val encoded = URLEncoder.encode(artistName, "UTF-8")
+        val encoded = encodeQueryValue(artistName)
         val url = "$BASE_URL/search?media=music&entity=musicArtist" +
             "&term=$encoded&limit=$ARTIST_SEARCH_LIMIT"
         val json = fetchJson(url) ?: return null
