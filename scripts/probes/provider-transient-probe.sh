@@ -35,7 +35,11 @@
 # **One series, one vantage point.** Rows appended from a different network measure that network's
 # egress as much as the upstream's availability, and a run compared against a row taken from
 # somewhere else is comparing two things. Append from the machine the earlier rows came from, or
-# start a separate file.
+# start a separate file. Two such series exist and must not be merged: this laptop's, which is
+# `provider-availability-counts.csv` on `main` and grows by hand, and the GitHub runner's, which
+# the availability trend workflow keeps on its own branch. Nothing in a row records which vantage
+# point wrote it, so the file *is* the distinction — and the threshold derived from one series is
+# no more transferable than its rows are.
 #
 set -euo pipefail
 

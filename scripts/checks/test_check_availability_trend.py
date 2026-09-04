@@ -11,6 +11,8 @@ Run with: python3 test_check_availability_trend.py
 
 from __future__ import annotations
 
+import contextlib
+import io
 import sys
 import tempfile
 import unittest
@@ -18,7 +20,15 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from check_availability_trend import COUNTS_FILE, HEADER, run  # noqa: E402
+from check_availability_trend import (  # noqa: E402
+    COUNTS_FILE,
+    HEADER,
+    LAPTOP_THRESHOLD,
+    READY_AT_RUNS,
+    Threshold,
+    main,
+    run,
+)
 
 PROVIDERS = ("deezer", "itunes", "wikidata")
 
@@ -35,18 +45,22 @@ def rows_for(run_id: str, failures: dict[str, tuple[str, int]], total: int = 20)
 
 
 class AvailabilityTrendTest(unittest.TestCase):
-    def findings_for(self, lines: list[str], *, header: str = HEADER) -> list[str]:
+    def findings_for(self, lines: list[str], *, header: str = HEADER, **options) -> list[str]:
         """Findings for a counts file holding these data rows under a fresh temp root."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            path = root / COUNTS_FILE
+            path = root / options.get("counts_file", COUNTS_FILE)
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text("\n".join([header, *lines]) + "\n", encoding="utf-8")
-            return run(root)
+            return run(root, **options)
 
-    def errors_for(self, lines: list[str], *, header: str = HEADER) -> list[str]:
+    def errors_for(self, lines: list[str], *, header: str = HEADER, **options) -> list[str]:
         """Only the findings that fail the run — a `::notice` is read, not acted on."""
-        return [f for f in self.findings_for(lines, header=header) if f.startswith("::error")]
+        return [f for f in self.findings_for(lines, header=header, **options) if f.startswith("::error")]
+
+    def notices_for(self, lines: list[str], **options) -> list[str]:
+        """Only the findings a passing run reports for someone to read."""
+        return [f for f in self.findings_for(lines, **options) if f.startswith("::notice")]
 
     # --- the alert, and the two rules that keep it quiet ---
 
@@ -181,6 +195,117 @@ class AvailabilityTrendTest(unittest.TestCase):
         # Then - it passes, but says out loud that no comparison was made
         self.assertEqual([f for f in findings if f.startswith("::error")], [])
         self.assertTrue(any("::notice" in f for f in findings), findings)
+
+    # --- a second vantage point is a second series, with its own threshold ---
+
+    def test_the_threshold_is_per_series_rather_than_a_constant(self):
+        # Given - a provider shedding 5 in 20 on both runs, over the laptop threshold of 3 in 20
+        lines = rows_for("2026-09-08T05:00Z", {"deezer": ("http 503", 5)}) + rows_for(
+            "2026-09-15T05:00Z", {"deezer": ("http 503", 5)}
+        )
+
+        # When - the same history is read against the laptop threshold and against a looser one
+        default_errors = self.errors_for(lines)
+        looser_errors = self.errors_for(lines, threshold=Threshold(6, 20))
+
+        # Then - the caller's threshold decides, so one series' number cannot judge another
+        self.assertEqual(len(default_errors), 1, default_errors)
+        self.assertIn("3 in 20", default_errors[0])
+        self.assertEqual(looser_errors, [])
+
+    def test_a_series_outside_the_default_path_is_read(self):
+        # Given - a second vantage point's counts kept in its own file
+        runner_file = "scripts/probes/provider-availability-counts-runner.csv"
+        lines = rows_for("2026-09-08T05:00Z", {"deezer": ("http 503", 9)}) + rows_for(
+            "2026-09-15T05:00Z", {"deezer": ("http 503", 9)}
+        )
+
+        # When - the trend is read against that path
+        errors = self.errors_for(lines, counts_file=runner_file)
+
+        # Then - the finding names the file it read, so two series cannot be confused
+        self.assertEqual(len(errors), 1, errors)
+        self.assertIn(runner_file, errors[0])
+
+    # --- collect-only: a series with no derived baseline measures, and does not judge ---
+
+    def test_collect_only_reports_a_breach_without_failing_on_it(self):
+        # Given - a breach that the same data flags when the threshold is being applied
+        lines = rows_for("2026-09-08T05:00Z", {"deezer": ("http 503", 9)}) + rows_for(
+            "2026-09-15T05:00Z", {"deezer": ("http 503", 9)}
+        )
+
+        # When - the series is read in collect-only mode
+        findings = self.findings_for(lines, collect_only=True)
+
+        # Then - the provider is named for a reader, but no borrowed threshold fails the run
+        self.assertEqual([f for f in findings if f.startswith("::error")], [])
+        self.assertTrue(any("deezer" in f and f.startswith("::notice") for f in findings), findings)
+
+    def test_collect_only_still_fails_a_file_it_cannot_parse(self):
+        # Given - a counts file with a kind outside the pin's vocabulary
+        lines = ["2026-09-15T05:00Z,deezer,ok,18,20", "2026-09-15T05:00Z,deezer,flaky,2,20"]
+
+        # When - it is read in collect-only mode
+        errors = self.errors_for(lines, collect_only=True)
+
+        # Then - collecting without judging is not licence to read nothing and look healthy
+        self.assertTrue(any("flaky" in f for f in errors), errors)
+
+    def test_collect_only_is_quiet_about_a_baseline_until_the_series_is_long_enough(self):
+        # Given - one run short of the count a baseline can be derived from
+        lines = []
+        for index in range(READY_AT_RUNS - 1):
+            lines += rows_for(f"2026-09-{index + 1:02d}T05:00Z", {})
+
+        # When - the series is read in collect-only mode
+        notices = self.notices_for(lines, collect_only=True)
+
+        # Then - it says how far along it is and does not yet ask for a baseline
+        self.assertTrue(any(str(READY_AT_RUNS) in f for f in notices), notices)
+        self.assertFalse(any("can now be derived" in f for f in notices), notices)
+
+    def test_collect_only_asks_for_a_baseline_once_the_series_is_long_enough(self):
+        # Given - exactly as many runs as a baseline needs
+        lines = []
+        for index in range(READY_AT_RUNS):
+            lines += rows_for(f"2026-09-{index + 1:02d}T05:00Z", {})
+
+        # When - the series is read in collect-only mode
+        notices = self.notices_for(lines, collect_only=True)
+
+        # Then - it names the flag to retire, so collect-only cannot quietly become permanent
+        self.assertTrue(any("can now be derived" in f for f in notices), notices)
+        self.assertTrue(any("--collect-only" in f for f in notices), notices)
+
+    # --- the flags the scheduled job passes must exist on the command line ---
+
+    def test_the_command_line_carries_the_series_and_its_mode(self):
+        # Given - a runner series in collect-only mode, invoked exactly as the schedule does
+        runner_file = "scripts/probes/provider-availability-counts-runner.csv"
+        lines = rows_for("2026-09-08T05:00Z", {"deezer": ("http 503", 9)}) + rows_for(
+            "2026-09-15T05:00Z", {"deezer": ("http 503", 9)}
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / runner_file
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("\n".join([HEADER, *lines]) + "\n", encoding="utf-8")
+
+            # When - the check runs against it, with its findings captured rather than printed
+            with contextlib.redirect_stdout(io.StringIO()):
+                status = main(["--root", tmp, "--counts-file", runner_file, "--collect-only"])
+
+        # Then - it exits green, because collect-only judges nothing
+        self.assertEqual(status, 0)
+
+    def test_the_laptop_threshold_stays_the_default(self):
+        # Given - the threshold a caller gets when it names none
+
+        # When - it is read
+        default = LAPTOP_THRESHOLD
+
+        # Then - the measured laptop numbers are it, and stay two integers rather than a share
+        self.assertEqual((default.failures, default.total), (3, 20))
 
 
 if __name__ == "__main__":
