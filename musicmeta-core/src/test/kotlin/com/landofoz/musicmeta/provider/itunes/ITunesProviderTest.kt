@@ -21,10 +21,12 @@ import com.landofoz.musicmeta.testutil.CancellingOnceHttpClient
 import com.landofoz.musicmeta.testutil.FakeEnrichmentCache
 import com.landofoz.musicmeta.testutil.FakeHttpClient
 import com.landofoz.musicmeta.testutil.FakeProvider
+import com.landofoz.musicmeta.testutil.GatedHttpClient
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import org.junit.Assert.assertEquals
@@ -835,6 +837,95 @@ class ITunesProviderTest {
         }
 
         // Then - all three succeed, and only one search request was made for the shared selection
+        assertTrue(results.all { it is EnrichmentResult.Success })
+        assertEquals(1, httpClient.requestedUrls.count { it.contains("/search") })
+    }
+
+    @Test
+    fun `concurrent album types make one UPC lookup between them`() = runTest {
+        // Given - a barcode lookup held open inside the fetch, so both types are in flight at once
+        httpClient.givenJsonResponse("upc=724384960650", UPC_LOOKUP_DISCOVERY)
+        httpClient.givenJsonResponse("lookup?id=697194953", ITUNES_LOOKUP_TRACKS_RESPONSE)
+        val gated = GatedHttpClient(httpClient, "/lookup?upc=")
+        val gatedProvider = ITunesProvider(gated, RateLimiter(0))
+        val request = barcodeRequest("724384960650", "Daft Punk", "Discovery")
+        val callScope = ProviderCallScope()
+
+        // When - both types run as concurrent siblings of one call, as the engine's fan-out does
+        val metadata = async(callScope) { gatedProvider.enrich(request, EnrichmentType.ALBUM_METADATA) }
+        val tracks = async(callScope) { gatedProvider.enrich(request, EnrichmentType.ALBUM_TRACKS) }
+        runCurrent()
+        val inFlight = gated.arrivals
+        gated.release()
+        val results = listOf(metadata.await(), tracks.await())
+
+        // Then - the second type waited on the first's lookup instead of starting its own
+        assertEquals(1, inFlight)
+        assertTrue(results.all { it is EnrichmentResult.Success })
+        assertEquals(1, httpClient.requestedUrls.count { it.contains("/lookup?upc=") })
+    }
+
+    @Test
+    fun `enrich retries the UPC lookup after a transient failure instead of memoizing it`() = runTest {
+        // Given - the barcode lookup fails transiently on every attempt
+        httpClient.givenIoException("upc=")
+        val request = barcodeRequest("724384960650", "Daft Punk", "Discovery")
+
+        // When - two types of one call ask for the same barcode
+        val (first, second) = withContext(ProviderCallScope()) {
+            provider.enrich(request, EnrichmentType.ALBUM_METADATA) to
+                provider.enrich(request, EnrichmentType.ALBUM_TRACKS)
+        }
+
+        // Then - both surface the failure, so the first was never held as a candidate-less answer
+        assertTrue(first is EnrichmentResult.Error)
+        assertTrue(second is EnrichmentResult.Error)
+        assertEquals(2, httpClient.requestedUrls.count { it.contains("/lookup?upc=") })
+    }
+
+    @Test
+    fun `a barcode request and a search request in one call each reach their own memo`() = runTest {
+        // Given - one request carrying a barcode and one without, both answerable
+        httpClient.givenJsonResponse("upc=724384960650", UPC_LOOKUP_DISCOVERY)
+        httpClient.givenJsonResponse("search", ITUNES_RESPONSE)
+        val withBarcode = barcodeRequest("724384960650", "Daft Punk", "Discovery")
+        val withoutBarcode = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+
+        // When - the barcode path runs first and the search path second, in one call
+        val (barcodeResult, searchResult) = withContext(ProviderCallScope()) {
+            provider.enrich(withBarcode, EnrichmentType.ALBUM_ART) to
+                provider.enrich(withoutBarcode, EnrichmentType.ALBUM_ART)
+        }
+
+        // Then - the search path still answers: one call's barcode state and its search selection
+        // are distinct, not one call-scope slot the first path filled with the wrong type
+        assertTrue(barcodeResult is EnrichmentResult.Success)
+        assertTrue(searchResult is EnrichmentResult.Success)
+    }
+
+    @Test
+    fun `concurrent album types make one name search between them`() = runTest {
+        // Given - a name search held open inside the fetch, so all three types are in flight at once
+        httpClient.givenJsonResponse("search", ITUNES_SEARCH_WITH_ID_RESPONSE)
+        httpClient.givenJsonResponse("lookup", ITUNES_LOOKUP_TRACKS_RESPONSE)
+        val gated = GatedHttpClient(httpClient, "/search")
+        val gatedProvider = ITunesProvider(gated, RateLimiter(0))
+        val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
+        val callScope = ProviderCallScope()
+
+        // When - all three album types run as concurrent siblings of one call
+        val deferreds = listOf(
+            EnrichmentType.ALBUM_ART,
+            EnrichmentType.ALBUM_METADATA,
+            EnrichmentType.ALBUM_TRACKS,
+        ).map { type -> async(callScope) { gatedProvider.enrich(request, type) } }
+        runCurrent()
+        val inFlight = gated.arrivals
+        gated.release()
+        val results = deferreds.map { it.await() }
+
+        // Then - two of the three waited on the first's search instead of starting their own
+        assertEquals(1, inFlight)
         assertTrue(results.all { it is EnrichmentResult.Success })
         assertEquals(1, httpClient.requestedUrls.count { it.contains("/search") })
     }

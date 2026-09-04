@@ -5,11 +5,13 @@ import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.HttpResult
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.testutil.FakeHttpClient
+import com.landofoz.musicmeta.testutil.GatedHttpClient
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
@@ -38,6 +40,27 @@ class LrcLibTrackScopeTest {
         scope.resolve(request)
 
         // Then - only one HTTP call was made
+        assertEquals(1, httpClient.requestedUrls.size)
+    }
+
+    @Test
+    fun `concurrent resolutions of one key make one lookup between them`() = runTest {
+        // Given - an exact-match lookup held open inside the fetch, so all three are in flight at once
+        httpClient.givenJsonResponse("/api/get", SYNCED_LYRICS_JSON)
+        val gated = GatedHttpClient(httpClient, "/api/get")
+        val scope = LrcLibTrackScope(LrcLibApi(gated, RateLimiter(intervalMs = 0)))
+        val request = EnrichmentRequest.forTrack(title = "Creep", artist = "Radiohead")
+
+        // When - three callers resolve the same request concurrently
+        val deferreds = List(3) { async { scope.resolve(request) } }
+        runCurrent()
+        val inFlight = gated.arrivals
+        gated.release()
+        val outcomes = deferreds.map { it.await() }
+
+        // Then - two waited on the first's lookup instead of starting their own
+        assertEquals(1, inFlight)
+        assertTrue(outcomes.all { it is LrcLibOutcome.Found })
         assertEquals(1, httpClient.requestedUrls.size)
     }
 

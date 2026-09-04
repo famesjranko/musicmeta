@@ -11,6 +11,7 @@ import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.engine.AlbumMatch
 import com.landofoz.musicmeta.engine.ArtistMatcher
+import com.landofoz.musicmeta.engine.CallMemo
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.engine.ProviderCallScope
 import com.landofoz.musicmeta.engine.trustedProviderIdentifier
@@ -18,8 +19,6 @@ import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 
 /**
  * Enrichment provider using Apple's iTunes Search and Lookup APIs.
@@ -38,24 +37,11 @@ public class ITunesProvider(
     private val api = ITunesApi(httpClient, rateLimiter)
 
     /**
-     * This call's `lookup?upc=` candidates, shared across every type asked of the same barcode —
-     * ALBUM_METADATA, an art type and ALBUM_TRACKS would otherwise each fetch the same barcode
-     * separately and, worse, each pick their own first artist-matching candidate, letting one
-     * `enrich()` answer with metadata from one edition and a tracklist from another. Held for the
-     * call only ([ProviderCallScope]); a provider used outside an engine gets its own memo per call.
+     * This call's [ITunesCallState] ([ProviderCallScope], `docs/pitfalls.md` §12). A provider used
+     * outside an engine gets its own for that one call, which is the same guarantee.
      */
-    private suspend fun upcMemo(): UpcLookupMemo =
-        currentCoroutineContext()[ProviderCallScope]?.slot(this, ::UpcLookupMemo) ?: UpcLookupMemo()
-
-    /**
-     * This call's [ITunesAlbumScope], shared by the name-search branches of `enrichAlbumTracks` and
-     * `enrichAlbumType` so a request answered by ALBUM_TRACKS together with ALBUM_ART/ALBUM_METADATA
-     * selects one collection, not one independently-ranked collection per type ([ProviderCallScope],
-     * `docs/pitfalls.md` §12). Composes with, and never replaces, [upcMemo] — an exact-id or barcode
-     * hit still bypasses this scope entirely.
-     */
-    private suspend fun albumScope(): ITunesAlbumScope =
-        currentCoroutineContext()[ProviderCallScope]?.slot(this) { ITunesAlbumScope(api) } ?: ITunesAlbumScope(api)
+    private suspend fun callState(): ITunesCallState =
+        currentCoroutineContext()[ProviderCallScope]?.slot(this) { ITunesCallState(api) } ?: ITunesCallState(api)
 
     /**
      * Resolves [barcode] to the album a human would mean by [artist] — [ITunesApi.lookupByUpc]
@@ -64,7 +50,8 @@ public class ITunesProvider(
      * candidates is a genuine miss, not a reason to fall back to search.
      */
     private suspend fun lookupByBarcode(barcode: String, artist: String): ITunesAlbumResult? =
-        upcMemo().get { api.lookupByUpc(barcode) }.firstOrNull { ArtistMatcher.isMatch(artist, it.artistName) }
+        callState().upcLookups.get(barcode) { api.lookupByUpc(barcode) }
+            .firstOrNull { ArtistMatcher.isMatch(artist, it.artistName) }
 
     override val id: String = "itunes"
     override val displayName: String = "iTunes"
@@ -88,7 +75,7 @@ public class ITunesProvider(
             api.searchAlbums(term, limit).map { it.toCandidate() }
         } catch (_: Exception) {
             // A suspend call, and emptyList() returns without suspending again, so a cancelled
-            // caller would otherwise be told the search simply found nothing. (#53)
+            // caller would otherwise be told the search simply found nothing.
             currentCoroutineContext().ensureActive()
             emptyList()
         }
@@ -126,9 +113,9 @@ public class ITunesProvider(
                 )
             }
 
-            // A barcode is an identity lookup, shared with the other album types via upcMemo() so
-            // a request asking metadata/art and tracks together resolves one collection, not two
-            // independently search-ranked ones (see upcMemo KDoc).
+            // A barcode is an identity lookup, shared with the other album types by the call's
+            // upcLookups memo so a request asking metadata/art and tracks together resolves one
+            // collection, not two independently search-ranked ones.
             val barcode = request.identifiers.barcode
             if (!barcode.isNullOrBlank()) {
                 val barcodeResult = lookupByBarcode(barcode, request.artist)
@@ -148,7 +135,7 @@ public class ITunesProvider(
 
             // Fall back to the shared name-search selection, so a call also asking ALBUM_ART or
             // ALBUM_METADATA resolves the same collection instead of ranking its own.
-            val albumResult = albumScope().resolveAlbum(request)?.candidate
+            val albumResult = callState().albumScope.resolveAlbum(request)?.candidate
                 ?: return EnrichmentResult.NotFound(type, id)
 
             val searchedCollectionId = albumResult.collectionId.takeIf { it > 0 }
@@ -238,7 +225,7 @@ public class ITunesProvider(
         }
 
         val result = try {
-            albumScope().resolveAlbum(albumRequest)?.candidate
+            callState().albumScope.resolveAlbum(albumRequest)?.candidate
         } catch (e: Exception) {
             currentCoroutineContext().ensureActive()
             return mapError(type, e)
@@ -307,21 +294,6 @@ public class ITunesProvider(
     private fun ITunesAlbumResult.toCandidate(): SearchCandidate =
         ITunesMapper.toSearchCandidate(this, id, SEARCH_SCORE)
 
-    /**
-     * One `lookup?upc=` answer per call, held whatever it is (including "no candidates") — the
-     * mutex is across [fetch] itself, not just the cache, since the engine resolves a request's
-     * types as sibling `async` children and two of them asking for the same barcode must make one
-     * call between them, matching `com.landofoz.musicmeta.engine.CallMemo`'s shape. A thrown transient is
-     * never held, so the next type that asks retries it.
-     */
-    private class UpcLookupMemo {
-        private val mutex = Mutex()
-        private var candidates: List<ITunesAlbumResult>? = null
-
-        suspend fun get(fetch: suspend () -> List<ITunesAlbumResult>): List<ITunesAlbumResult> =
-            mutex.withLock { candidates ?: fetch().also { candidates = it } }
-    }
-
     public companion object {
         public const val DEFAULT_ARTWORK_SIZE: Int = 1200
         private const val SEARCH_SCORE = 70
@@ -329,9 +301,34 @@ public class ITunesProvider(
 }
 
 /**
+ * Everything [ITunesProvider] reuses within one `enrich()` call, in one place because
+ * [ProviderCallScope.slot] keys a slot by its owner's identity: two slots taken by one provider are
+ * one slot, and the second caller reads whatever the first stored.
+ */
+private class ITunesCallState(api: ITunesApi) {
+
+    /**
+     * This call's `lookup?upc=` candidates by barcode — ALBUM_METADATA, an art type and
+     * ALBUM_TRACKS would otherwise each fetch the same barcode separately and, worse, each pick
+     * their own first artist-matching candidate, letting one `enrich()` answer with metadata from
+     * one edition and a tracklist from another.
+     */
+    val upcLookups = CallMemo<String, List<ITunesAlbumResult>>()
+
+    /**
+     * This call's name-search selection, shared by the search-fallback branches of
+     * `enrichAlbumTracks` and `enrichAlbumType` so a request answered by ALBUM_TRACKS together with
+     * ALBUM_ART/ALBUM_METADATA selects one collection, not one independently-ranked collection per
+     * type. Composes with, and never replaces, [upcLookups] — an exact-id or barcode hit still
+     * bypasses this scope entirely.
+     */
+    val albumScope = ITunesAlbumScope(api)
+}
+
+/**
  * One `enrich()` call's name-search selection, held only long enough to serve the search-fallback
  * branches of `ALBUM_TRACKS`, `ALBUM_METADATA` and `ALBUM_ART` from one search and one accepted
- * collection instead of one independently-ranked search per type — see [ITunesProvider.albumScope].
+ * collection instead of one independently-ranked search per type — see [ITunesCallState.albumScope].
  * Dies with the call ([ProviderCallScope]), so a mis-resolved artist/title never outlives a
  * `forceRefresh`. Exact `itunesCollectionId` and barcode/UPC lookups never reach this scope.
  */
@@ -340,8 +337,7 @@ private class ITunesAlbumScope(private val api: ITunesApi) {
     /** Every field [selectAlbum] reads, so two requests differing only in one still key distinctly. */
     private data class SelectionKey(val artist: String, val title: String, val trackCount: Int?, val year: Int?)
 
-    private val mutex = Mutex()
-    private val results = mutableMapOf<SelectionKey, AlbumMatch<ITunesAlbumResult>?>()
+    private val results = CallMemo<SelectionKey, AlbumMatch<ITunesAlbumResult>?>()
 
     /**
      * The accepted-and-ranked search hit for [request], with its selection evidence, one search per
@@ -350,15 +346,9 @@ private class ITunesAlbumScope(private val api: ITunesApi) {
      */
     suspend fun resolveAlbum(request: EnrichmentRequest.ForAlbum): AlbumMatch<ITunesAlbumResult>? {
         val key = SelectionKey(request.artist, request.title, request.trackCount, request.year)
-        return mutex.withLock {
-            if (results.containsKey(key)) {
-                results.getValue(key)
-            } else {
-                val term = "${request.artist} ${request.title}"
-                val match = api.searchAlbums(term, ALBUM_SEARCH_LIMIT).selectAlbum(request)
-                results[key] = match
-                match
-            }
+        return results.get(key) {
+            val term = "${request.artist} ${request.title}"
+            api.searchAlbums(term, ALBUM_SEARCH_LIMIT).selectAlbum(request)
         }
     }
 

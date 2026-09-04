@@ -735,6 +735,14 @@ Before adding provider-internal state of any kind:
   because it dies with the call. Held any longer, no refresh could ever correct a mis-resolution.
 - Per-call state rides the coroutine context, as `EnrichDeadline` and `TransientIdentifierMarker`
   already do. A new `EnrichmentProvider` method would be a documented break instead (§1).
+- **One owner, one slot.** `ProviderCallScope.slot` keys on the owner's *identity* alone, not on
+  what it is storing, so a provider that takes two slots takes the same slot twice: the second
+  caller is handed the first's object through an unchecked cast, and the `ClassCastException` lands
+  wherever that object is first used. A provider's own `catch (e: Exception)` then reports it as
+  `Error(UNKNOWN)` on whichever path ran second — `ITunesProvider` held a UPC memo and an album
+  scope this way, and a call mixing a barcode-bearing request with a barcode-free one lost the
+  second to a cast error. Hold everything one provider reuses in one call-state object, as
+  `FanartTvProvider`'s `FanartTvMemos` does.
 
 ## 25. A caller's identifier is an assertion, and nothing in a successful lookup checks it
 
