@@ -9,11 +9,14 @@ name: Provider API drift watch
 # is the point — a moved field and a shed request are distinguishable on the wire, and collapsing
 # them made every red ambiguous.
 #
-# The e2e suite is `workflow_dispatch` only, and that is arithmetic rather than preference: it is
-# ~380 live requests, so at a measured 4.4% per-request shed rate a run goes red with probability
-# 1.000. A daily job certain to go red is a rota for ignoring email. What that costs is real —
-# ranking, confidence, mergers and identity resolution against live data are exercised only by the
-# suite, so a pipeline regression now waits for someone to press the button.
+# The e2e suite is `workflow_dispatch` only. It is ~380 live requests, so at a measured 4.4%
+# per-request shed rate a run meets several throttled or dropped requests every time. Its
+# assertions now tolerate exactly those and fail only on an answer — a `NotFound`, or a payload the
+# mapper could not read — so a red is no longer arithmetic. What still keeps it off the schedule is
+# that nobody has watched it stay green across a run of dispatched runs, and a daily job that goes
+# red for reasons nobody trusts is a rota for ignoring email. Until then, ranking, confidence,
+# mergers and identity resolution against live data are exercised only when someone presses the
+# button.
 #
 # This used to be 476 lines, most of it building a summary and then creating, updating, reopening
 # and closing a public tracking issue with redacted bodies. A failed scheduled run already emails

@@ -3,9 +3,9 @@ package com.landofoz.musicmeta.e2e
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentRequest
-import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzProvider
+import com.landofoz.musicmeta.testutil.assertNotDrift
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
@@ -49,8 +49,8 @@ class ReleaseEditionsE2ETest {
         val result = provider.enrich(request, EnrichmentType.RELEASE_EDITIONS)
 
         // Then - editions came back, past the inline cap, carrying format and label detail
-        assertTrue("expected Success, got $result", result is EnrichmentResult.Success)
-        val data = (result as EnrichmentResult.Success).data
+        val success = assertNotDrift("Hail to the Thief release editions", result) ?: return@runBlocking
+        val data = success.data
         assertTrue("expected ReleaseEditions, got $data", data is EnrichmentData.ReleaseEditions)
         val editions = (data as EnrichmentData.ReleaseEditions).editions
         assertTrue("expected >$INLINE_RELEASE_CAP editions, got ${editions.size}", editions.size > INLINE_RELEASE_CAP)

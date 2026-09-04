@@ -18,6 +18,7 @@ import com.landofoz.musicmeta.provider.lrclib.LrcLibProvider
 import com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzProvider
 import com.landofoz.musicmeta.provider.wikidata.WikidataProvider
 import com.landofoz.musicmeta.provider.wikipedia.WikipediaProvider
+import com.landofoz.musicmeta.testutil.assertNotDrift
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -69,10 +70,10 @@ class V060EdgeTest {
             EnrichmentRequest.forArtist("Radiohead"),
             setOf(EnrichmentType.SIMILAR_ARTISTS),
         )
-        val sa = results.raw[EnrichmentType.SIMILAR_ARTISTS]
         // Then - Success with valid scores, non-blank names, sources, and no duplicate artists
-        assertTrue("Expected Success for Radiohead similar artists", sa is EnrichmentResult.Success)
-        val data = (sa as EnrichmentResult.Success).data as EnrichmentData.SimilarArtists
+        val sa = assertNotDrift("Radiohead similar artists", results.raw[EnrichmentType.SIMILAR_ARTISTS])
+            ?: return@runBlocking
+        val data = sa.data as EnrichmentData.SimilarArtists
         val artists = data.artists
 
         // Structural invariants
@@ -177,10 +178,10 @@ class V060EdgeTest {
         println("\n  --- Radiohead ARTIST_RADIO ---")
         // When - enriching for ARTIST_RADIO
         val results = engine.enrich(EnrichmentRequest.forArtist("Radiohead"), setOf(EnrichmentType.ARTIST_RADIO))
-        val radio = results.raw[EnrichmentType.ARTIST_RADIO]
         // Then - Success with non-blank track/artist fields, no duplicates, and multiple distinct artists
-        assertTrue("Expected Success for Radiohead radio", radio is EnrichmentResult.Success)
-        val data = (radio as EnrichmentResult.Success).data as EnrichmentData.RadioPlaylist
+        val radio = assertNotDrift("Radiohead radio", results.raw[EnrichmentType.ARTIST_RADIO])
+            ?: return@runBlocking
+        val data = radio.data as EnrichmentData.RadioPlaylist
 
         // Structural invariants
         assertTrue("Should return at least 1 track", data.tracks.isNotEmpty())
@@ -258,10 +259,10 @@ class V060EdgeTest {
             EnrichmentRequest.forAlbum("OK Computer", "Radiohead"),
             setOf(EnrichmentType.SIMILAR_ALBUMS),
         )
-        val sa = results.raw[EnrichmentType.SIMILAR_ALBUMS]
         // Then - Success with valid scores, no self-referencing albums, and no duplicates
-        assertTrue("Expected Success for OK Computer similar albums", sa is EnrichmentResult.Success)
-        val data = (sa as EnrichmentResult.Success).data as EnrichmentData.SimilarAlbums
+        val sa = assertNotDrift("OK Computer similar albums", results.raw[EnrichmentType.SIMILAR_ALBUMS])
+            ?: return@runBlocking
+        val data = sa.data as EnrichmentData.SimilarAlbums
 
         assertTrue("Should return at least 1 similar album", data.albums.isNotEmpty())
 
@@ -333,10 +334,10 @@ class V060EdgeTest {
             EnrichmentRequest.forArtist("Radiohead"),
             setOf(EnrichmentType.GENRE_DISCOVERY),
         )
-        val gd = results.raw[EnrichmentType.GENRE_DISCOVERY]
         // Then - Success with non-blank genre names/relationships and affinities in [0, 1.0]
-        assertTrue("Expected Success for Radiohead genre discovery", gd is EnrichmentResult.Success)
-        val data = (gd as EnrichmentResult.Success).data as EnrichmentData.GenreDiscovery
+        val gd = assertNotDrift("Radiohead genre discovery", results.raw[EnrichmentType.GENRE_DISCOVERY])
+            ?: return@runBlocking
+        val data = gd.data as EnrichmentData.GenreDiscovery
 
         assertTrue("Should return at least 1 related genre", data.relatedGenres.isNotEmpty())
         data.relatedGenres.forEach { genre ->
@@ -393,11 +394,10 @@ class V060EdgeTest {
             EnrichmentRequest.forArtist("Radiohead"),
             setOf(EnrichmentType.ARTIST_TOP_TRACKS),
         )
-        val tt = results.raw[EnrichmentType.ARTIST_TOP_TRACKS]
-
         // Then - Success with non-blank titles, artists, and valid ranks
-        assertTrue("Expected Success for Radiohead top tracks", tt is EnrichmentResult.Success)
-        val data = (tt as EnrichmentResult.Success).data as EnrichmentData.TopTracks
+        val tt = assertNotDrift("Radiohead top tracks", results.raw[EnrichmentType.ARTIST_TOP_TRACKS])
+            ?: return@runBlocking
+        val data = tt.data as EnrichmentData.TopTracks
         assertTrue("Should return at least 1 top track", data.tracks.isNotEmpty())
         data.tracks.forEach { track ->
             assertTrue("Track title should not be blank (rank=${track.rank})", track.title.isNotBlank())
@@ -424,11 +424,10 @@ class V060EdgeTest {
             EnrichmentRequest.forArtist("Radiohead"),
             setOf(EnrichmentType.ARTIST_POPULARITY),
         )
-        val pop = results.raw[EnrichmentType.ARTIST_POPULARITY]
-
         // Then - Success with non-null popularity data
-        assertTrue("Expected Success for Radiohead popularity", pop is EnrichmentResult.Success)
-        val data = (pop as EnrichmentResult.Success).data as EnrichmentData.Popularity
+        val pop = assertNotDrift("Radiohead popularity", results.raw[EnrichmentType.ARTIST_POPULARITY])
+            ?: return@runBlocking
+        val data = pop.data as EnrichmentData.Popularity
 
         println("    listens=${data.listenCount}, listeners=${data.listenerCount}")
         Unit

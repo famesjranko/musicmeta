@@ -12,6 +12,7 @@ import com.landofoz.musicmeta.provider.lrclib.LrcLibProvider
 import com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzProvider
 import com.landofoz.musicmeta.provider.wikidata.WikidataProvider
 import com.landofoz.musicmeta.provider.wikipedia.WikipediaProvider
+import com.landofoz.musicmeta.testutil.assertNotDrift
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
 import org.junit.Assume
@@ -48,8 +49,7 @@ class ProviderValidationTest {
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
         // Then - MBID resolved with high confidence and metadata
-        assertTrue("Should succeed", result is EnrichmentResult.Success)
-        val success = result as EnrichmentResult.Success
+        val success = assertNotDrift("OK Computer metadata", result) ?: return@runTest
         val data = success.data as EnrichmentData.Metadata
         assertNotNull("Should have MBID", success.resolvedIdentifiers?.musicBrainzId)
         assertTrue("Confidence >= 0.80", success.confidence >= 0.80f)
@@ -68,8 +68,7 @@ class ProviderValidationTest {
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
         // Then - artist resolved with Wikidata relation
-        assertTrue("Should succeed", result is EnrichmentResult.Success)
-        val success = result as EnrichmentResult.Success
+        val success = assertNotDrift("Radiohead artist metadata", result) ?: return@runTest
         assertTrue(success.data is EnrichmentData.Metadata)
         assertNotNull("Should have Wikidata ID", success.resolvedIdentifiers?.wikidataId)
         println("  Artist MBID: ${success.resolvedIdentifiers?.musicBrainzId}")
@@ -89,8 +88,7 @@ class ProviderValidationTest {
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
         // Then - uses the provided MBID and returns full metadata
-        assertTrue("Direct lookup should succeed", result is EnrichmentResult.Success)
-        val success = result as EnrichmentResult.Success
+        val success = assertNotDrift("Radiohead direct MBID lookup", result) ?: return@runTest
         val data = success.data as EnrichmentData.Metadata
         assertEquals("Should use provided MBID", "a74b1b7f-71a5-4011-9441-d0b5e4122711", success.resolvedIdentifiers?.musicBrainzId)
         assertNotNull("Lookup should return wikidataId", success.resolvedIdentifiers?.wikidataId)
@@ -108,8 +106,8 @@ class ProviderValidationTest {
         val result = provider.enrich(request, EnrichmentType.GENRE)
 
         // Then - resolves despite the slash in the name
-        assertTrue("AC/DC should resolve", result is EnrichmentResult.Success)
-        println("  MBID: ${(result as EnrichmentResult.Success).resolvedIdentifiers?.musicBrainzId}")
+        val success = assertNotDrift("AC/DC identity", result) ?: return@runTest
+        println("  MBID: ${success.resolvedIdentifiers?.musicBrainzId}")
     }
 
     // --- Cover Art Archive ---
@@ -178,8 +176,8 @@ class ProviderValidationTest {
         val result = provider.enrich(request, EnrichmentType.ARTIST_BIO)
 
         // Then - substantial biography text with Wikipedia as source
-        assertTrue("Should find bio", result is EnrichmentResult.Success)
-        val bio = (result as EnrichmentResult.Success).data as EnrichmentData.Biography
+        val success = assertNotDrift("Radiohead biography", result) ?: return@runTest
+        val bio = success.data as EnrichmentData.Biography
         assertTrue("Bio should be substantial", bio.text.length > 50)
         assertEquals("Wikipedia", bio.source)
         println("  Bio: ${bio.text.take(100)}...")
@@ -198,8 +196,8 @@ class ProviderValidationTest {
         val result = provider.enrich(request, EnrichmentType.ARTIST_BIO)
 
         // Then - biography resolved via the Wikidata→Wikipedia sitelink path
-        assertTrue("Should resolve via Wikidata sitelinks", result is EnrichmentResult.Success)
-        val bio = (result as EnrichmentResult.Success).data as EnrichmentData.Biography
+        val success = assertNotDrift("Air biography via Wikidata sitelinks", result) ?: return@runTest
+        val bio = success.data as EnrichmentData.Biography
         assertTrue("Bio should mention French", bio.text.contains("French"))
         println("  Bio: ${bio.text.take(100)}...")
     }
@@ -217,7 +215,7 @@ class ProviderValidationTest {
         val result = provider.enrich(request, EnrichmentType.ARTIST_BIO)
 
         // Then - handles parentheses in title without breaking
-        assertTrue("Should handle parentheses in title", result is EnrichmentResult.Success)
+        assertNotDrift("Air (French band) biography", result)
     }
 
     // --- LRCLIB ---
@@ -232,8 +230,8 @@ class ProviderValidationTest {
         val result = provider.enrich(request, EnrichmentType.LYRICS_SYNCED)
 
         // Then - lyrics found with at least one format (synced or plain)
-        assertTrue("Should find lyrics", result is EnrichmentResult.Success)
-        val lyrics = (result as EnrichmentResult.Success).data as EnrichmentData.Lyrics
+        val success = assertNotDrift("Creep synced lyrics", result) ?: return@runTest
+        val lyrics = success.data as EnrichmentData.Lyrics
         assertTrue("Should have some lyrics text",
             lyrics.syncedLyrics?.isNotBlank() == true || lyrics.plainLyrics?.isNotBlank() == true)
         println("  Synced: ${lyrics.syncedLyrics != null}, Plain: ${lyrics.plainLyrics != null}")
@@ -264,8 +262,8 @@ class ProviderValidationTest {
         val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
 
         // Then - artwork URL from Deezer CDN
-        assertTrue("Should find art", result is EnrichmentResult.Success)
-        val artwork = (result as EnrichmentResult.Success).data as EnrichmentData.Artwork
+        val success = assertNotDrift("Deezer album art", result) ?: return@runTest
+        val artwork = success.data as EnrichmentData.Artwork
         assertTrue("URL should be Deezer CDN", artwork.url.contains("dzcdn"))
         println("  Art: ${artwork.url}")
     }
@@ -282,8 +280,8 @@ class ProviderValidationTest {
         val result = provider.enrich(request, EnrichmentType.ALBUM_ART)
 
         // Then - artwork URL upscaled from default to 1200x1200
-        assertTrue("Should find art", result is EnrichmentResult.Success)
-        val artwork = (result as EnrichmentResult.Success).data as EnrichmentData.Artwork
+        val success = assertNotDrift("iTunes album art", result) ?: return@runTest
+        val artwork = success.data as EnrichmentData.Artwork
         assertTrue("URL should have 1200x1200", artwork.url.contains("1200x1200"))
         println("  Art: ${artwork.url}")
     }
