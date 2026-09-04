@@ -3,6 +3,7 @@ package com.landofoz.musicmeta.provider.discogs
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.engine.AlbumEvidence
 import com.landofoz.musicmeta.engine.ArtistMatcher
+import com.landofoz.musicmeta.engine.ProbeTrace
 import com.landofoz.musicmeta.engine.TieBreakEvidence
 import com.landofoz.musicmeta.engine.TitleMatcher
 
@@ -88,4 +89,4 @@ internal fun List<DiscogsRelease>.selectRelease(request: EnrichmentRequest.ForAl
             { it.artistQuality },
             { it.tieBreaks["year"] },
         ),
-    )
+    )?.also { ProbeTrace.picked("discogsRelease", it.artist, it.release.toString()) }

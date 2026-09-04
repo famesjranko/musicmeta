@@ -54,6 +54,13 @@ internal object ArtistMatcher {
         expected: String,
         candidate: String,
         minTokenOverlap: Float = DEFAULT_MIN_TOKEN_OVERLAP,
+    ): Int = rawMatchQuality(expected, candidate, minTokenOverlap)
+        .also { ProbeTrace.compared(expected, candidate, it) }
+
+    private fun rawMatchQuality(
+        expected: String,
+        candidate: String,
+        minTokenOverlap: Float,
     ): Int {
         if (expected.isBlank() || candidate.isBlank()) return QUALITY_NONE
 
@@ -154,4 +161,5 @@ internal fun <T> Iterable<T>.bestArtistMatch(
     val byQuality = compareBy<T> { ArtistMatcher.matchQuality(expected, nameOf(it)) }
     return filter { ArtistMatcher.isMatch(expected, nameOf(it)) }
         .maxWithOrNull(if (tieBreak == null) byQuality else byQuality.then(tieBreak))
+        ?.also { ProbeTrace.picked("bestArtistMatch", nameOf(it), it.toString()) }
 }
