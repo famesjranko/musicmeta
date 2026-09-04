@@ -99,6 +99,16 @@ api-check: ## Fail if the public ABI diverges from the committed baseline
 api-dump: ## Regenerate api/*.api after an intentional change — review the diff, it is the record
 	$(GRADLE) apiDump
 
+.PHONY: pom-check
+pom-check: ## Fail if musicmeta-core's published dependencies diverge from the committed baseline
+	$(GRADLE) :musicmeta-core:generatePomFileForMavenPublication
+	python3 scripts/checks/check_pom_dependencies.py
+
+.PHONY: pom-dump
+pom-dump: ## Regenerate the core dependency baseline — review the diff, it is what consumers inherit
+	$(GRADLE) :musicmeta-core:generatePomFileForMavenPublication
+	python3 scripts/checks/check_pom_dependencies.py --write
+
 # --- release ---
 
 .PHONY: publish-local

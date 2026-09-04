@@ -34,7 +34,8 @@ updates:
   # message belongs on the list below, whatever its own version number did.
   #
   # Everything left is test tooling, with one exception that matters: the Kotlin version publishes
-  # `kotlin-stdlib` into every POM at compile scope (VERIFICATION.md — "Known gaps"), so a Kotlin
+  # `kotlin-stdlib` into every POM at compile scope (VERIFICATION.md — "Core dependency floor", the
+  # gate that fails on the moved version), so a Kotlin
   # move is a consumer-facing floor move wearing a toolchain label — a second reason it is hand work.
   # `detekt` and `ktlint-gradle` stay offered but need more than a green run, and say so where they
   # live (VERIFICATION.md and libs.versions.toml respectively).

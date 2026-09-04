@@ -7,7 +7,8 @@
 # fails in a second rather than after a full Gradle build.
 #
 #   ./check              everything
-#   ./check --fast       skip detekt, the build, the demo canary and doc samples — edit loop, not a push
+#   ./check --fast       skip detekt, the build, the core dependency baseline, the demo canary and
+#                        doc samples — edit loop, not a push
 #   ./check --skip-demo  CI only: the demo canary is a separate required check there
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -136,7 +137,7 @@ step "kotlin format (ktlint)"
 ./gradlew ktlintCheck --quiet
 
 if [ "$FAST" = 1 ]; then
-    printf '\n\033[1m--fast: skipped detekt, the build, the demo canary and doc samples\033[0m\n'
+    printf '\n\033[1m--fast: skipped detekt, the build, the core dependency baseline, the demo canary and doc samples\033[0m\n'
     exit 0
 fi
 
@@ -153,6 +154,15 @@ step "kotlin static analysis (detekt, type-resolved)"
 
 step "build (compile, test, apiCheck)"
 ./gradlew build
+
+step "core dependency baseline (published POM)"
+# Beside apiCheck because it is the same shape of gate on the same artifact, and below --fast
+# because it needs Gradle. apiCheck reads the ABI and a transitive is not in it: a dependency added
+# to core moves no api/*.api line and reaches every consumer at the next release, where removing it
+# is a break. Generating the POM here rather than trusting build/ means a stale or absent build
+# directory fails the diff's input instead of the diff.
+./gradlew :musicmeta-core:generatePomFileForMavenPublication --quiet
+python3 scripts/checks/check_pom_dependencies.py
 
 # demo-cli/ is a separate composite build that `./gradlew build` never compiles, so this is the only
 # in-tree consumer compiling the way an external one does. It has no wrapper — it borrows the root.
