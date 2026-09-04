@@ -103,7 +103,7 @@ fun executeRefresh(input: String, state: DemoState, term: Terminal, spinner: Spi
         term.info("Usage: refresh artist|album|track <name> [by <artist>]")
         return
     }
-    val types = customTypes ?: defaultTypesFor(request)
+    val types = selectTypes(customTypes, entityKind(request), term) ?: return
     val label = "Refreshing ${entityKind(request)}..."
     runBlocking {
         val profile = if (state.logger.enabled) {
@@ -177,10 +177,10 @@ internal fun printEnrichedProfile(
     }
 }
 
-internal fun defaultTypesFor(request: EnrichmentRequest): Set<EnrichmentType> = when (request) {
-    is EnrichmentRequest.ForArtist -> ARTIST_TYPES
-    is EnrichmentRequest.ForAlbum -> ALBUM_TYPES
-    is EnrichmentRequest.ForTrack -> TRACK_TYPES
+internal fun defaultTypesForKind(kind: String): Set<EnrichmentType> = when (kind) {
+    "album" -> ALBUM_TYPES
+    "track" -> TRACK_TYPES
+    else -> ARTIST_TYPES
 }
 
 /** Wrapper so the caller can handle all three profile types uniformly. */
@@ -243,24 +243,55 @@ fun handleCatalog(args: String, state: DemoState, term: Terminal) {
     }
 }
 
-/** Extracts --types flag from input, returns (clean command, custom types or null). */
-fun extractTypes(input: String): Pair<String, Set<EnrichmentType>?> {
+/** Extracts the --types flag from input, returns (clean command, the names it carried or null). */
+fun extractTypes(input: String): Pair<String, List<String>?> {
     val idx = input.indexOf("--types", ignoreCase = true)
     if (idx < 0) return input to null
     val command = input.substring(0, idx).trim()
-    val typeStr = input.substring(idx + "--types".length).trim()
-    val types = typeStr.split(",", " ")
+    val names = input.substring(idx + "--types".length).trim()
+        .split(",", " ")
+        .map { it.trim() }
         .filter { it.isNotBlank() }
-        .mapNotNull { resolveType(it.trim()) }
-        .toSet()
-    return command to types.ifEmpty { null }
+    return command to names.ifEmpty { null }
 }
 
-fun resolveType(name: String): EnrichmentType? {
+/**
+ * The types to enrich for a request of [kind], the default set when no --types was given, or null
+ * once every name that resolved to nothing has been reported. A --types the caller typed and that
+ * resolves to nothing is an error, never a request for the default set.
+ */
+internal fun selectTypes(names: List<String>?, kind: String, term: Terminal): Set<EnrichmentType>? {
+    if (names == null) return defaultTypesForKind(kind)
+    val unknown = names.filter { resolveType(it, kind) == null }
+    if (unknown.isNotEmpty()) {
+        term.info(
+            "Unknown type(s): ${unknown.joinToString(", ")}. Nothing enriched — " +
+                "use an alias (bio, art) or a full type name (ARTIST_BIO).",
+        )
+        return null
+    }
+    return names.mapNotNull { resolveType(it, kind) }.toSet()
+}
+
+/**
+ * Resolves one --types name for a request of [kind] ("artist", "album", "track"): a full type name
+ * first, then an alias whose type depends on the kind, then a kind-independent alias.
+ */
+fun resolveType(name: String, kind: String): EnrichmentType? {
     val normalized = name.uppercase().replace("-", "_")
     return EnrichmentType.entries.firstOrNull { it.name == normalized }
+        ?: KIND_TYPE_ALIASES[kind]?.get(name.lowercase())
         ?: TYPE_ALIASES[name.lowercase()]
 }
+
+/**
+ * Aliases naming a different type per kind of entity. A kind with no such type omits the alias, so
+ * the name is reported as unknown rather than answered with a type nothing can enrich for it.
+ */
+val KIND_TYPE_ALIASES = mapOf(
+    "artist" to mapOf("popularity" to EnrichmentType.ARTIST_POPULARITY),
+    "track" to mapOf("popularity" to EnrichmentType.TRACK_POPULARITY),
+)
 
 val TYPE_ALIASES = mapOf(
     "art" to EnrichmentType.ALBUM_ART,
@@ -275,7 +306,9 @@ val TYPE_ALIASES = mapOf(
     "genre" to EnrichmentType.GENRE,
     "label" to EnrichmentType.LABEL,
     "date" to EnrichmentType.RELEASE_DATE,
+    "reltype" to EnrichmentType.RELEASE_TYPE,
     "country" to EnrichmentType.COUNTRY,
+    "desc" to EnrichmentType.ALBUM_DESCRIPTION,
     "metadata" to EnrichmentType.ALBUM_METADATA,
     "meta" to EnrichmentType.ALBUM_METADATA,
     "tracks" to EnrichmentType.ALBUM_TRACKS,
@@ -283,7 +316,6 @@ val TYPE_ALIASES = mapOf(
     "similar" to EnrichmentType.SIMILAR_ARTISTS,
     "similar-albums" to EnrichmentType.SIMILAR_ALBUMS,
     "similar-tracks" to EnrichmentType.SIMILAR_TRACKS,
-    "popularity" to EnrichmentType.ARTIST_POPULARITY,
     "members" to EnrichmentType.BAND_MEMBERS,
     "disco" to EnrichmentType.ARTIST_DISCOGRAPHY,
     "discography" to EnrichmentType.ARTIST_DISCOGRAPHY,
@@ -354,11 +386,7 @@ fun executeBatch(input: String, state: DemoState, term: Terminal) {
     }
     if (requests.isEmpty()) return
 
-    val types = customTypes ?: when (kind) {
-        "artist" -> ARTIST_TYPES
-        "album" -> ALBUM_TYPES
-        else -> TRACK_TYPES
-    }
+    val types = selectTypes(customTypes, kind, term) ?: return
 
     term.heading("Batch ($kind, ${requests.size} items)")
     val startMs = System.currentTimeMillis()
