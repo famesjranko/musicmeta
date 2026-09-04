@@ -12,6 +12,7 @@ import com.landofoz.musicmeta.ErrorKind
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.TrackProfile
 import com.landofoz.musicmeta.demo.ui.Terminal
+import java.util.Locale
 
 /** Formats enrichment results, profiles, and search results for terminal display. */
 object Formatter {
@@ -19,8 +20,11 @@ object Formatter {
     /** Above this a match is shown in the success colour; below it, as a warning. */
     private const val HIGH_MATCH = 0.90f
 
-    /** A 0.0-1.0 match score, two decimals, as every score on the library's surface carries it. */
-    private fun formatMatchScore(score: Float) = "%.2f".format(score)
+    /**
+     * A 0.0-1.0 score, two decimals — every score on the library's surface is shown this way, match
+     * and affinity alike. `Locale.ROOT` because the separator is part of what a reader compares.
+     */
+    private fun formatScore(score: Float) = String.format(Locale.ROOT, "%.2f", score)
 
     /** "5 members: Thom Yorke, Jonny Greenwood, ..." — used by both the profile and result views. */
     private fun membersSummary(members: List<BandMember>) =
@@ -28,29 +32,41 @@ object Formatter {
 
     // --- Profile display (Tier 1) ---
 
-    fun printProfile(profile: ArtistProfile, term: Terminal, cacheHits: Int = 0) {
+    fun printProfile(
+        profile: ArtistProfile,
+        term: Terminal,
+        cacheHits: Int = 0,
+        pinned: Set<EnrichmentType> = emptySet(),
+    ) {
         printArtistSummary(profile, term)
-        printResults(profile.results, term, cacheHits)
+        printResults(profile.results, term, cacheHits, pinned)
     }
 
-    fun printProfile(profile: AlbumProfile, term: Terminal, cacheHits: Int = 0) {
+    fun printProfile(
+        profile: AlbumProfile,
+        term: Terminal,
+        cacheHits: Int = 0,
+        pinned: Set<EnrichmentType> = emptySet(),
+    ) {
         printAlbumSummary(profile, term)
-        printResults(profile.results, term, cacheHits)
+        printResults(profile.results, term, cacheHits, pinned)
     }
 
-    fun printProfile(profile: TrackProfile, term: Terminal, cacheHits: Int = 0) {
+    fun printProfile(
+        profile: TrackProfile,
+        term: Terminal,
+        cacheHits: Int = 0,
+        pinned: Set<EnrichmentType> = emptySet(),
+    ) {
         printTrackSummary(profile, term)
-        printResults(profile.results, term, cacheHits)
+        printResults(profile.results, term, cacheHits, pinned)
     }
 
     private fun printArtistSummary(profile: ArtistProfile, term: Terminal) {
         term.heading("Profile")
         term.keyValue("Name:", profile.name)
         profile.photo?.let { term.keyValue("Photo:", term.link(it.url, artworkLabel(it))) }
-        profile.bio?.let {
-            val snippet = it.text.replace(Regex("<[^>]*>"), "").trim().take(80)
-            term.keyValue("Bio:", "\"$snippet...\"")
-        }
+        profile.bio?.let { term.keyValue("Bio:", textSnippet(it.text)) }
         val genres = profile.genres.take(4).joinToString(", ") { it.name }
         if (genres.isNotEmpty()) term.keyValue("Genres:", genres)
         profile.country?.let { term.keyValue("Country:", it) }
@@ -82,6 +98,10 @@ object Formatter {
         term.heading("Profile")
         term.keyValue("Title:", profile.title)
         term.keyValue("Artist:", profile.artist)
+        profile.trackMetadata?.let { meta ->
+            meta.albumTitle?.let { term.keyValue("Album:", it) }
+            meta.durationMs?.let { term.keyValue("Duration:", clockTime(it)) }
+        }
         val genres = profile.genres.take(4).joinToString(", ") { it.name }
         if (genres.isNotEmpty()) term.keyValue("Genres:", genres)
         profile.lyrics?.let { l ->
@@ -111,6 +131,10 @@ object Formatter {
         return "\"${plain.take(max)}${if (plain.length > max) "..." else ""}\""
     }
 
+    /** A duration as a clock time — "6:23", the form a track listing is read in. */
+    private fun clockTime(ms: Long): String =
+        String.format(Locale.ROOT, "%d:%02d", ms / 60_000, (ms % 60_000) / 1000)
+
     private fun artworkLabel(art: EnrichmentData.Artwork): String {
         val dims = art.sizes?.maxByOrNull { (it.width ?: 0) * (it.height ?: 0) }
             ?.let { s -> s.width?.let { w -> s.height?.let { h -> "${w}x$h" } } }
@@ -120,7 +144,12 @@ object Formatter {
 
     // --- Results display (Tier 2/3) ---
 
-    fun printResults(results: EnrichmentResults, term: Terminal, cacheHits: Int = 0) {
+    fun printResults(
+        results: EnrichmentResults,
+        term: Terminal,
+        cacheHits: Int = 0,
+        pinned: Set<EnrichmentType> = emptySet(),
+    ) {
         printIdentity(results, term)
         term.println()
 
@@ -146,11 +175,13 @@ object Formatter {
             val staleTag = if (result.isStale) " ${term.styled("[stale]", term.theme.warning)}" else ""
             val unfilteredTag =
                 if (result.isCatalogDegraded) " ${term.styled("[unranked]", term.theme.warning)}" else ""
+            val pinnedTag = if (type in pinned) " ${term.styled("[pinned]", term.theme.accent)}" else ""
+            val tags = "$staleTag$unfilteredTag$pinnedTag"
             if (bestEffort) {
                 val unverified = term.styled("[unverified]", term.theme.warning)
-                term.warning(typeName(type), "$detail  $conf $unverified$staleTag$unfilteredTag")
+                term.warning(typeName(type), "$detail  $conf $unverified$tags")
             } else {
-                term.success(typeName(type), "$detail  $conf$staleTag$unfilteredTag")
+                term.success(typeName(type), "$detail  $conf$tags")
             }
         }
 
@@ -181,7 +212,7 @@ object Formatter {
             suggestions.forEachIndexed { i, c ->
                 val name = term.styled(c.title, term.theme.bold)
                 val artist = c.artist?.let { " by $it" } ?: ""
-                val score = term.styled(formatMatchScore(c.matchScore), term.theme.warning)
+                val score = term.styled(formatScore(c.matchScore), term.theme.warning)
                 val disambig = c.disambiguation?.let { " ${term.styled("($it)", term.theme.muted)}" } ?: ""
                 term.println("    ${i + 1}. $name$artist  $score$disambig")
             }
@@ -200,7 +231,7 @@ object Formatter {
             val name = term.styled(c.title, term.theme.bold)
             val artist = c.artist?.let { " by $it" } ?: ""
             val score = term.styled(
-                formatMatchScore(c.matchScore),
+                formatScore(c.matchScore),
                 if (c.matchScore >= HIGH_MATCH) term.theme.success else term.theme.warning,
             )
 
@@ -231,7 +262,7 @@ object Formatter {
         ids.wikipediaTitle?.let { term.keyValue("Wikipedia:", it) }
         resolution.matchScore?.let { score ->
             val color = if (score >= HIGH_MATCH) term.theme.success else term.theme.warning
-            term.keyValue("Match:", term.styled(formatMatchScore(score), color))
+            term.keyValue("Match:", term.styled(formatScore(score), color))
         }
     }
 
@@ -277,10 +308,10 @@ object Formatter {
                 own ?: sibling?.let { "$it (fallback)" },
             ).joinToString(" ")
         }
-        is EnrichmentData.Biography -> "\"${data.text.replace(Regex("<[^>]*>"), "").trim().take(80)}...\""
+        is EnrichmentData.Biography -> textSnippet(data.text)
         is EnrichmentData.SimilarArtists ->
             "${data.artists.size} artists: " +
-                data.artists.take(3).joinToString(", ") { "${it.name}(%.1f)".format(it.matchScore) }
+                data.artists.take(3).joinToString(", ") { "${it.name} (match ${formatScore(it.matchScore)})" }
         is EnrichmentData.Popularity -> buildString {
             data.listenerCount?.let { append("listeners=$it ") }
             data.listenCount?.let { append("plays=$it ") }
@@ -289,7 +320,7 @@ object Formatter {
         is EnrichmentData.Discography -> "${data.albums.size} albums"
         is EnrichmentData.Tracklist -> "${data.tracks.size} tracks"
         is EnrichmentData.SimilarTracks ->
-            data.tracks.take(3).joinToString(", ") { "${it.title}(%.1f)".format(it.matchScore) }
+            data.tracks.take(3).joinToString(", ") { "${it.title} (match ${formatScore(it.matchScore)})" }
         is EnrichmentData.ArtistLinks -> data.links.take(3).joinToString(", ") { it.type }
         is EnrichmentData.Credits -> {
             val cats = data.credits.groupBy { it.roleCategory ?: "other" }
@@ -306,7 +337,7 @@ object Formatter {
             "${data.albums.size} albums: " + data.albums.take(3).joinToString(", ") { "${it.title} by ${it.artist}" }
         is EnrichmentData.GenreDiscovery ->
             "${data.relatedGenres.size} genres: " +
-                data.relatedGenres.take(3).joinToString(", ") { "${it.name}(%.2f)".format(it.affinity) }
+                data.relatedGenres.take(3).joinToString(", ") { "${it.name} (affinity ${formatScore(it.affinity)})" }
         is EnrichmentData.TopTracks ->
             "${data.tracks.size} tracks: " + data.tracks.take(3).joinToString(", ") {
                 val plays = it.listenCount?.let { c -> " ($c)" } ?: ""

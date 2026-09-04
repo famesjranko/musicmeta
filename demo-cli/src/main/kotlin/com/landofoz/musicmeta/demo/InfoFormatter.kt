@@ -24,14 +24,16 @@ object InfoFormatter {
         cmd("track", "<title> by <artist>", "Enrich a track")
         val typesHint = term.styled("Add --types bio,art,... to select specific types", term.theme.muted)
         term.println("${" ".repeat(4)}$typesHint")
+        cmd("stream", "artist|album|track ...", "Enrich progressively, a row per type")
         cmd("search", "artist|album|track ...", "Search for candidates")
         cmd("pick", "<number>", "Enrich a search result by MBID")
         cmd("batch", "artist|album|track a; b; c", "Batch enrich (semicolon-separated)")
 
         term.heading("Cache Management")
         cmd("refresh", "artist|album|track ...", "Re-enrich bypassing cache")
-        cmd("invalidate", "artist|album|track ...", "Clear cached data")
+        cmd("invalidate", "artist|album|track ...", "Clear cached data (--types to narrow)")
         cmd("cache", "[clear]", "View cache stats or clear all")
+        cmd("pin", "artist|album|track ... <type>", "Protect one type from overwrites")
 
         term.heading("Engine")
         cmd("config", "[key value]", "View or set configuration")
@@ -39,7 +41,7 @@ object InfoFormatter {
         cmd("catalog", "[add|remove|mode ...]", "Manage demo catalog")
         cmd("providers", "[detail]", "Show providers & capabilities")
         cmd("help", "", "Show this help")
-        cmd("quit", "", "Exit")
+        cmd("quit", "", "Exit (or 'exit')")
     }
 
     fun printConfig(
@@ -68,10 +70,25 @@ object InfoFormatter {
             CatalogFilterMode.AVAILABLE_FIRST -> "available first"
         }
         term.keyValue("Catalog:", modeName)
-        if (config.confidenceOverrides.isNotEmpty()) {
-            term.keyValue("Overrides:",
-                config.confidenceOverrides.entries.joinToString(", ") { "${it.key}=${it.value}" })
+        printOverrides(config, term)
+    }
+
+    /**
+     * The three per-type/per-provider override maps, one entry per line and each line spelled as the
+     * `config` command that sets it, so what is in effect and how to change it read the same.
+     */
+    private fun printOverrides(config: EnrichmentConfig, term: Terminal) {
+        val lines = buildList {
+            config.ttlOverrides.forEach { (type, ms) -> add("ttl ${type.name} $ms") }
+            config.confidenceOverrides.forEach { (provider, floor) -> add("provider-confidence $provider $floor") }
+            config.priorityOverrides.forEach { (provider, types) ->
+                types.forEach { (type, priority) -> add("priority $provider ${type.name} $priority") }
+            }
         }
+        if (lines.isEmpty()) return
+        term.println()
+        term.info("Overrides — each line is the 'config' command that sets it:")
+        for (line in lines) term.info("  $line")
     }
 
     fun printProviders(providers: List<ProviderInfo>, term: Terminal) {

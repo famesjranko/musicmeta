@@ -211,12 +211,15 @@ To consume a local checkout instead, see [docs/project/workflow.md](docs/project
 
 ## Interactive demo
 
-The `demo-cli/` module is a standalone CLI that showcases all three API tiers (profiles, named accessors, raw results), cache management, search, and the disambiguation flow. To enable the key-requiring providers, copy `secrets.properties.example` to `secrets.properties` and fill in the keys, or set environment variables (`LASTFM_API_KEY`, `FANARTTV_API_KEY`, `DISCOGS_TOKEN`, `LISTENBRAINZ_TOKEN`).
+The `demo-cli/` module is a standalone CLI that showcases all three API tiers (profiles, named accessors, raw results), progressive streaming, cache management, search, the disambiguation flow, and pinning a type against automatic overwrites. To enable the key-requiring providers, copy `secrets.properties.example` to `secrets.properties` and fill in the keys, or set environment variables (`LASTFM_API_KEY`, `FANARTTV_API_KEY`, `DISCOGS_TOKEN`, `LISTENBRAINZ_TOKEN`).
 
 ```bash
 make demo-cli-run                          # interactive
 make demo-cli-run ARGS="artist Radiohead"  # one command, then exit
 ```
+
+`ARGS=` takes an enrich or a search — `artist`, `album`, `track`, `search`. Everything below it
+(`stream`, `pin`, `config`, `catalog`, `cache`) is a session command, typed at the prompt.
 
 ```
 musicmeta> artist radiohead
@@ -224,8 +227,10 @@ musicmeta> album OK Computer by Radiohead
 musicmeta> track Paranoid Android by Radiohead --types lyrics,credits
 musicmeta> search artist pink floyd
 musicmeta> pick 1
+musicmeta> stream artist radiohead
+musicmeta> pin artist radiohead bio
 musicmeta> refresh artist radiohead
-musicmeta> invalidate artist radiohead
+musicmeta> invalidate artist radiohead --types bio,art
 ```
 
 The [`demo-web/`](demo-web/README.md) module is the same idea as a web app: artist, album, and

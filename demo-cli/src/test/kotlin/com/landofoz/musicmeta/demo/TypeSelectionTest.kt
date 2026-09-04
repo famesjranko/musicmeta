@@ -138,4 +138,16 @@ class TypeSelectionTest {
         assertEquals(EnrichmentType.RELEASE_TYPE, resolvedRelType)
         assertEquals(EnrichmentType.ALBUM_DESCRIPTION, resolvedDescription)
     }
+
+    @Test
+    fun `track metadata has an alias`() {
+        // Given - the type the track profile reads its duration and album from
+        val name = "track-meta"
+
+        // When - resolving it on a track request
+        val resolved = resolveType(name, "track")
+
+        // Then - it resolves without spelling out the enum name
+        assertEquals(EnrichmentType.TRACK_METADATA, resolved)
+    }
 }

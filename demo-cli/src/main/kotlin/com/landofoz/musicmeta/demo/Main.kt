@@ -32,12 +32,24 @@ fun main(args: Array<String>) {
     InfoFormatter.printProviders(state.engine.getProviders(), term)
     term.println()
 
-    if (args.isNotEmpty()) {
-        runSingleCommand(args, state, term, spinner)
-    } else {
-        InfoFormatter.printHelp(term)
-        term.println()
-        repl(state, term, spinner)
+    runDemo(state, term, spinner, args)
+}
+
+/**
+ * The session proper. The engine is closed however the session ends, including on the way out of a
+ * command that threw — [EnrichmentEngine] is not `AutoCloseable`, so this is the `finally` doing it.
+ */
+internal fun runDemo(state: DemoState, term: Terminal, spinner: Spinner, args: Array<String>) {
+    try {
+        if (args.isNotEmpty()) {
+            runSingleCommand(args, state, term, spinner)
+        } else {
+            InfoFormatter.printHelp(term)
+            term.println()
+            repl(state, term, spinner)
+        }
+    } finally {
+        state.engine.close()
     }
 }
 
@@ -54,6 +66,10 @@ class DemoState(
     var catalogMode: CatalogFilterMode = CatalogFilterMode.UNFILTERED,
     var httpBackend: HttpBackend = HttpBackend.DEFAULT,
     var radioMode: RadioDiscoveryMode = RadioDiscoveryMode.EASY,
+    /** How [rebuild] turns a configured builder into an engine; a test supplies its own. */
+    private val buildEngine: (EnrichmentEngine.Builder) -> EnrichmentEngine = {
+        it.withDefaultProviders().build()
+    },
 ) {
     lateinit var engine: EnrichmentEngine
 
@@ -63,6 +79,10 @@ class DemoState(
     private val secrets = loadSecrets()
 
     fun rebuild() {
+        // The engine being replaced is closed rather than abandoned: close() releases the scope a
+        // detached enrichProgressive fan-out would still be running on.
+        if (::engine.isInitialized) engine.close()
+
         val keys = ApiKeyConfig.of(
             *listOfNotNull(
                 (secrets["lastfm.apikey"] ?: env("LASTFM_API_KEY"))?.let { ApiKey.LASTFM_API_KEY to it },
@@ -73,21 +93,23 @@ class DemoState(
             ).toTypedArray(),
         )
         val baseConfig = config.copy(radioDiscoveryMode = radioMode)
-        val effectiveConfig = if (catalogMode != CatalogFilterMode.UNFILTERED) {
-            baseConfig.copy(catalogProvider = catalog, catalogFilterMode = catalogMode)
-        } else baseConfig
 
         val builder = EnrichmentEngine.Builder()
             .apiKeys(keys)
-            .config(effectiveConfig)
+            .config(baseConfig)
             .cache(cache)
             .logger(logger)
 
-        if (httpBackend == HttpBackend.OKHTTP) {
-            builder.httpClient(OkHttpEnrichmentClient(OkHttpClient(), effectiveConfig.userAgent))
+        // After config(), which replaces the builder's config wholesale — catalog() copies onto it.
+        if (catalogMode != CatalogFilterMode.UNFILTERED) {
+            builder.catalog(catalog, catalogMode)
         }
 
-        engine = builder.withDefaultProviders().build()
+        if (httpBackend == HttpBackend.OKHTTP) {
+            builder.httpClient(OkHttpEnrichmentClient(OkHttpClient(), baseConfig.userAgent))
+        }
+
+        engine = buildEngine(builder)
     }
 }
 
@@ -128,6 +150,10 @@ private fun repl(state: DemoState, term: Terminal, spinner: Spinner) {
                 executeRefresh(trimmed.substringAfter("refresh ").trim(), state, term, spinner)
             trimmed.startsWith("invalidate ", ignoreCase = true) ->
                 handleInvalidate(trimmed.substringAfter("invalidate ").trim(), state, term)
+            trimmed.startsWith("stream ", ignoreCase = true) ->
+                executeStream(trimmed.substringAfter("stream ").trim(), state, term)
+            trimmed.startsWith("pin ", ignoreCase = true) ->
+                handlePin(trimmed.substringAfter("pin ").trim(), state, term)
             trimmed.startsWith("pick ", ignoreCase = true) ->
                 pickCandidate(trimmed.substringAfter("pick ").trim(), state, term, spinner)
             trimmed.startsWith("batch ", ignoreCase = true) ->
@@ -160,7 +186,8 @@ private fun executeCommand(input: String, state: DemoState, term: Terminal, spin
                     spinner.spin("$label...") { enrichProfile(state, command.request, types) }
                 }
                 val cacheHits = state.cache.hits - hitsBefore
-                printEnrichedProfile(profile, command.request, term, cacheHits)
+                val pinned = pinnedTypes(state, command.request, types)
+                printEnrichedProfile(profile, command.request, term, cacheHits, pinned)
 
                 if (profile.suggestions.isNotEmpty()) {
                     state.lastSearchResults = profile.suggestions

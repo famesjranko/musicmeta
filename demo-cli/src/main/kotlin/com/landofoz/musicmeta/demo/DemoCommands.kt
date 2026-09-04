@@ -1,6 +1,7 @@
 package com.landofoz.musicmeta.demo
 
 import com.landofoz.musicmeta.CatalogFilterMode
+import com.landofoz.musicmeta.EnrichmentConfig
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
@@ -13,6 +14,7 @@ import com.landofoz.musicmeta.demo.ui.Terminal
 import com.landofoz.musicmeta.trackProfile
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.runBlocking
+import java.util.Locale
 
 fun handleConfig(args: String, state: DemoState, term: Terminal) {
     val parts = args.split(" ", limit = 2)
@@ -22,7 +24,9 @@ fun handleConfig(args: String, state: DemoState, term: Terminal) {
     if (value == null) {
         term.info("Usage: config <key> <value>")
         term.info("Keys: timeout <ms>, confidence <0.0-1.0>, identity on|off,")
-        term.info("      http default|okhttp, stale on|off, radiomode easy|medium|hard")
+        term.info("      http default|okhttp, stale on|off, radiomode easy|medium|hard,")
+        term.info("      ttl <TYPE> <ms>, provider-confidence <provider> <0.0-1.0>,")
+        term.info("      priority <provider> <TYPE> <n>")
         return
     }
 
@@ -79,7 +83,16 @@ fun handleConfig(args: String, state: DemoState, term: Terminal) {
             state.rebuild()
             term.info("Radio discovery mode: ${mode.name.lowercase()}")
         }
-        else -> term.info("Unknown config key: $key. Try: timeout, confidence, identity, http, stale, radiomode")
+        "ttl", "provider-confidence", "priority" -> {
+            val override = parseOverride(state.config, key, value, term) ?: return
+            state.config = override.config
+            state.rebuild()
+            term.info(override.message)
+        }
+        else -> term.info(
+            "Unknown config key: $key. Try: timeout, confidence, identity, http, stale, radiomode, " +
+                "ttl, provider-confidence, priority",
+        )
     }
 }
 
@@ -112,18 +125,25 @@ fun executeRefresh(input: String, state: DemoState, term: Terminal, spinner: Spi
         } else {
             spinner.spin(label) { enrichProfile(state, request, types, forceRefresh = true) }
         }
-        printEnrichedProfile(profile, request, term, cacheHits = 0)
+        printEnrichedProfile(profile, request, term, cacheHits = 0, pinnedTypes(state, request, types))
     }
 }
 
 fun handleInvalidate(input: String, state: DemoState, term: Terminal) {
-    val request = parseEntityRequest(input)
+    val (cleanInput, customTypes) = extractTypes(input)
+    val request = parseEntityRequest(cleanInput)
     if (request == null) {
-        term.info("Usage: invalidate artist|album|track <name> [by <artist>]")
+        term.info("Usage: invalidate artist|album|track <name> [by <artist>] [--types bio,art]")
         return
     }
-    runBlocking { state.engine.invalidate(request) }
-    term.info("Cache invalidated for ${entityKind(request)}.")
+    if (customTypes == null) {
+        runBlocking { state.engine.invalidate(request) }
+        term.info("Cache invalidated for ${entityKind(request)}.")
+        return
+    }
+    val types = selectTypes(customTypes, entityKind(request), term) ?: return
+    runBlocking { types.forEach { state.engine.invalidate(request, it) } }
+    term.info("Cache invalidated for ${types.size} type(s) on ${entityKind(request)}.")
 }
 
 /** Calls the appropriate profile extension with forceRefresh support. Returns an [EnrichedProfile]. */
@@ -169,13 +189,21 @@ internal fun printEnrichedProfile(
     request: EnrichmentRequest,
     term: Terminal,
     cacheHits: Int,
+    pinned: Set<EnrichmentType> = emptySet(),
 ) {
     when (profile) {
-        is EnrichedProfile.Artist -> Formatter.printProfile(profile.value, term, cacheHits)
-        is EnrichedProfile.Album -> Formatter.printProfile(profile.value, term, cacheHits)
-        is EnrichedProfile.Track -> Formatter.printProfile(profile.value, term, cacheHits)
+        is EnrichedProfile.Artist -> Formatter.printProfile(profile.value, term, cacheHits, pinned)
+        is EnrichedProfile.Album -> Formatter.printProfile(profile.value, term, cacheHits, pinned)
+        is EnrichedProfile.Track -> Formatter.printProfile(profile.value, term, cacheHits, pinned)
     }
 }
+
+/** Which of [types] the user has pinned for [request] — the `[pinned]` tags the results block shows. */
+internal suspend fun pinnedTypes(
+    state: DemoState,
+    request: EnrichmentRequest,
+    types: Set<EnrichmentType>,
+): Set<EnrichmentType> = types.filterTo(mutableSetOf()) { state.engine.isManuallySelected(request, it) }
 
 internal fun defaultTypesForKind(kind: String): Set<EnrichmentType> = when (kind) {
     "album" -> ALBUM_TYPES
@@ -329,6 +357,7 @@ val TYPE_ALIASES = mapOf(
     "top" to EnrichmentType.ARTIST_TOP_TRACKS,
     "top-tracks" to EnrichmentType.ARTIST_TOP_TRACKS,
     "preview" to EnrichmentType.TRACK_PREVIEW,
+    "track-meta" to EnrichmentType.TRACK_METADATA,
     "radio-discovery" to EnrichmentType.ARTIST_RADIO_DISCOVERY,
     "discover" to EnrichmentType.ARTIST_RADIO_DISCOVERY,
     "lb-radio" to EnrichmentType.ARTIST_RADIO_DISCOVERY,
@@ -425,4 +454,133 @@ fun executeBatch(input: String, state: DemoState, term: Terminal) {
     val elapsed = (System.currentTimeMillis() - startMs) / 1000.0
     term.println()
     term.info("${requests.size} items, $totalFound found, $totalErrors errors  [${"%.1f".format(elapsed)}s]")
+}
+
+/** A config the caller should adopt, and the line telling the user what it changed. */
+internal data class OverrideResult(val config: EnrichmentConfig, val message: String)
+
+/**
+ * [config] with one entry of one override map set from [value], or null once the reason it could not
+ * be is reported. Each command sets a single key, so the entries already in the map survive it.
+ */
+internal fun parseOverride(
+    config: EnrichmentConfig,
+    key: String,
+    value: String,
+    term: Terminal,
+): OverrideResult? {
+    val args = value.split(" ").map { it.trim() }.filter { it.isNotBlank() }
+    return when (key) {
+        "ttl" -> {
+            if (args.size != 2) { term.info("Usage: config ttl <TYPE> <ms>"); return null }
+            val type = overrideType(args[0], term) ?: return null
+            val ms = args[1].toLongOrNull()
+            if (ms == null || ms < 0) { term.info("Invalid ttl: ${args[1]}"); return null }
+            OverrideResult(
+                config.copy(ttlOverrides = config.ttlOverrides + (type to ms)),
+                "TTL override: ${type.name} = ${ms}ms",
+            )
+        }
+        "provider-confidence" -> {
+            if (args.size != 2) { term.info("Usage: config provider-confidence <provider> <0.0-1.0>"); return null }
+            val floor = args[1].toFloatOrNull()
+            if (floor == null || floor !in 0f..1f) {
+                term.info("Invalid confidence: ${args[1]} (use 0.0-1.0)")
+                return null
+            }
+            OverrideResult(
+                config.copy(confidenceOverrides = config.confidenceOverrides + (args[0] to floor)),
+                "Confidence override: ${args[0]} = ${String.format(Locale.ROOT, "%.2f", floor)}",
+            )
+        }
+        "priority" -> {
+            if (args.size != 3) { term.info("Usage: config priority <provider> <TYPE> <n>"); return null }
+            val type = overrideType(args[1], term) ?: return null
+            val priority = args[2].toIntOrNull()
+            if (priority == null) { term.info("Invalid priority: ${args[2]}"); return null }
+            val forProvider = config.priorityOverrides[args[0]].orEmpty() + (type to priority)
+            OverrideResult(
+                config.copy(priorityOverrides = config.priorityOverrides + (args[0] to forProvider)),
+                "Priority override: ${args[0]} ${type.name} = $priority",
+            )
+        }
+        else -> null
+    }
+}
+
+/** A type named on a `config` command, where no entity kind is in play to settle an ambiguous alias. */
+private fun overrideType(name: String, term: Terminal): EnrichmentType? = resolveType(name, kind = "").also {
+    if (it == null) {
+        term.info("Unknown type: $name. Use an alias (bio, art) or a full type name (ARTIST_BIO).")
+    }
+}
+
+/**
+ * Protects one type's data for one entity from being replaced by a later automatic result. The type
+ * name is the last word, so everything before it is the entity: `pin album OK Computer by Radiohead art`.
+ */
+fun handlePin(input: String, state: DemoState, term: Terminal) {
+    val typeName = input.substringAfterLast(' ', "").trim()
+    val entity = input.substringBeforeLast(' ', "").trim()
+    val request = if (typeName.isEmpty() || entity.isEmpty()) null else parseEntityRequest(entity)
+    if (request == null) {
+        term.info("Usage: pin artist|album|track <name> [by <artist>] <type>")
+        return
+    }
+    val type = resolveType(typeName, entityKind(request))
+    if (type == null) {
+        term.info("Unknown type: $typeName. Use an alias (bio, art) or a full type name (ARTIST_BIO).")
+        return
+    }
+    runBlocking { state.engine.markManuallySelected(request, type) }
+    term.info("Pinned ${Formatter.typeName(type)} — later enrichments of this ${entityKind(request)} keep it.")
+}
+
+/**
+ * Enriches through [com.landofoz.musicmeta.EnrichmentEngine.enrichProgressive], printing each type on
+ * the emission it settles on. Every snapshot is cumulative, so a type already printed is skipped
+ * rather than repeated, and what is left in `requestedTypes - raw.keys` at the end never settled.
+ */
+fun executeStream(input: String, state: DemoState, term: Terminal) {
+    val (cleanInput, customTypes) = extractTypes(input)
+    val request = parseEntityRequest(cleanInput)
+    if (request == null) {
+        term.info("Usage: stream artist|album|track <name> [by <artist>] [--types bio,art]")
+        return
+    }
+    val types = selectTypes(customTypes, entityKind(request), term) ?: return
+
+    term.heading("Streaming ${entityKind(request)} (${types.size} types)")
+    val startMs = System.currentTimeMillis()
+    val settled = mutableSetOf<EnrichmentType>()
+    runBlocking {
+        state.engine.enrichProgressive(request, types).collect { snapshot ->
+            for ((type, result) in snapshot.raw) {
+                if (settled.add(type)) streamRow(type, result, System.currentTimeMillis() - startMs, term)
+            }
+        }
+    }
+
+    term.println()
+    term.info("${settled.size}/${types.size} types settled in ${seconds(System.currentTimeMillis() - startMs)}")
+    // Belt and braces: an engine honouring the contract leaves this empty, since its terminal
+    // emission carries every requested type. A third-party one need not.
+    val pending = types - settled
+    if (pending.isNotEmpty()) {
+        term.info("Never settled: ${pending.joinToString(", ") { Formatter.typeName(it) }}")
+    }
+}
+
+/** Elapsed milliseconds as seconds — `Locale.ROOT`, so the separator does not follow the machine. */
+private fun seconds(elapsedMs: Long): String = String.format(Locale.ROOT, "%.1fs", elapsedMs / 1000.0)
+
+private fun streamRow(type: EnrichmentType, result: EnrichmentResult, elapsedMs: Long, term: Terminal) {
+    val at = "[${seconds(elapsedMs)}]"
+    val name = Formatter.typeName(type)
+    when (result) {
+        is EnrichmentResult.Success -> term.success(name, "${result.provider}  $at")
+        is EnrichmentResult.NotFound -> term.missing(name, at)
+        is EnrichmentResult.RateLimited -> term.warning(name, "rate limited  $at")
+        is EnrichmentResult.Error -> term.warning(name, "${result.errorKind}  $at")
+    }
 }
