@@ -382,6 +382,25 @@ class DiscogsProviderTest {
     }
 
     @Test
+    fun `enrich returns null country for album metadata when Discogs writes the sentinel lowercase`() = runTest {
+        // Given - the same sentinel, spelled "unknown" rather than "Unknown" — the live API's own
+        // country= filter is case-insensitive, so the catalogue is not assumed to always match case
+        httpClient.givenJsonResponse("discogs.com", METADATA_SEARCH_LOWERCASE_UNKNOWN_COUNTRY_JSON)
+        val request = EnrichmentRequest.forAlbum(
+            title = "OK Computer",
+            artist = "Radiohead",
+        )
+
+        // When - enriching for album metadata
+        val result = provider.enrich(request, EnrichmentType.ALBUM_METADATA)
+
+        // Then - country is absent regardless of the sentinel's case
+        assertTrue(result is EnrichmentResult.Success)
+        val data = (result as EnrichmentResult.Success).data as EnrichmentData.Metadata
+        assertNull(data.country)
+    }
+
+    @Test
     fun `enrich returns NotFound for album metadata when no results`() = runTest {
         // Given - Discogs returns empty results
         httpClient.givenJsonResponse("discogs.com", EMPTY_RESULTS_JSON)
@@ -945,10 +964,12 @@ class DiscogsProviderTest {
         // When - enriching for release editions
         val result = provider.enrich(request, EnrichmentType.RELEASE_EDITIONS)
 
-        // Then - the edition's country is absent, not the string "Unknown"
+        // Then - the edition's country is absent, not the string "Unknown", and the sibling
+        // version's real country survives untouched
         assertTrue(result is EnrichmentResult.Success)
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.ReleaseEditions
         assertNull(data.editions[0].country)
+        assertEquals("US", data.editions[1].country)
     }
 
     @Test
@@ -1398,6 +1419,26 @@ class DiscogsProviderTest {
             }
         """.trimIndent()
 
+        // Same fixture again, sentinel spelled lowercase — the live country= filter is
+        // case-insensitive, so nothing guarantees the catalogue always matches "Unknown"'s case.
+        val METADATA_SEARCH_LOWERCASE_UNKNOWN_COUNTRY_JSON = """
+            {
+              "results": [
+                {
+                  "title": "Radiohead - OK Computer",
+                  "label": ["Parlophone"],
+                  "year": "1997",
+                  "country": "unknown",
+                  "cover_image": "https://img.discogs.com/cover.jpg",
+                  "type": "release",
+                  "catno": "NODATA 02",
+                  "genre": ["Electronic", "Rock"],
+                  "style": ["Art Rock"]
+                }
+              ]
+            }
+        """.trimIndent()
+
         // A Discogs artist search result names the artist in `title`, not `name` — verified
         // against a live api.discogs.com/database/search?type=artist response. This fixture said
         // `name` until the searchArtist name filter was added and started reading the field.
@@ -1565,6 +1606,15 @@ class DiscogsProviderTest {
                   "country": "Unknown",
                   "year": 1997,
                   "catno": "NODATA 01"
+                },
+                {
+                  "id": 99002,
+                  "title": "OK Computer",
+                  "format": "CD",
+                  "label": "Capitol",
+                  "country": "US",
+                  "year": 1997,
+                  "catno": "7243 8 55229 2 4"
                 }
               ]
             }

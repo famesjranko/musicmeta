@@ -607,4 +607,5 @@ at all, so it is read as absent before that conversion runs, at both this route 
 a master's versions and its album metadata cannot disagree about the wording of one country. Passing
 the residue through rather than nulling it was measured, not assumed, on 2026-09-04: over a
 188-album spread of decades and regions, 25.9% of the Discogs `country` values a lookup resolved
-named no current ISO country, and 11.6% of MusicBrainz's did.
+named no current ISO country, and 11.6% of MusicBrainz's did. 2.4 of those 25.9 points were the
+`Unknown` sentinel itself, now read as absent rather than counted among the residue kept above.

@@ -275,9 +275,9 @@ internal class DiscogsApi(
  * `api.discogs.com/database/search?type=release&country=Unknown` returning that exact spelling on
  * every hit. Matched case-insensitively since the API's own `country=` filter is.
  */
-private const val DISCOGS_UNKNOWN_COUNTRY = "unknown"
+private const val DISCOGS_UNKNOWN_COUNTRY = "Unknown"
 
-/** A release or version's `country`, blank if absent or Discogs's own [DISCOGS_UNKNOWN_COUNTRY] sentinel. */
+/** A release or version's `country`, null if absent or Discogs's own [DISCOGS_UNKNOWN_COUNTRY] sentinel. */
 private fun JSONObject.discogsCountry(): String? =
     optString("country").takeIf { it.isNotBlank() && !it.equals(DISCOGS_UNKNOWN_COUNTRY, ignoreCase = true) }
 
