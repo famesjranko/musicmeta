@@ -341,7 +341,7 @@ class EnrichmentEngineExtensionsTest {
         engine.resultsToReturn = mapOf(
             EnrichmentType.TRACK_PREVIEW to EnrichmentResult.Success(
                 EnrichmentType.TRACK_PREVIEW,
-                EnrichmentData.TrackPreview("https://preview.mp3", 30000L, "deezer"),
+                EnrichmentData.TrackPreview(url = "https://preview.mp3", source = "deezer", durationMs = 30000L),
                 "deezer", 0.9f,
             ),
         )

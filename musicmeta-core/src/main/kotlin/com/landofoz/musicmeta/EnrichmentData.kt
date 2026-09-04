@@ -139,8 +139,10 @@ public sealed class EnrichmentData {
     @Serializable
     public data class TrackPreview(
         val url: String,
-        val durationMs: Long = 30000,
+        /** Provider id the clip came from. */
         val source: String,
+        /** Clip length as the upstream states it; `null` when it does not say. */
+        val durationMs: Long? = null,
     ) : EnrichmentData()
 
     /**

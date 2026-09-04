@@ -74,7 +74,7 @@ class DeezerTrackPreviewTest {
         // When - mapping to TrackPreview
         val preview = DeezerMapper.toTrackPreview(result)
 
-        // Then - default durationMs of 30000 is used (Deezer previews are always 30 seconds)
+        // Then - the mapper still states 30000 (Deezer previews are always 30 seconds)
         assertNotNull(preview)
         assertEquals(30000L, preview!!.durationMs)
     }

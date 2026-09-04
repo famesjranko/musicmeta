@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Breaking Changes
 - `RadioDiscoveryMode.apiValue` is now internal: it carried ListenBrainz's wire strings; branch on the enum constant instead
 - `ProviderPolicies.AS_READ_ON` is removed: read `ProviderPolicy.asReadOn` on the entry, which is the date that entry's terms were read
+- `EnrichmentData.TrackPreview` is now `(url, source, durationMs: Long? = null)`: the 30-second default was Deezer's clip length; Deezer still reports 30000, other sources may report null
 - `MusicBrainzProvider` drops its `thumbnailSize` parameter and `DEFAULT_THUMBNAIL_SIZE`: drop the argument; a release search carries no cover-art flag, so the thumbnail it sized was never built
 - `ApiKeyConfig` is now keyed by the `ApiKey` enum (`ApiKeyConfig.of(ApiKey.LASTFM_API_KEY to key)`): the four named fields go; `KeyRequirement.Required/Optional` name an `ApiKey` instead of a field
 - A throwing `CatalogProvider.checkAvailability` no longer escapes `enrich()`: that type degrades to unfiltered results and the run caches, so catch your own timeout inside it

@@ -563,6 +563,60 @@ class RoomEnrichmentCacheTest {
         assertTrue(popularity.signals.isEmpty())
     }
 
+    // synthetic - a JSON literal shaped like the wire form a persisted track preview carries under
+    // `encodeDefaults = true`, not a live capture.
+    private val storedPreviewJson =
+        """{"type":"com.landofoz.musicmeta.EnrichmentData.TrackPreview",""" +
+            """"url":"https://example.com/p.mp3","durationMs":30000,"source":"deezer"}"""
+
+    // synthetic - the same wire form from a source that states no clip length.
+    private val storedPreviewWithoutDurationJson =
+        """{"type":"com.landofoz.musicmeta.EnrichmentData.TrackPreview",""" +
+            """"url":"https://example.com/p.mp3","source":"other"}"""
+
+    private fun previewRow(entityKey: String, dataJson: String) = EnrichmentCacheEntity(
+        entityKey = entityKey,
+        enrichmentType = EnrichmentType.TRACK_PREVIEW.name,
+        provider = "deezer",
+        dataJson = dataJson,
+        confidence = 0.9f,
+        canonicalStatus = CanonicalStatus.RESOLVED.name,
+        cachedAt = 0L,
+        expiresAt = Long.MAX_VALUE,
+    )
+
+    @Test
+    fun `a stored track preview payload keeps the clip length it was written with`() = runTest {
+        // Given - a row carrying a track preview payload an earlier build already persisted
+        database.enrichmentCacheDao().insert(previewRow("track:stored-duration", storedPreviewJson))
+
+        // When - reading it back through the cache
+        val retrieved = cache.get("track:stored-duration", EnrichmentType.TRACK_PREVIEW)
+
+        // Then - the payload decodes and reports the clip length the row stores
+        assertNotNull(retrieved)
+        val preview = retrieved!!.result.data as EnrichmentData.TrackPreview
+        assertEquals("https://example.com/p.mp3", preview.url)
+        assertEquals(30_000L, preview.durationMs)
+        assertEquals("deezer", preview.source)
+    }
+
+    @Test
+    fun `a stored track preview payload with no clip length reads back as null`() = runTest {
+        // Given - a row whose payload states no clip length at all
+        database.enrichmentCacheDao().insert(
+            previewRow("track:no-duration", storedPreviewWithoutDurationJson),
+        )
+
+        // When - reading it back through the cache
+        val retrieved = cache.get("track:no-duration", EnrichmentType.TRACK_PREVIEW)
+
+        // Then - the absence survives instead of being filled in with a length nobody reported
+        assertNotNull(retrieved)
+        val preview = retrieved!!.result.data as EnrichmentData.TrackPreview
+        assertNull(preview.durationMs)
+    }
+
     @Test
     fun `a negative row's unnameable canonical status degrades the same way`() = runTest {
         // Given - a negative row carrying a CanonicalStatus name this version does not have

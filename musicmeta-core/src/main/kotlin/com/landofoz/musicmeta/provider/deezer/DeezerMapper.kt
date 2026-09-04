@@ -161,8 +161,8 @@ internal object DeezerMapper {
         val url = result.previewUrl ?: return null
         return EnrichmentData.TrackPreview(
             url = url,
-            durationMs = 30000L, // Deezer previews are always 30 seconds
             source = "deezer",
+            durationMs = 30000L, // Deezer previews are always 30 seconds
         )
     }
 

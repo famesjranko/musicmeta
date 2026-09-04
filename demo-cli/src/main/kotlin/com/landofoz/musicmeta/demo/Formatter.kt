@@ -86,7 +86,10 @@ object Formatter {
             }
             if (desc.isNotEmpty()) term.keyValue("Lyrics:", desc)
         }
-        profile.preview?.let { term.keyValue("Preview:", term.link(it.url, "${it.source} ${it.durationMs / 1000}s")) }
+        profile.preview?.let {
+            val label = it.source + (it.durationMs?.let { ms -> " ${ms / 1000}s" } ?: "")
+            term.keyValue("Preview:", term.link(it.url, label))
+        }
         profile.artwork?.let { term.keyValue("Artwork:", term.link(it.url, artworkLabel(it))) }
         profile.popularity?.let { p ->
             p.listenerCount?.let { term.keyValue("Listeners:", "%,d".format(it)) }
@@ -279,7 +282,8 @@ object Formatter {
             "${data.editions.size} editions" + data.editions.mapNotNull { it.format }.distinct().take(3)
                 .let { if (it.isNotEmpty()) " (${it.joinToString(", ")})" else "" }
         is EnrichmentData.ArtistTimeline -> "${data.events.size} events"
-        is EnrichmentData.TrackPreview -> "${data.source} ${data.durationMs / 1000}s preview"
+        is EnrichmentData.TrackPreview ->
+            "${data.source} " + (data.durationMs?.let { "${it / 1000}s " } ?: "") + "preview"
         is EnrichmentData.RadioPlaylist -> "${data.tracks.size} tracks"
         is EnrichmentData.SimilarAlbums ->
             "${data.albums.size} albums: " + data.albums.take(3).joinToString(", ") { "${it.title} by ${it.artist}" }

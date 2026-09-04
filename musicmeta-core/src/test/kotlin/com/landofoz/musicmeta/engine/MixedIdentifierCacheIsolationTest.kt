@@ -53,7 +53,7 @@ class MixedIdentifierCacheIsolationTest {
 
         val fresh = EnrichmentResult.Success(
             EnrichmentType.TRACK_PREVIEW,
-            EnrichmentData.TrackPreview("https://example.com/starman.mp3", 30_000, "fresh"),
+            EnrichmentData.TrackPreview(url = "https://example.com/starman.mp3", source = "fresh", durationMs = 30_000),
             "fresh",
             1f,
         )
@@ -93,7 +93,7 @@ class MixedIdentifierCacheIsolationTest {
         val mbidKey = DefaultEnrichmentEngine.entityKeyFor(mbidOnly, EnrichmentType.TRACK_PREVIEW)
         val foreign = EnrichmentResult.Success(
             EnrichmentType.TRACK_PREVIEW,
-            EnrichmentData.TrackPreview("https://example.com/foreign.mp3", 30_000, "seed"),
+            EnrichmentData.TrackPreview(url = "https://example.com/foreign.mp3", source = "seed", durationMs = 30_000),
             "seed",
             1f,
         )
@@ -102,7 +102,7 @@ class MixedIdentifierCacheIsolationTest {
         // When - a mixed request naming the same MBID plus a Deezer id is enriched
         val fresh = EnrichmentResult.Success(
             EnrichmentType.TRACK_PREVIEW,
-            EnrichmentData.TrackPreview("https://example.com/route.mp3", 30_000, "deezer"),
+            EnrichmentData.TrackPreview(url = "https://example.com/route.mp3", source = "deezer", durationMs = 30_000),
             "deezer",
             0.9f,
         )
@@ -154,7 +154,7 @@ class MixedIdentifierCacheIsolationTest {
                 EnrichmentType.TRACK_PREVIEW,
                 EnrichmentResult.Success(
                     EnrichmentType.TRACK_PREVIEW,
-                    EnrichmentData.TrackPreview("https://example.com/route.mp3", 30_000, "deezer"),
+                    EnrichmentData.TrackPreview(url = "https://example.com/route.mp3", source = "deezer", durationMs = 30_000),
                     "deezer",
                     0.9f,
                 ),

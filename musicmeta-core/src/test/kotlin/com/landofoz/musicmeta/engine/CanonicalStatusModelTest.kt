@@ -44,7 +44,7 @@ class CanonicalStatusModelTest {
             EnrichmentType.TRACK_PREVIEW,
             EnrichmentResult.Success(
                 EnrichmentType.TRACK_PREVIEW,
-                com.landofoz.musicmeta.EnrichmentData.TrackPreview("https://x/preview.mp3", 30_000, "deezer"),
+                com.landofoz.musicmeta.EnrichmentData.TrackPreview(url = "https://x/preview.mp3", source = "deezer", durationMs = 30_000),
                 "deezer",
                 0.8f,
             ),
@@ -65,7 +65,7 @@ class CanonicalStatusModelTest {
             EnrichmentType.TRACK_PREVIEW,
             EnrichmentResult.Success(
                 EnrichmentType.TRACK_PREVIEW,
-                com.landofoz.musicmeta.EnrichmentData.TrackPreview("https://x/preview.mp3", 30_000, "deezer"),
+                com.landofoz.musicmeta.EnrichmentData.TrackPreview(url = "https://x/preview.mp3", source = "deezer", durationMs = 30_000),
                 "deezer",
                 0.8f,
                 provenance = LookupProvenance.PROVIDER_NATIVE_ID,
@@ -464,7 +464,7 @@ class CanonicalStatusModelTest {
             entityKeyFor(req, EnrichmentType.TRACK_PREVIEW), EnrichmentType.TRACK_PREVIEW,
             EnrichmentResult.Success(
                 EnrichmentType.TRACK_PREVIEW,
-                com.landofoz.musicmeta.EnrichmentData.TrackPreview("https://x/preview.mp3", 30_000, "deezer"),
+                com.landofoz.musicmeta.EnrichmentData.TrackPreview(url = "https://x/preview.mp3", source = "deezer", durationMs = 30_000),
                 "deezer", 0.8f, provenance = LookupProvenance.FUZZY_NAME,
             ),
             CanonicalStatus.NOT_ATTEMPTED_DISABLED,
