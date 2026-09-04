@@ -30,7 +30,8 @@ from pathlib import Path
 MIGRATION_GUIDE = "docs/guides/migration.md"
 CHANGELOG = "CHANGELOG.md"
 
-GUIDE_HEADING = re.compile(r"^## (.+?)[ \t]*$", re.MULTILINE)
+GUIDE_HEADING = re.compile(r"^## (Unreleased|[0-9]+\.[0-9]+\.[0-9]+)[ \t]*$", re.MULTILINE)
+ANY_GUIDE_HEADING = re.compile(r"^## (.+?)[ \t]*$", re.MULTILINE)
 CHANGELOG_HEADING = re.compile(r"^## \[([^\]]+)\]", re.MULTILINE)
 CHANGELOG_UNRELEASED = re.compile(r"^## \[Unreleased\][ \t]*$", re.MULTILINE)
 BREAKING = re.compile(r"^### Breaking Changes[ \t]*$", re.MULTILINE)
@@ -59,6 +60,13 @@ def run(root: Path) -> list[str]:
     guide_headings = GUIDE_HEADING.findall(guide_text)
 
     findings = []
+    recognized = set(guide_headings)
+    for raw in ANY_GUIDE_HEADING.findall(guide_text):
+        if raw not in recognized:
+            findings.append(
+                f"::error file={MIGRATION_GUIDE}::heading `## {raw}` — guide headings are Unreleased or a bare version."
+            )
+
     for heading in guide_headings:
         if heading == "Unreleased":
             continue

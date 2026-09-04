@@ -14,8 +14,11 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "github-workflows"))
 
+from build_release_notes import released_versions  # noqa: E402
 from check_migration_guide import run  # noqa: E402
+from pin_release import pin_changelog, pin_migration_guide  # noqa: E402
 
 CHANGELOG = """# Changelog
 
@@ -50,6 +53,8 @@ before/after here.
 GUIDE_NO_UNRELEASED = "# Migration guide\n\n## 0.12.0\n\n### An older break\n\nbefore/after here.\n"
 
 GUIDE_STALE_VERSION = GUIDE.replace("## 0.12.0", "## 0.11.9")
+
+GUIDE_WITH_PROSE_HEADING = GUIDE + "\n## Some prose heading\n\nnot a version.\n"
 
 
 class MigrationGuideTest(unittest.TestCase):
@@ -93,6 +98,17 @@ class MigrationGuideTest(unittest.TestCase):
         self.assertTrue(findings, "an unrecorded break must fail the gate")
         self.assertIn("CHANGELOG.md", findings[0])
 
+    def test_non_version_guide_heading_is_reported_with_its_own_message(self) -> None:
+        # Given - a guide heading that is neither Unreleased nor a bare version
+        # When - the check runs
+        findings = self.findings_for(GUIDE_WITH_PROSE_HEADING, CHANGELOG)
+        # Then - it fails with the shape message, not the stale-version message
+        self.assertTrue(findings, "a non-version heading must fail the gate")
+        self.assertTrue(
+            any("guide headings are Unreleased or a bare version" in f for f in findings),
+            f"expected the shape message, got: {findings}",
+        )
+
     def test_guide_missing_is_reported(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -113,6 +129,29 @@ class MigrationGuideTest(unittest.TestCase):
         """The real files, not fixtures — proves the rule holds today, not just in a fixture."""
         root = Path(__file__).resolve().parents[2]
         self.assertEqual(run(root), [], "docs/guides/migration.md and CHANGELOG.md have drifted")
+
+    def test_pinning_the_live_files_together_leaves_no_findings(self) -> None:
+        """pin_changelog and pin_migration_guide, applied to the real files, must still agree.
+
+        Each is tested against the live repo in its own suite; this is the only place both run
+        together, which is what a real release actually does.
+        """
+        root = Path(__file__).resolve().parents[2]
+        changelog_text = (root / "CHANGELOG.md").read_text(encoding="utf-8")
+        guide_text = (root / "docs" / "guides" / "migration.md").read_text(encoding="utf-8")
+
+        last = released_versions(changelog_text)[0]
+        major, minor, _ = (int(p) for p in last.split("."))
+        next_minor = f"{major}.{minor + 1}.0"
+
+        pinned_changelog = pin_changelog(changelog_text, next_minor, "2026-07-23")
+        pinned_guide = pin_migration_guide(guide_text, next_minor)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_root = Path(tmp)
+            self.write(tmp_root, "CHANGELOG.md", pinned_changelog)
+            self.write(tmp_root, "docs/guides/migration.md", pinned_guide)
+            self.assertEqual(run(tmp_root), [])
 
 
 if __name__ == "__main__":
