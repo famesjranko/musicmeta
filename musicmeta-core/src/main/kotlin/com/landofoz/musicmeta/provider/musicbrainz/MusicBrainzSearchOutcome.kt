@@ -69,8 +69,8 @@ internal suspend fun offerNames(title: String?, artist: String?) {
  * Tries each of [MusicBrainzQualifierFallback]'s fallback candidates (dropping the original
  * title — the caller has already searched it) in most-specific-first order, stopping at the
  * first one [resolve] resolves. Shared shape for
- * [MusicBrainzAlbumResolution.resolveAlbumQualifierFallback] and
- * [MusicBrainzTrackResolution.resolveTrackQualifierFallback], which differ only in how a candidate
+ * `MusicBrainzAlbumEnrichment.resolveAlbumQualifierFallback` and
+ * `MusicBrainzTrackEnrichment.resolveTrackQualifierFallback`, which differ only in how a candidate
  * resolves.
  */
 internal suspend fun <T> resolveViaQualifierFallback(

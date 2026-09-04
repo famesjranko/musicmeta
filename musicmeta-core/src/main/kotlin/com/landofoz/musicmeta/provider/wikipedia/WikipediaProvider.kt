@@ -20,7 +20,7 @@ import kotlinx.coroutines.currentCoroutineContext
  *
  * `ALBUM_DESCRIPTION` reuses the same title-resolution and `Biography` mapping as `ARTIST_BIO`;
  * only the identifiers differ — for an album request they come from the release-group's Wikidata
- * relation (`MusicBrainzAlbumResolution.buildAlbumResult`), not the artist's.
+ * relation (`MusicBrainzAlbumEnrichment.buildAlbumResult`), not the artist's.
  *
  * **English only.** Every request goes to `en.wikipedia.org`, so the resolved title must be an
  * English article title. Title resolution, in order:

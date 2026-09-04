@@ -21,7 +21,8 @@ step to retry — answers with two near-miss recordings, which become
 
 Both `musicbrainz-recording-canonical.json` (the `WEAK_POOL` shape: two below-floor candidates) and
 `musicbrainz-recording-suggestions.json` (the `ALL_VARIANTS_POOL` shape, trimmed to two candidates
-with the `releases` sub-object removed, since [MusicBrainzEnricher.toCandidate] reads only `id`,
+with the `releases` sub-object removed, since `MusicBrainzTrackEnrichment`'s
+`MusicBrainzRecording.toCandidate` reads only `id`,
 `score`, `title`, `artist-credit` and `disambiguation`) are trimmed from
 `musicmeta-core/src/test/kotlin/com/landofoz/musicmeta/provider/musicbrainz/MusicBrainzCanonicalRecordingSearchTest.kt:202-234`
 (the `WEAK_POOL` and `ALL_VARIANTS_POOL` constants backing

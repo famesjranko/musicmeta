@@ -29,12 +29,13 @@ internal class MusicBrainzEnricher(
     minMatchScore: Int,
 ) {
 
-    private val artists = MusicBrainzArtistResolution(api, providerId, minMatchScore)
-    private val albums = MusicBrainzAlbumResolution(api, providerId, minMatchScore)
-    private val tracks = MusicBrainzTrackResolution(api, providerId, minMatchScore)
+    private val artists = MusicBrainzArtistEnrichment(api, providerId, minMatchScore)
+    private val albums = MusicBrainzAlbumEnrichment(api, providerId, minMatchScore)
+    private val tracks = MusicBrainzTrackEnrichment(api, providerId, minMatchScore)
 
     internal suspend fun enrichAlbum(
-        request: EnrichmentRequest.ForAlbum, type: EnrichmentType,
+        request: EnrichmentRequest.ForAlbum,
+        type: EnrichmentType,
     ): EnrichmentResult = albums.enrichAlbum(request, type)
 
     internal suspend fun enrichArtist(

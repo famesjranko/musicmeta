@@ -187,7 +187,7 @@ public class DiscogsProvider(
      * [EnrichmentResult.Error] — that would also open the circuit breaker against a healthy Discogs
      * for a failure the primary lookup never had (docs/pitfalls.md §4), and it would discard
      * `baseMetadata` the caller already has in hand. Mirrors
-     * [com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzAlbumResolution.resolveReleaseGroupWikiLinks].
+     * [com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzAlbumEnrichment.resolveReleaseGroupWikiLinks].
      */
     // SwallowedException: intentional — see the KDoc above. This provider has no logger to hand the
     // exception to; degrading silently is the fix, not an oversight (detekt cannot tell them apart).

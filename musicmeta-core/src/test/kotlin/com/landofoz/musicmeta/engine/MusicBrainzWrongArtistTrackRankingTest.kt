@@ -14,7 +14,7 @@ import org.junit.Test
 
 /**
  * A recording search pool that ties or outranks a wrong-artist hit above the correctly-credited
- * one must not resolve `RESOLVED` to the wrong artist — [MusicBrainzTrackResolution.pickBestRecording]'s
+ * one must not resolve `RESOLVED` to the wrong artist — [MusicBrainzTrackEnrichment.pickBestRecording]'s
  * direct search path now carries an `ArtistMatcher.matchQuality` tier over `artist-credit`
  * ([MusicBrainzRecording.artistCredits]), the same primitive `MusicBrainzReleaseRanking` uses on
  * the album path. Ranks rather than rejects: a pool with no matching-artist candidate at all still

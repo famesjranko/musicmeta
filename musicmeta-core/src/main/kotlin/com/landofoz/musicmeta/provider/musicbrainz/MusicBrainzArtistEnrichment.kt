@@ -16,7 +16,7 @@ import com.landofoz.musicmeta.engine.namesNoEntity
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 
-/** New artist types routed through [MusicBrainzArtistResolution.enrichArtistNewType]. */
+/** New artist types routed through [MusicBrainzArtistEnrichment.enrichArtistNewType]. */
 internal val ARTIST_NEW_TYPES = setOf(
     EnrichmentType.BAND_MEMBERS,
     EnrichmentType.ARTIST_DISCOGRAPHY,
@@ -30,7 +30,7 @@ internal val ARTIST_NEW_TYPES = setOf(
  * Holds one call's artist memos, so the invariant is [MusicBrainzEnricher]'s: one
  * instance per call, and nothing memoized here outlives it.
  */
-internal class MusicBrainzArtistResolution(
+internal class MusicBrainzArtistEnrichment(
     private val api: MusicBrainzApi,
     private val providerId: String,
     private val minMatchScore: Int,
@@ -50,13 +50,13 @@ internal class MusicBrainzArtistResolution(
 
     /**
      * The artist pool a name resolves out of. Keyed on the name searched for, as
-     * [MusicBrainzAlbumResolution.albumSearchMemo]'s key is: [enrichArtist] and
+     * `MusicBrainzAlbumEnrichment.albumSearchMemo`'s key is: [enrichArtist] and
      * [enrichArtistNewType] (via [nameResolvedArtistId]) both search it for a request carrying no
      * MBID, so GENRE, BAND_MEMBERS, ARTIST_DISCOGRAPHY and ARTIST_LINKS of one request otherwise
      * repeat the same search once each.
      *
      * Holds *which* artist a name resolves to, not just a payload — safe for the reason
-     * [MusicBrainzAlbumResolution.albumSearchMemo] is: nothing here outlives the call.
+     * `MusicBrainzAlbumEnrichment.albumSearchMemo` is: nothing here outlives the call.
      */
     private val artistSearchMemo = CallMemo<String, List<MusicBrainzArtist>>()
 
@@ -65,7 +65,7 @@ internal class MusicBrainzArtistResolution(
 
     /**
      * Near-miss suggestions for an artist name nothing strict resolves, keyed as [artistSearchMemo]
-     * is and memoized for the reason [MusicBrainzAlbumResolution.albumFuzzyMemo] is: the pool that
+     * is and memoized for the reason `MusicBrainzAlbumEnrichment.albumFuzzyMemo` is: the pool that
      * decides they are needed is memoized, so an absent artist would otherwise pay a full
      * `artist?query=` per type for the same three suggestions.
      */
@@ -129,7 +129,7 @@ internal class MusicBrainzArtistResolution(
     }
 
     /**
-     * Best-effort, mirroring [MusicBrainzAlbumResolution.resolveReleaseGroupWikiLinks]'s shape: a
+     * Best-effort, mirroring `MusicBrainzAlbumEnrichment.resolveReleaseGroupWikiLinks`'s shape: a
      * transient on the full-artist lookup must not fail the type being resolved (GENRE, LABEL, …)
      * just because it also happens to carry wikidata/wikipedia relations as a byproduct — it
      * degrades to [best] (the search hit, already a valid [MusicBrainzArtist]) instead of
@@ -322,7 +322,7 @@ internal fun pickBestArtist(
  * not payload (`docs/pitfalls.md` §8): the tier says how sure we are this is the right entity,
  * never how much it carried.
  */
-internal fun artistMatchConfidence(query: String, artist: MusicBrainzArtist): Float =
+private fun artistMatchConfidence(query: String, artist: MusicBrainzArtist): Float =
     ConfidenceCalculator.searchScore(artist.score) * artistNameTier(query, artist).confidenceFactor
 
 /**
@@ -332,5 +332,5 @@ internal fun artistMatchConfidence(query: String, artist: MusicBrainzArtist): Fl
  * ("コールドプレイ"), a hint may itself be locale-tagged, and only the second kind is a name the
  * artist actually goes by.
  */
-internal fun artistNameTier(query: String, artist: MusicBrainzArtist): NameMatchTier =
+private fun artistNameTier(query: String, artist: MusicBrainzArtist): NameMatchTier =
     nameMatchTier(requested = query, canonical = artist.name, aliases = artist.alternativeNames())

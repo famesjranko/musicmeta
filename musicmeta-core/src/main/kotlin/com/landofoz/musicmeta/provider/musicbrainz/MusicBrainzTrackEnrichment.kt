@@ -22,14 +22,14 @@ import org.json.JSONObject
  * Holds one call's track memos, so the invariant is [MusicBrainzEnricher]'s: one
  * instance per call, and nothing memoized here outlives it.
  */
-internal class MusicBrainzTrackResolution(
+internal class MusicBrainzTrackEnrichment(
     private val api: MusicBrainzApi,
     private val providerId: String,
     private val minMatchScore: Int,
 ) {
 
     /**
-     * Raw recording lookups by MBID, same shape as [MusicBrainzAlbumResolution.releaseMemo] — held
+     * Raw recording lookups by MBID, same shape as `MusicBrainzAlbumEnrichment.releaseMemo` — held
      * raw because CREDITS and the recording's own fields parse the same response two different ways
      * ([MusicBrainzApi.lookupRecording]), so one call serves every track type of a request that
      * carries an MBID.
@@ -91,7 +91,7 @@ internal class MusicBrainzTrackResolution(
     /**
      * The MBID reached this call from outside it — a caller's, or a foreign identity provider's —
      * so it names the recording the answer must describe, exactly as
-     * [MusicBrainzAlbumResolution.enrichAlbum] and [MusicBrainzArtistResolution.enrichArtist] treat
+     * [MusicBrainzAlbumEnrichment.enrichAlbum] and [MusicBrainzArtistEnrichment.enrichArtist] treat
      * theirs. A recording MusicBrainz *holds* is never traded for a search hit: answering with a
      * different recording is the defect this path exists to close, and that holds whether the
      * lookup's body parses or not.
@@ -343,7 +343,7 @@ internal class MusicBrainzTrackResolution(
      * Track resolution by title/artist/album: [searchTrack]'s whole ladder, which every track type
      * of one request otherwise re-runs — the search plus, on an empty pool,
      * [resolveTrackQualifierFallback]'s own searches. Keyed like
-     * [MusicBrainzAlbumResolution.albumSearchMemo], and holding which recording a name resolves to
+     * `MusicBrainzAlbumEnrichment.albumSearchMemo`, and holding which recording a name resolves to
      * under the same protection: nothing here outlives the call.
      *
      * A track repeats this search where an album does not. Identity resolution merges the recording
@@ -394,7 +394,7 @@ internal class MusicBrainzTrackResolution(
 
     /**
      * Near-miss suggestions for a track no pool holds, keyed as [trackSuggestionMemo] is and
-     * memoized for the reason [MusicBrainzAlbumResolution.albumFuzzyMemo] is: the pool that decides
+     * memoized for the reason `MusicBrainzAlbumEnrichment.albumFuzzyMemo` is: the pool that decides
      * they are needed is memoized, so an absent track would otherwise pay a full `recording?query=`
      * per type for the same three suggestions.
      */
@@ -406,7 +406,7 @@ internal class MusicBrainzTrackResolution(
         }
 
     /**
-     * [trackSearchMemo]'s key, in fields for the reason [MusicBrainzAlbumResolution.AlbumQuery] is.
+     * [trackSearchMemo]'s key, in fields for the reason `MusicBrainzAlbumEnrichment.AlbumQuery` is.
      * The album hint is held as the search sends it, and a blank album is no album:
      * [MusicBrainzApi] narrows on the hint only when it is non-blank, so a request carrying `null`,
      * `""` or `" "` sends one query and must reach one key.
@@ -418,7 +418,7 @@ internal class MusicBrainzTrackResolution(
 
     /**
      * Same qualifier-fallback candidate search as
-     * [MusicBrainzAlbumResolution.resolveAlbumQualifierFallback] — requires the same
+     * `MusicBrainzAlbumEnrichment.resolveAlbumQualifierFallback` — requires the same
      * "authoritative" hit (score floor, normalized title equality, matching credited artist; score
      * alone is not proof of identity) before ranking survivors — but for recordings, reuses
      * [pickBestRecording]'s existing ranking on the authoritative pool rather than introducing a

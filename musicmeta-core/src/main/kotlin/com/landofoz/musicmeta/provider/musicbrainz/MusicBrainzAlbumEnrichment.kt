@@ -21,14 +21,14 @@ import kotlinx.coroutines.ensureActive
  * Holds one call's album memos, so the invariant is [MusicBrainzEnricher]'s: one
  * instance per call, and nothing memoized here outlives it.
  */
-internal class MusicBrainzAlbumResolution(
+internal class MusicBrainzAlbumEnrichment(
     private val api: MusicBrainzApi,
     private val providerId: String,
     private val minMatchScore: Int,
 ) {
 
     /**
-     * Release lookups by MBID, same shape as [MusicBrainzArtistResolution.artistMemo].
+     * Release lookups by MBID, same shape as `MusicBrainzArtistEnrichment.artistMemo`.
      * One album is looked up more than once per `enrich()`: GENRE resolves it as identity and again
      * in the fan-out the identity MBID enables, and ALBUM_TRACKS wants the same response a third
      * time.
@@ -328,7 +328,7 @@ internal class MusicBrainzAlbumResolution(
 
     /**
      * The artist MBID to browse, or null unless the artist resolves to *exactly* the requested name
-     * — stricter than [MusicBrainzArtistResolution.enrichArtist], because a near-miss would scope
+     * — stricter than [MusicBrainzArtistEnrichment.enrichArtist], because a near-miss would scope
      * the browse to the wrong catalogue and nothing downstream would catch it.
      */
     private suspend fun resolveArtistMbidForFallback(artist: String, artistNorm: String): String? {

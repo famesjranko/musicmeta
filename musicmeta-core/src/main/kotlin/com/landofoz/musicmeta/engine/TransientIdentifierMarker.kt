@@ -13,7 +13,7 @@ import kotlin.coroutines.CoroutineContext
  *
  * A [ConcurrentHashMap]-backed set, not a plain `MutableSet` or a `Boolean`: [mark] can be called
  * from `DefaultEnrichmentEngine.resolveIdentity`'s catch and from the catch blocks in
- * `MusicBrainzArtistResolution` and `MusicBrainzAlbumResolution`, all of which may run inside
+ * `MusicBrainzArtistEnrichment` and `MusicBrainzAlbumEnrichment`, all of which may run inside
  * concurrently-launched `async` children of the same `enrich()` call.
  */
 internal class TransientIdentifierMarker : AbstractCoroutineContextElement(Key) {

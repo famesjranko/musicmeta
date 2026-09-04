@@ -868,7 +868,7 @@ class MusicBrainzProviderTest {
         provider.enrich(request, EnrichmentType.GENRE)
 
         // Then - the search plus one release-group wiki-links lookup (ALBUM_DESCRIPTION's
-        // wikidata/wikipedia resolution, `buildAlbumResult` §MusicBrainzAlbumResolution) — no full release
+        // wikidata/wikipedia resolution, `buildAlbumResult` §MusicBrainzAlbumEnrichment) — no full release
         // lookup, since the search hit already carried tags.
         assertEquals(2, httpClient.requestedUrls.size)
         assertTrue(httpClient.requestedUrls.any { it.contains("release-group/group123") })
@@ -1205,7 +1205,7 @@ class MusicBrainzProviderTest {
          * ranks it below the studio original. A blank-disambiguation per-member cover ("Enter
          * Sandman (Ulrich)") follows last — blank disambiguation and pool position alone would pick
          * it over the studio original if title were not ranked first, so it still pins
-         * [MusicBrainzTrackResolution.pickBestRecording]'s tier order.
+         * [MusicBrainzTrackEnrichment.pickBestRecording]'s tier order.
          */
         private val ENTER_SANDMAN_RANK_POOL = """
             {
