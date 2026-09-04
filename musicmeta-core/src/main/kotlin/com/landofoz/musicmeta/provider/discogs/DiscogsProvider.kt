@@ -6,6 +6,7 @@ import com.landofoz.musicmeta.EnrichmentProvider
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
+import com.landofoz.musicmeta.IdentifierNamespace
 import com.landofoz.musicmeta.LookupProvenance
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.engine.ArtistMatcher
@@ -112,7 +113,7 @@ public class DiscogsProvider(
         request: EnrichmentRequest.ForTrack,
         type: EnrichmentType,
     ): EnrichmentResult {
-        val releaseIdStr = request.identifiers.get("discogsReleaseId")
+        val releaseIdStr = request.identifiers.get(IdentifierNamespace.DISCOGS_RELEASE)
             ?: return EnrichmentResult.NotFound(type, id)
         val releaseId = releaseIdStr.toLongOrNull()
             ?: return EnrichmentResult.NotFound(type, id)
@@ -144,7 +145,7 @@ public class DiscogsProvider(
         request: EnrichmentRequest.ForAlbum,
         type: EnrichmentType,
     ): EnrichmentResult {
-        val masterIdStr = request.identifiers.get("discogsMasterId")
+        val masterIdStr = request.identifiers.get(IdentifierNamespace.DISCOGS_MASTER)
             ?: return EnrichmentResult.NotFound(type, id)
         val masterId = masterIdStr.toLongOrNull()
             ?: return EnrichmentResult.NotFound(type, id)
@@ -168,7 +169,7 @@ public class DiscogsProvider(
         val baseMetadata = DiscogsMapper.toAlbumMetadata(release)
         // Fetch release details for community rating if a releaseId is available
         val releaseId = release.releaseId
-            ?: identifiers.get("discogsReleaseId")?.toLongOrNull()
+            ?: identifiers.get(IdentifierNamespace.DISCOGS_RELEASE)?.toLongOrNull()
         val communityRating = if (releaseId != null) {
             degradeSideFetch { api.getReleaseDetails(releaseId)?.communityRating }
         } else null
@@ -248,10 +249,10 @@ public class DiscogsProvider(
     private fun buildResolvedIdentifiers(release: DiscogsRelease): EnrichmentIdentifiers? {
         var ids = EnrichmentIdentifiers()
         if (release.releaseId != null) {
-            ids = ids.withExtra("discogsReleaseId", release.releaseId.toString())
+            ids = ids.with(IdentifierNamespace.DISCOGS_RELEASE, release.releaseId.toString())
         }
         if (release.masterId != null) {
-            ids = ids.withExtra("discogsMasterId", release.masterId.toString())
+            ids = ids.with(IdentifierNamespace.DISCOGS_MASTER, release.masterId.toString())
         }
         return if (ids.extra.isEmpty()) null else ids
     }

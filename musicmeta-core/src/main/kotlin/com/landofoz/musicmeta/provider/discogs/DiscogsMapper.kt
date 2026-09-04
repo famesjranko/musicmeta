@@ -139,7 +139,7 @@ internal object DiscogsMapper {
                     catalogNumber = version.catno,
                     barcode = null,
                     identifiers = if (version.id > 0) {
-                        EnrichmentIdentifiers().withExtra("discogsReleaseId", version.id.toString())
+                        EnrichmentIdentifiers().with(IdentifierNamespace.DISCOGS_RELEASE, version.id.toString())
                     } else EnrichmentIdentifiers(),
                 )
             },

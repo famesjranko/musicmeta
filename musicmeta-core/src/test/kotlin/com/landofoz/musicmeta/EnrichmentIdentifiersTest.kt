@@ -11,39 +11,19 @@ class EnrichmentIdentifiersTest {
 
     private val json = Json { encodeDefaults = true }
 
-    @Test fun `withExtra stores key-value pair retrievable via get`() {
-        // Given - empty identifiers
-        val ids = EnrichmentIdentifiers()
-
-        // When - adding an extra identifier
-        val updated = ids.withExtra("deezerId", "123")
-
-        // Then - value is retrievable
-        assertEquals("123", updated.get("deezerId"))
-    }
-
-    @Test fun `get returns null for nonexistent key`() {
-        // Given - empty identifiers
-        val ids = EnrichmentIdentifiers()
-
-        // When - a nonexistent key is looked up
-        // Then - returns null
-        assertNull(ids.get("nonexistent"))
-    }
-
-    @Test fun `withExtra preserves existing extra entries`() {
+    @Test fun `with preserves existing extra entries`() {
         // Given - identifiers with one extra entry
-        val ids = EnrichmentIdentifiers().withExtra("deezerId", "123")
+        val ids = EnrichmentIdentifiers().with(IdentifierNamespace.DEEZER, "123")
 
         // When - adding another extra entry
-        val updated = ids.withExtra("spotifyId", "456")
+        val updated = ids.with(IdentifierNamespace.SPOTIFY_ARTIST, "456")
 
         // Then - both entries present
-        assertEquals("123", updated.get("deezerId"))
-        assertEquals("456", updated.get("spotifyId"))
+        assertEquals("123", updated.get(IdentifierNamespace.DEEZER))
+        assertEquals("456", updated.get(IdentifierNamespace.SPOTIFY_ARTIST))
     }
 
-    @Test fun `withExtra preserves existing typed fields`() {
+    @Test fun `with preserves existing typed fields`() {
         // Given - identifiers with typed fields set
         val ids = EnrichmentIdentifiers(
             musicBrainzId = "mbid-123",
@@ -52,13 +32,13 @@ class EnrichmentIdentifiersTest {
         )
 
         // When - adding extra entry
-        val updated = ids.withExtra("deezerId", "789")
+        val updated = ids.with(IdentifierNamespace.DEEZER, "789")
 
         // Then - typed fields unchanged
         assertEquals("mbid-123", updated.musicBrainzId)
         assertEquals("Q456", updated.wikidataId)
         assertEquals("USRC123", updated.isrc)
-        assertEquals("789", updated.get("deezerId"))
+        assertEquals("789", updated.get(IdentifierNamespace.DEEZER))
     }
 
     @Test fun `SimilarArtist has identifiers field`() {
@@ -94,9 +74,9 @@ class EnrichmentIdentifiersTest {
         assertNull(ids.get(IdentifierNamespace.DISCOGS_ARTIST))
     }
 
-    @Test fun `namespace accessor and string accessor read the same underlying key`() {
-        // Given - identifiers written through the string-keyed accessor
-        val ids = EnrichmentIdentifiers().withExtra("deezerId", "789")
+    @Test fun `the namespace accessor reads a raw extra entry stored under its key`() {
+        // Given - identifiers holding a raw extra entry under the wire key
+        val ids = EnrichmentIdentifiers(extra = mapOf("deezerId" to "789"))
 
         // When - the same key is read through the namespace accessor
         // Then - the value matches, proving the enum key mapping is unchanged
@@ -118,6 +98,6 @@ class EnrichmentIdentifiersTest {
         // Then - the round trip is lossless and the enum accessor reads the same stored value
         assertEquals(decoded, reEncoded)
         assertEquals("123", decoded.get(IdentifierNamespace.DEEZER))
-        assertEquals("123", decoded.get("deezerId"))
+        assertEquals("123", decoded.extra["deezerId"])
     }
 }

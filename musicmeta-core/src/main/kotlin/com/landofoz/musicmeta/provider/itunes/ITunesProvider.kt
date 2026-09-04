@@ -100,7 +100,7 @@ public class ITunesProvider(
 
         return try {
             // Try direct lookup if collectionId is already stored
-            val collectionId = request.identifiers.get("itunesCollectionId")?.toLongOrNull()
+            val collectionId = request.identifiers.get(IdentifierNamespace.ITUNES_COLLECTION)?.toLongOrNull()
             if (collectionId != null) {
                 val tracks = api.lookupAlbumTracks(collectionId)
                 if (tracks.isEmpty()) return EnrichmentResult.NotFound(type, id)
@@ -288,7 +288,7 @@ public class ITunesProvider(
 
     private fun buildResolvedIdentifiers(result: ITunesAlbumResult): EnrichmentIdentifiers? {
         val collectionId = result.collectionId.takeIf { it > 0 } ?: return null
-        return EnrichmentIdentifiers().withExtra("itunesCollectionId", collectionId.toString())
+        return EnrichmentIdentifiers().with(IdentifierNamespace.ITUNES_COLLECTION, collectionId.toString())
     }
 
     private fun ITunesAlbumResult.toCandidate(): SearchCandidate =

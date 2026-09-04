@@ -5,6 +5,7 @@ import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
+import com.landofoz.musicmeta.IdentifierNamespace
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -99,7 +100,7 @@ class ArtworkMergerTest {
             artwork("wikidata", "https://commons.wikimedia.org/photo.jpg", confidence = 1.0f,
                 identifiers = EnrichmentIdentifiers(wikidataId = "Q123")),
             artwork("deezer", "https://deezer.com/artist.jpg", confidence = 0.8f,
-                identifiers = EnrichmentIdentifiers().withExtra("deezerId", "456")),
+                identifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DEEZER, "456")),
         )
 
         // When - merging the results

@@ -1142,7 +1142,6 @@ public final class com/landofoz/musicmeta/EnrichmentIdentifiers {
 	public static synthetic fun copy$default (Lcom/landofoz/musicmeta/EnrichmentIdentifiers;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;ILjava/lang/Object;)Lcom/landofoz/musicmeta/EnrichmentIdentifiers;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun get (Lcom/landofoz/musicmeta/IdentifierNamespace;)Ljava/lang/String;
-	public final fun get (Ljava/lang/String;)Ljava/lang/String;
 	public final fun getBarcode ()Ljava/lang/String;
 	public final fun getExtra ()Ljava/util/Map;
 	public final fun getIsrc ()Ljava/lang/String;
@@ -1153,7 +1152,6 @@ public final class com/landofoz/musicmeta/EnrichmentIdentifiers {
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 	public final fun with (Lcom/landofoz/musicmeta/IdentifierNamespace;Ljava/lang/String;)Lcom/landofoz/musicmeta/EnrichmentIdentifiers;
-	public final fun withExtra (Ljava/lang/String;Ljava/lang/String;)Lcom/landofoz/musicmeta/EnrichmentIdentifiers;
 }
 
 public synthetic class com/landofoz/musicmeta/EnrichmentIdentifiers$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
@@ -1571,7 +1569,10 @@ public final class com/landofoz/musicmeta/GenreTag$Companion {
 public final class com/landofoz/musicmeta/IdentifierNamespace : java/lang/Enum {
 	public static final field DEEZER Lcom/landofoz/musicmeta/IdentifierNamespace;
 	public static final field DISCOGS_ARTIST Lcom/landofoz/musicmeta/IdentifierNamespace;
+	public static final field DISCOGS_MASTER Lcom/landofoz/musicmeta/IdentifierNamespace;
+	public static final field DISCOGS_RELEASE Lcom/landofoz/musicmeta/IdentifierNamespace;
 	public static final field ITUNES_ARTIST Lcom/landofoz/musicmeta/IdentifierNamespace;
+	public static final field ITUNES_COLLECTION Lcom/landofoz/musicmeta/IdentifierNamespace;
 	public static final field MUSICBRAINZ_ARTIST Lcom/landofoz/musicmeta/IdentifierNamespace;
 	public static final field MUSICBRAINZ_RECORDING Lcom/landofoz/musicmeta/IdentifierNamespace;
 	public static final field MUSICBRAINZ_RELEASE Lcom/landofoz/musicmeta/IdentifierNamespace;

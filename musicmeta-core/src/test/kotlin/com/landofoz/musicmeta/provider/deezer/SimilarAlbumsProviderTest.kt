@@ -5,6 +5,7 @@ import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
+import com.landofoz.musicmeta.IdentifierNamespace
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.testutil.FakeHttpClient
 import kotlinx.coroutines.test.runTest
@@ -201,7 +202,7 @@ class SimilarAlbumsProviderTest {
         httpClient.givenJsonResponse("artist/1002/albums", PORTISHEAD_ALBUMS)
         httpClient.givenJsonResponse("artist/1003/albums", SIGUR_ROS_ALBUMS)
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead").copy(
-            identifiers = EnrichmentIdentifiers().withExtra("deezerId", "399"),
+            identifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DEEZER, "399"),
         )
 
         // When - enriching for similar albums

@@ -8,6 +8,7 @@ import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
+import com.landofoz.musicmeta.IdentifierNamespace
 import com.landofoz.musicmeta.LookupProvenance
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.SearchCandidate
@@ -943,7 +944,7 @@ class DeezerProviderTest {
         // Given - request already has deezerId cached, only radio endpoint needed
         httpClient.givenJsonResponse("artist/399/radio", RADIO_RESPONSE)
         val request = EnrichmentRequest.forArtist("Radiohead").copy(
-            identifiers = EnrichmentIdentifiers().withExtra("deezerId", "399")
+            identifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DEEZER, "399")
         )
 
         // When - enriching for artist radio
@@ -1042,7 +1043,7 @@ class DeezerProviderTest {
         // Given - request has deezerId cached, only direct track endpoint needed
         httpClient.givenJsonResponse("track/789", TRACK_BY_ID_RESPONSE)
         val request = EnrichmentRequest.forTrack("Karma Police", "Radiohead",
-            identifiers = EnrichmentIdentifiers().withExtra("deezerId", "789"),
+            identifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DEEZER, "789"),
         )
 
         // When - enriching for track preview
@@ -1065,7 +1066,7 @@ class DeezerProviderTest {
         val request = EnrichmentRequest.forTrack(
             "Karma Police", "Radiohead",
             identifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-does-not-belong-to-deezer")
-                .withExtra("deezerId", "789"),
+                .with(IdentifierNamespace.DEEZER, "789"),
         )
 
         // When - enriching for track preview
@@ -1083,7 +1084,7 @@ class DeezerProviderTest {
         // wrong; the fetched track's title is wholly unrelated to what was requested
         httpClient.givenJsonResponse("track/789", TRACK_BY_ID_RESPONSE)
         val request = EnrichmentRequest.forTrack("Totally Different Title", "Someone Else",
-            identifiers = EnrichmentIdentifiers().withExtra("deezerId", "789"),
+            identifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DEEZER, "789"),
         )
 
         // When - enriching for track preview by id
@@ -1100,7 +1101,7 @@ class DeezerProviderTest {
         // Given - track exists but has no preview URL
         httpClient.givenJsonResponse("track/789", TRACK_BY_ID_NO_PREVIEW_RESPONSE)
         val request = EnrichmentRequest.forTrack("Karma Police", "Radiohead",
-            identifiers = EnrichmentIdentifiers().withExtra("deezerId", "789"),
+            identifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DEEZER, "789"),
         )
 
         // When - enriching for track preview

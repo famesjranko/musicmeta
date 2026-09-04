@@ -291,7 +291,7 @@ class EnrichmentEngineExtensionsTest {
     @Test fun `trackProfile passes identifiers with deezerId to request`() = runTest {
         // Given - identifiers with a deezerId from a previous top tracks enrichment
         val engine = FakeEngine()
-        val ids = EnrichmentIdentifiers(musicBrainzId = "rec-mbid").withExtra("deezerId", "789")
+        val ids = EnrichmentIdentifiers(musicBrainzId = "rec-mbid").with(IdentifierNamespace.DEEZER, "789")
 
         // When - calling trackProfile with pre-resolved identifiers
         engine.trackProfile("Karma Police", "Radiohead", identifiers = ids)
@@ -304,7 +304,7 @@ class EnrichmentEngineExtensionsTest {
 
     @Test fun `forTrack merges mbid into provided identifiers`() {
         // Given - identifiers with deezerId, plus a separate mbid
-        val ids = EnrichmentIdentifiers().withExtra("deezerId", "789")
+        val ids = EnrichmentIdentifiers().with(IdentifierNamespace.DEEZER, "789")
 
         // When - creating a request with both mbid and identifiers
         val request = EnrichmentRequest.forTrack("Karma Police", "Radiohead", mbid = "override-mbid", identifiers = ids)
@@ -317,7 +317,7 @@ class EnrichmentEngineExtensionsTest {
     @Test fun `artistProfile passes identifiers to request`() = runTest {
         // Given - identifiers carrying a deezerId
         val engine = FakeEngine()
-        val ids = EnrichmentIdentifiers().withExtra("deezerId", "399")
+        val ids = EnrichmentIdentifiers().with(IdentifierNamespace.DEEZER, "399")
 
         // When - calling artistProfile with those pre-resolved identifiers
         engine.artistProfile("Radiohead", identifiers = ids)
@@ -341,7 +341,7 @@ class EnrichmentEngineExtensionsTest {
         // When - resolving preview for a track with deezerId
         val results = engine.resolveTrackPreviews(
             listOf(TrackPreviewRequest("Karma Police", "Radiohead",
-                identifiers = EnrichmentIdentifiers().withExtra("deezerId", "789"))),
+                identifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DEEZER, "789"))),
         )
 
         // Then - preview is returned
