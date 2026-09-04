@@ -16,6 +16,7 @@ import com.landofoz.musicmeta.provider.lrclib.LrcLibProvider
 import com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzProvider
 import com.landofoz.musicmeta.provider.wikidata.WikidataProvider
 import com.landofoz.musicmeta.provider.wikipedia.WikipediaProvider
+import com.landofoz.musicmeta.testutil.assertNotDrift
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
 import org.junit.Assume
@@ -117,9 +118,9 @@ class RealApiEndToEndTest {
         val result = engine.enrich(request, setOf(EnrichmentType.ALBUM_ART))
 
         // Then - artwork URL returned via HTTP
-        val art = result.raw[EnrichmentType.ALBUM_ART]
-        assertTrue("Should find album art", art is EnrichmentResult.Success)
-        val artwork = (art as EnrichmentResult.Success).data as EnrichmentData.Artwork
+        val art = assertNotDrift("OK Computer album art", result.raw[EnrichmentType.ALBUM_ART])
+            ?: return@runBlocking
+        val artwork = art.data as EnrichmentData.Artwork
         assertTrue("URL should be HTTP", artwork.url.startsWith("http"))
         println("  Artwork URL: ${artwork.url}")
         println("  Provider: ${art.provider}")
@@ -163,9 +164,9 @@ class RealApiEndToEndTest {
         val result = engine.enrich(request, setOf(EnrichmentType.ARTIST_BIO))
 
         // Then - biography text mentioning "English" with Wikipedia as source
-        val bio = result.raw[EnrichmentType.ARTIST_BIO]
-        assertTrue("Should find biography", bio is EnrichmentResult.Success)
-        val biography = (bio as EnrichmentResult.Success).data as EnrichmentData.Biography
+        val bio = assertNotDrift("Radiohead biography", result.raw[EnrichmentType.ARTIST_BIO])
+            ?: return@runBlocking
+        val biography = bio.data as EnrichmentData.Biography
         assertTrue("Bio should mention English", biography.text.contains("English"))
         assertEquals("Source should be Wikipedia", "Wikipedia", biography.source)
         println("  Bio: ${biography.text.take(100)}...")
@@ -180,9 +181,9 @@ class RealApiEndToEndTest {
         val result = engine.enrich(request, setOf(EnrichmentType.ARTIST_BIO))
 
         // Then - biography found via the Wikidata→Wikipedia sitelink path
-        val bio = result.raw[EnrichmentType.ARTIST_BIO]
-        assertTrue("Should find Air biography via Wikidata sitelinks", bio is EnrichmentResult.Success)
-        val biography = (bio as EnrichmentResult.Success).data as EnrichmentData.Biography
+        val bio = assertNotDrift("Air biography via Wikidata sitelinks", result.raw[EnrichmentType.ARTIST_BIO])
+            ?: return@runBlocking
+        val biography = bio.data as EnrichmentData.Biography
         assertTrue("Bio should mention French", biography.text.contains("French"))
         println("  Bio: ${biography.text.take(100)}...")
     }
@@ -251,9 +252,9 @@ class RealApiEndToEndTest {
         val result = deezerOnly.enrich(request, setOf(EnrichmentType.ALBUM_ART))
 
         // Then - artwork URL from Deezer CDN
-        val art = result.raw[EnrichmentType.ALBUM_ART]
-        assertTrue("Deezer should find album art", art is EnrichmentResult.Success)
-        val artwork = (art as EnrichmentResult.Success).data as EnrichmentData.Artwork
+        val art = assertNotDrift("Deezer album art", result.raw[EnrichmentType.ALBUM_ART])
+            ?: return@runBlocking
+        val artwork = art.data as EnrichmentData.Artwork
         assertTrue("URL should be Deezer CDN", artwork.url.contains("dzcdn"))
         println("  Deezer artwork: ${artwork.url}")
     }
@@ -273,9 +274,9 @@ class RealApiEndToEndTest {
         val result = itunesOnly.enrich(request, setOf(EnrichmentType.ALBUM_ART))
 
         // Then - artwork URL upscaled to 1200x1200
-        val art = result.raw[EnrichmentType.ALBUM_ART]
-        assertTrue("iTunes should find album art", art is EnrichmentResult.Success)
-        val artwork = (art as EnrichmentResult.Success).data as EnrichmentData.Artwork
+        val art = assertNotDrift("iTunes album art", result.raw[EnrichmentType.ALBUM_ART])
+            ?: return@runBlocking
+        val artwork = art.data as EnrichmentData.Artwork
         assertTrue("URL should be upscaled to 1200", artwork.url.contains("1200x1200"))
         println("  iTunes artwork: ${artwork.url}")
     }
@@ -319,8 +320,8 @@ class RealApiEndToEndTest {
         println("  Type: ${resolution.metadata?.releaseType}")
         println("  Country: ${resolution.metadata?.country}")
 
-        val art = result.raw[EnrichmentType.ALBUM_ART]
-        assertTrue("Should have artwork", art is EnrichmentResult.Success)
+        val art = assertNotDrift("OK Computer album art", result.raw[EnrichmentType.ALBUM_ART])
+        println("  Artwork provider: ${art?.provider ?: "shed"}")
     }
 
     @Test
@@ -344,10 +345,9 @@ class RealApiEndToEndTest {
             println("    $type: $status")
         }
 
-        val bio = result.raw[EnrichmentType.ARTIST_BIO]
-        assertTrue("Should have biography", bio is EnrichmentResult.Success)
-        val biography = (bio as EnrichmentResult.Success).data as EnrichmentData.Biography
-        println("  Bio: ${biography.text.take(120)}...")
+        val bio = assertNotDrift("Pink Floyd biography", result.raw[EnrichmentType.ARTIST_BIO])
+            ?: return@runBlocking
+        println("  Bio: ${(bio.data as EnrichmentData.Biography).text.take(120)}...")
     }
 
     // --- Search ---

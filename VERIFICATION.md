@@ -74,6 +74,15 @@ than it looks like, each learned the hard way.
   against live data are exercised only by the e2e suite, which is now `workflow_dispatch` only and
   therefore runs when somebody remembers to press the button.
 
+- **A red e2e run means an upstream answered, not that one was unreachable.** Its assertions accept
+  a `Success`, a `RateLimited`, and an `Error` of kind `NETWORK`, `RATE_LIMIT` or `TIMEOUT`: a
+  request that never reached the upstream says nothing about that upstream, and a ~380-request live
+  run meets several of them every time. They fail on `NotFound`, which is the upstream saying the
+  entity is gone, and on every other error kind, which is it answering in a way the mapper could not
+  read. What that gives up is availability — the suite can no longer tell you a provider is down,
+  and a run in which every request was shed is green having checked nothing, so read the run log for
+  the `shed (…)` lines before treating a green as coverage.
+
 - **`!!` on a Java platform type is invisible to detekt.** Measured with a three-cell probe: detekt
   catches `!!` on a nullable receiver (`UnsafeCallOnNullableType`) and on a definitely-non-null one
   (`UnnecessaryNotNullOperator`), and catches **neither** on `System.getProperty("x")!!`, because

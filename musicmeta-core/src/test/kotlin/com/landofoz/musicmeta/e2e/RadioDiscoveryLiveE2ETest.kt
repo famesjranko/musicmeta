@@ -6,8 +6,8 @@ import com.landofoz.musicmeta.EnrichmentConfig
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentEngine
 import com.landofoz.musicmeta.EnrichmentRequest
-import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
+import com.landofoz.musicmeta.testutil.assertNotDrift
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
@@ -49,8 +49,8 @@ class RadioDiscoveryLiveE2ETest {
         val result = engine.enrich(EnrichmentRequest.forArtist("Radiohead"), setOf(type)).raw[type]
 
         // Then - a Success carrying tracks the parser built from today's payload, not an empty one
-        assertTrue("expected Success for LB Radio, got $result", result is EnrichmentResult.Success)
-        val tracks = ((result as EnrichmentResult.Success).data as EnrichmentData.RadioPlaylist).tracks
+        val success = assertNotDrift("LB Radio for Radiohead", result) ?: return@runBlocking
+        val tracks = (success.data as EnrichmentData.RadioPlaylist).tracks
         assertTrue("a Success with no tracks would have been NotFound", tracks.isNotEmpty())
         tracks.forEach { track ->
             assertTrue("a track came back with a blank title", track.title.isNotBlank())
