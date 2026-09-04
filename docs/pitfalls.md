@@ -424,6 +424,15 @@ siblings.
   record whose correct value you already know and confirm the field *moves*; a value that never
   varies is describing the request, not the entity.
 
+- An upstream's own alias can name a **different act**, so an alias is corroboration for a
+  candidate that came back, never a query to send. Measured on 15 non-Latin requests: rewriting the
+  search term to MusicBrainz's highest-tier Latin alias of فيروز ("Feyruz") returned a Turkish pop
+  singer from both Deezer and iTunes — two wrong matches that verifying the *returned* candidates
+  against the same pool does not make, because each provider's own search for فيروز ranks the
+  Lebanese Fairuz first. The same rewrite also loses matches that already worked: a search for
+  "Kino" is not a search for "Кино", and Deezer holds the band under the Cyrillic name. Widen what
+  a match is allowed to be; never widen what is asked for.
+
 ## 3. `org.json` returns a default for a missing key — it does not fail
 
 ```kotlin

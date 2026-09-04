@@ -32,7 +32,7 @@ class DiscogsApiSearchArtistTest {
         httpClient.givenJsonResponse("type=artist", BAD_COMPANY_LIVE)
 
         // When - searching for the artist
-        val result = api.searchArtist("Bad Company")
+        val result = api.searchArtist("Bad Company")?.value
 
         // Then - stripping " (n)" puts both at the same name rank, so Discogs's own order settles
         // it and the rock band is kept. Ranking the bare name higher would return 2017.
@@ -46,7 +46,7 @@ class DiscogsApiSearchArtistTest {
         httpClient.givenJsonResponse("type=artist", GIRLS_LIVE)
 
         // When - searching for the artist
-        val result = api.searchArtist("Girls")
+        val result = api.searchArtist("Girls")?.value
 
         // Then - the indie band is selected. Stripping the suffix is what makes that a *decisive*
         // same-name match rather than one containment match among four, but this fixture does not
@@ -62,7 +62,7 @@ class DiscogsApiSearchArtistTest {
         httpClient.givenJsonResponse("type=artist", WRONG_NAME_FIRST)
 
         // When - searching for the artist
-        val result = api.searchArtist("Autechre")
+        val result = api.searchArtist("Autechre")?.value
 
         // Then - result order does not decide it, the name does
         assertEquals(7777L, result)
@@ -74,7 +74,7 @@ class DiscogsApiSearchArtistTest {
         httpClient.givenJsonResponse("type=artist", LOOSE_MATCH_FIRST)
 
         // When - searching for the artist
-        val result = api.searchArtist("Radiohead")
+        val result = api.searchArtist("Radiohead")?.value
 
         // Then - name quality is ranked, not just filtered
         assertEquals(399L, result)
@@ -86,7 +86,7 @@ class DiscogsApiSearchArtistTest {
         httpClient.givenJsonResponse("type=artist", NO_NAME_MATCH)
 
         // When - searching for the artist
-        val result = api.searchArtist("Autechre")
+        val result = api.searchArtist("Autechre")?.value
 
         // Then - no wrong artist is returned in place of a real miss
         assertNull(result)
@@ -98,7 +98,7 @@ class DiscogsApiSearchArtistTest {
         httpClient.givenJsonResponse("type=artist", MALFORMED_ELEMENT_FIRST)
 
         // When - searching for the artist
-        val result = api.searchArtist("Radiohead")
+        val result = api.searchArtist("Radiohead")?.value
 
         // Then - it is skipped, not thrown: a JSONException here would surface as Error and
         // open the circuit breaker against a healthy Discogs (docs/pitfalls.md §4)

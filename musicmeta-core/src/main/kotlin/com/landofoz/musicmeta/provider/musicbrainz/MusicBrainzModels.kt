@@ -32,6 +32,8 @@ internal data class MusicBrainzRelease(
      * the first.
      */
     val artistCredits: List<String> = emptyList(),
+    /** Each credited artist's MBID, in credit order — the entity an alias pool is read off. */
+    val artistCreditIds: List<String> = emptyList(),
     /** MusicBrainz's release status (`"Official"`, `"Bootleg"`, `"Promotion"`, `"Pseudo-Release"`, …), used by [MusicBrainzReleaseRanking]. */
     val status: String? = null,
     /** The release group's secondary types (`"Live"`, `"Compilation"`, `"Remix"`, `"Soundtrack"`, …), used by [MusicBrainzReleaseRanking]. */
@@ -162,6 +164,8 @@ internal data class MusicBrainzRecording(
     val isVideo: Boolean = false,
     /** Each credited artist's name individually — same shape and purpose as [MusicBrainzRelease.artistCredits]. */
     val artistCredits: List<String> = emptyList(),
+    /** Each credited artist's MBID — same shape and purpose as [MusicBrainzRelease.artistCreditIds]. */
+    val artistCreditIds: List<String> = emptyList(),
 )
 
 internal data class MusicBrainzBandMember(

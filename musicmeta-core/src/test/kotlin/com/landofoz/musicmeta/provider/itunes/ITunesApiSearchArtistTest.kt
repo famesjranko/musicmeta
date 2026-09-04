@@ -30,7 +30,7 @@ class ITunesApiSearchArtistTest {
         httpClient.givenJsonResponse("entity=musicArtist", NIRVANA_LIVE)
 
         // When - searching for the artist
-        val result = api.searchArtist("Nirvana")
+        val result = api.searchArtist("Nirvana")?.value
 
         // Then - hit 0 is kept; the fix narrows the old behaviour, it does not re-rank it
         assertEquals(112018L, result)
@@ -42,7 +42,7 @@ class ITunesApiSearchArtistTest {
         httpClient.givenJsonResponse("entity=musicArtist", WRONG_NAME_FIRST)
 
         // When - searching for the artist
-        val result = api.searchArtist("Autechre")
+        val result = api.searchArtist("Autechre")?.value
 
         // Then - result order does not decide it, the name does
         assertEquals(7777L, result)
@@ -54,7 +54,7 @@ class ITunesApiSearchArtistTest {
         httpClient.givenJsonResponse("entity=musicArtist", LOOSE_MATCH_FIRST)
 
         // When - searching for the artist
-        val result = api.searchArtist("Radiohead")
+        val result = api.searchArtist("Radiohead")?.value
 
         // Then - name quality is ranked, not just filtered
         assertEquals(399L, result)
@@ -66,7 +66,7 @@ class ITunesApiSearchArtistTest {
         httpClient.givenJsonResponse("entity=musicArtist", NO_NAME_MATCH)
 
         // When - searching for the artist
-        val result = api.searchArtist("Autechre")
+        val result = api.searchArtist("Autechre")?.value
 
         // Then - no wrong artist is returned in place of a real miss
         assertNull(result)
@@ -78,7 +78,7 @@ class ITunesApiSearchArtistTest {
         httpClient.givenJsonResponse("entity=musicArtist", MALFORMED_ELEMENT_FIRST)
 
         // When - searching for the artist
-        val result = api.searchArtist("Radiohead")
+        val result = api.searchArtist("Radiohead")?.value
 
         // Then - it is skipped, not thrown: a JSONException here would surface as Error and
         // open the circuit breaker against a healthy iTunes (docs/pitfalls.md §4)

@@ -79,6 +79,7 @@ internal object MusicBrainzParser {
             title = obj.getString("title"),
             artistCredit = extractArtistCredit(obj),
             artistCredits = extractArtistCreditNames(obj),
+            artistCreditIds = extractArtistCreditIds(obj),
             date = obj.optString("date").takeIf { it.isNotBlank() },
             country = obj.optString("country").takeIf { it.isNotBlank() },
             barcode = obj.optString("barcode").takeIf { it.isNotBlank() },
@@ -157,6 +158,7 @@ internal object MusicBrainzParser {
             disambiguation = obj.optString("disambiguation").takeIf { it.isNotBlank() },
             artistCredit = extractArtistCredit(obj),
             artistCredits = extractArtistCreditNames(obj),
+            artistCreditIds = extractArtistCreditIds(obj),
             hasOfficialAlbumRelease = findStrictOfficialAlbumReleaseGroup(obj) != null,
             artReleaseGroupId = artReleaseGroup?.optString("id")?.takeIf { it.isNotBlank() },
             artReleaseGroupTitle = artReleaseGroup?.optString("title")?.takeIf { it.isNotBlank() },
@@ -384,6 +386,18 @@ internal object MusicBrainzParser {
             result.add(MusicBrainzUrlRelation(type = type, url = url))
         }
         return result
+    }
+
+    /**
+     * Each credited artist's MBID, in credit order. Present on every response carrying an
+     * `artist-credit` array — a search hit as well as a lookup — because the array embeds the
+     * artist stub, not a reference to it.
+     */
+    internal fun extractArtistCreditIds(obj: JSONObject): List<String> {
+        val credits = obj.optJSONArray("artist-credit") ?: return emptyList()
+        return (0 until credits.length()).mapNotNull { i ->
+            credits.optJSONObject(i)?.optJSONObject("artist")?.optString("id")?.takeIf { it.isNotBlank() }
+        }
     }
 
     internal fun extractArtistCredit(obj: JSONObject): String? {

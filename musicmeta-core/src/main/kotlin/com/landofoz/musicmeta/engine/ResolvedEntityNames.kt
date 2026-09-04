@@ -1,6 +1,10 @@
 package com.landofoz.musicmeta.engine
 
 import com.landofoz.musicmeta.EnrichmentRequest
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.coroutines.AbstractCoroutineContextElement
 import kotlin.coroutines.CoroutineContext
@@ -33,8 +37,54 @@ internal class ResolvedEntityNames : AbstractCoroutineContextElement(Key) {
     /** What identity resolution named, or null when it named nothing this call. */
     fun resolved(): EntityNames? = names.get()
 
+    /**
+     * Records how this call's alias pool can be obtained, unless a source is already recorded —
+     * first-write-wins for the same reason [offer] is.
+     *
+     * A source rather than a list because obtaining the pool is free on some resolution paths and
+     * costs a lookup on others, and only a matcher that has already failed on the requested name
+     * can say whether it is worth paying for. [aliases] is what decides that, once per call.
+     */
+    fun offerAliases(source: suspend () -> List<AlternativeName>) {
+        aliasSource.compareAndSet(null, source)
+    }
+
+    /**
+     * The alternative names identity resolution holds for this call's entity, resolving the source
+     * on first read and reusing that answer afterwards — however many providers and candidates ask.
+     *
+     * Empty when nothing offered a source, and empty when the source failed: an alias pool is
+     * corroboration, so a provider that cannot get one falls back to matching on the requested name
+     * alone rather than failing the type. Cancellation still propagates.
+     */
+    // SwallowedException: the degrade above is the contract; the exception has no second reader.
+    @Suppress("SwallowedException")
+    suspend fun aliases(): List<AlternativeName> {
+        resolvedAliases.get()?.let { return it }
+        val source = aliasSource.get() ?: return emptyList()
+        return aliasLock.withLock {
+            resolvedAliases.get() ?: try {
+                source().also { resolvedAliases.set(it) }
+            } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
+                emptyList()
+            }
+        }
+    }
+
+    private val aliasSource = AtomicReference<(suspend () -> List<AlternativeName>)?>(null)
+    private val resolvedAliases = AtomicReference<List<AlternativeName>?>(null)
+    private val aliasLock = Mutex()
+
     internal companion object Key : CoroutineContext.Key<ResolvedEntityNames>
 }
+
+/**
+ * The alias pool this call's identity resolution holds, or empty outside an engine call and for a
+ * request nothing offered a pool for.
+ */
+internal suspend fun resolvedAliasPool(): List<AlternativeName> =
+    currentCoroutineContext()[ResolvedEntityNames]?.aliases().orEmpty()
 
 /**
  * [request] with each blank name field filled from [names].

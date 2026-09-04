@@ -143,6 +143,25 @@ supplies an entity, not an identifier — so read the status before trusting tha
 pass it to the next call. `CREDITS` and `RELEASE_EDITIONS` have no name route to recover by, so they
 answer `NotFound` instead of falling back.
 
+**A provider's candidates are verified against the names identity resolution found, not only the
+one you asked with.** Deezer, iTunes and Discogs search by name, and a catalogue that carries an
+artist only under a romanization answers a request written in another script with candidates whose
+names cannot be compared to it — a request for 東京事変 is answered with "Tokyo Jihen". Every
+name-search provider first matches on the name the request carries, unchanged; only when that
+accepts nothing does it consult the alias pool MusicBrainz holds for the resolved entity, and a
+candidate is accepted there only as the *same* name as one of those aliases, never by containment or
+partial overlap. A candidate no known name form matches is still rejected. The query sent upstream is
+always the caller's own string: rewriting it to a romanization picks whatever that spelling ranks
+first, which is a different artist often enough to matter.
+
+Confidence records which of the two verified it. A hit under the requested name reports exactly the
+score it always has; one verified through the pool is scaled by the alias's tier — 0.95 for a name
+the entity is published under, 0.85 for any other alias — so a cross-script match is never reported
+as confidently as a direct one. The pool costs a MusicBrainz lookup only for an album or track
+request whose provider matching has already failed on the requested name; on an artist request it
+rides on the search identity resolution has already made, and a request whose providers match
+directly never pays for it at all.
+
 ### Type discovery: what a bare MBID names
 
 `EnrichmentEngine.discoverMbidEntityType(mbid)` answers `RECORDING`, `RELEASE`, `ARTIST` or nothing, so a consumer holding an identifier can build the right request. MusicBrainz has no endpoint that takes an id without its type — a wrong-type lookup answers 404, exactly as the right type does for an id it no longer holds — so the answer is a probe of the three types in order: **recording, then release, then artist**. That costs 1 request for a recording, 2 for a release, 3 for an artist and 3 for a dead id, on a 1 req/s limiter; the counts are asserted in `MusicBrainzEntityTypeDiscoveryTest`. Recording leads because that is where third-party identifiers come from. Each probe shares the enricher's per-call memo, so discovery inside an `enrich()` that already looked the entity up is free, and a miss is paid for once per call. It is an interface method whose default throws — an engine with no MusicBrainz identity provider has nothing to probe — so an engine that wraps another must forward it, or the call reaches that default instead of the engine underneath.

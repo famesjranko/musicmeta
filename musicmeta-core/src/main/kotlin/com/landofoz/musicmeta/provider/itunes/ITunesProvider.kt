@@ -13,7 +13,9 @@ import com.landofoz.musicmeta.engine.AlbumMatch
 import com.landofoz.musicmeta.engine.ArtistMatcher
 import com.landofoz.musicmeta.engine.CallMemo
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
+import com.landofoz.musicmeta.engine.NameMatchTier
 import com.landofoz.musicmeta.engine.ProviderCallScope
+import com.landofoz.musicmeta.engine.artistNameTier
 import com.landofoz.musicmeta.engine.trustedProviderIdentifier
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
@@ -49,9 +51,11 @@ public class ITunesProvider(
      * the search paths use ([ArtistMatcher]) before accepting a candidate. No match among the
      * candidates is a genuine miss, not a reason to fall back to search.
      */
-    private suspend fun lookupByBarcode(barcode: String, artist: String): ITunesAlbumResult? =
-        callState().upcLookups.get(barcode) { api.lookupByUpc(barcode) }
-            .firstOrNull { ArtistMatcher.isMatch(artist, it.artistName) }
+    private suspend fun lookupByBarcode(barcode: String, artist: String): ITunesAlbumResult? {
+        val candidates = callState().upcLookups.get(barcode) { api.lookupByUpc(barcode) }
+        return candidates.firstOrNull { ArtistMatcher.isMatch(artist, it.artistName) }
+            ?: candidates.firstOrNull { artistNameTier(artist, it.artistName) != null }
+    }
 
     override val id: String = "itunes"
     override val displayName: String = "iTunes"
@@ -135,8 +139,9 @@ public class ITunesProvider(
 
             // Fall back to the shared name-search selection, so a call also asking ALBUM_ART or
             // ALBUM_METADATA resolves the same collection instead of ranking its own.
-            val albumResult = callState().albumScope.resolveAlbum(request)?.candidate
+            val albumMatch = callState().albumScope.resolveAlbum(request)
                 ?: return EnrichmentResult.NotFound(type, id)
+            val albumResult = albumMatch.candidate
 
             val searchedCollectionId = albumResult.collectionId.takeIf { it > 0 }
                 ?: return EnrichmentResult.NotFound(type, id)
@@ -149,7 +154,7 @@ public class ITunesProvider(
                 type = type,
                 data = ITunesMapper.toTracklist(tracks),
                 provider = id,
-                confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
+                confidence = verifiedArtistConfidence(albumMatch.nameTier),
                 resolvedIdentifiers = resolvedIdentifiers,
             )
         } catch (e: Exception) {
@@ -169,8 +174,9 @@ public class ITunesProvider(
             // Try direct lookup if artistId is already stored, else search — kept as two branches
             // (not one Elvis chain) so the id-versus-search distinction survives to provenance below.
             val storedArtistId = trustedProviderIdentifier(request, type)?.value?.toLongOrNull()
+            val searchMatch = if (storedArtistId == null) api.searchArtist(request.name) else null
             val artistId = storedArtistId
-                ?: api.searchArtist(request.name)
+                ?: searchMatch?.value
                 ?: return EnrichmentResult.NotFound(type, id)
 
             val albums = api.lookupArtistAlbums(artistId)
@@ -180,7 +186,7 @@ public class ITunesProvider(
                 type = type,
                 data = ITunesMapper.toDiscography(albums),
                 provider = id,
-                confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
+                confidence = verifiedArtistConfidence(searchMatch?.tier ?: NameMatchTier.CANONICAL),
                 resolvedIdentifiers = EnrichmentIdentifiers()
                     .with(IdentifierNamespace.ITUNES_ARTIST, artistId.toString()),
                 provenance = if (storedArtistId != null) LookupProvenance.PROVIDER_NATIVE_ID else null,
@@ -224,19 +230,28 @@ public class ITunesProvider(
             }
         }
 
-        val result = try {
-            callState().albumScope.resolveAlbum(albumRequest)?.candidate
+        val match = try {
+            callState().albumScope.resolveAlbum(albumRequest)
         } catch (e: Exception) {
             currentCoroutineContext().ensureActive()
             return mapError(type, e)
         } ?: return EnrichmentResult.NotFound(type, id)
+        val result = match.candidate
 
-        val confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true)
+        val confidence = verifiedArtistConfidence(match.nameTier)
         return when (type) {
             EnrichmentType.ALBUM_METADATA -> enrichAlbumMetadata(result, type, confidence, null, provenance = null)
             else -> enrichAlbumArt(result, type, confidence, null, provenance = null)
         }
     }
+
+    /**
+     * The confidence a verified name-search hit reports: today's value for a hit under the
+     * requested name ([NameMatchTier.CANONICAL] scales by 1.0), scaled down when the alias pool is
+     * what verified it.
+     */
+    private fun verifiedArtistConfidence(tier: NameMatchTier): Float =
+        ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true) * tier.confidenceFactor
 
     private fun enrichAlbumMetadata(
         result: ITunesAlbumResult,
