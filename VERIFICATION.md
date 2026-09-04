@@ -94,20 +94,32 @@ than it looks like, each learned the hard way.
   and a run in which every request was shed is green having checked nothing, so read the run log for
   the `shed (…)` lines before treating a green as coverage.
 
-- **The provider availability trend gates nothing, and nothing schedules it.**
-  `scripts/probes/provider-transient-probe.sh` appends per-kind counts to
-  `scripts/probes/provider-availability-counts.csv` when given `COUNTS_FILE`, and
-  `scripts/checks/check_availability_trend.py` flags a provider at or above 3 failures in 20
-  requests on the two most recent runs. Neither runs on `./check` — only the check's self-test does
-  — and neither runs in CI: `main`'s ruleset requires a pull request with no bypass actors, so a
-  scheduled job cannot commit its own row, and a run measured from a GitHub runner would be a
-  different network's egress mixed into one series anyway. The trend therefore advances only when
-  somebody runs the probe by hand, from the same machine as the rows before it, and a gap in the
-  file is a gap in the measurement rather than a healthy fortnight. The counts are what the check
-  reads, so a header-only file, an unknown kind, counts that do not sum to their total or runs out
-  of append order all fail rather than reporting zero failures — a trend watch that read nothing
-  must never look healthy. What the file does *not* hold: the three keyed providers, which the
-  probe excludes on purpose so no credential reaches its output.
+- **The provider availability trend gates nothing, and the series that is scheduled cannot yet
+  judge anything.** `scripts/probes/provider-transient-probe.sh` appends per-kind counts to a counts
+  file when given `COUNTS_FILE`, and `scripts/checks/check_availability_trend.py` flags a provider
+  at or above a threshold share on the two most recent runs. Neither runs on `./check` — only the
+  check's self-test does. There are **two series, and they are not comparable**: availability
+  measured from a GitHub runner is that runner's egress as much as the upstream's.
+  - *The laptop series*, `scripts/probes/provider-availability-counts.csv` on `main`, carries the
+    only threshold anyone has derived — 3 failures in 20, from a 4.4% baseline measured on one
+    machine on one day. Nothing schedules it: `main`'s ruleset requires a pull request and has no
+    bypass actors, so no job can commit to it. It advances only when somebody runs the probe by
+    hand from the same machine as the rows before it, and a gap in the file is a gap in the
+    measurement rather than a healthy fortnight.
+  - *The runner series* is written weekly by `.github/workflows/availability-trend.yml` to its own
+    branch, which is outside that ruleset and so is writable by the job. **It has no baseline.** The
+    threshold above was not measured on a GitHub runner and is not transferable, so the job runs the
+    check with `--collect-only`: it reports which providers would have been flagged, as notices, and
+    fails on none of them. Until somebody derives a baseline from the collected rows — the recipe is
+    in the workflow's own comment, and the check names the run count it needs — a degrading provider
+    is visible in that series only to a person reading it. That is the gap, and it closes by
+    measurement, not by code.
+
+  In both series the counts are what the check reads, so a header-only file, an unknown kind, counts
+  that do not sum to their total or runs out of append order all fail rather than reporting zero
+  failures — including under `--collect-only`, because a trend watch that read nothing must never
+  look healthy. What neither file holds: the three keyed providers, which the probe excludes on
+  purpose so no credential reaches its output.
 
 - **`!!` on a Java platform type is invisible to detekt.** Measured with a three-cell probe: detekt
   catches `!!` on a nullable receiver (`UnsafeCallOnNullableType`) and on a definitely-non-null one
