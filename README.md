@@ -198,7 +198,8 @@ To consume a local checkout instead, see [docs/project/workflow.md](docs/project
 
 | Document | Purpose |
 |----------|---------|
-| [docs/guides/](docs/guides/README.md) | Developer guides: quick start, identity resolution, results & errors, streaming, cache management, configuration, extension points, Android |
+| [docs/guides/](docs/guides/README.md) | Developer guides: quick start, identity resolution, results & errors, streaming, cache management, configuration, extension points, Android, migration |
+| [docs/guides/migration.md](docs/guides/migration.md) | Every break since 0.10.0, grouped by version, with the edit each one asks of you |
 | [docs/how-it-works.md](docs/how-it-works.md) | Complete pipeline trace, from `enrich()` call to results |
 | [docs/glossary.md](docs/glossary.md) | One word per concept, and each upstream's word for the same thing, plus what `musicBrainzId` means on each request kind |
 | [docs/providers.md](docs/providers.md) | Per-provider upstream docs, terms and attribution, User-Agent requirements and rate limits, plus contributor notes on what each provider returns that we drop |

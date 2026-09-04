@@ -56,10 +56,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `EnrichmentIdentifiers.get(String)`/`withExtra(String, String)` go: use `get(IdentifierNamespace)`/`with(...)`; new `DISCOGS_RELEASE`, `DISCOGS_MASTER`, `ITUNES_COLLECTION` keep the wire keys
 - `EnrichmentEngine` gains `discoverMbidEntityType`, a defaulted method: a custom implementation built against an older `.jar` throws `AbstractMethodError` on first call until recompiled
 - The top-level `discoverMbidEntityType` extension is removed, superseded by that member: drop `import com.landofoz.musicmeta.discoverMbidEntityType`; an old `.jar` throws `NoSuchMethodError`
+- `EnrichmentRequest.forAlbum`'s pre-`trackCount`/`year` overload is removed: source is unaffected (both default), but a `.jar` compiled against 0.12.0 throws `NoSuchMethodError` until recompiled
 
 ### Added
+- `docs/guides/migration.md`: every break since 0.10.0 grouped by version, each with the edit it asks of you and a before/after pair; linked from the README documentation table
 - `enrichDeadlineRemainingMs()`: what is left of the enclosing `enrich()` deadline, for a custom `HttpClient` to clamp its transport timeouts down to; null outside an enrich call
-- `EnrichmentRequest.forAlbum` gains `trackCount` and `year`, the fields `ForAlbum` always had: providers pick between editions with them; the old signature is kept, so no recompile
+- `EnrichmentRequest.forAlbum` gains `trackCount` and `year`, the fields `ForAlbum` always had: providers pick between editions with them; leave them null when the value is uncertain
 - `EnrichmentEngine.enrichProgressive`: `enrich()`'s cumulative-snapshot streaming counterpart — each emission is everything settled so far; derive what's pending as `requestedTypes - raw.keys`
 - `enrichProgressive`'s cancellation is complete-and-cache: a cancelled collector detaches, the fan-out keeps running to completion and still writes back, bounded to one run per distinct request key
 - `EnrichmentEngine.close()` (defaulted no-op): releases the scope backing `enrichProgressive`'s detachment; call it once done with an engine to abandon a still-running detached fan-out

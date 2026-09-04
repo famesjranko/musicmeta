@@ -1,8 +1,8 @@
 package com.landofoz.musicmeta
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -26,20 +26,17 @@ class EnrichmentRequestAlbumEvidenceTest {
     }
 
     @Test
-    fun `the pre-evidence factory method is still on the class for an old jar to link`() {
-        // Given - the JVM signature a consumer compiled before trackCount and year existed calls
+    fun `the pre-evidence factory method is gone, so no deprecated overload ships`() {
+        // Given - the JVM signature a consumer compiled before trackCount and year existed called
         val old = arrayOf(
             String::class.java, String::class.java, String::class.java, EnrichmentIdentifiers::class.java,
         )
 
         // When - looking it up the way the JVM resolves a call from already-compiled bytecode
-        val method = EnrichmentRequest.Companion::class.java.getDeclaredMethod("forAlbum", *old)
+        val lookup = runCatching { EnrichmentRequest.Companion::class.java.getDeclaredMethod("forAlbum", *old) }
 
-        // Then - it is still there, so the old call links instead of throwing NoSuchMethodError
-        assertNotNull(method)
-        val built = method.invoke(EnrichmentRequest.Companion, "OK Computer", "Radiohead", null, null)
-        assertEquals("OK Computer", (built as EnrichmentRequest.ForAlbum).title)
-        assertNull(built.trackCount)
+        // Then - it is absent: the shim was withdrawn, so that old call now fails to link
+        assertTrue(lookup.exceptionOrNull() is NoSuchMethodException)
     }
 
     @Test
