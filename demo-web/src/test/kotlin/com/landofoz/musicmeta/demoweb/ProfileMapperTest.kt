@@ -604,6 +604,29 @@ class ProfileMapperTest {
     }
 
     @Test
+    fun `discography groups a Remastered Version edition with its base album`() {
+        // Given - two entries for the same album, one qualified "(Remastered Version)"
+        val results = resultsOf(
+            EnrichmentType.ARTIST_DISCOGRAPHY to EnrichmentData.Discography(
+                albums = listOf(
+                    DiscographyAlbum(title = "Ride The Lightning", year = "1984", type = "album"),
+                    DiscographyAlbum(title = "Ride The Lightning (Remastered Version)", year = "2016", type = "album"),
+                ),
+            ),
+        )
+        val profile = ArtistProfile(name = "Metallica", results = results)
+
+        // When - mapping to a demo response
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        // Then - the qualifier classifies, so both editions collapse into the base album's row
+        val discography = response.sections.first { it.key == "discography" }
+        assertEquals(1, discography.items.size)
+        assertEquals("Ride The Lightning", discography.items.first().primary)
+        assertEquals("album · 2 editions", discography.items.first().meta)
+    }
+
+    @Test
     fun `discography picks the earliest year across editions`() {
         // Given - three editions of the same album spanning two years, 2025 and 1996
         val results = resultsOf(

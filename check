@@ -101,6 +101,9 @@ python3 scripts/checks/check_provider_call_scope.py
 step "public vocabulary"
 python3 scripts/checks/check_public_vocabulary.py
 
+step "edition vocabulary"
+python3 scripts/checks/check_edition_vocabulary.py
+
 step "release coordinates"
 # The version is declared once in gradle.properties and repeated in four docs. Read on every commit
 # rather than at release time: the ROADMAP prose went a full release stale and sat unnoticed for
