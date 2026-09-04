@@ -233,7 +233,7 @@ public data class BandMember(
 @Serializable
 public data class DiscographyAlbum(
     val title: String,
-    val year: String? = null,
+    val year: Int? = null,
     val type: String? = null,
     val thumbnailUrl: String? = null,
     val identifiers: EnrichmentIdentifiers = EnrichmentIdentifiers(),

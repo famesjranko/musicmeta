@@ -41,7 +41,7 @@ class AttributionMappingTest {
 
     private fun discography(): EnrichmentData.Discography =
         EnrichmentData.Discography(
-            albums = listOf(DiscographyAlbum(title = "Master of Puppets", year = "1986")),
+            albums = listOf(DiscographyAlbum(title = "Master of Puppets", year = 1986)),
         )
 
     private fun sectionCredits(response: DemoResponse, key: String): List<SourceCredit> =

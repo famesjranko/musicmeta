@@ -72,7 +72,7 @@ fun ArtistProfile.toDemoResponse(elapsedMs: Long, pending: Set<EnrichmentType> =
             r.discography()?.albums?.let { DiscographyGrouping.group(it) }?.map {
                 SectionItem(
                     primary = it.displayTitle,
-                    secondary = it.year,
+                    secondary = it.year?.toString(),
                     imageUrl = it.thumbnailUrl,
                     meta = listOfNotNull(it.type, "${it.editionCount} editions".takeIf { _ -> it.editionCount > 1 })
                         .joinToString(" · ")

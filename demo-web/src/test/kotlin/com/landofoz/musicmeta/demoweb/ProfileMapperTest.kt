@@ -550,11 +550,11 @@ class ProfileMapperTest {
         val results = resultsOf(
             EnrichmentType.ARTIST_DISCOGRAPHY to EnrichmentData.Discography(
                 albums = listOf(
-                    DiscographyAlbum(title = "Master Of Puppets", year = "1986", type = "album"),
-                    DiscographyAlbum(title = "Master Of Puppets (Remastered)", year = "1986", type = "album"),
+                    DiscographyAlbum(title = "Master Of Puppets", year = 1986, type = "album"),
+                    DiscographyAlbum(title = "Master Of Puppets (Remastered)", year = 1986, type = "album"),
                     DiscographyAlbum(
                         title = "Master Of Puppets (Deluxe Box Set / Remastered)",
-                        year = "2017",
+                        year = 2017,
                         type = "album",
                     ),
                 ),
@@ -580,8 +580,8 @@ class ProfileMapperTest {
         val results = resultsOf(
             EnrichmentType.ARTIST_DISCOGRAPHY to EnrichmentData.Discography(
                 albums = listOf(
-                    DiscographyAlbum(title = "Master Of Puppets", year = "1986", type = "album"),
-                    DiscographyAlbum(title = "Welcome Home (Sanitarium)", year = "1986", type = "track"),
+                    DiscographyAlbum(title = "Master Of Puppets", year = 1986, type = "album"),
+                    DiscographyAlbum(title = "Welcome Home (Sanitarium)", year = 1986, type = "track"),
                 ),
             ),
         )
@@ -604,8 +604,8 @@ class ProfileMapperTest {
         val results = resultsOf(
             EnrichmentType.ARTIST_DISCOGRAPHY to EnrichmentData.Discography(
                 albums = listOf(
-                    DiscographyAlbum(title = "Ride The Lightning", year = "1984", type = "album"),
-                    DiscographyAlbum(title = "Ride The Lightning (Remastered Version)", year = "2016", type = "album"),
+                    DiscographyAlbum(title = "Ride The Lightning", year = 1984, type = "album"),
+                    DiscographyAlbum(title = "Ride The Lightning (Remastered Version)", year = 2016, type = "album"),
                 ),
             ),
         )
@@ -627,9 +627,9 @@ class ProfileMapperTest {
         val results = resultsOf(
             EnrichmentType.ARTIST_DISCOGRAPHY to EnrichmentData.Discography(
                 albums = listOf(
-                    DiscographyAlbum(title = "Load (Deluxe Box Set / Remastered)", year = "2025", type = "album"),
-                    DiscographyAlbum(title = "Load (Remastered)", year = "1996", type = "album"),
-                    DiscographyAlbum(title = "Load", year = "1996", type = "album"),
+                    DiscographyAlbum(title = "Load (Deluxe Box Set / Remastered)", year = 2025, type = "album"),
+                    DiscographyAlbum(title = "Load (Remastered)", year = 1996, type = "album"),
+                    DiscographyAlbum(title = "Load", year = 1996, type = "album"),
                 ),
             ),
         )
@@ -651,7 +651,7 @@ class ProfileMapperTest {
                 albums = listOf(
                     DiscographyAlbum(
                         title = "Ride The Lightning",
-                        year = "1984",
+                        year = 1984,
                         type = "album",
                         thumbnailUrl = "https://example.com/rtl.jpg",
                     ),
@@ -676,9 +676,9 @@ class ProfileMapperTest {
         val results = resultsOf(
             EnrichmentType.ARTIST_DISCOGRAPHY to EnrichmentData.Discography(
                 albums = listOf(
-                    DiscographyAlbum(title = "kill 'em all (remastered)", year = "2016", type = "album"),
-                    DiscographyAlbum(title = "Ride The Lightning", year = "1984", type = "album"),
-                    DiscographyAlbum(title = "Kill 'Em All", year = "1983", type = "album"),
+                    DiscographyAlbum(title = "kill 'em all (remastered)", year = 2016, type = "album"),
+                    DiscographyAlbum(title = "Ride The Lightning", year = 1984, type = "album"),
+                    DiscographyAlbum(title = "Kill 'Em All", year = 1983, type = "album"),
                 ),
             ),
         )
@@ -702,9 +702,9 @@ class ProfileMapperTest {
         val results = resultsOf(
             EnrichmentType.ARTIST_DISCOGRAPHY to EnrichmentData.Discography(
                 albums = listOf(
-                    DiscographyAlbum(title = "Metallica (Remastered Deluxe Box Set)", year = "2021", type = "album"),
-                    DiscographyAlbum(title = "Metallica (Remastered 2021)", year = "1991", type = "album"),
-                    DiscographyAlbum(title = "Metallica", year = "1991", type = "album"),
+                    DiscographyAlbum(title = "Metallica (Remastered Deluxe Box Set)", year = 2021, type = "album"),
+                    DiscographyAlbum(title = "Metallica (Remastered 2021)", year = 1991, type = "album"),
+                    DiscographyAlbum(title = "Metallica", year = 1991, type = "album"),
                 ),
             ),
         )
@@ -728,8 +728,8 @@ class ProfileMapperTest {
         val results = resultsOf(
             EnrichmentType.ARTIST_DISCOGRAPHY to EnrichmentData.Discography(
                 albums = listOf(
-                    DiscographyAlbum(title = "Somewhere", year = "1988", type = "album"),
-                    DiscographyAlbum(title = "Somewhere (Live Remastered)", year = "2016", type = "album"),
+                    DiscographyAlbum(title = "Somewhere", year = 1988, type = "album"),
+                    DiscographyAlbum(title = "Somewhere (Live Remastered)", year = 2016, type = "album"),
                 ),
             ),
         )
@@ -751,8 +751,8 @@ class ProfileMapperTest {
         val results = resultsOf(
             EnrichmentType.ARTIST_DISCOGRAPHY to EnrichmentData.Discography(
                 albums = listOf(
-                    DiscographyAlbum(title = "Album", year = "1990", type = "album"),
-                    DiscographyAlbum(title = "Album (Not Remastered)", year = "2020", type = "album"),
+                    DiscographyAlbum(title = "Album", year = 1990, type = "album"),
+                    DiscographyAlbum(title = "Album (Not Remastered)", year = 2020, type = "album"),
                 ),
             ),
         )
@@ -774,8 +774,8 @@ class ProfileMapperTest {
         val results = resultsOf(
             EnrichmentType.ARTIST_DISCOGRAPHY to EnrichmentData.Discography(
                 albums = listOf(
-                    DiscographyAlbum(title = "Load", year = "1996", type = "album"),
-                    DiscographyAlbum(title = "Load", year = "1996", type = "single"),
+                    DiscographyAlbum(title = "Load", year = 1996, type = "album"),
+                    DiscographyAlbum(title = "Load", year = 1996, type = "single"),
                 ),
             ),
         )
@@ -797,8 +797,8 @@ class ProfileMapperTest {
         val results = resultsOf(
             EnrichmentType.ARTIST_DISCOGRAPHY to EnrichmentData.Discography(
                 albums = listOf(
-                    DiscographyAlbum(title = "Ride", year = "1984", type = "live album"),
-                    DiscographyAlbum(title = "Ride Live", year = "1985", type = "album"),
+                    DiscographyAlbum(title = "Ride", year = 1984, type = "live album"),
+                    DiscographyAlbum(title = "Ride Live", year = 1985, type = "album"),
                 ),
             ),
         )

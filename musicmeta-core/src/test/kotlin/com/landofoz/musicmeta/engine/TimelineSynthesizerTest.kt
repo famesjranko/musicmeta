@@ -123,7 +123,7 @@ class TimelineSynthesizerTest {
     @Test
     fun `synthesize with discography produces album_release events`() {
         // Given - a discography with two albums
-        val disco = discography("OK Computer" to "1997", "Pablo Honey" to "1993")
+        val disco = discography("OK Computer" to 1997, "Pablo Honey" to 1993)
 
         // When - synthesizing the timeline from discography alone
         val result = TimelineSynthesizer.synthesize(null, disco, null)
@@ -137,7 +137,7 @@ class TimelineSynthesizerTest {
     @Test
     fun `synthesize marks earliest album as first_album type`() {
         // Given - a discography with three albums released in non-chronological order
-        val disco = discography("OK Computer" to "1997", "Pablo Honey" to "1993", "The Bends" to "1995")
+        val disco = discography("OK Computer" to 1997, "Pablo Honey" to 1993, "The Bends" to 1995)
 
         // When - synthesizing the timeline from discography alone
         val result = TimelineSynthesizer.synthesize(null, disco, null)
@@ -181,7 +181,7 @@ class TimelineSynthesizerTest {
     fun `synthesize events are sorted chronologically by date`() {
         // Given - metadata and a discography whose album years are out of order
         val meta = metadata(beginDate = "1990")
-        val disco = discography("Album A" to "1995", "Album B" to "1992")
+        val disco = discography("Album A" to 1995, "Album B" to 1992)
 
         // When - synthesizing the timeline from both sources
         val result = TimelineSynthesizer.synthesize(meta, disco, null)
@@ -259,7 +259,7 @@ class TimelineSynthesizerTest {
         confidence = 1.0f,
     )
 
-    private fun discography(vararg albums: Pair<String, String?>): EnrichmentResult =
+    private fun discography(vararg albums: Pair<String, Int?>): EnrichmentResult =
         EnrichmentResult.Success(
             type = EnrichmentType.ARTIST_DISCOGRAPHY,
             data = EnrichmentData.Discography(

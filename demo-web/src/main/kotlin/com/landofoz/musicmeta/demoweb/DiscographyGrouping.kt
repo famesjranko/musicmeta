@@ -12,7 +12,7 @@ internal object DiscographyGrouping {
     /** One base album's rows collapsed into a single display entry. */
     internal data class GroupedAlbum(
         val displayTitle: String,
-        val year: String?,
+        val year: Int?,
         val type: String?,
         val thumbnailUrl: String?,
         val editionCount: Int,

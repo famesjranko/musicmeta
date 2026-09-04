@@ -144,7 +144,7 @@ internal object MusicBrainzMapper {
             albums = groups.map { group ->
                 DiscographyAlbum(
                     title = group.title,
-                    year = group.firstReleaseDate?.take(4),
+                    year = group.firstReleaseDate?.take(4)?.toIntOrNull(),
                     type = group.primaryType,
                     identifiers = EnrichmentIdentifiers(
                         musicBrainzReleaseGroupId = group.id,

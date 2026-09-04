@@ -640,6 +640,47 @@ class RoomEnrichmentCacheTest {
     }
 
     @Test
+    fun `a discography row's quoted four-digit year still decodes, so the row stays a hit`() = runTest {
+        // Given - a row whose payload spells DiscographyAlbum.year as the string 0.12.x wrote
+        database.enrichmentCacheDao().insert(discographyRow("artist:radiohead", "\"1997\""))
+
+        // When - reading it back
+        val retrieved = cache.get("artist:radiohead", EnrichmentType.ARTIST_DISCOGRAPHY)
+
+        // Then - the quoted number reads as the number, so the retype costs this row no refetch
+        assertNotNull(retrieved)
+        val albums = (retrieved!!.result.data as EnrichmentData.Discography).albums
+        assertEquals(1997, albums.single().year)
+    }
+
+    @Test
+    fun `a discography row whose year was never a number is a miss, not a crash`() = runTest {
+        // Given - a row whose year is what take(4) of an undated release left behind
+        database.enrichmentCacheDao().insert(discographyRow("artist:undated", "\"unkn\""))
+
+        // When - reading it back
+        val retrieved = cache.get("artist:undated", EnrichmentType.ARTIST_DISCOGRAPHY)
+
+        // Then - the undecodable year makes the row a miss the caller refetches, not a thrown decode
+        assertNull(retrieved)
+    }
+
+    /** A stored `Discography` whose single album's `year` is the raw JSON [yearJson]. */
+    private fun discographyRow(entityKey: String, yearJson: String) = EnrichmentCacheEntity(
+        entityKey = entityKey,
+        enrichmentType = EnrichmentType.ARTIST_DISCOGRAPHY.name,
+        provider = "musicbrainz",
+        dataJson = """
+            {"type":"com.landofoz.musicmeta.EnrichmentData.Discography",
+            "albums":[{"title":"OK Computer","year":$yearJson,"type":"Album"}]}
+        """.trimIndent().replace("\n", ""),
+        confidence = 0.9f,
+        canonicalStatus = CanonicalStatus.RESOLVED.name,
+        cachedAt = 0L,
+        expiresAt = Long.MAX_VALUE,
+    )
+
+    @Test
     fun `concurrent writes are safe`() = runTest {
         // Given - launch many concurrent writes
         val jobs = (1..50).map { i ->

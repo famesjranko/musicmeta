@@ -27,7 +27,7 @@ class ProfileTest {
                 EnrichmentType.BAND_MEMBERS to success(EnrichmentType.BAND_MEMBERS,
                     EnrichmentData.BandMembers(listOf(BandMember("Thom Yorke", "vocals")))),
                 EnrichmentType.ARTIST_DISCOGRAPHY to success(EnrichmentType.ARTIST_DISCOGRAPHY,
-                    EnrichmentData.Discography(listOf(DiscographyAlbum("OK Computer", year = "1997")))),
+                    EnrichmentData.Discography(listOf(DiscographyAlbum("OK Computer", year = 1997)))),
                 EnrichmentType.ARTIST_TOP_TRACKS to success(EnrichmentType.ARTIST_TOP_TRACKS,
                     EnrichmentData.TopTracks(listOf(TopTrack("Creep", "Radiohead", rank = 1)))),
                 EnrichmentType.ARTIST_RADIO to success(EnrichmentType.ARTIST_RADIO,

@@ -830,7 +830,7 @@ class DefaultEnrichmentEngineTest {
                     EnrichmentType.ARTIST_DISCOGRAPHY,
                     EnrichmentResult.Success(
                         type = EnrichmentType.ARTIST_DISCOGRAPHY,
-                        data = EnrichmentData.Discography(albums = listOf(DiscographyAlbum("OK Computer", year = "1997"))),
+                        data = EnrichmentData.Discography(albums = listOf(DiscographyAlbum("OK Computer", year = 1997))),
                         provider = "mb-disco",
                         confidence = 0.95f,
                     )

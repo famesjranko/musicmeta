@@ -352,10 +352,30 @@ class ITunesProviderTest {
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.Discography
         assertEquals(1, data.albums.size)
         assertEquals("OK Computer", data.albums[0].title)
-        assertEquals("1997", data.albums[0].year)
+        assertEquals(1997, data.albums[0].year)
         // This call never searched: it went straight to the stored artist id, so its route is
         // observed, not left for the engine to infer from canonical status.
         assertEquals(LookupProvenance.PROVIDER_NATIVE_ID, (result as EnrichmentResult.Success).provenance)
+    }
+
+    @Test
+    fun `a release date carrying no year leaves the discography year null`() = runTest {
+        // Given - the captured album response with a releaseDate no year can be read off
+        httpClient.givenJsonResponse(
+            "lookup",
+            ITUNES_LOOKUP_ARTIST_ALBUMS_RESPONSE.replace("\"releaseDate\":\"1997-06-16T07:00:00Z\"", "\"releaseDate\":\"unknown\""),
+        )
+        val identifiers = EnrichmentIdentifiers().with(IdentifierNamespace.ITUNES_ARTIST, "657515")
+        val request = EnrichmentRequest.ForArtist(identifiers, "Radiohead")
+
+        // When - enriching for artist discography
+        val result = provider.enrich(request, EnrichmentType.ARTIST_DISCOGRAPHY)
+
+        // Then - the album still maps, with no year rather than a thrown parse
+        assertTrue(result is EnrichmentResult.Success)
+        val data = (result as EnrichmentResult.Success).data as EnrichmentData.Discography
+        assertEquals("OK Computer", data.albums[0].title)
+        assertNull(data.albums[0].year)
     }
 
     @Test

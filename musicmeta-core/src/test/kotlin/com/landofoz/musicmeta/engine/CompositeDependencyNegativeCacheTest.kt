@@ -37,7 +37,7 @@ class CompositeDependencyNegativeCacheTest {
     private fun discography(): EnrichmentResult.Success =
         EnrichmentResult.Success(
             type = EnrichmentType.ARTIST_DISCOGRAPHY,
-            data = EnrichmentData.Discography(listOf(DiscographyAlbum(title = "OK Computer", year = "1997"))),
+            data = EnrichmentData.Discography(listOf(DiscographyAlbum(title = "OK Computer", year = 1997))),
             provider = "stale-provider",
             confidence = 0.9f,
         )

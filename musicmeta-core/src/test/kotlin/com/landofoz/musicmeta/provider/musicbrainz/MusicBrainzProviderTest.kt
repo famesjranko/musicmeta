@@ -14,6 +14,7 @@ import com.landofoz.musicmeta.testutil.FakeHttpClient
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -520,8 +521,29 @@ class MusicBrainzProviderTest {
         val data = success.data as EnrichmentData.Discography
         assertEquals(2, data.albums.size)
         assertEquals("OK Computer", data.albums[0].title)
-        assertEquals("1997", data.albums[0].year)
+        assertEquals(1997, data.albums[0].year)
         assertEquals("Album", data.albums[0].type)
+    }
+
+    @Test
+    fun `a first-release-date carrying no year leaves the discography year null`() = runTest {
+        // Given - the captured browse response with a first-release-date no year can be read off
+        httpClient.givenJsonResponse("artist?query", ARTIST_SEARCH_WITH_WIKIDATA)
+        httpClient.givenJsonResponse(
+            "release-group?artist=art1",
+            RELEASE_GROUP_BROWSE.replace("\"first-release-date\": \"1997-06-16\"", "\"first-release-date\": \"unknown\""),
+        )
+        val request = EnrichmentRequest.forArtist("Radiohead")
+            .withIdentifiers(EnrichmentIdentifiers(musicBrainzId = "art1"))
+
+        // When - enriching for ARTIST_DISCOGRAPHY
+        val result = provider.enrich(request, EnrichmentType.ARTIST_DISCOGRAPHY)
+
+        // Then - the release group still maps, with no year rather than a thrown parse
+        assertTrue(result is EnrichmentResult.Success)
+        val data = (result as EnrichmentResult.Success).data as EnrichmentData.Discography
+        assertEquals("OK Computer", data.albums[0].title)
+        assertNull(data.albums[0].year)
     }
 
     @Test

@@ -44,13 +44,13 @@ class EnrichmentDataSerializationTest {
             albums = listOf(
                 DiscographyAlbum(
                     title = "Abbey Road",
-                    year = "1969",
+                    year = 1969,
                     type = "Album",
                     thumbnailUrl = "https://example.com/abbey-road.jpg",
                 ),
                 DiscographyAlbum(
                     title = "Let It Be",
-                    year = "1970",
+                    year = 1970,
                     identifiers = EnrichmentIdentifiers(
                         musicBrainzId = "12345",
                     ),

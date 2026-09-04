@@ -30,7 +30,7 @@ class CompositeCachedDependencyTest {
 
     private val cachedDiscography = EnrichmentResult.Success(
         type = EnrichmentType.ARTIST_DISCOGRAPHY,
-        data = EnrichmentData.Discography(listOf(DiscographyAlbum("Cached", "2020"))),
+        data = EnrichmentData.Discography(listOf(DiscographyAlbum("Cached", 2020))),
         provider = "cached-provider",
         confidence = 1f,
     )
@@ -43,7 +43,7 @@ class CompositeCachedDependencyTest {
             EnrichmentType.ARTIST_DISCOGRAPHY,
             EnrichmentResult.Success(
                 EnrichmentType.ARTIST_DISCOGRAPHY,
-                EnrichmentData.Discography(listOf(DiscographyAlbum("Fresh", "2026"))),
+                EnrichmentData.Discography(listOf(DiscographyAlbum("Fresh", 2026))),
                 "discography",
                 1f,
             ),
