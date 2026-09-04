@@ -163,10 +163,10 @@ class FanartTvMemoTest {
             }
         """.trimIndent()
 
-        // synthetic: no ground truth available for v3 field-level shapes, mirrors
-        // FanartTvProviderTest's ALBUM_ENDPOINT_JSON
+        // Mirrors FanartTvProviderTest's ALBUM_ENDPOINT_JSON: the album endpoint nests the release
+        // group under `albums`, captured 2026-09-03.
         val ALBUM_IMAGES_JSON = """
-            {"rg-memo1": {"albumcover": [{"url": "https://assets.fanart.tv/fanart/cover1.jpg"}], "cdart": [{"url": "https://assets.fanart.tv/fanart/cdart1.jpg"}]}}
+            {"albums": {"rg-memo1": {"albumcover": [{"url": "https://assets.fanart.tv/fanart/cover1.jpg"}], "cdart": [{"url": "https://assets.fanart.tv/fanart/cdart1.jpg"}]}}}
         """.trimIndent()
     }
 }

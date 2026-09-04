@@ -1,5 +1,7 @@
 package com.landofoz.musicmeta.provider.lrclib
 
+import com.landofoz.musicmeta.drift.BodyShape
+import com.landofoz.musicmeta.drift.SchemaTarget
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.http.bodyOrThrowTransient
@@ -44,8 +46,7 @@ internal class LrcLibApi(
         artist: String,
         track: String,
     ): List<LrcLibResult> = rateLimiter.execute {
-        val url = "$BASE_URL/api/search?artist_name=${encodeQueryValue(artist)}&track_name=${encodeQueryValue(track)}"
-        val jsonArray = httpClient.fetchJsonArrayResult(url).bodyOrThrowTransient()
+        val jsonArray = httpClient.fetchJsonArrayResult(lyricsSearchUrl(artist, track)).bodyOrThrowTransient()
             ?: return@execute emptyList()
         parseResultArray(jsonArray)
     }
@@ -66,5 +67,30 @@ internal class LrcLibApi(
 
     companion object {
         const val BASE_URL = "https://lrclib.net"
+
+        /** The URL [searchLyrics] requests. */
+        fun lyricsSearchUrl(artist: String, track: String): String =
+            "$BASE_URL/api/search?artist_name=${encodeQueryValue(artist)}&track_name=${encodeQueryValue(track)}"
+
+        /**
+         * Schema-pin target, mirroring [parseResult]. `syncedLyrics` and `plainLyrics` are the
+         * whole reason this provider is called; the pin reports their path names only, never their
+         * values, so no lyrics text can reach a CI log.
+         */
+        val SCHEMA_PIN_TARGETS: List<SchemaTarget> = listOf(
+            SchemaTarget(
+                provider = "lrclib",
+                route = "lyrics search",
+                url = lyricsSearchUrl("Radiohead", "Karma Police"),
+                shape = BodyShape.ARRAY,
+                requiredPaths = listOf(
+                    "[0].id",
+                    "[0].trackName",
+                    "[0].artistName",
+                    "[0].syncedLyrics",
+                    "[0].plainLyrics",
+                ),
+            ),
+        )
     }
 }

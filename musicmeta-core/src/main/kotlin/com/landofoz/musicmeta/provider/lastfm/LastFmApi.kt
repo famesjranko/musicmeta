@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.provider.lastfm
 
+import com.landofoz.musicmeta.drift.SchemaTarget
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.http.bodyOrThrowAuthOrTransient
@@ -73,10 +74,8 @@ internal class LastFmApi(
             "&api_key=${encodeQueryValue(apiKeyProvider())}&format=json"
     }
 
-    private fun buildUrl(method: String, artistName: String): String {
-        val encoded = encodeQueryValue(artistName)
-        return "$BASE_URL?method=$method&artist=$encoded&api_key=${encodeQueryValue(apiKeyProvider())}&format=json"
-    }
+    private fun buildUrl(method: String, artistName: String): String =
+        artistMethodUrl(method, artistName, apiKeyProvider())
 
     private fun parseArtistInfo(json: JSONObject): LastFmArtistInfo? {
         val artist = json.optJSONObject("artist") ?: return null
@@ -182,7 +181,37 @@ internal class LastFmApi(
         }.filter { it.isNotBlank() }
     }
 
-    private companion object {
+    companion object {
         const val BASE_URL = "https://ws.audioscrobbler.com/2.0/"
+
+        /** The URL any one-artist method — [getArtistInfo] among them — requests. */
+        fun artistMethodUrl(method: String, artistName: String, apiKey: String): String {
+            val encoded = encodeQueryValue(artistName)
+            return "$BASE_URL?method=$method&artist=$encoded&api_key=${encodeQueryValue(apiKey)}&format=json"
+        }
+
+        /**
+         * Schema-pin target, mirroring [parseArtistInfo] and [parseTags]. `bio.summary` is the
+         * biography this provider exists to contribute, and the `stats` counts are strings here,
+         * not numbers — a change of type reads as present, which is why the pin is a presence
+         * check and the parse keeps its own `toLongOrNull`.
+         *
+         * A function, not a constant: the key must not be captured into a static, and it never
+         * reaches a report — [SchemaTarget.loggableUrl] drops the query string.
+         */
+        fun schemaPinTargets(apiKey: String): List<SchemaTarget> = listOf(
+            SchemaTarget(
+                provider = "lastfm",
+                route = "artist.getinfo",
+                url = artistMethodUrl("artist.getinfo", "Radiohead", apiKey),
+                requiredPaths = listOf(
+                    "artist.name",
+                    "artist.bio.summary",
+                    "artist.stats.listeners",
+                    "artist.stats.playcount",
+                    "artist.tags.tag[0].name",
+                ),
+            ),
+        )
     }
 }

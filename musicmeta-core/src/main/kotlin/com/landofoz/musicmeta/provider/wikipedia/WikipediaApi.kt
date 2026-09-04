@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.provider.wikipedia
 
+import com.landofoz.musicmeta.drift.SchemaTarget
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.http.bodyOrThrowTransient
@@ -26,10 +27,8 @@ internal class WikipediaApi(
      * a disambiguation lead is a list of unrelated topics, never a usable biography.
      */
     suspend fun getPageExtract(title: String): WikipediaSummary? = rateLimiter.execute {
-        val url = "$ACTION_API?action=query&format=json&formatversion=2&redirects=1" +
-            "&prop=extracts%7Cpageimages%7Cpageprops&exintro=1&explaintext=1" +
-            "&piprop=thumbnail&pithumbsize=$THUMBNAIL_SIZE&titles=${encodePathSegment(title)}"
-        val json = httpClient.fetchJsonResult(url).bodyOrThrowTransient() ?: return@execute null
+        val json = httpClient.fetchJsonResult(pageExtractUrl(title)).bodyOrThrowTransient()
+            ?: return@execute null
 
         // The Action API reports its own failures inside a 200 (`maxlag` is the one this call can
         // provoke), so an error body must not read as an article that does not exist.
@@ -152,11 +151,38 @@ internal class WikipediaApi(
     private fun renderedWidthOf(url: String): Int? =
         THUMBNAIL_WIDTH_PATTERN.find(url)?.groupValues?.get(1)?.toIntOrNull()
 
-    private companion object {
+    companion object {
         const val ACTION_API = "https://en.wikipedia.org/w/api.php"
         const val MEDIA_LIST_BASE_URL = "https://en.wikipedia.org/api/rest_v1/page/media-list"
         const val THUMBNAIL_SIZE = 320
         const val MIN_IMAGE_WIDTH = 100
         val THUMBNAIL_WIDTH_PATTERN = Regex("""/(\d+)px-""")
+
+        /** The URL [getPageExtract] requests. */
+        fun pageExtractUrl(title: String): String =
+            "$ACTION_API?action=query&format=json&formatversion=2&redirects=1" +
+                "&prop=extracts%7Cpageimages%7Cpageprops&exintro=1&explaintext=1" +
+                "&piprop=thumbnail&pithumbsize=$THUMBNAIL_SIZE&titles=${encodePathSegment(title)}"
+
+        /**
+         * Schema-pin target, mirroring [getPageExtract]'s parse.
+         *
+         * `pages` is an array only because the URL asks for `formatversion=2`; under the default
+         * it is an object keyed by page id, and the same paths would read as absent. That is the
+         * reason this target takes its URL from [pageExtractUrl] rather than naming a route.
+         */
+        val SCHEMA_PIN_TARGETS: List<SchemaTarget> = listOf(
+            SchemaTarget(
+                provider = "wikipedia",
+                route = "page extract",
+                url = pageExtractUrl("Radiohead"),
+                requiredPaths = listOf(
+                    "query.pages[0].pageid",
+                    "query.pages[0].title",
+                    "query.pages[0].extract",
+                    "query.pages[0].thumbnail.source",
+                ),
+            ),
+        )
     }
 }

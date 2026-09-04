@@ -64,6 +64,30 @@ tasks.withType<Test> {
     }
 }
 
+// The daily provider drift watch, as its own task rather than a filter over `test`.
+//
+// Two reasons, both of which silently disarmed the watch when it was a filter. `test` is cacheable
+// and its inputs do not change between scheduled runs, so every run after the first was UP-TO-DATE:
+// the job passed daily having asked no upstream anything. And the e2e suite selects
+// `com.landofoz.musicmeta.e2e.*`, so a manual suite run overwrote the pin's own report.
+//
+// Never part of `check` or `build`: it makes live third-party calls, and a merge must not wait on
+// somebody else's uptime.
+val schemaPin by tasks.registering(Test::class) {
+    description = "Ask each pinned upstream route whether the fields its mapper reads are still there."
+    group = "verification"
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    filter { includeTestsMatching("com.landofoz.musicmeta.drift.SchemaPinE2ETest") }
+    reports.junitXml.outputLocation.set(layout.buildDirectory.dir("test-results/schemaPin"))
+    reports.html.outputLocation.set(layout.buildDirectory.dir("reports/tests/schemaPin"))
+    // The answer is a third party's and changes without a commit here, so nothing about this repo
+    // says whether a previous result still holds. Both are needed: `upToDateWhen` alone still lets
+    // the build cache serve a stored result for unchanged inputs.
+    outputs.upToDateWhen { false }
+    outputs.cacheIf { false }
+}
+
 // Core is dependency-minimal JVM (ARCHITECTURE.md), which is what lets a server or desktop
 // consumer take the engine without an Android artifact or a wire library. A fourth entry below is
 // imposed on every consumer's classpath at the next release and cannot be removed without a break.

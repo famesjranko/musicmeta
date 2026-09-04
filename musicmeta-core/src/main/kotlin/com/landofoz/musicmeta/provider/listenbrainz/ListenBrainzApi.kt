@@ -1,5 +1,7 @@
 package com.landofoz.musicmeta.provider.listenbrainz
 
+import com.landofoz.musicmeta.drift.BodyShape
+import com.landofoz.musicmeta.drift.SchemaTarget
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.http.bodyOrThrowAuthOrTransient
@@ -22,8 +24,7 @@ internal class ListenBrainzApi(
     suspend fun getTopRecordingsForArtist(
         artistMbid: String,
     ): List<ListenBrainzPopularTrack> = rateLimiter.execute {
-        val url = "$BASE_URL/popularity/top-recordings-for-artist/${encodePathSegment(artistMbid)}"
-        val jsonArray = httpClient.fetchJsonArrayResult(url).bodyOrThrowTransient()
+        val jsonArray = httpClient.fetchJsonArrayResult(topRecordingsUrl(artistMbid)).bodyOrThrowTransient()
             ?: return@execute emptyList()
         parseRecordings(jsonArray)
     }
@@ -213,5 +214,33 @@ internal class ListenBrainzApi(
 
     companion object {
         const val BASE_URL = "https://api.listenbrainz.org/1"
+
+        /** The URL [getTopRecordingsForArtist] requests. */
+        fun topRecordingsUrl(artistMbid: String): String =
+            "$BASE_URL/popularity/top-recordings-for-artist/${encodePathSegment(artistMbid)}"
+
+        /**
+         * Schema-pin target, mirroring [parseRecordings]. A row without `recording_mbid` is
+         * dropped outright, so a rename there empties every popularity answer silently.
+         *
+         * Radiohead's artist MBID, chosen because the artist is large enough that the endpoint
+         * answers with a full row rather than a sparse one.
+         */
+        val SCHEMA_PIN_TARGETS: List<SchemaTarget> = listOf(
+            SchemaTarget(
+                provider = "listenbrainz",
+                route = "top recordings for artist",
+                url = topRecordingsUrl("a74b1b7f-71a5-4011-9441-d0b5e4122711"),
+                shape = BodyShape.ARRAY,
+                requiredPaths = listOf(
+                    "[0].recording_mbid",
+                    "[0].recording_name",
+                    "[0].artist_name",
+                    "[0].total_listen_count",
+                    "[0].length",
+                    "[0].release_name",
+                ),
+            ),
+        )
     }
 }

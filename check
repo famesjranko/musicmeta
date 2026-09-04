@@ -98,6 +98,11 @@ python3 scripts/checks/check_pitfall_citations.py
 step "provider call scope"
 python3 scripts/checks/check_provider_call_scope.py
 
+step "schema pin coverage"
+# A provider the daily drift watch never asks about is invisible: the job stays green while that
+# provider's fields move. Read here rather than in the watch, which only runs on a schedule.
+python3 scripts/checks/check_schema_pin_coverage.py
+
 step "public vocabulary"
 python3 scripts/checks/check_public_vocabulary.py
 

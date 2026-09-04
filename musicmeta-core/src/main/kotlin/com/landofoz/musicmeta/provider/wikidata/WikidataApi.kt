@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.provider.wikidata
 
+import com.landofoz.musicmeta.drift.SchemaTarget
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.http.bodyOrThrowTransient
@@ -36,8 +37,8 @@ internal class WikidataApi(
         wikidataId: String,
         imageSize: Int = DEFAULT_IMAGE_SIZE,
     ): WikidataEntityProperties? = rateLimiter.execute {
-        val url = "$BASE_URL?action=wbgetentities&ids=${encodeQueryValue(wikidataId)}&props=claims&format=json"
-        val json = httpClient.fetchJsonResult(url).bodyOrThrowTransient() ?: return@execute null
+        val json = httpClient.fetchJsonResult(entityPropertiesUrl(wikidataId)).bodyOrThrowTransient()
+            ?: return@execute null
         val claims = json.optJSONObject("entities")
             ?.optJSONObject(wikidataId)
             ?.optJSONObject("claims")
@@ -133,9 +134,33 @@ internal class WikidataApi(
         return "$COMMONS_BASE_URL/$encoded$suffix?width=$size"
     }
 
-    private companion object {
+    companion object {
         const val BASE_URL = "https://www.wikidata.org/w/api.php"
         const val COMMONS_BASE_URL = "https://commons.wikimedia.org/wiki/Special:FilePath"
+
+        /** The URL [getEntityProperties] requests. */
+        fun entityPropertiesUrl(wikidataId: String): String =
+            "$BASE_URL?action=wbgetentities&ids=${encodeQueryValue(wikidataId)}&props=claims&format=json"
+
+        /**
+         * Schema-pin target, mirroring [parseEntityProperties].
+         *
+         * The paths are property ids under `claims`, not the `labels` a reader of the entity page
+         * would expect: `props=claims` returns no `labels` key at all, and this mapper reads none.
+         * Q44190 is Radiohead, which carries all three of the pinned external-id claims.
+         */
+        val SCHEMA_PIN_TARGETS: List<SchemaTarget> = listOf(
+            SchemaTarget(
+                provider = "wikidata",
+                route = "entity properties",
+                url = entityPropertiesUrl("Q44190"),
+                requiredPaths = listOf(
+                    "entities.Q44190.claims.P434[0].mainsnak.datavalue.value",
+                    "entities.Q44190.claims.P18[0].mainsnak.datavalue.value",
+                    "entities.Q44190.claims.P1953[0].mainsnak.datavalue.value",
+                ),
+            ),
+        )
         const val DEFAULT_IMAGE_SIZE = 1200
         val NON_RASTER_FORMATS = setOf("svg", "tif", "tiff")
 
