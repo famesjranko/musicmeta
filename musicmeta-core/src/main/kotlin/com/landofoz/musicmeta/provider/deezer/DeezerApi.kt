@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.provider.deezer
 
+import com.landofoz.musicmeta.drift.SchemaTarget
 import com.landofoz.musicmeta.engine.ArtistMatcher
 import com.landofoz.musicmeta.engine.TitleMatcher
 import com.landofoz.musicmeta.engine.bestArtistMatch
@@ -21,9 +22,7 @@ internal class DeezerApi(
 ) {
 
     suspend fun searchAlbums(query: String, limit: Int): List<DeezerAlbumResult> {
-        val encoded = encodeQueryValue(query)
-        val url = "$BASE_URL/search/album?q=$encoded&limit=$limit"
-        val json = fetchJson(url) ?: return emptyList()
+        val json = fetchJson(albumSearchUrl(query, limit)) ?: return emptyList()
 
         val data = json.optJSONArray("data") ?: return emptyList()
         return (0 until data.length()).map { i ->
@@ -361,8 +360,32 @@ internal class DeezerApi(
         null
     }
 
-    private companion object {
+    companion object {
         const val BASE_URL = "https://api.deezer.com"
+
+        /** The URL [searchAlbums] requests. */
+        fun albumSearchUrl(query: String, limit: Int): String =
+            "$BASE_URL/search/album?q=${encodeQueryValue(query)}&limit=$limit"
+
+        /**
+         * Schema-pin target, mirroring [searchAlbums]'s parse. `cover_xl` is the artwork the
+         * album path serves, and `nb_tracks`/`record_type` are what an edition is chosen on.
+         */
+        val SCHEMA_PIN_TARGETS: List<SchemaTarget> = listOf(
+            SchemaTarget(
+                provider = "deezer",
+                route = "album search",
+                url = albumSearchUrl("OK Computer", limit = 5),
+                requiredPaths = listOf(
+                    "data[0].id",
+                    "data[0].title",
+                    "data[0].artist.name",
+                    "data[0].cover_xl",
+                    "data[0].nb_tracks",
+                    "data[0].record_type",
+                ),
+            ),
+        )
 
         /** Candidate pool size for artist search — enough hits for a ghost to be outvoted. */
         const val ARTIST_SEARCH_LIMIT = 10

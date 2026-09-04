@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.provider.coverartarchive
 
+import com.landofoz.musicmeta.drift.SchemaTarget
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.http.bodyOrThrowTransient
@@ -41,7 +42,7 @@ internal class CoverArtArchiveApi(
      * Returns null if no metadata is available (404); throws on a transient (429/5xx/transport).
      */
     suspend fun getArtworkMetadata(releaseId: String): List<CoverArtArchiveImage>? {
-        val url = "$BASE_URL/release/${encodePathSegment(releaseId)}"
+        val url = artworkMetadataUrl(releaseId)
         val json = rateLimiter.execute {
             httpClient.fetchJsonResult(url).bodyOrThrowTransient()
         } ?: return null
@@ -74,5 +75,32 @@ internal class CoverArtArchiveApi(
 
     companion object {
         const val BASE_URL = "https://coverartarchive.org"
+
+        /** The URL [getArtworkMetadata] requests. */
+        fun artworkMetadataUrl(releaseId: String): String =
+            "$BASE_URL/release/${encodePathSegment(releaseId)}"
+
+        /**
+         * Schema-pin target, mirroring [parseImageList]. An image row without `image` is dropped,
+         * and `front` is what selects the cover from the rest of the set — a rename there returns
+         * artwork that is not the front cover.
+         *
+         * The 1997 GB pressing of OK Computer, which has front art. A release chosen for the pin
+         * must have art: this endpoint answers 404 for a release with none, which is UNAVAILABLE
+         * and would make the target permanently silent rather than permanently red.
+         */
+        val SCHEMA_PIN_TARGETS: List<SchemaTarget> = listOf(
+            SchemaTarget(
+                provider = "coverartarchive",
+                route = "release artwork metadata",
+                url = artworkMetadataUrl("541a0976-ca45-3c0f-89e5-26bc376f58d1"),
+                requiredPaths = listOf(
+                    "images[0].image",
+                    "images[0].front",
+                    "images[0].thumbnails.large",
+                    "images[0].types[0]",
+                ),
+            ),
+        )
     }
 }

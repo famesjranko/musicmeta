@@ -517,17 +517,20 @@ class FanartTvProviderTest {
             }
         """.trimIndent()
 
-        // synthetic: no ground truth available for v3 field-level shapes
+        // The album endpoint answers with the release group's *artist* document, so the requested
+        // album is one entry under `albums` — captured from
+        // /v3/music/albums/b1392450-e666-3926-a536-22c65f834433, 2026-09-03. The earlier fixtures
+        // here put the release group at the top level, which nothing upstream has ever sent.
         val ALBUM_NOT_FIRST_MOST_LIKED_JSON = """
-            {"rg-mbid": {"albumcover": [
+            {"albums": {"rg-mbid": {"albumcover": [
                 {"url": "https://fanart.tv/album-cover-low-likes.jpg", "id": "1", "likes": "1"},
                 {"url": "https://fanart.tv/album-cover-most-liked.jpg", "id": "2", "likes": "20"}
-              ], "cdart": []}}
+              ], "cdart": []}}}
         """.trimIndent()
 
-        // synthetic: no ground truth available for v3 field-level shapes
+        // Nesting captured 2026-09-03, as above.
         val ALBUM_ENDPOINT_JSON = """
-            {"rg-mbid": {"albumcover": [{"url": "https://fanart.tv/album-cover.jpg", "id": "1", "likes": "5"}], "cdart": [{"url": "https://fanart.tv/cd-art.jpg", "id": "2", "likes": "3"}]}}
+            {"albums": {"rg-mbid": {"albumcover": [{"url": "https://fanart.tv/album-cover.jpg", "id": "1", "likes": "5"}], "cdart": [{"url": "https://fanart.tv/cd-art.jpg", "id": "2", "likes": "3"}]}}}
         """.trimIndent()
 
         // synthetic: no ground truth available for v3 field-level shapes

@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.provider.discogs
 
+import com.landofoz.musicmeta.drift.SchemaTarget
 import com.landofoz.musicmeta.engine.ArtistMatcher
 import com.landofoz.musicmeta.engine.bestArtistMatch
 import com.landofoz.musicmeta.http.HttpClient
@@ -22,11 +23,7 @@ internal class DiscogsApi(
         this({ personalToken }, httpClient, rateLimiter)
 
     suspend fun searchReleases(title: String, artist: String, limit: Int = 5): List<DiscogsRelease> {
-        val encodedTitle = encodeQueryValue(title)
-        val encodedArtist = encodeQueryValue(artist)
-        val url = "$SEARCH_URL?type=release&title=$encodedTitle" +
-            "&artist=$encodedArtist&per_page=$limit"
-        val json = rateLimiter.execute { fetch(url) } ?: return emptyList()
+        val json = rateLimiter.execute { fetch(releaseSearchUrl(title, artist, limit)) } ?: return emptyList()
         return parseReleaseResults(json)
     }
 
@@ -226,8 +223,41 @@ internal class DiscogsApi(
         }
     }
 
-    private companion object {
+    companion object {
         const val SEARCH_URL = "https://api.discogs.com/database/search"
+
+        /** The URL [searchReleases] requests. */
+        fun releaseSearchUrl(title: String, artist: String, limit: Int): String =
+            "$SEARCH_URL?type=release&title=${encodeQueryValue(title)}" +
+                "&artist=${encodeQueryValue(artist)}&per_page=$limit"
+
+        /**
+         * Schema-pin target, mirroring [parseReleaseResults]. `catno`, `label` and `country` are
+         * the edition signals nothing else in the chain supplies.
+         *
+         * `year` is deliberately not pinned: it is absent from real hits, so requiring it would
+         * report drift about a healthy payload. The token travels in an `Authorization` header,
+         * not the query string.
+         */
+        fun schemaPinTargets(token: String): List<SchemaTarget> = listOf(
+            SchemaTarget(
+                provider = "discogs",
+                route = "release search",
+                url = releaseSearchUrl("OK Computer", "Radiohead", limit = 5),
+                headers = mapOf("Authorization" to "Discogs token=$token"),
+                requiredPaths = listOf(
+                    "results[0].id",
+                    "results[0].title",
+                    "results[0].type",
+                    "results[0].country",
+                    "results[0].catno",
+                    "results[0].cover_image",
+                    "results[0].master_id",
+                    "results[0].label[0]",
+                    "results[0].genre[0]",
+                ),
+            ),
+        )
 
         /** Candidate pool size for artist search — enough hits for a wrong name to be passed over. */
         const val ARTIST_SEARCH_LIMIT = 10

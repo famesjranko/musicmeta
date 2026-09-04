@@ -1,10 +1,19 @@
 name: Provider API drift watch
 
 # Scheduled watch for third-party provider drift. Scheduled, not change-triggered, because the
-# trigger is external: a provider changes its JSON with zero commits here. Runs the e2e suite
-# against live provider APIs and reports any red; a moved field surfaces indirectly if it breaks a
-# test, but this is not a field watcher, and today's failures are dominated by load shedding, not
-# provider changes. Never gating — see CHANGELOG 0.10.0 (#16).
+# trigger is external: a provider changes its JSON with zero commits here. Never gating — see
+# CHANGELOG 0.10.0 (#16).
+#
+# The daily run is the schema pin: one request per pinned upstream route, asking whether the fields
+# the mappers read are still there. It reports two verdicts where the e2e suite reported one, which
+# is the point — a moved field and a shed request are distinguishable on the wire, and collapsing
+# them made every red ambiguous.
+#
+# The e2e suite is `workflow_dispatch` only, and that is arithmetic rather than preference: it is
+# ~380 live requests, so at a measured 4.4% per-request shed rate a run goes red with probability
+# 1.000. A daily job certain to go red is a rota for ignoring email. What that costs is real —
+# ranking, confidence, mergers and identity resolution against live data are exercised only by the
+# suite, so a pipeline regression now waits for someone to press the button.
 #
 # This used to be 476 lines, most of it building a summary and then creating, updating, reopening
 # and closing a public tracking issue with redacted bodies. A failed scheduled run already emails
@@ -70,7 +79,7 @@ jobs:
           fi
           echo "All four provider credentials are present."
 
-      - name: Run E2E suite against live provider APIs
+      - name: Pin every upstream route's schema
         # `shell: bash` is load-bearing: without pipefail, `gradlew | tee` reports tee's status
         # (always 0) and this step is permanently `success`. That bug shipped once already.
         shell: bash
@@ -79,26 +88,72 @@ jobs:
           FANARTTV_API_KEY: ${{ secrets.FANARTTV_API_KEY }}
           DISCOGS_TOKEN: ${{ secrets.DISCOGS_TOKEN }}
           LISTENBRAINZ_TOKEN: ${{ secrets.LISTENBRAINZ_TOKEN }}
-        # `--tests` scopes this to the e2e package: unscoped, any ordinary unit-test regression on
-        # the default branch would look like provider drift. Retried once — 11 live APIs from a
-        # shared runner IP, so a lone 429/503 is noise, not drift.
+        # Fails on a moved field, and on a run in which every route was unavailable — a watch that
+        # saw nothing is blind, which is our problem, the same class as the credential precheck
+        # above. It does *not* fail on some routes being unavailable: at the measured shed rate a
+        # thirteen-request run carries at least one about two days in five, so failing on it would
+        # rebuild the alarm this replaced. Those land as `::notice` lines in the log instead.
         #
-        # The package glob below already picks up ProviderDriftClosedLoopE2ETest — the bounded,
-        # deterministic Top Tracks/radio/similar-tracks/discography closed loop: track sources feed
-        # TRACK_PREVIEW, while discography's album rows feed ALBUM_METADATA. This job's own log now
-        # trends by row source, source provider, title shape, route,
-        # canonical status and timeout rate, dated per run. It never fails this step: the hard
-        # suppression invariant lives in non-live unit coverage instead (see that test's own
-        # KDoc), so a trend shift here is a signal to read, not a gate. No separate trend
-        # artifact: the printed lines land in the same `e2e.log` the step below already uploads.
+        # No retry. Shedding is per-request, not per-run, so a second whole-run attempt buys
+        # nothing and costs a quarter of an hour of live traffic; the per-route verdict is what
+        # separates a shed from drift now.
+        #
+        # `schemaPin`, not a `--tests` filter over `test`: `test` is cacheable, and with the build
+        # cache restored between runs its inputs are identical every morning, so it comes back
+        # UP-TO-DATE and the job passes green having asked no upstream anything. The task declares
+        # itself neither up-to-date nor cacheable for that reason.
+        #
+        # The step then proves the pin actually ran, because the failure above is silent: a green
+        # step and a report older than this run look the same from the outside, and so does a run
+        # whose `assumeTrue` skipped every route because a system property did not arrive.
         run: |
           set -eo pipefail
-          if ./gradlew :musicmeta-core:test -Dinclude.e2e=true \
-               --tests "com.landofoz.musicmeta.e2e.*" 2>&1 | tee e2e.log; then
-            exit 0
+          rm -rf musicmeta-core/build/test-results/schemaPin
+          touch .pin-started
+          ./gradlew :musicmeta-core:schemaPin -Dinclude.e2e=true 2>&1 | tee schema-pin.log
+
+          report="musicmeta-core/build/test-results/schemaPin/TEST-com.landofoz.musicmeta.drift.SchemaPinE2ETest.xml"
+          if [ -z "$(find "${report}" -newer .pin-started 2>/dev/null)" ]; then
+            echo "::error::The pin wrote no report in this run, so no upstream was asked anything. A cached or up-to-date task passes without making a request — check that :musicmeta-core:schemaPin still declares itself uncacheable."
+            exit 1
           fi
-          echo "::notice::E2E suite failed on the first attempt — retrying once to rule out a transient provider error."
-          sleep 60
+          # Asserted positively — `skipped="0"` and a non-zero `tests` — rather than by matching the
+          # counts a failure happens to produce today. A negative match has to enumerate every
+          # count that means trouble, so `skipped="2"` would slip through the moment the pin grows
+          # a second test, and the check would go quiet exactly when it gained something to watch.
+          if ! grep -q 'skipped="0"' "${report}" || ! grep -q 'tests="[1-9]' "${report}"; then
+            echo "::error::The pin's report records no route actually exercised. Every route was skipped, or none ran: -Dinclude.e2e=true did not reach the test JVM."
+            exit 1
+          fi
+          echo "Pin report written this run, with a route actually exercised."
+          rm -f .pin-started
+
+      - name: Run E2E suite against live provider APIs
+        # On demand only. See the header: on a schedule this is certain to go red on shedding
+        # alone, which trains everyone to ignore the email the watch exists to send.
+        if: ${{ !cancelled() && github.event_name == 'workflow_dispatch' }}
+        shell: bash
+        env:
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+          FANARTTV_API_KEY: ${{ secrets.FANARTTV_API_KEY }}
+          DISCOGS_TOKEN: ${{ secrets.DISCOGS_TOKEN }}
+          LISTENBRAINZ_TOKEN: ${{ secrets.LISTENBRAINZ_TOKEN }}
+        # `--tests` scopes this to the e2e package: unscoped, any ordinary unit-test regression on
+        # the default branch would look like provider drift. The pin is not in that package and so
+        # is not swept in here — it has its own task and its own report directory, which this
+        # step's `--rerun-tasks` would otherwise overwrite.
+        #
+        # The package glob picks up ProviderDriftClosedLoopE2ETest — the bounded, deterministic Top
+        # Tracks/radio/similar-tracks/discography closed loop: track sources feed TRACK_PREVIEW,
+        # while discography's album rows feed ALBUM_METADATA. This job's own log trends by row
+        # source, source provider, title shape, route, canonical status and timeout rate, dated per
+        # run. It never fails this step: the hard suppression invariant lives in non-live unit
+        # coverage instead (see that test's own KDoc), so a trend shift here is a signal to read,
+        # not a gate. No separate trend artifact: the printed lines land in the same `e2e.log` the
+        # step below uploads. Its own log file, not the pin's — one file written twice keeps only
+        # the last writer's output, and comparing the two runs is the strongest tell of a shed.
+        run: |
+          set -eo pipefail
           ./gradlew :musicmeta-core:test -Dinclude.e2e=true --rerun-tasks \
             --tests "com.landofoz.musicmeta.e2e.*" 2>&1 | tee e2e.log
 
@@ -111,8 +166,13 @@ jobs:
         # has not been verified against the registry would be worse than a tag.
         uses: actions/upload-artifact@v7
         with:
-          name: e2e-reports
+          name: drift-reports
+          # `e2e.log` and the suite's own report exist only on a manual run, which
+          # `if-no-files-found: warn` (the default) reports without failing the job.
           path: |
+            schema-pin.log
             e2e.log
+            musicmeta-core/build/reports/tests/schemaPin/
+            musicmeta-core/build/test-results/schemaPin/
             musicmeta-core/build/reports/tests/test/
           retention-days: 30

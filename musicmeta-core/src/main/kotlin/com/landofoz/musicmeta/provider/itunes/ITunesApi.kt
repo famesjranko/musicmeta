@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.provider.itunes
 
+import com.landofoz.musicmeta.drift.SchemaTarget
 import com.landofoz.musicmeta.engine.ArtistMatcher
 import com.landofoz.musicmeta.engine.bestArtistMatch
 import com.landofoz.musicmeta.http.HttpClient
@@ -21,9 +22,7 @@ internal class ITunesApi(
 ) {
 
     suspend fun searchAlbums(term: String, limit: Int): List<ITunesAlbumResult> {
-        val encoded = encodeQueryValue(term)
-        val url = "$BASE_URL/search?media=music&entity=album&term=$encoded&limit=$limit"
-        val json = fetchJson(url) ?: return emptyList()
+        val json = fetchJson(albumSearchUrl(term, limit)) ?: return emptyList()
 
         val results = json.optJSONArray("results") ?: return emptyList()
         return (0 until results.length()).map { i ->
@@ -169,5 +168,30 @@ internal class ITunesApi(
 
         /** iTunes answers a rate limit with 403; see [fetchJson] for why that reading is safe here. */
         private const val THROTTLE_STATUS = 403
+
+        /** The URL [searchAlbums] requests. */
+        fun albumSearchUrl(term: String, limit: Int): String =
+            "$BASE_URL/search?media=music&entity=album&term=${encodeQueryValue(term)}&limit=$limit"
+
+        /**
+         * Schema-pin target, mirroring [parseAlbumResult]. `collectionId` is the key every
+         * follow-up lookup is built from, and `artworkUrl100` is the artwork this provider exists
+         * to contribute.
+         */
+        val SCHEMA_PIN_TARGETS: List<SchemaTarget> = listOf(
+            SchemaTarget(
+                provider = "itunes",
+                route = "album search",
+                url = albumSearchUrl("radiohead", limit = 5),
+                requiredPaths = listOf(
+                    "results[0].collectionId",
+                    "results[0].collectionName",
+                    "results[0].artistName",
+                    "results[0].artworkUrl100",
+                    "results[0].releaseDate",
+                    "results[0].primaryGenreName",
+                ),
+            ),
+        )
     }
 }

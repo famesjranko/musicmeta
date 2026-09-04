@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.provider.musicbrainz
 
+import com.landofoz.musicmeta.drift.SchemaTarget
 import com.landofoz.musicmeta.engine.CallMemo
 import com.landofoz.musicmeta.engine.ProviderCallScope
 import com.landofoz.musicmeta.http.HttpClient
@@ -24,9 +25,8 @@ internal class MusicBrainzApi(
         artist: String,
         limit: Int = RELEASE_SEARCH_LIMIT,
     ): List<MusicBrainzRelease> {
-        val query = buildQuery("release", title, "artistname", artist)
         val json = rateLimiter.execute {
-            httpClient.fetchJsonResult("$BASE_URL/release?query=$query&fmt=json&limit=$limit").bodyOrThrowTransient()
+            httpClient.fetchJsonResult(releaseSearchUrl(title, artist, limit)).bodyOrThrowTransient()
         } ?: return emptyList()
         return MusicBrainzParser.parseReleases(json)
     }
@@ -60,10 +60,8 @@ internal class MusicBrainzApi(
         name: String,
         limit: Int = 5,
     ): List<MusicBrainzArtist> {
-        val escaped = escapeLucene(name)
-        val query = encodeQueryValue("artist:\"$escaped\" OR alias:\"$escaped\"")
         val json = rateLimiter.execute {
-            httpClient.fetchJsonResult("$BASE_URL/artist?query=$query&fmt=json&limit=$limit").bodyOrThrowTransient()
+            httpClient.fetchJsonResult(artistSearchUrl(name, limit)).bodyOrThrowTransient()
         } ?: return emptyList()
         return MusicBrainzParser.parseArtists(json)
     }
@@ -369,10 +367,6 @@ internal class MusicBrainzApi(
         return MusicBrainzParser.parseReleaseGroups(json)
     }
 
-    /** Build a Lucene query with two fields and URL-encode the ENTIRE thing. */
-    private fun buildQuery(field1: String, value1: String, field2: String, value2: String): String =
-        encodeQueryValue("$field1:\"${escapeLucene(value1)}\" AND $field2:\"${escapeLucene(value2)}\"")
-
     companion object {
         private const val BASE_URL = "https://musicbrainz.org/ws/2"
         private val LUCENE_SPECIAL_CHARS = """[+\-&|!()\{}\[\]^"~*?:\\/]""".toRegex()
@@ -443,5 +437,57 @@ internal class MusicBrainzApi(
 
         fun escapeLucene(value: String): String =
             value.replace(LUCENE_SPECIAL_CHARS) { "\\${it.value}" }
+
+        /** Build a Lucene query with two fields and URL-encode the ENTIRE thing. */
+        private fun buildQuery(field1: String, value1: String, field2: String, value2: String): String =
+            encodeQueryValue("$field1:\"${escapeLucene(value1)}\" AND $field2:\"${escapeLucene(value2)}\"")
+
+        /** The URL [searchReleases] requests. */
+        fun releaseSearchUrl(title: String, artist: String, limit: Int): String =
+            "$BASE_URL/release?query=${buildQuery("release", title, "artistname", artist)}&fmt=json&limit=$limit"
+
+        /** The URL [searchArtists] requests. */
+        fun artistSearchUrl(name: String, limit: Int): String {
+            val escaped = escapeLucene(name)
+            val query = encodeQueryValue("artist:\"$escaped\" OR alias:\"$escaped\"")
+            return "$BASE_URL/artist?query=$query&fmt=json&limit=$limit"
+        }
+
+        /**
+         * Schema-pin targets, mirroring [MusicBrainzParser.parseArtists] and
+         * [MusicBrainzParser.parseReleases].
+         *
+         * `id`, `name` and `title` are `getString` reads, so their absence throws rather than
+         * degrading; `score` decides whether a hit is accepted at all, and `status`,
+         * `release-group.primary-type` and `artist-credit` are what release ranking is built from.
+         */
+        val SCHEMA_PIN_TARGETS: List<SchemaTarget> = listOf(
+            SchemaTarget(
+                provider = "musicbrainz",
+                route = "artist search",
+                url = artistSearchUrl("Radiohead", limit = 5),
+                requiredPaths = listOf(
+                    "artists[0].id",
+                    "artists[0].name",
+                    "artists[0].score",
+                    "artists[0].sort-name",
+                ),
+            ),
+            SchemaTarget(
+                provider = "musicbrainz",
+                route = "release search",
+                url = releaseSearchUrl("OK Computer", "Radiohead", limit = 5),
+                requiredPaths = listOf(
+                    "releases[0].id",
+                    "releases[0].title",
+                    "releases[0].score",
+                    "releases[0].status",
+                    "releases[0].date",
+                    "releases[0].country",
+                    "releases[0].release-group.primary-type",
+                    "releases[0].artist-credit[0].name",
+                ),
+            ),
+        )
     }
 }

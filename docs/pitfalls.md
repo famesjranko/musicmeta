@@ -645,6 +645,32 @@ a live response — including the ugly trailing part — and keep an emptiness-a
 beside the happy path, because a payload that is non-blank and still carries no content is the one
 the engine's blank check cannot demote.
 
+## 30. A check that rebuilds a provider's URL asserts against a document the library never receives
+
+The shape of an upstream answer depends on the parameters that asked for it, so a drift check that
+writes its own URL is testing a different response than the mapper parses. The schema pin's
+prototype hand-built the Wikidata request without `props=claims` and reported
+`DRIFT wikidata: entities.Q44190.labels.en.value (absent)` against a perfectly healthy Wikidata:
+the real request returns only `type`, `id` and `claims`, and the mapper reads property ids under
+`claims`, never `labels`. The same trap has a second door — a required-field list written by hand
+asserts fields nothing reads. Both produce a red saying DRIFT about a provider that has not moved,
+which is the cry-wolf the watch exists to remove, one layer down.
+
+So a pinned route takes its URL from the api client's own route function, and its field list lives
+in the same file as the parse it mirrors, where a diff that moves a field shows the pin going stale
+in the same hunk. `check_schema_pin_coverage.py` enforces that a list exists and is walked; it
+cannot read either of these, so review does.
+
+Fanart.tv is what the pin found on its first live run, and it is §28's lesson pointed at nesting
+rather than content. `/v3/music/albums/{releaseGroupMbid}` resolves the release group to its
+*artist* and answers with that artist's document, so the album sits under
+`albums.<releaseGroupMbid>`. The mapper read `<releaseGroupMbid>` at the top level, found nothing,
+and returned "this album has no art" — indistinguishable from the real thing, for as long as the
+route has existed. Every fixture in the suite was marked *synthetic: no ground truth available* and
+encoded the same wrong nesting, so the tests agreed with the code and both were wrong. A fixture
+whose comment says it has no ground truth is not evidence about an upstream; it is a restatement of
+the parse under it.
+
 ## Area — Transport and provider state
 
 ## 11. A retry ladder's coverage is not its trigger

@@ -22,6 +22,7 @@ because the config is the thing that fails.
 | Conventions | `scripts/checks/check_conventions.py` | no `!!` and no `@Serializable` under `provider/`/`http/` in main sources; only `*Provider` public under `provider/` in the committed `api/*.api`; conflict markers anywhere |
 | Pitfall citations | `scripts/checks/check_pitfall_citations.py` | every `§N` reference to `docs/pitfalls.md` resolves to a `## N.` heading in it — catches a renumbered or deleted section orphaning its citers silently |
 | Provider call scope | `scripts/checks/check_provider_call_scope.py` | every `provider/<name>/` directory with a `*Provider.kt` mentions `ProviderCallScope` somewhere in the directory, or is named in the script's own allowlist with a reason; plain substring match, so it proves the mention exists, not that the memo is correct or reached — the per-provider request-count tests and `ProviderMemoLifetimeTest` cover that |
+| Schema pin coverage | `scripts/checks/check_schema_pin_coverage.py` | every `provider/<name>/` directory with a `*Provider.kt` declares a schema-pin target list (`SCHEMA_PIN_TARGETS`, or `schemaPinTargets(` where the route needs a credential) *and* is named in `drift/SchemaPinTargets.kt`, or is in the script's own allowlist with a reason. Both halves, because a list nothing registers makes no request and a registry entry without a list registers nothing. Plain substring match: it proves a target list exists and is walked, never that its paths mirror what the mapper reads or that its URL came from the api client — those are review's, and `SchemaPinVerdictTest` proves only that the verdicts fire |
 | Public vocabulary | `scripts/checks/check_public_vocabulary.py` | no upstream's word for a concept this library already names — `recording`, `release-group`, `master` — appears in a public identifier in the committed `api/*.api` unless a provider's name is attached to it or to its enclosing type. `docs/glossary.md` holds the mapping and the rule. It reads names, never meaning: a public `albumId` holding a release id passes, and so does a name that is simply wrong rather than borrowed. `collection` is not banned — erased JVM descriptors put `Ljava/util/Collection;` on a large share of lines |
 | Edition vocabulary | `scripts/checks/check_edition_vocabulary.py` | demo-web's `EditionQualifier.KIND_PATTERNS` declares the same edition kinds, with the same regex literals, in the same order as core's `MusicBrainzQualifierFallback.KIND_PATTERNS` — the list is hand-copied because `internal` does not cross a module boundary, and order decides which kind a phrase reports. It compares literals, never behaviour: demo-web applies them more loosely on purpose (a sub-phrase may be a sequence of kinds), and that difference is invisible to the check by design. A kind added outside either `KIND_PATTERNS` list is invisible to it too |
 | Test shape | `scripts/checks/check_test_shape.py` | every `@Test` body has `// Given -`/`// When -`/`// Then -`, each on its own line with a plain hyphen and a real clause — Kotlin test sources only, on both the `check` gate and the `format-on-write.sh` hook |
@@ -63,6 +64,15 @@ than it looks like, each learned the hard way.
   A demo style violation therefore merges green and breaks `make check` on `main` for whoever
   pulls next — PR #285 did exactly that, fixed by #290. A green `demo-canary` is not evidence the
   demo tree passes `make check`.
+
+- **The daily schema pin gates nothing, and covers 13 routes across the 11 providers.** It runs on
+  a schedule in `provider-drift.yml`, so a merge never waits on it and a provider outage can never
+  block this repo; the signal is the failed run's email. Each route is requested once and checked
+  for named JSON paths still being present and non-blank — around 60 paths, against the ~304
+  accessor calls the mappers make. A green pin says no pinned field moved on a pinned route
+  today — not that enrichment still works. Ranking, confidence, mergers and identity resolution
+  against live data are exercised only by the e2e suite, which is now `workflow_dispatch` only and
+  therefore runs when somebody remembers to press the button.
 
 - **`!!` on a Java platform type is invisible to detekt.** Measured with a three-cell probe: detekt
   catches `!!` on a nullable receiver (`UnsafeCallOnNullableType`) and on a definitely-non-null one
