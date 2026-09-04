@@ -28,6 +28,7 @@ because the config is the thing that fails.
 | Test shape | `scripts/checks/check_test_shape.py` | every `@Test` body has `// Given -`/`// When -`/`// Then -`, each on its own line with a plain hyphen and a real clause — Kotlin test sources only, on both the `check` gate and the `format-on-write.sh` hook |
 | Release-note caps | `build_release_notes.py Unreleased` | `CHANGELOG.md`'s `[Unreleased]` stays under 48000 chars and 200 per line — the same `check_caps()` the release runs, so it fails here rather than at release prep. An empty section passes: `pin_release.py` opens one on every release branch |
 | Release coordinates | `scripts/checks/check_release_coordinates.py` | every version-bearing line outside `CHANGELOG.md` equals the version `gradle.properties` declares: `ROADMAP.md`'s `## Where We Are` block and its `### Unreleased` subsection, and the `musicmeta-*` coordinates in `README.md` and the three `docs/guides/`. Regions are found by heading, so renaming one fails the check rather than silently guarding nothing. Versions elsewhere in `ROADMAP.md` name the release a capability landed in and are left alone. It reads a version, never a claim: nothing checks that the artifact it names actually resolves |
+| Migration guide headings | `scripts/checks/check_migration_guide.py` | every `## <x>` heading in `docs/guides/migration.md` is `Unreleased` or a version with a `## [<x>]` section in `CHANGELOG.md`, and `## Unreleased` is present in the guide if and only if `CHANGELOG.md`'s `## [Unreleased]` has a `### Breaking Changes` heading. `pin_release.py` renames the guide's heading alongside the changelog's on every release. It checks headings exist, never that an individual `### Breaking Changes` line has its own guide section — see "Known gaps" |
 | Script self-tests | `scripts/**/test_*.py` | discovered, not listed |
 | Demo frontend | `node --test` via `demo-web/package.json` | the demo browser code's wire-protocol reading and its "is this worth retrying" decision, as the pure functions in `demo-web/src/main/resources/stream-protocol.js`. Runs on every `./check`, including `--fast`. node is a **minimum major** (`NODE_MIN_MAJOR` in `scripts/bootstrap.sh`) rather than an exact pin, and bootstrap reports it rather than installing it — it is the machine's runtime, not an executable the script can fetch and verify by digest |
 | Kotlin format | ktlint (version pinned in `libs.versions.toml`) | all modules, `demo-cli/`, and `demo-web/` |
@@ -59,18 +60,15 @@ conventions are not.
 Not an audit of everything unenforced — these are the specific places where a green run means less
 than it looks like, each learned the hard way.
 
-- **Nothing pins `docs/guides/migration.md`'s `## Unreleased` heading at release.** The guide groups
-  its sections by the version each break shipped in, and the newest group is headed `## Unreleased`
-  to match `CHANGELOG.md`. When a release renames that changelog heading, nothing renames the
-  guide's: `check_release_coordinates.py` reads version-bearing *coordinates* — the `musicmeta-*`
-  dependency lines — and the guide carries none, so it is not in that check's region list at all.
-  A consumer on the released version then reads "Unreleased" above breaks they already have.
-
-- **Nothing gates that every `### Breaking Changes` line has a migration-guide section.** The guide
-  is the promise `ROADMAP.md` makes for 1.0.0, and its completeness rests entirely on whoever adds
-  a breaking line remembering to add a section beside it. `./check` compiles the guide's fences —
-  so a section that drifts from the API fails — but a break with no section at all is invisible to
-  every gate we have. The failure is silent and only a consumer discovers it, mid-upgrade.
+- **Nothing gates that every `### Breaking Changes` *line* has a migration-guide section.**
+  `check_migration_guide.py` gates the two files' headings agreeing — `## Unreleased` exists in the
+  guide exactly when `[Unreleased]` has a `### Breaking Changes` heading at all — but not that each
+  individual breaking-change bullet under that heading has its own section in the guide. The guide
+  is the promise `ROADMAP.md` makes for 1.0.0, and per-line completeness still rests entirely on
+  whoever adds a breaking line remembering to add a section beside it. `./check` compiles the
+  guide's fences — so a section that drifts from the API fails — but a break with no section at all
+  is invisible to every gate we have. The failure is silent and only a consumer discovers it,
+  mid-upgrade.
 
 - **CI's `demo-canary` job compiles and tests the demos; it does not lint them.** It runs
   `../gradlew compileKotlin test` in each demo, while `make check` also runs the demos' ktlint.

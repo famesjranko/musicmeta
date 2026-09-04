@@ -86,6 +86,7 @@ reads:
 
 - pins `## [Unreleased]` to `## [<version>] - <date>` and opens a fresh empty `[Unreleased]` above it
 - moves `ROADMAP.md`'s “Where We Are” heading to the new version
+- renames `docs/guides/migration.md`'s `## Unreleased` heading to the new version, when present
 - sets `version` in `gradle.properties`
 - rewrites all nine README coordinate lines, then greps to prove the old version is gone
 - assembles the release notes and fails if they do not fit the caps

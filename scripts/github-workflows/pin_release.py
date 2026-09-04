@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
-"""Pin the CHANGELOG `[Unreleased]` section to a version, and move the ROADMAP heading.
+"""Pin the CHANGELOG `[Unreleased]` section to a version, move the ROADMAP heading, and rename the
+migration guide's `## Unreleased` section.
 
-Both edits are single-line and fully determined by the version and date, so a human doing them by
-hand is three chances to typo the thing every later check reads. `prepare-release.yml` runs this.
+All three edits are single-line (or single-heading) and fully determined by the version and date,
+so a human doing them by hand is three chances to typo the thing every later check reads.
+`prepare-release.yml` runs this.
 
     python3 pin_release.py 0.11.0 [--date YYYY-MM-DD] [--changelog PATH] [--roadmap PATH]
+                                  [--migration-guide PATH]
 
 Exit codes: 0 = pinned, 1 = refused (the message says why).
-Importable: pin_changelog(text, version, date) -> str, pin_roadmap(text, version) -> str.
+Importable: pin_changelog(text, version, date) -> str, pin_roadmap(text, version) -> str,
+pin_migration_guide(text, version) -> str.
 """
 
 from __future__ import annotations
@@ -22,6 +26,7 @@ UNRELEASED = re.compile(r"^## \[Unreleased\][ \t]*$", re.MULTILINE)
 PINNED = re.compile(r"^## \[([0-9]+\.[0-9]+\.[0-9]+)\]", re.MULTILINE)
 BREAKING = re.compile(r"^### Breaking Changes[ \t]*$", re.MULTILINE)
 ROADMAP_HEADING = re.compile(r"^## Where We Are \(v[0-9]+\.[0-9]+\.[0-9]+\)[ \t]*$", re.MULTILINE)
+MIGRATION_GUIDE_HEADING = re.compile(r"^## Unreleased[ \t]*$", re.MULTILINE)
 
 # The regions the ROADMAP names the version in, and the coordinate shape, are imported from the
 # check that reads them rather than restated here. Two copies of this rule is the defect one
@@ -37,6 +42,8 @@ from check_release_coordinates import (  # noqa: E402
 )
 
 COORDINATE_SUB = re.compile(r"(musicmeta-[a-z]+):(v?)[0-9]+\.[0-9]+\.[0-9]+")
+
+MIGRATION_GUIDE = "docs/guides/migration.md"
 
 
 class PinError(Exception):
@@ -112,12 +119,24 @@ def pin_guides(text: str, version: str) -> str:
     return COORDINATE_SUB.sub(lambda m: f"{m.group(1)}:{m.group(2)}{version}", text)
 
 
+def pin_migration_guide(text: str, version: str) -> str:
+    """Rename the guide's `## Unreleased` heading to `## <version>`. Absent heading is not an error.
+
+    The guide heads its newest group `## Unreleased` to match CHANGELOG.md's own section; nothing
+    renamed it at release time, so a consumer on the released version read "Unreleased" above
+    breaks they already had. `check_migration_guide.py` reads the same heading and enforces the
+    same rename on every later commit.
+    """
+    return MIGRATION_GUIDE_HEADING.sub(f"## {version}", text, count=1)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Pin the CHANGELOG and ROADMAP to a release version.")
     parser.add_argument("version", help="release version, e.g. 0.11.0 (leading v allowed)")
     parser.add_argument("--date", help="release date, YYYY-MM-DD (default: today, UTC)")
     parser.add_argument("--changelog", default="CHANGELOG.md")
     parser.add_argument("--roadmap", default="ROADMAP.md")
+    parser.add_argument("--migration-guide", default=MIGRATION_GUIDE)
     args = parser.parse_args(argv)
 
     version = args.version.removeprefix("v")
@@ -151,6 +170,14 @@ def main(argv: list[str] | None = None) -> int:
         if after != before:
             path.write_text(after, encoding="utf-8")
             print(f"Rewrote coordinates in {rel}.")
+
+    migration_guide = Path(args.migration_guide)
+    if migration_guide.exists():
+        before = migration_guide.read_text(encoding="utf-8")
+        after = pin_migration_guide(before, version)
+        if after != before:
+            migration_guide.write_text(after, encoding="utf-8")
+            print(f"Renamed {migration_guide}'s Unreleased heading to {version}.")
     return 0
 
 

@@ -115,6 +115,21 @@ assert "musicmeta-core:0.11.0" in pinned_guide
 assert "musicmeta-okhttp:v0.11.0" in pinned_guide, "the JitPack form keeps its v prefix"
 assert "0.10.1" not in pinned_guide
 
+# --- migration guide ------------------------------------------------------------------------------
+from pin_release import pin_migration_guide
+
+GUIDE_UNRELEASED = (
+    "# Migration guide\n\n## Unreleased\n\n### A break\n\nbefore/after here.\n\n## 0.10.0\n\n### An older break\n"
+)
+pinned_guide_heading = pin_migration_guide(GUIDE_UNRELEASED, "0.11.0")
+assert "## 0.11.0" in pinned_guide_heading
+assert "## Unreleased" not in pinned_guide_heading
+assert "## 0.10.0" in pinned_guide_heading, "older sections are untouched"
+
+# Absent heading is not an error, and the guide is returned unchanged.
+GUIDE_NO_UNRELEASED = "# Migration guide\n\n## 0.10.0\n\n### An older break\n"
+assert pin_migration_guide(GUIDE_NO_UNRELEASED, "0.11.0") == GUIDE_NO_UNRELEASED
+
 # --- against the real files ---------------------------------------------------------------------
 # State-agnostic on purpose: this runs on every commit, including the release branch (target
 # version freshly pinned, [Unreleased] empty) and main right after a release merges. A hard-coded
@@ -131,6 +146,11 @@ try:
     assert extract_section(real, next_minor), "the live [Unreleased] section must pin and extract"
     roadmap = pin_roadmap((root / "ROADMAP.md").read_text(encoding="utf-8"), next_minor)
     assert f"## Where We Are (v{next_minor})" in roadmap
+    migration = (root / "docs" / "guides" / "migration.md").read_text(encoding="utf-8")
+    assert "## Unreleased" in migration, "the live migration guide should still head its newest group Unreleased"
+    pinned_migration = pin_migration_guide(migration, next_minor)
+    assert f"## {next_minor}" in pinned_migration
+    assert "## Unreleased" not in pinned_migration
 except PinError as e:
     assert "empty" in str(e), f"live CHANGELOG refused to pin for an unexpected reason: {e}"
 
