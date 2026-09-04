@@ -2,7 +2,8 @@ package com.landofoz.musicmeta.provider.itunes
 
 import com.landofoz.musicmeta.drift.SchemaTarget
 import com.landofoz.musicmeta.engine.ArtistMatcher
-import com.landofoz.musicmeta.engine.bestArtistMatch
+import com.landofoz.musicmeta.engine.ArtistNameMatch
+import com.landofoz.musicmeta.engine.bestArtistMatchOrAlias
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.HttpResult
 import com.landofoz.musicmeta.http.RateLimiter
@@ -107,19 +108,20 @@ internal class ITunesApi(
      * back to iTunes' own order — [bestArtistMatch] keeps the first maximum — which makes this a
      * strict narrowing of the old behaviour rather than a re-ranking of it.
      */
-    suspend fun searchArtist(artistName: String): Long? {
+    suspend fun searchArtist(artistName: String): ArtistNameMatch<Long>? {
         val encoded = encodeQueryValue(artistName)
         val url = "$BASE_URL/search?media=music&entity=musicArtist" +
             "&term=$encoded&limit=$ARTIST_SEARCH_LIMIT"
         val json = fetchJson(url) ?: return null
         val results = json.optJSONArray("results") ?: return null
-        val artistId = (0 until results.length())
+        val match = (0 until results.length())
             // A non-object element is skipped, not thrown: a JSONException here would surface as
             // Error and open the breaker against a healthy iTunes (docs/pitfalls.md §4).
             .mapNotNull { results.optJSONObject(it) }
-            .bestArtistMatch(artistName) { it.optString("artistName", "") }
-            ?.optLong("artistId") ?: return null
-        return if (artistId > 0) artistId else null
+            .bestArtistMatchOrAlias(artistName) { it.optString("artistName", "") }
+            ?: return null
+        val artistId = match.value.optLong("artistId")
+        return if (artistId > 0) ArtistNameMatch(artistId, match.tier) else null
     }
 
     /**

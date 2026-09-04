@@ -9,7 +9,6 @@ import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.IdentifierNamespace
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.SimilarAlbum
-import com.landofoz.musicmeta.engine.ArtistMatcher
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
@@ -88,12 +87,8 @@ public class SimilarAlbumsProvider internal constructor(
         val seedArtist = if (deezerId != null) {
             DeezerArtistSearchResult(id = deezerId, name = albumRequest.artist)
         } else {
-            val searchResult = api.searchArtist(albumRequest.artist)
+            api.searchArtist(albumRequest.artist)
                 ?: return EnrichmentResult.NotFound(EnrichmentType.SIMILAR_ALBUMS, id)
-            if (!ArtistMatcher.isMatch(albumRequest.artist, searchResult.name)) {
-                return EnrichmentResult.NotFound(EnrichmentType.SIMILAR_ALBUMS, id)
-            }
-            searchResult
         }
 
         // Fetch up to 5 related artists
@@ -129,12 +124,13 @@ public class SimilarAlbumsProvider internal constructor(
             data = EnrichmentData.SimilarAlbums(deduped),
             provider = id,
             // 0.8 scores the *lookup*, not the strength of the recommendation. Note it overstates
-            // on the `deezerId` branch above, which trusts the caller's id and so runs neither
-            // searchArtist nor ArtistMatcher — only the search path actually verifies the name.
+            // on the `deezerId` branch above, which trusts the caller's id and runs no name
+            // search — only the search path actually verifies the name.
             // Deriving from related artists is a property of the type here (there is no
             // album-level source to be more confident than), so that caveat belongs in the KDoc
             // above, not smuggled into a number consumers rank providers by.
-            confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
+            confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true) *
+                seedArtist.nameTier.confidenceFactor,
             resolvedIdentifiers = EnrichmentIdentifiers()
                 .with(IdentifierNamespace.DEEZER, seedArtist.id.toString()),
         )

@@ -7,9 +7,11 @@ import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.IdentifierRequirement
 import com.landofoz.musicmeta.LookupProvenance
 import com.landofoz.musicmeta.SearchCandidate
+import com.landofoz.musicmeta.engine.AlternativeName
 import com.landofoz.musicmeta.engine.CallMemo
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.engine.NameMatchTier
+import com.landofoz.musicmeta.engine.ResolvedEntityNames
 import com.landofoz.musicmeta.engine.TransientIdentifierMarker
 import com.landofoz.musicmeta.engine.nameMatchTier
 import com.landofoz.musicmeta.engine.namesNoEntity
@@ -90,6 +92,7 @@ internal class MusicBrainzArtistEnrichment(
             when (val lookup = suppliedArtist(request, mbid)) {
                 is MusicBrainzLookup.Found -> {
                     offerNames(lookup.value.name, null)
+                    offerAliases(lookup.value)
                     return buildArtistResult(
                         lookup.value, type, ConfidenceCalculator.idBasedLookup(),
                         LookupProvenance.CANONICAL_ID,
@@ -115,6 +118,8 @@ internal class MusicBrainzArtistEnrichment(
         // Search results have metadata (genres, country) but lack URL relations
         // (wikidata, wikipedia). Do the full lookup when these are missing so
         // downstream providers (Wikidata, Wikipedia) can use them.
+        offerAliases(best)
+
         val needsRelations = best.wikidataId == null && best.wikipediaTitle == null
         val resolved = if (needsRelations) resolveArtistRelations(best) else best
 
@@ -239,6 +244,14 @@ internal class MusicBrainzArtistEnrichment(
             nameResolvedArtistId(request)?.let { memoizedArtist(it).valueOrNull() }
     }
 
+    /**
+     * The names MusicBrainz holds for [mbid]'s artist, for a request whose own entity is a release
+     * or a recording: its credited artist is the only entity carrying an alias pool, and it is a
+     * lookup away rather than in hand.
+     */
+    internal suspend fun aliasesOf(mbid: String): List<AlternativeName> =
+        memoizedArtist(mbid).valueOrNull()?.let { artistAliasPool(it) }.orEmpty()
+
     /** [memoizedArtist], with the caller's own name checked against it — see [unlessDifferentArtist]. */
     private suspend fun suppliedArtist(
         request: EnrichmentRequest.ForArtist,
@@ -305,12 +318,25 @@ internal class MusicBrainzArtistEnrichment(
  *
  * Null for an empty pool: a name MusicBrainz knows nothing of is a miss, not a failure.
  */
+
 internal fun pickBestArtist(
     query: String,
     candidates: List<MusicBrainzArtist>,
 ): MusicBrainzArtist? = candidates.maxWithOrNull(
     compareBy({ -artistNameTier(query, it).ordinal }, { it.tags.isNotEmpty() }),
 )
+
+/**
+ * Hands the fan-out the names this artist goes by, canonical first, for the providers whose own
+ * candidate matching has to verify a name in another script than the one the caller asked with.
+ */
+private suspend fun offerAliases(artist: MusicBrainzArtist) {
+    currentCoroutineContext()[ResolvedEntityNames]?.offerAliases { artistAliasPool(artist) }
+}
+
+/** [artist]'s canonical name and every alias MusicBrainz files under it, as one pool. */
+private fun artistAliasPool(artist: MusicBrainzArtist): List<AlternativeName> =
+    listOf(AlternativeName(artist.name, official = true)) + artist.alternativeNames()
 
 /**
  * MusicBrainz's own relevance score for [artist], scaled by how [query] reached it.

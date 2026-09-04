@@ -42,6 +42,12 @@ internal data class AlbumMatch<T>(
     val tier: TitleMatcher.TitleTier,
     val artistQuality: Int,
     val tieBreaks: AlbumEvidence,
+    /**
+     * How the accepted candidate's artist name matched the requested one — [NameMatchTier.CANONICAL]
+     * for the requested name itself, an alias tier when the pool is what verified it
+     * ([acceptAndRankAlbumOrAlias]). Scales the confidence the candidate is reported with.
+     */
+    val nameTier: NameMatchTier = NameMatchTier.CANONICAL,
 )
 
 /**

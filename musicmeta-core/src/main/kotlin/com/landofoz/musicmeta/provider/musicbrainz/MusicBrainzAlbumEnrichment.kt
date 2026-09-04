@@ -7,6 +7,7 @@ import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.IdentifierRequirement
 import com.landofoz.musicmeta.LookupProvenance
 import com.landofoz.musicmeta.SearchCandidate
+import com.landofoz.musicmeta.engine.AlternativeName
 import com.landofoz.musicmeta.engine.CallMemo
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.engine.TransientIdentifierMarker
@@ -25,6 +26,8 @@ internal class MusicBrainzAlbumEnrichment(
     private val api: MusicBrainzApi,
     private val providerId: String,
     private val minMatchScore: Int,
+    /** Reads a credited artist's alias pool, reusing this call's artist memo. */
+    private val artistAliases: suspend (String) -> List<AlternativeName> = { emptyList() },
 ) {
 
     /**
@@ -66,6 +69,7 @@ internal class MusicBrainzAlbumEnrichment(
         }
         if (namesNoEntity(request)) return EnrichmentResult.NotFound(type, providerId)
         val search = memoizedAlbumSearch(request.title, request.artist)
+        search.release?.let { offerCreditedArtistAliases(it.artistCreditIds.firstOrNull(), artistAliases) }
         val best = search.release ?: return notFoundWithSuggestions(
             type, providerId, search.originalPool,
             fuzzy = { memoizedFuzzyReleases(request.title, request.artist) },
@@ -95,6 +99,7 @@ internal class MusicBrainzAlbumEnrichment(
     ): EnrichmentResult? = when (val lookup = suppliedRelease(request, mbid)) {
         is MusicBrainzLookup.Found -> {
             offerNames(lookup.value.title, lookup.value.artistCredit)
+            offerCreditedArtistAliases(lookup.value.artistCreditIds.firstOrNull(), artistAliases)
             buildAlbumResult(
                 lookup.value, type, ConfidenceCalculator.idBasedLookup(),
                 LookupProvenance.CANONICAL_ID,

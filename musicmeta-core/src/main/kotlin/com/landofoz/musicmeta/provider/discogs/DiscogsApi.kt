@@ -2,7 +2,8 @@ package com.landofoz.musicmeta.provider.discogs
 
 import com.landofoz.musicmeta.drift.SchemaTarget
 import com.landofoz.musicmeta.engine.ArtistMatcher
-import com.landofoz.musicmeta.engine.bestArtistMatch
+import com.landofoz.musicmeta.engine.ArtistNameMatch
+import com.landofoz.musicmeta.engine.bestArtistMatchOrAlias
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.http.bodyOrThrowAuthOrTransient
@@ -50,18 +51,19 @@ internal class DiscogsApi(
      *
      * Name quality is therefore the only ranking, never overridden by anything.
      */
-    suspend fun searchArtist(name: String): Long? {
+    suspend fun searchArtist(name: String): ArtistNameMatch<Long>? {
         val encoded = encodeQueryValue(name)
         val url = "$SEARCH_URL?type=artist&q=$encoded&per_page=$ARTIST_SEARCH_LIMIT"
         val json = rateLimiter.execute { fetch(url) } ?: return null
         val results = json.optJSONArray("results") ?: return null
-        val id = (0 until results.length())
+        val match = (0 until results.length())
             // A non-object element is skipped, not thrown: a JSONException here would surface as
             // Error and open the breaker against a healthy Discogs (docs/pitfalls.md §4).
             .mapNotNull { results.optJSONObject(it) }
-            .bestArtistMatch(name) { it.candidateName() }
-            ?.optLong("id", 0L) ?: return null
-        return if (id > 0) id else null
+            .bestArtistMatchOrAlias(name) { it.candidateName() }
+            ?: return null
+        val id = match.value.optLong("id", 0L)
+        return if (id > 0) ArtistNameMatch(id, match.tier) else null
     }
 
     private fun JSONObject.candidateName(): String =

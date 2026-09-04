@@ -60,6 +60,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `EnrichmentRequest.forAlbum`'s pre-`trackCount`/`year` overload is removed: source is unaffected (both default), but a `.jar` compiled against 0.12.0 throws `NoSuchMethodError` until recompiled
 
 ### Added
+- Deezer, iTunes and Discogs verify a candidate against the alias pool identity resolution found, so a non-Latin request reaches a romanizing catalogue; an alias match scores lower
 - ListenBrainz now serves `SIMILAR_ARTISTS` (priority 50) from its keyless Labs host, on a resolved artist MBID: merged similar-artist lists grow, Radiohead's from 31 to 109 entries
 - `docs/guides/migration.md`: every break since 0.10.0 grouped by version, each with the edit it asks of you and a before/after pair; linked from the README documentation table
 - `enrichDeadlineRemainingMs()`: what is left of the enclosing `enrich()` deadline, for a custom `HttpClient` to clamp its transport timeouts down to; null outside an enrich call

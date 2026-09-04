@@ -4,6 +4,7 @@ import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.LookupProvenance
 import com.landofoz.musicmeta.SearchCandidate
+import com.landofoz.musicmeta.engine.AlternativeName
 import com.landofoz.musicmeta.engine.ResolvedEntityNames
 import com.landofoz.musicmeta.engine.TitleMatcher
 import kotlinx.coroutines.currentCoroutineContext
@@ -63,6 +64,20 @@ internal fun searchProvenance(
  */
 internal suspend fun offerNames(title: String?, artist: String?) {
     currentCoroutineContext()[ResolvedEntityNames]?.offer(title, artist)
+}
+
+/**
+ * Offers the fan-out the names [artistMbid]'s artist goes by, as a source rather than a pool: a
+ * release or a recording carries its credited artists' ids and none of their aliases, so the pool
+ * is a lookup away, and only a provider whose candidate matching has already failed on the
+ * requested name is worth paying it for.
+ */
+internal suspend fun offerCreditedArtistAliases(
+    artistMbid: String?,
+    aliasesOf: suspend (String) -> List<AlternativeName>,
+) {
+    if (artistMbid == null) return
+    currentCoroutineContext()[ResolvedEntityNames]?.offerAliases { aliasesOf(artistMbid) }
 }
 
 /**
