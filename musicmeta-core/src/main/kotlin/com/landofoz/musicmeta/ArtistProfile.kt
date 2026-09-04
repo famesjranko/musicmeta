@@ -13,7 +13,7 @@ public data class ArtistProfile(val name: String, val results: EnrichmentResults
     // --- Identity ---
     val identifiers: EnrichmentIdentifiers get() = results.identity.identifiers
     val canonicalStatus: CanonicalStatus get() = results.identity.status
-    val identityMatchScore: Int? get() = results.identity.matchScore
+    val identityMatchScore: Float? get() = results.identity.matchScore
     val suggestions: List<SearchCandidate> get() = results.identity.suggestions
 
     // --- Artwork ---

@@ -16,6 +16,12 @@ import com.landofoz.musicmeta.demo.ui.Terminal
 /** Formats enrichment results, profiles, and search results for terminal display. */
 object Formatter {
 
+    /** Above this a match is shown in the success colour; below it, as a warning. */
+    private const val HIGH_MATCH = 0.90f
+
+    /** A 0.0-1.0 match score, two decimals, as every score on the library's surface carries it. */
+    private fun formatMatchScore(score: Float) = "%.2f".format(score)
+
     /** "5 members: Thom Yorke, Jonny Greenwood, ..." — used by both the profile and result views. */
     private fun membersSummary(members: List<BandMember>) =
         "${members.size} members: ${members.take(4).joinToString(", ") { it.name }}"
@@ -167,7 +173,7 @@ object Formatter {
             suggestions.forEachIndexed { i, c ->
                 val name = term.styled(c.title, term.theme.bold)
                 val artist = c.artist?.let { " by $it" } ?: ""
-                val score = term.styled("${c.score}%", term.theme.warning)
+                val score = term.styled(formatMatchScore(c.matchScore), term.theme.warning)
                 val disambig = c.disambiguation?.let { " ${term.styled("($it)", term.theme.muted)}" } ?: ""
                 term.println("    ${i + 1}. $name$artist  $score$disambig")
             }
@@ -185,7 +191,10 @@ object Formatter {
             val num = term.styled("${i + 1}.", term.theme.bold)
             val name = term.styled(c.title, term.theme.bold)
             val artist = c.artist?.let { " by $it" } ?: ""
-            val score = term.styled("${c.score}%", if (c.score >= 90) term.theme.success else term.theme.warning)
+            val score = term.styled(
+                formatMatchScore(c.matchScore),
+                if (c.matchScore >= HIGH_MATCH) term.theme.success else term.theme.warning,
+            )
 
             val tags = listOfNotNull(c.country, c.releaseType, c.year?.take(4))
             val tagStr = if (tags.isEmpty()) {
@@ -213,8 +222,8 @@ object Formatter {
         ids.wikidataId?.let { term.keyValue("Wikidata:", it) }
         ids.wikipediaTitle?.let { term.keyValue("Wikipedia:", it) }
         resolution.matchScore?.let { score ->
-            val color = if (score >= 90) term.theme.success else term.theme.warning
-            term.keyValue("Match:", term.styled("$score%", color))
+            val color = if (score >= HIGH_MATCH) term.theme.success else term.theme.warning
+            term.keyValue("Match:", term.styled(formatMatchScore(score), color))
         }
     }
 

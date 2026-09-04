@@ -412,7 +412,9 @@ private fun EnrichmentResults.toMeta(elapsedMs: Long): Meta {
         }
     }
     val identitySummary = identity.let { id ->
-        listOfNotNull(id.status.name, id.matchScore?.let { "score $it" }).joinToString(" · ").ifBlank { null }
+        listOfNotNull(id.status.name, id.matchScore?.let { "score %.2f".format(it) })
+            .joinToString(" · ")
+            .ifBlank { null }
     }
     return Meta(
         elapsedMs = elapsedMs,

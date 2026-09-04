@@ -116,14 +116,14 @@ internal object DeezerMapper {
     fun toSearchCandidate(
         result: DeezerAlbumResult,
         providerId: String,
-        score: Int,
+        matchScore: Float,
     ): SearchCandidate = SearchCandidate(
         title = result.title,
         artist = result.artistName,
         year = null,
         country = null,
         releaseType = null,
-        score = score,
+        matchScore = matchScore,
         thumbnailUrl = result.coverMedium ?: result.coverSmall,
         identifiers = EnrichmentIdentifiers(),
         provider = providerId,

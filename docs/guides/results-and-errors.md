@@ -92,7 +92,7 @@ when (val r = results.result(EnrichmentType.ALBUM_ART)) {
 ```kotlin
 results.identity.identifiers        // EnrichmentIdentifiers (MBIDs, Wikidata, etc.)
 results.identity.status             // CanonicalStatus, never null (RESOLVED, AMBIGUOUS, UNRESOLVED, CONTRADICTED, FAILED, RESOLVING, NOT_ATTEMPTED_*)
-results.identity.matchScore         // Int? (0-100)
+results.identity.matchScore         // Float? (0.0-1.0)
 results.identity.suggestions        // List<SearchCandidate>
 ```
 

@@ -296,7 +296,7 @@ public class ITunesProvider(
 
     public companion object {
         public const val DEFAULT_ARTWORK_SIZE: Int = 1200
-        private const val SEARCH_SCORE = 70
+        private const val SEARCH_SCORE = 0.70f
     }
 }
 

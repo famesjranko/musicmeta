@@ -364,7 +364,7 @@ class RealApiEndToEndTest {
         assertTrue("Should return candidates", candidates.isNotEmpty())
         println("  Candidates:")
         candidates.forEach { c ->
-            println("    ${c.title} by ${c.artist} (${c.year}) — score ${c.score}, thumb=${c.thumbnailUrl != null}")
+            println("    ${c.title} by ${c.artist} (${c.year}) — matchScore ${c.matchScore}, thumb=${c.thumbnailUrl != null}")
         }
     }
 
@@ -380,7 +380,7 @@ class RealApiEndToEndTest {
         assertTrue("Should return candidates", candidates.isNotEmpty())
         println("  Candidates:")
         candidates.forEach { c ->
-            println("    ${c.title} (${c.country}, ${c.releaseType}) — score ${c.score}")
+            println("    ${c.title} (${c.country}, ${c.releaseType}) — matchScore ${c.matchScore}")
         }
     }
 

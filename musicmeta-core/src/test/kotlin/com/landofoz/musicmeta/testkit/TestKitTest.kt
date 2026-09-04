@@ -212,7 +212,7 @@ class TestKitTest {
         // Given - an UNRESOLVED resolution carrying a score, which its declaration forbids
         val request = EnrichmentRequest.forTrack("Song", "David Bowie")
         val results = resultsWith(
-            IdentityResolution(EnrichmentIdentifiers(), CanonicalStatus.UNRESOLVED, matchScore = 100),
+            IdentityResolution(EnrichmentIdentifiers(), CanonicalStatus.UNRESOLVED, matchScore = 1.0f),
         )
 
         // When - the name-search rule runs
@@ -276,7 +276,7 @@ class TestKitTest {
     private fun identity(title: String?, artist: String?) = IdentityResolution(
         identifiers = EnrichmentIdentifiers(),
         status = CanonicalStatus.RESOLVED,
-        matchScore = 100,
+        matchScore = 1.0f,
         title = title,
         artist = artist,
     )

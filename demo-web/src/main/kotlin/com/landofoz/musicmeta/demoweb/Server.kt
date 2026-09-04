@@ -1110,7 +1110,7 @@ private fun handleSearch(exchange: HttpExchange, engine: EnrichmentEngine) {
                         artist = candidate.artist,
                         year = candidate.year,
                         releaseType = candidate.releaseType,
-                        score = candidate.score,
+                        score = candidate.matchScore,
                         thumbnailUrl = candidate.thumbnailUrl,
                         disambiguation = candidate.disambiguation,
                         mbid = candidate.identifiers.musicBrainzId,

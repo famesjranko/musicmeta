@@ -282,14 +282,12 @@ class EnrichBatchTest {
         val req2 = EnrichmentRequest.forAlbum("Nevermind", "Nirvana")
         val req2Suggestion = SearchCandidate(
             title = "Nevermind",
+            provider = "identity-provider",
+            identifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-nirvana-near-miss"),
+            matchScore = 0.70f,
             artist = "Nirvana",
             year = "1991",
-            country = null,
             releaseType = "Album",
-            score = 70,
-            thumbnailUrl = null,
-            identifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-nirvana-near-miss"),
-            provider = "identity-provider",
         )
         val provider = object : FakeProvider(
             id = "identity-provider",

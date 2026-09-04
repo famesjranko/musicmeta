@@ -68,7 +68,7 @@ internal object ITunesMapper {
     fun toSearchCandidate(
         result: ITunesAlbumResult,
         providerId: String,
-        score: Int,
+        matchScore: Float,
     ): SearchCandidate {
         val year = result.releaseDate?.take(4)
         return SearchCandidate(
@@ -77,7 +77,7 @@ internal object ITunesMapper {
             year = year,
             country = null,
             releaseType = null,
-            score = score,
+            matchScore = matchScore,
             thumbnailUrl = result.artworkUrl,
             identifiers = if (result.collectionId > 0) {
                 EnrichmentIdentifiers().withExtra("itunesCollectionId", result.collectionId.toString())

@@ -12,7 +12,7 @@ import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.cache.CacheMode
 import com.landofoz.musicmeta.cache.InMemoryEnrichmentCache
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.int
+import kotlinx.serialization.json.float
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -68,14 +68,12 @@ class SearchEndpointTest {
         // Given - a provider whose search returns one concrete candidate
         val candidate = SearchCandidate(
             title = "Starman",
+            provider = "stub-search",
+            identifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-starman"),
+            matchScore = 0.95f,
             artist = "David Bowie",
             year = "1972",
-            country = null,
             releaseType = "single",
-            score = 95,
-            thumbnailUrl = null,
-            identifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-starman"),
-            provider = "stub-search",
         )
         val port = startTestServer(StubSearchProvider(listOf(candidate)))
 
@@ -90,7 +88,7 @@ class SearchEndpointTest {
             .jsonObject["candidates"]!!.jsonArray
             .single().jsonObject
         assertEquals("Starman", hitJson["title"]?.jsonPrimitive?.content)
-        assertEquals(95, hitJson["score"]?.jsonPrimitive?.int)
+        assertEquals(0.95f, hitJson["score"]!!.jsonPrimitive.float, 0.0001f)
         assertEquals("mbid-starman", hitJson["mbid"]?.jsonPrimitive?.content)
     }
 

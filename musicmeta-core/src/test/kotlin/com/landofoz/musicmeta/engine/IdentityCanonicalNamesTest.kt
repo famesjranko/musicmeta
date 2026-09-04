@@ -72,6 +72,22 @@ class IdentityCanonicalNamesTest {
     }
 
     @Test
+    fun `an identifier lookup reports its match on the same 0 to 1 scale a candidate uses`() = runTest {
+        // Given - a recording MusicBrainz holds under the caller's identifier
+        httpClient.givenJsonResponse("recording/$UNDER_PRESSURE_MBID", UNDER_PRESSURE_RECORDING)
+
+        // When - the request resolves by that identifier alone
+        val results = engine().enrich(
+            EnrichmentRequest.forTrackByMbid(UNDER_PRESSURE_MBID),
+            setOf(EnrichmentType.GENRE),
+        )
+
+        // Then - the deterministic lookup scores the top of the published scale, not 100
+        assertEquals(CanonicalStatus.RESOLVED, results.identity.status)
+        assertEquals(1.0f, results.identity.matchScore!!, 0.0001f)
+    }
+
+    @Test
     fun `an artist request carries the artist name as the title`() = runTest {
         // Given - an artist MusicBrainz holds under the caller's identifier
         httpClient.givenJsonResponse("artist/$QUEEN_MBID", QUEEN_ARTIST)

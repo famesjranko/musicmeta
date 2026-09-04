@@ -241,10 +241,14 @@ class DefaultEnrichmentEngineTest {
     @Test fun `search returns candidates from identity provider`() = runTest {
         // Given - identity provider with search capability
         val candidate = SearchCandidate(
-            title = "OK Computer", artist = "Radiohead", year = "1997",
-            country = "GB", releaseType = "Album", score = 98,
-            thumbnailUrl = null, identifiers = EnrichmentIdentifiers(musicBrainzId = "abc"),
+            title = "OK Computer",
             provider = "mb",
+            identifiers = EnrichmentIdentifiers(musicBrainzId = "abc"),
+            matchScore = 0.98f,
+            artist = "Radiohead",
+            year = "1997",
+            country = "GB",
+            releaseType = "Album",
         )
         val p = FakeProviderWithSearch(
             id = "mb",
@@ -346,7 +350,7 @@ class DefaultEnrichmentEngineTest {
     // --- Identity match (RESOLVED / BEST_EFFORT / SUGGESTIONS) ---
 
     @Test fun `enrich stamps RESOLVED with score from identity resolution`() = runTest {
-        // Given - identity provider resolves with confidence 0.85 (= score 85)
+        // Given - identity provider resolves with confidence 0.85
         val idProvider = FakeProvider(id = "mb", isIdentityProvider = true, capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)))
             .also { it.givenIdentityResult(EnrichmentResult.Success(EnrichmentType.GENRE, EnrichmentData.Metadata(genres = listOf("rock")), "mb", 0.85f, resolvedIdentifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-123"))) }
         val artProvider = FakeProvider(id = "caa", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 100, identifierRequirement = IdentifierRequirement.MUSICBRAINZ_ID)))
@@ -359,7 +363,7 @@ class DefaultEnrichmentEngineTest {
         // Then - RESOLVED with score, and the downstream result keyed on the resolved canonical id
         val artResult = results.raw[EnrichmentType.ALBUM_ART] as EnrichmentResult.Success
         assertEquals(CanonicalStatus.RESOLVED, results.identity.status)
-        assertEquals(85, results.identity.matchScore)
+        assertEquals(0.85f, results.identity.matchScore!!, 0.0001f)
         assertEquals(LookupProvenance.CANONICAL_ID, artResult.provenance)
     }
 
@@ -394,8 +398,26 @@ class DefaultEnrichmentEngineTest {
         // Given - identity provider returns NotFound with suggestions, and a downstream provider
         // whose capability names no identifier requirement
         val suggestions = listOf(
-            SearchCandidate("Bush", null, "1992", "GB", "Group", 75, null, EnrichmentIdentifiers(musicBrainzId = "mbid-gb"), "mb", disambiguation = "British rock band"),
-            SearchCandidate("Bush", null, "1994", "CA", "Group", 70, null, EnrichmentIdentifiers(musicBrainzId = "mbid-ca"), "mb", disambiguation = "Canadian band"),
+            SearchCandidate(
+                title = "Bush",
+                provider = "mb",
+                identifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-gb"),
+                matchScore = 0.75f,
+                year = "1992",
+                country = "GB",
+                releaseType = "Group",
+                disambiguation = "British rock band",
+            ),
+            SearchCandidate(
+                title = "Bush",
+                provider = "mb",
+                identifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-ca"),
+                matchScore = 0.70f,
+                year = "1994",
+                country = "CA",
+                releaseType = "Group",
+                disambiguation = "Canadian band",
+            ),
         )
         val idProvider = FakeProvider(id = "mb", isIdentityProvider = true, capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)))
             .also { it.givenIdentityResult(EnrichmentResult.NotFound(EnrichmentType.GENRE, "mb", suggestions = suggestions)) }
@@ -558,8 +580,24 @@ class DefaultEnrichmentEngineTest {
 
     @Test fun `search supplements from secondary providers when primary has few results`() = runTest {
         // Given - MB returns 1 candidate, Deezer has a different album
-        val mbCandidate = SearchCandidate("OK Computer", "Radiohead", "1997", "GB", "Album", 98, null, EnrichmentIdentifiers(musicBrainzId = "abc"), "mb")
-        val deezerCandidate = SearchCandidate("The Bends", "Radiohead", null, null, null, 75, "https://img.deezer.com/123", EnrichmentIdentifiers(), "deezer")
+        val mbCandidate = SearchCandidate(
+            title = "OK Computer",
+            provider = "mb",
+            identifiers = EnrichmentIdentifiers(musicBrainzId = "abc"),
+            matchScore = 0.98f,
+            artist = "Radiohead",
+            year = "1997",
+            country = "GB",
+            releaseType = "Album",
+        )
+        val deezerCandidate = SearchCandidate(
+            title = "The Bends",
+            provider = "deezer",
+            identifiers = EnrichmentIdentifiers(),
+            matchScore = 0.75f,
+            artist = "Radiohead",
+            thumbnailUrl = "https://img.deezer.com/123",
+        )
         val mb = FakeProviderWithSearch(id = "mb", isIdentityProvider = true, capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)), candidates = listOf(mbCandidate))
         val deezer = FakeProviderWithSearch(id = "deezer", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 50)), candidates = listOf(deezerCandidate))
 
@@ -575,11 +613,23 @@ class DefaultEnrichmentEngineTest {
     @Test fun `search does not call supplemental providers when primary fills limit`() = runTest {
         // Given - MB returns exactly 5 candidates, Deezer also has candidates
         val candidates = (1..5).map { i ->
-            SearchCandidate("Album $i", "Artist", null, null, null, 90, null, EnrichmentIdentifiers(), "mb")
+            SearchCandidate(
+                title = "Album $i",
+                provider = "mb",
+                identifiers = EnrichmentIdentifiers(),
+                matchScore = 0.90f,
+                artist = "Artist",
+            )
         }
         val mb = FakeProviderWithSearch(id = "mb", isIdentityProvider = true, capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)), candidates = candidates)
         val deezer = FakeProviderWithSearch(id = "deezer", capabilities = listOf(ProviderCapability(EnrichmentType.ALBUM_ART, 50)), candidates = listOf(
-            SearchCandidate("Should Not Appear", "Artist", null, null, null, 75, null, EnrichmentIdentifiers(), "deezer"),
+            SearchCandidate(
+                title = "Should Not Appear",
+                provider = "deezer",
+                identifiers = EnrichmentIdentifiers(),
+                matchScore = 0.75f,
+                artist = "Artist",
+            ),
         ))
 
         // When - searching with limit 5 (primary exactly fills it)
@@ -1646,7 +1696,16 @@ class DefaultEnrichmentEngineTest {
         // Given - identity provider returns NotFound with suggestions, backed by a real cache
         val negCache = InMemoryEnrichmentCache()
         val suggestions = listOf(
-            SearchCandidate("Bush", null, "1992", "GB", "Group", 75, null, EnrichmentIdentifiers(musicBrainzId = "mbid-gb"), "mb", disambiguation = "British rock band"),
+            SearchCandidate(
+                title = "Bush",
+                provider = "mb",
+                identifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-gb"),
+                matchScore = 0.75f,
+                year = "1992",
+                country = "GB",
+                releaseType = "Group",
+                disambiguation = "British rock band",
+            ),
         )
         val idProvider = FakeProvider(id = "mb", isIdentityProvider = true, capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)))
             .also { it.givenIdentityResult(EnrichmentResult.NotFound(EnrichmentType.GENRE, "mb", suggestions = suggestions)) }
@@ -1744,7 +1803,16 @@ class DefaultEnrichmentEngineTest {
         // Given - identity fails with suggestions and the only provider is a genuine, complete miss
         val realCache = InMemoryEnrichmentCache()
         val suggestions = listOf(
-            SearchCandidate("Bush", null, "1992", "GB", "Group", 75, null, EnrichmentIdentifiers(musicBrainzId = "mbid-gb"), "mb", disambiguation = "British rock band"),
+            SearchCandidate(
+                title = "Bush",
+                provider = "mb",
+                identifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-gb"),
+                matchScore = 0.75f,
+                year = "1992",
+                country = "GB",
+                releaseType = "Group",
+                disambiguation = "British rock band",
+            ),
         )
         val idProvider = FakeProvider(id = "mb", isIdentityProvider = true, capabilities = listOf(ProviderCapability(EnrichmentType.GENRE, 100)))
             .also { it.givenIdentityResult(EnrichmentResult.NotFound(EnrichmentType.GENRE, "mb", suggestions = suggestions)) }

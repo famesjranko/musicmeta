@@ -298,7 +298,7 @@ Two independent facts describe an `enrich()` call, never one merged value:
 
 | `CanonicalStatus` | Meaning |
 |---|---|
-| `RESOLVED` | MusicBrainz resolution completed. `identity.matchScore` (0–100) scores *how the lookup went*, never that the entity is the one described — see below. |
+| `RESOLVED` | MusicBrainz resolution completed. `identity.matchScore` (0.0–1.0) scores *how the lookup went*, never that the entity is the one described — see below. |
 | `AMBIGUOUS` | MusicBrainz found no confident match, but offered candidates. See `identity.suggestions`. |
 | `UNRESOLVED` | MusicBrainz searched and found neither a match nor candidates. |
 | `FAILED` | The identity provider errored (usually transient); a retry may resolve. |

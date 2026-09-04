@@ -1158,7 +1158,7 @@ internal class MusicBrainzEnricher(
 
     private fun MusicBrainzRelease.toCandidate() = SearchCandidate(
         title = title, artist = artistCredit, year = date,
-        country = country, releaseType = releaseType, score = score,
+        country = country, releaseType = releaseType, matchScore = ConfidenceCalculator.searchScore(score),
         thumbnailUrl = null, provider = providerId,
         identifiers = EnrichmentIdentifiers(musicBrainzId = id, musicBrainzReleaseGroupId = releaseGroupId),
         disambiguation = disambiguation,
@@ -1166,7 +1166,7 @@ internal class MusicBrainzEnricher(
 
     private fun MusicBrainzArtist.toCandidate() = SearchCandidate(
         title = name, artist = null, year = beginDate,
-        country = country, releaseType = type, score = score,
+        country = country, releaseType = type, matchScore = ConfidenceCalculator.searchScore(score),
         thumbnailUrl = null, provider = providerId,
         identifiers = EnrichmentIdentifiers(musicBrainzId = id),
         disambiguation = disambiguation,
@@ -1179,7 +1179,7 @@ internal class MusicBrainzEnricher(
      */
     private fun MusicBrainzRecording.toCandidate() = SearchCandidate(
         title = title, artist = artistCredit, year = null,
-        country = null, releaseType = null, score = score,
+        country = null, releaseType = null, matchScore = ConfidenceCalculator.searchScore(score),
         thumbnailUrl = null, provider = providerId,
         identifiers = EnrichmentIdentifiers(musicBrainzId = id, musicBrainzReleaseGroupId = artReleaseGroupId),
         disambiguation = disambiguation,

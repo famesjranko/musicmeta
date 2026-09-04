@@ -10,7 +10,7 @@ public data class TrackProfile(val title: String, val artist: String, val result
     // --- Identity ---
     val identifiers: EnrichmentIdentifiers get() = results.identity.identifiers
     val canonicalStatus: CanonicalStatus get() = results.identity.status
-    val identityMatchScore: Int? get() = results.identity.matchScore
+    val identityMatchScore: Float? get() = results.identity.matchScore
     val suggestions: List<SearchCandidate> get() = results.identity.suggestions
 
     // --- Metadata ---
