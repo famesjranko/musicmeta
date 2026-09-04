@@ -48,3 +48,13 @@ dependencies {
 
     testImplementation(libs.junit)
 }
+
+// `./check` passes -Pmusicmeta.rerunTests: the build cache is on and shared by every checkout on
+// the machine, so without this a Test task's reports — and its green — can be restored from a run
+// in another tree on another day. See the root build for the whole argument.
+tasks.withType<Test>().configureEach {
+    if (providers.gradleProperty("musicmeta.rerunTests").isPresent) {
+        outputs.upToDateWhen { false }
+        outputs.cacheIf { false }
+    }
+}
