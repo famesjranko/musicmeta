@@ -1,0 +1,14 @@
+run,provider,kind,count,total
+2026-09-04T16:27Z,musicbrainz-search,ok,12,20
+2026-09-04T16:27Z,musicbrainz-search,http 503,4,20
+2026-09-04T16:27Z,musicbrainz-search,transport timeout,4,20
+2026-09-04T16:27Z,musicbrainz-artist,ok,16,20
+2026-09-04T16:27Z,musicbrainz-artist,http 503,3,20
+2026-09-04T16:27Z,musicbrainz-artist,transport timeout,1,20
+2026-09-04T16:27Z,listenbrainz,ok,20,20
+2026-09-04T16:27Z,wikidata,ok,20,20
+2026-09-04T16:27Z,wikipedia,ok,20,20
+2026-09-04T16:27Z,coverartarchive,ok,20,20
+2026-09-04T16:27Z,deezer,ok,20,20
+2026-09-04T16:27Z,itunes,ok,20,20
+2026-09-04T16:27Z,lrclib,ok,20,20
