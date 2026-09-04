@@ -74,6 +74,27 @@ subprojects {
     // `check` already reaches the typed tasks through the alias above; naming them is belt and
     // braces against the alias being unpicked without the dependency being noticed.
     tasks.matching { it.name == "check" }.configureEach { dependsOn("detektMain", "detektTest") }
+
+    // `./check` passes -Pmusicmeta.rerunTests, and it is the reason a green run means the tests
+    // passed on this tree rather than on some tree.
+    //
+    // The build cache is on and its directory is shared by every checkout on the machine, so a Test
+    // task's outputs — its JUnit reports included — are restored wholesale on an input-hash hit.
+    // `./check` could therefore report green having run no test at all, against reports another
+    // tree wrote days earlier. Gradle's keys cover declared inputs only; anything a test reads that
+    // Gradle cannot see is free to differ between the tree that stored the entry and the one
+    // reusing it. Both lines are needed: `upToDateWhen` alone still lets the cache serve a result.
+    // `cacheIf` has no load-no/store-yes setting, so this also stops `check` from *writing* Test
+    // entries — only a run without the property populates the cache these tasks would read.
+    //
+    // Behind a property rather than always on, because the edit loop and the IDE want the cache;
+    // the gate is the one place that must not take an answer on trust.
+    tasks.withType<Test>().configureEach {
+        if (providers.gradleProperty("musicmeta.rerunTests").isPresent) {
+            outputs.upToDateWhen { false }
+            outputs.cacheIf { false }
+        }
+    }
 }
 
 // Public ABI baselines live in each module's api/ directory. apiCheck is wired into `check`, so
