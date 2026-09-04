@@ -14,6 +14,7 @@ import com.landofoz.musicmeta.demo.ui.Terminal
 import com.landofoz.musicmeta.trackProfile
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.runBlocking
+import java.util.Locale
 
 fun handleConfig(args: String, state: DemoState, term: Terminal) {
     val parts = args.split(" ", limit = 2)
@@ -489,7 +490,7 @@ internal fun parseOverride(
             }
             OverrideResult(
                 config.copy(confidenceOverrides = config.confidenceOverrides + (args[0] to floor)),
-                "Confidence override: ${args[0]} = ${"%.2f".format(floor)}",
+                "Confidence override: ${args[0]} = ${String.format(Locale.ROOT, "%.2f", floor)}",
             )
         }
         "priority" -> {
@@ -560,17 +561,21 @@ fun executeStream(input: String, state: DemoState, term: Terminal) {
         }
     }
 
-    val elapsed = (System.currentTimeMillis() - startMs) / 1000.0
     term.println()
-    term.info("${settled.size}/${types.size} types settled in ${"%.1f".format(elapsed)}s")
+    term.info("${settled.size}/${types.size} types settled in ${seconds(System.currentTimeMillis() - startMs)}")
+    // Belt and braces: an engine honouring the contract leaves this empty, since its terminal
+    // emission carries every requested type. A third-party one need not.
     val pending = types - settled
     if (pending.isNotEmpty()) {
         term.info("Never settled: ${pending.joinToString(", ") { Formatter.typeName(it) }}")
     }
 }
 
+/** Elapsed milliseconds as seconds — `Locale.ROOT`, so the separator does not follow the machine. */
+private fun seconds(elapsedMs: Long): String = String.format(Locale.ROOT, "%.1fs", elapsedMs / 1000.0)
+
 private fun streamRow(type: EnrichmentType, result: EnrichmentResult, elapsedMs: Long, term: Terminal) {
-    val at = "[${"%.1f".format(elapsedMs / 1000.0)}s]"
+    val at = "[${seconds(elapsedMs)}]"
     val name = Formatter.typeName(type)
     when (result) {
         is EnrichmentResult.Success -> term.success(name, "${result.provider}  $at")

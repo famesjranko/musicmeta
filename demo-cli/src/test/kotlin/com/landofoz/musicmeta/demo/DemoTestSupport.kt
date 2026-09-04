@@ -46,7 +46,11 @@ internal fun resultsOf(
  * An engine that answers from [snapshots] and records what it was asked to invalidate or pin, so a
  * command's use of the engine can be asserted without reaching a provider.
  */
-internal class FakeEngine(private val snapshots: List<EnrichmentResults> = emptyList()) : EnrichmentEngine {
+internal class FakeEngine(
+    private val snapshots: List<EnrichmentResults> = emptyList(),
+    /** Thrown from [enrich], for pinning what happens to the engine when a command fails. */
+    private val failWith: Throwable? = null,
+) : EnrichmentEngine {
 
     val invalidated = mutableListOf<Pair<EnrichmentRequest, EnrichmentType?>>()
     val pinned = mutableListOf<Pair<EnrichmentRequest, EnrichmentType>>()
@@ -58,7 +62,10 @@ internal class FakeEngine(private val snapshots: List<EnrichmentResults> = empty
         request: EnrichmentRequest,
         types: Set<EnrichmentType>,
         forceRefresh: Boolean,
-    ): EnrichmentResults = snapshots.lastOrNull() ?: resultsOf(emptyMap(), types)
+    ): EnrichmentResults {
+        failWith?.let { throw it }
+        return snapshots.lastOrNull() ?: resultsOf(emptyMap(), types)
+    }
 
     override fun enrichProgressive(
         request: EnrichmentRequest,

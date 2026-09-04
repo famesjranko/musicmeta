@@ -5,6 +5,7 @@ import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentResults
 import com.landofoz.musicmeta.EnrichmentType
+import com.landofoz.musicmeta.ErrorKind
 import com.landofoz.musicmeta.demo.ui.Terminal
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -163,6 +164,41 @@ class EngineCommandTest {
 
         // Then - the row that settled first is not reprinted, since a snapshot is cumulative
         assertEquals(1, output.split("Artist Bio").size - 1)
+    }
+
+    @Test
+    fun `stream says which way a type failed rather than only that it did`() {
+        // Given - a stream whose two types settle as a rate limit and an error
+        val requested = setOf(EnrichmentType.ARTIST_BIO, EnrichmentType.ARTIST_PHOTO)
+        val engine = FakeEngine(
+            listOf(
+                resultsOf(
+                    mapOf(
+                        EnrichmentType.ARTIST_BIO to EnrichmentResult.RateLimited(
+                            EnrichmentType.ARTIST_BIO,
+                            provider = "lastfm",
+                        ),
+                        EnrichmentType.ARTIST_PHOTO to EnrichmentResult.Error(
+                            EnrichmentType.ARTIST_PHOTO,
+                            provider = "fanarttv",
+                            message = "connection reset",
+                            errorKind = ErrorKind.NETWORK,
+                        ),
+                    ),
+                    requested,
+                ),
+            ),
+        )
+
+        // When - streaming an artist for both types
+        val output = run(engine) { state, term ->
+            executeStream("artist Radiohead --types bio,photo", state, term)
+        }
+
+        // Then - each row names its own failure, and both still count as settled
+        assertTrue(output, output.contains("rate limited"))
+        assertTrue(output, output.contains("NETWORK"))
+        assertTrue(output, output.contains("2/2 types settled"))
     }
 
     @Test

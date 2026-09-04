@@ -218,6 +218,9 @@ make demo-cli-run                          # interactive
 make demo-cli-run ARGS="artist Radiohead"  # one command, then exit
 ```
 
+`ARGS=` takes an enrich or a search — `artist`, `album`, `track`, `search`. Everything below it
+(`stream`, `pin`, `config`, `catalog`, `cache`) is a session command, typed at the prompt.
+
 ```
 musicmeta> artist radiohead
 musicmeta> album OK Computer by Radiohead

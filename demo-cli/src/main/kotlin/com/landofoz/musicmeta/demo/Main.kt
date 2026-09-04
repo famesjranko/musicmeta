@@ -32,14 +32,25 @@ fun main(args: Array<String>) {
     InfoFormatter.printProviders(state.engine.getProviders(), term)
     term.println()
 
-    if (args.isNotEmpty()) {
-        runSingleCommand(args, state, term, spinner)
-    } else {
-        InfoFormatter.printHelp(term)
-        term.println()
-        repl(state, term, spinner)
+    runDemo(state, term, spinner, args)
+}
+
+/**
+ * The session proper. The engine is closed however the session ends, including on the way out of a
+ * command that threw — [EnrichmentEngine] is not `AutoCloseable`, so this is the `finally` doing it.
+ */
+internal fun runDemo(state: DemoState, term: Terminal, spinner: Spinner, args: Array<String>) {
+    try {
+        if (args.isNotEmpty()) {
+            runSingleCommand(args, state, term, spinner)
+        } else {
+            InfoFormatter.printHelp(term)
+            term.println()
+            repl(state, term, spinner)
+        }
+    } finally {
+        state.engine.close()
     }
-    state.engine.close()
 }
 
 /** Mutable engine state — rebuilt when config, catalog, or verbose settings change. */
@@ -55,6 +66,10 @@ class DemoState(
     var catalogMode: CatalogFilterMode = CatalogFilterMode.UNFILTERED,
     var httpBackend: HttpBackend = HttpBackend.DEFAULT,
     var radioMode: RadioDiscoveryMode = RadioDiscoveryMode.EASY,
+    /** How [rebuild] turns a configured builder into an engine; a test supplies its own. */
+    private val buildEngine: (EnrichmentEngine.Builder) -> EnrichmentEngine = {
+        it.withDefaultProviders().build()
+    },
 ) {
     lateinit var engine: EnrichmentEngine
 
@@ -94,7 +109,7 @@ class DemoState(
             builder.httpClient(OkHttpEnrichmentClient(OkHttpClient(), baseConfig.userAgent))
         }
 
-        engine = builder.withDefaultProviders().build()
+        engine = buildEngine(builder)
     }
 }
 
