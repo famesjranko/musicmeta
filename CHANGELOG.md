@@ -69,6 +69,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - demo-web's Cloud Run artifacts are back (`Dockerfile`, `deploy.sh`); `-PdemoCoreVersion` builds the image against the released Maven Central core, unset builds from source as before
 - demo-web reads `DEMO_PUBLIC=1` for a ToS-safe public posture (Last.fm off, personal tokens withheld, Discogs images off and 6h freshness ceiling); `DEMO_PUBLIC_ALLOW` lifts named restrictions
 - demo-web bounds one client's share of upstream-bearing endpoints (20-burst, 30/min per client), and skips its transient-failure retry pass while the admission gate is saturated
+- demo-cli's album profile shows a `Description:` row read through the `albumDescription()` named accessor, and `--types` gains `desc` and `reltype` aliases
 
 ### Changed
 - `enrichProgressive` emits one extra snapshot the moment live identity resolution settles, before any type does: collectors see the verdict and its suggestions without waiting on enrichment
@@ -99,6 +100,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ListenBrainz's `ARTIST_DISCOGRAPHY` albums carry their titles again: the name moved under `release_group`, and a nameless album is skipped, not shipped blank; caches 30 days, so clear yours or wait
 - Cover Art Archive artwork URLs now leave the provider https: older CAA entries serve `http://`, which browsers block as mixed content; cached entries keep it until refresh, so clear yours or wait
 - A cache-hit type requested beside an uncached composite that depends on it is no longer re-fetched upstream: the cached value is served and its cache entry survives instead of being overwritten
+- demo-cli's `--types` now reports a name it cannot resolve and enriches nothing, instead of discarding it and silently falling back to the full default type set
+- demo-cli's `--types popularity` resolves against the request kind: a track request asks for `TRACK_POPULARITY`, the type its own profile reads, not the artist's
 - A fault that escapes the fan-out is no longer reported as `ErrorKind.ENGINE_CLOSED`: unsettled types carry `UNKNOWN` and the real cause, so a missing class no longer reads as a closed engine
 - A `CompositeSynthesizer` dependency that is itself a composite is now synthesized instead of settling `NotFound("no_provider")`: nested composite graphs resolve to any depth
 - A composite's dependency is resolved by its own registration, not the request: one with a `ResultMerger` is merged across every provider even when only the composite was asked for

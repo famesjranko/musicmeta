@@ -67,6 +67,8 @@ object Formatter {
         term.keyValue("Title:", profile.title)
         term.keyValue("Artist:", profile.artist)
         profile.artwork?.let { term.keyValue("Artwork:", term.link(it.url, artworkLabel(it))) }
+        // The Tier 2 named accessor; AlbumProfile.description reads the same value through Tier 1.
+        profile.results.albumDescription()?.let { term.keyValue("Description:", textSnippet(it.text)) }
         profile.label?.let { term.keyValue("Label:", it) }
         profile.releaseDate?.let { term.keyValue("Released:", it) }
         val genres = profile.genres.take(4).joinToString(", ") { it.name }
@@ -101,6 +103,12 @@ object Formatter {
             p.listenerCount?.let { term.keyValue("Listeners:", "%,d".format(it)) }
         }
         term.println()
+    }
+
+    /** Quoted first [max] characters of prose, with an ellipsis only when something was cut. */
+    private fun textSnippet(text: String, max: Int = 80): String {
+        val plain = text.replace(Regex("<[^>]*>"), "").trim()
+        return "\"${plain.take(max)}${if (plain.length > max) "..." else ""}\""
     }
 
     private fun artworkLabel(art: EnrichmentData.Artwork): String {

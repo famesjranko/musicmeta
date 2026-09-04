@@ -149,7 +149,8 @@ private fun executeCommand(input: String, state: DemoState, term: Terminal, spin
     runBlocking {
         when (command) {
             is Command.Enrich -> {
-                val types = customTypes ?: defaultTypesFor(command.request)
+                val types = selectTypes(customTypes, entityKind(command.request), term)
+                    ?: return@runBlocking
                 val label = enrichLabel(command.request)
                 val hitsBefore = state.cache.hits
                 val profile = if (state.logger.enabled) {
@@ -190,11 +191,8 @@ private fun pickCandidate(input: String, state: DemoState, term: Terminal, spinn
         return
     }
     val candidate = state.lastSearchResults[index - 1]
-    val types = customTypes ?: when (state.lastSearchType) {
-        "artist" -> ARTIST_TYPES
-        "album" -> ALBUM_TYPES
-        else -> TRACK_TYPES
-    }
+    val kind = state.lastSearchType ?: "artist"
+    val types = selectTypes(customTypes, kind, term) ?: return
     val disambig = candidate.disambiguation?.let { " ($it)" } ?: ""
     val label = "Enriching ${state.lastSearchType} \"${candidate.title}\"$disambig"
     runBlocking {
