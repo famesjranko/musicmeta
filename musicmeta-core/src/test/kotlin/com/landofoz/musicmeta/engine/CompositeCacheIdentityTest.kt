@@ -49,7 +49,7 @@ class CompositeCacheIdentityTest {
                 EnrichmentType.ARTIST_DISCOGRAPHY,
                 EnrichmentResult.Success(
                     EnrichmentType.ARTIST_DISCOGRAPHY,
-                    EnrichmentData.Discography(listOf(DiscographyAlbum("Fresh", "2026"))),
+                    EnrichmentData.Discography(listOf(DiscographyAlbum("Fresh", 2026))),
                     "discography",
                     1f,
                 ),
@@ -168,7 +168,7 @@ class CompositeCacheIdentityTest {
         )
         val cached = EnrichmentResult.Success(
             EnrichmentType.ARTIST_DISCOGRAPHY,
-            EnrichmentData.Discography(listOf(DiscographyAlbum("Cached", "1997"))),
+            EnrichmentData.Discography(listOf(DiscographyAlbum("Cached", 1997))),
             "cached",
             1f,
         )
@@ -197,7 +197,7 @@ class CompositeCacheIdentityTest {
         )
         val poison = EnrichmentResult.Success(
             EnrichmentType.ARTIST_DISCOGRAPHY,
-            EnrichmentData.Discography(listOf(DiscographyAlbum("Poison", "1900"))),
+            EnrichmentData.Discography(listOf(DiscographyAlbum("Poison", 1900))),
             "poison",
             1f,
         )
@@ -210,7 +210,7 @@ class CompositeCacheIdentityTest {
                 EnrichmentType.ARTIST_DISCOGRAPHY,
                 EnrichmentResult.Success(
                     EnrichmentType.ARTIST_DISCOGRAPHY,
-                    EnrichmentData.Discography(listOf(DiscographyAlbum("Fresh", "2026"))),
+                    EnrichmentData.Discography(listOf(DiscographyAlbum("Fresh", 2026))),
                     "fresh",
                     1f,
                 ),

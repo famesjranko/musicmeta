@@ -55,7 +55,7 @@ internal object DeezerMapper {
             albums = albums.map { album ->
                 DiscographyAlbum(
                     title = album.title,
-                    year = album.releaseDate?.take(4),
+                    year = album.releaseDate?.take(4)?.toIntOrNull(),
                     type = album.recordType,
                     thumbnailUrl = album.coverMedium ?: album.coverSmall,
                     identifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DEEZER, album.id.toString()),

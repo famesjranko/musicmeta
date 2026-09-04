@@ -42,7 +42,7 @@ class CompositeSynthesizerTest {
         val discography = EnrichmentResult.Success(
             type = EnrichmentType.ARTIST_DISCOGRAPHY,
             data = EnrichmentData.Discography(
-                albums = listOf(DiscographyAlbum(title = "Pablo Honey", year = "1993")),
+                albums = listOf(DiscographyAlbum(title = "Pablo Honey", year = 1993)),
             ),
             provider = "musicbrainz",
             confidence = 1.0f,

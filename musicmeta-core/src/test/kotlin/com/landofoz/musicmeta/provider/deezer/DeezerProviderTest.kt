@@ -30,6 +30,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
@@ -203,9 +204,29 @@ class DeezerProviderTest {
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.Discography
         assertEquals(2, data.albums.size)
         assertEquals("OK Computer", data.albums[0].title)
-        assertEquals("1997", data.albums[0].year)
+        assertEquals(1997, data.albums[0].year)
         assertEquals("album", data.albums[0].type)
         assertEquals("Kid A", data.albums[1].title)
+    }
+
+    @Test
+    fun `a release date carrying no year leaves the discography year null`() = runTest {
+        // Given - the captured albums response with a first release_date no year can be read off
+        httpClient.givenJsonResponse("search/artist", """{"data":[{"id":399,"name":"Radiohead"}]}""")
+        httpClient.givenJsonResponse(
+            "artist/399/albums",
+            ARTIST_ALBUMS_RESPONSE.replace("\"release_date\":\"1997-06-16\"", "\"release_date\":\"unknown\""),
+        )
+        val request = EnrichmentRequest.forArtist("Radiohead")
+
+        // When - enriching for artist discography
+        val result = provider.enrich(request, EnrichmentType.ARTIST_DISCOGRAPHY)
+
+        // Then - the album still maps, with no year rather than a thrown parse
+        assertTrue(result is EnrichmentResult.Success)
+        val data = (result as EnrichmentResult.Success).data as EnrichmentData.Discography
+        assertEquals("OK Computer", data.albums[0].title)
+        assertNull(data.albums[0].year)
     }
 
     @Test

@@ -55,7 +55,7 @@ internal object ITunesMapper {
             albums = albums.map { album ->
                 DiscographyAlbum(
                     title = album.collectionName,
-                    year = album.releaseDate?.take(4),
+                    year = album.releaseDate?.take(4)?.toIntOrNull(),
                     thumbnailUrl = album.artworkUrl,
                     identifiers = if (album.collectionId > 0) {
                         EnrichmentIdentifiers()

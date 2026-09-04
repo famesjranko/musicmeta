@@ -105,6 +105,12 @@ new parameters and fields, which go last with a default.
   `identifiers` and broke every Room cache entry in the field. Any payload change asks whether
   `CHANGELOG.md` needs a cache-clear note. Round-trip tests cannot catch this — they encode and
   decode with the same code (`VERIFICATION.md`; goldens unwritten).
+  Retyping a field `String?` → `Int?` is the exception that looks like a break and is not:
+  kotlinx.serialization 1.7.3 decodes a quoted number into a numeric field even with `isLenient`
+  false, so a stored `"year":"1997"` still reads. Only a value that was never numeric fails to
+  decode, and `RoomEnrichmentCache` reports that row as a miss rather than letting the exception
+  out. `RoomEnrichmentCacheTest`'s quoted-year test is what holds this; a kotlinx bump can revoke
+  it, so re-read that test before assuming a retype is free.
 - **Source callers** — positional arguments rebind silently. The demo canary proves consumers still
   *compile*, not that argument order held; v0.9.2 was caught only by a type mismatch, and a `String?`
   inserted between two `String?`s would have compiled green and wrong.

@@ -107,7 +107,7 @@ internal object TimelineSynthesizer : CompositeSynthesizer {
         sorted.forEachIndexed { index, album ->
             val type = if (index == 0) "first_album" else "album_release"
             events.add(TimelineEvent(
-                date = album.year.orEmpty(),
+                date = album.year?.toString().orEmpty(),
                 type = type,
                 description = album.title,
                 relatedEntity = album.title,
