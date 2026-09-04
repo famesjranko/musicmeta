@@ -365,7 +365,7 @@ class ITunesProviderTest {
             "lookup",
             ITUNES_LOOKUP_ARTIST_ALBUMS_RESPONSE.replace("\"releaseDate\":\"1997-06-16T07:00:00Z\"", "\"releaseDate\":\"unknown\""),
         )
-        val identifiers = EnrichmentIdentifiers().withExtra("itunesArtistId", "657515")
+        val identifiers = EnrichmentIdentifiers().with(IdentifierNamespace.ITUNES_ARTIST, "657515")
         val request = EnrichmentRequest.ForArtist(identifiers, "Radiohead")
 
         // When - enriching for artist discography
