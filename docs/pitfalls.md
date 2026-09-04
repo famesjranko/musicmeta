@@ -95,10 +95,12 @@ suspend fun EnrichmentEngine.albumProfile(title: String, artist: String, mbid: S
 //   → myTypes now binds to `identifiers`
 ```
 
-**Both historical breaks are still in the tree, deliberately** — `identifiers` still sits mid-list in
-`EnrichmentEngineExtensions.kt`, `genreTags` still at position 2 of `EnrichmentData.Metadata`.
-Reordering either *now* is a second break. Do not "fix" them to match this rule; apply the rule to
-new parameters and fields, which go last with a default.
+**Every mid-list default already in the tree is frozen, deliberately** — `identifiers` in
+`EnrichmentEngineExtensions.kt`, `genreTags` at position 2 of `EnrichmentData.Metadata`,
+`SimilarArtist.identifiers` before `matchScore`, `SimilarAlbum.year` before `artistMatchScore`, and
+`TopTrack`'s four defaults before `rank`. Reordering any of them *now* is a second break. Do not
+"fix" them to match the rule below; apply that rule to new parameters and fields, which go last
+with a default.
 
 - **Persisted data** — name-based JSON survives reordering, but *replacing or removing* a field
   breaks what consumers already stored: v0.4.0 swapped `SimilarArtist.musicBrainzId` for
@@ -123,6 +125,17 @@ new parameters and fields, which go last with a default.
   minor to remove. Check whether a baseline finding sits on a published signature
   (`*/api/*.api`) before acting on it.
 
+### Constructor order on a public data class
+
+Required parameters first, defaulted parameters after them, `identifiers` and `sources` last. A new
+field is appended last with a default whatever the existing order is — mid-list is where the trap
+above fires. A type that is breaking for another reason takes this order in the same break; a type
+that is not breaking is never reordered for it, because the reorder *is* a break.
+
+Positional construction of a data class with more than three parameters is not a supported use.
+Every example in the docs uses named arguments, and the demo canary proves that a positional caller
+still compiles, not that its arguments still bind where they did.
+
 ### What counts as breaking
 
 Removing or renaming public classes, functions or parameters; changing a return type; reordering
@@ -145,6 +158,12 @@ have theirs. Kotlin 2.2 flips that compiler default, so re-verify this on a
 toolchain bump — `apiDump` would show any `DefaultImpls` disappearing. Any public interface a
 consumer implements is exposed to this, so a defaulted addition to one needs the same
 `### Breaking Changes` line a removal would get.
+
+Generics are erased from the dump the same way. A type parameter, its variance and its bound leave
+no line to read: `CacheEnvelope<out T : EnrichmentResult>` dumps as a bare `CacheEnvelope`, and
+`EnrichmentResults.get`'s `inline fun <reified T : EnrichmentData>` carries no trace of `T`.
+Narrowing a bound, flipping variance, or removing `reified` from an inline function is a source
+break that moves no `.api` line, so any change to one is reviewed from the `.kt`.
 
 The surface was narrowed to the four-role boundary in v0.10.0 (#5). `CircuitBreaker`,
 `MusicBrainzParser` and the built-in mergers/synthesizers are `internal`, so a refactor confined to

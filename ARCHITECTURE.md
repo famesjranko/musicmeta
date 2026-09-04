@@ -232,6 +232,10 @@ is the point here: it inherits, rather than re-implements,
   including any id ending `_merger`, the suffix mergers stamp on their own output. Synthesizers
   stamp `_synthesizer`, which is **not** reserved.
 
+A published shape the eleventh provider must *change* rather than *extend* is the wrong shape:
+`EnrichmentProvider`, `IdentifierNamespace`, `LookupProvenance`, `ProviderPolicies` and `ApiKey`
+each grow by one appended member, and nothing in the root package grows by one field per provider.
+
 What it must supply is the judgement the engine cannot: parsing that survives the upstream's actual
 payloads, search acceptance that checks artist and title rather than trusting hit 0
 (`docs/pitfalls.md` §7), and a `confidence` that reflects the evidence.

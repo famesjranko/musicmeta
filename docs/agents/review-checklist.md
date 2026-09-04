@@ -18,6 +18,10 @@ a row here carries only what a reviewer looks *for*, so a rule change is never a
 - [ ] An `api/*.api` diff whose break was never **flagged to the user**, or is missing from a
       `### Breaking Changes` heading. `CLAUDE.md`'s compatibility rule holds the terms; `apiCheck`
       gates the dump matching the code — nothing gates whether anyone was told.
+- [ ] A new public data-class field, or a new public score or date. Is the field appended last with
+      a default? Is a score a `Float` on 0.0–1.0? Is a date a `String` and a `year` an `Int?`?
+      `docs/pitfalls.md` §1 and `docs/glossary.md` hold the three rules and their frozen
+      exceptions; the dump shows the addition, not whether it took the right shape.
 - [ ] A serialized payload changed. Round-trip tests encode and decode with the same tree, so they
       cannot see a break for data a consumer already persisted — `VERIFICATION.md`'s known gaps has
       what that cost. Ask the user about a cache-clear note.

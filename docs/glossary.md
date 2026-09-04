@@ -92,3 +92,23 @@ all qualify and are legal; a bare `recordingId` or `masterId` on a public type i
 an allowlist, and an entry there needs a reason. What it cannot see is a name that is merely
 *wrong* rather than borrowed — that stays review's job
 ([agents/review-checklist.md](agents/review-checklist.md)).
+
+Two shapes carry the same rule, because a scale and a date type are as much a word for a concept as
+a name is.
+
+**One score scale.** Every score on the published surface is a `Float` in 0.0–1.0. `confidence`
+scores a lookup or a claim (`EnrichmentResult.Success.confidence`, `GenreTag.confidence`,
+`CatalogMatch.confidence`); `matchScore` ranks a match within one pool (`SearchCandidate`,
+`IdentityResolution`, `SimilarArtist`, `SimilarTrack`). An upstream's own scale — MusicBrainz's
+0–100 search score, a 1–5 community rating — is normalised at the mapper, or carried with its
+source and kind in a `PopularitySignal`; it never reaches the surface raw. The one exception is
+`SimilarAlbum.artistMatchScore`, a rank product that can reach 1.2 and says so in its KDoc.
+
+**One date type.** A date is a `String` in ISO-8601, as precise as the upstream gave it (`YYYY`,
+`YYYY-MM` or `YYYY-MM-DD`): `Metadata.releaseDate`, `Metadata.beginDate`, `Metadata.endDate`,
+`TimelineEvent.date`, `ProviderPolicy.asReadOn`. A `year` is an `Int?`: `SimilarAlbum`,
+`ReleaseEdition`, `DiscographyAlbum`, `EnrichmentRequest.ForAlbum`. `SearchCandidate.year` is the
+shipped exception — it carries a MusicBrainz release date or artist begin date whole, so it is a
+date under a year's name, and it is frozen that way. No `java.time` on the surface, which is API
+26+ on Android, and no `kotlinx-datetime`, which would be a core dependency every consumer
+inherits.
