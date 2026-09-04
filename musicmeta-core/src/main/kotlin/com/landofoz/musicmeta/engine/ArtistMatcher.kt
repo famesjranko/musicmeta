@@ -55,7 +55,24 @@ internal object ArtistMatcher {
         candidate: String,
         minTokenOverlap: Float = DEFAULT_MIN_TOKEN_OVERLAP,
     ): Int = rawMatchQuality(expected, candidate, minTokenOverlap)
+        .let { if (it > QUALITY_NONE) it else aliasQuality(candidate, minTokenOverlap) }
         .also { ProbeTrace.compared(expected, candidate, it) }
+
+    /**
+     * [QUALITY_SAME_NAME] when [candidate] is the same name as one of the pool's aliases, else
+     * [QUALITY_NONE]. Same-name only: a pool multiplies the chances of a partial match, so the
+     * looser tiers are never granted across it. The tier the acceptance was granted at is recorded
+     * rather than applied, since confidence scaling is the provider's own call.
+     */
+    private fun aliasQuality(candidate: String, minTokenOverlap: Float): Int {
+        val pool = ProbeTrace.aliasPool
+        if (pool.isEmpty()) return QUALITY_NONE
+        val matched = pool.filter { rawMatchQuality(it.name, candidate, minTokenOverlap) == QUALITY_SAME_NAME }
+        if (matched.isEmpty()) return QUALITY_NONE
+        val tier = if (matched.any { it.official }) NameMatchTier.PRIMARY_ALIAS else NameMatchTier.ALIAS
+        ProbeTrace.aliasTiers += candidate to tier
+        return QUALITY_SAME_NAME
+    }
 
     private fun rawMatchQuality(
         expected: String,

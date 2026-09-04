@@ -13,11 +13,19 @@ internal object ProbeTrace {
     @Volatile
     var enabled: Boolean = false
 
+    /** The alias pool candidate matching may accept a name under; empty outside an arm that uses one. */
+    @Volatile
+    var aliasPool: List<AlternativeName> = emptyList()
+
+    /** The tier each alias-only acceptance was granted at, in the order they were granted. */
+    val aliasTiers: MutableList<Pair<String, NameMatchTier>> = mutableListOf()
+
     val picks: MutableList<Pick> = mutableListOf()
     val compares: MutableList<NameCompare> = mutableListOf()
     val titles: MutableList<Triple<String, String, Boolean>> = mutableListOf()
 
     fun reset() {
+        aliasTiers.clear()
         picks.clear()
         compares.clear()
         titles.clear()
@@ -40,5 +48,11 @@ internal object ProbeTrace {
  * Runs [body] with [pool] as the alias pool candidate matching may accept a name under. The control
  * arm has no pool: the names the request carries are the only ones a candidate can match.
  */
-@Suppress("UNUSED_PARAMETER")
-internal suspend fun <T> withAliasPool(pool: List<AlternativeName>, body: suspend () -> T): T = body()
+internal suspend fun <T> withAliasPool(pool: List<AlternativeName>, body: suspend () -> T): T {
+    ProbeTrace.aliasPool = pool
+    return try {
+        body()
+    } finally {
+        ProbeTrace.aliasPool = emptyList()
+    }
+}
