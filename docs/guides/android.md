@@ -166,8 +166,8 @@ object MyEnrichmentModule {
             .config(EnrichmentConfig(
                 userAgent = "MyApp/1.0 (contact@example.com)",
             ))
-            .apiKeys(ApiKeyConfig(
-                lastFmKey = BuildConfig.LASTFM_KEY,
+            .apiKeys(ApiKeyConfig.of(
+                ApiKey.LASTFM_API_KEY to BuildConfig.LASTFM_KEY,
             ))
             .build()
     }

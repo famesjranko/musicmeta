@@ -9,12 +9,7 @@ class ProviderCatalogTest {
 
     private val httpClient = FakeHttpClient()
 
-    private val fullyKeyedConfig = ApiKeyConfig(
-        lastFmKey = "test-lastfm-key",
-        fanartTvProjectKey = "test-fanarttv-key",
-        discogsPersonalToken = "test-discogs-token",
-        listenBrainzToken = "test-listenbrainz-token",
-    )
+    private val fullyKeyedConfig = ApiKeyConfig(ApiKey.entries.associateWith { "test-key" })
 
     private fun buildEngine(apiKeyConfig: ApiKeyConfig? = null) =
         EnrichmentEngine.Builder()
@@ -77,65 +72,53 @@ class ProviderCatalogTest {
         assertTrue("Catalog ids missing a policy: $unpolicedIds", unpolicedIds.isEmpty())
     }
 
-    @Test fun `Required entry registers only when its own field is set`() {
-        // Given - each Required catalog entry, keyed with only its own field
+    @Test fun `Required entry registers only when its own key is set`() {
+        // Given - each Required catalog entry, keyed with only its own ApiKey
         val requiredEntries = ProviderCatalog.entries.filter { it.keyRequirement is KeyRequirement.Required }
 
         requiredEntries.forEach { entry ->
             val requirement = entry.keyRequirement as KeyRequirement.Required
-            val config = when (requirement.fieldName) {
-                "lastFmKey" -> ApiKeyConfig(lastFmKey = "solo-key")
-                "fanartTvProjectKey" -> ApiKeyConfig(fanartTvProjectKey = "solo-key")
-                "discogsPersonalToken" -> ApiKeyConfig(discogsPersonalToken = "solo-key")
-                else -> error("Unhandled Required field: ${requirement.fieldName}")
-            }
+            val config = ApiKeyConfig.of(requirement.key to "solo-key")
 
-            // When - building an engine keyed with only that field
+            // When - building an engine keyed with only that key
             val registeredIds = buildEngine(config).getProviders().map { it.id }.toSet()
 
-            // Then - that entry's id is registered, and the selector reads the field that fed it
+            // Then - that entry's id is registered, and the config reads back the key that fed it
             assertTrue("${entry.id} should register with only its own key set", entry.id in registeredIds)
-            assertEquals("solo-key", requirement.key(config))
+            assertEquals("solo-key", config[requirement.key])
         }
     }
 
-    @Test fun `fullyKeyedConfig sets every ApiKeyConfig field`() {
-        // Given - fullyKeyedConfig's named fields
-        val namedFields = listOf(
-            fullyKeyedConfig.lastFmKey,
-            fullyKeyedConfig.fanartTvProjectKey,
-            fullyKeyedConfig.discogsPersonalToken,
-            fullyKeyedConfig.listenBrainzToken,
-        )
+    @Test fun `every ApiKey constant is named by exactly one catalog entry`() {
+        // Given - the ApiKey each keyed catalog entry names
+        val named = ProviderCatalog.entries.mapNotNull {
+            when (val requirement = it.keyRequirement) {
+                is KeyRequirement.Required -> requirement.key
+                is KeyRequirement.Optional -> requirement.key
+                KeyRequirement.None -> null
+            }
+        }
 
-        // When - counting ApiKeyConfig's real primary constructor's parameters. A data class whose
-        // parameters all default compiles to three constructors: the real primary one, a synthetic
-        // one carrying the defaults bitmask (`isSynthetic`), and — because every parameter defaults
-        // — a real bare no-arg one too. The primary constructor is the widest of the non-synthetic
-        // ones; plain java.lang.reflect, since kotlin-reflect is not on this module's test classpath.
-        val constructorParamCount = ApiKeyConfig::class.java.declaredConstructors
-            .filterNot { it.isSynthetic }
-            .maxOf { it.parameterCount }
+        // When - counting how many entries name each constant
+        val timesNamed = ApiKey.entries.associateWith { key -> named.count { it == key } }
 
-        // Then - the counts match, so a field added to ApiKeyConfig and left out here fails loudly,
-        // and every named field is actually set
-        assertEquals(constructorParamCount, namedFields.size)
-        assertTrue("fullyKeyedConfig has an unset field: $namedFields", namedFields.all { it != null })
+        // Then - every constant is named exactly once, so no key is unreachable or double-gated
+        assertEquals(ApiKey.entries.associateWith { 1 }, timesNamed)
     }
 
     @Test fun `Optional listenbrainz entry always registers and its selector reads the token`() {
         // Given - the ListenBrainz catalog entry and a config setting only its token
         val entry = ProviderCatalog.entries.single { it.id == "listenbrainz" }
         val requirement = entry.keyRequirement as KeyRequirement.Optional
-        val config = ApiKeyConfig(listenBrainzToken = "lb-token")
+        val config = ApiKeyConfig.of(requirement.key to "lb-token")
 
         // When - building keyless and token-only engines
         val keylessIds = buildEngine(apiKeyConfig = null).getProviders().map { it.id }.toSet()
         val keyedIds = buildEngine(config).getProviders().map { it.id }.toSet()
 
-        // Then - ListenBrainz registers either way, and the selector returns the set token
+        // Then - ListenBrainz registers either way, and the config returns the set token
         assertTrue("listenbrainz" in keylessIds)
         assertTrue("listenbrainz" in keyedIds)
-        assertEquals("lb-token", requirement.key(config))
+        assertEquals("lb-token", config[requirement.key])
     }
 }

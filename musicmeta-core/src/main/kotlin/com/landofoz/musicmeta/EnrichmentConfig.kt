@@ -120,18 +120,49 @@ internal fun requireUsableContact(contact: String) {
 }
 
 /**
- * Centralized API key configuration for all providers that need keys.
- * Pass to [EnrichmentEngine.Builder.apiKeys] to enable key-requiring providers
- * when using [EnrichmentEngine.Builder.withDefaultProviders].
+ * A credential [EnrichmentEngine.Builder.withDefaultProviders] reads. One constant per credential,
+ * not per provider. Members may only be appended; keep a consumer `when` over this non-exhaustive.
+ */
+public enum class ApiKey {
+    /** https://www.last.fm/api/account/create */
+    LASTFM_API_KEY,
+
+    /** https://fanart.tv/get-an-api-key/ — a project key, not a personal one. */
+    FANARTTV_PROJECT_KEY,
+
+    /** https://www.discogs.com/settings/developers — "Generate new token". */
+    DISCOGS_PERSONAL_TOKEN,
+
+    /**
+     * https://listenbrainz.org/profile/ — unlocks `ARTIST_RADIO_DISCOVERY`; every other
+     * ListenBrainz call is keyless.
+     */
+    LISTENBRAINZ_USER_TOKEN,
+}
+
+/**
+ * The credentials [EnrichmentEngine.Builder.apiKeys] passes to
+ * [EnrichmentEngine.Builder.withDefaultProviders].
+ *
+ * A [KeyRequirement.Required] provider registers only when its key is present; an absent key is
+ * "skip that provider", never an error.
  *
  * Every key and token here is given exactly as the upstream issued it. A key that reaches a URL is
  * percent-encoded on the way, so a pre-encoded one is encoded twice and authenticates as the wrong
  * string.
  */
-public data class ApiKeyConfig(
-    val lastFmKey: String? = null,
-    val fanartTvProjectKey: String? = null,
-    val discogsPersonalToken: String? = null,
-    /** ListenBrainz user token for LB Radio (ARTIST_RADIO_DISCOVERY). Keyless endpoints still work without this. */
-    val listenBrainzToken: String? = null,
-)
+public data class ApiKeyConfig(val keys: Map<ApiKey, String> = emptyMap()) {
+    /** The value set for [key], or null when none is. */
+    public operator fun get(key: ApiKey): String? = keys[key]
+
+    /** This config with [key] set to [value], replacing any value already there. */
+    public fun with(key: ApiKey, value: String): ApiKeyConfig = copy(keys = keys + (key to value))
+
+    /** This config with [key] absent, whether or not it was set. */
+    public fun without(key: ApiKey): ApiKeyConfig = copy(keys = keys - key)
+
+    public companion object {
+        /** A config holding exactly [keys]; a repeated [ApiKey] takes its last value. */
+        public fun of(vararg keys: Pair<ApiKey, String>): ApiKeyConfig = ApiKeyConfig(keys.toMap())
+    }
+}

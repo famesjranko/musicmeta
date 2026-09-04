@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.engine
 
+import com.landofoz.musicmeta.ApiKey
 import com.landofoz.musicmeta.ApiKeyConfig
 import com.landofoz.musicmeta.AttributionRequirement
 import com.landofoz.musicmeta.CommercialUse
@@ -11,17 +12,10 @@ import org.junit.Test
 
 class ProviderPolicyTest {
 
-    // Every key field filled reflectively, not by name: the guard must register providers gated
-    // behind keys that do not exist yet, and a hardcoded ApiKeyConfig would pass green when a new
+    // Every ApiKey filled, enumerated rather than listed: the guard must register providers gated
+    // behind keys that do not exist yet, and a hand-written key list would pass green when a new
     // gate is added without a policy.
-    private fun allKeysSupplied(): ApiKeyConfig {
-        val ctor = ApiKeyConfig::class.java.declaredConstructors
-            .filter { c -> c.parameterTypes.isNotEmpty() && c.parameterTypes.all { it == String::class.java } }
-            .maxByOrNull { it.parameterCount }
-            ?: error("ApiKeyConfig has no all-String constructor; update this guard to fill its key fields")
-        val args = Array<Any?>(ctor.parameterCount) { "test-key" }
-        return ctor.newInstance(*args) as ApiKeyConfig
-    }
+    private fun allKeysSupplied(): ApiKeyConfig = ApiKeyConfig(ApiKey.entries.associateWith { "test-key" })
 
     private fun allDefaultProviderIds(): List<String> =
         EnrichmentEngine.Builder()

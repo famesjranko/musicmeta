@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.e2e
 
+import com.landofoz.musicmeta.ApiKey
 import com.landofoz.musicmeta.ApiKeyConfig
 import com.landofoz.musicmeta.EnrichmentConfig
 import com.landofoz.musicmeta.EnrichmentData
@@ -39,7 +40,7 @@ class RadioDiscoveryLiveE2ETest {
         assumeTrue("needs listenbrainz.token", token.isNotBlank())
         val engine = EnrichmentEngine.Builder()
             .config(EnrichmentConfig(enableIdentityResolution = false))
-            .apiKeys(ApiKeyConfig(listenBrainzToken = token))
+            .apiKeys(ApiKeyConfig.of(ApiKey.LISTENBRAINZ_USER_TOKEN to token))
             .withDefaultProviders()
             .build()
 

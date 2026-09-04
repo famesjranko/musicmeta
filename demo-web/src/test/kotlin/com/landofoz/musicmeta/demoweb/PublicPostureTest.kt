@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.demoweb
 
+import com.landofoz.musicmeta.ApiKey
 import com.landofoz.musicmeta.ApiKeyConfig
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentEngine
@@ -31,11 +32,11 @@ import java.util.concurrent.atomic.AtomicReference
  */
 class PublicPostureTest {
 
-    private val fullKeys = ApiKeyConfig(
-        lastFmKey = "lastfm-key",
-        fanartTvProjectKey = "fanart-key",
-        discogsPersonalToken = "discogs-token",
-        listenBrainzToken = "listenbrainz-token",
+    private val fullKeys = ApiKeyConfig.of(
+        ApiKey.LASTFM_API_KEY to "lastfm-key",
+        ApiKey.FANARTTV_PROJECT_KEY to "fanart-key",
+        ApiKey.DISCOGS_PERSONAL_TOKEN to "discogs-token",
+        ApiKey.LISTENBRAINZ_USER_TOKEN to "listenbrainz-token",
     )
 
     private val discogsArt = "https://i.discogs.com/cover.jpg"
@@ -128,10 +129,10 @@ class PublicPostureTest {
         val effective = keys.underPublicPosture(PublicPosture(enabled = true))
 
         // Then - Last.fm and the ListenBrainz token are gone and the other two are untouched
-        assertEquals(null, effective.lastFmKey)
-        assertEquals(null, effective.listenBrainzToken)
-        assertEquals("fanart-key", effective.fanartTvProjectKey)
-        assertEquals("discogs-token", effective.discogsPersonalToken)
+        assertEquals(null, effective[ApiKey.LASTFM_API_KEY])
+        assertEquals(null, effective[ApiKey.LISTENBRAINZ_USER_TOKEN])
+        assertEquals("fanart-key", effective[ApiKey.FANARTTV_PROJECT_KEY])
+        assertEquals("discogs-token", effective[ApiKey.DISCOGS_PERSONAL_TOKEN])
     }
 
     @Test fun `with the posture off an unset credential is still reported missing`() {
@@ -312,8 +313,8 @@ class PublicPostureTest {
 
         // Then - the key reaches the engine and no id is held out of the table, while the
         // ListenBrainz token stays withheld
-        assertEquals("lastfm-key", effective.lastFmKey)
-        assertEquals(null, effective.listenBrainzToken)
+        assertEquals("lastfm-key", effective[ApiKey.LASTFM_API_KEY])
+        assertEquals(null, effective[ApiKey.LISTENBRAINZ_USER_TOKEN])
         assertEquals(emptySet<String>(), posture.unregisteredProviderIds)
         assertEquals(setOf("listenbrainz"), posture.withheldCredentialIds)
     }
@@ -326,8 +327,8 @@ class PublicPostureTest {
         val effective = fullKeys.underPublicPosture(posture)
 
         // Then - the token reaches the engine and Last.fm stays off
-        assertEquals("listenbrainz-token", effective.listenBrainzToken)
-        assertEquals(null, effective.lastFmKey)
+        assertEquals("listenbrainz-token", effective[ApiKey.LISTENBRAINZ_USER_TOKEN])
+        assertEquals(null, effective[ApiKey.LASTFM_API_KEY])
         assertEquals(setOf("lastfm"), posture.withheldCredentialIds)
     }
 
