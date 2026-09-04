@@ -52,6 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `EnrichmentEngine.Builder.build()` now throws `IllegalArgumentException` when registered `CompositeSynthesizer`s form a dependency cycle: the message names every type on the loop
 - `Builder.build()` also throws when one type has both a `CompositeSynthesizer` and a `ResultMerger`: the merger could never run, so the registration was silently dead
 - `PopularTrack` and `Popularity.topTracks` are removed: `ARTIST_TOP_TRACKS` carries the same tracks as `TopTrack`; cached `Popularity` entries still decode (the key is ignored)
+- `EnrichmentIdentifiers.get(String)`/`withExtra(String, String)` go: use `get(IdentifierNamespace)`/`with(...)`; new `DISCOGS_RELEASE`, `DISCOGS_MASTER`, `ITUNES_COLLECTION` keep the wire keys
 
 ### Added
 - `enrichDeadlineRemainingMs()`: what is left of the enclosing `enrich()` deadline, for a custom `HttpClient` to clamp its transport timeouts down to; null outside an enrich call

@@ -242,7 +242,7 @@ class EnrichmentDataSerializationTest {
                     artist = "Radiohead",
                     album = "Pablo Honey",
                     durationMs = 238000L,
-                    identifiers = EnrichmentIdentifiers().withExtra("deezerId", "123"),
+                    identifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DEEZER, "123"),
                 ),
                 RadioTrack(
                     title = "Karma Police",

@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.demoweb
 
+import com.landofoz.musicmeta.IdentifierNamespace
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
@@ -42,7 +43,7 @@ class IdentifierTransportTest {
 
         // Then - both identifiers survive unchanged
         assertEquals("mbid-starman", result?.musicBrainzId)
-        assertEquals("107471926", result?.get("deezerId"))
+        assertEquals("107471926", result?.get(IdentifierNamespace.DEEZER))
     }
 
     @Test fun `malformed JSON is rejected rather than silently downgraded`() {

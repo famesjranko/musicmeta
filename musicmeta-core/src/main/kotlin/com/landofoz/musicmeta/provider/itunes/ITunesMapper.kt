@@ -5,6 +5,7 @@ import com.landofoz.musicmeta.DiscographyAlbum
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.GenreTag
+import com.landofoz.musicmeta.IdentifierNamespace
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.TrackInfo
 
@@ -57,7 +58,8 @@ internal object ITunesMapper {
                     year = album.releaseDate?.take(4),
                     thumbnailUrl = album.artworkUrl,
                     identifiers = if (album.collectionId > 0) {
-                        EnrichmentIdentifiers().withExtra("itunesCollectionId", album.collectionId.toString())
+                        EnrichmentIdentifiers()
+                            .with(IdentifierNamespace.ITUNES_COLLECTION, album.collectionId.toString())
                     } else {
                         EnrichmentIdentifiers()
                     },
@@ -80,7 +82,7 @@ internal object ITunesMapper {
             matchScore = matchScore,
             thumbnailUrl = result.artworkUrl,
             identifiers = if (result.collectionId > 0) {
-                EnrichmentIdentifiers().withExtra("itunesCollectionId", result.collectionId.toString())
+                EnrichmentIdentifiers().with(IdentifierNamespace.ITUNES_COLLECTION, result.collectionId.toString())
             } else {
                 EnrichmentIdentifiers()
             },

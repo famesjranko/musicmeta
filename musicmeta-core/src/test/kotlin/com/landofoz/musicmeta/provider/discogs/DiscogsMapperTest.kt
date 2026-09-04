@@ -1,6 +1,7 @@
 package com.landofoz.musicmeta.provider.discogs
 
 import com.landofoz.musicmeta.EnrichmentData
+import com.landofoz.musicmeta.IdentifierNamespace
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -111,13 +112,13 @@ class DiscogsMapperTest {
         assertEquals("John Smith", first.name)
         assertEquals("Producer", first.role)
         assertEquals("production", first.roleCategory)
-        assertEquals("12345", first.identifiers.get("discogsArtistId"))
+        assertEquals("12345", first.identifiers.get(IdentifierNamespace.DISCOGS_ARTIST))
 
         val second = result.credits[1]
         assertEquals("Jane Doe", second.name)
         assertEquals("Vocals", second.role)
         assertEquals("performance", second.roleCategory)
-        assertEquals("67890", second.identifiers.get("discogsArtistId"))
+        assertEquals("67890", second.identifiers.get(IdentifierNamespace.DISCOGS_ARTIST))
     }
 
     @Test
@@ -146,7 +147,7 @@ class DiscogsMapperTest {
         val result = DiscogsMapper.toCredits(credits)
 
         // Then - no discogsArtistId in identifiers
-        assertNull(result.credits[0].identifiers.get("discogsArtistId"))
+        assertNull(result.credits[0].identifiers.get(IdentifierNamespace.DISCOGS_ARTIST))
     }
 
     @Test
@@ -227,7 +228,7 @@ class DiscogsMapperTest {
         val result = DiscogsMapper.toReleaseEditions(versions)
 
         // Then - discogsReleaseId is stored in identifiers
-        assertEquals("99001", result.editions[0].identifiers.get("discogsReleaseId"))
+        assertEquals("99001", result.editions[0].identifiers.get(IdentifierNamespace.DISCOGS_RELEASE))
     }
 
     @Test
@@ -242,7 +243,7 @@ class DiscogsMapperTest {
         val result = DiscogsMapper.toReleaseEditions(versions)
 
         // Then - discogsReleaseId is absent from identifiers
-        assertNull(result.editions[0].identifiers.get("discogsReleaseId"))
+        assertNull(result.editions[0].identifiers.get(IdentifierNamespace.DISCOGS_RELEASE))
     }
 
     @Test

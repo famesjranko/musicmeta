@@ -218,6 +218,9 @@ public enum class IdentifierNamespace(internal val key: String) {
 
     /** The key's meaning depends on the request: an artist, album or track id. */
     DEEZER("deezerId"),
+    DISCOGS_RELEASE("discogsReleaseId"),
+    DISCOGS_MASTER("discogsMasterId"),
+    ITUNES_COLLECTION("itunesCollectionId"),
 }
 
 /**
@@ -232,15 +235,12 @@ public data class EnrichmentIdentifiers(
     val isrc: String? = null,
     val barcode: String? = null,
     val wikipediaTitle: String? = null,
+    /**
+     * The escape hatch for a key [IdentifierNamespace] does not name: read it as `extra["x"]` and
+     * write it with `copy(extra = extra + ("x" to value))`. Prefer [get] and [with] for a key it does.
+     */
     val extra: Map<String, String> = emptyMap(),
 ) {
-    /** Retrieves an extra identifier by key, or null if not present. */
-    public fun get(key: String): String? = extra[key]
-
-    /** Returns a copy with the given extra identifier added (immutable). */
-    public fun withExtra(key: String, value: String): EnrichmentIdentifiers =
-        copy(extra = extra + (key to value))
-
     /** Retrieves an extra identifier by namespace, or null if not present. */
     public fun get(ns: IdentifierNamespace): String? = extra[ns.key]
 

@@ -8,6 +8,7 @@ import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
+import com.landofoz.musicmeta.IdentifierNamespace
 import com.landofoz.musicmeta.LookupProvenance
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.SearchCandidate
@@ -286,7 +287,7 @@ class ITunesProviderTest {
     fun `enrich returns album tracks from lookup API`() = runTest {
         // Given - ForAlbum request with itunesCollectionId in identifiers.extra
         httpClient.givenJsonResponse("lookup", ITUNES_LOOKUP_TRACKS_RESPONSE)
-        val identifiers = EnrichmentIdentifiers().withExtra("itunesCollectionId", "203558498")
+        val identifiers = EnrichmentIdentifiers().with(IdentifierNamespace.ITUNES_COLLECTION, "203558498")
         val request = EnrichmentRequest.ForAlbum(identifiers, "OK Computer", "Radiohead")
 
         // When - enriching for album tracks
@@ -307,7 +308,7 @@ class ITunesProviderTest {
     fun `album tracks by collectionId self-reports a provider-native-id route`() = runTest {
         // Given - the same stored-collectionId request the lookup-API test above uses
         httpClient.givenJsonResponse("lookup", ITUNES_LOOKUP_TRACKS_RESPONSE)
-        val identifiers = EnrichmentIdentifiers().withExtra("itunesCollectionId", "203558498")
+        val identifiers = EnrichmentIdentifiers().with(IdentifierNamespace.ITUNES_COLLECTION, "203558498")
         val request = EnrichmentRequest.ForAlbum(identifiers, "OK Computer", "Radiohead")
 
         // When - enriching for album tracks
@@ -340,7 +341,7 @@ class ITunesProviderTest {
     fun `enrich returns artist discography from lookup API`() = runTest {
         // Given - ForArtist with itunesArtistId in identifiers.extra
         httpClient.givenJsonResponse("lookup", ITUNES_LOOKUP_ARTIST_ALBUMS_RESPONSE)
-        val identifiers = EnrichmentIdentifiers().withExtra("itunesArtistId", "657515")
+        val identifiers = EnrichmentIdentifiers().with(IdentifierNamespace.ITUNES_ARTIST, "657515")
         val request = EnrichmentRequest.ForArtist(identifiers, "Radiohead")
 
         // When - enriching for artist discography
@@ -390,14 +391,14 @@ class ITunesProviderTest {
         assertTrue(result is EnrichmentResult.Success)
         val resolved = (result as EnrichmentResult.Success).resolvedIdentifiers
         assertNotNull(resolved)
-        assertNotNull("itunesArtistId should be stored", resolved?.get("itunesArtistId"))
+        assertNotNull("itunesArtistId should be stored", resolved?.get(IdentifierNamespace.ITUNES_ARTIST))
     }
 
     @Test
     fun `enrich returns NotFound for ALBUM_TRACKS when lookup returns empty`() = runTest {
         // Given - lookup returns only the collection wrapper, no tracks
         httpClient.givenJsonResponse("lookup", ITUNES_LOOKUP_EMPTY_TRACKS_RESPONSE)
-        val identifiers = EnrichmentIdentifiers().withExtra("itunesCollectionId", "203558498")
+        val identifiers = EnrichmentIdentifiers().with(IdentifierNamespace.ITUNES_COLLECTION, "203558498")
         val request = EnrichmentRequest.ForAlbum(identifiers, "OK Computer", "Radiohead")
 
         // When - enriching for album tracks
@@ -421,7 +422,7 @@ class ITunesProviderTest {
         assertTrue(result is EnrichmentResult.Success)
         val resolved = (result as EnrichmentResult.Success).resolvedIdentifiers
         assertNotNull(resolved)
-        assertEquals("203558498", resolved?.get("itunesCollectionId"))
+        assertEquals("203558498", resolved?.get(IdentifierNamespace.ITUNES_COLLECTION))
     }
 
     @Test
@@ -437,7 +438,7 @@ class ITunesProviderTest {
         val result = provider.enrich(picked, EnrichmentType.ALBUM_TRACKS)
 
         // Then - the candidate carried the id, and enrich took the id lookup path at 1.0 confidence
-        assertEquals("203558498", candidate.identifiers.get("itunesCollectionId"))
+        assertEquals("203558498", candidate.identifiers.get(IdentifierNamespace.ITUNES_COLLECTION))
         assertTrue(result is EnrichmentResult.Success)
         assertEquals(1.0f, (result as EnrichmentResult.Success).confidence, 0.0f)
         assertTrue(httpClient.requestedUrls.any { it.contains("/lookup?") })
@@ -454,7 +455,7 @@ class ITunesProviderTest {
         val candidate = provider.searchCandidates(search, 5).first()
 
         // Then - no itunesCollectionId is invented from the 0 default
-        assertNull(candidate.identifiers.get("itunesCollectionId"))
+        assertNull(candidate.identifiers.get(IdentifierNamespace.ITUNES_COLLECTION))
     }
 
     @Test
@@ -497,7 +498,7 @@ class ITunesProviderTest {
         // Then - confidence is the identity-match ceiling, above fuzzyMatch(true), and the resolved
         // collection id is carried so ALBUM_TRACKS can reuse it without a further UPC round trip
         assertEquals(1.0f, result.confidence, 0.0f)
-        assertEquals("697194953", result.resolvedIdentifiers?.get("itunesCollectionId"))
+        assertEquals("697194953", result.resolvedIdentifiers?.get(IdentifierNamespace.ITUNES_COLLECTION))
         // A barcode lookup is a direct identifier lookup, never a search — its route is observed,
         // not left for the engine's canonical-status inference.
         assertEquals(LookupProvenance.EXTERNAL_CATALOG_ID, result.provenance)
@@ -546,7 +547,7 @@ class ITunesProviderTest {
         assertTrue(result is EnrichmentResult.Success)
         assertEquals(
             "697194953",
-            (result as EnrichmentResult.Success).resolvedIdentifiers?.get("itunesCollectionId"),
+            (result as EnrichmentResult.Success).resolvedIdentifiers?.get(IdentifierNamespace.ITUNES_COLLECTION),
         )
     }
 

@@ -8,6 +8,7 @@ import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
+import com.landofoz.musicmeta.IdentifierNamespace
 import com.landofoz.musicmeta.LookupProvenance
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.SearchCandidate
@@ -419,8 +420,8 @@ class DiscogsProviderTest {
         assertTrue(result is EnrichmentResult.Success)
         val success = result as EnrichmentResult.Success
         assertNotNull(success.resolvedIdentifiers)
-        assertEquals("99001", success.resolvedIdentifiers!!.get("discogsReleaseId"))
-        assertEquals("55002", success.resolvedIdentifiers!!.get("discogsMasterId"))
+        assertEquals("99001", success.resolvedIdentifiers!!.get(IdentifierNamespace.DISCOGS_RELEASE))
+        assertEquals("55002", success.resolvedIdentifiers!!.get(IdentifierNamespace.DISCOGS_MASTER))
     }
 
     @Test
@@ -444,8 +445,8 @@ class DiscogsProviderTest {
         // Then - success with discogsReleaseId set but no discogsMasterId
         assertTrue(result is EnrichmentResult.Success)
         val success = result as EnrichmentResult.Success
-        assertEquals("99001", success.resolvedIdentifiers!!.get("discogsReleaseId"))
-        assertNull(success.resolvedIdentifiers!!.get("discogsMasterId"))
+        assertEquals("99001", success.resolvedIdentifiers!!.get(IdentifierNamespace.DISCOGS_RELEASE))
+        assertNull(success.resolvedIdentifiers!!.get(IdentifierNamespace.DISCOGS_MASTER))
     }
 
     @Test
@@ -777,7 +778,7 @@ class DiscogsProviderTest {
     @Test
     fun `enrich CREDITS returns track-level credits when track title matches`() = runTest {
         // Given - ForTrack with discogsReleaseId, release has track-specific extraartists
-        val identifiers = EnrichmentIdentifiers().withExtra("discogsReleaseId", "999")
+        val identifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DISCOGS_RELEASE, "999")
         val request = EnrichmentRequest.ForTrack(
             identifiers = identifiers,
             title = "Paranoid Android",
@@ -802,7 +803,7 @@ class DiscogsProviderTest {
     @Test
     fun `enrich CREDITS falls back to release-level credits when no track match`() = runTest {
         // Given - ForTrack title does not match any track in the release
-        val identifiers = EnrichmentIdentifiers().withExtra("discogsReleaseId", "999")
+        val identifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DISCOGS_RELEASE, "999")
         val request = EnrichmentRequest.ForTrack(
             identifiers = identifiers,
             title = "Unknown Track",
@@ -837,7 +838,7 @@ class DiscogsProviderTest {
     @Test
     fun `enrich CREDITS returns Error with NETWORK ErrorKind when IOException thrown`() = runTest {
         // Given - IOException thrown for releases endpoint
-        val identifiers = EnrichmentIdentifiers().withExtra("discogsReleaseId", "999")
+        val identifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DISCOGS_RELEASE, "999")
         val request = EnrichmentRequest.ForTrack(
             identifiers = identifiers,
             title = "Paranoid Android",
@@ -856,7 +857,7 @@ class DiscogsProviderTest {
     @Test
     fun `enrich CREDITS returns NotFound when release has no credits`() = runTest {
         // Given - release with empty extraartists and tracklist
-        val identifiers = EnrichmentIdentifiers().withExtra("discogsReleaseId", "999")
+        val identifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DISCOGS_RELEASE, "999")
         val request = EnrichmentRequest.ForTrack(
             identifiers = identifiers,
             title = "Paranoid Android",
@@ -887,7 +888,7 @@ class DiscogsProviderTest {
     @Test
     fun `enrich RELEASE_EDITIONS returns Success when discogsMasterId is present and has versions`() = runTest {
         // Given - ForAlbum with discogsMasterId, master has versions
-        val identifiers = EnrichmentIdentifiers().withExtra("discogsMasterId", "55002")
+        val identifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DISCOGS_MASTER, "55002")
         val request = EnrichmentRequest.ForAlbum(
             identifiers = identifiers,
             title = "OK Computer",
@@ -927,7 +928,7 @@ class DiscogsProviderTest {
     @Test
     fun `enrich RELEASE_EDITIONS returns NotFound when getMasterVersions returns empty list`() = runTest {
         // Given - ForAlbum with discogsMasterId, but master has no versions
-        val identifiers = EnrichmentIdentifiers().withExtra("discogsMasterId", "55002")
+        val identifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DISCOGS_MASTER, "55002")
         val request = EnrichmentRequest.ForAlbum(
             identifiers = identifiers,
             title = "OK Computer",
@@ -945,7 +946,7 @@ class DiscogsProviderTest {
     @Test
     fun `enrich RELEASE_EDITIONS returns Error with NETWORK ErrorKind on IOException`() = runTest {
         // Given - IOException thrown for masters endpoint
-        val identifiers = EnrichmentIdentifiers().withExtra("discogsMasterId", "55002")
+        val identifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DISCOGS_MASTER, "55002")
         val request = EnrichmentRequest.ForAlbum(
             identifiers = identifiers,
             title = "OK Computer",
@@ -1066,7 +1067,7 @@ class DiscogsProviderTest {
         provider.enrich(EnrichmentRequest.forArtist("Radiohead"), EnrichmentType.BAND_MEMBERS)
         provider.enrich(
             EnrichmentRequest.ForTrack(
-                identifiers = EnrichmentIdentifiers().withExtra("discogsReleaseId", "999"),
+                identifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DISCOGS_RELEASE, "999"),
                 title = "Paranoid Android",
                 artist = "Radiohead",
             ),
@@ -1074,7 +1075,7 @@ class DiscogsProviderTest {
         )
         provider.enrich(
             EnrichmentRequest.ForAlbum(
-                identifiers = EnrichmentIdentifiers().withExtra("discogsMasterId", "55002"),
+                identifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DISCOGS_MASTER, "55002"),
                 title = "OK Computer",
                 artist = "Radiohead",
             ),
