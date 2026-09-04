@@ -102,7 +102,7 @@ them, so `engine.artistProfile("pink floid").suggestions`, or `results.identity.
 | LRCLIB | Synced + plain lyrics, track metadata | No |
 | Deezer | Artist photos, album art, discography, tracklists, album metadata, similar artists/tracks, artist radio, top tracks, similar albums, track previews | No |
 | iTunes | Album art, tracklists, discography, album metadata | No |
-| ListenBrainz | Popularity, listen counts, discography, top tracks, radio discovery (requires a token) | Optional |
+| ListenBrainz | Popularity, listen counts, discography, top tracks, similar artists, radio discovery (requires a token) | Optional |
 | Last.fm | Genres, similar artists/tracks, bios, popularity, album metadata | Yes |
 | Fanart.tv | Artist photos/backgrounds/logos/banners, CD art, album art | Yes |
 | Discogs | Labels, members, credits, editions, artwork, album metadata, community ratings | Yes |
@@ -139,7 +139,7 @@ val engine = EnrichmentEngine.Builder()
 | **Credits** | CREDITS | MusicBrainz (recording rels) + Discogs (extraartists) |
 | **Editions** | RELEASE_EDITIONS | MusicBrainz (release-group) + Discogs (master versions) |
 | **Text** | ARTIST_BIO, ALBUM_DESCRIPTION, LYRICS_SYNCED, LYRICS_PLAIN | BIO (2), ALBUM_DESCRIPTION (2) |
-| **Relationships** | SIMILAR_ARTISTS, SIMILAR_TRACKS, ARTIST_LINKS | SIMILAR_ARTISTS (2: Last.fm, Deezer), SIMILAR_TRACKS (2), ARTIST_LINKS (2: MusicBrainz, Wikidata) |
+| **Relationships** | SIMILAR_ARTISTS, SIMILAR_TRACKS, ARTIST_LINKS | SIMILAR_ARTISTS (3: Last.fm, ListenBrainz, Deezer), SIMILAR_TRACKS (2), ARTIST_LINKS (2: MusicBrainz, Wikidata) |
 | **Top Tracks** | ARTIST_TOP_TRACKS | Merged from 3 (Last.fm, ListenBrainz, Deezer) |
 | **Statistics** | ARTIST_POPULARITY, TRACK_POPULARITY | Both merged from 3, each source's claim kept in its own unit |
 | **Composite** | ARTIST_TIMELINE, GENRE_DISCOVERY | ARTIST_TIMELINE: discography + members + life-span; GENRE_DISCOVERY: static affinity taxonomy |

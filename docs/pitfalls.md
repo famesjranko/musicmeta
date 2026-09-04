@@ -357,6 +357,34 @@ virtual when the work it bounds is real, so it fires unconditionally; here it is
 was written as if it were virtual.
 
 
+## 31. `bodyOrThrowTransient` turns a 4xx into an empty answer, which some routes cannot mean
+
+`bodyOrThrowTransient()` maps every `HttpResult.ClientError` to `null`, and the `*Api` idiom around
+it turns `null` into an empty list, which the provider reads as `NotFound`. That is right for a
+search route, where a 404 is the upstream saying there is nothing — and wrong for any route that
+already has a way to say "nothing".
+
+ListenBrainz Labs' similar-artists route is the case that showed it. It answers an artist it holds
+no data for with `200 []`, and rejects a request it will not serve with a `400` — including the day
+one of its `algorithm` enum members is retired, which is the failure the route was admitted with a
+guard against. Through the house helper that `400` becomes an empty list, an empty list becomes
+`NotFound`, and `NotFound` records a circuit-breaker *success* (§4): the capability would have gone
+permanently, silently blank while the provider reported healthy. `ListenBrainzApi.getSimilarArtists`
+therefore checks for `ClientError` before the helper runs and throws, so `mapError` reaches an
+`Error` the consumer sees.
+
+Ask what the route's own "nothing" looks like before reaching for the helper. Where the upstream has
+a success shape for absence, a 4xx is a statement about the *request*, and collapsing it to absence
+destroys the only signal that the request stopped being valid.
+
+Classifying it correctly has a cost worth knowing, because a breaker is per *provider*, not per
+route: five of these errors with no other route's success in between open ListenBrainz's breaker and
+every one of its capabilities is skipped for the cooldown. That is the right trade — a silent
+permanent blank is worse than a loud 60-second one — but a provider whose routes live on hosts with
+independent uptime pays for it, and nothing in the registry lets one route be isolated from its
+siblings.
+
+
 ## Area — Provider data and matching
 
 - A MusicBrainz `inc=` that names a relationship gets you the **link**, not the linked entity's own

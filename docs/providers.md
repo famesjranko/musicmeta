@@ -29,7 +29,7 @@ Auth keys and how to supply them are in [README.md](../README.md).
 | LRCLIB | `lrclib` | none | [docs](https://lrclib.net/docs) | Only lyrics source |
 | Wikidata | `wikidata` | none | [docs](https://www.wikidata.org/wiki/Wikidata:Data_access) | Structured claims keyed on a Q-id; our route to Commons imagery at any width |
 | Wikipedia | `wikipedia` | none | [docs](https://www.mediawiki.org/wiki/API:Main_page) | Highest-confidence bio; English only |
-| ListenBrainz | `listenbrainz` | optional token | [docs](https://listenbrainz.readthedocs.io/en/latest/users/api/) | MBID-keyed listen counts that cannot mismatch the artist; only source of `ARTIST_RADIO_DISCOVERY`, which is what the token gates |
+| ListenBrainz | `listenbrainz` | optional token | [docs](https://listenbrainz.readthedocs.io/en/latest/users/api/) | MBID-keyed listen counts that cannot mismatch the artist; only source of `ARTIST_RADIO_DISCOVERY`, which is what the token gates; the only `SIMILAR_ARTISTS` source whose every answer carries an MBID |
 | Last.fm | `lastfm` | API key | [docs](https://www.last.fm/api) | Widest capability set of any single provider; only source of tags-as-genre and artist similarity |
 | Fanart.tv | `fanarttv` | project key | [docs](https://fanarttv.docs.apiary.io/) | Only source of artist backgrounds, logos and banners |
 | Discogs | `discogs` | token | [docs](https://www.discogs.com/developers) | Pressing-level detail: catalogue numbers, editions, per-track credits |
@@ -73,6 +73,37 @@ ride the batch `POST /1/popularity/artist` and `POST /1/popularity/recording`, w
 
 Nothing re-probes these on a schedule, so the date above is the last time anyone looked, not a
 guarantee about today.
+
+## ListenBrainz Labs, and the algorithm this library pins
+
+`SIMILAR_ARTISTS` from ListenBrainz comes from `labs.api.listenbrainz.org`, not from
+`api.listenbrainz.org`. Labs is ListenBrainz's experimental deployment: a different host with its
+own availability, no documented stability promise, and no token. Every other ListenBrainz
+capability rides the main API, but they are not isolated from each other: the two share one rate
+limiter, so a slow Labs answer is time the main API's routes do not get, and one circuit breaker,
+which is per *provider* rather than per route. Five Labs errors with no main-API success in between
+open that breaker, and for the next 60 seconds `ARTIST_POPULARITY`, `TRACK_POPULARITY`,
+`ARTIST_DISCOGRAPHY`, `ARTIST_TOP_TRACKS` and `ARTIST_RADIO_DISCOVERY` are skipped too — a Labs
+outage is briefly a ListenBrainz outage.
+
+The route takes an `algorithm` parameter whose permitted values are an enum published nowhere but
+the route's own error body. This library pins one member — session-based over a 7500-day window at
+the full 100-result limit, the combination that still answers for a long-tail artist. Asking for a
+member the route no longer accepts is a `400`, and this library turns that into an
+`EnrichmentResult.Error`, deliberately: the same route answers an artist it holds no data for with
+an empty list, so treating a rejection as "no similar artists" would hide a retired algorithm as a
+silent, permanent absence of results. If `SIMILAR_ARTISTS` starts erroring from `listenbrainz`
+alone while Last.fm and Deezer keep answering, that is the shape to expect.
+
+Results are scored, unbounded session counts, and the route answers with up to a hundred rows where
+Last.fm answers with twenty — expect a merged `SIMILAR_ARTISTS` list to be markedly longer than it
+was before this provider joined the type (Radiohead: 31 entries to 109). A
+`SimilarArtist.matchScore` from this provider is that score scaled against the highest in the same
+answer and then halved, so its top entry is `0.5`. The halving is deliberate and is a contract: the
+merger sums `matchScore` across providers and caps the sum at 1.0, so at full scale a hundred Labs
+rows saturate the cap and the merged ordering collapses into a tie. At half scale a Labs row lifts
+an artist another provider also picked, and cannot outrank two providers that agree. The figures are
+not comparable between two answers, nor against Last.fm's own similarity number.
 
 ## Deviations from the house pattern
 
@@ -559,7 +590,10 @@ currently returns response order with no counts), and its `release_group.date` a
 leaves null. `caa_id`/`caa_release_mbid` are there too — cover art for a discography entry without a
 second provider — but nested inside `release_group` and `release` rather than beside the mbid.
 Also `release_mbid` on a top recording (its album's identity, as opposed to the `release_name` a top
-track now carries). Never called:
+track now carries). On a Labs similar-artists row, captured **2026-09-05**: `comment` (MusicBrainz's
+disambiguation line), `type` and `gender` — enough to tell two same-named artists apart in a UI,
+though `SimilarArtist` has nowhere to put them — and `reference_mbid`, which echoes the artist we
+asked about. Never called:
 `/1/stats/**`, `/1/user/**`, `/1/similar-users`, and every submit endpoint. Two of the unused are
 worth knowing before reaching for a third-party call. `/1/metadata/recording/` is a keyless batch
 lookup — up to 1000 recording MBIDs to titles, artists, lengths and release info in one request —

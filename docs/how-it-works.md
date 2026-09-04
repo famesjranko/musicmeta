@@ -463,7 +463,7 @@ when a key is present, and CAA is a fallback, not a second entry in the same res
 ### Relationships (5 types)
 | Type | Providers (by priority) | Notes |
 |------|------------------------|-------|
-| SIMILAR_ARTISTS | Last.fm(100), Deezer(30) | **Mergeable** — deduplicates, sums matchScores |
+| SIMILAR_ARTISTS | Last.fm(100), ListenBrainz(50), Deezer(30) | **Mergeable** — deduplicates, sums matchScores |
 | SIMILAR_TRACKS | Last.fm(100), Deezer(50) | **Mergeable** — deduplicates, sums matchScores |
 | BAND_MEMBERS | MusicBrainz(100), Discogs(50) | From artist-rels |
 | ARTIST_LINKS | MusicBrainz(100), Wikidata(50) | All URL relation types; Wikidata contributes P856 only |

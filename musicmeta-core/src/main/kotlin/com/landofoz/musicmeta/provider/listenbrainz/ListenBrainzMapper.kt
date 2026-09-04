@@ -7,6 +7,7 @@ import com.landofoz.musicmeta.IdentifierNamespace
 import com.landofoz.musicmeta.PopularitySignal
 import com.landofoz.musicmeta.PopularitySignalKind
 import com.landofoz.musicmeta.RadioTrack
+import com.landofoz.musicmeta.SimilarArtist
 import com.landofoz.musicmeta.TopTrack
 
 /** Maps ListenBrainz responses to EnrichmentData subclasses. */
@@ -50,6 +51,9 @@ internal object ListenBrainzMapper {
 
     private const val SOURCE = "listenbrainz"
 
+    /** The half in "scaled, then halved" — see [toSimilarArtists] for what it buys. */
+    private const val CORROBORATION_WEIGHT = 0.5f
+
     fun toTopTracks(tracks: List<ListenBrainzPopularTrack>): EnrichmentData.TopTracks =
         EnrichmentData.TopTracks(
             tracks = tracks.mapIndexed { index, t ->
@@ -80,6 +84,36 @@ internal object ListenBrainzMapper {
                 )
             },
         )
+
+    /**
+     * Labs neighbours as similar artists, every one carrying the MusicBrainz artist id it was
+     * keyed on.
+     *
+     * The upstream score is an unbounded session count with no ceiling to divide by, so it is
+     * scaled against the highest score in the same answer and then halved. **The contract the
+     * halving keeps: nothing from this provider alone reaches the top of a merged list.**
+     * `SimilarArtistMerger` sums `matchScore` across providers and caps the sum at 1.0, and this
+     * provider answers with up to a hundred rows against Last.fm's twenty — left at full scale its
+     * top rows saturate the cap, every entry ties at 1.0 and the merged order becomes arbitrary.
+     * At half scale a Labs row still lifts an artist another provider also chose, and can no longer
+     * outrank two providers that agree.
+     *
+     * A score is therefore comparable only within one answer: not against another answer's, and not
+     * against Last.fm's own similarity figure.
+     */
+    fun toSimilarArtists(artists: List<ListenBrainzSimilarArtist>): EnrichmentData.SimilarArtists {
+        val topScore = artists.maxOfOrNull { it.score }?.takeIf { it > 0 }
+        return EnrichmentData.SimilarArtists(
+            artists = artists.map { artist ->
+                SimilarArtist(
+                    name = artist.name,
+                    identifiers = EnrichmentIdentifiers(musicBrainzId = artist.artistMbid),
+                    matchScore = topScore?.let { artist.score.toFloat() / it * CORROBORATION_WEIGHT } ?: 0f,
+                    sources = listOf(SOURCE),
+                )
+            },
+        )
+    }
 
     fun toRadioPlaylist(tracks: List<ListenBrainzRadioTrack>): EnrichmentData.RadioPlaylist =
         EnrichmentData.RadioPlaylist(

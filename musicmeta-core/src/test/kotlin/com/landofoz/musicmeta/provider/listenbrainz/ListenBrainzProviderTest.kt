@@ -10,7 +10,6 @@ import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.testutil.FakeHttpClient
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -649,28 +648,5 @@ class ListenBrainzProviderTest {
         // When - searching it for ARTIST_DISCOGRAPHY
         // Then - the declared capabilities list ARTIST_DISCOGRAPHY at priority 50
         assertTrue(provider.capabilities.any { it.type == EnrichmentType.ARTIST_DISCOGRAPHY && it.priority == 50 })
-    }
-
-    @Test
-    fun `capabilities do not include SIMILAR_ARTISTS -- no real ListenBrainz endpoint returns it`() {
-        // Given - the provider's declared capabilities list
-        // When - searching it for SIMILAR_ARTISTS
-        // Then - no real ListenBrainz endpoint returns SIMILAR_ARTISTS, so it is absent; Deezer covers the type
-        assertFalse(provider.capabilities.any { it.type == EnrichmentType.SIMILAR_ARTISTS })
-    }
-
-    @Test
-    fun `enrich returns NotFound for SIMILAR_ARTISTS, a type ListenBrainz declares no capability for`() = runTest {
-        // Given - a request for SIMILAR_ARTISTS, a type ListenBrainz has no endpoint for
-        val request = EnrichmentRequest.ForArtist(
-            identifiers = EnrichmentIdentifiers(musicBrainzId = "a74b1b7f-71a5-4011-9441-d0b5e4122711"),
-            name = "Radiohead",
-        )
-
-        // When - enriching for similar artists
-        val result = provider.enrich(request, EnrichmentType.SIMILAR_ARTISTS)
-
-        // Then - falls through the `when`'s else branch, no HTTP call made
-        assertTrue(result is EnrichmentResult.NotFound)
     }
 }
