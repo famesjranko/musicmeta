@@ -34,7 +34,7 @@ import org.junit.Assert.fail
  * The replacement asserted the canonical [EnrichmentResults.identity] against the request. Killed by
  * child `00`, 2026-08-16, because [IdentityResolution.title] and [IdentityResolution.artist] are
  * populated **only from an identifier lookup, never from a name search** — stated at
- * `IdentityResolution.kt:20-32`, at `IdentityHelper.kt:14-20`, and at `MusicBrainzEnricher.kt:637`
+ * `IdentityResolution.kt:20-32`, at `IdentityHelper.kt:14-20`, and at `MusicBrainzNameResolution.kt:59`
  * ("Offered from the three lookup paths and never from a search"), and measured: a
  * `forTrack("Under Pressure", "Queen")` against a real `MusicBrainzProvider` returns
  * `status=RESOLVED matchScore=1.0 title=null artist=null`, whether the hit it took was the right

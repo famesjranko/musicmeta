@@ -129,7 +129,7 @@ public class CoverArtArchiveProvider(
      * into an [EnrichmentResult.Error] — that would also open the circuit breaker against a healthy
      * Cover Art Archive for a failure the primary lookup never had (docs/pitfalls.md §4), and it
      * would discard a url the caller already has in hand. Mirrors
-     * [com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzEnricher.resolveReleaseGroupWikiLinks].
+     * [com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzAlbumResolution.resolveReleaseGroupWikiLinks].
      */
     // SwallowedException: intentional — see the KDoc above. This provider has no logger to hand the
     // exception to; degrading silently is the fix, not an oversight (detekt cannot tell them apart).

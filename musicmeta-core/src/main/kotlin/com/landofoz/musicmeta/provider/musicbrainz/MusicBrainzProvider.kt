@@ -140,7 +140,7 @@ public class MusicBrainzProvider(
             .ifEmpty { api.searchRecordingsFuzzy(request.title, request.artist, limit) }
         return recordings.map { recording ->
             // year/country/releaseType/thumbnailUrl are null — a recording search hit carries
-            // none of its own (see MusicBrainzEnricher's MusicBrainzRecording.toCandidate).
+            // none of its own (see MusicBrainzTrackResolution's MusicBrainzRecording.toCandidate).
             SearchCandidate(
                 title = recording.title, artist = recording.artistCredit,
                 year = null, country = null,

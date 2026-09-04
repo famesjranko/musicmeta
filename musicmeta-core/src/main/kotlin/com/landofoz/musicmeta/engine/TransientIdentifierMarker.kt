@@ -12,9 +12,9 @@ import kotlin.coroutines.CoroutineContext
  * prerequisite identifier lookup hiccupped this run" from "the identifier genuinely doesn't exist."
  *
  * A [ConcurrentHashMap]-backed set, not a plain `MutableSet` or a `Boolean`: [mark] can be called
- * from `DefaultEnrichmentEngine.resolveIdentity`'s catch and from `MusicBrainzEnricher`'s two catch
- * blocks, all of which may run inside concurrently-launched `async` children of the same `enrich()`
- * call.
+ * from `DefaultEnrichmentEngine.resolveIdentity`'s catch and from the catch blocks in
+ * `MusicBrainzArtistResolution` and `MusicBrainzAlbumResolution`, all of which may run inside
+ * concurrently-launched `async` children of the same `enrich()` call.
  */
 internal class TransientIdentifierMarker : AbstractCoroutineContextElement(Key) {
     private val unresolved = java.util.concurrent.ConcurrentHashMap.newKeySet<IdentifierRequirement>()

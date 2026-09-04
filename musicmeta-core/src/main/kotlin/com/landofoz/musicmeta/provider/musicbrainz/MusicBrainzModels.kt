@@ -238,3 +238,11 @@ internal sealed interface MusicBrainzLookup<out T> {
     data object Absent : MusicBrainzLookup<Nothing>
     data object Unreadable : MusicBrainzLookup<Nothing>
 }
+
+/**
+ * The value a lookup resolved to, or null for either miss — for the call sites where an
+ * identifier this call resolved *itself* is being looked up, so [MusicBrainzLookup.Absent]
+ * cannot mean "the caller named something that does not exist" and both misses degrade the
+ * same way.
+ */
+internal fun <T> MusicBrainzLookup<T>.valueOrNull(): T? = (this as? MusicBrainzLookup.Found)?.value

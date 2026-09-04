@@ -110,7 +110,7 @@ internal class MusicBrainzApi(
      * The pool a track request is *resolved* out of, as opposed to the one
      * [MusicBrainzProvider.searchCandidates] offers a consumer to choose from.
      *
-     * `-comment:*` moves [MusicBrainzEnricher.pickBestRecording]'s tier-4 "prefer a blank
+     * `-comment:*` moves [MusicBrainzTrackResolution.pickBestRecording]'s tier-4 "prefer a blank
      * disambiguation" rule upstream of the result limit, in MusicBrainz's own query language, so a
      * heavily-covered track's studio take is not paged out before that tier can rank it
      * (`docs/pitfalls.md` §7). Three cases keep the unfiltered pool in reach because the filter

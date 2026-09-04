@@ -6,7 +6,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /**
- * Offline, no-API-dependency tests for [MusicBrainzEnricher.pickBestRecording]'s artist tier — the
+ * Offline, no-API-dependency tests for [MusicBrainzTrackResolution.pickBestRecording]'s artist tier — the
  * recording-side counterpart to [MusicBrainzReleaseRankingTest]'s artist-tier coverage of
  * [MusicBrainzReleaseRanking.pickBestRelease]. The appendix-fixture pools (tied and tiered
  * wrong-artist wins) and the collaboration/non-Latin cases live at the engine level in
@@ -14,13 +14,13 @@ import org.junit.Test
  * properties below need only [MusicBrainzRecording] values, so they are pinned directly here.
  *
  * The first two tests below are regression: the tier fires and decides the winner, so removing
- * `{ it.second.artistQuality }` from [MusicBrainzEnricher.pickBestRecording]'s comparator turns
+ * `{ it.second.artistQuality }` from [MusicBrainzTrackResolution.pickBestRecording]'s comparator turns
  * them red. The last two are characterisation, not regression, and cannot fail under that same
  * removal — see each one's own KDoc for why.
  */
 class MusicBrainzRecordingRankingTest {
-    private val enricher =
-        MusicBrainzEnricher(
+    private val tracks =
+        MusicBrainzTrackResolution(
             MusicBrainzApi(FakeHttpClient(), RateLimiter(0)),
             providerId = "musicbrainz",
             minMatchScore = 80,
@@ -46,7 +46,7 @@ class MusicBrainzRecordingRankingTest {
     private fun pick(
         recordings: List<MusicBrainzRecording>,
         artist: String? = null,
-    ): MusicBrainzRecording? = enricher.pickBestRecording("Test Track", recordings, artist = artist)
+    ): MusicBrainzRecording? = tracks.pickBestRecording("Test Track", recordings, artist = artist)
 
     @Test
     fun `wrong-artist recording tied on every other tier does not beat the matching-artist recording`() {

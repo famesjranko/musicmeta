@@ -9,8 +9,8 @@
     <ID>CyclomaticComplexMethod:DiscogsProvider.kt$DiscogsProvider$override suspend fun enrich( request: EnrichmentRequest, type: EnrichmentType, ): EnrichmentResult</ID>
     <ID>CyclomaticComplexMethod:IdentityHelper.kt$internal fun needsIdentityResolution( request: EnrichmentRequest, types: Set&lt;EnrichmentType&gt;, registry: ProviderRegistry, ): Boolean</ID>
     <ID>CyclomaticComplexMethod:LastFmProvider.kt$LastFmProvider$override suspend fun enrich( request: EnrichmentRequest, type: EnrichmentType, ): EnrichmentResult</ID>
+    <ID>CyclomaticComplexMethod:MusicBrainzArtistResolution.kt$MusicBrainzArtistResolution$internal suspend fun enrichArtistNewType( request: EnrichmentRequest.ForArtist, type: EnrichmentType, ): EnrichmentResult</ID>
     <ID>CyclomaticComplexMethod:MusicBrainzCreditParser.kt$MusicBrainzCreditParser$fun parseRecordingCredits(json: JSONObject): List&lt;MusicBrainzCredit&gt;</ID>
-    <ID>CyclomaticComplexMethod:MusicBrainzEnricher.kt$MusicBrainzEnricher$internal suspend fun enrichArtistNewType( request: EnrichmentRequest.ForArtist, type: EnrichmentType, ): EnrichmentResult</ID>
     <ID>CyclomaticComplexMethod:WikipediaApi.kt$WikipediaApi$private fun parseMediaList(json: org.json.JSONObject): List&lt;WikipediaMediaItem&gt;</ID>
     <ID>EmptyElseBlock:DefaultHttpClient.kt$DefaultHttpClient$if (attempt == maxRetries - 1) return null</ID>
     <ID>EmptyFunctionBlock:EnrichmentEngineExtensionsTest.kt$EnrichmentEngineExtensionsTest.FakeEngine${}</ID>

@@ -536,7 +536,7 @@ album versus a 137-track deluxe box) can outrank the one the request actually as
 **That ordering presumes a pool already filtered to artist matches, and MusicBrainz's direct search
 is the one place that presumption fails.** `DeezerApi.rankTracks` puts artist quality at tier 2
 because its pool was filtered by `ArtistMatcher.isMatch` before ranking ever started (§7's own fix);
-`MusicBrainzEnricher.pickBestRecording` and `MusicBrainzReleaseRanking.pickBestRelease` rank a pool
+`MusicBrainzTrackResolution.pickBestRecording` and `MusicBrainzReleaseRanking.pickBestRelease` rank a pool
 their direct search never filtered by artist at all, so `ArtistMatcher.matchQuality` has to lead
 their comparators — title and edition tiers cannot be trusted to settle a pool that may hold a
 wrong-artist hit tied or ahead on every other signal. Follow "tier first, then artist" only where the
@@ -548,7 +548,8 @@ match: 25 of 25 live album requests with the title's last word removed (`release
 returned the full album at score 99-100, all of them accepted by the `minMatchScore` floor and none
 title-equivalent (probe recipe and full pair list: `.scratch/exact-name-provenance/`, 2026-08-25 —
 re-run before building on the number; the pinned regression is
-`MusicBrainzSearchTitleProvenanceTest`). `MusicBrainzEnricher` compares the requested title against the hit's own with
+`MusicBrainzSearchTitleProvenanceTest`). `MusicBrainzNameResolution.searchProvenance` compares the
+requested title against the hit's own with
 `TitleMatcher.equivalent` and reports `FUZZY_NAME` when they differ — the same shape the artist route
 already had via `NameMatchTier.CANONICAL`. The engine cost was one layer further out: a search route
 that reported *nothing* was read by `identityNameEvidence` as "matched", so the whole fan-out
@@ -739,7 +740,9 @@ predicate is not simply "retry `NetworkError`":
 ## 12. A provider's own memo is a cache no consumer can flush
 
 `MusicBrainzEnricher` memoizes its artist, release, release-group-wiki, album-search,
-album-suggestion, artist-search and track-resolution lookups because the engine asks for one type
+album-suggestion, artist-search and track-resolution lookups — each in the resolution that owns it
+(`MusicBrainzArtistResolution`, `MusicBrainzAlbumResolution`, `MusicBrainzTrackResolution`) —
+because the engine asks for one type
 at a time and `EnrichmentCache` is keyed by type — nothing above the provider can tell that GENRE
 and ALBUM_TRACKS want the same release, and each repeat is a ~1.1s wait on the shared limiter.
 
@@ -784,7 +787,7 @@ Before adding provider-internal state of any kind:
   Put it in the call scope, or own a TTL and an invalidation path for it. `ProviderCallScope` is
   `internal`, so a provider outside this repo has only the second option.
 - **Payload staleness is recoverable; identity staleness is not.** A memo keyed by MBID serves at
-  worst an out-of-date payload for an entity already resolved. `MusicBrainzEnricher`'s album-search
+  worst an out-of-date payload for an entity already resolved. `MusicBrainzAlbumResolution`'s album-search
   memo is keyed by *title/artist* instead, so it holds which entity a name resolves to — safe only
   because it dies with the call. Held any longer, no refresh could ever correct a mis-resolution.
 - Per-call state rides the coroutine context, as `EnrichDeadline` and `TransientIdentifierMarker`
@@ -986,7 +989,7 @@ below are that measurement, not a live figure:
   A bodyless declaration has almost no code lines *by construction*, so the metric scores worst
   exactly where the caller contract matters most. Excluding bodyless members removes only 16 of the
   72 declarations at ratio ≥ 1.0.
-- `MusicBrainzEnricher.pickBestRecording` — 42 comment lines, 17 code, the worst body-bearing case
+- `MusicBrainzTrackResolution.pickBestRecording` — 42 comment lines, 17 code, the worst body-bearing case
   in the repo. Its ranking tiers record live-verified failure modes (§7). So does
   `DiscogsApi.searchArtist` at 25/11. Shortening either deletes evidence, not prose.
 

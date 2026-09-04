@@ -10,7 +10,7 @@ import org.junit.Test
 /**
  * URL-contract for [MusicBrainzApi.searchRecordings]'s album hint — the recording-search instance
  * of the same first-hit/dropped-hint disease [MusicBrainzSearchTest] covers for releases/artists.
- * Pool ranking itself lives in [MusicBrainzEnricher.pickBestRecording]; see
+ * Pool ranking itself lives in [MusicBrainzTrackResolution.pickBestRecording]; see
  * [MusicBrainzProviderTest] for those cases.
  */
 class MusicBrainzApiSearchRecordingsTest {
