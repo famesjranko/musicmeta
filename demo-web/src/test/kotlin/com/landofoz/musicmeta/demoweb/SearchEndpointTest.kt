@@ -72,7 +72,7 @@ class SearchEndpointTest {
             identifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-starman"),
             matchScore = 0.95f,
             artist = "David Bowie",
-            year = "1972",
+            year = 1972,
             releaseType = "single",
         )
         val port = startTestServer(StubSearchProvider(listOf(candidate)))

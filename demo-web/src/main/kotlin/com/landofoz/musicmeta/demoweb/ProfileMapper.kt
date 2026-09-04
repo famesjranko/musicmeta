@@ -765,7 +765,7 @@ private fun didYouMeanSection(
                 primary = candidate.title,
                 secondary = candidate.artist,
                 imageUrl = candidate.thumbnailUrl,
-                meta = listOfNotNull(candidate.releaseType, candidate.year, candidate.disambiguation)
+                meta = listOfNotNull(candidate.releaseType, candidate.year?.toString(), candidate.disambiguation)
                     .joinToString(" · ").ifBlank { null },
                 enrich = et,
             )

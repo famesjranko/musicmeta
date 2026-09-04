@@ -166,7 +166,7 @@ With profile methods, the same flow is available via `profile.suggestions` and t
 | `identifiers` | `EnrichmentIdentifiers` | MBIDs and linked IDs — use `identifiers.musicBrainzId` when re-enriching |
 | `matchScore` | `Float` | 0.0–1.0, how well the candidate matched within its own provider's pool |
 | `artist` | `String?` | Artist name (null for artist queries) |
-| `year` | `String?` | Release year |
+| `year` | `Int?` | Release year, or the year an artist began; null when the upstream states no usable year |
 | `country` | `String?` | Release country code (e.g., "GB") |
 | `releaseType` | `String?` | "Album", "Single", "EP", etc. |
 | `thumbnailUrl` | `String?` | Cover art or artist image thumbnail. Always null on a MusicBrainz candidate — a release search response carries no cover-art flag — so it is populated only for the Deezer and iTunes candidates `search()` adds |

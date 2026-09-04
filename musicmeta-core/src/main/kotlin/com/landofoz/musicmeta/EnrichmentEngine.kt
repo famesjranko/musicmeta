@@ -486,7 +486,8 @@ public data class SearchCandidate(
      */
     val matchScore: Float,
     val artist: String? = null,
-    val year: String? = null,
+    /** Release year, or the year an artist began. Null when the upstream states no usable year. */
+    val year: Int? = null,
     /**
      * ISO 3166-1 alpha-2 where the upstream names a current ISO country (`GB`), otherwise the
      * upstream's own label — MusicBrainz's `XE`/`XW` reach a consumer here. Null on an iTunes or

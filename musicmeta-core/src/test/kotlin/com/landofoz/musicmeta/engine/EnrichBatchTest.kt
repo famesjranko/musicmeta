@@ -286,7 +286,7 @@ class EnrichBatchTest {
             identifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-nirvana-near-miss"),
             matchScore = 0.70f,
             artist = "Nirvana",
-            year = "1991",
+            year = 1991,
             releaseType = "Album",
         )
         val provider = object : FakeProvider(

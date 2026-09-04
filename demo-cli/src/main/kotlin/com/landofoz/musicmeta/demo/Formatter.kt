@@ -204,7 +204,7 @@ object Formatter {
                 if (c.matchScore >= HIGH_MATCH) term.theme.success else term.theme.warning,
             )
 
-            val tags = listOfNotNull(c.country, c.releaseType, c.year?.take(4))
+            val tags = listOfNotNull(c.country, c.releaseType, c.year?.toString())
             val tagStr = if (tags.isEmpty()) {
                 ""
             } else {

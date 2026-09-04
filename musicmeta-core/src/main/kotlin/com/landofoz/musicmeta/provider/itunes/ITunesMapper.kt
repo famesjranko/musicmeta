@@ -72,7 +72,7 @@ internal object ITunesMapper {
         providerId: String,
         matchScore: Float,
     ): SearchCandidate {
-        val year = result.releaseDate?.take(4)
+        val year = result.releaseDate?.take(4)?.toIntOrNull()
         return SearchCandidate(
             title = result.collectionName,
             artist = result.artistName,

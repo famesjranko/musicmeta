@@ -1160,7 +1160,7 @@ internal class MusicBrainzEnricher(
         credits.any { MusicBrainzQualifierFallback.normalize(it) == expectedNorm }
 
     private fun MusicBrainzRelease.toCandidate() = SearchCandidate(
-        title = title, artist = artistCredit, year = date,
+        title = title, artist = artistCredit, year = date?.take(4)?.toIntOrNull(),
         country = country, releaseType = releaseType, matchScore = ConfidenceCalculator.searchScore(score),
         thumbnailUrl = null, provider = providerId,
         identifiers = EnrichmentIdentifiers(musicBrainzId = id, musicBrainzReleaseGroupId = releaseGroupId),
@@ -1168,7 +1168,7 @@ internal class MusicBrainzEnricher(
     )
 
     private fun MusicBrainzArtist.toCandidate() = SearchCandidate(
-        title = name, artist = null, year = beginDate,
+        title = name, artist = null, year = beginDate?.take(4)?.toIntOrNull(),
         country = country, releaseType = type, matchScore = ConfidenceCalculator.searchScore(score),
         thumbnailUrl = null, provider = providerId,
         identifiers = EnrichmentIdentifiers(musicBrainzId = id),
