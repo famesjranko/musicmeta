@@ -24,7 +24,8 @@ internal object TitleMatcher {
      */
     internal enum class TitleTier { NONE, EDITION, EXACT }
 
-    fun equivalent(a: String, b: String): Boolean = parse(a) == parse(b)
+    fun equivalent(a: String, b: String): Boolean =
+        (parse(a) == parse(b)).also { ProbeTrace.titleCompared(a, b, it) }
 
     /**
      * A qualifier is edition decoration, not a distinct release, when it names nothing but a

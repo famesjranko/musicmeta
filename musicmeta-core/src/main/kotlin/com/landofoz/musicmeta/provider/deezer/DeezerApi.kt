@@ -3,6 +3,7 @@ package com.landofoz.musicmeta.provider.deezer
 import com.landofoz.musicmeta.drift.SchemaTarget
 import com.landofoz.musicmeta.engine.ArtistMatcher
 import com.landofoz.musicmeta.engine.TitleMatcher
+import com.landofoz.musicmeta.engine.ProbeTrace
 import com.landofoz.musicmeta.engine.bestArtistMatch
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
@@ -166,6 +167,7 @@ internal class DeezerApi(
                 .filter { TitleMatcher.equivalent(title, it.optString("title", "")) }
             if (candidates.isNotEmpty()) {
                 return candidates.rankTracks(title, artist, album)?.toTrackSearchResult()
+                    ?.also { ProbeTrace.picked("deezerTrack", it.artistName, it.toString()) }
             }
         }
         return null

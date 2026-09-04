@@ -1,0 +1,37 @@
+arm	item	kind	provider	type	outcome	pickedArtist	pickedDetail	identityMbid	identityCorrect	latinName	requests	ms	detail
+control	A1	artist	deezer	ARTIST_PHOTO	REJECT				false		1	579	NotFound
+control	A1	artist	itunes	ARTIST_DISCOGRAPHY	REJECT				false		1	52	NotFound
+control	A1	artist	discogs	ARTIST_PHOTO	REJECT				false		1	312	NotFound
+control	A2	artist	deezer	ARTIST_PHOTO	REJECT				false		1	393	NotFound
+control	A2	artist	itunes	ARTIST_DISCOGRAPHY	REJECT				false		1	2307	NotFound
+control	A2	artist	discogs	ARTIST_PHOTO	REJECT				false		1	468	NotFound
+control	A3	artist	deezer	ARTIST_PHOTO	MATCH	Кино	{"picture_xl":"https://cdn-images.dzcdn.net/images/artist/ec428d21f614b586a7b647f8da435913/1000x1000-000000-80-0-0.jpg","tracklist":"https://api.deezer.com/artist/4505880/top?limit=50","link":"https://www.deezer.com/artist/4505880","picture		false		1	620	conf=0.8
+control	A3	artist	itunes	ARTIST_DISCOGRAPHY	MATCH	Кино	{"artistLinkUrl":"https://music.apple.com/us/artist/kino/621768190?uo=4","amgArtistId":13419,"wrapperType":"artist","artistType":"Artist","artistName":"Кино","artistId":621768190,"primaryGenreId":21,"primaryGenreName":"Rock"}		false		2	4937	conf=0.8
+control	A3	artist	discogs	ARTIST_PHOTO	MATCH	Кино	{"master_id":null,"resource_url":"https://api.discogs.com/artists/345278","thumb":"https://i.discogs.com/CKMPkYZAG7hkPj_YJKAi3t2uOXHRXW07T1KzJ9s0-sc/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9BLTM0NTI3/OC0xNzExMjU		false		2	2019	conf=0.6
+control	A4	artist	deezer	ARTIST_PHOTO	MATCH	Χάρις Αλεξίου	{"picture_xl":"https://cdn-images.dzcdn.net/images/artist//1000x1000-000000-80-0-0.jpg","tracklist":"https://api.deezer.com/artist/806735/top?limit=50","link":"https://www.deezer.com/artist/806735","picture_small":"https://cdn-images.dzcdn.		false		1	399	conf=0.8
+control	A4	artist	itunes	ARTIST_DISCOGRAPHY	MATCH	Χάρις Αλεξίου	{"artistLinkUrl":"https://music.apple.com/us/artist/haris-alexiou/39701368?uo=4","amgArtistId":143787,"wrapperType":"artist","artistType":"Artist","artistName":"Χάρις Αλεξίου","artistId":39701368,"primaryGenreId":14,"primaryGenreName":"Pop"		false		2	3607	conf=0.8
+control	A4	artist	discogs	ARTIST_PHOTO	MATCH	Χάρις Αλεξίου	{"master_id":null,"resource_url":"https://api.discogs.com/artists/1446579","thumb":"https://i.discogs.com/1qjTw60TsfACCex5cYn0k7gW_H3GIf35IarNIRX61xs/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9BLTE0NDY1/NzktMTU1OD		false		2	1685	conf=0.6
+control	A5	artist	deezer	ARTIST_PHOTO	REJECT				false		1	416	NotFound
+control	A5	artist	itunes	ARTIST_DISCOGRAPHY	MATCH	فيروز	{"artistLinkUrl":"https://music.apple.com/us/artist/%D9%81%D9%8A%D8%B1%D9%88%D8%B2/1755071250?uo=4","wrapperType":"artist","artistType":"Artist","artistName":"فيروز","artistId":1755071250,"primaryGenreId":1289,"primaryGenreName":"Folk"}		false		2	3918	conf=0.8
+control	A5	artist	discogs	ARTIST_PHOTO	REJECT				false		1	310	NotFound
+control	B1	album	deezer	ALBUM_ART	REJECT				false		1	408	NotFound
+control	B1	album	itunes	ALBUM_ART	REJECT				false		1	2293	NotFound
+control	B1	album	discogs	ALBUM_ART	REJECT				false		1	243	NotFound
+control	B2	album	deezer	ALBUM_ART	REJECT				false		1	432	NotFound
+control	B2	album	itunes	ALBUM_ART	REJECT				false		1	2343	NotFound
+control	B2	album	discogs	ALBUM_ART	REJECT				false		1	319	NotFound
+control	B3	album	deezer	ALBUM_ART	MATCH	Кино	DeezerAlbumResult(id=54717452, title=Группа крови, artistName=Кино, coverSmall=https://cdn-images.dzcdn.net/images/cover/b39e82e1e4fdaf3f08ae582e8c9565cd/56x56-000000-80-0-0.jpg, coverMedium=https://cdn-images.dzcdn.net/images/cover/b39e82e		false		1	416	conf=0.8
+control	B3	album	itunes	ALBUM_ART	REJECT				false		1	2277	NotFound
+control	B3	album	discogs	ALBUM_ART	MATCH	Кино	DiscogsRelease(title=Кино - Группа Крови, label=Maschina Records, year=2019, country=Russia, coverImage=https://i.discogs.com/8oCUpaCydS3GJLJ-fNqk0xJJKdvABTheGJ9TVdGgYCU/rs:fit/g:sm/q:90/h:600/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9		false		1	233	conf=0.8
+control	B4	album	deezer	ALBUM_ART	REJECT				false		1	350	NotFound
+control	B4	album	itunes	ALBUM_ART	REJECT				false		1	2425	NotFound
+control	B4	album	discogs	ALBUM_ART	REJECT				false		1	238	NotFound
+control	B5	album	deezer	ALBUM_ART	REJECT				false		1	409	NotFound
+control	B5	album	itunes	ALBUM_ART	REJECT				false		1	2364	NotFound
+control	B5	album	discogs	ALBUM_ART	REJECT				false		1	302	NotFound
+control	C1	track	deezer	TRACK_METADATA	REJECT				false		2	1021	NotFound
+control	C2	track	deezer	TRACK_METADATA	REJECT				false		2	1161	NotFound
+control	C3	track	deezer	TRACK_METADATA	MATCH	Кино	DeezerTrackSearchResult(id=448260732, title=Группа крови, artistName=Кино, previewUrl=https://cdnt-preview.dzcdn.net/api/1/1/a/d/e/0/adeeb096e9baeb6c8e4760b8572acffa.mp3?hdnea=exp=1788545901~acl=/api/1/1/a/d/e/0/adeeb096e9baeb6c8e4760b8572a		false		1	586	conf=0.8
+control	C4	track	deezer	TRACK_METADATA	REJECT				false		2	1149	NotFound
+control	C5	track	deezer	TRACK_METADATA	REJECT				false		2	1081	NotFound
+TOTALS	44	api.deezer.com=19,api.discogs.com=12,itunes.apple.com=13
