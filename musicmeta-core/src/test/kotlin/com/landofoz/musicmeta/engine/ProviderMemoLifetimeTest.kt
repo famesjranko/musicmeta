@@ -14,6 +14,7 @@ import com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzProvider
 import com.landofoz.musicmeta.testutil.FakeEnrichmentCache
 import com.landofoz.musicmeta.testutil.FakeHttpClient
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
@@ -378,6 +379,105 @@ class ProviderMemoLifetimeTest {
         assertTrue(results.raw[EnrichmentType.ARTIST_DISCOGRAPHY] is EnrichmentResult.NotFound)
         assertTrue(results.raw[EnrichmentType.ARTIST_LINKS] is EnrichmentResult.NotFound)
         assertEquals(ARTIST_SEARCHES_PER_ABSENT_ARTIST, httpClient.requestedUrls.count { it.contains(ARTIST_SEARCH) })
+    }
+
+    /**
+     * A key states which callers are asking the same question, so the only string it can honestly
+     * be is the one sent upstream. A key that folds two spellings together answers the second
+     * caller from a pool searched for a name it never asked about — and three of these memos hold
+     * *which entity* a name resolves to, not merely a payload.
+     *
+     * Driven through two [MusicBrainzProvider.enrich] calls under one [ProviderCallScope], which is
+     * what the engine's per-type fan-out is: one scope, one enricher, one set of memos.
+     */
+    @Test
+    fun `two spellings of one artist name each search for themselves`() = runTest {
+        // Given - a name MusicBrainz holds no artist under, so every request pays the whole ladder
+        httpClient.givenJsonResponse(ARTIST_SEARCH, NO_ARTISTS)
+
+        // When - two requests differing only in case are enriched under one call scope
+        withContext(ProviderCallScope()) {
+            provider.enrich(EnrichmentRequest.forArtist("Radiohead"), EnrichmentType.GENRE)
+            provider.enrich(EnrichmentRequest.forArtist("radiohead"), EnrichmentType.GENRE)
+        }
+
+        // Then - each spelling cost its own ladder, rather than the second being answered from the
+        // pool the first searched for
+        assertEquals(
+            2 * ARTIST_SEARCHES_PER_ABSENT_ARTIST,
+            httpClient.requestedUrls.count { it.contains(ARTIST_SEARCH) },
+        )
+    }
+
+    /** The album memo's two-field title/artist key, under the contract above. */
+    @Test
+    fun `two spellings of one album title each search for themselves`() = runTest {
+        // Given - a title MusicBrainz holds no release under, and an artist it holds none under
+        // either, so a fallback that searches for the artist cannot add a release search
+        httpClient.givenJsonResponse(RELEASE_SEARCH, NO_RELEASES)
+        httpClient.givenJsonResponse(ARTIST_SEARCH, NO_ARTISTS)
+
+        // When - two requests differing only in the title's case are enriched under one call scope
+        withContext(ProviderCallScope()) {
+            provider.enrich(EnrichmentRequest.forAlbum("OK Computer", "Radiohead"), EnrichmentType.GENRE)
+            provider.enrich(EnrichmentRequest.forAlbum("ok computer", "Radiohead"), EnrichmentType.GENRE)
+        }
+
+        // Then - each spelling cost its own strict search and fuzzy retry
+        assertEquals(
+            2 * RELEASE_SEARCHES_PER_ABSENT_ALBUM,
+            httpClient.requestedUrls.count { it.contains(RELEASE_SEARCH) },
+        )
+    }
+
+    /** The track memos' three-field title/artist/album key, under the contract above. */
+    @Test
+    fun `two spellings of one track title each search for themselves`() = runTest {
+        // Given - a track MusicBrainz holds no recording of, so every request runs the whole ladder
+        httpClient.givenJsonResponse(RECORDING_SEARCH, NO_RECORDINGS)
+
+        // When - two requests differing only in the title's case are enriched under one call scope
+        withContext(ProviderCallScope()) {
+            provider.enrich(EnrichmentRequest.forTrack("Enter Sandman", "Metallica"), EnrichmentType.GENRE)
+            provider.enrich(EnrichmentRequest.forTrack("enter sandman", "Metallica"), EnrichmentType.GENRE)
+        }
+
+        // Then - each spelling cost its own ladder, the resolution pool and the suggestion pools alike
+        assertEquals(
+            2 * RECORDING_SEARCHES_PER_ABSENT_TRACK,
+            httpClient.requestedUrls.count { it.contains(RECORDING_SEARCH) },
+        )
+    }
+
+    /**
+     * The same contract read the other way: a key that splits a query the search sends identically
+     * buys nothing and pays twice. [MusicBrainzApi] narrows on the album hint only when it is
+     * non-blank, so the three spellings of "no album" are one upstream query.
+     */
+    @Test
+    fun `a null, empty and whitespace album are one query and one key`() = runTest {
+        // Given - a track MusicBrainz holds no recording of, so every request runs the whole ladder
+        httpClient.givenJsonResponse(RECORDING_SEARCH, NO_RECORDINGS)
+
+        // When - the same track is enriched three times under one call scope, differing only in how
+        // it spells the album it does not have
+        withContext(ProviderCallScope()) {
+            provider.enrich(EnrichmentRequest.forTrack("Enter Sandman", "Metallica"), EnrichmentType.GENRE)
+            provider.enrich(
+                EnrichmentRequest.forTrack("Enter Sandman", "Metallica", album = ""),
+                EnrichmentType.GENRE,
+            )
+            provider.enrich(
+                EnrichmentRequest.forTrack("Enter Sandman", "Metallica", album = " "),
+                EnrichmentType.GENRE,
+            )
+        }
+
+        // Then - one ladder served all three, rather than one key each for one upstream query
+        assertEquals(
+            RECORDING_SEARCHES_PER_ABSENT_TRACK,
+            httpClient.requestedUrls.count { it.contains(RECORDING_SEARCH) },
+        )
     }
 
     @Test
