@@ -76,4 +76,15 @@ class ProviderPolicyTest {
         assertEquals(emptyList<String>(), claiming.map { it.providerId })
         assertTrue(unverified.isNotEmpty())
     }
+
+    @Test fun `every policy dates its terms snapshot as an ISO date`() {
+        // Given - the shipped policies and the shape a rendered date must have
+        val isoDate = Regex("""\d{4}-\d{2}-\d{2}""")
+
+        // When - checking each entry's own asReadOn
+        val malformed = ProviderPolicies.all.values.filterNot { isoDate.matches(it.asReadOn) }
+
+        // Then - the per-entry date is the published fact, so each one must be readable as a date
+        assertEquals(emptyList<String>(), malformed.map { it.providerId })
+    }
 }
