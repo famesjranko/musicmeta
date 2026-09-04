@@ -107,8 +107,8 @@ source and kind in a `PopularitySignal`; it never reaches the surface raw. The o
 **One date type.** A date is a `String` in ISO-8601, as precise as the upstream gave it (`YYYY`,
 `YYYY-MM` or `YYYY-MM-DD`): `Metadata.releaseDate`, `Metadata.beginDate`, `Metadata.endDate`,
 `TimelineEvent.date`, `ProviderPolicy.asReadOn`. A `year` is an `Int?`: `SimilarAlbum`,
-`ReleaseEdition`, `DiscographyAlbum`, `EnrichmentRequest.ForAlbum`. `SearchCandidate.year` is the
-shipped exception — it carries a MusicBrainz release date or artist begin date whole, so it is a
-date under a year's name, and it is frozen that way. No `java.time` on the surface, which is API
+`ReleaseEdition`, `DiscographyAlbum`, `EnrichmentRequest.ForAlbum`, `SearchCandidate`. A writer
+holding a date truncates to the leading four digits, and a value that does not begin with a year
+becomes null rather than a string the caller re-parses. No `java.time` on the surface, which is API
 26+ on Android, and no `kotlinx-datetime`, which would be a core dependency every consumer
 inherits.

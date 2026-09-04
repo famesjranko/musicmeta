@@ -365,6 +365,24 @@ Drop the parse; the year arrives as a number:
 val debutYear = results.discography()?.albums.orEmpty().mapNotNull { it.year }.minOrNull()
 ```
 
+### `SearchCandidate.year` is `Int?`, not `String?`
+
+It was written from a MusicBrainz release date or artist begin date whole, so a field named `year`
+could hand you `1997-06-16`; it now carries the year those dates start with, and null when an
+upstream states no usable one.
+
+<!-- no-compile: parses the withdrawn `String?` shape -->
+```kotlin
+val candidateYear = candidate.year?.take(4)?.toIntOrNull()
+```
+
+Drop the truncation and the parse:
+
+```kotlin
+val candidateYear = candidate.year
+val candidateIsNineties = candidateYear != null && candidateYear in 1990..1999
+```
+
 ### Binary-only breaks
 
 | What moved | What to do |

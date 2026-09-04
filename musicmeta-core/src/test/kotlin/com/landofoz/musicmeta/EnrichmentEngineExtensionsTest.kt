@@ -129,7 +129,7 @@ class EnrichmentEngineExtensionsTest {
             identifiers = EnrichmentIdentifiers(musicBrainzId = "album-mbid"),
             matchScore = 1.00f,
             artist = "Radiohead",
-            year = "1997",
+            year = 1997,
             country = "GB",
             releaseType = "Album",
         )

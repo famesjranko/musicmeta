@@ -36,7 +36,7 @@ class MusicBrainzSearchTest {
         val first = candidates[0]
         assertEquals("OK Computer", first.title)
         assertEquals("Radiohead", first.artist)
-        assertEquals("1997-06-16", first.year)
+        assertEquals(1997, first.year)
         assertEquals("GB", first.country)
         assertEquals("Album", first.releaseType)
         assertEquals(0.98f, first.matchScore, TOLERANCE)
@@ -64,6 +64,7 @@ class MusicBrainzSearchTest {
         val first = candidates[0]
         assertEquals("Radiohead", first.title)
         assertNull(first.artist)
+        assertEquals(1985, first.year)
         assertEquals("GB", first.country)
         assertEquals("Group", first.releaseType)
         assertEquals(1.0f, first.matchScore, TOLERANCE)
@@ -121,6 +122,34 @@ class MusicBrainzSearchTest {
             assertEquals("Enter Sandman", candidates[0].title)
             assertEquals("rec-fuzzy", candidates[0].identifiers.musicBrainzId)
         }
+
+    @Test
+    fun `searchCandidates reports no year when the upstream date does not begin with one`() = runTest {
+        // Given - one release with no date at all and one whose date is not a year
+        httpClient.givenJsonResponse("release?query", RELEASE_SEARCH_UNDATED)
+        val request = EnrichmentRequest.forAlbum("Untitled", "Unknown")
+
+        // When - searching for candidates
+        val candidates = provider.searchCandidates(request, 10)
+
+        // Then - neither carries a year, rather than a placeholder a caller would have to parse
+        assertEquals(2, candidates.size)
+        assertNull(candidates[0].year)
+        assertNull(candidates[1].year)
+    }
+
+    @Test
+    fun `searchCandidates reports no year for an artist whose life-span has no begin date`() = runTest {
+        // Given - a second artist hit that carries no life-span
+        httpClient.givenJsonResponse("artist?query", ARTIST_SEARCH_MULTIPLE)
+        val request = EnrichmentRequest.forArtist("Radiohead")
+
+        // When - searching for artist candidates
+        val candidates = provider.searchCandidates(request, 10)
+
+        // Then - that candidate's year is null
+        assertNull(candidates[1].year)
+    }
 
     @Test
     fun `searchCandidates offers no thumbnail because a release search cannot report cover art`() = runTest {
@@ -204,6 +233,32 @@ class MusicBrainzSearchTest {
                     "id": "group456",
                     "primary-type": "Album"
                   }
+                }
+              ]
+            }
+        """.trimIndent()
+
+        /**
+         * Constructed, not captured: MusicBrainz publishes an ISO-prefixed `date` or omits the key,
+         * so the non-numeric value here exists only to pin what the mapper does with one.
+         */
+        private val RELEASE_SEARCH_UNDATED = """
+            {
+              "releases": [
+                {
+                  "id": "nodate1",
+                  "score": 70,
+                  "title": "Untitled",
+                  "artist-credit": [{"artist": {"id": "art-unknown", "name": "Unknown"}}],
+                  "release-group": {"id": "group-nodate", "primary-type": "Album"}
+                },
+                {
+                  "id": "baddate1",
+                  "score": 65,
+                  "title": "Untitled",
+                  "artist-credit": [{"artist": {"id": "art-unknown", "name": "Unknown"}}],
+                  "date": "unknown",
+                  "release-group": {"id": "group-baddate", "primary-type": "Album"}
                 }
               ]
             }

@@ -287,7 +287,7 @@ data class SearchResponse(val candidates: List<CandidateHit>)
 data class CandidateHit(
     val title: String,
     val artist: String? = null,
-    val year: String? = null,
+    val year: Int? = null,
     val releaseType: String? = null,
     val score: Float,
     val thumbnailUrl: String? = null,

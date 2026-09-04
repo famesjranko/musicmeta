@@ -1290,7 +1290,7 @@ class DeezerProviderTest {
                 identifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-suggestion"),
                 matchScore = 0.80f,
                 artist = "Radiohead",
-                year = "1997",
+                year = 1997,
                 country = "GB",
                 releaseType = "Album",
             ),

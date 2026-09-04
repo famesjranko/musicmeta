@@ -102,7 +102,7 @@ public class MusicBrainzProvider(
         return releases.map { release ->
             SearchCandidate(
                 title = release.title, artist = release.artistCredit,
-                year = release.date, country = release.country,
+                year = release.date?.take(4)?.toIntOrNull(), country = release.country,
                 releaseType = release.releaseType,
                 matchScore = ConfidenceCalculator.searchScore(release.score),
                 thumbnailUrl = null, provider = id,
@@ -123,7 +123,7 @@ public class MusicBrainzProvider(
         return artists.map { artist ->
             SearchCandidate(
                 title = artist.name, artist = null,
-                year = artist.beginDate, country = artist.country,
+                year = artist.beginDate?.take(4)?.toIntOrNull(), country = artist.country,
                 releaseType = artist.type,
                 matchScore = ConfidenceCalculator.searchScore(artist.score),
                 thumbnailUrl = null, provider = id,

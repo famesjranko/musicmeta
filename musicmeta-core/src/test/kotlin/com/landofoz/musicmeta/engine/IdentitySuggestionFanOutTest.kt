@@ -33,7 +33,7 @@ class IdentitySuggestionFanOutTest {
             provider = "mb",
             identifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-gb"),
             matchScore = 0.75f,
-            year = "1992",
+            year = 1992,
             country = "GB",
             releaseType = "Group",
             disambiguation = "British rock band",
