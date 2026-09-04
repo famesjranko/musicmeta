@@ -9,6 +9,7 @@ import com.landofoz.musicmeta.IdentifierRequirement
 import com.landofoz.musicmeta.MusicBrainzEntityType
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.SearchCandidate
+import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.engine.ProviderCallScope
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
@@ -102,7 +103,8 @@ public class MusicBrainzProvider(
             SearchCandidate(
                 title = release.title, artist = release.artistCredit,
                 year = release.date, country = release.country,
-                releaseType = release.releaseType, score = release.score,
+                releaseType = release.releaseType,
+                matchScore = ConfidenceCalculator.searchScore(release.score),
                 thumbnailUrl = null, provider = id,
                 identifiers = EnrichmentIdentifiers(
                     musicBrainzId = release.id,
@@ -122,7 +124,8 @@ public class MusicBrainzProvider(
             SearchCandidate(
                 title = artist.name, artist = null,
                 year = artist.beginDate, country = artist.country,
-                releaseType = artist.type, score = artist.score,
+                releaseType = artist.type,
+                matchScore = ConfidenceCalculator.searchScore(artist.score),
                 thumbnailUrl = null, provider = id,
                 identifiers = EnrichmentIdentifiers(musicBrainzId = artist.id),
                 disambiguation = artist.disambiguation,
@@ -141,7 +144,8 @@ public class MusicBrainzProvider(
             SearchCandidate(
                 title = recording.title, artist = recording.artistCredit,
                 year = null, country = null,
-                releaseType = null, score = recording.score,
+                releaseType = null,
+                matchScore = ConfidenceCalculator.searchScore(recording.score),
                 thumbnailUrl = null, provider = id,
                 identifiers = EnrichmentIdentifiers(
                     musicBrainzId = recording.id,

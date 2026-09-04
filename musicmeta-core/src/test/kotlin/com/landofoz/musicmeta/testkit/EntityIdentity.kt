@@ -37,7 +37,7 @@ import org.junit.Assert.fail
  * `IdentityResolution.kt:20-32`, at `IdentityHelper.kt:14-20`, and at `MusicBrainzEnricher.kt:637`
  * ("Offered from the three lookup paths and never from a search"), and measured: a
  * `forTrack("Under Pressure", "Queen")` against a real `MusicBrainzProvider` returns
- * `status=RESOLVED matchScore=100 title=null artist=null`, whether the hit it took was the right
+ * `status=RESOLVED matchScore=1.0 title=null artist=null`, whether the hit it took was the right
  * artist or the wrong one. Almost every scenario in this programme is a name-search request, so the
  * rule would have run, compared nothing, and gone green — a test that cannot fail, which is what
  * child `01` deleted 1471 lines of.
@@ -104,7 +104,7 @@ internal object EntityIdentity {
      *   nothing to do with identity.
      * - **the resolution is internally consistent**, per the two invariants
      *   [IdentityResolution] declares: `matchScore` is set only when the status is
-     *   [CanonicalStatus.RESOLVED] (`IdentityResolution.kt:15-16`) and is a 0–100 score, and
+     *   [CanonicalStatus.RESOLVED] (`IdentityResolution.kt:15-16`) and is a 0.0–1.0 score, and
      *   `suggestions` are near-misses carried only by [CanonicalStatus.AMBIGUOUS]
      *   (`IdentityResolution.kt:17-18`). Neither was asserted anywhere before this kit.
      *
@@ -155,7 +155,7 @@ internal object EntityIdentity {
             )
         }
         if (score != null) {
-            assertTrue("matchScore is a 0-100 score, but was $score", score in 0..100)
+            assertTrue("matchScore is a 0.0-1.0 score, but was $score", score in 0f..1f)
         }
         if (identity.suggestions.isNotEmpty()) {
             assertTrue(

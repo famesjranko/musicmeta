@@ -33,7 +33,7 @@ internal fun buildIdentityResolution(
     is EnrichmentResult.Success -> IdentityResolution(
         identifiers = identityResult.resolvedIdentifiers ?: enrichedRequest.identifiers,
         status = CanonicalStatus.RESOLVED,
-        matchScore = (identityResult.confidence * 100).toInt(),
+        matchScore = identityResult.confidence,
         title = names?.title,
         artist = names?.artist,
     )

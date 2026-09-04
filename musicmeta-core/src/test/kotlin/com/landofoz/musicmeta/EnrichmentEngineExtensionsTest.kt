@@ -84,14 +84,11 @@ class EnrichmentEngineExtensionsTest {
         val engine = FakeEngine()
         val candidate = SearchCandidate(
             title = "Radiohead",
-            artist = null,
-            year = null,
+            provider = "musicbrainz",
+            identifiers = EnrichmentIdentifiers(musicBrainzId = "candidate-mbid"),
+            matchScore = 0.95f,
             country = "GB",
             releaseType = "Group",
-            score = 95,
-            thumbnailUrl = null,
-            identifiers = EnrichmentIdentifiers(musicBrainzId = "candidate-mbid"),
-            provider = "musicbrainz",
             disambiguation = "British rock band",
         )
 
@@ -128,14 +125,13 @@ class EnrichmentEngineExtensionsTest {
         val engine = FakeEngine()
         val candidate = SearchCandidate(
             title = "OK Computer",
+            provider = "musicbrainz",
+            identifiers = EnrichmentIdentifiers(musicBrainzId = "album-mbid"),
+            matchScore = 1.00f,
             artist = "Radiohead",
             year = "1997",
             country = "GB",
             releaseType = "Album",
-            score = 100,
-            thumbnailUrl = null,
-            identifiers = EnrichmentIdentifiers(musicBrainzId = "album-mbid"),
-            provider = "musicbrainz",
         )
 
         // When - requesting an album profile from that candidate
@@ -173,14 +169,10 @@ class EnrichmentEngineExtensionsTest {
         val engine = FakeEngine()
         val candidate = SearchCandidate(
             title = "Creep",
-            artist = "Radiohead",
-            year = null,
-            country = null,
-            releaseType = null,
-            score = 90,
-            thumbnailUrl = null,
-            identifiers = EnrichmentIdentifiers(musicBrainzId = "track-mbid"),
             provider = "musicbrainz",
+            identifiers = EnrichmentIdentifiers(musicBrainzId = "track-mbid"),
+            matchScore = 0.90f,
+            artist = "Radiohead",
         )
 
         // When - requesting a track profile from that candidate with an album
@@ -212,7 +204,7 @@ class EnrichmentEngineExtensionsTest {
         engine.identityToReturn = IdentityResolution(
             identifiers = EnrichmentIdentifiers(musicBrainzId = "resolved-mbid"),
             status = CanonicalStatus.RESOLVED,
-            matchScore = 98,
+            matchScore = 0.98f,
         )
 
         // When - requesting an artist profile
@@ -222,7 +214,7 @@ class EnrichmentEngineExtensionsTest {
         assertEquals("https://example.com/photo.jpg", profile.photo?.url)
         assertEquals("A band from Oxford", profile.bio?.text)
         assertEquals(CanonicalStatus.RESOLVED, profile.canonicalStatus)
-        assertEquals(98, profile.identityMatchScore)
+        assertEquals(0.98f, profile.identityMatchScore!!, 0.0001f)
         assertEquals("resolved-mbid", profile.identifiers.musicBrainzId)
     }
 

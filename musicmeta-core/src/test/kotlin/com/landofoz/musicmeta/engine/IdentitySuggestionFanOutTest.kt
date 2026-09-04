@@ -29,8 +29,14 @@ class IdentitySuggestionFanOutTest {
 
     private val suggestions = listOf(
         SearchCandidate(
-            "Bush", null, "1992", "GB", "Group", 75, null,
-            EnrichmentIdentifiers(musicBrainzId = "mbid-gb"), "mb", disambiguation = "British rock band",
+            title = "Bush",
+            provider = "mb",
+            identifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-gb"),
+            matchScore = 0.75f,
+            year = "1992",
+            country = "GB",
+            releaseType = "Group",
+            disambiguation = "British rock band",
         ),
     )
 

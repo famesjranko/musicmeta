@@ -201,14 +201,14 @@ class EnrichmentResultsTest {
         val identity = IdentityResolution(
             identifiers = ids,
             status = CanonicalStatus.RESOLVED,
-            matchScore = 95,
+            matchScore = 0.95f,
         )
         val results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = identity)
 
         // When - reading the identity field
         // Then - the status, score, and identifiers are accessible
         assertEquals(CanonicalStatus.RESOLVED, results.identity.status)
-        assertEquals(95, results.identity.matchScore)
+        assertEquals(0.95f, results.identity.matchScore!!, 0.0001f)
         assertEquals("abc-123", results.identity.identifiers.musicBrainzId)
     }
 

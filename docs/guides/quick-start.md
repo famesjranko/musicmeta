@@ -55,7 +55,7 @@ val profile = engine.artistProfile("Radiohead")
 // Identity
 profile.identifiers.musicBrainzId   // "a74b1b7f-71a5-4011-9441-d0b5e4122711"
 profile.canonicalStatus              // CanonicalStatus.RESOLVED
-profile.identityMatchScore           // 100
+profile.identityMatchScore           // 1.0f
 
 // Artwork
 profile.photo?.url                   // primary artist photo URL
@@ -192,7 +192,7 @@ val profile = engine.artistProfile("Bush")
 if (profile.canonicalStatus == CanonicalStatus.AMBIGUOUS) {
     println("Did you mean?")
     profile.suggestions.forEach { candidate ->
-        println("  ${candidate.title} — ${candidate.disambiguation} (${candidate.score}%)")
+        println("  ${candidate.title} — ${candidate.disambiguation} (%.2f)".format(candidate.matchScore))
     }
 
     val chosen = profile.suggestions.first()

@@ -37,7 +37,7 @@ class ProfileTest {
             identity = IdentityResolution(
                 identifiers = EnrichmentIdentifiers(musicBrainzId = "abc-123"),
                 status = CanonicalStatus.RESOLVED,
-                matchScore = 95,
+                matchScore = 0.95f,
             ),
         )
 
@@ -48,7 +48,7 @@ class ProfileTest {
         assertEquals("Radiohead", profile.name)
         assertEquals("abc-123", profile.identifiers.musicBrainzId)
         assertEquals(CanonicalStatus.RESOLVED, profile.canonicalStatus)
-        assertEquals(95, profile.identityMatchScore)
+        assertEquals(0.95f, profile.identityMatchScore!!, 0.0001f)
         assertNotNull(profile.photo)
         assertEquals("https://example.com/photo.jpg", profile.photo!!.url)
         assertEquals("A band from Oxford", profile.bio?.text)
@@ -84,10 +84,26 @@ class ProfileTest {
     @Test fun `artist profile surfaces suggestions from identity resolution`() {
         // Given - an EnrichmentResults whose identity resolution carries SUGGESTIONS candidates
         val candidates = listOf(
-            SearchCandidate("Bush", "Bush", null, "GB", "Group", 80, null,
-                EnrichmentIdentifiers(musicBrainzId = "mbid-1"), "musicbrainz", "British rock band"),
-            SearchCandidate("Bush", "Bush", null, "CA", "Group", 75, null,
-                EnrichmentIdentifiers(musicBrainzId = "mbid-2"), "musicbrainz", "Canadian band"),
+            SearchCandidate(
+                title = "Bush",
+                provider = "musicbrainz",
+                identifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-1"),
+                matchScore = 0.80f,
+                artist = "Bush",
+                country = "GB",
+                releaseType = "Group",
+                disambiguation = "British rock band",
+            ),
+            SearchCandidate(
+                title = "Bush",
+                provider = "musicbrainz",
+                identifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-2"),
+                matchScore = 0.75f,
+                artist = "Bush",
+                country = "CA",
+                releaseType = "Group",
+                disambiguation = "Canadian band",
+            ),
         )
         val results = EnrichmentResults(
             raw = mapOf(EnrichmentType.GENRE to EnrichmentResult.NotFound(EnrichmentType.GENRE, "engine",

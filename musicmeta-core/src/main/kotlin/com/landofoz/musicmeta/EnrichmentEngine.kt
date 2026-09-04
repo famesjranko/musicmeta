@@ -197,7 +197,7 @@ public interface EnrichmentEngine {
      * Searches for entities matching [request], for a manual-search UI where the caller lets a
      * user pick the right match from a list.
      *
-     * **Do not sort the result by [SearchCandidate.score].** The identity provider returns an
+     * **Do not sort the result by [SearchCandidate.matchScore].** The identity provider returns an
      * upstream relevance score and a supplemental provider that has no such number returns a flat
      * constant, so sorting on it ranks unlike scales. The list arrives in provenance order — the
      * identity provider's candidates, then whatever the others uniquely added — and is never
@@ -453,20 +453,25 @@ public interface EnrichmentEngine {
 
 public data class SearchCandidate(
     val title: String,
-    val artist: String?,
-    val year: String?,
+    /** Matches [EnrichmentProvider.id] of the provider that returned it. */
+    val provider: String,
+    val identifiers: EnrichmentIdentifiers,
+    /**
+     * 0.0–1.0, how well this candidate matched the query within its provider's pool. A ranking,
+     * not a probability: compare within one result list, never across providers.
+     */
+    val matchScore: Float,
+    val artist: String? = null,
+    val year: String? = null,
     /**
      * ISO 3166-1 alpha-2 where the upstream names a current ISO country (`GB`), otherwise the
      * upstream's own label — MusicBrainz's `XE`/`XW` reach a consumer here. Null on an iTunes or
      * Deezer candidate and on any recording search hit, none of which carries a release country.
      * The same rule as [EnrichmentData.Metadata.country].
      */
-    val country: String?,
-    val releaseType: String?,
-    val score: Int,
-    val thumbnailUrl: String?,
-    val identifiers: EnrichmentIdentifiers,
-    val provider: String,
+    val country: String? = null,
+    val releaseType: String? = null,
+    val thumbnailUrl: String? = null,
     /** MusicBrainz disambiguation comment (e.g., "British rock band" vs "Canadian band"). */
     val disambiguation: String? = null,
 )

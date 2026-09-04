@@ -31,14 +31,10 @@ val preludeOkHttpClient: OkHttpClient = OkHttpClient()
 val preludeSearchCandidate: SearchCandidate =
     SearchCandidate(
         title = "Bush",
-        artist = "Bush",
-        year = null,
-        country = null,
-        releaseType = null,
-        score = 90,
-        thumbnailUrl = null,
-        identifiers = EnrichmentIdentifiers(),
         provider = "musicbrainz",
+        identifiers = EnrichmentIdentifiers(),
+        matchScore = 0.90f,
+        artist = "Bush",
     )
 
 /** Stand-in for one of `profile.topTracks?.tracks` — carries its own identifiers, per quick-start.md. */

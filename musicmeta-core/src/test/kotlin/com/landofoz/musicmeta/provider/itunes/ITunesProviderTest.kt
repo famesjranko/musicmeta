@@ -1042,8 +1042,14 @@ class ITunesProviderTest {
         // Given - one album request, run through the engine under identity resolution disabled, enabled-but-unresolved, resolved, and ambiguous with suggestions
         val suggestions = listOf(
             SearchCandidate(
-                "OK Computer", "Radiohead", "1997", "GB", "Album", 80, null,
-                EnrichmentIdentifiers(musicBrainzId = "mbid-suggestion"), "mb",
+                title = "OK Computer",
+                provider = "mb",
+                identifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-suggestion"),
+                matchScore = 0.80f,
+                artist = "Radiohead",
+                year = "1997",
+                country = "GB",
+                releaseType = "Album",
             ),
         )
         val configs = listOf(

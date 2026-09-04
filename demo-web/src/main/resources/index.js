@@ -528,7 +528,7 @@ function renderCandidates(query) {
     const subtitle = candidateSubtitle(hit);
     return `<li><button type="button" data-index="${index}">${thumb}<span class="primary">${esc(hit.title)}${
       subtitle ? ` <span class="secondary">${esc(subtitle)}</span>` : ''
-    }</span><span class="score">score ${esc(hit.score)}</span></button></li>`;
+    }</span><span class="score">score ${esc(hit.score.toFixed(2))}</span></button></li>`;
   }).join('');
   searchResultsEl.innerHTML = `<h4>Matches for &ldquo;${esc(query)}&rdquo;</h4><ul>${rows}</ul>`;
   searchResultsEl.hidden = false;

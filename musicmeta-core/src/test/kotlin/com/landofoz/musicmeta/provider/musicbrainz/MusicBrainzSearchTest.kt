@@ -6,6 +6,7 @@ import com.landofoz.musicmeta.testutil.FakeHttpClient
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -38,14 +39,14 @@ class MusicBrainzSearchTest {
         assertEquals("1997-06-16", first.year)
         assertEquals("GB", first.country)
         assertEquals("Album", first.releaseType)
-        assertEquals(98, first.score)
+        assertEquals(0.98f, first.matchScore, TOLERANCE)
         assertEquals("abc123", first.identifiers.musicBrainzId)
         assertEquals("group123", first.identifiers.musicBrainzReleaseGroupId)
         assertEquals("musicbrainz", first.provider)
 
         val second = candidates[1]
         assertEquals("OK Computer OKNOTOK 1997 2017", second.title)
-        assertEquals(85, second.score)
+        assertEquals(0.85f, second.matchScore, TOLERANCE)
     }
 
     @Test
@@ -65,7 +66,7 @@ class MusicBrainzSearchTest {
         assertNull(first.artist)
         assertEquals("GB", first.country)
         assertEquals("Group", first.releaseType)
-        assertEquals(100, first.score)
+        assertEquals(1.0f, first.matchScore, TOLERANCE)
         assertEquals("art1", first.identifiers.musicBrainzId)
         assertEquals("musicbrainz", first.provider)
     }
@@ -90,7 +91,7 @@ class MusicBrainzSearchTest {
         assertNull(first.country)
         assertNull(first.releaseType)
         assertNull(first.thumbnailUrl)
-        assertEquals(95, first.score)
+        assertEquals(0.95f, first.matchScore, TOLERANCE)
         assertEquals("rec1", first.identifiers.musicBrainzId)
         assertEquals("group123", first.identifiers.musicBrainzReleaseGroupId)
         assertEquals("musicbrainz", first.provider)
@@ -99,7 +100,7 @@ class MusicBrainzSearchTest {
         val second = candidates[1]
         assertEquals("Paranoid Android", second.title)
         assertEquals("live", second.disambiguation)
-        assertEquals(88, second.score)
+        assertEquals(0.88f, second.matchScore, TOLERANCE)
     }
 
     @Test
@@ -136,7 +137,28 @@ class MusicBrainzSearchTest {
         assertNull(candidates[1].thumbnailUrl)
     }
 
+    @Test
+    fun `searchCandidates divides MusicBrainz's 0-100 search score onto the library's 0 to 1 scale`() = runTest {
+        // Given - a release search whose two hits score 98 and 85, and an artist search scoring 100
+        httpClient.givenJsonResponse("release?query", RELEASE_SEARCH_MULTIPLE)
+        httpClient.givenJsonResponse("artist?query", ARTIST_SEARCH_MULTIPLE)
+
+        // When - searching each entity type
+        val releases = provider.searchCandidates(EnrichmentRequest.forAlbum("OK Computer", "Radiohead"), 10)
+        val artists = provider.searchCandidates(EnrichmentRequest.forArtist("Radiohead"), 10)
+
+        // Then - each upstream score surfaces as itself divided by 100, a perfect 100 as 1.0
+        assertEquals(0.98f, releases[0].matchScore, TOLERANCE)
+        assertEquals(0.85f, releases[1].matchScore, TOLERANCE)
+        assertEquals(1.0f, artists[0].matchScore, TOLERANCE)
+
+        // Then - ranking within the pool is unchanged, because dividing by a constant preserves order
+        assertTrue(releases[0].matchScore > releases[1].matchScore)
+    }
+
     companion object {
+        private const val TOLERANCE = 0.0001f
+
         /** `recording:"Enter Sandmanz Xyzqq" AND artistname:"Metallica"` URL-encoded — the strict query. */
         private const val STRICT_TYPO_QUERY = "recording%3A%22Enter+Sandmanz+Xyzqq%22"
 

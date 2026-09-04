@@ -35,6 +35,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `EnrichmentData.TrackPreview` is now `(url, source, durationMs: Long? = null)`: the 30-second default was Deezer's clip length; Deezer still reports 30000, other sources may report null
 - `MusicBrainzProvider` drops its `thumbnailSize` parameter and `DEFAULT_THUMBNAIL_SIZE`: drop the argument; a release search carries no cover-art flag, so the thumbnail it sized was never built
 - `ApiKeyConfig` is now keyed by the `ApiKey` enum (`ApiKeyConfig.of(ApiKey.LASTFM_API_KEY to key)`): the four named fields go; `KeyRequirement.Required/Optional` name an `ApiKey` instead of a field
+- `SearchCandidate.score: Int` (0-100) is now `matchScore: Float` (0.0-1.0) and the constructor is reordered required-first (`title, provider, identifiers, matchScore`): use named arguments
+- `IdentityResolution.matchScore` and `*Profile.identityMatchScore` are now `Float?` on 0.0-1.0, the same scale as `Success.confidence`: a `100` is now `1.0f`
 - A throwing `CatalogProvider.checkAvailability` no longer escapes `enrich()`: that type degrades to unfiltered results and the run caches, so catch your own timeout inside it
 - `EnrichmentEngine` gains `enrichProgressive`, a defaulted method: a custom implementation built against an older `.jar` throws `AbstractMethodError` on first call until recompiled
 - `EnrichmentEngine` gains `close()`, a defaulted method: a custom implementation built against an older `.jar` throws `AbstractMethodError` on first call until recompiled

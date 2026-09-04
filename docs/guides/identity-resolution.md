@@ -77,7 +77,7 @@ identity.identifiers.musicBrainzId    // "a74b1b7f-..."
 identity.identifiers.wikidataId       // "Q44191"
 identity.identifiers.wikipediaTitle   // "Radiohead"
 identity.status                       // CanonicalStatus.RESOLVED
-identity.matchScore                   // 100
+identity.matchScore                   // 1.0f
 identity.suggestions                  // List<SearchCandidate> (non-empty when AMBIGUOUS)
 identity.title                        // canonical title of the entity, when one was looked up
 identity.artist                       // canonical artist credit, joined as MusicBrainz joins it
@@ -129,7 +129,7 @@ when (results.identity.status) {
     CanonicalStatus.AMBIGUOUS -> {
         val suggestions = results.identity.suggestions
         suggestions.forEach { candidate ->
-            println("${candidate.title} — ${candidate.disambiguation} (${candidate.score}%)")
+            println("${candidate.title} — ${candidate.disambiguation} (%.2f)".format(candidate.matchScore))
             // "Bush — British rock band (95%)"
             // "Bush — Canadian band (82%)"
         }
@@ -185,7 +185,7 @@ val candidates = engine.search(
 )
 
 candidates.forEach { c ->
-    println("${c.title} by ${c.artist} (${c.year}) — ${c.score}%")
+    println("${c.title} by ${c.artist} (${c.year}) — %.2f".format(c.matchScore))
     println("  MBID: ${c.identifiers.musicBrainzId}")
     println("  Disambiguation: ${c.disambiguation}")
     println("  Thumbnail: ${c.thumbnailUrl}")
