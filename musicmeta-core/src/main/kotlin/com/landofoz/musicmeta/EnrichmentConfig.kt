@@ -6,7 +6,7 @@ import com.landofoz.musicmeta.cache.CacheMode
  * Discovery depth for LB Radio requests.
  * Controls how adventurous/experimental the generated playlist is.
  */
-public enum class RadioDiscoveryMode(public val apiValue: String) {
+public enum class RadioDiscoveryMode(internal val apiValue: String) {
     EASY("easy"),
     MEDIUM("medium"),
     HARD("hard"),

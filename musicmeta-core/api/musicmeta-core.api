@@ -1788,7 +1788,6 @@ public final class com/landofoz/musicmeta/ProviderInfo {
 }
 
 public final class com/landofoz/musicmeta/ProviderPolicies {
-	public static final field AS_READ_ON Ljava/lang/String;
 	public static final field INSTANCE Lcom/landofoz/musicmeta/ProviderPolicies;
 	public final fun get (Ljava/lang/String;)Lcom/landofoz/musicmeta/ProviderPolicy;
 	public final fun getAll ()Ljava/util/Map;
@@ -1825,7 +1824,6 @@ public final class com/landofoz/musicmeta/RadioDiscoveryMode : java/lang/Enum {
 	public static final field EASY Lcom/landofoz/musicmeta/RadioDiscoveryMode;
 	public static final field HARD Lcom/landofoz/musicmeta/RadioDiscoveryMode;
 	public static final field MEDIUM Lcom/landofoz/musicmeta/RadioDiscoveryMode;
-	public final fun getApiValue ()Ljava/lang/String;
 	public static fun getEntries ()Lkotlin/enums/EnumEntries;
 	public static fun valueOf (Ljava/lang/String;)Lcom/landofoz/musicmeta/RadioDiscoveryMode;
 	public static fun values ()[Lcom/landofoz/musicmeta/RadioDiscoveryMode;
