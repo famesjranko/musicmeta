@@ -12,3 +12,4 @@ Focused guides for each area of the library. Start with [quick-start.md](quick-s
 | [configuration.md](configuration.md) | EnrichmentConfig, ApiKeyConfig, confidence scoring, provider wiring, and recommendations |
 | [extension-points.md](extension-points.md) | Custom providers, HTTP clients, caches, mergers, and synthesizers |
 | [android.md](android.md) | Android-specific setup: Room cache, Hilt module, WorkManager worker, ViewModel pattern |
+| [migration.md](migration.md) | Every break since 0.10.0, grouped by version, with the edit each one asks of you |
