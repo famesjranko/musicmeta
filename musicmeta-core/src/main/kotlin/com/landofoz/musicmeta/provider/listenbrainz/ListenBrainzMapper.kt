@@ -4,7 +4,6 @@ import com.landofoz.musicmeta.DiscographyAlbum
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.IdentifierNamespace
-import com.landofoz.musicmeta.PopularTrack
 import com.landofoz.musicmeta.PopularitySignal
 import com.landofoz.musicmeta.PopularitySignalKind
 import com.landofoz.musicmeta.RadioTrack
@@ -12,21 +11,6 @@ import com.landofoz.musicmeta.TopTrack
 
 /** Maps ListenBrainz responses to EnrichmentData subclasses. */
 internal object ListenBrainzMapper {
-
-    fun toPopularity(tracks: List<ListenBrainzPopularTrack>): EnrichmentData.Popularity =
-        EnrichmentData.Popularity(
-            topTracks = tracks.mapIndexed { index, track ->
-                PopularTrack(
-                    title = track.title,
-                    identifiers = EnrichmentIdentifiers(musicBrainzId = track.recordingMbid),
-                    listenCount = track.listenCount,
-                    rank = index + 1,
-                    listenerCount = track.listenerCount,
-                    durationMs = track.durationMs,
-                    album = track.albumName,
-                )
-            },
-        )
 
     fun toTrackPopularity(
         recordings: List<ListenBrainzRecordingPopularity>,

@@ -7,17 +7,13 @@ import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.IdentifierRequirement
 import com.landofoz.musicmeta.ProviderCapability
-import com.landofoz.musicmeta.engine.CallMemo
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
-import com.landofoz.musicmeta.engine.ProviderCallScope
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
-import kotlinx.coroutines.currentCoroutineContext
 
 /**
  * Provides popularity and discography data from ListenBrainz.
- * Uses batch POST endpoints for recording and artist popularity,
- * with fallback to top-recordings for artist popularity.
+ * Uses batch POST endpoints for recording and artist popularity, and top-recordings for top tracks.
  * Requires a musicBrainzId in request identifiers for most capabilities.
  * When [authToken] is provided, also registers ARTIST_RADIO_DISCOVERY capability.
  */
@@ -29,18 +25,6 @@ public class ListenBrainzProvider(
 ) : EnrichmentProvider {
 
     private val api = ListenBrainzApi(httpClient, rateLimiter, authToken)
-
-    /**
-     * `getTopRecordingsForArtist` for [artistMbid], memoized per [ProviderCallScope]/[CallMemo]
-     * (see their KDocs) — ARTIST_TOP_TRACKS calls this directly, and ARTIST_POPULARITY calls it as
-     * a fallback when the batch `popularity/artist` call has nothing for the artist.
-     */
-    private suspend fun getTopRecordingsForArtist(artistMbid: String): List<ListenBrainzPopularTrack> {
-        val memo = currentCoroutineContext()[ProviderCallScope]
-            ?.slot(this) { CallMemo<String, List<ListenBrainzPopularTrack>>() }
-            ?: return api.getTopRecordingsForArtist(artistMbid)
-        return memo.get(artistMbid) { api.getTopRecordingsForArtist(artistMbid) }
-    }
 
     override val id: String = "listenbrainz"
     override val displayName: String = "ListenBrainz"
@@ -105,13 +89,8 @@ public class ListenBrainzProvider(
     ): EnrichmentResult {
         return try {
             val artists = api.getArtistPopularity(listOf(artistMbid))
-            if (artists.isNotEmpty()) {
-                return success(ListenBrainzMapper.toArtistPopularity(artists), type)
-            }
-            // Fall back to existing top-recordings approach
-            val tracks = getTopRecordingsForArtist(artistMbid)
-            if (tracks.isEmpty()) return EnrichmentResult.NotFound(type, id)
-            success(ListenBrainzMapper.toPopularity(tracks), type)
+            if (artists.isEmpty()) return EnrichmentResult.NotFound(type, id)
+            success(ListenBrainzMapper.toArtistPopularity(artists), type)
         } catch (e: Exception) {
             mapError(type, e)
         }
@@ -148,7 +127,7 @@ public class ListenBrainzProvider(
         type: EnrichmentType,
     ): EnrichmentResult {
         return try {
-            val tracks = getTopRecordingsForArtist(artistMbid)
+            val tracks = api.getTopRecordingsForArtist(artistMbid)
             if (tracks.isEmpty()) return EnrichmentResult.NotFound(type, id)
             success(ListenBrainzMapper.toTopTracks(tracks), type)
         } catch (e: Exception) {

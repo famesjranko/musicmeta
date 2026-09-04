@@ -491,6 +491,78 @@ class RoomEnrichmentCacheTest {
         assertEquals(CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT, retrieved!!.canonicalStatus)
     }
 
+    /**
+     * The wire form 0.12.x wrote for `ARTIST_POPULARITY`, when `Popularity` still had a `topTracks`
+     * list. Held as a literal because a payload a consumer already persisted is what this pins.
+     */
+    private val popularityJsonWithTopTracks = """
+        {"type":"com.landofoz.musicmeta.EnrichmentData.Popularity","listenCount":900,"listenerCount":42,"rank":3,"topTracks":[{"title":"Creep","identifiers":{"musicBrainzId":"abc"},"listenCount":50000,"rank":1}],"signals":[]}
+    """.trimIndent()
+
+    @Test
+    fun `a popularity row cached with topTracks still reads, the removed key being unknown`() = runTest {
+        // Given - a row written by a version whose Popularity still carried topTracks
+        database.enrichmentCacheDao().insert(
+            EnrichmentCacheEntity(
+                entityKey = "artist:top-tracks-key",
+                enrichmentType = EnrichmentType.ARTIST_POPULARITY.name,
+                provider = "listenbrainz",
+                dataJson = popularityJsonWithTopTracks,
+                confidence = 0.95f,
+                canonicalStatus = CanonicalStatus.RESOLVED.name,
+                cachedAt = 0L,
+                expiresAt = Long.MAX_VALUE,
+            ),
+        )
+
+        // When - reading it back through the cache's own decoder
+        val retrieved = cache.get("artist:top-tracks-key", EnrichmentType.ARTIST_POPULARITY)
+
+        // Then - a hit, not a miss: the flat fields survive and the removed key is ignored
+        assertNotNull(retrieved)
+        val popularity = retrieved!!.result.data as EnrichmentData.Popularity
+        assertEquals(900L, popularity.listenCount)
+        assertEquals(42L, popularity.listenerCount)
+        assertEquals(3, popularity.rank)
+    }
+
+    /**
+     * The wire form 0.12.x wrote when only ListenBrainz's top-recordings route answered
+     * `ARTIST_POPULARITY`: every flat field null, the tracks in `topTracks`.
+     */
+    private val popularityJsonTopTracksOnly = """
+        {"type":"com.landofoz.musicmeta.EnrichmentData.Popularity","listenCount":null,"listenerCount":null,"rank":null,"topTracks":[{"title":"Creep","identifiers":{"musicBrainzId":"abc"},"listenCount":50000,"rank":1}],"signals":[]}
+    """.trimIndent()
+
+    @Test
+    fun `a popularity row holding only topTracks decodes to a payload carrying nothing`() = runTest {
+        // Given - a row whose whole content was the removed key
+        database.enrichmentCacheDao().insert(
+            EnrichmentCacheEntity(
+                entityKey = "artist:top-tracks-only",
+                enrichmentType = EnrichmentType.ARTIST_POPULARITY.name,
+                provider = "listenbrainz",
+                dataJson = popularityJsonTopTracksOnly,
+                confidence = 0.95f,
+                canonicalStatus = CanonicalStatus.RESOLVED.name,
+                cachedAt = 0L,
+                expiresAt = Long.MAX_VALUE,
+            ),
+        )
+
+        // When - reading it back through the cache's own decoder
+        val retrieved = cache.get("artist:top-tracks-only", EnrichmentType.ARTIST_POPULARITY)
+
+        // Then - it decodes rather than throwing, into an empty Popularity, which the engine's
+        // cache read discards as answering nothing
+        assertNotNull(retrieved)
+        val popularity = retrieved!!.result.data as EnrichmentData.Popularity
+        assertNull(popularity.listenCount)
+        assertNull(popularity.listenerCount)
+        assertNull(popularity.rank)
+        assertTrue(popularity.signals.isEmpty())
+    }
+
     @Test
     fun `a negative row's unnameable canonical status degrades the same way`() = runTest {
         // Given - a negative row carrying a CanonicalStatus name this version does not have

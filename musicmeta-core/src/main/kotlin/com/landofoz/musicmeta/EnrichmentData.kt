@@ -83,16 +83,15 @@ public sealed class EnrichmentData {
 
     /**
      * [signals] is the authoritative record: one entry per source, in the unit that source measures.
-     * The flat fields above it are a derived convenience — the merger back-fills each from the
-     * first source that reported it, so a caller wanting one number does not have to pick. Where the
-     * two disagree, [signals] is what the providers actually said.
+     * [listenCount], [listenerCount] and [rank] are a derived convenience — the merger back-fills
+     * each from the first source that reported it, so a caller wanting one number does not have to
+     * pick. Where the two disagree, [signals] is what the providers actually said.
      */
     @Serializable
     public data class Popularity(
         val listenCount: Long? = null,
         val listenerCount: Long? = null,
         val rank: Int? = null,
-        val topTracks: List<PopularTrack>? = null,
         /**
          * Every source's own claim, kept unmerged and never summed — a Last.fm scrobble count, a
          * ListenBrainz listen count and a MusicBrainz community rating measure different things.
@@ -220,18 +219,6 @@ public enum class PopularitySignalKind {
     /** A community score on the source's own scale — MusicBrainz rates 1–5. */
     RATING,
 }
-
-@Serializable
-public data class PopularTrack(
-    val title: String,
-    val identifiers: EnrichmentIdentifiers = EnrichmentIdentifiers(),
-    val listenCount: Long,
-    val rank: Int,
-    /** `null` when the source didn't carry it. */
-    val listenerCount: Long? = null,
-    val durationMs: Long? = null,
-    val album: String? = null,
-)
 
 @Serializable
 public data class BandMember(

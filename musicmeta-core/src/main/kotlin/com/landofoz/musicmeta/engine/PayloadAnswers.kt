@@ -39,8 +39,7 @@ internal fun EnrichmentData.answers(type: EnrichmentType): Boolean = when (this)
     // signals counts on its own: a source reporting only a rating (MusicBrainz) fills no flat
     // field, and demoting it would drop the one thing it had to say.
     is EnrichmentData.Popularity ->
-        listenCount != null || listenerCount != null || rank != null ||
-            !topTracks.isNullOrEmpty() || signals.isNotEmpty()
+        listenCount != null || listenerCount != null || rank != null || signals.isNotEmpty()
 
     is EnrichmentData.ArtistLinks -> links.isNotEmpty()
     is EnrichmentData.ArtistTimeline -> events.isNotEmpty()

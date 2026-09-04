@@ -430,20 +430,7 @@ class V060EdgeTest {
         assertTrue("Expected Success for Radiohead popularity", pop is EnrichmentResult.Success)
         val data = (pop as EnrichmentResult.Success).data as EnrichmentData.Popularity
 
-        // Top tracks within popularity should also have non-blank titles
-        data.topTracks?.forEach { track ->
-            assertTrue(
-                "Popularity topTrack title should not be blank (rank=${track.rank})",
-                track.title.isNotBlank(),
-            )
-        }
-
         println("    listens=${data.listenCount}, listeners=${data.listenerCount}")
-        println("    topTracks: ${data.topTracks?.size ?: 0}")
-        data.topTracks?.take(3)?.forEach {
-            // PopularTrack.listenCount is non-null, unlike TopTrack.listenCount — no elvis needed.
-            println("      #${it.rank} ${it.title.take(35).padEnd(35)} listens=${it.listenCount}")
-        }
         Unit
     }
 

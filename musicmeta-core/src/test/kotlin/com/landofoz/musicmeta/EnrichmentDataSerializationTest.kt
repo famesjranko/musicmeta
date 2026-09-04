@@ -261,7 +261,7 @@ class EnrichmentDataSerializationTest {
 
     // synthetic - a JSON literal shaped like the pre-signals wire form, not a live capture.
     private val preSignalsPopularityJson = """
-        {"listenCount":900,"listenerCount":42,"rank":3,"topTracks":null}
+        {"listenCount":900,"listenerCount":42,"rank":3}
     """.trimIndent()
 
     @Test
