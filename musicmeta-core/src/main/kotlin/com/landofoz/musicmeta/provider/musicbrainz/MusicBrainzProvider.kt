@@ -75,7 +75,7 @@ public class MusicBrainzProvider(
     override suspend fun resolveIdentity(request: EnrichmentRequest): EnrichmentResult =
         enrich(request, EnrichmentType.GENRE)
 
-    /** The probe behind [com.landofoz.musicmeta.discoverMbidEntityType], which holds its contract. */
+    /** The probe behind [com.landofoz.musicmeta.EnrichmentEngine.discoverMbidEntityType], which holds its contract. */
     internal suspend fun discoverEntityType(mbid: String): MusicBrainzEntityType? =
         enricher().discoverEntityType(mbid)
 

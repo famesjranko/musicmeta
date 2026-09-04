@@ -637,8 +637,7 @@ internal class DefaultEnrichmentEngine(
 
     override fun getProviders(): List<ProviderInfo> = registry.providerInfos()
 
-    /** The probe behind [com.landofoz.musicmeta.discoverMbidEntityType], which holds its contract. */
-    internal suspend fun discoverEntityType(mbid: String): MusicBrainzEntityType? {
+    override suspend fun discoverMbidEntityType(mbid: String): MusicBrainzEntityType? {
         val musicBrainz = registry.identityProvider() as? MusicBrainzProvider
             ?: error("No MusicBrainz identity provider is registered; nothing can resolve an MBID's type")
         // An ambient scope is the caller's own call, and joining it is the whole saving: a probe

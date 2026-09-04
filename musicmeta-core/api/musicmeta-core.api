@@ -1066,6 +1066,7 @@ public final class com/landofoz/musicmeta/EnrichmentData$Tracklist$Companion {
 
 public abstract interface class com/landofoz/musicmeta/EnrichmentEngine {
 	public abstract fun close ()V
+	public abstract fun discoverMbidEntityType (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun enrich (Lcom/landofoz/musicmeta/EnrichmentRequest;Ljava/util/Set;ZLkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun enrichBatch (Ljava/util/List;Ljava/util/Set;Z)Lkotlinx/coroutines/flow/Flow;
 	public abstract fun enrichBatchProgressive (Ljava/util/List;Ljava/util/Set;Z)Lkotlinx/coroutines/flow/Flow;
@@ -1097,6 +1098,7 @@ public final class com/landofoz/musicmeta/EnrichmentEngine$Builder {
 
 public final class com/landofoz/musicmeta/EnrichmentEngine$DefaultImpls {
 	public static fun close (Lcom/landofoz/musicmeta/EnrichmentEngine;)V
+	public static fun discoverMbidEntityType (Lcom/landofoz/musicmeta/EnrichmentEngine;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static synthetic fun enrich$default (Lcom/landofoz/musicmeta/EnrichmentEngine;Lcom/landofoz/musicmeta/EnrichmentRequest;Ljava/util/Set;ZLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static fun enrichBatch (Lcom/landofoz/musicmeta/EnrichmentEngine;Ljava/util/List;Ljava/util/Set;Z)Lkotlinx/coroutines/flow/Flow;
 	public static synthetic fun enrichBatch$default (Lcom/landofoz/musicmeta/EnrichmentEngine;Ljava/util/List;Ljava/util/Set;ZILjava/lang/Object;)Lkotlinx/coroutines/flow/Flow;
@@ -1117,7 +1119,6 @@ public final class com/landofoz/musicmeta/EnrichmentEngineExtensionsKt {
 	public static final fun artistProfile (Lcom/landofoz/musicmeta/EnrichmentEngine;Ljava/lang/String;Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentIdentifiers;Ljava/util/Set;ZLkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static synthetic fun artistProfile$default (Lcom/landofoz/musicmeta/EnrichmentEngine;Lcom/landofoz/musicmeta/SearchCandidate;Ljava/util/Set;ZLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun artistProfile$default (Lcom/landofoz/musicmeta/EnrichmentEngine;Ljava/lang/String;Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentIdentifiers;Ljava/util/Set;ZLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
-	public static final fun discoverMbidEntityType (Lcom/landofoz/musicmeta/EnrichmentEngine;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static final fun resolveTrackPreviews (Lcom/landofoz/musicmeta/EnrichmentEngine;Ljava/util/List;ZLkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static synthetic fun resolveTrackPreviews$default (Lcom/landofoz/musicmeta/EnrichmentEngine;Ljava/util/List;ZLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static final fun trackProfile (Lcom/landofoz/musicmeta/EnrichmentEngine;Lcom/landofoz/musicmeta/SearchCandidate;Ljava/lang/String;Ljava/util/Set;ZLkotlin/coroutines/Continuation;)Ljava/lang/Object;
