@@ -84,6 +84,8 @@ subprojects {
     // tree wrote days earlier. Gradle's keys cover declared inputs only; anything a test reads that
     // Gradle cannot see is free to differ between the tree that stored the entry and the one
     // reusing it. Both lines are needed: `upToDateWhen` alone still lets the cache serve a result.
+    // `cacheIf` has no load-no/store-yes setting, so this also stops `check` from *writing* Test
+    // entries — only a run without the property populates the cache these tasks would read.
     //
     // Behind a property rather than always on, because the edit loop and the IDE want the cache;
     // the gate is the one place that must not take an answer on trust.

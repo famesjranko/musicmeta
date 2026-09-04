@@ -141,17 +141,29 @@ class TestFreshnessTest(unittest.TestCase):
             self.assertEqual(1, len(problems))
             self.assertIn("scanned nothing", problems[0])
 
-    def test_a_nested_worktree_copy_is_not_discovered_as_a_module(self) -> None:
-        # Given - a whole copy of the repo under .claude/, as an agent worktree leaves one
+    def test_a_copy_under_a_pruned_directory_is_not_discovered_as_a_module(self) -> None:
+        # Given - copies of the repo under .claude/ and under a build output directory
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             self.results(self.module(root, "core"), "test", "2026-09-05T12:00:30.000Z")
             self.module(root, ".claude/worktrees/wt/core")
+            self.module(root, "core/build/unpacked/core")
             # When - modules are discovered
             modules = find_test_modules(root)
-            # Then - only this build's module is one, so the copy cannot fail the run
+            # Then - neither copy is one, so neither can fail the run
             self.assertEqual([root / "core"], modules)
             self.assertEqual([], run(root, START, frozenset()))
+
+    def test_a_report_stamped_at_the_run_start_passes(self) -> None:
+        # Given - a report whose timestamp is the run's start to the millisecond
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            at_start = START.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+            self.results(self.module(root, "core"), "test", at_start)
+            # When - the check reads the tree
+            problems = run(root, START, frozenset())
+            # Then - the boundary itself is this run, not before it
+            self.assertEqual([], problems)
 
     def test_a_report_written_a_second_before_the_start_is_reported(self) -> None:
         # Given - a report from just before the run began, which no re-run could have produced

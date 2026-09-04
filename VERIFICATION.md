@@ -167,9 +167,11 @@ than it looks like, each learned the hard way.
   report's timestamp, so a suite whose filter matched no method produces a fresh, empty, passing
   report and satisfies it. Paired with the count gap above, a green `./check` states that every
   module executed a test task in this run — never how many methods that task found. CI is not the
-  reason this exists: it runs `./check --skip-demo` on a fresh checkout, where nothing on disk
-  predates the run and only the remote cache could serve a stored result; the gate is for a
-  developer's warm tree, and for a machine where several worktrees share one cache directory.
+  reason this exists, but it is not immune either: it runs `./check --skip-demo` on a checkout that
+  is fresh, so nothing in a `build/` directory predates the run, while `gradle/actions/setup-gradle`
+  restores `~/.gradle`'s build cache from one run into the next — a stored `Test` entry can cross
+  runs even there. The gate is mostly for a developer's warm tree, and for a machine where several
+  worktrees share one cache directory.
 - **No test or skip count is recoverable from CI.** Gradle's `Test` task prints nothing on success
   and `build.yml` uploads reports `if: failure()` only, so no run on any branch can show that a suite
   ran rather than passed by producing no runnable methods. It is inferable — the task is neither

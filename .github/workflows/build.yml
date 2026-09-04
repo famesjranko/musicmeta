@@ -73,12 +73,17 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
 
       - name: Compile and test demo-cli composite build
-        # demo-cli/ has no wrapper of its own — it borrows the root one via ../gradlew. No test
-        # sources yet; the test task reports NO-SOURCE and passes rather than failing.
+        # demo-cli/ has no wrapper of its own — it borrows the root one via ../gradlew.
+        #
+        # -Pmusicmeta.rerunTests for the reason the root build carries it: setup-gradle restores
+        # ~/.gradle's build cache from one run into the next, so without it this job can report a
+        # green suite whose reports were written by an earlier run against different sources. These
+        # two steps are the only place the demo modules' tests are gated, and `./check`'s freshness
+        # step does not run here — the build job passes --skip-demo, which excludes them from it.
         working-directory: demo-cli
-        run: ../gradlew compileKotlin test
+        run: ../gradlew compileKotlin test -Pmusicmeta.rerunTests
 
       - name: Compile and test demo-web composite build
         # Same shape as demo-cli/: a separate composite build nothing else compiles.
         working-directory: demo-web
-        run: ../gradlew compileKotlin test
+        run: ../gradlew compileKotlin test -Pmusicmeta.rerunTests

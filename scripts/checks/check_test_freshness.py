@@ -29,6 +29,7 @@ legitimately from an earlier run.
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -44,15 +45,20 @@ PRUNED_DIRS = frozenset({".git", ".claude", "build", "node_modules"})
 
 
 def find_test_modules(root: Path) -> list[Path]:
-    """Given a repo root, return the module directories that have Kotlin or Java test sources."""
+    """Given a repo root, return the module directories that have Kotlin or Java test sources.
+
+    The walk prunes as it descends rather than filtering what a full walk found: `.claude/` holds a
+    checkout of this repo per live agent worktree, and descending into all of them costs seconds on
+    a check that should cost none.
+    """
     modules = []
-    for src_test in root.rglob("src/test"):
-        if any(part in PRUNED_DIRS for part in src_test.relative_to(root).parts):
+    for dirpath, dirnames, _ in os.walk(root):
+        dirnames[:] = sorted(d for d in dirnames if d not in PRUNED_DIRS)
+        here = Path(dirpath)
+        if here.name != "test" or here.parent.name != "src":
             continue
-        if not src_test.is_dir():
-            continue
-        if any(src_test.rglob("*.kt")) or any(src_test.rglob("*.java")):
-            modules.append(src_test.parent.parent)
+        if any(here.rglob("*.kt")) or any(here.rglob("*.java")):
+            modules.append(here.parent.parent)
     return sorted(set(modules))
 
 
