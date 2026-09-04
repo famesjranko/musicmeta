@@ -71,6 +71,7 @@ internal suspend fun <T> Iterable<T>.bestArtistMatchOrAlias(
     return mapNotNull { candidate ->
         aliasTier(nameOf(candidate), aliases)?.let { candidate to it }
     }.maxWithOrNull(comparator)?.let { ArtistNameMatch(it.first, it.second) }
+        ?.also { ProbeTrace.picked("aliasMatch", nameOf(it.value), it.value.toString()) }
 }
 
 /**

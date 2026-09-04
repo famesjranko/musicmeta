@@ -3,6 +3,7 @@ package com.landofoz.musicmeta.provider.deezer
 import com.landofoz.musicmeta.drift.SchemaTarget
 import com.landofoz.musicmeta.engine.ArtistMatcher
 import com.landofoz.musicmeta.engine.NameMatchTier
+import com.landofoz.musicmeta.engine.ProbeTrace
 import com.landofoz.musicmeta.engine.TitleMatcher
 import com.landofoz.musicmeta.engine.artistNameTier
 import com.landofoz.musicmeta.engine.bestArtistMatchOrAlias
@@ -180,6 +181,7 @@ internal class DeezerApi(
                 val tier = artistNameTier(artist, best.candidateArtistName(), resolvedAliasPool())
                     ?: return null
                 return best.toTrackSearchResult(tier)
+                    .also { ProbeTrace.picked("deezerTrack", it.artistName, it.toString()) }
             }
         }
         return null

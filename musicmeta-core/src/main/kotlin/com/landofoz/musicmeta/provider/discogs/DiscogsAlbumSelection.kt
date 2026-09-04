@@ -5,6 +5,7 @@ import com.landofoz.musicmeta.engine.AlbumEvidence
 import com.landofoz.musicmeta.engine.AlternativeName
 import com.landofoz.musicmeta.engine.ArtistMatcher
 import com.landofoz.musicmeta.engine.NameMatchTier
+import com.landofoz.musicmeta.engine.ProbeTrace
 import com.landofoz.musicmeta.engine.TieBreakEvidence
 import com.landofoz.musicmeta.engine.TitleMatcher
 import com.landofoz.musicmeta.engine.artistNameTier
@@ -107,4 +108,4 @@ private fun List<DiscogsRelease>.selectRelease(
             { it.artistQuality },
             { it.tieBreaks["year"] },
         ),
-    )
+    )?.also { ProbeTrace.picked("discogsRelease", it.artist, it.release.toString()) }

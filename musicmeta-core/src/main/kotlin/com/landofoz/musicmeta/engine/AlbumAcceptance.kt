@@ -82,4 +82,5 @@ internal fun <T> Iterable<T>.acceptAndRankAlbum(
         comparator = comparator.thenBy { it.tieBreaks[tieBreak.name] }
     }
     return matches.maxWithOrNull(comparator)
+        ?.also { ProbeTrace.picked("albumSelection", artistNameOf(it.candidate), it.candidate.toString()) }
 }
