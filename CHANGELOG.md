@@ -76,6 +76,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - demo-web reads `DEMO_PUBLIC=1` for a ToS-safe public posture (Last.fm off, personal tokens withheld, Discogs images off and 6h freshness ceiling); `DEMO_PUBLIC_ALLOW` lifts named restrictions
 - demo-web bounds one client's share of upstream-bearing endpoints (20-burst, 30/min per client), and skips its transient-failure retry pass while the admission gate is saturated
 - demo-cli's album profile shows a `Description:` row read through the `albumDescription()` named accessor, and `--types` gains `desc` and `reltype` aliases
+- demo-cli gains `stream` (progressive enrichment, a row per type as it settles) and `pin` (`markManuallySelected`, shown as `[pinned]`); `invalidate` now honours `--types`
+- demo-cli's track profile shows `Album:`/`Duration:` from `TrackProfile.trackMetadata`, and `config` reaches the `ttl`, per-provider confidence and priority override maps
 
 ### Changed
 - `enrichProgressive` emits one extra snapshot the moment live identity resolution settles, before any type does: collectors see the verdict and its suggestions without waiting on enrichment
