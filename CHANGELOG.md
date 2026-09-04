@@ -138,6 +138,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `close()` documented as engine-wide: with a shared or Hilt-singleton engine it belongs at app teardown, never a screen's `onCleared()`; cancellation documented as complete-and-cache in every guide
 - The results reference now lists the published shape — `ENGINE_CLOSED`, `isStale`, `isCatalogDegraded`, `CONTRADICTED`, `RESOLVING` — and documents `enrich()` as throwing only for cancellation
 - A Fanart.tv or Last.fm API key holding a reserved character (`|`, `#`, `&`) now sends: it is percent-encoded like every other interpolated value, instead of throwing on `DefaultHttpClient`
+- Discogs' literal `Unknown` country sentinel now reads as absent, not a place: `Metadata.country`/`ReleaseEdition.country` no longer carry it; cached entries keep it until cleared or expired
 
 ## [0.12.0] - 2026-08-18
 

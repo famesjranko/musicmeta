@@ -599,10 +599,12 @@ title, not the first artist-plausible one, then the result is accepted on the pa
 well as the artist before `ALBUM_ART`, `LABEL`, `RELEASE_TYPE` and `ALBUM_METADATA` share it
 (`docs/pitfalls.md` §7). `country` is free text: a country name is normalised to the ISO 3166-1
 alpha-2 code `Metadata.country` reports (`UK` included, which is not an ISO code), while a value
-naming no *current* ISO country — a multi-country region (`Europe`, `Scandinavia`, `UK & Europe`), a
-historical state (`Yugoslavia`, `Czechoslovakia`) or Discogs' literal `Unknown` — has no code and is
-passed through as Discogs wrote it rather than dropped. `ReleaseEdition.country` follows the same
-rule from the same conversion, so a master's versions and its album metadata cannot disagree about
-the wording of one country. Passing the residue through rather than nulling it was measured, not
-assumed, on 2026-09-04: over a 188-album spread of decades and regions, 25.9% of the Discogs
-`country` values a lookup resolved named no current ISO country, and 11.6% of MusicBrainz's did.
+naming no *current* ISO country — a multi-country region (`Europe`, `Scandinavia`, `UK & Europe`) or
+a historical state (`Yugoslavia`, `Czechoslovakia`) — has no code and is passed through as Discogs
+wrote it rather than dropped. Discogs' own literal `Unknown` is the one exception: it names no place
+at all, so it is read as absent before that conversion runs, at both this route and
+`/masters/{id}/versions`. `ReleaseEdition.country` follows the same rule from the same conversion, so
+a master's versions and its album metadata cannot disagree about the wording of one country. Passing
+the residue through rather than nulling it was measured, not assumed, on 2026-09-04: over a
+188-album spread of decades and regions, 25.9% of the Discogs `country` values a lookup resolved
+named no current ISO country, and 11.6% of MusicBrainz's did.
