@@ -108,6 +108,27 @@ class TestKitTest {
     }
 
     @Test
+    fun `the stack runs its fan-out off the pool the rest of the suite shares`() = runTest {
+        // Given - a composed stack over a pool that answers, so the fan-out reaches upstream
+        val http = UpstreamPools.load("itunes-album-pool")
+        val engine = TestStack.build(http)
+
+        // When - enriching, whose upstream calls are issued from the engine's detached scope
+        engine.enrich(
+            EnrichmentRequest.forAlbum("The Rise and Fall of Ziggy Stardust", "David Bowie"),
+            setOf(EnrichmentType.ALBUM_ART),
+        )
+
+        // Then - none of them was issued on Dispatchers.Default, where a neighbouring class's
+        // complete-and-cache work can deny this stack the wall-clock budget enrichTimeoutMs buys
+        assertTrue("no request was issued, so this asserts over nothing", http.requestedThreads.isNotEmpty())
+        assertTrue(
+            "the fan-out ran on the pool the whole suite shares: ${http.requestedThreads}",
+            http.requestedThreads.none { it.startsWith("DefaultDispatcher-worker") },
+        )
+    }
+
+    @Test
     fun `ALL_KEYS registers every provider and a keyless build registers fewer`() = runTest {
         // Given - one stack with every key and one with none
         val keyed = TestStack.build(FakeHttpClient())

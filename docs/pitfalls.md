@@ -349,7 +349,10 @@ Two ways that reaches a test as a flake, both invisible to the class run alone:
 
 So a test whose subject is a deadline hands the engine a `detachedDispatcher` it owns:
 `StandardTestDispatcher(testScheduler)` when the budget should be virtual, a dedicated pool when the
-measurement must stay real. Distinct from §17, which is the mirror image — there a timeout is
+measurement must stay real. Every composed-stack test already has one: `TestStack.build` gives each
+stack a two-thread pool of its own, so the shared-pool half above cannot reach a `harness/*` test.
+The budget stays wall-clock — a scenario still costs its real rate-limiter waits — and a test that
+wants it virtual has to say so. Distinct from §17, which is the mirror image — there a timeout is
 virtual when the work it bounds is real, so it fires unconditionally; here it is real when the test
 was written as if it were virtual.
 

@@ -6,6 +6,10 @@ import com.landofoz.musicmeta.EnrichmentCache
 import com.landofoz.musicmeta.EnrichmentEngine
 import com.landofoz.musicmeta.testutil.FakeEnrichmentCache
 import com.landofoz.musicmeta.testutil.FakeHttpClient
+import kotlinx.coroutines.asCoroutineDispatcher
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
 
 /**
  * The only place that knows how to build an [EnrichmentEngine] for a composed-stack test: the real
@@ -26,12 +30,15 @@ import com.landofoz.musicmeta.testutil.FakeHttpClient
  * **A scenario's rate-limiter waits under `enrich()` are wall-clock time, not virtual.**
  * [EnrichmentEngine.Builder.withDefaultProviders] builds real `RateLimiter`s (MusicBrainz and
  * Discogs 1100ms, iTunes 3000ms by constructor default) and `RateLimiter.execute` calls
- * `kotlinx.coroutines.delay` — but `enrich()` runs its fan-out on the engine's detached scope, on
- * `Dispatchers.Default`, so `runTest`'s scheduler never sees those delays. One MusicBrainz round
- * trip costs a scenario about 1.1s of real time, and `enrichTimeoutMs` is spent against the same
- * clock: a fan-out denied that shared pool spends the budget waiting and stamps `Error(TIMEOUT)`
- * on types it never got to ask about. `runTest` is still the harness convention — its 60s cap
- * turns such a run into a failure rather than a hung build.
+ * `kotlinx.coroutines.delay` — but `enrich()` runs its fan-out on the engine's detached scope, so
+ * `runTest`'s scheduler never sees those delays. One MusicBrainz round trip costs a scenario about
+ * 1.1s of real time, and `enrichTimeoutMs` is spent against the same clock. `runTest` is still the
+ * harness convention — its 60s cap turns a stalled run into a failure rather than a hung build.
+ *
+ * **The stack owns the dispatcher that budget is spent on.** [ownedFanOutPool] gives each built
+ * stack threads no other test can occupy, so a neighbour's complete-and-cache work cannot spend a
+ * scenario's budget for it and leave every unasked type stamped `Error(TIMEOUT)`. Pinned by
+ * `the stack runs its fan-out off the pool the rest of the suite shares` in `TestKitTest`.
  */
 internal object TestStack {
 
@@ -45,7 +52,21 @@ internal object TestStack {
             .apiKeys(keys)
             .cache(cache)
             .withDefaultProviders()
-            .build()
+            .buildOn(ownedFanOutPool())
+
+    /**
+     * The pool this stack alone runs its fan-out on. `enrich()` spends [EnrichmentConfig
+     * .enrichTimeoutMs] and every rate-limiter wait beneath it against the wall clock of whatever
+     * dispatcher it was handed, so on `Dispatchers.Default` a neighbouring class's
+     * complete-and-cache work can still be holding the pool when a scenario starts and spend that
+     * budget for it. One pool per stack, not one for the harness, so no composed test can deny
+     * another. Zero core threads and a five-second keep-alive: the threads are daemons and reap
+     * themselves, so a stack needs no teardown to build.
+     */
+    private fun ownedFanOutPool() =
+        ThreadPoolExecutor(0, 2, 5, TimeUnit.SECONDS, LinkedBlockingQueue()) { runnable ->
+            Thread(runnable, "test-stack-fanout").apply { isDaemon = true }
+        }.asCoroutineDispatcher()
 
     /**
      * Every key populated, so no key-gated provider is silently absent from a composed test. The
