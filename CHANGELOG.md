@@ -95,6 +95,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ReleaseEdition.country` is now alpha-2 where Discogs names a country (`UK` is `GB`), matching `Metadata.country`; cached editions keep the old wording until cleared or expired
 - Every `country` field now documents one rule: alpha-2 where the upstream names a *current* ISO country, else the upstream's own label — `Europe`, `Yugoslavia`, `XE`/`XW` reach you
 - ListenBrainz `ARTIST_POPULARITY` answers `NotFound` when its artist-popularity endpoint has nothing, instead of a payload holding only top tracks; request `ARTIST_TOP_TRACKS` for those
+- Two published-surface conventions documented: every score is a `Float` on 0.0-1.0, every date a `String` in ISO-8601 and every `year` an `Int?` — with their frozen exceptions named
 
 ### Fixed
 - demo-web's discography now collapses a `(Remastered Version)` edition into its base album's row, matching the qualifier vocabulary core already strips before searching
