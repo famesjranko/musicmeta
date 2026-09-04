@@ -133,7 +133,7 @@ internal object DiscogsMapper {
                 ReleaseEdition(
                     title = version.title,
                     format = version.format,
-                    country = version.country,
+                    country = IsoCountry.alpha2OrKeep(version.country),
                     year = version.year,
                     label = version.label,
                     catalogNumber = version.catno,

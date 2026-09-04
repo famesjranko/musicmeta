@@ -208,7 +208,7 @@ class DiscogsMapperTest {
         val edition = result.editions[0]
         assertEquals("OK Computer", edition.title)
         assertEquals("Vinyl, LP", edition.format)
-        assertEquals("UK", edition.country)
+        assertEquals("GB", edition.country)
         assertEquals(1997, edition.year)
         assertEquals("Parlophone", edition.label)
         assertEquals("NODATA 01", edition.catalogNumber)
