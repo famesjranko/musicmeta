@@ -113,7 +113,8 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add gradle.properties README.md CHANGELOG.md ROADMAP.md \
-            docs/guides/quick-start.md docs/guides/extension-points.md docs/guides/android.md
+            docs/guides/quick-start.md docs/guides/extension-points.md docs/guides/android.md \
+            docs/guides/migration.md
           git commit -m "release: prepare v${NEW}"
           # Non-force, explicit refspec — this creates the branch and can never move main.
           git push origin "HEAD:refs/heads/${branch}"
