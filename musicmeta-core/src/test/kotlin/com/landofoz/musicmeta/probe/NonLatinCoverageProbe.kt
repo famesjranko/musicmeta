@@ -272,7 +272,7 @@ class NonLatinCoverageProbe {
 
     private companion object {
         /** The arm this branch measures: control, a, b or c. */
-        const val ARM = "control"
+        const val ARM = "a"
 
         const val USER_AGENT = "MusicMetaProbe/1.0 (https://github.com/famesjranko/musicmeta)"
         const val MB_RATE_LIMIT_MS = 1100L
