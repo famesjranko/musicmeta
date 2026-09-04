@@ -186,7 +186,7 @@ internal class DiscogsApi(
                 title = obj.optString("title", ""),
                 format = obj.optString("format").takeIf { it.isNotBlank() },
                 label = obj.optString("label").takeIf { it.isNotBlank() },
-                country = obj.optString("country").takeIf { it.isNotBlank() },
+                country = obj.discogsCountry(),
                 year = obj.optInt("year", 0).takeIf { it > 0 },
                 catno = obj.optString("catno").takeIf { it.isNotBlank() },
             )
@@ -211,7 +211,7 @@ internal class DiscogsApi(
                 title = obj.optString("title", ""),
                 label = label,
                 year = obj.optString("year").takeIf { it.isNotBlank() },
-                country = obj.optString("country").takeIf { it.isNotBlank() },
+                country = obj.discogsCountry(),
                 coverImage = obj.optString("cover_image").takeIf { it.isNotBlank() },
                 releaseType = obj.optString("type").takeIf { it.isNotBlank() },
                 catno = obj.optString("catno").takeIf { it.isNotBlank() },
@@ -266,6 +266,20 @@ internal class DiscogsApi(
         const val MASTERS_URL = "https://api.discogs.com/masters"
     }
 }
+
+/**
+ * Discogs's own spelling of "no country", not a place. Its database guidelines
+ * (support.discogs.com, "Database Guidelines 7. Country") tell a contributor to leave the field
+ * blank when the country cannot be determined, but the live catalogue holds the literal string
+ * `Unknown` on hundreds of thousands of releases regardless — confirmed against
+ * `api.discogs.com/database/search?type=release&country=Unknown` returning that exact spelling on
+ * every hit. Matched case-insensitively since the API's own `country=` filter is.
+ */
+private const val DISCOGS_UNKNOWN_COUNTRY = "Unknown"
+
+/** A release or version's `country`, null if absent or Discogs's own [DISCOGS_UNKNOWN_COUNTRY] sentinel. */
+private fun JSONObject.discogsCountry(): String? =
+    optString("country").takeIf { it.isNotBlank() && !it.equals(DISCOGS_UNKNOWN_COUNTRY, ignoreCase = true) }
 
 /** Discogs's trailing homonym counter: "Nirvana (2)", "Bad Company (3)". */
 private val DISAMBIGUATOR_REGEX = Regex("\\s*\\(\\d+\\)$")
