@@ -7,6 +7,7 @@ import org.json.JSONObject
 import java.io.IOException
 import java.net.URI
 import java.net.URISyntaxException
+import java.util.Collections
 
 class FakeHttpClient : HttpClient {
     private val jsonResponses = mutableMapOf<String, String>()
@@ -20,6 +21,13 @@ class FakeHttpClient : HttpClient {
     val requestedUrls = mutableListOf<String>()
 
     /**
+     * The name of every thread a request was issued from. An engine's fan-out is detached, so this
+     * is the only place a composed-stack test can see which dispatcher that fan-out actually ran
+     * on. A set, and synchronized: a fan-out issues its requests from several threads at once.
+     */
+    val requestedThreads: MutableSet<String> = Collections.synchronizedSet(mutableSetOf())
+
+    /**
      * Every recorded URL must be one `java.net.URI` accepts, because that is what
      * `DefaultHttpClient` parses with in production: a URL this fake accepted and the real client
      * rejects is a test that passes on a request that can never be made.
@@ -30,6 +38,7 @@ class FakeHttpClient : HttpClient {
      * template in this module produces.
      */
     private fun record(url: String): String {
+        requestedThreads.add(Thread.currentThread().name)
         val uri = try {
             URI(url)
         } catch (e: URISyntaxException) {

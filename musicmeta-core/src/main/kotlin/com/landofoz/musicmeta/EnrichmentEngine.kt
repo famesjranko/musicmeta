@@ -23,6 +23,8 @@ import com.landofoz.musicmeta.provider.lrclib.LrcLibProvider
 import com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzProvider
 import com.landofoz.musicmeta.provider.wikidata.WikidataProvider
 import com.landofoz.musicmeta.provider.wikipedia.WikipediaProvider
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
@@ -400,7 +402,15 @@ public interface EnrichmentEngine {
          *   every type on the cycle — or if a type is registered as both a composite and a
          *   mergeable, whose [ResultMerger] could then never run.
          */
-        public fun build(): EnrichmentEngine {
+        public fun build(): EnrichmentEngine = buildOn()
+
+        /**
+         * [build], with the dispatcher the engine runs its detached fan-out on. That dispatcher's
+         * clock is the one [EnrichmentConfig.enrichTimeoutMs] and every `delay` beneath `enrich()`
+         * are spent against, so a test that must not lose its budget to the rest of a suite passes
+         * a pool it owns. Internal: a consumer has no reason to hold the engine off the default.
+         */
+        internal fun buildOn(detachedDispatcher: CoroutineDispatcher = Dispatchers.Default): EnrichmentEngine {
             val cfg = effectiveConfig()
             warnAboutUserAgentOnTheWire(cfg)
             val registry = ProviderRegistry(providers, cfg.priorityOverrides, logger)
@@ -411,6 +421,7 @@ public interface EnrichmentEngine {
                 logger = logger,
                 mergers = mergers.toList(),
                 synthesizers = synthesizers.toList(),
+                detachedDispatcher = detachedDispatcher,
             )
         }
 
