@@ -5,6 +5,8 @@ import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.SimilarArtist
+import com.landofoz.musicmeta.provider.listenbrainz.ListenBrainzMapper
+import com.landofoz.musicmeta.provider.listenbrainz.ListenBrainzSimilarArtist
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -253,5 +255,28 @@ class SimilarArtistMergerTest {
         assertEquals(listOf("lastfm"), muse.sources)
         val portishead = data.artists.first { it.name == "Portishead" }
         assertEquals(listOf("deezer"), portishead.sources)
+    }
+
+    @Test
+    fun `a ListenBrainz-only pick does not outrank an artist two other providers both chose`() {
+        // Given - Last.fm and Deezer agreeing on one artist, and ListenBrainz's own top pick alone
+        val corroborated = listOf(
+            SimilarArtist("Portishead", matchScore = 0.6f, sources = listOf("lastfm")),
+            SimilarArtist("Portishead", matchScore = 0.3f, sources = listOf("deezer")),
+        )
+        val listenBrainz = ListenBrainzMapper.toSimilarArtists(
+            listOf(
+                ListenBrainzSimilarArtist(artistMbid = "mbid-1", name = "Massive Attack", score = 9000),
+                ListenBrainzSimilarArtist(artistMbid = "mbid-2", name = "Tricky", score = 4500),
+            ),
+        ).artists
+
+        // When - the three providers' answers are merged
+        val merged = SimilarArtistMerger.mergeArtists(corroborated + listenBrainz)
+
+        // Then - two providers agreeing outrank one provider's favourite, which no cap has flattened
+        assertEquals("Portishead", merged.first().name)
+        assertEquals(0.9f, merged.first().matchScore, 0.0001f)
+        assertEquals(0.5f, merged.first { it.name == "Massive Attack" }.matchScore, 0.0001f)
     }
 }

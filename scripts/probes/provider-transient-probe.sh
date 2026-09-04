@@ -57,11 +57,16 @@ COUNTS_FILE="${COUNTS_FILE:-}"
 
 # One line per target: <name> <url>. MusicBrainz appears twice on purpose — it reports different
 # rate-limit zones with different limits per endpoint, so a host-level number would average two
-# unrelated things.
+# unrelated things. ListenBrainz appears twice for a different reason: `listenbrainz-labs` is a
+# separate host with its own uptime, and its URL carries the `algorithm` value the library pins.
+# That target is doing two jobs — availability, and the only standing watch on the pinned algorithm
+# still being one the route accepts. A retirement shows up here as a run of `http 400`, which is a
+# bucket no healthy target produces.
 TARGETS=(
     "musicbrainz-search|https://musicbrainz.org/ws/2/release-group?query=release:OK%20Computer%20AND%20artist:Radiohead&fmt=json&limit=5"
     "musicbrainz-artist|https://musicbrainz.org/ws/2/artist?query=Radiohead&fmt=json&limit=1"
     "listenbrainz|https://api.listenbrainz.org/1/stats/sitewide/artists?count=1"
+    "listenbrainz-labs|https://labs.api.listenbrainz.org/similar-artists/json?artist_mbids=a74b1b7f-71a5-4011-9441-d0b5e4122711&algorithm=session_based_days_7500_session_300_contribution_5_threshold_10_limit_100_filter_True_skip_30"
     "wikidata|https://www.wikidata.org/w/api.php?action=wbgetentities&ids=Q44190&format=json"
     "wikipedia|https://en.wikipedia.org/api/rest_v1/page/summary/Radiohead"
     "coverartarchive|https://coverartarchive.org/release-group/b1392450-e666-3926-a536-22c65f834433/front"

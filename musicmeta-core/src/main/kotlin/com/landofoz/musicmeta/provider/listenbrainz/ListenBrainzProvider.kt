@@ -12,10 +12,14 @@ import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 
 /**
- * Provides popularity and discography data from ListenBrainz.
+ * Provides popularity, discography and artist-similarity data from ListenBrainz.
  * Uses batch POST endpoints for recording and artist popularity, and top-recordings for top tracks.
  * Requires a musicBrainzId in request identifiers for most capabilities.
  * When [authToken] is provided, also registers ARTIST_RADIO_DISCOVERY capability.
+ *
+ * SIMILAR_ARTISTS comes from the experimental Labs host rather than the main API — a separate
+ * deployment with its own availability, and a route whose `algorithm` parameter this library pins
+ * to one value. See [ListenBrainzApi.SIMILAR_ARTISTS_ALGORITHM].
  */
 public class ListenBrainzProvider(
     httpClient: HttpClient,
@@ -52,6 +56,11 @@ public class ListenBrainzProvider(
             priority = PRIORITY,
             identifierRequirement = IdentifierRequirement.MUSICBRAINZ_ID,
         ))
+        add(ProviderCapability(
+            type = EnrichmentType.SIMILAR_ARTISTS,
+            priority = FALLBACK_PRIORITY,
+            identifierRequirement = IdentifierRequirement.MUSICBRAINZ_ID,
+        ))
         // ARTIST_RADIO_DISCOVERY only available when authToken is provided (auth gating per-capability)
         if (authToken != null) {
             add(ProviderCapability(
@@ -79,6 +88,7 @@ public class ListenBrainzProvider(
             EnrichmentType.TRACK_POPULARITY -> enrichTrackPopularity(mbid, type)
             EnrichmentType.ARTIST_DISCOGRAPHY -> enrichDiscography(mbid, type)
             EnrichmentType.ARTIST_TOP_TRACKS -> enrichTopTracks(mbid, type)
+            EnrichmentType.SIMILAR_ARTISTS -> enrichSimilarArtists(mbid, type)
             else -> EnrichmentResult.NotFound(type, id)
         }
     }
@@ -135,6 +145,27 @@ public class ListenBrainzProvider(
         }
     }
 
+    /**
+     * Similar artists from the Labs host, which is a separate deployment from the main API and can
+     * be down or refuse the request while every other capability here answers.
+     *
+     * An empty list is `NotFound` — the route answers an artist it holds no similarity data for
+     * with an empty array, and thin data for a long-tail artist is a short list, not a failure. A
+     * refusal is an `Error`, thrown from the api client rather than reaching here as an empty list.
+     */
+    private suspend fun enrichSimilarArtists(
+        artistMbid: String,
+        type: EnrichmentType,
+    ): EnrichmentResult {
+        return try {
+            val similar = api.getSimilarArtists(artistMbid)
+            if (similar.isEmpty()) return EnrichmentResult.NotFound(type, id)
+            success(ListenBrainzMapper.toSimilarArtists(similar), type)
+        } catch (e: Exception) {
+            mapError(type, e)
+        }
+    }
+
     private suspend fun enrichRadioDiscovery(
         request: EnrichmentRequest,
         type: EnrichmentType,
@@ -164,7 +195,7 @@ public class ListenBrainzProvider(
     private companion object {
         const val PRIORITY = 100
 
-        /** Fallback priority -- Last.fm is primary for track popularity. */
+        /** Fallback priority -- Last.fm is primary for track popularity and for artist similarity. */
         const val FALLBACK_PRIORITY = 50
     }
 }

@@ -3,6 +3,7 @@ package com.landofoz.musicmeta.provider.listenbrainz
 import com.landofoz.musicmeta.drift.BodyShape
 import com.landofoz.musicmeta.drift.SchemaTarget
 import com.landofoz.musicmeta.http.HttpClient
+import com.landofoz.musicmeta.http.HttpResult
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.http.bodyOrThrowAuthOrTransient
 import com.landofoz.musicmeta.http.bodyOrThrowTransient
@@ -124,6 +125,57 @@ internal class ListenBrainzApi(
     private fun optNullableLong(item: JSONObject, key: String): Long? =
         if (item.isNull(key)) null else item.optLong(key, 0L)
 
+    /**
+     * Similar artists for [artistMbid] from the Labs host, under the one pinned
+     * [SIMILAR_ARTISTS_ALGORITHM].
+     *
+     * A 4xx here is never an empty answer: the route answers an artist it holds nothing for with
+     * `200 []`, so the only thing a rejection can mean is that the request itself is no longer
+     * one this route accepts — most likely the pinned algorithm leaving the enum. Every other
+     * `*Api` call collapses a `ClientError` to `null` and reads as `NotFound`, which is exactly the
+     * silent emptiness a retired algorithm must not produce, so this one throws instead
+     * (`docs/pitfalls.md` §31).
+     */
+    suspend fun getSimilarArtists(
+        artistMbid: String,
+    ): List<ListenBrainzSimilarArtist> = rateLimiter.execute {
+        val url = similarArtistsUrl(artistMbid)
+        val result = httpClient.fetchJsonArrayResult(url)
+        if (result is HttpResult.ClientError) {
+            throw LabsRequestRejectedException(rejectionMessage(result.statusCode))
+        }
+        val jsonArray = result.bodyOrThrowTransient() ?: return@execute emptyList()
+        parseSimilarArtists(jsonArray)
+    }
+
+    /**
+     * Only a `400` is the route rejecting the *request* it was given, which is the status a retired
+     * `algorithm` arrives as; naming the algorithm on a 404 or a 451 would blame it for something
+     * it did not cause.
+     */
+    private fun rejectionMessage(statusCode: Int): String =
+        if (statusCode == HTTP_BAD_REQUEST) {
+            "ListenBrainz Labs rejected the similar-artists request with HTTP 400: algorithm " +
+                "$SIMILAR_ARTISTS_ALGORITHM has been retired, or the artist MBID was malformed"
+        } else {
+            "ListenBrainz Labs refused the similar-artists request with HTTP $statusCode"
+        }
+
+    private fun parseSimilarArtists(jsonArray: JSONArray): List<ListenBrainzSimilarArtist> {
+        val results = mutableListOf<ListenBrainzSimilarArtist>()
+        for (i in 0 until jsonArray.length()) {
+            parseSimilarArtist(jsonArray.getJSONObject(i))?.let { results += it }
+        }
+        return results
+    }
+
+    /** Null for a row carrying no artist MBID or no name: neither can be named nor merged. */
+    private fun parseSimilarArtist(item: JSONObject): ListenBrainzSimilarArtist? {
+        val mbid = item.optString("artist_mbid").takeIf { it.isNotBlank() } ?: return null
+        val name = item.optString("name").takeIf { it.isNotBlank() } ?: return null
+        return ListenBrainzSimilarArtist(artistMbid = mbid, name = name, score = item.optInt("score", 0))
+    }
+
     /** GET /1/explore/lb-radio?prompt=artist:({prompt})&mode={mode}. Requires authToken. */
     suspend fun getRadio(
         artistPrompt: String,
@@ -213,18 +265,52 @@ internal class ListenBrainzApi(
             ?.takeIf { it.isNotBlank() }
 
     companion object {
+        private const val HTTP_BAD_REQUEST = 400
+
         const val BASE_URL = "https://api.listenbrainz.org/1"
+
+        /**
+         * The experimental host, which is a different deployment from [BASE_URL] with its own
+         * uptime and its own idea of what it accepts.
+         */
+        const val LABS_BASE_URL = "https://labs.api.listenbrainz.org"
+
+        /**
+         * The one member of the route's `algorithm` enum this library asks for.
+         *
+         * The enum is the route's whole contract and is published nowhere but its own 400 body, so
+         * a member can leave it without notice. Pinning one member is what makes that visible:
+         * every similar-artists request carries this string, and the day the route stops accepting
+         * it every request fails loudly rather than one silently returning a different ranking.
+         * Session-based over 7500 days with a contribution floor of 5 — the widest window the enum
+         * offers at the full 100-result limit, which is what keeps a long-tail artist answerable.
+         */
+        const val SIMILAR_ARTISTS_ALGORITHM =
+            "session_based_days_7500_session_300_contribution_5_threshold_10_limit_100_filter_True_skip_30"
 
         /** The URL [getTopRecordingsForArtist] requests. */
         fun topRecordingsUrl(artistMbid: String): String =
             "$BASE_URL/popularity/top-recordings-for-artist/${encodePathSegment(artistMbid)}"
 
         /**
-         * Schema-pin target, mirroring [parseRecordings]. A row without `recording_mbid` is
-         * dropped outright, so a rename there empties every popularity answer silently.
+         * The URL [getSimilarArtists] requests. `artist_mbids` is plural and takes a list; this
+         * library asks about one artist at a time.
+         */
+        fun similarArtistsUrl(artistMbid: String): String =
+            "$LABS_BASE_URL/similar-artists/json" +
+                "?artist_mbids=${encodeQueryValue(artistMbid)}&algorithm=$SIMILAR_ARTISTS_ALGORITHM"
+
+        /**
+         * Schema-pin targets, each mirroring the parse beside it. A top-recordings row without
+         * `recording_mbid` is dropped outright, so a rename there empties every popularity answer
+         * silently; a similar-artists row without `artist_mbid` or `name` is dropped the same way.
          *
-         * Radiohead's artist MBID, chosen because the artist is large enough that the endpoint
-         * answers with a full row rather than a sparse one.
+         * Radiohead's artist MBID in both, chosen because the artist is large enough that either
+         * endpoint answers with a full row rather than a sparse one.
+         *
+         * A retired `algorithm` is *not* what these catch — the pin reports any non-200 as
+         * unavailable rather than as drift, and [getSimilarArtists] is what turns that case into a
+         * provider error a consumer sees.
          */
         val SCHEMA_PIN_TARGETS: List<SchemaTarget> = listOf(
             SchemaTarget(
@@ -241,6 +327,24 @@ internal class ListenBrainzApi(
                     "[0].release_name",
                 ),
             ),
+            SchemaTarget(
+                provider = "listenbrainz",
+                route = "labs similar artists",
+                url = similarArtistsUrl("a74b1b7f-71a5-4011-9441-d0b5e4122711"),
+                shape = BodyShape.ARRAY,
+                requiredPaths = listOf(
+                    "[0].artist_mbid",
+                    "[0].name",
+                    "[0].score",
+                ),
+            ),
         )
     }
 }
+
+/**
+ * The Labs host answered, and refused the request. Thrown rather than collapsed to an empty list so
+ * that `mapError` turns it into an `EnrichmentResult.Error`: a route that answers "nothing similar"
+ * with `200 []` leaves a 4xx no reading other than "this request is no longer valid".
+ */
+internal class LabsRequestRejectedException(message: String) : IllegalStateException(message)

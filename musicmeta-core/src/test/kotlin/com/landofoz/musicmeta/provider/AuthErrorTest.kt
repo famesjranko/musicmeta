@@ -18,6 +18,8 @@ import com.landofoz.musicmeta.testutil.FakeHttpClient
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -60,6 +62,18 @@ class AuthErrorTest {
         assertEquals("${provider.id} should report AUTH", ErrorKind.AUTH, (result as? EnrichmentResult.Error)?.errorKind)
     }
 
+    /** An `Error` a consumer cannot fix with a key: the failure is real, the cause is not the credential. */
+    private suspend fun assertNonAuthError(pair: Pair<EnrichmentProvider, EnrichmentRequest>, type: EnrichmentType) {
+        val (provider, request) = pair
+        val result = provider.enrich(request, type)
+        assertTrue("${provider.id} should report an Error, got $result", result is EnrichmentResult.Error)
+        assertNotEquals(
+            "${provider.id} sends no key here, so AUTH would tell a consumer to fix one they do not have",
+            ErrorKind.AUTH,
+            (result as EnrichmentResult.Error).errorKind,
+        )
+    }
+
     private suspend fun assertNotFound(pair: Pair<EnrichmentProvider, EnrichmentRequest>, type: EnrichmentType) {
         val (provider, request) = pair
         assertEquals(EnrichmentResult.NotFound(type, provider.id), provider.enrich(request, type))
@@ -98,8 +112,10 @@ class AuthErrorTest {
     @Test fun `a 403 from a public ListenBrainz endpoint is not an auth failure`() = runTest {
         // Given - popularity and similar-artists both send no token, so neither a 403 nor a 401
         // from ListenBrainz on them is something the consumer can fix
+        // Then - popularity reads the refusal as no data; the Labs route, which answers "nothing
+        // similar" with an empty list, can only read one as its request no longer being accepted
         assertNotFound(listenBrainz(403), EnrichmentType.ARTIST_POPULARITY)
-        assertNotFound(listenBrainz(401), EnrichmentType.SIMILAR_ARTISTS)
+        assertNonAuthError(listenBrainz(401), EnrichmentType.SIMILAR_ARTISTS)
     }
 
     @Test fun `the breaker records a failure on a 401, not a success`() = runTest {

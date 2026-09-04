@@ -77,14 +77,18 @@ than it looks like, each learned the hard way.
   pulls next — PR #285 did exactly that, fixed by #290. A green `demo-canary` is not evidence the
   demo tree passes `make check`.
 
-- **The daily schema pin gates nothing, and covers 13 routes across the 11 providers.** It runs on
+- **The daily schema pin gates nothing, and covers 14 routes across the 11 providers.** It runs on
   a schedule in `provider-drift.yml`, so a merge never waits on it and a provider outage can never
   block this repo; the signal is the failed run's email. Each route is requested once and checked
   for named JSON paths still being present and non-blank — around 60 paths, against the ~304
   accessor calls the mappers make. A green pin says no pinned field moved on a pinned route
   today — not that enrichment still works. Ranking, confidence, mergers and identity resolution
   against live data are exercised only by the e2e suite, which is now `workflow_dispatch` only and
-  therefore runs when somebody remembers to press the button.
+  therefore runs when somebody remembers to press the button. It also cannot report a route that
+  stops accepting a parameter: any non-200 is classified unavailable rather than drift, so
+  ListenBrainz Labs retiring the `algorithm` value `SIMILAR_ARTISTS` pins reads here as a route
+  being down. What surfaces that is the provider itself, which turns the refusal into an
+  `EnrichmentResult.Error` a consumer sees.
 
 - **A red e2e run means an upstream answered, not that one was unreachable.** Its assertions accept
   a `Success`, a `RateLimited`, and an `Error` of kind `NETWORK`, `RATE_LIMIT` or `TIMEOUT`: a
@@ -121,6 +125,15 @@ than it looks like, each learned the hard way.
   failures — including under `--collect-only`, because a trend watch that read nothing must never
   look healthy. What neither file holds: the three keyed providers, which the probe excludes on
   purpose so no credential reaches its output.
+
+  The `listenbrainz-labs` target carries a second job, and it is **the only standing watch on the
+  ListenBrainz Labs `algorithm` value `SIMILAR_ARTISTS` pins**: its URL asks for that value, so the
+  route retiring it appears in the series as a run of `http 400`. Read what that is worth honestly —
+  it is a trend, not a gate. Nothing fails on it, the runner series has no baseline to flag against,
+  the laptop series only advances when somebody runs the probe by hand, and the schema pin next to it
+  classifies the same 400 as an unavailable route rather than as drift. What actually protects a
+  consumer is the provider turning the refusal into an `EnrichmentResult.Error` at the moment it
+  happens; everything here only makes it noticed sooner.
 
 - **`!!` on a Java platform type is invisible to detekt.** Measured with a three-cell probe: detekt
   catches `!!` on a nullable receiver (`UnsafeCallOnNullableType`) and on a definitely-non-null one

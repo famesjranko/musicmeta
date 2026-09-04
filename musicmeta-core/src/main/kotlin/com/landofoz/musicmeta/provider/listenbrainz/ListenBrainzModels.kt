@@ -55,3 +55,15 @@ internal data class ListenBrainzRadioTrack(
     val artistMbid: String? = null,
     val releaseMbid: String? = null,
 )
+
+/**
+ * One neighbour from the Labs similar-artists route.
+ *
+ * [score] is the route's own session count, unbounded and comparable only within one answer: the
+ * mapper scales it against that answer's highest before it becomes a `matchScore`.
+ */
+internal data class ListenBrainzSimilarArtist(
+    val artistMbid: String,
+    val name: String,
+    val score: Int,
+)

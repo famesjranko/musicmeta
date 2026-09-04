@@ -88,7 +88,7 @@ measurement — of how well each type is covered.
 | | ALBUM_DESCRIPTION | Good — 2 providers, keyless top source |
 | | LYRICS_SYNCED | Good |
 | | LYRICS_PLAIN | Good |
-| **Relationships** | SIMILAR_ARTISTS | Good — 2 providers merged via SimilarArtistMerger |
+| **Relationships** | SIMILAR_ARTISTS | Good — 3 providers merged via SimilarArtistMerger |
 | | SIMILAR_TRACKS | Good — 2 providers merged via SimilarTrackMerger |
 | | ARTIST_LINKS | Good — every MusicBrainz URL relation type, plus Wikidata's official website (P856) as a second source |
 | **Statistics** | ARTIST_POPULARITY | Good — 3 providers merged; each source's claim kept in its own unit as a `PopularitySignal`, MusicBrainz's community rating among them |
