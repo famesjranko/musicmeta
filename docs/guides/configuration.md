@@ -374,7 +374,7 @@ val results = engine.enrich(
 
 val preview = results.trackPreview()
 println(preview?.url)        // https://cdns-preview-d.dzcdn.net/stream/...
-println(preview?.durationMs) // 30000
+println(preview?.durationMs) // 30000 — Deezer states its clip length; null where a source does not
 println(preview?.source)     // "deezer"
 ```
 

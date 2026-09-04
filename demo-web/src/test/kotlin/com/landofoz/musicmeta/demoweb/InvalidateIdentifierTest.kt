@@ -41,7 +41,7 @@ class InvalidateIdentifierTest {
             calls.incrementAndGet()
             return EnrichmentResult.Success(
                 type = EnrichmentType.TRACK_PREVIEW,
-                data = EnrichmentData.TrackPreview("https://example.com/preview.mp3", 30_000, id),
+                data = EnrichmentData.TrackPreview(url = "https://example.com/preview.mp3", source = id, durationMs = 30_000),
                 provider = id,
                 confidence = 0.9f,
             )

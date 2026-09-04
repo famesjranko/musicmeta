@@ -43,7 +43,7 @@ class QueryParamLimitTest {
             return EnrichmentResult.Success(
                 type,
                 if (type == EnrichmentType.TRACK_PREVIEW) {
-                    EnrichmentData.TrackPreview("https://example.com/p.mp3", 30_000, id)
+                    EnrichmentData.TrackPreview(url = "https://example.com/p.mp3", source = id, durationMs = 30_000)
                 } else {
                     EnrichmentData.Metadata(genres = listOf("rock"))
                 },

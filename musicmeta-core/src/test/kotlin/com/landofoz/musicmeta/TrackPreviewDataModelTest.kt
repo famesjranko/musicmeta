@@ -34,16 +34,16 @@ class TrackPreviewDataModelTest {
     }
 
     @Test
-    fun `TrackPreview durationMs defaults to 30000`() {
-        // Given - a TrackPreview constructed without explicit durationMs
+    fun `TrackPreview durationMs defaults to null`() {
+        // Given - a TrackPreview from a source that states no clip length
         // When - omitting the durationMs field
         val preview = EnrichmentData.TrackPreview(
             url = "https://cdns-preview.dzcdn.net/stream/preview.mp3",
             source = "deezer",
         )
 
-        // Then - default durationMs is 30000 (30 seconds)
-        assertEquals(30000L, preview.durationMs)
+        // Then - no length is invented for it
+        assertNull(preview.durationMs)
     }
 
     @Test
