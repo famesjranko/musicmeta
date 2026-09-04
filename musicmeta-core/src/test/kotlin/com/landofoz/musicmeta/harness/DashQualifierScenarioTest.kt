@@ -18,7 +18,7 @@ import org.junit.Test
  * `MusicBrainzQualifierFallback.qualifierFallbackCandidates` dash-form step, which the original
  * #210 fix added. The pool's stripped-title recording search ties a studio recording against a
  * live one at the same score, so a real answer here also proves
- * `MusicBrainzEnricher.pickBestRecording`'s blank-disambiguation tie-break — the studio/live
+ * `MusicBrainzTrackEnrichment.pickBestRecording`'s blank-disambiguation tie-break — the studio/live
  * distinction — actually runs over the composed stack, not only in a single-provider test.
  */
 class DashQualifierScenarioTest {

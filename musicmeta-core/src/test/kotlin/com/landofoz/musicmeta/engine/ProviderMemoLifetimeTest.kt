@@ -8,8 +8,8 @@ import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.http.RateLimiter
+import com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzAlbumEnrichment
 import com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzApi
-import com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzEnricher
 import com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzProvider
 import com.landofoz.musicmeta.testutil.FakeEnrichmentCache
 import com.landofoz.musicmeta.testutil.FakeHttpClient
@@ -205,7 +205,7 @@ class ProviderMemoLifetimeTest {
         assertEquals(RELEASE_SEARCHES_PER_ABSENT_ALBUM, httpClient.requestedUrls.count { it.contains(RELEASE_SEARCH) })
         assertEquals(1, httpClient.requestedUrls.count { it.contains(ARTIST_SEARCH) })
         assertEquals(
-            MusicBrainzEnricher.SYMBOL_FALLBACK_MAX_PAGES,
+            MusicBrainzAlbumEnrichment.SYMBOL_FALLBACK_MAX_PAGES,
             httpClient.requestedUrls.count { it.contains(BROWSE) },
         )
     }

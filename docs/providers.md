@@ -79,10 +79,14 @@ guarantee about today.
 `CLAUDE.md` states the four-file pattern. Two packages depart from it, and both departures are
 deliberate:
 
-- **`musicbrainz` adds six files.** `MusicBrainzEnricher.kt` holds the per-entity enrichment logic
-  and the memos that fold the lookups one request's types repeat into one call each — per *call*,
-  not per provider, so `forceRefresh` reaches upstream (§12 of `pitfalls.md` has why that matters).
-  Inlining it would put `MusicBrainzProvider` near 900 lines.
+- **`musicbrainz` adds twelve files.** `MusicBrainzEnricher.kt` routes a request on to
+  `MusicBrainzArtistEnrichment.kt`, `MusicBrainzAlbumEnrichment.kt` and
+  `MusicBrainzTrackEnrichment.kt`, which hold the per-entity enrichment logic and the memos that fold
+  the lookups one request's types repeat into one call each — per *call*, not per provider, so
+  `forceRefresh` reaches upstream (§12 of `pitfalls.md` has why that matters).
+  `MusicBrainzSearchOutcome.kt` holds what all three share: the suggestions a miss offers, the name
+  route a hit reports, and the qualifier ladder the album and track searches both walk.
+  Inlining them would put `MusicBrainzProvider` near 900 lines.
   `MusicBrainzParser.kt` holds every JSON → DTO conversion, which the other packages do inline in
   `*Api`; fourteen capabilities across three entity types is more than an API client should carry.
   `MusicBrainzCreditParser.kt` serves `CREDITS` and `RELEASE_EDITIONS` only — those two read raw
@@ -101,6 +105,9 @@ two response shapes under one cache key. `MusicBrainzQualifierFallback.kt` strip
   fold to the one asked for — the title itself folds, or its folded form contains the image of a
   folded symbol. Folding never edits a letter, so nothing a plain typo could reach is in that browse;
   such a title skips it and returns the same `AMBIGUOUS` verdict without spending the calls.
+  The remaining two, `MusicBrainzEditions.kt` and `MusicBrainzSuppliedIdentifier.kt`, each state in
+  their own KDoc why they stand apart: the first is the one album type keyed on the release-*group*,
+  the second is the check every caller-supplied identifier passes through.
 - **`deezer` has a second public provider class.** `SimilarAlbumsProvider` registers under its own id
   `deezer-similar-albums`, so it gets its own `CircuitBreaker` and can be disabled without touching
   `deezer`. It exists because `SIMILAR_ALBUMS` is *derived* — Deezer has no such endpoint, so it

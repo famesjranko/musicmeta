@@ -8,7 +8,7 @@ import com.landofoz.musicmeta.engine.ConfidenceCalculator
 /**
  * `RELEASE_EDITIONS` — every release MusicBrainz holds in one release group.
  *
- * Apart from the rest of [MusicBrainzEnricher] because it is the one album type keyed on the
+ * Apart from the rest of [MusicBrainzAlbumEnrichment] because it is the one album type keyed on the
  * release-*group* identifier rather than the release identifier, so it shares neither the release
  * memo nor the chain of guards on that lookup, and needs its own copy of both for that reason: the
  * artist check ([markIfDifferentArtist]) and the year check ([markIfPredatingFirstRelease]).

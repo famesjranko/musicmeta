@@ -4,7 +4,7 @@ Reproduces the #210 dash-qualifier defect: a track request spelling its reissue 
 dash (`Starman - 2012 Remaster`) must resolve through `MusicBrainzQualifierFallback`'s dash-form
 step to the stripped `Starman` search, and — because a bare stripped title routinely ties a studio
 recording against a live one — must pick the studio recording, not the live one, via the
-blank-disambiguation tie-break (`MusicBrainzEnricher.pickBestRecording`'s `blankDisambiguation`
+blank-disambiguation tie-break (`MusicBrainzTrackEnrichment.pickBestRecording`'s `blankDisambiguation`
 tier).
 
 The original dash-decorated title's own search (`recording:"Starman - 2012 Remaster"...`) is left
