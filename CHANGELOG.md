@@ -48,6 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Cancelling `enrich()`'s calling coroutine is now complete-and-cache, not abort-and-forfeit: the fan-out keeps running and still writes back, since it now shares `enrichProgressive`'s resolution path
 - `EnrichmentEngine.Builder.build()` now throws `IllegalArgumentException` when registered `CompositeSynthesizer`s form a dependency cycle: the message names every type on the loop
 - `Builder.build()` also throws when one type has both a `CompositeSynthesizer` and a `ResultMerger`: the merger could never run, so the registration was silently dead
+- `PopularTrack` and `Popularity.topTracks` are removed: `ARTIST_TOP_TRACKS` carries the same tracks as `TopTrack`; cached `Popularity` entries still decode (the key is ignored)
 
 ### Added
 - `enrichDeadlineRemainingMs()`: what is left of the enclosing `enrich()` deadline, for a custom `HttpClient` to clamp its transport timeouts down to; null outside an enrich call
@@ -85,6 +86,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ExternalLink.url` documented as the upstream's URL verbatim, which may be `http://`, so an https-only policy is the consumer's to enforce; `Artwork.url` documents its Cover Art Archive upgrade
 - `ReleaseEdition.country` is now alpha-2 where Discogs names a country (`UK` is `GB`), matching `Metadata.country`; cached editions keep the old wording until cleared or expired
 - Every `country` field now documents one rule: alpha-2 where the upstream names a *current* ISO country, else the upstream's own label — `Europe`, `Yugoslavia`, `XE`/`XW` reach you
+- ListenBrainz `ARTIST_POPULARITY` answers `NotFound` when its artist-popularity endpoint has nothing, instead of a payload holding only top tracks; request `ARTIST_TOP_TRACKS` for those
 
 ### Fixed
 - demo-web's discography now collapses a `(Remastered Version)` edition into its base album's row, matching the qualifier vocabulary core already strips before searching

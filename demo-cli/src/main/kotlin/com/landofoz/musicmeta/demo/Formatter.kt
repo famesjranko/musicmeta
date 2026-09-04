@@ -264,7 +264,6 @@ object Formatter {
         is EnrichmentData.Popularity -> buildString {
             data.listenerCount?.let { append("listeners=$it ") }
             data.listenCount?.let { append("plays=$it ") }
-            data.topTracks?.firstOrNull()?.let { append("top: ${it.title}") }
         }
         is EnrichmentData.BandMembers -> membersSummary(data.members)
         is EnrichmentData.Discography -> "${data.albums.size} albums"

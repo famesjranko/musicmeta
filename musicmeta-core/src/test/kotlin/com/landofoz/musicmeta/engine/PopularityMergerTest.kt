@@ -130,19 +130,6 @@ class PopularityMergerTest {
     }
 
     @Test
-    fun `an empty top-track list does not win over a populated one`() {
-        // Given - a leading source whose topTracks came back empty, and a later one with tracks
-        val winner = success("listenbrainz", EnrichmentData.Popularity(topTracks = emptyList()))
-        val loser = success("lastfm", EnrichmentData.Popularity(listenCount = 5))
-
-        // When - they are merged
-        val result = merged(winner, loser)
-
-        // Then - an empty list reads as absent, as it does everywhere else in the payload
-        assertNull(result.topTracks)
-    }
-
-    @Test
     fun `merging nothing is NotFound rather than an empty Success`() {
         // Given - a chain where every provider failed, so no successes reached the merger
         val results = emptyList<EnrichmentResult.Success>()

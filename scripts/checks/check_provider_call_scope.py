@@ -38,12 +38,13 @@ PROVIDER_ROOT = "musicmeta-core/src/main/kotlin/com/landofoz/musicmeta/provider"
 MENTION = "ProviderCallScope"
 
 # A directory whose types provably hit disjoint upstream endpoints has nothing to memoize, and this
-# is where that argument is written down for a reviewer to read. Starts empty: after the five
-# missing providers were fixed, all eleven provider directories mention `ProviderCallScope` directly,
-# so nothing needs an exemption today. This mapping exists for the twelfth provider, not the current
-# eleven — an untested empty branch is how an escape hatch turns out to be broken the first time
-# someone legitimately needs it.
-ALLOWLIST: dict[str, str] = {}
+# is where that argument is written down for a reviewer to read.
+ALLOWLIST: dict[str, str] = {
+    "listenbrainz": (
+        "one endpoint per type: popularity/artist, popularity/recording, "
+        "top-recordings-for-artist, top-release-groups-for-artist, explore/lb-radio"
+    ),
+}
 
 NO_PROVIDERS_FINDING = (
     f"::error::no directory with a `*Provider.kt` found under `{PROVIDER_ROOT}`, so this check "

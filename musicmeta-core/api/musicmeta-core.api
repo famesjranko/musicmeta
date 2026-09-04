@@ -778,21 +778,19 @@ public final class com/landofoz/musicmeta/EnrichmentData$Metadata$Companion {
 public final class com/landofoz/musicmeta/EnrichmentData$Popularity : com/landofoz/musicmeta/EnrichmentData {
 	public static final field Companion Lcom/landofoz/musicmeta/EnrichmentData$Popularity$Companion;
 	public fun <init> ()V
-	public fun <init> (Ljava/lang/Long;Ljava/lang/Long;Ljava/lang/Integer;Ljava/util/List;Ljava/util/List;)V
-	public synthetic fun <init> (Ljava/lang/Long;Ljava/lang/Long;Ljava/lang/Integer;Ljava/util/List;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/Long;Ljava/lang/Long;Ljava/lang/Integer;Ljava/util/List;)V
+	public synthetic fun <init> (Ljava/lang/Long;Ljava/lang/Long;Ljava/lang/Integer;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Ljava/lang/Long;
 	public final fun component2 ()Ljava/lang/Long;
 	public final fun component3 ()Ljava/lang/Integer;
 	public final fun component4 ()Ljava/util/List;
-	public final fun component5 ()Ljava/util/List;
-	public final fun copy (Ljava/lang/Long;Ljava/lang/Long;Ljava/lang/Integer;Ljava/util/List;Ljava/util/List;)Lcom/landofoz/musicmeta/EnrichmentData$Popularity;
-	public static synthetic fun copy$default (Lcom/landofoz/musicmeta/EnrichmentData$Popularity;Ljava/lang/Long;Ljava/lang/Long;Ljava/lang/Integer;Ljava/util/List;Ljava/util/List;ILjava/lang/Object;)Lcom/landofoz/musicmeta/EnrichmentData$Popularity;
+	public final fun copy (Ljava/lang/Long;Ljava/lang/Long;Ljava/lang/Integer;Ljava/util/List;)Lcom/landofoz/musicmeta/EnrichmentData$Popularity;
+	public static synthetic fun copy$default (Lcom/landofoz/musicmeta/EnrichmentData$Popularity;Ljava/lang/Long;Ljava/lang/Long;Ljava/lang/Integer;Ljava/util/List;ILjava/lang/Object;)Lcom/landofoz/musicmeta/EnrichmentData$Popularity;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getListenCount ()Ljava/lang/Long;
 	public final fun getListenerCount ()Ljava/lang/Long;
 	public final fun getRank ()Ljava/lang/Integer;
 	public final fun getSignals ()Ljava/util/List;
-	public final fun getTopTracks ()Ljava/util/List;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
@@ -1669,46 +1667,6 @@ public final class com/landofoz/musicmeta/MusicBrainzEntityType : java/lang/Enum
 }
 
 public abstract interface annotation class com/landofoz/musicmeta/MusicmetaTestApi : java/lang/annotation/Annotation {
-}
-
-public final class com/landofoz/musicmeta/PopularTrack {
-	public static final field Companion Lcom/landofoz/musicmeta/PopularTrack$Companion;
-	public fun <init> (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentIdentifiers;JILjava/lang/Long;Ljava/lang/Long;Ljava/lang/String;)V
-	public synthetic fun <init> (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentIdentifiers;JILjava/lang/Long;Ljava/lang/Long;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public final fun component1 ()Ljava/lang/String;
-	public final fun component2 ()Lcom/landofoz/musicmeta/EnrichmentIdentifiers;
-	public final fun component3 ()J
-	public final fun component4 ()I
-	public final fun component5 ()Ljava/lang/Long;
-	public final fun component6 ()Ljava/lang/Long;
-	public final fun component7 ()Ljava/lang/String;
-	public final fun copy (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentIdentifiers;JILjava/lang/Long;Ljava/lang/Long;Ljava/lang/String;)Lcom/landofoz/musicmeta/PopularTrack;
-	public static synthetic fun copy$default (Lcom/landofoz/musicmeta/PopularTrack;Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentIdentifiers;JILjava/lang/Long;Ljava/lang/Long;Ljava/lang/String;ILjava/lang/Object;)Lcom/landofoz/musicmeta/PopularTrack;
-	public fun equals (Ljava/lang/Object;)Z
-	public final fun getAlbum ()Ljava/lang/String;
-	public final fun getDurationMs ()Ljava/lang/Long;
-	public final fun getIdentifiers ()Lcom/landofoz/musicmeta/EnrichmentIdentifiers;
-	public final fun getListenCount ()J
-	public final fun getListenerCount ()Ljava/lang/Long;
-	public final fun getRank ()I
-	public final fun getTitle ()Ljava/lang/String;
-	public fun hashCode ()I
-	public fun toString ()Ljava/lang/String;
-}
-
-public synthetic class com/landofoz/musicmeta/PopularTrack$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
-	public static final field INSTANCE Lcom/landofoz/musicmeta/PopularTrack$$serializer;
-	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
-	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Lcom/landofoz/musicmeta/PopularTrack;
-	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
-	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
-	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Lcom/landofoz/musicmeta/PopularTrack;)V
-	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
-	public fun typeParametersSerializers ()[Lkotlinx/serialization/KSerializer;
-}
-
-public final class com/landofoz/musicmeta/PopularTrack$Companion {
-	public final fun serializer ()Lkotlinx/serialization/KSerializer;
 }
 
 public final class com/landofoz/musicmeta/PopularitySignal {

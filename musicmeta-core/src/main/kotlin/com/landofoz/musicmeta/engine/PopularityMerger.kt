@@ -33,7 +33,6 @@ internal class PopularityMerger(override val type: EnrichmentType) : ResultMerge
             listenCount = payloads.firstNotNullOfOrNull { it.listenCount },
             listenerCount = payloads.firstNotNullOfOrNull { it.listenerCount },
             rank = payloads.firstNotNullOfOrNull { it.rank },
-            topTracks = payloads.firstNotNullOfOrNull { it.topTracks?.takeIf(List<*>::isNotEmpty) },
             signals = payloads.flatMap { it.signals },
         )
 

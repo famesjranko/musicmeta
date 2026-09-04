@@ -74,20 +74,6 @@ class EnrichmentIdentifiersTest {
         assertEquals("abc123", artist.identifiers.musicBrainzId)
     }
 
-    @Test fun `PopularTrack has identifiers field`() {
-        // Given - an identifiers value
-        // When - a PopularTrack is created with it
-        val track = PopularTrack(
-            title = "Creep",
-            identifiers = EnrichmentIdentifiers(musicBrainzId = "track-123"),
-            listenCount = 50000L,
-            rank = 1,
-        )
-
-        // Then - identifiers accessible
-        assertEquals("track-123", track.identifiers.musicBrainzId)
-    }
-
     @Test fun `with stores a namespaced identifier retrievable via get`() {
         // Given - empty identifiers
         val ids = EnrichmentIdentifiers()
