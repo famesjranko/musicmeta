@@ -2,7 +2,6 @@ package com.landofoz.musicmeta.provider.musicbrainz
 
 import com.landofoz.musicmeta.EnrichmentConfig
 import com.landofoz.musicmeta.MusicBrainzEntityType
-import com.landofoz.musicmeta.discoverMbidEntityType
 import com.landofoz.musicmeta.engine.DefaultEnrichmentEngine
 import com.landofoz.musicmeta.engine.ProviderCallScope
 import com.landofoz.musicmeta.engine.ProviderRegistry

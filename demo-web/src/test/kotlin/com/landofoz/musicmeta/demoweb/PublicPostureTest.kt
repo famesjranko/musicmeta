@@ -8,9 +8,13 @@ import com.landofoz.musicmeta.EnrichmentProvider
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
+import com.landofoz.musicmeta.MusicBrainzEntityType
 import com.landofoz.musicmeta.ProviderCapability
+import com.landofoz.musicmeta.ProviderInfo
+import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.cache.CacheMode
 import com.landofoz.musicmeta.cache.InMemoryEnrichmentCache
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -402,5 +406,37 @@ class PublicPostureTest {
         // Then - the Discogs image is served, so the relaxation reaches the engine wiring itself
         assertEquals(200, response.statusCode())
         assertTrue(response.body().contains(discogsArt))
+    }
+
+    /** An engine that answers what an identifier names, standing in for the one `main` wraps. */
+    private class MbidAnsweringEngine : EnrichmentEngine {
+        override val cache = InMemoryEnrichmentCache()
+        override suspend fun enrich(
+            request: EnrichmentRequest,
+            types: Set<EnrichmentType>,
+            forceRefresh: Boolean,
+        ): Nothing = throw UnsupportedOperationException()
+
+        override suspend fun search(request: EnrichmentRequest, limit: Int): List<SearchCandidate> = emptyList()
+        override fun getProviders(): List<ProviderInfo> = emptyList()
+        override suspend fun invalidate(request: EnrichmentRequest, type: EnrichmentType?) = Unit
+        override suspend fun isManuallySelected(request: EnrichmentRequest, type: EnrichmentType): Boolean = false
+        override suspend fun markManuallySelected(request: EnrichmentRequest, type: EnrichmentType) = Unit
+        override suspend fun discoverMbidEntityType(mbid: String) = MusicBrainzEntityType.RECORDING
+    }
+
+    @Test fun `the posture wrapper still answers what a bare identifier names`() {
+        // Given - a public instance whose engine is wrapped to withhold Discogs images
+        val engine = PublicPostureEngine(MbidAnsweringEngine())
+
+        // When - the wrapper is asked what an identifier names, as the mbid route does
+        val entity = runBlocking { engine.discoverMbidEntityType(RECORDING_MBID) }
+
+        // Then - the wrapped engine's answer reaches the caller instead of the wrapper refusing
+        assertEquals(MusicBrainzEntityType.RECORDING, entity)
+    }
+
+    private companion object {
+        const val RECORDING_MBID = "b1a9c0e9-d987-4042-ae91-78d6a3267d69"
     }
 }

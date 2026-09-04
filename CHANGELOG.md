@@ -53,6 +53,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Builder.build()` also throws when one type has both a `CompositeSynthesizer` and a `ResultMerger`: the merger could never run, so the registration was silently dead
 - `PopularTrack` and `Popularity.topTracks` are removed: `ARTIST_TOP_TRACKS` carries the same tracks as `TopTrack`; cached `Popularity` entries still decode (the key is ignored)
 - `EnrichmentIdentifiers.get(String)`/`withExtra(String, String)` go: use `get(IdentifierNamespace)`/`with(...)`; new `DISCOGS_RELEASE`, `DISCOGS_MASTER`, `ITUNES_COLLECTION` keep the wire keys
+- `EnrichmentEngine` gains `discoverMbidEntityType`, a defaulted method: a custom implementation built against an older `.jar` throws `AbstractMethodError` on first call until recompiled
+- The top-level `discoverMbidEntityType` extension is removed, superseded by that member: drop `import com.landofoz.musicmeta.discoverMbidEntityType`; an old `.jar` throws `NoSuchMethodError`
 
 ### Added
 - `enrichDeadlineRemainingMs()`: what is left of the enclosing `enrich()` deadline, for a custom `HttpClient` to clamp its transport timeouts down to; null outside an enrich call
@@ -110,6 +112,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - demo-web's album "Did You Mean?" rows now name their release type and list albums before singles, so a suggestion list no longer reads as a track list
 - `enrich()` now returns within `enrichTimeoutMs` plus slack even when an upstream accepts no connection or stalls mid-redirect: the remaining budget rides the socket's own timeouts, in both clients
 - A track title merely ending in brackets ("(Reprise)", "(feat. X)") no longer forfeits the deep canonical recording pool: both pools union, keeping the studio take in reach
+- demo-web answers an MBID lookup on a public instance again: withholding Discogs images wraps the engine, and every `kind=mbid` request under that posture used to fail
 - MusicBrainz's release-group browse works again: its URL carried a raw `|` that the transport rejects, so every discography browse and album did-you-mean fallback failed since the browse shipped
 - `RELEASE_EDITIONS` from MusicBrainz now returns up to 100 editions per album, the browse maximum, in place of a silent cap at 25
 - demo-web's card image now prefers a Deezer/iTunes CDN URL over Cover Art Archive's when both are available, cutting card paint latency from seconds to well under a second

@@ -39,6 +39,9 @@ private const val TAG = "EnrichmentEngine"
  */
 private val CONTACT_REQUIRING_PROVIDERS = setOf("musicbrainz", "wikipedia", "wikidata")
 
+// TooManyFunctions: this is the published four-role boundary, so a capability a consumer calls
+// belongs on it; splitting it to satisfy a count would move the break onto every implementor.
+@Suppress("TooManyFunctions")
 public interface EnrichmentEngine {
 
     /**
@@ -250,6 +253,27 @@ public interface EnrichmentEngine {
 
     /** Marks data as manually selected by the user, protecting it from automatic overwrites. */
     public suspend fun markManuallySelected(request: EnrichmentRequest, type: EnrichmentType)
+
+    /**
+     * What [mbid] names, or null when MusicBrainz holds it under no entity type — the answer needed
+     * before an identifier-only request can be built, since an MBID does not say what it identifies
+     * and MusicBrainz has no endpoint that takes one without its type. Pair it with
+     * [EnrichmentRequest.forTrackByMbid] and its siblings.
+     *
+     * Costs 1 to 3 requests on MusicBrainz's 1 req/s limiter: the types are probed **recording,
+     * then release, then artist**, so a recording is one request, a release two, an artist three,
+     * and an identifier held under none of them three. Recording leads because that is where
+     * third-party identifiers overwhelmingly come from — and a dead one is not a corner case, per
+     * the measurement on [EnrichmentRequest.forAlbumByMbid]. `docs/how-it-works.md` records the
+     * ListenBrainz alternative that was measured against this ordering and lost.
+     *
+     * A transient failure throws rather than answering null — an outage is not an absence. So does
+     * an `IllegalStateException` for an engine with no MusicBrainz identity provider to probe,
+     * which is what the default here does: neither is an answer about [mbid], and returning null
+     * for them would read as one. An engine that wraps another overrides this to forward it.
+     */
+    public suspend fun discoverMbidEntityType(mbid: String): MusicBrainzEntityType? =
+        error("This engine cannot resolve an MBID's type: it has no MusicBrainz identity provider to probe")
 
     public class Builder {
         private val providers = mutableListOf<EnrichmentProvider>()

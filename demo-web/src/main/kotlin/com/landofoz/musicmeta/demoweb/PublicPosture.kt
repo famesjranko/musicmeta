@@ -9,6 +9,7 @@ import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentResults
 import com.landofoz.musicmeta.EnrichmentType
+import com.landofoz.musicmeta.MusicBrainzEntityType
 import com.landofoz.musicmeta.ProviderInfo
 import com.landofoz.musicmeta.SearchCandidate
 import kotlinx.coroutines.flow.Flow
@@ -186,6 +187,9 @@ internal class PublicPostureEngine(private val delegate: EnrichmentEngine) : Enr
 
     override suspend fun markManuallySelected(request: EnrichmentRequest, type: EnrichmentType) =
         delegate.markManuallySelected(request, type)
+
+    override suspend fun discoverMbidEntityType(mbid: String): MusicBrainzEntityType? =
+        delegate.discoverMbidEntityType(mbid)
 
     override fun close() = delegate.close()
 }
