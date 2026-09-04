@@ -360,7 +360,7 @@ val config = EnrichmentConfig(radioDiscoveryMode = RadioDiscoveryMode.EASY)
 val config = EnrichmentConfig(radioDiscoveryMode = RadioDiscoveryMode.HARD)
 ```
 
-Without `listenBrainzToken`, `ARTIST_RADIO_DISCOVERY` is silently absent — `NotFound` is returned and all other ListenBrainz capabilities continue working.
+Without `ApiKey.LISTENBRAINZ_USER_TOKEN`, `ARTIST_RADIO_DISCOVERY` is silently absent — `NotFound` is returned and all other ListenBrainz capabilities continue working.
 
 ### Track preview
 
