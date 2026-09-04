@@ -123,6 +123,27 @@ class EditionVocabularyTest(unittest.TestCase):
         # Then the check stays silent — only the vocabulary is duplicated, so only it is compared
         self.assertEqual([], found)
 
+    # --- the parser cannot pass by understanding only a prefix ---
+
+    def test_reads_past_an_escaped_paren_inside_a_regex_literal(self) -> None:
+        # Given a regex holding an escaped `)` — which does not close the declaration — and a
+        # genuine drift in a kind declared after it
+        escaped = [("anniversary_edition", r"anniversary\)(\s+edition)?"), *SHARED]
+        found = self.run_kinds(escaped, [escaped[0], SHARED[0], ("deluxe", r"deluxes")])
+        # Then the kinds past the escaped paren are still compared, so the drift is reported
+        self.assertEqual(1, len(found))
+        self.assertIn("the `deluxe` pattern has drifted", found[0])
+
+    def test_fails_when_an_entry_in_the_list_does_not_parse(self) -> None:
+        # Given a list whose second entry names its regex by constant, so the entry pattern skips it
+        core = CORE_TEMPLATE.format(entries=entries(SHARED))
+        readable = entries([SHARED[0]])
+        demo = DEMO_TEMPLATE.format(entries=readable + "\n        KindPattern(DELUXE, DELUXE_PATTERN),")
+        found = self.run_against(core, demo)
+        # Then the count cross-check fails it, rather than comparing the one entry it could read
+        self.assertEqual(1, len(found))
+        self.assertIn("declares 2 kinds but only 1 parsed", found[0])
+
     # --- the parser cannot pass by understanding nothing ---
 
     def test_fails_when_a_file_no_longer_declares_the_list(self) -> None:

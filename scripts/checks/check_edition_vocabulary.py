@@ -50,6 +50,11 @@ class NotFound(Exception):
 def declaration_body(text: str, rel: str) -> str:
     """The text between `listOf(` and its matching `)`, for the `KIND_PATTERNS` declaration.
 
+    Parens inside a string literal do not nest, so the scan skips over Kotlin's raw and quoted
+    string spans rather than counting through them: every value in the list is a regex, and a regex
+    is free to hold an escaped `\\)` that would otherwise close the declaration early, truncating
+    the list to a prefix that still parses.
+
     Raises `NotFound` rather than returning empty: a parse that quietly yields nothing would let
     this check pass on a file it no longer understands, which is the silent divergence it exists
     to catch.
@@ -58,23 +63,56 @@ def declaration_body(text: str, rel: str) -> str:
     if anchor < 0:
         raise NotFound(f"{rel} holds no `{DECLARATION}` declaration")
     start = anchor + len(DECLARATION)
-    depth = 1
-    for index in range(start, len(text)):
+    index, depth = start, 1
+    while index < len(text):
+        if text.startswith('"""', index):
+            close = text.find('"""', index + 3)
+            if close < 0:
+                break
+            index = close + 3
+            continue
         char = text[index]
+        if char == '"':
+            index = end_of_quoted(text, index)
+            continue
         if char == "(":
             depth += 1
         elif char == ")":
             depth -= 1
             if depth == 0:
                 return text[start:index]
+        index += 1
     raise NotFound(f"{rel}'s `{DECLARATION}` is never closed")
 
 
+def end_of_quoted(text: str, index: int) -> int:
+    """The offset just past the `"…"` literal opening at `index`, honouring `\\` escapes."""
+    index += 1
+    while index < len(text):
+        if text[index] == "\\":
+            index += 2
+            continue
+        if text[index] == '"':
+            return index + 1
+        index += 1
+    return index
+
+
 def kind_patterns(text: str, rel: str) -> list[tuple[str, str]]:
-    """The `(kind, regex literal)` pairs of a file's `KIND_PATTERNS`, in declaration order."""
-    entries = ENTRY.findall(declaration_body(text, rel))
+    """The `(kind, regex literal)` pairs of a file's `KIND_PATTERNS`, in declaration order.
+
+    Every `KindPattern(` in the body must yield a pair. A count that falls short means the body was
+    cut short or an entry took a shape [ENTRY] cannot read, and either way the comparison would run
+    on a prefix and report the kinds past it as being in sync — the silent pass this check exists
+    to prevent, so it is an error rather than a shorter list.
+    """
+    body = declaration_body(text, rel)
+    entries = ENTRY.findall(body)
+    declared = body.count("KindPattern(")
     if not entries:
         raise NotFound(f"{rel}'s `KIND_PATTERNS` parsed to zero entries")
+    if len(entries) != declared:
+        raise NotFound(f"{rel}'s `KIND_PATTERNS` declares {declared} kinds but only {len(entries)} parsed")
     return entries
 
 
@@ -131,12 +169,16 @@ def findings(root: Path) -> list[str]:
 
     core_text = (root / CORE_FILE).read_text(encoding="utf-8")
     demo_text = (root / DEMO_FILE).read_text(encoding="utf-8")
-    try:
-        core = kind_patterns(core_text, CORE_FILE)
-        demo = kind_patterns(demo_text, DEMO_FILE)
-    except NotFound as failure:
-        message = f"{failure}, {NEVER_COMPARED}. Update check_edition_vocabulary.py's parser to match the new shape."
-        return [error(DEMO_FILE, 1, message)]
+    parsed: dict[str, list[tuple[str, str]]] = {}
+    for rel, text in ((CORE_FILE, core_text), (DEMO_FILE, demo_text)):
+        try:
+            parsed[rel] = kind_patterns(text, rel)
+        except NotFound as failure:
+            message = (
+                f"{failure}, {NEVER_COMPARED}. Update check_edition_vocabulary.py's parser to match the new shape."
+            )
+            return [error(rel, 1, message)]
+    core, demo = parsed[CORE_FILE], parsed[DEMO_FILE]
 
     core_kinds = [kind for kind, _ in core]
     demo_kinds = [kind for kind, _ in demo]
