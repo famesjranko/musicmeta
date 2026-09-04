@@ -83,7 +83,7 @@ val chosen = candidates.first() // whichever one the user picked
 val profile = engine.artistProfile(chosen)
 ```
 
-Show the list in the order it arrives, and **do not sort it by `score`**, because that number is each
+Show the list in the order it arrives, and **do not sort it by `matchScore`**, because that number is each
 provider's own, not comparable across them, so sorting on it ranks unlike scales.
 
 The same candidates surface unprompted when a name is ambiguous: an enriched profile carries

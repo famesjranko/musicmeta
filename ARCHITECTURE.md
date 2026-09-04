@@ -206,16 +206,16 @@ provider that returned nothing.
 The missing edges are why this call exists as a separate path rather than a thin `enrich()`
 wrapper. Skipping the cache is what lets a search-ahead UI call this per keystroke without
 writing an entry, and later expiring, for every character the user typed. Skipping gating is the
-corresponding cost: a `SearchCandidate` carries a `score`, not the confidence and provenance
+corresponding cost: a `SearchCandidate` carries a `matchScore`, not the confidence and provenance
 `enrich()` stamps on a `Success`, so it is a pick-list entry, not an enriched result — a caller
 that treats one as the other is treating an unvetted guess as gated data.
 
-**`score` is a provider's own number, and the list is not sorted by it.** The identity provider
-returns an upstream relevance score; a supplemental provider that has no such number returns a
-flat constant standing in for one. Nothing normalises the two, and the returned list is the
-identity provider's candidates followed by whatever the others uniquely added — provenance
-order, not merit order. A UI that re-sorts on `score` is ranking a relevance score against a
-constant. This is the shape of every unmerged, ungated result the engine hands back: comparable
+**`matchScore` is one scale, and the list is still not sorted by it.** Every candidate arrives
+on 0.0–1.0, but that only makes the numbers the same shape, not the same claim: the identity
+provider divides down an upstream relevance score, while a supplemental provider that has no such
+number returns a flat constant standing in for one. The returned list is the identity provider's
+candidates followed by whatever the others uniquely added — provenance order, not merit order. A
+UI that re-sorts on `matchScore` is ranking a relevance score against a constant. This is the shape of every unmerged, ungated result the engine hands back: comparable
 within a provider, not across them.
 
 ## What the eleventh provider costs

@@ -5,7 +5,7 @@ Identity resolution is the step that makes downstream providers accurate. Before
 ## How it works
 
 1. The engine calls `MusicBrainzProvider.resolveIdentity()` with the request (title + artist text).
-2. MusicBrainz returns search results ranked by score (0–100).
+2. MusicBrainz returns search results ranked by its own score (0–100), which the mapper divides by 100 before it reaches `matchScore`.
 3. If the top result is confident enough, the engine populates `EnrichmentIdentifiers` on the request with the MBID, Wikidata ID, and Wikipedia title.
 4. All subsequent providers receive the enriched request and can do ID-based lookups instead of fuzzy text search.
 
@@ -90,7 +90,7 @@ matched, not what an identifier named. An artist's own name arrives as `title` w
 the same shape a `SearchCandidate` for an artist has.
 
 `matchScore` measures how well the lookup went, not whether the entity is the one the caller meant.
-A request carrying an identifier resolves by looking it up, and that lookup scores 100 whether or
+A request carrying an identifier resolves by looking it up, and that lookup scores 1.0 whether or
 not the identifier names what the caller described — a wrong-but-live MBID resolves at full score.
 Read `status` for that question instead: `CONTRADICTED` is the only status that reports a supplied
 identifier naming something else, and `NOT_ATTEMPTED_IDENTIFIER_TRUSTED` means nobody checked at
@@ -162,14 +162,14 @@ With profile methods, the same flow is available via `profile.suggestions` and t
 | Field | Type | Description |
 |-------|------|-------------|
 | `title` | `String` | Artist name or album/track title |
+| `provider` | `String` | Source provider (typically "musicbrainz") |
+| `identifiers` | `EnrichmentIdentifiers` | MBIDs and linked IDs — use `identifiers.musicBrainzId` when re-enriching |
+| `matchScore` | `Float` | 0.0–1.0, how well the candidate matched within its own provider's pool |
 | `artist` | `String?` | Artist name (null for artist queries) |
 | `year` | `String?` | Release year |
 | `country` | `String?` | Release country code (e.g., "GB") |
 | `releaseType` | `String?` | "Album", "Single", "EP", etc. |
-| `score` | `Int` | MusicBrainz relevance score (0–100) |
 | `thumbnailUrl` | `String?` | Cover art or artist image thumbnail. Always null on a MusicBrainz candidate — a release search response carries no cover-art flag — so it is populated only for the Deezer and iTunes candidates `search()` adds |
-| `identifiers` | `EnrichmentIdentifiers` | MBIDs and linked IDs — use `identifiers.musicBrainzId` when re-enriching |
-| `provider` | `String` | Source provider (typically "musicbrainz") |
 | `disambiguation` | `String?` | MusicBrainz disambiguation comment (e.g., "British rock band" vs "Canadian band") |
 
 ---
