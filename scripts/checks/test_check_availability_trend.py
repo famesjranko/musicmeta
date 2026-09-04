@@ -11,6 +11,8 @@ Run with: python3 test_check_availability_trend.py
 
 from __future__ import annotations
 
+import contextlib
+import io
 import sys
 import tempfile
 import unittest
@@ -289,8 +291,9 @@ class AvailabilityTrendTest(unittest.TestCase):
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text("\n".join([HEADER, *lines]) + "\n", encoding="utf-8")
 
-            # When - the check runs against it
-            status = main(["--root", tmp, "--counts-file", runner_file, "--collect-only"])
+            # When - the check runs against it, with its findings captured rather than printed
+            with contextlib.redirect_stdout(io.StringIO()):
+                status = main(["--root", tmp, "--counts-file", runner_file, "--collect-only"])
 
         # Then - it exits green, because collect-only judges nothing
         self.assertEqual(status, 0)

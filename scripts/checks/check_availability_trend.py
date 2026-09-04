@@ -78,9 +78,12 @@ class Threshold(NamedTuple):
 # default because it is the only threshold anyone has derived; it is not a general number.
 LAPTOP_THRESHOLD = Threshold(3, 20)
 
-# How many runs a series needs before its own baseline can be derived from it. Eight weekly runs is
-# two months of a fortnightly false-alarm figure — enough for a per-provider failure share to mean
-# something, and short enough that a collect-only series is not collecting forever.
+# How many runs before the check starts asking for a baseline. A judgement about how long
+# collect-only may reasonably last, not a measured quantity: nothing establishes that eight runs
+# make a per-provider failure share reliable. It is two months at weekly cadence — long enough to
+# be worth deriving from, short enough that a collect-only series is not collecting forever. The
+# derivation itself is what says whether the rows support a threshold; this only decides when
+# somebody is asked to look.
 READY_AT_RUNS = 8
 
 # The schema pin's vocabulary, and nothing else. `PinVerdict.Unavailable` is built as

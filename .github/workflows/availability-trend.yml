@@ -24,10 +24,11 @@ name: Provider availability trend
 # `scripts/probes/provider-availability-counts.csv` on `main`, and are deliberately kept in a
 # different file on a different branch so that no reader and no parser can mix them.
 #
-# **Why the counts branch and not an artifact.** ~90 rows a week is ~4.7k a year: diffable,
-# permanent, greppable, and the history outlives any retention policy. Artifact retention is 30
-# days by default, which at weekly cadence holds four samples — not a trend, and it would make a
-# retention setting load-bearing for a signal defined in months.
+# **Why the counts branch and not an artifact.** A run writes one row per target per kind it saw,
+# so a healthy week is ~10 rows and a bad one a few more: ~500 rows a year. Diffable, permanent,
+# greppable, and the history outlives any retention policy. Artifact retention is 30 days by
+# default, which at weekly cadence holds four samples — not a trend, and it would make a retention
+# setting load-bearing for a signal defined in months.
 
 on:
   schedule:
@@ -51,7 +52,12 @@ concurrency:
 jobs:
   trend:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    # The probe's worst case is every request timing out: `ROUNDS × targets × (TIMEOUT + SPACING)`,
+    # which at 20 × 9 × (10 + 1.2) is ~34 minutes. That is the week worth measuring, so the ceiling
+    # has to clear it — a job killed inside the probe writes no row at all, and a total outage would
+    # leave the series with a gap exactly where it should hold its most interesting run. Recompute
+    # from that formula if `ROUNDS` moves.
+    timeout-minutes: 45
 
     env:
       # The series, and the branch it lives on. The branch holds this one file and nothing else, so
@@ -76,11 +82,19 @@ jobs:
         # The branch may not exist on the first run, and a first run must not be a failed run.
         # `git show` of the branch's blob rather than a checkout: the probe and the check must come
         # from this workflow's own commit, not from whatever the counts branch happens to carry.
+        #
+        # `ls-remote` decides whether the branch exists, so that question is answered separately
+        # from whether the fetch worked. Swallowing a fetch failure would conflate the two: a
+        # transient network error would read as "no branch yet" and start a parentless series,
+        # which is only rejected at the push — after the run has already spent its live requests.
         run: |
           set -eo pipefail
-          git fetch --no-tags origin "+refs/heads/${COUNTS_BRANCH}:refs/remotes/origin/${COUNTS_BRANCH}" || true
-          if git rev-parse -q --verify "refs/remotes/origin/${COUNTS_BRANCH}" >/dev/null; then
-            git show "origin/${COUNTS_BRANCH}:${COUNTS_FILE}" > "${COUNTS_FILE}"
+          if git ls-remote --exit-code --heads origin "${COUNTS_BRANCH}" >/dev/null; then
+            git fetch --no-tags origin "+refs/heads/${COUNTS_BRANCH}:refs/remotes/origin/${COUNTS_BRANCH}"
+            git show "origin/${COUNTS_BRANCH}:${COUNTS_FILE}" > "${COUNTS_FILE}" || {
+              echo "::error::${COUNTS_BRANCH} exists but holds no ${COUNTS_FILE}. The branch carries the series and nothing else; something else wrote to it."
+              exit 1
+            }
             echo "::notice::Read $(( $(wc -l < "${COUNTS_FILE}") - 1 )) rows from ${COUNTS_BRANCH}."
           else
             rm -f "${COUNTS_FILE}"
@@ -96,8 +110,12 @@ jobs:
       - name: Commit the row
         # Before the check, deliberately, and mirroring the probe's own ordering: a run that
         # measured 180 requests and then failed its reading must not lose the measurement. The
-        # commit is built with plumbing so the branch holds exactly this one file — a checkout of
-        # `main` followed by a commit would carry the whole tree onto the counts branch forever.
+        # cost of that order is that a row the check would have rejected is already committed, and
+        # the series is append-only: fixing one means rewriting the counts branch by hand and
+        # force-pushing it, which is why the check reports the malformed row loudly enough to act on.
+        #
+        # The commit is built with plumbing so the branch holds exactly this one file — a checkout
+        # of `main` followed by a commit would carry the whole tree onto the counts branch forever.
         # Pushed without --force: a lost update is a loud non-fast-forward, not a silent gap.
         run: |
           set -eo pipefail
