@@ -85,18 +85,49 @@ internal object SimilarArtistMerger : ResultMerger {
     }
 
     /**
+     * The alias pool an entity is published under, by the name an entry carries.
+     *
+     * A seam the probe fills offline. Production resolves one pool per call for the *requested*
+     * artist; a pool per similar-artist entry is a lookup this merger has no way to make.
+     */
+    internal var aliasPoolLookup: (String) -> List<AlternativeName> = { emptyList() }
+
+    /**
      * The entries of [artists] that are one act, in first-occurrence order.
      *
-     * The key is the normalized name and nothing else, so two providers naming one act differently
-     * stay two groups.
+     * An entry carrying an MBID joins the group carrying that same MBID; failing that it joins a
+     * same-name group, or a group whose alias pool publishes it, only while that group carries no
+     * MBID of its own. An entry carrying no MBID takes the same two name paths without that guard.
+     * Two entries whose MBIDs disagree therefore never land in one group, whatever a pool says.
      */
     internal fun groupArtists(artists: List<SimilarArtist>): List<List<SimilarArtist>> {
-        val grouped = LinkedHashMap<String, MutableList<SimilarArtist>>()
+        val groups = mutableListOf<MutableList<SimilarArtist>>()
+        val groupMbid = mutableListOf<String?>()
+        val groupName = mutableListOf<String>()
         for (artist in artists) {
-            grouped.getOrPut(normalize(artist.name)) { mutableListOf() }.add(artist)
+            val mbid = artist.identifiers.musicBrainzId
+            val key = normalize(artist.name)
+            val open = groupName.indices.filter { mbid == null || groupMbid[it] == null || groupMbid[it] == mbid }
+            val index = if (mbid == null) -1 else groupMbid.indexOfFirst { it == mbid }
+            val joined = index.takeIf { it >= 0 }
+                ?: open.firstOrNull { normalize(groupName[it]) == key }
+                ?: open.firstOrNull { onePoolHoldsBoth(groupName[it], artist.name) }
+            if (joined == null) {
+                groups += mutableListOf(artist)
+                groupMbid += mbid
+                groupName += artist.name
+            } else {
+                groups[joined] += artist
+                if (groupMbid[joined] == null) groupMbid[joined] = mbid
+            }
         }
-        return grouped.values.toList()
+        return groups
     }
+
+    /** Whether either name's own alias pool publishes the other, at same name. */
+    private fun onePoolHoldsBoth(one: String, other: String): Boolean =
+        nameMatchTier(other, one, aliasPoolLookup(one)) != NameMatchTier.NONE ||
+            nameMatchTier(one, other, aliasPoolLookup(other)) != NameMatchTier.NONE
 
     private fun normalize(name: String): String = name.trim().lowercase()
 }
