@@ -1,0 +1,902 @@
+[
+  {
+    "artist_mbid": "b328de0e-ee48-4d74-9d36-7c7ee16ffc69",
+    "name": "GoGo Penguin",
+    "comment": "UK jazz trio",
+    "type": "Group",
+    "gender": null,
+    "score": 249,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "d1785218-d8f4-4a83-a33d-8cf737eef918",
+    "name": "Machinedrum",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 204,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "17d78170-7194-4603-8dbb-ca1108430882",
+    "name": "Avishai Cohen",
+    "comment": "Israeli jazz bassist",
+    "type": "Person",
+    "gender": "Male",
+    "score": 181,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "5fd9d175-1fed-45e5-a2b4-e4e727f34d8b",
+    "name": "Mammal Hands",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 153,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "32895c04-8e3c-491b-9382-e1c6eda5ee5f",
+    "name": "Artyom Manukyan",
+    "comment": "cellist",
+    "type": "Person",
+    "gender": "Male",
+    "score": 145,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "0efa1646-360b-45b8-bd00-29ae7c0ffc34",
+    "name": "Arve Henriksen",
+    "comment": "Norwegian trumpeter",
+    "type": "Person",
+    "gender": "Male",
+    "score": 143,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "cfa7c6b1-bbb3-4f9a-a636-cbfafb9b4bcf",
+    "name": "Esbjörn Svensson Trio",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 134,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "0e6e5a3e-b5cb-45ff-97f4-c23c88efc563",
+    "name": "Portico Quartet",
+    "comment": "instrumental band from London",
+    "type": "Group",
+    "gender": null,
+    "score": 132,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "b9bede5d-89b6-4c43-9c45-ca3930cf4db8",
+    "name": "The Bad Plus",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 128,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "d0b9a780-439a-4c4e-a658-4b0d81fa6796",
+    "name": "Neil Cowley Trio",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 120,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "fe85367e-4036-43c1-874b-b91af81cb4f3",
+    "name": "Snarky Puppy",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 114,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "a6faa805-989d-4529-9cf6-342a8e883423",
+    "name": "Lars Danielsson",
+    "comment": "Swedish jazz bassist, composer and producer",
+    "type": "Person",
+    "gender": "Male",
+    "score": 108,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "b7723b3f-9a35-438d-bc42-8ad8b5e027ae",
+    "name": "Brad Mehldau",
+    "comment": "American jazz pianist, composer, and arranger",
+    "type": "Person",
+    "gender": "Male",
+    "score": 107,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "9edadf07-e3a3-48b4-bff0-6a5c04298f5d",
+    "name": "Tosin Abasi",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 105,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "05da8a7c-676d-4d8a-a514-e25ee526a98f",
+    "name": "Avishai Cohen Trio",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 90,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "2d3f545f-f56d-47cf-93c6-956c4fea6b39",
+    "name": "Ambrose Akinmusire",
+    "comment": "US post bop trumpeter",
+    "type": "Person",
+    "gender": "Male",
+    "score": 86,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "af575726-1437-4b53-b6e6-343bc5f16817",
+    "name": "Ibrahim Maalouf",
+    "comment": "French-Lebanese jazz musician",
+    "type": "Person",
+    "gender": "Male",
+    "score": 86,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "e193397d-a888-4b4d-b11d-2a602c24b023",
+    "name": "Dhafer Youssef",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 85,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "f22942a1-6f70-4f48-866e-238cb2308fbd",
+    "name": "Aphex Twin",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 82,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "2c43503a-fb94-433a-98a9-8898367ea71f",
+    "name": "Brad Mehldau Trio",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 81,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "4dd62d49-9868-465b-882f-733afb40eb0d",
+    "name": "Aaron Parks",
+    "comment": "jazz pianist",
+    "type": "Person",
+    "gender": "Male",
+    "score": 78,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "29b9d080-7de7-4608-8a50-57274a611bdd",
+    "name": "Chief Xian aTunde Adjuah",
+    "comment": "US jazz musician",
+    "type": "Person",
+    "gender": "Male",
+    "score": 76,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "d03a54bc-6e07-4c04-a8d4-7fbf2bd07a01",
+    "name": "Nils Frahm",
+    "comment": "German pianist and score composer",
+    "type": "Person",
+    "gender": "Male",
+    "score": 75,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "f315f045-48e3-4a45-a4ed-14c9a522e4db",
+    "name": "Phronesis",
+    "comment": "danish jazz trio",
+    "type": "Group",
+    "gender": null,
+    "score": 74,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "b00a17c3-72b2-4e39-96f9-770ba6cf4573",
+    "name": "Joshua Redman",
+    "comment": "tenor saxophonist",
+    "type": "Person",
+    "gender": "Male",
+    "score": 73,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "c7a3e868-c6d8-4512-a5ef-f6cbe42899b0",
+    "name": "Kamasi Washington",
+    "comment": "US jazz saxophonist",
+    "type": "Person",
+    "gender": "Male",
+    "score": 71,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "f30eb720-5cb6-4b44-a289-07ced7971041",
+    "name": "Bill Laurance",
+    "comment": "English composer & multi-instrumentalist",
+    "type": "Person",
+    "gender": "Male",
+    "score": 70,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "1a5edb78-1fd2-40f2-b61a-dd76bafb219b",
+    "name": "Jan Bang",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 69,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "6d75cf4b-82b5-4fbe-a09a-5963af6d7576",
+    "name": "Takuya Kuroda",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 63,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "1f914f5d-3546-45bd-b3bd-f58a6843a98b",
+    "name": "Tonbruket",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 60,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "0e0d5912-4026-47ef-be1c-c876c7108dd2",
+    "name": "Rochelle Jordan",
+    "comment": "UK‐born, CA‐raised, US‐based R&B singer",
+    "type": "Person",
+    "gender": "Female",
+    "score": 59,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "b191a9d7-9f6b-4fc8-a097-488cf79d0242",
+    "name": "Matthew Halsall",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 59,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "beb404c4-9d0b-4042-a56c-aad7673c677d",
+    "name": "Sungazer",
+    "comment": "electrojazz duo from New York",
+    "type": "Group",
+    "gender": null,
+    "score": 57,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "4b5cf460-0f9f-4453-9191-0f129461d897",
+    "name": "Kneebody",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 55,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "0e4b69f3-6644-4548-8739-16eabde215ac",
+    "name": "Tim Smith",
+    "comment": "UK vocals/guitar/keyboards for Cardiacs",
+    "type": "Person",
+    "gender": "Male",
+    "score": 55,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "d700b3f5-45af-4d02-95ed-57d301bda93e",
+    "name": "Mogwai",
+    "comment": "Scottish post‐rock band",
+    "type": "Group",
+    "gender": null,
+    "score": 51,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "eed37141-af0b-45b1-ab26-f018f3962b67",
+    "name": "Nate Smith",
+    "comment": "USA jazz drummer/R&B, soul & funk producer/songwriter",
+    "type": "Person",
+    "gender": "Male",
+    "score": 51,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "c116b504-ce24-4264-96dc-d10a7458236f",
+    "name": "Julian Lage",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 50,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "24088e02-cf06-4a1e-9e4e-283b165ba7d5",
+    "name": "Cascadeur",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 50,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "e20747e7-55a4-452e-8766-7b985585082d",
+    "name": "Frank Zappa",
+    "comment": "US musician, composer, activist & filmmaker",
+    "type": "Person",
+    "gender": "Male",
+    "score": 50,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "b07793f0-bf47-4e3a-9655-f6d673479c17",
+    "name": "Mark Turner",
+    "comment": "saxophone",
+    "type": "Person",
+    "gender": "Male",
+    "score": 50,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "51b553fa-1604-4110-ba48-f54e38f50678",
+    "name": "Tingvall Trio",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 50,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "f3b8e107-abe8-4743-b6a3-4a4ee995e71f",
+    "name": "Charles Mingus",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 49,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "d33386db-1b21-4864-8d03-e541fea3e903",
+    "name": "Shai Maestro Trio",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 48,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "d69c7745-b988-4b20-8b8e-8a2219b18f8f",
+    "name": "Helge Lien Trio",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 48,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "fc7376fe-1a6f-4414-b4a7-83f50ed59c92",
+    "name": "Flying Lotus",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 48,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "02811c5c-3cfc-4354-a116-8a254581ef6e",
+    "name": "Tord Gustavsen Trio",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 46,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "6a5e8260-4932-4f86-9ead-8ef3e6df310a",
+    "name": "Mark Guiliana Jazz Quartet",
+    "comment": "US jazz quartet",
+    "type": "Group",
+    "gender": null,
+    "score": 45,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "36b9036d-5f64-495b-aa1b-c610abf5d0d3",
+    "name": "Varduhi Art School Children’s Choir",
+    "comment": "",
+    "type": "Choir",
+    "gender": null,
+    "score": 45,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "c7356af9-9ea6-4a78-a55b-c73775716312",
+    "name": "Charlie Parker",
+    "comment": "aka “Bird”, jazz alto saxophonist",
+    "type": "Person",
+    "gender": "Male",
+    "score": 45,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "8472f0ce-c57d-46f2-93db-d4a6f6e6473a",
+    "name": "上原ひろみ",
+    "comment": "Japanese jazz pianist “Hiromi” for Telarc",
+    "type": "Person",
+    "gender": "Female",
+    "score": 45,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "6a8744ac-5206-4d4d-84f0-78fc06924a8f",
+    "name": "mouse on the keys",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 44,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "2d1750ec-4d5b-4388-bac4-bbd753394fce",
+    "name": "Henri Texier",
+    "comment": "French jazz double bassist",
+    "type": "Person",
+    "gender": "Male",
+    "score": 44,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "fee950a2-e68c-4e76-b1ae-ff6efdf68b11",
+    "name": "Sons of Kemet",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 43,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "e95d91f2-9bf8-4439-b169-cc67f051c46e",
+    "name": "LV",
+    "comment": "UK Producers",
+    "type": "Group",
+    "gender": null,
+    "score": 43,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "f5b41828-248a-449d-95b8-fff92db97629",
+    "name": "Alfa Mist",
+    "comment": "UK musician/producer/songwriter/MC",
+    "type": "Person",
+    "gender": "Male",
+    "score": 43,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "f6f2326f-6b25-4170-b89d-e235b25508e8",
+    "name": "Sigur Rós",
+    "comment": "Icelandic post‐rock band",
+    "type": "Group",
+    "gender": null,
+    "score": 42,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "42616833-1821-4b46-9c4e-7ec3831cf4a7",
+    "name": "Anomalie",
+    "comment": "keyboardist, alias of Nicolas Dupuis",
+    "type": "Person",
+    "gender": "Male",
+    "score": 42,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "59476fae-d0c9-4ebd-b03c-c38b19b30dff",
+    "name": "Makaya McCraven",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 41,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "50bb373d-78c6-42a6-b40f-e5fb4b2c5535",
+    "name": "Yaron Herman Trio",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 40,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "81cd2697-8193-4017-a0b4-d1f27c1b59ad",
+    "name": "Get the Blessing",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 40,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "6772809f-9726-42fb-a6af-e5f9dad33a7b",
+    "name": "Lund Quartet",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 38,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "cf8b3b8c-118e-4136-8d1d-c37091173413",
+    "name": "Meshuggah",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 38,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "124971e9-090b-4e46-8afe-d17e7708c25e",
+    "name": "Médéric Collignon",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 38,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "32d47391-3b0d-43bb-8f26-31fea85e5ee2",
+    "name": "DJ Pfel",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 37,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "e3c4c4af-f83b-4168-84cb-898009dd0447",
+    "name": "Agnes Obel",
+    "comment": "Danish singer",
+    "type": "Person",
+    "gender": "Female",
+    "score": 37,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "f58384a4-2ad2-4f24-89c5-c7b74ae1cce7",
+    "name": "King Gizzard & the Lizard Wizard",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 37,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "fc7bbf00-fbaa-4736-986b-b3ac0266ca9b",
+    "name": "alt‐J",
+    "comment": "English indie‐rock band",
+    "type": "Group",
+    "gender": null,
+    "score": 37,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "e88313e2-22f6-4f6d-9656-6d2ad20ea415",
+    "name": "Lettuce",
+    "comment": "Boston funk band",
+    "type": "Group",
+    "gender": null,
+    "score": 37,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "cc0b7089-c08d-4c10-b6b0-873582c17fd6",
+    "name": "System of a Down",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 36,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "d72e6ce3-641f-46a4-b5a7-786008422061",
+    "name": "Kenny Garrett",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 36,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "59d8bee3-a751-4849-9f1f-42e9f343baf1",
+    "name": "Renaud Garcia‐Fons",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 35,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "ba2ff5ad-b5a4-499b-aac1-b31fd093112b",
+    "name": "Vijay Iyer",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 35,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "d7235f31-229a-4c04-abca-14e0fbcba26e",
+    "name": "CHON",
+    "comment": "US progressive metal band",
+    "type": "Group",
+    "gender": null,
+    "score": 35,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "cbfd7f01-87c3-44bf-a3a2-fe4dbff20ad2",
+    "name": "John Scofield",
+    "comment": "US guitarist/composer",
+    "type": "Person",
+    "gender": "Male",
+    "score": 34,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "15e3d8aa-87e0-40bd-a46e-4000310185dd",
+    "name": "Stéphane Galland",
+    "comment": "Belgian jazz drummer & pianist",
+    "type": "Person",
+    "gender": "Male",
+    "score": 34,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "4d54e19b-f78d-4d2b-bdcd-a8d0348d6e6f",
+    "name": "Brian Blade",
+    "comment": "US jazz drummer, composer, and session musician",
+    "type": "Person",
+    "gender": "Male",
+    "score": 34,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "36250550-80c6-4f83-819b-092d12db5575",
+    "name": "Grandbrothers",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 34,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "72fd7688-8394-43b6-8f41-278657648a45",
+    "name": "Yussef Kamaal",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 34,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "d922fda2-1d1c-4c26-b3f8-4eaff1eda85d",
+    "name": "Vijay Iyer Trio",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 33,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "12fb47e3-526d-470f-b439-b80bfee3dbeb",
+    "name": "Mark Guiliana",
+    "comment": "US drummer, composer & bandleader",
+    "type": "Person",
+    "gender": "Male",
+    "score": 33,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "fe723bbb-47cc-4f42-830c-352f7b1fed81",
+    "name": "Shai Maestro",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 33,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "2dffcc79-9009-40e2-add9-333e4ee62cb3",
+    "name": "Հարություն Թոփիկյան",
+    "comment": "conductor, choir director",
+    "type": "Person",
+    "gender": "Male",
+    "score": 32,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "606518a1-475d-4dc9-8f5c-8e0ebe499a41",
+    "name": "Gilad Hekselman",
+    "comment": "jazz guitarist",
+    "type": "Person",
+    "gender": "Male",
+    "score": 32,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "2581fa6c-1a78-4c59-9f18-020ed8cb18be",
+    "name": "Manu Katché",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 31,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "fc43556b-9657-4680-8809-e50295380f98",
+    "name": "Kurt Rosenwinkel",
+    "comment": "US jazz guitarist, composer, and keyboardist",
+    "type": "Person",
+    "gender": "Male",
+    "score": 31,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "ef3a1aab-6676-4ad1-89a2-6c6bd828e0b0",
+    "name": "LITE",
+    "comment": "Japanese math rock band",
+    "type": "Group",
+    "gender": null,
+    "score": 31,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "0ebeab89-00e2-4388-a48b-14591013f489",
+    "name": "Forq",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 31,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "bb0fa8bd-c230-49b1-bc80-e69e229d158f",
+    "name": "Thank You Scientist",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 30,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "82687235-98c5-4229-969f-28f901279eb8",
+    "name": "Slowly Rolling Camera",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 30,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "2bf68df0-da0d-40db-a669-e070203aaf56",
+    "name": "Shabaka and the Ancestors",
+    "comment": "UK jazz group",
+    "type": "Group",
+    "gender": null,
+    "score": 30,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "e8f55abb-a6d5-4e5f-81b4-14f9cc320519",
+    "name": "The Pineapple Thief",
+    "comment": "English progressive rock band",
+    "type": "Group",
+    "gender": null,
+    "score": 30,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "e1ae74e0-200d-48cc-8cd1-ef005a480c6f",
+    "name": "Marcin Wasilewski Trio",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 29,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "207c883c-3358-42f4-8d51-dcab3c7054bc",
+    "name": "Donny McCaslin",
+    "comment": "US jazz saxophonist",
+    "type": "Person",
+    "gender": "Male",
+    "score": 29,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "f4857fb9-e255-4dc6-bd01-e4ca7cc68544",
+    "name": "Jamiroquai",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 29,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "fe74e1e9-6985-405a-97f3-41ac6994a6c4",
+    "name": "Polar Bear",
+    "comment": "British jazz band",
+    "type": "Group",
+    "gender": null,
+    "score": 29,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "ad45a94c-8afb-4091-afc4-829b6d52c3c1",
+    "name": "Brian Blade Fellowship",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 29,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "1f3eb078-899d-4ec5-9c91-dd7337db5bf2",
+    "name": "Richard Spaven",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 28,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "ead26d19-20b3-49ac-92e9-3d8a25ca9462",
+    "name": "Cory Wong",
+    "comment": "rhythm guitarist",
+    "type": "Person",
+    "gender": "Male",
+    "score": 28,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  },
+  {
+    "artist_mbid": "e4777ad0-2531-48b7-8c90-4099a7333c58",
+    "name": "René Aubry",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 28,
+    "reference_mbid": "c57e3280-5182-42a5-812b-02659a079c44"
+  }
+]

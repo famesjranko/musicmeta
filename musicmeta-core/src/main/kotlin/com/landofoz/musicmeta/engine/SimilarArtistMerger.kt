@@ -59,23 +59,24 @@ internal object SimilarArtistMerger : ResultMerger {
             grouped.getOrPut(key) { mutableListOf() }.add(artist)
         }
 
-        return grouped.values
-            .map { group ->
-                val first = group.first()
-                val totalScore = group
-                    .map { it.matchScore }
-                    .fold(0f) { acc, s -> acc + s }
-                    .coerceAtMost(1.0f)
-                val allSources = group.flatMap { it.sources }.distinct()
-                val mergedIdentifiers = ResultMerger.mergeIdentifiers(group.map { it.identifiers })
-
-                SimilarArtist(
-                    name = first.name,
-                    identifiers = mergedIdentifiers,
-                    matchScore = totalScore,
-                    sources = allSources,
-                )
-            }
+        val summed = grouped.values.map { group ->
+            val first = group.first()
+            val totalScore = group.map { it.matchScore }.fold(0f) { acc, s -> acc + s }
+            val allSources = group.flatMap { it.sources }.distinct()
+            val mergedIdentifiers = ResultMerger.mergeIdentifiers(group.map { it.identifiers })
+            SimilarArtist(
+                name = first.name,
+                identifiers = mergedIdentifiers,
+                matchScore = totalScore,
+                sources = allSources,
+            )
+        }
+        // Arm A (nocap): no per-provider normalisation, and no fixed cap. Instead of clamping any
+        // sum past 1.0 to the same 1.0 (the control's tie-maker), the whole merged list is rescaled
+        // by its own maximum so the top entry lands at 1.0 and relative spacing survives below it.
+        val max = summed.maxOfOrNull { it.matchScore }?.takeIf { it > 0f } ?: 1f
+        return summed
+            .map { it.copy(matchScore = it.matchScore / max) }
             .sortedByDescending { it.matchScore }
     }
 
