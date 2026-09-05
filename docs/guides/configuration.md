@@ -468,6 +468,10 @@ val engine = EnrichmentEngine.Builder()
 
 Catalog filtering applies to: `SIMILAR_ARTISTS`, `SIMILAR_TRACKS`, `SIMILAR_ALBUMS`, `ARTIST_RADIO`, `ARTIST_RADIO_DISCOVERY`, `ARTIST_TOP_TRACKS`.
 
+It runs after the merge that produced `SimilarArtist.matchScore`, so `AVAILABLE_ONLY` can remove
+the merged list's 1.0 top entry and `AVAILABLE_FIRST` can move any entry ahead of a higher-scored
+one — neither renumbers or re-sorts by `matchScore` afterward.
+
 Note: `TRACK_PREVIEW` is intentionally excluded — previews are for tracks the user does not have.
 
 If `checkAvailability` throws for a given recommendation type, that type degrades to its unfiltered results rather than failing the call, and the returned `EnrichmentResult.Success.isCatalogDegraded` is `true`. See [results-and-errors.md](results-and-errors.md#a-throwing-catalogprovider-costs-filtering-not-the-result) for the full failure-isolation contract.

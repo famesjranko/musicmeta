@@ -43,7 +43,7 @@ fun ArtistProfile.toDemoResponse(elapsedMs: Long, pending: Set<EnrichmentType> =
             r.similarArtists()?.artists?.map {
                 SectionItem(
                     primary = it.name,
-                    secondary = "match ${(it.matchScore * 100).toInt()}%",
+                    secondary = "rank %.2f".format(it.matchScore),
                     meta = it.sources.joinToString(", ").ifBlank { null },
                     enrich = artistEnrich(it.name),
                 )
@@ -216,7 +216,7 @@ fun AlbumProfile.toDemoResponse(
                     primary = it.title,
                     secondary = it.artist,
                     imageUrl = it.thumbnailUrl,
-                    meta = "score %.2f".format(it.artistMatchScore),
+                    meta = "rank %.2f".format(it.artistMatchScore),
                     enrich = albumEnrich(it.title, it.artist),
                 )
             }
@@ -327,7 +327,7 @@ fun TrackProfile.toDemoResponse(
                 SectionItem(
                     primary = it.title,
                     secondary = it.artist,
-                    meta = "score %.2f".format(it.matchScore),
+                    meta = "rank %.2f".format(it.matchScore),
                     previewTitle = it.title,
                     previewArtist = it.artist,
                     enrich = trackEnrich(it.title, it.artist),

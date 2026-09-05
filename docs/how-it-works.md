@@ -203,6 +203,10 @@ Types where multiple providers contribute complementary data. The chain calls **
 | `SimilarTrackMerger` | SIMILAR_TRACKS | Deduplicates by name, sums matchScores, merges sources |
 | `TopTrackMerger` | ARTIST_TOP_TRACKS | Deduplicates by MBID or title, sums listen counts |
 
+`SimilarArtistMerger`'s rescaled-to-1.0 top and descending sort describe this merge step's own
+output, not necessarily what a caller receives: Step 6 below runs after it and can remove the top
+entry or reorder the list.
+
 Example merged genre result: `alternative rock (0.70, [musicbrainz, lastfm])` — higher confidence when multiple providers agree.
 
 #### Composite (synthesize from sub-types)
@@ -283,7 +287,10 @@ For recommendation types only (SIMILAR_ARTISTS, SIMILAR_ALBUMS, ARTIST_RADIO, AR
 - **AVAILABLE_FIRST** — reorder: available items first, then unavailable
 - **UNFILTERED** (default) — no filtering
 
-This lets a music player show only recommendations the user can actually play.
+This lets a music player show only recommendations the user can actually play. It also means a
+merger's own contract — `SimilarArtistMerger`'s 1.0 top entry, either merger's descending sort —
+holds only up to this step: `AVAILABLE_ONLY` can remove the top-scored entry, and `AVAILABLE_FIRST`
+reorders the list without touching a score.
 
 Filtering runs per type, as that type settles, and settlements do not queue behind one another — so
 `CatalogProvider.checkAvailability` is called concurrently by as many coroutines as there are
@@ -484,7 +491,7 @@ when a key is present, and CAA is a fallback, not a second entry in the same res
 ### Relationships (5 types)
 | Type | Providers (by priority) | Notes |
 |------|------------------------|-------|
-| SIMILAR_ARTISTS | Last.fm(100), ListenBrainz(50), Deezer(30) | **Mergeable** — deduplicates by MusicBrainz id, else by name; sums matchScores, rescales to a 1.0 top |
+| SIMILAR_ARTISTS | Last.fm(100), ListenBrainz(50), Deezer(30) | **Mergeable** — deduplicates by MusicBrainz id, else by name; sums matchScores, rescales to a 1.0 top before catalog filtering (Step 6) |
 | SIMILAR_TRACKS | Last.fm(100), Deezer(50) | **Mergeable** — deduplicates, sums matchScores |
 | BAND_MEMBERS | MusicBrainz(100), Discogs(50) | From artist-rels |
 | ARTIST_LINKS | MusicBrainz(100), Wikidata(50) | All URL relation types; Wikidata contributes P856 only |

@@ -11,8 +11,11 @@ import com.landofoz.musicmeta.SimilarArtist
  * Additive scoring: artists recommended by multiple providers rank higher.
  *
  * The summed scores are rescaled against the merged list's own maximum rather than clamped, so a
- * [SimilarArtist.matchScore] is a position within one merged list and nothing else — it is not
- * comparable against another list's, nor against the figure a provider reported.
+ * [SimilarArtist.matchScore] is a position within *this* merge and nothing else — it is not
+ * comparable against another list's, nor against the figure a provider reported. That position is
+ * fixed at merge time; a served result can still differ from it, because catalog filtering
+ * (`catalogFilterMode`) runs afterward and may drop the top-scored entry or reorder the list
+ * without touching any score. See [SimilarArtist.matchScore]'s KDoc.
  */
 internal object SimilarArtistMerger : ResultMerger {
 
@@ -52,11 +55,16 @@ internal object SimilarArtistMerger : ResultMerger {
      * - Deduplicates by MusicBrainz id where one is present, and by normalized name otherwise —
      *   see [groupArtists]
      * - Sums matchScores across providers, then divides every sum by the largest of them, so the
-     *   top entry is 1.0 and the spacing below it survives. A list whose maximum is not positive
-     *   is left as it is.
+     *   top entry of *this returned list* is 1.0 and the spacing below it survives. A list whose
+     *   maximum is not positive is left as it is.
      * - Merges sources lists
      * - Merges identifiers: prefers MBID when available, combines extra maps
      * - Returns results sorted by matchScore descending
+     *
+     * Both the 1.0 top entry and the descending sort are properties of this return value, before
+     * catalog filtering (`catalogFilterMode`) — a caller sees them only when no `CatalogProvider`
+     * is configured or the mode is `UNFILTERED`. `AVAILABLE_ONLY` can remove the top entry;
+     * `AVAILABLE_FIRST` reorders without touching a score.
      */
     internal fun mergeArtists(artists: List<SimilarArtist>): List<SimilarArtist> {
         if (artists.isEmpty()) return emptyList()

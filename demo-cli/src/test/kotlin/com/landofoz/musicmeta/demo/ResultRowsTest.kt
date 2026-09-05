@@ -26,7 +26,7 @@ class ResultRowsTest {
     ): String = captureOutput { term -> Formatter.printResults(resultsOf(raw), term, pinned = pinned) }
 
     @Test
-    fun `a similar-artist score is labelled as a match, not left as a bare number`() {
+    fun `a similar-artist score is labelled as a rank, not left as a bare number`() {
         // Given - a similar-artists payload whose scores are summed, so no percentage can be honest
         val raw = mapOf(
             EnrichmentType.SIMILAR_ARTISTS to success(
@@ -39,11 +39,11 @@ class ResultRowsTest {
         val output = render(raw)
 
         // Then - the number carries a unit rather than standing alone beside the name
-        assertTrue(output, output.contains("Portishead (match 0.90)"))
+        assertTrue(output, output.contains("Portishead (rank 0.90)"))
     }
 
     @Test
-    fun `a similar-track score is labelled as a match`() {
+    fun `a similar-track score is labelled as a rank`() {
         // Given - a similar-tracks payload carrying the same kind of score
         val raw = mapOf(
             EnrichmentType.SIMILAR_TRACKS to success(
@@ -58,7 +58,7 @@ class ResultRowsTest {
         val output = render(raw)
 
         // Then - the number carries the same unit as the artist rows
-        assertTrue(output, output.contains("Glory Box (match 0.80)"))
+        assertTrue(output, output.contains("Glory Box (rank 0.80)"))
     }
 
     @Test
