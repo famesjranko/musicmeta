@@ -15,6 +15,7 @@ import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.engine.NameMatchTier
 import com.landofoz.musicmeta.engine.ProviderCallScope
 import com.landofoz.musicmeta.engine.artistNameTier
+import com.landofoz.musicmeta.engine.corroboratedBy
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 import kotlinx.coroutines.currentCoroutineContext
@@ -212,9 +213,11 @@ public class DiscogsProvider(
                 ?: return EnrichmentResult.NotFound(type, id)
             val artist = api.getArtist(match.value)
                 ?: return EnrichmentResult.NotFound(type, id)
-            // searchArtist already name-matches the pool; this re-checks the *detail* record,
-            // whose `name` is a different field from the search result's `title`.
+            // searchArtist already name-matches the pool; this re-checks the *detail* record, whose
+            // `name` is a different field from the search result's `title`, against the requested
+            // name, the pool, and the other names Discogs itself files on this artist.
             val detailTier = artistNameTier(request.name, artist.name)
+                .corroboratedBy(request.name, artist.otherNames)
                 ?: return EnrichmentResult.NotFound(type, id)
             when (type) {
                 EnrichmentType.ARTIST_PHOTO -> {

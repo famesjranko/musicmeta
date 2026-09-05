@@ -42,6 +42,11 @@ internal data class DiscogsArtist(
     val name: String,
     val members: List<DiscogsMember>,
     val images: List<DiscogsImage> = emptyList(),
+    /**
+     * Every other name Discogs files on this artist — its `realname` and its `namevariations`.
+     * Not Discogs' `aliases`, which names *other acts* the same people record under.
+     */
+    val otherNames: List<String> = emptyList(),
 )
 
 internal data class DiscogsImage(

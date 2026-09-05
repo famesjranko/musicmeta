@@ -84,4 +84,52 @@ class NameMatchTierTest {
         assertEquals(0.7f, tier.confidenceFactor, 0.001f)
         assertEquals(NameMatchTier.entries.last(), tier)
     }
+
+    @Test
+    fun `a candidate whose own record holds the requested name is canonical`() {
+        // Given - an alias-tier match whose source files the requested name on the candidate itself
+        val tier = NameMatchTier.ALIAS
+
+        // When - corroborating it against the names that record carries
+        val corroborated = tier.corroboratedBy("コールドプレイ", listOf("Coldplay", "コールドプレイ"))
+
+        // Then - the answering source names the entity as asked, so nothing scales the score down
+        assertEquals(NameMatchTier.CANONICAL, corroborated)
+    }
+
+    @Test
+    fun `a record that does not hold the requested name leaves the tier as it was`() {
+        // Given - an alias-tier match whose source files only other names on the candidate
+        val tier = NameMatchTier.PRIMARY_ALIAS
+
+        // When - corroborating it against those names
+        val corroborated = tier.corroboratedBy("コールドプレイ", listOf("Chris Martin", "Cold Play Live"))
+
+        // Then - absent corroboration the pool's own tier stands, neither raised nor rejected
+        assertEquals(NameMatchTier.PRIMARY_ALIAS, corroborated)
+    }
+
+    @Test
+    fun `corroboration is same-name only`() {
+        // Given - a record naming the entity as part of a longer credit
+        val tier = NameMatchTier.ALIAS
+
+        // When - corroborating a request the credit merely contains
+        val corroborated = tier.corroboratedBy("Radiohead", listOf("Radiohead & Thom Yorke"))
+
+        // Then - containment is not a name, so the alias tier stands
+        assertEquals(NameMatchTier.ALIAS, corroborated)
+    }
+
+    @Test
+    fun `a candidate no name form matched is still corroborated by the record's own names`() {
+        // Given - a candidate the requested name and the alias pool both failed
+        val tier: NameMatchTier? = null
+
+        // When - the record itself turns out to hold the requested name
+        val corroborated = tier.corroboratedBy("コールドプレイ", listOf("コールドプレイ"))
+
+        // Then - the source's own claim identifies it, where no cross-source claim could
+        assertEquals(NameMatchTier.CANONICAL, corroborated)
+    }
 }

@@ -173,7 +173,22 @@ internal class DiscogsApi(
             name = json.discogsArtistName("name"),
             members = members,
             images = images,
+            otherNames = json.artistOtherNames(),
         )
+    }
+
+    /**
+     * The artist's `realname` and `namevariations`, as one list of plain names.
+     *
+     * Discogs writes a name and its transliteration in one field, joined by `=`
+     * (`Χαρίκλεια Ρουπάκα = Haríklia Roupáka`), so each side is split out: both name the same
+     * artist, and a comparison against the joined string matches neither.
+     */
+    private fun JSONObject.artistOtherNames(): List<String> {
+        val variations = optJSONArray("namevariations")
+        val written = (0 until (variations?.length() ?: 0)).mapNotNull { variations?.optString(it) } +
+            optString("realname")
+        return written.flatMap { it.split('=') }.map { it.trim() }.filter { it.isNotEmpty() }
     }
 
     private fun parseMasterVersions(json: JSONObject): List<DiscogsMasterVersion> {

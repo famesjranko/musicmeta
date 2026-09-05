@@ -115,6 +115,15 @@ MusicBrainz marks primary or locale-tagged, then a "Search hint" — the typo-ca
 own indexer. `engine/NameMatchTier.kt` holds the tiers and is deliberately source-agnostic, so a
 second upstream publishing alternative names does not grow a second matching rule beside it.
 
+Discogs' artist detail — already fetched for `ARTIST_PHOTO` and `BAND_MEMBERS`, so this costs no
+request — carries `realname` and `namevariations`, other names Discogs files on that artist itself.
+A candidate whose record holds the requested name among them is reported at the canonical tier
+rather than an alias one: an alias-pool tier is MusicBrainz's claim that two names are one entity,
+and a record naming the entity as the request asked needs no second source to say so. Same-name
+only, as a pool match is. Their absence claims nothing in the other direction — the lists are the
+credit spellings contributors filed, not a complete alias set — so an uncorroborated candidate keeps
+the tier its pool match earned and is never rejected on the strength of a missing entry.
+
 ## Two genre surfaces, kept apart
 
 Lookups request `tags+genres`. `genres` is MusicBrainz's controlled vocabulary — 2184 names as of
