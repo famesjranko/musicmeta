@@ -26,7 +26,12 @@ public class ListenBrainzProvider(
     rateLimiter: RateLimiter,
     private val authToken: String? = null,
     private val config: EnrichmentConfig = EnrichmentConfig(),
-) : EnrichmentProvider {
+) : EnrichmentProvider, com.landofoz.musicmeta.engine.BreakerHostKeyed {
+
+    /** ARM A: SIMILAR_ARTISTS rides the Labs deployment, which fails independently of the main API. */
+    override fun breakerKey(type: EnrichmentType): String =
+        if (type == EnrichmentType.SIMILAR_ARTISTS) "$id@labs" else id
+
 
     private val api = ListenBrainzApi(httpClient, rateLimiter, authToken)
 
