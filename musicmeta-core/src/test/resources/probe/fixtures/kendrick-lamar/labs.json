@@ -1,0 +1,902 @@
+[
+  {
+    "artist_mbid": "73e5e69d-3554-40d8-8516-00cb38737a1c",
+    "name": "Rihanna",
+    "comment": "Barbadian R&B/pop singer",
+    "type": "Person",
+    "gender": "Female",
+    "score": 9169,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "9fff2f8a-21e6-47de-a2b8-7f449929d43f",
+    "name": "Drake",
+    "comment": "Canadian rapper",
+    "type": "Person",
+    "gender": "Male",
+    "score": 9044,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "164f0d73-1234-4e2c-8743-d77bf2191051",
+    "name": "Ye",
+    "comment": "formerly Kanye West",
+    "type": "Person",
+    "gender": "Male",
+    "score": 8289,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "044fd265-79dd-43eb-afc4-8b20becf7e17",
+    "name": "Thundercat",
+    "comment": "US singer-songwriter & bassist",
+    "type": "Person",
+    "gender": "Male",
+    "score": 7588,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "c8b03190-306c-4120-bb0b-6f2ebfc06ea9",
+    "name": "The Weeknd",
+    "comment": "Canadian R&B singer",
+    "type": "Person",
+    "gender": "Male",
+    "score": 7361,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "f90e8b26-9e52-4669-a5c9-e28529c47894",
+    "name": "Snoop Dogg",
+    "comment": "US rapper",
+    "type": "Person",
+    "gender": "Male",
+    "score": 6967,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "260097c7-d628-4a3f-966f-956ea430c0d8",
+    "name": "Bilal",
+    "comment": "US jazz/neo-soul vocalist Bilal Oliver",
+    "type": "Person",
+    "gender": "Male",
+    "score": 6954,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "a3cb23fc-acd3-4ce0-8f36-1e5aa6a18432",
+    "name": "U2",
+    "comment": "Irish rock band",
+    "type": "Group",
+    "gender": null,
+    "score": 6048,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "272989c8-5535-492d-a25c-9f58803e027f",
+    "name": "SZA",
+    "comment": "",
+    "type": "Person",
+    "gender": "Female",
+    "score": 5879,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "e4a51f17-a57b-47b1-b37b-f552d0f8e9e6",
+    "name": "Travis Scott",
+    "comment": "US rapper",
+    "type": "Person",
+    "gender": "Male",
+    "score": 5855,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "d6302903-1f62-420a-8d8b-c54941ac754e",
+    "name": "Rapsody",
+    "comment": "US rapper",
+    "type": "Person",
+    "gender": "Female",
+    "score": 5740,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "ad8585b3-655e-4e6f-82a8-e10f89ec65f3",
+    "name": "Ronald Isley",
+    "comment": "a.k.a. Mr. Biggs",
+    "type": "Person",
+    "gender": "Male",
+    "score": 5665,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "056e4f3e-d505-4dad-8ec1-d04f521cbb56",
+    "name": "Daft Punk",
+    "comment": "French electronic duo",
+    "type": "Group",
+    "gender": null,
+    "score": 5605,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "e520459c-dff4-491d-a6e4-c97be35e0044",
+    "name": "Frank Ocean",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 5522,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "b95ce3ff-3d05-4e87-9e01-c97b66af13d4",
+    "name": "Eminem",
+    "comment": "US rapper",
+    "type": "Person",
+    "gender": "Male",
+    "score": 5426,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "48262e82-db9f-4a92-b650-dfef979b73ec",
+    "name": "Future",
+    "comment": "US rapper Nayvadius Cash",
+    "type": "Person",
+    "gender": "Male",
+    "score": 5420,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "7fb57fba-a6ef-44c2-abab-2fa3bdee607e",
+    "name": "Childish Gambino",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 5350,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "25b7b584-d952-4662-a8b9-dd8cdfbfeb64",
+    "name": "A$AP Rocky",
+    "comment": "US rapper",
+    "type": "Person",
+    "gender": "Male",
+    "score": 5198,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "f6beac20-5dfe-4d1f-ae02-0b0a740aafd6",
+    "name": "Tyler, The Creator",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 5121,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "103555b8-ae47-4e99-8fc3-e31bdfd7854e",
+    "name": "MC Eiht",
+    "comment": "MC 8, Eiht, Tony Smallz",
+    "type": "Person",
+    "gender": "Male",
+    "score": 4997,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "875203e1-8e58-4b86-8dcb-7190faf411c5",
+    "name": "J. Cole",
+    "comment": "US rapper & producer",
+    "type": "Person",
+    "gender": "Male",
+    "score": 4856,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "5f6ab597-f57a-40da-be9e-adad48708203",
+    "name": "Dr. Dre",
+    "comment": "Andre Young, rap producer",
+    "type": "Person",
+    "gender": "Male",
+    "score": 4759,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "ac9a487a-d9d2-4f27-bb23-0f4686488345",
+    "name": "Lil Wayne",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 4739,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "f82bcf78-5b69-4622-a5ef-73800768d9ac",
+    "name": "JAŸ-Z",
+    "comment": "US rapper",
+    "type": "Person",
+    "gender": "Male",
+    "score": 4708,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "bce6d667-cde8-485e-b078-c0a05adea36d",
+    "name": "ScHoolboy Q",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 4661,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "9880800a-f6f8-4f8f-a00e-b4b664776c0c",
+    "name": "Jay Rock",
+    "comment": "US rapper",
+    "type": "Person",
+    "gender": "Male",
+    "score": 4383,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "78e854b8-9713-4ff2-9218-6b3784893bff",
+    "name": "Vince Staples",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 4019,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "d02dd67e-f655-4600-bc47-f789f59e7367",
+    "name": "Anderson .Paak",
+    "comment": "American rapper and producer",
+    "type": "Person",
+    "gender": "Male",
+    "score": 4007,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "e0e1db18-f7ba-4dee-95ff-7ae8cf545460",
+    "name": "Kid Cudi",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 3949,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "942a9807-9c1a-4a0e-a285-1fde2c5be9d1",
+    "name": "Big Sean",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 3921,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "373a4c98-a46b-48e4-86ec-f6ca65b4f438",
+    "name": "Chance the Rapper",
+    "comment": "US rapper, singer, songwriter, and producer",
+    "type": "Person",
+    "gender": "Male",
+    "score": 3876,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "7bd66c18-cb33-49aa-9279-140acedbdb49",
+    "name": "Ty Dolla $ign",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 3803,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "a0e8a1b1-5f8f-475a-a253-17415c17d0ff",
+    "name": "Mac Miller",
+    "comment": "American rapper",
+    "type": "Person",
+    "gender": "Male",
+    "score": 3782,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "859d0860-d480-4efd-970c-c05d5f1776b8",
+    "name": "Beyoncé",
+    "comment": "",
+    "type": "Person",
+    "gender": "Female",
+    "score": 3748,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "8b22acd6-20e6-4463-a75c-c14b5cfdb666",
+    "name": "Earl Sweatshirt",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 3728,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "14ecd19f-7121-4192-8549-e5056241a42f",
+    "name": "Pusha T",
+    "comment": "US rapper Terrence Thornton, member of Clipse",
+    "type": "Person",
+    "gender": "Male",
+    "score": 3702,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "b7539c32-53e7-4908-bda3-81449c367da6",
+    "name": "Lana Del Rey",
+    "comment": "",
+    "type": "Person",
+    "gender": "Female",
+    "score": 3684,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "a74b1b7f-71a5-4011-9441-d0b5e4122711",
+    "name": "Radiohead",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 3648,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "1036b808-f58c-4a3e-b461-a2c4492ecf1b",
+    "name": "Nicki Minaj",
+    "comment": "",
+    "type": "Person",
+    "gender": "Female",
+    "score": 3504,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "112beffb-1adc-488b-8d61-7b2ab3475d52",
+    "name": "BJ the Chicago Kid",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 3491,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "149f91ef-1287-46da-9a8e-87fee02f1471",
+    "name": "Pharrell Williams",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 3473,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "800760de-bdf8-43a2-8fe0-44a2401a5515",
+    "name": "Young Thug",
+    "comment": "US rapper",
+    "type": "Person",
+    "gender": "Male",
+    "score": 3454,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "2f548675-008d-4332-876c-108b0c7ab9c5",
+    "name": "Sia",
+    "comment": "Australian singer‐songwriter",
+    "type": "Person",
+    "gender": "Female",
+    "score": 3368,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "63aa26c3-d59b-4da4-84ac-716b54f1ef4d",
+    "name": "Tame Impala",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 3344,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "b1e26560-60e5-4236-bbdb-9aa5a8d5ee19",
+    "name": "Post Malone",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 3340,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "8837b875-3689-4646-b3fd-d8b53815c7a8",
+    "name": "Lil Uzi Vert",
+    "comment": "",
+    "type": "Person",
+    "gender": "Non-binary",
+    "score": 3321,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "8dc08b1f-e393-4f85-a5dd-300f7693a8b8",
+    "name": "James Blake",
+    "comment": "English singer and producer",
+    "type": "Person",
+    "gender": "Male",
+    "score": 3268,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "dff0d392-4cd5-4052-9fbb-f485df3891e5",
+    "name": "2 Chainz",
+    "comment": "fka Tity Boi",
+    "type": "Person",
+    "gender": "Male",
+    "score": 3268,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "9757ae7d-44b1-4d63-81ce-b463fe27b9ae",
+    "name": "Joey Bada$$",
+    "comment": "rapper",
+    "type": "Person",
+    "gender": "Male",
+    "score": 3219,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "cfbc0924-0035-4d6c-8197-f024653af823",
+    "name": "Nas",
+    "comment": "US rapper",
+    "type": "Person",
+    "gender": "Male",
+    "score": 3158,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "f4fdbb4c-e4b7-47a0-b83b-d91bbfcfa387",
+    "name": "Ariana Grande",
+    "comment": "",
+    "type": "Person",
+    "gender": "Female",
+    "score": 3147,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "73fdb566-a9b1-494c-9f32-51768ec9fd27",
+    "name": "OutKast",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 3131,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "ceb3f5b7-9f1a-430f-afbe-976fdcf30482",
+    "name": "Jhené Aiko",
+    "comment": "",
+    "type": "Person",
+    "gender": "Female",
+    "score": 3051,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "a80c5dc5-b12e-4667-9f5a-b568961f3839",
+    "name": "Run the Jewels",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 3043,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "13bcb2bb-db37-4397-baf5-e0f085be2d64",
+    "name": "Rick Ross",
+    "comment": "US rapper",
+    "type": "Person",
+    "gender": "Male",
+    "score": 3034,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "b8a7c51f-362c-4dcb-a259-bc6e0095f0a6",
+    "name": "Ed Sheeran",
+    "comment": "UK singer‐songwriter",
+    "type": "Person",
+    "gender": "Male",
+    "score": 3032,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "960afc67-9c21-46dd-9c7f-ff2b509e3150",
+    "name": "Danny Brown",
+    "comment": "US rapper",
+    "type": "Person",
+    "gender": "Male",
+    "score": 2978,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "e21857d5-3256-4547-afb3-4b6ded592596",
+    "name": "Gorillaz",
+    "comment": "virtual band",
+    "type": "Group",
+    "gender": null,
+    "score": 2976,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "0221734a-35a8-40f7-b5c5-2f61a200bc7c",
+    "name": "Migos",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 2896,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "28737730-ec70-4da5-89c5-77ac13c5c34d",
+    "name": "Khalid",
+    "comment": "American R&B singer‐songwriter",
+    "type": "Person",
+    "gender": "Male",
+    "score": 2868,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "3ac96b4c-4f42-48c8-b793-84dbf54d7ac6",
+    "name": "BROCKHAMPTON",
+    "comment": "American boyband",
+    "type": "Group",
+    "gender": null,
+    "score": 2850,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "9689aa5a-4471-4fb4-9721-07cecda0fa9f",
+    "name": "A Tribe Called Quest",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 2832,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "f5dfa020-ad69-41cd-b3d4-fd7af0414e94",
+    "name": "Wiz Khalifa",
+    "comment": "US rapper",
+    "type": "Person",
+    "gender": "Male",
+    "score": 2831,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "8e494408-8620-4c6a-82c2-c2ca4a1e4f12",
+    "name": "Lorde",
+    "comment": "New Zealand singer‐songwriter",
+    "type": "Person",
+    "gender": "Female",
+    "score": 2805,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "20244d07-534f-4eff-b4d4-930878889970",
+    "name": "Taylor Swift",
+    "comment": "",
+    "type": "Person",
+    "gender": "Female",
+    "score": 2790,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "37547347-ea75-45fa-9766-ff36b44d8147",
+    "name": "Isaiah Rashad",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 2739,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "285e1285-aecc-478f-a8da-0c8cf69e1217",
+    "name": "Miguel",
+    "comment": "US R&B singer",
+    "type": "Person",
+    "gender": "Male",
+    "score": 2729,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "8ab5d936-49d1-415e-92c8-151e0e7dd912",
+    "name": "FERG",
+    "comment": "fka A$AP Ferg",
+    "type": "Person",
+    "gender": "Male",
+    "score": 2720,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "f9133036-ab3d-4e97-bd11-7a2c98ad148a",
+    "name": "Death Grips",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 2691,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "5ec1ecc6-4535-4911-a27a-e26343f4a189",
+    "name": "Kodak Black",
+    "comment": "US rapper",
+    "type": "Person",
+    "gender": "Male",
+    "score": 2673,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "ada7a83c-e3e1-40f1-93f9-3e73dbc9298a",
+    "name": "Arctic Monkeys",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 2645,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d",
+    "name": "The Beatles",
+    "comment": "UK rock band, “The Fab Four”",
+    "type": "Group",
+    "gender": null,
+    "score": 2637,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "012151a8-0f9a-44c9-997f-ebd68b5389f9",
+    "name": "Imagine Dragons",
+    "comment": "American pop rock band",
+    "type": "Group",
+    "gender": null,
+    "score": 2602,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "61af87f4-16ee-4431-8504-cc06187079fb",
+    "name": "XXXTENTACION",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 2597,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "d5d97b2b-b83b-4976-814a-056d9076c8c3",
+    "name": "The Notorious B.I.G.",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 2566,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "37b2cb82-ef79-4d46-a184-a549450aa231",
+    "name": "21 Savage",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 2553,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "fc7376fe-1a6f-4414-b4a7-83f50ed59c92",
+    "name": "Flying Lotus",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 2548,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "713e751f-3ddb-4b77-b3b1-9e6f2e953ad5",
+    "name": "Logic",
+    "comment": "US rapper",
+    "type": "Person",
+    "gender": "Male",
+    "score": 2545,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "d0c7656d-8169-4f77-9dbe-b8f24e40105d",
+    "name": "Kali Uchis",
+    "comment": "",
+    "type": "Person",
+    "gender": "Female",
+    "score": 2544,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "6143403a-df6c-429e-8ee6-ef869896b0da",
+    "name": "Quavo",
+    "comment": "US rapper",
+    "type": "Person",
+    "gender": "Male",
+    "score": 2519,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "cc197bad-dc9c-440d-a5b5-d52ba2e14234",
+    "name": "Coldplay",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 2485,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "afb680f2-b6eb-4cd7-a70b-a63b25c763d5",
+    "name": "Bruno Mars",
+    "comment": "US singer",
+    "type": "Person",
+    "gender": "Male",
+    "score": 2465,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "188711ed-c99b-439c-844a-ca831f63a727",
+    "name": "MF DOOM",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 2448,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "130c2184-14f2-4180-a216-04b5a333be57",
+    "name": "Sampha",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 2446,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "e0140a67-e4d1-4f13-8a01-364355bee46e",
+    "name": "Justin Bieber",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 2399,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "5441c29d-3602-4898-b1a1-b77fa23b8e50",
+    "name": "David Bowie",
+    "comment": "English singer‐songwriter",
+    "type": "Person",
+    "gender": "Male",
+    "score": 2396,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "5f95440d-7737-4a36-9bcf-c05337f7129b",
+    "name": "Denzel Curry",
+    "comment": "US rapper",
+    "type": "Person",
+    "gender": "Male",
+    "score": 2396,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "41ca19c2-935f-4647-9ef5-26f81291a9aa",
+    "name": "Blxst",
+    "comment": "US rapper from Los Angeles",
+    "type": "Person",
+    "gender": "Male",
+    "score": 2357,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "4e024037-14b7-4aea-99ad-c6ace63b9620",
+    "name": "Madvillain",
+    "comment": "underground hip‐hop duo Madlib and MF DOOM",
+    "type": "Group",
+    "gender": null,
+    "score": 2344,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "650e7db6-b795-4eb5-a702-5ea2fc46c848",
+    "name": "Lady Gaga",
+    "comment": "",
+    "type": "Person",
+    "gender": "Female",
+    "score": 2338,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "260b6184-8828-48eb-945c-bc4cb6fc34ca",
+    "name": "Charli xcx",
+    "comment": "",
+    "type": "Person",
+    "gender": "Female",
+    "score": 2338,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "db76c5ca-d555-4f09-b1db-baa1b713d875",
+    "name": "Mary J. Blige",
+    "comment": "",
+    "type": "Person",
+    "gender": "Female",
+    "score": 2336,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "6f1a58bf-9b1b-49cf-a44a-6cefad7ae04f",
+    "name": "Dua Lipa",
+    "comment": "",
+    "type": "Person",
+    "gender": "Female",
+    "score": 2334,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "f23ef341-33bd-47c1-b83c-846a78581f05",
+    "name": "PARTYNEXTDOOR",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 2334,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "9167f739-da47-4495-9d63-9c13b40114ac",
+    "name": "Summer Walker",
+    "comment": "R&B singer",
+    "type": "Person",
+    "gender": "Female",
+    "score": 2328,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "3b39abeb-0064-4eed-9ddd-ee47a45c54cb",
+    "name": "Ghostface Killah",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 2305,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "2baf3276-ed6a-4349-8d2e-f4601e7b2167",
+    "name": "Playboi Carti",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 2278,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "36494952-f434-45d8-a958-8b4acdbcf8a8",
+    "name": "Gucci Mane",
+    "comment": "US rapper",
+    "type": "Person",
+    "gender": "Male",
+    "score": 2266,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "10a9ff92-9637-4498-afea-7044b2ab0dc0",
+    "name": "Busta Rhymes",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 2265,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  },
+  {
+    "artist_mbid": "9d7a44f1-ec57-4d36-a9d3-a665c69d19f0",
+    "name": "Amanda Reifer",
+    "comment": "Barbados born, former lead singer of pop group Cover Drive",
+    "type": "Person",
+    "gender": "Female",
+    "score": 2242,
+    "reference_mbid": "381086ea-f511-4aba-bdf9-71c753dc5077"
+  }
+]

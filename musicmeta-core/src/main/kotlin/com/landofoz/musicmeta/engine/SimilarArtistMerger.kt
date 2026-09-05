@@ -60,13 +60,7 @@ internal object SimilarArtistMerger : ResultMerger {
     internal fun mergeArtists(artists: List<SimilarArtist>): List<SimilarArtist> {
         if (artists.isEmpty()) return emptyList()
 
-        val grouped = LinkedHashMap<String, MutableList<SimilarArtist>>()
-        for (artist in artists) {
-            val key = normalize(artist.name)
-            grouped.getOrPut(key) { mutableListOf() }.add(artist)
-        }
-
-        val summed = grouped.values.map { group ->
+        val summed = groupArtists(artists).map { group ->
             val first = group.first()
             val totalScore = group
                 .map { it.matchScore }
@@ -88,6 +82,20 @@ internal object SimilarArtistMerger : ResultMerger {
         return summed
             .map { it.copy(matchScore = it.matchScore / scale) }
             .sortedByDescending { it.matchScore }
+    }
+
+    /**
+     * The entries of [artists] that are one act, in first-occurrence order.
+     *
+     * The key is the normalized name and nothing else, so two providers naming one act differently
+     * stay two groups.
+     */
+    internal fun groupArtists(artists: List<SimilarArtist>): List<List<SimilarArtist>> {
+        val grouped = LinkedHashMap<String, MutableList<SimilarArtist>>()
+        for (artist in artists) {
+            grouped.getOrPut(normalize(artist.name)) { mutableListOf() }.add(artist)
+        }
+        return grouped.values.toList()
     }
 
     private fun normalize(name: String): String = name.trim().lowercase()
