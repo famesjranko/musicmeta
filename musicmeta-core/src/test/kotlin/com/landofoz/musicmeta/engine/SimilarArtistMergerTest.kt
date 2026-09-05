@@ -5,6 +5,10 @@ import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.SimilarArtist
+import com.landofoz.musicmeta.provider.deezer.DeezerMapper
+import com.landofoz.musicmeta.provider.deezer.DeezerRelatedArtist
+import com.landofoz.musicmeta.provider.lastfm.LastFmMapper
+import com.landofoz.musicmeta.provider.lastfm.LastFmSimilarArtist
 import com.landofoz.musicmeta.provider.listenbrainz.ListenBrainzMapper
 import com.landofoz.musicmeta.provider.listenbrainz.ListenBrainzSimilarArtist
 import org.junit.Assert.assertEquals
@@ -352,5 +356,179 @@ class SimilarArtistMergerTest {
         assertEquals("Portishead", merged.first().name)
         assertEquals(1.0f, merged.first().matchScore, 0.0001f)
         assertEquals(0.5f / 0.9f, merged.first { it.name == "Massive Attack" }.matchScore, 0.0001f)
+    }
+
+    // --- grouping by identifier, not by name alone ---
+
+    @Test
+    fun `two same-name artists carrying different MBIDs stay two entries`() {
+        // Given - one name held by two MusicBrainz artists, one entry from each of two providers
+        val artists = listOf(
+            SimilarArtist(
+                name = "Loathe",
+                identifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-uk"),
+                matchScore = 0.6f,
+                sources = listOf("listenbrainz"),
+            ),
+            SimilarArtist(
+                name = "Loathe",
+                identifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-malta"),
+                matchScore = 0.4f,
+                sources = listOf("lastfm"),
+            ),
+        )
+
+        // When - merging the two entries
+        val merged = SimilarArtistMerger.mergeArtists(artists)
+
+        // Then - each act keeps its own entry, its own MBID and its own single source
+        assertEquals(2, merged.size)
+        assertEquals(listOf("mbid-uk", "mbid-malta"), merged.map { it.identifiers.musicBrainzId })
+        assertEquals(listOf(listOf("listenbrainz"), listOf("lastfm")), merged.map { it.sources })
+    }
+
+    @Test
+    fun `an artist with no MBID joins the same-name group and lends it its score`() {
+        // Given - an identifier-less entry and a same-name entry carrying an MBID
+        val artists = listOf(
+            SimilarArtist(name = "Bad Omens", matchScore = 0.5f, sources = listOf("deezer")),
+            SimilarArtist(
+                name = "Bad Omens",
+                identifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-metalcore"),
+                matchScore = 0.5f,
+                sources = listOf("listenbrainz"),
+            ),
+        )
+
+        // When - merging the two entries
+        val merged = SimilarArtistMerger.mergeArtists(artists)
+
+        // Then - one entry carries both sources and the only MBID either offered
+        assertEquals(1, merged.size)
+        assertEquals(listOf("deezer", "listenbrainz"), merged.single().sources)
+        assertEquals("mbid-metalcore", merged.single().identifiers.musicBrainzId)
+    }
+
+    @Test
+    fun `two names sharing one MBID become one entry`() {
+        // Given - two providers naming one MusicBrainz artist differently
+        val artists = listOf(
+            SimilarArtist(
+                name = "Africa 70",
+                identifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-africa70"),
+                matchScore = 0.6f,
+                sources = listOf("listenbrainz"),
+            ),
+            SimilarArtist(
+                name = "Fela Kuti & Afrika 70",
+                identifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-africa70"),
+                matchScore = 0.4f,
+                sources = listOf("lastfm"),
+            ),
+        )
+
+        // When - merging the two entries
+        val merged = SimilarArtistMerger.mergeArtists(artists)
+
+        // Then - the identifier wins over the two names and the scores sum under the first name
+        assertEquals(1, merged.size)
+        assertEquals("Africa 70", merged.single().name)
+        assertEquals(listOf("listenbrainz", "lastfm"), merged.single().sources)
+    }
+
+    @Test
+    fun `an MBID-carrying artist refuses a same-name group already holding a different MBID`() {
+        // Given - an identifier-less entry, then two same-name entries whose MBIDs disagree
+        val artists = listOf(
+            SimilarArtist(name = "Spiritbox", matchScore = 0.5f, sources = listOf("deezer")),
+            SimilarArtist(
+                name = "Spiritbox",
+                identifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-canada"),
+                matchScore = 0.4f,
+                sources = listOf("listenbrainz"),
+            ),
+            SimilarArtist(
+                name = "Spiritbox",
+                identifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-netherlands"),
+                matchScore = 0.3f,
+                sources = listOf("lastfm"),
+            ),
+        )
+
+        // When - merging the three entries
+        val merged = SimilarArtistMerger.mergeArtists(artists)
+
+        // Then - the first group takes the identifier-less entry and closes against the second MBID
+        assertEquals(2, merged.size)
+        assertEquals(listOf("mbid-canada", "mbid-netherlands"), merged.map { it.identifiers.musicBrainzId })
+        assertEquals(listOf(listOf("deezer", "listenbrainz"), listOf("lastfm")), merged.map { it.sources })
+    }
+
+    @Test
+    fun `an MBID-less artist joins the first same-name group rather than a bucket of its own`() {
+        // Given - two same-name groups already open under different MBIDs, then two nameless-id entries
+        val artists = listOf(
+            SimilarArtist(
+                name = "Sungazer",
+                identifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-ny"),
+                matchScore = 0.5f,
+                sources = listOf("listenbrainz"),
+            ),
+            SimilarArtist(
+                name = "Sungazer",
+                identifiers = EnrichmentIdentifiers(musicBrainzId = "mbid-colorado"),
+                matchScore = 0.4f,
+                sources = listOf("lastfm"),
+            ),
+            SimilarArtist(name = "Sungazer", matchScore = 0.3f, sources = listOf("deezer")),
+            SimilarArtist(name = "Bicep", matchScore = 0.2f, sources = listOf("deezer")),
+        )
+
+        // When - merging the four entries
+        val merged = SimilarArtistMerger.mergeArtists(artists)
+
+        // Then - the unidentified Sungazer joins the first Sungazer, and Bicep is not swept in with it
+        assertEquals(3, merged.size)
+        val sungazers = merged.filter { it.name == "Sungazer" }
+        assertEquals(listOf("mbid-ny", "mbid-colorado"), sungazers.map { it.identifiers.musicBrainzId })
+        assertEquals(listOf("listenbrainz", "deezer"), sungazers.first().sources)
+        assertEquals(listOf("deezer"), merged.single { it.name == "Bicep" }.sources)
+    }
+
+    @Test
+    fun `the two Bad Omens the three providers return do not become one act`() {
+        // Given - the Bad Omens rows the sleep-token capture holds, mapped by the providers' own mappers
+        val deezer = DeezerMapper.toSimilarArtists(
+            listOf(DeezerRelatedArtist(id = 9700940L, name = "Bad Omens")),
+        ).artists
+        val labs = ListenBrainzMapper.toSimilarArtists(
+            listOf(
+                ListenBrainzSimilarArtist(
+                    artistMbid = "eecada09-acfc-472d-ae55-e9e5a43f12d8",
+                    name = "Bad Omens",
+                    score = 114,
+                ),
+            ),
+        ).artists
+        val lastfm = LastFmMapper.toSimilarArtists(
+            listOf(
+                LastFmSimilarArtist(
+                    name = "Bad Omens",
+                    matchScore = 0.900919f,
+                    mbid = "8834d8b5-72a4-4a6e-9d35-3a041b8579fa",
+                ),
+            ),
+        ).artists
+
+        // When - merging them in the engine's registration order
+        val merged = SimilarArtistMerger.mergeArtists(deezer + labs + lastfm)
+
+        // Then - the metalcore band and the 1960s garage band stay apart, Deezer's row joining the first
+        assertEquals(2, merged.size)
+        assertEquals(
+            listOf("eecada09-acfc-472d-ae55-e9e5a43f12d8", "8834d8b5-72a4-4a6e-9d35-3a041b8579fa"),
+            merged.map { it.identifiers.musicBrainzId },
+        )
+        assertEquals(listOf(listOf("deezer", "listenbrainz"), listOf("lastfm")), merged.map { it.sources })
     }
 }
