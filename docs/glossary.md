@@ -5,9 +5,9 @@ public type or member, and before reading a provider's mapper — the mapper's j
 cross this table, and a name that crosses it in the wrong direction leaks an upstream's vocabulary
 into the published surface.
 
-Scope is vocabulary. What each provider *serves*, and what it deliberately leaves, is
-[providers.md](providers.md); how the pipeline uses the resolved ids is
-[how-it-works.md](how-it-works.md).
+Scope is vocabulary. What each provider *serves* is [providers.md](providers.md); what it
+deliberately leaves is [provider-internals.md](provider-internals.md); how the pipeline uses the
+resolved ids is [how-it-works.md](how-it-works.md).
 
 **Half of this is checked.** `scripts/checks/check_public_vocabulary.py` gates the one rule with a
 mechanical form — an upstream's word may not appear unqualified in the published surface — and

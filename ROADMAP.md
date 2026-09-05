@@ -58,9 +58,10 @@ the list. The published 0.12.0 artifact carries none of it.
 ### Current Coverage (36 enrichment types)
 
 Which providers serve each type, and in what priority order, is in
-[docs/how-it-works.md](docs/how-it-works.md); what each provider takes from its upstream and what it
-leaves is [docs/providers.md](docs/providers.md). This table is the assessment — a judgement, not a
-measurement — of how well each type is covered.
+[docs/how-it-works.md](docs/how-it-works.md); what each provider takes from its upstream is
+[docs/providers.md](docs/providers.md), and what it leaves is
+[docs/provider-internals.md](docs/provider-internals.md). This table is the assessment — a
+judgement, not a measurement — of how well each type is covered.
 
 | Category | Type | Depth |
 |----------|------|-------|
@@ -124,7 +125,7 @@ Parameter variants fold into one path: Last.fm's six `method=` calls are one pat
 No percentage of each upstream's total surface appears here. What a provider leaves unused is a
 per-field judgement, not a ratio — a write endpoint, a user-scoped route and a field we already
 fetch and drop are not one unit — and that judgement is kept, hand-verified and dated, in
-[docs/providers.md](docs/providers.md) § What we don't extract.
+[docs/provider-internals.md](docs/provider-internals.md) § What we don't extract.
 
 ---
 
@@ -176,7 +177,7 @@ The `SearchCandidate` fields this flow relies on are documented in
 - **A second ARTIST_RADIO_DISCOVERY source** — the type has one provider, and that provider withdrew
   its route once already, which took the whole type down with it. `/1/lb-radio/artist/{mbid}` is the
   nearest fallback, but it is a candidate pool rather than a playlist
-  ([docs/providers.md](docs/providers.md) has why serving the type from it is not free)
+  ([docs/provider-internals.md](docs/provider-internals.md) has why serving the type from it is not free)
 
 ### Catalog Awareness — Interface Shipped, Implementations Remaining
 
@@ -200,7 +201,7 @@ Which types merge, and from how many providers, is in the Current Coverage table
 ### Provider Coverage Gaps
 
 Left deliberately, with the reason. The full per-field list is in
-[docs/providers.md](docs/providers.md) § What we don't extract; these are the ones that shape a
+[docs/provider-internals.md](docs/provider-internals.md) § What we don't extract; these are the ones that shape a
 milestone:
 
 - Wikidata: P136 genre and P264 label arrive as Q-ids, so either would need a label lookup we
