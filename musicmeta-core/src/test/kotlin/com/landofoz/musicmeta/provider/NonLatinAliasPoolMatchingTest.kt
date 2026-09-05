@@ -75,9 +75,9 @@ class NonLatinAliasPoolMatchingTest {
 
     @Test
     fun `a homonym counter on the discogs detail record does not reject the hit the search accepted`() = runTest {
-        // Given - a Korean request whose Discogs record is filed under a romanization and a counter
+        // Given - a Korean request whose Discogs record is a romanization and a counter, no other names
         httpClient.givenJsonResponse("api.discogs.com/database/search", DISCOGS_IU_ARTIST_SEARCH)
-        httpClient.givenJsonResponse("api.discogs.com/artists", DISCOGS_IU_ARTIST_DETAIL)
+        httpClient.givenJsonResponse("api.discogs.com/artists", DISCOGS_IU_ARTIST_DETAIL_UNCORROBORATED)
         val provider = DiscogsProvider("token", httpClient, RateLimiter(0))
         val request = EnrichmentRequest.forArtist("아이유")
 
@@ -88,6 +88,46 @@ class NonLatinAliasPoolMatchingTest {
         assertTrue("expected the detail re-check to accept the hit, got $result", result is EnrichmentResult.Success)
         assertEquals(
             DISCOGS_ARTIST_PRIMARY_ALIAS_CONFIDENCE,
+            (result as EnrichmentResult.Success).confidence,
+            0.0001f,
+        )
+    }
+
+    @Test
+    fun `a discogs record whose own realname is the requested name reports the canonical tier`() = runTest {
+        // Given - a request in Japanese, and Discogs filing that very name as the artist's realname
+        httpClient.givenJsonResponse("api.discogs.com/database/search", DISCOGS_ARTIST_SEARCH)
+        httpClient.givenJsonResponse("api.discogs.com/artists", DISCOGS_ARTIST_DETAIL)
+        val provider = DiscogsProvider("token", httpClient, RateLimiter(0))
+        val request = EnrichmentRequest.forArtist("東京事変")
+
+        // When - the artist photo is asked for
+        val result = withPool { provider.enrich(request, EnrichmentType.ARTIST_PHOTO) }
+
+        // Then - Discogs itself holds the requested name, so no alias tier scales the score down
+        assertTrue("expected a match through the pool, got $result", result is EnrichmentResult.Success)
+        assertEquals(
+            DISCOGS_ARTIST_CONFIDENCE,
+            (result as EnrichmentResult.Success).confidence,
+            0.0001f,
+        )
+    }
+
+    @Test
+    fun `a discogs record whose name variations hold the requested name is the requested act`() = runTest {
+        // Given - a Korean request whose Discogs record answers under a romanization and a homonym counter
+        httpClient.givenJsonResponse("api.discogs.com/database/search", DISCOGS_IU_ARTIST_SEARCH)
+        httpClient.givenJsonResponse("api.discogs.com/artists", DISCOGS_IU_ARTIST_DETAIL)
+        val provider = DiscogsProvider("token", httpClient, RateLimiter(0))
+        val request = EnrichmentRequest.forArtist("아이유")
+
+        // When - the artist photo is asked for
+        val result = withPool(IU_POOL) { provider.enrich(request, EnrichmentType.ARTIST_PHOTO) }
+
+        // Then - the record's own name variations carry the requested name, at the canonical tier
+        assertTrue("expected the record's own names to verify it, got $result", result is EnrichmentResult.Success)
+        assertEquals(
+            DISCOGS_ARTIST_CONFIDENCE,
             (result as EnrichmentResult.Success).confidence,
             0.0001f,
         )
@@ -282,6 +322,12 @@ class NonLatinAliasPoolMatchingTest {
          * artist endpoints match on one name only, so a pool-verified hit there reports this.
          */
         const val DISCOGS_ARTIST_PRIMARY_ALIAS_CONFIDENCE = 0.6f * 0.95f
+
+        /**
+         * `fuzzyMatch(hasArtistMatch = false)`, unscaled: the Discogs artist endpoints match on one
+         * name only, so this is what a canonical-tier hit there reports.
+         */
+        const val DISCOGS_ARTIST_CONFIDENCE = 0.6f
 
         // The pool as MusicBrainz files it: a locale-tagged or primary alias is a name the entity
         // is published under, a "Search hint" is not.
@@ -506,6 +552,20 @@ class NonLatinAliasPoolMatchingTest {
                     "resource_url":"https://i.discogs.com/cover/600x600.jpeg",
                     "uri150":"https://i.discogs.com/thumb/150x150.jpeg","width":600,"height":600}],
          "realname":"이지은","namevariations":["아이유","아이유 IU"],"data_quality":"Needs Vote"}
+        """
+
+        // [DISCOGS_IU_ARTIST_DETAIL] less its `realname` and `namevariations`, which hold the
+        // requested name and so would identify this record by corroboration alone. Only the
+        // disambiguator strip can accept the hit here, which is what the homonym-counter test pins;
+        // reading the full capture there would leave that test green with the strip reverted.
+        const val DISCOGS_IU_ARTIST_DETAIL_UNCORROBORATED = """
+        {"name":"IU (3)","id":2226306,
+         "resource_url":"https://api.discogs.com/artists/2226306",
+         "uri":"https://www.discogs.com/artist/2226306-IU-3",
+         "images":[{"type":"primary","uri":"https://i.discogs.com/cover/600x600.jpeg",
+                    "resource_url":"https://i.discogs.com/cover/600x600.jpeg",
+                    "uri150":"https://i.discogs.com/thumb/150x150.jpeg","width":600,"height":600}],
+         "data_quality":"Needs Vote"}
         """
     }
 }

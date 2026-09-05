@@ -83,6 +83,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - `EnrichmentData.Discography.albums` now arrives in ascending `year` order, undated albums last, from providers and cache alike; a shared year and the undated run keep the provider's order
+- A Discogs artist whose own `realname` or `namevariations` hold the requested name now reports full confidence, not the alias tier, and is no longer rejected when its `name` alone disagrees
 - `enrichProgressive` emits one extra snapshot the moment live identity resolution settles, before any type does: collectors see the verdict and its suggestions without waiting on enrichment
 - An album title no folding could match (a plain typo, say) no longer runs the symbol-title browse on an empty pool: the same `AMBIGUOUS` verdict arrives without those MusicBrainz calls
 - An album or track search hit is stamped `EXACT_NAME` only when the returned title matches the requested one; a loose hit now reports `FUZZY_NAME`, so provenance branching sees downgrades

@@ -439,6 +439,17 @@ siblings.
   Lebanese Fairuz first. The same rewrite also loses matches that already worked: a search for
   "Kino" is not a search for "Кино", and Deezer holds the band under the Cyrillic name. Widen what
   a match is allowed to be; never widen what is asked for.
+- A Discogs artist's other names are `realname` and `namevariations`. Its **`aliases` array is not
+  one of them**: that names *other acts* the same people record under (artist 345278, `Кино`, lists
+  `Гарин И Гиперболоиды`), so reading it as a name for this artist matches the wrong band. Two more
+  traps in the same record, both confirmed live on 2026-09-05: a name and its transliteration are
+  written into one field joined by ` = ` (`Χαρίκλεια Ρουπάκα = Haríklia Roupáka`, and a search hit's
+  `title` does it too), so each side is split out before comparing or neither side matches; and the
+  detail record's `name` keeps the `" (n)"` homonym counter that `stripDiscogsDisambiguator` takes
+  off the search hit's `title` — `IU (3)` is the whole `name`, which no Korean request can match, so
+  the detail re-check that repeats the search's name test has to reach the record's other names too.
+  Those lists are the credit spellings contributors filed, never a complete alias set, so a name
+  missing from one is not evidence of a different act and must not reject a candidate.
 
 ## 3. `org.json` returns a default for a missing key — it does not fail
 

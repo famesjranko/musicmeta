@@ -64,6 +64,23 @@ internal fun nameMatchTier(
 }
 
 /**
+ * [NameMatchTier.CANONICAL] when [ownNames] — other names the *answering* source publishes for the
+ * candidate itself — hold [requested]; this tier unchanged otherwise, null included.
+ *
+ * An alias-pool tier is a second source's claim that two names are one entity. A candidate whose own
+ * record carries the requested name needs no such claim: the source that answered says the entity is
+ * named as the request asked, and which of its fields carries that name is its cataloguing
+ * convention, not a weaker identification. Absence corroborates nothing either way — such a list is
+ * what contributors happened to file, so a name missing from it is not evidence of a different act,
+ * and the pool's own tier stands.
+ *
+ * Same-name only, as an alias-pool match is: containment across a name list multiplies the chances
+ * of a partial match.
+ */
+internal fun NameMatchTier?.corroboratedBy(requested: String, ownNames: List<String>): NameMatchTier? =
+    if (ownNames.any { sameName(requested, it) }) NameMatchTier.CANONICAL else this
+
+/**
  * [ArtistMatcher.matchQuality]'s same-name rank. The empty-normalization case — a name written
  * entirely in another script, or one whose only Latin content was a stripped "the " prefix — is
  * [ArtistMatcher]'s rule to own; this delegates rather than keeping a second copy of it.
