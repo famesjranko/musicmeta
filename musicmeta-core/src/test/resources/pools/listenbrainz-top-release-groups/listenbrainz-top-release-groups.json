@@ -1,0 +1,86 @@
+[
+  {
+    "artist": {
+      "artists": [
+        {
+          "name": "Lil Wayne"
+        }
+      ]
+    },
+    "release_group": {
+      "name": "Tha Carter III"
+    },
+    "release_group_mbid": "cb688885-74b2-4e9b-a18c-6102866151f2",
+    "total_listen_count": 884294
+  },
+  {
+    "artist": {
+      "artists": [
+        {
+          "name": "Lil Wayne"
+        }
+      ]
+    },
+    "release_group": {
+      "name": "Tha Carter IV"
+    },
+    "release_group_mbid": "75fb59d5-4880-4f39-a447-5e0f81bf4448",
+    "total_listen_count": 504507
+  },
+  {
+    "artist": {
+      "artists": [
+        {
+          "name": "Kevin Rudolf"
+        }
+      ]
+    },
+    "release_group": {
+      "name": "In the City"
+    },
+    "release_group_mbid": "d0ca50a7-d445-3071-be85-0776d74b45f2",
+    "total_listen_count": 286885
+  },
+  {
+    "artist": {
+      "artists": [
+        {
+          "name": "Lil Wayne"
+        }
+      ]
+    },
+    "release_group": {
+      "name": "Tha Carter II"
+    },
+    "release_group_mbid": "d97d9f3b-3dc1-3330-a240-b84b74e62044",
+    "total_listen_count": 283423
+  },
+  {
+    "artist": {
+      "artists": [
+        {
+          "name": "Lil Wayne"
+        }
+      ]
+    },
+    "release_group": {
+      "name": "Rebirth"
+    },
+    "release_group_mbid": "5d79140b-66a9-4897-a364-0aa86eec190a",
+    "total_listen_count": 237649
+  },
+  {
+    "artist": {
+      "artists": [
+        {
+          "name": "Young Money"
+        }
+      ]
+    },
+    "release_group": {
+      "name": "We Are Young Money"
+    },
+    "release_group_mbid": "475b97e7-fc4a-4b7c-a735-68a0e707ea93",
+    "total_listen_count": 221959
+  }
+]

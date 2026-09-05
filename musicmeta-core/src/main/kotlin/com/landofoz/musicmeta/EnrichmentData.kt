@@ -103,6 +103,12 @@ public sealed class EnrichmentData {
     @Serializable
     public data class BandMembers(val members: List<BandMember>) : EnrichmentData()
 
+    /**
+     * Albums in ascending [DiscographyAlbum.year] order. Albums with no year follow every dated
+     * album, in the order the provider gave them; a provider that carries no dates therefore
+     * returns its list unchanged. Within one year the provider's order is kept. The order is
+     * applied by the engine, not the provider.
+     */
     @Serializable
     public data class Discography(val albums: List<DiscographyAlbum>) : EnrichmentData()
 

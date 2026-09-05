@@ -304,15 +304,13 @@ internal class DefaultEnrichmentEngine(
                 CanonicalStatus.NOT_ATTEMPTED_DISABLED
             }
             val identity = IdentityResolution(request.identifiers, cacheHitStatus)
-            // A partial cache hit re-runs catalog filtering per type via settle()/finalizeResult
-            // below; a full cache hit must do the same rather than replay whatever
+            // A partial cache hit normalizes per type via settle()/finalizeResult below; a full
+            // cache hit must do the same rather than replay whatever
             // EnrichmentResult.Success.isCatalogDegraded happened to be true at write time — that
             // value is call-scoped, not a stored fact (see its KDoc), so a since-recovered or
             // since-failed CatalogProvider must be reflected on every read, not just a partial one.
-            val filtered = cacheLayer.results.mapValues { (type, result) ->
-                applyCatalogFilteringToType(type, result, config.catalogProvider, config.catalogFilterMode, logger)
-            }
-            send(EnrichmentResults(filtered, types, identity))
+            val normalized = cacheLayer.results.mapValues { (type, result) -> normalizeOnServe(type, result) }
+            send(EnrichmentResults(normalized, types, identity))
             return@channelFlow
         }
 
@@ -521,16 +519,15 @@ internal class DefaultEnrichmentEngine(
     /**
      * One type's whole post-processing pass, run by [SettlementBoard.settle] *before* it takes
      * its lock — concurrently across types, which is why [CatalogProvider.checkAvailability]
-     * must be thread-safe: catalog
-     * filtering, then provenance stamping, then stale-cache resolution — the order that lets a
-     * `Success` demoted to `NotFound` by filtering flow untouched through stamping (which only
-     * reads `Success`) and into stale-cache resolution (which only reads `Error`/`RateLimited`), so
-     * the three never contend over the same result.
+     * must be thread-safe: [normalizeOnServe], then provenance stamping, then stale-cache
+     * resolution — the order that lets a `Success` demoted to `NotFound` by filtering flow
+     * untouched through stamping (which only reads `Success`) and into stale-cache resolution
+     * (which only reads `Error`/`RateLimited`), so the three never contend over the same result.
      *
      * A stale-cache substitution hands back a *different* `Success` object, read straight from the
-     * cache rather than produced by this call's own filtering pass above — so it is run back through
-     * [applyCatalogFilteringToType] before returning, the same normalize-at-entry every other serve
-     * gets. Without this, a persisted `isCatalogDegraded = true` (written by a call whose
+     * cache rather than produced by this call's own pass above — so it is run back through
+     * [normalizeOnServe] before returning, the same normalize-at-entry every other serve gets.
+     * Without this, a persisted `isCatalogDegraded = true` (written by a call whose
      * `CatalogProvider` threw) would replay verbatim on a call with no `CatalogProvider` configured
      * at all, which that field's own KDoc says should be structurally impossible.
      *
@@ -550,7 +547,7 @@ internal class DefaultEnrichmentEngine(
         if (currentCoroutineContext()[SuppliedIdentifierContradiction]?.seen() == true) {
             session.identityHolder.contradicted = true
         }
-        val filtered = applyCatalogFilteringToType(type, raw, config.catalogProvider, config.catalogFilterMode, logger)
+        val filtered = normalizeOnServe(type, raw)
         if (raw is EnrichmentResult.Success && filtered is EnrichmentResult.NotFound) {
             session.filterEmptied.add(type)
         }
@@ -564,8 +561,20 @@ internal class DefaultEnrichmentEngine(
         // this membership alone is what bars writeBack from negative-caching a NotFound the
         // re-filter produces.
         session.staleDerived.add(type)
-        return applyCatalogFilteringToType(type, stale, config.catalogProvider, config.catalogFilterMode, logger)
+        return normalizeOnServe(type, stale)
     }
+
+    /**
+     * The normalization every result gets on its way to a caller, whatever produced it — a
+     * provider, this call's own cache read, or a stale-cache substitution: catalog filtering, then
+     * discography ordering. One function rather than a call to each, so a serve route cannot pick
+     * up one step and miss the other.
+     */
+    private suspend fun normalizeOnServe(type: EnrichmentType, result: EnrichmentResult): EnrichmentResult =
+        orderDiscography(
+            type,
+            applyCatalogFilteringToType(type, result, config.catalogProvider, config.catalogFilterMode, logger),
+        )
 
     override fun enrichBatch(
         requests: List<EnrichmentRequest>,

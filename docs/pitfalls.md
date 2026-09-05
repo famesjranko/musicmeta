@@ -74,6 +74,13 @@ exhaustive. Paths are relative to `musicmeta-core/src/main/kotlin/com/landofoz/m
   propagates. An expiry does not discard results already fetched, but the write-back is skipped, so
   a timed-out run caches nothing. The stale fallback and write-back sit outside the timed block.
   §6 below holds the worked example.
+- A cached result reaches a caller by **two** routes, and a normalization added to one is invisibly
+  missing from the other. `enrichProgressive`'s fully-cached fast path returns before any fan-out
+  starts and never touches `finalizeResult`, which is where a partial cache hit's entries — and
+  every live provider answer — are normalized. Both now go through `normalizeOnServe`, and anything
+  that must hold of a served result belongs in that one function: a rule written at either call site
+  holds for one warm-cache shape and silently not the other, and the difference between the two is
+  whether some *unrelated* type in the same request happened to be cached.
 - `filterByConfidence()` demotes a `Success` below `minConfidence` (0.5) to `NotFound`; its sibling
   `demoteUnanswered()` demotes one whose payload does not `answers()` its type, at any confidence,
   and runs on the cache read too — where an unanswered entry counts as a *miss*, so one written by
