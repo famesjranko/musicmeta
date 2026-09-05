@@ -311,7 +311,7 @@ object Formatter {
         is EnrichmentData.Biography -> textSnippet(data.text)
         is EnrichmentData.SimilarArtists ->
             "${data.artists.size} artists: " +
-                data.artists.take(3).joinToString(", ") { "${it.name} (match ${formatScore(it.matchScore)})" }
+                data.artists.take(3).joinToString(", ") { "${it.name} (rank ${formatScore(it.matchScore)})" }
         is EnrichmentData.Popularity -> buildString {
             data.listenerCount?.let { append("listeners=$it ") }
             data.listenCount?.let { append("plays=$it ") }
@@ -320,7 +320,7 @@ object Formatter {
         is EnrichmentData.Discography -> "${data.albums.size} albums"
         is EnrichmentData.Tracklist -> "${data.tracks.size} tracks"
         is EnrichmentData.SimilarTracks ->
-            data.tracks.take(3).joinToString(", ") { "${it.title} (match ${formatScore(it.matchScore)})" }
+            data.tracks.take(3).joinToString(", ") { "${it.title} (rank ${formatScore(it.matchScore)})" }
         is EnrichmentData.ArtistLinks -> data.links.take(3).joinToString(", ") { it.type }
         is EnrichmentData.Credits -> {
             val cats = data.credits.groupBy { it.roleCategory ?: "other" }
