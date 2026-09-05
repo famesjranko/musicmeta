@@ -180,6 +180,27 @@ class ListenBrainzSimilarArtistsTest {
         assertTrue("nothing should have been requested", httpClient.requestedUrls.isEmpty())
     }
 
+    @Test
+    fun `enrich returns NotFound for SIMILAR_ARTISTS when the request is not for an artist`() = runTest {
+        // Given - a track request whose MBID identifies a recording, and a route that refuses one
+        httpClient.givenHttpResultArray(
+            "similar-artists/json",
+            HttpResult.ClientError(400, ALGORITHM_REJECTED_BODY),
+        )
+        val request = EnrichmentRequest.ForTrack(
+            identifiers = EnrichmentIdentifiers(musicBrainzId = CREEP_RECORDING_MBID),
+            title = "Creep",
+            artist = "Radiohead",
+        )
+
+        // When - similar artists are asked of that request
+        val result = provider.enrich(request, EnrichmentType.SIMILAR_ARTISTS)
+
+        // Then - NotFound rather than the Error a refused recording MBID would earn
+        assertTrue("a recording MBID is not an artist MBID, got $result", result is EnrichmentResult.NotFound)
+        assertTrue("nothing should have been requested", httpClient.requestedUrls.isEmpty())
+    }
+
     private fun radioheadRequest() = EnrichmentRequest.ForArtist(
         identifiers = EnrichmentIdentifiers(musicBrainzId = RADIOHEAD_MBID),
         name = "Radiohead",
@@ -197,6 +218,9 @@ class ListenBrainzSimilarArtistsTest {
 
     private companion object {
         const val RADIOHEAD_MBID = "a74b1b7f-71a5-4011-9441-d0b5e4122711"
+
+        /** A recording MBID — the shape `identifiers.musicBrainzId` carries on a track request. */
+        const val CREEP_RECORDING_MBID = "b4a5a4a8-9e26-4b0e-8e97-1fbf1a1e0cd0"
 
         const val PINNED_ALGORITHM =
             "session_based_days_7500_session_300_contribution_5_threshold_10_limit_100_filter_True_skip_30"

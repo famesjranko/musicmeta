@@ -72,6 +72,30 @@ class ListenBrainzProviderTest {
     }
 
     @Test
+    fun `enrich returns NotFound for every artist type when the request is not for an artist`() = runTest {
+        // Given - an album request, whose MBID identifies a release group and not an artist
+        val request = EnrichmentRequest.ForAlbum(
+            identifiers = EnrichmentIdentifiers(musicBrainzId = "b1392450-e666-3926-a536-22c65998fcbd"),
+            title = "OK Computer",
+            artist = "Radiohead",
+        )
+        val artistTypes = listOf(
+            EnrichmentType.ARTIST_POPULARITY,
+            EnrichmentType.ARTIST_DISCOGRAPHY,
+            EnrichmentType.ARTIST_TOP_TRACKS,
+        )
+
+        // When - each artist-keyed type is asked of that request
+        val results = artistTypes.map { provider.enrich(request, it) }
+
+        // Then - NotFound throughout, and no artist route was asked for a release group
+        results.forEach { result ->
+            assertTrue("a release-group MBID is not an artist MBID, got $result", result is EnrichmentResult.NotFound)
+        }
+        assertTrue("nothing should have been requested", httpClient.requestedUrls.isEmpty())
+    }
+
+    @Test
     fun `enrich returns NotFound when no artist MBID in identifiers`() = runTest {
         // Given - a request whose identifiers have no MusicBrainz ID
         val request = EnrichmentRequest.ForArtist(

@@ -83,9 +83,15 @@ public class ListenBrainzProvider(
         val mbid = request.identifiers.musicBrainzId
         if (mbid.isNullOrBlank()) return EnrichmentResult.NotFound(type, id)
 
+        if (type == EnrichmentType.TRACK_POPULARITY) return enrichTrackPopularity(mbid, type)
+
+        // Every route below is keyed on an artist MBID, and `identifiers.musicBrainzId` is a
+        // recording or release MBID on the other two request shapes — an id those routes will
+        // reject rather than miss on. NotFound is the answer for a request they cannot be asked.
+        if (request !is EnrichmentRequest.ForArtist) return EnrichmentResult.NotFound(type, id)
+
         return when (type) {
             EnrichmentType.ARTIST_POPULARITY -> enrichArtistPopularity(mbid, type)
-            EnrichmentType.TRACK_POPULARITY -> enrichTrackPopularity(mbid, type)
             EnrichmentType.ARTIST_DISCOGRAPHY -> enrichDiscography(mbid, type)
             EnrichmentType.ARTIST_TOP_TRACKS -> enrichTopTracks(mbid, type)
             EnrichmentType.SIMILAR_ARTISTS -> enrichSimilarArtists(mbid, type)
