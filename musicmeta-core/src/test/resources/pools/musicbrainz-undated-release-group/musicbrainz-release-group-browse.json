@@ -1,0 +1,46 @@
+{
+  "release-groups": [
+    {
+      "id": "096f3aca-8515-3153-955f-95a7456f4962",
+      "title": "The Pick of Destiny",
+      "primary-type": "Album",
+      "first-release-date": "2006-11-02"
+    },
+    {
+      "id": "0bb3a340-e920-4ea8-a2dc-8df71fe8b98b",
+      "title": "Tenacious Demo",
+      "primary-type": "EP",
+      "first-release-date": "1994"
+    },
+    {
+      "id": "3084b4aa-0d14-392f-9dba-5449e68c0ef3",
+      "title": "1998-05-03: Key Club, Los Angeles, CA, USA",
+      "primary-type": "Album",
+      "first-release-date": ""
+    },
+    {
+      "id": "a1369e69-ceb7-3d23-9e19-4c76157b3cad",
+      "title": "Tenacious D",
+      "primary-type": "Album",
+      "first-release-date": "2001-09-25"
+    },
+    {
+      "id": "a2161536-4a62-49ed-92ac-59367a199220",
+      "title": "D Homemade",
+      "primary-type": "Album",
+      "first-release-date": "2002"
+    },
+    {
+      "id": "b354749d-962b-4598-b015-d76ec6f8ac69",
+      "title": "The History of Tenacious D: Demos and Pre-Album Tracks",
+      "primary-type": "Album",
+      "first-release-date": ""
+    },
+    {
+      "id": "c5a6f97e-d420-3b1c-bd15-feeb61f7277b",
+      "title": "D Fun Pak",
+      "primary-type": "EP",
+      "first-release-date": "2002"
+    }
+  ]
+}
