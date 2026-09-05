@@ -8,6 +8,7 @@ import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
 import com.landofoz.musicmeta.IdentifierRequirement
+import com.landofoz.musicmeta.http.BreakerPool
 import com.landofoz.musicmeta.http.CircuitBreaker
 import com.landofoz.musicmeta.http.RateLimitException
 import kotlinx.coroutines.async
@@ -71,10 +72,16 @@ internal fun EnrichmentResult.asRateLimitedIfThrottled(): EnrichmentResult =
 internal class ProviderChain(
     val type: EnrichmentType,
     private val providers: List<EnrichmentProvider>,
-    private val circuitBreakers: Map<String, CircuitBreaker> =
+    circuitBreakers: Map<String, CircuitBreaker> =
         providers.associate { it.id to CircuitBreaker() },
     private val logger: EnrichmentLogger = EnrichmentLogger.NoOp,
+    pool: BreakerPool? = null,
 ) {
+    private val breakers: BreakerPool = pool ?: BreakerPool(circuitBreakers)
+
+    /** ARM: B — (provider.id, type). The chain already knows its type; no provider declares anything. */
+    private fun breakerKeyFor(provider: EnrichmentProvider): String = "${provider.id}@${type.name}"
+
     /**
      * Collects ALL Success results from every eligible provider concurrently, and separately what
      * the providers that produced none of them did — see [ChainResults]. Discards the execution
@@ -104,7 +111,7 @@ internal class ProviderChain(
 
         val outcomes = eligible.map { provider ->
             async {
-                val breaker = circuitBreakers[provider.id]
+                val breaker = breakers.get(breakerKeyFor(provider))
                 val result = try {
                     provider.enrich(request, type)
                 } catch (e: Exception) {
@@ -119,17 +126,17 @@ internal class ProviderChain(
                 // no rethrow of ours could intercept. (#53)
                 currentCoroutineContext().ensureActive()
                 when (result) {
-                    is EnrichmentResult.Success -> { breaker?.recordSuccess(); result }
-                    is EnrichmentResult.NotFound -> { breaker?.recordSuccess(); null }
+                    is EnrichmentResult.Success -> { breaker.recordSuccess(); result }
+                    is EnrichmentResult.NotFound -> { breaker.recordSuccess(); null }
                     is EnrichmentResult.RateLimited -> {
                         // A failure, not a no-op: a throttled provider that records neither is a
                         // breaker that never opens under load, which is the collapse
                         // `bodyOrThrowTransient` throws to avoid (`docs/pitfalls.md` §4).
-                        breaker?.recordFailure()
+                        breaker.recordFailure()
                         logger.debug(TAG, "${type.name}: ${provider.id} rate limited, skipping"); result
                     }
                     is EnrichmentResult.Error -> {
-                        breaker?.recordFailure()
+                        breaker.recordFailure()
                         logger.debug(TAG, "${type.name}: ${provider.id} error: ${result.message}"); result
                     }
                 }
@@ -184,7 +191,7 @@ internal class ProviderChain(
         request: EnrichmentRequest,
         attempted: MutableList<String>,
     ): EnrichmentResult {
-        val breaker = circuitBreakers[provider.id]
+        val breaker = breakers.get(breakerKeyFor(provider))
         val result = try {
             provider.enrich(request, type)
         } catch (e: Exception) {
@@ -193,9 +200,9 @@ internal class ProviderChain(
         currentCoroutineContext().ensureActive() // see resolveAllWithExecution — the same single guard
         attempted.add(provider.id)
         if (result is EnrichmentResult.Success || result is EnrichmentResult.NotFound) {
-            breaker?.recordSuccess()
+            breaker.recordSuccess()
         } else {
-            breaker?.recordFailure()
+            breaker.recordFailure()
         }
         return result
     }
@@ -314,7 +321,7 @@ internal class ProviderChain(
 
     /** Whether [provider]'s breaker is open. A provider with no breaker is never skipped. */
     private fun isTripped(provider: EnrichmentProvider): Boolean =
-        circuitBreakers[provider.id]?.allowRequest() == false
+        !breakers.get(breakerKeyFor(provider)).allowRequest()
 
     private fun hasRequiredIdentifiers(
         provider: EnrichmentProvider,
