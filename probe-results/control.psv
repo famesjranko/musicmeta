@@ -1,0 +1,9 @@
+arm|scenario|ordering|artists|walks|main_api_calls_skipped|doomed_calls_made|answers_lost|successes|wall_clock_ms|breaker_states
+control|S1_LABS_DOWN|INTERLEAVE|1|5|0|1|0|4|14|{healthy_other=CLOSED, listenbrainz=CLOSED}
+control|S1_LABS_DOWN|INTERLEAVE|20|100|0|20|0|80|12|{healthy_other=CLOSED, listenbrainz=CLOSED}
+control|S1_LABS_DOWN|BURST|1|5|0|1|0|4|0|{healthy_other=CLOSED, listenbrainz=CLOSED}
+control|S1_LABS_DOWN|BURST|20|100|80|5|80|0|5|{healthy_other=CLOSED, listenbrainz=OPEN}
+control|S2_PROVIDER_DOWN|INTERLEAVE|1|5|0|5|0|0|0|{healthy_other=CLOSED, listenbrainz=OPEN}
+control|S2_PROVIDER_DOWN|INTERLEAVE|20|100|76|5|0|0|4|{healthy_other=CLOSED, listenbrainz=OPEN}
+control|S2_PROVIDER_DOWN|BURST|1|5|0|5|0|0|0|{healthy_other=CLOSED, listenbrainz=OPEN}
+control|S2_PROVIDER_DOWN|BURST|20|100|80|5|0|0|3|{healthy_other=CLOSED, listenbrainz=OPEN}
