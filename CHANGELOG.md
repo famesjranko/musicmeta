@@ -58,6 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `EnrichmentEngine` gains `discoverMbidEntityType`, a defaulted method: a custom implementation built against an older `.jar` throws `AbstractMethodError` on first call until recompiled
 - The top-level `discoverMbidEntityType` extension is removed, superseded by that member: drop `import com.landofoz.musicmeta.discoverMbidEntityType`; an old `.jar` throws `NoSuchMethodError`
 - `EnrichmentRequest.forAlbum`'s pre-`trackCount`/`year` overload is removed: source is unaffected (both default), but a `.jar` compiled against 0.12.0 throws `NoSuchMethodError` until recompiled
+- `SimilarArtist.matchScore` is now rank in its own merged list, top entry 1.0, not a sum clamped at 1.0: merged order and every score move; a cached list reads on the old scale until you clear it
 
 ### Added
 - Deezer, iTunes and Discogs verify a candidate against the alias pool identity resolution found, so a non-Latin request reaches a romanizing catalogue; an alias match scores lower

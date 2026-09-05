@@ -100,12 +100,13 @@ alone while Last.fm and Deezer keep answering, that is the shape to expect.
 Results are scored, unbounded session counts, and the route answers with up to a hundred rows where
 Last.fm answers with twenty — expect a merged `SIMILAR_ARTISTS` list to be markedly longer than it
 was before this provider joined the type (Radiohead: 31 entries to 109). A
-`SimilarArtist.matchScore` from this provider is that score scaled against the highest in the same
-answer and then halved, so its top entry is `0.5`. The halving is deliberate and is a contract: the
-merger sums `matchScore` across providers and caps the sum at 1.0, so at full scale a hundred Labs
-rows saturate the cap and the merged ordering collapses into a tie. At half scale a Labs row lifts
-an artist another provider also picked, and cannot outrank two providers that agree. The figures are
-not comparable between two answers, nor against Last.fm's own similarity number.
+The score this provider hands the merger is that count scaled against the highest in the same
+answer and then halved, so its top row enters the merge at `0.5`. The halving is deliberate and is
+a contract: the merger sums each provider's figure, so at full scale a row this provider alone
+picked would outrank two providers agreeing on an artist neither ranked first. At half scale a Labs
+row lifts an artist another provider also picked, and cannot outrank two providers that agree. The
+figures are not comparable between two answers, nor against Last.fm's own similarity number — and
+the `SimilarArtist.matchScore` a consumer reads is the merger's rescaled rank, not this one.
 
 ## Editions of an album
 
