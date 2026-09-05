@@ -106,6 +106,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Two published-surface conventions documented: every score is a `Float` on 0.0-1.0, every date a `String` in ISO-8601 and every `year` an `Int?` — with their frozen exceptions named
 
 ### Fixed
+- Discogs `ARTIST_PHOTO` and `BAND_MEMBERS` answer for an artist filed under a `(n)` homonym counter (`IU (3)`): the counter is dropped on the artist record as it already was on the search hit
 - demo-web's discography now collapses a `(Remastered Version)` edition into its base album's row, matching the qualifier vocabulary core already strips before searching
 - Fanart.tv `ALBUM_ART` and `CD_ART` answer again: the album route nests images under `albums.<release group id>`, which the mapper never read, so every album was `NotFound`; clear your cache or wait
 - Last.fm biographies and album descriptions carry no anchor tags, and a wiki-less artist settles `NotFound` not a link-only bio; cached entries keep it until refresh, so clear yours or wait

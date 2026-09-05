@@ -485,6 +485,36 @@ fixtures agreed with each other, three of them carrying a hand-written `cover-ar
 search payload upstream never sends. A fixture copied from a real response of **the endpoint the
 caller actually uses** is what pins this — a lookup capture proves nothing about a search path.
 
+## 32. Normalizing an upstream's convention at one call site gives one entity two names
+
+```kotlin
+// WRONG — the search path strips Discogs' "(n)" homonym counter, the detail path does not
+private fun JSONObject.candidateName(): String = stripDiscogsDisambiguator(optString("title", ""))
+// ...
+name = json.optString("name", "")
+
+// RIGHT — one accessor owns the convention, and every read of either field goes through it
+private fun JSONObject.discogsArtistName(key: String): String =
+    stripDiscogsDisambiguator(optString(key, ""))
+```
+
+Discogs appends `" (n)"` to a homonym's name on both an artist search hit's `title` and an artist
+record's `name`. Stripping it on the search path alone meant artist 2226306 was `IU` when picked and
+`IU (3)` when re-checked, so `DiscogsProvider`'s detail re-check compared the request against a name
+no request can carry. A Latin request survived on `ArtistMatcher`'s containment rank finding `IU`
+inside `IU (3)`; a request written in another script has no containment to fall back on and was
+rejected outright, having selected the right artist.
+
+The sibling of §22, inverted: there the field only one endpoint sends, here the same field both
+endpoints send under different keys and one shared convention. Normalization that lives at the call
+site is normalization that a second call site can be written without. Give the convention one
+accessor, named for what it returns, and the second caller cannot skip it by accident.
+
+A strip is not free elsewhere: dropping the counter across a *pool* changes which candidate ranks
+first, and Discogs hands the bare name to whoever was catalogued first rather than the better-known
+act (`DiscogsApi.searchArtist`'s KDoc). It is safe on a detail record because there is no pool —
+the record was already chosen by id, and the only question left is whether to accept it.
+
 ## 5. A capability's `identifierRequirement` defaults to `NONE`
 
 ```kotlin

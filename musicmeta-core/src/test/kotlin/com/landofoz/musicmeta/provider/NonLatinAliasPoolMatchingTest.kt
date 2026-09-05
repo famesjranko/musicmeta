@@ -74,6 +74,26 @@ class NonLatinAliasPoolMatchingTest {
     }
 
     @Test
+    fun `a homonym counter on the discogs detail record does not reject the hit the search accepted`() = runTest {
+        // Given - a Korean request whose Discogs record is filed under a romanization and a counter
+        httpClient.givenJsonResponse("api.discogs.com/database/search", DISCOGS_IU_ARTIST_SEARCH)
+        httpClient.givenJsonResponse("api.discogs.com/artists", DISCOGS_IU_ARTIST_DETAIL)
+        val provider = DiscogsProvider("token", httpClient, RateLimiter(0))
+        val request = EnrichmentRequest.forArtist("아이유")
+
+        // When - the artist photo is asked for
+        val result = withPool(IU_POOL) { provider.enrich(request, EnrichmentType.ARTIST_PHOTO) }
+
+        // Then - the detail name reads the same as the search hit did, so the pool verifies it once more
+        assertTrue("expected the detail re-check to accept the hit, got $result", result is EnrichmentResult.Success)
+        assertEquals(
+            DISCOGS_ARTIST_PRIMARY_ALIAS_CONFIDENCE,
+            (result as EnrichmentResult.Success).confidence,
+            0.0001f,
+        )
+    }
+
+    @Test
     fun `a latin exact match keeps the confidence it has today`() = runTest {
         // Given - a Latin-script request whose candidate carries the requested name itself
         httpClient.givenJsonResponse("api.deezer.com", DEEZER_LATIN_ARTIST_SEARCH)
@@ -226,9 +246,9 @@ class NonLatinAliasPoolMatchingTest {
         assertEquals(first, second)
     }
 
-    private suspend fun <T> withPool(body: suspend () -> T): T {
+    private suspend fun <T> withPool(pool: List<AlternativeName> = TOKYO_JIHEN_POOL, body: suspend () -> T): T {
         val names = ResolvedEntityNames()
-        names.offerAliases { TOKYO_JIHEN_POOL }
+        names.offerAliases { pool }
         return withContext(names) { body() }
     }
 
@@ -241,6 +261,12 @@ class NonLatinAliasPoolMatchingTest {
 
         /** [EXACT_CONFIDENCE] scaled by `NameMatchTier.ALIAS` — a search hint, not a published name. */
         const val ALIAS_CONFIDENCE = 0.8f * 0.85f
+
+        /**
+         * `fuzzyMatch(hasArtistMatch = false)` scaled by `NameMatchTier.PRIMARY_ALIAS`: the Discogs
+         * artist endpoints match on one name only, so a pool-verified hit there reports this.
+         */
+        const val DISCOGS_ARTIST_PRIMARY_ALIAS_CONFIDENCE = 0.6f * 0.95f
 
         // The pool as MusicBrainz files it: a locale-tagged or primary alias is a name the entity
         // is published under, a "Search hint" is not.
@@ -404,6 +430,38 @@ class NonLatinAliasPoolMatchingTest {
                     "uri150":"https://i.discogs.com/thumb/150x150.jpeg","width":600,"height":538}],
          "realname":"東京事変","profile":"Japanese five-piece rock band.",
          "namevariations":["Tokyo Incidents","東京事變"],"members":[],"data_quality":"Needs Vote"}
+        """
+
+        // The pool as MusicBrainz files it for artist b9545342-1e6d-4dae-84ac-013374ad8d7c,
+        // captured 2026-09-05: every alias is primary or locale-tagged, so all are official here.
+        val IU_POOL = listOf(
+            AlternativeName("IU", official = true),
+            AlternativeName("Lee Ji-eun", official = true),
+            AlternativeName("아이유", official = true),
+            AlternativeName("이지은", official = true),
+        )
+
+        // https://api.discogs.com/database/search?type=artist&q=아이유&per_page=10
+        // — captured 2026-09-05, trimmed to the read fields, image URLs shortened.
+        const val DISCOGS_IU_ARTIST_SEARCH = """
+        {"pagination":{"page":1,"pages":1,"per_page":10,"items":1,"urls":{}},"results":[
+          {"id":2226306,"type":"artist","master_id":null,"master_url":null,
+           "uri":"/artist/2226306-IU-3","title":"IU (3)",
+           "thumb":"https://i.discogs.com/thumb/150x150.jpeg",
+           "cover_image":"https://i.discogs.com/cover/600x600.jpeg",
+           "resource_url":"https://api.discogs.com/artists/2226306"}]}
+        """
+
+        // https://api.discogs.com/artists/2226306
+        // — captured 2026-09-05, trimmed to the read fields, image URLs shortened.
+        const val DISCOGS_IU_ARTIST_DETAIL = """
+        {"name":"IU (3)","id":2226306,
+         "resource_url":"https://api.discogs.com/artists/2226306",
+         "uri":"https://www.discogs.com/artist/2226306-IU-3",
+         "images":[{"type":"primary","uri":"https://i.discogs.com/cover/600x600.jpeg",
+                    "resource_url":"https://i.discogs.com/cover/600x600.jpeg",
+                    "uri150":"https://i.discogs.com/thumb/150x150.jpeg","width":600,"height":600}],
+         "realname":"이지은","namevariations":["아이유","아이유 IU"],"data_quality":"Needs Vote"}
         """
     }
 }
