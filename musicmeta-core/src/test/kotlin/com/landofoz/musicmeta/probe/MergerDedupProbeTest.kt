@@ -21,7 +21,7 @@ import java.io.File
  *
  * ARM_NAME and installArm() are the only two things that differ between branches.
  */
-private const val ARM_NAME = "control"
+private const val ARM_NAME = "mbid"
 
 /** Arm-specific wiring. The control and the MBID arm need none; the pool arms install their pool. */
 private fun installArm() = Unit

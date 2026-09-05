@@ -87,15 +87,35 @@ internal object SimilarArtistMerger : ResultMerger {
     /**
      * The entries of [artists] that are one act, in first-occurrence order.
      *
-     * The key is the normalized name and nothing else, so two providers naming one act differently
-     * stay two groups.
+     * An entry carrying an MBID joins the group carrying that same MBID, whatever either is named;
+     * failing that it joins a same-name group only while that group carries no MBID of its own, so
+     * two entries whose MBIDs disagree can never land in one group. An entry carrying no MBID falls
+     * back to the name key, joining the first group under that name.
      */
     internal fun groupArtists(artists: List<SimilarArtist>): List<List<SimilarArtist>> {
-        val grouped = LinkedHashMap<String, MutableList<SimilarArtist>>()
+        val groups = mutableListOf<MutableList<SimilarArtist>>()
+        val groupMbid = mutableListOf<String?>()
+        val groupKey = mutableListOf<String>()
         for (artist in artists) {
-            grouped.getOrPut(normalize(artist.name)) { mutableListOf() }.add(artist)
+            val mbid = artist.identifiers.musicBrainzId
+            val key = normalize(artist.name)
+            val index = if (mbid == null) {
+                groupKey.indexOfFirst { it == key }
+            } else {
+                groupMbid.indexOfFirst { it == mbid }
+                    .takeIf { it >= 0 }
+                    ?: groupKey.indices.firstOrNull { groupKey[it] == key && groupMbid[it] == null } ?: -1
+            }
+            if (index < 0) {
+                groups += mutableListOf(artist)
+                groupMbid += mbid
+                groupKey += key
+            } else {
+                groups[index] += artist
+                if (groupMbid[index] == null) groupMbid[index] = mbid
+            }
         }
-        return grouped.values.toList()
+        return groups
     }
 
     private fun normalize(name: String): String = name.trim().lowercase()
