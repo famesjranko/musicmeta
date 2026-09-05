@@ -18,7 +18,25 @@ class FakeHttpClient : HttpClient {
     private val sequencedHttpResults = mutableMapOf<String, MutableList<HttpResult<JSONObject>>>()
     private val httpResultArrayResponses = mutableMapOf<String, HttpResult<JSONArray>>()
     private val redirectResults = mutableMapOf<String, HttpResult<String>>()
-    val requestedUrls = mutableListOf<String>()
+    val requestedUrls: MutableList<String> = Collections.synchronizedList(mutableListOf())
+
+    private val delaysMs = mutableMapOf<String, Long>()
+
+    /**
+     * How long a matching URL takes to answer. Empty by default, so a client nobody configured
+     * behaves exactly as it did before this existed.
+     *
+     * A real `delay`, not a virtual one: whether a concurrent fan-out's failures cluster is a
+     * question about the order real threads finish in, and a `runTest` scheduler would answer it by
+     * fiat. A test that wants this to cost no wall clock should simply not call it.
+     */
+    fun givenDelay(urlContains: String, ms: Long) { delaysMs[urlContains] = ms }
+
+    private suspend fun applyDelay(url: String) {
+        if (delaysMs.isEmpty()) return
+        val ms = delaysMs.entries.firstOrNull { url.contains(it.key) }?.value ?: return
+        if (ms > 0) kotlinx.coroutines.delay(ms)
+    }
 
     /**
      * The name of every thread a request was issued from. An engine's fan-out is detached, so this
@@ -74,7 +92,7 @@ class FakeHttpClient : HttpClient {
             }
         }
     }
-    val requestedHeaders = mutableListOf<Map<String, String>>()
+    val requestedHeaders: MutableList<Map<String, String>> = Collections.synchronizedList(mutableListOf())
 
     fun givenJsonResponse(urlContains: String, json: String) { jsonResponses[urlContains] = json }
 
@@ -127,6 +145,7 @@ class FakeHttpClient : HttpClient {
 
     override suspend fun fetchRedirectUrlResult(url: String): HttpResult<String> {
         requestedUrls.add(record(url))
+        applyDelay(url)
         if (ioExceptions.any { url.contains(it) }) throw IOException("Simulated network error: $url")
         if (errors.any { url.contains(it) }) return HttpResult.NetworkError("Simulated network error")
         redirectResults.entries.firstOrNull { url.contains(it.key) }?.let { return it.value }
@@ -142,6 +161,7 @@ class FakeHttpClient : HttpClient {
         headers: Map<String, String>,
     ): HttpResult<JSONObject> {
         requestedUrls.add(record(url))
+        applyDelay(url)
         requestedHeaders.add(headers)
         if (ioExceptions.any { url.contains(it) }) throw IOException("Simulated network error: $url")
         if (errors.any { url.contains(it) }) return HttpResult.NetworkError("Simulated network error")
@@ -152,6 +172,7 @@ class FakeHttpClient : HttpClient {
 
     override suspend fun fetchJsonArrayResult(url: String): HttpResult<JSONArray> {
         requestedUrls.add(record(url))
+        applyDelay(url)
         if (ioExceptions.any { url.contains(it) }) throw IOException("Simulated network error: $url")
         if (errors.any { url.contains(it) }) return HttpResult.NetworkError("Simulated network error")
         val configured = httpResultArrayResponses.entries.firstOrNull { url.contains(it.key) }
@@ -162,6 +183,7 @@ class FakeHttpClient : HttpClient {
 
     override suspend fun postJsonResult(url: String, body: String): HttpResult<JSONObject> {
         requestedUrls.add(record(url))
+        applyDelay(url)
         if (ioExceptions.any { url.contains(it) }) throw IOException("Simulated network error: $url")
         if (errors.any { url.contains(it) }) return HttpResult.NetworkError("Simulated network error")
         httpResultFor(url)?.let { return it }
@@ -171,6 +193,7 @@ class FakeHttpClient : HttpClient {
 
     override suspend fun postJsonArrayResult(url: String, body: String): HttpResult<JSONArray> {
         requestedUrls.add(record(url))
+        applyDelay(url)
         if (ioExceptions.any { url.contains(it) }) throw IOException("Simulated network error: $url")
         if (errors.any { url.contains(it) }) return HttpResult.NetworkError("Simulated network error")
         val configured = httpResultArrayResponses.entries.firstOrNull { url.contains(it.key) }

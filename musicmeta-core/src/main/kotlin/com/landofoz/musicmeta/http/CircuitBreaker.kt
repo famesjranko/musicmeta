@@ -24,6 +24,24 @@ internal class CircuitBreaker(
     private var consecutiveFailures = 0
     private var openedAt = 0L
 
+    /**
+     * Probe instrumentation: how many times this breaker has gone from below the threshold to at
+     * it. Counted inside the same monitor as the transition, so a concurrent fan-out cannot lose
+     * or double an opening.
+     */
+    var openings: Int = 0
+        @Synchronized get
+        private set
+
+    /**
+     * Probe instrumentation: the highest consecutive-failure count this breaker ever held. How far
+     * short of [failureThreshold] a run stopped is what says whether "it never opened" was a margin
+     * or a coin toss.
+     */
+    var peakConsecutiveFailures: Int = 0
+        @Synchronized get
+        private set
+
     val state: State
         @Synchronized get() = when {
             consecutiveFailures < failureThreshold -> State.CLOSED
@@ -49,7 +67,11 @@ internal class CircuitBreaker(
     @Synchronized
     fun recordFailure() {
         consecutiveFailures++
+        if (consecutiveFailures > peakConsecutiveFailures) peakConsecutiveFailures = consecutiveFailures
         if (consecutiveFailures >= failureThreshold) {
+            // Probe instrumentation: an opening is the failure that first reaches the threshold.
+            // A later failure while already at or above it re-stamps openedAt without reopening.
+            if (consecutiveFailures == failureThreshold) openings++
             openedAt = clock()
         }
     }

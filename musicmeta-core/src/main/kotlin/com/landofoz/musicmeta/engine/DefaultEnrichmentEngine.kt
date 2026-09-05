@@ -176,6 +176,9 @@ internal class DefaultEnrichmentEngine(
     detachedDispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) : EnrichmentEngine {
 
+    /** Probe instrumentation: the registry whose breaker pool this engine's fan-out shares. */
+    internal val probeRegistry: ProviderRegistry get() = registry
+
     private val mergers: Map<EnrichmentType, ResultMerger> = mergers.associateBy { it.type }
     private val synthesizers: Map<EnrichmentType, CompositeSynthesizer> = synthesizers.associateBy { it.type }
 
