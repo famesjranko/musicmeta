@@ -12,8 +12,8 @@ import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.SimilarTrack
 import com.landofoz.musicmeta.engine.AlbumMatch
-import com.landofoz.musicmeta.engine.ArtistMatcher
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
+import com.landofoz.musicmeta.engine.NameMatchTier
 import com.landofoz.musicmeta.engine.ProviderCallScope
 import com.landofoz.musicmeta.engine.trustedProviderIdentifier
 import com.landofoz.musicmeta.http.HttpClient
@@ -108,10 +108,6 @@ public class DeezerProvider(
         val artist = api.searchArtist(artistRequest.name)
             ?: return EnrichmentResult.NotFound(EnrichmentType.ARTIST_PHOTO, id)
 
-        if (!ArtistMatcher.isMatch(artistRequest.name, artist.name)) {
-            return EnrichmentResult.NotFound(EnrichmentType.ARTIST_PHOTO, id)
-        }
-
         val artwork = DeezerMapper.toArtistPhoto(artist)
             ?: return EnrichmentResult.NotFound(EnrichmentType.ARTIST_PHOTO, id)
 
@@ -119,7 +115,7 @@ public class DeezerProvider(
             type = EnrichmentType.ARTIST_PHOTO,
             data = artwork,
             provider = id,
-            confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
+            confidence = verifiedArtistConfidence(artist.nameTier),
             resolvedIdentifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DEEZER, artist.id.toString()),
         )
     }
@@ -139,7 +135,7 @@ public class DeezerProvider(
             type = EnrichmentType.ARTIST_TOP_TRACKS,
             data = DeezerMapper.toTopTracks(tracks),
             provider = id,
-            confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
+            confidence = verifiedArtistConfidence(artist.nameTier),
             resolvedIdentifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DEEZER, artist.id.toString()),
             provenance = resolution.provenance,
         )
@@ -159,7 +155,8 @@ public class DeezerProvider(
             type = EnrichmentType.ARTIST_DISCOGRAPHY,
             data = DeezerMapper.toDiscography(albums),
             provider = id,
-            confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = false),
+            confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = false) *
+                artist.nameTier.confidenceFactor,
             resolvedIdentifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DEEZER, artist.id.toString()),
         )
     }
@@ -179,7 +176,7 @@ public class DeezerProvider(
             type = EnrichmentType.SIMILAR_ARTISTS,
             data = DeezerMapper.toSimilarArtists(related),
             provider = id,
-            confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
+            confidence = verifiedArtistConfidence(artist.nameTier),
             resolvedIdentifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DEEZER, artist.id.toString()),
             provenance = resolution.provenance,
         )
@@ -196,9 +193,8 @@ public class DeezerProvider(
      *
      * No second `search/artist` round trip: the id the track search already returned is
      * authoritative for the artist the track actually belongs to, where a fresh name search could
-     * land on a different, same-named artist. `ArtistMatcher.isMatch` still runs once, against the
-     * track search result's own artist name, to validate that the track search itself landed on the
-     * right artist.
+     * land on a different, same-named artist. The track search has already verified its own hit's
+     * artist name, so the seed is a checked one.
      *
      * Deliberately does not reuse `request.identifiers.get(IdentifierNamespace.DEEZER)` as a shortcut to the
      * artist id the way [enrichArtistRadio] does: on a `ForTrack` request that key already means
@@ -216,10 +212,6 @@ public class DeezerProvider(
         val seedTrack = api.searchTrack(trackRequest.title, trackRequest.artist, trackRequest.album)
             ?: return EnrichmentResult.NotFound(EnrichmentType.SIMILAR_TRACKS, id)
 
-        if (!ArtistMatcher.isMatch(trackRequest.artist, seedTrack.artistName)) {
-            return EnrichmentResult.NotFound(EnrichmentType.SIMILAR_TRACKS, id)
-        }
-
         // No name-search fallback: Deezer always populates artist.id on a track search result, so
         // a missing id is treated as absent data rather than silently re-resolved by name.
         val seedArtistId = seedTrack.artistId
@@ -236,7 +228,7 @@ public class DeezerProvider(
             type = EnrichmentType.SIMILAR_TRACKS,
             data = EnrichmentData.SimilarTracks(dedupeSimilarTracks(tracks)),
             provider = id,
-            confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
+            confidence = verifiedArtistConfidence(seedTrack.nameTier),
             resolvedIdentifiers = EnrichmentIdentifiers()
                 .with(IdentifierNamespace.DEEZER, seedTrack.id.toString()),
         )
@@ -290,7 +282,7 @@ public class DeezerProvider(
             type = EnrichmentType.ARTIST_RADIO,
             data = DeezerMapper.toRadioPlaylist(tracks),
             provider = id,
-            confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
+            confidence = verifiedArtistConfidence(artist.nameTier),
             resolvedIdentifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DEEZER, artist.id.toString()),
             provenance = resolution.provenance,
         )
@@ -313,7 +305,7 @@ public class DeezerProvider(
             type = EnrichmentType.TRACK_PREVIEW,
             data = preview,
             provider = id,
-            confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
+            confidence = verifiedArtistConfidence(resolution.track.nameTier),
             resolvedIdentifiers = EnrichmentIdentifiers()
                 .with(IdentifierNamespace.DEEZER, resolution.track.id.toString()),
             provenance = resolution.provenance,
@@ -332,7 +324,7 @@ public class DeezerProvider(
             type = EnrichmentType.TRACK_METADATA,
             data = DeezerMapper.toTrackMetadata(resolution.track),
             provider = id,
-            confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
+            confidence = verifiedArtistConfidence(resolution.track.nameTier),
             resolvedIdentifiers = EnrichmentIdentifiers()
                 .with(IdentifierNamespace.DEEZER, resolution.track.id.toString()),
             provenance = resolution.provenance,
@@ -343,8 +335,9 @@ public class DeezerProvider(
         val albumRequest = request as? EnrichmentRequest.ForAlbum
             ?: return EnrichmentResult.NotFound(EnrichmentType.ALBUM_TRACKS, id)
 
-        val album = albumScope().resolveAlbum(albumRequest)?.candidate
+        val match = albumScope().resolveAlbum(albumRequest)
             ?: return EnrichmentResult.NotFound(EnrichmentType.ALBUM_TRACKS, id)
+        val album = match.candidate
 
         val tracks = api.getAlbumTracks(album.id)
         if (tracks.isEmpty()) return EnrichmentResult.NotFound(EnrichmentType.ALBUM_TRACKS, id)
@@ -353,7 +346,7 @@ public class DeezerProvider(
             type = EnrichmentType.ALBUM_TRACKS,
             data = DeezerMapper.toTracklist(tracks),
             provider = id,
-            confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
+            confidence = verifiedArtistConfidence(match.nameTier),
         )
     }
 
@@ -365,15 +358,16 @@ public class DeezerProvider(
             return EnrichmentResult.NotFound(type, id)
         }
         val scope = albumScope()
-        val result = scope.resolveAlbum(request)?.candidate
+        val match = scope.resolveAlbum(request)
             ?: return EnrichmentResult.NotFound(type, id)
+        val result = match.candidate
         val detail = scope.albumDetail(result.id)
 
         return EnrichmentResult.Success(
             type = type,
             data = DeezerMapper.toAlbumMetadata(result, detail),
             provider = id,
-            confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
+            confidence = verifiedArtistConfidence(match.nameTier),
         )
     }
 
@@ -383,8 +377,9 @@ public class DeezerProvider(
     ): EnrichmentResult {
         val albumRequest = request.toAlbumArtRequest(type) ?: return EnrichmentResult.NotFound(type, id)
 
-        val result = albumScope().resolveAlbum(albumRequest)?.candidate
+        val match = albumScope().resolveAlbum(albumRequest)
             ?: return EnrichmentResult.NotFound(type, id)
+        val result = match.candidate
 
         val artwork = DeezerMapper.toArtwork(result)
             ?: return EnrichmentResult.NotFound(type, id)
@@ -393,7 +388,7 @@ public class DeezerProvider(
             type = type,
             data = artwork,
             provider = id,
-            confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true),
+            confidence = verifiedArtistConfidence(match.nameTier),
         )
     }
 
@@ -424,9 +419,7 @@ public class DeezerProvider(
                 LookupProvenance.PROVIDER_NATIVE_ID,
             )
         }
-        val searchResult = api.searchArtist(request.name)
-            ?.takeIf { ArtistMatcher.isMatch(request.name, it.name) }
-            ?: return null
+        val searchResult = api.searchArtist(request.name) ?: return null
         return ArtistResolution(searchResult, provenance = null)
     }
 
@@ -448,9 +441,16 @@ public class DeezerProvider(
             return TrackResolution(track, LookupProvenance.PROVIDER_NATIVE_ID)
         }
         val result = api.searchTrack(request.title, request.artist, request.album) ?: return null
-        if (!ArtistMatcher.isMatch(request.artist, result.artistName)) return null
         return TrackResolution(result, provenance = null)
     }
+
+    /**
+     * The confidence a verified name-search hit reports: today's value for a hit under the
+     * requested name ([NameMatchTier.CANONICAL] scales by 1.0), scaled down when the alias pool is
+     * what verified it.
+     */
+    private fun verifiedArtistConfidence(tier: NameMatchTier): Float =
+        ConfidenceCalculator.fuzzyMatch(hasArtistMatch = true) * tier.confidenceFactor
 
     private fun DeezerAlbumResult.toCandidate() =
         DeezerMapper.toSearchCandidate(this, this@DeezerProvider.id, SEARCH_SCORE)

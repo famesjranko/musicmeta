@@ -2,9 +2,13 @@ package com.landofoz.musicmeta.provider.discogs
 
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.engine.AlbumEvidence
+import com.landofoz.musicmeta.engine.AlternativeName
 import com.landofoz.musicmeta.engine.ArtistMatcher
+import com.landofoz.musicmeta.engine.NameMatchTier
 import com.landofoz.musicmeta.engine.TieBreakEvidence
 import com.landofoz.musicmeta.engine.TitleMatcher
+import com.landofoz.musicmeta.engine.artistNameTier
+import com.landofoz.musicmeta.engine.resolvedAliasPool
 
 /**
  * The artist/title Discogs's combined `"Artist - Title"` search field names, or null if no ` - `
@@ -26,6 +30,7 @@ internal fun parseDiscogsRelease(
     combined: String,
     requestedArtist: String,
     requestedTitle: String,
+    aliases: List<AlternativeName> = emptyList(),
 ): Pair<String, String>? {
     var from = 0
     var artistOnlyMatch: Pair<String, String>? = null
@@ -34,7 +39,8 @@ internal fun parseDiscogsRelease(
         if (index < 0) return artistOnlyMatch
         val artistPart = stripDiscogsDisambiguator(combined.substring(0, index).trim())
         val titlePart = combined.substring(index + 3).trim()
-        if (artistPart.isNotEmpty() && titlePart.isNotEmpty() && ArtistMatcher.isMatch(requestedArtist, artistPart)) {
+        val accepted = artistNameTier(requestedArtist, artistPart, aliases) != null
+        if (artistPart.isNotEmpty() && titlePart.isNotEmpty() && accepted) {
             if (TitleMatcher.equivalent(requestedTitle, titlePart)) return artistPart to titlePart
             if (artistOnlyMatch == null) artistOnlyMatch = artistPart to titlePart
         }
@@ -55,6 +61,11 @@ internal data class DiscogsAlbumChoice(
     val artistQuality: Int,
     val tier: TitleMatcher.TitleTier,
     val tieBreaks: AlbumEvidence,
+    /**
+     * How [artist] matched the requested name — [NameMatchTier.CANONICAL] for the requested name
+     * itself, an alias tier when this call's alias pool is what verified it. Scales the confidence.
+     */
+    val nameTier: NameMatchTier = NameMatchTier.CANONICAL,
 )
 
 /**
@@ -68,9 +79,16 @@ internal data class DiscogsAlbumChoice(
  * provider-decoration tier the way Deezer/iTunes's remaster suffix does, so a bare request here
  * never admits a qualified candidate.
  */
-internal fun List<DiscogsRelease>.selectRelease(request: EnrichmentRequest.ForAlbum): DiscogsAlbumChoice? =
+internal suspend fun List<DiscogsRelease>.selectRelease(request: EnrichmentRequest.ForAlbum): DiscogsAlbumChoice? =
+    selectRelease(request, aliases = emptyList())
+        ?: selectRelease(request, aliases = resolvedAliasPool())
+
+private fun List<DiscogsRelease>.selectRelease(
+    request: EnrichmentRequest.ForAlbum,
+    aliases: List<AlternativeName>,
+): DiscogsAlbumChoice? =
     mapNotNull { release ->
-        val (artist, title) = parseDiscogsRelease(release.title, request.artist, request.title)
+        val (artist, title) = parseDiscogsRelease(release.title, request.artist, request.title, aliases)
             ?: return@mapNotNull null
         if (!TitleMatcher.equivalent(request.title, title)) return@mapNotNull null
         DiscogsAlbumChoice(
@@ -78,6 +96,7 @@ internal fun List<DiscogsRelease>.selectRelease(request: EnrichmentRequest.ForAl
             artist = artist,
             title = title,
             artistQuality = ArtistMatcher.matchQuality(request.artist, artist),
+            nameTier = artistNameTier(request.artist, artist, aliases) ?: NameMatchTier.CANONICAL,
             tier = TitleMatcher.TitleTier.EXACT,
             tieBreaks = AlbumEvidence.of(
                 listOf(TieBreakEvidence("year", request.year != null && release.year == request.year.toString())),
@@ -85,6 +104,9 @@ internal fun List<DiscogsRelease>.selectRelease(request: EnrichmentRequest.ForAl
         )
     }.maxWithOrNull(
         compareBy(
+            // Tier leads: every alias match is the same artist quality, so without it a search-hint
+            // match would beat a published-name one on Discogs's own result order.
+            { it.nameTier.confidenceFactor },
             { it.artistQuality },
             { it.tieBreaks["year"] },
         ),

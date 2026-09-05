@@ -4,7 +4,7 @@ import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.engine.AlbumMatch
 import com.landofoz.musicmeta.engine.AlbumTieBreak
 import com.landofoz.musicmeta.engine.TitleMatcher
-import com.landofoz.musicmeta.engine.acceptAndRankAlbum
+import com.landofoz.musicmeta.engine.acceptAndRankAlbumOrAlias
 
 /**
  * iTunes's own album-title acceptance policy, adjudicated separately from Deezer's: [TitleMatcher.TitleTier.EXACT]
@@ -34,8 +34,10 @@ internal fun itunesAlbumTitleTier(requested: String, candidate: String): TitleMa
  * the evidence — a matching [EnrichmentRequest.ForAlbum.trackCount] or a `releaseDate` that starts
  * with the requested [EnrichmentRequest.ForAlbum.year].
  */
-internal fun List<ITunesAlbumResult>.selectAlbum(request: EnrichmentRequest.ForAlbum): AlbumMatch<ITunesAlbumResult>? =
-    acceptAndRankAlbum(
+internal suspend fun List<ITunesAlbumResult>.selectAlbum(
+    request: EnrichmentRequest.ForAlbum,
+): AlbumMatch<ITunesAlbumResult>? =
+    acceptAndRankAlbumOrAlias(
         requestedArtist = request.artist,
         artistNameOf = { it.artistName },
         titleTierOf = { itunesAlbumTitleTier(request.title, it.collectionName) },

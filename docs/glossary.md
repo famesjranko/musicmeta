@@ -78,6 +78,13 @@ flag is how that result says so. It is always `false` under `CatalogFilterMode.U
 a deliberate configuration and not a degradation. See `EnrichmentResult.Success.isCatalogDegraded`'s
 KDoc for why this is call-scoped, not a stored fact.
 
+**alias pool** is every name identity resolution found for one entity — its canonical name plus
+each alternative name the identity provider files under it — and it is what a provider's candidate
+is verified against when the requested name matches nothing. MusicBrainz calls these `aliases` and
+marks the ones an entity is published under; Discogs calls the same thing `namevariations` and
+marks none of them. A *cache* alias is a different thing entirely: that is a second key one result
+is stored under (`how-it-works.md`, Step 8).
+
 **Discogs `master_id` is optional.** A Discogs release may have no master, so the album-level
 identifier is absent rather than derivable — treat it as a miss, not as a release id to reuse.
 

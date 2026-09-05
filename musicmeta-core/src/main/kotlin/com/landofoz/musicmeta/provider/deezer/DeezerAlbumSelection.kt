@@ -4,7 +4,7 @@ import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.engine.AlbumMatch
 import com.landofoz.musicmeta.engine.AlbumTieBreak
 import com.landofoz.musicmeta.engine.TitleMatcher
-import com.landofoz.musicmeta.engine.acceptAndRankAlbum
+import com.landofoz.musicmeta.engine.acceptAndRankAlbumOrAlias
 
 /**
  * Deezer's own album-title acceptance policy: [TitleMatcher.TitleTier.EXACT] when [TitleMatcher.equivalent]
@@ -34,8 +34,10 @@ internal fun deezerAlbumTitleTier(requested: String, candidate: String): TitleMa
  * candidate whose track count is known to match, but it never loses to one either, so a request
  * with no `trackCount` hint is unaffected.
  */
-internal fun List<DeezerAlbumResult>.selectAlbum(request: EnrichmentRequest.ForAlbum): AlbumMatch<DeezerAlbumResult>? =
-    acceptAndRankAlbum(
+internal suspend fun List<DeezerAlbumResult>.selectAlbum(
+    request: EnrichmentRequest.ForAlbum,
+): AlbumMatch<DeezerAlbumResult>? =
+    acceptAndRankAlbumOrAlias(
         requestedArtist = request.artist,
         artistNameOf = { it.artistName },
         titleTierOf = { deezerAlbumTitleTier(request.title, it.title) },

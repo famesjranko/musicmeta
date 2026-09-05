@@ -6,6 +6,7 @@ import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.LookupProvenance
 import com.landofoz.musicmeta.SearchCandidate
+import com.landofoz.musicmeta.engine.AlternativeName
 import com.landofoz.musicmeta.engine.ArtistMatcher
 import com.landofoz.musicmeta.engine.CallMemo
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
@@ -26,6 +27,8 @@ internal class MusicBrainzTrackEnrichment(
     private val api: MusicBrainzApi,
     private val providerId: String,
     private val minMatchScore: Int,
+    /** Reads a credited artist's alias pool, reusing this call's artist memo. */
+    private val artistAliases: suspend (String) -> List<AlternativeName> = { emptyList() },
 ) {
 
     /**
@@ -118,6 +121,7 @@ internal class MusicBrainzTrackEnrichment(
         val recording = MusicBrainzParser.parseLookupRecording(json, request.album)
             ?: return EnrichmentResult.NotFound(type, providerId)
         offerNames(recording.title, recording.artistCredit)
+        offerCreditedArtistAliases(recording.artistCreditIds.firstOrNull(), artistAliases)
         return trackResult(recording, type, ConfidenceCalculator.idBasedLookup(), LookupProvenance.CANONICAL_ID)
     }
 

@@ -2,8 +2,11 @@ package com.landofoz.musicmeta.provider.deezer
 
 import com.landofoz.musicmeta.drift.SchemaTarget
 import com.landofoz.musicmeta.engine.ArtistMatcher
+import com.landofoz.musicmeta.engine.NameMatchTier
 import com.landofoz.musicmeta.engine.TitleMatcher
-import com.landofoz.musicmeta.engine.bestArtistMatch
+import com.landofoz.musicmeta.engine.artistNameTier
+import com.landofoz.musicmeta.engine.bestArtistMatchOrAlias
+import com.landofoz.musicmeta.engine.resolvedAliasPool
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.http.bodyOrThrowTransient
@@ -64,11 +67,12 @@ internal class DeezerApi(
         val data = json.optJSONArray("data") ?: return null
         return (0 until data.length())
             .mapNotNull { data.optJSONObject(it) }
-            .bestArtistMatch(
+            .bestArtistMatchOrAlias(
                 expected = name,
                 tieBreak = compareBy({ it.optLong("nb_fan") }, { it.optLong("nb_album") }),
             ) { it.optString("name", "") }
-            ?.let { artist ->
+            ?.let { match ->
+                val artist = match.value
                 DeezerArtistSearchResult(
                     id = artist.optLong("id"),
                     name = artist.optString("name", ""),
@@ -76,6 +80,7 @@ internal class DeezerApi(
                     pictureMedium = artist.optString("picture_medium").takeIfNotEmpty(),
                     pictureBig = artist.optString("picture_big").takeIfNotEmpty(),
                     pictureXl = artist.optString("picture_xl").takeIfNotEmpty(),
+                    nameTier = match.tier,
                 )
             }
     }
@@ -160,16 +165,27 @@ internal class DeezerApi(
             add(plainTrackUrl(artist, title))
         }
         for (url in queries) {
-            val candidates = fetchTrackPool(url)
+            val pool = fetchTrackPool(url)
                 .orEmpty()
-                .filter { ArtistMatcher.isMatch(artist, it.optJSONObject("artist")?.optString("name", "").orEmpty()) }
                 .filter { TitleMatcher.equivalent(title, it.optString("title", "")) }
+            // The alias pool is read only once the requested name has accepted nothing, so a
+            // request whose artist Deezer already carries under the requested name costs nothing.
+            val direct = pool.filter { ArtistMatcher.isMatch(artist, it.candidateArtistName()) }
+            val aliases = if (direct.isNotEmpty()) emptyList() else resolvedAliasPool()
+            val candidates = direct.ifEmpty {
+                pool.filter { artistNameTier(artist, it.candidateArtistName(), aliases) != null }
+            }
             if (candidates.isNotEmpty()) {
-                return candidates.rankTracks(title, artist, album)?.toTrackSearchResult()
+                val best = candidates.rankTracks(title, artist, album) ?: return null
+                val tier = artistNameTier(artist, best.candidateArtistName(), aliases) ?: return null
+                return best.toTrackSearchResult(tier)
             }
         }
         return null
     }
+
+    private fun JSONObject.candidateArtistName(): String =
+        optJSONObject("artist")?.optString("name", "").orEmpty()
 
     private suspend fun fetchTrackPool(url: String): List<JSONObject>? {
         val json = fetchJson(url) ?: return null
@@ -191,7 +207,9 @@ internal class DeezerApi(
         return "$BASE_URL/search/track?q=$encoded&limit=$TRACK_SEARCH_LIMIT"
     }
 
-    private fun JSONObject.toTrackSearchResult(): DeezerTrackSearchResult {
+    private fun JSONObject.toTrackSearchResult(
+        nameTier: NameMatchTier = NameMatchTier.CANONICAL,
+    ): DeezerTrackSearchResult {
         val trackArtist = optJSONObject("artist")
         return DeezerTrackSearchResult(
             id = optLong("id"),
@@ -201,6 +219,7 @@ internal class DeezerApi(
             durationSec = optInt("duration").takeIf { it > 0 },
             albumTitle = optJSONObject("album")?.optString("title")?.takeIf { it.isNotBlank() },
             artistId = trackArtist?.optLong("id")?.takeIf { it != 0L },
+            nameTier = nameTier,
         )
     }
 

@@ -12,7 +12,9 @@ import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.engine.ArtistMatcher
 import com.landofoz.musicmeta.engine.CallMemo
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
+import com.landofoz.musicmeta.engine.NameMatchTier
 import com.landofoz.musicmeta.engine.ProviderCallScope
+import com.landofoz.musicmeta.engine.artistNameTier
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 import kotlinx.coroutines.currentCoroutineContext
@@ -97,12 +99,12 @@ public class DiscogsProvider(
         return try {
             // Discogs titles are "Artist - Title"; accept and rank on both halves, shared by every
             // type this call asks for so they select one release, not one search-ranked pick each.
-            val release = albumScope().resolveRelease(albumRequest)?.release
+            val choice = albumScope().resolveRelease(albumRequest)
                 ?: return EnrichmentResult.NotFound(type, id)
             if (type == EnrichmentType.ALBUM_METADATA) {
-                enrichAlbumMetadataWithCommunity(release, albumRequest.identifiers)
+                enrichAlbumMetadataWithCommunity(choice.release, albumRequest.identifiers, choice.nameTier)
             } else {
-                enrichFromRelease(release, type)
+                enrichFromRelease(choice.release, type, choice.nameTier)
             }
         } catch (e: Exception) {
             mapError(type, e)
@@ -165,6 +167,7 @@ public class DiscogsProvider(
     private suspend fun enrichAlbumMetadataWithCommunity(
         release: DiscogsRelease,
         identifiers: EnrichmentIdentifiers,
+        nameTier: NameMatchTier,
     ): EnrichmentResult {
         val baseMetadata = DiscogsMapper.toAlbumMetadata(release)
         // Fetch release details for community rating if a releaseId is available
@@ -177,7 +180,7 @@ public class DiscogsProvider(
             baseMetadata.copy(communityRating = communityRating)
         } else baseMetadata
         // Only reached with a release the album search verified against the requested artist.
-        return success(metadata, EnrichmentType.ALBUM_METADATA, release, hasArtistMatch = true)
+        return success(metadata, EnrichmentType.ALBUM_METADATA, release, hasArtistMatch = true, nameTier = nameTier)
     }
 
     /**
@@ -205,24 +208,23 @@ public class DiscogsProvider(
         type: EnrichmentType,
     ): EnrichmentResult {
         return try {
-            val artistId = api.searchArtist(request.name)
+            val match = api.searchArtist(request.name)
                 ?: return EnrichmentResult.NotFound(type, id)
-            val artist = api.getArtist(artistId)
+            val artist = api.getArtist(match.value)
                 ?: return EnrichmentResult.NotFound(type, id)
             // searchArtist already name-matches the pool; this re-checks the *detail* record,
             // whose `name` is a different field from the search result's `title`.
-            if (!ArtistMatcher.isMatch(request.name, artist.name)) {
-                return EnrichmentResult.NotFound(type, id)
-            }
+            val detailTier = artistNameTier(request.name, artist.name)
+                ?: return EnrichmentResult.NotFound(type, id)
             when (type) {
                 EnrichmentType.ARTIST_PHOTO -> {
                     val artwork = DiscogsMapper.toArtistPhoto(artist)
                         ?: return EnrichmentResult.NotFound(type, id)
-                    success(artwork, type)
+                    success(artwork, type, nameTier = detailTier)
                 }
                 EnrichmentType.BAND_MEMBERS -> {
                     if (artist.members.isEmpty()) return EnrichmentResult.NotFound(type, id)
-                    success(DiscogsMapper.toBandMembers(artist), type)
+                    success(DiscogsMapper.toBandMembers(artist), type, nameTier = detailTier)
                 }
                 else -> EnrichmentResult.NotFound(type, id)
             }
@@ -234,6 +236,7 @@ public class DiscogsProvider(
     private fun enrichFromRelease(
         release: DiscogsRelease,
         type: EnrichmentType,
+        nameTier: NameMatchTier,
     ): EnrichmentResult {
         val data = when (type) {
             EnrichmentType.ALBUM_ART -> DiscogsMapper.toArtwork(release)
@@ -243,7 +246,7 @@ public class DiscogsProvider(
             else -> null
         } ?: return EnrichmentResult.NotFound(type, id)
         // Only reached with a release the album search verified against the requested artist.
-        return success(data, type, release, hasArtistMatch = true)
+        return success(data, type, release, hasArtistMatch = true, nameTier = nameTier)
     }
 
     private fun buildResolvedIdentifiers(release: DiscogsRelease): EnrichmentIdentifiers? {
@@ -276,11 +279,13 @@ public class DiscogsProvider(
         release: DiscogsRelease? = null,
         // Defaults false: only the album search matches on an artist name.
         hasArtistMatch: Boolean = false,
+        // Scales the score when this call's alias pool, not the requested name, verified the hit.
+        nameTier: NameMatchTier = NameMatchTier.CANONICAL,
     ) = EnrichmentResult.Success(
         type = type,
         data = data,
         provider = id,
-        confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch),
+        confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch) * nameTier.confidenceFactor,
         resolvedIdentifiers = release?.let { buildResolvedIdentifiers(it) },
     )
 }

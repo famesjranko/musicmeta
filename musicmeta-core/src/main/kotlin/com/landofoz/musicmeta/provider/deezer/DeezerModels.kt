@@ -1,5 +1,7 @@
 package com.landofoz.musicmeta.provider.deezer
 
+import com.landofoz.musicmeta.engine.NameMatchTier
+
 /** Album search result from the Deezer API. */
 internal data class DeezerAlbumResult(
     val id: Long = 0,
@@ -30,6 +32,8 @@ internal data class DeezerArtistSearchResult(
     val pictureMedium: String? = null,
     val pictureBig: String? = null,
     val pictureXl: String? = null,
+    /** How this hit's name matched the request — an alias tier scales the reported confidence. */
+    val nameTier: NameMatchTier = NameMatchTier.CANONICAL,
 )
 
 /** Album entry from Deezer artist albums endpoint. */
@@ -66,6 +70,8 @@ internal data class DeezerTrackSearchResult(
     val albumTitle: String? = null,
     /** The track's artist's Deezer id, straight off the search payload — null when absent/0. */
     val artistId: Long? = null,
+    /** How this hit's artist name matched the request — an alias tier scales the confidence. */
+    val nameTier: NameMatchTier = NameMatchTier.CANONICAL,
 )
 
 /** Top track entry from Deezer /artist/{id}/top endpoint. */

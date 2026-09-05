@@ -30,8 +30,8 @@ internal class MusicBrainzEnricher(
 ) {
 
     private val artists = MusicBrainzArtistEnrichment(api, providerId, minMatchScore)
-    private val albums = MusicBrainzAlbumEnrichment(api, providerId, minMatchScore)
-    private val tracks = MusicBrainzTrackEnrichment(api, providerId, minMatchScore)
+    private val albums = MusicBrainzAlbumEnrichment(api, providerId, minMatchScore, artists::aliasesOf)
+    private val tracks = MusicBrainzTrackEnrichment(api, providerId, minMatchScore, artists::aliasesOf)
 
     internal suspend fun enrichAlbum(
         request: EnrichmentRequest.ForAlbum,

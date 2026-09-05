@@ -101,14 +101,19 @@ class SimilarAlbumsProviderTest {
 
     @Test
     fun `enrich returns NotFound when artist name does not match`() = runTest {
-        // Given - Deezer returns a completely different artist
+        // Given - Deezer returns a completely different artist, whose own related artists and
+        // albums are all present, so the name is the only thing that can reject this
         httpClient.givenJsonResponse("search/artist", """{"data":[{"id":999,"name":"Completely Different Band"}]}""")
+        httpClient.givenJsonResponse("artist/999/related", RELATED_ARTISTS_3)
+        httpClient.givenJsonResponse("artist/1001/albums", MUSE_ALBUMS)
+        httpClient.givenJsonResponse("artist/1002/albums", PORTISHEAD_ALBUMS)
+        httpClient.givenJsonResponse("artist/1003/albums", SIGUR_ROS_ALBUMS)
         val request = EnrichmentRequest.forAlbum("OK Computer", "Radiohead")
 
         // When - enriching for similar albums
         val result = provider.enrich(request, EnrichmentType.SIMILAR_ALBUMS)
 
-        // Then - NotFound because ArtistMatcher.isMatch() rejects the result
+        // Then - NotFound because no name form of the requested artist matches the seed
         assertTrue(result is EnrichmentResult.NotFound)
     }
 
