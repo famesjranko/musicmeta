@@ -55,7 +55,10 @@ internal class ResolvedEntityNames : AbstractCoroutineContextElement(Key) {
      *
      * Empty when nothing offered a source, and empty when the source failed: an alias pool is
      * corroboration, so a provider that cannot get one falls back to matching on the requested name
-     * alone rather than failing the type. Cancellation still propagates.
+     * alone rather than failing the type. **A failed source is held as that empty pool for the rest
+     * of the call**, so a failing upstream costs one lookup and not one per reader; the price is
+     * that a source recovering mid-call is invisible to the later readers. Cancellation of this
+     * call's own job propagates instead, and is not held.
      */
     // SwallowedException: the degrade above is the contract; the exception has no second reader.
     @Suppress("SwallowedException")
@@ -63,11 +66,15 @@ internal class ResolvedEntityNames : AbstractCoroutineContextElement(Key) {
         resolvedAliases.get()?.let { return it }
         val source = aliasSource.get() ?: return emptyList()
         return aliasLock.withLock {
-            resolvedAliases.get() ?: try {
-                source().also { resolvedAliases.set(it) }
-            } catch (e: Exception) {
-                currentCoroutineContext().ensureActive()
-                emptyList()
+            resolvedAliases.get() ?: run {
+                val pool = try {
+                    source()
+                } catch (e: Exception) {
+                    currentCoroutineContext().ensureActive()
+                    emptyList()
+                }
+                resolvedAliases.set(pool)
+                pool
             }
         }
     }
