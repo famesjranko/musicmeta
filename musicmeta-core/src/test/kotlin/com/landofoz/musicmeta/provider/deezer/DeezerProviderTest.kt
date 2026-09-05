@@ -768,14 +768,22 @@ class DeezerProviderTest {
 
     @Test
     fun `enrich returns NotFound for SimilarTracks when artist mismatch`() = runTest {
-        // Given - Deezer returns a track from a different artist
-        httpClient.givenJsonResponse("search/track", """{"data":[{"id":999,"title":"Karma Police","artist":{"name":"Completely Different Band"}}]}""")
+        // Given - Deezer returns a track from a different artist, carrying the artist id and the
+        // related-artist data the derivation needs, so the name is the only thing that can reject it
+        httpClient.givenJsonResponse(
+            "search/track",
+            """{"data":[{"id":999,"title":"Karma Police","artist":{"id":888,"name":"Completely Different Band"}}]}""",
+        )
+        httpClient.givenJsonResponse("artist/888/related", RELATED_ARTISTS_RESPONSE)
+        httpClient.givenJsonResponse("artist/1001/top", MUSE_TOP_TRACKS)
+        httpClient.givenJsonResponse("artist/1002/top", SIGUR_ROS_TOP_TRACKS)
+        httpClient.givenJsonResponse("artist/1003/top", PORTISHEAD_TOP_TRACKS)
         val request = EnrichmentRequest.forTrack("Karma Police", "Radiohead")
 
         // When - enriching for similar tracks
         val result = provider.enrich(request, EnrichmentType.SIMILAR_TRACKS)
 
-        // Then - NotFound because ArtistMatcher.isMatch() rejects the result
+        // Then - NotFound because no name form of the requested artist matches the seed track's
         assertTrue(result is EnrichmentResult.NotFound)
     }
 

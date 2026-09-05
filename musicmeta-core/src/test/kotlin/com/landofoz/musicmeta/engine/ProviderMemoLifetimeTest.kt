@@ -8,6 +8,8 @@ import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.http.RateLimiter
+import com.landofoz.musicmeta.provider.deezer.DeezerProvider
+import com.landofoz.musicmeta.provider.itunes.ITunesProvider
 import com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzAlbumEnrichment
 import com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzApi
 import com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzProvider
@@ -47,6 +49,20 @@ class ProviderMemoLifetimeTest {
         ProviderRegistry(listOf(provider)),
         FakeEnrichmentCache(),
         EnrichmentConfig(enableIdentityResolution = identityResolution),
+        mergers = emptyList(),
+    )
+
+    /** MusicBrainz plus the two name-search providers whose matching reads the alias pool. */
+    private fun poolEngine() = DefaultEnrichmentEngine(
+        ProviderRegistry(
+            listOf(
+                provider,
+                DeezerProvider(httpClient, RateLimiter(0)),
+                ITunesProvider(httpClient, RateLimiter(0)),
+            ),
+        ),
+        FakeEnrichmentCache(),
+        EnrichmentConfig(),
         mergers = emptyList(),
     )
 
@@ -289,6 +305,44 @@ class ProviderMemoLifetimeTest {
         // Then - neither was handed whichever filled its slot first
         assertEquals("strict", strictSlot)
         assertEquals("lenient", lenientSlot)
+    }
+
+    @Test
+    fun `one call resolves the credited artist's alias pool once, however many providers read it`() = runTest {
+        // Given - an album whose credited artist carries the names two name-search providers need,
+        // and a chain where the first provider misses so the second is asked for the same type
+        httpClient.givenJsonResponse(RELEASE_SEARCH, NON_LATIN_RELEASE_SEARCH)
+        httpClient.givenJsonResponse(ARTIST_ALIAS_LOOKUP, ARTIST_WITH_ALIASES)
+        httpClient.givenJsonResponse("api.deezer.com", DEEZER_NO_ALBUM_MATCH)
+        httpClient.givenJsonResponse("itunes.apple.com", ITUNES_ALIAS_ALBUM)
+        val engine = poolEngine()
+
+        // When - one call fans ALBUM_ART out across both of them
+        val results = engine.enrich(NON_LATIN_ALBUM, setOf(EnrichmentType.ALBUM_ART))
+
+        // Then - the pool cost one lookup for the call, not one per provider that consulted it
+        assertTrue(
+            "expected album art, got ${results.raw[EnrichmentType.ALBUM_ART]}",
+            results.raw[EnrichmentType.ALBUM_ART] is EnrichmentResult.Success,
+        )
+        assertEquals(1, httpClient.requestedUrls.count { it.contains(ARTIST_ALIAS_LOOKUP) })
+    }
+
+    @Test
+    fun `a second call resolves the alias pool again rather than inheriting the first call's`() = runTest {
+        // Given - the same album resolved once already, and a cache that cannot answer the second call
+        httpClient.givenJsonResponse(RELEASE_SEARCH, NON_LATIN_RELEASE_SEARCH)
+        httpClient.givenJsonResponse(ARTIST_ALIAS_LOOKUP, ARTIST_WITH_ALIASES)
+        httpClient.givenJsonResponse("api.deezer.com", DEEZER_NO_ALBUM_MATCH)
+        httpClient.givenJsonResponse("itunes.apple.com", ITUNES_ALIAS_ALBUM)
+        val engine = poolEngine()
+        engine.enrich(NON_LATIN_ALBUM, setOf(EnrichmentType.ALBUM_ART))
+
+        // When - the same request is made again with forceRefresh, so nothing is served from cache
+        engine.enrich(NON_LATIN_ALBUM, setOf(EnrichmentType.ALBUM_ART), forceRefresh = true)
+
+        // Then - the second call resolved its own pool: nothing the first call held outlived it
+        assertEquals(2, httpClient.requestedUrls.count { it.contains(ARTIST_ALIAS_LOOKUP) })
     }
 
     @Test
@@ -579,6 +633,48 @@ class ProviderMemoLifetimeTest {
         const val ARTIST_SEARCH = "artist?query"
         const val BROWSE = "release-group?artist="
         const val RECORDING_SEARCH = "recording?query"
+
+        /** The lookup the credited artist's alias pool costs, and the only one this test counts. */
+        const val ARTIST_ALIAS_LOOKUP = "artist/art-nonlatin?"
+
+        val NON_LATIN_ALBUM = EnrichmentRequest.forAlbum("教育", "東京事変")
+
+        /** A release hit whose artist-credit names the artist an alias pool would be read off. */
+        val NON_LATIN_RELEASE_SEARCH = """
+            {
+              "releases": [{
+                "id": "rel-nonlatin",
+                "score": 100,
+                "title": "教育",
+                "artist-credit": [{"artist": {"id": "art-nonlatin", "name": "東京事変"}}],
+                "release-group": {"id": "rg-nonlatin", "primary-type": "Album"}
+              }]
+            }
+        """.trimIndent()
+
+        val ARTIST_WITH_ALIASES = """
+            {
+              "id": "art-nonlatin",
+              "name": "東京事変",
+              "aliases": [
+                {"name": "Tokyo Incidents", "type": "Artist name", "locale": "en", "primary": true}
+              ]
+            }
+        """.trimIndent()
+
+        /** Deezer answers with an album no name form matches, so the chain falls through to iTunes. */
+        val DEEZER_NO_ALBUM_MATCH = """
+            {"data":[{"id":9,"title":"教育","artist":{"id":9,"name":"Unrelated Band"},"type":"album"}]}
+        """.trimIndent()
+
+        /** iTunes carries the album under the romanized artist name only. */
+        val ITUNES_ALIAS_ALBUM = """
+            {"resultCount":1,"results":[
+              {"wrapperType":"collection","collectionType":"Album","collectionId":77,
+               "artistName":"Tokyo Incidents","collectionName":"教育",
+               "artworkUrl100":"https://is1-ssl.mzstatic.com/image/thumb/kyouiku/100x100bb.jpg",
+               "releaseDate":"2004-11-25T08:00:00Z","trackCount":11}]}
+        """.trimIndent()
 
         /**
          * The encoded ` AND -comment:*` Lucene term [MusicBrainzApi]'s canonical recording query

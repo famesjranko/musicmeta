@@ -104,6 +104,9 @@ private fun List<DiscogsRelease>.selectRelease(
         )
     }.maxWithOrNull(
         compareBy(
+            // Tier leads: every alias match is the same artist quality, so without it a search-hint
+            // match would beat a published-name one on Discogs's own result order.
+            { it.nameTier.confidenceFactor },
             { it.artistQuality },
             { it.tieBreaks["year"] },
         ),

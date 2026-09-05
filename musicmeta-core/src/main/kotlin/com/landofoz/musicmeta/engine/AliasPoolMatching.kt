@@ -66,7 +66,7 @@ internal suspend fun <T> Iterable<T>.bestArtistMatchOrAlias(
     bestArtistMatch(expected, tieBreak, nameOf)?.let { return ArtistNameMatch(it, NameMatchTier.CANONICAL) }
     val aliases = resolvedAliasPool()
     if (aliases.isEmpty()) return null
-    val byTier = compareBy<Pair<T, NameMatchTier>> { -it.second.ordinal }
+    val byTier = compareBy<Pair<T, NameMatchTier>> { it.second.confidenceFactor }
     val comparator = if (tieBreak == null) byTier else byTier.then(compareBy(tieBreak) { it.first })
     return mapNotNull { candidate ->
         aliasTier(nameOf(candidate), aliases)?.let { candidate to it }
@@ -76,6 +76,9 @@ internal suspend fun <T> Iterable<T>.bestArtistMatchOrAlias(
 /**
  * [acceptAndRankAlbum], retried against this call's alias pool when the requested artist name
  * accepted nothing — the title policy is untouched, only the artist floor widens.
+ *
+ * Official aliases are tried before the rest, so a candidate under a name the entity is published
+ * under beats one under a search hint whatever order the source listed them in.
  */
 internal suspend fun <T> Iterable<T>.acceptAndRankAlbumOrAlias(
     requestedArtist: String,
@@ -86,14 +89,13 @@ internal suspend fun <T> Iterable<T>.acceptAndRankAlbumOrAlias(
     acceptAndRankAlbum(requestedArtist, artistNameOf, titleTierOf, *tieBreaks)?.let { return it }
     val aliases = resolvedAliasPool()
     if (aliases.isEmpty()) return null
-    return aliases.firstNotNullOfOrNull { alias ->
-        val tier = aliasTierOfPool(alias, aliases)
+    return aliases.sortedByDescending { it.official }.firstNotNullOfOrNull { alias ->
         filter { ArtistMatcher.matchQuality(alias.name, artistNameOf(it)) == ArtistMatcher.QUALITY_SAME_NAME }
             .acceptAndRankAlbum(alias.name, artistNameOf, titleTierOf, *tieBreaks)
-            ?.copy(nameTier = tier)
+            ?.let { match ->
+                // The winner's own name against the whole pool, not the alias that reached it: a
+                // candidate matching an official alias listed later is still a primary-alias match.
+                match.copy(nameTier = aliasTier(artistNameOf(match.candidate), aliases) ?: NameMatchTier.ALIAS)
+            }
     }
 }
-
-/** The tier [alias] itself is granted at, given the pool it came from. */
-private fun aliasTierOfPool(alias: AlternativeName, aliases: List<AlternativeName>): NameMatchTier =
-    aliasTier(alias.name, aliases) ?: NameMatchTier.ALIAS

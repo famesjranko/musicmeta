@@ -171,14 +171,13 @@ internal class DeezerApi(
             // The alias pool is read only once the requested name has accepted nothing, so a
             // request whose artist Deezer already carries under the requested name costs nothing.
             val direct = pool.filter { ArtistMatcher.isMatch(artist, it.candidateArtistName()) }
+            val aliases = if (direct.isNotEmpty()) emptyList() else resolvedAliasPool()
             val candidates = direct.ifEmpty {
-                val aliases = resolvedAliasPool()
                 pool.filter { artistNameTier(artist, it.candidateArtistName(), aliases) != null }
             }
             if (candidates.isNotEmpty()) {
                 val best = candidates.rankTracks(title, artist, album) ?: return null
-                val tier = artistNameTier(artist, best.candidateArtistName(), resolvedAliasPool())
-                    ?: return null
+                val tier = artistNameTier(artist, best.candidateArtistName(), aliases) ?: return null
                 return best.toTrackSearchResult(tier)
             }
         }

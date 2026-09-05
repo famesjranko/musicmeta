@@ -1,8 +1,10 @@
 package com.landofoz.musicmeta.provider
 
+import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
+import com.landofoz.musicmeta.IdentifierNamespace
 import com.landofoz.musicmeta.engine.AlternativeName
 import com.landofoz.musicmeta.engine.ResolvedEntityNames
 import com.landofoz.musicmeta.http.RateLimiter
@@ -115,6 +117,97 @@ class NonLatinAliasPoolMatchingTest {
     }
 
     @Test
+    fun `the alias source is never resolved when the requested name matches`() = runTest {
+        // Given - a Latin request Deezer answers under the very name it asked with
+        httpClient.givenJsonResponse("search/track", DEEZER_TRACK_SEARCH)
+        val provider = DeezerProvider(httpClient, RateLimiter(0))
+        val request = EnrichmentRequest.forTrack("Karma Police", "Radiohead")
+        var calls = 0
+        val names = ResolvedEntityNames()
+        names.offerAliases {
+            calls++
+            TOKYO_JIHEN_POOL
+        }
+
+        // When - the track resolves on the requested name alone
+        val result = withContext(names) { provider.enrich(request, EnrichmentType.TRACK_METADATA) }
+
+        // Then - the source that would have cost a MusicBrainz lookup was never asked
+        assertTrue("expected a match, got $result", result is EnrichmentResult.Success)
+        assertEquals(EXACT_CONFIDENCE, (result as EnrichmentResult.Success).confidence, 0.0001f)
+        assertEquals(0, calls)
+    }
+
+    @Test
+    fun `a candidate verified by a search-hint alias reports the lower alias tier`() = runTest {
+        // Given - a pool whose only match for the returned candidate is a non-official alias
+        httpClient.givenJsonResponse("api.deezer.com", DEEZER_SEARCH_HINT_ARTIST_SEARCH)
+        val provider = DeezerProvider(httpClient, RateLimiter(0))
+        val request = EnrichmentRequest.forArtist("東京事変")
+
+        // When - the pool is consulted for it
+        val result = withPool { provider.enrich(request, EnrichmentType.ARTIST_PHOTO) }
+
+        // Then - accepted, but at the weaker of the two alias tiers
+        assertTrue("expected a match through the pool, got $result", result is EnrichmentResult.Success)
+        assertEquals(ALIAS_CONFIDENCE, (result as EnrichmentResult.Success).confidence, 0.0001f)
+    }
+
+    @Test
+    fun `a candidate under the requested name beats one under an alias`() = runTest {
+        // Given - one hit named as the request asked and one matching a non-official alias only
+        httpClient.givenJsonResponse("api.deezer.com", DEEZER_CANONICAL_AND_ALIAS_SEARCH)
+        val provider = DeezerProvider(httpClient, RateLimiter(0))
+        val request = EnrichmentRequest.forArtist("東京事変")
+
+        // When - both are in one result page
+        val result = withPool { provider.enrich(request, EnrichmentType.ARTIST_PHOTO) }
+
+        // Then - the requested name wins outright, at the unscaled confidence
+        assertTrue("expected a match, got $result", result is EnrichmentResult.Success)
+        val success = result as EnrichmentResult.Success
+        assertEquals(EXACT_CONFIDENCE, success.confidence, 0.0001f)
+        assertEquals("2", success.resolvedIdentifiers?.get(IdentifierNamespace.DEEZER))
+    }
+
+    @Test
+    fun `an album under an official alias beats one under a search hint listed first`() = runTest {
+        // Given - two albums, the first credited under a search hint and the second under a name
+        // the entity is published under
+        httpClient.givenJsonResponse("api.deezer.com", DEEZER_ALBUM_SEARCH_TWO_ALIASES)
+        val provider = DeezerProvider(httpClient, RateLimiter(0))
+        val request = EnrichmentRequest.forAlbum("Kyouiku", "東京事変")
+
+        // When - the album is selected through the pool
+        val result = withPool { provider.enrich(request, EnrichmentType.ALBUM_ART) }
+
+        // Then - the published name wins on tier, not on the order Deezer returned them in
+        assertTrue("expected a match, got $result", result is EnrichmentResult.Success)
+        val success = result as EnrichmentResult.Success
+        assertEquals(PRIMARY_ALIAS_CONFIDENCE, success.confidence, 0.0001f)
+        val artwork = success.data as EnrichmentData.Artwork
+        assertTrue("picked the search-hint credit: ${artwork.url}", artwork.url.contains("official"))
+    }
+
+    @Test
+    fun `a discogs release under an official alias beats a search-hint credit listed first`() = runTest {
+        // Given - two releases whose combined titles credit two different aliases of one entity
+        httpClient.givenJsonResponse("api.discogs.com/database/search", DISCOGS_RELEASE_SEARCH_TWO_ALIASES)
+        val provider = DiscogsProvider("token", httpClient, RateLimiter(0))
+        val request = EnrichmentRequest.forAlbum("Kyouiku", "東京事変")
+
+        // When - the release is selected through the pool
+        val result = withPool { provider.enrich(request, EnrichmentType.ALBUM_ART) }
+
+        // Then - the published name wins on tier, not on Discogs's own result order
+        assertTrue("expected a match, got $result", result is EnrichmentResult.Success)
+        val success = result as EnrichmentResult.Success
+        assertEquals(PRIMARY_ALIAS_CONFIDENCE, success.confidence, 0.0001f)
+        val artwork = success.data as EnrichmentData.Artwork
+        assertTrue("picked the search-hint credit: ${artwork.url}", artwork.url.contains("official"))
+    }
+
+    @Test
     fun `the pool is resolved once however many candidates consult it`() = runTest {
         // Given - a pool whose source counts how often it is asked
         var calls = 0
@@ -146,11 +239,19 @@ class NonLatinAliasPoolMatchingTest {
         /** [EXACT_CONFIDENCE] scaled by `NameMatchTier.PRIMARY_ALIAS`. */
         const val PRIMARY_ALIAS_CONFIDENCE = 0.8f * 0.95f
 
+        /** [EXACT_CONFIDENCE] scaled by `NameMatchTier.ALIAS` — a search hint, not a published name. */
+        const val ALIAS_CONFIDENCE = 0.8f * 0.85f
+
+        // The pool as MusicBrainz files it: a locale-tagged or primary alias is a name the entity
+        // is published under, a "Search hint" is not.
+        // Source order puts a search hint ahead of a published name on purpose: MusicBrainz sorts
+        // its aliases array alphabetically, so the array is no guide to which name to prefer.
         val TOKYO_JIHEN_POOL = listOf(
             AlternativeName("東京事変", official = true),
+            AlternativeName("Toukyou Jihen", official = false),
+            AlternativeName("東京事變", official = false),
             AlternativeName("Tokyo Jihen", official = true),
             AlternativeName("Tokyo Incidents", official = true),
-            AlternativeName("東京事變", official = false),
         )
 
         // https://api.deezer.com/search/artist?q=東京事変&limit=10 — captured 2026-09-05, first two hits.
@@ -198,6 +299,61 @@ class NonLatinAliasPoolMatchingTest {
         // https://api.deezer.com/search/artist?q=Radiohead&limit=10 — the shape above, Latin request.
         const val DEEZER_LATIN_ARTIST_SEARCH = DEEZER_UNRELATED_ARTIST_SEARCH
 
+        // Same endpoint, answering only under a name the pool holds as a search hint.
+        const val DEEZER_SEARCH_HINT_ARTIST_SEARCH = """
+        {"data":[
+          {"id":90002,"name":"Toukyou Jihen","link":"https://www.deezer.com/artist/90002",
+           "picture_small":"https://cdn-images.dzcdn.net/images/artist/tj/56x56.jpg",
+           "picture_medium":"https://cdn-images.dzcdn.net/images/artist/tj/250x250.jpg",
+           "picture_big":"https://cdn-images.dzcdn.net/images/artist/tj/500x500.jpg",
+           "picture_xl":"https://cdn-images.dzcdn.net/images/artist/tj/1000x1000.jpg",
+           "nb_album":3,"nb_fan":40,"radio":true,"type":"artist"}
+        ],"total":1}
+        """
+
+        // Same endpoint, with a search-hint match listed ahead of the requested name itself.
+        const val DEEZER_CANONICAL_AND_ALIAS_SEARCH = """
+        {"data":[
+          {"id":90002,"name":"Toukyou Jihen","link":"https://www.deezer.com/artist/90002",
+           "picture_small":"https://cdn-images.dzcdn.net/images/artist/tj/56x56.jpg",
+           "picture_medium":"https://cdn-images.dzcdn.net/images/artist/tj/250x250.jpg",
+           "picture_big":"https://cdn-images.dzcdn.net/images/artist/tj/500x500.jpg",
+           "picture_xl":"https://cdn-images.dzcdn.net/images/artist/tj/1000x1000.jpg",
+           "nb_album":3,"nb_fan":40,"radio":true,"type":"artist"},
+          {"id":2,"name":"東京事変","link":"https://www.deezer.com/artist/2",
+           "picture_small":"https://cdn-images.dzcdn.net/images/artist/tk/56x56.jpg",
+           "picture_medium":"https://cdn-images.dzcdn.net/images/artist/tk/250x250.jpg",
+           "picture_big":"https://cdn-images.dzcdn.net/images/artist/tk/500x500.jpg",
+           "picture_xl":"https://cdn-images.dzcdn.net/images/artist/tk/1000x1000.jpg",
+           "nb_album":45,"nb_fan":2487,"radio":true,"type":"artist"}
+        ],"total":2}
+        """
+
+        // https://api.deezer.com/search/album?q=… — the search-hint credit listed first.
+        const val DEEZER_ALBUM_SEARCH_TWO_ALIASES = """
+        {"data":[
+          {"id":501,"title":"Kyouiku","cover_small":"https://cdn-images.dzcdn.net/hint/56.jpg",
+           "cover_medium":"https://cdn-images.dzcdn.net/hint/250.jpg",
+           "cover_big":"https://cdn-images.dzcdn.net/hint/500.jpg",
+           "cover_xl":"https://cdn-images.dzcdn.net/hint/1000.jpg",
+           "nb_tracks":11,"artist":{"id":90002,"name":"Toukyou Jihen"},"type":"album"},
+          {"id":502,"title":"Kyouiku","cover_small":"https://cdn-images.dzcdn.net/official/56.jpg",
+           "cover_medium":"https://cdn-images.dzcdn.net/official/250.jpg",
+           "cover_big":"https://cdn-images.dzcdn.net/official/500.jpg",
+           "cover_xl":"https://cdn-images.dzcdn.net/official/1000.jpg",
+           "nb_tracks":11,"artist":{"id":384298,"name":"Tokyo Incidents"},"type":"album"}
+        ],"total":2}
+        """
+
+        // https://api.deezer.com/search/track?q=artist:"Radiohead" track:"Karma Police"
+        // — the shape a direct match arrives in.
+        const val DEEZER_TRACK_SEARCH = """
+        {"data":[
+          {"id":789,"title":"Karma Police","artist":{"id":399,"name":"Radiohead"},
+           "album":{"title":"OK Computer"},"duration":263}
+        ]}
+        """
+
         // https://itunes.apple.com/search?media=music&entity=musicArtist&term=東京事変&limit=10
         // — captured 2026-09-05, verbatim.
         const val ITUNES_ARTIST_SEARCH = """
@@ -215,6 +371,16 @@ class NonLatinAliasPoolMatchingTest {
            "artistName":"Tokyo Incidents","collectionName":"Kyouiku",
            "artworkUrl100":"https://is1-ssl.mzstatic.com/image/thumb/Music/kyouiku/100x100bb.jpg",
            "releaseDate":"2004-11-25T08:00:00Z","trackCount":11,"primaryGenreName":"Rock"}]}
+        """
+
+        // https://api.discogs.com/database/search?type=release&q=… — the search-hint credit first.
+        const val DISCOGS_RELEASE_SEARCH_TWO_ALIASES = """
+        {"results":[
+          {"title":"Toukyou Jihen - Kyouiku","label":["EMI"],"year":"2004","country":"Japan",
+           "cover_image":"https://img.discogs.com/hint.jpg","id":601},
+          {"title":"Tokyo Incidents - Kyouiku","label":["EMI"],"year":"2004","country":"Japan",
+           "cover_image":"https://img.discogs.com/official.jpg","id":602}
+        ]}
         """
 
         // https://api.discogs.com/database/search?type=artist&q=東京事変&per_page=10

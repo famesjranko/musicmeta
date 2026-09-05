@@ -157,7 +157,9 @@ first, which is a different artist often enough to matter.
 Confidence records which of the two verified it. A hit under the requested name reports exactly the
 score it always has; one verified through the pool is scaled by the alias's tier — 0.95 for a name
 the entity is published under, 0.85 for any other alias — so a cross-script match is never reported
-as confidently as a direct one. The pool costs a MusicBrainz lookup only for an album or track
+as confidently as a direct one. Names are all the pool has: two acts that genuinely share an alias
+string cannot be told apart by it, so 0.85 is also what the wrong act would score if a provider
+returned it under that name. The pool costs a MusicBrainz lookup only for an album or track
 request whose provider matching has already failed on the requested name; on an artist request it
 rides on the search identity resolution has already made, and a request whose providers match
 directly never pays for it at all.

@@ -99,12 +99,12 @@ public class DiscogsProvider(
         return try {
             // Discogs titles are "Artist - Title"; accept and rank on both halves, shared by every
             // type this call asks for so they select one release, not one search-ranked pick each.
-            val release = albumScope().resolveRelease(albumRequest)?.release
+            val choice = albumScope().resolveRelease(albumRequest)
                 ?: return EnrichmentResult.NotFound(type, id)
             if (type == EnrichmentType.ALBUM_METADATA) {
-                enrichAlbumMetadataWithCommunity(release, albumRequest.identifiers)
+                enrichAlbumMetadataWithCommunity(choice.release, albumRequest.identifiers, choice.nameTier)
             } else {
-                enrichFromRelease(release, type)
+                enrichFromRelease(choice.release, type, choice.nameTier)
             }
         } catch (e: Exception) {
             mapError(type, e)
@@ -167,6 +167,7 @@ public class DiscogsProvider(
     private suspend fun enrichAlbumMetadataWithCommunity(
         release: DiscogsRelease,
         identifiers: EnrichmentIdentifiers,
+        nameTier: NameMatchTier,
     ): EnrichmentResult {
         val baseMetadata = DiscogsMapper.toAlbumMetadata(release)
         // Fetch release details for community rating if a releaseId is available
@@ -179,7 +180,7 @@ public class DiscogsProvider(
             baseMetadata.copy(communityRating = communityRating)
         } else baseMetadata
         // Only reached with a release the album search verified against the requested artist.
-        return success(metadata, EnrichmentType.ALBUM_METADATA, release, hasArtistMatch = true)
+        return success(metadata, EnrichmentType.ALBUM_METADATA, release, hasArtistMatch = true, nameTier = nameTier)
     }
 
     /**
@@ -235,6 +236,7 @@ public class DiscogsProvider(
     private fun enrichFromRelease(
         release: DiscogsRelease,
         type: EnrichmentType,
+        nameTier: NameMatchTier,
     ): EnrichmentResult {
         val data = when (type) {
             EnrichmentType.ALBUM_ART -> DiscogsMapper.toArtwork(release)
@@ -244,7 +246,7 @@ public class DiscogsProvider(
             else -> null
         } ?: return EnrichmentResult.NotFound(type, id)
         // Only reached with a release the album search verified against the requested artist.
-        return success(data, type, release, hasArtistMatch = true)
+        return success(data, type, release, hasArtistMatch = true, nameTier = nameTier)
     }
 
     private fun buildResolvedIdentifiers(release: DiscogsRelease): EnrichmentIdentifiers? {
