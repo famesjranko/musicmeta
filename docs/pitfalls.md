@@ -515,6 +515,34 @@ first, and Discogs hands the bare name to whoever was catalogued first rather th
 act (`DiscogsApi.searchArtist`'s KDoc). It is safe on a detail record because there is no pool —
 the record was already chosen by id, and the only question left is whether to accept it.
 
+## 33. A display field that reads like one name can be a list of them
+
+```kotlin
+// WRONG — "Χάρις Αλεξίου, Αντώνης Βαρδής" is two artists, and matches neither
+val accepted = artistNameTier(requestedArtist, artistPart, aliases) != null
+
+// RIGHT — the whole credit first, then the artists it names, at same name only
+artistNameTier(requestedArtist, credit, aliases)?.let { return it }
+return credit.split(", ").map { it.trim() }.takeIf { it.size > 1 }
+    ?.mapNotNull { sameNameTier(requestedArtist, it, aliases) }?.minByOrNull { it.ordinal }
+```
+
+Discogs publishes a release's credit only inside the combined `"Artist - Title"` display field, and
+joins co-credited artists there with `", "`. Splitting on ` - ` therefore hands a *list* to a test
+that compares one name, and a request for one of the credited artists is measured against a string
+no upstream holds for anybody. On the frozen non-Latin workload this was the only artist-side
+rejection left: all five Discogs candidates for `Ξημερώνει` title-matched and none artist-matched.
+
+A Latin request usually survives, because `ArtistMatcher`'s containment rank finds the requested
+name inside the joined string. That is what hides it — the defect is only visible where containment
+cannot apply, which is every request written in another script.
+
+Splitting is a loosening, so it is fenced the way §7's ranking is. The whole field is tested first,
+so a split can never displace a match the field already has, and an act whose own name holds a comma
+(`Earth, Wind & Fire`) is still matched as itself. A part is then accepted at **same name only**,
+for the reason `NameMatchTier` refuses a partial alias match: taking one field apart multiplies the
+strings a request is compared against, and a partial match against one of many is not a name.
+
 ## 5. A capability's `identifierRequirement` defaults to `NONE`
 
 ```kotlin

@@ -228,6 +228,21 @@ class NonLatinAliasPoolMatchingTest {
     }
 
     @Test
+    fun `a discogs release credited to two artists answers the one the request names`() = runTest {
+        // Given - a Greek request, and Discogs crediting the release to her and a second artist
+        httpClient.givenJsonResponse("api.discogs.com/database/search", DISCOGS_JOINT_CREDIT_RELEASE_SEARCH)
+        val provider = DiscogsProvider("token", httpClient, RateLimiter(0))
+        val request = EnrichmentRequest.forAlbum("Ξημερώνει", "Χάρις Αλεξίου")
+
+        // When - the album art is asked for
+        val result = withPool(ALEXIOU_POOL) { provider.enrich(request, EnrichmentType.ALBUM_ART) }
+
+        // Then - the credit is read as the two artists it names, and her own name identifies it
+        assertTrue("expected the credited artist to be found, got $result", result is EnrichmentResult.Success)
+        assertEquals(EXACT_CONFIDENCE, (result as EnrichmentResult.Success).confidence, 0.0001f)
+    }
+
+    @Test
     fun `the pool is resolved once however many candidates consult it`() = runTest {
         // Given - a pool whose source counts how often it is asked
         var calls = 0
@@ -430,6 +445,35 @@ class NonLatinAliasPoolMatchingTest {
                     "uri150":"https://i.discogs.com/thumb/150x150.jpeg","width":600,"height":538}],
          "realname":"東京事変","profile":"Japanese five-piece rock band.",
          "namevariations":["Tokyo Incidents","東京事變"],"members":[],"data_quality":"Needs Vote"}
+        """
+
+        // The pool as MusicBrainz files it for artist 2dc67a2d-5914-4064-bf7b-8c8ea77bfab6,
+        // captured 2026-09-05, less two mojibake aliases: nothing in it is the joint credit
+        // Discogs publishes, so the pool cannot verify that credit whole.
+        val ALEXIOU_POOL = listOf(
+            AlternativeName("Χάρις Αλεξίου", official = true),
+            AlternativeName("Charis Alexiou", official = false),
+            AlternativeName("Charoula Alexiou", official = false),
+            AlternativeName("Haris Alexiou", official = true),
+            AlternativeName("Kharis Alexiou", official = false),
+            AlternativeName("Xaris Alexiou", official = false),
+            AlternativeName("Xaroula Aleksiou", official = false),
+            AlternativeName("ΧΑΡΙΣ ΑΛΕΞΙΟΥ", official = false),
+            AlternativeName("Χαρούλα Αλεξίου", official = false),
+        )
+
+        // https://api.discogs.com/database/search?type=release&title=Ξημερώνει&artist=Χάρις Αλεξίου&per_page=5
+        // — captured 2026-09-05, first hit only, trimmed to the read fields, image URLs shortened.
+        const val DISCOGS_JOINT_CREDIT_RELEASE_SEARCH = """
+        {"results":[
+          {"id":9326133,"type":"release","master_id":583829,
+           "title":"Χάρις Αλεξίου, Αντώνης Βαρδής - Ξημερώνει",
+           "year":"1994","country":"Greece","catno":"7243 4 80188 2 3","format":["CD","Album"],
+           "label":["Minos","Minos Matsas & Son Co. Ltd."],
+           "thumb":"https://i.discogs.com/thumb/150x150.jpeg",
+           "cover_image":"https://i.discogs.com/cover/600x519.jpeg",
+           "resource_url":"https://api.discogs.com/releases/9326133"}
+        ]}
         """
 
         // The pool as MusicBrainz files it for artist b9545342-1e6d-4dae-84ac-013374ad8d7c,
