@@ -186,13 +186,20 @@ public data class SimilarArtist(
     val name: String,
     val identifiers: EnrichmentIdentifiers = EnrichmentIdentifiers(),
     /**
-     * Rank within this list, 0.0–1.0, where the top entry is 1.0.
+     * Rank within the merged list [SimilarArtistMerger][com.landofoz.musicmeta.engine.SimilarArtistMerger]
+     * produced, 0.0–1.0, where the top entry there is 1.0.
      *
      * The merger sums each provider's figure for an artist and divides every sum by the largest,
-     * so a score says where an artist sits in *this* answer. It is not a similarity measurement,
-     * and comparing one against a score from another answer, or against the number a provider
+     * so a score says where an artist sat in *that* merge. It is not a similarity measurement, and
+     * comparing one against a score from another answer, or against the number a provider
      * reported, means nothing. The one case it does not hold: a list in which every entry scored
      * zero stays at zero, having no scale to rank against.
+     *
+     * Catalog filtering (`catalogFilterMode`) runs after the merge and reads this score for
+     * nothing: `AVAILABLE_ONLY` can remove the 1.0 entry outright, and `AVAILABLE_FIRST` reorders
+     * the list without touching any score. A served list's top [matchScore] is 1.0, and the list
+     * sorted by it descending, only when no `CatalogProvider` is configured or the mode is
+     * `UNFILTERED`.
      */
     val matchScore: Float,
     val sources: List<String> = emptyList(),

@@ -481,4 +481,41 @@ class CatalogFilteringTest {
         val radio = results.raw[EnrichmentType.ARTIST_RADIO] as EnrichmentResult.Success
         assertEquals(listOf("Track 1"), (radio.data as EnrichmentData.RadioPlaylist).tracks.map { it.title })
     }
+
+    @Test fun `AVAILABLE_ONLY can serve a list whose top matchScore is below 1_0, unrenormalised`() = runTest {
+        // Given - a merged-shaped list whose top-scored (1.0) entry is the one the catalog lacks
+        val fakeCatalog = CatalogProvider { queries ->
+            queries.map { CatalogMatch(available = it.title != "Artist A", source = "test") }
+        }
+        val provider = FakeProvider(
+            id = "fake",
+            capabilities = listOf(ProviderCapability(EnrichmentType.SIMILAR_ARTISTS, 100)),
+        ).also {
+            it.givenResult(
+                EnrichmentType.SIMILAR_ARTISTS,
+                EnrichmentResult.Success(
+                    type = EnrichmentType.SIMILAR_ARTISTS,
+                    data = EnrichmentData.SimilarArtists(
+                        artists = listOf(
+                            SimilarArtist(name = "Artist A", matchScore = 1.0f),
+                            SimilarArtist(name = "Artist B", matchScore = 0.5f),
+                            SimilarArtist(name = "Artist C", matchScore = 0.3f),
+                        ),
+                    ),
+                    provider = "fake",
+                    confidence = 0.9f,
+                ),
+            )
+        }
+
+        // When - enriching with AVAILABLE_ONLY filtering
+        val results = engine(provider, fakeCatalog).enrich(req, setOf(EnrichmentType.SIMILAR_ARTISTS))
+
+        // Then - the 1.0 entry is gone and the surviving top score stays at its pre-filter value
+        val success = results.raw[EnrichmentType.SIMILAR_ARTISTS] as EnrichmentResult.Success
+        val artists = (success.data as EnrichmentData.SimilarArtists).artists
+        assertEquals(listOf("Artist B", "Artist C"), artists.map { it.name })
+        assertEquals(0.5f, artists[0].matchScore)
+        assertEquals(0.3f, artists[1].matchScore)
+    }
 }
