@@ -60,14 +60,11 @@ internal class DiscogsApi(
             // A non-object element is skipped, not thrown: a JSONException here would surface as
             // Error and open the breaker against a healthy Discogs (docs/pitfalls.md §4).
             .mapNotNull { results.optJSONObject(it) }
-            .bestArtistMatchOrAlias(name) { it.candidateName() }
+            .bestArtistMatchOrAlias(name) { it.discogsArtistName("title") }
             ?: return null
         val id = match.value.optLong("id", 0L)
         return if (id > 0) ArtistNameMatch(id, match.tier) else null
     }
-
-    private fun JSONObject.candidateName(): String =
-        stripDiscogsDisambiguator(optString("title", ""))
 
     /** Fetch artist details including band members. */
     suspend fun getArtist(artistId: Long): DiscogsArtist? {
@@ -173,7 +170,7 @@ internal class DiscogsApi(
         }
         return DiscogsArtist(
             id = json.optLong("id", 0L),
-            name = json.optString("name", ""),
+            name = json.discogsArtistName("name"),
             members = members,
             images = images,
         )
@@ -287,11 +284,21 @@ private fun JSONObject.discogsCountry(): String? =
 private val DISAMBIGUATOR_REGEX = Regex("\\s*\\(\\d+\\)$")
 
 /**
+ * The artist name Discogs files under [key], without the homonym counter it appends there.
+ *
+ * Discogs calls the field `title` on an artist search hit and `name` on an artist record, and puts
+ * the counter on both. Every read of either goes through here, so one artist cannot carry two
+ * different names according to which response it was parsed from.
+ */
+private fun JSONObject.discogsArtistName(key: String): String =
+    stripDiscogsDisambiguator(optString(key, ""))
+
+/**
  * Drops Discogs's `" (n)"` homonym counter so two entries sharing a name compare as equals. Only a
  * trailing all-digit group goes — "Bad Company (3)" becomes "Bad Company", while a meaningful
- * parenthetical like "Air (French Band)" is left alone. Shared by artist search
- * ([DiscogsApi.candidateName]) and album selection ([parseDiscogsRelease]) — the same disambiguator
- * appears on both an artist search hit's `title` and a release search hit's `"Artist - Title"`
+ * parenthetical like "Air (French Band)" is left alone. Shared by the artist endpoints
+ * ([discogsArtistName]) and album selection ([parseDiscogsRelease]) — the same disambiguator
+ * appears on an artist's `title` and `name`, and on a release search hit's `"Artist - Title"`
  * artist prefix.
  */
 internal fun stripDiscogsDisambiguator(title: String): String =
