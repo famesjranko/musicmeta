@@ -74,8 +74,9 @@ a row here carries only what a reviewer looks *for*, so a rule change is never a
 - [ ] A new provider off the `CLAUDE.md` layout. The visibility half is gated — only `*Provider`
       may be public under `provider/` in `api/*.api` — so what is left for review is the file
       layout and the names themselves.
-- [ ] A capability or provider behaviour change with no matching edit to `docs/providers.md`.
-      Nothing checks that file; two mechanisms for it were built and both deleted. Leave the
-      header's hand-verified date where it is: it warrants the whole file, and a partial edit
-      cannot — the file's own header already brands text newer than the date as a claim, and the
-      edit's evidence lives in its PR. Move the date only after re-verifying the entire file.
+- [ ] A capability change with no matching edit to `docs/providers.md`, or a provider behaviour
+      change with no matching edit to `docs/provider-internals.md`. Nothing checks either file; two
+      mechanisms for the capability table were built and both deleted. Leave each header's
+      hand-verified date where it is: it warrants the whole file, and a partial edit cannot — each
+      file's own header already brands text newer than its date as a claim, and the edit's evidence
+      lives in its PR. Move a date only after re-verifying that whole file.

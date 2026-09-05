@@ -144,8 +144,9 @@ than it looks like, each learned the hard way.
   them skip comments is what previously cost a 155-line hand-written Kotlin scanner, a 118-line
   `KotlinLexer` oracle and a 337-line differential test. There are no such comments in the tree. If
   one is ever needed, reword it.
-- **Nothing checks `docs/providers.md`.** Two mechanisms for it were built and both were deleted: a
-  Kotlin-parsing Python script, then a unit test comparing a per-capability table against each
+- **Nothing checks `docs/providers.md` or `docs/provider-internals.md`.** Two mechanisms for the
+  capability table were built and both were deleted: a Kotlin-parsing Python script, then a unit
+  test comparing a per-capability table against each
   package's runtime `capabilities`. The test worked — 8/8 mutations killed, including a Gradle
   up-to-date hole it exposed — and was cut anyway, as too much standing machinery for one column of
   prose. `git log -S ProviderFeatureDocsTest` has it if the judgement changes. The tables it checked
@@ -256,7 +257,7 @@ than it looks like, each learned the hard way.
   today." That is what the daily `provider-drift.yml` e2e job is for, and each pool's `scenario.md`
   records whether the provider it covers has that live coverage.
 - **No live check remains behind the `cover-art-archive` endpoint claim.** `docs/pitfalls.md` §22
-  and `docs/providers.md` state that a `/release?query=` hit carries no `cover-art-archive` object
+  and `docs/provider-internals.md` state that a `/release?query=` hit carries no `cover-art-archive` object
   while a `/release/{mbid}` lookup does. The e2e test that re-checked that against the live API went
   with the field it asserted, so the claim is dated (2026-08-22) rather than watched — and no
   fixture can re-establish it, because a hand-written one says whatever it was written to say.

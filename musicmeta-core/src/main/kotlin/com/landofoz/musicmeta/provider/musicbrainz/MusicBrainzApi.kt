@@ -397,8 +397,8 @@ internal class MusicBrainzApi(
          *
          * Re-measure with `scripts/probes/recording-pool-filter-probe.sh` before relying on any of
          * those figures; they decay as MusicBrainz's catalogue grows. This KDoc is their one home —
-         * `docs/providers.md` and the probe state the shape and point here rather than restating
-         * them, because the copies drifted apart within a day of being written.
+         * `docs/provider-internals.md` and the probe state the shape and point here rather than
+         * restating them, because the copies drifted apart within a day of being written.
          */
         const val CANONICAL_SEARCH_LIMIT = 100
 

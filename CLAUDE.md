@@ -16,7 +16,7 @@ rest; `ls docs/` lists the docs.
 | Changing a public signature, an `api/*.api` file, or a public data class | `docs/pitfalls.md` — "The published surface" |
 | Naming a public type or member, or reading a provider's mapper | `docs/glossary.md` — one word per concept, and each upstream's word for it |
 | Writing a `catch`, a timeout, breaker or fallback behaviour, or classifying a result as `Error`/`NotFound` | `docs/pitfalls.md` — "Errors, cancellation, and timeouts" |
-| A provider's parsing, search/ranking, `confidence`, or a `ProviderCapability` | `docs/pitfalls.md` — "Provider data and matching" |
+| A provider's parsing, search/ranking, `confidence`, or a `ProviderCapability` | `docs/pitfalls.md` — "Provider data and matching"; `docs/provider-internals.md` |
 | Retry or status mapping, state held by a provider, or `forceRefresh`/invalidation | `docs/pitfalls.md` — "Transport and provider state" |
 | `scripts/checks/`, the comment rule, or demo config | `docs/pitfalls.md` — "Checks, comments, and config" |
 | Treating a green run as proof | `VERIFICATION.md` — what each check skips |

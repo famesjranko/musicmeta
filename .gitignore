@@ -25,8 +25,9 @@ local.properties
 .out-of-scope
 /prototype
 # Third-party API surface reports and the tables derived from them. Working notes, not the repo's
-# account of a provider — docs/providers.md is that. They date fast: an upstream's availability and
-# routes change under you, so a committed copy would read as current long after it stopped being.
+# account of a provider — docs/providers.md and docs/provider-internals.md are that. They date fast:
+# an upstream's availability and routes change under you, so a committed copy would read as current
+# long after it stopped being.
 /research/
 secrets.properties
 

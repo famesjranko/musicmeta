@@ -21,7 +21,7 @@
 #   3. DEPRECATION. `rest_v1` is the legacy surface. Live responses are the only place a
 #      `Deprecation` or `Sunset` header would appear before removal, and the documentation is the
 #      only place a date would. The HEADERS section checks the former; the latter is a reading
-#      task, recorded in docs/providers.md.
+#      task, recorded in docs/provider-internals.md.
 #
 #   ./scripts/probes/wikipedia-surface-probe.sh
 #   PAGES='Radiohead|Bj%C3%B6rk' ./scripts/probes/wikipedia-surface-probe.sh
