@@ -5,8 +5,13 @@ Code comments, tests and docs cite `docs/pitfalls.md` by section number, and not
 those references — renumbering or deleting a `## N.` heading orphans every one of them silently.
 This check collects the numbered headings that exist and fails on any cited number that does not.
 
-Deliberately one job: it does not validate area-heading names (`CLAUDE.md` is the only citer of
-those, and it is read every session), and it does not police citation formatting.
+It also fails on a number used twice. Two changes numbering "a new section 32" independently is not
+hypothetical — it happened, both landed, and nothing noticed: the headings are hand-assigned, they
+sit in different areas of the file, so the two edits merge cleanly and every later citation of that
+number silently means two things. Collecting into a set, as this check did, is exactly what hides it.
+
+Deliberately one job otherwise: it does not validate area-heading names (`CLAUDE.md` is the only
+citer of those, and it is read every session), and it does not police citation formatting.
 
     python3 check_pitfall_citations.py [--root PATH]
 """
@@ -49,12 +54,32 @@ def is_agent_worktree(path: Path, root: Path) -> bool:
 # tree, and already scanned under its own name, or outside it, and not this repo's content.
 
 
-def valid_ids(root: Path) -> set[str]:
-    """The section numbers that exist as `## N.` headings in the pitfalls file."""
+def heading_lines(root: Path) -> list[tuple[str, int]]:
+    """Every `## N.` heading in the pitfalls file, as (number, line), in the order they appear."""
     path = root / PITFALLS
     if not path.is_file():
-        return set()
-    return {m.group(1) for line in path.read_text(encoding="utf-8").splitlines() if (m := HEADING.match(line))}
+        return []
+    lines = path.read_text(encoding="utf-8").splitlines()
+    return [(m.group(1), number) for number, line in enumerate(lines, start=1) if (m := HEADING.match(line))]
+
+
+def valid_ids(root: Path) -> set[str]:
+    """The section numbers that exist as `## N.` headings in the pitfalls file."""
+    return {number for number, _ in heading_lines(root)}
+
+
+def duplicate_findings(root: Path) -> list[str]:
+    """A number carried by more than one heading, which makes every citation of it ambiguous."""
+    seen: dict[str, list[int]] = {}
+    for number, line in heading_lines(root):
+        seen.setdefault(number, []).append(line)
+    return [
+        f"::error file={PITFALLS},line={lines[1]}::section {number} is used by {len(lines)} headings "
+        f"(lines {', '.join(str(line) for line in lines)}), so every citation of it names more than "
+        "one pitfall. Renumber all but the first to the next unused number."
+        for number, lines in sorted(seen.items(), key=lambda item: int(item[0]))
+        if len(lines) > 1
+    ]
 
 
 def citing_files(root: Path) -> list[Path]:
@@ -80,7 +105,7 @@ def run(root: Path) -> list[str]:
             "Restore the headings or fix valid_ids()."
         ]
     known = ", ".join(sorted(ids, key=int))
-    findings = []
+    findings = duplicate_findings(root)
     for path in citing_files(root):
         rel = path.relative_to(root).as_posix()
         check_bare = rel in BARE_REFERENCE_FILES

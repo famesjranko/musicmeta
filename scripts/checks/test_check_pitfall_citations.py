@@ -137,6 +137,49 @@ class PitfallCitationsTest(unittest.TestCase):
         self.assertEqual(len(findings), 1)
         self.assertIn("A.kt", findings[0])
 
+    def test_a_number_used_by_two_headings_is_reported(self):
+        # Given - a pitfalls file where two headings independently took the same number
+        doubled = "# Pitfalls\n\n## 1. First\n\nbody\n\n## 4. Fourth\n\nbody\n\n## 4. Fourth again\n\nbody\n"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.write(root, DOC, doubled)
+
+            # When - the check runs over a tree that cites nothing at all
+            findings = run(root)
+
+        # Then - the duplicate is reported on its own, naming both heading lines
+        self.assertEqual(len(findings), 1)
+        self.assertIn("section 4 is used by 2 headings", findings[0])
+        self.assertIn("lines 7, 11", findings[0])
+
+    def test_a_citation_of_a_doubled_number_is_reported_as_a_duplicate_not_an_orphan(self):
+        # Given - a doubled heading number, and a file citing it
+        doubled = "# Pitfalls\n\n## 1. First\n\nbody\n\n## 4. Fourth\n\nbody\n\n## 4. Fourth again\n\nbody\n"
+        citation = "// see " + DOC + " " + SECTION + "4\n"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.write(root, DOC, doubled)
+            self.write(root, "musicmeta-core/src/main/kotlin/A.kt", citation)
+
+            # When - the check runs
+            findings = run(root)
+
+        # Then - the citation resolves, so only the duplicate is a finding
+        self.assertEqual(len(findings), 1)
+        self.assertIn("is used by 2 headings", findings[0])
+
+    def test_headings_each_used_once_report_nothing(self):
+        # Given - a pitfalls file whose numbers are all distinct
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.write(root, DOC, HEADINGS)
+
+            # When - the check runs
+            findings = run(root)
+
+        # Then - no duplicate is reported
+        self.assertEqual(findings, [])
+
 
 if __name__ == "__main__":
     unittest.main()
