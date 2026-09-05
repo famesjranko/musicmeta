@@ -79,8 +79,23 @@ internal class ProviderChain(
 ) {
     private val breakers: BreakerPool = pool ?: BreakerPool(circuitBreakers)
 
-    /** ARM: Control — the breaker key is the provider id, exactly as HEAD keys it. */
-    private fun breakerKeyFor(provider: EnrichmentProvider): String = provider.id
+    /**
+     * The three arms of the finished A/B, verbatim, chosen per chain at construction so one branch
+     * can run all three against a workload that is byte-identical between them. Under a workload
+     * whose ordering is decided by the scheduler, that is the only way the arms are comparable at
+     * all: rebuilding the harness per arm would vary the instrument as well as the key.
+     */
+    private val arm: String = System.getProperty("probe.breaker.arm", "control")
+
+    private fun breakerKeyFor(provider: EnrichmentProvider): String = when (arm) {
+        // ARM: Control — the breaker key is the provider id, exactly as HEAD keys it.
+        "control" -> provider.id
+        // ARM: A — (provider.id, host), with the host declared by the provider.
+        "host" -> (provider as? BreakerHostKeyed)?.breakerKey(type) ?: provider.id
+        // ARM: B — (provider.id, type). The chain already knows its type; no provider declares anything.
+        "type" -> "${provider.id}@${type.name}"
+        else -> error("unknown probe.breaker.arm: $arm")
+    }
 
     /**
      * Collects ALL Success results from every eligible provider concurrently, and separately what
@@ -320,8 +335,13 @@ internal class ProviderChain(
         providers.firstOrNull { it.id == providerId }?.let { requirementFor(it) } ?: IdentifierRequirement.NONE
 
     /** Whether [provider]'s breaker is open. A provider with no breaker is never skipped. */
-    private fun isTripped(provider: EnrichmentProvider): Boolean =
-        !breakers.get(breakerKeyFor(provider)).allowRequest()
+    private fun isTripped(provider: EnrichmentProvider): Boolean {
+        val tripped = !breakers.get(breakerKeyFor(provider)).allowRequest()
+        // Probe instrumentation: metric 1, counted where the refusal happens rather than from a
+        // ChainExecution, because enrich() does not hand a caller the executions of its fan-out.
+        if (tripped && type != EnrichmentType.SIMILAR_ARTISTS) breakers.mainHostSkips.incrementAndGet()
+        return tripped
+    }
 
     private fun hasRequiredIdentifiers(
         provider: EnrichmentProvider,

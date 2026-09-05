@@ -58,6 +58,13 @@ internal class ProviderRegistry(
     /** Probe instrumentation: every breaker key this registry has created, and its state. */
     internal fun breakerStates(): Map<String, CircuitBreaker.State> = breakerPool.states()
 
+    /** Probe instrumentation: how many times each key opened during the run, and main-host skips. */
+    internal fun breakerOpenings(): Map<String, Int> = breakerPool.openings()
+
+    internal fun mainHostSkips(): Int = breakerPool.mainHostSkips.get()
+
+    internal fun breakerPeaks(): Map<String, Int> = breakerPool.peaks()
+
     private val chains: Map<EnrichmentType, ProviderChain> = buildChains(allProviders)
 
     fun chainFor(type: EnrichmentType): ProviderChain? = chains[type]
