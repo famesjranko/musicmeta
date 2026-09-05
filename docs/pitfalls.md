@@ -1329,3 +1329,20 @@ Nothing catches this: `check_schema_pin_coverage.py` is per-provider, so one pin
 provider with thirteen look covered, and no check reads a `scenario.md` at all. So before writing
 that sentence, find the route's own `SchemaTarget` — and where there is none, either add it or say
 plainly that the capture is the only warrant.
+
+## 36. A pre-registered metric set can be blind to the mirror of the defect it was written for
+
+The similar-artist merger's dedup-key A/B froze its two decisive metrics over *pairs of different
+names* — how many the arm unifies, and how many it unifies wrongly — because the ticket was about
+one act arriving twice. Every arm scored on them, the control included, and the whole set was
+structurally unable to see the opposite failure: one name carrying **two different acts**, which the
+control fused four times over twelve artists and ships to consumers. It surfaced only because a
+sanity gate ("groups whose members' identifiers disagree — must be zero") happened to count it, and
+that gate then disqualified the baseline it existed to measure against.
+
+The shape to watch: a metric written from a ticket's own framing measures the arm against that
+framing, not against correctness, and a pre-registration freeze protects it from being fixed once an
+arm's output makes the gap visible. Before freezing, write down the defect's mirror — the wrong
+answer that is the *inverse* of the thin one — and give it its own metric even where no arm is
+expected to move it. Failing that, run the sanity gates against the control first: a baseline
+scoring non-zero on a gate is not a plan defect to note in the report, it is the finding.

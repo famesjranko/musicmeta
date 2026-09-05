@@ -107,6 +107,12 @@ step "schema pin coverage"
 # provider's fields move. Read here rather than in the watch, which only runs on a schedule.
 python3 scripts/checks/check_schema_pin_coverage.py
 
+step "route pin coverage"
+# The check above is satisfied by one pinned route per provider, so nine more can arrive unwatched
+# behind it. This one names every route the providers call and requires each to be pinned or
+# allowlisted — a new route arrives with the decision made either way, rather than with silence.
+python3 scripts/checks/check_route_pin_coverage.py
+
 step "public vocabulary"
 python3 scripts/checks/check_public_vocabulary.py
 

@@ -20,7 +20,7 @@ internal object SimilarArtistMerger : ResultMerger {
 
     /**
      * Merges multiple successful provider results for SIMILAR_ARTISTS into a single result.
-     * Collects all SimilarArtist entries, deduplicates by normalized name, sums matchScores and
+     * Collects all SimilarArtist entries, groups them by [groupArtists], sums matchScores and
      * rescales them against the merged maximum, merges sources and identifiers, and sorts by
      * matchScore descending.
      * Returns NotFound if results is empty; returns the first result as-is if no artists present.
@@ -49,7 +49,8 @@ internal object SimilarArtistMerger : ResultMerger {
     /**
      * Merges a list of similar artists from multiple providers.
      *
-     * - Deduplicates by normalized name (lowercase trim)
+     * - Deduplicates by MusicBrainz id where one is present, and by normalized name otherwise —
+     *   see [groupArtists]
      * - Sums matchScores across providers, then divides every sum by the largest of them, so the
      *   top entry is 1.0 and the spacing below it survives. A list whose maximum is not positive
      *   is left as it is.
@@ -60,13 +61,7 @@ internal object SimilarArtistMerger : ResultMerger {
     internal fun mergeArtists(artists: List<SimilarArtist>): List<SimilarArtist> {
         if (artists.isEmpty()) return emptyList()
 
-        val grouped = LinkedHashMap<String, MutableList<SimilarArtist>>()
-        for (artist in artists) {
-            val key = normalize(artist.name)
-            grouped.getOrPut(key) { mutableListOf() }.add(artist)
-        }
-
-        val summed = grouped.values.map { group ->
+        val summed = groupArtists(artists).map { group ->
             val first = group.first()
             val totalScore = group
                 .map { it.matchScore }
@@ -88,6 +83,51 @@ internal object SimilarArtistMerger : ResultMerger {
         return summed
             .map { it.copy(matchScore = it.matchScore / scale) }
             .sortedByDescending { it.matchScore }
+    }
+
+    /**
+     * The entries of [artists] that are one act, grouped in first-occurrence order.
+     *
+     * An entry carrying a MusicBrainz id joins the group carrying that same id, whatever either is
+     * named; failing that it joins a same-name group only while that group carries no id of its
+     * own, so two entries whose ids disagree can never share a group. An entry carrying no id falls
+     * back to the name, joining the first group under it rather than a bucket of its own — so where
+     * one name covers two ids, an unidentified entry's score attaches to whichever of them a
+     * contributor happened to report first (Deezer, then ListenBrainz, then Last.fm), by order
+     * rather than by evidence. Ids are compared trimmed and lowercased, and a blank one counts as
+     * no id at all.
+     *
+     * A caller therefore sees two entries wherever MusicBrainz holds one act under two ids, since
+     * nothing below the merge can tell that apart from two acts sharing a name — a duplicate entry
+     * splits a score the caller can still add up, where a fused one is an entry no act ever earned.
+     */
+    internal fun groupArtists(artists: List<SimilarArtist>): List<List<SimilarArtist>> {
+        val groups = mutableListOf<MutableList<SimilarArtist>>()
+        val groupMbid = mutableListOf<String?>()
+        val groupKey = mutableListOf<String>()
+        for (artist in artists) {
+            // Blanked here rather than trusted: nothing normalizes EnrichmentIdentifiers, and a
+            // blank id keys every entry carrying one into a single group whatever they are named.
+            val mbid = normalize(artist.identifiers.musicBrainzId.orEmpty()).takeIf { it.isNotEmpty() }
+            val key = normalize(artist.name)
+            val index = if (mbid == null) {
+                groupKey.indexOfFirst { it == key }
+            } else {
+                groupMbid.indexOfFirst { it == mbid }
+                    .takeIf { it >= 0 }
+                    ?: groupKey.indices.firstOrNull { groupKey[it] == key && groupMbid[it] == null }
+                    ?: -1
+            }
+            if (index < 0) {
+                groups += mutableListOf(artist)
+                groupMbid += mbid
+                groupKey += key
+            } else {
+                groups[index] += artist
+                if (groupMbid[index] == null) groupMbid[index] = mbid
+            }
+        }
+        return groups
     }
 
     private fun normalize(name: String): String = name.trim().lowercase()

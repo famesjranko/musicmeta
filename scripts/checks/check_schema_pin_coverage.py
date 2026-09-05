@@ -19,6 +19,11 @@ that reads as coverage, and a registry entry is what turns a declaration into a 
 that genuinely has no route worth pinning goes in `ALLOWLIST` below with a one-line reason a
 reviewer reads, which is the design and not an escape hatch.
 
+One pinned route satisfies this, which is the point: it is the provider-level half, and asks only
+that the mechanism was not forgotten. `check_route_pin_coverage.py` asks the route-level question of
+the same tree, and neither answers the other's — a provider can pin every route it calls and still
+leave the list unregistered, which is invisible there and reported here.
+
 **What this cannot prove.** Substring matching only shows a target list exists and is named — not
 that its paths mirror what the mapper reads, that its URL comes from the api client rather than
 being hand-built, or that the route is one a consumer's answer depends on. Those are review's, and
