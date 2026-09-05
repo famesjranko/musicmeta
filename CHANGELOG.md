@@ -122,6 +122,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - demo-cli's `--types` now reports a name it cannot resolve and enriches nothing, instead of discarding it and silently falling back to the full default type set
 - demo-cli's `--types popularity` resolves against the request kind: a track request asks for `TRACK_POPULARITY`, the type its own profile reads, not the artist's
 - A fault that escapes the fan-out is no longer reported as `ErrorKind.ENGINE_CLOSED`: unsettled types carry `UNKNOWN` and the real cause, so a missing class no longer reads as a closed engine
+- A MusicBrainz alias lookup that fails is now asked once per `enrich()` call rather than once per reading provider, so a down alias source costs one retry ladder against your `enrichTimeoutMs`
+- ListenBrainz answers an artist type asked of a track or album request with `NotFound`, not `Error`: its artist routes are no longer called with a recording MBID, so no breaker failure is recorded
 - A `CompositeSynthesizer` dependency that is itself a composite is now synthesized instead of settling `NotFound("no_provider")`: nested composite graphs resolve to any depth
 - A composite's dependency is resolved by its own registration, not the request: one with a `ResultMerger` is merged across every provider even when only the composite was asked for
 - `CREDITS` now returns the songwriters, composers and lyricists MusicBrainz models on the work, silently dropped until now; caches 30 days, so clear yours or wait

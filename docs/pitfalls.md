@@ -261,8 +261,8 @@ coroutine with its own. `CatalogProvider` was the live case because its call was
 consumer-implementable one the engine made unguarded; it now reaches `ensureActive()` like the
 cache, merge strategies and providers (§2), degrading that type to unfiltered results.
 
-**A timed-out `results` map is a mix, not a prefix.** `applyCatalogFiltering()` rewrites entries one
-type at a time inside the deadline, so an expiry mid-loop leaves some types filtered and some raw,
+**A timed-out `results` map is a mix, not a prefix.** `applyCatalogFilteringToType()` settles entries
+one type at a time inside the deadline, so an expiry mid-run leaves some types filtered and some raw,
 and the timeout backfill only fills types that are *missing* — a half-filtered `Success` carries no
 marker at all. That mix is fine to return and was never fine to cache: the write-back ran outside
 the deadline and persisted it under the primary *and* name-alias keys, so every later lookup was a
@@ -1024,6 +1024,12 @@ the ladder at all, still cost one full timeout per type. Against a CAA sampled a
 attempt, an album enrich took 167-184s where sharing one budget takes 42-58s (offline replay over
 captured samples, 2026-08-22 — treat the seconds as a scale, re-measure before building on them; the
 attempt counts are arithmetic and `CoverArtArchiveMemoTest` pins the 4-to-1 collapse).
+
+`ResolvedEntityNames.aliases` is the same trap with a different reader set: not *N* types but every
+provider and every candidate in the fan-out, all queued on one `Mutex`, so the ladders run in series
+inside `enrichTimeoutMs`. It hid because the failure path already degraded to an empty pool — a
+silent, correct-looking answer costing a full lookup each time — which is how a memo that holds
+nothing can look like a memo that works.
 
 Wrap the outcome in a `Result` so the memo can hold a failure, and gate what may become one on
 `ensureActive()` — §2's form, verbatim, for the same reason. **The blanket

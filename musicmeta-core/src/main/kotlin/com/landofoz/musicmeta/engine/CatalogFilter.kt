@@ -96,7 +96,10 @@ internal fun reorderData(data: EnrichmentData, indices: List<Int>): EnrichmentDa
 }
 
 /**
- * Applies catalog availability filtering to recommendation results in-place. No-op when null or UNFILTERED.
+ * Applies catalog availability filtering to one settled type: not a [RECOMMENDATION_TYPES] member,
+ * not a [EnrichmentResult.Success], nothing to filter, or [catalogFilterMode] is
+ * [CatalogFilterMode.UNFILTERED] all return [result] with
+ * [EnrichmentResult.Success.isCatalogDegraded] normalized to false and nothing else changed.
  *
  * A throwing [CatalogProvider] costs that type its filtering, not the whole enrichment: filtering
  * ranks and trims results the providers already produced, so degrading to the unfiltered result
@@ -104,24 +107,6 @@ internal fun reorderData(data: EnrichmentData, indices: List<Int>): EnrichmentDa
  * is settled as `CacheGuard` and `StrategyGuard` settle it: `ensureActive()` asks whether *our* job
  * was cancelled, so a consumer's own `withTimeout` around their catalog lookup stops their lookup
  * and not `enrich()`.
- */
-internal suspend fun applyCatalogFiltering(
-    results: MutableMap<EnrichmentType, EnrichmentResult>,
-    catalogProvider: CatalogProvider?,
-    catalogFilterMode: CatalogFilterMode,
-    logger: EnrichmentLogger,
-) {
-    for (type in RECOMMENDATION_TYPES) {
-        val result = results[type] ?: continue
-        results[type] = applyCatalogFilteringToType(type, result, catalogProvider, catalogFilterMode, logger)
-    }
-}
-
-/**
- * [applyCatalogFiltering]'s per-type body, so a per-type settlement pipeline can run it without a
- * shared map: not a [RECOMMENDATION_TYPES] member, not a [EnrichmentResult.Success], nothing to
- * filter, or [catalogFilterMode] is [CatalogFilterMode.UNFILTERED] all return [result] with
- * [EnrichmentResult.Success.isCatalogDegraded] normalized to false and nothing else changed.
  */
 internal suspend fun applyCatalogFilteringToType(
     type: EnrichmentType,
