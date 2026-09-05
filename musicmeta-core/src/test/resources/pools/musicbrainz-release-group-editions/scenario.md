@@ -31,5 +31,6 @@ what makes the pool prove that one copy is enough.
 The two kept releases differ in both fields the old route could never carry: a Cassette on Capitol
 Records (`C4 7243 5`) and a 12" Vinyl on XL Recordings (`XLLP785`).
 
-MusicBrainz's field names are exercised against the live API by the daily `provider-drift.yml` job
-(non-gating), the same argument the other MusicBrainz pools in this directory make.
+This exact request is exercised against the live API by the daily `provider-drift.yml` job
+(non-gating): the pin is built from the same release group and asserts every field
+`parseReleaseBrowse` reads off the first release, the group carried inside it included.

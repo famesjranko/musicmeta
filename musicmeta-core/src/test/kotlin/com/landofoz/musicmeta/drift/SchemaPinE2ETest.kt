@@ -41,7 +41,7 @@ class SchemaPinE2ETest {
         // When - each route is requested once and its answer classified
         val results = targets.map { target ->
             // One request at a time with a MusicBrainz-safe gap between them. The whole run is
-            // thirteen requests, so the wall-clock cost of the slowest provider's limit is
+            // seventeen requests, so the wall-clock cost of the slowest provider's limit is
             // seconds — cheaper than a per-provider limiter that has to be right.
             delay(REQUEST_GAP_MS)
             PinResult(target, probe(E2ETestFixture.httpClient, target))

@@ -77,11 +77,14 @@ than it looks like, each learned the hard way.
   pulls next — PR #285 did exactly that, fixed by #290. A green `demo-canary` is not evidence the
   demo tree passes `make check`.
 
-- **The daily schema pin gates nothing, and covers 14 routes across the 11 providers.** It runs on
+- **The daily schema pin gates nothing, and covers 17 routes across the 11 providers.** It runs on
   a schedule in `provider-drift.yml`, so a merge never waits on it and a provider outage can never
   block this repo; the signal is the failed run's email. Each route is requested once and checked
-  for named JSON paths still being present and non-blank — around 60 paths, against the ~304
-  accessor calls the mappers make. A green pin says no pinned field moved on a pinned route
+  for named JSON paths still being present and non-blank — around 90 paths, against the ~304
+  accessor calls the mappers make. Which routes those are is a judgement someone made route by
+  route, and most upstream routes this library calls are not among them — the coverage check above
+  is per-provider, so one pinned route is enough to make a provider with a dozen look watched. A
+  green pin says no pinned field moved on a pinned route
   today — not that enrichment still works. Ranking, confidence, mergers and identity resolution
   against live data are exercised only by the e2e suite, which is now `workflow_dispatch` only and
   therefore runs when somebody remembers to press the button. It also cannot report a route that
