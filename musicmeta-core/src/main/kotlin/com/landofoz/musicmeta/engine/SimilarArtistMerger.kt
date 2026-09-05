@@ -87,15 +87,28 @@ internal object SimilarArtistMerger : ResultMerger {
     /**
      * The entries of [artists] that are one act, in first-occurrence order.
      *
-     * The key is the normalized name and nothing else, so two providers naming one act differently
-     * stay two groups.
+     * The name key groups first; an entry no key takes joins the first group whose name contains
+     * it or is contained by it, [ArtistMatcher]'s own containment rank. This is the loosened name
+     * test the engine refuses everywhere else, measured to show what it costs.
      */
     internal fun groupArtists(artists: List<SimilarArtist>): List<List<SimilarArtist>> {
-        val grouped = LinkedHashMap<String, MutableList<SimilarArtist>>()
+        val groups = mutableListOf<MutableList<SimilarArtist>>()
+        val groupName = mutableListOf<String>()
         for (artist in artists) {
-            grouped.getOrPut(normalize(artist.name)) { mutableListOf() }.add(artist)
+            val key = normalize(artist.name)
+            val index = groupName.indexOfFirst { normalize(it) == key }
+                .takeIf { it >= 0 }
+                ?: groupName.indexOfFirst {
+                    ArtistMatcher.matchQuality(it, artist.name) >= ArtistMatcher.QUALITY_CONTAINS
+                }
+            if (index < 0) {
+                groups += mutableListOf(artist)
+                groupName += artist.name
+            } else {
+                groups[index] += artist
+            }
         }
-        return grouped.values.toList()
+        return groups
     }
 
     private fun normalize(name: String): String = name.trim().lowercase()
