@@ -1,0 +1,902 @@
+[
+  {
+    "artist_mbid": "ea524cc6-191a-4c05-ab88-3bb5c0880ca5",
+    "name": "Tony Allen",
+    "comment": "Nigerian-born drummer and composer",
+    "type": "Person",
+    "gender": "Male",
+    "score": 226,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "a94a7155-c79d-4409-9fcf-220cb0e4dc3a",
+    "name": "Talking Heads",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 208,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "8b034085-b06d-4c42-9be3-d709be169d79",
+    "name": "Ebo Taylor",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 205,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "b6fa9b9b-41cf-45a6-adc0-0a4c9a8c0d3c",
+    "name": "The Budos Band",
+    "comment": "US instrumental band",
+    "type": "Group",
+    "gender": null,
+    "score": 204,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d",
+    "name": "The Beatles",
+    "comment": "UK rock band, “The Fab Four”",
+    "type": "Group",
+    "gender": null,
+    "score": 201,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "a74b1b7f-71a5-4011-9441-d0b5e4122711",
+    "name": "Radiohead",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 199,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "702d2b90-eef0-4354-b2c4-6366eba92b7f",
+    "name": "Femi Kuti",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 199,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "c296e10c-110a-4103-9e77-47bfebb7fb2e",
+    "name": "Bob Marley & The Wailers",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 184,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "cf042013-3edd-46c4-9b0e-a62faac98d0b",
+    "name": "Funkadelic",
+    "comment": "original funk band",
+    "type": "Group",
+    "gender": null,
+    "score": 178,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "851827d6-ae31-4093-a166-1420cac610a4",
+    "name": "The Meters",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 170,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "826b488f-5164-45ca-abc4-ab11b3c321eb",
+    "name": "Manu Dibango",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 169,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "b5b89643-c488-4f39-a302-25cab31084a5",
+    "name": "Gil Scott‐Heron",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 162,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "72c536dc-7137-4477-a521-567eeb840fa8",
+    "name": "Bob Dylan",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 159,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "93da8c8a-bd13-4418-a00e-2861b8518a8d",
+    "name": "Menahan Street Band",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 150,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "b7ec4c54-1f93-4bf2-957f-7b9921ab84ea",
+    "name": "Sly & the Family Stone",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 149,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "afdb7919-059d-43c1-b668-ba1d265e7e42",
+    "name": "Marvin Gaye",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 148,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "83d91898-7763-47d7-b03b-b92132375c47",
+    "name": "Pink Floyd",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 147,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "678d88b2-87b0-403b-b63d-5da7465aecc3",
+    "name": "Led Zeppelin",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 143,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "b071f9fa-14b0-4217-8e97-eb41da73f598",
+    "name": "The Rolling Stones",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 139,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "c3aeb863-7b26-4388-94e8-5a240f2be21b",
+    "name": "Tom Waits",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 135,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "d1947987-9614-49ae-bd36-8000e6b6f7d0",
+    "name": "Parliament",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 128,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "21c5fb53-6fbc-4080-989a-b26d4540f4fd",
+    "name": "Cymande",
+    "comment": "British funk group",
+    "type": "Group",
+    "gender": null,
+    "score": 126,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "87c5dedd-371d-4a53-9f7f-80522fb7f3cb",
+    "name": "Björk",
+    "comment": "",
+    "type": "Person",
+    "gender": "Female",
+    "score": 123,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "30331c85-26d4-4daa-9f66-3075cac4c20b",
+    "name": "Orchestra Baobab",
+    "comment": "Senegalese Afro‐Cuban band",
+    "type": "Group",
+    "gender": null,
+    "score": 123,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "75167b8b-44e4-407b-9d35-effe87b223cf",
+    "name": "Neil Young",
+    "comment": "Canadian singer, songwriter & musician",
+    "type": "Person",
+    "gender": "Male",
+    "score": 121,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "69158f97-4c07-4c4e-baf8-4e4ab1ed666e",
+    "name": "Boards of Canada",
+    "comment": "Scottish electronic duo",
+    "type": "Group",
+    "gender": null,
+    "score": 120,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "9beb62b2-88db-4cea-801e-162cd344ee53",
+    "name": "Beastie Boys",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 117,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "f3b8e107-abe8-4743-b6a3-4a4ee995e71f",
+    "name": "Charles Mingus",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 113,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "e21857d5-3256-4547-afb3-4b6ded592596",
+    "name": "Gorillaz",
+    "comment": "virtual band",
+    "type": "Group",
+    "gender": null,
+    "score": 113,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "69ee3720-a7cb-4402-b48d-a02c366f2bcf",
+    "name": "The Cure",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 107,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "94b0fb9d-a066-4823-b2ec-af1d324bcfcf",
+    "name": "The Velvet Underground",
+    "comment": "Lou Reed’s seminal rock band",
+    "type": "Group",
+    "gender": null,
+    "score": 104,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "ff9542ca-7859-4db2-8796-c1e3c39b9c0a",
+    "name": "Shuggie Otis",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 104,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "e20747e7-55a4-452e-8766-7b985585082d",
+    "name": "Frank Zappa",
+    "comment": "US musician, composer, activist & filmmaker",
+    "type": "Person",
+    "gender": "Male",
+    "score": 104,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "453dab0c-aa5f-4091-bf58-64dead0d06b8",
+    "name": "The Souljazz Orchestra",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 103,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "5c98fc12-be83-4246-ae5b-2184192913b9",
+    "name": "Tinariwen",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 103,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "b29a24ff-2c55-437e-867b-1456c9f3f73e",
+    "name": "Salif Keita",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 102,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "ea4dfa26-f633-4da6-a52a-f49ea4897b58",
+    "name": "R.E.M.",
+    "comment": "American rock band",
+    "type": "Group",
+    "gender": null,
+    "score": 101,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "f22942a1-6f70-4f48-866e-238cb2308fbd",
+    "name": "Aphex Twin",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 101,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "7570a0dd-5a67-401b-b19a-261eee01a284",
+    "name": "Manu Chao",
+    "comment": "French singer‐songwriter",
+    "type": "Person",
+    "gender": "Male",
+    "score": 100,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "9efff43b-3b29-4082-824e-bc82f646f93d",
+    "name": "The Doors",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 100,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "b625448e-bf4a-41c3-a421-72ad46cdb831",
+    "name": "John Coltrane",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 100,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "d43d12a1-2dc9-4257-a2fd-0a3bb1081b86",
+    "name": "Johnny Cash",
+    "comment": "country music legend",
+    "type": "Person",
+    "gender": "Male",
+    "score": 98,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "8f92558c-2baa-4758-8c38-615519e9deda",
+    "name": "The Clash",
+    "comment": "70s–80s British punk rock band",
+    "type": "Group",
+    "gender": null,
+    "score": 97,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "83a2e0fb-3d9b-46ff-b383-3dde54c15297",
+    "name": "Hugh Masekela",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 97,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "a2361c7d-ddb6-41c1-a9a0-be09fbbb8d21",
+    "name": "Isaac Hayes",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 97,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "aea4c9b9-9f8d-49dc-b2ca-57d6f26e8634",
+    "name": "Khruangbin",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 96,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "cbcbb22c-3a8d-46af-b4ba-09c98f0d7931",
+    "name": "J Dilla",
+    "comment": "US producer and rapper aka Jay Dee",
+    "type": "Person",
+    "gender": "Male",
+    "score": 94,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "5bdc8759-a592-4202-a48c-691d4bec5c6d",
+    "name": "The Funkees",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 94,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "b7ffd2af-418f-4be2-bdd1-22f8b48613da",
+    "name": "Nine Inch Nails",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 93,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "8bfac288-ccc5-448d-9573-c33ea2aa5c30",
+    "name": "Red Hot Chili Peppers",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 93,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "bc5c2918-4aba-4ef6-a245-100563a4487f",
+    "name": "Miriam Makeba",
+    "comment": "South African singer-songwriter",
+    "type": "Person",
+    "gender": "Female",
+    "score": 93,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "f37b3f31-b1f8-4b88-8cb5-b34f709b17d7",
+    "name": "Iggy Pop",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 92,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "9689aa5a-4471-4fb4-9721-07cecda0fa9f",
+    "name": "A Tribe Called Quest",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 92,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "9fdaa16b-a6c4-4831-b87c-bc9ca8ce7eaa",
+    "name": "The Who",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 91,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "fb7272ba-f130-4f0a-934d-6eeea4c18c9a",
+    "name": "Al Green",
+    "comment": "US soul singer, songwriter, pastor and record producer",
+    "type": "Person",
+    "gender": "Male",
+    "score": 91,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "69f95e5c-4b34-4c8b-b8fe-c59f9296195a",
+    "name": "Donald Byrd",
+    "comment": "American jazz trumpeter",
+    "type": "Person",
+    "gender": "Male",
+    "score": 88,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "67f0c7ca-14e8-47a3-be0e-bd2f2ffe25bb",
+    "name": "ሙላቱ አስታጥቄ",
+    "comment": "Ethiopian multi-instrumentalist, composer, arranger",
+    "type": "Person",
+    "gender": "Male",
+    "score": 87,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "a505bb48-ad65-4af4-ae47-29149715bff9",
+    "name": "Thievery Corporation",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 86,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "f1df0431-9250-4ec8-95d8-f19ce7cf7fb6",
+    "name": "Stereolab",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 85,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "8d50cd20-34f2-4abe-ba16-0759ee0fb9f5",
+    "name": "Sharon Jones and the Dap‐Kings",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 85,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "b6b2bb8d-54a9-491f-9607-7b546023b433",
+    "name": "Pixies",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 84,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "ebfc1398-8d96-47e3-82c3-f782abcdb13d",
+    "name": "The Beach Boys",
+    "comment": "American rock band",
+    "type": "Group",
+    "gender": null,
+    "score": 84,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "53dd0229-8a42-4bd7-8ffb-29bdec25e9c6",
+    "name": "William Onyeabor",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 83,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "73fdb566-a9b1-494c-9f32-51768ec9fd27",
+    "name": "OutKast",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 82,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "9a58fda3-f4ed-4080-a3a5-f457aac9fcdd",
+    "name": "Joy Division",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 82,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "dbf0a5c5-3665-4495-b13b-99438a6a0900",
+    "name": "El Michels Affair",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 81,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6",
+    "name": "Burial",
+    "comment": "UK dubstep",
+    "type": "Person",
+    "gender": "Male",
+    "score": 81,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "ea9078ef-20ca-4506-81ea-2ae5fe3a42e8",
+    "name": "Madlib",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 80,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "8f6bd1e4-fbe1-4f50-aa9b-94c450ec0f11",
+    "name": "Portishead",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 80,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "70248960-cb53-4ea4-943a-edb18f7d336f",
+    "name": "Bruce Springsteen",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 80,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "f27ec8db-af05-4f36-916e-3d57f91ecf5e",
+    "name": "Michael Jackson",
+    "comment": "“King of Pop”",
+    "type": "Person",
+    "gender": "Male",
+    "score": 78,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "efa2c11a-1a35-4b60-bc1b-66d37de88511",
+    "name": "DJ Shadow",
+    "comment": "US hip hop producer, DJ & instrumentalist",
+    "type": "Person",
+    "gender": "Male",
+    "score": 77,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "e795e03d-b5d5-4a5f-834d-162cfb308a2c",
+    "name": "PJ Harvey",
+    "comment": "",
+    "type": "Person",
+    "gender": "Female",
+    "score": 77,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "8970d868-0723-483b-a75b-51088913d3d4",
+    "name": "Moby",
+    "comment": "electronic musician Richard Melville Hall",
+    "type": "Person",
+    "gender": "Male",
+    "score": 76,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "735e3514-a8ae-401f-af3b-6300df1b8d2c",
+    "name": "Caribou",
+    "comment": "electronic act from Dan Snaith",
+    "type": "Person",
+    "gender": "Male",
+    "score": 76,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "d6ed7887-a401-47a8-893c-34b967444d26",
+    "name": "Ramones",
+    "comment": "US punk rock band",
+    "type": "Group",
+    "gender": null,
+    "score": 76,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "9d1ebcfe-4c15-4d18-95d3-d919898638a1",
+    "name": "Lou Reed",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 76,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "9a709693-b4f8-4da9-8cc1-038c911a61be",
+    "name": "Bonobo",
+    "comment": "UK electronic artist Simon Green",
+    "type": "Person",
+    "gender": "Male",
+    "score": 75,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "eea8a864-fcda-4602-9569-38ab446decd6",
+    "name": "Louis Armstrong",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 75,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "a3cb23fc-acd3-4ce0-8f36-1e5aa6a18432",
+    "name": "U2",
+    "comment": "Irish rock band",
+    "type": "Group",
+    "gender": null,
+    "score": 74,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "cb6a2948-7b9b-4a15-8c71-2b79cc76408e",
+    "name": "The J.B.’s",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 74,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "82b1f5fd-cd31-41a9-b5d4-7e33f0eb9751",
+    "name": "Otis Redding",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 74,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "65f4f0c5-ef9e-490c-aee3-909e7ae6b2ab",
+    "name": "Metallica",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 73,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "65314b12-0e08-43fa-ba33-baaa7b874c15",
+    "name": "Leonard Cohen",
+    "comment": "Canadian singer‐songwriter and poet",
+    "type": "Person",
+    "gender": "Male",
+    "score": 73,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "dc45f2dc-ef36-4a7a-aa52-97495fca8ced",
+    "name": "Africa 70",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 72,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "58724240-bdfc-4301-aea9-06c1138233dd",
+    "name": "The Daktaris",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 72,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "fa97dd36-1b82-43d7-a6e4-2adeafd59cef",
+    "name": "Fleet Foxes",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 71,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "f58384a4-2ad2-4f24-89c5-c7b74ae1cce7",
+    "name": "King Gizzard & the Lizard Wizard",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 70,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "fc7376fe-1a6f-4414-b4a7-83f50ed59c92",
+    "name": "Flying Lotus",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 70,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "a4e2650b-938b-4b72-95bc-6e229cd34601",
+    "name": "Ry Cooder",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 70,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "f1106b17-dcbb-45f6-b938-199ccfab50cc",
+    "name": "New Order",
+    "comment": "UK synth pop band",
+    "type": "Group",
+    "gender": null,
+    "score": 69,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "bd13909f-1c29-4c27-a874-d4aaf27c5b1a",
+    "name": "Fleetwood Mac",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 69,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "e5c7b94f-e264-473c-bb0f-37c85d4d5c70",
+    "name": "Belle and Sebastian",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 68,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "cc197bad-dc9c-440d-a5b5-d52ba2e14234",
+    "name": "Coldplay",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 68,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "ff95eb47-41c4-4f7f-a104-cdc30f02e872",
+    "name": "Brian Eno",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 68,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "e520459c-dff4-491d-a6e4-c97be35e0044",
+    "name": "Frank Ocean",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 67,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "dc6d2ba1-012c-47a7-ba3f-d74e76c30d53",
+    "name": "Charles Bradley",
+    "comment": "US funk/soul/R&B singer",
+    "type": "Person",
+    "gender": "Male",
+    "score": 67,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "8e8c7417-c905-46b1-b42a-5260b4274ed4",
+    "name": "Thelonious Monk",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 67,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "80b3cf5e-18fe-4c59-98c7-e5bb87210710",
+    "name": "The Roots",
+    "comment": "US hip hop group",
+    "type": "Group",
+    "gender": null,
+    "score": 66,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  },
+  {
+    "artist_mbid": "f6beac20-5dfe-4d1f-ae02-0b0a740aafd6",
+    "name": "Tyler, The Creator",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 65,
+    "reference_mbid": "6514cffa-fbe0-4965-ad88-e998ead8a82a"
+  }
+]

@@ -1,0 +1,902 @@
+[
+  {
+    "artist_mbid": "9c935736-7530-41e4-b776-1dbcf534c061",
+    "name": "Spiritbox",
+    "comment": "Canadian metalcore",
+    "type": "Group",
+    "gender": null,
+    "score": 213,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "f4e44995-1890-42a0-a6c1-9185b71655fa",
+    "name": "Northlane",
+    "comment": "Australian metalcore band",
+    "type": "Group",
+    "gender": null,
+    "score": 178,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "fd529c0d-4a5c-479d-bbb8-601cefe2b38b",
+    "name": "VOLA",
+    "comment": "Danish progressive metal band",
+    "type": "Group",
+    "gender": null,
+    "score": 158,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "56eb02c4-1f16-4613-8bb3-b4a752283fc3",
+    "name": "Loathe",
+    "comment": "UK experimental metal",
+    "type": "Group",
+    "gender": null,
+    "score": 147,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "a630b133-bcc4-4796-9a0e-685c68b1e6ab",
+    "name": "The Contortionist",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 126,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "5c14e10e-735e-4108-a8a5-74d8771672da",
+    "name": "ERRA",
+    "comment": "progressive metalcore band from Alabama",
+    "type": "Group",
+    "gender": null,
+    "score": 124,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "b7e442b4-30cd-4bd2-9238-032e74f7807d",
+    "name": "Currents",
+    "comment": "metalcore",
+    "type": "Group",
+    "gender": null,
+    "score": 120,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "368f19e5-51c0-45d7-80c5-963be6971ac7",
+    "name": "Thornhill",
+    "comment": "Melbourne metalcore",
+    "type": "Group",
+    "gender": null,
+    "score": 117,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "a466c2a2-6517-42fb-a160-1087c3bafd9f",
+    "name": "Slipknot",
+    "comment": "US metal band",
+    "type": "Group",
+    "gender": null,
+    "score": 116,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "a2e55cf5-ca3a-4c26-ba62-fc4a4f2bc603",
+    "name": "Leprous",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 115,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "eecada09-acfc-472d-ae55-e9e5a43f12d8",
+    "name": "Bad Omens",
+    "comment": "metalcore/post-metal",
+    "type": "Group",
+    "gender": null,
+    "score": 114,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "f1ec4765-e5da-4591-8b50-a8ff9627dda8",
+    "name": "TesseracT",
+    "comment": "British djent band",
+    "type": "Group",
+    "gender": null,
+    "score": 105,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "f59c5520-5f46-4d2c-b2c4-822eabf53419",
+    "name": "Linkin Park",
+    "comment": "American rock band",
+    "type": "Group",
+    "gender": null,
+    "score": 105,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "93dc11f4-ffc4-4039-a5c2-1c2c035b6eb8",
+    "name": "Holding Absence",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 105,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "a0cef17a-4574-44f4-9f97-fd068615dac6",
+    "name": "Periphery",
+    "comment": "US progressive metal band",
+    "type": "Group",
+    "gender": null,
+    "score": 105,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "6ffb7be4-0a53-4014-853d-83790cd5e091",
+    "name": "Polaris",
+    "comment": "Australian metalcore band",
+    "type": "Group",
+    "gender": null,
+    "score": 86,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "270d9798-9984-49fe-b525-70e39e0ffc76",
+    "name": "Arcane Roots",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 83,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "134a8b0d-9d1a-49c1-9921-b0ac849a1c0d",
+    "name": "Time, The Valuator",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 82,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "854a1807-025b-42a8-ba8c-2a39717f1d25",
+    "name": "Breaking Benjamin",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 82,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "3bdd932d-f442-451a-93f6-286d2bb8075d",
+    "name": "Monuments",
+    "comment": "UK metal band",
+    "type": "Group",
+    "gender": null,
+    "score": 79,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "d9a9b6aa-c5c5-40dc-95ec-0bff029245c0",
+    "name": "Dayseeker",
+    "comment": "post‐hardcore band from California",
+    "type": "Group",
+    "gender": null,
+    "score": 78,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "b6f8cce8-cbac-48a0-b0fa-d6cc06447928",
+    "name": "Make Them Suffer",
+    "comment": "Australian metalcore",
+    "type": "Group",
+    "gender": null,
+    "score": 75,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "9d397404-907d-4355-b5d6-299bae93f6d9",
+    "name": "Volumes",
+    "comment": "LA progressive metal",
+    "type": "Group",
+    "gender": null,
+    "score": 75,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "c14b4180-dc87-481e-b17a-64e4150f90f6",
+    "name": "Opeth",
+    "comment": "Swedish progressive metal/rock",
+    "type": "Group",
+    "gender": null,
+    "score": 74,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "ef3eb759-49b3-4f20-ac12-a92b87a3cb4c",
+    "name": "Unprocessed",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 74,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "cf8b3b8c-118e-4136-8d1d-c37091173413",
+    "name": "Meshuggah",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 73,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "c5eb9407-caeb-4303-b383-6929aa94021c",
+    "name": "Papa Roach",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 71,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "cc0b7089-c08d-4c10-b6b0-873582c17fd6",
+    "name": "System of a Down",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 70,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "db008806-16f6-48fc-8521-3d953709689d",
+    "name": "A Day to Remember",
+    "comment": "US post‐hardcore band",
+    "type": "Group",
+    "gender": null,
+    "score": 70,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "c62afc98-8596-4532-a1dd-bc1a595c927e",
+    "name": "Silent Planet",
+    "comment": "metalcore band",
+    "type": "Group",
+    "gender": null,
+    "score": 70,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "9c9f1380-2516-4fc9-a3e6-f9f61941d090",
+    "name": "Muse",
+    "comment": "UK rock band",
+    "type": "Group",
+    "gender": null,
+    "score": 69,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "af3fd27c-c59f-4eb7-9303-042ee3eef006",
+    "name": "Invent Animate",
+    "comment": "metalcore",
+    "type": "Group",
+    "gender": null,
+    "score": 69,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "bc5e2ad6-0a4a-4d90-b911-e9a7e6861727",
+    "name": "Mastodon",
+    "comment": "American heavy metal band",
+    "type": "Group",
+    "gender": null,
+    "score": 69,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "ac865b2e-bba8-4f5a-8756-dd40d5e39f46",
+    "name": "Korn",
+    "comment": "US nu metal band",
+    "type": "Group",
+    "gender": null,
+    "score": 66,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "46acfa40-8df2-4637-ab07-fc9f3a24e4f6",
+    "name": "Port Noir",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 66,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "9d2fde91-4633-430d-87f0-2b9bbb7fa451",
+    "name": "Asking Alexandria",
+    "comment": "English metalcore band",
+    "type": "Group",
+    "gender": null,
+    "score": 65,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "f0d96476-1ce8-4efa-940f-5b47efde3082",
+    "name": "David Maxim Micic",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 65,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "6cf24b22-d4a2-4d8d-893d-af05476d7fc2",
+    "name": "Good Tiger",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 65,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "8264722b-df00-467a-858e-5c97cda169c9",
+    "name": "Joji",
+    "comment": "Japanese‐Australian singer‐songwriter, rapper",
+    "type": "Person",
+    "gender": "Male",
+    "score": 62,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "d530dbf9-69b1-404f-98f2-0431104f5a1e",
+    "name": "Bullet for My Valentine",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 62,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "9dd5668f-4bba-4b48-a35e-e8b13de80a8c",
+    "name": "Caskets",
+    "comment": "English alternative metal group",
+    "type": "Group",
+    "gender": null,
+    "score": 62,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "dc0da7d1-231c-4058-8e6e-1c0801848602",
+    "name": "We Came as Romans",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 61,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "d7235f31-229a-4c04-abca-14e0fbcba26e",
+    "name": "CHON",
+    "comment": "US progressive metal band",
+    "type": "Group",
+    "gender": null,
+    "score": 60,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "8456e9f7-debf-4579-a86c-33a325a35d2d",
+    "name": "Chevelle",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 59,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "a75f009f-7234-4f69-81a2-c1f7492f4106",
+    "name": "Vildhjarta",
+    "comment": "progressive metal",
+    "type": "Group",
+    "gender": null,
+    "score": 59,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "431ed486-4606-485a-b11d-f05feb860257",
+    "name": "Imminence",
+    "comment": "Swedish metalcore band",
+    "type": "Group",
+    "gender": null,
+    "score": 57,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "08b5a32a-6428-4779-810d-43f99483d06d",
+    "name": "Crystal Lake",
+    "comment": "Japanese metalcore band",
+    "type": "Group",
+    "gender": null,
+    "score": 56,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "758630d7-ba78-4029-b4d2-d274c880ff04",
+    "name": "Twelve Foot Ninja",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 56,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "b09de30a-09ac-4cc9-8812-49bb12e2bfa6",
+    "name": "Bilmuri",
+    "comment": "US post-hardcore/pop-punk project",
+    "type": "Person",
+    "gender": "Male",
+    "score": 55,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "82b6784e-8161-42a0-9b5c-b9d31e63fd85",
+    "name": "Of Mice & Men",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 55,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "ae1b47d5-5128-431c-9d30-e08fd90e0767",
+    "name": "Coheed and Cambria",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 54,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "7e2e4e3a-4e85-4d5a-b78e-5e4afd467a3e",
+    "name": "Nothing But Thieves",
+    "comment": "English rock band",
+    "type": "Group",
+    "gender": null,
+    "score": 53,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "c8b03190-306c-4120-bb0b-6f2ebfc06ea9",
+    "name": "The Weeknd",
+    "comment": "Canadian R&B singer",
+    "type": "Person",
+    "gender": "Male",
+    "score": 53,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "8295ee00-0096-461d-95c7-c2263d2a4c6d",
+    "name": "Killswitch Engage",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 52,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "add25648-f252-444f-8837-08ac9fc48f19",
+    "name": "Darko US",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 52,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "a02b1a45-271c-4bc3-9d82-68bb896cb5fd",
+    "name": "Norma Jean",
+    "comment": "metalcore band",
+    "type": "Group",
+    "gender": null,
+    "score": 52,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "9ee2638f-c3a3-4532-bc08-54d397241c2a",
+    "name": "Karnivool",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 51,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "8f9d6bb2-dba4-4cca-9967-cc02b9f4820c",
+    "name": "Limp Bizkit",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 51,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "ca6a9395-c50d-44af-9ec8-4a35c2dca796",
+    "name": "Artificial Language",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 50,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "20b144e3-dd0e-4359-ae0c-0af7188c443b",
+    "name": "Covet",
+    "comment": "math rock band from California led by Yvette Young",
+    "type": "Group",
+    "gender": null,
+    "score": 50,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "5848b3d6-1977-4339-bb3c-514212081933",
+    "name": "Moon Tooth",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 49,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "8e71ae04-e368-4e3a-8c5a-e9fdbe5b35b9",
+    "name": "Andromida",
+    "comment": "one man progressive metal project",
+    "type": "Group",
+    "gender": null,
+    "score": 49,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "6b24a6fa-c731-4806-bae8-017485fd1cd7",
+    "name": "Sam Carter",
+    "comment": "vocalist in Architects",
+    "type": "Person",
+    "gender": "Male",
+    "score": 49,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "d9745270-de5c-41f5-9873-a9614fa97541",
+    "name": "Eidola",
+    "comment": "post-hardcore band",
+    "type": "Group",
+    "gender": null,
+    "score": 48,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "fabb37f8-eb2a-4cc1-a72a-b56935bbb72d",
+    "name": "Three Days Grace",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 48,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "4ba1bd10-44fb-4335-a295-37f26c8a5f37",
+    "name": "NOVELISTS",
+    "comment": "French djent / progressive metal band",
+    "type": "Group",
+    "gender": null,
+    "score": 48,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "98ef1696-cb7e-4ecc-be1d-22f62bb308a4",
+    "name": "Emmure",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 47,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "7e8571b1-7c5a-4739-bc51-73d422ee9d74",
+    "name": "Five Finger Death Punch",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 47,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "ef90f210-f136-4386-ab37-8c00d04eeace",
+    "name": "Every Time I Die",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 47,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "ba147ea0-60c4-4a40-9da6-0d5c2b2e7b03",
+    "name": "As I Lay Dying",
+    "comment": "American metalcore band",
+    "type": "Group",
+    "gender": null,
+    "score": 46,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "cd584ea0-0fc5-412b-8598-0244c4025af6",
+    "name": "Boston Manor",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 46,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "a61d862c-2714-47a7-b68b-2870a753f4a8",
+    "name": "Night Verses",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 45,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "242b35ec-765c-478c-9b65-8d18d1849bae",
+    "name": "Greyhaven",
+    "comment": "post-hardcore/metalcore band from Louisville, Kentucky",
+    "type": "Group",
+    "gender": null,
+    "score": 45,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "a436dd02-0549-4c91-b608-df451217fdeb",
+    "name": "Parkway Drive",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 45,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "c2e7d4ac-5e30-4b55-99b7-e49d99fd7c63",
+    "name": "The Plot in You",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 45,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "beff21d3-88c7-4ee0-8b7a-40b6db22c6d7",
+    "name": "Pendulum",
+    "comment": "Australian drum & bass",
+    "type": "Group",
+    "gender": null,
+    "score": 44,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "5ec19553-a0f1-462e-bc38-984b63f8c36d",
+    "name": "Skyharbor",
+    "comment": "Progressive rock/metal band",
+    "type": "Group",
+    "gender": null,
+    "score": 44,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "98a1e0ab-35fa-40dd-b62c-9fda46fdb061",
+    "name": "Beartooth",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 44,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "c07f0676-9143-4217-8a9f-4c26bd636f13",
+    "name": "My Chemical Romance",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 44,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "892500b7-09a6-4049-ba92-2d192dd70563",
+    "name": "Biffy Clyro",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 43,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "f4abc0b5-3f7a-4eff-8f78-ac078dbce533",
+    "name": "Billie Eilish",
+    "comment": "",
+    "type": "Person",
+    "gender": "Female",
+    "score": 43,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "6df09304-c59c-40f1-b7fc-4e049fedeab0",
+    "name": "Sordid Pink",
+    "comment": "FKA Destiny Potato",
+    "type": "Group",
+    "gender": null,
+    "score": 43,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "a6c6897a-7415-4f8d-b5a5-3a5e05f3be67",
+    "name": "twenty one pilots",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 42,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "8d0acf0e-c099-49ac-b4b3-d57ca9eb2561",
+    "name": "The Ocean",
+    "comment": "German metal band",
+    "type": "Group",
+    "gender": null,
+    "score": 42,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "f7c65346-9631-4220-9188-5e90baae58d5",
+    "name": "Pain of Salvation",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 42,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "a74b1b7f-71a5-4011-9441-d0b5e4122711",
+    "name": "Radiohead",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 42,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "96508e61-1854-436c-8130-e794a724e5e9",
+    "name": "Agent Fresco",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 42,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "cf075492-d880-4afc-b87b-d6b03e33dacc",
+    "name": "Electric Callboy",
+    "comment": "German metalcore, fka Eskimo Callboy",
+    "type": "Group",
+    "gender": null,
+    "score": 42,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "bb0fa8bd-c230-49b1-bc80-e69e229d158f",
+    "name": "Thank You Scientist",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 42,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "de210c9e-fbf6-4827-987f-dd8885f5d890",
+    "name": "PVRIS",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 42,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "a8d77515-f7b7-4d71-9646-8446a3b2a341",
+    "name": "Avatar",
+    "comment": "Swedish metal band",
+    "type": "Group",
+    "gender": null,
+    "score": 41,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "b1e26560-60e5-4236-bbdb-9aa5a8d5ee19",
+    "name": "Post Malone",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 41,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "dc0d6e61-d332-47c8-8837-50b63ab5f426",
+    "name": "Strawberry Girls",
+    "comment": "math pop",
+    "type": "Group",
+    "gender": null,
+    "score": 41,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "8ed919fb-eaee-45a1-ba99-b3ede9ca5f1d",
+    "name": "Pierce the Veil",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 41,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "89254fcc-91d8-46f9-a861-f0e91333ec70",
+    "name": "Cane Hill",
+    "comment": "nu metal band",
+    "type": "Group",
+    "gender": null,
+    "score": 41,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "b7ffd2af-418f-4be2-bdd1-22f8b48613da",
+    "name": "Nine Inch Nails",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 41,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "00411a4c-0ac4-42d5-998d-6ceec71e26e2",
+    "name": "Harry Rule",
+    "comment": "",
+    "type": null,
+    "gender": null,
+    "score": 41,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "0b013a6d-d8ae-424b-adc5-8a0f98c1e13a",
+    "name": "Voices From the Fuselage",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 41,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "ea89deb6-10f0-4c85-bf32-cc1102dc8d58",
+    "name": "Alpha Wolf",
+    "comment": "Australian metalcore band",
+    "type": "Group",
+    "gender": null,
+    "score": 40,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  },
+  {
+    "artist_mbid": "c6bf185b-3a3b-408e-a8b9-f51e5ed7371b",
+    "name": "Oceans Ate Alaska",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 40,
+    "reference_mbid": "775ad383-ac2d-479a-af9d-b561442cb749"
+  }
+]
