@@ -337,7 +337,9 @@ and every user collection endpoint. `ReleaseEdition.barcode` is explicitly null 
 `"Artist - Title"` field is safely split on the boundary that matches both the requested artist and
 title, not the first artist-plausible one, then the result is accepted on the parsed album title as
 well as the artist before `ALBUM_ART`, `LABEL`, `RELEASE_TYPE` and `ALBUM_METADATA` share it
-(`docs/pitfalls.md` §7). `country` is free text: a country name is normalised to the ISO 3166-1
+(`docs/pitfalls.md` §7). The artist half may credit several artists, joined by `", "`; a request
+naming one of them is accepted at that artist's own tier, matching a credited name whole and never
+partially (`docs/pitfalls.md` §33). `country` is free text: a country name is normalised to the ISO 3166-1
 alpha-2 code `Metadata.country` reports (`UK` included, which is not an ISO code), while a value
 naming no *current* ISO country — a multi-country region (`Europe`, `Scandinavia`, `UK & Europe`) or
 a historical state (`Yugoslavia`, `Czechoslovakia`) — has no code and is passed through as Discogs

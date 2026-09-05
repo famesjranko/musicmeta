@@ -9,11 +9,13 @@ import com.landofoz.musicmeta.engine.TieBreakEvidence
 import com.landofoz.musicmeta.engine.TitleMatcher
 import com.landofoz.musicmeta.engine.artistNameTier
 import com.landofoz.musicmeta.engine.resolvedAliasPool
+import com.landofoz.musicmeta.engine.sameNameTier
 
 /**
  * The artist/title Discogs's combined `"Artist - Title"` search field names, or null if no ` - `
- * boundary in [combined] has a disambiguator-stripped artist-side [ArtistMatcher] accepts for
- * [requestedArtist].
+ * boundary in [combined] has a disambiguator-stripped artist-side [creditNameTier] accepts for
+ * [requestedArtist]. The artist side is returned whole, credit and all, not narrowed to the artist
+ * the request named.
  *
  * Discogs exposes the two halves as one display field, not separate structured ones, and neither
  * artist nor album names are dash-free in general, so a single fixed split (first or last ` - `)
@@ -39,13 +41,45 @@ internal fun parseDiscogsRelease(
         if (index < 0) return artistOnlyMatch
         val artistPart = stripDiscogsDisambiguator(combined.substring(0, index).trim())
         val titlePart = combined.substring(index + 3).trim()
-        val accepted = artistNameTier(requestedArtist, artistPart, aliases) != null
+        val accepted = creditNameTier(requestedArtist, artistPart, aliases) != null
         if (artistPart.isNotEmpty() && titlePart.isNotEmpty() && accepted) {
             if (TitleMatcher.equivalent(requestedTitle, titlePart)) return artistPart to titlePart
             if (artistOnlyMatch == null) artistOnlyMatch = artistPart to titlePart
         }
         from = index + 3
     }
+}
+
+/** Discogs joins the artists sharing a release credit with this in the one field it publishes. */
+private const val CREDIT_SEPARATOR = ", "
+
+/**
+ * How [requestedArtist] matched [credit], or null if no artist [credit] names is theirs.
+ *
+ * A release credited to more than one artist reaches here as one string —
+ * `Χάρις Αλεξίου, Αντώνης Βαρδής` — because Discogs publishes the credit only as the artist half of
+ * its combined display field. A request naming one of those artists is otherwise compared against a
+ * name no upstream holds for anyone, which is why every candidate for such a release was refused.
+ *
+ * The whole credit is tested first, so splitting can never displace a match the credit already has,
+ * and an act whose own name holds a comma (`Earth, Wind & Fire`) is matched as itself. Only `", "`
+ * separates: an artist name holds `&` far more often than a Discogs credit joins on it.
+ *
+ * A part is accepted at same name only ([sameNameTier]). The tier is then the one that part earns,
+ * undemoted — this path identifies a *release*, and a release credited to the requested artist and
+ * another is still the release the request named. How many artists share the credit is
+ * [DiscogsAlbumChoice.artistQuality]'s to rank: measured on the whole credit, it already puts a
+ * sole credit above a shared one.
+ */
+private fun creditNameTier(
+    requestedArtist: String,
+    credit: String,
+    aliases: List<AlternativeName>,
+): NameMatchTier? {
+    artistNameTier(requestedArtist, credit, aliases)?.let { return it }
+    val credited = credit.split(CREDIT_SEPARATOR).map { it.trim() }.filter { it.isNotEmpty() }
+    if (credited.size < 2) return null
+    return credited.mapNotNull { sameNameTier(requestedArtist, it, aliases) }.minByOrNull { it.ordinal }
 }
 
 /**
@@ -63,7 +97,8 @@ internal data class DiscogsAlbumChoice(
     val tieBreaks: AlbumEvidence,
     /**
      * How [artist] matched the requested name — [NameMatchTier.CANONICAL] for the requested name
-     * itself, an alias tier when this call's alias pool is what verified it. Scales the confidence.
+     * itself or for one artist of a shared credit, an alias tier when this call's alias pool is what
+     * verified it. Scales the confidence.
      */
     val nameTier: NameMatchTier = NameMatchTier.CANONICAL,
 )
@@ -96,7 +131,7 @@ private fun List<DiscogsRelease>.selectRelease(
             artist = artist,
             title = title,
             artistQuality = ArtistMatcher.matchQuality(request.artist, artist),
-            nameTier = artistNameTier(request.artist, artist, aliases) ?: NameMatchTier.CANONICAL,
+            nameTier = creditNameTier(request.artist, artist, aliases) ?: NameMatchTier.CANONICAL,
             tier = TitleMatcher.TitleTier.EXACT,
             tieBreaks = AlbumEvidence.of(
                 listOf(TieBreakEvidence("year", request.year != null && release.year == request.year.toString())),

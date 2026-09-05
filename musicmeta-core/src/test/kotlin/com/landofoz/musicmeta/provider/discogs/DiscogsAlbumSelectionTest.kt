@@ -60,4 +60,41 @@ class DiscogsAlbumSelectionTest {
         // Then - the whole remainder survives as the title, not just the text before the next dash
         assertEquals("Radiohead" to "Kid A - Special Edition", parsed)
     }
+
+    @Test
+    fun `a request naming one of two comma-joined credited artists finds the boundary`() {
+        // Given - Discogs credits two artists on one release, joined by a comma, in Greek
+        val combined = "Χάρις Αλεξίου, Αντώνης Βαρδής - Ξημερώνει"
+
+        // When - parsing against one of the two, whose script leaves the whole credit unmatchable
+        val parsed = parseDiscogsRelease(combined, requestedArtist = "Χάρις Αλεξίου", requestedTitle = "Ξημερώνει")
+
+        // Then - the credit is the artist side, whole, and the title side is the album
+        assertEquals("Χάρις Αλεξίου, Αντώνης Βαρδής" to "Ξημερώνει", parsed)
+    }
+
+    @Test
+    fun `a credited artist is accepted at same name only, never by containment`() {
+        // Given - a credit the request does not match whole, one of whose parts it contains
+        val combined = "Chuck D, Public Enemy - Album"
+
+        // When - parsing against a longer name holding that part
+        val parsed =
+            parseDiscogsRelease(combined, requestedArtist = "Public Enemy Number One Crew", requestedTitle = "Album")
+
+        // Then - splitting multiplies the strings compared, so a part is a name or it is nothing
+        assertNull(parsed)
+    }
+
+    @Test
+    fun `an artist whose own name holds a comma is matched whole, before any split`() {
+        // Given - a single act whose own name contains the comma Discogs also joins credits with
+        val combined = "Earth, Wind & Fire - Album"
+
+        // When - parsing against that act's whole name
+        val parsed = parseDiscogsRelease(combined, requestedArtist = "Earth, Wind & Fire", requestedTitle = "Album")
+
+        // Then - the whole credit is tried first, so splitting can never displace a match it has
+        assertEquals("Earth, Wind & Fire" to "Album", parsed)
+    }
 }

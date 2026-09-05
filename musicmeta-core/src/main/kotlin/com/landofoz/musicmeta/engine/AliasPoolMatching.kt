@@ -40,6 +40,25 @@ internal fun artistNameTier(
     return aliasTier(candidate, aliases)
 }
 
+/**
+ * [artistNameTier] with the requested name accepted at same name only.
+ *
+ * For a caller comparing against a string it derived by taking a candidate's field apart. Splitting
+ * multiplies the strings one request is compared against exactly as an alias pool does, so the
+ * looser ranks [ArtistMatcher] accepts are refused here for the reason [nameMatchTier] refuses them
+ * of an alias: a partial match against one of many strings is not a name.
+ */
+internal fun sameNameTier(
+    requested: String,
+    candidate: String,
+    aliases: List<AlternativeName>,
+): NameMatchTier? {
+    if (ArtistMatcher.matchQuality(requested, candidate) == ArtistMatcher.QUALITY_SAME_NAME) {
+        return NameMatchTier.CANONICAL
+    }
+    return aliasTier(candidate, aliases)
+}
+
 private fun aliasTier(candidate: String, aliases: List<AlternativeName>): NameMatchTier? {
     val matched = aliases.filter {
         ArtistMatcher.matchQuality(it.name, candidate) == ArtistMatcher.QUALITY_SAME_NAME
