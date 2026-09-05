@@ -304,10 +304,7 @@ internal class MusicBrainzApi(
      */
     suspend fun browseReleaseGroupReleases(releaseGroupMbid: String): JSONObject? {
         val json = rateLimiter.execute {
-            httpClient.fetchJsonResult(
-                "$BASE_URL/release?release-group=${encodeQueryValue(releaseGroupMbid)}&fmt=json" +
-                    "&inc=$RELEASE_BROWSE_INC&limit=$RELEASE_BROWSE_LIMIT",
-            ).bodyOrThrowTransient()
+            httpClient.fetchJsonResult(releaseGroupReleaseBrowseUrl(releaseGroupMbid)).bodyOrThrowTransient()
         }
         return json
     }
@@ -358,11 +355,7 @@ internal class MusicBrainzApi(
         offset: Int = 0,
     ): List<MusicBrainzReleaseGroup> {
         val json = rateLimiter.execute {
-            httpClient.fetchJsonResult(
-                // The pipes reach MusicBrainz as %7C: java.net.URI rejects a raw | in a query.
-                "$BASE_URL/release-group?artist=${encodeQueryValue(artistMbid)}" +
-                    "&type=album%7Cep%7Csingle&fmt=json&limit=$limit&offset=$offset",
-            ).bodyOrThrowTransient()
+            httpClient.fetchJsonResult(artistReleaseGroupBrowseUrl(artistMbid, limit, offset)).bodyOrThrowTransient()
         } ?: return emptyList()
         return MusicBrainzParser.parseReleaseGroups(json)
     }
@@ -453,13 +446,31 @@ internal class MusicBrainzApi(
             return "$BASE_URL/artist?query=$query&fmt=json&limit=$limit"
         }
 
+        /** The URL [browseReleaseGroups] requests. */
+        fun artistReleaseGroupBrowseUrl(artistMbid: String, limit: Int, offset: Int): String =
+            // The pipes reach MusicBrainz as %7C: java.net.URI rejects a raw | in a query.
+            "$BASE_URL/release-group?artist=${encodeQueryValue(artistMbid)}" +
+                "&type=album%7Cep%7Csingle&fmt=json&limit=$limit&offset=$offset"
+
+        /** The URL [browseReleaseGroupReleases] requests. */
+        fun releaseGroupReleaseBrowseUrl(releaseGroupMbid: String): String =
+            "$BASE_URL/release?release-group=${encodeQueryValue(releaseGroupMbid)}&fmt=json" +
+                "&inc=$RELEASE_BROWSE_INC&limit=$RELEASE_BROWSE_LIMIT"
+
         /**
-         * Schema-pin targets, mirroring [MusicBrainzParser.parseArtists] and
-         * [MusicBrainzParser.parseReleases].
+         * Schema-pin targets, mirroring [MusicBrainzParser.parseArtists],
+         * [MusicBrainzParser.parseReleases], [MusicBrainzParser.parseReleaseGroups] and
+         * [MusicBrainzCreditParser.parseReleaseBrowse].
          *
          * `id`, `name` and `title` are `getString` reads, so their absence throws rather than
          * degrading; `score` decides whether a hit is accepted at all, and `status`,
          * `release-group.primary-type` and `artist-credit` are what release ranking is built from.
+         *
+         * The two browses are pinned at index `[0]` like every other target, and MusicBrainz
+         * documents no ordering for a browse — so a reorder onto a release that legitimately lacks
+         * an optional edition field reports drift the mapper survives. That is the price of
+         * watching `inc=labels+media` at all, which is the whole reason `RELEASE_EDITIONS` is a
+         * browse rather than a lookup.
          */
         val SCHEMA_PIN_TARGETS: List<SchemaTarget> = listOf(
             SchemaTarget(
@@ -486,6 +497,40 @@ internal class MusicBrainzApi(
                     "releases[0].country",
                     "releases[0].release-group.primary-type",
                     "releases[0].artist-credit[0].name",
+                ),
+            ),
+            SchemaTarget(
+                provider = "musicbrainz",
+                route = "release group browse for artist",
+                url = artistReleaseGroupBrowseUrl(
+                    "a74b1b7f-71a5-4011-9441-d0b5e4122711",
+                    limit = 5,
+                    offset = 0,
+                ),
+                requiredPaths = listOf(
+                    "release-groups[0].id",
+                    "release-groups[0].title",
+                    "release-groups[0].primary-type",
+                    "release-groups[0].first-release-date",
+                ),
+            ),
+            SchemaTarget(
+                provider = "musicbrainz",
+                route = "release browse for release group",
+                url = releaseGroupReleaseBrowseUrl("5c14fd50-a2f1-3672-9537-b0dad91bea2f"),
+                requiredPaths = listOf(
+                    "releases[0].id",
+                    "releases[0].title",
+                    "releases[0].date",
+                    "releases[0].country",
+                    "releases[0].barcode",
+                    "releases[0].media[0].format",
+                    "releases[0].label-info[0].label.name",
+                    "releases[0].label-info[0].catalog-number",
+                    "releases[0].release-group.id",
+                    "releases[0].release-group.title",
+                    "releases[0].release-group.first-release-date",
+                    "releases[0].release-group.artist-credit[0].artist.name",
                 ),
             ),
         )

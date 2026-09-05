@@ -464,9 +464,8 @@ albumName = item.optString("release_name").takeIf { it.isNotBlank() }
 
 No exception, no `NotFound` — empty strings enriched, cached and persisted, needing a 0.9.1 fix plus a
 "clear your cache" migration note. A provider test must assert against a fixture copied from a real
-response; that is what pins the field name. `provider-drift.yml` runs the `e2e` suite against live
-APIs on a schedule, so a moved field surfaces indirectly — it is not a field watcher and never gates
-a merge.
+response; that is what pins the field name. `provider-drift.yml` then re-checks it daily against the
+live API, but only for a route someone put in `SCHEMA_PIN_TARGETS`, and it never gates a merge.
 
 ## 22. Two endpoints of one API do not carry the same fields
 
@@ -807,7 +806,7 @@ encoded the same wrong nesting, so the tests agreed with the code and both were 
 whose comment says it has no ground truth is not evidence about an upstream; it is a restatement of
 the parse under it.
 
-## 32. A provider's scale is argued from the merger's arithmetic, so changing the merger silently retires the argument
+## 35. A provider's scale is argued from the merger's arithmetic, so changing the merger silently retires the argument
 
 `ListenBrainzMapper` halves every Labs similar-artist score, and the KDoc justifying the halving
 argued it from a mechanism one layer away: `SimilarArtistMerger` clamped its sums to 1.0, so a
@@ -1309,3 +1308,18 @@ be refiled as a gap by the next reader, or trusted as a guard by the one after t
 Distinct from §16 (a probe whose planted edit was never present) and §18 (a real measurement of the
 wrong tree): here the test runs, the measurement is honest, and the subject is genuinely exercised —
 it simply cannot register the subject's absence.
+
+## 34. A fixture's warrant can name a mechanism that does not watch it
+
+A pool's `scenario.md` earns its field names either from the capture beside it or from something
+that re-checks them against the live API. Several say the latter, in a sentence copied from pool to
+pool: "exercised against the live API by the daily `provider-drift.yml` job (non-gating)". That job
+requests exactly the routes in `SCHEMA_PIN_TARGETS` and nothing else, so the sentence is a claim
+about one list — and two pools carried it for routes that were never in it. Both discography
+browses and the `RELEASE_EDITIONS` browse went unwatched, the same class of change that once
+emptied every `ARTIST_RADIO_DISCOVERY` title when ListenBrainz nested `release_group_name`.
+
+Nothing catches this: `check_schema_pin_coverage.py` is per-provider, so one pinned route makes a
+provider with thirteen look covered, and no check reads a `scenario.md` at all. So before writing
+that sentence, find the route's own `SchemaTarget` — and where there is none, either add it or say
+plainly that the capture is the only warrant.

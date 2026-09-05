@@ -27,6 +27,8 @@ carries no date, title or type signal. Two groups share 2002 (`D Homemade` befor
 the pool also pins that a within-year tie keeps the provider's order rather than being broken on
 title, which would put `D Fun Pak` first.
 
-This route is not in `SCHEMA_PIN_TARGETS`, so no daily job re-checks that these field names are still
-live — unlike the other MusicBrainz pools in this directory, this pool's field names are warranted
-only by the capture above.
+MusicBrainz's field names are exercised against the live API by the daily `provider-drift.yml` job
+(non-gating), which pins this route's `id`, `title`, `primary-type` and `first-release-date` — the
+four `parseReleaseGroups` reads. The empty `first-release-date` this pool exists for is the one thing
+that pin cannot watch: a pin reads it as absent, so the pin is aimed at an artist whose first group
+is dated, and only this capture is evidence that MusicBrainz sends the absence as `""`.

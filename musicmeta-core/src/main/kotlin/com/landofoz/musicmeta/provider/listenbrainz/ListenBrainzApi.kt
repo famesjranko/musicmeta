@@ -54,8 +54,7 @@ internal class ListenBrainzApi(
     suspend fun getTopReleaseGroupsForArtist(
         artistMbid: String,
     ): List<ListenBrainzTopReleaseGroup> = rateLimiter.execute {
-        val url = "$BASE_URL/popularity/top-release-groups-for-artist/${encodePathSegment(artistMbid)}"
-        val jsonArray = httpClient.fetchJsonArrayResult(url).bodyOrThrowTransient()
+        val jsonArray = httpClient.fetchJsonArrayResult(topReleaseGroupsUrl(artistMbid)).bodyOrThrowTransient()
             ?: return@execute emptyList()
         parseTopReleaseGroups(jsonArray)
     }
@@ -300,13 +299,26 @@ internal class ListenBrainzApi(
             "$LABS_BASE_URL/similar-artists/json" +
                 "?artist_mbids=${encodeQueryValue(artistMbid)}&algorithm=$SIMILAR_ARTISTS_ALGORITHM"
 
+        /** The URL [getTopReleaseGroupsForArtist] requests. */
+        fun topReleaseGroupsUrl(artistMbid: String): String =
+            "$BASE_URL/popularity/top-release-groups-for-artist/${encodePathSegment(artistMbid)}"
+
         /**
          * Schema-pin targets, each mirroring the parse beside it. A top-recordings row without
          * `recording_mbid` is dropped outright, so a rename there empties every popularity answer
-         * silently; a similar-artists row without `artist_mbid` or `name` is dropped the same way.
+         * silently; a similar-artists row without `artist_mbid` or `name` is dropped the same way,
+         * as is a top-release-groups row without `release_group_mbid` or a name.
          *
-         * Radiohead's artist MBID in both, chosen because the artist is large enough that either
-         * endpoint answers with a full row rather than a sparse one.
+         * Radiohead's artist MBID in the first two, chosen because the artist is large enough that
+         * either endpoint answers with a full row rather than a sparse one. The third names the
+         * artist its captured pool was taken from, so pin and pool warrant the same field names.
+         *
+         * The top-release-groups pin names `release_group.name` rather than the flat
+         * `release_group_name` that [toTopReleaseGroup] still falls back to: the flat sibling is
+         * absent from the live answer, so pinning it would report drift on every healthy run. Only
+         * the two fields [ListenBrainzMapper.toDiscography] reads are pinned — `total_listen_count`
+         * and the credited artist name are parsed but reach no enrichment answer, so their absence
+         * is not drift.
          *
          * A retired `algorithm` is *not* what these catch — the pin reports any non-200 as
          * unavailable rather than as drift, and [getSimilarArtists] is what turns that case into a
@@ -336,6 +348,16 @@ internal class ListenBrainzApi(
                     "[0].artist_mbid",
                     "[0].name",
                     "[0].score",
+                ),
+            ),
+            SchemaTarget(
+                provider = "listenbrainz",
+                route = "top release groups for artist",
+                url = topReleaseGroupsUrl("ac9a487a-d9d2-4f27-bb23-0f4686488345"),
+                shape = BodyShape.ARRAY,
+                requiredPaths = listOf(
+                    "[0].release_group_mbid",
+                    "[0].release_group.name",
                 ),
             ),
         )

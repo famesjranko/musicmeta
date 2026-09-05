@@ -27,5 +27,6 @@ field for it and `ListenBrainzTopReleaseGroup` has nowhere to put it, so `Discog
 null for every ListenBrainz entry by construction — which is why that date is trimmed here like any
 other unread key.
 
-This route is not in `SCHEMA_PIN_TARGETS`, so no daily job re-checks that these field names are still
-live; they are warranted only by the capture above.
+This route is exercised against the live API by the daily `provider-drift.yml` job (non-gating),
+pinned on this same artist and on the two paths `toDiscography` reads — `release_group_mbid` and the
+nested `release_group.name`. The rest of the kept keys are warranted only by the capture above.
