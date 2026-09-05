@@ -1,6 +1,7 @@
 package com.landofoz.musicmeta.probe
 
 import com.landofoz.musicmeta.SimilarArtist
+import com.landofoz.musicmeta.engine.AlternativeName
 import com.landofoz.musicmeta.engine.SimilarArtistMerger
 import com.landofoz.musicmeta.provider.deezer.DeezerMapper
 import com.landofoz.musicmeta.provider.deezer.DeezerRelatedArtist
@@ -8,6 +9,9 @@ import com.landofoz.musicmeta.provider.lastfm.LastFmMapper
 import com.landofoz.musicmeta.provider.lastfm.LastFmSimilarArtist
 import com.landofoz.musicmeta.provider.listenbrainz.ListenBrainzMapper
 import com.landofoz.musicmeta.provider.listenbrainz.ListenBrainzSimilarArtist
+import com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzParser
+import com.landofoz.musicmeta.provider.musicbrainz.alternativeNames
+import com.landofoz.musicmeta.provider.musicbrainz.pickBestArtist
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
@@ -21,10 +25,35 @@ import java.io.File
  *
  * ARM_NAME and installArm() are the only two things that differ between branches.
  */
-private const val ARM_NAME = "control"
+private const val ARM_NAME = "alias"
 
 /** Arm-specific wiring. The control and the MBID arm need none; the pool arms install their pool. */
-private fun installArm() = Unit
+private fun installArm() {
+    SimilarArtistMerger.aliasPoolLookup = { name -> POOLS[key(name)].orEmpty() }
+}
+
+/**
+ * One MusicBrainz artist search per distinct name in the workload, captured offline, reduced to the
+ * pool `artistAliasPool` builds in production: the picked artist's own name, plus its aliases.
+ * The pick is `pickBestArtist`, the ranking MusicBrainz resolution already uses.
+ */
+private val POOLS: Map<String, List<AlternativeName>> by lazy {
+    val root = JSONObject(File("src/test/resources/probe/pools.json").readText())
+    val entries = root.getJSONArray("pools")
+    val out = HashMap<String, List<AlternativeName>>()
+    for (i in 0 until entries.length()) {
+        val entry = entries.getJSONObject(i)
+        val query = entry.getString("query")
+        val candidates = MusicBrainzParser.parseArtists(JSONObject().put("artists", entry.getJSONArray("artists")))
+        val picked = pickBestArtist(query, candidates)
+        out[key(query)] = if (picked == null) {
+            emptyList()
+        } else {
+            listOf(AlternativeName(picked.name, official = true)) + picked.alternativeNames()
+        }
+    }
+    out
+}
 
 private const val PROVIDER_LASTFM = "lastfm"
 private const val PROVIDER_DEEZER = "deezer"

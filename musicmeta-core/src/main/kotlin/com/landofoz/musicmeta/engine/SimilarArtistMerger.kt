@@ -85,18 +85,42 @@ internal object SimilarArtistMerger : ResultMerger {
     }
 
     /**
+     * The alias pool an entity is published under, by the name an entry carries.
+     *
+     * A seam the probe fills offline. Production resolves one pool per call for the *requested*
+     * artist; a pool per similar-artist entry is a lookup this merger has no way to make.
+     */
+    internal var aliasPoolLookup: (String) -> List<AlternativeName> = { emptyList() }
+
+    /**
      * The entries of [artists] that are one act, in first-occurrence order.
      *
-     * The key is the normalized name and nothing else, so two providers naming one act differently
-     * stay two groups.
+     * The name key groups first. An entry no name key takes joins the first group whose alias pool
+     * publishes it — the same-name-only pool test the rest of the engine matches candidates with,
+     * applied in either direction because neither of two merged entries is the requested name.
      */
     internal fun groupArtists(artists: List<SimilarArtist>): List<List<SimilarArtist>> {
-        val grouped = LinkedHashMap<String, MutableList<SimilarArtist>>()
+        val groups = mutableListOf<MutableList<SimilarArtist>>()
+        val groupName = mutableListOf<String>()
         for (artist in artists) {
-            grouped.getOrPut(normalize(artist.name)) { mutableListOf() }.add(artist)
+            val key = normalize(artist.name)
+            val index = groupName.indexOfFirst { normalize(it) == key }
+                .takeIf { it >= 0 }
+                ?: groupName.indexOfFirst { onePoolHoldsBoth(it, artist.name) }
+            if (index < 0) {
+                groups += mutableListOf(artist)
+                groupName += artist.name
+            } else {
+                groups[index] += artist
+            }
         }
-        return grouped.values.toList()
+        return groups
     }
+
+    /** Whether either name's own alias pool publishes the other, at same name. */
+    private fun onePoolHoldsBoth(one: String, other: String): Boolean =
+        nameMatchTier(other, one, aliasPoolLookup(one)) != NameMatchTier.NONE ||
+            nameMatchTier(one, other, aliasPoolLookup(other)) != NameMatchTier.NONE
 
     private fun normalize(name: String): String = name.trim().lowercase()
 }
