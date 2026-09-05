@@ -91,7 +91,11 @@ internal object SimilarArtistMerger : ResultMerger {
      * An entry carrying a MusicBrainz id joins the group carrying that same id, whatever either is
      * named; failing that it joins a same-name group only while that group carries no id of its
      * own, so two entries whose ids disagree can never share a group. An entry carrying no id falls
-     * back to the name, joining the first group under it rather than a bucket of its own.
+     * back to the name, joining the first group under it rather than a bucket of its own — so where
+     * one name covers two ids, an unidentified entry's score attaches to whichever of them a
+     * contributor happened to report first (Deezer, then ListenBrainz, then Last.fm), by order
+     * rather than by evidence. Ids are compared trimmed and lowercased, and a blank one counts as
+     * no id at all.
      *
      * A caller therefore sees two entries wherever MusicBrainz holds one act under two ids, since
      * nothing below the merge can tell that apart from two acts sharing a name — a duplicate entry
@@ -102,7 +106,9 @@ internal object SimilarArtistMerger : ResultMerger {
         val groupMbid = mutableListOf<String?>()
         val groupKey = mutableListOf<String>()
         for (artist in artists) {
-            val mbid = artist.identifiers.musicBrainzId
+            // Blanked here rather than trusted: nothing normalizes EnrichmentIdentifiers, and a
+            // blank id keys every entry carrying one into a single group whatever they are named.
+            val mbid = normalize(artist.identifiers.musicBrainzId.orEmpty()).takeIf { it.isNotEmpty() }
             val key = normalize(artist.name)
             val index = if (mbid == null) {
                 groupKey.indexOfFirst { it == key }

@@ -531,4 +531,61 @@ class SimilarArtistMergerTest {
         )
         assertEquals(listOf(listOf("deezer", "listenbrainz"), listOf("lastfm")), merged.map { it.sources })
     }
+
+    @Test
+    fun `a blank MusicBrainz id groups nothing, so three names stay three entries`() {
+        // Given - three different artists whose provider put a blank string where an MBID goes
+        val artists = listOf(
+            SimilarArtist(
+                name = "Bicep",
+                identifiers = EnrichmentIdentifiers(musicBrainzId = ""),
+                matchScore = 0.6f,
+                sources = listOf("custom"),
+            ),
+            SimilarArtist(
+                name = "Overmono",
+                identifiers = EnrichmentIdentifiers(musicBrainzId = ""),
+                matchScore = 0.4f,
+                sources = listOf("custom"),
+            ),
+            SimilarArtist(
+                name = "Joy Orbison",
+                identifiers = EnrichmentIdentifiers(musicBrainzId = "   "),
+                matchScore = 0.3f,
+                sources = listOf("custom"),
+            ),
+        )
+
+        // When - merging the three entries
+        val merged = SimilarArtistMerger.mergeArtists(artists)
+
+        // Then - a blank id is no id, so the names keep them apart instead of one blank-keyed group
+        assertEquals(listOf("Bicep", "Overmono", "Joy Orbison"), merged.map { it.name })
+    }
+
+    @Test
+    fun `one MusicBrainz id written in two cases is one act`() {
+        // Given - two providers reporting one id, one of them upper-cased, under different names
+        val artists = listOf(
+            SimilarArtist(
+                name = "Africa 70",
+                identifiers = EnrichmentIdentifiers(musicBrainzId = "dc45f2dc-ef36-4a7a-aa52-97495fca8ced"),
+                matchScore = 0.6f,
+                sources = listOf("listenbrainz"),
+            ),
+            SimilarArtist(
+                name = "Fela Kuti & Afrika 70",
+                identifiers = EnrichmentIdentifiers(musicBrainzId = "DC45F2DC-EF36-4A7A-AA52-97495FCA8CED"),
+                matchScore = 0.4f,
+                sources = listOf("lastfm"),
+            ),
+        )
+
+        // When - merging the two entries
+        val merged = SimilarArtistMerger.mergeArtists(artists)
+
+        // Then - the case of the id does not make a second act of it
+        assertEquals(1, merged.size)
+        assertEquals(listOf("listenbrainz", "lastfm"), merged.single().sources)
+    }
 }
