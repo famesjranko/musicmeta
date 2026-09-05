@@ -806,7 +806,7 @@ encoded the same wrong nesting, so the tests agreed with the code and both were 
 whose comment says it has no ground truth is not evidence about an upstream; it is a restatement of
 the parse under it.
 
-## 32. A provider's scale is argued from the merger's arithmetic, so changing the merger silently retires the argument
+## 35. A provider's scale is argued from the merger's arithmetic, so changing the merger silently retires the argument
 
 `ListenBrainzMapper` halves every Labs similar-artist score, and the KDoc justifying the halving
 argued it from a mechanism one layer away: `SimilarArtistMerger` clamped its sums to 1.0, so a
