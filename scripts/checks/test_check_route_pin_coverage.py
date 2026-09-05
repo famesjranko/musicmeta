@@ -180,6 +180,21 @@ class RoutePinCoverageTest(unittest.TestCase):
         self.assertIn("no route in its own file reaches it", findings[0])
         self.assertIn("`foo/FooApi.kt#fetch`", findings[0])
 
+    def test_route_in_a_nested_package_is_reported(self):
+        # Given - an api client one package below the provider directory
+        source = api(
+            routes="""
+    suspend fun getArtist(id: String): String? {
+        return httpClient.fetchJsonResult("https://example.test/artist/$id").body
+    }
+"""
+        )
+        # When - the check reads it
+        findings = self.findings_for({f"{PROVIDER_ROOT}/foo/inner/BarApi.kt": source})
+        # Then - the nesting does not take the route out of the enumeration
+        self.assertEqual(len(findings), 1)
+        self.assertIn("`inner/getArtist`", findings[0])
+
     def test_http_call_outside_an_api_client_is_reported(self):
         # Given - a provider that asks an upstream from its provider class
         findings = self.findings_for(

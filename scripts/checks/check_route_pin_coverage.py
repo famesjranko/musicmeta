@@ -276,6 +276,9 @@ def pins_in(text: str) -> list[tuple[str | None, str | None]]:
     """Every `SchemaTarget(` literal in `text`, as its `route =` string and its `url =` expression."""
     pins: list[tuple[str | None, str | None]] = []
     for match in re.finditer(r"SchemaTarget\s*\(", text):
+        # Both keys sit in the literal's first few lines, well inside 2000 characters; a window that
+        # overran into the next literal could only repeat a pin that is already in this list, so the
+        # bound trades a Kotlin parser for a key that cannot be invented, only missed.
         tail = text[match.end() : match.end() + 2000]
         route = re.search(r"route\s*=\s*\"([^\"]*)\"", tail)
         url = re.search(r"url\s*=\s*([^\n]*)", tail)
@@ -353,7 +356,7 @@ def stale_call_site_message(key: str) -> str:
 def api_files(root: Path) -> list[Path]:
     """Every provider api client, sorted, so findings come out in a stable order."""
     base = root / PROVIDER_ROOT
-    return sorted(base.glob("*/[A-Z]*Api.kt")) if base.is_dir() else []
+    return sorted(base.glob("**/[A-Z]*Api.kt")) if base.is_dir() else []
 
 
 def other_files(root: Path) -> list[Path]:
@@ -362,7 +365,7 @@ def other_files(root: Path) -> list[Path]:
     if not base.is_dir():
         return []
     apis = set(api_files(root))
-    return sorted(path for path in base.glob("*/*.kt") if path not in apis)
+    return sorted(path for path in base.glob("**/*.kt") if path not in apis)
 
 
 def pins_and_builders(directory: Path) -> tuple[list[tuple[str | None, str | None]], set[str]]:
