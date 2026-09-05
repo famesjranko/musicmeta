@@ -108,6 +108,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Two published-surface conventions documented: every score is a `Float` on 0.0-1.0, every date a `String` in ISO-8601 and every `year` an `Int?` — with their frozen exceptions named
 
 ### Fixed
+- Two similar artists sharing a name but holding different MusicBrainz ids are no longer fused into one entry with their scores summed: each keeps its own entry, so ranks below the pair shift
+- Two similar-artist entries holding one MusicBrainz id under different names now merge into one, keeping the first name reported, so a name the providers spell two ways stops appearing twice
 - Discogs `ARTIST_PHOTO` and `BAND_MEMBERS` answer for an artist filed under a `(n)` homonym counter (`IU (3)`): the counter is dropped on the artist record as it already was on the search hit
 - A Discogs release credited to several artists (`Χάρις Αλεξίου, Αντώνης Βαρδής`) now answers a request naming one of them, at that artist's own tier; a credited name is matched whole, never partially
 - demo-web's discography now collapses a `(Remastered Version)` edition into its base album's row, matching the qualifier vocabulary core already strips before searching
