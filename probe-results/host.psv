@@ -1,0 +1,9 @@
+arm|scenario|ordering|artists|walks|main_api_calls_skipped|doomed_calls_made|answers_lost|successes|wall_clock_ms|breaker_states
+host|S1_LABS_DOWN|INTERLEAVE|1|5|0|1|0|4|15|{healthy_other=CLOSED, listenbrainz=CLOSED, listenbrainz@labs=CLOSED}
+host|S1_LABS_DOWN|INTERLEAVE|20|100|0|5|0|80|16|{healthy_other=CLOSED, listenbrainz=CLOSED, listenbrainz@labs=OPEN}
+host|S1_LABS_DOWN|BURST|1|5|0|1|0|4|0|{healthy_other=CLOSED, listenbrainz=CLOSED, listenbrainz@labs=CLOSED}
+host|S1_LABS_DOWN|BURST|20|100|0|5|0|80|12|{healthy_other=CLOSED, listenbrainz=CLOSED, listenbrainz@labs=OPEN}
+host|S2_PROVIDER_DOWN|INTERLEAVE|1|5|0|5|0|0|0|{healthy_other=CLOSED, listenbrainz=CLOSED, listenbrainz@labs=CLOSED}
+host|S2_PROVIDER_DOWN|INTERLEAVE|20|100|75|10|0|0|5|{healthy_other=CLOSED, listenbrainz=OPEN, listenbrainz@labs=OPEN}
+host|S2_PROVIDER_DOWN|BURST|1|5|0|5|0|0|0|{healthy_other=CLOSED, listenbrainz=CLOSED, listenbrainz@labs=CLOSED}
+host|S2_PROVIDER_DOWN|BURST|20|100|75|10|0|0|3|{healthy_other=CLOSED, listenbrainz=OPEN, listenbrainz@labs=OPEN}

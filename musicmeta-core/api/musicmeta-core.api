@@ -2508,11 +2508,12 @@ public final class com/landofoz/musicmeta/provider/lastfm/LastFmProvider : com/l
 	public fun searchCandidates (Lcom/landofoz/musicmeta/EnrichmentRequest;ILkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 
-public final class com/landofoz/musicmeta/provider/listenbrainz/ListenBrainzProvider : com/landofoz/musicmeta/EnrichmentProvider {
+public final class com/landofoz/musicmeta/provider/listenbrainz/ListenBrainzProvider : com/landofoz/musicmeta/EnrichmentProvider, com/landofoz/musicmeta/engine/BreakerHostKeyed {
 	public static final field FALLBACK_PRIORITY I
 	public static final field PRIORITY I
 	public fun <init> (Lcom/landofoz/musicmeta/http/HttpClient;Lcom/landofoz/musicmeta/http/RateLimiter;Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentConfig;)V
 	public synthetic fun <init> (Lcom/landofoz/musicmeta/http/HttpClient;Lcom/landofoz/musicmeta/http/RateLimiter;Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentConfig;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun breakerKey (Lcom/landofoz/musicmeta/EnrichmentType;)Ljava/lang/String;
 	public fun enrich (Lcom/landofoz/musicmeta/EnrichmentRequest;Lcom/landofoz/musicmeta/EnrichmentType;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun getCapabilities ()Ljava/util/List;
 	public fun getDisplayName ()Ljava/lang/String;

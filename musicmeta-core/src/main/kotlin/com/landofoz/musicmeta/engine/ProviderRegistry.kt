@@ -4,6 +4,7 @@ import com.landofoz.musicmeta.EnrichmentLogger
 import com.landofoz.musicmeta.EnrichmentProvider
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ProviderInfo
+import com.landofoz.musicmeta.http.BreakerPool
 import com.landofoz.musicmeta.http.CircuitBreaker
 
 /**
@@ -51,9 +52,11 @@ internal class ProviderRegistry(
             registered.forEach { requireRegistrableProviderId(it.id, seen); seen.add(it.id) }
         }
 
-    /** One circuit breaker per provider, shared across all chains. */
-    private val circuitBreakers: Map<String, CircuitBreaker> =
-        allProviders.associate { it.id to CircuitBreaker() }
+    /** One pool of circuit breakers, shared across all chains. The key is what this probe varies. */
+    private val breakerPool = BreakerPool()
+
+    /** Probe instrumentation: every breaker key this registry has created, and its state. */
+    internal fun breakerStates(): Map<String, CircuitBreaker.State> = breakerPool.states()
 
     private val chains: Map<EnrichmentType, ProviderChain> = buildChains(allProviders)
 
@@ -92,8 +95,9 @@ internal class ProviderRegistry(
             ProviderChain(
                 type,
                 providerPriorities.sortedByDescending { it.second }.map { it.first },
-                circuitBreakers,
+                emptyMap(),
                 logger,
+                breakerPool,
             )
         }
     }
