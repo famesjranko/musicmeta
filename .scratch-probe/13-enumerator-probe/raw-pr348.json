@@ -1,0 +1,1011 @@
+{
+  "coverartarchive": {
+    "arm_a": [
+      {
+        "attributable": false,
+        "line": 26,
+        "name": "getArtworkUrl",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 35,
+        "name": "getGroupArtworkUrl",
+        "private": false
+      },
+      {
+        "attributable": true,
+        "line": 44,
+        "name": "getArtworkMetadata",
+        "private": false
+      }
+    ],
+    "arm_a_prime": [
+      {
+        "attributable": false,
+        "line": 26,
+        "name": "getArtworkUrl",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 35,
+        "name": "getGroupArtworkUrl",
+        "private": false
+      },
+      {
+        "attributable": true,
+        "line": 44,
+        "name": "getArtworkMetadata",
+        "private": false
+      }
+    ],
+    "arm_b": [
+      {
+        "attributable": true,
+        "callers": [
+          "getArtworkMetadata"
+        ],
+        "line": 80,
+        "name": "artworkMetadataUrl"
+      }
+    ],
+    "builders": [
+      "artworkMetadataUrl"
+    ],
+    "file": ".scratch-probe/13-enumerator-probe/pr348/musicmeta-core/src/main/kotlin/com/landofoz/musicmeta/provider/coverartarchive/CoverArtArchiveApi.kt",
+    "pins": [
+      {
+        "route": "release artwork metadata",
+        "url_expr": "artworkMetadataUrl(\"541a0976-ca45-3c0f-89e5-26bc376f58d1\")"
+      }
+    ],
+    "suspend_without_builder": [
+      "getArtworkUrl",
+      "getGroupArtworkUrl"
+    ]
+  },
+  "deezer": {
+    "arm_a": [
+      {
+        "attributable": false,
+        "line": 373,
+        "name": "fetchJson",
+        "private": true
+      }
+    ],
+    "arm_a_prime": [
+      {
+        "attributable": true,
+        "line": 27,
+        "name": "searchAlbums",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 62,
+        "name": "searchArtist",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 88,
+        "name": "getArtistAlbums",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 113,
+        "name": "getAlbum",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 123,
+        "name": "getAlbumTracks",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 139,
+        "name": "getRelatedArtists",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 161,
+        "name": "searchTrack",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 303,
+        "name": "getArtistTop",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 323,
+        "name": "getArtistRadio",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 343,
+        "name": "getTrack",
+        "private": false
+      }
+    ],
+    "arm_b": [
+      {
+        "attributable": false,
+        "callers": [
+          "searchTrack"
+        ],
+        "line": 201,
+        "name": "advancedTrackUrl"
+      },
+      {
+        "attributable": true,
+        "callers": [
+          "searchAlbums"
+        ],
+        "line": 386,
+        "name": "albumSearchUrl"
+      },
+      {
+        "attributable": false,
+        "callers": [
+          "searchTrack"
+        ],
+        "line": 196,
+        "name": "plainTrackUrl"
+      }
+    ],
+    "builders": [
+      "advancedTrackUrl",
+      "albumSearchUrl",
+      "plainTrackUrl"
+    ],
+    "file": ".scratch-probe/13-enumerator-probe/pr348/musicmeta-core/src/main/kotlin/com/landofoz/musicmeta/provider/deezer/DeezerApi.kt",
+    "pins": [
+      {
+        "route": "album search",
+        "url_expr": "albumSearchUrl(\"OK Computer\", limit = 5)"
+      }
+    ],
+    "suspend_without_builder": [
+      "searchArtist",
+      "getArtistAlbums",
+      "getAlbum",
+      "getAlbumTracks",
+      "getRelatedArtists",
+      "getArtistTop",
+      "getArtistRadio",
+      "getTrack"
+    ]
+  },
+  "discogs": {
+    "arm_a": [
+      {
+        "attributable": false,
+        "line": 91,
+        "name": "fetch",
+        "private": true
+      }
+    ],
+    "arm_a_prime": [
+      {
+        "attributable": true,
+        "line": 26,
+        "name": "searchReleases",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 54,
+        "name": "searchArtist",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 70,
+        "name": "getArtist",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 77,
+        "name": "getMasterVersions",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 84,
+        "name": "getReleaseDetails",
+        "private": false
+      }
+    ],
+    "arm_b": [
+      {
+        "attributable": true,
+        "callers": [
+          "searchReleases"
+        ],
+        "line": 244,
+        "name": "releaseSearchUrl"
+      }
+    ],
+    "builders": [
+      "releaseSearchUrl"
+    ],
+    "file": ".scratch-probe/13-enumerator-probe/pr348/musicmeta-core/src/main/kotlin/com/landofoz/musicmeta/provider/discogs/DiscogsApi.kt",
+    "pins": [
+      {
+        "route": "release search",
+        "url_expr": "releaseSearchUrl(\"OK Computer\", \"Radiohead\", limit = 5)"
+      }
+    ],
+    "suspend_without_builder": [
+      "searchArtist",
+      "getArtist",
+      "getMasterVersions",
+      "getReleaseDetails"
+    ]
+  },
+  "fanarttv": {
+    "arm_a": [
+      {
+        "attributable": true,
+        "line": 35,
+        "name": "getAlbumImages",
+        "private": false
+      },
+      {
+        "attributable": true,
+        "line": 45,
+        "name": "getArtistImages",
+        "private": false
+      }
+    ],
+    "arm_a_prime": [
+      {
+        "attributable": true,
+        "line": 35,
+        "name": "getAlbumImages",
+        "private": false
+      },
+      {
+        "attributable": true,
+        "line": 45,
+        "name": "getArtistImages",
+        "private": false
+      }
+    ],
+    "arm_b": [
+      {
+        "attributable": true,
+        "callers": [
+          "getAlbumImages"
+        ],
+        "line": 77,
+        "name": "albumImagesUrl"
+      },
+      {
+        "attributable": true,
+        "callers": [
+          "getArtistImages"
+        ],
+        "line": 82,
+        "name": "artistImagesUrl"
+      }
+    ],
+    "builders": [
+      "albumImagesUrl",
+      "artistImagesUrl"
+    ],
+    "file": ".scratch-probe/13-enumerator-probe/pr348/musicmeta-core/src/main/kotlin/com/landofoz/musicmeta/provider/fanarttv/FanartTvApi.kt",
+    "pins": [
+      {
+        "route": "album images",
+        "url_expr": "albumImagesUrl(releaseGroup, apiKey)"
+      },
+      {
+        "route": "artist images",
+        "url_expr": "artistImagesUrl(\"a74b1b7f-71a5-4011-9441-d0b5e4122711\", apiKey)"
+      }
+    ],
+    "suspend_without_builder": []
+  },
+  "itunes": {
+    "arm_a": [
+      {
+        "attributable": false,
+        "line": 145,
+        "name": "fetchJson",
+        "private": true
+      }
+    ],
+    "arm_a_prime": [
+      {
+        "attributable": true,
+        "line": 25,
+        "name": "searchAlbums",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 35,
+        "name": "lookupAlbumTracks",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 54,
+        "name": "lookupArtistAlbums",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 85,
+        "name": "lookupByUpc",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 111,
+        "name": "searchArtist",
+        "private": false
+      }
+    ],
+    "arm_b": [
+      {
+        "attributable": true,
+        "callers": [
+          "searchAlbums"
+        ],
+        "line": 175,
+        "name": "albumSearchUrl"
+      }
+    ],
+    "builders": [
+      "albumSearchUrl"
+    ],
+    "file": ".scratch-probe/13-enumerator-probe/pr348/musicmeta-core/src/main/kotlin/com/landofoz/musicmeta/provider/itunes/ITunesApi.kt",
+    "pins": [
+      {
+        "route": "album search",
+        "url_expr": "albumSearchUrl(\"radiohead\", limit = 5)"
+      }
+    ],
+    "suspend_without_builder": [
+      "lookupAlbumTracks",
+      "lookupArtistAlbums",
+      "lookupByUpc",
+      "searchArtist"
+    ]
+  },
+  "lastfm": {
+    "arm_a": [
+      {
+        "attributable": false,
+        "line": 24,
+        "name": "getArtistInfo",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 30,
+        "name": "getSimilarArtists",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 37,
+        "name": "getSimilarTracks",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 44,
+        "name": "getArtistTopTracks",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 51,
+        "name": "getAlbumInfo",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 57,
+        "name": "getTrackInfo",
+        "private": false
+      }
+    ],
+    "arm_a_prime": [
+      {
+        "attributable": false,
+        "line": 24,
+        "name": "getArtistInfo",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 30,
+        "name": "getSimilarArtists",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 37,
+        "name": "getSimilarTracks",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 44,
+        "name": "getArtistTopTracks",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 51,
+        "name": "getAlbumInfo",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 57,
+        "name": "getTrackInfo",
+        "private": false
+      }
+    ],
+    "arm_b": [
+      {
+        "attributable": false,
+        "callers": [
+          "getAlbumInfo"
+        ],
+        "line": 63,
+        "name": "buildAlbumUrl"
+      },
+      {
+        "attributable": false,
+        "callers": [
+          "getSimilarTracks",
+          "getTrackInfo"
+        ],
+        "line": 70,
+        "name": "buildTrackUrl"
+      },
+      {
+        "attributable": false,
+        "callers": [
+          "getArtistInfo",
+          "getArtistTopTracks",
+          "getSimilarArtists"
+        ],
+        "line": 77,
+        "name": "buildUrl"
+      }
+    ],
+    "builders": [
+      "artistMethodUrl",
+      "buildAlbumUrl",
+      "buildTrackUrl",
+      "buildUrl"
+    ],
+    "file": ".scratch-probe/13-enumerator-probe/pr348/musicmeta-core/src/main/kotlin/com/landofoz/musicmeta/provider/lastfm/LastFmApi.kt",
+    "pins": [
+      {
+        "route": "artist.getinfo",
+        "url_expr": "artistMethodUrl(\"artist.getinfo\", \"Radiohead\", apiKey)"
+      }
+    ],
+    "suspend_without_builder": []
+  },
+  "listenbrainz": {
+    "arm_a": [
+      {
+        "attributable": true,
+        "line": 25,
+        "name": "getTopRecordingsForArtist",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 34,
+        "name": "getRecordingPopularity",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 44,
+        "name": "getArtistPopularity",
+        "private": false
+      },
+      {
+        "attributable": true,
+        "line": 54,
+        "name": "getTopReleaseGroupsForArtist",
+        "private": false
+      },
+      {
+        "attributable": true,
+        "line": 138,
+        "name": "getSimilarArtists",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 179,
+        "name": "getRadio",
+        "private": false
+      }
+    ],
+    "arm_a_prime": [
+      {
+        "attributable": true,
+        "line": 25,
+        "name": "getTopRecordingsForArtist",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 34,
+        "name": "getRecordingPopularity",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 44,
+        "name": "getArtistPopularity",
+        "private": false
+      },
+      {
+        "attributable": true,
+        "line": 54,
+        "name": "getTopReleaseGroupsForArtist",
+        "private": false
+      },
+      {
+        "attributable": true,
+        "line": 138,
+        "name": "getSimilarArtists",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 179,
+        "name": "getRadio",
+        "private": false
+      }
+    ],
+    "arm_b": [
+      {
+        "attributable": true,
+        "callers": [
+          "getSimilarArtists"
+        ],
+        "line": 298,
+        "name": "similarArtistsUrl"
+      },
+      {
+        "attributable": true,
+        "callers": [
+          "getTopRecordingsForArtist"
+        ],
+        "line": 291,
+        "name": "topRecordingsUrl"
+      },
+      {
+        "attributable": true,
+        "callers": [
+          "getTopReleaseGroupsForArtist"
+        ],
+        "line": 303,
+        "name": "topReleaseGroupsUrl"
+      }
+    ],
+    "builders": [
+      "similarArtistsUrl",
+      "topRecordingsUrl",
+      "topReleaseGroupsUrl"
+    ],
+    "file": ".scratch-probe/13-enumerator-probe/pr348/musicmeta-core/src/main/kotlin/com/landofoz/musicmeta/provider/listenbrainz/ListenBrainzApi.kt",
+    "pins": [
+      {
+        "route": "top recordings for artist",
+        "url_expr": "topRecordingsUrl(\"a74b1b7f-71a5-4011-9441-d0b5e4122711\")"
+      },
+      {
+        "route": "labs similar artists",
+        "url_expr": "similarArtistsUrl(\"a74b1b7f-71a5-4011-9441-d0b5e4122711\")"
+      },
+      {
+        "route": "top release groups for artist",
+        "url_expr": "topReleaseGroupsUrl(\"ac9a487a-d9d2-4f27-bb23-0f4686488345\")"
+      }
+    ],
+    "suspend_without_builder": [
+      "getRecordingPopularity",
+      "getArtistPopularity",
+      "getRadio"
+    ]
+  },
+  "lrclib": {
+    "arm_a": [
+      {
+        "attributable": false,
+        "line": 24,
+        "name": "getLyrics",
+        "private": false
+      },
+      {
+        "attributable": true,
+        "line": 45,
+        "name": "searchLyrics",
+        "private": false
+      }
+    ],
+    "arm_a_prime": [
+      {
+        "attributable": false,
+        "line": 24,
+        "name": "getLyrics",
+        "private": false
+      },
+      {
+        "attributable": true,
+        "line": 45,
+        "name": "searchLyrics",
+        "private": false
+      }
+    ],
+    "arm_b": [
+      {
+        "attributable": true,
+        "callers": [
+          "searchLyrics"
+        ],
+        "line": 72,
+        "name": "lyricsSearchUrl"
+      }
+    ],
+    "builders": [
+      "lyricsSearchUrl"
+    ],
+    "file": ".scratch-probe/13-enumerator-probe/pr348/musicmeta-core/src/main/kotlin/com/landofoz/musicmeta/provider/lrclib/LrcLibApi.kt",
+    "pins": [
+      {
+        "route": "lyrics search",
+        "url_expr": "lyricsSearchUrl(\"Radiohead\", \"Karma Police\")"
+      }
+    ],
+    "suspend_without_builder": [
+      "getLyrics"
+    ]
+  },
+  "musicbrainz": {
+    "arm_a": [
+      {
+        "attributable": true,
+        "line": 23,
+        "name": "searchReleases",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 35,
+        "name": "searchReleasesFuzzy",
+        "private": false
+      },
+      {
+        "attributable": true,
+        "line": 59,
+        "name": "searchArtists",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 70,
+        "name": "searchArtistsFuzzy",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 220,
+        "name": "fetchRecordingsJson",
+        "private": true
+      },
+      {
+        "attributable": false,
+        "line": 232,
+        "name": "searchRecordingsFuzzy",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 260,
+        "name": "lookupRelease",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 280,
+        "name": "lookupArtistWithRels",
+        "private": false
+      },
+      {
+        "attributable": true,
+        "line": 305,
+        "name": "browseReleaseGroupReleases",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 317,
+        "name": "lookupReleaseGroupWikiLinks",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 339,
+        "name": "lookupRecording",
+        "private": false
+      },
+      {
+        "attributable": true,
+        "line": 352,
+        "name": "browseReleaseGroups",
+        "private": false
+      }
+    ],
+    "arm_a_prime": [
+      {
+        "attributable": true,
+        "line": 23,
+        "name": "searchReleases",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 35,
+        "name": "searchReleasesFuzzy",
+        "private": false
+      },
+      {
+        "attributable": true,
+        "line": 59,
+        "name": "searchArtists",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 70,
+        "name": "searchArtistsFuzzy",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 97,
+        "name": "searchRecordings",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 132,
+        "name": "searchCanonicalRecordings",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 232,
+        "name": "searchRecordingsFuzzy",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 260,
+        "name": "lookupRelease",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 280,
+        "name": "lookupArtistWithRels",
+        "private": false
+      },
+      {
+        "attributable": true,
+        "line": 305,
+        "name": "browseReleaseGroupReleases",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 317,
+        "name": "lookupReleaseGroupWikiLinks",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 339,
+        "name": "lookupRecording",
+        "private": false
+      },
+      {
+        "attributable": true,
+        "line": 352,
+        "name": "browseReleaseGroups",
+        "private": false
+      }
+    ],
+    "arm_b": [
+      {
+        "attributable": true,
+        "callers": [
+          "browseReleaseGroups"
+        ],
+        "line": 450,
+        "name": "artistReleaseGroupBrowseUrl"
+      },
+      {
+        "attributable": true,
+        "callers": [
+          "searchArtists"
+        ],
+        "line": 443,
+        "name": "artistSearchUrl"
+      },
+      {
+        "attributable": true,
+        "callers": [
+          "browseReleaseGroupReleases"
+        ],
+        "line": 456,
+        "name": "releaseGroupReleaseBrowseUrl"
+      },
+      {
+        "attributable": true,
+        "callers": [
+          "searchReleases"
+        ],
+        "line": 439,
+        "name": "releaseSearchUrl"
+      }
+    ],
+    "builders": [
+      "artistReleaseGroupBrowseUrl",
+      "artistSearchUrl",
+      "releaseGroupReleaseBrowseUrl",
+      "releaseSearchUrl"
+    ],
+    "file": ".scratch-probe/13-enumerator-probe/pr348/musicmeta-core/src/main/kotlin/com/landofoz/musicmeta/provider/musicbrainz/MusicBrainzApi.kt",
+    "pins": [
+      {
+        "route": "artist search",
+        "url_expr": "artistSearchUrl(\"Radiohead\", limit = 5)"
+      },
+      {
+        "route": "release search",
+        "url_expr": "releaseSearchUrl(\"OK Computer\", \"Radiohead\", limit = 5)"
+      },
+      {
+        "route": "release group browse for artist",
+        "url_expr": "artistReleaseGroupBrowseUrl("
+      },
+      {
+        "route": "release browse for release group",
+        "url_expr": "releaseGroupReleaseBrowseUrl(\"5c14fd50-a2f1-3672-9537-b0dad91bea2f\")"
+      }
+    ],
+    "suspend_without_builder": [
+      "searchReleasesFuzzy",
+      "searchArtistsFuzzy",
+      "searchRecordings",
+      "searchCanonicalRecordings",
+      "searchRecordingsFuzzy",
+      "lookupRelease",
+      "lookupArtistWithRels",
+      "lookupReleaseGroupWikiLinks",
+      "lookupRecording"
+    ]
+  },
+  "wikidata": {
+    "arm_a": [
+      {
+        "attributable": true,
+        "line": 36,
+        "name": "getEntityProperties",
+        "private": false
+      }
+    ],
+    "arm_a_prime": [
+      {
+        "attributable": true,
+        "line": 36,
+        "name": "getEntityProperties",
+        "private": false
+      }
+    ],
+    "arm_b": [
+      {
+        "attributable": true,
+        "callers": [
+          "getEntityProperties"
+        ],
+        "line": 142,
+        "name": "entityPropertiesUrl"
+      }
+    ],
+    "builders": [
+      "buildCommonsUrl",
+      "entityPropertiesUrl"
+    ],
+    "file": ".scratch-probe/13-enumerator-probe/pr348/musicmeta-core/src/main/kotlin/com/landofoz/musicmeta/provider/wikidata/WikidataApi.kt",
+    "pins": [
+      {
+        "route": "entity properties",
+        "url_expr": "entityPropertiesUrl(\"Q44190\")"
+      }
+    ],
+    "suspend_without_builder": []
+  },
+  "wikipedia": {
+    "arm_a": [
+      {
+        "attributable": true,
+        "line": 29,
+        "name": "getPageExtract",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 62,
+        "name": "getPageMediaList",
+        "private": false
+      }
+    ],
+    "arm_a_prime": [
+      {
+        "attributable": true,
+        "line": 29,
+        "name": "getPageExtract",
+        "private": false
+      },
+      {
+        "attributable": false,
+        "line": 62,
+        "name": "getPageMediaList",
+        "private": false
+      }
+    ],
+    "arm_b": [
+      {
+        "attributable": true,
+        "callers": [
+          "getPageExtract"
+        ],
+        "line": 162,
+        "name": "pageExtractUrl"
+      }
+    ],
+    "builders": [
+      "pageExtractUrl",
+      "shippableUrl"
+    ],
+    "file": ".scratch-probe/13-enumerator-probe/pr348/musicmeta-core/src/main/kotlin/com/landofoz/musicmeta/provider/wikipedia/WikipediaApi.kt",
+    "pins": [
+      {
+        "route": "page extract",
+        "url_expr": "pageExtractUrl(\"Radiohead\")"
+      }
+    ],
+    "suspend_without_builder": [
+      "getPageMediaList"
+    ]
+  }
+}

@@ -1,0 +1,176 @@
+=== coverartarchive  (1 pins, 1 url builders)
+  builders: artworkMetadataUrl
+  ARM A:
+    public  getArtworkUrl:26  attributable=False
+    public  getGroupArtworkUrl:35  attributable=False
+    public  getArtworkMetadata:44  attributable=True
+  ARM A-prime (emergent):
+    getArtworkUrl:26  attributable=False
+    getGroupArtworkUrl:35  attributable=False
+    getArtworkMetadata:44  attributable=True
+  ARM B:
+    artworkMetadataUrl:80  pinned=True  callers=getArtworkMetadata
+  suspend fun with no builder call: getArtworkUrl, getGroupArtworkUrl
+=== deezer  (1 pins, 3 url builders)
+  builders: advancedTrackUrl, albumSearchUrl, plainTrackUrl
+  ARM A:
+    private fetchJson:373  attributable=False
+  ARM A-prime (emergent):
+    searchAlbums:27  attributable=True
+    searchArtist:62  attributable=False
+    getArtistAlbums:88  attributable=False
+    getAlbum:113  attributable=False
+    getAlbumTracks:123  attributable=False
+    getRelatedArtists:139  attributable=False
+    searchTrack:161  attributable=False
+    getArtistTop:303  attributable=False
+    getArtistRadio:323  attributable=False
+    getTrack:343  attributable=False
+  ARM B:
+    advancedTrackUrl:201  pinned=False  callers=searchTrack
+    albumSearchUrl:386  pinned=True  callers=searchAlbums
+    plainTrackUrl:196  pinned=False  callers=searchTrack
+  suspend fun with no builder call: searchArtist, getArtistAlbums, getAlbum, getAlbumTracks, getRelatedArtists, getArtistTop, getArtistRadio, getTrack
+=== discogs  (1 pins, 1 url builders)
+  builders: releaseSearchUrl
+  ARM A:
+    private fetch:91  attributable=False
+  ARM A-prime (emergent):
+    searchReleases:26  attributable=True
+    searchArtist:54  attributable=False
+    getArtist:70  attributable=False
+    getMasterVersions:77  attributable=False
+    getReleaseDetails:84  attributable=False
+  ARM B:
+    releaseSearchUrl:244  pinned=True  callers=searchReleases
+  suspend fun with no builder call: searchArtist, getArtist, getMasterVersions, getReleaseDetails
+=== fanarttv  (2 pins, 2 url builders)
+  builders: albumImagesUrl, artistImagesUrl
+  ARM A:
+    public  getAlbumImages:35  attributable=True
+    public  getArtistImages:45  attributable=True
+  ARM A-prime (emergent):
+    getAlbumImages:35  attributable=True
+    getArtistImages:45  attributable=True
+  ARM B:
+    albumImagesUrl:77  pinned=True  callers=getAlbumImages
+    artistImagesUrl:82  pinned=True  callers=getArtistImages
+  suspend fun with no builder call: -
+=== itunes  (1 pins, 1 url builders)
+  builders: albumSearchUrl
+  ARM A:
+    private fetchJson:145  attributable=False
+  ARM A-prime (emergent):
+    searchAlbums:25  attributable=True
+    lookupAlbumTracks:35  attributable=False
+    lookupArtistAlbums:54  attributable=False
+    lookupByUpc:85  attributable=False
+    searchArtist:111  attributable=False
+  ARM B:
+    albumSearchUrl:175  pinned=True  callers=searchAlbums
+  suspend fun with no builder call: lookupAlbumTracks, lookupArtistAlbums, lookupByUpc, searchArtist
+=== lastfm  (1 pins, 4 url builders)
+  builders: artistMethodUrl, buildAlbumUrl, buildTrackUrl, buildUrl
+  ARM A:
+    public  getArtistInfo:24  attributable=False
+    public  getSimilarArtists:30  attributable=False
+    public  getSimilarTracks:37  attributable=False
+    public  getArtistTopTracks:44  attributable=False
+    public  getAlbumInfo:51  attributable=False
+    public  getTrackInfo:57  attributable=False
+  ARM A-prime (emergent):
+    getArtistInfo:24  attributable=False
+    getSimilarArtists:30  attributable=False
+    getSimilarTracks:37  attributable=False
+    getArtistTopTracks:44  attributable=False
+    getAlbumInfo:51  attributable=False
+    getTrackInfo:57  attributable=False
+  ARM B:
+    buildAlbumUrl:63  pinned=False  callers=getAlbumInfo
+    buildTrackUrl:70  pinned=False  callers=getSimilarTracks,getTrackInfo
+    buildUrl:77  pinned=False  callers=getArtistInfo,getArtistTopTracks,getSimilarArtists
+  suspend fun with no builder call: -
+=== listenbrainz  (2 pins, 2 url builders)
+  builders: similarArtistsUrl, topRecordingsUrl
+  ARM A:
+    public  getTopRecordingsForArtist:25  attributable=True
+    public  getRecordingPopularity:34  attributable=False
+    public  getArtistPopularity:44  attributable=False
+    public  getTopReleaseGroupsForArtist:54  attributable=False
+    public  getSimilarArtists:139  attributable=True
+    public  getRadio:180  attributable=False
+  ARM A-prime (emergent):
+    getTopRecordingsForArtist:25  attributable=True
+    getRecordingPopularity:34  attributable=False
+    getArtistPopularity:44  attributable=False
+    getTopReleaseGroupsForArtist:54  attributable=False
+    getSimilarArtists:139  attributable=True
+    getRadio:180  attributable=False
+  ARM B:
+    similarArtistsUrl:299  pinned=True  callers=getSimilarArtists
+    topRecordingsUrl:292  pinned=True  callers=getTopRecordingsForArtist
+  suspend fun with no builder call: getRecordingPopularity, getArtistPopularity, getTopReleaseGroupsForArtist, getRadio
+=== lrclib  (1 pins, 1 url builders)
+  builders: lyricsSearchUrl
+  ARM A:
+    public  getLyrics:24  attributable=False
+    public  searchLyrics:45  attributable=True
+  ARM A-prime (emergent):
+    getLyrics:24  attributable=False
+    searchLyrics:45  attributable=True
+  ARM B:
+    lyricsSearchUrl:72  pinned=True  callers=searchLyrics
+  suspend fun with no builder call: getLyrics
+=== musicbrainz  (2 pins, 2 url builders)
+  builders: artistSearchUrl, releaseSearchUrl
+  ARM A:
+    public  searchReleases:23  attributable=True
+    public  searchReleasesFuzzy:35  attributable=False
+    public  searchArtists:59  attributable=True
+    public  searchArtistsFuzzy:70  attributable=False
+    private fetchRecordingsJson:220  attributable=False
+    public  searchRecordingsFuzzy:232  attributable=False
+    public  lookupRelease:260  attributable=False
+    public  lookupArtistWithRels:280  attributable=False
+    public  browseReleaseGroupReleases:305  attributable=False
+    public  lookupReleaseGroupWikiLinks:320  attributable=False
+    public  lookupRecording:342  attributable=False
+    public  browseReleaseGroups:355  attributable=False
+  ARM A-prime (emergent):
+    searchReleases:23  attributable=True
+    searchReleasesFuzzy:35  attributable=False
+    searchArtists:59  attributable=True
+    searchArtistsFuzzy:70  attributable=False
+    searchRecordings:97  attributable=False
+    searchCanonicalRecordings:132  attributable=False
+    searchRecordingsFuzzy:232  attributable=False
+    lookupRelease:260  attributable=False
+    lookupArtistWithRels:280  attributable=False
+    browseReleaseGroupReleases:305  attributable=False
+    lookupReleaseGroupWikiLinks:320  attributable=False
+    lookupRecording:342  attributable=False
+    browseReleaseGroups:355  attributable=False
+  ARM B:
+    artistSearchUrl:450  pinned=True  callers=searchArtists
+    releaseSearchUrl:446  pinned=True  callers=searchReleases
+  suspend fun with no builder call: searchReleasesFuzzy, searchArtistsFuzzy, searchRecordings, searchCanonicalRecordings, searchRecordingsFuzzy, lookupRelease, lookupArtistWithRels, browseReleaseGroupReleases, lookupReleaseGroupWikiLinks, lookupRecording, browseReleaseGroups
+=== wikidata  (1 pins, 2 url builders)
+  builders: buildCommonsUrl, entityPropertiesUrl
+  ARM A:
+    public  getEntityProperties:36  attributable=True
+  ARM A-prime (emergent):
+    getEntityProperties:36  attributable=True
+  ARM B:
+    entityPropertiesUrl:142  pinned=True  callers=getEntityProperties
+  suspend fun with no builder call: -
+=== wikipedia  (1 pins, 2 url builders)
+  builders: pageExtractUrl, shippableUrl
+  ARM A:
+    public  getPageExtract:29  attributable=True
+    public  getPageMediaList:62  attributable=False
+  ARM A-prime (emergent):
+    getPageExtract:29  attributable=True
+    getPageMediaList:62  attributable=False
+  ARM B:
+    pageExtractUrl:162  pinned=True  callers=getPageExtract
+  suspend fun with no builder call: getPageMediaList
