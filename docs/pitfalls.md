@@ -807,6 +807,21 @@ encoded the same wrong nesting, so the tests agreed with the code and both were 
 whose comment says it has no ground truth is not evidence about an upstream; it is a restatement of
 the parse under it.
 
+## 32. A provider's scale is argued from the merger's arithmetic, so changing the merger silently retires the argument
+
+`ListenBrainzMapper` halves every Labs similar-artist score, and the KDoc justifying the halving
+argued it from a mechanism one layer away: `SimilarArtistMerger` clamped its sums to 1.0, so a
+hundred full-scale Labs rows would saturate the clamp and flatten the merged order. When the clamp
+became a rescale against the merged maximum, that sentence became false while the `0.5` it defended
+stayed right — for a different reason, that a lone Labs row must not outsum two providers agreeing.
+Nothing failed. `apiCheck` sees no signature move, the mapper's own tests assert the halved number
+and not the reason for it, and the merger's tests never read the mapper.
+
+The shape to watch: a provider's constant is only ever defensible against what the merge does with
+it, so a merge-side change makes every such constant's stated argument suspect even where the
+constant survives. Grep the merger's own vocabulary out of `provider/` before changing it, and
+re-derive each justification you find rather than checking that the number still looks reasonable.
+
 ## Area — Transport and provider state
 
 ## 11. A retry ladder's coverage is not its trigger

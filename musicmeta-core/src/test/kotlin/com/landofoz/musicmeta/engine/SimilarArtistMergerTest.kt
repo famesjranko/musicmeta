@@ -29,7 +29,7 @@ class SimilarArtistMergerTest {
     }
 
     @Test
-    fun `merge returns single provider results unchanged`() {
+    fun `merge returns every artist from a single provider result`() {
         // Given - lastfm returns 3 artists
         val artists = listOf(
             SimilarArtist("Muse", matchScore = 0.9f, sources = listOf("lastfm")),
@@ -87,12 +87,13 @@ class SimilarArtistMergerTest {
     }
 
     @Test
-    fun `merge sums matchScores capped at 1_0`() {
-        // Given - "Muse" appears in both providers with scores 0.9 and 0.8
+    fun `merge rescales summed matchScores against the merged maximum`() {
+        // Given - "Muse" in both providers summing to 1.7, and "Bjork" alone at half that sum
         val lastfmResult = EnrichmentResult.Success(
             type = EnrichmentType.SIMILAR_ARTISTS,
             data = EnrichmentData.SimilarArtists(artists = listOf(
                 SimilarArtist("Muse", matchScore = 0.9f, sources = listOf("lastfm")),
+                SimilarArtist("Bjork", matchScore = 0.85f, sources = listOf("lastfm")),
             )),
             provider = "lastfm",
             confidence = 0.9f,
@@ -109,10 +110,81 @@ class SimilarArtistMergerTest {
         // When - merging the results with the duplicate "Muse" entries
         val result = SimilarArtistMerger.merge(listOf(lastfmResult, deezerResult))
 
-        // Then - matchScore = min(0.9 + 0.8, 1.0) = 1.0, not 1.7
+        // Then - the 1.7 sum becomes 1.0 and Bjork keeps its 0.85/1.7 share instead of being flattened
         assertTrue(result is EnrichmentResult.Success)
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.SimilarArtists
-        assertEquals(1.0f, data.artists[0].matchScore, 0.001f)
+        assertEquals(listOf("Muse", "Bjork"), data.artists.map { it.name })
+        assertEquals(1.0f, data.artists[0].matchScore, 0.0001f)
+        assertEquals(0.5f, data.artists[1].matchScore, 0.0001f)
+    }
+
+    @Test
+    fun `two artists whose sums both exceed 1_0 keep distinct scores`() {
+        // Given - two artists both picked by two providers, summing to 1.7 and 1.6
+        val lastfmResult = EnrichmentResult.Success(
+            type = EnrichmentType.SIMILAR_ARTISTS,
+            data = EnrichmentData.SimilarArtists(artists = listOf(
+                SimilarArtist("Muse", matchScore = 0.9f, sources = listOf("lastfm")),
+                SimilarArtist("Bjork", matchScore = 0.9f, sources = listOf("lastfm")),
+            )),
+            provider = "lastfm",
+            confidence = 0.9f,
+        )
+        val deezerResult = EnrichmentResult.Success(
+            type = EnrichmentType.SIMILAR_ARTISTS,
+            data = EnrichmentData.SimilarArtists(artists = listOf(
+                SimilarArtist("Muse", matchScore = 0.8f, sources = listOf("deezer")),
+                SimilarArtist("Bjork", matchScore = 0.7f, sources = listOf("deezer")),
+            )),
+            provider = "deezer",
+            confidence = 0.8f,
+        )
+
+        // When - merging the two providers' answers
+        val result = SimilarArtistMerger.merge(listOf(lastfmResult, deezerResult))
+
+        // Then - the stronger sum ranks first and the weaker one does not tie with it
+        val data = (result as EnrichmentResult.Success).data as EnrichmentData.SimilarArtists
+        assertEquals(listOf("Muse", "Bjork"), data.artists.map { it.name })
+        assertEquals(1.0f, data.artists[0].matchScore, 0.0001f)
+        assertEquals(1.6f / 1.7f, data.artists[1].matchScore, 0.0001f)
+    }
+
+    @Test
+    fun `an all-zero merged list stays at zero rather than dividing by its own maximum`() {
+        // Given - every contributor's entries score zero, so the merged maximum is zero
+        val artists = listOf(
+            SimilarArtist("Muse", matchScore = 0f, sources = listOf("lastfm")),
+            SimilarArtist("Portishead", matchScore = 0f, sources = listOf("deezer")),
+        )
+
+        // When - merging the all-zero list
+        val merged = SimilarArtistMerger.mergeArtists(artists)
+
+        // Then - both scores are still zero, and none is NaN or infinite
+        assertEquals(2, merged.size)
+        assertTrue(merged.all { it.matchScore.isFinite() })
+        assertEquals(0f, merged[0].matchScore, 0.0f)
+        assertEquals(0f, merged[1].matchScore, 0.0f)
+    }
+
+    @Test
+    fun `a single contributor's order survives the rescale`() {
+        // Given - one provider's three artists, none of them at 1.0
+        val artists = listOf(
+            SimilarArtist("Muse", matchScore = 0.87f, sources = listOf("lastfm")),
+            SimilarArtist("Bjork", matchScore = 0.435f, sources = listOf("lastfm")),
+            SimilarArtist("Portishead", matchScore = 0.087f, sources = listOf("lastfm")),
+        )
+
+        // When - merging that single contributor's list
+        val merged = SimilarArtistMerger.mergeArtists(artists)
+
+        // Then - the provider's order is kept while every score is rescaled onto a 1.0 top
+        assertEquals(listOf("Muse", "Bjork", "Portishead"), merged.map { it.name })
+        assertEquals(1.0f, merged[0].matchScore, 0.0001f)
+        assertEquals(0.5f, merged[1].matchScore, 0.0001f)
+        assertEquals(0.1f, merged[2].matchScore, 0.0001f)
     }
 
     @Test
@@ -216,10 +288,12 @@ class SimilarArtistMergerTest {
         // When - merging the three single-artist provider results
         val result = SimilarArtistMerger.merge(listOf(lastfmResult, deezerResult, lbResult))
 
-        // Then - sorted by matchScore descending
+        // Then - sorted by matchScore descending, each score rescaled against the 0.9 top
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.SimilarArtists
-        val scores = data.artists.map { it.matchScore }
-        assertEquals(listOf(0.9f, 0.75f, 0.6f), scores)
+        assertEquals(listOf("Portishead", "Thom Yorke", "Bjork"), data.artists.map { it.name })
+        assertEquals(1.0f, data.artists[0].matchScore, 0.0001f)
+        assertEquals(0.75f / 0.9f, data.artists[1].matchScore, 0.0001f)
+        assertEquals(0.6f / 0.9f, data.artists[2].matchScore, 0.0001f)
     }
 
     @Test
@@ -274,9 +348,9 @@ class SimilarArtistMergerTest {
         // When - the three providers' answers are merged
         val merged = SimilarArtistMerger.mergeArtists(corroborated + listenBrainz)
 
-        // Then - two providers agreeing outrank one provider's favourite, which no cap has flattened
+        // Then - two providers agreeing outrank one provider's favourite, at 0.9 and 0.5 rescaled by the 0.9 top
         assertEquals("Portishead", merged.first().name)
-        assertEquals(0.9f, merged.first().matchScore, 0.0001f)
-        assertEquals(0.5f, merged.first { it.name == "Massive Attack" }.matchScore, 0.0001f)
+        assertEquals(1.0f, merged.first().matchScore, 0.0001f)
+        assertEquals(0.5f / 0.9f, merged.first { it.name == "Massive Attack" }.matchScore, 0.0001f)
     }
 }

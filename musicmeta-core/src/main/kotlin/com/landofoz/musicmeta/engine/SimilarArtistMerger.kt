@@ -9,6 +9,10 @@ import com.landofoz.musicmeta.SimilarArtist
 /**
  * Deduplicates and merges similar artist results from multiple providers.
  * Additive scoring: artists recommended by multiple providers rank higher.
+ *
+ * The summed scores are rescaled against the merged list's own maximum rather than clamped, so a
+ * [SimilarArtist.matchScore] is a position within one merged list and nothing else — it is not
+ * comparable against another list's, nor against the figure a provider reported.
  */
 internal object SimilarArtistMerger : ResultMerger {
 
@@ -16,8 +20,9 @@ internal object SimilarArtistMerger : ResultMerger {
 
     /**
      * Merges multiple successful provider results for SIMILAR_ARTISTS into a single result.
-     * Collects all SimilarArtist entries, deduplicates by normalized name, sums matchScores
-     * (capped at 1.0), merges sources and identifiers, and sorts by matchScore descending.
+     * Collects all SimilarArtist entries, deduplicates by normalized name, sums matchScores and
+     * rescales them against the merged maximum, merges sources and identifiers, and sorts by
+     * matchScore descending.
      * Returns NotFound if results is empty; returns the first result as-is if no artists present.
      */
     override fun merge(results: List<EnrichmentResult.Success>): EnrichmentResult {
@@ -45,7 +50,9 @@ internal object SimilarArtistMerger : ResultMerger {
      * Merges a list of similar artists from multiple providers.
      *
      * - Deduplicates by normalized name (lowercase trim)
-     * - Sums matchScores across providers (capped at 1.0)
+     * - Sums matchScores across providers, then divides every sum by the largest of them, so the
+     *   top entry is 1.0 and the spacing below it survives. A list whose maximum is not positive
+     *   is left as it is.
      * - Merges sources lists
      * - Merges identifiers: prefers MBID when available, combines extra maps
      * - Returns results sorted by matchScore descending
@@ -59,23 +66,27 @@ internal object SimilarArtistMerger : ResultMerger {
             grouped.getOrPut(key) { mutableListOf() }.add(artist)
         }
 
-        return grouped.values
-            .map { group ->
-                val first = group.first()
-                val totalScore = group
-                    .map { it.matchScore }
-                    .fold(0f) { acc, s -> acc + s }
-                    .coerceAtMost(1.0f)
-                val allSources = group.flatMap { it.sources }.distinct()
-                val mergedIdentifiers = ResultMerger.mergeIdentifiers(group.map { it.identifiers })
+        val summed = grouped.values.map { group ->
+            val first = group.first()
+            val totalScore = group
+                .map { it.matchScore }
+                .fold(0f) { acc, s -> acc + s }
+            val allSources = group.flatMap { it.sources }.distinct()
+            val mergedIdentifiers = ResultMerger.mergeIdentifiers(group.map { it.identifiers })
 
-                SimilarArtist(
-                    name = first.name,
-                    identifiers = mergedIdentifiers,
-                    matchScore = totalScore,
-                    sources = allSources,
-                )
-            }
+            SimilarArtist(
+                name = first.name,
+                identifiers = mergedIdentifiers,
+                matchScore = totalScore,
+                sources = allSources,
+            )
+        }
+
+        // A list whose maximum is not positive has no scale to divide by, so it passes through
+        // untouched — every contributor scoring zero must stay at zero, not become NaN.
+        val scale = summed.maxOfOrNull { it.matchScore }?.takeIf { it > 0f } ?: 1f
+        return summed
+            .map { it.copy(matchScore = it.matchScore / scale) }
             .sortedByDescending { it.matchScore }
     }
 

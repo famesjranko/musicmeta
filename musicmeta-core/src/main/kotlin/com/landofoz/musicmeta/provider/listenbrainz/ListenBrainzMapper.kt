@@ -92,10 +92,10 @@ internal object ListenBrainzMapper {
      * The upstream score is an unbounded session count with no ceiling to divide by, so it is
      * scaled against the highest score in the same answer and then halved. **The contract the
      * halving keeps: nothing from this provider alone reaches the top of a merged list.**
-     * `SimilarArtistMerger` sums `matchScore` across providers and caps the sum at 1.0, and this
-     * provider answers with up to a hundred rows against Last.fm's twenty — left at full scale its
-     * top rows saturate the cap, every entry ties at 1.0 and the merged order becomes arbitrary.
-     * At half scale a Labs row still lifts an artist another provider also chose, and can no longer
+     * `SimilarArtistMerger` sums `matchScore` across providers, and this provider answers with up
+     * to a hundred rows against Last.fm's twenty — left at full scale a row this provider alone
+     * chose would sum above two providers that agree on an artist neither ranked first. At half
+     * scale a Labs row still lifts an artist another provider also chose, and can no longer
      * outrank two providers that agree.
      *
      * A score is therefore comparable only within one answer: not against another answer's, and not
