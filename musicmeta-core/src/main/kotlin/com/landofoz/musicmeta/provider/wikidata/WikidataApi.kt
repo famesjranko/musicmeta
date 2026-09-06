@@ -28,22 +28,37 @@ internal class WikidataApi(
      * `param-invalid` — at HTTP 200, so [bodyOrThrowTransient] never sees it. `wbgetentities`
      * returns the full claims set for the entity in one call, no property-list encoding needed.
      *
-     * Response shape: claims live under `entities.<id>.claims`. A missing or invalid id comes
-     * back as either `entities.<id>` with no `claims` key (bare "missing" marker) or a top-level
-     * `error` key with no `entities` key at all — both fall through the `optJSONObject` chain
-     * below to `null`, same as an empty claims object.
+     * Response shape: claims live under `entities.<id>.claims`, and an entity Wikidata holds no
+     * statements for still carries a `claims` object — an empty one. So a *present* entity with no
+     * `claims` key is the payload having changed shape, not an artist with nothing recorded, which
+     * is the pair [WikidataProperties.UnreadableShape] and [WikidataProperties.NoClaims].
+     *
+     * An id Wikidata does not hold comes back as `entities.<id>` carrying a `missing` marker, or
+     * keyed under the target id when the requested one is now a redirect: both are
+     * [WikidataProperties.NoEntity].
+     *
+     * A top-level `error` key is [WikidataProperties.UnreadableShape] too. It is how this route
+     * rejects a *request* — `param-invalid` is the shape that regressed the old `wbgetclaims` call
+     * — and it arrives at HTTP 200, so nothing else in the stack can see it.
+     *
+     * No body at all is [WikidataProperties.UnreadableShape] for the same reason:
+     * [bodyOrThrowTransient] hands back `null` for a 4xx, and this route answers an id it does not
+     * hold at 200 (§31). A 4xx here is a statement about the *request* — a parameter this route
+     * stopped accepting — so reading any of these as "this entity has no properties" would blank
+     * `ARTIST_PHOTO`, `COUNTRY` and `ARTIST_LINKS` while reporting the provider healthy.
      */
     suspend fun getEntityProperties(
         wikidataId: String,
         imageSize: Int = DEFAULT_IMAGE_SIZE,
-    ): WikidataEntityProperties? = rateLimiter.execute {
+    ): WikidataProperties = rateLimiter.execute {
         val json = httpClient.fetchJsonResult(entityPropertiesUrl(wikidataId)).bodyOrThrowTransient()
-            ?: return@execute null
-        val claims = json.optJSONObject("entities")
-            ?.optJSONObject(wikidataId)
-            ?.optJSONObject("claims")
-            ?: return@execute null
-        parseEntityProperties(claims, imageSize)
+            ?: return@execute WikidataProperties.UnreadableShape
+        if (json.has("error")) return@execute WikidataProperties.UnreadableShape
+        val entity = json.optJSONObject("entities")?.optJSONObject(wikidataId)
+        if (entity == null || entity.has("missing")) return@execute WikidataProperties.NoEntity
+        val claims = entity.optJSONObject("claims") ?: return@execute WikidataProperties.UnreadableShape
+        val properties = parseEntityProperties(claims, imageSize)
+        if (properties == NO_PROPERTIES) WikidataProperties.NoClaims else WikidataProperties.Claims(properties)
     }
 
     /**
@@ -167,6 +182,13 @@ internal class WikidataApi(
     }
 
     companion object {
+        /**
+         * What a `claims` object holding nothing this mapper reads parses to. Compared by value
+         * rather than field by field, so a property added to [WikidataEntityProperties] is counted
+         * without anyone remembering to count it.
+         */
+        private val NO_PROPERTIES = WikidataEntityProperties(null, null, null, null, null)
+
         const val BASE_URL = "https://www.wikidata.org/w/api.php"
         const val COMMONS_BASE_URL = "https://commons.wikimedia.org/wiki/Special:FilePath"
 

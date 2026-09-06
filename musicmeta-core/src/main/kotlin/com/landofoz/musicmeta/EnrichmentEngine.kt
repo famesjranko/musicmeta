@@ -290,6 +290,17 @@ public interface EnrichmentEngine {
          */
         private var defaultProvidersUserAgent: String? = null
         private var logger: EnrichmentLogger = EnrichmentLogger.NoOp
+
+        /**
+         * A view of [logger], not its value: [withDefaultProviders] hands this to the providers
+         * that log, and a consumer may call [logger] after it. Reading the field per call is what
+         * makes the two builder methods order-independent.
+         */
+        private val loggerView: EnrichmentLogger = object : EnrichmentLogger {
+            override fun debug(tag: String, message: String) = logger.debug(tag, message)
+            override fun warn(tag: String, message: String, throwable: Throwable?) =
+                logger.warn(tag, message, throwable)
+        }
         private var apiKeyConfig: ApiKeyConfig? = null
         private val mergers = DEFAULT_MERGERS.toMutableList()
         private val synthesizers = DEFAULT_SYNTHESIZERS.toMutableList()
@@ -366,11 +377,11 @@ public interface EnrichmentEngine {
             // Always-available providers (no API key needed)
             addProvider(MusicBrainzProvider(client, musicBrainzLimiter))
             addProvider(CoverArtArchiveProvider(client, coverArtArchiveLimiter))
-            addProvider(WikidataProvider(client, wikidataLimiter))
+            addProvider(WikidataProvider(client, wikidataLimiter, WikidataProvider.DEFAULT_IMAGE_SIZE, loggerView))
             // Wikipedia reaches two hosts: its own, and Wikidata for the sitelink that resolves an
             // article title. `wikidataLimiter` is the same instance WikidataProvider holds, so the
             // two providers queue on one limiter for the one host, per the rule above.
-            addProvider(WikipediaProvider(client, wikipediaLimiter, wikidataLimiter))
+            addProvider(WikipediaProvider(client, wikipediaLimiter, wikidataLimiter, loggerView))
             // One DeezerApi for both providers: it owns the call-scoped album scope, so sharing it
             // is what makes the album search they both need one request per call rather than two.
             val deezerApi = DeezerApi(client, deezerLimiter)

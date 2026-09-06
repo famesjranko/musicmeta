@@ -2415,7 +2415,6 @@ public final class com/landofoz/musicmeta/provider/coverartarchive/CoverArtArchi
 }
 
 public final class com/landofoz/musicmeta/provider/deezer/DeezerProvider : com/landofoz/musicmeta/EnrichmentProvider {
-	public static final field SEARCH_SCORE F
 	public fun <init> (Lcom/landofoz/musicmeta/http/HttpClient;Lcom/landofoz/musicmeta/http/RateLimiter;I)V
 	public synthetic fun <init> (Lcom/landofoz/musicmeta/http/HttpClient;Lcom/landofoz/musicmeta/http/RateLimiter;IILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun enrich (Lcom/landofoz/musicmeta/EnrichmentRequest;Lcom/landofoz/musicmeta/EnrichmentType;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
@@ -2511,8 +2510,6 @@ public final class com/landofoz/musicmeta/provider/lastfm/LastFmProvider : com/l
 }
 
 public final class com/landofoz/musicmeta/provider/listenbrainz/ListenBrainzProvider : com/landofoz/musicmeta/EnrichmentProvider {
-	public static final field FALLBACK_PRIORITY I
-	public static final field PRIORITY I
 	public fun <init> (Lcom/landofoz/musicmeta/http/HttpClient;Lcom/landofoz/musicmeta/http/RateLimiter;Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentConfig;)V
 	public synthetic fun <init> (Lcom/landofoz/musicmeta/http/HttpClient;Lcom/landofoz/musicmeta/http/RateLimiter;Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentConfig;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun enrich (Lcom/landofoz/musicmeta/EnrichmentRequest;Lcom/landofoz/musicmeta/EnrichmentType;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
@@ -2582,8 +2579,6 @@ public final class com/landofoz/musicmeta/provider/wikidata/WikidataProvider$Com
 }
 
 public final class com/landofoz/musicmeta/provider/wikipedia/WikipediaProvider : com/landofoz/musicmeta/EnrichmentProvider {
-	public static final field TAG Ljava/lang/String;
-	public static final field WIKIDATA_API Ljava/lang/String;
 	public fun <init> (Lcom/landofoz/musicmeta/http/HttpClient;Lcom/landofoz/musicmeta/http/RateLimiter;Lcom/landofoz/musicmeta/http/RateLimiter;Lcom/landofoz/musicmeta/EnrichmentLogger;)V
 	public synthetic fun <init> (Lcom/landofoz/musicmeta/http/HttpClient;Lcom/landofoz/musicmeta/http/RateLimiter;Lcom/landofoz/musicmeta/http/RateLimiter;Lcom/landofoz/musicmeta/EnrichmentLogger;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun enrich (Lcom/landofoz/musicmeta/EnrichmentRequest;Lcom/landofoz/musicmeta/EnrichmentType;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;

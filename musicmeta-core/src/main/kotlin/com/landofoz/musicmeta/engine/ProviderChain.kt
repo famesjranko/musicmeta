@@ -357,6 +357,6 @@ internal class ProviderChain(
     fun providers(): List<EnrichmentProvider> = providers
 
     private companion object {
-        const val TAG = "ProviderChain"
+        private const val TAG = "ProviderChain"
     }
 }

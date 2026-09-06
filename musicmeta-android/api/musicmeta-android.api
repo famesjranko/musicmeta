@@ -96,7 +96,6 @@ public final class com/landofoz/musicmeta/android/cache/NegativeCacheEntity {
 }
 
 public final class com/landofoz/musicmeta/android/cache/RoomEnrichmentCache : com/landofoz/musicmeta/EnrichmentCache {
-	public static final field TAG Ljava/lang/String;
 	public fun <init> (Lcom/landofoz/musicmeta/android/cache/EnrichmentCacheDao;Lcom/landofoz/musicmeta/android/cache/NegativeCacheDao;Lcom/landofoz/musicmeta/android/cache/SelectionDao;Lkotlin/jvm/functions/Function0;Lcom/landofoz/musicmeta/EnrichmentLogger;)V
 	public synthetic fun <init> (Lcom/landofoz/musicmeta/android/cache/EnrichmentCacheDao;Lcom/landofoz/musicmeta/android/cache/NegativeCacheDao;Lcom/landofoz/musicmeta/android/cache/SelectionDao;Lkotlin/jvm/functions/Function0;Lcom/landofoz/musicmeta/EnrichmentLogger;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun clear (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;

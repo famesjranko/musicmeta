@@ -96,6 +96,11 @@ mypy
 step "conventions"
 python3 scripts/checks/check_conventions.py
 
+step "private companion constants"
+# apiCheck freezes a leaked constant rather than objecting to it, so without this the dump grows a
+# field nobody meant to publish and only a later deletion — a break — reveals it.
+python3 scripts/checks/check_private_companion_consts.py
+
 step "pitfall citations"
 python3 scripts/checks/check_pitfall_citations.py
 
