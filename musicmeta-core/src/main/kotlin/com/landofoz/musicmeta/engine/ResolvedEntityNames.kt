@@ -1,10 +1,17 @@
 package com.landofoz.musicmeta.engine
 
+import com.landofoz.musicmeta.EnrichmentConfig
 import com.landofoz.musicmeta.EnrichmentRequest
+import com.landofoz.musicmeta.http.enrichDeadlineRemainingMs
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeout
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.coroutines.AbstractCoroutineContextElement
 import kotlin.coroutines.CoroutineContext
@@ -25,7 +32,10 @@ internal data class EntityNames(val title: String?, val artist: String?)
  * entity named this call is the one the request was resolved to; the later types' entities are
  * byproducts of it.
  */
-internal class ResolvedEntityNames : AbstractCoroutineContextElement(Key) {
+internal class ResolvedEntityNames(
+    private val lookupScope: CoroutineScope,
+    private val lookupBudgetMs: Long = EnrichmentConfig.DEFAULT_ENRICH_TIMEOUT_MS,
+) : AbstractCoroutineContextElement(Key) {
 
     private val names = AtomicReference<EntityNames?>(null)
 
@@ -65,22 +75,54 @@ internal class ResolvedEntityNames : AbstractCoroutineContextElement(Key) {
     suspend fun aliases(): List<AlternativeName> {
         resolvedAliases.get()?.let { return it }
         val source = aliasSource.get() ?: return emptyList()
-        return aliasLock.withLock {
-            resolvedAliases.get() ?: run {
-                val pool = try {
-                    source()
-                } catch (e: Exception) {
-                    currentCoroutineContext().ensureActive()
-                    emptyList()
-                }
-                resolvedAliases.set(pool)
-                pool
-            }
+        val lookup = aliasLock.withLock {
+            resolvedAliases.get()?.let { return it }
+            aliasLookup.get() ?: sharedLookup(source).also { aliasLookup.set(it) }
         }
+        return try {
+            lookup.await()
+        } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
+            emptyList()
+        }
+    }
+
+    /**
+     * The one in-flight resolution of [source], run on [lookupScope] rather than on the reader that
+     * opened it: the readers are the whole fan-out and do not share a fate, so a provider's own
+     * `withTimeout` must not take the lookup the others are waiting on down with it. Only the job is
+     * replaced: the lookup keeps the opening reader's dispatcher and deadline, so it runs on the
+     * fan-out's threads, not on the scope's own dispatcher.
+     */
+    // SwallowedException: every failure is the empty pool, per [aliases]; nothing else reads it.
+    @Suppress("SwallowedException")
+    private suspend fun sharedLookup(
+        source: suspend () -> List<AlternativeName>,
+    ): Deferred<List<AlternativeName>> {
+        val budgetMs = enrichDeadlineRemainingMs() ?: lookupBudgetMs
+        return lookupScope.async(currentCoroutineContext().minusKey(Job)) {
+            val pool = try {
+                withTimeout(budgetMs) { source() }
+            } catch (e: Exception) {
+                emptyList()
+            }
+            resolvedAliases.set(pool)
+            pool
+        }
+    }
+
+    /**
+     * Abandons a lookup still in flight, for the call that installed this to run as it returns.
+     * Without it a source slower than the call outlives it on [lookupScope], holding whatever
+     * rate-limiter permit it took into the next call.
+     */
+    fun cancelPendingLookup() {
+        aliasLookup.get()?.cancel()
     }
 
     private val aliasSource = AtomicReference<(suspend () -> List<AlternativeName>)?>(null)
     private val resolvedAliases = AtomicReference<List<AlternativeName>?>(null)
+    private val aliasLookup = AtomicReference<Deferred<List<AlternativeName>>?>(null)
     private val aliasLock = Mutex()
 
     internal companion object Key : CoroutineContext.Key<ResolvedEntityNames>

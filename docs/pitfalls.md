@@ -308,6 +308,21 @@ waits, at most, for a few non-suspending lines to finish, never for a suspending
 Re-check that holds before ever adding a suspending call back to that critical section, or a
 same-dispatcher `runBlocking` caller can wedge forever with no thread left to resume the holder.
 
+`ResolvedEntityNames.aliasLock` was the second site, and it is worth knowing what it did and did not
+cost, because the two are easy to confuse. Probed under `AliasLockConcurrencyTest` it never
+deadlocked — a waiter on `Mutex.lock()` suspends without holding a thread, so even five readers on a
+`limitedParallelism(1)` dispatcher leave the holder a thread to finish on, and a consumer client
+that blocks one or bridges it with `runBlocking` still completes. What it did cost is the other half
+of the same rule: the lock held the *right to run* the lookup rather than its result, so a reader
+cancelled mid-lookup by a provider's own `withTimeout` unwound `withLock` and left the next waiter to
+start the same network call again, in series. The lock now guards only installing a shared
+`Deferred`, run on the engine's `detachedScope` and abandoned when the call's context comes down.
+Its `withTimeout(enrichDeadlineRemainingMs())` is a coroutine deadline and so cannot reach a thread
+already blocked in socket I/O (§26); what actually bounds the lookup is that the detached context
+still carries the call's `EnrichDeadline`, which `DefaultHttpClient` reads per leg. Both fixes are
+the same move — get the suspension point out from under the lock — and the starvation shape is only
+the louder of its two failures.
+
 ## 26. Cancellation cannot reach a thread blocked in socket I/O — the deadline must ride the socket
 
 `withTimeoutOrNull(enrichTimeoutMs)` cancels the coroutine; the thread under it stays blocked in
@@ -1048,6 +1063,13 @@ recovers between two readers is no longer visible to the second**: it inherits t
 where it would once have found its own `Success`. That trade is the fix, not an oversight in it —
 it is what buys the collapse — but it is a real behaviour change and a memo whose readers can
 genuinely disagree about a flapping endpoint should not take it.
+
+Holding the failure is only half of it, and `ResolvedEntityNames.aliases()` shipped the other half
+still open. A memo that starts the fetch under its lock shares the right to run it, not the run: a
+reader cancelled while it holds the lock — a provider's own `withTimeout`, not the engine's deadline
+— leaves the waiters behind it to start the same call over, once each and in series. Share the
+in-flight work itself, as a `Deferred` installed under the lock and awaited outside it, or a hung
+endpoint is charged per reader however carefully its failures are held.
 
 ## 27. A raw reserved character in a URL works on one client and cannot be sent on the other
 
