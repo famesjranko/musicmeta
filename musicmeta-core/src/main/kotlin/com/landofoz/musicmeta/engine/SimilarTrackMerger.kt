@@ -45,13 +45,7 @@ internal object SimilarTrackMerger : ResultMerger {
     internal fun mergeTracks(tracks: List<SimilarTrack>): List<SimilarTrack> {
         if (tracks.isEmpty()) return emptyList()
 
-        val grouped = LinkedHashMap<String, MutableList<SimilarTrack>>()
-        for (track in tracks) {
-            val key = normalize(track.title, track.artist)
-            grouped.getOrPut(key) { mutableListOf() }.add(track)
-        }
-
-        return grouped.values
+        return groupTracks(tracks)
             .map { group ->
                 val first = group.first()
                 val genuineEntry = group.firstOrNull { GENUINE_SOURCE in it.sources }
@@ -71,6 +65,15 @@ internal object SimilarTrackMerger : ResultMerger {
                 )
             }
             .sortedByDescending { it.matchScore }
+    }
+
+    /** The entries of [tracks] that are one recording, grouped in first-occurrence order. */
+    internal fun groupTracks(tracks: List<SimilarTrack>): List<List<SimilarTrack>> {
+        val grouped = LinkedHashMap<String, MutableList<SimilarTrack>>()
+        for (track in tracks) {
+            grouped.getOrPut(normalize(track.title, track.artist)) { mutableListOf() }.add(track)
+        }
+        return grouped.values.toList()
     }
 
     private fun normalize(title: String, artist: String): String =
