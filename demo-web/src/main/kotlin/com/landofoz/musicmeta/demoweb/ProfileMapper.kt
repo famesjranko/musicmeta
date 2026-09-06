@@ -217,7 +217,7 @@ fun AlbumProfile.toDemoResponse(
             r.get<EnrichmentData.SimilarAlbums>(EnrichmentType.SIMILAR_ALBUMS)?.albums?.map {
                 SectionItem(
                     primary = it.title,
-                    secondary = it.artist,
+                    secondary = listOfNotNull(it.artist, it.year?.toString()).joinToString(" · "),
                     imageUrl = it.thumbnailUrl,
                     meta = "rank %.2f".format(it.artistMatchScore),
                     enrich = albumEnrich(it.title, it.artist),
