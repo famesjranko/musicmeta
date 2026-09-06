@@ -2563,7 +2563,6 @@ public final class com/landofoz/musicmeta/provider/wikidata/WikidataProvider : c
 	public static final field DEFAULT_IMAGE_SIZE I
 	public fun <init> (Lcom/landofoz/musicmeta/http/HttpClient;Lcom/landofoz/musicmeta/http/RateLimiter;I)V
 	public synthetic fun <init> (Lcom/landofoz/musicmeta/http/HttpClient;Lcom/landofoz/musicmeta/http/RateLimiter;IILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public fun <init> (Lcom/landofoz/musicmeta/http/HttpClient;Lcom/landofoz/musicmeta/http/RateLimiter;ILcom/landofoz/musicmeta/EnrichmentLogger;)V
 	public fun enrich (Lcom/landofoz/musicmeta/EnrichmentRequest;Lcom/landofoz/musicmeta/EnrichmentType;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun getCapabilities ()Ljava/util/List;
 	public fun getDisplayName ()Ljava/lang/String;

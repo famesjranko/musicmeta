@@ -35,11 +35,14 @@ public class WikidataProvider internal constructor(
     ) : this(WikidataApi(httpClient, rateLimiter), imageSize, EnrichmentLogger.NoOp)
 
     /**
-     * As above, with somewhere to report a request this route has stopped serving. A second
-     * constructor rather than a fourth defaulted parameter on the first: a default would move the
-     * existing constructor's JVM signature and break every Java caller of it.
+     * As above, with somewhere to report a request this route has stopped serving.
+     *
+     * A second constructor rather than a fourth defaulted parameter on the first: a default would
+     * move the existing constructor's JVM signature and break every Java caller of it. `internal`
+     * because the engine's own builder is what passes a logger — a consumer registering the
+     * provider by hand reaches the log through `EnrichmentEngine.Builder.logger` instead.
      */
-    public constructor(
+    internal constructor(
         httpClient: HttpClient,
         rateLimiter: RateLimiter,
         imageSize: Int,
@@ -132,9 +135,10 @@ public class WikidataProvider internal constructor(
     }
 
     /**
-     * The entity's claims, or null when there are none to read. Both answerless outcomes leave the
-     * caller with nothing, so neither changes the result; only [WikidataProperties.UnreadableShape]
-     * is logged, because it is the route having moved rather than anything about this artist.
+     * The entity's claims, or null when there are none to read. All three answerless outcomes leave
+     * the caller with nothing, so none of them changes the result; only
+     * [WikidataProperties.UnreadableShape] is logged, because it is the route having moved or
+     * refused the request rather than anything about this artist.
      */
     private suspend fun readClaims(wikidataId: String): WikidataEntityProperties? =
         when (val properties = getEntityProperties(wikidataId)) {
@@ -143,7 +147,7 @@ public class WikidataProvider internal constructor(
                 logger.debug(TAG, "Wikidata answered $wikidataId with no readable claims body")
                 null
             }
-            WikidataProperties.NoClaims -> null
+            WikidataProperties.NoClaims, WikidataProperties.NoEntity -> null
         }
 
     /**

@@ -21,27 +21,35 @@ internal data class WikidataEntityProperties(
 /**
  * What `wbgetentities&props=claims` said about one entity's properties.
  *
- * The two answerless cases are what the response can distinguish, not a classification imposed on
- * it: Wikidata answers an id it does not hold, and a request it will not serve, in different ways,
- * and only the first is a fact about the artist. Both leave the caller without properties, so
- * neither changes an enrichment answer — the distinction exists so a route that stopped serving us
- * is reported as that rather than as three capabilities the artist has nothing for.
+ * The four cases are what the answer can distinguish, not a classification imposed on it: an entity
+ * Wikidata holds nothing for still carries a `claims` object, so a *missing* one is the response
+ * having changed shape rather than an artist with nothing recorded. Every case but [Claims] leaves
+ * the caller without properties, so none of them changes an enrichment answer — the distinction
+ * exists so a route that stopped serving us is reported as that rather than as three capabilities
+ * the artist has nothing for.
  */
 internal sealed interface WikidataProperties {
 
-    /** The entity's claims, parsed. */
+    /** The entity's claims, parsed, holding at least one property this mapper reads. */
     data class Claims(val value: WikidataEntityProperties) : WikidataProperties
 
     /**
-     * Wikidata answered, and there are no claims to read: the entity is absent, marked `missing`,
-     * or carries an empty claims object. All three arrive at 200.
+     * The entity is present and its `claims` object holds none of the properties read here: the
+     * artist has nothing recorded that this provider can answer with.
      */
     data object NoClaims : WikidataProperties
 
     /**
-     * No body this route can be read from — a 4xx, which `bodyOrThrowTransient` hands back as no
-     * body at all. This route says "no such entity" at 200, so it is the request that stopped
-     * being served, never a fact about the artist, and this is the one case the caller logs.
+     * Wikidata answered, and holds no entity under the requested id — it is marked `missing`, or
+     * the answer is keyed under a different id because the requested one is now a redirect.
+     */
+    data object NoEntity : WikidataProperties
+
+    /**
+     * The answer is not one this route can be read from: a top-level `error` key, an entity present
+     * but carrying no `claims` object, or no body at all. All three are the route having moved or
+     * having rejected the request, never a fact about the artist, so this is the one case the
+     * caller logs.
      */
     data object UnreadableShape : WikidataProperties
 }

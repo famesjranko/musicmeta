@@ -408,6 +408,13 @@ Ask what the route's own "nothing" looks like before reaching for the helper. Wh
 a success shape for absence, a 4xx is a statement about the *request*, and collapsing it to absence
 destroys the only signal that the request stopped being valid.
 
+Wikidata's two routes take the other option, and the difference is worth reading. Both
+`getEnwikiSitelink` and `getEntityProperties` name the unreadable answer in their own return type,
+log it, and still answer `NotFound` rather than throwing: the enrichment answer is `NotFound` either
+way, so the only thing an `Error` would add is an open breaker — and a request-shaped 4xx on one
+route would then take every other Wikidata capability down with it. The log is the signal, and the
+schema pins are what turn a route that has moved into something someone reads.
+
 Classifying it correctly has a cost worth knowing, because a breaker is per *provider*, not per
 route: five of these errors with no other route's success in between open ListenBrainz's breaker and
 every one of its capabilities is skipped for the cooldown. That is the right trade — a silent

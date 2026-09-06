@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.provider.wikidata
 
+import com.landofoz.musicmeta.EnrichmentEngine
 import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentLogger
 import com.landofoz.musicmeta.EnrichmentRequest
@@ -48,7 +49,20 @@ class WikidataEntityClaimsTest {
     }
 
     @Test
-    fun `an entity Wikidata holds no claims for is answered at 200 and reads as no claims`() = runTest {
+    fun `an entity whose claims hold none of the read properties has no claims`() = runTest {
+        // Given - a present entity carrying a claims object with nothing this mapper reads in it
+        val http = FakeHttpClient()
+        http.givenJsonResponse("props=claims", """{"entities":{"Q44190":{"id":"Q44190","claims":{}}}}""")
+
+        // When - the entity-properties route is called for it
+        val outcome = WikidataApi(http, RateLimiter(0)).getEntityProperties("Q44190")
+
+        // Then - no claims, which is an answer about the entity and not about the route
+        assertEquals(WikidataProperties.NoClaims, outcome)
+    }
+
+    @Test
+    fun `an id Wikidata does not hold is no entity`() = runTest {
         // Given - the `missing` marker shape: an entity keyed under the requested id, no claims key
         val http = FakeHttpClient()
         http.givenJsonResponse("props=claims", """{"entities":{"Q999999999":{"id":"Q999999999","missing":""}}}""")
@@ -56,8 +70,44 @@ class WikidataEntityClaimsTest {
         // When - the entity-properties route is called for it
         val outcome = WikidataApi(http, RateLimiter(0)).getEntityProperties("Q999999999")
 
-        // Then - no claims, which is an answer about the entity and not about the route
-        assertEquals(WikidataProperties.NoClaims, outcome)
+        // Then - no entity, read off the marker rather than off the claims object it also lacks
+        assertEquals(WikidataProperties.NoEntity, outcome)
+    }
+
+    @Test
+    fun `a top-level error at 200 is unreadable, not an entity with nothing recorded`() = runTest {
+        // Given - how this route rejects a request: an `error` object at HTTP 200, which is the
+        // shape the withdrawn wbgetclaims call hit on every single call
+        val http = FakeHttpClient()
+        http.givenJsonResponse(
+            "props=claims",
+            """{"error":{"code":"param-invalid","info":"The value for parameter is invalid"}}""",
+        )
+
+        // When - the entity-properties route is called
+        val outcome = WikidataApi(http, RateLimiter(0)).getEntityProperties("Q44190")
+
+        // Then - the shape is unreadable, so the request is reported rather than blanked
+        assertEquals(WikidataProperties.UnreadableShape, outcome)
+        assertNotEquals(WikidataProperties.NoClaims, outcome)
+    }
+
+    @Test
+    fun `a claims object that has left the payload is told apart from an entity holding none`() = runTest {
+        // Given - a present entity, not marked missing, with the claims object gone, as a renamed
+        // field would arrive; and the live shape of an entity that genuinely records none
+        val http = FakeHttpClient()
+        http.givenJsonResponse("props=claims", """{"entities":{"Q44190":{"id":"Q44190","type":"item"}}}""")
+        val empty = FakeHttpClient()
+        empty.givenJsonResponse("props=claims", """{"entities":{"Q44190":{"id":"Q44190","claims":{}}}}""")
+
+        // When - the route is called once for each
+        val drifted = WikidataApi(http, RateLimiter(0)).getEntityProperties("Q44190")
+        val noClaims = WikidataApi(empty, RateLimiter(0)).getEntityProperties("Q44190")
+
+        // Then - the two answers differ, and the drifted one names the shape rather than the artist
+        assertNotEquals(noClaims, drifted)
+        assertEquals(WikidataProperties.UnreadableShape, drifted)
     }
 
     @Test
@@ -76,6 +126,34 @@ class WikidataEntityClaimsTest {
 
         // Then - the consumer still sees NotFound, and the unreadable answer is on the log
         assertTrue(result is EnrichmentResult.NotFound)
-        assertEquals(listOf("WikidataProvider: Wikidata answered Q44190 with no readable claims body"), logger.debugs)
+        assertEquals(listOf(UNREADABLE_LOG_LINE), logger.debugs)
+    }
+
+    @Test
+    fun `the engine's own default providers report an unreadable claims answer to the consumer`() = runTest {
+        // Given - the engine as a consumer builds it: default providers, and a logger registered
+        // after them, against a Wikidata claims route that sheds the request
+        val http = FakeHttpClient()
+        http.givenHttpResult("props=claims", HttpResult.ClientError(400, "unknown parameter"))
+        val logger = RecordingLogger()
+        val engine = EnrichmentEngine.Builder()
+            .httpClient(http)
+            .withDefaultProviders()
+            .logger(logger)
+            .build()
+
+        // When - a photo is asked for an artist whose Wikidata id is known
+        engine.enrich(
+            EnrichmentRequest.ForArtist(identifiers = EnrichmentIdentifiers(wikidataId = "Q44190"), name = "Radiohead"),
+            setOf(EnrichmentType.ARTIST_PHOTO),
+        )
+
+        // Then - the log the provider writes reached the consumer's logger
+        assertTrue(logger.debugs.toString(), UNREADABLE_LOG_LINE in logger.debugs)
+    }
+
+    private companion object {
+        private const val UNREADABLE_LOG_LINE =
+            "WikidataProvider: Wikidata answered Q44190 with no readable claims body"
     }
 }
