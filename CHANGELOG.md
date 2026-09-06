@@ -154,6 +154,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A Fanart.tv or Last.fm API key holding a reserved character (`|`, `#`, `&`) now sends: it is percent-encoded like every other interpolated value, instead of throwing on `DefaultHttpClient`
 - Discogs' literal `Unknown` country sentinel now reads as absent, not a place: `Metadata.country`/`ReleaseEdition.country` no longer carry it; cached entries keep it until cleared or expired
 
+### Migration note
+If you use `EnrichmentCache`, clear it after upgrading from 0.12.0 or earlier: a cached `SIMILAR_ARTISTS` list decodes on the old summed-and-clamped `matchScore` scale.
+Until cleared, a cached list and a fresh one are not comparable, and a cached entry may still hold Discogs' `Unknown` country sentinel.
+
 ## [0.12.0] - 2026-08-18
 
 ### Breaking Changes
