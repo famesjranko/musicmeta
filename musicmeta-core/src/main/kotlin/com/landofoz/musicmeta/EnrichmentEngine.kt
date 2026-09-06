@@ -368,9 +368,10 @@ public interface EnrichmentEngine {
             addProvider(CoverArtArchiveProvider(client, coverArtArchiveLimiter))
             addProvider(WikidataProvider(client, wikidataLimiter))
             addProvider(WikipediaProvider(client, wikipediaLimiter, wikidataLimiter))
-            addProvider(DeezerProvider(client, deezerLimiter,
-                radioLimit = cfg.radioLimit))
+            // One DeezerApi for both providers: it owns the call-scoped album scope, so sharing it
+            // is what makes the album search they both need one request per call rather than two.
             val deezerApi = DeezerApi(client, deezerLimiter)
+            addProvider(DeezerProvider(deezerApi, radioLimit = cfg.radioLimit))
             addProvider(SimilarAlbumsProvider(deezerApi))
             addProvider(ITunesProvider(client)) // its own RateLimiter(3000) by constructor default
             addProvider(ListenBrainzProvider(
