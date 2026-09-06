@@ -191,6 +191,25 @@ search this call and keeps searching for those, which is what stops a name-only 
 changing which release-group answers it. An MBID from anywhere else — a caller's, a foreign identity
 provider's — reads as external.
 
+## Last.fm's similar-artist ids can name the wrong act
+
+Unlike the recording ids above, these are not stale. Last.fm's `artist.getSimilar` carries a
+MusicBrainz artist id on each row; measured 2026-09-06 against MusicBrainz's own url-rels, every id
+Last.fm supplied resolved, and to itself — no `404`, no merge, no redirect. Some are simply wrong:
+**8 of 198** MBID-carrying rows over twelve artists name a different act (4.0%), and **5 of 214**
+over a second, blind twelve (2.3%). Björk's top-scoring similar artist was one of them.
+
+The library passes such an id through unchanged rather than replace or drop it. Two corroboration
+signals were measured and neither shipped: matching Last.fm's linked page against MusicBrainz costs
+more sequential, rate-limited lookups than `enrich()`'s disambiguation budget allows, and on the
+held-out sample it rewrote a correct id to a wrong one — Last.fm publishes one page per artist
+*name*, shared by any act carrying it, so a MusicBrainz contributor's link to that page names an
+opinion about which act owns it, not a fact. Genre overlap with the requested artist, the cheap
+alternative, caught some mismatches on the first sample and none on the second — no signal there
+either. `SimilarArtist.disambiguation` is how a consumer sees which act an id actually names: it is
+read from the MusicBrainz record the id itself points to, so a wrong id like this surfaces as a
+disambiguation that plainly doesn't fit the requested artist, rather than staying hidden.
+
 ## Terms, licences, attribution
 
 What each provider's terms said on **2026-08-12** — verify before relying on any of it. This is not
