@@ -99,6 +99,7 @@ internal class LastFmApi(
                 name = obj.optString("name", ""),
                 matchScore = obj.optString("match", "0").toFloatOrNull() ?: 0f,
                 mbid = obj.optString("mbid").takeIf { it.isNotBlank() },
+                url = obj.optString("url").takeIf { it.isNotBlank() },
             )
         }
     }

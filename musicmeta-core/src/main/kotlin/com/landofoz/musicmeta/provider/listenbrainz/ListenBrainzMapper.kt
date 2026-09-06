@@ -110,6 +110,7 @@ internal object ListenBrainzMapper {
                     identifiers = EnrichmentIdentifiers(musicBrainzId = artist.artistMbid),
                     matchScore = topScore?.let { artist.score.toFloat() / it * CORROBORATION_WEIGHT } ?: 0f,
                     sources = listOf(SOURCE),
+                    url = "https://musicbrainz.org/artist/${artist.artistMbid}",
                 )
             },
         )

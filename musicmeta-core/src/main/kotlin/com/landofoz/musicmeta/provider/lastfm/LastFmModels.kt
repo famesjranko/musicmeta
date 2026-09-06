@@ -22,6 +22,8 @@ internal data class LastFmSimilarArtist(
     val name: String,
     val matchScore: Float,
     val mbid: String?,
+    /** The route's `url`, which Last.fm builds from the name rather than from the entity. */
+    val url: String? = null,
 )
 
 internal data class LastFmSimilarTrack(

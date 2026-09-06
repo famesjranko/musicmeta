@@ -94,6 +94,7 @@ internal object DeezerMapper {
                     identifiers = EnrichmentIdentifiers().with(IdentifierNamespace.DEEZER, artist.id.toString()),
                     matchScore = 1.0f - (index.toFloat() / count) * 0.9f,
                     sources = listOf("deezer"),
+                    url = artist.link,
                 )
             },
         )

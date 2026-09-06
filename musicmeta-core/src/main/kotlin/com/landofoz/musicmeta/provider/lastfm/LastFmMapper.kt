@@ -20,6 +20,7 @@ internal object LastFmMapper {
                     identifiers = EnrichmentIdentifiers(musicBrainzId = it.mbid),
                     matchScore = it.matchScore,
                     sources = listOf("lastfm"),
+                    url = it.url,
                 )
             },
         )

@@ -203,6 +203,8 @@ public data class SimilarArtist(
      */
     val matchScore: Float,
     val sources: List<String> = emptyList(),
+    /** The contributing upstream's own page for this act, when it publishes one. */
+    val url: String? = null,
 )
 
 /**

@@ -1965,19 +1965,21 @@ public final class com/landofoz/musicmeta/SimilarAlbum$Companion {
 
 public final class com/landofoz/musicmeta/SimilarArtist {
 	public static final field Companion Lcom/landofoz/musicmeta/SimilarArtist$Companion;
-	public fun <init> (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentIdentifiers;FLjava/util/List;)V
-	public synthetic fun <init> (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentIdentifiers;FLjava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentIdentifiers;FLjava/util/List;Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentIdentifiers;FLjava/util/List;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Ljava/lang/String;
 	public final fun component2 ()Lcom/landofoz/musicmeta/EnrichmentIdentifiers;
 	public final fun component3 ()F
 	public final fun component4 ()Ljava/util/List;
-	public final fun copy (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentIdentifiers;FLjava/util/List;)Lcom/landofoz/musicmeta/SimilarArtist;
-	public static synthetic fun copy$default (Lcom/landofoz/musicmeta/SimilarArtist;Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentIdentifiers;FLjava/util/List;ILjava/lang/Object;)Lcom/landofoz/musicmeta/SimilarArtist;
+	public final fun component5 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentIdentifiers;FLjava/util/List;Ljava/lang/String;)Lcom/landofoz/musicmeta/SimilarArtist;
+	public static synthetic fun copy$default (Lcom/landofoz/musicmeta/SimilarArtist;Ljava/lang/String;Lcom/landofoz/musicmeta/EnrichmentIdentifiers;FLjava/util/List;Ljava/lang/String;ILjava/lang/Object;)Lcom/landofoz/musicmeta/SimilarArtist;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getIdentifiers ()Lcom/landofoz/musicmeta/EnrichmentIdentifiers;
 	public final fun getMatchScore ()F
 	public final fun getName ()Ljava/lang/String;
 	public final fun getSources ()Ljava/util/List;
+	public final fun getUrl ()Ljava/lang/String;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }

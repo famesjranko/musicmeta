@@ -146,6 +146,7 @@ internal class DeezerApi(
             DeezerRelatedArtist(
                 id = artist.optLong("id"),
                 name = artist.optString("name", ""),
+                link = artist.optString("link").takeIf { it.isNotBlank() },
             )
         }
     }

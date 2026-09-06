@@ -58,6 +58,8 @@ internal data class DeezerTrack(
 internal data class DeezerRelatedArtist(
     val id: Long,
     val name: String,
+    /** The route's `link`, Deezer's own page for this artist id. */
+    val link: String? = null,
 )
 
 /** Track search result from Deezer API. */
