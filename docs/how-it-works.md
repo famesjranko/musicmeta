@@ -494,7 +494,7 @@ when a key is present, and CAA is a fallback, not a second entry in the same res
 | SIMILAR_ARTISTS | Last.fm(100), ListenBrainz(50), Deezer(30) | **Mergeable** — deduplicates by MusicBrainz id, else by name; sums matchScores, rescales to a 1.0 top before catalog filtering (Step 6). After merging, entries sharing a name that no contributor described are labelled from one batched MusicBrainz `arid:` search |
 | SIMILAR_TRACKS | Last.fm(100), Deezer(50) | **Mergeable** — deduplicates by title and artist; keeps Last.fm's raw score over a sum where Last.fm contributed, sums the rest, rescales to a 1.0 top before catalog filtering (Step 6) |
 | BAND_MEMBERS | MusicBrainz(100), Discogs(50) | From artist-rels |
-| ARTIST_LINKS | MusicBrainz(100), Wikidata(50) | All URL relation types; Wikidata contributes P856 only |
+| ARTIST_LINKS | MusicBrainz(100), Wikidata(50) | All URL relation types; Wikidata contributes P856 only. `type` is the upstream's word for the relationship (`social network`), `label` the site the URL's host names (`instagram.com`) |
 | CREDITS | MusicBrainz(100), Discogs(50) | Recording rels + extraartists, roleCategory grouping |
 
 ### Additional Data (4 types)

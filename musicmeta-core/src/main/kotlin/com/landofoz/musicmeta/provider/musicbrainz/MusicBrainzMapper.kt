@@ -5,12 +5,12 @@ import com.landofoz.musicmeta.Credit
 import com.landofoz.musicmeta.DiscographyAlbum
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
-import com.landofoz.musicmeta.ExternalLink
 import com.landofoz.musicmeta.GenreTag
 import com.landofoz.musicmeta.PopularitySignal
 import com.landofoz.musicmeta.PopularitySignalKind
 import com.landofoz.musicmeta.ReleaseEdition
 import com.landofoz.musicmeta.TrackInfo
+import com.landofoz.musicmeta.externalLink
 
 /** Maps MusicBrainz DTOs to EnrichmentData subclasses. */
 internal object MusicBrainzMapper {
@@ -168,7 +168,7 @@ internal object MusicBrainzMapper {
     fun toArtistLinks(relations: List<MusicBrainzUrlRelation>): EnrichmentData.ArtistLinks =
         EnrichmentData.ArtistLinks(
             links = relations.map { rel ->
-                ExternalLink(type = rel.type, url = rel.url)
+                externalLink(type = rel.type, url = rel.url)
             },
         )
 

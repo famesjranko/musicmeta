@@ -323,8 +323,24 @@ public data class ExternalLink(
      * a working link. A consumer enforcing an https-only policy handles that here.
      */
     val url: String,
+    /**
+     * The site [url] points at — its host, lowercased and without a leading `www.` — where the
+     * upstream named none, and null where the URL carries no host to read. It is not a display
+     * name: a consumer wanting `Instagram` rather than `instagram.com` capitalises it itself.
+     * [type] remains the upstream's word for the *relationship*, which does not name a site —
+     * MusicBrainz calls both a Facebook and an Instagram page `social network`.
+     */
     val label: String? = null,
 )
+
+/**
+ * An [ExternalLink] whose [ExternalLink.label] falls back to the site [url] points at.
+ *
+ * One home so every producer answers the same way: a provider that knows the site's name passes
+ * [label] and keeps it.
+ */
+internal fun externalLink(type: String, url: String, label: String? = null): ExternalLink =
+    ExternalLink(type = type, url = url, label = label ?: url.urlSiteLabel())
 
 @Serializable
 public data class Credit(
