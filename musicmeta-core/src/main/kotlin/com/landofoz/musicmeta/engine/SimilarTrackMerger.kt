@@ -45,14 +45,13 @@ internal object SimilarTrackMerger : ResultMerger {
     internal fun mergeTracks(tracks: List<SimilarTrack>): List<SimilarTrack> {
         if (tracks.isEmpty()) return emptyList()
 
-        return groupTracks(tracks)
+        val summed = groupTracks(tracks)
             .map { group ->
                 val first = group.first()
                 val genuineEntry = group.firstOrNull { GENUINE_SOURCE in it.sources }
                 val totalScore = genuineEntry?.matchScore ?: group
                     .map { it.matchScore }
                     .fold(0f) { acc, s -> acc + s }
-                    .coerceAtMost(1.0f)
                 val allSources = group.flatMap { it.sources }.distinct()
                 val mergedIdentifiers = ResultMerger.mergeIdentifiers(group.map { it.identifiers })
 
@@ -64,6 +63,12 @@ internal object SimilarTrackMerger : ResultMerger {
                     sources = allSources,
                 )
             }
+
+        // A list whose maximum is not positive has no scale to divide by, so it passes through
+        // untouched — every contributor scoring zero must stay at zero, not become NaN.
+        val scale = summed.maxOfOrNull { it.matchScore }?.takeIf { it > 0f } ?: 1f
+        return summed
+            .map { it.copy(matchScore = it.matchScore / scale) }
             .sortedByDescending { it.matchScore }
     }
 
