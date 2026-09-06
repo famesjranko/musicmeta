@@ -19,6 +19,34 @@ internal data class WikidataEntityProperties(
 )
 
 /**
+ * What `wbgetentities&props=claims` said about one entity's properties.
+ *
+ * The two answerless cases are what the response can distinguish, not a classification imposed on
+ * it: Wikidata answers an id it does not hold, and a request it will not serve, in different ways,
+ * and only the first is a fact about the artist. Both leave the caller without properties, so
+ * neither changes an enrichment answer — the distinction exists so a route that stopped serving us
+ * is reported as that rather than as three capabilities the artist has nothing for.
+ */
+internal sealed interface WikidataProperties {
+
+    /** The entity's claims, parsed. */
+    data class Claims(val value: WikidataEntityProperties) : WikidataProperties
+
+    /**
+     * Wikidata answered, and there are no claims to read: the entity is absent, marked `missing`,
+     * or carries an empty claims object. All three arrive at 200.
+     */
+    data object NoClaims : WikidataProperties
+
+    /**
+     * No body this route can be read from — a 4xx, which `bodyOrThrowTransient` hands back as no
+     * body at all. This route says "no such entity" at 200, so it is the request that stopped
+     * being served, never a fact about the artist, and this is the one case the caller logs.
+     */
+    data object UnreadableShape : WikidataProperties
+}
+
+/**
  * What `wbgetentities&props=sitelinks&sitefilter=enwiki` said about one entity's English article.
  *
  * The four cases are what the answer can distinguish, not a classification imposed on it: an entity

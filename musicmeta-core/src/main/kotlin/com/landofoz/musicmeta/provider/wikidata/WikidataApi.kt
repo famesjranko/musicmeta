@@ -30,20 +30,26 @@ internal class WikidataApi(
      *
      * Response shape: claims live under `entities.<id>.claims`. A missing or invalid id comes
      * back as either `entities.<id>` with no `claims` key (bare "missing" marker) or a top-level
-     * `error` key with no `entities` key at all — both fall through the `optJSONObject` chain
-     * below to `null`, same as an empty claims object.
+     * `error` key with no `entities` key at all — all of them at 200, and all of them
+     * [WikidataProperties.NoClaims].
+     *
+     * No body at all is [WikidataProperties.UnreadableShape], not [WikidataProperties.NoClaims]:
+     * [bodyOrThrowTransient] hands back `null` for a 4xx, and this route answers an id it does not
+     * hold at 200 (§31). A 4xx here is a statement about the *request* — a parameter this route
+     * stopped accepting — so reading it as "this entity has no properties" would blank
+     * `ARTIST_PHOTO`, `COUNTRY` and `ARTIST_LINKS` while reporting the provider healthy.
      */
     suspend fun getEntityProperties(
         wikidataId: String,
         imageSize: Int = DEFAULT_IMAGE_SIZE,
-    ): WikidataEntityProperties? = rateLimiter.execute {
+    ): WikidataProperties = rateLimiter.execute {
         val json = httpClient.fetchJsonResult(entityPropertiesUrl(wikidataId)).bodyOrThrowTransient()
-            ?: return@execute null
+            ?: return@execute WikidataProperties.UnreadableShape
         val claims = json.optJSONObject("entities")
             ?.optJSONObject(wikidataId)
             ?.optJSONObject("claims")
-            ?: return@execute null
-        parseEntityProperties(claims, imageSize)
+            ?: return@execute WikidataProperties.NoClaims
+        WikidataProperties.Claims(parseEntityProperties(claims, imageSize))
     }
 
     /**

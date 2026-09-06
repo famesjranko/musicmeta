@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.provider.wikidata
 
+import com.landofoz.musicmeta.EnrichmentLogger
 import com.landofoz.musicmeta.EnrichmentProvider
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
@@ -21,13 +22,29 @@ import kotlinx.coroutines.currentCoroutineContext
  * P1902 Spotify, P2850 Apple Music) as resolved identifiers, from the same single request.
  * Requires a wikidataId in the request identifiers.
  */
-public class WikidataProvider(
-    httpClient: HttpClient,
-    rateLimiter: RateLimiter,
-    private val imageSize: Int = DEFAULT_IMAGE_SIZE,
+public class WikidataProvider internal constructor(
+    private val api: WikidataApi,
+    private val imageSize: Int,
+    private val logger: EnrichmentLogger,
 ) : EnrichmentProvider {
 
-    private val api = WikidataApi(httpClient, rateLimiter)
+    public constructor(
+        httpClient: HttpClient,
+        rateLimiter: RateLimiter,
+        imageSize: Int = DEFAULT_IMAGE_SIZE,
+    ) : this(WikidataApi(httpClient, rateLimiter), imageSize, EnrichmentLogger.NoOp)
+
+    /**
+     * As above, with somewhere to report a request this route has stopped serving. A second
+     * constructor rather than a fourth defaulted parameter on the first: a default would move the
+     * existing constructor's JVM signature and break every Java caller of it.
+     */
+    public constructor(
+        httpClient: HttpClient,
+        rateLimiter: RateLimiter,
+        imageSize: Int,
+        logger: EnrichmentLogger,
+    ) : this(WikidataApi(httpClient, rateLimiter), imageSize, logger)
 
     override val id: String = "wikidata"
     override val displayName: String = "Wikidata"
@@ -62,7 +79,7 @@ public class WikidataProvider(
         }
 
         val props = try {
-            getEntityProperties(wikidataId)
+            readClaims(wikidataId)
                 ?: return EnrichmentResult.NotFound(type, id)
         } catch (e: Exception) {
             return mapError(type, e)
@@ -115,12 +132,27 @@ public class WikidataProvider(
     }
 
     /**
+     * The entity's claims, or null when there are none to read. Both answerless outcomes leave the
+     * caller with nothing, so neither changes the result; only [WikidataProperties.UnreadableShape]
+     * is logged, because it is the route having moved rather than anything about this artist.
+     */
+    private suspend fun readClaims(wikidataId: String): WikidataEntityProperties? =
+        when (val properties = getEntityProperties(wikidataId)) {
+            is WikidataProperties.Claims -> properties.value
+            WikidataProperties.UnreadableShape -> {
+                logger.debug(TAG, "Wikidata answered $wikidataId with no readable claims body")
+                null
+            }
+            WikidataProperties.NoClaims -> null
+        }
+
+    /**
      * `getEntityProperties` for [wikidataId], memoized per [ProviderCallScope]/[CallMemo] (see
      * their KDocs) — ARTIST_PHOTO, COUNTRY and ARTIST_LINKS all read this same response.
      */
-    private suspend fun getEntityProperties(wikidataId: String): WikidataEntityProperties? {
+    private suspend fun getEntityProperties(wikidataId: String): WikidataProperties {
         val memo = currentCoroutineContext()[ProviderCallScope]
-            ?.slot(this) { CallMemo<String, WikidataEntityProperties?>() }
+            ?.slot(this) { CallMemo<String, WikidataProperties>() }
             ?: return api.getEntityProperties(wikidataId, imageSize)
         return memo.get(wikidataId) { api.getEntityProperties(wikidataId, imageSize) }
     }
@@ -128,5 +160,6 @@ public class WikidataProvider(
     public companion object {
         public const val DEFAULT_IMAGE_SIZE: Int = 1200
         private const val PRIORITY = 100
+        private const val TAG = "WikidataProvider"
     }
 }
