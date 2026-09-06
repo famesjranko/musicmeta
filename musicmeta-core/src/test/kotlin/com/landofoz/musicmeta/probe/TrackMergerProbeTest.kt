@@ -21,7 +21,7 @@ import java.io.File
  *
  * ARM_NAME is the only thing that differs between branches; the arm itself lives in the merger.
  */
-private const val ARM_NAME = "control"
+private const val ARM_NAME = "identifier"
 
 private const val FIXTURES = "src/test/resources/probe/tracks"
 

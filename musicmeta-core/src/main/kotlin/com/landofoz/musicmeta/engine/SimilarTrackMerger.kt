@@ -1,6 +1,7 @@
 package com.landofoz.musicmeta.engine
 
 import com.landofoz.musicmeta.EnrichmentData
+import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.LookupProvenance
@@ -67,13 +68,46 @@ internal object SimilarTrackMerger : ResultMerger {
             .sortedByDescending { it.matchScore }
     }
 
-    /** The entries of [tracks] that are one recording, grouped in first-occurrence order. */
+    /**
+     * The entries of [tracks] that are one recording, grouped in first-occurrence order.
+     *
+     * An entry carrying an identifier joins the group already carrying that same identifier in that
+     * same namespace, whatever either is titled; failing that it joins a same-(title, artist) group
+     * only while that group holds no conflicting identifier of its own, so two entries whose
+     * same-namespace identifiers disagree can never share a group. An entry carrying no identifier
+     * in a namespace is unconstrained by it and falls back to the (title, artist) key. Identifiers
+     * are compared trimmed and lowercased, and a blank one counts as absent.
+     */
     internal fun groupTracks(tracks: List<SimilarTrack>): List<List<SimilarTrack>> {
-        val grouped = LinkedHashMap<String, MutableList<SimilarTrack>>()
+        val groups = mutableListOf<MutableList<SimilarTrack>>()
+        val groupIds = mutableListOf<MutableMap<String, String>>()
+        val groupKey = mutableListOf<String>()
         for (track in tracks) {
-            grouped.getOrPut(normalize(track.title, track.artist)) { mutableListOf() }.add(track)
+            val ids = identifierKeys(track.identifiers)
+            val key = normalize(track.title, track.artist)
+            val index = groups.indices.firstOrNull { i -> ids.any { (ns, v) -> groupIds[i][ns] == v } }
+                ?: groups.indices.firstOrNull { i ->
+                    groupKey[i] == key && ids.none { (ns, v) -> groupIds[i][ns]?.let { it != v } ?: false }
+                }
+            if (index == null) {
+                groups += mutableListOf(track)
+                groupIds += ids.toMutableMap()
+                groupKey += key
+            } else {
+                groups[index] += track
+                ids.forEach { (ns, v) -> groupIds[index].putIfAbsent(ns, v) }
+            }
         }
-        return grouped.values.toList()
+        return groups
+    }
+
+    /** Every namespaced identifier [identifiers] actually carries, trimmed and lowercased. */
+    private fun identifierKeys(identifiers: EnrichmentIdentifiers): Map<String, String> = buildMap {
+        identifiers.musicBrainzId?.trim()?.lowercase()?.takeIf { it.isNotEmpty() }
+            ?.let { put("musicBrainzId", it) }
+        identifiers.extra.forEach { (ns, value) ->
+            value.trim().lowercase().takeIf { it.isNotEmpty() }?.let { put(ns, it) }
+        }
     }
 
     private fun normalize(title: String, artist: String): String =
