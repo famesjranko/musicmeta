@@ -1,0 +1,6 @@
+artist=BLACKPINK
+musicbrainz=48646387-1664-4c9a-9139-9bfd091b823c
+deezer=10803980
+lastfm=https://ws.audioscrobbler.com/2.0/?method=artist.getsimilar&artist=BLACKPINK&api_key=<LASTFM_API_KEY>&format=json&limit=20
+labs=https://labs.api.listenbrainz.org/similar-artists/json?artist_mbids=48646387-1664-4c9a-9139-9bfd091b823c&algorithm=session_based_days_7500_session_300_contribution_5_threshold_10_limit_100_filter_True_skip_30
+deezer_url=https://api.deezer.com/artist/10803980/related?limit=20

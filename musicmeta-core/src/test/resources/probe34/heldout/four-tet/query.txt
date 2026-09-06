@@ -1,0 +1,6 @@
+artist=Four Tet
+musicbrainz=3bcff06f-675a-451f-9075-99e8657047e8
+deezer=1744
+lastfm=https://ws.audioscrobbler.com/2.0/?method=artist.getsimilar&artist=Four%20Tet&api_key=<LASTFM_API_KEY>&format=json&limit=20
+labs=https://labs.api.listenbrainz.org/similar-artists/json?artist_mbids=3bcff06f-675a-451f-9075-99e8657047e8&algorithm=session_based_days_7500_session_300_contribution_5_threshold_10_limit_100_filter_True_skip_30
+deezer_url=https://api.deezer.com/artist/1744/related?limit=20

@@ -1,0 +1,6 @@
+artist=A Tribe Called Quest
+musicbrainz=9689aa5a-4471-4fb4-9721-07cecda0fa9f
+deezer=1862
+lastfm=https://ws.audioscrobbler.com/2.0/?method=artist.getsimilar&artist=A%20Tribe%20Called%20Quest&api_key=<LASTFM_API_KEY>&format=json&limit=20
+labs=https://labs.api.listenbrainz.org/similar-artists/json?artist_mbids=9689aa5a-4471-4fb4-9721-07cecda0fa9f&algorithm=session_based_days_7500_session_300_contribution_5_threshold_10_limit_100_filter_True_skip_30
+deezer_url=https://api.deezer.com/artist/1862/related?limit=20
