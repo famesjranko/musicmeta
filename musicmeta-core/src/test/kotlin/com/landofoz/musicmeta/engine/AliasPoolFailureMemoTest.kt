@@ -4,7 +4,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
@@ -43,31 +43,32 @@ class AliasPoolFailureMemoTest {
     }
 
     @Test
-    fun `our own cancellation reaches the reader and leaves the pool unresolved`() = runTest {
-        // Given - a source whose first reader is cancelled while it runs
+    fun `our own cancellation reaches the reader rather than being held as an empty pool`() = runTest {
+        // Given - a source that outlives the job of the reader that opened it
         var calls = 0
         val names = ResolvedEntityNames()
         names.offerAliases {
             calls++
-            if (calls == 1) {
-                currentCoroutineContext().cancel()
-                throw CancellationException("the reader's job was cancelled")
-            }
+            delay(SOURCE_MS)
             POOL
         }
         val isolated = CoroutineScope(Job() + UnconfinedTestDispatcher(testScheduler))
 
-        // When - the cancelled reader asks, and a healthy reader asks after it
-        val thrown = runCatching { isolated.async(names) { names.aliases() }.await() }.exceptionOrNull()
+        // When - that reader's job is cancelled mid-lookup, and a healthy reader asks after it
+        val reader = isolated.async(names) { names.aliases() }
+        delay(SOURCE_MS / 2)
+        isolated.cancel()
+        val thrown = runCatching { reader.await() }.exceptionOrNull()
         val recovered = withContext(names) { names.aliases() }
 
-        // Then - cancellation propagated rather than being held as an empty pool
+        // Then - cancellation propagated, and the lookup it opened still answered the next reader
         assertTrue("expected cancellation to propagate, got $thrown", thrown is CancellationException)
         assertEquals(POOL, recovered)
-        assertEquals(2, calls)
+        assertEquals(1, calls)
     }
 
     private companion object {
+        const val SOURCE_MS = 400L
         val POOL = listOf(AlternativeName("Tokyo Jihen", official = true))
     }
 }

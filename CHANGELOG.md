@@ -108,6 +108,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Two published-surface conventions documented: every score is a `Float` on 0.0-1.0, every date a `String` in ISO-8601 and every `year` an `Int?` — with their frozen exceptions named
 
 ### Fixed
+- A slow alias lookup is now shared by every provider waiting on it, so one provider timing out mid-lookup no longer makes the next one repeat the whole call against `enrichTimeoutMs`
 - Two similar artists sharing a name but holding different MusicBrainz ids are no longer fused into one entry with their scores summed: each keeps its own entry, so ranks below the pair shift
 - Two similar-artist entries holding one MusicBrainz id under different names now merge into one, keeping the first name reported, so a name the providers spell two ways stops appearing twice
 - `SimilarArtist.matchScore`'s 1.0 top entry and descending sort are documented as facts about the merge, not a served result: catalog filtering can remove the top entry or reorder the list after it

@@ -1,10 +1,16 @@
 package com.landofoz.musicmeta.engine
 
 import com.landofoz.musicmeta.EnrichmentRequest
+import com.landofoz.musicmeta.http.enrichDeadlineRemainingMs
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeout
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.coroutines.AbstractCoroutineContextElement
 import kotlin.coroutines.CoroutineContext
@@ -65,22 +71,47 @@ internal class ResolvedEntityNames : AbstractCoroutineContextElement(Key) {
     suspend fun aliases(): List<AlternativeName> {
         resolvedAliases.get()?.let { return it }
         val source = aliasSource.get() ?: return emptyList()
-        return aliasLock.withLock {
-            resolvedAliases.get() ?: run {
-                val pool = try {
-                    source()
-                } catch (e: Exception) {
-                    currentCoroutineContext().ensureActive()
-                    emptyList()
-                }
-                resolvedAliases.set(pool)
-                pool
+        val lookup = aliasLock.withLock {
+            resolvedAliases.get()?.let { return it }
+            aliasLookup.get() ?: sharedLookup(source).also { aliasLookup.set(it) }
+        }
+        return try {
+            lookup.await()
+        } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
+            emptyList()
+        }
+    }
+
+    /**
+     * The one in-flight resolution of [source], detached from the reader that opened it.
+     *
+     * Detached because the readers are the whole fan-out and they do not share a fate: a provider's
+     * own `withTimeout` cancels one of them, and the lookup the rest are waiting on must survive
+     * that or each cancellation costs the next reader a fresh network call, serialised behind the
+     * lock. [enrichDeadlineRemainingMs] is what keeps that detachment bounded — an endpoint that
+     * never answers cannot outlive the call that asked.
+     */
+    // SwallowedException: every failure is the empty pool, per [aliases]; nothing else reads it.
+    @Suppress("SwallowedException")
+    private suspend fun sharedLookup(
+        source: suspend () -> List<AlternativeName>,
+    ): Deferred<List<AlternativeName>> {
+        val budgetMs = enrichDeadlineRemainingMs()
+        return CoroutineScope(currentCoroutineContext().minusKey(Job)).async {
+            val pool = try {
+                if (budgetMs == null) source() else withTimeout(budgetMs) { source() }
+            } catch (e: Exception) {
+                emptyList()
             }
+            resolvedAliases.set(pool)
+            pool
         }
     }
 
     private val aliasSource = AtomicReference<(suspend () -> List<AlternativeName>)?>(null)
     private val resolvedAliases = AtomicReference<List<AlternativeName>?>(null)
+    private val aliasLookup = AtomicReference<Deferred<List<AlternativeName>>?>(null)
     private val aliasLock = Mutex()
 
     internal companion object Key : CoroutineContext.Key<ResolvedEntityNames>
