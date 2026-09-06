@@ -1,0 +1,8272 @@
+[
+ {
+  "workload": "4wheel",
+  "name": "MoonDeity",
+  "mbid": "14d5a858-3074-42bc-ae7b-6f76d2e08068",
+  "url": "https://www.last.fm/music/MoonDeity",
+  "match": "0.876123",
+  "status": "?",
+  "lastfm_page": "moondeity",
+  "mb_id": "14d5a858-3074-42bc-ae7b-6f76d2e08068",
+  "mb_name": "MoonDeity",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "drift phonk"
+  ],
+  "tags": [
+   "drift phonk"
+  ],
+  "mb_lastfm_pages": [
+   "moondeity"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "4wheel",
+  "name": "ONIMXRU",
+  "mbid": "d3764fae-04a9-4d41-9105-3dbcc538f4b9",
+  "url": "https://www.last.fm/music/ONIMXRU",
+  "match": "0.871344",
+  "status": "200",
+  "lastfm_page": "onimxru",
+  "mb_id": "d3764fae-04a9-4d41-9105-3dbcc538f4b9",
+  "mb_name": "ONIMXRU",
+  "disambiguation": "",
+  "type": null,
+  "genres": [],
+  "tags": [],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "d3764fae-04a9-4d41-9105-3dbcc538f4b9",
+    "name": "ONIMXRU",
+    "disambiguation": "",
+    "type": null,
+    "score": 100,
+    "exact_name": true
+   }
+  ],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "4wheel",
+  "name": "VISXGE",
+  "mbid": "f7bd3302-886f-4bb9-a3f5-b472fb36209c",
+  "url": "https://www.last.fm/music/VISXGE",
+  "match": "0.841272",
+  "status": "200",
+  "lastfm_page": "visxge",
+  "mb_id": "f7bd3302-886f-4bb9-a3f5-b472fb36209c",
+  "mb_name": "VISXGE",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [],
+  "tags": [],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "f7bd3302-886f-4bb9-a3f5-b472fb36209c",
+    "name": "VISXGE",
+    "disambiguation": "",
+    "type": "Person",
+    "score": 100,
+    "exact_name": true
+   }
+  ],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "4wheel",
+  "name": "MC ORSEN",
+  "mbid": "0013eb31-2a3a-4e7d-8361-18632ca8fe2d",
+  "url": "https://www.last.fm/music/MC+ORSEN",
+  "match": "0.801548",
+  "status": "?",
+  "lastfm_page": "mc orsen",
+  "mb_id": "0013eb31-2a3a-4e7d-8361-18632ca8fe2d",
+  "mb_name": "MC ORSEN",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "drift phonk"
+  ],
+  "tags": [
+   "drift phonk"
+  ],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "0013eb31-2a3a-4e7d-8361-18632ca8fe2d",
+    "name": "MC ORSEN",
+    "disambiguation": "",
+    "type": "Person",
+    "score": 100,
+    "exact_name": true
+   }
+  ],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "4wheel",
+  "name": "Hensonn",
+  "mbid": "aaad94f7-eeaa-4965-afa1-762c87ae1340",
+  "url": "https://www.last.fm/music/Hensonn",
+  "match": "0.739537",
+  "status": "200",
+  "lastfm_page": "hensonn",
+  "mb_id": "aaad94f7-eeaa-4965-afa1-762c87ae1340",
+  "mb_name": "Hensonn",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "phonk house"
+  ],
+  "tags": [
+   "phonk house"
+  ],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "aaad94f7-eeaa-4965-afa1-762c87ae1340",
+    "name": "Hensonn",
+    "disambiguation": "",
+    "type": "Person",
+    "score": 100,
+    "exact_name": true
+   }
+  ],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "4wheel",
+  "name": "Dxrk \u30c0\u30fc\u30af",
+  "mbid": "4f433452-ad1e-4714-afb9-2ff3f014fd7c",
+  "url": "https://www.last.fm/music/Dxrk+%E3%83%80%E3%83%BC%E3%82%AF",
+  "match": "0.704122",
+  "status": "200",
+  "lastfm_page": "dxrk \u30c0\u30fc\u30af",
+  "mb_id": "4f433452-ad1e-4714-afb9-2ff3f014fd7c",
+  "mb_name": "Dxrk \u30c0\u30fc\u30af",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "drift phonk"
+  ],
+  "tags": [
+   "drift phonk"
+  ],
+  "mb_lastfm_pages": [
+   "dxrk \u30c0\u30fc\u30af"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "4wheel",
+  "name": "Phonk Killer",
+  "mbid": "a8ffb5eb-de2e-4999-8b1d-011d3de7555b",
+  "url": "https://www.last.fm/music/Phonk+Killer",
+  "match": "0.678622",
+  "status": "200",
+  "lastfm_page": "phonk killer",
+  "mb_id": "a8ffb5eb-de2e-4999-8b1d-011d3de7555b",
+  "mb_name": "Phonk Killer",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [],
+  "tags": [],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "a8ffb5eb-de2e-4999-8b1d-011d3de7555b",
+    "name": "Phonk Killer",
+    "disambiguation": "",
+    "type": "Person",
+    "score": 100,
+    "exact_name": true
+   }
+  ],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "4wheel",
+  "name": "RAIZHELL",
+  "mbid": "b6630123-3b93-4740-8923-5379fc8e8971",
+  "url": "https://www.last.fm/music/RAIZHELL",
+  "match": "0.669125",
+  "status": "200",
+  "lastfm_page": "raizhell",
+  "mb_id": "b6630123-3b93-4740-8923-5379fc8e8971",
+  "mb_name": "RAIZHELL",
+  "disambiguation": "Phonk Artist, formely Razihel",
+  "type": "Person",
+  "genres": [],
+  "tags": [],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "b6630123-3b93-4740-8923-5379fc8e8971",
+    "name": "RAIZHELL",
+    "disambiguation": "Phonk Artist, formely Razihel",
+    "type": "Person",
+    "score": 100,
+    "exact_name": true
+   }
+  ],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "4wheel",
+  "name": "glichery",
+  "mbid": "b6826d4e-a271-4f4e-8c57-e3ca4c08e6a0",
+  "url": "https://www.last.fm/music/glichery",
+  "match": "0.537166",
+  "status": "200",
+  "lastfm_page": "glichery",
+  "mb_id": "b6826d4e-a271-4f4e-8c57-e3ca4c08e6a0",
+  "mb_name": "glichery",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [],
+  "tags": [],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "b6826d4e-a271-4f4e-8c57-e3ca4c08e6a0",
+    "name": "glichery",
+    "disambiguation": "",
+    "type": "Person",
+    "score": 100,
+    "exact_name": true
+   }
+  ],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "4wheel",
+  "name": "phonk.me",
+  "mbid": "cf175606-b584-48f3-a2a7-331c0d3266b1",
+  "url": "https://www.last.fm/music/phonk.me",
+  "match": "0.520880",
+  "status": "200",
+  "lastfm_page": "phonk.me",
+  "mb_id": "cf175606-b584-48f3-a2a7-331c0d3266b1",
+  "mb_name": "phonk.me",
+  "disambiguation": "",
+  "type": null,
+  "genres": [],
+  "tags": [],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "cf175606-b584-48f3-a2a7-331c0d3266b1",
+    "name": "phonk.me",
+    "disambiguation": "",
+    "type": null,
+    "score": 100,
+    "exact_name": true
+   }
+  ],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "4wheel",
+  "name": "FORGOTTENAGE",
+  "mbid": "b58cb2b2-f266-4391-9549-c614db62749b",
+  "url": "https://www.last.fm/music/FORGOTTENAGE",
+  "match": "0.516654",
+  "status": "200",
+  "lastfm_page": "forgottenage",
+  "mb_id": "b58cb2b2-f266-4391-9549-c614db62749b",
+  "mb_name": "FORGOTTENAGE",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [],
+  "tags": [],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "b58cb2b2-f266-4391-9549-c614db62749b",
+    "name": "FORGOTTENAGE",
+    "disambiguation": "",
+    "type": "Person",
+    "score": 100,
+    "exact_name": true
+   }
+  ],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "4wheel",
+  "name": "ARCHEZ",
+  "mbid": "b77ea5c6-454e-4e3e-bf51-7728fe899166",
+  "url": "https://www.last.fm/music/ARCHEZ",
+  "match": "0.506768",
+  "status": "200",
+  "lastfm_page": "archez",
+  "mb_id": "b77ea5c6-454e-4e3e-bf51-7728fe899166",
+  "mb_name": "ARCHEZ",
+  "disambiguation": "phonk",
+  "type": null,
+  "genres": [],
+  "tags": [],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "b77ea5c6-454e-4e3e-bf51-7728fe899166",
+    "name": "ARCHEZ",
+    "disambiguation": "phonk",
+    "type": null,
+    "score": 100,
+    "exact_name": true
+   }
+  ],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "4wheel",
+  "name": "GRAVECHILL",
+  "mbid": "543d59d7-25df-40a3-b6a9-0c804e1cc8a8",
+  "url": "https://www.last.fm/music/GRAVECHILL",
+  "match": "0.503677",
+  "status": "200",
+  "lastfm_page": "gravechill",
+  "mb_id": "543d59d7-25df-40a3-b6a9-0c804e1cc8a8",
+  "mb_name": "GRAVECHILL",
+  "disambiguation": "",
+  "type": null,
+  "genres": [],
+  "tags": [],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "543d59d7-25df-40a3-b6a9-0c804e1cc8a8",
+    "name": "GRAVECHILL",
+    "disambiguation": "",
+    "type": null,
+    "score": 100,
+    "exact_name": true
+   }
+  ],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "4wheel",
+  "name": "Kordhell",
+  "mbid": "e97e9533-a69b-431d-a88f-e9a519be6c0d",
+  "url": "https://www.last.fm/music/Kordhell",
+  "match": "0.502751",
+  "status": "200",
+  "lastfm_page": "kordhell",
+  "mb_id": "e97e9533-a69b-431d-a88f-e9a519be6c0d",
+  "mb_name": "Kordhell",
+  "disambiguation": "Mick Kenney alias for phonk music",
+  "type": "Person",
+  "genres": [
+   "drift phonk"
+  ],
+  "tags": [
+   "drift phonk"
+  ],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "e97e9533-a69b-431d-a88f-e9a519be6c0d",
+    "name": "Kordhell",
+    "disambiguation": "Mick Kenney alias for phonk music",
+    "type": "Person",
+    "score": 100,
+    "exact_name": true
+   }
+  ],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "4wheel",
+  "name": "$werve",
+  "mbid": "e075b9f8-7917-4fa6-9d98-f66bb8c157d1",
+  "url": "https://www.last.fm/music/$werve",
+  "match": "0.463942",
+  "status": "200",
+  "lastfm_page": "$werve",
+  "mb_id": "e075b9f8-7917-4fa6-9d98-f66bb8c157d1",
+  "mb_name": "$werve",
+  "disambiguation": "Phonk artist",
+  "type": "Person",
+  "genres": [],
+  "tags": [],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "e075b9f8-7917-4fa6-9d98-f66bb8c157d1",
+    "name": "$werve",
+    "disambiguation": "Phonk artist",
+    "type": "Person",
+    "score": 100,
+    "exact_name": true
+   },
+   {
+    "id": "7425676d-e906-410c-8d6b-6894619f7a23",
+    "name": "$werve",
+    "disambiguation": "phonk, drift phonk - the other $werve. Yes, according to Spotify, there is a second $werve with only one track",
+    "type": null,
+    "score": 96,
+    "exact_name": true
+   }
+  ],
+  "contest": "CONTESTED",
+  "final": "UNADJUDICATED"
+ },
+ {
+  "workload": "4wheel",
+  "name": "KXLLYXU",
+  "mbid": "c2714a84-4040-4e4c-b13a-b113be84aa93",
+  "url": "https://www.last.fm/music/KXLLYXU",
+  "match": "0.404521",
+  "status": "200",
+  "lastfm_page": "kxllyxu",
+  "mb_id": "c2714a84-4040-4e4c-b13a-b113be84aa93",
+  "mb_name": "KXLLYXU",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [],
+  "tags": [],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "c2714a84-4040-4e4c-b13a-b113be84aa93",
+    "name": "KXLLYXU",
+    "disambiguation": "",
+    "type": "Person",
+    "score": 100,
+    "exact_name": true
+   }
+  ],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "aphex-twin",
+  "name": "AFX",
+  "mbid": "87225a21-c925-41cd-852f-be4b052d0824",
+  "url": "https://www.last.fm/music/AFX",
+  "match": "1",
+  "status": "200",
+  "lastfm_page": "afx",
+  "mb_id": "87225a21-c925-41cd-852f-be4b052d0824",
+  "mb_name": "AFX",
+  "disambiguation": "Aphex Twin",
+  "type": "Person",
+  "genres": [
+   "acid techno",
+   "ambient",
+   "drill and bass",
+   "electro",
+   "electronic",
+   "experimental",
+   "glitch",
+   "idm"
+  ],
+  "tags": [
+   "acid",
+   "acid techno",
+   "ambient",
+   "braindance",
+   "drill and bass",
+   "electro",
+   "electronic",
+   "english",
+   "experimental",
+   "glitch",
+   "idm",
+   "uk",
+   "warp"
+  ],
+  "mb_lastfm_pages": [
+   "afx"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "aphex-twin",
+  "name": "Squarepusher",
+  "mbid": "4d86ad4e-28d8-4e9f-8cf4-735c57060fdc",
+  "url": "https://www.last.fm/music/Squarepusher",
+  "match": "0.805349",
+  "status": "200",
+  "lastfm_page": "squarepusher",
+  "mb_id": "4d86ad4e-28d8-4e9f-8cf4-735c57060fdc",
+  "mb_name": "Squarepusher",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "drill and bass",
+   "drum and bass",
+   "electronic",
+   "glitch",
+   "idm",
+   "jazz fusion"
+  ],
+  "tags": [
+   "drill and bass",
+   "drum and bass",
+   "electronic",
+   "glitch",
+   "idm",
+   "jazz fusion"
+  ],
+  "mb_lastfm_pages": [
+   "squarepusher"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "aphex-twin",
+  "name": "Polygon Window",
+  "mbid": "aaa78ce4-e4fe-43b6-abe1-733dc83f8eb1",
+  "url": "https://www.last.fm/music/Polygon+Window",
+  "match": "0.804004",
+  "status": "200",
+  "lastfm_page": "polygon window",
+  "mb_id": "aaa78ce4-e4fe-43b6-abe1-733dc83f8eb1",
+  "mb_name": "Polygon Window",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "acid techno",
+   "ambient techno",
+   "electronic",
+   "idm",
+   "techno"
+  ],
+  "tags": [
+   "acid techno",
+   "ambient techno",
+   "british",
+   "electronic",
+   "english",
+   "idm",
+   "techno",
+   "uk",
+   "warp"
+  ],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "aaa78ce4-e4fe-43b6-abe1-733dc83f8eb1",
+    "name": "Polygon Window",
+    "disambiguation": "",
+    "type": "Person",
+    "score": 100,
+    "exact_name": true
+   }
+  ],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "aphex-twin",
+  "name": "Autechre",
+  "mbid": "410c9baf-5469-44f6-9852-826524b80c61",
+  "url": "https://www.last.fm/music/Autechre",
+  "match": "0.619877",
+  "status": "200",
+  "lastfm_page": "autechre",
+  "mb_id": "410c9baf-5469-44f6-9852-826524b80c61",
+  "mb_name": "Autechre",
+  "disambiguation": "electronic music duo",
+  "type": "Group",
+  "genres": [
+   "ambient techno",
+   "avant-garde",
+   "drill and bass",
+   "electronic",
+   "electronica",
+   "experimental",
+   "experimental electronic",
+   "glitch",
+   "idm",
+   "instrumental"
+  ],
+  "tags": [
+   "abstract",
+   "ambient techno",
+   "avant-garde",
+   "drill and bass",
+   "electronic",
+   "electronica",
+   "experimental",
+   "experimental electronic",
+   "generative music",
+   "glitch",
+   "idm",
+   "instrumental",
+   "warp"
+  ],
+  "mb_lastfm_pages": [
+   "autechre"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "aphex-twin",
+  "name": "Boards of Canada",
+  "mbid": "69158f97-4c07-4c4e-baf8-4e4ab1ed666e",
+  "url": "https://www.last.fm/music/Boards+of+Canada",
+  "match": "0.548946",
+  "status": "200",
+  "lastfm_page": "boards of canada",
+  "mb_id": "69158f97-4c07-4c4e-baf8-4e4ab1ed666e",
+  "mb_name": "Boards of Canada",
+  "disambiguation": "Scottish electronic duo",
+  "type": "Group",
+  "genres": [
+   "ambient",
+   "ambient techno",
+   "downtempo",
+   "electronic",
+   "folktronica",
+   "hauntology",
+   "idm",
+   "trip hop"
+  ],
+  "tags": [
+   "ambient",
+   "ambient techno",
+   "british",
+   "downtempo",
+   "electronic",
+   "folktronica",
+   "hauntology",
+   "idm",
+   "trip hop",
+   "warp"
+  ],
+  "mb_lastfm_pages": [
+   "boards of canada"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "aphex-twin",
+  "name": "Caustic Window",
+  "mbid": "bc1fd2f7-1ecf-46d1-9ca6-47b7d7880c4d",
+  "url": "https://www.last.fm/music/Caustic+Window",
+  "match": "0.486183",
+  "status": "200",
+  "lastfm_page": "caustic window",
+  "mb_id": "bc1fd2f7-1ecf-46d1-9ca6-47b7d7880c4d",
+  "mb_name": "Caustic Window",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "idm"
+  ],
+  "tags": [
+   "british",
+   "english",
+   "idm",
+   "uk"
+  ],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "bc1fd2f7-1ecf-46d1-9ca6-47b7d7880c4d",
+    "name": "Caustic Window",
+    "disambiguation": "",
+    "type": "Person",
+    "score": 100,
+    "exact_name": true
+   }
+  ],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "aphex-twin",
+  "name": "The Tuss",
+  "mbid": "09292e4d-b7ad-476b-86d9-7806303ef8c3",
+  "url": "https://www.last.fm/music/The+Tuss",
+  "match": "0.460067",
+  "status": "200",
+  "lastfm_page": "the tuss",
+  "mb_id": "09292e4d-b7ad-476b-86d9-7806303ef8c3",
+  "mb_name": "The Tuss",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [],
+  "tags": [],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "09292e4d-b7ad-476b-86d9-7806303ef8c3",
+    "name": "The Tuss",
+    "disambiguation": "",
+    "type": "Person",
+    "score": 100,
+    "exact_name": true
+   }
+  ],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "aphex-twin",
+  "name": "Venetian Snares",
+  "mbid": "56abaa47-0101-463b-b37e-e961136fec39",
+  "url": "https://www.last.fm/music/Venetian+Snares",
+  "match": "0.428693",
+  "status": "200",
+  "lastfm_page": "venetian snares",
+  "mb_id": "56abaa47-0101-463b-b37e-e961136fec39",
+  "mb_name": "Venetian Snares",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "acid techno",
+   "breakcore",
+   "drill and bass",
+   "electronic",
+   "gabber",
+   "idm",
+   "modern classical",
+   "orchestral"
+  ],
+  "tags": [
+   "acid techno",
+   "breakcore",
+   "canadian",
+   "composers",
+   "drill and bass",
+   "electronic",
+   "electronic music",
+   "gabber",
+   "glitch music",
+   "idm",
+   "intelligent dance music",
+   "modern classical",
+   "orchestral",
+   "tracker music"
+  ],
+  "mb_lastfm_pages": [
+   "venetian snares"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "aphex-twin",
+  "name": "Bogdan Raczynski",
+  "mbid": "9bc2888c-f4c8-4cfa-a2c6-7384f331fa01",
+  "url": "https://www.last.fm/music/Bogdan+Raczynski",
+  "match": "0.313403",
+  "status": "200",
+  "lastfm_page": "bogdan raczynski",
+  "mb_id": "9bc2888c-f4c8-4cfa-a2c6-7384f331fa01",
+  "mb_name": "Bogdan Raczynski",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "electronic",
+   "jungle",
+   "techno"
+  ],
+  "tags": [
+   "dance and electronica",
+   "drum'n'bass",
+   "electronic",
+   "jungle",
+   "techno"
+  ],
+  "mb_lastfm_pages": [
+   "bogdan raczynski"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "aphex-twin",
+  "name": "GAK",
+  "mbid": "4bcafe79-c42d-46ee-b398-3304a5d7b663",
+  "url": "https://www.last.fm/music/GAK",
+  "match": "0.293211",
+  "status": "200",
+  "lastfm_page": "gak",
+  "mb_id": "4bcafe79-c42d-46ee-b398-3304a5d7b663",
+  "mb_name": "GAK",
+  "disambiguation": "THE CAT FOOD LOUNGE.",
+  "type": "Person",
+  "genres": [],
+  "tags": [],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "3fe2d6c0-6081-4d82-a265-deaab1206d3a",
+    "name": "GAK",
+    "disambiguation": "Japanese composer, arranger, guitarist, lyricist",
+    "type": "Person",
+    "score": 100,
+    "exact_name": true
+   },
+   {
+    "id": "c5028308-353d-49c1-b8a5-dd623c09abbd",
+    "name": "Gak",
+    "disambiguation": "1990s+ Nice French rapper / D\u2019en Bas Fondation, Atl\u00e9tico, IDEM, ASUIVRE\u2026",
+    "type": "Person",
+    "score": 75,
+    "exact_name": true
+   },
+   {
+    "id": "2d1beb0f-edf7-4dea-9a8b-2c88f2551053",
+    "name": "GAK",
+    "disambiguation": "UK experimental/techno artist Richard David James",
+    "type": "Person",
+    "score": 72,
+    "exact_name": true
+   },
+   {
+    "id": "568426d9-6727-41fd-af9a-799074867d49",
+    "name": "gak",
+    "disambiguation": "Innocent Key",
+    "type": "Person",
+    "score": 71,
+    "exact_name": true
+   },
+   {
+    "id": "2b338650-b69a-4010-908a-448274068f3b",
+    "name": "GAK",
+    "disambiguation": "Austrian soccer team",
+    "type": null,
+    "score": 70,
+    "exact_name": true
+   },
+   {
+    "id": "4bcafe79-c42d-46ee-b398-3304a5d7b663",
+    "name": "GAK",
+    "disambiguation": "THE CAT FOOD LOUNGE.",
+    "type": "Person",
+    "score": 70,
+    "exact_name": true
+   },
+   {
+    "id": "dea553aa-cd46-4054-8f5b-3c3d473a8cbb",
+    "name": "GAK",
+    "disambiguation": "group from the United States",
+    "type": "Group",
+    "score": 70,
+    "exact_name": true
+   },
+   {
+    "id": "60d12a15-fe0b-4ed1-b0ff-a1206bb2ba52",
+    "name": "Gak",
+    "disambiguation": "90s cover band from Roanoke, VA",
+    "type": "Group",
+    "score": 70,
+    "exact_name": true
+   },
+   {
+    "id": "8bc20ab6-70b7-4900-873e-3406fd949d97",
+    "name": "gak",
+    "disambiguation": "japanese doujin musician",
+    "type": "Person",
+    "score": 70,
+    "exact_name": true
+   }
+  ],
+  "contest": "CONTESTED",
+  "final": "UNADJUDICATED"
+ },
+ {
+  "workload": "aphex-twin",
+  "name": "Burial",
+  "mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6",
+  "url": "https://www.last.fm/music/Burial",
+  "match": "0.267165",
+  "status": "200",
+  "lastfm_page": "burial",
+  "mb_id": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6",
+  "mb_name": "Burial",
+  "disambiguation": "UK dubstep",
+  "type": "Person",
+  "genres": [
+   "2-step",
+   "ambient",
+   "dub",
+   "dubstep",
+   "electronic",
+   "future garage",
+   "uk garage"
+  ],
+  "tags": [
+   "2-step",
+   "ambient",
+   "britannique",
+   "british",
+   "dance and electronica",
+   "dub",
+   "dubstep",
+   "electronic",
+   "english",
+   "future garage",
+   "london",
+   "moody",
+   "summer vibes",
+   "uk",
+   "uk garage"
+  ],
+  "mb_lastfm_pages": [
+   "burial"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "aphex-twin",
+  "name": "Plaid",
+  "mbid": "7e54d133-2525-4bc0-ae94-65584145a386",
+  "url": "https://www.last.fm/music/Plaid",
+  "match": "0.254945",
+  "status": "200",
+  "lastfm_page": "plaid",
+  "mb_id": "7e54d133-2525-4bc0-ae94-65584145a386",
+  "mb_name": "Plaid",
+  "disambiguation": "British electronic music duo",
+  "type": "Group",
+  "genres": [
+   "breakbeat",
+   "electronic",
+   "idm",
+   "techno"
+  ],
+  "tags": [
+   "abstract",
+   "breakbeat",
+   "electronic",
+   "idm",
+   "techno"
+  ],
+  "mb_lastfm_pages": [
+   "plaid"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "aphex-twin",
+  "name": "Casino Versus Japan",
+  "mbid": "1245270b-3c9c-4c60-ae90-954a771c6bd4",
+  "url": "https://www.last.fm/music/Casino+Versus+Japan",
+  "match": "0.248596",
+  "status": "200",
+  "lastfm_page": "casino versus japan",
+  "mb_id": "1245270b-3c9c-4c60-ae90-954a771c6bd4",
+  "mb_name": "Casino Versus Japan",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "ambient",
+   "downtempo",
+   "idm"
+  ],
+  "tags": [
+   "ambient",
+   "downtempo",
+   "idm"
+  ],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "1245270b-3c9c-4c60-ae90-954a771c6bd4",
+    "name": "Casino Versus Japan",
+    "disambiguation": "",
+    "type": "Person",
+    "score": 100,
+    "exact_name": true
+   }
+  ],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "aphex-twin",
+  "name": "Four Tet",
+  "mbid": "3bcff06f-675a-451f-9075-99e8657047e8",
+  "url": "https://www.last.fm/music/Four+Tet",
+  "match": "0.248076",
+  "status": "200",
+  "lastfm_page": "four tet",
+  "mb_id": "3bcff06f-675a-451f-9075-99e8657047e8",
+  "mb_name": "Four Tet",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "club",
+   "dance",
+   "downtempo",
+   "dubstep",
+   "electronic",
+   "electronica",
+   "folktronica",
+   "future garage",
+   "idm",
+   "indie rock",
+   "indietronica",
+   "microhouse",
+   "post-dubstep",
+   "post-rock",
+   "tech house",
+   "techno",
+   "trip hop"
+  ],
+  "tags": [
+   "british",
+   "club",
+   "dance",
+   "downtempo",
+   "dubstep",
+   "electronic",
+   "electronica",
+   "english",
+   "folktronica",
+   "future garage",
+   "idm",
+   "indie rock",
+   "indietronica",
+   "microhouse",
+   "post-dubstep",
+   "post-rock",
+   "tech house",
+   "techno",
+   "trip hop",
+   "uk"
+  ],
+  "mb_lastfm_pages": [
+   "four tet"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "aphex-twin",
+  "name": "Gescom",
+  "mbid": "edc88ebf-4790-4cb8-8a40-13efda4a00fa",
+  "url": "https://www.last.fm/music/Gescom",
+  "match": "0.240189",
+  "status": "200",
+  "lastfm_page": "gescom",
+  "mb_id": "edc88ebf-4790-4cb8-8a40-13efda4a00fa",
+  "mb_name": "Gescom",
+  "disambiguation": "",
+  "type": "Group",
+  "genres": [
+   "idm"
+  ],
+  "tags": [
+   "british",
+   "english",
+   "idm",
+   "skam",
+   "uk",
+   "warp"
+  ],
+  "mb_lastfm_pages": [
+   "gescom"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "aphex-twin",
+  "name": "Luke Vibert",
+  "mbid": "0b59a279-54ef-4723-854e-a12b61e9581a",
+  "url": "https://www.last.fm/music/Luke+Vibert",
+  "match": "0.231741",
+  "status": "?",
+  "lastfm_page": "luke vibert",
+  "mb_id": "0b59a279-54ef-4723-854e-a12b61e9581a",
+  "mb_name": "Luke Vibert",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "drill and bass",
+   "drum and bass",
+   "electronic",
+   "electronica",
+   "idm",
+   "trip hop"
+  ],
+  "tags": [
+   "british",
+   "dance and electronica",
+   "drill and bass",
+   "drum and bass",
+   "electronic",
+   "electronica",
+   "english",
+   "idm",
+   "mo wax",
+   "trip hop",
+   "uk",
+   "warp"
+  ],
+  "mb_lastfm_pages": [
+   "luke vibert"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "aphex-twin",
+  "name": "The Future Sound of London",
+  "mbid": "a1d77dd4-8728-4a47-bdfa-9663d791139c",
+  "url": "https://www.last.fm/music/The+Future+Sound+of+London",
+  "match": "0.227225",
+  "status": "200",
+  "lastfm_page": "the future sound of london",
+  "mb_id": "a1d77dd4-8728-4a47-bdfa-9663d791139c",
+  "mb_name": "The Future Sound of London",
+  "disambiguation": "",
+  "type": "Group",
+  "genres": [
+   "acid house",
+   "ambient",
+   "ambient house",
+   "ambient techno",
+   "big beat",
+   "breakbeat",
+   "classical",
+   "club",
+   "downtempo",
+   "electronic",
+   "electronica",
+   "experimental",
+   "idm",
+   "progressive electronic",
+   "psychedelic",
+   "techno",
+   "trip hop"
+  ],
+  "tags": [
+   "abstract",
+   "acid house",
+   "ambient",
+   "ambient electronic",
+   "ambient house",
+   "ambient techno",
+   "big beat",
+   "breakbeat",
+   "british",
+   "classical",
+   "club",
+   "downtempo",
+   "electronic",
+   "electronica",
+   "english",
+   "experimental",
+   "idm",
+   "intelligent dance music",
+   "progressive electronic",
+   "psychedelia",
+   "psychedelic",
+   "techno",
+   "trip hop",
+   "uk"
+  ],
+  "mb_lastfm_pages": [
+   "the future sound of london"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "aphex-twin",
+  "name": "LFO",
+  "mbid": "e6d0179f-b899-4563-b6c6-88715aaae0b8",
+  "url": "https://www.last.fm/music/LFO",
+  "match": "0.224425",
+  "status": "200",
+  "lastfm_page": "lfo",
+  "mb_id": "e6d0179f-b899-4563-b6c6-88715aaae0b8",
+  "mb_name": "LFO",
+  "disambiguation": "Mark Bell & Gez Varley: Low Frequency Oscillator",
+  "type": "Group",
+  "genres": [
+   "bleep techno",
+   "electronic",
+   "electronica",
+   "idm",
+   "techno"
+  ],
+  "tags": [
+   "bleep techno",
+   "british",
+   "dance and electronica",
+   "electronic",
+   "electronica",
+   "english",
+   "idm",
+   "techno",
+   "uk",
+   "warp"
+  ],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "e6d0179f-b899-4563-b6c6-88715aaae0b8",
+    "name": "LFO",
+    "disambiguation": "Mark Bell & Gez Varley: Low Frequency Oscillator",
+    "type": "Group",
+    "score": 100,
+    "exact_name": true
+   },
+   {
+    "id": "67d68aea-1351-4cbf-8f4e-9ebc8a6878e3",
+    "name": "LFO",
+    "disambiguation": "Mario Aldini & Bernard Preudhomme",
+    "type": "Group",
+    "score": 88,
+    "exact_name": true
+   },
+   {
+    "id": "56df5343-86ac-4dd9-8331-173a4439337e",
+    "name": "LFO",
+    "disambiguation": "Lyte Funkie Ones",
+    "type": "Group",
+    "score": 82,
+    "exact_name": true
+   },
+   {
+    "id": "4cb2ab53-84d4-485c-993e-0cce789b77b9",
+    "name": "LFO",
+    "disambiguation": "Les Cutmore, Paul Hardcastle",
+    "type": "Group",
+    "score": 61,
+    "exact_name": true
+   }
+  ],
+  "contest": "CONTESTED",
+  "final": "UNADJUDICATED"
+ },
+ {
+  "workload": "bjork",
+  "name": "Arca",
+  "mbid": "c58ea103-44c2-4ff3-a6a5-233b96081063",
+  "url": "https://www.last.fm/music/Arca",
+  "match": "1",
+  "status": "200",
+  "lastfm_page": "arca",
+  "mb_id": "c58ea103-44c2-4ff3-a6a5-233b96081063",
+  "mb_name": "Arca",
+  "disambiguation": "French band created by S. Chauveau and J. Cambon",
+  "type": "Group",
+  "genres": [],
+  "tags": [],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "f7625f34-1799-42a4-a1c6-22b5377c767b",
+    "name": "Arca",
+    "disambiguation": "Venezuelan producer & composer",
+    "type": "Person",
+    "score": 100,
+    "exact_name": true
+   },
+   {
+    "id": "ec318a6a-3349-42f4-b2bd-0a65e2c0c9d6",
+    "name": "Arca",
+    "disambiguation": "trance, released First Impression",
+    "type": null,
+    "score": 86,
+    "exact_name": true
+   },
+   {
+    "id": "c58ea103-44c2-4ff3-a6a5-233b96081063",
+    "name": "Arca",
+    "disambiguation": "French band created by S. Chauveau and J. Cambon",
+    "type": "Group",
+    "score": 71,
+    "exact_name": true
+   },
+   {
+    "id": "3f38d043-8033-48ac-a39e-3ddb9fed91b5",
+    "name": "arca",
+    "disambiguation": "LUCA & haruka nakamura",
+    "type": "Group",
+    "score": 67,
+    "exact_name": true
+   },
+   {
+    "id": "6f404ebb-82e2-41f3-abd9-0d02475d3b27",
+    "name": "Arca",
+    "disambiguation": "Romanian band from Timi\u0219oara",
+    "type": "Group",
+    "score": 65,
+    "exact_name": true
+   }
+  ],
+  "contest": "CONTESTED",
+  "final": "MISMATCH",
+  "true_owner": {
+   "id": "f7625f34-1799-42a4-a1c6-22b5377c767b",
+   "name": "Arca",
+   "disambiguation": "Venezuelan producer & composer",
+   "type": "Person",
+   "score": 100,
+   "exact_name": true
+  },
+  "all_owners": [
+   {
+    "id": "f7625f34-1799-42a4-a1c6-22b5377c767b",
+    "name": "Arca",
+    "disambiguation": "Venezuelan producer & composer",
+    "type": "Person",
+    "score": 100,
+    "exact_name": true
+   }
+  ]
+ },
+ {
+  "workload": "bjork",
+  "name": "The Sugarcubes",
+  "mbid": "95303251-46d5-4239-89c8-eaf0b0947a11",
+  "url": "https://www.last.fm/music/The+Sugarcubes",
+  "match": "0.868697",
+  "status": "200",
+  "lastfm_page": "the sugarcubes",
+  "mb_id": "95303251-46d5-4239-89c8-eaf0b0947a11",
+  "mb_name": "The Sugarcubes",
+  "disambiguation": "Icelandic alternative/post-punk rock band",
+  "type": "Group",
+  "genres": [
+   "alternative dance",
+   "alternative rock",
+   "art pop",
+   "art punk",
+   "dream pop",
+   "electronic",
+   "indie pop",
+   "post-punk",
+   "rock",
+   "synth-pop"
+  ],
+  "tags": [
+   "80s",
+   "alternative",
+   "alternative dance",
+   "alternative rock",
+   "art pop",
+   "art punk",
+   "dream pop",
+   "electronic",
+   "iceland",
+   "icelandic",
+   "indie pop",
+   "post-punk",
+   "rock",
+   "synth-pop"
+  ],
+  "mb_lastfm_pages": [
+   "the sugarcubes"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "bjork",
+  "name": "Kate Bush",
+  "mbid": "4b585938-f271-45e2-b19a-91c634b5e396",
+  "url": "https://www.last.fm/music/Kate+Bush",
+  "match": "0.814530",
+  "status": "200",
+  "lastfm_page": "kate bush",
+  "mb_id": "4b585938-f271-45e2-b19a-91c634b5e396",
+  "mb_name": "Kate Bush",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "alternative pop",
+   "ambient pop",
+   "art pop",
+   "art rock",
+   "baroque pop",
+   "new wave",
+   "pop",
+   "pop rock",
+   "progressive pop",
+   "rock"
+  ],
+  "tags": [
+   "alternative pop",
+   "alternative rock music",
+   "ambient pop",
+   "art pop",
+   "art rock",
+   "baroque pop",
+   "british",
+   "new wave",
+   "pop",
+   "pop rock",
+   "progressive pop",
+   "progressive rock music",
+   "rock",
+   "sound recording executives and producers",
+   "women composers",
+   "women rock musicians",
+   "women singers"
+  ],
+  "mb_lastfm_pages": [
+   "kate bush"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "bjork",
+  "name": "FKA twigs",
+  "mbid": "1e4e9db7-5068-4a9c-bdd0-5777e47172c8",
+  "url": "https://www.last.fm/music/FKA+twigs",
+  "match": "0.707013",
+  "status": "200",
+  "lastfm_page": "fka twigs",
+  "mb_id": "1e4e9db7-5068-4a9c-bdd0-5777e47172c8",
+  "mb_name": "FKA twigs",
+  "disambiguation": "British electro\u2010pop artist",
+  "type": "Person",
+  "genres": [
+   "alternative r&b",
+   "ambient",
+   "ambient pop",
+   "art pop",
+   "avant-garde",
+   "avant-garde pop",
+   "dance",
+   "electronic",
+   "electronica",
+   "experimental",
+   "future bass",
+   "glitch pop",
+   "hip hop",
+   "pop",
+   "techno",
+   "trap",
+   "trip hop"
+  ],
+  "tags": [
+   "alternative r&b",
+   "alternative/indie rock",
+   "ambient",
+   "ambient pop",
+   "art pop",
+   "avant-garde",
+   "avant-garde pop",
+   "dance",
+   "electronic",
+   "electronica",
+   "experimental",
+   "future bass",
+   "glitch pop",
+   "hip hop",
+   "indie electronic",
+   "left-field pop",
+   "pop",
+   "techno",
+   "trap",
+   "trip hop",
+   "uk bass"
+  ],
+  "mb_lastfm_pages": [
+   "fka twigs"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "bjork",
+  "name": "Fiona Apple",
+  "mbid": "a9ee533f-8871-4f62-a6bb-91eb264abc90",
+  "url": "https://www.last.fm/music/Fiona+Apple",
+  "match": "0.617534",
+  "status": "200",
+  "lastfm_page": "fiona apple",
+  "mb_id": "a9ee533f-8871-4f62-a6bb-91eb264abc90",
+  "mb_name": "Fiona Apple",
+  "disambiguation": "singer-songwriter and pianist",
+  "type": "Person",
+  "genres": [
+   "alternative pop",
+   "art pop",
+   "baroque pop",
+   "jazz",
+   "piano rock",
+   "rock",
+   "singer-songwriter",
+   "soft rock"
+  ],
+  "tags": [
+   "1990s",
+   "2000s",
+   "alternative pop",
+   "art pop",
+   "baroque pop",
+   "experimental pop",
+   "female vocals",
+   "jazz",
+   "piano rock",
+   "rock",
+   "singer-songwriter",
+   "singer/songwriter",
+   "soft rock"
+  ],
+  "mb_lastfm_pages": [
+   "fiona apple"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "bjork",
+  "name": "Eartheater",
+  "mbid": "bde8e7a4-9c31-4af6-92c9-210f1f170878",
+  "url": "https://www.last.fm/music/Eartheater",
+  "match": "0.617181",
+  "status": "200",
+  "lastfm_page": "eartheater",
+  "mb_id": "bde8e7a4-9c31-4af6-92c9-210f1f170878",
+  "mb_name": "Eartheater",
+  "disambiguation": "metal band from Sweden, previously known as Dr. Acetone",
+  "type": "Group",
+  "genres": [
+   "doom metal",
+   "metal",
+   "sludge metal",
+   "stoner metal"
+  ],
+  "tags": [
+   "doom metal",
+   "metal",
+   "sludge metal",
+   "stoner metal",
+   "weed metal"
+  ],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "7f5a2d26-8625-4788-bafd-0034936895ae",
+    "name": "Eartheater",
+    "disambiguation": "multi-instrumentalist and vocalist Alexandra Drewchin",
+    "type": "Person",
+    "score": 100,
+    "exact_name": true
+   },
+   {
+    "id": "bde8e7a4-9c31-4af6-92c9-210f1f170878",
+    "name": "Eartheater",
+    "disambiguation": "metal band from Sweden, previously known as Dr. Acetone",
+    "type": "Group",
+    "score": 86,
+    "exact_name": true
+   },
+   {
+    "id": "563ebc14-dd39-44a3-af78-e699cb257b76",
+    "name": "earTHeater",
+    "disambiguation": "",
+    "type": null,
+    "score": 86,
+    "exact_name": true
+   }
+  ],
+  "contest": "CONTESTED",
+  "final": "MISMATCH",
+  "true_owner": {
+   "id": "7f5a2d26-8625-4788-bafd-0034936895ae",
+   "name": "Eartheater",
+   "disambiguation": "multi-instrumentalist and vocalist Alexandra Drewchin",
+   "type": "Person",
+   "score": 100,
+   "exact_name": true
+  },
+  "all_owners": [
+   {
+    "id": "7f5a2d26-8625-4788-bafd-0034936895ae",
+    "name": "Eartheater",
+    "disambiguation": "multi-instrumentalist and vocalist Alexandra Drewchin",
+    "type": "Person",
+    "score": 100,
+    "exact_name": true
+   }
+  ]
+ },
+ {
+  "workload": "bjork",
+  "name": "PJ Harvey",
+  "mbid": "e795e03d-b5d5-4a5f-834d-162cfb308a2c",
+  "url": "https://www.last.fm/music/PJ+Harvey",
+  "match": "0.480898",
+  "status": "200",
+  "lastfm_page": "pj harvey",
+  "mb_id": "e795e03d-b5d5-4a5f-834d-162cfb308a2c",
+  "mb_name": "PJ Harvey",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "alternative rock",
+   "art rock",
+   "chamber folk",
+   "folk rock",
+   "indie rock",
+   "rock",
+   "singer-songwriter"
+  ],
+  "tags": [
+   "alternative rock",
+   "alternative singer-songwriter",
+   "art rock",
+   "chamber folk",
+   "folk rock",
+   "indie rock",
+   "rock",
+   "singer-songwriter",
+   "the lost generation",
+   "too pure"
+  ],
+  "mb_lastfm_pages": [
+   "pj harvey"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "bjork",
+  "name": "Grimes",
+  "mbid": "7e5a2a59-6d9f-4a17-b7c2-e1eedb7bd222",
+  "url": "https://www.last.fm/music/Grimes",
+  "match": "0.431610",
+  "status": "200",
+  "lastfm_page": "grimes",
+  "mb_id": "7e5a2a59-6d9f-4a17-b7c2-e1eedb7bd222",
+  "mb_name": "Grimes",
+  "disambiguation": "Canadian singer and producer",
+  "type": "Person",
+  "genres": [
+   "alternative rock",
+   "ambient",
+   "art pop",
+   "avant-garde",
+   "avant-garde pop",
+   "chillwave",
+   "contemporary r&b",
+   "dance",
+   "dark wave",
+   "dream pop",
+   "electronic",
+   "electronica",
+   "electropop",
+   "ethereal wave",
+   "experimental",
+   "idm",
+   "indie pop",
+   "indie rock",
+   "indietronica",
+   "leftfield",
+   "pop",
+   "synth-pop",
+   "witch house"
+  ],
+  "tags": [
+   "alternative rock",
+   "ambient",
+   "art pop",
+   "avant-garde",
+   "avant-garde pop",
+   "chillwave",
+   "contemporary r&b",
+   "dance",
+   "dark wave",
+   "dream pop",
+   "electronic",
+   "electronica",
+   "electropop",
+   "ethereal wave",
+   "experimental",
+   "idm",
+   "indie pop",
+   "indie rock",
+   "indietronica",
+   "leftfield",
+   "pop",
+   "synth-pop",
+   "witch house"
+  ],
+  "mb_lastfm_pages": [
+   "grimes"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "bjork",
+  "name": "Kelela",
+  "mbid": "045494aa-e913-4e62-bf4e-dcc276e0075a",
+  "url": "https://www.last.fm/music/Kelela",
+  "match": "0.427166",
+  "status": "?",
+  "lastfm_page": "kelela",
+  "mb_id": "045494aa-e913-4e62-bf4e-dcc276e0075a",
+  "mb_name": "Kelela",
+  "disambiguation": "US | R&B",
+  "type": "Person",
+  "genres": [
+   "alternative r&b",
+   "grime"
+  ],
+  "tags": [
+   "alternative r&b",
+   "grime",
+   "pbr&b",
+   "r & b"
+  ],
+  "mb_lastfm_pages": [
+   "kelela"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "bjork",
+  "name": "ANOHNI",
+  "mbid": "91b67275-db2c-4fc2-b51f-82978aeb5c41",
+  "url": "https://www.last.fm/music/ANOHNI",
+  "match": "0.377517",
+  "status": "200",
+  "lastfm_page": "anohni",
+  "mb_id": "91b67275-db2c-4fc2-b51f-82978aeb5c41",
+  "mb_name": "ANOHNI",
+  "disambiguation": "Anohni Hegarty",
+  "type": "Person",
+  "genres": [
+   "alternative rock",
+   "ambient",
+   "electronic",
+   "experimental",
+   "indie rock"
+  ],
+  "tags": [
+   "alternative rock",
+   "ambient",
+   "british",
+   "electronic",
+   "english",
+   "experimental",
+   "indie rock",
+   "lgbtq+",
+   "uk",
+   "voice"
+  ],
+  "mb_lastfm_pages": [
+   "anohni"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "bjork",
+  "name": "M.I.A.",
+  "mbid": "7cf0ea9d-86b9-4dad-ba9e-2355a64899ea",
+  "url": "https://www.last.fm/music/M.I.A.",
+  "match": "0.370976",
+  "status": "200",
+  "lastfm_page": "m.i.a.",
+  "mb_id": "7cf0ea9d-86b9-4dad-ba9e-2355a64899ea",
+  "mb_name": "M.I.A.",
+  "disambiguation": "hip hop artist Maya Arulpragasam",
+  "type": "Person",
+  "genres": [
+   "alternative dance",
+   "alternative hip hop",
+   "christian hip hop",
+   "contemporary christian",
+   "dance",
+   "dancehall",
+   "edm",
+   "electronic",
+   "electronica",
+   "electropop",
+   "experimental",
+   "experimental hip hop",
+   "hip hop",
+   "idm",
+   "indietronica",
+   "industrial hip hop",
+   "new rave",
+   "political hip hop",
+   "pop",
+   "pop rap",
+   "trap",
+   "trap edm",
+   "trip hop",
+   "urban contemporary gospel"
+  ],
+  "tags": [
+   "alternative dance",
+   "alternative hip hop",
+   "ccm",
+   "christian hip hop",
+   "contemporary christian",
+   "dance",
+   "dancehall",
+   "edm",
+   "electronic",
+   "electronica",
+   "electropop",
+   "experimental",
+   "experimental hip hop",
+   "female vocals",
+   "hip hop",
+   "idm",
+   "indietronica",
+   "industrial hip hop",
+   "new rave",
+   "political hip hop",
+   "pop",
+   "pop rap",
+   "trap",
+   "trap edm",
+   "trip hop",
+   "uk hip hop",
+   "urban contemporary gospel"
+  ],
+  "mb_lastfm_pages": [
+   "m.i.a."
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "bjork",
+  "name": "Imogen Heap",
+  "mbid": "328d146c-79f1-4eb6-9e40-8ee5710c14e5",
+  "url": "https://www.last.fm/music/Imogen+Heap",
+  "match": "0.361133",
+  "status": "200",
+  "lastfm_page": "imogen heap",
+  "mb_id": "328d146c-79f1-4eb6-9e40-8ee5710c14e5",
+  "mb_name": "Imogen Heap",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "alternative rock",
+   "art pop",
+   "electronic",
+   "electropop",
+   "indie pop",
+   "indietronica",
+   "pop"
+  ],
+  "tags": [
+   "alternative rock",
+   "art pop",
+   "british",
+   "composers",
+   "electronic",
+   "electropop",
+   "indie pop",
+   "indietronica",
+   "instrumentalists",
+   "pop",
+   "producer",
+   "singers",
+   "sound engineers",
+   "sound recording executives and producers"
+  ],
+  "mb_lastfm_pages": [
+   "imogen heap"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "bjork",
+  "name": "Tori Amos",
+  "mbid": "c0b2500e-0cef-4130-869d-732b23ed9df5",
+  "url": "https://www.last.fm/music/Tori+Amos",
+  "match": "0.359737",
+  "status": "200",
+  "lastfm_page": "tori amos",
+  "mb_id": "c0b2500e-0cef-4130-869d-732b23ed9df5",
+  "mb_name": "Tori Amos",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "alternative pop",
+   "alternative rock",
+   "art pop",
+   "art rock",
+   "baroque pop",
+   "chamber pop",
+   "crossover prog",
+   "electronic",
+   "electronica",
+   "experimental",
+   "indie rock",
+   "jazz",
+   "piano rock",
+   "pop",
+   "pop rock",
+   "rock",
+   "singer-songwriter"
+  ],
+  "tags": [
+   "adult alternative pop/rock",
+   "alternative pop",
+   "alternative rock",
+   "alternative/indie rock",
+   "american",
+   "art pop",
+   "art rock",
+   "baroque pop",
+   "chamber pop",
+   "contemporary singer/songwriter",
+   "crossover prog",
+   "electronic",
+   "electronica",
+   "experimental",
+   "female vocalist",
+   "female vocals",
+   "indie rock",
+   "jazz",
+   "piano",
+   "piano pop rock",
+   "piano rock",
+   "pop",
+   "pop rock",
+   "rock",
+   "rock and indie",
+   "singer-songwriter",
+   "wip"
+  ],
+  "mb_lastfm_pages": [
+   "tori amos"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "bjork",
+  "name": "Robyn",
+  "mbid": "5a8e07d5-d932-4484-a7f7-e700793a9c94",
+  "url": "https://www.last.fm/music/Robyn",
+  "match": "0.336518",
+  "status": "200",
+  "lastfm_page": "robyn",
+  "mb_id": "5a8e07d5-d932-4484-a7f7-e700793a9c94",
+  "mb_name": "Robyn",
+  "disambiguation": "Swedish singer and songwriter Robin Carlsson",
+  "type": "Person",
+  "genres": [
+   "alternative dance",
+   "club",
+   "contemporary r&b",
+   "dance",
+   "dance-pop",
+   "disco",
+   "edm",
+   "electronica",
+   "electropop",
+   "europop",
+   "house",
+   "pop",
+   "r&b",
+   "synth-pop",
+   "tech house",
+   "trance"
+  ],
+  "tags": [
+   "alternative dance",
+   "alternative/indie rock",
+   "club",
+   "contemporary r&b",
+   "dance",
+   "dance-pop",
+   "disco",
+   "edm",
+   "electronica",
+   "electropop",
+   "european",
+   "europop",
+   "female",
+   "female vocals",
+   "house",
+   "indie dance",
+   "left-field pop",
+   "pop",
+   "pop and chart",
+   "r&b",
+   "swedish",
+   "swedish pop",
+   "synth-pop",
+   "tech house",
+   "trance"
+  ],
+  "mb_lastfm_pages": [
+   "robyn"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "bjork",
+  "name": "Locust",
+  "mbid": "3d3f144f-62fa-4be1-a4d1-4fba3a5c61c7",
+  "url": "https://www.last.fm/music/Locust",
+  "match": "0.312509",
+  "status": "200",
+  "lastfm_page": "locust",
+  "mb_id": "3d3f144f-62fa-4be1-a4d1-4fba3a5c61c7",
+  "mb_name": "Locust",
+  "disambiguation": "aka Kyle Preston",
+  "type": "Person",
+  "genres": [],
+  "tags": [],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "046a16c2-2c9a-43d2-8fab-6513635a7efd",
+    "name": "Locust",
+    "disambiguation": "Mark van Hoen (IDM, ambient)",
+    "type": "Person",
+    "score": 79,
+    "exact_name": true
+   },
+   {
+    "id": "61ef9604-1019-47ee-9e83-38180d87713f",
+    "name": "Locust",
+    "disambiguation": "Perry van de Vrede; \"Mind Circles\"",
+    "type": null,
+    "score": 68,
+    "exact_name": true
+   },
+   {
+    "id": "3d3f144f-62fa-4be1-a4d1-4fba3a5c61c7",
+    "name": "Locust",
+    "disambiguation": "aka Kyle Preston",
+    "type": "Person",
+    "score": 68,
+    "exact_name": true
+   },
+   {
+    "id": "3c546cac-d0d1-4efe-a901-464d521ab8ba",
+    "name": "Locust",
+    "disambiguation": "1970s UK funk band",
+    "type": "Group",
+    "score": 67,
+    "exact_name": true
+   },
+   {
+    "id": "858fe6e6-e2b9-4fed-a29a-5241b24a4e69",
+    "name": "Locust",
+    "disambiguation": "Break the Rules by Sleep Skee",
+    "type": null,
+    "score": 67,
+    "exact_name": true
+   },
+   {
+    "id": "0d1af427-e27b-429b-8b69-9a750b076978",
+    "name": "Locust",
+    "disambiguation": "artist of Cyberfunk Records",
+    "type": null,
+    "score": 66,
+    "exact_name": true
+   },
+   {
+    "id": "e7c70179-96e8-43b8-a803-e844745a6ba0",
+    "name": "Locust",
+    "disambiguation": "hip hop producer",
+    "type": "Person",
+    "score": 66,
+    "exact_name": true
+   },
+   {
+    "id": "683b4835-c75c-4146-9c08-11e32f36234e",
+    "name": "Locust",
+    "disambiguation": "Iowa AOR band",
+    "type": "Group",
+    "score": 66,
+    "exact_name": true
+   }
+  ],
+  "contest": "CONTESTED",
+  "final": "MISMATCH",
+  "true_owner": {
+   "id": "046a16c2-2c9a-43d2-8fab-6513635a7efd",
+   "name": "Locust",
+   "disambiguation": "Mark van Hoen (IDM, ambient)",
+   "type": "Person",
+   "score": 79,
+   "exact_name": true
+  },
+  "all_owners": [
+   {
+    "id": "046a16c2-2c9a-43d2-8fab-6513635a7efd",
+    "name": "Locust",
+    "disambiguation": "Mark van Hoen (IDM, ambient)",
+    "type": "Person",
+    "score": 79,
+    "exact_name": true
+   }
+  ]
+ },
+ {
+  "workload": "bjork",
+  "name": "Frou Frou",
+  "mbid": "d614b0ad-fe3a-4927-b413-48cb831a814b",
+  "url": "https://www.last.fm/music/Frou+Frou",
+  "match": "0.301701",
+  "status": "200",
+  "lastfm_page": "frou frou",
+  "mb_id": "d614b0ad-fe3a-4927-b413-48cb831a814b",
+  "mb_name": "Frou Frou",
+  "disambiguation": "",
+  "type": "Group",
+  "genres": [
+   "electropop"
+  ],
+  "tags": [
+   "electropop"
+  ],
+  "mb_lastfm_pages": [
+   "frou frou"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "bjork",
+  "name": "Ramona Lisa",
+  "mbid": "a32d76a0-a8d4-48fc-9525-b5b4e45036ac",
+  "url": "https://www.last.fm/music/Ramona+Lisa",
+  "match": "0.287722",
+  "status": "200",
+  "lastfm_page": "ramona lisa",
+  "mb_id": "a32d76a0-a8d4-48fc-9525-b5b4e45036ac",
+  "mb_name": "Ramona Lisa",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "art pop",
+   "indie pop",
+   "synth-pop"
+  ],
+  "tags": [
+   "alternative",
+   "art pop",
+   "indie pop",
+   "synth-pop"
+  ],
+  "mb_lastfm_pages": [
+   "ramona lisa"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "bjork",
+  "name": "Aphex Twin",
+  "mbid": "f22942a1-6f70-4f48-866e-238cb2308fbd",
+  "url": "https://www.last.fm/music/Aphex+Twin",
+  "match": "0.280470",
+  "status": "200",
+  "lastfm_page": "aphex twin",
+  "mb_id": "f22942a1-6f70-4f48-866e-238cb2308fbd",
+  "mb_name": "Aphex Twin",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "acid breaks",
+   "acid techno",
+   "ambient",
+   "ambient techno",
+   "bleep techno",
+   "breakbeat",
+   "breakcore",
+   "breaks",
+   "club",
+   "drill and bass",
+   "drum and bass",
+   "electro",
+   "electroacoustic",
+   "electronic",
+   "electronica",
+   "experimental",
+   "house",
+   "idm",
+   "instrumental",
+   "organic house",
+   "pop",
+   "techno"
+  ],
+  "tags": [
+   "acid breaks",
+   "acid techno",
+   "ambient",
+   "ambient music",
+   "ambient techno",
+   "bleep techno",
+   "breakbeat",
+   "breakcore",
+   "breaks",
+   "british",
+   "club",
+   "drill and bass",
+   "drum and bass",
+   "electro",
+   "electroacoustic",
+   "electronic",
+   "electronica",
+   "experimental",
+   "experimental ambient",
+   "experimental jungle",
+   "experimental techno",
+   "house",
+   "idm",
+   "instrumental",
+   "organic house",
+   "pop",
+   "progressive techno",
+   "techno"
+  ],
+  "mb_lastfm_pages": [
+   "aphex twin"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "boards-of-canada",
+  "name": "Aphex Twin",
+  "mbid": "f22942a1-6f70-4f48-866e-238cb2308fbd",
+  "url": "https://www.last.fm/music/Aphex+Twin",
+  "match": "1",
+  "status": "200",
+  "lastfm_page": "aphex twin",
+  "mb_id": "f22942a1-6f70-4f48-866e-238cb2308fbd",
+  "mb_name": "Aphex Twin",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "acid breaks",
+   "acid techno",
+   "ambient",
+   "ambient techno",
+   "bleep techno",
+   "breakbeat",
+   "breakcore",
+   "breaks",
+   "club",
+   "drill and bass",
+   "drum and bass",
+   "electro",
+   "electroacoustic",
+   "electronic",
+   "electronica",
+   "experimental",
+   "house",
+   "idm",
+   "instrumental",
+   "organic house",
+   "pop",
+   "techno"
+  ],
+  "tags": [
+   "acid breaks",
+   "acid techno",
+   "ambient",
+   "ambient music",
+   "ambient techno",
+   "bleep techno",
+   "breakbeat",
+   "breakcore",
+   "breaks",
+   "british",
+   "club",
+   "drill and bass",
+   "drum and bass",
+   "electro",
+   "electroacoustic",
+   "electronic",
+   "electronica",
+   "experimental",
+   "experimental ambient",
+   "experimental jungle",
+   "experimental techno",
+   "house",
+   "idm",
+   "instrumental",
+   "organic house",
+   "pop",
+   "progressive techno",
+   "techno"
+  ],
+  "mb_lastfm_pages": [
+   "aphex twin"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "boards-of-canada",
+  "name": "Autechre",
+  "mbid": "410c9baf-5469-44f6-9852-826524b80c61",
+  "url": "https://www.last.fm/music/Autechre",
+  "match": "0.896161",
+  "status": "200",
+  "lastfm_page": "autechre",
+  "mb_id": "410c9baf-5469-44f6-9852-826524b80c61",
+  "mb_name": "Autechre",
+  "disambiguation": "electronic music duo",
+  "type": "Group",
+  "genres": [
+   "ambient techno",
+   "avant-garde",
+   "drill and bass",
+   "electronic",
+   "electronica",
+   "experimental",
+   "experimental electronic",
+   "glitch",
+   "idm",
+   "instrumental"
+  ],
+  "tags": [
+   "abstract",
+   "ambient techno",
+   "avant-garde",
+   "drill and bass",
+   "electronic",
+   "electronica",
+   "experimental",
+   "experimental electronic",
+   "generative music",
+   "glitch",
+   "idm",
+   "instrumental",
+   "warp"
+  ],
+  "mb_lastfm_pages": [
+   "autechre"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "boards-of-canada",
+  "name": "Slag Boom Van Loon",
+  "mbid": "dd000921-fed7-45de-8372-23f15557dd7e",
+  "url": "https://www.last.fm/music/Slag+Boom+Van+Loon",
+  "match": "0.812617",
+  "status": "200",
+  "lastfm_page": "slag boom van loon",
+  "mb_id": "dd000921-fed7-45de-8372-23f15557dd7e",
+  "mb_name": "Slag Boom Van Loon",
+  "disambiguation": "",
+  "type": "Group",
+  "genres": [],
+  "tags": [],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "dd000921-fed7-45de-8372-23f15557dd7e",
+    "name": "Slag Boom Van Loon",
+    "disambiguation": "",
+    "type": "Group",
+    "score": 100,
+    "exact_name": true
+   }
+  ],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "boards-of-canada",
+  "name": "Casino Versus Japan",
+  "mbid": "1245270b-3c9c-4c60-ae90-954a771c6bd4",
+  "url": "https://www.last.fm/music/Casino+Versus+Japan",
+  "match": "0.745306",
+  "status": "200",
+  "lastfm_page": "casino versus japan",
+  "mb_id": "1245270b-3c9c-4c60-ae90-954a771c6bd4",
+  "mb_name": "Casino Versus Japan",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "ambient",
+   "downtempo",
+   "idm"
+  ],
+  "tags": [
+   "ambient",
+   "downtempo",
+   "idm"
+  ],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "1245270b-3c9c-4c60-ae90-954a771c6bd4",
+    "name": "Casino Versus Japan",
+    "disambiguation": "",
+    "type": "Person",
+    "score": 100,
+    "exact_name": true
+   }
+  ],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "boards-of-canada",
+  "name": "Squarepusher",
+  "mbid": "4d86ad4e-28d8-4e9f-8cf4-735c57060fdc",
+  "url": "https://www.last.fm/music/Squarepusher",
+  "match": "0.721540",
+  "status": "200",
+  "lastfm_page": "squarepusher",
+  "mb_id": "4d86ad4e-28d8-4e9f-8cf4-735c57060fdc",
+  "mb_name": "Squarepusher",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "drill and bass",
+   "drum and bass",
+   "electronic",
+   "glitch",
+   "idm",
+   "jazz fusion"
+  ],
+  "tags": [
+   "drill and bass",
+   "drum and bass",
+   "electronic",
+   "glitch",
+   "idm",
+   "jazz fusion"
+  ],
+  "mb_lastfm_pages": [
+   "squarepusher"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "boards-of-canada",
+  "name": "Seefeel",
+  "mbid": "8ffcd7d7-6293-4fbf-b0f6-46aef9ce9f69",
+  "url": "https://www.last.fm/music/Seefeel",
+  "match": "0.657103",
+  "status": "200",
+  "lastfm_page": "seefeel",
+  "mb_id": "8ffcd7d7-6293-4fbf-b0f6-46aef9ce9f69",
+  "mb_name": "Seefeel",
+  "disambiguation": "",
+  "type": "Group",
+  "genres": [
+   "ambient dub",
+   "ambient pop",
+   "ambient techno",
+   "dream pop",
+   "idm",
+   "post-rock",
+   "shoegaze"
+  ],
+  "tags": [
+   "ambient dub",
+   "ambient pop",
+   "ambient techno",
+   "british",
+   "dream pop",
+   "idm",
+   "post-rock",
+   "shoegaze",
+   "the lost generation",
+   "too pure",
+   "warp"
+  ],
+  "mb_lastfm_pages": [
+   "seefeel"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "boards-of-canada",
+  "name": "Plaid",
+  "mbid": "7e54d133-2525-4bc0-ae94-65584145a386",
+  "url": "https://www.last.fm/music/Plaid",
+  "match": "0.630159",
+  "status": "200",
+  "lastfm_page": "plaid",
+  "mb_id": "7e54d133-2525-4bc0-ae94-65584145a386",
+  "mb_name": "Plaid",
+  "disambiguation": "British electronic music duo",
+  "type": "Group",
+  "genres": [
+   "breakbeat",
+   "electronic",
+   "idm",
+   "techno"
+  ],
+  "tags": [
+   "abstract",
+   "breakbeat",
+   "electronic",
+   "idm",
+   "techno"
+  ],
+  "mb_lastfm_pages": [
+   "plaid"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "boards-of-canada",
+  "name": "AFX",
+  "mbid": "87225a21-c925-41cd-852f-be4b052d0824",
+  "url": "https://www.last.fm/music/AFX",
+  "match": "0.619897",
+  "status": "200",
+  "lastfm_page": "afx",
+  "mb_id": "87225a21-c925-41cd-852f-be4b052d0824",
+  "mb_name": "AFX",
+  "disambiguation": "Aphex Twin",
+  "type": "Person",
+  "genres": [
+   "acid techno",
+   "ambient",
+   "drill and bass",
+   "electro",
+   "electronic",
+   "experimental",
+   "glitch",
+   "idm"
+  ],
+  "tags": [
+   "acid",
+   "acid techno",
+   "ambient",
+   "braindance",
+   "drill and bass",
+   "electro",
+   "electronic",
+   "english",
+   "experimental",
+   "glitch",
+   "idm",
+   "uk",
+   "warp"
+  ],
+  "mb_lastfm_pages": [
+   "afx"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "boards-of-canada",
+  "name": "Boom Bip",
+  "mbid": "e595ed1c-9251-4362-a816-534f141d16ce",
+  "url": "https://www.last.fm/music/Boom+Bip",
+  "match": "0.566998",
+  "status": "200",
+  "lastfm_page": "boom bip",
+  "mb_id": "e595ed1c-9251-4362-a816-534f141d16ce",
+  "mb_name": "Boom Bip",
+  "disambiguation": "US hip-hop/electronic record producer and musician",
+  "type": "Person",
+  "genres": [
+   "folktronica",
+   "hip hop"
+  ],
+  "tags": [
+   "dance and electronica",
+   "folktronica",
+   "hip hop"
+  ],
+  "mb_lastfm_pages": [
+   "boom bip"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "boards-of-canada",
+  "name": "Oneohtrix Point Never",
+  "mbid": "9cea062d-d476-447f-98b4-e67e14bfd1e4",
+  "url": "https://www.last.fm/music/Oneohtrix+Point+Never",
+  "match": "0.564774",
+  "status": "200",
+  "lastfm_page": "oneohtrix point never",
+  "mb_id": "9cea062d-d476-447f-98b4-e67e14bfd1e4",
+  "mb_name": "Oneohtrix Point Never",
+  "disambiguation": "Daniel Lopatin, commonly abbreviated OPN",
+  "type": "Person",
+  "genres": [
+   "ambient",
+   "art pop",
+   "drone",
+   "electronic",
+   "experimental",
+   "experimental electronic",
+   "glitch",
+   "outsider house",
+   "plunderphonics",
+   "progressive electronic",
+   "vaporwave"
+  ],
+  "tags": [
+   "ambient",
+   "art pop",
+   "drone",
+   "electronic",
+   "experimental",
+   "experimental electronic",
+   "glitch",
+   "outsider house",
+   "plunderphonics",
+   "progressive electronic",
+   "vapor",
+   "vaporwave"
+  ],
+  "mb_lastfm_pages": [
+   "oneohtrix point never"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "boards-of-canada",
+  "name": "Four Tet",
+  "mbid": "3bcff06f-675a-451f-9075-99e8657047e8",
+  "url": "https://www.last.fm/music/Four+Tet",
+  "match": "0.531289",
+  "status": "200",
+  "lastfm_page": "four tet",
+  "mb_id": "3bcff06f-675a-451f-9075-99e8657047e8",
+  "mb_name": "Four Tet",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "club",
+   "dance",
+   "downtempo",
+   "dubstep",
+   "electronic",
+   "electronica",
+   "folktronica",
+   "future garage",
+   "idm",
+   "indie rock",
+   "indietronica",
+   "microhouse",
+   "post-dubstep",
+   "post-rock",
+   "tech house",
+   "techno",
+   "trip hop"
+  ],
+  "tags": [
+   "british",
+   "club",
+   "dance",
+   "downtempo",
+   "dubstep",
+   "electronic",
+   "electronica",
+   "english",
+   "folktronica",
+   "future garage",
+   "idm",
+   "indie rock",
+   "indietronica",
+   "microhouse",
+   "post-dubstep",
+   "post-rock",
+   "tech house",
+   "techno",
+   "trip hop",
+   "uk"
+  ],
+  "mb_lastfm_pages": [
+   "four tet"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "boards-of-canada",
+  "name": "Biosphere",
+  "mbid": "a5ee1ebe-a645-45d2-8319-d101fe62e581",
+  "url": "https://www.last.fm/music/Biosphere",
+  "match": "0.488244",
+  "status": "200",
+  "lastfm_page": "biosphere",
+  "mb_id": "a5ee1ebe-a645-45d2-8319-d101fe62e581",
+  "mb_name": "Biosphere",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "ambient",
+   "ambient house",
+   "ambient techno",
+   "electronic",
+   "electronica",
+   "experimental",
+   "field recording"
+  ],
+  "tags": [
+   "ambient",
+   "ambient house",
+   "ambient techno",
+   "electronic",
+   "electronica",
+   "experimental",
+   "field recording",
+   "norwegian"
+  ],
+  "mb_lastfm_pages": [
+   "geir jenssen"
+  ],
+  "verdict": "MISMATCH",
+  "candidates": [
+   {
+    "id": "a5ee1ebe-a645-45d2-8319-d101fe62e581",
+    "name": "Biosphere",
+    "disambiguation": "",
+    "type": "Person",
+    "score": 100,
+    "exact_name": true
+   },
+   {
+    "id": "27f676bc-5304-40a5-be78-14911c5deaa6",
+    "name": "Biosphere",
+    "disambiguation": "lofi/chillhop/RnB/trap producer",
+    "type": "Person",
+    "score": 86,
+    "exact_name": true
+   }
+  ],
+  "contest": "CONTESTED",
+  "final": "UNADJUDICATED"
+ },
+ {
+  "workload": "boards-of-canada",
+  "name": "The Future Sound of London",
+  "mbid": "a1d77dd4-8728-4a47-bdfa-9663d791139c",
+  "url": "https://www.last.fm/music/The+Future+Sound+of+London",
+  "match": "0.488189",
+  "status": "200",
+  "lastfm_page": "the future sound of london",
+  "mb_id": "a1d77dd4-8728-4a47-bdfa-9663d791139c",
+  "mb_name": "The Future Sound of London",
+  "disambiguation": "",
+  "type": "Group",
+  "genres": [
+   "acid house",
+   "ambient",
+   "ambient house",
+   "ambient techno",
+   "big beat",
+   "breakbeat",
+   "classical",
+   "club",
+   "downtempo",
+   "electronic",
+   "electronica",
+   "experimental",
+   "idm",
+   "progressive electronic",
+   "psychedelic",
+   "techno",
+   "trip hop"
+  ],
+  "tags": [
+   "abstract",
+   "acid house",
+   "ambient",
+   "ambient electronic",
+   "ambient house",
+   "ambient techno",
+   "big beat",
+   "breakbeat",
+   "british",
+   "classical",
+   "club",
+   "downtempo",
+   "electronic",
+   "electronica",
+   "english",
+   "experimental",
+   "idm",
+   "intelligent dance music",
+   "progressive electronic",
+   "psychedelia",
+   "psychedelic",
+   "techno",
+   "trip hop",
+   "uk"
+  ],
+  "mb_lastfm_pages": [
+   "the future sound of london"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "boards-of-canada",
+  "name": "Polygon Window",
+  "mbid": "aaa78ce4-e4fe-43b6-abe1-733dc83f8eb1",
+  "url": "https://www.last.fm/music/Polygon+Window",
+  "match": "0.481012",
+  "status": "200",
+  "lastfm_page": "polygon window",
+  "mb_id": "aaa78ce4-e4fe-43b6-abe1-733dc83f8eb1",
+  "mb_name": "Polygon Window",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "acid techno",
+   "ambient techno",
+   "electronic",
+   "idm",
+   "techno"
+  ],
+  "tags": [
+   "acid techno",
+   "ambient techno",
+   "british",
+   "electronic",
+   "english",
+   "idm",
+   "techno",
+   "uk",
+   "warp"
+  ],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "aaa78ce4-e4fe-43b6-abe1-733dc83f8eb1",
+    "name": "Polygon Window",
+    "disambiguation": "",
+    "type": "Person",
+    "score": 100,
+    "exact_name": true
+   }
+  ],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "boards-of-canada",
+  "name": "Global Communication",
+  "mbid": "8179e236-86df-459f-bd51-0107138d0a6a",
+  "url": "https://www.last.fm/music/Global+Communication",
+  "match": "0.465114",
+  "status": "200",
+  "lastfm_page": "global communication",
+  "mb_id": "8179e236-86df-459f-bd51-0107138d0a6a",
+  "mb_name": "Global Communication",
+  "disambiguation": "",
+  "type": "Group",
+  "genres": [
+   "ambient",
+   "ambient techno",
+   "electronic",
+   "idm"
+  ],
+  "tags": [
+   "ambient",
+   "ambient techno",
+   "british",
+   "electronic",
+   "idm",
+   "uk"
+  ],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "8179e236-86df-459f-bd51-0107138d0a6a",
+    "name": "Global Communication",
+    "disambiguation": "",
+    "type": "Group",
+    "score": 100,
+    "exact_name": true
+   }
+  ],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "boards-of-canada",
+  "name": "Jon Hopkins",
+  "mbid": "0b0c25f4-f31c-46a5-a4fb-ccbf53d663bd",
+  "url": "https://www.last.fm/music/Jon+Hopkins",
+  "match": "0.420773",
+  "status": "?",
+  "lastfm_page": "jon hopkins",
+  "mb_id": "0b0c25f4-f31c-46a5-a4fb-ccbf53d663bd",
+  "mb_name": "Jon Hopkins",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "ambient",
+   "contemporary classical",
+   "electronic",
+   "electronica",
+   "idm",
+   "tech house",
+   "techno"
+  ],
+  "tags": [
+   "ambient",
+   "contemporary classical",
+   "electronic",
+   "electronic dance music",
+   "electronica",
+   "idm",
+   "tech house",
+   "techno"
+  ],
+  "mb_lastfm_pages": [
+   "jon hopkins"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "boards-of-canada",
+  "name": "Susumu Yokota",
+  "mbid": "7b05d6fe-91e8-4cb9-a401-2a13b1578716",
+  "url": "https://www.last.fm/music/Susumu+Yokota",
+  "match": "0.410334",
+  "status": "200",
+  "lastfm_page": "susumu yokota",
+  "mb_id": "7b05d6fe-91e8-4cb9-a401-2a13b1578716",
+  "mb_name": "Susumu Yokota",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "ambient",
+   "downtempo",
+   "electronic",
+   "electronica",
+   "techno"
+  ],
+  "tags": [
+   "ambient",
+   "downtempo",
+   "electronic",
+   "electronica",
+   "techno"
+  ],
+  "mb_lastfm_pages": [
+   "susumu yokota"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "boards-of-canada",
+  "name": "Lone",
+  "mbid": "cb8fc40c-bde5-4a84-94e4-ee1d4de385be",
+  "url": "https://www.last.fm/music/Lone",
+  "match": "0.405710",
+  "status": "200",
+  "lastfm_page": "lone",
+  "mb_id": "cb8fc40c-bde5-4a84-94e4-ee1d4de385be",
+  "mb_name": "Lone",
+  "disambiguation": "UK electronic artist Matt Cutler",
+  "type": "Person",
+  "genres": [
+   "house"
+  ],
+  "tags": [
+   "el michels affair",
+   "house"
+  ],
+  "mb_lastfm_pages": [
+   "lone"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "burial",
+  "name": "Kode9",
+  "mbid": "e95a9d7f-fc26-4e56-8032-90cd954deea0",
+  "url": "https://www.last.fm/music/Kode9",
+  "match": "0.782032",
+  "status": "200",
+  "lastfm_page": "kode9",
+  "mb_id": "e95a9d7f-fc26-4e56-8032-90cd954deea0",
+  "mb_name": "Kode9",
+  "disambiguation": "UK DJ/producer",
+  "type": "Person",
+  "genres": [
+   "dubstep",
+   "uk garage"
+  ],
+  "tags": [
+   "dubstep",
+   "merge-recordings",
+   "uk garage"
+  ],
+  "mb_lastfm_pages": [
+   "kode9"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "burial",
+  "name": "Blackdown",
+  "mbid": "c583b756-a74d-4010-af7e-61482ab8aeaa",
+  "url": "https://www.last.fm/music/Blackdown",
+  "match": "0.578141",
+  "status": "200",
+  "lastfm_page": "blackdown",
+  "mb_id": "c583b756-a74d-4010-af7e-61482ab8aeaa",
+  "mb_name": "Blackdown",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "dubstep",
+   "electronic",
+   "experimental electronic",
+   "post-dubstep",
+   "uk garage"
+  ],
+  "tags": [
+   "dubstep",
+   "electronic",
+   "electronics",
+   "experimental electronic",
+   "post-dubstep",
+   "uk garage"
+  ],
+  "mb_lastfm_pages": [
+   "blackdown"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "burial",
+  "name": "Zomby",
+  "mbid": "21a6751e-887e-4eae-9989-de45d452feb6",
+  "url": "https://www.last.fm/music/Zomby",
+  "match": "0.546600",
+  "status": "200",
+  "lastfm_page": "zomby",
+  "mb_id": "21a6751e-887e-4eae-9989-de45d452feb6",
+  "mb_name": "Zomby",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "dubstep",
+   "jungle",
+   "uk garage"
+  ],
+  "tags": [
+   "dubstep",
+   "jungle",
+   "uk garage"
+  ],
+  "mb_lastfm_pages": [
+   "zomby"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "burial",
+  "name": "Four Tet",
+  "mbid": "3bcff06f-675a-451f-9075-99e8657047e8",
+  "url": "https://www.last.fm/music/Four+Tet",
+  "match": "0.483669",
+  "status": "200",
+  "lastfm_page": "four tet",
+  "mb_id": "3bcff06f-675a-451f-9075-99e8657047e8",
+  "mb_name": "Four Tet",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "club",
+   "dance",
+   "downtempo",
+   "dubstep",
+   "electronic",
+   "electronica",
+   "folktronica",
+   "future garage",
+   "idm",
+   "indie rock",
+   "indietronica",
+   "microhouse",
+   "post-dubstep",
+   "post-rock",
+   "tech house",
+   "techno",
+   "trip hop"
+  ],
+  "tags": [
+   "british",
+   "club",
+   "dance",
+   "downtempo",
+   "dubstep",
+   "electronic",
+   "electronica",
+   "english",
+   "folktronica",
+   "future garage",
+   "idm",
+   "indie rock",
+   "indietronica",
+   "microhouse",
+   "post-dubstep",
+   "post-rock",
+   "tech house",
+   "techno",
+   "trip hop",
+   "uk"
+  ],
+  "mb_lastfm_pages": [
+   "four tet"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "burial",
+  "name": "Aphex Twin",
+  "mbid": "f22942a1-6f70-4f48-866e-238cb2308fbd",
+  "url": "https://www.last.fm/music/Aphex+Twin",
+  "match": "0.414764",
+  "status": "200",
+  "lastfm_page": "aphex twin",
+  "mb_id": "f22942a1-6f70-4f48-866e-238cb2308fbd",
+  "mb_name": "Aphex Twin",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "acid breaks",
+   "acid techno",
+   "ambient",
+   "ambient techno",
+   "bleep techno",
+   "breakbeat",
+   "breakcore",
+   "breaks",
+   "club",
+   "drill and bass",
+   "drum and bass",
+   "electro",
+   "electroacoustic",
+   "electronic",
+   "electronica",
+   "experimental",
+   "house",
+   "idm",
+   "instrumental",
+   "organic house",
+   "pop",
+   "techno"
+  ],
+  "tags": [
+   "acid breaks",
+   "acid techno",
+   "ambient",
+   "ambient music",
+   "ambient techno",
+   "bleep techno",
+   "breakbeat",
+   "breakcore",
+   "breaks",
+   "british",
+   "club",
+   "drill and bass",
+   "drum and bass",
+   "electro",
+   "electroacoustic",
+   "electronic",
+   "electronica",
+   "experimental",
+   "experimental ambient",
+   "experimental jungle",
+   "experimental techno",
+   "house",
+   "idm",
+   "instrumental",
+   "organic house",
+   "pop",
+   "progressive techno",
+   "techno"
+  ],
+  "mb_lastfm_pages": [
+   "aphex twin"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "burial",
+  "name": "Skream",
+  "mbid": "fb5ee67e-e31a-40cf-8b06-5f1a0f53529a",
+  "url": "https://www.last.fm/music/Skream",
+  "match": "0.397810",
+  "status": "200",
+  "lastfm_page": "skream",
+  "mb_id": "fb5ee67e-e31a-40cf-8b06-5f1a0f53529a",
+  "mb_name": "Skream",
+  "disambiguation": "UK dubstep & house producer",
+  "type": "Person",
+  "genres": [
+   "disco",
+   "drum and bass",
+   "dub",
+   "dubstep",
+   "grime",
+   "house",
+   "jungle",
+   "techno",
+   "uk garage"
+  ],
+  "tags": [
+   "disco",
+   "drum and bass",
+   "dub",
+   "dubstep",
+   "electronic dance music",
+   "grime",
+   "house",
+   "house music",
+   "jungle",
+   "sound recording executives and producers",
+   "techno",
+   "techno music",
+   "uk garage"
+  ],
+  "mb_lastfm_pages": [
+   "skream"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "burial",
+  "name": "Mala",
+  "mbid": "09f221eb-c97e-4da5-ac22-d7ab7c555bbb",
+  "url": "https://www.last.fm/music/Mala",
+  "match": "0.363451",
+  "status": "200",
+  "lastfm_page": "mala",
+  "mb_id": "09f221eb-c97e-4da5-ac22-d7ab7c555bbb",
+  "mb_name": "Mala",
+  "disambiguation": "dubstep producer Mark Lawrence",
+  "type": "Person",
+  "genres": [
+   "dubstep",
+   "uk garage"
+  ],
+  "tags": [
+   "dubstep",
+   "uk garage"
+  ],
+  "mb_lastfm_pages": [
+   "mala"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "burial",
+  "name": "Oneohtrix Point Never",
+  "mbid": "9cea062d-d476-447f-98b4-e67e14bfd1e4",
+  "url": "https://www.last.fm/music/Oneohtrix+Point+Never",
+  "match": "0.353397",
+  "status": "200",
+  "lastfm_page": "oneohtrix point never",
+  "mb_id": "9cea062d-d476-447f-98b4-e67e14bfd1e4",
+  "mb_name": "Oneohtrix Point Never",
+  "disambiguation": "Daniel Lopatin, commonly abbreviated OPN",
+  "type": "Person",
+  "genres": [
+   "ambient",
+   "art pop",
+   "drone",
+   "electronic",
+   "experimental",
+   "experimental electronic",
+   "glitch",
+   "outsider house",
+   "plunderphonics",
+   "progressive electronic",
+   "vaporwave"
+  ],
+  "tags": [
+   "ambient",
+   "art pop",
+   "drone",
+   "electronic",
+   "experimental",
+   "experimental electronic",
+   "glitch",
+   "outsider house",
+   "plunderphonics",
+   "progressive electronic",
+   "vapor",
+   "vaporwave"
+  ],
+  "mb_lastfm_pages": [
+   "oneohtrix point never"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "burial",
+  "name": "Clubroot",
+  "mbid": "09721ba6-8972-4862-b272-b69465265de5",
+  "url": "https://www.last.fm/music/Clubroot",
+  "match": "0.347158",
+  "status": "?",
+  "lastfm_page": "clubroot",
+  "mb_id": "09721ba6-8972-4862-b272-b69465265de5",
+  "mb_name": "Clubroot",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "ambient",
+   "dubstep",
+   "electronic",
+   "future garage",
+   "post-dubstep"
+  ],
+  "tags": [
+   "ambient",
+   "dubstep",
+   "electronic",
+   "future garage",
+   "post-dubstep"
+  ],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "09721ba6-8972-4862-b272-b69465265de5",
+    "name": "Clubroot",
+    "disambiguation": "",
+    "type": "Person",
+    "score": 100,
+    "exact_name": true
+   }
+  ],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "burial",
+  "name": "Boards of Canada",
+  "mbid": "69158f97-4c07-4c4e-baf8-4e4ab1ed666e",
+  "url": "https://www.last.fm/music/Boards+of+Canada",
+  "match": "0.336276",
+  "status": "200",
+  "lastfm_page": "boards of canada",
+  "mb_id": "69158f97-4c07-4c4e-baf8-4e4ab1ed666e",
+  "mb_name": "Boards of Canada",
+  "disambiguation": "Scottish electronic duo",
+  "type": "Group",
+  "genres": [
+   "ambient",
+   "ambient techno",
+   "downtempo",
+   "electronic",
+   "folktronica",
+   "hauntology",
+   "idm",
+   "trip hop"
+  ],
+  "tags": [
+   "ambient",
+   "ambient techno",
+   "british",
+   "downtempo",
+   "electronic",
+   "folktronica",
+   "hauntology",
+   "idm",
+   "trip hop",
+   "warp"
+  ],
+  "mb_lastfm_pages": [
+   "boards of canada"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "burial",
+  "name": "Tim Hecker",
+  "mbid": "c7ee3bc9-780c-42c0-91e9-4cd70ad692d3",
+  "url": "https://www.last.fm/music/Tim+Hecker",
+  "match": "0.326708",
+  "status": "200",
+  "lastfm_page": "tim hecker",
+  "mb_id": "c7ee3bc9-780c-42c0-91e9-4cd70ad692d3",
+  "mb_name": "Tim Hecker",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "ambient",
+   "dark ambient",
+   "drone",
+   "electroacoustic",
+   "electronic",
+   "experimental",
+   "experimental electronic",
+   "glitch",
+   "noise"
+  ],
+  "tags": [
+   "4ad",
+   "ambient",
+   "canadian",
+   "dark ambient",
+   "drone",
+   "electroacoustic",
+   "electronic",
+   "experimental",
+   "experimental electronic",
+   "glitch",
+   "mandible",
+   "noise"
+  ],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "c7ee3bc9-780c-42c0-91e9-4cd70ad692d3",
+    "name": "Tim Hecker",
+    "disambiguation": "",
+    "type": "Person",
+    "score": 100,
+    "exact_name": true
+   }
+  ],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "burial",
+  "name": "Joy Orbison",
+  "mbid": "8542f9a4-bd91-4066-91cf-359d2d9950db",
+  "url": "https://www.last.fm/music/Joy+Orbison",
+  "match": "0.323325",
+  "status": "200",
+  "lastfm_page": "joy orbison",
+  "mb_id": "8542f9a4-bd91-4066-91cf-359d2d9950db",
+  "mb_name": "Joy Orbison",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "dubstep",
+   "house",
+   "trip hop",
+   "uk funky",
+   "uk garage"
+  ],
+  "tags": [
+   "2-step garage",
+   "dubstep",
+   "house",
+   "trip hop",
+   "uk funky",
+   "uk garage"
+  ],
+  "mb_lastfm_pages": [
+   "joy orbison"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "burial",
+  "name": "Mount Kimbie",
+  "mbid": "4a3a5fc0-af4b-4990-957b-8d94f7bfe706",
+  "url": "https://www.last.fm/music/Mount+Kimbie",
+  "match": "0.307912",
+  "status": "200",
+  "lastfm_page": "mount kimbie",
+  "mb_id": "4a3a5fc0-af4b-4990-957b-8d94f7bfe706",
+  "mb_name": "Mount Kimbie",
+  "disambiguation": "English dubstep",
+  "type": "Group",
+  "genres": [
+   "deep house",
+   "dubstep",
+   "electronic",
+   "minimal techno",
+   "post-dubstep"
+  ],
+  "tags": [
+   "=",
+   "deep house",
+   "dubstep",
+   "electronic",
+   "electronic music",
+   "minimal techno",
+   "post-dubstep"
+  ],
+  "mb_lastfm_pages": [
+   "mount kimbie"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "burial",
+  "name": "Actress",
+  "mbid": "973321d1-9565-4214-a6ef-a77f1890c294",
+  "url": "https://www.last.fm/music/Actress",
+  "match": "0.296862",
+  "status": "200",
+  "lastfm_page": "actress",
+  "mb_id": "973321d1-9565-4214-a6ef-a77f1890c294",
+  "mb_name": "Actress",
+  "disambiguation": "British electronic musician",
+  "type": "Person",
+  "genres": [
+   "ambient",
+   "electronic",
+   "experimental",
+   "idm",
+   "outsider house"
+  ],
+  "tags": [
+   "ambient",
+   "electronic",
+   "experimental",
+   "idm",
+   "intelligent dance",
+   "outsider house"
+  ],
+  "mb_lastfm_pages": [
+   "actress"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "burial",
+  "name": "Jamie xx",
+  "mbid": "d1515727-4a93-4c0d-88cb-d7a9fce01879",
+  "url": "https://www.last.fm/music/Jamie+xx",
+  "match": "0.294819",
+  "status": "200",
+  "lastfm_page": "jamie xx",
+  "mb_id": "d1515727-4a93-4c0d-88cb-d7a9fce01879",
+  "mb_name": "Jamie xx",
+  "disambiguation": "English DJ, record producer, and remixer",
+  "type": "Person",
+  "genres": [
+   "deep house",
+   "electronic",
+   "future garage",
+   "house",
+   "pop rap",
+   "post-dubstep",
+   "uk funky"
+  ],
+  "tags": [
+   "deep house",
+   "electronic",
+   "future garage",
+   "house",
+   "pop rap",
+   "post-dubstep",
+   "uk bass",
+   "uk funky"
+  ],
+  "mb_lastfm_pages": [
+   "jamie xx"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "burial",
+  "name": "Autechre",
+  "mbid": "410c9baf-5469-44f6-9852-826524b80c61",
+  "url": "https://www.last.fm/music/Autechre",
+  "match": "0.280917",
+  "status": "200",
+  "lastfm_page": "autechre",
+  "mb_id": "410c9baf-5469-44f6-9852-826524b80c61",
+  "mb_name": "Autechre",
+  "disambiguation": "electronic music duo",
+  "type": "Group",
+  "genres": [
+   "ambient techno",
+   "avant-garde",
+   "drill and bass",
+   "electronic",
+   "electronica",
+   "experimental",
+   "experimental electronic",
+   "glitch",
+   "idm",
+   "instrumental"
+  ],
+  "tags": [
+   "abstract",
+   "ambient techno",
+   "avant-garde",
+   "drill and bass",
+   "electronic",
+   "electronica",
+   "experimental",
+   "experimental electronic",
+   "generative music",
+   "glitch",
+   "idm",
+   "instrumental",
+   "warp"
+  ],
+  "mb_lastfm_pages": [
+   "autechre"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "burial",
+  "name": "Volor Flex",
+  "mbid": "01e65a84-4598-4f2e-8693-28a8b89cddd0",
+  "url": "https://www.last.fm/music/Volor+Flex",
+  "match": "0.269764",
+  "status": "?",
+  "lastfm_page": "volor flex",
+  "mb_id": "01e65a84-4598-4f2e-8693-28a8b89cddd0",
+  "mb_name": "Volor Flex",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "downtempo",
+   "dubstep",
+   "electronic",
+   "future garage",
+   "post-dubstep",
+   "uk garage"
+  ],
+  "tags": [
+   "downtempo",
+   "dubstep",
+   "electronic",
+   "future garage",
+   "post-dubstep",
+   "uk garage"
+  ],
+  "mb_lastfm_pages": [
+   "volor flex"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "changg",
+  "name": "Suni H\u1ea1 Linh",
+  "mbid": "3c67df88-0965-4a89-863a-73597d4a04bd",
+  "url": "https://www.last.fm/music/Suni+H%E1%BA%A1+Linh",
+  "match": "0.865817",
+  "status": "200",
+  "lastfm_page": "suni h\u1ea1 linh",
+  "mb_id": "3c67df88-0965-4a89-863a-73597d4a04bd",
+  "mb_name": "SUNI",
+  "disambiguation": "Suni H\u1ea1 Linh",
+  "type": "Person",
+  "genres": [],
+  "tags": [],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "changg",
+  "name": "H\u1ee9a Kim Tuy\u1ec1n",
+  "mbid": "51ace54d-6a30-4726-9af1-e6a16539d231",
+  "url": "https://www.last.fm/music/H%E1%BB%A9a+Kim+Tuy%E1%BB%81n",
+  "match": "0.752346",
+  "status": "200",
+  "lastfm_page": "h\u1ee9a kim tuy\u1ec1n",
+  "mb_id": "51ace54d-6a30-4726-9af1-e6a16539d231",
+  "mb_name": "H\u1ee9a Kim Tuy\u1ec1n",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [],
+  "tags": [],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "51ace54d-6a30-4726-9af1-e6a16539d231",
+    "name": "H\u1ee9a Kim Tuy\u1ec1n",
+    "disambiguation": "",
+    "type": "Person",
+    "score": 100,
+    "exact_name": true
+   }
+  ],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "changg",
+  "name": "V\u0169 Ph\u1ee5ng Ti\u00ean",
+  "mbid": "382d25c8-38ff-4ba0-8165-3dc0c0a9f371",
+  "url": "https://www.last.fm/music/V%C5%A9+Ph%E1%BB%A5ng+Ti%C3%AAn",
+  "match": "0.689864",
+  "status": "200",
+  "lastfm_page": "v\u0169 ph\u1ee5ng ti\u00ean",
+  "mb_id": "382d25c8-38ff-4ba0-8165-3dc0c0a9f371",
+  "mb_name": "V\u0169 Ph\u1ee5ng Ti\u00ean",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [],
+  "tags": [],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "382d25c8-38ff-4ba0-8165-3dc0c0a9f371",
+    "name": "V\u0169 Ph\u1ee5ng Ti\u00ean",
+    "disambiguation": "",
+    "type": "Person",
+    "score": 100,
+    "exact_name": true
+   }
+  ],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "changg",
+  "name": "JSOL",
+  "mbid": "8d31685b-a62f-4e9a-abb2-48239582ad53",
+  "url": "https://www.last.fm/music/JSOL",
+  "match": "0.688697",
+  "status": "200",
+  "lastfm_page": "jsol",
+  "mb_id": "8d31685b-a62f-4e9a-abb2-48239582ad53",
+  "mb_name": "JSOL",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [],
+  "tags": [],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "8d31685b-a62f-4e9a-abb2-48239582ad53",
+    "name": "JSOL",
+    "disambiguation": "",
+    "type": "Person",
+    "score": 100,
+    "exact_name": true
+   }
+  ],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "changg",
+  "name": "Ti\u00ean Ti\u00ean",
+  "mbid": "a53b5288-cced-4319-941c-cfcfefaf2ab1",
+  "url": "https://www.last.fm/music/Ti%C3%AAn+Ti%C3%AAn",
+  "match": "0.666409",
+  "status": "200",
+  "lastfm_page": "ti\u00ean ti\u00ean",
+  "mb_id": "a53b5288-cced-4319-941c-cfcfefaf2ab1",
+  "mb_name": "Ti\u00ean Ti\u00ean",
+  "disambiguation": "",
+  "type": null,
+  "genres": [],
+  "tags": [],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "a53b5288-cced-4319-941c-cfcfefaf2ab1",
+    "name": "Ti\u00ean Ti\u00ean",
+    "disambiguation": "",
+    "type": null,
+    "score": 100,
+    "exact_name": true
+   }
+  ],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "changg",
+  "name": "T\u00f3c Ti\u00ean",
+  "mbid": "2a29ec30-762c-4517-b739-d77df0fefb6c",
+  "url": "https://www.last.fm/music/T%C3%B3c+Ti%C3%AAn",
+  "match": "0.659031",
+  "status": "200",
+  "lastfm_page": "t\u00f3c ti\u00ean",
+  "mb_id": "2a29ec30-762c-4517-b739-d77df0fefb6c",
+  "mb_name": "T\u00f3c Ti\u00ean",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "v-pop"
+  ],
+  "tags": [
+   "v-pop"
+  ],
+  "mb_lastfm_pages": [
+   "t\u00f3c ti\u00ean"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "changg",
+  "name": "marzuz",
+  "mbid": "1c5ef00c-c30f-4ca4-9ba5-d3b89ea1f6f9",
+  "url": "https://www.last.fm/music/marzuz",
+  "match": "0.638326",
+  "status": "200",
+  "lastfm_page": "marzuz",
+  "mb_id": "1c5ef00c-c30f-4ca4-9ba5-d3b89ea1f6f9",
+  "mb_name": "marzuz",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [],
+  "tags": [],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "1c5ef00c-c30f-4ca4-9ba5-d3b89ea1f6f9",
+    "name": "marzuz",
+    "disambiguation": "",
+    "type": "Person",
+    "score": 100,
+    "exact_name": true
+   }
+  ],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "fela-kuti",
+  "name": "Ebo Taylor",
+  "mbid": "8b034085-b06d-4c42-9be3-d709be169d79",
+  "url": "https://www.last.fm/music/Ebo+Taylor",
+  "match": "1",
+  "status": "200",
+  "lastfm_page": "ebo taylor",
+  "mb_id": "8b034085-b06d-4c42-9be3-d709be169d79",
+  "mb_name": "Ebo Taylor",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "afrobeat",
+   "funk",
+   "highlife"
+  ],
+  "tags": [
+   "afrobeat",
+   "afrofunk",
+   "fela",
+   "funk",
+   "ghana",
+   "highlife"
+  ],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "8b034085-b06d-4c42-9be3-d709be169d79",
+    "name": "Ebo Taylor",
+    "disambiguation": "",
+    "type": "Person",
+    "score": 100,
+    "exact_name": true
+   }
+  ],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "fela-kuti",
+  "name": "Tony Allen",
+  "mbid": "ea524cc6-191a-4c05-ab88-3bb5c0880ca5",
+  "url": "https://www.last.fm/music/Tony+Allen",
+  "match": "0.780606",
+  "status": "200",
+  "lastfm_page": "tony allen",
+  "mb_id": "ea524cc6-191a-4c05-ab88-3bb5c0880ca5",
+  "mb_name": "Tony Allen",
+  "disambiguation": "Nigerian-born drummer and composer",
+  "type": "Person",
+  "genres": [
+   "afrobeat",
+   "funk",
+   "jazz",
+   "post-bop"
+  ],
+  "tags": [
+   "afro-beat",
+   "afrobeat",
+   "drummer",
+   "funk",
+   "jazz",
+   "post-bop",
+   "world"
+  ],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "ea524cc6-191a-4c05-ab88-3bb5c0880ca5",
+    "name": "Tony Allen",
+    "disambiguation": "Nigerian-born drummer and composer",
+    "type": "Person",
+    "score": 100,
+    "exact_name": true
+   },
+   {
+    "id": "60935ccf-448b-4126-b8a2-a366a99a1ca5",
+    "name": "Tony Allen",
+    "disambiguation": "R&B musician from New Orleans",
+    "type": "Person",
+    "score": 85,
+    "exact_name": true
+   },
+   {
+    "id": "2406265f-6961-41bd-905b-72b67147a824",
+    "name": "Tony Allen",
+    "disambiguation": "Jazz musician",
+    "type": "Person",
+    "score": 82,
+    "exact_name": true
+   },
+   {
+    "id": "413cc877-274f-4e95-beda-4a407e6e6197",
+    "name": "Tony Allen",
+    "disambiguation": "DJ",
+    "type": "Person",
+    "score": 81,
+    "exact_name": true
+   },
+   {
+    "id": "0e21d145-8321-48f1-930d-47defd5221a3",
+    "name": "Tony Allen",
+    "disambiguation": "appears on Ayetoro's track",
+    "type": null,
+    "score": 80,
+    "exact_name": true
+   },
+   {
+    "id": "a622a3e8-0c88-4f49-810c-7cea9f5209cd",
+    "name": "Tony Allen",
+    "disambiguation": "production music composer",
+    "type": "Person",
+    "score": 80,
+    "exact_name": true
+   },
+   {
+    "id": "a0f92141-d8e8-42e2-9cea-d2a9d0d8cf95",
+    "name": "Tony Allen",
+    "disambiguation": "Canadian fiddler",
+    "type": "Person",
+    "score": 80,
+    "exact_name": true
+   },
+   {
+    "id": "c47ee153-eb9e-4c43-8216-39fc1982d15b",
+    "name": "Tony Allen",
+    "disambiguation": "Translator",
+    "type": "Person",
+    "score": 80,
+    "exact_name": true
+   },
+   {
+    "id": "6f029b07-1898-4dd7-9a81-a56ce0d57148",
+    "name": "Tony Allen",
+    "disambiguation": "Anthony Allen (Wackies)",
+    "type": "Person",
+    "score": 80,
+    "exact_name": true
+   },
+   {
+    "id": "2e357e94-67ec-44bc-8762-cac03fecc882",
+    "name": "Tony Allen",
+    "disambiguation": "guitarist",
+    "type": "Person",
+    "score": 80,
+    "exact_name": true
+   },
+   {
+    "id": "7d4a5895-e40e-47ed-b1f3-74224fe667d4",
+    "name": "Tony Allen",
+    "disambiguation": "Irish guitarist and singer",
+    "type": "Person",
+    "score": 80,
+    "exact_name": true
+   },
+   {
+    "id": "f7acf489-b076-4707-835e-5059a9b598cc",
+    "name": "Tony Allen",
+    "disambiguation": "US funk bassist",
+    "type": "Person",
+    "score": 80,
+    "exact_name": true
+   }
+  ],
+  "contest": "CONTESTED",
+  "final": "UNADJUDICATED"
+ },
+ {
+  "workload": "fela-kuti",
+  "name": "The Funkees",
+  "mbid": "5bdc8759-a592-4202-a48c-691d4bec5c6d",
+  "url": "https://www.last.fm/music/The+Funkees",
+  "match": "0.734803",
+  "status": "200",
+  "lastfm_page": "the funkees",
+  "mb_id": "5bdc8759-a592-4202-a48c-691d4bec5c6d",
+  "mb_name": "The Funkees",
+  "disambiguation": "",
+  "type": "Group",
+  "genres": [
+   "afro rock",
+   "afrobeat",
+   "funk",
+   "jazz fusion",
+   "psychedelic rock"
+  ],
+  "tags": [
+   "afro rock",
+   "afrobeat",
+   "funk",
+   "jazz fusion",
+   "psychedelic rock"
+  ],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "5bdc8759-a592-4202-a48c-691d4bec5c6d",
+    "name": "The Funkees",
+    "disambiguation": "",
+    "type": "Group",
+    "score": 100,
+    "exact_name": true
+   }
+  ],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "fela-kuti",
+  "name": "Femi Kuti",
+  "mbid": "702d2b90-eef0-4354-b2c4-6366eba92b7f",
+  "url": "https://www.last.fm/music/Femi+Kuti",
+  "match": "0.607257",
+  "status": "200",
+  "lastfm_page": "femi kuti",
+  "mb_id": "702d2b90-eef0-4354-b2c4-6366eba92b7f",
+  "mb_name": "Femi Kuti",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "afrobeat",
+   "jazz",
+   "j\u00f9j\u00fa"
+  ],
+  "tags": [
+   "african",
+   "afro-beat",
+   "afrobeat",
+   "jazz",
+   "j\u00f9j\u00fa",
+   "world"
+  ],
+  "mb_lastfm_pages": [
+   "femi kuti"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "fela-kuti",
+  "name": "Manu Dibango",
+  "mbid": "826b488f-5164-45ca-abc4-ab11b3c321eb",
+  "url": "https://www.last.fm/music/Manu+Dibango",
+  "match": "0.523871",
+  "status": "200",
+  "lastfm_page": "manu dibango",
+  "mb_id": "826b488f-5164-45ca-abc4-ab11b3c321eb",
+  "mb_name": "Manu Dibango",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "afro-jazz",
+   "afrobeat",
+   "jazz",
+   "makossa"
+  ],
+  "tags": [
+   "african rumba",
+   "afro-jazz",
+   "afrobeat",
+   "afrofunk",
+   "death by covid-19",
+   "jazz",
+   "makossa",
+   "traditional"
+  ],
+  "mb_lastfm_pages": [
+   "manu dibango"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "fela-kuti",
+  "name": "William Onyeabor",
+  "mbid": "53dd0229-8a42-4bd7-8ffb-29bdec25e9c6",
+  "url": "https://www.last.fm/music/William+Onyeabor",
+  "match": "0.465134",
+  "status": "200",
+  "lastfm_page": "william onyeabor",
+  "mb_id": "53dd0229-8a42-4bd7-8ffb-29bdec25e9c6",
+  "mb_name": "William Onyeabor",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [],
+  "tags": [],
+  "mb_lastfm_pages": [
+   "william onyeabor"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "fela-kuti",
+  "name": "Hugh Masekela",
+  "mbid": "83a2e0fb-3d9b-46ff-b383-3dde54c15297",
+  "url": "https://www.last.fm/music/Hugh+Masekela",
+  "match": "0.450959",
+  "status": "200",
+  "lastfm_page": "hugh masekela",
+  "mb_id": "83a2e0fb-3d9b-46ff-b383-3dde54c15297",
+  "mb_name": "Hugh Masekela",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "afrobeat",
+   "jazz",
+   "soul jazz"
+  ],
+  "tags": [
+   "2008 universal fire victim",
+   "afrobeat",
+   "classic pop and rock",
+   "jazz",
+   "soul jazz",
+   "south african"
+  ],
+  "mb_lastfm_pages": [
+   "hugh masekela"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "fela-kuti",
+  "name": "Marijata",
+  "mbid": "09435962-d4bf-4b99-bec1-44c1d82a845c",
+  "url": "https://www.last.fm/music/Marijata",
+  "match": "0.381046",
+  "status": "?",
+  "lastfm_page": "marijata",
+  "mb_id": "09435962-d4bf-4b99-bec1-44c1d82a845c",
+  "mb_name": "Marijata",
+  "disambiguation": "",
+  "type": "Group",
+  "genres": [
+   "afrobeat",
+   "highlife"
+  ],
+  "tags": [
+   "afrobeat",
+   "highlife"
+  ],
+  "mb_lastfm_pages": [
+   "marijata"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "fela-kuti",
+  "name": "Peter King",
+  "mbid": "cf5fc4c6-f5a2-4e5c-9937-9b72eb255451",
+  "url": "https://www.last.fm/music/Peter+King",
+  "match": "0.293108",
+  "status": "200",
+  "lastfm_page": "peter king",
+  "mb_id": "cf5fc4c6-f5a2-4e5c-9937-9b72eb255451",
+  "mb_name": "Peter King",
+  "disambiguation": "Nigerian afrobeat / tenor sax player",
+  "type": "Person",
+  "genres": [
+   "afrobeat",
+   "jazz"
+  ],
+  "tags": [
+   "afrobeat",
+   "jazz"
+  ],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "cf5fc4c6-f5a2-4e5c-9937-9b72eb255451",
+    "name": "Peter King",
+    "disambiguation": "Nigerian afrobeat / tenor sax player",
+    "type": "Person",
+    "score": 100,
+    "exact_name": true
+   },
+   {
+    "id": "a9d7c9e4-ed76-4913-9dc3-d000fb82305c",
+    "name": "Peter King",
+    "disambiguation": "English alto saxophonist",
+    "type": "Person",
+    "score": 77,
+    "exact_name": true
+   },
+   {
+    "id": "38a1a82e-2301-4ad0-99fe-7ae06ea93b98",
+    "name": "Peter King",
+    "disambiguation": "UK organist, Bath Abbey",
+    "type": "Person",
+    "score": 73,
+    "exact_name": true
+   },
+   {
+    "id": "923a02fc-7b9a-40ee-ba13-b615ed9a2079",
+    "name": "Peter King",
+    "disambiguation": "US cajun artist",
+    "type": "Person",
+    "score": 72,
+    "exact_name": true
+   },
+   {
+    "id": "ee4dc3c0-101c-47f6-93d6-eb518f3b147d",
+    "name": "Peter King",
+    "disambiguation": "US alternative rock drummer/bassist",
+    "type": "Person",
+    "score": 71,
+    "exact_name": true
+   },
+   {
+    "id": "bac19ce9-6d7b-4241-bba6-8778f6303a87",
+    "name": "Peter King",
+    "disambiguation": "New Zealand lathe cutter",
+    "type": "Person",
+    "score": 71,
+    "exact_name": true
+   },
+   {
+    "id": "62f24509-88e5-4ce5-9e8c-f5e940b0b6eb",
+    "name": "Peter King",
+    "disambiguation": "photographer",
+    "type": "Person",
+    "score": 71,
+    "exact_name": true
+   },
+   {
+    "id": "ad7a6907-a492-4ce8-9b68-c2987cae2f3b",
+    "name": "Peter King",
+    "disambiguation": "London\u2010based MC, Saxon sound system",
+    "type": "Person",
+    "score": 71,
+    "exact_name": true
+   },
+   {
+    "id": "eaabfb04-51d5-4c93-832a-71bce85783d7",
+    "name": "Peter King",
+    "disambiguation": "Australian producer, engineer and musician; Hillsong",
+    "type": "Person",
+    "score": 71,
+    "exact_name": true
+   },
+   {
+    "id": "952c6c3e-75e4-41fd-aac3-8534f57369a5",
+    "name": "Peter King",
+    "disambiguation": "Welsh guitarist, vocalist and producer",
+    "type": "Person",
+    "score": 71,
+    "exact_name": true
+   },
+   {
+    "id": "09cf61d6-6156-4bff-9386-55144cf83d53",
+    "name": "Peter King",
+    "disambiguation": "US producer",
+    "type": "Person",
+    "score": 71,
+    "exact_name": true
+   },
+   {
+    "id": "2f6b2b95-b7b3-42fb-be2b-9611127c92e7",
+    "name": "Peter King",
+    "disambiguation": "Up With People",
+    "type": "Person",
+    "score": 71,
+    "exact_name": true
+   },
+   {
+    "id": "279c9d97-7dd2-4033-bd83-c72c831455ec",
+    "name": "Peter King",
+    "disambiguation": "Ivorian afrobeat musician, real name: Richard Tape",
+    "type": "Person",
+    "score": 71,
+    "exact_name": true
+   },
+   {
+    "id": "b47e9106-333d-4c58-b8e4-1f2dfb7c1b32",
+    "name": "Peter King",
+    "disambiguation": "California guitarist (Dakoda Motor Co.), ex-pro surfer, MTV host (\"Sandblast\")",
+    "type": "Person",
+    "score": 71,
+    "exact_name": true
+   }
+  ],
+  "contest": "CONTESTED",
+  "final": "UNADJUDICATED"
+ },
+ {
+  "workload": "fela-kuti",
+  "name": "The Budos Band",
+  "mbid": "b6fa9b9b-41cf-45a6-adc0-0a4c9a8c0d3c",
+  "url": "https://www.last.fm/music/The+Budos+Band",
+  "match": "0.292022",
+  "status": "200",
+  "lastfm_page": "the budos band",
+  "mb_id": "b6fa9b9b-41cf-45a6-adc0-0a4c9a8c0d3c",
+  "mb_name": "The Budos Band",
+  "disambiguation": "US instrumental band",
+  "type": "Group",
+  "genres": [
+   "afrobeat",
+   "funk",
+   "jazz",
+   "psychedelic rock",
+   "soul"
+  ],
+  "tags": [
+   "afro-soul",
+   "afrobeat",
+   "funk",
+   "jazz",
+   "psychedelic rock",
+   "soul"
+  ],
+  "mb_lastfm_pages": [
+   "the budos band"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "fela-kuti",
+  "name": "Orchestra Baobab",
+  "mbid": "30331c85-26d4-4daa-9f66-3075cac4c20b",
+  "url": "https://www.last.fm/music/Orchestra+Baobab",
+  "match": "0.282807",
+  "status": "200",
+  "lastfm_page": "orchestra baobab",
+  "mb_id": "30331c85-26d4-4daa-9f66-3075cac4c20b",
+  "mb_name": "Orchestra Baobab",
+  "disambiguation": "Senegalese Afro\u2010Cuban band",
+  "type": "Group",
+  "genres": [],
+  "tags": [
+   "afro-cuban",
+   "world"
+  ],
+  "mb_lastfm_pages": [
+   "orchestra baobab"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "fela-kuti",
+  "name": "Seun Kuti",
+  "mbid": "02e5d1fe-db84-450d-b58f-b4f5a34a7a35",
+  "url": "https://www.last.fm/music/Seun+Kuti",
+  "match": "0.281128",
+  "status": "200",
+  "lastfm_page": "seun kuti",
+  "mb_id": "02e5d1fe-db84-450d-b58f-b4f5a34a7a35",
+  "mb_name": "Seun Kuti",
+  "disambiguation": "Nigerian musician",
+  "type": "Person",
+  "genres": [
+   "afrobeat",
+   "j\u00f9j\u00fa"
+  ],
+  "tags": [
+   "african",
+   "afro-beat",
+   "afrobeat",
+   "j\u00f9j\u00fa",
+   "world"
+  ],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "02e5d1fe-db84-450d-b58f-b4f5a34a7a35",
+    "name": "Seun Kuti",
+    "disambiguation": "Nigerian musician",
+    "type": "Person",
+    "score": 87,
+    "exact_name": true
+   }
+  ],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "fela-kuti",
+  "name": "Osibisa",
+  "mbid": "b1355867-16a1-4863-ae3b-6a8be122eaaa",
+  "url": "https://www.last.fm/music/Osibisa",
+  "match": "0.241055",
+  "status": "200",
+  "lastfm_page": "osibisa",
+  "mb_id": "b1355867-16a1-4863-ae3b-6a8be122eaaa",
+  "mb_name": "Osibisa",
+  "disambiguation": "",
+  "type": "Group",
+  "genres": [
+   "afro rock",
+   "afro-funk",
+   "afrobeat",
+   "highlife",
+   "progressive rock"
+  ],
+  "tags": [
+   "afro rock",
+   "afro-funk",
+   "afrobeat",
+   "highlife",
+   "performer",
+   "progressive rock"
+  ],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "b1355867-16a1-4863-ae3b-6a8be122eaaa",
+    "name": "Osibisa",
+    "disambiguation": "",
+    "type": "Group",
+    "score": 100,
+    "exact_name": true
+   }
+  ],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "fleetwood-mac",
+  "name": "Stevie Nicks",
+  "mbid": "b7f2cca2-72c6-41fb-ae33-53370fc62fe7",
+  "url": "https://www.last.fm/music/Stevie+Nicks",
+  "match": "1",
+  "status": "200",
+  "lastfm_page": "stevie nicks",
+  "mb_id": "b7f2cca2-72c6-41fb-ae33-53370fc62fe7",
+  "mb_name": "Stevie Nicks",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "country rock",
+   "pop",
+   "pop rock",
+   "rock",
+   "singer-songwriter",
+   "soft rock"
+  ],
+  "tags": [
+   "country rock",
+   "pop",
+   "pop rock",
+   "rock",
+   "singer-songwriter",
+   "soft rock"
+  ],
+  "mb_lastfm_pages": [
+   "stevie nicks"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "fleetwood-mac",
+  "name": "Christine McVie",
+  "mbid": "21551f7d-93f2-4cb7-ba71-7f260058e923",
+  "url": "https://www.last.fm/music/Christine+McVie",
+  "match": "0.550625",
+  "status": "200",
+  "lastfm_page": "christine mcvie",
+  "mb_id": "21551f7d-93f2-4cb7-ba71-7f260058e923",
+  "mb_name": "Christine McVie",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "blues rock",
+   "british blues",
+   "pop rock",
+   "rock"
+  ],
+  "tags": [
+   "blues rock",
+   "british blues",
+   "pop rock",
+   "rock"
+  ],
+  "mb_lastfm_pages": [
+   "christine mcvie"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "fleetwood-mac",
+  "name": "Lindsey Buckingham",
+  "mbid": "5d12875c-a197-43b2-8f29-41dc0ad895c3",
+  "url": "https://www.last.fm/music/Lindsey+Buckingham",
+  "match": "0.537882",
+  "status": "200",
+  "lastfm_page": "lindsey buckingham",
+  "mb_id": "5d12875c-a197-43b2-8f29-41dc0ad895c3",
+  "mb_name": "Lindsey Buckingham",
+  "disambiguation": "guitarist, singer, songwriter and producer",
+  "type": "Person",
+  "genres": [
+   "blues",
+   "rock",
+   "soft rock"
+  ],
+  "tags": [
+   "blues",
+   "rock",
+   "soft rock"
+  ],
+  "mb_lastfm_pages": [
+   "lindsey buckingham"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "fleetwood-mac",
+  "name": "Buckingham Nicks",
+  "mbid": "4b1bf05d-0e3c-44a3-9fc8-ad088fc25797",
+  "url": "https://www.last.fm/music/Buckingham+Nicks",
+  "match": "0.321156",
+  "status": "200",
+  "lastfm_page": "buckingham nicks",
+  "mb_id": "4b1bf05d-0e3c-44a3-9fc8-ad088fc25797",
+  "mb_name": "Buckingham Nicks",
+  "disambiguation": "",
+  "type": "Group",
+  "genres": [
+   "pop rock",
+   "rock"
+  ],
+  "tags": [
+   "pop rock",
+   "rock"
+  ],
+  "mb_lastfm_pages": [
+   "buckingham nicks"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "fleetwood-mac",
+  "name": "Heart",
+  "mbid": "bdbd48f5-abf3-4a4f-9a21-4551dbc3fde9",
+  "url": "https://www.last.fm/music/Heart",
+  "match": "0.283631",
+  "status": "200",
+  "lastfm_page": "heart",
+  "mb_id": "bdbd48f5-abf3-4a4f-9a21-4551dbc3fde9",
+  "mb_name": "Heart",
+  "disambiguation": "rock band, Ann and Nancy Wilson",
+  "type": "Group",
+  "genres": [
+   "aor",
+   "arena rock",
+   "classic rock",
+   "folk rock",
+   "hard rock",
+   "pop",
+   "pop rock",
+   "rock",
+   "soft rock",
+   "synth-pop"
+  ],
+  "tags": [
+   "aor",
+   "arena rock",
+   "classic rock",
+   "folk rock",
+   "hard rock",
+   "pop",
+   "pop rock",
+   "rock",
+   "soft rock",
+   "synth-pop"
+  ],
+  "mb_lastfm_pages": [
+   "heart"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "fleetwood-mac",
+  "name": "Eagles",
+  "mbid": "f46bd570-5768-462e-b84c-c7c993bbf47e",
+  "url": "https://www.last.fm/music/Eagles",
+  "match": "0.240908",
+  "status": "200",
+  "lastfm_page": "eagles",
+  "mb_id": "f46bd570-5768-462e-b84c-c7c993bbf47e",
+  "mb_name": "Eagles",
+  "disambiguation": "US country rock band",
+  "type": "Group",
+  "genres": [
+   "classic rock",
+   "country rock",
+   "folk rock",
+   "pop",
+   "pop rock",
+   "rock",
+   "soft rock"
+  ],
+  "tags": [
+   "classic rock",
+   "country rock",
+   "folk rock",
+   "pop",
+   "pop rock",
+   "rock",
+   "soft rock"
+  ],
+  "mb_lastfm_pages": [
+   "eagles"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "fleetwood-mac",
+  "name": "Dire Straits",
+  "mbid": "614e3804-7d34-41ba-857f-811bad7c2b7a",
+  "url": "https://www.last.fm/music/Dire+Straits",
+  "match": "0.237505",
+  "status": "200",
+  "lastfm_page": "dire straits",
+  "mb_id": "614e3804-7d34-41ba-857f-811bad7c2b7a",
+  "mb_name": "Dire Straits",
+  "disambiguation": "",
+  "type": "Group",
+  "genres": [
+   "blues rock",
+   "classic rock",
+   "pop rock",
+   "pub rock",
+   "rock",
+   "rock and roll",
+   "roots rock",
+   "soft rock",
+   "sophisti-pop"
+  ],
+  "tags": [
+   "blues rock",
+   "british",
+   "classic rock",
+   "guitar",
+   "pop rock",
+   "pub rock",
+   "rock",
+   "rock & roll",
+   "rock and roll",
+   "roots rock",
+   "soft rock",
+   "sophisti-pop"
+  ],
+  "mb_lastfm_pages": [
+   "dire straits"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "fleetwood-mac",
+  "name": "Elton John",
+  "mbid": "b83bc61f-8451-4a5d-8b8e-7e9ed295e822",
+  "url": "https://www.last.fm/music/Elton+John",
+  "match": "0.222297",
+  "status": "200",
+  "lastfm_page": "elton john",
+  "mb_id": "b83bc61f-8451-4a5d-8b8e-7e9ed295e822",
+  "mb_name": "Elton John",
+  "disambiguation": "English singer, songwriter, pianist, and composer",
+  "type": "Person",
+  "genres": [
+   "classic rock",
+   "country",
+   "dance",
+   "disco",
+   "electronica",
+   "folk rock",
+   "glam rock",
+   "hip hop",
+   "house",
+   "piano rock",
+   "pop",
+   "pop rock",
+   "progressive rock",
+   "psychedelic rock",
+   "r&b",
+   "rock",
+   "rock and roll",
+   "singer-songwriter",
+   "soft rock"
+  ],
+  "tags": [
+   "2008 universal fire victim",
+   "adult contemporary",
+   "album rock",
+   "am pop",
+   "british",
+   "classic rock",
+   "contemporary pop/rock",
+   "country",
+   "dance",
+   "disco",
+   "electronica",
+   "english",
+   "film score",
+   "folk rock",
+   "glam rock",
+   "hip hop",
+   "house",
+   "indie dance",
+   "piano rock",
+   "pop",
+   "pop music",
+   "pop rock",
+   "progressive rock",
+   "psychedelic rock",
+   "r&b",
+   "rock",
+   "rock and roll",
+   "show/musical",
+   "singer-songwriter",
+   "singer/songwriter",
+   "soft rock",
+   "uk"
+  ],
+  "mb_lastfm_pages": [
+   "elton john"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "fleetwood-mac",
+  "name": "The Rolling Stones",
+  "mbid": "b071f9fa-14b0-4217-8e97-eb41da73f598",
+  "url": "https://www.last.fm/music/The+Rolling+Stones",
+  "match": "0.201512",
+  "status": "200",
+  "lastfm_page": "the rolling stones",
+  "mb_id": "b071f9fa-14b0-4217-8e97-eb41da73f598",
+  "mb_name": "The Rolling Stones",
+  "disambiguation": "",
+  "type": "Group",
+  "genres": [
+   "blues",
+   "blues rock",
+   "british rhythm & blues",
+   "classic rock",
+   "pop rock",
+   "psychedelic rock",
+   "rock",
+   "rock and roll"
+  ],
+  "tags": [
+   "blues",
+   "blues rock",
+   "british",
+   "british rhythm & blues",
+   "classic rock",
+   "pop rock",
+   "psychedelic rock",
+   "rock",
+   "rock & roll",
+   "rock and roll"
+  ],
+  "mb_lastfm_pages": [
+   "the rolling stones"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "fleetwood-mac",
+  "name": "Led Zeppelin",
+  "mbid": "678d88b2-87b0-403b-b63d-5da7465aecc3",
+  "url": "https://www.last.fm/music/Led+Zeppelin",
+  "match": "0.198476",
+  "status": "200",
+  "lastfm_page": "led zeppelin",
+  "mb_id": "678d88b2-87b0-403b-b63d-5da7465aecc3",
+  "mb_name": "Led Zeppelin",
+  "disambiguation": "",
+  "type": "Group",
+  "genres": [
+   "arena rock",
+   "blues rock",
+   "classic rock",
+   "folk rock",
+   "hard rock",
+   "heavy metal",
+   "pop",
+   "progressive rock",
+   "rock",
+   "rock and roll"
+  ],
+  "tags": [
+   "album rock",
+   "arena rock",
+   "blues rock",
+   "blues-rock",
+   "british",
+   "british metal",
+   "classic rock",
+   "folk rock",
+   "hard rock",
+   "heavy metal",
+   "pop",
+   "progressive rock",
+   "regional blues",
+   "rock",
+   "rock and roll"
+  ],
+  "mb_lastfm_pages": [
+   "led zeppelin"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "fleetwood-mac",
+  "name": "George Harrison",
+  "mbid": "42a8f507-8412-4611-854f-926571049fa0",
+  "url": "https://www.last.fm/music/George+Harrison",
+  "match": "0.196968",
+  "status": "200",
+  "lastfm_page": "george harrison",
+  "mb_id": "42a8f507-8412-4611-854f-926571049fa0",
+  "mb_name": "George Harrison",
+  "disambiguation": "The Beatles",
+  "type": "Person",
+  "genres": [
+   "electronic",
+   "experimental",
+   "folk",
+   "folk pop",
+   "pop",
+   "pop rock",
+   "psychedelic rock",
+   "rock"
+  ],
+  "tags": [
+   "british",
+   "electronic",
+   "experimental",
+   "folk",
+   "folk pop",
+   "pop",
+   "pop rock",
+   "psychedelic rock",
+   "rock",
+   "singer/songwriter"
+  ],
+  "mb_lastfm_pages": [
+   "george harrison"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "fleetwood-mac",
+  "name": "Rod Stewart",
+  "mbid": "a35237a0-4f47-40a6-b6f3-1e786db23402",
+  "url": "https://www.last.fm/music/Rod+Stewart",
+  "match": "0.189764",
+  "status": "200",
+  "lastfm_page": "rod stewart",
+  "mb_id": "a35237a0-4f47-40a6-b6f3-1e786db23402",
+  "mb_name": "Rod Stewart",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "blues rock",
+   "folk rock",
+   "pop",
+   "pop rock",
+   "rock",
+   "roots rock",
+   "soft rock"
+  ],
+  "tags": [
+   "adult contemporary",
+   "blues rock",
+   "folk rock",
+   "pop",
+   "pop rock",
+   "rock",
+   "roots rock",
+   "soft rock",
+   "standards"
+  ],
+  "mb_lastfm_pages": [
+   "rod stewart"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "fleetwood-mac",
+  "name": "Wings",
+  "mbid": "d922d727-240a-4432-9a88-05a7cf9bc403",
+  "url": "https://www.last.fm/music/Wings",
+  "match": "0.188186",
+  "status": "200",
+  "lastfm_page": "wings",
+  "mb_id": "d922d727-240a-4432-9a88-05a7cf9bc403",
+  "mb_name": "Wings",
+  "disambiguation": "Paul McCartney\u2019s band",
+  "type": "Group",
+  "genres": [
+   "classic rock",
+   "pop rock",
+   "rock",
+   "soft rock"
+  ],
+  "tags": [
+   "classic rock",
+   "pop rock",
+   "rock",
+   "soft rock"
+  ],
+  "mb_lastfm_pages": [
+   "wings"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "fleetwood-mac",
+  "name": "Foreigner",
+  "mbid": "160629ab-ec18-4931-8c95-02cb92d06186",
+  "url": "https://www.last.fm/music/Foreigner",
+  "match": "0.184999",
+  "status": "?",
+  "lastfm_page": "foreigner",
+  "mb_id": "160629ab-ec18-4931-8c95-02cb92d06186",
+  "mb_name": "Foreigner",
+  "disambiguation": "British/American rock band",
+  "type": "Group",
+  "genres": [
+   "acoustic rock",
+   "aor",
+   "arena rock",
+   "classic rock",
+   "hard rock",
+   "pop rock",
+   "rock",
+   "soft rock"
+  ],
+  "tags": [
+   "4029759205272",
+   "acoustic rock",
+   "aor",
+   "arena rock",
+   "classic rock",
+   "hard rock",
+   "pop rock",
+   "rock",
+   "soft rock"
+  ],
+  "mb_lastfm_pages": [
+   "foreigner"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "fleetwood-mac",
+  "name": "Queen",
+  "mbid": "0383dadf-2a4e-4d10-a46a-e9e041da8eb3",
+  "url": "https://www.last.fm/music/Queen",
+  "match": "0.178057",
+  "status": "?",
+  "lastfm_page": "queen",
+  "mb_id": "0383dadf-2a4e-4d10-a46a-e9e041da8eb3",
+  "mb_name": "Queen",
+  "disambiguation": "UK rock group",
+  "type": "Group",
+  "genres": [
+   "art rock",
+   "baroque pop",
+   "classic rock",
+   "disco",
+   "glam rock",
+   "hard rock",
+   "pop rock",
+   "progressive rock",
+   "rock",
+   "symphonic rock"
+  ],
+  "tags": [
+   "70's",
+   "80's",
+   "80s",
+   "art rock",
+   "baroque pop",
+   "beholder",
+   "british",
+   "classic rock",
+   "disco",
+   "eclectic",
+   "film soundtrack",
+   "glam rock",
+   "glorious",
+   "hard rock",
+   "medley",
+   "pop rock",
+   "progressive rock",
+   "queer",
+   "rock",
+   "symphonic rock",
+   "uk",
+   "united kingdom",
+   "vyrzukhisuc-artiest"
+  ],
+  "mb_lastfm_pages": [
+   "queen"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "fleetwood-mac",
+  "name": "Electric Light Orchestra",
+  "mbid": "0c502791-4ee9-4c5f-9696-0602b721ff3b",
+  "url": "https://www.last.fm/music/Electric+Light+Orchestra",
+  "match": "0.177264",
+  "status": "?",
+  "lastfm_page": "electric light orchestra",
+  "mb_id": "0c502791-4ee9-4c5f-9696-0602b721ff3b",
+  "mb_name": "Electric Light Orchestra",
+  "disambiguation": "British rock group",
+  "type": "Group",
+  "genres": [
+   "art rock",
+   "classic rock",
+   "crossover prog",
+   "pop",
+   "pop rock",
+   "progressive",
+   "progressive pop",
+   "progressive rock",
+   "rock",
+   "symphonic prog",
+   "symphonic rock"
+  ],
+  "tags": [
+   "art rock",
+   "classic rock",
+   "crossover prog",
+   "pop",
+   "pop rock",
+   "progressive",
+   "progressive pop",
+   "progressive rock",
+   "rock",
+   "symphonic prog",
+   "symphonic rock"
+  ],
+  "mb_lastfm_pages": [
+   "electric light orchestra"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "fleetwood-mac",
+  "name": "Eric Clapton",
+  "mbid": "618b6900-0618-4f1e-b835-bccb17f84294",
+  "url": "https://www.last.fm/music/Eric+Clapton",
+  "match": "0.173771",
+  "status": "200",
+  "lastfm_page": "eric clapton",
+  "mb_id": "618b6900-0618-4f1e-b835-bccb17f84294",
+  "mb_name": "Eric Clapton",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "blues",
+   "blues rock",
+   "rock",
+   "soft rock"
+  ],
+  "tags": [
+   "blues",
+   "blues rock",
+   "guitar",
+   "guitarists",
+   "rock",
+   "soft rock"
+  ],
+  "mb_lastfm_pages": [
+   "eric clapton"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "fleetwood-mac",
+  "name": "America",
+  "mbid": "34cf95c7-4be9-4efd-a48a-c2ea4a0bb114",
+  "url": "https://www.last.fm/music/America",
+  "match": "0.169007",
+  "status": "200",
+  "lastfm_page": "america",
+  "mb_id": "34cf95c7-4be9-4efd-a48a-c2ea4a0bb114",
+  "mb_name": "America",
+  "disambiguation": "US folk/soft rock band",
+  "type": "Group",
+  "genres": [
+   "aor",
+   "folk pop",
+   "folk rock",
+   "pop rock",
+   "rock",
+   "soft rock",
+   "yacht rock"
+  ],
+  "tags": [
+   "aor",
+   "folk pop",
+   "folk rock",
+   "pop rock",
+   "rock",
+   "soft rock",
+   "yacht rock"
+  ],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "34cf95c7-4be9-4efd-a48a-c2ea4a0bb114",
+    "name": "America",
+    "disambiguation": "US folk/soft rock band",
+    "type": "Group",
+    "score": 100,
+    "exact_name": true
+   }
+  ],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "kendrick-lamar",
+  "name": "Baby Keem",
+  "mbid": "81d12ca7-5b89-4d21-8736-860b7400b4eb",
+  "url": "https://www.last.fm/music/Baby+Keem",
+  "match": "1",
+  "status": "200",
+  "lastfm_page": "baby keem",
+  "mb_id": "81d12ca7-5b89-4d21-8736-860b7400b4eb",
+  "mb_name": "Baby Keem",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "hip hop",
+   "trap",
+   "west coast hip hop"
+  ],
+  "tags": [
+   "hip hop",
+   "trap",
+   "west coast hip hop"
+  ],
+  "mb_lastfm_pages": [
+   "baby keem"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "kendrick-lamar",
+  "name": "JID",
+  "mbid": "d616b606-cf6a-4b6e-ab0f-e253b8db6610",
+  "url": "https://www.last.fm/music/JID",
+  "match": "0.973066",
+  "status": "200",
+  "lastfm_page": "jid",
+  "mb_id": "d616b606-cf6a-4b6e-ab0f-e253b8db6610",
+  "mb_name": "JID",
+  "disambiguation": "rapper",
+  "type": "Person",
+  "genres": [
+   "hip hop",
+   "southern hip hop",
+   "trap"
+  ],
+  "tags": [
+   "hip hop",
+   "rapper",
+   "southern hip hop",
+   "trap"
+  ],
+  "mb_lastfm_pages": [
+   "jid"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "kendrick-lamar",
+  "name": "Jay Rock",
+  "mbid": "9880800a-f6f8-4f8f-a00e-b4b664776c0c",
+  "url": "https://www.last.fm/music/Jay+Rock",
+  "match": "0.957334",
+  "status": "200",
+  "lastfm_page": "jay rock",
+  "mb_id": "9880800a-f6f8-4f8f-a00e-b4b664776c0c",
+  "mb_name": "Jay Rock",
+  "disambiguation": "US rapper",
+  "type": "Person",
+  "genres": [
+   "hip hop"
+  ],
+  "tags": [
+   "hip hop"
+  ],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "fc5145f0-558d-452a-8d6e-82eeab1ba245",
+    "name": "Jay Rock",
+    "disambiguation": "UK DJ, aka Mad Doctor X",
+    "type": "Person",
+    "score": 100,
+    "exact_name": true
+   },
+   {
+    "id": "9880800a-f6f8-4f8f-a00e-b4b664776c0c",
+    "name": "Jay Rock",
+    "disambiguation": "US rapper",
+    "type": "Person",
+    "score": 83,
+    "exact_name": true
+   }
+  ],
+  "contest": "CONTESTED",
+  "final": "UNADJUDICATED"
+ },
+ {
+  "workload": "kendrick-lamar",
+  "name": "Tyler, The Creator",
+  "mbid": "f6beac20-5dfe-4d1f-ae02-0b0a740aafd6",
+  "url": "https://www.last.fm/music/Tyler,+The+Creator",
+  "match": "0.935400",
+  "status": "200",
+  "lastfm_page": "tyler, the creator",
+  "mb_id": "f6beac20-5dfe-4d1f-ae02-0b0a740aafd6",
+  "mb_name": "Tyler, The Creator",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "hardcore hip hop",
+   "hip hop",
+   "horrorcore",
+   "pop rap",
+   "west coast hip hop"
+  ],
+  "tags": [
+   "hardcore hip hop",
+   "hip hop",
+   "horrorcore",
+   "pop rap",
+   "west coast hip hop"
+  ],
+  "mb_lastfm_pages": [
+   "tyler, the creator"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "kendrick-lamar",
+  "name": "Black Hippy",
+  "mbid": "6fc5c0c6-bf05-4b29-bda0-5fa6cc863785",
+  "url": "https://www.last.fm/music/Black+Hippy",
+  "match": "0.796423",
+  "status": "200",
+  "lastfm_page": "black hippy",
+  "mb_id": "6fc5c0c6-bf05-4b29-bda0-5fa6cc863785",
+  "mb_name": "Black Hippy",
+  "disambiguation": "US hip hop collective",
+  "type": "Group",
+  "genres": [
+   "hip hop"
+  ],
+  "tags": [
+   "hip hop"
+  ],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "6fc5c0c6-bf05-4b29-bda0-5fa6cc863785",
+    "name": "Black Hippy",
+    "disambiguation": "US hip hop collective",
+    "type": "Group",
+    "score": 100,
+    "exact_name": true
+   }
+  ],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "kendrick-lamar",
+  "name": "Joey Bada$$",
+  "mbid": "9757ae7d-44b1-4d63-81ce-b463fe27b9ae",
+  "url": "https://www.last.fm/music/Joey+Bada$$",
+  "match": "0.759388",
+  "status": "200",
+  "lastfm_page": "joey bada$$",
+  "mb_id": "9757ae7d-44b1-4d63-81ce-b463fe27b9ae",
+  "mb_name": "Joey Bada$$",
+  "disambiguation": "rapper",
+  "type": "Person",
+  "genres": [
+   "boom bap",
+   "conscious hip hop",
+   "east coast hip hop",
+   "hardcore hip hop",
+   "hip hop",
+   "jazz rap"
+  ],
+  "tags": [
+   "boom bap",
+   "conscious hip hop",
+   "east coast hip hop",
+   "hardcore hip hop",
+   "hip hop",
+   "jazz rap"
+  ],
+  "mb_lastfm_pages": [
+   "jo-vaughn scott",
+   "jo-vaughn virginie scott",
+   "joey bada$$"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "kendrick-lamar",
+  "name": "ScHoolboy Q",
+  "mbid": "bce6d667-cde8-485e-b078-c0a05adea36d",
+  "url": "https://www.last.fm/music/ScHoolboy+Q",
+  "match": "0.738216",
+  "status": "200",
+  "lastfm_page": "schoolboy q",
+  "mb_id": "bce6d667-cde8-485e-b078-c0a05adea36d",
+  "mb_name": "ScHoolboy Q",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "gangsta rap",
+   "hardcore hip hop",
+   "hip hop",
+   "trap",
+   "west coast hip hop"
+  ],
+  "tags": [
+   "gangsta rap",
+   "hardcore hip hop",
+   "hip hop",
+   "trap",
+   "west coast hip hop"
+  ],
+  "mb_lastfm_pages": [
+   "schoolboy q"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "kendrick-lamar",
+  "name": "J. Cole",
+  "mbid": "875203e1-8e58-4b86-8dcb-7190faf411c5",
+  "url": "https://www.last.fm/music/J.+Cole",
+  "match": "0.732364",
+  "status": "200",
+  "lastfm_page": "j. cole",
+  "mb_id": "875203e1-8e58-4b86-8dcb-7190faf411c5",
+  "mb_name": "J. Cole",
+  "disambiguation": "US rapper & producer",
+  "type": "Person",
+  "genres": [
+   "hip hop"
+  ],
+  "tags": [
+   "hip hop",
+   "rap"
+  ],
+  "mb_lastfm_pages": [
+   "j. cole"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "kendrick-lamar",
+  "name": "A$AP Rocky",
+  "mbid": "25b7b584-d952-4662-a8b9-dd8cdfbfeb64",
+  "url": "https://www.last.fm/music/A$AP+Rocky",
+  "match": "0.714071",
+  "status": "200",
+  "lastfm_page": "a$ap rocky",
+  "mb_id": "25b7b584-d952-4662-a8b9-dd8cdfbfeb64",
+  "mb_name": "A$AP Rocky",
+  "disambiguation": "US rapper",
+  "type": "Person",
+  "genres": [
+   "cloud rap",
+   "east coast hip hop",
+   "experimental hip hop",
+   "hardcore hip hop",
+   "hip hop",
+   "pop rap",
+   "trap"
+  ],
+  "tags": [
+   "cloud rap",
+   "east coast hip hop",
+   "experimental hip hop",
+   "hardcore hip hop",
+   "hip hop",
+   "pop rap",
+   "trap"
+  ],
+  "mb_lastfm_pages": [
+   "a$ap rocky"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "kendrick-lamar",
+  "name": "Pusha T",
+  "mbid": "14ecd19f-7121-4192-8549-e5056241a42f",
+  "url": "https://www.last.fm/music/Pusha+T",
+  "match": "0.682861",
+  "status": "?",
+  "lastfm_page": "pusha t",
+  "mb_id": "14ecd19f-7121-4192-8549-e5056241a42f",
+  "mb_name": "Pusha T",
+  "disambiguation": "US rapper Terrence Thornton, member of Clipse",
+  "type": "Person",
+  "genres": [
+   "boom bap",
+   "east coast hip hop",
+   "gangsta rap",
+   "hardcore hip hop",
+   "hip hop",
+   "southern hip hop"
+  ],
+  "tags": [
+   "boom bap",
+   "east coast hip hop",
+   "gangsta rap",
+   "hardcore hip hop",
+   "hip hop",
+   "southern hip hop",
+   "trap rap"
+  ],
+  "mb_lastfm_pages": [
+   "pusha t"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "kendrick-lamar",
+  "name": "Denzel Curry",
+  "mbid": "5f95440d-7737-4a36-9bcf-c05337f7129b",
+  "url": "https://www.last.fm/music/Denzel+Curry",
+  "match": "0.681145",
+  "status": "200",
+  "lastfm_page": "denzel curry",
+  "mb_id": "5f95440d-7737-4a36-9bcf-c05337f7129b",
+  "mb_name": "Denzel Curry",
+  "disambiguation": "US rapper",
+  "type": "Person",
+  "genres": [
+   "conscious hip hop",
+   "hardcore hip hop",
+   "hip hop",
+   "southern hip hop",
+   "trap",
+   "trap metal"
+  ],
+  "tags": [
+   "conscious hip hop",
+   "hardcore hip hop",
+   "hip hop",
+   "rap",
+   "southern hip hop",
+   "trap",
+   "trap metal",
+   "underground"
+  ],
+  "mb_lastfm_pages": [
+   "denzel curry"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "kendrick-lamar",
+  "name": "Vince Staples",
+  "mbid": "78e854b8-9713-4ff2-9218-6b3784893bff",
+  "url": "https://www.last.fm/music/Vince+Staples",
+  "match": "0.574362",
+  "status": "200",
+  "lastfm_page": "vince staples",
+  "mb_id": "78e854b8-9713-4ff2-9218-6b3784893bff",
+  "mb_name": "Vince Staples",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "hip hop",
+   "west coast hip hop"
+  ],
+  "tags": [
+   "hip hop",
+   "west coast hip hop"
+  ],
+  "mb_lastfm_pages": [
+   "vince staples"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "kendrick-lamar",
+  "name": "Nas",
+  "mbid": "cfbc0924-0035-4d6c-8197-f024653af823",
+  "url": "https://www.last.fm/music/Nas",
+  "match": "0.556311",
+  "status": "200",
+  "lastfm_page": "nas",
+  "mb_id": "cfbc0924-0035-4d6c-8197-f024653af823",
+  "mb_name": "Nas",
+  "disambiguation": "US rapper",
+  "type": "Person",
+  "genres": [
+   "boom bap",
+   "deep soul",
+   "east coast hip hop",
+   "hip hop",
+   "hip hop soul",
+   "jazz rap",
+   "pop",
+   "pop soul",
+   "r&b",
+   "smooth soul",
+   "trap soul"
+  ],
+  "tags": [
+   "boom bap",
+   "conscious rap",
+   "deep soul",
+   "east coast hip hop",
+   "east coast hip-hop",
+   "god",
+   "hip hop",
+   "hip hop soul",
+   "jazz rap",
+   "pop",
+   "pop soul",
+   "r&b",
+   "rap",
+   "rap musicians",
+   "rnb",
+   "smooth soul",
+   "top 10",
+   "top 100",
+   "top 5",
+   "top 50",
+   "trap soul"
+  ],
+  "mb_lastfm_pages": [
+   "nas"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "kendrick-lamar",
+  "name": "KIDS SEE GHOSTS",
+  "mbid": "793e220b-64f8-46d9-954d-e033dbcfeef4",
+  "url": "https://www.last.fm/music/KIDS+SEE+GHOSTS",
+  "match": "0.543692",
+  "status": "200",
+  "lastfm_page": "kids see ghosts",
+  "mb_id": "793e220b-64f8-46d9-954d-e033dbcfeef4",
+  "mb_name": "KIDS SEE GHOSTS",
+  "disambiguation": "Kanye West & Kid Cudi",
+  "type": "Group",
+  "genres": [
+   "experimental hip hop",
+   "hip hop",
+   "pop rap"
+  ],
+  "tags": [
+   "experimental hip hop",
+   "hip hop",
+   "pop rap"
+  ],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "793e220b-64f8-46d9-954d-e033dbcfeef4",
+    "name": "KIDS SEE GHOSTS",
+    "disambiguation": "Kanye West & Kid Cudi",
+    "type": "Group",
+    "score": 100,
+    "exact_name": true
+   },
+   {
+    "id": "47e0a1bd-6d60-44d7-abe3-cbe37172b36f",
+    "name": "KIDS SEE GHOSTS",
+    "disambiguation": "Nicholas Joseph Awad & Gianluc Gamino",
+    "type": null,
+    "score": 93,
+    "exact_name": true
+   }
+  ],
+  "contest": "CONTESTED",
+  "final": "UNADJUDICATED"
+ },
+ {
+  "workload": "kendrick-lamar",
+  "name": "Dreamville",
+  "mbid": "f7a94446-aa3f-41e6-b3d0-46dd695d7d6e",
+  "url": "https://www.last.fm/music/Dreamville",
+  "match": "0.507353",
+  "status": "200",
+  "lastfm_page": "dreamville",
+  "mb_id": "f7a94446-aa3f-41e6-b3d0-46dd695d7d6e",
+  "mb_name": "Dreamville",
+  "disambiguation": "Dreamville Records",
+  "type": "Group",
+  "genres": [],
+  "tags": [
+   "j. cole",
+   "top 100"
+  ],
+  "mb_lastfm_pages": [
+   "dreamville"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "kendrick-lamar",
+  "name": "Clipse",
+  "mbid": "e6424fa5-08d3-41c6-96f3-8549f733708c",
+  "url": "https://www.last.fm/music/Clipse",
+  "match": "0.494183",
+  "status": "200",
+  "lastfm_page": "clipse",
+  "mb_id": "e6424fa5-08d3-41c6-96f3-8549f733708c",
+  "mb_name": "Clipse",
+  "disambiguation": "American hip hop duo",
+  "type": "Group",
+  "genres": [
+   "coke rap",
+   "hip hop"
+  ],
+  "tags": [
+   "coke rap",
+   "hip hop"
+  ],
+  "mb_lastfm_pages": [
+   "clipse"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "kendrick-lamar",
+  "name": "Childish Gambino",
+  "mbid": "7fb57fba-a6ef-44c2-abab-2fa3bdee607e",
+  "url": "https://www.last.fm/music/Childish+Gambino",
+  "match": "0.489331",
+  "status": "200",
+  "lastfm_page": "childish gambino",
+  "mb_id": "7fb57fba-a6ef-44c2-abab-2fa3bdee607e",
+  "mb_name": "Childish Gambino",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "contemporary r&b",
+   "hip hop",
+   "neo soul",
+   "r&b"
+  ],
+  "tags": [
+   "contemporary r&b",
+   "hip hop",
+   "neo soul",
+   "nuno",
+   "r&b"
+  ],
+  "mb_lastfm_pages": [
+   "childish gambino"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "radiohead",
+  "name": "Thom Yorke",
+  "mbid": "8ed2e0b3-aa4c-4e13-bec3-dc7393ed4d6b",
+  "url": "https://www.last.fm/music/Thom+Yorke",
+  "match": "1",
+  "status": "200",
+  "lastfm_page": "thom yorke",
+  "mb_id": "8ed2e0b3-aa4c-4e13-bec3-dc7393ed4d6b",
+  "mb_name": "Thom Yorke",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "alternative rock",
+   "ambient",
+   "ambient pop",
+   "art pop",
+   "art rock",
+   "electronic",
+   "glitch pop",
+   "idm",
+   "rock"
+  ],
+  "tags": [
+   "alternative rock",
+   "ambient",
+   "ambient pop",
+   "art pop",
+   "art rock",
+   "british",
+   "electronic",
+   "english",
+   "film score",
+   "film soundtrack",
+   "glitch pop",
+   "idm",
+   "rock",
+   "rock and indie",
+   "uk"
+  ],
+  "mb_lastfm_pages": [
+   "thom yorke"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "radiohead",
+  "name": "Atoms for Peace",
+  "mbid": "9e299bee-d7e2-49f3-8cd7-d6b28ab204d1",
+  "url": "https://www.last.fm/music/Atoms+for+Peace",
+  "match": "0.524927",
+  "status": "200",
+  "lastfm_page": "atoms for peace",
+  "mb_id": "9e299bee-d7e2-49f3-8cd7-d6b28ab204d1",
+  "mb_name": "Atoms for Peace",
+  "disambiguation": "",
+  "type": "Group",
+  "genres": [
+   "crossover prog",
+   "electronic",
+   "electronic rock",
+   "electronica",
+   "experimental",
+   "experimental electronic",
+   "experimental rock",
+   "idm"
+  ],
+  "tags": [
+   "crossover prog",
+   "electronic",
+   "electronic rock",
+   "electronica",
+   "experimental",
+   "experimental electronic",
+   "experimental rock",
+   "idm"
+  ],
+  "mb_lastfm_pages": [
+   "atoms for peace"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "radiohead",
+  "name": "Jeff Buckley",
+  "mbid": "e6e879c0-3d56-4f12-b3c5-3ce459661a8e",
+  "url": "https://www.last.fm/music/Jeff+Buckley",
+  "match": "0.313584",
+  "status": "200",
+  "lastfm_page": "jeff buckley",
+  "mb_id": "e6e879c0-3d56-4f12-b3c5-3ce459661a8e",
+  "mb_name": "Jeff Buckley",
+  "disambiguation": "American singer, guitarist and songwriter",
+  "type": "Person",
+  "genres": [
+   "acoustic rock",
+   "alternative rock",
+   "blues",
+   "folk rock",
+   "rock",
+   "singer-songwriter",
+   "soul"
+  ],
+  "tags": [
+   "acoustic rock",
+   "alternative rock",
+   "alternative/indie rock",
+   "american",
+   "bittersweet",
+   "blues",
+   "california",
+   "depressive",
+   "english",
+   "ethereal",
+   "existential",
+   "folk rock",
+   "introspective",
+   "longing",
+   "melancholic",
+   "melodic",
+   "new york",
+   "passionate",
+   "poetic",
+   "powerful",
+   "rock",
+   "romantic",
+   "sensual",
+   "sentimental",
+   "singer-songwriter",
+   "singer/songwriter",
+   "soul",
+   "united states",
+   "usa",
+   "vyrzukhisuc-artiest"
+  ],
+  "mb_lastfm_pages": [
+   "jeff buckley"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "radiohead",
+  "name": "Nirvana",
+  "mbid": "5b11f4ce-a62d-471e-81fc-a69a8278c7da",
+  "url": "https://www.last.fm/music/Nirvana",
+  "match": "0.287275",
+  "status": "200",
+  "lastfm_page": "nirvana",
+  "mb_id": "5b11f4ce-a62d-471e-81fc-a69a8278c7da",
+  "mb_name": "Nirvana",
+  "disambiguation": "1980s\u20131990s US grunge band",
+  "type": "Group",
+  "genres": [
+   "acoustic rock",
+   "alternative metal",
+   "alternative pop",
+   "alternative rock",
+   "ambient",
+   "conscious hip hop",
+   "electronic",
+   "experimental",
+   "grunge",
+   "hip hop",
+   "instrumental hip hop",
+   "new age",
+   "noise rock",
+   "pigfuck",
+   "pop",
+   "post-hardcore",
+   "psychedelic pop",
+   "psytrance",
+   "punk",
+   "punk rock",
+   "rock",
+   "sludge metal",
+   "underground hip hop"
+  ],
+  "tags": [
+   "90s",
+   "acoustic rock",
+   "alternative",
+   "alternative metal",
+   "alternative pop",
+   "alternative rock",
+   "alternative/indie rock",
+   "ambient",
+   "american",
+   "conscious hip hop",
+   "diy",
+   "electronic",
+   "estados unidos",
+   "ethereal",
+   "ethnic",
+   "experimental",
+   "grunge",
+   "grunge rock",
+   "hip hop",
+   "instrumental beats",
+   "instrumental hip hop",
+   "meditative",
+   "new age",
+   "noise rock",
+   "pigfuck",
+   "pop",
+   "post-hardcore",
+   "psychedelic pop",
+   "psytrance",
+   "punk",
+   "punk rock",
+   "rock",
+   "seattle",
+   "sludge metal",
+   "underground hip hop",
+   "united states",
+   "usa"
+  ],
+  "mb_lastfm_pages": [
+   "nirvana"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "radiohead",
+  "name": "Muse",
+  "mbid": "9c9f1380-2516-4fc9-a3e6-f9f61941d090",
+  "url": "https://www.last.fm/music/Muse",
+  "match": "0.282412",
+  "status": "200",
+  "lastfm_page": "muse",
+  "mb_id": "9c9f1380-2516-4fc9-a3e6-f9f61941d090",
+  "mb_name": "Muse",
+  "disambiguation": "UK rock band",
+  "type": "Group",
+  "genres": [
+   "alternative dance",
+   "alternative metal",
+   "alternative rock",
+   "art rock",
+   "neo-progressive rock",
+   "pop rock",
+   "post-grunge",
+   "progressive rock",
+   "rock",
+   "symphonic rock"
+  ],
+  "tags": [
+   "alternative dance",
+   "alternative metal",
+   "alternative rock",
+   "art rock",
+   "british",
+   "neo-progressive rock",
+   "pop rock",
+   "post-grunge",
+   "progressive rock",
+   "rock",
+   "symphonic rock",
+   "uk"
+  ],
+  "mb_lastfm_pages": [
+   "muse"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "radiohead",
+  "name": "The Strokes",
+  "mbid": "f181961b-20f7-459e-89de-920ef03c7ed0",
+  "url": "https://www.last.fm/music/The+Strokes",
+  "match": "0.248352",
+  "status": "200",
+  "lastfm_page": "the strokes",
+  "mb_id": "f181961b-20f7-459e-89de-920ef03c7ed0",
+  "mb_name": "The Strokes",
+  "disambiguation": "",
+  "type": "Group",
+  "genres": [
+   "alternative rock",
+   "garage rock",
+   "garage rock revival",
+   "indie rock",
+   "new wave",
+   "pop",
+   "post-punk revival",
+   "rock",
+   "synth-pop"
+  ],
+  "tags": [
+   "alternative",
+   "alternative rock",
+   "alternative rock music",
+   "alternative/indie rock",
+   "garage rock",
+   "garage rock music",
+   "garage rock revival",
+   "indie rock",
+   "new wave",
+   "pop",
+   "post-punk revival",
+   "rock",
+   "rock music",
+   "synth-pop"
+  ],
+  "mb_lastfm_pages": [
+   "the strokes"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "radiohead",
+  "name": "The Smiths",
+  "mbid": "40f5d9e4-2de7-4f2d-ad41-e31a9a9fea27",
+  "url": "https://www.last.fm/music/The+Smiths",
+  "match": "0.238100",
+  "status": "200",
+  "lastfm_page": "the smiths",
+  "mb_id": "40f5d9e4-2de7-4f2d-ad41-e31a9a9fea27",
+  "mb_name": "The Smiths",
+  "disambiguation": "1980s English rock band",
+  "type": "Group",
+  "genres": [
+   "alternative rock",
+   "britpop",
+   "indie pop",
+   "indie rock",
+   "jangle pop",
+   "new wave",
+   "pop",
+   "post-punk",
+   "rock"
+  ],
+  "tags": [
+   "alternative rock",
+   "british",
+   "britpop",
+   "indie pop",
+   "indie rock",
+   "jangle pop",
+   "new wave",
+   "pop",
+   "post-punk",
+   "rock"
+  ],
+  "mb_lastfm_pages": [
+   "the smiths"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "radiohead",
+  "name": "Weezer",
+  "mbid": "6fe07aa5-fec0-4eca-a456-f29bff451b04",
+  "url": "https://www.last.fm/music/Weezer",
+  "match": "0.233549",
+  "status": "200",
+  "lastfm_page": "weezer",
+  "mb_id": "6fe07aa5-fec0-4eca-a456-f29bff451b04",
+  "mb_name": "Weezer",
+  "disambiguation": "American rock band",
+  "type": "Group",
+  "genres": [
+   "alternative pop",
+   "alternative rock",
+   "emo",
+   "garage rock",
+   "geek rock",
+   "indie rock",
+   "mainstream rock",
+   "pop",
+   "pop punk",
+   "pop rock",
+   "power pop",
+   "rock"
+  ],
+  "tags": [
+   "alternative",
+   "alternative pop",
+   "alternative rock",
+   "alternative/indie rock",
+   "emo",
+   "garage rock",
+   "geek rock",
+   "indie rock",
+   "mainstream rock",
+   "nerd music",
+   "pop",
+   "pop punk",
+   "pop rock",
+   "power pop",
+   "rock"
+  ],
+  "mb_lastfm_pages": [
+   "weezer"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "radiohead",
+  "name": "Philip Selway",
+  "mbid": "4ab74d13-d1eb-4895-b874-6da5d8b1aac3",
+  "url": "https://www.last.fm/music/Philip+Selway",
+  "match": "0.219163",
+  "status": "200",
+  "lastfm_page": "philip selway",
+  "mb_id": "4ab74d13-d1eb-4895-b874-6da5d8b1aac3",
+  "mb_name": "Philip Selway",
+  "disambiguation": "drummer in Radiohead",
+  "type": "Person",
+  "genres": [
+   "art pop",
+   "contemporary folk",
+   "post-rock",
+   "rock",
+   "singer-songwriter"
+  ],
+  "tags": [
+   "art pop",
+   "british",
+   "contemporary folk",
+   "english",
+   "post-rock",
+   "rock",
+   "singer-songwriter",
+   "uk"
+  ],
+  "mb_lastfm_pages": [
+   "philip selway"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "radiohead",
+  "name": "Blur",
+  "mbid": "ba853904-ae25-4ebb-89d6-c44cfbd71bd2",
+  "url": "https://www.last.fm/music/Blur",
+  "match": "0.214161",
+  "status": "200",
+  "lastfm_page": "blur",
+  "mb_id": "ba853904-ae25-4ebb-89d6-c44cfbd71bd2",
+  "mb_name": "Blur",
+  "disambiguation": "UK alternative rock band",
+  "type": "Group",
+  "genres": [
+   "alternative rock",
+   "art pop",
+   "art rock",
+   "britpop",
+   "experimental rock",
+   "grunge",
+   "indie rock",
+   "madchester",
+   "neo-psychedelia",
+   "noise rock",
+   "pop rock",
+   "post-grunge",
+   "rock",
+   "shoegaze",
+   "slacker rock"
+  ],
+  "tags": [
+   "alternative rock",
+   "art pop",
+   "art rock",
+   "baggy",
+   "britannique",
+   "british",
+   "britpop",
+   "experimental rock",
+   "grunge",
+   "indie rock",
+   "lo-fi music",
+   "madchester",
+   "neo-psychedelia",
+   "noise rock",
+   "pop rock",
+   "post-grunge",
+   "rock",
+   "shoegaze",
+   "slacker rock"
+  ],
+  "mb_lastfm_pages": [
+   "blur"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "radiohead",
+  "name": "b\u00f4a",
+  "mbid": "ca1dcba2-792c-4550-abf2-7b45396e81ca",
+  "url": "https://www.last.fm/music/b%C3%B4a",
+  "match": "0.204327",
+  "status": "200",
+  "lastfm_page": "b\u00f4a",
+  "mb_id": "ca1dcba2-792c-4550-abf2-7b45396e81ca",
+  "mb_name": "b\u00f4a",
+  "disambiguation": "UK alternative rock band",
+  "type": "Group",
+  "genres": [
+   "alternative rock",
+   "chamber pop",
+   "indie pop",
+   "indie rock",
+   "post-britpop"
+  ],
+  "tags": [
+   "alternative rock",
+   "chamber pop",
+   "indie pop",
+   "indie rock",
+   "post-britpop",
+   "television music"
+  ],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "ca1dcba2-792c-4550-abf2-7b45396e81ca",
+    "name": "b\u00f4a",
+    "disambiguation": "UK alternative rock band",
+    "type": "Group",
+    "score": 87,
+    "exact_name": true
+   }
+  ],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "radiohead",
+  "name": "The Smashing Pumpkins",
+  "mbid": "ba0d6274-db14-4ef5-b28d-657ebde1a396",
+  "url": "https://www.last.fm/music/The+Smashing+Pumpkins",
+  "match": "0.199690",
+  "status": "200",
+  "lastfm_page": "the smashing pumpkins",
+  "mb_id": "ba0d6274-db14-4ef5-b28d-657ebde1a396",
+  "mb_name": "The Smashing Pumpkins",
+  "disambiguation": "",
+  "type": "Group",
+  "genres": [
+   "alternative rock",
+   "dream pop",
+   "grunge",
+   "neo-psychedelia",
+   "progressive rock",
+   "rock",
+   "shoegaze",
+   "symphonic rock",
+   "synth-pop"
+  ],
+  "tags": [
+   "alternative rock",
+   "dream pop",
+   "grunge",
+   "neo-psychedelia",
+   "progressive rock",
+   "rock",
+   "shoegaze",
+   "spacegrunge",
+   "symphonic rock",
+   "synth-pop"
+  ],
+  "mb_lastfm_pages": [
+   "the smashing pumpkins"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "radiohead",
+  "name": "Pixies",
+  "mbid": "b6b2bb8d-54a9-491f-9607-7b546023b433",
+  "url": "https://www.last.fm/music/Pixies",
+  "match": "0.191187",
+  "status": "200",
+  "lastfm_page": "pixies",
+  "mb_id": "b6b2bb8d-54a9-491f-9607-7b546023b433",
+  "mb_name": "Pixies",
+  "disambiguation": "",
+  "type": "Group",
+  "genres": [
+   "alternative rock",
+   "indie rock",
+   "noise pop",
+   "punk rock",
+   "rock",
+   "surf rock"
+  ],
+  "tags": [
+   "alternative rock",
+   "indie rock",
+   "noise pop",
+   "punk rock",
+   "rock",
+   "rock groups",
+   "rock music",
+   "surf rock"
+  ],
+  "mb_lastfm_pages": [
+   "pixies"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "radiohead",
+  "name": "Deftones",
+  "mbid": "7527f6c2-d762-4b88-b5e2-9244f1e34c46",
+  "url": "https://www.last.fm/music/Deftones",
+  "match": "0.186449",
+  "status": "200",
+  "lastfm_page": "deftones",
+  "mb_id": "7527f6c2-d762-4b88-b5e2-9244f1e34c46",
+  "mb_name": "Deftones",
+  "disambiguation": "",
+  "type": "Group",
+  "genres": [
+   "alternative metal",
+   "alternative rock",
+   "heavy metal",
+   "metal",
+   "nu metal",
+   "shoegaze"
+  ],
+  "tags": [
+   "alternative metal",
+   "alternative rock",
+   "heavy metal",
+   "metal",
+   "nu metal",
+   "shoegaze"
+  ],
+  "mb_lastfm_pages": [
+   "deftones"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "radiohead",
+  "name": "Gorillaz",
+  "mbid": "e21857d5-3256-4547-afb3-4b6ded592596",
+  "url": "https://www.last.fm/music/Gorillaz",
+  "match": "0.181701",
+  "status": "200",
+  "lastfm_page": "gorillaz",
+  "mb_id": "e21857d5-3256-4547-afb3-4b6ded592596",
+  "mb_name": "Gorillaz",
+  "disambiguation": "virtual band",
+  "type": "Group",
+  "genres": [
+   "alternative dance",
+   "alternative rock",
+   "art pop",
+   "electronic",
+   "electronica",
+   "electropop",
+   "hip hop",
+   "rock",
+   "synth-pop",
+   "trip hop"
+  ],
+  "tags": [
+   "alternative dance",
+   "alternative rock",
+   "art pop",
+   "british",
+   "electronic",
+   "electronica",
+   "electropop",
+   "fabloo",
+   "fictional",
+   "fictitious artist",
+   "fictitious-artist",
+   "hip hop",
+   "rock",
+   "synth-pop",
+   "trip hop",
+   "trip rock",
+   "virtual band",
+   "vyrzukhisuc-artiest"
+  ],
+  "mb_lastfm_pages": [
+   "gorillaz"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "radiohead",
+  "name": "Placebo",
+  "mbid": "847e8284-8582-4b0e-9c26-b042a4f49e57",
+  "url": "https://www.last.fm/music/Placebo",
+  "match": "0.173365",
+  "status": "200",
+  "lastfm_page": "placebo",
+  "mb_id": "847e8284-8582-4b0e-9c26-b042a4f49e57",
+  "mb_name": "Placebo",
+  "disambiguation": "UK alternative rock band",
+  "type": "Group",
+  "genres": [
+   "alternative rock",
+   "indie rock",
+   "pop rock",
+   "rock"
+  ],
+  "tags": [
+   "alternative rock",
+   "british",
+   "indie rock",
+   "pop rock",
+   "rock"
+  ],
+  "mb_lastfm_pages": [
+   "placebo"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "radiohead",
+  "name": "R.E.M.",
+  "mbid": "ea4dfa26-f633-4da6-a52a-f49ea4897b58",
+  "url": "https://www.last.fm/music/R.E.M.",
+  "match": "0.167084",
+  "status": "200",
+  "lastfm_page": "r.e.m.",
+  "mb_id": "ea4dfa26-f633-4da6-a52a-f49ea4897b58",
+  "mb_name": "R.E.M.",
+  "disambiguation": "American rock band",
+  "type": "Group",
+  "genres": [
+   "acoustic rock",
+   "alternative country",
+   "alternative rock",
+   "chamber pop",
+   "electronic rock",
+   "folk rock",
+   "glam rock",
+   "grunge",
+   "jangle pop",
+   "neo-psychedelia",
+   "pop rock",
+   "power pop",
+   "rock"
+  ],
+  "tags": [
+   "2008 universal fire victim",
+   "acoustic rock",
+   "alternative country",
+   "alternative rock",
+   "chamber pop",
+   "college rock",
+   "electronic rock",
+   "folk rock",
+   "glam rock",
+   "grunge",
+   "indie",
+   "jangle pop",
+   "neo-psychedelia",
+   "pop rock",
+   "power pop",
+   "rock",
+   "usa"
+  ],
+  "mb_lastfm_pages": [
+   "r.e.m."
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "radiohead",
+  "name": "Coldplay",
+  "mbid": "cc197bad-dc9c-440d-a5b5-d52ba2e14234",
+  "url": "https://www.last.fm/music/Coldplay",
+  "match": "0.166703",
+  "status": "200",
+  "lastfm_page": "coldplay",
+  "mb_id": "cc197bad-dc9c-440d-a5b5-d52ba2e14234",
+  "mb_name": "Coldplay",
+  "disambiguation": "",
+  "type": "Group",
+  "genres": [
+   "alternative rock",
+   "art pop",
+   "britpop",
+   "dream pop",
+   "piano rock",
+   "pop",
+   "pop rock",
+   "post-britpop",
+   "rock"
+  ],
+  "tags": [
+   "alternative rock",
+   "art pop",
+   "british",
+   "britpop",
+   "dream pop",
+   "piano rock",
+   "pop",
+   "pop rock",
+   "post-britpop",
+   "rock",
+   "uk"
+  ],
+  "mb_lastfm_pages": [
+   "coldplay"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "radiohead",
+  "name": "Beck",
+  "mbid": "309c62ba-7a22-4277-9f67-4a162526d18a",
+  "url": "https://www.last.fm/music/Beck",
+  "match": "0.161359",
+  "status": "200",
+  "lastfm_page": "beck",
+  "mb_id": "309c62ba-7a22-4277-9f67-4a162526d18a",
+  "mb_name": "Beck",
+  "disambiguation": "alt rock, multi\u2010instrumentalist Beck Hansen",
+  "type": "Person",
+  "genres": [
+   "alternative dance",
+   "alternative rock",
+   "anti-folk",
+   "chamber folk",
+   "electronic",
+   "experimental hip hop",
+   "folk rock",
+   "indie rock",
+   "noise rock",
+   "pop",
+   "psychedelic pop",
+   "rock",
+   "singer-songwriter",
+   "slacker rock",
+   "trip hop"
+  ],
+  "tags": [
+   "alternative dance",
+   "alternative rock",
+   "anti-folk",
+   "chamber folk",
+   "electronic",
+   "experimental hip hop",
+   "folk rock",
+   "indie rock",
+   "lo-fi indie",
+   "noise rock",
+   "pity pop",
+   "pop",
+   "psychedelic pop",
+   "rock",
+   "singer-songwriter",
+   "singer/songwriter",
+   "slacker rock",
+   "trip hop"
+  ],
+  "mb_lastfm_pages": [
+   "beck"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "radiohead",
+  "name": "Arctic Monkeys",
+  "mbid": "ada7a83c-e3e1-40f1-93f9-3e73dbc9298a",
+  "url": "https://www.last.fm/music/Arctic+Monkeys",
+  "match": "0.160760",
+  "status": "200",
+  "lastfm_page": "arctic monkeys",
+  "mb_id": "ada7a83c-e3e1-40f1-93f9-3e73dbc9298a",
+  "mb_name": "Arctic Monkeys",
+  "disambiguation": "",
+  "type": "Group",
+  "genres": [
+   "alternative rock",
+   "art rock",
+   "baroque pop",
+   "dance",
+   "electronica",
+   "garage rock",
+   "garage rock revival",
+   "house",
+   "indie rock",
+   "neo-psychedelia",
+   "pop",
+   "post-punk revival",
+   "psychedelic pop",
+   "psychedelic rock",
+   "rock"
+  ],
+  "tags": [
+   "alternative",
+   "alternative rock",
+   "alternative/indie rock",
+   "art rock",
+   "baroque pop",
+   "british",
+   "dance",
+   "electronica",
+   "garage rock",
+   "garage rock revival",
+   "house",
+   "indie rock",
+   "neo-psychedelia",
+   "pop",
+   "post-punk revival",
+   "psychedelic pop",
+   "psychedelic rock",
+   "rock",
+   "sheffield",
+   "uk"
+  ],
+  "mb_lastfm_pages": [
+   "arctic monkeys"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "sleep-token",
+  "name": "breakk.away",
+  "mbid": "f4627d50-de0c-4d37-bf43-14d51dc6794f",
+  "url": "https://www.last.fm/music/breakk.away",
+  "match": "1",
+  "status": "200",
+  "lastfm_page": "breakk.away",
+  "mb_id": "f4627d50-de0c-4d37-bf43-14d51dc6794f",
+  "mb_name": "breakkaway",
+  "disambiguation": "",
+  "type": "Group",
+  "genres": [
+   "alternative metal",
+   "ambient",
+   "djent",
+   "metalcore",
+   "post-metal",
+   "progressive metal"
+  ],
+  "tags": [
+   "alternative metal",
+   "ambient",
+   "djent",
+   "metalcore",
+   "post-metal",
+   "progressive metal"
+  ],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "sleep-token",
+  "name": "Bad Omens",
+  "mbid": "8834d8b5-72a4-4a6e-9d35-3a041b8579fa",
+  "url": "https://www.last.fm/music/Bad+Omens",
+  "match": "0.900919",
+  "status": "200",
+  "lastfm_page": "bad omens",
+  "mb_id": "8834d8b5-72a4-4a6e-9d35-3a041b8579fa",
+  "mb_name": "Bad Omens",
+  "disambiguation": "60s garage rock band from Minnesota",
+  "type": null,
+  "genres": [],
+  "tags": [],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "eecada09-acfc-472d-ae55-e9e5a43f12d8",
+    "name": "Bad Omens",
+    "disambiguation": "metalcore/post-metal",
+    "type": "Group",
+    "score": 100,
+    "exact_name": true
+   },
+   {
+    "id": "8834d8b5-72a4-4a6e-9d35-3a041b8579fa",
+    "name": "Bad Omens",
+    "disambiguation": "60s garage rock band from Minnesota",
+    "type": null,
+    "score": 87,
+    "exact_name": true
+   }
+  ],
+  "contest": "CONTESTED",
+  "final": "MISMATCH",
+  "true_owner": {
+   "id": "eecada09-acfc-472d-ae55-e9e5a43f12d8",
+   "name": "Bad Omens",
+   "disambiguation": "metalcore/post-metal",
+   "type": "Group",
+   "score": 100,
+   "exact_name": true
+  },
+  "all_owners": [
+   {
+    "id": "eecada09-acfc-472d-ae55-e9e5a43f12d8",
+    "name": "Bad Omens",
+    "disambiguation": "metalcore/post-metal",
+    "type": "Group",
+    "score": 100,
+    "exact_name": true
+   }
+  ]
+ },
+ {
+  "workload": "sleep-token",
+  "name": "President",
+  "mbid": "5b4978bf-f8e0-4f55-90af-74173d9b1e38",
+  "url": "https://www.last.fm/music/President",
+  "match": "0.705261",
+  "status": "200",
+  "lastfm_page": "president",
+  "mb_id": "5b4978bf-f8e0-4f55-90af-74173d9b1e38",
+  "mb_name": "President",
+  "disambiguation": "Spanish Band",
+  "type": "Group",
+  "genres": [],
+  "tags": [],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "5b4978bf-f8e0-4f55-90af-74173d9b1e38",
+    "name": "President",
+    "disambiguation": "Spanish Band",
+    "type": "Group",
+    "score": 71,
+    "exact_name": true
+   },
+   {
+    "id": "72d462e5-ec43-4f5d-966c-977d0e067db3",
+    "name": "pRESIDENT",
+    "disambiguation": "Estonian band",
+    "type": "Group",
+    "score": 71,
+    "exact_name": true
+   },
+   {
+    "id": "7449cc7e-5fe0-4fd4-9901-7e715391ee50",
+    "name": "PRESIDENT",
+    "disambiguation": "UK metal band",
+    "type": "Group",
+    "score": 71,
+    "exact_name": true
+   },
+   {
+    "id": "5c13110c-f3b6-41eb-96f1-fceed830d9cc",
+    "name": "President",
+    "disambiguation": "Thai funk",
+    "type": "Group",
+    "score": 70,
+    "exact_name": true
+   },
+   {
+    "id": "f5798598-39a0-48f4-9c3f-1d7ad66d3740",
+    "name": "President",
+    "disambiguation": "US Miami Bass rapper",
+    "type": "Person",
+    "score": 69,
+    "exact_name": true
+   },
+   {
+    "id": "e728f56c-306a-4565-8e9a-c1a503bbd7f9",
+    "name": "President",
+    "disambiguation": "Jos\u00e9 Mar\u00eda de Mingo",
+    "type": "Person",
+    "score": 69,
+    "exact_name": true
+   },
+   {
+    "id": "29033af2-037f-4535-889e-c517a12fa970",
+    "name": "President",
+    "disambiguation": "UK rock band",
+    "type": "Group",
+    "score": 69,
+    "exact_name": true
+   }
+  ],
+  "contest": "CONTESTED",
+  "final": "MISMATCH",
+  "true_owner": {
+   "id": "7449cc7e-5fe0-4fd4-9901-7e715391ee50",
+   "name": "PRESIDENT",
+   "disambiguation": "UK metal band",
+   "type": "Group",
+   "score": 71,
+   "exact_name": true
+  },
+  "all_owners": [
+   {
+    "id": "7449cc7e-5fe0-4fd4-9901-7e715391ee50",
+    "name": "PRESIDENT",
+    "disambiguation": "UK metal band",
+    "type": "Group",
+    "score": 71,
+    "exact_name": true
+   }
+  ]
+ },
+ {
+  "workload": "sleep-token",
+  "name": "Sleep Theory",
+  "mbid": "e0d839ad-3880-4530-ac32-6d373006678f",
+  "url": "https://www.last.fm/music/Sleep+Theory",
+  "match": "0.532784",
+  "status": "200",
+  "lastfm_page": "sleep theory",
+  "mb_id": "e0d839ad-3880-4530-ac32-6d373006678f",
+  "mb_name": "Sleep Theory",
+  "disambiguation": "American band",
+  "type": "Group",
+  "genres": [
+   "alternative metal",
+   "hard rock",
+   "nu metal",
+   "rock"
+  ],
+  "tags": [
+   "alternative metal",
+   "hard rock",
+   "nu metal",
+   "rock"
+  ],
+  "mb_lastfm_pages": [
+   "sleep theory"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "sleep-token",
+  "name": "Spiritbox",
+  "mbid": "a39ad456-a697-4f32-aa36-c107f654d318",
+  "url": "https://www.last.fm/music/Spiritbox",
+  "match": "0.524585",
+  "status": "200",
+  "lastfm_page": "spiritbox",
+  "mb_id": "a39ad456-a697-4f32-aa36-c107f654d318",
+  "mb_name": "Spiritbox",
+  "disambiguation": "Dutch post-rock",
+  "type": "Group",
+  "genres": [],
+  "tags": [],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "9c935736-7530-41e4-b776-1dbcf534c061",
+    "name": "Spiritbox",
+    "disambiguation": "Canadian metalcore",
+    "type": "Group",
+    "score": 100,
+    "exact_name": true
+   },
+   {
+    "id": "a39ad456-a697-4f32-aa36-c107f654d318",
+    "name": "Spiritbox",
+    "disambiguation": "Dutch post-rock",
+    "type": "Group",
+    "score": 90,
+    "exact_name": true
+   }
+  ],
+  "contest": "CONTESTED",
+  "final": "MISMATCH",
+  "true_owner": {
+   "id": "9c935736-7530-41e4-b776-1dbcf534c061",
+   "name": "Spiritbox",
+   "disambiguation": "Canadian metalcore",
+   "type": "Group",
+   "score": 100,
+   "exact_name": true
+  },
+  "all_owners": [
+   {
+    "id": "9c935736-7530-41e4-b776-1dbcf534c061",
+    "name": "Spiritbox",
+    "disambiguation": "Canadian metalcore",
+    "type": "Group",
+    "score": 100,
+    "exact_name": true
+   }
+  ]
+ },
+ {
+  "workload": "sleep-token",
+  "name": "Thornhill",
+  "mbid": "368f19e5-51c0-45d7-80c5-963be6971ac7",
+  "url": "https://www.last.fm/music/Thornhill",
+  "match": "0.508985",
+  "status": "200",
+  "lastfm_page": "thornhill",
+  "mb_id": "368f19e5-51c0-45d7-80c5-963be6971ac7",
+  "mb_name": "Thornhill",
+  "disambiguation": "Melbourne metalcore",
+  "type": "Group",
+  "genres": [
+   "alternative metal",
+   "metalcore",
+   "progressive metal",
+   "progressive metalcore"
+  ],
+  "tags": [
+   "alternative metal",
+   "australian",
+   "metalcore",
+   "progressive metal",
+   "progressive metalcore"
+  ],
+  "mb_lastfm_pages": [
+   "thornhill"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "sleep-token",
+  "name": "Jutes",
+  "mbid": "0340dcbd-e5fb-45e9-b597-0047180c371f",
+  "url": "https://www.last.fm/music/Jutes",
+  "match": "0.486172",
+  "status": "?",
+  "lastfm_page": "jutes",
+  "mb_id": "0340dcbd-e5fb-45e9-b597-0047180c371f",
+  "mb_name": "Jutes",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "hip hop",
+   "pop rap"
+  ],
+  "tags": [
+   "canadian",
+   "chode",
+   "hip hop",
+   "jutes",
+   "life",
+   "pop rap",
+   "rap"
+  ],
+  "mb_lastfm_pages": [
+   "jutes"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "sleep-token",
+  "name": "Memorist",
+  "mbid": "26bae791-d49c-4928-bd94-cbe7615908ac",
+  "url": "https://www.last.fm/music/Memorist",
+  "match": "0.412534",
+  "status": "200",
+  "lastfm_page": "memorist",
+  "mb_id": "26bae791-d49c-4928-bd94-cbe7615908ac",
+  "mb_name": "Memorist",
+  "disambiguation": "",
+  "type": "Group",
+  "genres": [
+   "alternative metal",
+   "metalcore",
+   "post-hardcore"
+  ],
+  "tags": [
+   "alternative metal",
+   "metalcore",
+   "post-hardcore"
+  ],
+  "mb_lastfm_pages": [
+   "memorist"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "sleep-token",
+  "name": "Holywatr",
+  "mbid": "9fbafa3a-8096-47e0-96e5-71d3d92c4363",
+  "url": "https://www.last.fm/music/Holywatr",
+  "match": "0.411935",
+  "status": "200",
+  "lastfm_page": "holywatr",
+  "mb_id": "9fbafa3a-8096-47e0-96e5-71d3d92c4363",
+  "mb_name": "Holywatr",
+  "disambiguation": "",
+  "type": "Group",
+  "genres": [
+   "metal"
+  ],
+  "tags": [
+   "metal"
+  ],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "9fbafa3a-8096-47e0-96e5-71d3d92c4363",
+    "name": "Holywatr",
+    "disambiguation": "",
+    "type": "Group",
+    "score": 100,
+    "exact_name": true
+   }
+  ],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "sleep-token",
+  "name": "Unprocessed",
+  "mbid": "ef3eb759-49b3-4f20-ac12-a92b87a3cb4c",
+  "url": "https://www.last.fm/music/Unprocessed",
+  "match": "0.361285",
+  "status": "200",
+  "lastfm_page": "unprocessed",
+  "mb_id": "ef3eb759-49b3-4f20-ac12-a92b87a3cb4c",
+  "mb_name": "Unprocessed",
+  "disambiguation": "",
+  "type": "Group",
+  "genres": [
+   "djent",
+   "math rock",
+   "metal",
+   "metalcore",
+   "progressive metal"
+  ],
+  "tags": [
+   "djent",
+   "math rock",
+   "metal",
+   "metalcore",
+   "progressive metal"
+  ],
+  "mb_lastfm_pages": [
+   "unprocessed"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "sleep-token",
+  "name": "Amira Elfeky",
+  "mbid": "e2f82804-26c7-4269-95e0-1ed7a4dda6f5",
+  "url": "https://www.last.fm/music/Amira+Elfeky",
+  "match": "0.358265",
+  "status": "200",
+  "lastfm_page": "amira elfeky",
+  "mb_id": "e2f82804-26c7-4269-95e0-1ed7a4dda6f5",
+  "mb_name": "Amira Elfeky",
+  "disambiguation": "American heavy metal singer / songwriter",
+  "type": "Person",
+  "genres": [
+   "emo",
+   "gothic rock",
+   "nu metal",
+   "post-hardcore",
+   "rock"
+  ],
+  "tags": [
+   "emo",
+   "gothic rock",
+   "nu gaze",
+   "nu metal",
+   "post-hardcore",
+   "rock"
+  ],
+  "mb_lastfm_pages": [
+   "amira elfeky"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "sleep-token",
+  "name": "Loathe",
+  "mbid": "e9ea0fbc-ccc7-4e98-9290-0a41aa848fa2",
+  "url": "https://www.last.fm/music/Loathe",
+  "match": "0.323256",
+  "status": "200",
+  "lastfm_page": "loathe",
+  "mb_id": "e9ea0fbc-ccc7-4e98-9290-0a41aa848fa2",
+  "mb_name": "Loathe",
+  "disambiguation": "Maltese death metal band",
+  "type": "Group",
+  "genres": [
+   "death metal"
+  ],
+  "tags": [
+   "death metal"
+  ],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "56eb02c4-1f16-4613-8bb3-b4a752283fc3",
+    "name": "Loathe",
+    "disambiguation": "UK experimental metal",
+    "type": "Group",
+    "score": 100,
+    "exact_name": true
+   },
+   {
+    "id": "e9ea0fbc-ccc7-4e98-9290-0a41aa848fa2",
+    "name": "Loathe",
+    "disambiguation": "Maltese death metal band",
+    "type": "Group",
+    "score": 93,
+    "exact_name": true
+   }
+  ],
+  "contest": "CONTESTED",
+  "final": "MISMATCH",
+  "true_owner": {
+   "id": "56eb02c4-1f16-4613-8bb3-b4a752283fc3",
+   "name": "Loathe",
+   "disambiguation": "UK experimental metal",
+   "type": "Group",
+   "score": 100,
+   "exact_name": true
+  },
+  "all_owners": [
+   {
+    "id": "56eb02c4-1f16-4613-8bb3-b4a752283fc3",
+    "name": "Loathe",
+    "disambiguation": "UK experimental metal",
+    "type": "Group",
+    "score": 100,
+    "exact_name": true
+   }
+  ]
+ },
+ {
+  "workload": "sleep-token",
+  "name": "Save Us",
+  "mbid": "43fe275d-f90a-4dca-9b42-260f289c256d",
+  "url": "https://www.last.fm/music/Save+Us",
+  "match": "0.319750",
+  "status": "200",
+  "lastfm_page": "save us",
+  "mb_id": "43fe275d-f90a-4dca-9b42-260f289c256d",
+  "mb_name": "Save Us",
+  "disambiguation": "",
+  "type": "Group",
+  "genres": [],
+  "tags": [],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "b72a4b0a-eddf-4d65-a442-bb60509e3c95",
+    "name": "SAVE US",
+    "disambiguation": "",
+    "type": "Group",
+    "score": 100,
+    "exact_name": true
+   },
+   {
+    "id": "43fe275d-f90a-4dca-9b42-260f289c256d",
+    "name": "Save Us",
+    "disambiguation": "",
+    "type": "Group",
+    "score": 97,
+    "exact_name": true
+   }
+  ],
+  "contest": "CONTESTED",
+  "final": "MISMATCH",
+  "true_owner": {
+   "id": "b72a4b0a-eddf-4d65-a442-bb60509e3c95",
+   "name": "SAVE US",
+   "disambiguation": "",
+   "type": "Group",
+   "score": 100,
+   "exact_name": true
+  },
+  "all_owners": [
+   {
+    "id": "b72a4b0a-eddf-4d65-a442-bb60509e3c95",
+    "name": "SAVE US",
+    "disambiguation": "",
+    "type": "Group",
+    "score": 100,
+    "exact_name": true
+   }
+  ]
+ },
+ {
+  "workload": "sleep-token",
+  "name": "Nothing More",
+  "mbid": "6def3fa9-836f-4b50-8815-b96cc92e63b8",
+  "url": "https://www.last.fm/music/Nothing+More",
+  "match": "0.290710",
+  "status": "200",
+  "lastfm_page": "nothing more",
+  "mb_id": "6def3fa9-836f-4b50-8815-b96cc92e63b8",
+  "mb_name": "Nothing More",
+  "disambiguation": "US rock band",
+  "type": "Group",
+  "genres": [
+   "alternative metal",
+   "alternative rock",
+   "hard rock",
+   "heavy metal",
+   "progressive metal",
+   "progressive rock",
+   "rock"
+  ],
+  "tags": [
+   "alternative metal",
+   "alternative rock",
+   "hard rock",
+   "heavy metal",
+   "progressive metal",
+   "progressive rock",
+   "rock"
+  ],
+  "mb_lastfm_pages": [
+   "nothing more"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "sleep-token",
+  "name": "Silent Planet",
+  "mbid": "c62afc98-8596-4532-a1dd-bc1a595c927e",
+  "url": "https://www.last.fm/music/Silent+Planet",
+  "match": "0.259602",
+  "status": "200",
+  "lastfm_page": "silent planet",
+  "mb_id": "c62afc98-8596-4532-a1dd-bc1a595c927e",
+  "mb_name": "Silent Planet",
+  "disambiguation": "metalcore band",
+  "type": "Group",
+  "genres": [
+   "djent",
+   "melodic metalcore",
+   "metal",
+   "metalcore",
+   "post-hardcore",
+   "progressive metalcore"
+  ],
+  "tags": [
+   "christian metalcore",
+   "djent",
+   "melodic metalcore",
+   "metal",
+   "metalcore",
+   "post-hardcore",
+   "progressive metalcore"
+  ],
+  "mb_lastfm_pages": [
+   "silent planet"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "sleep-token",
+  "name": "Stoneside.",
+  "mbid": "779dc1ed-030b-4c29-8335-80b2e56664d5",
+  "url": "https://www.last.fm/music/Stoneside.",
+  "match": "0.238235",
+  "status": "200",
+  "lastfm_page": "stoneside.",
+  "mb_id": "779dc1ed-030b-4c29-8335-80b2e56664d5",
+  "mb_name": "Stoneside.",
+  "disambiguation": "",
+  "type": "Group",
+  "genres": [],
+  "tags": [],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "779dc1ed-030b-4c29-8335-80b2e56664d5",
+    "name": "Stoneside.",
+    "disambiguation": "",
+    "type": "Group",
+    "score": 100,
+    "exact_name": true
+   }
+  ],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "tigran-hamasyan",
+  "name": "Aaron Parks",
+  "mbid": "4dd62d49-9868-465b-882f-733afb40eb0d",
+  "url": "https://www.last.fm/music/Aaron+Parks",
+  "match": "1",
+  "status": "200",
+  "lastfm_page": "aaron parks",
+  "mb_id": "4dd62d49-9868-465b-882f-733afb40eb0d",
+  "mb_name": "Aaron Parks",
+  "disambiguation": "jazz pianist",
+  "type": "Person",
+  "genres": [
+   "contemporary jazz",
+   "jazz",
+   "jazz fusion",
+   "post-bop"
+  ],
+  "tags": [
+   "contemporary jazz",
+   "jazz",
+   "jazz fusion",
+   "post-bop"
+  ],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "4dd62d49-9868-465b-882f-733afb40eb0d",
+    "name": "Aaron Parks",
+    "disambiguation": "jazz pianist",
+    "type": "Person",
+    "score": 100,
+    "exact_name": true
+   },
+   {
+    "id": "71d0c8a2-bdc1-4d29-a476-8bde3c35027a",
+    "name": "Aaron Parks",
+    "disambiguation": "drummer/composer",
+    "type": "Person",
+    "score": 88,
+    "exact_name": true
+   }
+  ],
+  "contest": "CONTESTED",
+  "final": "UNADJUDICATED"
+ },
+ {
+  "workload": "tigran-hamasyan",
+  "name": "Brad Mehldau",
+  "mbid": "b7723b3f-9a35-438d-bc42-8ad8b5e027ae",
+  "url": "https://www.last.fm/music/Brad+Mehldau",
+  "match": "0.998259",
+  "status": "200",
+  "lastfm_page": "brad mehldau",
+  "mb_id": "b7723b3f-9a35-438d-bc42-8ad8b5e027ae",
+  "mb_name": "Brad Mehldau",
+  "disambiguation": "American jazz pianist, composer, and arranger",
+  "type": "Person",
+  "genres": [
+   "jazz",
+   "post-bop",
+   "third stream"
+  ],
+  "tags": [
+   "american",
+   "jazz",
+   "jazz and blues",
+   "pianist",
+   "post-bop",
+   "third stream"
+  ],
+  "mb_lastfm_pages": [
+   "brad mehldau"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "tigran-hamasyan",
+  "name": "Avishai Cohen",
+  "mbid": "17d78170-7194-4603-8dbb-ca1108430882",
+  "url": "https://www.last.fm/music/Avishai+Cohen",
+  "match": "0.931423",
+  "status": "?",
+  "lastfm_page": "avishai cohen",
+  "mb_id": "17d78170-7194-4603-8dbb-ca1108430882",
+  "mb_name": "Avishai Cohen",
+  "disambiguation": "Israeli jazz bassist",
+  "type": "Person",
+  "genres": [
+   "jazz",
+   "post-bop"
+  ],
+  "tags": [
+   "jazz",
+   "jazz and blues",
+   "post-bop"
+  ],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "17d78170-7194-4603-8dbb-ca1108430882",
+    "name": "Avishai Cohen",
+    "disambiguation": "Israeli jazz bassist",
+    "type": "Person",
+    "score": 100,
+    "exact_name": true
+   },
+   {
+    "id": "a9adebe6-3436-4746-bc76-3623e66f6e76",
+    "name": "Avishai Cohen",
+    "disambiguation": "trumpeter, member of Third World Love",
+    "type": "Person",
+    "score": 98,
+    "exact_name": true
+   }
+  ],
+  "contest": "CONTESTED",
+  "final": "UNADJUDICATED"
+ },
+ {
+  "workload": "tigran-hamasyan",
+  "name": "Sungazer",
+  "mbid": "21006fdb-2e22-4950-91ed-8575a1a96b58",
+  "url": "https://www.last.fm/music/Sungazer",
+  "match": "0.894555",
+  "status": "200",
+  "lastfm_page": "sungazer",
+  "mb_id": "21006fdb-2e22-4950-91ed-8575a1a96b58",
+  "mb_name": "Sungazer",
+  "disambiguation": "Colorado-based psychadelic, ambient, noise",
+  "type": "Group",
+  "genres": [],
+  "tags": [],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "beb404c4-9d0b-4042-a56c-aad7673c677d",
+    "name": "Sungazer",
+    "disambiguation": "electrojazz duo from New York",
+    "type": "Group",
+    "score": 100,
+    "exact_name": true
+   },
+   {
+    "id": "cb8a8056-c3c0-4037-8c15-4d43f7f102b5",
+    "name": "Sungazer",
+    "disambiguation": "Lithuanian dream pop / shoegaze multi-instrumentalist",
+    "type": "Person",
+    "score": 97,
+    "exact_name": true
+   },
+   {
+    "id": "21006fdb-2e22-4950-91ed-8575a1a96b58",
+    "name": "Sungazer",
+    "disambiguation": "Colorado-based psychadelic, ambient, noise",
+    "type": "Group",
+    "score": 96,
+    "exact_name": true
+   },
+   {
+    "id": "ccc353e6-4509-4bf6-85ff-c426e2ff85c5",
+    "name": "Sungazer",
+    "disambiguation": "Richmond, VA -based indie rock",
+    "type": "Group",
+    "score": 94,
+    "exact_name": true
+   }
+  ],
+  "contest": "CONTESTED",
+  "final": "UNADJUDICATED"
+ },
+ {
+  "workload": "tigran-hamasyan",
+  "name": "Mammal Hands",
+  "mbid": "5fd9d175-1fed-45e5-a2b4-e4e727f34d8b",
+  "url": "https://www.last.fm/music/Mammal+Hands",
+  "match": "0.778878",
+  "status": "200",
+  "lastfm_page": "mammal hands",
+  "mb_id": "5fd9d175-1fed-45e5-a2b4-e4e727f34d8b",
+  "mb_name": "Mammal Hands",
+  "disambiguation": "",
+  "type": "Group",
+  "genres": [
+   "contemporary jazz",
+   "instrumental",
+   "jazz"
+  ],
+  "tags": [
+   "contemporary jazz",
+   "instrumental",
+   "jazz"
+  ],
+  "mb_lastfm_pages": [
+   "mammal hands"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "tigran-hamasyan",
+  "name": "Shubh Saran",
+  "mbid": "a483b1f0-d712-4a6b-ae1d-8359c22c4f3d",
+  "url": "https://www.last.fm/music/Shubh+Saran",
+  "match": "0.756393",
+  "status": "200",
+  "lastfm_page": "shubh saran",
+  "mb_id": "a483b1f0-d712-4a6b-ae1d-8359c22c4f3d",
+  "mb_name": "Shubh Saran",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [],
+  "tags": [],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "a483b1f0-d712-4a6b-ae1d-8359c22c4f3d",
+    "name": "Shubh Saran",
+    "disambiguation": "",
+    "type": "Person",
+    "score": 100,
+    "exact_name": true
+   }
+  ],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "tigran-hamasyan",
+  "name": "Lars Danielsson",
+  "mbid": "a6faa805-989d-4529-9cf6-342a8e883423",
+  "url": "https://www.last.fm/music/Lars+Danielsson",
+  "match": "0.728677",
+  "status": "200",
+  "lastfm_page": "lars danielsson",
+  "mb_id": "a6faa805-989d-4529-9cf6-342a8e883423",
+  "mb_name": "Lars Danielsson",
+  "disambiguation": "Swedish jazz bassist, composer and producer",
+  "type": "Person",
+  "genres": [
+   "jazz",
+   "post-bop"
+  ],
+  "tags": [
+   "jazz",
+   "post-bop"
+  ],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "a6faa805-989d-4529-9cf6-342a8e883423",
+    "name": "Lars Danielsson",
+    "disambiguation": "Swedish jazz bassist, composer and producer",
+    "type": "Person",
+    "score": 100,
+    "exact_name": true
+   }
+  ],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "tigran-hamasyan",
+  "name": "Snarky Puppy",
+  "mbid": "fe85367e-4036-43c1-874b-b91af81cb4f3",
+  "url": "https://www.last.fm/music/Snarky+Puppy",
+  "match": "0.712295",
+  "status": "200",
+  "lastfm_page": "snarky puppy",
+  "mb_id": "fe85367e-4036-43c1-874b-b91af81cb4f3",
+  "mb_name": "Snarky Puppy",
+  "disambiguation": "",
+  "type": "Group",
+  "genres": [
+   "contemporary jazz",
+   "funk",
+   "jazz",
+   "jazz fusion"
+  ],
+  "tags": [
+   "contemporary jazz",
+   "funk",
+   "fusion",
+   "jazz",
+   "jazz fusion"
+  ],
+  "mb_lastfm_pages": [
+   "snarky puppy"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "tigran-hamasyan",
+  "name": "Vijay Iyer",
+  "mbid": "ba2ff5ad-b5a4-499b-aac1-b31fd093112b",
+  "url": "https://www.last.fm/music/Vijay+Iyer",
+  "match": "0.665973",
+  "status": "200",
+  "lastfm_page": "vijay iyer",
+  "mb_id": "ba2ff5ad-b5a4-499b-aac1-b31fd093112b",
+  "mb_name": "Vijay Iyer",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "avant-garde jazz",
+   "free improvisation",
+   "free jazz",
+   "jazz",
+   "jazz fusion",
+   "post-bop",
+   "third stream"
+  ],
+  "tags": [
+   "avant-garde jazz",
+   "free improvisation",
+   "free jazz",
+   "jazz",
+   "jazz fusion",
+   "post-bop",
+   "third stream"
+  ],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "ba2ff5ad-b5a4-499b-aac1-b31fd093112b",
+    "name": "Vijay Iyer",
+    "disambiguation": "",
+    "type": "Person",
+    "score": 100,
+    "exact_name": true
+   }
+  ],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "tigran-hamasyan",
+  "name": "GoGo Penguin",
+  "mbid": "b328de0e-ee48-4d74-9d36-7c7ee16ffc69",
+  "url": "https://www.last.fm/music/GoGo+Penguin",
+  "match": "0.638996",
+  "status": "200",
+  "lastfm_page": "gogo penguin",
+  "mb_id": "b328de0e-ee48-4d74-9d36-7c7ee16ffc69",
+  "mb_name": "GoGo Penguin",
+  "disambiguation": "UK jazz trio",
+  "type": "Group",
+  "genres": [
+   "electronica",
+   "jazz",
+   "jazz fusion",
+   "nu jazz",
+   "post-rock"
+  ],
+  "tags": [
+   "electronica",
+   "fusion",
+   "jazz",
+   "jazz fusion",
+   "nu jazz",
+   "post-rock",
+   "progressive jazz"
+  ],
+  "mb_lastfm_pages": [
+   "gogo penguin"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "tigran-hamasyan",
+  "name": "Esbj\u00f6rn Svensson Trio",
+  "mbid": "cfa7c6b1-bbb3-4f9a-a636-cbfafb9b4bcf",
+  "url": "https://www.last.fm/music/Esbj%C3%B6rn+Svensson+Trio",
+  "match": "0.627835",
+  "status": "200",
+  "lastfm_page": "esbj\u00f6rn svensson trio",
+  "mb_id": "cfa7c6b1-bbb3-4f9a-a636-cbfafb9b4bcf",
+  "mb_name": "Esbj\u00f6rn Svensson Trio",
+  "disambiguation": "",
+  "type": "Group",
+  "genres": [
+   "contemporary jazz",
+   "jazz",
+   "jazz fusion",
+   "nu jazz"
+  ],
+  "tags": [
+   "contemporary jazz",
+   "jazz",
+   "jazz fusion",
+   "nu jazz"
+  ],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "cfa7c6b1-bbb3-4f9a-a636-cbfafb9b4bcf",
+    "name": "Esbj\u00f6rn Svensson Trio",
+    "disambiguation": "",
+    "type": "Group",
+    "score": 100,
+    "exact_name": true
+   }
+  ],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "tigran-hamasyan",
+  "name": "Dhafer Youssef",
+  "mbid": "e193397d-a888-4b4d-b11d-2a602c24b023",
+  "url": "https://www.last.fm/music/Dhafer+Youssef",
+  "match": "0.620960",
+  "status": "200",
+  "lastfm_page": "dhafer youssef",
+  "mb_id": "e193397d-a888-4b4d-b11d-2a602c24b023",
+  "mb_name": "Dhafer Youssef",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "avant-garde jazz",
+   "free improvisation",
+   "jazz",
+   "nu jazz",
+   "post-bop",
+   "spiritual jazz",
+   "worldbeat"
+  ],
+  "tags": [
+   "african traditions",
+   "arabic",
+   "arabic jazz",
+   "avant-garde jazz",
+   "ethno jazz",
+   "free improvisation",
+   "global jazz",
+   "international",
+   "jazz",
+   "middle eastern traditions",
+   "modern jazz",
+   "north african",
+   "nu jazz",
+   "post-bop",
+   "spiritual jazz",
+   "sufi",
+   "traditional middle eastern folk",
+   "world",
+   "world music",
+   "worldbeat"
+  ],
+  "mb_lastfm_pages": [
+   "dhafer youssef"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "tigran-hamasyan",
+  "name": "Hiromi",
+  "mbid": "91df368e-a22a-429e-853a-ce78bbc42e43",
+  "url": "https://www.last.fm/music/Hiromi",
+  "match": "0.596615",
+  "status": "200",
+  "lastfm_page": "hiromi",
+  "mb_id": "91df368e-a22a-429e-853a-ce78bbc42e43",
+  "mb_name": "Hiromi",
+  "disambiguation": "japanese background dancer",
+  "type": "Person",
+  "genres": [],
+  "tags": [],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "ab3e1803-033b-4a4e-9bff-133e106579cd",
+    "name": "Hiromi",
+    "disambiguation": "Japanese vocalist from Amuse",
+    "type": "Person",
+    "score": 100,
+    "exact_name": true
+   },
+   {
+    "id": "e11c4197-2302-482e-9804-1bf9b5e1ff53",
+    "name": "HiroMi",
+    "disambiguation": "d\u014djin music arranger",
+    "type": "Person",
+    "score": 79,
+    "exact_name": true
+   },
+   {
+    "id": "d51b4a2b-170c-46c5-9518-420994e34134",
+    "name": "HIROMI",
+    "disambiguation": "singer fomerly known as \u7f8e\u88d5\u30ea\u30e5\u30a6",
+    "type": "Person",
+    "score": 79,
+    "exact_name": true
+   },
+   {
+    "id": "c6e6e62c-b90a-4a35-a2e3-c2153366e938",
+    "name": "HiROMi",
+    "disambiguation": "Japanese DJ",
+    "type": "Person",
+    "score": 79,
+    "exact_name": true
+   },
+   {
+    "id": "9152a767-f3d1-4cb1-bb67-2709a84207ba",
+    "name": "hiromi",
+    "disambiguation": "appears on Troubadour Record label",
+    "type": null,
+    "score": 79,
+    "exact_name": true
+   },
+   {
+    "id": "721192b5-e666-4d89-adc2-a5f4111431e3",
+    "name": "HIROMI",
+    "disambiguation": "pop'n music singer by e-ha",
+    "type": "Person",
+    "score": 79,
+    "exact_name": true
+   },
+   {
+    "id": "1ab65e90-6eed-4075-857d-707194731a39",
+    "name": "HIROMI",
+    "disambiguation": "Guitarist",
+    "type": "Person",
+    "score": 79,
+    "exact_name": true
+   },
+   {
+    "id": "e1c6eae4-b977-4f8e-b1ff-4c7ea320a7f7",
+    "name": "Hiromi",
+    "disambiguation": "Singer La Academia",
+    "type": "Person",
+    "score": 79,
+    "exact_name": true
+   },
+   {
+    "id": "65d9ed26-8455-4604-bc14-7f240d9c0c06",
+    "name": "HIROMI",
+    "disambiguation": "Composer for Koda Kumi",
+    "type": null,
+    "score": 79,
+    "exact_name": true
+   },
+   {
+    "id": "12e5a877-8542-49fc-b3e2-ad66c7501c24",
+    "name": "HIROMI",
+    "disambiguation": "Japanese lyricist",
+    "type": "Person",
+    "score": 79,
+    "exact_name": true
+   },
+   {
+    "id": "91df368e-a22a-429e-853a-ce78bbc42e43",
+    "name": "Hiromi",
+    "disambiguation": "japanese background dancer",
+    "type": "Person",
+    "score": 79,
+    "exact_name": true
+   },
+   {
+    "id": "3f5e528e-97c3-4f38-99d6-22f7531bbd4f",
+    "name": "Hiromi",
+    "disambiguation": "anonymous singer on \u2018relations sister\u00d7sister\u2019",
+    "type": "Person",
+    "score": 79,
+    "exact_name": true
+   },
+   {
+    "id": "afd6284d-540a-4400-9db1-5d4fcb2a0846",
+    "name": "hiromi",
+    "disambiguation": "artist in Trouble Succubus Original Soundtrack",
+    "type": "Person",
+    "score": 79,
+    "exact_name": true
+   }
+  ],
+  "contest": "CONTESTED",
+  "final": "UNADJUDICATED"
+ },
+ {
+  "workload": "tigran-hamasyan",
+  "name": "The Bad Plus",
+  "mbid": "b9bede5d-89b6-4c43-9c45-ca3930cf4db8",
+  "url": "https://www.last.fm/music/The+Bad+Plus",
+  "match": "0.593239",
+  "status": "200",
+  "lastfm_page": "the bad plus",
+  "mb_id": "b9bede5d-89b6-4c43-9c45-ca3930cf4db8",
+  "mb_name": "The Bad Plus",
+  "disambiguation": "",
+  "type": "Group",
+  "genres": [
+   "jazz",
+   "post-bop"
+  ],
+  "tags": [
+   "jazz",
+   "jazz and blues",
+   "post-bop"
+  ],
+  "mb_lastfm_pages": [
+   "the bad plus"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "tigran-hamasyan",
+  "name": "Ben Wendel",
+  "mbid": "d03b178f-d46b-43a0-b683-f24a32440b00",
+  "url": "https://www.last.fm/music/Ben+Wendel",
+  "match": "0.566830",
+  "status": "200",
+  "lastfm_page": "ben wendel",
+  "mb_id": "d03b178f-d46b-43a0-b683-f24a32440b00",
+  "mb_name": "Ben Wendel",
+  "disambiguation": "jazz saxophonist, bassoonist, and pianist",
+  "type": "Person",
+  "genres": [
+   "contemporary jazz",
+   "jazz",
+   "jazz fusion"
+  ],
+  "tags": [
+   "contemporary jazz",
+   "jazz",
+   "jazz fusion"
+  ],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "d03b178f-d46b-43a0-b683-f24a32440b00",
+    "name": "Ben Wendel",
+    "disambiguation": "jazz saxophonist, bassoonist, and pianist",
+    "type": "Person",
+    "score": 100,
+    "exact_name": true
+   }
+  ],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "tigran-hamasyan",
+  "name": "Robert Glasper",
+  "mbid": "6e8f82ea-9e6d-4fdd-9b32-32feef13186b",
+  "url": "https://www.last.fm/music/Robert+Glasper",
+  "match": "0.547307",
+  "status": "200",
+  "lastfm_page": "robert glasper",
+  "mb_id": "6e8f82ea-9e6d-4fdd-9b32-32feef13186b",
+  "mb_name": "Robert Glasper",
+  "disambiguation": "piano",
+  "type": "Person",
+  "genres": [
+   "contemporary jazz",
+   "hip hop",
+   "instrumental jazz",
+   "jazz",
+   "neo soul",
+   "post-bop",
+   "progressive",
+   "r&b",
+   "soul"
+  ],
+  "tags": [
+   "contemporary jazz",
+   "hip hop",
+   "instrumental jazz",
+   "jazz",
+   "neo soul",
+   "post-bop",
+   "progressive",
+   "r&b",
+   "rhythm and blues",
+   "soul"
+  ],
+  "mb_lastfm_pages": [
+   "robert glasper"
+  ],
+  "verdict": "MATCH",
+  "final": "MATCH"
+ },
+ {
+  "workload": "tigran-hamasyan",
+  "name": "Immanuel Wilkins",
+  "mbid": "61112049-cba4-409b-a4dc-a5f5a4d7c62e",
+  "url": "https://www.last.fm/music/Immanuel+Wilkins",
+  "match": "0.540147",
+  "status": "200",
+  "lastfm_page": "immanuel wilkins",
+  "mb_id": "61112049-cba4-409b-a4dc-a5f5a4d7c62e",
+  "mb_name": "Immanuel Wilkins",
+  "disambiguation": "",
+  "type": "Person",
+  "genres": [
+   "jazz"
+  ],
+  "tags": [
+   "jazz"
+  ],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "61112049-cba4-409b-a4dc-a5f5a4d7c62e",
+    "name": "Immanuel Wilkins",
+    "disambiguation": "",
+    "type": "Person",
+    "score": 100,
+    "exact_name": true
+   }
+  ],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "tigran-hamasyan",
+  "name": "Moses Yoofee Trio",
+  "mbid": "51466cc5-83e1-4ce3-857a-84c3bc109d65",
+  "url": "https://www.last.fm/music/Moses+Yoofee+Trio",
+  "match": "0.538891",
+  "status": "200",
+  "lastfm_page": "moses yoofee trio",
+  "mb_id": "51466cc5-83e1-4ce3-857a-84c3bc109d65",
+  "mb_name": "Moses Yoofee Trio",
+  "disambiguation": "",
+  "type": "Group",
+  "genres": [],
+  "tags": [],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "51466cc5-83e1-4ce3-857a-84c3bc109d65",
+    "name": "Moses Yoofee Trio",
+    "disambiguation": "",
+    "type": "Group",
+    "score": 100,
+    "exact_name": true
+   }
+  ],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "tigran-hamasyan",
+  "name": "Bill Laurance",
+  "mbid": "f30eb720-5cb6-4b44-a289-07ced7971041",
+  "url": "https://www.last.fm/music/Bill+Laurance",
+  "match": "0.538354",
+  "status": "200",
+  "lastfm_page": "bill laurance",
+  "mb_id": "f30eb720-5cb6-4b44-a289-07ced7971041",
+  "mb_name": "Bill Laurance",
+  "disambiguation": "English composer & multi-instrumentalist",
+  "type": "Person",
+  "genres": [
+   "contemporary jazz",
+   "jazz",
+   "jazz fusion"
+  ],
+  "tags": [
+   "contemporary jazz",
+   "jazz",
+   "jazz fusion"
+  ],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "f30eb720-5cb6-4b44-a289-07ced7971041",
+    "name": "Bill Laurance",
+    "disambiguation": "English composer & multi-instrumentalist",
+    "type": "Person",
+    "score": 100,
+    "exact_name": true
+   }
+  ],
+  "contest": "UNCONTESTED",
+  "final": "UNCONTESTED"
+ },
+ {
+  "workload": "tigran-hamasyan",
+  "name": "Joel Ross",
+  "mbid": "6d09039b-3e1f-49ef-b8e3-b8b7267a8578",
+  "url": "https://www.last.fm/music/Joel+Ross",
+  "match": "0.530766",
+  "status": "200",
+  "lastfm_page": "joel ross",
+  "mb_id": "6d09039b-3e1f-49ef-b8e3-b8b7267a8578",
+  "mb_name": "Joel Ross",
+  "disambiguation": "US vibraphonist",
+  "type": "Person",
+  "genres": [],
+  "tags": [],
+  "mb_lastfm_pages": [],
+  "verdict": "UNKNOWN",
+  "candidates": [
+   {
+    "id": "6d09039b-3e1f-49ef-b8e3-b8b7267a8578",
+    "name": "Joel Ross",
+    "disambiguation": "US vibraphonist",
+    "type": "Person",
+    "score": 100,
+    "exact_name": true
+   },
+   {
+    "id": "02f84b16-2d03-468b-8f38-c47e889d7e4a",
+    "name": "Joel Ross",
+    "disambiguation": "American pianist, conductor, choral arranger",
+    "type": "Person",
+    "score": 89,
+    "exact_name": true
+   }
+  ],
+  "contest": "CONTESTED",
+  "final": "UNADJUDICATED"
+ }
+]
