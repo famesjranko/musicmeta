@@ -7,6 +7,11 @@ internal data class DeezerAlbumResult(
     val id: Long = 0,
     val title: String,
     val artistName: String,
+    /**
+     * The hit's own artist id. Authoritative for who recorded this album, where a name search for
+     * the same string can land on a different artist of that name.
+     */
+    val artistId: Long? = null,
     val coverSmall: String?,
     val coverMedium: String?,
     val coverBig: String?,
@@ -34,6 +39,12 @@ internal data class DeezerArtistSearchResult(
     val pictureXl: String? = null,
     /** How this hit's name matched the request — an alias tier scales the reported confidence. */
     val nameTier: NameMatchTier = NameMatchTier.CANONICAL,
+    /**
+     * Another artist in the pool carried the requested name just as exactly, so popularity is what
+     * chose this one. Two same-named entries are as often two different acts as one act listed
+     * twice, and the search cannot tell those apart.
+     */
+    val ambiguousName: Boolean = false,
 )
 
 /** Album entry from Deezer artist albums endpoint. */

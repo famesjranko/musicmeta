@@ -133,6 +133,26 @@ class TitleMatcherTest {
     }
 
     @Test
+    fun `a remaster year written after the word is edition decoration`() {
+        // Given - the suffix form Deezer publishes, with the year trailing rather than leading
+        // When - classifying that qualifier
+        val result = TitleMatcher.isEditionDecoration("remastered 2020")
+
+        // Then - it decorates the same release, exactly as the leading-year form does
+        assertTrue(result)
+    }
+
+    @Test
+    fun `a qualifier naming a different release is not edition decoration`() {
+        // Given - a qualifier that carries a year but names a distinct release
+        // When - classifying it
+        val result = TitleMatcher.isEditionDecoration("live 2020")
+
+        // Then - the year does not make it decoration
+        assertFalse(result)
+    }
+
+    @Test
     fun `mixed qualifier brackets are rejected`() {
         // Given - a terminal group opened with a parenthesis and closed with a square bracket
         // When - comparing it to the correctly paired parenthetical form

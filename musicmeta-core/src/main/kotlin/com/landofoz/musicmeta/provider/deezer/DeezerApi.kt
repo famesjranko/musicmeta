@@ -35,6 +35,7 @@ internal class DeezerApi(
                 id = album.optLong("id"),
                 title = album.optString("title", ""),
                 artistName = artist?.optString("name", "").orEmpty(),
+                artistId = artist?.optLong("id")?.takeIf { it > 0 },
                 coverSmall = album.optString("cover_small").takeIfNotEmpty(),
                 coverMedium = album.optString("cover_medium").takeIfNotEmpty(),
                 coverBig = album.optString("cover_big").takeIfNotEmpty(),
@@ -58,6 +59,11 @@ internal class DeezerApi(
      * not one the matcher rejects, and not one it accepts only loosely while a closer name is in
      * the pool. Popularity decides between candidates whose names are equally good — which is the
      * ghost case, two entries both named exactly "Radiohead".
+     *
+     * It is also the homonym case, where those two entries are two different acts, and popularity
+     * then picks the louder one rather than the right one. That is what
+     * [DeezerArtistSearchResult.ambiguousName] reports: a caller holding evidence of its own can
+     * refuse the pick, and one holding none at least knows what settled it.
      */
     suspend fun searchArtist(name: String): DeezerArtistSearchResult? {
         val encoded = encodeQueryValue(name)
@@ -65,8 +71,11 @@ internal class DeezerApi(
         val json = fetchJson(url) ?: return null
 
         val data = json.optJSONArray("data") ?: return null
-        return (0 until data.length())
-            .mapNotNull { data.optJSONObject(it) }
+        val candidates = (0 until data.length()).mapNotNull { data.optJSONObject(it) }
+        val sameNameCount = candidates.count {
+            ArtistMatcher.matchQuality(name, it.optString("name", "")) == ArtistMatcher.QUALITY_SAME_NAME
+        }
+        return candidates
             .bestArtistMatchOrAlias(
                 expected = name,
                 tieBreak = compareBy({ it.optLong("nb_fan") }, { it.optLong("nb_album") }),
@@ -81,6 +90,7 @@ internal class DeezerApi(
                     pictureBig = artist.optString("picture_big").takeIfNotEmpty(),
                     pictureXl = artist.optString("picture_xl").takeIfNotEmpty(),
                     nameTier = match.tier,
+                    ambiguousName = sameNameCount > 1,
                 )
             }
     }
